@@ -90,7 +90,6 @@ Light and dark values are both drawn from the Design canvas (the Light theme pag
 | `text-secondary` | `#5B536E` | `#B1A8C4` | Labels and secondary lines |
 | `text-muted` | `#746C88` | `#978EAB` | Hints, dates, placeholders |
 | `line` | `#E7E2F0` | `#2E2740` | Hairlines |
-| `line-strong` | `#DAD3E6` | `#3A3350` | Strong hairline: a switch off, the dashed add row (new; the board uses it, no screen does yet) |
 | `outline-secondary` | `#DAD3E6` | `#382A5E` (= `tint-strong`) | Secondary button border (new). Dark aliases `tint-strong` |
 | `tint-strong` | `#D9CBF6` | `#382A5E` | Selected outline and selected row fill (new) |
 | `pill-helps` | `#4A4458` | `#4A4458` | Band change pill when the change helps (new) |

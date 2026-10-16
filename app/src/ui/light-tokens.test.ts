@@ -79,7 +79,6 @@ describe("light values from the Design guide's Light theme table", () => {
     "--color-tint": "#EEE6FD",
     "--color-track": "#E7E2F0",
     "--color-line": "#E7E2F0",
-    "--color-line-strong": "#DAD3E6",
     "--color-outline-secondary": "#DAD3E6",
     "--color-tint-strong": "#D9CBF6",
     "--color-text": "#1D1728",
@@ -120,5 +119,40 @@ describe("toasts invert", () => {
   it("a dark theme toast is light, with dark text", () => {
     expect(luminance(hexOf(dark, "--color-toast-bg"))).toBeGreaterThan(0.5);
     expect(luminance(hexOf(dark, "--color-toast-text"))).toBeLessThan(0.1);
+  });
+});
+
+describe("dark values are unchanged by FLOW-372", () => {
+  const darkMedia = declarations(blockBody(tokensCss, ':root:not([data-theme="light"]) {'));
+
+  // Dark values before FLOW-372 for the tokens it does not own, plus tint-strong (the dark alias target).
+  const pinned: Record<string, string> = {
+    "--color-band": "#7B3FE4",
+    "--color-band-past": "#5A2DB0",
+    "--color-on-band": "#FFFFFF",
+    "--color-band-chip": "#1E1929",
+    "--color-band-pill": "#1E1929",
+    "--color-pill-helps": "#4A4458",
+    "--color-pill-hurts": "#C3302B",
+    "--color-toast-bad": "#C3302B",
+    "--color-tint-strong": "#382A5E",
+  };
+  for (const [name, value] of Object.entries(pinned)) {
+    it(`${name} is ${value} in both dark blocks`, () => {
+      expect(darkMedia.get(name)).toBe(value);
+      expect(dark.get(name)).toBe(value);
+    });
+  }
+
+  // The two intended changes: the new secondary outline aliases tint-strong, and the pill shadow is
+  // declared in the dark blocks with the value it inherited before.
+  it("the secondary outline is the dark tint-strong, in both dark blocks", () => {
+    expect(darkMedia.get("--color-outline-secondary")).toBe("var(--color-tint-strong)");
+    expect(dark.get("--color-outline-secondary")).toBe("var(--color-tint-strong)");
+  });
+
+  it("the pill shadow keeps its dark value, in both dark blocks", () => {
+    expect(darkMedia.get("--shadow-pill")).toBe("0 6px 18px rgba(0, 0, 0, 0.4)");
+    expect(dark.get("--shadow-pill")).toBe("0 6px 18px rgba(0, 0, 0, 0.4)");
   });
 });

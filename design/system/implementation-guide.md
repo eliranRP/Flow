@@ -71,7 +71,6 @@ In CSS, every colour is `--color-<name>`, for example `--color-text-secondary`.
 | `tint` | #EEE6FD | #2A2045 | The one fill colour: pending card, pills, secondary button, skeletons |
 | `tint-strong` / `tint-pressed` | #D9CBF6 / #E7DAFD | #382A5E | tint-strong: the selected outline and row fill (the board); tint-pressed: the pressed state of tinted things |
 | `line` | #E7E2F0 | #2E2740 | 1px hairlines between rows, card and input borders |
-| `line-strong` | #DAD3E6 | #3A3350 | Strong hairline: a switch off, the dashed add row (new; the board uses it, no screen does yet) |
 | `outline-secondary` | #DAD3E6 | #382A5E (= tint-strong) | Secondary button border (new) |
 | `control-off` | #8F86A3 | #736A8C | Switch track when off, unchecked checkbox border, sheet grab handle (≥ 3:1) |
 | `control-border` | #8F86A3 | #736A8C | Borders of inputs, search fields, outlined chips, radio circles (≥ 3:1) |
@@ -101,8 +100,8 @@ In CSS, every colour is `--color-<name>`, for example `--color-text-secondary`.
 | `income` | #1A8048 | #62CB8D | Money in only, always with "+". Never with a minus, never on the band (0181) |
 | `signal` | #D23B2F | #FF8A80 | The one signal colour on a screen: a loss, a change that hurts, an invoice over 30 days. At most one per screen. New in 0181 |
 | `signal-soft` | #B9503F | #E8A598 | Soft signal fill or text beside `signal`. New in 0181 |
-| `pill-helps` | FLOW-372 | #4A4458 | Band change pill when the change helps. New in 0181 |
-| `pill-hurts` | FLOW-372 | #C3302B | Band change pill when the change hurts. New in 0181 |
+| `pill-helps` | #4A4458 | #4A4458 | Band change pill when the change helps. New in 0181 |
+| `pill-hurts` | #C3302B | #C3302B | Band change pill when the change hurts. New in 0181 |
 
 These component colours are also in `implementation-tokens.css`:
 

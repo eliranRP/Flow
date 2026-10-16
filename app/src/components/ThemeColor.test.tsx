@@ -39,7 +39,7 @@ describe("ThemeColor", () => {
 
     document.documentElement.removeAttribute("data-theme");
     await waitFor(() => {
-      expect(meta.content).not.toBe("#15111E");
+      expect(meta.content).toBe("#F6F4FA");
     });
     expect(meta.content).not.toBe("");
   });
