@@ -4,8 +4,8 @@ import { StoryRoute } from "../ui/story-route";
 import { SearchScreen, type SearchSample } from "./search";
 
 /**
- * FLOW-368: the transaction search, one field with סינון beside it, the checks before anything is
- * typed, and the results after. Invented data only. The play functions never focus the field.
+ * FLOW-323 option A and FLOW-402: the transaction search, field and chips at the bottom.
+ * Invented data only. The play functions never focus the field.
  */
 const meta = {
   title: "Screens/Search",
@@ -76,19 +76,13 @@ function Search({ entry, data = sample }: { entry: string; data?: SearchSample }
 }
 
 
-/** Nothing typed: the last searches and the three checks. */
-export const Start: Story = { render: () => <Search entry="/search" /> };
+/** Every line, newest first, with no text typed. */
+export const AllLines: Story = { render: () => <Search entry="/search" /> };
 
-/** Typed text: the count line, then the lines, newest first. */
+/** Typed text, tinted in each name it matches; the count line totals the shown rows. */
 export const Results: Story = { render: () => <Search entry="/search?q=חומרי" /> };
 
-/** The text names a project: its shortcut row comes first. */
-export const ProjectMatch: Story = { render: () => <Search entry="/search?q=וילה" /> };
-
-/** The filter sheet open over the results (dev query, for the board proofs). */
-export const FilterSheet: Story = { render: () => <Search entry="/search?q=חומרי&sheet=filters" /> };
-
-/** A picked period names its active chip (3 חודשים), which removes itself. */
+/** FLOW-351: a picked period names the chip with the shared sheet's own row (3 חודשים). */
 export const PeriodChip: Story = { render: () => <Search entry="/search?period=months3" /> };
 
 /** FLOW-402: opened from a project's "כל התנועות", with the project chip set. */
@@ -101,12 +95,12 @@ export const ExpensesWaiting: Story = { render: () => <Search entry="/search?dir
 export const NoResults: Story = { render: () => <Search entry="/search?q=מעליות" /> };
 export const NoResultsFiltered: Story = { render: () => <Search entry="/search?q=מעליות&dir=income" /> };
 
-/** A company with no lines yet: the checks still show, with no count. */
+/** A company with no lines yet. */
 export const NoLines: Story = { render: () => <Search entry="/search" data={{ ...sample, rows: [] }} /> };
 
 export const Loading: Story = { render: () => <Search entry="/search?q=חומרי" data={{ ...sample, phase: { kind: "loading" } }} /> };
 export const Failed: Story = { render: () => <Search entry="/search?q=חומרי" data={{ ...sample, phase: { kind: "error", offline: false } }} /> };
-export const Offline: Story = { render: () => <Search entry="/search?q=חומרי" data={{ ...sample, phase: { kind: "error", offline: true } }} /> };
+export const Offline: Story = { render: () => <Search entry="/search" data={{ ...sample, phase: { kind: "error", offline: true } }} /> };
 
 /** More lines than one page: the month head of the last month waits, and the count says the total. */
-export const MorePages: Story = { render: () => <Search entry="/search?dir=expense" data={{ ...sample, total: 120 }} /> };
+export const MorePages: Story = { render: () => <Search entry="/search" data={{ ...sample, total: 120 }} /> };

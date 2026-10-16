@@ -463,7 +463,6 @@ Don't:
 - Don't add a kicker or an inline layout to a new screen. The options are kept only until their last screen moves.
 
 ### 7.7 OrganizeChips
-- No screen builds this component now: FLOW-368 removed `organize-chips.tsx` when the search row, its only user, moved to the removable filter chips. The look below still holds for choice chips.
 - Chips group a screen's views or filters. One chip is always selected: the chips are not filters you can clear.
 - Look: suggested (`tint` fill, ✦ in `accent-text`, optional hint), outlined choice (`surface`, 1px `control-border`), selected (`tint-strong` fill with an `accent` border, no ✓), disabled (`disabled-text`).
 - Chips are 36px drawn, 14px inline padding, a full radius, a 44px hit area, and they wrap. Show at most about 4 chips, then "עוד…".

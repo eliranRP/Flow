@@ -120,13 +120,10 @@ afterEach(() => {
 });
 
 describe("Search screen (FLOW-323)", () => {
-  it("starts with the checks and no list, then lists every line once a check is picked (FLOW-368)", async () => {
+  it("lists every line newest first with no text, and counts them with no totals (FLOW-339 C6-6)", async () => {
     wrap("/search");
-    expect(await screen.findByText("שווה לבדוק")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /^חומרי בניין לדוגמה/ })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /^ממתינים לאישור/ }));
     expect(await screen.findByRole("link", { name: /^חומרי בניין לדוגמה/ })).toBeInTheDocument();
-    expect(searchCalls().some((call) => call.args.p_scope === "pending")).toBe(true);
+    expect(searchCalls()[0]?.args).toEqual({ p_scope: "all", p_limit: 50, p_offset: 0 });
     const status = screen.getByRole("status");
     expect(status).toHaveTextContent(/^2 תנועות$/);
     // The income line names its customer and waits for review, in words on the row.
@@ -136,7 +133,7 @@ describe("Search screen (FLOW-323)", () => {
 
   it("waits for typing to stop before it asks, and tints the match", async () => {
     wrap("/search");
-    await screen.findByText("שווה לבדוק");
+    await screen.findByRole("link", { name: /^חומרי בניין לדוגמה/ });
     const field = screen.getByRole("searchbox", { name: "חיפוש תנועות" });
     fireEvent.change(field, { target: { value: "ח" } });
     fireEvent.change(field, { target: { value: "חו" } });
@@ -153,30 +150,25 @@ describe("Search screen (FLOW-323)", () => {
     wrap(`/search?project=${PROJECT}`);
     await screen.findByRole("link", { name: /^חומרי בניין לדוגמה/ });
     expect(searchCalls()[0]?.args).toMatchObject({ p_project: PROJECT });
-    expect(await screen.findByRole("button", { name: "הסרת שיפוץ לדוגמה" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "שיפוץ לדוגמה" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("sends each filter in the sheet to the server, and each chip removes itself", async () => {
+  it("sends each chip to the server", async () => {
     wrap("/search");
-    await screen.findByText("שווה לבדוק");
-    fireEvent.click(screen.getByRole("button", { name: /^סינון/ }));
-    fireEvent.click(await screen.findByRole("radio", { name: "הוצאות" }));
-    fireEvent.click(screen.getByRole("button", { name: /^הצגת/ }));
+    await screen.findByRole("link", { name: /^חומרי בניין לדוגמה/ });
+    fireEvent.click(screen.getByRole("button", { name: "הוצאות" }));
     await waitFor(() => {
       expect(searchCalls().at(-1)?.args).toMatchObject({ p_direction: "expense" });
     });
-    fireEvent.click(screen.getByRole("button", { name: /^סינון/ }));
-    fireEvent.click(await screen.findByRole("switch", { name: "רק ממתינים לאישור" }));
-    fireEvent.click(screen.getByRole("button", { name: /^הצגת/ }));
+    fireEvent.click(screen.getByRole("button", { name: "לאישור" }));
     await waitFor(() => {
       expect(searchCalls().at(-1)?.args).toMatchObject({ p_direction: "expense", p_scope: "pending" });
     });
-    // Removing the type chip leaves the review filter on.
-    fireEvent.click(screen.getByRole("button", { name: "הסרת הוצאות" }));
+    // A second tap clears the chip.
+    fireEvent.click(screen.getByRole("button", { name: "הוצאות" }));
     await waitFor(() => {
       expect(searchCalls().at(-1)?.args).not.toHaveProperty("p_direction");
     });
-    expect(searchCalls().at(-1)?.args).toMatchObject({ p_scope: "pending" });
   });
 
   it("says nothing matched, with one way out", async () => {
@@ -207,18 +199,17 @@ describe("Search screen (FLOW-323)", () => {
     expect(await screen.findByRole("link", { name: /^חומרי בניין לדוגמה/ })).toBeInTheDocument();
   });
 
-  it("shows the checks, not an empty list, when a company has no lines yet", async () => {
+  it("says a company with no lines has none yet", async () => {
     page = { total: 0, expenses: [] };
     wrap("/search");
-    expect(await screen.findByText("שווה לבדוק")).toBeInTheDocument();
-    expect(screen.queryByText(/^לא מצאנו/)).not.toBeInTheDocument();
+    expect(await screen.findByText("עוד אין תנועות")).toBeInTheDocument();
   });
 
   it("shows a failed read with נסו שוב, which reads again", async () => {
     rpc.impl = (name) => (name === "search_transactions"
       ? Promise.resolve({ data: null, error: { message: "boom" } })
       : Promise.resolve({ data: name === "get_dashboard" ? dashboard : [], error: null }));
-    wrap("/search?dir=expense");
+    wrap("/search");
     const retry = await screen.findByRole("button", { name: "נסו שוב" });
     const before = searchCalls().length;
     rpc.impl = (name) => Promise.resolve({ data: name === "search_transactions" ? page : name === "get_dashboard" ? dashboard : [], error: null });
@@ -229,7 +220,7 @@ describe("Search screen (FLOW-323)", () => {
 
   it("loads the next page with עוד תנועות", async () => {
     page = { total: 51, expenses: Array.from({ length: 50 }, (_, i) => line(`p${String(i)}`)) };
-    wrap("/search?dir=expense");
+    wrap("/search");
     const more = await screen.findByRole("button", { name: "עוד תנועות" });
     expect(screen.getByRole("status")).toHaveTextContent(/^51 תנועות$/);
     page = { total: 51, expenses: [line("p50")] };
@@ -252,7 +243,7 @@ describe("Search screen (FLOW-323)", () => {
         { month: "2026-09", currency: "ILS", income_minor: 80_000, expense_minor: 0 },
       ],
     } as typeof page;
-    const { container } = wrap("/search?dir=expense");
+    const { container } = wrap("/search");
     expect(await screen.findByRole("button", { name: "עוד תנועות" })).toBeInTheDocument();
     const heads = [...container.querySelectorAll(".ui-month-head")];
     expect(heads).toHaveLength(2);
@@ -261,7 +252,7 @@ describe("Search screen (FLOW-323)", () => {
 
   it("draws a line the next page repeats once, and still ends the paging", async () => {
     page = { total: 51, expenses: Array.from({ length: 50 }, (_, i) => line(`p${String(i)}`)) };
-    wrap("/search?dir=expense");
+    wrap("/search");
     const more = await screen.findByRole("button", { name: "עוד תנועות" });
     // A new line landed between the reads, so the second page starts with the first page's last.
     page = { total: 51, expenses: [line("p49")] };
@@ -274,12 +265,12 @@ describe("Search screen (FLOW-323)", () => {
 
   it("sends no id the server would refuse from a hand-edited link", async () => {
     wrap("/search?project=p1&category=%3Cx%3E");
-    await screen.findByText("שווה לבדוק");
-    expect(searchCalls().every((call) => !("p_project" in call.args) && !("p_category" in call.args))).toBe(true);
+    await screen.findByRole("link", { name: /^חומרי בניין לדוגמה/ });
+    expect(searchCalls()[0]?.args).toEqual({ p_scope: "all", p_limit: 50, p_offset: 0 });
   });
 
   it("opens a line with the results as its prev and next list", async () => {
-    wrap("/search?dir=expense");
+    wrap("/search");
     const row = await screen.findByRole("link", { name: /^חומרי בניין לדוגמה/ });
     expect(row).toHaveAttribute("href", "/transactions/t1");
     fireEvent.click(row);
@@ -291,11 +282,11 @@ describe("Search screen (FLOW-323)", () => {
   it("focuses the field when the search icon opened it, and not on a link or Back", async () => {
     const { unmount } = wrap("/");
     fireEvent.click(screen.getByRole("link", { name: "חיפוש תנועות" }));
-    await screen.findByText("שווה לבדוק");
+    await screen.findByRole("link", { name: /^חומרי בניין לדוגמה/ });
     expect(screen.getByRole("searchbox", { name: "חיפוש תנועות" })).toHaveFocus();
     unmount();
     wrap("/search");
-    await screen.findByText("שווה לבדוק");
+    await screen.findByRole("link", { name: /^חומרי בניין לדוגמה/ });
     expect(screen.getByRole("searchbox", { name: "חיפוש תנועות" })).not.toHaveFocus();
   });
 });
