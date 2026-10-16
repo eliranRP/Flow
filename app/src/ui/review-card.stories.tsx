@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { ReviewCard } from "./review-card";
+import { ReviewCard, type ReviewSplitSummary } from "./review-card";
 import { jevReasonText, reviewFlagView, reviewPaidView, type JevReasonKind, type ReviewFlag } from "../review-copy";
 import { expect, userEvent, within } from "@storybook/test";
 import type { TxnMeta } from "../txn-meta";
@@ -40,12 +40,15 @@ type CardArgs = {
   paidOn?: string | null;
   /** The field rows open their pickers (chevrons), as on the review screen. */
   editable?: boolean;
+  /** FLOW-365: the source pill and the split summary. */
+  sourcePill?: string;
+  splitSummary?: ReviewSplitSummary;
 };
 
 function CardView({
   supplier, sourceLine, netAgorot, vatLine, project, category, confidence, reason, meta, currency, projectJev, categoryJev,
   splitParts, why, partyFilings = 5, matchingFilings = 3, flags, direction, missingBoth, projectNoneJev, filled,
-  receipts, paid, paidOn, editable,
+  receipts, paid, paidOn, editable, sourcePill, splitSummary,
 }: CardArgs) {
   const shared = reason === "unallocated_shared";
   const suggestion = project || category || projectNoneJev
@@ -74,6 +77,9 @@ function CardView({
       onProject={editable || projectJev || categoryJev || filled != null ? () => undefined : undefined}
       onCategory={editable || projectJev || categoryJev || filled != null ? () => undefined : undefined}
       splitParts={splitParts}
+      sourcePill={sourcePill}
+      splitSummary={splitSummary}
+      onSplit={splitSummary == null ? () => undefined : undefined}
       jevWhy={jevWhy}
       flag={reviewFlagView(flags, { direction, currency })}
       direction={direction}
@@ -401,3 +407,30 @@ export const SupplierThreeLines: Story = {
 /** FLOW-352 1 (cycle 11): beside the הצעה pill at 320 a long value wraps to a second line. Invented names. */
 const longValueCard = { ...OneCard.args, project: "וילה הדקלים", category: "חומרי גמר וצבע", editable: true };
 export const ValueWraps: Story = { name: "Stress: value on two lines beside הצעה", args: longValueCard };
+
+const usdSplit: ReviewSplitSummary = {
+  total: "$1,284.50",
+  parts: [
+    { key: "a", amount: "$340.00", project: "שיפוץ הרצל 12", category: "ציוד והשכרה" },
+    { key: "b", amount: "$420.00", project: "וילה רעננה", category: "חומרים" },
+    { key: "c", amount: "$524.50", project: "שיפוץ הרצל 12", category: "חומרים" },
+  ],
+};
+
+/** FLOW-365 states: a suggestion, no suggestion, a split summary and a photo, in USD. */
+export const ReviewStateSuggestion: Story = {
+  name: "Review state: suggestion",
+  args: { supplier: "חומרי בניין לדוגמה", sourceLine: "הוצאה · 12/10/2026", netAgorot: "-128450", currency: "USD", vatLine: "לפני מע״מ", project: "שיפוץ הרצל 12", category: "חומרים", projectJev: true, categoryJev: true, sourcePill: "שורת בנק" },
+};
+export const ReviewStateNoSuggestion: Story = {
+  name: "Review state: no suggestion",
+  args: { supplier: "חומרי בניין לדוגמה", sourceLine: "הוצאה · 12/10/2026", netAgorot: "-128450", currency: "USD", vatLine: "לפני מע״מ", sourcePill: "שורת בנק" },
+};
+export const ReviewStateSplit: Story = {
+  name: "Review state: split summary",
+  args: { supplier: "ציוד משותף לדוגמה", sourceLine: "הוצאה · 12/10/2026", netAgorot: "-128450", currency: "USD", vatLine: "לפני מע״מ", sourcePill: "שורת בנק", splitSummary: usdSplit },
+};
+export const ReviewStatePhoto: Story = {
+  name: "Review state: photo invoice",
+  args: { supplier: "מחסן לדוגמה", sourceLine: "חשבונית · 12/10/2026", netAgorot: "-64200", currency: "USD", vatLine: "לפני מע״מ", sourcePill: "חשבונית מצולמת" },
+};

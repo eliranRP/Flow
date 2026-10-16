@@ -1,5 +1,6 @@
 import type { ReviewRow } from "@flow/shared";
 import type { JevQueueData } from "../screens/jev-review";
+import type { ChangeChoice } from "../ui/change-sheet-copy";
 
 /**
  * In-memory review queue for Playwright. Imported only from a
@@ -8,56 +9,127 @@ import type { JevQueueData } from "../screens/jev-review";
  */
 let e2eOpen: ReviewRow[] | null = null;
 let e2eGone: ReviewRow[] = [];
-/** FLOW-309: `&rows=N` seeds N cards (5 by default), so the counter can step 9→10 or the queue can empty. */
-let seedSize = 5;
+/** FLOW-309: `&rows=N` seeds N cards (7 by default), so the counter can step 9→10 or the queue can empty. */
+let seedSize = 7;
 const listeners = new Set<() => void>();
 
 function notify(): void {
   for (const listener of listeners) listener();
 }
 
+/**
+ * FLOW-365: the seeded queue in USD with round, varied amounts and invented payees, in the board's
+ * order: two receipts and five bank lines (one income, one with no project), each its own date.
+ */
+type SeedSpec = {
+  supplier: string;
+  date: string;
+  minor: bigint;
+  source: "photo" | "mercury";
+  direction?: "income" | "expense";
+  project?: boolean;
+};
+const SEED: readonly SeedSpec[] = [
+  { supplier: "Cedar Hardware Co", date: "2026-10-08", minor: 128_450n, source: "photo" },
+  { supplier: "Ridge Plumbing Co", date: "2026-10-09", minor: 240_000n, source: "mercury" },
+  { supplier: "J. Ortega • שכר דירה", date: "2026-10-09", minor: 185_000n, source: "mercury", direction: "income" },
+  { supplier: "Maple Lumber", date: "2026-10-10", minor: 45_000n, source: "photo", project: false },
+  { supplier: "Coastal Water Co.", date: "2026-10-10", minor: 9_000n, source: "mercury" },
+  { supplier: "העברה לחיסכון לדוגמה", date: "2026-10-10", minor: 500_000n, source: "mercury" },
+  { supplier: "Quill Insurance Co", date: "2026-10-11", minor: 125_000n, source: "mercury" },
+];
+
 function seed(): ReviewRow[] {
-  const names: Array<readonly [string, string]> = [
-    ["r1", "מחסן הנמל"],
-    ["r2", "עגורני החוף"],
-    ["r3", "ברזל לדוגמה"],
-    ["r4", "צבע לדוגמה"],
-    ["r5", "חשמלאות לדוגמה"],
-  ];
-  for (let n = names.length + 1; n <= seedSize; n += 1) names.push([`r${String(n)}`, `ספק בדיקה ${String(n)}`]);
-  return names.slice(0, seedSize).map(([id, supplier]) => ({
-    id,
-    transaction_id: `t-${id}`,
-    description: supplier,
-    doc_date: "2026-09-29",
-    amount_net: -10_000n,
-    direction: "expense" as const,
+  const specs: SeedSpec[] = [...SEED];
+  for (let n = SEED.length + 1; n <= seedSize; n += 1) {
+    specs.push({ supplier: `ספק בדיקה ${String(n)}`, date: "2026-10-12", minor: BigInt(n) * 1_000n, source: "photo" });
+  }
+  return specs.slice(0, seedSize).map((spec, index) => {
+    const id = `r${String(index + 1)}`;
+    const income = spec.direction === "income";
+    return {
+      id,
+      transaction_id: `t-${id}`,
+      description: spec.supplier,
+      doc_date: spec.date,
+      amount_net: income ? spec.minor : -spec.minor,
+      currency: "USD",
+      direction: income ? "income" as const : "expense" as const,
+      reason: null,
+      project_id: spec.project === false ? null : "p1",
+      category_id: "c1",
+      project_name: spec.project === false ? null : "שיפוץ הרצל 12",
+      category_name: "חומרים",
+      project_suggested: false,
+      category_suggested: false,
+      supplier_name: spec.supplier,
+      doc_kind: spec.source === "photo" ? "invoice" : "bank",
+      source: spec.source,
+      auto_approved_today: 0,
+    };
+  });
+}
+
+/**
+ * FLOW-365: `&case=` seeds one card in a board state, in USD with round amounts and invented names:
+ * suggest (Jev's project and category), none (no suggestion), split (two parts, the summary on the
+ * card), photo (a photographed invoice).
+ */
+export type ReviewCase = "suggest" | "none" | "split" | "photo";
+let seedCase: ReviewCase | null = null;
+
+function caseRow(kind: ReviewCase): ReviewRow {
+  const base: ReviewRow = {
+    id: "r1",
+    transaction_id: "t-r1",
+    description: "Cedar Hardware Co",
+    doc_date: "2026-10-08",
+    amount_net: -128_450n,
+    currency: "USD",
+    direction: "expense",
     reason: null,
     project_id: "p1",
     category_id: "c1",
-    project_name: "הרצל",
+    project_name: "Maple Ridge",
     category_name: "חומרים",
-    project_suggested: false,
-    category_suggested: false,
-    supplier_name: supplier,
+    project_suggested: true,
+    category_suggested: true,
+    supplier_name: "Cedar Hardware Co",
     doc_kind: "invoice",
-    auto_approved_today: 0,
-  }));
+    source: "photo",
+    auto_approved_today: 12,
+  };
+  if (kind === "none") return { ...base, project_id: null, project_name: null, project_suggested: false, category_suggested: false, supplier_name: "Northwind Supply", source: "mercury" };
+  if (kind === "split") return { ...base, project_id: null, project_name: null, category_id: null, category_name: null, project_suggested: false, category_suggested: false, reason: null, pnl_role: "shared", share_count: 3, supplier_name: "Summit Equipment" };
+  if (kind === "photo") return { ...base, source: "photo", supplier_name: "Voltline Electric" };
+  return base;
+}
+
+/** The split parts a dev card shows (the live read is off in previews). */
+export function e2eSplitParts(transactionId: string | null | undefined): Array<{ project: string; category: string; amount: string; rest: boolean }> | null {
+  if (transactionId !== "t-r1" || seedCase !== "split") return null;
+  return [
+    { project: "שיפוץ הרצל 12", category: "ציוד והשכרה", amount: "$340.00", rest: false },
+    { project: "וילה רעננה", category: "חומרים", amount: "$420.00", rest: false },
+    { project: "שיפוץ הרצל 12", category: "חומרים", amount: "$524.50", rest: true },
+  ];
 }
 
 /** `size` is the page's request; without one, the queue already seeded stands (dismiss, restore). */
-function ensure(size?: number): ReviewRow[] {
-  if (e2eOpen == null || (size != null && size !== seedSize)) {
-    seedSize = size ?? 5;
+function ensure(size?: number, kind?: ReviewCase | null): ReviewRow[] {
+  const nextCase = kind ?? null;
+  if (e2eOpen == null || (size != null && size !== seedSize) || nextCase !== seedCase) {
+    seedSize = size ?? 7;
+    seedCase = nextCase;
     e2eGone = [];
-    e2eOpen = seed();
+    e2eOpen = nextCase != null ? [caseRow(nextCase), ...seed().slice(1)] : seed();
   }
   return e2eOpen;
 }
 
 /** The size belongs to the seeded queue: a page with another `rows` (or none, 5) seeds afresh. */
-export function currentRows(size?: number): ReviewRow[] {
-  return ensure(size != null && size > 0 ? size : 5);
+export function currentRows(size?: number, kind?: ReviewCase | null): ReviewRow[] {
+  return ensure(size != null && size > 0 ? size : 7, kind);
 }
 
 export function subscribe(listener: () => void): () => void {
@@ -68,7 +140,7 @@ export function subscribe(listener: () => void): () => void {
 }
 
 export function dismissE2eReview(id: string): void {
-  const open = ensure();
+  const open = ensure(undefined, seedCase);
   const row = open.find((item) => item.id === id);
   if (!row) return;
   e2eGone = [row, ...e2eGone];
@@ -87,8 +159,8 @@ export function restoreE2eReview(id: string): void {
 }
 
 export const e2eChangeSample = {
-  supplier: "מחסן הנמל",
-  amount: "₪100",
+  supplier: "Harbor Hardware",
+  amount: "$1,200",
   projectId: "p1",
   categoryId: "c1",
   suggestionId: "p1",
@@ -135,6 +207,27 @@ export const e2eFitJev: JevQueueData = {
       project: { id: "p1", name: "הרצל" },
       category: { id: "c1", name: "חומרים" },
       why: { reason: "usual_for_party", partyFilings: 5, matchingFilings: 4 },
+    },
+  },
+};
+
+/** The project list the picker sheet shows in a preview (the live dashboard read is off there). Invented names. */
+export const e2eProjectChoices: ChangeChoice[] = [
+  { id: "p1", name: "שיפוץ הרצל 12", code: "P-12", status: "active" },
+  { id: "p2", name: "וילה רעננה", code: "P-07", status: "active" },
+  { id: "p3", name: "מחסן הנמל", code: "P-03", status: "finished" },
+];
+
+/** FLOW-365: the suggest case's Jev read: a supplier that repeats its project, so Jev's line sits under the card. */
+export const e2eSuggestJev: JevQueueData = {
+  connectorOn: true,
+  byId: {
+    "t-r1": {
+      suggestionId: "s-suggest",
+      transactionId: "t-r1",
+      project: { id: "p1", name: "שיפוץ הרצל 12" },
+      category: { id: "c1", name: "חומרים" },
+      why: { reason: "usual_for_party", partyFilings: 6, matchingFilings: 6 },
     },
   },
 };

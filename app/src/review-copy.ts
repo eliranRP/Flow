@@ -37,11 +37,16 @@ export function jevReasonText(
   info: JevReasonInfo,
   direction: "income" | "expense" | undefined,
   hasParty = true,
+  project?: string,
 ): CopyPart[] {
   switch (info.reason) {
     case "same_as_last":
       return ["כמו בפעם הקודמת"];
     case "usual_for_party":
+      // FLOW-365: with the project named, the board's line: "ספק חוזר: N החשבוניות הקודמות שלו הלכו ל־<project>."
+      if (project != null && project !== "") {
+        return [`Jev ${partyWord(direction)} חוזר: `, { num: String(info.matchingFilings) }, ` החשבוניות הקודמות שלו הלכו ל־${project}.`];
+      }
       return [
         "כמו ב־",
         { num: String(info.matchingFilings) },
