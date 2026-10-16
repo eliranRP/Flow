@@ -17,6 +17,8 @@ A push to a PR branch is checked in two places. `bash scripts/cloud-agent-instal
 
 The pull-request workflow runs no e2e specs, no Storybook build or layout specs, no perf specs, and no secrets. Those run on `main` after each merge (`ci`).
 
+CI v2 (in progress): `bash scripts/local-ci.sh --part ready` runs the static, types and tests slices at the same time, then writes the stamp for HEAD to `.git/flow-ci-stamp.md`: the full sha, each phase's result and seconds (`scripts/ci-stamp.mjs`). With `CI_STAMP_PR=<number>` it also posts the stamp as a comment on that PR. The e2e run, the clip-check and the board-proof script are not in it yet, and no GitHub check reads the stamp yet.
+
 `FLOW_LOCAL_CI=default git push` runs the scoped default gate on the pusher's machine instead (`bash scripts/local-ci.sh`). It also runs the e2e specs the change reaches, with Docker. `FLOW_LOCAL_CI=full git push`, or `bash scripts/local-ci.sh --full`, runs the full suite (about 12 minutes).
 
 - The tree must be clean. A default pass writes the commit sha to `.git/flow-local-ci`, so pushing the same commit again does not rerun it. A slice appends its gate-times line and writes no pass stamp.
@@ -194,7 +196,7 @@ The public anon key is already in `app/.env.production`. Do not add a `service_r
 
 ## Storybook preview
 
-`.github/workflows/storybook-preview.yml` (FLOW-809) builds the Storybook of every pull request head that touches the app. It runs on pull requests from this repository only; forks are skipped. The build gets sample Supabase settings from `app/.storybook/main.ts`, never `.env.production`. Before anything is published, `scripts/storybook-preview-keys.mjs` fails the job on the hosted project ref, a JWT, a Supabase API key or a flow-mcp token, and `check-jev-bundle.mjs` runs on the same build.
+`.github/workflows/storybook-preview.yml` (FLOW-809) builds the Storybook of every pull request head that touches the app, once the pull request is ready for review (FLOW-837): pushes to a draft skip it. It runs on pull requests from this repository only; forks are skipped. The build gets sample Supabase settings from `app/.storybook/main.ts`, never `.env.production`. Before anything is published, `scripts/storybook-preview-keys.mjs` fails the job on the hosted project ref, a JWT, a Supabase API key or a flow-mcp token, and `check-jev-bundle.mjs` runs on the same build.
 
 The workflow deploys to the Cloudflare Pages project `flow-storybook` (created on the first run) under the branch `pr-<number>`, so each pull request keeps one link that follows its newest push. One comment on the pull request, from `github-actions[bot]`, carries the link and the stories the pull request changed; each push updates it.
 
