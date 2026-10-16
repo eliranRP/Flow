@@ -114,7 +114,7 @@ const unpaidMatchSchema = z.object({
   date: z.string(),
   account_name: z.string(),
   raw_description: z.string(),
-  amount_agorot: agorotSchema,
+  amount_minor: agorotSchema,
 });
 
 export const unpaidRowSchema = z.object({
@@ -134,7 +134,7 @@ export const unpaidRowSchema = z.object({
   /** FLOW-335. The SUMIT document link (pay.sumit.co.il), null until a sync reads it. */
   document_url: z.string().nullable().optional(),
   /** FLOW-367. Whole days since the document's date. */
-  days_open: z.number().int().nonnegative().optional(),
+  days_open: z.number().int().optional(),
   /** FLOW-367. The deposit to offer, null when none (and when the invoice is marked). */
   match: unpaidMatchSchema.nullable().optional(),
 });
