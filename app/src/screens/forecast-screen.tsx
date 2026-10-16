@@ -91,7 +91,8 @@ function ForecastSection({
   );
 }
 
-export function ForecastScreen({ sample }: { sample?: ForecastSample } = {}) {
+/** `openFirst` opens the change sheet on the first income row (the dev route's sheet frame, FLOW-141). */
+export function ForecastScreen({ sample, openFirst = false }: { sample?: ForecastSample; openFirst?: boolean } = {}) {
   const toast = useToast();
   const live = sample == null;
   const today = sample?.today ?? israelToday();
@@ -152,6 +153,12 @@ export function ForecastScreen({ sample }: { sample?: ForecastSample } = {}) {
   }
 
   const income = build?.income ?? [];
+  const firstIncome = income[0];
+  useEffect(() => {
+    if (openFirst && firstIncome != null) setOpen(firstIncome);
+    // Only on mount of the dev route: the sample is fixed for the page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openFirst]);
   const expense = build?.expense ?? [];
   const moved = build?.moved ?? [];
 

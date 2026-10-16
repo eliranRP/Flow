@@ -26,10 +26,10 @@ describe("ForecastScreen", () => {
     renderWithProviders(<ForecastScreen sample={monthForecastSample("negative")} />, { route: "/forecast" });
     const big = document.querySelector(".ui-forecast-big bdi");
     expect(big?.getAttribute("dir")).toBe("ltr");
-    expect(big?.textContent?.startsWith("₪")).toBe(true);
+    expect(big?.textContent.startsWith("₪")).toBe(true);
     const today = document.querySelector(".ui-forecast-today bdi");
     expect(today?.getAttribute("dir")).toBe("ltr");
-    expect(today?.textContent?.startsWith("−₪")).toBe(true);
+    expect(today?.textContent.startsWith("−₪")).toBe(true);
   });
 
   it("opens the change sheet from a row", () => {
