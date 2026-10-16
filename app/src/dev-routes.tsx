@@ -361,11 +361,13 @@ export function DevCashLines() {
   // FLOW-366: ?pending=1 flags the first line for review and the second as out of profit.
   const flagged = params.get("pending") === "1";
   if (params.get("board") === "1") {
-    // The board frame: an invented USD company with the board's amounts and pending rows.
-    const board = sampleBoardCashMonths();
+    // The board frame: an invented USD company with the board's amounts and pending rows, dated as the board
+    // draws them (today is 11/10 there), so the day titles and the rows' dates match the frame.
+    const boardToday = new Date(2026, 9, 11, 12);
+    const board = sampleBoardCashMonths(boardToday);
     return (
       <CashLinesScreen
-        sample={{ months: board, lines: sampleBoardCashLines(side === "in" ? "in" : "out") }}
+        sample={{ months: board, lines: sampleBoardCashLines(side === "in" ? "in" : "out", boardToday) }}
         at={{ month: cashMonthKey(board.months[0]?.month ?? ""), side, currency: "USD" }}
       />
     );
