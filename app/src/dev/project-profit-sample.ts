@@ -44,10 +44,10 @@ export const JUNIPER_PROFIT: ProjectProfitSample = {
     base_currency: "USD",
     budget_agorot: null,
     income_agorot: 7_605_000n,
-    direct_agorot: 5_457_000n,
+    direct_agorot: 5_457_040n,
     shared_agorot: 0n,
-    profit_agorot: 2_148_000n,
-    by_currency: [{ currency: "USD", income_minor: 7_605_000n, direct_minor: 5_457_000n, shared_minor: 0n, profit_minor: 2_148_000n }],
+    profit_agorot: 2_147_960n,
+    by_currency: [{ currency: "USD", income_minor: 7_605_000n, direct_minor: 5_457_040n, shared_minor: 0n, profit_minor: 2_147_960n }],
     overhead_weighted: true,
     overhead_share_minor: 304_000n,
     after_overhead: true,
@@ -71,7 +71,7 @@ export const JUNIPER_PROFIT: ProjectProfitSample = {
     after_overhead: true,
     base_currency: "USD",
     months: MONTHS,
-    by_currency: [{ currency: "USD", income_minor: 7_605_000n, expense_minor: 5_457_000n, profit_minor: 2_148_000n }],
+    by_currency: [{ currency: "USD", income_minor: 7_605_000n, expense_minor: 5_457_040n, profit_minor: 2_147_960n }],
   } satisfies NonNullable<ProfitMonths>,
 };
 
