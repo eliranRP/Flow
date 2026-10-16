@@ -54,6 +54,21 @@ const cashTotalRowSchema = z.object({
 });
 
 /**
+ * FLOW-364. `cash_month_to_day`: one month's נכנס and יצא up to a day of it, per currency (rows
+ * with no money in or out are absent; a missing base currency reads as 0). Home's
+ * "שינוי מול <previous month>, עד ה־<day>" compares it with the current month's figures.
+ */
+export const cashToDaySchema = z.array(
+  z.object({
+    currency: currencySchema,
+    in_minor: minorSchema,
+    out_minor: minorSchema,
+  }),
+);
+
+export type CashToDay = z.infer<typeof cashToDaySchema>;
+
+/**
  * FLOW-417 (decision 0174). `cash_years`: the net, in and out since the first cash month
  * (by_currency) and per year, newest first, through this month. first_month is null when the
  * books hold no cash line yet.

@@ -1,6 +1,6 @@
 <a id="flow-832"></a>
 # FLOW-832 · Push to checks done in 2 minutes
-- **Type:** INFRA · **Status:** claimed (fast cycle lane, 2026-10-15, claude/project-thread-zozsvp) · **Depends on:** — · **Source:** owner, 2026-10-15: code push to finished CI checks takes no more than 2 minutes; plan approved on a card 18:34Z.
+- **Type:** INFRA · **Status:** done (#599) · **Depends on:** — · **Source:** owner, 2026-10-15: code push to finished CI checks takes no more than 2 minutes; plan approved on a card 18:34Z.
 - [ ] The pre-push hook runs the quick part of `scripts/local-ci.sh` (`--part quick`) in 20 s or less: eslint on the files the branch changes, with no importer walk, no Docker, no install unless `pnpm-lock.yaml` changed, no build and no tests.
 - [ ] A `pull_request` workflow (`.github/workflows/pr.yml`) runs the rest on GitHub as parallel jobs: static (eslint on the changed files and the files that import them, the typecheck, the migration and static checks, the unused-code and CSS checks), the related app unit and Storybook vitest tests in three shards, and pgTAP with the db types check when `supabase/` changes. e2e, perf, the Storybook build and the every-story specs run on `main` after every merge, and the next merge waits for `main` to be green. A UI or server PR's `pr` check finishes in 2 minutes or less after the push; a migration PR is the one exception, about 4.
 - [x] `main` runs the full suite on every merge; the deploy stays batched every 5 merges.
