@@ -79,7 +79,7 @@
 }
 
 .ui-forecast-section {
-  margin-top: var(--space-section);
+  margin-top: var(--space-6);
 }
 
 .ui-forecast-section-head {
@@ -125,7 +125,6 @@
   min-height: var(--row-height);
   padding: var(--space-2) 0;
   border: 0;
-  border-bottom: 1px solid var(--color-line);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -137,10 +136,11 @@
   display: inline-grid;
   place-items: center;
   flex: none;
-  width: 32px;
-  height: 32px;
+  width: var(--avatar);
+  height: var(--avatar);
   border-radius: var(--radius-chip);
-  background: var(--color-tint);
+  background: var(--color-raised);
+  color: var(--color-text-secondary);
   font-size: var(--type-meta-size);
 }
 
