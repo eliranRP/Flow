@@ -55,15 +55,16 @@ button.ui-tab-slot {
   font-weight: var(--type-micro-weight);
   text-decoration: none;
   border-radius: var(--radius-chip);
-  transition: background-color var(--motion-press), color var(--motion-press);
+  transition: color var(--motion-press) var(--ease-linear), opacity var(--motion-press) var(--ease-standard);
 }
 
 .ui-tab-slot[aria-current="page"] {
   color: var(--color-accent-text);
 }
 
-.ui-tab-slot:active {
-  background: var(--color-tint-pressed);
+/* FLOW-363 (3c): a press dims the tab, with no tint behind it. The FAB slot keeps its own press. */
+.ui-tab-slot:not(.ui-tab-slot-fab):active {
+  opacity: .72;
 }
 
 .ui-tab-slot-fab {
