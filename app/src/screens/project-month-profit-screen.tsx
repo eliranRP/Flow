@@ -157,5 +157,5 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
 /** A group's sum on the page's side: a plus on profit, a minus on a loss. */
 function GroupSum({ total, currency }: { total: bigint; currency: string }) {
   const sign = total < 0n ? "−" : total > 0n ? "+" : "";
-  return <bdi className="t-line2 ui-lines-group-sum" dir="ltr">{`${sign}${formatAmountText(total < 0n ? -total : total, currency, { detail: true })}`}</bdi>;
+  return <bdi className="t-line2 ui-lines-group-sum" dir="ltr">{`${sign}${formatAmountText(total < 0n ? -total : total, currency)}`}</bdi>;
 }
