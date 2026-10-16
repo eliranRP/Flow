@@ -28,7 +28,7 @@ const line: ProjectWaitingRow = {
 };
 
 const rows: ProjectWaitingRow[] = [
-  { ...line, transaction_id: "t-bank", description: "Home Depot #4471 Example City", source: "mercury" },
+  { ...line, transaction_id: "t-bank", description: "חומרי בניין לדוגמה #4471", source: "mercury" },
   { ...line, transaction_id: "t-out", description: "ריבית הלוואה לדוגמה", doc_date: "2026-10-03", amount_net: 41_000n, kept_out: true },
   line,
 ];
