@@ -44,6 +44,8 @@ describe("chargeMark (FLOW-366)", () => {
   it("marks a charge only from 20% either way, and only the bad way in red", () => {
     expect(chargeMark(12_700n, 10_000n, false)).toMatchObject({ arrow: "▲", percent: "27%", hurts: true });
     expect(chargeMark(12_700n, 10_000n, true)).toMatchObject({ arrow: "▲", percent: "27%", hurts: false });
+    // A 26.5% rise reads as 27%, the board's rounding, not 26% by truncation.
+    expect(chargeMark(124_000n, 98_000n, false)).toMatchObject({ arrow: "▲", percent: "27%" });
     expect(chargeMark(8_000n, 10_000n, false)).toMatchObject({ arrow: "▼", hurts: false });
     expect(chargeMark(10_900n, 10_000n, false)).toBeNull();
     expect(chargeMark(10_000n, 0n, false)).toBeNull();

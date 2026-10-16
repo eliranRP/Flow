@@ -62,7 +62,7 @@ export function chargeMark(amount: bigint, typical: bigint, income: boolean): { 
   const size = absAgorot(amount);
   const usual = absAgorot(typical);
   if (usual === 0n) return null;
-  const pct = Number(((size - usual) * 100n) / usual);
+  const pct = Math.round((Number(size - usual) * 100) / Number(usual));
   if (Math.abs(pct) < MARK_FROM_PERCENT) return null;
   const up = pct > 0;
   return { arrow: up ? "▲" : "▼", percent: `${String(Math.abs(pct))}%`, hurts: income ? !up : up };

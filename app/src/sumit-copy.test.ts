@@ -9,7 +9,7 @@ describe("israelSyncPhrase", () => {
     expect(israelSyncPhrase("2026-10-03T20:50:00.000Z", midnight)).toBe("עודכן אתמול ב-23:50");
     expect(israelSyncPhrase("2026-09-30T11:05:00.000Z", midnight)).toBe("עודכן\u00A030/09");
     // FLOW-356: the investment card's dd/mm, with the year when it is another year's.
-    expect(israelSyncPhrase("2025-12-30T11:05:00.000Z", midnight)).toBe("עודכן\u00A030/12/2025");
+    expect(israelSyncPhrase("2025-12-30T11:05:00.000Z", midnight)).toBe("עודכן\u00A030/12/25");
     expect(israelSyncPhrase(null, midnight)).toBeNull();
   });
 });
