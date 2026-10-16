@@ -4,8 +4,8 @@ import { RadioRow } from "./radio-row";
 export type RoleChoiceValue = "viewer" | "editor";
 
 export const ROLE_CHOICE_LABEL: Record<RoleChoiceValue, string> = { viewer: "צופה", editor: "עורך" };
-/** The owner's pick (2026-10-09): צופה is "צפייה בלבד". */
-export const ROLE_CHOICE_HINT: Record<RoleChoiceValue, string> = { viewer: "צפייה בלבד", editor: "יכול לשייך ולשנות" };
+/** The invite sheet's lines under each role (FLOW-512, the board's). */
+export const ROLE_CHOICE_HINT: Record<RoleChoiceValue, string> = { viewer: "רואה הכל, לא משנה כלום", editor: "יכול לשייך, לאשר ולשנות" };
 const ORDER: readonly RoleChoiceValue[] = ["viewer", "editor"];
 
 /**

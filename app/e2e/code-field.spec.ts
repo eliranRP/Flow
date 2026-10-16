@@ -2,13 +2,12 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 
 test.use({ hasTouch: true });
 
-async function openCode(page: Page) {
-  await page.goto("/e2e/connections?preview=1&e2e=stack");
-  await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
-  await page.getByRole("button", { name: "יצירת קוד" }).click();
-  const code = page.getByRole("dialog", { name: "הקוד מוכן" });
-  await expect(code).toBeVisible();
-  return code;
+/** Opens the AI page on the dev fixture, picks an assistant (Claude Code by default), and mints a code. */
+async function openCode(page: Page, assistant?: string) {
+  await page.goto("/e2e/connections/ai");
+  if (assistant != null) await page.getByRole("radio", { name: assistant, exact: true }).click();
+  await page.getByRole("button", { name: "יצירת קוד", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: assistant === "אחר" ? "כותרת" : "פקודת חיבור" })).toBeVisible();
 }
 
 async function touchSwipe(page: Page, field: Locator) {
@@ -78,13 +77,12 @@ async function swipeEndAndClear(page: Page, field: Locator) {
 for (const width of [320, 390]) {
   test(`a touch swipe scrolls the code field and End reaches the end at ${String(width)}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
-    const code = await openCode(page);
-    await swipeEndAndClear(page, code.getByRole("textbox", { name: "כתובת" }));
-    await swipeEndAndClear(page, code.getByRole("textbox", { name: "קוד" }));
+    await openCode(page, "אחר");
+    await swipeEndAndClear(page, page.getByRole("textbox", { name: "כתובת שרת MCP" }));
+    await swipeEndAndClear(page, page.getByRole("textbox", { name: "כותרת" }));
 
-    await code.getByRole("button", { name: "איך מחברים ב־Claude" }).click();
-    const help = page.getByRole("dialog", { name: "איך מחברים ב־Claude" });
-    const command = help.getByRole("textbox", { name: "פקודת חיבור ל־Claude Code" });
+    await openCode(page);
+    const command = page.getByRole("textbox", { name: "פקודת חיבור" });
     await swipeEndAndClear(page, command);
 
     await command.evaluate((input: HTMLInputElement) => {

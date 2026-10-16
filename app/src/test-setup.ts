@@ -73,7 +73,7 @@ afterEach(() => {
 
 // Radix's FocusScope dispatches its unmount event on a 0 ms timer. Left for after the file, it fires
 // once jsdom is torn down and fails the run with "parameter 1 is not of type 'Event'" (red main on
-// d5365c0, sumit-row-nav.test.tsx). One real tick at the end of each file lets it run first (a file
+// d5365c0, a SUMIT row suite). One real tick at the end of each file lets it run first (a file
 // that left fake timers on would never see it).
 afterAll(() => {
   vi.useRealTimers();

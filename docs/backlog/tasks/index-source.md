@@ -219,6 +219,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-213
 - FLOW-214
 - FLOW-215
+- FLOW-515
 
 ## Transactions and app UX
 
@@ -363,6 +364,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-512
 - FLOW-513
 - FLOW-514
+
+- FLOW-918
 
 ## Multi-company and team
 

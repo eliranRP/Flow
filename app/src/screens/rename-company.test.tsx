@@ -7,6 +7,7 @@ import * as supabaseModule from "../lib/supabase";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { ViewerPreview } from "../use-is-viewer";
+import { BusinessScreen } from "./business-screen";
 import { SettingsScreen } from "./flow-screens";
 import {
   companyNameError,
@@ -68,7 +69,7 @@ function FocusHarness() {
 }
 
 function field(): HTMLInputElement {
-  return within(screen.getByRole("dialog", { name: "שם העסק" })).getByLabelText("שם");
+  return within(screen.getByRole("dialog", { name: "שם העסק" })).getByLabelText("השם כפי שיופיע");
 }
 
 afterEach(() => {
@@ -162,13 +163,14 @@ describe("rename company sheet", () => {
     expect(calls).toHaveLength(0);
   });
 
-  it("closes without a write when the name did not change", async () => {
+  it("keeps שמירה off when the name did not change, so nothing is written", async () => {
     const calls = mockRpc(() => ({ error: null }));
     wrap(<Harness />);
     fireEvent.change(field(), { target: { value: " אלפא " } });
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
-    await screen.findByText("closed");
+    expect(screen.getByRole("button", { name: "שמירה" })).toBeDisabled();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
     expect(calls).toHaveLength(0);
+    expect(screen.getByText("open")).toBeInTheDocument();
   });
 
   it("keeps the sheet and the typed name when the save fails", async () => {
@@ -204,20 +206,20 @@ describe("rename company sheet", () => {
   });
 });
 
-describe("settings business row", () => {
+describe("business page name row (FLOW-512)", () => {
   const sample = { name: "אלפא", connected: false, companyId: null, lastError: null, email: "owner@example.com" };
 
   it("opens the rename sheet from the business row for an owner", () => {
-    wrap(<SettingsScreen sample={sample} />);
+    wrap(<BusinessScreen sample={sample} />);
     const row = screen.getByRole("button", { name: "שם העסק: אלפא" });
     fireEvent.click(row);
     const sheet = screen.getByRole("dialog", { name: "שם העסק" });
-    expect(within(sheet).getByLabelText("שם")).toHaveValue("אלפא");
+    expect(within(sheet).getByLabelText("השם כפי שיופיע")).toHaveValue("אלפא");
   });
 
   it("toasts instead of saving in a sample", async () => {
     const calls = mockRpc(() => ({ error: null }));
-    wrap(<SettingsScreen sample={sample} />);
+    wrap(<BusinessScreen sample={sample} />);
     fireEvent.click(screen.getByRole("button", { name: "שם העסק: אלפא" }));
     fireEvent.change(field(), { target: { value: "בטא" } });
     act(() => {
@@ -228,9 +230,9 @@ describe("settings business row", () => {
     expect(calls).toHaveLength(0);
   });
 
-  it("closes the rename sheet on browser Back and stays on Settings", async () => {
+  it("closes the rename sheet on browser Back and stays on the business page", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const router = createMemoryRouter([{ path: "*", element: <SettingsScreen sample={sample} /> }], { initialEntries: ["/", "/settings"], initialIndex: 1 });
+    const router = createMemoryRouter([{ path: "*", element: <BusinessScreen sample={sample} /> }], { initialEntries: ["/", "/settings/business"], initialIndex: 1 });
     render(
       <QueryClientProvider client={client}>
         <ToastProvider>
@@ -246,13 +248,13 @@ describe("settings business row", () => {
     await act(async () => { await router.navigate(-1); });
     act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
     await waitFor(() => { expect(screen.queryByRole("dialog", { name: "שם העסק" })).not.toBeInTheDocument(); });
-    expect(router.state.location.pathname).toBe("/settings");
+    expect(router.state.location.pathname).toBe("/settings/business");
   });
 
   it("keeps the business row static for a viewer", () => {
     wrap(
       <ViewerPreview>
-        <SettingsScreen sample={sample} />
+        <BusinessScreen sample={sample} />
       </ViewerPreview>,
     );
     expect(screen.getByText("אלפא")).toBeInTheDocument();
@@ -260,10 +262,10 @@ describe("settings business row", () => {
     expect(screen.getByText("אלפא").closest("button")).toBeNull();
   });
 
-  it("shows no business row without a company", () => {
+  it("shows no business link in the menu without a company", () => {
     wrap(<SettingsScreen sample={{ ...sample, name: null, noCompany: true }} />);
+    expect(screen.queryByRole("link", { name: /^העסק/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /שם העסק/ })).not.toBeInTheDocument();
-    expect(screen.getByText("owner@example.com")).toBeInTheDocument();
   });
 });
 

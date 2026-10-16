@@ -1,30 +1,34 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { onlineManager, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRefreshingNow } from "../israel-clock";
 import { getSupabase } from "../lib/supabase";
 import { claudeCodeCommand, flowMcpUrl } from "../mcp-address";
 import { israelUsePhrase } from "../sumit-copy";
-import { popSheetLayers, useSheetHistory } from "../ui/back";
-import { useFocusRowAfterRetry } from "../ui/focus-retry";
-import { Button } from "../ui/button";
-import { ConfirmSheet } from "../ui/confirm-sheet";
-import { CodeField, type CopyTarget } from "../ui/code-field";
-import { AlertIcon, LogoutIcon, SparkIcon } from "../ui/icons";
-import { FormError, SectionHead } from "../ui/layout";
-import { List, ListRow } from "../ui/list-row";
-import { RadioRow } from "../ui/radio-row";
-import { Sheet } from "../ui/sheet";
-import { ConnectorRow } from "../ui/connector-row";
-import { TextLink } from "../ui/text-link";
+import { useHomePreview, usePreviewSearch } from "../preview";
+import { useDashboardQuery } from "../use-books";
+import { useHoldOwnerSettings, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { useToast } from "../ui/toast";
+import { Button } from "../ui/button";
+import { CodeField, type CopyTarget } from "../ui/code-field";
+import { ConfirmSheet } from "../ui/confirm-sheet";
+import { ConnectionFacts, ConnectionHead, ConnectionNote, ConnectionPage, StepList } from "../ui/connection-page";
+import { FormError } from "../ui/layout";
+import { RadioRow } from "../ui/radio-row";
+import { ScreenState } from "../ui/screen-state";
+import { SegmentedControl } from "../ui/segmented-control";
+import { TextLink } from "../ui/text-link";
+import { useBlockedPreview } from "./screen-shared";
+import { screenPhase } from "../query-phase";
+import { LogoutIcon } from "../ui/icons";
 
 export type AssistantScope = "read" | "read_write";
+export type AssistantClient = "claude-code" | "claude-ai" | "chatgpt" | "other";
 
 export type AssistantSample = {
   state: "empty" | "loading" | "connected" | "expired" | "no-company" | "error";
   scope?: AssistantScope;
   lastUsedAt?: string | null;
+  expiresAt?: string | null;
   id?: string;
   error?: boolean;
 };
@@ -34,43 +38,43 @@ type Status = {
   id?: string;
   scope?: string[];
   last_used_at?: string | null;
+  expires_at?: string | null;
 };
 
 type Minted = { id: string; secret: string; scope: string[] };
 
-const MINT_ERROR = "לא הצלחנו להתחבר. נסו שוב.";
+/** The assistant choices, in the board's order. */
+const CLIENTS: Array<{ value: AssistantClient; label: string }> = [
+  { value: "claude-code", label: "Claude Code" },
+  { value: "claude-ai", label: "Claude.ai" },
+  { value: "chatgpt", label: "ChatGPT" },
+  { value: "other", label: "אחר" },
+];
+
+/** The three questions the board shows under "מה אפשר לשאול" (the project and supplier are invented). */
+export const EXAMPLE_QUESTIONS = [
+  "כמה הוצאתי על Elm Court החודש?",
+  "מה מהקבועים עוד לא הגיע?",
+  "שייך את כל Hardware Plus מהשבוע ל־Elm Court",
+];
+
+export const MINT_ERROR = "לא הצלחנו להתחבר. נסו שוב.";
 const MINT_REASON = "יוצרים קוד. אי אפשר לשנות עכשיו.";
-const INSTALL_HINT = "אם Claude Code לא מותקן, התקינו אותו קודם.";
-const SCOPE_INTRO = "בחרו מה העוזר יכול לעשות.";
-const SHOWN_ONCE = "הקוד מוצג פעם אחת.";
-const SCOPE_FIELD = "היקף הגישה";
-const CHANGE_SCOPE = "כדי לשנות את הגישה מנתקים ומחברים שוב.";
-const HELP_TITLE = "איך מחברים ב־Claude";
-const HELP_LEAD = "ב־Claude Code הריצו את הפקודה.";
-const CLAUDE_WEB = "ב־Claude.ai צריך כותרת מותאמת";
-const CLAUDE_HEADER = "Authorization: Bearer <הקוד>.";
+const CONNECTED_TOAST = "העוזר מחובר";
+const DISCONNECTED_TOAST = "העוזר נותק. הקוד הפסיק לעבוד";
+const EXPIRED_BOX = "הקוד פג אחרי 90 יום. צרו קוד חדש כדי להמשיך.";
+const CODE_NOTE = "הקוד מוצג פעם אחת ותקף ל־90 יום. אל תשתפו אותו.";
+const SCOPE_FIELD = "מה העוזר יכול לעשות";
+const CONNECTED_NOTE = "כל פעולה של העוזר נרשמת ואפשר לבטל אותה כמו כל שינוי אחר.";
+/** How often the page asks the server while the code is on screen, so the first call turns it to connected. */
+export const POLL_MS = 5000;
 
 function scopeChoice(scope: string[] | undefined): AssistantScope {
   return scope?.includes("write") ? "read_write" : "read";
 }
 
-const COMMAND_FIELD = "פקודת חיבור ל־Claude Code";
-
 function scopeLabel(scope: AssistantScope): string {
   return scope === "read" ? "קריאה בלבד" : "קריאה וכתיבה";
-}
-
-function scopeShownOnce(scope: AssistantScope): string {
-  return `גישה: ${scopeLabel(scope)}. ${SHOWN_ONCE}`;
-}
-
-function connectedHint(scope: AssistantScope): ReactNode {
-  return (
-    <>
-      מחובר
-      <span className="ui-nowrap">{` · ${scopeLabel(scope)}`}</span>
-    </>
-  );
 }
 
 async function readStatus(): Promise<Status> {
@@ -81,12 +85,13 @@ async function readStatus(): Promise<Status> {
   return response.data;
 }
 
-/** The assistant's status, shared by the Connections page and the Settings חיבורים hint (FLOW-501). */
-export function useAssistantStatusQuery(enabled: boolean) {
+/** The assistant's status, shared by the Connections page and the Settings חיבורים row (FLOW-501). */
+export function useAssistantStatusQuery(enabled: boolean, poll = false) {
   return useQuery({
     queryKey: ["mcp-status"],
     enabled,
     queryFn: readStatus,
+    refetchInterval: poll ? POLL_MS : false,
   });
 }
 
@@ -105,170 +110,163 @@ async function revokeCode(id: string): Promise<void> {
   if (response.error) throw new Error("revoke");
 }
 
-export function AssistantSettings({
+/** The steps and fields for the chosen assistant (board: SettingsMcpCode). */
+function clientSteps(client: AssistantClient): { steps: readonly string[]; fields: "command" | "url-header" } {
+  if (client === "claude-code") {
+    return { steps: ["פתחו טרמינל במחשב.", "הדביקו את הפקודה והריצו. היא מוסיפה את Flow כשרת MCP.", "פתחו את Claude Code מחדש."], fields: "command" };
+  }
+  if (client === "claude-ai") {
+    return { steps: ["ב־Claude.ai: הגדרות ← Connectors ← הוספת connector מותאם.", "הדביקו את כתובת השרת.", "בכותרת מותאמת הוסיפו Authorization עם הקוד."], fields: "url-header" };
+  }
+  if (client === "chatgpt") {
+    return { steps: ["ב־ChatGPT: הגדרות ← Connectors ← מצב מפתחים.", "הוסיפו שרת MCP והדביקו את הכתובת.", "באימות בחרו כותרת והדביקו את הקוד."], fields: "url-header" };
+  }
+  return { steps: ["בעוזר שלכם, הוסיפו שרת MCP מסוג HTTP.", "הדביקו את הכתובת ואת הכותרת."], fields: "url-header" };
+}
+
+/** The month the first question asks about, in Hebrew ("אוקטובר"). */
+export function currentMonthName(now = new Date()): string {
+  return new Intl.DateTimeFormat("he-IL", { month: "long" }).format(now);
+}
+
+/** A date in the board's dd/MM/yyyy, read in Israel time. */
+function expiryDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Jerusalem" }).format(date);
+}
+
+/**
+ * The AI connection page (FLOW-512, §1.6; was the "עוזר AI" sheet). Four faces: the setup
+ * (access, assistant, mint), the code once (steps and fields), connected (last use, expiry,
+ * new code, ניתוק), and expired. The code is shown once: leaving the page shows setup again.
+ */
+export function AiConnectionPage({
   sample,
   sampleSecret,
-  noCompany = false,
-  blocked,
   initialSecret,
-  initialOpen = false,
-  showHeading = true,
-  announceLoading = true,
-  readOnly = false,
-  viewerCopy = false,
+  initialClient = "claude-code",
+  blocked,
+  readOnly,
 }: {
   sample?: AssistantSample;
   /** A preview mint shows this secret. Stories and the dev route pass it. */
   sampleSecret?: string;
-  noCompany?: boolean;
-  blocked?: () => boolean;
   initialSecret?: Minted;
-  initialOpen?: boolean;
-  /** Settings puts this block under חיבורים, so the עוזר heading would repeat. */
-  showHeading?: boolean;
-  /** Settings already announced טוען… for the SUMIT row. */
-  announceLoading?: boolean;
-  /** A viewer sees the row and cannot open connect or details. */
+  initialClient?: AssistantClient;
+  blocked?: () => boolean;
+  /** Read-only for the viewer and editor: the page shows the state, not the actions. */
   readOnly?: boolean;
-  /** A confirmed viewer sees a neutral expired line. Loading stays on the short hint. */
-  viewerCopy?: boolean;
 }) {
-  const toast = useToast();
-  const navigate = useNavigate();
+  const preview = useHomePreview();
+  const search = usePreviewSearch();
   const client = useQueryClient();
-  const status = useAssistantStatusQuery(sample == null);
-  const [open, setOpen] = useState(initialSecret != null || initialOpen);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
+  const toast = useToast();
+  const localBlocked = useBlockedPreview();
+  const guard = blocked ?? localBlocked;
+  const holdOwner = useHoldOwnerSettings();
+  const dashboard = useDashboardQuery(sample == null);
+  const liveNoCompany = sample == null && preview === "off" && dashboard.isSuccess && dashboard.data.company_id == null;
+  const readonly = readOnly ?? holdOwner;
+  const disconnectFocus = useRef<HTMLElement | null>(null);
   const [now] = useRefreshingNow();
-  const [disconnectOpen, setDisconnectOpen] = useState(false);
-  const [choice, setChoice] = useState<AssistantScope>("read_write");
+  const [scope, setScope] = useState<AssistantScope>("read_write");
+  const [assistant, setAssistant] = useState<AssistantClient>(initialClient);
+  const [secret, setSecret] = useState<Minted | null>(initialSecret ?? null);
+  const [setupOpen, setSetupOpen] = useState(false);
   const [minting, setMinting] = useState(false);
   const [mintError, setMintError] = useState(false);
-  const [secret, setSecret] = useState<Minted | null>(initialSecret ?? null);
   const [manualField, setManualField] = useState<CopyTarget | null>(null);
+  const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [revoking, setRevoking] = useState(false);
-  const [intro, setIntro] = useState(false);
-  const [retrying, setRetrying] = useState(false);
-  const [hint, setHint] = useState("לא הצלחנו לטעון");
-  const [offlineNote, setOfflineNote] = useState(0);
-  const [hintNonce, setHintNonce] = useState(0);
-  const [focusRow, setFocusRow] = useState(false);
-  const rowRef = useRef<HTMLButtonElement>(null);
-  const retryRef = useRef<HTMLButtonElement>(null);
-  const disconnectRef = useRef<HTMLButtonElement>(null);
-  const helpLinkRef = useRef<HTMLButtonElement>(null);
-  const connectTitleRef = useRef<HTMLHeadingElement>(null);
-  const urlRef = useRef<HTMLInputElement>(null);
-  const commandRef = useRef<HTMLInputElement>(null);
-  const focusStep = useRef(false);
-  const hadSecret = useRef(initialSecret != null);
-  const openRef = useRef(initialSecret != null || initialOpen);
-  const secretRef = useRef<HTMLInputElement>(null);
-  const closeConnectRef = useRef<(next: boolean) => void>(() => undefined);
-  const connectCloseRef = useRef<(() => void) | null>(null);
-  const setDetailsSheet = useSheetHistory("assistant-details", detailsOpen, setDetailsOpen);
-  const setHelpSheet = useSheetHistory("assistant-help", helpOpen, setHelpOpen);
-  const setDisconnectSheet = useSheetHistory("assistant-disconnect", disconnectOpen, setDisconnectOpen);
-  const setConnectSheet = useSheetHistory("assistant-connect", open, (next) => {
-    closeConnectRef.current(next);
-  });
-
+  const status = useAssistantStatusQuery(sample == null && !liveNoCompany && preview === "off", secret != null);
   const live = status.data;
-  const paused = sample == null && !noCompany && status.fetchStatus === "paused" && status.data == null;
-  const failed = sample == null && (retrying || paused || (status.isError && status.data == null));
+  const mcpUrl = flowMcpUrl();
+  const command = secret != null && mcpUrl !== "" ? claudeCodeCommand(mcpUrl, secret.secret) : "";
+
+  // The first call (a last use on the new code) turns the code screen to connected, with a toast.
+  // A status that is already connected is not that: the new code is the newest row, so only its use counts.
+  const firstUse = secret != null && live != null && live.id === secret.id && live.last_used_at != null;
+  useEffect(() => {
+    if (!firstUse) return;
+    setSecret(null);
+    setSetupOpen(false);
+    toast.show({ message: CONNECTED_TOAST, tone: "info" });
+  }, [firstUse, toast]);
+
   const view: AssistantSample = sample
-    ? (sample.state === "error" || sample.error ? { ...sample, state: "error" } : sample)
-    : noCompany
+    ? sample
+    : liveNoCompany
       ? { state: "no-company" }
-      : failed
+      : status.isError && status.data == null
         ? { state: "error" }
         : live
-          ? {
-            state: live.state,
-            scope: scopeChoice(live.scope),
-            lastUsedAt: live.last_used_at,
-            id: live.id,
-          }
+          ? { state: live.state, scope: scopeChoice(live.scope), lastUsedAt: live.last_used_at, expiresAt: live.expires_at, id: live.id }
           : { state: "loading" };
-  const scope = view.scope ?? "read_write";
-  const showDisconnect = view.state === "connected" || view.state === "expired";
 
-  function closeSheet(next: boolean) {
-    openRef.current = next;
-    setOpen(next);
+  if (view.state === "loading" && sample == null) {
+    return <ScreenState title="חיבור ל־AI" kicker="חיבורים" backTo={`/settings/connections${search}`} phase={{ kind: "loading" }} onRetry={() => { void status.refetch(); }} />;
   }
-  closeConnectRef.current = closeSheet;
-
-  function finishConnectClose() {
-    const reopened = openRef.current;
-    setMintError(false);
-    setManualField(null);
-    setSecret(null);
-    setChoice("read_write");
-    if (!reopened) setIntro(false);
+  if (view.state === "error") {
+    return (
+      <ScreenState
+        title="חיבור ל־AI"
+        kicker="חיבורים"
+        backTo={`/settings/connections${search}`}
+        phase={{ kind: "error", offline: !navigator.onLine }}
+        onRetry={() => { void status.refetch(); }}
+      />
+    );
+  }
+  if (sample == null && dashboard.isLoading) {
+    return <ScreenState title="חיבור ל־AI" kicker="חיבורים" backTo={`/settings/connections${search}`} phase={screenPhase(preview, dashboard)} onRetry={() => { void dashboard.refetch(); }} />;
   }
 
   async function mint() {
-    if (minting) return;
-    if (blocked?.()) return;
+    if (minting || guard()) return;
     if (sample != null) {
       if (sampleSecret == null || sampleSecret === "") return;
-      setSecret({
-        id: "mcp-sample",
-        secret: sampleSecret,
-        scope: choice === "read" ? ["read"] : ["read", "write"],
-      });
+      setSecret({ id: "mcp-sample", secret: sampleSecret, scope: scope === "read" ? ["read"] : ["read", "write"] });
       return;
     }
     setMinting(true);
     setMintError(false);
     try {
-      const minted = await mintCode(choice);
-      if (!openRef.current) {
-        await revokeCode(minted.id);
-        await client.invalidateQueries({ queryKey: ["mcp-status"] });
-        return;
-      }
+      const minted = await mintCode(scope);
       setSecret(minted);
       await client.invalidateQueries({ queryKey: ["mcp-status"] });
     } catch {
-      if (openRef.current) setMintError(true);
+      setMintError(true);
     } finally {
       setMinting(false);
     }
   }
 
-  async function copyValue(field: CopyTarget, value: string, node: HTMLInputElement | null) {
+  async function copyValue(field: CopyTarget, value: string) {
     try {
       await navigator.clipboard.writeText(value);
       setManualField(null);
       toast.show({ tone: "info", message: "הועתק" });
     } catch {
-      if (node) {
-        node.focus();
-        node.select();
-      }
       setManualField(field);
     }
   }
 
   async function disconnect() {
-    if (!view.id || revoking) return;
-    if (blocked?.()) {
-      setDisconnectSheet(false);
+    if (view.id == null || revoking) return;
+    if (guard()) {
+      setDisconnectOpen(false);
       return;
     }
     setRevoking(true);
     try {
       await revokeCode(view.id);
       setDisconnectOpen(false);
-      if (view.state === "connected") setDetailsOpen(false);
-      else closeSheet(false);
-      popSheetLayers(navigate, 2);
-      toast.show({ tone: "info", message: "העוזר נותק." });
+      setSecret(null);
+      setSetupOpen(false);
+      toast.show({ tone: "info", message: DISCONNECTED_TOAST });
       await client.invalidateQueries({ queryKey: ["mcp-status"] });
-      setFocusRow(true);
     } catch {
       toast.show({ tone: "bad", message: "לא הצלחנו לנתק. נסו שוב." });
     } finally {
@@ -276,232 +274,173 @@ export function AssistantSettings({
     }
   }
 
-  useEffect(() => {
-    if (hintNonce === 0) return;
-    setHint("");
-    const id = window.setTimeout(() => {
-      setHint("לא הצלחנו לטעון");
-      const retry = retryRef.current;
-      const active = document.activeElement;
-      if (retry == null || active === retry) return;
-      if (active instanceof HTMLElement && active !== document.body && active !== document.documentElement) return;
-      retry.focus();
-    }, 30);
-    return () => { window.clearTimeout(id); };
-  }, [hintNonce]);
+  const scopeHint = (choice: AssistantScope) => (choice === "read" ? "העוזר רואה ועונה. לא משנה כלום." : "יכול גם לשייך, לאשר וליצור. כל שינוי נרשם וניתן לביטול.");
+  const useLine = view.lastUsedAt ? israelUsePhrase(view.lastUsedAt, now) : null;
+  const expires = expiryDate(view.expiresAt);
+  const connected = view.state === "connected" && secret == null && !setupOpen;
+  // An expired code shows its box and one button; the setup steps follow the button.
+  const expiredWaiting = view.state === "expired" && secret == null && !setupOpen;
+  const current = secret != null;
+  const showSetup = !connected && !expiredWaiting && !current;
+  const month = currentMonthName(new Date(now));
+  const headerSubtitle = "MCP · העוזר שלכם עובד עם הספרים של Flow";
+  const backTo = `/settings/connections${search}`;
 
-  useFocusRowAfterRetry(view.state === "error", retryRef, rowRef, view.state !== "error" && view.state !== "loading", hintNonce);
-
-  useEffect(() => onlineManager.subscribe((online) => {
-    if (online) setOfflineNote(0);
-  }), []);
-
-  useEffect(() => {
-    if (!focusStep.current || intro || !open || secret != null) return;
-    focusStep.current = false;
-    connectTitleRef.current?.focus();
-  }, [intro, open, secret]);
-
-  useLayoutEffect(() => {
-    const arrived = secret != null && !hadSecret.current;
-    hadSecret.current = secret != null;
-    if (!arrived || !open) return;
-    connectTitleRef.current?.focus();
-  }, [open, secret]);
-
-  useEffect(() => {
-    if (!focusRow) return;
-    if (rowRef.current == null) return;
-    const id = window.setTimeout(() => {
-      rowRef.current?.focus();
-      setFocusRow(false);
-    }, 0);
-    return () => { window.clearTimeout(id); };
-  }, [focusRow, view.state, status.data]);
-
-  function retryStatus() {
-    if (sample != null || retrying) return;
-    if (!onlineManager.isOnline()) {
-      setOfflineNote((nonce) => nonce + 1);
-      return;
-    }
-    setRetrying(true);
-    void status.refetch().then((result) => {
-      const stayed = document.activeElement === retryRef.current;
-      setRetrying(false);
-      if (result.fetchStatus === "paused" || !onlineManager.isOnline()) {
-        setOfflineNote((nonce) => nonce + 1);
-        return;
-      }
-      if (result.isError || result.data == null) {
-        setHintNonce((nonce) => nonce + 1);
-        return;
-      }
-      if (stayed) setFocusRow(true);
-    });
+  if (view.state === "no-company") {
+    return (
+      <ViewerScope>
+      <ConnectionPage title="חיבור ל־AI" subtitle={headerSubtitle} backTo={backTo}>
+        <div className="ui-stack">
+          <p>כדי לחבר עוזר צריך עסק.</p>
+          <TextLink to={`/onboarding?return=${encodeURIComponent(backTo)}`}>פרטי העסק</TextLink>
+        </div>
+      </ConnectionPage>
+      </ViewerScope>
+    );
+  }
+  if (readonly && !connected) {
+    return (
+      <ViewerScope>
+      <ConnectionPage title="חיבור ל־AI" subtitle={headerSubtitle} backTo={backTo}>
+        <ViewerNote />
+        <ConnectionNote>רק בעל העסק יכול לחבר את העוזר.</ConnectionNote>
+      </ConnectionPage>
+      </ViewerScope>
+    );
   }
 
-  const mcpUrl = flowMcpUrl();
-  const urlReady = mcpUrl !== "";
-  const command = secret != null && urlReady ? claudeCodeCommand(mcpUrl, secret.secret) : "";
-  const useLine = view.lastUsedAt ? israelUsePhrase(view.lastUsedAt, now) : null;
-  const spark = <SparkIcon size={24} />;
-  const rowHint: ReactNode = view.state === "no-company"
-    ? "אין עסק עדיין"
-    : view.state === "connected"
-      ? connectedHint(scope)
-      : view.state === "expired"
-        ? (readOnly ? (viewerCopy ? "לא מחובר כרגע" : "לא מחובר") : "צריך לחבר מחדש")
-        : "לא מחובר";
-  const row = (
-    <ConnectorRow
-      title="עוזר AI"
-      icon={spark}
-      state={view.state === "loading" ? "loading" : view.state === "error" ? "error" : "ready"}
-      hint={rowHint}
-      warning={view.state === "expired" && !readOnly}
-      ariaDisabled={view.state === "no-company"}
-      rowRef={rowRef}
-      retry={{
-        hint: (
-          <>
-            {hint}
-            {offlineNote > 0 ? <span className="sr-only">אין חיבור לאינטרנט</span> : null}
-          </>
-        ),
-        label: "ניסיון חוזר: עוזר AI",
-        busy: retrying,
-        retryRef,
-        onRetry: retryStatus,
-      }}
-      onOpen={readOnly ? undefined : view.state === "connected"
-        ? () => { setDetailsSheet(true); }
-        : view.state === "expired"
-          ? () => { setIntro(true); setConnectSheet(true); }
-          : () => { setIntro(false); setConnectSheet(true); }}
-    />
-  );
-
   return (
-    <>
-      {showHeading ? <SectionHead title="עוזר AI" /> : null}
-      {view.state === "loading" && announceLoading ? <p className="sr-only" role="status">טוען…</p> : null}
-      <List>
-        {row}
-      </List>
-      <Sheet open={open} onOpenChange={setConnectSheet} onClosed={finishConnectClose} onRequestClose={connectCloseRef} closeOnBackdrop={secret == null} title={secret != null ? "הקוד מוכן" : intro ? "עוזר AI" : "חיבור עוזר AI"} titleRef={connectTitleRef} returnFocusRef={rowRef}>
-        {secret ? (
-          <div className="ui-stack ui-assistant-step">
-            <p className="t-hint">{scopeShownOnce(scopeChoice(secret.scope))}</p>
-            <CodeField
-              label="כתובת"
-              labelId="assistant-url-label"
-              value={mcpUrl}
-              valueRef={urlRef}
-              failed={manualField === "url"}
-              copyLabel="העתקה: כתובת"
-              onCopy={() => { void copyValue("url", mcpUrl, urlRef.current); }}
+    <ViewerScope>
+    <ConnectionPage
+      title="חיבור ל־AI"
+      subtitle={headerSubtitle}
+      backTo={backTo}
+      problem={expiredWaiting ? EXPIRED_BOX : undefined}
+    >
+      <ViewerNote />
+      {connected ? (
+        <>
+          <div className="ui-settings-card ui-connection-card">
+            <p className="ui-ai-status">
+              <span className="ui-ai-status-name">מחובר</span>
+              <span className="ui-ai-status-scope">{scopeLabel(view.scope ?? "read_write")}</span>
+            </p>
+            <ConnectionFacts
+              rows={[
+                { label: "שימוש אחרון", value: useLine ?? "עדיין אין שימוש" },
+                ...(expires != null ? [{ label: "הקוד בתוקף עד", value: expires, ltr: true }] : []),
+              ]}
             />
-            <CodeField
-              label="קוד"
-              labelId="assistant-secret-label"
-              value={secret.secret}
-              valueRef={secretRef}
-              failed={manualField === "secret"}
-              copyLabel="העתקה: קוד"
-              onCopy={() => { void copyValue("secret", secret.secret, secretRef.current); }}
-            />
-            {urlReady ? (
-              <TextLink chevron={false} buttonRef={helpLinkRef} onClick={() => { setHelpSheet(true); }}>{HELP_TITLE}</TextLink>
-            ) : null}
-            <Button type="button" onClick={() => { connectCloseRef.current?.(); }}>סיום</Button>
           </div>
-        ) : intro ? (
-          <div className="ui-stack">
-            <List>
-              <ListRow
-                variant="static"
-                title="פג תוקף"
-                hint="הקוד הפסיק לעבוד אחרי 90 יום."
-                icon={<AlertIcon size={24} />}
-                tone="muted"
-                describeHint
-                wrapHint
-                heading
-              />
-            </List>
-            <Button type="button" onClick={() => { focusStep.current = true; setIntro(false); }}>חיבור מחדש</Button>
-          </div>
-        ) : (
-          <div className="ui-stack ui-assistant-step">
-            <p>{SCOPE_INTRO}</p>
-            <div role="radiogroup" aria-label={SCOPE_FIELD}>
-              <RadioRow
-                marker="start"
-                label="קריאה וכתיבה"
-                selected={choice === "read_write"}
-                disabled={minting}
-                onSelect={() => { setChoice("read_write"); }}
-              />
-              <RadioRow
-                marker="start"
-                label="קריאה בלבד"
-                selected={choice === "read"}
-                disabled={minting}
-                onSelect={() => { setChoice("read"); }}
-              />
+          <ConnectionNote>{CONNECTED_NOTE}</ConnectionNote>
+          {readonly ? null : (
+            <div className="ui-connection-actions">
+              <Button variant="secondary" onClick={() => { setSetupOpen(true); }}>יצירת קוד חדש</Button>
+              <Button variant="danger-link" icon={<LogoutIcon size={18} />} onClick={(event) => { disconnectFocus.current = event.currentTarget; setDisconnectOpen(true); }}>ניתוק</Button>
             </div>
-            {minting ? <p className="t-hint" id="assistant-mint-reason" role="status">{MINT_REASON}</p> : null}
-            {mintError ? <FormError>{MINT_ERROR}</FormError> : null}
-            <Button type="button" busy={minting} aria-describedby={minting ? "assistant-mint-reason" : undefined} onClick={() => { void mint(); }}>יצירת קוד</Button>
+          )}
+        </>
+      ) : null}
+      {expiredWaiting && !readonly ? (
+        <Button onClick={() => { setSetupOpen(true); }}>יצירת קוד חדש</Button>
+      ) : null}
+      {showSetup && !readonly ? (
+        <>
+          <div className="ui-settings-card ui-ai-questions">
+            <p className="ui-ai-questions-head">מה אפשר לשאול</p>
+            {EXAMPLE_QUESTIONS.map((question) => <p key={question} className="ui-ai-question">{question}</p>)}
           </div>
-        )}
-        {showDisconnect && view.id && view.state === "expired" ? (
-          <List>
-            <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={disconnectRef} onClick={() => { setDisconnectSheet(true); }} />
-          </List>
-        ) : null}
-      </Sheet>
-      <Sheet open={helpOpen} onOpenChange={setHelpSheet} title={HELP_TITLE} returnFocusRef={helpLinkRef}>
-        <div className="ui-stack">
-          <p>{HELP_LEAD}</p>
-          {command !== "" ? (
-            <CodeField
-              fieldLabel={COMMAND_FIELD}
-              value={command}
-              valueRef={commandRef}
-              failed={manualField === "command"}
-              copyLabel="העתקה: פקודה"
-              onCopy={() => { void copyValue("command", command, commandRef.current); }}
-            />
-          ) : null}
-          <p className="t-hint">{INSTALL_HINT}</p>
-          <p className="t-hint">{CLAUDE_WEB} <bdi dir="ltr" tabIndex={-1} className="ui-nowrap ui-assistant-header" data-vaul-no-drag="">{CLAUDE_HEADER}</bdi></p>
-        </div>
-      </Sheet>
-      <Sheet open={detailsOpen} onOpenChange={setDetailsSheet} title="עוזר AI" returnFocusRef={rowRef}>
-        <div className="ui-stack">
-          <div className="ui-assistant-status">
-            <p>{connectedHint(scope)}</p>
-            <p className={useLine != null ? "ui-nowrap" : undefined}>{useLine ?? "עדיין אין שימוש"}</p>
+              <ConnectionHead>1 · מה העוזר יכול לעשות</ConnectionHead>
+              <div role="radiogroup" aria-label={SCOPE_FIELD} className="ui-ai-scope">
+                <RadioRow
+                  label="קריאה בלבד"
+                  description={scopeHint("read")}
+                  marker="start"
+                  selected={scope === "read"}
+                  disabled={minting}
+                  onSelect={() => { setScope("read"); }}
+                />
+                <RadioRow
+                  label="קריאה וכתיבה"
+                  description={scopeHint("read_write")}
+                  marker="start"
+                  selected={scope === "read_write"}
+                  disabled={minting}
+                  onSelect={() => { setScope("read_write"); }}
+                />
+              </div>
+              <ConnectionHead>2 · באיזה עוזר</ConnectionHead>
+              <SegmentedControl<AssistantClient>
+                label="באיזה עוזר"
+                value={assistant}
+                disabled={minting}
+                options={CLIENTS}
+                onChange={(next) => { setAssistant(next); }}
+              />
+              <ConnectionHead>3 · מחברים</ConnectionHead>
+              <ConnectionNote>Flow ייצור קוד גישה אישי. הוא מוצג פעם אחת, כמו סיסמה.</ConnectionNote>
+              {minting ? <p className="t-hint" role="status">{MINT_REASON}</p> : null}
+              {mintError ? <FormError>{MINT_ERROR}</FormError> : null}
+              <Button busy={minting} onClick={() => { void mint(); }}>יצירת קוד</Button>
+        </>
+      ) : null}
+      {current ? (
+        <>
+          <ConnectionHead>1 · מה העוזר יכול לעשות</ConnectionHead>
+          <ConnectionNote>{`${scopeLabel(scopeChoice(secret.scope))}. ${scopeHint(scopeChoice(secret.scope))}`}</ConnectionNote>
+          <ConnectionHead>2 · {CLIENTS.find((item) => item.value === assistant)?.label ?? ""}</ConnectionHead>
+          <div className="ui-settings-card ui-connection-steps">
+            <StepList steps={clientSteps(assistant).steps} />
           </div>
-          <p className="t-hint">{CHANGE_SCOPE}</p>
-        </div>
-        <List>
-          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={disconnectRef} onClick={() => { setDisconnectSheet(true); }} />
-        </List>
-      </Sheet>
+          <div className="ui-ai-fields">
+            {clientSteps(assistant).fields === "command" ? (
+              <CodeField
+                label="פקודת חיבור"
+                labelId="ai-command-label"
+                value={command}
+                failed={manualField === "command"}
+                copyLabel="העתקה: פקודה"
+                onCopy={() => { void copyValue("command", command); }}
+              />
+            ) : (
+              <>
+                <CodeField
+                  label="כתובת שרת MCP"
+                  labelId="ai-url-label"
+                  value={mcpUrl}
+                  failed={manualField === "url"}
+                  copyLabel="העתקה: כתובת"
+                  onCopy={() => { void copyValue("url", mcpUrl); }}
+                />
+                <CodeField
+                  label="כותרת"
+                  labelId="ai-header-label"
+                  value={`Authorization: Bearer ${secret.secret}`}
+                  failed={manualField === "secret"}
+                  copyLabel="העתקה: כותרת"
+                  onCopy={() => { void copyValue("secret", `Authorization: Bearer ${secret.secret}`); }}
+                />
+              </>
+            )}
+          </div>
+          <ConnectionNote>{CODE_NOTE}</ConnectionNote>
+          <ConnectionHead>4 · בודקים</ConnectionHead>
+          <ConnectionNote>{`שאלו את העוזר: "מה מצב התזרים של ${month}?". כשהוא עונה, החיבור מוכן ויופיע כאן כמחובר.`}</ConnectionNote>
+          <Button onClick={() => { setSecret(null); setSetupOpen(false); }}>סיום</Button>
+        </>
+      ) : null}
       <ConfirmSheet
         open={disconnectOpen}
-        onOpenChange={setDisconnectSheet}
-        returnFocusRef={disconnectRef}
+        onOpenChange={setDisconnectOpen}
         title="לנתק את העוזר?"
         consequence="הקוד יפסיק לעבוד. הספרים נשארים."
         confirmLabel="ניתוק"
         destructive
         busy={revoking}
+        returnFocusRef={disconnectFocus}
         onConfirm={() => { void disconnect(); }}
       />
-    </>
+    </ConnectionPage>
+    </ViewerScope>
   );
 }

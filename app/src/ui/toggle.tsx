@@ -28,7 +28,7 @@ export function Toggle({ label, hint, checked, disabled = false, locked = false,
   const hintId = useId();
   const viewerNoteId = useViewerNoteId();
   const noteId = disabledNoteId ?? viewerNoteId;
-  const describedIds = [hint != null ? hintId : null, disabled && noteId != null ? noteId : null].filter((id): id is string => id != null);
+  const describedIds = [hint != null ? hintId : null, (disabled || locked) && noteId != null ? noteId : null].filter((id): id is string => id != null);
   const described = describedIds.length > 0 ? describedIds.join(" ") : undefined;
   const row = icon != null;
   return (

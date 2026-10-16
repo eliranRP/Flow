@@ -3,13 +3,13 @@ import { Avatar, MailAvatar } from "./avatar";
 import { ListRow } from "./list-row";
 
 /**
- * FLOW-601 (mockups a-1, invite-2). One person on the team page: the 40px initials circle, the
- * name, and the role under it. A pending invite shows the envelope and the email (LTR) with
- * "הוזמנה · role". A row that opens a sheet carries the chevron; the owner's row is static.
+ * FLOW-601, FLOW-512. One person on the team page: the icon, the name, and the role at the end
+ * (muted). A pending invite shows the envelope and the email (LTR) with "הוזמן · ממתין" in the
+ * accent colour. A row that opens a sheet carries the chevron; the owner's row is static.
  */
 export function PersonRow({
   name,
-  hint,
+  value,
   invite = false,
   onOpen,
   buttonRef,
@@ -17,8 +17,8 @@ export function PersonRow({
 }: {
   /** The member's name, or the invite's email. */
   name: string;
-  /** The role, or "הוזמנה · role". */
-  hint: string;
+  /** The role at the end, or "הוזמן · ממתין" for a pending invite. */
+  value: string;
   invite?: boolean;
   onOpen?: () => void;
   buttonRef?: Ref<HTMLButtonElement>;
@@ -26,8 +26,9 @@ export function PersonRow({
   label?: string;
 }) {
   const icon = invite ? <MailAvatar /> : <Avatar name={name} fallback="person" />;
+  const shown = invite ? <span className="ui-row-value-accent">{value}</span> : value;
   if (onOpen == null) {
-    return <ListRow variant="static" className="ui-person-row" title={name} ltrTitle={invite} hint={hint} icon={icon} />;
+    return <ListRow variant="static" className="ui-person-row" title={name} ltrTitle={invite} value={shown} icon={icon} />;
   }
   return (
     <ListRow
@@ -35,10 +36,10 @@ export function PersonRow({
       className="ui-person-row"
       title={name}
       ltrTitle={invite}
-      hint={hint}
+      value={shown}
       icon={icon}
       chevron
-      label={label ?? `${name}, ${hint}`}
+      label={label ?? `${name}, ${value}`}
       buttonRef={buttonRef}
       onClick={onOpen}
     />

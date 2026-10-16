@@ -225,6 +225,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-213"></a>[FLOW-213](tasks/FLOW-213.md) | match_lines: reconcile an outside ledger export in one read | MCP |
 | <a id="flow-214"></a>[FLOW-214](tasks/FLOW-214.md) | search_expenses takes amounts in minor units too | SMALL CYCLE |
 | <a id="flow-215"></a>[FLOW-215](tasks/FLOW-215.md) | get_cash_lines names a missing side, and documents its page cap | SMALL CYCLE |
+| <a id="flow-515"></a>[FLOW-515](tasks/FLOW-515.md) | MCP: the AI connection page shows the assistant's name, its request count and the code's expiry from the server | MCP |
 
 ## Transactions and app UX
 
@@ -375,6 +376,10 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-512"></a>[FLOW-512](tasks/FLOW-512.md) | Redesign: Settings as a menu, its inner pages, and the guided SUMIT, Mercury and MCP pages | UI (design approved) |
 | <a id="flow-513"></a>[FLOW-513](tasks/FLOW-513.md) | Redesign: Settings › קטגוריות, switching business, and the invitation screen | UI (design approved) |
 | <a id="flow-514"></a>[FLOW-514](tasks/FLOW-514.md) | Redesign: first-time onboarding in 7 short steps | UI (design approved) |
+
+| Id | Title | Type |
+| --- | --- | --- |
+| <a id="flow-918"></a>[FLOW-918](tasks/FLOW-918.md) | Port the deleted SUMIT and Mercury row suites onto the connection pages | Test |
 
 ## Multi-company and team
 

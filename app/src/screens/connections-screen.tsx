@@ -1,69 +1,43 @@
-import { onlineManager, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
-import { useCompanyRole, useHoldOwnerSettings, useIsViewer, ViewerNote, ViewerScope } from "../use-is-viewer";
-import { getSupabase } from "../lib/supabase";
+import { useHoldOwnerSettings, useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
-import { useRefreshingNow } from "../israel-clock";
-import { hebrewMercuryError, mercuryRefreshDone } from "../mercury-copy";
-import { hebrewSumitError, israelSyncPhrase, retryClockParts } from "../sumit-copy";
 import { useDashboardQuery, useMercuryStatusQuery, useSumitStatusQuery } from "../use-books";
-import { assertNoError, useWrite } from "../use-write";
-import { useSyncSettled } from "../use-sync-settled";
-import { invokeEdge } from "../edge";
-import { REFRESH_DONE, SUMIT_REFRESH_KEYS, useSumitRefresh } from "../use-sumit-refresh";
-import { useMercuryConnect } from "../use-mercury-connect";
-import { useSumitConnect } from "../use-sumit-connect";
-import { MercuryConnectSheet } from "../ui/mercury-connect-sheet";
-import { SumitConnectSheet } from "../ui/sumit-connect-sheet";
-import { AssistantSettings } from "./assistant-settings";
+import { useAssistantStatusQuery } from "./assistant-settings";
 import { bindJevConnectorScope } from "./jev-review";
 import { JEV_DEFAULT, JevSettings } from "./jev-settings";
-import { ConfirmSheet } from "../ui/confirm-sheet";
-import { historyIndex, popSheetLayers, sheetStack, useSheetHistory } from "../ui/back";
-import { useFocusRowAfterRetry } from "../ui/focus-retry";
-import { BankIcon, DocumentIcon } from "../ui/icons";
-import { SectionHead } from "../ui/layout";
-import { List } from "../ui/list-row";
-import { ConnectorRow } from "../ui/connector-row";
-import { ConnectorStatusSheet } from "../ui/connector-status-sheet";
+import { useBlockedPreview } from "./screen-shared";
+import { connectorWord, sumitKind } from "./connections-status";
+import { BankIcon, DocumentIcon, NoteIcon } from "../ui/icons";
+import { ConnectionHead, ConnectionNote } from "../ui/connection-page";
+import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
-import { TextLink } from "../ui/text-link";
-import { useBlockedPreview } from "./screen-shared";
-import { connectorWord, MERCURY_REFRESH_KEYS, onboardingFromSettings, sumitKind } from "./connections-status";
+import { Skeleton } from "../ui/skeleton";
 import type { SettingsSample } from "./settings-screen";
 
-/**
- * `/settings/connections` (FLOW-501): SUMIT and Mercury under ספרים ובנק,
- * Jev and the assistant under עזרים. The rows, sheets and focus returns moved
- * here from Settings unchanged. `?sheet=sumit|mercury|assistant` opens one.
- */
-/** FLOW-601: an editor reads the connections; the owner changes them. */
-export const EDITOR_CONNECTIONS_NOTE = "רק בעל העסק יכול לשנות חיבורים.";
+/** The Connections note under the עזרים card (FLOW-512). */
+export const HELPERS_NOTE = "תיוג חכם משייך שורות חדשות לפרויקט ולקטגוריה. חיבור ל־AI נותן ל־Claude, ל־ChatGPT או לעוזר אחר לעבוד עם הספרים.";
 
-export function ConnectionsScreen({
-  sample,
-  sampleSecret,
-}: {
-  sample?: SettingsSample;
-  /** Dev route only. Production preview never mints a local code. */
-  sampleSecret?: string;
-} = {}) {
+/** A connector's value at the row's end: its word, in the signal colour when it needs connecting. */
+function statusValue(word: string, attention: boolean) {
+  return attention ? <span className="ui-row-value-signal">{word}</span> : word;
+}
+
+/**
+ * `/settings/connections` (FLOW-512): the bank and the books (Mercury, SUMIT), then the helpers
+ * (תיוג חכם, and the AI connection). Each row opens its own page. `?sheet=` links from before the
+ * pages moved there, so they open the page with their query.
+ */
+export function ConnectionsScreen({ sample }: { sample?: SettingsSample; sampleSecret?: string } = {}) {
   const preview = useHomePreview();
-  const queryClient = useQueryClient();
-  const location = useLocation();
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
   const previewValue = params.get("preview");
   const search = usePreviewSearch();
-  const navigate = useNavigate();
   const { session } = useAuth();
-  const viewer = useIsViewer();
-  // FLOW-601: connecting, refreshing and disconnecting are the owner's; an editor reads them.
-  const holdWrites = useHoldOwnerSettings();
-  const editor = useCompanyRole() === "editor";
+  const holdWrites = useHoldWrites();
+  const holdOwner = useHoldOwnerSettings();
   const blocked = useBlockedPreview();
   const status = useSumitStatusQuery(sample == null);
   const mercuryStatus = useMercuryStatusQuery(sample == null);
@@ -73,309 +47,18 @@ export function ConnectionsScreen({
   if (signedInUserId && signedInCompanyId) {
     bindJevConnectorScope({ userId: signedInUserId, companyId: signedInCompanyId });
   }
-  const [companyId, setCompanyId] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [mercuryApiKey, setMercuryApiKey] = useState("");
-  const [connectOpen, setConnectOpen] = useState(false);
-  const [statusOpen, setStatusOpen] = useState(false);
-  const [disconnectOpen, setDisconnectOpen] = useState(false);
-  const [mercuryConnectOpen, setMercuryConnectOpen] = useState(false);
-  const [mercuryStatusOpen, setMercuryStatusOpen] = useState(false);
-  const [mercuryDisconnectOpen, setMercuryDisconnectOpen] = useState(false);
-  const adoptSheet = useRef(false);
-  const setConnectSheet = useSheetHistory("sumit-connect", connectOpen, setConnectOpen, undefined, adoptSheet);
-  const setStatusSheet = useSheetHistory("sumit-status", statusOpen, setStatusOpen, undefined, adoptSheet);
-  const setDisconnectSheet = useSheetHistory("sumit-disconnect", disconnectOpen, setDisconnectOpen);
-  // Every close path (✕, Escape, Back, success) drops the pasted token.
-  const setMercuryConnectOpenClearing = useCallback((open: boolean) => {
-    if (!open) setMercuryApiKey("");
-    setMercuryConnectOpen(open);
-  }, []);
-  const setMercuryConnectSheet = useSheetHistory("mercury-connect", mercuryConnectOpen, setMercuryConnectOpenClearing, undefined, adoptSheet);
-  const setMercuryStatusSheet = useSheetHistory("mercury-status", mercuryStatusOpen, setMercuryStatusOpen, undefined, adoptSheet);
-  const setMercuryDisconnectSheet = useSheetHistory("mercury-disconnect", mercuryDisconnectOpen, setMercuryDisconnectOpen);
-  // "ייבוא מ" (FLOW-505): each connect sheet shows the stored date until it is touched, and only a
-  // touched choice is saved, so a status that arrives late or changes in another tab is never undone.
-  const [sumitImport, setSumitImport] = useState<{ touched: boolean; value: string | null }>({ touched: false, value: null });
-  const [mercuryImport, setMercuryImport] = useState<{ touched: boolean; value: string | null }>({ touched: false, value: null });
-  const [importSeen, setImportSeen] = useState({ sumit: connectOpen, mercury: mercuryConnectOpen });
-  if (importSeen.sumit !== connectOpen || importSeen.mercury !== mercuryConnectOpen) {
-    setImportSeen({ sumit: connectOpen, mercury: mercuryConnectOpen });
-    if (connectOpen && !importSeen.sumit) setSumitImport({ touched: false, value: null });
-    if (mercuryConnectOpen && !importSeen.mercury) setMercuryImport({ touched: false, value: null });
-  }
-  const sumitImportFrom = sumitImport.touched ? sumitImport.value : (status.data?.import_from ?? null);
-  const mercuryImportFrom = mercuryImport.touched ? mercuryImport.value : (mercuryStatus.data?.import_from ?? null);
-  const setSumitImportFrom = useCallback((value: string | null) => { setSumitImport({ touched: true, value }); }, []);
-  const setMercuryImportFrom = useCallback((value: string | null) => { setMercuryImport({ touched: true, value }); }, []);
-  const [clockNow, setClockNow] = useRefreshingNow();
-  const [focusSumit, setFocusSumit] = useState(false);
-  const [focusMercury, setFocusMercury] = useState(false);
-  const [sumitRetrying, setSumitRetrying] = useState(false);
-  const [mercuryRetrying, setMercuryRetrying] = useState(false);
-  const [sumitHint, setSumitHint] = useState("לא הצלחנו לטעון");
-  const [mercuryHint, setMercuryHint] = useState("לא הצלחנו לטעון");
-  const [sumitOffline, setSumitOffline] = useState(0);
-  const [mercuryOffline, setMercuryOffline] = useState(0);
-  const [sumitNonce, setSumitNonce] = useState(0);
-  const [mercuryNonce, setMercuryNonce] = useState(0);
-  const sumitRowRef = useRef<HTMLButtonElement>(null);
-  const sumitRetryRef = useRef<HTMLButtonElement>(null);
-  const sumitDisconnectRef = useRef<HTMLButtonElement>(null);
-  const mercuryRowRef = useRef<HTMLButtonElement>(null);
-  const mercuryRetryRef = useRef<HTMLButtonElement>(null);
-  const mercuryDisconnectRef = useRef<HTMLButtonElement>(null);
-  const sheetApplied = useRef(false);
-  const wantSheet = useRef<"sumit" | "mercury" | null>(null);
-  const retrySource = sample ? sample.nextAttemptAt : status.data?.next_attempt_at;
-  useEffect(() => {
-    if (!retrySource) return;
-    const at = Date.parse(retrySource);
-    const wait = at - Date.now();
-    if (!Number.isFinite(wait) || wait <= 0) return;
-    const id = window.setTimeout(() => { setClockNow(Date.now()); }, wait + 25);
-    return () => { window.clearTimeout(id); };
-  }, [retrySource, setClockNow]);
+  const liveCompany = sample == null && preview === "off" && signedInCompanyId != null;
+  const assistant = useAssistantStatusQuery(liveCompany);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, dashboard);
-  const connect = useSumitConnect({
-    companyId,
-    apiKey,
-    setApiKey,
-    importFrom: sumitImport.touched ? sumitImport.value : undefined,
-    onSuccess: () => {
-      setConnectSheet(false);
-    },
-  });
-  const mercuryConnect = useMercuryConnect({
-    apiKey: mercuryApiKey,
-    setApiKey: setMercuryApiKey,
-    importFrom: mercuryImport.touched ? mercuryImport.value : undefined,
-    onSuccess: () => {
-      setMercuryConnectSheet(false);
-    },
-  });
-  const refresh = useSumitRefresh();
-  const disconnect = useWrite({
-    failure: "לא הצלחנו לנתק.",
-    success: "החיבור נותק. הספרים נשארו.",
-    keys: ["sumit"],
-    onSuccess: () => {
-      setDisconnectOpen(false);
-      setStatusOpen(false);
-      setConnectOpen(false);
-      popSheetLayers(navigate, 2);
-      setFocusSumit(true);
-    },
-    run: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      assertNoError(await supabase.rpc("disconnect_sumit"));
-    },
-  });
-  const mercuryRefreshResult = useRef<unknown>(null);
-  const mercuryRefresh = useWrite({
-    failure: (error) => hebrewMercuryError(error.message) ?? "הרענון נכשל.",
-    silent: (error) => error.message === "sync_held",
-    success: () => mercuryRefreshDone(mercuryRefreshResult.current),
-    keys: MERCURY_REFRESH_KEYS,
-    run: async () => {
-      mercuryRefreshResult.current = null;
-      const data = await invokeEdge("mercury-sync", { force: true });
-      mercuryRefreshResult.current = data;
-      if (data != null && typeof data === "object" && "skipped" in data && data.skipped === true) {
-        await queryClient.refetchQueries({ queryKey: ["mercury"] });
-        const held = queryClient.getQueriesData<{ syncing?: boolean }>({ queryKey: ["mercury"] }).some(([, d]) => d?.syncing === true);
-        throw new Error(held ? "sync_held" : "sync_skipped");
-      }
-    },
-  });
-  // syncing comes from the server claim, so the busy row survives a reload, a new tab, and reopening the app.
-  const sumitSyncing = status.data?.syncing === true;
-  const mercurySyncing = mercuryStatus.data?.syncing === true;
-  const sumitRefreshBusy = refresh.isPending || sumitSyncing;
-  const mercuryRefreshBusy = mercuryRefresh.isPending || mercurySyncing;
-  useSyncSettled({
-    syncing: sumitSyncing,
-    pending: refresh.isPending,
-    lastSyncAt: status.data?.last_sync_at,
-    lastError: status.data?.last_error,
-    keys: SUMIT_REFRESH_KEYS,
-    success: REFRESH_DONE,
-  });
-  useSyncSettled({
-    syncing: mercurySyncing,
-    pending: mercuryRefresh.isPending,
-    lastSyncAt: mercuryStatus.data?.last_sync_at,
-    lastError: mercuryStatus.data?.last_error,
-    keys: MERCURY_REFRESH_KEYS,
-    success: REFRESH_DONE,
-  });
-  const mercuryDisconnect = useWrite({
-    failure: "לא הצלחנו לנתק.",
-    success: "החיבור נותק. הספרים נשארו.",
-    keys: ["mercury"],
-    onSuccess: () => {
-      setMercuryDisconnectOpen(false);
-      setMercuryStatusOpen(false);
-      setMercuryConnectOpen(false);
-      popSheetLayers(navigate, 2);
-      setFocusMercury(true);
-    },
-    run: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      assertNoError(await supabase.rpc("disconnect_connector", { p_provider: "mercury" }));
-    },
-  });
 
-  useEffect(() => {
-    if (sumitNonce === 0) return;
-    setSumitHint("");
-    const id = window.setTimeout(() => {
-      setSumitHint("לא הצלחנו לטעון");
-      const retry = sumitRetryRef.current;
-      const active = document.activeElement;
-      if (retry == null || active === retry) return;
-      if (active instanceof HTMLElement && active !== document.body && active !== document.documentElement) return;
-      retry.focus();
-    }, 30);
-    return () => { window.clearTimeout(id); };
-  }, [sumitNonce]);
-
-  useEffect(() => {
-    if (mercuryNonce === 0) return;
-    setMercuryHint("");
-    const id = window.setTimeout(() => {
-      setMercuryHint("לא הצלחנו לטעון");
-      const retry = mercuryRetryRef.current;
-      const active = document.activeElement;
-      if (retry == null || active === retry) return;
-      if (active instanceof HTMLElement && active !== document.body && active !== document.documentElement) return;
-      retry.focus();
-    }, 30);
-    return () => { window.clearTimeout(id); };
-  }, [mercuryNonce]);
-
-  const sumitNoCompany = sample
-    ? sample.noCompany === true
-    : previewValue === "empty" || (preview === "off" && dashboard.data?.company_id == null);
-  const sumitPaused = sample == null && preview === "off" && !sumitNoCompany && status.fetchStatus === "paused" && status.data == null;
-  const sumitShowsRetry = sample?.sumit === "error" || (
-    sample == null
-    && !sumitNoCompany
-    && (sumitRetrying || sumitPaused || (status.isError && status.data == null))
-  );
-  const sumitRowReady = phase.kind !== "loading"
-    && phase.kind !== "error"
-    && sample?.sumit !== "loading"
-    && sample?.sumit !== "error"
-    && !sumitShowsRetry
-    && !(sample == null && !sumitNoCompany && status.isLoading && !sumitRetrying);
-  useFocusRowAfterRetry(sumitShowsRetry, sumitRetryRef, sumitRowRef, sumitRowReady, sumitNonce);
-
-  const mercuryPaused = sample == null && preview === "off" && !sumitNoCompany && mercuryStatus.fetchStatus === "paused" && mercuryStatus.data == null;
-  const mercuryShowsRetry = sample?.mercury === "error" || (
-    sample == null
-    && !sumitNoCompany
-    && (mercuryRetrying || mercuryPaused || (mercuryStatus.isError && mercuryStatus.data == null))
-  );
-  const mercuryRowReady = phase.kind !== "loading"
-    && phase.kind !== "error"
-    && sample?.mercury !== "loading"
-    && sample?.mercury !== "error"
-    && !mercuryShowsRetry
-    && !(sample == null && !sumitNoCompany && mercuryStatus.isLoading && !mercuryRetrying);
-  useFocusRowAfterRetry(mercuryShowsRetry, mercuryRetryRef, mercuryRowRef, mercuryRowReady, mercuryNonce);
-
-  useEffect(() => onlineManager.subscribe((online) => {
-    if (online) {
-      setSumitOffline(0);
-      setMercuryOffline(0);
-    }
-  }), []);
-
-  useEffect(() => {
-    if (!focusSumit) return;
-    if (sumitRowRef.current == null) return;
-    const id = window.setTimeout(() => {
-      sumitRowRef.current?.focus();
-      setFocusSumit(false);
-    }, 0);
-    return () => { window.clearTimeout(id); };
-  }, [focusSumit, status.data, status.isError, status.isLoading]);
-
-  useEffect(() => {
-    if (!focusMercury) return;
-    if (mercuryRowRef.current == null) return;
-    const id = window.setTimeout(() => {
-      mercuryRowRef.current?.focus();
-      setFocusMercury(false);
-    }, 0);
-    return () => { window.clearTimeout(id); };
-  }, [focusMercury, mercuryStatus.data, mercuryStatus.isError, mercuryStatus.isLoading]);
-
-  useEffect(() => {
-    if (holdWrites) return;
-    if (sheetApplied.current) return;
-    const noCo = sample
-      ? sample.noCompany === true
-      : previewValue === "empty" || (preview === "off" && dashboard.data?.company_id == null);
-    const asked = params.get("sheet");
-    if (asked === "sumit" || asked === "mercury") {
-      if (phase.kind === "loading" || phase.kind === "error") {
-        adoptSheet.current = false;
-        return;
-      }
-      if (sample == null && !noCo && (asked === "sumit" ? status.isLoading : mercuryStatus.isLoading)) {
-        adoptSheet.current = false;
-        return;
-      }
-      const companySettling = sample == null && preview === "off" && dashboard.isFetching && dashboard.data?.company_id == null;
-      if (companySettling) {
-        adoptSheet.current = false;
-        return;
-      }
-      wantSheet.current = asked;
-      const next = new URLSearchParams(params);
-      next.delete("sheet");
-      setParams(next, { replace: true });
-      return;
-    }
-    const wanted = wantSheet.current;
-    if (wanted == null) return;
-    const mercury = wanted === "mercury";
-    const query = mercury ? mercuryStatus : status;
-    const auth = mercury
-      ? (sample ? sample.mercuryLastError : mercuryStatus.data?.last_error) === "auth"
-      : (sample ? sample.lastError : status.data?.last_error) === "sumit_auth";
-    const isConnected = noCo
-      ? false
-      : mercury
-        ? (sample ? sample.mercuryConnected === true : mercuryStatus.data?.connected === true)
-        : (sample ? sample.connected : status.data?.connected === true);
-    const statusPaused = sample == null && preview === "off" && !noCo && query.fetchStatus === "paused" && query.data == null;
-    const opened = sumitKind({
-      forced: (mercury ? sample?.mercury : sample?.sumit) ?? null,
-      noCompany: noCo,
-      statusLoading: false,
-      statusFailed: sample == null && (statusPaused || (query.isError && query.data == null)),
-      authReconnect: auth,
-      connected: isConnected,
-    });
-    sheetApplied.current = true;
-    wantSheet.current = null;
-    if (opened === "connected" || opened === "reconnect" || opened === "disconnected") {
-      const earlier = historyIndex();
-      adoptSheet.current = earlier != null && earlier > 0;
-    }
-    if (mercury) {
-      if (opened === "connected") setMercuryStatusOpen(true);
-      else if (opened === "reconnect" || opened === "disconnected") setMercuryConnectOpen(true);
-      return;
-    }
-    if (opened === "connected") setStatusOpen(true);
-    else if (opened === "reconnect" || opened === "disconnected") setConnectOpen(true);
-  }, [params, setParams, phase.kind, sample, preview, previewValue, dashboard.data, dashboard.isFetching, status, mercuryStatus, holdWrites]);
+  const asked = params.get("sheet");
+  if (sample == null && (asked === "sumit" || asked === "mercury" || asked === "assistant")) {
+    const target = asked === "assistant" ? "/settings/connections/ai" : `/settings/connections/${asked}`;
+    const next = new URLSearchParams(params);
+    next.delete("sheet");
+    const rest = next.toString();
+    return <Navigate to={{ pathname: target, search: rest === "" ? "" : `?${rest}` }} replace />;
+  }
 
   if (phase.kind === "loading" || phase.kind === "error") {
     return (
@@ -393,311 +76,89 @@ export function ConnectionsScreen({
     ? sample.noCompany === true
     : previewValue === "empty" || (preview === "off" && dashboard.data?.company_id == null);
   const connected = noCompany ? false : sample ? sample.connected : status.data?.connected === true;
-  const sumitId = sample ? sample.companyId : status.data?.sumit_company_id;
   const rawError = sample ? sample.lastError : status.data?.last_error;
-  const lastError = hebrewSumitError(rawError);
   const authReconnect = rawError === "sumit_auth";
-  const retry = authReconnect ? null : retryClockParts(retrySource, clockNow);
-  const refreshHeld = retry != null;
-  const statusPaused = sample == null && preview === "off" && !noCompany && status.fetchStatus === "paused" && status.data == null;
-  const kind = sumitKind({
+  const sumitState = sumitKind({
     forced: sample?.sumit ?? null,
     noCompany,
-    statusLoading: sample == null && !noCompany && status.isLoading && !sumitRetrying,
-    statusFailed: sample == null && (sumitRetrying || statusPaused || (status.isError && status.data == null)),
+    statusLoading: sample == null && !noCompany && status.isLoading,
+    statusFailed: sample == null && status.isError && status.data == null,
     authReconnect,
     connected,
   });
-  const syncPhrase = israelSyncPhrase(sample ? sample.lastSyncAt : status.data?.last_sync_at, clockNow);
   const mercuryConnected = noCompany ? false : sample ? sample.mercuryConnected === true : mercuryStatus.data?.connected === true;
   const mercuryRawError = sample ? sample.mercuryLastError : mercuryStatus.data?.last_error;
-  const mercuryLastError = hebrewMercuryError(mercuryRawError);
-  const mercuryAuthReconnect = mercuryRawError === "auth";
-  const mercuryRetrySource = sample ? undefined : mercuryStatus.data?.next_attempt_at;
-  const mercuryRetry = mercuryAuthReconnect ? null : retryClockParts(mercuryRetrySource, clockNow);
-  const mercuryRefreshHeld = mercuryRetry != null;
-  const mercuryStatusPaused = sample == null && preview === "off" && !noCompany && mercuryStatus.fetchStatus === "paused" && mercuryStatus.data == null;
-  const mercuryKind = sumitKind({
+  const mercuryState = sumitKind({
     forced: sample?.mercury ?? null,
     noCompany,
-    statusLoading: sample == null && !noCompany && mercuryStatus.isLoading && !mercuryRetrying,
-    statusFailed: sample == null && (mercuryRetrying || mercuryStatusPaused || (mercuryStatus.isError && mercuryStatus.data == null)),
-    authReconnect: mercuryAuthReconnect,
+    statusLoading: sample == null && !noCompany && mercuryStatus.isLoading,
+    statusFailed: sample == null && mercuryStatus.isError && mercuryStatus.data == null,
+    authReconnect: mercuryRawError === "auth",
     connected: mercuryConnected,
   });
-  const mercurySyncPhrase = israelSyncPhrase(sample ? sample.mercuryLastSyncAt : mercuryStatus.data?.last_sync_at, clockNow);
-  const retryHint = retry == null ? undefined : (
-    <>
-      {retry.tomorrow ? "אפשר לנסות שוב מחר ב-" : "אפשר לנסות שוב ב-"}
-      <bdi className="ui-num" dir="ltr">{retry.clock}</bdi>
-    </>
-  );
-  const refreshHint = retryHint;
-  const mercuryRetryHint = mercuryRetry == null ? undefined : (
-    <>
-      {mercuryRetry.tomorrow ? "אפשר לנסות שוב מחר ב-" : "אפשר לנסות שוב ב-"}
-      <bdi className="ui-num" dir="ltr">{mercuryRetry.clock}</bdi>
-    </>
-  );
-  const mercuryRefreshHint = mercuryRetryHint;
+  const aiState = sample ? (sample.assistant?.state ?? "empty") : (assistant.data?.state ?? (assistant.isError ? "error" : "loading"));
+  const aiWord = noCompany ? "אין עסק עדיין" : aiState === "connected" ? "מחובר" : aiState === "expired" ? (holdOwner ? "לא מחובר" : "פג תוקף") : aiState === "error" ? "לא הצלחנו לטעון" : aiState === "loading" ? null : "לא מחובר";
+  const viewerOnly = holdOwner;
+  const providerValue = (state: ReturnType<typeof sumitKind>, word: string, loadingFlag: boolean) => {
+    if (loadingFlag || state === "loading") return <Skeleton width="sm" />;
+    if (state === "error") return "לא הצלחנו לטעון";
+    return statusValue(word, state === "reconnect" && !viewerOnly);
+  };
+  const sumitLoading = sumitState === "loading";
+  const mercuryLoading = mercuryState === "loading";
+
   return (
     <ViewerScope>
     <div>
-      <ScreenHeader title="חיבורים" kicker="הגדרות" backTo={`/settings${search}`} />
+      <ScreenHeader title="חיבורים" backTo={`/settings${search}`} backText="הגדרות" />
       <ViewerNote />
-      {editor ? <p className="ui-page-pad t-hint">{EDITOR_CONNECTIONS_NOTE}</p> : null}
-      <SectionHead title="ספרים ובנק" />
-      {kind === "loading" || mercuryKind === "loading" ? <p className="sr-only" role="status">טוען…</p> : null}
+      <ConnectionHead>בנק וספרים</ConnectionHead>
       <List>
-        <ConnectorRow
-          title="SUMIT"
-          icon={<DocumentIcon size={24} />}
-          state={kind === "loading" ? "loading" : kind === "error" ? "error" : "ready"}
-          hint={connectorWord(kind, holdWrites, viewer)}
-          warning={kind === "reconnect" && !holdWrites}
-          rowRef={sumitRowRef}
-          onOpen={holdWrites ? undefined : () => {
-            if (kind === "connected") setStatusSheet(true);
-            else setConnectSheet(true);
-          }}
-          retry={{
-            hint: (
-              <>
-                {sumitHint}
-                {sumitOffline > 0 ? <span className="sr-only">אין חיבור לאינטרנט</span> : null}
-              </>
-            ),
-            label: "ניסיון חוזר: SUMIT",
-            busy: sumitRetrying,
-            retryRef: sumitRetryRef,
-            onRetry: () => {
-              if (sample != null || sumitRetrying) return;
-              if (!onlineManager.isOnline()) {
-                setSumitOffline((nonce) => nonce + 1);
-                return;
-              }
-              setSumitRetrying(true);
-              void status.refetch().then((result) => {
-                const stayed = document.activeElement === sumitRetryRef.current;
-                setSumitRetrying(false);
-                if (result.fetchStatus === "paused" || !onlineManager.isOnline()) {
-                  setSumitOffline((nonce) => nonce + 1);
-                  return;
-                }
-                if (result.isError || result.data == null) {
-                  setSumitNonce((nonce) => nonce + 1);
-                  return;
-                }
-                if (stayed) setFocusSumit(true);
-              });
-            },
-          }}
-        />
-        <ConnectorRow
+        <ListRow
+          variant="item"
+          href={`/settings/connections/mercury${search}`}
           title="Mercury"
           icon={<BankIcon size={24} />}
-          state={mercuryKind === "loading" ? "loading" : mercuryKind === "error" ? "error" : "ready"}
-          hint={connectorWord(mercuryKind, holdWrites, viewer)}
-          warning={mercuryKind === "reconnect" && !holdWrites}
-          rowRef={mercuryRowRef}
-          onOpen={holdWrites ? undefined : () => {
-            if (mercuryKind === "connected") setMercuryStatusSheet(true);
-            else setMercuryConnectSheet(true);
-          }}
-          retry={{
-            hint: (
-              <>
-                {mercuryHint}
-                {mercuryOffline > 0 ? <span className="sr-only">אין חיבור לאינטרנט</span> : null}
-              </>
-            ),
-            label: "ניסיון חוזר: Mercury",
-            busy: mercuryRetrying,
-            retryRef: mercuryRetryRef,
-            onRetry: () => {
-              if (sample != null || mercuryRetrying) return;
-              if (!onlineManager.isOnline()) {
-                setMercuryOffline((nonce) => nonce + 1);
-                return;
-              }
-              setMercuryRetrying(true);
-              void mercuryStatus.refetch().then((result) => {
-                const stayed = document.activeElement === mercuryRetryRef.current;
-                setMercuryRetrying(false);
-                if (result.fetchStatus === "paused" || !onlineManager.isOnline()) {
-                  setMercuryOffline((nonce) => nonce + 1);
-                  return;
-                }
-                if (result.isError || result.data == null) {
-                  setMercuryNonce((nonce) => nonce + 1);
-                  return;
-                }
-                if (stayed) setFocusMercury(true);
-              });
-            },
-          }}
+          value={noCompany ? "אין עסק עדיין" : providerValue(mercuryState, connectorWord(mercuryState, viewerOnly), mercuryLoading)}
+          chevron
+        />
+        <ListRow
+          variant="item"
+          href={`/settings/connections/sumit${search}`}
+          title="SUMIT"
+          icon={<DocumentIcon size={24} />}
+          value={noCompany ? "אין עסק עדיין" : providerValue(sumitState, connectorWord(sumitState, viewerOnly), sumitLoading)}
+          chevron
         />
       </List>
-      <SectionHead title="עזרים" />
-      <JevSettings
-        noCompany={noCompany}
-        blocked={blocked}
-        readOnly={holdWrites}
-        sample={
-          noCompany
-            ? undefined
-            : sample
-              ? (sample.jev ?? JEV_DEFAULT)
-              : preview !== "off"
-                ? JEV_DEFAULT
-                : undefined
-        }
-      />
-      <AssistantSettings
-        announceLoading={kind !== "loading"}
-        sample={
-          // A missing company, and any preview, must not call flow-mcp/status.
-          sample
-            ? (noCompany ? { state: "no-company" } : (sample.assistant ?? { state: "empty" }))
-            : noCompany
-              ? { state: "no-company" }
-              : preview !== "off"
-                ? { state: "empty" }
-                : undefined
-        }
-        noCompany={noCompany}
-        blocked={import.meta.env.DEV && params.get("e2e") === "stack" ? undefined : blocked}
-        sampleSecret={import.meta.env.DEV && params.get("e2e") === "stack" ? sampleSecret : undefined}
-        showHeading={false}
-        initialOpen={params.get("sheet") === "assistant"}
-        readOnly={holdWrites}
-        viewerCopy={viewer}
-      />
-      <SumitConnectSheet
-        open={connectOpen}
-        onOpenChange={setConnectSheet}
-        title={authReconnect && !noCompany ? "SUMIT" : "חיבור SUMIT"}
-        returnFocusRef={sumitRowRef}
-        noCompanyBody={noCompany ? (
-          <div className="ui-stack">
-            <p>כדי לחבר את SUMIT צריך עסק.</p>
-            <TextLink to={onboardingFromSettings(search, "sumit")} replace={sheetStack(location.state).includes("sumit-connect")}>פרטי העסק</TextLink>
-          </div>
-        ) : undefined}
-        authReconnect={authReconnect}
-        companyId={companyId}
-        setCompanyId={setCompanyId}
-        apiKey={apiKey}
-        setApiKey={setApiKey}
-        importFrom={sumitImportFrom}
-        setImportFrom={setSumitImportFrom}
-        submitLabel={authReconnect ? "חיבור מחדש" : "חיבור"}
-        busy={connect.isPending}
-        disabled={holdWrites}
-        onSubmit={() => {
-          if (holdWrites || blocked()) return;
-          connect.mutate();
-        }}
-        onDisconnect={authReconnect ? () => {
-          if (holdWrites) return;
-          setDisconnectSheet(true);
-        } : undefined}
-        disconnectRef={sumitDisconnectRef}
-      />
-      <ConnectorStatusSheet
-        open={statusOpen}
-        onOpenChange={setStatusSheet}
-        title="SUMIT"
-        returnFocusRef={sumitRowRef}
-        detail={sumitId != null ? <span className="ui-nowrap">{` · מספר חברה `}<bdi dir="ltr">{String(sumitId)}</bdi></span> : null}
-        syncPhrase={syncPhrase}
-        failed={rawError != null && rawError !== "sumit_auth"}
-        held={refreshHeld}
-        errorText={lastError}
-        refreshHint={refreshHint}
-        busy={sumitRefreshBusy}
-        onRefresh={() => {
-          if (holdWrites || blocked()) return;
-          refresh.mutate();
-        }}
-        onDisconnect={() => { if (holdWrites) return; setDisconnectSheet(true); }}
-        disconnectRef={sumitDisconnectRef}
-      />
-      <ConfirmSheet
-        open={disconnectOpen}
-        onOpenChange={setDisconnectSheet}
-        returnFocusRef={sumitDisconnectRef}
-        title="לנתק את SUMIT?"
-        consequence="המפתח נמחק. הספרים שכבר ירדו נשארים."
-        confirmLabel="ניתוק"
-        destructive
-        busy={disconnect.isPending}
-        onConfirm={() => {
-          if (holdWrites || blocked()) return;
-          disconnect.mutate();
-        }}
-      />
-      <MercuryConnectSheet
-        open={mercuryConnectOpen}
-        onOpenChange={setMercuryConnectSheet}
-        title={mercuryAuthReconnect && !noCompany ? "צריך לחבר מחדש את Mercury" : "חיבור Mercury"}
-        returnFocusRef={mercuryRowRef}
-        noCompanyBody={noCompany ? (
-          <div className="ui-stack">
-            <p>כדי לחבר את Mercury צריך עסק.</p>
-            <TextLink to={onboardingFromSettings(search, "mercury")} replace={sheetStack(location.state).includes("mercury-connect")}>פרטי העסק</TextLink>
-          </div>
-        ) : undefined}
-        authReconnect={mercuryAuthReconnect}
-        apiKey={mercuryApiKey}
-        setApiKey={setMercuryApiKey}
-        importFrom={mercuryImportFrom}
-        setImportFrom={setMercuryImportFrom}
-        submitLabel={mercuryAuthReconnect ? "חיבור מחדש" : "חיבור"}
-        busy={mercuryConnect.isPending}
-        disabled={holdWrites}
-        onSubmit={() => {
-          if (holdWrites || blocked()) return;
-          mercuryConnect.mutate();
-        }}
-        onDisconnect={mercuryAuthReconnect ? () => {
-          if (holdWrites) return;
-          setMercuryDisconnectSheet(true);
-        } : undefined}
-        disconnectRef={mercuryDisconnectRef}
-      />
-      <ConnectorStatusSheet
-        open={mercuryStatusOpen}
-        onOpenChange={setMercuryStatusSheet}
-        title="Mercury"
-        returnFocusRef={mercuryRowRef}
-        syncPhrase={mercurySyncPhrase}
-        failed={mercuryRawError != null && mercuryRawError !== "auth"}
-        held={mercuryRefreshHeld}
-        errorText={mercuryLastError}
-        refreshHint={mercuryRefreshHint}
-        busy={mercuryRefreshBusy}
-        onRefresh={() => {
-          if (holdWrites || blocked()) return;
-          mercuryRefresh.mutate();
-        }}
-        onDisconnect={() => { if (holdWrites) return; setMercuryDisconnectSheet(true); }}
-        disconnectRef={mercuryDisconnectRef}
-      />
-      <ConfirmSheet
-        open={mercuryDisconnectOpen}
-        onOpenChange={setMercuryDisconnectSheet}
-        returnFocusRef={mercuryDisconnectRef}
-        title="לנתק את Mercury?"
-        consequence="המפתח נמחק. הספרים שכבר ירדו נשארים."
-        confirmLabel="ניתוק"
-        destructive
-        busy={mercuryDisconnect.isPending}
-        onConfirm={() => {
-          if (holdWrites || blocked()) return;
-          mercuryDisconnect.mutate();
-        }}
-      />
+      {noCompany ? null : (
+        <>
+          <ConnectionHead>עזרים</ConnectionHead>
+          <JevSettings
+            noCompany={noCompany}
+            blocked={blocked}
+            readOnly={holdWrites}
+            sample={
+              sample
+                ? (sample.jev ?? JEV_DEFAULT)
+                : preview !== "off"
+                  ? JEV_DEFAULT
+                  : undefined
+            }
+          />
+          <List>
+            <ListRow
+              variant="item"
+              href={`/settings/connections/ai${search}`}
+              title="חיבור ל־AI (MCP)"
+              icon={<NoteIcon size={24} />}
+              value={aiWord == null ? <Skeleton width="sm" /> : statusValue(aiWord, aiState === "expired" && !holdOwner)}
+              chevron
+            />
+          </List>
+          <ConnectionNote>{HELPERS_NOTE}</ConnectionNote>
+        </>
+      )}
     </div>
     </ViewerScope>
   );
