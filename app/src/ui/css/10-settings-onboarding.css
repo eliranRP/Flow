@@ -93,7 +93,6 @@
 
 .ui-switch-row input:checked + .ui-switch i {
   transform: translateX(calc(var(--size-switch) - var(--switch-knob) - 2 * var(--switch-inset)));
-  background: var(--color-knob-on);
 }
 
 .ui-switch-row:dir(rtl) input:checked + .ui-switch i {
