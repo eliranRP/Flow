@@ -1,4 +1,3 @@
-// E2E proof for the PR-check UI job (reverted in the next commit).
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page, type Request, type Response } from "@playwright/test";
