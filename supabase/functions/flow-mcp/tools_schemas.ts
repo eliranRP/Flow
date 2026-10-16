@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { LOAN_TERM_MONTHS_MAX, type LoanKind } from "../../../packages/shared/src/loan-schedule.ts";
 import { DATE, fail, isCalendarDate, shownKey, type ToolResult, UUID } from "./tools_args.ts";
+import { FORECAST_ALLOWED } from "./tools_forecast_schemas.ts";
 
 export const READ_TOOL_NAMES = [
   "list_projects",
@@ -40,8 +41,7 @@ export const READ_TOOL_NAMES = [
   "get_cash_months",
   "get_cash_years",
   "get_cash_lines",
-  "match_lines",
-  "get_forecast",
+  "match_lines", "get_forecast",
 ] as const;
 
 /** Read tool that a write-only token may also call: it polls that token's own sync job. */
@@ -104,8 +104,7 @@ export const WRITE_TOOL_NAMES = [
   "undo_jev_prefill",
   "undo",
   "undo_batch",
-  "set_forecast_item",
-  "reset_forecast",
+  "set_forecast_item", "reset_forecast",
 ] as const;
 export const ALLOWED: Record<string, Set<string>> = {
   list_projects: new Set(["from", "to", "basis"]),
@@ -143,9 +142,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   get_cash_years: new Set(),
   get_cash_lines: new Set(["month", "side", "currency", "limit", "offset"]),
   match_lines: new Set(["rows", "window_days", "direction", "currency"]),
-  get_forecast: new Set(["month"]),
-  set_forecast_item: new Set(["idempotency_key", "month", "item_key", "amount_minor", "due_on", "moved_out", "reset"]),
-  reset_forecast: new Set(["idempotency_key", "month"]),
+  ...FORECAST_ALLOWED,
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
@@ -535,7 +532,6 @@ export const deleteProjectSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   id: UUID_TEXT,
 }).strict();
-
 export const createCategorySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   name: visibleName(2, 120),

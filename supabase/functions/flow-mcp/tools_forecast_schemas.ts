@@ -23,3 +23,10 @@ export const resetForecastSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   month: forecastMonth,
 }).strict();
+
+/** The forecast tools' argument allow-list, merged into ALLOWED in tools_schemas.ts. */
+export const FORECAST_ALLOWED: Record<string, Set<string>> = {
+  get_forecast: new Set(["month"]),
+  set_forecast_item: new Set(["idempotency_key", "month", "item_key", "amount_minor", "due_on", "moved_out", "reset"]),
+  reset_forecast: new Set(["idempotency_key", "month"]),
+};

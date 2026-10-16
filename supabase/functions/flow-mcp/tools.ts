@@ -13,6 +13,7 @@ import {
   dateOf,
   fail,
   isCalendarDate,
+  matchRowsOf,
   isFail,
   limitOf,
   lineMetaOf,
@@ -785,23 +786,4 @@ export async function callTool(
   const loanSplit = await rpc("get_loan_split", { p_transaction_id: transactionId });
   if (loanSplit.status >= 400) return fail("refused", "The read was refused.");
   return ok({ ...out, loan_split: loanSplit.json ?? null });
-}
-
-const MATCH_ROW_KEYS = new Set(["date", "amount_minor", "ref"]);
-
-/** match_lines rows as the RPC takes them, or null when any row is malformed. */
-function matchRowsOf(value: unknown): { date: string; amount_minor: number; ref: string | null }[] | null {
-  if (!Array.isArray(value) || value.length < 1 || value.length > 500) return null;
-  const rows: { date: string; amount_minor: number; ref: string | null }[] = [];
-  for (const row of value) {
-    if (row == null || typeof row !== "object" || Array.isArray(row)) return null;
-    const entry = row as Record<string, unknown>;
-    if (Object.keys(entry).some((key) => !MATCH_ROW_KEYS.has(key))) return null;
-    const { date, amount_minor: amount, ref = null } = entry;
-    if (typeof date !== "string" || !isCalendarDate(date)) return null;
-    if (typeof amount !== "number" || !Number.isSafeInteger(amount) || amount === 0 || Math.abs(amount) >= 1e15) return null;
-    if (ref != null && (typeof ref !== "string" || ref.length > 200)) return null;
-    rows.push({ date, amount_minor: amount, ref: ref as string | null });
-  }
-  return rows;
 }
