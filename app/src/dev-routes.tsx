@@ -476,7 +476,6 @@ export function DevCategories() {
         { id: "c9", name: "שכר", kind: "expense", hidden: false, is_default: false, count: 20, in_rehab: false },
         { id: "c10", name: "משיכות בעלים", kind: "expense", hidden: false, is_default: false, count: 6, excluded_from_pnl: true, in_rehab: false },
         { id: "c11", name: "העברות בין חשבונות", kind: "expense", hidden: false, is_default: false, count: 9, excluded_from_pnl: true, in_rehab: false },
-        { id: "c12", name: "ישנה", kind: "expense", hidden: true, is_default: false, count: 0 },
         { id: "c13", name: "הכנסות משכירות", kind: "income", hidden: false, is_default: false, count: 1 },
       ]}
     />

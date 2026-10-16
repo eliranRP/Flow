@@ -193,6 +193,16 @@
   margin-top: 0;
 }
 
+/* FLOW-513: the board's row is a count line under the name, with a 4px pad, so the row is 56px. */
+.ui-cat-list .ui-row {
+  padding-block: var(--space-1);
+}
+
+.ui-cat-list .ui-row-hint {
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+}
+
 .ui-cat-foot {
   display: flex;
   flex-wrap: wrap;
