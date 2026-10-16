@@ -64,6 +64,17 @@
   inline-size: 100%;
 }
 
+/* FLOW-366: the side switch sits above the title, full width, as the board draws it. */
+.ui-lines-switch {
+  inline-size: 100%;
+}
+
+.ui-lines-switch .ui-seg {
+  inline-size: 100%;
+  /* The board sets יצא on the left half of the segment. */
+  direction: ltr;
+}
+
 /* The order chips bleed to the screen's edge and scroll sideways; their first chip lines up with the text. */
 .ui-lines-chips {
   margin-inline: calc(var(--space-4) * -1);

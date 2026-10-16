@@ -41,8 +41,8 @@ describe("linesOrder", () => {
 
 describe("lineDayTitle", () => {
   it("names today and yesterday, and dates older days without a year", () => {
-    expect(lineDayTitle("2026-10-11", TODAY)).toBe("היום · 11/10");
-    expect(lineDayTitle("2026-10-10", TODAY)).toBe("אתמול · 10/10");
+    expect(lineDayTitle("2026-10-11", TODAY)).toBe("היום • 11/10");
+    expect(lineDayTitle("2026-10-10", TODAY)).toBe("אתמול • 10/10");
     expect(lineDayTitle("2026-10-02", TODAY)).toBe("02/10");
   });
 });
@@ -51,7 +51,7 @@ describe("groupLines by date", () => {
   const groups = groupLines(rows, "date", "out", TODAY);
 
   it("makes one group per day, newest first, with the day's sum", () => {
-    expect(groups.map((g) => g.title)).toEqual(["היום · 11/10", "אתמול · 10/10", "02/10"]);
+    expect(groups.map((g) => g.title)).toEqual(["היום • 11/10", "אתמול • 10/10", "02/10"]);
     expect(groups.map((g) => g.total)).toEqual([120_000n, 345_000n, 45_000n]);
   });
 

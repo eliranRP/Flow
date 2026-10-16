@@ -23,7 +23,15 @@ import { attentionRows, CashHome, HomeBooks } from "./screens/HomeScreen";
 import { chargeChangeViews } from "./forecast";
 import { CashLinesScreen } from "./screens/cash-lines-screen";
 import { CashMonthScreen } from "./screens/cash-screens";
-import { sampleCashLines, sampleCashLinesFlagged, sampleCashMonths, sampleCashYearMonths, sampleCashYears } from "./dev/cash-sample";
+import {
+  sampleBoardCashLines,
+  sampleBoardCashMonths,
+  sampleCashLines,
+  sampleCashLinesFlagged,
+  sampleCashMonths,
+  sampleCashYearMonths,
+  sampleCashYears,
+} from "./dev/cash-sample";
 import { CashHistoryScreen, CashYearScreen } from "./screens/cash-history";
 import { cashMonthKey } from "./cash";
 import {
@@ -352,6 +360,16 @@ export function DevCashLines() {
   const side = asked === "in" || asked === "kept" ? asked : "out";
   // FLOW-366: ?pending=1 flags the first line for review and the second as out of profit.
   const flagged = params.get("pending") === "1";
+  if (params.get("board") === "1") {
+    // The board frame: an invented USD company with the board's amounts and pending rows.
+    const board = sampleBoardCashMonths();
+    return (
+      <CashLinesScreen
+        sample={{ months: board, lines: sampleBoardCashLines(side === "in" ? "in" : "out") }}
+        at={{ month: cashMonthKey(board.months[0]?.month ?? ""), side, currency: "USD" }}
+      />
+    );
+  }
   const data = sampleCashMonths();
   return (
     <CashLinesScreen

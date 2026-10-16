@@ -191,14 +191,13 @@ function CashLinesBody({
         layout="stacked"
         title={title}
         backTo={back}
-        backText={isCurrent ? "בית" : undefined}
-        kicker={kicker}
+        backText={isCurrent ? "בית" : kicker}
+        aboveTitle={side === "kept" ? undefined : <div className="ui-lines-switch">{sideSwitch}</div>}
         subtitle={subtitle}
         compactFigure={figureText}
         panel={side === "kept" ? chips : <>{sideSwitch}{chips}</>}
         below={
           <div className="ui-lines-head">
-            {side === "kept" ? null : sideSwitch}
             {headBlock}
             {currencies}
             {chips}

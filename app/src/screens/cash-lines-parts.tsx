@@ -35,7 +35,7 @@ export function CashLinesHead({ side, currency, figure, rest }: { side: CashList
       {figure != null ? (
         <p className="ui-breakdown-total ui-page-pad">
           <span className="ui-breakdown-total-line">
-            <Amount agorot={figure} currency={currency} size="display" income={side === "in"} />
+            <Amount agorot={figure} currency={currency} size="total" income={side === "in"} />
           </span>
         </p>
       ) : null}
@@ -115,7 +115,7 @@ export function LinesTotal({ side, currency, total }: { side: CashListSide; curr
   return (
     <p className="ui-breakdown-total">
       <span className="ui-breakdown-total-line">
-        <Amount agorot={total} currency={currency} size="display" income={side === "in"} />
+        <Amount agorot={total} currency={currency} size="total" income={side === "in"} />
       </span>
     </p>
   );

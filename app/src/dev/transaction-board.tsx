@@ -1,7 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import { type TransactionDetail } from "@flow/shared";
 import { TransactionScreen } from "../screens/transaction-screen";
-import { mailboxCharges, steadyCharges } from "../ui/related-charges.sample";
+import { boardCharges, loanCharges } from "../ui/related-charges.sample";
 
 const BOARD_TXN: NonNullable<TransactionDetail> = {
   id: "t-board",
@@ -44,6 +44,7 @@ export function DevTransactionBoard() {
         sample={{
           ...BOARD_TXN,
           id: "t-loan",
+          doc_date: "2026-10-07",
           description: "Harbor Loan Servicing",
           supplier_name: "Harbor Loan Servicing",
           project_name: "Maple Ave • דופלקס להשכרה",
@@ -52,7 +53,7 @@ export function DevTransactionBoard() {
           amount_net: -395700n,
           review_status: "approved",
           review_id: null,
-          paid: true,
+          paid: false,
         }}
         sampleProjects={[{ id: "p1", name: "Maple Ave • דופלקס להשכרה" }]}
         sampleCategories={[{ id: "c1", name: "תשלומי הלוואה" }]}
@@ -67,28 +68,28 @@ export function DevTransactionBoard() {
           pace: "month",
           detected_pace: "month",
         }}
-        sampleCharges={steadyCharges}
+        sampleCharges={loanCharges}
       />
     );
   }
   if (params.get("board") === "recurring") {
     return (
       <TransactionScreen
-        sample={BOARD_TXN}
+        sample={{ ...BOARD_TXN, amount_gross: -124000n, amount_net: -124000n, doc_date: "2026-10-11" }}
         sampleProjects={[{ id: "p1", name: "פרויקט לדוגמה" }]}
         sampleCategories={[{ id: "c1", name: "חומרים" }]}
         sampleRecurring={{
           transaction_id: "t-board",
-          party: { direction: "expense", id: "s-sample", name: "ספק לדוגמה", currency: "ILS" },
+          party: { direction: "expense", id: "s-sample", name: "ספק לדוגמה", currency: "USD" },
           recurring: true,
           override: null,
           detected: true,
-          typical_day: 4,
-          typical_amount_minor: 1199n,
+          typical_day: 11,
+          typical_amount_minor: 98000n,
           pace: "month",
           detected_pace: "month",
         }}
-        sampleCharges={mailboxCharges}
+        sampleCharges={boardCharges}
       />
     );
   }

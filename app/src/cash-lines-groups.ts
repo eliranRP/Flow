@@ -41,11 +41,11 @@ export function sideMinor(row: CashLine, side: CashListSide): bigint {
   return row.side === "in" ? row.amount_minor : -row.amount_minor;
 }
 
-/** The day heads: "היום · dd/mm", "אתמול · dd/mm", otherwise "dd/mm" (no year). */
+/** The day heads: "היום • dd/mm", "אתמול • dd/mm", otherwise "dd/mm" (no year). */
 export function lineDayTitle(date: string, today: string): string {
   const day = `${date.slice(8, 10)}/${date.slice(5, 7)}`;
-  if (date === today) return `היום · ${day}`;
-  if (date === shiftIsoDay(today, -1)) return `אתמול · ${day}`;
+  if (date === today) return `היום • ${day}`;
+  if (date === shiftIsoDay(today, -1)) return `אתמול • ${day}`;
   return day;
 }
 
