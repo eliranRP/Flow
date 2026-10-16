@@ -356,7 +356,7 @@ export function LineSplitEditor({
       : line.loanSplit ? "line has a loan split"
         : line.reviewBlocked ? "line has an open review" : null;
 
-  const meta = [line.direction === "income" && line.categoryId != null && isReversal(categories, line.categoryId, "income") ? "החזר" : null, line.supplier, line.docDate ? formatDisplay(line.docDate) : ""].filter(Boolean);
+  const meta = [line.direction === "income" && line.categoryId != null && isReversal(categories, line.categoryId, "income") ? "החזר" : null, line.supplier, line.docDate ? formatDisplay(line.docDate) : "", line.categoryName].filter(Boolean);
   const restCategory = categoryName(rest.categoryId);
   const restProject = rest.projectId == null ? (line.projectName ?? "בלי פרויקט") : (projectName(rest.projectId) ?? "פרויקט");
   const restDuplicate = check.restDuplicate;
@@ -389,7 +389,7 @@ export function LineSplitEditor({
               {meta.map((item, index) => (
                 <span key={item}>
                   {index > 0 ? " · " : null}
-                  {index === meta.length - 1 && line.docDate ? <bdi dir="ltr">{item}</bdi> : item}
+                  {line.docDate && item === formatDisplay(line.docDate) ? <bdi dir="ltr">{item}</bdi> : item}
                 </span>
               ))}
             </p>
