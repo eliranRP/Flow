@@ -9,7 +9,7 @@ import { loanListSummary, type LoanListEntry } from "./loan-list-summary";
 const TODAY = "2026-10-16";
 const USD = "USD";
 
-function entry(loan: (typeof SAMPLE_AMORTIZING), today = TODAY): LoanListEntry {
+function entry(loan: typeof SAMPLE_AMORTIZING, today = TODAY): LoanListEntry {
   return { loan, outlook: loanOutlook(loan, today) };
 }
 
@@ -33,7 +33,7 @@ describe("loanListSummary", () => {
 
   it("names the earliest next payment and its loan", () => {
     const summary = loanListSummary([entry(SAMPLE_AMORTIZING), entry(SAMPLE_INTEREST_ONLY), entry(SAMPLE_BALLOON)], USD);
-    expect(summary.next).toEqual({ loanId: "loan-mortgage", lenderName: "משכנתא דוגמה", dueDate: "2026-11-01", amountMinor: 151_240n });
+    expect(summary.next).toEqual({ lenderName: "משכנתא דוגמה", dueDate: "2026-11-01", amountMinor: 151_240n });
   });
 
   it("returns no next payment when no open loan has an outlook", () => {

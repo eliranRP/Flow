@@ -19,7 +19,7 @@ export type LoanListSummary = {
   monthlyParts: { principal: bigint; interest: bigint; escrow: bigint };
   monthlyMinor: bigint;
   /** הבא: the earliest next payment, with its loan. Null when no open loan has one. */
-  next: { loanId: string; lenderName: string; dueDate: string; amountMinor: bigint } | null;
+  next: { lenderName: string; dueDate: string; amountMinor: bigint } | null;
   /** 12 החודשים הבאים: the next 12 payments of every open loan. */
   twelveMonthsMinor: bigint;
 };
@@ -42,7 +42,7 @@ export function loanListSummary(entries: readonly LoanListEntry[], currency: Loa
     twelveMonthsMinor += outlook.ahead.totalMinor;
     const amountMinor = outlook.next.principalMinor + outlook.next.interestMinor + outlook.next.escrowMinor;
     if (next == null || outlook.next.dueDate < next.dueDate) {
-      next = { loanId: loan.id, lenderName: loan.name, dueDate: outlook.next.dueDate, amountMinor };
+      next = { lenderName: loan.name, dueDate: outlook.next.dueDate, amountMinor };
     }
   }
   return {
