@@ -1,1 +1,1 @@
-Backlog: the review card can split a line between several projects and categories (FLOW-365), and the split screen now allows the same project with different categories (FLOW-370).
+The review card has a split link under its project and category rows. A saved split shows its parts on the card.

@@ -239,7 +239,7 @@ describe("cold review scope", () => {
     await waitFor(() => {
       expect(localStorage.getItem("flow.jev-connector")).toBeNull();
       expect(connectorKeys(client)).toContainEqual(["jev-connector", scope.userId, scope.companyId]);
-    }, { timeout: 5000 });
+    });
     expect(document.querySelector("[data-jev-pending]")).not.toBeNull();
     expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();

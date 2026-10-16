@@ -190,7 +190,6 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
   overflow-wrap: anywhere;
 }
 
-/* FLOW-309: the skipped cards at the end of הצגת הכול. */
 /* FLOW-333 C6: a disabled text link looks disabled, with no pressed tint. */
 .ui-text-link:disabled,
 .ui-text-link[aria-disabled="true"] {

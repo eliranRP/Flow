@@ -9,6 +9,7 @@
 - [ ] Actions in a fixed bar in the thumb zone: אישור (wide, primary), שינוי, דלג, with one line under it on what happens.
 - [ ] No suggestion: the project row reads "אין הצעה · הקישו לבחירה" in accent, אישור is disabled, the line says "בחרו פרויקט כדי לאשר".
 - [ ] Transfer: deferred to [FLOW-915](FLOW-915.md). No transfer field exists in the shared review row, so the queue shows no transfer state and has no transfer branch.
+- [ ] Photo thumbnail: deferred to [FLOW-915](FLOW-915.md). Until the review row carries a document URL, a photo card keeps its document icon.
 - [ ] Picker sheet: search, a list with the suggestion marked, + פרויקט חדש, and the "לזכור לספק …" switch (on by default). Picking saves that field only and returns to the card ([FLOW-831](FLOW-831.md)'s שמירה rule applies to the change sheet, not to this one-tap pick).
 - [ ] Approve or skip: the card leaves to the right (240ms, ease-exit), the next one comes in from the left; toast "הפריט אושר · ביטול" for 3s. דלג sends the item to the end of the queue.
 - [ ] Last item: the "הכל מאושר" screen with what was done and "חזרה לבית".
