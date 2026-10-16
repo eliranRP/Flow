@@ -10,6 +10,7 @@ import { Card } from "../ui/card";
 import { EmptyState } from "../ui/empty-state";
 import { RefreshIcon, ReviewIcon } from "../ui/icons";
 import { PartsBar } from "../ui/parts-bar";
+import { ListRow } from "../ui/list-row";
 import { ScreenState } from "../ui/screen-state";
 import { unpaidDaysOpen, unpaidIsMarked, unpaidOverdueMinor, unpaidTotals, UNPAID_OVERDUE_DAYS, type UnpaidInvoice, type UnpaidSummary } from "../unpaid";
 import { usePreviewSearch } from "../preview";
@@ -25,11 +26,6 @@ function syncedAgo(iso: string, now = Date.now()): string {
 /** The month name for "מאז 1 ב…" (Hebrew, Israel time). */
 export function unpaidMonthName(iso: string): string {
   return new Intl.DateTimeFormat("he-IL", { month: "long", timeZone: "Asia/Jerusalem" }).format(new Date(`${iso}T12:00:00Z`));
-}
-
-/** The invoice's amount, as the row and the page show it: money in, a plus, whole units without ".00". */
-export function UnpaidAmount({ invoice, size }: { invoice: UnpaidInvoice; size: "list" | "display" }) {
-  return <Amount agorot={absAgorot(invoice.open_gross_agorot)} currency={invoice.currency ?? "ILS"} size={size} income />;
 }
 
 /** The bank match line of a row (FLOW-367): the amount and date of the deposit, then the invoice page. */
@@ -127,41 +123,45 @@ export function UnpaidScreen({ sample, summary }: { sample?: UnpaidInvoice[]; su
           {rows.map((row) => {
             const marked = unpaidIsMarked(row);
             const days = unpaidDaysOpen(row.doc_date, today);
-            const over = days > UNPAID_OVERDUE_DAYS;
+            const over = days > UNPAID_OVERDUE_DAYS && !marked;
             const matchText = !marked ? unpaidMatchText(row) : null;
             const detailTo = `/unpaid/${encodeURIComponent(row.id)}${search}`;
+            const name = row.customer_name ?? row.description;
             return (
-              <li key={row.id} className="ui-inv-item" data-marked={marked ? "true" : undefined}>
-                <Link to={detailTo} className="ui-inv-row">
-                  <Avatar name={row.customer_name ?? row.description} fallback="invoice" />
-                  <span className="ui-inv-copy">
-                    <span className="ui-inv-line">
-                      <span className="ui-inv-name">{row.customer_name ?? row.description}</span>
-                      <UnpaidAmount invoice={row} size="list" />
+              <li key={row.id} className="ui-inv-item">
+                <ListRow
+                  variant="project"
+                  layout="flat"
+                  title={name}
+                  hint={row.project_name ?? undefined}
+                  href={detailTo}
+                  className={marked ? "ui-inv-marked" : undefined}
+                  icon={<Avatar name={name} fallback="invoice" />}
+                  agorot={absAgorot(row.open_gross_agorot)}
+                  currency={row.currency ?? "ILS"}
+                  amountDirection="income"
+                  endSub={marked ? null : (
+                    <span className="ui-inv-age" data-over={over ? "true" : undefined}>
+                      <span className="ui-inv-dot" aria-hidden="true" data-tone={over ? "signal" : "plain"} />
+                      {`פתוחה ${String(days)} ימים`}
                     </span>
-                    <span className="ui-inv-line ui-inv-sub">
-                      <span className="ui-inv-project">{row.project_name ?? ""}</span>
-                      <span className="ui-inv-age" data-over={over && !marked ? "true" : undefined}>
-                        <span className="ui-inv-dot" aria-hidden="true" data-tone={over && !marked ? "signal" : "plain"} />
-                        {marked ? UNPAID_MARKED : `פתוחה ${String(days)} ימים`}
-                      </span>
-                    </span>
-                  </span>
-                </Link>
-                {marked ? (
-                  <div className="ui-inv-action-line">
-                    <span className="t-hint text-text-secondary">{UNPAID_MARKED}</span>
-                    {holdWrites ? null : <button type="button" className="ui-inv-text-action" onClick={() => { actions.setPaid(row.id, false); }}>ביטול</button>}
-                  </div>
-                ) : matchText != null && row.match != null ? (
-                  <div className="ui-inv-action-line">
-                    <Link to={detailTo} className="ui-inv-match-link">{matchText}</Link>
-                  </div>
-                ) : holdWrites ? null : (
-                  <div className="ui-inv-action-line">
-                    <button type="button" className="ui-inv-text-action" onClick={() => { actions.setPaid(row.id, true); }}>סימון כשולם</button>
-                  </div>
-                )}
+                  )}
+                  actionBelow
+                  action={marked ? (
+                    <div className="ui-inv-action-line">
+                      <span className="t-hint text-text-secondary">{UNPAID_MARKED}</span>
+                      {holdWrites ? null : <button type="button" className="ui-inv-text-action" onClick={() => { actions.setPaid(row.id, false); }}>ביטול</button>}
+                    </div>
+                  ) : matchText != null && row.match != null ? (
+                    <div className="ui-inv-action-line">
+                      <Link to={detailTo} className="ui-inv-match-link">{matchText}</Link>
+                    </div>
+                  ) : holdWrites ? null : (
+                    <div className="ui-inv-action-line">
+                      <button type="button" className="ui-inv-text-action" onClick={() => { actions.setPaid(row.id, true); }}>סימון כשולם</button>
+                    </div>
+                  )}
+                />
               </li>
             );
           })}
