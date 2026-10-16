@@ -16,6 +16,7 @@ import { COMPANY_NAME_MAX, companyNameError } from "./rename-company";
  */
 export function useCompanyForm({
   initialName = "",
+  namePlaceholder,
   checked = false,
   reserveMessage = false,
   blocked,
@@ -23,6 +24,8 @@ export function useCompanyForm({
   onCreated,
 }: {
   initialName?: string;
+  /** FLOW-514: the setup's placeholder, an invented name (never a board sample). */
+  namePlaceholder?: string;
   /** A story opens on a typed name, checked as if the field had been left. */
   checked?: boolean;
   /** Keep the error line's space, so an inline button below does not move. */
@@ -78,6 +81,7 @@ export function useCompanyForm({
       <TextField
         ref={fieldRef}
         label="שם העסק"
+        placeholder={namePlaceholder}
         value={name}
         maxLength={COMPANY_NAME_MAX * 2 + 20}
         aria-required="true"

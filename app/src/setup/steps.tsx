@@ -26,6 +26,7 @@ import {
   BASIS_NOTE,
   BASIS_OPTIONS,
   BUSINESS_LEAD,
+  BUSINESS_NAME_PLACEHOLDER,
   CONNECT_BUSY,
   CONNECT_BUTTON,
   CONNECT_CONNECTED,
@@ -104,6 +105,7 @@ export function StepBusiness({
   const client = useQueryClient();
   const form = useCompanyForm({
     initialName: initial?.name ?? "",
+    namePlaceholder: BUSINESS_NAME_PLACEHOLDER,
     hideVat: true,
     onCreated: (created) => {
       // create_company succeeded: the first settings follow, then the run starts.

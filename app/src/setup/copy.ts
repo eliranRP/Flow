@@ -43,6 +43,7 @@ export const CURRENCY_OPTIONS = [
   { value: "USD", label: "$ דולר" },
   { value: "ILS", label: "₪ שקל" },
 ] as const;
+export const BUSINESS_NAME_PLACEHOLDER = "למשל ברוש נכסים";
 export const BASIS_LABEL = "רווח ותזרים לפי";
 export const BASIS_OPTIONS = [
   { value: "paid", label: "תאריך תשלום" },
