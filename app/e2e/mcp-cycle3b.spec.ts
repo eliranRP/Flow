@@ -34,8 +34,8 @@ async function expectNoOverflow(page: Page) {
 }
 
 /** Line-clamp keeps the text in the DOM, so a text query cannot see a vertical cut. */
-async function bannerTitleClipped(page: Page): Promise<boolean> {
-  return page.locator(".ui-banner .ui-row-title").evaluate((node) => {
+async function autoCountClipped(page: Page): Promise<boolean> {
+  return page.locator(".ui-review-auto").evaluate((node) => {
     if (!(node instanceof HTMLElement) || node.parentElement == null) return true;
     const clone = node.cloneNode(true);
     if (!(clone instanceof HTMLElement)) return true;
@@ -54,10 +54,10 @@ async function bannerTitleClipped(page: Page): Promise<boolean> {
 
 test("banner wording fits at 320 and 390 in both themes", async ({ page }) => {
   const cases = [
-    // One wording for every source, "שויכו/שויכה אוטומטית היום", with no "בלי להמתין"; one line beside לרשימה.
-    ["/reviewer/review?banner=assistant", "4 שויכו אוטומטית היום"],
-    ["/reviewer/review?banner=one", "אחת שויכה אוטומטית היום"],
-    ["/reviewer/review?banner=one-assistant", "אחת שויכה אוטומטית היום"],
+    // FLOW-365: the count sits in the header as "<n> אושרו אוטומטית היום", one line beside the counter.
+    ["/reviewer/review?banner=assistant", "4 אושרו אוטומטית היום"],
+    ["/reviewer/review?banner=one", "1 אושרו אוטומטית היום"],
+    ["/reviewer/review?banner=one-assistant", "1 אושרו אוטומטית היום"],
   ] as const;
   for (const scheme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme: scheme });
@@ -66,10 +66,10 @@ test("banner wording fits at 320 and 390 in both themes", async ({ page }) => {
       for (const [route, title] of cases) {
         await page.goto(route);
         await expect(page.getByText("נתוני דוגמה · Example data")).toBeVisible();
-        const banner = page.locator(".ui-banner");
+        const banner = page.locator(".ui-review-auto");
         await expect(banner).toContainText(title);
         if (!title.includes("בלי להמתין")) await expect(banner).not.toContainText("בלי להמתין");
-        if (width === 320) expect(await bannerTitleClipped(page)).toBe(false);
+        if (width === 320) expect(await autoCountClipped(page)).toBe(false);
         await expectNoOverflow(page);
       }
     }
@@ -102,8 +102,7 @@ test("skip, approve, and undo keep the visit index and grow the total", async ({
       await expect(page.getByText("3 מתוך 3")).toBeVisible();
       await expect(page.getByRole("heading", { name: "צבעי הכרמל בע״מ" })).toBeVisible();
       await page.getByRole("button", { name: "אישור" }).click();
-      await expect(page.getByText("הכל מאושר")).toBeVisible();
-      await expect(page.getByText("מתוך")).toHaveCount(0);
+      await expect(page.getByRole("heading", { name: "עגורני החוף בע״מ" })).toBeVisible();
       await page.locator(".ui-toast button", { hasText: "ביטול" }).click();
       await expect(page.getByRole("heading", { name: "צבעי הכרמל בע״מ" })).toBeVisible();
       await expect(page.getByText("4 מתוך 4")).toBeVisible();

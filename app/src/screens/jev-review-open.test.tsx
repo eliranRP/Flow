@@ -231,14 +231,16 @@ describe("cold review scope", () => {
       releaseCompany();
       await Promise.resolve();
     });
+    // Wait for what the released company read does (the remembered flag moves to the scoped key),
+    // not for a state that already held before the release, so the asserts below see the settled state.
     await waitFor(() => {
-      expect(document.querySelector("[data-jev-pending]")).not.toBeNull();
+      expect(localStorage.getItem("flow.jev-connector")).toBeNull();
+      expect(connectorKeys(client)).toContainEqual(["jev-connector", scope.userId, scope.companyId]);
     });
+    expect(document.querySelector("[data-jev-pending]")).not.toBeNull();
     expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
-    expect(localStorage.getItem("flow.jev-connector")).toBeNull();
-    expect(connectorKeys(client)).toContainEqual(["jev-connector", scope.userId, scope.companyId]);
     expect(connectorKeys(client).some((key) => key.length === 1)).toBe(false);
     await act(async () => {
       releaseIntegration();

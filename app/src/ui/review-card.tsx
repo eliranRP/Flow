@@ -294,7 +294,7 @@ export function ReviewCard({
             <span className="ui-row-main">
               <span className="ui-row-text">
                 <span className="ui-row-hint">{line.label}</span>
-                <span className="ui-row-title"><Skeleton width="md" still={still} /></span>
+                <span className="ui-row-title ui-review-skel-title"><Skeleton width="md" still={still} /></span>
               </span>
             </span>
           </div>

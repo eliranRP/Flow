@@ -488,6 +488,14 @@
   margin: var(--space-2) var(--space-side) 0;
 }
 
+/* FLOW-309: the plural auto count stays on one line at 320, beside the counter. */
+.ui-review-auto {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* The dashed peek of the next card, under the card (the board's "הבא בתור"). */
 .ui-review-next {
   display: flex;
@@ -599,4 +607,10 @@
   flex-direction: column;
   align-items: flex-end;
   min-inline-size: 0;
+}
+
+/* FLOW-704: a pending row holds the title line a settled row's text has, so the waiting card keeps its height. */
+.ui-review-skel-title {
+  display: block;
+  min-block-size: calc(var(--type-body-size) * var(--type-body-line));
 }

@@ -96,11 +96,10 @@ test("the queue opens a shared split, blocks a missing category, and approves th
   await page.goto("/reviewer/review");
   await expect(page.getByText("הוצאה משותפת")).toBeVisible();
   await expect(page.getByText("1 מתוך 3")).toBeVisible();
-  await page.getByRole("link", { name: "לרשימה" }).click();
+  await page.getByRole("link", { name: /אושרו אוטומטית היום/ }).click();
   await expect(page).toHaveURL(/\/reviewer\/filed$/);
   await page.goto("/reviewer/review");
-  await page.getByRole("button", { name: "סגירה" }).click();
-  await expect(page.getByRole("link", { name: "לרשימה" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /אושרו אוטומטית היום/ })).toHaveCount(1);
   await expectNoOverflow(page);
   const approve = page.getByRole("button", { name: "אישור" });
   expect(await approve.evaluate((node) => getComputedStyle(node).cursor)).toBe("pointer");
@@ -118,11 +117,12 @@ test("the queue opens a shared split, blocks a missing category, and approves th
 
   await page.goto("/reviewer/review");
   await page.getByRole("button", { name: "דלג" }).click();
-  await toast(page, "דילגנו על הפריט");
-  // 0091: a missing category is a muted "לא נבחר" row, and the primary action picks it instead of approving.
+  // The skipped card leaves with its exit motion; wait for the missing-category card before acting on it.
+  await expect(page.getByRole("heading", { name: "ברגי העמק בע״מ" })).toBeVisible();
+  // 0091: a missing category is a muted "לא נבחר" row, and אישור stays held disabled until one is picked.
   await expect(page.getByRole("button", { name: "קטגוריה: לא נבחר" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "אישור" })).toHaveCount(0);
-  const held = page.getByRole("button", { name: "בחירת קטגוריה", exact: true });
+  await expect(page.getByRole("button", { name: "אישור" })).toBeDisabled();
+  const held = page.getByRole("button", { name: "קטגוריה: לא נבחר" });
   await expect(held).toBeEnabled();
   await page.getByRole("link", { name: "שינוי" }).click();
   await expect(page).toHaveURL(/\/reviewer\/save\?save=ok&item=q-bolts$/);
@@ -132,18 +132,24 @@ test("the queue opens a shared split, blocks a missing category, and approves th
   await expect(page.getByRole("heading", { name: "צבעי הכרמל בע״מ" })).toBeVisible();
   await page.getByRole("button", { name: "אישור" }).click();
   await toast(page, "הפריט אושר");
-  await expect(page.getByText("הכל מאושר")).toBeVisible();
-  await page.getByRole("link", { name: "לתצוגת הביקורת" }).click();
-  await expect(page).toHaveURL(/\/reviewer$/);
+  await expect(page.getByRole("heading", { name: "עגורני החוף בע״מ" })).toBeVisible();
 });
 
 test("a refused queue save has no retry, and a dropped connection does", async ({ page }) => {
+  // A skip writes nothing (device order only), so the save failures are reached by an approve on a ready card.
+  const toReady = async () => {
+    await page.getByRole("button", { name: "דלג" }).click();
+    await page.getByRole("button", { name: "דלג" }).click();
+    await expect(page.getByRole("heading", { name: "צבעי הכרמל בע״מ" })).toBeVisible();
+  };
   await page.goto("/reviewer/review?save=fail");
-  await page.getByRole("button", { name: "דלג" }).click();
+  await toReady();
+  await page.getByRole("button", { name: "אישור" }).click();
   await toast(page, refusal);
   await expect(toastAction(page, "ניסיון חוזר")).toHaveCount(0);
   await page.goto("/reviewer/review?save=offline");
-  await page.getByRole("button", { name: "דלג" }).click();
+  await toReady();
+  await page.getByRole("button", { name: "אישור" }).click();
   await toast(page, offline);
   const retry = toastAction(page, "ניסיון חוזר");
   await expect(retry).toBeVisible();
@@ -304,7 +310,7 @@ test("category, project queue, and waiting stay inside the sample", async ({ pag
   await expect(page.getByText("צבעי הכרמל בע״מ · ₪300")).toBeVisible();
 
   await page.goto("/reviewer/project");
-  await page.getByRole("link", { name: "לרשימה" }).click();
+  await page.getByRole("link", { name: /אושרו אוטומטית היום/ }).click();
   await expect(page).toHaveURL(/\/reviewer\/filed$/);
   await page.goto("/reviewer/project");
   await page.getByRole("link", { name: "שינוי" }).click();
@@ -312,7 +318,6 @@ test("category, project queue, and waiting stay inside the sample", async ({ pag
   await expect(page.getByText("ברגי העמק בע״מ · ₪150")).toBeVisible();
   await page.goto("/reviewer/project");
   await page.getByRole("button", { name: "דלג" }).click();
-  await toast(page, "דילגנו על הפריט");
   await expect(page.getByRole("heading", { name: "צבעי הכרמל בע״מ" })).toBeVisible();
   await page.getByRole("button", { name: "אישור" }).click();
   await toast(page, "הפריט אושר");
@@ -426,7 +431,7 @@ test("approving ברגי העמק leaves שויכו היום automatic only, and
   await page.getByRole("button", { name: "אישור" }).click();
   await toast(page, "הפריט אושר");
   // FLOW-309: the owner's own approval is not an automatic filing, so the count stays.
-  await expect(page.locator(".ui-banner")).toContainText("4");
+  await expect(page.locator(".ui-review-auto")).toContainText("4");
   const undo = toastAction(page, "ביטול");
   await expect(undo).toBeVisible();
   await page.locator(".ui-toast").hover();
@@ -443,9 +448,9 @@ test("a saved split category is not a suggestion and אישור is enabled", asy
   await expect(page.getByRole("heading", { name: "ברגי העמק בע״מ" })).toBeVisible();
   await expect(page.getByText("מפוצל · 2 פרויקטים")).toBeVisible();
   await expect(page.getByText("הצעה")).toHaveCount(0);
-  // 0091: no category yet, so there is no אישור; the primary action is an enabled בחירת קטגוריה.
-  await expect(page.getByRole("button", { name: "אישור" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "בחירת קטגוריה", exact: true })).toBeEnabled();
+  // 0091: no category yet, so אישור is held disabled; the category row is an enabled button.
+  await expect(page.getByRole("button", { name: "אישור" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "קטגוריה: לא נבחר" })).toBeEnabled();
   await page.getByRole("link", { name: "שינוי" }).click();
   await expect(page).toHaveURL(/item=q-bolts/);
   await expect(page.getByRole("switch", { name: "לזכור לספק הזה" })).toHaveCount(0);

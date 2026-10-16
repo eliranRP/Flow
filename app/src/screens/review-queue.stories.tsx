@@ -129,32 +129,22 @@ export const ReviewJevFit375: Story = { ...se, render: () => <ReviewJevFitStory 
 export const ReviewJevReason375: Story = { ...se, render: () => <ReviewJevFitStory jev={jevSuggested} /> };
 export const ReviewJevFitLoud375: Story = { ...se, render: () => <ReviewJevFitStory flags={loudDuplicate} /> };
 
-/** FLOW-327 / 0137: after דלג, the undo toast sits just above the bar. */
+/** FLOW-365: דלג moves the card to the end of the device order. It writes nothing and shows no toast. */
 const skipRows: ReviewRow[] = [plainRow, { ...plainRow, id: "r2", transaction_id: "t2", supplier_name: "שיש לדוגמה", amount_net: -345_000n }];
 function ReviewQueueSkipStory() {
-  const [rows, setRows] = useState(skipRows);
   return (
-    <StoryRoute entry="/review" tabs reviewCount={rows.length}>
-      <ReviewQueue
-        rows={rows}
-        search=""
-        sample
-        previewWrite={{
-          run: () => Promise.resolve(),
-          onDone: (id) => { setRows((current) => current.filter((row) => row.id !== id)); },
-          onUndo: () => { setRows(skipRows); },
-        }}
-      />
+    <StoryRoute entry="/review" tabs reviewCount={skipRows.length}>
+      <ReviewQueue rows={skipRows} search="" sample />
     </StoryRoute>
   );
 }
-export const ReviewQueueSkipToast: Story = {
+export const ReviewQueueSkipMoves: Story = {
   ...se,
   render: () => <ReviewQueueSkipStory />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByRole("button", { name: "דלג" }));
-    await canvas.findByText("דילגנו על הפריט");
+    await canvas.findByRole("heading", { name: "שיש לדוגמה" });
   },
 };
 
