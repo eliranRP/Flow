@@ -386,13 +386,13 @@ declare
 begin
   def := (select pg_get_constraintdef(oid) from pg_constraint
           where conrelid = 'private.mcp_writes'::regclass and conname = 'mcp_writes_kind_check');
-  anchor := $a$'project_delete'::text]$a$;
+  anchor := $a$'document_attach'::text]$a$;
   if pg_temp.anchor_count(def, anchor) <> 1 then
     raise exception 'mcp_writes_kind_check is not the expected definition';
   end if;
   execute 'alter table private.mcp_writes drop constraint mcp_writes_kind_check';
   execute 'alter table private.mcp_writes add constraint mcp_writes_kind_check '
-    || replace(def, anchor, $n$'project_delete'::text, 'forecast_item'::text, 'forecast_reset'::text]$n$);
+    || replace(def, anchor, $n$'document_attach'::text, 'forecast_item'::text, 'forecast_reset'::text]$n$);
 
   def := (select pg_get_constraintdef(oid) from pg_constraint
           where conrelid = 'private.mcp_writes'::regclass and conname = 'mcp_writes_target');
