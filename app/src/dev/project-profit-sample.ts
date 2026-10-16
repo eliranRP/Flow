@@ -51,7 +51,14 @@ export const JUNIPER_PROFIT: ProjectProfitSample = {
     overhead_weighted: true,
     overhead_share_minor: 304_000n,
     after_overhead: true,
-    categories: [],
+    // The brief's Juniper Ct categories (44 / 23 / 20 / 11 / 2 %), summing to the counted expenses of $54,570.
+    categories: [
+      { id: "loan-interest", name: "ריבית הלוואות", amount_agorot: 2_374_000n },
+      { id: "repairs", name: "תיקונים ותחזוקה", amount_agorot: 1_260_000n },
+      { id: "taxes", name: "מסים וביטוח", amount_agorot: 1_098_000n },
+      { id: "property-mgmt", name: "ניהול נכס", amount_agorot: 609_000n },
+      { id: "other", name: "אחר", amount_agorot: 116_000n },
+    ],
     pending_count: 0,
     pending_agorot: 0n,
     transactions: [],

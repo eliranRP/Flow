@@ -13,6 +13,7 @@ const base = {
   state_label: "פעיל",
   base_currency: "USD",
   by_currency: [{ currency: "USD", income_minor: 1_000_000n, direct_minor: 600_000n, shared_minor: 0n, profit_minor: 400_000n }],
+  categories: [],
   transactions: [],
 } as unknown as NonNullable<ProjectDetail>;
 
@@ -30,11 +31,11 @@ const months: NonNullable<ProfitMonths> = {
   by_currency: [{ currency: "USD", income_minor: 1_000_000n, expense_minor: 600_000n, profit_minor: 400_000n }],
 };
 
-function renderScreen(sample: ProjectProfitSample) {
+function renderScreen(sample: ProjectProfitSample, path = "/projects/p-test/profit") {
   const client = new QueryClient();
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={["/projects/p-test/profit"]}>
+      <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/projects/:projectId/profit" element={<ProjectProfitScreen sample={sample} />} />
         </Routes>
@@ -73,5 +74,16 @@ describe("ProjectProfitScreen", () => {
     expect(income).toBe(total?.income_minor);
     expect(expense).toBe(total?.direct_minor);
     expect(income - expense).toBe(total?.profit_minor);
+  });
+
+  it("the category chip lists the expense categories largest first, with shares that add to 100", () => {
+    const { container } = renderScreen(JUNIPER_PROFIT, "/projects/juniper-ct/profit?by=category");
+    const rows = Array.from(container.querySelectorAll(".ui-pp-cat"));
+    expect(rows).toHaveLength(5);
+    expect(rows[0]?.textContent).toContain("ריבית הלוואות");
+    const shares = rows.map((row) => Number.parseInt(row.querySelector(".ui-pp-cat-hint")?.textContent ?? "", 10));
+    expect(shares).toEqual([44, 23, 20, 11, 2]);
+    expect(shares.reduce((sum, share) => sum + share, 0)).toBe(100);
+    expect(container.querySelector(".ui-pp-months")).toBeNull();
   });
 });

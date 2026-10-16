@@ -1,6 +1,7 @@
 import { formatAmountText, type ProfitMonth, type ProfitMonths, type ProjectDetail } from "@flow/shared";
 import type { ReactNode } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { absAgorot } from "../agorot";
 import { useCompanyCurrency } from "../company-currency";
 import { projectExpenseMinor, projectRows } from "../by-currency";
 import { allTime, monthPeriod } from "../period";
@@ -10,8 +11,10 @@ import { screenPhase } from "../query-phase";
 import { useProfitMonthsQuery, useProjectQuery } from "../use-books";
 import { Amount } from "../ui/amount";
 import { Card } from "../ui/card";
+import { Chip } from "../ui/chip";
 import { HEBREW_MONTHS } from "../ui/date-math";
 import { List, ListRow } from "../ui/list-row";
+import { OrganizeChips } from "../ui/organize-chips";
 import { ProfitSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 
@@ -33,6 +36,20 @@ function countWord(count: number): string {
   return count === 1 ? "חודש אחד" : `${String(count)} חודשים`;
 }
 
+/** An expense category's total since the start, in the row's currency, largest first (categories are positive). */
+type CategoryTotal = { id: string | null; name: string; amount: bigint };
+
+function categoryTotals(project: NonNullable<ProjectDetail>, currency: string): CategoryTotal[] {
+  const rows: CategoryTotal[] = project.categories_by_currency
+    ? project.categories_by_currency
+      .filter((category) => category.currency === currency)
+      .map((category) => ({ id: category.id, name: category.name ?? "", amount: absAgorot(category.amount_minor) }))
+    : currency === (project.base_currency ?? "ILS")
+      ? project.categories.map((category) => ({ id: category.id, name: category.name ?? "", amount: absAgorot(category.amount_agorot) }))
+      : [];
+  return rows.filter((row) => row.amount !== 0n).sort((a, b) => (a.amount === b.amount ? 0 : a.amount > b.amount ? -1 : 1));
+}
+
 /**
  * The project's profit page (FLOW-140, slice 1, ProfitProject frame): the profit since the project's first
  * month, a four-row card (income, counted expenses, the project's share of general expenses, and the profit
@@ -42,6 +59,7 @@ function countWord(count: number): string {
 export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample } = {}) {
   const { projectId = "" } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const search = usePreviewSearch();
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();
@@ -70,6 +88,16 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
       : `${project.name} · מאז ${monthName(oldest, "")} · ${countWord(rows.length)}`;
   const fromProfit = new URLSearchParams(location.search).get("from") === "profit";
   const backTo = fromProfit ? `/profit${search}` : `/projects/${id}${search}`;
+  // The chips live in the URL (`by=category`), so Back from a category row restores the order.
+  const by = new URLSearchParams(location.search).get("by") === "category" ? "category" : "month";
+  const categories = project == null ? [] : categoryTotals(project, currency);
+  const setBy = (next: "month" | "category") => {
+    const params = new URLSearchParams(location.search);
+    if (next === "month") params.delete("by");
+    else params.set("by", next);
+    const query = params.toString();
+    void navigate({ pathname: location.pathname, search: query === "" ? "" : `?${query}` }, { replace: true });
+  };
   return (
     <ScreenState
       title="רווח"
@@ -94,7 +122,18 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
             )}
           </Card>
           {after == null ? null : <p className="ui-pp-note t-hint">{NOTE}</p>}
-          {rows.length === 0 ? null : (
+          <OrganizeChips label="סידור" className="ui-pp-chips">
+            <Chip pressed={by === "month"} onClick={() => { setBy("month"); }}>לפי חודש</Chip>
+            <Chip pressed={by === "category"} onClick={() => { setBy("category"); }}>לפי קטגוריה</Chip>
+          </OrganizeChips>
+          {by === "category" ? (
+            <CategoryBars
+              rows={categories}
+              projectId={id}
+              currency={currency}
+              search={search}
+            />
+          ) : rows.length === 0 ? null : (
             <List className="ui-pp-months">
               {rows.map((month) => (
                 <MonthLine
@@ -120,6 +159,44 @@ function SummaryRow({ label, value, strong = false }: { label: string; value: Re
       <span>{value}</span>
     </div>
   );
+}
+
+/** FLOW-140 §2.3: one row per expense category, largest first, with a bar scaled to the largest row. */
+function CategoryBars({ rows, projectId, currency, search }: { rows: CategoryTotal[]; projectId: string; currency: string; search: string }) {
+  const total = rows.reduce((sum, row) => sum + row.amount, 0n);
+  const largest = rows[0]?.amount ?? 0n;
+  if (rows.length === 0) return null;
+  return (
+    <List className="ui-pp-cats">
+      {rows.map((row) => {
+        const share = total === 0n ? 0 : Math.round((Number(row.amount) * 100) / Number(total));
+        const width = largest === 0n ? 0 : Number((row.amount * 1000n) / largest) / 10;
+        const body = (
+          <>
+            <span className="ui-pp-cat-top">
+              <span>{row.name}</span>
+              <Amount agorot={-row.amount} currency={currency} />
+            </span>
+            <span className="ui-pp-bar" aria-hidden="true"><span className="ui-pp-bar-fill" style={{ width: `${String(width)}%` }} /></span>
+            <span className="ui-pp-cat-hint t-hint">{`${String(share)}% מההוצאות`}</span>
+          </>
+        );
+        return row.id == null ? (
+          <div key={row.name} className="ui-pp-cat">{body}</div>
+        ) : (
+          <div key={row.id} className="ui-pp-cat">
+            <Link className="ui-pp-cat-link" to={`/projects/${projectId}/categories/${row.id}${categoryQuery(currency, search)}`}>{body}</Link>
+          </div>
+        );
+      })}
+    </List>
+  );
+}
+
+/** The category page's query: the preview flag, and the currency when it is not shekels. */
+function categoryQuery(currency: string, search: string): string {
+  if (currency === "ILS") return search;
+  return `${search}${search === "" ? "?" : "&"}currency=${encodeURIComponent(currency)}`;
 }
 
 function MonthLine({ month, title, currency, href }: { month: ProfitMonth; title: string; currency: string; href: string }) {
