@@ -203,6 +203,9 @@ describe("cold review scope", () => {
     localStorage.removeItem(jevConnectorStorageKey(scope));
   });
 
+  // The budget is 15s, not the 5s default: a cold first render of /review (module transform, then the first
+  // paint) took about 5s on a loaded runner and timed the test out before any assertion ran. It is not a retry.
+  // The wait for the released company read gets 5s, not the 1s default, for the same cold-start reason.
   it("waits on a remembered on when /review is opened with no dashboard cache", async () => {
     let releaseCompany: () => void = () => undefined;
     let releaseIntegration: () => void = () => undefined;
@@ -236,7 +239,7 @@ describe("cold review scope", () => {
     await waitFor(() => {
       expect(localStorage.getItem("flow.jev-connector")).toBeNull();
       expect(connectorKeys(client)).toContainEqual(["jev-connector", scope.userId, scope.companyId]);
-    });
+    }, { timeout: 5000 });
     expect(document.querySelector("[data-jev-pending]")).not.toBeNull();
     expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();

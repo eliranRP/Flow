@@ -543,7 +543,6 @@ export function ReviewQueue({
           sourceLine={`${invoiceDate(card.doc_date)} • ${card.direction === "income" ? "הכנסה" : "הוצאה"}`}
           onSplit={holdWrites || leaving ? undefined : openSplit}
           splitSummary={splitSummary}
-          transfer={(card as ReviewRow & { transfer?: boolean }).transfer === true}
           pending={jevLoading}
           reason={card.reason}
           direction={card.direction}

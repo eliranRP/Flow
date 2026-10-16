@@ -49,9 +49,9 @@ function seed(): ReviewRow[] {
 /**
  * FLOW-365: `&case=` seeds one card in a board state, in USD with round amounts and invented names:
  * suggest (Jev's project and category), none (no suggestion), split (two parts, the summary on the
- * card), transfer (the project row says it does not apply), photo (a photographed invoice).
+ * card), photo (a photographed invoice).
  */
-export type ReviewCase = "suggest" | "none" | "split" | "transfer" | "photo";
+export type ReviewCase = "suggest" | "none" | "split" | "photo";
 let seedCase: ReviewCase | null = null;
 
 function caseRow(kind: ReviewCase): ReviewRow {
@@ -76,8 +76,7 @@ function caseRow(kind: ReviewCase): ReviewRow {
     auto_approved_today: 12,
   };
   if (kind === "none") return { ...base, project_id: null, project_name: null, project_suggested: false, category_suggested: false, supplier_name: "ספק חדש לדוגמה", source: "mercury" };
-  if (kind === "split") return { ...base, project_id: null, project_name: null, category_id: null, category_name: null, project_suggested: false, category_suggested: false, reason: null, pnl_role: "shared", share_count: 3, supplier_name: "The Home Depot לדוגמה" };
-  if (kind === "transfer") return { ...base, project_id: null, project_name: null, project_suggested: false, supplier_name: "העברה לדוגמה", source: "mercury", transfer: true } as ReviewRow;
+  if (kind === "split") return { ...base, project_id: null, project_name: null, category_id: null, category_name: null, project_suggested: false, category_suggested: false, reason: null, pnl_role: "shared", share_count: 3, supplier_name: "ספק ציוד לדוגמה" };
   if (kind === "photo") return { ...base, source: "photo", supplier_name: "חשמל לדוגמה" };
   return base;
 }

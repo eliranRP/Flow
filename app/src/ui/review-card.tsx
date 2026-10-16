@@ -66,8 +66,6 @@ export type ReviewSplitSummary = {
 export const REVIEW_NO_SUGGESTION = "אין הצעה · הקישו לבחירה";
 /** FLOW-365: the split link under the rows. */
 export const REVIEW_SPLIT_LINK = "פיצול לכמה פרויקטים או קטגוריות";
-/** FLOW-365: the project row of a transfer. It does not apply to a transfer. */
-export const REVIEW_TRANSFER = "לא רלוונטי · העברה";
 
 type ReviewCardProps = {
   supplier: string;
@@ -83,12 +81,10 @@ type ReviewCardProps = {
   onProject?: () => void;
   /** FLOW-365: the source pill at the top of the text column (חשבונית מצולמת, שורת בנק). */
   sourcePill?: string;
-  /** FLOW-365: opens the split screen for this line. Left out for a transfer or a viewer. */
+  /** FLOW-365: opens the split screen for this line. Left out for a viewer. */
   onSplit?: () => void;
   /** FLOW-365: a split already saved. The card shows its parts in place of the two rows. */
   splitSummary?: ReviewSplitSummary | null;
-  /** FLOW-365: a transfer between the owner's accounts. The project row says it does not apply. */
-  transfer?: boolean;
   /** Opens the category picker. A line pick saves that field and does not resolve. */
   onCategory?: () => void;
   projectButtonRef?: Ref<HTMLButtonElement>;
@@ -139,7 +135,6 @@ export function ReviewCard({
   sourcePill,
   onSplit,
   splitSummary,
-  transfer = false,
   projectButtonRef,
   categoryButtonRef,
   pending = false,
@@ -176,9 +171,7 @@ export function ReviewCard({
     onOpen?: () => void;
   }> = [];
   const projectNone = projectValue == null && suggestion?.projectNoneJev === true;
-  if (transfer) {
-    lines.push({ key: "project", label: "פרויקט", value: REVIEW_TRANSFER, suggested: false, jev: false, onOpen: undefined });
-  } else if (projectValue || onProject || projectNone) {
+  if (projectValue || onProject || projectNone) {
     lines.push({
       key: "project",
       label: "פרויקט",
@@ -320,7 +313,7 @@ export function ReviewCard({
             tag={lineTag(line)}
           />
         ))}
-        {onSplit && !mismatch && !transfer && splitSummary == null ? (
+        {onSplit && !mismatch && splitSummary == null ? (
           <button type="button" className="ui-review-split-link ui-hit" onClick={onSplit}>
             <SplitIcon size={18} />
             {REVIEW_SPLIT_LINK}
@@ -445,7 +438,6 @@ function ReviewFlagBlock({ flag }: { flag: ReviewFlagView }) {
  * rule picked reads בחרת; a missing one reads חסר.
  */
 function lineTag(line: { suggested: boolean; jev: boolean; reversal?: boolean; value: string }) {
-  if (line.value === REVIEW_TRANSFER) return null;
   if (line.jev) return <JevTag />;
   if (line.suggested) return <SuggestTag />;
   if (line.reversal) return <ReversalTag />;

@@ -25,7 +25,7 @@ import { jevShown, withJev } from "./jev-review";
 
 /** FLOW-365: the dev `case` param names a board state for the proofs; anything else is the default queue. */
 function reviewCaseOf(value: string | null): ReviewCase | null {
-  return value === "suggest" || value === "none" || value === "split" || value === "transfer" || value === "photo" ? value : null;
+  return value === "suggest" || value === "none" || value === "split" || value === "photo" ? value : null;
 }
 
 /** The row opened from the list. A later URL replace must not move this. */

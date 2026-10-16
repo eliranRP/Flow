@@ -113,9 +113,6 @@ export function listPlace(rows: ReviewRow[], ordered: ReviewRow[], fromList: boo
   return { index: index + 1, total: rows.length };
 }
 
-/** הצגת הכול with nothing waiting, above the skipped section. */
-export const REVIEW_NONE_WAITING = "אין פריטים שמחכים לאישור.";
-
 /** "project · category" for the statement row's ✦ line: what the card shows (U11). FLOW-305. */
 export function statementSuggestion(row: ReviewRow): string | null {
   const suggestion = reviewSuggestion(row);

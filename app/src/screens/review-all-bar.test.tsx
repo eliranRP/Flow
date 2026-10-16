@@ -270,6 +270,26 @@ describe("the review queue acceptance (FLOW-365)", () => {
     expect(rpc.calls.some((call) => call.name === "approve_review_item")).toBe(false);
   });
 
+  it("approving a split card saves every part through one call, and creates no vendor rule", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({ data: [reviewRow("r1", "ציוד משותף לדוגמה", null, { pnl_role: "shared", share_count: 3, reason: null, category_id: "c1", project_name: null })], error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "approve_split_review")).toBe(true);
+    });
+    // The one call carries the card and its category; the server saves every part and the rest.
+    expect(rpc.calls.find((call) => call.name === "approve_split_review")?.args).toEqual({ p_id: "r1", p_category_id: "c1" });
+    expect(rpc.calls.some((call) => call.name === "approve_review_item")).toBe(false);
+    expect(rpc.calls.some((call) => call.name === "resolve_review" && (call.args as { p_remember?: boolean } | undefined)?.p_remember === true)).toBe(false);
+    // No vendor or supplier rule is written from a split approve.
+    expect(rpc.calls.some((call) => /rule|vendor|supplier/i.test(call.name))).toBe(false);
+  });
+
   it("the approve toast's ביטול puts the item back on the card", async () => {
     const open = new Set(["r1", "r2"]);
     const rows = [reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")];

@@ -219,13 +219,6 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
   color: var(--color-disabled-text);
 }
 
-/* FLOW-309, owner pick 2026-10-08: "N פריטים דולגו" under the empty queue's action. */
-.ui-review-empty-skipped {
-  display: flex;
-  justify-content: center;
-  margin-block-start: var(--space-3);
-}
-
 /* FLOW-704: on a phone-width card the ✦ line starts under the labels, not the values, so Jev's longest
    reason ("כמו ב־10 מתוך 12 הפעמים האחרונות") stays on the one line held while Jev waits. It comes after
    the base rule, so it wins at equal weight. */

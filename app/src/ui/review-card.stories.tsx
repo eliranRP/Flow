@@ -40,16 +40,15 @@ type CardArgs = {
   paidOn?: string | null;
   /** The field rows open their pickers (chevrons), as on the review screen. */
   editable?: boolean;
-  /** FLOW-365: the source pill, the split summary and a transfer. */
+  /** FLOW-365: the source pill and the split summary. */
   sourcePill?: string;
   splitSummary?: ReviewSplitSummary;
-  transfer?: boolean;
 };
 
 function CardView({
   supplier, sourceLine, netAgorot, vatLine, project, category, confidence, reason, meta, currency, projectJev, categoryJev,
   splitParts, why, partyFilings = 5, matchingFilings = 3, flags, direction, missingBoth, projectNoneJev, filled,
-  receipts, paid, paidOn, editable, sourcePill, splitSummary, transfer,
+  receipts, paid, paidOn, editable, sourcePill, splitSummary,
 }: CardArgs) {
   const shared = reason === "unallocated_shared";
   const suggestion = project || category || projectNoneJev
@@ -80,8 +79,7 @@ function CardView({
       splitParts={splitParts}
       sourcePill={sourcePill}
       splitSummary={splitSummary}
-      transfer={transfer}
-      onSplit={splitSummary == null && !transfer ? () => undefined : undefined}
+      onSplit={splitSummary == null ? () => undefined : undefined}
       jevWhy={jevWhy}
       flag={reviewFlagView(flags, { direction, currency })}
       direction={direction}
@@ -419,7 +417,7 @@ const usdSplit: ReviewSplitSummary = {
   ],
 };
 
-/** FLOW-365 states: a suggestion, no suggestion, a split summary, a transfer and a photo, in USD. */
+/** FLOW-365 states: a suggestion, no suggestion, a split summary and a photo, in USD. */
 export const ReviewStateSuggestion: Story = {
   name: "Review state: suggestion",
   args: { supplier: "חומרי בניין לדוגמה", sourceLine: "הוצאה · 12/10/2026", netAgorot: "-128450", currency: "USD", vatLine: "לפני מע״מ", project: "שיפוץ הרצל 12", category: "חומרים", projectJev: true, categoryJev: true, sourcePill: "שורת בנק" },
@@ -431,10 +429,6 @@ export const ReviewStateNoSuggestion: Story = {
 export const ReviewStateSplit: Story = {
   name: "Review state: split summary",
   args: { supplier: "ציוד משותף לדוגמה", sourceLine: "הוצאה · 12/10/2026", netAgorot: "-128450", currency: "USD", vatLine: "לפני מע״מ", sourcePill: "שורת בנק", splitSummary: usdSplit },
-};
-export const ReviewStateTransfer: Story = {
-  name: "Review state: transfer",
-  args: { supplier: "העברה בין חשבונות לדוגמה", sourceLine: "העברה · 12/10/2026", netAgorot: "-500000", currency: "USD", vatLine: "לפני מע״מ", sourcePill: "שורת בנק", transfer: true },
 };
 export const ReviewStatePhoto: Story = {
   name: "Review state: photo invoice",

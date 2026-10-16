@@ -14,7 +14,7 @@ import { BackButton, useGoBack } from "./ui/back";
 import { Button } from "./ui/button";
 import { ActionBar, ActionBarRow } from "./ui/action-bar";
 import { CheckIcon } from "./ui/icons";
-import { ProgressBar } from "./ui/progress-bar";
+import { ReviewSegments } from "./ui/review-count";
 import { ReviewCard } from "./ui/review-card";
 import { ScreenHeader } from "./ui/screen-header";
 import { useToast } from "./ui/toast";
@@ -140,28 +140,20 @@ export function DevSplit() {
 /** A local queue so the skip toast can be tested without writing a review row. */
 export function DevReview() {
   const toast = useToast();
-  const [index, setIndex] = useState(0);
+  const [items, setItems] = useState(devReviewItems);
+  const [index] = useState(0);
   const [change, setChange] = useState(false);
-  const item = devReviewItems[index];
-  const total = devReviewItems.length;
+  const item = items[index];
+  const total = items.length;
   return (
     <div className="ui-review-queue" data-bar="">
       <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" />
-      <div className="ui-review-meter">
-        <ProgressBar
-          variant="thin"
-          label="התקדמות התור"
-          value={Math.min(index + 1, total)}
-          max={total}
-          caption={
-            <span className="t-hint">
-              <bdi dir="ltr">{String(Math.min(index + 1, total))}</bdi>
-              {" מתוך "}
-              <bdi dir="ltr">{String(total)}</bdi>
-            </span>
-          }
-        />
-      </div>
+      <ReviewSegments index={Math.min(index + 1, total)} total={total} />
+      <p className="t-hint ui-review-counter">
+        <bdi dir="ltr">{String(Math.min(index + 1, total))}</bdi>
+        {" מתוך "}
+        <bdi dir="ltr">{String(total)}</bdi>
+      </p>
       {item ? (
         <div className="ui-review-motion" data-motion={index === 0 ? undefined : "in"} key={item.id}>
           <ReviewCard
@@ -182,16 +174,16 @@ export function DevReview() {
           disabled={!item}
           onClick={() => {
             if (!item) return;
-            const next = index + 1;
+            const at = index;
+            setItems((list) => list.filter((_, position) => position !== at));
             toast.show({
               message: "הפריט אושר",
               action: "ביטול",
               place: "bar",
               onAction: () => {
-                setIndex(next - 1);
+                setItems((list) => [...list.slice(0, at), item, ...list.slice(at)]);
               },
             });
-            setIndex(next);
           }}
         >
           אישור
@@ -203,17 +195,9 @@ export function DevReview() {
             disabled={!item}
             onClick={() => {
               if (!item) return;
-              const next = index + 1;
-              // FLOW-327: the skip toast offers ביטול, as on the live queue, for the shots.
-              toast.show({
-                message: "דילגנו על הפריט",
-                action: "ביטול",
-                place: "bar",
-                onAction: () => {
-                  setIndex(next - 1);
-                },
-              });
-              setIndex(next);
+              // FLOW-365: דלג moves the card to the end of the device order. It writes nothing and shows no toast.
+              const at = index;
+              setItems((list) => [...list.filter((_, position) => position !== at), item]);
             }}
           >
             דלג

@@ -313,7 +313,7 @@ describe("review queue list", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review");
-    expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
+    // The no-suggestion project row carries the current copy; the picker opens from it.
     fireEvent.click(await screen.findByRole("button", { name: "פרויקט: אין הצעה · הקישו לבחירה" }, { timeout: 2500 }));
     expect(await screen.findByRole("heading", { name: "בחירת פרויקט" })).toBeInTheDocument();
     // FLOW-365: a pick saves that one field and returns to the card; there is no שמירה.

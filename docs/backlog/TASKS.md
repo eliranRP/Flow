@@ -304,6 +304,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-373"></a>[FLOW-373](tasks/FLOW-373.md) | Expected (כ־) income figures get the "+" | BACKLOG NIT |
 | <a id="flow-364"></a>[FLOW-364](tasks/FLOW-364.md) | Redesign: Home, the month drawer, a past month, and the 4-tab bar | UI (design approved) |
 | <a id="flow-365"></a>[FLOW-365](tasks/FLOW-365.md) | Redesign: the review queue (לאישור) without a tab | UI (design approved) |
+| <a id="flow-915"></a>[FLOW-915](tasks/FLOW-915.md) | Review queue: a server transfer flag, approve as a transfer, and the document thumbnail | Server + UI |
 | <a id="flow-366"></a>[FLOW-366](tasks/FLOW-366.md) | Redesign: month lines (נכנס / יצא) and the transaction page | UI (design approved) |
 | <a id="flow-367"></a>[FLOW-367](tasks/FLOW-367.md) | Redesign: open invoices, with a bank match and mark as paid | UI (design approved) |
 | <a id="flow-368"></a>[FLOW-368](tasks/FLOW-368.md) | Redesign: search with one סינון button, and opening from Home's icon | UI (design approved) |

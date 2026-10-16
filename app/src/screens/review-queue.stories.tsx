@@ -129,6 +129,32 @@ export const ReviewJevFit375: Story = { ...se, render: () => <ReviewJevFitStory 
 export const ReviewJevReason375: Story = { ...se, render: () => <ReviewJevFitStory jev={jevSuggested} /> };
 export const ReviewJevFitLoud375: Story = { ...se, render: () => <ReviewJevFitStory flags={loudDuplicate} /> };
 
+/**
+ * FLOW-365: the picker sheet from the card's project row. The preview list is the dev fixture's (invented
+ * names); picking saves that field and returns to the card, so the story only opens the sheet.
+ */
+function ReviewProjectSheetStory() {
+  return (
+    <StoryRoute entry="/review?preview=1" tabs reviewCount={1}>
+      <ReviewQueue
+        rows={[plainRow]}
+        search="?preview=1"
+        sample
+        previewWrite={{ run: () => Promise.resolve(), onDone: () => undefined, onUndo: () => undefined }}
+      />
+    </StoryRoute>
+  );
+}
+export const ReviewProjectSheet: Story = {
+  ...se,
+  render: () => <ReviewProjectSheetStory />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: /^פרויקט:/ }));
+    await within(document.body).findByRole("dialog", { name: "בחירת פרויקט" });
+  },
+};
+
 /** FLOW-365: דלג moves the card to the end of the device order. It writes nothing and shows no toast. */
 const skipRows: ReviewRow[] = [plainRow, { ...plainRow, id: "r2", transaction_id: "t2", supplier_name: "שיש לדוגמה", amount_net: -345_000n }];
 function ReviewQueueSkipStory() {

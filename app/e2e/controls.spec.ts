@@ -31,7 +31,7 @@ test("צפייה opens today's list, a row opens the transaction, and back retur
   await expect(page.getByRole("link", { name: /אושרו אוטומטית היום/ })).toBeVisible();
 });
 
-test("review approve, change, and skip give feedback", async ({ page }) => {
+test("review approve gives a toast, change opens, and skip moves the card with no toast", async ({ page }) => {
   await page.goto("/e2e/review-banner");
   await page.getByRole("button", { name: "אישור" }).click();
   await toast(page, previewToast);
@@ -39,7 +39,7 @@ test("review approve, change, and skip give feedback", async ({ page }) => {
   await expect(page).toHaveURL(/\/review\/change/);
   await page.goto("/e2e/review-banner");
   await page.getByRole("button", { name: "דלג" }).click();
-  await toast(page, previewToast);
+  await expect(page.locator(".ui-toast")).toHaveCount(0);
 });
 
 test("undo on the approve toast brings the card back", async ({ page }) => {

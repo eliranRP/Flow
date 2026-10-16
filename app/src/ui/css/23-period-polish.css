@@ -5,7 +5,7 @@
 
 /*
   FLOW-335: a ListRow's action under the row sits on the start side, under the name (Unpaid's mark).
-  Only ListRow's own stack: the skipped list on לאישור builds its own .ui-row-stack and keeps it.
+  Only ListRow's own stack: any other .ui-row-stack (a list that builds its own) keeps its layout.
 */
 .ui-row-stack-action {
   align-items: flex-start;
