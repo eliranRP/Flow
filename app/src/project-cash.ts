@@ -20,7 +20,6 @@ import { waitForAccessToken } from "./wait-for-session";
 /** The project page reads this many months: the current one and three under "חודשים קודמים". */
 export const PROJECT_CASH_MONTHS = 4;
 
-/** The page the project used to open on: its profit for a period, with the period pill. */
 /** A month's profit page (FLOW-140): the project's profit page for one month, named in the path. */
 export function projectProfitMonthPath(projectId: string, key: string, search: string): string {
   return `/projects/${projectId}/profit/${key}${search}`;

@@ -1,5 +1,8 @@
 import { lazy } from "react";
-import { Route } from "react-router-dom";
+import { Navigate, Route, useLocation, useParams } from "react-router-dom";
+import { anchorOf, monthPeriod, periodFromSearch } from "../period";
+import { usePreviewSearch } from "../preview";
+import { withPeriodSearch } from "../project-period";
 import { screenLoaders } from "../screen-loaders";
 
 const ProjectsScreen = lazy(() => screenLoaders.projects().then((m) => ({ default: m.ProjectsScreen })));
@@ -13,6 +16,21 @@ const ProfitMonthsScreen = lazy(() => screenLoaders.profitMonths().then((m) => (
 const ProjectProfitScreen = lazy(() => screenLoaders.projectProfit().then((m) => ({ default: m.ProjectProfitScreen })));
 const ProjectGroupScreen = lazy(() => screenLoaders.projectGroup().then((m) => ({ default: m.ProjectGroupScreen })));
 
+/**
+ * A month's profit page (FLOW-140): the period comes from the month in the path. A link or an address that
+ * names another period (or none) is sent to the month it names, so the path and the figures always agree.
+ */
+function ProjectMonthProfitRoute() {
+  const { projectId = "", month = "" } = useParams();
+  const location = useLocation();
+  const search = usePreviewSearch();
+  const current = periodFromSearch(new URLSearchParams(location.search));
+  if (current?.kind !== "month" || anchorOf(current) !== month) {
+    return <Navigate replace to={`/projects/${projectId}/profit/${month}${withPeriodSearch(search, monthPeriod(month))}`} />;
+  }
+  return <ProjectDetailScreen section="profit" />;
+}
+
 /** The projects tab: the list, a group, and a project's pages (its cash, profit, expenses, loans, transactions). */
 export function ProjectRoutes() {
   return (
@@ -25,7 +43,7 @@ export function ProjectRoutes() {
       {/* FLOW-340 C: the screens the project page's rows open. */}
       {/* FLOW-419: the project opens on its cash; its profit page, a month and a month's lines are one tap in. */}
       <Route path="projects/:projectId/profit" element={<ProjectProfitScreen />} />
-      <Route path="projects/:projectId/profit/:month" element={<ProjectDetailScreen section="profit" />} />
+      <Route path="projects/:projectId/profit/:month" element={<ProjectMonthProfitRoute />} />
       {/* The project page's "לכל החודשים": its years, a year its months (Home's FLOW-417). */}
       <Route path="projects/:projectId/cash/history" element={<ProjectCashHistoryScreen />} />
       <Route path="projects/:projectId/cash/year/:year" element={<ProjectCashYearScreen />} />
