@@ -113,3 +113,8 @@
 .ui-pm-month .ui-lines-group-head {
   padding: var(--space-4) 0 var(--space-1);
 }
+
+/* The month page's list sits in the group's own side padding, as on the board, not inside a second one. */
+.ui-pm-month .ui-project-list {
+  padding-inline: 0;
+}
