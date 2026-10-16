@@ -19,6 +19,7 @@ import { CompactBar } from "../ui/compact-bar";
 import { useScrolledPast } from "../ui/screen-header";
 import { formatAmount } from "../ui/amount";
 import { PlusIcon, ProjectsIcon, SearchIcon } from "../ui/icons";
+import { Avatar } from "../ui/avatar";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ProjectsSkeleton } from "../ui/screen-skeletons";
@@ -198,7 +199,7 @@ function ProjectCashRowItem({ row, currency, search, finished = false }: { row: 
       variant="project"
       title={row.name}
       hint={over ? <>{hint}<span className="ui-proj-over"> · מעל התקציב</span></> : hint}
-      icon={<span className="ui-row-initials" aria-hidden="true">{projectInitials(row.name)}</span>}
+      icon={<Avatar name={row.name} fallback="person" />}
       agorot={BigInt(finished ? row.profit_all_minor : net)}
       currency={currency}
       loss={finished && row.profit_all_minor < 0}
