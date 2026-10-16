@@ -460,19 +460,24 @@ function useDevSettingsSample(): NonNullable<Parameters<typeof SettingsScreen>[0
 }
 
 export function DevCategories() {
+  // FLOW-513 fixture: the board's Settings › קטגוריות frame (SettingsCategories), same names, counts and order.
   return (
     <CategoriesScreen
       listPath="/e2e/categories"
       sample={[
-        { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: false, count: 2 },
-        // FLOW-406: a parent with two sub-categories (mockups cat-b, cat-b-2).
-        { id: "c5", name: "תחזוקה", kind: "expense", hidden: false, is_default: false, count: 0, rollup_lines: 3, children_count: 2 },
-        { id: "c6", name: "חשמל", kind: "expense", hidden: false, is_default: false, count: 2, parent_id: "c5" },
-        { id: "c7", name: "ניקיון", kind: "expense", hidden: false, is_default: false, count: 1, parent_id: "c5" },
-        // A second visible expense category, so חומרים has somewhere to move (FLOW-347).
-        { id: "c4", name: "קבלנים", kind: "expense", hidden: false, is_default: false, count: 1 },
-        { id: "c2", name: "ישנה", kind: "expense", hidden: true, is_default: false, count: 0 },
-        { id: "c3", name: "עבודה", kind: "income", hidden: false, is_default: false, count: 1 },
+        { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: false, count: 142, in_rehab: true, rehab: true },
+        { id: "c2", name: "עבודה", kind: "expense", hidden: false, is_default: false, count: 61, rollup_lines: 61, children_count: 3, in_rehab: true, rehab: true },
+        { id: "c3", name: "קבלנים", kind: "expense", hidden: false, is_default: false, count: 0, parent_id: "c2", in_rehab: true, rehab: true },
+        { id: "c4", name: "חשמלאי", kind: "expense", hidden: false, is_default: false, count: 0, parent_id: "c2", in_rehab: true, rehab: true },
+        { id: "c5", name: "שרברבות", kind: "expense", hidden: false, is_default: false, count: 0, parent_id: "c2", in_rehab: true, rehab: true },
+        { id: "c6", name: "תיקונים ותחזוקה", kind: "expense", hidden: false, is_default: false, count: 38 },
+        { id: "c7", name: "חשמל ומים", kind: "expense", hidden: false, is_default: false, count: 27 },
+        { id: "c8", name: "מסים וביטוח", kind: "expense", hidden: false, is_default: false, count: 24 },
+        { id: "c9", name: "שכר", kind: "expense", hidden: false, is_default: false, count: 20 },
+        { id: "c10", name: "משיכות בעלים", kind: "expense", hidden: false, is_default: false, count: 6, excluded_from_pnl: true },
+        { id: "c11", name: "העברות בין חשבונות", kind: "expense", hidden: false, is_default: false, count: 9, excluded_from_pnl: true },
+        { id: "c12", name: "ישנה", kind: "expense", hidden: true, is_default: false, count: 0 },
+        { id: "c13", name: "הכנסות משכירות", kind: "income", hidden: false, is_default: false, count: 1 },
       ]}
     />
   );
