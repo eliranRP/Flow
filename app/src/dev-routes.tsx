@@ -58,6 +58,8 @@ import {
 } from "./screens/flow-screens";
 import { ProfitMonthsScreen } from "./screens/profit-months";
 import { ProjectProfitScreen } from "./screens/project-profit-screen";
+import { ProjectMonthProfitScreen } from "./screens/project-month-profit-screen";
+import { JUNIPER_MONTH_PROFIT } from "./dev/profit-month-sample";
 import { JUNIPER_PROFIT, NEW_PROJECT_PROFIT } from "./dev/project-profit-sample";
 import { LoanDetailScreen, type LoanView } from "./screens/loan-detail-screen";
 import { useMemoryLoanStore } from "./screens/loan-detail-store";
@@ -647,6 +649,11 @@ export function DevProjectDetail() {
 }
 
 /** FLOW-140 slice 1: the project profit page on the board's Juniper Ct figures; `?state=empty` is a project with no lines. */
+/** FLOW-140 slice 2: the project month page on the Juniper Ct October fixture (the ProfitMonth frame). */
+export function DevProjectMonthProfit() {
+  return <ProjectMonthProfitScreen sample={JUNIPER_MONTH_PROFIT} />;
+}
+
 export function DevProjectProfit() {
   const [params] = useSearchParams();
   return <ProjectProfitScreen sample={params.get("state") === "empty" ? NEW_PROJECT_PROFIT : JUNIPER_PROFIT} />;

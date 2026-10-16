@@ -224,27 +224,6 @@ const periodProject: NonNullable<ProjectDetailData> = {
 };
 
 /** A month from the "לפי חודש" list. The row still shows: the page lists the whole project (FLOW-337). */
-export const ProjectOneMonth: Story = {
-  name: "Project, one month opened from by month",
-  render: () => (
-    <StoryRoute entry="/projects/p-a/profit/2026-09?period=month&at=2026-09" tabs>
-      <ProjectDetailScreen example={exampleOnBand} section="profit" sample={{ ...periodProject, transactions: periodProject.transactions.filter((txn) => txn.doc_date.startsWith("2026-09")) }} />
-    </StoryRoute>
-  ),
-};
-/** FLOW-444: Back names the project; a long name is cut with an ellipsis. */
-export const ProjectOneMonthLongName: Story = {
-  name: "Project, one month, long project name",
-  render: () => (
-    <StoryRoute entry="/projects/p-a/profit/2026-09?period=month&at=2026-09" tabs>
-      <ProjectDetailScreen
-        example={exampleOnBand}
-        section="profit"
-        sample={{ ...periodProject, name: "שיפוץ דירת גן ברחוב הדוגמה הארוך 128", transactions: periodProject.transactions.filter((txn) => txn.doc_date.startsWith("2026-09")) }}
-      />
-    </StoryRoute>
-  ),
-};
 /** FLOW-404. The השקעה card under the categories, with invented figures. */
 export const ProjectInvestment: Story = {
   name: "Project with investment card",

@@ -15,6 +15,7 @@ const ProjectCashYearScreen = lazy(() => screenLoaders.projectCashHistory().then
 const ProjectCategoryScreen = lazy(() => screenLoaders.projectCategory().then((m) => ({ default: m.ProjectCategoryScreen })));
 const ProfitMonthsScreen = lazy(() => screenLoaders.profitMonths().then((m) => ({ default: m.ProfitMonthsScreen })));
 const ProjectProfitScreen = lazy(() => screenLoaders.projectProfit().then((m) => ({ default: m.ProjectProfitScreen })));
+const ProjectMonthProfitScreen = lazy(() => screenLoaders.projectMonthProfit().then((m) => ({ default: m.ProjectMonthProfitScreen })));
 const ProjectGroupScreen = lazy(() => screenLoaders.projectGroup().then((m) => ({ default: m.ProjectGroupScreen })));
 
 /**
@@ -31,7 +32,7 @@ function ProjectMonthProfitRoute() {
   if (current?.kind !== "month" || anchorOf(current) !== month) {
     return <Navigate replace to={`/projects/${projectId}/profit/${month}${withPeriodSearch(search, monthPeriod(month))}`} />;
   }
-  return <ProjectDetailScreen section="profit" />;
+  return <ProjectMonthProfitScreen />;
 }
 
 /** The projects tab: the list, a group, and a project's pages (its cash, profit, expenses, loans, transactions). */

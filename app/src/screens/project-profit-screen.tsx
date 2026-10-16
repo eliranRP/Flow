@@ -152,7 +152,7 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
   );
 }
 
-function SummaryRow({ label, value, strong = false }: { label: string; value: ReactNode; strong?: boolean }) {
+export function SummaryRow({ label, value, strong = false }: { label: string; value: ReactNode; strong?: boolean }) {
   return (
     <div className={strong ? "ui-pp-row ui-pp-row-strong" : "ui-pp-row"}>
       <span className="ui-pp-label">{label}</span>
