@@ -14,6 +14,8 @@
 }
 
 .ui-seg-btn {
+  /* FLOW-363 (3c): the 40px button takes taps across the track's padding, so the whole 48px track is hit. */
+  --hit-block: var(--size-seg-track);
   position: relative;
   block-size: var(--size-seg);
   min-block-size: var(--size-seg);

@@ -188,6 +188,7 @@
   --radius-toast: 14px;
   --radius-seg-btn: 10px;
   --size-seg: 40px;
+  --size-seg-track: 48px; /* --size-seg plus the track's 4px padding on each side */
   --swipe-action: 120px;
   --dur-shimmer: 1400ms;   /* until FLOW-371 replaces the shimmer with --motion-pulse */
   /* FLOW-363 (3b): the sheet's panel top and bottom (board: 10 above the handle, 28 below the content). */
