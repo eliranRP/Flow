@@ -1,7 +1,5 @@
 import { formatAmountText } from "@flow/shared";
 import type { ReactNode } from "react";
-import { methodLabel, type TxnMeta } from "../txn-meta";
-import { BankIcon, CardIcon, DocumentIcon, TransferIcon } from "./icons";
 
 /**
  * The method slot under a statement row's amount (FLOW-305): a 16px icon and a short label,
