@@ -125,6 +125,7 @@ function AddSheet({ bank: sampleBank, fromProject }: { bank?: AddBankState; from
   return (
     <RouteSheet
       title={fromProject == null ? "הוספה" : `הוספה ל־${fromProject.name}`}
+      hint={fromProject == null ? undefined : "כל מה שתוסיפו ישויך לפרויקט הזה"}
       closeTo={`/${search}`}
       returnFocusRef={addTriggerRef}
     >
@@ -147,7 +148,6 @@ function AddSheet({ bank: sampleBank, fromProject }: { bank?: AddBankState; from
           </button>
         </div>
         {pickError == null ? null : <p role="alert" className="ui-add-error">{pickError}</p>}
-        {fromProject == null ? null : <p className="ui-add-scope">כל מה שתוסיפו ישויך לפרויקט הזה</p>}
         <div className="ui-add-rows">
           {fromProject == null ? (
             <ListRow

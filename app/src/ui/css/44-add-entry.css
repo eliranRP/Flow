@@ -58,12 +58,6 @@
   font-size: var(--type-meta-size);
 }
 
-.ui-add-scope {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
-}
-
 .ui-add-rows {
   margin-block: var(--space-4);
   overflow: hidden;
