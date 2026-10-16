@@ -12,7 +12,7 @@ import { israelToday } from "../ui/date-math";
  * FLOW-139. Every loan of a company with its outlook (its next payment and the payments ahead), for
  * the list's summary card. `today` is the Israeli-calendar date the outlook starts from.
  */
-export function useLoanSummaryEntries(companyId: string | null, today: string) {
+function useLoanSummaryEntries(companyId: string | null, today: string) {
   return useQuery({
     queryKey: ["loans", companyId, "summary-entries", today],
     enabled: companyId != null,

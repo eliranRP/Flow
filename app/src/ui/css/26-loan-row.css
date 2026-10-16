@@ -93,7 +93,7 @@
   align-items: baseline;
   justify-content: space-between;
   padding-block-start: var(--space-2);
-  border-block-start: 1px solid var(--color-line);
+  border-block-start: var(--stroke-hairline) solid var(--color-line);
 }
 
 .ui-loan-summary-caption {
@@ -109,11 +109,23 @@
 }
 
 .ui-loan-summary .ui-parts-legend-item {
-  min-height: 30px;
+  min-height: var(--loan-legend-pitch);
 }
 
-/* FLOW-139: the card's escrow part is the track tone (the board's dark grey), not the muted text colour. */
+/* FLOW-139: the card's escrow part is the board's lavender tint in light (#DAD3E6, the outline token) and the track tone in dark. */
 .ui-loan-summary .ui-parts-part[data-tone="muted"],
 .ui-loan-summary .ui-parts-dot[data-tone="muted"] {
   background: var(--color-track);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .ui-loan-summary .ui-parts-part[data-tone="muted"],
+  :root:not([data-theme="dark"]) .ui-loan-summary .ui-parts-dot[data-tone="muted"] {
+    background: var(--color-outline-secondary);
+  }
+}
+
+:root[data-theme="light"] .ui-loan-summary .ui-parts-part[data-tone="muted"],
+:root[data-theme="light"] .ui-loan-summary .ui-parts-dot[data-tone="muted"] {
+  background: var(--color-outline-secondary);
 }

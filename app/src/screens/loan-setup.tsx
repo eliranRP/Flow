@@ -672,7 +672,7 @@ export function LoanSettingsSection({
               )}
             />
           ) : null}
-          {summary != null && summary.openCount > 0 && currency != null ? <LoanSummaryCard summary={summary} currency={currency} /> : null}
+          {summary != null && summary.next != null && currency != null ? <LoanSummaryCard summary={summary} currency={currency} /> : null}
           {/* A viewer reads the loan's page too, as static rows. */}
           <LoanGroupedList
             rows={rows}
