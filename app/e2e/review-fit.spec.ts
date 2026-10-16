@@ -78,14 +78,14 @@ test("a keyboard אישור moves focus to the next card's אישור, then to �
   const approve = page.locator(".ui-action-bar").getByRole("button", { name: "אישור" });
   await approve.focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("heading", { name: "Lark Plumbing Co" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ridge Plumbing Co" })).toBeVisible();
   await expect(approve).toBeFocused();
   await page.keyboard.press("Enter");
   const home = page.getByRole("link", { name: "חזרה לבית" });
   await expect(home).toBeFocused();
   await page.locator(".ui-toast button", { hasText: "ביטול" }).focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("heading", { name: "Lark Plumbing Co" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ridge Plumbing Co" })).toBeVisible();
   await expect(approve).toBeFocused();
   expect(await focused(page)).toBe("אישור");
 });
