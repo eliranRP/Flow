@@ -436,6 +436,8 @@ test("a transaction shows its VAT, changes, and confirms delete", async ({ page 
   await page.goto("/e2e/txn?preview=1");
   await expect(page.getByRole("button", { name: "חשבונית ותשלום" })).toHaveCount(0);
   await expect(page.getByText(/^לפני מע״מ · מע״מ \(משוער\) ₪[\d,.]+$/)).toBeVisible();
+  // The date sits on the meta line above the VAT line (FLOW-366).
+  await expect(page.locator(".ui-txn-meta").first()).toContainText(/\d{2}\/\d{2}\/\d{4}/);
   await page.getByRole("button", { name: "עוד" }).click();
   await page.getByRole("button", { name: "מחיקה" }).click();
   await expect(page.getByRole("dialog", { name: "למחוק את הרשומה?" })).toBeVisible();

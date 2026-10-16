@@ -756,8 +756,6 @@ export function DevInstall({ mode }: { mode: InstallMode }) {
   );
 }
 
-/** FLOW-366: the board's Lines.dc sample (pending, in P&L, not in the cash view); `?board=1`. */
-
 export function DevTransaction() {
   return <DevTransactionBoard />;
 }

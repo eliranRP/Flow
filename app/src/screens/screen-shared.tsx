@@ -72,8 +72,6 @@ export function withChoice(options: ChangeChoice[], id: string, name: string | n
 
 export const KEPT_OUT = "לא נספר ברווח";
 export const KEPT_OUT_SHORT = "לא נספר ברווח";
-/** FLOW-124: a line split by category with some parts kept out. */
-
 export function combinePhase(left: ScreenPhase, right: ScreenPhase): ScreenPhase {
   if (left.kind === "error") return left;
   if (right.kind === "error") return right;

@@ -72,5 +72,3 @@ export function methodSourceName(meta: Pick<TxnMeta, "method" | "card_name" | "a
   if (meta.account == null) return null;
   return splitAccountLast4(meta.account).name || null;
 }
-
-

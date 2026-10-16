@@ -1,5 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { paceSheetCopy } from "./pace";
 import { ChoiceSheet, type ChoiceSheetCopy } from "./choice-sheet";
@@ -19,6 +21,26 @@ function renderSheet<T extends string>(copy: ChoiceSheetCopy<T>, value: string, 
 }
 
 describe("ChoiceSheet", () => {
+  it("draws no divider between the rows and a filled disc for the chosen one", () => {
+    // The sheet's rows are the bare list (no row lines); the chosen disc is solid, not a ring with a dot.
+    render(
+      <MemoryRouter>
+        <ChoiceSheet copy={CURRENCY_COPY} open value="USD" saving={null} onPick={vi.fn()} onOpenChange={vi.fn()} />
+      </MemoryRouter>,
+    );
+    const rows = document.querySelectorAll(".ui-choice-sheet .ui-radio-row");
+    expect(rows.length).toBeGreaterThan(1);
+    for (const row of rows) expect(row.className).toContain("ui-radio-row");
+    const on = screen.getByRole("radio", { name: "$ דולר" });
+    expect(on.closest(".ui-choice-sheet")).not.toBeNull();
+    // The disc is the visual circle inside the row: solid when chosen, the other rows are not on.
+    expect(on.querySelector(".ui-radio")).toHaveAttribute("data-on", "true");
+    expect(screen.getByRole("radio", { name: "₪ שקל" }).querySelector(".ui-radio")).toHaveAttribute("data-on", "false");
+    const css = readFileSync(resolve(__dirname, "css/04-banners-lists.css"), "utf8");
+    expect(css).toMatch(/\.ui-choice-sheet \.ui-radio-row \{\s*border-bottom: 0;\s*\}/);
+    expect(css).toMatch(/\.ui-choice-sheet \.ui-radio\[data-on="true"\] \{\s*font-size: 0;\s*\}/);
+  });
+
   it("marks the stored currency and shows its note", () => {
     renderSheet(CURRENCY_COPY, "USD");
     expect(screen.getByRole("radio", { name: "$ דולר" })).toHaveAttribute("aria-checked", "true");

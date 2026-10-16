@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { TransactionScreen } from "./flow-screens";
@@ -99,7 +99,10 @@ beforeEach(() => {
 beforeAll(async () => {
   await loadReadSchemas();
   showLive();
-  await screen.findByRole("button", { name: /תשלום קבוע/ }, { timeout: 8000 });
+  // The first mount is paid here; the queries of the first test then resolve at once.
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
   cleanup();
 });
 

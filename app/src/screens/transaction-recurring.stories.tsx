@@ -37,10 +37,21 @@ const recurring = (over: Partial<PaymentRecurring>): PaymentRecurring => ({
   ...over,
 });
 
-function Demo({ state, charges }: { state: PaymentRecurring | null; charges: PartyCharges | null }) {
+/** Story args name a sample (a string), so no bigint is held in args; the data is built here. */
+const stateSamples: Record<"off" | "found", PaymentRecurring> = {
+  off: recurring({ recurring: false, override: false, detected: false }),
+  found: recurring({}),
+};
+const chargeSamples: Record<"mailbox" | "few" | "steady", PartyCharges> = {
+  mailbox: mailboxCharges,
+  few: { ...cheaperCharges, charges: cheaperCharges.charges.slice(0, 2) },
+  steady: steadyCharges,
+};
+
+function Demo({ state, charges }: { state: keyof typeof stateSamples; charges: keyof typeof chargeSamples }) {
   return (
     <StoryRoute entry="/transactions/t-rec">
-      <TxnRecurring txn={txn} holdWrites={false} sample={state} sampleCharges={charges} context="דירת הגפן · חשבונות" />
+      <TxnRecurring txn={txn} holdWrites={false} sample={stateSamples[state]} sampleCharges={chargeSamples[charges]} context="דירת הגפן · חשבונות" />
     </StoryRoute>
   );
 }
@@ -57,19 +68,19 @@ type Story = StoryObj<typeof meta>;
 
 /** The pace sheet: לא קבוע is the stored choice, and the detected note sits under the detected pace. */
 export const PaceSheetOpen: Story = {
-  args: { state: recurring({ recurring: false, override: false, detected: false }), charges: mailboxCharges },
+  args: { state: "off", charges: "mailbox" },
   play: async ({ canvasElement }) => {
     await userEvent.click(await within(canvasElement).findByRole("button", { name: /קבוע/ }));
   },
 };
 /** Twelve charges, the usual amount with a 27% rise that hurts (the all-charges sheet is one tap away). */
 export const AllChargesSheet: Story = {
-  args: { state: recurring({}), charges: mailboxCharges },
+  args: { state: "found", charges: "mailbox" },
   play: async ({ canvasElement }) => {
     await userEvent.click(await within(canvasElement).findByRole("button", { name: "לכל החיובים" }));
   },
 };
 /** Few earlier charges: no link to all of them, and the history stays short. */
-export const FewCharges: Story = { args: { state: recurring({}), charges: { ...cheaperCharges, charges: cheaperCharges.charges.slice(0, 2) } } };
+export const FewCharges: Story = { args: { state: "found", charges: "few" } };
 /** Steady charges: the change reads "כרגיל", not a percent. */
-export const Flat: Story = { args: { state: recurring({}), charges: steadyCharges } };
+export const Flat: Story = { args: { state: "found", charges: "steady" } };
