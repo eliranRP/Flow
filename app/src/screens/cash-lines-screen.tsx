@@ -26,7 +26,7 @@ import { ScreenState } from "../ui/screen-state";
 import { CashCurrencySwitch, CashLinesEmpty, CashLinesHead, CashLinesMore, cashLinesFigures } from "./cash-lines-parts";
 
 /** The month's CashMonths entry for a month key. */
-function monthOf(data: CashMonths | undefined, key: string) {
+export function monthOf(data: CashMonths | undefined, key: string) {
   return data?.months.find((month) => cashMonthKey(month.month) === key);
 }
 

@@ -47,28 +47,6 @@ const months = {
   ],
 };
 
-const lines = {
-  rows: [
-    {
-      transaction_id: "t1",
-      part: "principal",
-      description: "תשלום הלוואה",
-      supplier_name: "בנק לדוגמה",
-      project_name: "בית לדוגמה",
-      category_name: "קרן הלוואה",
-      doc_date: `${earlier}-02`,
-      cash_month_date: `${earlier}-03`,
-      currency: "ILS",
-      amount_minor: 120_000,
-      side: "out",
-      shared: false,
-      source: "mercury",
-      kept_out: false,
-    },
-  ],
-  has_more: true,
-};
-
 function wrap(path: string) {
   return renderWithProviders(
     <Routes>
@@ -84,7 +62,6 @@ beforeEach(() => {
   rpc.calls = [];
   rpc.impl = (name) => {
     if (name === "cash_months") return Promise.resolve({ data: months, error: null });
-    if (name === "cash_month_lines") return Promise.resolve({ data: lines, error: null });
     return Promise.resolve({ data: null, error: null });
   };
 });

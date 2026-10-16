@@ -21,16 +21,13 @@ import { PeriodSwipe } from "../ui/period-swipe";
 import { ScreenHeader } from "../ui/screen-header";
 import { LinesSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
+import { monthOf } from "./cash-lines-screen";
 
 /**
  * FLOW-413, frame b. An earlier month's cash page (its figure, נכנס, יצא and "רווח ב<month>", as Home
  * shows the current month), and the lines behind one month's נכנס or יצא, or (FLOW-418) the cash
  * profit leaves out. Decision 0168.
  */
-
-function monthOf(data: CashMonths | undefined, key: string) {
-  return data?.months.find((month) => cashMonthKey(month.month) === key);
-}
 
 /** Dev fixtures pass the month and the sample; the app reads the month from the path. */
 export function CashMonthScreen({ sample, monthKey }: { sample?: NonNullable<CashMonths>; monthKey?: string } = {}) {
