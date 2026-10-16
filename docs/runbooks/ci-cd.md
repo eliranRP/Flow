@@ -17,6 +17,8 @@ A push to a PR branch is checked in two places. `bash scripts/cloud-agent-instal
 
 The pull-request workflow runs no e2e specs, no Storybook build or layout specs, no perf specs, and no secrets. Those run on `main` after each merge (`ci`).
 
+CI v2 (in progress): `bash scripts/local-ci.sh --part ready` runs the static, types and tests slices at the same time, then writes the stamp for HEAD to `.git/flow-ci-stamp.md`: the full sha, each phase's result and seconds (`scripts/ci-stamp.mjs`). With `CI_STAMP_PR=<number>` it also posts the stamp as a comment on that PR. The e2e, clip-check and board-proof slices are not in it yet, and no GitHub check reads the stamp yet.
+
 `FLOW_LOCAL_CI=default git push` runs the scoped default gate on the pusher's machine instead (`bash scripts/local-ci.sh`). It also runs the e2e specs the change reaches, with Docker. `FLOW_LOCAL_CI=full git push`, or `bash scripts/local-ci.sh --full`, runs the full suite (about 12 minutes).
 
 - The tree must be clean. A default pass writes the commit sha to `.git/flow-local-ci`, so pushing the same commit again does not rerun it. A slice appends its gate-times line and writes no pass stamp.
