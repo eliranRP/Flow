@@ -258,3 +258,34 @@ describe("the pinned review bar (FLOW-327)", () => {
     expect(document.querySelector(".ui-toast-bad")).toBeNull();
   });
 });
+
+describe("the review queue acceptance (FLOW-365)", () => {
+  it("אישור stays disabled without a project, and the category alone does not enable it", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", null)], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    expect(await screen.findByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(rpc.calls.some((call) => call.name === "approve_review_item")).toBe(false);
+  });
+
+  it("the approve toast's ביטול puts the item back on the card", async () => {
+    const open = new Set(["r1", "r2"]);
+    const rows = [reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")];
+    rpc.impl = (name, args) => {
+      const id = (args as { p_id?: string } | undefined)?.p_id ?? "";
+      if (name === "list_review") return Promise.resolve({ data: rows.filter((row) => open.has(row.id)), error: null });
+      if (name === "approve_review_item") { open.delete(id); return Promise.resolve({ data: { ok: true }, error: null }); }
+      if (name === "reopen_review") { open.add(id); return Promise.resolve({ data: { ok: true }, error: null }); }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
+    expect(await screen.findByText("הפריט אושר")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
+    fireEvent.click(within(document.querySelector(".ui-toast") as HTMLElement).getByRole("button", { name: "ביטול" }));
+    expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
+    expect(rpc.calls.some((call) => call.name === "reopen_review")).toBe(true);
+  });
+});

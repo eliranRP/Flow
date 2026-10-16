@@ -374,7 +374,8 @@ export function ReviewQueue({
       void navigate(`/transactions/${current.transaction_id}/split${search}`);
       return;
     }
-    if (changeTo == null && !sample && previewWrite == null) {
+    // FLOW-365: the owner's project row opens the picker sheet; a route change (changeTo) keeps the reviewer's own screen.
+    if (changeTo == null) {
       setPickProject(true);
       return;
     }
@@ -728,7 +729,11 @@ function ProjectPickSheet({
   onCreate: () => void;
 }) {
   const dashboard = useDashboardQuery(true);
-  const projectOptions = useMemo(() => projectChoices(dashboard.data), [dashboard.data]);
+  const samplePreview = useHomePreview() !== "off" && reviewE2e != null;
+  const projectOptions = useMemo(
+    () => (samplePreview && reviewE2e != null ? reviewE2e.e2eProjectChoices : projectChoices(dashboard.data)),
+    [dashboard.data, samplePreview],
+  );
   return (
     <Sheet open onOpenChange={(open) => { if (!open) onClose(); }} title="בחירת פרויקט">
       <Picker
@@ -736,7 +741,7 @@ function ProjectPickSheet({
         searchable
         query={query}
         onQuery={onQuery}
-        loading={dashboard.isPending}
+        loading={!samplePreview && dashboard.isPending}
         listed={projectOptions}
         selectedId={selectedId}
         suggestionId={suggestionId}

@@ -1,5 +1,6 @@
 import type { ReviewRow } from "@flow/shared";
 import type { JevQueueData } from "../screens/jev-review";
+import type { ChangeChoice } from "../ui/change-sheet-copy";
 
 /**
  * In-memory review queue for Playwright. Imported only from a
@@ -186,3 +187,10 @@ export const e2eFitJev: JevQueueData = {
     },
   },
 };
+
+/** The project list the picker sheet shows in a preview (the live dashboard read is off there). Invented names. */
+export const e2eProjectChoices: ChangeChoice[] = [
+  { id: "p1", name: "שיפוץ הרצל 12", code: "P-12", status: "active" },
+  { id: "p2", name: "וילה רעננה", code: "P-07", status: "active" },
+  { id: "p3", name: "מחסן הנמל", code: "P-03", status: "finished" },
+];
