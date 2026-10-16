@@ -193,3 +193,8 @@
   gap: var(--space-4);
   padding-top: var(--space-3);
 }
+
+/* FLOW-445: the project page's bar is 60px tall on the board (the shared detail bar is 56px). */
+.ui-project-cash {
+  --compact-bar-detail: 60px;
+}

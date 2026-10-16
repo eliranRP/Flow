@@ -125,7 +125,7 @@ export function ProjectCashOverview({
   const bandRows = summaryRows.filter((row) => row.id === "in" || row.id === "out");
   const listRows = summaryRows.filter((row) => !bandRows.includes(row));
   return (
-    <div className="flex min-h-full flex-1 flex-col">
+    <div className="ui-project-cash flex min-h-full flex-1 flex-col">
       <TopBand
         wordmark={false}
         example={example}
@@ -164,7 +164,6 @@ export function ProjectCashOverview({
       </TopBand>
       <CompactBar
         title={project.name}
-        figureFirst
         figure={first == null ? undefined : <Amount agorot={first.net_minor} currency={first.currency} loss={first.net_minor < 0n} presentation="detail" />}
         backTo={`/projects${search}`}
         size="detail"

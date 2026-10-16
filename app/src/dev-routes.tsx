@@ -602,6 +602,9 @@ function DevStepTransaction({ n }: { n: number }) {
   );
 }
 
+/** The scroll the board's scrolled frame shows the page at (CSS px). */
+const DEV_SCROLLED_Y = 320;
+
 export function DevProjectDetail() {
   const [params] = useSearchParams();
   const section = params.get("section");
@@ -609,6 +612,12 @@ export function DevProjectDetail() {
   const queryClient = useQueryClient();
   const preview = useHomePreview();
   useState(() => { queryClient.setQueryData(["company-currency", preview], "USD"); });
+  // `?scrolled=1` is the board's scrolled frame: the page is scrolled past the band, so the compact bar shows.
+  useEffect(() => {
+    if (params.get("scrolled") !== "1") return;
+    const timer = window.setTimeout(() => { window.scrollTo(0, DEV_SCROLLED_Y); }, 0);
+    return () => { window.clearTimeout(timer); };
+  }, [params]);
   return (
     <ProjectDetailScreen
       // FLOW-340 C: `?section=` draws the screen a row opens, on the same sample (FLOW-419: `profit` too).
