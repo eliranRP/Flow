@@ -10,6 +10,11 @@
   scrollbar-width: none;
 }
 
+/* A chip in the row keeps its width: the row scrolls, the chips never shrink. */
+.ui-organize-chips > .ui-chip {
+  flex: none;
+}
+
 .ui-organize-chips[data-more="end"] {
   mask-image: linear-gradient(to right, transparent, #000 var(--chip-fade));
 }

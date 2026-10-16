@@ -6,7 +6,7 @@ import { at320 } from "./screen-stories-support";
 
 function Row() {
   return (
-    <OrganizeChips label="סינון" className="ui-search-chips">
+    <OrganizeChips label="סינון">
       <Chip pressed onClick={() => undefined}>לפי תאריך</Chip>
       <Chip onClick={() => undefined}>לפי סכום</Chip>
       <Chip onClick={() => undefined}>לפי פרויקט</Chip>
