@@ -35,6 +35,8 @@ async function expectNoOverflow(page: Page) {
 
 /** Line-clamp keeps the text in the DOM, so a text query cannot see a vertical cut. */
 async function bannerTitleClipped(page: Page): Promise<boolean> {
+  // The title's line count depends on the web font's advance widths, so measure only once it has loaded.
+  await page.evaluate(() => document.fonts.ready);
   return page.locator(".ui-banner .ui-row-title").evaluate((node) => {
     if (!(node instanceof HTMLElement) || node.parentElement == null) return true;
     const clone = node.cloneNode(true);

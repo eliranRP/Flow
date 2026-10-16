@@ -62,29 +62,8 @@
   }
 }
 
-/* FLOW-335: the sync row under Unpaid's list, one section gap below the last invoice. */
-.ui-unpaid-sync {
-  margin-block-start: var(--space-section);
-}
-
 /* FLOW-335: "ניתוק" in its own group after a section gap, away from "רענון עכשיו". */
 .ui-sheet-danger-group {
   margin-block-start: var(--space-section);
 }
 
-/* FLOW-357: an open invoice's sheet. The amount is the one figure, the facts under it, then the
-   link to the invoice; "סימון כשולם" is pinned under the body. */
-.ui-unpaid-sheet {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
-}
-
-.ui-unpaid-sheet .t-display bdi {
-  display: inline-block;
-}
-
-.ui-unpaid-sheet .ui-text-link {
-  margin-block-start: var(--space-5);
-}

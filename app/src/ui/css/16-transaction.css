@@ -105,79 +105,173 @@
   display: contents;
 }
 
-/* FLOW-304. "פרטי הבנק" on the transaction screen. Static rows; text stays selectable. */
-.ui-bank .ui-row {
-  user-select: text;
+/* FLOW-366: the transaction page's own top bar (Lines.dc 87–100). It is in the page's flow and
+   sticks to the top; at rest it takes the page colour, and past 110px the surface and a hairline. */
+.ui-txn-sentinel {
+  position: absolute;
+  inset-block-start: var(--txn-bar-scroll);
+  inline-size: 1px;
+  block-size: 1px;
+  pointer-events: none;
 }
 
-.ui-bank-account {
-  display: inline-flex;
-  max-inline-size: 100%;
-  gap: var(--space-1);
-  vertical-align: bottom;
+.ui-txn-top {
+  position: sticky;
+  inset-block-start: 0;
+  /* Clear of the status bar once it sticks, as the compact header does (27-compact-header.css). */
+  padding-block-start: var(--safe-top);
+  z-index: 2;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  block-size: var(--compact-bar-detail);
+  padding-inline: var(--space-4);
+  border-block-end: 1px solid transparent;
+  background: var(--color-bg);
+  transition: background-color var(--motion-fade) linear, border-color var(--motion-fade) linear;
 }
 
-.ui-bank-account-name {
-  min-inline-size: 0;
+.ui-txn-top-past {
+  border-block-end-color: var(--color-line);
+  background: var(--color-surface);
+}
+
+.ui-txn-top-start {
+  justify-self: start;
+  color: var(--color-accent-text);
+  font-size: var(--type-btn-size);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-txn-top-title {
   overflow: hidden;
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-btn-weight);
+  text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+  opacity: 0;
+  transition: opacity var(--motion-fade) linear;
 }
 
-.ui-bank-last4 {
-  flex: none;
+.ui-txn-top-past .ui-txn-top-title {
+  opacity: 1;
 }
 
-/* FLOW-707: the dot between the card and its nickname from the bank. */
-.ui-bank-sep {
-  flex: none;
+.ui-txn-top-end {
+  justify-self: end;
+  min-inline-size: var(--touch-min);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-txn-top,
+  .ui-txn-top-title {
+    transition: none;
+  }
+}
+
+/* The page body: the side gutter and the 14px gap between blocks (the board's Lines.dc 101–153). */
+.ui-txn-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-inset-row);
+  padding-inline: var(--space-side);
+}
+
+/* The header block: 64px clears the bar (its 56px is already in the flow, so 8px more here). */
+.ui-txn-intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-inset-row);
+  padding-block-start: var(--space-2);
+}
+
+.ui-txn-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  text-align: start;
+}
+
+.ui-txn-status {
   color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
 }
 
-/* The clipping box takes the name's own direction, so a Latin name loses its end, not its start. */
-.ui-bank-line {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ui-bank-wrap .ui-row-title {
-  overflow: visible;
+.ui-txn-supplier {
+  margin: 0;
   overflow-wrap: anywhere;
-  text-overflow: clip;
-  white-space: normal;
 }
 
-.ui-bank-memo {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
-  line-clamp: 4;
+.ui-txn-amount {
+  margin: 0;
+  line-height: var(--type-detail-line);
 }
 
-.ui-bank-memo[data-open] {
-  display: block;
-  -webkit-line-clamp: unset;
-  line-clamp: none;
-}
-
-/* FLOW-315: the ▾ cue on a memo longer than 4 lines, as on the review card's memo. */
-.ui-bank-memo-cue {
-  display: inline-flex;
+.ui-txn-meta {
+  margin: 0;
   color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
 }
 
-.ui-bank-memo-cue[data-open] {
-  transform: rotate(180deg);
+/* The pending banner: a link to the review item, on the tint. */
+.ui-txn-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 52px;
+  padding-inline: var(--space-inset-row);
+  border-radius: var(--radius-toast);
+  background: var(--color-tint);
+  color: var(--color-text);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  text-decoration: none;
 }
 
-.ui-bank-text {
-  display: block;
-  color: var(--color-text-secondary);
-  font-size: var(--type-label-size);
-  font-weight: var(--type-hint-weight);
+.ui-txn-banner-text {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.ui-txn-banner-action {
+  color: var(--color-accent-text);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-txn-banner > svg {
+  flex: none;
+  color: var(--color-accent-text);
+}
+
+/* The footer: Jev's note, the bank line and the raw bank description (13px, muted). */
+.ui-txn-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-1) 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-txn-footer p {
+  margin: 0;
+}
+
+.ui-txn-jev {
+  color: var(--color-accent-text);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-txn-raw {
+  overflow-wrap: anywhere;
 }
 
 /* ---------------------------------------------------------------------------------------------

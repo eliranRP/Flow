@@ -4,7 +4,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  margin: var(--space-4);
+  margin: var(--space-5) var(--space-4) var(--space-1);
   padding: var(--space-4);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
@@ -57,12 +57,14 @@
 }
 
 .ui-home-split-label {
-  font-size: var(--type-body-size);
+  font-size: var(--type-btn-2-size);
+  line-height: var(--type-line2-line);
 }
 
 .ui-home-split-sub {
   color: var(--color-text-muted);
   font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
 }
 
 .ui-home-split-value {
@@ -81,6 +83,7 @@
   color: var(--color-text-secondary);
   font-size: var(--type-meta-size);
   line-height: var(--type-meta-line);
+  font-weight: var(--type-meta-weight);
 }
 
 /* FLOW-364 (board): the box is one tint card; its rows are divided lines, 20px in. */
