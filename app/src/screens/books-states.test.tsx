@@ -7,6 +7,7 @@ import { demoProject } from "../demo/model";
 import { resetShownCompanyForTests, setShownCompany } from "../lib/company-header";
 import { forgetProjectReads } from "../project-cache";
 import { renderWithProviders } from "../test-render";
+import { BusinessScreen } from "./business-screen";
 import { CategoriesScreen, ProjectDetailScreen, ProjectsScreen, ChangeForm, ReviewScreen, SettingsScreen, SplitScreen, TransactionScreen, UnpaidScreen } from "./flow-screens";
 import { HomeScreen } from "./HomeScreen";
 
@@ -91,6 +92,7 @@ function renderAt(path: string) {
         <Route path="/review/change" element={<ChangeForm />} />
         <Route path="/unpaid" element={<UnpaidScreen />} />
         <Route path="/settings" element={<SettingsScreen />} />
+        <Route path="/settings/business" element={<BusinessScreen />} />
         <Route path="/settings/categories" element={<CategoriesScreen />} />
         <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
         <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
@@ -217,18 +219,18 @@ describe("rejected reads", () => {
       if (name === "mcp_company_loan_currency") return Promise.resolve(stored ?? { data: null, error: null });
       return Promise.resolve({ data: null, error: { message: "db down" } });
     };
-    const currencyRow = () => screen.getByText("מטבע העסק").closest(".ui-row");
+    const currencyRow = () => screen.getByText("מטבע", { exact: true }).closest(".ui-row");
     // A failed read and an odd value both read as a failure, never as a shekel company.
     for (const answer of answers.slice(0, 2)) {
       stored = answer;
-      renderAt("/settings");
+      renderAt("/settings/business");
       await waitFor(() => { expect(currencyRow()).toHaveTextContent("לא הצלחנו לטעון"); });
       expect(screen.queryByRole("button", { name: /^מטבע העסק/ })).not.toBeInTheDocument();
       cleanup();
       rpc.handlers.length = 0;
     }
     stored = answers[2];
-    renderAt("/settings");
+    renderAt("/settings/business");
     expect(await screen.findByRole("button", { name: "מטבע העסק: $ דולר" })).toBeInTheDocument();
   });
 

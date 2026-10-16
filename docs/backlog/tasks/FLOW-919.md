@@ -1,0 +1,9 @@
+<a id="flow-915"></a>
+# FLOW-919 · Review queue: a server transfer flag, approve as a transfer, and the document thumbnail
+- **Type:** Server + UI · **Status:** ready · **Depends on:** [FLOW-365](FLOW-365.md) · **Related:** [FLOW-370](FLOW-370.md) (the split screen), [FLOW-439](FLOW-439.md) (the card name on the source line) · **Source:** the review-queue redesign (FLOW-365) deferred these two parts of the approved board; the rules are on the design canvas, page "Ready for dev", section "Review queue".
+- **Files:** `packages/shared/src/dashboard.ts` (`reviewRowSchema`), the `list_review` read in `supabase/migrations/` (a new migration), `app/src/ui/review-card.tsx`, `app/src/screens/review-queue.tsx`, `app/src/ui/css/06-review-card.css`, `app/src/ui/review-card.stories.tsx`, `app/src/dev/review-e2e-fixture.ts`, their tests, and `docs/mcp/TOOLS.md` if an MCP tool changes.
+- [ ] Transfer flag: `list_review` carries a transfer flag for a transfer between the owner's accounts. Today no field exists in `reviewRowSchema`, so the queue cannot show the transfer state the board describes.
+- [ ] Card: a transfer's project row says it does not apply ("לא רלוונטי · העברה"), the split link is hidden, and no pick tag shows on that row.
+- [ ] Approve as a transfer: אישור marks the line as a transfer (out of profit and cash), with its own RPC or argument and an undo. The approve button is disabled until the server path exists.
+- [ ] Document thumbnail: a photo card shows the document thumbnail and opens the viewer. This needs a document URL or path on the review row. The row carries none today, so the photo card keeps the document icon until this lands. When the row carries it, update the `ReviewStatePhoto` story to render the thumbnail.
+- [ ] Stories and tests for the transfer card and the thumbnail at 320 and 393, with invented names and round USD amounts.

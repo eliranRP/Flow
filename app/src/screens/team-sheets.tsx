@@ -64,6 +64,9 @@ function useInviteUndo() {
   return { cancel, restore };
 }
 
+/** The send button waits for something that looks like an address (FLOW-512); the server checks the rest. */
+export const INVITE_EMAIL_SHAPE = /.+@.+\..+/;
+
 /**
  * Mockup invite-1: אימייל, then צופה (the default) or עורך with their hints, then שליחת הזמנה.
  * No name: the person's Google name shows once they join. A refusal about the address stays on
@@ -150,10 +153,10 @@ export function InviteSheet({
         if (!next && send.isPending) return;
         onOpenChange(next);
       }}
-      title="הזמנה"
+      title="הזמנה לצוות"
       returnFocusRef={returnFocusRef}
       action={(
-        <Button full busy={send.isPending} onClick={submit}>
+        <Button full busy={send.isPending} disabled={!INVITE_EMAIL_SHAPE.test(email.trim())} onClick={submit}>
           שליחת הזמנה
         </Button>
       )}

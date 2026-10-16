@@ -53,7 +53,7 @@ export type UnpaidMatch = {
   date: string;
   account_name: string;
   raw_description: string;
-  amount_agorot: bigint;
+  amount_minor: bigint;
 };
 
 /**
