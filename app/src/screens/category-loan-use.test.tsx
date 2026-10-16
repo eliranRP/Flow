@@ -16,7 +16,7 @@ const LOANS = [
 
 function openMenu(name: string) {
   renderWithProviders(<CategoriesScreen sample={CATEGORIES} sampleLoans={LOANS} />);
-  fireEvent.click(screen.getByRole("button", { name: `עוד, ${name}` }));
+  fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${name}`) }));
   return screen.findByRole("dialog", { name });
 }
 

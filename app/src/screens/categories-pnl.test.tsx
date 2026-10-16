@@ -72,7 +72,7 @@ describe("categories kept out of the P&L", () => {
 
   it("keeps a category out on tap, and ביטול puts it back", async () => {
     renderScreen(<CategoriesScreen />);
-    const more = await screen.findByRole("button", { name: "עוד, חומרים" });
+    const more = await screen.findByRole("button", { name: /^חומרים/ });
     fireEvent.click(more);
     const sheet = await screen.findByRole("dialog", { name: "חומרים" });
     fireEvent.click(within(sheet).getByRole("button", { name: "לא לספור ברווח" }));
@@ -85,7 +85,7 @@ describe("categories kept out of the P&L", () => {
       expect(screen.queryByRole("dialog", { name: "חומרים" })).not.toBeInTheDocument();
     });
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "עוד, חומרים" })).toHaveFocus();
+      expect(screen.getByRole("button", { name: /^חומרים/ })).toHaveFocus();
     });
 
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
@@ -100,7 +100,7 @@ describe("categories kept out of the P&L", () => {
 
   it("brings a kept-out category back into the P&L", async () => {
     renderScreen(<CategoriesScreen />);
-    fireEvent.click(await screen.findByRole("button", { name: "עוד, פיקדונות" }));
+    fireEvent.click(await screen.findByRole("button", { name: /^פיקדונות/ }));
     const sheet = await screen.findByRole("dialog", { name: "פיקדונות" });
     fireEvent.click(within(sheet).getByRole("button", { name: "לספור ברווח" }));
     await waitFor(() => {
@@ -110,7 +110,7 @@ describe("categories kept out of the P&L", () => {
 
   it("shows a fixed line instead of the button on loan categories", async () => {
     renderScreen(<CategoriesScreen />);
-    fireEvent.click(await screen.findByRole("button", { name: "עוד, תשלומי הלוואה" }));
+    fireEvent.click(await screen.findByRole("button", { name: /^תשלומי הלוואה/ }));
     let sheet = await screen.findByRole("dialog", { name: "תשלומי הלוואה" });
     expect(within(sheet).getByText("קטגוריית הלוואה · לא נספרת ברווח")).toBeInTheDocument();
     expect(within(sheet).queryByRole("button", { name: /רווח והפסד/ })).not.toBeInTheDocument();
@@ -119,7 +119,7 @@ describe("categories kept out of the P&L", () => {
       expect(screen.queryByRole("dialog", { name: "תשלומי הלוואה" })).not.toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "עוד, ריבית משכנתא" }));
+    fireEvent.click(screen.getByRole("button", { name: /^ריבית משכנתא/ }));
     sheet = await screen.findByRole("dialog", { name: "ריבית משכנתא" });
     expect(within(sheet).getByText("חלק מתשלום הלוואה · תמיד נספרת ברווח")).toBeInTheDocument();
     expect(within(sheet).queryByRole("button", { name: /רווח והפסד/ })).not.toBeInTheDocument();
@@ -128,7 +128,7 @@ describe("categories kept out of the P&L", () => {
   it("finds loan categories by loan_part, not by name", async () => {
     rpc.renamedLoan = true;
     renderScreen(<CategoriesScreen />);
-    fireEvent.click(await screen.findByRole("button", { name: "עוד, החזר הלוואה" }));
+    fireEvent.click(await screen.findByRole("button", { name: /^החזר הלוואה/ }));
     const sheet = await screen.findByRole("dialog", { name: "החזר הלוואה" });
     expect(within(sheet).getByText("קטגוריית הלוואה · לא נספרת ברווח")).toBeInTheDocument();
     expect(within(sheet).queryByRole("button", { name: /רווח והפסד/ })).not.toBeInTheDocument();
@@ -137,7 +137,7 @@ describe("categories kept out of the P&L", () => {
   it("keeps the sheet open and says so when the save fails", async () => {
     rpc.failPnl = true;
     renderScreen(<CategoriesScreen />);
-    fireEvent.click(await screen.findByRole("button", { name: "עוד, חומרים" }));
+    fireEvent.click(await screen.findByRole("button", { name: /^חומרים/ }));
     const sheet = await screen.findByRole("dialog", { name: "חומרים" });
     fireEvent.click(within(sheet).getByRole("button", { name: "לא לספור ברווח" }));
     expect(await screen.findByText("לא הצלחנו לעדכן את הקטגוריה.")).toBeInTheDocument();
@@ -148,7 +148,7 @@ describe("categories kept out of the P&L", () => {
   it("says why when a loan's use of the category refuses the change (FLOW-134)", async () => {
     rpc.pnlRefusal = "loan category is fixed";
     renderScreen(<CategoriesScreen />);
-    fireEvent.click(await screen.findByRole("button", { name: "עוד, חומרים" }));
+    fireEvent.click(await screen.findByRole("button", { name: /^חומרים/ }));
     const sheet = await screen.findByRole("dialog", { name: "חומרים" });
     fireEvent.click(within(sheet).getByRole("button", { name: "לא לספור ברווח" }));
     expect(await screen.findByText("זו קטגוריה של הלוואה, ולכן אי אפשר לשנות אם היא נספרת ברווח.")).toBeInTheDocument();
@@ -158,7 +158,7 @@ describe("categories kept out of the P&L", () => {
     let release: () => void = () => undefined;
     rpc.holdPnl = new Promise<void>((resolve) => { release = resolve; });
     renderScreen(<CategoriesScreen />);
-    fireEvent.click(await screen.findByRole("button", { name: "עוד, חומרים" }));
+    fireEvent.click(await screen.findByRole("button", { name: /^חומרים/ }));
     const sheet = await screen.findByRole("dialog", { name: "חומרים" });
     const action = within(sheet).getByRole("button", { name: "לא לספור ברווח" });
     fireEvent.click(action);
@@ -184,6 +184,6 @@ describe("categories kept out of the P&L", () => {
       </ViewerPreview>,
     );
     expect(screen.getByText(/לא נספרת ברווח$/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /עוד, פיקדונות/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^פיקדונות/ })).not.toBeInTheDocument();
   });
 });

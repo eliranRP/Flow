@@ -11,8 +11,7 @@ import { mergeFailureText, pnlFailureText } from "../category-copy";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { EmptyState } from "../ui/empty-state";
-import { IconButton } from "../ui/icon-button";
-import { ChevronDownIcon, MoreIcon, PlusIcon, TagIcon } from "../ui/icons";
+import { ChevronDownIcon, PlusIcon, TagIcon } from "../ui/icons";
 import { EMPTY_FILTERS, searchFiltersQuery } from "../search";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
@@ -95,6 +94,23 @@ function CategoryLine({
   onMenu?: (opener: HTMLElement) => void;
 }) {
   const lines = rowLines(category, subCount != null);
+  const opener = useRef<HTMLButtonElement>(null);
+  const hint = categoryMeta(category, lines, subCount);
+  // FLOW-513: a leaf row opens its category sheet on tap (the board has no ⋯); a parent opens its sub-categories.
+  if (onMenu != null && subCount == null) {
+    return (
+      <ListRow
+        variant="button"
+        buttonRef={opener}
+        onClick={() => { if (opener.current) onMenu(opener.current); }}
+        title={category.name}
+        muted={muted}
+        icon={<TagIcon />}
+        chevron
+        hint={hint}
+      />
+    );
+  }
   return (
     <ListRow
       variant="item"
@@ -103,16 +119,8 @@ function CategoryLine({
       title={category.name}
       muted={muted}
       icon={<TagIcon />}
-      chevron={href != null}
-      meta={categoryMeta(category, lines, subCount)}
-      action={onMenu == null ? undefined : (
-        <IconButton
-          label={`עוד, ${category.name}`}
-          onClick={(event) => { onMenu(event.currentTarget); }}
-        >
-          <MoreIcon />
-        </IconButton>
-      )}
+      chevron
+      hint={hint}
     />
   );
 }

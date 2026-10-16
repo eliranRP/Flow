@@ -54,7 +54,7 @@ function calls(name: string) {
 
 async function openSheet(name: string) {
   renderScreen(<CategoriesScreen />);
-  fireEvent.click(await screen.findByRole("button", { name: `עוד, ${name}` }));
+  fireEvent.click(await screen.findByRole("button", { name: new RegExp(`^${name}`) }));
   return screen.findByRole("dialog", { name });
 }
 
@@ -187,7 +187,7 @@ describe("category sheet: move all lines and delete (FLOW-405)", () => {
   it("has no rehab switch on an income category", async () => {
     renderScreen(<CategoriesScreen />);
     fireEvent.click(await screen.findByRole("radio", { name: "הכנסות" }));
-    fireEvent.click(await screen.findByRole("button", { name: "עוד, תקבול" }));
+    fireEvent.click(await screen.findByRole("button", { name: /^תקבול/ }));
     const sheet = await screen.findByRole("dialog", { name: "תקבול" });
     expect(within(sheet).queryByRole("switch", { name: "נספרת בשיפוץ" })).not.toBeInTheDocument();
   });
@@ -195,7 +195,7 @@ describe("category sheet: move all lines and delete (FLOW-405)", () => {
   it("offers no move when the category is the only one of its kind (FLOW-347)", async () => {
     renderScreen(<CategoriesScreen />);
     fireEvent.click(await screen.findByRole("radio", { name: "הכנסות" }));
-    fireEvent.click(await screen.findByRole("button", { name: "עוד, תקבול" }));
+    fireEvent.click(await screen.findByRole("button", { name: /^תקבול/ }));
     const sheet = await screen.findByRole("dialog", { name: "תקבול" });
     expect(within(sheet).getByRole("button", { name: "שינוי שם" })).toBeInTheDocument();
     expect(within(sheet).queryByRole("button", { name: "העברה לקטגוריה אחרת" })).not.toBeInTheDocument();

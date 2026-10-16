@@ -45,7 +45,7 @@ function Screen({ withLoans = false }: { withLoans?: boolean } = {}) {
 }
 
 async function openMenu(canvasElement: HTMLElement, name: string) {
-  await userEvent.click(await within(canvasElement).findByRole("button", { name: `עוד, ${name}` }));
+  await userEvent.click(await within(canvasElement).findByRole("button", { name: new RegExp(`^${name}`) }));
   return body(canvasElement).findByRole("dialog", { name });
 }
 

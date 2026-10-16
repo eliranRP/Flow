@@ -60,7 +60,7 @@ function calls(name: string) {
 
 async function openSheet(name: string, parentId?: string) {
   renderScreen(<CategoriesScreen parentId={parentId} />);
-  fireEvent.click(await screen.findByRole("button", { name: `עוד, ${name}` }));
+  fireEvent.click(await screen.findByRole("button", { name: new RegExp(`^${name}`) }));
   return screen.findByRole("dialog", { name });
 }
 
@@ -82,12 +82,12 @@ describe("category sheet: group (FLOW-401)", () => {
 
   it("gives an income category the row too, and a loan category none (FLOW-406)", async () => {
     renderScreen(<CategoriesScreen />);
-    fireEvent.click(await screen.findByRole("button", { name: "עוד, תשלומי הלוואה" }));
+    fireEvent.click(await screen.findByRole("button", { name: /^תשלומי הלוואה/ }));
     const loan = await screen.findByRole("dialog", { name: "תשלומי הלוואה" });
     expect(within(loan).queryByRole("button", { name: /^קטגוריית אב/ })).toBeNull();
     fireEvent.click(within(loan).getByRole("button", { name: "סגירה" }));
     fireEvent.click(await screen.findByRole("radio", { name: "הכנסות" }));
-    fireEvent.click(await screen.findByRole("button", { name: "עוד, תקבול" }));
+    fireEvent.click(await screen.findByRole("button", { name: /^תקבול/ }));
     const sheet = await screen.findByRole("dialog", { name: "תקבול" });
     expect(within(sheet).getByRole("button", { name: /^קטגוריית אב/ })).toBeInTheDocument();
   });

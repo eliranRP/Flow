@@ -64,21 +64,17 @@ describe("categories hidden footer", () => {
     expect(screen.queryByText("עבודה")).not.toBeInTheDocument();
   });
 
-  it("opens a category's lines in search, with its ⋯ beside the link, not inside it (FLOW-322)", () => {
+  it("opens a leaf category's sheet from its row (FLOW-513: the board has no ⋯)", async () => {
     renderScreen(<CategoriesScreen sample={sample} />);
-    const row = screen.getByRole("link", { name: /חומרים/ });
-    expect(row).toHaveAttribute("href", "/search?dir=expense&category=c1");
-    const more = screen.getByRole("button", { name: "עוד, חומרים" });
-    expect(row).not.toContainElement(more);
-    fireEvent.click(screen.getByRole("radio", { name: "הכנסות" }));
-    expect(screen.getByRole("link", { name: /תקבול/ })).toHaveAttribute("href", "/search?dir=income&category=c5");
+    fireEvent.click(screen.getByRole("button", { name: /^חומרים/ }));
+    expect(await screen.findByRole("dialog", { name: "חומרים" })).toBeInTheDocument();
   });
 
   it("saves unhide through set_category_hidden", async () => {
     rpc.calls.length = 0;
     renderScreen(<CategoriesScreen />);
     fireEvent.click(await screen.findByRole("button", { name: /מוסתרות/ }));
-    fireEvent.click(await screen.findByRole("button", { name: "עוד, עבודה" }));
+    fireEvent.click(await screen.findByRole("button", { name: /^עבודה/ }));
     fireEvent.click(await screen.findByRole("button", { name: "החזרה לרשימה" }));
     fireEvent.click(await screen.findByRole("button", { name: "החזרה לרשימה" }));
     await waitFor(() => {
@@ -97,7 +93,7 @@ describe("categories hide at once (decision 0180)", () => {
     rpc.hidden = new Promise((resolve) => { answer = resolve; });
     renderScreen(<CategoriesScreen />);
     fireEvent.click(await screen.findByRole("button", { name: /מוסתרות/ }));
-    fireEvent.click(await screen.findByRole("button", { name: "עוד, עבודה" }));
+    fireEvent.click(await screen.findByRole("button", { name: /^עבודה/ }));
     fireEvent.click(await screen.findByRole("button", { name: "החזרה לרשימה" }));
     fireEvent.click(await screen.findByRole("button", { name: "החזרה לרשימה" }));
     // The row is back in the list at once: no hidden categories are left, so the hidden footer is gone.
