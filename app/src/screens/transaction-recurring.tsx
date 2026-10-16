@@ -120,7 +120,9 @@ export function TxnRecurring({
     },
   });
 
-  const hint = isRecurring
+  // FLOW-366: a recurring rule needs a party to follow, so a line with no supplier or customer is locked.
+  const noParty = recurring != null && recurring.party == null;
+  const hint = noParty ? "אין ספק או לקוח בשורה" : isRecurring
     ? [
         recurring?.typical_day == null ? null : `בערך ב־${String(recurring.typical_day)} לחודש`,
         overridden ? "סימנת" : "זוהה לבד",
@@ -139,11 +141,11 @@ export function TxnRecurring({
         value={valueWord}
         hint={hint}
         tag={<span className={isRecurring ? "ui-recurring-tag" : "ui-recurring-tag ui-recurring-tag-off"}>{tag}</span>}
-        disabled={holdWrites || (sample === undefined && recurringQuery.isError)}
+        disabled={holdWrites || noParty || (sample === undefined && recurringQuery.isError)}
         busy={sample === undefined && recurringQuery.isLoading}
         buttonRef={paceRow}
         onClick={() => {
-          if (holdWrites || (sample === undefined && blocked())) return;
+          if (holdWrites || noParty || (sample === undefined && blocked())) return;
           setPaceOpen(true);
         }}
       />

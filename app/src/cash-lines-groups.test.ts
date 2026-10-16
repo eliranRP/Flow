@@ -115,8 +115,8 @@ describe("the page total against Home's row", () => {
       excluded_out_minor: 0,
     } as unknown as CashCurrencyRow;
     const home = cashSummaryRows("2026-10", [month], "").find((row) => row.id === "out");
-    expect(home?.amounts[0]?.minor).toBe(linesSummary(rows, "out").total);
-    expect(notInProfitMinor(month)).toBeDefined();
+    expect(home?.amounts[0]?.minor).toBe(510_000n);
+    expect(notInProfitMinor(month)).toBe(-300_000n);
   });
 });
 

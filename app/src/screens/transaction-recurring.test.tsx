@@ -112,6 +112,12 @@ describe("transaction page: recurring card and counted-in sheet (FLOW-415, FLOW-
     expect(screen.getByRole("button", { name: /הכנסה קבועה/ })).toBeInTheDocument();
   });
 
+  it("locks the recurring row when the line has no supplier or customer", () => {
+    show(base, { ...found, party: null, recurring: false, detected: false, typical_day: null });
+    const locked = screen.getByText("אין ספק או לקוח בשורה").closest("button");
+    expect(locked).toBeDisabled();
+  });
+
   it("locks the cash row on a split whose parts differ", () => {
     show({ ...base, pnl_state: "mixed" }, found);
     expect(screen.getAllByText("לפי הקטגוריות בפיצול").length).toBeGreaterThan(0);

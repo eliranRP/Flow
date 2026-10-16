@@ -167,7 +167,7 @@ describe("Cash lines profit leaves out (FLOW-418)", () => {
     expect(rpc.calls.find((c) => c.name === "cash_month_lines")?.args).toMatchObject({ p_side: "not_in_profit", p_currency: "ILS" });
     expect(screen.getByRole("heading", { name: "לא נספר ברווח" })).toBeInTheDocument();
     // Net −₪1,150 less profit −₪400; the month sends no categories, so all of it is the rest.
-    expect(screen.getAllByText("−₪750").length).toBeGreaterThan(0);
+    expect(document.querySelector(".ui-breakdown-total")).toHaveTextContent("−₪750");
     expect(screen.getByText(/מזה −₪750 מע״מ והפרשים/)).toBeInTheDocument();
     expect(screen.getByText("−₪1,200")).toBeInTheDocument();
     expect(screen.getByText("+₪450")).toHaveClass("ui-income");

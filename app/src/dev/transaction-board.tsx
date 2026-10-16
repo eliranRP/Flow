@@ -44,8 +44,8 @@ export function DevTransactionBoard() {
         sample={{
           ...BOARD_TXN,
           id: "t-loan",
-          description: "Rocket Mortgage",
-          supplier_name: "Rocket Mortgage",
+          description: "Harbor Loan Servicing",
+          supplier_name: "Harbor Loan Servicing",
           project_name: "Maple Ave • דופלקס להשכרה",
           category_name: "תשלומי הלוואה",
           amount_gross: -395700n,
@@ -58,7 +58,7 @@ export function DevTransactionBoard() {
         sampleCategories={[{ id: "c1", name: "תשלומי הלוואה" }]}
         sampleRecurring={{
           transaction_id: "t-loan",
-          party: { direction: "expense", id: "s-loan", name: "Rocket Mortgage", currency: "USD" },
+          party: { direction: "expense", id: "s-loan", name: "Harbor Loan Servicing", currency: "USD" },
           recurring: true,
           override: null,
           detected: true,

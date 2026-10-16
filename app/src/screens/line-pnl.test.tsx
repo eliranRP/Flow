@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { TransactionDetail } from "@flow/shared";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import type { LineSplitRead } from "../line-split";
 import { describe, expect, it } from "vitest";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
@@ -49,6 +50,24 @@ function show(sample: NonNullable<TransactionDetail>, client = new QueryClient()
 }
 
 /** The P&L switch sits in the נספר ב sheet, so the sheet opens first (FLOW-366). */
+/** The split row navigates, so this render has the split route to land on. */
+function showRouted(sample: NonNullable<TransactionDetail>, split: LineSplitRead | null = null) {
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <ToastProvider>
+        <BooksProvider>
+          <MemoryRouter initialEntries={["/transactions/t-1"]}>
+            <Routes>
+              <Route path="/transactions/:transactionId" element={<TransactionScreen sample={sample} sampleLineSplit={split} />} />
+              <Route path="/transactions/:transactionId/split-category" element={<p>split-category</p>} />
+            </Routes>
+          </MemoryRouter>
+        </BooksProvider>
+      </ToastProvider>
+    </QueryClientProvider>,
+  );
+}
+
 function pnlSwitch() {
   return screen.getByRole("switch", { name: "נספר ברווח" });
 }
@@ -92,7 +111,7 @@ describe("one line out of the P&L", () => {
     fireEvent.click(screen.getByRole("button", { name: /^נספר ב/ }));
     fireEvent.click(pnlSwitch());
     expect(await screen.findByText("נספר ברווח")).toBeTruthy();
-    expect(screen.getByText("רווח ותזרים")).toBeInTheDocument();
+    expect(within(document.querySelector(".ui-counted-sheet") as HTMLElement).getByRole("switch", { name: "נספר ברווח" })).toBeChecked();
   });
 
   it("locks a loan line; with no loan split it counts by its category (FLOW-329)", () => {
@@ -127,12 +146,23 @@ describe("one line out of the P&L", () => {
     expect(screen.getByText("לפי חלקי ההלוואה")).toBeTruthy();
   });
 
-  it("locks a mixed split, and its פיצול row stays open (FLOW-124)", () => {
+  it("locks a mixed split, and its פיצול row stays open (FLOW-124)", async () => {
     // The line's own category counts, but some of its parts are kept out.
-    show({ ...base, pnl_state: "mixed" });
+    const split: LineSplitRead = {
+      transactionId: "t-1",
+      currency: "ILS",
+      lineMinor: 120_000n,
+      partsMatch: true,
+      parts: [
+        { category_id: "c1", category_name: "חומרים", project_id: "p1", project_name: "פרויקט לדוגמה", amount_minor: 60_000n, percent: 50, rest: false },
+        { category_id: "c2", category_name: "שיפוץ", project_id: null, project_name: null, amount_minor: 60_000n, percent: null, rest: true },
+      ],
+    };
+    showRouted({ ...base, pnl_state: "mixed" }, split);
     expect(screen.queryByRole("button", { name: /^נספר ב/ })).toBeNull();
     expect(screen.getByText("לפי הקטגוריות בפיצול")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /^פיצול/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^פיצול/ }));
+    expect(await screen.findByText("split-category")).toBeTruthy();
   });
 
   it("a split line whose parts are all kept out counts again from the sheet", async () => {
