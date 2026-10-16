@@ -183,8 +183,8 @@ describe("the pinned review bar (FLOW-327)", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderWithLine("/review");
-    const pick = await screen.findByRole("button", { name: "בחירת פרויקט" });
-    expect(pick).toBeEnabled();
+    const pick = await screen.findByRole("button", { name: "אישור" });
+    expect(pick).toBeDisabled();
     const hint = screen.getByText("בחרו פרויקט וקטגוריה");
     expect(pick).toHaveAttribute("aria-describedby", hint.id);
     expect(hint.closest(".ui-review")).not.toBeNull();
@@ -196,7 +196,7 @@ describe("the pinned review bar (FLOW-327)", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderWithLine("/review");
-    const pick = await screen.findByRole("button", { name: "בחירת פרויקט" });
+    const pick = await screen.findByRole("button", { name: "אישור" });
     expect(pick).not.toHaveAttribute("aria-describedby");
     expect(screen.queryByText("בחרו פרויקט וקטגוריה")).toBeNull();
   });

@@ -209,7 +209,12 @@ export function ReviewAllList({
   }
   return (
     <div>
-      <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} layout="inline" />
+      {/* FLOW-365: the flat list's title and its count line. */}
+      <ScreenHeader
+        title="כל הפריטים לאישור"
+        subtitle={`${String(rows.length)} פריטים מחכים • הקישו על פריט כדי לפתוח אותו`}
+        backTo={backTo}
+      />
       <MonthList
         rows={ordered}
         keyOf={(row) => row.id}

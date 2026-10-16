@@ -7,7 +7,6 @@ import { useHomePreview } from "../preview";
 import { useCategoriesQuery, useInvalidateBooks, useLineMetaPageQuery, useLineMetaQuery } from "../use-books";
 import { approveFailure, approveShown } from "../approve-review";
 import { LEDGER_FOCUS_KEYS } from "../books-focus";
-import { filedTodayBannerTitle } from "../filed-today-copy";
 import { useHeldOrder } from "../list-hold";
 import { pinReviewHead, pinReviewLine, releaseReviewHold, reviewHold, reviewPin } from "../review-pin";
 import { emptyVisit, noteHandled, notePresence, visitPlace } from "../visit-meter";
@@ -18,13 +17,10 @@ import { jevFilledOnCard, jevShown, withJev, type JevQueueData } from "./jev-rev
 import { useJevUndo } from "./jev-undo";
 import { useReviewSwap } from "./review-swap";
 import { focusReviewEmptyAction, handReviewFocus, takeReviewFocus } from "./review-focus";
-import { ReviewCount, reviewCountDigits } from "../ui/review-count";
-import { Banner } from "../ui/banner";
+import { ReviewCount, ReviewSegments, reviewCountDigits } from "../ui/review-count";
 import { Button } from "../ui/button";
-import { IconButton } from "../ui/icon-button";
-import { CheckIcon, CloseIcon, ReviewIcon } from "../ui/icons";
+import { CheckIcon } from "../ui/icons";
 import { changeSaveFailure } from "../ui/change-sheet";
-import { ProgressBar } from "../ui/progress-bar";
 import { REVIEW_MISMATCH_ID, REVIEW_MISSING_ID, ReviewCard, SPLIT_MISMATCH_ACTION, SPLIT_MISMATCH_KEEP } from "../ui/review-card";
 import { ActionBar, ActionBarRow } from "../ui/action-bar";
 import { jevReasonText, reviewFlagView, reviewPaidView } from "../review-copy";
@@ -92,7 +88,6 @@ export function ReviewQueue({
   // The card on screen stays the head until it is handled, so a refetch that reorders the
   // queue can't swap another line under אישור. A card opened from the list keeps its focus.
   const rows = fromList ? held : pinReviewHead(held, reviewPin());
-  const [hideAuto, setHideAuto] = useState(false);
   const { shown, motion } = useReviewSwap(rows[0] ?? null);
   useEffect(() => {
     // While ביטול holds the undone line, this pin of another card is ignored (review-pin.ts).
@@ -365,6 +360,11 @@ export function ReviewQueue({
     }
     void navigate(assignmentPath(changeTo, search, current.id, "project", fromList, true));
   }
+  /** FLOW-365: the card's split link opens the split screen for this line (FLOW-370 owns that screen). */
+  function openSplit() {
+    if (!current.transaction_id) return;
+    void navigate(`/transactions/${current.transaction_id}/split${search}`);
+  }
   function openCategory() {
     void navigate(assignmentPath(changeTo, search, current.id, "category", fromList, true));
   }
@@ -390,7 +390,15 @@ export function ReviewQueue({
   const nextPick = settled ? (needProject ? "project" : needCategory ? "category" : null) : null;
   const approvable = settled && nextPick == null && (view.reason === "unallocated_shared"
     || (splitCard ? view.category_id != null : view.project_id != null && view.category_id != null));
-  const approveLabel = nextPick === "project" ? "בחירת פרויקט" : nextPick === "category" ? "בחירת קטגוריה" : "אישור";
+  // FLOW-365: אישור always reads אישור; a card with no project is disabled, and its line says why.
+  const approveLabel = "אישור";
+  const barHint = nextPick === "project" && !splitCard
+    ? "בחרו פרויקט כדי לאשר"
+    : nextPick === "category"
+      ? "בחרו קטגוריה כדי לאשר"
+      : splitCard
+        ? "אישור שומר את הפיצול: כל חלק נספר בפרויקט ובקטגוריה שלו"
+        : "שינוי של פרויקט או קטגוריה נשמר כחוק לספק";
   // FLOW-327 1.5: with both fields missing the card says why, and the button points at it.
   const missingBoth = settled && needProject && needCategory;
   // FLOW-333 C2: a split whose bank amount changed leads with עדכון הפיצול; להשאיר כך approves it as it stands.
@@ -467,62 +475,53 @@ export function ReviewQueue({
         if (next instanceof Element && !(queueRoot.current?.contains(next) ?? false)) barFocus.current = false;
       }}
     >
-      <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} layout="inline" />
+      {/* FLOW-365: "הצגת הכול" sits on the bar's end side; a card opened from the list leaves it out. */}
+      <ScreenHeader
+        title="לאישור"
+        backTo={backTo ?? "/"}
+        backText={backTo == null ? "בית" : undefined}
+        trailing={changeTo == null && listPlace == null ? <TextLink className="ui-review-show-all" to={reviewListPath(search)} chevron={false}>הצגת הכול</TextLink> : undefined}
+      />
       {rows.length > 0 ? (
-        <div className="ui-review-meter">
-          {/* FLOW-327 r1: on the start side, near the thumb. A card opened from the list leaves it
-              out: Back already goes to the list. */}
-          {changeTo == null && listPlace == null ? (
-            <TextLink className="ui-review-show-all" to={reviewListPath(search)} chevron={false}>הצגת הכול</TextLink>
-          ) : null}
+        <>
           {/* FLOW-507: a viewer doesn't work through the queue, so no visit meter. */}
-          {listPlace == null && !holdWrites ? (
-            <ProgressBar
-              variant="thin"
-              label="התקדמות התור"
-              value={index}
-              max={total}
-            />
-          ) : null}
-          {holdWrites ? null : <span className="sr-only">פריט </span>}
-          <span className="t-hint ui-review-counter">
+          {listPlace == null && !holdWrites ? <ReviewSegments index={index} total={total} /> : null}
+          <div className="ui-review-counts">
             {holdWrites ? (
-              <>
+              <span className="t-hint">
                 <ReviewCount value={total} digits={reviewCountDigits(total)} side="total" />
                 {total === 1 ? " ממתינה" : " ממתינות"}
-              </>
+              </span>
             ) : (
               <>
-                <ReviewCount value={index} digits={reviewCountDigits(total)} side="index" />
-                {" מתוך "}
-                <ReviewCount value={total} digits={reviewCountDigits(total)} side="total" />
+                <span className="sr-only">פריט </span>
+                <span className="t-hint ui-review-counter">
+                  <ReviewCount value={index} digits={reviewCountDigits(total)} side="index" />
+                  {" מתוך "}
+                  <ReviewCount value={total} digits={reviewCountDigits(total)} side="total" />
+                </span>
               </>
             )}
-          </span>
-        </div>
-      ) : null}
-      {auto > 0 && !hideAuto ? (
-        <Banner
-          slim
-          icon={<ReviewIcon />}
-          title={filedTodayBannerTitle(auto)}
-          hint={<TextLink to={filedTo ?? `/review/filed${search}`}>לרשימה</TextLink>}
-          action={
-            <IconButton label="סגירה" onClick={() => { setHideAuto(true); }}>
-              <CloseIcon />
-            </IconButton>
-          }
-        />
+            {auto > 0 ? (
+              <TextLink className="ui-review-auto" to={filedTo ?? `/review/filed${search}`} chevron={false}>
+                <ReviewCount value={auto} digits={reviewCountDigits(auto)} side="total" />
+                {" אושרו אוטומטית היום"}
+              </TextLink>
+            ) : null}
+          </div>
+        </>
       ) : null}
       <div className="ui-review-motion" data-motion={motion === "still" ? undefined : motion} key={card.id}>
         <ReviewCard
           supplier={card.supplier_name ?? card.customer_name ?? card.description}
-          sourceLine={`${card.direction === "income" ? "הכנסה" : docKindLabel(card.doc_kind)} · ${invoiceDate(card.doc_date)}`}
           netAgorot={card.amount_net}
           currency={card.currency}
           vatLine={reviewVatLine(card.vat_agorot, card.currency)}
           paid={reviewPaidView(card)}
           suggestion={shownSuggestion}
+          sourcePill={card.source === "mercury" ? "שורת בנק" : "חשבונית מצולמת"}
+          sourceLine={`${invoiceDate(card.doc_date)} • ${card.direction === "income" ? "הכנסה" : "הוצאה"}`}
+          onSplit={holdWrites || leaving ? undefined : openSplit}
           pending={jevLoading}
           reason={card.reason}
           direction={card.direction}
@@ -538,6 +537,13 @@ export function ReviewQueue({
           jevFilled={jevFilled}
         />
       </div>
+      {/* FLOW-365: the card after this one, dashed, so the owner sees what comes next. */}
+      {!holdWrites && rows[1] != null ? (
+        <div className="ui-review-next t-hint">
+          <span>{`הבא בתור: ${rows[1].supplier_name ?? rows[1].description}`}</span>
+          <bdi className="ui-num" dir="ltr">{formatMoney(rows[1].amount_net < 0n ? -rows[1].amount_net : rows[1].amount_net, rows[1].currency ?? "ILS")}</bdi>
+        </div>
+      ) : null}
       {holdWrites ? <ViewerNote className="t-hint ui-viewer-note" /> : (
       <ActionBar>
         {mismatch ? (
@@ -568,21 +574,22 @@ export function ReviewQueue({
           </>
         ) : (
           <>
-            <div className="ui-review-approve" ref={approveSlot}>
-              <Button
-                full
-                disabled={!settled}
-                icon={approveLabel === "אישור" ? <CheckIcon /> : undefined}
-                aria-describedby={missingBoth ? REVIEW_MISSING_ID : undefined}
-                onClick={runApprove}
-              >
-                {approveLabel}
-              </Button>
-            </div>
-            <ActionBarRow>
+            <div className="ui-action-bar-row ui-review-actions">
+              <div className="ui-review-approve" ref={approveSlot}>
+                <Button
+                  full
+                  disabled={!settled || nextPick != null || !approvable}
+                  icon={<CheckIcon />}
+                  aria-describedby={missingBoth ? REVIEW_MISSING_ID : undefined}
+                  onClick={runApprove}
+                >
+                  {approveLabel}
+                </Button>
+              </div>
               <Button variant="secondary" to={change}>שינוי</Button>
               {skipButton}
-            </ActionBarRow>
+            </div>
+            <p className="t-hint ui-review-bar-hint">{barHint}</p>
           </>
         )}
       </ActionBar>
@@ -604,15 +611,6 @@ function reviewVatLine(vat: bigint | undefined, currency?: string): string | nul
   if (vat === 0n) return "פטור ממע״מ";
   const shown = vat < 0n ? -vat : vat;
   return `לפני מע״מ · מע״מ ${formatMoney(shown, currency)}`;
-}
-
-function docKindLabel(kind: string | undefined): string {
-  if (kind === "invoice") return "חשבונית";
-  if (kind === "receipt") return "קבלה";
-  if (kind === "invoice_receipt") return "חשבונית מס קבלה";
-  if (kind === "credit") return "זיכוי";
-  if (kind === "expense") return "הוצאה";
-  return "מסמך";
 }
 
 /** How long after ביטול's reopen lands the queue waits for the line before it drops the hold. */

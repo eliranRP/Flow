@@ -456,3 +456,103 @@
   min-inline-size: 0;
   overflow-wrap: anywhere;
 }
+
+/* FLOW-365: the header's segmented progress, one segment per card (read from the start side). */
+.ui-review-segments {
+  display: flex;
+  gap: var(--space-1);
+  margin: var(--space-3) var(--space-side) 0;
+}
+
+.ui-review-seg {
+  flex: 1 1 0;
+  block-size: 4px;
+  border-radius: 2px;
+  background: var(--color-line);
+}
+
+.ui-review-seg[data-state="done"] {
+  background: var(--color-accent);
+}
+
+.ui-review-seg[data-state="current"] {
+  background: var(--color-tint-strong);
+}
+
+/* The counter row: "פריט i מתוך n" on the start side, "<n> אושרו אוטומטית היום" on the end side. */
+.ui-review-counts {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-2) var(--space-side) 0;
+}
+
+/* The dashed peek of the next card, under the card (the board's "הבא בתור"). */
+.ui-review-next {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-3) var(--space-side) 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+/* The source pill at the top of the card's text column (חשבונית מצולמת, שורת בנק). */
+.ui-review-source {
+  align-self: flex-end;
+  padding: 2px var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  color: var(--color-text-secondary);
+  font-size: var(--type-hint-size);
+}
+
+/* The owner's and the missing tags, beside the row's tag (הצעה, הצעת Jev, החזר). */
+.ui-review-pick-tag {
+  color: var(--color-text-secondary);
+  font-size: var(--type-hint-size);
+}
+
+.ui-review-pick-tag[data-state="missing"] {
+  color: var(--color-accent-text);
+}
+
+/* No suggestion: the project row's value reads in the accent, not muted. */
+.ui-review-none-value {
+  color: var(--color-accent-text);
+}
+
+/* The split link under the rows: a text link with the split icon, 44px tall. */
+.ui-review-split-link {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-end;
+  gap: var(--space-2);
+  min-block-size: var(--touch-min);
+  color: var(--color-accent-text);
+  font-size: 15px;
+  font-weight: 400;
+  text-decoration: none;
+}
+
+/* The bar's three actions: אישור takes two parts, שינוי and דלג one each. */
+.ui-action-bar-row.ui-review-actions {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+
+/* The board's two big rows: the label over the value, the tag beside the value. */
+.ui-review .ui-row-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-inline-size: 0;
+}
+
+/* The one line under the bar says what the button does. */
+.ui-review-bar-hint {
+  margin: 0;
+  text-align: center;
+}

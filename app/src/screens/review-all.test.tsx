@@ -176,7 +176,7 @@ describe("review list paths", () => {
 });
 
 describe("review queue list", () => {
-  it("puts הצגת הכול on the start side of the counter line, before the bar and above the filed banner", async () => {
+  it("puts הצגת הכול in the header and the auto count on the counter line (FLOW-365)", async () => {
     rpc.impl = (name) => {
       if (name === "list_review") {
         return Promise.resolve({
@@ -191,12 +191,11 @@ describe("review queue list", () => {
     expect(link).toHaveAttribute("href", "/review/all");
     // FLOW-601: the meter waits for the role (list_my_companies), so it can land after the link.
     const meter = await screen.findByRole("meter", { name: "התקדמות התור" });
-    const banner = await screen.findByText(/שויכו אוטומטית היום/);
+    const auto = await screen.findByText(/אושרו אוטומטית היום/);
     const card = screen.getByRole("heading", { name: "מחסן הנמל" });
     expect(link.compareDocumentPosition(meter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(link.parentElement).toHaveClass("ui-review-meter");
-    expect(link.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(link.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(meter.compareDocumentPosition(auto) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(auto.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("lists every open item, opens that card, and returns to the list", async () => {
@@ -247,7 +246,7 @@ describe("review queue list", () => {
     // header stays on one line so the pinned bar clears the tab bar at 375x667.
     expect(screen.queryByRole("link", { name: "הצגת הכול" })).toBeNull();
     const title = screen.getByRole("heading", { name: "לאישור" });
-    expect(title.closest("header")).not.toHaveClass("ui-page-stacked");
+    expect(title.closest("header")).toHaveClass("ui-page-stacked");
     fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
     expect(await screen.findByRole("link", { name: /מחסן הנמל/ })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "עגורני החוף" })).not.toBeInTheDocument();
@@ -285,7 +284,7 @@ describe("review queue list", () => {
     renderAt("/review?project=p1");
     const link = await screen.findByRole("link", { name: "הצגת הכול" });
     expect(link).toHaveAttribute("href", "/review/all?project=p1");
-    expect(screen.getByRole("heading", { name: "לאישור" }).closest("header")).not.toHaveClass("ui-page-stacked");
+    expect(screen.getByRole("heading", { name: "לאישור" }).closest("header")).toHaveClass("ui-page-stacked");
     fireEvent.click(link);
     expect(await screen.findByRole("link", { name: /מחסן הנמל/ })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /עגורני החוף/ })).not.toBeInTheDocument();
@@ -315,7 +314,7 @@ describe("review queue list", () => {
     };
     renderAt("/review");
     expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
-    fireEvent.click(await screen.findByRole("button", { name: "בחירת פרויקט" }, { timeout: 2500 }));
+    fireEvent.click(await screen.findByRole("button", { name: "פרויקט: אין הצעה · הקישו לבחירה" }, { timeout: 2500 }));
     expect(await screen.findByRole("heading", { name: "בחירת פרויקט" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "הרצל" }));
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
@@ -330,7 +329,7 @@ describe("review queue list", () => {
     });
     expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "פרויקט: הרצל" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "בחירת קטגוריה" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
     expect(screen.queryByText("בחרו פרויקט וקטגוריה.")).not.toBeInTheDocument();
   });
 

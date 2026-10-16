@@ -4,7 +4,7 @@ import { lineSplitPartsLabel } from "../line-split-copy";
 import { REVIEW_FLAG_PREFIX, type CopyPart, type ReviewFlagView, type ReviewPaidView } from "../review-copy";
 import { methodLabel, methodSourceName, type TxnMeta } from "../txn-meta";
 import { MethodIcon } from "./bank-details";
-import { AlertIcon, CheckIcon, ChevronDownIcon, DocumentIcon, NoteIcon } from "./icons";
+import { AlertIcon, CheckIcon, ChevronDownIcon, DocumentIcon, NoteIcon, SplitIcon } from "./icons";
 import { ListRow } from "./list-row";
 import { Skeleton } from "./skeleton";
 import { TextLink } from "./text-link";
@@ -56,6 +56,10 @@ export type ReviewSuggestion = {
 
 /** FLOW-703: Jev's "no project / overhead" answer on the project row. תקורה first: at 320 the row cuts the end. */
 export const JEV_NO_PROJECT = "תקורה · ללא פרויקט";
+/** FLOW-365: the project row when nothing suggests one. It reads in the accent and asks for a tap. */
+export const REVIEW_NO_SUGGESTION = "אין הצעה · הקישו לבחירה";
+/** FLOW-365: the split link under the rows. */
+export const REVIEW_SPLIT_LINK = "פיצול לכמה פרויקטים או קטגוריות";
 
 type ReviewCardProps = {
   supplier: string;
@@ -69,6 +73,10 @@ type ReviewCardProps = {
   direction?: "income" | "expense";
   /** Opens the project picker, or the split when this line is a split. */
   onProject?: () => void;
+  /** FLOW-365: the source pill at the top of the text column (חשבונית מצולמת, שורת בנק). */
+  sourcePill?: string;
+  /** FLOW-365: opens the split screen for this line. Left out for a transfer or a viewer. */
+  onSplit?: () => void;
   /** Opens the category picker. A line pick saves that field and does not resolve. */
   onCategory?: () => void;
   projectButtonRef?: Ref<HTMLButtonElement>;
@@ -116,6 +124,8 @@ export function ReviewCard({
   direction = "expense",
   onProject,
   onCategory,
+  sourcePill,
+  onSplit,
   projectButtonRef,
   categoryButtonRef,
   pending = false,
@@ -156,7 +166,7 @@ export function ReviewCard({
     lines.push({
       key: "project",
       label: "פרויקט",
-      value: projectValue ?? (projectNone ? JEV_NO_PROJECT : "לא נבחר"),
+      value: projectValue ?? (projectNone ? JEV_NO_PROJECT : REVIEW_NO_SUGGESTION),
       suggested: (suggestion?.projectSuggested === true && projectValue != null) || projectNone,
       jev: (suggestion?.projectSuggested === true && suggestion.projectJev === true && projectValue != null) || projectNone,
       onOpen: onProject,
@@ -190,6 +200,7 @@ export function ReviewCard({
           <DocumentIcon size={24} />
         </span>
         <div className="ui-review-copy">
+          {sourcePill ? <span className="ui-review-source">{sourcePill}</span> : null}
           <h2 className="ui-review-supplier t-title-3">
             {supplier}
           </h2>
@@ -255,7 +266,7 @@ export function ReviewCard({
             key={line.key}
             variant="button"
             eyebrow={line.label}
-            title={line.value}
+            title={line.value === REVIEW_NO_SUGGESTION ? <span className="ui-review-none-value">{line.value}</span> : line.value}
             muted={line.value === "לא נבחר"}
             label={`${line.label}: ${line.value}${line.jev ? ", הצעת Jev" : line.suggested ? ", הצעה" : line.reversal ? ", החזר" : ""}`}
             tag={lineTag(line)}
@@ -272,6 +283,12 @@ export function ReviewCard({
             tag={lineTag(line)}
           />
         ))}
+        {onSplit && !mismatch ? (
+          <button type="button" className="ui-review-split-link ui-hit" onClick={onSplit}>
+            <SplitIcon size={18} />
+            {REVIEW_SPLIT_LINK}
+          </button>
+        ) : null}
         {filled ? (
           <p className="t-hint ui-review-reason ui-review-filled">
             <span className="ui-review-reason-mark" aria-hidden="true">✦</span>
@@ -386,11 +403,18 @@ function ReviewFlagBlock({ flag }: { flag: ReviewFlagView }) {
   );
 }
 
-/** הצעת Jev on a Jev fill, הצעה on any other suggestion, then החזר. */
-function lineTag(line: { suggested: boolean; jev: boolean; reversal?: boolean }) {
+/**
+ * FLOW-365: הצעת Jev on a Jev fill, הצעה on any other suggestion, then החזר. A value the owner or a
+ * rule picked reads בחרת; a missing one reads חסר.
+ */
+function lineTag(line: { suggested: boolean; jev: boolean; reversal?: boolean; value: string }) {
   if (line.jev) return <JevTag />;
   if (line.suggested) return <SuggestTag />;
-  return line.reversal ? <ReversalTag /> : undefined;
+  if (line.reversal) return <ReversalTag />;
+  if (line.value === "לא נבחר" || line.value === REVIEW_NO_SUGGESTION) {
+    return <span className="ui-review-pick-tag" data-state="missing">חסר</span>;
+  }
+  return <span className="ui-review-pick-tag">בחרת</span>;
 }
 
 /**

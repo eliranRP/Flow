@@ -156,11 +156,10 @@ describe("ReviewCard", () => {
       />,
     );
     expect(screen.queryByText(/חסר פרויקט/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/אין הצעה/)).not.toBeInTheDocument();
     expect(screen.queryByText(/לפני מע״מ|פטור ממע״מ/)).not.toBeInTheDocument();
     expect(screen.getByText(/הכנסה ·/)).toBeInTheDocument();
-    const projectRow = screen.getByRole("button", { name: /פרויקט: לא נבחר/ });
-    expect(projectRow.querySelector(".ui-row-title")).toHaveClass("ui-row-title-muted");
+    const projectRow = screen.getByRole("button", { name: /פרויקט: אין הצעה · הקישו לבחירה/ });
+    expect(projectRow.querySelector(".ui-review-none-value")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /פרויקט:/ })).toBeInTheDocument();
   });
 
@@ -334,7 +333,7 @@ describe("ReviewCard הצעת Jev", () => {
 
   it("does not show הצעת Jev on an empty row", () => {
     render(jevCard({ projectSuggested: true, projectJev: true, category: "חומרים" }));
-    expect(screen.getByRole("button", { name: "פרויקט: לא נבחר" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "פרויקט: אין הצעה · הקישו לבחירה" })).toBeInTheDocument();
     expect(screen.queryByText("הצעת Jev")).not.toBeInTheDocument();
   });
 

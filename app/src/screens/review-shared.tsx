@@ -175,14 +175,14 @@ export function ReviewEmpty({
   const skippedCount = skippedLink && !filtered && !skipped.isError ? (skipped.data?.length ?? 0) : 0;
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} layout="inline" />
+      <ScreenHeader title="לאישור" backTo={backTo} layout="inline" />
       <EmptyState
         icon={<ReviewIcon />}
         title={filtered ? "אין פריטים לאישור בפרויקט הזה" : "הכל מאושר"}
         body={filtered ? "אין פריטים של הפרויקט הזה בתור." : "אין פריטים שמחכים לך. נעדכן כשיגיע משהו חדש."}
         action={(
           <>
-            <Button variant="pill" to={homeTo ?? `/${search}`}>{homeLabel ?? "לדף הבית"}</Button>
+            <Button full to={homeTo ?? `/${search}`}>{homeLabel ?? "חזרה לבית"}</Button>
             <ReviewSkippedLink count={skippedCount} to={skippedListPath(reviewListPath(search))} />
           </>
         )}
