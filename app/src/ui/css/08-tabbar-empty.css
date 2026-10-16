@@ -31,66 +31,32 @@
   padding-top: var(--space-2);
 }
 
-button.ui-tab-slot {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-}
-
 .ui-tab-slot {
   display: flex;
-  width: var(--tab-slot);
+  min-width: 56px;
   max-inline-size: 100%;
   min-inline-size: 0;
   min-height: var(--touch-min);
   flex-direction: column;
   align-items: center;
-  gap: var(--tab-icon-gap);
+  gap: var(--space-1);
   overflow: visible;
-  color: var(--color-text-muted);
-  font-size: var(--type-micro-size);
-  line-height: var(--type-micro-line);
-  font-weight: var(--type-micro-weight);
+  color: var(--color-text-secondary);
+  font-size: var(--type-small-size);
+  line-height: var(--type-small-line);
+  font-weight: var(--type-small-weight);
   text-decoration: none;
   border-radius: var(--radius-chip);
-  transition: color var(--motion-press) var(--ease-linear), opacity var(--motion-press) var(--ease-standard);
+  transition: color var(--motion-press) var(--ease-linear), opacity var(--motion-fast) var(--ease-standard);
 }
 
 .ui-tab-slot[aria-current="page"] {
   color: var(--color-accent-text);
 }
 
-/* FLOW-363 (3c): a press dims the tab, with no tint behind it. The FAB slot keeps its own press. */
-.ui-tab-slot:not(.ui-tab-slot-fab):active {
+/* FLOW-363 (3c): a press dims the tab, with no tint behind it. */
+.ui-tab-slot:active {
   opacity: .72;
-}
-
-.ui-tab-slot-fab {
-  background: transparent;
-}
-
-.ui-tab-slot-fab:active {
-  background: transparent;
-}
-
-.ui-fab {
-  display: grid;
-  width: var(--fab-size);
-  height: var(--fab-size);
-  place-items: center;
-  border-radius: var(--radius-fab);
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  transform: none;
-  transition: background-color var(--motion-press);
-}
-
-.ui-tab-slot-fab:active .ui-fab,
-.ui-fab-pressed {
-  background: var(--color-accent-pressed);
-  transform: none;
 }
 
 .ui-tab-label {

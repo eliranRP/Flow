@@ -211,7 +211,7 @@ function SumitScene({ pointer }: SceneProps) {
         <SumitLine title="אבי חשמל" hint="הוצאה · 20/09" agorot={234_000n} sign="out" drop={line2} />
         <SumitLine title="וילה רעננה" hint="הכנסה · 19/09" agorot={4_500_000n} sign="in" drop={line3} />
         <div className="ui-setup-tabs ui-setup-drop" style={styleOf({ "--setup-drop": hello })}>
-          <TabBarPicture section="review" reviewCount={12} />
+          <TabBarPicture section="home" />
         </div>
       </div>
       <div

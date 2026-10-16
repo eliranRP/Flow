@@ -56,7 +56,7 @@ export const HomeServerError: Story = {
 
 export const HomeBooksMonth: Story = {
   render: () => (
-    <StoryRoute entry="/" tabs reviewCount={7}>
+    <StoryRoute entry="/" tabs>
       <HomeBooks
         data={sampleDashboard}
         previewing={false}
@@ -74,7 +74,7 @@ export const HomeBooksMonth: Story = {
 // FLOW-321. The pending card on Home: a row to Review and a row to Unpaid, each only when it has items.
 function AttentionHome({ pending, unpaidCount, unpaidGross }: { pending: number; unpaidCount: number; unpaidGross: bigint }) {
   return (
-    <StoryRoute entry="/" tabs reviewCount={pending}>
+    <StoryRoute entry="/" tabs>
       <HomeBooks
         data={{ ...sampleDashboard, review_count: pending }}
         previewing={false}
@@ -143,7 +143,7 @@ function SampleHome({ refreshing = false, notice }: { refreshing?: boolean; noti
 
 export const PullToRefresh: Story = {
   render: () => (
-    <StoryRoute entry="/" tabs reviewCount={7}>
+    <StoryRoute entry="/" tabs>
       <SampleHome refreshing />
     </StoryRoute>
   ),
@@ -151,7 +151,7 @@ export const PullToRefresh: Story = {
 
 export const OfflineCached: Story = {
   render: () => (
-    <StoryRoute entry="/" tabs reviewCount={7}>
+    <StoryRoute entry="/" tabs>
       <SampleHome
         notice={
           <Banner
@@ -290,7 +290,7 @@ const periodDashboard: Dashboard = {
 
 function PeriodHome() {
   return (
-    <StoryRoute entry="/" tabs reviewCount={2}>
+    <StoryRoute entry="/" tabs>
       <HomeBooks
         data={periodDashboard}
         previewing={false}

@@ -15,7 +15,6 @@ import { LedgerFocusRefresh } from "./books-focus";
 import { ListHoldRoot } from "./list-hold";
 import { TxnAnnouncer } from "./txn-nav";
 import { BooksProvider } from "./use-books";
-import { useCompanyRole, useHoldWrites, useIsViewer } from "./use-is-viewer";
 import { detectInstallMode, isStandalone, listenForInstallPrompt } from "./ui/install-prompt";
 import { DropRestoredSheet, ScrollMemory, useGoBack } from "./ui/back";
 import { EdgeSwipeBack } from "./ui/edge-back";
@@ -216,7 +215,7 @@ function AppRoutes() {
                 <Route path="/e2e/project" element={<DevProject />} />
                 <Route path="/e2e/expense" element={<DevExpense />} />
                 {/* FLOW-334: a fixture of a screen that has the tab bar draws it, on that screen's tab. */}
-                <Route element={<DevShell section="review" />}>
+                <Route element={<DevShell section="home" />}>
                   <Route path="/e2e/review" element={<DevReview />} />
                   <Route path="/e2e/jev-review" element={<JevReviewE2e />} />
                   <Route path="/e2e/review-banner" element={<DevReviewBanner />} />
@@ -241,14 +240,17 @@ function AppRoutes() {
                   <Route path="/e2e/project-category" element={<DevProjectCategory />} />
                   <Route path="/e2e/project-months" element={<DevProjectMonths />} />
                 </Route>
-                <Route element={<DevShell section="settings" />}>
-                  <Route path="/e2e/settings" element={<DevSettings />} />
-                  <Route path="/e2e/connections" element={<DevConnections />} />
+                {/* Settings has no tab (FLOW-364); the loans pages open the loans tab. */}
+                <Route element={<DevShell section="loans" />}>
                   <Route path="/e2e/loans" element={<DevLoans />} />
                   <Route path="/e2e/loans/:loanId" element={<DevLoanDetail />} />
                   <Route path="/e2e/loans/:loanId/details" element={<DevLoanDetail view="details" />} />
                   <Route path="/e2e/loans/:loanId/future" element={<DevLoanDetail view="future" />} />
                   <Route path="/e2e/loans/:loanId/future/:period" element={<DevLoanDetail view="period" />} />
+                </Route>
+                <Route element={<DevShell section={null} />}>
+                  <Route path="/e2e/settings" element={<DevSettings />} />
+                  <Route path="/e2e/connections" element={<DevConnections />} />
                   <Route path="/e2e/categories" element={<DevCategories />} />
                   <Route path="/e2e/categories/:parentId" element={<DevCategories />} />
                   <Route path="/e2e/team" element={<DevTeam />} />
@@ -424,14 +426,6 @@ function TransactionRoute() {
 }
 
 function Shell() {
-  const role = useCompanyRole();
-  const viewer = useIsViewer();
-  const holdWrites = useHoldWrites();
-  const preview = usePreviewMode();
-  // Preview keeps +, unless this session is already a viewer. A role that is
-  // still loading hides + so a viewer never taps it. An unknown role never
-  // shows a write control.
-  const allowAdd = role !== "unknown" && !viewer && (preview || !holdWrites);
   return (
     <div className="flex min-h-dvh flex-col">
       <SetupResume />
@@ -442,13 +436,13 @@ function Shell() {
           <Outlet />
         </ScreenSuspense>
       </div>
-      <TabBar allowAdd={allowAdd} />
+      <TabBar />
     </div>
   );
 }
 
 /** Dev only (FLOW-334): the Shell's tab bar for an /e2e/ fixture, on the tab its real screen belongs to. */
-function DevShell({ section }: { section: TabSection }) {
+function DevShell({ section }: { section: TabSection | null }) {
   return (
     <div className="flex min-h-dvh flex-col">
       <div className="below-tabbar flex min-h-0 min-w-0 flex-1 flex-col">

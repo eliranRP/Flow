@@ -275,12 +275,12 @@ describe("viewer gates", () => {
       expect(screen.getByText("פרויקטים מגיעים מ־SUMIT.")).toBeInTheDocument();
       expect(screen.queryByRole("dialog", { name: "פרויקט" })).not.toBeInTheDocument();
     }],
-    ["V24", "add is an empty slot", () => {
-      viewer(<TabBar allowAdd={false} />);
+    ["V24", "the tab bar has no add for a viewer (FLOW-364)", () => {
+      viewer(<TabBar />);
       const nav = screen.getByRole("navigation", { name: "ניווט ראשי" });
       expect(screen.queryByRole("button", { name: "הוספה" })).not.toBeInTheDocument();
       expect(screen.queryByRole("link", { name: "הוספה" })).not.toBeInTheDocument();
-      expect(nav.querySelectorAll(".ui-tab-slot")).toHaveLength(5);
+      expect(nav.querySelectorAll(".ui-tab-slot")).toHaveLength(4);
       expect(nav.querySelector(".ui-fab")).toBeNull();
     }],
     ["V25", "settings carries the quiet line", () => {
