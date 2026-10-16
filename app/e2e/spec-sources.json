@@ -220,7 +220,7 @@
       "screens/month-drawer.tsx",
       "ui/tab-bar.tsx",
       "ui/top-band.tsx",
-      "dev-routes-cash.tsx",
+      "dev-routes.tsx",
       "dev/cash-sample.ts"
     ]
   },
