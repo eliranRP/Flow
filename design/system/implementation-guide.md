@@ -65,40 +65,41 @@ In CSS, every colour is `--color-<name>`, for example `--color-text-secondary`.
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `bg` | #FFFFFF | #15111E | Page |
+| `bg` | #F6F4FA | #15111E | Page |
 | `surface` | #FFFFFF | #1E1929 | Cards, tab bar, sheets, inputs |
-| `raised` | #FFFFFF | #251F33 | Something raised above a surface (dark mode only differs) |
-| `tint` | #F3ECFE | #2A2045 | The one fill colour: pending card, pills, secondary button, skeletons |
-| `tint-strong` / `tint-pressed` | #E7DAFD | #382A5E | Pressed state of tinted things |
-| `line` | #EEE8FA | #2E2740 | 1px hairlines between rows, card and input borders |
+| `raised` | #F1EEF6 | #251F33 | Inner box and input (the board; dark mode only differs) |
+| `tint` | #EEE6FD | #2A2045 | The one fill colour: pending card, pills, secondary button, skeletons |
+| `tint-strong` / `tint-pressed` | #D9CBF6 / #E7DAFD | #382A5E | tint-strong: the selected outline and row fill (the board); tint-pressed: the pressed state of tinted things |
+| `line` | #E7E2F0 | #2E2740 | 1px hairlines between rows, card and input borders |
+| `line-strong` | #DAD3E6 | #3A3350 | Strong hairline: the secondary button outline, a switch off, the dashed add row (new; the board uses it, no screen does yet) |
 | `control-off` | #8F86A3 | #736A8C | Switch track when off, unchecked checkbox border, sheet grab handle (≥ 3:1) |
 | `control-border` | #8F86A3 | #736A8C | Borders of inputs, search fields, outlined chips, radio circles (≥ 3:1) |
 | `gsi-bg` / `gsi-border` / `gsi-text` | #FFFFFF / #747775 / #1F1F1F | same | The "המשך עם Google" button only (§7.24). Fixed by Google branding, identical in both modes. Stroke 4.5:1 (light) / 4.1:1 (dark) on the page |
 | `bad-tint` | #FCEDEC | #3A1E24 | Soft fill behind a destructive confirm button (`bad` text on it: 4.9:1 / 6.6:1) |
 | `text` | #1D1728 | #F1EDF8 | Main text and **all figures** |
-| `text-secondary` | #564E66 | #B1A8C4 | Labels, secondary lines, row icons |
-| `text-muted` | #6A627A | #978EAB | Hints, dates, percentages, chevrons, placeholders |
-| `accent` | #7B3FE4 | #B894FF | + button, primary button fill, switch on, selected chip |
+| `text-secondary` | #5B536E | #B1A8C4 | Labels, secondary lines, row icons |
+| `text-muted` | #746C88 | #978EAB | Hints, dates, percentages, chevrons, placeholders |
+| `accent` | #6C2ED6 | #B894FF | + button, primary button fill, switch on, selected chip |
 | `accent-pressed` | #6631C9 | #A47FF0 | Pressed accent fills |
 | `accent-text` | #6C2ED6 | #C3A5FF | Links, accent icons, active tab, secondary button text |
 | `logo` | #7B3FE4 | #B894FF | The "Flow" wordmark on white and dark pages (brand violet). **Not** `accent-text`. On the band use `on-band`. |
-| `on-accent` | #FFFFFF | #1E0B45 | Text and icons on an accent fill (note: **dark** text in dark mode) |
+| `on-accent` | #F6F4FA | #1E0B45 | Text and icons on an accent fill (note: **dark** text in dark mode) |
 | `band` | #7B3FE4 | #7B3FE4 | Top band. **The same in both modes.** |
 | `on-band` | #FFFFFF | #FFFFFF | Text on the band |
 | `on-band-secondary` | #F0E8FF | #F0E8FF | Labels on the band |
 | `band-chip` / `band-pill` | #FFFFFF | #1E1929 | Period pill and change pill sitting on the band |
-| `good` | #15733F | #62CB8D | Positive change, only with ▲ |
-| `bad` | #C3302B | #FF8A80 | Negative change or loss, only with ▼ or a minus sign |
+| `good` | #1A8048 | #62CB8D | Positive change, only with ▲ |
+| `bad` | #D23B2F | #FF8A80 | Negative change or loss, only with ▼ or a minus sign |
 | `warning` | #8A5700 | #EDB866 | Warnings (for example "over budget") |
-| `error` | #C3302B | #FF8A80 | Input error border and message |
+| `error` | #D23B2F | #FF8A80 | Input error border and message |
 | `disabled-bg` / `disabled-text` | #F1EEF6 / #8F889C | #2A2438 / #7A7290 | Disabled controls |
 | `scrim` | rgba(29,23,40,.45) | rgba(5,3,10,.62) | Backdrop behind sheets |
-| `toast-bg` / `toast-text` | #1D1728 / #FFFFFF | #F1EDF8 / #15111E | Toast (it inverts per mode) |
+| `toast-bg` / `toast-text` | #1D1728 / #F6F4FA | #F1EDF8 / #15111E | Toast (it inverts per mode) |
 | `seg-on` | #FFFFFF | #3B2F5E | Selected segment |
-| `band-past` | FLOW-372 | #5A2DB0 | Band of a past month. New in [0181](../../docs/decisions/0181-redesign-foundation.md) |
-| `income` | #13703D | #62CB8D | Money in only, always with "+". Never with a minus, never on the band (0181) |
-| `signal` | FLOW-372 | #FF8A80 | The one signal colour on a screen: a loss, a change that hurts, an invoice over 30 days. At most one per screen. New in 0181 |
-| `signal-soft` | FLOW-372 | #E8A598 | Soft signal fill or text beside `signal`. New in 0181 |
+| `band-past` | #5A2DB0 | #5A2DB0 | Band of a past month. New in [0181](../../docs/decisions/0181-redesign-foundation.md) |
+| `income` | #1A8048 | #62CB8D | Money in only, always with "+". Never with a minus, never on the band (0181) |
+| `signal` | #D23B2F | #FF8A80 | The one signal colour on a screen: a loss, a change that hurts, an invoice over 30 days. At most one per screen. New in 0181 |
+| `signal-soft` | #B9503F | #E8A598 | Soft signal fill or text beside `signal`. New in 0181 |
 | `pill-helps` | FLOW-372 | #4A4458 | Band change pill when the change helps. New in 0181 |
 | `pill-hurts` | FLOW-372 | #C3302B | Band change pill when the change hurts. New in 0181 |
 
@@ -111,7 +112,7 @@ These component colours are also in `implementation-tokens.css`:
 | `toast-bad` | the other mode's `bad` | Error icon inside the inverted toast (7.6:1 light, 4.8:1 dark) |
 | `badge-bg` / `badge-text` | `text` / `surface` | Tab bar count badge. It is neutral, not red. |
 | `focus`, `focus-on-band` | `accent-text`, `on-band` | Focus rings (see §9) |
-| `skeleton`, `skeleton-shine` | #F3ECFE / #FAF6FF, dark #2A2045 / #33285A | Loading placeholders (decorative) |
+| `skeleton`, `skeleton-shine` | #F1EEF6 / #FAF6FF, dark #2A2045 / #33285A | Loading placeholders (decorative) |
 | `skeleton-band`, `skeleton-band-shine` | #9565E9 / #A57CED | Placeholders on the band |
 
 The other token groups are:

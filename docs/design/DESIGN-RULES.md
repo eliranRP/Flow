@@ -71,31 +71,33 @@ From the Design guide page of the [Design canvas](https://claude.ai/artifact/9gr
 
 ### 2.2 Colour tokens
 
-Dark values are drawn; the table gives the dark value of each token. Light values are [FLOW-372](../backlog/tasks/FLOW-372.md)'s. Until it merges, the light values in [implementation-tokens.css](../../design/system/implementation-tokens.css) stand. Every colour is `--color-<name>`. Dark is a violet-tinted near-black, never `#000000`. [0181](../decisions/0181-redesign-foundation.md), [0024](../decisions/0024-design-system-approved.md), guide §2.2.
+Light and dark values are both drawn from the Design canvas (the Light theme page, FLOW-372). Both are in [implementation-tokens.css](../../design/system/implementation-tokens.css). Every colour is `--color-<name>`. Dark is a violet-tinted near-black, never `#000000`. [0181](../decisions/0181-redesign-foundation.md), [0024](../decisions/0024-design-system-approved.md), guide §2.2.
 
-| Token | Dark | Use |
-|---|---|---|
-| `bg` | `#15111E` | Page |
-| `surface` | `#1E1929` | Cards, sheets, the compact bar |
-| `raised` | `#251F33` | Inner box and input |
-| `tint` | `#2A2045` | Tint fill, pending card, pills |
-| `accent` | `#B894FF` | Accent: + button, primary fill, switch on, selected chip |
-| `accent-pressed` | `#C3A5FF` | Pressed accent, and accent on a tint |
-| `band` | `#7B3FE4` | Top band, the same in both modes |
-| `band-past` | `#5A2DB0` | Band of a past month (new) |
-| `income` | `#62CB8D` | Money in only. Always with "+". Never with a minus, never on the band |
-| `signal` | `#FF8A80` | The one signal colour on a screen: a loss, a change that hurts, an invoice over 30 days (new) |
-| `signal-soft` | `#E8A598` | Soft signal fill or text beside `signal` (new) |
-| `text` | `#F1EDF8` | Main text and all figures |
-| `text-secondary` | `#B1A8C4` | Labels and secondary lines |
-| `text-muted` | `#978EAB` | Hints, dates, placeholders |
-| `line` | `#2E2740` | Hairlines |
-| `pill-helps` | `#4A4458` | Band change pill when the change helps (new) |
-| `pill-hurts` | `#C3302B` | Band change pill when the change hurts (new) |
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `bg` | `#F6F4FA` | `#15111E` | Page |
+| `surface` | `#FFFFFF` | `#1E1929` | Cards, sheets, the compact bar |
+| `raised` | `#F1EEF6` | `#251F33` | Inner box and input |
+| `tint` | `#EEE6FD` | `#2A2045` | Tint fill, pending card, pills |
+| `accent` | `#6C2ED6` | `#B894FF` | Accent: + button, primary fill, switch on, selected chip |
+| `accent-pressed` | `#6631C9` | `#C3A5FF` | Pressed accent, and accent on a tint |
+| `band` | `#7B3FE4` | `#7B3FE4` | Top band, the same in both modes |
+| `band-past` | `#5A2DB0` | `#5A2DB0` | Band of a past month (new) |
+| `income` | `#1A8048` | `#62CB8D` | Money in only. Always with "+". Never with a minus, never on the band |
+| `signal` | `#D23B2F` | `#FF8A80` | The one signal colour on a screen: a loss, a change that hurts, an invoice over 30 days (new) |
+| `signal-soft` | `#B9503F` | `#E8A598` | Soft signal fill or text beside `signal` (new) |
+| `text` | `#1D1728` | `#F1EDF8` | Main text and all figures |
+| `text-secondary` | `#5B536E` | `#B1A8C4` | Labels and secondary lines |
+| `text-muted` | `#746C88` | `#978EAB` | Hints, dates, placeholders |
+| `line` | `#E7E2F0` | `#2E2740` | Hairlines |
+| `line-strong` | `#DAD3E6` | `#3A3350` | Strong hairline: the secondary button outline, a switch off, the dashed add row (new; the board uses it, no screen does yet) |
+| `tint-strong` | `#D9CBF6` | `#382A5E` | Selected outline and selected row fill (new) |
+| `pill-helps` | `#4A4458` | `#4A4458` | Band change pill when the change helps (new) |
+| `pill-hurts` | `#C3302B` | `#C3302B` | Band change pill when the change hurts (new) |
 
 Text pairs are WCAG AA 4.5:1, non-text UI at least 3:1. The other tokens (`raised`, `on-accent`, `control-*`, `bad`, `warning`, `toast-*`, `seg-on`, and the rest in the token file) keep their names and their role in the table of the implementation guide §2.2.
 
-Theme switching: follow the OS (`prefers-color-scheme`). `data-theme` on `<html>` forces a mode. Guide §2.3.
+Theme switching: the device's choice, saved per device under `flow.theme`: system (the default, follows `prefers-color-scheme`), light or dark (`data-theme` on `<html>`). index.html applies a saved light or dark choice before first paint. The Settings row that sets it, Settings › מראה, is not built yet (FLOW-372 step 4). Guide §2.3.
 
 ### 2.3 Type scale
 
