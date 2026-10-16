@@ -135,7 +135,7 @@ const open: ReviewRow = {
 function fieldBox() {
   const ai = document.querySelector(".ui-review-ai");
   return {
-    rows: ai?.querySelectorAll(":scope > .ui-row").length ?? 0,
+    rows: ai?.querySelectorAll(":scope > .ui-review-panel > .ui-row, :scope > .ui-review-panel > .ui-review-field").length ?? 0,
     note: ai?.querySelector(":scope > p")?.textContent ?? "",
   };
 }
@@ -523,8 +523,8 @@ describe("Jev review one tap", () => {
     renderQueue([row]);
     expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" }, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "קטגוריה: קטגוריה שמורה" })).toBeInTheDocument();
-    expect(screen.getAllByText("הצעת Jev")).toHaveLength(1);
-    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
+    // The grey hint reads הצעה on any suggestion; Jev's fill is named in the row's label (aria) only.
+    expect(screen.getAllByText("הצעה")).toHaveLength(1);
   });
 
   it("keeps הצעה on a stored suggestion Jev did not answer", async () => {

@@ -1,7 +1,7 @@
 // Every screen now has its own file (FLOW-807). This file only re-exports them for older imports:
 // import from the screen's own file in new code.
 export { reviewFocusPath } from "../review-paths";
-export { reviewLineFocus, reviewListPath, rotateReview, queueAfterFocus, statementSuggestion, ReviewEmpty, reviewHasParty, reviewIsSplit, reviewSplitTitle } from "./review-shared";
+export { reviewLineFocus, reviewListPath, rotateReview, queueAfterFocus, ReviewEmpty, reviewHasParty, reviewIsSplit, reviewSplitTitle } from "./review-shared";
 export { resetReviewListFocus, ReviewScreen, ReviewAllList, ProjectWaitingList } from "./review-screen";
 export { type ReviewPreviewWrite, ReviewQueue } from "./review-queue";
 export { ChangeForm } from "./change-form";

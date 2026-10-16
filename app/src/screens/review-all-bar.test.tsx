@@ -104,7 +104,7 @@ describe("the pinned review bar (FLOW-327)", () => {
     expect(within(bar as HTMLElement).getByRole("link", { name: "שינוי" })).toBeInTheDocument();
     const skip = within(bar as HTMLElement).getByRole("button", { name: "דלג" });
     expect(document.querySelector(".ui-review-queue")).toHaveAttribute("data-bar");
-    expect(screen.getByText("פריט")).toHaveClass("sr-only");
+    expect(screen.getByText(/^פריט /)).toBeInTheDocument();
     fireEvent.click(skip);
     // FLOW-365: דלג moves the card to the end of the queue on this device; nothing is written.
     expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();

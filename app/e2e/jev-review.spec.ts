@@ -46,28 +46,24 @@ test("a waiting card keeps the settled height for a fill, an auto fill, one row,
   await expect(page.locator("[data-layout=note] [data-phase=settled]").getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeVisible();
 });
 
-test("a long suggestion keeps הצעת Jev and the chevron inside the row at 320", async ({ page }) => {
+test("a long suggestion keeps the grey הצעה and the chevron inside the row at 320", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/e2e/jev-review?on=1&long=1");
-  const tags = page.locator(".ui-review-ai .ui-suggest-tag-jev");
-  await expect(tags).toHaveCount(2);
+  const hints = page.locator(".ui-review-panel .ui-review-field-hint", { hasText: "הצעה" });
+  await expect(hints).toHaveCount(2);
   const inside = (box: { x: number; width: number } | null, what: string) => {
     expect(box, what).not.toBeNull();
     if (box == null) throw new Error(`${what} has no box`);
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(320);
   };
-  for (const tag of await tags.all()) {
-    inside(await tag.boundingBox(), "הצעת Jev");
-    const row = tag.locator("xpath=ancestor::button[1]");
-    inside(await row.locator(".ui-row-chevron").boundingBox(), "the chevron");
-    // FLOW-352 1: the value wraps to two lines at 320, then ends in an ellipsis.
-    const title = row.locator(".ui-row-title-text");
-    const { cut, lines } = await title.evaluate((node) => {
-      const lineHeight = parseFloat(getComputedStyle(node).lineHeight);
-      return { cut: node.scrollHeight > node.clientHeight, lines: Math.round(node.clientHeight / lineHeight) };
-    });
-    expect(cut).toBe(true);
-    expect(lines).toBe(2);
+  for (const hint of await hints.all()) {
+    inside(await hint.boundingBox(), "הצעה");
+    const row = hint.locator("xpath=ancestor::*[contains(concat(' ', normalize-space(@class), ' '), ' ui-review-field ')][1]");
+    inside(await row.locator("svg").last().boundingBox(), "the chevron");
+    // The value wraps inside the row instead of pushing the hint or the chevron out of it.
+    const value = row.locator(".ui-review-field-value");
+    expect((await value.boundingBox())?.width ?? 0).toBeGreaterThan(0);
+    inside(await value.boundingBox(), "the value");
   }
 });

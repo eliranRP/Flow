@@ -88,6 +88,8 @@ afterEach(() => {
 });
 
 describe("review approve and undo refresh", () => {
+  // The budget is 15s, not the 5s default: this is the file's first render of /review, and the cold module
+  // graph takes about 5s on a loaded runner before the first assertion. Measured, not a retry.
   it("re-reads filed-today and the transaction after אישור, and again after ביטול", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
@@ -132,5 +134,5 @@ describe("review approve and undo refresh", () => {
       expect(rpc.calls.slice(reopen)).toContain("get_transaction");
     });
     expect(await screen.findByText("הפריט חזר לתור, והשיוך הקודם שוחזר.")).toBeInTheDocument();
-  });
+  }, 15_000);
 });

@@ -1,5 +1,4 @@
-.ui-review-doc,
-.ui-review-line {
+.ui-review-doc {
   display: flex;
   align-items: center;
 }
@@ -177,6 +176,8 @@
 
 /* Long supplier names: a name wraps up to three lines on the card, then ends in an ellipsis. */
 .ui-review-supplier {
+  font-size: var(--type-name-size);
+  line-height: var(--type-name-line);
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
@@ -268,14 +269,113 @@
   transform: rotate(180deg);
 }
 
+/* FLOW-365: the document thumbnail, a receipt drawn in two tones: paper with its lines and a total. */
 .ui-review-tile {
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-2);
   inline-size: var(--review-tile-w);
   block-size: var(--review-tile-h);
   flex: none;
+  box-sizing: border-box;
   border-radius: var(--review-radius);
-  background: var(--color-tint);
+  background: var(--color-text);
+}
+
+.ui-review-paper-line,
+.ui-review-paper-total {
+  display: block;
+  block-size: var(--space-1);
+  border-radius: var(--radius-block);
+  background: var(--color-surface);
+  opacity: 0.55;
+}
+
+.ui-review-paper-line[data-w="long"] {
+  inline-size: 100%;
+}
+
+.ui-review-paper-line[data-w="short"] {
+  inline-size: 60%;
+}
+
+.ui-review-paper-total {
+  align-self: flex-end;
+  inline-size: 40%;
+  margin-block-start: auto;
+  opacity: 0.85;
+}
+
+/* FLOW-365: the card's field rows sit in one tinted panel; each row is a label over its value. */
+.ui-review-panel {
+  display: flex;
+  flex-direction: column;
+  margin-block-start: var(--space-3);
+  border-radius: var(--radius-input);
+  background: color-mix(in srgb, var(--color-text) 8%, var(--color-surface));
+  overflow: hidden;
+}
+
+.ui-review-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  inline-size: 100%;
+  min-block-size: 56px;
+  padding: var(--space-3) var(--space-4);
+  box-sizing: border-box;
+  border: 0;
+  background: none;
+  color: var(--color-text-secondary);
+  font: inherit;
+  text-align: start;
+}
+
+.ui-review-field + .ui-review-field {
+  border-block-start: 1px solid var(--color-line);
+}
+
+.ui-review-field-button {
+  cursor: pointer;
+}
+
+.ui-review-field-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-end;
+  min-inline-size: 0;
+  text-align: end;
+}
+
+.ui-review-field-label {
+  font-size: var(--type-hint-size);
+  line-height: var(--type-hint-line);
+  color: var(--color-text-secondary);
+}
+
+.ui-review-field-value {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-line);
+  color: var(--color-text);
+}
+
+.ui-review-field-hint {
+  flex: none;
+  font-size: var(--type-hint-size);
+  color: var(--color-text-secondary);
+}
+
+.ui-review-reason-held {
+  visibility: hidden;
+}
+
+.ui-review-field-missing {
   color: var(--color-accent-text);
 }
 
@@ -286,11 +386,6 @@
   margin-top: var(--space-2);
   padding-top: var(--space-3);
   border-top: 1px solid var(--color-line);
-}
-
-.ui-review-line {
-  justify-content: space-between;
-  gap: var(--space-3);
 }
 
 /* 2026-10-09 (option A): an amount spike puts "↑ N%" right after the amount, in the status pill
@@ -329,7 +424,21 @@
 @media (max-height: 720px) {
   .ui-review {
     gap: var(--space-1);
-    padding: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+  }
+
+  /* A 320x693 phone keeps the card above the bar: a long name ends after two lines here. */
+  .ui-review-supplier {
+    -webkit-line-clamp: 2;
+  }
+
+  .ui-review-field {
+    min-block-size: 48px;
+    padding-block: var(--space-1);
+  }
+
+  .ui-review-queue .ui-review-segments {
+    margin-top: 0;
   }
 
   .ui-review-queue .ui-banner {
@@ -348,8 +457,8 @@
   }
 
   .ui-review-ai {
-    margin-top: var(--space-1);
-    padding-top: var(--space-2);
+    margin-top: 0;
+    padding-top: var(--space-1);
   }
 
   /* With the filed-today banner, the subtitle is what pushes אישור under the tab bar. */
@@ -455,7 +564,7 @@
 
 .ui-review-seg {
   flex: 1 1 0;
-  block-size: 4px;
+  block-size: var(--space-1);
   border-radius: var(--radius-block);
   background: var(--color-line);
 }
@@ -505,21 +614,6 @@
   border-radius: var(--radius-chip);
   color: var(--color-text-secondary);
   font-size: var(--type-hint-size);
-}
-
-/* The owner's and the missing tags, beside the row's tag (הצעה, הצעת Jev, החזר). */
-.ui-review-pick-tag {
-  color: var(--color-text-secondary);
-  font-size: var(--type-hint-size);
-}
-
-.ui-review-pick-tag[data-state="missing"] {
-  color: var(--color-accent-text);
-}
-
-/* No suggestion: the project row's value reads in the accent, not muted. */
-.ui-review-none-value {
-  color: var(--color-accent-text);
 }
 
 /* The split link under the rows: a text link with the split icon, 44px tall. */
@@ -602,4 +696,60 @@
 .ui-review-skel-title {
   display: block;
   min-block-size: calc(var(--type-body-size) * var(--type-body-line));
+}
+
+/* FLOW-365: the flat list of everything to review (כל הפריטים לאישור): payee over its meta line, the amount, a chevron. */
+.ui-review-all {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-review-all-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--touch-min);
+  padding: var(--space-4) var(--space-side);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.ui-review-all-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-end;
+  min-inline-size: 0;
+  text-align: end;
+}
+
+.ui-review-all-title {
+  max-inline-size: 100%;
+  overflow: hidden;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-review-all-meta {
+  font-size: var(--type-hint-size);
+  color: var(--color-text-secondary);
+}
+
+.ui-review-all-amount {
+  flex: none;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-title-3-weight);
+  white-space: nowrap;
+}
+
+.ui-review-all-in {
+  color: var(--color-income);
+}
+
+.ui-review-all-row > svg {
+  flex: none;
+  color: var(--color-text-secondary);
 }
