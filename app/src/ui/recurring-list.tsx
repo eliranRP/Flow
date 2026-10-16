@@ -1,4 +1,5 @@
 import { formatAmountText } from "@flow/shared";
+import { Avatar } from "./avatar";
 import { cx } from "./cx";
 import { SectionHead } from "./layout";
 import "./css/39-recurring.css";
@@ -92,16 +93,17 @@ export function RecurringList({ subtitle, currency, outflow, late, groups }: Rec
 function RowView({ row, money }: { row: RecurringListRow; money: (minor: bigint) => string }) {
   return (
     <li className={cx("ui-recurring-row", !row.paid && "ui-recurring-row-open")}>
+      <Avatar name={row.name} fallback="person" />
+      <span className="ui-recurring-name">
+        <span className="ui-recurring-title">{row.name}</span>
+        {row.place != null && <span className="t-label">{row.place}</span>}
+      </span>
       <span className="ui-recurring-amount">
         <span className={cx(row.income && row.paid && "ui-recurring-income")}>
           {row.income ? "+" : ""}
           {money(row.minor)}
         </span>
         {row.hint != null && <span className={cx("t-label", row.alert && "ui-recurring-alert")}>{row.hint}</span>}
-      </span>
-      <span className="ui-recurring-name">
-        <span className="ui-recurring-title">{row.name}</span>
-        {row.place != null && <span className="t-label">{row.place}</span>}
       </span>
     </li>
   );

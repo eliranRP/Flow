@@ -1,7 +1,7 @@
 /* FLOW-447: the קבועים list. Tokens only; the card comes from 40-card.css (ui-card). */
 .ui-recurring {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-3);
   padding: var(--space-4);
 }
 
@@ -39,7 +39,7 @@
   justify-content: space-between;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) 0;
+  padding: var(--space-2) 0;
 }
 
 .ui-recurring-row-open .ui-recurring-amount > span:first-child {
@@ -48,11 +48,14 @@
 
 .ui-recurring-name {
   display: grid;
+  flex: 1;
+  min-width: 0;
   text-align: end;
 }
 
 .ui-recurring-amount {
   display: grid;
+  flex: none;
   text-align: start;
 }
 
