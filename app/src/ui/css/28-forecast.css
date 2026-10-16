@@ -85,7 +85,7 @@
 .ui-forecast-section-head {
   display: flex;
   justify-content: space-between;
-  margin: 0 0 var(--space-2);
+  margin: var(--space-1) 0 var(--space-2);
   font-size: var(--type-section-size);
   font-weight: var(--type-heading-weight);
 }
