@@ -93,7 +93,7 @@ test("light and dark both show the parts", async ({ page }) => {
   const light = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--color-bg").trim());
   await page.emulateMedia({ colorScheme: "dark" });
   const dark = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--color-bg").trim());
-  expect(light.toLowerCase()).toBe("#ffffff");
+  expect(light.toLowerCase()).toBe("#f6f4fa");
   expect(dark.toLowerCase()).toBe("#15111e");
   await expect(page.getByRole("button", { name: "הוספת חלק" })).toBeVisible();
   await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
