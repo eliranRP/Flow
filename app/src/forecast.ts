@@ -229,6 +229,32 @@ export function usePaymentRecurringQuery(transactionId: string, active = true) {
   });
 }
 
+/**
+ * FLOW-364: the company's open month (this month, still to come) with no project. Home's forecast
+ * row reads its recurring money still due, and the server sums it.
+ */
+export function useCompanyExpectedQuery(active = true) {
+  const preview = useHomePreview();
+  return useQuery({
+    queryKey: ["expected-months", preview, "company", 1],
+    enabled: active && preview === "off",
+    queryFn: async (): Promise<ExpectedMonths> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
+      const { data, error } = await supabase.rpc("expected_months", { p_months: 1 });
+      if (error) throw error;
+      return (await loadReadSchemas()).expectedMonthsSchema.parse(data);
+    },
+  });
+}
+
+/** The open month's recurring money still due in one currency, as the server counted it (0 when none). */
+export function openMonthDue(data: ExpectedMonths | null | undefined, currency: string): { income: bigint; expense: bigint } {
+  const row = data?.months.find((month) => month.open)?.by_currency.find((figure) => figure.currency === currency);
+  return { income: row?.income_minor ?? 0n, expense: row?.expense_minor ?? 0n };
+}
+
 /** FLOW-415 (b-2): הגיעו החודש, every recurring party seen this month. */
 export function useRecurringThisMonthQuery(active = true) {
   const preview = useHomePreview();
