@@ -267,7 +267,7 @@ describe("inner write gates after the role changes", () => {
   describe("setup business step (FLOW-506)", () => {
     function show() {
       rpc.mockResolvedValue({ data: "company-1", error: null });
-      renderAt(<StepBusiness userId={null} onDone={() => undefined} initialName="עסק לדוגמה" />, "/setup/0");
+      renderAt(<StepBusiness companyId={null} initial={{ name: "עסק לדוגמה", currency: "ILS", basis: "paid" }} onDone={() => undefined} onStamp={() => undefined} onSkipStep={() => undefined} onSkipAll={() => undefined} />, "/setup/welcome");
       return screen.getByRole("button", { name: "המשך" });
     }
 

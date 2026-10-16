@@ -438,6 +438,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-834"></a>[FLOW-834](tasks/FLOW-834.md) | Delete what nothing uses: code, CSS, old mockups, duplicate tests | CLEANUP |
 | <a id="flow-835"></a>[FLOW-835](tasks/FLOW-835.md) | PR check under 100 seconds | INFRA |
 | <a id="flow-837"></a>[FLOW-837](tasks/FLOW-837.md) | Storybook preview on ready pull requests only | INFRA |
+| <a id="flow-915"></a>[FLOW-915](tasks/FLOW-915.md) | Test flakes under load: line-split dialog close, toast rAF and three more | BUG |
 
 ## Data hygiene (public repo)
 

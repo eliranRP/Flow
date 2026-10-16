@@ -1,171 +1,621 @@
-.ui-setup {
+/* FLOW-514: the first-time setup (seven steps, welcome, done, the skip sheet, the movie). Colours,
+ * type, spacing and motion come from design/system/implementation-tokens.css only. */
+
+/* -- The page: OnboardingFrame (shell.tsx) ----------------------------------------------------- */
+.ui-onb {
   display: flex;
-  min-block-size: calc(100dvh - var(--safe-bottom));
   flex-direction: column;
+  min-height: 100dvh;
   padding-block-start: var(--safe-top);
-  padding-block-end: calc(var(--control-height) + var(--safe-bottom) + var(--space-4) + var(--space-4));
-}
-
-.ui-setup-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-block-size: var(--topbar-height);
-  padding-inline: var(--space-3);
-}
-
-.ui-setup-bar-slot {
-  inline-size: var(--touch-min);
-  block-size: var(--touch-min);
-}
-
-.ui-setup-skip {
-  margin-inline-start: auto;
-}
-
-.ui-setup-meter {
+  padding-block-end: var(--safe-bottom);
   padding-inline: var(--space-side);
+  background: var(--color-bg);
+  color: var(--color-text);
+  box-sizing: border-box;
 }
 
-/* Step 0 has no count, but keeps its height (FLOW-356). */
-.ui-setup-meter-slot {
+.ui-onb-top {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+}
+
+.ui-onb-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ui-onb-row > :last-child {
+  justify-self: end;
+}
+
+.ui-onb-link {
+  font-size: var(--type-hint-size);
+  line-height: var(--type-hint-line);
+  font-weight: var(--type-hint-weight);
+  min-height: var(--touch-min);
+  display: inline-flex;
+  align-items: center;
+}
+
+.ui-onb-link-hidden {
   visibility: hidden;
 }
 
-.ui-setup-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding-inline: var(--space-side);
-  margin-block-start: var(--space-2);
+.ui-onb-counter {
+  text-align: center;
+  color: var(--color-text-muted);
 }
 
-.ui-setup-line {
+.ui-onb-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  padding-block-start: var(--space-3);
+  padding-block-end: var(--space-section);
+  overflow-y: auto;
+}
+
+.ui-onb-body-full {
+  justify-content: center;
+  text-align: center;
+}
+
+/* The board's welcome and done screens sit 28px lower and 22px higher than the centred body. */
+.ui-onb-body-welcome {
+  padding-block-start: calc(var(--space-8) + var(--space-6) + var(--space-3));
+}
+
+.ui-onb-body-done {
+  padding-block-end: calc(var(--space-10) * 2);
+}
+
+.ui-onb-enter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  animation: ui-onb-rise var(--motion-page) var(--ease-enter) both;
+}
+
+@keyframes ui-onb-rise {
+  from { opacity: 0; transform: translateY(var(--rise-page)); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-onb-enter {
+    animation: none;
+  }
+}
+
+.ui-onb-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-onb-title {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.ui-onb-lead {
   margin: 0;
   color: var(--color-text-secondary);
 }
 
-.ui-setup-stage-host {
-  margin-block-start: var(--space-5);
-}
-
-.ui-setup-body {
+.ui-onb-foot {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  padding-inline: var(--space-side);
-  margin-block-start: var(--space-5);
+  gap: var(--space-2);
+  padding-block: var(--space-4) calc(var(--space-4) + var(--space-3));
 }
 
-/* A note's last line never holds one word alone (FLOW-358). */
-.ui-setup-body .ui-notice-body {
-  text-wrap: pretty;
+.ui-onb-logo {
+  display: block;
+  margin-inline: auto;
+  color: var(--color-logo);
 }
 
-/* A note in a step with a demo lines up with the demo frame, a card, not with the text (FLOW-506). */
-.ui-setup-stage-host ~ .ui-setup-body > .ui-notice {
-  max-width: none;
-  margin-inline: calc(var(--space-card-inset) - var(--space-side));
+.ui-onb-note,
+.ui-onb-pending {
+  margin: 0;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-text-muted);
 }
 
-.ui-setup-panel {
-  margin-inline: calc((var(--space-side) - var(--space-4)) * -1);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-card);
-  padding-inline: var(--space-4);
-  background: var(--color-surface);
+.ui-onb-form,
+.ui-onb-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
-.ui-setup-panel .ui-row {
-  padding-block: var(--space-4);
+.ui-onb-error {
+  margin: 0;
+  color: var(--color-bad);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
 }
 
-.ui-setup-panel .ui-row:last-child {
-  border-block-end: 0;
+.ui-onb-good {
+  color: var(--color-good);
 }
 
-.ui-setup-cta {
-  position: fixed;
-  z-index: 15;
-  inset-inline: 0;
-  inset-block-end: 0;
+.ui-onb-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  box-sizing: border-box;
-  max-inline-size: var(--content-max);
-  margin-inline: auto;
-  padding: var(--space-4) var(--space-side) calc(var(--safe-bottom) + var(--space-4));
-  background: var(--color-bg);
-}
-
-.ui-setup-cta .ui-btn {
-  min-block-size: var(--control-height);
-}
-
-/* Step 5 uses the install screen's numbered steps (FLOW-506); the step body already has the side gutter. */
-.ui-install-steps.ui-setup-steps {
-  margin: 0;
-  padding-inline: 0;
-}
-
-.ui-setup-card {
-  margin-block-start: var(--space-4);
-  margin-inline: var(--space-card-inset);
-  border: 1px solid var(--color-line);
+  padding: var(--space-card-inset);
   border-radius: var(--radius-card);
   background: var(--color-surface);
 }
 
-.ui-setup-card-head {
+.ui-onb-chips,
+.ui-onb-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ui-onb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--control-height-sm);
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  font-size: var(--type-chip-size);
+  line-height: var(--type-chip-line);
+  font-weight: var(--type-chip-weight);
+  color: var(--color-text);
+}
+
+.ui-onb-chip-suggest {
+  border-style: dashed;
+  color: var(--color-accent-text);
+}
+
+.ui-onb-chip-added {
+  background: var(--color-tint);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-onb-chip-x {
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.ui-onb-chip-x svg {
+  inline-size: 14px;
+  block-size: 14px;
+}
+
+.ui-onb-add,
+.ui-onb-add-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ui-onb-add-loan {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(var(--touch-min) + var(--space-3));
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
+  font-weight: var(--type-label-weight);
+  color: var(--color-accent-text);
+}
+
+.ui-onb-conn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.ui-onb-conn-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: start;
+}
+
+/* The board sets connect row titles at body weight, not the name weight. */
+.ui-onb-conn .t-name {
+  font-weight: var(--type-body-weight);
+}
+
+/* The board's connect pills are solid accent with on-accent text, not the tint pill. */
+.ui-onb-conn .ui-btn-pill {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  padding-inline: var(--space-4);
+}
+
+.ui-onb-conn-done {
+  color: var(--color-good);
+}
+
+.ui-onb-done {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.ui-onb-done-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-1) var(--space-4) 0;
-  padding-inline-end: var(--space-1);
+  padding-block: var(--space-3);
+  border-bottom: 1px solid var(--color-line);
+  animation: ui-onb-rise var(--motion-fade) var(--ease-enter) both;
 }
 
-.ui-setup-card-head .ui-setup-card-close {
-  flex: none;
+.ui-onb-done-label {
   color: var(--color-text-secondary);
+  margin-inline-end: auto;
 }
 
-.ui-setup-card-head h2 {
+.ui-onb-done .ui-onb-mark {
+  inline-size: auto;
+  block-size: auto;
+  background: transparent;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: var(--type-name-weight);
+}
+
+.ui-onb-mark {
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--size-seg);
+  block-size: var(--size-seg);
+  border-radius: var(--radius-fab);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+}
+
+.ui-onb-mark-good {
+  background: var(--color-tint);
+  color: var(--color-good);
+}
+
+.ui-onb-install {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ui-onb-loan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-block: var(--space-3);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.ui-onb-loan .t-name {
+  font-weight: var(--type-body-weight);
+}
+
+.ui-onb-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* -- The steps bar (ProgressBar variant "steps") ------------------------------------------------ */
+.ui-steps-bar {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: var(--space-1);
+}
+
+.ui-steps-seg {
+  display: block;
+  block-size: var(--bar-thin);
+  border-radius: var(--radius-band);
+  background: var(--color-track);
+}
+
+.ui-steps-seg[data-state="done"],
+.ui-steps-seg[data-state="current"] {
+  background: var(--color-accent);
+}
+
+.ui-steps-seg[data-state="next"] {
+  background: var(--color-track);
+}
+
+/* -- Sample card (SampleCard, step 6, compact) -------------------------------------------------- */
+.ui-sample {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-card-inset);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  text-align: start;
+}
+
+.ui-sample-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.ui-sample-name {
+  color: var(--color-text);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-sample-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height-sm);
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-chip);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-size: var(--type-chip-size);
+  line-height: var(--type-chip-line);
+  font-weight: var(--type-chip-weight);
+}
+
+.ui-sample-meta {
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+  color: var(--color-text-muted);
+}
+
+.ui-sample-amount {
+  font-size: var(--type-amount-size);
+  line-height: var(--type-amount-line);
+  font-weight: var(--type-amount-weight);
+  color: var(--color-text);
+}
+
+.ui-sample-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ui-sample-done {
+  color: var(--color-good);
+}
+
+.ui-sample-approved {
+  border: 1px solid var(--color-good);
+}
+
+/* -- The movie (SetupMovie) --------------------------------------------------------------------- */
+.ui-movie {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  inline-size: 100%;
+}
+
+.ui-movie-panel {
+  inline-size: min(100%, 320px);
+  padding: var(--space-3);
+  border-radius: var(--radius-sheet);
+  background: linear-gradient(180deg, var(--color-movie-from), var(--color-surface));
+}
+
+.ui-movie-phone {
+  position: relative;
+  inline-size: 210px;
+  block-size: 300px;
+  margin-inline: auto;
+  padding: var(--space-3) var(--space-2) 0;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  background: var(--color-surface);
+}
+
+.ui-movie-scene {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  transition: transform var(--motion-page) var(--ease-standard), opacity var(--motion-page) var(--ease-standard);
+}
+
+.ui-movie-scene[data-pos="current"] {
+  opacity: 1;
+  transform: none;
+}
+
+.ui-movie-scene[data-pos="after"] {
+  opacity: 0;
+  transform: translateY(var(--rise-push));
+}
+
+.ui-movie-scene[data-pos="before"] {
+  opacity: 0;
+  transform: translateY(calc(var(--rise-push) * -1));
+}
+
+.ui-movie-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-movie-row {
+  border-radius: var(--radius-card);
+  background: var(--color-raised);
+}
+
+.ui-movie-row-hi {
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+
+.ui-movie-mark {
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--size-seg);
+  block-size: var(--size-seg);
+  border-radius: var(--radius-fab);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-size: var(--type-micro-size);
+  font-weight: var(--type-micro-weight);
+}
+
+.ui-movie-amt {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.ui-movie-amt-in {
+  color: var(--color-income);
+}
+
+.ui-movie-tag {
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-chip);
+  font-size: var(--type-micro-size);
+  line-height: var(--type-micro-line);
+  font-weight: var(--type-micro-weight);
+}
+
+.ui-movie-tag-accent {
+  background: var(--color-tint-strong);
+  color: var(--color-accent-text);
+}
+
+.ui-movie-tag-good {
+  background: var(--color-tint);
+  color: var(--color-good);
+}
+
+.ui-movie-tag-muted {
+  background: var(--color-track);
+  color: var(--color-text-muted);
+}
+
+.ui-movie-pill {
+  align-self: center;
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-chip);
+  background: var(--color-raised);
+  color: var(--color-text);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+}
+
+.ui-movie-finger {
+  position: absolute;
+  inset-inline-end: var(--space-6);
+  inline-size: var(--size-seg);
+  block-size: var(--size-seg);
+  border-radius: var(--radius-fab);
+  background: var(--movie-finger-fill);
+  box-shadow: 0 0 0 2px var(--movie-finger-ring);
+  opacity: 0;
+  transition: top var(--motion-page) var(--ease-standard), opacity var(--motion-fast) var(--ease-standard);
+  pointer-events: none;
+}
+
+.ui-movie-finger[data-on="true"] {
+  opacity: 1;
+}
+
+.ui-movie-controls {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  inline-size: min(100%, 320px);
+}
+
+/* One row, as the board draws it: dots, caption, then the play control at the far end. */
+.ui-movie-caption {
+  flex: 1;
   min-inline-size: 0;
   margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.ui-setup-card-meter {
-  padding: var(--space-3) var(--space-4) 0;
-}
-
-.ui-setup-ring {
-  display: block;
-  box-sizing: border-box;
-  inline-size: 22px;
-  block-size: 22px;
-  border: 1.5px solid var(--color-line);
-  border-radius: var(--radius-chip);
-}
-
-.ui-setup-card-advanced {
+  text-align: start;
   color: var(--color-text-secondary);
 }
 
-/* FLOW-502, FLOW-353: the evening reminder card on step 5 sits above the demo, so its answers stay
-   above the pinned סיום; it spans the side gutters like the step body. */
-.ui-setup-ask {
-  padding-inline: var(--space-side);
-  margin-block-start: var(--space-5);
+.ui-movie-dots {
+  order: -1;
+  display: inline-flex;
+  gap: var(--space-1);
 }
 
-.ui-setup-ask:empty {
-  display: none;
+.ui-movie-toggle {
+  order: 1;
 }
 
-.ui-setup-ask .ui-prompt-card {
-  max-inline-size: none;
+.ui-movie-dot {
+  inline-size: var(--space-2);
+  block-size: var(--space-2);
+  border-radius: var(--radius-fab);
+  background: var(--color-track);
+}
+
+.ui-movie-dot[data-current="true"] {
+  background: var(--color-accent);
+}
+
+.ui-movie-toggle {
+  color: var(--color-text-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-movie-scene,
+  .ui-movie-finger {
+    transition: none;
+  }
+}
+
+/* -- Skip sheet body and errors ---------------------------------------------------------------- */
+.ui-skip-body {
+  margin: 0 calc(var(--space-3) * -1);
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+}
+
+.ui-setup-error {
   margin: 0;
+  color: var(--color-bad);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
 }

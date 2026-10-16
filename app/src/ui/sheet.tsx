@@ -53,6 +53,7 @@ export function SheetSurface({
   titleRef,
   footClassName,
   busy = false,
+  closeButton = true,
 }: {
   title: string;
   /** Under the title, in the title's column (FLOW-372: the board's "רק בטלפון הזה"). */
@@ -70,6 +71,8 @@ export function SheetSurface({
   footClassName?: string;
   /** A save is in flight: no ✕ (the board's saving frame). */
   busy?: boolean;
+  /** Off where the sheet has its own way out (the setup skip sheet draws none). */
+  closeButton?: boolean;
 }) {
   const Title = drawer ? sheetDrawer?.Drawer.Title : undefined;
   const heading0 = Title ? (
@@ -94,7 +97,7 @@ export function SheetSurface({
       <div className="ui-sheet-head">
         {leading}
         {heading}
-        {onClose && !busy ? (
+        {onClose && closeButton && !busy ? (
           <IconButton ref={closeRef} label="סגירה" onClick={onClose}>
             <CloseIcon size={22} />
           </IconButton>
@@ -155,6 +158,7 @@ export function Sheet({
   onCloseKind,
   closeOnBackdrop = true,
   busy = false,
+  closeButton = true,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -189,6 +193,8 @@ export function Sheet({
   closeOnBackdrop?: boolean;
   /** A save is in flight: the sheet stays open and closes once it settles. */
   busy?: boolean;
+  /** Off where the sheet has its own way out (the setup skip sheet draws none). */
+  closeButton?: boolean;
 }) {
   const vaul = useSheetDrawer();
   // Until vaul arrives the sheet counts as closed, so its open runs in full once it can draw.
@@ -469,6 +475,7 @@ export function Sheet({
             titleRef={titleRef}
             footClassName={footClassName}
             busy={busy}
+            closeButton={closeButton}
             onClose={() => {
               void requestClose();
             }}

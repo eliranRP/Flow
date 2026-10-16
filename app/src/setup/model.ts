@@ -2,22 +2,24 @@ import { SETUP_TOTAL } from "./copy";
 import type { SetupStore } from "./storage";
 import { emptySetupStore } from "./storage";
 
-/** Steps 1–5 are counted. Step 0 is the company pre-step. Notifications stay outside this five. */
-export const COUNTED_STEPS = [1, 2, 3, 4, 5] as const;
+/** FLOW-514: the seven steps, in order. Welcome and done are not steps. */
+export const STEP_NUMBERS = [1, 2, 3, 4, 5, 6, 7] as const;
 
-export type CountedStep = (typeof COUNTED_STEPS)[number];
-export type SetupStepId = 0 | CountedStep;
+export type StepNumber = (typeof STEP_NUMBERS)[number];
+export type SetupStepId = "welcome" | StepNumber | "done";
 
 export type SetupFacts = {
   ready: boolean;
   companyId: string | null;
   sumitConnected: boolean;
-  /** Mercury counts for step 1 too (FLOW-503): either connector brings the money in. */
   mercuryConnected: boolean;
-  /** A Jev row exists, on or off. A missing row is not saved. */
+  /** A Jev row exists, on or off. */
   jevSaved: boolean;
   hasResolvedReview: boolean;
   standalone: boolean;
+  /** Projects and loans the company already has in the books (step 3 and 4 done rules). */
+  projectCount: number;
+  loanCount: number;
 };
 
 export function emptyFacts(ready = false): SetupFacts {
@@ -29,58 +31,61 @@ export function emptyFacts(ready = false): SetupFacts {
     jevSaved: false,
     hasResolvedReview: false,
     standalone: false,
+    projectCount: 0,
+    loanCount: 0,
   };
 }
 
+/** Route segment to step id. "1".."7" are steps; "welcome" and "done" are the two full screens. */
 export function parseStep(value: string | undefined): SetupStepId | null {
-  if (value == null || !/^[0-5]$/.test(value)) return null;
-  return Number(value) as SetupStepId;
+  if (value === "welcome" || value === "done") return value;
+  if (value == null || !/^[1-7]$/.test(value)) return null;
+  return Number(value) as StepNumber;
 }
 
-function skipKey(step: CountedStep): "1" | "2" | "3" | "4" | "5" {
-  return String(step) as "1" | "2" | "3" | "4" | "5";
+export function stepPath(step: StepNumber | "done" | "welcome"): string {
+  return `/setup/${String(step)}`;
 }
 
-export function isSkipped(store: SetupStore, step: CountedStep): boolean {
+function skipKey(step: StepNumber): "1" | "2" | "3" | "4" | "5" | "6" | "7" {
+  return String(step) as "1" | "2" | "3" | "4" | "5" | "6" | "7";
+}
+
+export function isSkipped(store: SetupStore, step: StepNumber): boolean {
   return store.skipped[skipKey(step)] != null;
 }
 
-export function isDone(step: CountedStep, store: SetupStore, facts: SetupFacts): boolean {
-  if (step === 1) return facts.sumitConnected || facts.mercuryConnected;
-  if (step === 2) return facts.jevSaved;
-  if (step === 3) return store.confirmed_lists_at != null;
-  if (step === 4) return facts.hasResolvedReview || store.sample_review_at != null;
-  return store.installed_at != null || store.ios_steps_seen_at != null || facts.standalone;
+/**
+ * The done rules (FLOW-514): 1 a company exists; 2 Mercury or SUMIT connected; 3 projects_at or a
+ * project exists; 4 loans_at or a loan exists; 5 the Jev row is saved; 6 the sample is approved (or a
+ * review is resolved); 7 installed, or the app runs standalone.
+ */
+export function isDone(step: StepNumber, store: SetupStore, facts: SetupFacts): boolean {
+  if (step === 1) return facts.companyId != null;
+  if (step === 2) return facts.sumitConnected || facts.mercuryConnected;
+  if (step === 3) return store.projects_at != null || facts.projectCount > 0;
+  if (step === 4) return store.loans_at != null || facts.loanCount > 0;
+  if (step === 5) return facts.jevSaved;
+  if (step === 6) return store.sample_review_at != null || facts.hasResolvedReview;
+  return store.installed_at != null || facts.standalone;
 }
 
 export function doneCount(store: SetupStore, facts: SetupFacts): number {
-  return COUNTED_STEPS.filter((step) => isDone(step, store, facts)).length;
+  return STEP_NUMBERS.filter((step) => isDone(step, store, facts)).length;
 }
 
 export function allDone(store: SetupStore, facts: SetupFacts): boolean {
   return doneCount(store, facts) === SETUP_TOTAL;
 }
 
-/** Skipped and pending, in order. A done step is gone. */
-export function remainingSteps(store: SetupStore, facts: SetupFacts): CountedStep[] {
-  return COUNTED_STEPS.filter((step) => !isDone(step, store, facts));
-}
-
-/** es-01 already offers חיבור SUMIT, so the card drops that row whenever Home is empty. */
-export function cardRows(store: SetupStore, facts: SetupFacts, emptyHome: boolean): CountedStep[] {
-  const rows = remainingSteps(store, facts);
-  if (emptyHome) return rows.filter((step) => step !== 1);
-  return rows;
-}
-
-/** First not-done counted step, including a skipped one. */
-export function firstNotDone(store: SetupStore, facts: SetupFacts): CountedStep | null {
-  return remainingSteps(store, facts)[0] ?? null;
+/** First step that is not done, skipped or not. */
+export function firstNotDone(store: SetupStore, facts: SetupFacts): StepNumber | null {
+  return STEP_NUMBERS.find((step) => !isDone(step, store, facts)) ?? null;
 }
 
 /** The one automatic resume skips steps the user already skipped. */
-export function firstResumable(store: SetupStore, facts: SetupFacts): CountedStep | null {
-  return COUNTED_STEPS.find((step) => !isDone(step, store, facts) && !isSkipped(store, step)) ?? null;
+export function firstResumable(store: SetupStore, facts: SetupFacts): StepNumber | null {
+  return STEP_NUMBERS.find((step) => !isDone(step, store, facts) && !isSkipped(store, step)) ?? null;
 }
 
 export type EntryDecision =
@@ -89,110 +94,81 @@ export type EntryDecision =
   | { kind: "redirect"; to: string; patch: Partial<SetupStore> | null; markSession: boolean };
 
 /**
- * No company always opens step 0, and that does not consume the one resume.
- * A company with every counted step already done does not start a run.
- * Otherwise the first visit opens the first not-done step. The next visit resumes once,
- * unless the user closed the Home card: that opts out of setup, resume included.
+ * No company: the welcome screen (once per sign-in; a pending invite lands on the invitation first).
+ * A run of the seven-step flow that has not finished or skipped everything resumes once, to the first
+ * step not done and not skipped. An older run (no flow_at) gets only the Settings entry (FLOW-514 Q5).
  */
 export function decideEntry(store: SetupStore, facts: SetupFacts, sessionAlreadyEntered: boolean, at: string): EntryDecision {
   if (!facts.ready) return { kind: "wait" };
-  if (facts.companyId == null) return { kind: "redirect", to: "/setup/0", patch: null, markSession: false };
-  if (store.run_started_at == null) {
-    if (allDone(store, facts)) return { kind: "stay" };
-    const step = firstNotDone(store, facts);
-    if (step == null) return { kind: "stay" };
-    return {
-      kind: "redirect",
-      to: `/setup/${String(step)}`,
-      patch: { run_started_at: at },
-      markSession: true,
-    };
-  }
-  if (store.card_dismissed_at != null) return { kind: "stay" };
+  if (facts.companyId == null) return { kind: "redirect", to: "/setup/welcome", patch: null, markSession: false };
+  if (store.flow_at == null || store.run_started_at == null) return { kind: "stay" };
+  if (store.finished_at != null || store.skipped_all_at != null) return { kind: "stay" };
   if (store.run_resumed_at != null || sessionAlreadyEntered) return { kind: "stay" };
   const step = firstResumable(store, facts);
   if (step == null) return { kind: "stay" };
-  return {
-    kind: "redirect",
-    to: `/setup/${String(step)}`,
-    patch: { run_resumed_at: at },
-    markSession: true,
-  };
+  return { kind: "redirect", to: stepPath(step), patch: { run_resumed_at: at }, markSession: true };
 }
 
-/** When the run has started and nothing is left to resume, still record the one attempt. */
-export function resumeStamp(store: SetupStore, facts: SetupFacts, sessionAlreadyEntered: boolean, at: string): Partial<SetupStore> | null {
-  if (!facts.ready || facts.companyId == null || store.run_started_at == null) return null;
-  if (store.run_resumed_at != null || sessionAlreadyEntered) return null;
-  if (firstResumable(store, facts) != null) return null;
-  return { run_resumed_at: at };
-}
-
+/** The index (/setup) opens where the owner left off: the first step not done, skipped ones included. */
 export function indexTarget(store: SetupStore, facts: SetupFacts): string {
-  if (facts.companyId == null) return "/setup/0";
-  if (allDone(store, facts)) return "/";
+  if (facts.companyId == null) return "/setup/welcome";
+  if (store.finished_at != null || store.skipped_all_at != null) return "/";
   const step = firstNotDone(store, facts);
-  return step == null ? "/" : `/setup/${String(step)}`;
+  return step == null ? "/setup/done" : stepPath(step);
 }
 
-export function backPath(step: SetupStepId, fromCard: boolean, companyCreated: boolean): string | null {
-  if (fromCard) return "/";
-  if (step === 0) return null;
-  if (step === 1) return companyCreated ? "/setup/0" : null;
-  return `/setup/${String(step - 1)}`;
+/** The next screen after a step: the next step, or done after step 7. */
+export function nextPath(step: StepNumber): string {
+  return step === 7 ? "/setup/done" : stepPath((step + 1) as StepNumber);
 }
 
-export function continuePath(step: SetupStepId, fromCard: boolean): string {
-  if (fromCard || step >= 5) return "/";
-  if (step === 0) return "/setup/1";
-  return `/setup/${String(step + 1)}`;
+export function previousPath(step: StepNumber): string | null {
+  return step === 1 ? null : stepPath((step - 1) as StepNumber);
 }
 
-export function skipPatch(store: SetupStore, step: CountedStep, at: string): SetupStore {
+export function skipPatch(store: SetupStore, step: StepNumber, at: string): SetupStore {
   if (isSkipped(store, step)) return store;
   return { ...store, skipped: { ...store.skipped, [skipKey(step)]: at } };
 }
 
-export function confirmLists(store: SetupStore, at: string): SetupStore {
+/**
+ * Skip all (the sheet, from any step): every step not done is skipped, the stamp is set, and the
+ * run has started (the business is created as "העסק שלי" by the caller when there is none).
+ */
+export function skipAllPatch(store: SetupStore, facts: SetupFacts, at: string): SetupStore {
   const skipped = { ...store.skipped };
-  delete skipped["3"];
-  return { ...store, confirmed_lists_at: store.confirmed_lists_at ?? at, skipped };
+  for (const step of STEP_NUMBERS) {
+    if (!isDone(step, store, facts)) skipped[skipKey(step)] = skipped[skipKey(step)] ?? at;
+  }
+  return {
+    ...store,
+    run_started_at: store.run_started_at ?? at,
+    flow_at: store.flow_at ?? at,
+    skipped,
+    skipped_all_at: store.skipped_all_at ?? at,
+  };
 }
 
-export function approveSample(store: SetupStore, at: string): SetupStore {
-  const skipped = { ...store.skipped };
-  delete skipped["4"];
-  return { ...store, sample_review_at: store.sample_review_at ?? at, skipped };
-}
-
-export function finishIos(store: SetupStore, at: string): SetupStore {
-  const skipped = { ...store.skipped };
-  delete skipped["5"];
-  return { ...store, ios_steps_seen_at: store.ios_steps_seen_at ?? at, skipped };
-}
-
-export function finishInstall(store: SetupStore, at: string): SetupStore {
-  const skipped = { ...store.skipped };
-  delete skipped["5"];
-  return { ...store, installed_at: store.installed_at ?? at, skipped };
-}
-
-export function shouldShowCompletedToast(store: SetupStore, facts: SetupFacts): boolean {
-  return facts.ready && store.run_started_at != null && allDone(store, facts) && store.completed_toast_at == null;
-}
-
-export function cardVisible(store: SetupStore, facts: SetupFacts, viewer: boolean): boolean {
-  if (!facts.ready || viewer) return false;
-  if (store.run_started_at == null || store.card_dismissed_at != null) return false;
-  return !allDone(store, facts);
-}
-
+/** Settings › הגדרה ראשונה: visible once a run started, until every step is done. */
 export function settingsEntryVisible(store: SetupStore, facts: SetupFacts): boolean {
   if (!facts.ready || store.run_started_at == null) return false;
+  if (store.finished_at != null) return false;
   return !allDone(store, facts);
 }
 
 export function withPatch(store: SetupStore, patch: Partial<SetupStore> | null): SetupStore {
   if (!patch) return store;
   return { ...emptySetupStore(), ...store, ...patch, skipped: patch.skipped ?? store.skipped };
+}
+
+export function approveSample(store: SetupStore, at: string): SetupStore {
+  const skipped = { ...store.skipped };
+  delete skipped["6"];
+  return { ...store, sample_review_at: store.sample_review_at ?? at, skipped };
+}
+
+/* -- Legacy: the completed toast stays gated off until #622 removes the Home slot. */
+
+export function shouldShowCompletedToast(_store: SetupStore, _facts: SetupFacts): boolean {
+  return false;
 }

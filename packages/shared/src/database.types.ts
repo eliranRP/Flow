@@ -289,6 +289,37 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"invoice_match_dismissals": {
+                  Row: {
+                    "bank_transaction_id": string,"company_id": string,"dismissed_at": string,"dismissed_by": string | null,"transaction_id": string
+                  }
+                  Insert: {
+                    "bank_transaction_id": string,"company_id": string,"dismissed_at"?: string,"dismissed_by"?: string | null,"transaction_id": string
+                  }
+                  Update: {
+                    "bank_transaction_id"?: string,"company_id"?: string,"dismissed_at"?: string,"dismissed_by"?: string | null,"transaction_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "invoice_match_dismissals_company_id_bank_transaction_id_fkey"
+      columns: ["company_id","bank_transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "invoice_match_dismissals_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "invoice_match_dismissals_company_id_transaction_id_fkey"
+      columns: ["company_id","transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
                 },"invoice_paid_marks": {
                   Row: {
                     "company_id": string,"marked_at": string,"marked_by": string | null,"transaction_id": string
@@ -308,6 +339,37 @@ isOneToOne: false
       referencedColumns: ["id"]
     },{
       foreignKeyName: "invoice_paid_marks_company_id_transaction_id_fkey"
+      columns: ["company_id","transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
+                },"invoice_payment_links": {
+                  Row: {
+                    "bank_transaction_id": string,"company_id": string,"linked_at": string,"linked_by": string | null,"transaction_id": string
+                  }
+                  Insert: {
+                    "bank_transaction_id": string,"company_id": string,"linked_at"?: string,"linked_by"?: string | null,"transaction_id": string
+                  }
+                  Update: {
+                    "bank_transaction_id"?: string,"company_id"?: string,"linked_at"?: string,"linked_by"?: string | null,"transaction_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "invoice_payment_links_company_id_bank_transaction_id_fkey"
+      columns: ["company_id","bank_transaction_id"]
+isOneToOne: true
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "invoice_payment_links_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "invoice_payment_links_company_id_transaction_id_fkey"
       columns: ["company_id","transaction_id"]
 isOneToOne: false
       referencedRelation: "transactions"
@@ -1163,6 +1225,9 @@ isOneToOne: false
 "disconnect_sumit":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
+"dismiss_invoice_match":
+{ Args: { "p_invoice": string,"p_transaction": string }; Returns: Json
+                           },
 "dismiss_recurring_alert":
 { Args: { "p_key": string,"p_kind": string }; Returns: Json
                            },
@@ -1207,6 +1272,9 @@ isOneToOne: false
 "get_project_group":
 { Args: { "p_basis"?: string,"p_from"?: string,"p_id": string,"p_to"?: string }; Returns: Json
                            },
+"get_setup_suggestions":
+{ Args: { "p_today"?: string }; Returns: Json
+                           },
 "get_transaction":
 { Args: { "p_id": string }; Returns: Json
                            },
@@ -1245,6 +1313,9 @@ isOneToOne: false
                            },
 "jev_take_lease":
 { Args: { "p_holder": string,"p_seconds"?: number }; Returns: boolean
+                           },
+"link_invoice_payment":
+{ Args: { "p_invoice": string,"p_transaction": string }; Returns: Json
                            },
 "list_auto_assigned_today":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -1354,6 +1425,9 @@ isOneToOne: false
 "mcp_detach_loan_payment":
 { Args: { "p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
                            },
+"mcp_dismiss_invoice_match":
+{ Args: { "p_idempotency_key": string,"p_invoice_id": string,"p_transaction_id": string }; Returns: Json
+                           },
 "mcp_hide_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string }; Returns: Json
                            },
@@ -1368,6 +1442,9 @@ isOneToOne: false
                            },
 "mcp_jev_suggestions":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"mcp_link_invoice_payment":
+{ Args: { "p_idempotency_key": string,"p_invoice_id": string,"p_transaction_id": string }; Returns: Json
                            },
 "mcp_list_loans":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -1755,6 +1832,9 @@ isOneToOne: false
                            },
 "undo_reassign":
 { Args: { "p_id": string }; Returns: undefined
+                           },
+"unpaid_overview":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "upsert_connector_lines":
 { Args: { "p_company": string,"p_expected_prev_cursor": string,"p_lines": Json,"p_next_cursor": string,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: Database["public"]['CompositeTypes']["connector_upsert_result"]

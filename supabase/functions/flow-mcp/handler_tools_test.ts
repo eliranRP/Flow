@@ -131,6 +131,8 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
     "set_line_pnl",
     "set_lines_pnl",
     "set_invoice_paid",
+    "link_invoice_payment",
+    "dismiss_invoice_match",
     "detach_loan_payment",
     "delete_loan",
     "reorder_loans",
@@ -166,7 +168,7 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
   }), localDeps);
   const readNames = ((await readList.json()).result.tools as { name: string }[]).map((tool) => tool.name);
   assertEquals(readNames.includes("assign_expense"), false, "read token hides writes");
-  assertEquals(readNames.length, 35, "thirty-five reads, with get_forecast");
+  assertEquals(readNames.length, 36, "thirty-six reads (FLOW-514 adds get_setup_suggestions, FLOW-141 adds get_forecast)");
 });
 
 Deno.test("assign_expenses is one write rate hit for many rows", async () => {
