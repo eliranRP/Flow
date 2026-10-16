@@ -177,6 +177,7 @@ button.ui-tab-slot {
 /* The outline pill that only helps is 44px on the board, the primary next step 52px. */
 .ui-empty-action .ui-btn-secondary {
   height: var(--touch-min);
+  min-height: var(--touch-min);
 }
 
 .ui-sheet-scrim {
