@@ -24,7 +24,6 @@
   --invoice-w: 188px;
   --invoice-h: 248px;
   --lock-time: 5.5rem;
-  --sheet-foot-h: calc(var(--control-height) + var(--space-3) + var(--space-4) + env(safe-area-inset-bottom, 0px));
   --sheet-gap: 56px;
   --spinner: 18px;
   --spinner-radio: 12px;

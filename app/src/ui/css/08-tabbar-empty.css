@@ -266,7 +266,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 .ui-sheet-grab {
   width: var(--grab-width);
   height: var(--grab-height);
-  margin: 0 auto var(--space-4);
+  margin: 0 auto var(--space-3);
   border-radius: var(--grab-radius);
   background: var(--sheet-grab);
 }
