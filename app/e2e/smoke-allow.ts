@@ -38,6 +38,7 @@ export const readRpcs = new Set([
   "my_invites",
   "party_charges",
   "payment_recurring",
+  "receipt_match",
   "project_cash_month_lines",
   "project_cash_months",
   "project_cash_year_months",
