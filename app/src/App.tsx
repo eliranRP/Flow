@@ -48,6 +48,7 @@ const CashYearScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ def
 const BreakdownScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownScreen })));
 const BreakdownLinesScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownLinesScreen })));
 const MissingBillsScreen = lazy(() => screenLoaders.missingBills().then((m) => ({ default: m.MissingBillsScreen })));
+const RecurringScreen = lazy(() => import("./screens/recurring-screen").then((m) => ({ default: m.RecurringScreen })));
 const LineSplitScreen = lazy(() => screenLoaders.lineSplit().then((m) => ({ default: m.LineSplitScreen })));
 const HelpScreen = lazy(() => screenLoaders.help().then((m) => ({ default: m.HelpScreen })));
 const LegalScreen = lazy(() => screenLoaders.legal().then((m) => ({ default: m.LegalScreen })));
@@ -291,6 +292,7 @@ function AppRoutes() {
                 <Route path="review/filed" element={<FiledTodayScreen />} />
                 {UnpaidRoute()}
                 <Route path="missing-bills" element={<MissingBillsScreen />} />
+                <Route path="recurring" element={<RecurringScreen />} />
                 {SettingsRoutes()}
                 {LoanRoutes()}
               </Route>
