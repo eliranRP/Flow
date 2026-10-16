@@ -340,7 +340,7 @@ isOneToOne: false
                     {
       foreignKeyName: "invoice_payment_links_company_id_bank_transaction_id_fkey"
       columns: ["company_id","bank_transaction_id"]
-isOneToOne: false
+isOneToOne: true
       referencedRelation: "transactions"
       referencedColumns: ["company_id","id"]
     },{
