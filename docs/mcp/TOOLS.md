@@ -962,6 +962,10 @@ Undoes every successful row from an `assign_expenses`, `set_lines_pnl`, `set_lin
 
 A company has an owner and members, each an editor or a viewer ([0167](../decisions/0167-team-members.md)). An editor's token could do every bookkeeping write here; the team, the company's name and currency, connectors and Jev settings stay the owner's. A token is for the owner's company it was made in.
 
+### get_setup_suggestions
+
+`get_setup_suggestions`, no arguments ([FLOW-514](../backlog/TASKS.md#flow-514), migration `20261014184212_setup_suggestions.sql`). Read tool. The first-time setup's two suggestions, from the company's bank lines. Output `data`: `projects` (project names found in the lines; `[]` until a bank source is chosen) and `lenders[]`: recurring suppliers the company pays in its own currency in at least three months, with no loan of the same name yet. Each has `name`, `monthly_agorot` (positive minor units of the company's currency, the usual amount) and `since` (the date of its first line). Suggestions only: ask the owner before creating a loan or a project from one. A failed read returns `refused`, as the other reads do; a user with no company gets no data.
+
 ### list_team
 
 No arguments. Output `data`: `{ "company_id", "role", "can_manage", "members": [{ "user_id", "name", "email", "role", "you" }], "invites": [{ "id", "email", "role", "created_at" }] }`. Members list the owner first. `name` is the Google profile name, else the email. `invites` are the pending ones, and only the owner sees them.

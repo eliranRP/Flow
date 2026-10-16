@@ -1173,6 +1173,9 @@ isOneToOne: false
 "get_project_group":
 { Args: { "p_basis"?: string,"p_from"?: string,"p_id": string,"p_to"?: string }; Returns: Json
                            },
+"get_setup_suggestions":
+{ Args: { "p_today"?: string }; Returns: Json
+                           },
 "get_transaction":
 { Args: { "p_id": string }; Returns: Json
                            },
