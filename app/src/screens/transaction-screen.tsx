@@ -139,6 +139,7 @@ export function TransactionScreen({
   sampleLineSplit,
   sampleRecurring,
   sampleCharges,
+  sampleSheet,
   sampleMeta,
   sampleFrom,
   sampleNoFooter = false,
@@ -153,6 +154,8 @@ export function TransactionScreen({
   sampleRecurring?: PaymentRecurring | null;
   /** FLOW-431: a story's party charges, in place of the party_charges read. */
   sampleCharges?: PartyCharges | null;
+  /** The sheet a story's frame draws open: the all-charges list or the pace choices. */
+  sampleSheet?: "all" | "pace";
   /** A story's bank line (get_line_meta), in place of the read. Its account makes the meta say שורת בנק. */
   sampleMeta?: TxnMeta | null;
   /** The month lines page the story was opened from (`/cash/YYYY-MM/out/USD`), so the back link reads its side. */
@@ -615,6 +618,7 @@ export function TransactionScreen({
           holdWrites={holdWrites}
           sample={sample ? (sampleRecurring ?? null) : undefined}
           sampleCharges={sample ? (sampleCharges ?? null) : undefined}
+          openSheet={sample ? sampleSheet : undefined}
           context={`${shownProject} · ${shownCategory}`}
         />
         <List layout="inset">

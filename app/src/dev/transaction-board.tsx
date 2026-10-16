@@ -42,12 +42,18 @@ const BOARD_TXN: NonNullable<TransactionDetail> = {
   allocations: [],
 };
 
+/** FLOW-366 (proof): `?sheet=all` opens the all-charges list, `?sheet=pace` the pace choices, on the frame's page. */
+function sheetParam(value: string | null): "all" | "pace" | undefined {
+  return value === "all" || value === "pace" ? value : undefined;
+}
+
 export function DevTransactionBoard() {
   const [params] = useSearchParams();
   if (params.get("board") === "1") {
     return (
       <TransactionScreen
         sample={BOARD_TXN}
+        sampleSheet={sheetParam(params.get("sheet"))}
         sampleProjects={[{ id: "p1", name: "Elmwood • flip" }]}
         sampleCategories={[{ id: "c1", name: "חומרים" }]}
         sampleMeta={BOARD_BANK_LINE}
@@ -96,6 +102,7 @@ export function DevTransactionBoard() {
     return (
       <TransactionScreen
         sample={{ ...BOARD_TXN, amount_gross: -124000n, amount_net: -124000n, doc_date: "2026-10-11" }}
+        sampleSheet={sheetParam(params.get("sheet"))}
         sampleProjects={[{ id: "p1", name: "Elmwood • flip" }]}
         sampleCategories={[{ id: "c1", name: "חומרים" }]}
         sampleRecurring={{

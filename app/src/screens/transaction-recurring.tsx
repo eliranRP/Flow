@@ -39,6 +39,7 @@ export function TxnRecurring({
   holdWrites,
   sample,
   sampleCharges,
+  openSheet,
   context,
 }: {
   txn: NonNullable<TransactionDetail>;
@@ -47,6 +48,8 @@ export function TxnRecurring({
   sample?: PaymentRecurring | null;
   /** A story's party charges, in place of the party_charges read. */
   sampleCharges?: PartyCharges | null;
+  /** A story's open sheet: the all-charges list or the pace choices. */
+  openSheet?: "all" | "pace";
   /** The line's project and category, for the all-charges sheet's context line. */
   context: string;
 }) {
@@ -57,8 +60,8 @@ export function TxnRecurring({
   const chargesQuery = usePartyChargesQuery(sample === undefined ? txn.id : "", sample === undefined);
   const charges = sample === undefined ? chargesQuery.data : sampleCharges;
   const [sampleState, setSampleState] = useState<{ recurring: boolean; pace: RecurringPace } | undefined>(undefined);
-  const [paceOpen, setPaceOpen] = useState(false);
-  const [allOpen, setAllOpen] = useState(false);
+  const [paceOpen, setPaceOpen] = useState(openSheet === "pace");
+  const [allOpen, setAllOpen] = useState(openSheet === "all");
   const [saving, setSaving] = useState<PaceChoice | null>(null);
   const paceRow = useRef<HTMLButtonElement>(null);
   const allRef = useRef<HTMLButtonElement>(null);
