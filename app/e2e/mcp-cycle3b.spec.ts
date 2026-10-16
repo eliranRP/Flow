@@ -2,6 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
+const LINE_REST = /^השאר,/;
+
 async function horizontalOverflow(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const problems: string[] = [];
@@ -105,6 +107,22 @@ test("skip, approve, and undo keep the visit index and grow the total", async ({
       await expect(page.getByRole("heading", { name: "צבעי הכרמל בע״מ" })).toBeVisible();
       await page.getByRole("button", { name: "אישור" }).click();
       await expect(page.getByRole("heading", { name: "עגורני החוף בע״מ" })).toBeVisible();
+      await page.getByRole("button", { name: "אישור" }).click();
+      // The shared card's approve opens the split sheet: the rest and one more part are saved, then the card approves.
+      await page.getByRole("button", { name: LINE_REST }).click();
+      await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "בית הספר אלון" }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
+      await page.getByRole("button", { name: "הוספת חלק" }).click();
+      await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "מחסן הנמל" }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
+      await page.getByLabel("סכום, מחסן הנמל").fill("1");
+      await page.getByRole("button", { name: "סגירה" }).click();
+      await page.getByRole("button", { name: "אישור" }).click();
+      // ברגי is still held without a category; picking one lets it approve, and the queue ends.
+      await expect(page.getByRole("heading", { name: "ברגי העמק בע״מ" })).toBeVisible();
+      await page.getByRole("button", { name: /^קטגוריה:/ }).click();
+      await page.getByRole("radio", { name: "שינוע" }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
       await page.getByRole("button", { name: "אישור" }).click();
       await expect(page.getByText("הכל מאושר")).toBeVisible();
       await expect(page.getByText("מתוך")).toHaveCount(0);
