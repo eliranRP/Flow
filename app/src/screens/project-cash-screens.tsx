@@ -138,7 +138,7 @@ export function ProjectCashOverview({
             <div className="t-display ui-project-profits">
               {rows.map((row) => (
                 <p key={row.currency}>
-                  <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} />
+                  <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} presentation="detail" />
                 </p>
               ))}
             </div>
@@ -149,7 +149,7 @@ export function ProjectCashOverview({
       <CompactBar
         title={project.name}
         figureFirst
-        figure={first == null ? undefined : <Amount agorot={first.net_minor} currency={first.currency} loss={first.net_minor < 0n} />}
+        figure={first == null ? undefined : <Amount agorot={first.net_minor} currency={first.currency} loss={first.net_minor < 0n} presentation="detail" />}
         backTo={`/projects${search}`}
         size="detail"
         shown={past}

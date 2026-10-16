@@ -2,10 +2,14 @@ import { formatAmount } from "./amount";
 import { Card } from "./card";
 import { TextLink } from "./text-link";
 
-/** The share of the budget spent, rounded to whole percent (the card's "N%"). */
+/**
+ * The share of the budget spent, to the nearest whole percent (the card's "N%"). Under the budget it
+ * stops at 99, so 100% only shows once the budget is reached.
+ */
 export function budgetUsedPercent(spentMinor: bigint, budgetMinor: bigint): number {
   if (budgetMinor <= 0n) return 0;
-  return Number((spentMinor * 100n) / budgetMinor);
+  const rounded = Number((spentMinor * 100n + budgetMinor / 2n) / budgetMinor);
+  return spentMinor < budgetMinor ? Math.min(99, rounded) : rounded;
 }
 
 /**

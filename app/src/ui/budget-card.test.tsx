@@ -8,6 +8,10 @@ describe("BudgetCard (FLOW-445)", () => {
     expect(budgetUsedPercent(10_000_000n, 10_000_000n)).toBe(100);
     expect(budgetUsedPercent(12_000_000n, 10_000_000n)).toBe(120);
     expect(budgetUsedPercent(5n, 0n)).toBe(0);
+    // 61,300 of 75,000 is 81.7%: nearest percent is 82.
+    expect(budgetUsedPercent(6_130_000n, 7_500_000n)).toBe(82);
+    // Just under the budget rounds to 100, but stops at 99 until the budget is reached.
+    expect(budgetUsedPercent(9_999_000n, 10_000_000n)).toBe(99);
   });
 
   it("says what is left, with the used percent, under the budget", () => {
