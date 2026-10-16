@@ -7,9 +7,9 @@ const meta = {
   component: PartsBar,
   args: {
     parts: [
-      { key: "principal", label: "קרן", minor: 447_700n, color: "var(--color-accent)", amount: "$4,477" },
-      { key: "interest", label: "ריבית", minor: 506_250n, color: "var(--color-accent-dim)", amount: "$5,062.50" },
-      { key: "escrow", label: "נאמנות (escrow)", minor: 64_300n, color: "var(--color-line)", amount: "$643" },
+      { key: "principal", label: "קרן", weight: 447_700, color: "var(--color-accent)", amount: "$4,477" },
+      { key: "interest", label: "ריבית", weight: 506_250, color: "var(--color-accent-dim)", amount: "$5,062.50" },
+      { key: "escrow", label: "נאמנות (escrow)", weight: 64_300, color: "var(--color-line)", amount: "$643" },
     ],
   },
 } satisfies Meta<typeof PartsBar>;
@@ -24,9 +24,9 @@ export const ThreeParts: Story = {};
 export const WithoutEscrow: Story = {
   args: {
     parts: [
-      { key: "principal", label: "קרן", minor: 447_700n, color: "var(--color-accent)", amount: "$4,477" },
-      { key: "interest", label: "ריבית", minor: 506_250n, color: "var(--color-accent-dim)", amount: "$5,062.50" },
-      { key: "escrow", label: "נאמנות (escrow)", minor: 0n, color: "var(--color-line)", amount: "$0" },
+      { key: "principal", label: "קרן", weight: 447_700, color: "var(--color-accent)", amount: "$4,477" },
+      { key: "interest", label: "ריבית", weight: 506_250, color: "var(--color-accent-dim)", amount: "$5,062.50" },
+      { key: "escrow", label: "נאמנות (escrow)", weight: 0, color: "var(--color-line)", amount: "$0" },
     ],
   },
 };

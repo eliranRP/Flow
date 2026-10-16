@@ -1,10 +1,12 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError } from "../use-write";
 import { LOAN_DETAIL_COLUMNS, readLoanRow, type LoanDetail } from "./loan-detail-data";
-import type { LoanListEntry } from "./loan-list-summary";
+import { loanListSummary, type LoanListEntry, type LoanListSummary } from "./loan-list-summary";
 import { loanOutlook } from "./loan-outlook";
 import { readLoanBalances } from "./loan-reads";
+import { israelToday } from "../ui/date-math";
 
 /**
  * FLOW-139. Every loan of a company with its outlook (its next payment and the payments ahead), for
@@ -31,4 +33,13 @@ export function useLoanSummaryEntries(companyId: string | null, today: string) {
       });
     },
   });
+}
+
+/** The summary card's figures for one currency; null until the loans are read. */
+export function useLoanSummary(companyId: string | null, currency: string | null): LoanListSummary | null {
+  const entries = useLoanSummaryEntries(companyId, israelToday());
+  return useMemo(
+    () => (entries.data == null || currency == null ? null : loanListSummary(entries.data.filter((entry) => entry.loan.currency === currency))),
+    [entries.data, currency],
+  );
 }

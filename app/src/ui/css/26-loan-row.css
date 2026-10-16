@@ -71,20 +71,20 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: 18px;
-  border-radius: 20px;
+  padding: var(--space-card-inset);
+  border-radius: var(--radius-card);
 }
 
 .ui-loan-summary-label {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--type-meta-size);
   color: var(--color-text-secondary);
 }
 
 .ui-loan-summary-total {
-  font-size: 34px;
-  font-weight: 400;
-  line-height: 1.15;
+  font-size: var(--type-total-size);
+  font-weight: var(--type-total-weight);
+  line-height: var(--type-total-line);
 }
 
 .ui-loan-summary-monthly {
@@ -97,7 +97,7 @@
 
 .ui-loan-summary-caption {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--type-caption-size);
   color: var(--color-text-muted);
 }
 
@@ -109,9 +109,8 @@
 
 .ui-parts-track {
   display: flex;
-  gap: 2px;
-  height: 8px;
-  border-radius: 4px;
+  height: var(--space-2);
+  border-radius: var(--radius-block);
   overflow: hidden;
 }
 
@@ -123,14 +122,14 @@
 .ui-parts-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 15px;
+  gap: var(--space-2);
+  font-size: var(--type-meta-size);
 }
 
 .ui-parts-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-chip);
 }
 
 .ui-parts-name {
