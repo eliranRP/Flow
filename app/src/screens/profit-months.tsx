@@ -132,7 +132,7 @@ export function ProfitMonthsScreen({ sample }: { sample?: ProfitMonthsSample } =
               afterOverhead={afterOverhead}
               currencies={currencies}
               baseCurrency={baseCurrency}
-              href={`${projectPath}${withPeriodSearch(search, monthPeriod(month.month))}`}
+              href={`${projectPath}/${month.month}${withPeriodSearch(search, monthPeriod(month.month))}`}
             />
           ))}
         </List>

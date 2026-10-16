@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
+import { JUNIPER_PROFIT } from "../dev/project-profit-sample";
 import { ProjectProfitScreen, type ProjectProfitSample } from "./project-profit-screen";
 
 const base = {
@@ -62,5 +63,15 @@ describe("ProjectProfitScreen", () => {
     expect(screen.getByText(/הכנסות \$10,000 · הוצאות \$6,000/)).toBeTruthy();
     const titles = screen.getAllByRole("link").map((link) => link.textContent);
     expect(titles.findIndex((text) => text.includes("אוקטובר"))).toBeLessThan(titles.findIndex((text) => text.includes("ספטמבר")));
+  });
+
+  it("the preview's month rows add up to the project's profit since the start", () => {
+    const rows = JUNIPER_PROFIT.months.months.flatMap((month) => month.by_currency);
+    const income = rows.reduce((sum, row) => sum + row.income_minor, 0n);
+    const expense = rows.reduce((sum, row) => sum + row.expense_minor, 0n);
+    const total = JUNIPER_PROFIT.project.by_currency?.[0];
+    expect(income).toBe(total?.income_minor);
+    expect(expense).toBe(total?.direct_minor);
+    expect(income - expense).toBe(total?.profit_minor);
   });
 });

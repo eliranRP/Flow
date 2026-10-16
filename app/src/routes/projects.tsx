@@ -24,6 +24,8 @@ function ProjectMonthProfitRoute() {
   const { projectId = "", month = "" } = useParams();
   const location = useLocation();
   const search = usePreviewSearch();
+  // A segment that is not a month (YYYY-MM) has no page: it goes to the project's profit page.
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return <Navigate replace to={`/projects/${projectId}/profit${search}`} />;
   const current = periodFromSearch(new URLSearchParams(location.search));
   if (current?.kind !== "month" || anchorOf(current) !== month) {
     return <Navigate replace to={`/projects/${projectId}/profit/${month}${withPeriodSearch(search, monthPeriod(month))}`} />;
