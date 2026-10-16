@@ -464,7 +464,6 @@ Don't:
 - The month lines page (נכנס / יצא) stacks its head in one column (`.ui-lines-head`): the side switch spans the 20px gutters, then the total, the count line, the currency switch and the order chips. The chips keep their words and scroll sideways. The shared `.ui-page-below` row is for a single control, so a page with several blocks wraps them.
 
 ### 7.7 OrganizeChips
-- No screen builds this component now: FLOW-368 removed `organize-chips.tsx` when the search row, its only user, moved to the removable filter chips. The look below still holds for choice chips.
 - Chips group a screen's views or filters. One chip is always selected: the chips are not filters you can clear.
 - Look: suggested (`tint` fill, ✦ in `accent-text`, optional hint), outlined choice (`surface`, 1px `control-border`), selected (`tint-strong` fill with an `accent` border, no ✓), disabled (`disabled-text`).
 - Chips are 36px drawn, 14px inline padding, a full radius, a 44px hit area, and they wrap. Show at most about 4 chips, then "עוד…".

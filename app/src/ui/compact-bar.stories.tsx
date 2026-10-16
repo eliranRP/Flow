@@ -3,6 +3,7 @@ import { Amount } from "./amount";
 import { Chip } from "./chip";
 import { CompactBar } from "./compact-bar";
 import { IconButton } from "./icon-button";
+import { OrganizeChips } from "./organize-chips";
 import { ChevronDownIcon, OutwardChevron } from "./icons";
 import { longHebrew } from "./story-support";
 
@@ -49,12 +50,12 @@ export const Panel: Story = {
       {...args}
       figure={<Amount agorot={125_000n} size="list" />}
       panel={
-        <>
+        <OrganizeChips label="סידור">
           <Chip kind="choice" pressed>לפי תאריך</Chip>
           <Chip kind="choice">לפי סכום</Chip>
           <Chip kind="choice">לפי פרויקט</Chip>
           <Chip kind="choice">לפי קטגוריה</Chip>
-        </>
+        </OrganizeChips>
       }
     />
   ),

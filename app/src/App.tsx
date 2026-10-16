@@ -81,6 +81,7 @@ const DevCashYear = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ defaul
 const DevInstall = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevInstall })));
 const DevLoanDetail = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoanDetail })));
 const DevLoans = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoans })));
+const DevLoanSummary = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoanSummary })));
 const DevMissingBills = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevMissingBills })));
 const DevProject = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProject })));
 const DevProjectCategory = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectCategory })));
@@ -230,6 +231,7 @@ function AppRoutes() {
                 {/* Settings has no tab (FLOW-364); the loans pages open the loans tab. */}
                 <Route element={<DevShell section="loans" />}>
                   <Route path="/e2e/loans" element={<DevLoans />} />
+                  <Route path="/e2e/loans-summary" element={<DevLoanSummary />} />
                   <Route path="/e2e/loans/:loanId" element={<DevLoanDetail />} />
                   <Route path="/e2e/loans/:loanId/details" element={<DevLoanDetail view="details" />} />
                   <Route path="/e2e/loans/:loanId/future" element={<DevLoanDetail view="future" />} />
