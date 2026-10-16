@@ -52,7 +52,8 @@ insert into public.transactions (
 select
   (select id from ibm where label = v.co),
   v.direction::public.txn_direction, v.doc_kind::public.doc_kind, null,
-  'posted', 'ILS', v.amount, v.amount, abs(v.amount), 0, 'source',
+  'posted', case when v.source = 'mercury' then 'USD' else 'ILS' end,
+  v.amount, v.amount, abs(v.amount), 0, 'source',
   v.doc_date::date, v.doc_date::date, v.source::public.txn_source, v.ikey, v.ext,
   case when v.cust is null then null else (select id from ibm where label = v.cust) end,
   v.descr
