@@ -40,7 +40,7 @@ export const ProjectCategoryLineMarks: Story = {
         sample={{
           ...categorySample,
           rows: [
-            { id: "t1", description: "Home Depot", doc_date: "2026-09-14", amount_net: -8_500_000n, source: "mercury" },
+            { id: "t1", description: "חומרי בניין לדוגמה", doc_date: "2026-09-14", amount_net: -8_500_000n, source: "mercury" },
             { id: "t2", description: "ריבית בנק לדוגמה", doc_date: "2026-09-20", amount_net: -41_200n, source: "sumit", kept_out: true },
           ],
         }}
