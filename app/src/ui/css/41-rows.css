@@ -31,3 +31,18 @@
   inset-inline: 0;
   border-radius: 0;
 }
+
+/* A project row's end side holds the amount, and a muted line under it (FLOW-367: an open invoice's age). */
+.ui-row-end {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 0;
+}
+
+.ui-row-end-sub {
+  font-size: var(--type-line2-size);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}

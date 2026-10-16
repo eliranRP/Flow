@@ -35,7 +35,7 @@ The open branch is `claude/nice-cerf-um5fkw` (#594). This lane pushes every FLOW
    - `radio-sheet` becomes `choice-sheet`. The currency, basis and pace sheets become ChoiceSheet calls; first move their exported copy constants to a small `ui/company-choices.ts`.
    - Chips:
      - 36px tall, 1.5px `--color-tint-strong` border, transparent fill. The selected chip is a tint fill with an accent border; the text stays `--color-text`.
-     - `chip-scroller` becomes `organize-chips`. Its only user is the search filter chips, which the board does not want; leave that to FLOW-368.
+     - `chip-scroller` became `organize-chips`; FLOW-368 removed it, since the search filter chips were its only user.
    - Segment: track `--color-surface`, radius 14. The button is radius 10 at 15/500, and the selected one is `--color-tint-strong`.
    - Toggle: 46×28 with a 22px knob. The knob moves with a `transform`, not an `inset` jump, so it can animate.
    - SwipeRow: "התעלמות" as signal-colour text with no fill. The row leaves with `.m-row-leave`, and `onRemove` fires on `animationend`.
