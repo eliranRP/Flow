@@ -100,7 +100,9 @@ const taps: Tap[] = [
     rpc: "set_invoice_paid",
     path: "/unpaid",
     arrange: async (page) => {
-      await page.getByRole("button", { name: new RegExp(escapeRe(unpaidName)) }).first().tap();
+      // FLOW-367: a row is a link to its invoice page, and the mark sits there, once.
+      await page.getByRole("link", { name: new RegExp(escapeRe(unpaidName)) }).first().tap();
+      await expect(page).toHaveURL(/\/unpaid\/[^/?]+/);
       await expect(page.getByRole("button", { name: LABELS.markPaid, exact: true })).toBeVisible({ timeout: 30_000 });
     },
     press: async (page) => {
