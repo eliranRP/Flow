@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { PACE_COPY } from "./charge-switches";
+import { paceSheetCopy } from "./pace";
 import { ChoiceSheet } from "./choice-sheet";
 import { BASIS_COPY, CURRENCY_COPY } from "./company-choices";
 import { THEME_COPY } from "./theme-choices";
@@ -27,10 +27,10 @@ export const WithDescriptions: Story = {
 };
 /** The tapped row spins; the other rows wait until the save settles. */
 export const Saving: Story = {
-  args: { copy: PACE_COPY, open: true, onOpenChange: noop, value: "month", saving: "2months", onPick: noop },
+  args: { copy: paceSheetCopy(null), open: true, onOpenChange: noop, value: "month", saving: "2months", onPick: noop },
 };
 export const ReducedMotion: Story = {
-  args: { copy: PACE_COPY, open: true, onOpenChange: noop, value: "quarter", saving: null, onPick: noop },
+  args: { copy: paceSheetCopy(null), open: true, onOpenChange: noop, value: "quarter", saving: null, onPick: noop },
   decorators: [forceReducedMotion],
 };
 

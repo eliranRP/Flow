@@ -475,6 +475,6 @@ describe("ReviewCard paid line (FLOW-309, decision 0165)", () => {
 
   it("takes the latest receipt's date when paid_on is missing, and keeps the year of another year", () => {
     expect(reviewPaidView({ receipts: [receipt("2026-10-03"), receipt("2026-10-07")], paid: true }, now)?.spoken).toBe("שולם, קבלה מ־07/10");
-    expect(reviewPaidView({ receipts: [receipt("2025-12-30")], paid: true, paid_on: "2025-12-30" }, now)?.line).toEqual(["שולם · קבלה ", { num: "30/12/2025" }]);
+    expect(reviewPaidView({ receipts: [receipt("2025-12-30")], paid: true, paid_on: "2025-12-30" }, now)?.line).toEqual(["שולם · קבלה ", { num: "30/12/25" }]);
   });
 });

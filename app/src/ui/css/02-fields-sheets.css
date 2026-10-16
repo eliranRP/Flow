@@ -92,15 +92,6 @@
   }
 }
 
-.ui-loan-spacer {
-  display: block;
-  inline-size: 24px;
-}
-
-.ui-loan-total .ui-row-title {
-  font-weight: var(--type-title-3-weight);
-}
-
 .ui-num-field {
   direction: ltr;
   text-align: right;

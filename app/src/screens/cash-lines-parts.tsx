@@ -5,6 +5,7 @@ import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 import { DocumentIcon } from "../ui/icons";
 import { SegmentedControl } from "../ui/segmented-control";
+import { Skeleton } from "../ui/skeleton";
 
 /**
  * The parts of a נכנס, יצא or לא נספר ברווח page that the company's and the project's pages share.
@@ -34,7 +35,7 @@ export function CashLinesHead({ side, currency, figure, rest }: { side: CashList
       {figure != null ? (
         <p className="ui-breakdown-total ui-page-pad">
           <span className="ui-breakdown-total-line">
-            <Amount agorot={figure} currency={currency} size="display" income={side === "in"} />
+            <Amount agorot={figure} currency={currency} size="total" income={side === "in"} />
           </span>
         </p>
       ) : null}
@@ -97,4 +98,39 @@ export function CashLinesMore({ busy, onMore }: { busy: boolean; onMore: () => v
       </Button>
     </div>
   );
+}
+
+/**
+ * FLOW-366: the total of a lines page on נכנס or יצא, in Home's figure for the side. A skeleton bar
+ * until every page is in, because the total comes from the lines.
+ */
+export function LinesTotal({ side, currency, total }: { side: CashListSide; currency: string; total: bigint | null }) {
+  if (total == null) {
+    return (
+      <p className="ui-breakdown-total">
+        <Skeleton width="md" />
+      </p>
+    );
+  }
+  return (
+    <p className="ui-breakdown-total">
+      <span className="ui-breakdown-total-line">
+        <Amount agorot={total} currency={currency} size="total" income={side === "in"} />
+      </span>
+    </p>
+  );
+}
+
+/** FLOW-366: "N תנועות · N ממתינות לאישור · $X לא נספרים ברווח"; the pending and out-of-profit parts show only when they apply. */
+export function LinesCount({
+  summary,
+  currency,
+}: {
+  summary: { count: number; pending: number; notInProfit: bigint };
+  currency: string;
+}) {
+  const parts = [summary.count === 1 ? "תנועה אחת" : `${String(summary.count)} תנועות`];
+  if (summary.pending > 0) parts.push(`${String(summary.pending)} ממתינות לאישור`);
+  if (summary.notInProfit > 0n) parts.push(`${formatAmountText(summary.notInProfit, currency)} לא נספרים ברווח`);
+  return <p className="t-caption ui-lines-count">{parts.join(" • ")}</p>;
 }

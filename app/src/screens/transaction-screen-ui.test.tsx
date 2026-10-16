@@ -179,12 +179,13 @@ describe("transaction status chips", () => {
       supplier_name: null,
     });
     expect(screen.getByText("מאושר")).toBeInTheDocument();
-    expect(screen.getByText("לגבייה")).toBeInTheDocument();
+    expect(screen.queryByText("לגבייה")).not.toBeInTheDocument();
   });
 
   it("puts the VAT on the amount's line with no minus, and no empty invoice row (FLOW-339)", () => {
     renderTxn(expense);
-    expect(screen.getByText("לפני מע״מ").closest("p")).toHaveTextContent("לפני מע״מ · מע״מ משוער ₪1,800 · 12/09/2026");
+    expect(screen.getByText("12/09/2026", { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("לפני מע״מ").closest("p")).toHaveTextContent("לפני מע״מ · מע״מ (משוער) ₪1,800");
     expect(screen.queryByText(/−₪1,800/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "חשבונית ותשלום" })).not.toBeInTheDocument();
     // FLOW-322: no document row or hint promises what the detail does not show (an invoice number, the bank line).
@@ -193,13 +194,13 @@ describe("transaction status chips", () => {
 
   it("names a document's VAT without a status word", () => {
     renderTxn({ ...expense, vat_status: "source" });
-    expect(screen.getByText("לפני מע״מ").closest("p")).toHaveTextContent("לפני מע״מ · מע״מ ₪1,800 · 12/09/2026");
+    expect(screen.getByText("לפני מע״מ").closest("p")).toHaveTextContent("לפני מע״מ · מע״מ ₪1,800");
     expect(screen.queryByText(/לפי המסמך/)).not.toBeInTheDocument();
   });
 
   it("hides the VAT amount when a shekel line has no VAT", () => {
     renderTxn({ ...expense, amount_gross: -1_000_000n, vat_amount: 0n, vat_status: "source" });
-    expect(screen.getByText("לפני מע״מ").closest("p")).toHaveTextContent("לפני מע״מ · 12/09/2026");
+    expect(screen.getByText("לפני מע״מ").closest("p")).toHaveTextContent("לפני מע״מ");
   });
 
   it("hides VAT and invoice rows for a USD expense", () => {
@@ -265,7 +266,7 @@ describe("transaction reassignment", () => {
   it("saves through reassign_transaction and invalidates the books", async () => {
     mockTxnBooks();
     mountTxn();
-    expect(await screen.findByRole("heading", { name: "הוצאה" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /חולון/ })).toBeInTheDocument();
     // FLOW-320: each row opens its own picker, and a pick closes the sheet.
     fireEvent.click(screen.getByRole("button", { name: /חולון/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "וילה" }));
