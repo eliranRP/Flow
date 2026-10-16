@@ -18,7 +18,7 @@ async function describeControls(page: Page): Promise<Control[]> {
       const style = getComputedStyle(el);
       const rect = el.getBoundingClientRect();
       if (style.display === "none" || style.visibility === "hidden" || rect.width === 0 || rect.height === 0) return [];
-      if (el.closest("[inert], [aria-hidden='true']") != null) return [];
+      if (el.getAttribute("aria-hidden") === "true") return [];
       const input = el as HTMLInputElement;
       const disabled = input.disabled || el.getAttribute("aria-disabled") === "true";
       const rawType = (el as { type?: unknown }).type;
