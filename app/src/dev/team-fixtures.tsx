@@ -27,7 +27,9 @@ function SampleTeam({ options, children }: { options: SampleTeamOptions; childre
 export function DevTeam() {
   const [params] = useSearchParams();
   const state = params.get("team");
+  // FLOW-512 proof: ?proof=1 answers at once, so a board capture is not taken on the loading skeleton.
   const options: SampleTeamOptions = {
+    ...(params.get("proof") === "1" ? { delayMs: 0 } : {}),
     pendingInvite: state === "pending",
     alone: state === "alone",
     role: state === "editor" ? "editor" : "owner",
