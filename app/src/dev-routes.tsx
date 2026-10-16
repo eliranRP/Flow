@@ -367,21 +367,40 @@ export function DevCashYear() {
   return <CashYearScreen sample={{ years: sampleCashYears(), months }} year={Number(months.months[0]?.month.slice(0, 4))} />;
 }
 
-/** FLOW-445: the list's month cash for the same three projects, and one line with no project. */
+/** FLOW-445: the Projects list on the board's frame: seven active projects, the overhead row, and one line with no project. Invented names, about the board's lengths. */
+const devProjectsRows: NonNullable<Dashboard["projects"]> = [
+  { id: "p1", name: "Halvorsen", status: "active", state_label: "עבודה לקוח • תשלום 2 מתוך 4", income_agorot: 1_500_000n, direct_agorot: 0n, shared_agorot: 0n, profit_before_shared_agorot: 1_500_000n, profit_agorot: 1_500_000n, by_currency: [] },
+  { id: "p2", name: "Lark Hill", status: "active", state_label: "flip • בשיפוץ", income_agorot: 0n, direct_agorot: 1_425_342n, shared_agorot: 0n, profit_before_shared_agorot: -1_425_342n, profit_agorot: -1_425_342n, by_currency: [] },
+  { id: "p3", name: "Elm Ct", status: "active", state_label: "שיפוץ • לפני השכרה • מעל התקציב", income_agorot: 0n, direct_agorot: 1_044_000n, shared_agorot: 0n, profit_before_shared_agorot: -1_044_000n, profit_agorot: -1_044_000n, by_currency: [] },
+  { id: "p4", name: "Birch St", status: "active", state_label: "השכרה • מושכר", income_agorot: 379_560n, direct_agorot: 0n, shared_agorot: 0n, profit_before_shared_agorot: 379_560n, profit_agorot: 379_560n, by_currency: [] },
+  { id: "p5", name: "Willow Ave", status: "active", state_label: "דופלקס להשכרה • 2 יחידות", income_agorot: 0n, direct_agorot: 328_200n, shared_agorot: 0n, profit_before_shared_agorot: -328_200n, profit_agorot: -328_200n, by_currency: [] },
+  { id: "p6", name: "Fernview", status: "active", state_label: "תיקון גג • חשבונית פתוחה", income_agorot: 0n, direct_agorot: 0n, shared_agorot: 0n, profit_before_shared_agorot: 0n, profit_agorot: 0n, by_currency: [] },
+  { id: "p7", name: "Okafor", status: "active", state_label: "מטבח • עבודה לקוח", income_agorot: 0n, direct_agorot: 0n, shared_agorot: 0n, profit_before_shared_agorot: 0n, profit_agorot: 0n, by_currency: [] },
+  { id: "p0", name: "הוצאות כלליות", status: "active", state_label: "תקורה • לא פרויקט", income_agorot: 0n, direct_agorot: 760_000n, shared_agorot: 0n, profit_before_shared_agorot: -760_000n, profit_agorot: -760_000n, by_currency: [] },
+];
+
+const devProjectsDashboard: Dashboard = { ...devDashboard, projects: devProjectsRows };
+
+/** The list's month cash for the same rows, in dollars: the board's amounts; one line with no project. */
 const devProjectsCash: NonNullable<ProjectsCashMonth> = {
-  month: "2026-09-01",
-  base_currency: "ILS",
+  month: "2026-10-01",
+  base_currency: "USD",
   basis: "paid",
   projects: [
-    { id: "p1", name: "שיפוץ הרצל 12", type: "flip", status: "active", is_overhead: false, group_id: null, created_at: "2026-08-01T08:00:00Z", finished_on: null, budget_minor: null, spent_minor: 0, cash: [{ currency: "ILS", in_minor: 100_000, out_minor: 40_000, net_minor: 60_000 }], profit_month_minor: 60_000, profit_all_minor: 60_000, first_month: "2026-09-01", pending_count: 0, deletable: false },
-    { id: "p2", name: "וילה רעננה", type: "השכרה", status: "active", is_overhead: false, group_id: null, created_at: "2026-09-20T08:00:00Z", finished_on: null, budget_minor: null, spent_minor: 0, cash: [], profit_month_minor: 0, profit_all_minor: 0, first_month: null, pending_count: 0, deletable: true },
-    { id: "p3", name: "פרויקט ישן", type: null, status: "finished", is_overhead: false, group_id: null, created_at: "2026-06-01T08:00:00Z", finished_on: "2026-08-30", budget_minor: null, spent_minor: 0, cash: [], profit_month_minor: 0, profit_all_minor: 0, first_month: "2026-06-01", pending_count: 0, deletable: false },
+    { id: "p1", name: "Halvorsen", type: "עבודה לקוח", status: "active", is_overhead: false, group_id: null, created_at: "2026-08-01T08:00:00Z", finished_on: null, budget_minor: null, spent_minor: 0, cash: [{ currency: "USD", in_minor: 1_500_000, out_minor: 0, net_minor: 1_500_000 }], profit_month_minor: 1_500_000, profit_all_minor: 1_500_000, first_month: "2026-08-01", pending_count: 0, deletable: false },
+    { id: "p2", name: "Lark Hill", type: "flip", status: "active", is_overhead: false, group_id: null, created_at: "2026-07-01T08:00:00Z", finished_on: null, budget_minor: 7_500_000, spent_minor: 6_130_000, cash: [{ currency: "USD", in_minor: 0, out_minor: 1_425_342, net_minor: -1_425_342 }], profit_month_minor: -1_425_342, profit_all_minor: -6_130_000, first_month: "2026-07-01", pending_count: 0, deletable: false },
+    { id: "p3", name: "Elm Ct", type: "שיפוץ", status: "active", is_overhead: false, group_id: null, created_at: "2026-06-15T08:00:00Z", finished_on: null, budget_minor: 1_000_000, spent_minor: 1_044_000, cash: [{ currency: "USD", in_minor: 0, out_minor: 1_044_000, net_minor: -1_044_000 }], profit_month_minor: -1_044_000, profit_all_minor: -1_044_000, first_month: "2026-06-15", pending_count: 0, deletable: false },
+    { id: "p4", name: "Birch St", type: "השכרה", status: "active", is_overhead: false, group_id: null, created_at: "2026-05-01T08:00:00Z", finished_on: null, budget_minor: null, spent_minor: 0, cash: [{ currency: "USD", in_minor: 379_560, out_minor: 0, net_minor: 379_560 }], profit_month_minor: 379_560, profit_all_minor: 379_560, first_month: "2026-05-01", pending_count: 0, deletable: false },
+    { id: "p5", name: "Willow Ave", type: "השכרה", status: "active", is_overhead: false, group_id: null, created_at: "2026-04-01T08:00:00Z", finished_on: null, budget_minor: null, spent_minor: 0, cash: [{ currency: "USD", in_minor: 0, out_minor: 328_200, net_minor: -328_200 }], profit_month_minor: -328_200, profit_all_minor: -328_200, first_month: "2026-04-01", pending_count: 0, deletable: false },
+    { id: "p6", name: "Fernview", type: "תיקון", status: "active", is_overhead: false, group_id: null, created_at: "2026-09-01T08:00:00Z", finished_on: null, budget_minor: null, spent_minor: 0, cash: [{ currency: "USD", in_minor: 0, out_minor: 0, net_minor: 0 }], profit_month_minor: 0, profit_all_minor: 0, first_month: "2026-09-01", pending_count: 0, deletable: true },
+    { id: "p7", name: "Okafor", type: "מטבח", status: "active", is_overhead: false, group_id: null, created_at: "2026-09-10T08:00:00Z", finished_on: null, budget_minor: null, spent_minor: 0, cash: [{ currency: "USD", in_minor: 0, out_minor: 0, net_minor: 0 }], profit_month_minor: 0, profit_all_minor: 0, first_month: "2026-09-10", pending_count: 0, deletable: true },
+    { id: "p0", name: "הוצאות כלליות", type: null, status: "active", is_overhead: true, group_id: null, created_at: "2026-01-01T08:00:00Z", finished_on: null, budget_minor: null, spent_minor: 0, cash: [{ currency: "USD", in_minor: 0, out_minor: 760_000, net_minor: -760_000 }], profit_month_minor: -760_000, profit_all_minor: -760_000, first_month: "2026-01-01", pending_count: 0, deletable: false },
   ],
-  unassigned: { count: 1, cash: [{ currency: "ILS", in_minor: 0, out_minor: 2_500, net_minor: -2_500 }] },
+  unassigned: { count: 1, cash: [{ currency: "USD", in_minor: 41_218, out_minor: 0, net_minor: 41_218 }] },
 };
 
 export function DevProjects() {
-  return <ProjectsScreen sample={devDashboard} cashSample={devProjectsCash} />;
+  return <ProjectsScreen sample={devProjectsDashboard} cashSample={devProjectsCash} />;
 }
 
 /** Dev-only. A production build drops the sample secret with this flag. */
