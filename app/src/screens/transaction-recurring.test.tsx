@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { PaymentRecurring, TransactionDetail } from "@flow/shared";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import { loadReadSchemas } from "../load-read-schemas";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { TransactionScreen } from "./flow-screens";
@@ -64,6 +65,16 @@ function show(sample: NonNullable<TransactionDetail>, recurring: PaymentRecurrin
 
 const recurringRow = () => screen.getByRole("button", { name: /תשלום קבוע/ });
 
+beforeAll(async () => {
+  await loadReadSchemas();
+  show(base, found);
+  // The first mount is paid here; the queries of the first test then resolve at once.
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  cleanup();
+});
+
 describe("transaction page: recurring card and counted-in sheet (FLOW-415, FLOW-366)", () => {
   it("draws the recurring row with the pace and זוהה לבד on a found charge", () => {
     show(base, found);
@@ -82,7 +93,7 @@ describe("transaction page: recurring card and counted-in sheet (FLOW-415, FLOW-
     await waitFor(() => { expect(screen.queryByRole("radiogroup", { name: "כל כמה זמן" })).toBeNull(); });
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     await waitFor(() => { expect(recurringRow().textContent).toMatch(/כל חודש/); });
-  }, 15000);
+  });
 
   it("shows the row as לא קבוע with no pace while the charge is off", () => {
     show(base, { ...found, recurring: false, override: false, detected: true });
@@ -97,7 +108,7 @@ describe("transaction page: recurring card and counted-in sheet (FLOW-415, FLOW-
     await waitFor(() => { expect(screen.getByText("סומן כלא קבוע")).toBeInTheDocument(); });
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     await waitFor(() => { expect(recurringRow()).toBeInTheDocument(); });
-  }, 15000);
+  });
 
   it("keeps a line out of the cash view from the counted-in sheet, with an undo toast", async () => {
     show(base, found);
@@ -105,7 +116,7 @@ describe("transaction page: recurring card and counted-in sheet (FLOW-415, FLOW-
     fireEvent.click(await screen.findByRole("switch", { name: "נספר בתזרים" }));
     await waitFor(() => { expect(screen.getByText("הוצא מהתזרים")).toBeInTheDocument(); });
     expect(screen.getByRole("switch", { name: "נספר בתזרים" })).not.toBeChecked();
-  }, 15000);
+  });
 
   it("reads הכנסה קבועה on an income line", () => {
     show({ ...base, direction: "income", supplier_name: null, customer_name: "לקוח לדוגמה" }, { ...found, party: { direction: "income", id: "c9", name: "לקוח לדוגמה", currency: "ILS" } });

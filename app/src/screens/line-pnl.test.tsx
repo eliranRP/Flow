@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { TransactionDetail } from "@flow/shared";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { LineSplitRead } from "../line-split";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -96,7 +96,10 @@ describe("linePnlState", () => {
 beforeAll(async () => {
   await loadReadSchemas();
   show(base);
-  await screen.findByRole("button", { name: /^נספר ב/ }, { timeout: 8000 });
+  // The first mount is paid here; the queries of the first test then resolve at once.
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
   cleanup();
 });
 

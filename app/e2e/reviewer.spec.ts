@@ -383,7 +383,7 @@ test("a split expense saves the category on the tap and keeps it after close", a
   await page.getByRole("button", { name: /^פיצול/ }).click();
   await expect(page).toHaveURL(/\/reviewer\/split$/);
   await expect(page.getByRole("heading", { name: "פיצול בין פרויקטים" })).toBeVisible();
-  await expect(page.getByText("ליסינג הדרך").first()).toBeVisible();
+  await expect(page.getByText("ליסינג הדרך בע״מ", { exact: true })).toBeVisible();
 });
 
 test("a split returns to one project and the project totals follow", async ({ page }) => {
