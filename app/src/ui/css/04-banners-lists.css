@@ -350,6 +350,11 @@
   color: var(--color-pill-hurts);
 }
 
+/* FLOW-364 (board): on the band both change pills are white with the helps text; the arrow gives the direction. */
+.ui-band .ui-change-amount.ui-delta-bad {
+  color: var(--color-pill-helps);
+}
+
 .ui-radio-row {
   display: flex;
   align-items: center;

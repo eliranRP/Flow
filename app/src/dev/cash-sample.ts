@@ -157,7 +157,15 @@ function usdRow(inMinor: bigint, outMinor: bigint, profit: bigint, kept: CashCur
 export function sampleCashUsdLoss(past = false, now = new Date()): NonNullable<CashMonths> {
   const current = israelToday(now).slice(0, 7);
   const month = (back: number) => `${shiftMonthKey(current, -back)}-01`;
-  const investment = (amount: bigint) => [{ name: "השקעה", amount_minor: amount }];
+  // Three named categories, so the subline reads "שיפוץ והשבחה, הון בעלים ועוד" as the board's does.
+  const investment = (amount: bigint) => {
+    const part = amount / 10n;
+    return [
+      { name: "שיפוץ והשבחה", amount_minor: part * 6n },
+      { name: "הון בעלים", amount_minor: part * 2n + (amount - part * 9n) },
+      { name: "ריבית", amount_minor: part },
+    ];
+  };
   const months = past
     ? [
         usdRow(2_480_000n, 4_200_000n, -340_000n, investment(-1_380_000n)),

@@ -220,7 +220,7 @@ export function SplitCard({ monthKey, row, search, onOpenProfit }: { monthKey: s
         <ChevronIcon size={18} />
       </Link>
       <button type="button" className="ui-home-split-row m-press" onClick={onOpenProfit}>
-        <span className="ui-home-split-swatch ui-home-split-swatch-none" aria-hidden="true" />
+        <span className={cx("ui-home-split-swatch", parts.profit < 0n ? "ui-home-split-loss" : "ui-home-split-swatch-none")} aria-hidden="true" />
         <span className="ui-home-split-text">
           <span className="ui-home-split-label">רווח החודש</span>
           <span className="ui-home-split-sub">{`הפעילות השוטפת · ${String(parts.profitPct)}%`}</span>

@@ -39,7 +39,6 @@ describe("App", () => {
     expect(screen.getByText("חברו את הבנק")).toBeInTheDocument();
     expect(screen.getByText("עוד אין תנועות. הן יגיעו מהבנק.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "חיבור Mercury" })).toHaveAttribute("href", "/settings/connections?preview=1");
-    expect(screen.getByText("מצב תצוגה")).toBeInTheDocument();
     expect(screen.queryByText("נתוני דוגמה · Example data")).not.toBeInTheDocument();
     // The band reads the month's zero figure, as on the board (FLOW-364).
     expect(screen.getByText("₪0")).toBeInTheDocument();

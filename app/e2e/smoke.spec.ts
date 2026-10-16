@@ -10,7 +10,6 @@ test("preview home is the first-run empty state", async ({ page }) => {
   await expect(page.getByText("חברו את הבנק")).toBeVisible();
   await expect(page.getByText("עוד אין תנועות. הן יגיעו מהבנק.")).toBeVisible();
   await expect(page.getByRole("link", { name: "חיבור Mercury" })).toHaveAttribute("href", "/settings/connections?preview=1");
-  await expect(page.getByText("מצב תצוגה")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "ניווט ראשי" })).toBeVisible();
   // The band reads the month's zero figure, as on the board (FLOW-364).
   await expect(page.getByText("₪0")).toHaveCount(1);

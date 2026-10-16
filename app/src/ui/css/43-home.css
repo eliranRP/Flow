@@ -72,6 +72,10 @@
   background: var(--color-text-muted);
 }
 
+.ui-home-split-swatch.ui-home-split-loss {
+  background: var(--color-bad);
+}
+
 .ui-home-split-text {
   display: flex;
   flex: 1;
@@ -238,10 +242,24 @@
   text-align: center;
 }
 
+/* FLOW-364 (board): the empty band is shorter than a figure band; no padding above the month. */
+.ui-band-body-empty {
+  gap: var(--space-2);
+  padding-block-start: 0;
+}
+
+.ui-band:has(.ui-band-body-empty) {
+  padding-bottom: var(--space-3);
+}
+
 /* FLOW-364 (board, StatesHomeEmpty): the month on the band with no figure, then a bank card and what will show here. */
 .ui-band-month-static {
   margin: 0;
-  padding-block: var(--space-3);
+  block-size: var(--touch-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-block: 0;
   border-radius: var(--touch-min);
   background: var(--band-track);
   color: var(--color-on-band);

@@ -116,13 +116,13 @@ function NoBooksYet({ previewing, example, search, companyName, view }: { previe
   return (
     <div className="flex min-h-full min-w-0 flex-1 flex-col">
       <TopBand
-        preview={previewing}
+        preview={false}
         example={example}
         wordmark={false}
         leading={leading}
         trailing={<HomeBandActions isPast={false} currentName="" search={search} />}
       >
-        <div className="ui-band-body">
+        <div className="ui-band-body ui-band-body-empty">
           <p className="ui-band-month-static">{homeMonthLabel(currentKey)}</p>
           <Hero label={`תזרים ${monthName(currentKey)}`} agorot={0n} explanation="עוד אין תנועות. הן יגיעו מהבנק." />
         </div>
