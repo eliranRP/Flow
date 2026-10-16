@@ -212,6 +212,18 @@ async function proofInBrowser(input) {
 }
 
 /**
+ * Runs in the page: waits for every finite animation and transition (a sheet's scrim fade, say) to finish,
+ * so the shot shows the settled screen. Endless ones (spinners) are skipped. Gives up after 3 s.
+ */
+function settleAnimations() {
+  const finite = document
+    .getAnimations()
+    .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+    .map((animation) => animation.finished.catch(() => undefined));
+  return Promise.race([Promise.all(finite), new Promise((resolve) => setTimeout(resolve, 3000))]).then(() => undefined);
+}
+
+/**
  * Runs in the page: the box of every text node on the app screen, in CSS px, each padded by 2px.
  * @returns {Array<{ x: number, y: number, w: number, h: number }>}
  */
@@ -250,6 +262,7 @@ async function main(argv) {
       });
       const page = await context.newPage();
       await page.goto(new URL(shot.route, options.base).toString(), { waitUntil: "networkidle" });
+      await page.evaluate(settleAnimations);
       const appPng = await page.screenshot({ fullPage: false });
       const textRects = await page.evaluate(collectTextRects);
       await context.close();
