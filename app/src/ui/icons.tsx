@@ -564,3 +564,20 @@ export function MailIcon(props: IconProps) {
     </Svg>
   );
 }
+
+export function PauseIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <line x1="9" y1="6" x2="9" y2="18" />
+      <line x1="15" y1="6" x2="15" y2="18" />
+    </Svg>
+  );
+}
+
+export function PlayIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <polygon points="8 5 19 12 8 19 8 5" />
+    </Svg>
+  );
+}
