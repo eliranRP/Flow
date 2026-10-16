@@ -38,6 +38,8 @@ Take tasks in this order. The fast-cycle and cleanup rows (F1 to F3, owner 2026-
 | R3 | FLOW-372 |
 | R4a | FLOW-364 |
 | R4b | FLOW-366 |
+| R4c | FLOW-374 |
+| R4d | FLOW-375 |
 | R5a | FLOW-365 |
 | R5b | FLOW-367 |
 | R6a | FLOW-445 |
@@ -294,6 +296,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-371
 - FLOW-372
 - FLOW-373
+- FLOW-374
+- FLOW-375
 - FLOW-364
 - FLOW-365
 - FLOW-915

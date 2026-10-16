@@ -38,8 +38,14 @@ const invoice = (id: string, name: string): UnpaidRow => ({
   open_gross_agorot: 10_000n, open_net_agorot: 10_000n, currency: "ILS", direction: "income", marked_paid_at: null,
 });
 
-describe("Unpaid mark undo on the live path (FLOW-357)", () => {
-  it("marks from the sheet, then the toast's ביטול clears the mark with a second write", async () => {
+/** The list row of one invoice (its link carries the customer's name). */
+async function rowOf(name: string): Promise<HTMLElement> {
+  const link = await screen.findByRole("link", { name: new RegExp(name) });
+  return link.closest("li") as HTMLElement;
+}
+
+describe("Unpaid mark undo on the live path (FLOW-357, FLOW-367)", () => {
+  it("marks from the row, then the toast's ביטול clears the mark with a second write", async () => {
     db.rows = [invoice("a", "לקוח א"), invoice("b", "לקוח ב")];
     db.rpcs = [];
     render(
@@ -51,10 +57,8 @@ describe("Unpaid mark undo on the live path (FLOW-357)", () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    fireEvent.click(await screen.findByRole("button", { name: /לקוח א/ }));
-    const sheet = await screen.findByRole("dialog", { name: "לקוח א" });
-    fireEvent.click(within(sheet).getByRole("button", { name: "סימון כשולם" }));
-    const undo = await screen.findByRole("button", { name: "ביטול" });
+    fireEvent.click(within(await rowOf("לקוח א")).getByRole("button", { name: "סימון כשולם" }));
+    const undo = within(await screen.findByRole("status")).getByRole("button", { name: "ביטול" });
     expect(db.rpcs).toEqual([{ name: "set_invoice_paid", args: { p_id: "a", p_paid: true } }]);
     fireEvent.click(undo);
     await waitFor(() => { expect(db.rpcs).toHaveLength(2); });
@@ -75,22 +79,20 @@ describe("Unpaid mark undo on the live path (FLOW-357)", () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    fireEvent.click(await screen.findByRole("button", { name: /לקוח א/ }));
-    const sheet = await screen.findByRole("dialog", { name: "לקוח א" });
-    fireEvent.click(within(sheet).getByRole("button", { name: "סימון כשולם" }));
+    fireEvent.click(within(await rowOf("לקוח א")).getByRole("button", { name: "סימון כשולם" }));
     // The row takes its mark at once; the write is still pending.
-    expect(await screen.findByText("סומן כשולם · ממתין לסנכרון")).toBeInTheDocument();
+    expect((await screen.findAllByText("סומן כשולם · ממתין לסנכרון")).length).toBeGreaterThan(0);
     expect(db.rpcs).toEqual([{ name: "set_invoice_paid", args: { p_id: "a", p_paid: true } }]);
     await act(async () => {
       answer({ data: null, error: { message: "Failed to fetch" } });
       await Promise.resolve();
     });
     expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
-    expect(screen.queryByText("סומן כשולם · ממתין לסנכרון")).not.toBeInTheDocument();
+    expect(screen.queryAllByText("סומן כשולם · ממתין לסנכרון")).toHaveLength(0);
     db.gate = null;
     fireEvent.click(screen.getByRole("button", { name: "ניסיון חוזר" }));
     await waitFor(() => { expect(db.rpcs).toHaveLength(2); });
     expect(db.rpcs[1]).toEqual({ name: "set_invoice_paid", args: { p_id: "a", p_paid: true } });
-    expect(await screen.findByText("סומן כשולם · ממתין לסנכרון")).toBeInTheDocument();
+    expect((await screen.findAllByText("סומן כשולם · ממתין לסנכרון")).length).toBeGreaterThan(0);
   });
 });

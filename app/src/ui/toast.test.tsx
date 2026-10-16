@@ -337,6 +337,26 @@ describe("Toast", () => {
 });
 
 describe("Toast leaving (FLOW-363 3c)", () => {
+  it("cancels a leaving toast's sink timer when the provider unmounts", () => {
+    vi.useFakeTimers();
+    document.documentElement.style.setProperty("--motion-toast-out", "200ms");
+    try {
+      const { unmount } = render(
+        <ToastProvider>
+          <Probe message="הפריט אושר" />
+        </ToastProvider>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
+      fireEvent.click(screen.getByRole("status"));
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+      unmount();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+      document.documentElement.style.removeProperty("--motion-toast-out");
+    }
+  });
+
   it("clears a leaving toast at once when its out token reads 0", () => {
     document.documentElement.style.setProperty("--motion-toast-out", "0ms");
     try {

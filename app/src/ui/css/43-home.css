@@ -4,7 +4,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  margin: var(--space-4);
+  margin: var(--space-5) var(--space-4) var(--space-1);
   padding: var(--space-4);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
@@ -16,33 +16,6 @@
   font-size: var(--type-section-size);
   line-height: var(--type-section-line);
   font-weight: var(--type-section-weight);
-}
-
-.ui-home-split-bar {
-  display: flex;
-  block-size: var(--split-bar);
-  gap: var(--band-label-gap);
-  border-radius: var(--radius-block);
-  overflow: hidden;
-}
-
-.ui-home-split-kept,
-.ui-home-split-profit {
-  flex: 1 1 0;
-  min-inline-size: 0;
-  transition: flex-grow var(--motion-width) var(--ease-standard);
-}
-
-.ui-home-split-kept {
-  background: var(--color-accent);
-}
-
-.ui-home-split-profit {
-  background: var(--color-text-muted);
-}
-
-.ui-home-split-profit.ui-home-split-loss {
-  background: var(--color-bad);
 }
 
 .ui-home-split-row {
@@ -84,12 +57,14 @@
 }
 
 .ui-home-split-label {
-  font-size: var(--type-body-size);
+  font-size: var(--type-btn-2-size);
+  line-height: var(--type-line2-line);
 }
 
 .ui-home-split-sub {
   color: var(--color-text-muted);
   font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
 }
 
 .ui-home-split-value {
@@ -108,6 +83,7 @@
   color: var(--color-text-secondary);
   font-size: var(--type-meta-size);
   line-height: var(--type-meta-line);
+  font-weight: var(--type-meta-weight);
 }
 
 /* FLOW-364 (board): the box is one tint card; its rows are divided lines, 20px in. */

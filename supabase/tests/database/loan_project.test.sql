@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(89);
+select plan(91);
 
 do $users$
 begin
@@ -436,6 +436,20 @@ select is(
   '12000000',
   'the project''s loan carries its balance'
 );
+-- FLOW-446: the loan's terms come with it, so the client can work out its next payment.
+select is(
+  public.get_project((select id from lp where label = 'p1'), 'cash')->'loans'->0->>'principal_minor' is not null
+    and public.get_project((select id from lp where label = 'p1'), 'cash')->'loans'->0->>'start_date' is not null
+    and jsonb_typeof(public.get_project((select id from lp where label = 'p1'), 'cash')->'loans'->0->'rates') = 'array',
+  true,
+  'the project''s loan carries its principal, start date and rate history'
+);
+select is(
+  (public.get_project((select id from lp where label = 'p1'), 'cash')->'loans'->0->>'annual_rate_ppm')::integer is not null,
+  true,
+  'and its annual rate in parts per million'
+);
+
 select is(
   jsonb_array_length(public.get_project((select id from lp where label = 'p2'), 'cash')->'loans'),
   0,
