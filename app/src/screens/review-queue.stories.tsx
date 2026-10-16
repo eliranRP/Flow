@@ -134,7 +134,12 @@ const skipRows: ReviewRow[] = [plainRow, { ...plainRow, id: "r2", transaction_id
 function ReviewQueueSkipStory() {
   return (
     <StoryRoute entry="/review" tabs reviewCount={skipRows.length}>
-      <ReviewQueue rows={skipRows} search="" sample />
+      <ReviewQueue
+        rows={skipRows}
+        search=""
+        sample
+        previewWrite={{ run: () => Promise.resolve(), onDone: () => undefined, onUndo: () => undefined }}
+      />
     </StoryRoute>
   );
 }
