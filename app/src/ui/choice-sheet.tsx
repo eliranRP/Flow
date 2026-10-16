@@ -3,16 +3,16 @@ import { useSheetHistory } from "./back";
 import { RadioRow } from "./radio-row";
 import { Sheet } from "./sheet";
 
-/** A radio sheet's own words: its history entry, title, note under the rows, and the rows. */
-export type RadioSheetCopy<T extends string> = {
+/** A choice sheet's own words: its history entry, title, the note under the rows (if any), and the rows. */
+export type ChoiceSheetCopy<T extends string> = {
   historyKey: string;
   title: string;
-  note: string;
+  note?: string;
   choices: ReadonlyArray<{ value: T; label: string; description?: string }>;
 };
 
-export type RadioSheetProps<T extends string, V extends string = T> = {
-  copy: RadioSheetCopy<T>;
+export type ChoiceSheetProps<T extends string, V extends string = T> = {
+  copy: ChoiceSheetCopy<T>;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** The stored choice. */
@@ -28,10 +28,10 @@ export type RadioSheetProps<T extends string, V extends string = T> = {
 };
 
 /**
- * A sheet of radio rows that apply on tap (FLOW-103, FLOW-504). The tapped row spins while it
- * saves and the other row waits; a close during the save waits too.
+ * A sheet of radio rows that apply on tap (FLOW-103, FLOW-504, FLOW-415). The tapped row spins
+ * while it saves and the other rows wait. A close during the save waits for it: the sheet is busy.
  */
-export function RadioSheet<T extends string, V extends string = T>({
+export function ChoiceSheet<T extends string, V extends string = T>({
   copy,
   open,
   onOpenChange,
@@ -39,9 +39,11 @@ export function RadioSheet<T extends string, V extends string = T>({
   saving,
   onPick,
   returnFocusRef,
-}: RadioSheetProps<T, V>) {
+}: ChoiceSheetProps<T, V>) {
   // Set by `close`: the save has settled, so Back's popstate must not wait on a stale `saving`.
   const closing = useRef(false);
+  /** The sheet's own close: a success close and a dismiss both go through it, so the save's wait applies. */
+  const requestSheetClose = useRef<(() => void) | null>(null);
   useEffect(() => {
     if (open) closing.current = false;
   }, [open]);
@@ -50,12 +52,11 @@ export function RadioSheet<T extends string, V extends string = T>({
   return (
     <Sheet
       open={open}
-      onOpenChange={(next) => {
-        if (!next && saving != null) return;
-        setOpen(next);
-      }}
+      onOpenChange={setOpen}
       title={copy.title}
       returnFocusRef={returnFocusRef}
+      busy={saving != null}
+      onRequestClose={requestSheetClose}
     >
       <div role="radiogroup" aria-label={copy.title}>
         {copy.choices.map((choice) => (
@@ -63,6 +64,7 @@ export function RadioSheet<T extends string, V extends string = T>({
             key={choice.value}
             label={choice.label}
             description={choice.description}
+            value={choice.value}
             selected={saving == null && choice.value === stored}
             busy={saving === choice.value}
             disabled={saving != null && saving !== choice.value}
@@ -73,13 +75,13 @@ export function RadioSheet<T extends string, V extends string = T>({
               }
               onPick(choice.value, () => {
                 closing.current = true;
-                setOpen(false);
+                requestSheetClose.current?.();
               });
             }}
           />
         ))}
       </div>
-      <p className="t-hint ui-pick-note">{copy.note}</p>
+      {copy.note ? <p className="t-hint ui-pick-note">{copy.note}</p> : null}
     </Sheet>
   );
 }

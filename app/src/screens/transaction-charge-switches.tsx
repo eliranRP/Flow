@@ -6,8 +6,8 @@ import { loadReadSchemas } from "../load-read-schemas";
 import { useHomePreview } from "../preview";
 import { transactionQueryOptions } from "../use-books";
 import { assertNoError, useWrite } from "../use-write";
-import { ChargeSwitches, chargeSwitchToast, paceToast } from "../ui/charge-switches";
-import { PaceSheet } from "../ui/pace-sheet";
+import { ChargeSwitches, chargeSwitchToast, PACE_COPY, paceToast } from "../ui/charge-switches";
+import { ChoiceSheet } from "../ui/choice-sheet";
 import { useToast } from "../ui/toast";
 import { useBlockedPreview } from "./screen-shared";
 
@@ -196,7 +196,8 @@ export function TxnChargeSwitches({
           setPaceOpen(true);
         }}
       />
-      <PaceSheet
+      <ChoiceSheet
+        copy={PACE_COPY}
         open={paceOpen}
         onOpenChange={setPaceOpen}
         value={currentPace}

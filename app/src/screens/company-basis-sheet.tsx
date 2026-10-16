@@ -1,7 +1,8 @@
 import { useRef, type RefObject } from "react";
 import { getSupabase } from "../lib/supabase";
 import { forgetProjectReads } from "../project-cache";
-import { BasisSheet, type BasisChoice } from "../ui/basis-sheet";
+import { ChoiceSheet } from "../ui/choice-sheet";
+import { BASIS_COPY, type BasisChoice } from "../ui/company-choices";
 import { useToast } from "../ui/toast";
 import { assertNoError, useWrite, type WriteFailure } from "../use-write";
 
@@ -74,7 +75,8 @@ export function CompanyBasisSheet({
     },
   });
   return (
-    <BasisSheet
+    <ChoiceSheet
+      copy={BASIS_COPY}
       open={open}
       onOpenChange={onOpenChange}
       value={basis}

@@ -66,8 +66,128 @@ describe("Sheet", () => {
     expect(closed).toBe(1);
   });
 
+  it("sets the title on the sheet role (20/600), not the name role", () => {
+    render(
+      <Sheet open onOpenChange={() => undefined} title="תקופה">
+        <p>תוכן</p>
+      </Sheet>,
+    );
+    expect(screen.getByRole("heading", { name: "תקופה" })).toHaveClass("t-sheet");
+    expect(screen.getByRole("heading", { name: "תקופה" })).not.toHaveClass("t-title-2");
+  });
+
   it("sizes the tall sheet with the visual viewport variable", () => {
     expect(tallSheetHeightRule()).toContain("var(--vvh");
+  });
+});
+
+describe("Sheet while a save is in flight (FLOW-363 3b)", () => {
+  const tick = () => act(async () => { await Promise.resolve(); });
+
+  it("has no ✕ and marks the dialog busy; a closed sheet shows ✕ again", () => {
+    const { rerender } = render(
+      <Sheet open busy onOpenChange={() => undefined} title="תקופה">
+        <p>תוכן</p>
+      </Sheet>,
+    );
+    expect(screen.getByRole("dialog", { name: "תקופה" })).toHaveAttribute("aria-busy", "true");
+    expect(screen.queryByRole("button", { name: "סגירה" })).toBeNull();
+    rerender(
+      <Sheet open onOpenChange={() => undefined} title="תקופה">
+        <p>תוכן</p>
+      </Sheet>,
+    );
+    expect(screen.getByRole("dialog", { name: "תקופה" })).not.toHaveAttribute("aria-busy");
+    expect(screen.getByRole("button", { name: "סגירה" })).toBeInTheDocument();
+  });
+
+  it("keeps a busy sheet open on Escape and a scrim tap, then closes it once when the save settles", async () => {
+    const onOpenChange = vi.fn();
+    const sheet = (busy: boolean) => (
+      <Sheet open busy={busy} onOpenChange={onOpenChange} title="תקופה">
+        <p>תוכן</p>
+      </Sheet>
+    );
+    const { rerender } = render(sheet(true));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    fireEvent.keyDown(document, { key: "Escape" });
+    await tick();
+    fireEvent.pointerDown(document.querySelector(".ui-sheet-scrim") ?? document.body);
+    await tick();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "תקופה" })).toBeInTheDocument();
+    rerender(sheet(false));
+    await waitFor(() => { expect(onOpenChange).toHaveBeenCalledWith(false); });
+    await tick();
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves a sheet open when onBeforeClose refuses, and the next accepted ✕ closes it", async () => {
+    const veto = { current: true };
+    const onOpenChange = vi.fn();
+    render(
+      <Sheet open onOpenChange={onOpenChange} title="תקופה" onBeforeClose={() => (veto.current ? false : undefined)}>
+        <p>תוכן</p>
+      </Sheet>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await tick();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "תקופה" })).toBeInTheDocument();
+    veto.current = false;
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await waitFor(() => { expect(onOpenChange).toHaveBeenCalledWith(false); });
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes once when a dismiss and the success close both land during a save", async () => {
+    const onOpenChange = vi.fn();
+    const onCloseKind = vi.fn();
+    const requestClose: { current: (() => void) | null } = { current: null };
+    const sheet = (busy: boolean) => (
+      <Sheet
+        open
+        busy={busy}
+        onOpenChange={onOpenChange}
+        onCloseKind={onCloseKind}
+        onRequestClose={requestClose}
+        title="תקופה"
+      >
+        <p>תוכן</p>
+      </Sheet>
+    );
+    const { rerender } = render(sheet(true));
+    await tick();
+    fireEvent.keyDown(document, { key: "Escape" });
+    await tick();
+    act(() => { requestClose.current?.(); });
+    await tick();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    rerender(sheet(false));
+    await waitFor(() => { expect(onOpenChange).toHaveBeenCalledWith(false); });
+    await tick();
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
+    expect(onCloseKind).toHaveBeenCalledTimes(1);
+    expect(onCloseKind).toHaveBeenCalledWith(true);
+  });
+
+  it("reports an Escape held through a save as a key close once the save clears", async () => {
+    const onOpenChange = vi.fn();
+    const onCloseKind = vi.fn();
+    const sheet = (busy: boolean) => (
+      <Sheet open busy={busy} onOpenChange={onOpenChange} onCloseKind={onCloseKind} title="תקופה">
+        <p>תוכן</p>
+      </Sheet>
+    );
+    const { rerender } = render(sheet(true));
+    await tick();
+    fireEvent.keyDown(document, { key: "Escape" });
+    await tick();
+    expect(onCloseKind).not.toHaveBeenCalled();
+    rerender(sheet(false));
+    await waitFor(() => { expect(onCloseKind).toHaveBeenCalledWith(true); });
+    expect(onCloseKind).toHaveBeenCalledTimes(1);
+    await waitFor(() => { expect(onOpenChange).toHaveBeenCalledWith(false); });
   });
 });
 

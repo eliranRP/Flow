@@ -1,0 +1,34 @@
+import type { Meta, StoryObj } from "@storybook/react";
+import { PACE_COPY } from "./charge-switches";
+import { ChoiceSheet } from "./choice-sheet";
+import { BASIS_COPY, CURRENCY_COPY } from "./company-choices";
+import { forceReducedMotion } from "./reduced-motion";
+import { padded } from "./story-support";
+
+/** One sheet of radio rows that apply on tap: currency, basis and pace (FLOW-103, FLOW-504, FLOW-415). */
+const meta = {
+  title: "Components/ChoiceSheet",
+  component: ChoiceSheet,
+  decorators: [padded],
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+} satisfies Meta<typeof ChoiceSheet>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+const noop = () => undefined;
+
+export const Default: Story = {
+  args: { copy: CURRENCY_COPY, open: true, onOpenChange: noop, value: "ILS", saving: null, onPick: noop },
+};
+export const WithDescriptions: Story = {
+  args: { copy: BASIS_COPY, open: true, onOpenChange: noop, value: "cash", saving: null, onPick: noop },
+};
+/** The tapped row spins; the other rows wait until the save settles. */
+export const Saving: Story = {
+  args: { copy: PACE_COPY, open: true, onOpenChange: noop, value: "month", saving: "2months", onPick: noop },
+};
+export const ReducedMotion: Story = {
+  args: { copy: PACE_COPY, open: true, onOpenChange: noop, value: "quarter", saving: null, onPick: noop },
+  decorators: [forceReducedMotion],
+};

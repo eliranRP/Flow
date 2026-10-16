@@ -1,6 +1,7 @@
 import { useRef, type RefObject } from "react";
 import { getSupabase } from "../lib/supabase";
-import { CurrencySheet, type CurrencyChoice } from "../ui/currency-sheet";
+import { ChoiceSheet } from "../ui/choice-sheet";
+import { CURRENCY_COPY, type CurrencyChoice } from "../ui/company-choices";
 import { useToast } from "../ui/toast";
 import { assertNoError, useWrite, type WriteFailure } from "../use-write";
 
@@ -71,7 +72,8 @@ export function CompanyCurrencySheet({
     },
   });
   return (
-    <CurrencySheet
+    <ChoiceSheet
+      copy={CURRENCY_COPY}
       open={open}
       onOpenChange={onOpenChange}
       value={currency}
