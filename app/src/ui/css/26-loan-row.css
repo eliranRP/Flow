@@ -65,3 +65,78 @@
 .ui-loan-parts-retry {
   margin-block-start: var(--space-2);
 }
+
+/* FLOW-139: the loans list's summary card and its parts bar. */
+.ui-loan-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 18px;
+  border-radius: 20px;
+}
+
+.ui-loan-summary-label {
+  margin: 0;
+  font-size: 15px;
+  color: var(--color-text-secondary);
+}
+
+.ui-loan-summary-total {
+  font-size: 34px;
+  font-weight: 400;
+  line-height: 1.15;
+}
+
+.ui-loan-summary-monthly {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--color-line);
+}
+
+.ui-loan-summary-caption {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.ui-parts-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-parts-track {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ui-parts-seg {
+  display: block;
+  min-width: 2px;
+}
+
+.ui-parts-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+
+.ui-parts-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.ui-parts-name {
+  color: var(--color-text-secondary);
+}
+
+.ui-parts-amount {
+  margin-inline-start: auto;
+}

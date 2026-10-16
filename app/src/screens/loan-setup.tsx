@@ -43,6 +43,10 @@ import {
   type LoanPreview,
 } from "./loan-form";
 import { LoanGroupedList, groupLoans, useLoanList, type LoanListRow } from "./loan-list";
+import { loanListSummary } from "./loan-list-summary";
+import { LoanSummaryCard } from "./loan-summary-card";
+import { useLoanSummaryEntries } from "./loan-summary-entries";
+import { israelToday } from "../ui/date-math";
 import { type LoanProjectField, LoanProjectPicker, type LoanProjectSource, NO_PROJECT, projectNameOf } from "./loan-project-picker";
 
 // Moved to their own files (FLOW-807). Import from those files in new code.
@@ -556,6 +560,8 @@ export function LoanSettingsSection({
     return false;
   }, adoptNew);
   const balances = useLoanList(sample == null ? companyId : null);
+  // FLOW-139: the summary card reads each loan's outlook, the same figures the loan page shows.
+  const summaryEntries = useLoanSummaryEntries(sample == null ? companyId : null, israelToday());
   const holdWrites = useHoldWrites();
   const emptyButton = useRef<HTMLButtonElement>(null);
   const query = useQuery({
@@ -567,6 +573,10 @@ export function LoanSettingsSection({
   const currency: LoanCurrency | null = companyCurrency
     ?? query.data
     ?? (query.isFetched || companyId == null ? "ILS" : null);
+  const summary = useMemo(
+    () => (summaryEntries.data == null || currency == null ? null : loanListSummary(summaryEntries.data.filter((entry) => entry.loan.currency === currency))),
+    [summaryEntries.data, currency],
+  );
   const save = useWrite<Omit<LoanInsert, "company_id">>({
     failure: (error) => {
       const code = (error as { code?: string }).code;
@@ -668,6 +678,7 @@ export function LoanSettingsSection({
               )}
             />
           ) : null}
+          {summary != null && summary.openCount > 0 && currency != null ? <LoanSummaryCard summary={summary} currency={currency} /> : null}
           {/* A viewer reads the loan's page too, as static rows. */}
           <LoanGroupedList
             rows={rows}
