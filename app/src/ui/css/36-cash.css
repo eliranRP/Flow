@@ -43,3 +43,42 @@
 .ui-profit-rows {
   margin-block-start: var(--space-4);
 }
+
+/* FLOW-366: the month lines page. The count line sits under the total, in muted text. */
+.ui-lines-count {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+/* The order chips bleed to the screen's edge and scroll sideways; their first chip lines up with the text. */
+.ui-lines-chips {
+  margin-inline: calc(var(--space-4) * -1);
+  padding-inline: var(--space-side);
+}
+
+/* A group: its head sticks under the top of the screen, or under the compact bar when it shows
+   (--month-sticky-top, set on html by 27-compact-header.css). */
+.ui-lines-group {
+  padding: 0 var(--space-side) var(--space-2);
+}
+
+.ui-lines-group-head {
+  position: sticky;
+  inset-block-start: var(--month-sticky-top, 0);
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-5) 0 var(--space-2);
+  background: var(--color-bg);
+}
+
+.ui-lines-group-title {
+  margin: 0;
+}
+
+.ui-lines-group-sum {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}

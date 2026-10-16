@@ -5,7 +5,7 @@ import { groupLines, lineDayTitle, lineInitials, linesOrder, linesSummary } from
 
 const TODAY = "2026-10-11";
 
-// Invented lines on יצא (amounts are negative there, as the server sends them).
+// Invented lines on יצא (the server sends each row positive on its own side).
 function line(overrides: Partial<CashLine> & Pick<CashLine, "transaction_id" | "amount_minor">): CashLine {
   return {
     part: null,
@@ -23,10 +23,10 @@ function line(overrides: Partial<CashLine> & Pick<CashLine, "transaction_id" | "
 }
 
 const rows: CashLine[] = [
-  line({ transaction_id: "a", amount_minor: -120_000n, cash_month_date: "2026-10-11", project_name: "דירת הגפן", category_name: "חומרים" }),
-  line({ transaction_id: "b", amount_minor: -45_000n, cash_month_date: "2026-10-10", project_name: null, category_name: "חומרים", supplier_name: "אור חשמל" }),
-  line({ transaction_id: "c", amount_minor: -300_000n, cash_month_date: "2026-10-10", project_name: "בית הים", category_name: "שיפוץ", supplier_name: "מים ושות׳", pending: true, in_pnl: false }),
-  line({ transaction_id: "d", amount_minor: -45_000n, cash_month_date: "2026-10-02", project_name: "דירת הגפן", category_name: null, supplier_name: "אור חשמל" }),
+  line({ transaction_id: "a", amount_minor: 120_000n, cash_month_date: "2026-10-11", project_name: "דירת הגפן", category_name: "חומרים" }),
+  line({ transaction_id: "b", amount_minor: 45_000n, cash_month_date: "2026-10-10", project_name: null, category_name: "חומרים", supplier_name: "אור חשמל" }),
+  line({ transaction_id: "c", amount_minor: 300_000n, cash_month_date: "2026-10-10", project_name: "בית הים", category_name: "שיפוץ", supplier_name: "מים ושות׳", pending: true, in_pnl: false }),
+  line({ transaction_id: "d", amount_minor: 45_000n, cash_month_date: "2026-10-02", project_name: "דירת הגפן", category_name: null, supplier_name: "אור חשמל" }),
 ];
 
 describe("linesOrder", () => {

@@ -128,3 +128,8 @@ export function sampleCashYearMonths(now = new Date()): NonNullable<CashMonths> 
     }),
   };
 }
+
+/** FLOW-366: the lines with the flags the server sends. The first has a review open, the second is out of profit. */
+export function sampleCashLinesFlagged(side: "in" | "out" | "kept", now = new Date()): CashLine[] {
+  return sampleCashLines(side, now).map((row, index) => ({ ...row, pending: index === 0, in_pnl: index !== 1 }));
+}

@@ -1,5 +1,6 @@
 import type { CashLine } from "@flow/shared";
-import type { CashListSide } from "./cash";
+import { cashLoanPart, type CashListSide } from "./cash";
+import { LOAN_PART_LABEL } from "./ui/loan-part-terms";
 
 /**
  * FLOW-366. The month lines page's order and groups, as pure functions. Money is signed on the
@@ -30,10 +31,13 @@ export type LineGroup = {
   rows: CashLine[];
 };
 
-/** A line's amount on the page's side. On נכנס and יצא both are the side's own figure; on לא נספר ברווח each row keeps its own side. */
+/**
+ * A line's amount on the page's side. The server sends each row positive on its own side (a refund
+ * comes through negative). On נכנס and יצא that is the figure; on לא נספר ברווח money in counts
+ * plus and money out minus, as the side's net does.
+ */
 export function sideMinor(row: CashLine, side: CashListSide): bigint {
-  if (side === "in") return row.amount_minor;
-  if (side === "out") return -row.amount_minor;
+  if (side !== "kept") return row.amount_minor;
   return row.side === "in" ? row.amount_minor : -row.amount_minor;
 }
 
@@ -130,4 +134,15 @@ export function lineInitials(name: string | null | undefined): string {
   if (first == null) return "?";
   if (second != null) return `${Array.from(first)[0] ?? ""}${Array.from(second)[0] ?? ""}`.toUpperCase();
   return Array.from(first).slice(0, 2).join("").toUpperCase();
+}
+
+/**
+ * The reason a line is out of profit, on its tag line: the loan's principal ("קרן הלוואה"), another
+ * loan part by its label, otherwise the category. Null when the line has no category.
+ */
+export function lineTagReason(row: CashLine): string | null {
+  const part = cashLoanPart(row.part);
+  if (part === "principal") return "קרן הלוואה";
+  if (part != null) return LOAN_PART_LABEL[part];
+  return row.category_name;
 }

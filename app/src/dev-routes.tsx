@@ -22,7 +22,7 @@ import { attentionRows, CashHome, HomeBooks } from "./screens/HomeScreen";
 import { chargeChangeViews } from "./forecast";
 import { CashLinesScreen } from "./screens/cash-lines-screen";
 import { CashMonthScreen } from "./screens/cash-screens";
-import { sampleCashLines, sampleCashMonths, sampleCashYearMonths, sampleCashYears } from "./dev/cash-sample";
+import { sampleCashLines, sampleCashLinesFlagged, sampleCashMonths, sampleCashYearMonths, sampleCashYears } from "./dev/cash-sample";
 import { CashHistoryScreen, CashYearScreen } from "./screens/cash-history";
 import { cashMonthKey } from "./cash";
 import {
@@ -344,15 +344,17 @@ export function DevCashMonth() {
   return <CashMonthScreen sample={data} monthKey={cashMonthKey(data.months[1]?.month ?? "")} />;
 }
 
-/** FLOW-413: this month's יצא lines; `?side=in` shows נכנס, `?side=kept` לא נספר ברווח (FLOW-418). */
+/** FLOW-413: this month's יצא lines; `?side=in` shows נכנס, `?side=kept` לא נספר ברווח (FLOW-418). FLOW-366: `?order=` and `?pending=1`. */
 export function DevCashLines() {
   const [params] = useSearchParams();
   const asked = params.get("side");
   const side = asked === "in" || asked === "kept" ? asked : "out";
+  // FLOW-366: ?pending=1 flags the first line for review and the second as out of profit.
+  const flagged = params.get("pending") === "1";
   const data = sampleCashMonths();
   return (
     <CashLinesScreen
-      sample={{ months: data, lines: sampleCashLines(side) }}
+      sample={{ months: data, lines: flagged ? sampleCashLinesFlagged(side) : sampleCashLines(side) }}
       at={{ month: cashMonthKey(data.months[0]?.month ?? ""), side, currency: "ILS" }}
     />
   );
