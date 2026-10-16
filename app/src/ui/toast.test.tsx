@@ -352,10 +352,10 @@ describe("Toast leaving (FLOW-363 3c)", () => {
       unmount();
       expect(vi.getTimerCount()).toBe(0);
     } finally {
+      vi.useRealTimers();
       document.documentElement.style.removeProperty("--motion-toast-out");
     }
   });
-
 
   it("clears a leaving toast at once when its out token reads 0", () => {
     document.documentElement.style.setProperty("--motion-toast-out", "0ms");
