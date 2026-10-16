@@ -21,13 +21,13 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-export const THEME_NAMES = ["dark", "light"];
-export const PROOF_WIDTH = 390;
-export const PROOF_HEIGHT = 844;
-export const PROOF_DPR = 2;
+const THEME_NAMES = ["dark", "light"];
+const PROOF_WIDTH = 390;
+const PROOF_HEIGHT = 844;
+const PROOF_DPR = 2;
 /** A channel difference up to this (of 255) counts as the same pixel: anti-aliasing and sub-pixel text. */
-export const CHANNEL_TOLERANCE = 16;
-export const DEFAULT_BOARDS = "/mnt/project-files/design/board-png";
+const CHANNEL_TOLERANCE = 16;
+const DEFAULT_BOARDS = "/mnt/project-files/design/board-png";
 
 /**
  * @param {string[]} argv the arguments after the script name
@@ -141,7 +141,7 @@ export function mismatchPercent(a, b, tolerance) {
  * and returns the three panels side by side as a PNG data URL with the mismatch.
  * @param {{ boardUrl: string, appUrl: string, width: number, height: number, tolerance: number, mismatchSource: string }} input
  */
-export async function proofInBrowser(input) {
+async function proofInBrowser(input) {
   const mismatch = new Function(`return (${input.mismatchSource});`)();
   const load = (src) =>
     new Promise((resolve, reject) => {
@@ -208,7 +208,7 @@ async function main(argv) {
       await page.goto(new URL(shot.route, options.base).toString(), { waitUntil: "networkidle" });
       const appPng = await page.screenshot({ fullPage: false });
       await context.close();
-      const boardUrl = pathToFileURL(shot.board).toString();
+      const boardUrl = `data:image/png;base64,${readFileSync(shot.board).toString("base64")}`;
       const appUrl = `data:image/png;base64,${appPng.toString("base64")}`;
       const proofPage = await browser.newPage();
       const result = await proofPage.evaluate(proofInBrowser, {
