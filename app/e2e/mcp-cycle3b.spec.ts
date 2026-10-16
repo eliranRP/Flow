@@ -103,8 +103,11 @@ test("skip, approve, and undo keep the visit index and grow the total", async ({
       await expect(page.getByRole("heading", { name: "צבעי הכרמל בע״מ" })).toBeVisible();
       await page.getByRole("button", { name: "אישור" }).click();
       await expect(page.getByRole("heading", { name: "עגורני החוף בע״מ" })).toBeVisible();
+      await page.getByRole("button", { name: "אישור" }).click();
+      await expect(page.getByText("הכל מאושר")).toBeVisible();
+      await expect(page.getByText("מתוך")).toHaveCount(0);
       await page.locator(".ui-toast button", { hasText: "ביטול" }).click();
-      await expect(page.getByRole("heading", { name: "צבעי הכרמל בע״מ" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "עגורני החוף בע״מ" })).toBeVisible();
       await expect(page.getByText("4 מתוך 4")).toBeVisible();
       await expectNoOverflow(page);
     }

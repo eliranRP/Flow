@@ -133,6 +133,10 @@ test("the queue opens a shared split, blocks a missing category, and approves th
   await page.getByRole("button", { name: "אישור" }).click();
   await toast(page, "הפריט אושר");
   await expect(page.getByRole("heading", { name: "עגורני החוף בע״מ" })).toBeVisible();
+  await page.getByRole("button", { name: "אישור" }).click();
+  await expect(page.getByText("הכל מאושר")).toBeVisible();
+  await page.getByRole("link", { name: "חזרה לבית" }).click();
+  await expect(page).toHaveURL(/\/reviewer$/);
 });
 
 test("a refused queue save has no retry, and a dropped connection does", async ({ page }) => {
