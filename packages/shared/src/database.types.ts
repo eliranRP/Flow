@@ -627,13 +627,13 @@ isOneToOne: false
                   ]
                 },"projects": {
                   Row: {
-                    "after_overhead": boolean | null,"arv_minor": number | null,"budget_agorot": number | null,"company_id": string,"created_at": string,"group_id": string | null,"id": string,"investment_currency": string,"name": string,"purchase_minor": number | null,"state_label": string | null,"status": Database["public"]['Enums']["project_status"],"sumit_budget_section_id": number | null,"updated_at": string,"value_date": string | null,"value_minor": number | null
+                    "after_overhead": boolean | null,"arv_minor": number | null,"budget_agorot": number | null,"company_id": string,"created_at": string,"finished_on": string | null,"group_id": string | null,"id": string,"investment_currency": string,"name": string,"purchase_minor": number | null,"state_label": string | null,"status": Database["public"]['Enums']["project_status"],"sumit_budget_section_id": number | null,"updated_at": string,"value_date": string | null,"value_minor": number | null
                   }
                   Insert: {
-                    "after_overhead"?: boolean | null,"arv_minor"?: number | null,"budget_agorot"?: number | null,"company_id": string,"created_at"?: string,"group_id"?: string | null,"id"?: string,"investment_currency"?: string,"name": string,"purchase_minor"?: number | null,"state_label"?: string | null,"status"?: Database["public"]['Enums']["project_status"],"sumit_budget_section_id"?: number | null,"updated_at"?: string,"value_date"?: string | null,"value_minor"?: number | null
+                    "after_overhead"?: boolean | null,"arv_minor"?: number | null,"budget_agorot"?: number | null,"company_id": string,"created_at"?: string,"finished_on"?: string | null,"group_id"?: string | null,"id"?: string,"investment_currency"?: string,"name": string,"purchase_minor"?: number | null,"state_label"?: string | null,"status"?: Database["public"]['Enums']["project_status"],"sumit_budget_section_id"?: number | null,"updated_at"?: string,"value_date"?: string | null,"value_minor"?: number | null
                   }
                   Update: {
-                    "after_overhead"?: boolean | null,"arv_minor"?: number | null,"budget_agorot"?: number | null,"company_id"?: string,"created_at"?: string,"group_id"?: string | null,"id"?: string,"investment_currency"?: string,"name"?: string,"purchase_minor"?: number | null,"state_label"?: string | null,"status"?: Database["public"]['Enums']["project_status"],"sumit_budget_section_id"?: number | null,"updated_at"?: string,"value_date"?: string | null,"value_minor"?: number | null
+                    "after_overhead"?: boolean | null,"arv_minor"?: number | null,"budget_agorot"?: number | null,"company_id"?: string,"created_at"?: string,"finished_on"?: string | null,"group_id"?: string | null,"id"?: string,"investment_currency"?: string,"name"?: string,"purchase_minor"?: number | null,"state_label"?: string | null,"status"?: Database["public"]['Enums']["project_status"],"sumit_budget_section_id"?: number | null,"updated_at"?: string,"value_date"?: string | null,"value_minor"?: number | null
                   }
                   Relationships: [
                     {
@@ -1120,6 +1120,9 @@ isOneToOne: false
 "delete_loan":
 { Args: { "p_loan_id": string }; Returns: Json
                            },
+"delete_project":
+{ Args: { "p_id": string }; Returns: Json
+                           },
 "delete_project_group":
 { Args: { "p_id": string }; Returns: Json
                            },
@@ -1291,7 +1294,7 @@ isOneToOne: false
 { Args: { "p_idempotency_key": string,"p_kind": string,"p_name": string,"p_parent_id": string }; Returns: Json
                            },
 "mcp_create_project":
-{ Args: { "p_idempotency_key": string,"p_name": string,"p_status"?: string }; Returns: Json
+{ Args: { "p_budget_minor"?: number,"p_idempotency_key": string,"p_name": string,"p_status"?: string,"p_type"?: string }; Returns: Json
                            },
 "mcp_create_project_group":
 { Args: { "p_idempotency_key": string,"p_name": string }; Returns: Json
@@ -1307,6 +1310,9 @@ isOneToOne: false
                            },
 "mcp_delete_loan":
 { Args: { "p_idempotency_key": string,"p_loan_id": string }; Returns: Json
+                           },
+"mcp_delete_project":
+{ Args: { "p_id": string,"p_idempotency_key": string }; Returns: Json
                            },
 "mcp_detach_loan_payment":
 { Args: { "p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
@@ -1443,6 +1449,9 @@ isOneToOne: false
 "mcp_update_loan":
 { Args: { "p_idempotency_key": string,"p_loan_id": string,"p_patch": Json }; Returns: Json
                            },
+"mcp_update_project":
+{ Args: { "p_id": string,"p_idempotency_key": string,"p_patch": Json }; Returns: Json
+                           },
 "merge_category":
 { Args: { "p_from": string,"p_into": string }; Returns: undefined
                            },
@@ -1502,6 +1511,9 @@ isOneToOne: false
                            },
 "project_waiting":
 { Args: { "p_project": string }; Returns: Json
+                           },
+"projects_cash_month":
+{ Args: { "p_month"?: string,"p_project"?: string,"p_today"?: string }; Returns: Json
                            },
 "push_claim_targets":
 { Args: { "p_kind": string }; Returns: {
@@ -1696,7 +1708,7 @@ isOneToOne: false
         isSetofReturn: false
       } },
 "upsert_project":
-{ Args: { "p_budget_agorot"?: number,"p_id"?: string,"p_name"?: string,"p_status"?: string }; Returns: string
+{ Args: { "p_budget_agorot"?: number,"p_id"?: string,"p_name"?: string,"p_status"?: string,"p_type"?: string }; Returns: string
                            },
 "upsert_project_group":
 { Args: { "p_id": string,"p_name": string }; Returns: string
