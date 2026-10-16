@@ -244,12 +244,12 @@
 
 /* FLOW-364 (board): the empty band is shorter than a figure band; no padding above the month. */
 .ui-band-body-empty {
-  gap: var(--space-2);
-  padding-block-start: 0;
+  gap: 0;
+  padding-block-start: var(--space-3);
 }
 
 .ui-band:has(.ui-band-body-empty) {
-  padding-bottom: var(--space-3);
+  padding-bottom: var(--space-1);
 }
 
 /* FLOW-364 (board, StatesHomeEmpty): the month on the band with no figure, then a bank card and what will show here. */
@@ -274,7 +274,7 @@
   flex-direction: column;
   align-items: stretch;
   gap: var(--space-3);
-  margin: var(--space-5) var(--space-side) 0;
+  margin: var(--space-4) var(--space-side) 0;
   padding: var(--space-5);
   border-radius: var(--radius-card);
   background: var(--color-surface);
@@ -334,6 +334,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  padding-block: var(--space-4);
 }
 
 .ui-home-empty-list li::before {
@@ -348,4 +349,13 @@
 .ui-home-empty-link-row {
   margin: 0;
   text-align: center;
+}
+
+/* FLOW-364 (board): the manual-add link under the button is a centred text link with no chevron. */
+.ui-home-empty-manual {
+  color: var(--color-accent);
+  font-size: var(--type-btn-size);
+  font-weight: var(--type-btn-2-weight);
+  text-align: center;
+  text-decoration: none;
 }

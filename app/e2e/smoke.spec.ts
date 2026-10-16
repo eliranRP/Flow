@@ -34,7 +34,7 @@ test("add is a sheet over Home and transaction detail has no tab bar", async ({ 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/?preview=1");
   expect(await page.evaluate(() => (history.state as { idx?: number }).idx)).toBe(0);
-  await page.getByRole("link", { name: "הוספה" }).click();
+  await page.getByRole("link", { name: "הוספה", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();
   const motion = await page.evaluate(() => {
     const drawer = document.querySelector("[data-vaul-drawer]");
@@ -68,11 +68,11 @@ test("add is a sheet over Home and transaction detail has no tab bar", async ({ 
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "הוספה" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "חברו את הבנק" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "הוספה" })).toBeFocused();
+  await expect(page.getByRole("link", { name: "הוספה", exact: true })).toBeFocused();
   expect(await page.evaluate(() => (history.state as { idx?: number }).idx)).toBe(0);
   // /projects has no + (FLOW-364): the add is Home's band button only.
   await page.goto("/projects?preview=1");
-  await expect(page.getByRole("link", { name: "הוספה" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "הוספה", exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "פרויקטים" })).toBeVisible();
   await page.goto("/transactions/1?preview=1");
   await expect(page.getByRole("heading", { name: "פרטי תנועה" })).toBeVisible();

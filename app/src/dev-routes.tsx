@@ -19,7 +19,7 @@ import { ProgressBar } from "./ui/progress-bar";
 import { ReviewCard } from "./ui/review-card";
 import { ScreenHeader } from "./ui/screen-header";
 import { useToast } from "./ui/toast";
-import { attentionRows, CashHome, HomeBooks } from "./screens/HomeScreen";
+import { attentionRows, CashEmptyHome, CashHome, HomeBooks } from "./screens/HomeScreen";
 import { chargeChangeViews } from "./forecast";
 import { CashLinesScreen, CashMonthScreen } from "./screens/cash-screens";
 import { sampleCashLines, sampleCashMonths, sampleCashToDay, sampleCashUsdLoss, sampleCashUsdToDay, sampleCashYearMonths, sampleCashYears } from "./dev/cash-sample";
@@ -350,6 +350,20 @@ export function DevCash() {
         void navigate(`/e2e/cash?month=${key}`, { replace: true });
       }}
       initialDrawerOpen={params.get("drawer") === "1"}
+    />
+  );
+}
+
+/** FLOW-364 (board, StatesHomeEmpty): the signed-in company with no books yet, in dollars, not preview. */
+export function DevCashEmpty() {
+  const navigate = useNavigate();
+  return (
+    <CashEmptyHome
+      leading={<BandCompany name="Acme Test Co" onOpen={() => { void navigate("/settings?preview=1"); }} />}
+      search="?preview=1"
+      holdWrites={false}
+      currency="USD"
+      avatarInitial="A"
     />
   );
 }

@@ -44,7 +44,7 @@ export type HomeMonthNav = {
 };
 
 /** Row 1 of the band: + , search and the avatar on the current month; "חזרה ל…" on a past one. */
-export function HomeBandActions({ isPast, currentName, search }: { isPast: boolean; currentName: string; search: string }) {
+export function HomeBandActions({ isPast, currentName, search, avatarInitial }: { isPast: boolean; currentName: string; search: string; avatarInitial?: string }) {
   const allowAdd = useAllowAdd();
   if (isPast) {
     return (
@@ -75,7 +75,7 @@ export function HomeBandActions({ isPast, currentName, search }: { isPast: boole
       </IconButton>
       <IconButton label="הגדרות וחשבון" onBand to={`/settings${search}`} className="ui-band-action">
         <span className="ui-band-avatar" aria-hidden="true">
-          <PersonIcon />
+          {avatarInitial ?? <PersonIcon />}
         </span>
       </IconButton>
     </div>

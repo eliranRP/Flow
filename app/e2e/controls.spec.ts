@@ -104,8 +104,8 @@ test("tab bar has four tabs, and each opens its screen (FLOW-364)", async ({ pag
   await bar.getByRole("link", { name: "בית", exact: true }).click();
   await expect(page).toHaveURL(/\/\?preview=1$/);
   // The add sits in Home's band, not in the tab bar (FLOW-364).
-  await expect(bar.getByRole("link", { name: "הוספה" })).toHaveCount(0);
-  await page.getByRole("link", { name: "הוספה" }).click();
+  await expect(bar.getByRole("link", { name: "הוספה", exact: true })).toHaveCount(0);
+  await page.getByRole("link", { name: "הוספה", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();
 });
 
@@ -121,7 +121,7 @@ test("the current tab stays put and capture rows stay disabled", async ({ page }
   await expect(addSheet).toHaveAttribute("data-state", "open");
   // The band's + opens the sheet and its close returns to Home (FLOW-364).
   await page.goto("/?preview=1");
-  await page.getByRole("link", { name: "הוספה" }).click();
+  await page.getByRole("link", { name: "הוספה", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();
   await page.getByRole("dialog", { name: "הוספה" }).getByRole("button", { name: "סגירה" }).click();
   await expect(page.getByRole("dialog", { name: "הוספה" })).toHaveCount(0);

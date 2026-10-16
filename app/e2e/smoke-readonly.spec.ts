@@ -205,7 +205,7 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   } else {
     await expect(page.getByRole("heading", { name: "חברו את הבנק" })).toBeVisible();
   }
-  await expect(page.getByRole("link", { name: "הוספה" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "הוספה", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "הוספה" })).toHaveCount(0);
   if (!hasBooks) await expect(page.getByRole("link", { name: "חיבור Mercury" })).toHaveCount(0);
   await expect(page.getByText("לא הצלחנו לטעון את הנתונים")).toHaveCount(0);

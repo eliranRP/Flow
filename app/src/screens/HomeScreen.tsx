@@ -13,7 +13,7 @@ import {
 import { onlineManager } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useHeldOrder } from "../list-hold";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { unpaidOpenGross, unpaidOpenRows, unpaidTotals } from "../unpaid";
 import { useAuth } from "../auth";
 import { cashMonthKey, cashRows, profitPath, shownCashRows } from "../cash";
@@ -111,6 +111,29 @@ function NoBooksYet({ previewing, example, search, companyName, view }: { previe
       </div>
     );
   }
+  return <CashEmptyHome leading={leading} search={search} example={example} holdWrites={holdWrites} />;
+}
+
+/**
+ * FLOW-364 (board, StatesHomeEmpty): the cash first run with no books. `leading` is the company
+ * (or nothing in preview); `currency` is the company's base currency; `avatarInitial` is the band's
+ * initial when the company has one (the board's "N").
+ */
+export function CashEmptyHome({
+  leading,
+  search,
+  example,
+  holdWrites,
+  currency = "ILS",
+  avatarInitial,
+}: {
+  leading?: ReactNode;
+  search: string;
+  example?: ReactNode;
+  holdWrites: boolean;
+  currency?: string;
+  avatarInitial?: string;
+}) {
   // FLOW-364 (board, StatesHomeEmpty): the band with the month and a zero figure, then the bank card and what will show here.
   const currentKey = israelToday().slice(0, 7);
   return (
@@ -120,11 +143,11 @@ function NoBooksYet({ previewing, example, search, companyName, view }: { previe
         example={example}
         wordmark={false}
         leading={leading}
-        trailing={<HomeBandActions isPast={false} currentName="" search={search} />}
+        trailing={<HomeBandActions isPast={false} currentName="" search={search} avatarInitial={avatarInitial} />}
       >
         <div className="ui-band-body ui-band-body-empty">
           <p className="ui-band-month-static">{homeMonthLabel(currentKey)}</p>
-          <Hero label={`תזרים ${monthName(currentKey)}`} agorot={0n} explanation="עוד אין תנועות. הן יגיעו מהבנק." />
+          <Hero label={`תזרים ${monthName(currentKey)}`} agorot={0n} currency={currency} explanation="עוד אין תנועות. הן יגיעו מהבנק." />
         </div>
       </TopBand>
       <section className="ui-home-empty-card" dir="rtl" aria-labelledby="home-empty-title">
@@ -135,7 +158,7 @@ function NoBooksYet({ previewing, example, search, companyName, view }: { previe
         {holdWrites ? null : (
           <>
             <Button full to={`/settings/connections${search}`}>חיבור Mercury</Button>
-            <p className="ui-home-empty-link-row"><TextLink to={`/add${search}`}>בינתיים, הוספה ידנית</TextLink></p>
+            <p className="ui-home-empty-link-row"><Link to={`/add${search}`} className="ui-home-empty-manual">בינתיים, הוספה ידנית</Link></p>
           </>
         )}
       </section>
@@ -344,6 +367,8 @@ export function CashHome({
     const key = pendingMonth.current;
     pendingMonth.current = null;
     onStepMonth(key);
+    // The sheet's close restores the scroll it locked, so the top is set again once it has closed (FLOW-364).
+    window.scrollTo({ top: 0 });
   }, [drawerOpen, onStepMonth]);
   const nav: HomeMonthNav = {
     earlierKey,
