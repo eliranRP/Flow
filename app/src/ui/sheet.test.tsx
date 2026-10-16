@@ -139,6 +139,56 @@ describe("Sheet while a save is in flight (FLOW-363 3b)", () => {
     await waitFor(() => { expect(onOpenChange).toHaveBeenCalledWith(false); });
     expect(onOpenChange).toHaveBeenCalledTimes(1);
   });
+
+  it("closes once when a dismiss and the success close both land during a save", async () => {
+    const onOpenChange = vi.fn();
+    const onCloseKind = vi.fn();
+    const requestClose: { current: (() => void) | null } = { current: null };
+    const sheet = (busy: boolean) => (
+      <Sheet
+        open
+        busy={busy}
+        onOpenChange={onOpenChange}
+        onCloseKind={onCloseKind}
+        onRequestClose={requestClose}
+        title="תקופה"
+      >
+        <p>תוכן</p>
+      </Sheet>
+    );
+    const { rerender } = render(sheet(true));
+    await tick();
+    fireEvent.keyDown(document, { key: "Escape" });
+    await tick();
+    act(() => { requestClose.current?.(); });
+    await tick();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    rerender(sheet(false));
+    await waitFor(() => { expect(onOpenChange).toHaveBeenCalledWith(false); });
+    await tick();
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
+    expect(onCloseKind).toHaveBeenCalledTimes(1);
+    expect(onCloseKind).toHaveBeenCalledWith(true);
+  });
+
+  it("reports an Escape held through a save as a key close once the save clears", async () => {
+    const onOpenChange = vi.fn();
+    const onCloseKind = vi.fn();
+    const sheet = (busy: boolean) => (
+      <Sheet open busy={busy} onOpenChange={onOpenChange} onCloseKind={onCloseKind} title="תקופה">
+        <p>תוכן</p>
+      </Sheet>
+    );
+    const { rerender } = render(sheet(true));
+    await tick();
+    fireEvent.keyDown(document, { key: "Escape" });
+    await tick();
+    expect(onCloseKind).not.toHaveBeenCalled();
+    rerender(sheet(false));
+    await waitFor(() => { expect(onCloseKind).toHaveBeenCalledWith(true); });
+    expect(onCloseKind).toHaveBeenCalledTimes(1);
+    await waitFor(() => { expect(onOpenChange).toHaveBeenCalledWith(false); });
+  });
 });
 
 function tallSheetHeightRule(): string {

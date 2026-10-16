@@ -188,7 +188,7 @@ export function Sheet({
   const closing = useRef(false);
   const deciding = useRef(false);
   /** A dismiss came in while a save was in flight; the sheet closes once it settles (0075). */
-  const closeAfterBusy = useRef(false);
+  const closeAfterBusy = useRef<{ byKey: boolean } | null>(null);
   const wasOpen = useRef(false);
   /** The sheet closed from the keyboard (Escape), so the returned focus shows its ring. */
   const keyClose = useRef(false);
@@ -315,7 +315,8 @@ export function Sheet({
   }, [open, returnFocusRef]);
   async function requestClose(byKey = false) {
     if (busy) {
-      closeAfterBusy.current = true;
+      // A repeat dismiss keeps the key flag: Escape anywhere in the wait means a key close.
+      closeAfterBusy.current = { byKey: byKey || closeAfterBusy.current?.byKey === true };
       return;
     }
     if (closing.current || deciding.current) return;
@@ -340,9 +341,15 @@ export function Sheet({
   const requestCloseRef = useRef(requestClose);
   requestCloseRef.current = requestClose;
   useEffect(() => {
-    if (busy || !closeAfterBusy.current) return;
-    closeAfterBusy.current = false;
-    if (open) void requestCloseRef.current();
+    // The pending close dies with the sheet: a sheet that closed by another route must not close again.
+    if (!open) {
+      closeAfterBusy.current = null;
+      return;
+    }
+    const pending = closeAfterBusy.current;
+    if (busy || pending == null) return;
+    closeAfterBusy.current = null;
+    void requestCloseRef.current(pending.byKey);
   }, [busy, open]);
   useEffect(() => {
     if (!onRequestClose) return;

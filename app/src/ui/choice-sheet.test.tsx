@@ -59,6 +59,22 @@ describe("ChoiceSheet", () => {
     expect(onOpenChange).toHaveBeenCalledTimes(1);
   });
 
+  it("closes once when a dismiss and the success close both land during the save", async () => {
+    const { onPick, onOpenChange, setSaving } = renderSheet(CURRENCY_COPY, "ILS");
+    fireEvent.click(screen.getByRole("radio", { name: "$ דולר" }));
+    const close = onPick.mock.calls[0]?.[1] as () => void;
+    setSaving("USD");
+    fireEvent.keyDown(document, { key: "Escape" });
+    await act(async () => { await Promise.resolve(); });
+    act(() => { close(); });
+    await act(async () => { await Promise.resolve(); });
+    expect(onOpenChange).not.toHaveBeenCalled();
+    setSaving(null);
+    await waitFor(() => { expect(onOpenChange).toHaveBeenCalledWith(false); });
+    await act(async () => { await Promise.resolve(); });
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
+  });
+
   it("shows each basis's description", () => {
     renderSheet(BASIS_COPY, "invoiced");
     expect(screen.getByRole("radio", { name: /^תאריך חשבונית/ })).toHaveAttribute("aria-checked", "true");

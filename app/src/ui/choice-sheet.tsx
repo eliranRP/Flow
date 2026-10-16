@@ -42,13 +42,22 @@ export function ChoiceSheet<T extends string, V extends string = T>({
 }: ChoiceSheetProps<T, V>) {
   // Set by `close`: the save has settled, so Back's popstate must not wait on a stale `saving`.
   const closing = useRef(false);
+  /** The sheet's own close: a success close and a dismiss both go through it, so the save's wait applies. */
+  const requestSheetClose = useRef<(() => void) | null>(null);
   useEffect(() => {
     if (open) closing.current = false;
   }, [open]);
   const stored: string = value;
   const setOpen = useSheetHistory(copy.historyKey, open, onOpenChange, () => closing.current || saving == null);
   return (
-    <Sheet open={open} onOpenChange={setOpen} title={copy.title} returnFocusRef={returnFocusRef} busy={saving != null}>
+    <Sheet
+      open={open}
+      onOpenChange={setOpen}
+      title={copy.title}
+      returnFocusRef={returnFocusRef}
+      busy={saving != null}
+      onRequestClose={requestSheetClose}
+    >
       <div role="radiogroup" aria-label={copy.title}>
         {copy.choices.map((choice) => (
           <RadioRow
@@ -66,7 +75,7 @@ export function ChoiceSheet<T extends string, V extends string = T>({
               }
               onPick(choice.value, () => {
                 closing.current = true;
-                setOpen(false);
+                requestSheetClose.current?.();
               });
             }}
           />

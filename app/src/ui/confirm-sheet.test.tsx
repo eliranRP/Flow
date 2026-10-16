@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ConfirmSheet } from "./confirm-sheet";
 import { expectRtl, expectTarget, expectThemePaint } from "./test-support";
@@ -46,6 +46,32 @@ describe("ConfirmSheet", () => {
       await Promise.resolve();
     });
     expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it("runs a dismiss held during the save once busy clears, and only once", async () => {
+    const onOpenChange = vi.fn();
+    const confirm = (busy: boolean) => (
+      <ConfirmSheet
+        open
+        busy={busy}
+        onOpenChange={onOpenChange}
+        title="למחוק את ההוצאה?"
+        consequence="אפשר לבטל."
+        confirmLabel="מחיקה"
+        destructive
+        onConfirm={() => undefined}
+      />
+    );
+    const { rerender } = render(confirm(true));
+    await act(async () => {
+      fireEvent.keyDown(document, { key: "Escape" });
+      await Promise.resolve();
+    });
+    expect(onOpenChange).not.toHaveBeenCalled();
+    rerender(confirm(false));
+    await waitFor(() => { expect(onOpenChange).toHaveBeenCalledWith(false); });
+    await act(async () => { await Promise.resolve(); });
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
   });
 
   it("offers the safer path as a quiet link under ביטול (FLOW-405)", () => {
