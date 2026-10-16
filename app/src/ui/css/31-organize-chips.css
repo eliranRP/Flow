@@ -1,0 +1,36 @@
+/* FLOW-347: a sideways chip row. While chips wait past the inline end, that end fades out over
+   the side gutter and a little more, so the cut chip reads as "more", not as a sliver.
+   FLOW-351: once scrolled, the start edge fades the same way. In RTL the start is the right. */
+.ui-organize-chips {
+  --chip-fade: calc(var(--space-side) + var(--space-6));
+  display: flex;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ui-organize-chips[data-more="end"] {
+  mask-image: linear-gradient(to right, transparent, #000 var(--chip-fade));
+}
+
+.ui-organize-chips[data-more="start"] {
+  mask-image: linear-gradient(to left, transparent, #000 var(--chip-fade));
+}
+
+.ui-organize-chips[data-more="both"] {
+  mask-image: linear-gradient(to right, transparent, #000 var(--chip-fade), #000 calc(100% - var(--chip-fade)), transparent);
+}
+
+.ui-organize-chips[data-more="end"]:dir(ltr) {
+  mask-image: linear-gradient(to left, transparent, #000 var(--chip-fade));
+}
+
+.ui-organize-chips[data-more="start"]:dir(ltr) {
+  mask-image: linear-gradient(to right, transparent, #000 var(--chip-fade));
+}
+
+/* A chip scrolled into view stops clear of either fade, not under it. */
+.ui-organize-chips {
+  scroll-padding-inline: var(--chip-fade);
+}
