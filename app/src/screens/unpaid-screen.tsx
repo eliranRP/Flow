@@ -15,14 +15,6 @@ import { unpaidDaysOpen, unpaidIsMarked, unpaidOverdueMinor, unpaidTotals, UNPAI
 import { usePreviewSearch } from "../preview";
 import { UNPAID_MARKED, useUnpaidActions } from "./unpaid-actions";
 
-/** FLOW-353: "היום", "אתמול", "לפני יומיים", else "לפני N ימים". */
-export function unpaidAge(days: number): string {
-  if (days === 0) return "היום";
-  if (days === 1) return "אתמול";
-  if (days === 2) return "לפני יומיים";
-  return `לפני ${String(days)} ימים`;
-}
-
 /** "לפני N דק׳" for the refresh line; a fresh sync says so without a number. */
 function syncedAgo(iso: string, now = Date.now()): string {
   const minutes = Math.floor((now - Date.parse(iso)) / 60_000);

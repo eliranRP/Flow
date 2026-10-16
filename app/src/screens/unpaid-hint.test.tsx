@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { UnpaidScreen, unpaidAge } from "./unpaid-screen";
+import { UnpaidScreen } from "./unpaid-screen";
 import { ToastProvider } from "../ui/toast";
 import type { UnpaidInvoice } from "../unpaid";
 
@@ -10,15 +10,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("Unpaid rows (FLOW-353, FLOW-357, FLOW-367)", () => {
-  it("names today, yesterday and two days ago, and counts older days", () => {
-    expect(unpaidAge(0)).toBe("היום");
-    expect(unpaidAge(1)).toBe("אתמול");
-    expect(unpaidAge(2)).toBe("לפני יומיים");
-    expect(unpaidAge(3)).toBe("לפני 3 ימים");
-    expect(unpaidAge(37)).toBe("לפני 37 ימים");
-  });
-
+describe("Unpaid rows (FLOW-357, FLOW-367)", () => {
   it("shows the age and the mark line on a row, and the row opens the invoice page", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-10-08T09:00:00Z"));
