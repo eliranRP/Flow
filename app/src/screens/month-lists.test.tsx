@@ -137,7 +137,7 @@ describe("project recent list months", () => {
   });
 });
 
-describe("review list months", () => {
+describe("review list rows (FLOW-365 flat list)", () => {
   const review = (id: string, doc_date: string, amount_net: bigint, direction: "income" | "expense", currency?: string): ReviewRow => ({
     id,
     transaction_id: `t-${id}`,
@@ -151,9 +151,10 @@ describe("review list months", () => {
     category_id: null,
     supplier_name: null,
   });
+  const amountsOf = (container: HTMLElement) => [...container.querySelectorAll(".ui-review-all-amount")].map((node) => node.textContent);
 
-  it("totals each currency by direction, with a missing currency as ₪", () => {
-    wrap(<ReviewAllList
+  it("lists every row in order with no month groups, and counts them in the subtitle", () => {
+    const { container } = wrap(<ReviewAllList
       rows={[
         review("a", "2026-08-03", 10_000n, "income", "USD"),
         review("b", "2026-08-04", -25_000n, "expense"),
@@ -162,25 +163,26 @@ describe("review list months", () => {
       search=""
       backTo="/review"
     />);
-    // FLOW-305: the statement rows show cents, so the month total shows exact cents too.
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪250, הכנסות +$100");
+    expect(screen.queryAllByRole("group")).toHaveLength(0);
+    expect(container.querySelectorAll(".ui-review-all-row")).toHaveLength(3);
+    expect(screen.getByText("3 פריטים מחכים • הקישו על פריט כדי לפתוח אותו")).toBeTruthy();
+    expect(amountsOf(container)).toEqual(["+$100", "₪250", "₪50"]);
   });
 
-  it("adds exact cents, so the month matches its statement rows", () => {
-    wrap(<ReviewAllList
+  it("shows exact cents on each row", () => {
+    const { container } = wrap(<ReviewAllList
       rows={[
         review("a", "2026-08-03", -10_050n, "expense"),
         review("b", "2026-08-04", -10_050n, "expense"),
-        review("c", "2026-09-01", -5_000n, "expense"),
       ]}
       search=""
       backTo="/review"
     />);
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪201");
+    expect(amountsOf(container)).toEqual(["₪100.50", "₪100.50"]);
   });
 });
 
-describe("review list statement rows (FLOW-305)", () => {
+describe("review list row details (FLOW-305, flat list)", () => {
   const base: ReviewRow = {
     id: "s1",
     transaction_id: "t-s1",
@@ -199,33 +201,26 @@ describe("review list statement rows (FLOW-305)", () => {
     source: "mercury",
   };
 
-  it("draws the avatar, pending chip, suggestion, amount and method, and names the row in reading order", () => {
-    wrap(<ReviewAllList rows={[base]} search="" backTo="/review" />);
-    const link = screen.getByRole("link", { name: /Northwind Traders/ });
-    expect(link.getAttribute("aria-label")).toBe("Northwind Traders, בנק, הצעה: וילה לדוגמה · חומרים, הוצאה −$1,200.50, בהמתנה");
-    expect(link.querySelector(".ui-avatar")?.textContent).toBe("NT");
-    expect(link.querySelector(".ui-avatar")?.getAttribute("aria-hidden")).toBe("true");
-    expect(link.querySelector(".ui-status")?.textContent).toBe("בהמתנה");
-    expect(link.querySelector(".ui-statement-suggest")?.textContent).toBe("✦ וילה לדוגמה · חומרים");
-    expect(link.querySelector(".ui-statement-method")?.textContent).toBe("בנק");
-    expect(link.querySelector(".ui-row-title")?.getAttribute("dir")).toBe("ltr");
-    expect(link.querySelector(".t-amount")?.textContent).toBe("−$1,200.50");
-    expect(screen.getByRole("heading", { level: 3 }).textContent).toMatch(/29\/09/);
+  it("shows the payee, the date and source, and the amount in its currency", () => {
+    const { container } = wrap(<ReviewAllList rows={[base]} search="" backTo="/review" />);
+    const row = container.querySelector(".ui-review-all-row");
+    expect(row?.querySelector(".ui-review-all-title")?.textContent).toBe("Northwind Traders");
+    expect(row?.querySelector(".ui-review-all-meta")?.textContent).toBe("29/09/2026 • בנק");
+    expect(row?.querySelector(".ui-review-all-amount")?.textContent).toBe("$1,200.50");
+    expect(row?.querySelector(".ui-review-all-amount")?.getAttribute("dir")).toBe("ltr");
+    expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
   });
 
-  it("labels a SUMIT invoice row with its document kind and green income with a plus", () => {
-    wrap(<ReviewAllList
-      rows={[{ ...base, description: "לקוח לדוגמה", amount_net: 500_000n, currency: "ILS", direction: "income", line_status: "posted", source: "sumit", doc_kind: "invoice", project_name: null, category_name: null }]}
+  it("flags a row without a project and labels an invoice row with its document source", () => {
+    const { container } = wrap(<ReviewAllList
+      rows={[{ ...base, description: "לקוח לדוגמה", amount_net: 500_000n, currency: "ILS", direction: "income", line_status: "posted", source: "sumit", doc_kind: "invoice", project_id: null, project_name: null, category_id: null, category_name: null }]}
       search=""
       backTo="/review"
     />);
-    const link = screen.getByRole("link", { name: /לקוח לדוגמה/ });
-    expect(link.querySelector(".ui-statement-method")?.textContent).toBe("חשבונית");
-    expect(link.querySelector(".ui-status")).toBeNull();
-    expect(link.querySelector(".ui-statement-line")).toBeNull();
-    expect(link.querySelector(".ui-income")?.textContent).toBe("+₪5,000");
-    expect(link.textContent).toContain("+₪5,000");
-    expect(link.getAttribute("aria-label")).toBe("לקוח לדוגמה, חשבונית, הכנסה ₪5,000");
+    const row = container.querySelector(".ui-review-all-row");
+    expect(row?.querySelector(".ui-review-all-meta")?.textContent).toBe("29/09/2026 • חשבונית • חסר פרויקט");
+    expect(row?.querySelector(".ui-review-all-amount")?.textContent).toBe("+₪5,000");
+    expect(row?.querySelector(".ui-review-all-amount")?.classList.contains("ui-review-all-in")).toBe(true);
   });
 });
 

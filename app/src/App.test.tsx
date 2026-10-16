@@ -141,7 +141,7 @@ describe("App", () => {
   it("opens the bank sheet on Connections from + → חיבור בנק", async () => {
     await renderAt("/add?preview=1");
     fireEvent.click(screen.getByRole("button", { name: /חיבור בנק/ }));
-    expect(await screen.findByRole("heading", { name: "חיבורים", hidden: true })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Mercury", hidden: true })).toBeInTheDocument();
   });
 
   it("closes the add sheet on Escape after the exit animation", async () => {
@@ -240,16 +240,16 @@ describe("App", () => {
 
   it("routes Settings to the Connections and Loans pages under the הגדרות tab (FLOW-501)", async () => {
     const settings = await renderAt("/settings?preview=1");
-    expect(screen.getByRole("link", { name: "חיבורים" })).toHaveAttribute("href", "/settings/connections?preview=1");
+    expect(screen.getByRole("link", { name: /^חיבורים/ })).toHaveAttribute("href", "/settings/connections?preview=1");
     expect(within(screen.getByRole("navigation", { name: "ניווט ראשי" })).getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/settings/loans?preview=1");
     expect(screen.queryByRole("button", { name: "SUMIT" })).not.toBeInTheDocument();
     settings.unmount();
 
     const connections = await renderAt("/settings/connections?preview=1");
     expect(await screen.findByRole("heading", { name: "חיבורים" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "SUMIT" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Mercury" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "ספרים ובנק" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^SUMIT/ })).toHaveAttribute("href", "/settings/connections/sumit?preview=1");
+    expect(screen.getByRole("link", { name: /^Mercury/ })).toHaveAttribute("href", "/settings/connections/mercury?preview=1");
+    expect(screen.getByRole("heading", { name: "בנק וספרים" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "עזרים" })).toBeInTheDocument();
     connections.unmount();
 
@@ -259,10 +259,14 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "הלוואה חדשה" })).toBeInTheDocument();
   });
 
-  it("moves an old Settings sheet link to the Connections page with the sheet open", async () => {
-    await renderAt("/settings?preview=1&sheet=sumit");
-    expect(await screen.findByRole("dialog", { name: "חיבור SUMIT" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "חיבורים", hidden: true })).toBeInTheDocument();
+  it("moves an old Settings sheet link to the SUMIT page", async () => {
+    const settingsSheet = await renderAt("/settings?preview=1&sheet=sumit");
+    expect(await screen.findByRole("heading", { name: "SUMIT", hidden: true })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    settingsSheet.unmount();
+    const connectionsSheet = await renderAt("/settings/connections?preview=1&sheet=mercury");
+    expect(await screen.findByRole("heading", { name: "Mercury", hidden: true })).toBeInTheDocument();
+    connectionsSheet.unmount();
   });
 
   it("sends Loans with no company back to Settings", async () => {

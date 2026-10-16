@@ -1,0 +1,1 @@
+board-proof also reports a text-masked mismatch for each frame. Every app text box, padded 2px, is painted over both images, so only layout, colour and spacing count. This is the redesign screen gate (under 3%).

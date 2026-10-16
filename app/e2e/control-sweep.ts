@@ -188,6 +188,9 @@ export function sweepControls(spec: string): void {
           continue;
         }
         const before = await fingerprint(page);
+        // A control that opens the phone's file picker (FLOW-369 tiles) changes nothing in the page: its
+        // effect is the file chooser, which the sweep counts as doing something.
+        const chooser = page.waitForEvent("filechooser", { timeout: 3_000 }).then(() => true, () => false);
         try {
           await target.click({ timeout: 2_000 });
         } catch {
@@ -202,7 +205,8 @@ export function sweepControls(spec: string): void {
             const field = document.activeElement;
             return field instanceof HTMLInputElement && field.validationMessage !== "";
           });
-          if (!invalid) failures.push(`${control.name || control.tag} at ${url} did nothing`);
+          const opened = await chooser;
+          if (!invalid && !opened) failures.push(`${control.name || control.tag} at ${url} did nothing`);
         }
       }
       console.log(`no-op sweep ${url}: skipped ${String(skipped)} covered controls`);

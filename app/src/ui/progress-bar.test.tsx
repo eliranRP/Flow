@@ -20,6 +20,13 @@ describe("ProgressBar", () => {
     expect(screen.getByText("1 מתוך 7")).toBeInTheDocument();
   });
 
+  it("draws seven segments: done before the current one, the rest after", () => {
+    render(<ProgressBar variant="steps" count={7} current={3} label="התקדמות ההגדרה" />);
+    const states = [...document.querySelectorAll(".ui-steps-seg")].map((seg) => seg.getAttribute("data-state"));
+    expect(states).toEqual(["done", "done", "current", "next", "next", "next", "next"]);
+    expect(screen.getByRole("meter", { name: "התקדמות ההגדרה" })).toHaveAttribute("aria-valuenow", "3");
+  });
+
   it("draws a split bar and names an overrun in words", () => {
     render(<ProgressBar variant="split" label="חריגה" spentAgorot={12000000n} budgetAgorot={10000000n} />);
     expect(screen.getByRole("meter", { name: "חריגה, מעל התקציב" })).toBeInTheDocument();

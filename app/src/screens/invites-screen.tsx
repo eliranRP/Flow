@@ -13,7 +13,7 @@ import { useInviteActions } from "./invite-actions";
 
 /** Where אחר כך goes: Home for someone with a company, else the first setup step. */
 export function laterPath(hasCompany: boolean): string {
-  return hasCompany ? "/" : "/setup/0";
+  return hasCompany ? "/" : "/setup/welcome";
 }
 
 /**

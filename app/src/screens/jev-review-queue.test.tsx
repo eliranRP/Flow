@@ -135,7 +135,7 @@ const open: ReviewRow = {
 function fieldBox() {
   const ai = document.querySelector(".ui-review-ai");
   return {
-    rows: ai?.querySelectorAll(":scope > .ui-row").length ?? 0,
+    rows: ai?.querySelectorAll(":scope > .ui-review-panel > .ui-row, :scope > .ui-review-panel > .ui-review-field").length ?? 0,
     note: ai?.querySelector(":scope > p")?.textContent ?? "",
   };
 }
@@ -458,7 +458,7 @@ describe("Jev review one tap", () => {
     db.reasons = [{ transaction_id: "t1", project_id: null, category_id: "c1", no_project: true, reason: "model_only", party_filings: 0, matching_filings: 0 }];
     renderQueue();
     expect(await screen.findByRole("button", { name: "פרויקט: תקורה · ללא פרויקט, הצעת Jev" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
   });
 
   it("shows the no-project answer from the real #177 shape, choice none, with the reasons read failing", async () => {
@@ -468,7 +468,7 @@ describe("Jev review one tap", () => {
     renderQueue();
     expect(await screen.findByRole("button", { name: "פרויקט: תקורה · ללא פרויקט, הצעת Jev" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
   });
 
   it("shows the no-project answer alone, when Jev named no category", async () => {
@@ -523,8 +523,9 @@ describe("Jev review one tap", () => {
     renderQueue([row]);
     expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" }, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "קטגוריה: קטגוריה שמורה" })).toBeInTheDocument();
+    // Jev's fill shows the הצעת Jev pill; the stored category carries no hint.
     expect(screen.getAllByText("הצעת Jev")).toHaveLength(1);
-    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
+    expect(screen.queryByText("הצעה")).toBeNull();
   });
 
   it("keeps הצעה on a stored suggestion Jev did not answer", async () => {
@@ -554,7 +555,7 @@ describe("Jev review one tap", () => {
     await waitFor(() => {
       expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
     });
-    expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
     expect(screen.queryByText("הצעת Jev")).not.toBeInTheDocument();
     expect(db.writes).toEqual([]);
@@ -625,7 +626,7 @@ describe("Jev review one tap", () => {
     expect(document.querySelector(".ui-review-note")).toBeNull();
     expect(document.querySelector(".ui-review-note-slot")).toBeNull();
     expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
   });
 
@@ -744,7 +745,7 @@ describe("Jev review one tap", () => {
     await waitFor(() => {
       expect(client.getQueryState(jevConnectorQueryKey(scope))?.status).toBe("error");
     }, { timeout: 2500 });
-    expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
     // The stall wrote nothing: no answer came back.
     expect(localStorage.getItem(jevConnectorStorageKey(scope))).toBeNull();
     first.unmount();
@@ -928,7 +929,7 @@ describe("Jev review one tap", () => {
     });
     expect(screen.queryByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).not.toBeInTheDocument();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
   });
 
   it("fails a Jev read without a toast and leaves the stored row", async () => {
@@ -938,7 +939,7 @@ describe("Jev review one tap", () => {
     await waitFor(() => {
       expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
     });
-    expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
     expect(db.writes).toEqual([]);
   });
@@ -962,6 +963,8 @@ describe("review card pin (prod QA: אישור approved another line)", () => {
     doc_date: "2026-04-01",
   };
 
+  /** FLOW-365: an approvable card (a project and a category), so אישור is enabled for the pin tests. */
+  const ready: ReviewRow = { ...open, project_id: "p1", category_id: "c1", project_name: "הרצל", category_name: "חומרים" };
   function queue(rows: ReviewRow[], client: QueryClient) {
     db.rows = rows;
     return (
@@ -977,41 +980,41 @@ describe("review card pin (prod QA: אישור approved another line)", () => {
 
   it("keeps the card on screen when a refetch reorders the queue", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const view = render(queue([open, other], client));
+    const view = render(queue([ready, other], client));
     expect(await screen.findByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
-    view.rerender(queue([other, open], client));
+    view.rerender(queue([other, ready], client));
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(screen.getByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
     expect(screen.queryByText("קבלן משנה בע״מ")).not.toBeInTheDocument();
   });
 
   it("returns to the same card after the picker, whatever order the queue comes back in", async () => {
-    const first = render(queue([open, other], new QueryClient({ defaultOptions: { queries: { retry: false } } })));
+    const first = render(queue([ready, other], new QueryClient({ defaultOptions: { queries: { retry: false } } })));
     expect(await screen.findByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
     first.unmount();
-    render(queue([other, open], new QueryClient({ defaultOptions: { queries: { retry: false } } })));
+    render(queue([other, ready], new QueryClient({ defaultOptions: { queries: { retry: false } } })));
     expect(await screen.findByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
   });
 
-  it("skips the card on screen and ביטול reopens it", async () => {
+  it("approves the card on screen and ביטול reopens it", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const view = render(queue([open, other], client));
+    const view = render(queue([ready, other], client));
     expect(await screen.findByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
-    view.rerender(queue([other, open], client));
-    fireEvent.click(screen.getByRole("button", { name: "דלג" }));
+    view.rerender(queue([other, ready], client));
+    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
     await waitFor(() => {
-      expect(db.writes.find((call) => call.name === "resolve_review")?.args).toEqual({ p_id: "r1", p_action: "skipped" });
+      expect(db.writes.some((call) => call.name === "approve_review_item")).toBe(true);
     });
-    // The skipped card leaves; the next one takes the screen.
+    // The approved card leaves; the next one takes the screen.
     view.rerender(queue([other], client));
     expect(await screen.findByText("קבלן משנה בע״מ")).toBeInTheDocument();
     fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
     await waitFor(() => {
       expect(db.writes.find((call) => call.name === "reopen_review")?.args).toEqual({ p_id: "r1" });
     });
-    expect(await screen.findByText("הפריט חזר לתור.")).toBeInTheDocument();
+    expect(await screen.findByText("הפריט חזר לתור, והשיוך הקודם שוחזר.")).toBeInTheDocument();
     // It comes back behind the card on screen in queue order, but ביטול puts it in front.
-    view.rerender(queue([other, open], client));
+    view.rerender(queue([other, ready], client));
     expect(await screen.findByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.queryByText("קבלן משנה בע״מ")).not.toBeInTheDocument();
@@ -1035,13 +1038,13 @@ describe("review card pin (prod QA: אישור approved another line)", () => {
 
     async function skipThenUndoInsideSwap() {
       const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-      const view = render(queue([open, other], client));
+      const view = render(queue([ready, other], client));
       await tick(50);
       expect(screen.getByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
-      fireEvent.click(screen.getByRole("button", { name: "דלג" }));
+      fireEvent.click(screen.getByRole("button", { name: "אישור" }));
       await tick(0);
-      expect(db.writes.some((call) => call.name === "resolve_review")).toBe(true);
-      // The skip's refetch: the card leaves and the 200ms swap starts.
+      expect(db.writes.some((call) => call.name === "approve_review_item")).toBe(true);
+      // The approval's refetch: the card leaves and the 200ms swap starts.
       view.rerender(queue([other], client));
       await tick(50);
       fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
@@ -1056,14 +1059,14 @@ describe("review card pin (prod QA: אישור approved another line)", () => {
       expect(screen.getByText("קבלן משנה בע״מ")).toBeInTheDocument();
       expect(reviewPin()).toBe("t1");
       // The refetch brings the undone line back behind it in queue order.
-      view.rerender(queue([other, open], client));
+      view.rerender(queue([other, ready], client));
       await tick(300);
       expect(screen.getByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
       expect(screen.queryByText("קבלן משנה בע״מ")).not.toBeInTheDocument();
       expect(reviewHold()).toBeNull();
       expect(reviewPin()).toBe("t1");
       // The pin guarantee holds again: a reorder can't swap the card under אישור.
-      view.rerender(queue([other, open], client));
+      view.rerender(queue([other, ready], client));
       await tick(300);
       expect(screen.getByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
     });
@@ -1087,7 +1090,7 @@ describe("review card pin (prod QA: אישור approved another line)", () => {
       expect(screen.getByText("לא הצלחנו לבטל.")).toBeInTheDocument();
       expect(reviewHold()).toBeNull();
       expect(reviewPin()).toBe("t2");
-      view.rerender(queue([open, other], client));
+      view.rerender(queue([ready, other], client));
       await tick(300);
       expect(screen.getByText("קבלן משנה בע״מ")).toBeInTheDocument();
     });
@@ -1095,7 +1098,7 @@ describe("review card pin (prod QA: אישור approved another line)", () => {
 
   it("moves on once the card leaves the queue", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const view = render(queue([open, other], client));
+    const view = render(queue([ready, other], client));
     expect(await screen.findByText("חומרי בניין לדוגמה בע״מ")).toBeInTheDocument();
     view.rerender(queue([other], client));
     expect(await screen.findByText("קבלן משנה בע״מ")).toBeInTheDocument();

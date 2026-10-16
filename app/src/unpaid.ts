@@ -46,3 +46,46 @@ export function unpaidDocumentUrl(row: Pick<UnpaidRow, "document_url">): string 
     return null;
   }
 }
+
+/** The bank deposit the server found for an open invoice: same amount and customer, not linked or dismissed (FLOW-367). */
+export type UnpaidMatch = {
+  transaction_id: string;
+  date: string;
+  account_name: string;
+  raw_description: string;
+  amount_minor: bigint;
+};
+
+/**
+ * An open invoice with the fields FLOW-367 adds: its number and a bank match. A row without them (an
+ * older payload) shows no match and no number.
+ */
+export type UnpaidInvoice = UnpaidRow & {
+  doc_number?: string | null;
+  match?: UnpaidMatch | null;
+};
+
+/** The figures the summary card's bar needs, from the server: what was paid since issued_since (the 1st of last month). */
+export type UnpaidSummary = {
+  paid_agorot: bigint;
+  issued_since: string;
+  last_sync_at?: string | null;
+};
+
+/** FLOW-367: an open invoice older than this is in the signal colour and counted on the summary. */
+export const UNPAID_OVERDUE_DAYS = 30;
+
+/** Whole days from an ISO date to today (Israel). */
+export function unpaidDaysOpen(iso: string, today: string): number {
+  const start = Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)));
+  const end = Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 1, Number(today.slice(8, 10)));
+  if (Number.isNaN(start) || Number.isNaN(end)) return 0;
+  return Math.max(0, Math.round((end - start) / 86_400_000));
+}
+
+/** The open rows in one currency that are older than UNPAID_OVERDUE_DAYS. */
+export function unpaidOverdueMinor(rows: readonly UnpaidRow[], currency: string, today: string): bigint {
+  return unpaidOpenRows(rows)
+    .filter((row) => (row.currency ?? "ILS") === currency && unpaidDaysOpen(row.doc_date, today) > UNPAID_OVERDUE_DAYS)
+    .reduce((sum, row) => sum + absAgorot(row.open_gross_agorot), 0n);
+}

@@ -5,7 +5,6 @@ import {
   INVITE_ALREADY_MEMBER,
   INVITE_CANCELLED,
   INVITE_EMAIL_INVALID,
-  INVITE_EMAIL_MISSING,
   INVITE_SENT,
   INVITE_TOO_MANY,
   INVITE_UPDATED,
@@ -32,8 +31,8 @@ beforeEach(() => {
 
 async function openInvite() {
   renderTeam(<TeamScreen />, "/settings/team");
-  fireEvent.click(await screen.findByRole("button", { name: "הזמנה" }));
-  return screen.findByRole("dialog", { name: "הזמנה" });
+  fireEvent.click(await screen.findByRole("button", { name: "הזמנה לצוות" }));
+  return screen.findByRole("dialog", { name: "הזמנה לצוות" });
 }
 
 describe("team page (FLOW-601, mockup a-1)", () => {
@@ -41,17 +40,17 @@ describe("team page (FLOW-601, mockup a-1)", () => {
     renderTeam(<TeamScreen />, "/settings/team");
     expect(await screen.findByText("דנה לוי")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "צוות" })).toBeInTheDocument();
-    expect(screen.getByText("בעלים")).toBeInTheDocument();
+    expect(screen.getByText("את/ה")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /דנה לוי/ })).toBeNull();
     expect(screen.getByRole("button", { name: "יוסי כהן, עורך" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "מיכל אברהם, צופה" })).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "הזמנה" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "הזמנה לצוות" })).toHaveLength(1);
   });
 
-  it("shows a pending invite as its email with הוזמנה and the role (mockup invite-2)", async () => {
+  it("shows a pending invite as its email with הוזמן · ממתין (mockup invite-2)", async () => {
     answer("list_team", { data: { ...sampleTeam, invites: [pending] } });
     renderTeam(<TeamScreen />, "/settings/team");
-    expect(await screen.findByRole("button", { name: "noa@example.com, הוזמנה · צופה" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "noa@example.com, הוזמן · ממתין" })).toBeInTheDocument();
   });
 
   it("says when the owner is alone", async () => {
@@ -75,7 +74,7 @@ describe("team page (FLOW-601, mockup a-1)", () => {
     renderTeam(<TeamScreen />, "/settings/team");
     expect(await screen.findByText("יוסי כהן")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /יוסי כהן/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: "הזמנה" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "הזמנה לצוות" })).toBeNull();
   });
 
   it("goes back to Settings with no company", async () => {
@@ -86,17 +85,19 @@ describe("team page (FLOW-601, mockup a-1)", () => {
 });
 
 describe("invite sheet (mockup invite-1)", () => {
-  it("starts on צופה with its hint, and checks the address before sending", async () => {
+  it("starts on צופה with its hint, and keeps the send off until the address has a shape", async () => {
     const dialog = await openInvite();
     expect(within(dialog).getByRole("radio", { name: "צופה" })).toHaveAttribute("aria-checked", "true");
-    expect(within(dialog).getByText("צפייה בלבד")).toBeInTheDocument();
-    expect(within(dialog).getByText("יכול לשייך ולשנות")).toBeInTheDocument();
+    expect(within(dialog).getByText("רואה הכל, לא משנה כלום")).toBeInTheDocument();
+    expect(within(dialog).getByText("יכול לשייך, לאשר ולשנות")).toBeInTheDocument();
     expect(within(dialog).getByLabelText("אימייל")).toHaveAttribute("placeholder", "name@example.com");
-    fireEvent.click(within(dialog).getByRole("button", { name: "שליחת הזמנה" }));
-    expect(await within(dialog).findByText(INVITE_EMAIL_MISSING)).toBeInTheDocument();
+    // The send stays off until the address has the shape of one, so no request goes out for a blank or half-typed address.
+    const send = within(dialog).getByRole("button", { name: "שליחת הזמנה" });
+    expect(send).toBeDisabled();
     fireEvent.change(within(dialog).getByLabelText("אימייל"), { target: { value: "noa@" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "שליחת הזמנה" }));
-    expect(await within(dialog).findByText(INVITE_EMAIL_INVALID)).toBeInTheDocument();
+    expect(send).toBeDisabled();
+    fireEvent.change(within(dialog).getByLabelText("אימייל"), { target: { value: "noa@example.com" } });
+    expect(send).toBeEnabled();
     expect(rpcCalls("invite_member")).toHaveLength(0);
   });
 
@@ -108,7 +109,7 @@ describe("invite sheet (mockup invite-1)", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "שליחת הזמנה" }));
     expect(await screen.findByText(INVITE_SENT)).toBeInTheDocument();
     expect(rpcCalls("invite_member")).toEqual([{ p_email: "noa@example.com", p_role: "editor" }]);
-    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "הזמנה" })).toBeNull(); });
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "הזמנה לצוות" })).toBeNull(); });
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     await waitFor(() => { expect(rpcCalls("cancel_invite")).toEqual([{ p_invite_id: pending.id }]); });
     expect(await screen.findByText(INVITE_CANCELLED)).toBeInTheDocument();
@@ -194,14 +195,14 @@ describe("pending invite sheet (mockup invite-2)", () => {
     answer("list_team", { data: { ...sampleTeam, invites: [pending] } });
     answer("invite_member", { data: { id: pending.id, email: pending.email, role: "editor", status: "pending", existing: true } });
     renderTeam(<TeamScreen />, "/settings/team");
-    fireEvent.click(await screen.findByRole("button", { name: "noa@example.com, הוזמנה · צופה" }));
+    fireEvent.click(await screen.findByRole("button", { name: "noa@example.com, הוזמן · ממתין" }));
     let dialog = await screen.findByRole("dialog", { name: "noa@example.com" });
     fireEvent.click(within(dialog).getByRole("radio", { name: "עורך" }));
     expect(await screen.findByText(INVITE_UPDATED)).toBeInTheDocument();
     expect(rpcCalls("invite_member")).toEqual([{ p_email: "noa@example.com", p_role: "editor" }]);
     await waitFor(() => { expect(screen.queryByRole("dialog", { name: "noa@example.com" })).toBeNull(); });
 
-    fireEvent.click(screen.getByRole("button", { name: "noa@example.com, הוזמנה · צופה" }));
+    fireEvent.click(screen.getByRole("button", { name: "noa@example.com, הוזמן · ממתין" }));
     dialog = await screen.findByRole("dialog", { name: "noa@example.com" });
     fireEvent.click(within(dialog).getByRole("button", { name: "ביטול ההזמנה" }));
     expect(await screen.findByText(INVITE_CANCELLED)).toBeInTheDocument();

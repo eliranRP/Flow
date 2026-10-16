@@ -2,6 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
+const LINE_REST = /^השאר,/;
+
 async function horizontalOverflow(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const problems: string[] = [];
@@ -34,8 +36,10 @@ async function expectNoOverflow(page: Page) {
 }
 
 /** Line-clamp keeps the text in the DOM, so a text query cannot see a vertical cut. */
-async function bannerTitleClipped(page: Page): Promise<boolean> {
-  return page.locator(".ui-banner .ui-row-title").evaluate((node) => {
+async function autoCountClipped(page: Page): Promise<boolean> {
+  // The title's line count depends on the web font's advance widths, so measure only once it has loaded.
+  await page.evaluate(() => document.fonts.ready);
+  return page.locator(".ui-review-auto").evaluate((node) => {
     if (!(node instanceof HTMLElement) || node.parentElement == null) return true;
     const clone = node.cloneNode(true);
     if (!(clone instanceof HTMLElement)) return true;
@@ -54,10 +58,10 @@ async function bannerTitleClipped(page: Page): Promise<boolean> {
 
 test("banner wording fits at 320 and 390 in both themes", async ({ page }) => {
   const cases = [
-    // One wording for every source, "שויכו/שויכה אוטומטית היום", with no "בלי להמתין"; one line beside לרשימה.
-    ["/reviewer/review?banner=assistant", "4 שויכו אוטומטית היום"],
-    ["/reviewer/review?banner=one", "אחת שויכה אוטומטית היום"],
-    ["/reviewer/review?banner=one-assistant", "אחת שויכה אוטומטית היום"],
+    // FLOW-365: the count sits in the header as "<n> אושרו אוטומטית היום", one line beside the counter.
+    ["/reviewer/review?banner=assistant", "4 אושרו אוטומטית היום"],
+    ["/reviewer/review?banner=one", "1 אושרו אוטומטית היום"],
+    ["/reviewer/review?banner=one-assistant", "1 אושרו אוטומטית היום"],
   ] as const;
   for (const scheme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme: scheme });
@@ -66,10 +70,10 @@ test("banner wording fits at 320 and 390 in both themes", async ({ page }) => {
       for (const [route, title] of cases) {
         await page.goto(route);
         await expect(page.getByText("נתוני דוגמה · Example data")).toBeVisible();
-        const banner = page.locator(".ui-banner");
+        const banner = page.locator(".ui-review-auto");
         await expect(banner).toContainText(title);
         if (!title.includes("בלי להמתין")) await expect(banner).not.toContainText("בלי להמתין");
-        if (width === 320) expect(await bannerTitleClipped(page)).toBe(false);
+        if (width === 320) expect(await autoCountClipped(page)).toBe(false);
         await expectNoOverflow(page);
       }
     }
@@ -89,25 +93,50 @@ test("the empty filed list says both sources and does not clip", async ({ page }
   }
 });
 
-test("skip, approve, and undo keep the visit index and grow the total", async ({ page }) => {
-  for (const scheme of ["light", "dark"] as const) {
-    await page.emulateMedia({ colorScheme: scheme });
-    for (const width of [390, 320]) {
+for (const scheme of ["light", "dark"] as const) {
+  for (const width of [390, 320]) {
+    test(`skip, approve, and undo keep the visit index and grow the total (${scheme}, ${String(width)})`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
       await page.setViewportSize({ width, height: 844 });
-      await page.goto("/reviewer/review");
-      await expect(page.getByText("1 מתוך 3")).toBeVisible();
-      await page.getByRole("button", { name: "דלג" }).click();
-      await expect(page.getByText("2 מתוך 3")).toBeVisible();
-      await page.getByRole("button", { name: "דלג" }).click();
-      await expect(page.getByText("3 מתוך 3")).toBeVisible();
-      await expect(page.getByRole("heading", { name: "צבעי הכרמל בע״מ" })).toBeVisible();
-      await page.getByRole("button", { name: "אישור" }).click();
-      await expect(page.getByText("הכל מאושר")).toBeVisible();
-      await expect(page.getByText("מתוך")).toHaveCount(0);
-      await page.locator(".ui-toast button", { hasText: "ביטול" }).click();
-      await expect(page.getByRole("heading", { name: "צבעי הכרמל בע״מ" })).toBeVisible();
-      await expect(page.getByText("4 מתוך 4")).toBeVisible();
-      await expectNoOverflow(page);
-    }
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/reviewer/review");
+    await expect(page.getByText("1 מתוך 3")).toBeVisible();
+    await expect(page.getByRole("button", { name: "דלג" })).toBeEnabled();
+    await page.getByRole("button", { name: "דלג" }).click();
+    await expect(page.getByText("2 מתוך 3")).toBeVisible();
+    await page.getByRole("button", { name: "דלג" }).click();
+    await expect(page.getByText("3 מתוך 3")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "צבעי הכרמל בע״מ" })).toBeVisible();
+    await page.getByRole("button", { name: "אישור" }).click();
+    await expect(page.getByRole("heading", { name: "עגורני החוף בע״מ" })).toBeVisible();
+    await page.getByRole("button", { name: "אישור" }).click();
+    // The shared card's approve opens the split sheet: the rest and one more part are saved, then the card approves.
+    await page.getByRole("button", { name: LINE_REST }).click();
+    await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "בית הספר אלון" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
+    await page.getByRole("button", { name: "הוספת חלק" }).click();
+    await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "מחסן הנמל" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
+    await page.getByLabel("סכום, מחסן הנמל").fill("1");
+    await page.getByRole("button", { name: "סגירה" }).click();
+    await page.getByRole("button", { name: "אישור" }).click();
+    // ברגי is still held without a category; picking one lets it approve, and the queue ends.
+    await expect(page.getByRole("heading", { name: "ברגי העמק בע״מ" })).toBeVisible();
+    await page.getByRole("button", { name: /^קטגוריה:/ }).click();
+    await page.getByRole("radio", { name: "שינוע" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
+    // The pointer still rests where שמירה was, over the toast; a hovered toast holds its timer, so move it away.
+    await page.mouse.move(0, 0);
+    await expect(page.locator(".ui-toast")).toHaveCount(0, { timeout: 10_000 });
+    // One card left, so the total is 1; the approve empties the queue, and undo grows the total to 2.
+    await expect(page.getByText("פריט 1 מתוך 1")).toBeVisible();
+    await page.getByRole("button", { name: "אישור" }).click();
+    await expect(page.getByText("הכל מאושר")).toBeVisible();
+    await expect(page.getByText("מתוך")).toHaveCount(0);
+    await page.locator(".ui-toast button", { hasText: "ביטול" }).click();
+    await expect(page.getByRole("heading", { name: "ברגי העמק בע״מ" })).toBeVisible();
+    await expect(page.getByText("פריט 2 מתוך 2")).toBeVisible();
+    await expectNoOverflow(page);
+    });
   }
-});
+}

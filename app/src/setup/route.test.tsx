@@ -1,13 +1,13 @@
 import type { Session } from "@supabase/supabase-js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { RouterProvider, createMemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { ToastProvider } from "../ui/toast";
 import { BooksProvider } from "../use-books";
-import { SetupStepScreen } from "./route-screens";
-import { markCompanyCreated, readSetupStore, setupStorageKey } from "./storage";
+import { SetupStepScreen, SetupWelcomeScreen } from "./route-screens";
+import { SETUP_TOTAL, SKIP_SHEET_CONFIRM, WELCOME_LATER, WELCOME_TITLE } from "./copy";
 import { myCompaniesFor } from "../team-test-support";
 
 const userId = "user-1";
@@ -20,16 +20,13 @@ const session = {
   user: { id: userId, aud: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-09-27T00:00:00Z", email: "owner@example.com" },
 } satisfies Session;
 
-const gate = vi.hoisted(() => ({ owner: "user-1" }));
+const gate = vi.hoisted(() => ({ owner: "user-1", company: true }));
 const invoke = vi.hoisted(() => vi.fn(
   (_name: string, _options?: { body?: unknown }): Promise<{ data: unknown; error: null }> =>
     Promise.resolve({ data: null, error: null }),
 ));
 
-const starter = vi.hoisted(() => ({
-  calls: [] as unknown[],
-  error: null as { message: string; code?: string } | null,
-}));
+const created = vi.hoisted(() => ({ calls: [] as unknown[] }));
 
 const dashboard = {
   company_id: companyId,
@@ -75,11 +72,11 @@ const supabase = {
   },
   rpc: (name: string, args?: unknown) => {
     if (name === "list_my_companies") return Promise.resolve({ data: myCompaniesFor(userId, gate.owner), error: null });
-    if (name === "apply_starter_categories") {
-      starter.calls.push(args);
-      return Promise.resolve({ data: starter.error ? null : { set: "rentals", categories: 14 }, error: starter.error });
+    if (name === "create_company") {
+      created.calls.push(args);
+      return Promise.resolve({ data: "company-new", error: null });
     }
-    if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+    if (name === "get_dashboard") return Promise.resolve({ data: gate.company ? dashboard : { ...dashboard, company_id: null, name: null }, error: null });
     if (name === "sumit_status") {
       return Promise.resolve({
         data: { connected: false, sumit_company_id: null, last_sync_at: null, last_error: null },
@@ -106,6 +103,7 @@ function renderRoute(path: string, entries: string[] = [path]) {
   const router = createMemoryRouter(
     [
       { path: "/", element: <p>home</p> },
+      { path: "/setup/welcome", element: <SetupWelcomeScreen /> },
       { path: "/setup/:step", element: <SetupStepScreen /> },
       { path: "/settings", element: <p>settings</p> },
     ],
@@ -126,161 +124,48 @@ function renderRoute(path: string, entries: string[] = [path]) {
   return router;
 }
 
-describe("setup route history", () => {
+describe("setup route (FLOW-514)", () => {
   afterEach(() => {
     localStorage.clear();
     sessionStorage.clear();
     gate.owner = userId;
+    gate.company = true;
+    created.calls.length = 0;
     invoke.mockReset();
     window.history.replaceState(null, "");
   });
 
-  it("pushes the next step, writes only the skip, and Android back returns one step", async () => {
-    const router = renderRoute("/setup/2");
-    fireEvent.click(await screen.findByRole("button", { name: "דלג" }));
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/setup/3");
-    });
-    const stored = readSetupStore(userId, companyId);
-    expect(stored.skipped["2"]).toEqual(expect.any(String));
-    expect(stored.confirmed_lists_at).toBeNull();
-    expect(stored.sample_review_at).toBeNull();
-    expect(stored.run_started_at).toBeNull();
-    await act(async () => {
-      await router.navigate(-1);
-    });
-    expect(router.state.location.pathname).toBe("/setup/2");
+  it("shows the welcome to a user with no company", async () => {
+    gate.company = false;
+    renderRoute("/setup/welcome");
+    expect(await screen.findByText(WELCOME_TITLE)).toBeInTheDocument();
   });
 
-  it("closes the SUMIT sheet on back and stays on step 1", async () => {
-    const router = renderRoute("/setup/1");
-    window.history.replaceState({ idx: 1 }, "");
-    fireEvent.click(await screen.findByRole("button", { name: "חיבור SUMIT" }));
-    await screen.findByRole("dialog", { name: "חיבור SUMIT" });
-    await act(async () => {
-      await router.navigate(-1);
-    });
-    act(() => {
-      window.dispatchEvent(new PopStateEvent("popstate"));
-    });
+  it("sends a user with no company from a step to the welcome", async () => {
+    gate.company = false;
+    const router = renderRoute("/setup/3");
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/setup/1");
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(router.state.location.pathname).toBe("/setup/welcome");
     });
   });
 
-  it("advances to step 2 after a successful connect", async () => {
-    invoke.mockResolvedValue({ data: {}, error: null });
-    const router = renderRoute("/setup/1");
-    fireEvent.click(await screen.findByRole("button", { name: "חיבור SUMIT" }));
-    const dialog = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
-    fireEvent.change(within(dialog).getByLabelText("מספר חברה"), { target: { value: "1001" } });
-    fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "secret-key" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/setup/2");
-    });
-  });
-
-  it("returns home from step 1 when opened from the card", async () => {
-    invoke.mockResolvedValue({ data: {}, error: null });
-    window.history.replaceState({ idx: 1 }, "");
-    const router = renderRoute("/setup/1?from=card", ["/", "/setup/1?from=card"]);
-    fireEvent.click(await screen.findByRole("button", { name: "חיבור SUMIT" }));
-    const dialog = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
-    fireEvent.change(within(dialog).getByLabelText("מספר חברה"), { target: { value: "1001" } });
-    fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "secret-key" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
+  it("skip all from the welcome creates the business and goes home, with the step count in the frame", async () => {
+    gate.company = false;
+    const router = renderRoute("/setup/welcome");
+    fireEvent.click(await screen.findByText(WELCOME_LATER));
+    fireEvent.click(await screen.findByRole("button", { name: SKIP_SHEET_CONFIRM }));
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/");
     });
+    expect(created.calls).toEqual([{ p_name: "העסק שלי", p_vat_registered: true }]);
+    expect(SETUP_TOTAL).toBe(7);
   });
 
-  it("keeps from=card when step 4 opens the review queue", async () => {
-    const router = renderRoute("/setup/4?from=card");
-    fireEvent.click(await screen.findByRole("button", { name: "כרטיס דוגמה" }));
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/review");
-    });
-    expect(router.state.location.search).toBe("?setup=1&from=card");
-  });
-
-  it("pops back to Home when the step was opened from the card", async () => {
-    window.history.replaceState({ idx: 1 }, "");
-    const router = renderRoute("/setup/2?from=card", ["/", "/setup/2?from=card"]);
-    fireEvent.click(await screen.findByRole("button", { name: "דלג" }));
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/");
-    });
-    expect(localStorage.getItem(setupStorageKey(userId, companyId))).toContain("\"2\"");
-    await act(async () => {
-      await router.navigate(1);
-    });
-    expect(router.state.location.pathname).toBe("/setup/2");
-  });
-
-  it("sends a viewer home and will not leave a company on step 0", async () => {
+  it("sends a viewer home from a step", async () => {
     gate.owner = "other";
     const viewer = renderRoute("/setup/2");
     await waitFor(() => {
       expect(viewer.state.location.pathname).toBe("/");
     });
-    gate.owner = userId;
-    const step = renderRoute("/setup/0");
-    await waitFor(() => {
-      expect(step.state.location.pathname).toBe("/setup/1");
-    });
-  });
-
-  it("asks for the starter categories once the company exists, with כללי picked on arrival", async () => {
-    markCompanyCreated(userId);
-    starter.calls = [];
-    starter.error = null;
-    const router = renderRoute("/setup/0");
-    expect(await screen.findByRole("heading", { name: "קטגוריות לפתיחה" })).toBeTruthy();
-    expect(screen.getByRole("radio", { name: "כללי" }).getAttribute("aria-checked")).toBe("true");
-    expect(screen.queryByRole("button", { name: "דלג" })).toBeNull();
-    fireEvent.click(screen.getByRole("radio", { name: "השכרת נכסים" }));
-    fireEvent.click(screen.getByRole("button", { name: "המשך" }));
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/setup/1");
-    });
-    expect(starter.calls).toEqual([{ p_set: "rentals" }]);
-    expect(readSetupStore(userId, companyId).starter_set).toBe("rentals");
-  });
-
-  it("moves on without a word when the books already have lines", async () => {
-    markCompanyCreated(userId);
-    starter.calls = [];
-    starter.error = { message: "starter_locked", code: "55000" };
-    const router = renderRoute("/setup/0");
-    fireEvent.click(await screen.findByRole("button", { name: "המשך" }));
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/setup/1");
-    });
-    expect(starter.calls).toEqual([{ p_set: "general" }]);
-    expect(readSetupStore(userId, companyId).starter_set).toBeNull();
-    expect(document.querySelector(".ui-toast")).toBeNull();
-  });
-
-  it("back from step 1 shows the set already applied and does not apply it again", async () => {
-    markCompanyCreated(userId);
-    starter.calls = [];
-    starter.error = null;
-    const router = renderRoute("/setup/0");
-    fireEvent.click(await screen.findByRole("radio", { name: "השכרת נכסים" }));
-    fireEvent.click(screen.getByRole("button", { name: "המשך" }));
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/setup/1");
-    });
-    await act(async () => {
-      await router.navigate(-1);
-    });
-    expect((await screen.findByRole("radio", { name: "השכרת נכסים" })).getAttribute("aria-checked")).toBe("true");
-    fireEvent.click(screen.getByRole("button", { name: "המשך" }));
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/setup/1");
-    });
-    expect(starter.calls).toEqual([{ p_set: "rentals" }]);
   });
 });

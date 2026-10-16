@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TabBar, TabBarPicture, tabSection } from "./tab-bar";
+import { TabBar, tabSection } from "./tab-bar";
 import { expectRtl, expectTarget } from "./test-support";
 
 function accentRule(): string {
@@ -102,16 +102,6 @@ describe("TabBar", () => {
     expect(screen.getByRole("link", { name: "בית" })).toHaveAttribute("aria-current", "page");
   });
 
-  it("draws a picture of the bar with no router or links (FLOW-506)", () => {
-    render(<TabBarPicture section="projects" />);
-    const bar = document.querySelector(".ui-tabbar-picture");
-    expect(bar).toHaveAttribute("aria-hidden", "true");
-    expect(bar?.querySelectorAll(".ui-tab-slot")).toHaveLength(4);
-    expect(bar?.querySelector("a, button")).toBeNull();
-    expect(bar?.querySelector('[aria-current="page"]')).toHaveTextContent("פרויקטים");
-    // Toast placement and the action bar look for .ui-tabbar; a picture must not count as the bar.
-    expect(document.querySelector(".ui-tabbar")).toBeNull();
-  });
 });
 
 describe("tabSection", () => {

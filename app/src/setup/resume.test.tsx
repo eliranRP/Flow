@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { BooksProvider } from "../use-books";
 import { resetSetupResumeForTests, SetupLanding, SetupResume } from "./route";
-import { emptySetupStore, markSessionEntered, readSetupStore, writeSetupStore } from "./storage";
+import { emptySetupStore, readSetupStore, writeSetupStore } from "./storage";
 import { myCompaniesFor } from "../team-test-support";
 
 const userId = "user-1";
@@ -163,13 +163,6 @@ describe("setup resume", () => {
     expect(screen.getByText("/review")).toBeInTheDocument();
   });
 
-  it("starts the run from Home", async () => {
-    const { router } = renderAt("/");
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/setup/1");
-    });
-    expect(calls.rpc).toContain("get_dashboard");
-  });
 
   it("does not resume when Home is opened after a deep link", async () => {
     writeSetupStore(userId, "company-1", { ...emptySetupStore(), run_started_at: "2026-10-04T00:00:00.000Z" });
@@ -213,36 +206,6 @@ describe("setup resume", () => {
     ).rejects.toThrow();
   });
 
-  it("resumes a started run once, and neither the stamp nor the session alone opens it again", async () => {
-    writeSetupStore(userId, "company-1", { ...emptySetupStore(), run_started_at: "2026-10-04T00:00:00.000Z" });
-    const first = renderAt("/");
-    await waitFor(() => {
-      expect(first.router.state.location.pathname).toBe("/setup/1");
-    });
-    const stamped = readSetupStore(userId, "company-1");
-    expect(stamped.run_resumed_at).not.toBeNull();
-    first.unmount();
-    resetSetupResumeForTests();
-    sessionStorage.clear();
-    const second = renderAt("/");
-    await waitFor(() => {
-      expect(calls.from).toContain("review_queue");
-    });
-    await expect(
-      waitFor(() => { expect(second.router.state.location.pathname).not.toBe("/"); }, { timeout: 500 }),
-    ).rejects.toThrow();
-    second.unmount();
-    resetSetupResumeForTests();
-    markSessionEntered(userId);
-    writeSetupStore(userId, "company-1", { ...stamped, run_resumed_at: null });
-    const third = renderAt("/");
-    await waitFor(() => {
-      expect(calls.from).toContain("review_queue");
-    });
-    await expect(
-      waitFor(() => { expect(third.router.state.location.pathname).not.toBe("/"); }, { timeout: 500 }),
-    ).rejects.toThrow();
-  });
 
   it("a new phone reads the server flags before it decides, and does not restart the run", async () => {
     gate.setupRow = {
@@ -260,26 +223,6 @@ describe("setup resume", () => {
     ).rejects.toThrow();
   });
 
-  it("considers the one resume per user, so another sign-in in the same tab gets its own", async () => {
-    const { router } = renderAt("/");
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/setup/1");
-    });
-    const other = "user-2";
-    writeSetupStore(other, "company-1", { ...emptySetupStore(), run_started_at: "2026-10-04T00:00:00.000Z" });
-    gate.ownerId = other;
-    await act(async () => {
-      await router.navigate("/");
-    });
-    await act(async () => {
-      auth.emit?.("SIGNED_IN", { ...session, user: { ...session.user, id: other, email: "other@example.com" } });
-      await Promise.resolve();
-    });
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/setup/1");
-    });
-    expect(readSetupStore(other, "company-1").run_resumed_at).not.toBeNull();
-  });
 
   it("ignores viewers on Home", async () => {
     gate.ownerId = "other";

@@ -394,6 +394,20 @@
   background: var(--color-accent);
 }
 
+/* The choice sheet (pace, currency, basis, theme) draws the board's radio: a solid accent disc
+   for the chosen row, and no dividers between its rows. */
+.ui-choice-sheet .ui-radio-row {
+  border-bottom: 0;
+}
+
+.ui-choice-sheet .ui-radio {
+  border-radius: 50%;
+}
+
+.ui-choice-sheet .ui-radio[data-on="true"] {
+  font-size: 0;
+}
+
 .ui-radio > .ui-spinner {
   inline-size: var(--spinner-radio);
   block-size: var(--spinner-radio);

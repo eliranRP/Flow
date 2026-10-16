@@ -966,16 +966,19 @@ Deno.test("list_unpaid returns minor units and open and marked totals per curren
     { id: PROJECT_B, description: "Invoice 3", doc_date: "2026-06-03", currency: "USD", direction: "income", project_name: null, customer_name: null, open_gross_agorot: 2500, open_net_agorot: 2500, marked_paid_at: null },
     { id: CATEGORY, description: "Supplier bill", doc_date: "2026-06-04", currency: "ILS", direction: "expense", project_name: null, customer_name: null, open_gross_agorot: -5000, open_net_agorot: -5000, marked_paid_at: null },
   ];
-  const { calls, rpc } = rpcOf(() => ({ status: 200, json: rows }));
+  const overview = { issued_since: "2026-09-01", billed_minor: 48300, open_minor: 21300, paid_minor: 27000, last_sync_at: "2026-10-16T17:30:00+00:00" };
+  const { calls, rpc } = rpcOf((name) => ({ status: 200, json: name === "unpaid_overview" ? overview : rows }));
   const out = await callTool("list_unpaid", {}, ["read"], rpc);
   assertEquals(out.isError, false);
   assertEquals(calls[0], { name: "list_unpaid", body: {} });
+  assertEquals(calls[1], { name: "unpaid_overview", body: {} });
   if (!out.structuredContent.ok) throw new Error("expected ok");
-  const data = out.structuredContent.data as { invoices: Record<string, unknown>[]; totals: unknown[] };
+  const data = out.structuredContent.data as { invoices: Record<string, unknown>[]; totals: unknown[]; overview: Record<string, unknown> };
+  assertEquals(data.overview, overview);
   assertEquals(data.invoices[1], {
     id: PROJECT, description: "Invoice 2", doc_date: "2026-06-02", currency: "ILS", direction: "income", project_name: null,
     customer_name: "Client B", open_gross_minor: 5900, open_net_minor: 5000, marked_paid_at: "2026-06-10T08:00:00+00:00",
-    document_url: "https://pay.sumit.co.il/example/doc-2",
+    document_url: "https://pay.sumit.co.il/example/doc-2", days_open: null, match: null,
   });
   assertEquals(data.invoices[0].document_url, null);
   assertEquals(data.totals, [
@@ -985,6 +988,7 @@ Deno.test("list_unpaid returns minor units and open and marked totals per curren
   ]);
   assertEquals((await callTool("list_unpaid", { company_id: TXN }, ["read"], rpc)).isError, true);
   assertEquals((await callTool("list_unpaid", {}, ["read"], () => Promise.resolve({ status: 403, json: null }))).isError, true);
+  assertEquals((await callTool("list_unpaid", {}, ["read"], (name) => Promise.resolve({ status: 200, json: name === "unpaid_overview" ? null : rows }))).isError, true);
   assertEquals((await callTool("list_unpaid", {}, ["read"], () => Promise.resolve({ status: 200, json: { rows } }))).isError, true);
   assertEquals((await callTool("list_unpaid", {}, ["write"], rpc)).isError, true);
 });

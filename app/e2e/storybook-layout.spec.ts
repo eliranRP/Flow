@@ -269,11 +269,12 @@ test("the assistant settings stories stay inside 320, 360, and 390", async ({ pa
     "screens-routes--connections-assistant-expired",
     "screens-routes--connections-assistant-no-company",
     "screens-routes--connections-assistant-connected",
-    "screens-routes--settings-assistant-scope",
-    "screens-routes--settings-assistant-secret",
-    "screens-routes--settings-assistant-help",
-    "screens-routes--settings-assistant-used",
-    "screens-routes--settings-assistant-unused",
+    "screens-ai-connection--setup",
+    "screens-ai-connection--code-ready-claude-code",
+    "screens-ai-connection--code-ready-other",
+    "screens-ai-connection--connected",
+    "screens-ai-connection--read-scope",
+    "screens-ai-connection--expired",
   ];
   const failures: string[] = [];
   for (const theme of ["light", "dark"]) {
@@ -283,9 +284,6 @@ test("the assistant settings stories stay inside 320, 360, and 390", async ({ pa
         const globals = `&globals=theme:${theme}`;
         await page.goto(`/iframe.html?id=${id}&viewMode=story${globals}`, { waitUntil: "domcontentloaded" });
         await page.locator("#storybook-root").waitFor({ state: "attached" });
-        if (id.endsWith("scope") || id.endsWith("secret") || id.endsWith("help") || id.endsWith("used") || id.endsWith("unused")) {
-          await page.locator(".ui-sheet-panel").last().waitFor({ state: "visible" });
-        }
         const problems = await page.evaluate(() => {
           const roots = [document.querySelector("#storybook-root"), ...document.querySelectorAll(".ui-sheet-panel")].filter((node) => node instanceof HTMLElement);
           const problems: string[] = [];
@@ -460,18 +458,23 @@ test("loading band skeletons stay inside the gutter and do not touch", async ({ 
     for (const story of stories) {
       await page.goto(`/iframe.html?id=${story.id}&viewMode=story`, { waitUntil: "domcontentloaded" });
       await page.locator("#storybook-root").waitFor({ state: "attached" });
+      // A screen can mount its band a few ticks after the root attaches, so wait until the story has
+      // drawn something: its band, or any content for a story without one. The Home cash skeleton's
+      // band has no hero (BandHero is only in HomeSkeleton), so the content box is the hero's when
+      // there is one and the band's own when there is not.
+      await page.waitForFunction(() => document.querySelector(".ui-band") !== null || (document.querySelector("#storybook-root")?.childElementCount ?? 0) > 0);
       const problems = await page.evaluate(() => {
         const band = document.querySelector(".ui-band");
         if (!(band instanceof HTMLElement)) return [];
         const hero = band.querySelector(".ui-band-hero");
-        if (!(hero instanceof HTMLElement)) return [`${location.pathname} band has no hero`];
-        const heroBox = hero.getBoundingClientRect();
-        const style = getComputedStyle(hero);
+        const frame = hero instanceof HTMLElement ? hero : band;
+        const frameBox = frame.getBoundingClientRect();
+        const style = getComputedStyle(frame);
         const content = {
-          left: heroBox.left + (Number.parseFloat(style.paddingLeft) || 0),
-          right: heroBox.right - (Number.parseFloat(style.paddingRight) || 0),
-          top: heroBox.top + (Number.parseFloat(style.paddingTop) || 0),
-          bottom: heroBox.bottom - (Number.parseFloat(style.paddingBottom) || 0),
+          left: frameBox.left + (Number.parseFloat(style.paddingLeft) || 0),
+          right: frameBox.right - (Number.parseFloat(style.paddingRight) || 0),
+          top: frameBox.top + (Number.parseFloat(style.paddingTop) || 0),
+          bottom: frameBox.bottom - (Number.parseFloat(style.paddingBottom) || 0),
         };
         const bars = [...band.querySelectorAll(".ui-skeleton-bar, .ui-skeleton-bar-band")]
           .filter((node): node is HTMLElement => node instanceof HTMLElement)
@@ -514,7 +517,7 @@ test("a row tint is wider than its content by the spacing token on both sides", 
     { id: "components-radiorow--idle", selector: ".ui-radio-row", hover: true },
     { id: "components-radiorow--selected", selector: ".ui-radio-row", hover: false },
     { id: "components-reviewcard--suggestion", selector: ".ui-review-ai .ui-row", hover: true },
-    { id: "screens-routes--settings-business-row", selector: "a.ui-row", name: "קטגוריות", hover: true },
+    { id: "components-listrow--flat-list", selector: ".ui-row", hover: true },
   ];
   const failures: string[] = [];
   for (const item of cases) {
