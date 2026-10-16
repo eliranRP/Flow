@@ -13,8 +13,8 @@ const LIMIT_MS = 700;
 
 const taps = [
   { tab: "פרויקטים", heading: "פרויקטים" },
-  { tab: "לאישור", heading: "לאישור" },
-  { tab: "הגדרות", heading: "הגדרות" },
+  { tab: "הלוואות", heading: "הלוואות" },
+  { tab: "קבועים", heading: "קבועים" },
 ] as const;
 
 async function openHome(page: Page) {

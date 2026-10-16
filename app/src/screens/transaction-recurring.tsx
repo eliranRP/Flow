@@ -165,7 +165,7 @@ export function TxnRecurring({
         <PartyChargesSheet open={allOpen} onOpenChange={setAllOpen} data={charges} search={search} context={context} returnFocusRef={allRef} />
       ) : null}
       <ChoiceSheet
-        copy={paceSheetCopy(detectedPace)}
+        copy={paceSheetCopy(detectedPace, recurring?.party?.name ?? txn.description)}
         open={paceOpen}
         onOpenChange={setPaceOpen}
         value={choice}

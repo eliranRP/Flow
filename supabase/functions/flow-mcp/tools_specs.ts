@@ -263,10 +263,24 @@ function writeTools() {
       transaction_id: { type: "string" },
       category_id: { type: "string" },
     }, true),
-    toolSpec("create_project", "Create a project in the owner's company.", {
+    toolSpec("create_project", "Create a project in the owner's company (FLOW-445). type (optional, up to 40 characters, free text, e.g. flip or rental) and budget_minor (optional, whole minor units of the company currency, or null for no budget; the project's budget, over which its page warns) are set when given. Returns id and undo_kind (project: undo deletes it while it is empty).", {
       idempotency_key: { type: "string" },
       name: { type: "string" },
       status: { type: "string", enum: ["active", "finished"] },
+      type: { type: "string" },
+      budget_minor: { type: ["integer", "null"], minimum: 0 },
+    }, true),
+    toolSpec("update_project", "Change a project's name, type, budget or status (FLOW-445; owner or editor). id is the project id; send only the fields to change: name (2 to 120 characters), type (up to 40 characters; null clears it), budget_minor (whole minor units; null clears the budget), status (active or finished; finished sets its finish day, active clears it). At least one field. Returns id, name, type, budget_minor, status and undo_kind (project_update: undo puts the before values back while the project still holds this write's values, else conflict). A project of another company is not_found.", {
+      idempotency_key: { type: "string" },
+      id: { type: "string" },
+      name: { type: "string" },
+      type: { type: ["string", "null"] },
+      budget_minor: { type: ["integer", "null"], minimum: 0 },
+      status: { type: "string", enum: ["active", "finished"] },
+    }, true),
+    toolSpec("delete_project", "Delete a project that nothing refers to (FLOW-445; owner or editor): no line, split, allocation, loan or supplier default. A project in use is refused (in use). Returns id, name and undo_kind (project_delete: undo puts the project back with the same id).", {
+      idempotency_key: { type: "string" },
+      id: { type: "string" },
     }, true),
     toolSpec("create_category", "Create a category in the owner's company. parent_id (optional) puts it under a parent category of the same kind, as a sub-category (one level; not a loan category).", {
       idempotency_key: { type: "string" },
@@ -563,7 +577,7 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "recurring_match"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "recurring_match", "project_update", "project_delete"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, set_lines_cash, create_projects or create_categories batch.", {

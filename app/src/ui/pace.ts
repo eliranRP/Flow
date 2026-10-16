@@ -26,10 +26,12 @@ export type PaceChoice = RecurringPace | "never";
  * The "כל כמה זמן" sheet (FLOW-415 D, decision 0175; FLOW-366 adds לא קבוע). The note under לא קבוע
  * says what it does; the note under the pace the server detected says where it came from.
  */
-export function paceSheetCopy(detected: RecurringPace | null): ChoiceSheetCopy<PaceChoice> {
+export function paceSheetCopy(detected: RecurringPace | null, party?: string): ChoiceSheetCopy<PaceChoice> {
   return {
     historyKey: "payment-pace",
     title: PACE_TITLE,
+    // The board's subtitle: the rule covers every payment of this party.
+    subtitle: party ? `חל על כל התשלומים של ${party}` : undefined,
     choices: [
       { value: "never", label: "לא קבוע", description: "לא יופיע בקבועים" },
       ...PACE_CHOICES.map((pace) => ({

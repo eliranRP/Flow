@@ -1,4 +1,6 @@
+import type { ReactNode } from "react";
 import { useId } from "react";
+import { cx } from "./cx";
 import { IconButton } from "./icon-button";
 import { OutwardChevron } from "./icons";
 
@@ -12,24 +14,33 @@ export function MonthStepper({
   earlier,
   later,
   onStep,
+  children,
+  onBand = false,
 }: {
   /** The earlier month's name for the chevron ("תזרים אוגוסט"), or null for none. */
   earlier: string | null;
   later: string | null;
   onStep: (delta: -1 | 1) => void;
+  /** FLOW-364: a centre between the two chevrons (Home's month name and its drawer button). */
+  children?: ReactNode;
+  /** FLOW-364: on the colour band, white chevrons on the band's track. */
+  onBand?: boolean;
 }) {
   return (
-    <div className="ui-month-step">
+    <div className={cx("ui-month-step", onBand && "ui-month-step-band")}>
       <StepArrow
         label={earlier}
         side="start"
+        onBand={onBand}
         onClick={() => {
           onStep(-1);
         }}
       />
+      {children}
       <StepArrow
         label={later}
         side="end"
+        onBand={onBand}
         onClick={() => {
           onStep(1);
         }}
@@ -42,7 +53,17 @@ export function MonthStepper({
  * One chevron. With no month to open it stays in place, dimmed (the owner's call, 2026-10-10), and
  * focusable with aria-disabled, as the period bar's arrows are, so a screen reader hears why.
  */
-function StepArrow({ label, side, onClick }: { label: string | null; side: "start" | "end"; onClick: () => void }) {
+function StepArrow({
+  label,
+  side,
+  onBand,
+  onClick,
+}: {
+  label: string | null;
+  side: "start" | "end";
+  onBand: boolean;
+  onClick: () => void;
+}) {
   const reasonId = useId();
   const off = label == null;
   return (
@@ -50,6 +71,7 @@ function StepArrow({ label, side, onClick }: { label: string | null; side: "star
       <IconButton
         label={label ?? (side === "start" ? "חודש קודם" : "חודש הבא")}
         className="ui-month-step-arrow"
+        onBand={onBand}
         aria-disabled={off || undefined}
         aria-describedby={off ? reasonId : undefined}
         onClick={() => {

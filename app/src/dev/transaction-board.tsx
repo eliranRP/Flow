@@ -1,7 +1,22 @@
 import { useSearchParams } from "react-router-dom";
 import { type TransactionDetail } from "@flow/shared";
+import { type TxnMeta } from "../txn-meta";
 import { TransactionScreen } from "../screens/transaction-screen";
 import { boardCharges, loanCharges } from "../ui/related-charges.sample";
+
+/** The board's month the cards open from: the back link reads its side (יצא). */
+const BOARD_FROM = "/cash/2026-10/out/USD";
+
+/** The bank line behind the board's card: its account makes the meta read "חשבונית + שורת בנק". */
+const BOARD_BANK_LINE: TxnMeta = {
+  transaction_id: "t-board",
+  method: "card",
+  card_last4: null,
+  memo: null,
+  account: "Example Checking ••1234",
+  counterparty: null,
+  bank_description: null,
+};
 
 const BOARD_TXN: NonNullable<TransactionDetail> = {
   id: "t-board",
@@ -35,6 +50,9 @@ export function DevTransactionBoard() {
         sample={BOARD_TXN}
         sampleProjects={[{ id: "p1", name: "פרויקט לדוגמה" }]}
         sampleCategories={[{ id: "c1", name: "חומרים" }]}
+        sampleMeta={BOARD_BANK_LINE}
+        sampleFrom={BOARD_FROM}
+        sampleNoFooter
       />
     );
   }
@@ -69,6 +87,8 @@ export function DevTransactionBoard() {
           detected_pace: "month",
         }}
         sampleCharges={loanCharges}
+        sampleFrom={BOARD_FROM}
+        sampleNoFooter
       />
     );
   }
@@ -90,6 +110,8 @@ export function DevTransactionBoard() {
           detected_pace: "month",
         }}
         sampleCharges={boardCharges}
+        sampleFrom={BOARD_FROM}
+        sampleNoFooter
       />
     );
   }

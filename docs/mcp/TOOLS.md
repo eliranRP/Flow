@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `update_project`, `delete_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -21,6 +21,8 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "review"` | `id` | the review-queue id the write closed |
 | `undo` `kind: "reassign"` | `id` | the `reassign_undo` id |
 | `undo` `kind: "project"` | `id` | the project id `create_project` or a `create_projects` row returned |
+| `undo` `kind: "project_update"` | `id` | the project id `update_project` returned |
+| `undo` `kind: "project_delete"` | `id` | the project id `delete_project` returned |
 | `undo` `kind: "category"` | `id` | the category id `create_category` or a `create_categories` row returned |
 | `undo` `kind: "category_hidden"` | `id` | the category id `hide_category` returned |
 | `undo` `kind: "category_pnl"` | `id` | the category id `set_category_pnl` returned |
@@ -308,17 +310,33 @@ Output `data` when a review closed: `{ "undo_kind": "review", "id": "11111111-11
 
 ## Writes · cycle 4
 
-A project, category or loan name (`create_project`, `create_category`, `create_projects`, `create_categories`, `add_loan`, `update_loan`) with a control character, a line or paragraph separator, an invisible format character (zero-width, bidi marks and controls, BOM, soft hyphen, tag characters) or a blank filler is `validation` with message `name has an invisible or control character`, so a client knows to strip it (a pasted RLM, for example); ZWJ is allowed for emoji (FLOW-205). A no-break or other wide space inside the name is stored as a plain space. The database holds the app to the same rule: a new or renamed project, category or loan with such a character is refused (`23514`), and a name stored before the rule does not block other edits. A SUMIT budget section name, which comes from outside, has such characters dropped instead (the sync and `map_budget_section` do not fail on it).
+A project, category or loan name (`create_project`, `update_project`, `delete_project`, `create_category`, `create_projects`, `create_categories`, `add_loan`, `update_loan`) with a control character, a line or paragraph separator, an invisible format character (zero-width, bidi marks and controls, BOM, soft hyphen, tag characters) or a blank filler is `validation` with message `name has an invisible or control character`, so a client knows to strip it (a pasted RLM, for example); ZWJ is allowed for emoji (FLOW-205). A no-break or other wide space inside the name is stored as a plain space. The database holds the app to the same rule: a new or renamed project, category or loan with such a character is refused (`23514`), and a name stored before the rule does not block other edits. A SUMIT budget section name, which comes from outside, has such characters dropped instead (the sync and `map_budget_section` do not fail on it).
 
 `create_project` and `create_category` record undo rows. Undo deletes the row only when nothing in the company references it, including a review row, an open reassign undo or an open `split_line` undo that would restore it (FLOW-205). Otherwise undo is `conflict` and the row stays.
 
 ### create_project
 
 ```json
-{ "idempotency_key": "proj-1", "name": "Site Alpha", "status": "active" }
+{ "idempotency_key": "proj-1", "name": "Site Alpha", "status": "active", "type": "flip", "budget_minor": 500000 }
 ```
 
-`status` is optional (`active` or `finished`). Output `data`: `{ "id", "undo_kind": "project" }`.
+`status` is optional (`active` or `finished`). `type` is optional free text, up to 40 characters with the name's character rule (FLOW-445; decision [0176](../decisions/0176-project-opens-on-cash.md)). `budget_minor` is optional whole minor units of the company currency, or `null` for no budget; the project page warns when its expenses pass it. Output `data`: `{ "id", "undo_kind": "project" }`.
+
+### update_project
+
+```json
+{ "idempotency_key": "proj-u1", "id": "<project id>", "name": "Site Road", "type": null, "budget_minor": null }
+```
+
+Changes only the fields sent (FLOW-445; owner or editor): `name` (2 to 120 characters, the name rule), `type` (up to 40 characters; `null` clears it), `budget_minor` (whole minor units; `null` clears the budget) and `status` (`active` or `finished`; `finished` sets the finish day, `active` clears it). At least one field; an unknown field is `validation`. A project of another company is `not_found`. Output `data`: `{ "id", "name", "type", "budget_minor", "status", "undo_kind": "project_update" }`. Undo puts the before values back while the project still holds the values this write set; otherwise `conflict`.
+
+### delete_project
+
+```json
+{ "idempotency_key": "proj-d1", "id": "<project id>" }
+```
+
+Deletes a project that nothing refers to (FLOW-445; owner or editor): no line (filed, shared or split, removed ones too), no allocation, loan or supplier whose default project it is. A project in use is `refused` with the message `in use`, and the project stays. Output `data`: `{ "id", "name", "undo_kind": "project_delete" }`. Undo puts the project back with the same id and its fields.
 
 ### create_category
 
@@ -992,4 +1010,4 @@ The owner only; the member loses access at once. Output `data`: `{ "user_id", "p
 
 ## Not in tools/list
 
-`rename_project`, `finish_project`, `collapse_expense`, `bulk_assign`, and `skip_review` wait. So do the SUMIT writers, `delete_transaction`, `create_company`, and `create_manual_entry`. Only `sync_bank` calls an internal Flow function; no tool calls a third party directly.
+`collapse_expense`, `bulk_assign`, and `skip_review` wait. So do the SUMIT writers, `delete_transaction`, `create_company`, and `create_manual_entry`. Only `sync_bank` calls an internal Flow function; no tool calls a third party directly.

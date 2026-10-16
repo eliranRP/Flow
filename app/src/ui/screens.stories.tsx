@@ -5,7 +5,6 @@ import { SignInScreen } from "../screens/SignInScreen";
 import { InstallScreen } from "./install-screen";
 import { InvoiceReadingFrame } from "./reference-frames.stories-support";
 import { StoryRoute } from "./story-route";
-import { TabBar } from "./tab-bar";
 import { ExampleBar, exampleLabel } from "./screen-stories-support";
 
 const meta = {
@@ -135,13 +134,3 @@ export const InvoiceReading: Story = {
   ),
 };
 
-export const FabPressed: Story = {
-  tags: ["clip-no-text"],
-  render: () => (
-    <StoryRoute entry="/">
-      <div className="flex min-h-dvh flex-1 flex-col justify-end">
-        <TabBar fabPressed />
-      </div>
-    </StoryRoute>
-  ),
-};

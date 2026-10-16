@@ -223,7 +223,7 @@ Parts not in the inventory keep their rules until their screens move. They are l
 | Part | States | Rule |
 |---|---|---|
 | Period pill | tinted, or white/dark on the band | Opens the period sheet. Home's band carries one pill (FLOW-355), and so does the project band (FLOW-359) |
-| + button | default, pressed | 48px circle in the tab bar. Opens Add |
+| + button | default, pressed | A circle in Home's band, beside the search and the avatar. Opens Add. It is not a tab (FLOW-364) |
 | Switch and checkbox | off / on / disabled | Overhead switch starts off. [0022](../decisions/0022-after-overhead-starts-off.md) |
 | Pending card | default, pressed; one row, or two rows (review, unpaid) each pressed on its own | The one tinted block on Home. Two rows share it, separated by padding, no hairline (FLOW-321) |
 | Project row | profit in `text`, loss in `bad` with a minus | Name and margin on the start side |
@@ -277,7 +277,7 @@ The band holds only the summary. Home: one period pill, one label and the hero n
 - Must work from **320 to 480px**. Amounts never wrap. Above 480px, centre a column (`--content-max: 480px`). No desktop layout. [0015](../decisions/0015-installable-mobile-web-app.md), guide §4.
 - Sides 24px. Cards inset 16px. Sections 36–40px apart.
 - `viewport-fit=cover`. Pad with `env(safe-area-inset-top)` and `env(safe-area-inset-bottom)`. Do not hard-code 47px or 34px.
-- Tab bar is 52px plus the bottom safe area (86px on a notched iPhone). When that inset is 0, an 8px floor (`--tabbar-min-inset`) keeps the labels off the screen edge ([0045](../decisions/0045-phase-0-design-gaps.md)). Content pads so the last row is not hidden.
+- Tab bar is 52px plus the bottom safe area (86px on a notched iPhone). When that inset is 0, a floor (`--tabbar-min-inset`) keeps the labels off the screen edge ([0045](../decisions/0045-phase-0-design-gaps.md), superseded for the floor by [0183](../decisions/0183-tab-bar-floor-from-the-board.md)). The default floor is 8px; the app sets 32px so the bar is 84px as on the board ([0183](../decisions/0183-tab-bar-floor-from-the-board.md) supersedes the 8px floor). Content pads so the last row is not hidden.
 - When the keyboard is open, hide the tab bar and keep the focused field visible.
 - Portrait, `display: standalone`. Guide §4 manifest excerpt.
 
@@ -555,13 +555,12 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 
 ### 01 Home
 
-- Mockups: [01-home-light.png](../../design/screens/01-home-light.png), [01-home-dark.png](../../design/screens/01-home-dark.png). Overhead on: [18-home-overhead-on-light.png](../../design/screens/18-home-overhead-on-light.png), [18-home-overhead-on-dark.png](../../design/screens/18-home-overhead-on-dark.png).
-- Empty: [es-01-home-first-run-light.png](../../design/states/es-01-home-first-run-light.png), [es-01-home-first-run-dark.png](../../design/states/es-01-home-first-run-dark.png).
-- Loading: [ld-01-home-skeleton-light.png](../../design/states/ld-01-home-skeleton-light.png), [ld-01-home-skeleton-dark.png](../../design/states/ld-01-home-skeleton-dark.png). Refresh: [ld-07](../../design/states/ld-07-pull-to-refresh-light.png).
+- Mockups: the FLOW-364 board frames for Home, the month drawer, a past month and the empty first run (the 01-home, es-01, ld-01 and ld-07 PNGs were removed; the screen, the skeleton and the empty state are in the app, see the FLOW-364 log).
 - Entry: tab בית. Sunday notification. Returning sign-in. [0018](../decisions/0018-two-notifications.md), guide §7.33.
+- Board (FLOW-364): the band holds the company, search, + and the avatar. The month pill steps by month and opens the month drawer, a 3-by-4 grid whose cells are 60px with the name and amount at the start edge. The split card (ממה מורכב) and the attention box follow. A past month has the darker band with the white back pill and no attention box. The compact bar shows the month and its figure once the band scrolls away.
 - Steps: the band's period pill opens 16. The hero is the label and the number. נכנס and יצא sit below the band. The pending card sits under the first two project rows and has a row to Review and a row to Unpaid with its total, each only when it has items (FLOW-321, FLOW-355). A project row opens 02. + opens 04. Overhead switch starts off ([0022](../decisions/0022-after-overhead-starts-off.md)). On, the hero stays company net profit ([0032](../decisions/0032-home-hero-stays-company-net-profit.md)).
 - Back: none. This is a tab root.
-- Success: the summary. Empty first run follows [0044](../decisions/0044-phase-0-shell-calls.md): the button is "חיבור בנק או SUMIT" and opens the connections page, and the line says the profit appears once a bank or SUMIT is connected (FLOW-328). No greeting and no wordmark ([0069](../decisions/0069-back-and-one-tap-review.md)).
+- Success: the summary. Empty first run follows [0044](../decisions/0044-phase-0-shell-calls.md) and the FLOW-364 board (StatesHomeEmpty): a zero band, the bank card with "חיבור Mercury" opening the connections page and a manual-add link, and the list "מה יופיע כאן". The connections page is the one way in (FLOW-328). No greeting and no wordmark ([0069](../decisions/0069-back-and-one-tap-review.md)).
 - Error: skeleton while loading (`ld-01`). The loading band matches the calm hero. Offline is `ld-08`. A server load failure and the period pill are [0045](../decisions/0045-phase-0-design-gaps.md). Home no longer greets a missing name ([0069](../decisions/0069-back-and-one-tap-review.md) amends that sentence).
 
 ### 02 Project
@@ -706,7 +705,7 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 
 ### 14a Connections
 
-- Mockup: `flow-501-mockup.html` option A (FLOW-501). Route `/settings/connections`, template A with the tab bar (הגדרות stays current).
+- Mockup: `flow-501-mockup.html` option A (FLOW-501). Route `/settings/connections`, template A with the tab bar. No tab is current here: Settings sits behind the avatar (FLOW-364).
 - Header: Back labelled הגדרות to `/settings`, title חיבורים.
 - Steps: "ספרים ובנק" holds SUMIT and Mercury; "עזרים" holds תיוג חכם (Jev) and עוזר AI. Each row is the shared `ConnectorRow`: the one-word status and its one sheet, unchanged from [0082](../decisions/0082-settings-redesign.md) §3–§8. `?sheet=sumit|mercury|assistant` opens that sheet once; the old `/settings?sheet=` links redirect here.
 - States: loading keeps the real titles over skeleton hints; an error is the row's inline ניסיון חוזר; the page is never empty. With no company the page stays open and SUMIT and Mercury offer פרטי העסק.
@@ -714,7 +713,7 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 
 ### 14b Loans
 
-- Mockup: `flow-501-mockup.html` option A (FLOW-501). Route `/settings/loans`, template A with the tab bar. `/settings/loans/:id` is kept for FLOW-110's detail page.
+- Mockup: `flow-501-mockup.html` option A (FLOW-501). Route `/settings/loans`, template A with the tab bar. No tab is current here: Settings sits behind the avatar (FLOW-364). `/settings/loans/:id` is kept for FLOW-110's detail page.
 - Header: Back labelled הגדרות to `/settings`, title הלוואות. No company goes back to Settings.
 - Steps: each loan's name, its hint (project, or ממתין לבדיקה in the warning tone), and the balance with small cents (".00" included); then the הלוואה חדשה row. A row tap opens the project sheet (FLOW-119).
 - States: two skeleton rows while loading; the error layout "לא הצלחנו לטעון את ההלוואות" with ניסיון חוזר and no new-loan row; the empty state "אין הלוואות עדיין" with one primary הלוואה חדשה.

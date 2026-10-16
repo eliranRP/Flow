@@ -169,23 +169,6 @@ export function cashSummaryRows(key: string, rows: CashCurrencyRow[], search: st
   ];
 }
 
-/** The earlier months under "חודשים קודמים": each month's net, opening its own page. */
-export function earlierMonthRows(data: NonNullable<CashMonths>, search: string, now = new Date()): CashRow[] {
-  return data.months.slice(1).map((month) => {
-    const key = cashMonthKey(month.month);
-    const rows = shownCashRows(month, data.base_currency);
-    const net = rows.map((row) => ({ currency: row.currency, minor: row.net_minor }));
-    return {
-      id: key,
-      label: cashMonthName(key, now),
-      tone: "net",
-      amounts: net,
-      href: cashMonthPath(key, search),
-      name: `${cashTitle(key, now)} ${cashAmountsText(net)}`,
-    };
-  });
-}
-
 /**
  * FLOW-417 (owner's "Years, then months", decision 0174). Home's "לכל החודשים" opens the history:
  * the net since the first cash month, then a row per year; a year opens its months, and a month

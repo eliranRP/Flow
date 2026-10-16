@@ -28,6 +28,7 @@ import {
   createProjectsSchema,
   deleteCategorySchema,
   deleteLoanSchema,
+  deleteProjectSchema,
   detachLoanPaymentSchema,
   hideCategorySchema,
   invalid,
@@ -66,6 +67,7 @@ import {
   undoBatchSchema,
   undoJevPrefillSchema,
   undoSchema,
+  updateProjectSchema,
   WRITE_TOOL_NAMES,
 } from "./tools_schemas.ts";
 import { addLoanWrite, attachLoanWrite, updateLoanWrite } from "./tools_loans.ts";
@@ -125,6 +127,30 @@ export async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_name: parsed.data.name,
       ...(parsed.data.status == null ? {} : { p_status: parsed.data.status }),
+      ...(parsed.data.type == null ? {} : { p_type: parsed.data.type }),
+      ...(parsed.data.budget_minor == null ? {} : { p_budget_minor: parsed.data.budget_minor }),
+    };
+  } else if (name === "update_project") {
+    // FLOW-445: only the fields the caller sent go in the patch; null clears type or budget.
+    const parsed = updateProjectSchema.safeParse(args);
+    if (!parsed.success) return invalid(parsed.error);
+    rpcName = "mcp_update_project";
+    const patch: Record<string, unknown> = {};
+    for (const key of ["name", "type", "budget_minor", "status"] as const) {
+      if (parsed.data[key] !== undefined) patch[key] = parsed.data[key];
+    }
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_id: parsed.data.id,
+      p_patch: patch,
+    };
+  } else if (name === "delete_project") {
+    const parsed = deleteProjectSchema.safeParse(args);
+    if (!parsed.success) return invalid(parsed.error);
+    rpcName = "mcp_delete_project";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_id: parsed.data.id,
     };
   } else if (name === "create_category") {
     const parsed = createCategorySchema.safeParse(args);

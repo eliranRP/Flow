@@ -1,4 +1,4 @@
-import type { CashCurrencyRow, CashLine, CashMonths, CashYears } from "@flow/shared";
+import type { CashCurrencyRow, CashLine, CashMonths, CashToDay, CashYears } from "@flow/shared";
 import { shiftMonthKey } from "../period";
 import { israelToday } from "../ui/date-math";
 
@@ -129,6 +129,90 @@ export function sampleCashYearMonths(now = new Date()): NonNullable<CashMonths> 
   };
 }
 
+/** FLOW-364: the previous month up to today's day, as cash_month_to_day returns it (invented figures). */
+export function sampleCashToDay(): CashToDay {
+  return [{ currency: "ILS", in_minor: 1_420_000n, out_minor: 1_310_000n }];
+}
+
+/**
+ * FLOW-364 (board): a negative month in dollars, the board's shape. Money out is above money in,
+ * the split card reads the minus with an investment row and a negative profit row, and the
+ * forecast is negative. `past` gives the darker frame's month (`?month=past`), whose own figures
+ * and the month before it are the board's September. Invented round figures, in cents.
+ */
+function usdRow(inMinor: bigint, outMinor: bigint, profit: bigint, kept: CashCurrencyRow["not_in_profit_categories"] = []): CashCurrencyRow {
+  return {
+    currency: "USD",
+    in_minor: inMinor,
+    out_minor: outMinor,
+    net_minor: inMinor - outMinor,
+    profit_minor: profit,
+    excluded_count: 0,
+    excluded_in_minor: 0n,
+    excluded_out_minor: 0n,
+    not_in_profit_categories: kept,
+  };
+}
+
+export function sampleCashUsdLoss(past = false, now = new Date()): NonNullable<CashMonths> {
+  const current = israelToday(now).slice(0, 7);
+  const month = (back: number) => `${shiftMonthKey(current, -back)}-01`;
+  // Three named categories, so the subline reads "שיפוץ והשבחה, הון בעלים ועוד" as the board's does.
+  const investment = (amount: bigint) => {
+    const part = amount / 10n;
+    return [
+      { name: "שיפוץ והשבחה", amount_minor: part * 6n },
+      { name: "הון בעלים", amount_minor: part * 2n + (amount - part * 9n) },
+      { name: "ריבית", amount_minor: part },
+    ];
+  };
+  const months = past
+    ? [
+        usdRow(2_480_000n, 4_200_000n, -340_000n, investment(-1_380_000n)),
+        usdRow(6_145_000n, 23_877_000n, -2_472_000n, investment(-15_260_000n)),
+        usdRow(2_000_000n, 1_900_000n, 100_000n),
+        usdRow(1_700_000n, 1_520_000n, 180_000n),
+      ]
+    : [
+        usdRow(2_480_000n, 4_200_000n, -340_000n, investment(-1_380_000n)),
+        usdRow(1_824_000n, 6_350_000n, -4_526_000n),
+        usdRow(1_720_000n, 1_480_000n, 240_000n),
+        usdRow(1_700_000n, 1_520_000n, 180_000n),
+      ];
+  return {
+    basis: "paid",
+    base_currency: "USD",
+    months: months.map((by, index) => ({ month: month(index), by_currency: [by] })),
+  };
+}
+
+/** The current month's previous month up to today's day, in dollars, for the change pills. */
+export function sampleCashUsdToDay(): CashToDay {
+  // The board: money in up, money out down (the same-day compare for the change pills).
+  return [{ currency: "USD", in_minor: 1_824_000n, out_minor: 6_350_000n }];
+}
+
+/**
+ * FLOW-364 (board, FlowPicker): the usd-loss year in dollars, January to the current month. The
+ * cells show each month's net: losses in coral with a minus, the rest plain. Invented figures.
+ */
+export function sampleCashUsdYear(now = new Date()): NonNullable<CashMonths> {
+  const year = israelToday(now).slice(0, 4);
+  const current = israelToday(now).slice(0, 7);
+  const nets = [842_000n, -315_000n, 1_278_000n, 409_000n, -2_160_000n, 931_000n, 299_600n, 11_458_200n, -17_732_000n, -1_720_000n];
+  return {
+    basis: "paid",
+    base_currency: "USD",
+    months: nets.map((net, index) => {
+      const key = `${year}-${String(index + 1).padStart(2, "0")}`;
+      const base = 2_000_000n;
+      const inMinor = net >= 0n ? base + net : base;
+      const outMinor = net >= 0n ? base : base - net;
+      return { month: `${key}-01`, by_currency: [usdRow(inMinor, outMinor, net)] };
+    }).filter((row) => row.month.slice(0, 7) <= current),
+  };
+}
+
 /** FLOW-366: the lines with the flags the server sends. The first has a review open, the second is out of profit. */
 export function sampleCashLinesFlagged(side: "in" | "out" | "kept", now = new Date()): CashLine[] {
   return sampleCashLines(side, now).map((row, index) => ({ ...row, pending: index === 0, in_pnl: index !== 1 }));
@@ -139,9 +223,6 @@ export function sampleCashLinesFlagged(side: "in" | "out" | "kept", now = new Da
  * waiting for approval, and $13,757 that profit leaves out. The days count back from today, so the
  * day heads read "היום" and "אתמול" on any date.
  */
-function usdRow(inMinor: bigint, outMinor: bigint, profit: bigint, kept: CashCurrencyRow["not_in_profit_categories"] = []): CashCurrencyRow {
-  return { ...row(inMinor, outMinor, profit, kept), currency: "USD" };
-}
 
 const BOARD_KEPT = [
   { name: "ציוד לעסק", amount_minor: -900_000n },

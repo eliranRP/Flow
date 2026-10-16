@@ -200,12 +200,33 @@
   margin: 0;
 }
 
-/* The board's recurring row: the tag sits at the far end of the text, before the chevron. */
+/* The board's recurring row is two lines: the value is the title, and under it the tag sits at the
+   end while the hint wraps beside it. The value line opens up so its tag and the hint share a row. */
+.ui-recurring-card .ui-icon-row-text {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+}
+
 .ui-recurring-card .ui-icon-row-value-line {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-2);
+  display: contents;
+}
+
+.ui-recurring-card .ui-icon-row-value {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+.ui-recurring-card .ui-recurring-tag {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+}
+
+.ui-recurring-card .ui-icon-row-hint {
+  grid-column: 1;
+  grid-row: 2;
 }
 
 /* The board's earlier-charge rows have no chevron: the row is the link, and its label names it. */

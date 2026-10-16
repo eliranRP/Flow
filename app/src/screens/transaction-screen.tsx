@@ -11,6 +11,7 @@ import { getSupabase } from "../lib/supabase";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { transactionQueryOptions, useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useLineMetaQuery, useTransactionQuery } from "../use-books";
+import { type TxnMeta } from "../txn-meta";
 import { TxnStepNav, txnParty, usePrefetchNeighbours, usePrefetchNextPage, useAnnounceTxn, useNeighbourParty, useTxnNav, useTxnNavKeys } from "../txn-nav";
 import { assertNoError, useWrite } from "../use-write";
 import { CardSwipe } from "../ui/card-swipe";
@@ -138,6 +139,9 @@ export function TransactionScreen({
   sampleLineSplit,
   sampleRecurring,
   sampleCharges,
+  sampleMeta,
+  sampleFrom,
+  sampleNoFooter = false,
   onOpenSplit,
 }: {
   sample?: NonNullable<TransactionDetail>;
@@ -149,6 +153,12 @@ export function TransactionScreen({
   sampleRecurring?: PaymentRecurring | null;
   /** FLOW-431: a story's party charges, in place of the party_charges read. */
   sampleCharges?: PartyCharges | null;
+  /** A story's bank line (get_line_meta), in place of the read. Its account makes the meta say שורת בנק. */
+  sampleMeta?: TxnMeta | null;
+  /** The month lines page the story was opened from (`/cash/YYYY-MM/out/USD`), so the back link reads its side. */
+  sampleFrom?: string;
+  /** The board's frame draws no footer under the cards. */
+  sampleNoFooter?: boolean;
   /** Reviewer preview stays on its own split instead of the ledger route. */
   onOpenSplit?: () => void;
 } = {}) {
@@ -173,6 +183,7 @@ export function TransactionScreen({
   const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
   const detail = useTransactionQuery(sample ? "" : transactionId);
   const lineMeta = useLineMetaQuery(sample ? sample.id : transactionId, sample == null);
+  const meta = sample ? sampleMeta ?? null : lineMeta.data ?? null;
   const nav = useTxnNav(sample?.id ?? transactionId);
   const goBack = useGoBack();
   useTxnNavKeys(nav);
@@ -548,14 +559,14 @@ export function TransactionScreen({
     <>
       <TransactionTopBar
         fallback={parent}
-        backLabel={nav ? cashLinesBackLabel(nav.list.from) : null}
+        backLabel={nav ? cashLinesBackLabel(nav.list.from) : sampleFrom != null ? cashLinesBackLabel(sampleFrom) : null}
         title={`${party} · ${amountText}`}
         end={menuButton}
       />
       <CardSwipe key={txn.id} canNext={nav?.next != null} canPrev={nav?.prev != null} enter={nav?.enter} peekNext={peekNext} peekPrev={peekPrev} onStep={(step) => { nav?.move(step, "swipe"); }}>
         <div className="ui-txn-body">
           <div className="ui-txn-intro">
-          <TxnHead txn={txn} party={party} moneyIn={moneyIn} meta={lineMeta.data ?? undefined} />
+          <TxnHead txn={txn} party={party} moneyIn={moneyIn} meta={meta ?? undefined} />
           {pending ? (
             <Link className="ui-txn-banner" to={txn.review_id ? `/review?item=${encodeURIComponent(txn.review_id)}&from=all` : "/review?from=all"}>
               <span className="ui-txn-banner-text">השורה מחכה לאישור שלך</span>
@@ -633,7 +644,7 @@ export function TransactionScreen({
         {lineMeta.isError && lineMeta.data == null ? (
           <LoanReadError label="פרטי הבנק" busy={lineMeta.isFetching} onRetry={() => { void lineMeta.refetch(); }} />
         ) : null}
-        <TxnFooter txn={txn} meta={lineMeta.data ?? undefined} />
+        {sampleNoFooter ? null : <TxnFooter txn={txn} meta={meta ?? undefined} />}
         </div>
       </CardSwipe>
       {countedLocked ? null : (

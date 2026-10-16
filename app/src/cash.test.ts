@@ -12,7 +12,6 @@ import {
   cashYearSummaryRows,
   cashYearTitle,
   cashYearTotals,
-  earlierMonthRows,
   notInProfitHint,
   notInProfitRest,
   shownCashRows,
@@ -110,16 +109,6 @@ describe("the months", () => {
       ["ILS", 0n],
       ["USD", 50_000n],
     ]);
-  });
-
-  it("lists the earlier months by their net, a loss in red, each opening its page", () => {
-    const rows = earlierMonthRows(data, "?preview=1", now);
-    expect(rows.map((r) => [r.label, r.tone, r.href])).toEqual([
-      ["ספטמבר", "net", "/cash/2026-09?preview=1"],
-      ["אוגוסט", "net", "/cash/2026-08?preview=1"],
-    ]);
-    expect(rows[0]?.amounts).toEqual([{ currency: "ILS", minor: -115_000n }]);
-    expect(rows[0]?.name).toBe("תזרים ספטמבר −₪1,150");
   });
 });
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import net from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -119,7 +119,17 @@ function walkRoutes(source) {
   return { routes: [...new Set(routes)].sort(), bad };
 }
 
-/** Production routes from App.tsx. `/` is index.html. Dev and reviewer routes are not shipped. */
+/** App.tsx and the per-area route modules it spreads in (app/src/routes), as one source. */
+function appRouteSource() {
+  const routesDir = path.join(root, "app/src/routes");
+  const modules = readdirSync(routesDir)
+    .filter((file) => file.endsWith(".tsx"))
+    .sort()
+    .map((file) => readFileSync(path.join(routesDir, file), "utf8"));
+  return [readFileSync(path.join(root, "app/src/App.tsx"), "utf8"), ...modules].join("\n");
+}
+
+/** Production routes from App.tsx and the route modules. `/` is index.html. Dev and reviewer routes are not shipped. */
 function productionRoutes(source) {
   const shipped = source.replace(/\{import\.meta\.env\.DEV \? \([\s\S]*?\) : null\}/, "");
   return walkRoutes(shipped).routes;
@@ -212,7 +222,7 @@ test("nested relative routes resolve, and a path that is not a double-quoted lit
 });
 
 test("every production route is listed in _redirects, and a stale entry fails", () => {
-  const app = readFileSync(path.join(root, "app/src/App.tsx"), "utf8");
+  const app = appRouteSource();
   const drift = redirectDrift(app, redirects);
   assert.deepEqual(drift.badPaths, []);
   assert.deepEqual(drift.missing, []);
@@ -232,7 +242,7 @@ test("every production route is listed in _redirects, and a stale entry fails", 
 });
 
 test("every production route is covered by _headers", () => {
-  const routes = productionRoutes(readFileSync(path.join(root, "app/src/App.tsx"), "utf8"));
+  const routes = productionRoutes(appRouteSource());
   const blocks = headerRules(headers);
   const missingHeader = routes.filter((route) => !headerCovers(route, blocks));
   assert.deepEqual(missingHeader, []);

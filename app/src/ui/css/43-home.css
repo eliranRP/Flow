@@ -1,0 +1,372 @@
+/* FLOW-364: Home's split card, its attention box and the month drawer. */
+
+.ui-home-split {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ui-home-split-title {
+  margin: 0;
+  font-size: var(--type-section-size);
+  line-height: var(--type-section-line);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-home-split-bar {
+  display: flex;
+  block-size: var(--split-bar);
+  gap: var(--band-label-gap);
+  border-radius: var(--radius-block);
+  overflow: hidden;
+}
+
+.ui-home-split-kept,
+.ui-home-split-profit {
+  flex: 1 1 0;
+  min-inline-size: 0;
+  transition: flex-grow var(--motion-width) var(--ease-standard);
+}
+
+.ui-home-split-kept {
+  background: var(--color-accent);
+}
+
+.ui-home-split-profit {
+  background: var(--color-text-muted);
+}
+
+.ui-home-split-profit.ui-home-split-loss {
+  background: var(--color-bad);
+}
+
+.ui-home-split-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  inline-size: 100%;
+  min-block-size: var(--touch-min);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+}
+
+.ui-home-split-swatch {
+  flex: none;
+  inline-size: 12px;
+  block-size: 12px;
+  border-radius: 3px;
+  background: var(--color-accent);
+}
+
+.ui-home-split-swatch-none {
+  background: var(--color-text-muted);
+}
+
+.ui-home-split-swatch.ui-home-split-loss {
+  background: var(--color-bad);
+}
+
+.ui-home-split-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.ui-home-split-label {
+  font-size: var(--type-body-size);
+}
+
+.ui-home-split-sub {
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+}
+
+.ui-home-split-value {
+  font-size: var(--type-btn-size);
+  font-weight: var(--type-btn-2-weight);
+}
+
+.ui-home-split-value.ui-home-split-loss {
+  color: var(--color-bad);
+}
+
+.ui-home-split-note {
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-line);
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+}
+
+/* FLOW-364 (board): the box is one tint card; its rows are divided lines, 20px in. */
+.ui-home-attention {
+  margin: var(--space-3) var(--space-4) var(--space-4);
+  padding: var(--space-5) 0 0;
+  border-radius: var(--radius-card);
+  background: var(--color-tint);
+}
+
+.ui-home-attention .ui-banner-rows {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+}
+
+.ui-home-attention .ui-banner-rows > li + li {
+  border-top: 1px solid var(--color-line);
+}
+
+.ui-home-attention .ui-banner-row {
+  min-height: 70px;
+  padding: var(--space-3) var(--space-5);
+  border-radius: 0;
+}
+
+.ui-home-attention-title {
+  margin: 0 var(--space-5) var(--space-3);
+  font-size: var(--type-section-size);
+  line-height: var(--type-section-line);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-month-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ui-month-drawer-years {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.ui-month-drawer-step {
+  inline-size: var(--touch-min);
+  block-size: var(--touch-min);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-text) 12%, transparent);
+  color: var(--color-text);
+}
+
+.ui-month-drawer-step-off {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.ui-month-drawer-year {
+  min-inline-size: var(--year-label-min);
+  margin: 0;
+  font-size: var(--type-btn-size);
+  font-weight: var(--type-btn-2-weight);
+  text-align: center;
+}
+
+.ui-month-drawer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+/* FLOW-364 (board): the cell's name and amount sit at the start edge, 12px in, 60px high. */
+.ui-month-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--band-label-gap);
+  min-block-size: var(--month-cell-min);
+  padding: var(--space-1) var(--space-3);
+  text-align: start;
+  border: 2px solid transparent;
+  border-radius: var(--radius-month-cell);
+  background: var(--color-raised);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.ui-month-cell:disabled {
+  cursor: default;
+}
+
+.ui-month-cell-name {
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+.ui-month-cell-amount {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+}
+
+/* FLOW-364 (board): the cells' figures are one step under the list size. */
+.ui-month-cell-amount .t-amount {
+  font-size: var(--type-label-size);
+}
+
+.ui-month-cell-selected {
+  border-color: var(--color-accent);
+  background: var(--color-tint-strong);
+}
+
+.ui-month-cell-selected .ui-month-cell-name {
+  font-weight: var(--type-line2-weight);
+}
+
+.ui-month-cell-future {
+  border: 2px dashed var(--color-line);
+  background: transparent;
+  color: var(--color-disabled-text);
+}
+
+.ui-month-cell-future .ui-month-cell-amount {
+  color: var(--color-disabled-text);
+}
+
+.ui-month-cell-before {
+  color: var(--color-disabled-text);
+}
+
+
+.ui-month-drawer-foot {
+  margin: 0;
+  text-align: center;
+}
+
+/* FLOW-364 (board): the empty band is shorter than a figure band; no padding above the month. */
+.ui-band-body-empty {
+  gap: 0;
+  padding-block-start: var(--space-3);
+}
+
+.ui-band:has(.ui-band-body-empty) {
+  padding-bottom: var(--space-1);
+}
+
+/* FLOW-364 (board): the zero figure on the empty band is a dim lavender, not white. */
+.ui-band-body-empty .ui-hero-figure {
+  opacity: 0.6;
+}
+
+/* FLOW-364 (board, StatesHomeEmpty): the month on the band with no figure, then a bank card and what will show here. */
+.ui-band-month-static {
+  margin: 0;
+  block-size: var(--touch-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-block: 0;
+  border-radius: var(--touch-min);
+  background: var(--band-track);
+  color: var(--color-on-band);
+  font-size: var(--type-btn-size);
+  font-weight: var(--type-btn-2-weight);
+  text-align: center;
+}
+
+.ui-home-empty-card {
+  display: flex;
+  direction: rtl;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
+  margin: var(--space-4) var(--space-side) 0;
+  padding: var(--space-5);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  text-align: start;
+}
+
+.ui-home-empty-icon {
+  display: grid;
+  place-items: center;
+  align-self: flex-start;
+  inline-size: 48px;
+  block-size: 48px;
+  border-radius: 50%;
+  background: var(--color-tint-strong);
+  color: var(--color-accent);
+}
+
+.ui-home-empty-title {
+  margin: 0;
+  font-size: var(--type-section-size);
+  font-weight: var(--type-heading-weight);
+  text-align: start;
+}
+
+.ui-home-empty-body {
+  margin: 0;
+  color: var(--color-text-secondary);
+  text-align: start;
+}
+
+.ui-home-empty-what {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-5) var(--space-side) 0;
+}
+
+.ui-home-empty-what-title {
+  margin: 0;
+  font-size: var(--type-section-size);
+  font-weight: var(--type-section-weight);
+  text-align: start;
+}
+
+.ui-home-empty-list {
+  display: flex;
+  flex-direction: column;
+  /* FLOW-364 (board): the two rows sit 12px closer than the 16px gap. */
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-secondary);
+  text-align: start;
+}
+
+.ui-home-empty-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-4);
+}
+
+.ui-home-empty-list li::before {
+  content: "";
+  flex: none;
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--color-line);
+}
+
+.ui-home-empty-link-row {
+  margin: 0;
+  text-align: center;
+}
+
+/* FLOW-364 (board): the manual-add link under the button is a centred text link with no chevron. */
+.ui-home-empty-manual {
+  color: var(--color-accent);
+  font-size: var(--type-btn-size);
+  font-weight: var(--type-btn-2-weight);
+  text-align: center;
+  text-decoration: none;
+}
