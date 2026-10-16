@@ -62,7 +62,7 @@ export function OnboardingFrame({
           <ProgressBar variant="steps" count={SETUP_TOTAL} current={step} label="התקדמות ההגדרה" />
         </div>
       ) : null}
-      <div className={full ? "ui-onb-body ui-onb-body-full" : "ui-onb-body"}>
+      <div className={full ? `ui-onb-body ui-onb-body-full ui-onb-body-${step}` : "ui-onb-body"}>
         <div className="ui-onb-enter" key={String(step)}>
           {top}
           <div className="ui-onb-copy">

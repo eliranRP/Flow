@@ -64,6 +64,15 @@
   text-align: center;
 }
 
+/* The board's welcome and done screens sit 28px lower and 22px higher than the centred body. */
+.ui-onb-body-welcome {
+  padding-block-start: calc(var(--space-8) + var(--space-6) + var(--space-3));
+}
+
+.ui-onb-body-done {
+  padding-block-end: calc(var(--space-10) * 2);
+}
+
 .ui-onb-enter {
   display: flex;
   flex-direction: column;
@@ -175,6 +184,7 @@
 
 .ui-onb-chip-added {
   background: var(--color-tint);
+  font-weight: var(--type-body-weight);
 }
 
 .ui-onb-chip-x {
@@ -183,6 +193,11 @@
   border: 0;
   background: transparent;
   color: var(--color-text-muted);
+}
+
+.ui-onb-chip-x svg {
+  inline-size: 14px;
+  block-size: 14px;
 }
 
 .ui-onb-add,
