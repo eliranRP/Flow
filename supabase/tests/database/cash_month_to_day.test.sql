@@ -103,7 +103,7 @@ select is(
 );
 
 -- 13-14. Another company's lines never show.
-select is(pg_temp.ils(31, 'in'), 150000::bigint, 'the owner does not see the other company\'s money in');
+select is(pg_temp.ils(31, 'in'), 150000::bigint, 'the owner does not see the other company''s money in');
 
 reset role;
 select tests.authenticate_as('cmtd_other');
