@@ -104,7 +104,7 @@ export const ProjectCash: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("link", { name: /^נכנס ב/ })).toBeInTheDocument();
     await expect(canvas.getByRole("link", { name: /^רווח ב/ })).toBeInTheDocument();
-    await expect(canvas.getByRole("link", { name: /השקעה והלוואות/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("heading", { name: "השקעה והלוואות" })).toBeInTheDocument();
     await expect(canvas.getByRole("heading", { name: "חודשים קודמים" })).toBeInTheDocument();
   },
 };
