@@ -771,12 +771,13 @@ function ProjectBudget({ project, spentAgorot }: { project: NonNullable<ProjectD
   // The owner's type text is on the month's row (the same cached read the menu uses).
   const type = useProjectsCashMonth(undefined, project.id).data?.projects.find((row) => row.id === project.id)?.type ?? null;
   const budget = project.budget_agorot ?? null;
+  const currency = useCompanyCurrency();
   return (
     <>
       {budget == null ? (
         <TextLink tone="quiet" chevron={false} onClick={() => { setEditing(true); }}>+ הוספת תקציב</TextLink>
       ) : (
-        <BudgetCard spentMinor={spentAgorot} budgetMinor={budget} onEdit={() => { setEditing(true); }} />
+        <BudgetCard spentMinor={spentAgorot} budgetMinor={budget} currency={currency} onEdit={() => { setEditing(true); }} />
       )}
       <ProjectFormSheet open={editing} onOpenChange={setEditing} project={{ id: project.id, name: project.name, type, budget }} />
     </>

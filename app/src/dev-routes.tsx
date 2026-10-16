@@ -605,6 +605,10 @@ function DevStepTransaction({ n }: { n: number }) {
 export function DevProjectDetail() {
   const [params] = useSearchParams();
   const section = params.get("section");
+  // The fixture company is in dollars: the preview's company-currency read answers USD.
+  const queryClient = useQueryClient();
+  const preview = useHomePreview();
+  useState(() => { queryClient.setQueryData(["company-currency", preview], "USD"); });
   return (
     <ProjectDetailScreen
       // FLOW-340 C: `?section=` draws the screen a row opens, on the same sample (FLOW-419: `profit` too).
