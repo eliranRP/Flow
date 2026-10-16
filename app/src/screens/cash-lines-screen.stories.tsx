@@ -74,3 +74,40 @@ export const Scrolled: Story = {
 };
 
 export const Empty: Story = { args: { side: "out", order: "date", lines: "none" } };
+
+/** Cash-view stories from the move (FLOW-418): the month's יצא and לא נספר ברווח lines. */
+export const CashLinesOut: Story = {
+  name: "Cash, the month's יצא",
+  render: () => {
+    const data = sampleCashMonths();
+    return (
+      <StoryRoute entry="/" tabs>
+        <CashLinesScreen
+          sample={{ months: data, lines: sampleCashLines("out") }}
+          at={{ month: cashMonthKey(data.months[0]?.month ?? ""), side: "out", currency: "ILS" }}
+        />
+      </StoryRoute>
+    );
+  },
+};
+
+/** FLOW-418: the lines behind לא נספר ברווח, money in and out mixed. */
+export const CashLinesKept: Story = {
+  name: "Cash, the month's לא נספר ברווח",
+  render: () => {
+    const data = sampleCashMonths();
+    return (
+      <StoryRoute entry="/" tabs>
+        <CashLinesScreen
+          sample={{ months: data, lines: sampleCashLines("kept") }}
+          at={{ month: cashMonthKey(data.months[0]?.month ?? ""), side: "kept", currency: "ILS" }}
+        />
+      </StoryRoute>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("heading", { name: "לא נספר ברווח" })).toBeInTheDocument();
+    await expect(canvas.getByText("כסף שזז בבנק, אבל אינו הכנסה או הוצאה.")).toBeInTheDocument();
+  },
+};
