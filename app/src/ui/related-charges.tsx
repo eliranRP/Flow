@@ -21,12 +21,15 @@ function ChargeRows({
   charges,
   search,
   typical,
+  chevron = true,
 }: {
   data: PartyCharges;
   charges: PartyCharges["charges"];
   search: string;
   /** Shows the ±20% mark on each row against the usual amount (the sheet). */
   typical?: bigint | null;
+  /** The board's all-charges list has no chevron on its rows; the page's history keeps it. */
+  chevron?: boolean;
 }) {
   const currency = data.party?.currency ?? "ILS";
   const income = data.party?.direction === "income";
@@ -52,7 +55,7 @@ function ChargeRows({
             )}
             <span className="ui-charges-end">
               <bdi dir="ltr" className={cx("ui-charges-amount", income && "ui-charges-income")}>{income ? `+${amount}` : amount}</bdi>
-              {current ? null : <ChevronIcon />}
+              {current || !chevron ? null : <ChevronIcon />}
             </span>
           </>
         );
@@ -155,7 +158,7 @@ export function PartyChargesBody({ data, search = "", context }: { data: PartyCh
           <bdi dir="ltr">{formatAmountText(total, currency, { detail: true })}</bdi>
         </span>
       </div>
-      <ChargeRows data={data} charges={data.charges} search={search} typical={data.typical_amount_minor} />
+      <ChargeRows data={data} charges={data.charges} search={search} typical={data.typical_amount_minor} chevron={false} />
     </div>
   );
 }
