@@ -36,6 +36,8 @@
 
 .ui-search-form .ui-search-field {
   min-block-size: 44px;
+  border: 1.5px solid var(--color-line);
+  background: var(--color-surface);
   border-radius: var(--radius-button);
   padding-inline: var(--space-inset-row);
   gap: var(--space-2);
