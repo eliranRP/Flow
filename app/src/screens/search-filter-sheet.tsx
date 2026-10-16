@@ -1,4 +1,4 @@
-import { allTime, presetPeriod, type PeriodChoice } from "../period";
+import { allTime, periodPillLabel, presetPeriod, type PeriodChoice } from "../period";
 import { searchCountWords, type SearchDirection, type SearchFilters } from "../search";
 import { Button } from "../ui/button";
 import { Chip } from "../ui/chip";
@@ -9,16 +9,18 @@ import { Toggle } from "../ui/toggle";
 export type SearchSheetProject = { id: string; name: string; status?: string };
 
 type TypeChoice = "all" | SearchDirection;
-type PeriodChoiceKey = "all" | "month" | "months3";
+/** "other" is a period the sheet has no button for (a link's 6 months, a year or custom dates); it shows as its own pressed segment. */
+type PeriodChoiceKey = "all" | "month" | "months3" | "other";
 
 /** The filters the sheet edits (FLOW-368 §2.4): type, period, project and the review switch. */
 export function periodKey(period: PeriodChoice): PeriodChoiceKey {
+  if (period.kind === "all") return "all";
   if (period.kind === "month") return "month";
   if (period.kind === "months3") return "months3";
-  return "all";
+  return "other";
 }
 
-export function periodFor(key: PeriodChoiceKey): PeriodChoice {
+export function periodFor(key: Exclude<PeriodChoiceKey, "other">): PeriodChoice {
   return key === "all" ? allTime() : presetPeriod(key);
 }
 
@@ -53,7 +55,9 @@ export function SearchFilterSheet({
   onClear: () => void;
   onApply: () => void;
 }) {
-  const shown = projects.filter((project) => project.status !== "finished");
+  // A finished project stays listed while it is the filter, so the chip shows what the count applies.
+  const shown = projects.filter((project) => project.status !== "finished" || project.id === draft.project);
+  const other = periodKey(draft.period) === "other";
   const applyLabel = count == null ? "הצגת תנועות" : count === 1 ? "הצגת תנועה אחת" : `הצגת ${searchCountWords(count)}`;
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title="סינון">
@@ -82,8 +86,9 @@ export function SearchFilterSheet({
               { value: "all", label: "הכל" },
               { value: "month", label: "החודש" },
               { value: "months3", label: "3 חודשים" },
+              ...(other ? [{ value: "other" as const, label: periodPillLabel(draft.period) }] : []),
             ]}
-            onChange={(value) => { onDraft({ period: periodFor(value) }); }}
+            onChange={(value) => { if (value !== "other") onDraft({ period: periodFor(value) }); }}
           />
         </div>
         <div className="ui-search-filter-group">

@@ -116,6 +116,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
   // `?sheet=filters` opens the sheet on arrival: a dev-only query the board proofs use.
   const [sheetOpen, setSheetOpen] = useState(() => import.meta.env.DEV && new URLSearchParams(location.search).get("sheet") === "filters");
   const [draft, setDraft] = useState<SearchFilters>(filters);
+  const filterBtnRef = useRef<HTMLButtonElement>(null);
   const settled = useDebounced(text, SEARCH_DEBOUNCE_MS);
   const active = useMemo(() => ({ ...filters, q: settled }), [filters, settled]);
   const [entryKey] = useState(location.key);
@@ -394,7 +395,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
               busy={query.isFetching && filtered}
             />
           </form>
-          <button type="button" className="ui-search-filter-btn" onClick={openSheet} aria-haspopup="dialog">
+          <button ref={filterBtnRef} type="button" className="ui-search-filter-btn" onClick={openSheet} aria-haspopup="dialog">
             סינון
             {activeFilterCount(filters) > 0 ? (
               <span className="ui-search-badge">{String(activeFilterCount(filters))}</span>
@@ -405,7 +406,16 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
           <div className="ui-search-active" role="list" aria-label="הסינון שנבחר">
             {chips.map((chip) => (
               <div role="listitem" key={chip.key}>
-                <button type="button" className="ui-chip ui-chip-choice ui-search-active-chip" aria-label={`הסרת ${chip.label}`} onClick={chip.remove}>
+                <button
+                  type="button"
+                  className="ui-chip ui-chip-choice ui-search-active-chip"
+                  aria-label={`הסרת ${chip.label}`}
+                  onClick={() => {
+                    chip.remove();
+                    // The chip unmounts with its filter; focus goes to סינון so keyboard users keep their place.
+                    filterBtnRef.current?.focus();
+                  }}
+                >
                   <span className="ui-chip-label" data-clip-ok="">{chip.label}</span>
                   <span className="ui-search-active-x" aria-hidden="true">
                     <CloseIcon size={12} />
