@@ -88,14 +88,29 @@
 }
 
 .ui-compact-title {
+  display: flex;
+  align-items: baseline;
   min-inline-size: 0;
   margin: 0;
   justify-self: center;
   max-inline-size: 100%;
-  overflow: hidden;
-  text-align: center;
-  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.ui-compact-title-text {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ui-compact-figure {
+  flex: none;
+}
+
+/* The bar's row already insets Back by the icon's own padding, so the labelled Back does not hang
+   past the gutter here the way it does under a page title. */
+.ui-compact-bar-row .ui-back-labelled {
+  margin-inline-start: 0;
 }
 
 .ui-compact-actions {
