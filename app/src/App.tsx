@@ -43,7 +43,7 @@ const FiledTodayScreen = lazy(() => screenLoaders.filedToday().then((m) => ({ de
 const TransactionScreen = lazy(() => screenLoaders.transaction().then((m) => ({ default: m.TransactionScreen })));
 const SplitScreen = lazy(() => screenLoaders.split().then((m) => ({ default: m.SplitScreen })));
 const CashMonthScreen = lazy(() => screenLoaders.cash().then((m) => ({ default: m.CashMonthScreen })));
-const CashLinesScreen = lazy(() => screenLoaders.cash().then((m) => ({ default: m.CashLinesScreen })));
+const CashLinesScreen = lazy(() => screenLoaders.cashLines().then((m) => ({ default: m.CashLinesScreen })));
 const CashHistoryScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ default: m.CashHistoryScreen })));
 const CashYearScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ default: m.CashYearScreen })));
 const BreakdownScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownScreen })));
