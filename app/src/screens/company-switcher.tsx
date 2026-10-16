@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { SWITCH_FAILED, inviteLine, type MyCompanies } from "../team-api";
 import { useLeaveShownCompany, useMyCompaniesQuery, useMyInvitesQuery, useOpenCompany } from "../team-queries";
 import { useSheetHistory } from "../ui/back";
-import { BandCompany } from "../ui/band-company";
+import { BandCompany } from "../ui/top-band";
 import { PlusIcon } from "../ui/icons";
 import { InviteCard } from "../ui/invite-card";
 import { List, ListRow } from "../ui/list-row";

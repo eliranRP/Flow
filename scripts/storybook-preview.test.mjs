@@ -71,7 +71,7 @@ test("Storybook replaces the hosted Supabase settings with sample ones", () => {
 test("the preview workflow skips forks, keeps off production, and pins actions like ci", () => {
   assert.match(workflow, /\non:\n {2}pull_request:\n/);
   assert.equal(workflow.includes("pull_request_target"), false);
-  assert.match(workflow, /if: github\.event\.pull_request\.head\.repo\.full_name == github\.repository\n/);
+  assert.match(workflow, /if: github\.event\.pull_request\.head\.repo\.full_name == github\.repository && !github\.event\.pull_request\.draft\n/);
   assert.match(workflow, /environment: storybook-preview\n/);
   assert.equal(/environment: production/.test(workflow), false);
   assert.match(workflow, /persist-credentials: false\n/);

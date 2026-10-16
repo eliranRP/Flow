@@ -1,148 +1,92 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { addTriggerRef } from "../add-trigger";
 import { usePreviewSearch } from "../preview";
-import { withSheetBackground } from "../sheet-background";
-import { useGoBack } from "./back";
-import { HomeIcon, PlusIcon, ProjectsIcon, ReviewIcon, SettingsIcon } from "./icons";
+import { reducedMotion } from "./period-swipe";
+import { BankColumnsIcon, HomeIcon, ProjectsIcon, RepeatIcon } from "./icons";
 
 const slot = "ui-tab-slot";
-
-export function reviewAwaitingLabel(count: number): string {
-  if (count === 1) return "לאישור, פריט אחד ממתין לאישור";
-  const shown = count > 99 ? "99+" : String(count);
-  return `לאישור, ${shown} פריטים ממתינים לאישור`;
-}
 
 type TabBarProps = {
   label?: string;
   /** Names the current tab where the path can't: the dev fixtures under /e2e/ (FLOW-334). */
   section?: TabSection | null;
-  reviewCount?: number;
-  fabPressed?: boolean;
-  /** A viewer has no add. The empty slot keeps the five-column rhythm. */
-  allowAdd?: boolean;
 };
 
-export type TabSection = "home" | "projects" | "review" | "settings";
-type Section = TabSection;
+export type TabSection = "home" | "projects" | "loans" | "recurring";
 
-/** Pushed screens keep the tab of the section they belong to. /add highlights none. */
-export function tabSection(pathname: string): Section | null {
+/**
+ * The tab a path belongs to. Settings is behind the avatar on Home, so no tab is current there,
+ * except the loans page, which the loans tab opens (FLOW-364).
+ */
+export function tabSection(pathname: string): TabSection | null {
   if (pathname === "/" || pathname.startsWith("/unpaid") || pathname.startsWith("/flow/")) return "home";
-  // FLOW-413: the profit view and the cash months open from Home.
-  if (pathname === "/profit" || pathname.startsWith("/cash/")) return "home";
+  // The profit view and the cash months open from Home; the review queue opens from Home's box.
+  if (pathname === "/profit" || pathname.startsWith("/cash/") || pathname.startsWith("/review")) return "home";
   if (pathname.startsWith("/projects")) return "projects";
-  if (pathname.startsWith("/review")) return "review";
-  if (pathname.startsWith("/settings")) return "settings";
+  if (pathname.startsWith("/settings/loans") || pathname.startsWith("/loans")) return "loans";
+  if (pathname.startsWith("/missing-bills") || pathname.startsWith("/recurring")) return "recurring";
   return null;
 }
 
-/** A slot's icon, its count badge, and its label: the same in the live bar and its picture. */
-function TabFace({ icon, label, badge }: { icon: ReactNode; label: string; badge?: string | null }) {
+/** A slot's icon and its label: the same in the live bar and its picture. */
+function TabFace({ icon, label }: { icon: ReactNode; label: string }) {
   return (
     <>
-      <span className="ui-tab-icon">
-        {icon}
-        {badge != null ? (
-          <span className="ui-count-badge">
-            <bdi dir="ltr">{badge}</bdi>
-          </span>
-        ) : null}
-      </span>
+      <span className="ui-tab-icon">{icon}</span>
       <span className="ui-tab-label">{label}</span>
     </>
   );
 }
 
-function countBadge(count: number): string | null {
-  if (count <= 0) return null;
-  return count > 99 ? "99+" : String(count);
-}
+const tabs: { section: TabSection; label: string; path: string; icon: ReactNode }[] = [
+  { section: "home", label: "בית", path: "/", icon: <HomeIcon size={24} stroke={2} /> },
+  { section: "projects", label: "פרויקטים", path: "/projects", icon: <ProjectsIcon size={24} stroke={2} /> },
+  { section: "loans", label: "הלוואות", path: "/settings/loans", icon: <BankColumnsIcon size={24} stroke={2} /> },
+  { section: "recurring", label: "קבועים", path: "/missing-bills", icon: <RepeatIcon size={24} stroke={2} /> },
+];
 
 /**
- * The tab bar as a picture (FLOW-506): the same slots, icons and badge, with no links, no router
- * and no add trigger. It sits in the flow, not fixed, and is hidden from assistive tech.
+ * The tab bar as a picture (FLOW-506): the same slots and icons, with no links, no router.
+ * It sits in the flow, not fixed, and is hidden from assistive tech.
  */
-export function TabBarPicture({ section = null, reviewCount = 0 }: { section?: TabSection | null; reviewCount?: number }) {
-  const current = (name: TabSection) => (section === name ? "page" : undefined);
+export function TabBarPicture({ section = null }: { section?: TabSection | null }) {
   return (
     <div className="ui-tabbar-picture" aria-hidden="true">
       <div className="ui-tabbar-slots">
-        <span className={slot} aria-current={current("home")}><TabFace icon={<HomeIcon />} label="בית" /></span>
-        <span className={slot} aria-current={current("projects")}><TabFace icon={<ProjectsIcon />} label="פרויקטים" /></span>
-        <span className={`${slot} ui-tab-slot-fab`}>
-          <span className="ui-fab">
-            <PlusIcon />
+        {tabs.map((tab) => (
+          <span key={tab.section} className={slot} aria-current={section === tab.section ? "page" : undefined}>
+            <TabFace icon={tab.icon} label={tab.label} />
           </span>
-        </span>
-        <span className={slot} aria-current={current("review")}><TabFace icon={<ReviewIcon />} label="לאישור" badge={countBadge(reviewCount)} /></span>
-        <span className={slot} aria-current={current("settings")}><TabFace icon={<SettingsIcon />} label="הגדרות" /></span>
+        ))}
       </div>
     </div>
   );
 }
 
-export function TabBar({ label = "ניווט ראשי", section: pinned, reviewCount = 0, fabPressed = false, allowAdd = true }: TabBarProps) {
+export function TabBar({ label = "ניווט ראשי", section: pinned }: TabBarProps) {
   const search = usePreviewSearch();
   const location = useLocation();
-  const goBack = useGoBack();
-  const section = pinned === undefined ? tabSection(location.pathname) : pinned;
-  const onAdd = location.pathname === "/add";
-  const fab = (
-    <span className={fabPressed ? "ui-fab ui-fab-pressed" : "ui-fab"}>
-      <PlusIcon />
-    </span>
-  );
+  const current = pinned === undefined ? tabSection(location.pathname) : pinned;
+  // FLOW-364: tapping the active tab scrolls the page to the top, and does not move.
+  const onActive = (section: TabSection) => (event: MouseEvent<HTMLAnchorElement>) => {
+    if (section !== current) return;
+    event.preventDefault();
+    window.scrollTo({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" });
+  };
   return (
     <nav className="ui-tabbar" aria-label={label}>
       <div className="ui-tabbar-slots">
-        <Link to={`/${search}`} className={slot} aria-current={section === "home" ? "page" : undefined}>
-          <TabFace icon={<HomeIcon />} label="בית" />
-        </Link>
-        <Link to={`/projects${search}`} className={slot} aria-current={section === "projects" ? "page" : undefined}>
-          <TabFace icon={<ProjectsIcon />} label="פרויקטים" />
-        </Link>
-        {onAdd ? (
-          <button
-            ref={(node) => {
-              addTriggerRef.current = node;
-            }}
-            type="button"
-            aria-label="הוספה"
-            className={`${slot} ui-tab-slot-fab`}
-            onClick={() => {
-              goBack(`/${search}`);
-            }}
-          >
-            {fab}
-          </button>
-        ) : allowAdd ? (
+        {tabs.map((tab) => (
           <Link
-            ref={(node) => {
-              addTriggerRef.current = node;
-            }}
-            to={`/add${search}`}
-            state={withSheetBackground(location)}
-            aria-label="הוספה"
-            className={`${slot} ui-tab-slot-fab`}
+            key={tab.section}
+            to={`${tab.path}${search}`}
+            className={slot}
+            aria-current={current === tab.section ? "page" : undefined}
+            onClick={onActive(tab.section)}
           >
-            {fab}
+            <TabFace icon={tab.icon} label={tab.label} />
           </Link>
-        ) : (
-          <span className={`${slot} ui-tab-slot-fab`} aria-hidden="true" />
-        )}
-        <Link
-          to={`/review${search}`}
-          className={slot}
-          aria-current={section === "review" ? "page" : undefined}
-          aria-label={reviewCount > 0 ? reviewAwaitingLabel(reviewCount) : undefined}
-        >
-          <TabFace icon={<ReviewIcon />} label="לאישור" badge={countBadge(reviewCount)} />
-        </Link>
-        <Link to={`/settings${search}`} className={slot} aria-current={section === "settings" ? "page" : undefined}>
-          <TabFace icon={<SettingsIcon />} label="הגדרות" />
-        </Link>
+        ))}
       </div>
     </nav>
   );

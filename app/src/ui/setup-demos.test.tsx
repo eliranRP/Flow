@@ -149,9 +149,7 @@ describe("setup demos", () => {
         expect(visibleText()).toContain("2,340");
         expect(visibleText()).toContain("45,000");
         expect(visibleText()).toContain("21/09");
-        expect(visibleText()).toContain("12");
         expect(visibleText()).toContain("בית");
-        expect(visibleText()).toContain("הגדרות");
         expect(visibleText()).toContain("הוצאה ·");
         expect(visibleText()).toContain("הכנסה ·");
         expect(document.querySelector(".ui-setup-lead")).toBeInTheDocument();

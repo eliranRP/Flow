@@ -4,16 +4,20 @@ import type { ReactNode } from "react";
 import { Amount } from "./amount";
 import { BandHero } from "./layout";
 import { longHebrew, largeAgorot } from "./story-support";
-import { TopBand } from "./top-band";
+import { BandCompany, TopBand } from "./top-band";
 
 type BandArgs = {
   preview?: boolean;
   heading: string;
   amount?: string;
   label?: string;
+  /** FLOW-364: the company's name at the start of the band row (Home). */
+  company?: string;
+  /** FLOW-364: a past month's darker band. */
+  past?: boolean;
 };
 
-function BandView({ preview, heading, amount, label }: BandArgs) {
+function BandView({ preview, heading, amount, label, company, past }: BandArgs) {
   let body: ReactNode;
   if (label) {
     body = <h1 className="ui-band-label t-label">{label}</h1>;
@@ -25,7 +29,12 @@ function BandView({ preview, heading, amount, label }: BandArgs) {
     );
   }
   return (
-    <TopBand preview={preview}>
+    <TopBand
+      preview={preview}
+      tone={past ? "past" : "current"}
+      wordmark={company == null}
+      leading={company == null ? undefined : <BandCompany name={company} onOpen={() => undefined} />}
+    >
       <BandHero>
         <p className="t-title-2">{heading}</p>
         {body}
@@ -52,6 +61,16 @@ export const Preview: Story = {
 
 export const LongHebrew: Story = {
   args: { heading: longHebrew, amount: String(largeAgorot) },
+};
+
+/** FLOW-364: Home's band with the company's name at the start and the figures under it. */
+export const Company: Story = {
+  args: { company: "חברה לדוגמה", heading: "תזרים · עד היום", amount: "3916400" },
+};
+
+/** FLOW-364: a past month's band, in the darker colour. */
+export const Past: Story = {
+  args: { company: "חברה לדוגמה", past: true, heading: "תזרים · חודש סגור", amount: "1204500" },
 };
 
 /** The project name on the band is `band-title` 32 (decision 0120), above the 36 profit. */
