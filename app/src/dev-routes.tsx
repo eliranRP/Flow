@@ -57,6 +57,8 @@ import {
   UnpaidScreen,
 } from "./screens/flow-screens";
 import { ProfitMonthsScreen } from "./screens/profit-months";
+import { ProjectProfitScreen } from "./screens/project-profit-screen";
+import { JUNIPER_PROFIT, NEW_PROJECT_PROFIT } from "./dev/project-profit-sample";
 import { LoanDetailScreen, type LoanView } from "./screens/loan-detail-screen";
 import { useMemoryLoanStore } from "./screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "./dev/loan-detail-sample";
@@ -642,6 +644,12 @@ export function DevProjectDetail() {
       categoryTo="/e2e/project-category"
     />
   );
+}
+
+/** FLOW-140 slice 1: the project profit page on the board's Juniper Ct figures; `?state=empty` is a project with no lines. */
+export function DevProjectProfit() {
+  const [params] = useSearchParams();
+  return <ProjectProfitScreen sample={params.get("state") === "empty" ? NEW_PROJECT_PROFIT : JUNIPER_PROFIT} />;
 }
 
 /** Dev-only months for the "לפי חודש" page: one open month, a loss and a profit. */
