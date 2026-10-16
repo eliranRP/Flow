@@ -139,13 +139,13 @@ isOneToOne: false
                   ]
                 },"company_invites": {
                   Row: {
-                    "company_id": string,"created_at": string,"decided_at": string | null,"decided_by": string | null,"email": string,"id": string,"invited_by": string | null,"role": string,"status": string
+                    "company_id": string,"created_at": string,"decided_at": string | null,"decided_by": string | null,"email": string,"expires_at": string,"id": string,"invited_by": string | null,"role": string,"seen_at": string | null,"status": string
                   }
                   Insert: {
-                    "company_id": string,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"email": string,"id"?: string,"invited_by"?: string | null,"role": string,"status"?: string
+                    "company_id": string,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"email": string,"expires_at"?: string,"id"?: string,"invited_by"?: string | null,"role": string,"seen_at"?: string | null,"status"?: string
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"email"?: string,"id"?: string,"invited_by"?: string | null,"role"?: string,"status"?: string
+                    "company_id"?: string,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"email"?: string,"expires_at"?: string,"id"?: string,"invited_by"?: string | null,"role"?: string,"seen_at"?: string | null,"status"?: string
                   }
                   Relationships: [
                     {
@@ -1266,6 +1266,9 @@ isOneToOne: false
                            },
 "map_budget_section":
 { Args: { "p_name"?: string,"p_project_id"?: string,"p_section_id": number }; Returns: string
+                           },
+"mark_invite_seen":
+{ Args: { "p_invite_id": string }; Returns: Json
                            },
 "match_lines":
 { Args: { "p_currency"?: string,"p_direction"?: string,"p_rows": Json,"p_window_days"?: number }; Returns: Json
