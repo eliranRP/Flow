@@ -16,4 +16,19 @@ describe("TextField", () => {
     expectThemePaint(field, "color");
     expect(screen.getByText("מספר קצר מדי – 9 ספרות")).toBeInTheDocument();
   });
+
+  it("a read-only field keeps its value, takes the muted read-only look, and keeps the error message linked", () => {
+    const { container } = render(<TextField label="מזהה" error="לא תקין" readOnly defaultValue="ABC-1" />);
+    const field = screen.getByLabelText("מזהה");
+    expect(field).toHaveAttribute("readonly");
+    expect(field).toHaveValue("ABC-1");
+    expect(container.querySelector(".ui-field")).toHaveClass("ui-field-readonly", "ui-field-error");
+    expect(field).toHaveAttribute("aria-describedby", expect.stringMatching(/-error$/));
+    expect(screen.getByText("לא תקין")).toHaveAttribute("id", field.getAttribute("aria-describedby"));
+  });
+
+  it("an editable field has no read-only class", () => {
+    const { container } = render(<TextField label="שם" defaultValue="טק" />);
+    expect(container.querySelector(".ui-field")).not.toHaveClass("ui-field-readonly");
+  });
 });
