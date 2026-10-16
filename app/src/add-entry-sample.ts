@@ -13,11 +13,12 @@ export const SAMPLE_PROJECTS = [
   { id: "sp-4", name: "Ashgrove" },
 ];
 
+// The board's five categories, in the board's order (the selected one, עבודה, is second).
 export const SAMPLE_CATEGORIES = [
   { id: "sc-1", name: "חומרים", kind: "expense" as const },
   { id: "sc-2", name: "עבודה", kind: "expense" as const },
-  { id: "sc-3", name: "ציוד", kind: "expense" as const },
-  { id: "sc-4", name: "הובלה", kind: "expense" as const },
+  { id: "sc-3", name: "תיקונים ותחזוקה", kind: "expense" as const },
+  { id: "sc-4", name: "חשמל ומים", kind: "expense" as const },
   { id: "sc-5", name: "אחר", kind: "expense" as const },
 ];
 
