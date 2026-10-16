@@ -1,5 +1,6 @@
 import type { LoanDetail } from "./loan-detail-data";
-import type { LoanOutlook, PartTotals } from "./loan-outlook";
+import type { LoanCurrency } from "./loan-form";
+import type { LoanOutlook } from "./loan-outlook";
 
 /**
  * FLOW-139 (the Loans tab). The figures the list's summary card shows, from each open loan's
@@ -15,7 +16,7 @@ export type LoanListSummary = {
   /** סך החוב היום: every open loan's balance. */
   totalBalanceMinor: bigint;
   /** תשלומים בחודש: each open loan's next payment, part by part. */
-  monthlyParts: PartTotals;
+  monthlyParts: { principal: bigint; interest: bigint; escrow: bigint };
   monthlyMinor: bigint;
   /** הבא: the earliest next payment, with its loan. Null when no open loan has one. */
   next: { loanId: string; lenderName: string; dueDate: string; amountMinor: bigint } | null;
@@ -23,17 +24,15 @@ export type LoanListSummary = {
   twelveMonthsMinor: bigint;
 };
 
-const ZERO_PARTS: PartTotals = { interest: 0n, escrow: 0n, principal: 0n, fees: 0n };
-
-/** The open loans of one currency, summed. A loan with no outlook (a demand loan, a closed one) adds its balance only. */
-export function loanListSummary(entries: readonly LoanListEntry[]): LoanListSummary {
-  const monthlyParts: PartTotals = { ...ZERO_PARTS };
+/** The open loans of one currency, summed. A loan with no outlook (a demand loan) adds its balance only. */
+export function loanListSummary(entries: readonly LoanListEntry[], currency: LoanCurrency): LoanListSummary {
+  const monthlyParts = { principal: 0n, interest: 0n, escrow: 0n };
   let totalBalanceMinor = 0n;
   let twelveMonthsMinor = 0n;
   let openCount = 0;
   let next: LoanListSummary["next"] = null;
   for (const { loan, outlook } of entries) {
-    if (loan.status !== "open") continue;
+    if (loan.status !== "open" || loan.currency !== currency) continue;
     openCount += 1;
     totalBalanceMinor += loan.balanceMinor;
     if (outlook == null) continue;

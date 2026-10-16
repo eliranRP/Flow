@@ -19,6 +19,6 @@ export const Default: Story = {
 /** Only the principal is due this month: the interest and escrow parts are left out of the bar. */
 export const PrincipalOnly: Story = {
   render: () => (
-    <LoanSummaryCard summary={{ ...SUMMARY, monthlyParts: { principal: 447_700n, interest: 0n, escrow: 0n, fees: 0n }, monthlyMinor: 447_700n, next: null }} currency="USD" />
+    <LoanSummaryCard summary={{ ...SUMMARY, monthlyParts: { principal: 447_700n, interest: 0n, escrow: 0n }, monthlyMinor: 447_700n, next: null }} currency="USD" />
   ),
 };

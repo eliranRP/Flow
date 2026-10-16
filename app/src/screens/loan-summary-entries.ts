@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError } from "../use-write";
 import { LOAN_DETAIL_COLUMNS, readLoanRow, type LoanDetail } from "./loan-detail-data";
+import type { LoanCurrency } from "./loan-form";
 import { loanListSummary, type LoanListEntry, type LoanListSummary } from "./loan-list-summary";
 import { loanOutlook } from "./loan-outlook";
 import { readLoanBalances } from "./loan-reads";
@@ -36,10 +37,10 @@ function useLoanSummaryEntries(companyId: string | null, today: string) {
 }
 
 /** The summary card's figures for one currency; null until the loans are read. */
-export function useLoanSummary(companyId: string | null, currency: string | null): LoanListSummary | null {
+export function useLoanSummary(companyId: string | null, currency: LoanCurrency | null): LoanListSummary | null {
   const entries = useLoanSummaryEntries(companyId, israelToday());
   return useMemo(
-    () => (entries.data == null || currency == null ? null : loanListSummary(entries.data.filter((entry) => entry.loan.currency === currency))),
+    () => (entries.data == null || currency == null ? null : loanListSummary(entries.data, currency)),
     [entries.data, currency],
   );
 }
