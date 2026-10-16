@@ -408,10 +408,10 @@
 .ui-field-label {
   max-width: 100%;
   overflow-wrap: anywhere;
-  color: var(--color-text-secondary);
-  font-size: var(--type-hint-size);
-  font-weight: var(--type-hint-weight);
-  line-height: var(--type-hint-line);
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-caption-line);
 }
 
 .ui-code-field {
@@ -484,16 +484,17 @@
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  height: var(--control-height);
+  block-size: var(--field-height);
   min-height: var(--touch-min);
   padding-inline: var(--field-pad);
-  border: 1px solid var(--color-control-border);
+  border: var(--stroke-strong) solid var(--color-tint-strong);
   border-radius: var(--radius-input);
-  background: var(--color-surface);
+  background: var(--color-raised);
   color: var(--color-text);
   box-sizing: border-box;
   font-size: max(16px, var(--type-body-size));
   font-weight: var(--type-body-weight);
+  transition: border-color var(--motion-fast) var(--ease-standard);
 }
 
 /* After .ui-field-control. That rule's padding-inline would otherwise put the value under the copy button. */

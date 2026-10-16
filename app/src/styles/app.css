@@ -209,6 +209,10 @@
   --gsi-press: 12%;
   --gsi-disabled: 38%;
   --gsi-ink: 31 31 31;
+  /* FLOW-363 (4): text fields are 48 high (the board's Settings fields), buttons stay 52. */
+  --field-height: 48px;
+  --radius-field-btn: 10px;
+  --field-btn-pad: 10px;
 }
 
 html,
