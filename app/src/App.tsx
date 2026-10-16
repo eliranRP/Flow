@@ -83,6 +83,7 @@ const DevInstall = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default
 const DevLoanDetail = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoanDetail })));
 const DevLoans = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoans })));
 const DevMissingBills = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevMissingBills })));
+const DevForecast = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevForecast })));
 const DevProject = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProject })));
 const DevProjectCategory = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectCategory })));
 const DevProjectDetail = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectDetail })));
@@ -221,6 +222,7 @@ function AppRoutes() {
                   <Route path="/e2e/cash-year" element={<DevCashYear />} />
                   <Route path="/e2e/unpaid" element={<DevUnpaid />} />
                   <Route path="/e2e/missing-bills" element={<DevMissingBills />} />
+                  <Route path="/e2e/forecast" element={<DevForecast />} />
                 </Route>
                 <Route element={<DevShell section="projects" />}>
                   <Route path="/e2e/projects" element={<DevProjects />} />

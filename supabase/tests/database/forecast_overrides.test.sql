@@ -77,7 +77,7 @@ select is(
   'the past month still holds its own row, read only for that month'
 );
 select is(
-  (select count(*)::int from public.forecast_overrides_for(pg_temp.m('now')) x where x->>'item_key' = 'party:expense:supplier-a:ILS'),
+  (select count(*)::int from jsonb_array_elements(public.forecast_overrides_for(pg_temp.m('now'))) x where x->>'item_key' = 'party:expense:supplier-a:ILS'),
   1,
   'the item key is listed for the current month only'
 );
@@ -199,7 +199,7 @@ select is(
 
 -- A reset of the month, then undo brings the rows back.
 insert into fc_out (label, body)
-values ('set2', public.mcp_set_forecast_item('fc-s-4', pg_temp.m('now'), 'party:expense:supplier-d:ILS', '{"due_on": "' || pg_temp.m('now') || '-20"}'));
+values ('set2', public.mcp_set_forecast_item('fc-s-4', pg_temp.m('now'), 'party:expense:supplier-d:ILS', ('{"due_on": "' || pg_temp.m('now') || '-20"}')::jsonb));
 insert into fc_out (label, body)
 values ('reset1', public.mcp_reset_forecast('fc-r-1', pg_temp.m('now')));
 select is(
