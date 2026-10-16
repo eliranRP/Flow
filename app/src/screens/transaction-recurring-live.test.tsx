@@ -1,11 +1,12 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { TransactionScreen } from "./flow-screens";
 import { renderWithProviders } from "../test-render";
+import { loadReadSchemas } from "../load-read-schemas";
 
 // FLOW-366: the recurring row is not optimistic (decision 0180 covers the cash switch only). It waits
-// in the pace sheet with a saving state, and that state clears when the write fails.
+// in the pace sheet: the other choices are held until the write answers, and they open again when it fails.
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
   fail: null as { message: string; code?: string } | null,
@@ -24,7 +25,7 @@ vi.mock("../lib/supabase", () => ({
         return Promise.resolve({
           data: {
             id: "tx",
-            description: "אור חשמל",
+            description: "ספק חשמל לדוגמה",
             direction: "expense",
             doc_date: "2026-10-04",
             amount_gross: -255000,
@@ -38,7 +39,7 @@ vi.mock("../lib/supabase", () => ({
             project_name: "בניין לדוגמה",
             category_id: "c1",
             category_name: "חשמל",
-            supplier_name: "אור חשמל",
+            supplier_name: "ספק חשמל לדוגמה",
             customer_name: null,
             paid: false,
             open_gross_agorot: null,
@@ -55,7 +56,7 @@ vi.mock("../lib/supabase", () => ({
         return Promise.resolve({
           data: {
             transaction_id: "tx",
-            party: { direction: "expense", id: "s1", name: "אור חשמל", currency: "ILS" },
+            party: { direction: "expense", id: "s1", name: "ספק חשמל לדוגמה", currency: "ILS" },
             recurring: true,
             override: null,
             detected: true,
@@ -93,8 +94,17 @@ beforeEach(() => {
   rpc.gate = null;
 });
 
+// The first render of the screen in a file is a cold start (about 1.5s in jsdom: the first mount and the first
+// role queries). Pay it here, outside the timed tests, then clear the DOM so the first test starts empty.
+beforeAll(async () => {
+  await loadReadSchemas();
+  showLive();
+  await screen.findByRole("button", { name: /תשלום קבוע/ }, { timeout: 8000 });
+  cleanup();
+});
+
 describe("the recurring row, live", () => {
-  it("waits in the pace sheet with a saving state, and clears it when the write fails", async () => {
+  it("holds the other pace choices while the write is pending, and enables them again when it fails", async () => {
     let release: () => void = () => undefined;
     rpc.gate = new Promise<void>((resolve) => { release = resolve; });
     rpc.fail = { message: "transaction not found", code: "P0001" };
@@ -110,5 +120,5 @@ describe("the recurring row, live", () => {
     expect(await screen.findByText("לא הצלחנו לעדכן את השורה.")).toBeTruthy();
     expect(screen.getByRole("radio", { name: "כל שנה" })).toBeEnabled();
     expect(screen.getByRole("radio", { name: "כל רבעון" })).toBeEnabled();
-  }, 15000);
+  });
 });

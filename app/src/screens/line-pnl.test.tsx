@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { TransactionDetail } from "@flow/shared";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { LineSplitRead } from "../line-split";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { BooksProvider } from "../use-books";
+import { loadReadSchemas } from "../load-read-schemas";
 import { ToastProvider } from "../ui/toast";
 import { linePnlState, TransactionScreen } from "./flow-screens";
 
@@ -90,6 +91,15 @@ describe("linePnlState", () => {
   });
 });
 
+// The first render of the screen in a file is a cold start (about 1.5s in jsdom: the first mount and the first
+// role queries). Pay it here, outside the timed tests, then clear the DOM so the first test starts empty.
+beforeAll(async () => {
+  await loadReadSchemas();
+  show(base);
+  await screen.findByRole("button", { name: /^נספר ב/ }, { timeout: 8000 });
+  cleanup();
+});
+
 describe("one line out of the P&L", () => {
   it("takes the line out from the נספר ב sheet, and undoes from the toast", async () => {
     show(base);
@@ -107,7 +117,7 @@ describe("one line out of the P&L", () => {
     fireEvent.click(screen.getByText("ביטול"));
     expect(await screen.findByText("נספר ברווח")).toBeTruthy();
     expect(pnlSwitch()).toBeChecked();
-  }, 15000);
+  });
 
   it("brings one line of a kept-out category back in from the sheet", async () => {
     show({ ...base, category_excluded_from_pnl: true, in_pnl: false });

@@ -1,6 +1,6 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { TransactionScreen } from "./flow-screens";
 import { renderWithProviders } from "../test-render";
 
@@ -85,6 +85,14 @@ async function pnlSwitch() {
   }
   return screen.findByRole("switch", { name: "נספר ברווח" });
 }
+
+// The first render of the screen in a file is a cold start (about 1.5s in jsdom: the first mount and the first
+// role queries). Pay it here, outside the timed tests, then clear the DOM so the first test starts empty.
+beforeAll(async () => {
+  showLive();
+  await screen.findByRole("button", { name: /^נספר ב/ }, { timeout: 8000 });
+  cleanup();
+});
 
 beforeEach(() => {
   rpc.calls.length = 0;
