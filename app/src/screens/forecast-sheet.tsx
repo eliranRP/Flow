@@ -30,9 +30,12 @@ export function groupThousands(text: string): string {
   return fraction == null ? grouped : `${grouped}.${fraction}`;
 }
 
-/** The line under the title: the invoice, or the recurring charge and its day. */
+/** The line under the title: the invoice and its number, or the recurring charge and its day. */
 function subtitle(item: ForecastItem): string {
-  if (item.kind === "invoice") return `חשבונית · ${item.direction === "income" ? "לגבייה" : "לתשלום"}`;
+  if (item.kind === "invoice") {
+    const number = item.description != null && item.description !== "" ? ` ${item.description.replace(/^Invoice\s*/i, "")}` : "";
+    return `חשבונית${number} · ${item.direction === "income" ? "לגבייה" : "לתשלום"}`;
+  }
   return item.day != null ? `קבוע · ב־${String(item.day)}` : "קבוע";
 }
 
