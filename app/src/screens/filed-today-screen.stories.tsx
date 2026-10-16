@@ -60,7 +60,7 @@ export const FiledTodayLineMarks: Story = {
       <ExampleBar />
       <FiledTodayScreen
         sample={[
-          { ...filedLine, id: "t-bank", supplier_name: "Home Depot", source: "mercury" },
+          { ...filedLine, id: "t-bank", supplier_name: "חומרי בניין לדוגמה", source: "mercury" },
           { ...filedLine, id: "t-out", supplier_name: "ריבית בנק לדוגמה", category_name: "ריבית", source: "sumit", kept_out: true },
           { ...filedLine, id: "t-doc", source: "sumit" },
         ]}
