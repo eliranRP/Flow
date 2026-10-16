@@ -44,6 +44,15 @@ export interface AddEntryViewProps {
   onAddCategory: (name: string, kind: "expense" | "income") => Promise<string>;
   /** Cash only: the optional photo button. */
   onAttach?: () => void;
+  /** The company's currency code; the amount field shows its symbol. */
+  currency?: string;
+}
+
+/** The symbol inside the amount field: ₪ for shekels, $ for dollars, else the code. */
+function currencySymbol(currency: string): string {
+  if (currency === "ILS") return "₪";
+  if (currency === "USD") return "$";
+  return currency;
 }
 
 /** The chips that always come last: a category named אחר, and the overhead chip. */
@@ -164,7 +173,7 @@ export function AddEntryView(props: AddEntryViewProps) {
               style={{ color: amountColor }}
               onChange={(e) => { const value = e.target.value; patch({ amount: value }); }}
             />
-            <span className="ui-add-currency" aria-hidden="true">₪</span>
+            <span className="ui-add-currency" aria-hidden="true">{currencySymbol(props.currency ?? "ILS")}</span>
           </span>
         </label>
 

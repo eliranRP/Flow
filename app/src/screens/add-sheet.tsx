@@ -78,6 +78,30 @@ function AddSheet({ bank: sampleBank, fromProject }: { bank?: AddBankState; from
     setPickError(null);
     setEntry({ kind: "receipt", document: await documentOf(file) });
   }
+  // The two file inputs: the camera's shutter and the file tile's. Both hand their file to pickReceipt.
+  const inputs = (
+    <>
+      <input
+        ref={cameraPicker}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        aria-hidden="true"
+        tabIndex={-1}
+        onChange={(event) => { void pickReceipt(event.target.files?.[0]); event.target.value = ""; }}
+      />
+      <input
+        ref={filePicker}
+        type="file"
+        accept="image/*,application/pdf"
+        hidden
+        aria-hidden="true"
+        tabIndex={-1}
+        onChange={(event) => { void pickReceipt(event.target.files?.[0]); event.target.value = ""; }}
+      />
+    </>
+  );
   if (entry != null) {
     return (
       <AddEntrySheet
@@ -151,25 +175,7 @@ function AddSheet({ bank: sampleBank, fromProject }: { bank?: AddBankState; from
           )}
         </div>
       </div>
-      <input
-        ref={cameraPicker}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        hidden
-        aria-hidden="true"
-        tabIndex={-1}
-        onChange={(event) => { void pickReceipt(event.target.files?.[0]); event.target.value = ""; }}
-      />
-      <input
-        ref={filePicker}
-        type="file"
-        accept="image/*,application/pdf"
-        hidden
-        aria-hidden="true"
-        tabIndex={-1}
-        onChange={(event) => { void pickReceipt(event.target.files?.[0]); event.target.value = ""; }}
-      />
+      {inputs}
     </RouteSheet>
   );
 }

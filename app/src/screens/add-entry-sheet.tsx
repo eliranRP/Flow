@@ -9,6 +9,8 @@ import { useToast } from "../ui/toast";
 import { formatAmount } from "../ui/amount";
 import { useCategoriesQuery, useDashboardQuery, useInvalidateBooks } from "../use-books";
 import { attachDocument, createCategoryNamed, createProjectNamed, saveManualLine, undoAttach, undoManualLine, useReceiptMatch } from "../use-add-entry";
+import { useCompanyCurrency } from "../company-currency";
+import { SAMPLE_CATEGORIES, SAMPLE_CURRENCY, SAMPLE_PROJECTS } from "../add-entry-sample";
 import { AddEntryView } from "./add-entry-view";
 
 export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = null, onDone, onClose }: {
@@ -23,6 +25,10 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
   const preview = useHomePreview();
   const dashboard = useDashboardQuery();
   const categories = useCategoriesQuery();
+  const companyCurrency = useCompanyCurrency();
+  // The preview route has no books: it shows the invented USD company (add-entry-sample.ts).
+  const sample = preview !== "off";
+  const currency = sample ? SAMPLE_CURRENCY : companyCurrency;
   const [draft, setDraft] = useState<EntryDraft>(() => emptyDraft(fromProjectId, todayDisplayDate()));
   const [document, setDocument] = useState<AttachedDocument | null>(initialDocument);
   const [busy, setBusy] = useState(false);
@@ -31,10 +37,10 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
   const matchQuery = useReceiptMatch(draft, kind === "receipt");
   const match = kind === "receipt" ? (matchQuery.data ?? null) : null;
 
-  const projects = (dashboard.data?.projects ?? [])
+  const projects = sample ? SAMPLE_PROJECTS : (dashboard.data?.projects ?? [])
     .filter((project) => project.status === "active")
     .map((project) => ({ id: project.id, name: project.name }));
-  const cats = (categories.data ?? [])
+  const cats = sample ? SAMPLE_CATEGORIES : (categories.data ?? [])
     .filter((category) => !category.hidden && category.loan_part == null)
     .map((category) => ({ id: category.id, name: category.name, kind: category.kind }));
   const fromProjectName = fromProjectId == null ? null : (projects.find((p) => p.id === fromProjectId)?.name ?? "");
@@ -104,7 +110,8 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
         match={match}
         busy={busy}
         error={error}
-        formatMoney={(minor) => formatAmount(BigInt(minor), "detail")}
+        currency={currency}
+        formatMoney={(minor) => formatAmount(BigInt(minor), "detail", currency)}
         onClose={onClose}
         onSave={(next) => { void save(next); }}
         onAddProject={async (name) => {
