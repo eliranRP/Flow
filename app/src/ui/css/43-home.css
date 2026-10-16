@@ -213,6 +213,11 @@
   font-size: var(--type-caption-size);
 }
 
+/* FLOW-364 (board): the cells' figures are one step under the list size. */
+.ui-month-cell-amount .t-amount {
+  font-size: var(--type-label-size);
+}
+
 .ui-month-cell-selected {
   border-color: var(--color-accent);
   background: var(--color-tint-strong);
@@ -327,7 +332,8 @@
 .ui-home-empty-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  /* FLOW-364 (board): the two rows sit 12px closer than the 16px gap. */
+  gap: var(--space-1);
   margin: 0;
   padding: 0;
   list-style: none;

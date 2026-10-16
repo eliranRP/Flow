@@ -213,6 +213,15 @@
       "ui/card-swipe.tsx",
       "txn-nav.tsx",
       "screens/transaction-screen.tsx"
+    ],
+    "home-redesign.spec.ts": [
+      "screens/HomeScreen.tsx",
+      "screens/home-parts.tsx",
+      "screens/month-drawer.tsx",
+      "ui/tab-bar.tsx",
+      "ui/top-band.tsx",
+      "dev-routes-cash.tsx",
+      "dev/cash-sample.ts"
     ]
   },
   "sweeps": {
