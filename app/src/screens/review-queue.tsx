@@ -35,7 +35,7 @@ import { useToast } from "../ui/toast";
 import { isReversal } from "../reversal";
 import { useLineSplitQuery } from "./line-split";
 import { invoiceDate, useBlockedPreview } from "./screen-shared";
-import { assignmentPath, listFocusId, ReviewEmpty, reviewHasParty, reviewIsSplit, reviewLineFocus, reviewListPath, reviewSuggestion } from "./review-shared";
+import { assignmentPath, listFocusId, ReviewEmpty, reviewE2e, reviewHasParty, reviewIsSplit, reviewLineFocus, reviewListPath, reviewSuggestion } from "./review-shared";
 
 export type ReviewPreviewWrite = {
   run: () => Promise<void>;
@@ -279,6 +279,8 @@ export function ReviewQueue({
     pinReviewLine(null);
     // Focus was on this card's דלג; the next card's אישור takes it (FLOW-327 r2).
     skippedNow.current = true;
+    // A skip is a visit to this card: the meter counts it, as it counts an approval.
+    markHandled(target.id);
     setDeferred((list) => [...list.filter((id) => id !== target.id), target.id]);
   }
   // FLOW-365: the project picker (a sheet over the card) saves that one field and returns to the card.
@@ -342,7 +344,11 @@ export function ReviewQueue({
   // FLOW-365: a saved split shows its parts on the card. Read only for a card that is a split.
   const splitShown = shown != null && (shown.share_count ?? 0) > 1 && shown.reason !== "unallocated_shared";
   const summaryRead = useLineSplitQuery(splitShown ? shown.transaction_id : "", splitShown && !sample && previewWrite == null);
-  const splitSummary = summaryRead.data != null && summaryRead.data.parts.length > 0 ? {
+  const devParts = previewWrite != null && reviewE2e != null ? reviewE2e.e2eSplitParts(shown?.transaction_id) : null;
+  const splitSummary = devParts != null ? {
+    total: "$1,284.50",
+    parts: devParts.map((part, index) => ({ key: String(index), amount: part.amount, project: part.project, category: part.rest ? `${part.category} · השאר` : part.category })),
+  } : summaryRead.data != null && summaryRead.data.parts.length > 0 ? {
     total: formatMoney(summaryRead.data.lineMinor, summaryRead.data.currency),
     parts: summaryRead.data.parts.map((part, index) => ({
       key: String(index),

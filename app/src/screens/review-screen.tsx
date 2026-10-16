@@ -20,7 +20,13 @@ import { ScreenState } from "../ui/screen-state";
 import { EMPTY_REVIEW, listFocusId, listPlace, queueAfterFocus, reviewE2e, ReviewEmpty, reviewLineFocus, reviewListPath, reviewSuggestion, rotateReview, statementSuggestion, useE2eReviewRows } from "./review-shared";
 import { type ReviewPreviewWrite, ReviewQueue } from "./review-queue";
 import { useJevQueue } from "./jev-review-card";
+import type { ReviewCase } from "../dev/review-e2e-fixture";
 import { jevShown, withJev } from "./jev-review";
+
+/** FLOW-365: the dev `case` param names a board state for the proofs; anything else is the default queue. */
+function reviewCaseOf(value: string | null): ReviewCase | null {
+  return value === "suggest" || value === "none" || value === "split" || value === "transfer" || value === "photo" ? value : null;
+}
 
 /** The row opened from the list. A later URL replace must not move this. */
 let reviewReturnId: string | null = null;
@@ -44,7 +50,7 @@ export function ReviewScreen() {
   const waiting = useProjectWaitingQuery(projectFilter ?? "");
   const focusedOrder = useRef<ReviewRow[] | null>(null);
   const e2eList = reviewE2e != null && params.get("preview") != null && params.get("e2e") === "list";
-  const e2eRows = useE2eReviewRows(e2eList, Number(params.get("rows") ?? "") || undefined);
+  const e2eRows = useE2eReviewRows(e2eList, Number(params.get("rows") ?? "") || undefined, reviewCaseOf(params.get("case")));
   // FLOW-309: `&fit=1` is the short-phone worst case (a wrapping supplier, Jev's reason, the banner).
   const e2eFit = e2eList && reviewE2e != null && params.get("fit") === "1";
   const e2eShown = useMemo(() => (e2eFit && reviewE2e != null ? reviewE2e.e2eFitRows(e2eRows) : e2eRows), [e2eFit, e2eRows]);

@@ -1,6 +1,7 @@
 import { type ReviewRow } from "@flow/shared";
 import { useEffect, useRef, useState } from "react";
 import * as reviewE2eFixture from "../dev/review-e2e-fixture";
+import type { ReviewCase } from "../dev/review-e2e-fixture";
 import { type JevShown } from "./jev-review";
 import { focusReviewEmptyAction, takeReviewFocus } from "./review-focus";
 import { Button } from "../ui/button";
@@ -25,7 +26,7 @@ export const reviewLineFocus: {
 /** Dev-only fixture. A production build folds this to null and drops the module. */
 export const reviewE2e = import.meta.env.DEV ? reviewE2eFixture : null;
 
-export function useE2eReviewRows(active: boolean, size?: number): ReviewRow[] {
+export function useE2eReviewRows(active: boolean, size?: number, kind?: ReviewCase | null): ReviewRow[] {
   const [, bump] = useState(0);
   useEffect(() => {
     if (!import.meta.env.DEV || !active || reviewE2e == null) return;
@@ -34,7 +35,7 @@ export function useE2eReviewRows(active: boolean, size?: number): ReviewRow[] {
     });
   }, [active]);
   if (!import.meta.env.DEV || !active || reviewE2e == null) return EMPTY_REVIEW;
-  return reviewE2e.currentRows(size);
+  return reviewE2e.currentRows(size, kind);
 }
 
 export function reviewListPath(search: string): string {

@@ -258,8 +258,10 @@ describe("rejected reads", () => {
 });
 
 describe("rejected writes", () => {
-  it("does not say a review item was skipped when the write fails", async () => {
+  it("skips on the device only: no server write, and no skip error copy", async () => {
+    const calls: string[] = [];
     rpc.impl = (name) => {
+      calls.push(name);
       if (name === "list_review") {
         return Promise.resolve({
           data: [
@@ -279,14 +281,12 @@ describe("rejected writes", () => {
           error: null,
         });
       }
-      if (name === "resolve_review") return Promise.resolve({ data: null, error: { message: "Failed to fetch" } });
       return Promise.resolve({ data: [], error: null });
     };
     renderAt("/review");
     fireEvent.click(await screen.findByRole("button", { name: "דלג" }));
-    expect(await screen.findByText("לא הצלחנו לדלג.")).toBeInTheDocument();
-    expect(screen.queryByText("דילגנו על הפריט")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    expect(screen.queryByText("לא הצלחנו לדלג.")).not.toBeInTheDocument();
+    expect(calls).not.toContain("resolve_review");
   });
 
   it("approves a review item and undo calls reopen_review", async () => {

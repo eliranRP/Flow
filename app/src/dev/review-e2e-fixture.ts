@@ -45,19 +45,67 @@ function seed(): ReviewRow[] {
   }));
 }
 
+/**
+ * FLOW-365: `&case=` seeds one card in a board state, in USD with round amounts and invented names:
+ * suggest (Jev's project and category), none (no suggestion), split (two parts, the summary on the
+ * card), transfer (the project row says it does not apply), photo (a photographed invoice).
+ */
+export type ReviewCase = "suggest" | "none" | "split" | "transfer" | "photo";
+let seedCase: ReviewCase | null = null;
+
+function caseRow(kind: ReviewCase): ReviewRow {
+  const base: ReviewRow = {
+    id: "r1",
+    transaction_id: "t-r1",
+    description: "חומרי בניין לדוגמה",
+    doc_date: "2026-10-08",
+    amount_net: -128_450n,
+    currency: "USD",
+    direction: "expense",
+    reason: null,
+    project_id: "p1",
+    category_id: "c1",
+    project_name: "שיפוץ הרצל 12",
+    category_name: "חומרים",
+    project_suggested: true,
+    category_suggested: true,
+    supplier_name: "חומרי בניין לדוגמה",
+    doc_kind: "invoice",
+    source: "photo",
+    auto_approved_today: 12,
+  };
+  if (kind === "none") return { ...base, project_id: null, project_name: null, project_suggested: false, category_suggested: false, supplier_name: "ספק חדש לדוגמה", source: "mercury" };
+  if (kind === "split") return { ...base, project_id: null, project_name: null, category_id: null, category_name: null, project_suggested: false, category_suggested: false, reason: null, pnl_role: "shared", share_count: 3, supplier_name: "The Home Depot לדוגמה" };
+  if (kind === "transfer") return { ...base, project_id: null, project_name: null, project_suggested: false, supplier_name: "העברה לדוגמה", source: "mercury", transfer: true } as ReviewRow;
+  if (kind === "photo") return { ...base, source: "photo", supplier_name: "חשמל לדוגמה" };
+  return base;
+}
+
+/** The split parts a dev card shows (the live read is off in previews). */
+export function e2eSplitParts(transactionId: string | null | undefined): Array<{ project: string; category: string; amount: string; rest: boolean }> | null {
+  if (transactionId !== "t-r1" || seedCase !== "split") return null;
+  return [
+    { project: "שיפוץ הרצל 12", category: "ציוד והשכרה", amount: "$340.00", rest: false },
+    { project: "וילה רעננה", category: "חומרים", amount: "$420.00", rest: false },
+    { project: "שיפוץ הרצל 12", category: "חומרים", amount: "$524.50", rest: true },
+  ];
+}
+
 /** `size` is the page's request; without one, the queue already seeded stands (dismiss, restore). */
-function ensure(size?: number): ReviewRow[] {
-  if (e2eOpen == null || (size != null && size !== seedSize)) {
+function ensure(size?: number, kind?: ReviewCase | null): ReviewRow[] {
+  const nextCase = kind ?? null;
+  if (e2eOpen == null || (size != null && size !== seedSize) || nextCase !== seedCase) {
     seedSize = size ?? 5;
+    seedCase = nextCase;
     e2eGone = [];
-    e2eOpen = seed();
+    e2eOpen = nextCase != null ? [caseRow(nextCase), ...seed().slice(1)] : seed();
   }
   return e2eOpen;
 }
 
 /** The size belongs to the seeded queue: a page with another `rows` (or none, 5) seeds afresh. */
-export function currentRows(size?: number): ReviewRow[] {
-  return ensure(size != null && size > 0 ? size : 5);
+export function currentRows(size?: number, kind?: ReviewCase | null): ReviewRow[] {
+  return ensure(size != null && size > 0 ? size : 5, kind);
 }
 
 export function subscribe(listener: () => void): () => void {
@@ -68,7 +116,7 @@ export function subscribe(listener: () => void): () => void {
 }
 
 export function dismissE2eReview(id: string): void {
-  const open = ensure();
+  const open = ensure(undefined, seedCase);
   const row = open.find((item) => item.id === id);
   if (!row) return;
   e2eGone = [row, ...e2eGone];

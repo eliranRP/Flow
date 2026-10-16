@@ -78,6 +78,8 @@ describe("payment page: cash and recurring switches (FLOW-415)", () => {
     expect(screen.getByRole("radio", { name: "כל חודש" })).toBeChecked();
     fireEvent.click(screen.getByRole("radio", { name: "כל רבעון" }));
     await waitFor(() => { expect(screen.getByText("אור חשמל · כל רבעון")).toBeInTheDocument(); });
+    // The sheet closes with an exit motion; wait for it to leave before the page's switch is queried.
+    await waitFor(() => { expect(screen.queryByRole("radiogroup", { name: "כל כמה זמן" })).toBeNull(); });
     expect(screen.getByText(/זוהה לבד/).closest(".ui-row-hint")?.textContent).toBe("כל רבעון · בערך ב־4 · זוהה לבד");
     // The switch still turns the charge off; its own target is apart from the row's.
     expect(screen.getByRole("switch", { name: "חיוב קבוע" })).toBeChecked();

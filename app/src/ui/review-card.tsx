@@ -445,6 +445,7 @@ function ReviewFlagBlock({ flag }: { flag: ReviewFlagView }) {
  * rule picked reads בחרת; a missing one reads חסר.
  */
 function lineTag(line: { suggested: boolean; jev: boolean; reversal?: boolean; value: string }) {
+  if (line.value === REVIEW_TRANSFER) return null;
   if (line.jev) return <JevTag />;
   if (line.suggested) return <SuggestTag />;
   if (line.reversal) return <ReversalTag />;
