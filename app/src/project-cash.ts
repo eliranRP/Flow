@@ -21,8 +21,9 @@ import { waitForAccessToken } from "./wait-for-session";
 export const PROJECT_CASH_MONTHS = 4;
 
 /** The page the project used to open on: its profit for a period, with the period pill. */
-export function projectProfitPath(projectId: string, search: string): string {
-  return `/projects/${projectId}/profit${search}`;
+/** A month's profit page (FLOW-140): the project's profit page for one month, named in the path. */
+export function projectProfitMonthPath(projectId: string, key: string, search: string): string {
+  return `/projects/${projectId}/profit/${key}${search}`;
 }
 
 /** An earlier month's page for the project: its figure, נכנס, יצא and רווח החודש. */
@@ -69,7 +70,7 @@ export function projectCashSummaryRows(
   return cashSummaryRows(key, rows, search, now).map((row) => {
     if (row.id === "in" || row.id === "out" || row.id === "kept") return { ...row, href: projectCashLinesPath(projectId, key, row.id, base, search) };
     // The profit page reads its period from the link, so the month travels in the search, not Home's period.
-    return { ...row, href: projectProfitPath(projectId, withPeriodSearch(search, monthPeriod(key))), profitMonth: undefined };
+    return { ...row, href: projectProfitMonthPath(projectId, key, withPeriodSearch(search, monthPeriod(key))), profitMonth: undefined };
   });
 }
 

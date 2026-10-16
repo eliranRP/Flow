@@ -24,6 +24,7 @@ const months: NonNullable<ProfitMonths> = {
   base_currency: "USD",
   months: [
     { month: "2026-10", from: "2026-10-01", to: "2026-10-16", open: true, by_currency: [{ currency: "USD", income_minor: 1_000_000n, expense_minor: 600_000n, profit_minor: 400_000n }] },
+    { month: "2026-09", from: "2026-09-01", to: "2026-09-30", open: false, by_currency: [{ currency: "USD", income_minor: 500_000n, expense_minor: 700_000n, profit_minor: -200_000n }] },
   ],
   by_currency: [{ currency: "USD", income_minor: 1_000_000n, expense_minor: 600_000n, profit_minor: 400_000n }],
 };
@@ -59,5 +60,7 @@ describe("ProjectProfitScreen", () => {
     renderScreen({ project: { ...base, overhead_weighted: false, overhead_share_minor: null }, months });
     expect(screen.getByText("אוקטובר · עד היום")).toBeTruthy();
     expect(screen.getByText(/הכנסות \$10,000 · הוצאות \$6,000/)).toBeTruthy();
+    const titles = screen.getAllByRole("link").map((link) => link.textContent);
+    expect(titles.findIndex((text) => text.includes("אוקטובר"))).toBeLessThan(titles.findIndex((text) => text.includes("ספטמבר")));
   });
 });
