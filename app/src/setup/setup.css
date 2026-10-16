@@ -246,6 +246,7 @@
 .ui-onb-conn .ui-btn-pill {
   background: var(--color-accent);
   color: var(--color-on-accent);
+  padding-inline: var(--space-4);
 }
 
 .ui-onb-conn-done {
