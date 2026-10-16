@@ -598,6 +598,8 @@ export const breakdownSchema = z
         key: z.string(),
         name: z.string().nullable(),
         shared: z.boolean(),
+        /** FLOW-140. Projects with a counted line in the group. Omitted on older payloads. */
+        projects: z.number().int().nonnegative().optional(),
       }),
     ),
     excluded: z.array(breakdownSumSchema),
