@@ -231,8 +231,12 @@ async function main(argv) {
   const summary = /** @type {Record<string, Record<string, number>>} */ ({});
   try {
     for (const shot of plan) {
-      // A frame drawn in one theme only (no light board PNG) gets one shot, not a crash.
-      if (!existsSync(shot.board)) continue;
+      // A frame drawn in one theme only (no light board PNG) gets one shot, not a crash. Any other
+      // missing board PNG is named, so a wrong --boards folder cannot pass as an empty report.
+      if (!existsSync(shot.board)) {
+        console.warn(`skipped ${shot.frame} ${shot.theme}: no board PNG at ${shot.board}`);
+        continue;
+      }
       const context = await browser.newContext({
         viewport: { width: PROOF_WIDTH, height: PROOF_HEIGHT },
         deviceScaleFactor: PROOF_DPR,

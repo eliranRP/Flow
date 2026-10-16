@@ -62,10 +62,11 @@ export function chargeMark(amount: bigint, typical: bigint, income: boolean): { 
   const size = absAgorot(amount);
   const usual = absAgorot(typical);
   if (usual === 0n) return null;
-  const pct = Math.round((Number(size - usual) * 100) / Number(usual));
-  if (Math.abs(pct) < MARK_FROM_PERCENT) return null;
-  const up = pct > 0;
-  return { arrow: up ? "▲" : "▼", percent: `${String(Math.abs(pct))}%`, hurts: income ? !up : up };
+  // The cut is on the exact percent, both ways; the shown figure rounds the magnitude, so ±19.5% gets no mark.
+  const exact = (Number(size - usual) * 100) / Number(usual);
+  if (Math.abs(exact) < MARK_FROM_PERCENT) return null;
+  const up = exact > 0;
+  return { arrow: up ? "▲" : "▼", percent: `${String(Math.round(Math.abs(exact)))}%`, hurts: income ? !up : up };
 }
 
 /** "אוק׳": a month label short enough for 6 bars at 320. */

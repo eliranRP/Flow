@@ -48,6 +48,9 @@ describe("chargeMark (FLOW-366)", () => {
     expect(chargeMark(124_000n, 98_000n, false)).toMatchObject({ arrow: "▲", percent: "27%" });
     expect(chargeMark(8_000n, 10_000n, false)).toMatchObject({ arrow: "▼", hurts: false });
     expect(chargeMark(10_900n, 10_000n, false)).toBeNull();
+    // 19.5% is under the cut both ways, though it would round to 20.
+    expect(chargeMark(11_950n, 10_000n, false)).toBeNull();
+    expect(chargeMark(8_050n, 10_000n, false)).toBeNull();
     expect(chargeMark(10_000n, 0n, false)).toBeNull();
   });
 });

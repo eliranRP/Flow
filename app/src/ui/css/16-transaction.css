@@ -118,6 +118,8 @@
 .ui-txn-top {
   position: sticky;
   inset-block-start: 0;
+  /* Clear of the status bar once it sticks, as the compact header does (27-compact-header.css). */
+  padding-block-start: var(--safe-top);
   z-index: 2;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;

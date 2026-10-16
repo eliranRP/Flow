@@ -108,9 +108,10 @@ function CashLinesBody({
   const lines = useCashLinesQuery(monthKey, side, currency, sample == null);
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = lines;
   // FLOW-366: every page loads up front; the totals and the groups need all of them.
+  // A page that failed stops the loop here: a failed fetch leaves hasNextPage set, so it would retry forever.
   useEffect(() => {
-    if (sample == null && hasNextPage && !isFetchingNextPage) void fetchNextPage();
-  }, [sample, hasNextPage, isFetchingNextPage, fetchNextPage]);
+    if (sample == null && hasNextPage && !isFetchingNextPage && !lines.isError) void fetchNextPage();
+  }, [sample, hasNextPage, isFetchingNextPage, lines.isError, fetchNextPage]);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, lines);
   const loaded = sample?.lines ?? (lines.data?.pages ?? []).flatMap((page) => page?.rows ?? []);
   const rows = useHeldOrder(loaded, (row) => `${row.transaction_id}:${row.part ?? ""}`);
