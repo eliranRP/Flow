@@ -54,7 +54,8 @@ function lineSign(side: CashListSide, row: CashLine): "in" | "out" | "cost" {
   return (row.side === "in") !== back ? "in" : "out";
 }
 
-type LinesSample = { months: NonNullable<CashMonths>; lines: CashLine[] };
+/** `today` pins the day heads ("היום") for a sample whose lines are dated around a fixed day. */
+type LinesSample = { months: NonNullable<CashMonths>; lines: CashLine[]; today?: string };
 
 export function CashLinesScreen({ sample, at }: { sample?: LinesSample; at?: { month: string; side: CashListSide; currency: string } } = {}) {
   const params = useParams();
@@ -138,7 +139,7 @@ function CashLinesBody({
   // The total is the figure Home shows for the side (the server's month row); on a side that is not
   // נכנס or יצא it is the month's figure, and on נכנס and יצא the rows once every page is in.
   const total = side === "kept" ? figure : allLoaded ? (figure ?? summary.total) : null;
-  const groups = groupLines(rows, order, side, israelToday());
+  const groups = groupLines(rows, order, side, sample?.today ?? israelToday());
   const shownIds = groups.flatMap((group) => group.rows.map((row) => row.transaction_id));
   const from = cashLinesPath(monthKey, side, currency, searchWith(search, order));
   const sideSwitch = (
@@ -250,5 +251,5 @@ function CashLinesBody({
 /** A group's sum, with the plus on money in (decision 0181); a negative sum keeps its minus. */
 function LinesGroupSum({ total, side, currency }: { total: bigint; side: CashListSide; currency: string }) {
   const sign = total < 0n ? "−" : side === "in" && total > 0n ? "+" : "";
-  return <bdi className="t-line2 ui-lines-group-sum" dir="ltr">{`${sign}${formatAmountText(total < 0n ? -total : total, currency)}`}</bdi>;
+  return <bdi className="t-line2 ui-lines-group-sum" dir="ltr">{`${sign}${formatAmountText(total < 0n ? -total : total, currency, { detail: true })}`}</bdi>;
 }

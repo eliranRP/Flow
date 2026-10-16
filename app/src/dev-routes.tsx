@@ -367,7 +367,7 @@ export function DevCashLines() {
     const board = sampleBoardCashMonths(boardToday);
     return (
       <CashLinesScreen
-        sample={{ months: board, lines: sampleBoardCashLines(side === "in" ? "in" : "out", boardToday) }}
+        sample={{ months: board, lines: sampleBoardCashLines(side === "in" ? "in" : "out", boardToday), today: "2026-10-11" }}
         at={{ month: cashMonthKey(board.months[0]?.month ?? ""), side, currency: "USD" }}
       />
     );
