@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(62);
+select plan(63);
 
 do $users$
 begin
@@ -297,6 +297,12 @@ select is(pg_temp.total(pg_temp.out_of('in:category:invoiced'), 'GBP'), 15000::b
   'an outflow under an income category is negative income: 20000 - 5000');
 select is(pg_temp.total(pg_temp.out_of('in:project:cash'), 'GBP'), (pg_temp.cur(pg_temp.out_of('dash:cash'), 'GBP') ->> 'income_minor')::bigint,
   'cash income counts the reversal whatever its document kind (GBP)');
+-- FLOW-140: each group counts the projects it has counted lines in; materials has Site Alpha and Office.
+select ok(bool_and(x ? 'projects'), 'every category group carries a project count')
+  from jsonb_array_elements(pg_temp.out_of('ex:category') -> 'groups') x;
+select cmp_ok((pg_temp.grp(pg_temp.out_of('ex:category'), 'ILS', (select id::text from fb_ref where label = 'materials')) ->> 'projects')::integer, '>=', 2,
+  'materials counts at least Site Alpha and Office');
+
 select is(pg_temp.total(pg_temp.out_of('ex:category'), 'GBP'), 5000::bigint,
   'an inflow under an expense category is negative expense: 8000 - 3000');
 select is(pg_temp.total(pg_temp.out_of('in:july'), 'GBP'), -5000::bigint,
