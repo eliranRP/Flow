@@ -23,8 +23,6 @@ import {
   categorySchema,
   createCategoriesSchema,
   createCategorySchema,
-  attachDocumentSchema,
-  createManualEntrySchema,
   createProjectGroupSchema,
   createProjectSchema,
   createProjectsSchema,
@@ -74,6 +72,7 @@ import {
 } from "./tools_schemas.ts";
 import { addLoanWrite, attachLoanWrite, updateLoanWrite } from "./tools_loans.ts";
 import { syncBank } from "./tools_sync.ts";
+import { attachDocumentSchema, createManualEntrySchema } from "./tools_manual_schemas.ts";
 
 export async function callWrite(
   name: typeof WRITE_TOOL_NAMES[number],

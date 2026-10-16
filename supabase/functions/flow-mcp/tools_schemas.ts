@@ -194,8 +194,8 @@ export const ALLOWED: Record<string, Set<string>> = {
   undo_batch: new Set(["idempotency_key", "batch_key"]),
 };
 // Any case is accepted; the database compares ids in lower case (FLOW-205).
-const UUID_TEXT = z.string().regex(UUID).transform((id) => id.toLowerCase());
-const IDEMPOTENCY_KEY = z.string().min(1).max(128);
+export const UUID_TEXT = z.string().regex(UUID).transform((id) => id.toLowerCase());
+export const IDEMPOTENCY_KEY = z.string().min(1).max(128);
 // A batch key leaves room for ":" and a three-digit ordinal on each row key.
 const BATCH_KEY = z.string().min(1).max(124);
 export const assignSchema = z.object({
@@ -323,7 +323,7 @@ export const renameCompanySchema = z.object({
     .refine((name) => !HIDDEN_CHARS.test(name), { message: HIDDEN_NAME })
     .refine(companyNameIsValid),
 }).strict();
-function visibleName(min: number, max: number) {
+export function visibleName(min: number, max: number) {
   return z.string().trim().min(min).max(max).transform(plainSpaces)
     .refine((name) => !HIDDEN_CHARS.test(name), { message: HIDDEN_NAME });
 }
@@ -498,32 +498,6 @@ const projectType = z.string().trim().max(40).transform(plainSpaces)
   .refine((type) => !HIDDEN_CHARS.test(type), { message: HIDDEN_NAME });
 // A budget is whole minor units of the company currency; null clears it (update only).
 const projectBudget = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
-// FLOW-369. A cash or cheque line from the add sheet: the payee is the description, the method
-// and a cheque number are kept with it. The database checks the rest (project, category, amount).
-export const createManualEntrySchema = z.object({
-  idempotency_key: IDEMPOTENCY_KEY,
-  direction: z.enum(["income", "expense"]),
-  amount_minor: z.number().int().min(1).max(999999999999),
-  doc_date: z.string().refine((v) => isCalendarDate(v)),
-  payee: visibleName(2, 120),
-  project_id: UUID_TEXT.nullable().optional(),
-  category_id: UUID_TEXT,
-  method: z.enum(["cash", "cheque"]),
-  cheque_number: z.string().trim().regex(/^[0-9A-Za-z-]{1,20}$/).nullable().optional(),
-}).strict().superRefine((body, ctx) => {
-  if (body.method === "cheque" && body.cheque_number == null) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cheque_number"] });
-});
-// FLOW-369. One document on an existing line: its metadata (no file is stored yet, FLOW-306).
-export const attachDocumentSchema = z.object({
-  idempotency_key: IDEMPOTENCY_KEY,
-  transaction_id: UUID_TEXT,
-  document: z.object({
-    name: visibleName(1, 200),
-    mime: z.enum(["image/jpeg", "image/png", "image/webp", "image/heic", "application/pdf"]),
-    bytes: z.number().int().min(1).max(26214400),
-    sha256: z.string().regex(/^[0-9a-fA-F]{64}$/).transform((hash) => hash.toLowerCase()),
-  }).strict(),
-}).strict();
 export const createProjectSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   name: visibleName(2, 120),

@@ -226,7 +226,7 @@ set search_path = ''
 as $$
   select t.id, t.description, t.doc_date, -t.amount_gross, t.source::text
   from public.transactions t
-  where t.company_id = private.current_company_id()
+  where t.company_id = private.readable_company_id()
     and t.removed_at is null
     and t.direction = 'expense'
     and t.source <> 'manual'
