@@ -194,9 +194,12 @@ export const ProjectCashKept: Story = {
     const owner: CashLine = { ...line("4", "השקעת בעלים לדוגמה", "השקעת בעלים", 107_000n), supplier_name: null, side: "in" };
     // FLOW-442: a $1,500 loan payment's principal ($900) names its part, out of the whole payment.
     const principal: CashLine = { ...line("7", "מלווה לדוגמה", "תשלומי הלוואה", 90_000n), transaction_id: "loan-7", part: "principal", line_minor: 150_000n };
+    // The month's net is above its profit by the owner's money, so this story keeps its own month.
+    const keptMonth = cashRow(310_000n, 75_000n, 128_000n);
+    keptMonth.not_in_profit_categories = [{ name: "השקעת בעלים", amount_minor: 107_000n }];
     return (
       <StoryRoute entry={`/projects/p-c/cash/${key}/kept/USD`} tabs>
-        <ProjectCashLinesScreen sample={{ months: cash, lines: [principal, owner] }} at={{ projectId: "p-c", month: key, side: "kept", currency: "USD" }} />
+        <ProjectCashLinesScreen sample={{ months: months([[keptMonth]]), lines: [principal, owner] }} at={{ projectId: "p-c", month: key, side: "kept", currency: "USD" }} />
       </StoryRoute>
     );
   },
