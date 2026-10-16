@@ -52,12 +52,6 @@ export const CashFromProject: Story = {
   args: { fromProject: "Oak Ridge", start: { payee: "", categoryId: null } },
 };
 
-/** The same form at 320 wide: the two-column date row and the chips still wrap. */
-export const CashFromProject320: Story = {
-  ...CashFromProject,
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};
-
 /** A receipt with a matched bank line: the box names it and the save attaches to it. */
 export const ReceiptMatched: Story = {
   args: {
@@ -66,9 +60,4 @@ export const ReceiptMatched: Story = {
     document: { name: "ajax-receipt.jpg", mime: "image/jpeg", bytes: 183000, sha256: "a".repeat(64) },
     start: { payee: "Ajax Hardware", amount: "409.01", categoryId: "c1" },
   },
-};
-
-export const ReceiptMatched393: Story = {
-  ...ReceiptMatched,
-  parameters: { viewport: { defaultViewport: "flow393" } },
 };
