@@ -30,6 +30,7 @@ function line(id: string, day: string, payee: string, category: string, signedMi
  * lines, which add to income $6,302, counted expenses $2,506 and profit $3,796 (the brief's §5 figures).
  */
 export const JUNIPER_MONTH_PROFIT: ProjectMonthProfitSample = {
+  month: "2026-10",
   project: {
     ...JUNIPER_PROFIT.project,
     income_agorot: 630_200n,

@@ -21,7 +21,7 @@ import { ProfitSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 import { SummaryRow } from "./project-profit-screen";
 
-export type ProjectMonthProfitSample = { project: NonNullable<ProjectDetail>; lines: CashLine[] };
+export type ProjectMonthProfitSample = { project: NonNullable<ProjectDetail>; month: string; lines: CashLine[] };
 
 const ORDERS: readonly { key: LinesOrder; label: string }[] = [
   { key: "date", label: "לפי תאריך" },
@@ -36,7 +36,9 @@ const ORDERS: readonly { key: LinesOrder; label: string }[] = [
  * expenses that count, and the profit it leaves (a named exception on the PR).
  */
 export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProfitSample } = {}) {
-  const { projectId = "", month = "" } = useParams();
+  const params = useParams();
+  const projectId = sample?.project.id ?? params.projectId ?? "";
+  const month = sample?.month ?? params.month ?? "";
   const location = useLocation();
   const navigate = useNavigate();
   const search = usePreviewSearch();
