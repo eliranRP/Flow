@@ -156,7 +156,7 @@ Do not mix radii inside a component.
 
 ### 2.6 Shadows
 
-There is no shadow scale in the tokens. Do not add drop shadows. The only allowed shadows are a faint one on the switch knob and a faint 1px shadow on the selected segment. The band has no shadow. [design-system.md](../../design/system/design-system.md) principles, guide §1 P5 and §7.5–7.6. Decision [0040](../decisions/0040-tailwind-v4.md) says shadows are mapped into `@theme` when they exist. They do not exist as a scale, so do not invent `--shadow-*` utilities.
+There is no shadow scale in the tokens. Do not add drop shadows. The only allowed shadows are a faint one on the switch knob and a faint 1px shadow on the selected segment. The band has no shadow. [design-system.md](../../design/system/design-system.md) principles, guide §1 P5 and §7.8–7.9. Decision [0040](../decisions/0040-tailwind-v4.md) says shadows are mapped into `@theme` when they exist. They do not exist as a scale, so do not invent `--shadow-*` utilities.
 
 ### 2.7 Motion
 
@@ -235,7 +235,7 @@ Parts not in the inventory keep their rules until their screens move. They are l
 | Date picker | field, single sheet, range sheet | Sunday first, א׳ on the right. [0027](../decisions/0027-date-picker.md) |
 | Period sheet | radio rows apply on tap, plus custom range | [0028](../decisions/0028-period-sheet-with-custom-range.md) |
 | Confirmation sheet | question, item, consequence, action, quiet ביטול | [0030](../decisions/0030-confirmation-sheets.md) |
-| Google button | default, pressed (12% overlay), focus, loading ("מתחברים…"), disabled (38%) | Text exactly "המשך עם Google". [0033](../decisions/0033-google-sign-in.md), guide §7.24 |
+| Google button | default, pressed (12% overlay), focus, loading ("מתחברים…"), disabled (38%) | Text exactly "המשך עם Google". [0033](../decisions/0033-google-sign-in.md), guide §7.33 |
 | Logo | wordmark and S1 icon | [0031](../decisions/0031-logo.md), [LOGO.md](../../design/logo/LOGO.md) |
 
 ### 2.9 Tailwind `@theme` mapping

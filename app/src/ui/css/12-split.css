@@ -136,7 +136,7 @@ div.ui-check-row {
   min-inline-size: 96px;
   block-size: var(--field-height);
   height: var(--field-height);
-  padding-inline: var(--space-3);
+  padding-inline: var(--field-pad);
   border-radius: var(--radius-input);
   font-size: var(--type-title-3-size);
 }

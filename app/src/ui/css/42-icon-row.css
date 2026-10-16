@@ -70,3 +70,9 @@
 .ui-icon-row-warning :is(.ui-icon-row-hint, .ui-icon-row-icon) {
   color: var(--color-warning);
 }
+
+/* The brief keeps the global ring on IconRow, so this undoes the row rule's `outline: none` (01-base.css). */
+.ui-icon-row:is(:focus-visible, [data-focus-ring]:focus) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
