@@ -132,6 +132,10 @@
   font-size: var(--type-body-size);
 }
 
+.ui-add-input[dir="ltr"] {
+  text-align: end;
+}
+
 .ui-add-input:focus-visible {
   border-color: var(--color-accent);
   outline: 2px solid var(--color-focus);
