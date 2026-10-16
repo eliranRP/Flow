@@ -12,7 +12,7 @@ test("Home: the late-bills row opens the list, and a bill opens Search on its su
   await expect(row).not.toContainText("₪");
   await row.click();
   // FLOW-415 (b-2): the קבועים screen, at its לא הגיעו section.
-  await expect(page).toHaveURL(/\/e2e\/missing-bills\?preview=1#late$/);
+  await expect(page).toHaveURL(/\/e2e\/recurring\?preview=1#late$/);
   await expect(page.getByRole("heading", { name: "קבועים" })).toBeVisible();
   const bills = page.getByRole("region", { name: "לא הגיעו" }).getByRole("link");
   await expect(bills).toHaveCount(2);
@@ -28,7 +28,7 @@ test("Home: the late-bills row opens the list, and a bill opens Search on its su
 });
 
 test("קבועים: a late row closes for this user with סגירה under עריכה and comes back on ביטול; a change opens its payment", async ({ page }) => {
-  await page.goto("/e2e/missing-bills?preview=1");
+  await page.goto("/e2e/recurring?preview=1");
   const late = page.getByRole("region", { name: "לא הגיעו" });
   await expect(late.getByRole("link")).toHaveCount(2);
   await page.getByRole("button", { name: "עריכה" }).click();
@@ -50,12 +50,12 @@ test("Home: the קבועים tab opens קבועים, and the box has no link to 
   await expect(tab).toBeVisible();
   expect((await tab.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
   await tab.click();
-  await expect(page).toHaveURL(/\/missing-bills\?preview=1$/);
+  await expect(page).toHaveURL(/\/recurring\?preview=1$/);
   await expect(page.getByRole("heading", { name: "קבועים" })).toBeVisible();
 });
 
 test("קבועים on one project shows only its rows and names it (FLOW-424)", async ({ page }) => {
-  await page.goto("/e2e/missing-bills?preview=1&project=p1");
+  await page.goto("/e2e/recurring?preview=1&project=p1");
   await expect(page.getByRole("heading", { name: "קבועים" })).toBeVisible();
   await expect(page.getByText("בניין הדקל", { exact: true }).first()).toBeVisible();
   const late = page.getByRole("region", { name: "לא הגיעו" });
@@ -89,7 +89,7 @@ test("Project: with no history the section says so in one line", async ({ page }
 });
 
 test("קבועים: a late bill suggests a renamed supplier; כן takes the row out and לא its hint, each with ביטול", async ({ page }) => {
-  await page.goto("/e2e/missing-bills?preview=1&match=1");
+  await page.goto("/e2e/recurring?preview=1&match=1");
   const late = page.getByRole("region", { name: "לא הגיעו" });
   const hint = late.getByRole("group", { name: "אולי זה: Riverside Water Works" });
   await expect(hint).toContainText("אולי זה: Riverside Water Works · $57.79 · 06/10");

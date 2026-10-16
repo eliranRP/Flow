@@ -27,6 +27,7 @@ export type ScheduleRow = {
 /**
  * Maps the server rows to the layout's lines: "arrived" rows carry the amount they came at, "due" is
  * any row not later than this month (late and soon as well as arrived), and "later" rows stay out of the total.
+ * The server signs an expense negative; the list shows amounts unsigned, so the magnitude is taken here.
  */
 export function scheduleLines(rows: readonly ScheduleRow[]): RecurringLine[] {
   return rows.map((row) => {
@@ -37,13 +38,17 @@ export function scheduleLines(rows: readonly ScheduleRow[]): RecurringLine[] {
       income: row.direction === "income",
       category: row.category_name,
       pace: row.pace,
-      usual: BigInt(row.typical_amount_minor),
-      minor: BigInt(minor),
+      usual: magnitude(row.typical_amount_minor),
+      minor: magnitude(minor),
       arrived,
       due: row.state !== "later",
       day: row.typical_day,
     };
   });
+}
+
+function magnitude(minor: number): bigint {
+  return BigInt(Math.abs(minor));
 }
 
 /** The schedule of the signed-in company, in the server's order (arrived, late, soon, later). */

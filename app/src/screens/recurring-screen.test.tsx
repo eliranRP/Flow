@@ -39,4 +39,9 @@ describe("recurringView (rule-25 fixture)", () => {
     expect(places["Juniper Pointe HOA"]).toBe("Juniper Ct");
     expect(places["Harborlink Internet"]).toBe("משרד");
   });
+
+  it("reads the server's negative expenses as the same amounts as positive ones", () => {
+    const signed = FIXTURE.map((item) => (item.direction === "expense" ? { ...item, typical_amount_minor: -item.typical_amount_minor, amount_minor: item.amount_minor == null ? null : -item.amount_minor } : item));
+    expect(recurringView(signed, "2026-10-11")).toEqual(view);
+  });
 });
