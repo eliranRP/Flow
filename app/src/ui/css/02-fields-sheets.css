@@ -312,10 +312,10 @@
   flex: 1 1 auto;
   flex-direction: column;
   overflow: hidden;
-  /* FLOW-363 (3b): the panel's 8px top and this 4px make 12px above the handle (board 10). The
-     panel's 32px bottom is in 08; the surface adds nothing below. */
+  /* FLOW-363 (3b): the panel's top (08, 10px) is the space above the handle. The surface adds
+     only the toast pad. The panel's bottom is in 08; the surface adds nothing below. */
   padding: 0;
-  padding-top: calc(var(--space-1) + var(--toast-pad, 0px));
+  padding-top: var(--toast-pad, 0px);
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   background: var(--color-surface);
   transition: padding-top var(--motion-fade) var(--ease-standard);
@@ -334,13 +334,15 @@
   overflow-y: auto;
   overflow-wrap: anywhere;
   max-height: calc(var(--vvh, 100dvh) - var(--sheet-gap) - 11rem);
-  padding-block-end: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  /* FLOW-363 (3b): the body has no bottom space. The panel's bottom (08: 28px and the safe area)
+     ends a sheet whose body is last; a foot brings its own top space. The safe area counts once. */
+  padding-block-end: 0;
 }
 
-/* FLOW-363 (3b): with no action pinned below, the body is the sheet's last block, so the panel's
-   bottom padding (08) is the only space under the content (board: 28 plus the safe area). */
-.ui-sheet-body:last-child {
-  padding-block-end: 0;
+/* FLOW-363 (3b) busy frame: a save in flight shows the fields as settled text, not as inputs. */
+.ui-sheet-panel[aria-busy="true"] input[readonly],
+.ui-sheet-panel[aria-busy="true"] textarea[readonly] {
+  color: var(--color-text-muted);
 }
 
 [data-vaul-drawer].ui-sheet-panel {
@@ -368,7 +370,8 @@
   max-height: none;
 }
 
-.ui-sheet-fit .ui-sheet-body {
+/* A fit sheet's panel has no bottom padding, so its last body carries the gap. */
+.ui-sheet-fit .ui-sheet-body:last-child {
   padding-block-end: var(--space-4);
 }
 
@@ -379,11 +382,11 @@
 
 .ui-sheet-foot {
   flex: none;
-  padding: var(--space-3) var(--space-side) 0;
+  padding: var(--space-4) var(--space-side) 0;
 }
 
-/* FLOW-363 (3b): the sheet title is the sheet role (20/600, t-sheet). Its two-line clamp is the
-   rule that 08 keeps for `.ui-sheet-head .t-title-2`; that rule is dead once 08 lands after #607. */
+/* FLOW-363 (3b): the sheet title is the sheet role (20/600, t-sheet). This two-line clamp is the
+   only one a sheet head has: the old `.ui-sheet-head .t-title-2` clamp in 08 is deleted. */
 .ui-sheet-head .ui-sheet-title {
   display: -webkit-box;
   flex: 1;
