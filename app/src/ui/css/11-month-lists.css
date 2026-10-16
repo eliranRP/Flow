@@ -187,6 +187,8 @@
 
 .ui-cat-list {
   margin-top: var(--space-2);
+  inline-size: auto;
+  margin-inline: var(--space-4);
 }
 
 .ui-cat-list.ui-cat-hidden {
