@@ -10,7 +10,7 @@ import type { LineSplitRead } from "./line-split";
 import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "./assistant-sample";
 import { InstallScreen, type InstallMode } from "./ui/install-screen";
 import { ChangeAssignment } from "./ui/change-sheet";
-import { DevTransaction } from "./dev/transaction-board";
+import { DevTransactionBoard } from "./dev/transaction-board";
 import { BackButton, useGoBack } from "./ui/back";
 import { Button } from "./ui/button";
 import { ActionBar, ActionBarRow } from "./ui/action-bar";
@@ -758,4 +758,6 @@ export function DevInstall({ mode }: { mode: InstallMode }) {
 
 /** FLOW-366: the board's Lines.dc sample (pending, in P&L, not in the cash view); `?board=1`. */
 
-export { DevTransaction };
+export function DevTransaction() {
+  return <DevTransactionBoard />;
+}

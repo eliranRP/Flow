@@ -23,7 +23,7 @@ test("צפייה opens today's list, a row opens the transaction, and back retur
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
   await page.getByRole("link", { name: /מנופים לדוגמה/ }).click();
   await expect(page).toHaveURL(/\/transactions\/t-filed\?preview=1$/);
-  await expect(page.getByRole("heading", { name: "הוצאה" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^פרויקט / })).toBeVisible();
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
   await page.getByRole("button", { name: "חזרה" }).click();

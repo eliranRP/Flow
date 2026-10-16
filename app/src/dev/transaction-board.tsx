@@ -27,7 +27,7 @@ const BOARD_TXN: NonNullable<TransactionDetail> = {
   allocations: [],
 };
 
-export function DevTransaction() {
+export function DevTransactionBoard() {
   const [params] = useSearchParams();
   if (params.get("board") === "1") {
     return (

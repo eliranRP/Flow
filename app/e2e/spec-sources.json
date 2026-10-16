@@ -20,6 +20,12 @@
     "sumit-live.spec.ts"
   ],
   "specs": {
+    "cash-lines.spec.ts": [
+      "screens/cash-lines-screen.tsx",
+      "screens/cash-screens.tsx",
+      "dev-routes.tsx",
+      "cash.ts"
+    ],
     "back.spec.ts": [
       "screens/",
       "ui/back.tsx",
@@ -328,6 +334,7 @@
           "screens/transaction-recurring.tsx",
           "screens/transaction-head.tsx",
           "screens/transaction-top-bar.tsx",
+          "dev/transaction-board.tsx",
           "dev-routes.tsx#DevTransaction"
         ],
         "/e2e/split": [
