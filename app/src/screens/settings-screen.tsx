@@ -498,8 +498,8 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
           </List>
         </>
       )}
-      {/* FLOW-372: the theme row sits before the install row, as on the board. */}
-      <SectionHead title="עוד" />
+      {/* FLOW-372: the card (and its theme row, before the install row) shows on every state. The board's card has no heading, so the "עוד" heading keeps its own condition. */}
+      {showInstall || showSignOut || (setupEntry != null && !holdOwner) ? <SectionHead title="עוד" /> : null}
       <List>
         {setupEntry && !holdOwner ? (
           <ListRow
