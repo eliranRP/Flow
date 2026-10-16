@@ -1,0 +1,7 @@
+<a id="flow-375"></a>
+# FLOW-375 · Home's loading skeleton looks squeezed
+- **Type:** BUG (high priority) · **Status:** ready · **Depends on:** [FLOW-364](FLOW-364.md) (done, #622), [FLOW-371](FLOW-371.md) (the skeleton parts) · **Source:** the owner's phone screenshot of production, 2026-10-16 16:10Z (iPhone, 390 wide, Safari).
+- **Files:** `app/src/screens/home-skeleton.tsx`, the skeleton blocks in `app/src/ui/css/` (`ui-skel-*`), their stories and tests.
+- [ ] **The band placeholders run off the screen.** In the loading band the month name and the placeholders for the label, the big figure and the נכנס / יצא rows touch or pass the start edge (the right side in RTL), with no side padding, and the big-figure block is wider than the rows under it. They must sit inside the band's normal padding, in the same places and sizes as the loaded figures.
+- [ ] **The two cards are squashed.** The split-card and דורש טיפול placeholders are thin bars in short boxes, much shorter than the loaded cards, so the page jumps when data arrives. Each placeholder card takes the loaded card's height and row layout (title line, bar, two rows; attention rows with icon and two lines).
+- **Acceptance:** the Home skeleton story at 320 and 390 next to the loaded Home story, with each card's height within a few pixels of the loaded one and no placeholder outside the band's padding; design check against the FLOW-371 skeleton board (mismatch under 3%).

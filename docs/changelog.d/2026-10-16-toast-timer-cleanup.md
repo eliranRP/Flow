@@ -1,0 +1,1 @@
+Backlog: the toast timer test flake. A toast's sink timer could fire after the provider unmounted, and in the test run that was after the environment was torn down ("window is not defined", src/ui/toast.tsx). The provider now cancels its timers on unmount, and a unit test checks that none are left. No screen changes.
