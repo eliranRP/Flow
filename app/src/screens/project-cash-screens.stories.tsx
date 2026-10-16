@@ -2,7 +2,7 @@ import type { CashLine } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
 import { cashMonthKey, cashMonthName } from "../cash";
-import { monthPeriod, shiftMonthKey } from "../period";
+import { monthPeriod } from "../period";
 import { withPeriodSearch } from "../project-period";
 import { cash, cashRow, investment, months, project, thisMonth } from "../dev/project-cash-sample";
 import { israelToday } from "../ui/date-math";

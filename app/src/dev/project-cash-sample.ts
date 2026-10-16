@@ -1,8 +1,8 @@
 import type { CashMonths, ProjectDetail } from "@flow/shared";
 import { shiftMonthKey } from "../period";
+import type { InvestmentFigures } from "../ui/investment-card";
 import { israelToday } from "../ui/date-math";
-import { FILLED } from "../ui/investment-card.stories-support";
-import { SAMPLE_MONTH_FIGURES, SAMPLE_MONTH_KEPT, SAMPLE_PROFIT_FIGURES, sampleProfitLines } from "./project-month-sample";
+import { SAMPLE_PROFIT_FIGURES, sampleProfitLines } from "./project-month-sample";
 
 /**
  * The project page's cash-first sample, shared by the stories and the proof build (dev route
@@ -66,14 +66,16 @@ export const project: NonNullable<ProjectDetail> = {
 };
 
 /** A dollar project's investment, so the row's figure is in the project's currency. */
-export const usdFigures = {
-  ...FILLED,
+export const usdFigures: InvestmentFigures = {
   currency: "USD",
   purchaseMinor: 28_500_000n,
   arvMinor: 41_000_000n,
   valueMinor: 37_000_000n,
+  valueDate: "2026-10-01",
   rehabMinor: 6_200_000n,
+  rehabOther: [],
   loanMinor: 21_360_000n,
+  loanOther: [],
   forcedEquityMinor: 6_300_000n,
   currentEquityMinor: 15_640_000n,
 };
