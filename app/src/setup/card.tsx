@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { List, ListRow } from "../ui/list-row";
 import { IconButton } from "../ui/icon-button";
 import { CloseIcon } from "../ui/icons";
@@ -55,21 +54,3 @@ export function SetupCard({
   );
 }
 
-export function CountTitle({ count, one, many }: { count: number; one: string; many: string }) {
-  if (count === 1) return one;
-  return (
-    <>
-      <bdi className="ui-num" dir="ltr">{String(count)}</bdi> {many}
-    </>
-  );
-}
-
-export function NameHint({ head, rest }: { head: string; rest: number }): ReactNode {
-  if (head === "" && rest === 0) return null;
-  return (
-    <>
-      {head}
-      {rest > 0 ? <> ועוד <bdi className="ui-num" dir="ltr">{String(rest)}</bdi></> : null}
-    </>
-  );
-}

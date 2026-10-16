@@ -36,14 +36,8 @@ export const BACK = "הקודם";
 export const SKIP_ALL = "דילוג על הכל";
 export const SKIP_STEP = "דילוג על השלב";
 
-export function stepCounter(step: number): string {
-  return `שלב ${String(step)} מתוך ${String(SETUP_TOTAL)}`;
-}
-
 // 1 · העסק
 export const BUSINESS_LEAD = "השם יופיע בבית ובדוחות. אפשר לשנות אחר כך.";
-export const BUSINESS_NAME_LABEL = "שם העסק";
-export const BUSINESS_NAME_PLACEHOLDER = "למשל ברוש נכסים";
 export const CURRENCY_LABEL = "מטבע";
 export const CURRENCY_OPTIONS = [
   { value: "USD", label: "$ דולר" },
@@ -76,7 +70,6 @@ export const CONNECT_ROWS = {
 export const PROJECTS_LEAD = "נכס, שיפוץ או עבודה ללקוח. כל שורה תשויך לאחד מהם.";
 export const PROJECT_PLACEHOLDER = "שם הפרויקט, למשל Birch Lane";
 export const PROJECT_ADD = "הוספה";
-export const PROJECT_REMOVE = "הסרה";
 export const SUGGESTED_PROJECTS_LABEL = "מהבנק נראה שיש לכם עוד:";
 
 export function projectsPrimary(count: number): string {

@@ -159,7 +159,7 @@ describe("auth guard when Supabase is configured", () => {
       emit("INITIAL_SESSION", session);
     });
     await settle();
-    await headingShows("פרטי העסק");
+    await headingShows("ברוכים הבאים ל־Flow");
     expect(screen.queryByText("שלום, דנה")).not.toBeInTheDocument();
     expect(screen.queryByText("Flow")).not.toBeInTheDocument();
     act(() => {
