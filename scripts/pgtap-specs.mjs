@@ -35,6 +35,9 @@ export function namesIn(sql) {
   return names;
 }
 
+/** A test file that checks the whole schema, not one object, carries this line; a migration change runs it. */
+const CATALOG_WIDE = /^--\s*pgtap:\s*catalog-wide\b/m;
+
 /** The test files to run for the changed paths, given each test's name and text. */
 export function pgtapSpecs(changed, tests, readMigration) {
   const picked = new Set();
@@ -50,6 +53,10 @@ export function pgtapSpecs(changed, tests, readMigration) {
       if (found.size === 0) return [...tests.keys()].sort();
       for (const name of found) names.add(name);
     }
+  }
+  // A catalog-wide check, such as every foreign key having an index, reaches any migration, so it runs with one.
+  if (changed.some((path) => /^supabase\/migrations\/[^/]+\.sql$/.test(path))) {
+    for (const [path, text] of tests) if (CATALOG_WIDE.test(text)) picked.add(path);
   }
   if (names.size > 0) {
     const words = new RegExp(String.raw`\b(?:${[...names].join("|")})\b`, "i");
