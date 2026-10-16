@@ -22,6 +22,9 @@ const unpaid = [
 function reads(name: string) {
   if (name === "expected_months") return { status: 200, json: expected };
   if (name === "list_unpaid") return { status: 200, json: unpaid };
+  if (name === "cash_months") {
+    return { status: 200, json: { basis: "cash", base_currency: "ILS", months: [{ month: "2026-10-01", by_currency: [{ currency: "ILS", net_minor: 120000 }] }] } };
+  }
   if (name === "forecast_overrides_for") {
     return { status: 200, json: [{ item_key: "party:expense:p-rent:ILS", amount_minor: 480000, due_on: null, moved_out: false }] };
   }
@@ -37,6 +40,8 @@ Deno.test("get_forecast reads three RPCs and builds the items, totals and change
     income_total_minor: number;
     expense_total_minor: number;
     changed: number;
+    cash_net_minor: number | null;
+    big_number_minor: number | null;
     expense: { minor: number; usual_minor: number }[];
   } | null;
   assertEquals(data?.month, "2026-10");
@@ -45,7 +50,10 @@ Deno.test("get_forecast reads three RPCs and builds the items, totals and change
   assertEquals(data?.changed, 1);
   assertEquals(data?.expense[0]?.minor, 480000);
   assertEquals(data?.expense[0]?.usual_minor, 500000);
-  assertEquals(calls.map((call) => call.name).sort(), ["expected_months", "forecast_overrides_for", "list_unpaid"]);
+  assertEquals(calls.map((call) => call.name).sort(), ["cash_months", "expected_months", "forecast_overrides_for", "list_unpaid"]);
+  // Home's number: the cash net + the income still to come - the charges still to go (small ones included).
+  assertEquals(data?.cash_net_minor, 120000);
+  assertEquals(data?.big_number_minor, 120000 + 250000 - 480000);
   assertEquals(calls.find((call) => call.name === "forecast_overrides_for")?.body, { p_month: "2026-10" });
 });
 
@@ -90,4 +98,11 @@ Deno.test("reset_forecast takes a month and is a write, and a read token cannot 
   assertEquals(calls[0]?.body, { p_idempotency_key: KEY, p_month: "2026-10" });
   const denied = await callTool("reset_forecast", { idempotency_key: KEY, month: "2026-10" }, ["read"], rpc);
   assertEquals(denied.isError, true);
+});
+
+Deno.test("get_forecast has no cash net or big number for a month other than the newest cash month", async () => {
+  const { rpc } = rpcOf(reads);
+  const result = await callTool("get_forecast", { month: "2026-09" }, ["read"], rpc);
+  const data = (result.structuredContent.ok ? result.structuredContent.data : null) as { cash_net_minor: number | null; big_number_minor: number | null } | null;
+  assertEquals([data?.cash_net_minor, data?.big_number_minor], [null, null]);
 });

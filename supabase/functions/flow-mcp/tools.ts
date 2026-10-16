@@ -240,13 +240,16 @@ export async function callTool(
   if (name === "get_forecast") {
     const month = args.month ?? israelMonthKey();
     if (typeof month !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return fail("validation", "validation");
-    const [expected, unpaid, overrides] = await Promise.all([
+    const [expected, unpaid, overrides, cash] = await Promise.all([
       rpc("expected_months", { p_months: 1, p_project_id: null }),
       rpc("list_unpaid", {}),
       rpc("forecast_overrides_for", { p_month: month }),
+      rpc("cash_months", { p_months: 1 }),
     ]);
-    if (expected.status >= 400 || unpaid.status >= 400 || overrides.status >= 400) return fail("refused", READ_REFUSED);
-    const report = forecastReport(month, expected.json, unpaid.json, overrides.json);
+    if (expected.status >= 400 || unpaid.status >= 400 || overrides.status >= 400 || cash.status >= 400) {
+      return fail("refused", READ_REFUSED);
+    }
+    const report = forecastReport(month, expected.json, unpaid.json, overrides.json, cash.json);
     if (report == null) return fail("refused", READ_REFUSED);
     return ok(report);
   }
