@@ -209,7 +209,8 @@ export function clearToastPad(sheet: Element | null = document.querySelector("[d
 export function shiftPad(surface: HTMLElement): number {
   const declared = Number.parseFloat(surface.style.getPropertyValue("--toast-pad")) || 0;
   const computedTop = Number.parseFloat(getComputedStyle(surface).paddingTop) || 0;
-  const live = Math.max(0, computedTop - cssPx("--space-2"));
+  // FLOW-363 (3b): the surface pads only for the toast; the space above the handle is the panel's.
+  const live = computedTop;
   return live > 0.5 ? live : Math.max(live, declared);
 }
 
