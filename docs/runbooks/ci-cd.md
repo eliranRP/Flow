@@ -196,7 +196,7 @@ The public anon key is already in `app/.env.production`. Do not add a `service_r
 
 ## Storybook preview
 
-`.github/workflows/storybook-preview.yml` (FLOW-809) builds the Storybook of every pull request head that touches the app. It runs on pull requests from this repository only; forks are skipped. The build gets sample Supabase settings from `app/.storybook/main.ts`, never `.env.production`. Before anything is published, `scripts/storybook-preview-keys.mjs` fails the job on the hosted project ref, a JWT, a Supabase API key or a flow-mcp token, and `check-jev-bundle.mjs` runs on the same build.
+`.github/workflows/storybook-preview.yml` (FLOW-809) builds the Storybook of every pull request head that touches the app, once the pull request is ready for review (FLOW-837): pushes to a draft skip it. It runs on pull requests from this repository only; forks are skipped. The build gets sample Supabase settings from `app/.storybook/main.ts`, never `.env.production`. Before anything is published, `scripts/storybook-preview-keys.mjs` fails the job on the hosted project ref, a JWT, a Supabase API key or a flow-mcp token, and `check-jev-bundle.mjs` runs on the same build.
 
 The workflow deploys to the Cloudflare Pages project `flow-storybook` (created on the first run) under the branch `pr-<number>`, so each pull request keeps one link that follows its newest push. One comment on the pull request, from `github-actions[bot]`, carries the link and the stories the pull request changed; each push updates it.
 
