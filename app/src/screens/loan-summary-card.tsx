@@ -1,15 +1,22 @@
 import { Card } from "../ui/card";
-import { PartsBar, type PartsBarPart } from "../ui/parts-bar";
+import { PartsBar, type BarPart, type BarLegendItem } from "../ui/parts-bar";
 import { LoanBalance } from "./loan-list";
 import type { LoanListSummary } from "./loan-list-summary";
 
 /** FLOW-139. The loans list's summary card: the debt today, this month's parts, and the next payment. */
 export function LoanSummaryCard({ summary, currency }: { summary: LoanListSummary; currency: string }) {
-  const parts: PartsBarPart[] = [
-    { key: "principal", label: "קרן", weight: Number(summary.monthlyParts.principal), color: "var(--color-accent)", amount: <LoanBalance minor={summary.monthlyParts.principal} currency={currency} /> },
-    { key: "interest", label: "ריבית", weight: Number(summary.monthlyParts.interest), color: "var(--color-accent-dim)", amount: <LoanBalance minor={summary.monthlyParts.interest} currency={currency} /> },
-    { key: "escrow", label: "נאמנות (escrow)", weight: Number(summary.monthlyParts.escrow), color: "var(--color-track-strong, var(--color-line))", amount: <LoanBalance minor={summary.monthlyParts.escrow} currency={currency} /> },
-  ];
+  const parts = [
+    { key: "principal", label: "קרן", value: summary.monthlyParts.principal, tone: "accent" },
+    { key: "interest", label: "ריבית", value: summary.monthlyParts.interest, tone: "accent-dim" },
+    { key: "escrow", label: "נאמנות (escrow)", value: summary.monthlyParts.escrow, tone: "muted" },
+  ] as const;
+  const shown = parts.filter((part) => part.value > 0n);
+  const bars: BarPart[] = shown.map((part) => ({ key: part.key, value: part.value, tone: part.tone }));
+  const legend: BarLegendItem[] = shown.map((part) => ({
+    key: part.key,
+    label: part.label,
+    value: <LoanBalance minor={part.value} currency={currency} />,
+  }));
   const next = summary.next;
   return (
     <Card className="ui-loan-summary">
@@ -19,7 +26,7 @@ export function LoanSummaryCard({ summary, currency }: { summary: LoanListSummar
         <span className="ui-loan-summary-label">תשלומים בחודש</span>
         <LoanBalance minor={summary.monthlyMinor} currency={currency} />
       </div>
-      <PartsBar parts={parts} />
+      <PartsBar parts={bars} label="תשלומים בחודש" height={8} gap={2} radius="block" legend={legend} />
       {next == null ? null : (
         <p className="ui-loan-summary-caption">
           הבא: <LoanBalance minor={next.amountMinor} currency={currency} /> ל־{next.lenderName} ב־{dayMonth(next.dueDate)}
