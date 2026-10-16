@@ -142,6 +142,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "get_recurring_this_month",
     "get_recurring_schedule",
     "list_unpaid",
+    "get_setup_suggestions",
     "list_team",
     "assign_expense",
     "assign_expense_split",

@@ -131,6 +131,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "get_recurring_this_month",
     "get_recurring_schedule",
     "list_unpaid",
+    "get_setup_suggestions",
     "list_team",
     "assign_expense",
     "assign_expense_split",

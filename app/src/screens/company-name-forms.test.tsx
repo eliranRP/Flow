@@ -60,9 +60,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+const stepNoop = { onDone: () => undefined, onStamp: () => undefined, onSkipStep: () => undefined, onSkipAll: () => undefined };
+
 const forms = [
   ["onboarding", (initialName?: string) => onboarding(initialName)],
-  ["setup business step", (initialName?: string) => wrap(<StepBusiness userId={null} onDone={() => undefined} initialName={initialName} />)],
+  ["setup business step", (initialName?: string) => wrap(<StepBusiness companyId={null} initial={initialName == null ? null : { name: initialName, currency: "ILS", basis: "paid" }} {...stepNoop} />)],
 ] as const;
 
 describe.each(forms)("%s company name", (_label, show) => {
@@ -100,11 +102,13 @@ describe.each(forms)("%s company name", (_label, show) => {
     expect(creates(calls)).toHaveLength(0);
   });
 
-  it("opens on a given name with its error", () => {
-    mockRpc();
+  it("opens on a given name, and refuses it with its error on continue", () => {
+    const calls = mockRpc();
     show("אלפא\u0085");
     expect(field()).toHaveValue("אלפא\u0085");
+    fireEvent.click(screen.getByRole("button", { name: "המשך" }));
     expect(screen.getByText(RENAME_CONTROL_CHAR)).toBeInTheDocument();
+    expect(creates(calls)).toHaveLength(0);
   });
 
   it("sends the trimmed name once it fits the rule", async () => {
@@ -118,7 +122,8 @@ describe.each(forms)("%s company name", (_label, show) => {
     expect(screen.queryByText(RENAME_CONTROL_CHAR)).not.toBeInTheDocument();
   });
 
-  it("describes the business type with its own hint and sends the exempt choice (FLOW-506)", async () => {
+  // FLOW-514 Q2: step 1 hides the VAT question (registered by default), so only onboarding has it.
+  it.runIf(_label === "onboarding")("describes the business type with its own hint and sends the exempt choice (FLOW-506)", async () => {
     const calls = mockRpc();
     show();
     const exempt = screen.getByRole("radio", { name: "עוסק פטור" });

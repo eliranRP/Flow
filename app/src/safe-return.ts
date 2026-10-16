@@ -106,7 +106,7 @@ export function peekSignInReturn(): string | null {
 
 /** Where the auth callback goes: setup first for a new user, else the stored return or Home. */
 export function afterSignInPath(hasCompany: boolean, stored: string | null): string {
-  if (!hasCompany) return "/setup/0";
+  if (!hasCompany) return "/setup/welcome";
   return safeSignInReturn(stored) ?? "/";
 }
 

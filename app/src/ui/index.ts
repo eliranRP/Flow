@@ -8,7 +8,6 @@ export type { ButtonProps, ButtonVariant } from "./button";
 export { ChangePill } from "./change-pill";
 export { CodeField } from "./code-field";
 export type { CopyTarget } from "./code-field";
-export { CheckRow } from "./check-row";
 export { Chip } from "./chip";
 export { StatusDot } from "./status-dot";
 export { Card } from "./card";

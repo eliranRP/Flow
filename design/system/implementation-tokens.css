@@ -233,6 +233,9 @@
   --color-bad: #D23B2F;
   --color-warning: #8A5700;
   --color-scrim: rgba(29,23,40,.45);
+  --color-movie-from: #E9DDFF;
+  --movie-finger-fill: rgba(255,255,255,.28);
+  --movie-finger-ring: rgba(255,255,255,.7);
   --sheet-scrim: rgba(29,23,40,.38);
   --sheet-grab: #A69EB8;
   --color-toast-bg: #1D1728;
@@ -295,6 +298,9 @@
     --color-bad: #FF8A80;
     --color-warning: #EDB866;
     --color-scrim: rgba(5,3,10,.62);
+    --color-movie-from: #2A1A55;
+    --movie-finger-fill: rgba(255,255,255,.28);
+    --movie-finger-ring: rgba(255,255,255,.7);
     --sheet-scrim: rgba(8,6,12,.6);
     --sheet-grab: #564E66;
     --color-toast-bg: #F1EDF8;
