@@ -8,6 +8,13 @@ async function pickRest(page: Page, project: string) {
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
 
+async function addPart(page: Page, project: string) {
+  await page.getByRole("button", { name: "הוספת חלק" }).click();
+  await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: project }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+}
+
 test.use({ viewport: { width: 390, height: 844 } });
 
 const refusal = "לא נשמר. בדקו את הפרטים ונסו שוב.";
@@ -133,6 +140,15 @@ test("the queue opens a shared split, blocks a missing category, and approves th
   await page.getByRole("button", { name: "אישור" }).click();
   await toast(page, "הפריט אושר");
   await expect(page.getByRole("heading", { name: "עגורני החוף בע״מ" })).toBeVisible();
+  // A shared card's approve opens the split sheet; the split is completed, saved, and then approved.
+  await page.getByRole("button", { name: "אישור" }).click();
+  await expect(page.getByRole("heading", { name: "פיצול בין פרויקטים" })).toBeVisible();
+  await pickRest(page, "בית הספר אלון");
+  await addPart(page, "מחסן הנמל");
+  await page.getByLabel("סכום, מחסן הנמל").fill("1");
+  await page.getByRole("button", { name: "סגירה" }).click();
+  await toast(page, "הפיצול נשמר");
+  await expect(page).toHaveURL(/\/reviewer\/review\?save=ok$/);
   await page.getByRole("button", { name: "אישור" }).click();
   await expect(page.getByText("הכל מאושר")).toBeVisible();
   await page.getByRole("link", { name: "חזרה לבית" }).click();
