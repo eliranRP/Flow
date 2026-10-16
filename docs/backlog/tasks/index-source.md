@@ -201,7 +201,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-139
 - FLOW-140
 - FLOW-141
-- FLOW-918
+- FLOW-919
 
 ## MCP
 
@@ -220,6 +220,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-213
 - FLOW-214
 - FLOW-215
+- FLOW-515
 
 ## Transactions and app UX
 
@@ -365,6 +366,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-513
 - FLOW-514
 
+- FLOW-918
+
 ## Multi-company and team
 
 - FLOW-601
@@ -421,6 +424,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-834
 - FLOW-835
 - FLOW-837
+- FLOW-915
 
 ## Data hygiene (public repo)
 

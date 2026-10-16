@@ -65,10 +65,15 @@ const DevBreakdownGate = /* @__PURE__ */ lazy(() => devBreakdown().then((m) => (
 const DevBreakdownLinesGate = /* @__PURE__ */ lazy(() => devBreakdown().then((m) => ({ default: m.DevBreakdownLinesGate })));
 const jevReviewCard = () => import("./screens/jev-review-card");
 const JevReviewE2e = /* @__PURE__ */ lazy(() => jevReviewCard().then((m) => ({ default: m.JevReviewE2e })));
+const devSetup = () => import("./dev/setup-e2e");
+const DevSetupFrame = /* @__PURE__ */ lazy(() => devSetup().then((m) => ({ default: m.DevSetupFrame })));
 const devRoutes = () => import("./dev-routes");
 const DevCategories = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCategories })));
 const DevChange = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevChange })));
 const DevConnections = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevConnections })));
+const DevAiConnection = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevAiConnection })));
+const DevBusiness = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevBusiness })));
+const DevSumitConnection = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevSumitConnection })));
 const DevExpense = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevExpense })));
 const DevFiled = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevFiled })));
 const DevHome = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevHome })));
@@ -201,6 +206,7 @@ function AppRoutes() {
             <Route path="/help" element={<HelpScreen />} />
             {import.meta.env.DEV ? (
               <>
+                <Route path="/e2e/setup/:frame" element={<DevSetupFrame />} />
                 <Route path="/e2e/project" element={<DevProject />} />
                 <Route path="/e2e/expense" element={<DevExpense />} />
                 {/* FLOW-334: a fixture of a screen that has the tab bar draws it, on that screen's tab. */}
@@ -244,6 +250,9 @@ function AppRoutes() {
                 <Route element={<DevShell section={null} />}>
                   <Route path="/e2e/settings" element={<DevSettings />} />
                   <Route path="/e2e/connections" element={<DevConnections />} />
+                  <Route path="/e2e/connections/ai" element={<DevAiConnection />} />
+                  <Route path="/e2e/business" element={<DevBusiness />} />
+                  <Route path="/e2e/connections/sumit" element={<DevSumitConnection />} />
                   <Route path="/e2e/categories" element={<DevCategories />} />
                   <Route path="/e2e/categories/:parentId" element={<DevCategories />} />
                   <Route path="/e2e/team" element={<DevTeam />} />

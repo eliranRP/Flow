@@ -10,7 +10,10 @@ import { assertNoError, useWrite, type WriteFailure } from "../use-write";
 export const COMPANY_NAME_MIN = 2;
 export const COMPANY_NAME_MAX = 100;
 
-export const RENAME_SAVED = "שם העסק נשמר";
+export const RENAME_SAVED = "השם נשמר";
+/** The field's limit on the page (FLOW-512). The server keeps its own, COMPANY_NAME_MAX. */
+export const RENAME_FIELD_MAX = 60;
+export const RENAME_NOTE = "מופיע בבית, בבחירת העסק, בדוחות ובהזמנות לצוות. לא משנה את השם ב־SUMIT או ב־Mercury.";
 export const RENAME_FAILED = "שם העסק לא נשמר";
 export const RENAME_REFUSED = "אין הרשאה לשנות את שם העסק.";
 export const RENAME_UNDONE = "שם העסק הוחזר";
@@ -153,7 +156,7 @@ export function RenameCompanySheet({
       title="שם העסק"
       returnFocusRef={returnFocusRef}
       action={
-        <Button busy={save.isPending} onClick={submit}>
+        <Button busy={save.isPending} disabled={name.trim() === "" || name.trim() === currentName.trim()} onClick={submit}>
           שמירה
         </Button>
       }
@@ -166,9 +169,9 @@ export function RenameCompanySheet({
       >
         <TextField
           ref={fieldRef}
-          label="שם"
+          label="השם כפי שיופיע"
           value={name}
-          maxLength={COMPANY_NAME_MAX * 2 + 20}
+          maxLength={RENAME_FIELD_MAX}
           error={error}
           disabled={save.isPending}
           onChange={(event) => {
@@ -180,6 +183,7 @@ export function RenameCompanySheet({
           }}
           enterKeyHint="done"
         />
+        <p className="ui-settings-note">{RENAME_NOTE}</p>
       </form>
     </Sheet>
   );

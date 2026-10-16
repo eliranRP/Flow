@@ -53,7 +53,7 @@ function renderSheet(blocked: () => boolean = () => false, currency = "ILS") {
 }
 
 function dollars(): HTMLElement {
-  return screen.getByRole("radio", { name: "$ דולר" });
+  return screen.getByRole("radio", { name: "דולר · $" });
 }
 
 afterEach(() => {
@@ -69,7 +69,7 @@ describe("CompanyCurrencySheet (FLOW-504)", () => {
     await waitFor(() => { expect(sheetStack(router.state.location.state)).toEqual(["company-currency"]); });
     fireEvent.click(dollars());
     await waitFor(() => { expect(dollars()).toHaveAttribute("aria-busy", "true"); });
-    expect(screen.getByRole("radio", { name: "₪ שקל" })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: "שקל · ₪" })).toBeDisabled();
     fireEvent.click(dollars());
     release();
     await screen.findByText(CURRENCY_SAVED);
@@ -90,11 +90,11 @@ describe("CompanyCurrencySheet (FLOW-504)", () => {
       return { error: null };
     });
     renderSheet(() => false, "USD");
-    fireEvent.click(screen.getByRole("radio", { name: "₪ שקל" }));
+    fireEvent.click(screen.getByRole("radio", { name: "שקל · ₪" }));
     fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
     await waitFor(() => { expect(calls).toHaveLength(2); });
     fireEvent.click(screen.getByRole("button", { name: "פתיחה" }));
-    fireEvent.click(await screen.findByRole("radio", { name: "₪ שקל" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "שקל · ₪" }));
     release();
     await screen.findByText(CURRENCY_UNDONE);
     expect(calls.map((call) => call.args.p_currency)).toEqual(["ILS", "USD"]);

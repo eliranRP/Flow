@@ -24,7 +24,7 @@ function Demo(props: Partial<AddEntryViewProps> & { start?: Partial<EntryDraft> 
       kind="cash"
       projects={projects}
       categories={categories}
-      draft={draft}
+      edit={draft}
       onDraftChange={setDraft}
       formatMoney={(minor) => formatAmount(BigInt(minor), "detail")}
       onClose={() => undefined}

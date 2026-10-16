@@ -43,6 +43,8 @@ type Common = {
   /** Hidden categories use a muted name. */
   muted?: boolean;
   meta?: ReactNode;
+  /** FLOW-512: the end value of a menu row (15px, muted, before the chevron). Shorter than the title; it truncates. */
+  value?: ReactNode;
   /** Small tint after the title. The change sheet uses "הצעה". */
   tag?: ReactNode;
   /** Replaces the accessible name. Summary rows say "פרויקט: X, שינוי". */
@@ -256,6 +258,7 @@ export function ListRow(props: ListRowProps) {
           <span className="ui-row-end-sub">{props.endSub}</span>
         </span>
       ) : props.variant === "project" || props.variant === "transaction" ? <RowAmount {...props} /> : null}
+      {props.value != null ? <span className="ui-row-value">{props.value}</span> : null}
       {props.meta ? <span className="ui-row-meta t-hint">{props.meta}</span> : null}
       {props.actionBelow || sideAction ? null : props.action}
       {showChevron ? (

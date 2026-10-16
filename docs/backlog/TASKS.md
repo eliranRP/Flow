@@ -205,7 +205,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-139"></a>[FLOW-139](tasks/FLOW-139.md) | Redesign: the Loans tab, the loan page, all payments, and the new-loan sheet | UI (design approved) |
 | <a id="flow-140"></a>[FLOW-140](tasks/FLOW-140.md) | Redesign: company profit, project profit, project month, and the basis sheet | UI (design approved) |
 | <a id="flow-141"></a>[FLOW-141](tasks/FLOW-141.md) | Redesign: the month-end forecast (צפי), which the user can correct | UI (design approved) |
-| <a id="flow-918"></a>[FLOW-918](tasks/FLOW-918.md) | Project profit: the month's share and after-overhead rows from the server, and the old profit-month section goes | UI + server (follow-up to FLOW-140) |
+| <a id="flow-919"></a>[FLOW-919](tasks/FLOW-919.md) | Project profit: the month's share and after-overhead rows from the server, and the old profit-month section goes | UI + server (follow-up to FLOW-140) |
 
 ## MCP
 
@@ -226,6 +226,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-213"></a>[FLOW-213](tasks/FLOW-213.md) | match_lines: reconcile an outside ledger export in one read | MCP |
 | <a id="flow-214"></a>[FLOW-214](tasks/FLOW-214.md) | search_expenses takes amounts in minor units too | SMALL CYCLE |
 | <a id="flow-215"></a>[FLOW-215](tasks/FLOW-215.md) | get_cash_lines names a missing side, and documents its page cap | SMALL CYCLE |
+| <a id="flow-515"></a>[FLOW-515](tasks/FLOW-515.md) | MCP: the AI connection page shows the assistant's name, its request count and the code's expiry from the server | MCP |
 
 ## Transactions and app UX
 
@@ -377,6 +378,10 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-513"></a>[FLOW-513](tasks/FLOW-513.md) | Redesign: Settings › קטגוריות, switching business, and the invitation screen | UI (design approved) |
 | <a id="flow-514"></a>[FLOW-514](tasks/FLOW-514.md) | Redesign: first-time onboarding in 7 short steps | UI (design approved) |
 
+| Id | Title | Type |
+| --- | --- | --- |
+| <a id="flow-918"></a>[FLOW-918](tasks/FLOW-918.md) | Port the deleted SUMIT and Mercury row suites onto the connection pages | Test |
+
 ## Multi-company and team
 
 | Id | Title | Type |
@@ -439,6 +444,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-834"></a>[FLOW-834](tasks/FLOW-834.md) | Delete what nothing uses: code, CSS, old mockups, duplicate tests | CLEANUP |
 | <a id="flow-835"></a>[FLOW-835](tasks/FLOW-835.md) | PR check under 100 seconds | INFRA |
 | <a id="flow-837"></a>[FLOW-837](tasks/FLOW-837.md) | Storybook preview on ready pull requests only | INFRA |
+| <a id="flow-915"></a>[FLOW-915](tasks/FLOW-915.md) | Test flakes under load: line-split dialog close, toast rAF and three more | BUG |
 
 ## Data hygiene (public repo)
 

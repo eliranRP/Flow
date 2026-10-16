@@ -142,6 +142,7 @@
   --radius-input: 12px;
   --radius-button: 9999px;
   --radius-card: 20px;
+  --radius-card-tight: 16px;     /* connection and AI pages (implementation-guide §7.14, FLOW-512) */
   --radius-sheet: 24px;
   --radius-band: 28px;
   --radius-fab: 9999px;
@@ -216,6 +217,7 @@
   --color-outline-secondary: #DAD3E6; /* secondary button border (board); dark aliases tint-strong */
   --color-control-off: #8F86A3;
   --color-control-border: #8F86A3;
+  --color-switch-off: #DAD3E6;  /* switch track, off (board: Settings switch off; FLOW-512) */
   --color-text: #1D1728;
   --color-text-secondary: #5B536E;
   --color-text-muted: #746C88;
@@ -233,6 +235,9 @@
   --color-bad: #D23B2F;
   --color-warning: #8A5700;
   --color-scrim: rgba(29,23,40,.45);
+  --color-movie-from: #E9DDFF;
+  --movie-finger-fill: rgba(255,255,255,.28);
+  --movie-finger-ring: rgba(255,255,255,.7);
   --sheet-scrim: rgba(29,23,40,.38);
   --sheet-grab: #A69EB8;
   --color-toast-bg: #1D1728;
@@ -278,6 +283,7 @@
     --color-avatar: #2A2540;
     --color-control-off: #736A8C;
     --color-control-border: #736A8C;
+    --color-switch-off: #3A3350;  /* switch track, off (board: Settings switch off; FLOW-512) */
     --color-text: #F1EDF8;
     --color-text-secondary: #B1A8C4;
     --color-text-muted: #978EAB;
@@ -295,6 +301,9 @@
     --color-bad: #FF8A80;
     --color-warning: #EDB866;
     --color-scrim: rgba(5,3,10,.62);
+    --color-movie-from: #2A1A55;
+    --movie-finger-fill: rgba(255,255,255,.28);
+    --movie-finger-ring: rgba(255,255,255,.7);
     --sheet-scrim: rgba(8,6,12,.6);
     --sheet-grab: #564E66;
     --color-toast-bg: #F1EDF8;
@@ -344,6 +353,7 @@
   --color-avatar: #2A2540;
   --color-control-off: #736A8C;
   --color-control-border: #736A8C;
+  --color-switch-off: #3A3350;  /* switch track, off (board: Settings switch off; FLOW-512) */
   --color-text: #F1EDF8;
   --color-text-secondary: #B1A8C4;
   --color-text-muted: #978EAB;
