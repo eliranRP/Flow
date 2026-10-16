@@ -69,7 +69,10 @@ static_part() {
 typecheck_part() {
   local info dir script
   info="$(cd "$cache" && pwd)/tsbuildinfo"
-  node scripts/check-unused-app-code.mjs && node scripts/check-unused-css.mjs && node scripts/check-css-tokens.mjs # FLOW-819, 822, 363: no dead code, CSS or raw CSS values.
+  # FLOW-819, 822, 363: no dead code, CSS or raw CSS values. Separate statements, not an and-list: errexit does not stop an and-list early.
+  node scripts/check-unused-app-code.mjs
+  node scripts/check-unused-css.mjs
+  node scripts/check-css-tokens.mjs
   if (( ! skips )) || [[ "$(node -p 'require("./package.json").scripts.typecheck')" \
     != 'tsc --noEmit -p scripts/tsconfig.json && pnpm -r --if-present --filter "!flow" typecheck' ]]; then
     pnpm typecheck
@@ -231,7 +234,8 @@ slice_ready() {
   stamp="$(git rev-parse --git-dir)/flow-ci-stamp.md"
   # A stamp that fails to write or post is reported, but the logs of a failed slice still print and the
   # temp directory still goes.
-  if node scripts/ci-stamp.mjs "$head" "$phases" >"$stamp"; then
+  # Written beside the stamp and moved into place only on success, so a failed write keeps the last stamp.
+  if node scripts/ci-stamp.mjs "$head" "$phases" >"$stamp.tmp" && mv "$stamp.tmp" "$stamp"; then
     cat "$stamp"
     if [[ -n "${CI_STAMP_PR:-}" ]]; then
       gh pr comment "$CI_STAMP_PR" --body-file "$stamp" || echo "local-ci: could not post the stamp on PR $CI_STAMP_PR." >&2
