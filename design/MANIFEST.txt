@@ -76,8 +76,6 @@ ef928262200fff37bc45518139e078699cefb04ad3f9c1808ed5665c36fd6c5c  7558  flow-des
 9ff1f592d825d0c9171a1c4e5314739dc2f93830d840341208b338bc5acc4819  2022  flow-design-part2.zip  design/logo/wordmark/flow-wordmark-white.svg
 8cc557e0433c821d5dc1ed68d86967befde15af53c7c26faa2c2c1f86ac6eb9a  2765  flow-design-part2.zip  design/logo/wordmark/flow-wordmark-white@2x.png
 eccfb4ceb71666f517a9a303e82b238b6243cce960a746a5d9ee93122dda397f  5767  flow-design-part2.zip  design/logo/wordmark/flow-wordmark-white@4x.png
-5a4860f43571e9841b6dc3e39cb8c21ebb26b8bfbfdb95db0d85ed54a28c5e60  105523  flow-design-part1.zip  design/screens/01-home-dark.png
-b632e35c911c69f3a5988dda7ad90562ffc6706c7cc22b2446100585923b5fde  104168  flow-design-part1.zip  design/screens/01-home-light.png
 15219e5ef1fd118a61c7aa5816b5e20e95fbe735b88d692105c0f2d1099d0c92  102212  flow-design-part1.zip  design/screens/02-project-dark.png
 c6e135c5b06eef55644af17a0014c394e0ed4e3478a6743935811fb33c7270d0  100477  flow-design-part1.zip  design/screens/02-project-light.png
 cc88a3ac41845fd530f65e70402d79e6973b0378914513545a4ec96fa7e03ad8  90496  flow-design-part1.zip  design/screens/03-review-dark.png

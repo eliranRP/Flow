@@ -2,7 +2,7 @@
 
 The production QA thread checks every deploy end to end, including saves. The [smoke user](smoke-user.md) can't do that: it is a viewer of Flow Test and the server rejects its writes. Flow has no editor role. Write rights belong to the owner of a company (`private.current_company_id()`).
 
-So QA has its own login that owns its own company, **Flow QA**. It is a normal owner of that one company and nothing else. Row-level security keeps it out of every other company, including NRO Momentum and Flow Test. No schema change is involved.
+So QA has its own login that owns its own company, **Flow QA**. It is a normal owner of that one company and nothing else. Row-level security keeps it out of every other company, including the owner's real company and Flow Test. No schema change is involved.
 
 ## What QA may do
 
@@ -13,10 +13,10 @@ So QA has its own login that owns its own company, **Flow QA**. It is a normal o
 
 ## What QA must not do
 
-- Use any other login or key for writes. The NRO Momentum MCP key stays read-only (`readOnlyHint` tools only).
+- Use any other login or key for writes. The owner company's MCP key stays read-only (`readOnlyHint` tools only).
 - Join, view or invite into any other company. Never set `is_demo` on Flow QA.
 - Run SQL that touches a row of any other company, or that has no company filter.
-- Change NRO Momentum's own Mercury connection.
+- Change the owner's own company's Mercury connection.
 - Call any `/auth/v1/admin/` endpoint other than `generate_link`, or call `generate_link` for any email other than `ops+qa@nromomentum.com`. The secret below would allow it, so this rule is the guard.
 
 ## How it is set up

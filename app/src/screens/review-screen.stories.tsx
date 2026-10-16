@@ -26,7 +26,7 @@ export const ReviewEmpty: Story = {
 
 export const ReviewCardQueue: Story = {
   render: () => (
-    <StoryRoute entry="/review" tabs reviewCount={1}>
+    <StoryRoute entry="/review" tabs>
       <ExampleBar />
       <ReviewQueue rows={[sampleReview]} search="" sample />
     </StoryRoute>
@@ -35,7 +35,7 @@ export const ReviewCardQueue: Story = {
 
 export const ReviewCardViewer: Story = {
   render: () => (
-    <StoryRoute entry="/review" tabs reviewCount={1} viewer>
+    <StoryRoute entry="/review" tabs viewer>
       <ExampleBar />
       <ReviewQueue rows={[sampleReview]} search="" sample />
     </StoryRoute>
@@ -45,6 +45,7 @@ export const ReviewCardViewer: Story = {
 export const ReviewAll: Story = {
   render: () => (
     <StoryRoute entry="/review/all" tabs reviewCount={2}>
+      <SeedSkipped rows={[]} />
       <ExampleBar />
       <ReviewAllList
         backTo="/review"
@@ -96,7 +97,7 @@ const statementMeta: TxnMeta[] = [
 
 function ReviewStatement() {
   return (
-    <StoryRoute entry="/review/all" tabs reviewCount={statementReviews.length}>
+    <StoryRoute entry="/review/all" tabs>
       <SeedLineMeta meta={statementMeta} />
       <ExampleBar />
       <ReviewAllList backTo="/review" search="" rows={statementReviews} />
@@ -108,7 +109,7 @@ export const ReviewAllStatement: Story = { render: () => <ReviewStatement /> };
 
 export const ReviewWithoutSuggestion: Story = {
   render: () => (
-    <StoryRoute entry="/review" tabs reviewCount={1}>
+    <StoryRoute entry="/review" tabs>
       <ExampleBar />
       <ReviewQueue rows={[bareReview]} search="" sample />
     </StoryRoute>
@@ -117,7 +118,7 @@ export const ReviewWithoutSuggestion: Story = {
 
 export const ReviewBanner: Story = {
   render: () => (
-    <StoryRoute entry="/review" tabs reviewCount={1}>
+    <StoryRoute entry="/review" tabs>
       <ExampleBar />
       <ReviewQueue rows={[sampleReview]} search="" sample />
     </StoryRoute>
@@ -126,7 +127,7 @@ export const ReviewBanner: Story = {
 
 export const ReviewBannerOne: Story = {
   render: () => (
-    <StoryRoute entry="/review" tabs reviewCount={1}>
+    <StoryRoute entry="/review" tabs>
       <ExampleBar />
       <ReviewQueue rows={[{ ...sampleReview, auto_approved_today: 1, assistant_filed_today: false }]} search="" sample />
     </StoryRoute>
@@ -135,7 +136,7 @@ export const ReviewBannerOne: Story = {
 
 export const ReviewBannerAssistant: Story = {
   render: () => (
-    <StoryRoute entry="/review" tabs reviewCount={1}>
+    <StoryRoute entry="/review" tabs>
       <ExampleBar />
       <ReviewQueue rows={[{ ...sampleReview, auto_approved_today: 3, assistant_filed_today: true }]} search="" sample />
     </StoryRoute>
@@ -144,7 +145,7 @@ export const ReviewBannerAssistant: Story = {
 
 export const ReviewBannerAssistantOne: Story = {
   render: () => (
-    <StoryRoute entry="/review" tabs reviewCount={1}>
+    <StoryRoute entry="/review" tabs>
       <ExampleBar />
       <ReviewQueue rows={[{ ...sampleReview, auto_approved_today: 1, assistant_filed_today: true }]} search="" sample />
     </StoryRoute>
@@ -153,7 +154,7 @@ export const ReviewBannerAssistantOne: Story = {
 
 export const ReviewMissingProject: Story = {
   render: () => (
-    <StoryRoute entry="/review" tabs reviewCount={1}>
+    <StoryRoute entry="/review" tabs>
       <ExampleBar />
       <ReviewQueue
         rows={[{
@@ -174,7 +175,7 @@ export const ReviewMissingProject: Story = {
 export const ReviewFoldStress: Story = {
   name: "Fold stress",
   render: () => (
-    <StoryRoute entry="/review?item=q-stress&from=all" tabs reviewCount={15}>
+    <StoryRoute entry="/review?item=q-stress&from=all" tabs>
       <ExampleBar />
       <ReviewQueue
         rows={[{
@@ -222,7 +223,7 @@ const splitReviewRow: ReviewRow = {
 export const ReviewSplitMissingCategory: Story = {
   name: "Split missing category",
   render: () => (
-    <StoryRoute entry="/review" tabs reviewCount={1}>
+    <StoryRoute entry="/review" tabs>
       <ExampleBar />
       <ReviewQueue rows={[splitReviewRow]} search="" sample />
     </StoryRoute>
@@ -232,7 +233,7 @@ export const ReviewSplitMissingCategory: Story = {
 export const ReviewSplitCategorySaved: Story = {
   name: "Split category saved",
   render: () => (
-    <StoryRoute entry="/review" tabs reviewCount={1}>
+    <StoryRoute entry="/review" tabs>
       <ExampleBar />
       <ReviewQueue
         rows={[{
@@ -250,7 +251,7 @@ export const ReviewSplitCategorySaved: Story = {
 
 export const ReviewSharedCost: Story = {
   render: () => (
-    <StoryRoute entry="/review" tabs reviewCount={1}>
+    <StoryRoute entry="/review" tabs>
       <ExampleBar />
       <ReviewQueue
         rows={[{
@@ -270,7 +271,7 @@ export const ReviewSharedCost: Story = {
 
 export const ReviewFiltered: Story = {
   render: () => (
-    <StoryRoute entry="/review?project=a" tabs reviewCount={1}>
+    <StoryRoute entry="/review?project=a" tabs>
       <ExampleBar />
       <ReviewQueue
         rows={[sampleReview]}
@@ -301,7 +302,7 @@ export const ReviewFilteredEmpty: Story = {
 
 export const ReviewMissingCategory: Story = {
   render: () => (
-    <StoryRoute entry="/review" tabs reviewCount={1}>
+    <StoryRoute entry="/review" tabs>
       <ExampleBar />
       <ReviewQueue
         rows={[{
@@ -353,7 +354,7 @@ const metaReviewRow: ReviewRow = {
 export const ReviewMetaFold: Story = {
   name: "Review bank details: fold with memo",
   render: () => (
-    <StoryRoute entry="/review" tabs reviewCount={15}>
+    <StoryRoute entry="/review" tabs>
       <SeedLineMeta
         meta={[storyMeta("t-meta", { method: "wire", memo: "Invoice 1042 for the September office lease, parking, and storage" })]}
       />
@@ -366,7 +367,7 @@ export const ReviewMetaFold: Story = {
 export const ReviewMetaCard: Story = {
   name: "Review bank details: card",
   render: () => (
-    <StoryRoute entry="/review" tabs reviewCount={15}>
+    <StoryRoute entry="/review" tabs>
       <SeedLineMeta meta={[storyMeta("t-meta", { method: "card", card_last4: "4242" })]} />
       <ExampleBar />
       <ReviewQueue rows={[metaReviewRow]} search="" sample />

@@ -85,17 +85,21 @@ test("an empty review queue sends you home", async ({ page }) => {
   await expect(page).toHaveURL(/\/\?preview=1$/);
 });
 
-test("tab bar opens each section and the add sheet", async ({ page }) => {
+test("tab bar has four tabs, and each opens its screen (FLOW-364)", async ({ page }) => {
   await page.goto("/?preview=1");
+  const bar = page.getByRole("navigation", { name: "ניווט ראשי" });
+  await expect(bar.getByRole("link")).toHaveCount(4);
   await page.getByRole("link", { name: "פרויקטים" }).click();
   await expect(page).toHaveURL(/\/projects\?preview=1$/);
-  await page.getByRole("link", { name: "לאישור" }).click();
-  await expect(page).toHaveURL(/\/review\?preview=1$/);
-  await page.getByRole("link", { name: "הגדרות" }).click();
-  await expect(page).toHaveURL(/\/settings\?preview=1$/);
-  await page.getByRole("link", { name: "בית", exact: true }).click();
+  await bar.getByRole("link", { name: "הלוואות" }).click();
+  await expect(page).toHaveURL(/\/settings\/loans\?preview=1$/);
+  await bar.getByRole("link", { name: "קבועים" }).click();
+  await expect(page).toHaveURL(/\/missing-bills\?preview=1$/);
+  await bar.getByRole("link", { name: "בית", exact: true }).click();
   await expect(page).toHaveURL(/\/\?preview=1$/);
-  await page.getByRole("link", { name: "הוספה" }).click();
+  // The add sits in Home's band, not in the tab bar (FLOW-364).
+  await expect(bar.getByRole("link", { name: "הוספה", exact: true })).toHaveCount(0);
+  await page.getByRole("link", { name: "הוספה", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();
 });
 
@@ -109,11 +113,12 @@ test("the current tab stays put and capture rows stay disabled", async ({ page }
   const addSheet = page.getByRole("dialog", { name: "הוספה" });
   await expect(addSheet).toBeVisible();
   await expect(addSheet).toHaveAttribute("data-state", "open");
-  // The sheet covers the tab bar, so a coordinate click hits the panel. The button still owns the close.
-  await page.locator("button.ui-tab-slot-fab").evaluate((node: HTMLButtonElement) => {
-    node.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-  });
-  await expect(addSheet).toHaveCount(0);
+  // The band's + opens the sheet and its close returns to Home (FLOW-364).
+  await page.goto("/?preview=1");
+  await page.getByRole("link", { name: "הוספה", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();
+  await page.getByRole("dialog", { name: "הוספה" }).getByRole("button", { name: "סגירה" }).click();
+  await expect(page.getByRole("dialog", { name: "הוספה" })).toHaveCount(0);
   await expect(page).toHaveURL(/\/\?preview=1$/);
   await page.goto("/add?preview=1");
   // FLOW-331: three quick actions, all enabled.
@@ -127,7 +132,7 @@ test("the current tab stays put and capture rows stay disabled", async ({ page }
 
 test("home connects, filters the period, and opens a project", async ({ page }) => {
   await page.goto("/?preview=1");
-  await page.getByRole("link", { name: "חיבור בנק או SUMIT" }).click();
+  await page.getByRole("link", { name: "חיבור Mercury" }).click();
   await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
 
   await page.goto("/e2e/home?preview=1");
@@ -180,7 +185,7 @@ test("a preview load error returns to the empty preview", async ({ page }) => {
   await page.goto("/?preview=error");
   await page.getByRole("button", { name: "נסו שוב" }).click();
   await expect(page).toHaveURL(/\/\?preview=1$/);
-  await expect(page.getByRole("heading", { name: "כאן יופיע התזרים של העסק" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "חברו את הבנק" })).toBeVisible();
   await page.goto("/unpaid?preview=error");
   await page.getByRole("button", { name: "נסו שוב" }).click();
   await expect(page).toHaveURL(/\/unpaid\?preview=1$/);
@@ -554,7 +559,7 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   await expect(page.getByRole("button", { name: "owner@example.com" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "תצוגה" })).toHaveCount(0);
   await expect(page.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "הלוואות" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "הלוואות" }).filter({ hasNot: page.locator(".ui-tab-label") })).toHaveCount(0);
   await page.goto("/e2e/connections?preview=1&nocompany=1");
   const sumit = page.getByRole("button", { name: "SUMIT" });
   await expect(sumit).toBeEnabled();
@@ -796,11 +801,13 @@ test("settings opens the Connections and Loans pages, and Back returns to the ro
   await connections.click();
   await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
   await expect(page.getByRole("heading", { name: "חיבורים" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "הגדרות" })).toHaveAttribute("aria-current", "page");
+  // Settings has no tab (FLOW-364): no tab is current.
+  await expect(page.locator(".ui-tabbar [aria-current=page]")).toHaveCount(0);
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page).toHaveURL(/\/settings\?preview=1$/);
   await expect(connections).toBeFocused();
-  const loans = page.getByRole("link", { name: "הלוואות" });
+  // The loans tab shares the name, so the row is the link without the tab's label (FLOW-364).
+  const loans = page.getByRole("link", { name: "הלוואות" }).filter({ hasNot: page.locator(".ui-tab-label") });
   await loans.click();
   await expect(page).toHaveURL(/\/settings\/loans\?preview=1$/);
   await expect(page.getByText("משכנתא אלון")).toBeVisible();

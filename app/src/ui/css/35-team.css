@@ -95,38 +95,3 @@ form + .ui-role-choice {
   padding-block: var(--space-6) calc(var(--safe-bottom, 0px) + var(--space-4));
 }
 
-/* Mockup a-3: the company's name on Home's band, a 16px ▼ after it, a 44px hit area. */
-.ui-band-company {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-inline-size: 0;
-  max-inline-size: 100%;
-  min-block-size: var(--touch-min);
-  margin-inline-start: calc(var(--space-2) * -1);
-  padding-inline: var(--space-2);
-  border: 0;
-  border-radius: var(--radius-input);
-  background: transparent;
-  color: var(--color-on-band);
-  font: inherit;
-  cursor: pointer;
-}
-
-.ui-band-company:active {
-  background: color-mix(in srgb, var(--color-scrim) 50%, transparent);
-}
-
-.ui-band-company-name {
-  min-inline-size: 0;
-  overflow: hidden;
-  font-size: var(--type-title-2-size);
-  line-height: var(--type-title-2-line);
-  font-weight: var(--type-title-2-weight);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ui-band-company > svg {
-  flex: none;
-}

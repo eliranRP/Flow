@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TopBand } from "./top-band";
+import { BandCompany, TopBand } from "./top-band";
 import { expectRtl } from "./test-support";
 
 describe("TopBand", () => {
@@ -83,5 +83,23 @@ describe("TopBand", () => {
       fireEvent.scroll(window);
       expect(frames).toHaveLength(1);
     });
+  });
+});
+
+describe("TopBand tone and the company button (FLOW-364)", () => {
+  it("is the darker band for a past month", () => {
+    render(
+      <TopBand tone="past">
+        <h1>תזרים · חודש סגור</h1>
+      </TopBand>,
+    );
+    expect(screen.getByRole("banner")).toHaveClass("ui-band", "ui-band-past");
+  });
+
+  it("opens the company sheet from the company button at the start of the band", () => {
+    const onOpen = vi.fn();
+    render(<TopBand leading={<BandCompany name="חברה לדוגמה" onOpen={onOpen} />} />);
+    fireEvent.click(screen.getByRole("button", { name: "חברה: חברה לדוגמה" }));
+    expect(onOpen).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,13 +1,14 @@
 import type { ReviewRow } from "@flow/shared";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { type SkippedReviewRow } from "./review-skipped";
 import { reviewFlagsQueryKey, type JevQueueData, type ReviewFlagsData } from "./jev-review";
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
-import { ReviewQueue } from "./flow-screens";
+import { ReviewAllList, ReviewQueue } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { pinReviewLine } from "../review-pin";
-import { bareReview, sampleReview } from "../ui/screen-stories-support";
+import { bareReview, sampleReview, SeedSkipped } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -23,7 +24,7 @@ const tall = { parameters: { viewport: { defaultViewport: "flow393" } } };
 /** FLOW-327: the card with its bar pinned on the tab bar. */
 function ReviewQueueStory({ row = sampleReview, viewer = false }: { row?: ReviewRow; viewer?: boolean }) {
   return (
-    <StoryRoute entry="/review" tabs reviewCount={1} viewer={viewer}>
+    <StoryRoute entry="/review" tabs viewer={viewer}>
       <ReviewQueue rows={[row]} search="" sample />
     </StoryRoute>
   );
@@ -42,7 +43,7 @@ export const ReviewBarViewer375: Story = { ...se, render: () => <ReviewQueueStor
 /** FLOW-327 r1: a project's queue has Back; its header stays on one line so the bar clears the tab bar. */
 function ReviewFilteredBarStory({ row }: { row: ReviewRow }) {
   return (
-    <StoryRoute entry="/review?project=a" tabs reviewCount={4}>
+    <StoryRoute entry="/review?project=a" tabs>
       <ReviewQueue rows={[row]} search="?project=a" sample backTo="/projects/a" homeTo="/projects/a" homeLabel="חזרה לפרויקט" />
     </StoryRoute>
   );
@@ -73,7 +74,7 @@ const loudSpike: ReviewFlagsData = {
 function ReviewQueueFlagStory({ banner = false }: { banner?: boolean }) {
   const row = banner ? sampleReview : flagRow;
   return (
-    <StoryRoute entry="/review" tabs reviewCount={4}>
+    <StoryRoute entry="/review" tabs>
       <SeedFlags ids={[row.transaction_id]} flags={{ [row.transaction_id]: loudSpike[flagRow.transaction_id] ?? [] }} />
       <ReviewQueue rows={[row]} search="" sample />
     </StoryRoute>
@@ -119,7 +120,7 @@ const loudDuplicate: ReviewFlagsData = {
 };
 function ReviewJevFitStory({ jev = jevFilled, flags = quietSpike }: { jev?: JevQueueData; flags?: ReviewFlagsData }) {
   return (
-    <StoryRoute entry="/review" tabs reviewCount={4}>
+    <StoryRoute entry="/review" tabs>
       <SeedFlags ids={[jevRow.transaction_id]} flags={flags} />
       <ReviewQueue rows={[jevRow]} search="" sample sampleJev={jev} />
     </StoryRoute>
@@ -187,7 +188,7 @@ const shortPhone = { parameters: { viewport: { defaultViewport: "flow320-short" 
 const fitRow: ReviewRow = { ...jevRow, supplier_name: "חומרי בניין ואינסטלציה לדוגמה בע״מ" };
 function ReviewFitStory() {
   return (
-    <StoryRoute entry="/review" tabs reviewCount={4}>
+    <StoryRoute entry="/review" tabs>
       <ReviewQueue rows={[fitRow]} search="" sample sampleJev={jevSuggested} />
     </StoryRoute>
   );
@@ -201,7 +202,7 @@ const countRows: ReviewRow[] = Array.from({ length: 12 }, (_, n) => ({
 function ReviewCounterStory() {
   const [rows, setRows] = useState(countRows);
   return (
-    <StoryRoute entry="/review" tabs reviewCount={rows.length}>
+    <StoryRoute entry="/review" tabs>
       <ReviewQueue
         rows={rows}
         search=""
@@ -229,4 +230,28 @@ const unpin: NonNullable<Story["loaders"]> = [() => {
 }];
 export const ReviewCounter10At: Story = { loaders: unpin, render: () => <ReviewCounterStory />, play: skipToTen };
 
+/** FLOW-309: the skipped cards at the end of הצגת הכול. Invented data. */
+const skippedSample: SkippedReviewRow[] = [
+  {
+    id: "k1", transaction_id: "tk1", description: "ברזל ומתכת לדוגמה", doc_date: "2026-09-28", doc_kind: "invoice",
+    amount_net: -250_000n, currency: "ILS", direction: "expense", line_status: "posted", source: "sumit",
+    project_name: "וילה רעננה", category_name: "חומרים", supplier_name: "ברזל ומתכת לדוגמה בע״מ", skipped_at: "2026-09-30T08:00:00Z",
+  },
+  {
+    id: "k2", transaction_id: "tk2", description: "Northwind Traders", doc_date: "2026-09-26", doc_kind: null,
+    amount_net: -4_299n, currency: "USD", direction: "expense", line_status: "pending", source: "mercury",
+    project_name: null, category_name: null, supplier_name: null, skipped_at: "2026-09-29T08:00:00Z",
+  },
+];
+function ReviewAllSkippedStory({ rows, skipped }: { rows: ReviewRow[]; skipped: SkippedReviewRow[] }) {
+  return (
+    <StoryRoute entry="/review/all" tabs>
+      <SeedSkipped rows={skipped} />
+      <ReviewAllList backTo="/review" search="" rows={rows} />
+    </StoryRoute>
+  );
+}
+const pendingRows: ReviewRow[] = [plainRow, { ...plainRow, id: "r2", transaction_id: "t2", supplier_name: "שיש לדוגמה", amount_net: -345_000n }];
+export const ReviewAllSkipped: Story = { render: () => <ReviewAllSkippedStory rows={pendingRows} skipped={skippedSample} /> };
+export const ReviewAllSkippedOnly: Story = { render: () => <ReviewAllSkippedStory rows={[]} skipped={skippedSample} /> };
 
