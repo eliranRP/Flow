@@ -49,27 +49,21 @@ export function ReviewIcon(props: IconProps) {
   );
 }
 
-export function SettingsIcon(props: IconProps) {
-  return (
-    <Svg {...props}>
-      <line x1="4" y1="21" x2="4" y2="14" />
-      <line x1="4" y1="10" x2="4" y2="3" />
-      <line x1="12" y1="21" x2="12" y2="12" />
-      <line x1="12" y1="8" x2="12" y2="3" />
-      <line x1="20" y1="21" x2="20" y2="16" />
-      <line x1="20" y1="12" x2="20" y2="3" />
-      <line x1="1" y1="14" x2="7" y2="14" />
-      <line x1="9" y1="8" x2="15" y2="8" />
-      <line x1="17" y1="16" x2="23" y2="16" />
-    </Svg>
-  );
-}
-
 export function PlusIcon(props: IconProps) {
   return (
     <Svg size={24} stroke={2.4} {...props}>
       <line x1="12" y1="5" x2="12" y2="19" />
       <line x1="5" y1="12" x2="19" y2="12" />
+    </Svg>
+  );
+}
+
+/** Home's band avatar (FLOW-364): the account and settings button. */
+export function PersonIcon(props: IconProps) {
+  return (
+    <Svg size={18} stroke={2} {...props}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
     </Svg>
   );
 }
@@ -164,6 +158,17 @@ export function BankIcon(props: IconProps) {
       <path d="M3 10 12 4l9 6" />
       <path d="M5 10v8M12 10v8M19 10v8" />
       <path d="M3 18h18" />
+    </Svg>
+  );
+}
+
+/** FLOW-364 (board): the tab bar's הלוואות icon, a pediment on four columns over a base. */
+export function BankColumnsIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M3 9l9-6 9 6" />
+      <path d="M6 10.5v7.5M10 10.5v7.5M14 10.5v7.5M18 10.5v7.5" />
+      <path d="M3 20.5h18" />
     </Svg>
   );
 }

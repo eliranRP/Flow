@@ -1,8 +1,11 @@
 import type { Dashboard } from "@flow/shared";
 import { type ReactNode } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fireEvent, within } from "@storybook/test";
-import { HomeBooks, HomeScreen } from "./HomeScreen";
+import { expect, fireEvent, waitFor, within } from "@storybook/test";
+import { attentionRows, CashHome, HomeBooks, HomeScreen } from "./HomeScreen";
+import { sampleCashMonths, sampleQuietCashMonths } from "../dev/cash-sample";
+import { shiftMonthKey } from "../period";
+import { israelToday } from "../ui/date-math";
 import { presetPeriod } from "../period";
 import { Banner } from "../ui/banner";
 import { TextLink } from "../ui/text-link";
@@ -53,7 +56,7 @@ export const HomeServerError: Story = {
 
 export const HomeBooksMonth: Story = {
   render: () => (
-    <StoryRoute entry="/" tabs reviewCount={7}>
+    <StoryRoute entry="/" tabs>
       <HomeBooks
         data={sampleDashboard}
         previewing={false}
@@ -71,7 +74,7 @@ export const HomeBooksMonth: Story = {
 // FLOW-321. The pending card on Home: a row to Review and a row to Unpaid, each only when it has items.
 function AttentionHome({ pending, unpaidCount, unpaidGross }: { pending: number; unpaidCount: number; unpaidGross: bigint }) {
   return (
-    <StoryRoute entry="/" tabs reviewCount={pending}>
+    <StoryRoute entry="/" tabs>
       <HomeBooks
         data={{ ...sampleDashboard, review_count: pending }}
         previewing={false}
@@ -140,7 +143,7 @@ function SampleHome({ refreshing = false, notice }: { refreshing?: boolean; noti
 
 export const PullToRefresh: Story = {
   render: () => (
-    <StoryRoute entry="/" tabs reviewCount={7}>
+    <StoryRoute entry="/" tabs>
       <SampleHome refreshing />
     </StoryRoute>
   ),
@@ -148,7 +151,7 @@ export const PullToRefresh: Story = {
 
 export const OfflineCached: Story = {
   render: () => (
-    <StoryRoute entry="/" tabs reviewCount={7}>
+    <StoryRoute entry="/" tabs>
       <SampleHome
         notice={
           <Banner
@@ -287,7 +290,7 @@ const periodDashboard: Dashboard = {
 
 function PeriodHome() {
   return (
-    <StoryRoute entry="/" tabs reviewCount={2}>
+    <StoryRoute entry="/" tabs>
       <HomeBooks
         data={periodDashboard}
         previewing={false}
@@ -318,5 +321,51 @@ export const HomePeriodSheet: Story = {
   play: async ({ canvasElement }) => {
     await fireEvent.click(within(canvasElement).getByRole("button", { name: /בחירת תקופה$/ }));
     await expect(await within(document.body).findByRole("dialog", { name: "תקופה" })).toBeVisible();
+  },
+};
+
+/** FLOW-364: Home's band with the month, its figures, the split card and the attention box. Invented figures. */
+function CashHomeStory({ monthBack = 0, attention = true, initialDrawerOpen = false, quiet = false }: { monthBack?: number; attention?: boolean; initialDrawerOpen?: boolean; quiet?: boolean }) {
+  const data = quiet ? sampleQuietCashMonths() : sampleCashMonths();
+  const currentKey = israelToday().slice(0, 7);
+  return (
+    <StoryRoute entry="/" tabs>
+      <CashHome
+        data={data}
+        monthKey={shiftMonthKey(currentKey, -monthBack)}
+        currentKey={currentKey}
+        previewing={false}
+        search=""
+        attention={attention ? attentionRows({ pending: 7, unpaidCount: 3, unpaidGross: 460_000n, search: "" }) : []}
+        example={exampleOnBand}
+        onStepMonth={() => undefined}
+        initialDrawerOpen={initialDrawerOpen}
+      />
+    </StoryRoute>
+  );
+}
+
+/** The current month, with the attention box and the split card. */
+export const HomeCurrent: Story = { render: () => <CashHomeStory /> };
+
+/** Nothing waiting: the attention box is not drawn. */
+export const HomeNoBox: Story = { render: () => <CashHomeStory attention={false} /> };
+
+/** A past month: the darker band, "חזרה ל…" and no forecast or box. */
+export const HomePast: Story = { render: () => <CashHomeStory monthBack={1} attention={false} /> };
+
+/** The month drawer open on the selected month's year. */
+export const HomeDrawer: Story = { render: () => <CashHomeStory initialDrawerOpen /> };
+
+/** A month with nothing moved yet: the figures read zero. */
+export const HomeQuiet: Story = { render: () => <CashHomeStory quiet attention={false} /> };
+
+/** Scrolled past the band: the compact bar pins the month and the arrows, and the band's figures fade away (FLOW-364). */
+export const HomeScrolled: Story = {
+  render: () => <CashHomeStory />,
+  play: async ({ canvasElement }) => {
+    window.scrollTo(0, 400);
+    await expect(await waitFor(() => canvasElement.ownerDocument.querySelector(".ui-compact-bar"))).toBeInTheDocument();
+    window.scrollTo(0, 0);
   },
 };

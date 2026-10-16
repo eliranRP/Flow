@@ -8,7 +8,7 @@
   },
   "app/src/ui/css/04-banners-lists.css": {
     "radius": 1,
-    "spacing": 2,
+    "spacing": 3,
     "duration": 1
   },
   "app/src/ui/css/05-search-toast.css": {
@@ -18,7 +18,7 @@
     "radius": 1
   },
   "app/src/ui/css/07-band-home.css": {
-    "spacing": 1
+    "spacing": 2
   },
   "app/src/ui/css/08-tabbar-empty.css": {
     "font-weight": 2,
@@ -46,7 +46,7 @@
     "line-height": 1
   },
   "app/src/ui/css/18-period-bar.css": {
-    "radius": 1
+    "radius": 2
   },
   "app/src/ui/css/22-edge-back.css": {
     "spacing": 3,
@@ -58,7 +58,7 @@
     "spacing": 1
   },
   "app/src/ui/css/27-compact-header.css": {
-    "spacing": 3
+    "spacing": 4
   },
   "app/src/ui/css/30-prompt-card.css": {
     "font-weight": 1
@@ -82,5 +82,8 @@
   "app/src/ui/css/38-related-charges.css": {
     "font-weight": 3,
     "radius": 1
+  },
+  "app/src/ui/css/43-home.css": {
+    "radius": 2
   }
 }

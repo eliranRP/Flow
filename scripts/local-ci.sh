@@ -10,6 +10,8 @@
 #   --part types: the typecheck, the unused-code and CSS checks (FLOW-835: a job of its own on GitHub, beside static).
 #   --part tests [--shard i/n]: the app unit and Storybook vitest tests the change reaches (vitest --changed
 #     against main; --shard passes through to vitest).
+#   --part ready (CI v2): static, types and tests at the same time, then the stamp for HEAD in .git/flow-ci-stamp.md
+#     (CI_STAMP_PR=<number> also posts it on that PR). Scripts/local-ci-parts.sh: slice_ready.
 #   --part db: when supabase/ changed: local Supabase (started when it is down), a fresh database, the
 #     flow-mcp smoke, the pgTAP files that name the change, and the db types check.
 # With no option, the default run (what FLOW_LOCAL_CI=default runs, and a manual run) is the scoped gate:
@@ -56,7 +58,7 @@ full=0
 slice=""
 shard=""
 usage() {
-  echo "Usage: local-ci.sh [--full | --part quick|static|types|tests|db [--shard i/n]]" >&2
+  echo "Usage: local-ci.sh [--full | --part quick|static|types|tests|db|ready [--shard i/n]]" >&2
   exit 2
 }
 while (( $# )); do
@@ -69,7 +71,7 @@ while (( $# )); do
   shift
 done
 case "$slice" in
-  ""|quick|static|types|tests|db) ;;
+  ""|quick|static|types|tests|db|ready) ;;
   *) usage ;;
 esac
 if [[ -n "$shard" ]] && { [[ "$slice" != tests ]] || [[ ! "$shard" =~ ^[1-9][0-9]*/[1-9][0-9]*$ ]]; }; then usage; fi

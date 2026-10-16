@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { type Dashboard, type TransactionDetail } from "@flow/shared";
 import { defaultPeriod } from "./period";
 import { useHomePreview } from "./preview";
 import { transactionQueryOptions } from "./use-books";
 export { DevTxnList, DevTxnPagedList } from "./dev/txn-lists";
+export { DevExpense, DevProject, DevProjectCategory } from "./dev-routes-projects";
 import type { LineSplitRead } from "./line-split";
 import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "./assistant-sample";
 import { InstallScreen, type InstallMode } from "./ui/install-screen";
 import { ChangeAssignment } from "./ui/change-sheet";
 import { BackButton, useGoBack } from "./ui/back";
+import { BandCompany } from "./ui/top-band";
 import { Button } from "./ui/button";
 import { ActionBar, ActionBarRow } from "./ui/action-bar";
 import { CheckIcon } from "./ui/icons";
@@ -18,11 +20,11 @@ import { ProgressBar } from "./ui/progress-bar";
 import { ReviewCard } from "./ui/review-card";
 import { ScreenHeader } from "./ui/screen-header";
 import { useToast } from "./ui/toast";
-import { attentionRows, CashHome, HomeBooks } from "./screens/HomeScreen";
+import { attentionRows, CashEmptyHome, CashHome, HomeBooks } from "./screens/HomeScreen";
 import { chargeChangeViews } from "./forecast";
 import { CashLinesScreen } from "./screens/cash-lines-screen";
 import { CashMonthScreen } from "./screens/cash-screens";
-import { sampleCashLines, sampleCashMonths, sampleCashYearMonths, sampleCashYears } from "./dev/cash-sample";
+import { sampleCashLines, sampleCashMonths, sampleCashToDay, sampleCashUsdLoss, sampleCashUsdToDay, sampleCashUsdYear, sampleCashYearMonths, sampleCashYears } from "./dev/cash-sample";
 import { CashHistoryScreen, CashYearScreen } from "./screens/cash-history";
 import { cashMonthKey } from "./cash";
 import {
@@ -32,7 +34,6 @@ import {
   LoansScreen,
   ReviewQueue,
   FiledTodayScreen,
-  ProjectCategoryScreen,
   ProjectDetailScreen,
   ProjectsScreen,
   SettingsScreen,
@@ -46,44 +47,6 @@ import { useMemoryLoanStore } from "./screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "./dev/loan-detail-sample";
 import { MissingBillsScreen } from "./screens/missing-bills-screen";
 import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME, SAMPLE_MISSING_RENAMED, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "./forecast-sample";
-
-const devLinks: Array<[string, string]> = [
-  ["/e2e/expense", "הוצאה לבדיקה"],
-  ["/projects/herzl?preview=1", "פרויקט לדוגמה"],
-  ["/transactions/1?preview=1", "תנועה לדוגמה"],
-  ["/transactions/1/split?preview=1", "פיצול לדוגמה"],
-  ["/settings/categories?preview=1", "קטגוריות לדוגמה"],
-  ["/settings/connections?preview=1", "חיבורים לדוגמה"],
-  ["/settings/loans?preview=1", "הלוואות לדוגמה"],
-  ["/unpaid?preview=1", "חשבוניות לדוגמה"],
-  ["/onboarding?preview=1", "הצטרפות לדוגמה"],
-  ["/install?preview=1", "התקנה לדוגמה"],
-  ["/review/change?preview=1", "שינוי לדוגמה"],
-  ["/e2e/split?save=fail", "פיצול שנכשל"],
-];
-
-export function DevProject() {
-  return (
-    <main className="ui-page-pad">
-      <h1 className="t-title-1">פרויקט לבדיקה</h1>
-      <div style={{ blockSize: "1800px" }} />
-      <nav className="ui-stack">
-        {devLinks.map(([to, label]) => (
-          <Link key={to} to={to}>{label}</Link>
-        ))}
-      </nav>
-    </main>
-  );
-}
-
-export function DevExpense() {
-  return (
-    <main className="ui-page-pad">
-      <h1 className="t-title-1">הוצאה לבדיקה</h1>
-      <BackButton fallback="/projects?preview=1" />
-    </main>
-  );
-}
 
 const devReviewItems = [
   {
@@ -317,11 +280,23 @@ export function DevHome() {
  */
 export function DevCash() {
   const [params] = useSearchParams();
-  const data = sampleCashMonths();
+  const navigate = useNavigate();
+  // FLOW-364: `?state=usd-loss` is the board's negative month in dollars (its past frame with `?month=past`).
+  const usdLoss = params.get("state") === "usd-loss";
+  const past = params.get("month") === "past";
+  const data = usdLoss ? sampleCashUsdLoss(past) : sampleCashMonths();
+  const currentKey = cashMonthKey(data.months[0]?.month ?? "");
+  // The board's drawer lists the year from January; the usd-loss year carries those months.
+  const yearMonths = usdLoss ? sampleCashUsdYear() : undefined;
+  // FLOW-364: `?month=past` shows the previous month (the darker band); `?drawer=1` opens the month drawer.
+  const monthKey = past ? cashMonthKey(data.months[1]?.month ?? "") : currentKey;
   return (
     <CashHome
       data={data}
-      previewing={params.get("preview") != null}
+      monthKey={monthKey}
+      currentKey={currentKey}
+      firstKey={cashMonthKey(yearMonths?.months[0]?.month ?? data.months.at(-1)?.month ?? currentKey)}
+      previewing={false}
       search="?preview=1"
       attention={params.get("box") === "none" ? [] : attentionRows({
         pending: 7,
@@ -333,7 +308,28 @@ export function DevCash() {
         changes: params.get("recurring") === "1" ? chargeChangeViews(SAMPLE_RECURRING_CHANGES, "?preview=1") : [],
         search: "?preview=1",
       })}
-      recurringTo="/e2e/missing-bills?preview=1"
+      sameDay={usdLoss ? (past ? null : sampleCashUsdToDay()) : sampleCashToDay()}
+      forecast={usdLoss ? -570_000n : -6_810_000n}
+      company={<BandCompany name="Acme Test Co" onOpen={() => { void navigate("/settings?preview=1"); }} />}
+      onStepMonth={(key) => {
+        void navigate(`/e2e/cash?month=${key}`, { replace: true });
+      }}
+      initialDrawerOpen={params.get("drawer") === "1"}
+      drawerYearMonths={yearMonths}
+    />
+  );
+}
+
+/** FLOW-364 (board, StatesHomeEmpty): the signed-in company with no books yet, in dollars, not preview. */
+export function DevCashEmpty() {
+  const navigate = useNavigate();
+  return (
+    <CashEmptyHome
+      leading={<BandCompany name="Acme Test Co" onOpen={() => { void navigate("/settings?preview=1"); }} />}
+      search="?preview=1"
+      holdWrites={false}
+      currency="USD"
+      avatarInitial="A"
     />
   );
 }
@@ -663,24 +659,6 @@ export function DevProjectMonths() {
           ],
           by_currency: [{ currency: "ILS", income_minor: 1_000_000n, expense_minor: 460_000n, profit_minor: 540_000n }],
         },
-      }}
-    />
-  );
-}
-
-export function DevProjectCategory() {
-  return (
-    <ProjectCategoryScreen
-      backTo="/e2e/project-detail"
-      sample={{
-        categoryName: "חומרים",
-        projectName: "שיפוץ הרצל 12",
-        rows: [{
-          id: "t1",
-          description: "מלט",
-          doc_date: "2026-09-12",
-          amount_net: -400n,
-        }],
       }}
     />
   );
