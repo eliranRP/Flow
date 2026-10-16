@@ -1,10 +1,10 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { shiftMonthKey } from "../period";
 import { renderWithProviders } from "../test-render";
 import { israelToday } from "../ui/date-math";
-import { CashLinesScreen, CashMonthScreen } from "./cash-screens";
+import { CashMonthScreen } from "./cash-screens";
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
@@ -73,7 +73,6 @@ function wrap(path: string) {
   return renderWithProviders(
     <Routes>
       <Route path="/cash/:month" element={<CashMonthScreen />} />
-      <Route path="/cash/:month/:side/:currency" element={<CashLinesScreen />} />
       <Route path="/cash/year/:year" element={<p>שנה</p>} />
       <Route path="/" element={<p>בית</p>} />
     </Routes>,
@@ -142,54 +141,5 @@ describe("Cash month page", () => {
     wrap("/cash/oct");
     expect(screen.getByText("בית")).toBeInTheDocument();
     expect(rpc.calls).toEqual([]);
-  });
-});
-
-describe("Cash lines", () => {
-  it("asks for the month, side and currency, and lists the lines with no minus under יצא", async () => {
-    wrap(`/cash/${earlier}/out/ILS`);
-    expect(await screen.findByText("בנק לדוגמה")).toBeInTheDocument();
-    expect(rpc.calls.find((c) => c.name === "cash_month_lines")?.args).toMatchObject({
-      p_month: `${earlier}-01`,
-      p_side: "out",
-      p_currency: "ILS",
-      p_offset: 0,
-    });
-    expect(screen.getByRole("heading", { name: "יצא" })).toBeInTheDocument();
-    expect(screen.queryByText(/^−₪1,200/)).toBeNull();
-    expect(screen.getByRole("link", { name: /בנק לדוגמה/ })).toHaveAttribute("href", "/transactions/t1");
-  });
-
-  it("switches currency in place and loads the next page", async () => {
-    wrap(`/cash/${earlier}/out/ILS`);
-    await screen.findByText("בנק לדוגמה");
-    fireEvent.click(screen.getByRole("button", { name: "עוד תנועות" }));
-    await waitFor(() => {
-      expect(rpc.calls.some((c) => c.name === "cash_month_lines" && (c.args as { p_offset: number }).p_offset === 40)).toBe(true);
-    });
-    fireEvent.click(screen.getByRole("radio", { name: "USD" }));
-    await waitFor(() => {
-      expect(rpc.calls.some((c) => c.name === "cash_month_lines" && (c.args as { p_currency: string }).p_currency === "USD")).toBe(true);
-    });
-  });
-});
-
-describe("Cash lines profit leaves out (FLOW-418)", () => {
-  it("reads the not_in_profit side, shows net less profit, and gives money out its minus", async () => {
-    const capital = { ...lines.rows[0], transaction_id: "t2", part: null, supplier_name: "שותף לדוגמה", category_name: "השקעת בעלים", amount_minor: 45_000, side: "in" };
-    rpc.impl = (name) => {
-      if (name === "cash_months") return Promise.resolve({ data: months, error: null });
-      if (name === "cash_month_lines") return Promise.resolve({ data: { rows: [lines.rows[0], capital], has_more: false }, error: null });
-      return Promise.resolve({ data: null, error: null });
-    };
-    wrap(`/cash/${earlier}/kept/ILS`);
-    expect(await screen.findByText("בנק לדוגמה")).toBeInTheDocument();
-    expect(rpc.calls.find((c) => c.name === "cash_month_lines")?.args).toMatchObject({ p_side: "not_in_profit", p_currency: "ILS" });
-    expect(screen.getByRole("heading", { name: "לא נספר ברווח" })).toBeInTheDocument();
-    // Net −₪1,150 less profit −₪400; the month sends no categories, so all of it is the rest.
-    expect(screen.getByText("−₪750")).toBeInTheDocument();
-    expect(screen.getByText(/מזה −₪750 מע״מ והפרשים/)).toBeInTheDocument();
-    expect(screen.getByText("−₪1,200")).toBeInTheDocument();
-    expect(screen.getByText("+₪450")).toHaveClass("ui-income");
   });
 });
