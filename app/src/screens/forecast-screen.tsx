@@ -36,7 +36,7 @@ export function forecastBigText(minor: bigint, currency = "ILS"): string {
 
 function itemWhen(item: ForecastItem): string {
   if (item.due_on != null) return `עד ${String(Number(item.due_on.slice(8, 10)))}.${String(Number(item.due_on.slice(5, 7)))}`;
-  if (item.kind === "invoice") return "לגבייה";
+  if (item.kind === "invoice") return item.direction === "income" ? "לגבייה" : "לתשלום";
   return item.day != null ? `ב־${String(item.day)}` : "השבוע";
 }
 
@@ -171,7 +171,7 @@ export function ForecastScreen({ sample }: { sample?: ForecastSample } = {}) {
       {build == null ? null : (
         <>
           <p className={cx("ui-forecast-big", total < 0n && "ui-forecast-big-neg")} aria-label="הצפי לסוף החודש">{forecastBigText(total, base)}</p>
-          <p className="ui-forecast-today">{`היום ${formatAmountText(net < 0n ? -net : net, base)}`}</p>
+          <p className="ui-forecast-today">{`היום ${forecastBigText(net, base)}`}</p>
           <ForecastSection
             title="צפוי להיכנס"
             total={signed(build.incomeTotal, "+", base)}

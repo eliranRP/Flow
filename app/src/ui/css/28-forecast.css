@@ -280,8 +280,8 @@
 }
 
 .ui-forecast-choice-on {
-  background: var(--color-seg-on);
-  color: var(--color-on-accent);
+  background: var(--color-tint-strong);
+  color: var(--color-text);
 }
 
 .ui-forecast-source {
