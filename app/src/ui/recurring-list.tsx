@@ -110,5 +110,5 @@ function RowView({ row, money }: { row: RecurringListRow; money: (minor: bigint)
 /** The paid share of the month's outflow, as a width; an empty month shows an empty bar. */
 function barWidth(paid: bigint, total: bigint): string {
   if (total <= 0n) return "0%";
-  return `${Number((paid * 10000n) / total) / 100}%`;
+  return `${String(Number((paid * 10000n) / total) / 100)}%`;
 }

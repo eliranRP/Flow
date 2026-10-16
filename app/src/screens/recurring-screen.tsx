@@ -58,7 +58,7 @@ export function recurringView(rows: readonly ScheduleRow[], today: string) {
     rows: group.lines.filter((line) => !lateIds.has(line.id)).map((line) => toRow(line)),
   }));
   return {
-    subtitle: `${monthTitle(today)} • ${rows.length} קבועים`,
+    subtitle: `${monthTitle(today)} • ${String(rows.length)} קבועים`,
     currency: rows[0]?.currency ?? "ILS",
     outflow: monthOutflow(lines),
     late,
@@ -73,11 +73,11 @@ export function recurringView(rows: readonly ScheduleRow[], today: string) {
 function hintFor(row: ScheduleRow, line: RecurringLine, today: string): Pick<RecurringListRow, "hint" | "alert"> {
   if (row.state === "late") {
     const usualDay = `${row.next_due_month}-${String(row.typical_day).padStart(2, "0")}`;
-    return { hint: `באיחור ${daysBetween(usualDay, today)} ימים`, alert: true };
+    return { hint: `באיחור ${String(daysBetween(usualDay, today))} ימים`, alert: true };
   }
   if (row.state === "arrived" && line.usual > 0n && line.minor * 100n >= line.usual * 120n) {
     const percent = Math.round(Number(((line.minor - line.usual) * 10000n) / line.usual) / 100);
-    return { hint: `▲ ${percent}%`, alert: true };
+    return { hint: `▲ ${String(percent)}%`, alert: true };
   }
   return {};
 }
