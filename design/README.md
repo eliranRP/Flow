@@ -4,7 +4,7 @@ The design source is the live design board: https://claude.ai/artifact/9grt9spjs
 
 | Folder | Contents |
 |---|---|
-| `system/` | `design-system.md` (short spec), `implementation-guide.md` (**mandatory** for every screen implementation), `implementation-tokens.css` (the hand-edited token file), and the boards `ds-4` to `ds-8` (light and dark PNG) |
+| `system/` | `design-system.md` (short spec), `implementation-guide.md` (**mandatory** for every screen implementation), `implementation-tokens.css` (the hand-edited token file), and the boards `ds-7` and `ds-8` (light and dark PNG; the Design canvas is the live board) |
 | `screens/` | The screen PNGs that the docs cite, light and dark at 390×844 @2x: screens `01`–`23` (with `09a`, `15a`–`15c`, `22a`/`22b`) and the `overview` grids. The uncited dark onboarding variants `09b`–`09d` are not kept. |
 | `states/` | The state PNGs that DESIGN-RULES.md cites: empty states, loaders and offline, errors, and `overview-states`. Uncited variants are not kept. |
 | `logo/` | Final logo package: the wordmark (outlines), the S1 app icon (light, dark, brand), PWA icons and manifest block, the favicon, the usage board `board/flow-logo-usage.png`, and `LOGO.md`. `explorations/` holds only the overviews of the rejected rounds. |

@@ -35,7 +35,7 @@ import type { LoanPatch, LoanRateWrite } from "./loan-detail-store";
  */
 export type SheetSave<T> = (value: T) => Promise<string | null>;
 
-/** More rows than this get a search field (guide §7.12). */
+/** More rows than this get a search field (guide §7.13). */
 const SEARCH_FROM = 8;
 
 /**

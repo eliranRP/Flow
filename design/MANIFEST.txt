@@ -193,12 +193,6 @@ d06bf45d20a83f01796c0035d90249c3ec5e9d008b2d689933752e70a474c70b  394905  flow-d
 a65c002fb6e1b14a0bbb7bd2527ab77bf01a5954a790d2d1dd755a546bd1b5e1  391348  flow-design-part2.zip  design/system/ds-2-type-light.png
 ae9ef88054f2c22489d6394e6789bc1c4b2de7cccfb392735b3ee080f2f32a76  319324  flow-design-part2.zip  design/system/ds-3-spacing-dark.png
 bdfe36f0c5c8ed15aca8c4a092e2b391d47f7b48330a38a0540e915f8ffef922  315084  flow-design-part2.zip  design/system/ds-3-spacing-light.png
-c92b416253268c7c57a15ea7455b0dec6782613f36df1c60dcdeb5a36c0883c3  448004  flow-design-part2.zip  design/system/ds-4-controls-dark.png
-2d9d0395430bea2e756a303d4edc691d0fc9fc7eac334af2a3ddc28a73901327  439516  flow-design-part2.zip  design/system/ds-4-controls-light.png
-d4079af25a61155d6f6e6235c7d058c7af253459791d7e6f7fa6b39a2355b015  417041  flow-design-part2.zip  design/system/ds-5-content-dark.png
-1296838a39ab85eafa70334439e8e3f5ed292294fc931176397e836efe5938b0  409490  flow-design-part2.zip  design/system/ds-5-content-light.png
-d2cc8ec46817e6bff1356af7457db444b8dffa409aa58a51c14a501cf2f22319  443643  flow-design-part2.zip  design/system/ds-6-band-dark.png
-3b6ea0de2de684f5191ef3f55c29fee832062641b5cce14c0df96459f5f9f307  443249  flow-design-part2.zip  design/system/ds-6-band-light.png
 515f3554930c5ae1d442e52e059eba636b756646cdb85a2554c5f4df740c493b  1032808  flow-design-part2.zip  design/system/ds-7-empty-loading-dark.png
 a610eca26168fecafcb12be698da81ed87d249476d12d300e2d0328905336a65  1002921  flow-design-part2.zip  design/system/ds-7-empty-loading-light.png
 d079e8e415017d7d60f8afd78ebd48deb46449959bd2f89e36f1722739a2bbe8  1033368  flow-design-update-google.zip  design/system/ds-8-pickers-sheets-dark.png

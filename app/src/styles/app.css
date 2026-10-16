@@ -165,7 +165,7 @@
   --text-wordmark: var(--type-wordmark-size);
   --text-wordmark--line-height: var(--type-wordmark-line);
   --text-wordmark--font-weight: var(--type-wordmark-weight);
-  /* Guide §7.24: the sign-in wordmark is 44px. The in-app wordmark stays 22px. */
+  /* Guide §7.33: the sign-in wordmark is 44px. The in-app wordmark stays 22px. */
   --text-signin: 2.75rem;
   --text-signin--line-height: 1.2;
   --text-signin--font-weight: 700;
@@ -184,7 +184,7 @@
 
 /*
   Component sizes from the implementation guide. They are not new layout steps.
-  §3.2 ui-band padding, §3.3 grab handle, §4 tab slots and row padding, §7.24 sign-in.
+  §3.2 ui-band padding, §3.3 grab handle, §4 tab slots and row padding, §7.33 sign-in.
 */
 :root {
   --band-pad-bottom: var(--radius-band);

@@ -2,7 +2,7 @@
 
 **Who this is for:** developers and AI coding agents building Flow screens.
 **What Flow is:** a Hebrew-only, right-to-left, phone-only installable web app (PWA). It shows a simple project P&L (income, expenses, profit) for Israeli contractors. There is no desktop layout.
-**Source of truth:** the [Design canvas](https://claude.ai/artifact/9grt9spjshVCxerYWrRXiD) (Design guide and Flow & motion pages), with [REDESIGN-BUILD](../../docs/design/REDESIGN-BUILD.md) and [DESIGN-RULES](../../docs/design/DESIGN-RULES.md). The boards in this folder still apply to the screens that have not been rebuilt yet (`ds-4` to `ds-8`).
+**Source of truth:** the [Design canvas](https://claude.ai/artifact/9grt9spjshVCxerYWrRXiD) (Design guide and Flow & motion pages), with [REDESIGN-BUILD](../../docs/design/REDESIGN-BUILD.md) and [DESIGN-RULES](../../docs/design/DESIGN-RULES.md). The boards in this folder still apply to the screens that have not been rebuilt yet (`ds-7` and `ds-8`). The earlier controls, content and band boards are retired; their parts are in §7 and the Design canvas.
 **Tokens for code:** `implementation-tokens.css`, the one hand-edited token file ([0181](../../docs/decisions/0181-redesign-foundation.md)).
 
 How to read the rules:
@@ -74,7 +74,7 @@ In CSS, every colour is `--color-<name>`, for example `--color-text-secondary`.
 | `outline-secondary` | #DAD3E6 | #382A5E (= tint-strong) | Secondary button border (new) |
 | `control-off` | #8F86A3 | #736A8C | Switch track when off, unchecked checkbox border, sheet grab handle (≥ 3:1) |
 | `control-border` | #8F86A3 | #736A8C | Borders of inputs, search fields, outlined chips, radio circles (≥ 3:1) |
-| `gsi-bg` / `gsi-border` / `gsi-text` | #FFFFFF / #747775 / #1F1F1F | same | The "המשך עם Google" button only (§7.24). Fixed by Google branding, identical in both modes. Stroke 4.5:1 (light) / 4.1:1 (dark) on the page |
+| `gsi-bg` / `gsi-border` / `gsi-text` | #FFFFFF / #747775 / #1F1F1F | same | The "המשך עם Google" button only (§7.33). Fixed by Google branding, identical in both modes. Stroke 4.5:1 (light) / 4.1:1 (dark) on the page |
 | `bad-tint` | #FCEDEC | #3A1E24 | Soft fill behind a destructive confirm button (`bad` text on it: 4.9:1 / 6.6:1) |
 | `text` | #1D1728 | #F1EDF8 | Main text and **all figures** |
 | `text-secondary` | #5B536E | #B1A8C4 | Labels, secondary lines, row icons |
@@ -404,72 +404,178 @@ export const formatLongDate = (d: Date) =>
 
 ## 7. Components
 
-Reference CSS is in `flow.py` (`BASE`), and the states are shown on boards `ds-4` (controls) and `ds-5` (content). Build each component **once** in the shared library, and have screens compose them rather than restyle them.
+The components are the 19 parts of the [component inventory](../../docs/design/DESIGN-RULES.md#28-component-inventory-and-states) in DESIGN-RULES §2.8, in the same order (7.1 to 7.19). Each one is built once in the shared library, and screens compose it rather than restyle it. The Design canvas (Design guide, Ready for dev, Flow & motion) is the source for the look; the values below repeat it for the build. Parts that are not in the inventory are in 7.20 to 7.33, with the rules they keep until their screens move.
 
-### 7.1 Buttons
+Where this section and the canvas disagree, the canvas wins.
+
+### 7.1 Button
 | Kind | Look | Use for |
 |---|---|---|
-| **Primary** | `accent` fill, `on-accent` text, 52px high, 14px radius, weight 600 | The one main action of the screen or sheet ("אישור", "שמירה", "המשך") |
-| **Secondary** | `tint` fill, `accent-text` text | Important alternatives ("שינוי", "פיצול בין פרויקטים"), and the empty-state action |
-| **Ghost** | Text only, `accent-text` (or `text-secondary` for "ביטול") | Low-emphasis options ("דלג") |
-| **Destructive** | Text only, `bad`, with a trash icon | "מחיקה", always confirmed or undoable |
-| **Small pill** (`.btn.sm`) | 36px high, fully round, usually secondary | Inline actions in rows and empty states ("סימון כשולם", "פרויקט חדש") |
+| **Primary** | 52px pill, 17/500, `accent` fill, `on-accent` text | The one main action of the screen or sheet ("אישור", "שמירה", "המשך") |
+| **Secondary** | 52px pill, 1.5px `tint-strong` outline, 16/500, `accent-text` text | Important alternatives, and the empty-state action (44px in the empty state) |
+| **Link** | 44px text, 15/400, `accent-text`, optional left-pointing chevron | Low-emphasis actions in a row or a card ("שינוי", "דלג") |
+| **Danger link** | As link, in the signal colour | "מחיקה", always confirmed or undoable |
 
-States:
-
-| State | Look |
-|---|---|
-| Default | As above |
-| Pressed | `accent-pressed` / `tint-pressed` / `tint` behind ghost and destructive |
-| Disabled | `disabled-bg` + `disabled-text`, with `disabled` or `aria-disabled` set |
-| Focus | Focus ring (see §9) |
-| Busy | Spinner inside the button (see §8) |
+States: default, pressed, disabled, busy, focus.
+- **Pressed:** opacity .72 and, on primary and secondary, scale .985, over 120ms.
+- **Disabled:** `disabled-bg` and `disabled-text`, with `disabled` or `aria-disabled` set.
+- **Busy:** the same width, a spinner and the action's verb ("מאשר…"), `aria-busy`. The other actions on the screen are disabled.
+- **Focus:** the 2px ring (see §9).
 
 Do:
-- **Use exactly one primary per screen** (or sheet or step). Where there are several choices, the others are secondary or ghost.
+- Use exactly one primary per screen (or sheet or step). Where there are several choices, the others are secondary or link.
 - Use full width at 24px sides for main actions, and stack them with 8px gaps.
-- Keep labels short: a verb or noun of one or two words, optionally with an icon on the start side (e.g. ✓ אישור).
+- Keep labels short: a verb or noun of one or two words.
 
 Don't:
-- Put two violet-filled buttons on one screen.
-- Use an outlined button style (it doesn't exist).
-- Make a button red-filled.
+- Put two accent-filled buttons on one screen.
+- Make a button red-filled. A destructive confirm is `bad` text on `bad-tint`.
 - Put a button inside the band.
+- Use the 36px pill, the ghost or the old destructive variant in new screens. They stay only until their call sites move (REDESIGN-PLAN §2.2).
 
-### 7.2 + button (FAB) and tab bar
-- The **+ button** is a 48px `accent` circle in the middle of the tab bar that opens the **Add** sheet (04). States are default and pressed. It is the only violet shape that is always visible. It has `aria-label="הוספה"`.
-- The **tab bar** has five slots, 64px wide each, in this order from the right: בית · פרויקטים · **+** · לאישור · הגדרות.
-  - Icons are 24px and labels are `micro`. Inactive items are `text-muted`; the active item has an `accent-text` icon **and** label.
-  - Use `aria-current="page"` on the active item.
-  - The **badge** on לאישור shows the waiting count: `badge-bg`/`badge-text`, fully round, 17px minimum, `micro`, sitting at the icon's top end corner. Give it an accessible name, e.g. `aria-label="לאישור, 7 ממתינים"`. It is hidden at 0 and shows "99+" above 99.
+### 7.2 IconButton
+- A 44px icon target, with a 24px icon. States: default, pressed (opacity .72 only), disabled, on-band.
+- Every icon-only button has an `aria-label`.
+
+### 7.3 ListRow
+- **Flat** (`layout="flat"`): on the background, 20px sides, about 64px tall, a 36px initial circle, name 17/400, one grey line 15/400, the amount at the end. No dividers, no chevrons. Used for long lists (month lines, invoices).
+- **Inset** (`layout="inset"`): a row inside a Card, 14px side padding, a 1px `line` divider between rows and not after the last.
+- **Control:** none, chevron (inset only), radio, check, switch or value.
+- States: default, pressed (opacity .72), selected, disabled (with a reason line), busy (a spinner at the end), pending (soft text), skeleton (FLOW-371).
+- Motion: press 120ms; a row that leaves fades for 220ms and collapses.
+- Don't add hairlines to a flat list, and don't add a chevron to a row that cannot open anything.
+
+### 7.4 Card
+- Radius 20 (`--radius-card`), 14 to 18px padding, `surface`, no border. `tone="tint"` gives the tinted problem box and the דורש טיפול block.
+- A list stays flat. A card is for one focused item or a summary.
+- States: default, pressed (only when the whole card is a link), tint. Press 120ms.
+
+### 7.5 Amount
+- The `role` sets the size: band 52/500, detail 40/400, total 34/400, card 28/400, list 17/400 with the cents at 11px, raised 5px.
+- States: expense (U+2212 on the start side, in `text`), income (`income` green with a "+", and a visually hidden "הכנסה "), loss (signal colour, with a minus), muted (`$0`).
+- Every amount is wrapped in `<bdi dir="ltr">`. Figures never count up.
+- Green is only for money in, always with "+". A figure with a minus is never green. [0120](../../docs/decisions/0120-income-green-type-scale.md)
+
+### 7.6 Band and ScreenHeader
+- **Band** (`top-band.tsx`): the current or past month, from `#7B3FE4` to `#5A2DB0` (light and dark from the same tokens). Its figures fade with the scroll between 60 and 220px, with no timer. The band colour changes in 240ms.
+- **ScreenHeader** (`screen-header.tsx`): with Back, with actions, or scrolled. Back is labelled with the kicker when there is one (`label` in `accent-text`, cut at about 16 characters) and there is no kicker line ([0156](../../docs/decisions/0156-labelled-back-and-compact-bar.md)). When Back goes to a page other than the kicker's, `backText` labels Back with that page and the kicker stays as a `hint` line above the title (FLOW-444).
+- **CompactBar** (`compact-bar.tsx`, extends the 0156 bar and is never a second bar): once the large title scrolls off, it pins to the top, 44px on a list page and 56px on a detail page, over a `line` hairline. It shows Back, "title · figure" and the actions. It slides in 240ms ease-enter and out 240ms ease-exit, and at once under reduced motion. A compact title (the transaction) gets no compact bar.
+- Don't add a kicker or an inline layout to a new screen. The options are kept only until their last screen moves.
+
+### 7.7 OrganizeChips
+- Chips group a screen's views or filters. One chip is always selected: the chips are not filters you can clear.
+- Look: suggested (`tint` fill, ✦ in `accent-text`, optional hint), outlined choice (`surface`, 1px `control-border`), selected (`tint-strong` fill with an `accent` border, no ✓), disabled (`disabled-text`).
+- Chips are 36px drawn, 14px inline padding, a full radius, a 44px hit area, and they wrap. Show at most about 4 chips, then "עוד…".
+- Use `role="radiogroup"` with `radio` or `aria-pressed`. Don't use chips as navigation or as action buttons.
+- The organize row sticks under the compact bar in a StickyPanel (240ms, with the compact bar). Chips change colour in 150ms.
+- A read-only status is a ChangePill (7.16), not a chip.
+
+### 7.8 Segment
+- Use it to switch between 2 or 3 views of the same thing (נכנס / יצא, הוצאות / הכנסות).
+- Look: a `raised` track with 4px padding and gap, 40px buttons. The selected segment has a `tint-strong` fill and `text`; unselected segments are `text-secondary`. No shadow, no 600 weight.
+- States: one selected, pressed, disabled, busy, on-band. Motion 150ms.
+- Use `role="tablist"` with `tab` and `aria-selected`, or a radio group. Don't use it for more than 3 options, for navigation, or with icons only.
+
+### 7.9 Toggle
+- A 46×28 track. `control-off` when off, `accent` when on. The knob is `knob`, with a faint shadow; the knob moves in 150ms ease-standard.
+- States: on, off, disabled-on (a muted accent, distinct from an enabled off track), disabled-off (3:1 edge against the row), locked (`aria-disabled`), busy.
+- The whole row is the control. Use `role="switch"` with `aria-checked` and the row's text as its label. The hint under the label states the current effect ("כבוי · מציג רווח לפני כלליות"), so the state never depends on colour.
+- Use a toggle for settings that apply at once. Use a checkbox (24px, 7px radius, `accent` fill with a ✓ when checked) to select items in a list.
+- **The overhead switch ("אחרי חלק בכלליות") is OFF by default** everywhere. You **MUST NOT** turn it on by default or remember it on without the user choosing it ([0022](../../docs/decisions/0022-after-overhead-starts-off.md)).
+
+### 7.10 IconRow
+- An icon row (`icon-row.tsx`): a 24px outline icon in `text-secondary`, a label 13 in `text-muted`, the value 16/500 in `text`, 12px block and 14px inline padding, 12px gap, at least 44px high. The accessible name is "label value" (or `name`).
+- The end is a chevron (default; `onClick` opens a sheet) or a text link action (`action`, "שינוי"). A switch row has no chevron. A busy row shows a spinner in the chevron slot. A static row (a read-only fact) has no end.
+- An accent value marks an empty prompt.
+- States: default, pressed (opacity .72, 120ms), focus, busy, disabled, static, value changed (the undo toast, 7.12).
+
+**Counted-in row and sheet** (spec, built in FLOW-366 for the line and FLOW-513 for the category; FLOW-363 (4) wrote it down):
+
+The row is an IconRow with `ChartIcon`, the label "נספר ב" and a chevron. Its value is "רווח ותזרים" (both on), "תזרים בלבד · <reason>", "רווח בלבד · לא בתזרים", or "לא נספר". The value is `text` when both are on, otherwise `accent-text`. [0170](../../docs/decisions/0170-pnl-follows-company-basis.md)
+
+- **Line sheet:** surface, padding 10 16 28, gap 10. Title "איפה השורה נספרת" (sheet title, 20/600). ✕ is a 44px target with a 22px glyph in `text-secondary`. Two switch rows, each on `raised`, radius 14, min-height 64, padding 10 14: "נספר ברווח" (sub: the P&L reason) and "נספר בתזרים" (sub "כסף שזז בבנק. כבוי רק להעברות בין החשבונות שלך"). Footer 13 in `text-muted`: "רק השורה הזו. הקטגוריה לא משתנה."
+- **Line toasts:** "הוצא מהרווח", "נספר ברווח", "הוצא מהתזרים", "נספר בתזרים".
+- **Category row:** label "נספרת ב", on `raised`, radius 16, min-height 60, padding 12 14, value 17/400. Copy: "רווח ותזרים", "תזרים בלבד · הוצאה מהרווח", "תזרים · שיפוץ, לא ברווח החודשי", or "לא נספרת".
+- **Category sheet:** title "איפה הקטגוריה נספרת", sub "חל על כל N התנועות של <name>". Three switches: "נספרת ברווח", "נספרת בתזרים" and "נספרת בשיפוץ" (expense only). The knob side is opposite to the line sheet's (open question 12 in FLOW-363).
+- **Decided:** switches, not three choices, because the board frames in use draw switches (0170). Open values with no token or role are in the design log.
+
+### 7.11 Sheet
+See the template in §3.3. The family is three parts:
+- **Sheet** (`sheet.tsx`): a bottom sheet with a grab handle, a title, ✕ and a scrim. It has one primary action. Use `role="dialog"`, `aria-modal="true"` and `aria-labelledby` pointing at the title.
+- **ChoiceSheet** (`choice-sheet.tsx`, from `radio-sheet.tsx`): option rows. Tapping an option applies it and closes the sheet, so there is no confirm button. The currency, basis and pace sheets are ChoiceSheet calls.
+- **ConfirmSheet**: the question as the title, the item as the subtitle, one line on the consequence, the primary action and a quiet "ביטול". Details are in 7.28.
+
+States: open, closing, busy (a save in progress), refusing (an incomplete change, with ביטול השינוי beside the sentence that says why). Motion: in 280ms ease-enter; out 220ms ease-exit; the scrim 260ms; drag down to close.
+- ✕, scrim, swipe and Android back save a valid pending change, then close. An incomplete change stays open. A second dismiss discards it. A dismiss during a save waits for the save, then closes ([0075](../../docs/decisions/0075-save-on-tap-and-on-leave.md)).
+- Focus moves into the sheet when it opens and returns to the trigger when it closes. Don't stack sheets. A second sheet replaces the first, or the task becomes a screen.
+
+### 7.12 Toast
+- A single line above the bottom bar, 16px sides, one at a time. Its look is `toast-bg` and `toast-text` (inverted per mode), a 14px radius and `label` text. A confirmation has no icon.
+- **Undo toast:** 3 seconds with ביטול (a link in the toast's action colour, weight 500). The timer pauses while the toast has focus or is touched.
+- **Failure toast:** the 4 seconds with an icon in `toast-bad`, and "שוב" or "ניסיון חוזר" when there is a retry. The failure toast stays for failures that need the user ([0180](../../docs/decisions/0180-instant-tap-notify-on-failure.md)). The timer is `OK_MS` in `toast-layout.tsx`.
+- States: ok (with or without ביטול), failure, info. Motion: in 200ms rising from above the bottom bar; out 160ms.
+- Use `role="status"`. Every action that shows an undo toast **MUST** be undoable for those 3 seconds: approve, move, delete, mark as paid. Commit on the server optimistically, and revert if the user taps ביטול.
+- Don't use a toast for errors that block the user (use the field or the error pattern, 7.29), or for long messages.
+
+### 7.13 Field family
+Five components: `text-field.tsx`, `money-field.tsx` (money and percent: the ₪ and % affixes keep their place), `select-field.tsx`, `code-field.tsx` and `search-field.tsx`.
+
+- **Text, money and select fields:** 48px high (`--field-height`), a 1.5px `tint-strong` border, a 12px radius, `raised` background, 14px side padding, body 17/400. The label sits above in caption role, `text-muted`, with a 6px gap. The label is always visible. A placeholder never replaces it. Placeholders are `text-muted` and start with "למשל:".
+- **States:** default, focused (accent border; no ring; border transition 150ms), filled, error (the border stays as drawn; the message under the field is `signal-soft` and carries the error; the message line is reserved, so the layout does not move), disabled (disabled tokens), read-only (the text in `text-muted` on the same box), busy (a spinner at the end, FLOW-371).
+- Validate on blur and on submit, not on every keystroke. Link the message with `aria-describedby`, and set `aria-invalid="true"`. A connect or setup form checks required fields on submit, before any request, and the message sits on the field's reserved line.
+- Amounts use `inputmode="decimal"` with the ₪ or % shown as an affix inside the field. Numbers are LTR (see §6.3). Use the right `inputmode`, `autocomplete` and `enterkeyhint`.
+- **Code field:** the value is 13px monospace, read-only, LTR, on a `line` border. The copy is a "העתקה" pill (36px, chip role, `accent-text` on `tint`) in a 44px hit area at the end, on one line. The value keeps its end clear of the button.
+- **Search:** a 44px pill on `raised`, no border. An 18px icon in `text-muted`, input 17/400. The focus is the global ring on the pill. Busy: an 18px spinner after the input, the clear button hidden, and `aria-busy` on the box. Filter as the user types, debounced by about 150ms. A ✕ clear button shows once there is text (`aria-label="ניקוי"`). With no results, use the empty state: "לא מצאנו ״<query>״", and a "ניקוי החיפוש" button.
+- Money and percent share the text field's box. The percent field is `money-field` with a % affix; there is no separate percent component.
+
+### 7.14 ConnectionPage
+Spec, built in FLOW-512 for SUMIT, Mercury and MCP (`connection-page.tsx`). FLOW-363 (4) wrote it down. It composes the page header, StepList (`ui-install-num`), the problem box, a TextField with show and hide, a CodeField, the primary and secondary Button, and facts rows. States: new, connecting (busy), connected, problem (the key stopped working), error (one line with נסו שוב). Motion: page enter.
+
+- **Page and header:** padding 12 16 28 (the app's side is 20). Back is 16/500 in `accent-text` with a 44px target and a 20px chevron. The title is 32/600 with line-height 1.2. The subtitle is 15 in `text-muted`. Content gap 14.
+- **Steps:** the section head is 15/500 in `text-secondary`. The card is `surface`, radius 16, padding 16, gap 10. A step is 15 with line-height 1.5. The number circle is 22, radius 11, `tint` background, `accent-text`, 12/500.
+- **Problem box:** padding 14, radius 14, `tint` background, 15 with line-height 1.5. The copy comes from the connection's broken text, as `connect-sheet.tsx`'s authReconnect lead did.
+- **Show and hide:** "הצגה" and "הסתרה", 36px high, padding-inline 10, radius 10, `tint`, `accent-text`, 14/500 (`--type-chip`).
+- **Copy:** the CodeField with its "העתקה" pill (7.13).
+- **Connect button:** the primary Button, 52px pill. Disabled uses `disabled-bg` and `disabled-text`. Label "מתחבר…" while busy, otherwise "חיבור מחדש" or "חיבור".
+- **Connected:** facts rows min-height 44, 15 text, label in `text-secondary`, a line divider, card padding 6 16. A secondary Button, 52px. "החלפת מפתח API" is 15/400 in `accent-text`. "ניתוק" is 15/400 in `signal-soft`.
+- **Motion:** push 280 in and 220 out. Page enter 280 with an 8px rise and a 40ms stagger. Press opacity .72 and scale .985. Reduced motion turns everything off.
+- **Values with no token or role (open question 10 in FLOW-363):** `#3A3350` (secondary border and category switch off), `#6A627A` (disabled text), the section head 15/500, the step number 12/500, the side padding 16, and the card radius 16. They are recorded in the design log, not in tokens.
+
+### 7.15 SwipeRow
+- A row that swipes to reveal one action (`swipe-row.tsx`, from `swipe-remove.tsx`). The action is "התעלמות" in signal-colour text, with no fill.
+- States: rest, revealed, leaving. A leaving row fades in 220ms and collapses, and the undo toast (7.12) offers ביטול.
+
+### 7.16 ChangePill and StatusDot
+- **ChangePill** (`change-pill.tsx`): the change against last month, "▼" or "▲" with the absolute %, in `text`/`good`/`bad` on the band or off it. Off the band it is text: neutral when it helps, `signal` when it hurts. On the band a helping change is a `pill-helps` fill and a hurting one a `pill-hurts` fill, white text, in chip type (14/500). `upHurts` swaps the tones for an expense. Words for screen readers: `aria-label="ירידה של 10% מהחודש שעבר"`.
+- **StatusDot** (`change-pill.tsx`): a status is coloured text in role meta (14/400), never a filled chip. With a dot (6px, hidden from readers), the words stay `text-secondary` and the dot takes the tone: `accent-text`, or `signal-soft` for signal. Tones: neutral, accent, signal.
+- The change pill on the page uses a `tint` background only where it is a control; otherwise it is text.
+
+### 7.17 ProgressBar
+- Thin bars, 6 to 8px (`--bar-thin`), rounded to `--radius-chip`: a value bar, a two-part split bar (budget), and the 8px job bar of FLOW-371.
+- States: value, split, indeterminate (the sync strip, FLOW-371). A split stops at 100% in `bad` and states the overage in words (decision 0060).
+- Motion: the fill grows from the right on enter (`m-bar-grow`, 480ms); widths ease `--motion-width` with ease-standard.
+
+### 7.18 TabBar
+- Five slots, 64px wide each, in this order from the right: בית · פרויקטים · **+** · לאישור · הגדרות. The + is a 48px `accent` circle in the middle, and it opens the Add sheet (`aria-label="הוספה"`). The place of + is settled by the FLOW-364 brief against the canvas.
+- Icons are 24px and labels are `micro`. Inactive items are `text-muted`; the active item has an `accent-text` icon and label. Use `aria-current="page"` on the active item.
+- The badge on לאישור shows the waiting count: `badge-bg` and `badge-text`, fully round, 17px minimum, `micro`, at the icon's top end corner. Its accessible name reads the count ("לאישור, 7 ממתינים"). It is hidden at 0 and shows "99+" above 99.
+- States: active, pressed (+ and the items: opacity), badge. Motion: tab colour 120ms; content crossfade 150ms; no slide.
 - Don't add a fifth tab, text-only tabs, or a red badge.
 
-### 7.3 Chips
-| Kind | Look | Use for |
-|---|---|---|
-| **Suggested** | `tint` fill, ✦ spark icon in `accent-text`, optional hint ("אחרון") | AI suggestions or recent picks, shown first |
-| **Choice** | `surface` with a 1px `control-border` outline (≥ 3:1) | The other selectable options, and quick chips in pickers |
-| **Selected** | `accent` fill, `on-accent` text, ✓ (or ✦ if AI-picked) | The current choice. One per group for single-select. |
-| **Disabled** | `disabled-text`, `line` outline | Options that can't be picked |
-| **Status** | Small (28px), `tint`, `micro`/`hint` text with a ✓ icon | Read-only status ("שולם", "מאושר · אוטומטי"). Not tappable. |
+### 7.19 Page transitions
+- `usePageEnter` and `PushPage`. A page enters with its content rising 8px and fading in over 280ms, with the first blocks staggered 40ms. A push to a detail page slides 280ms from the left; going back is 220ms.
+- States: entering, entered, going back. Under reduced motion the end state shows at once.
 
-Chips are 36px high (with a 44px hit area), 14px side padding and 8px gaps, and they wrap.
-- Use `role="radiogroup"`/`radio` or `aria-pressed` for selection.
-- Show at most about 4 chips, then "עוד…", which opens a search or list.
-- Don't use chips as navigation or as buttons for actions.
+---
 
-### 7.4 Segmented tabs
-- Use them to switch between **2–3 views of the same thing** (הוצאות / הכנסות; שווה בשווה / לפי הכנסות / ידני).
-- The track is `tint` with a 12px radius and 3px padding. Segments are 36px high. The selected segment is `seg-on` (white in light mode, raised violet `#3B2F5E` in dark mode), with `text` at weight 600 and a faint 1px shadow (the only other allowed shadow). Unselected segments are `text-secondary`.
-- Use `role="tablist"`/`tab` with `aria-selected`, or a radio group.
-- Don't use them for more than 3 options, for navigation between screens, or with icons only.
+Parts that are not in the inventory keep these rules until their screens move. A part that a screen PR removes is deleted in that PR.
 
-### 7.5 Period pill
+### 7.20 Period pill
 - The period pill is a tinted, fully round pill, 32px high, with the label (e.g. "החודש") followed by a ▾ chevron in `accent-text`. Pressed state is `tint-pressed`.
 - On the band it uses `band-pill`: **white in light mode, `#1E1929` in dark mode**, with `text` inside.
-- Tapping it opens the period sheet (§7.18, `16-period-sheet`): החודש, חודש קודם, מתחילת השנה, and טווח מותאם (opens the range picker, §7.17). Add more presets only with design. The choice updates every figure on the screen, and the hero label **MUST** name the period ("רווח בספטמבר").
+- Tapping it opens the period sheet (§7.27, `16-period-sheet`): החודש, חודש קודם, מתחילת השנה, and טווח מותאם (opens the range picker, §7.26). Add more presets only with design. The choice updates every figure on the screen, and the hero label **MUST** name the period ("רווח בספטמבר").
 
-### 7.6 Pending card
+### 7.21 Pending card
 - This is **the one tinted block on Home**. It is `tint` with a 16px radius and a 16px inset.
   - Inbox icon in `accent-text` on the start side.
   - Title in `body`/17px: "7 פריטים ממתינים לאישור".
@@ -479,125 +585,75 @@ Chips are 36px high (with a 44px hit area), 14px side padding and 8px gaps, and 
 - When there are 0 pending items and 0 unpaid invoices, **hide the card**. Don't show "0 items".
 - Don't add a second tinted card to Home.
 
-### 7.7 Project row
+### 7.22 Project row
 - **Name** (17/400, the row title) and **margin** below it (`meta`: "רווחיות 27%") on the start side (right). **Profit** (`amount`, 17/400, whole units) on the end side (left). Rows have no hairline (decision 0120); they are separated by 14px vertical padding.
 - A **loss** shows in `bad` **with a minus sign** (`−₪10,000`), and the margin is shown with a minus too ("−17%"). A profit is `text`, **never green**.
 - The pressed state is a `tint` background with a 12px radius that bleeds 12px past the text. Tapping the row opens **02 Project**.
 - The secondary line MAY be the client name instead of the margin (05 Projects).
 
-### 7.8 Transaction row
+### 7.23 Transaction row
 - A **grey source icon** (`text-secondary`) on the start side: `doc` for an invoice, `bank` for a bank line.
 - The title is the vendor or payer (`body`). The hint below shows category and date ("חומרים · 22/09").
 - The **amount** is on the end side in `amount` (17, weight 400), **with cents** drawn small and raised, ".00" included (`₪150,000.00`); this replaces §11.3's whole units for transaction rows only. An expense is `text` **with its minus** (`−₪12,000.00`). Money in is `income` green **with a `+`** (decision 0181), preceded by a visually hidden "הכנסה ", so direction is never colour alone. A figure with a minus is never green. [0120](../../docs/decisions/0120-income-green-type-scale.md)
 - Rows have **no hairline** (any list, decision 0120), and month groups are 32px apart. The title is 17/400. The month head is `heading` with no rule; its income total is `income` green with a `+`.
 - Tapping a row opens **10 Transaction detail**.
 
-### 7.9 Change pill
-- Shows the month-over-month change: **▼ or ▲ followed by the absolute %**, in `bad`/`good` at weight 600, inside a fully round pill.
-- **On the band** the pill has a solid `band-chip` background (white in light mode, `#1E1929` in dark mode) so red and green stay readable. **On the page** it uses a `tint` background.
-- It is followed by a `label` explaining the comparison ("מחודש שעבר").
-- Screen readers **MUST** get words, e.g. `aria-label="ירידה של 10% מהחודש שעבר"`.
-- For changes that round to 0%, and when there is no comparison data, see §8.4 and §11.3.
-
-### 7.10 Switch and checkbox
-- **Switch:** 46×28, `control-off` track when off, `accent` when on. Knob: `knob` when off, `knob-on` when on (dark mode: a dark knob on the light violet track), faint shadow. **Checkbox:** 24px, 7px radius, `accent` fill with a ✓ when checked, and a 1.5px `control-border` border when unchecked. Disabled controls are at 45% opacity.
-- Use a switch for settings that apply immediately. Use a checkbox for selecting items in a list (e.g. onboarding projects).
-- The whole row is the control. Use `role="switch"` with `aria-checked`, and the row's text as its label. The hint under the label **SHOULD** state the current effect ("כבוי · מציג רווח לפני כלליות"), so the state doesn't depend on colour.
-- **The overhead switch ("אחרי חלק בכלליות", i.e. profit after a share of overheads) is OFF by default** everywhere: on the Project screen and as the default in Settings ("רווח אחרי חלק בכלליות"). You **MUST NOT** turn it on by default or remember it on without the user choosing it.
-
-### 7.11 Text inputs
-- The **label goes above** the field (`hint` size in `text-secondary`, 6px gap) and is always visible. **A placeholder never replaces the label.**
-- The field is 52px high, 12px radius, `surface` background, 1px `control-border` border (focused: 2px `accent`), 14px side padding and `body` text. Placeholders are `text-muted` at weight 400 and start with "למשל:".
-
-| State | Look |
-|---|---|
-| Default | As above |
-| Focused | `accent` border |
-| Filled | As default, with the value |
-| Error | `error` border, plus a `hint`-size message in `error` below it that says how to fix the problem ("מספר קצר מדי – 9 ספרות") |
-| Disabled | `disabled-bg`, no border, `disabled-text` |
-
-- Validate on blur and on submit, **not on every keystroke**. Link the message with `aria-describedby`, and set `aria-invalid="true"`.
-- Use the right `inputmode`, `autocomplete` and `enterkeyhint`. Amounts use `inputmode="decimal"` with the ₪ shown as a prefix inside the field. Numbers are LTR (see §6.3).
-
-### 7.12 Search
-- A `surface` field with a 1px `control-border` border (≥ 3:1), 46px high, a search icon on the start side, a `text-muted` placeholder, and a 1.5px `accent` inset ring while it is focused or being typed in.
-- Filter as the user types, debounced by about 150ms. Show a ✕ clear button once there is text (`aria-label="ניקוי"`).
-- With no results, use the empty state from `es-06-search-none`: "לא מצאנו ״<query>״", a hint about what can be searched, and a "ניקוי החיפוש" button.
-
-### 7.13 Bottom sheet
-See the template in §3.3.
-- Use it for short tasks and pickers: Add, change assignment, mark as paid, period.
-- It has one primary action. Use `role="dialog"`, `aria-modal="true"` and `aria-labelledby` pointing at the title.
-- Focus moves into the sheet when it opens, stays trapped inside while it is open, and returns to the trigger when it closes.
-- Don't stack sheets. If a second sheet is needed, the first one closes, or the task becomes a full-screen screen.
-
-### 7.14 Toast with undo
-- A single-line confirmation **above the tab bar**, 12px above it. It is `toast-bg`/`toast-text`, which inverts per mode (dark pill in light mode, light pill in dark mode). It has a 14px radius and 12×16 padding, and uses `label` text.
-  - A ✓ icon sits on the start side and an **undo** link ("ביטול", underlined, weight 600) on the end side.
-  - The error variant uses an info icon in `toast-bad`, with a "שוב" link that retries.
-- It stays for **4 seconds**, one toast at a time (a new toast replaces the old one). The timer **MUST** pause while the toast has focus or is being touched.
-- Use `role="status"` (polite).
-- Every action that shows a toast **MUST** be undoable for those 4 seconds: approve, move, delete, mark as paid. Commit the action on the server optimistically, and revert it if the user taps undo.
-- Don't use a toast for errors that block the user (use an inline error), or for long messages.
-
-### 7.15 Empty state
+### 7.24 Empty state
 See §8.2.
 
-### 7.16 Link rows and text links
+### 7.25 Link rows and text links
 - "לכל הפרויקטים ‹", "תנועות אחרונות ‹": `label` text with a forward chevron.
   - Use `accent-text` for the main next step.
   - Use `text-secondary` (`.lnk.q`) for quiet "see all" links.
 
-### 7.17 Date picker
+### 7.26 Date picker
 Screens: `15a-date-field` (the field), `15b-date-single`, `15c-date-range`. Board: `ds-8-pickers-sheets`.
-- **The field:** a normal text input (§7.11) showing `dd/mm/yyyy` (LTR number, §6.3) with a calendar icon on the end side. Tapping anywhere on it opens the sheet. Don't allow free typing on phones.
+- **The field:** a normal text input (§7.13) showing `dd/mm/yyyy` (LTR number, §6.3) with a calendar icon on the end side. Tapping anywhere on it opens the sheet. Don't allow free typing on phones.
 - **The sheet** (§3.3): title ("תאריך ההוצאה"), quick chips, then the month header, then the grid, then one primary button at the bottom ("בחירה").
-  - Quick chips (choice style, §7.3): **single** היום / אתמול. **Range** החודש / חודש קודם / מתחילת השנה. A chip fills the value, and it's highlighted only while the value matches it.
+  - Quick chips (choice style, §7.7): **single** היום / אתמול. **Range** החודש / חודש קודם / מתחילת השנה. A chip fills the value, and it's highlighted only while the value matches it.
   - Month header: "ספטמבר 2026" (Hebrew month names) between ‹ › buttons, each 44px. In RTL the *previous* month is the right arrow. *Next* is disabled in the current month.
   - Grid: **Sunday first, on the right**. Weekday row א׳ ב׳ ג׳ ד׳ ה׳ ו׳ ש׳ in `hint` / `text-muted`. Cells are 44px high with 40px circles and tabular digits.
   - Day states: **today** has a 1.5px `accent-text` ring with `accent-text` digits. **Selected** has an `accent` fill with `on-accent` digits. **Range** start and end are `accent` circles, with a `tint` strip between them (the start connects towards the end, using logical `inset-inline`). **Future** days use `disabled-text` and are not tappable (transactions and reports can't be in the future).
   - Single: under the grid, the chosen date in words ("יום שני, 21 בספטמבר 2026"). Range: two small fields above the grid ("מתאריך" / "עד תאריך"); the one being set is focused. The button names the result ("הצגת 12 ימים").
 - **Accessibility:** use `role="grid"`. Each day has `aria-label="יום שני 21 בספטמבר 2026"`, plus `aria-selected` and `aria-current="date"` for today. Arrow keys move by day and PageUp/PageDown by month, mirrored for RTL.
 
-### 7.18 Period sheet
+### 7.27 Period sheet
 Screen: `16-period-sheet`. It opens from the band's period pill.
 - Option rows show the name and its dates in `hint` ("ספטמבר 2026"), with a radio on the end side. The radio is a 22px circle with a `control-border` outline, or an `accent` fill with a ✓ when selected.
 - Tapping an option **applies it and closes the sheet**, so there is no confirm button. The last row, "טווח מותאם" (calendar icon and chevron), closes this sheet and opens the range picker (don't stack sheets).
-- After a change, every figure updates and the hero label names the period (§7.5).
+- After a change, every figure updates and the hero label names the period (§7.20).
 
-### 7.19 Confirmation sheet
+### 7.28 Confirmation sheet
 Screens: `20-confirm-delete`, `21-confirm-archive`, `22a-merge-pick` → `22b-merge-confirm`, `23-confirm-hide`.
 - A short bottom sheet: the **question as the title** ("למחוק את ההוצאה?"), the item as the subtitle, **one line about the consequence** (and whether it can be undone), then the primary action and a quiet "ביטול" (ghost, `text-secondary`).
-- **Destructive** (delete): `bad-tint` fill with `bad` text and a trash icon (`.btn.dngs`), never a solid red block. After confirming, show the undo toast (§7.14).
+- **Destructive** (delete): `bad-tint` fill with `bad` text and a trash icon (`.btn.dngs`), never a solid red block. After confirming, show the undo toast (§7.12).
 - **Reversible** (archive, hide): the primary accent button. The line says how to get the item back ("אפשר להחזיר מ״מוסתרות״").
-- **Multi-step** (merge a category): step 1 picks the target from option rows (§7.18 radios), with "שלב 1 מתוך 2". Step 2 shows *from → to* chips, "21 תנועות יעברו ל״ציוד והשכרה״" and two ✓ lines about what happens next, then "מיזוג" and "חזרה".
+- **Multi-step** (merge a category): step 1 picks the target from option rows (§7.27 radios), with "שלב 1 מתוך 2". Step 2 shows *from → to* chips, "21 תנועות יעברו ל״ציוד והשכרה״" and two ✓ lines about what happens next, then "מיזוג" and "חזרה".
 
-### 7.20 Error pattern
+### 7.29 Error pattern
 Screens: `er-01-bank-file`, `er-02-invoice-blurry`, `er-03-google-cancelled`, `er-04-google-failed`, `er-05-save-failed`.
 - **Tone:** say what happened, that nothing was lost, and give **one** action. No red blocks. Red (`error`) appears only on a field border and its one-line message, or on the icon of a note.
 - **Wrong file** (not a Poalim Excel): full-screen empty-state layout. The file name goes in an outlined chip (`<bdi>`), the title is "זה לא דוח מפועלים", one line names the expected file, the primary action is "בחירת קובץ אחר", plus a quiet help link.
 - **Unreadable photo:** a blurred thumbnail, "החשבונית לא ברורה", one tip (light, flat, filling the frame), a "צילום מחדש" primary, and a quiet "הזנה ידנית" link.
-- **Google sign-in** (same layout as 09a, with a note card above "כניסה או הרשמה"; the Google button itself is the retry, §7.24):
+- **Google sign-in** (same layout as 09a, with a note card above "כניסה או הרשמה"; the Google button itself is the retry, §7.33):
   - *Cancelled* (`er-03`, the user closed the Google window, `popup_closed` / user cancel): a neutral `tint` note with an `accent-text` info icon, "הכניסה לא הושלמה" / "החלון של Google נסגר. אפשר לנסות שוב." It is not treated as an error.
   - *Failed* (`er-04`, no connection, Google error, or the account couldn't be verified): the same note with the icon in `bad` (4.8:1 / 6.6:1 on tint) and text in `text` / `text-secondary`, "לא הצלחנו להתחבר" / one line suggesting checking the connection, plus a quiet "צריך עזרה בכניסה?" link.
   - Never show Google's error codes. Keep the note until the next attempt starts.
 - **Save failed:** the form keeps every value, and the error toast shows above the button ("לא נשמר – אין חיבור" · "ניסיון חוזר"), with the icon in `toast-bad`.
 
-### 7.21 Install prompt (PWA)
+### 7.30 Install prompt (PWA)
 Screens: `17a-install-android`, `17b-install-iphone`.
 - Offer it after the first successful report, **not on first launch**, and at most once a week after "לא עכשיו".
-- **Android / Chrome:** the S1 app icon (white Rubik F on band violet, 72px, 18px radius; §7.23), "התקנת Flow", one line, three benefit rows, then "התקנה" (calls the saved `beforeinstallprompt`) and a quiet "לא עכשיו".
+- **Android / Chrome:** the S1 app icon (white Rubik F on band violet, 72px, 18px radius; §7.32), "התקנת Flow", one line, three benefit rows, then "התקנה" (calls the saved `beforeinstallprompt`) and a quiet "לא עכשיו".
 - **iPhone / Safari** (no install API): three numbered steps, each with the Safari icon in a `tint` tile (share, then add-square), a hint pointing down at the Safari toolbar, and "הבנתי". Detect standalone mode and never show the prompt inside the installed app.
 
-### 7.22 Overhead breakdown (switch on)
+### 7.31 Overhead breakdown (switch on)
 Screens: `18-home-overhead-on`, `19-project-overhead-on`.
 - **Project:** the band hero becomes "רווח אחרי כלליות · רווחיות 16%" (display 36). Under the switch ("פועל · לפי חלק הפרויקט בהכנסות"), an "איך מחושב" section shows three rows: before overhead, the share (with "21% מההכנסות של כל הפרויקטים" as a hint and a minus sign), and the semibold total.
 - **Home:** the hero stays the company's net profit. The band's two small figures become "לפני כלליות" and "כלליות −₪…". Project rows show profit after the share, with a quiet "אחרי חלק בכלליות" beside the section title.
 - The share is `overhead × project income ÷ income of all active projects` for the selected period. Round only for display.
 
-
-### 7.23 Logo and app icon
+### 7.32 Logo and app icon
 - **Wordmark:**
   - Set as live text "Flow" in `.t-wordmark` (Rubik 700, 22/1.2, letter-spacing −0.01em) with `dir="ltr"`. The coloured-band header uses `color: var(--color-on-band)`. Everywhere else, use `color: var(--color-logo)` (#7B3FE4 light, #B894FF dark).
   - Where live text isn't possible (splash, emails, docs, marketing), use the outline SVGs in `design/logo/wordmark/`. **Don't** retype the wordmark in another weight or font, and don't use `accent-text` for it.
@@ -607,7 +663,7 @@ Screens: `18-home-overhead-on`, `19-project-overhead-on`.
   - **Don't** redraw the F, add effects, or scale the ≤48px PNGs up. The small PNGs are pixel-snapped.
 - Clear space, minimum sizes and the list of don'ts are in `design/logo/LOGO.md` and `flow-logo-usage.png`. Decision 0031.
 
-### 7.24 Sign in with Google
+### 7.33 Sign in with Google
 Screens: `09a-onboarding` (sign-in), `er-03-google-cancelled`, `er-04-google-failed`; board 8. Google is the **only** sign-in method in the POC (no phone number, no one-time code, no password).
 - **Layout (09a):** status bar only (no top bar, no progress row). The wordmark (44px, `logo`) and one value line ("הרווח וההפסד של העסק, בלי אקסלים") sit in the upper third. The bottom block holds "כניסה או הרשמה" (title-2), "בלי סיסמה – עם חשבון Google שכבר יש לך", the button, and a hint-size privacy line: "נקבל מ־Google רק שם ואימייל. אין לנו גישה לתיבת הדואר." with underlined links to the terms and the privacy policy.
 - **Button (follow Google's sign-in branding guidelines):**
@@ -617,29 +673,7 @@ Screens: `09a-onboarding` (sign-in), `er-03-google-cancelled`, `er-04-google-fai
   - Prefer Google Identity Services' rendered button (`google.accounts.id.renderButton` with `theme:"outline"`, `shape:"pill"`, `text:"continue_with"`, `locale:"he"`, `width` = the column width). Use the custom HTML button above only if the rendered one can't fit, keeping the exact spec.
 - **States:** default; pressed = 12% #1F1F1F overlay; focus = the app focus ring (2px `bg` gap + 2px `focus`); loading while the Google window is open = spinner in place of the G and "מתחברים…", button not tappable; disabled (offline before tapping) = 38% fill and text, 12% stroke.
 - **After sign-in:** a new account goes to 09b (company details). A returning account goes straight to Home. Use the Google name only as a greeting ("בוקר טוב, אלירן").
-- **Errors:** see §7.20 (`er-03`, `er-04`).
-
-
-### 7.25 Counted-in row and sheet (spec; built in FLOW-366 and FLOW-513)
-FLOW-363 (4) wrote this down. The code waits for its first callers, the transaction page (FLOW-366, the line) and the category sheet (FLOW-513), so no `counted-in` module exists yet.
-- **Row (line):** an IconRow (`ui/icon-row.tsx`) with `ChartIcon`, label "נספר ב" and a chevron. It opens the sheet. Value copy: "רווח ותזרים" (both on), "תזרים בלבד · <reason>", "רווח בלבד · לא בתזרים", or "לא נספר". The value is `--color-text` when both are on, otherwise `--color-accent-text`. [0170](../../docs/decisions/0170-pnl-follows-company-basis.md).
-- **Row (category):** label "נספרת ב", on `--color-raised`, radius 16, min-height 60, padding 12 14, value 17/400. Copy: "רווח ותזרים", "תזרים בלבד · הוצאה מהרווח", "תזרים · שיפוץ, לא ברווח החודשי", or "לא נספרת".
-- **Line sheet:** surface, padding 10 16 28, gap 10. Title "איפה השורה נספרת" (sheet title role, 20/600). ✕ is a 44px target with a 22px glyph in text-secondary. Two switch rows, each on `--color-raised`, radius 14, min-height 64, padding 10 14, gap 12: "נספר ברווח" (sub: the P&L reason) and "נספר בתזרים" (sub "כסף שזז בבנק. כבוי רק להעברות בין החשבונות שלך"). Title 16/400 (no role; body 17 or btn-2 16/500 are the nearest), sub 12 (caption 13 is the nearest). Toggle 46×28 track, 22px white knob, on `--color-accent`, off the app's switch-off token, knob 150ms. Footer 13 in `--color-text-muted`: "רק השורה הזו. הקטגוריה לא משתנה."
-- **Line toasts:** "הוצא מהרווח", "נספר ברווח", "הוצא מהתזרים", "נספר בתזרים".
-- **Category sheet:** title "איפה הקטגוריה נספרת", sub "חל על כל N התנועות של <name>". Three switches, "נספרת ברווח", "נספרת בתזרים" and "נספרת בשיפוץ" (expense only). Off track `#3A3350` (no token). The knob side is opposite to the line sheet's (open question 12 in FLOW-363).
-- **Decided:** switches, not three choices, because the board frames in use draw switches (0170). The row's copy and the toasts come from the board's Lines and Settings frames.
-
-### 7.26 Connection page (spec; built in FLOW-512)
-FLOW-363 (4) wrote this down. The page is `connection-page.tsx`, built in FLOW-512 for SUMIT, Mercury and MCP. It composes the page header, StepList (`ui-install-num`), the problem box, a TextField with show and hide, a CodeField, the primary and secondary Button, and facts rows.
-- **Page and header:** padding 12 16 28 (the app's side is 20). Back is 16/500 in `--color-accent-text` with a 44px target and a 20px chevron. The title is 32/600 with line-height 1.2. The subtitle is 15 in `--color-text-muted`. Content gap 14.
-- **Steps:** the section head is 15/500 in `--color-text-secondary`. The card is surface, radius 16 (the app's card radius is 20), padding 16, gap 10. A step is 15 with line-height 1.5. The number circle is 22, radius 11, tint background, accent text, 12/500 (the board draws 24 and 13/500).
-- **Problem box:** padding 14, radius 14, tint background, 15 with line-height 1.5. The copy comes from the connection's broken text, as `connect-sheet.tsx`'s authReconnect lead did.
-- **Show and hide:** "הצגה" and "הסתרה", 36px high, padding-inline 10, radius 10, tint, accent text, 14/500 (`--type-chip`; the board's 13/500 has no role).
-- **Copy:** `CodeField` with a "העתקה" pill (§7.11). The pill is 36 high in a 44px hit area.
-- **Connect button:** the primary Button, 52px pill. Disabled uses `--color-disabled-bg` and `--color-disabled-text` (the board's #6A627A has no token). Label "מתחבר…" while busy, otherwise "חיבור מחדש" or "חיבור".
-- **Connected:** facts rows min-height 44, 15 text, label in text-secondary, line divider, card padding 6 16. A secondary Button, 52px, outline `--color-outline-secondary`. "החלפת מפתח API" is 15/400 in accent text. "ניתוק" is 15/400 in `--color-signal-soft`.
-- **Motion:** push 280 in and 220 out (the plan wins over the board's 300 and 260). Page enter is 280 with an 8px rise and a 40ms stagger. Press is opacity .72 and scale .985. Reduced motion turns everything off.
-- **Values with no token or role (open question 10 in FLOW-363):** #3A3350 (secondary border and category switch off), #6A627A (disabled text), the section head 15/500, the step number 12/500, the side padding 16, and the card radius 16. They are recorded in the design log, not in tokens.
+- **Errors:** see §7.29 (`er-03`, `er-04`).
 
 ---
 
@@ -666,7 +700,7 @@ Each screen spec and PR **MUST** show all of these states in **both light and da
 - Use `aria-busy="true"` on the loading region, with a visually hidden "טוען…".
 
 ### 8.2 Empty
-- Use the empty-state layout from `ds-5`:
+- Use the empty-state layout from the Design canvas (Design guide):
   1. A **muted icon** (40–44px, `text-muted`).
   2. A **short title** (`title-3`).
   3. **One line** of text (`hint`).
@@ -704,8 +738,8 @@ The button is optional when there is truly nothing to do (Unpaid). Otherwise the
 - **While offline** (the app shell and last data MUST work offline through the service worker):
   - Disable actions that need the network (disabled style, with the reason given on tap).
   - Queue approvals if the backend supports it. The toast then says "יישלח כשהחיבור יחזור".
-- **Action failed:** the button leaves its busy state and an error toast shows ("לא נשמר", with "שוב"), as on `ds-5`. Form errors show at the field (§7.11). Destructive actions that fail restore the item.
-- **Upload failed or unreadable file:** use the error pattern (§7.20): `er-01-bank-file` for a wrong or non-Poalim file, `er-02-invoice-blurry` for a photo that can't be read. Google sign-in cancelled or failed: `er-03` / `er-04`. Save failed: `er-05`.
+- **Action failed:** the button leaves its busy state and an error toast shows ("לא נשמר", with "שוב"), as on the Design canvas. Form errors show at the field (§7.13). Destructive actions that fail restore the item.
+- **Upload failed or unreadable file:** use the error pattern (§7.29): `er-01-bank-file` for a wrong or non-Poalim file, `er-02-invoice-blurry` for a photo that can't be read. Google sign-in cancelled or failed: `er-03` / `er-04`. Save failed: `er-05`.
 
 ### 8.4 Partial data
 Screens **MUST** stay honest and calm when data is incomplete:
@@ -729,7 +763,7 @@ Every interactive element **MUST** implement all of these:
 
 | State | Look |
 |---|---|
-| **Pressed** | `:active` styles from `ds-4`/`ds-5` (`accent-pressed`, `tint-pressed`, or a `tint` wash on rows). Instant on touch, with a 100ms transition. |
+| **Pressed** | `:active` styles from the Design canvas (`accent-pressed`, `tint-pressed`, or a `tint` wash on rows). Instant on touch, with a 100ms transition. |
 | **Disabled** | `disabled-bg` / `disabled-text`. Set `disabled` or `aria-disabled`. Where the reason isn't obvious, give it in a hint. |
 | **Focus** | A visible focus ring on `:focus-visible` (§9) |
 | **Selected** | As defined per component (chip, segment, tab) |
@@ -761,7 +795,7 @@ Remove the grey tap highlight with `-webkit-tap-highlight-color: transparent` **
   - Errors: message plus red border.
   - Selected: check mark plus fill.
   - Switch state: stated in its hint.
-- **Structure:** one `<h1>` per screen (the page title, or the band's main label on Home). Section heads are `<h2>`. Lists are `<ul>` or `role="list"`. The tab bar is `<nav>` with `aria-current`. Sheets are dialogs (§7.13). Toasts use `role="status"`.
+- **Structure:** one `<h1>` per screen (the page title, or the band's main label on Home). Section heads are `<h2>`. Lists are `<ul>` or `role="list"`. The tab bar is `<nav>` with `aria-current`. Sheets are dialogs (§7.11). Toasts use `role="status"`.
 - **Amounts for screen readers:** amounts read correctly as "₪10,000". Losses **SHOULD** add visually hidden context ("הפסד של").
 - **Targets and zoom:**
   - Targets are at least 44×44 (§4).
@@ -942,18 +976,15 @@ All paths are relative to `/workspace/wireframes-pnl/final/`. Every screen exist
 | `more.py`, `render-more.sh` | Screens 15–23 and the er- errors, plus `overview-more` |
 | `render.sh` | Renders the screen PNGs |
 | `render-logo.sh` | Re-renders only the screens touched by the logo decision (09a, 09e, 13, 17a/b, overviews, boards 1–8) |
-| `design/logo/` (repo) | Final logo package: wordmark, S1 icon, PWA icons, favicon, usage board, `LOGO.md` (see §7.23) |
+| `design/logo/` (repo) | Final logo package: wordmark, S1 icon, PWA icons, favicon, usage board, `LOGO.md` (see §7.32) |
 
 **Boards** (`-light` / `-dark`, `.png` and `.html`)
 
 | Board | Content | Use it for |
 |---|---|---|
-| `ds-4-controls-*` | Buttons, FAB, period pill, chips, segmented tabs, switch and checkbox, inputs, search, all with their states | §7 |
-| `ds-5-content-*` | Pending card, project row, transaction row, change pill, tab bar, toast, bottom sheet, empty state | §7, §8 |
-| `ds-6-band-*` | The top band in light and dark, with notes | §3.2 |
 | `ds-7-empty-loading-*` | **Empty and loading states** board | §8 |
-| `ds-8-pickers-sheets-*` | Date picker, period sheet, confirmation sheet, error pattern, install prompt, overhead breakdown, fixed switch | §7.17–7.22 |
-| `overview-more-*` | All screens from 15 onwards, plus the updated 10, in one grid | §7.17–7.22 |
+| `ds-8-pickers-sheets-*` | Date picker, period sheet, confirmation sheet, error pattern, install prompt, overhead breakdown, fixed switch | §7.9, §7.26–7.31 |
+| `overview-more-*` | All screens from 15 onwards, plus the updated 10, in one grid | §7.26–7.31 |
 | `overview-states-*` | All empty and loading screens in one grid | §8 |
 
 **Empty states** (`es-*`, light and dark, `.html` + `.png`)
@@ -1049,4 +1080,4 @@ Note: `flow.py` itself says its screens are an early pass. The **boards and toke
    - *Interim:* `hint` at 400.
 2. ~~Non-text contrast~~ **Resolved:** `control-off` / `control-border` are #8F86A3 / #736A8C (≥ 3:1), and `knob-on` fixes the dark ON switch.
 3. ~~Derived colours~~ **Resolved:** they are in `implementation-tokens.css`. Motion values stay guide-defined in the CSS.
-4. ~~Period sheet and custom range~~ **Resolved:** `16-period-sheet`, `15b-date-single`, `15c-date-range` (§7.17–7.18).
+4. ~~Period sheet and custom range~~ **Resolved:** `16-period-sheet`, `15b-date-single`, `15c-date-range` (§7.26–7.27).
