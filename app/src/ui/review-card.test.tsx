@@ -134,7 +134,7 @@ describe("ReviewCard FLOW-327 additions", () => {
   it("shows Jev's no-project answer on the empty project row with הצעת Jev (FLOW-703)", () => {
     render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={{ category: "חומרים", projectNoneJev: true }} onProject={() => undefined} onCategory={() => undefined} />);
     const row = screen.getByRole("button", { name: `פרויקט: ${JEV_NO_PROJECT}, הצעת Jev` });
-    expect(row.querySelector(".ui-review-field-hint")).toHaveTextContent("הצעה");
+    expect(row.querySelector(".ui-review-field-hint")).toHaveTextContent("הצעת Jev");
     expect(row.querySelector(".ui-review-field-missing")).toBeNull();
     expect(JEV_NO_PROJECT).toBe("תקורה · ללא פרויקט");
   });
@@ -298,7 +298,8 @@ describe("ReviewCard הצעת Jev", () => {
     render(jevCard({ ...both, projectJev: true }));
     expect(screen.getByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעה" })).toBeInTheDocument();
-    expect(screen.getAllByText("הצעה")).toHaveLength(2);
+    expect(screen.getAllByText("הצעת Jev")).toHaveLength(1);
+    expect(screen.getAllByText("הצעה")).toHaveLength(1);
   });
 
   it("shows הצעת Jev on the category only", () => {
@@ -307,12 +308,12 @@ describe("ReviewCard הצעת Jev", () => {
     expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
   });
 
-  it("shows the grey הצעה on both rows, after the value and before the chevron", () => {
+  it("shows the הצעת Jev pill on both rows, after the value and before the chevron", () => {
     render(jevCard({ ...both, projectJev: true, categoryJev: true }));
     const hints = document.querySelectorAll(".ui-review-field-hint");
     expect(hints).toHaveLength(2);
     for (const hint of hints) {
-      expect(hint).toHaveTextContent("הצעה");
+      expect(hint).toHaveTextContent("הצעת Jev");
       const row = hint.closest("button");
       const chevron = row?.querySelector("svg");
       expect(chevron).not.toBeNull();
@@ -338,7 +339,7 @@ describe("ReviewCard הצעת Jev", () => {
   it("reads the words on a static row", () => {
     render(jevCard({ ...both, projectJev: true }, false));
     const row = document.querySelector(".ui-review-field");
-    expect(row).toHaveTextContent("הצעה");
+    expect(row).toHaveTextContent("הצעת Jev");
     expect(row).toHaveTextContent("וילה רעננה");
   });
 
@@ -413,12 +414,12 @@ describe("ReviewCard Jev fill label (FLOW-702)", () => {
     expect(container.querySelector(".ui-review-filled")).toBeNull();
   });
 
-  it("shows a held flagged line with its flag, the grey הצעה and no fill (plan item 3)", () => {
+  it("shows a held flagged line with its flag, the הצעת Jev pill and no fill (plan item 3)", () => {
     // The anomaly gate kept the auto job off this line, so no jev_prefills row and no jevFilled.
     const loud = reviewFlagView([{ transaction_id: "t", kind: "duplicate", jev_score: 0.8, other_doc_date: "2026-10-03" }]);
     const { container } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} flag={loud} onProject={() => undefined} onCategory={() => undefined} />);
     expect(container.querySelector(".ui-review-flag")).not.toBeNull();
-    expect(screen.getAllByText("הצעה").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("הצעת Jev").length).toBeGreaterThan(0);
     expect(screen.queryByText(JEV_FILLED)).toBeNull();
     expect(screen.queryByRole("button", { name: /ביטול/ })).toBeNull();
   });

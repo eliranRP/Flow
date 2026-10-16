@@ -6,6 +6,7 @@ import { methodLabel, methodSourceName, type TxnMeta } from "../txn-meta";
 import { MethodIcon } from "./bank-details";
 import { AlertIcon, CheckIcon, ChevronDownIcon, ChevronIcon, NoteIcon, SplitIcon } from "./icons";
 import { ListRow } from "./list-row";
+import { JevTag } from "./suggest-tag";
 import { Skeleton } from "./skeleton";
 import { TextLink } from "./text-link";
 
@@ -450,7 +451,7 @@ function ReviewPanelLine({
         <span className="ui-review-field-label">{line.label}</span>
         <span className={missing ? "ui-review-field-value ui-review-field-missing" : "ui-review-field-value"}>{line.value}</span>
       </span>
-      {hint ? <span className="ui-review-field-hint">{hint}</span> : null}
+      {line.jev ? <span className="ui-review-field-hint"><JevTag /></span> : hint ? <span className="ui-review-field-hint">{hint}</span> : null}
       {line.onOpen ? <ChevronIcon size={16} /> : null}
     </>
   );
