@@ -2,6 +2,8 @@
 
 export type ToastInput = {
   message: string;
+  /** Overrides the default time on screen, in ms (the theme undo is 3 s, the board's). */
+  durationMs?: number;
   tone?: "ok" | "bad" | "info";
   action?: string;
   onAction?: () => void;
@@ -18,6 +20,7 @@ const BAD_MS = 4000;
 export const SWIPE_PX = 48;
 
 export function toastMs(input: ToastInput): number {
+  if (input.durationMs) return input.durationMs;
   if (input.action && input.onAction) return ACTION_MS;
   if (input.tone === "bad" || input.tone === "info") return BAD_MS;
   return OK_MS;

@@ -42,6 +42,7 @@ function useSheetDrawer(): SheetDrawer | null {
 
 export function SheetSurface({
   title,
+  subtitle,
   children,
   hint,
   action,
@@ -54,6 +55,8 @@ export function SheetSurface({
   busy = false,
 }: {
   title: string;
+  /** Under the title, in the title's column (FLOW-372: the board's "רק בטלפון הזה"). */
+  subtitle?: string;
   children?: ReactNode;
   hint?: string;
   /** Stays pinned under the scrolling body. */
@@ -69,7 +72,7 @@ export function SheetSurface({
   busy?: boolean;
 }) {
   const Title = drawer ? sheetDrawer?.Drawer.Title : undefined;
-  const heading = Title ? (
+  const heading0 = Title ? (
     <Title ref={titleRef} tabIndex={-1} className="ui-focus-title t-sheet ui-sheet-title" data-clip-ok="">
       {title}
     </Title>
@@ -78,6 +81,13 @@ export function SheetSurface({
       {title}
     </h2>
   );
+  // A sheet without a subtitle keeps its one-title head; with one, the title and subtitle share a column.
+  const heading = subtitle ? (
+    <div className="ui-sheet-titles">
+      {heading0}
+      <span className="ui-sheet-subtitle t-hint">{subtitle}</span>
+    </div>
+  ) : heading0;
   return (
     <div className="ui-sheet-surface">
       <div className="ui-sheet-grab" />
@@ -128,6 +138,7 @@ export function Sheet({
   open: wanted,
   onOpenChange,
   title,
+  subtitle,
   children,
   hint,
   action,
@@ -148,6 +159,8 @@ export function Sheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
+  /** Under the title, in the title's column. Only a choice sheet has one (FLOW-372). */
+  subtitle?: string;
   children?: ReactNode;
   hint?: string;
   action?: ReactNode;
@@ -447,6 +460,7 @@ export function Sheet({
         >
           <SheetSurface
             title={title}
+            subtitle={subtitle}
             hint={hint}
             action={action}
             leading={leading}

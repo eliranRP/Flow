@@ -17,12 +17,15 @@ import { CompanyCurrencySheet } from "./company-currency-sheet";
 import { CompanyBasisSheet } from "./company-basis-sheet";
 import { useCompanyCurrencyQuery } from "../company-currency";
 import { basisChoiceLabel, BASIS_TITLE, currencyChoiceLabel, type BasisChoice } from "../ui/company-choices";
+import { themeChoiceLabel, THEME_TITLE } from "../ui/theme-choices";
+import { readThemeChoice, writeThemeChoice, type ThemeChoice } from "../theme-store";
+import { ThemeSheet } from "./theme-sheet";
 import { bindJevConnectorScope, clearJevConnectorFlag } from "./jev-review";
 import { JEV_DEFAULT, jevLocked, jevSwitchOn, useJevIntegrationQuery, useJevKeyStatusQuery, type JevCardState } from "./jev-settings";
 import { LoanSettingsSection, type LoanCurrency, type LoanProjectChoice, type LoanRowsSample } from "./loan-setup";
 import { useSetupSettingsEntry } from "../setup/settings-row";
 import { useSheetHistory } from "../ui/back";
-import { AlertIcon, BellIcon, BuildingIcon, CalendarIcon, CoinIcon, DownloadIcon, GoogleIcon, LoanIcon, LogoutIcon, PeopleIcon, PlugIcon, SplitIcon, TagIcon } from "../ui/icons";
+import { AlertIcon, BellIcon, BuildingIcon, CalendarIcon, CoinIcon, DownloadIcon, GoogleIcon, LoanIcon, LogoutIcon, PeopleIcon, PlugIcon, SplitIcon, TagIcon, ThemeIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
@@ -187,6 +190,15 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
   const currencyQuery = useCompanyCurrencyQuery(liveCompany);
   const [basisOpen, setBasisOpen] = useState(false);
   const basisRowRef = useRef<HTMLButtonElement>(null);
+  // FLOW-372: the appearance is this phone's, saved per device (Settings › מראה).
+  const [theme, setTheme] = useState<ThemeChoice>(readThemeChoice);
+  const [themeOpen, setThemeOpen] = useState(false);
+  const themeRowRef = useRef<HTMLButtonElement>(null);
+  const pickTheme = (next: ThemeChoice) => {
+    writeThemeChoice(next);
+    setTheme(next);
+  };
+  const themeHint = themeChoiceLabel(theme);
   const [overheadOn, setOverheadOn] = useState(false);
   const wantedOverhead = useRef(false);
   useEffect(() => {
@@ -417,6 +429,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
           returnFocusRef={basisRowRef}
         />
       ) : null}
+      <ThemeSheet open={themeOpen} onOpenChange={setThemeOpen} value={theme} onChange={pickTheme} returnFocusRef={themeRowRef} />
       {!noCompany && !holdOwner && namedBusiness !== "" ? (
         <RenameCompanySheet
           open={renameOpen}
@@ -485,37 +498,44 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
           </List>
         </>
       )}
-      {showInstall || showSignOut || (setupEntry != null && !holdOwner) ? (
-        <>
-          <SectionHead title="עוד" />
-          <List>
-            {setupEntry && !holdOwner ? (
-              <ListRow
-                variant="item"
-                href={setupEntry.href}
-                title="הגדרה ראשונה"
-                hint={<><bdi className="ui-num" dir="ltr">{String(setupEntry.done)}</bdi> מתוך <bdi className="ui-num" dir="ltr">5</bdi></>}
-                describeHint
-                chevron
-              />
-            ) : null}
-            {showInstall ? (
-              <ListRow variant="item" href={`/install${search}`} title="התקנה למסך הבית" hint="נפתח כמו אפליקציה" icon={<DownloadIcon />} chevron />
-            ) : null}
-            {showSignOut ? (
-              <ListRow
-                variant="danger"
-                title="התנתקות"
-                icon={<LogoutIcon />}
-                busy={signOut.isPending}
-                onClick={() => {
-                  signOut.mutate();
-                }}
-              />
-            ) : null}
-          </List>
-        </>
-      ) : null}
+      {/* FLOW-372: the card (and its theme row, before the install row) shows on every state. The board's card has no heading, so the "עוד" heading keeps its own condition. */}
+      {showInstall || showSignOut || (setupEntry != null && !holdOwner) ? <SectionHead title="עוד" /> : null}
+      <List>
+        {setupEntry && !holdOwner ? (
+          <ListRow
+            variant="item"
+            href={setupEntry.href}
+            title="הגדרה ראשונה"
+            hint={<><bdi className="ui-num" dir="ltr">{String(setupEntry.done)}</bdi> מתוך <bdi className="ui-num" dir="ltr">5</bdi></>}
+            describeHint
+            chevron
+          />
+        ) : null}
+        <ListRow
+          variant="button"
+          title={THEME_TITLE}
+          hint={themeHint}
+          label={`${THEME_TITLE}: ${themeHint}`}
+          icon={<ThemeIcon />}
+          chevron
+          buttonRef={themeRowRef}
+          onClick={() => { setThemeOpen(true); }}
+        />
+        {showInstall ? (
+          <ListRow variant="item" href={`/install${search}`} title="התקנה למסך הבית" hint="נפתח כמו אפליקציה" icon={<DownloadIcon />} chevron />
+        ) : null}
+        {showSignOut ? (
+          <ListRow
+            variant="danger"
+            title="התנתקות"
+            icon={<LogoutIcon />}
+            busy={signOut.isPending}
+            onClick={() => {
+              signOut.mutate();
+            }}
+          />
+        ) : null}
+      </List>
       <p className="ui-poc t-hint"><bdi dir="ltr">Flow 0.1</bdi></p>
     </div>
     </ViewerScope>

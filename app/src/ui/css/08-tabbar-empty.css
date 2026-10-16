@@ -287,6 +287,24 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   margin-block: calc(-1 * var(--space-2));
 }
 
+/* FLOW-372: a sheet with a subtitle (Settings › מראה): the title and the line under it, one column
+   with 2px between them, as on the board. The subtitle is the muted text colour. */
+.ui-sheet-titles {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: calc(var(--space-1) / 2); /* the board's 2px: half the 4px step, no raw value */
+  min-width: 0;
+}
+
+.ui-sheet-titles > .ui-sheet-title {
+  flex: none;
+}
+
+.ui-sheet-subtitle {
+  color: var(--color-text-muted);
+}
+
 /* The glyphs line up with the sheet's content edges (owner, 2026-10-09): Back's chevron point sits
    on the rows' start edge and ✕ on their end edge. The 44px targets keep their size; their inner
    padding and the glyph's own inset (8px for the chevron, 6px for ✕) hang past the gutter. */

@@ -102,6 +102,9 @@ describe("settings account", () => {
     expect(screen.getByText("Flow 0.1")).toBeInTheDocument();
     expect(screen.queryByText("Flow · POC 0.1")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /התקנה למסך הבית/ })).toBeInTheDocument();
+    // FLOW-372: מראה shows the device's choice (the default follows the phone) and sits before the install row.
+    const themeRow = screen.getByRole("button", { name: "מראה: לפי המכשיר" });
+    expect(themeRow.compareDocumentPosition(screen.getByRole("link", { name: /התקנה למסך הבית/ })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole("link", { name: /קטגוריות/ })).toBeInTheDocument();
     const overhead = screen.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" });
     expect(document.getElementById(overhead.getAttribute("aria-describedby") ?? "")).toHaveTextContent("חלק מההוצאות הכלליות נכנס לכל פרויקט");

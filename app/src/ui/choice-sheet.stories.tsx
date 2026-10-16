@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { PACE_COPY } from "./charge-switches";
 import { ChoiceSheet } from "./choice-sheet";
 import { BASIS_COPY, CURRENCY_COPY } from "./company-choices";
+import { THEME_COPY } from "./theme-choices";
 import { forceReducedMotion } from "./reduced-motion";
 import { padded } from "./story-support";
 
@@ -31,4 +32,13 @@ export const Saving: Story = {
 export const ReducedMotion: Story = {
   args: { copy: PACE_COPY, open: true, onOpenChange: noop, value: "quarter", saving: null, onPick: noop },
   decorators: [forceReducedMotion],
+};
+
+/** Settings › מראה (FLOW-372): the default, which follows the phone, with its subtitle. */
+export const ThemeFollowsDevice: Story = {
+  args: { copy: THEME_COPY, open: true, onOpenChange: noop, value: "system", saving: null, onPick: noop },
+};
+/** Settings › מראה with the light choice picked. */
+export const ThemeLight: Story = {
+  args: { copy: THEME_COPY, open: true, onOpenChange: noop, value: "light", saving: null, onPick: noop },
 };

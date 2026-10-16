@@ -3,7 +3,10 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
+import { applyThemeChoice, readThemeChoice } from "./theme-store";
 import "./styles/app.css";
+
+applyThemeChoice(readThemeChoice());
 
 const queryClient = new QueryClient({
   defaultOptions: {
