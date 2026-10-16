@@ -102,7 +102,7 @@ async function layoutProblems(page: Page): Promise<string[]> {
       if (Number.isFinite(line) && amount.scrollHeight > line * 1.6) problems.push("an amount wraps onto a second line");
     }
 
-    const sheetTitle = document.querySelector(".ui-sheet-head .t-title-2");
+    const sheetTitle = document.querySelector(".ui-sheet-head .ui-sheet-title");
     if (sheetTitle instanceof HTMLElement) {
       const line = Number.parseFloat(getComputedStyle(sheetTitle).lineHeight);
       if (Number.isFinite(line) && sheetTitle.getBoundingClientRect().height > line * 2.4) {
