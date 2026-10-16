@@ -30,6 +30,7 @@ export const screenLoaders = {
   profitMonths: () => import("./screens/profit-months"),
   search: () => import("./screens/search"),
   missingBills: () => import("./screens/missing-bills-screen"),
+  forecast: () => import("./screens/forecast-screen"),
   lineSplit: () => import("./screens/line-split"),
   loanDetail: () => import("./screens/loan-detail-screen"),
   help: () => import("./screens/HelpScreen"),

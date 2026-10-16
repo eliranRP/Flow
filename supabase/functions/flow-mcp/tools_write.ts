@@ -68,6 +68,8 @@ import {
   undoJevPrefillSchema,
   undoSchema,
   updateProjectSchema,
+  setForecastItemSchema,
+  resetForecastSchema,
   WRITE_TOOL_NAMES,
 } from "./tools_schemas.ts";
 import { addLoanWrite, attachLoanWrite, updateLoanWrite } from "./tools_loans.ts";
@@ -152,6 +154,27 @@ export async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_id: parsed.data.id,
     };
+  } else if (name === "set_forecast_item") {
+    // FLOW-141: the patch holds only the fields the caller sent; reset goes alone.
+    const parsed = setForecastItemSchema.safeParse(args);
+    if (!parsed.success) return invalid(parsed.error);
+    rpcName = "mcp_set_forecast_item";
+    const patch: Record<string, unknown> = {};
+    for (const key of ["amount_minor", "due_on", "moved_out"] as const) {
+      if (parsed.data[key] !== undefined) patch[key] = parsed.data[key];
+    }
+    if (parsed.data.reset === true) patch.reset = true;
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_month: parsed.data.month,
+      p_item_key: parsed.data.item_key,
+      p_patch: patch,
+    };
+  } else if (name === "reset_forecast") {
+    const parsed = resetForecastSchema.safeParse(args);
+    if (!parsed.success) return invalid(parsed.error);
+    rpcName = "mcp_reset_forecast";
+    body = { p_idempotency_key: parsed.data.idempotency_key, p_month: parsed.data.month };
   } else if (name === "create_category") {
     const parsed = createCategorySchema.safeParse(args);
     if (!parsed.success) return invalid(parsed.error);

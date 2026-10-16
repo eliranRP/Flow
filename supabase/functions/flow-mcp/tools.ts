@@ -47,7 +47,7 @@ import {
   storedLoanSchedule,
 } from "./tools_loans.ts";
 import { scopeAllows } from "./tools_specs.ts";
-import { dashboard, filterReviews, projectRow, type Review, totalsOf, unpaidReport } from "./tools_reports.ts";
+import { dashboard, filterReviews, forecastReport, israelMonthKey, projectRow, type Review, totalsOf, unpaidReport } from "./tools_reports.ts";
 import { syncStatus } from "./tools_sync.ts";
 import { callWrite } from "./tools_write.ts";
 
@@ -234,6 +234,21 @@ export async function callTool(
     const rows = result.json;
     if (result.status >= 400 || !Array.isArray(rows)) return fail("refused", READ_REFUSED);
     return ok(unpaidReport(rows));
+  }
+
+  // FLOW-141: the month-end forecast. Three reads, one builder; the write tools live in tools_write.ts.
+  if (name === "get_forecast") {
+    const month = args.month ?? israelMonthKey();
+    if (typeof month !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return fail("validation", "validation");
+    const [expected, unpaid, overrides] = await Promise.all([
+      rpc("expected_months", { p_months: 1, p_project_id: null }),
+      rpc("list_unpaid", {}),
+      rpc("forecast_overrides_for", { p_month: month }),
+    ]);
+    if (expected.status >= 400 || unpaid.status >= 400 || overrides.status >= 400) return fail("refused", READ_REFUSED);
+    const report = forecastReport(month, expected.json, unpaid.json, overrides.json);
+    if (report == null) return fail("refused", READ_REFUSED);
+    return ok(report);
   }
 
   if (name === "get_expected_months") {

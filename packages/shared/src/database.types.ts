@@ -606,6 +606,25 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
+                },"forecast_overrides": {
+                  Row: {
+                    "amount_minor": number | null,"company_id": string,"created_at": string,"due_on": string | null,"id": string,"item_key": string,"month": string,"moved_out": boolean,"updated_at": string
+                  }
+                  Insert: {
+                    "amount_minor"?: number | null,"company_id": string,"created_at"?: string,"due_on"?: string | null,"id"?: string,"item_key": string,"month": string,"moved_out"?: boolean,"updated_at"?: string
+                  }
+                  Update: {
+                    "amount_minor"?: number | null,"company_id"?: string,"created_at"?: string,"due_on"?: string | null,"id"?: string,"item_key"?: string,"month"?: string,"moved_out"?: boolean,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "forecast_overrides_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"project_groups": {
                   Row: {
                     "company_id": string,"created_at": string,"id": string,"name": string,"sort_order": number,"updated_at": string
@@ -1141,6 +1160,9 @@ isOneToOne: false
 "expected_months":
 { Args: { "p_months"?: number,"p_project_id"?: string,"p_today"?: string }; Returns: Json
                            },
+"forecast_overrides_for":
+{ Args: { "p_month": string }; Returns: Json
+                           },
 "get_breakdown":
 { Args: { "p_basis"?: string,"p_direction": string,"p_from"?: string,"p_group_by"?: string,"p_to"?: string }; Returns: Json
                            },
@@ -1567,6 +1589,9 @@ isOneToOne: false
 "request_connector_refresh":
 { Args: { "p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: string
                            },
+"reset_forecast_month":
+{ Args: { "p_month": string }; Returns: number
+                           },
 "resolve_review":
 { Args: { "p_action": string,"p_category_id"?: string,"p_id": string,"p_project_id"?: string,"p_remember"?: boolean,"p_resolve"?: boolean }; Returns: undefined
                            },
@@ -1623,6 +1648,9 @@ isOneToOne: false
                            },
 "set_company_integration":
 { Args: { "p_enabled": boolean,"p_mode"?: string,"p_provider"?: string,"p_threshold"?: number }; Returns: Json
+                           },
+"set_forecast_item":
+{ Args: { "p_item_key": string,"p_month": string,"p_patch": Json }; Returns: Json
                            },
 "set_import_from":
 { Args: { "p_from": string,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: undefined

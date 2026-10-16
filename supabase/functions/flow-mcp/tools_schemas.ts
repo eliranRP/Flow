@@ -39,6 +39,7 @@ export const READ_TOOL_NAMES = [
   "get_cash_years",
   "get_cash_lines",
   "match_lines",
+  "get_forecast",
 ] as const;
 
 /** Read tool that a write-only token may also call: it polls that token's own sync job. */
@@ -97,6 +98,8 @@ export const WRITE_TOOL_NAMES = [
   "undo_jev_prefill",
   "undo",
   "undo_batch",
+  "set_forecast_item",
+  "reset_forecast",
 ] as const;
 export const ALLOWED: Record<string, Set<string>> = {
   list_projects: new Set(["from", "to", "basis"]),
@@ -132,6 +135,9 @@ export const ALLOWED: Record<string, Set<string>> = {
   get_cash_years: new Set(),
   get_cash_lines: new Set(["month", "side", "currency", "limit", "offset"]),
   match_lines: new Set(["rows", "window_days", "direction", "currency"]),
+  get_forecast: new Set(["month"]),
+  set_forecast_item: new Set(["idempotency_key", "month", "item_key", "amount_minor", "due_on", "moved_out", "reset"]),
+  reset_forecast: new Set(["idempotency_key", "month"]),
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
@@ -516,6 +522,26 @@ export const updateProjectSchema = z.object({
 export const deleteProjectSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   id: UUID_TEXT,
+}).strict();
+
+// FLOW-141: a month is YYYY-MM; one item's amount, day or "not this month", or its reset (alone).
+const forecastMonth = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
+export const setForecastItemSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  month: forecastMonth,
+  item_key: z.string().min(1).max(200),
+  amount_minor: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).nullable().optional(),
+  due_on: z.string().regex(DATE).refine((v) => isCalendarDate(v)).nullable().optional(),
+  moved_out: z.boolean().nullable().optional(),
+  reset: z.literal(true).optional(),
+}).strict().superRefine((body, ctx) => {
+  const keys = ["amount_minor", "due_on", "moved_out", "reset"].filter((key) => body[key as keyof typeof body] !== undefined);
+  if (keys.length === 0) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "at least one field" });
+  if (body.reset !== undefined && keys.length > 1) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "reset goes alone" });
+});
+export const resetForecastSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  month: forecastMonth,
 }).strict();
 export const createCategorySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
