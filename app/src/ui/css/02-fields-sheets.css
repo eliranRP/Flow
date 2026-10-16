@@ -338,6 +338,12 @@
   padding-block-end: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
 }
 
+/* FLOW-363 (3b): with no action pinned below, the body is the sheet's last block, so the panel's
+   bottom padding (08) is the only space under the content (board: 28 plus the safe area). */
+.ui-sheet-body:last-child {
+  padding-block-end: 0;
+}
+
 [data-vaul-drawer].ui-sheet-panel {
   /* Vaul writes an inline height while the keyboard is up and later restores the height
      it first measured, which --vvh had already shrunk. Content height, capped here, wins. */
@@ -365,6 +371,11 @@
 
 .ui-sheet-fit .ui-sheet-body {
   padding-block-end: var(--space-4);
+}
+
+/* FLOW-363 (3b): the ✕ glyph is 22px in the secondary text colour (board). */
+.ui-sheet-head > .ui-icon-btn:last-child:not(:first-child) {
+  color: var(--color-text-secondary);
 }
 
 .ui-sheet-foot {

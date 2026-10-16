@@ -86,7 +86,7 @@ export function SheetSurface({
         {heading}
         {onClose && !busy ? (
           <IconButton ref={closeRef} label="סגירה" onClick={onClose}>
-            <CloseIcon />
+            <CloseIcon size={22} />
           </IconButton>
         ) : null}
       </div>
