@@ -5,6 +5,7 @@ import { ApproxAmount, approxAmountText } from "./approx-amount";
 import { Button } from "./button";
 import { cx } from "./cx";
 import { EmptyState } from "./empty-state";
+import { DelayedSkeleton } from "./skeleton";
 import { ErrorState } from "./error-state";
 import { CheckIcon, ChevronIcon } from "./icons";
 import { SectionHead } from "./layout";
@@ -178,7 +179,7 @@ export function MissingBillList({
   /** FLOW-430: the user's answer to a row's suggestion. */
   onMatch?: (rowId: string, same: boolean) => void;
 }) {
-  if (phase.kind === "loading") return <RecurringSkeleton />;
+  if (phase.kind === "loading") return <DelayedSkeleton><RecurringSkeleton /></DelayedSkeleton>;
   if (phase.kind === "error") return <ErrorState offline={phase.offline} onRetry={() => { onRetry?.(); }} />;
   if (phase.kind === "empty" || (rows.length === 0 && arrived.length === 0)) {
     return <EmptyState icon={<CheckIcon />} title="הכל הגיע" body="אין תשלומים קבועים שמאחרים החודש." />;

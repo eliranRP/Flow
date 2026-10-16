@@ -8,7 +8,7 @@ import { IconButton } from "../ui/icon-button";
 import { List, ListRow } from "../ui/list-row";
 import { MoneyField, PercentField } from "../ui/money-field";
 import { SegmentedControl } from "../ui/segmented-control";
-import { Skeleton } from "../ui/skeleton";
+import { DelayedSkeleton, Skeleton } from "../ui/skeleton";
 import { LoansSkeleton } from "../ui/screen-skeletons";
 import { DateSheet } from "../ui/date-sheet";
 import { Sheet } from "../ui/sheet";
@@ -634,7 +634,9 @@ export function LoanSettingsSection({
   return (
     <>
       {loading ? (
-        <LoansSkeleton />
+        <DelayedSkeleton>
+          <LoansSkeleton />
+        </DelayedSkeleton>
       ) : failed ? (
         <EmptyState
           icon={<InfoIcon size={36} />}
