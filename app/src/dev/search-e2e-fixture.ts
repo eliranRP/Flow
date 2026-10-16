@@ -67,3 +67,79 @@ export function searchE2eFixture(): SearchE2eFixture {
   };
   return built;
 }
+
+const usd = (minor: number, direction: "income" | "expense" = "expense") => ({
+  amount: BigInt(direction === "income" ? minor : -minor),
+  direction,
+});
+
+type BoardLine = {
+  date: string;
+  payee: string;
+  project: string | null;
+  category: string | null;
+  amount: number;
+  direction?: "income" | "expense";
+  waiting?: boolean;
+};
+
+const boardProjects = [
+  { id: "birch-lane", name: "Birch Lane", status: "active" },
+  { id: "juniper-ct", name: "Juniper Ct", status: "active" },
+  { id: "elm-row", name: "Elm Row", status: "active" },
+  { id: "sable-ct", name: "Sable Ct", status: "active" },
+  { id: "okafor", name: "Okafor", status: "active" },
+] as const;
+
+const boardLines: BoardLine[] = [
+  { date: "2026-10-10", payee: "Northline Supply", project: "juniper-ct", category: "תיקונים ותחזוקה", amount: 52_440 },
+  { date: "2026-10-05", payee: "Northline Supply", project: "birch-lane", category: "חומרים", amount: 894_017 },
+  { date: "2026-09-23", payee: "Northline Supply", project: "birch-lane", category: "חומרים", amount: 321_255 },
+  { date: "2026-09-16", payee: "Northline Supply Pro", project: "birch-lane", category: "חומרים", amount: 248_000 },
+  { date: "2026-09-09", payee: "Northline Supply", project: "sable-ct", category: "חומרים", amount: 111_832, waiting: true },
+  { date: "2026-08-23", payee: "Northline Supply", project: "juniper-ct", category: "תיקונים ותחזוקה", amount: 18_000 },
+  { date: "2026-08-12", payee: "Northline Supply", project: "birch-lane", category: "חומרים", amount: 460_590 },
+  { date: "2026-10-09", payee: "D. Avery", project: "elm-row", category: "שכירות", amount: 185_000, direction: "income" },
+  { date: "2026-10-07", payee: "Okafor", project: "okafor", category: "עבודות לקוח", amount: 1_500_000, direction: "income" },
+  { date: "2026-10-01", payee: "Harbor Lending", project: "birch-lane", category: "ריבית הלוואות", amount: 183_750 },
+  { date: "2026-10-08", payee: "Quarry Lane Drywall", project: "birch-lane", category: "עבודה", amount: 347_575 },
+  { date: "2026-10-06", payee: "Coastline Power", project: "sable-ct", category: "חשמל ומים", amount: 41_200, waiting: true },
+];
+
+/**
+ * The board's sample (FLOW-368 brief §5): the same amounts, dates, counts and order, with the
+ * names invented. Dev only; `?preview=search` opens it.
+ */
+export function searchBoardFixture(): { projects: Array<(typeof boardProjects)[number]>; categories: Array<{ id: string; name: string; kind: "expense" | "income" }>; rows: SearchRow[] } {
+  const rows = boardLines.map((line, index): SearchRow => {
+    const sign = usd(line.amount, line.direction ?? "expense");
+    const project = boardProjects.find((item) => item.id === line.project) ?? null;
+    return {
+      id: `board-${String(index + 1)}`,
+      description: line.payee,
+      doc_date: line.date,
+      doc_kind: "invoice",
+      amount_net: sign.amount,
+      vat_agorot: 0n,
+      direction: sign.direction,
+      currency: "USD",
+      amount_original: sign.amount,
+      line_status: line.waiting ? "pending" : "posted",
+      project_id: project?.id ?? null,
+      category_id: line.category == null ? null : "board-cat",
+      project_name: project?.name ?? null,
+      category_name: line.category,
+      supplier_name: sign.direction === "income" ? null : line.payee,
+      customer_name: sign.direction === "income" ? line.payee : null,
+      waiting_review: line.waiting === true,
+      kept_out: false,
+      split_parts: 0,
+      loan_matched: false,
+    };
+  });
+  return {
+    projects: [...boardProjects],
+    categories: [{ id: "board-cat", name: "חומרים", kind: "expense" }],
+    rows,
+  };
+}

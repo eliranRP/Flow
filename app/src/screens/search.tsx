@@ -97,7 +97,11 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
   const location = useLocation();
   const preview = useHomePreview();
   const previewSearch = usePreviewSearch();
-  const fixture = sample == null && preview === "empty" ? searchE2e?.searchE2eFixture() ?? null : null;
+  // Any preview value other than the states above reads as "empty" here; `search` is the board's sample.
+  const boardSample = import.meta.env.DEV && new URLSearchParams(location.search).get("preview") === "search";
+  const fixture = sample == null && preview === "empty"
+    ? (boardSample ? searchE2e?.searchBoardFixture() : searchE2e?.searchE2eFixture()) ?? null
+    : null;
   const local: SearchSample | null = sample ?? fixture;
   const [initial] = useState(() => {
     const kept = location.key === FIRST_ENTRY ? undefined : remembered.get(location.key);
