@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { type Dashboard, type TransactionDetail } from "@flow/shared";
 import { defaultPeriod } from "./period";
 import { useHomePreview } from "./preview";
