@@ -65,6 +65,8 @@ const DevBreakdownGate = /* @__PURE__ */ lazy(() => devBreakdown().then((m) => (
 const DevBreakdownLinesGate = /* @__PURE__ */ lazy(() => devBreakdown().then((m) => ({ default: m.DevBreakdownLinesGate })));
 const jevReviewCard = () => import("./screens/jev-review-card");
 const JevReviewE2e = /* @__PURE__ */ lazy(() => jevReviewCard().then((m) => ({ default: m.JevReviewE2e })));
+const devSetup = () => import("./dev/setup-e2e");
+const DevSetupFrame = /* @__PURE__ */ lazy(() => devSetup().then((m) => ({ default: m.DevSetupFrame })));
 const devRoutes = () => import("./dev-routes");
 const DevCategories = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCategories })));
 const DevChange = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevChange })));
@@ -198,6 +200,7 @@ function AppRoutes() {
             <Route path="/help" element={<HelpScreen />} />
             {import.meta.env.DEV ? (
               <>
+                <Route path="/e2e/setup/:frame" element={<DevSetupFrame />} />
                 <Route path="/e2e/project" element={<DevProject />} />
                 <Route path="/e2e/expense" element={<DevExpense />} />
                 {/* FLOW-334: a fixture of a screen that has the tab bar draws it, on that screen's tab. */}
