@@ -170,7 +170,7 @@ export function sampleCashUsdLoss(past = false, now = new Date()): NonNullable<C
     ? [
         usdRow(2_480_000n, 4_200_000n, -340_000n, investment(-1_380_000n)),
         usdRow(6_145_000n, 23_877_000n, -2_472_000n, investment(-15_260_000n)),
-        usdRow(2_000_000n, 1_900_000n, 100_000n),
+        usdRow(14_890_000n, 3_431_800n, 11_458_200n),
         usdRow(1_700_000n, 1_520_000n, 180_000n),
       ]
     : [

@@ -72,6 +72,8 @@ export type ListRowProps =
     amountDirection?: "expense" | "income";
     /** A small mark before the amount. The project page's up mark (FLOW-401). */
     mark?: ReactNode;
+    /** A muted line under the amount at the end side (FLOW-367: an open invoice's age). */
+    endSub?: ReactNode;
     /** No amount yet: a muted "—" with this hidden word instead (FLOW-401: a bill not in yet). */
     missing?: string;
     /** With no href, the row is a button (an open invoice opens its sheet, FLOW-357). */
@@ -248,7 +250,12 @@ export function ListRow(props: ListRowProps) {
         </CopyText>
       </CopyMain>
       {props.variant === "project" ? props.mark : null}
-      {props.variant === "project" || props.variant === "transaction" ? <RowAmount {...props} /> : null}
+      {props.variant === "project" && props.endSub != null ? (
+        <span className="ui-row-end">
+          <RowAmount {...props} />
+          <span className="ui-row-end-sub">{props.endSub}</span>
+        </span>
+      ) : props.variant === "project" || props.variant === "transaction" ? <RowAmount {...props} /> : null}
       {props.meta ? <span className="ui-row-meta t-hint">{props.meta}</span> : null}
       {props.actionBelow || sideAction ? null : props.action}
       {showChevron ? (
@@ -558,6 +565,7 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
       size="list"
       loss={props.loss === true}
       direction={props.amountDirection}
+      income={props.amountDirection === "income"}
     />
   );
 }

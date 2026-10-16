@@ -460,18 +460,23 @@ test("loading band skeletons stay inside the gutter and do not touch", async ({ 
     for (const story of stories) {
       await page.goto(`/iframe.html?id=${story.id}&viewMode=story`, { waitUntil: "domcontentloaded" });
       await page.locator("#storybook-root").waitFor({ state: "attached" });
+      // A screen can mount its band a few ticks after the root attaches, so wait until the story has
+      // drawn something: its band, or any content for a story without one. The Home cash skeleton's
+      // band has no hero (BandHero is only in HomeSkeleton), so the content box is the hero's when
+      // there is one and the band's own when there is not.
+      await page.waitForFunction(() => document.querySelector(".ui-band") !== null || (document.querySelector("#storybook-root")?.childElementCount ?? 0) > 0);
       const problems = await page.evaluate(() => {
         const band = document.querySelector(".ui-band");
         if (!(band instanceof HTMLElement)) return [];
         const hero = band.querySelector(".ui-band-hero");
-        if (!(hero instanceof HTMLElement)) return [`${location.pathname} band has no hero`];
-        const heroBox = hero.getBoundingClientRect();
-        const style = getComputedStyle(hero);
+        const frame = hero instanceof HTMLElement ? hero : band;
+        const frameBox = frame.getBoundingClientRect();
+        const style = getComputedStyle(frame);
         const content = {
-          left: heroBox.left + (Number.parseFloat(style.paddingLeft) || 0),
-          right: heroBox.right - (Number.parseFloat(style.paddingRight) || 0),
-          top: heroBox.top + (Number.parseFloat(style.paddingTop) || 0),
-          bottom: heroBox.bottom - (Number.parseFloat(style.paddingBottom) || 0),
+          left: frameBox.left + (Number.parseFloat(style.paddingLeft) || 0),
+          right: frameBox.right - (Number.parseFloat(style.paddingRight) || 0),
+          top: frameBox.top + (Number.parseFloat(style.paddingTop) || 0),
+          bottom: frameBox.bottom - (Number.parseFloat(style.paddingBottom) || 0),
         };
         const bars = [...band.querySelectorAll(".ui-skeleton-bar, .ui-skeleton-bar-band")]
           .filter((node): node is HTMLElement => node instanceof HTMLElement)
