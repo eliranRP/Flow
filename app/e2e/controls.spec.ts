@@ -406,7 +406,7 @@ test("a project's by-month list opens a month, and Back steps back one screen at
   await page.goto("/e2e/project-months?preview=1");
   await expect(page.getByRole("heading", { name: "לפי חודש" })).toBeVisible();
   await page.getByRole("link", { name: /^ספטמבר, הפסד/ }).click();
-  await expect(page).toHaveURL(/\/projects\/p1\/profit\?preview=1&period=month&at=2026-09$/);
+  await expect(page).toHaveURL(/\/projects\/p1\/profit\/2026-09\?preview=1&period=month&at=2026-09$/);
   await page.goBack();
   await expect(page).toHaveURL(/\/e2e\/project-months\?preview=1$/);
 });

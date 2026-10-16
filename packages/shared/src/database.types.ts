@@ -909,13 +909,13 @@ isOneToOne: false
                   ]
                 },"transactions": {
                   Row: {
-                    "amount_gross": number,"amount_net": number,"amount_original": number,"cash_date": string | null,"category_assigned": boolean,"category_id": string | null,"category_suggested": boolean,"company_id": string,"created_at": string,"currency": string,"customer_id": string | null,"description": string,"direction": Database["public"]['Enums']["txn_direction"],"doc_date": string,"doc_kind": Database["public"]['Enums']["doc_kind"],"external_id": string | null,"fx_rate": number | null,"fx_rate_date": string | null,"id": string,"idempotency_key": string,"in_cash_override": boolean | null,"in_pnl_override": boolean | null,"line_status": Database["public"]['Enums']["line_status"],"linked_external_id": string | null,"pnl_role": Database["public"]['Enums']["pnl_role"] | null,"project_assigned": boolean,"project_id": string | null,"provider_meta": NonNullable<Json>,"removed_at": string | null,"source": Database["public"]['Enums']["txn_source"],"supplier_id": string | null,"updated_at": string,"user_assigned": boolean,"vat_amount": number,"vat_status": Database["public"]['Enums']["vat_status"]
+                    "amount_gross": number,"amount_net": number,"amount_original": number,"attachments": NonNullable<Json>,"cash_date": string | null,"category_assigned": boolean,"category_id": string | null,"category_suggested": boolean,"company_id": string,"created_at": string,"currency": string,"customer_id": string | null,"description": string,"direction": Database["public"]['Enums']["txn_direction"],"doc_date": string,"doc_kind": Database["public"]['Enums']["doc_kind"],"external_id": string | null,"fx_rate": number | null,"fx_rate_date": string | null,"id": string,"idempotency_key": string,"in_cash_override": boolean | null,"in_pnl_override": boolean | null,"line_status": Database["public"]['Enums']["line_status"],"linked_external_id": string | null,"pnl_role": Database["public"]['Enums']["pnl_role"] | null,"project_assigned": boolean,"project_id": string | null,"provider_meta": NonNullable<Json>,"removed_at": string | null,"source": Database["public"]['Enums']["txn_source"],"supplier_id": string | null,"updated_at": string,"user_assigned": boolean,"vat_amount": number,"vat_status": Database["public"]['Enums']["vat_status"]
                   }
                   Insert: {
-                    "amount_gross": number,"amount_net": number,"amount_original": number,"cash_date"?: string | null,"category_assigned"?: boolean,"category_id"?: string | null,"category_suggested"?: boolean,"company_id": string,"created_at"?: string,"currency"?: string,"customer_id"?: string | null,"description"?: string,"direction": Database["public"]['Enums']["txn_direction"],"doc_date": string,"doc_kind"?: Database["public"]['Enums']["doc_kind"],"external_id"?: string | null,"fx_rate"?: number | null,"fx_rate_date"?: string | null,"id"?: string,"idempotency_key": string,"in_cash_override"?: boolean | null,"in_pnl_override"?: boolean | null,"line_status"?: Database["public"]['Enums']["line_status"],"linked_external_id"?: string | null,"pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"project_assigned"?: boolean,"project_id"?: string | null,"provider_meta"?: NonNullable<Json>,"removed_at"?: string | null,"source": Database["public"]['Enums']["txn_source"],"supplier_id"?: string | null,"updated_at"?: string,"user_assigned"?: boolean,"vat_amount": number,"vat_status": Database["public"]['Enums']["vat_status"]
+                    "amount_gross": number,"amount_net": number,"amount_original": number,"attachments"?: NonNullable<Json>,"cash_date"?: string | null,"category_assigned"?: boolean,"category_id"?: string | null,"category_suggested"?: boolean,"company_id": string,"created_at"?: string,"currency"?: string,"customer_id"?: string | null,"description"?: string,"direction": Database["public"]['Enums']["txn_direction"],"doc_date": string,"doc_kind"?: Database["public"]['Enums']["doc_kind"],"external_id"?: string | null,"fx_rate"?: number | null,"fx_rate_date"?: string | null,"id"?: string,"idempotency_key": string,"in_cash_override"?: boolean | null,"in_pnl_override"?: boolean | null,"line_status"?: Database["public"]['Enums']["line_status"],"linked_external_id"?: string | null,"pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"project_assigned"?: boolean,"project_id"?: string | null,"provider_meta"?: NonNullable<Json>,"removed_at"?: string | null,"source": Database["public"]['Enums']["txn_source"],"supplier_id"?: string | null,"updated_at"?: string,"user_assigned"?: boolean,"vat_amount": number,"vat_status": Database["public"]['Enums']["vat_status"]
                   }
                   Update: {
-                    "amount_gross"?: number,"amount_net"?: number,"amount_original"?: number,"cash_date"?: string | null,"category_assigned"?: boolean,"category_id"?: string | null,"category_suggested"?: boolean,"company_id"?: string,"created_at"?: string,"currency"?: string,"customer_id"?: string | null,"description"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"doc_date"?: string,"doc_kind"?: Database["public"]['Enums']["doc_kind"],"external_id"?: string | null,"fx_rate"?: number | null,"fx_rate_date"?: string | null,"id"?: string,"idempotency_key"?: string,"in_cash_override"?: boolean | null,"in_pnl_override"?: boolean | null,"line_status"?: Database["public"]['Enums']["line_status"],"linked_external_id"?: string | null,"pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"project_assigned"?: boolean,"project_id"?: string | null,"provider_meta"?: NonNullable<Json>,"removed_at"?: string | null,"source"?: Database["public"]['Enums']["txn_source"],"supplier_id"?: string | null,"updated_at"?: string,"user_assigned"?: boolean,"vat_amount"?: number,"vat_status"?: Database["public"]['Enums']["vat_status"]
+                    "amount_gross"?: number,"amount_net"?: number,"amount_original"?: number,"attachments"?: NonNullable<Json>,"cash_date"?: string | null,"category_assigned"?: boolean,"category_id"?: string | null,"category_suggested"?: boolean,"company_id"?: string,"created_at"?: string,"currency"?: string,"customer_id"?: string | null,"description"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"doc_date"?: string,"doc_kind"?: Database["public"]['Enums']["doc_kind"],"external_id"?: string | null,"fx_rate"?: number | null,"fx_rate_date"?: string | null,"id"?: string,"idempotency_key"?: string,"in_cash_override"?: boolean | null,"in_pnl_override"?: boolean | null,"line_status"?: Database["public"]['Enums']["line_status"],"linked_external_id"?: string | null,"pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"project_assigned"?: boolean,"project_id"?: string | null,"provider_meta"?: NonNullable<Json>,"removed_at"?: string | null,"source"?: Database["public"]['Enums']["txn_source"],"supplier_id"?: string | null,"updated_at"?: string,"user_assigned"?: boolean,"vat_amount"?: number,"vat_status"?: Database["public"]['Enums']["vat_status"]
                   }
                   Relationships: [
                     {
@@ -1053,6 +1053,9 @@ isOneToOne: false
                            } |
 { Args: { "p_category_id": string,"p_id": string }; Returns: undefined
                            },
+"attach_line_document":
+{ Args: { "p_document": Json,"p_transaction_id": string }; Returns: Json
+                           },
 "bump_mcp_rate":
 { Args: { "p_kind": string,"p_token": string,"p_user": string }; Returns: Json
                            },
@@ -1111,6 +1114,9 @@ isOneToOne: false
 "create_manual_entry":
 { Args: { "p_category_id"?: string,"p_description": string,"p_direction": string,"p_doc_date": string,"p_gross_agorot": number,"p_kind": string,"p_project_id"?: string,"p_vat_exempt"?: boolean }; Returns: string
                            },
+"create_manual_line":
+{ Args: { "p_amount_minor": number,"p_category_id": string,"p_cheque_number": string,"p_direction": string,"p_doc_date": string,"p_method": string,"p_payee": string,"p_project_id": string }; Returns: string
+                           },
 "decline_invite":
 { Args: { "p_invite_id": string }; Returns: Json
                            },
@@ -1128,6 +1134,9 @@ isOneToOne: false
                            },
 "delete_transaction":
 { Args: { "p_id": string }; Returns: undefined
+                           },
+"detach_line_document":
+{ Args: { "p_sha256": string,"p_transaction_id": string }; Returns: undefined
                            },
 "disconnect_connector":
 { Args: { "p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: undefined
@@ -1282,6 +1291,9 @@ isOneToOne: false
 "mcp_assign_expenses":
 { Args: { "p_idempotency_key": string,"p_items": Json }; Returns: Json
                            },
+"mcp_attach_document":
+{ Args: { "p_document": Json,"p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
+                           },
 "mcp_attach_loan_payment":
 { Args: { "p_idempotency_key": string,"p_loan_id": string,"p_parts": Json,"p_transaction_id": string }; Returns: Json
                            },
@@ -1295,6 +1307,9 @@ isOneToOne: false
 { Args: { "p_idempotency_key": string,"p_kind": string,"p_name": string }; Returns: Json
                            } |
 { Args: { "p_idempotency_key": string,"p_kind": string,"p_name": string,"p_parent_id": string }; Returns: Json
+                           },
+"mcp_create_manual_entry":
+{ Args: { "p_amount_minor": number,"p_category_id": string,"p_cheque_number": string,"p_direction": string,"p_doc_date": string,"p_idempotency_key": string,"p_method": string,"p_payee": string,"p_project_id": string }; Returns: Json
                            },
 "mcp_create_project":
 { Args: { "p_budget_minor"?: number,"p_idempotency_key": string,"p_name": string,"p_status"?: string,"p_type"?: string }; Returns: Json
@@ -1539,6 +1554,11 @@ isOneToOne: false
                            },
 "reassign_transaction":
 { Args: { "p_category_id": string,"p_id": string,"p_project_id": string }; Returns: string
+                           },
+"receipt_match":
+{ Args: { "p_amount_minor": number,"p_doc_date": string,"p_payee": string }; Returns: {
+              "amount_minor": number,"description": string,"doc_date": string,"id": string,"source": string
+            }[]
                            },
 "recurring_changes":
 { Args: { "p_today"?: string }; Returns: Json

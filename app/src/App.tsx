@@ -88,6 +88,7 @@ const DevMissingBills = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ de
 const DevProject = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProject })));
 const DevProjectCategory = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectCategory })));
 const DevProjectDetail = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectDetail })));
+const DevProjectProfit = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectProfit })));
 const DevProjectMonths = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectMonths })));
 const DevProjects = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjects })));
 const DevReview = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevReview })));
@@ -230,6 +231,7 @@ function AppRoutes() {
                   <Route path="/e2e/project-detail" element={<DevProjectDetail />} />
                   <Route path="/e2e/project-category" element={<DevProjectCategory />} />
                   <Route path="/e2e/project-months" element={<DevProjectMonths />} />
+                  <Route path="/e2e/project-profit" element={<DevProjectProfit />} />
                 </Route>
                 {/* Settings has no tab (FLOW-364); the loans pages open the loans tab. */}
                 <Route element={<DevShell section="loans" />}>

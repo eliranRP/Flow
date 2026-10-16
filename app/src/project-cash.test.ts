@@ -1,6 +1,6 @@
 import type { CashCurrencyRow } from "@flow/shared";
 import { describe, expect, it } from "vitest";
-import { projectCashSummaryRows, projectEarlierMonthRows, projectProfitPath } from "./project-cash";
+import { projectCashSummaryRows, projectEarlierMonthRows, projectProfitMonthPath } from "./project-cash";
 
 const NOW = new Date("2026-10-10T09:00:00Z");
 
@@ -26,7 +26,7 @@ describe("FLOW-419 project cash rows", () => {
     expect(rows[3]?.href).toBe("/projects/p1/cash/2026-10/kept/USD?preview=1");
     expect(rows[0]?.href).toBe("/projects/p1/cash/2026-10/in/USD?preview=1");
     expect(rows[1]?.href).toBe("/projects/p1/cash/2026-10/out/USD?preview=1");
-    expect(rows[2]?.href).toMatch(/^\/projects\/p1\/profit\?preview=1&period=month&at=2026-10/);
+    expect(rows[2]?.href).toMatch(/^\/projects\/p1\/profit\/2026-10\?preview=1&period=month&at=2026-10/);
     // The profit page reads the month from its link, so Home's period is left alone.
     expect(rows[2]?.profitMonth).toBeUndefined();
   });
@@ -48,6 +48,6 @@ describe("FLOW-419 project cash rows", () => {
   });
 
   it("names the profit page's path", () => {
-    expect(projectProfitPath("p 1", "")).toBe("/projects/p 1/profit");
+    expect(projectProfitMonthPath("p 1", "2026-09", "?period=month&at=2026-09")).toBe("/projects/p 1/profit/2026-09?period=month&at=2026-09");
   });
 });
