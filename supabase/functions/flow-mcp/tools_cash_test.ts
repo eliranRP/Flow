@@ -51,6 +51,33 @@ Deno.test("get_cash_months with year reads that year's months (FLOW-417)", async
   assertEquals(calls.length, 1);
 });
 
+Deno.test("get_cash_months with to_day adds the month before, up to that day (FLOW-364)", async () => {
+  const report = {
+    basis: "paid",
+    base_currency: "ILS",
+    months: [{ month: "2026-01-01", by_currency: [] }, { month: "2025-12-01", by_currency: [] }],
+  };
+  const same = [{ currency: "ILS", in_minor: 500, out_minor: 200 }];
+  const { calls, rpc } = rpcOf((name) =>
+    name === "cash_months" ? { status: 200, json: report } : name === "cash_month_to_day" ? { status: 200, json: same } : { status: 500, json: null }
+  );
+  const result = await callTool("get_cash_months", { to_day: 11 }, ["read"], rpc);
+  assertEquals(result.isError, false);
+  if (result.structuredContent.ok) {
+    assertEquals(result.structuredContent.data, { ...report, previous_to_day: { month: "2025-12-01", day: 11, by_currency: same } });
+  }
+  assertEquals(calls.map((call) => [call.name, call.body]), [
+    ["cash_months", { p_months: 6 }],
+    ["cash_month_to_day", { p_month: "2025-12-01", p_day: 11 }],
+  ]);
+  for (const args of [{ to_day: 0 }, { to_day: 32 }, { to_day: 1.5 }, { to_day: "11" }, { to_day: 11, year: 2025 }]) {
+    const bad = await callTool("get_cash_months", args, ["read"], rpc);
+    assertEquals(bad.isError, true);
+    if (!bad.structuredContent.ok) assertEquals(bad.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, 2);
+});
+
 Deno.test("get_cash_years passes the history through, and refuses a read with no company", async () => {
   const report = {
     basis: "paid",
