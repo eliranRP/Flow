@@ -28,8 +28,8 @@
 
 **Lines follow-up (text-masked proofs, scripts/board-proof.mjs; figures from PR #686)**
 - [x] LinesIn under the 3% gate (2.4% dark), by the chip row margin and the group head gap scoped to the נכנס view (`ui-lines-group-head-in`).
-- [ ] LinesRecurring (`/e2e/txn?board=recurring`): still over 3%; the recurring row and its pace line.
-- [ ] LinesFreq (`/e2e/txn?board=recurring&sheet=pace`): still over 3%; the pace sheet rows.
-- [ ] LinesAll (`/e2e/txn?board=recurring&sheet=all`): still over 3%; the all-charges sheet rows.
-- [ ] LinesDetailLoan (`/e2e/txn?board=loan`): still over 3%; the loan detail card.
+- [ ] LinesRecurring (`/e2e/txn?board=recurring`): the recurring row and its pace line.
+- [ ] LinesFreq (`/e2e/txn?board=recurring&sheet=pace`): the pace sheet rows.
+- [ ] LinesAll (`/e2e/txn?board=recurring&sheet=all`): the all-charges sheet rows.
+- [ ] LinesDetailLoan (`/e2e/txn?board=loan`): the loan detail card.
 - [ ] Lines dark stays a named exception (3.7%); the light frame is 2.7%.
