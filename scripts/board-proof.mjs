@@ -164,6 +164,16 @@ async function proofInBrowser(input) {
   const appCanvas = draw(app);
   const boardData = boardCanvas.getContext("2d").getImageData(0, 0, w, h).data;
   const appData = appCanvas.getContext("2d").getImageData(0, 0, w, h).data;
+  // How much of the frame the text boxes hide, so a low masked number can be read against what was compared.
+  const maskCoverage = () => {
+    const c = canvas(w, h);
+    const ctx = c.getContext("2d");
+    for (const rect of input.textRects) ctx.fillRect(rect.x * input.scale, rect.y * input.scale, rect.w * input.scale, rect.h * input.scale);
+    const data = ctx.getImageData(0, 0, w, h).data;
+    let covered = 0;
+    for (let index = 3; index < data.length; index += 4) if (data[index] > 0) covered += 1;
+    return Math.round((covered / (w * h)) * 1000) / 10;
+  };
   const masked = (img) => {
     const c = draw(img);
     const ctx = c.getContext("2d");
@@ -197,7 +207,20 @@ async function proofInBrowser(input) {
     mismatch: mismatch(boardData, appData, input.tolerance),
     masked: mismatch(masked(board), masked(app), input.tolerance),
     masks: input.textRects.length,
+    coverage: maskCoverage(),
   };
+}
+
+/**
+ * Runs in the page: waits for every finite animation and transition (a sheet's scrim fade, say) to finish,
+ * so the shot shows the settled screen. Endless ones (spinners) are skipped. Gives up after 3 s.
+ */
+function settleAnimations() {
+  const finite = document
+    .getAnimations()
+    .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+    .map((animation) => animation.finished.catch(() => undefined));
+  return Promise.race([Promise.all(finite), new Promise((resolve) => setTimeout(resolve, 3000))]).then(() => undefined);
 }
 
 /**
@@ -209,6 +232,7 @@ function collectTextRects() {
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode(); node != null; node = walker.nextNode()) {
     if (node.textContent == null || node.textContent.trim() === "") continue;
+    if (node.parentElement != null && getComputedStyle(node.parentElement).visibility !== "visible") continue;
     const range = document.createRange();
     range.selectNodeContents(node);
     for (const box of range.getClientRects()) {
@@ -238,6 +262,7 @@ async function main(argv) {
       });
       const page = await context.newPage();
       await page.goto(new URL(shot.route, options.base).toString(), { waitUntil: "networkidle" });
+      await page.evaluate(settleAnimations);
       const appPng = await page.screenshot({ fullPage: false });
       const textRects = await page.evaluate(collectTextRects);
       await context.close();
@@ -261,8 +286,11 @@ async function main(argv) {
         [shot.theme]: result.mismatch,
         [`${shot.theme}Masked`]: result.masked,
         [`${shot.theme}Masks`]: result.masks,
+        [`${shot.theme}MaskCoverage`]: result.coverage,
       };
-      console.log(`${shot.frame} ${shot.theme}: ${result.mismatch}% mismatch, ${result.masked}% text-masked (${result.masks} boxes)`);
+      console.log(
+        `${shot.frame} ${shot.theme}: ${result.mismatch}% mismatch, ${result.masked}% text-masked (${result.masks} boxes covering ${result.coverage}% of the frame)`,
+      );
     }
   } finally {
     await browser.close();
