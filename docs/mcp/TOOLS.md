@@ -807,6 +807,8 @@ Output `data`: `basis` (`paid` or `invoice`), `base_currency`, and `months[]` ne
 
 With `year` instead of `months` (FLOW-417), `cash_year_months(p_year)` returns that calendar year's months in the same shape: all 12 for a past year, January to this month for this one. A later year, or `year` with `months`, is a validation error.
 
+FLOW-364: `to_day` (1 to 31, with `months`, not `year`; otherwise a validation error) adds `previous_to_day`: the month before the current month, up to the same day of it (`cash_month_to_day(p_month, p_day)`; a day past the month's end counts to its last day). It has `month` (`YYYY-MM-DD`, the first day), `day` and `by_currency[]` (`currency`, `in_minor`, `out_minor`; the base currency first and always present). Input: `{ "to_day": 11 }`.
+
 ### get_cash_years
 
 `cash_years()`. The cash view's whole history (FLOW-417, decision 0174), on the company's cash basis, through the end of this month. No input.

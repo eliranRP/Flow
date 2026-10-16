@@ -389,6 +389,11 @@ export async function callTool(
   // FLOW-413 (decision 0168): money in and out per month, on the company's cash basis.
   if (name === "get_cash_months") {
     // FLOW-417: year (with no months) reads that calendar year's months instead.
+    // FLOW-364: to_day (1 to 31) adds the month before's cash up to that day (previous_to_day).
+    const toDay = args.to_day;
+    if (toDay != null && (typeof toDay !== "number" || !Number.isInteger(toDay) || toDay < 1 || toDay > 31 || args.year != null)) {
+      return fail("validation", "validation");
+    }
     if (args.year != null) {
       const year = args.year;
       if (args.months != null || typeof year !== "number" || !Number.isInteger(year) || year < 1900 || year > 9999) {
@@ -408,7 +413,16 @@ export async function callTool(
     if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {
       return fail("refused", READ_REFUSED);
     }
-    return ok(result.json as Review);
+    if (toDay == null) return ok(result.json as Review);
+    // The month before the newest month in the report (the current one), up to the same day of it.
+    const report = result.json as Review & { months?: { month?: string }[] };
+    const current = report.months?.[0]?.month;
+    if (typeof current !== "string") return ok(report);
+    const [year, month] = current.split("-").map(Number);
+    const previous = `${month === 1 ? year - 1 : year}-${String(month === 1 ? 12 : month - 1).padStart(2, "0")}-01`;
+    const same = await rpc("cash_month_to_day", { p_month: previous, p_day: toDay });
+    if (same.status >= 400 || !Array.isArray(same.json)) return fail("refused", READ_REFUSED);
+    return ok({ ...report, previous_to_day: { month: previous, day: toDay, by_currency: same.json } } as Review);
   }
 
   // FLOW-417 (decision 0174): the net, in and out since the first cash month and per year.
