@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
-  data: null,
+  data: null as unknown[] | null,
 }));
 
 vi.mock("./lib/supabase", () => ({

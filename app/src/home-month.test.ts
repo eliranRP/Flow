@@ -87,17 +87,16 @@ describe("drawerCells", () => {
   it("marks future months, the selected month and the months with data", () => {
     const cells = drawerCells(2026, net, "2026-01", TODAY, "2026-07");
     expect(cells).toHaveLength(12);
-    expect(cells[0]).toEqual({ key: "2026-01", index: 0, state: "data", netMinor: 50_000n });
-    expect(cells[6]).toEqual({ key: "2026-07", index: 6, state: "selected", netMinor: -20_000n });
-    expect(cells[9]).toEqual({ key: "2026-10", index: 9, state: "data", netMinor: 10_000n });
-    expect(cells[10].state).toBe("future");
-    expect(cells[10].netMinor).toBeNull();
+    expect(cells.find((cell) => cell.index === 0)).toEqual({ key: "2026-01", index: 0, state: "data", netMinor: 50_000n });
+    expect(cells.find((cell) => cell.index === 6)).toEqual({ key: "2026-07", index: 6, state: "selected", netMinor: -20_000n });
+    expect(cells.find((cell) => cell.index === 9)).toEqual({ key: "2026-10", index: 9, state: "data", netMinor: 10_000n });
+    expect(cells.find((cell) => cell.index === 10)).toEqual({ key: "2026-11", index: 10, state: "future", netMinor: null });
   });
 
   it("disables months before the books' first month", () => {
     const cells = drawerCells(2025, {}, "2025-03", TODAY, "2026-10");
-    expect(cells[1].state).toBe("before");
-    expect(cells[2].state).toBe("data");
+    expect(cells.find((cell) => cell.index === 1)?.state).toBe("before");
+    expect(cells.find((cell) => cell.index === 2)?.state).toBe("data");
   });
 });
 

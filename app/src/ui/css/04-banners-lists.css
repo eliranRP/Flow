@@ -349,6 +349,20 @@
   color: var(--color-on-band);
 }
 
+/* FLOW-364: the change as an amount on the band. A grey (helps) or red (hurts) figure on the band's pill. */
+.ui-change-amount {
+  padding: var(--pill-pad-block) var(--pill-pad-inline);
+  background: var(--color-band-pill);
+}
+
+.ui-change-amount.ui-delta-good {
+  color: var(--color-pill-helps);
+}
+
+.ui-change-amount.ui-delta-bad {
+  color: var(--color-pill-hurts);
+}
+
 .ui-radio-row {
   display: flex;
   align-items: center;

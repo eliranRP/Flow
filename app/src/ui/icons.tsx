@@ -74,6 +74,16 @@ export function PlusIcon(props: IconProps) {
   );
 }
 
+/** Home's band avatar (FLOW-364): the account and settings button. */
+export function PersonIcon(props: IconProps) {
+  return (
+    <Svg size={18} stroke={2} {...props}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
+    </Svg>
+  );
+}
+
 /** The stepper's minus (FLOW-106). */
 export function MinusIcon(props: IconProps) {
   return (

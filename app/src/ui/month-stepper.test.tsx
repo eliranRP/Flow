@@ -22,3 +22,18 @@ describe("MonthStepper (FLOW-362)", () => {
     expect(onStep).not.toHaveBeenCalled();
   });
 });
+
+describe("MonthStepper on the band and with a centre (FLOW-364)", () => {
+  it("puts its centre between the two chevrons, and keeps the disabled reason on each side", () => {
+    render(
+      <MonthStepper earlier={null} later="תזרים נובמבר" onStep={() => undefined} onBand>
+        <button type="button">בחירת חודש</button>
+      </MonthStepper>,
+    );
+    const group = screen.getByRole("button", { name: "חודש קודם" }).parentElement;
+    expect(group).toHaveClass("ui-month-step-band");
+    const names = Array.from(group?.querySelectorAll("button") ?? []).map((node) => node.textContent);
+    expect(names).toEqual(["", "בחירת חודש", ""]);
+    expect(screen.getByRole("button", { name: "חודש קודם" })).toHaveAttribute("aria-disabled", "true");
+  });
+});

@@ -209,6 +209,19 @@
   --gsi-press: 12%;
   --gsi-disabled: 38%;
   --gsi-ink: 31 31 31;
+  /* FLOW-364: Home's band and month drawer (the board's values with no token of their own). */
+  --band-track: rgba(255, 255, 255, 0.14);
+  --band-row: rgba(255, 255, 255, 0.12);
+  --band-avatar: rgba(255, 255, 255, 0.22);
+  --type-small-size: 12px;
+  --type-small-line: 1.35;
+  --type-small-weight: 400;
+  --radius-band-row: 16px;
+  --radius-month-cell: var(--radius-toast);
+  --avatar-size: 32px;
+  --month-cell-min: 60px;
+  --year-label-min: 80px;
+  --split-bar: 8px;
 }
 
 html,
