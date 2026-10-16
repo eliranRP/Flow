@@ -285,6 +285,61 @@ Deno.test("create_project and create_category send exact p_* bodies", async () =
   });
 });
 
+Deno.test("FLOW-445: project type and budget reach the RPC, update sends only the fields given, delete and undo bodies", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { id: PROJECT_NEW, undo_kind: "project_update" } },
+  }));
+  const created = await callTool("create_project", {
+    idempotency_key: "proj-t1",
+    name: "Lark Hill",
+    type: "flip",
+    budget_minor: 500000,
+  }, ["write"], rpc);
+  assertEquals(created.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_create_project",
+    body: { p_idempotency_key: "proj-t1", p_name: "Lark Hill", p_type: "flip", p_budget_minor: 500000 },
+  });
+  const renamed = await callTool("update_project", {
+    idempotency_key: "proj-u1",
+    id: PROJECT_NEW,
+    name: "Lark Road",
+    type: null,
+    budget_minor: null,
+  }, ["write"], rpc);
+  assertEquals(renamed.isError, false);
+  assertEquals(calls[1], {
+    name: "mcp_update_project",
+    body: {
+      p_idempotency_key: "proj-u1",
+      p_id: PROJECT_NEW,
+      p_patch: { name: "Lark Road", type: null, budget_minor: null },
+    },
+  });
+  await callTool("update_project", { idempotency_key: "proj-u2", id: PROJECT_NEW, status: "finished" }, ["write"], rpc);
+  assertEquals(calls[2].body, { p_idempotency_key: "proj-u2", p_id: PROJECT_NEW, p_patch: { status: "finished" } });
+  const empty = await callTool("update_project", { idempotency_key: "proj-u3", id: PROJECT_NEW }, ["write"], rpc);
+  assertEquals(empty.isError, true, "an update with nothing to change is refused");
+  const unknown = await callTool("update_project", { idempotency_key: "proj-u4", id: PROJECT_NEW, colour: "red" }, ["write"], rpc);
+  assertEquals(unknown.isError, true, "an unknown field is refused");
+  const longType = await callTool("create_project", {
+    idempotency_key: "proj-t2",
+    name: "Lark Two",
+    type: "x".repeat(41),
+  }, ["write"], rpc);
+  assertEquals(longType.isError, true, "a type over 40 characters is refused");
+  const deleted = await callTool("delete_project", { idempotency_key: "proj-d1", id: PROJECT_NEW }, ["write"], rpc);
+  assertEquals(deleted.isError, false);
+  assertEquals(calls[calls.length - 1], {
+    name: "mcp_delete_project",
+    body: { p_idempotency_key: "proj-d1", p_id: PROJECT_NEW },
+  });
+  const undo = await callTool("undo", { idempotency_key: "u-pd", kind: "project_delete", id: PROJECT_NEW }, ["write"], rpc);
+  assertEquals(undo.isError, false);
+  assertEquals(calls[calls.length - 1].name, "mcp_undo");
+});
+
 Deno.test("create_projects and create_categories send one batch write each", async () => {
   const { calls, rpc } = rpcOf(() => ({
     status: 200,
