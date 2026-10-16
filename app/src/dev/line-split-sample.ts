@@ -1,4 +1,4 @@
-import type { PayloadPart, ServerPart } from "../line-split";
+import type { LineSplitRead, PayloadPart, ServerPart } from "../line-split";
 
 /**
  * A stand-in for `save_line_split(..., p_preview => true)` in stories, unit tests and the dev
@@ -198,4 +198,17 @@ export const BOARD_SPLIT_LINE: SampleLine = {
   docDate: "2026-10-05",
   reviewBlocked: false,
   loanSplit: false,
+};
+
+/** The board's saved split: Birch Lane $6,000 and Sable Ct $2,000, the rest on Juniper Ct. */
+export const BOARD_SPLIT_READ: LineSplitRead = {
+  transactionId: "t-board-split",
+  currency: "USD",
+  lineMinor: 894_017n,
+  partsMatch: true,
+  parts: [
+    { category_id: "b-materials", category_name: "חומרים", project_id: "b-birch", project_name: "Birch Lane", amount_minor: 600_000n, percent: null, rest: false },
+    { category_id: "b-materials", category_name: "חומרים", project_id: "b-sable", project_name: "Sable Ct", amount_minor: 200_000n, percent: null, rest: false },
+    { category_id: "b-materials", category_name: "חומרים", project_id: "b-juniper", project_name: "Juniper Ct", amount_minor: 94_017n, percent: null, rest: true },
+  ],
 };

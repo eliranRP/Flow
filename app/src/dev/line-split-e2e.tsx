@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { LineSplitScreen } from "../screens/line-split";
-import { BOARD_SPLIT_CATEGORIES, BOARD_SPLIT_LINE, BOARD_SPLIT_PROJECTS, SAMPLE_EXPENSE_LINE, SAMPLE_REFUND_LINE, SAMPLE_SPLIT_CATEGORIES, SAMPLE_SPLIT_PROJECTS, sampleSplitApi } from "./line-split-sample";
+import { BOARD_SPLIT_CATEGORIES, BOARD_SPLIT_LINE, BOARD_SPLIT_PROJECTS, BOARD_SPLIT_READ, SAMPLE_EXPENSE_LINE, SAMPLE_REFUND_LINE, SAMPLE_SPLIT_CATEGORIES, SAMPLE_SPLIT_PROJECTS, sampleSplitApi } from "./line-split-sample";
 
 /**
  * FLOW-325. The parts editor on a sample line for Playwright, with the sample preview and a
@@ -27,6 +27,7 @@ export function DevLineSplit() {
         line,
         categories: board ? BOARD_SPLIT_CATEGORIES : SAMPLE_SPLIT_CATEGORIES,
         projects: board ? BOARD_SPLIT_PROJECTS : SAMPLE_SPLIT_PROJECTS,
+        split: board ? BOARD_SPLIT_READ : null,
         api,
       }}
     />
