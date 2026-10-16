@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(7);
+select plan(10);
 
 do $users$
 begin
@@ -70,6 +70,9 @@ select is(pg_temp.row_for('soon') ->> 'state', 'soon', 'a party due later this m
 select is(pg_temp.row_for('later') ->> 'state', 'later', 'a party whose next month is after this one is later');
 select is(pg_temp.row_for('later') ->> 'pace', '2months', 'the pace comes from recurring_parties');
 select is(pg_temp.row_for('late') ->> 'next_due_month', '2026-10', 'the next due month is this month for a late party');
+select is(abs((pg_temp.row_for('arrived') ->> 'amount_minor')::bigint), 9000::bigint, 'an arrived party shows this month''s live amount');
+select ok(not has_function_privilege('anon', 'public.recurring_schedule(date)', 'execute'), 'anon cannot run the schedule read');
+select ok(has_function_privilege('authenticated', 'public.recurring_schedule(date)', 'execute'), 'a signed-in user can run the schedule read');
 select is(
   (select count(distinct e ->> 'party_id')::integer from jsonb_array_elements(public.recurring_schedule('2026-10-20')) e),
   jsonb_array_length(public.recurring_schedule('2026-10-20')),

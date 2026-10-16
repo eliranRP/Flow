@@ -38,7 +38,7 @@ as $$
       'currency', x.currency,
       'state', x.state,
       'typical_amount_minor', x.typical_amount_minor,
-      'amount_minor', case when x.seen_this_month then x.last_amount_minor end,
+      'amount_minor', case when x.seen_this_month then ma.amount end,
       'typical_day', x.typical_day,
       'pace', x.pace,
       'next_due_month', to_char(x.next_due_month, 'YYYY-MM'),
@@ -51,6 +51,18 @@ as $$
       case x.state when 'arrived' then 0 when 'late' then 1 when 'soon' then 2 else 3 end,
       x.direction = 'income', x.typical_day, coalesce(s.name, cu.name), x.party_id), '[]'::jsonb)
   from rows x
+  -- This month's live lines of the party, the same sum recurring_arrivals takes.
+  left join lateral (
+    select sum(t.amount_net)::bigint as amount
+    from public.transactions t
+    where t.company_id = p_company and t.direction = x.direction and t.currency = x.currency
+      and x.party_id = case when x.direction = 'expense' then t.supplier_id else t.customer_id end
+      and t.removed_at is null
+      and t.line_status <> 'void'
+      and (t.direction = 'expense' or t.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
+      and t.doc_date >= date_trunc('month', p_today)::date
+      and t.doc_date <= p_today
+  ) ma on x.seen_this_month
   left join public.suppliers s on x.direction = 'expense' and s.company_id = p_company and s.id = x.party_id
   left join public.customers cu on x.direction = 'income' and cu.company_id = p_company and cu.id = x.party_id
   left join public.projects p on p.company_id = p_company and p.id = x.project_id
@@ -61,7 +73,7 @@ $$;
 revoke all on function private.recurring_schedule_json(uuid, date) from public, anon, authenticated;
 
 -- The caller's company only. Amounts are minor units; an expense's typical amount is negative, as
--- in recurring_parties. amount_minor is this month's line, set only when the party arrived.
+-- in recurring_parties. amount_minor is this month's live lines, set only when the party arrived.
 create function public.recurring_schedule(p_today date default null)
 returns jsonb
 language plpgsql
