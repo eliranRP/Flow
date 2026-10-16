@@ -182,16 +182,16 @@ describe("split by category editor (FLOW-325)", () => {
     const categorySheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
     fireEvent.click(within(categorySheet).getByRole("radio", { name: "ביטוח" }));
     fireEvent.click(within(categorySheet).getByRole("button", { name: "שמירה" }));
-    const projectSheet = await screen.findByRole("dialog", { name: "בחירת פרויקט" });
-    expect(within(projectSheet).getByRole("radio", { name: "פרויקט גבעתיים · פרויקט השורה" })).toBeInTheDocument();
-    expect(within(projectSheet).queryByRole("radio", { name: "פרויקט גבעתיים" })).toBeNull();
-    fireEvent.click(within(projectSheet).getByRole("radio", { name: "פרויקט הרצליה" }));
-    fireEvent.click(within(projectSheet).getByRole("button", { name: "שמירה" }));
-    // Two sheets close one after the other (each waits out --motion-sheet-out); under a loaded
-    // full run that took longer than waitFor's 1s default (FLOW-363 2b gate), so allow 3s.
+    // The project sheet is asked for again before each step: the category sheet's close swaps the
+    // page under it, so a sheet element held from the first find can be detached when clicked.
+    const projectSheet = () => screen.getByRole("dialog", { name: "בחירת פרויקט" });
+    await waitFor(() => { expect(within(projectSheet()).getByRole("radio", { name: "פרויקט גבעתיים · פרויקט השורה" })).toBeInTheDocument(); });
+    expect(within(projectSheet()).queryByRole("radio", { name: "פרויקט גבעתיים" })).toBeNull();
+    fireEvent.click(within(projectSheet()).getByRole("radio", { name: "פרויקט הרצליה" }));
+    fireEvent.click(within(projectSheet()).getByRole("button", { name: "שמירה" }));
+    // Two sheets close one after the other (each waits out --motion-sheet-out), so allow 3s.
     await waitFor(() => { expect(screen.queryByRole("dialog")).toBeNull(); }, { timeout: 3000 });
-    const field = screen.getByLabelText("אחוז, ביטוח");
-    await waitFor(() => { expect(field).toHaveFocus(); });
+    await waitFor(() => { expect(screen.getByLabelText("אחוז, ביטוח")).toHaveFocus(); });
   });
 
   it("maps a server refusal to a banner and keeps the screen open", async () => {
