@@ -1,7 +1,4 @@
 {
-  "app/src/setup/setup.css": {
-    "spacing": 1
-  },
   "app/src/styles/app.css": {
     "font-weight": 1
   },
@@ -85,14 +82,5 @@
   "app/src/ui/css/38-related-charges.css": {
     "font-weight": 3,
     "radius": 1
-  },
-  "app/src/ui/demo-player.css": {
-    "spacing": 4,
-    "font-weight": 1
-  },
-  "app/src/ui/setup-demos.css": {
-    "spacing": 7,
-    "radius": 6,
-    "font-size": 1
   }
 }

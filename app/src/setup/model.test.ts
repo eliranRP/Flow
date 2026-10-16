@@ -1,134 +1,138 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CATEGORY_NAMES, categoryTitle, nameHint, projectTitle } from "./copy";
 import {
   allDone,
-  backPath,
-  cardRows,
   cardVisible,
-  continuePath,
   decideEntry,
   doneCount,
   emptyFacts,
   firstNotDone,
   firstResumable,
+  indexTarget,
   isDone,
-  resumeStamp,
+  nextPath,
+  parseStep,
+  previousPath,
   settingsEntryVisible,
+  skipAllPatch,
   skipPatch,
+  withPatch,
   type SetupFacts,
 } from "./model";
 import { emptySetupStore, type SetupStore } from "./storage";
 
-const at = "2026-10-04T00:00:00.000Z";
+const at = "2026-10-16T00:00:00.000Z";
 
 function facts(patch: Partial<SetupFacts> = {}): SetupFacts {
   return { ...emptyFacts(true), companyId: "company-1", ...patch };
 }
 
 function started(patch: Partial<SetupStore> = {}): SetupStore {
-  return { ...emptySetupStore(), run_started_at: at, ...patch };
+  return { ...emptySetupStore(), run_started_at: at, flow_at: at, ...patch };
 }
 
-describe("setup step model", () => {
-  it("does not count step 0 and keeps the counter at 5", () => {
+describe("setup step model (FLOW-514)", () => {
+  it("parses the seven steps and the two full screens, and rejects the rest", () => {
+    expect(parseStep("1")).toBe(1);
+    expect(parseStep("7")).toBe(7);
+    expect(parseStep("welcome")).toBe("welcome");
+    expect(parseStep("done")).toBe("done");
+    expect(parseStep("0")).toBeNull();
+    expect(parseStep("8")).toBeNull();
+    expect(parseStep(undefined)).toBeNull();
+  });
+
+  it("walks forward to done after step 7 and back to null before step 1", () => {
+    expect(nextPath(1)).toBe("/setup/2");
+    expect(nextPath(7)).toBe("/setup/done");
+    expect(previousPath(1)).toBeNull();
+    expect(previousPath(4)).toBe("/setup/3");
+  });
+
+  it("applies the done rules of each step", () => {
     const store = emptySetupStore();
-    const open = facts();
-    expect(doneCount(store, open)).toBe(0);
-    expect(firstNotDone(store, open)).toBe(1);
-    expect(isDone(1, store, facts({ sumitConnected: true }))).toBe(true);
-    expect(isDone(1, store, facts({ mercuryConnected: true }))).toBe(true);
-    expect(doneCount(started(), facts({ sumitConnected: true, jevSaved: true, hasResolvedReview: true, standalone: true }))).toBe(4);
+    expect(isDone(1, store, facts({ companyId: null }))).toBe(false);
+    expect(isDone(1, store, facts())).toBe(true);
+    expect(isDone(2, store, facts({ mercuryConnected: true }))).toBe(true);
+    expect(isDone(3, store, facts({ projectCount: 2 }))).toBe(true);
+    expect(isDone(3, { ...store, projects_at: at }, facts())).toBe(true);
+    expect(isDone(4, store, facts({ loanCount: 1 }))).toBe(true);
+    expect(isDone(5, store, facts({ jevSaved: true }))).toBe(true);
+    expect(isDone(6, store, facts({ hasResolvedReview: true }))).toBe(true);
+    expect(isDone(7, store, facts({ standalone: true }))).toBe(true);
   });
 
-  it("treats a skip as not done and leaves it on the card", () => {
-    const store = skipPatch(started(), 2, at);
-    const state = facts({ sumitConnected: true, hasResolvedReview: true });
-    expect(isDone(2, store, state)).toBe(false);
-    expect(doneCount(store, state)).toBe(2);
-    expect(cardRows(store, state, false)).toEqual([2, 3, 5]);
-    expect(firstResumable(store, state)).toBe(3);
+  it("counts done steps and finds the first one not done, skipped or not", () => {
+    const store = emptySetupStore();
+    expect(doneCount(store, facts())).toBe(1);
+    expect(firstNotDone(store, facts())).toBe(2);
+    expect(allDone(store, facts({ mercuryConnected: true, projectCount: 1, loanCount: 1, jevSaved: true, hasResolvedReview: true, standalone: true }))).toBe(true);
   });
 
-  it("hides the SUMIT row whenever Home is empty", () => {
-    const state = facts();
-    expect(cardRows(started(), state, true)).toEqual([2, 3, 4, 5]);
-    expect(cardRows(started(), state, false)).toEqual([1, 2, 3, 4, 5]);
-    expect(cardRows(skipPatch(started(), 1, at), state, true)).not.toContain(1);
+  it("resumes at the first step that is neither done nor skipped", () => {
+    const skipped = skipPatch(emptySetupStore(), 2, at);
+    expect(firstResumable(skipped, facts())).toBe(3);
+    expect(firstNotDone(skipped, facts())).toBe(2);
   });
 
-  it("opens step 0 until a company exists, and does not start a finished account", () => {
-    expect(decideEntry(emptySetupStore(), emptyFacts(true), false, at)).toEqual({
-      kind: "redirect",
-      to: "/setup/0",
-      patch: null,
-      markSession: false,
-    });
-    const done = facts({ sumitConnected: true, jevSaved: true, hasResolvedReview: true, standalone: true });
-    const confirmed = { ...emptySetupStore(), confirmed_lists_at: at, sample_review_at: at };
-    expect(allDone(confirmed, done)).toBe(true);
-    expect(decideEntry(confirmed, done, false, at)).toEqual({ kind: "stay" });
-    expect(cardVisible(confirmed, done, false)).toBe(false);
+  it("sends a user with no company to the welcome screen, and never resumes them", () => {
+    const decision = decideEntry(started(), facts({ companyId: null }), false, at);
+    expect(decision).toEqual({ kind: "redirect", to: "/setup/welcome", patch: null, markSession: false });
   });
 
-  it("starts at the first not-done step, then resumes once past skipped steps", () => {
-    const open = facts({ sumitConnected: true });
-    expect(decideEntry(emptySetupStore(), open, false, at)).toEqual({
-      kind: "redirect",
-      to: "/setup/2",
-      patch: { run_started_at: at },
-      markSession: true,
-    });
-    const skipped = skipPatch(started(), 2, at);
-    expect(decideEntry(skipped, open, false, at)).toEqual({
-      kind: "redirect",
-      to: "/setup/3",
-      patch: { run_resumed_at: at },
-      markSession: true,
-    });
-    expect(decideEntry(skipped, open, true, at)).toEqual({ kind: "stay" });
-    expect(resumeStamp({ ...skipped, run_resumed_at: at }, open, false, at)).toBeNull();
-    expect(decideEntry({ ...started(), run_resumed_at: at }, open, false, at)).toEqual({ kind: "stay" });
+  it("waits until the facts are ready", () => {
+    expect(decideEntry(started(), emptyFacts(false), false, at)).toEqual({ kind: "wait" });
   });
 
-  it("stops the one resume once the Home card is closed, and brings it back on undo", () => {
-    const open = facts({ sumitConnected: true });
-    const closed = { ...skipPatch(started(), 2, at), card_dismissed_at: at };
-    expect(decideEntry(closed, open, false, at)).toEqual({ kind: "stay" });
-    expect(cardVisible(closed, open, false)).toBe(false);
-    expect(settingsEntryVisible(closed, open)).toBe(true);
-    expect(decideEntry({ ...closed, card_dismissed_at: null }, open, false, at)).toEqual({
-      kind: "redirect",
-      to: "/setup/3",
-      patch: { run_resumed_at: at },
-      markSession: true,
-    });
+  it("resumes a flow run once, to the first resumable step, and stamps the resume", () => {
+    const decision = decideEntry(started(), facts(), false, at);
+    expect(decision).toEqual({ kind: "redirect", to: "/setup/2", patch: { run_resumed_at: at }, markSession: true });
   });
 
-  it("sends card and finish actions home, and step 1 back only after this run created the company", () => {
-    expect(backPath(0, false, true)).toBeNull();
-    expect(backPath(1, false, false)).toBeNull();
-    expect(backPath(1, false, true)).toBe("/setup/0");
-    expect(backPath(2, true, false)).toBe("/");
-    expect(continuePath(2, true)).toBe("/");
-    expect(continuePath(2, false)).toBe("/setup/3");
-    expect(continuePath(5, false)).toBe("/");
+  it("does not resume a run that was already resumed, entered this session, finished or skipped all", () => {
+    expect(decideEntry(started({ run_resumed_at: at }), facts(), false, at).kind).toBe("stay");
+    expect(decideEntry(started(), facts(), true, at).kind).toBe("stay");
+    expect(decideEntry(started({ finished_at: at }), facts(), false, at).kind).toBe("stay");
+    expect(decideEntry(started({ skipped_all_at: at }), facts(), false, at).kind).toBe("stay");
   });
 
-  it("keeps settings closed until the run starts and hides it at 5 of 5", () => {
-    const open = facts();
-    expect(settingsEntryVisible(emptySetupStore(), open)).toBe(false);
-    expect(settingsEntryVisible(started(), open)).toBe(true);
-    expect(firstNotDone(started(), facts({ sumitConnected: true }))).toBe(2);
+  it("gives an older run (no flow_at) only the Settings entry, with no auto resume (FLOW-514 Q5)", () => {
+    const older: SetupStore = { ...emptySetupStore(), run_started_at: at };
+    expect(decideEntry(older, facts(), false, at).kind).toBe("stay");
+    expect(settingsEntryVisible(older, facts())).toBe(true);
   });
 
-  it("names nine default categories when SUMIT has not sent a list", () => {
-    expect(DEFAULT_CATEGORY_NAMES).toHaveLength(9);
-    expect(categoryTitle(9)).toBe("9 קטגוריות");
-    expect(categoryTitle(1)).toBe("קטגוריה אחת");
-    expect(projectTitle(0)).toBe("אין פרויקטים");
-    expect(nameHint([...DEFAULT_CATEGORY_NAMES], 3)).toEqual({
-      head: "חומרים, קבלני משנה, עבודה",
-      rest: 6,
-    });
+  it("index target: welcome without a company, the first step not done, then done or Home", () => {
+    expect(indexTarget(emptySetupStore(), facts({ companyId: null }))).toBe("/setup/welcome");
+    expect(indexTarget(emptySetupStore(), facts())).toBe("/setup/2");
+    expect(indexTarget(emptySetupStore(), facts({ mercuryConnected: true, projectCount: 1, loanCount: 1, jevSaved: true, hasResolvedReview: true, standalone: true }))).toBe("/setup/done");
+    expect(indexTarget(started({ skipped_all_at: at }), facts())).toBe("/");
+  });
+
+  it("skip all skips every step not done, stamps the run, and keeps earlier skips", () => {
+    const earlier = skipPatch(emptySetupStore(), 3, "2026-10-01T00:00:00.000Z");
+    const next = skipAllPatch(earlier, facts({ mercuryConnected: true }), at);
+    expect(next.skipped["3"]).toBe("2026-10-01T00:00:00.000Z");
+    expect(next.skipped["2"]).toBeUndefined();
+    expect(next.skipped["4"]).toBe(at);
+    expect(next.skipped["7"]).toBe(at);
+    expect(next.skipped_all_at).toBe(at);
+    expect(next.run_started_at).toBe(at);
+    expect(next.flow_at).toBe(at);
+  });
+
+  it("settings entry is visible while the flow is open, and hidden when finished or without a run", () => {
+    expect(settingsEntryVisible(started(), facts())).toBe(true);
+    expect(settingsEntryVisible(started({ finished_at: at }), facts())).toBe(false);
+    expect(settingsEntryVisible(emptySetupStore(), facts())).toBe(false);
+  });
+
+  it("withPatch keeps the stored skips unless the patch brings its own", () => {
+    const base = skipPatch(emptySetupStore(), 1, at);
+    expect(withPatch(base, { finished_at: at }).skipped["1"]).toBe(at);
+    expect(withPatch(base, null)).toBe(base);
+  });
+
+  it("keeps the Home card hidden (FLOW-514 replaces it)", () => {
+    expect(cardVisible(started(), facts(), false)).toBe(false);
   });
 });

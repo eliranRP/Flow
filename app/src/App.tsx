@@ -69,6 +69,8 @@ const TeamScreen = lazy(() => screenLoaders.team().then((m) => ({ default: m.Tea
 const InvitesScreen = lazy(() => screenLoaders.invites().then((m) => ({ default: m.InvitesScreen })));
 const SetupIndex = lazy(() => screenLoaders.setupRoutes().then((m) => ({ default: m.SetupIndex })));
 const SetupStepScreen = lazy(() => screenLoaders.setupRoutes().then((m) => ({ default: m.SetupStepScreen })));
+const SetupWelcomeScreen = lazy(() => screenLoaders.setupRoutes().then((m) => ({ default: m.SetupWelcomeScreen })));
+const SetupDoneScreen = lazy(() => screenLoaders.setupRoutes().then((m) => ({ default: m.SetupDoneScreen })));
 
 /**
  * Dev and e2e fixtures. Every use sits behind import.meta.env.DEV, so a production build drops
@@ -272,6 +274,8 @@ function AppRoutes() {
                 <Route path="onboarding" element={<OnboardingScreen />} />
                 <Route path="invites" element={<InvitesScreen />} />
                 <Route path="setup" element={<SetupIndex />} />
+                <Route path="setup/welcome" element={<SetupWelcomeScreen />} />
+                <Route path="setup/done" element={<SetupDoneScreen />} />
                 <Route path="setup/:step" element={<SetupStepScreen />} />
                 <Route path="search" element={<SearchScreen />} />
                 <Route path="transactions/:transactionId" element={<TransactionRoute />} />

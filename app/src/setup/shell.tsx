@@ -1,97 +1,82 @@
-import type { ReactNode, SubmitEvent } from "react";
+import { useState, type ReactNode } from "react";
 import { FocusTitle } from "../ui/focus-title";
-import { BackIcon } from "../ui/icons";
-import { IconButton } from "../ui/icon-button";
 import { ProgressBar } from "../ui/progress-bar";
 import { TextLink } from "../ui/text-link";
-import { SETUP_TOTAL } from "./copy";
-import { DemoSlot, type SetupDemoId } from "./demo-slot";
-import type { SetupStepId } from "./model";
+import { BACK, SETUP_TOTAL, SKIP_ALL } from "./copy";
+import { SkipSheet } from "./skip-sheet";
+import type { StepNumber } from "./model";
 
-/** Template C for one setup step. Step 0 has no counter and no דלג; its bar and meter keep their height, empty. */
-export function SetupStep({
+/**
+ * OnboardingFrame (FLOW-514 §1): the page of every setup screen. Steps 1 to 7 get the top block
+ * (הקודם, the counter, דילוג על הכל, the seven segments); welcome and done are full screens. The
+ * body scrolls and the bottom holds the main button and the optional secondary one.
+ */
+export function OnboardingFrame({
   step,
   title,
-  line,
-  demo,
+  lead,
   onBack,
-  onSkip,
-  onSubmit,
+  onSkipAll,
+  top,
   primary,
   secondary,
-  lead,
   children,
 }: {
-  step: SetupStepId;
+  step: StepNumber | "welcome" | "done";
   title: string;
-  line: ReactNode;
-  demo?: SetupDemoId;
-  onBack?: () => void;
-  onSkip?: () => void;
-  onSubmit?: (event: SubmitEvent<HTMLFormElement>) => void;
-  primary?: ReactNode;
-  secondary?: ReactNode;
-  /** Shown above the demo, for a question that must sit above the pinned button (FLOW-353). */
+  /** One line under the title. */
   lead?: ReactNode;
+  /** הקודם. Step 1 has none: its slot keeps the space, invisible and inert. */
+  onBack?: () => void;
+  /** Runs when the skip sheet's confirm is tapped. Steps 1 to 7 and welcome have the sheet; done does not. */
+  onSkipAll?: () => Promise<void> | void;
+  /** Above the title (welcome's logo). */
+  top?: ReactNode;
+  primary: ReactNode;
+  /** Either the node, or a function that gets the skip sheet's opener (welcome's "דילוג, אגדיר אחר כך"). */
+  secondary?: ReactNode | ((openSkip: () => void) => ReactNode);
   children?: ReactNode;
 }) {
-  const counted = step >= 1;
-  const body = (
-    <>
-      {/* Every step keeps the bar's 44px, so the title does not jump when step 1 opens (FLOW-356). */}
-      <div className="ui-setup-bar">
-        {onBack ? (
-          <IconButton label="חזרה" onClick={onBack}>
-            <BackIcon />
-          </IconButton>
-        ) : (
-          <span className="ui-setup-bar-slot" aria-hidden="true" />
-        )}
-        {onSkip ? (
-          <TextLink className="ui-setup-skip" tone="accent" chevron={false} onClick={onSkip}>
-            דלג
-          </TextLink>
-        ) : null}
-      </div>
-      {/* Step 0 keeps the meter's height hidden, so its title sits where steps 1 to 5 put theirs (FLOW-356). */}
-      <div className={counted ? "ui-setup-meter" : "ui-setup-meter ui-setup-meter-slot"} aria-hidden={counted ? undefined : true}>
-        <ProgressBar
-          variant="thin"
-          value={step}
-          max={SETUP_TOTAL}
-          label="התקדמות ההגדרה"
-          caption={
-            <span className="t-hint" aria-live="polite">
-              שלב <bdi className="ui-num" dir="ltr">{String(step)}</bdi> מתוך <bdi className="ui-num" dir="ltr">{String(SETUP_TOTAL)}</bdi>
+  const [skipOpen, setSkipOpen] = useState(false);
+  const counted = typeof step === "number";
+  const full = !counted;
+  return (
+    <main className="ui-onb" data-setup-step={String(step)}>
+      {counted && onSkipAll ? (
+        <div className="ui-onb-top">
+          <div className="ui-onb-row">
+            {onBack ? (
+              <TextLink className="ui-onb-link" tone="accent" chevron={false} onClick={onBack}>
+                {BACK}
+              </TextLink>
+            ) : (
+              <span className="ui-onb-link ui-onb-link-hidden" aria-hidden="true">{BACK}</span>
+            )}
+            <span className="t-hint ui-onb-counter" aria-live="polite">
+              שלב <bdi dir="ltr">{String(step)}</bdi> מתוך <bdi dir="ltr">{String(SETUP_TOTAL)}</bdi>
             </span>
-          }
-        />
-      </div>
-      <div className="ui-setup-copy">
-        <FocusTitle className="t-title-1">{title}</FocusTitle>
-        <p className="ui-setup-line t-label">{line}</p>
-      </div>
-      {lead}
-      {demo ? <DemoSlot demo={demo} /> : null}
-      {children ? <div className="ui-setup-body">{children}</div> : null}
-      {primary || secondary ? (
-        <div className="ui-setup-cta">
-          {primary}
-          {secondary}
+            <TextLink className="ui-onb-link" tone="accent" chevron={false} onClick={() => { setSkipOpen(true); }}>
+              {SKIP_ALL}
+            </TextLink>
+          </div>
+          <ProgressBar variant="steps" count={SETUP_TOTAL} current={step} label="התקדמות ההגדרה" />
         </div>
       ) : null}
-    </>
-  );
-  if (onSubmit) {
-    return (
-      <form className="ui-setup" data-setup-step={step} onSubmit={onSubmit}>
-        {body}
-      </form>
-    );
-  }
-  return (
-    <main className="ui-setup" data-setup-step={step}>
-      {body}
+      <div className={full ? "ui-onb-body ui-onb-body-full" : "ui-onb-body"}>
+        <div className="ui-onb-enter" key={String(step)}>
+          {top}
+          <div className="ui-onb-copy">
+            <FocusTitle className={full ? "t-title ui-onb-title" : "t-name ui-onb-title"}>{title}</FocusTitle>
+            {lead ? <p className="t-line2 ui-onb-lead">{lead}</p> : null}
+          </div>
+          {children}
+        </div>
+      </div>
+      <div className="ui-onb-foot">
+        {primary}
+        {typeof secondary === "function" ? secondary(() => { setSkipOpen(true); }) : secondary}
+      </div>
+      {onSkipAll ? <SkipSheet open={skipOpen} onOpenChange={setSkipOpen} onConfirm={onSkipAll} /> : null}
     </main>
   );
 }

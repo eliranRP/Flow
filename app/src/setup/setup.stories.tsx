@@ -1,133 +1,117 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { Button } from "../ui/button";
-import { Toggle } from "../ui/toggle";
-import { TagIcon } from "../ui/icons";
-import { longHebrew } from "../ui/story-support";
-import { SetupCard } from "./card";
-import { JEV_HINT, STEP_TITLE } from "./copy";
-import { SetupStep } from "./shell";
-import { StepBusiness, StepInstall, StepStarter, StepSumit, SumitFailureNote } from "./steps";
 import { StoryRoute } from "../ui/story-route";
-import { NO_PREFS } from "../push";
+import { SetupDone } from "./done";
+import { SetupWelcome } from "./welcome";
+import { SkipSheet } from "./skip-sheet";
+import { SampleCard } from "./sample-card";
+import { StepBusiness, StepConnect, StepInstall, StepJev, StepLoans, StepProjects, StepReview, type StepProps } from "./steps";
+
+/** Invented names only (Birch Lane, Northline Supply, Lantern Home Loans). Never a board sample. */
+const noop: StepProps = {
+  onDone: () => undefined,
+  onStamp: () => undefined,
+  onSkipStep: () => undefined,
+  onSkipAll: () => undefined,
+  onBack: () => undefined,
+};
 
 const meta = {
-  title: "Screens/Setup",
-  component: SetupStep,
-} satisfies Meta<typeof SetupStep>;
+  title: "Screens/Onboarding",
+  parameters: { layout: "fullscreen" },
+} satisfies Meta;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const SmartTag: Story = {
-  args: {
-    step: 2,
-    title: "תיוג חכם",
-    line: "Flow יציע פרויקט וקטגוריה לכל תנועה.",
-    demo: "jev",
-  },
-  render: (args) => (
-    <SetupStep
-      {...args}
-      onBack={() => undefined}
-      onSkip={() => undefined}
-      primary={<Button type="button" full>המשך</Button>}
-    >
-      <Toggle
-        icon={<TagIcon size={24} />}
-        label="תיוג חכם (Jev)"
-        hint={`${JEV_HINT} ${longHebrew}`}
-        checked
-        onChange={() => undefined}
-      />
-    </SetupStep>
-  ),
+export const Welcome: Story = {
+  render: () => <SetupWelcome onStart={() => undefined} onSkipAll={() => undefined} />,
 };
 
-export const HomeCard: Story = {
-  args: SmartTag.args,
-  render: () => <SetupCard done={4} steps={[5]} onDismiss={() => undefined} />,
-};
-
-/** FLOW-606: a pasted tab is refused on the field, as create_company refuses it. */
-const businessNameError = {
-  args: SmartTag.args,
-  parameters: { flowRouter: false },
-  render: () => (
-    <StoryRoute entry="/setup/0">
-      <StepBusiness userId={null} onDone={() => undefined} initialName={"סטודיו אלפא\tלעיצוב"} />
-    </StoryRoute>
-  ),
-};
-
-export const BusinessNameError: Story = { ...businessNameError, name: "Business step, name error" };
-
-/** FLOW-406: the starter pick right after the company step, כללי picked on arrival. */
-const starterStep = {
-  args: SmartTag.args,
-  parameters: { flowRouter: false },
-  render: () => (
-    <StoryRoute entry="/setup/0">
-      <StepStarter onDone={() => undefined} />
-    </StoryRoute>
-  ),
-};
-
-export const StarterStep: Story = { ...starterStep, name: "Starter categories" };
-
-/** FLOW-503: SUMIT and Mercury side by side on step 1, each opening its shared connect sheet. */
-const connectStep = {
-  args: SmartTag.args,
-  parameters: { flowRouter: false },
+export const Step1Business: Story = {
+  name: "Step 1 · business",
   render: () => (
     <StoryRoute entry="/setup/1">
-      <StepSumit onBack={() => undefined} onSkip={() => undefined} onConnected={() => undefined} />
+      <StepBusiness {...noop} companyId={null} initial={null} />
     </StoryRoute>
   ),
 };
 
-export const ConnectStep: Story = { ...connectStep, name: "Connect step, SUMIT or Mercury" };
-
-/** FLOW-506: a failed SUMIT connect leaves the note under the demo, at the demo frame's inset. */
-const connectFailed = {
-  args: SmartTag.args,
-  parameters: { flowRouter: false },
+export const Step2Connect: Story = {
+  name: "Step 2 · connect",
   render: () => (
-    <StoryRoute entry="/setup/1">
-      <SetupStep
-        step={1}
-        title={STEP_TITLE[1] ?? ""}
-        line="ההכנסות וההוצאות נכנסות לבד."
-        demo="sumit"
-        onBack={() => undefined}
-        onSkip={() => undefined}
-        primary={<Button type="button" full>ניסיון חוזר</Button>}
-        secondary={<Button type="button" variant="secondary" full>חיבור Mercury</Button>}
-      >
-        <SumitFailureNote />
-      </SetupStep>
+    <StoryRoute entry="/setup/2">
+      <StepConnect {...noop} mercuryConnected={false} sumitConnected={false} />
     </StoryRoute>
   ),
 };
 
-export const ConnectFailed: Story = { ...connectFailed, name: "Connect step, SUMIT failed" };
+export const Step3Projects: Story = {
+  name: "Step 3 · projects",
+  render: () => (
+    <StoryRoute entry="/setup/3">
+      <StepProjects {...noop} companyId="company-story" bankConnected={false} existingNames={["Birch Lane"]} />
+    </StoryRoute>
+  ),
+};
 
-/** FLOW-506: step 5 draws the install screen's numbered steps. */
-const installStep = (mode: "iphone" | "android-steps", reminder = false) => ({
-  args: SmartTag.args,
-  parameters: { flowRouter: false },
+export const Step4Loans: Story = {
+  name: "Step 4 · loans",
+  render: () => (
+    <StoryRoute entry="/setup/4">
+      <StepLoans {...noop} companyId="company-story" currency="ILS" bankConnected loanCount={0} picks={[]} onPick={() => undefined} />
+    </StoryRoute>
+  ),
+};
+
+export const Step5Jev: Story = {
+  name: "Step 5 · smart tagging",
   render: () => (
     <StoryRoute entry="/setup/5">
-      <StepInstall
-        initialMode={mode}
-        // An answered sample hides the card without a server read (a story never fetches).
-        pushSample={{ prefs: reminder ? NO_PREFS : { ...NO_PREFS, prompt_answered: true }, support: "ok" }}
-        onBack={() => undefined}
-        onSkip={() => undefined}
-        onFinish={() => undefined}
-      />
+      <StepJev {...noop} />
     </StoryRoute>
   ),
-});
+};
 
-export const InstallStepAndroid: Story = { ...installStep("android-steps"), name: "Install step, Android steps" };
+export const Step6Review: Story = {
+  name: "Step 6 · first approval",
+  render: () => (
+    <StoryRoute entry="/setup/6">
+      <StepReview {...noop} approved={false} />
+    </StoryRoute>
+  ),
+};
 
+export const Step7Install: Story = {
+  name: "Step 7 · Home screen",
+  render: () => (
+    <StoryRoute entry="/setup/7">
+      <StepInstall {...noop} initialMode="iphone" />
+    </StoryRoute>
+  ),
+};
+
+export const Done: Story = {
+  name: "Done",
+  render: () => (
+    <SetupDone
+      rows={[
+        { label: "העסק", value: "Birch Lane Realty", done: true, delay: 0 },
+        { label: "חיבור בנק", value: "לא עכשיו", done: false, delay: 1 },
+      ]}
+      onHome={() => undefined}
+    />
+  ),
+};
+
+/** The compact sample card (FLOW-514 Q4) on its own, with the board's invented row. */
+export const SampleCardOnly: Story = {
+  name: "Sample card",
+  render: () => <SampleCard approved={false} onApprove={() => undefined} />,
+};
+
+export const SkipSheetOpen: Story = {
+  name: "Skip sheet",
+  render: () => (
+    <SkipSheet open onOpenChange={() => undefined} onConfirm={() => undefined} />
+  ),
+};

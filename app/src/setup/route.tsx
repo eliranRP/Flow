@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { usePreviewMode } from "../preview";
 import { useSetupFacts } from "./facts";
-import { decideEntry, resumeStamp, withPatch } from "./model";
+import { decideEntry, withPatch } from "./model";
 import { resetSetupServerForTests } from "./server-store";
 import { useSetupStore } from "./store";
 import { markSessionEntered, sessionEntered, writeSetupStore } from "./storage";
@@ -60,11 +60,7 @@ export function SetupResume() {
     if (decision.kind === "wait") return;
     resumeConsideredFor = userId;
     acted.current = signature;
-    if (decision.kind === "stay") {
-      const stamp = resumeStamp(store, facts, entered, at);
-      if (stamp) writeSetupStore(userId, facts.companyId, withPatch(store, stamp));
-      return;
-    }
+    if (decision.kind === "stay") return;
     if (decision.markSession) markSessionEntered(userId);
     if (decision.patch) writeSetupStore(userId, facts.companyId, withPatch(store, decision.patch));
     void navigate(decision.to);

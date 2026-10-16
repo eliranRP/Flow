@@ -19,6 +19,7 @@ export function useCompanyForm({
   checked = false,
   reserveMessage = false,
   blocked,
+  hideVat = false,
   onCreated,
 }: {
   initialName?: string;
@@ -28,8 +29,10 @@ export function useCompanyForm({
   reserveMessage?: boolean;
   /** Preview mode: true when the write must not run. */
   blocked?: () => boolean;
+  /** FLOW-514: the setup's step 1 leaves the VAT question out; it creates the company as registered (today's default). */
+  hideVat?: boolean;
   onCreated: (companyId: string) => void;
-}): { submit: (event: SubmitEvent<HTMLFormElement>) => void; busy: boolean; holdWrites: boolean; fields: ReactElement } {
+}): { submit: (event: SubmitEvent<HTMLFormElement>) => void; busy: boolean; holdWrites: boolean; name: string; fields: ReactElement } {
   const client = useQueryClient();
   const holdWrites = useHoldWrites();
   const [name, setName] = useState(initialName);
@@ -88,19 +91,23 @@ export function useCompanyForm({
           setError(companyNameError(name));
         }}
       />
-      <SegmentedControl
-        label="סוג העסק"
-        describedBy={hintId}
-        value={vat}
-        onChange={setVat}
-        options={[
-          { value: "registered", label: "עוסק מורשה" },
-          { value: "exempt", label: "עוסק פטור" },
-        ]}
-      />
-      <p id={hintId} className="t-hint">{vat === "registered" ? VAT_HINT.registered : VAT_HINT.exempt}</p>
+      {hideVat ? null : (
+        <>
+          <SegmentedControl
+            label="סוג העסק"
+            describedBy={hintId}
+            value={vat}
+            onChange={setVat}
+            options={[
+              { value: "registered", label: "עוסק מורשה" },
+              { value: "exempt", label: "עוסק פטור" },
+            ]}
+          />
+          <p id={hintId} className="t-hint">{vat === "registered" ? VAT_HINT.registered : VAT_HINT.exempt}</p>
+        </>
+      )}
     </>
   );
 
-  return { submit, busy: save.isPending, holdWrites, fields };
+  return { submit, busy: save.isPending, holdWrites, name, fields };
 }

@@ -1,6 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
@@ -134,22 +134,6 @@ describe("setup home card", () => {
     resetSetupServerForTests();
   });
 
-  it("closes with one tap, focuses ביטול, and restores the card on undo", async () => {
-    writeSetupStore(userId, companyId, { ...emptySetupStore(), run_started_at: "2026-10-04T00:00:00.000Z" });
-    renderHome();
-    fireEvent.click(await screen.findByRole("button", { name: "סגירת ההגדרה" }));
-    await waitFor(() => {
-      expect(screen.queryByRole("button", { name: "סגירת ההגדרה" })).not.toBeInTheDocument();
-    });
-    expect(await screen.findByText("ההגדרה לא תופיע שוב. אפשר לחזור אליה מההגדרות.")).toBeInTheDocument();
-    const undo = await screen.findByRole("button", { name: "ביטול" });
-    await waitFor(() => {
-      expect(undo).toHaveFocus();
-    });
-    fireEvent.click(undo);
-    expect(await screen.findByRole("button", { name: "סגירת ההגדרה" })).toBeInTheDocument();
-    expect(readSetupStore(userId, companyId).card_dismissed_at).toBeNull();
-  });
 
   it("keeps a dismissed card hidden", async () => {
     writeSetupStore(userId, companyId, {
@@ -164,49 +148,5 @@ describe("setup home card", () => {
     expect(screen.queryByRole("button", { name: "סגירת ההגדרה" })).not.toBeInTheDocument();
   });
 
-  it("shows the completed toast once", async () => {
-    gate.sumit = true;
-    gate.jev = true;
-    gate.review = true;
-    writeSetupStore(userId, companyId, {
-      ...emptySetupStore(),
-      run_started_at: "2026-10-04T00:00:00.000Z",
-      confirmed_lists_at: "2026-10-04T00:00:00.000Z",
-      installed_at: "2026-10-04T00:00:00.000Z",
-    });
-    const first = renderHome();
-    expect(await screen.findByText("ההגדרה הושלמה.")).toBeInTheDocument();
-    const stamped = readSetupStore(userId, companyId).completed_toast_at;
-    expect(stamped).not.toBeNull();
-    first.unmount();
-    renderHome();
-    await waitFor(() => {
-      expect(readSetupStore(userId, companyId).completed_toast_at).toBe(stamped);
-    });
-    await expect(screen.findByText("ההגדרה הושלמה.", {}, { timeout: 500 })).rejects.toThrow();
-    expect(readSetupStore(userId, companyId).completed_toast_at).toBe(stamped);
-  });
 
-  it("waits for the server copy: a stale phone neither toasts again nor uploads over newer flags", async () => {
-    gate.sumit = true;
-    gate.jev = true;
-    gate.review = true;
-    const done = {
-      ...emptySetupStore(),
-      run_started_at: "2026-10-04T00:00:00.000Z",
-      confirmed_lists_at: "2026-10-04T00:00:00.000Z",
-      installed_at: "2026-10-04T00:00:00.000Z",
-    };
-    localStorage.setItem(`flow.setup.${userId}.${companyId}`, JSON.stringify(done));
-    gate.setupRow = {
-      state: { ...done, completed_toast_at: "2026-10-05T00:00:00.000Z", card_dismissed_at: "2026-10-05T00:00:00.000Z" },
-    };
-    renderHome();
-    await waitFor(() => {
-      expect(readSetupStore(userId, companyId).completed_toast_at).toBe("2026-10-05T00:00:00.000Z");
-    });
-    await expect(screen.findByText("ההגדרה הושלמה.", {}, { timeout: 300 })).rejects.toThrow();
-    expect(screen.queryByRole("button", { name: "סגירת ההגדרה" })).not.toBeInTheDocument();
-    expect(gate.upserts).toHaveLength(0);
-  });
 });

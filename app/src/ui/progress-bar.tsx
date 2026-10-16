@@ -39,13 +39,36 @@ type JobBarProps = {
   leaveLabel?: string;
 };
 
-export type ProgressBarProps = ValueBarProps | SplitBarProps | JobBarProps;
+/** FLOW-514: the setup's seven segments. Done is accent, the current step band, the rest line. */
+type StepsBarProps = {
+  variant: "steps";
+  /** Segments, one per step. */
+  count: number;
+  /** 1-based step shown as current; a value above count fills every segment done. */
+  current: number;
+  label: string;
+};
+
+export type ProgressBarProps = ValueBarProps | SplitBarProps | JobBarProps | StepsBarProps;
 
 /** Thin bars grow from the right on first render (FLOW-363, m-bar-grow). */
 export function ProgressBar(props: ProgressBarProps) {
+  if (props.variant === "steps") return <StepsBar {...props} />;
   if (props.variant === "split") return <SplitBar {...props} />;
   if (props.variant === "job") return <JobBar {...props} />;
   return <ValueBar {...props} />;
+}
+
+function StepsBar({ count, current, label }: StepsBarProps) {
+  const segments = Array.from({ length: Math.max(1, count) }, (_, index) => index + 1);
+  return (
+    <div className="ui-steps-bar" role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={count} aria-valuenow={Math.min(current, count)}>
+      {segments.map((index) => {
+        const state = index < current ? "done" : index === current ? "current" : "next";
+        return <span key={index} className="ui-steps-seg" data-state={state} />;
+      })}
+    </div>
+  );
 }
 
 function JobBar({ value, max, label, count, steps, onLeave, leaveLabel = "המשך לבית בינתיים" }: JobBarProps) {
