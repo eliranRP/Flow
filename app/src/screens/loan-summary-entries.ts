@@ -1,6 +1,7 @@
+import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { LoanCurrency } from "./loan-form";
-import { readLoanList } from "./loan-list";
+import { readLoanList, type LoanListData } from "./loan-list";
 import { loanListSummary, type LoanListSummary } from "./loan-list-summary";
 import { loanOutlook } from "./loan-outlook";
 import { readLoanRow } from "./loan-detail-data";
@@ -18,14 +19,14 @@ export function useLoanSummary(companyId: string | null, currency: LoanCurrency 
     enabled: companyId != null && currency != null,
     retry: false,
     queryFn: () => readLoanList(companyId),
-    select: (data): LoanListSummary | null => {
+    select: useCallback((data: LoanListData): LoanListSummary | null => {
       if (currency == null) return null;
       const entries = data.loans.map(({ row, balance }) => {
         const loan = readLoanRow(row, balance);
         return { loan, outlook: loanOutlook(loan, today) };
       });
       return loanListSummary(entries, currency);
-    },
+    }, [currency, today]),
   });
   return summary.data ?? null;
 }

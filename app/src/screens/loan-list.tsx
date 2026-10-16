@@ -193,7 +193,7 @@ export async function readLoanList(companyId: string | null): Promise<LoanListDa
   }));
   const detailRows = (loans.data ?? []).map((row) => {
     const balance = byLoan.get(row.id);
-    return { row, balance: balance == null ? null : { balanceMinor: BigInt(balance.balance_minor ?? 0), flaggedParts: balance.flagged_parts ?? 0 } };
+    return { row, balance: balance == null ? null : { balanceMinor: BigInt(balance.balance_minor ?? row.principal_minor), flaggedParts: balance.flagged_parts ?? 0 } };
   });
   return { rows, loans: detailRows };
 }

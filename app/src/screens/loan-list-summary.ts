@@ -11,7 +11,7 @@ import type { LoanOutlook } from "./loan-outlook";
 export type LoanListEntry = { loan: LoanDetail; outlook: LoanOutlook | null };
 
 export type LoanListSummary = {
-  /** Open loans, counted for the "N פעילות" line. */
+  /** Open loans in the currency. */
   openCount: number;
   /** סך החוב היום: every open loan's balance. */
   totalBalanceMinor: bigint;

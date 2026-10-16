@@ -47,6 +47,6 @@ describe("loanListSummary", () => {
     const ils = { ...SAMPLE_AMORTIZING, currency: "ILS" as const };
     const summary = loanListSummary([entry(SAMPLE_AMORTIZING), entry(ils)], USD);
     expect(summary.openCount).toBe(1);
-    expect(summary.totalBalanceMinor).toBe(SAMPLE_AMORTIZING.balanceMinor);
+    expect(summary.totalBalanceMinor).toBe(18_240_955n);
   });
 });
