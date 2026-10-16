@@ -367,8 +367,12 @@ export function CashHome({
     const key = pendingMonth.current;
     pendingMonth.current = null;
     onStepMonth(key);
-    // The sheet's close restores the scroll it locked, so the top is set again once it has closed (FLOW-364).
+    // The sheet's close and the month's history entry restore the scroll they saved, so the top is set
+    // again after both have run (FLOW-364).
     window.scrollTo({ top: 0 });
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0 });
+    });
   }, [drawerOpen, onStepMonth]);
   const nav: HomeMonthNav = {
     earlierKey,
