@@ -47,7 +47,7 @@ insert into su_lines
 select 'ridgeway_' || to_char(d, 'MM'), 'ridgeway', d::date + 6, 90000, 'USD'
 from generate_series('2026-04-01'::date, '2026-09-01'::date, interval '1 month') d;
 insert into su_lines values
-  ('once', 'once', '2026-08-03', 12000, 'ILS'),
+  ('once_line', 'once', '2026-08-03', 12000, 'ILS'),
   ('northline_07', 'northline', '2026-07-02', 150000, 'ILS'),
   ('northline_08', 'northline', '2026-08-02', 150000, 'ILS'),
   ('northline_09', 'northline', '2026-09-02', 150000, 'ILS');
