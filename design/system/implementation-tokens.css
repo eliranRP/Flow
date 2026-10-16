@@ -256,6 +256,8 @@
   --color-signal: #D23B2F;
   --color-signal-soft: #B9503F;
   --color-track-strong: #DAD3E6;   /* FLOW-445: budget track, loan part of the equity bar */
+  --color-line-soft: #F0EDF5;    /* row hairlines inside search results and filter sheets (FLOW-368); dark is #231E30 */
+  --color-accent-dim: #9C7BE0;   /* bar fill only, never text (interest part of the loan bar, FLOW-139); dark is #7E66B8 */
   --color-avatar: #F3F0F8;   /* FLOW-366/445: initials and menu icon circles */
   --color-band-past: #5A2DB0;
   --color-pill-helps: #4A4458;
@@ -318,6 +320,8 @@
     --color-signal: #FF8A80;
     --color-signal-soft: #E8A598;
     --color-track-strong: #3A3350;   /* FLOW-445: budget track, loan part of the equity bar */
+    --color-line-soft: #231E30;
+    --color-accent-dim: #7E66B8;
     --color-avatar: #2A2540;   /* FLOW-366/445: initials and menu icon circles */
     --color-band-past: #5A2DB0;
     --color-pill-helps: #4A4458;
@@ -383,6 +387,8 @@
   --color-signal: #FF8A80;
   --color-signal-soft: #E8A598;
   --color-track-strong: #3A3350;   /* FLOW-445: budget track, loan part of the equity bar */
+  --color-line-soft: #231E30;
+  --color-accent-dim: #7E66B8;
   --color-avatar: #2A2540;   /* FLOW-366/445: initials and menu icon circles */
   --color-band-past: #5A2DB0;
   --color-pill-helps: #4A4458;

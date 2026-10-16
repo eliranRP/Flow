@@ -265,6 +265,14 @@ export async function callTool(
     return ok(changes ? { changes: data } : { arrived: data });
   }
 
+  // FLOW-447: the קבועים list, every recurring party with its state this month.
+  if (name === "get_recurring_schedule") {
+    const result = await rpc("recurring_schedule", {});
+    const data = result.json;
+    if (result.status >= 400 || !Array.isArray(data)) return fail("refused", READ_REFUSED);
+    return ok({ schedule: data });
+  }
+
   if (name === "get_line_recurring") {
     const id = args.transaction_id;
     if (typeof id !== "string" || !UUID.test(id)) return fail("validation", "validation");

@@ -310,7 +310,7 @@ export function DevCash() {
         search: "?preview=1",
       })}
       sameDay={usdLoss ? (past ? null : sampleCashUsdToDay()) : sampleCashToDay()}
-      forecast={usdLoss ? -570_000n : -6_810_000n}
+      forecast={usdLoss ? -574_100n : -6_810_000n}
       company={<BandCompany name="Acme Test Co" onOpen={() => { void navigate("/settings?preview=1"); }} />}
       onStepMonth={(key) => {
         void navigate(`/e2e/cash?month=${key}`, { replace: true });
