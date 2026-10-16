@@ -391,9 +391,8 @@ export async function callTool(
     // FLOW-417: year (with no months) reads that calendar year's months instead.
     // FLOW-364: to_day (1 to 31) adds the month before's cash up to that day (previous_to_day).
     const toDay = args.to_day;
-    if (toDay != null && (typeof toDay !== "number" || !Number.isInteger(toDay) || toDay < 1 || toDay > 31 || args.year != null)) {
-      return fail("validation", "validation");
-    }
+    const badDay = typeof toDay !== "number" || !Number.isInteger(toDay) || toDay < 1 || toDay > 31;
+    if (toDay != null && (badDay || args.year != null)) return fail("validation", "validation");
     if (args.year != null) {
       const year = args.year;
       if (args.months != null || typeof year !== "number" || !Number.isInteger(year) || year < 1900 || year > 9999) {
