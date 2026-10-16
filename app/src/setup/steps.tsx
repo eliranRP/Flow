@@ -465,7 +465,7 @@ export function StepLoans({
       }
       secondary={total === 0 ? undefined : <Button type="button" variant="link" full onClick={onSkipStep}>{SKIP_STEP}</Button>}
     >
-      <SetupMovie scenes={LOANS_MOVIE.scenes} label={LOANS_MOVIE.label} />
+      {total === 0 ? <SetupMovie scenes={LOANS_MOVIE.scenes} label={LOANS_MOVIE.label} /> : null}
       {picks.length > 0 ? (
         <div className="ui-onb-card">
           {picks.map((lender) => (
@@ -491,15 +491,9 @@ export function StepLoans({
           </div>
         </div>
       ) : null}
-      <Button
-        type="button"
-        variant="link"
-        full
-        className="ui-onb-add-loan"
-        onClick={() => { openNewLoan(() => { setSheet(true); }); }}
-      >
+      <button type="button" className="ui-onb-add-loan" onClick={() => { openNewLoan(() => { setSheet(true); }); }}>
         {LOAN_ADD_OTHER}
-      </Button>
+      </button>
       <p className="t-hint ui-onb-note">{LOAN_NOTE}</p>
       <NewLoanSheet
         open={sheet}

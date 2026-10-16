@@ -143,7 +143,7 @@
   gap: var(--space-3);
   padding: var(--space-card-inset);
   border-radius: var(--radius-card);
-  background: var(--color-raised);
+  background: var(--color-surface);
 }
 
 .ui-onb-chips,
@@ -186,11 +186,24 @@
 }
 
 .ui-onb-add,
-.ui-onb-add-field,
-.ui-onb-add-loan {
+.ui-onb-add-field {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+.ui-onb-add-loan {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(var(--touch-min) + var(--space-3));
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
+  font-weight: var(--type-label-weight);
+  color: var(--color-accent-text);
 }
 
 .ui-onb-conn {
@@ -263,6 +276,10 @@
   gap: var(--space-1);
   padding-block: var(--space-3);
   border-bottom: 1px solid var(--color-line);
+}
+
+.ui-onb-loan .t-name {
+  font-weight: var(--type-body-weight);
 }
 
 .ui-onb-switch {
@@ -524,8 +541,8 @@
 .ui-skip-body {
   margin: 0;
   color: var(--color-text-secondary);
-  font-size: var(--type-sheet-size);
-  line-height: var(--type-sheet-line);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
 }
 
 .ui-setup-error {
