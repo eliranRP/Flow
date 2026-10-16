@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Amount } from "./amount";
+import { Chip } from "./chip";
 import { CompactBar } from "./compact-bar";
+import { OrganizeChips } from "./organize-chips";
 import { longHebrew } from "./story-support";
 
 // Amounts are bigint, so the figure stays in render: story args go through JSON.
@@ -36,6 +38,25 @@ export const ListWithFigure: Story = {
 export const Detail: Story = {
   args: { title: "שיפוץ הרצל 12", label: "פרויקטים", backTo: "/projects", size: "detail" },
   render: (args) => <CompactBar {...args} figure={<Amount agorot={2_940_000n} size="list" />} />,
+};
+
+/** FLOW-363 (3c): the organize chips ride under the bar, so they stay one tap away once the page scrolls. */
+export const Panel: Story = {
+  args: { title: "יצא", label: "בית", backTo: "/" },
+  render: (args) => (
+    <CompactBar
+      {...args}
+      figure={<Amount agorot={125_000n} size="list" />}
+      panel={
+        <OrganizeChips label="סידור">
+          <Chip kind="choice" pressed>לפי תאריך</Chip>
+          <Chip kind="choice">לפי סכום</Chip>
+          <Chip kind="choice">לפי פרויקט</Chip>
+          <Chip kind="choice">לפי קטגוריה</Chip>
+        </OrganizeChips>
+      }
+    />
+  ),
 };
 
 /** Hidden from the start: no slide, no focus, no clicks. */

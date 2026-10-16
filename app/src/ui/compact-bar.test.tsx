@@ -84,6 +84,15 @@ describe("CompactBar", () => {
     expect(container.querySelector(".ui-compact-bar")).toHaveClass("ui-compact-bar-detail");
   });
 
+  it("renders the panel under the row and reports the taller panel bar", () => {
+    const { container, rerender } = render(bar({ shown: true, panel: <span>לפי תאריך</span> }));
+    const root = container.querySelector(".ui-compact-bar");
+    expect(root?.querySelector(".ui-compact-bar-row + .ui-compact-panel")).toHaveTextContent("לפי תאריך");
+    expect(document.documentElement).toHaveAttribute("data-compact-bar", "panel");
+    rerender(bar({ shown: true }));
+    expect(document.documentElement).toHaveAttribute("data-compact-bar", "list");
+  });
+
   it("keeps the shown and hidden states under reduced motion, with no slide to wait for", () => {
     const frame = (props: Parameters<typeof bar>[0]) => <ReducedMotionFrame>{bar(props)}</ReducedMotionFrame>;
     const { container, rerender } = render(frame({ shown: false }));
