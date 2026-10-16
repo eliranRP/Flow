@@ -57,7 +57,7 @@ export const JUNIPER_PROFIT: ProjectProfitSample = {
       { id: "repairs", name: "תיקונים ותחזוקה", amount_agorot: 1_260_000n },
       { id: "taxes", name: "מסים וביטוח", amount_agorot: 1_098_000n },
       { id: "property-mgmt", name: "ניהול נכס", amount_agorot: 609_000n },
-      { id: "other", name: "אחר", amount_agorot: 116_000n },
+      { id: "other", name: "אחר", amount_agorot: 116_040n },
     ],
     pending_count: 0,
     pending_agorot: 0n,
