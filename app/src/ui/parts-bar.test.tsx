@@ -64,4 +64,24 @@ describe("PartsBar", () => {
     expect(screen.getByText("25%")).toBeInTheDocument();
     expect(document.querySelector(".ui-parts-dot")).toHaveAttribute("data-tone", "accent-dim");
   });
+
+  it("takes the muted and bad tones, and the block radius and 2px gap for the Home split bar", () => {
+    render(
+      <PartsBar
+        label="ממה מורכב המינוס"
+        height={8}
+        gap={2}
+        radius="block"
+        parts={[
+          { key: "kept", value: 35, tone: "accent" },
+          { key: "profit", value: 65, tone: "bad" },
+        ]}
+      />,
+    );
+    const bar = document.querySelector(".ui-parts-bar");
+    expect(bar).toHaveAttribute("data-radius", "block");
+    expect(bar).toHaveAttribute("data-gap", "2");
+    expect(bar).toHaveAttribute("data-height", "8");
+    expect(document.querySelector(".ui-parts-part[data-tone='bad']")).not.toBeNull();
+  });
 });

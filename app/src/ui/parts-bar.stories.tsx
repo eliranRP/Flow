@@ -48,3 +48,16 @@ export const NoTotal: Story = {
     label: "חלוקה",
   },
 };
+// Home's split card: an 8px bar with a 2px gap and block corners, a loss in the bad tone.
+export const HomeSplitLoss: Story = {
+  args: {
+    parts: [
+      { key: "kept", value: 35, tone: "accent" },
+      { key: "profit", value: 65, tone: "bad" },
+    ],
+    height: 8,
+    gap: 2,
+    radius: "block",
+    label: "ממה מורכב המינוס",
+  },
+};

@@ -23,8 +23,12 @@
   height: var(--bar-job);
 }
 
+.ui-parts-bar[data-radius="block"] {
+  border-radius: var(--radius-block);
+}
+
 .ui-parts-bar[data-gap="2"] > .ui-parts-part + .ui-parts-part {
-  margin-inline-start: var(--space-1);
+  margin-inline-start: var(--band-label-gap);
 }
 
 .ui-parts-part,
@@ -48,6 +52,14 @@
 
 .ui-parts-part[data-tone="signal-soft"] {
   background: var(--color-signal-soft);
+}
+
+.ui-parts-part[data-tone="muted"] {
+  background: var(--color-text-muted);
+}
+
+.ui-parts-part[data-tone="bad"] {
+  background: var(--color-bad);
 }
 
 /* A part over the total takes the signal colour, whatever its tone. */
@@ -100,4 +112,12 @@
 
 .ui-parts-dot[data-tone="signal-soft"] {
   background: var(--color-signal-soft);
+}
+
+.ui-parts-dot[data-tone="muted"] {
+  background: var(--color-text-muted);
+}
+
+.ui-parts-dot[data-tone="bad"] {
+  background: var(--color-bad);
 }

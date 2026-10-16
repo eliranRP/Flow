@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 /** The colours a part can take. Each one is a token, so light and dark follow the theme. */
-export type PartTone = "accent" | "accent-dim" | "band-past" | "signal-soft";
+export type PartTone = "accent" | "accent-dim" | "band-past" | "signal-soft" | "muted" | "bad";
 
 export type BarPart = { key: string; value: bigint | number; tone: PartTone };
 
@@ -13,8 +13,10 @@ export type PartsBarProps = {
   total?: bigint | number;
   /** The bar's height: 6 is the thin bar, 8 the job bar (tokens --bar-thin and --bar-job). */
   height?: 6 | 8;
-  /** 2 leaves a small gap between parts; 0 butts them together. */
+  /** 2 leaves a 2px gap between parts (--band-label-gap); 0 butts them together. */
   gap?: 0 | 2;
+  /** pill: fully rounded ends (the default). block: the 6px block corner (--radius-block). */
+  radius?: "pill" | "block";
   /** One line per part, with a dot in its tone. Optional. */
   legend?: BarLegendItem[];
   /** The name for screen readers, for example the figure the bar is of. */
@@ -30,14 +32,14 @@ function toNumber(value: bigint | number): number {
  * over the total, so the widths add up. One part with a total is a single-fill bar. The parts grow
  * from the start on a change, over --motion-width (CSS only; reduced motion turns it off).
  */
-export function PartsBar({ parts, total, height = 6, gap = 0, legend, label }: PartsBarProps) {
+export function PartsBar({ parts, total, height = 6, gap = 0, radius = "pill", legend, label }: PartsBarProps) {
   const shown = parts.filter((part) => toNumber(part.value) > 0);
   const sum = shown.reduce((acc, part) => acc + toNumber(part.value), 0);
   const whole = total === undefined ? sum : toNumber(total);
   const rest = whole - sum;
   return (
     <div className="ui-parts">
-      <div className="ui-parts-bar" role="img" aria-label={label} data-height={height} data-gap={gap}>
+      <div className="ui-parts-bar" role="img" aria-label={label} data-height={height} data-gap={gap} data-radius={radius}>
         {shown.map((part) => (
           <span
             key={part.key}
