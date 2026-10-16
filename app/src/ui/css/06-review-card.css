@@ -341,6 +341,11 @@
   cursor: pointer;
 }
 
+.ui-review-field-chevron {
+  display: inline-flex;
+  flex: none;
+}
+
 .ui-review-field-main {
   display: flex;
   flex: 1;

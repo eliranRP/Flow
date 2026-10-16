@@ -454,7 +454,7 @@ function ReviewPanelLine({
         <span className={missing ? "ui-review-field-value ui-review-field-missing" : "ui-review-field-value"}>{line.value}</span>
       </span>
       {line.jev ? <span className="ui-review-field-hint"><JevTag /></span> : hint ? <span className="ui-review-field-hint">{hint}</span> : null}
-      {line.onOpen ? <ChevronIcon size={16} /> : null}
+      {line.onOpen ? <span className="ui-review-field-chevron" aria-hidden="true"><ChevronIcon size={16} /></span> : null}
     </>
   );
   if (line.onOpen == null) return <div className="ui-review-field">{inner}</div>;
