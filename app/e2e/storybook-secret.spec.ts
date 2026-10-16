@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { SAMPLE_ASSISTANT_SECRET } from "../src/assistant-sample";
 
-const STORY = "/iframe.html?id=screens-ai-connection--code-ready-claude-code&viewMode=story";
+const STORY = "/iframe.html?id=screens-ai-connection--code-ready-other&viewMode=story";
 
 async function openSecret(page: Page): Promise<{ secret: Locator; text: string }> {
   await page.goto(STORY, { waitUntil: "domcontentloaded" });
