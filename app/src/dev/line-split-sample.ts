@@ -163,3 +163,39 @@ export function sampleSplitApi(
     },
   };
 }
+
+/**
+ * FLOW-370 proof fixture: the split board's amounts, dates, counts and order with invented names
+ * (lane rule 25). Only `?board=1` on the dev route uses it, so the unit tests keep the sample above.
+ */
+export const BOARD_SPLIT_CATEGORIES = [
+  { id: "b-materials", name: "חומרים", kind: "expense" as const, hidden: false },
+  { id: "b-labour", name: "עבודה", kind: "expense" as const, hidden: false },
+  { id: "b-repairs", name: "תיקונים ותחזוקה", kind: "expense" as const, hidden: false },
+  { id: "b-power", name: "חשמל ומים", kind: "expense" as const, hidden: false },
+  { id: "b-other", name: "אחר", kind: "expense" as const, hidden: false },
+];
+
+export const BOARD_SPLIT_PROJECTS = [
+  { id: "b-birch", name: "Birch Lane", status: "active" as const },
+  { id: "b-juniper", name: "Juniper Ct", status: "active" as const },
+  { id: "b-elm", name: "Elm Row", status: "active" as const },
+  { id: "b-sable", name: "Sable Ct", status: "active" as const },
+  { id: "b-okafor", name: "Okafor", status: "active" as const },
+];
+
+/** 05/10, a $8,940.17 expense to a supplier, filed as materials on the Juniper Ct project. */
+export const BOARD_SPLIT_LINE: SampleLine = {
+  id: "t-board-split",
+  amountNet: -894_017n,
+  direction: "expense",
+  currency: "USD",
+  categoryId: "b-materials",
+  categoryName: "חומרים",
+  projectId: "b-juniper",
+  projectName: "Juniper Ct",
+  supplier: "Northline Supply",
+  docDate: "2026-10-05",
+  reviewBlocked: false,
+  loanSplit: false,
+};
