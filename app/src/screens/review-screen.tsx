@@ -1,10 +1,10 @@
-import { type ProjectWaitingRow, type ReviewRow } from "@flow/shared";
+import { formatAmountText, type ProjectWaitingRow, type ReviewRow } from "@flow/shared";
 import { useEffect, useMemo, useRef } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useHoldWrites } from "../use-is-viewer";
 import { useFlowSearch, useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
-import { useProjectWaitingQuery, useReviewQuery, useLineMetaPageQuery } from "../use-books";
+import { useProjectWaitingQuery, useReviewQuery } from "../use-books";
 import { useHeldOrder } from "../list-hold";
 import { txnListState } from "../txn-nav";
 import { reviewFocusPath } from "../review-paths";
@@ -13,15 +13,13 @@ import { formatDayMonth } from "../ui/date-math";
 import { KeptOutTag, rowSource } from "../ui/line-marks";
 import { ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
-import { statementMethodOf } from "../ui/statement";
 import { ScreenHeader } from "../ui/screen-header";
-import { KEPT_OUT } from "./screen-shared";
+import { KEPT_OUT, invoiceDate } from "./screen-shared";
+import { ChevronIcon } from "../ui/icons";
 import { ScreenState } from "../ui/screen-state";
-import { EMPTY_REVIEW, listFocusId, listPlace, queueAfterFocus, reviewE2e, ReviewEmpty, reviewLineFocus, reviewListPath, reviewSuggestion, rotateReview, statementSuggestion, useE2eReviewRows } from "./review-shared";
+import { EMPTY_REVIEW, listFocusId, listPlace, queueAfterFocus, reviewE2e, ReviewEmpty, reviewLineFocus, reviewListPath, rotateReview, useE2eReviewRows } from "./review-shared";
 import { type ReviewPreviewWrite, ReviewQueue } from "./review-queue";
-import { useJevQueue } from "./jev-review-card";
 import type { ReviewCase } from "../dev/review-e2e-fixture";
-import { jevShown, withJev } from "./jev-review";
 
 /** FLOW-365: the dev `case` param names a board state for the proofs; anything else is the default queue. */
 function reviewCaseOf(value: string | null): ReviewCase | null {
@@ -53,6 +51,8 @@ export function ReviewScreen() {
   const e2eRows = useE2eReviewRows(e2eList, Number(params.get("rows") ?? "") || undefined, reviewCaseOf(params.get("case")));
   // FLOW-309: `&fit=1` is the short-phone worst case (a wrapping supplier, Jev's reason, the banner).
   const e2eFit = e2eList && reviewE2e != null && params.get("fit") === "1";
+  // FLOW-365: the suggest case shows Jev's repeat-supplier line under the card.
+  const e2eSuggest = e2eList && params.get("case") === "suggest";
   const e2eShown = useMemo(() => (e2eFit && reviewE2e != null ? reviewE2e.e2eFitRows(e2eRows) : e2eRows), [e2eFit, e2eRows]);
   const phase = e2eList ? ({ kind: "ready" } as const) : screenPhase(preview, review);
   const source = e2eList ? e2eShown : (review.data ?? EMPTY_REVIEW);
@@ -154,7 +154,7 @@ export function ReviewScreen() {
       rows={ordered}
       search={search}
       previewWrite={e2eWrite}
-      sampleJev={e2eFit && reviewE2e != null ? reviewE2e.e2eFitJev : undefined}
+      sampleJev={e2eFit && reviewE2e != null ? reviewE2e.e2eFitJev : e2eSuggest && reviewE2e != null ? reviewE2e.e2eSuggestJev : undefined}
       listPlace={listPlace(rows, ordered, fromList)}
       backTo={fromList ? reviewListPath(search) : undefined}
       setupHandoff={setupRun ? { fromCard: setupFromCard } : undefined}
@@ -183,55 +183,48 @@ export function ReviewAllList({
     return () => { window.clearTimeout(timer); };
   }, [search, rows]);
   const ordered = useHeldOrder(rows, (row) => row.id);
-  // FLOW-704: the same Jev read as the queue, so a line Jev fills reads "✦ Jev · …" here too.
-  const preview = useHomePreview();
-  const jevIds = useMemo(() => rows.map((row) => row.transaction_id), [rows]);
-  const jevQueue = useJevQueue(jevIds, preview === "off");
-  // FLOW-305: one bank-details read for the bank lines on this page. A failed read keeps "בנק".
-  const bankIds = useMemo(() => rows.filter((row) => row.source === "mercury").map((row) => row.transaction_id), [rows]);
-  const lineMeta = useLineMetaPageQuery(bankIds);
   if (rows.length === 0) return <ReviewEmpty search={search} backTo={backTo} />;
   return (
     <div>
-      {/* FLOW-365: the flat list's title and its count line. */}
+      {/* FLOW-365: the flat list's title, its count line, and one row per item (no date groups, no avatars). */}
       <ScreenHeader
         title="כל הפריטים לאישור"
         subtitle={`${String(rows.length)} פריטים מחכים • הקישו על פריט כדי לפתוח אותו`}
         backTo={backTo}
+        backText="בית"
       />
-      <MonthList
-        rows={ordered}
-        keyOf={(row) => row.id}
-        dateOf={(row) => row.doc_date}
-        amountOf={(row) => ({ minor: row.amount_net, currency: row.currency ?? "ILS", direction: row.direction })}
-        days
-        cents
-        renderRow={(row) => {
-          const jev = jevQueue.stateFor(row.transaction_id);
-          const view = withJev(row, jev);
-          // "✦ Jev" only when every value on the line is Jev's: a rule's or the owner's value is not.
-          const parts = reviewSuggestion(view, false, jevShown(row, jev));
-          const allJev = parts != null && (parts.projectJev === true || parts.categoryJev === true)
-            && (parts.project == null || parts.projectJev === true)
-            && (parts.category == null || parts.categoryJev === true);
-          return (
-            <ListRow
-              variant="statement"
-              title={row.supplier_name ?? row.description}
-              fallback={row.source === "mercury" ? "bank" : "invoice"}
-              method={statementMethodOf(row.source, row.doc_kind, lineMeta.data?.get(row.transaction_id))}
-              suggestion={statementSuggestion(view)}
-              suggestionJev={allJev}
-              pending={row.line_status === "pending"}
-              agorot={row.amount_net}
-              currency={row.currency}
-              sign={row.direction === "income" ? "in" : "out"}
-              href={reviewFocusPath(search, row.id)}
-            />
-          );
-        }}
-      />
+      <ul className="ui-review-all">
+        {ordered.map((row) => (
+          <li key={row.id}>
+            <ReviewAllRow row={row} href={reviewFocusPath(search, row.id)} />
+          </li>
+        ))}
+      </ul>
     </div>
+  );
+}
+
+/** FLOW-365: a list row. The payee, then "<date> • חשבונית|בנק" (and "חסר פרויקט"), the amount and a chevron. */
+function ReviewAllRow({ row, href }: { row: ReviewRow; href: string }) {
+  const income = row.direction === "income";
+  const shown = row.amount_net < 0n ? -row.amount_net : row.amount_net;
+  const amount = formatAmountText(shown, row.currency ?? "ILS", income
+    ? { detail: true, direction: "income", plus: true }
+    : { detail: true });
+  const meta = [
+    invoiceDate(row.doc_date),
+    row.source === "mercury" ? "בנק" : "חשבונית",
+    row.project_id == null ? "חסר פרויקט" : null,
+  ].filter((part): part is string => part != null).join(" • ");
+  return (
+    <Link className="ui-review-all-row ui-hit" to={href}>
+      <span className="ui-review-all-text">
+        <span className="ui-review-all-title">{row.supplier_name ?? row.description}</span>
+        <span className="ui-review-all-meta">{meta}</span>
+      </span>
+      <bdi className={income ? "ui-review-all-amount ui-review-all-in ui-num" : "ui-review-all-amount ui-num"} dir="ltr">{amount}</bdi>
+      <ChevronIcon size={16} />
+    </Link>
   );
 }
 

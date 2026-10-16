@@ -59,7 +59,7 @@ describe("ReviewCard FLOW-327 additions", () => {
     expect(screen.queryByText(REVIEW_MISSING_BOTH)).toBeNull();
   });
 
-  it("shows the Jev reason line only with a הצעת Jev pill, numbers in bdi", () => {
+  it("shows the Jev reason line whenever the caller has Jev's reason, numbers in bdi", () => {
     const why = jevReasonText({ reason: "usual_for_party", partyFilings: 5, matchingFilings: 3 }, "expense");
     const { container, rerender } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevWhy={why} onProject={() => undefined} onCategory={() => undefined} />);
     const line = container.querySelector(".ui-review-reason");
@@ -67,7 +67,7 @@ describe("ReviewCard FLOW-327 additions", () => {
     expect([...(line?.querySelectorAll("bdi.ui-num") ?? [])].map((node) => node.textContent)).toEqual(["3", "5"]);
     expect(line?.querySelector("[aria-hidden='true']")?.textContent).toBe("✦");
     rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={{ ...jev, projectJev: false, categoryJev: false }} jevWhy={why} onProject={() => undefined} onCategory={() => undefined} />);
-    expect(container.querySelector(".ui-review-reason")).toBeNull();
+    expect(container.querySelector(".ui-review-reason")).not.toBeNull();
     rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevWhy={why} pending onProject={() => undefined} onCategory={() => undefined} />);
     expect(container.querySelector(".ui-review-reason:not(.ui-review-reason-slot)")).toBeNull();
     rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevWhy={null} onProject={() => undefined} onCategory={() => undefined} />);
@@ -134,8 +134,8 @@ describe("ReviewCard FLOW-327 additions", () => {
   it("shows Jev's no-project answer on the empty project row with הצעת Jev (FLOW-703)", () => {
     render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={{ category: "חומרים", projectNoneJev: true }} onProject={() => undefined} onCategory={() => undefined} />);
     const row = screen.getByRole("button", { name: `פרויקט: ${JEV_NO_PROJECT}, הצעת Jev` });
-    expect(row.querySelector(".ui-row-title")).not.toHaveClass("ui-row-title-muted");
-    expect(row.querySelector(".ui-suggest-tag-jev")).not.toBeNull();
+    expect(row.querySelector(".ui-review-field-hint")).toHaveTextContent("הצעה");
+    expect(row.querySelector(".ui-review-field-missing")).toBeNull();
     expect(JEV_NO_PROJECT).toBe("תקורה · ללא פרויקט");
   });
 });
@@ -159,11 +159,11 @@ describe("ReviewCard", () => {
     expect(screen.queryByText(/לפני מע״מ|פטור ממע״מ/)).not.toBeInTheDocument();
     expect(screen.getByText(/הכנסה ·/)).toBeInTheDocument();
     const projectRow = screen.getByRole("button", { name: /פרויקט: אין הצעה · הקישו לבחירה/ });
-    expect(projectRow.querySelector(".ui-review-none-value")).toBeInTheDocument();
+    expect(projectRow.querySelector(".ui-review-field-missing")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /פרויקט:/ })).toBeInTheDocument();
   });
 
-  it("prefixes expense amounts with a minus and leaves income unsigned", () => {
+  it("shows expense amounts without a sign and income with a plus", () => {
     const { rerender } = render(
       <ReviewCard
         supplier="Vendor"
@@ -172,7 +172,8 @@ describe("ReviewCard", () => {
         direction="expense"
       />,
     );
-    expect(screen.getByText("−₪1,250")).toBeInTheDocument();
+    expect(screen.getByText("₪1,250")).toBeInTheDocument();
+    expect(screen.queryByText(/−/)).not.toBeInTheDocument();
     rerender(
       <ReviewCard
         supplier="Client"
@@ -181,7 +182,7 @@ describe("ReviewCard", () => {
         direction="income"
       />,
     );
-    expect(screen.getByText("₪1,250")).toBeInTheDocument();
+    expect(screen.getByText("+₪1,250")).toBeInTheDocument();
     expect(screen.queryByText(/^−/)).not.toBeInTheDocument();
   });
 });
@@ -297,8 +298,7 @@ describe("ReviewCard הצעת Jev", () => {
     render(jevCard({ ...both, projectJev: true }));
     expect(screen.getByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעה" })).toBeInTheDocument();
-    expect(screen.getAllByText("הצעת Jev")).toHaveLength(1);
-    expect(screen.getAllByText("הצעה")).toHaveLength(1);
+    expect(screen.getAllByText("הצעה")).toHaveLength(2);
   });
 
   it("shows הצעת Jev on the category only", () => {
@@ -307,28 +307,26 @@ describe("ReviewCard הצעת Jev", () => {
     expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
   });
 
-  it("shows הצעת Jev on both rows, after the value and before the chevron, with the ✦ hidden", () => {
+  it("shows the grey הצעה on both rows, after the value and before the chevron", () => {
     render(jevCard({ ...both, projectJev: true, categoryJev: true }));
-    const tags = document.querySelectorAll(".ui-review-ai .ui-suggest-tag-jev");
-    expect(tags).toHaveLength(2);
-    for (const tag of tags) {
-      expect(tag).toHaveTextContent("✦הצעת Jev");
-      expect(within(tag as HTMLElement).getByText("✦")).toHaveAttribute("aria-hidden", "true");
-      const title = tag.closest(".ui-row-title");
-      expect(title?.firstElementChild).toHaveClass("ui-row-title-text");
-      expect(title?.lastElementChild).toBe(tag);
-      const chevron = tag.closest("button")?.querySelector(".ui-row-chevron");
+    const hints = document.querySelectorAll(".ui-review-field-hint");
+    expect(hints).toHaveLength(2);
+    for (const hint of hints) {
+      expect(hint).toHaveTextContent("הצעה");
+      const row = hint.closest("button");
+      const chevron = row?.querySelector("svg");
       expect(chevron).not.toBeNull();
-      expect(title?.compareDocumentPosition(chevron as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(hint.compareDocumentPosition(chevron as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     }
-    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
   });
 
   it("does not show הצעת Jev on a value that is not a suggestion", () => {
     render(jevCard({ project: "וילה רעננה", category: "חומרים", projectJev: true, categoryJev: true }));
     expect(screen.getByRole("button", { name: "פרויקט: וילה רעננה" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "קטגוריה: חומרים" })).toBeInTheDocument();
-    expect(document.querySelector(".ui-suggest-tag")).toBeNull();
+    expect(document.querySelector(".ui-review-field-hint")).toBeNull();
   });
 
   it("does not show הצעת Jev on an empty row", () => {
@@ -339,9 +337,9 @@ describe("ReviewCard הצעת Jev", () => {
 
   it("reads the words on a static row", () => {
     render(jevCard({ ...both, projectJev: true }, false));
-    const tag = document.querySelector(".ui-suggest-tag-jev");
-    expect(tag).not.toBeNull();
-    expect(within(tag?.closest(".ui-row") as HTMLElement).getByText("הצעת Jev")).toBeInTheDocument();
+    const row = document.querySelector(".ui-review-field");
+    expect(row).toHaveTextContent("הצעה");
+    expect(row).toHaveTextContent("וילה רעננה");
   });
 
   it("prefers הצעת Jev over החזר on a Jev category of the other kind", () => {
@@ -415,12 +413,12 @@ describe("ReviewCard Jev fill label (FLOW-702)", () => {
     expect(container.querySelector(".ui-review-filled")).toBeNull();
   });
 
-  it("shows a held flagged line with its flag, the הצעת Jev pills and no fill (plan item 3)", () => {
+  it("shows a held flagged line with its flag, the grey הצעה and no fill (plan item 3)", () => {
     // The anomaly gate kept the auto job off this line, so no jev_prefills row and no jevFilled.
     const loud = reviewFlagView([{ transaction_id: "t", kind: "duplicate", jev_score: 0.8, other_doc_date: "2026-10-03" }]);
     const { container } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} flag={loud} onProject={() => undefined} onCategory={() => undefined} />);
     expect(container.querySelector(".ui-review-flag")).not.toBeNull();
-    expect(screen.getAllByText("הצעת Jev").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("הצעה").length).toBeGreaterThan(0);
     expect(screen.queryByText(JEV_FILLED)).toBeNull();
     expect(screen.queryByRole("button", { name: /ביטול/ })).toBeNull();
   });

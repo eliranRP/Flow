@@ -2,18 +2,17 @@ import { expect, test, type Page } from "@playwright/test";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
-// The approve toast (הפריט אושר, with ביטול) is the one review toast the queue still shows; skip is device-only and shows none.
+// The approve toast (הפריט אושר, with ביטול) is the review toast the queue shows; skip is device-only and shows none.
 test("an approve toast stays clear of the actions and leaves on its own", async ({ page }) => {
-  await page.goto("/e2e/review");
+  await page.goto("/review?preview=1&e2e=list&rows=2");
   await expect(page.getByText("1 מתוך 2")).toBeVisible();
   const approve = page.getByRole("button", { name: "אישור" });
-  const change = page.getByRole("button", { name: "שינוי" });
   await approve.click();
   const toast = page.locator(".ui-toast");
   await expect(toast).toHaveAttribute("role", "status");
   await expect(toast).toHaveText(/הפריט אושר/);
-  await expect(page.getByRole("heading", { name: "הובלות לדוגמה" })).toBeVisible();
-  await expect(page.getByText("1 מתוך 1")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bayview Plumbing LLC" })).toBeVisible();
+  await expect(page.getByText("2 מתוך 2")).toBeVisible();
 
   const toastBox = await toast.boundingBox();
   const approveBox = await approve.boundingBox();
@@ -23,11 +22,7 @@ test("an approve toast stays clear of the actions and leaves on its own", async 
   expect(toastBox.y + toastBox.height).toBeLessThan(approveBox.y);
   await expect(page.locator(".ui-toast-host")).toHaveCSS("pointer-events", "none");
   await expect(toast).toHaveCSS("pointer-events", "auto");
-
-  await change.click();
-  await expect(page.getByText("השינוי נפתח")).toBeVisible();
-  // The undo toast lives 3s from when it is placed, and placing waits for the sheet to settle,
-  // so a slow runner needs more than 3s here.
+  // The undo toast lives 3s from when it is placed, so it leaves on its own well inside this wait.
   await expect(toast).toHaveCount(0, { timeout: 12_000 });
 });
 

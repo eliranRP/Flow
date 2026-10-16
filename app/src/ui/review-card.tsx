@@ -4,11 +4,10 @@ import { lineSplitPartsLabel } from "../line-split-copy";
 import { REVIEW_FLAG_PREFIX, type CopyPart, type ReviewFlagView, type ReviewPaidView } from "../review-copy";
 import { methodLabel, methodSourceName, type TxnMeta } from "../txn-meta";
 import { MethodIcon } from "./bank-details";
-import { AlertIcon, CheckIcon, ChevronDownIcon, DocumentIcon, NoteIcon, SplitIcon } from "./icons";
+import { AlertIcon, CheckIcon, ChevronDownIcon, ChevronIcon, NoteIcon, SplitIcon } from "./icons";
 import { ListRow } from "./list-row";
 import { Skeleton } from "./skeleton";
 import { TextLink } from "./text-link";
-import { JevTag, ReversalTag, SuggestTag } from "./suggest-tag";
 
 /** FLOW-312 item 2 / decision 0125: a split line whose bank amount changed. */
 export const SPLIT_MISMATCH_LINE = "הפיצול לא תואם את סכום השורה בבנק.";
@@ -152,10 +151,10 @@ export function ReviewCard({
   const methodName = method == null ? null : methodSourceName(meta);
   const memo = meta?.memo ?? null;
   const shown = netAgorot < 0n ? -netAgorot : netAgorot;
-  const amountText = formatAmountText(shown, currency, {
-    detail: true,
-    direction,
-  });
+  // FLOW-365: the board's figure has no minus: an expense is the plain amount, an income is "+" the amount.
+  const amountText = direction === "income"
+    ? formatAmountText(shown, currency, { detail: true, direction: "income", plus: true })
+    : formatAmountText(shown, currency, { detail: true });
   // A long amount steps its size down to fit a narrow card; it is never cut or wrapped (FLOW-327).
   const figureFit = { "--figure-chars": amountText.length } as CSSProperties;
   const shared = reason === "unallocated_shared";
@@ -195,7 +194,8 @@ export function ReviewCard({
   const note = shared ? "הוצאה משותפת · אישור יפתח\u00A0פיצול" : null;
   const mismatch = reason === "split_mismatch";
   const jevOnCard = !pending && lines.some((line) => line.jev);
-  const why = jevOnCard && jevWhy != null && jevWhy.length > 0 ? jevWhy : null;
+  // FLOW-365: Jev's line sits under the split link whenever the caller has Jev's reason for this line.
+  const why = !pending && jevWhy != null && jevWhy.length > 0 ? jevWhy : null;
   const spike = flag?.spike ?? null;
   const filled = jevFilled != null && !pending && (jevOnCard || jevFilled.alone === true) ? jevFilled : null;
   // FLOW-704: a row Jev may fill holds a skeleton while the read waits; the ✦ line under the rows is held
@@ -205,9 +205,6 @@ export function ReviewCard({
   return (
     <article className="ui-review" aria-busy={pending || undefined} data-jev-pending={pending ? "" : undefined}>
       <div className="ui-review-doc">
-        <span className="ui-review-tile" aria-hidden="true">
-          <DocumentIcon size={24} />
-        </span>
         <div className="ui-review-copy">
           {sourcePill ? <span className="ui-review-source">{sourcePill}</span> : null}
           <h2 className="ui-review-supplier t-title-3">
@@ -234,6 +231,15 @@ export function ReviewCard({
             </p>
           ) : null}
         </div>
+        {/* FLOW-365: a photographed document's thumbnail at the card's end-side top corner (the board's receipt). A bank line has no document. */}
+        {sourcePill === "חשבונית מצולמת" ? (
+        <span className="ui-review-tile" aria-hidden="true">
+          <span className="ui-review-paper-line" data-w="long" />
+          <span className="ui-review-paper-line" data-w="long" />
+          <span className="ui-review-paper-line" data-w="short" />
+          <span className="ui-review-paper-total" />
+        </span>
+        ) : null}
       </div>
       {spike?.pill ? (
         <div className="ui-review-amount">
@@ -282,37 +288,26 @@ export function ReviewCard({
               </div>
             ))}
           </div>
-        ) : lines.map((line) => pending && (line.value === "לא נבחר" || line.suggested) ? (
-          <div className="ui-row ui-hit" aria-hidden="true" key={line.key}>
-            <span className="ui-row-main">
-              <span className="ui-row-text">
-                <span className="ui-row-hint">{line.label}</span>
-                <span className="ui-row-title ui-review-skel-title"><Skeleton width="md" still={still} /></span>
-              </span>
-            </span>
+        ) : lines.length > 0 ? (
+          <div className="ui-review-panel">
+            {lines.map((line) => pending && (line.value === "לא נבחר" || line.suggested) ? (
+              <div className="ui-review-field" aria-hidden="true" key={line.key}>
+                <span className="ui-row-main">
+                  <span className="ui-row-text">
+                    <span className="ui-row-hint">{line.label}</span>
+                    <span className="ui-row-title ui-review-skel-title"><Skeleton width="md" still={still} /></span>
+                  </span>
+                </span>
+              </div>
+            ) : (
+              <ReviewPanelLine
+                key={line.key}
+                line={line}
+                buttonRef={line.key === "project" ? projectButtonRef : categoryButtonRef}
+              />
+            ))}
           </div>
-        ) : line.onOpen ? (
-          <ListRow
-            key={line.key}
-            variant="button"
-            eyebrow={line.label}
-            title={line.value === REVIEW_NO_SUGGESTION ? <span className="ui-review-none-value">{line.value}</span> : line.value}
-            muted={line.value === "לא נבחר"}
-            label={`${line.label}: ${line.value}${line.jev ? ", הצעת Jev" : line.suggested ? ", הצעה" : line.reversal ? ", החזר" : ""}`}
-            tag={lineTag(line)}
-            chevron
-            buttonRef={line.key === "project" ? projectButtonRef : categoryButtonRef}
-            onClick={line.onOpen}
-          />
-        ) : (
-          <ListRow
-            key={line.key}
-            variant="static"
-            eyebrow={line.label}
-            title={line.value}
-            tag={lineTag(line)}
-          />
-        ))}
+        ) : null}
         {onSplit && !mismatch && splitSummary == null ? (
           <button type="button" className="ui-review-split-link ui-hit" onClick={onSplit}>
             <SplitIcon size={18} />
@@ -348,7 +343,8 @@ export function ReviewCard({
         {jevSlot ? (
           <p className="t-hint ui-review-reason ui-review-reason-slot" aria-hidden="true">
             <span className="ui-review-reason-mark">✦</span>
-            <span className="ui-review-reason-text">{"\u00A0"}</span>
+            {/* Held, not shown: the words Jev's fill will carry, so the waiting card keeps its height. */}
+            <span className="ui-review-reason-text ui-review-reason-held">{`${JEV_FILLED} ${JEV_FILLED_UNDO}`}</span>
           </p>
         ) : null}
         {note == null ? null : pending ? (
@@ -434,17 +430,42 @@ function ReviewFlagBlock({ flag }: { flag: ReviewFlagView }) {
 }
 
 /**
- * FLOW-365: הצעת Jev on a Jev fill, הצעה on any other suggestion, then החזר. A value the owner or a
- * rule picked reads בחרת; a missing one reads חסר.
+ * FLOW-365: one field row of the card's panel. The label sits over the value; a suggestion reads as a
+ * grey "הצעה" (or "החזר") beside the chevron, with no pill. A missing value reads in the accent.
  */
-function lineTag(line: { suggested: boolean; jev: boolean; reversal?: boolean; value: string }) {
-  if (line.jev) return <JevTag />;
-  if (line.suggested) return <SuggestTag />;
-  if (line.reversal) return <ReversalTag />;
-  if (line.value === "לא נבחר" || line.value === REVIEW_NO_SUGGESTION) {
-    return <span className="ui-review-pick-tag" data-state="missing">חסר</span>;
-  }
-  return <span className="ui-review-pick-tag">בחרת</span>;
+function ReviewPanelLine({
+  line,
+  buttonRef,
+}: {
+  line: { key: string; label: string; value: string; suggested: boolean; jev: boolean; reversal?: boolean; onOpen?: () => void };
+  buttonRef?: Ref<HTMLButtonElement>;
+}) {
+  const missing = line.value === "לא נבחר" || line.value === REVIEW_NO_SUGGESTION;
+  const hint = line.suggested ? "הצעה" : line.reversal ? "החזר" : null;
+  // The visible hint is the grey word; a screen reader hears Jev's fill as "הצעת Jev".
+  const spoken = line.jev ? "הצעת Jev" : hint;
+  const inner = (
+    <>
+      <span className="ui-review-field-main">
+        <span className="ui-review-field-label">{line.label}</span>
+        <span className={missing ? "ui-review-field-value ui-review-field-missing" : "ui-review-field-value"}>{line.value}</span>
+      </span>
+      {hint ? <span className="ui-review-field-hint">{hint}</span> : null}
+      {line.onOpen ? <ChevronIcon size={16} /> : null}
+    </>
+  );
+  if (line.onOpen == null) return <div className="ui-review-field">{inner}</div>;
+  return (
+    <button
+      type="button"
+      className="ui-review-field ui-review-field-button ui-hit"
+      ref={buttonRef}
+      aria-label={`${line.label}: ${line.value}${spoken == null ? "" : `, ${spoken}`}`}
+      onClick={line.onOpen}
+    >
+      {inner}
+    </button>
+  );
 }
 
 /**

@@ -424,7 +424,7 @@ export function ReviewQueue({
   const missingBoth = settled && needProject && needCategory;
   // FLOW-333 C2: a split whose bank amount changed leads with עדכון הפיצול; להשאיר כך approves it as it stands.
   const mismatch = card.reason === "split_mismatch";
-  const jevWhy = jev.prefill?.why == null ? null : jevReasonText(jev.prefill.why, card.direction, reviewHasParty(card));
+  const jevWhy = jev.prefill?.why == null ? null : jevReasonText(jev.prefill.why, card.direction, reviewHasParty(card), jev.prefill.project?.name);
   const flag = reviewFlagView(flagsFor(card.transaction_id), { direction: card.direction, currency: card.currency });
   // FLOW-702: the auto job's fill still stands on the stored row; ביטול takes it back (a viewer reads it only).
   const jevFilled = !jevLoading && card.transaction_id && jevFilledOnCard(card, jev) ? {
@@ -505,7 +505,7 @@ export function ReviewQueue({
       {rows.length > 0 ? (
         <>
           {/* FLOW-507: a viewer doesn't work through the queue, so no visit meter. */}
-          {listPlace == null && !holdWrites ? <ReviewSegments index={index} total={total} /> : null}
+          {/* FLOW-365: the counter line ("פריט i מתוך n" and the auto count) sits above the visit bar. */}
           <div className="ui-review-counts">
             {holdWrites ? (
               <span className="t-hint ui-review-counter">
@@ -513,14 +513,12 @@ export function ReviewQueue({
                 {total === 1 ? " ממתינה" : " ממתינות"}
               </span>
             ) : (
-              <>
-                <span className="sr-only">פריט </span>
-                <span className="t-hint ui-review-counter">
-                  <ReviewCount value={index} digits={reviewCountDigits(total)} side="index" />
-                  {" מתוך "}
-                  <ReviewCount value={total} digits={reviewCountDigits(total)} side="total" />
-                </span>
-              </>
+              <span className="t-hint ui-review-counter">
+                {"פריט "}
+                <ReviewCount value={index} digits={reviewCountDigits(total)} side="index" />
+                {" מתוך "}
+                <ReviewCount value={total} digits={reviewCountDigits(total)} side="total" />
+              </span>
             )}
             {auto > 0 ? (
               <TextLink className="ui-review-auto" to={filedTo ?? `/review/filed${search}`} chevron={false}>
@@ -529,6 +527,7 @@ export function ReviewQueue({
               </TextLink>
             ) : null}
           </div>
+          {listPlace == null && !holdWrites ? <ReviewSegments index={index} total={total} /> : null}
         </>
       ) : null}
       <div className="ui-review-motion" data-motion={motion === "still" ? undefined : motion} key={card.id}>

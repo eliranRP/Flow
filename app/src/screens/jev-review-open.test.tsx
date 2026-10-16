@@ -203,9 +203,9 @@ describe("cold review scope", () => {
     localStorage.removeItem(jevConnectorStorageKey(scope));
   });
 
-  // The budget is 15s, not the 5s default: a cold first render of /review (module transform, then the first
-  // paint) took about 5s on a loaded runner and timed the test out before any assertion ran. It is not a retry.
-  // The wait for the released company read gets 5s, not the 1s default, for the same cold-start reason.
+  // Measured, not a retry: a warm-up render in beforeAll did not shorten this test (it changed the remembered
+  // state the test starts from), so the budget stays at 15s and the release wait at 5s: on this runner the
+  // released company read and the scoped connector key land after about 5s, where the defaults timed out.
   it("waits on a remembered on when /review is opened with no dashboard cache", async () => {
     let releaseCompany: () => void = () => undefined;
     let releaseIntegration: () => void = () => undefined;

@@ -118,7 +118,7 @@ function reviewRow(id: string, supplier: string, projectId: string | null, extra
 
 function showsPlace(text: string) {
   expect(screen.getByText((_content, element) => {
-    return element?.tagName === "SPAN" && element.classList.contains("t-hint") && element.textContent === text;
+    return element?.tagName === "SPAN" && element.classList.contains("t-hint") && element.textContent === `פריט ${text}`;
   })).toBeInTheDocument();
 }
 
@@ -194,8 +194,9 @@ describe("review queue list", () => {
     const auto = await screen.findByText(/אושרו אוטומטית היום/);
     const card = screen.getByRole("heading", { name: "מחסן הנמל" });
     expect(link.compareDocumentPosition(meter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(meter.compareDocumentPosition(auto) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(auto.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // FLOW-365: the counter line ("פריט i מתוך n" and the auto count) sits above the visit bar, then the card.
+    expect(auto.compareDocumentPosition(meter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(meter.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("lists every open item, opens that card, and returns to the list", async () => {
@@ -212,10 +213,10 @@ describe("review queue list", () => {
     fireEvent.click(await screen.findByRole("link", { name: "הצגת הכול" }));
     const first = await screen.findByRole("link", { name: /מחסן הנמל/ });
     const second = screen.getByRole("link", { name: /עגורני החוף/ });
-    // FLOW-305: the date moved from each row into one quiet day head above the rows.
-    expect(screen.getAllByRole("heading", { level: 3, name: /29\/09/ })).toHaveLength(1);
-    expect(first).toHaveTextContent("100");
-    expect(first).toHaveTextContent("✦ הרצל · חומרים");
+    // FLOW-365: no day heads; each row carries its date and source on the meta line, and no Jev marks.
+    expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
+    expect(first).toHaveTextContent("חשבונית");
+    expect(first).not.toHaveTextContent("✦");
     fireEvent.click(second);
     expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "אישור" })).toBeInTheDocument();
@@ -885,7 +886,7 @@ describe("review amounts keep their currency", () => {
         backTo="/review"
       />,
     );
-    expect(screen.getByText("+$100")).toHaveClass("ui-income");
+    expect(screen.getByText("+$100")).toHaveClass("ui-review-all-in");
     expect(screen.queryByText("₪100")).not.toBeInTheDocument();
   });
 });
