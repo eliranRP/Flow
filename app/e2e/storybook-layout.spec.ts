@@ -460,6 +460,11 @@ test("loading band skeletons stay inside the gutter and do not touch", async ({ 
     for (const story of stories) {
       await page.goto(`/iframe.html?id=${story.id}&viewMode=story`, { waitUntil: "domcontentloaded" });
       await page.locator("#storybook-root").waitFor({ state: "attached" });
+      // The band can attach before its hero renders; wait for the hero so the measure never reads a half-drawn band.
+      await page.waitForFunction(() => {
+        const band = document.querySelector(".ui-band");
+        return !band || band.querySelector(".ui-band-hero") !== null;
+      });
       const problems = await page.evaluate(() => {
         const band = document.querySelector(".ui-band");
         if (!(band instanceof HTMLElement)) return [];
