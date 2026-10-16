@@ -47,7 +47,7 @@ import { useMemoryLoanStore } from "./screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "./dev/loan-detail-sample";
 import { MissingBillsScreen } from "./screens/missing-bills-screen";
 import { ForecastScreen } from "./screens/forecast-screen";
-import { monthForecastSample, type ForecastSampleKind } from "./forecast-sample";
+import { monthForecastSample } from "./forecast-sample";
 import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME, SAMPLE_MISSING_RENAMED, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "./forecast-sample";
 
 const devReviewItems = [
@@ -512,7 +512,7 @@ export function DevUnpaid() {
 export function DevForecast() {
   const [params] = useSearchParams();
   const kind = (["positive", "negative", "moved"] as const).find((k) => k === params.get("kind")) ?? "positive";
-  return <ForecastScreen sample={monthForecastSample(kind as ForecastSampleKind)} />;
+  return <ForecastScreen sample={monthForecastSample(kind)} />;
 }
 
 export function DevMissingBills() {
