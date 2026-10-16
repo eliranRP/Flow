@@ -217,6 +217,7 @@
   --color-control-border: #8F86A3;
   --color-text: #1D1728;
   --color-text-secondary: #5B536E;
+  --color-avatar: #F3F0F8;   /* the board's neutral avatar circle (FLOW-445) */
   --color-text-muted: #746C88;
   --color-accent: #6C2ED6;
   --color-accent-text: #6C2ED6;
@@ -278,6 +279,7 @@
     --color-control-border: #736A8C;
     --color-text: #F1EDF8;
     --color-text-secondary: #B1A8C4;
+    --color-avatar: #2A2540;   /* the board's neutral avatar circle (FLOW-445) */
     --color-text-muted: #978EAB;
     --color-accent: #B894FF;
     --color-accent-text: #C3A5FF;
@@ -343,6 +345,7 @@
   --color-control-border: #736A8C;
   --color-text: #F1EDF8;
   --color-text-secondary: #B1A8C4;
+  --color-avatar: #2A2540;   /* the board's neutral avatar circle (FLOW-445) */
   --color-text-muted: #978EAB;
   --color-accent: #B894FF;
   --color-accent-text: #C3A5FF;
