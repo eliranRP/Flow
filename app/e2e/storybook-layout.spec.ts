@@ -269,11 +269,12 @@ test("the assistant settings stories stay inside 320, 360, and 390", async ({ pa
     "screens-routes--connections-assistant-expired",
     "screens-routes--connections-assistant-no-company",
     "screens-routes--connections-assistant-connected",
-    "screens-routes--settings-assistant-scope",
-    "screens-routes--settings-assistant-secret",
-    "screens-routes--settings-assistant-help",
-    "screens-routes--settings-assistant-used",
-    "screens-routes--settings-assistant-unused",
+    "screens-ai-connection--setup",
+    "screens-ai-connection--code-ready-claude-code",
+    "screens-ai-connection--code-ready-other",
+    "screens-ai-connection--connected",
+    "screens-ai-connection--read-scope",
+    "screens-ai-connection--expired",
   ];
   const failures: string[] = [];
   for (const theme of ["light", "dark"]) {
@@ -283,9 +284,6 @@ test("the assistant settings stories stay inside 320, 360, and 390", async ({ pa
         const globals = `&globals=theme:${theme}`;
         await page.goto(`/iframe.html?id=${id}&viewMode=story${globals}`, { waitUntil: "domcontentloaded" });
         await page.locator("#storybook-root").waitFor({ state: "attached" });
-        if (id.endsWith("scope") || id.endsWith("secret") || id.endsWith("help") || id.endsWith("used") || id.endsWith("unused")) {
-          await page.locator(".ui-sheet-panel").last().waitFor({ state: "visible" });
-        }
         const problems = await page.evaluate(() => {
           const roots = [document.querySelector("#storybook-root"), ...document.querySelectorAll(".ui-sheet-panel")].filter((node) => node instanceof HTMLElement);
           const problems: string[] = [];
@@ -519,7 +517,7 @@ test("a row tint is wider than its content by the spacing token on both sides", 
     { id: "components-radiorow--idle", selector: ".ui-radio-row", hover: true },
     { id: "components-radiorow--selected", selector: ".ui-radio-row", hover: false },
     { id: "components-reviewcard--suggestion", selector: ".ui-review-ai .ui-row", hover: true },
-    { id: "screens-routes--settings-business-row", selector: "a.ui-row", name: "קטגוריות", hover: true },
+    { id: "screens-routes--settings-menu", selector: "a.ui-row", name: "קטגוריות", hover: true },
   ];
   const failures: string[] = [];
   for (const item of cases) {
