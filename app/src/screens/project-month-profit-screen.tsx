@@ -16,7 +16,6 @@ import { Chip } from "../ui/chip";
 import { formatDayMonth, israelToday } from "../ui/date-math";
 import { rowSource } from "../ui/line-marks";
 import { List, ListRow } from "../ui/list-row";
-import { OrganizeChips } from "../ui/organize-chips";
 import { ProfitSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 import { SummaryRow } from "./project-profit-screen";
@@ -99,11 +98,11 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
             <SummaryRow label="הכנסות" value={<Amount agorot={figures.income_minor} currency={currency} income />} />
             <SummaryRow label="הוצאות שנספרות ברווח" value={<Amount agorot={projectExpenseMinor(figures)} currency={currency} />} />
           </Card>
-          <OrganizeChips label="סידור" className="ui-pp-chips">
+          <div role="group" aria-label="סידור" className="ui-pp-chips">
             {ORDERS.map((option) => (
               <Chip key={option.key} pressed={order === option.key} onClick={() => { setOrder(option.key); }}>{option.label}</Chip>
             ))}
-          </OrganizeChips>
+          </div>
           {counted.length === 0 ? <p className="ui-pp-note t-hint">אין תנועות בחודש הזה.</p> : null}
           {groups.map((group) => {
             const expanded = order !== "category" || openKeys.has(group.key);

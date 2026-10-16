@@ -14,7 +14,6 @@ import { Card } from "../ui/card";
 import { Chip } from "../ui/chip";
 import { HEBREW_MONTHS } from "../ui/date-math";
 import { List, ListRow } from "../ui/list-row";
-import { OrganizeChips } from "../ui/organize-chips";
 import { ProfitSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 
@@ -122,10 +121,10 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
             )}
           </Card>
           {after == null ? null : <p className="ui-pp-note t-hint">{NOTE}</p>}
-          <OrganizeChips label="סידור" className="ui-pp-chips">
+          <div role="group" aria-label="סידור" className="ui-pp-chips">
             <Chip pressed={by === "month"} onClick={() => { setBy("month"); }}>לפי חודש</Chip>
             <Chip pressed={by === "category"} onClick={() => { setBy("category"); }}>לפי קטגוריה</Chip>
-          </OrganizeChips>
+          </div>
           {by === "category" ? (
             <CategoryBars
               rows={categories}
