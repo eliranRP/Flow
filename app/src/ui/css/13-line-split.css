@@ -234,17 +234,3 @@
   margin-inline: var(--space-1) var(--space-2);
 }
 
-.ui-lsplit-read .ui-row-meta {
-  text-align: end;
-}
-
-.ui-lsplit-read-end {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.ui-lsplit-caution {
-  margin: var(--space-2) 0 0;
-  color: var(--color-warning);
-}

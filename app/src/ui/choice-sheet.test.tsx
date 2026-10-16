@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { PACE_COPY } from "./charge-switches";
+import { paceSheetCopy } from "./pace";
 import { ChoiceSheet, type ChoiceSheetCopy } from "./choice-sheet";
 import { BASIS_COPY, BASIS_SHEET_NOTE, CURRENCY_COPY, CURRENCY_SHEET_NOTE } from "./company-choices";
 
@@ -82,16 +82,16 @@ describe("ChoiceSheet", () => {
     expect(screen.getByText(BASIS_SHEET_NOTE)).toBeInTheDocument();
   });
 
-  it("lists the paces shortest first, with the stored one checked", () => {
-    renderSheet(PACE_COPY, "2months");
+  it("lists לא קבוע first, then the paces shortest first, with the stored one checked", () => {
+    renderSheet(paceSheetCopy(null), "2months");
     expect(screen.getByRole("radiogroup", { name: "כל כמה זמן" })).toBeInTheDocument();
     const radios = screen.getAllByRole("radio");
-    expect(radios.map((radio) => radio.getAttribute("data-value"))).toEqual(["month", "2months", "quarter", "year"]);
+    expect(radios.map((radio) => radio.getAttribute("data-value"))).toEqual(["never", "month", "2months", "quarter", "year"]);
     expect(screen.getByRole("radio", { name: "כל חודשיים" })).toBeChecked();
   });
 
   it("renders no note paragraph when the copy has no note", () => {
-    renderSheet(PACE_COPY, "month");
+    renderSheet(paceSheetCopy(null), "month");
     expect(document.querySelector(".ui-pick-note")).toBeNull();
   });
 });

@@ -73,9 +73,4 @@ export function methodSourceName(meta: Pick<TxnMeta, "method" | "card_name" | "a
   return splitAccountLast4(meta.account).name || null;
 }
 
-/** The counterparty row is hidden when it repeats the party shown above. */
-export function sameParty(a: string | null | undefined, b: string | null | undefined): boolean {
-  if (a == null || b == null) return false;
-  return a.trim().toLocaleLowerCase() === b.trim().toLocaleLowerCase();
-}
 

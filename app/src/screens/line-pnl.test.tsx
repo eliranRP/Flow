@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { TransactionDetail } from "@flow/shared";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { BooksProvider } from "../use-books";
@@ -8,7 +8,6 @@ import { ToastProvider } from "../ui/toast";
 import { linePnlState, TransactionScreen } from "./flow-screens";
 
 // The pill, not the toast's parts: a toast in parts shows them hidden from queries (FLOW-426).
-const VISIBLE_TOAST_PARTS = "script, style, [aria-hidden='true'] *";
 
 const base: NonNullable<TransactionDetail> = {
   id: "t-1",
@@ -49,6 +48,7 @@ function show(sample: NonNullable<TransactionDetail>, client = new QueryClient()
   );
 }
 
+/** The P&L switch sits in the נספר ב sheet, so the sheet opens first (FLOW-366). */
 function pnlSwitch() {
   return screen.getByRole("switch", { name: "נספר ברווח" });
 }
@@ -72,38 +72,34 @@ describe("linePnlState", () => {
 });
 
 describe("one line out of the P&L", () => {
-  it("takes the line out with the switch row, shows the pill, and undoes from the toast", async () => {
+  it("takes the line out from the נספר ב sheet, and undoes from the toast", async () => {
     show(base);
-    expect(screen.queryByText("לא נספר ברווח", { ignore: VISIBLE_TOAST_PARTS })).toBeNull();
+    expect(screen.getByRole("button", { name: /^נספר ב רווח ותזרים/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^נספר ב/ }));
     expect(pnlSwitch()).toBeChecked();
-    // On: no hint (design review).
-    expect(pnlSwitch()).not.toHaveAttribute("aria-describedby");
     fireEvent.click(pnlSwitch());
-    expect(await screen.findByText("ספק לדוגמה · לא נספר ברווח")).toBeTruthy();
-    expect(screen.getByText("לא נספר ברווח", { ignore: VISIBLE_TOAST_PARTS })).toBeTruthy();
+    expect(await screen.findByText("הוצא מהרווח")).toBeTruthy();
     expect(pnlSwitch()).not.toBeChecked();
     expect(screen.getByText("רק השורה הזו. הקטגוריה לא משתנה.")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
-    expect(await screen.findByText("ספק לדוגמה · נספר ברווח")).toBeTruthy();
-    await waitFor(() => { expect(screen.queryByText("לא נספר ברווח", { ignore: VISIBLE_TOAST_PARTS })).toBeNull(); });
+    fireEvent.click(screen.getByText("ביטול"));
+    expect(await screen.findByText("נספר ברווח")).toBeTruthy();
+    expect(pnlSwitch()).toBeChecked();
   });
 
-  it("brings one line of a kept-out category back in and marks it", async () => {
+  it("brings one line of a kept-out category back in from the sheet", async () => {
     show({ ...base, category_excluded_from_pnl: true, in_pnl: false });
-    expect(screen.getByText("לא נספר ברווח", { ignore: VISIBLE_TOAST_PARTS })).toBeTruthy();
-    expect(screen.getByText("הקטגוריה חומרים לא נספרת ברווח. אפשר לספור ברווח רק את השורה הזו.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^נספר ב תזרים בלבד · הוצא מהרווח/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^נספר ב/ }));
     fireEvent.click(pnlSwitch());
-    expect(await screen.findByText("ספק לדוגמה · נספר ברווח")).toBeTruthy();
-    expect(screen.queryByText("לא נספר ברווח", { ignore: VISIBLE_TOAST_PARTS })).toBeNull();
-    expect(within(document.querySelector(".ui-status-row") as HTMLElement).getByText("נספר ברווח")).toBeTruthy();
+    expect(await screen.findByText("נספר ברווח")).toBeTruthy();
+    expect(screen.getByText("רווח ותזרים")).toBeInTheDocument();
   });
 
   it("locks a loan line; with no loan split it counts by its category (FLOW-329)", () => {
     show({ ...base, pnl_fixed: true, pnl_state: "mixed" });
-    expect(screen.queryByRole("switch", { name: "נספר ברווח" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^נספר ב/ })).toBeNull();
     expect(screen.getByText("תשלום הלוואה · לפי הקטגוריה")).toBeTruthy();
     expect(screen.queryByText(/לפי הפיצול/)).toBeNull();
-    expect(screen.queryByText("חלקית ברווח")).toBeNull();
   });
 
   it("shows ⋯ only on a manual line, with delete alone (FLOW-329)", () => {
@@ -127,27 +123,24 @@ describe("one line out of the P&L", () => {
       splits: [part("s-1", "principal"), part("s-2", "interest"), part("s-3", "escrow")],
     });
     show({ ...base, pnl_state: "mixed" }, client);
-    expect(screen.queryByRole("switch", { name: "נספר ברווח" })).toBeNull();
-    expect(screen.queryByRole("link", { name: /לפי הקטגוריות בפיצול/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^נספר ב/ })).toBeNull();
     expect(screen.getByText("לפי חלקי ההלוואה")).toBeTruthy();
-    expect(screen.queryByText("חלקית ברווח")).toBeNull();
   });
 
-  it("locks a mixed split and opens its split by category (FLOW-124)", () => {
+  it("locks a mixed split, and its פיצול row stays open (FLOW-124)", () => {
     // The line's own category counts, but some of its parts are kept out.
     show({ ...base, pnl_state: "mixed" });
-    expect(screen.getByText("חלקית ברווח")).toBeTruthy();
-    expect(screen.queryByRole("switch", { name: "נספר ברווח" })).toBeNull();
-    expect(screen.getByRole("link", { name: /נספר ברווח, לפי הקטגוריות בפיצול/ })).toHaveAttribute("href", "/transactions/t-1/split-category");
+    expect(screen.queryByRole("button", { name: /^נספר ב/ })).toBeNull();
+    expect(screen.getByText("לפי הקטגוריות בפיצול")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^פיצול/ })).toBeInTheDocument();
   });
 
-  it("marks a split line whose parts are all kept out, and brings it back in with true", async () => {
+  it("a split line whose parts are all kept out counts again from the sheet", async () => {
     show({ ...base, pnl_state: "out" });
-    expect(screen.getByText("לא נספר ברווח", { ignore: VISIBLE_TOAST_PARTS })).toBeTruthy();
-    expect(screen.getByText("הקטגוריות בפיצול לא נספרות ברווח. אפשר לספור ברווח רק את השורה הזו.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^נספר ב/ }));
     expect(pnlSwitch()).not.toBeChecked();
     fireEvent.click(pnlSwitch());
-    expect(await screen.findByText("ספק לדוגמה · נספר ברווח")).toBeTruthy();
+    expect(await screen.findByText("נספר ברווח")).toBeTruthy();
   });
 });
 

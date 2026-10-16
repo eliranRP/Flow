@@ -1,4 +1,3 @@
-import type { TransactionDetail } from "@flow/shared";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -11,8 +10,7 @@ import {
 } from "../dev/line-split-sample";
 import type { LineSplitRead, PartDraft, PayloadPart } from "../line-split";
 import { renderWithProviders } from "../test-render";
-import { ViewerPreview } from "../use-is-viewer";
-import { SplitScreen, TransactionScreen } from "./flow-screens";
+import { SplitScreen } from "./flow-screens";
 import { LineSplitScreen, type LineInfo, type LineSplitApi, type LineSplitSample } from "./line-split";
 
 function showEditor(sample: Partial<LineSplitSample> & { line?: LineInfo } = {}) {
@@ -368,94 +366,6 @@ describe("split by category editor (FLOW-325)", () => {
     showEditor({ parts: expenseParts, saving: true });
     expect(screen.getByRole("button", { name: "סגירה" })).toBeDisabled();
     expect(screen.getByLabelText("אחוז, חשמל")).toBeDisabled();
-  });
-});
-
-const detailLine: NonNullable<TransactionDetail> = {
-  id: "t-detail",
-  description: "חומרי בניין אלון",
-  direction: "expense",
-  doc_date: "2026-10-06",
-  amount_gross: -480_000n,
-  amount_net: -480_000n,
-  vat_amount: 0n,
-  vat_status: "unknown",
-  source: "mercury",
-  pnl_role: "project",
-  project_id: "p-givat",
-  project_name: "פרויקט גבעתיים",
-  category_id: "c-build",
-  category_name: "חומרי בניין",
-  supplier_name: "חומרי בניין אלון",
-  customer_name: null,
-  review_status: null,
-};
-
-const savedSplit: LineSplitRead = {
-  transactionId: "t-detail",
-  currency: "ILS",
-  lineMinor: 480_000n,
-  partsMatch: true,
-  parts: [
-    { category_id: "c-elec", category_name: "חשמל", project_id: "p-herz", project_name: "פרויקט הרצליה", amount_minor: 144_000n, percent: 30, rest: false },
-    { category_id: "c-build", category_name: "חומרי בניין", project_id: null, project_name: null, amount_minor: 336_000n, percent: null, rest: true },
-  ],
-};
-
-function showDetail(sample: NonNullable<TransactionDetail>, split: LineSplitRead | null, viewer = false) {
-  const screenNode = <TransactionScreen sample={sample} sampleCategories={SAMPLE_SPLIT_CATEGORIES} sampleLineSplit={split} />;
-  renderWithProviders(viewer ? <ViewerPreview>{screenNode}</ViewerPreview> : screenNode);
-}
-
-describe("the פיצול section on the transaction detail (FLOW-325)", () => {
-  it("offers both kinds of split under one heading", () => {
-    showDetail(detailLine, null);
-    expect(screen.getByRole("heading", { name: "פיצול" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "פיצול בין פרויקטים" })).toHaveAttribute("href", "/transactions/t-detail/split");
-    expect(screen.getByRole("link", { name: "פיצול לפי קטגוריות" })).toHaveAttribute("href", "/transactions/t-detail/split-category");
-  });
-
-  it("shows a saved split's parts with a סה״כ row, and the category and project rows say the line is split", () => {
-    showDetail(detailLine, savedSplit);
-    expect(screen.getByRole("link", { name: /^חשמל, פרויקט הרצליה, ₪1,440, עריכת הפיצול/ })).toBeInTheDocument();
-    expect(screen.getByText("השאר · חומרי בניין")).toBeInTheDocument();
-    expect(screen.getByText("סה״כ")).toBeInTheDocument();
-    expect(screen.getAllByText("מפוצל · 2 חלקים · לא נספר כאן")).toHaveLength(2);
-    expect(screen.queryByRole("link", { name: "פיצול לפי קטגוריות" })).toBeNull();
-  });
-
-  it("a viewer reads the parts as static rows, with no entry rows", () => {
-    showDetail(detailLine, savedSplit, true);
-    expect(screen.getByText("חשמל")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /עריכת הפיצול/ })).toBeNull();
-    expect(screen.queryByRole("link", { name: "פיצול בין פרויקטים" })).toBeNull();
-  });
-
-  it("an open review keeps the row visible but off, with the reason", () => {
-    showDetail({ ...detailLine, review_status: "open", review_reason: "missing_project" }, null);
-    const row = screen.getByRole("button", { name: "פיצול לפי קטגוריות" });
-    expect(row).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByText("אשרו את התנועה בתור לאישור, ואז פצלו.")).toBeInTheDocument();
-  });
-
-  it("a line split by category keeps בין פרויקטים visible but off, with the reason", () => {
-    showDetail(detailLine, savedSplit);
-    const row = screen.getByRole("button", { name: "פיצול בין פרויקטים" });
-    expect(row).toHaveAttribute("aria-disabled", "true");
-    const hint = screen.getByText("לשורה יש פיצול לפי קטגוריות. אפשר רק אחד מהשניים.");
-    expect(row.getAttribute("aria-describedby")).toBe(hint.id);
-    expect(screen.queryByRole("link", { name: "פיצול בין פרויקטים" })).toBeNull();
-  });
-
-  it("a split_mismatch review does not block the editor", () => {
-    showDetail({ ...detailLine, review_status: "open", review_reason: "split_mismatch" }, null);
-    expect(screen.getByRole("link", { name: "פיצול לפי קטגוריות" })).toBeInTheDocument();
-  });
-
-  it("a line of zero has no entry for a split by category", () => {
-    showDetail({ ...detailLine, amount_net: 0n, amount_gross: 0n }, null);
-    expect(screen.queryByRole("link", { name: "פיצול לפי קטגוריות" })).toBeNull();
-    expect(screen.getByRole("link", { name: "פיצול בין פרויקטים" })).toBeInTheDocument();
   });
 });
 

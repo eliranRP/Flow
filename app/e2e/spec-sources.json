@@ -45,6 +45,10 @@
       "screens/project-detail-screen.tsx",
       "screens/profit-months.tsx",
       "screens/transaction-screen.tsx",
+      "ui/counted-in.tsx",
+      "screens/transaction-recurring.tsx",
+      "screens/transaction-head.tsx",
+      "screens/transaction-top-bar.tsx",
       "screens/split-screen.tsx",
       "screens/unpaid-screen.tsx",
       "screens/missing-bills-screen.tsx"
@@ -137,6 +141,10 @@
       "screens/change-form.tsx",
       "screens/search.tsx",
       "screens/transaction-screen.tsx",
+      "ui/counted-in.tsx",
+      "screens/transaction-recurring.tsx",
+      "screens/transaction-head.tsx",
+      "screens/transaction-top-bar.tsx",
       "screens/split-screen.tsx",
       "ui/review-card.tsx",
       "ui/change-sheet.tsx",
@@ -201,6 +209,10 @@
     ],
     "txn-step.spec.ts": [
       "screens/transaction-screen.tsx",
+      "ui/counted-in.tsx",
+      "screens/transaction-recurring.tsx",
+      "screens/transaction-head.tsx",
+      "screens/transaction-top-bar.tsx",
       "screens/filed-today-screen.tsx"
     ],
     "txn-paged.spec.ts": [
@@ -212,7 +224,11 @@
     "txn-swipe.spec.ts": [
       "ui/card-swipe.tsx",
       "txn-nav.tsx",
-      "screens/transaction-screen.tsx"
+      "screens/transaction-screen.tsx",
+      "ui/counted-in.tsx",
+      "screens/transaction-recurring.tsx",
+      "screens/transaction-head.tsx",
+      "screens/transaction-top-bar.tsx"
     ]
   },
   "sweeps": {
@@ -300,10 +316,18 @@
           "dev-routes.tsx#DevProjectMonths"
         ],
         "/transactions/1?preview=1": [
-          "screens/transaction-screen.tsx"
+          "screens/transaction-screen.tsx",
+          "ui/counted-in.tsx",
+          "screens/transaction-recurring.tsx",
+          "screens/transaction-head.tsx",
+          "screens/transaction-top-bar.tsx"
         ],
         "/e2e/txn?preview=1": [
           "screens/transaction-screen.tsx",
+          "ui/counted-in.tsx",
+          "screens/transaction-recurring.tsx",
+          "screens/transaction-head.tsx",
+          "screens/transaction-top-bar.tsx",
           "dev-routes.tsx#DevTransaction"
         ],
         "/e2e/split": [
@@ -418,7 +442,7 @@
       "screens/review-screen.tsx",
       "screens/unpaid-screen.tsx",
       "screens/transaction-screen.tsx",
-      "screens/transaction-charge-switches.tsx",
+      "ui/counted-in.tsx",
       "screens/categories-screen.tsx",
       "ui/change-sheet.tsx"
     ]

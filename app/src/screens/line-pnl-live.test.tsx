@@ -5,7 +5,6 @@ import { TransactionScreen } from "./flow-screens";
 import { renderWithProviders } from "../test-render";
 
 // The pill, not the toast's parts: a toast in parts shows them hidden from queries (FLOW-426).
-const VISIBLE_TOAST_PARTS = "script, style, [aria-hidden='true'] *";
 
 // FLOW-108 review: the live card, not the sample. It writes through set_transaction_pnl.
 const rpc = vi.hoisted(() => ({
@@ -79,7 +78,11 @@ function pnlCalls() {
   return rpc.calls.filter((call) => call.name === "set_transaction_pnl").map((call) => call.args);
 }
 
+/** The switch sits in the נספר ב sheet (FLOW-366): open the sheet when it is not up yet. */
 async function pnlSwitch() {
+  if (!screen.queryByRole("switch", { name: "נספר ברווח" })) {
+    fireEvent.click(await screen.findByRole("button", { name: /^נספר ב/ }));
+  }
   return screen.findByRole("switch", { name: "נספר ברווח" });
 }
 
@@ -96,8 +99,8 @@ describe("one line out of the P&L, live", () => {
     showLive();
     fireEvent.click(await pnlSwitch());
     await waitFor(() => { expect(pnlCalls()).toEqual([{ p_id: "tx", p_in_pnl: false }]); });
-    expect(await screen.findByText("לא נספר ברווח", { ignore: VISIBLE_TOAST_PARTS })).toBeTruthy();
-    fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
+    expect(await screen.findByText("הוצא מהרווח")).toBeTruthy();
+    fireEvent.click(await screen.findByText("ביטול"));
     await waitFor(() => { expect(pnlCalls().at(-1)).toEqual({ p_id: "tx", p_in_pnl: null }); });
   });
 
@@ -130,7 +133,7 @@ describe("one line out of the P&L, live", () => {
     fireEvent.click(await pnlSwitch());
     expect(await screen.findByText("לחלק ההחזר אין פרויקט.")).toBeTruthy();
     // FLOW-343: the toast offers the way out instead of a retry.
-    fireEvent.click(screen.getByRole("button", { name: "לפיצול" }));
+    fireEvent.click(screen.getByText("לפיצול"));
     expect(await screen.findByText("split-category")).toBeTruthy();
   });
 

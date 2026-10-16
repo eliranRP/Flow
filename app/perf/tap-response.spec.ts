@@ -115,6 +115,8 @@ const taps: Tap[] = [
     rpc: "set_transaction_cash",
     path: `/transactions/${TXN_ID}`,
     arrange: async (page) => {
+      // FLOW-366: the switch sits in the "נספר ב" sheet, so open the row first.
+      await page.getByRole("button", { name: /^נספר ב/ }).tap();
       await expect(cashSwitch(page)).toBeVisible({ timeout: 30_000 });
     },
     press: async (page) => {

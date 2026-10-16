@@ -1,10 +1,11 @@
-import { formatAmountText, formatMoney, type PartyCharges, type PaymentRecurring, type TransactionDetail } from "@flow/shared";
+import { formatAmountText, type PartyCharges, type PaymentRecurring, type TransactionDetail } from "@flow/shared";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { LoanReadError, LoanTransactionSplit } from "./loan-match";
 import { LoanCategoryRow } from "./loan-match-row";
 import { useLoanSplitView } from "./loan-match-api";
 import { absAgorot } from "../agorot";
+import { cashLinesBackLabel } from "../cash";
 import { useHoldWrites } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
 import { useHomePreview, usePreviewSearch } from "../preview";
@@ -12,19 +13,16 @@ import { screenPhase } from "../query-phase";
 import { transactionQueryOptions, useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useLineMetaQuery, useTransactionQuery } from "../use-books";
 import { TxnStepNav, txnParty, usePrefetchNeighbours, usePrefetchNextPage, useAnnounceTxn, useNeighbourParty, useTxnNav, useTxnNavKeys } from "../txn-nav";
 import { assertNoError, useWrite } from "../use-write";
-import { Amount } from "../ui/amount";
 import { CardSwipe } from "../ui/card-swipe";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
-import { StatusDot } from "../ui/status-dot";
-import { BackButton, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
+import { transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
 import { IconRow } from "../ui/icon-row";
-import { ChartIcon, CheckIcon, KeptOutIcon, LockIcon, MoreIcon, ProjectsIcon, TagIcon, TrashIcon } from "../ui/icons";
-import { List, ListRow } from "../ui/list-row";
-import { Toggle } from "../ui/toggle";
+import { ChevronIcon, MoreIcon, ProjectsIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { List } from "../ui/list-row";
 import { ChangeAssignment, changeSaveFailure, type ChangeChoice } from "../ui/change-sheet";
-import { BankDetails } from "../ui/bank-details";
+import { CountedInRow, CountedInSheet, COUNTED_REASON_LOAN, COUNTED_REASON_RENO } from "../ui/counted-in";
 import { ScreenHeader } from "../ui/screen-header";
 import { DetailSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
@@ -33,10 +31,11 @@ import { useToast } from "../ui/toast";
 import { isReversal, reversalChoices } from "../reversal";
 import { ReversalTag } from "../ui/suggest-tag";
 import type { LineSplitRead } from "../line-split";
-import { TxnChargeSwitches } from "./transaction-charge-switches";
-import { TxnPartyCharges } from "./transaction-party-charges";
-import { LineSplitSection, lineSplitRowHint, useLineSplitQuery, useLoanSplitFlag } from "./line-split";
-import { invoiceDate, KEPT_OUT, KEPT_OUT_SHORT, MIXED_SHORT, ReservedMenuSlot, saveNewProject, useBlockedPreview, withChoice } from "./screen-shared";
+import { lineSplitRowHint, useLineSplitQuery, useLoanSplitFlag } from "./line-split";
+import { ReservedMenuSlot, saveNewProject, useBlockedPreview, withChoice } from "./screen-shared";
+import { TransactionTopBar } from "./transaction-top-bar";
+import { TxnFooter, TxnHead } from "./transaction-head";
+import { TxnRecurring } from "./transaction-recurring";
 import { projectChoices } from "../project-groups";
 
 function splitProjectLabel(
@@ -118,16 +117,13 @@ export function linePnlState(
   return { override, categoryOut, out, mixed, partsOut, forcedIn, next };
 }
 
-/** The switch row's one line of scope, shown only while the line is out (DESIGN-RULES §2.1). */
-function linePnlHint(pnl: LinePnl, categoryName: string): string | undefined {
-  if (!pnl.out) return undefined;
-  if (pnl.partsOut) return "הקטגוריות בפיצול לא נספרות ברווח. אפשר לספור ברווח רק את השורה הזו.";
-  if (pnl.override === false) return "רק השורה הזו. הקטגוריה לא משתנה.";
-  return `הקטגוריה ${categoryName} לא נספרת ברווח. אפשר לספור ברווח רק את השורה הזו.`;
-}
-
 /** What a change to a line's project or category refreshes. */
 const ASSIGN_KEYS = ["txn", "dashboard", "project", "project-category", "project-waiting", "review"];
+/** What a cash switch changes: the line, Home's cash box, the lists. */
+const CASH_KEYS = ["txn", "dashboard", "home", "breakdown-lines"];
+
+/** A cash write: the line's own override, with the state before it for the undo. */
+type CashChange = { id: string; party: string; next: boolean | null; previous: boolean | null; on: boolean; undo: boolean };
 
 /** A pick's write: the next ids, and the screen as it was before the tap, for a rollback. */
 type PickBack = {
@@ -227,7 +223,7 @@ export function TransactionScreen({
     keys: ["txn", "dashboard", "project", "project-category", "home", "breakdown", "breakdown-lines"],
     onSuccess: (done) => {
       toast.show({
-        message: `${done.party} · ${done.out ? KEPT_OUT : "נספר ברווח"}`,
+        message: done.out ? "הוצא מהרווח" : "נספר ברווח",
         ...(done.undo ? {} : {
           action: "ביטול",
           onAction: () => {
@@ -245,6 +241,39 @@ export function TransactionScreen({
       if (!supabase) throw new Error("supabase");
       // null clears the override; the generated types mark every argument non-null.
       assertNoError(await supabase.rpc("set_transaction_pnl", { p_id: change.id, p_in_pnl: change.override as boolean }));
+    },
+  });
+  const [sampleCash, setSampleCash] = useState<boolean | null | undefined>(undefined);
+  const [countedOpen, setCountedOpen] = useState(false);
+  const countedRef = useRef<HTMLButtonElement>(null);
+  const cashLine = useWrite<CashChange>({
+    failure: (error) => (error.message.includes("forbidden") ? "אין הרשאה לעדכן את השורה." : "לא הצלחנו לעדכן את השורה."),
+    keys: CASH_KEYS,
+    // A switch flips at once and the server's answer only corrects it (decision 0180).
+    optimistic: (change) => (sample || detail.data == null ? [] : [{
+      key: transactionQueryOptions(preview, detail.data.id).queryKey,
+      update: (old: unknown) => (old == null ? old : { ...(old), in_cash_override: change.next }),
+    }]),
+    onSuccess: (done) => {
+      toast.show({
+        message: done.on ? "נספר בתזרים" : "הוצא מהתזרים",
+        ...(done.undo ? {} : {
+          action: "ביטול",
+          onAction: () => {
+            cashLine.mutate({ ...done, next: done.previous, previous: done.next, on: !done.on, undo: true });
+          },
+        }),
+      });
+    },
+    run: async (change) => {
+      if (sample) {
+        setSampleCash(change.next);
+        return;
+      }
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      // null clears the override; the generated types mark every argument non-null.
+      assertNoError(await supabase.rpc("set_transaction_cash", { p_id: change.id, p_in_cash: change.next as boolean }));
     },
   });
   const [projectName, setProjectName] = useState("");
@@ -406,8 +435,8 @@ export function TransactionScreen({
   const detailRow = txn;
   const serverSplit = detailRow.pnl_role === "shared" || detailRow.review_reason === "unallocated_shared" || (detailRow.allocations?.length ?? 0) > 1;
   const splitRow = serverSplit;
-  const shownProject = splitProjectLabel(txn, splitRow, projectName || txn.project_name || "בלי פרויקט");
-  const shownCategory = categoryName || txn.category_name || "בלי קטגוריה";
+  const shownProject = splitProjectLabel(txn, splitRow, projectName || txn.project_name || "בחרו פרויקט");
+  const shownCategory = categoryName || txn.category_name || "בחרו קטגוריה";
   const shownCategoryId = categoryId || txn.category_id || "";
   const shownLoanPart = categories.data?.find((category) => category.id === shownCategoryId)?.loan_part ?? null;
   function openSplit() {
@@ -477,9 +506,6 @@ export function TransactionScreen({
     txn.category_name,
   );
   const shownReversal = sample == null && isReversal(categories.data ?? [], categoryId || txn.category_id, txnDirection);
-  const reviewLabel = txn.review_status === "open" ? "ממתין לאישור" : txn.review_status === "approved" || txn.review_status === "changed" ? "מאושר" : null;
-  const paymentLabel = txn.open_gross_agorot != null && txn.open_gross_agorot !== 0n ? "לגבייה" : txn.paid === true ? "שולם" : null;
-  const vatShown = (txn.currency ?? "ILS") === "ILS";
   const sampleChanged = sample != null && sampleOverride !== undefined;
   const lineSplit = sample ? (sampleLineSplit ?? null) : lineSplitQuery.data;
   const splitByCategory = lineSplit != null && lineSplit.parts.length > 0 && lineSplit.partsMatch;
@@ -488,112 +514,61 @@ export function TransactionScreen({
   // category, which misses a loan's own (unkeyed) principal category (FLOW-134 item 3).
   const loanLine = txn.pnl_fixed === true || loanSplitFlag || loanSplitView != null;
   const pnl = linePnlState(txn, sampleChanged ? sampleOverride : (txn.in_pnl_override ?? null), sampleChanged || loanLine ? null : txn.pnl_state, splitByCategory);
-  const pnlPill = pnl.out ? (
-    <StatusDot icon={<KeptOutIcon size={16} />}>{KEPT_OUT_SHORT}</StatusDot>
-  ) : pnl.mixed ? (
-    <StatusDot icon={<KeptOutIcon size={16} />}>{MIXED_SHORT}</StatusDot>
-  ) : pnl.forcedIn ? <StatusDot>נספר ברווח</StatusDot> : null;
-  const pnlSplit = txn.pnl_role === "shared" || (txn.allocations?.length ?? 0) > 1;
-  // FLOW-325 (plan Q9): the P&L reads the parts, not the line's own category and project.
-  const lineSplitHint = lineSplitRowHint(lineSplit);
+  // The cash view reads the line's override first, then its categories (decision 0168).
+  const cashOverride = sampleCash !== undefined ? sampleCash : (txn.in_cash_override ?? null);
+  const cashState = sampleCash !== undefined ? (sampleCash === false ? "out" : "in") : (txn.cash_state ?? "in");
+  const inCash = cashOverride != null ? cashOverride : cashState !== "out";
   // FLOW-329: ⋯ holds only delete, so it shows only on a manual line; its slot stays so the title keeps its place.
   const canDelete = txn.source === "manual" && !holdWrites;
   const menuButton = canDelete
     ? <IconButton ref={moreRef} label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>
     : <ReservedMenuSlot />;
-  const pnlScope = linePnlHint(pnl, txn.category_name ?? "");
-  const pnlHint = pnlScope == null ? undefined : `${pnlScope}${pnlSplit && !pnl.partsOut ? " כל הפרויקטים בשורה." : ""}`;
-  // Like the פיצול section's rows: no link for the reviewer preview, a viewer, or a line with an open review.
+  // A split's row is set only while no review is open on the line, and not in the reviewer's preview.
   const reviewBlocked = txn.review_status === "open" && txn.review_reason !== "split_mismatch";
-  const splitCategoryTo = onOpenSplit || holdWrites || reviewBlocked ? undefined : `/transactions/${txn.id}/split-category${search}`;
-  splitOpen.current = splitCategoryTo != null;
-  // FLOW-329 design review: the row sits after the VAT line. A loan line, and a split whose parts
-  // differ, are locked with one reason; a mixed split opens the split by category, where its parts are set.
-  const pnlRow = loanLine ? (
-    <ListRow variant="static" title="נספר ברווח" icon={<LockIcon />} hint={loanSplitFlag || loanSplitView != null ? "לפי חלקי ההלוואה" : "תשלום הלוואה · לפי הקטגוריה"} />
-  ) : pnl.mixed ? (
-    splitCategoryTo ? (
-      <ListRow variant="item" href={splitCategoryTo} title="נספר ברווח" icon={<LockIcon />} hint="לפי הקטגוריות בפיצול" label="נספר ברווח, לפי הקטגוריות בפיצול, פיצול לפי קטגוריות" chevron />
-    ) : (
-      <ListRow variant="static" title="נספר ברווח" icon={<LockIcon />} hint="לפי הקטגוריות בפיצול" />
-    )
-  ) : (
-    // FLOW-329: one tap takes the line out of the P&L or brings it back.
-    <Toggle
-      label="נספר ברווח"
-      hint={pnlHint}
-      // FLOW-420: the row icons' 24px and 1.9 stroke, so the three switch rows share one start edge.
-      icon={<ChartIcon size={24} stroke={1.9} />}
-      checked={!pnl.out}
-      disabled={holdWrites}
-      busy={pnlLine.isPending}
-      onChange={() => {
-        if (holdWrites || pnlLine.isPending || (sample == null && blocked())) return;
-        pnlLine.mutate({
-          id: txn.id,
-          party,
-          override: pnl.next,
-          previous: pnl.override,
-          out: !pnl.out,
-          undo: false,
-        });
-      }}
-    />
-  );
+  splitOpen.current = !(onOpenSplit || holdWrites || reviewBlocked);
+  const splitTo = `/transactions/${txn.id}/${splitByCategory ? "split-category" : "split"}${search}`;
+  // The reason a line is out of the P&L, as the counted-in row names it (FLOW-366, guide §7.10).
+  const category = categories.data?.find((entry) => entry.id === shownCategoryId);
+  const countedReason = loanLine ? COUNTED_REASON_LOAN : category?.in_rehab === true ? COUNTED_REASON_RENO : null;
+  const countedLocked = loanLine || pnl.mixed;
+  const lockedHint = loanLine ? (loanSplitFlag || loanSplitView != null ? "לפי חלקי ההלוואה" : "תשלום הלוואה · לפי הקטגוריה") : "לפי הקטגוריות בפיצול";
+  const countedBusy = pnlLine.isPending || cashLine.isPending;
+  const lineSplitHint = lineSplitRowHint(lineSplit);
+  function togglePnl() {
+    if (holdWrites || pnlLine.isPending || (sample == null && blocked())) return;
+    pnlLine.mutate({ id: detailRow.id, party, override: pnl.next, previous: pnl.override, out: !pnl.out, undo: false });
+  }
+  function toggleCash(next: boolean) {
+    if (holdWrites || cashLine.isPending || (sample == null && blocked())) return;
+    cashLine.mutate({ id: detailRow.id, party, next, previous: cashOverride, on: next, undo: false });
+  }
+  const pending = txn.review_status === "open";
+  const amountText = formatAmountText(absAgorot(txn.amount_net), txn.currency ?? "ILS", { detail: true });
   return frame(
     <>
-      <ScreenHeader
-        title={txn.direction === "income" ? "הכנסה" : "הוצאה"}
-        size="compact"
-        leading={<BackButton fallback={parent} />}
-        trailing={menuButton}
+      <TransactionTopBar
+        fallback={parent}
+        backLabel={nav ? cashLinesBackLabel(nav.list.from) : null}
+        title={`${party} · ${amountText}`}
+        end={menuButton}
       />
       <CardSwipe key={txn.id} canNext={nav?.next != null} canPrev={nav?.prev != null} enter={nav?.enter} peekNext={peekNext} peekPrev={peekPrev} onStep={(step) => { nav?.move(step, "swipe"); }}>
-        <div className="ui-page-pad">
-          <p className="t-title-3 ui-party">{party}</p>
-          <p className="t-display">
-            <Amount
-              agorot={absAgorot(txn.amount_net)}
-              presentation="detail"
-              currency={txn.currency}
-              direction={moneyIn ? "income" : "expense"}
-              income={moneyIn}
-              size="display"
-            />
-          </p>
-          {/* FLOW-339: the VAT sits on the amount's line, with no minus; only a guessed rate says so.
-              FLOW-351: each part keeps its words together and carries the "·" before it, so a narrow
-              line breaks before a separator and never leaves the date alone after one. */}
-          <p className="t-hint">
-            {vatShown ? <span className="ui-nowrap">לפני מע״מ</span> : null}
-            {vatShown && txn.vat_amount !== 0n ? (
-              <>
-                {" "}
-                <span className="ui-nowrap">
-                  {txn.vat_status === "assumed" ? "· מע״מ משוער " : "· מע״מ "}
-                  <bdi dir="ltr">{formatMoney(absAgorot(txn.vat_amount), txn.currency, { agorot: true })}</bdi>
-                </span>
-              </>
-            ) : null}
-            {vatShown ? " " : null}
-            <span className="ui-nowrap">
-              {vatShown ? "· " : null}
-              <bdi dir="ltr">{invoiceDate(txn.doc_date)}</bdi>
-            </span>
-          </p>
-          {reviewLabel || paymentLabel || pnlPill ? (
-            <div className="ui-status-row">
-              {reviewLabel ? <StatusDot>{reviewLabel}</StatusDot> : null}
-              {paymentLabel ? <StatusDot icon={paymentLabel === "שולם" ? <CheckIcon size={14} /> : undefined}>{paymentLabel}</StatusDot> : null}
-              {pnlPill}
-            </div>
+        <div className="ui-txn-body">
+          <div className="ui-txn-intro">
+          <TxnHead txn={txn} party={party} moneyIn={moneyIn} meta={lineMeta.data ?? undefined} />
+          {pending ? (
+            <Link className="ui-txn-banner" to={txn.review_id ? `/review?item=${encodeURIComponent(txn.review_id)}&from=all` : "/review?from=all"}>
+              <span className="ui-txn-banner-text">השורה מחכה לאישור שלך</span>
+              <span className="ui-txn-banner-action">לאישור</span>
+              <ChevronIcon />
+            </Link>
           ) : null}
-        </div>
+          </div>
         <List layout="inset">
           {holdWrites ? (
-            <IconRow icon={<ProjectsIcon />} label="פרויקט" value={shownProject} hint={lineSplitHint} />
+            <IconRow icon={<ProjectsIcon />} label="פרויקט" value={shownProject} valueTone={shownProject === "בחרו פרויקט" ? "accent" : undefined} hint={lineSplitHint} />
           ) : (
-            <IconRow icon={<ProjectsIcon />} label="פרויקט" value={shownProject} hint={lineSplitHint} buttonRef={projectRowRef} onClick={() => {
+            <IconRow icon={<ProjectsIcon />} label="פרויקט" value={shownProject} valueTone={shownProject === "בחרו פרויקט" ? "accent" : undefined} hint={lineSplitHint} buttonRef={projectRowRef} onClick={() => {
               if (splitRow) {
                 openSplit();
                 return;
@@ -605,9 +580,9 @@ export function TransactionScreen({
           {/* FLOW-114: a matched loan payment shows its loan here instead, and its category is locked. */}
           <LoanCategoryRow transactionId={txn.id} split={txn.loan_split} direction={txn.direction} currency={txn.currency} docDate={txn.doc_date} active={sample == null} readOnly={holdWrites}>
             {holdWrites ? (
-              <IconRow icon={<TagIcon />} label="קטגוריה" value={shownCategory} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} />
+              <IconRow icon={<TagIcon />} label="קטגוריה" value={shownCategory} valueTone={shownCategory === "בחרו קטגוריה" ? "accent" : undefined} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} />
             ) : (
-              <IconRow icon={<TagIcon />} label="קטגוריה" value={shownCategory} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} buttonRef={categoryRowRef} onClick={() => {
+              <IconRow icon={<TagIcon />} label="קטגוריה" value={shownCategory} valueTone={shownCategory === "בחרו קטגוריה" ? "accent" : undefined} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} buttonRef={categoryRowRef} onClick={() => {
                 setChangeStart("category");
                 setChangeSheet(true);
               }} />
@@ -624,29 +599,56 @@ export function TransactionScreen({
           readOnly={holdWrites}
           split={txn.loan_split}
         />
-        <List>
-          {pnlRow}
-          {/* FLOW-415 (a-3): the cash view and recurring switches, under נספר ברווח. */}
-          <TxnChargeSwitches txn={txn} party={party} holdWrites={holdWrites} sample={sample ? (sampleRecurring ?? null) : undefined} />
+        <TxnRecurring
+          txn={txn}
+          holdWrites={holdWrites}
+          sample={sample ? (sampleRecurring ?? null) : undefined}
+          sampleCharges={sample ? (sampleCharges ?? null) : undefined}
+          context={`${shownProject} · ${shownCategory}`}
+        />
+        <List layout="inset">
+          <CountedInRow
+            pnl={!pnl.out}
+            cash={inCash}
+            reason={countedReason}
+            locked={countedLocked}
+            lockedHint={lockedHint}
+            disabled={holdWrites}
+            busy={countedBusy}
+            onOpen={() => { setCountedOpen(true); }}
+            buttonRef={countedRef}
+          />
+          {holdWrites ? (
+            <IconRow icon={<SplitIcon />} label="פיצול" value={lineSplitHint ?? "בין פרויקטים או לפי קטגוריות"} />
+          ) : (
+            <IconRow icon={<SplitIcon />} label="פיצול" value={lineSplitHint ?? "בין פרויקטים או לפי קטגוריות"} disabled={loanSplitFlag || loanSplitView != null} onClick={() => {
+              if (onOpenSplit) {
+                onOpenSplit();
+                return;
+              }
+              void navigate(splitTo);
+            }} />
+          )}
         </List>
-        {/* FLOW-431 (layout A): the party's earlier charges, the usual amount and the change. */}
-        <TxnPartyCharges transactionId={txn.id} sample={sample ? (sampleCharges ?? null) : undefined} />
         {lineMeta.isError && lineMeta.data == null ? (
           <LoanReadError label="פרטי הבנק" busy={lineMeta.isFetching} onRetry={() => { void lineMeta.refetch(); }} />
-        ) : (
-          <BankDetails meta={lineMeta.data} party={party} direction={txnDirection} />
-        )}
-        <LineSplitSection
-          txn={txn}
-          split={lineSplit}
-          readOnly={holdWrites}
-          categories={sample ? (sampleCategories ?? []) : (categories.data ?? [])}
-          loanSplit={loanSplitFlag || loanSplitView != null}
-          projectSplitTo={`/transactions/${txn.id}/split${search}`}
-          onProjectSplit={onOpenSplit ? openSplit : undefined}
-          categorySplitTo={onOpenSplit ? undefined : `/transactions/${txn.id}/split-category${search}`}
-        />
+        ) : null}
+        <TxnFooter txn={txn} meta={lineMeta.data ?? undefined} />
+        </div>
       </CardSwipe>
+      {countedLocked ? null : (
+        <CountedInSheet
+          open={countedOpen}
+          onOpenChange={setCountedOpen}
+          pnl={!pnl.out}
+          cash={inCash}
+          reason={countedReason}
+          busy={countedBusy}
+          onPnl={togglePnl}
+          onCash={toggleCash}
+          returnFocusRef={countedRef}
+        />
+      )}
       <ChangeAssignment
         host="overlay"
         open={changeOpen}

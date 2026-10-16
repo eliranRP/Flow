@@ -340,3 +340,13 @@ export function cashLineSplit(row: Pick<CashLine, "parts" | "line_minor" | "curr
     total: formatAmountText(row.line_minor, row.currency, { detail: true }),
   };
 }
+
+/**
+ * FLOW-366: the transaction page's Back label when the list it was opened from is a month's lines
+ * ("יצא" or "נכנס"); null for any other list, so the page keeps its own parent.
+ */
+export function cashLinesBackLabel(from: string): string | null {
+  const path = from.split("?")[0] ?? "";
+  const match = /^\/cash\/\d{4}-\d{2}\/(in|out)\/[A-Z]{3}$/u.exec(path);
+  return match?.[1] == null ? null : cashSideLabel(match[1] === "in" ? "in" : "out");
+}

@@ -210,7 +210,7 @@ describe("viewer gates", () => {
       expect(screen.queryByRole("button", { name: "פיצול בין פרויקטים" })).not.toBeInTheDocument();
       expect(screen.queryByRole("link", { name: "פיצול בין פרויקטים" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "עוד" })).not.toBeInTheDocument();
-      expect(screen.getByRole("heading", { name: "הוצאה" })).toBeInTheDocument();
+      expect(screen.getByText("פיצול")).toBeInTheDocument();
       const slot = document.querySelector(".ui-menu-slot");
       expect(slot).toBeInstanceOf(HTMLElement);
       expect(slot).toHaveAttribute("aria-hidden", "true");
