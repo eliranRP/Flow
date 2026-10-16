@@ -31,7 +31,7 @@ export interface AddEntryViewProps {
   fromProject?: string | null;
   projects: readonly AddEntryItem[];
   categories: readonly AddEntryCategory[];
-  draft: EntryDraft;
+  edit: EntryDraft;
   onDraftChange: (next: EntryDraft) => void;
   document?: AttachedDocument | null;
   match?: BankMatch | null;
@@ -91,7 +91,7 @@ function ChipRow({ children }: { children: ReactNode }) {
 }
 
 export function AddEntryView(props: AddEntryViewProps) {
-  const { draft } = props;
+  const { edit: draft } = props;
   function patch(change: Partial<EntryDraft>) {
     props.onDraftChange({ ...draft, ...change });
   }
