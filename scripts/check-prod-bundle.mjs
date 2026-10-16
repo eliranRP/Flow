@@ -61,12 +61,12 @@ function isBlockedModule(id) {
 }
 
 /**
- * The setup sample card and the setup drawings use the example tag.
+ * The setup sample card uses the example tag.
  * A story, a reviewer screen, or a fixture in the same graph still fails.
  * @param {string[]} modules
  */
 function setupExampleCopyShips(modules) {
-  const ships = modules.some((id) => /[/\\]setup[/\\]sample-review\.tsx$/.test(id) || /[/\\]ui[/\\]setup-demos\.tsx$/.test(id));
+  const ships = modules.some((id) => /[/\\]setup[/\\]sample-review\.tsx$/.test(id));
   if (!ships) return false;
   return !modules.some((id) => isBlockedModule(id));
 }
