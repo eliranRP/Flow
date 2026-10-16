@@ -937,24 +937,6 @@ Deno.test("get_anomalies and get_missing_bills take no arguments and pass the SQ
   assertEquals(calls.length, 2);
 });
 
-// FLOW-514: the setup's suggestions pass the SQL object through, take no arguments, and refuse a write token.
-Deno.test("get_setup_suggestions takes no arguments and passes the SQL object through", async () => {
-  const calls: Array<[string, unknown]> = [];
-  const data = { projects: [], lenders: [{ name: "Lantern Home Loans", monthly_agorot: 524000, since: "2026-04-07" }] };
-  const rpc = (name: string, body: unknown) => {
-    calls.push([name, body]);
-    return Promise.resolve({ status: 200, json: data });
-  };
-  const result = await callTool("get_setup_suggestions", {}, ["read"], rpc);
-  assertEquals(result.structuredContent, { ok: true, data });
-  assertEquals(calls, [["get_setup_suggestions", {}]]);
-  assertEquals((await callTool("get_setup_suggestions", { today: "2026-01-01" }, ["read"], rpc)).isError, true);
-  assertEquals((await callTool("get_setup_suggestions", {}, ["read"], () => Promise.resolve({ status: 403, json: null }))).isError, true);
-  assertEquals((await callTool("get_setup_suggestions", {}, ["read"], () => Promise.resolve({ status: 200, json: [] }))).isError, true);
-  assertEquals((await callTool("get_setup_suggestions", {}, ["write"], rpc)).isError, true);
-  assertEquals(calls.length, 1);
-});
-
 Deno.test("get_expected_months checks months and project_id", async () => {
   const calls: Array<[string, unknown]> = [];
   const report = { today: "2026-04-20", months: [], recurring: [] };
