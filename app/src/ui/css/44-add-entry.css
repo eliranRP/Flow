@@ -163,6 +163,7 @@
   font: inherit;
   font-size: var(--type-title-3-size);
   font-variant-numeric: tabular-nums;
+  text-align: right;
   outline: none;
 }
 
