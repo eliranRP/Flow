@@ -211,7 +211,8 @@ a:is(.ui-btn-ghost, .ui-btn-danger, .ui-btn-link, .ui-btn-danger-link)[aria-disa
 }
 
 .ui-btn-primary[aria-busy="true"] {
-  background: var(--color-accent-pressed);
+  /* The board's saving frame: busy keeps the accent; the spinner and verb show the wait. */
+  background: var(--color-accent);
   color: var(--color-on-accent);
 }
 
