@@ -65,6 +65,15 @@
   padding-bottom: var(--band-pad-bottom);
 }
 
+/* FLOW-364: a past month's band is the darker one, and the colour eases between the two. */
+.ui-band {
+  transition: background-color var(--motion-bar) var(--ease-standard);
+}
+
+.ui-band-past {
+  background: var(--color-band-past);
+}
+
 .ui-band-row {
   display: flex;
   align-items: center;
@@ -311,4 +320,234 @@ html[data-kb="open"] .ui-sheet-body {
      little height left above the keyboard. */
   max-height: none;
   padding-block-end: var(--space-3);
+}
+
+/* Mockup a-3: the company's name on Home's band, a 16px ▼ after it, a 44px hit area. */
+.ui-band-company {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  min-block-size: var(--touch-min);
+  margin-inline-start: calc(var(--space-2) * -1);
+  padding-inline: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-input);
+  background: transparent;
+  color: var(--color-on-band);
+  font: inherit;
+  cursor: pointer;
+}
+
+.ui-band-company:active {
+  background: color-mix(in srgb, var(--color-scrim) 50%, transparent);
+}
+
+.ui-band-company-name {
+  min-inline-size: 0;
+  overflow: hidden;
+  font-size: var(--type-sheet-size);
+  line-height: var(--type-sheet-line);
+  font-weight: var(--type-sheet-weight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-band-company > svg {
+  flex: none;
+  stroke-width: 2.5;
+}
+
+/* FLOW-364: Home's band. Row 1 holds the company and the actions; the month pill, the figures and the forecast follow. */
+.ui-band-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--band-label-gap);
+}
+
+.ui-band-action {
+  color: var(--color-on-band);
+}
+
+.ui-band-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--avatar-size);
+  block-size: var(--avatar-size);
+  border-radius: var(--radius-button);
+  background: var(--band-avatar);
+}
+
+/* A past month's way back: the pill in the band's white, the darker band's colour. */
+.ui-band-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  block-size: var(--control-height-sm);
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-button);
+  background: var(--color-on-band);
+  color: var(--color-band-past);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-btn-2-weight);
+  text-decoration: none;
+}
+
+.ui-band-month-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--label-gap);
+  min-block-size: var(--touch-min);
+  padding-inline: var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--color-on-band);
+  font: inherit;
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-2-weight);
+  cursor: pointer;
+}
+
+.ui-band-title {
+  margin: 0;
+  color: var(--color-on-band-secondary);
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-small-weight);
+}
+
+/* FLOW-364 (board): Home's band ends 22px under its last row, not the 28px band padding. */
+.ui-band:has(.ui-band-body) {
+  padding-bottom: 22px;
+}
+
+/* FLOW-364 (board): the band's body sits on the page gutter, with the pill, the figures and the forecast stacked. */
+.ui-band-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-block-start: var(--space-5);
+  padding-inline: var(--space-side);
+  min-inline-size: 0;
+}
+
+.ui-home-figures {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-inline-size: 0;
+}
+
+.ui-band-net {
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-band-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--band-label-gap);
+  padding-top: var(--space-3);
+}
+
+.ui-band-row-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: 36px;
+  color: var(--color-on-band);
+  font-size: var(--type-body-size);
+  text-decoration: none;
+}
+
+.ui-band-row-label {
+  inline-size: var(--touch-min);
+}
+
+.ui-band-row-amount {
+  flex: 1;
+  font-weight: var(--type-btn-2-weight);
+}
+
+.ui-band-caption {
+  margin: 0;
+  color: var(--color-on-band-secondary);
+  font-size: var(--type-small-size);
+  line-height: var(--type-small-line);
+  font-weight: var(--type-small-weight);
+}
+
+/* The figures enter from the side the month came from (RTL: an earlier month from the right). */
+.ui-band-month-in-earlier {
+  animation: m-band-in-earlier var(--motion-bar) var(--ease-enter);
+}
+
+.ui-band-month-in-later {
+  animation: m-band-in-later var(--motion-bar) var(--ease-enter);
+}
+
+@keyframes m-band-in-earlier {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+@keyframes m-band-in-later {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-band-month-in-earlier,
+  .ui-band-month-in-later {
+    animation: none;
+  }
+}
+
+.ui-home-forecast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: 63px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--band-row);
+  color: var(--color-on-band);
+}
+
+.ui-home-forecast-text {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.ui-home-forecast-title {
+  margin: 0;
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  font-weight: var(--type-line2-weight);
+}
+
+.ui-home-forecast-sub {
+  margin: 0;
+  color: var(--color-on-band-secondary);
+  font-size: var(--type-small-size);
+  line-height: var(--type-small-line);
+  font-weight: var(--type-small-weight);
+}
+
+.ui-home-forecast-value {
+  font-size: var(--type-body-size);
+  font-weight: var(--type-btn-2-weight);
+}
+
+.ui-home-forecast-chevron {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-on-band);
 }

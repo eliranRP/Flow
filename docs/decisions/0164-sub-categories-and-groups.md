@@ -92,7 +92,7 @@ This is the one change existing data sees. A group label that becomes a real cat
   - `get_project_group(id, basis, from, to)`
   - All writes get the idempotency key, the write rate limit and undo kinds `category_parent` and `project_group`.
 - **What the Flow MCP agent needs first:**
-  1. `set_category_parent` and `create_categories` with `parent_id`, to tidy NRO Momentum's categories once the owner says how.
+  1. `set_category_parent` and `create_categories` with `parent_id`, to tidy the owner company's categories once the owner says how.
   2. `create_project_group` with `set_project_group`, to group the properties.
   3. The roll-up reads.
   - Starter sets are app-only.

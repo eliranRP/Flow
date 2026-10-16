@@ -127,7 +127,7 @@ export type {
   RecurringChange,
   RecurringPace,
 } from "./forecast.ts";
-export { cashLinesSchema, cashMonthsSchema, cashYearsSchema } from "./cash.ts";
+export { cashLinesSchema, cashMonthsSchema, cashToDaySchema, cashYearsSchema } from "./cash.ts";
 export type {
   CashCurrencyRow,
   CashLine,
@@ -136,7 +136,10 @@ export type {
   CashMonths,
   CashSide,
   CashTotalRow,
+  CashToDay,
   CashYears,
 } from "./cash.ts";
+export { projectsCashMonthSchema } from "./projects-cash.ts";
+export type { ProjectCashCurrencyRow, ProjectCashRow, ProjectsCashMonth } from "./projects-cash.ts";
 export { partyChargesSchema } from "./party-charges.ts";
 export type { PartyCharges } from "./party-charges.ts";

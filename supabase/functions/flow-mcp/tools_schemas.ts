@@ -50,6 +50,8 @@ export const WRITE_TOOL_NAMES = [
   "assign_expenses",
   "set_expense_category",
   "create_project",
+  "update_project",
+  "delete_project",
   "create_category",
   "create_projects",
   "create_categories",
@@ -134,7 +136,9 @@ export const ALLOWED: Record<string, Set<string>> = {
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
   set_expense_category: new Set(["idempotency_key", "transaction_id", "category_id"]),
-  create_project: new Set(["idempotency_key", "name", "status"]),
+  create_project: new Set(["idempotency_key", "name", "status", "type", "budget_minor"]),
+  update_project: new Set(["idempotency_key", "id", "name", "type", "budget_minor", "status"]),
+  delete_project: new Set(["idempotency_key", "id"]),
   create_category: new Set(["idempotency_key", "name", "kind", "parent_id"]),
   create_projects: new Set(["idempotency_key", "items"]),
   create_categories: new Set(["idempotency_key", "items"]),
@@ -272,7 +276,7 @@ export const categorySchema = z.object({
 }).strict();
 export const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "recurring_match"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "recurring_match", "project_update", "project_delete"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -485,10 +489,33 @@ export const attachLoanSchema = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fees_category_id"], message: "only with fees" });
   }
 });
+// FLOW-445: the project type is free text, at most 40 characters, with the name's character rule.
+const projectType = z.string().trim().max(40).transform(plainSpaces)
+  .refine((type) => !HIDDEN_CHARS.test(type), { message: HIDDEN_NAME });
+// A budget is whole minor units of the company currency; null clears it (update only).
+const projectBudget = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 export const createProjectSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   name: visibleName(2, 120),
   status: z.enum(["active", "finished"]).optional(),
+  type: projectType.optional(),
+  budget_minor: projectBudget.nullable().optional(),
+}).strict();
+export const updateProjectSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  id: UUID_TEXT,
+  name: visibleName(2, 120).optional(),
+  type: projectType.nullable().optional(),
+  budget_minor: projectBudget.nullable().optional(),
+  status: z.enum(["active", "finished"]).optional(),
+}).strict().superRefine((body, ctx) => {
+  if (!["name", "type", "budget_minor", "status"].some((key) => body[key as keyof typeof body] !== undefined)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "nothing to change" });
+  }
+});
+export const deleteProjectSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  id: UUID_TEXT,
 }).strict();
 export const createCategorySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,

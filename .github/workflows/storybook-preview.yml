@@ -24,8 +24,9 @@ concurrency:
 
 jobs:
   preview:
-    # A fork's pull request gets no secrets and must not run with a write token.
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    # A fork's pull request gets no secrets and must not run with a write token. A draft gets its preview
+    # when it is marked ready for review (FLOW-837): pushes to a draft do not build one.
+    if: github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: storybook-preview

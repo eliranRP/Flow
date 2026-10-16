@@ -153,10 +153,11 @@ jobs:
   # split and spec set as main's e2e-shard job: four shards of the main suite and two sweeps. Each shard
   # starts its own local Supabase and its own dev server; the database part, pgTAP and the deploy checks stay
   # on main. The runner jobs restore Playwright's browsers and apt packages from main's caches and never save.
+  # A draft's pushes skip the e2e shards (the stopgap until CI v2): they run once the PR is ready for review, and on each push after that.
   e2e:
     name: pr (e2e ${{ matrix.part }})
     needs: [changes]
-    if: needs.changes.outputs.ui == 'true'
+    if: needs.changes.outputs.ui == 'true' && !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -287,6 +288,7 @@ jobs:
           TESTS: ${{ needs.tests.result }}
           E2E: ${{ needs.e2e.result }}
           UI_CHANGED: ${{ needs.changes.outputs.ui }}
+          DRAFT: ${{ github.event.pull_request.draft }}
           DB: ${{ needs.db.result }}
           DB_CHANGED: ${{ needs.changes.outputs.db }}
         run: |
@@ -294,13 +296,13 @@ jobs:
           echo "static: $STATIC"
           echo "types: $TYPES"
           echo "tests: $TESTS"
-          echo "e2e: $E2E (the diff touches the app: $UI_CHANGED)"
+          echo "e2e: $E2E (the diff touches the app: $UI_CHANGED, draft: $DRAFT)"
           echo "db: $DB (the diff touches supabase/: $DB_CHANGED)"
           test "$CHANGES" = success
           test "$STATIC" = success
           test "$TYPES" = success
           test "$TESTS" = success
-          if [ "$UI_CHANGED" = true ]; then
+          if [ "$UI_CHANGED" = true ] && [ "$DRAFT" != true ]; then
             test "$E2E" = success
           else
             test "$E2E" = skipped

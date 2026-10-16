@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { describe, expect, it } from "vitest";
-import { TabBar, TabBarPicture } from "./tab-bar";
+import { MemoryRouter } from "react-router-dom";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { TabBar, TabBarPicture, tabSection } from "./tab-bar";
 import { expectRtl, expectTarget } from "./test-support";
 
 function accentRule(): string {
@@ -21,51 +21,35 @@ function accentRule(): string {
   return "";
 }
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe("TabBar", () => {
-  it("keeps the five slots", () => {
+  it("has four tabs, each a link to its screen (FLOW-364)", () => {
     expectRtl();
     render(
       <MemoryRouter>
-        <TabBar reviewCount={7} />
+        <TabBar />
       </MemoryRouter>,
     );
     const nav = screen.getByRole("navigation", { name: "ניווט ראשי" });
-    const names = [...nav.querySelectorAll("a")].map((link) => link.getAttribute("aria-label") ?? link.textContent.trim());
-    expect(names).toEqual(["בית", "פרויקטים", "הוספה", "לאישור, 7 פריטים ממתינים לאישור", "הגדרות"]);
-    expectTarget(screen.getByRole("link", { name: "הוספה" }));
+    const links = [...nav.querySelectorAll("a")];
+    expect(links.map((link) => link.textContent.trim())).toEqual(["בית", "פרויקטים", "הלוואות", "קבועים"]);
+    expect(links.map((link) => link.getAttribute("href"))).toEqual(["/", "/projects", "/settings/loans", "/missing-bills"]);
+    expectTarget(screen.getByRole("link", { name: "הלוואות" }));
   });
 
-  it("hides add for a viewer and keeps the slot", () => {
+  it("has no add, no badge and no count", () => {
     render(
       <MemoryRouter>
-        <TabBar allowAdd={false} />
+        <TabBar />
       </MemoryRouter>,
     );
-    const nav = screen.getByRole("navigation", { name: "ניווט ראשי" });
     expect(screen.queryByRole("button", { name: "הוספה" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "הוספה" })).not.toBeInTheDocument();
-    expect(nav.querySelectorAll(".ui-tab-slot")).toHaveLength(5);
-    expect(nav.querySelector(".ui-fab")).toBeNull();
-  });
-
-  it("uses the singular awaiting label for one item", () => {
-    render(
-      <MemoryRouter>
-        <TabBar reviewCount={1} />
-      </MemoryRouter>,
-    );
-    expect(screen.getByRole("link", { name: "לאישור, פריט אחד ממתין לאישור" })).toBeInTheDocument();
-  });
-
-  it("keeps 99+ in an ltr isolate", () => {
-    render(
-      <MemoryRouter>
-        <TabBar reviewCount={100} />
-      </MemoryRouter>,
-    );
-    const badge = document.querySelector(".ui-count-badge bdi");
-    expect(badge).toHaveAttribute("dir", "ltr");
-    expect(badge).toHaveTextContent("99+");
+    expect(document.querySelector(".ui-fab")).toBeNull();
+    expect(document.querySelector(".ui-count-badge")).toBeNull();
   });
 
   it("paints the active tab with the accent colour", () => {
@@ -81,92 +65,72 @@ describe("TabBar", () => {
     expect(screen.getByRole("link", { name: "בית" })).not.toHaveAttribute("aria-current");
   });
 
-  it("keeps home active on Home's breakdown", () => {
-    render(
-      <MemoryRouter initialEntries={["/flow/expense/category/ILS/c1"]}>
-        <TabBar />
-      </MemoryRouter>,
-    );
-    expect(screen.getByRole("link", { name: "בית" })).toHaveAttribute("aria-current", "page");
-  });
-
-  it("keeps home active on unpaid and settings active on categories", () => {
+  it("marks no tab current on settings, and the loans tab on the loans page", () => {
     const { unmount } = render(
-      <MemoryRouter initialEntries={["/unpaid"]}>
+      <MemoryRouter initialEntries={["/settings"]}>
         <TabBar />
       </MemoryRouter>,
     );
-    expect(screen.getByRole("link", { name: "בית" })).toHaveAttribute("aria-current", "page");
+    expect(document.querySelector('[aria-current="page"]')).toBeNull();
     unmount();
     render(
-      <MemoryRouter initialEntries={["/settings/categories"]}>
+      <MemoryRouter initialEntries={["/settings/loans/loan-1"]}>
         <TabBar />
       </MemoryRouter>,
     );
-    expect(screen.getByRole("link", { name: "הגדרות" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "הלוואות" })).toHaveAttribute("aria-current", "page");
   });
 
-  it("keeps settings active on the Connections and Loans pages (FLOW-501)", () => {
-    for (const path of ["/settings/connections", "/settings/loans", "/settings/loans/loan-1"]) {
-      const { unmount } = render(
-        <MemoryRouter initialEntries={[path]}>
-          <TabBar />
-        </MemoryRouter>,
-      );
-      expect(screen.getByRole("link", { name: "הגדרות" })).toHaveAttribute("aria-current", "page");
-      unmount();
-    }
+  it("scrolls to the top when the active tab is tapped", () => {
+    const scroll = vi.fn();
+    window.scrollTo = scroll;
+    render(
+      <MemoryRouter initialEntries={["/projects"]}>
+        <TabBar />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("link", { name: "פרויקטים" }));
+    expect(scroll).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
   });
 
   it("lights the tab a dev fixture names, where the path names none (FLOW-334)", () => {
     render(
       <MemoryRouter initialEntries={["/e2e/review"]}>
-        <TabBar section="review" />
+        <TabBar section="home" />
       </MemoryRouter>,
     );
-    expect(screen.getByRole("link", { name: /^לאישור/ })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "בית" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "בית" })).toHaveAttribute("aria-current", "page");
   });
 
-  it("highlights no tab on add and closes the sheet from +", async () => {
-    render(
-      <MemoryRouter initialEntries={["/add"]}>
-        <TabBar />
-        <Routes>
-          <Route path="/" element={<h1>בית</h1>} />
-          <Route path="/add" element={<h1>גיליון</h1>} />
-        </Routes>
-      </MemoryRouter>,
-    );
-    expect(document.querySelector('[aria-current="page"]')).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "הוספה" }));
-    expect(await screen.findByRole("heading", { name: "בית" })).toBeInTheDocument();
-  });
-
-  it("hides the tab bar while the keyboard is open", () => {
-    render(
-      <MemoryRouter>
-        <TabBar />
-      </MemoryRouter>,
-    );
-    const bar = document.querySelector(".ui-tabbar");
-    expect(bar).toBeInstanceOf(HTMLElement);
-    if (!(bar instanceof HTMLElement)) return;
-    expect(getComputedStyle(bar).display).not.toBe("none");
-    document.documentElement.dataset.kb = "open";
-    expect(getComputedStyle(bar).display).toBe("none");
-    delete document.documentElement.dataset.kb;
-  });
-
-  it("draws a picture of the bar with no router, links or names (FLOW-506)", () => {
-    render(<TabBarPicture section="review" reviewCount={120} />);
+  it("draws a picture of the bar with no router or links (FLOW-506)", () => {
+    render(<TabBarPicture section="projects" />);
     const bar = document.querySelector(".ui-tabbar-picture");
     expect(bar).toHaveAttribute("aria-hidden", "true");
-    expect(bar?.querySelectorAll(".ui-tab-slot")).toHaveLength(5);
+    expect(bar?.querySelectorAll(".ui-tab-slot")).toHaveLength(4);
     expect(bar?.querySelector("a, button")).toBeNull();
-    expect(bar?.querySelector('[aria-current="page"]')).toHaveTextContent("לאישור");
-    expect(bar?.querySelector(".ui-count-badge")).toHaveTextContent("99+");
+    expect(bar?.querySelector('[aria-current="page"]')).toHaveTextContent("פרויקטים");
     // Toast placement and the action bar look for .ui-tabbar; a picture must not count as the bar.
     expect(document.querySelector(".ui-tabbar")).toBeNull();
+  });
+});
+
+describe("tabSection", () => {
+  it.each([
+    ["/", "home"],
+    ["/review", "home"],
+    ["/unpaid", "home"],
+    ["/flow/expense/category/ILS/c1", "home"],
+    ["/profit", "home"],
+    ["/cash/2026-06", "home"],
+    ["/projects/villa", "projects"],
+    ["/settings/loans", "loans"],
+    ["/loans", "loans"],
+    ["/missing-bills", "recurring"],
+    ["/recurring", "recurring"],
+    ["/settings", null],
+    ["/settings/categories", null],
+    ["/add", null],
+  ] as const)("maps %s to %s", (path, expected) => {
+    expect(tabSection(path)).toBe(expected);
   });
 });
