@@ -916,6 +916,20 @@ Deno.test("get_jev_accuracy checks its dates and passes the report through", asy
   assertEquals(calls.length, 2);
 });
 
+Deno.test("get_recurring_schedule takes no arguments and passes the SQL rows through", async () => {
+  const calls: Array<[string, unknown]> = [];
+  const rpc = (name: string, body: unknown) => {
+    calls.push([name, body]);
+    return Promise.resolve({ status: 200, json: [{ party_name: "שכירות", state: "late" }] });
+  };
+  const result = await callTool("get_recurring_schedule", {}, ["read"], rpc);
+  assertEquals(result.structuredContent, { ok: true, data: { schedule: [{ party_name: "שכירות", state: "late" }] } });
+  assertEquals(calls, [["recurring_schedule", {}]]);
+  assertEquals((await callTool("get_recurring_schedule", { today: "2026-01-01" }, ["read"], rpc)).isError, true);
+  assertEquals((await callTool("get_recurring_schedule", {}, ["read"], () => Promise.resolve({ status: 200, json: {} }))).isError, true);
+  assertEquals((await callTool("get_recurring_schedule", {}, ["write"], rpc)).isError, true);
+});
+
 Deno.test("get_anomalies and get_missing_bills take no arguments and pass the SQL result through", async () => {
   const calls: Array<[string, unknown]> = [];
   const rpc = (name: string, body: unknown) => {
