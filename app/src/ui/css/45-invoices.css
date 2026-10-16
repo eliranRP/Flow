@@ -4,16 +4,16 @@
 .ui-inv-detail {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--space-inset-row);
 }
 
 /* Summary card: the total to collect, the paid and open bar, and the over-30-days line. */
 .ui-inv-summary {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 18px;
-  border-radius: 20px;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-radius: var(--radius-card);
 }
 
 .ui-inv-summary > .t-label,
@@ -23,17 +23,17 @@
 
 .ui-inv-total {
   margin: 0;
-  font-size: 34px;
-  font-weight: 400;
-  line-height: 1.15;
+  font-size: var(--type-total-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-total-line);
   color: var(--color-income);
 }
 
 .ui-inv-bar-block {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-block-start: 4px;
+  gap: var(--space-2);
+  padding-block-start: var(--space-1);
 }
 
 .ui-inv-bar-block .t-caption {
@@ -43,14 +43,14 @@
 .ui-inv-overdue {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   margin: 0;
-  padding-block-start: 10px;
+  padding-block-start: var(--space-3);
   border-block-start: 1px solid var(--color-line);
 }
 
 .ui-inv-overdue bdi {
-  font-weight: 500;
+  font-weight: var(--type-chip-weight);
 }
 
 .ui-inv-dot {
@@ -71,21 +71,21 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   min-height: 36px;
 }
 
 .ui-inv-refresh {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
   min-height: 36px;
   padding: 0;
   border: 0;
   background: none;
   color: var(--color-accent-text);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-chip-weight);
   cursor: pointer;
 }
 
@@ -97,14 +97,14 @@
 .ui-inv-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .ui-inv-item {
-  padding: 4px 0 8px;
+  padding: var(--space-1) 0 var(--space-2);
 }
 
 .ui-inv-item[data-marked="true"] .ui-inv-row {
@@ -114,8 +114,8 @@
 .ui-inv-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 8px 0;
+  gap: var(--space-inset-row);
+  padding: var(--space-2) 0;
   color: inherit;
   text-decoration: none;
 }
@@ -125,26 +125,26 @@
   flex: 1;
   flex-direction: column;
   min-width: 0;
-  gap: 2px;
+  gap: var(--space-1);
 }
 
 .ui-inv-line {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 0;
 }
 
 .ui-inv-name {
   overflow: hidden;
-  font-size: 17px;
+  font-size: var(--type-body-size);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .ui-inv-sub {
-  font-size: 15px;
+  font-size: var(--type-line2-size);
   color: var(--color-text-secondary);
 }
 
@@ -159,7 +159,7 @@
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
   white-space: nowrap;
 }
 
@@ -171,9 +171,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   min-height: 36px;
-  margin-inline-start: 50px;
+  margin-inline-start: calc(var(--space-10) + var(--space-3));
 }
 
 .ui-inv-text-action,
@@ -185,8 +185,8 @@
   border: 0;
   background: none;
   color: var(--color-accent-text);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-chip-weight);
   text-decoration: none;
   cursor: pointer;
 }
@@ -196,7 +196,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .ui-inv-head > * {
@@ -204,10 +204,10 @@
 }
 
 .ui-inv-chip {
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 500;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-field-btn);
+  font-size: var(--type-micro-size);
+  font-weight: var(--type-chip-weight);
   color: var(--color-text-secondary);
 }
 
@@ -220,85 +220,85 @@
 }
 
 .ui-inv-customer {
-  font-size: 24px;
-  font-weight: 600;
-  line-height: 1.2;
+  font-size: var(--type-name-size);
+  font-weight: var(--type-name-weight);
+  line-height: var(--type-card-line);
 }
 
 .ui-inv-match {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--space-3);
+  padding: var(--space-4);
   border: 1.5px solid var(--color-tint-strong);
-  border-radius: 18px;
+  border-radius: var(--radius-card);
   background: var(--color-tint);
 }
 
 .ui-inv-match-title {
   margin: 0;
   color: var(--color-accent-text);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-chip-weight);
 }
 
 .ui-inv-match-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .ui-inv-match-amount {
-  font-size: 17px;
+  font-size: var(--type-body-size);
 }
 
 .ui-inv-match-copy {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 2px;
+  gap: var(--space-1);
   text-align: end;
 }
 
 .ui-inv-raw {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px;
+  font-size: var(--type-micro-size);
   color: var(--color-text-secondary);
 }
 
 .ui-inv-match-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .ui-inv-match-yes {
   flex: 2;
   min-height: 48px;
-  border-radius: 24px;
+  border-radius: var(--radius-sheet);
 }
 
 .ui-inv-match-no {
   flex: 1;
   min-height: 48px;
   border: 1.5px solid var(--color-tint-strong);
-  border-radius: 24px;
+  border-radius: var(--radius-sheet);
   background: transparent;
 }
 
 .ui-inv-facts {
   display: flex;
   flex-direction: column;
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   background: var(--color-surface);
 }
 
 .ui-inv-fact {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--space-1);
   min-height: 56px;
-  padding: 12px 14px;
+  padding: var(--space-3) var(--space-inset-row);
 }
 
 .ui-inv-fact + .ui-inv-fact {
@@ -306,7 +306,7 @@
 }
 
 .ui-inv-fact-value {
-  font-weight: 500;
+  font-weight: var(--type-chip-weight);
 }
 
 .ui-inv-fact-value[data-over="true"] {
@@ -314,17 +314,17 @@
 }
 
 .ui-inv-fact-note {
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: var(--type-line2-size);
+  line-height: var(--type-body-line);
 }
 
 .ui-inv-doc {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   min-height: 76px;
-  padding: 10px 14px;
-  border-radius: 16px;
+  padding: var(--space-3) var(--space-inset-row);
+  border-radius: var(--radius-card);
   background: var(--color-surface);
   color: inherit;
   text-decoration: none;
@@ -342,19 +342,19 @@
   flex: none;
   flex-direction: column;
   justify-content: center;
-  gap: 5px;
+  gap: var(--space-1);
   width: 44px;
   height: 56px;
-  padding: 0 9px;
+  padding: 0 var(--space-2);
   box-sizing: border-box;
-  border-radius: 8px;
+  border-radius: var(--radius-field-btn);
   background: var(--color-raised);
 }
 
 .ui-inv-thumb > span {
   display: block;
   height: 2px;
-  border-radius: 1px;
+  border-radius: var(--radius-block);
   background: var(--color-line);
 }
 
@@ -367,12 +367,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .ui-inv-mark-note {
   margin: 0;
   max-width: 300px;
   text-align: center;
-  line-height: 1.5;
+  line-height: var(--type-body-line);
 }
