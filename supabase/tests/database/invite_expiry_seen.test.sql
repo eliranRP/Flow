@@ -23,12 +23,13 @@ where u.email in ('ei-invitee@example.com', 'ei-other@example.com');
 create temp table ei (label text primary key, id uuid);
 grant all on ei to authenticated, service_role;
 
-select tests.authenticate_as('ei_owner');
 insert into ei (label, id) values ('a', tests.fixture_company('ei_owner', 'Example Expiry'));
+insert into ei (label, id) values ('b', tests.fixture_company('ei_older', 'Example Older'));
+
+select tests.authenticate_as('ei_owner');
 insert into ei (label, id) select 'new', (public.invite_member('ei-invitee@example.com', 'editor')->>'id')::uuid;
 
 select tests.authenticate_as('ei_older');
-insert into ei (label, id) values ('b', tests.fixture_company('ei_older', 'Example Older'));
 insert into ei (label, id) select 'old', (public.invite_member('ei-invitee@example.com', 'viewer')->>'id')::uuid;
 
 -- Sent 20 days ago: out of the inbox. Sent 8 days ago: expired yesterday.
