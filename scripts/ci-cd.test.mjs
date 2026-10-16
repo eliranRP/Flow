@@ -973,7 +973,7 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
 
   // The check a merge waits for: every job it needs passed, or db was skipped because the diff does not touch it.
   const aggregate = jobIn(pr, "pr");
-  assert.match(aggregate, /needs: \[changes, static, types, tests, db\]\n {4}if: always\(\)\n/);
+  assert.match(aggregate, /needs: \[changes, static, types, tests, e2e, db\]\n {4}if: always\(\)\n/);
   assert.match(aggregate, /test "\$CHANGES" = success\n/);
   assert.match(aggregate, /test "\$STATIC" = success\n/);
   assert.match(aggregate, /test "\$TYPES" = success\n/);
