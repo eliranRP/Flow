@@ -56,6 +56,8 @@ type SettledToast = {
 };
 
 const GAP = 8;
+/** FLOW-363 (3b): the panel holds the space above the handle, so a sheet the toast fits above keeps a 0px surface pad. */
+const BASE_PAD = 0;
 
 async function setSafe(page: Page, safe: number): Promise<void> {
   await page.evaluate((inset) => {
@@ -193,7 +195,7 @@ function assertFade(samples: ToastFrame[]): void {
 
 function assertAboveSheet(settled: SettledToast): void {
   expect(Math.abs(settled.toastBottom - (settled.sheetTop - GAP))).toBeLessThanOrEqual(1);
-  expect(Math.abs(settled.pad - GAP)).toBeLessThanOrEqual(1);
+  expect(Math.abs(settled.pad - BASE_PAD)).toBeLessThanOrEqual(1);
 }
 
 async function openCategory(page: Page, safe: number): Promise<void> {
@@ -224,7 +226,7 @@ for (const viewport of viewports) {
       assertFade(samples);
       // The category picker is a fit sheet (change-sheet.tsx), so the toast sits above it with no pad.
       assertAboveSheet(settled);
-      expect(samples.every((sample) => Math.abs(sample.pad - GAP) <= 1)).toBe(true);
+      expect(samples.every((sample) => Math.abs(sample.pad - BASE_PAD) <= 1)).toBe(true);
     });
 
     test(`first show after the sheet settles at ${label}`, async ({ page }) => {
@@ -313,7 +315,7 @@ for (const viewport of viewports) {
       assertAboveSheet(settled);
       const partial = first.filter((sample) => sample.opacity > 0.02 && sample.opacity < 0.9);
       expect(partial).toHaveLength(0);
-      expect(first.every((sample) => Math.abs(sample.pad - GAP) <= 1)).toBe(true);
+      expect(first.every((sample) => Math.abs(sample.pad - BASE_PAD) <= 1)).toBe(true);
       await armSampler(page, safe, 600);
       await page.getByRole("button", { name: "חזרה" }).click();
       await expect(page.getByRole("heading", { name: "שינוי שיוך" })).toBeVisible();
@@ -323,7 +325,7 @@ for (const viewport of viewports) {
       expect(short.length).toBeGreaterThan(0);
       assertVisiblePosition(short);
       assertAboveSheet(above);
-      expect(short.every((sample) => sample.pad <= Math.max(above.pad, GAP) + 1)).toBe(true);
+      expect(short.every((sample) => sample.pad <= Math.max(above.pad, BASE_PAD) + 1)).toBe(true);
     });
   }
 }
