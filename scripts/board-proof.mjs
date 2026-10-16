@@ -17,7 +17,7 @@
  * Render method: see the board renders note in team memory (redesign-approval-proofs). The app shot is
  * taken from a dev-fixture build served at --base; the board PNGs were rendered at the same size.
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -101,6 +101,8 @@ export function proofPlan(frames, only, boards, out) {
   const plan = [];
   for (const frame of picked) {
     for (const theme of THEME_NAMES) {
+      // A frame drawn in one theme only (no light board PNG) gets one shot, not a crash.
+      if (!existsSync(path.join(boards, boardFileName(frame, theme)))) continue;
       plan.push({
         frame,
         theme,
@@ -110,6 +112,8 @@ export function proofPlan(frames, only, boards, out) {
       });
     }
   }
+  // A wrong --boards folder must fail loudly, not write an empty summary.
+  if (plan.length === 0) throw new Error(`no board PNG for ${picked.join(", ") || "any frame"} in ${boards}`);
   return plan;
 }
 
@@ -255,6 +259,14 @@ async function main(argv) {
   const summary = /** @type {Record<string, Record<string, number>>} */ ({});
   try {
     for (const shot of plan) {
+      // A frame drawn in one theme only (no board PNG for this theme, but one for the other) gets one
+      // shot, not a crash. A frame with no board in any theme is a wrong --boards folder or a typo.
+      if (!existsSync(shot.board)) {
+        const drawnElsewhere = plan.some((other) => other.frame === shot.frame && existsSync(other.board));
+        if (!drawnElsewhere) throw new Error(`no board PNG for ${shot.frame} in any theme: ${shot.board}`);
+        console.warn(`skipped ${shot.frame} ${shot.theme}: drawn in one theme only`);
+        continue;
+      }
       const context = await browser.newContext({
         viewport: { width: PROOF_WIDTH, height: PROOF_HEIGHT },
         deviceScaleFactor: PROOF_DPR,
@@ -295,6 +307,8 @@ async function main(argv) {
   } finally {
     await browser.close();
   }
+  // An empty run is a failed run: nothing was compared, so there is no number to gate on.
+  if (Object.keys(summary).length === 0) throw new Error("no frame was compared; check the map and the --boards folder");
   writeFileSync(path.join(options.out, "summary.json"), `${JSON.stringify(summary, null, 2)}\n`);
 }
 

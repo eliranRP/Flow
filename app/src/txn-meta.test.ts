@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { maskLongDigits, methodLabel, sameParty, splitAccountLast4 } from "./txn-meta";
+import { maskLongDigits, methodLabel, splitAccountLast4 } from "./txn-meta";
 import { parseTxnMeta, parseTxnMetaList } from "./txn-meta-parse";
 
 const empty = {
@@ -89,10 +89,3 @@ describe("methodLabel", () => {
   });
 });
 
-describe("sameParty", () => {
-  it("compares trimmed and case-insensitive", () => {
-    expect(sameParty(" example office suite ", "Example Office Suite")).toBe(true);
-    expect(sameParty("Example Office Suite", "Sample Supplies")).toBe(false);
-    expect(sameParty(null, "x")).toBe(false);
-  });
-});

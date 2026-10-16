@@ -313,6 +313,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-368"></a>[FLOW-368](tasks/FLOW-368.md) | Redesign: search with one סינון button, and opening from Home's icon | UI (design approved) |
 | <a id="flow-369"></a>[FLOW-369](tasks/FLOW-369.md) | Redesign: the add (+) sheet, receipt, cash or cheque, and the add form | UI (design approved) |
 | <a id="flow-370"></a>[FLOW-370](tasks/FLOW-370.md) | Redesign: one split screen for projects and categories | UI (design approved) |
+| <a id="flow-916"></a>[FLOW-916](tasks/FLOW-916.md) | Lines detail: receipt thumbnail row once a receipt image path exists | UI (follow-up) |
+| <a id="flow-917"></a>[FLOW-917](tasks/FLOW-917.md) | Add (+) sheet: camera, receipt reading and the supplier suggestion | UI (design approved) |
 
 ## Projects and reports
 
@@ -436,6 +438,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-834"></a>[FLOW-834](tasks/FLOW-834.md) | Delete what nothing uses: code, CSS, old mockups, duplicate tests | CLEANUP |
 | <a id="flow-835"></a>[FLOW-835](tasks/FLOW-835.md) | PR check under 100 seconds | INFRA |
 | <a id="flow-837"></a>[FLOW-837](tasks/FLOW-837.md) | Storybook preview on ready pull requests only | INFRA |
+| <a id="flow-915"></a>[FLOW-915](tasks/FLOW-915.md) | Test flakes under load: line-split dialog close, toast rAF and three more | BUG |
 
 ## Data hygiene (public repo)
 

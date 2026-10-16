@@ -173,7 +173,7 @@ describe("shared transaction category", () => {
 
   it("saves a shared category without calling reassign", async () => {
     mountShared({ allocations: twoShares }, savedUndo);
-    expect(await screen.findByRole("heading", { name: "הוצאה" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /קטגוריה|בחרו|חומרים/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /חומרים/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
@@ -229,7 +229,7 @@ describe("shared transaction category", () => {
     expect(await screen.findByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "שמירה" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "שמירה ואישור" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /בלי קטגוריה/ }));
+    fireEvent.click(screen.getByRole("button", { name: /בחרו קטגוריה/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {

@@ -204,14 +204,10 @@ test("a hosted build rejects an empty Supabase URL or anon key", () => {
   assert.deepEqual(rejectEmptyHostedSupabase({ VITE_SUPABASE_URL: "https://example.supabase.co" }, false), []);
 });
 
-test("ships the setup stage and the sample tag, and still blocks a fixture demo", () => {
+test("ships the setup sample tag, and still blocks a fixture demo", () => {
   const setup = violations({
     modules: [
-      "/repo/app/src/setup/demo-slot.tsx",
-      "/repo/app/src/ui/demo-player.tsx",
-      "/repo/app/src/ui/demo-pointer.tsx",
       "/repo/app/src/setup/sample-review.tsx",
-      "/repo/app/src/ui/setup-demos.tsx",
     ],
     files: [{ name: "app/dist/assets/index.js", body: "נתוני דוגמה · Example data" }],
   });

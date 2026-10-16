@@ -12,6 +12,7 @@ import type { LineSplitRead } from "./line-split";
 import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "./assistant-sample";
 import { InstallScreen, type InstallMode } from "./ui/install-screen";
 import { ChangeAssignment } from "./ui/change-sheet";
+import { DevTransactionBoard } from "./dev/transaction-board";
 import { BackButton, useGoBack } from "./ui/back";
 import { BandCompany } from "./ui/top-band";
 import { Button } from "./ui/button";
@@ -25,7 +26,19 @@ import { attentionRows, CashEmptyHome, CashHome, HomeBooks } from "./screens/Hom
 import { chargeChangeViews } from "./forecast";
 import { CashLinesScreen } from "./screens/cash-lines-screen";
 import { CashMonthScreen } from "./screens/cash-screens";
-import { sampleCashLines, sampleCashMonths, sampleCashToDay, sampleCashUsdLoss, sampleCashUsdToDay, sampleCashUsdYear, sampleCashYearMonths, sampleCashYears } from "./dev/cash-sample";
+import {
+  sampleBoardCashLines,
+  sampleBoardCashMonths,
+  sampleCashLines,
+  sampleCashLinesFlagged,
+  sampleCashMonths,
+  sampleCashToDay,
+  sampleCashUsdLoss,
+  sampleCashUsdToDay,
+  sampleCashUsdYear,
+  sampleCashYearMonths,
+  sampleCashYears,
+} from "./dev/cash-sample";
 import { CashHistoryScreen, CashYearScreen } from "./screens/cash-history";
 import { cashMonthKey } from "./cash";
 import {
@@ -44,6 +57,8 @@ import {
   UnpaidScreen,
 } from "./screens/flow-screens";
 import { ProfitMonthsScreen } from "./screens/profit-months";
+import { ProjectProfitScreen } from "./screens/project-profit-screen";
+import { JUNIPER_PROFIT, NEW_PROJECT_PROFIT } from "./dev/project-profit-sample";
 import { LoanDetailScreen, type LoanView } from "./screens/loan-detail-screen";
 import { useMemoryLoanStore } from "./screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "./dev/loan-detail-sample";
@@ -344,15 +359,31 @@ export function DevCashMonth() {
   return <CashMonthScreen sample={data} monthKey={cashMonthKey(data.months[1]?.month ?? "")} />;
 }
 
-/** FLOW-413: this month's יצא lines; `?side=in` shows נכנס, `?side=kept` לא נספר ברווח (FLOW-418). */
+/** FLOW-413: this month's יצא lines; `?side=in` shows נכנס, `?side=kept` לא נספר ברווח (FLOW-418). FLOW-366: `?order=` and `?pending=1`. */
 export function DevCashLines() {
   const [params] = useSearchParams();
   const asked = params.get("side");
   const side = asked === "in" || asked === "kept" ? asked : "out";
+  // FLOW-366: ?pending=1 flags the first line for review and the second as out of profit.
+  const flagged = params.get("pending") === "1";
+  if (params.get("board") === "1") {
+    // The board frame: an invented USD company with the board's amounts and pending rows, dated as the board
+    // draws them (today is 11/10 there), so the day titles and the rows' dates match the frame.
+    const boardToday = new Date(2026, 9, 11, 12);
+    const board = sampleBoardCashMonths(boardToday);
+    // The board draws only the יצא and נכנס rows, so a לא נספר request shows the יצא rows.
+    const boardSide = side === "in" ? "in" : "out";
+    return (
+      <CashLinesScreen
+        sample={{ months: board, lines: sampleBoardCashLines(boardSide, boardToday), today: "2026-10-11" }}
+        at={{ month: cashMonthKey(board.months[0]?.month ?? ""), side: boardSide, currency: "USD" }}
+      />
+    );
+  }
   const data = sampleCashMonths();
   return (
     <CashLinesScreen
-      sample={{ months: data, lines: sampleCashLines(side) }}
+      sample={{ months: data, lines: flagged ? sampleCashLinesFlagged(side) : sampleCashLines(side) }}
       at={{ month: cashMonthKey(data.months[0]?.month ?? ""), side, currency: "ILS" }}
     />
   );
@@ -615,6 +646,12 @@ export function DevProjectDetail() {
   );
 }
 
+/** FLOW-140 slice 1: the project profit page on the board's Juniper Ct figures; `?state=empty` is a project with no lines. */
+export function DevProjectProfit() {
+  const [params] = useSearchParams();
+  return <ProjectProfitScreen sample={params.get("state") === "empty" ? NEW_PROJECT_PROFIT : JUNIPER_PROFIT} />;
+}
+
 /** Dev-only months for the "לפי חודש" page: one open month, a loss and a profit. */
 /** `?empty=1` is a project with no month yet (review-cycle fixture, FLOW-335). */
 export function DevProjectMonths() {
@@ -719,32 +756,7 @@ export function DevInstall({ mode }: { mode: InstallMode }) {
 }
 
 export function DevTransaction() {
-  return (
-    <TransactionScreen
-      sample={{
-        id: "t-manual",
-        description: "רשומה ידנית",
-        direction: "expense",
-        doc_date: "2026-09-12",
-        amount_gross: -118n,
-        amount_net: -100n,
-        vat_amount: -18n,
-        vat_status: "assumed",
-        source: "manual",
-        project_id: "p1",
-        project_name: "שיפוץ הרצל 12",
-        category_id: "c1",
-        category_name: "חומרים",
-        supplier_name: "ספק",
-        customer_name: null,
-        paid: true,
-        open_gross_agorot: null,
-        allocations: [],
-      }}
-      sampleProjects={[{ id: "p1", name: "שיפוץ הרצל 12" }, { id: "p2", name: "וילה רעננה" }]}
-      sampleCategories={[{ id: "c1", name: "חומרים" }, { id: "c2", name: "הובלה" }]}
-    />
-  );
+  return <DevTransactionBoard />;
 }
 
 /** FLOW-139. The loans list's summary card alone, for the board proof. */

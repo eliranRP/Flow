@@ -206,6 +206,7 @@
   --color-raised: #F1EEF6;       /* inner box and input (board: "Inner box, input"; DESIGN-RULES 2.2) */
   --color-tint: #EEE6FD;
   --color-track: #E7E2F0;        /* job bar track, States board (light line); dark is #2E2740 */
+  --color-avatar: #F3F0F8;       /* FLOW-366: a row's initials circle (board; dark is #2A2540) */
   --shadow-pill: 0 6px 18px rgba(40, 20, 90, 0.12); /* sync pill, States board (FLOW-371) */
   --shadow-toast: 0 8px 24px rgba(40, 20, 90, 0.12); /* toast, LinesLight and StatesLight board (FLOW-363 3c) */
   --color-tint-strong: #D9CBF6;  /* selected outline and selected row fill (board) */
@@ -232,6 +233,9 @@
   --color-bad: #D23B2F;
   --color-warning: #8A5700;
   --color-scrim: rgba(29,23,40,.45);
+  --color-movie-from: #E9DDFF;
+  --movie-finger-fill: rgba(255,255,255,.28);
+  --movie-finger-ring: rgba(255,255,255,.7);
   --sheet-scrim: rgba(29,23,40,.38);
   --sheet-grab: #A69EB8;
   --color-toast-bg: #1D1728;
@@ -274,6 +278,7 @@
     --color-line: #2E2740;
     --color-line-soft: #231E30;
     --color-accent-dim: #7E66B8;
+    --color-avatar: #2A2540;
     --color-control-off: #736A8C;
     --color-control-border: #736A8C;
     --color-text: #F1EDF8;
@@ -293,6 +298,9 @@
     --color-bad: #FF8A80;
     --color-warning: #EDB866;
     --color-scrim: rgba(5,3,10,.62);
+    --color-movie-from: #2A1A55;
+    --movie-finger-fill: rgba(255,255,255,.28);
+    --movie-finger-ring: rgba(255,255,255,.7);
     --sheet-scrim: rgba(8,6,12,.6);
     --sheet-grab: #564E66;
     --color-toast-bg: #F1EDF8;
@@ -339,6 +347,7 @@
   --color-line: #2E2740;
   --color-line-soft: #231E30;
   --color-accent-dim: #7E66B8;
+  --color-avatar: #2A2540;
   --color-control-off: #736A8C;
   --color-control-border: #736A8C;
   --color-text: #F1EDF8;

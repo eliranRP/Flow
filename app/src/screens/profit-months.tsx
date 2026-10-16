@@ -2,6 +2,7 @@ import { formatAmountText, type ProfitMonth, type ProfitMonths } from "@flow/sha
 import type { ReactNode } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { allTime, monthPeriod, periodFromSearch, windowLabel, type PeriodChoice } from "../period";
+import { projectProfitMonthPath } from "../project-cash";
 import { withPeriodSearch } from "../project-period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
@@ -132,7 +133,7 @@ export function ProfitMonthsScreen({ sample }: { sample?: ProfitMonthsSample } =
               afterOverhead={afterOverhead}
               currencies={currencies}
               baseCurrency={baseCurrency}
-              href={`${projectPath}${withPeriodSearch(search, monthPeriod(month.month))}`}
+              href={projectProfitMonthPath(projectId || (data?.project_id ?? ""), month.month, withPeriodSearch(search, monthPeriod(month.month)))}
             />
           ))}
         </List>
