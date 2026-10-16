@@ -29,7 +29,7 @@ export function NewLoanSheet({
 }) {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
-  const formId = "setup-new-loan";
+  const formId = "setup-create-loan";
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title="הלוואה אחרת" busy={busy}>
       <LoanSetupForm
