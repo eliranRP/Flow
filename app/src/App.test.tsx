@@ -116,7 +116,7 @@ describe("App", () => {
 
   it("opens the project sheet again on a second + → פרויקט חדש from Home", async () => {
     await renderAt("/?preview=1");
-    for (let round = 0; round < 1; round += 1) {
+    for (let round = 0; round < 2; round += 1) {
       fireEvent.click(screen.getByRole("link", { name: "הוספה" }));
       fireEvent.click(await screen.findByRole("button", { name: /פרויקט חדש/ }));
       const dialog = await screen.findByRole("dialog", { name: "פרויקט" });
@@ -124,6 +124,11 @@ describe("App", () => {
       await waitFor(() => {
         expect(screen.queryByRole("dialog", { name: "פרויקט" })).not.toBeInTheDocument();
       });
+      // Cancel leaves the quick action's page, Projects; the tab bar's בית brings the test back to Home.
+      if (round === 0) {
+        fireEvent.click(screen.getByRole("link", { name: "בית" }));
+        await screen.findByRole("link", { name: "הוספה" });
+      }
     }
   });
 

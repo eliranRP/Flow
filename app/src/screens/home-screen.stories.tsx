@@ -1,7 +1,7 @@
 import type { Dashboard } from "@flow/shared";
 import { type ReactNode } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fireEvent, within } from "@storybook/test";
+import { expect, fireEvent, waitFor, within } from "@storybook/test";
 import { attentionRows, CashHome, HomeBooks, HomeScreen } from "./HomeScreen";
 import { sampleCashMonths, sampleQuietCashMonths } from "../dev/cash-sample";
 import { shiftMonthKey } from "../period";
@@ -359,3 +359,13 @@ export const HomeDrawer: Story = { render: () => <CashHomeStory initialDrawerOpe
 
 /** A month with nothing moved yet: the figures read zero. */
 export const HomeQuiet: Story = { render: () => <CashHomeStory quiet attention={false} /> };
+
+/** Scrolled past the band: the compact bar pins the month and the arrows, and the band's figures fade away (FLOW-364). */
+export const HomeScrolled: Story = {
+  render: () => <CashHomeStory />,
+  play: async ({ canvasElement }) => {
+    window.scrollTo(0, 400);
+    await expect(await waitFor(() => canvasElement.ownerDocument.querySelector(".ui-compact-bar"))).toBeInTheDocument();
+    window.scrollTo(0, 0);
+  },
+};

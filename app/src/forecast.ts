@@ -249,10 +249,14 @@ export function useCompanyExpectedQuery(active = true) {
   });
 }
 
-/** The open month's recurring money still due in one currency, as the server counted it (0 when none). */
+/**
+ * The open month's recurring money still due in one currency, as two positive amounts (0 when none).
+ * The server sends an expense as a negative figure (recurring_pace.sql); forecastMinor takes it off.
+ */
 export function openMonthDue(data: ExpectedMonths | null | undefined, currency: string): { income: bigint; expense: bigint } {
   const row = data?.months.find((month) => month.open)?.by_currency.find((figure) => figure.currency === currency);
-  return { income: row?.income_minor ?? 0n, expense: row?.expense_minor ?? 0n };
+  const expense = row?.expense_minor ?? 0n;
+  return { income: row?.income_minor ?? 0n, expense: expense < 0n ? -expense : expense };
 }
 
 /** FLOW-415 (b-2): הגיעו החודש, every recurring party seen this month. */

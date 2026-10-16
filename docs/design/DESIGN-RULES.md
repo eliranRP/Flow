@@ -277,7 +277,7 @@ The band holds only the summary. Home: one period pill, one label and the hero n
 - Must work from **320 to 480px**. Amounts never wrap. Above 480px, centre a column (`--content-max: 480px`). No desktop layout. [0015](../decisions/0015-installable-mobile-web-app.md), guide §4.
 - Sides 24px. Cards inset 16px. Sections 36–40px apart.
 - `viewport-fit=cover`. Pad with `env(safe-area-inset-top)` and `env(safe-area-inset-bottom)`. Do not hard-code 47px or 34px.
-- Tab bar is 52px plus the bottom safe area (86px on a notched iPhone). When that inset is 0, a floor (`--tabbar-min-inset`) keeps the labels off the screen edge ([0045](../decisions/0045-phase-0-design-gaps.md)). The default floor is 8px; the app sets 32px so the bar is 84px as on the board (FLOW-364, a deliberate change to 0045). Content pads so the last row is not hidden.
+- Tab bar is 52px plus the bottom safe area (86px on a notched iPhone). When that inset is 0, a floor (`--tabbar-min-inset`) keeps the labels off the screen edge ([0045](../decisions/0045-phase-0-design-gaps.md), superseded for the floor by [0183](../decisions/0183-tab-bar-floor-from-the-board.md)). The default floor is 8px; the app sets 32px so the bar is 84px as on the board ([0183](../decisions/0183-tab-bar-floor-from-the-board.md) supersedes the 8px floor). Content pads so the last row is not hidden.
 - When the keyboard is open, hide the tab bar and keep the focused field visible.
 - Portrait, `display: standalone`. Guide §4 manifest excerpt.
 
@@ -555,9 +555,7 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 
 ### 01 Home
 
-- Mockups: [01-home-light.png](../../design/screens/01-home-light.png), [01-home-dark.png](../../design/screens/01-home-dark.png). Overhead on: [18-home-overhead-on-light.png](../../design/screens/18-home-overhead-on-light.png), [18-home-overhead-on-dark.png](../../design/screens/18-home-overhead-on-dark.png).
-- Empty: [es-01-home-first-run-light.png](../../design/states/es-01-home-first-run-light.png), [es-01-home-first-run-dark.png](../../design/states/es-01-home-first-run-dark.png).
-- Loading: [ld-01-home-skeleton-light.png](../../design/states/ld-01-home-skeleton-light.png), [ld-01-home-skeleton-dark.png](../../design/states/ld-01-home-skeleton-dark.png). Refresh: [ld-07](../../design/states/ld-07-pull-to-refresh-light.png).
+- Mockups: the FLOW-364 board frames for Home, the month drawer, a past month and the empty first run (the 01-home, es-01, ld-01 and ld-07 PNGs were removed; the screen, the skeleton and the empty state are in the app, see the FLOW-364 log).
 - Entry: tab בית. Sunday notification. Returning sign-in. [0018](../decisions/0018-two-notifications.md), guide §7.33.
 - Board (FLOW-364): the band holds the company, search, + and the avatar. The month pill steps by month and opens the month drawer, a 3-by-4 grid whose cells are 60px with the name and amount at the start edge. The split card (ממה מורכב) and the attention box follow. A past month has the darker band with the white back pill and no attention box. The compact bar shows the month and its figure once the band scrolls away.
 - Steps: the band's period pill opens 16. The hero is the label and the number. נכנס and יצא sit below the band. The pending card sits under the first two project rows and has a row to Review and a row to Unpaid with its total, each only when it has items (FLOW-321, FLOW-355). A project row opens 02. + opens 04. Overhead switch starts off ([0022](../decisions/0022-after-overhead-starts-off.md)). On, the hero stays company net profit ([0032](../decisions/0032-home-hero-stays-company-net-profit.md)).

@@ -13,7 +13,7 @@
 - [ ] Month pill: ‹ prev · "<month year> ▾" · next ›; the name opens the month drawer; next is disabled on the current month.
 - [ ] Label "תזרים · עד היום"; the big figure is the month's net cash (in − out), 52/500, a minus but never red inside the band.
 - [ ] נכנס and יצא rows, each with a change pill ▲/▼ + amount: grey when the change helps (more in, less out), red when it hurts. The current month compares to the previous month up to the same day; no pill for the first month with data.
-- [ ] Forecast line "צפי לסוף <month>" = net so far − recurring still due + open invoices, labelled הערכה, hidden when there is nothing to project; it opens FLOW-141.
+- [ ] Forecast line "צפי לסוף <month>" = net so far + recurring income still due − recurring expense still due + open invoices, labelled הערכה, hidden when there is nothing to project; it opens FLOW-141. (The server sends a recurring expense as a negative figure; the app takes its absolute value before the sum.)
 - [ ] Split card "ממה מורכב המינוס" (or "ממה מורכב התזרים" when positive): a bar and two rows, לא נספר ברווח (accent) and רווח החודש (green or red), with one explanation line. רווח החודש opens FLOW-140.
 - [ ] דורש טיפול box (tint #2A2045, current month only): review queue count, open invoices with their amount, bills that didn't arrive, recurring charges that changed 20% or more. Each row opens its screen; the box is hidden when empty.
 
