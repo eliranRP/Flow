@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
 import { holdFieldPointer } from "./field-pointer";
-import { CopyIcon } from "./icons";
-import { IconButton } from "./icon-button";
 
 /** Which value the copy control belongs to. The component used to share this name. */
 export type CopyTarget = "url" | "secret" | "command";
@@ -136,7 +134,7 @@ export function CodeField({
   value: string;
   valueRef?: RefObject<HTMLInputElement | null>;
   failed: boolean;
-  /** Accessible name. The icon stays the visible control. */
+  /** Accessible name. The visible text is "העתקה". */
   copyLabel: string;
   onCopy: () => void;
 }) {
@@ -172,9 +170,9 @@ export function CodeField({
         onKeyDown={onFieldKeyDown}
       />
       {value === "" ? null : (
-        <IconButton label={copyLabel} className="ui-code-field-copy" onClick={onCopy}>
-          <CopyIcon />
-        </IconButton>
+        <button type="button" className="ui-code-field-copy m-press" aria-label={copyLabel} onClick={onCopy}>
+          <span className="ui-code-field-copy-pill">העתקה</span>
+        </button>
       )}
     </div>
   );

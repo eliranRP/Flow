@@ -451,16 +451,51 @@
 .ui-code-field-copy {
   position: absolute;
   z-index: 1;
-  /* Sit inside the field border so the surface does not cover the end edge. */
-  inset-inline-end: 1px;
+  /* Sit inside the field border, so the end edge of the box stays clear of the button. */
+  inset-inline-end: var(--stroke-strong);
   inset-block-start: 50%;
   transform: translateY(-50%);
-  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--field-copy-width);
+  block-size: var(--touch-min);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
 }
 
-/* The shared icon ring is offset 2px, which runs past this field's end border. */
-.ui-code-field-copy.ui-icon-btn:focus-visible {
+.ui-code-field-copy-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  block-size: var(--control-height-sm);
+  inline-size: 100%;
+  padding-inline: var(--field-btn-pad);
+  border-radius: var(--radius-field-btn);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-size: var(--type-chip-size);
+  font-weight: var(--type-chip-weight);
+  line-height: var(--type-chip-line);
+  white-space: nowrap;
+}
+
+/* The hit area sits on the field's inner end edge, inside the border. */
+.ui-code-field-copy:focus-visible {
   outline-offset: -2px;
+}
+
+/* The value is read-only text, so it takes the board's 13px caption size and the line colour. */
+.ui-code-field-input.ui-field-control {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  border-color: var(--color-line);
+}
+
+.ui-code-field-input.ui-field-control:focus {
+  border-color: var(--color-accent);
 }
 
 .ui-assistant-step {
@@ -499,7 +534,7 @@
 
 /* After .ui-field-control. That rule's padding-inline would otherwise put the value under the copy button. */
 .ui-code-field-box[data-copy="on"] .ui-code-field-input.ui-field-control {
-  padding-inline-end: calc(var(--touch-min) + var(--space-2));
+  padding-inline-end: calc(var(--field-copy-width) + var(--space-2));
 }
 
 .ui-code-field-box[data-copy="off"] .ui-code-field-input.ui-field-control {
