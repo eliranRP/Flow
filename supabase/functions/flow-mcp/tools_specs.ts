@@ -263,12 +263,12 @@ function writeTools() {
       transaction_id: { type: "string" },
       category_id: { type: "string" },
     }, true),
-    toolSpec("create_project", "Create a project in the owner's company (FLOW-445). type (optional, up to 40 characters, free text, e.g. flip or rental) and budget_minor (optional, whole minor units of the company currency; the project's budget, over which its page warns) are set when given. Returns id and undo_kind (project: undo deletes it while it is empty).", {
+    toolSpec("create_project", "Create a project in the owner's company (FLOW-445). type (optional, up to 40 characters, free text, e.g. flip or rental) and budget_minor (optional, whole minor units of the company currency, or null for no budget; the project's budget, over which its page warns) are set when given. Returns id and undo_kind (project: undo deletes it while it is empty).", {
       idempotency_key: { type: "string" },
       name: { type: "string" },
       status: { type: "string", enum: ["active", "finished"] },
       type: { type: "string" },
-      budget_minor: { type: "integer", minimum: 0 },
+      budget_minor: { type: ["integer", "null"], minimum: 0 },
     }, true),
     toolSpec("update_project", "Change a project's name, type, budget or status (FLOW-445; owner or editor). id is the project id; send only the fields to change: name (2 to 120 characters), type (up to 40 characters; null clears it), budget_minor (whole minor units; null clears the budget), status (active or finished; finished sets its finish day, active clears it). At least one field. Returns id, name, type, budget_minor, status and undo_kind (project_update: undo puts the before values back while the project still holds this write's values, else conflict). A project of another company is not_found.", {
       idempotency_key: { type: "string" },
