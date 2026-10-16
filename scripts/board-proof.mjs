@@ -111,6 +111,8 @@ export function proofPlan(frames, only, boards, out) {
       });
     }
   }
+  // A wrong --boards folder must fail loudly, not write an empty summary.
+  if (plan.length === 0) throw new Error(`no board PNG for ${picked.join(", ") || "any frame"} in ${boards}`);
   return plan;
 }
 

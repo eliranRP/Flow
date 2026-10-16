@@ -60,6 +60,8 @@ test("plans both themes for each frame, in name order, and keeps only the frames
     ["Flow", "Flow"],
   );
   assert.throws(() => proofPlan(frames, ["Nope"], boards, "out"), /not in the frame map: Nope/);
+  // A --boards folder with no board PNG for any requested frame fails, not an empty plan.
+  assert.throws(() => proofPlan(frames, [], path.join(boards, "missing"), "out"), /no board PNG for/);
 });
 
 test("a theme with no board PNG gets no shot", () => {

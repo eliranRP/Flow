@@ -49,14 +49,8 @@ const modulePatterns = [
   /[/\\]assistant-sample\./,
 ];
 
-/** The setup stage, its player, and the player's pointer ship. A fixture file named demo* stays blocked. */
-function isSetupProductModule(id) {
-  return /[/\\]setup[/\\]demo-slot\.tsx$/.test(id) || /[/\\]ui[/\\]demo-(player|pointer)\.tsx$/.test(id);
-}
-
 /** @param {string} id */
 function isBlockedModule(id) {
-  if (isSetupProductModule(id)) return false;
   return modulePatterns.some((pattern) => pattern.test(id));
 }
 
