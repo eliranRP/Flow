@@ -20,6 +20,52 @@ export const mailboxCharges: PartyCharges = {
   ],
 };
 
+/** FLOW-366 board frame: an invented monthly charge of 980 with its last twelve months, this month 1,240. */
+export const boardCharges: PartyCharges = {
+  transaction_id: "t-board",
+  party: { direction: "expense", id: "s-sample", name: "ספק לדוגמה", currency: "USD" },
+  month: "2026-10",
+  month_amount_minor: -124_000n,
+  typical_amount_minor: -98_000n,
+  typical_source: "recurring",
+  change_percent: 27,
+  others: 0,
+  months: Array.from({ length: 6 }, (_, index) => {
+    const date = new Date(Date.UTC(2026, 4 + index, 1));
+    const month = date.toISOString().slice(0, 7);
+    return { month, amount_minor: month === "2026-10" ? -124_000n : -98_000n };
+  }),
+  charges: Array.from({ length: 12 }, (_, index) => {
+    const date = new Date(Date.UTC(2025, 10 + 11 - index, 11));
+    const month = date.toISOString().slice(0, 7);
+    const current = index === 0;
+    return {
+      id: current ? "t-board" : `t-board-${String(index)}`,
+      doc_date: `${month}-11`,
+      amount_minor: current ? -124_000n : -98_000n,
+      pending: false,
+    };
+  }),
+};
+
+/** FLOW-366 board frame: an invented loan payment of 3,957 on the 7th, the same each month. */
+export const loanCharges: PartyCharges = {
+  transaction_id: "t-loan",
+  party: { direction: "expense", id: "s-loan", name: "Harbor Loan Servicing", currency: "USD" },
+  month: "2026-10",
+  month_amount_minor: -395_700n,
+  typical_amount_minor: -395_700n,
+  typical_source: "recurring",
+  change_percent: 0,
+  others: 0,
+  months: Array.from({ length: 6 }, (_, index) => ({ month: new Date(Date.UTC(2026, 4 + index, 1)).toISOString().slice(0, 7), amount_minor: -395_700n })),
+  charges: Array.from({ length: 12 }, (_, index) => {
+    const month = new Date(Date.UTC(2025, 10 + 11 - index, 1)).toISOString().slice(0, 7);
+    const current = index === 0;
+    return { id: current ? "t-loan" : `t-loan-${String(index)}`, doc_date: `${month}-07`, amount_minor: -395_700n, pending: false };
+  }),
+};
+
 export const rentCharges: PartyCharges = {
   transaction_id: "r1",
   party: { direction: "income", id: "c-tenant", name: "שוכר לדוגמה", currency: "ILS" },
