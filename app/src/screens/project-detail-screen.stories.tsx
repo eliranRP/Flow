@@ -410,8 +410,9 @@ export const ProjectFinishConfirm: Story = {
   play: async (context) => {
     await ProjectMenu.play?.(context);
     const body = storyBody(context.canvasElement);
-    await userEvent.click(await body.findByRole("button", { name: "סיום הפרויקט" }));
-    await body.findByRole("dialog", { name: "לסיים את הפרויקט?" });
+    // FLOW-445: the row carries its hint, and the confirm names the project.
+    await userEvent.click(await body.findByRole("button", { name: /^סיום הפרויקט/ }));
+    await body.findByRole("dialog", { name: /^לסיים את/ });
   },
 };
 

@@ -89,3 +89,99 @@
 .ui-budget-note-over {
   color: var(--color-signal-soft);
 }
+
+/* FLOW-445: the השקעה והלוואות card (investment-card.tsx InvestmentSummary). */
+.ui-investment-summary {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-card-inset) var(--space-5);
+}
+
+.ui-investment-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ui-investment-head h2 {
+  margin: 0;
+  font-size: var(--type-section-size);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-investment-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3) var(--space-4);
+  margin: 0;
+}
+
+.ui-investment-grid dt {
+  font-size: var(--type-caption-size);
+  color: var(--color-text-muted);
+}
+
+.ui-investment-grid dd {
+  margin: 0;
+  font-size: var(--type-body-size);
+}
+
+.ui-investment-equity {
+  display: grid;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-line);
+}
+
+.ui-investment-equity-label {
+  margin: 0;
+  font-size: var(--type-line2-size);
+  color: var(--color-text-secondary);
+}
+
+.ui-investment-equity-figure {
+  margin: 0;
+  font-size: var(--type-section-size);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-investment-bar {
+  display: flex;
+  height: var(--space-2);
+  border-radius: var(--radius-block);
+  overflow: hidden;
+}
+
+.ui-investment-loan {
+  background: var(--color-track-strong);
+  flex-basis: 0;
+}
+
+.ui-investment-own {
+  background: var(--color-accent);
+  flex-basis: 0;
+}
+
+.ui-investment-legend {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  font-size: var(--type-caption-size);
+  color: var(--color-text-muted);
+}
+
+.ui-investment-dot {
+  display: inline-block;
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-chip);
+  margin-inline-end: var(--space-1);
+}
+
+.ui-investment-dot-own {
+  background: var(--color-accent);
+}
+
+.ui-investment-dot-loan {
+  background: var(--color-track-strong);
+}

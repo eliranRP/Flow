@@ -37,6 +37,7 @@ import { FocusTitle } from "../ui/focus-title";
 import { BannerRows, type BannerRow } from "../ui/banner";
 import { BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
+import { InvestmentSummary } from "../ui/investment-card";
 import { MonthStepper } from "../ui/month-stepper";
 import { PeriodSwipe } from "../ui/period-swipe";
 import { ScreenHeader } from "../ui/screen-header";
@@ -81,6 +82,7 @@ export function ProjectCashOverview({
   stateLine,
   menu,
   attention = [],
+  budget,
   example,
   now,
 }: {
@@ -95,6 +97,8 @@ export function ProjectCashOverview({
   menu: ReactNode;
   /** Home's attention rows for this project: its late bills and income, and its changed charges. */
   attention?: BannerRow[];
+  /** FLOW-445: the budget card, when the project has a budget (the edit sheet lives with the page). */
+  budget?: ReactNode;
   example?: ReactNode;
   /** Stories and tests pin the month names. */
   now?: Date;
@@ -104,6 +108,13 @@ export function ProjectCashOverview({
   const rows = data == null ? [] : shownCashRows(month, data.base_currency);
   const earlier = data == null ? [] : projectEarlierMonthRows(project.id, data, search, now);
   const investment = investmentLoansRow(investmentData, project);
+  // FLOW-445: the summary card shows once a figure is entered (or a loan is open).
+  const figures = investmentData.figures;
+  const summaryFigures = figures != null && !investmentData.isOverhead
+    && (figures.purchaseMinor != null || figures.valueMinor != null || figures.arvMinor != null || figures.loanMinor !== 0n)
+    ? figures
+    : null;
+  const summary = summaryFigures != null;
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <TopBand
@@ -131,7 +142,13 @@ export function ProjectCashOverview({
       </TopBand>
       {data == null ? <ListSkeleton /> : null}
       {key == null ? null : <CashRows rows={projectCashSummaryRows(project.id, key, rows, search, now)} />}
-      {investment == null ? null : (
+      {budget ? <div className="ui-page-pad">{budget}</div> : null}
+      {summaryFigures == null ? null : (
+        <div className="ui-page-pad">
+          <InvestmentSummary figures={summaryFigures} href={investmentHref} />
+        </div>
+      )}
+      {investment == null || summary ? null : (
         <List className="ui-project-cash-more">
           <ListRow
             variant="item"

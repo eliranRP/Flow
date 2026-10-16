@@ -390,6 +390,9 @@ export function ProjectDetailScreen({
         investmentHref={sectionHref("investment")}
         stateLine={stateLine}
         menu={menu}
+        budget={project.budget_agorot == null ? undefined : (
+          <ProjectBudget project={project} spentAgorot={absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot)} />
+        )}
         attention={projectAttentionRows({
           projectId: project.id,
           pending: project.pending_count ?? 0,

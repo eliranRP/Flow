@@ -126,7 +126,7 @@ function ProjectsBody({
       <span ref={titleEnd} className="ui-compact-mark" aria-hidden="true" />
       {month.unassigned.count > 0 ? (
         <div className="ui-page-pad ui-projects-unassigned">
-          <TextLink to="/review" tone="accent">
+          <TextLink to={`/review${search}`} tone="accent">
             {unassignedCountLabel(month.unassigned.count)} · <bdi dir="ltr">{formatAmount(BigInt(unassignedNet), "summary", base)}</bdi> · לשיוך
           </TextLink>
         </div>
