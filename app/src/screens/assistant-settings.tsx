@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRefreshingNow } from "../israel-clock";
 import { getSupabase } from "../lib/supabase";
@@ -169,6 +169,7 @@ export function AiConnectionPage({
   const dashboard = useDashboardQuery(sample == null);
   const liveNoCompany = sample == null && preview === "off" && dashboard.isSuccess && dashboard.data.company_id == null;
   const readonly = readOnly ?? holdOwner;
+  const disconnectFocus = useRef<HTMLElement | null>(null);
   const [now] = useRefreshingNow();
   const [scope, setScope] = useState<AssistantScope>("read_write");
   const [assistant, setAssistant] = useState<AssistantClient>(initialClient);
@@ -335,7 +336,7 @@ export function AiConnectionPage({
           {readonly ? null : (
             <div className="ui-connection-actions">
               <Button variant="secondary" onClick={() => { setSetupOpen(true); }}>יצירת קוד חדש</Button>
-              <Button variant="danger-link" icon={<LogoutIcon size={18} />} onClick={() => { setDisconnectOpen(true); }}>ניתוק</Button>
+              <Button variant="danger-link" icon={<LogoutIcon size={18} />} onClick={(event) => { disconnectFocus.current = event.currentTarget; setDisconnectOpen(true); }}>ניתוק</Button>
             </div>
           )}
         </>
@@ -436,6 +437,7 @@ export function AiConnectionPage({
         confirmLabel="ניתוק"
         destructive
         busy={revoking}
+        returnFocusRef={disconnectFocus}
         onConfirm={() => { void disconnect(); }}
       />
     </ConnectionPage>

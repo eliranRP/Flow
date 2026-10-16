@@ -107,6 +107,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
   const status = provider === "sumit" ? sumit : mercury;
   const copy = COPY[provider];
   const backTo = `/settings/connections${search}`;
+  const disconnectFocus = useRef<HTMLElement | null>(null);
   const [now] = useRefreshingNow();
 
   const [typedCompany, setTypedCompany] = useState<string | null>(null);
@@ -262,7 +263,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
                 </Button>
               )}
               <Button variant="link" onClick={() => { setReplacing(true); }}>החלפת מפתח API</Button>
-              <Button variant="danger-link" icon={<LogoutIcon size={18} />} onClick={() => { setDisconnectOpen(true); }}>ניתוק</Button>
+              <Button variant="danger-link" icon={<LogoutIcon size={18} />} onClick={(event) => { disconnectFocus.current = event.currentTarget; setDisconnectOpen(true); }}>ניתוק</Button>
             </div>
           )}
         </>
@@ -334,6 +335,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
         confirmLabel="ניתוק"
         destructive
         busy={disconnect.isPending}
+        returnFocusRef={disconnectFocus}
         onConfirm={() => {
           if (holdOwner || blocked()) return;
           disconnect.mutate();
