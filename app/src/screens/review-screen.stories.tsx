@@ -44,8 +44,7 @@ export const ReviewCardViewer: Story = {
 
 export const ReviewAll: Story = {
   render: () => (
-    <StoryRoute entry="/review/all" tabs reviewCount={2}>
-      <SeedSkipped rows={[]} />
+    <StoryRoute entry="/review/all" tabs>
       <ExampleBar />
       <ReviewAllList
         backTo="/review"
