@@ -202,10 +202,6 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
   const clearChips = () => {
     setFilters((current) => ({ ...current, direction: null, period: allTime(), project: null, category: null, review: false }));
   };
-  const clearAll = () => {
-    setFilters(EMPTY_FILTERS);
-    setText("");
-  };
   const search = (value: string) => {
     setText(value);
     setRecent(rememberRecentSearch(value));
