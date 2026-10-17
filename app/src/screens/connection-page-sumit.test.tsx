@@ -19,9 +19,9 @@ const down = { data: null, error: { message: "down" } };
 
 /** sumit_status answers `attempt()`, so a test decides each read: a failure, a hang, or the status. */
 function serveSumit(attempt: () => Promise<unknown>) {
-  backend.rpc = (name) => {
+  backend.answer = (name) => {
     if (name === "get_dashboard") return Promise.resolve({ data: DASHBOARD, error: null });
-    if (name === "sumit_status") return attempt() as ReturnType<typeof backend.rpc>;
+    if (name === "sumit_status") return attempt() as ReturnType<typeof backend.answer>;
     return Promise.resolve({ data: null, error: null });
   };
 }
@@ -186,7 +186,7 @@ describe("SUMIT page: reconnect and cached states (FLOW-918)", () => {
   });
 
   it("shows a screen error, with no form, when the dashboard fails", async () => {
-    backend.rpc = (name) => Promise.resolve(name === "get_dashboard" || name === "sumit_status" ? down : { data: null, error: null });
+    backend.answer = (name) => Promise.resolve(name === "get_dashboard" || name === "sumit_status" ? down : { data: null, error: null });
     renderPage("sumit");
     expect(await screen.findByText(FAILED)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: RETRY })).toBeInTheDocument();
@@ -197,7 +197,7 @@ describe("SUMIT page: reconnect and cached states (FLOW-918)", () => {
   it("never shows a paused read as disconnected, and a preview shows the new form", async () => {
     onlineManager.setOnline(false);
     try {
-      backend.rpc = () => new Promise(() => undefined);
+      backend.answer = () => new Promise(() => undefined);
       const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
       client.setQueryData(["dashboard", "off", defaultPeriod()], DASHBOARD);
       const { unmount } = renderWithProviders(<ConnectionDetailPage provider="sumit" />, { client, route: "/settings/connections/sumit" });

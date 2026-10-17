@@ -82,8 +82,8 @@ describe("the page and the business form (FLOW-918)", () => {
   /** Creating a business answers its id; `company` is what the dashboard says before that. */
   function serveForm(company: string | null) {
     serve({});
-    const live = backend.rpc;
-    backend.rpc = (name, args) => {
+    const live = backend.answer;
+    backend.answer = (name, args) => {
       if (name === "get_dashboard") return Promise.resolve({ data: { ...DASHBOARD, company_id: company }, error: null });
       if (name === "create_company") return Promise.resolve({ data: "company-1", error: null });
       return live(name, args);

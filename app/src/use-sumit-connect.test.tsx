@@ -86,8 +86,8 @@ describe("useSumitConnect (FLOW-918)", () => {
   });
 
   it("still connects, and says so, when only saving ייבוא מ fails", async () => {
-    const live = backend.rpc;
-    backend.rpc = (name, args) => name === "set_import_from" ? Promise.resolve({ data: null, error: { message: "boom" } }) : live(name, args);
+    const live = backend.answer;
+    backend.answer = (name, args) => name === "set_import_from" ? Promise.resolve({ data: null, error: { message: "boom" } }) : live(name, args);
     const { result, onSuccess } = connectWith("2026-01-01");
     act(() => { result.current.connect.mutate(); });
     expect(await screen.findByText(DATE_LOST)).toBeInTheDocument();

@@ -154,8 +154,8 @@ describe("Mercury page: connecting (FLOW-918)", () => {
     expect(saves()).toEqual([]);
     unmount();
     invokeEdge.mockResolvedValue(undefined);
-    const live = backend.rpc;
-    backend.rpc = (name, args) => name === "set_import_from" ? Promise.resolve({ data: null, error: { message: "boom" } }) : live(name, args);
+    const live = backend.answer;
+    backend.answer = (name, args) => name === "set_import_from" ? Promise.resolve({ data: null, error: { message: "boom" } }) : live(name, args);
     renderPage("mercury");
     fireEvent.click(await screen.findByRole("radio", { name: "מתאריך" }));
     await typeKey();

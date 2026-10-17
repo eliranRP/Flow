@@ -12,9 +12,9 @@ import { vi } from "vitest";
 type Answer = { data: unknown; error: { message: string } | null };
 const ok = (data: unknown): Promise<Answer> => Promise.resolve({ data, error: null });
 
-/** The fake server. A test sets `rpc` / `mercuryRow` for what the page reads; `calls` lists every RPC. */
+/** The fake server. A test sets `answer` (RPCs) / `mercuryRow` for what the page reads; `calls` lists every RPC. */
 export const backend = {
-  rpc: (_name: string, _args?: unknown): Promise<Answer> => ok(null),
+  answer: (_name: string, _args?: unknown): Promise<Answer> => ok(null),
   mercuryRow: (): Promise<Answer> => ok(null),
   calls: [] as string[],
   args: [] as Array<[string, unknown]>,
@@ -36,7 +36,7 @@ export function supabaseModule() {
       rpc: (name: string, args?: unknown) => {
         backend.calls.push(name);
         backend.args.push([name, args]);
-        return backend.rpc(name, args);
+        return backend.answer(name, args);
       },
       functions: { invoke: () => ok(null) },
       from: () => ({ select: () => ({ eq: () => ({ maybeSingle: () => backend.mercuryRow() }) }) }),
@@ -104,7 +104,7 @@ export function mercuryStatus(partial: Record<string, unknown> = {}) {
 
 /** The reads every page makes, with the connector's status: `sumit` answers sumit_status, `mercury` the Mercury row. */
 export function serve(status: { sumit?: Record<string, unknown> | null; mercury?: Record<string, unknown> | null }) {
-  backend.rpc = (name) => {
+  backend.answer = (name) => {
     if (name === "get_dashboard") return ok(DASHBOARD);
     if (name === "sumit_status") return ok(status.sumit ?? null);
     return ok(null);
@@ -117,7 +117,7 @@ export function resetBackend() {
   window.history.replaceState(null, "");
   invokeEdge.mockReset();
   invokeEdge.mockResolvedValue(undefined);
-  backend.rpc = () => ok(null);
+  backend.answer = () => ok(null);
   backend.mercuryRow = () => ok(null);
   backend.calls = [];
   backend.args = [];
