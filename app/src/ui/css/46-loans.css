@@ -2,7 +2,7 @@
    no hairline), the open loans, then the closed group collapsed under a quiet toggle. */
 
 .ui-loans-screen {
-  padding: var(--space-4) var(--space-side) calc(var(--tabbar-height) + var(--space-section));
+  padding: calc(var(--space-4) + var(--space-2)) var(--space-side) calc(var(--tabbar-height) + var(--space-section));
   color: var(--color-text);
 }
 
@@ -25,20 +25,20 @@
 }
 
 .ui-loans-title {
-  margin: var(--space-1) 0 0;
+  margin: var(--space-3) 0 0;
   font-size: var(--type-title-size);
   line-height: var(--type-title-line);
   font-weight: var(--type-title-weight);
 }
 
 .ui-loans-count {
-  margin: 0;
+  margin: var(--space-1) 0 0;
   color: var(--color-text-muted);
   font-size: var(--type-line2-size);
 }
 
 .ui-loans-summary-wrap {
-  margin-top: var(--space-4);
+  margin-top: var(--space-6);
 }
 
 .ui-loans-section-head {
@@ -59,6 +59,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  box-sizing: content-box;
   width: 100%;
   min-height: var(--row-height);
   padding: var(--space-2) 0;
