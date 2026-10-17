@@ -319,6 +319,10 @@
   line-height: var(--type-hint-line);
 }
 
+.ui-loan-new .ui-percent-suffix {
+  display: none;
+}
+
 .ui-loan-new .ui-date-field {
   min-block-size: calc(var(--touch-min) + var(--space-1));
   border: 1.5px solid var(--color-line);
