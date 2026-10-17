@@ -18,7 +18,7 @@ import { CategoryRenameSheet } from "./category-rename";
 import type { LoanLine } from "./category-loan-use";
 
 /**
- * FLOW-405 + FLOW-404: the sheet a category's ⋯ opens in Settings → Categories, and the move and delete it starts.
+ * FLOW-405 + FLOW-404: the category sheet a leaf row opens in Settings → Categories, and the move and delete it starts.
  * FLOW-341: one move row and no hints; the picker's switch turns the move into a merge.
  */
 

@@ -16,13 +16,11 @@
   overflow: hidden;
 }
 
-.ui-list-inset > .ui-row,
-.ui-list-inset > .ui-row-side > .ui-row {
+.ui-list-inset > .ui-row {
   padding-inline: var(--space-inset-row);
 }
 
-.ui-list-inset > .ui-row:not(:last-child),
-.ui-list-inset > .ui-row-side:not(:last-child) {
+.ui-list-inset > .ui-row:not(:last-child) {
   border-bottom: 1px solid var(--color-line);
 }
 

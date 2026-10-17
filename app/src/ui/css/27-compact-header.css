@@ -204,22 +204,6 @@ html[data-compact-bar]:has(.ui-month-head) {
   scroll-padding-block-start: calc(var(--safe-top) + var(--compact-bar-h) + 1px + var(--space-10) * 3);
 }
 
-/* FLOW-322: a linked row with its own action (the categories ⋯): the link and the action side by side. */
-.ui-row-side {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-inline-size: 0;
-}
-
-.ui-row-side > .ui-row {
-  flex: 1 1 auto;
-}
-
-.ui-row-side > :last-child {
-  flex: none;
-}
-
 /* FLOW-334: a stacked page's own control under the title, on the start side, nearer the thumb than
    the top corner (the breakdown's period pill). */
 .ui-page-below {

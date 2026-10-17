@@ -89,7 +89,7 @@ describe("viewer write controls", () => {
     expect(screen.queryByText(/מתוך/)).not.toBeInTheDocument();
   });
 
-  it("hides a new category and the row menu", () => {
+  it("hides a new category and the category row sheet", () => {
     renderScreen(
       <ViewerPreview>
         <CategoriesScreen
