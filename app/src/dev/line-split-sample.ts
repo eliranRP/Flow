@@ -75,15 +75,16 @@ export const BOARD_SPLIT_CATEGORIES = [
   { id: "b-other", name: "אחר", kind: "expense" as const, hidden: false },
 ];
 
+/** Five projects in the board's order; the line's own project (Elm Row) is the second one. Invented names of the board's length. */
 export const BOARD_SPLIT_PROJECTS = [
   { id: "b-birch", name: "Birch Lane", status: "active" as const },
-  { id: "b-juniper", name: "Juniper Ct", status: "active" as const },
   { id: "b-elm", name: "Elm Row", status: "active" as const },
+  { id: "b-juniper", name: "Juniper Ct", status: "active" as const },
   { id: "b-sable", name: "Sable Ct", status: "active" as const },
   { id: "b-okafor", name: "Okafor", status: "active" as const },
 ];
 
-/** 05/10, a $8,940.17 expense to a supplier, filed as materials on the Juniper Ct project. */
+/** 05/10, a $8,940.17 expense to a supplier, filed as materials on the Elm Row project. */
 export const BOARD_SPLIT_LINE: SampleLine = {
   id: "t-board-split",
   amountNet: -894_017n,
@@ -91,15 +92,15 @@ export const BOARD_SPLIT_LINE: SampleLine = {
   currency: "USD",
   categoryId: "b-materials",
   categoryName: "חומרים",
-  projectId: "b-juniper",
-  projectName: "Juniper Ct",
-  supplier: "Northline Supply",
+  projectId: "b-elm",
+  projectName: "Elm Row",
+  supplier: "Harlow Supply",
   docDate: "2026-10-05",
   reviewBlocked: false,
   loanSplit: false,
 };
 
-/** The board's saved split: Birch Lane $6,000 and Sable Ct $2,000, the rest on Juniper Ct. */
+/** The board's saved split: Birch Lane $6,000 and Sable Ct $2,000, the rest on Elm Row. */
 export const BOARD_SPLIT_READ: LineSplitRead = {
   transactionId: "t-board-split",
   currency: "USD",
@@ -108,7 +109,7 @@ export const BOARD_SPLIT_READ: LineSplitRead = {
   parts: [
     { category_id: "b-materials", category_name: "חומרים", project_id: "b-birch", project_name: "Birch Lane", amount_minor: 600_000n, percent: null, rest: false },
     { category_id: "b-materials", category_name: "חומרים", project_id: "b-sable", project_name: "Sable Ct", amount_minor: 200_000n, percent: null, rest: false },
-    { category_id: "b-materials", category_name: "חומרים", project_id: "b-juniper", project_name: "Juniper Ct", amount_minor: 94_017n, percent: null, rest: true },
+    { category_id: "b-materials", category_name: "חומרים", project_id: "b-elm", project_name: "Elm Row", amount_minor: 94_017n, percent: null, rest: true },
   ],
 };
 
@@ -117,7 +118,7 @@ export type BoardSplitState = "split" | "empty" | "picker" | "over" | "twice";
 
 export const BOARD_SPLIT_STATES: readonly BoardSplitState[] = ["split", "empty", "picker", "over", "twice"];
 
-/** The board's two parts: Birch Lane $6,000 and Sable Ct $2,000, both on materials. */
+/** The board's two parts: Birch Lane $6,000 and Sable Ct $2,000, both on materials (part 2 is the picker's target). */
 const BOARD_PART_BIRCH: PartDraft = { key: "board-1", categoryId: "b-materials", projectId: "b-birch", unit: "amount", value: "6000" };
 const BOARD_PART_SABLE: PartDraft = { key: "board-2", categoryId: "b-materials", projectId: "b-sable", unit: "amount", value: "2000" };
 

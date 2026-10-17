@@ -367,7 +367,7 @@ export function LineSplitEditor({
         : line.reviewBlocked ? "line has an open review" : null;
 
   const dateShort = line.docDate ? `${line.docDate.slice(8, 10)}/${line.docDate.slice(5, 7)}` : "";
-  const meta = [line.direction === "income" && line.categoryId != null && isReversal(categories, line.categoryId, "income") ? "החזר" : null, line.supplier, dateShort, line.categoryName].filter(Boolean);
+  const meta = [line.direction === "income" && line.categoryId != null && isReversal(categories, line.categoryId, "income") ? "החזר" : null, line.categoryName, line.supplier, dateShort].filter(Boolean);
   const restCategory = categoryName(rest.categoryId);
   const restProject = rest.projectId == null ? (line.projectName ?? "בלי פרויקט") : (projectName(rest.projectId) ?? "פרויקט");
   const restDuplicate = check.restDuplicate;
@@ -416,7 +416,7 @@ export function LineSplitEditor({
     ? <>{"חולק יותר מהסכום ב־"}<Amount minor={check.overMinor} currency={currency} /></>
     : parts.length === 0
       ? "הוסיפו חלק כדי לפצל. מה שלא פוצל נשאר בשורה."
-      : <>{"חולק "}{splitShown == null ? "…" : <Amount minor={splitShown} currency={currency} />}{" · נשאר "}{restShown == null ? "…" : <Amount minor={restShown} currency={currency} />}</>;
+      : <>{"חולק "}{splitShown == null ? "…" : <Amount minor={splitShown} currency={currency} cents />}{" · נשאר "}{restShown == null ? "…" : <Amount minor={restShown} currency={currency} cents />}</>;
 
   return (
     <>
@@ -618,7 +618,7 @@ export function LineSplitEditor({
             </span>
             <span className="ui-lsplit-rest-amount">
               {restShown != null
-                ? <Amount minor={restShown} currency={currency} />
+                ? <Amount minor={restShown} currency={currency} cents />
                 : pending ? "…" : <Amount minor={lineMinor} currency={currency} />}
             </span>
           </button>
