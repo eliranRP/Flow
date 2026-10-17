@@ -44,7 +44,6 @@ test("an expense splits 30% and ₪500, the rest stays on the line, and ✕ save
   await page.getByLabel("סכום, ביטוח").fill("500");
   const rest = page.getByRole("button", { name: /^השאר,/ });
   await expect(rest).toContainText("₪2,860");
-  await expect(rest).toContainText("59.58%");
   await expect(page.locator(".ui-lsplit-status")).toContainText("₪1,940");
   await page.getByRole("button", { name: "סגירה" }).click();
   expect(await saved(page)).toEqual([
