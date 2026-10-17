@@ -34,7 +34,7 @@ import { israelToday } from "../ui/date-math";
 import { ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
 import { useProjectGroups, type ProjectGroups } from "./project-group-sheets";
 import { ProjectInvestmentSection, type ProjectInvestment } from "./project-investment";
-import { ProjectCashOverview } from "./project-cash-screens";
+import { investmentLoansRow, ProjectCashOverview } from "./project-cash-screens";
 import { ProjectFormSheet } from "./project-form-sheet";
 import { ProjectMenu } from "./project-menu";
 import { projectAttentionRows, useProjectRecurring, type ProjectRecurringSample } from "./project-attention";
@@ -259,6 +259,7 @@ export function ProjectDetailScreen({
       sampleRow={sampleMenuRow}
       overhead={overhead}
       investmentTo={sectionHref("investment")}
+      hasInvestment={investmentLoansRow(investmentData, project) != null}
     />
   );
   const cashData = sampleCash ?? (sample ? sampleCashOf(sample, now) : cash.data) ?? null;
