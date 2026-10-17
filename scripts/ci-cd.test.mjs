@@ -177,6 +177,11 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
     steps:
 `));
   assert.equal((job("e2e-shard").match(/if: matrix\.part == 'database'\n/g) ?? []).length, 5);
+  // flow-mcp's smoke reads the local API, so the first Playwright shard runs it and the others do not.
+  assert.match(job("e2e-shard"), /name: flow-mcp answers on the local API\n {8}if: matrix\.part == '1\/4'\n {8}run: bash scripts\/mcp-function-smoke\.sh\n/);
+  assert.equal((job("e2e-shard").match(/mcp-function-smoke/g) ?? []).length, 1);
+  assert.match(jobIn(pr, "e2e"), /name: flow-mcp answers on the local API\n {8}if: matrix\.part == '1\/4'\n {8}run: bash scripts\/mcp-function-smoke\.sh\n/);
+  assert.equal((jobIn(pr, "e2e").match(/mcp-function-smoke/g) ?? []).length, 1);
   assert.match(job("e2e-shard"), /if: matrix\.part != 'database'\n {8}run: \|\n {10}set -euo pipefail\n {10}eval "\$\(bash scripts\/ci-local-supabase-env\.sh\)"\n/);
   // Seven story runners, each with three of the every-story test's groups and a seventh of the other specs.
   // With them the run holds 20 jobs at once, GitHub Free's limit: an eighth runner waited for a free slot.
