@@ -212,6 +212,34 @@
   border-radius: var(--radius-input);
 }
 
+/* FLOW-375 (board, States homeLoading): Home's skeleton in the loaded Home's geometry. Bars sit at the
+   inline start (right in Hebrew) as the board draws them; the rows stay at the loaded rows' heights. */
+.ui-skel-band-figs { gap: var(--space-2); }
+.ui-skel-band-label { inline-size: calc(var(--skel-sm) * 5 / 3); block-size: var(--skel-block-lg); }
+.ui-skel-band-hero { inline-size: calc(var(--skel-sm) * 5 / 2); block-size: calc(var(--skel-hero) - var(--space-3)); border-radius: var(--radius-input); }
+.ui-skel-band-caption { inline-size: var(--skel-md); block-size: var(--skel-block-lg); }
+.ui-skel-band-rows { display: flex; flex-direction: column; gap: var(--space-2); padding-top: var(--space-1); }
+.ui-skel-band-row { display: flex; align-items: center; justify-content: space-between; }
+.ui-skel-band-row-a { inline-size: calc(var(--skel-sm) - var(--space-2)); block-size: var(--skel-block-lg); }
+.ui-skel-band-row-b { inline-size: var(--skel-pill); block-size: var(--skel-block-lg); }
+.ui-skel-split-title { inline-size: calc(var(--skel-sm) * 3 / 2); block-size: var(--skel-block-lg); }
+.ui-skel-split-bar { inline-size: 100%; block-size: var(--space-2); border-radius: var(--radius-block); }
+.ui-skel-split-row { display: flex; align-items: center; justify-content: space-between; min-block-size: var(--touch-min); }
+.ui-skel-split-a { inline-size: var(--skel-pill); block-size: var(--skel-block-lg); }
+.ui-skel-split-b { inline-size: var(--skel-sm); block-size: var(--skel-block-lg); }
+/* The board draws the attention box on the surface, not the loaded tint. */
+.ui-home-attention.ui-skel-attention { background: var(--color-surface); }
+.ui-skel-attention-title { inline-size: calc(var(--skel-sm) * 4 / 3); block-size: var(--skel-block-lg); margin: 0 var(--space-5) var(--space-1); }
+.ui-skel-attention-rows { display: flex; flex-direction: column; }
+.ui-skel-row { display: flex; align-items: center; gap: var(--space-3); min-block-size: calc(var(--touch-min) + var(--space-5)); padding: var(--space-3) var(--space-5); }
+.ui-home-attention .ui-skel-row { min-block-size: calc(var(--touch-min) + var(--space-5) + var(--space-1) * 1.5); }
+.ui-skel-row-dot { flex: none; inline-size: calc(var(--touch-min) - var(--space-1)); block-size: calc(var(--touch-min) - var(--space-1)); border-radius: var(--radius-chip); }
+.ui-skel-row-trail { flex: none; inline-size: calc(var(--skel-sm) - var(--space-2)); block-size: var(--skel-block-lg); }
+.ui-skel-line-a { inline-size: 100%; block-size: var(--skel-block-lg); }
+.ui-skel-line-b { inline-size: 65%; block-size: var(--skel-block-lg); }
+.ui-skel-list { display: flex; flex-direction: column; gap: var(--space-3); margin-block-start: var(--space-5); padding-inline: var(--space-5); }
+.ui-skel-list-title { inline-size: calc(var(--skel-sm) * 3 / 2); block-size: var(--space-4); }
+.ui-skel-list .ui-skel-row { padding-inline: 0; }
 .ui-skel-dot { inline-size: var(--switch-knob); block-size: var(--switch-knob); border-radius: var(--radius-chip); }
 
 .ui-row-stack {

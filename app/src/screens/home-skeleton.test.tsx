@@ -67,11 +67,13 @@ describe("CashHomeSkeleton (FLOW-364)", () => {
     });
     const band = document.querySelector(".ui-band");
     expect(band).not.toBeNull();
-    expect(band?.querySelector(".ui-band-month-name")).not.toBeNull();
-    expect(band?.querySelectorAll(".ui-skeleton-hero")).toHaveLength(1);
+    expect(band?.querySelector(".ui-band-month-static")).not.toBeNull();
+    expect(band?.querySelector(".ui-band-body .ui-skel-band-hero")).not.toBeNull();
+    expect(band?.querySelectorAll(".ui-skel-band-row")).toHaveLength(2);
     expect(band?.querySelector('[aria-label="חיפוש"]')).not.toBeNull();
     expect(document.querySelector(".ui-home-split")).not.toBeNull();
-    expect(document.querySelector(".ui-skel-card")).not.toBeNull();
+    expect(document.querySelectorAll(".ui-home-attention .ui-skel-row")).toHaveLength(2);
+    expect(document.querySelectorAll(".ui-skel-list .ui-skel-row")).toHaveLength(3);
     expect(screen.getByText("טוען…")).toBeInTheDocument();
     // No past-month list is loaded on Home any more (FLOW-364).
     expect(screen.queryByText("חודשים קודמים")).toBeNull();

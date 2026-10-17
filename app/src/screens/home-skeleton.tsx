@@ -92,9 +92,24 @@ export function HomeSkeleton({
   );
 }
 
+/** FLOW-375 (board, States homeLoading): a skeleton row of the attention box and the third block: an icon slot, copy, a trailing bar. */
+function CashSkeletonRow() {
+  return (
+    <div className="ui-skel-row">
+      <Skeleton className="ui-skel-row-dot" />
+      <span className="ui-skel-copy">
+        <Skeleton className="ui-skel-line-a" />
+        <Skeleton className="ui-skel-line-b" />
+      </span>
+      <Skeleton className="ui-skel-row-trail" />
+    </div>
+  );
+}
+
 /**
- * FLOW-364: Home's cash while it loads, in the shape it lands in: the band (the company, the icons
- * and the month pill are real; the figures are band bars), then the split card and the box as blocks.
+ * FLOW-364 / FLOW-375: Home's cash while it loads, in the shape it lands in: the band (the company, the icons
+ * and the month pill are real; the figures are band bars), the split card and the attention box at the loaded
+ * Home's geometry, then the board's third block (a title and three rows).
  */
 export function CashHomeSkeleton({ preview = false, example }: { preview?: boolean; example?: ReactNode }) {
   const search = usePreviewSearch();
@@ -117,31 +132,48 @@ export function CashHomeSkeleton({ preview = false, example }: { preview?: boole
         }
         trailing={<HomeBandActions isPast={false} currentName="" search={search} />}
       >
-        <p className="ui-band-month-name">
-          <span>{homeMonthLabel(currentKey)}</span>
-        </p>
-        <div className="ui-home-figures" aria-hidden="true">
+        <div className="ui-band-body">
+          <p className="ui-band-month-static">{homeMonthLabel(currentKey)}</p>
           <DelayedSkeleton>
-            <Skeleton tone="band" className="ui-skel-label" />
-            <Skeleton tone="band" className="ui-skeleton-hero ui-skel-hero-num" />
-            <div className="ui-band-rows">
-              <Skeleton tone="band" className="ui-skel-figure" />
-              <Skeleton tone="band" className="ui-skel-figure" />
+            <div className="ui-home-figures ui-skel-band-figs" aria-hidden="true">
+              <Skeleton tone="band" className="ui-skel-band-label" />
+              <Skeleton tone="band" className="ui-skel-band-hero" />
+              <Skeleton tone="band" className="ui-skel-band-caption" />
+              <div className="ui-skel-band-rows">
+                <div className="ui-skel-band-row">
+                  <Skeleton tone="band" className="ui-skel-band-row-a" />
+                  <Skeleton tone="band" className="ui-skel-band-row-b" />
+                </div>
+                <div className="ui-skel-band-row">
+                  <Skeleton tone="band" className="ui-skel-band-row-a" />
+                  <Skeleton tone="band" className="ui-skel-band-row-b" />
+                </div>
+              </div>
             </div>
           </DelayedSkeleton>
         </div>
       </TopBand>
       <DelayedSkeleton>
-        <div className="ui-home-split" aria-hidden="true">
-          <Skeleton width="lg" className="ui-skel-label" />
-          <Skeleton className="ui-skel-figure" />
-        </div>
-        <div className="ui-skel-card" aria-hidden="true">
-          <Skeleton className="ui-skel-dot" />
-          <span className="ui-skel-copy">
-            <Skeleton width="lg" />
-            <Skeleton width="md" />
-          </span>
+        <section className="ui-home-split" aria-hidden="true">
+          <Skeleton className="ui-skel-split-title" />
+          <Skeleton className="ui-skel-split-bar" />
+          <div className="ui-skel-split-row">
+            <Skeleton className="ui-skel-split-a" />
+            <Skeleton className="ui-skel-split-b" />
+          </div>
+        </section>
+        <section className="ui-home-attention ui-skel-attention" aria-hidden="true">
+          <Skeleton className="ui-skel-attention-title" />
+          <div className="ui-skel-attention-rows">
+            <CashSkeletonRow />
+            <CashSkeletonRow />
+          </div>
+        </section>
+        <div className="ui-skel-list" aria-hidden="true">
+          <Skeleton className="ui-skel-list-title" />
+          <CashSkeletonRow />
+          <CashSkeletonRow />
+          <CashSkeletonRow />
         </div>
       </DelayedSkeleton>
     </div>

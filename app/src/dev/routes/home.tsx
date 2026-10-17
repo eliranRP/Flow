@@ -5,6 +5,7 @@ import { defaultPeriod } from "../../period";
 import { BackButton } from "../../ui/back";
 import { BandCompany } from "../../ui/top-band";
 import { attentionRows, CashEmptyHome, CashHome, HomeBooks } from "../../screens/HomeScreen";
+import { CashHomeSkeleton } from "../../screens/home-skeleton";
 import { chargeChangeViews } from "../../forecast";
 import { CashLinesScreen } from "../../screens/cash-lines-screen";
 import { CashMonthScreen } from "../../screens/cash-screens";
@@ -152,6 +153,11 @@ export function DevCashEmpty() {
   );
 }
 
+/** FLOW-375 (board, States homeLoading and homeReveal): the cash Home while it loads. */
+export function DevCashLoading() {
+  return <CashHomeSkeleton />;
+}
+
 /** FLOW-413: the earlier month's cash page. */
 export function DevCashMonth() {
   const data = sampleCashMonths();
@@ -204,6 +210,7 @@ export const homeRoutes: DevRoute[] = [
   { path: "home", element: <DevHome /> },
   { path: "cash", element: <DevCash /> },
   { path: "cash-empty", element: <DevCashEmpty /> },
+  { path: "cash-loading", element: <DevCashLoading /> },
   { path: "cash-month", element: <DevCashMonth /> },
   { path: "cash-lines", element: <DevCashLines /> },
   { path: "cash-history", element: <DevCashHistory /> },
