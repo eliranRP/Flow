@@ -619,11 +619,77 @@
 
 /* FLOW-512b C: the theme sheet's board block: 24px under the last option, options 60px tall, 12px apart. */
 .ui-theme-sheet {
-  --sheet-pad-bottom: calc(var(--space-6) + var(--space-3));
+  --sheet-pad-bottom: var(--space-6);
 }
 
 .ui-theme-sheet .ui-radio-row {
   min-block-size: calc(var(--control-height) + var(--space-2));
+}
+
+/* board quirk: the opposite-theme row is an <a> (content-box), 60 + 16 = 76 tall */
+.ui-theme-sheet .ui-radio-row:not(:first-child):not([aria-checked="true"]) {
+  min-block-size: calc(var(--control-height) + var(--space-2) + var(--space-4));
+}
+
+.ui-theme-sheet .ui-sheet-head > .ui-icon-btn {
+  margin-block: 0;
+}
+
+.ui-theme-sheet .ui-sheet-head > .ui-icon-btn:last-child:not(:first-child) {
+  margin-inline-end: 0;
+}
+
+.ui-theme-sheet .ui-sheet-title,
+.ui-theme-sheet .ui-sheet-subtitle,
+.ui-theme-sheet .ui-row-title {
+  line-height: var(--type-cents-line);
+}
+
+/* The settings list page (settings-screen.tsx root .ui-settings-page): cards inset 16 with a 16px radius,
+   14px between them, 56px rows with hairlines, as on the board. */
+.ui-settings-page > .ui-page-stacked {
+  padding-top: var(--space-3);
+  padding-bottom: calc(var(--space-3) - 1px);
+}
+
+.ui-settings-page > .ui-page-stacked .ui-focus-title {
+  margin-top: var(--space-1);
+}
+
+.ui-settings-page > .ui-page-stacked .ui-focus-title + * {
+  margin-top: var(--space-1);
+}
+
+.ui-settings-page > .ui-list-inset {
+  margin-inline: var(--space-4);
+  inline-size: auto;
+  border-radius: var(--radius-card-tight);
+}
+
+.ui-settings-page > .ui-list-inset + .ui-list-inset {
+  margin-top: var(--space-inset-row);
+}
+
+.ui-settings-page .ui-list-inset .ui-row {
+  min-block-size: 56px;
+}
+
+.ui-settings-page .ui-settings-page-row > .ui-row {
+  padding-inline: var(--space-inset-row);
+}
+
+.ui-settings-page .ui-settings-page-row:not(:last-child) > .ui-row {
+  border-bottom: 1px solid var(--color-line);
+  min-block-size: 57px;
+}
+
+.ui-settings-page .ui-settings-signout {
+  margin-top: var(--space-inset-row);
+  padding-inline: var(--space-side);
+}
+
+.ui-settings-page .ui-poc {
+  padding-top: calc(var(--space-3) - var(--space-1) / 2);
 }
 
 /* FLOW-512b C: the rename sheet's board block: a 44px title row, 12px to the field and 12px to the note. */
