@@ -1,0 +1,5 @@
+{
+  "Invoices": "/e2e/invoices",
+  "InvoicesDone": "/e2e/invoices?state=done",
+  "InvoicesDetail": "/e2e/invoices?invoice=inv-1043"
+}

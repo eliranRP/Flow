@@ -20,3 +20,5 @@ supabase/.branches
 clip-report.json
 clip-report.txt
 .DS_Store
+board-png/
+design/board/

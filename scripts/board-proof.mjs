@@ -11,11 +11,10 @@
  * The map is JSON: { "<frame>": "<route>" }, where <frame> is the board frame's file name without the theme
  * suffix (Flow, FlowPicker, ...) and <route> is the app path the frame is drawn from (for example "/?preview=1").
  * The light theme's board is "<frame>Light.png", the dark theme's is "<frame>.png", both in --boards
- * (default /mnt/project-files/design/board-png).
+ * (default $FLOW_BOARD_PNG). Make the renders with scripts/board-render.mjs.
  * Output: <out>/<frame>--<theme>.png, and <out>/summary.json with each frame's raw and text-masked mismatch.
  *
- * Render method: see the board renders note in team memory (redesign-approval-proofs). The app shot is
- * taken from a dev-fixture build served at --base; the board PNGs were rendered at the same size.
+ * The app shot is taken from a dev-fixture build served at --base; the board PNGs were rendered at the same size.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -28,14 +27,14 @@ const PROOF_HEIGHT = 844;
 const PROOF_DPR = 2;
 /** A channel difference up to this (of 255) counts as the same pixel: anti-aliasing and sub-pixel text. */
 const CHANNEL_TOLERANCE = 16;
-const DEFAULT_BOARDS = "/mnt/project-files/design/board-png";
 
 /**
  * @param {string[]} argv the arguments after the script name
+ * @param {Record<string, string | undefined>} [env] the environment, for FLOW_BOARD_PNG
  * @returns {{ base: string, map: string, out: string, boards: string, frames: string[] }}
  */
-export function parseArgs(argv) {
-  const options = { base: "", map: "", out: "", boards: DEFAULT_BOARDS, frames: /** @type {string[]} */ ([]) };
+export function parseArgs(argv, env = process.env) {
+  const options = { base: "", map: "", out: "", boards: "", frames: /** @type {string[]} */ ([]) };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--base" || arg === "--map" || arg === "--out" || arg === "--boards") {
@@ -57,6 +56,12 @@ export function parseArgs(argv) {
   if (options.base === "") throw new Error("--base is required (the running app, for example http://localhost:4173)");
   if (options.map === "") throw new Error("--map is required (the JSON frame map)");
   if (options.out === "") throw new Error("--out is required (the folder for the PNGs)");
+  if (options.boards === "") options.boards = env.FLOW_BOARD_PNG ?? "";
+  if (options.boards === "") {
+    throw new Error(
+      "--boards or FLOW_BOARD_PNG is required: the folder of fresh board renders. Make it with node scripts/board-render.mjs --project <board project dir> --runtime <dc-runtime.js> --out <dir>",
+    );
+  }
   return options;
 }
 

@@ -1,0 +1,4 @@
+{
+  "Projects": "/e2e/projects",
+  "ProjectFlip": "/e2e/project-detail?preview=1&budget=1"
+}
