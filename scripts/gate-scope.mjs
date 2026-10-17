@@ -128,10 +128,13 @@ export function reachesApp(nameStatus) {
 // control there. A route renders the app shell (what App.tsx and main.tsx import, outside the screens
 // they load on a route) and its screen: a file a route loads lazily (App.tsx's and
 // screen-loaders.ts's import() targets) or one of `sweeps.pages`, imported by App.tsx for its first
-// paint. The /e2e/ routes draw their screens through dev-routes.tsx, with its fixtures.
+// paint. The /e2e/ routes draw their screens through the route table in app/src/dev/routes (one file
+// per area), with its fixtures.
 const shellRoots = ["app/src/App.tsx", "app/src/main.tsx"];
 const lazyLoaders = ["app/src/App.tsx", "app/src/screen-loaders.ts"];
-const devRoutes = "app/src/dev-routes.tsx";
+// The /e2e/ route table and its fixtures: index.ts and types.ts, and one .tsx file per area.
+const devRouteFile = /^app\/src\/dev\/routes\/[^/]+\.tsx?$/;
+const devRouteArea = /^app\/src\/dev\/routes\/[^/]+\.tsx$/;
 // Barrels and loaders that import every screen: a screen reaches them, but they draw nothing of it.
 const screenIndexes = new Set(["app/src/screens/flow-screens.tsx", "app/src/screen-loaders.ts"]);
 const dynamicImport = /import\(\s*["']([^"']+)["']\s*\)/g;
@@ -183,6 +186,11 @@ function declarationsUsing(exists, file, text, target, only) {
   return using;
 }
 
+/** The names a module exports as functions or constants. */
+function exportedNames(text) {
+  return new Set([...text.matchAll(/^export (?:async )?(?:function|const) ([A-Za-z_$][\w$]*)/gm)].map((match) => match[1]));
+}
+
 /**
  * The names a barrel re-exports from `source` (`export { a, b } from "./source"`), or null when it
  * does more than re-export by name.
@@ -209,7 +217,7 @@ function reExportedFrom(exists, root, barrel, source) {
  * The sweep routes a change reaches, with the reason for each. A route is swept when a changed file
  * is, or is imported (at any depth) by, one of the route's files in `map.sweeps.routes`; every route
  * when the change matches `map.all`, changes the sweep, or reaches the app shell outside a screen;
- * every /e2e/ route when it reaches dev-routes.tsx outside a screen.
+ * every /e2e/ route when it reaches the e2e route table (app/src/dev/routes) outside a screen.
  * @param {string[]} changed repo-relative paths (git diff --name-only)
  * @param {{ root: string, files?: string[], map: any }} options map: app/e2e/spec-sources.json
  * @returns {{ spec: string, url: string, why: string }[]}
@@ -227,6 +235,7 @@ export function sweepRoutes(changed, { root, files, map }) {
     if (file === "app/e2e/control-sweep.ts") return every(`${file} is the sweep`);
   }
   const pages = new Set(map.sweeps.pages.map((page) => `app/src/${page}`));
+  for (const file of exists) if (devRouteFile.test(file)) pages.add(file);
   for (const loader of lazyLoaders) {
     if (!exists.has(loader)) continue;
     for (const match of fs.readFileSync(path.join(root, loader), "utf8").matchAll(dynamicImport)) {
@@ -252,29 +261,36 @@ export function sweepRoutes(changed, { root, files, map }) {
     for (const target of imports.get(file) ?? []) down.push(target);
   }
   // Each changed file's importers, all the way up. A screen's own importers count only when they
-  // draw it: App.tsx, dev-routes.tsx and the screen indexes load it on its route instead.
-  // dev-routes.tsx draws each /e2e/ route with one of its exports (a route's "dev-routes.tsx#Name"
-  // entry): a file it imports reaches the exports that use it.
-  const devText = exists.has(devRoutes) ? fs.readFileSync(path.join(root, devRoutes), "utf8") : "";
+  // draw it: App.tsx, the route table and the screen indexes load it on its route instead.
+  // Each dev/routes area file draws its /e2e/ routes with its exports (a route's
+  // "app/src/dev/routes/<area>.tsx#Name" entry): a file it imports reaches the exports that use it.
   const reached = new Map();
   for (const file of changed) {
     const seen = new Set();
     const stack = [{ file, fromPage: false, via: "", names: null }];
     while (stack.length > 0) {
       const { file: next, fromPage, via, names } = stack.pop();
-      const key = `${next}\t${fromPage}\t${next === devRoutes ? `${via}\t${[...(names ?? [])].join()}` : ""}`;
+      const dev = devRouteFile.test(next);
+      const key = `${next}\t${fromPage}\t${dev ? `${via}\t${[...(names ?? [])].join()}` : ""}`;
       if (seen.has(key)) continue;
       seen.add(key);
       if (shell.has(next) && !pages.has(next)) {
         if (fromPage && (shellRoots.includes(next) || screenIndexes.has(next))) continue;
         return every(`${file} reaches the app shell through ${next}`);
       }
-      if (next === devRoutes) {
+      if (dev) {
+        // index.ts and types.ts draw nothing themselves: changing one changes the whole route table.
+        if (!devRouteArea.test(next)) {
+          if (via === "") reached.set("e2e", `${file} reaches the e2e fixtures (${next})`);
+          continue;
+        }
         if (fromPage) continue;
-        const using = declarationsUsing(exists, devRoutes, devText, via, names);
-        if (using === null) reached.set("e2e", `${file} reaches the e2e fixtures (${devRoutes})`);
+        const text = fs.readFileSync(path.join(root, next), "utf8");
+        // The changed area file itself: every export it draws.
+        const using = via === "" ? exportedNames(text) : declarationsUsing(exists, next, text, via, names);
+        if (using === null) reached.set("e2e", `${file} reaches the e2e fixtures (${next})`);
         for (const name of using ?? []) {
-          if (!reached.has(`${devRoutes}#${name}`)) reached.set(`${devRoutes}#${name}`, file);
+          if (!reached.has(`${next}#${name}`)) reached.set(`${next}#${name}`, file);
         }
         continue;
       }

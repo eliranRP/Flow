@@ -10,7 +10,7 @@ import { preloadScreens } from "./screen-loaders";
 // FLOW-804: screens load on demand. With every screen (and the dev fixtures) fetched first, a
 // few ticks settle a route.
 beforeAll(async () => {
-  await Promise.all([preloadScreens(), import("./dev-routes")]);
+  await Promise.all([preloadScreens(), import("./dev/routes")]);
 }, 60_000);
 
 async function settle(): Promise<void> {
