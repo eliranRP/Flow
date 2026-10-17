@@ -44,15 +44,10 @@
   margin-block-start: var(--space-4);
 }
 
-/* FLOW-366: the month lines page. The count line sits under the total, in muted text. */
+/* FLOW-366: the month lines page. The count line sits under the total, in muted text, at the board's 15px. */
 .ui-lines-count {
   margin: 0;
   color: var(--color-text-muted);
-  /* One line at 390px: the board's count is the caption size. */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-block-start: calc(var(--space-2) * -1);
 }
 
 /* FLOW-366: the lines head stacks its switch, total, count and chips in one column. The page's
@@ -108,6 +103,11 @@
   padding: 0 var(--space-side) var(--space-2);
 }
 
+/* The group's own side padding is the page edge; the flat list under it adds none (the board's rows start at the edge). */
+.ui-lines-group .ui-project-list {
+  padding-inline: 0;
+}
+
 .ui-lines-group-head {
   position: sticky;
   inset-block-start: var(--month-sticky-top, 0);
@@ -116,7 +116,8 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-5) 0 var(--space-2);
+  /* board: 20px above the head, 6px under it. */
+  padding: var(--space-5) 0 6px;
   background: var(--color-bg);
 }
 
@@ -132,4 +133,16 @@
 .ui-lines-group-sum {
   color: var(--color-text-muted);
   white-space: nowrap;
+}
+
+/* FLOW-366b: the chip row as the board draws it: 36px chips, 14px sides, 1.5px border, 14/500 type. */
+.ui-lines-chips .ui-chip {
+  block-size: 36px;
+  min-block-size: 36px;
+  gap: var(--space-2);
+  padding-inline: 14px;
+  border-width: 1.5px;
+  font-size: var(--type-chip-size);
+  line-height: var(--type-chip-line);
+  font-weight: var(--type-chip-weight);
 }

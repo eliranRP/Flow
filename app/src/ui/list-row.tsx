@@ -95,6 +95,8 @@ export type ListRowProps =
     initials?: string;
     /** FLOW-366: the tag line under the hint (13px): "ממתין לאישור", or the reason a line is out of profit. */
     tagLine?: ReactNode;
+    /** FLOW-366b: the amount keeps ".00" on a whole figure (the month lines page). Off: whole figures have no cents. */
+    wholeCents?: boolean;
   })
   | StatementRowProps
   | (Common & { variant: "item" })
@@ -436,7 +438,7 @@ function withAction(props: { actionBelow?: boolean; action?: ReactNode }, row: R
   );
 }
 
-function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "out" | "cost"; inWord?: string }) {
+function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "out" | "cost"; inWord?: string; wholeCents?: boolean }) {
   const abs = props.agorot < 0n ? -props.agorot : props.agorot;
   const cost = props.sign === "cost";
   // The amount's sign wins over the direction: a negative income (an income credit) shows its
@@ -452,6 +454,7 @@ function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "
         direction={income ? "income" : cost ? undefined : "expense"}
         income={income}
         cents="always"
+        zeroCents={props.wholeCents === true}
       />
     </span>
   );
@@ -523,7 +526,7 @@ function StatementRow(props: StatementRowProps) {
 
 function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transaction" }>) {
   if (props.variant === "transaction") {
-    return <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} />;
+    return <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} wholeCents={props.wholeCents} />;
   }
   if (props.missing != null) {
     return (
