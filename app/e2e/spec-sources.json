@@ -64,7 +64,49 @@
       "screens/connections-screen.tsx",
       "screens/onboarding-screen.tsx"
     ],
-    "controls.spec.ts": [
+    "controls-review.spec.ts": [
+      "screens/",
+      "setup/",
+      "ui/install-screen.tsx",
+      "ui/tab-bar.tsx"
+    ],
+    "controls-home.spec.ts": [
+      "screens/",
+      "setup/",
+      "ui/install-screen.tsx",
+      "ui/tab-bar.tsx"
+    ],
+    "controls-fields.spec.ts": [
+      "screens/",
+      "setup/",
+      "ui/install-screen.tsx",
+      "ui/tab-bar.tsx"
+    ],
+    "controls-projects.spec.ts": [
+      "screens/",
+      "setup/",
+      "ui/install-screen.tsx",
+      "ui/tab-bar.tsx"
+    ],
+    "controls-transaction.spec.ts": [
+      "screens/",
+      "setup/",
+      "ui/install-screen.tsx",
+      "ui/tab-bar.tsx"
+    ],
+    "controls-settings.spec.ts": [
+      "screens/",
+      "setup/",
+      "ui/install-screen.tsx",
+      "ui/tab-bar.tsx"
+    ],
+    "controls-onboarding.spec.ts": [
+      "screens/",
+      "setup/",
+      "ui/install-screen.tsx",
+      "ui/tab-bar.tsx"
+    ],
+    "controls-split.spec.ts": [
       "screens/",
       "setup/",
       "ui/install-screen.tsx",

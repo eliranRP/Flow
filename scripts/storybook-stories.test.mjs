@@ -138,7 +138,7 @@ test("the vitest runs take the related tests for sources, migrations, e2e files 
       "M\tapp/src/ui/hero.tsx",
       "A\tapp/src/screens/home-skeleton.test.tsx",
       "M\tapp/src/ui/css/07-band-home.css",
-      "M\tapp/e2e/controls.spec.ts",
+      "M\tapp/e2e/controls-projects.spec.ts",
       "M\tpackages/shared/src/categories.ts",
       "A\tsupabase/migrations/20261013000000_x.sql",
     ]),
