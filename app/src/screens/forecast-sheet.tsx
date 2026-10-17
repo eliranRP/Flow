@@ -50,7 +50,9 @@ function ForecastItemForm({ item, today, onSave, onDone }: {
   const name = item.name === "" ? "ללא שם" : item.name;
   const usual = item.usual;
   const monthEnd = monthEndDay(today.slice(0, 7));
-  const source = item.kind === "invoice" ? { to: "/unpaid", label: "לחשבונית" } : { to: "/missing-bills", label: "לקבוע" };
+  const source = item.kind !== "invoice"
+    ? { to: "/recurring", label: "לחיוב הקבוע" }
+    : { to: "/unpaid", label: item.direction === "income" ? "לחשבונית" : "לחשבון" };
 
   function save() {
     if (when === "moved") {

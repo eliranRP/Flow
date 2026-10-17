@@ -193,41 +193,82 @@
   list-style: none;
 }
 
-.ui-forecast-moved {
-  opacity: 0.8;
+/* FLOW-141b: the all-arrived state sits lower and wider than the shared empty block, as on the board. */
+.ui-forecast-empty { --empty-measure: 300px; }
+.ui-forecast-empty > .ui-empty-state {
+  padding: calc(var(--space-6) * 2 + var(--space-3)) var(--space-6) var(--space-6);
+}
+
+/* FLOW-141b: the moved heading follows the list directly; its own top padding spaces it. */
+.ui-forecast-section-moved { margin-top: 0; }
+
+/* FLOW-141b: an item moved to next month is one muted line, not a full row. */
+.ui-forecast-head-moved {
+  margin: 0;
+  padding: calc(var(--space-6) * 11 / 12) 0 calc(var(--space-1) * 3 / 2);
+}
+
+.ui-forecast-moved-li {
   animation: ui-forecast-drop var(--motion-page) var(--ease-enter) both;
+}
+
+.ui-forecast-moved-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-inset-row);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--space-2) 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--type-body-size);
+  text-align: start;
+  cursor: pointer;
 }
 
 @keyframes ui-forecast-drop {
   from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 0.8; transform: translateY(0); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
+/* The reset line: the text and איפוס sit together at the start side; hidden keeps the 36px row. */
 .ui-forecast-changed {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: var(--space-2);
   height: 36px;
   color: var(--color-text-muted);
   font-size: var(--type-hint-size);
+  visibility: hidden;
   opacity: 0;
-  transition: opacity var(--motion-fade) var(--ease-standard);
+  transition: opacity var(--motion-fade) linear, visibility var(--motion-fade) linear;
 }
 
 .ui-forecast-changed-on {
+  visibility: visible;
   opacity: 1;
 }
 
 .ui-forecast-reset {
+  height: 36px;
   border: 0;
   background: transparent;
   color: var(--color-accent-text);
   font: inherit;
+  font-size: var(--type-meta-size);
   cursor: pointer;
 }
 
 .ui-forecast-foot {
-  margin: var(--space-section) 0 0;
+  margin: 0;
+  padding-top: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--type-hint-size);
+  line-height: calc(var(--type-hint-line) + 0.1);
 }
 
 .ui-forecast-form {
@@ -300,7 +341,7 @@
   .ui-forecast-li,
   .ui-forecast-compact,
   .ui-forecast-changed,
-  .ui-forecast-moved {
+  .ui-forecast-moved-li {
     transition: none;
     animation: none;
   }
