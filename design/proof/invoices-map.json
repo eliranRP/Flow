@@ -1,5 +1,6 @@
 {
   "Invoices": "/e2e/invoices",
+  "InvoicesMatch": "/e2e/invoices?invoice=inv-1051",
   "InvoicesDone": "/e2e/invoices?state=done",
   "InvoicesDetail": "/e2e/invoices?invoice=inv-1043"
 }

@@ -157,22 +157,25 @@
   cursor: pointer;
 }
 
-/* The invoice page. */
+/* The invoice page. The board's detail has only a labelled back row, then the status, customer, amount and meta line. */
 .ui-inv-head {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-2);
+  gap: 8px;
+  margin-block-start: 12px;
 }
 
 .ui-inv-head > * {
   margin: 0;
 }
 
+/* Status is plain text, no pill: 12px, 4px 10px padding (no token for 12px and 10px). */
 .ui-inv-chip {
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-field-btn);
-  font-size: var(--type-micro-size);
+  padding: var(--space-1) 10px;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 12px;
   font-weight: var(--type-chip-weight);
   color: var(--color-text-secondary);
 }
@@ -188,16 +191,23 @@
 .ui-inv-customer {
   font-size: var(--type-name-size);
   font-weight: var(--type-name-weight);
-  line-height: var(--type-card-line);
+  line-height: var(--type-name-line);
 }
 
+.ui-inv-meta {
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+  color: var(--color-text-secondary);
+}
+
+/* The bank match card: copy first (start side in RTL), amount last. */
 .ui-inv-match {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
   border: 1.5px solid var(--color-tint-strong);
-  border-radius: var(--radius-card);
+  border-radius: 18px;
   background: var(--color-tint);
 }
 
@@ -216,20 +226,38 @@
 }
 
 .ui-inv-match-amount {
+  flex: none;
   font-size: var(--type-body-size);
+  color: var(--color-text);
 }
 
 .ui-inv-match-copy {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-1);
-  text-align: end;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+  text-align: start;
+}
+
+.ui-inv-match-when {
+  font-size: 16px;
+  font-weight: var(--type-chip-weight);
+  color: var(--color-text);
 }
 
 .ui-inv-raw {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: var(--type-micro-size);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  direction: ltr;
+  text-align: right;
+}
+
+.ui-inv-explain {
+  margin: 0;
+  font-size: var(--type-caption-size);
   color: var(--color-text-secondary);
 }
 
@@ -242,6 +270,8 @@
   flex: 2;
   min-height: 48px;
   border-radius: var(--radius-sheet);
+  font-size: 16px;
+  font-weight: var(--type-chip-weight);
 }
 
 .ui-inv-match-no {
@@ -250,47 +280,58 @@
   border: 1.5px solid var(--color-tint-strong);
   border-radius: var(--radius-sheet);
   background: transparent;
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: var(--type-chip-weight);
 }
 
+/* The facts card: label 12px muted, value 16px/500 in the text colour, a line between rows. */
 .ui-inv-facts {
   display: flex;
   flex-direction: column;
-  border-radius: var(--radius-card);
+  overflow: hidden;
+  border-radius: var(--radius-card-tight);
   background: var(--color-surface);
 }
 
 .ui-inv-fact {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 3px;
   min-height: 56px;
   padding: var(--space-3) var(--space-inset-row);
+  box-sizing: border-box;
 }
 
 .ui-inv-fact + .ui-inv-fact {
   border-block-start: 1px solid var(--color-line);
 }
 
-.ui-inv-fact-value {
-  font-weight: var(--type-chip-weight);
+.ui-inv-fact-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
 }
 
-.ui-inv-fact-value[data-over="true"] {
-  color: var(--color-signal-soft);
+.ui-inv-fact-value {
+  font-size: 16px;
+  font-weight: var(--type-chip-weight);
+  color: var(--color-text);
 }
 
 .ui-inv-fact-note {
   font-size: var(--type-line2-size);
-  line-height: var(--type-body-line);
+  line-height: 1.5;
 }
 
+/* The PDF card: thumb first (start side in RTL), copy, then a left-pointing chevron. */
 .ui-inv-doc {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   min-height: 76px;
-  padding: var(--space-3) var(--space-inset-row);
-  border-radius: var(--radius-card);
+  padding: 10px var(--space-inset-row);
+  box-sizing: border-box;
+  border-radius: var(--radius-card-tight);
   background: var(--color-surface);
   color: inherit;
   text-decoration: none;
@@ -300,7 +341,24 @@
   display: flex;
   flex: 1;
   flex-direction: column;
+  gap: 3px;
   min-width: 0;
+}
+
+.ui-inv-doc-title {
+  font-size: 16px;
+  color: var(--color-text);
+}
+
+.ui-inv-doc-sub {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.ui-inv-doc-chevron {
+  display: flex;
+  flex: none;
+  color: var(--color-text-muted);
 }
 
 .ui-inv-thumb {
@@ -308,37 +366,84 @@
   flex: none;
   flex-direction: column;
   justify-content: center;
-  gap: var(--space-1);
+  gap: 4px;
   width: 44px;
   height: 56px;
-  padding: 0 var(--space-2);
+  padding: 8px 6px;
   box-sizing: border-box;
-  border-radius: var(--radius-field-btn);
-  background: var(--color-raised);
+  border-radius: 8px;
+  background: var(--color-text);
 }
 
 .ui-inv-thumb > span {
   display: block;
-  height: 2px;
-  border-radius: var(--radius-block);
-  background: var(--color-line);
+  height: 3px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--color-surface) 35%, var(--color-text));
 }
 
 .ui-inv-thumb > span:first-child {
-  width: 60%;
-  background: var(--color-text-muted);
+  width: 70%;
+  height: 4px;
+  background: color-mix(in srgb, var(--color-surface) 20%, var(--color-text));
 }
 
 .ui-inv-mark {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--space-3);
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+.ui-inv-mark-yes {
+  min-height: 52px;
+  border-radius: 26px;
+  font-size: 16px;
+  font-weight: var(--type-chip-weight);
 }
 
 .ui-inv-mark-note {
   margin: 0;
-  max-width: 300px;
+  font-size: var(--type-caption-size);
+  line-height: 1.5;
   text-align: center;
-  line-height: var(--type-body-line);
+  color: var(--color-text-muted);
+}
+
+/* The all-paid state starts 24px under the title, like the board's done frame. */
+.ui-inv-page-done {
+  padding-block-start: 24px;
+}
+
+/* The all-paid state: a 80px tint circle with a 40px check, the board's sizes (scoped, EmptyState is shared). */
+.ui-inv-empty {
+  margin-top: 30px;
+}
+
+.ui-inv-empty .ui-empty-icon {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+}
+
+.ui-inv-empty .ui-empty-title {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.ui-inv-empty .ui-empty-line {
+  font-size: 15px;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.ui-inv-empty .ui-empty-action .ui-btn-pill {
+  min-height: 52px;
+  height: 52px;
+  margin-top: 6px;
+  border-radius: 26px;
+  font-size: 17px;
+  font-weight: var(--type-chip-weight);
 }

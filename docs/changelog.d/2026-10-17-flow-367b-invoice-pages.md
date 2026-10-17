@@ -1,0 +1,1 @@
+Invoice pages follow the board: the invoice page has a back row to the open invoices and no title, its status, amount and facts are set as on the board, a bank deposit that matches an invoice shows its date and account first, and the list keeps its sort row and SUMIT refresh line when every invoice is paid.
