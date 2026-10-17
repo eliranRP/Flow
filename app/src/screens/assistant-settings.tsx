@@ -19,7 +19,6 @@ import { SegmentedControl } from "../ui/segmented-control";
 import { TextLink } from "../ui/text-link";
 import { useBlockedPreview } from "./screen-shared";
 import { screenPhase } from "../query-phase";
-import { LogoutIcon } from "../ui/icons";
 
 export type AssistantScope = "read" | "read_write";
 export type AssistantClient = "claude-code" | "claude-ai" | "chatgpt" | "other";
@@ -53,9 +52,9 @@ const CLIENTS: Array<{ value: AssistantClient; label: string }> = [
 
 /** The three questions the board shows under "מה אפשר לשאול" (the project and supplier are invented). */
 export const EXAMPLE_QUESTIONS = [
-  "כמה הוצאתי על Elm Court החודש?",
-  "מה מהקבועים עוד לא הגיע?",
-  "שייך את כל Hardware Plus מהשבוע ל־Elm Court",
+  '"כמה הוצאתי על Elm Court החודש?"',
+  '"מה מהקבועים עוד לא הגיע?"',
+  '"שייך את כל Harlow מהשבוע ל־Elm Court"',
 ];
 
 export const MINT_ERROR = "לא הצלחנו להתחבר. נסו שוב.";
@@ -332,7 +331,7 @@ export function AiConnectionPage({
       <ViewerNote />
       {connected ? (
         <>
-          <div className="ui-settings-card ui-connection-card">
+          <div className="ui-settings-card ui-connection-card ui-ai-connected-card">
             <p className="ui-ai-status">
               <span className="ui-ai-status-name">מחובר</span>
               <span className="ui-ai-status-scope">{scopeLabel(view.scope ?? "read_write")}</span>
@@ -343,12 +342,12 @@ export function AiConnectionPage({
                 ...(expires != null ? [{ label: "הקוד בתוקף עד", value: expires, ltr: true }] : []),
               ]}
             />
+            <p className="ui-ai-code-note">{CONNECTED_NOTE}</p>
           </div>
-          <ConnectionNote>{CONNECTED_NOTE}</ConnectionNote>
           {readonly ? null : (
             <div className="ui-connection-actions">
               <Button variant="secondary" onClick={() => { setSetupOpen(true); }}>יצירת קוד חדש</Button>
-              <Button variant="danger-link" icon={<LogoutIcon size={18} />} onClick={(event) => { disconnectFocus.current = event.currentTarget; setDisconnectOpen(true); }}>ניתוק</Button>
+              <Button variant="danger-link" onClick={(event) => { disconnectFocus.current = event.currentTarget; setDisconnectOpen(true); }}>ניתוק</Button>
             </div>
           )}
         </>

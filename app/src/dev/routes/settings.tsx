@@ -85,14 +85,14 @@ export function DevSumitConnection() {
   const [params] = useSearchParams();
   const state = params.get("state");
   if (state === "new") return <SumitConnectionRoute sample={{ state: "new" }} />;
-  return <SumitConnectionRoute sample={state === "problem" ? { state: "problem", companyId: "1234567890" } : { state: "connected", companyId: "1234567890", lastSync: "היום, 06:05" }} />;
+  return <SumitConnectionRoute sample={state === "problem" ? { state: "problem", companyId: "1234567890" } : { state: "connected", companyId: "1234567890", lastSync: "היום, 06:05", imported: "312 מסמכים" }} />;
 }
 
 /** The Mercury page on the dev fixture: connected, or `?state=new` for a page with no key yet. */
 export function DevMercuryConnection() {
   const [params] = useSearchParams();
   if (params.get("state") === "new") return <MercuryConnectionRoute sample={{ state: "new" }} />;
-  return <MercuryConnectionRoute sample={{ state: "connected", accounts: "חשבון תפעול", lastSync: "היום, 06:05" }} />;
+  return <MercuryConnectionRoute sample={{ state: "connected", accounts: "Checking ••4821 · Savings ••1093", cards: "IO Credit ••7710", lastSync: "לפני 5 דקות", imported: "1,284 תנועות" }} />;
 }
 
 /** The business page on the dev settings fixture: its name is the fixture's, and its rename sheet opens from it. */
@@ -147,7 +147,7 @@ export function useDevSettingsSample(): NonNullable<Parameters<typeof SettingsSc
         assistant: noCompany
           ? { state: "no-company" }
           : assistant === "connected"
-          ? { state: "connected", scope: "read_write", lastUsedAt: "2026-09-30T11:05:00.000Z", id: "mcp-1" }
+          ? { state: "connected", scope: "read_write", lastUsedAt: "2026-09-30T11:05:00.000Z", expiresAt: "2027-01-09T00:00:00.000Z", id: "mcp-1" }
           : assistant === "expired"
             ? { state: "expired", scope: "read", id: "mcp-1" }
             : assistant === "loading"

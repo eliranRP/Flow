@@ -48,6 +48,10 @@
 
 .ui-connection-page .ui-secret-wrap .ui-field-control {
   min-block-size: 50px;
+  padding-inline: calc(var(--space-10) + var(--space-3)) var(--space-inset-row);
+  font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", monospace;
+  font-size: var(--type-line2-size);
+  text-align: right;
 }
 
 /* The import-from control: no label above it, a 44px track on the surface colour. */
@@ -129,4 +133,46 @@
   color: var(--color-text-muted);
   font-size: var(--type-caption-size);
   line-height: calc(var(--type-caption-line) + 0.1);
+}
+
+/* Connected page: the buttons and links take the page's block gap and width, as the board's direct children do. */
+.ui-connection-page .ui-connection-actions {
+  display: contents;
+}
+
+.ui-connection-page .ui-connection-actions > .ui-btn-link,
+.ui-connection-page .ui-connection-actions > .ui-btn-danger-link {
+  align-self: flex-start;
+  padding-inline: var(--space-1);
+}
+
+.ui-connection-page .ui-connection-actions > .ui-btn-secondary {
+  align-self: stretch;
+}
+
+.ui-connection-page .ui-connection-fact dd {
+  font-weight: var(--type-line2-weight);
+}
+
+/* The AI page's connected card: status, two facts and the footnote in one 16-inset card. */
+.ui-ai-connected-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+/* Four assistants in one row at 13: the tab text fits without clipping. */
+.ui-connection-page .ui-seg-btn {
+  padding-inline: calc(var(--space-1) / 2);
+  font-size: var(--type-caption-size);
+}
+
+.ui-ai-connected-card .ui-connection-fact {
+  min-block-size: calc(var(--touch-min) - var(--space-1));
+  padding-block: 0;
+}
+
+.ui-ai-connected-card .ui-ai-status-name {
+  font-weight: var(--type-line2-weight);
 }

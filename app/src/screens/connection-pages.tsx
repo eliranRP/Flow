@@ -24,7 +24,6 @@ import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 import { useBlockedPreview } from "./screen-shared";
 import { screenPhase } from "../query-phase";
-import { LogoutIcon, RefreshIcon } from "../ui/icons";
 
 export type Provider = "sumit" | "mercury";
 
@@ -35,6 +34,10 @@ export type ConnectionSample = {
   companyId?: string;
   /** Mercury: the account labels on file. */
   accounts?: string;
+  /** Mercury: the card labels on file. */
+  cards?: string;
+  /** What has come in so far, already in words ("312 מסמכים"). */
+  imported?: string;
   /** The last sync, already in words ("היום, 06:05"). */
   lastSync?: string;
   /** A connect is in flight. */
@@ -211,11 +214,14 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
       { label: "מספר חברה", value: view.companyId ?? companyValue, ltr: true },
       { label: "עדכון אחרון", value: syncLine ?? "—" },
       { label: "מה מגיע", value: "חשבוניות, קבלות והוצאות" },
+      ...(view.imported != null ? [{ label: "נכנסו עד היום", value: view.imported }] : []),
     ]
     : [
       { label: "מצב", value: "מחובר" },
       { label: "חשבונות", value: accountLine ?? "—", ltr: true },
+      ...(view.cards != null ? [{ label: "כרטיס", value: view.cards, ltr: true }] : []),
       { label: "עדכון אחרון", value: syncLine ?? "—" },
+      ...(view.imported != null ? [{ label: "נכנסו עד היום", value: view.imported }] : []),
     ];
 
   if (noCompany) {
@@ -254,16 +260,16 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
           {viewerOnly ? null : (
             <div className="ui-connection-actions">
               {provider === "sumit" ? (
-                <Button variant="secondary" busy={refreshSumit.isPending || live && sumit.data?.syncing === true} onClick={() => { if (!blocked()) refreshSumit.mutate(); }} icon={<RefreshIcon size={18} />}>
+                <Button variant="secondary" busy={refreshSumit.isPending || live && sumit.data?.syncing === true} onClick={() => { if (!blocked()) refreshSumit.mutate(); }}>
                   רענון עכשיו
                 </Button>
               ) : (
-                <Button variant="secondary" busy={mercuryRefresh.isPending || live && mercury.data?.syncing === true} onClick={() => { if (!blocked()) mercuryRefresh.mutate(); }} icon={<RefreshIcon size={18} />}>
+                <Button variant="secondary" busy={mercuryRefresh.isPending || live && mercury.data?.syncing === true} onClick={() => { if (!blocked()) mercuryRefresh.mutate(); }}>
                   רענון עכשיו
                 </Button>
               )}
               <Button variant="link" onClick={() => { setReplacing(true); }}>החלפת מפתח API</Button>
-              <Button variant="danger-link" icon={<LogoutIcon size={18} />} onClick={(event) => { disconnectFocus.current = event.currentTarget; setDisconnectOpen(true); }}>ניתוק</Button>
+              <Button variant="danger-link" onClick={(event) => { disconnectFocus.current = event.currentTarget; setDisconnectOpen(true); }}>ניתוק</Button>
             </div>
           )}
         </>
