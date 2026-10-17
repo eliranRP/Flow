@@ -990,6 +990,13 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
     assert.ok(body.indexOf("pnpm store path") < body.indexOf("actions/cache/restore"), name);
   }
   assert.equal(pr.includes("actions/cache@"), false, "PR jobs never save a cache");
+  // The e2e shards skip the browser install when the browsers came from the cache exactly.
+  const e2e = jobIn(pr, "e2e");
+  assert.match(e2e, /uses: actions\/cache\/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0\n {8}with:\n {10}path: ~\/\.cache\/ms-playwright\n/);
+  assert.ok(e2e.includes("      - name: Restore Playwright browsers\n        id: playwright-cache\n"));
+  assert.ok(e2e.includes("      - name: Restore Playwright system packages\n        id: apt-cache\n"));
+  assert.match(e2e, /      - name: Install Playwright browsers\n        if: steps\.playwright-cache\.outputs\.cache-hit != 'true'\n/);
+  assert.equal((e2e.match(/if: steps\.playwright-cache/g) ?? []).length, 1);
   // The static slice and the db slice run deno (the flow-mcp tests, the edge-function check, the edge seed).
   assert.match(jobIn(pr, "static"), /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
   assert.match(jobIn(pr, "db"), /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);

@@ -199,11 +199,13 @@ jobs:
           restore-keys: node-cache-Linux-x64-pnpm-
       - run: pnpm install --frozen-lockfile
       - name: Restore Playwright browsers
+        id: playwright-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-1.63.0
       - name: Restore Playwright system packages
+        id: apt-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/flow-apt
@@ -214,7 +216,10 @@ jobs:
       - name: Install Playwright system dependencies
         timeout-minutes: 8
         run: bash scripts/ci-apt-cache.sh install
+      # An exact hit means the browsers are already in the cache. The apt restore is prefix-only, so its cache-hit
+      # is never exact: ci-apt-cache.sh install already returns at once when no package is missing.
       - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         timeout-minutes: 5
         run: pnpm --filter @flow/app exec playwright install chromium
       - name: Wait for local Supabase
