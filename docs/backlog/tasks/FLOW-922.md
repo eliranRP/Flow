@@ -1,0 +1,10 @@
+<a id="flow-922"></a>
+# FLOW-922 · Split screen: the other four board states, the part actions, and removing the old project split editor
+- **Type:** UI · **Status:** ready · **Depends on:** [FLOW-370](FLOW-370.md) · **Source:** FLOW-370 (#664) built the Split board frame (two parts saved) and proofed it under 3%; the board's other states and the cleanup were cut from that PR to land it (lane rule of 2026-10-16 22:12Z: open PRs cut scope to what passes 3%).
+- **Files:** `app/src/screens/line-split-editor.tsx`, `app/src/screens/line-split.tsx`, `app/src/screens/line-split-parts.tsx`, `app/src/dev/line-split-e2e.tsx`, `app/src/dev/line-split-sample.ts`, `app/src/screens/split-screen.tsx` (delete), `app/src/project-split.ts`, `app/src/ui/css/12-split.css`, `app/src/ui/css/13-line-split.css`, `app/src/App.tsx` (split routes), their stories and tests.
+- [ ] Proof states on the dev route, one query param per frame (no click drivers): `SplitEmpty`, `SplitPicker` (project sheet for part 2), `SplitOver` (part 2 at $3,500), `SplitTwice` (part 2 the same project and category as part 1). Each under 3% text-masked in light and dark; Split and SplitOver also at 320. Fixture values are in the FLOW-370 brief §5 (invented names).
+- [ ] "+ חלק נוסף" adds a part with the line's category, no project, and what is left as the amount (today it opens the category picker first).
+- [ ] "חלוקה שווה" on an empty split creates two parts (today it only evens out existing parts); the last part takes the cents.
+- [ ] Problem notes (over the total, the same pair twice, missing project or amount) replace the share line on the part and outline the card, as on the board.
+- [ ] The $/% switch segments use an 8px radius (no 8px radius token today; FLOW-370 used `--radius-field-btn`).
+- [ ] Delete the old project split editor (`split-screen.tsx`, the `/e2e/split` dev route, the parts of `project-split.ts` only it used, the `12-split.css` blocks and `.ui-lsplit-*` rules only it used, its stories and tests). Decide whether `transactions/:id/split-category` becomes the redirect to `transactions/:id/split` as the brief asks (today `/split` redirects to `/split-category`).

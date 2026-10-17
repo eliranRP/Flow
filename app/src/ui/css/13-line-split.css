@@ -17,12 +17,16 @@
   margin: var(--space-4) var(--space-side) 0;
 }
 
+/* FLOW-370: each part is its own surface card (board Split frame), 10 apart, on the page. */
 .ui-lsplit-card {
-  /* Bordered, so its edge shows in both themes and keeps the screen's side gutter. */
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   margin-inline: var(--space-side);
-  margin-top: var(--space-5);
-  padding-block: var(--space-1);
-  border: 1px solid var(--color-line);
+  margin-top: var(--space-4);
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .ui-lsplit-part {
@@ -32,9 +36,10 @@
   gap: var(--space-1) var(--space-3);
   box-sizing: border-box;
   inline-size: 100%;
-  padding: var(--space-3) var(--space-4);
-  border: 0;
-  background: transparent;
+  padding: var(--space-3) var(--space-inset-row);
+  border: 1px solid transparent;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
   color: inherit;
   font: inherit;
   text-align: start;
@@ -63,6 +68,36 @@
   font: inherit;
   text-align: start;
   cursor: pointer;
+}
+
+/* FLOW-370: the category and project pickers sit side by side, each a field on the card. */
+/* FLOW-370: the card head row, the board's "חלק N" with the remove control. */
+.ui-lsplit-part-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.ui-lsplit-part-no {
+  color: var(--color-text-muted);
+}
+
+.ui-lsplit-pickers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  inline-size: 100%;
+}
+
+.ui-lsplit-pickers .ui-lsplit-pick {
+  box-sizing: border-box;
+  min-block-size: var(--field-height);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-input);
+  background: var(--color-raised);
+  justify-content: center;
 }
 
 .ui-lsplit-title {
@@ -166,11 +201,11 @@
 }
 
 .ui-lsplit-rest {
-  inline-size: calc(100% - var(--space-4));
-  margin: var(--space-1) var(--space-2);
-  padding-inline: var(--space-2);
-  border-radius: var(--radius-input);
-  background: var(--color-tint);
+  inline-size: 100%;
+  margin: 0;
+  padding: var(--space-3) var(--space-inset-row);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
   cursor: pointer;
 }
 
@@ -191,11 +226,6 @@
   display: flex;
   flex: none;
   align-self: center;
-}
-
-.ui-lsplit-clear {
-  display: flex;
-  margin: var(--space-4) var(--space-side) 0;
 }
 
 .ui-lsplit-clear-link {
@@ -234,3 +264,453 @@
   margin-inline: var(--space-1) var(--space-2);
 }
 
+
+/* FLOW-370 board: the line split frame (top box, part cards, rest card, footer). Scoped to the
+   editor root, so the project split (split-screen.tsx) keeps the rules above. */
+.ui-lsplit-board {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100dvh;
+  /* Clears the fixed footer (padding 12 + button 52 + padding 24, plus the hold line). */
+  padding-block-end: calc(var(--space-section) * 3);
+}
+
+.ui-lsplit-board .ui-lsplit-top {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-block: var(--space-2) var(--space-3);
+  padding-inline: var(--space-3) var(--space-4);
+  border-block-end: 1px solid var(--color-line);
+}
+
+.ui-lsplit-top-row {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+}
+
+.ui-lsplit-top-title {
+  margin: 0;
+  justify-self: center;
+  color: var(--color-text);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-btn-weight);
+  line-height: var(--type-sheet-line);
+}
+
+.ui-lsplit-top-spacer {
+  display: block;
+  inline-size: 44px;
+}
+
+.ui-lsplit-board .ui-lsplit-line {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-inline: var(--space-1);
+}
+
+.ui-lsplit-board .ui-lsplit-meta {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
+
+  font-weight: var(--type-body-weight);}
+
+.ui-lsplit-board .ui-lsplit-amount {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  color: var(--color-text);
+  font-size: var(--type-card-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-card-line);
+  text-align: start;
+}
+
+.ui-lsplit-board .ui-lsplit-amount .ui-num {
+  font-size: inherit;
+}
+
+/* The cents sit raised, at 13px, as on the board. */
+.ui-lsplit-board .ui-lsplit-amount .ui-num-cents {
+  font-size: var(--type-label-size);
+  line-height: 1;
+  vertical-align: top;
+  margin-inline-start: 0;
+}
+
+.ui-lsplit-bar {
+  block-size: 6px;
+  margin-inline: var(--space-1);
+  overflow: hidden;
+  border-radius: var(--radius-chip);
+  background: var(--color-line);
+}
+
+.ui-lsplit-fill {
+  display: block;
+  block-size: 100%;
+  border-radius: var(--radius-chip);
+  background: var(--color-accent);
+}
+
+.ui-lsplit-fill-over {
+  background: var(--color-signal-soft);
+}
+
+.ui-lsplit-board .ui-lsplit-status {
+  margin: 0;
+  padding-inline: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--type-hint-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-line);
+}
+
+.ui-lsplit-board .ui-lsplit-status .ui-num {
+  color: inherit;
+  font-size: inherit;
+  font-weight: var(--type-body-weight);
+}
+
+.ui-lsplit-board .ui-lsplit-body {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+  padding: var(--space-4);
+}
+
+/* The swipe wrapper carries the card's radius and clips its corners (the board's 16px card). */
+.ui-lsplit-board .ui-swipe-row {
+  border-radius: var(--radius-card-tight);
+  overflow: hidden;
+}
+
+.ui-lsplit-board .ui-lsplit-part {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  inline-size: 100%;
+  padding: var(--space-3) var(--space-inset-row);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-card-tight);
+  background: var(--color-surface);
+}
+
+.ui-lsplit-board .ui-lsplit-part[data-invalid] {
+  border-color: var(--color-signal-soft);
+}
+
+.ui-lsplit-board .ui-lsplit-part-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+}
+
+.ui-lsplit-board .ui-lsplit-part-no {
+  color: var(--color-text-muted);
+  font-size: var(--type-hint-size);
+  line-height: var(--type-body-line);
+
+  font-weight: var(--type-body-weight);}
+
+.ui-lsplit-part-remove {
+  min-block-size: 32px;
+  padding: 0 var(--space-1);
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--type-hint-size);
+  cursor: pointer;
+}
+
+.ui-lsplit-board .ui-lsplit-pickers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  inline-size: 100%;
+}
+
+.ui-lsplit-board .ui-lsplit-pick {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  block-size: 48px;
+  min-inline-size: 0;
+  padding: 0 var(--space-3);
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-input);
+  background: var(--color-raised);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-body-weight);
+  text-align: start;
+  cursor: pointer;
+}
+
+.ui-lsplit-board .ui-lsplit-pick > .ui-lsplit-title,
+.ui-lsplit-board .ui-lsplit-pick > .ui-lsplit-project {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.ui-lsplit-board .ui-lsplit-project {
+  overflow: hidden;
+  color: inherit;
+  font-size: var(--type-label-size);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-lsplit-board .ui-lsplit-project-error {
+  color: var(--color-signal-soft);
+}
+
+.ui-lsplit-chevron {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.ui-lsplit-board .ui-lsplit-field {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-1);
+  box-sizing: border-box;
+  block-size: 48px;
+  padding-inline: var(--space-1) var(--space-3);
+  border: 1.5px solid var(--color-tint-strong);
+  border-radius: var(--radius-input);
+  background: var(--color-raised);
+}
+
+.ui-lsplit-board .ui-lsplit-field-flagged {
+  border-color: var(--color-signal-soft);
+}
+
+/* The amount wrapper stretches to the field's height, so the input (absolute, inset 0) sits inside it. */
+.ui-lsplit-board .ui-lsplit-field .ui-field:has(.ui-money-field) {
+  display: block;
+  flex: 1 1 0;
+  inline-size: auto;
+  min-inline-size: 0;
+  margin: 0;
+}
+
+.ui-lsplit-board .ui-lsplit-field .ui-money-lead,
+.ui-lsplit-board .ui-lsplit-field .ui-money-mirror {
+  display: none;
+}
+
+.ui-lsplit-board .ui-lsplit-field .ui-money-field {
+  block-size: 100%;
+  min-block-size: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.ui-lsplit-board .ui-lsplit-field .ui-money-field input {
+  padding-inline: var(--space-1) var(--space-3);
+  font-size: var(--type-sheet-size);
+  font-weight: var(--type-body-weight);
+  text-align: end;
+}
+
+/* The $ / % switch: two 36px segments on a 2px track, at the field's start edge. */
+.ui-lsplit-board .ui-lsplit-field .ui-field:not(:has(.ui-money-field)) {
+  flex: none;
+  inline-size: auto;
+  margin: 0;
+  align-self: center;
+}
+
+.ui-lsplit-board .ui-lsplit-field .ui-seg-input {
+  inline-size: max-content;
+  box-sizing: border-box;
+  block-size: 40px;
+  min-block-size: 40px;
+  gap: 0;
+  padding: calc(var(--space-1) / 2);
+  border: 0;
+  border-radius: var(--radius-field-btn);
+  background: var(--color-surface);
+}
+
+.ui-lsplit-board .ui-lsplit-field .ui-seg-btn {
+  flex: none;
+  inline-size: 36px;
+  min-inline-size: 36px;
+  block-size: 36px;
+  min-block-size: 36px;
+  padding: 0;
+  border-radius: var(--radius-field-btn);
+}
+
+.ui-lsplit-board .ui-lsplit-note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-hint-size);
+  line-height: var(--type-body-line);
+}
+
+.ui-lsplit-board .ui-lsplit-note-flagged {
+  color: var(--color-signal-soft);
+}
+
+.ui-lsplit-add-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-block-size: 52px;
+  padding: 0 var(--space-4);
+  border: 1.5px dashed var(--color-track-strong);
+  border-radius: var(--radius-card-tight);
+  background: transparent;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-btn-weight);
+  cursor: pointer;
+}
+
+.ui-lsplit-add-card:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.ui-lsplit-rest {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  inline-size: 100%;
+  margin: 0;
+  padding: var(--space-3) var(--space-inset-row);
+  border: 0;
+  border-radius: var(--radius-card-tight);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ui-lsplit-rest[data-empty] {
+  opacity: 0.5;
+}
+
+.ui-lsplit-rest-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: calc(var(--space-1) / 2);
+  min-inline-size: 0;
+}
+
+.ui-lsplit-rest-label {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--type-hint-size);
+  line-height: var(--type-chip-line);
+}
+
+.ui-lsplit-rest-line {
+  display: block;
+  overflow: hidden;
+  font-size: var(--type-label-size);
+  line-height: var(--type-chip-line);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  font-weight: var(--type-body-weight);}
+
+.ui-lsplit-rest-amount {
+  flex: none;
+  font-size: var(--type-body-size);
+  line-height: var(--type-sheet-line);
+
+  font-weight: var(--type-body-weight);}
+
+.ui-lsplit-rest-amount .ui-num {
+  font-size: inherit;
+}
+
+.ui-lsplit-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: var(--space-1);
+  margin-block-start: 0;
+}
+
+.ui-lsplit-actions button {
+  min-block-size: 40px;
+  font-size: var(--type-body-size);
+}
+
+.ui-lsplit-board .ui-lsplit-clear-link {
+  color: var(--color-signal-soft);
+}
+
+.ui-lsplit-footnote {
+  margin: 0;
+  padding-inline: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--type-label-size);
+  line-height: var(--type-body-line);
+}
+
+.ui-lsplit-board .ui-lsplit-foot {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) var(--space-6);
+  border-block-start: 1px solid var(--color-line);
+  background: var(--color-bg);
+}
+
+.ui-lsplit-board .ui-lsplit-foot .ui-btn-primary {
+  block-size: 52px;
+  border-radius: var(--radius-button);
+}
+
+/* The board has no page scrollbar strip: the editor's document scroll hides its bar (as .ui-search-active does). */
+html:has(.ui-lsplit-board) {
+  scrollbar-width: none;
+}
+
+html:has(.ui-lsplit-board)::-webkit-scrollbar {
+  display: none;
+}
+
+/* The actions row and the footnote sit inside the 20px side gutter, as the board's body text does. */
+.ui-lsplit-board .ui-lsplit-actions,
+.ui-lsplit-board .ui-lsplit-footnote {
+  padding-inline: var(--space-side);
+}
+
+.ui-lsplit-board .ui-lsplit-rest {
+  padding-block: calc(var(--space-3) - var(--space-1) / 2);
+}

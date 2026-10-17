@@ -91,7 +91,7 @@ export function SplitUnitToggle({
       showLabel={false}
       radius="input"
       value={unit}
-      options={[{ value: "percent", label: "%" }, { value: "amount", label: amountLabel }]}
+      options={[{ value: "amount", label: amountLabel }, { value: "percent", label: "%" }]}
       disabled={disabled}
       onChange={onChange}
     />
