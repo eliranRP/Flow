@@ -97,15 +97,20 @@
 .ui-forecast-section-head {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   margin: 0 0 var(--space-1);
   font-size: var(--type-section-size);
   font-weight: var(--type-section-weight);
-  line-height: var(--type-section-line);
+  line-height: calc(var(--type-section-line) * 12 / 13);
 }
 
 .ui-forecast-section-total {
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-body-weight);
   font-variant-numeric: tabular-nums lining-nums;
 }
+
+.ui-forecast-section-total bdi { font-size: inherit; line-height: inherit; font-weight: inherit; }
 
 .ui-forecast-total-out {
   color: var(--color-text-muted);
@@ -169,12 +174,19 @@
   font-size: var(--type-title-3-size);
   font-weight: var(--type-body-weight);
   line-height: var(--type-title-3-line);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .ui-forecast-meta {
   color: var(--color-text-muted);
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-meta-line);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .ui-forecast-amount {
@@ -225,6 +237,7 @@
   color: var(--color-text-muted);
   font: inherit;
   font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
   text-align: start;
   cursor: pointer;
 }

@@ -26,6 +26,14 @@ export function monthEndDay(month: string): string {
   return `${month}-${String(last).padStart(2, "0")}`;
 }
 
+/** The Saturday that ends the week of `today` (yyyy-mm-dd), in the same format. */
+export function weekEndDay(today: string): string {
+  const date = new Date(`${today}T00:00:00Z`);
+  const daysToSaturday = 6 - date.getUTCDay();
+  date.setUTCDate(date.getUTCDate() + daysToSaturday);
+  return date.toISOString().slice(0, 10);
+}
+
 /** The month after a YYYY-MM month (December rolls into the next year). */
 export function nextMonth(month: string): string {
   const [year = 1970, mon = 1] = month.split("-").map(Number);

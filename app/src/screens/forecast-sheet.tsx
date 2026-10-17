@@ -1,25 +1,18 @@
 import type { ForecastItem } from "@flow/shared";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { monthEndDay, type ForecastPatch } from "../forecast-month";
+import { monthEndDay, type ForecastPatch, weekEndDay } from "../forecast-month";
+import { dayMonth, itemLate, itemWhat } from "./forecast-parts";
 import { Button } from "../ui/button";
 import { SegmentedControl } from "../ui/segmented-control";
 import { Sheet } from "../ui/sheet";
-
-/** The Saturday that ends the week of `today` (yyyy-mm-dd), in the same format. */
-export function weekEndDay(today: string): string {
-  const date = new Date(`${today}T00:00:00Z`);
-  const daysToSaturday = 6 - date.getUTCDay();
-  date.setUTCDate(date.getUTCDate() + daysToSaturday);
-  return date.toISOString().slice(0, 10);
-}
 
 /** The board's three choices: this week, to the month's end, or not this month. */
 type When = "week" | "monthEnd" | "moved";
 
 function startWhen(item: ForecastItem, today: string): When {
   if (item.moved_out) return "moved";
-  if (item.due_on === weekEndDay(today)) return "week";
+  if (item.due_on === weekEndDay(today) || itemLate(item, today)) return "week";
   return "monthEnd";
 }
 
@@ -30,13 +23,12 @@ export function groupThousands(text: string): string {
   return fraction == null ? grouped : `${grouped}.${fraction}`;
 }
 
-/** The line under the title: the invoice and its number, or the recurring charge and its day. */
+/** The line under the title: what it is, then how late it is or when it is due. */
 function subtitle(item: ForecastItem): string {
-  if (item.kind === "invoice") {
-    const number = item.description != null && item.description !== "" ? ` ${item.description.replace(/^Invoice\s*/i, "")}` : "";
-    return `חשבונית${number} · ${item.direction === "income" ? "לגבייה" : "לתשלום"}`;
-  }
-  return item.day != null ? `קבוע · ב־${String(item.day)}` : "קבוע";
+  const what = itemWhat(item);
+  if (item.late_days > 0) return `${what} · באיחור ${item.late_days === 1 ? "יום" : `${String(item.late_days)} ימים`}`;
+  if (item.kind === "invoice") return `${what} · ${item.expected_on != null ? `לתשלום עד ${dayMonth(item.expected_on)}` : item.direction === "income" ? "לגבייה" : "לתשלום"}`;
+  return item.day != null ? `${what} · ב־${String(item.day)}` : what;
 }
 
 function ForecastItemForm({ item, today, onSave, onDone }: {
@@ -50,6 +42,7 @@ function ForecastItemForm({ item, today, onSave, onDone }: {
   const name = item.name === "" ? "ללא שם" : item.name;
   const usual = item.usual;
   const monthEnd = monthEndDay(today.slice(0, 7));
+  const monthEndChoice = item.expected_on != null && item.expected_on > weekEndDay(today) ? item.expected_on : monthEnd;
   const source = item.kind !== "invoice"
     ? { to: "/recurring", label: "לחיוב הקבוע" }
     : { to: "/unpaid", label: item.direction === "income" ? "לחשבונית" : "לחשבון" };
@@ -60,7 +53,7 @@ function ForecastItemForm({ item, today, onSave, onDone }: {
     } else {
       const minor = amount.trim() === "" ? null : Math.round(Number(amount) * 100);
       const amountMinor = minor == null || BigInt(minor) === usual ? null : minor;
-      const due = when === "week" ? weekEndDay(today) : monthEnd;
+      const due = when === "week" ? weekEndDay(today) : monthEndChoice;
       onSave(item, { amount_minor: amountMinor, due_on: due, moved_out: false });
     }
     onDone();
@@ -86,7 +79,7 @@ function ForecastItemForm({ item, today, onSave, onDone }: {
           onChange={setWhen}
           options={[
             { value: "week", label: "השבוע" },
-            { value: "monthEnd", label: `עד ${monthEnd.slice(8, 10)}/${monthEnd.slice(5, 7)}` },
+            { value: "monthEnd", label: `עד ${dayMonth(monthEndChoice)}` },
             { value: "moved", label: "לא החודש" },
           ]}
         />

@@ -9,7 +9,7 @@ import { DelayedSkeleton, ListSkeleton } from "../ui/skeleton";
 import { EmptyState } from "../ui/empty-state";
 import { CalendarCheckIcon } from "../ui/icons";
 import { useToast } from "../ui/toast";
-import { ChangedLine, ForecastFootnote, MovedRow, signed } from "./forecast-parts";
+import { ChangedLine, dayMonth, ForecastFootnote, itemWhat, itemWhen, MovedRow, signed } from "./forecast-parts";
 import { ForecastItemSheet } from "./forecast-sheet";
 import { monthName } from "./home-parts";
 import { Amount } from "../ui/amount";
@@ -31,18 +31,7 @@ export function forecastBigText(minor: bigint, currency = "ILS"): string {
   return minor < 0n ? signed(minor, "−", currency) : formatAmountText(minor, currency);
 }
 
-function itemWhen(item: ForecastItem): string {
-  if (item.due_on != null) return `עד ${String(Number(item.due_on.slice(8, 10)))}.${String(Number(item.due_on.slice(5, 7)))}`;
-  if (item.kind === "invoice") return item.direction === "income" ? "לגבייה" : "לתשלום";
-  return item.day != null ? `ב־${String(item.day)}` : "השבוע";
-}
-
-function itemWhat(item: ForecastItem): string {
-  if (item.kind !== "invoice") return "קבוע";
-  return item.description != null && item.description !== "" ? `חשבונית ${item.description.replace(/^Invoice\s*/i, "")}` : "חשבונית";
-}
-
-function ForecastRowButton({ item, onOpen, leaving }: { item: ForecastItem; onOpen: (item: ForecastItem) => void; leaving: boolean }) {
+function ForecastRowButton({ item, today, onOpen, leaving }: { item: ForecastItem; today: string; onOpen: (item: ForecastItem) => void; leaving: boolean }) {
   const name = item.name === "" ? "ללא שם" : item.name;
   const amount = item.direction === "income" ? signed(item.minor, "+", item.currency) : signed(item.minor, "−", item.currency);
   const figure = <Amount agorot={item.minor} size="list" currency={item.currency} direction={item.direction} income={item.direction === "income"} />;
@@ -52,7 +41,7 @@ function ForecastRowButton({ item, onOpen, leaving }: { item: ForecastItem; onOp
         <span className="ui-forecast-initial" aria-hidden="true">{name.slice(0, 1)}</span>
         <span className="ui-forecast-text">
           <span className="ui-forecast-name">{name}</span>
-          <span className="ui-forecast-meta">{`${itemWhat(item)} · ${itemWhen(item)}`}</span>
+          <span className="ui-forecast-meta">{`${itemWhat(item)} · ${itemWhen(item, today)}`}</span>
         </span>
         <span className={cx("ui-forecast-amount", item.overridden && "ui-forecast-edited")}>{figure}</span>
       </button>
@@ -64,12 +53,14 @@ function ForecastSection({
   title,
   total,
   items,
+  today,
   onOpen,
   leavingKey,
 }: {
   title: string;
   total: ReactNode;
   items: readonly ForecastItem[];
+  today: string;
   onOpen: (item: ForecastItem) => void;
   leavingKey: string | null;
 }) {
@@ -81,7 +72,7 @@ function ForecastSection({
       </h2>
       <ul className="ui-forecast-list">
         {items.map((item) => (
-          <ForecastRowButton key={item.key} item={item} onOpen={onOpen} leaving={leavingKey === item.key} />
+          <ForecastRowButton key={item.key} item={item} today={today} onOpen={onOpen} leaving={leavingKey === item.key} />
         ))}
       </ul>
     </section>
@@ -120,6 +111,7 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
 
   const smallTotal = build == null ? 0n : build.small.reduce((sum, item) => sum + item.minor, 0n);
   const changed = build?.changed ?? 0;
+  const smallUntil = build?.small.reduce<string | null>((latest, item) => { const day = item.due_on ?? item.expected_on; return day != null && (latest == null || day > latest) ? day : latest; }, null) ?? null;
 
   function save(item: ForecastItem, patch: ForecastPatch) {
     const prior = data?.overrides.find((row) => row.item_key === item.key) ?? null;
@@ -206,17 +198,18 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
             title="צפוי להיכנס"
             total={<Amount agorot={build.incomeTotal} size="list" currency={base} direction="income" income />}
             items={income}
+            today={today}
             onOpen={setOpen}
             leavingKey={leavingKey}
           />
           <section className="ui-forecast-section">
             <h2 className="ui-forecast-section-head">
               <span>צפוי לצאת</span>
-              <span className="ui-forecast-section-total ui-forecast-total-out"><Amount agorot={build.expenseTotal} size="list" currency={base} direction="expense" /></span>
+              <span className="ui-forecast-section-total ui-forecast-total-out"><bdi dir="ltr">{formatAmountText(build.expenseTotal, base)}</bdi></span>
             </h2>
             <ul className="ui-forecast-list">
               {expense.map((item) => (
-                <ForecastRowButton key={item.key} item={item} onOpen={setOpen} leaving={leavingKey === item.key} />
+                <ForecastRowButton key={item.key} item={item} today={today} onOpen={setOpen} leaving={leavingKey === item.key} />
               ))}
               {build.small.length > 0 ? (
                 <li className="ui-forecast-li">
@@ -224,14 +217,14 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
                     <span className="ui-forecast-initial" aria-hidden="true">{`+${String(build.small.length)}`}</span>
                     <span className="ui-forecast-text">
                       <span className="ui-forecast-name">חיובים קבועים קטנים</span>
-                      <span className="ui-forecast-meta">{build.small.length === 1 ? "חיוב אחד" : `${String(build.small.length)} חיובים`}</span>
+                      <span className="ui-forecast-meta">{`${build.small.length === 1 ? "חיוב אחד" : `${String(build.small.length)} חיובים`}${smallUntil == null ? "" : ` · עד ${dayMonth(smallUntil)}`}`}</span>
                     </span>
                     <span className="ui-forecast-amount"><Amount agorot={smallTotal} size="list" currency={base} direction="expense" /></span>
                   </button>
                   {smallOpen ? (
                     <ul className="ui-forecast-small-list">
                       {build.small.map((item) => (
-                        <ForecastRowButton key={item.key} item={item} onOpen={setOpen} leaving={false} />
+                        <ForecastRowButton key={item.key} item={item} today={today} onOpen={setOpen} leaving={false} />
                       ))}
                     </ul>
                   ) : null}
