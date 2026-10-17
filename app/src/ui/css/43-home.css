@@ -89,7 +89,8 @@
 /* FLOW-364 (board): the box is one tint card; its rows are divided lines, 20px in. */
 .ui-home-attention {
   margin: var(--space-3) var(--space-4) var(--space-4);
-  padding: var(--space-5) 0 0;
+  /* FLOW-374 (board): the title sits 9px higher than the 20px inset it had. */
+  padding: var(--space-3) 0 0;
   border-radius: var(--radius-card);
   background: var(--color-tint);
 }
@@ -112,7 +113,7 @@
 }
 
 .ui-home-attention-title {
-  margin: 0 var(--space-5) var(--space-3);
+  margin: 0 var(--space-5) var(--space-1);
   font-size: var(--type-section-size);
   line-height: var(--type-section-line);
   font-weight: var(--type-section-weight);
@@ -217,11 +218,6 @@
   color: var(--color-disabled-text);
 }
 
-
-.ui-month-drawer-foot {
-  margin: 0;
-  text-align: center;
-}
 
 /* FLOW-364 (board): the empty band is shorter than a figure band; no padding above the month. */
 .ui-band-body-empty {

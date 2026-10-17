@@ -357,7 +357,7 @@
 
 /* FLOW-374 (board): Home's change chips are 12px-round, 13/500, with 3px 10px padding. Scoped to Home's rows. */
 .ui-band-rows .ui-change-amount {
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-input);
   font-size: var(--type-caption-size);
   font-weight: var(--type-chip-weight);

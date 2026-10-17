@@ -1,6 +1,6 @@
 import { formatAmountText, type CashMonth, type CashMonths } from "@flow/shared";
 import { useState, type RefObject } from "react";
-import { cashHistoryPath, cashRows } from "../cash";
+import { cashRows } from "../cash";
 import { canStepYear, drawerCells, type DrawerCell } from "../home-month";
 import { useCashYearMonthsQuery } from "../use-cash";
 import { israelToday, HEBREW_MONTHS } from "../ui/date-math";
@@ -8,7 +8,6 @@ import { Amount } from "../ui/amount";
 import { Sheet } from "../ui/sheet";
 import { IconButton } from "../ui/icon-button";
 import { OutwardChevron } from "../ui/icons";
-import { TextLink } from "../ui/text-link";
 import { cx } from "../ui/cx";
 
 /**
@@ -21,7 +20,6 @@ export function MonthDrawer({
   selectedKey,
   firstKey,
   base,
-  search,
   onPick,
   returnFocusRef,
   initialYear,
@@ -34,7 +32,6 @@ export function MonthDrawer({
   /** The books' first month with data, or null. */
   firstKey: string | null;
   base: string;
-  search: string;
   onPick: (key: string) => void;
   returnFocusRef?: RefObject<HTMLElement | null>;
   /** The year to open on (defaults to the selected month's). */
@@ -64,11 +61,6 @@ export function MonthDrawer({
             <MonthCell key={cell.key} cell={cell} base={base} onPick={onPick} />
           ))}
         </div>
-        <p className="ui-month-drawer-foot">
-          <TextLink to={cashHistoryPath(search)} tone="quiet">
-            לכל החודשים ברשימה
-          </TextLink>
-        </p>
       </div>
     </Sheet>
   );
