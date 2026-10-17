@@ -10,11 +10,15 @@ import {
 } from "./safe-return";
 
 describe("safeAppPath", () => {
-  it("accepts only the settings and connections paths", () => {
+  it("accepts only the settings, connections and connection page paths", () => {
     expect(safeAppPath("/settings")).toBe("/settings");
     expect(safeAppPath("/settings?sheet=sumit")).toBe("/settings?sheet=sumit");
     expect(safeAppPath("/settings/connections")).toBe("/settings/connections");
     expect(safeAppPath("/settings/connections?sheet=sumit")).toBe("/settings/connections?sheet=sumit");
+    expect(safeAppPath("/settings/connections/sumit")).toBe("/settings/connections/sumit");
+    expect(safeAppPath("/settings/connections/mercury")).toBe("/settings/connections/mercury");
+    expect(safeAppPath("/settings/connections/ai")).toBeNull();
+    expect(safeAppPath("/settings/connections/sumit/")).toBeNull();
     expect(safeAppPath("/settings/connections?sheet=mercury")).toBeNull();
     expect(safeAppPath("/settings/connections/")).toBeNull();
     expect(safeAppPath("/loans")).toBeNull();
