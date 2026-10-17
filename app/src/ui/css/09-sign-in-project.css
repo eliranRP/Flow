@@ -215,9 +215,6 @@
 /* FLOW-375 (board, States homeLoading): Home's skeleton in the loaded Home's geometry. Bars sit at the
    inline start (right in Hebrew) as the board draws them; the rows stay at the loaded rows' heights. */
 .ui-skel-band-figs { gap: calc(var(--space-1) * 2.5); padding-inline: 0; }
-/* The Home band's skeleton, with the loaded band's own row and body padding (FLOW-375, States board). */
-.ui-band:is(:has(.ui-skel-band-figs), :has(.ui-band-body-empty)) .ui-band-row { padding-top: var(--space-4); }
-.ui-band:has(.ui-skel-band-figs) .ui-band-body { padding-block-start: var(--space-4); }
 .ui-skel-band-label { inline-size: calc(var(--skel-sm) * 5 / 3); block-size: var(--space-3); }
 .ui-skel-band-hero { inline-size: calc(var(--skel-sm) * 5 / 2); block-size: calc(var(--skel-hero) - var(--space-3)); border-radius: var(--radius-input); }
 .ui-skel-band-caption { inline-size: var(--skel-md); block-size: var(--space-3); }

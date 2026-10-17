@@ -77,6 +77,10 @@
 .ui-tab-icon {
   position: relative;
   display: grid;
+  /* The board's 26px icon box; the 24px glyph sits 1px in. */
+  inline-size: 26px;
+  block-size: 26px;
+  place-items: center;
 }
 
 /* FLOW-363 (2b): off the band a change is coloured text; the one signal colour marks a fall in value. */
@@ -422,6 +426,12 @@
   background: var(--color-tint);
 }
 
+/* The row is its own card here, so the shared hover tint that reaches 12px past a row would make the chosen
+   row run to the sheet's edge; the board's chosen row stops at the sheet's side padding. */
+.ui-choice-sheet .ui-radio-row::before {
+  display: none;
+}
+
 .ui-choice-sheet .ui-row-text {
   gap: calc(var(--space-1) / 2);
 }
@@ -445,6 +455,11 @@
 
 .ui-choice-sheet .ui-radio[data-on="true"] {
   font-size: 0;
+}
+
+/* The board keeps a disabled choice's circle as drawn; only its words dim. */
+.ui-choice-sheet .ui-radio-row:is(:disabled, [aria-disabled="true"]):not([aria-busy="true"]) .ui-radio {
+  border-color: var(--color-control-border);
 }
 
 .ui-radio > .ui-spinner {

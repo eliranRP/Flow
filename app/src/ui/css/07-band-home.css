@@ -79,6 +79,10 @@
   padding: var(--space-3) var(--space-side) 0;
 }
 
+.ui-band:has(.ui-band-body) > .ui-band-row {
+  padding-top: var(--space-4);
+}
+
 .ui-band-row > .text-wordmark {
   flex: none;
 }
@@ -379,7 +383,7 @@ html[data-kb="open"] .ui-sheet-body {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding-block-start: var(--space-5);
+  padding-block-start: var(--space-4);
   padding-inline: var(--space-side);
   min-inline-size: 0;
 }
