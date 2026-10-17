@@ -432,7 +432,7 @@ export function LineSplitEditor({
                   <div className="ui-lsplit-part" data-invalid={message != null || fieldError != null ? "" : undefined}>
                     {/* FLOW-370: the board's card head: the part's number, and its remove control. */}
                     <div className="ui-lsplit-part-head">
-                      <span className="t-label ui-lsplit-part-no">{`חלק ${index + 1}`}</span>
+                      <span className="t-label ui-lsplit-part-no">{`חלק ${String(index + 1)}`}</span>
                       <SplitRemoveButton name={name} onRemove={() => { removePart(part.key); }} />
                     </div>
                     <div className="ui-lsplit-text">
