@@ -1,0 +1,159 @@
+/* The project page at the board's layout (ProjectFlip): a 259px band (name 24px, a status line, the month's
+   figure at 52px, one stats line), then a stack of 16px-gutter cards: the pending banner, the budget, the
+   profit rows, the investment and the months. */
+.ui-project-page .ui-band-hero-project {
+  padding-block-start: calc(var(--space-3) + var(--space-1) / 2 * 1);
+  margin-block-end: calc(var(--space-3) / -2);
+}
+
+.ui-project-page .ui-band-hero-project .t-band-title {
+  font-size: var(--type-name-size);
+  line-height: normal;
+  font-weight: var(--type-name-weight);
+}
+
+.ui-project-page .ui-band-hero-project .t-label {
+  line-height: normal;
+}
+
+.ui-project-page .ui-band-hero-project .t-band-title + .t-label {
+  margin-block-start: calc(var(--space-1) / 2);
+}
+
+.ui-project-page .ui-band-hero-project .ui-band-label {
+  margin-block: calc(var(--space-3) + var(--space-1) / 2) calc(var(--space-1) + var(--space-1) / 2);
+}
+
+.ui-project-page .ui-project-profits {
+  font-size: var(--type-band-size);
+  font-weight: var(--type-band-weight);
+  line-height: 1;
+}
+
+.ui-project-page .ui-project-band-pair {
+  justify-content: flex-start;
+  gap: var(--space-5);
+  margin-block-start: calc(var(--space-1) + var(--space-1) / 2);
+  padding-block-start: var(--space-1);
+  font-size: var(--type-btn-2-size);
+}
+
+.ui-project-page .ui-band-row-link {
+  min-block-size: 0;
+  gap: var(--space-1);
+  font-size: var(--type-btn-2-size);
+  line-height: normal;
+}
+
+.ui-project-page .ui-band-row-label {
+  inline-size: auto;
+  font-weight: var(--type-line2-weight);
+}
+
+.ui-project-page .ui-band-row-amount {
+  flex: none;
+  font-weight: var(--type-line2-weight);
+}
+
+.ui-project-page .ui-band-row-amount .t-amount {
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-line2-weight);
+  line-height: normal;
+}
+
+.ui-project-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-inset-row);
+  padding: calc(var(--space-4) + var(--space-1) / 2) var(--space-4) 0;
+}
+
+.ui-project-stack > .ui-banner,
+.ui-project-stack > .ui-banner-rows,
+.ui-project-stack > .ui-card {
+  margin: 0;
+}
+
+.ui-project-stack > .ui-banner {
+  min-block-size: 56px;
+  padding: calc(var(--space-3) + var(--space-1) / 2) calc(var(--space-4) + var(--space-1) / 2);
+}
+
+.ui-project-stack > .ui-banner .ui-row-title {
+  line-height: normal;
+}
+
+.ui-project-stack .ui-budget-card,
+.ui-project-stack .ui-investment-summary {
+  padding: calc(var(--space-4) + var(--space-1) / 2);
+  line-height: normal;
+}
+
+.ui-project-stack .ui-budget-card {
+  gap: var(--space-3);
+}
+
+.ui-project-stack .ui-investment-summary {
+  gap: var(--space-inset-row);
+}
+
+.ui-project-stack .ui-budget-head h2,
+.ui-project-stack .ui-investment-head h2,
+.ui-project-stack .ui-budget-spent,
+.ui-project-stack .ui-budget-note {
+  line-height: normal;
+}
+
+.ui-project-stack .ui-budget-head .ui-text-link {
+  block-size: 32px;
+  min-block-size: 32px;
+}
+
+.ui-project-card {
+  padding: 0;
+}
+
+.ui-project-card .ui-list,
+.ui-project-card .ui-row {
+  margin-inline: 0;
+}
+
+.ui-project-card .ui-row {
+  min-block-size: 84px;
+  padding-block: var(--space-3);
+  padding-inline: calc(var(--space-4) + var(--space-1) / 2);
+}
+
+.ui-project-card .ui-row-title,
+.ui-project-card .ui-row-hint {
+  line-height: normal;
+}
+
+.ui-project-card .ui-row-hint {
+  font-size: var(--type-caption-size);
+}
+
+.ui-project-card .ui-row + .ui-row {
+  border-block-start: 1px solid var(--color-line);
+}
+
+.ui-project-figures {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.ui-project-card-title {
+  margin: var(--space-3) var(--space-card-inset) var(--space-1);
+  font-size: var(--type-section-size);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-project-months-card {
+  padding-block: calc(var(--space-1) + var(--space-1) / 2);
+}
+
+.ui-project-card-more {
+  margin: 0;
+  padding: var(--space-2) var(--space-card-inset);
+}

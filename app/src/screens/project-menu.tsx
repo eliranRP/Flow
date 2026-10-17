@@ -1,6 +1,6 @@
 // The project's ⋯ menu (board Projects.dc.html, "פעולות על הפרויקט"): edit, the investment page, finish,
-// and delete when the project has no lines. Its rows the board does not draw come after them, as named
-// deviations. The menu's sheet is titled with the project's name.
+// and delete when the project has no lines. The sheet is titled with the project's name. The overhead
+// switch and the group live in the edit sheet; adding a line is the + sheet's job.
 import { useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { getSupabase } from "../lib/supabase";
@@ -36,10 +36,10 @@ export function ProjectMenu({
   sample?: boolean;
   /** A sample project's month row (stories and the proof fixture); a live menu reads it from the month. */
   sampleRow?: ProjectCashRow;
-  /** FLOW-340 C: the overhead switch left the page body for this menu. */
+  /** The overhead switch, drawn in the edit sheet. */
   overhead?: ReactNode;
-  /** FLOW-340 C: set when the overview hides its השקעה row, so the data can still be added. */
-  investmentTo?: string;
+  /** The investment and loans page the menu's second row opens. */
+  investmentTo: string;
 }) {
   const blocked = useBlockedPreview();
   const navigate = useNavigate();
@@ -105,14 +105,14 @@ export function ProjectMenu({
       >
         <MoreIcon />
       </IconButton>
-      <Sheet open={menu} onOpenChange={setMenu} title={name} panelClassName="ui-sheet-wide ui-sheet-pad28 ui-project-menu">
+      <Sheet open={menu} onOpenChange={setMenu} title={name} panelClassName="ui-sheet-wide ui-sheet-pad28 ui-project-menu" closeButton={false}>
         {/* FLOW-334: the menu's actions are rows, so "סיום הפרויקט" is not a second kind of control. */}
         <List className="ui-project-menu-list">
           {finished ? null : (
             <ListRow
               variant="button"
               title="עריכת פרטים"
-              meta="שם, סוג ותקציב"
+              hint="שם, סוג ותקציב"
               icon={<PencilIcon />}
               chevron
               onClick={() => {
@@ -121,20 +121,18 @@ export function ProjectMenu({
               }}
             />
           )}
-          {investmentTo == null ? null : (
-            <ListRow
+          <ListRow
               variant="item"
               title="השקעה והלוואות"
-              meta="מחיר קנייה, ARV, שווי והלוואות"
+              hint="מחיר קנייה, ARV, שווי והלוואות"
               icon={<InvestIcon />}
               href={investmentTo}
               chevron
             />
-          )}
           <ListRow
             variant="button"
             title={action}
-            meta={finished ? "יחזור לרשימת הפעילים" : "יעבור ל״הסתיימו״. שום דבר לא נמחק"}
+            hint={finished ? "יחזור לרשימת הפעילים" : "יעבור ל״הסתיימו״. שום דבר לא נמחק"}
             icon={<FlagIcon />}
             onClick={() => {
               setMenu(false);
@@ -145,7 +143,7 @@ export function ProjectMenu({
             <ListRow
               variant="button"
               title="מחיקת הפרויקט"
-              meta="אין בו תנועות, אז אפשר למחוק אותו"
+              hint="אין בו תנועות, אז אפשר למחוק אותו"
               icon={<BinIcon />}
               className="ui-project-menu-delete"
               onClick={() => {
@@ -154,26 +152,32 @@ export function ProjectMenu({
               }}
             />
           ) : null}
-          {/* Named deviations (not on the board): the add-a-manual-entry row and the groups row follow the board's rows. */}
-          {finished ? null : (
-            <ListRow variant="item" title="הוספה לפרויקט" meta="תנועה ידנית לפרויקט הזה" href={`/add?project=${projectId}`} chevron />
-          )}
-          {groups == null ? null : (
-            <ListRow
-              variant="button"
-              title="קבוצה"
-              meta={groups.groups.find((group) => group.id === groups.currentId)?.name ?? NO_GROUP}
-              chevron
-              onClick={() => {
-                setMenu(false);
-                setGroupView("pick");
-              }}
-            />
-          )}
         </List>
-        {overhead}
       </Sheet>
-      <ProjectFormSheet open={editing} onOpenChange={setEditing} project={{ id: projectId, name, type: row?.type ?? null, budget, status: row?.status ?? "active" }} />
+      <ProjectFormSheet
+        open={editing}
+        onOpenChange={setEditing}
+        project={{ id: projectId, name, type: row?.type ?? null, budget, status: row?.status ?? "active" }}
+        extras={(
+          <>
+            {overhead}
+            {groups == null ? null : (
+              <List>
+                <ListRow
+                  variant="button"
+                  title="קבוצה"
+                  meta={groups.groups.find((group) => group.id === groups.currentId)?.name ?? NO_GROUP}
+                  chevron
+                  onClick={() => {
+                    setEditing(false);
+                    setGroupView("pick");
+                  }}
+                />
+              </List>
+            )}
+          </>
+        )}
+      />
       {groups == null ? null : (
         <ProjectGroupSheets
           projectId={projectId}
@@ -183,7 +187,7 @@ export function ProjectMenu({
           onView={setGroupView}
           onBack={() => {
             setGroupView(null);
-            setMenu(true);
+            setEditing(true);
           }}
           blocked={blocked}
           returnFocusRef={opener}
@@ -202,6 +206,7 @@ export function ProjectMenu({
         warning={!finished && pending > 0 ? pendingWarning : undefined}
         confirmLabel={action}
         returnFocusRef={opener}
+        closeButton={false}
         busy={save.isPending}
         onConfirm={() => {
           if (blocked()) return;
@@ -217,6 +222,7 @@ export function ProjectMenu({
         confirmLabel="מחיקה"
         destructive="outline"
         returnFocusRef={opener}
+        closeButton={false}
         busy={remove.isPending}
         onConfirm={() => {
           if (blocked()) return;

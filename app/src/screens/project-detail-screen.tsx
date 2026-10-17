@@ -7,7 +7,7 @@ import { absAgorot } from "../agorot";
 import { overheadHint, shownProfit } from "../overhead";
 import { useHoldWrites } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
-import { anchorOf, monthPeriod, periodPhrase, shiftMonthKey, windowLabel } from "../period";
+import { anchorOf, monthPeriod, periodPhrase, type PeriodChoice, shiftMonthKey, windowLabel } from "../period";
 import { cashMonthName } from "../cash";
 import { MonthStepper } from "../ui/month-stepper";
 import { useProjectPeriod, withPeriodSearch } from "../project-period";
@@ -98,6 +98,8 @@ function ProjectLoading({ search, example, pill = true }: { search: string; exam
     </div>
   );
 }
+
+const ALL_PERIOD: PeriodChoice = { kind: "all", from: null, to: null };
 
 function projectRowProfit(
   project: NonNullable<ProjectDetail>,
@@ -197,6 +199,8 @@ export function ProjectDetailScreen({
   // FLOW-804: read once the project's own read has landed, so they never slow the page's paint.
   const liveGroups = useProjectGroups(projectId, sample == null && detail.data != null && !detail.isFetching);
   const groups = sampleGroups ?? liveGroups;
+  // The profit since the project began: a read over every period, once the page's own read has landed.
+  const lifetime = useProjectQuery(sample == null && section === "overview" && detail.data != null && !detail.isFetching ? projectId : "", ALL_PERIOD);
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();
   const blocked = useBlockedPreview();
@@ -378,8 +382,7 @@ export function ProjectDetailScreen({
       sample={sample != null}
       sampleRow={sampleMenuRow}
       overhead={overhead}
-      // FLOW-340 C: with no investment data the page hides its row, so the menu keeps the way in.
-      investmentTo={investmentShown || investmentData.isOverhead || loans.length > 0 ? undefined : sectionHref("investment")}
+      investmentTo={sectionHref("investment")}
     />
   );
   if (section === "overview") {
@@ -396,6 +399,7 @@ export function ProjectDetailScreen({
         budget={(
           <ProjectBudget project={project} spentAgorot={absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot)} />
         )}
+        sinceProfit={(lifetime.data ?? (sample ? project : null)) == null ? null : projectRows(lifetime.data ?? project, companyCurrency).map((row) => ({ currency: row.currency, minor: row.profit_minor }))}
         attention={projectAttentionRows({
           projectId: project.id,
           pending: project.pending_count ?? 0,
