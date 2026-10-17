@@ -7,7 +7,8 @@ import { List, ListRow } from "../ui/list-row";
 import { useBlockedPreview } from "./screen-shared";
 import { ViewerNote, ViewerScope } from "../use-is-viewer";
 import { type LoanBalanceRow } from "./loan-match";
-import { LoansHost, type LoanCurrency, type LoanProjectChoice, type LoanRowsSample } from "./loan-setup";
+import { type LoanCurrency, type LoanProjectChoice, type LoanSetupInitial } from "./loan-setup";
+import { LoansHost, type LoanRowsSample } from "./loans-host";
 import { LoansList } from "./loans-list";
 import type { LoanListSummary } from "./loan-list-summary";
 
@@ -25,6 +26,9 @@ export type LoansSample = {
   noCompany?: boolean;
   /** The summary card's figures, for a sample. */
   summary?: LoanListSummary;
+  /** Dev proof only: the new-loan sheet opens, with these values typed in. */
+  openSheet?: "new";
+  newLoan?: LoanSetupInitial;
 };
 
 /**
@@ -71,6 +75,8 @@ export function LoansScreen({ sample, closedOpen = false }: { sample?: LoansSamp
         blocked={blocked}
         sample={sample ? (sample.loans ?? []) : preview !== "off" ? PREVIEW_LOANS : undefined}
         summary={sample?.summary}
+        openNew={sample?.openSheet === "new"}
+        newLoan={sample?.newLoan}
         projects={sampled
           ? { rows: sample?.loanProjects ?? [] }
           : {

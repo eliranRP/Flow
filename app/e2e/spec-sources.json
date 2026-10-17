@@ -153,6 +153,9 @@
       "screens/loan-list.tsx",
       "screens/loans-list.tsx",
       "screens/loan-setup.tsx",
+      "screens/loans-host.tsx",
+      "screens/loan-new-parts.tsx",
+      "screens/loan-kind-sheet.tsx",
       "dev/loan-detail-sample.ts",
       "ui/date-sheet.tsx",
       "ui/month-grid.tsx"
@@ -160,6 +163,9 @@
     "loan-project.spec.ts": [
       "screens/settings-screen.tsx",
       "screens/loan-setup.tsx",
+      "screens/loans-host.tsx",
+      "screens/loan-new-parts.tsx",
+      "screens/loan-kind-sheet.tsx",
       "screens/loan-detail-screen.tsx",
       "screens/loan-project-picker.tsx",
       "screens/project-detail-screen.tsx",

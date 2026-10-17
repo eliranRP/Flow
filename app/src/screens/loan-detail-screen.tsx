@@ -44,7 +44,8 @@ import { LoanBalanceCard, LoanNextCard, LoanRateChangesCard, LoanRecentCard, Loa
 import { LoanPaymentsView } from "./loan-payments-view";
 import { loanSubtitle, paymentTotals, wholeMoney } from "./loan-detail-view-data";
 import { TransactionTopBar } from "./transaction-top-bar";
-import { LoanKindSheet, LoanPartSheet, LoanRateSheet, LoanStatusSheet } from "./loan-detail-sheets";
+import { LoanPartSheet, LoanRateSheet, LoanStatusSheet } from "./loan-detail-sheets";
+import { LoanKindSheet } from "./loan-kind-sheet";
 import {
   inversePatch,
   liveLoanWrites,

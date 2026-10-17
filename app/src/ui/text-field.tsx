@@ -1,4 +1,4 @@
-import { useId, type InputHTMLAttributes, type Ref } from "react";
+import { useId, type InputHTMLAttributes, type ReactNode, type Ref } from "react";
 import { cx } from "./cx";
 import { flowControlName } from "./field-name";
 import { holdFieldPointer } from "./field-pointer";
@@ -11,6 +11,8 @@ type TextFieldProps = {
   reserveMessage?: boolean;
   /** Digits sit on the same edge as an amount. */
   numeric?: boolean;
+  /** Under the field, in the message line, while there is no error (FLOW-139d). */
+  hint?: ReactNode;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "className">;
 
 export function TextField({
@@ -25,6 +27,7 @@ export function TextField({
   spellCheck,
   numeric = false,
   readOnly = false,
+  hint,
   onPointerDown,
   ...rest
 }: TextFieldProps) {
@@ -54,9 +57,9 @@ export function TextField({
           onPointerDown?.(event);
         }}
       />
-      {error || reserveMessage ? (
-        <span id={errorId} className={reserveMessage ? "ui-field-message ui-field-message-slot" : "ui-field-message"}>
-          {error ?? ""}
+      {error || reserveMessage || hint ? (
+        <span id={errorId} className={error ? "ui-field-message" : hint ? "ui-field-hint" : "ui-field-message ui-field-message-slot"}>
+          {error ?? hint ?? ""}
         </span>
       ) : null}
     </div>

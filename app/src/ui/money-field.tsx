@@ -1,4 +1,4 @@
-import { useId, type KeyboardEventHandler } from "react";
+import { useId, type KeyboardEventHandler, type ReactNode } from "react";
 import { flowControlName } from "./field-name";
 import { holdFieldMouse, holdFieldPointer } from "./field-pointer";
 
@@ -23,6 +23,10 @@ type MoneyFieldProps = {
   onBlur?: () => void;
   onFocus?: () => void;
   onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
+  /** Drawn inside the field after the input (the loan form's $ / ₪ switch). Default: nothing. */
+  trailing?: ReactNode;
+  /** Under the field, in the message line, while there is no error (FLOW-139d). */
+  hint?: ReactNode;
 };
 
 function describedByIds(...ids: Array<string | undefined>): string | undefined {
@@ -69,6 +73,8 @@ export function MoneyField({
   onBlur,
   onFocus,
   onKeyDown,
+  trailing,
+  hint,
 }: MoneyFieldProps) {
   const generated = useId();
   const fieldId = flowControlName("flow-amount", generated, id);
@@ -114,10 +120,11 @@ export function MoneyField({
             onValueChange(digitsOnly(event.target.value, keepMinus));
           }}
         />
+        {trailing}
       </div>
-      {error || reserveMessage ? (
-        <span id={errorId} className={reserveMessage ? "ui-field-message ui-field-message-slot" : "ui-field-message"}>
-          {error ?? ""}
+      {error || reserveMessage || hint ? (
+        <span id={errorId} className={error ? "ui-field-message" : hint ? "ui-field-hint" : "ui-field-message ui-field-message-slot"}>
+          {error ?? hint ?? ""}
         </span>
       ) : null}
     </div>
