@@ -663,3 +663,35 @@ html:has(.ui-lsplit-board)::-webkit-scrollbar {
 .ui-lsplit-board .ui-lsplit-rest {
   padding-block: calc(var(--space-3) - var(--space-1) / 2);
 }
+
+/* d4: the board's split header rhythm (header gaps 10, bar 6 above the status) and the part card gaps. */
+.ui-lsplit-board .ui-lsplit-top {
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+}
+
+.ui-lsplit-board .ui-lsplit-line {
+  gap: calc(var(--space-1) / 2);
+}
+
+.ui-lsplit-board .ui-lsplit-meta,
+.ui-lsplit-board .ui-lsplit-amount,
+.ui-lsplit-board .ui-lsplit-note {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-lsplit-board .ui-lsplit-bar {
+  margin-block-end: calc(var(--space-1) * -1);
+}
+
+.ui-lsplit-board .ui-lsplit-status {
+  font-size: calc(var(--type-caption-size) + 1px);
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-lsplit-board .ui-lsplit-status-over {
+  color: var(--color-signal-soft);
+}
+
+.ui-lsplit-board .ui-lsplit-part {
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+}

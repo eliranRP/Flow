@@ -601,12 +601,6 @@
   font-size: 0;
 }
 
-.ui-ai-fields {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
 /* FLOW-512b C: the categories list's rows are 56px tall, as on the board (one- and two-line rows alike). */
 .ui-cat-list .ui-row {
   min-block-size: 56px;

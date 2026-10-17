@@ -457,7 +457,7 @@ export function LineSplitEditor({
           <div className="ui-lsplit-bar" aria-hidden="true">
             <span className={check.overMinor > 0n ? "ui-lsplit-fill ui-lsplit-fill-over" : "ui-lsplit-fill"} style={{ inlineSize: `${String(fillPercent)}%` }} />
           </div>
-          <p className="ui-lsplit-status" aria-live="polite">{statusNode}</p>
+          <p className={check.overMinor > 0n ? "ui-lsplit-status ui-lsplit-status-over" : "ui-lsplit-status"} aria-live="polite">{statusNode}</p>
         </header>
         {bannerReason ? (
           <div className="ui-lsplit-banner">

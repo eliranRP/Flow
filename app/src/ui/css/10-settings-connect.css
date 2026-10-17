@@ -1,0 +1,132 @@
+/* The connection pages (SUMIT, Mercury, the AI page) at the board's rhythm, split from 10-settings-onboarding.css (file size). */
+
+/* d4: connection pages (SUMIT, Mercury, AI) match the board's rhythm: the header sits at the 20 page gutter with
+   the back row at 12, the blocks 14 apart, 15/1.5 text in the tint box, steps and AI rows. */
+.ui-connection-page > .ui-page-stacked {
+  margin-inline: calc(var(--space-4) * -1);
+  padding-block: 0;
+}
+
+.ui-connection-page .ui-focus-title {
+  margin-top: var(--space-1);
+}
+
+.ui-connection-page > .ui-page-stacked .ui-focus-title ~ .t-label {
+  margin-top: var(--space-1);
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-connection-page .ui-settings-head {
+  padding-top: calc(var(--space-1) * 1.5);
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-connection-problem,
+.ui-step-text,
+.ui-settings-head + .ui-settings-note {
+  line-height: calc(var(--type-line2-line) + 0.1);
+}
+
+.ui-step-list {
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+}
+
+.ui-step-item .ui-install-num {
+  inline-size: 22px;
+  block-size: 22px;
+  margin-top: 1px;
+  font-size: var(--type-caption-size);
+}
+
+.ui-connection-page .ui-field-label {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-connection-page .ui-field-message-slot:empty {
+  display: none;
+}
+
+.ui-connection-page .ui-secret-wrap .ui-field-control {
+  min-block-size: 50px;
+}
+
+/* The import-from control: no label above it, a 44px track on the surface colour. */
+.ui-connection-page .ui-field > .ui-field-label:has(+ .ui-seg) {
+  display: none;
+}
+
+.ui-connection-page .ui-seg {
+  padding: calc(var(--space-1) / 2);
+  gap: calc(var(--space-1) / 2);
+  border-radius: var(--radius-input);
+  background: var(--color-surface);
+}
+
+.ui-connection-page > .ui-settings-head + .ui-settings-note {
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+}
+
+.ui-connection-page .ui-settings-note {
+  line-height: calc(var(--type-caption-line) + 0.1);
+}
+
+.ui-connection-page > .ui-settings-head + .ui-settings-note {
+  line-height: calc(var(--type-line2-line) + 0.1);
+}
+
+.ui-ai-questions {
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+}
+
+.ui-ai-questions-head,
+.ui-ai-question {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+/* The scope rows: the choice-sheet card row, 60px, the chosen row tinted, the disc on the end side. */
+.ui-ai-scope .ui-radio-row {
+  min-block-size: 60px;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-inset-row);
+  border-radius: var(--radius-toast);
+}
+
+.ui-ai-scope .ui-radio-row::before {
+  display: none;
+}
+
+.ui-ai-scope .ui-radio-row[aria-checked="true"] {
+  background: var(--color-tint);
+}
+
+.ui-ai-scope .ui-row-text {
+  gap: calc(var(--space-1) * 0.75);
+}
+
+.ui-ai-scope .ui-row-title {
+  font-size: var(--type-btn-2-size);
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-ai-scope .ui-radio-desc {
+  font-size: calc(var(--type-cents-size) + 1px);
+  line-height: var(--type-meta-line);
+}
+
+.ui-ai-scope .ui-radio {
+  inline-size: 22px;
+  block-size: 22px;
+  border-width: 2px;
+}
+
+.ui-ai-scope .ui-radio[data-on="true"] {
+  border: 0;
+}
+
+.ui-ai-code-note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: calc(var(--type-caption-line) + 0.1);
+}

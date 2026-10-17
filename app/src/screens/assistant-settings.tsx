@@ -287,8 +287,13 @@ export function AiConnectionPage({
   const connected = view.state === "connected" && secret == null && !setupOpen;
   // An expired code shows its box and one button; the setup steps follow the button.
   const expiredWaiting = view.state === "expired" && secret == null && !setupOpen;
-  const current = secret != null;
-  const showSetup = !connected && !expiredWaiting && !current;
+  const showSetup = !connected && !expiredWaiting;
+  // The code on screen stays tied to the scope it was minted for; picking the other scope drops it (board: SettingsMcpCode).
+  const shownScope = secret != null ? scopeChoice(secret.scope) : scope;
+  function pickScope(next: AssistantScope) {
+    if (next !== shownScope) setSecret(null);
+    setScope(next);
+  }
   const month = currentMonthName(new Date(now));
   const headerSubtitle = "MCP · העוזר שלכם עובד עם הספרים של Flow";
   const backTo = `/settings/connections${search}`;
@@ -362,18 +367,16 @@ export function AiConnectionPage({
                 <RadioRow
                   label="קריאה בלבד"
                   description={scopeHint("read")}
-                  marker="start"
-                  selected={scope === "read"}
+                  selected={shownScope === "read"}
                   disabled={minting}
-                  onSelect={() => { setScope("read"); }}
+                  onSelect={() => { pickScope("read"); }}
                 />
                 <RadioRow
                   label="קריאה וכתיבה"
                   description={scopeHint("read_write")}
-                  marker="start"
-                  selected={scope === "read_write"}
+                  selected={shownScope === "read_write"}
                   disabled={minting}
-                  onSelect={() => { setScope("read_write"); }}
+                  onSelect={() => { pickScope("read_write"); }}
                 />
               </div>
               <ConnectionHead>2 · באיזה עוזר</ConnectionHead>
@@ -386,58 +389,56 @@ export function AiConnectionPage({
                 onChange={(next) => { setAssistant(next); }}
               />
               <ConnectionHead>3 · מחברים</ConnectionHead>
-              <ConnectionNote>Flow ייצור קוד גישה אישי. הוא מוצג פעם אחת, כמו סיסמה.</ConnectionNote>
-              {minting ? <p className="t-hint" role="status">{MINT_REASON}</p> : null}
-              {mintError ? <FormError>{MINT_ERROR}</FormError> : null}
-              <Button busy={minting} onClick={() => { void mint(); }}>יצירת קוד</Button>
-        </>
-      ) : null}
-      {current ? (
-        <>
-          <ConnectionHead>1 · מה העוזר יכול לעשות</ConnectionHead>
-          <ConnectionNote>{`${scopeLabel(scopeChoice(secret.scope))}. ${scopeHint(scopeChoice(secret.scope))}`}</ConnectionNote>
-          <ConnectionHead>2 · {CLIENTS.find((item) => item.value === assistant)?.label ?? ""}</ConnectionHead>
-          <div className="ui-settings-card ui-connection-steps">
-            <StepList steps={clientSteps(assistant).steps} />
-          </div>
-          <div className="ui-ai-fields">
-            {clientSteps(assistant).fields === "command" ? (
-              <CodeField
-                label="פקודת חיבור"
-                labelId="ai-command-label"
-                value={command}
-                valueRef={commandRef}
-                failed={manualField === "command"}
-                copyLabel="העתקה: פקודה"
-                onCopy={() => { void copyValue("command", command, commandRef.current); }}
-              />
-            ) : (
-              <>
-                <CodeField
-                  label="כתובת שרת MCP"
-                  labelId="ai-url-label"
-                  value={mcpUrl}
-                  valueRef={urlRef}
-                  failed={manualField === "url"}
-                  copyLabel="העתקה: כתובת"
-                  onCopy={() => { void copyValue("url", mcpUrl, urlRef.current); }}
-                />
-                <CodeField
-                  label="כותרת"
-                  labelId="ai-header-label"
-                  value={`Authorization: Bearer ${secret.secret}`}
-                  valueRef={headerRef}
-                  failed={manualField === "secret"}
-                  copyLabel="העתקה: כותרת"
-                  onCopy={() => { void copyValue("secret", `Authorization: Bearer ${secret.secret}`, headerRef.current); }}
-                />
-              </>
-            )}
-          </div>
-          <ConnectionNote>{CODE_NOTE}</ConnectionNote>
-          <ConnectionHead>4 · בודקים</ConnectionHead>
-          <ConnectionNote>{`שאלו את העוזר: "מה מצב התזרים של ${month}?". כשהוא עונה, החיבור מוכן ויופיע כאן כמחובר.`}</ConnectionNote>
-          <Button onClick={() => { setSecret(null); setSetupOpen(false); }}>סיום</Button>
+              {secret == null ? (
+                <>
+                  <ConnectionNote>Flow ייצור קוד גישה אישי. הוא מוצג פעם אחת, כמו סיסמה.</ConnectionNote>
+                  {minting ? <p className="t-hint" role="status">{MINT_REASON}</p> : null}
+                  {mintError ? <FormError>{MINT_ERROR}</FormError> : null}
+                  <Button busy={minting} onClick={() => { void mint(); }}>יצירת קוד</Button>
+                </>
+              ) : (
+                <>
+                  <div className="ui-settings-card ui-connection-steps">
+                    <StepList steps={clientSteps(assistant).steps} />
+                  {clientSteps(assistant).fields === "command" ? (
+                    <CodeField
+                      label="פקודת חיבור"
+                      labelId="ai-command-label"
+                      value={command}
+                      valueRef={commandRef}
+                      failed={manualField === "command"}
+                      copyLabel="העתקה: פקודה"
+                      onCopy={() => { void copyValue("command", command, commandRef.current); }}
+                    />
+                  ) : (
+                    <>
+                      <CodeField
+                        label="כתובת שרת MCP"
+                        labelId="ai-url-label"
+                        value={mcpUrl}
+                        valueRef={urlRef}
+                        failed={manualField === "url"}
+                        copyLabel="העתקה: כתובת"
+                        onCopy={() => { void copyValue("url", mcpUrl, urlRef.current); }}
+                      />
+                      <CodeField
+                        label="כותרת"
+                        labelId="ai-header-label"
+                        value={`Authorization: Bearer ${secret.secret}`}
+                        valueRef={headerRef}
+                        failed={manualField === "secret"}
+                        copyLabel="העתקה: כותרת"
+                        onCopy={() => { void copyValue("secret", `Authorization: Bearer ${secret.secret}`, headerRef.current); }}
+                      />
+                    </>
+                  )}
+                    <p className="ui-ai-code-note">{CODE_NOTE}</p>
+                  </div>
+                  <ConnectionHead>4 · בודקים</ConnectionHead>
+                  <ConnectionNote>{`שאלו את העוזר: "מה מצב התזרים של ${month}?". כשהוא עונה, החיבור מוכן ויופיע כאן כמחובר.`}</ConnectionNote>
+                  <Button onClick={() => { setSecret(null); setSetupOpen(false); }}>סיום</Button>
+                </>
+              )}
         </>
       ) : null}
       <ConfirmSheet
