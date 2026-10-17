@@ -331,7 +331,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
       {viewerOnly && !connected ? <ConnectionNote>רק הבעלים יכולים לחבר.</ConnectionNote> : null}
       {viewerOnly && connected ? <ConnectionNote>רק בעל העסק יכול לשנות חיבורים.</ConnectionNote> : null}
       {connected && replacing ? (
-        <Button variant="link" onClick={() => { setReplacing(false); }}>ביטול</Button>
+        <Button variant="link" onClick={() => { setForm({ key: "" }); setShowKey(false); setReplacing(false); }}>ביטול</Button>
       ) : null}
       <ConfirmSheet
         open={disconnectOpen}

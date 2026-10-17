@@ -1,6 +1,6 @@
 /**
  * Where onboarding may send the owner. Anything else, including a normalised
- * `//host`, goes home. `safeAppPath` accepts a few Settings paths;
+ * `//host`, goes home. `safeAppPath` accepts a few Settings paths and the two connection pages;
  * `safeSignInReturn` a short list of screens (FLOW-308).
  */
 const SETTINGS = "/settings";
@@ -9,7 +9,9 @@ const SETTINGS_SUMIT = "/settings?sheet=sumit";
 const CONNECTIONS = "/settings/connections";
 const CONNECTIONS_SUMIT = "/settings/connections?sheet=sumit";
 const LOANS = "/loans";
-const APP_PATHS: ReadonlySet<string> = new Set([SETTINGS, SETTINGS_SUMIT, CONNECTIONS, CONNECTIONS_SUMIT]);
+/** The connection pages: onboarding from one returns to it (connections-status.ts). */
+const CONNECTION_PAGES = ["/settings/connections/sumit", "/settings/connections/mercury"];
+const APP_PATHS: ReadonlySet<string> = new Set([SETTINGS, SETTINGS_SUMIT, CONNECTIONS, CONNECTIONS_SUMIT, ...CONNECTION_PAGES]);
 
 function hasControlChar(value: string): boolean {
   for (let index = 0; index < value.length; index += 1) {
@@ -38,7 +40,7 @@ function normalisedPath(value: string): string | null {
   return path;
 }
 
-/** Settings, Connections, or either with the SUMIT sheet open. Every other value is dropped. */
+/** Settings, Connections (or either with the SUMIT sheet open), or a connection page. Every other value is dropped. */
 export function safeAppPath(value: string | null | undefined): string | null {
   if (value == null || value === "") return null;
   if (value !== value.trim() || hasControlChar(value)) return null;
