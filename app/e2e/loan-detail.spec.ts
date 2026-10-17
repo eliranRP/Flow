@@ -14,7 +14,7 @@ function toast(page: Page, text: string | RegExp) {
 test("the list puts paid-off and closed loans under a collapsed group, and a row opens its page", async ({ page }) => {
   await page.goto("/e2e/loans");
   await expect(page.getByRole("button", { name: /^הלוואת גישור, / })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^הלוואת גישור, \$240,000, .*ריבית בלבד$/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^הלוואת גישור, \$210,000, .*ריבית בלבד$/ })).toBeVisible();
   const group = page.getByRole("button", { name: /^נסגרו · 2/ });
   await expect(group).toHaveAttribute("aria-expanded", "false");
   await expect(page.getByRole("button", { name: /^שטר ישן, / })).toHaveCount(0);
@@ -31,7 +31,8 @@ test("the list puts paid-off and closed loans under a collapsed group, and a row
   await expect(page.getByText("יתרה היום")).toBeVisible();
   await expect(page.getByText(/^התשלום הבא · /)).toBeVisible();
   await expect(page.getByRole("heading", { name: "שולם השנה" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "שינויי ריבית" })).toBeVisible();
+  // The bridge loan has no rate change (its rate is from the start), so the card is not drawn.
+  await expect(page.getByRole("heading", { name: "שינויי ריבית" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "3 התשלומים האחרונים" })).toBeVisible();
   await page.getByRole("link", { name: "כל התשלומים" }).click();
   await expect(page).toHaveURL(/\/e2e\/loans\/loan-bridge\/payments$/);
@@ -55,7 +56,7 @@ test("marking a loan paid off takes a date from the last payment on, then undo r
   await expect(dateSheet.getByText("התשלום האחרון שויך ב־01/10/2026. אי אפשר לבחור יום לפניו.")).toBeVisible();
   await expect(dateSheet.getByRole("button", { name: "חודש קודם" })).toBeDisabled();
   await dateSheet.getByRole("button", { name: "החלה" }).click();
-  await expect(toast(page, "סומנה כנפרעה · נשארה יתרה $240,000 בספרים")).toBeVisible();
+  await expect(toast(page, "סומנה כנפרעה · נשארה יתרה $210,000 בספרים")).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   // The paid-off loan leads with נפרעה and its date alone; the status row keeps the date.
   await expect(page.locator(".ui-loan-status").getByText(/^נפרעה · 01\/10\/2026$/)).toBeVisible();
@@ -94,17 +95,18 @@ test("a part's category saves on tap, and undo puts the default back", async ({ 
   await expect(page.getByRole("button", { name: /^עמלות נספר ברווח/ })).toBeVisible();
 });
 
-test("a rate change saves, and undo puts the old rate back", async ({ page }) => {
+test("a rate change saves, and undo takes it back", async ({ page }) => {
   await page.goto(`/e2e/loans/loan-bridge?reset=1&today=${TODAY}`);
-  await page.getByRole("button", { name: /^מ־01\/09\/2026/ }).click();
-  const sheet = page.getByRole("dialog", { name: "שינוי ריבית" });
-  await expect(sheet.getByRole("button", { name: "הסרת השינוי" })).toBeVisible();
+  await page.getByRole("button", { name: /^ריבית 10\.5%/ }).click();
+  const sheet = page.getByRole("dialog", { name: "קביעת ריבית" });
   await sheet.getByLabel("ריבית שנתית").fill("12");
   await sheet.getByRole("button", { name: "שמירה" }).click();
   await expect(toast(page, "הריבית עודכנה")).toBeVisible();
-  await expect(page.getByRole("button", { name: /^מ־01\/09\/2026 12%$/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "שינויי ריבית" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^מ־.* 12%$/ })).toBeVisible();
   await toast(page, "הריבית עודכנה").getByRole("button", { name: "ביטול" }).click();
-  await expect(page.getByRole("button", { name: /^מ־01\/09\/2026 11\.25%$/ })).toBeVisible();
+  await expect(toast(page, "הריבית הקודמת חזרה")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "שינויי ריבית" })).toHaveCount(0);
 });
 
 test("delete names the payments that go back, then ביטול restores the loan", async ({ page }) => {

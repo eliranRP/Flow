@@ -17,18 +17,18 @@ describe("loanListSummary", () => {
   it("counts only open loans and sums their balances", () => {
     const summary = loanListSummary([entry(SAMPLE_AMORTIZING), entry(SAMPLE_INTEREST_ONLY), entry(SAMPLE_PAID_OFF), entry(SAMPLE_DEMAND)], USD);
     expect(summary.openCount).toBe(3);
-    expect(summary.totalBalanceMinor).toBe(43_447_597n);
+    expect(summary.totalBalanceMinor).toBe(42_528_904n);
   });
 
   it("sums each open loan's next payment part by part, as the monthly line", () => {
     const summary = loanListSummary([entry(SAMPLE_AMORTIZING), entry(SAMPLE_INTEREST_ONLY), entry(SAMPLE_BALLOON)], USD);
-    expect(summary.monthlyParts).toEqual({ principal: 417_755n, interest: 358_152n, escrow: 36_300n });
-    expect(summary.monthlyMinor).toBe(812_207n);
+    expect(summary.monthlyParts).toEqual({ principal: 406_915n, interest: 327_742n, escrow: 36_300n });
+    expect(summary.monthlyMinor).toBe(770_957n);
   });
 
   it("sums the next twelve payments of every open loan", () => {
     const summary = loanListSummary([entry(SAMPLE_AMORTIZING), entry(SAMPLE_INTEREST_ONLY), entry(SAMPLE_BALLOON)], USD);
-    expect(summary.twelveMonthsMinor).toBe(24_938_164n);
+    expect(summary.twelveMonthsMinor).toBe(28_413_984n);
   });
 
   it("names the earliest next payment and its loan", () => {
@@ -47,6 +47,6 @@ describe("loanListSummary", () => {
     const ils = { ...SAMPLE_AMORTIZING, currency: "ILS" as const };
     const summary = loanListSummary([entry(SAMPLE_AMORTIZING), entry(ils)], USD);
     expect(summary.openCount).toBe(1);
-    expect(summary.totalBalanceMinor).toBe(15_568_693n);
+    expect(summary.totalBalanceMinor).toBe(17_650_000n);
   });
 });

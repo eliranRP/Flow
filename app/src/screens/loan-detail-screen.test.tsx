@@ -189,7 +189,9 @@ describe("loan page: what it leads with (FLOW-139c)", () => {
   });
 
   it("opens the rate sheet from a rate change row, and the ריבית row for a new rate", async () => {
-    renderLoan(sampleLoanStore(), "loan-bridge", undefined, "");
+    const store = sampleLoanStore();
+    await store.saveRate({ id: "loan-bridge", companyId: "company-sample" }, { effectiveDate: "2026-09-01", annualRatePpm: 112_500 });
+    renderLoan(store, "loan-bridge", undefined, "");
     expect(screen.getByRole("heading", { name: "שינויי ריבית" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^מ־01\/09\/2026/ }));
     expect(await screen.findByRole("dialog", { name: "שינוי ריבית" })).toBeInTheDocument();
@@ -197,10 +199,10 @@ describe("loan page: what it leads with (FLOW-139c)", () => {
 
   it("leaves out a part at $0, and leads the bridge loan with its interest (design r1)", () => {
     const { container } = renderLoan(sampleLoanStore(), "loan-bridge", undefined, "");
-    expect(container.querySelector(".ui-loan-next-card")).toHaveTextContent("$2,250");
+    expect(container.querySelector(".ui-loan-next-card")).toHaveTextContent("$1,838");
     expect(screen.getByRole("button", { name: /^ריבית ריבית/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^קרן/ })).not.toBeInTheDocument();
-    expect(screen.getByText(/^ריבית בלבד: הקרן \(\$240,000\) תיפרע בסוף, /)).toBeInTheDocument();
+    expect(screen.getByText(/^ריבית בלבד: הקרן \(\$210,000\) תיפרע בסוף, /)).toBeInTheDocument();
   });
 
   it("has no next payment for a demand loan, and says the balance is the principal", () => {
@@ -222,7 +224,7 @@ describe("loan page: all payments (FLOW-139c)", () => {
 
   it("opens a payment's transaction, and steps Back to the loan page", async () => {
     renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "payments");
-    expect(screen.getAllByRole("link", { name: /\$5,240$/ })[0]).toHaveAttribute("href", expect.stringMatching(/^\/transactions\/txn-m22/));
+    expect(screen.getAllByRole("link", { name: /\$5,240$/ })[0]).toHaveAttribute("href", expect.stringMatching(/^\/transactions\/txn-2026-10/));
     fireEvent.click(firstBack());
     expect(await screen.findByText("יתרה היום")).toBeInTheDocument();
   });
