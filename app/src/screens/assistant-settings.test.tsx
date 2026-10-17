@@ -48,6 +48,27 @@ describe("AI connection page", () => {
     vi.unstubAllEnvs();
   });
 
+  it("selects the header for a manual copy when the clipboard refuses", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: () => Promise.reject(new DOMException("denied", "NotAllowedError")) },
+    });
+    renderWithProviders(
+      <AiConnectionPage
+        sample={{ state: "empty" }}
+        initialSecret={{ id: "mcp-1", secret: SAMPLE_ASSISTANT_SECRET, scope: ["read"] }}
+        initialClient="other"
+      />,
+    );
+    const field = screen.getByRole("group", { name: "כותרת" });
+    fireEvent.click(within(field).getByRole("button", { name: "העתקה: כותרת" }));
+    expect(await within(field).findByRole("status")).toHaveTextContent("העתיקו ידנית");
+    const input = within(field).getByRole("textbox", { name: "כותרת" });
+    if (!(input instanceof HTMLInputElement)) throw new Error("not an input");
+    expect(input).toHaveFocus();
+    expect(input.value.slice(input.selectionStart ?? 0, input.selectionEnd ?? 0)).toBe(`Authorization: Bearer ${SAMPLE_ASSISTANT_SECRET}`);
+  });
+
   it("shows the connected state with its scope, last use and the actions", () => {
     renderWithProviders(
       <AiConnectionPage

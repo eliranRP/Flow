@@ -1,0 +1,2 @@
+- Copying the AI connection command, address or header now selects the field when the browser blocks the clipboard, so it can be copied by hand. The Storybook secret test now checks the header field on the AI connection page.
+- The deploy smoke now lets the Projects tab's month figures through.
