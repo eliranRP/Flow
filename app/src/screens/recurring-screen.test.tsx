@@ -62,7 +62,7 @@ describe("recurringView with the late bills (FLOW-447b)", () => {
     const power = view.late.find((item) => item.id === "power");
     expect(power?.alertKey).toBe("expense:power:USD:2026-10");
     expect(power?.suggestion).toEqual({ name: "Brightline Energy Svcs", partyId: "power-alt", minor: 19100n, date: "08/10" });
-    expect(power?.href).toBe("/search?q=Brightline%20Power");
+    expect(power?.href).toBe("/recurring/expense/power");
     expect(view.late.find((item) => item.id === "rent-elm")?.suggestion).toBeNull();
   });
 
@@ -73,7 +73,7 @@ describe("recurringView with the late bills (FLOW-447b)", () => {
     const power = view.groups.flatMap((group) => group.rows).find((item) => item.id === "power");
     expect(power?.paid).toBe(false);
     expect(power?.hint).toBeUndefined();
-    expect(power?.href).toBeUndefined();
+    expect(power?.href).toBe("/recurring/expense/power");
     const monthly = Object.fromEntries(view.groups.map((group) => [group.title, group.monthlyMinor]));
     expect(monthly["חשמל ומים"]).toBe(28900n);
     expect(view.outflow.total).toBe(125300n);

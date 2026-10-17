@@ -50,6 +50,8 @@
   Content-Type: text/html; charset=utf-8
 /recurring
   Content-Type: text/html; charset=utf-8
+/recurring/:direction/:partyId
+  Content-Type: text/html; charset=utf-8
 /forecast
   Content-Type: text/html; charset=utf-8
 /loans

@@ -55,6 +55,8 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) 0;
+  color: inherit;
+  text-decoration: none;
 }
 
 .ui-recurring-row-open .ui-recurring-amount > span:first-child {
@@ -130,4 +132,16 @@
 
 .ui-recurring-suggest {
   color: var(--color-accent-text);
+}
+
+/* The loading skeleton's avatar is a circle, and its card block has the card corners (FLOW-447c). */
+.ui-recurring-skeleton-avatar {
+  flex: none;
+  inline-size: calc(var(--avatar) + var(--space-1));
+  block-size: calc(var(--avatar) + var(--space-1));
+  border-radius: 50%;
+}
+
+.ui-recurring-skeleton-card {
+  border-radius: var(--radius-card-tight);
 }

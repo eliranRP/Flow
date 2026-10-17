@@ -80,6 +80,24 @@ function magnitude(minor: number): bigint {
   return BigInt(Math.abs(minor));
 }
 
+/** The Israel calendar day as YYYY-MM-DD, the day the server counts lateness from. */
+export function israelToday(now: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(now);
+}
+
+/** Whole days from one YYYY-MM-DD day to another. */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000);
+}
+
+/**
+ * The whole percent a charge is off its usual amount, by size: 38 is 38% over, -20 is 20% under.
+ * The rounding is the list's (FLOW-447), so the page and the list show the same figure.
+ */
+export function changePercentOf(minor: bigint, usual: bigint): number {
+  return Math.round(Number(((minor - usual) * 10000n) / usual) / 100);
+}
+
 /** The schedule of the signed-in company, in the server's order (arrived, late, soon, later). */
 export function useRecurringScheduleQuery(enabled = true) {
   return useQuery({

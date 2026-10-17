@@ -47,6 +47,8 @@
 /missing-bills/ /missing-bills 301
 /recurring /app-shell 200
 /recurring/ /recurring 301
+/recurring/:direction/:partyId /app-shell 200
+/recurring/:direction/:partyId/ /recurring/:direction/:partyId 301
 /notifications /app-shell 200
 /notifications/ /notifications 301
 /settings /app-shell 200

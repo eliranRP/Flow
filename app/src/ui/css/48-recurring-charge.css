@@ -1,0 +1,234 @@
+/* FLOW-447c: the charge page (קבועים › one party) and its match box, as the board draws them. Tokens only. */
+
+.ui-charge-page {
+  min-block-size: 100%;
+  background: var(--color-bg);
+}
+
+/* The top bar is in the flow, so the body starts under it; the 14px column gap, the sides at 16px. */
+.ui-charge-body {
+  display: grid;
+  gap: var(--space-inset-row);
+  padding: var(--space-4) var(--space-4) calc(var(--space-6) + var(--space-1));
+}
+
+.ui-charge-head {
+  display: grid;
+  gap: var(--space-2);
+  padding-inline: var(--space-1);
+}
+
+.ui-charge-status {
+  margin: 0;
+  color: var(--color-accent-text);
+  font-size: calc(var(--type-cents-size) + 1px);
+  font-weight: var(--type-chip-weight);
+  text-align: start;
+}
+
+.ui-charge-status-bad {
+  color: var(--color-bad);
+}
+
+.ui-charge-name {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--type-name-size);
+  line-height: var(--type-name-line);
+  font-weight: var(--type-name-weight);
+  overflow-wrap: anywhere;
+}
+
+.ui-charge-amount {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--type-detail-size);
+  line-height: var(--type-detail-line);
+  font-weight: var(--type-detail-weight);
+  text-align: end;
+}
+
+.ui-charge-amount-muted {
+  color: var(--color-text-muted);
+}
+
+.ui-charge-amount-income {
+  color: var(--color-income);
+}
+
+.ui-charge-meta {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+}
+
+/* The alert banner: a tint, 14px corners, the words and the action at the end. */
+.ui-charge-banner {
+  display: flex;
+  min-block-size: calc(var(--touch-min) + var(--space-2));
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-inline: calc(var(--space-1) * 1.5) var(--space-inset-row);
+  border-radius: var(--radius-toast);
+  background: var(--color-tint);
+}
+
+.ui-charge-banner-text {
+  color: var(--color-text);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+.ui-charge-banner-action,
+.ui-charge-ignored-action {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-btn-2-weight);
+}
+
+.ui-charge-banner-action {
+  min-block-size: var(--touch-min);
+}
+
+.ui-charge-ignored {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.ui-charge-ignored-text {
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-charge-ignored-action {
+  min-block-size: calc(var(--touch-min) - var(--space-2));
+}
+
+/* The project and category rows: read-only, so no tap target and no chevron. */
+.ui-charge-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.ui-charge-card .ui-charge-row {
+  min-block-size: calc(var(--touch-min) + var(--space-4));
+  padding-inline: var(--space-4);
+}
+
+.ui-charge-card .ui-charge-row + .ui-charge-row {
+  border-block-start: 1px solid var(--color-line);
+}
+
+/* The recurring block: the row that opens the pace sheet, then the history. */
+.ui-charge-recurring {
+  padding: 0;
+  overflow: hidden;
+}
+
+.ui-charge-rec {
+  display: flex;
+  min-block-size: calc(var(--touch-min) + var(--space-4));
+  width: 100%;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+}
+
+.ui-charge-rec-icon,
+.ui-charge-rec-end {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.ui-charge-rec-text {
+  display: grid;
+  flex: 1;
+  min-inline-size: 0;
+  gap: 0;
+}
+
+.ui-charge-rec-title {
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-2-weight);
+}
+
+.ui-charge-rec-sub {
+  color: var(--color-text-muted);
+  font-size: calc(var(--type-cents-size) + 1px);
+}
+
+.ui-charge-rec-tag {
+  color: var(--color-accent-text);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-btn-2-weight);
+  white-space: nowrap;
+}
+
+/* The match box: a tint, 14px corners, the suggested party and the two answers. */
+.ui-recurring-match {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-inset-row);
+  border-radius: var(--radius-toast);
+  background: var(--color-tint);
+}
+
+.ui-recurring-match-title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+.ui-recurring-match-detail {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+}
+
+.ui-recurring-match-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.ui-recurring-match-yes,
+.ui-recurring-match-no {
+  display: inline-flex;
+  min-block-size: calc(var(--touch-min) - var(--space-2));
+  align-items: center;
+  padding-inline: var(--space-4);
+  border-radius: var(--radius-chip);
+  font: inherit;
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-btn-2-weight);
+}
+
+.ui-recurring-match-yes {
+  border: 0;
+  background: var(--color-tint-strong);
+  color: var(--color-text);
+}
+
+.ui-recurring-match-no {
+  border: 1px solid var(--sheet-grab);
+  background: transparent;
+  color: var(--color-text-secondary);
+}

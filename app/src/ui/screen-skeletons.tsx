@@ -79,20 +79,33 @@ export function LoansSkeleton() {
   );
 }
 
-/** קבועים (recurring): a title, then the recurring lines. */
+/**
+ * קבועים (recurring), as the States board draws it (FLOW-447c): the real title, a 12px line, a card block,
+ * a 6px track, then two groups, each a head bar and avatar rows with two lines and an amount bar.
+ */
 export function RecurringSkeleton() {
   return (
-    <div className="ui-page-pad ui-stack" aria-busy="true">
+    <div className="ui-page-pad ui-stack ui-recurring-skeleton" aria-busy="true">
       <Loading />
-      <Bar w="150px" h={34} />
-      <div className="ui-stack">
-        {rows.slice(0, 4).map((key) => (
-          <div className="ui-skel-row" key={key}>
-            <Bar w="38%" h={10} />
-            <Bar w="20%" h={10} />
-          </div>
-        ))}
-      </div>
+      <h1 className="t-title">קבועים</h1>
+      <Bar w="120px" h={12} />
+      <Bar w="150px" h={34} className="ui-recurring-skeleton-card" />
+      <Bar w="100%" h={6} pill />
+      {[0, 1].map((group) => (
+        <div className="ui-stack" key={group}>
+          <Bar w="80px" h={16} />
+          {[0, 1].map((line) => (
+            <div className="ui-skel-row" key={line}>
+              <span aria-hidden="true" className="ui-skeleton-bar ui-recurring-skeleton-avatar" />
+              <div className="ui-stack">
+                <Bar w="130px" h={12} />
+                <Bar w="84px" h={10} />
+              </div>
+              <Bar w="64px" h={24} />
+            </div>
+          ))}
+        </div>
+      ))}
     </div>
   );
 }

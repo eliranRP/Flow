@@ -2,9 +2,10 @@ import type { PartyCharges, PaymentRecurring, RecurringPace, TransactionDetail }
 import { useRef, useState } from "react";
 import { usePaymentRecurringQuery } from "../forecast";
 import { getSupabase } from "../lib/supabase";
+import { RECURRING_KEYS, runPaceChange, type PaceWrite } from "../pace-write";
 import { usePartyChargesQuery } from "../party-charges";
 import { usePreviewSearch } from "../preview";
-import { assertNoError, useWrite } from "../use-write";
+import { useWrite } from "../use-write";
 import { ChoiceSheet } from "../ui/choice-sheet";
 import { RepeatIcon } from "../ui/icons";
 import { IconRow } from "../ui/icon-row";
@@ -13,14 +14,8 @@ import { PartyChargesHistory, PartyChargesSheet } from "../ui/related-charges";
 import { useToast } from "../ui/toast";
 import { useBlockedPreview } from "./screen-shared";
 
-/** The keys a recurring or pace write changes: the party's payments, the missing bills, the lists. */
-const RECURRING_KEYS = ["payment-recurring", "missing-bills", "recurring-changes", "expected-months", "party-charges"];
-
 /** What a pick changes: the choice, and the state before it, so the undo is the same write back. */
-type PaceChange = {
-  id: string;
-  next: PaceChoice;
-  before: { recurring: boolean; pace: RecurringPace };
+type PaceChange = PaceWrite & {
   undo: boolean;
   /** Closes the sheet once the save has settled (a close during the save waits for it). */
   close?: () => void;
@@ -113,13 +108,7 @@ export function TxnRecurring({
       }
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
-      if (change.next === "never") {
-        assertNoError(await supabase.rpc("set_payment_recurring", { p_id: change.id, p_recurring: false }));
-        return;
-      }
-      // A payment that is not recurring turns on first, then takes the pace (decision 0175).
-      if (!change.before.recurring) assertNoError(await supabase.rpc("set_payment_recurring", { p_id: change.id, p_recurring: true }));
-      assertNoError(await supabase.rpc("set_payment_pace", { p_id: change.id, p_pace: change.next }));
+      await runPaceChange(supabase, change);
     },
   });
 
