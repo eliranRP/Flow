@@ -46,7 +46,8 @@ export const Ignored: Story = { args: { state: "ignored" } };
 export const PaceSheetOpen: Story = {
   args: { state: "pace" },
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByRole("radio", { name: "כל חודש" });
+    // The sheet draws in a portal on the body, outside the story's canvas.
+    await within(canvasElement.ownerDocument.body).findByRole("radio", { name: "כל חודש" });
   },
 };
 
