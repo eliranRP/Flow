@@ -225,11 +225,6 @@
   margin-inline-start: auto;
 }
 
-/* A kept-out category: the mark sits right after the name and never truncates. */
-.ui-cat-list .ui-row-title-with-tag .ui-row-title-text {
-  flex: 0 1 auto;
-}
-
 .ui-cat-out {
   display: inline-flex;
   flex: none;

@@ -84,7 +84,7 @@ function CategoryLine({
   onMenu,
 }: {
   category: ListedCategory;
-  /** FLOW-322: the category's lines, in search. A parent's opens its sub-categories (FLOW-406). */
+  /** FLOW-322: the link of a row that navigates: a parent's opens its sub-categories (FLOW-406). Leaf rows open the category sheet. */
   href?: string;
   /** FLOW-406: a parent opens its sub-categories, with a chevron. */
   subCount?: number;
@@ -187,7 +187,7 @@ export function CategoriesScreen({
   const [mergeOpen, setMergeOpen] = useState(false);
   const [categoryName, setCategoryName] = useState("");
   const toast = useToast();
-  // FLOW-322: a category row opens that category's lines, every period, in search.
+  // FLOW-322: the category sheet's "הצג תנועות" row opens that category's lines, every period, in search.
   const linesHref = (category: CategoryRow) =>
     `/search${searchFiltersQuery({ ...EMPTY_FILTERS, category: category.id, direction: category.kind }, new URLSearchParams(search))}`;
   const menuOpener = useRef<HTMLElement | null>(null);
