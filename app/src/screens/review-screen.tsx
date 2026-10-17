@@ -64,6 +64,8 @@ export function ReviewScreen() {
   const e2eFit = e2eList && reviewE2e != null && params.get("fit") === "1";
   // FLOW-365: the suggest case shows Jev's repeat-supplier line under the card.
   const e2eSuggest = e2eList && params.get("case") === "suggest";
+  // The none and split cards carry Jev's reason line too (the board's two-line copy under the card).
+  const e2eCaseJev = e2eList && reviewE2e != null ? reviewE2e.e2eCaseJev(params.get("case")) : undefined;
   const e2eShown = useMemo(() => (e2eFit && reviewE2e != null ? reviewE2e.e2eFitRows(e2eRows) : e2eRows), [e2eFit, e2eRows]);
   const phase = e2eList ? ({ kind: "ready" } as const) : screenPhase(preview, review);
   const source = e2eList ? e2eShown : (review.data ?? EMPTY_REVIEW);
@@ -172,7 +174,7 @@ export function ReviewScreen() {
       rows={ordered}
       search={search}
       previewWrite={e2eWrite}
-      sampleJev={e2eFit && reviewE2e != null ? reviewE2e.e2eFitJev : e2eSuggest && reviewE2e != null ? reviewE2e.e2eSuggestJev : undefined}
+      sampleJev={e2eFit && reviewE2e != null ? reviewE2e.e2eFitJev : e2eSuggest && reviewE2e != null ? reviewE2e.e2eSuggestJev : e2eCaseJev}
       listPlace={listPlace(rows, ordered, fromList)}
       backTo={fromList ? reviewListPath(search) : undefined}
       setupHandoff={setupRun ? { fromCard: setupFromCard } : undefined}
