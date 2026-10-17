@@ -30,6 +30,8 @@ export type RecurringListGroup = {
 };
 
 export type RecurringListProps = {
+  /** The project the list is narrowed to, named under the title. */
+  project?: string;
   /** "אוקטובר 2026 • 15 קבועים". */
   subtitle: string;
   currency: string;
@@ -43,12 +45,13 @@ export type RecurringListProps = {
  * FLOW-447: the קבועים list. The outflow card totals this month's expenses, the late bills come first,
  * then one group per category. The amounts are formatted here; the rows only say what they are.
  */
-export function RecurringList({ subtitle, currency, outflow, late, groups }: RecurringListProps) {
+export function RecurringList({ project, subtitle, currency, outflow, late, groups }: RecurringListProps) {
   const money = (minor: bigint) => formatAmountText(minor, currency);
   return (
     <div className="ui-recurring">
       <header className="ui-recurring-head">
         <h1 className="t-display">קבועים</h1>
+        {project != null && <p className="t-heading">{project}</p>}
         <p className="t-label">{subtitle}</p>
       </header>
       <section className="ui-card ui-recurring-outflow" aria-label="יוצא החודש">

@@ -535,7 +535,6 @@ export function DevInvoices() {
   return <UnpaidScreen sample={rows} summary={summary} />;
 }
 
-/** FLOW-403. The late-bills list with invented rows; `?empty=1` has none. */
 /** FLOW-447: the list on the rule-25 fixture, for the e2e run. */
 export function DevRecurring() {
   return <RecurringScreen sample={RECURRING_FIXTURE} />;

@@ -258,5 +258,3 @@ export function openMonthDue(data: ExpectedMonths | null | undefined, currency: 
   const expense = row?.expense_minor ?? 0n;
   return { income: row?.income_minor ?? 0n, expense: expense < 0n ? -expense : expense };
 }
-
-/** FLOW-415 (b-2): הגיעו החודש, every recurring party seen this month. */

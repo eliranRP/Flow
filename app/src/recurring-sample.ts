@@ -8,7 +8,8 @@ const row = (over: Partial<ScheduleRow> & Pick<ScheduleRow, "party_id" | "party_
   pace: "month",
   next_due_month: "2026-10",
   expected_by: "2026-10-31",
-  project_id: null,
+  // A project's id is its name in slug form, so `?project=` can name it in a link.
+  project_id: over.project_name == null ? null : `p-${over.project_name.replace(/ /g, "-").toLowerCase()}`,
   project_name: null,
   category_id: null,
   category_name: null,

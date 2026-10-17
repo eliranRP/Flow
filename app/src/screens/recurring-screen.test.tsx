@@ -27,6 +27,14 @@ describe("recurringView (rule-25 fixture)", () => {
     expect(names).not.toContain("Elm Row unit 2");
   });
 
+  it("narrows to one project, named, with its own count", () => {
+    const birch = recurringView(FIXTURE, "2026-10-11", "p-birch-lane");
+    expect(birch.project).toBe("Birch Lane");
+    expect(birch.subtitle).toBe("אוקטובר 2026 • 4 קבועים");
+    const names = [...birch.late, ...birch.groups.flatMap((group) => group.rows)].map((item) => item.name);
+    expect(names.sort()).toEqual(["Bay County Tax", "Birch Lane rent", "Brightline Power", "Brightside Pest"]);
+  });
+
   it("shows a change of 20% or more as the bad-news hint", () => {
     const bayside = view.groups.flatMap((group) => group.rows).find((item) => item.name === "Bayside Water Utility");
     expect(bayside?.hint).toBe("▲ 38%");

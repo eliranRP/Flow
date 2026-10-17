@@ -16,8 +16,8 @@ test("the four tabs open their screens, and the old paths still land", async ({ 
   await expect(page.getByRole("heading", { name: "לאישור" })).toBeVisible();
   await page.goto("/settings/loans?preview=1");
   await expect(page).toHaveURL(/\/settings\/loans\?preview=1$/);
-  await page.goto("/recurring?preview=1");
-  await expect(page.getByRole("heading", { name: "קבועים" })).toBeVisible();
+  await page.goto("/missing-bills?preview=1");
+  await expect(page).toHaveURL(/\/recurring\?preview=1$/);
 });
 
 test("the drawer opens, a future month is disabled, and a pick replaces the month at the top", async ({ page }) => {

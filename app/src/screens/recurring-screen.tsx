@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { groupRecurring, monthOutflow, type RecurringLine } from "../recurring-layout";
 import { type ScheduleRow, scheduleLines, useRecurringScheduleQuery } from "../recurring-schedule";
 import { type RecurringListGroup, type RecurringListRow, RecurringList } from "../ui/recurring-list";
@@ -19,20 +20,29 @@ function monthTitle(today: string): string {
   return new Intl.DateTimeFormat("he-IL", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${today}T12:00:00Z`));
 }
 
-/** FLOW-447: the קבועים list. Late bills lead; the rest group by category, in the server's order. */
+/**
+ * FLOW-447: the קבועים list. Late bills lead; the rest group by category, in the server's order.
+ * `?project=` narrows it to one project (FLOW-424), as the project's own rows link to it.
+ */
 export function RecurringScreen({ now = new Date(), sample }: { now?: Date; sample?: readonly ScheduleRow[] } = {}) {
+  const [params] = useSearchParams();
+  const project = params.get("project");
   const query = useRecurringScheduleQuery(sample == null);
   const rows = sample ?? query.data;
-  const view = useMemo(() => (rows == null ? null : recurringView(rows, israelToday(now))), [rows, now]);
+  const today = israelToday(now);
+  const view = useMemo(() => (rows == null ? null : recurringView(rows, today, project)), [rows, today, project]);
   if (view == null) return sample == null ? <RecurringSkeleton /> : null;
   return <RecurringList {...view} />;
 }
 
 /**
- * The list's props from the server rows. The outflow counts every charge; a late charge leaves its
- * group's rows (it leads the list) but still counts in its group's monthly cost, as the board does.
+ * The list's props from the server rows, for the project when one is named. The outflow counts every
+ * charge; a late charge leaves its group's rows (it leads the list) but still counts in its group's
+ * monthly cost, as the board does.
  */
-export function recurringView(rows: readonly ScheduleRow[], today: string) {
+export function recurringView(allRows: readonly ScheduleRow[], today: string, project: string | null = null) {
+  const rows = project == null ? allRows : allRows.filter((row) => row.project_id === project);
+  const projectName = project == null ? undefined : allRows.find((row) => row.project_id === project)?.project_name ?? undefined;
   const lines = scheduleLines(rows);
   const byId = new Map(rows.map((row) => [row.party_id, row] as const));
   const lateIds = new Set(rows.filter((row) => row.state === "late").map((row) => row.party_id));
@@ -59,6 +69,7 @@ export function recurringView(rows: readonly ScheduleRow[], today: string) {
     rows: group.lines.filter((line) => !lateIds.has(line.id)).map((line) => toRow(line)),
   }));
   return {
+    project: projectName,
     subtitle: `${monthTitle(today)} • ${String(rows.length)} קבועים`,
     currency: rows[0]?.currency ?? "ILS",
     outflow: monthOutflow(lines),
