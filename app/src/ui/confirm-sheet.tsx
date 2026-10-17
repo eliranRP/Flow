@@ -12,8 +12,13 @@ type ConfirmSheetProps = {
   consequence: string;
   /** A second hint line, for a consequence with a side effect (FLOW-405: split lines lose their split). */
   detail?: string;
+  /** body (17/1.5) for a confirm that explains what stays and what goes (FLOW-445). Default hint. */
+  consequenceSize?: "hint" | "body";
+  /** A warning line in the signal-soft colour, under the consequence (FLOW-445: pending lines before a finish). */
+  warning?: string;
   confirmLabel: string;
-  destructive?: boolean;
+  /** true: the red tint with a bin. "outline": the signal outline with no bin (FLOW-445 delete). */
+  destructive?: boolean | "outline";
   /** The confirm button's icon. A destructive confirm shows the bin unless this says otherwise; null shows none (FLOW-341: a merge is not a delete). */
   icon?: ReactNode;
   busy?: boolean;
@@ -30,6 +35,8 @@ export function ConfirmSheet({
   item,
   consequence,
   detail,
+  consequenceSize = "hint",
+  warning,
   confirmLabel,
   destructive = false,
   icon,
@@ -41,13 +48,14 @@ export function ConfirmSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={title} returnFocusRef={returnFocusRef} busy={busy}>
       {item ? <p className="t-label text-text-secondary">{item}</p> : null}
-      <p className="t-hint text-text-secondary">{consequence}</p>
+      <p className={consequenceSize === "body" ? "ui-confirm-body" : "t-hint text-text-secondary"}>{consequence}</p>
+      {warning ? <p className="ui-confirm-warning">{warning}</p> : null}
       {detail ? <p className="t-hint text-text-secondary">{detail}</p> : null}
       <Button
-        variant={destructive ? "danger-tint" : "primary"}
+        variant={destructive === "outline" ? "danger-outline" : destructive ? "danger-tint" : "primary"}
         full
         busy={busy}
-        icon={icon !== undefined ? icon ?? undefined : destructive ? <TrashIcon /> : undefined}
+        icon={icon !== undefined ? icon ?? undefined : destructive === true ? <TrashIcon /> : undefined}
         onClick={() => {
           onConfirm();
         }}

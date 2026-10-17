@@ -268,7 +268,7 @@ describe("viewer gates", () => {
     ["V23b", "?new=project opens no sheet for a viewer (FLOW-331)", () => {
       viewer(<ProjectsScreen sample={{ projects: [] } as unknown as Dashboard} />, "/projects?new=project");
       expect(screen.getByText("פרויקטים מגיעים מ־SUMIT.")).toBeInTheDocument();
-      expect(screen.queryByRole("dialog", { name: "פרויקט" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog", { name: "פרויקט חדש" })).not.toBeInTheDocument();
     }],
     ["V24", "the tab bar has no add for a viewer (FLOW-364)", () => {
       viewer(<TabBar />);

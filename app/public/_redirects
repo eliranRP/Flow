@@ -29,6 +29,8 @@
 /projects/ /projects 301
 /search /app-shell 200
 /search/ /search 301
+/forecast /app-shell 200
+/forecast/ /forecast 301
 /review /app-shell 200
 /review/ /review 301
 /review/all /app-shell 200

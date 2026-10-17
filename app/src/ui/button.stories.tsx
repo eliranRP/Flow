@@ -10,6 +10,7 @@ const variants: ButtonVariant[] = [
   "pill",
   "danger",
   "danger-tint",
+  "danger-outline",
   "ghost",
 ];
 
@@ -35,6 +36,8 @@ type Story = StoryObj<typeof meta>;
 export const Primary: Story = {};
 export const Secondary: Story = { args: { children: "שינוי", variant: "secondary" } };
 export const Link: Story = { args: { children: "לכל החיובים", variant: "link", chevron: true } };
+/** FLOW-445: the destructive confirm's second choice, outlined, so the red stays on the one action. */
+export const DangerOutline: Story = { args: { children: "מחיקת הפרויקט", variant: "danger-outline", full: true } };
 export const DangerLink: Story = { args: { children: "מחיקה", variant: "danger-link" } };
 export const Disabled: Story = { args: { disabled: true } };
 export const Busy: Story = { args: { children: "שומר…", busy: true } };

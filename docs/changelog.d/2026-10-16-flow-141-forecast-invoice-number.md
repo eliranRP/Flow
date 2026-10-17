@@ -1,0 +1,1 @@
+- The month-end forecast shows each invoice's number on its row, and `get_forecast` lists the invoice's own `description` (additive field).

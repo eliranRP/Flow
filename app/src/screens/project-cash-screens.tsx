@@ -1,6 +1,6 @@
 import { formatAmountText, type CashLine, type CashMonths, type ProjectDetail } from "@flow/shared";
-import type { ReactNode } from "react";
-import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { useRef, type ReactNode } from "react";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import {
   cashMonthKey,
   cashSideLabel,
@@ -37,9 +37,11 @@ import { FocusTitle } from "../ui/focus-title";
 import { BannerRows, type BannerRow } from "../ui/banner";
 import { BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
+import { InvestmentSummary } from "../ui/investment-card";
 import { MonthStepper } from "../ui/month-stepper";
 import { PeriodSwipe } from "../ui/period-swipe";
-import { ScreenHeader } from "../ui/screen-header";
+import { ScreenHeader, useScrolledPast } from "../ui/screen-header";
+import { CompactBar } from "../ui/compact-bar";
 import { ScreenState } from "../ui/screen-state";
 import { TextLink } from "../ui/text-link";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
@@ -81,6 +83,7 @@ export function ProjectCashOverview({
   stateLine,
   menu,
   attention = [],
+  budget,
   example,
   now,
 }: {
@@ -95,6 +98,8 @@ export function ProjectCashOverview({
   menu: ReactNode;
   /** Home's attention rows for this project: its late bills and income, and its changed charges. */
   attention?: BannerRow[];
+  /** FLOW-445: the budget card, when the project has a budget (the edit sheet lives with the page). */
+  budget?: ReactNode;
   example?: ReactNode;
   /** Stories and tests pin the month names. */
   now?: Date;
@@ -104,8 +109,23 @@ export function ProjectCashOverview({
   const rows = data == null ? [] : shownCashRows(month, data.base_currency);
   const earlier = data == null ? [] : projectEarlierMonthRows(project.id, data, search, now);
   const investment = investmentLoansRow(investmentData, project);
+  // FLOW-445: the summary card shows once a figure is entered (or a loan is open).
+  const figures = investmentData.figures;
+  const summaryFigures = figures != null && !investmentData.isOverhead
+    && (figures.purchaseMinor != null || figures.valueMinor != null || figures.arvMinor != null || figures.loanMinor !== 0n)
+    ? figures
+    : null;
+  const summary = summaryFigures != null;
+  // FLOW-445: once the figure scrolls under the band, the compact bar slides down: Back, "−$X • name", ⋯.
+  const titleEnd = useRef<HTMLSpanElement>(null);
+  const past = useScrolledPast(titleEnd, true);
+  const first = rows[0];
+  // FLOW-445: נכנס and יצא sit in the band on one line; the month's profit and the rest stay in the list.
+  const summaryRows = key == null ? [] : projectCashSummaryRows(project.id, key, rows, search, now);
+  const bandRows = summaryRows.filter((row) => row.id === "in" || row.id === "out");
+  const listRows = summaryRows.filter((row) => !bandRows.includes(row));
   return (
-    <div className="flex min-h-full flex-1 flex-col">
+    <div className="ui-project-cash flex min-h-full flex-1 flex-col">
       <TopBand
         wordmark={false}
         example={example}
@@ -122,16 +142,46 @@ export function ProjectCashOverview({
             <div className="t-display ui-project-profits">
               {rows.map((row) => (
                 <p key={row.currency}>
-                  <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} />
+                  <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} presentation="detail" />
                 </p>
               ))}
             </div>
           )}
+          {bandRows.length === 0 ? null : (
+            <div className="ui-project-band-pair">
+              {bandRows.map((row) => (
+                <Link key={row.id} to={row.href ?? "#"} className="ui-band-row-link m-press" aria-label={row.name}>
+                  <span className="ui-band-row-label">{row.id === "in" ? "נכנס" : "יצא"}</span>
+                  <span className="ui-band-row-amount">
+                    {row.amounts.map((amount) => (
+                      <Amount key={amount.currency} agorot={amount.minor} currency={amount.currency} size="list" />
+                    ))}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+          <span ref={titleEnd} className="ui-compact-mark" aria-hidden="true" />
         </BandHero>
       </TopBand>
+      <CompactBar
+        title={project.name}
+        figureFirst
+        figure={first == null ? undefined : <Amount agorot={first.net_minor} currency={first.currency} loss={first.net_minor < 0n} presentation="detail" />}
+        backTo={`/projects${search}`}
+        size="detail"
+        shown={past}
+        actions={menu}
+      />
       {data == null ? <ListSkeleton /> : null}
-      {key == null ? null : <CashRows rows={projectCashSummaryRows(project.id, key, rows, search, now)} />}
-      {investment == null ? null : (
+      {listRows.length === 0 ? null : <CashRows rows={listRows} />}
+      {budget ? <div className="ui-page-pad">{budget}</div> : null}
+      {summaryFigures == null ? null : (
+        <div className="ui-page-pad">
+          <InvestmentSummary figures={summaryFigures} href={investmentHref} />
+        </div>
+      )}
+      {investment == null || summary ? null : (
         <List className="ui-project-cash-more">
           <ListRow
             variant="item"

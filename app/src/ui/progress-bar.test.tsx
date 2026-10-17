@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { ProgressBar, budgetUsedPercent } from "./progress-bar";
+import { ProgressBar } from "./progress-bar";
 import { expectRtl, expectThemePaint } from "./test-support";
 
 describe("ProgressBar", () => {
@@ -25,30 +25,6 @@ describe("ProgressBar", () => {
     const states = [...document.querySelectorAll(".ui-steps-seg")].map((seg) => seg.getAttribute("data-state"));
     expect(states).toEqual(["done", "done", "current", "next", "next", "next", "next"]);
     expect(screen.getByRole("meter", { name: "התקדמות ההגדרה" })).toHaveAttribute("aria-valuenow", "3");
-  });
-
-  it("draws a split bar and names an overrun in words", () => {
-    render(<ProgressBar variant="split" label="חריגה" spentAgorot={12000000n} budgetAgorot={10000000n} />);
-    expect(screen.getByRole("meter", { name: "חריגה, מעל התקציב" })).toBeInTheDocument();
-    expect(document.body.textContent.replace(/\s+/g, " ")).toMatch(/נוצלו 120%/);
-    expect(screen.getByText(/מעל התקציב/)).toBeInTheDocument();
-    const over = document.querySelector('.ui-bar-fill[data-over="true"]');
-    expect(over).toBeInstanceOf(HTMLElement);
-    if (over instanceof HTMLElement) expect(over.style.transform).toBe("scaleX(1)");
-    expect(over?.parentElement).toHaveClass("m-bar-grow");
-  });
-
-  it("floors a partial budget and keeps an overrun as the real percent", () => {
-    expect(budgetUsedPercent(12_345_678_900n, 12_346_678_900n)).toBe(99);
-    expect(budgetUsedPercent(10_000_000n, 10_000_000n)).toBe(100);
-    expect(budgetUsedPercent(12_000_000n, 10_000_000n)).toBe(120);
-    render(<ProgressBar variant="split" label="כמעט" spentAgorot={12_345_678_900n} budgetAgorot={12_346_678_900n} />);
-    const text = document.body.textContent.replace(/\s+/g, " ");
-    expect(text).toMatch(/נוצלו 99%/);
-    expect(text).not.toMatch(/נוצלו 100%/);
-    const fill = document.querySelector(".ui-bar-fill");
-    if (fill instanceof HTMLElement) expect(fill.style.transform).toBe("scaleX(0.99)");
-    expect(document.querySelector(".ui-overage")).toBeNull();
   });
 
   it("draws a job: a count, the steps in order, and a way to leave that does not stop the job", () => {

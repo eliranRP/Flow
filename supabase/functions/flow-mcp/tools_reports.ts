@@ -1,6 +1,10 @@
 // MCP tools: the Unpaid report and the review dashboard reads.
 // Split out of tools.ts (FLOW-807). Decision 0080.
 
+import { z } from "zod";
+import { expectedMonthsSchema } from "../../../packages/shared/src/forecast.ts";
+import { unpaidRowSchema } from "../../../packages/shared/src/dashboard.ts";
+import { buildMonthForecast, forecastTotal, type ForecastItem, type ForecastOverrideRow } from "../../../packages/shared/src/month-forecast.ts";
 import { fail, READ_REFUSED, type ToolResult, type ToolRpc } from "./tools_args.ts";
 
 /**
@@ -153,4 +157,70 @@ export async function dashboard(rpc: ToolRpc, from: string | null, to: string | 
     return fail("refused", READ_REFUSED);
   }
   return result.json as Review;
+}
+
+/** FLOW-141: this month's key in Israel time (YYYY-MM), the default for get_forecast. */
+export function israelMonthKey(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit" }).format(now);
+}
+
+function forecastItemJson(item: ForecastItem) {
+  return {
+    key: item.key,
+    direction: item.direction,
+    kind: item.kind,
+    name: item.name,
+    currency: item.currency,
+    usual_minor: Number(item.usual),
+    minor: Number(item.minor),
+    day: item.day,
+    due_on: item.due_on,
+    moved_out: item.moved_out,
+    overridden: item.overridden,
+  };
+}
+
+/**
+ * FLOW-141 get_forecast: the items, the sections and their totals for one month, built by the
+ * same arithmetic as the app (packages/shared/src/month-forecast.ts). Null when a read is malformed.
+ */
+/**
+ * The month's cash net in ILS from a cash_months read, when that read's newest month is the
+ * forecast month (Home's figure is the current month only). Null for any other month.
+ */
+function cashNetMinor(cash: unknown, month: string): bigint | null {
+  const months = (cash as { months?: unknown } | null)?.months;
+  if (!Array.isArray(months)) return null;
+  const newest = months[0] as { month?: unknown; by_currency?: unknown } | undefined;
+  if (typeof newest?.month !== "string" || newest.month.slice(0, 7) !== month) return null;
+  const rows = Array.isArray(newest.by_currency) ? (newest.by_currency as { currency?: unknown; net_minor?: unknown }[]) : [];
+  const ils = rows.find((row) => row.currency === "ILS");
+  return ils == null ? 0n : BigInt(String(ils.net_minor ?? 0));
+}
+
+export function forecastReport(month: string, expected: unknown, unpaid: unknown, overrides: unknown, cash: unknown): Review | null {
+  const parsedExpected = expectedMonthsSchema.safeParse(expected);
+  const parsedUnpaid = z.array(unpaidRowSchema).safeParse(unpaid);
+  if (!parsedExpected.success || !parsedUnpaid.success || !Array.isArray(overrides)) return null;
+  const build = buildMonthForecast({
+    base: "ILS",
+    expected: parsedExpected.data,
+    unpaid: parsedUnpaid.data,
+    overrides: overrides as ForecastOverrideRow[],
+  });
+  const smallTotal = build.small.reduce((total, item) => total + item.minor, 0n);
+  const net = cashNetMinor(cash, month);
+  return {
+    month,
+    base_currency: "ILS",
+    cash_net_minor: net == null ? null : Number(net),
+    big_number_minor: net == null ? null : Number(forecastTotal(net, build)),
+    income: build.income.map(forecastItemJson),
+    expense: build.expense.map(forecastItemJson),
+    small: { count: build.small.length, total_minor: Number(smallTotal), items: build.small.map(forecastItemJson) },
+    moved: build.moved.map(forecastItemJson),
+    income_total_minor: Number(build.incomeTotal),
+    expense_total_minor: Number(build.expenseTotal),
+    changed: build.changed,
+  };
 }

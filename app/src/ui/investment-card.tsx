@@ -1,5 +1,6 @@
 import type { ReactNode, RefObject } from "react";
-import { Amount } from "./amount";
+import { Amount, formatAmount } from "./amount";
+import { Card } from "./card";
 import { cx } from "./cx";
 import { formatDayMonth } from "./date-math";
 import { AlertIcon } from "./icons";
@@ -363,5 +364,72 @@ export function InvestmentCard({
         </List>
       </div>
     </section>
+  );
+}
+
+/** FLOW-445: a count of minor units rounded to whole thousands, for the summary's grid ("₪185,000"). */
+export function roundedThousands(minor: bigint, currency: string): string {
+  const step = 100_000n;
+  const rounded = ((minor < 0n ? -minor : minor) + step / 2n) / step * step;
+  return formatAmount(minor < 0n ? -rounded : rounded, "summary", currency);
+}
+
+/**
+ * FLOW-445: the project page's השקעה והלוואות card (properties only). Purchase, rehab so far, the
+ * ARV or today's value, and the open loans; the equity figure and a two-part bar: equity on the
+ * left, the loan on the right. "לפרטים" opens the investment page.
+ */
+export function InvestmentSummary({ figures, href }: { figures: InvestmentFigures; href: string }) {
+  const hasArv = figures.arvMinor != null;
+  const valueLabel = hasArv ? "ARV · שווי אחרי שיפוץ" : "שווי היום";
+  const valueMinor = hasArv ? figures.arvMinor : figures.valueMinor;
+  const equityLabel = hasArv ? "הון צפוי אחרי שיפוץ" : "הון עצמי היום";
+  const equityMinor = hasArv ? figures.forcedEquityMinor : figures.currentEquityMinor;
+  const loan = figures.loanMinor;
+  const equityPart = equityMinor != null && equityMinor > 0n ? equityMinor : 0n;
+  const total = equityPart + loan;
+  const equityShare = total === 0n ? 0 : Number((equityPart * 10_000n) / total) / 100;
+  const cur = figures.currency;
+  return (
+    <Card className="ui-investment-summary">
+      <div className="ui-investment-head">
+        <h2>השקעה והלוואות</h2>
+        <TextLink to={href} chevron={false}>לפרטים</TextLink>
+      </div>
+      <dl className="ui-investment-grid">
+        <div>
+          <dt>מחיר קנייה</dt>
+          <dd>{figures.purchaseMinor == null ? "—" : <bdi dir="ltr">{roundedThousands(figures.purchaseMinor, cur)}</bdi>}</dd>
+        </div>
+        <div>
+          <dt>שיפוץ עד היום</dt>
+          <dd><bdi dir="ltr">{roundedThousands(figures.rehabMinor, cur)}</bdi></dd>
+        </div>
+        <div>
+          <dt>{valueLabel}</dt>
+          <dd>{valueMinor == null ? "—" : <bdi dir="ltr">{roundedThousands(valueMinor, cur)}</bdi>}</dd>
+        </div>
+        <div>
+          <dt>יתרת הלוואה</dt>
+          <dd><bdi dir="ltr">{roundedThousands(loan, cur)}</bdi></dd>
+        </div>
+      </dl>
+      <div className="ui-investment-equity">
+        <p className="ui-investment-equity-label">{equityLabel}</p>
+        <p className="ui-investment-equity-figure">
+          {equityMinor == null ? "—" : <bdi dir="ltr">{formatAmount(equityMinor, "summary", cur)}</bdi>}
+        </p>
+      </div>
+      {total === 0n ? null : (
+        <div className="ui-investment-bar" aria-hidden="true">
+          <span className="ui-investment-loan" style={{ flexGrow: 100 - equityShare }} />
+          <span className="ui-investment-own" style={{ flexGrow: equityShare }} />
+        </div>
+      )}
+      <p className="ui-investment-legend">
+        <span><span className="ui-investment-dot ui-investment-dot-own" aria-hidden="true" /> הון עצמי</span>
+        <span><span className="ui-investment-dot ui-investment-dot-loan" aria-hidden="true" /> הלוואה</span>
+      </p>
+    </Card>
   );
 }

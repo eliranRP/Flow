@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `create_manual_entry`, `attach_document`, `create_project`, `update_project`, `delete_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `create_manual_entry`, `attach_document`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -23,6 +23,8 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "project"` | `id` | the project id `create_project` or a `create_projects` row returned |
 | `undo` `kind: "project_update"` | `id` | the project id `update_project` returned |
 | `undo` `kind: "project_delete"` | `id` | the project id `delete_project` returned |
+| `undo` `kind: "forecast_item"` | `id` | the write id `set_forecast_item` returned |
+| `undo` `kind: "forecast_reset"` | `id` | the write id `reset_forecast` returned |
 | `undo` `kind: "category"` | `id` | the category id `create_category` or a `create_categories` row returned |
 | `undo` `kind: "category_hidden"` | `id` | the category id `hide_category` returned |
 | `undo` `kind: "category_pnl"` | `id` | the category id `set_category_pnl` returned |
@@ -348,6 +350,22 @@ A project, category or loan name (`create_project`, `update_project`, `delete_pr
 
 `status` is optional (`active` or `finished`). `type` is optional free text, up to 40 characters with the name's character rule (FLOW-445; decision [0176](../decisions/0176-project-opens-on-cash.md)). `budget_minor` is optional whole minor units of the company currency, or `null` for no budget; the project page warns when its expenses pass it. Output `data`: `{ "id", "undo_kind": "project" }`.
 
+### set_forecast_item
+
+```json
+{ "idempotency_key": "fc-1", "month": "2026-10", "item_key": "invoice:<id>", "amount_minor": 480000 }
+```
+
+Changes one item of the month-end forecast (FLOW-141; owner or editor). It changes the forecast only, never the invoice, the bill or the recurring charge. `month` is `YYYY-MM`, this month or later (a past month is `refused` with `month ended`). `item_key` is the key `get_forecast` lists. Send only the fields to change: `amount_minor` (whole minor units, unsigned; `null` goes back to the usual amount), `due_on` (`yyyy-mm-dd`; `null` clears it), `moved_out` (`true` moves it to next month, `false` brings it back), or `reset` (`true`, alone: the item goes back to Flow's number). Returns `month`, `item_key`, `amount_minor`, `due_on`, `moved_out`, `id` and `undo_kind` (`forecast_item`: undo puts the item back to what it was, `conflict` once it changed again). Idempotency key and the write rate limit apply.
+
+### reset_forecast
+
+```json
+{ "idempotency_key": "fc-r1", "month": "2026-10" }
+```
+
+Puts back every item of one month's forecast to Flow's numbers (איפוס, FLOW-141; owner or editor). `month` is `YYYY-MM`, this month or later. Returns `month`, `removed` (how many items had a change), `id` and `undo_kind` (`forecast_reset`: undo puts the month's changes back, `conflict` when one was set since).
+
 ### update_project
 
 ```json
@@ -570,6 +588,10 @@ Takes back Jev's auto fill on one open review line ([FLOW-702](../backlog/TASKS.
 ### get_missing_bills
 
 `missing_bills`, no arguments ([0131](../decisions/0131-jev-patterns.md)). Read tool. Output `data.missing[]`: recurring suppliers and customers whose due month has come with no line yet, after their usual day plus 5 days in the due month (Israel time; on the month's last day when that falls later). Monthly ones (a line in at least 3 of the last 6 complete months and one of the last 2) are due every month; a pace of every 2 months, quarter or year is due one pace after the last bill ([0175](../decisions/0175-recurring-pace-dismissals.md)). Alerts the token's user dismissed in the app are left out. A supplier the owner marked recurring ([set_line_recurring](#set_line_recurring)) counts too, and one marked not recurring never does ([0172](../decisions/0172-recurring-charges.md)). Each has `direction`, `party_id`, `party_name`, `supplier_id` and `supplier_name` (null for income), `currency`, `typical_amount_minor` (median net per bill, negative for expenses), `typical_day`, `due_month` (YYYY-MM), `expected_by`, `months_seen`, `last_doc_date`, `last_amount_minor` (the last bill's net), `project_id`, `project_name`, `category_id`, `category_name`, `source` (`auto`: the rule found it; `user`: the owner marked it), `pace` (`month`, `2months`, `quarter` or `year`), `pace_source`, `alert_key` and `suggestion`: `null`, or `{ "party_id", "party_name", "transaction_id", "doc_date", "amount_minor" }`, a supplier (or customer) that may be this one under another name, first seen in the due month or the month before, with an alike name and its newest line within 50% of the usual amount ([0179](../decisions/0179-recurring-match.md)). Ask the user, then [answer_recurring_match](#answer_recurring_match).
+
+### get_forecast
+
+`month` (`YYYY-MM`, default this month in Israel time). Read tool (FLOW-141). The month-end forecast (צפי): `data` has `month`, `base_currency` (`ILS`), `income[]` and `expense[]` (largest first; `key`, `direction`, `kind` (`recurring` or `invoice`), `name`, `currency`, `usual_minor`, `minor` (the figure the forecast uses, unsigned), `day`, `description` (an invoice's own description, such as "Invoice #1043", or null for a recurring charge; added with FLOW-141), `due_on`, `moved_out`, `overridden`), `small` (recurring charges under 100 shekels: `count`, `total_minor`, `items`), `moved[]` (moved to next month, not counted), `income_total_minor`, `expense_total_minor` (both unsigned; small included in the expenses) and `changed` (how many items were changed), `cash_net_minor` (this month's cash net in ILS, the same figure Home starts from) and `big_number_minor` (Home's number: `cash_net_minor` plus `income_total_minor` minus `expense_total_minor`). Both are `null` when the month is not the newest cash month. Built from `expected_months`, `list_unpaid`, `forecast_overrides_for` and `cash_months`.
 
 ### get_expected_months
 

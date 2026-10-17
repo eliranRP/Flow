@@ -180,10 +180,6 @@
   background: var(--color-bad);
 }
 
-.ui-overage {
-  color: var(--color-bad);
-}
-
 .ui-meter-label {
   display: block;
   max-width: 100%;
@@ -191,43 +187,7 @@
   white-space: normal;
 }
 
-.ui-budget {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.ui-budget-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-  min-width: 0;
-}
-
-.ui-budget-title {
-  display: -webkit-box;
-  min-inline-size: 0;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.ui-budget-amounts {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-1);
-  margin: 0;
-}
-
-.ui-budget-amounts bdi,
 .ui-num {
   white-space: nowrap;
 }
 
-.ui-budget .ui-row-hint {
-  margin-top: var(--space-1);
-}

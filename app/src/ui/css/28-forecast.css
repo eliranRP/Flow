@@ -33,3 +33,245 @@
   padding: 0;
   list-style: none;
 }
+
+/* FLOW-141: the month-end forecast screen (צפי). Flat sections, no card; the big number and the
+   line under it are the same figure Home shows. */
+.ui-forecast-screen {
+  position: relative;
+  padding: 0 var(--space-side) calc(var(--tabbar-height) + var(--space-section));
+  color: var(--color-text);
+}
+
+.ui-forecast-compact {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-side);
+  background: var(--color-surface);
+  transform: translateY(-100%);
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+
+.ui-forecast-compact-on {
+  transform: translateY(0);
+}
+
+.ui-forecast-compact-figure {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-forecast-big {
+  margin: var(--space-4) 0 0;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-forecast-big-neg {
+  color: var(--color-bad);
+}
+
+.ui-forecast-today {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-hint-size);
+}
+
+.ui-forecast-section {
+  margin-top: var(--space-6);
+}
+
+.ui-forecast-section-head {
+  display: flex;
+  justify-content: space-between;
+  margin: var(--space-1) 0 var(--space-2);
+  font-size: var(--type-section-size);
+  font-weight: var(--type-heading-weight);
+}
+
+.ui-forecast-section-total {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-forecast-total-out {
+  color: var(--color-text-muted);
+}
+
+.ui-forecast-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-forecast-li {
+  display: block;
+  overflow: hidden;
+  max-height: 80px;
+  transition: max-height var(--motion-page) var(--ease-exit), opacity var(--motion-fade) var(--ease-exit), transform var(--motion-page) var(--ease-exit);
+}
+
+.ui-forecast-leaving {
+  max-height: 0;
+  opacity: 0;
+  transform: translateX(-24px);
+}
+
+.ui-forecast-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--row-height);
+  padding: var(--space-2) 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ui-forecast-initial {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--avatar);
+  height: var(--avatar);
+  border-radius: var(--radius-chip);
+  background: var(--color-raised);
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+}
+
+.ui-forecast-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ui-forecast-name {
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-forecast-meta {
+  color: var(--color-text-muted);
+  font-size: var(--type-meta-size);
+}
+
+.ui-forecast-amount {
+  flex: none;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-forecast-edited {
+  text-decoration: underline dotted var(--color-text-muted);
+  text-underline-offset: 4px;
+}
+
+.ui-forecast-small-list {
+  margin: 0;
+  padding: 0 var(--space-4);
+  list-style: none;
+}
+
+.ui-forecast-moved {
+  opacity: 0.8;
+  animation: ui-forecast-drop var(--motion-page) var(--ease-enter) both;
+}
+
+@keyframes ui-forecast-drop {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 0.8; transform: translateY(0); }
+}
+
+.ui-forecast-changed {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  color: var(--color-text-muted);
+  font-size: var(--type-hint-size);
+  opacity: 0;
+  transition: opacity var(--motion-fade) var(--ease-standard);
+}
+
+.ui-forecast-changed-on {
+  opacity: 1;
+}
+
+.ui-forecast-reset {
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.ui-forecast-foot {
+  margin: var(--space-section) 0 0;
+}
+
+.ui-forecast-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+}
+
+.ui-forecast-field,
+.ui-forecast-when {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ui-forecast-field-label {
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+}
+
+.ui-forecast-input {
+  min-height: var(--field-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-input);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-forecast-source {
+  margin: 0;
+  font-size: var(--type-meta-size);
+}
+
+.ui-forecast-source a {
+  color: var(--color-accent);
+}
+
+.ui-forecast-error {
+  margin: var(--space-4) 0 0;
+}
+
+.ui-home-forecast-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-forecast-li,
+  .ui-forecast-compact,
+  .ui-forecast-changed,
+  .ui-forecast-moved {
+    transition: none;
+    animation: none;
+  }
+}

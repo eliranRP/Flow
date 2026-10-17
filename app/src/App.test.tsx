@@ -109,7 +109,7 @@ describe("App", () => {
   it("opens the project sheet from + → פרויקט חדש, and Back does not reopen +", async () => {
     await renderAt("/add?preview=1");
     fireEvent.click(screen.getByRole("button", { name: /פרויקט חדש/ }));
-    expect(await screen.findByRole("dialog", { name: "פרויקט" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "פרויקט חדש" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "הוספה" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "פרויקטים", hidden: true })).toBeInTheDocument();
   });
@@ -119,10 +119,10 @@ describe("App", () => {
     for (let round = 0; round < 2; round += 1) {
       fireEvent.click(screen.getByRole("link", { name: "הוספה" }));
       fireEvent.click(await screen.findByRole("button", { name: /פרויקט חדש/ }));
-      const dialog = await screen.findByRole("dialog", { name: "פרויקט" });
-      fireEvent.click(within(dialog).getByRole("button", { name: "ביטול" }));
+      const dialog = await screen.findByRole("dialog", { name: "פרויקט חדש" });
+      fireEvent.keyDown(dialog, { key: "Escape" });
       await waitFor(() => {
-        expect(screen.queryByRole("dialog", { name: "פרויקט" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("dialog", { name: "פרויקט חדש" })).not.toBeInTheDocument();
       });
       // Cancel leaves the quick action's page, Projects; the tab bar's בית brings the test back to Home.
       if (round === 0) {
