@@ -74,6 +74,13 @@ describe("Invoice page follows the board (FLOW-367b)", () => {
     expect(facts.querySelector("[data-over]")).toBeNull();
   });
 
+  it("draws the open amount in the income colour with no plus sign", () => {
+    renderPage("inv-1043");
+    const figure = document.querySelector(".ui-inv-head .ui-num");
+    expect(figure?.textContent).not.toContain("+");
+    expect(figure?.classList.contains("ui-income")).toBe(true);
+  });
+
   it("pushes the ready detail in from the start side", () => {
     renderPage("inv-1043");
     expect(document.querySelector(".ui-inv-detail")?.classList.contains("m-push-in")).toBe(true);

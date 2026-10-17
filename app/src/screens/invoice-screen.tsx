@@ -53,7 +53,7 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp }: { s
               {marked ? UNPAID_MARKED : `פתוחה ${String(days)} ימים`}
             </p>
             <h2 className="ui-inv-customer">{customer}</h2>
-            <Amount agorot={absAgorot(row.open_gross_agorot)} currency={row.currency ?? "ILS"} size="display" income />
+            <Amount agorot={absAgorot(row.open_gross_agorot)} currency={row.currency ?? "ILS"} size="display" income signless />
             <p className="ui-inv-meta text-text-secondary">
               {[
                 row.doc_number ? `חשבונית #${row.doc_number}` : "חשבונית",
