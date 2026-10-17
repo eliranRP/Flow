@@ -39,8 +39,8 @@
 #   --full (about 12 minutes): every story, local Supabase (all of pgTAP, db types, deploy
 #     preflight, SUMIT cron), and the main Playwright suite. Needs Docker.
 # `bash scripts/cloud-agent-install.sh` installs Deno, the Supabase CLI, and Playwright's Chromium.
-# On success the default run writes .git/flow-local-ci with the commit it passed on, so the hook can skip a
-# repeat. A slice appends its gate-times line and writes no pass stamp.
+# On success the default run appends the commit it passed on to the shared stamp, $(git rev-parse
+# --git-common-dir)/flow-local-ci (the last 50), so the hook can skip a repeat in any worktree of the clone. A slice appends its gate-times line and writes no pass stamp.
 # FLOW-813: the default run skips the app parts (typecheck, builds, app unit tests, Storybook) whose
 # inputs (the git tree of app, packages, design, _shared and the root configs) already passed here.
 # --full runs everything; FLOW_LOCAL_CI_NO_SKIP=1 only turns these skips off. CSS and token changes
@@ -205,8 +205,17 @@ fi
 # same patch can break on a new main there (#364's viewer checks under #383's RPCs).
 patch_id=""
 [[ -z "$pr_fork" ]] || patch_id="$(git diff "$pr_fork" HEAD | git patch-id --stable | cut -d' ' -f1)"
+# The shared pass stamp: the commits that passed a default run, in the common git dir, so a task worktree's
+# pass counts when the main clone pushes it (the pre-push hook reads it). A commit that passed again moves to
+# the end; only the last 50 are kept.
+record_pass() {
+  local stamp tmp
+  stamp="$(git rev-parse --git-common-dir)/flow-local-ci"
+  tmp="$stamp.tmp.$$"
+  { grep -vxF "$head" "$stamp" 2>/dev/null || true; echo "$head"; } | tail -n 50 >"$tmp" && mv "$tmp" "$stamp"
+}
 passed() {
-  echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
+  record_pass
   [[ -z "$patch_id" ]] || mark_green "patch-$patch_id" "$pr_fork"
 }
 # The --part slices (scripts/local-ci-parts.sh) run on the scoping above and exit here; the default run goes on.
@@ -234,7 +243,7 @@ if (( skips )) && [[ -n "$patch_id" ]] && has_mark "patch-$patch_id"; then
   risk_out="$(node scripts/gate-base-risk.mjs "$(mark_fork "patch-$patch_id")" "$pr_fork")" && {
     mode="same patch"
     echo "local-ci: this branch's patch against main already passed; main's own changes are main's CI's."
-    echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
+    record_pass
     exit 0
   }
   grep -v '^areas=' <<<"$risk_out" || true

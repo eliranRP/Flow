@@ -4,7 +4,7 @@ GitHub Actions runs the checks and the production deploy from `.github/workflows
 
 ## Checks on pull requests
 
-A push to a PR branch is checked in two places. `bash scripts/cloud-agent-install.sh` sets `core.hooksPath` to `.githooks`, and `.githooks/pre-push` runs `bash scripts/local-ci.sh --part quick` before the push leaves: ESLint on the files the branch changes against `main`, under a 20-second budget. A failure stops the push.
+A push to a PR branch is checked in two places. `bash scripts/cloud-agent-install.sh` sets `core.hooksPath` to `.githooks`, and `.githooks/pre-push` runs `bash scripts/local-ci.sh --part quick` before the push leaves: ESLint on the files the branch changes against `main`, under a 20-second budget. A ref that is not checked out (a task branch pushed from the main clone) is checked the same way in a throwaway detached worktree of its sha, with the clone's `node_modules` linked in; the worktree is removed afterwards. A failure stops the push.
 
 `.github/workflows/pr.yml` runs the rest on GitHub for every push to a PR into `main`, as parallel jobs. The `pr` job is the check a merge waits for. It passes only when every job it needs passed, or `pr (db)` was skipped because the diff does not touch `supabase/`.
 
@@ -21,7 +21,7 @@ CI v2 (in progress): `bash scripts/local-ci.sh --part ready` runs the static, ty
 
 `FLOW_LOCAL_CI=default git push` runs the scoped default gate on the pusher's machine instead (`bash scripts/local-ci.sh`). It also runs the e2e specs the change reaches, with Docker. `FLOW_LOCAL_CI=full git push`, or `bash scripts/local-ci.sh --full`, runs the full suite (about 12 minutes).
 
-- The tree must be clean. A default pass writes the commit sha to `.git/flow-local-ci`, so pushing the same commit again does not rerun it. A slice appends its gate-times line and writes no pass stamp.
+- The tree must be clean. A default pass appends the commit sha to the shared stamp, `$(git rev-parse --git-common-dir)/flow-local-ci` (the last 50 kept), so pushing the same commit again, from any worktree of the clone, does not rerun it. A slice appends its gate-times line and writes no pass stamp.
 - A change that needs Docker (a database change, or e2e specs that reach it) starts Docker when it is down: containerd first, then `dockerd --containerd=/run/containerd/containerd.sock`. It starts containerd whenever none runs, even if an old socket file is left, waits for it to boot, and starts dockerd once more if the first one exited. In cloud containers a bare `dockerd` can fail with "timeout waiting for containerd". If Docker still won't start, the push fails with those two commands to run by hand. The gate never passes a push with a required phase skipped. A phase it leaves to main (more e2e specs than `FLOW_E2E_MAX`, a patch that already passed on a main that didn't move the database) prints why.
 
 ## When main runs CI and deploys
