@@ -13,6 +13,7 @@ import {
   dateOf,
   fail,
   isCalendarDate,
+  matchRowsOf,
   isFail,
   limitOf,
   lineMetaOf,
@@ -47,7 +48,7 @@ import {
   storedLoanSchedule,
 } from "./tools_loans.ts";
 import { scopeAllows } from "./tools_specs.ts";
-import { dashboard, filterReviews, projectRow, type Review, totalsOf, unpaidReport } from "./tools_reports.ts";
+import { dashboard, filterReviews, forecastReport, israelMonthKey, projectRow, type Review, totalsOf, unpaidReport } from "./tools_reports.ts";
 import { syncStatus } from "./tools_sync.ts";
 import { callWrite } from "./tools_write.ts";
 
@@ -249,6 +250,24 @@ export async function callTool(
       return fail("refused", READ_REFUSED);
     }
     return ok(unpaidReport(rows, overview.json as Record<string, unknown>));
+  }
+
+  // FLOW-141: the month-end forecast. Three reads, one builder; the write tools live in tools_write.ts.
+  if (name === "get_forecast") {
+    const month = args.month ?? israelMonthKey();
+    if (typeof month !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return fail("validation", "validation");
+    const [expected, unpaid, overrides, cash] = await Promise.all([
+      rpc("expected_months", { p_months: 1, p_project_id: null }),
+      rpc("list_unpaid", {}),
+      rpc("forecast_overrides_for", { p_month: month }),
+      rpc("cash_months", { p_months: 1 }),
+    ]);
+    if (expected.status >= 400 || unpaid.status >= 400 || overrides.status >= 400 || cash.status >= 400) {
+      return fail("refused", READ_REFUSED);
+    }
+    const report = forecastReport(month, expected.json, unpaid.json, overrides.json, cash.json);
+    if (report == null) return fail("refused", READ_REFUSED);
+    return ok(report);
   }
 
   if (name === "get_expected_months") {
@@ -767,23 +786,4 @@ export async function callTool(
   const loanSplit = await rpc("get_loan_split", { p_transaction_id: transactionId });
   if (loanSplit.status >= 400) return fail("refused", "The read was refused.");
   return ok({ ...out, loan_split: loanSplit.json ?? null });
-}
-
-const MATCH_ROW_KEYS = new Set(["date", "amount_minor", "ref"]);
-
-/** match_lines rows as the RPC takes them, or null when any row is malformed. */
-function matchRowsOf(value: unknown): { date: string; amount_minor: number; ref: string | null }[] | null {
-  if (!Array.isArray(value) || value.length < 1 || value.length > 500) return null;
-  const rows: { date: string; amount_minor: number; ref: string | null }[] = [];
-  for (const row of value) {
-    if (row == null || typeof row !== "object" || Array.isArray(row)) return null;
-    const entry = row as Record<string, unknown>;
-    if (Object.keys(entry).some((key) => !MATCH_ROW_KEYS.has(key))) return null;
-    const { date, amount_minor: amount, ref = null } = entry;
-    if (typeof date !== "string" || !isCalendarDate(date)) return null;
-    if (typeof amount !== "number" || !Number.isSafeInteger(amount) || amount === 0 || Math.abs(amount) >= 1e15) return null;
-    if (ref != null && (typeof ref !== "string" || ref.length > 200)) return null;
-    rows.push({ date, amount_minor: amount, ref: ref as string | null });
-  }
-  return rows;
 }

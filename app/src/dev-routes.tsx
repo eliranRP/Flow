@@ -8,6 +8,7 @@ import { useHomePreview } from "./preview";
 import { transactionQueryOptions } from "./use-books";
 export { DevTxnList, DevTxnPagedList } from "./dev/txn-lists";
 export { DevExpense, DevProject, DevProjectCategory } from "./dev-routes-projects";
+export { DevForecast } from "./dev-routes-forecast";
 import type { LineSplitRead } from "./line-split";
 import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "./assistant-sample";
 import { InstallScreen, type InstallMode } from "./ui/install-screen";

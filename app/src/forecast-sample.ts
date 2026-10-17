@@ -1,4 +1,5 @@
-import type { ExpectedMonths, MissingBill, RecurringChange } from "@flow/shared";
+import { buildMonthForecast, expectedMonthsSchema, type ExpectedMonths, type ForecastOverrideRow, type MissingBill, type RecurringChange, unpaidRowSchema } from "@flow/shared";
+import type { ForecastSample as MonthForecastSampleShape } from "./screens/forecast-screen";
 
 /**
  * Invented sample data for FLOW-403's dev routes, stories and tests: made-up supplier names and
@@ -218,3 +219,96 @@ export const SAMPLE_EXPECTED_EMPTY: ExpectedMonths = {
   months: SAMPLE_EXPECTED.months.map((month) => ({ ...month, by_currency: [] })),
   recurring: [],
 };
+
+/**
+ * FLOW-141: invented month-end forecast data for stories. Payees are placeholders and amounts are
+ * round. `kind` picks the state: a positive month, a negative one, or one item moved to next month.
+ */
+export type ForecastSampleKind = "positive" | "negative" | "moved";
+
+export function monthForecastSample(kind: ForecastSampleKind): MonthForecastSampleShape {
+  const today = "2026-10-16";
+  const expected = {
+    today,
+    project_id: null,
+    months: [{ month: "2026-10", open: true, by_currency: [{ currency: "ILS", income_minor: 0, expense_minor: 0 }] }],
+    recurring: [
+      { direction: "expense", party_id: "rent", name: "ספק לדוגמה א׳", currency: "ILS", typical_amount_minor: -420000, typical_day: 1, months_seen: 6, seen_this_month: false },
+      { direction: "expense", party_id: "tools", name: "ספק לדוגמה ב׳", currency: "ILS", typical_amount_minor: -180000, typical_day: 8, months_seen: 6, seen_this_month: false },
+      { direction: "expense", party_id: "coffee", name: "ספק לדוגמה ג׳", currency: "ILS", typical_amount_minor: -4500, typical_day: 12, months_seen: 6, seen_this_month: false },
+      { direction: "income", party_id: "retainer", name: "לקוח לדוגמה", currency: "ILS", typical_amount_minor: 650000, typical_day: 20, months_seen: 5, seen_this_month: false },
+    ],
+  };
+  const unpaid = [
+    { id: "inv-1", description: "חשבונית לדוגמה", doc_date: "2026-10-02", project_name: null, customer_name: "לקוח לדוגמה ד׳", open_gross_agorot: 250000, open_net_agorot: 250000, currency: "ILS" },
+  ];
+  const overrides: ForecastOverrideRow[] = kind === "negative"
+    ? [{ item_key: "party:expense:rent:ILS", amount_minor: 480000, due_on: null, moved_out: false }]
+    : kind === "moved"
+      ? [{ item_key: "invoice:inv-1", amount_minor: null, due_on: null, moved_out: true }]
+      : [];
+  const build = buildMonthForecast({
+    base: "ILS",
+    expected: expectedMonthsSchema.parse(expected),
+    unpaid: unpaidRowSchema.array().parse(unpaid),
+    overrides,
+  });
+  return {
+    today,
+    net: kind === "negative" ? -150000n : 120000n,
+    data: { month: "2026-10", build, overrides },
+  };
+}
+
+/**
+ * FLOW-141: the dev fixture that matches the board frame (MonthForecast): an invented USD company
+ * with the same parties, invoices and count of small charges. Its amounts are the board's, except
+ * the six small charges, which total less than the board's (each one is under the 100 units rule).
+ */
+export function monthForecastBoardSample(): MonthForecastSampleShape {
+  const today = "2026-10-11";
+  const small = [
+    ["Streaming", 8700],
+    ["Cloud storage", 8700],
+    ["Phone line", 8700],
+    ["Domain", 8700],
+    ["Password manager", 8700],
+    ["Accounting app", 8700],
+    ["Backup drive", 8700],
+    ["Video calls", 8700],
+    ["Design fonts", 8700],
+    ["Mail tool", 8700],
+    ["Scanner plan", 9200],
+  ] as const;
+  const expected = {
+    today,
+    project_id: null,
+    months: [{ month: "2026-10", open: true, by_currency: [{ currency: "USD", income_minor: 0, expense_minor: 0 }] }],
+    recurring: [
+      ...small.map(([name, minor], index) => ({
+        direction: "expense" as const,
+        party_id: `small-${String(index + 1)}`,
+        name,
+        currency: "USD",
+        typical_amount_minor: -minor,
+        typical_day: 5,
+        months_seen: 6,
+        seen_this_month: false,
+      })),
+      { direction: "income" as const, party_id: "elm", name: "Elm St, unit 2", currency: "USD", typical_amount_minor: 165000, typical_day: 1, months_seen: 6, seen_this_month: false },
+    ],
+  };
+  const unpaid = [
+    { id: "inv-1043", description: "Invoice #1043", doc_date: "2026-09-22", project_name: null, customer_name: "Northgate Co", open_gross_agorot: 1250000, open_net_agorot: 1250000, currency: "USD", direction: "income" as const },
+    { id: "inv-1047", description: "Invoice #1047", doc_date: "2026-09-22", project_name: null, customer_name: "Lakeside HOA", open_gross_agorot: 560000, open_net_agorot: 560000, currency: "USD", direction: "income" as const },
+    { id: "bill-118", description: "Bill VD-118", doc_date: "2026-09-15", project_name: null, customer_name: "Varga Drywall", open_gross_agorot: 420000, open_net_agorot: 420000, currency: "USD", direction: "expense" as const },
+    { id: "bill-hd", description: "Monthly bill", doc_date: "2026-09-25", project_name: null, customer_name: "Harbor Supply Pro", open_gross_agorot: 313800, open_net_agorot: 313800, currency: "USD", direction: "expense" as const },
+  ];
+  const build = buildMonthForecast({
+    base: "USD",
+    expected: expectedMonthsSchema.parse(expected),
+    unpaid: unpaidRowSchema.array().parse(unpaid),
+    overrides: [],
+  });
+  return { today, net: -1719100n, base: "USD", data: { month: "2026-10", build, overrides: [] } };
+}
