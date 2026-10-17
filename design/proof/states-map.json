@@ -1,4 +1,6 @@
 {
+  "States": "/e2e/cash-loading",
+  "StatesHomeReveal": "/e2e/cash-loading",
   "StatesHomeEmpty": "/e2e/cash-empty",
   "StatesLoansEmpty": "/e2e/loans?loans=none"
 }
