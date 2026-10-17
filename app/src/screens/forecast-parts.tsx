@@ -65,5 +65,7 @@ export function itemWhat(item: ForecastItem): string {
 export function itemWhen(item: ForecastItem, today: string): string {
   if (itemLate(item, today)) return "באיחור · צפוי השבוע";
   if (item.due_on != null) return item.due_on === weekEndDay(today) ? "השבוע" : `עד ${dayMonth(item.due_on)}`;
-  return item.expected_on != null ? `עד ${dayMonth(item.expected_on)}` : "עד סוף החודש";
+  if (item.expected_on != null) return `עד ${dayMonth(item.expected_on)}`;
+  if (item.kind === "invoice") return item.direction === "income" ? "לגבייה" : "לתשלום";
+  return item.day != null ? `ב־${String(item.day)}` : "השבוע";
 }

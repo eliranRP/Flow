@@ -319,6 +319,7 @@ export function monthForecastBoardSample(variant: BoardForecastVariant = "board"
     expected: expectedMonthsSchema.parse(expected),
     unpaid: unpaidRowSchema.array().parse(unpaid),
     overrides,
+    paymentTermsDays: 30,
   });
   // The changed frame's reset line reads these, so the undo has the prior state to send back.
   return { today, net: -1719100n, base: "USD", data: { month: "2026-10", build, overrides } };

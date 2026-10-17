@@ -38,7 +38,7 @@ export type ForecastItem = {
   due_on: string | null;
   moved_out: boolean;
   overridden: boolean;
-  /** Where Flow itself expects it (yyyy-mm-dd): the usual day this month, or the invoice's date plus its terms. Null without a today. */
+  /** Where Flow itself expects it (yyyy-mm-dd): the usual day this month, or the invoice's date plus its terms. Null unless the caller passes `paymentTermsDays` (the app has no per-document terms, so only fixtures do). */
   expected_on: string | null;
   /** Whole days past `expected_on` (0 when it is not late yet). */
   late_days: number;
@@ -59,9 +59,6 @@ export type ForecastBuild = {
   /** How many items the owner changed this month (the reset line's count). */
   changed: number;
 };
-
-/** An open invoice or bill counts as due this many days after its date (the app has no per-document terms). */
-const PAYMENT_TERMS_DAYS = 30;
 
 const DAY_MS = 86_400_000;
 
@@ -110,9 +107,12 @@ export function buildMonthForecast(input: {
   expected: ExpectedMonths | null;
   unpaid: readonly UnpaidRow[];
   overrides: readonly ForecastOverrideRow[];
+  /** Sample data only: when set, dates are expected (usual day, or document date plus these days) and late items are marked. */
+  paymentTermsDays?: number;
 }): ForecastBuild {
   const overrides = new Map(input.overrides.map((row) => [row.item_key, row] as const));
-  const today = input.expected?.today ?? null;
+  const terms = input.paymentTermsDays ?? null;
+  const today = terms == null ? null : input.expected?.today ?? null;
   const raw: Omit<ForecastItem, "minor" | "due_on" | "moved_out" | "overridden" | "late_days">[] = [];
 
   for (const party of input.expected?.recurring ?? []) {
@@ -144,7 +144,7 @@ export function buildMonthForecast(input: {
       usual,
       day: null,
       description: row.description,
-      expected_on: today != null ? addDays(row.doc_date, PAYMENT_TERMS_DAYS) : null,
+      expected_on: terms != null ? addDays(row.doc_date, terms) : null,
     });
   }
 

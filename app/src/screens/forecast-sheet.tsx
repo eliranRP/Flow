@@ -27,7 +27,7 @@ export function groupThousands(text: string): string {
 function subtitle(item: ForecastItem): string {
   const what = itemWhat(item);
   if (item.late_days > 0) return `${what} · באיחור ${item.late_days === 1 ? "יום" : `${String(item.late_days)} ימים`}`;
-  if (item.kind === "invoice") return item.expected_on != null ? `${what} · לתשלום עד ${dayMonth(item.expected_on)}` : what;
+  if (item.kind === "invoice") return `${what} · ${item.expected_on != null ? `לתשלום עד ${dayMonth(item.expected_on)}` : item.direction === "income" ? "לגבייה" : "לתשלום"}`;
   return item.day != null ? `${what} · ב־${String(item.day)}` : what;
 }
 
