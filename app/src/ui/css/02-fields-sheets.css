@@ -464,9 +464,9 @@
   border-radius: var(--radius-field-btn);
   background: var(--color-tint);
   color: var(--color-accent-text);
-  font-size: var(--type-chip-size);
+  font-size: var(--type-caption-size);
   font-weight: var(--type-chip-weight);
-  line-height: var(--type-chip-line);
+  line-height: var(--type-caption-line);
   white-space: nowrap;
 }
 
