@@ -43,8 +43,18 @@ Raw = mismatch, masked = text-masked mismatch (percent). Pass = masked under 3% 
 | profit | ProfitByCategory | /e2e/company-profit?by=category | 2.6 | 0.2 | 2.6 | 0.2 | no | FLOW-140c2 |
 | profit | ProfitProject | /e2e/project-profit | 4.9 | 0.2 | 4.8 | 0.2 | yes | FLOW-140c1/FLOW-920 |
 | profit | ProfitMonth | /e2e/project-month-profit | 5.0 | 0.5 | 5.0 | 0.4 | yes | FLOW-140c1/FLOW-920 |
-| projects | Projects | /e2e/projects | 9.5 | 4.9 | 7.0 | 2.7 | no | FLOW-445b |
-| projects | ProjectFlip | /e2e/project-detail?preview=1&budget=1 | 18.2 | 12.3 | 12.2 | 6.5 | no | FLOW-445b |
+| projects | Projects | /e2e/projects | 5.0 | 0.3 | 4.9 | 0.3 | yes | FLOW-445b |
+| projects | ProjectsFinished | /e2e/projects?finished=1 | 5.0 | 0.3 | 4.9 | 0.3 | yes | FLOW-445b |
+| projects | ProjectFlip | /e2e/project-detail?preview=1&budget=1 | 5.4 | 1.2 | 4.6 | 0.4 | yes | FLOW-445b |
+| projects | ProjectRental | /e2e/project-detail?preview=1&kind=rental | 6.6 | 2.2 | 5.7 | 1.4 | yes | FLOW-445b |
+| projects | ProjectClient | /e2e/project-detail?preview=1&kind=client | 5.8 | 1.4 | 4.9 | 0.6 | yes | FLOW-445b |
+| projects | ProjectNewCreated | /e2e/project-detail?preview=1&kind=new | 3.8 | 1.1 | 3.0 | 0.3 | yes | FLOW-445b |
+| projects | ProjectNewSheet | /e2e/projects?new=project | 3.1 | 0.7 | 3.2 | 0.7 | yes | FLOW-445b |
+| projects | ProjectMenu | /e2e/project-detail?preview=1&budget=1&sheet=menu | 4.6 | 0.1 | 4.8 | 0.2 | yes | FLOW-445b |
+| projects | ProjectMenuDeletable | /e2e/project-detail?preview=1&budget=1&sheet=menu&deletable=1 | 3.4 | 0.1 | 3.5 | 0.1 | yes | FLOW-445b (decision 1 commit) |
+| projects | ProjectFinishConfirm | /e2e/project-detail?preview=1&budget=1&sheet=finish | 7.4 | 1.4 | 7.5 | 1.4 | yes | FLOW-445b |
+| states | StatesProjectsLoading | /projects?preview=loading | 0.4 | 0.2 | 0.4 | 0.2 | yes | FLOW-445b |
+| states | StatesProjectsEmpty | /projects?preview=empty | 1.1 | 0.3 | 1.1 | 0.3 | yes | FLOW-445b |
 | recurring | Recurring | /e2e/recurring | 8.8 | 3.0 | 8.2 | 2.5 | no (3.0 is not under 3) | FLOW-447b |
 | review | ReviewList | /review/all?preview=1&e2e=list | 8.5 | 2.5 | 8.4 | 2.5 | yes | FLOW-365b |
 | settings | Settings | /e2e/settings?board=1 | 5.0 | 2.9 | 5.0 | 2.9 | yes | FLOW-512b |
