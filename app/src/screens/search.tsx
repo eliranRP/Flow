@@ -16,6 +16,7 @@ import {
   searchCountWords,
   searchRowAmount,
   searchRowTotals,
+  searchMonthTitle,
   searchMonthTotals,
   searchRowTitle,
   searchTotalText,
@@ -337,6 +338,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
           monthTotals={monthTotals}
           cents
           signedTotal
+          monthTitle={(year, month) => searchMonthTitle(year, month, checkNow)}
           renderRow={(row) => (
             <ListRow
               variant="statement"

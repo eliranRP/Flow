@@ -25,6 +25,7 @@ export function groupByMonth<T>(
   dateOf: (row: T) => string,
   amountOf: (row: T) => MonthAmount,
   cents = false,
+  titleOf: (year: number, monthIndex: number) => string = monthTitle,
 ): MonthGroup<T>[] | null {
   const groups: MonthGroup<T>[] = [];
   const seen = new Set<string>();
@@ -36,7 +37,7 @@ export function groupByMonth<T>(
     if (group?.key !== key) {
       if (seen.has(key)) return null;
       seen.add(key);
-      group = { key, title: monthTitle(Number(match[1]), Number(match[2]) - 1), rows: [], totals: [] };
+      group = { key, title: titleOf(Number(match[1]), Number(match[2]) - 1), rows: [], totals: [] };
       groups.push(group);
     }
     group.rows.push(row);

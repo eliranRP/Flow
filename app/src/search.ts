@@ -6,6 +6,7 @@ import { loadReadSchemas } from "./load-read-schemas";
 import { allTime, periodFromSearch, periodSearch, type PeriodChoice } from "./period";
 import { useHomePreview } from "./preview";
 import { waitForAccessToken } from "./wait-for-session";
+import { HEBREW_MONTHS, israelToday, monthTitle } from "./ui/date-math";
 import type { MonthTotal } from "./ui/month-groups";
 
 /**
@@ -323,9 +324,14 @@ export function searchMonthTotals(months: SearchPage["months"]): Map<string, Mon
   return byMonth;
 }
 
-/** "תנועה אחת" or "N תנועות". */
+/** "1 תנועה" or "N תנועות". */
 export function searchCountWords(count: number): string {
-  return count === 1 ? "תנועה אחת" : `${String(count)} תנועות`;
+  return count === 1 ? "1 תנועה" : `${String(count)} תנועות`;
+}
+
+/** The results' month titles: the current year's months drop the year ("אוקטובר"), as the board draws them. */
+export function searchMonthTitle(year: number, monthIndex: number, now: Date): string {
+  return year === Number(israelToday(now).slice(0, 4)) ? (HEBREW_MONTHS[monthIndex] ?? "") : monthTitle(year, monthIndex);
 }
 
 /**

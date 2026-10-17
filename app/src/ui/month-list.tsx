@@ -18,6 +18,8 @@ type MonthListProps<T> = {
   days?: boolean;
   /** The rows show cents, so the month totals add exact minor units and show cents too. FLOW-305. */
   cents?: boolean;
+  /** A month's title (default: its name and year). */
+  monthTitle?: (year: number, monthIndex: number) => string;
   /** The list is titled as a cost (a category's lines): expense totals carry no minus (DESIGN-RULES §3.7, FLOW-339). */
   cost?: boolean;
   /**
@@ -59,9 +61,10 @@ export function MonthList<T>({
   net = false,
   monthTotals,
   signedTotal = false,
+  monthTitle,
 }: MonthListProps<T>) {
   const baseId = useId();
-  const groups = groupByMonth(rows, dateOf, amountOf, cents);
+  const groups = groupByMonth(rows, dateOf, amountOf, cents, monthTitle);
   if (groups == null) {
     const first = rows[0];
     const flat: MonthGroup<T> = { key: first == null ? "" : monthKey(dateOf(first)), title: "", rows: [...rows], totals: [] };
