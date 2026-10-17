@@ -171,10 +171,10 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "לאישור", hidden: true })).toBeInTheDocument();
   });
 
-  it("leaves the tab bar off transaction detail", async () => {
+  it("keeps the tab bar on transaction detail, as on the board (LinesDetail)", async () => {
     await renderAt("/transactions/1?preview=1");
     expect(screen.getByRole("heading", { name: "פרטי תנועה" })).toBeInTheDocument();
-    expect(screen.queryByRole("navigation", { name: "ניווט ראשי" })).not.toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "ניווט ראשי" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "חזרה לבית" })).not.toBeInTheDocument();
   });
 
