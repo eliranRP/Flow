@@ -342,11 +342,6 @@
   border-block-end: 1px solid var(--color-tint-strong);
 }
 
-/* FLOW-369: the form's first field sits 12px under the head's rule (board), not the sheet's 16px. */
-.ui-add-entry .ui-sheet-body {
-  margin-top: var(--space-3);
-}
-
 /* FLOW-369: the form's body ends at board y 751 (its last row peeks above the footer), so the footer sits at 767 (the footer slot adds 16px above the save). */
 .ui-add-entry .ui-sheet-body {
   max-height: 609px;

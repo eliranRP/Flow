@@ -412,10 +412,13 @@
 }
 
 .ui-choice-sheet .ui-radio-row {
+  border-bottom: 0;
+}
+
+.ui-choice-sheet .ui-radio-row {
   min-block-size: 56px;
   padding-block: var(--space-2);
   padding-inline: var(--space-inset-row);
-  border: 0;
   border-radius: var(--radius-toast);
   gap: var(--space-3);
 }
