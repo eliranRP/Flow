@@ -175,6 +175,8 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.equal(Number(/const STORY_SHARDS = (\d+);/.exec(storySpec)?.[1]) % 7, 0);
   assert.match(job("check-storybook"), /run: pnpm test:storybook\n/);
   assert.match(job("check-perf"), /pnpm --filter @flow\/app test:perf\n/);
+  // The speed test's Playwright config builds its own dist (playwright.perf.config.ts), so check-perf builds nothing else.
+  assert.equal(job("check-perf").includes("pnpm build"), false);
   assert.equal(job("check-storybook").includes("test:perf"), false);
   assert.equal(ci.includes("check-unit"), false);
   assert.match(
