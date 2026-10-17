@@ -470,6 +470,11 @@ html[data-kb="open"] .ui-sheet-body {
   font-weight: var(--type-btn-2-weight);
 }
 
+/* FLOW-374 (board): the band's figures sit 4px in from the band's gutter on both sides, as the board draws them. */
+.ui-home-figures {
+  padding-inline: var(--space-1);
+}
+
 /* FLOW-374 (board): Home's two rows. The amount is LTR and sits at the chip's side (the cell's left edge),
    16/500, as the board draws it; the label keeps the row's end. Scoped here: other bands keep their rows. */
 .ui-band-rows .ui-band-row-link {

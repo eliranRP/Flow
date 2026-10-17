@@ -78,6 +78,17 @@ export function DevHome() {
  * as a month with nothing waiting does. FLOW-374: `?scrolled=1` scrolls the page to the board's 328px, as the
  * FlowScrolled frame is.
  */
+/** The usd-loss board's changed charge: an insurance charge up 27% (the board's $1,240 against its usual $980). */
+const SAMPLE_USD_CHANGES = SAMPLE_RECURRING_CHANGES.slice(0, 1).map((change) => ({
+  ...change,
+  supplier_name: "ביטוח הנכס",
+  category_name: "ביטוח הנכס",
+  currency: "USD",
+  amount_minor: -124_000n,
+  typical_amount_minor: -98_000n,
+  change_percent: 27,
+}));
+
 export function DevCash() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -106,11 +117,13 @@ export function DevCash() {
       attention={params.get("box") === "none" ? [] : attentionRows({
         pending: 7,
         unpaidCount: 3,
-        unpaidGross: 460_000n,
+        // The usd-loss board frame's invoices and its charge are in dollars (the board's $21,300 and $1,240).
+        unpaidGross: usdLoss ? 2_130_000n : 460_000n,
+        currency: usdLoss ? "USD" : "ILS",
         // FLOW-415: `?recurring=1` adds the late bills and a charge above its usual amount.
         missingCount: params.get("recurring") === "1" ? SAMPLE_MISSING_BILLS.length : 0,
         missingTo: "/e2e/recurring",
-        changes: params.get("recurring") === "1" ? chargeChangeViews(SAMPLE_RECURRING_CHANGES, "?preview=1") : [],
+        changes: params.get("recurring") === "1" ? chargeChangeViews(usdLoss ? SAMPLE_USD_CHANGES : SAMPLE_RECURRING_CHANGES, "?preview=1") : [],
         search: "?preview=1",
       })}
       sameDay={usdLoss ? (past ? null : sampleCashUsdToDay()) : sampleCashToDay()}

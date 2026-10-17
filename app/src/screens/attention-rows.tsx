@@ -1,4 +1,4 @@
-import { formatAmountText, formatIls } from "@flow/shared";
+import { formatAmountText } from "@flow/shared";
 import { missingBillsTitle, type ChargeChangeView } from "../forecast";
 import type { BannerRow } from "../ui/banner";
 import { HintParts } from "../ui/hint-parts";
@@ -19,6 +19,7 @@ export function attentionRows({
   pending,
   unpaidCount,
   unpaidGross,
+  currency = "ILS",
   unpaidOther = [],
   missingCount = 0,
   missingIncome = 0,
@@ -29,6 +30,8 @@ export function attentionRows({
   pending: number;
   unpaidCount: number;
   unpaidGross: bigint;
+  /** The company's base currency for the open invoices' total (ILS when not given). */
+  currency?: string;
   unpaidOther?: { currency: string; minor: bigint }[];
   /** Late bills (expenses). */
   missingCount?: number;
@@ -54,11 +57,11 @@ export function attentionRows({
       icon: <DocumentIcon size={24} stroke={1.9} />,
       title: unpaidCount === 1 ? "חשבונית פתוחה אחת" : <><bdi dir="ltr">{String(unpaidCount)}</bdi> חשבוניות פתוחות</>,
       hint: unpaidOther.length === 0 ? (
-        <><bdi dir="ltr">{formatIls(unpaidGross)}</bdi> · לגבייה</>
+        <><bdi dir="ltr">{formatAmountText(unpaidGross, currency)}</bdi> · לגבייה</>
       ) : (
         <>
           {[
-            ...(unpaidGross !== 0n ? [formatIls(unpaidGross)] : []),
+            ...(unpaidGross !== 0n ? [formatAmountText(unpaidGross, currency)] : []),
             ...unpaidOther.map((total) => formatAmountText(total.minor, total.currency)),
           ].map((text) => (
             <span key={text}><bdi dir="ltr">{text}</bdi> · </span>

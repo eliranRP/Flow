@@ -446,7 +446,6 @@ export function CashHome({
         selectedKey={monthKey}
         firstKey={firstKey}
         base={base}
-        search={search}
         yearMonths={drawerYearMonths}
         onPick={(key) => {
           pendingMonth.current = key;
