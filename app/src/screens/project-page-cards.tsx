@@ -26,6 +26,7 @@ function Figures({ figures, detail = true }: { figures: Figure[]; detail?: boole
 /** The project page's profit card (board): this month's profit and the profit since the start, each with its line. */
 export function ProjectProfitCard({
   monthName,
+  monthLabel,
   month,
   since,
   sinceHint,
@@ -34,6 +35,8 @@ export function ProjectProfitCard({
   extra,
 }: {
   monthName: string;
+  /** Read in full by a screen reader: "רווח באוקטובר $… – פירוט". */
+  monthLabel?: string;
   month: Figure[];
   since: Figure[] | null;
   sinceHint: string;
@@ -45,7 +48,7 @@ export function ProjectProfitCard({
   return (
     <Card className="ui-project-card ui-project-profit-card">
       <List>
-        <ListRow variant="item" title={`רווח ${monthName}`} hint="הכנסות פחות הוצאות שנספרות ברווח" meta={<Figures figures={month} />} href={monthHref} chevron />
+        <ListRow variant="item" title={`רווח ${monthName}`} hint="הכנסות פחות הוצאות שנספרות ברווח" meta={<Figures figures={month} />} href={monthHref} label={monthLabel} chevron />
         {since == null ? null : (
           <ListRow variant="item" title="רווח מתחילת הפרויקט" hint={sinceHint} meta={<Figures figures={since} />} href={sinceHref} chevron />
         )}

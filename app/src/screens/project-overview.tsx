@@ -1,7 +1,6 @@
 import { formatAmountText, type ProjectDetail } from "@flow/shared";
 import { projectExpenseMinor, type ProjectCurrencyRow } from "../by-currency";
 import { CashRows, cashAmountsText, type CashRow } from "../ui/cash-rows";
-import type { ProjectInvestment } from "./project-investment-data";
 
 type Project = NonNullable<ProjectDetail>;
 
@@ -14,15 +13,6 @@ export type ProjectProfitLinks = {
   expenses: string;
   months: string;
 };
-
-/** "הון עצמי בנכס ₪850,000"; "" when there is data but no equity yet; null with nothing to show (FLOW-340 C). */
-export function investmentFigure(data: ProjectInvestment): string | null {
-  const figures = data.figures;
-  if (data.isOverhead || figures == null) return null;
-  if (figures.currentEquityMinor != null) return `הון עצמי בנכס ${formatAmountText(figures.currentEquityMinor, figures.currency)}`;
-  const entered = figures.purchaseMinor != null || figures.valueMinor != null || figures.arvMinor != null || figures.rehabMinor !== 0n;
-  return entered ? "" : null;
-}
 
 /** The loans the project still owes on; a paid-off or closed loan lives on the loans page only. */
 export function openLoans(project: Project): NonNullable<Project["loans"]> {

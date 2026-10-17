@@ -198,6 +198,7 @@ export function ProjectCashOverview({
         {profitRow == null ? null : (
           <ProjectProfitCard
             monthName={cashMonthName(key ?? "", now)}
+            monthLabel={profitRow.name}
             month={profitRow.amounts}
             since={sinceProfit}
             sinceHint={sinceHint}

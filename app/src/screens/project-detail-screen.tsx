@@ -40,7 +40,7 @@ import { useProjectGroups, type ProjectGroups } from "./project-group-sheets";
 import { ProjectInvestmentSection, type ProjectInvestment } from "./project-investment";
 import { ProjectCategories } from "./project-categories";
 import { ProjectExpectedMonths } from "./project-expected-months";
-import { investmentFigure, openLoans, PROJECT_RECENT_CAP, ProjectProfitRows } from "./project-overview";
+import { PROJECT_RECENT_CAP, ProjectProfitRows } from "./project-overview";
 import { ProjectTransactions } from "./project-transactions";
 import { ProjectCashOverview } from "./project-cash-screens";
 import { ProjectFormSheet } from "./project-form-sheet";
@@ -342,10 +342,8 @@ export function ProjectDetailScreen({
   const bandSign = profitSign(profitRows.map(({ profit }) => profit));
   const bandWord = bandSign === "mixed" ? "רווח והפסד" : bandSign === "loss" ? "הפסד" : "רווח";
   const stateLine = projectStateLine(project);
-  const loans = openLoans(project);
   const projectSearch = withParams(periodQuery, { project: project.id });
   const investmentData = sampleInvestment ?? toProjectInvestment(project);
-  const investmentShown = investmentFigure(investmentData) != null;
   const overhead = (
     <Toggle
       label="רווח אחרי הוצאות כלליות"

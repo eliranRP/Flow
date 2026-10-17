@@ -186,6 +186,7 @@ describe("project overhead hero", () => {
     expect(screen.queryByText("₪100,000", { selector: ".t-display" })).not.toBeInTheDocument();
     // FLOW-340 C: the switch lives in the ⋯ menu.
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+    fireEvent.click(screen.getByRole("button", { name: /עריכת פרטים/ }));
     expect(screen.getByText("החלק בהוצאות כלליות ₪40,000")).toBeInTheDocument();
   });
 
@@ -220,6 +221,7 @@ describe("project overhead hero", () => {
     // The loading screen has its own עוד; wait for the page's rows first.
     await screen.findByRole("link", { name: /^הכנסות/ });
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+    fireEvent.click(screen.getByRole("button", { name: /עריכת פרטים/ }));
     const toggle = await screen.findByRole("switch", { name: "רווח אחרי הוצאות כלליות" });
     expect(toggle).not.toBeChecked();
     expect(screen.queryByText("₪60,000")).not.toBeInTheDocument();
@@ -255,6 +257,7 @@ describe("project overhead hero", () => {
     // The loading screen has its own עוד; wait for the page's rows first.
     await screen.findByRole("link", { name: /^הכנסות/ });
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+    fireEvent.click(screen.getByRole("button", { name: /עריכת פרטים/ }));
     const toggle = await screen.findByRole("switch", { name: "רווח אחרי הוצאות כלליות" });
     fireEvent.click(toggle);
     await waitFor(() => {

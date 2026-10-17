@@ -285,7 +285,7 @@ export const ProjectMenu: Story = {
   },
 };
 
-/** FLOW-360 A: the ⋯ menu's קבוצה row, then its picker and the new group sheet. */
+/** FLOW-360 A: the edit sheet's קבוצה row (opened from the ⋯ menu), then its picker and the new group sheet. */
 const sampleGroups = {
   groups: [{ id: "g1", name: "בניין לדוגמה" }, { id: "g2", name: "מתחם לדוגמה" }],
   currentId: null,
@@ -301,17 +301,23 @@ const groupedRender = (currentId: string | null) => () => (
     />
   </StoryRoute>
 );
+const openEditSheet: NonNullable<Story["play"]> = async (context) => {
+  await ProjectMenu.play?.(context);
+  await userEvent.click(await storyBody(context.canvasElement).findByRole("button", { name: /^עריכת פרטים/ }));
+  await storyBody(context.canvasElement).findByRole("dialog", { name: "עריכת פרויקט" });
+};
+
 export const ProjectMenuGroup: Story = {
-  name: "Project, ⋯ menu with קבוצה",
+  name: "Project, edit sheet with קבוצה",
   render: groupedRender(null),
-  play: ProjectMenu.play,
+  play: openEditSheet,
 };
 
 export const ProjectGroupPicker: Story = {
   name: "Project, group picker",
   render: groupedRender("g1"),
   play: async (context) => {
-    await ProjectMenu.play?.(context);
+    await openEditSheet(context);
     await userEvent.click(await storyBody(context.canvasElement).findByRole("button", { name: /קבוצה/ }));
     await storyBody(context.canvasElement).findByRole("radiogroup", { name: "קבוצה" });
   },
