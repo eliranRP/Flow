@@ -366,9 +366,14 @@
 
 /* The separator is its own isolated run, so its spaces stay on both sides of the dot beside a Latin name. */
 .ui-statement-details .ui-hint-sep {
-  direction: rtl;
+  direction: ltr;
   unicode-bidi: isolate;
-  margin-inline: var(--space-1);
+  white-space: pre;
+}
+
+/* The board shortens only the last part (the category); the date and the project stay whole. */
+.ui-statement-details > .ui-hint-part:not(:last-child, .ui-hint-part-keep) {
+  flex-shrink: 0;
 }
 
 /* A state to act on stays on the line: it wraps only below 3em, and shortens with "…" instead. */
