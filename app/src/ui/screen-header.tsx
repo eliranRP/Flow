@@ -19,7 +19,7 @@ type HeaderChrome = {
   leading?: ReactNode;
   /** Sits on the end of the bar. */
   trailing?: ReactNode;
-  /** A stacked page's own control under the title, on the start side (the breakdown's period pill, FLOW-334). */
+  /** A stacked page's own control under the title, on the start side. */
   below?: ReactNode;
   /** A stacked title's own controls at the end of its line (a month page's chevrons, FLOW-362). */
   titleAside?: ReactNode;

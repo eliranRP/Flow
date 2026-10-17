@@ -43,8 +43,6 @@ const CashMonthScreen = lazy(() => screenLoaders.cash().then((m) => ({ default: 
 const CashLinesScreen = lazy(() => screenLoaders.cashLines().then((m) => ({ default: m.CashLinesScreen })));
 const CashHistoryScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ default: m.CashHistoryScreen })));
 const CashYearScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ default: m.CashYearScreen })));
-const BreakdownScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownScreen })));
-const BreakdownLinesScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownLinesScreen })));
 const ForecastScreen = lazy(() => screenLoaders.forecast().then((m) => ({ default: m.ForecastScreen })));
 const RecurringScreen = lazy(() => screenLoaders.recurring().then((m) => ({ default: m.RecurringScreen })));
 const RecurringChargeScreen = lazy(() => screenLoaders.recurringCharge().then((m) => ({ default: m.RecurringChargeScreen })));
@@ -58,9 +56,6 @@ const InvitesScreen = lazy(() => screenLoaders.invites().then((m) => ({ default:
  * Dev and e2e fixtures. Every use sits behind import.meta.env.DEV, so a production build drops
  * them; the pure mark lets the bundler drop the lazy() calls too.
  */
-const devBreakdown = () => import("./dev/breakdown-sample");
-const DevBreakdownGate = /* @__PURE__ */ lazy(() => devBreakdown().then((m) => ({ default: m.DevBreakdownGate })));
-const DevBreakdownLinesGate = /* @__PURE__ */ lazy(() => devBreakdown().then((m) => ({ default: m.DevBreakdownLinesGate })));
 const DevTransactionGate = /* @__PURE__ */ lazy(() => import("./dev/routes/transaction").then((m) => ({ default: m.DevTransactionGate })));
 const DevRoutes = /* @__PURE__ */ lazy(() => import("./dev/routes/render").then((m) => ({ default: m.DevRoutes })));
 const devFixtures = () => import("./dev/routes/render");
@@ -69,7 +64,7 @@ const devFixtures = () => import("./dev/routes/render");
 // chain of requests there. In dev every screen and fixture is fetched at start, as before FLOW-804.
 if (import.meta.env.DEV) {
   // The e2e sweeps wait for this mark, so a screen or sheet never mounts between their look and their tap.
-  void Promise.all([preloadScreens(), devFixtures().then((m) => m.preloadDevFixtures()), devBreakdown()])
+  void Promise.all([preloadScreens(), devFixtures().then((m) => m.preloadDevFixtures())])
     .catch(() => undefined)
     .then(() => {
       document.documentElement.dataset.screensLoaded = "1";
@@ -189,10 +184,6 @@ function AppRoutes() {
                 <Route path="cash/:month" element={<CashMonthScreen />} />
                 <Route path="cash/:month/:side/:currency" element={<CashLinesScreen />} />
                 {ProjectRoutes()}
-                {/* FLOW-334: on the dev server ?preview=1 shows sample figures here; a build keeps the screen. */}
-                <Route path="flow/:direction" element={import.meta.env.DEV ? <DevBreakdownGate /> : <BreakdownScreen />} />
-                <Route path="flow/:direction/excluded/:currency" element={import.meta.env.DEV ? <DevBreakdownLinesGate excluded /> : <BreakdownLinesScreen excluded />} />
-                <Route path="flow/:direction/:groupBy/:currency/:groupKey" element={import.meta.env.DEV ? <DevBreakdownLinesGate /> : <BreakdownLinesScreen />} />
                 <Route element={<ReviewWithSheet />}>
                   <Route path="review" element={null} />
                   <Route path="review/all" element={null} />

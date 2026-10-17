@@ -19,7 +19,7 @@ export type TabSection = "home" | "projects" | "loans" | "recurring";
  * on the board; the loans page is the loans tab's (FLOW-364).
  */
 export function tabSection(pathname: string): TabSection | null {
-  if (pathname === "/" || pathname.startsWith("/unpaid") || pathname.startsWith("/flow/")) return "home";
+  if (pathname === "/" || pathname.startsWith("/unpaid")) return "home";
   // The profit view and the cash months open from Home; the review queue opens from Home's box.
   if (pathname === "/profit" || pathname.startsWith("/cash/") || pathname.startsWith("/review") || pathname.startsWith("/settings")) return "home";
   if (pathname.startsWith("/projects")) return "projects";

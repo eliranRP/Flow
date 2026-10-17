@@ -71,7 +71,7 @@ export function groupByKey<T>(
     group.rows.push(row);
     addTo(group.totals, amountOf(row), cents);
   }
-  // The "" group (no project on שויכו היום) goes last, as unassigned does on the breakdown.
+  // The "" group (no project on שויכו היום) goes last.
   const list = [...groups.values()].sort((a, b) => Number(a.key === "") - Number(b.key === ""));
   for (const group of list) group.totals.sort(byCurrency);
   return list;

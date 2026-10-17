@@ -45,7 +45,7 @@ function signedText(minor: bigint, currency: string): string {
 }
 
 function countWord(count: number): string {
-  return count === 1 ? "תנועה אחת" : `${String(count)} תנועות`;
+  return `${String(count)} ${count === 1 ? "תנועה" : "תנועות"}`;
 }
 
 /** `dd/mm` of an ISO date. */

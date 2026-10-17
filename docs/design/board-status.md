@@ -40,6 +40,7 @@ Raw = mismatch, masked = text-masked mismatch (percent). Pass = masked under 3% 
 | onboarding | Onboarding | /e2e/setup/welcome | 27.6 | 16.2 | 8.1 | 4.0 | no | FLOW-514b |
 | onboarding | OnboardingConnect | /e2e/setup/connect | 21.1 | 16.6 | 22.8 | 14.5 | no | FLOW-514b |
 | onboarding | OnboardingSkip | /e2e/setup/skip | 7.5 | 4.6 | 9.4 | 5.9 | no | FLOW-514b |
+| profit | ProfitByCategory | /e2e/company-profit?by=category | 2.6 | 0.2 | 2.6 | 0.2 | no | FLOW-140c2 |
 | profit | ProfitProject | /e2e/project-profit | 9.8 | 4.2 | 9.8 | 4.1 | no | FLOW-140c1/FLOW-920 |
 | profit | ProfitMonth | /e2e/project-month-profit | 11.6 | 4.8 | 10.1 | 3.9 | no | FLOW-140c1/FLOW-920 |
 | projects | Projects | /e2e/projects | 9.5 | 4.9 | 7.0 | 2.7 | no | FLOW-445b |

@@ -115,12 +115,6 @@
 /cash/:month/:side/:currency/ /cash/:month/:side/:currency 301
 /cash/:month /app-shell 200
 /cash/:month/ /cash/:month 301
-/flow/:direction/excluded/:currency /app-shell 200
-/flow/:direction/excluded/:currency/ /flow/:direction/excluded/:currency 301
-/flow/:direction/:groupBy/:currency/:groupKey /app-shell 200
-/flow/:direction/:groupBy/:currency/:groupKey/ /flow/:direction/:groupBy/:currency/:groupKey 301
-/flow/:direction /app-shell 200
-/flow/:direction/ /flow/:direction 301
 /transactions/:transactionId/split-category /app-shell 200
 /transactions/:transactionId/split-category/ /transactions/:transactionId/split-category 301
 /transactions/:transactionId /app-shell 200

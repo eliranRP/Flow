@@ -185,17 +185,6 @@
   margin: 0;
 }
 
-/* Rows beside the counted groups: the waiting count and the kept-out lines read quieter. */
-.ui-breakdown-quiet .ui-row-title,
-.ui-breakdown-quiet .t-amount {
-  color: var(--color-text-secondary);
-}
-
-/* Groups from the previous grouping or period while the new ones load. */
-.ui-breakdown-stale {
-  opacity: 0.6;
-}
-
 .ui-breakdown-hint {
   margin: var(--space-1) 0 0;
   color: var(--color-text-secondary);

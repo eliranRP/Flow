@@ -73,6 +73,25 @@ describe("CompanyProfitScreen (FLOW-140c1)", () => {
     expect(income - expense).toBe(headProfit());
   });
 
+  it("category rows run by size across income and expense, with the project count only when above one", () => {
+    renderPage(COMPANY_PROFIT_SAMPLE, "/profit?by=category");
+    const rows = [...document.querySelectorAll(".ui-cp-list .ui-cp-row")];
+    const sizes = rows.map((row) => {
+      const amount = rowAmount(row);
+      return amount < 0n ? -amount : amount;
+    });
+    expect(sizes.some((_, index) => rowAmount(rows[index] as Element) > 0n)).toBe(true);
+    expect(sizes.some((_, index) => rowAmount(rows[index] as Element) < 0n)).toBe(true);
+    expect(sizes.every((size, index) => index === 0 || (sizes[index - 1] ?? 0n) >= size)).toBe(true);
+    const metas = rows.map((row) => row.querySelector(".ui-cp-meta")?.textContent ?? "");
+    expect(metas.some((text) => text.includes("פרויקטים"))).toBe(true);
+    expect(metas.some((text) => /^1 תנועה$/.test(text))).toBe(true);
+    for (const text of metas) {
+      const match = /(\d+) פרויקטים/.exec(text);
+      if (match) expect(Number(match[1])).toBeGreaterThan(1);
+    }
+  });
+
   it("shows a loss with the minus sign and the loss colour", () => {
     renderPage();
     expect(headProfit()).toBeLessThan(0n);

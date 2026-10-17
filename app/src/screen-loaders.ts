@@ -28,7 +28,6 @@ export const screenLoaders = {
   assistant: () => import("./screens/assistant-settings"),
   notifications: () => import("./screens/notifications-screen"),
   categories: () => import("./screens/categories-screen"),
-  breakdown: () => import("./screens/breakdown"),
   cash: () => import("./screens/cash-screens"),
   cashLines: () => import("./screens/cash-lines-screen"),
   cashHistory: () => import("./screens/cash-history"),
