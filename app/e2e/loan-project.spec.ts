@@ -118,7 +118,8 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
   }
 
   await page.goto("/loans");
-  await page.getByRole("button", { name: "+ הלוואה חדשה", exact: true }).click();
+  // An empty list offers הוספת הלוואה in place of the header's + הלוואה חדשה (the board's StatesLoansEmpty).
+  await page.getByRole("button", { name: /^(\+ הלוואה חדשה|הוספת הלוואה)$/ }).first().click();
   const sheet = page.getByRole("dialog");
   await sheet.getByLabel("מלווה").fill(lender);
   await sheet.getByLabel("סכום מקורי").fill("100000");

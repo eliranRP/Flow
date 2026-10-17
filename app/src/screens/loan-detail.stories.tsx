@@ -114,11 +114,12 @@ export const PartSheet: Story = {
 };
 
 export const RateSheet: Story = {
-  name: "Rate change sheet",
+  name: "Rate sheet",
   ...loan("loan-bridge"),
   play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button", { name: /^מ־01\/09\/2026/ }));
-    await expect(await bodyOf(canvasElement).findByRole("dialog", { name: "שינוי ריבית" })).toBeInTheDocument();
+    // The sample loans have no rate change (the board's), so the sheet opens from the terms card's ריבית row.
+    await userEvent.click(within(canvasElement).getByRole("button", { name: /^ריבית 10\.5%/ }));
+    await expect(await bodyOf(canvasElement).findByRole("dialog", { name: "קביעת ריבית" })).toBeInTheDocument();
   },
 };
 

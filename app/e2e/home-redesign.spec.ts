@@ -66,6 +66,8 @@ for (const width of [390, 320]) {
     await page.goto("/e2e/cash?preview=1&scrolled=1&recurring=1");
     const bar = page.locator(".ui-compact-bar-band");
     await expect(bar).toBeVisible();
+    // The bar slides in: measure once it has arrived (CI once read it mid-slide, 6px above the top).
+    await bar.evaluate((node) => Promise.all(node.getAnimations({ subtree: true }).map((animation) => animation.finished)));
     const barBox = await bar.boundingBox();
     const netBox = await page.locator(".ui-compact-bar-centre-net").boundingBox();
     if (barBox == null || netBox == null) throw new Error("the compact bar or its figure is not drawn");
