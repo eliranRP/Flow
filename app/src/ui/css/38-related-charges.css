@@ -258,6 +258,11 @@
   --sheet-gap: 90px;
 }
 
+/* board: the body starts right under the title, so the panel's gap between blocks comes back out here. */
+.ui-charges-sheet .ui-sheet-body {
+  margin-top: calc(-1 * var(--sheet-gap-y));
+}
+
 /* board: the context line sits 10px higher, so the summary and the rows follow it up. */
 .ui-charges-sheet .ui-charges-context {
   margin-block: calc(var(--space-1) * -2.5) 0;
@@ -283,3 +288,43 @@
   background: var(--color-tint);
 }
 
+/* The pace sheet (how often a party's charge recurs): the board's panel, rows and radio. Only this sheet. */
+.ui-pace-sheet .ui-sheet-body {
+  margin-top: 0;
+}
+
+.ui-pace-sheet .ui-choice-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-1) * 2.5);
+}
+
+/* board: a 56px option (8px above and below its text), 14px sides, 12px between the radio and its
+   text. The title is 16px and the note 12px under it, 2px apart. */
+.ui-pace-sheet .ui-radio-row {
+  min-block-size: 56px;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-toast);
+  gap: var(--space-3);
+}
+
+.ui-pace-sheet .ui-row-text {
+  gap: calc(var(--space-1) / 2);
+}
+
+.ui-pace-sheet .ui-row-title {
+  font-size: var(--type-btn-2-size);
+  line-height: var(--type-btn-line);
+}
+
+.ui-pace-sheet .ui-radio-desc {
+  font-size: calc(var(--type-cents-size) + 1px);
+  line-height: calc(var(--type-cents-size) * 1.45);
+}
+
+.ui-pace-sheet .ui-radio {
+  inline-size: 22px;
+  block-size: 22px;
+  border-width: 2px;
+}
