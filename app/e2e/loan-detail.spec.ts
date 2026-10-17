@@ -14,15 +14,15 @@ function toast(page: Page, text: string | RegExp) {
 test("the list puts paid-off and closed loans under a collapsed group, and a row opens its page", async ({ page }) => {
   await page.goto("/e2e/loans");
   await expect(page.getByRole("button", { name: /^הלוואת גישור, / })).toBeVisible();
-  await expect(page.getByRole("button", { name: /ריבית בלבד · בית דוגמה 9$/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^הלוואת גישור, \$240,000, .*ריבית בלבד$/ })).toBeVisible();
   const group = page.getByRole("button", { name: /^נסגרו · 2/ });
   await expect(group).toHaveAttribute("aria-expanded", "false");
   await expect(page.getByRole("button", { name: /^שטר ישן, / })).toHaveCount(0);
   await group.click();
   await expect(group).toHaveAttribute("aria-expanded", "true");
   // FLOW-139c: a paid-off loan shows its balance as $0, as the board draws it.
-  await expect(page.getByRole("button", { name: /^שטר ישן, \$0, .*נפרעה · 15\/06\/2026$/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^הלוואת ציוד ישנה, \$0, .*נסגרה · 30\/11\/2025$/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^שטר ישן, \$1,240, .*נפרעה 06\/2026$/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^הלוואת ציוד ישנה, \$0, .*נסגרה 11\/2025$/ })).toBeVisible();
 
   await page.getByRole("button", { name: /^הלוואת גישור, / }).click();
   await expect(page).toHaveURL(/\/e2e\/loans\/loan-bridge$/);
@@ -75,7 +75,7 @@ test("marking a loan paid off takes a date from the last payment on, then undo r
   await expect(page).toHaveURL(/\/e2e\/loans$/);
   await expect(page.getByRole("button", { name: /^הלוואת גישור, / })).toHaveCount(0);
   await page.getByRole("button", { name: /^נסגרו · 3/ }).click();
-  await expect(page.getByRole("button", { name: /^הלוואת גישור, .*נסגרה · 01\/10\/2026$/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^הלוואת גישור, .*נסגרה 10\/2026$/ })).toBeVisible();
 });
 
 test("a part's category saves on tap, and undo puts the default back", async ({ page }) => {
@@ -90,7 +90,8 @@ test("a part's category saves on tap, and undo puts the default back", async ({ 
   await expect(toast(page, "עמלות · עלויות סגירה")).toBeVisible();
   await expect(page.getByRole("button", { name: /^עמלות עלויות סגירה/ })).toBeVisible();
   await toast(page, "עמלות · עלויות סגירה").getByRole("button", { name: "ביטול" }).click();
-  await expect(page.getByRole("button", { name: /^עמלות לא נקבעה/ })).toBeVisible();
+  // With no category the part's row shows its profit note, as the year's rows do.
+  await expect(page.getByRole("button", { name: /^עמלות נספר ברווח/ })).toBeVisible();
 });
 
 test("a rate change saves, and undo puts the old rate back", async ({ page }) => {
@@ -101,9 +102,9 @@ test("a rate change saves, and undo puts the old rate back", async ({ page }) =>
   await sheet.getByLabel("ריבית שנתית").fill("12");
   await sheet.getByRole("button", { name: "שמירה" }).click();
   await expect(toast(page, "הריבית עודכנה")).toBeVisible();
-  await expect(page.getByRole("button", { name: /^מ־01\/09\/2026, 12%$/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^מ־01\/09\/2026 12%$/ })).toBeVisible();
   await toast(page, "הריבית עודכנה").getByRole("button", { name: "ביטול" }).click();
-  await expect(page.getByRole("button", { name: /^מ־01\/09\/2026, 11.25%$/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^מ־01\/09\/2026 11\.25%$/ })).toBeVisible();
 });
 
 test("delete names the payments that go back, then ביטול restores the loan", async ({ page }) => {
