@@ -22,7 +22,7 @@ function monthTitle(today: string): string {
 
 /**
  * FLOW-447: the קבועים list. Late bills lead; the rest group by category, in the server's order.
- * `?project=` narrows it to one project (FLOW-424), as the project's own rows link to it.
+ * `?project=` narrows it to one project (FLOW-424); an unknown id shows an empty list.
  */
 export function RecurringScreen({ now = new Date(), sample }: { now?: Date; sample?: readonly ScheduleRow[] } = {}) {
   const [params] = useSearchParams();
