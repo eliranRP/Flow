@@ -318,12 +318,23 @@
   display: flex;
   align-items: center;
   min-block-size: 44px;
-  margin-block: calc(var(--space-4) + var(--space-1) / 2) var(--space-5);
+  margin-block: var(--space-4) var(--space-5);
   padding-block: 0;
+}
+
+.ui-projects-head {
+  padding-block-end: calc(var(--space-1) * 1.5);
+}
+
+.ui-projects-finished-toggle {
+  margin-block-start: calc(var(--space-1) * 1.25);
+  padding-block-start: var(--space-5);
+  color: var(--color-text);
 }
 
 .ui-projects-head h2 {
   font-size: var(--type-section-size);
+  font-weight: var(--type-section-weight);
   line-height: var(--type-title-line);
 }
 
@@ -335,6 +346,10 @@
 
 .ui-projects-head ~ * .ui-row-project {
   padding-block: var(--space-3);
+}
+
+.ui-projects-head ~ * .ui-row-initials {
+  font-weight: var(--type-section-weight);
 }
 
 .ui-projects-head ~ * .ui-row-project .ui-row-text {

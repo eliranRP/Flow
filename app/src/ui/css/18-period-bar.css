@@ -92,6 +92,13 @@
   border-radius: 24px;
   background: var(--band-track);
   color: var(--color-on-band);
+  padding-inline: calc(var(--space-1) / 2);
+}
+
+/* The board's pager chevrons are 20px, not the 24px icon button's default. */
+.ui-month-step-band .ui-month-step-arrow svg {
+  inline-size: var(--space-5);
+  block-size: var(--space-5);
 }
 
 /* No month that way: the chevron stays, dimmed, and does not respond (2026-10-10). */

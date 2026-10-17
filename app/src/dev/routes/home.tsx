@@ -55,7 +55,7 @@ export const devDashboard: Dashboard = {
 
 /**
  * FLOW-413: Home's cash with invented figures (frame b). `?box=none` hides the attention box,
- * as a month with nothing waiting does. FLOW-374: `?scrolled=1` scrolls the page to the board's 328px, as the
+ * as a month with nothing waiting does. FLOW-374: `?scrolled=1` scrolls the page to the board's 330px, as the
  * FlowScrolled frame is.
  */
 /** The usd-loss board's changed charge: an insurance charge up 27% (the board's $1,240 against its usual $980). */
@@ -74,7 +74,7 @@ export function DevCash() {
   const navigate = useNavigate();
   useEffect(() => {
     if (params.get("scrolled") !== "1") return;
-    const frame = requestAnimationFrame(() => { window.scrollTo(0, 328); });
+    const frame = requestAnimationFrame(() => { window.scrollTo(0, 330); });
     return () => { cancelAnimationFrame(frame); };
   }, [params]);
   // FLOW-364: `?state=usd-loss` is the board's negative month in dollars (its past frame with `?month=past`).

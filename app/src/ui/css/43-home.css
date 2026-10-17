@@ -3,9 +3,9 @@
 .ui-home-split {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  margin: var(--space-5) var(--space-4) var(--space-1);
-  padding: var(--space-4);
+  gap: calc(var(--space-3) + var(--space-1) / 2);
+  margin: calc(var(--space-5) - var(--space-1) / 2) var(--space-4) var(--space-1);
+  padding: calc(var(--space-4) + var(--space-1) / 2);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
   background: var(--color-surface);
@@ -14,7 +14,7 @@
 .ui-home-split-title {
   margin: 0;
   font-size: var(--type-section-size);
-  line-height: var(--type-section-line);
+  line-height: var(--type-cents-line);
   font-weight: var(--type-section-weight);
 }
 
@@ -59,13 +59,13 @@
 .ui-home-split-label {
   font-size: var(--type-btn-size);
   font-weight: var(--type-line2-weight);
-  line-height: var(--type-btn-2-line);
+  line-height: var(--type-cents-line);
 }
 
 .ui-home-split-sub {
-  margin-block-start: var(--space-1);
+  margin-block-start: calc(var(--space-1) / 2);
   color: var(--color-text-muted);
-  line-height: var(--type-btn-2-line);
+  line-height: var(--type-cents-line);
   font-size: var(--type-caption-size);
   font-weight: var(--type-caption-weight);
 }
@@ -73,6 +73,11 @@
 .ui-home-split-value {
   font-size: var(--type-btn-size);
   font-weight: var(--type-btn-2-weight);
+}
+
+.ui-home-split-value .t-amount {
+  font-weight: var(--type-btn-2-weight);
+  font-variant-numeric: normal;
 }
 
 .ui-home-split-value.ui-home-split-loss {
@@ -91,7 +96,7 @@
 
 /* FLOW-364 (board): the box is one tint card; its rows are divided lines, 20px in. */
 .ui-home-attention {
-  margin: var(--space-3) var(--space-4) var(--space-4);
+  margin: calc(var(--space-3) - var(--space-1) / 2) var(--space-4) var(--space-4);
   /* FLOW-374 (board): the title sits 9px higher than the 20px inset it had. */
   padding: var(--space-3) 0 0;
   border-radius: var(--radius-card);

@@ -87,7 +87,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  padding-block: var(--space-2);
+  padding-block: calc(var(--space-1) * 1.5);
   padding-inline: var(--pill-pad-inline);
 }
 
@@ -101,7 +101,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  block-size: calc(var(--touch-min) + var(--space-1));
+  block-size: calc(var(--touch-min) + var(--space-2));
   gap: 1px;
   padding: 0;
   border: 0;
@@ -118,14 +118,15 @@
   gap: var(--space-1);
   font-size: var(--type-caption-size);
   font-weight: var(--type-caption-weight);
-  line-height: var(--type-caption-line);
+  line-height: var(--type-cents-line);
   color: var(--color-on-band-secondary);
 }
 
 .ui-compact-bar-centre-net {
   font-size: var(--type-section-size);
   font-weight: var(--type-sheet-weight);
-  line-height: var(--type-section-line);
+  line-height: var(--type-cents-line);
+  font-variant-numeric: normal;
   white-space: nowrap;
 }
 
