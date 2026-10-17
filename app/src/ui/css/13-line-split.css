@@ -314,8 +314,8 @@
 .ui-lsplit-board .ui-lsplit-meta {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
 }
 
 .ui-lsplit-board .ui-lsplit-amount {
@@ -323,7 +323,7 @@
   display: flex;
   align-items: flex-start;
   color: var(--color-text);
-  font-size: var(--type-amount-size);
+  font-size: var(--type-card-size);
   font-weight: var(--type-body-weight);
   line-height: var(--type-card-line);
   text-align: start;
@@ -379,8 +379,14 @@
   display: flex;
   flex: 1 0 auto;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
   padding: var(--space-4);
+}
+
+/* The swipe wrapper carries the card's radius and clips its corners (the board's 16px card). */
+.ui-lsplit-board .ui-swipe-row {
+  border-radius: var(--radius-card-tight);
+  overflow: hidden;
 }
 
 .ui-lsplit-board .ui-lsplit-part {
@@ -388,7 +394,7 @@
   flex-direction: column;
   flex-wrap: nowrap;
   align-items: stretch;
-  gap: var(--space-3);
+  gap: var(--space-2);
   box-sizing: border-box;
   inline-size: 100%;
   padding: var(--space-3) var(--space-inset-row);
@@ -410,7 +416,7 @@
 
 .ui-lsplit-board .ui-lsplit-part-no {
   color: var(--color-text-muted);
-  font-size: var(--type-label-size);
+  font-size: var(--type-hint-size);
   line-height: var(--type-body-line);
 }
 
@@ -447,7 +453,7 @@
   background: var(--color-raised);
   color: var(--color-text);
   font: inherit;
-  font-size: var(--type-body-size);
+  font-size: var(--type-label-size);
   font-weight: var(--type-body-weight);
   text-align: start;
   cursor: pointer;
@@ -462,7 +468,7 @@
 .ui-lsplit-board .ui-lsplit-project {
   overflow: hidden;
   color: inherit;
-  font-size: var(--type-body-size);
+  font-size: var(--type-label-size);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -555,7 +561,7 @@
 .ui-lsplit-board .ui-lsplit-note {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: var(--type-label-size);
+  font-size: var(--type-hint-size);
   line-height: var(--type-body-line);
 }
 
@@ -620,15 +626,15 @@
 .ui-lsplit-rest-label {
   display: block;
   color: var(--color-text-muted);
-  font-size: var(--type-label-size);
+  font-size: var(--type-hint-size);
   line-height: var(--type-body-line);
 }
 
 .ui-lsplit-rest-line {
   display: block;
   overflow: hidden;
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
