@@ -62,7 +62,7 @@ function categoryMeta(category: ListedCategory, lines: number | undefined, subCo
   if (subCount != null) parts.push(`${String(subCount)} תת־קטגוריות`);
   if (category.excluded_from_pnl === true) parts.push("לא נספרת ברווח");
   else if (category.kind === "expense" && countsAsRehab(category)) parts.push("נספרת בשיפוץ");
-  return parts.length === 0 ? undefined : parts.join(" • ");
+  return parts.length === 0 ? undefined : parts.join(" · ");
 }
 
 /**
