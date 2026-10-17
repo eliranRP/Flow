@@ -108,7 +108,7 @@ test("a category row opens its transactions and the waiting line opens that proj
   await expect(page.getByRole("heading", { name: "חומרים" })).toBeVisible();
   await expect(page.getByText("מלט")).toBeVisible();
   await page.goto("/e2e/project-detail?preview=1&section=expenses");
-  await page.getByRole("link", { name: /ממתינה לאישור/ }).click();
+  await page.getByRole("link", { name: /ממתינות לאישור/ }).click();
   await expect(page).toHaveURL(/project=p1/);
   await expect(page.getByRole("heading", { name: "לאישור" })).toBeVisible();
 });
