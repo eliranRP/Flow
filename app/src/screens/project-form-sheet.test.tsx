@@ -20,6 +20,11 @@ vi.mock("../lib/supabase", () => ({
   }),
 }));
 
+// The sheet also reads the company currency over the same client, so the save is the upsert call.
+function upsertCalls() {
+  return rpc.calls.filter((call) => call.name === "upsert_project");
+}
+
 function renderSheet(project?: Parameters<typeof ProjectFormSheet>[0]["project"]) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(
@@ -50,8 +55,8 @@ describe("the project sheet (FLOW-445)", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "שם הפרויקט" }), { target: { value: "  Lark Hill  " } });
     fireEvent.change(screen.getByRole("textbox", { name: "תקציב (אופציונלי)" }), { target: { value: "1500" } });
     fireEvent.click(screen.getByRole("button", { name: "יצירת פרויקט" }));
-    await waitFor(() => { expect(rpc.calls).toHaveLength(1); });
-    expect(rpc.calls[0]).toEqual({
+    await waitFor(() => { expect(upsertCalls()).toHaveLength(1); });
+    expect(upsertCalls()[0]).toEqual({
       name: "upsert_project",
       args: { p_name: "Lark Hill", p_type: "", p_status: "active", p_budget_agorot: 150_000 },
     });
@@ -62,8 +67,8 @@ describe("the project sheet (FLOW-445)", () => {
     expect(screen.getByRole("dialog", { name: "עריכת פרויקט" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "סוג (אופציונלי)" })).toHaveValue("flip");
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
-    await waitFor(() => { expect(rpc.calls).toHaveLength(1); });
-    expect(rpc.calls[0]).toEqual({
+    await waitFor(() => { expect(upsertCalls()).toHaveLength(1); });
+    expect(upsertCalls()[0]).toEqual({
       name: "upsert_project",
       args: { p_id: "p1", p_name: "Okafor", p_type: "flip", p_status: "active" },
     });

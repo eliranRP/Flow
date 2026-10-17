@@ -9,7 +9,7 @@ import { Button } from "../ui/button";
 import { MoneyField } from "../ui/money-field";
 import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
-import { LOAN_CURRENCY_MARK, type LoanCurrency } from "./loan-form";
+import { LOAN_CURRENCY_MARK } from "./loan-form";
 import { useBlockedPreview } from "./screen-shared";
 
 /** The project an edit sheet opens on. `type` is the owner's own text (or none); `budget` is in agorot. */
@@ -43,7 +43,7 @@ function ProjectForm({ project, onClose }: { project?: ProjectFormValues; onClos
   const blocked = useBlockedPreview();
   const companyCurrency = useCompanyCurrency();
   // The budget is in the company currency, so its field shows that currency's mark.
-  const mark = LOAN_CURRENCY_MARK[companyCurrency as LoanCurrency] ?? companyCurrency;
+  const mark = companyCurrency === "USD" ? LOAN_CURRENCY_MARK.USD : LOAN_CURRENCY_MARK.ILS;
   const holdWrites = useHoldWrites();
   const navigate = useNavigate();
   const [name, setName] = useState(project?.name ?? "");
