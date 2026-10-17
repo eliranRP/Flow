@@ -291,6 +291,7 @@
 
 .ui-home-empty-body {
   margin: calc(var(--space-1) * -0.875) 0 0;
+  font-size: var(--type-label-size);
   line-height: calc(var(--space-1) * 5.75);
   color: var(--color-text-secondary);
   text-align: start;
@@ -319,6 +320,8 @@
   padding: 0;
   list-style: none;
   color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  line-height: calc(var(--space-1) * 5.25);
   text-align: start;
 }
 
@@ -335,7 +338,7 @@
   inline-size: 8px;
   block-size: 8px;
   border-radius: 50%;
-  background: var(--color-line);
+  background: var(--color-outline-secondary);
 }
 
 .ui-home-empty-card .ui-btn { margin-top: var(--space-1); }

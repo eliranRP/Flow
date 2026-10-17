@@ -230,7 +230,7 @@
 .ui-skel-split-row { display: flex; align-items: center; justify-content: space-between; min-block-size: var(--space-3); }
 .ui-skel-split-a { inline-size: var(--skel-pill); block-size: var(--space-3); }
 .ui-skel-split-b { inline-size: var(--skel-sm); block-size: var(--space-3); }
-.ui-home-split:has(.ui-skel-split-title) { margin-top: var(--space-4); padding: calc(var(--space-4) + 1px); }
+.ui-home-split:has(.ui-skel-split-title) { margin-top: var(--space-4); padding: calc(var(--space-4) + 1px); border-color: transparent; }
 /* The board draws the attention box on the surface, not the loaded tint. */
 .ui-home-attention.ui-skel-attention { background: var(--color-surface); padding-block: calc(var(--space-1) * 4.5); }
 .ui-skel-attention-title { inline-size: calc(var(--skel-sm) * 4 / 3); block-size: var(--skel-block-lg); margin: 0 var(--space-5) var(--space-3); }
@@ -243,6 +243,12 @@
 .ui-skel-list { display: flex; flex-direction: column; gap: 0; margin-block-start: var(--space-1); padding-inline: var(--space-5); }
 .ui-skel-list-title { inline-size: calc(var(--skel-sm) * 3 / 2); block-size: var(--space-4); }
 .ui-skel-list .ui-skel-row { padding-inline: 0; }
+/* The board's copy bars are fixed widths at the start edge: 108 and 72 in the attention box, 130 and 84 in the list. */
+.ui-skel-attention .ui-skel-copy, .ui-skel-list .ui-skel-copy { align-items: flex-start; }
+.ui-skel-attention .ui-skel-line-a { inline-size: calc(var(--skel-sm) * 3 / 2); }
+.ui-skel-attention .ui-skel-line-b { inline-size: var(--skel-sm); }
+.ui-skel-list .ui-skel-line-a { inline-size: calc(var(--skel-sm) * 9 / 5); }
+.ui-skel-list .ui-skel-line-b { inline-size: calc(var(--skel-sm) * 7 / 6); }
 .ui-row-stack {
   display: flex;
   flex-direction: column;

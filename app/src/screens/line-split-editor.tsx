@@ -370,7 +370,8 @@ export function LineSplitEditor({
         : line.reviewBlocked ? "line has an open review" : null;
 
   const dateShort = line.docDate ? `${line.docDate.slice(8, 10)}/${line.docDate.slice(5, 7)}` : "";
-  const meta = [line.direction === "income" && line.categoryId != null && isReversal(categories, line.categoryId, "income") ? "החזר" : null, line.categoryName, line.supplier, dateShort].filter(Boolean);
+  // The board's order: supplier · date · category. The supplier and date stay one left-to-right run at the start edge.
+  const meta = [line.supplier, dateShort, line.direction === "income" && line.categoryId != null && isReversal(categories, line.categoryId, "income") ? "החזר" : null, line.categoryName].filter(Boolean);
   const restCategory = categoryName(rest.categoryId);
   const restProject = rest.projectId == null ? (line.projectName ?? "בלי פרויקט") : (projectName(rest.projectId) ?? "פרויקט");
   const restDuplicate = check.restDuplicate;
@@ -444,7 +445,7 @@ export function LineSplitEditor({
                 {meta.map((item, index) => (
                   <span key={item}>
                     {index > 0 ? " · " : null}
-                    {item === dateShort ? <bdi dir="ltr">{item}</bdi> : item}
+                    {item}
                   </span>
                 ))}
               </p>

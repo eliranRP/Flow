@@ -144,7 +144,7 @@
 .ui-search-start {
   display: flex;
   flex-direction: column;
-  padding-block: var(--space-2) var(--space-6);
+  padding-block: 0 var(--space-6);
 }
 
 .ui-search-section {
@@ -154,10 +154,15 @@
 
 .ui-search-heading {
   margin: 0;
-  padding-block: var(--space-5) var(--space-2);
-  font-size: var(--type-heading-size);
-  font-weight: var(--type-title-3-weight);
+  padding-block: var(--space-5) calc(var(--space-1) * 1.5);
+  font-size: var(--type-section-size);
+  font-weight: var(--type-section-weight);
+  line-height: calc(var(--type-section-line) - 0.1);
   color: var(--color-text);
+}
+
+.ui-search-section + .ui-search-section .ui-search-heading {
+  padding-block-start: calc(var(--space-5) + var(--space-1) / 2);
 }
 
 .ui-search-recent,
@@ -222,7 +227,8 @@
 
 .ui-search-check-count {
   flex: none;
-  font-size: var(--type-btn-size);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
   color: var(--color-text-muted);
 }
 
@@ -356,6 +362,13 @@
 /* A result's line 2 (its statuses only, FLOW-339 option C): whole parts as many as fit (.ui-hint-parts). */
 .ui-statement-details {
   flex: 0 1 auto;
+}
+
+/* The separator is its own isolated run, so its spaces stay on both sides of the dot beside a Latin name. */
+.ui-statement-details .ui-hint-sep {
+  direction: rtl;
+  unicode-bidi: isolate;
+  margin-inline: var(--space-1);
 }
 
 /* A state to act on stays on the line: it wraps only below 3em, and shortens with "…" instead. */
@@ -515,20 +528,20 @@
   flex-direction: column;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-10) var(--space-4) 0;
+  padding: calc(var(--space-10) + var(--space-6)) var(--space-3) 0;
   text-align: center;
 }
 
 .ui-search-empty-title {
   margin: 0;
-  font-size: var(--type-title-2-size);
-  font-weight: var(--type-title-2-weight);
+  font-size: var(--type-section-size);
+  font-weight: var(--type-section-weight);
 }
 
 .ui-search-empty-body {
   margin: 0;
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line);
+  font-size: var(--type-label-size);
+  line-height: calc(var(--type-label-line) + 0.1);
   color: var(--color-text-muted);
 }
 

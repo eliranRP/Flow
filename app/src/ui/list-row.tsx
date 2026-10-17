@@ -503,7 +503,7 @@ function StatementRow(props: StatementRowProps) {
                       className={detail.tone === "accent" || detail.keep === true ? "ui-hint-part ui-hint-part-keep" : "ui-hint-part"}
                       data-clip-ok=""
                     >
-                      {index > 0 ? HINT_SEPARATOR : null}
+                      {index > 0 ? <span className="ui-hint-sep">{HINT_SEPARATOR}</span> : null}
                       <span className={detail.tone === "accent" ? "ui-statement-accent" : undefined}>{detail.text}</span>
                     </span>
                   ))}
