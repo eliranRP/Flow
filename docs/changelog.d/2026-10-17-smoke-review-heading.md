@@ -1,0 +1,1 @@
+- The live-app smoke test checks the review queue by its לאישור heading, since the redesigned queue no longer has the old subtitle.
