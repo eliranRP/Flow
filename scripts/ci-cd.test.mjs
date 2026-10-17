@@ -78,7 +78,7 @@ function installDepsStep(body) {
 function playwrightProblems(text) {
   /** @type {string[]} */
   const problems = [];
-  for (const name of ["check-storybook", "check-perf", "check-stories", "e2e-shard"]) {
+  for (const name of ["check-storybook", "check-storybook-dark", "check-perf", "check-stories", "e2e-shard"]) {
     const body = jobIn(text, name);
     if (!body.includes(PLAYWRIGHT_KEY)) problems.push(`${name} cache key`);
     if (body.includes("env.ImageOS") || body.includes("env.ImageVersion")) problems.push(`${name} runner image`);
@@ -146,7 +146,7 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(job("plan"), /FLOW_DEPLOY_BATCH: "5"\n/);
   assert.match(job("plan"), /fetch-depth: 0\n/);
   assert.match(job("plan"), /deployments: read\n/);
-  for (const name of ["lint", "check-core", "check-app", "check-storybook", "check-perf", "build-storybook", "e2e-shard"]) {
+  for (const name of ["lint", "check-core", "check-app", "check-storybook", "check-storybook-dark", "check-perf", "build-storybook", "e2e-shard"]) {
     assert.match(job(name), /\n {4}needs: \[plan\]\n {4}if: needs\.plan\.outputs\.run == 'true'\n/, name);
   }
   // The stories shards wait for the one Storybook build, and download it.
@@ -156,9 +156,9 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(job("build-storybook"), /run: pnpm build-storybook\n/);
   assert.match(job("build-storybook"), /name: storybook-static\n {10}path: app\/storybook-static\n/);
   // check and e2e are the required checks. They are gates that run always and pass only on success.
-  assert.match(job("check"), /needs: \[plan, check-core, check-app, check-storybook, check-perf, check-stories, build-storybook\]\n {4}if: always\(\) && needs\.plan\.outputs\.run == 'true'\n/);
+  assert.match(job("check"), /needs: \[plan, check-core, check-app, check-storybook, check-storybook-dark, check-perf, check-stories, build-storybook\]\n {4}if: always\(\) && needs\.plan\.outputs\.run == 'true'\n/);
   assert.match(job("check"), /test "\$CORE" = success\n/);
-  for (const name of ["CORE", "APP", "STORYBOOK", "STORIES", "STORYBOOK_BUILD"]) {
+  for (const name of ["CORE", "APP", "STORYBOOK", "STORYBOOK_DARK", "STORIES", "STORYBOOK_BUILD"]) {
     assert.match(job("check"), new RegExp(`test "\\$${name}" = success\n`), name);
   }
   assert.match(job("e2e"), /needs: \[plan, e2e-shard\]\n {4}if: always\(\) && needs\.plan\.outputs\.run == 'true'\n/);
@@ -199,7 +199,11 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(job("check-stories"), /pnpm test:storybook:smoke --grep-invert "every static story" --shard=\$\{\{ matrix\.shard \}\}\/7\n/);
   const storySpec = readFileSync(new URL("../app/e2e/storybook-static.spec.ts", import.meta.url), "utf8");
   assert.equal(Number(/const STORY_SHARDS = (\d+);/.exec(storySpec)?.[1]) % 7, 0);
-  assert.match(job("check-storybook"), /run: pnpm test:storybook\n/);
+  // Light and dark are two jobs, each one vitest project, so they run side by side.
+  assert.match(job("check-storybook"), /run: pnpm --filter @flow\/app exec vitest run --project storybook\n/);
+  assert.match(job("check-storybook-dark"), /run: pnpm --filter @flow\/app exec vitest run --project storybook-dark\n/);
+  assert.equal(job("check-storybook-dark").includes("--project storybook\n"), false);
+  assert.equal(job("check-storybook-dark").includes("actions/cache@"), false);
   assert.match(job("check-perf"), /pnpm --filter @flow\/app test:perf\n/);
   // The speed test's Playwright config builds its own dist (playwright.perf.config.ts), so check-perf builds nothing else.
   assert.equal(job("check-perf").includes("pnpm build"), false);
@@ -377,7 +381,7 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.match(ci, /group: ci-\$\{\{ github\.workflow \}\}-\$\{\{ github\.ref \}\}/);
   assert.match(ci, /cancel-in-progress: \$\{\{ github\.ref != 'refs\/heads\/main' \}\}/);
   assert.match(job("deploy"), /cancel-in-progress: false/);
-  for (const name of ["lint", "check-core", "check-app", "check-storybook", "check-perf", "check-stories", "build-storybook", "e2e-shard"]) {
+  for (const name of ["lint", "check-core", "check-app", "check-storybook", "check-storybook-dark", "check-perf", "check-stories", "build-storybook", "e2e-shard"]) {
     assert.match(job(name), /timeout-minutes: 20\n/, name);
   }
   for (const name of ["check", "e2e"]) {
@@ -588,7 +592,7 @@ test("every Playwright job restores the apt cache before install-deps, and only 
   assert.match(jobIn(ci, "lint"), /node-version: 22\n {10}cache: pnpm\n/);
   assert.equal((ci.match(/uses: actions\/cache@/g) ?? []).length, 2);
   assert.equal((jobIn(ci, APT_WRITER).match(/uses: actions\/cache@/g) ?? []).length, 2);
-  for (const name of ["check-core", "check-app", "check-storybook", "check-perf", "check-stories", "build-storybook", "e2e-shard", "deploy"]) {
+  for (const name of ["check-core", "check-app", "check-storybook", "check-storybook-dark", "check-perf", "check-stories", "build-storybook", "e2e-shard", "deploy"]) {
     const body = jobIn(ci, name);
     assert.equal(body.includes("cache: pnpm"), false, `${name} saves the pnpm store`);
     assert.ok(body.includes("uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0\n        with:\n          path: ${{ steps.pnpm-store.outputs.path }}\n          key: node-cache-Linux-x64-pnpm-"), `${name} restores the pnpm store`);
