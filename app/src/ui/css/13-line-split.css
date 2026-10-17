@@ -339,7 +339,7 @@
   font-size: var(--type-label-size);
   line-height: 1;
   vertical-align: top;
-  margin-inline-start: var(--space-1);
+  margin-inline-start: 0;
 }
 
 .ui-lsplit-bar {
@@ -709,4 +709,8 @@ html:has(.ui-lsplit-board)::-webkit-scrollbar {
 .ui-lsplit-board .ui-lsplit-actions,
 .ui-lsplit-board .ui-lsplit-footnote {
   padding-inline: var(--space-side);
+}
+
+.ui-lsplit-board .ui-lsplit-rest {
+  padding-block: calc(var(--space-3) - var(--space-1) / 2);
 }
