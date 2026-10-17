@@ -1,7 +1,8 @@
 {
   "about": "FLOW-813: which app sources each e2e spec exercises, for the pre-push gate (scripts/e2e-specs.mjs). Entries are under app/src; one ending in / takes every source in that folder. A spec runs when it, a file it imports, or anything its entries import (followed through relative imports, the screens barrel by name, and @flow/shared) changed. A change matching an `all` pattern, or to an app source that only App.tsx reaches (the session providers), runs every spec. Migrations and edge functions pick no spec here: the specs that use local Supabase run on main. `ignored` specs run on their own configs. `perf` maps each page-speed spec in app/perf to the screens it opens, the same way; the gate runs the ones a change reaches (scripts/e2e-specs.mjs --perf).",
   "all": [
-    "^app/src/(App|main|dev-routes)\\.tsx$",
+    "^app/src/(App|main)\\.tsx$",
+    "^app/src/dev/routes/[^/]+\\.tsx?$",
     "^app/src/screens/flow-screens\\.tsx$",
     "^app/src/.*\\.css$",
     "^design/system/.*\\.css$",
@@ -63,7 +64,49 @@
       "screens/connections-screen.tsx",
       "screens/onboarding-screen.tsx"
     ],
-    "controls.spec.ts": [
+    "controls-review.spec.ts": [
+      "screens/",
+      "setup/",
+      "ui/install-screen.tsx",
+      "ui/tab-bar.tsx"
+    ],
+    "controls-home.spec.ts": [
+      "screens/",
+      "setup/",
+      "ui/install-screen.tsx",
+      "ui/tab-bar.tsx"
+    ],
+    "controls-fields.spec.ts": [
+      "screens/",
+      "setup/",
+      "ui/install-screen.tsx",
+      "ui/tab-bar.tsx"
+    ],
+    "controls-projects.spec.ts": [
+      "screens/",
+      "setup/",
+      "ui/install-screen.tsx",
+      "ui/tab-bar.tsx"
+    ],
+    "controls-transaction.spec.ts": [
+      "screens/",
+      "setup/",
+      "ui/install-screen.tsx",
+      "ui/tab-bar.tsx"
+    ],
+    "controls-settings.spec.ts": [
+      "screens/",
+      "setup/",
+      "ui/install-screen.tsx",
+      "ui/tab-bar.tsx"
+    ],
+    "controls-onboarding.spec.ts": [
+      "screens/",
+      "setup/",
+      "ui/install-screen.tsx",
+      "ui/tab-bar.tsx"
+    ],
+    "controls-split.spec.ts": [
       "screens/",
       "setup/",
       "ui/install-screen.tsx",
@@ -223,18 +266,18 @@
       "screens/month-drawer.tsx",
       "ui/tab-bar.tsx",
       "ui/top-band.tsx",
-      "dev-routes.tsx",
+      "dev/routes/",
       "dev/cash-sample.ts"
     ],
     "cash-lines.spec.ts": [
       "screens/cash-lines-screen.tsx",
       "screens/cash-screens.tsx",
-      "dev-routes.tsx",
+      "dev/routes/",
       "cash.ts"
     ]
   },
   "sweeps": {
-    "about": "The no-op control sweep's routes per spec (app/e2e/control-sweep.ts reads them), and the files each route draws, under app/src: scripts/gate-scope.mjs --sweep sweeps a route when a change reaches one of them. A route also draws the app shell, and an /e2e/ route the fixtures in dev-routes.tsx; a change that reaches either sweeps every route, or every /e2e/ route. `pages` are the screens App.tsx imports for its first paint; the screens it loads on demand count on their own.",
+    "about": "The no-op control sweep's routes per spec (app/e2e/control-sweep.ts reads them), and the files each route draws, under app/src: scripts/gate-scope.mjs --sweep sweeps a route when a change reaches one of them. A route also draws the app shell, and an /e2e/ route the fixtures in its app/src/dev/routes area file; a change that reaches either sweeps every route, or every /e2e/ route. `pages` are the screens App.tsx imports for its first paint; the screens it loads on demand count on their own.",
     "pages": [
       "screens/HomeScreen.tsx",
       "screens/SignInScreen.tsx"
@@ -249,22 +292,22 @@
         ],
         "/e2e/home?preview=1": [
           "screens/HomeScreen.tsx",
-          "dev-routes.tsx#DevHome"
+          "dev/routes/home.tsx#DevHome"
         ],
         "/profit?preview=1": [
           "screens/HomeScreen.tsx"
         ],
         "/e2e/cash?preview=1": [
           "screens/HomeScreen.tsx",
-          "dev-routes.tsx#DevCash"
+          "dev/routes/home.tsx#DevCash"
         ],
         "/e2e/cash-month?preview=1": [
           "screens/cash-screens.tsx",
-          "dev-routes.tsx#DevCashMonth"
+          "dev/routes/home.tsx#DevCashMonth"
         ],
         "/e2e/cash-lines?preview=1": [
           "screens/cash-lines-screen.tsx",
-          "dev-routes.tsx#DevCashLines"
+          "dev/routes/home.tsx#DevCashLines"
         ],
         "/add?preview=1": [
           "screens/HomeScreen.tsx",
@@ -291,11 +334,11 @@
         ],
         "/e2e/install-android": [
           "ui/install-screen.tsx",
-          "dev-routes.tsx#DevInstall"
+          "dev/routes/onboarding.tsx#DevInstall"
         ],
         "/e2e/install-other": [
           "ui/install-screen.tsx",
-          "dev-routes.tsx#DevInstall"
+          "dev/routes/onboarding.tsx#DevInstall"
         ]
       },
       "controls-sweep-projects.spec.ts": {
@@ -307,26 +350,26 @@
         ],
         "/e2e/projects?preview=1": [
           "screens/projects-screen.tsx",
-          "dev-routes.tsx#DevProjects"
+          "dev/routes/projects.tsx#DevProjects"
         ],
         "/e2e/project-detail?preview=1": [
           "screens/project-detail-screen.tsx",
-          "dev-routes.tsx#DevProjectDetail"
+          "dev/routes/projects.tsx#DevProjectDetail"
         ],
         "/e2e/project-months?preview=1": [
           "screens/profit-months.tsx",
-          "dev-routes.tsx#DevProjectMonths"
+          "dev/routes/projects.tsx#DevProjectMonths"
         ],
         "/transactions/1?preview=1": [
           "screens/transaction-screen.tsx"
         ],
         "/e2e/txn?preview=1": [
           "screens/transaction-screen.tsx",
-          "dev-routes.tsx#DevTransaction"
+          "dev/routes/transaction.tsx#DevTransaction"
         ],
         "/e2e/split": [
           "screens/split-screen.tsx",
-          "dev-routes.tsx#DevSplit"
+          "dev/routes/split.tsx#DevSplit"
         ],
         "/unpaid?preview=1": [
           "screens/unpaid-screen.tsx"
@@ -334,11 +377,11 @@
         "/e2e/invoices": [
           "screens/unpaid-screen.tsx",
           "screens/invoice-screen.tsx",
-          "dev-routes.tsx#DevInvoices"
+          "dev/routes/invoices.tsx#DevInvoices"
         ],
         "/e2e/recurring?preview=1": [
           "screens/recurring-screen.tsx",
-          "dev-routes.tsx#DevRecurring"
+          "dev/routes/recurring.tsx#DevRecurring"
         ]
       },
       "controls-sweep-review.spec.ts": {
@@ -354,18 +397,18 @@
         ],
         "/e2e/review-banner": [
           "screens/review-queue.tsx",
-          "dev-routes.tsx#DevReviewBanner"
+          "dev/routes/review.tsx#DevReviewBanner"
         ],
         "/e2e/filed?preview=1": [
           "screens/filed-today-screen.tsx",
-          "dev-routes.tsx#DevFiled"
+          "dev/routes/review.tsx#DevFiled"
         ],
         "/e2e/review": [
-          "dev-routes.tsx#DevReview"
+          "dev/routes/review.tsx#DevReview"
         ],
         "/e2e/change?preview=1": [
           "ui/change-sheet.tsx",
-          "dev-routes.tsx#DevChange"
+          "dev/routes/review.tsx#DevChange"
         ]
       },
       "controls-sweep-settings.spec.ts": {
@@ -386,31 +429,31 @@
         ],
         "/e2e/settings?preview=1": [
           "screens/settings-screen.tsx",
-          "dev-routes.tsx#DevSettings"
+          "dev/routes/settings.tsx#DevSettings"
         ],
         "/e2e/connections?preview=1": [
           "screens/connections-screen.tsx",
-          "dev-routes.tsx#DevConnections"
+          "dev/routes/settings.tsx#DevConnections"
         ],
         "/e2e/connections?preview=1&connected=1": [
           "screens/connections-screen.tsx",
-          "dev-routes.tsx#DevConnections"
+          "dev/routes/settings.tsx#DevConnections"
         ],
         "/e2e/connections?preview=1&connected=auth": [
           "screens/connections-screen.tsx",
-          "dev-routes.tsx#DevConnections"
+          "dev/routes/settings.tsx#DevConnections"
         ],
         "/e2e/loans?preview=1": [
           "screens/settings-screen.tsx",
-          "dev-routes.tsx#DevLoans"
+          "dev/routes/loans.tsx#DevLoans"
         ],
         "/e2e/categories?preview=1": [
           "screens/categories-screen.tsx",
-          "dev-routes.tsx#DevCategories"
+          "dev/routes/settings.tsx#DevCategories"
         ],
         "/e2e/categories?preview=1&hidden=1": [
           "screens/categories-screen.tsx",
-          "dev-routes.tsx#DevCategories"
+          "dev/routes/settings.tsx#DevCategories"
         ]
       }
     }

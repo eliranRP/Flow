@@ -126,14 +126,14 @@ test("the build reads every app input but tests, stories, specs, test setups and
 });
 
 // A shell bar with an icon, two screens (one lazy from App, one from the loaders), a card on screen a
-// and on dev-routes' DevA, the screens barrel, and the e2e fixtures.
+// and on the e2e route table's DevA (dev/routes/area.tsx), the screens barrel, and the e2e fixtures.
 function app() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gate-sweep-"));
   const files = {
     "app/src/main.tsx": 'import { App } from "./App";\nvoid App;\n',
     "app/src/App.tsx":
       'import { Bar } from "./ui/shell-bar";\nimport { screenLoaders } from "./screen-loaders";\n' +
-      'const a = () => import("./screens/a");\nconst dev = () => import("./dev-routes");\nexport const App = [Bar, a, dev, screenLoaders];\n',
+      'const a = () => import("./screens/a");\nconst dev = () => import("./dev/routes");\nexport const App = [Bar, a, dev, screenLoaders];\n',
     "app/src/screen-loaders.ts": 'export const screenLoaders = { b: () => import("./screens/b") };\n',
     "app/src/screens/a.tsx": 'import { Card } from "../ui/card";\nexport const A = Card;\n',
     "app/src/screens/b.tsx": "export const B = 1;\n",
@@ -142,8 +142,9 @@ function app() {
     "app/src/ui/shell-bar.tsx": 'import { Icon } from "./icon";\nexport const Bar = Icon;\n',
     "app/src/ui/icon.tsx": "export const Icon = 1;\n",
     "app/src/dev/sample.ts": "export const sample = 1;\n",
-    "app/src/dev-routes.tsx":
-      'import { Card } from "./ui/card";\nimport { B } from "./screens/flow-screens";\nimport { sample } from "./dev/sample";\n' +
+    "app/src/dev/routes/index.ts": 'import { DevA, DevB } from "./area";\nexport const routes = [DevA, DevB];\n',
+    "app/src/dev/routes/area.tsx":
+      'import { Card } from "../../ui/card";\nimport { B } from "../../screens/flow-screens";\nimport { sample } from "../../dev/sample";\n' +
       "export function DevA() {\n  return Card + sample;\n}\nexport function DevB() {\n  return B;\n}\n",
   };
   for (const [file, text] of Object.entries(files)) {
@@ -158,8 +159,8 @@ function app() {
         "s.spec.ts": {
           "/a": ["screens/a.tsx"],
           "/b": ["screens/b.tsx"],
-          "/e2e/a": ["dev-routes.tsx#DevA"],
-          "/e2e/b": ["screens/b.tsx", "dev-routes.tsx#DevB"],
+          "/e2e/a": ["dev/routes/area.tsx#DevA"],
+          "/e2e/b": ["screens/b.tsx", "dev/routes/area.tsx#DevB"],
         },
       },
     },
@@ -189,17 +190,16 @@ test("the sweep opens the routes whose files a change reaches, and every route f
 
 test("the real sweep map: every route draws files that exist, and a screen reaches only its routes", () => {
   const map = JSON.parse(fs.readFileSync(path.join(root, "app/e2e/spec-sources.json"), "utf8"));
-  const dev = fs.readFileSync(path.join(root, "app/src/dev-routes.tsx"), "utf8");
   for (const [spec, urls] of Object.entries(map.sweeps.routes)) {
     assert.match(fs.readFileSync(path.join(root, "app/e2e", spec), "utf8"), new RegExp(`sweepControls\\("${spec.replace(/\./g, "\\.")}"\\)`));
     for (const [url, entries] of Object.entries(urls)) {
       for (const entry of entries) {
         const [file, name] = entry.split("#");
         assert.ok(fs.existsSync(path.join(root, "app/src", file)), `${url}: ${entry}`);
-        if (name) assert.match(dev, new RegExp(`^export function ${name}\\b`, "m"), `${url}: ${entry}`);
+        if (name) assert.match(fs.readFileSync(path.join(root, "app/src", file), "utf8"), new RegExp(`^export function ${name}\\b`, "m"), `${url}: ${entry}`);
       }
-      // dev-routes draws every /e2e/ route; a route with no entry would never be swept by the gate.
-      if (url.startsWith("/e2e/")) assert.ok(entries.some((entry) => entry.startsWith("dev-routes.tsx#")), url);
+      // The route table draws every /e2e/ route; a route with no entry would never be swept by the gate.
+      if (url.startsWith("/e2e/")) assert.ok(entries.some((entry) => entry.startsWith("dev/routes/") && entry.includes("#")), url);
       else assert.ok(entries.length > 0, url);
     }
   }

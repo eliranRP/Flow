@@ -1,6 +1,7 @@
 import { useSearchParams } from "react-router-dom";
-import { ForecastScreen } from "./screens/forecast-screen";
-import { monthForecastBoardSample, monthForecastSample } from "./forecast-sample";
+import { ForecastScreen } from "../../screens/forecast-screen";
+import { monthForecastBoardSample, monthForecastSample } from "../../forecast-sample";
+import type { DevRoute } from "./types";
 
 /** FLOW-141: the forecast on invented fixture data; `?kind=positive|negative|moved` picks the state. */
 export function DevForecast() {
@@ -10,3 +11,5 @@ export function DevForecast() {
   const kind = (["positive", "negative", "moved"] as const).find((k) => k === params.get("kind")) ?? "positive";
   return <ForecastScreen sample={monthForecastSample(kind)} />;
 }
+
+export const forecastRoutes: DevRoute[] = [{ path: "forecast", element: <DevForecast /> }];
