@@ -32,11 +32,11 @@ export function categoryLoanUses(loans: readonly LoanCategoryColumns[]): Map<str
   return uses;
 }
 
-/** The locked line in a loan category's ⋯ sheet: its first line, and an optional second one under it. */
+/** The locked line in a loan category's sheet: its first line, and an optional second one under it. */
 export type LoanLine = { title: string; detail?: string };
 
 /**
- * FLOW-106 §3.5, FLOW-362: the locked line in the category's ⋯ sheet, "קטגוריה של הלוואה" on line 1 and
+ * FLOW-106 §3.5, FLOW-362: the locked line in the category sheet, "קטגוריה של הלוואה" on line 1 and
  * "<loan> · ריבית" on line 2, so a long loan name never breaks across the two. The name is isolated, as a bdi would.
  */
 export function loanUseLine(use: CategoryLoanUse): LoanLine {

@@ -567,26 +567,33 @@ test("settings connect, refresh, categories, and the account row", async ({ page
 });
 
 test("categories filter, hide, merge, and create", async ({ page }) => {
-  await page.goto("/e2e/categories?preview=1");
+  await page.goto("/e2e/categories?preview=1&hidden=1");
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page).toHaveURL(/\/settings/);
-  await page.goto("/e2e/categories?preview=1");
+  await page.goto("/e2e/categories?preview=1&hidden=1");
   await page.getByRole("radio", { name: "הכנסות" }).click();
-  await expect(page.getByText("עבודה")).toBeVisible();
+  await expect(page.getByText("הכנסות משכירות")).toBeVisible();
   await expect(page.getByText("חומרים")).toHaveCount(0);
   await page.getByRole("radio", { name: "הוצאות" }).click();
-  await page.getByRole("button", { name: /מוסתרות/ }).click();
-  await expect(page.getByText("ישנה")).toBeVisible();
-  await page.getByRole("button", { name: "עוד, חומרים" }).click();
-  await page.getByRole("button", { name: "הסתרה" }).click();
-  await page.getByRole("button", { name: "הסתרה" }).last().click();
+  await page.getByRole("button", { name: /^חשמל ומים/ }).click();
+  await page.getByRole("dialog", { name: "חשמל ומים" }).getByRole("button", { name: "הסתרה", exact: true }).click();
+  await page.getByRole("dialog", { name: "להסתיר את הקטגוריה?" }).getByRole("button", { name: "הסתרה", exact: true }).click();
   await toast(page, previewToast);
-  await page.getByRole("button", { name: "ביטול" }).click();
-  await page.getByRole("button", { name: "עוד, ישנה" }).click();
+  await expect(page.getByRole("dialog", { name: "חשמל ומים" })).toHaveCount(0);
+  // In preview a blocked write leaves the confirm sheet open; dismiss it so its open dialog does not hide the footer.
+  await page.getByRole("dialog", { name: "להסתיר את הקטגוריה?" }).getByRole("button", { name: "ביטול" }).click();
+  await expect(page.getByRole("dialog", { name: "להסתיר את הקטגוריה?" })).toHaveCount(0);
+  await page.getByRole("button", { name: /מוסתרות/ }).click();
+  await page.getByRole("button", { name: /^ישנה/ }).click();
   await page.getByRole("button", { name: "החזרה לרשימה" }).click();
-  await expect(page.getByRole("dialog", { name: "להחזיר את הקטגוריה לרשימה?" })).toBeVisible();
-  await page.getByRole("button", { name: "ביטול" }).click();
-  await page.getByRole("button", { name: "עוד, חומרים" }).click();
+  const unhide = page.getByRole("dialog", { name: "להחזיר את הקטגוריה לרשימה?" });
+  await unhide.getByRole("button", { name: "החזרה לרשימה", exact: true }).click();
+  // The preview guard blocks the write: the confirm stays open with the blocked-write toast, and nothing moves.
+  await toast(page, previewToast);
+  await unhide.getByRole("button", { name: "ביטול" }).click();
+  await expect(unhide).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^ישנה/ })).toBeVisible();
+  await page.getByRole("button", { name: /^חומרים/ }).click();
   await page.getByRole("button", { name: "העברה לקטגוריה אחרת" }).click();
   await expect(page.getByRole("switch", { name: "להסתיר את חומרים" })).toBeVisible();
   await page.getByRole("button", { name: "סגירה" }).click();

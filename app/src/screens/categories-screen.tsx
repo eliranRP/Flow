@@ -11,9 +11,7 @@ import { mergeFailureText, pnlFailureText } from "../category-copy";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { EmptyState } from "../ui/empty-state";
-import { IconButton } from "../ui/icon-button";
-import { ChevronDownIcon, KeptOutIcon, MoreIcon, PlusIcon, TagIcon } from "../ui/icons";
-import { KeptOutTag } from "../ui/line-marks";
+import { ChevronDownIcon, PlusIcon, TagIcon } from "../ui/icons";
 import { EMPTY_FILTERS, searchFiltersQuery } from "../search";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
@@ -23,7 +21,7 @@ import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
 import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
-import { CategoryMenuSheet } from "./category-sheet";
+import { CategoryMenuSheet, countsAsRehab } from "./category-sheet";
 import { loanUseLine, useCategoryLoanUses, type LoanCategoryColumns, type LoanLine } from "./category-loan-use";
 import { KEPT_OUT, useBlockedPreview } from "./screen-shared";
 
@@ -57,6 +55,16 @@ function countLine(count: number): string {
   return count === 1 ? "תנועה אחת" : `${String(count)} תנועות`;
 }
 
+/** FLOW-513 (board SettingsCategories): the row's meta line, lines then sub-categories then the P&L word. */
+function categoryMeta(category: ListedCategory, lines: number | undefined, subCount: number | undefined): string | undefined {
+  const parts: string[] = [];
+  if (lines != null) parts.push(countLine(lines));
+  if (subCount != null) parts.push(subCount === 1 ? "תת־קטגוריה אחת" : `${String(subCount)} תת־קטגוריות`);
+  if (category.excluded_from_pnl === true) parts.push("לא נספרת ברווח");
+  else if (category.kind === "expense" && countsAsRehab(category)) parts.push("נספרת בשיפוץ");
+  return parts.length === 0 ? undefined : parts.join(" · ");
+}
+
 /**
  * FLOW-406 (decision 0164, mockup cat-b): the top of the list holds the categories with no parent.
  * A sub-category of a hidden parent is listed there too, as the server keeps it visible.
@@ -70,43 +78,47 @@ export function topLevelCategories(rows: readonly ListedCategory[]): ListedCateg
 function CategoryLine({
   category,
   muted = false,
-  plain = false,
   href,
   subCount,
   onMenu,
 }: {
   category: ListedCategory;
-  /** FLOW-322: the category's lines, in search. A parent's opens its sub-categories (FLOW-406). */
+  /** FLOW-322: the link of a row that navigates: a parent's opens its sub-categories (FLOW-406). Leaf rows open the category sheet. */
   href?: string;
   /** FLOW-406: a parent opens its sub-categories, with a chevron. */
   subCount?: number;
   muted?: boolean;
-  /** A viewer row keeps the height and drops the pointer. */
-  plain?: boolean;
   onMenu?: (opener: HTMLElement) => void;
 }) {
   const lines = rowLines(category, subCount != null);
+  const opener = useRef<HTMLButtonElement>(null);
+  const hint = categoryMeta(category, lines, subCount);
+  // FLOW-513: a leaf row opens its category sheet on tap (the board has no ⋯); a parent opens its sub-categories.
+  if (onMenu != null && subCount == null) {
+    return (
+      <ListRow
+        variant="button"
+        buttonRef={opener}
+        onClick={() => { if (opener.current) onMenu(opener.current); }}
+        title={category.name}
+        muted={muted}
+        icon={<TagIcon />}
+        chevron
+        hint={hint}
+        layout="inset"
+      />
+    );
+  }
   return (
     <ListRow
       variant="item"
-      plain={plain && href == null}
       href={href}
       title={category.name}
       muted={muted}
-      chevron={subCount != null}
-      // FLOW-356: one count column. A parent counts its own and its sub-categories' lines, and every
-      // row keeps the chevron's space, so the counts line up.
-      chevronSpace
-      meta={lines == null ? undefined : countLine(lines)}
-      tag={category.excluded_from_pnl === true ? <KeptOutTag label={KEPT_OUT} /> : undefined}
-      action={onMenu == null ? undefined : (
-        <IconButton
-          label={`עוד, ${category.name}`}
-          onClick={(event) => { onMenu(event.currentTarget); }}
-        >
-          <MoreIcon />
-        </IconButton>
-      )}
+      icon={<TagIcon />}
+      chevron
+      hint={hint}
+      layout="inset"
     />
   );
 }
@@ -171,7 +183,7 @@ export function CategoriesScreen({
   const [mergeOpen, setMergeOpen] = useState(false);
   const [categoryName, setCategoryName] = useState("");
   const toast = useToast();
-  // FLOW-322: a category row opens that category's lines, every period, in search.
+  // FLOW-322: the category sheet's "הצג תנועות" row opens that category's lines, every period, in search.
   const linesHref = (category: CategoryRow) =>
     `/search${searchFiltersQuery({ ...EMPTY_FILTERS, category: category.id, direction: category.kind }, new URLSearchParams(search))}`;
   const menuOpener = useRef<HTMLElement | null>(null);
@@ -255,7 +267,6 @@ export function CategoriesScreen({
   const shown = scope.filter((category) => category.kind === kind && !category.hidden);
   const hiddenRows = scope.filter((category) => category.kind === kind && category.hidden);
   const hiddenExpanded = showHidden && hiddenRows.length > 0;
-  const anyKeptOut = scope.some((category) => category.kind === kind && category.excluded_from_pnl === true);
   // Follow the refetched row, so the rehab switch shows the saved value while the sheet stays open.
   const menuRow = menu ? rows.find((row) => row.id === menu.id) ?? menu : null;
   // FLOW-106 §3.5: a category a loan names for interest, escrow or principal is locked like the keyed ones.
@@ -287,7 +298,7 @@ export function CategoriesScreen({
   }
   return (
     <div>
-      <ScreenHeader title={title} kicker={kicker} backTo={backTo} subtitle={lines == null ? undefined : countLine(lines)} />
+      <ScreenHeader title={title} kicker={kicker} backTo={backTo} subtitle={parent == null ? "איך התנועות מתחלקות ומה נספר ברווח" : lines == null ? undefined : countLine(lines)} />
       {parent != null ? null : (
       <div className="ui-page-pad ui-cat-seg">
         <SegmentedControl
@@ -306,25 +317,7 @@ export function CategoriesScreen({
         />
       </div>
       )}
-      {shown.length === 0 && hiddenRows.length === 0 && parent == null ? (
-        <EmptyState icon={<TagIcon />} title="אין עדיין קטגוריות" body="קטגוריות נוצרות מהמסמכים של SUMIT או כשמוסיפים אחת" />
-      ) : shown.length > 0 ? (
-      <List className="ui-cat-list">
-        {shown.map((category) => (
-          <CategoryLine
-            key={category.id}
-            category={category}
-            plain={holdWrites}
-            href={rowHref(category)}
-            subCount={subCountOf(category)}
-            onMenu={holdWrites ? undefined : (opener) => {
-              menuOpener.current = opener;
-              setMenu(category);
-            }}
-          />
-        ))}
-      </List>
-      ) : null}
+      {/* FLOW-513: the board puts the new-category link above the card, the hidden toggle below it. */}
       <div className="ui-cat-foot">
         {holdWrites ? null : (
         <TextLink
@@ -339,6 +332,26 @@ export function CategoriesScreen({
           {parent == null ? "קטגוריה חדשה" : "הוספת תת־קטגוריה"}
         </TextLink>
         )}
+      </div>
+      {shown.length === 0 && hiddenRows.length === 0 && parent == null ? (
+        <EmptyState icon={<TagIcon />} title="אין עדיין קטגוריות" body="קטגוריות נוצרות מהמסמכים של SUMIT או כשמוסיפים אחת" />
+      ) : shown.length > 0 ? (
+      <List className="ui-cat-list" layout="inset">
+        {shown.map((category) => (
+          <CategoryLine
+            key={category.id}
+            category={category}
+            href={rowHref(category)}
+            subCount={subCountOf(category)}
+            onMenu={holdWrites ? undefined : (opener) => {
+              menuOpener.current = opener;
+              setMenu(category);
+            }}
+          />
+        ))}
+      </List>
+      ) : null}
+      <div className="ui-cat-foot">
         {hiddenRows.length > 0 ? (
           <TextLink
             tone="quiet"
@@ -359,13 +372,12 @@ export function CategoriesScreen({
       {hiddenRows.length > 0 ? (
         <div id="categories-hidden" hidden={!hiddenExpanded}>
           {hiddenExpanded ? (
-            <List className="ui-cat-list ui-cat-hidden">
+            <List className="ui-cat-list ui-cat-hidden" layout="inset">
               {hiddenRows.map((category) => (
                 <CategoryLine
                   key={category.id}
                   category={category}
                   muted
-                  plain={holdWrites}
                   href={linesHref(category)}
                   onMenu={holdWrites ? undefined : (opener) => {
                     menuOpener.current = opener;
@@ -377,14 +389,9 @@ export function CategoriesScreen({
           ) : null}
         </div>
       ) : null}
-      {anyKeptOut ? (
-        <p className="t-hint ui-page-pad ui-cat-legend">
-          <KeptOutIcon size={14} />
-          {KEPT_OUT}
-        </p>
-      ) : null}
       <CategoryMenuSheet
         category={menuRow}
+        linesHref={menuRow == null ? undefined : linesHref(menuRow)}
         rows={rows}
         loanLine={menuLoanLine}
         pnlBusy={pnl.isPending}

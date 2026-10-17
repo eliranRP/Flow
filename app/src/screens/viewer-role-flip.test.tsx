@@ -195,7 +195,7 @@ describe("inner write gates after the role changes", () => {
     async function openMenu() {
       rpc.mockResolvedValue({ data: null, error: null });
       renderAt(<CategoriesScreen sample={rows} />, "/settings/categories");
-      fireEvent.click(screen.getByRole("button", { name: /עוד, חומרים/ }));
+      fireEvent.click(screen.getByRole("button", { name: /^חומרים/ }));
       return screen.findByRole("dialog", { name: "חומרים" });
     }
 

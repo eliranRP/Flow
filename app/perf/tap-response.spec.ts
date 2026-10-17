@@ -133,7 +133,7 @@ const taps: Tap[] = [
     rpc: "set_category_hidden",
     path: "/settings/categories",
     arrange: async (page) => {
-      await page.getByRole("button", { name: "עוד, חומרים" }).tap();
+      await page.getByRole("button", { name: /^חומרים/ }).tap();
       await page.getByRole("dialog", { name: "חומרים" }).getByRole("button", { name: LABELS.hide, exact: true }).tap();
       await expect(page.getByRole("dialog", { name: "להסתיר את הקטגוריה?" })).toBeVisible({ timeout: 30_000 });
     },
@@ -142,7 +142,7 @@ const taps: Tap[] = [
     },
     // The row leaves the visible list (it moves to מוסתרות). includeHidden: the open dialog covers the list, and
     // a covered row still counts as on the list until the hide lands.
-    shown: async (page) => (await page.getByRole("button", { name: "עוד, חומרים", exact: true, includeHidden: true }).count()) === 0,
+    shown: async (page) => (await page.getByRole("button", { name: /^חומרים/, includeHidden: true }).count()) === 0,
   },
   {
     name: "pick another project on a transaction",

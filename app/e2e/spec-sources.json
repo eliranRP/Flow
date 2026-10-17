@@ -407,6 +407,10 @@
         "/e2e/categories?preview=1": [
           "screens/categories-screen.tsx",
           "dev-routes.tsx#DevCategories"
+        ],
+        "/e2e/categories?preview=1&hidden=1": [
+          "screens/categories-screen.tsx",
+          "dev-routes.tsx#DevCategories"
         ]
       }
     }

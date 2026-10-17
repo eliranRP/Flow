@@ -5,7 +5,7 @@ import { StoryRoute } from "../ui/story-route";
 import { CategoriesScreen } from "./categories-screen";
 
 /**
- * FLOW-405 + FLOW-404: the ⋯ sheet in Settings → Categories, the move picker and the delete
+ * FLOW-405 + FLOW-404: the category sheet in Settings → Categories, the move picker and the delete
  * confirm (mockup v2, approved by the owner 2026-10-08). Invented data only.
  */
 const meta = {
@@ -45,7 +45,7 @@ function Screen({ withLoans = false }: { withLoans?: boolean } = {}) {
 }
 
 async function openMenu(canvasElement: HTMLElement, name: string) {
-  await userEvent.click(await within(canvasElement).findByRole("button", { name: `עוד, ${name}` }));
+  await userEvent.click(await within(canvasElement).findByRole("button", { name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`) }));
   return body(canvasElement).findByRole("dialog", { name });
 }
 

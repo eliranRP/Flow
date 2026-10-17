@@ -697,14 +697,14 @@ test("the categories hidden link wraps on the end side and does not truncate", a
   await expect(page.getByRole("button", { name: /מוסתרות/ })).toHaveCount(0);
 
   await page.goto("/iframe.html?id=screens-routes--categories-long-hebrew&viewMode=story", { waitUntil: "domcontentloaded" });
-  const foot = page.locator(".ui-cat-foot");
+  // The hidden toggle's footer; the new-category link sits in the footer above the list.
+  const foot = page.locator(".ui-cat-foot").filter({ has: page.locator(".ui-cat-foot-end") });
   const hidden = foot.getByRole("button", { name: /מוסתרות/ });
   await expect(hidden).toBeVisible();
   const placed = await foot.evaluate((node) => {
     const buttons = [...node.querySelectorAll("button")];
     const end = buttons.find((button) => button.classList.contains("ui-cat-foot-end"));
-    const start = buttons.find((button) => !button.classList.contains("ui-cat-foot-end"));
-    if (!(end instanceof HTMLElement) || !(start instanceof HTMLElement)) return null;
+    if (!(end instanceof HTMLElement)) return null;
     const label = end.querySelector(".ui-text-link-label");
     if (!(label instanceof HTMLElement)) return null;
     const style = getComputedStyle(label);
@@ -726,22 +726,21 @@ test("the categories hidden link wraps on the end side and does not truncate", a
   const wrapped = await foot.evaluate((node) => {
     const buttons = [...node.querySelectorAll("button")];
     const end = buttons.find((button) => button.classList.contains("ui-cat-foot-end"));
-    const start = buttons.find((button) => !button.classList.contains("ui-cat-foot-end"));
-    if (!(end instanceof HTMLElement) || !(start instanceof HTMLElement)) return null;
+    if (!(end instanceof HTMLElement)) return null;
     const label = end.querySelector(".ui-text-link-label");
     if (!(label instanceof HTMLElement)) return null;
     const footBox = node.getBoundingClientRect();
     const pad = Number.parseFloat(getComputedStyle(node).paddingLeft);
     const endBox = end.getBoundingClientRect();
-    const startBox = start.getBoundingClientRect();
     return {
-      ownLine: endBox.y >= startBox.y + startBox.height - 1,
       onEnd: Math.abs(endBox.x - (footBox.x + pad)) < 2,
       fits: label.scrollWidth <= label.clientWidth + 1,
       ellipsis: getComputedStyle(label).textOverflow === "ellipsis",
+      // The long label wraps onto a second line rather than cutting: its box is taller than one line.
+      wrapsToTwoLines: label.getBoundingClientRect().height > Number.parseFloat(getComputedStyle(label).fontSize) * 1.5,
     };
   });
-  expect(wrapped).toEqual({ ownLine: true, onEnd: true, fits: true, ellipsis: false });
+  expect(wrapped).toEqual({ onEnd: true, fits: true, ellipsis: false, wrapsToTwoLines: true });
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/iframe.html?id=screens-routes--categories-hidden-expanded&viewMode=story", { waitUntil: "domcontentloaded" });

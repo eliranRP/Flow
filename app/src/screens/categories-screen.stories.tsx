@@ -55,7 +55,7 @@ export const CategoryParentPage: Story = {
   ),
 };
 
-/** FLOW-507: a viewer's rows have no ⋯ and keep the owner's row height. */
+/** FLOW-507: a viewer's rows have no sheet and open their lines, as a read. */
 export const CategoriesViewer: Story = {
   render: () => (
     <StoryRoute entry="/settings/categories" tabs viewer>
@@ -146,7 +146,7 @@ export const CategoriesKeptOutMenu: Story = {
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוד, חומרים" }));
+    await userEvent.click(within(canvasElement).getByRole("button", { name: /^חומרים/ }));
     await storyBody(canvasElement).findByRole("dialog", { name: "חומרים" });
   },
 };
@@ -159,7 +159,7 @@ export const CategoriesKeptOutBackMenu: Story = {
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוד, פיקדונות" }));
+    await userEvent.click(within(canvasElement).getByRole("button", { name: /^פיקדונות/ }));
     await storyBody(canvasElement).findByRole("dialog", { name: "פיקדונות" });
   },
 };
@@ -172,7 +172,7 @@ export const CategoriesKeptOutLoanMenu: Story = {
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוד, תשלומי הלוואה" }));
+    await userEvent.click(within(canvasElement).getByRole("button", { name: /^תשלומי הלוואה/ }));
     await storyBody(canvasElement).findByRole("dialog", { name: "תשלומי הלוואה" });
   },
 };

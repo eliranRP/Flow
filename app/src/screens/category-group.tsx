@@ -11,7 +11,7 @@ import { useToast } from "../ui/toast";
 import { assertNoError, useWrite } from "../use-write";
 
 /**
- * FLOW-401, then FLOW-406 (decision 0164): the "בחירת קטגוריית אב" sheet a category's ⋯ opens.
+ * FLOW-401, then FLOW-406 (decision 0164): the "בחירת קטגוריית אב" sheet a category sheet opens.
  * One tap on a parent applies it by id (`set_category_parent`), with a ביטול toast that puts the
  * earlier parent back. "קטגוריית אב חדשה" makes the parent first (`create_category`), then moves.
  */

@@ -89,7 +89,7 @@ describe("viewer write controls", () => {
     expect(screen.queryByText(/מתוך/)).not.toBeInTheDocument();
   });
 
-  it("hides a new category and the row menu", () => {
+  it("hides a new category and the category row sheet", () => {
     renderScreen(
       <ViewerPreview>
         <CategoriesScreen
@@ -99,7 +99,7 @@ describe("viewer write controls", () => {
     );
     expect(screen.getByText("חומרים")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "קטגוריה חדשה" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /עוד, חומרים/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^חומרים/ })).not.toBeInTheDocument();
   });
 
   it("disables settings writes and connect", () => {
@@ -346,14 +346,14 @@ describe("viewer gates", () => {
       expect(screen.getAllByText("לא מחובר").length).toBeGreaterThan(0);
       expect(screen.queryByText("צריך חיבור")).not.toBeInTheDocument();
     }],
-    ["V30", "a category row only opens its lines (a read, FLOW-322), with no ⋯", () => {
+    ["V30", "a category row only opens its lines (a read, FLOW-322), with no sheet", () => {
       viewer(
         <CategoriesScreen
           sample={[{ id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true, count: 1 }]}
         />,
       );
       expect(screen.getByRole("link", { name: /חומרים/ })).toHaveAttribute("href", "/search?dir=expense&category=c1");
-      expect(screen.queryByRole("button", { name: "עוד, חומרים" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /^חומרים/ })).not.toBeInTheDocument();
     }],
     ["V31", "the project menu stays off", () => {
       viewer(

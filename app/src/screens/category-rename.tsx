@@ -5,7 +5,7 @@ import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
 import { useRenameCategory } from "./category-manage";
 
-/** The category name sheet the ⋯ sheet's "שינוי שם" opens: one field and שמירה, like the business name. */
+/** The category name sheet the category sheet's "שינוי שם" opens: one field and שמירה, like the business name. */
 export function CategoryRenameSheet({
   category,
   onClose,
