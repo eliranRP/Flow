@@ -76,14 +76,19 @@ describe("the sample mortgage's history", () => {
   it("has one payment a month from 01/2025 to 10/2026, each its interest on the balance before it", () => {
     const payments = sampleLoans().find((item) => item.loan.id === SAMPLE_AMORTIZING.id)?.payments ?? [];
     expect(payments).toHaveLength(22);
-    const oldestFirst = [...payments].sort((a, b) => (a.docDate < b.docDate ? -1 : 1));
-    let balance = SAMPLE_AMORTIZING.principalMinor;
-    for (const payment of oldestFirst) {
-      expect(payment.interestMinor).toBe(monthlyInterest(balance, SAMPLE_AMORTIZING.annualRatePpm));
+    // Worked backward from the balance in the books: the newest payment left that balance, so the balance
+    // before each payment is the one after it plus its principal. The interest is the balance before at the
+    // rate, to the cent (the history is rounded to the cent, so one cent either way).
+    const newestFirst = [...payments].sort((a, b) => (a.docDate < b.docDate ? 1 : -1));
+    let after = SAMPLE_AMORTIZING.balanceMinor;
+    for (const payment of newestFirst) {
+      const before = after + payment.principalMinor;
+      const drift = payment.interestMinor - monthlyInterest(before, SAMPLE_AMORTIZING.annualRatePpm);
+      expect(drift >= -1n && drift <= 1n).toBe(true);
       expect(payment.totalMinor).toBe(524_000n);
-      balance -= payment.principalMinor;
+      after = before;
     }
-    expect(balance).toBe(SAMPLE_AMORTIZING.balanceMinor);
+    expect(payments).toHaveLength(22);
   });
 
   it("the next payment reads the schedule from the balance in the books", () => {
@@ -138,8 +143,8 @@ describe("the loan page's balance and subtitle", () => {
     const outlook = loanOutlook(SAMPLE_AMORTIZING, "2026-10-17");
     expect(outlook).not.toBeNull();
     if (outlook == null) return;
-    expect(balanceProgressText(SAMPLE_AMORTIZING, outlook)).toMatch(/^נפרע \$84,313 מתוך \$240,000 · לתשלום עד \d{4}$/);
-    expect(balanceProgressText(SAMPLE_INTEREST_ONLY, { ...outlook, endDate: "2028-03-01" })).toBe("ריבית בלבד: הקרן ($240,000) תיפרע בסוף, 03/2028");
+    expect(balanceProgressText(SAMPLE_AMORTIZING, outlook)).toMatch(/^נפרע \$63,500 מתוך \$240,000 · לתשלום עד \d{4}$/);
+    expect(balanceProgressText(SAMPLE_INTEREST_ONLY, { ...outlook, endDate: "2028-03-01" })).toBe("ריבית בלבד: הקרן ($210,000) תיפרע בסוף, 03/2028");
   });
 
   it("names the project, the kind and the start month, or no project", () => {

@@ -31,13 +31,15 @@ describe("loanOutlook", () => {
   });
 
   it("keeps the months of interest only still ahead, then amortizes over the rest of the term", () => {
-    const outlook = loanOutlook({ ...SAMPLE_INTEREST_ONLY, balanceMinor: 23_000_000n }, "2026-10-09");
+    // A 24-month loan started 2026-03-01 with 12 months of interest only (the sample bridge is now a 6-month note).
+    const loan = { ...SAMPLE_INTEREST_ONLY, startDate: "2026-03-01", termMonths: 24, interestOnlyMonths: 12, paymentMinor: 2_115_566n, balanceMinor: 23_000_000n };
+    const outlook = loanOutlook(loan, "2026-10-09");
     // Started 2026-03-01 with 12 months of interest only: November to February pay no principal.
     expect(outlook?.next).toMatchObject({ dueDate: "2026-11-01", principalMinor: 0n });
     expect(outlook?.toEnd.totals.principal).toBe(23_000_000n);
     expect(outlook?.endYear).toBe("2028");
     // Past them, a balance above the schedule leaves more for the last payment.
-    const later = loanOutlook({ ...SAMPLE_INTEREST_ONLY, balanceMinor: 23_000_000n }, "2027-06-09");
+    const later = loanOutlook(loan, "2027-06-09");
     expect(later?.next.principalMinor).toBeGreaterThan(0n);
     expect(later?.toEnd.totals.principal).toBe(23_000_000n);
   });

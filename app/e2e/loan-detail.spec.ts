@@ -14,7 +14,7 @@ function toast(page: Page, text: string | RegExp) {
 test("the list puts paid-off and closed loans under a collapsed group, and a row opens its page", async ({ page }) => {
   await page.goto("/e2e/loans");
   await expect(page.getByRole("button", { name: /^הלוואת גישור, / })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^הלוואת גישור, \$240,000, .*ריבית בלבד$/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^הלוואת גישור, \$210,000, .*ריבית בלבד$/ })).toBeVisible();
   const group = page.getByRole("button", { name: /^נסגרו · 2/ });
   await expect(group).toHaveAttribute("aria-expanded", "false");
   await expect(page.getByRole("button", { name: /^שטר ישן, / })).toHaveCount(0);
