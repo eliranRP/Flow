@@ -379,6 +379,7 @@ export function AiConnectionPage({
               <ConnectionHead>2 · באיזה עוזר</ConnectionHead>
               <SegmentedControl<AssistantClient>
                 label="באיזה עוזר"
+                showLabel={false}
                 value={assistant}
                 disabled={minting}
                 options={CLIENTS}
