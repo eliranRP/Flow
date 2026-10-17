@@ -177,14 +177,14 @@ export const BOARD_SPLIT_CATEGORIES = [
 ];
 
 export const BOARD_SPLIT_PROJECTS = [
-  { id: "b-birch", name: "Birch Lane", status: "active" as const },
-  { id: "b-juniper", name: "Juniper Ct", status: "active" as const },
+  { id: "b-oak", name: "Oak Ridge", status: "active" as const },
+  { id: "b-pine", name: "Pine Ct", status: "active" as const },
+  { id: "b-cedar", name: "Cedar St", status: "active" as const },
   { id: "b-elm", name: "Elm Row", status: "active" as const },
-  { id: "b-sable", name: "Sable Ct", status: "active" as const },
   { id: "b-okafor", name: "Okafor", status: "active" as const },
 ];
 
-/** 05/10, a $8,940.17 expense to a supplier, filed as materials on the Juniper Ct project. */
+/** 05/10, a $8,940.17 expense to a supplier, filed as materials on the Cedar St project. */
 export const BOARD_SPLIT_LINE: SampleLine = {
   id: "t-board-split",
   amountNet: -894_017n,
@@ -192,9 +192,9 @@ export const BOARD_SPLIT_LINE: SampleLine = {
   currency: "USD",
   categoryId: "b-materials",
   categoryName: "חומרים",
-  projectId: "b-juniper",
-  projectName: "Juniper Ct",
-  supplier: "Northline Supply",
+  projectId: "b-cedar",
+  projectName: "Cedar St",
+  supplier: "Home Depot",
   docDate: "2026-10-05",
   reviewBlocked: false,
   loanSplit: false,
@@ -207,8 +207,8 @@ export const BOARD_SPLIT_READ: LineSplitRead = {
   lineMinor: 894_017n,
   partsMatch: true,
   parts: [
-    { category_id: "b-materials", category_name: "חומרים", project_id: "b-birch", project_name: "Birch Lane", amount_minor: 600_000n, percent: null, rest: false },
-    { category_id: "b-materials", category_name: "חומרים", project_id: "b-sable", project_name: "Sable Ct", amount_minor: 200_000n, percent: null, rest: false },
-    { category_id: "b-materials", category_name: "חומרים", project_id: "b-juniper", project_name: "Juniper Ct", amount_minor: 94_017n, percent: null, rest: true },
+    { category_id: "b-materials", category_name: "חומרים", project_id: "b-oak", project_name: "Oak Ridge", amount_minor: 600_000n, percent: null, rest: false },
+    { category_id: "b-materials", category_name: "חומרים", project_id: "b-pine", project_name: "Pine Ct", amount_minor: 200_000n, percent: null, rest: false },
+    { category_id: "b-materials", category_name: "חומרים", project_id: "b-cedar", project_name: "Cedar St", amount_minor: 94_017n, percent: null, rest: true },
   ],
 };
