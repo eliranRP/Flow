@@ -542,7 +542,9 @@ export function LoansHost({
   const toast = useToast();
   const savedId = useRef<string | null>(null);
   // The loan's page sits under the tab: /loans/:id, or /e2e/loans/:id in the dev fixture.
-  const base = location.pathname.startsWith("/e2e/") ? "/e2e/loans" : "/loans";
+  // The first segment is "loans", or the dev fixture's prefix (built here, so no fixture path ships in the build).
+  const first = location.pathname.split("/")[1] ?? "";
+  const base = first === "loans" ? "/loans" : `/${first}/loans`;
   const loanHref = (id: string) => `${base}/${encodeURIComponent(id)}${search}`;
   const [open, setOpenState] = useState(false);
   const [view, setView] = useState<"form" | "project" | "kind">("form");
