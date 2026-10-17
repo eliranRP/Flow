@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from "react";
-import { PlusIcon, InfoIcon, LoanIcon, RefreshIcon } from "../ui/icons";
+import { PlusIcon, InfoIcon, PercentIcon, RefreshIcon } from "../ui/icons";
 import { CompactBar } from "../ui/compact-bar";
 import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
@@ -86,13 +86,16 @@ export function LoansList({ ctx, closedOpen = false }: { ctx: LoansHostCtx; clos
           </IconButton>
         )}
       />
+      {/* The empty state (States board) has its own primary action, so the header link and the count stay out. */}
       {ctx.holdWrites ? null : (
         <div className="ui-loans-add">
-          <button type="button" className="ui-loans-add-btn" onClick={ctx.openNew} ref={ctx.newRef}>+ הלוואה חדשה</button>
+          {ctx.empty ? null : (
+            <button type="button" className="ui-loans-add-btn" onClick={ctx.openNew} ref={ctx.newRef}>+ הלוואה חדשה</button>
+          )}
         </div>
       )}
       <h1 className="ui-loans-title">הלוואות</h1>
-      {ready ? <p className="ui-loans-count">{`${String(open.length)} פעילות`}</p> : null}
+      {ready && !ctx.empty ? <p className="ui-loans-count">{`${String(open.length)} פעילות`}</p> : null}
       {ctx.loading ? (
         <DelayedSkeleton>
           <LoansSkeleton />
@@ -113,12 +116,12 @@ export function LoansList({ ctx, closedOpen = false }: { ctx: LoansHostCtx; clos
         <>
           {ctx.empty ? (
             <EmptyState
-              icon={<LoanIcon />}
+              icon={<PercentIcon />}
               title={LOANS_EMPTY_TITLE}
               body={ctx.holdWrites ? LOANS_EMPTY_VIEWER : LOANS_EMPTY_OWNER}
               action={ctx.holdWrites ? undefined : (
-                <Button variant="pill" icon={<PlusIcon />} buttonRef={ctx.emptyRef} onClick={ctx.openNew}>
-                  הלוואה חדשה
+                <Button buttonRef={ctx.emptyRef} onClick={ctx.openNew}>
+                  הוספת הלוואה
                 </Button>
               )}
             />

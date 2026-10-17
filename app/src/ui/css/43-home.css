@@ -222,11 +222,11 @@
 /* FLOW-364 (board): the empty band is shorter than a figure band; no padding above the month. */
 .ui-band-body-empty {
   gap: 0;
-  padding-block-start: var(--space-3);
+  padding-block-start: var(--space-4);
 }
 
 .ui-band:has(.ui-band-body-empty) {
-  padding-bottom: var(--space-1);
+  padding-bottom: calc(var(--space-1) * 4.5);
 }
 
 /* FLOW-364 (board): the zero figure on the empty band is a dim lavender, not white. */
@@ -237,7 +237,10 @@
 /* FLOW-375 (board, StatesHomeEmpty): the zero figure sits on the band body's edge, not inside the hero's own gutter. */
 .ui-band-body-empty .ui-band-hero {
   padding-inline: 0;
+  padding-top: calc(var(--space-1) * 3.375);
 }
+.ui-band-body-empty .ui-hero { gap: calc(var(--space-1) * 1.15); }
+.ui-band-body-empty .t-hero { line-height: 1; }
 
 /* FLOW-364 (board, StatesHomeEmpty): the month on the band with no figure, then a bank card and what will show here. */
 .ui-band-month-static {
@@ -262,7 +265,7 @@
   align-items: stretch;
   gap: var(--space-3);
   margin: var(--space-4) var(--space-side) 0;
-  padding: var(--space-5);
+  padding: calc(var(--space-1) * 4.5) calc(var(--space-1) * 4.5) calc(var(--space-1) * 6.5);
   border-radius: var(--radius-card);
   background: var(--color-surface);
   text-align: start;
@@ -287,7 +290,8 @@
 }
 
 .ui-home-empty-body {
-  margin: 0;
+  margin: calc(var(--space-1) * -0.875) 0 0;
+  line-height: calc(var(--space-1) * 5.75);
   color: var(--color-text-secondary);
   text-align: start;
 }
@@ -295,7 +299,7 @@
 .ui-home-empty-what {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: calc(var(--space-1) * 0.75);
   margin: var(--space-5) var(--space-side) 0;
 }
 
@@ -310,7 +314,7 @@
   display: flex;
   flex-direction: column;
   /* FLOW-364 (board): the two rows sit 12px closer than the 16px gap. */
-  gap: var(--space-1);
+  gap: calc(var(--space-1) * 0.5);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -334,8 +338,9 @@
   background: var(--color-line);
 }
 
+.ui-home-empty-card .ui-btn { margin-top: var(--space-1); }
 .ui-home-empty-link-row {
-  margin: 0;
+  margin: calc(var(--space-1) * 2.5) 0 0;
   text-align: center;
 }
 

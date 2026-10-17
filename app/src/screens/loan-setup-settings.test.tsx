@@ -138,8 +138,9 @@ function renderSection(ui: ReactNode) {
   return Object.assign(view, { client });
 }
 
+/** The empty list's primary action, or the header link once a loan is listed. */
 function openLoan() {
-  fireEvent.click(screen.getByRole("button", { name: "+ הלוואה חדשה" }));
+  fireEvent.click(screen.queryByRole("button", { name: "הוספת הלוואה" }) ?? screen.getByRole("button", { name: "+ הלוואה חדשה" }));
 }
 
 async function expectReopenedBlank(inserts: number) {
@@ -205,7 +206,7 @@ describe("the Loans tab list and sheet", () => {
     const owner = renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
     expect(await screen.findByText("אין הלוואות עדיין")).toBeInTheDocument();
     expect(screen.getByText("הוסיפו הלוואה כדי לפצל כל תשלום לריבית, מסים וביטוח וקרן.")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "הלוואה חדשה" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "הוספת הלוואה" })).toHaveLength(1);
     owner.unmount();
     renderSection(
       <ViewerPreview>
@@ -219,7 +220,7 @@ describe("the Loans tab list and sheet", () => {
   it("returns focus to the empty state's button when the new-loan sheet closes", async () => {
     renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
     await screen.findByText("אין הלוואות עדיין");
-    const add = screen.getByRole("button", { name: "הלוואה חדשה" });
+    const add = screen.getByRole("button", { name: "הוספת הלוואה" });
     fireEvent.click(add);
     fireEvent.click(within(screen.getByRole("dialog", { name: "הלוואה" })).getByRole("button", { name: "סגירה" }));
     await waitFor(() => { expect(add).toHaveFocus(); }, { timeout: 2500 });
