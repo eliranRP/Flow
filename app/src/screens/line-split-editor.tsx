@@ -430,6 +430,11 @@ export function LineSplitEditor({
               return (
                 <SwipeRow key={part.key} disabled={busy || blocked} onRemove={() => { removePart(part.key); }}>
                   <div className="ui-lsplit-part" data-invalid={message != null || fieldError != null ? "" : undefined}>
+                    {/* FLOW-370: the board's card head: the part's number, and its remove control. */}
+                    <div className="ui-lsplit-part-head">
+                      <span className="t-label ui-lsplit-part-no">{`חלק ${index + 1}`}</span>
+                      <SplitRemoveButton name={name} onRemove={() => { removePart(part.key); }} />
+                    </div>
                     <div className="ui-lsplit-text">
                       {/* FLOW-370: two pickers side by side, as on the board: category, then project. */}
                       <div className="ui-lsplit-pickers">
@@ -456,7 +461,6 @@ export function LineSplitEditor({
                           </span>
                         </button>
                       </div>
-                      <SplitRemoveButton name={name} onRemove={() => { removePart(part.key); }} />
                     </div>
                     <div className="ui-lsplit-end ui-lsplit-end-entry">
                       <div className="ui-lsplit-entry">

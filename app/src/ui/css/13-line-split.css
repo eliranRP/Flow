@@ -71,6 +71,18 @@
 }
 
 /* FLOW-370: the category and project pickers sit side by side, each a field on the card. */
+/* FLOW-370: the card head row, the board's "חלק N" with the remove control. */
+.ui-lsplit-part-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.ui-lsplit-part-no {
+  color: var(--color-text-muted);
+}
+
 .ui-lsplit-pickers {
   display: grid;
   grid-template-columns: 1fr 1fr;
