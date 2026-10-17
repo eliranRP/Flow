@@ -1,15 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type Ref, type SubmitEvent } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type Ref, type SubmitEvent } from "react";
 import type { LoanKind } from "@flow/shared";
-import { BackIcon, CalendarIcon, ChevronDownIcon, InfoIcon, LoanIcon, PlusIcon, RefreshIcon } from "../ui/icons";
-import { EmptyState } from "../ui/empty-state";
+import { BackIcon, CalendarIcon, ChevronDownIcon } from "../ui/icons";
 import { IconButton } from "../ui/icon-button";
-import { List, ListRow } from "../ui/list-row";
 import { MoneyField, PercentField } from "../ui/money-field";
 import { SegmentedControl } from "../ui/segmented-control";
-import { DelayedSkeleton, Skeleton } from "../ui/skeleton";
-import { LoansSkeleton } from "../ui/screen-skeletons";
+import { Skeleton } from "../ui/skeleton";
 import { DateSheet } from "../ui/date-sheet";
 import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
@@ -42,8 +39,7 @@ import {
   type LoanInsert,
   type LoanPreview,
 } from "./loan-form";
-import { LoanGroupedList, groupLoans, useLoanList, type LoanListRow } from "./loan-list";
-import { LoanSummaryCard } from "./loan-summary-card";
+import { groupLoans, useLoanList, type LoanListRow } from "./loan-list";
 import { useLoanSummary } from "./loan-summary-entries";
 import { type LoanProjectField, LoanProjectPicker, type LoanProjectSource, NO_PROJECT, projectNameOf } from "./loan-project-picker";
 
@@ -492,18 +488,39 @@ export const LOANS_EMPTY_OWNER = "הוסיפו הלוואה כדי לפצל כל
 export const LOANS_EMPTY_VIEWER = "כשיתווספו הלוואות הן יופיעו כאן.";
 export const LOANS_ERROR_TITLE = "לא הצלחנו לטעון את ההלוואות";
 
+/** What the Loans tab's list draws (LoansList in loans-list.tsx), with the host's reads and actions. */
+export type LoansHostCtx = {
+  rows: readonly LoanListRow[];
+  loading: boolean;
+  failed: boolean;
+  /** No open loan: the empty state shows, with the closed group under it. */
+  empty: boolean;
+  summary: ReturnType<typeof useLoanSummary>;
+  currency: LoanCurrency | null;
+  holdWrites: boolean;
+  /** A background refresh of the list is running. */
+  retrying: boolean;
+  retry: () => void;
+  /** Opens the new-loan sheet (הלוואה חדשה). */
+  openNew: () => void;
+  newRef: Ref<HTMLButtonElement>;
+  emptyRef: Ref<HTMLButtonElement>;
+  /** Opens one loan's page. */
+  openLoan: (id: string) => void;
+};
+
 /**
- * The body of `/settings/loans` (FLOW-501): the balances, then הלוואה חדשה.
- * A viewer reads the balances as static rows and gets no new-loan row (U10).
- * Open loans come first, then "נסגרו (N)", collapsed (FLOW-106). A row opens the loan's page,
- * where its project now lives (FLOW-106 B moved the FLOW-119 sheet there).
+ * The Loans tab's data and the new-loan sheet (FLOW-139b). The list is the render prop: the screen
+ * draws it from `ctx`, and the sheet and everything it saves stay here. A viewer gets no new-loan
+ * action (U10). A row opens the loan's page under /loans, or /e2e/loans in the dev fixture.
  */
-export function LoanSettingsSection({
+export function LoansHost({
   companyId,
   companyCurrency,
   blocked,
   projects,
   sample,
+  children,
 }: {
   companyId: string | null;
   /** Preview passes this. Live omits it and reads the company's lines. */
@@ -512,6 +529,7 @@ export function LoanSettingsSection({
   /** FLOW-119. The projects the loan can sit under. */
   projects?: LoanProjectSource;
   sample?: LoanRowsSample;
+  children: (ctx: LoansHostCtx) => ReactNode;
 }) {
   const source: LoanProjectSource = projects ?? { rows: [] };
   const navigate = useNavigate();
@@ -519,8 +537,9 @@ export function LoanSettingsSection({
   const search = usePreviewSearch();
   const toast = useToast();
   const savedId = useRef<string | null>(null);
-  // The page sits under this list's path: /settings/loans/:id, or /e2e/loans/:id in the dev fixture.
-  const loanHref = (id: string) => `${location.pathname.replace(/\/$/, "")}/${encodeURIComponent(id)}${search}`;
+  // The loan's page sits under the tab: /loans/:id, or /e2e/loans/:id in the dev fixture.
+  const base = location.pathname.startsWith("/e2e/") ? "/e2e/loans" : "/loans";
+  const loanHref = (id: string) => `${base}/${encodeURIComponent(id)}${search}`;
   const [open, setOpenState] = useState(false);
   const [view, setView] = useState<"form" | "project" | "kind">("form");
   const [draftProject, setDraftProject] = useState<string | null>(null);
@@ -528,7 +547,7 @@ export function LoanSettingsSection({
   // The picker keeps the form's height, so the sheet does not jump when they swap.
   const [formHeight, setFormHeight] = useState<number | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
-  const rowRef = useRef<HTMLButtonElement>(null);
+  const newButton = useRef<HTMLButtonElement>(null);
   const projectFieldRef = useRef<HTMLButtonElement>(null);
   const kindFieldRef = useRef<HTMLButtonElement>(null);
   const sheetTitle = useRef<HTMLHeadingElement>(null);
@@ -608,7 +627,7 @@ export function LoanSettingsSection({
     setSheet(next);
   }
 
-  // FLOW-331: + → הלוואה חדשה lands on /settings/loans with ?new=loan.
+  // FLOW-331: + → הלוואה חדשה lands on /loans with ?new=loan.
   useOpenFromQuery("loan", !holdWrites && currency != null, (sameEntry) => {
     adoptNew.current = sameEntry;
     setLoanSheet(true);
@@ -633,65 +652,25 @@ export function LoanSettingsSection({
   const rows: readonly LoanListRow[] = Array.isArray(sample) ? sample : sample == null ? (balances.data ?? []) : [];
   // Only closed loans: the empty state shows, with "הלוואות שנסגרו (N)" under it (§3.1).
   const empty = !loading && !failed && groupLoans(rows).open.length === 0;
-  const newLoanReturn = empty ? emptyButton : rowRef;
+  const newLoanReturn = empty ? emptyButton : newButton;
 
   return (
     <>
-      {loading ? (
-        <DelayedSkeleton>
-          <LoansSkeleton />
-        </DelayedSkeleton>
-      ) : failed ? (
-        <EmptyState
-          icon={<InfoIcon size={36} />}
-          title={LOANS_ERROR_TITLE}
-          body="נסו שוב בעוד רגע"
-          action={(
-            // The tint action every empty and error state uses (DESIGN-RULES §2.8, FLOW-334), not a fill.
-            <Button
-              variant="pill"
-              icon={<RefreshIcon />}
-              busy={sample == null && balances.isFetching}
-              onClick={() => { if (sample == null) void balances.refetch(); }}
-            >
-              ניסיון חוזר
-            </Button>
-          )}
-        />
-      ) : (
-        <>
-          {empty ? (
-            <EmptyState
-              icon={<LoanIcon />}
-              title={LOANS_EMPTY_TITLE}
-              body={holdWrites ? LOANS_EMPTY_VIEWER : LOANS_EMPTY_OWNER}
-              action={holdWrites ? undefined : (
-                <Button variant="pill" icon={<PlusIcon />} buttonRef={emptyButton} onClick={() => { setLoanSheet(true); }}>
-                  הלוואה חדשה
-                </Button>
-              )}
-            />
-          ) : null}
-          {summary != null && summary.openCount > 0 && currency != null ? <LoanSummaryCard summary={summary} currency={currency} /> : null}
-          {/* A viewer reads the loan's page too, as static rows. */}
-          <LoanGroupedList
-            rows={rows}
-            onOpen={(row) => { void navigate(loanHref(row.id)); }}
-          />
-        </>
-      )}
-      {holdWrites || failed || empty ? null : (
-        <List className="ui-loan-new">
-          <ListRow
-            variant="button"
-            title="הלוואה חדשה"
-            icon={<LoanIcon />}
-            chevron
-            buttonRef={rowRef}
-            onClick={() => { setLoanSheet(true); }}
-          />
-        </List>
-      )}
+      {children({
+        rows,
+        loading,
+        failed,
+        empty,
+        summary,
+        currency,
+        holdWrites,
+        retrying: sample == null && balances.isFetching,
+        retry: () => { if (sample == null) void balances.refetch(); },
+        openNew: () => { setLoanSheet(true); },
+        newRef: newButton,
+        emptyRef: emptyButton,
+        openLoan: (id) => { void navigate(loanHref(id)); },
+      })}
       <Sheet
         open={holdWrites ? false : open}
         onOpenChange={setLoanSheet}

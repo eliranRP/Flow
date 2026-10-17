@@ -35,12 +35,12 @@ describe("useOpenFromQuery", () => {
 
   it("waits while not ready and keeps the param until then", () => {
     const open = vi.fn();
-    const view = renderAt("/settings/loans?new=loan", "loan", false, open);
+    const view = renderAt("/loans?new=loan", "loan", false, open);
     expect(open).not.toHaveBeenCalled();
-    expect(shown).toBe("/settings/loans?new=loan");
+    expect(shown).toBe("/loans?new=loan");
     view.setReady(true);
     expect(open).toHaveBeenCalledTimes(1);
-    expect(shown).toBe("/settings/loans");
+    expect(shown).toBe("/loans");
   });
 
   it("leaves another screen's request alone", () => {
@@ -52,6 +52,6 @@ describe("useOpenFromQuery", () => {
 
   it("builds the path with the preview search kept", () => {
     expect(quickNewPath("/projects", "?preview=1", "project")).toBe("/projects?preview=1&new=project");
-    expect(quickNewPath("/settings/loans", "", "loan")).toBe("/settings/loans?new=loan");
+    expect(quickNewPath("/loans", "", "loan")).toBe("/loans?new=loan");
   });
 });

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
-import { LoansScreen, SettingsScreen } from "./flow-screens";
+import { SettingsScreen } from "./flow-screens";
 import { BusinessScreen } from "./business-screen";
 import { NotificationsLockFrame } from "../ui/reference-frames.stories-support";
 import { StoryRoute } from "../ui/story-route";
@@ -156,76 +156,6 @@ export const BusinessDateSheet: Story = {
     await userEvent.click(within(canvasElement).getByRole("button", { name: "רווח ותזרים לפי: תאריך תשלום" }));
     await storyBody(canvasElement).findByRole("dialog", { name: "רווח ותזרים לפי" });
   },
-};
-
-const pagesLoans = [
-  { id: "l1", name: "משכנתא אלון", currency: "USD", balanceMinor: 20_000_000n, flaggedParts: 0, projectId: "p1", projectName: "וילה אלון" },
-  { id: "l2", name: "הלוואת ציוד", currency: "ILS", balanceMinor: 5_000_000n, flaggedParts: 1, projectId: "p2", projectName: "פרויקט גפן" },
-];
-
-export const Loans: Story = {
-  name: "Loans",
-  render: () => (
-    <StoryRoute entry="/settings/loans" tabs>
-      <ExampleBar />
-      <LoansScreen sample={{ ...pagesBusiness, loans: pagesLoans }} />
-    </StoryRoute>
-  ),
-};
-
-export const LoansEmpty: Story = {
-  name: "Loans, empty",
-  render: () => (
-    <StoryRoute entry="/settings/loans" tabs>
-      <ExampleBar />
-      <LoansScreen sample={{ ...pagesBusiness, loans: [] }} />
-    </StoryRoute>
-  ),
-};
-
-export const LoansLoading: Story = {
-  name: "Loans, loading",
-  render: () => (
-    <StoryRoute entry="/settings/loans" tabs>
-      <ExampleBar />
-      <LoansScreen sample={{ ...pagesBusiness, loans: "loading" }} />
-    </StoryRoute>
-  ),
-};
-// FLOW-358: under 360px the loading rows drop the icon slot, as the loaded list does.
-
-export const LoansError: Story = {
-  name: "Loans, error",
-  render: () => (
-    <StoryRoute entry="/settings/loans" tabs>
-      <ExampleBar />
-      <LoansScreen sample={{ ...pagesBusiness, loans: "error" }} />
-    </StoryRoute>
-  ),
-};
-
-export const LoansViewer: Story = {
-  name: "Loans, viewer",
-  render: () => (
-    <StoryRoute entry="/settings/loans" tabs>
-      <ExampleBar />
-      <ViewerPreview>
-        <LoansScreen sample={{ ...pagesBusiness, loans: pagesLoans }} />
-      </ViewerPreview>
-    </StoryRoute>
-  ),
-};
-
-export const LoansEmptyViewer: Story = {
-  name: "Loans, empty, viewer",
-  render: () => (
-    <StoryRoute entry="/settings/loans" tabs>
-      <ExampleBar />
-      <ViewerPreview>
-        <LoansScreen sample={{ ...pagesBusiness, loans: [] }} />
-      </ViewerPreview>
-    </StoryRoute>
-  ),
 };
 
 export const NotificationsLock: Story = {

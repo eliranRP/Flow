@@ -1,13 +1,19 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { createMemoryRouter, MemoryRouter, RouterProvider } from "react-router-dom";
 import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { contractualPaymentMinor, regularPaymentMinor } from "@flow/shared";
 import { ToastProvider } from "../ui/toast";
 import { ViewerPreview } from "../use-is-viewer";
 import { firstOfNextMonth } from "./loan-form";
-import { LoanProjectPicker, LoanSettingsSection } from "./loan-setup";
+import { LoanProjectPicker, LoansHost } from "./loan-setup";
+import { LoansList } from "./loans-list";
+
+/** The Loans tab's list and sheet: the host with the list drawn from its context (FLOW-139b). */
+function LoanSettingsSection(props: Omit<ComponentProps<typeof LoansHost>, "children">) {
+  return <LoansHost {...props}>{(ctx) => <LoansList ctx={ctx} />}</LoansHost>;
+}
 
 const db = vi.hoisted(() => ({
   inserts: [] as Array<Record<string, unknown>>,
@@ -133,7 +139,7 @@ function renderSection(ui: ReactNode) {
 }
 
 function openLoan() {
-  fireEvent.click(screen.getByRole("button", { name: "הלוואה חדשה" }));
+  fireEvent.click(screen.getByRole("button", { name: "+ הלוואה חדשה" }));
 }
 
 async function expectReopenedBlank(inserts: number) {
@@ -160,7 +166,7 @@ function fillSavable() {
   fireEvent.change(screen.getByLabelText("ריבית שנתית"), { target: { value: "11.2042" } });
 }
 
-describe("LoanSettingsSection", () => {
+describe("the Loans tab list and sheet", () => {
   it("hides a new loan from a viewer and keeps the balances readable (FLOW-501, U10)", async () => {
     db.loans = [{ id: "l1", name: "משכנתא אלון", currency: "ILS", project_id: null }];
     renderSection(
@@ -179,7 +185,7 @@ describe("LoanSettingsSection", () => {
     const at = (ui: ReactNode) => (
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <ToastProvider>
-          <MemoryRouter initialEntries={["/settings/loans?new=loan"]}>{ui}</MemoryRouter>
+          <MemoryRouter initialEntries={["/loans?new=loan"]}>{ui}</MemoryRouter>
         </ToastProvider>
       </QueryClientProvider>
     );
@@ -567,7 +573,7 @@ describe("FLOW-119 loan project", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "הלוואה חדשה" }));
+    fireEvent.click(screen.getByRole("button", { name: "+ הלוואה חדשה" }));
     await waitFor(() => {
       expect(router.state.location.state).toMatchObject({ flowLayer: "loan-new" });
     });
@@ -588,10 +594,10 @@ describe("FLOW-119 loan project", () => {
     db.projects = [{ id: "p-a", name: "פרויקט א" }];
     const router = createMemoryRouter(
       [
-        { path: "/settings/loans", element: <LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} /> },
-        { path: "/settings/loans/:loanId", element: <p>עמוד ההלוואה</p> },
+        { path: "/loans", element: <LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} /> },
+        { path: "/loans/:loanId", element: <p>עמוד ההלוואה</p> },
       ],
-      { initialEntries: ["/settings/loans"] },
+      { initialEntries: ["/loans"] },
     );
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
@@ -601,8 +607,8 @@ describe("FLOW-119 loan project", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    fireEvent.click(await screen.findByRole("button", { name: /^הלוואת דוגמה, .*פרויקט א$/ }));
-    await waitFor(() => { expect(router.state.location.pathname).toBe("/settings/loans/l-1"); });
+    fireEvent.click(await screen.findByRole("button", { name: /^הלוואת דוגמה, .*פרויקט א/ }));
+    await waitFor(() => { expect(router.state.location.pathname).toBe("/loans/l-1"); });
   });
 
   it("shows the principal, not נפרעה, for a loan with no balance row yet (FLOW-115)", async () => {

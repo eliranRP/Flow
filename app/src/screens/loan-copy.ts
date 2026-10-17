@@ -16,6 +16,14 @@ export const LOAN_KIND_LABEL: Record<LoanKind, string> = {
   demand: "לפי דרישה",
 };
 
+/** The kind word under a row on the Loans tab (board: short words; the detail page keeps LOAN_KIND_LABEL). */
+export const LOAN_KIND_LIST_LABEL: Record<LoanKind, string> = {
+  amortizing: "פריסה רגילה",
+  interest_only: "ריבית בלבד",
+  balloon: "בלון",
+  demand: "לפי דרישה",
+};
+
 export const LOAN_STATUS_LABEL: Record<LoanStatus, string> = {
   open: "פתוחה",
   paid_off: "נפרעה",

@@ -530,7 +530,7 @@ function ProjectLoansList({ project, search }: { project: NonNullable<ProjectDet
           title={loan.name}
           hint={loan.balance_minor <= 0n ? "נפרעה" : undefined}
           meta={<bdi className="ui-num ui-project-row-figure" dir="ltr">{formatAmountText(loan.balance_minor, loan.currency)}</bdi>}
-          href={`/settings/loans/${loan.id}${search}`}
+          href={`/loans/${loan.id}${search}`}
           chevron
         />
       ))}

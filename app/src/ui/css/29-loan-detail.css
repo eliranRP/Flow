@@ -1,6 +1,6 @@
-/* FLOW-106 B / FLOW-110. A loan's page (/settings/loans/:id): the balance with its status, the
+/* FLOW-106 B / FLOW-110. A loan's page (/loans/:id): the balance with its status, the
    quiet links under a section ("+ קביעת ריבית", "כל התשלומים"), and the delete row at the end.
-   The loans list's "נסגרו (N)" group (DisclosureGroup) and the date sheet's floor line. */
+   The date sheet's floor line. */
 .ui-loan-head {
   margin-top: var(--space-2);
 }
@@ -36,17 +36,6 @@
 .ui-text-link-bad,
 .ui-text-link-bad.ui-text-link-quiet {
   color: var(--color-bad);
-}
-
-/* "נסגרו (N)": a quiet link at the end of the list, the rows under it muted. */
-.ui-disclosure-head {
-  display: flex;
-  margin-top: var(--space-2);
-  padding-inline: var(--space-side);
-}
-
-.ui-loan-closed-list .ui-loan-amount {
-  color: var(--color-text-muted);
 }
 
 /* The date sheet's floor ("התשלום האחרון שויך ב־…") and a refusal under the picked day. */

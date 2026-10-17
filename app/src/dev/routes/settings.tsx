@@ -77,14 +77,6 @@ export function useDevSettingsSample(): NonNullable<Parameters<typeof SettingsSc
                 : assistant === "nocompany"
                   ? { state: "no-company" }
                   : { state: "empty" },
-        loanProjects: [
-          { id: "p1", name: "שיפוץ הרצל 12", status: "active" },
-          { id: "p2", name: "פרגולה בית כהן", status: "active" },
-        ],
-        loans: params.get("loans") === "none" ? [] : [
-          { id: "l1", name: "משכנתא אלון", currency: "USD", balanceMinor: 20_000_000n, flaggedParts: 0, projectId: "p1", projectName: "שיפוץ הרצל 12" },
-          { id: "l2", name: "הלוואת ציוד", currency: "ILS", balanceMinor: 5_000_000n, flaggedParts: 1, projectId: null, projectName: null },
-        ],
   };
 }
 
