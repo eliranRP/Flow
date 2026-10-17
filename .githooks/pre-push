@@ -65,6 +65,14 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   if [[ "$local_sha" == "$(git rev-parse HEAD)" ]]; then
     gate || { echo "pre-push: local CI failed on ${local_ref}." >&2; exit 1; }
   else
+    # A linked node_modules would be changed by the slice's pnpm install when the lock differs, so such a ref is
+    # checked from a checkout. An unreadable lock on either side counts as a difference.
+    theirs="$(git rev-parse -q --verify "$local_sha:pnpm-lock.yaml" 2>/dev/null || echo none)"
+    ours="$(git hash-object "$root/pnpm-lock.yaml" 2>/dev/null || echo none)"
+    if [[ "$theirs" != "$ours" ]]; then
+      echo "pre-push: ${local_ref} changes pnpm-lock.yaml; check it out here (pnpm install) and push again" >&2
+      exit 1
+    fi
     echo "pre-push: ${local_ref} is not checked out; checking ${local_sha:0:7} in a throwaway worktree."
     check_detached "$local_sha" || { echo "pre-push: local CI failed on ${local_ref}." >&2; exit 1; }
   fi
