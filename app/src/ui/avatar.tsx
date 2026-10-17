@@ -6,12 +6,12 @@ import { BankIcon, DocumentIcon, PeopleIcon } from "./icons";
  * Every row uses the same colour. A name with no letter shows the source icon in the same circle.
  * Decorative: the row's accessible name already carries the counterparty.
  */
-export function Avatar({ name, fallback }: { name: string; fallback: "bank" | "invoice" | "person" }) {
+export function Avatar({ name, fallback, single = false }: { name: string; fallback: "bank" | "invoice" | "person"; /** One letter, as the קבועים list draws it. */ single?: boolean }) {
   const initials = initialsOf(name);
   return (
     <span className="ui-avatar" aria-hidden="true" dir={initials?.dir} data-avatar={initials == null ? "icon" : "letters"}>
       {initials != null
-        ? initials.text
+        ? (single ? initials.text.slice(0, 1) : initials.text)
         : fallback === "bank"
           ? <BankIcon size={20} />
           : fallback === "person"

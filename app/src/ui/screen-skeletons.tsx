@@ -85,21 +85,25 @@ export function LoansSkeleton() {
  */
 export function RecurringSkeleton() {
   return (
-    <div className="ui-recurring-skeleton" aria-busy="true">
+    <div className="ui-recurring ui-recurring-skeleton" aria-busy="true">
       <Loading />
-      <h1 className="t-title">קבועים</h1>
-      <Bar w="120px" h={12} />
-      <Bar w="150px" h={34} className="ui-recurring-skeleton-card" />
-      <Bar w="100%" h={6} pill />
-      {[0, 1].map((group) => (
+      <header className="ui-recurring-head">
+        <h1 className="t-title">קבועים</h1>
+      </header>
+      <div className="ui-recurring-skeleton-top">
+        <Bar w="120px" h={12} />
+        <Bar w="150px" h={34} className="ui-recurring-skeleton-card" />
+        <Bar w="100%" h={6} pill />
+      </div>
+      {[2, 3].map((rows, group) => (
         <div className="ui-recurring-skeleton-group" key={group}>
           <Bar w={group === 0 ? "80px" : "110px"} h={16} />
-          {[0, 1].map((line) => (
+          {Array.from({ length: rows }, (_, line) => (
             <div className="ui-recurring-skeleton-row" key={line}>
               <span aria-hidden="true" className="ui-skeleton-bar ui-recurring-skeleton-avatar" />
               <div className="ui-recurring-skeleton-lines">
-                <Bar w="130px" h={12} />
-                <Bar w="84px" h={10} />
+                <Bar w="58%" h={12} />
+                <Bar w="38%" h={10} />
               </div>
               <Bar w="64px" h={12} />
             </div>

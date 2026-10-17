@@ -4,6 +4,9 @@ import { RecurringScreen } from "../../screens/recurring-screen";
 import { RECURRING_CHARGES_FIXTURE_POWER, RECURRING_CHARGES_FIXTURE_WATER, RECURRING_FIXTURE, RECURRING_MISSING_FIXTURE } from "../../recurring-sample";
 import type { DevRoute } from "./types";
 
+/** The board fixture date: 11/10/2026 (the late days count from it). */
+const CHARGE_NOW = new Date("2026-10-11T12:00:00Z");
+
 /**
  * FLOW-447: the list on the rule-25 fixture, for the e2e run and the board proof. FLOW-447b:
  * `?preset=swipe` opens the late bill with a suggestion over its action, `?preset=ignored` has
@@ -13,11 +16,8 @@ export function DevRecurring() {
   const [params] = useSearchParams();
   const preset = params.get("preset");
   const late = preset === "ignored" ? RECURRING_MISSING_FIXTURE.filter((bill) => bill.party_id !== "power") : RECURRING_MISSING_FIXTURE;
-  return <RecurringScreen sample={RECURRING_FIXTURE} missing={late} failed={preset === "error"} openId={preset === "swipe" ? "power" : undefined} />;
+  return <RecurringScreen now={CHARGE_NOW} sample={RECURRING_FIXTURE} missing={late} failed={preset === "error"} openId={preset === "swipe" ? "power" : undefined} />;
 }
-
-/** The charge page's board fixture date: 11/10/2026 (the late days count from it). */
-const CHARGE_NOW = new Date("2026-10-11T12:00:00Z");
 
 /**
  * FLOW-447c: the charge page on the board's two parties. `item` is the water bill (arrived, 38% over),

@@ -127,7 +127,7 @@ function RowView({
   const className = cx("ui-recurring-row", !row.paid && "ui-recurring-row-open");
   const inner = (
     <>
-      <Avatar name={row.name} fallback="person" />
+      <Avatar name={row.name} fallback="person" single />
       <span className="ui-recurring-name">
         <RowName row={row} />
       </span>

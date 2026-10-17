@@ -1,48 +1,56 @@
-/* FLOW-447: the קבועים list. Tokens only; the card comes from 40-card.css (ui-card). */
+/* FLOW-447: the קבועים list, measured against the board (Recurring.dc.html). Tokens only; the card comes from 40-card.css. */
 .ui-recurring {
-  display: grid;
-  gap: 0;
-  padding: calc(var(--space-8) * 2) var(--space-side) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--space-4) + var(--space-10) + var(--space-1)) var(--space-side) var(--space-6);
 }
 
-.ui-recurring > section {
-  margin-top: calc(var(--space-5) + var(--space-1) / 2);
-}
-
-.ui-recurring .ui-section-head {
-  margin-top: 0;
-  margin-bottom: var(--space-1);
+.ui-recurring .t-label {
+  font-size: var(--type-line2-size);
+  line-height: var(--type-title-line);
+  color: var(--color-text-muted);
 }
 
 .ui-recurring-head {
-  display: grid;
-  gap: calc(var(--space-1) / 2);
+  display: flex;
+  flex-direction: column;
 }
 
-.ui-recurring-head .t-label,
-.ui-recurring-outflow .t-label {
-  line-height: calc(var(--type-line2-size) * 1.2);
+.ui-recurring-head > h1 {
+  margin: var(--space-1) 0 calc(var(--space-1) / 2);
+  font-size: var(--type-title-size);
+  font-weight: var(--type-title-weight);
+  line-height: var(--type-title-line);
+}
+
+.ui-recurring-head > .t-heading {
+  margin: 0;
+  font-weight: var(--type-section-weight);
 }
 
 .ui-recurring-outflow {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
-  padding: calc(var(--space-4) + var(--space-1) / 2);
-}
-
-.ui-recurring > .ui-recurring-outflow {
   margin-top: var(--space-4);
+  padding: calc(var(--space-4) + var(--space-1) / 2);
+  border-radius: var(--radius-card);
 }
 
-/* board: the month's figure is the 34px total, not the 40px display. */
-.ui-recurring-outflow .t-display {
+.ui-recurring-outflow > .t-label:first-child {
+  color: var(--color-text-secondary);
+}
+
+.ui-recurring-outflow > .t-display {
+  margin: 0;
   font-size: var(--type-total-size);
+  font-weight: var(--type-total-weight);
   line-height: var(--type-total-line);
 }
 
 .ui-recurring-bar {
-  height: 8px;
-  border-radius: var(--radius-block);
+  height: var(--space-2);
+  border-radius: var(--radius-chip);
   background: var(--color-track-strong);
   overflow: hidden;
 }
@@ -53,73 +61,96 @@
   background: var(--color-accent);
 }
 
+/* A section head: 22px above, 6px under, the title 20/500 and the note on its baseline. */
+.ui-recurring .ui-section-head {
+  align-items: baseline;
+  margin: 0;
+  padding: calc(var(--space-5) + var(--space-1) / 2) 0 calc(var(--space-1) + var(--space-1) / 2);
+}
+
+.ui-recurring .ui-section-head > h2 {
+  font-size: var(--type-section-size);
+  font-weight: var(--type-section-weight);
+  line-height: var(--type-title-line);
+}
+
 .ui-recurring-rows {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
+/* A row: initial, name over place, amount over hint at the far end; no tint, the page colour behind it. */
 .ui-recurring-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: var(--space-inset-row);
-  padding: var(--space-3) 0;
-  color: inherit;
+  box-sizing: border-box;
+  min-height: calc(var(--space-8) * 2);
+  padding: var(--space-2) 0;
+  color: var(--color-text);
   text-decoration: none;
 }
 
-.ui-recurring-row-open .ui-recurring-amount > span:first-child {
-  color: var(--color-text-secondary);
-}
-
-.ui-recurring-name {
-  display: grid;
-  flex: 1;
-  min-width: 0;
-  gap: calc(var(--space-1) / 2);
-  text-align: end;
-}
-
-.ui-recurring-amount {
-  display: grid;
-  flex: none;
-  gap: calc(var(--space-1) / 2);
-  text-align: start;
-}
-
-/* board: the name and the amount are the 17px regular line, the place and the hint under them. */
-.ui-recurring-title,
-.ui-recurring-amount > span:first-child {
-  font-size: var(--type-body-size);
-  font-weight: var(--type-body-weight);
-  line-height: calc(var(--type-title-line) - 0.015);
-}
-
-.ui-recurring-name > .t-label {
-  line-height: calc(var(--type-title-line) - 0.015);
-}
-
-.ui-recurring-amount > .t-label {
-  font-size: var(--type-caption-size);
-  line-height: calc(var(--type-title-line) - 0.015);
-}
-
-/* The row covers the action under it in the page colour, as the board's row does. */
 .ui-recurring .ui-swipe-row-body {
   background: var(--color-bg);
 }
 
-.ui-recurring-income {
-  color: var(--color-income);
+.ui-recurring .ui-avatar {
+  font-weight: var(--type-chip-weight);
 }
 
-.ui-recurring-alert {
-  color: var(--color-bad);
+.ui-recurring-name {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: calc(var(--space-1) / 2);
+  min-width: 0;
+  text-align: start;
+}
+
+.ui-recurring-name > span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .ui-recurring-title {
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-title-line);
   color: var(--color-text);
+}
+
+.ui-recurring-amount {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: calc(var(--space-1) / 2);
+  font-size: var(--type-body-size);
+  line-height: var(--type-title-line);
+}
+
+.ui-recurring-amount > span:first-child {
+  direction: ltr;
+  color: var(--color-text);
+}
+
+.ui-recurring-row-open .ui-recurring-amount > span:first-child {
+  color: var(--color-text-muted);
+}
+
+.ui-recurring-amount > .t-label {
+  font-size: var(--type-caption-size);
+}
+
+.ui-recurring-amount > .ui-recurring-alert {
+  color: var(--color-signal-soft);
+}
+
+.ui-recurring-amount > span:first-child.ui-recurring-income {
+  color: var(--color-income);
 }
 
 /* FLOW-447b: a late bill that still alerts. The swipe reveals the ignore action; its button is for
@@ -164,46 +195,40 @@
   z-index: 1;
 }
 
-.ui-recurring-suggest {
+.ui-recurring .ui-recurring-suggest {
   color: var(--color-accent-text);
 }
 
-/* The loading skeleton, as the States board draws it: the title at 64px, a 12px line, a card block, a track,
-   then two groups of 64px avatar rows (a 40px circle, two lines, an amount bar at the far side). */
-.ui-recurring-skeleton {
+/* The loading skeleton, as the States board draws it: the real title, a 12/34/6 stack 14px under it, two groups. */
+.ui-recurring-skeleton-top {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: calc(var(--space-8) * 2) var(--space-side) var(--space-4);
-}
-
-.ui-recurring-skeleton > h1 {
-  margin: 0 0 var(--space-2);
-}
-
-.ui-recurring-skeleton-card {
-  border-radius: var(--radius-block);
+  margin-top: calc(var(--space-3) + var(--space-1) / 2);
 }
 
 .ui-recurring-skeleton-group {
-  margin-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-6);
 }
 
 .ui-recurring-skeleton-group + .ui-recurring-skeleton-group {
-  margin-top: calc(var(--space-2) + var(--space-1) / 2);
+  margin-top: calc(var(--space-4) + var(--space-1) / 2);
 }
 
 .ui-recurring-skeleton-row {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding-block: var(--space-3);
+  block-size: calc(var(--space-8) * 2);
 }
 
 .ui-recurring-skeleton-lines {
-  display: grid;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   gap: var(--space-2);
-  margin-inline-end: auto;
 }
 
 .ui-recurring-skeleton-avatar {
@@ -211,4 +236,8 @@
   inline-size: calc(var(--avatar) + var(--space-1));
   block-size: calc(var(--avatar) + var(--space-1));
   border-radius: 50%;
+}
+
+.ui-recurring-skeleton-card {
+  border-radius: var(--radius-input);
 }
