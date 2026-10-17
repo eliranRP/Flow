@@ -442,8 +442,8 @@ test("the transaction change sheet opens split in place", async ({ page }) => {
   const sheet = page.getByRole("dialog", { name: "בחירת פרויקט" });
   await expect(sheet).toBeVisible();
   await sheet.getByRole("button", { name: "פיצול בין פרויקטים" }).click();
-  await expect(page).toHaveURL(/\/transactions\/t-manual\/split\?preview=1$/);
-  await expect(page.getByRole("heading", { name: "פיצול בין פרויקטים" })).toBeVisible();
+  await expect(page).toHaveURL(/\/transactions\/t-manual\/split-category\?preview=1$/);
+  await expect(page.getByRole("heading", { name: "פיצול", exact: true })).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(/\/e2e\/txn\?preview=1$/);
   await expect(page.getByRole("dialog")).toHaveCount(0);

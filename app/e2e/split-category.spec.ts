@@ -8,7 +8,7 @@ import { expect, test, type Page } from "@playwright/test";
 test.use({ viewport: { width: 390, height: 844 } });
 
 async function addPart(page: Page, category: string, project: string, reversal = false) {
-  await page.getByRole("button", { name: "הוספת חלק" }).click();
+  await page.getByRole("button", { name: "חלק נוסף" }).click();
   const categories = page.getByRole("dialog", { name: "בחירת קטגוריה" });
   await expect(categories).toBeVisible();
   // A refund line opens its reversal section expanded (FLOW-333 C3c).
@@ -33,7 +33,7 @@ async function saved(page: Page): Promise<unknown> {
 
 test("an expense splits 30% and ₪500, the rest stays on the line, and ✕ saves", async ({ page }) => {
   await page.goto("/e2e/split-category");
-  await expect(page.getByRole("heading", { name: "פיצול לפי קטגוריות" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "פיצול", exact: true })).toBeVisible();
   await addPart(page, "חשמל", "פרויקט הרצליה");
   await page.getByRole("radio", { name: "%" }).click();
   await page.getByLabel("אחוז, חשמל").fill("30");
@@ -45,7 +45,7 @@ test("an expense splits 30% and ₪500, the rest stays on the line, and ✕ save
   const rest = page.getByRole("button", { name: /^השאר,/ });
   await expect(rest).toContainText("₪2,860");
   await expect(rest).toContainText("59.58%");
-  await expect(page.locator(".ui-lsplit-foot")).toContainText("₪1,940");
+  await expect(page.locator(".ui-lsplit-status")).toContainText("₪1,940");
   await page.getByRole("button", { name: "סגירה" }).click();
   expect(await saved(page)).toEqual([
     { category_id: "c-elec", project_id: "p-herz", percent: 30 },
@@ -57,7 +57,7 @@ test("an expense splits 30% and ₪500, the rest stays on the line, and ✕ save
 
 test("a refund's reversal part needs a project before it saves", async ({ page }) => {
   await page.goto("/e2e/split-category?line=refund");
-  await page.getByRole("button", { name: "הוספת חלק" }).click();
+  await page.getByRole("button", { name: "חלק נוסף" }).click();
   const categories = page.getByRole("dialog", { name: "בחירת קטגוריה" });
   await expect(categories.getByRole("button", { name: "החזר מספק" })).toHaveAttribute("aria-expanded", "true");
   await categories.getByRole("radio", { name: "חומרי בניין" }).click();
@@ -75,7 +75,7 @@ test("a refund's reversal part needs a project before it saves", async ({ page }
   await expect(page.getByRole("button", { name: "ביטול השינוי" })).toBeVisible();
   expect(await readSaved(page)).toBeNull();
   // The part's row opens straight on the project list while it misses one.
-  await page.getByRole("button", { name: /^חומרי בניין, החזר/ }).click();
+  await page.getByRole("button", { name: /^פרויקט · חובה בהחזר, פרויקט, שינוי$/ }).click();
   await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "פרויקט הרצליה" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -95,7 +95,7 @@ test("a dropped connection keeps the screen and offers ניסיון חוזר", a
   await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page.getByText("הפיצול לא נשמר")).toBeVisible();
   await expect(page.getByRole("button", { name: "ניסיון חוזר" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "פיצול לפי קטגוריות" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "פיצול", exact: true })).toBeVisible();
 });
 
 test.describe("on a touch screen (FLOW-325 §10)", () => {
