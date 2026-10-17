@@ -74,7 +74,7 @@ describe("delete on a card opened from a list", () => {
 });
 
 describe("payment status on the card (FLOW-328)", () => {
-  it("draws שולם with the ✓ icon, like mockup 10", () => {
+  it("reads שולם in the header, with no icon (the board)", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <ToastProvider>
@@ -88,7 +88,6 @@ describe("payment status on the card (FLOW-328)", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    const pill = screen.getByText("שולם").closest(".ui-status");
-    expect(pill?.querySelector(".ui-status-icon svg")).not.toBeNull();
+    expect(screen.getByText("שולם").closest(".ui-txn-status")).not.toBeNull();
   });
 });

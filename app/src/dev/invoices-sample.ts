@@ -57,7 +57,7 @@ export function invoicesSample(state?: string | null): UnpaidInvoice[] {
         date: shiftDays(today, -1),
         account_name: "Mercury",
         raw_description: "ZELLE FROM R CHEN",
-        amount_agorot: 320_000n,
+        amount_minor: 320_000n,
       },
     },
   ];

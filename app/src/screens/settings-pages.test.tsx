@@ -1,14 +1,15 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { createMemoryRouter, MemoryRouter, RouterProvider } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { ViewerPreview } from "../use-is-viewer";
-import { connectionsHint, ConnectionsScreen, LoansScreen, loansCountHint, SettingsScreen } from "./flow-screens";
+import { connectionsHint, ConnectionsScreen, LoansScreen, SettingsScreen } from "./flow-screens";
 
-// FLOW-501. Settings keeps the account, תצוגה and עוד; חיבורים and הלוואות open pages.
+// FLOW-501, FLOW-512. Settings is a menu: the business, connections, team, notifications and
+// categories rows open pages. The loans list still lives at /settings/loans.
 
 const business = {
   name: "אלפא בנייה",
@@ -40,8 +41,9 @@ function renderAt(ui: ReactNode, path = "/settings") {
   return render(providers(<MemoryRouter initialEntries={[path]}>{ui}</MemoryRouter>));
 }
 
-function hintOf(link: HTMLElement): string {
-  return document.getElementById(link.getAttribute("aria-describedby") ?? "")?.textContent ?? "";
+/** The row's visible value (its hint), read from the link's text after its title. */
+function valueOf(link: HTMLElement): string {
+  return link.textContent;
 }
 
 describe("connectionsHint", () => {
@@ -55,23 +57,16 @@ describe("connectionsHint", () => {
     expect(connectionsHint([
       { name: "SUMIT", state: "active" },
       { name: "Mercury", state: "reconnect" },
-    ])).toEqual({ kind: "attention", text: "Mercury: צריך לחבר מחדש" });
+    ])).toEqual({ kind: "attention", text: "Mercury צריך חיבור" });
     expect(connectionsHint([
       { name: "SUMIT", state: "reconnect" },
       { name: "עוזר AI", state: "reconnect" },
-    ])).toEqual({ kind: "attention", text: "2 חיבורים צריכים חיבור מחדש" });
+    ])).toEqual({ kind: "attention", text: "2 צריכים חיבור" });
   });
 
   it("never guesses a count while one status loads or fails", () => {
     expect(connectionsHint([{ name: "SUMIT", state: "loading" }, { name: "Mercury", state: "error" }])).toEqual({ kind: "loading" });
     expect(connectionsHint([{ name: "SUMIT", state: "active" }, { name: "Mercury", state: "error" }])).toEqual({ kind: "error" });
-  });
-
-  it("words the loans count", () => {
-    render(<p>{loansCountHint(2)}</p>);
-    expect(screen.getByText(/הלוואות/)).toHaveTextContent("2 הלוואות");
-    expect(loansCountHint(0)).toBe("אין הלוואות עדיין");
-    expect(loansCountHint(1)).toBe("הלוואה אחת");
   });
 });
 
@@ -79,88 +74,80 @@ describe("Settings rows", () => {
   it("does not count Jev as active when the server holds no key (FLOW-348 A)", () => {
     const on = { ...business.jev, enabled: true };
     const { unmount } = renderAt(<SettingsScreen sample={{ ...business, jev: on }} />);
-    expect(hintOf(screen.getByRole("link", { name: "חיבורים" }))).toBe("4 מתוך 4 פעילים");
+    expect(valueOf(screen.getByRole("link", { name: /^חיבורים/ }))).toContain("4 פעילים");
     unmount();
     renderAt(<SettingsScreen sample={{ ...business, jev: { ...on, keyMissing: true } }} />);
-    expect(hintOf(screen.getByRole("link", { name: "חיבורים" }))).toBe("3 מתוך 4 פעילים");
+    expect(valueOf(screen.getByRole("link", { name: /^חיבורים/ }))).toContain("3 פעילים");
   });
 
-  it("opens the two pages from one quiet group under the account", () => {
+  it("opens the connections page from the menu, and the loans list is not in the menu", () => {
     renderAt(<SettingsScreen sample={{ ...business, loans: twoLoans }} />);
-    const connections = screen.getByRole("link", { name: "חיבורים" });
-    const loans = screen.getByRole("link", { name: "הלוואות" });
+    const connections = screen.getByRole("link", { name: /^חיבורים/ });
     expect(connections).toHaveAttribute("href", "/settings/connections");
-    expect(loans).toHaveAttribute("href", "/settings/loans");
-    expect(hintOf(connections)).toBe("3 מתוך 4 פעילים");
-    expect(hintOf(loans)).toBe("2 הלוואות");
-    expect(connections).not.toHaveClass("ui-row-tone-warning");
+    expect(valueOf(connections)).toContain("3 פעילים");
+    expect(connections.querySelector(".ui-row-value-signal")).toBeNull();
+    expect(screen.queryByRole("link", { name: /^הלוואות/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "חיבורים" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "הלוואות" })).not.toBeInTheDocument();
-    // The connector rows and the loan list live on their pages now.
-    expect(screen.queryByRole("button", { name: "SUMIT" })).not.toBeInTheDocument();
-    expect(screen.queryByText("משכנתא אלון")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "הלוואה חדשה" })).not.toBeInTheDocument();
   });
 
-  it("names a broken connector in the warning tone", () => {
+  it("names a broken connector in the signal tone", () => {
     renderAt(<SettingsScreen sample={{ ...business, mercuryLastError: "auth" }} />);
-    const connections = screen.getByRole("link", { name: "חיבורים" });
-    expect(hintOf(connections)).toBe("Mercury: צריך לחבר מחדש");
-    expect(connections).toHaveClass("ui-row-tone-warning");
-    expect(hintOf(screen.getByRole("link", { name: "הלוואות" }))).toBe("אין הלוואות עדיין");
+    const connections = screen.getByRole("link", { name: /^חיבורים/ });
+    expect(valueOf(connections)).toContain("Mercury צריך חיבור");
+    expect(connections.querySelector(".ui-row-value-signal")).not.toBeNull();
   });
 
   it("counts two broken connectors", () => {
     renderAt(<SettingsScreen sample={{ ...business, lastError: "sumit_auth", assistant: { state: "expired", scope: "read", id: "mcp-1" } }} />);
-    expect(hintOf(screen.getByRole("link", { name: "חיבורים" }))).toBe("2 חיבורים צריכים חיבור מחדש");
+    expect(valueOf(screen.getByRole("link", { name: /^חיבורים/ }))).toContain("2 צריכים חיבור");
   });
 
   it("shows a skeleton hint while a status loads and a short failure without a retry", () => {
-    const loading = renderAt(<SettingsScreen sample={{ ...business, mercury: "loading", loans: "loading" }} />);
-    expect(screen.getByRole("link", { name: "חיבורים" }).querySelector(".ui-row-hint-skel")).not.toBeNull();
-    expect(screen.getByRole("link", { name: "הלוואות" }).querySelector(".ui-row-hint-skel")).not.toBeNull();
+    const loading = renderAt(<SettingsScreen sample={{ ...business, mercury: "loading" }} />);
+    expect(screen.getByRole("link", { name: /^חיבורים/ }).querySelector("[class*='ui-skel']")).not.toBeNull();
     loading.unmount();
-    renderAt(<SettingsScreen sample={{ ...business, sumit: "error", loans: "error" }} />);
-    expect(hintOf(screen.getByRole("link", { name: "חיבורים" }))).toBe("לא הצלחנו לטעון");
-    expect(hintOf(screen.getByRole("link", { name: "הלוואות" }))).toBe("לא הצלחנו לטעון");
+    renderAt(<SettingsScreen sample={{ ...business, sumit: "error" }} />);
+    expect(valueOf(screen.getByRole("link", { name: /^חיבורים/ }))).toContain("לא הצלחנו לטעון");
     expect(screen.queryByRole("button", { name: /ניסיון חוזר/ })).not.toBeInTheDocument();
   });
 
-  it("keeps both rows for a viewer and reads an expired connector as off", () => {
+  it("reads an expired connector as off for a viewer, who cannot reconnect it", () => {
     renderAt(
       <ViewerPreview>
-        <SettingsScreen sample={{ ...business, mercuryLastError: "auth", loans: twoLoans }} />
+        <SettingsScreen sample={{ ...business, mercuryLastError: "auth" }} />
       </ViewerPreview>,
     );
-    const connections = screen.getByRole("link", { name: "חיבורים" });
-    expect(hintOf(connections)).toBe("2 מתוך 4 פעילים");
-    expect(screen.getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/settings/loans");
+    const connections = screen.getByRole("link", { name: /^חיבורים/ });
+    expect(valueOf(connections)).toContain("2 פעילים");
+    expect(connections.querySelector(".ui-row-value-signal")).toBeNull();
   });
 
-  it("hides הלוואות with no company", () => {
+  it("shows no connections count with no company", () => {
     renderAt(<SettingsScreen sample={{ ...business, name: null, noCompany: true }} />);
-    expect(hintOf(screen.getByRole("link", { name: "חיבורים" }))).toBe("אין עסק עדיין");
-    expect(screen.queryByRole("link", { name: "הלוואות" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^חיבורים/ })).not.toBeInTheDocument();
   });
 });
 
 describe("Settings redirects", () => {
   it.each([
-    ["sumit", "חיבור SUMIT"],
-    ["mercury", "חיבור Mercury"],
-    ["assistant", "חיבור עוזר AI"],
-  ])("moves /settings?sheet=%s to the Connections page with the sheet open", async (sheet, dialog) => {
+    ["sumit", "/settings/connections/sumit"],
+    ["mercury", "/settings/connections/mercury"],
+    ["assistant", "/settings/connections"],
+  ])("moves /settings?sheet=%s to the connections pages", async (sheet, path) => {
     const sample = { ...business, connected: false, companyId: null, mercuryConnected: false, assistant: { state: "empty" as const } };
     const router = createMemoryRouter(
       [
         { path: "/settings", element: <SettingsScreen sample={sample} /> },
         { path: "/settings/connections", element: <ConnectionsScreen sample={sample} /> },
+        { path: "/settings/connections/sumit", element: <h1>SUMIT page</h1> },
+        { path: "/settings/connections/mercury", element: <h1>Mercury page</h1> },
       ],
       { initialEntries: [`/settings?sheet=${sheet}`] },
     );
     render(providers(<RouterProvider router={router} />));
-    expect(await screen.findByRole("dialog", { name: dialog })).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe("/settings/connections");
+    await waitFor(() => { expect(router.state.location.pathname).toBe(path); });
+    expect(router.state.location.search).not.toContain("sheet=");
   });
 
   it("returns focus to the Settings row on Back from a page", async () => {
@@ -168,39 +155,33 @@ describe("Settings redirects", () => {
       [
         { path: "/settings", element: <SettingsScreen sample={business} /> },
         { path: "/settings/connections", element: <ConnectionsScreen sample={business} /> },
-        { path: "/settings/loans", element: <LoansScreen sample={business} /> },
       ],
       { initialEntries: ["/settings"] },
     );
     render(providers(<RouterProvider router={router} />));
-    fireEvent.click(screen.getByRole("link", { name: "חיבורים" }));
+    fireEvent.click(screen.getByRole("link", { name: /^חיבורים/ }));
     expect(await screen.findByRole("heading", { name: "חיבורים" })).toBeInTheDocument();
     await act(async () => { await router.navigate(-1); });
-    await waitFor(() => { expect(screen.getByRole("link", { name: "חיבורים" })).toHaveFocus(); });
-    fireEvent.click(screen.getByRole("link", { name: "הלוואות" }));
-    expect(await screen.findByRole("heading", { name: "הלוואות" })).toBeInTheDocument();
-    await act(async () => { await router.navigate(-1); });
-    await waitFor(() => { expect(screen.getByRole("link", { name: "הלוואות" })).toHaveFocus(); });
+    await waitFor(() => { expect(screen.getByRole("link", { name: /^חיבורים/ })).toHaveFocus(); });
   });
 
   it("does not move focus on a fresh visit to Settings", async () => {
     renderAt(<SettingsScreen sample={business} />);
     await new Promise((resolve) => { window.setTimeout(resolve, 20); });
-    expect(screen.getByRole("link", { name: "חיבורים" })).not.toHaveFocus();
+    expect(screen.getByRole("link", { name: /^חיבורים/ })).not.toHaveFocus();
   });
 });
 
 describe("Connections page", () => {
-  it("groups the four connectors under ספרים ובנק and עזרים, with Back to Settings", () => {
+  it("groups the connectors under בנק וספרים and עזרים, in that order", () => {
     renderAt(<ConnectionsScreen sample={business} />, "/settings/connections");
     expect(screen.getByRole("heading", { name: "חיבורים" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "חזרה להגדרות" })).toBeInTheDocument();
-    const books = screen.getByRole("heading", { name: "ספרים ובנק" });
-    const helpers = screen.getByRole("heading", { name: "עזרים" });
-    const sumit = screen.getByRole("button", { name: "SUMIT" });
-    const jev = screen.getByRole("switch", { name: "תיוג חכם (Jev)" });
-    const assistant = screen.getByRole("button", { name: "עוזר AI" });
-    const order = [books, sumit, screen.getByRole("button", { name: "Mercury" }), helpers, jev, assistant];
+    const books = screen.getByText("בנק וספרים");
+    const helpers = screen.getByText("עזרים");
+    const mercury = screen.getByRole("link", { name: /^Mercury/ });
+    const sumit = screen.getByRole("link", { name: /^SUMIT/ });
+    const ai = screen.getByRole("link", { name: /^חיבור ל־AI/ });
+    const order = [books, mercury, sumit, helpers, ai];
     for (let index = 1; index < order.length; index += 1) {
       const before = order[index - 1];
       const after = order[index];
@@ -210,25 +191,21 @@ describe("Connections page", () => {
     expect(screen.queryByText("owner@example.com")).not.toBeInTheDocument();
   });
 
-  it("shows static rows with no chevrons for a viewer", () => {
+  it("keeps the connector rows open to read for a viewer, with no connect action", () => {
     renderAt(
       <ViewerPreview>
-        <ConnectionsScreen sample={business} />
+        <ConnectionsScreen sample={{ ...business, connected: false, mercuryConnected: false }} />
       </ViewerPreview>,
       "/settings/connections",
     );
-    expect(screen.getByText("SUMIT")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "SUMIT" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Mercury" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "עוזר AI" })).not.toBeInTheDocument();
-    expect(document.querySelector(".ui-row-chevron")).toBeNull();
+    expect(screen.getByRole("link", { name: /^SUMIT/ })).toHaveAttribute("href", "/settings/connections/sumit");
+    expect(screen.getByRole("link", { name: /^Mercury/ })).toHaveAttribute("href", "/settings/connections/mercury");
   });
 
-  it("stays open with no company and offers the business details", () => {
+  it("shows no connector values with no company", () => {
     renderAt(<ConnectionsScreen sample={{ ...business, name: null, noCompany: true, assistant: { state: "no-company" } }} />, "/settings/connections");
-    fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
-    const sheet = screen.getByRole("dialog", { name: "חיבור SUMIT" });
-    expect(within(sheet).getByRole("link", { name: "פרטי העסק" })).toHaveAttribute("href", "/onboarding?return=%2Fsettings%2Fconnections%3Fsheet%3Dsumit");
+    expect(screen.getByRole("link", { name: /^SUMIT/ })).toHaveTextContent("אין עסק עדיין");
+    expect(screen.queryByRole("link", { name: /^חיבור ל־AI/ })).not.toBeInTheDocument();
   });
 });
 

@@ -53,7 +53,8 @@
   height: var(--switch-track-h);
   flex: none;
   border-radius: var(--radius-chip);
-  background: var(--color-control-border);
+  /* FLOW-512: the off track is the board's grey, and the off knob is muted (on: on-accent knob). */
+  background: var(--color-switch-off);
   transition: background-color var(--motion-press) var(--ease-linear);
 }
 
@@ -65,8 +66,8 @@
   width: var(--switch-knob);
   height: var(--switch-knob);
   border-radius: var(--radius-chip);
-  background: var(--color-knob);
-  transition: transform var(--motion-fast) var(--ease-standard);
+  background: var(--color-text-muted);
+  transition: transform var(--motion-fast) var(--ease-standard), background-color var(--motion-press) var(--ease-linear);
 }
 
 .ui-switch-row input {
@@ -91,7 +92,9 @@
   background: var(--color-accent);
 }
 
+/* The on knob takes the on-accent colour (board: the knob is #15111E / #F6F4FA on the accent track). */
 .ui-switch-row input:checked + .ui-switch i {
+  background: var(--color-on-accent);
   transform: translateX(calc(var(--size-switch) - var(--switch-knob) - 2 * var(--switch-inset)));
 }
 
@@ -362,4 +365,234 @@
   min-inline-size: 0;
   padding-inline: var(--space-side);
   box-sizing: border-box;
+}
+
+/* FLOW-512: a menu row's end value (ListRow `value`): 15px muted, one line, cut at its end. */
+.ui-row-value {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  max-inline-size: 50%;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-line2-weight);
+  line-height: var(--type-line2-line);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- FLOW-512: the Settings menu, its inner pages, and the connection and AI pages ---- */
+
+/* A section head above a card: 15/500, secondary, 6 above and 4 in from the edge. */
+.ui-settings-head {
+  margin: 0;
+  padding: var(--space-2) var(--space-1) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-section-weight);
+  line-height: var(--type-line2-line);
+}
+
+/* The grey line under a card or a field group: 13/1.5, muted, 4 in from the edge. */
+.ui-settings-note {
+  margin: 0;
+  padding-inline: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-line2-line);
+}
+
+/* A card of blocks (the inner pages). The menu and the business page use the page side (20). */
+/* A connection page (SUMIT, Mercury, the AI page): the 16 side gutter and the 14 block gap of guide §7.14. */
+.ui-connection-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-inset-row);
+  padding: var(--space-3) var(--space-4) calc(var(--space-6) + var(--space-1));
+}
+
+.ui-settings-card {
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ui-connection-card,
+.ui-connection-steps,
+.ui-ai-questions {
+  border-radius: var(--radius-card-tight);
+}
+
+.ui-connection-steps,
+.ui-ai-questions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.ui-ai-questions-head {
+  margin: 0;
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-ai-question {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+/* The steps: a numbered circle, then the step's words at 15/1.5. */
+.ui-step-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.ui-step-text {
+  min-inline-size: 0;
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+/* The reconnect box: a tint, 14 in, 14 radius, 15/1.5. */
+.ui-connection-problem {
+  padding: var(--space-inset-row);
+  border-radius: var(--radius-toast);
+  background: var(--color-tint);
+  color: var(--color-text);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+/* The facts card: a row per fact, a line between rows, the label secondary and the value text. */
+.ui-connection-card {
+  padding: var(--space-2) var(--space-4);
+}
+
+.ui-connection-facts {
+  margin: 0;
+}
+
+.ui-connection-fact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: var(--touch-min);
+  padding-block: var(--space-2);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+.ui-connection-fact + .ui-connection-fact {
+  border-block-start: 1px solid var(--color-line);
+}
+
+.ui-connection-fact dt {
+  color: var(--color-text-secondary);
+}
+
+.ui-connection-fact dd {
+  margin: 0;
+  color: var(--color-text);
+  text-align: end;
+  font-variant-numeric: var(--font-numerals);
+}
+
+.ui-connection-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+/* The key field: its show/hide pill sits on the end side, level with the input. */
+.ui-secret-wrap {
+  position: relative;
+}
+
+.ui-secret-wrap .ui-field-control {
+  padding-inline-end: calc(var(--space-10) + var(--space-3));
+}
+
+.ui-secret-toggle {
+  position: absolute;
+  inset-inline-end: var(--space-2);
+  top: calc(var(--type-caption-size) * 2 + var(--space-2));
+  min-block-size: 36px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-field-btn);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-title-3-weight);
+  cursor: pointer;
+}
+
+.ui-settings-signout {
+  display: flex;
+  justify-content: flex-start;
+  padding-inline: var(--space-1);
+}
+
+.ui-team-invite {
+  padding-block: var(--space-3);
+}
+
+.ui-row-value-signal {
+  color: var(--color-signal-soft);
+}
+
+.ui-row-value-accent {
+  color: var(--color-accent-text);
+}
+
+/* At 320px the AI row's title wraps instead of clipping its last letters. */
+.ui-ai-row-list .ui-row-title {
+  white-space: normal;
+}
+
+/* The AI page's status line: the name, and the access level at the end, muted. */
+.ui-ai-status {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.ui-ai-status-name {
+  font-size: var(--type-title-3-size);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-ai-status-scope {
+  color: var(--color-text-muted);
+  font-size: var(--type-line2-size);
+}
+
+.ui-ai-scope {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ui-ai-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }

@@ -212,3 +212,80 @@ export function sampleCashUsdYear(now = new Date()): NonNullable<CashMonths> {
     }).filter((row) => row.month.slice(0, 7) <= current),
   };
 }
+
+/** FLOW-366: the lines with the flags the server sends. The first has a review open, the second is out of profit. */
+export function sampleCashLinesFlagged(side: "in" | "out" | "kept", now = new Date()): CashLine[] {
+  return sampleCashLines(side, now).map((row, index) => ({ ...row, pending: index === 0, in_pnl: index !== 1 }));
+}
+
+/**
+ * The board's USD company (the Lines frames): invented suppliers, amounts with cents, five lines
+ * waiting for approval, and $13,757 that profit leaves out. The days count back from today, so the
+ * day heads read "היום" and "אתמול" on any date.
+ */
+
+const BOARD_KEPT = [
+  { name: "ציוד לעסק", amount_minor: -900_000n },
+  { name: "שיפוץ והשבחה", amount_minor: -475_700n },
+];
+
+export function sampleBoardCashMonths(now = new Date()): NonNullable<CashMonths> {
+  const current = israelToday(now).slice(0, 7);
+  const month = (back: number) => `${shiftMonthKey(current, -back)}-01`;
+  return {
+    basis: "paid",
+    base_currency: "USD",
+    months: [
+      { month: month(0), by_currency: [usdRow(2_487_700n, 4_206_900n, -3_094_900n, BOARD_KEPT)] },
+      { month: month(1), by_currency: [usdRow(1_980_000n, 2_310_000n, 180_000n)] },
+      { month: month(2), by_currency: [usdRow(2_120_000n, 1_890_000n, 410_000n)] },
+      { month: month(3), by_currency: [usdRow(1_760_000n, 1_720_000n, 90_000n)] },
+    ],
+  };
+}
+
+/** The board's lines: [days back, supplier, project, category, minor, pending, in P&L]. */
+const BOARD_OUT: Array<[number, string, string | null, string, bigint, boolean, boolean]> = [
+  [0, "Redfield", "Maple St", "ביטוח", 124_000n, true, true],
+  [1, "Bayside Water Works", "Maple St", "אחר", 8_640n, true, true],
+  [1, "Harlow's", null, "חומרים", 41_218n, true, true],
+  [2, "Pike Plumbing LLC", "Pine Ridge", "שירותים", 240_000n, true, true],
+  [3, "Norvell Builders", "Birch Court", "שיפוץ", 320_000n, false, true],
+  [4, "Kestrel Electric", "Maple St", "חשמל", 96_000n, false, true],
+  [5, "Lantern Paint Co", "Pine Ridge", "חומרים", 78_500n, true, true],
+  [6, "Clearwater Clean", "Birch Court", "שירותים", 45_000n, false, true],
+  [7, "Summit Equipment", "Birch Court", "ציוד לעסק", 900_000n, false, false],
+  [8, "Tilecraft Supply", "Maple St", "חומרים", 220_000n, false, true],
+  [9, "Vertex Lifts", "Birch Court", "שיפוץ והשבחה", 475_700n, false, false],
+  [10, "Payroll Partners", "Pine Ridge", "שכר", 90_000n, false, true],
+  [12, "Harbor Bistro", null, "אחר", 12_500n, false, true],
+  [14, "Cloudline Software", null, "תוכנות ומנויים", 2_990n, false, true],
+  [15, "Flameline Gas", "Pine Ridge", "חשמל", 18_990n, false, true],
+];
+
+/** The board's income lines: a tenant's rent, and the lines that make up the day totals. */
+const BOARD_IN: Array<[number, string, string | null, string, bigint, boolean]> = [
+  [2, "R. Delgado", "Birch Court", "שכר דירה", 185_000n, true],
+  [6, "T. Lindqvist", "Pine Ridge", "שכר דירה", 172_500n, false],
+  [8, "S. Whitfield", "Maple St", "שכר דירה", 215_000n, false],
+  [9, "Moreno Co", "Birch Court", "שכר דירה", 260_000n, false],
+  [9, "Harborline Ltd", null, "הכנסה מלקוחות", 155_200n, false],
+];
+
+function isoDaysBack(now: Date, back: number): string {
+  const [year, month, day] = israelToday(now).split("-").map(Number);
+  return new Date(Date.UTC(year ?? 1970, (month ?? 1) - 1, (day ?? 1) - back)).toISOString().slice(0, 10);
+}
+
+function boardLine(id: number, day: string, supplier: string, project: string | null, category: string, minor: bigint, side: "in" | "out", pending: boolean, inPnl: boolean): CashLine {
+  return { ...line(String(id), day, supplier, project, category, minor, side, "mercury"), currency: "USD", pending, in_pnl: inPnl };
+}
+
+export function sampleBoardCashLines(side: "in" | "out", now = new Date()): CashLine[] {
+  if (side === "in") {
+    return BOARD_IN.map(([back, supplier, project, category, minor, pending], index) =>
+      boardLine(100 + index, isoDaysBack(now, back), supplier, project, category, minor, "in", pending, true));
+  }
+  return BOARD_OUT.map(([back, supplier, project, category, minor, pending, inPnl], index) =>
+    boardLine(200 + index, isoDaysBack(now, back), supplier, project, category, minor, "out", pending, inPnl));
+}

@@ -258,20 +258,3 @@ export function openMonthDue(data: ExpectedMonths | null | undefined, currency: 
   const expense = row?.expense_minor ?? 0n;
   return { income: row?.income_minor ?? 0n, expense: expense < 0n ? -expense : expense };
 }
-
-/** FLOW-415 (b-2): הגיעו החודש, every recurring party seen this month. */
-export function useRecurringThisMonthQuery(active = true) {
-  const preview = useHomePreview();
-  return useQuery({
-    queryKey: ["recurring-this-month", preview],
-    enabled: active && preview === "off",
-    queryFn: async (): Promise<RecurringChange[]> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
-      const { data, error } = await supabase.rpc("recurring_this_month", {});
-      if (error) throw error;
-      return (await loadReadSchemas()).recurringThisMonthSchema.parse(data);
-    },
-  });
-}

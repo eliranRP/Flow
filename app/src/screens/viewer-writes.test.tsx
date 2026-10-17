@@ -1,3 +1,4 @@
+import { BusinessScreen } from "./business-screen";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -130,28 +131,22 @@ describe("viewer write controls", () => {
     );
     expect(screen.getByText("SUMIT")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /SUMIT/ })).not.toBeInTheDocument();
-    expect(screen.getByText("עוזר AI")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /עוזר AI/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" })).toBeDisabled();
+    expect(screen.getByRole("link", { name: /חיבור ל־AI/ })).toBeInTheDocument();
     expect(screen.getByRole("switch", { name: "תיוג חכם (Jev)" })).toBeDisabled();
-    // FLOW-501: reading is allowed, so both pages stay a tap away.
-    expect(screen.getByRole("link", { name: "חיבורים" })).toHaveAttribute("href", "/settings/connections");
-    expect(screen.getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/settings/loans");
-    // FLOW-504: the viewer reads the company currency and cannot change it.
-    expect(screen.getByText("מטבע העסק")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /מטבע העסק/ })).not.toBeInTheDocument();
+    // FLOW-501, FLOW-512: reading is allowed, so the pages stay a tap away.
+    expect(screen.getByRole("link", { name: /^חיבורים/ })).toHaveAttribute("href", "/settings/connections");
   });
 
-  it("lets the owner open the company currency sheet from Settings (FLOW-504)", async () => {
+  it("lets the owner open the company currency sheet from the business page (FLOW-504)", async () => {
     renderScreen(
-      <SettingsScreen
+      <BusinessScreen
         sample={{ name: "אלפא", connected: false, companyId: null, lastError: null, email: "dana@example.com", loanCurrency: "USD" }}
       />,
     );
     const row = screen.getByRole("button", { name: "מטבע העסק: $ דולר" });
     row.click();
     expect(await screen.findByRole("dialog", { name: "מטבע העסק" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "$ דולר" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "דולר · $" })).toHaveAttribute("aria-checked", "true");
   });
 });
 
@@ -210,7 +205,7 @@ describe("viewer gates", () => {
       expect(screen.queryByRole("button", { name: "פיצול בין פרויקטים" })).not.toBeInTheDocument();
       expect(screen.queryByRole("link", { name: "פיצול בין פרויקטים" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "עוד" })).not.toBeInTheDocument();
-      expect(screen.getByRole("heading", { name: "הוצאה" })).toBeInTheDocument();
+      expect(screen.getByText("פיצול")).toBeInTheDocument();
       const slot = document.querySelector(".ui-menu-slot");
       expect(slot).toBeInstanceOf(HTMLElement);
       expect(slot).toHaveAttribute("aria-hidden", "true");
@@ -285,7 +280,7 @@ describe("viewer gates", () => {
     }],
     ["V25", "settings carries the quiet line", () => {
       viewer(
-        <SettingsScreen
+        <BusinessScreen
           sample={{
             name: "אלפא",
             connected: false,
@@ -300,7 +295,7 @@ describe("viewer gates", () => {
       const note = screen.getByText(VIEWER_NOTE);
       expect(note).toHaveClass("t-hint");
       const overhead = screen.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" });
-      expect(overhead).toBeDisabled();
+      expect(overhead).toHaveAttribute("aria-disabled", "true");
       expect(overhead.getAttribute("aria-describedby") ?? "").toContain(note.id);
       const row = overhead.closest("label");
       expect(row).toBeInstanceOf(HTMLElement);
@@ -348,9 +343,8 @@ describe("viewer gates", () => {
           }}
         />,
       );
-      expect(screen.getByText("לא מחובר כרגע")).toBeInTheDocument();
-      expect(screen.queryByText("צריך לחבר מחדש")).not.toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /עוזר AI/ })).not.toBeInTheDocument();
+      expect(screen.getAllByText("לא מחובר").length).toBeGreaterThan(0);
+      expect(screen.queryByText("צריך חיבור")).not.toBeInTheDocument();
     }],
     ["V30", "a category row only opens its lines (a read, FLOW-322), with no ⋯", () => {
       viewer(

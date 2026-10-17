@@ -548,6 +548,16 @@ function leasingSplit(state: unknown): boolean {
   return state.sample === "leasing";
 }
 
+/** The sample queue's saves live here, because a saved split leaves the queue for a new mount. */
+let sharedSplitSaved = false;
+const sampleApproved = new Set<string>();
+
+/** The shared card after a saved split: a split with a category, so אישור approves it as it stands. */
+function afterSharedSplit(row: ReviewRow): ReviewRow {
+  if (row.id !== "q-shared" || !sharedSplitSaved) return row;
+  return { ...row, reason: null, share_count: 2, project_id: null, project_name: null, category_id: "c-materials", category_name: "מלט" };
+}
+
 function ReviewerSplit() {
   const [params] = useSearchParams();
   const location = useLocation();
@@ -555,6 +565,7 @@ function ReviewerSplit() {
   const leasing = leasingSplit(location.state);
   const mode = sampleSaveMode(params.get("save"));
   const write = useSampleWrite(mode, "הפיצול נשמר", () => {
+    if (!leasing) sharedSplitSaved = true;
     void navigate(`/reviewer/review?save=${mode}`);
   });
   return (
@@ -620,7 +631,7 @@ function SampleQueue({
 }) {
   const navigate = useNavigate();
   const filedCount = useSyncExternalStore(subscribeReviewerFiled, reviewerFiledCount, reviewerFiledCount);
-  const [rows, setRows] = useState(initial);
+  const [rows, setRows] = useState(() => initial.filter((row) => !sampleApproved.has(row.id)).map(afterSharedSplit));
   return (
     <ReviewQueue
       search={search}
@@ -629,9 +640,11 @@ function SampleQueue({
       previewWrite={{
         run: () => sampleRun(mode),
         onDone: (id) => {
+          sampleApproved.add(id);
           setRows((current) => current.filter((row) => row.id !== id));
         },
         onUndo: (id) => {
+          sampleApproved.delete(id);
           const original = initial.find((row) => row.id === id);
           if (!original) return;
           setRows((current) => (current.some((row) => row.id === id) ? current : [original, ...current]));

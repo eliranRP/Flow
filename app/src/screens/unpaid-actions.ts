@@ -18,6 +18,8 @@ const UNPAID_MARK_DONE = "סומן כשולם";
 const UNPAID_CLEAR_DONE = "הסימון בוטל.";
 const UNPAID_LINKED = "החשבונית חוברה לתשלום ויצאה מהרשימה";
 const UNPAID_DISMISSED = "נסמן ידנית, או נחכה לתשלום אחר";
+const UNPAID_LINK_FAILED = "לא הצלחנו לחבר את התשלום.";
+const UNPAID_DISMISS_FAILED = "לא הצלחנו לשמור את ההחלטה.";
 
 type LocalState = { marked: string | null; gone: boolean; match: boolean };
 
@@ -91,18 +93,61 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
   const setPaidRef = useRef(setPaid);
   setPaidRef.current = setPaid;
 
-  // The bank match and its writes (link_invoice_payment, dismiss_invoice_match) come with 367-server.
-  // Until then no live row carries a match, so only the sample reaches these.
+  // FLOW-367: "זה התשלום" links the invoice to the deposit (the row leaves the list); "לא זה" dismisses that one pairing.
+  const link = useWrite<{ id: string; transaction: string }>({
+    keys: ["unpaid"],
+    failure: (error) => (isTransientWriteError(error) ? { message: UNPAID_LINK_FAILED, retry: true } : UNPAID_LINK_FAILED),
+    optimistic: ({ id }) => [{
+      key: ["unpaid", preview],
+      update: (old: unknown) => (Array.isArray(old) ? (old as UnpaidInvoice[]).filter((row) => row.id !== id) : old),
+    }],
+    onSuccess: () => { toast.show({ message: UNPAID_LINKED }); },
+    run: async ({ id, transaction }) => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      assertNoError(await supabase.rpc("link_invoice_payment", { p_invoice: id, p_transaction: transaction }));
+    },
+  });
+
+  const dismiss = useWrite<{ id: string; transaction: string }>({
+    keys: ["unpaid"],
+    failure: (error) => (isTransientWriteError(error) ? { message: UNPAID_DISMISS_FAILED, retry: true } : UNPAID_DISMISS_FAILED),
+    optimistic: ({ id }) => [{
+      key: ["unpaid", preview],
+      update: (old: unknown) => (Array.isArray(old)
+        ? (old as UnpaidInvoice[]).map((row) => (row.id === id ? { ...row, match: null } : row))
+        : old),
+    }],
+    onSuccess: () => { toast.show({ message: UNPAID_DISMISSED }); },
+    run: async ({ id, transaction }) => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      assertNoError(await supabase.rpc("dismiss_invoice_match", { p_invoice: id, p_transaction: transaction }));
+    },
+  });
+
   function linkMatch(id: string) {
-    if (holdWrites || sample == null) return;
-    setLocal((current) => ({ ...current, [id]: { marked: null, gone: true, match: false } }));
-    toast.show({ message: UNPAID_LINKED });
+    const transaction = all.find((row) => row.id === id)?.match?.transaction_id;
+    if (holdWrites || transaction == null) return;
+    if (sample) {
+      setLocal((current) => ({ ...current, [id]: { marked: null, gone: true, match: false } }));
+      toast.show({ message: UNPAID_LINKED });
+      return;
+    }
+    if (blocked()) return;
+    link.mutate({ id, transaction });
   }
 
   function dismissMatch(id: string) {
-    if (holdWrites || sample == null) return;
-    setLocal((current) => ({ ...current, [id]: { marked: current[id]?.marked ?? null, gone: false, match: true } }));
-    toast.show({ message: UNPAID_DISMISSED });
+    const transaction = all.find((row) => row.id === id)?.match?.transaction_id;
+    if (holdWrites || transaction == null) return;
+    if (sample) {
+      setLocal((current) => ({ ...current, [id]: { marked: current[id]?.marked ?? null, gone: false, match: true } }));
+      toast.show({ message: UNPAID_DISMISSED });
+      return;
+    }
+    if (blocked()) return;
+    dismiss.mutate({ id, transaction });
   }
 
   function startSync() {

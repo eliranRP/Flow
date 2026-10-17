@@ -53,6 +53,14 @@
 /settings/categories/:parentId/ /settings/categories/:parentId 301
 /settings/connections /app-shell 200
 /settings/connections/ /settings/connections 301
+/settings/business /app-shell 200
+/settings/business/ /settings/business 301
+/settings/connections/ai /app-shell 200
+/settings/connections/ai/ /settings/connections/ai 301
+/settings/connections/mercury /app-shell 200
+/settings/connections/mercury/ /settings/connections/mercury 301
+/settings/connections/sumit /app-shell 200
+/settings/connections/sumit/ /settings/connections/sumit 301
 /settings/notifications /app-shell 200
 /settings/notifications/ /settings/notifications 301
 /settings/team /app-shell 200
@@ -83,6 +91,8 @@
 /projects/:projectId/transactions/ /projects/:projectId/transactions 301
 /projects/:projectId/profit /app-shell 200
 /projects/:projectId/profit/ /projects/:projectId/profit 301
+/projects/:projectId/profit/:month /app-shell 200
+/projects/:projectId/profit/:month/ /projects/:projectId/profit/:month 301
 /projects/:projectId/cash/history /app-shell 200
 /projects/:projectId/cash/history/ /projects/:projectId/cash/history 301
 /projects/:projectId/cash/year/:year /app-shell 200
@@ -115,5 +125,9 @@
 /transactions/:transactionId/split-category/ /transactions/:transactionId/split-category 301
 /transactions/:transactionId /app-shell 200
 /transactions/:transactionId/ /transactions/:transactionId 301
+/setup/welcome /app-shell 200
+/setup/welcome/ /setup/welcome 301
+/setup/done /app-shell 200
+/setup/done/ /setup/done 301
 /setup/:step /app-shell 200
 /setup/:step/ /setup/:step 301

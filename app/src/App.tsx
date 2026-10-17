@@ -47,7 +47,7 @@ const CashHistoryScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ 
 const CashYearScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ default: m.CashYearScreen })));
 const BreakdownScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownScreen })));
 const BreakdownLinesScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownLinesScreen })));
-const MissingBillsScreen = lazy(() => screenLoaders.missingBills().then((m) => ({ default: m.MissingBillsScreen })));
+const RecurringScreen = lazy(() => import("./screens/recurring-screen").then((m) => ({ default: m.RecurringScreen })));
 const LineSplitScreen = lazy(() => screenLoaders.lineSplit().then((m) => ({ default: m.LineSplitScreen })));
 const HelpScreen = lazy(() => screenLoaders.help().then((m) => ({ default: m.HelpScreen })));
 const LegalScreen = lazy(() => screenLoaders.legal().then((m) => ({ default: m.LegalScreen })));
@@ -65,10 +65,15 @@ const DevBreakdownGate = /* @__PURE__ */ lazy(() => devBreakdown().then((m) => (
 const DevBreakdownLinesGate = /* @__PURE__ */ lazy(() => devBreakdown().then((m) => ({ default: m.DevBreakdownLinesGate })));
 const jevReviewCard = () => import("./screens/jev-review-card");
 const JevReviewE2e = /* @__PURE__ */ lazy(() => jevReviewCard().then((m) => ({ default: m.JevReviewE2e })));
+const devSetup = () => import("./dev/setup-e2e");
+const DevSetupFrame = /* @__PURE__ */ lazy(() => devSetup().then((m) => ({ default: m.DevSetupFrame })));
 const devRoutes = () => import("./dev-routes");
 const DevCategories = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCategories })));
 const DevChange = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevChange })));
 const DevConnections = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevConnections })));
+const DevAiConnection = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevAiConnection })));
+const DevBusiness = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevBusiness })));
+const DevSumitConnection = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevSumitConnection })));
 const DevExpense = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevExpense })));
 const DevFiled = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevFiled })));
 const DevHome = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevHome })));
@@ -81,11 +86,13 @@ const DevCashYear = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ defaul
 const DevInstall = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevInstall })));
 const DevLoanDetail = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoanDetail })));
 const DevLoans = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoans })));
+const DevRecurring = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevRecurring })));
 const DevLoanSummary = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoanSummary })));
-const DevMissingBills = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevMissingBills })));
 const DevProject = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProject })));
 const DevProjectCategory = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectCategory })));
 const DevProjectDetail = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectDetail })));
+const DevProjectProfit = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectProfit })));
+const DevProjectMonthProfit = /* @__PURE__ */ lazy(() => import("./dev-routes-profit").then((m) => ({ default: m.DevProjectMonthProfit })));
 const DevProjectMonths = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectMonths })));
 const DevProjects = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjects })));
 const DevReview = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevReview })));
@@ -199,6 +206,7 @@ function AppRoutes() {
             <Route path="/help" element={<HelpScreen />} />
             {import.meta.env.DEV ? (
               <>
+                <Route path="/e2e/setup/:frame" element={<DevSetupFrame />} />
                 <Route path="/e2e/project" element={<DevProject />} />
                 <Route path="/e2e/expense" element={<DevExpense />} />
                 {/* FLOW-334: a fixture of a screen that has the tab bar draws it, on that screen's tab. */}
@@ -219,14 +227,16 @@ function AppRoutes() {
                   <Route path="/e2e/cash-lines" element={<DevCashLines />} />
                   <Route path="/e2e/cash-history" element={<DevCashHistory />} />
                   <Route path="/e2e/cash-year" element={<DevCashYear />} />
+                  <Route path="/e2e/recurring" element={<DevRecurring />} />
                   <Route path="/e2e/invoices" element={<DevInvoices />} />
-                  <Route path="/e2e/missing-bills" element={<DevMissingBills />} />
                 </Route>
                 <Route element={<DevShell section="projects" />}>
                   <Route path="/e2e/projects" element={<DevProjects />} />
                   <Route path="/e2e/project-detail" element={<DevProjectDetail />} />
                   <Route path="/e2e/project-category" element={<DevProjectCategory />} />
                   <Route path="/e2e/project-months" element={<DevProjectMonths />} />
+                  <Route path="/e2e/project-profit" element={<DevProjectProfit />} />
+                  <Route path="/e2e/project-month-profit" element={<DevProjectMonthProfit />} />
                 </Route>
                 {/* Settings has no tab (FLOW-364); the loans pages open the loans tab. */}
                 <Route element={<DevShell section="loans" />}>
@@ -240,6 +250,9 @@ function AppRoutes() {
                 <Route element={<DevShell section={null} />}>
                   <Route path="/e2e/settings" element={<DevSettings />} />
                   <Route path="/e2e/connections" element={<DevConnections />} />
+                  <Route path="/e2e/connections/ai" element={<DevAiConnection />} />
+                  <Route path="/e2e/business" element={<DevBusiness />} />
+                  <Route path="/e2e/connections/sumit" element={<DevSumitConnection />} />
                   <Route path="/e2e/categories" element={<DevCategories />} />
                   <Route path="/e2e/categories/:parentId" element={<DevCategories />} />
                   <Route path="/e2e/team" element={<DevTeam />} />
@@ -292,8 +305,9 @@ function AppRoutes() {
                 </Route>
                 <Route path="review/filed" element={<FiledTodayScreen />} />
                 {UnpaidRoute()}
+                <Route path="missing-bills" element={<RecurringRedirect />} />
+                <Route path="recurring" element={<RecurringScreen />} />
                 {UnpaidInvoiceRoute()}
-                <Route path="missing-bills" element={<MissingBillsScreen />} />
                 {SettingsRoutes()}
                 {LoanRoutes()}
               </Route>
@@ -477,4 +491,10 @@ function AuthCallback() {
   }, [navigate]);
 
   return <AuthCallbackView message={message} />;
+}
+
+/** FLOW-447: the old missing-bills address (Home's rows link to it) opens קבועים, keeping its query and hash. */
+function RecurringRedirect() {
+  const { search, hash } = useLocation();
+  return <Navigate to={{ pathname: "/recurring", search, hash }} replace />;
 }

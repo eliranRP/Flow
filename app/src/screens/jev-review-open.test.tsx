@@ -203,6 +203,9 @@ describe("cold review scope", () => {
     localStorage.removeItem(jevConnectorStorageKey(scope));
   });
 
+  // Measured, not a retry: a warm-up render in beforeAll did not shorten this test (it changed the remembered
+  // state the test starts from), so the budget stays at 15s and the release wait at 5s: on this runner the
+  // released company read and the scoped connector key land after about 5s, where the defaults timed out.
   it("waits on a remembered on when /review is opened with no dashboard cache", async () => {
     let releaseCompany: () => void = () => undefined;
     let releaseIntegration: () => void = () => undefined;
@@ -231,14 +234,16 @@ describe("cold review scope", () => {
       releaseCompany();
       await Promise.resolve();
     });
+    // Wait for what the released company read does (the remembered flag moves to the scoped key),
+    // not for a state that already held before the release, so the asserts below see the settled state.
     await waitFor(() => {
-      expect(document.querySelector("[data-jev-pending]")).not.toBeNull();
+      expect(localStorage.getItem("flow.jev-connector")).toBeNull();
+      expect(connectorKeys(client)).toContainEqual(["jev-connector", scope.userId, scope.companyId]);
     });
+    expect(document.querySelector("[data-jev-pending]")).not.toBeNull();
     expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
-    expect(localStorage.getItem("flow.jev-connector")).toBeNull();
-    expect(connectorKeys(client)).toContainEqual(["jev-connector", scope.userId, scope.companyId]);
     expect(connectorKeys(client).some((key) => key.length === 1)).toBe(false);
     await act(async () => {
       releaseIntegration();
@@ -250,7 +255,7 @@ describe("cold review scope", () => {
     expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();
-  });
+  }, 15_000);
 
   it("uses company_id on the list_review payload when the session has no company row yet", async () => {
     let releaseIntegration: () => void = () => undefined;

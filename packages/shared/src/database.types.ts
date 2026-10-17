@@ -270,6 +270,37 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"invoice_match_dismissals": {
+                  Row: {
+                    "bank_transaction_id": string,"company_id": string,"dismissed_at": string,"dismissed_by": string | null,"transaction_id": string
+                  }
+                  Insert: {
+                    "bank_transaction_id": string,"company_id": string,"dismissed_at"?: string,"dismissed_by"?: string | null,"transaction_id": string
+                  }
+                  Update: {
+                    "bank_transaction_id"?: string,"company_id"?: string,"dismissed_at"?: string,"dismissed_by"?: string | null,"transaction_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "invoice_match_dismissals_company_id_bank_transaction_id_fkey"
+      columns: ["company_id","bank_transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "invoice_match_dismissals_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "invoice_match_dismissals_company_id_transaction_id_fkey"
+      columns: ["company_id","transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
                 },"invoice_paid_marks": {
                   Row: {
                     "company_id": string,"marked_at": string,"marked_by": string | null,"transaction_id": string
@@ -289,6 +320,37 @@ isOneToOne: false
       referencedColumns: ["id"]
     },{
       foreignKeyName: "invoice_paid_marks_company_id_transaction_id_fkey"
+      columns: ["company_id","transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
+                },"invoice_payment_links": {
+                  Row: {
+                    "bank_transaction_id": string,"company_id": string,"linked_at": string,"linked_by": string | null,"transaction_id": string
+                  }
+                  Insert: {
+                    "bank_transaction_id": string,"company_id": string,"linked_at"?: string,"linked_by"?: string | null,"transaction_id": string
+                  }
+                  Update: {
+                    "bank_transaction_id"?: string,"company_id"?: string,"linked_at"?: string,"linked_by"?: string | null,"transaction_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "invoice_payment_links_company_id_bank_transaction_id_fkey"
+      columns: ["company_id","bank_transaction_id"]
+isOneToOne: true
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "invoice_payment_links_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "invoice_payment_links_company_id_transaction_id_fkey"
       columns: ["company_id","transaction_id"]
 isOneToOne: false
       referencedRelation: "transactions"
@@ -909,13 +971,13 @@ isOneToOne: false
                   ]
                 },"transactions": {
                   Row: {
-                    "amount_gross": number,"amount_net": number,"amount_original": number,"cash_date": string | null,"category_assigned": boolean,"category_id": string | null,"category_suggested": boolean,"company_id": string,"created_at": string,"currency": string,"customer_id": string | null,"description": string,"direction": Database["public"]['Enums']["txn_direction"],"doc_date": string,"doc_kind": Database["public"]['Enums']["doc_kind"],"external_id": string | null,"fx_rate": number | null,"fx_rate_date": string | null,"id": string,"idempotency_key": string,"in_cash_override": boolean | null,"in_pnl_override": boolean | null,"line_status": Database["public"]['Enums']["line_status"],"linked_external_id": string | null,"pnl_role": Database["public"]['Enums']["pnl_role"] | null,"project_assigned": boolean,"project_id": string | null,"provider_meta": NonNullable<Json>,"removed_at": string | null,"source": Database["public"]['Enums']["txn_source"],"supplier_id": string | null,"updated_at": string,"user_assigned": boolean,"vat_amount": number,"vat_status": Database["public"]['Enums']["vat_status"]
+                    "amount_gross": number,"amount_net": number,"amount_original": number,"attachments": NonNullable<Json>,"cash_date": string | null,"category_assigned": boolean,"category_id": string | null,"category_suggested": boolean,"company_id": string,"created_at": string,"currency": string,"customer_id": string | null,"description": string,"direction": Database["public"]['Enums']["txn_direction"],"doc_date": string,"doc_kind": Database["public"]['Enums']["doc_kind"],"external_id": string | null,"fx_rate": number | null,"fx_rate_date": string | null,"id": string,"idempotency_key": string,"in_cash_override": boolean | null,"in_pnl_override": boolean | null,"line_status": Database["public"]['Enums']["line_status"],"linked_external_id": string | null,"pnl_role": Database["public"]['Enums']["pnl_role"] | null,"project_assigned": boolean,"project_id": string | null,"provider_meta": NonNullable<Json>,"removed_at": string | null,"source": Database["public"]['Enums']["txn_source"],"supplier_id": string | null,"updated_at": string,"user_assigned": boolean,"vat_amount": number,"vat_status": Database["public"]['Enums']["vat_status"]
                   }
                   Insert: {
-                    "amount_gross": number,"amount_net": number,"amount_original": number,"cash_date"?: string | null,"category_assigned"?: boolean,"category_id"?: string | null,"category_suggested"?: boolean,"company_id": string,"created_at"?: string,"currency"?: string,"customer_id"?: string | null,"description"?: string,"direction": Database["public"]['Enums']["txn_direction"],"doc_date": string,"doc_kind"?: Database["public"]['Enums']["doc_kind"],"external_id"?: string | null,"fx_rate"?: number | null,"fx_rate_date"?: string | null,"id"?: string,"idempotency_key": string,"in_cash_override"?: boolean | null,"in_pnl_override"?: boolean | null,"line_status"?: Database["public"]['Enums']["line_status"],"linked_external_id"?: string | null,"pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"project_assigned"?: boolean,"project_id"?: string | null,"provider_meta"?: NonNullable<Json>,"removed_at"?: string | null,"source": Database["public"]['Enums']["txn_source"],"supplier_id"?: string | null,"updated_at"?: string,"user_assigned"?: boolean,"vat_amount": number,"vat_status": Database["public"]['Enums']["vat_status"]
+                    "amount_gross": number,"amount_net": number,"amount_original": number,"attachments"?: NonNullable<Json>,"cash_date"?: string | null,"category_assigned"?: boolean,"category_id"?: string | null,"category_suggested"?: boolean,"company_id": string,"created_at"?: string,"currency"?: string,"customer_id"?: string | null,"description"?: string,"direction": Database["public"]['Enums']["txn_direction"],"doc_date": string,"doc_kind"?: Database["public"]['Enums']["doc_kind"],"external_id"?: string | null,"fx_rate"?: number | null,"fx_rate_date"?: string | null,"id"?: string,"idempotency_key": string,"in_cash_override"?: boolean | null,"in_pnl_override"?: boolean | null,"line_status"?: Database["public"]['Enums']["line_status"],"linked_external_id"?: string | null,"pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"project_assigned"?: boolean,"project_id"?: string | null,"provider_meta"?: NonNullable<Json>,"removed_at"?: string | null,"source": Database["public"]['Enums']["txn_source"],"supplier_id"?: string | null,"updated_at"?: string,"user_assigned"?: boolean,"vat_amount": number,"vat_status": Database["public"]['Enums']["vat_status"]
                   }
                   Update: {
-                    "amount_gross"?: number,"amount_net"?: number,"amount_original"?: number,"cash_date"?: string | null,"category_assigned"?: boolean,"category_id"?: string | null,"category_suggested"?: boolean,"company_id"?: string,"created_at"?: string,"currency"?: string,"customer_id"?: string | null,"description"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"doc_date"?: string,"doc_kind"?: Database["public"]['Enums']["doc_kind"],"external_id"?: string | null,"fx_rate"?: number | null,"fx_rate_date"?: string | null,"id"?: string,"idempotency_key"?: string,"in_cash_override"?: boolean | null,"in_pnl_override"?: boolean | null,"line_status"?: Database["public"]['Enums']["line_status"],"linked_external_id"?: string | null,"pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"project_assigned"?: boolean,"project_id"?: string | null,"provider_meta"?: NonNullable<Json>,"removed_at"?: string | null,"source"?: Database["public"]['Enums']["txn_source"],"supplier_id"?: string | null,"updated_at"?: string,"user_assigned"?: boolean,"vat_amount"?: number,"vat_status"?: Database["public"]['Enums']["vat_status"]
+                    "amount_gross"?: number,"amount_net"?: number,"amount_original"?: number,"attachments"?: NonNullable<Json>,"cash_date"?: string | null,"category_assigned"?: boolean,"category_id"?: string | null,"category_suggested"?: boolean,"company_id"?: string,"created_at"?: string,"currency"?: string,"customer_id"?: string | null,"description"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"doc_date"?: string,"doc_kind"?: Database["public"]['Enums']["doc_kind"],"external_id"?: string | null,"fx_rate"?: number | null,"fx_rate_date"?: string | null,"id"?: string,"idempotency_key"?: string,"in_cash_override"?: boolean | null,"in_pnl_override"?: boolean | null,"line_status"?: Database["public"]['Enums']["line_status"],"linked_external_id"?: string | null,"pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"project_assigned"?: boolean,"project_id"?: string | null,"provider_meta"?: NonNullable<Json>,"removed_at"?: string | null,"source"?: Database["public"]['Enums']["txn_source"],"supplier_id"?: string | null,"updated_at"?: string,"user_assigned"?: boolean,"vat_amount"?: number,"vat_status"?: Database["public"]['Enums']["vat_status"]
                   }
                   Relationships: [
                     {
@@ -1053,6 +1115,9 @@ isOneToOne: false
                            } |
 { Args: { "p_category_id": string,"p_id": string }; Returns: undefined
                            },
+"attach_line_document":
+{ Args: { "p_document": Json,"p_transaction_id": string }; Returns: Json
+                           },
 "bump_mcp_rate":
 { Args: { "p_kind": string,"p_token": string,"p_user": string }; Returns: Json
                            },
@@ -1111,6 +1176,9 @@ isOneToOne: false
 "create_manual_entry":
 { Args: { "p_category_id"?: string,"p_description": string,"p_direction": string,"p_doc_date": string,"p_gross_agorot": number,"p_kind": string,"p_project_id"?: string,"p_vat_exempt"?: boolean }; Returns: string
                            },
+"create_manual_line":
+{ Args: { "p_amount_minor": number,"p_category_id": string,"p_cheque_number": string,"p_direction": string,"p_doc_date": string,"p_method": string,"p_payee": string,"p_project_id": string }; Returns: string
+                           },
 "decline_invite":
 { Args: { "p_invite_id": string }; Returns: Json
                            },
@@ -1129,11 +1197,17 @@ isOneToOne: false
 "delete_transaction":
 { Args: { "p_id": string }; Returns: undefined
                            },
+"detach_line_document":
+{ Args: { "p_sha256": string,"p_transaction_id": string }; Returns: undefined
+                           },
 "disconnect_connector":
 { Args: { "p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: undefined
                            },
 "disconnect_sumit":
 { Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"dismiss_invoice_match":
+{ Args: { "p_invoice": string,"p_transaction": string }; Returns: Json
                            },
 "dismiss_recurring_alert":
 { Args: { "p_key": string,"p_kind": string }; Returns: Json
@@ -1176,6 +1250,9 @@ isOneToOne: false
 "get_project_group":
 { Args: { "p_basis"?: string,"p_from"?: string,"p_id": string,"p_to"?: string }; Returns: Json
                            },
+"get_setup_suggestions":
+{ Args: { "p_today"?: string }; Returns: Json
+                           },
 "get_transaction":
 { Args: { "p_id": string }; Returns: Json
                            },
@@ -1214,6 +1291,9 @@ isOneToOne: false
                            },
 "jev_take_lease":
 { Args: { "p_holder": string,"p_seconds"?: number }; Returns: boolean
+                           },
+"link_invoice_payment":
+{ Args: { "p_invoice": string,"p_transaction": string }; Returns: Json
                            },
 "list_auto_assigned_today":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -1279,6 +1359,9 @@ isOneToOne: false
 "mcp_assign_expenses":
 { Args: { "p_idempotency_key": string,"p_items": Json }; Returns: Json
                            },
+"mcp_attach_document":
+{ Args: { "p_document": Json,"p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
+                           },
 "mcp_attach_loan_payment":
 { Args: { "p_idempotency_key": string,"p_loan_id": string,"p_parts": Json,"p_transaction_id": string }; Returns: Json
                            },
@@ -1292,6 +1375,9 @@ isOneToOne: false
 { Args: { "p_idempotency_key": string,"p_kind": string,"p_name": string }; Returns: Json
                            } |
 { Args: { "p_idempotency_key": string,"p_kind": string,"p_name": string,"p_parent_id": string }; Returns: Json
+                           },
+"mcp_create_manual_entry":
+{ Args: { "p_amount_minor": number,"p_category_id": string,"p_cheque_number": string,"p_direction": string,"p_doc_date": string,"p_idempotency_key": string,"p_method": string,"p_payee": string,"p_project_id": string }; Returns: Json
                            },
 "mcp_create_project":
 { Args: { "p_budget_minor"?: number,"p_idempotency_key": string,"p_name": string,"p_status"?: string,"p_type"?: string }; Returns: Json
@@ -1317,6 +1403,9 @@ isOneToOne: false
 "mcp_detach_loan_payment":
 { Args: { "p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
                            },
+"mcp_dismiss_invoice_match":
+{ Args: { "p_idempotency_key": string,"p_invoice_id": string,"p_transaction_id": string }; Returns: Json
+                           },
 "mcp_hide_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string }; Returns: Json
                            },
@@ -1331,6 +1420,9 @@ isOneToOne: false
                            },
 "mcp_jev_suggestions":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"mcp_link_invoice_payment":
+{ Args: { "p_idempotency_key": string,"p_invoice_id": string,"p_transaction_id": string }; Returns: Json
                            },
 "mcp_list_loans":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -1537,6 +1629,11 @@ isOneToOne: false
 "reassign_transaction":
 { Args: { "p_category_id": string,"p_id": string,"p_project_id": string }; Returns: string
                            },
+"receipt_match":
+{ Args: { "p_amount_minor": number,"p_doc_date": string,"p_payee": string }; Returns: {
+              "amount_minor": number,"description": string,"doc_date": string,"id": string,"source": string
+            }[]
+                           },
 "recurring_changes":
 { Args: { "p_today"?: string }; Returns: Json
                            },
@@ -1701,6 +1798,9 @@ isOneToOne: false
                            },
 "undo_reassign":
 { Args: { "p_id": string }; Returns: undefined
+                           },
+"unpaid_overview":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "upsert_connector_lines":
 { Args: { "p_company": string,"p_expected_prev_cursor": string,"p_lines": Json,"p_next_cursor": string,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: Database["public"]['CompositeTypes']["connector_upsert_result"]

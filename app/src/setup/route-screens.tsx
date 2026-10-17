@@ -1,213 +1,226 @@
-import { lazy, useState } from "react";
-import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth";
+import { getSupabase } from "../lib/supabase";
 import { usePreviewMode, usePreviewSearch } from "../preview";
-import { useGoBack } from "../ui/back";
 import { useDashboardQuery } from "../use-books";
+import { SKIP_ALL_COMPANY_NAME } from "./copy";
 import { useSetupFacts } from "./facts";
 import {
-  backPath,
-  continuePath,
-  confirmLists,
-  finishInstall,
-  finishIos,
   indexTarget,
+  nextPath,
   parseStep,
+  previousPath,
+  skipAllPatch,
   skipPatch,
-  type SetupStepId,
+  withPatch,
+  type SetupFacts,
+  type StepNumber,
 } from "./model";
+import { SetupWelcome } from "./welcome";
+import { SetupDone, buildDoneRows } from "./done";
+import { StepBusiness, StepConnect, StepInstall, StepJev, StepLoans, StepProjects, StepReview, type BusinessInitial, type StepProps } from "./steps";
+import { readSetupStore, writeSetupStore, type SetupLender, type SetupStore } from "./storage";
 import { useSetupStore } from "./store";
-import { companyCreatedThisRun, readSetupStore, writeSetupStore } from "./storage";
 import { useSetupViewer } from "./viewer";
-import { screenLoaders } from "../screen-loaders";
 
-// FLOW-804: the steps load when a setup screen opens, so Home's first load skips them.
-const loadSteps = screenLoaders.setupSteps;
-const StepBusiness = lazy(() => loadSteps().then((m) => ({ default: m.StepBusiness })));
-const StepStarter = lazy(() => loadSteps().then((m) => ({ default: m.StepStarter })));
-const StepSumit = lazy(() => loadSteps().then((m) => ({ default: m.StepSumit })));
-const StepJev = lazy(() => loadSteps().then((m) => ({ default: m.StepJev })));
-const StepLists = lazy(() => loadSteps().then((m) => ({ default: m.StepLists })));
-const StepReview = lazy(() => loadSteps().then((m) => ({ default: m.StepReview })));
-const StepInstall = lazy(() => loadSteps().then((m) => ({ default: m.StepInstall })));
-
-function useFromCard(): boolean {
-  const [params] = useSearchParams();
-  return params.get("from") === "card";
+/** The company's base currency (companies.base_currency). Null while it loads or with no company. */
+function useBaseCurrency(companyId: string | null): "USD" | "ILS" | null {
+  const query = useQuery({
+    queryKey: ["setup-base-currency", companyId],
+    enabled: companyId != null,
+    queryFn: async () => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      const { data, error } = await supabase.from("companies").select("base_currency").eq("id", companyId as string).maybeSingle();
+      if (error) throw new Error(error.message);
+      return (data as { base_currency?: string } | null)?.base_currency ?? "ILS";
+    },
+  });
+  if (query.data === "USD") return "USD";
+  if (query.data === "ILS") return "ILS";
+  return null;
 }
 
-export function SetupIndex() {
-  const preview = usePreviewMode();
-  const search = usePreviewSearch();
-  const { status, session } = useAuth();
-  const facts = useSetupFacts(!preview && status === "authed");
-  const { store, ready } = useSetupStore(session?.user.id ?? null, facts.companyId);
-  if (preview) return <Navigate to={`/${search}`} replace />;
-  // Wait for the server copy too (FLOW-506), so a new phone opens the step the owner reached.
-  if (status === "loading" || !facts.ready || !ready) return null;
-  return <Navigate to={indexTarget(store, facts)} replace />;
+/** Writes a patch to the company's stored run. Reads first, so a stale render never drops a stamp. */
+function commit(userId: string, companyId: string | null, patch: Partial<SetupStore>): void {
+  const current = readSetupStore(userId, companyId);
+  writeSetupStore(userId, companyId, withPatch(current, patch));
 }
 
-export function SetupStepScreen() {
+function useSetupRoute() {
   const preview = usePreviewMode();
   const search = usePreviewSearch();
-  const params = useParams();
-  const step = parseStep(params.step);
   const viewer = useSetupViewer();
   const { status, session } = useAuth();
   const userId = session?.user.id ?? null;
   const facts = useSetupFacts(!preview && status === "authed" && !viewer.viewer);
   const { store, ready } = useSetupStore(userId, facts.companyId);
+  const navigate = useNavigate();
+  const client = useQueryClient();
+  const dashboard = useDashboardQuery(!preview && status === "authed" && facts.companyId != null);
+  const loading = status === "loading" || !viewer.ready || !facts.ready || !ready;
+  return { preview, search, viewer, status, userId, facts, store, loading, navigate, client, dashboard };
+}
+
+/** The index (/setup) decides where the owner goes: the welcome, or the first step not done. */
+export function SetupIndex() {
+  const { preview, search, facts, store, loading, userId } = useSetupRoute();
   if (preview) return <Navigate to={`/${search}`} replace />;
-  if (step == null) return <Navigate to="/setup" replace />;
-  if (!viewer.ready || status === "loading") return null;
+  if (loading || userId == null) return null;
+  return <Navigate to={indexTarget(store, facts)} replace />;
+}
+
+/** /setup/welcome: the first screen for a user with no company. A user who has one goes home. */
+export function SetupWelcomeScreen() {
+  const { preview, search, viewer, facts, loading, userId, navigate, client } = useSetupRoute();
+  if (preview) return <Navigate to={`/${search}`} replace />;
+  if (loading) return null;
   if (viewer.viewer) return <Navigate to={`/${search}`} replace />;
-  if (!facts.ready || !ready) return null;
-  if (step === 0 && facts.companyId != null && !(userId && companyCreatedThisRun(userId))) {
-    return <Navigate to={indexTarget(store, facts)} replace />;
-  }
+  if (facts.companyId != null) return <Navigate to="/" replace />;
   return (
-    <SetupStepBody
-      key={step}
-      step={step}
-      userId={userId}
-      companyId={facts.companyId}
-      reviewCount={0}
+    <SetupWelcome
+      onStart={() => { void navigate("/setup/1"); }}
+      onSkipAll={() => runSkipAll({ userId, facts, navigate, client })}
     />
   );
 }
 
-function SetupStepBody({
+/** Skip all (the sheet, from any screen): a business "העסק שלי" when there is none, every step not done skipped, then Home. */
+async function runSkipAll({
+  userId,
+  facts,
+  navigate,
+  client,
+}: {
+  userId: string | null;
+  facts: SetupFacts;
+  navigate: ReturnType<typeof useNavigate>;
+  client: ReturnType<typeof useQueryClient>;
+}): Promise<void> {
+  if (userId == null) return;
+  let companyId = facts.companyId;
+  if (companyId == null) {
+    const supabase = getSupabase();
+    if (!supabase) return;
+    const { data, error } = await supabase.rpc("create_company", { p_name: SKIP_ALL_COMPANY_NAME, p_vat_registered: true });
+    if (error || typeof data !== "string" || data === "") return;
+    companyId = data;
+    await client.refetchQueries({ queryKey: ["dashboard"], type: "all" });
+  }
+  const at = new Date().toISOString();
+  const current = readSetupStore(userId, companyId);
+  writeSetupStore(userId, companyId, skipAllPatch(current, { ...facts, companyId }, at));
+  void navigate("/", { replace: true });
+}
+
+/** /setup/1 … /setup/7: one step. Each screen gets the route's writes, its navigation and its skip actions. */
+export function SetupStepScreen() {
+  const params = useParams();
+  const step = parseStep(params.step);
+  const route = useSetupRoute();
+  const { preview, search, viewer, facts, store, loading, userId, navigate, client, dashboard } = route;
+  if (preview) return <Navigate to={`/${search}`} replace />;
+  if (step == null || step === "welcome" || step === "done") return <Navigate to="/setup" replace />;
+  if (loading || userId == null) return null;
+  if (viewer.viewer) return <Navigate to={`/${search}`} replace />;
+  if (facts.companyId == null && step !== 1) return <Navigate to="/setup/welcome" replace />;
+  return <StepBody key={step} step={step} userId={userId} facts={facts} store={store} navigate={navigate} client={client} dashboardName={dashboard.data?.name ?? null} dashboardBasis={dashboard.data?.basis ?? null} existingNames={(dashboard.data?.projects ?? []).map((project) => project.name)} />;
+}
+
+function StepBody({
   step,
   userId,
-  companyId,
-  reviewCount,
+  facts,
+  store,
+  navigate,
+  client,
+  dashboardName,
+  dashboardBasis,
+  existingNames,
 }: {
-  step: SetupStepId;
-  userId: string | null;
-  companyId: string | null;
-  reviewCount: number;
+  step: StepNumber;
+  userId: string;
+  facts: SetupFacts;
+  store: SetupStore;
+  navigate: ReturnType<typeof useNavigate>;
+  client: ReturnType<typeof useQueryClient>;
+  dashboardName: string | null;
+  dashboardBasis: "cash" | "invoiced" | null;
+  existingNames: string[];
 }) {
-  const navigate = useNavigate();
-  const goBack = useGoBack();
-  const fromCard = useFromCard();
-  const created = companyCreatedThisRun(userId);
-  const dashboard = useDashboardQuery();
-  const count = dashboard.data?.review_count ?? reviewCount;
-  const backTo = backPath(step, fromCard, created);
-  const [createdCompany, setCreatedCompany] = useState<string | null>(null);
+  const companyId = facts.companyId;
+  const currency = useBaseCurrency(companyId);
+  const back = previousPath(step);
+  const toStep = nextPath(step);
 
-  function go(path: string) {
-    void navigate(path);
-  }
+  const props: StepProps = {
+    onDone: (patch, id) => {
+      commit(userId, id === undefined ? companyId : id, patch ?? {});
+      void navigate(toStep);
+    },
+    onStamp: (patch) => { commit(userId, companyId, patch); },
+    onBack: back == null ? undefined : () => { void navigate(back); },
+    onSkipStep: () => {
+      const current = readSetupStore(userId, companyId);
+      writeSetupStore(userId, companyId, skipPatch(current, step, new Date().toISOString()));
+      void navigate(toStep);
+    },
+    onSkipAll: () => runSkipAll({ userId, facts, navigate, client }),
+  };
 
-  function skip() {
-    if (step === 0 || !userId) return;
-    const at = new Date().toISOString();
-    const current = readSetupStore(userId, companyId);
-    writeSetupStore(userId, companyId, skipPatch(current, step, at));
-    const next = continuePath(step, fromCard);
-    if (fromCard) goBack(next);
-    else go(next);
-  }
-
-  function back() {
-    if (backTo) goBack(backTo);
-  }
-
-  if (step === 0) {
-    // FLOW-406: once the company exists, step 0 asks for the starter categories before step 1.
-    const starterCompany = createdCompany ?? companyId;
-    if (starterCompany != null) {
-      return (
-        <StepStarter
-          initial={readSetupStore(userId, starterCompany).starter_set}
-          onDone={(set) => {
-            if (userId && set != null) {
-              const current = readSetupStore(userId, starterCompany);
-              writeSetupStore(userId, starterCompany, { ...current, starter_set: set, starter_at: new Date().toISOString() });
-            }
-            go("/setup/1");
-          }}
-        />
-      );
-    }
-    return (
-      <StepBusiness
-        userId={userId}
-        onDone={(nextCompany) => {
-          if (userId) {
-            const at = new Date().toISOString();
-            const current = readSetupStore(userId, nextCompany);
-            writeSetupStore(userId, nextCompany, { ...current, run_started_at: current.run_started_at ?? at });
-          }
-          setCreatedCompany(nextCompany);
-        }}
-      />
-    );
-  }
   if (step === 1) {
-    return (
-      <StepSumit
-        onBack={backTo ? back : undefined}
-        onSkip={skip}
-        onConnected={() => {
-          go(continuePath(1, fromCard));
-        }}
-      />
-    );
+    const initial: BusinessInitial | null = companyId != null && currency != null && dashboardName != null
+      ? { name: dashboardName, currency, basis: dashboardBasis === "cash" ? "paid" : "invoice" }
+      : null;
+    return <StepBusiness {...props} companyId={companyId} initial={initial} />;
   }
   if (step === 2) {
-    return (
-      <StepJev
-        onBack={backTo ? back : undefined}
-        onSkip={skip}
-        onSaved={() => {
-          go(continuePath(2, fromCard));
-        }}
-      />
-    );
+    return <StepConnect {...props} mercuryConnected={facts.mercuryConnected} sumitConnected={facts.sumitConnected} />;
   }
   if (step === 3) {
-    return (
-      <StepLists
-        onBack={backTo ? back : undefined}
-        onSkip={skip}
-        onConfirm={() => {
-          if (userId) {
-            const at = new Date().toISOString();
-            const current = readSetupStore(userId, companyId);
-            writeSetupStore(userId, companyId, confirmLists(current, at));
-          }
-          go(continuePath(3, fromCard));
-        }}
-      />
-    );
+    return <StepProjects {...props} companyId={companyId} bankConnected={facts.mercuryConnected || facts.sumitConnected} existingNames={existingNames} />;
   }
   if (step === 4) {
     return (
-      <StepReview
-        count={count}
-        onBack={backTo ? back : undefined}
-        onSkip={skip}
-        onOpen={() => {
-          const query = fromCard ? "?setup=1&from=card" : "?setup=1";
-          go(`/review${query}`);
+      <StepLoans
+        {...props}
+        companyId={companyId}
+        currency={currency ?? "ILS"}
+        bankConnected={facts.mercuryConnected || facts.sumitConnected}
+        picks={store.lenders}
+        loanCount={facts.loanCount}
+        onPick={(lender: SetupLender) => {
+          if (store.lenders.some((item) => item.name === lender.name)) return;
+          commit(userId, companyId, { lenders: [...store.lenders, lender] });
         }}
       />
     );
   }
+  if (step === 5) return <StepJev {...props} />;
+  if (step === 6) return <StepReview {...props} approved={store.sample_review_at != null} />;
+  return <StepInstall {...props} />;
+}
+
+/** /setup/done: what was set up, and what waits in Settings. Reaching it stamps finished_at. */
+export function SetupDoneScreen() {
+  const { preview, search, viewer, facts, store, loading, userId, navigate, dashboard } = useSetupRoute();
+  if (preview) return <Navigate to={`/${search}`} replace />;
+  if (loading || userId == null) return null;
+  if (viewer.viewer) return <Navigate to={`/${search}`} replace />;
+  if (facts.companyId == null) return <Navigate to="/setup/welcome" replace />;
+  const rows = buildDoneRows({
+    store,
+    facts,
+    businessName: dashboard.data?.name ?? SKIP_ALL_COMPANY_NAME,
+    pendingLenders: store.lenders.length,
+  });
   return (
-    <StepInstall
-      onBack={backTo ? back : undefined}
-      onSkip={skip}
-      onFinish={(kind) => {
-        if (userId) {
-          const at = new Date().toISOString();
-          const current = readSetupStore(userId, companyId);
-          writeSetupStore(userId, companyId, kind === "ios" ? finishIos(current, at) : finishInstall(current, at));
-        }
-        go(continuePath(5, fromCard));
+    <SetupDone
+      rows={rows}
+      onHome={() => {
+        commit(userId, facts.companyId, { finished_at: new Date().toISOString() });
+        void navigate("/");
       }}
     />
   );

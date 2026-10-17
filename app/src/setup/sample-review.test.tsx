@@ -98,7 +98,7 @@ describe("setup sample review", () => {
     fireEvent.click(approve);
     expect(await screen.findByText("הכל מאושר")).toBeInTheDocument();
     expect(screen.getByText("אין פריטים שמחכים לך. נעדכן כשיגיע משהו חדש.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "לדף הבית" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "חזרה לבית" })).toBeInTheDocument();
     const stored = localStorage.getItem(setupStorageKey(USER, COMPANY));
     expect(stored).toContain("sample_review_at");
     expect(rpc.mock.calls.some((call) => call[0] === "approve_review_item")).toBe(false);

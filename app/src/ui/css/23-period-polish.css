@@ -5,7 +5,7 @@
 
 /*
   FLOW-335: a ListRow's action under the row sits on the start side, under the name (Unpaid's mark).
-  Only ListRow's own stack: the skipped list on לאישור builds its own .ui-row-stack and keeps it.
+  Only ListRow's own stack: any other .ui-row-stack (a list that builds its own) keeps its layout.
 */
 .ui-row-stack-action {
   align-items: flex-start;
@@ -65,10 +65,5 @@
 /* FLOW-335: "ניתוק" in its own group after a section gap, away from "רענון עכשיו". */
 .ui-sheet-danger-group {
   margin-block-start: var(--space-section);
-}
-
-/* FLOW-356: the status sheet's rows start at the sheet's edge, in line with its title and copy. */
-.ui-connector-sheet-list.ui-project-list {
-  padding-inline: 0;
 }
 

@@ -12,12 +12,13 @@ import type { LineSplitRead } from "./line-split";
 import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "./assistant-sample";
 import { InstallScreen, type InstallMode } from "./ui/install-screen";
 import { ChangeAssignment } from "./ui/change-sheet";
+import { DevTransactionBoard } from "./dev/transaction-board";
 import { BackButton, useGoBack } from "./ui/back";
 import { BandCompany } from "./ui/top-band";
 import { Button } from "./ui/button";
 import { ActionBar, ActionBarRow } from "./ui/action-bar";
 import { CheckIcon } from "./ui/icons";
-import { ProgressBar } from "./ui/progress-bar";
+import { ReviewSegments } from "./ui/review-count";
 import { ReviewCard } from "./ui/review-card";
 import { ScreenHeader } from "./ui/screen-header";
 import { useToast } from "./ui/toast";
@@ -25,7 +26,19 @@ import { attentionRows, CashEmptyHome, CashHome, HomeBooks } from "./screens/Hom
 import { chargeChangeViews } from "./forecast";
 import { CashLinesScreen } from "./screens/cash-lines-screen";
 import { CashMonthScreen } from "./screens/cash-screens";
-import { sampleCashLines, sampleCashMonths, sampleCashToDay, sampleCashUsdLoss, sampleCashUsdToDay, sampleCashUsdYear, sampleCashYearMonths, sampleCashYears } from "./dev/cash-sample";
+import {
+  sampleBoardCashLines,
+  sampleBoardCashMonths,
+  sampleCashLines,
+  sampleCashLinesFlagged,
+  sampleCashMonths,
+  sampleCashToDay,
+  sampleCashUsdLoss,
+  sampleCashUsdToDay,
+  sampleCashUsdYear,
+  sampleCashYearMonths,
+  sampleCashYears,
+} from "./dev/cash-sample";
 import { CashHistoryScreen, CashYearScreen } from "./screens/cash-history";
 import { cashMonthKey } from "./cash";
 import {
@@ -43,14 +56,20 @@ import {
   InvoiceScreen,
   UnpaidScreen,
 } from "./screens/flow-screens";
+import { AiConnectionPage } from "./screens/assistant-settings";
+import { BusinessScreen } from "./screens/business-screen";
+import { SumitConnectionRoute } from "./screens/connection-pages";
 import { ProfitMonthsScreen } from "./screens/profit-months";
+import { ProjectProfitScreen } from "./screens/project-profit-screen";
+import { JUNIPER_PROFIT, NEW_PROJECT_PROFIT } from "./dev/project-profit-sample";
 import { LoanDetailScreen, type LoanView } from "./screens/loan-detail-screen";
 import { useMemoryLoanStore } from "./screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "./dev/loan-detail-sample";
-import { MissingBillsScreen } from "./screens/missing-bills-screen";
+import { RecurringScreen } from "./screens/recurring-screen";
+import { RECURRING_FIXTURE } from "./recurring-sample";
 import { LoanSummaryCard } from "./screens/loan-summary-card";
 import { LOAN_SUMMARY_SAMPLE } from "./dev/loan-summary-sample";
-import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME, SAMPLE_MISSING_RENAMED, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "./forecast-sample";
+import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS, SAMPLE_RECURRING_CHANGES } from "./forecast-sample";
 
 const devReviewItems = [
   {
@@ -104,31 +123,23 @@ export function DevSplit() {
   );
 }
 
-/** A local queue so the skip toast can be tested without writing a review row. */
+/** A local queue for the review card, so approve and skip can be tried without writing a review row. */
 export function DevReview() {
   const toast = useToast();
-  const [index, setIndex] = useState(0);
+  const [items, setItems] = useState(devReviewItems);
+  const [index] = useState(0);
   const [change, setChange] = useState(false);
-  const item = devReviewItems[index];
-  const total = devReviewItems.length;
+  const item = items[index];
+  const total = items.length;
   return (
     <div className="ui-review-queue" data-bar="">
       <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" />
-      <div className="ui-review-meter">
-        <ProgressBar
-          variant="thin"
-          label="התקדמות התור"
-          value={Math.min(index + 1, total)}
-          max={total}
-          caption={
-            <span className="t-hint">
-              <bdi dir="ltr">{String(Math.min(index + 1, total))}</bdi>
-              {" מתוך "}
-              <bdi dir="ltr">{String(total)}</bdi>
-            </span>
-          }
-        />
-      </div>
+      <ReviewSegments index={Math.min(index + 1, total)} total={total} />
+      <p className="t-hint ui-review-counter">
+        <bdi dir="ltr">{String(Math.min(index + 1, total))}</bdi>
+        {" מתוך "}
+        <bdi dir="ltr">{String(total)}</bdi>
+      </p>
       {item ? (
         <div className="ui-review-motion" data-motion={index === 0 ? undefined : "in"} key={item.id}>
           <ReviewCard
@@ -149,16 +160,16 @@ export function DevReview() {
           disabled={!item}
           onClick={() => {
             if (!item) return;
-            const next = index + 1;
+            const at = index;
+            setItems((list) => list.filter((_, position) => position !== at));
             toast.show({
               message: "הפריט אושר",
               action: "ביטול",
               place: "bar",
               onAction: () => {
-                setIndex(next - 1);
+                setItems((list) => [...list.slice(0, at), item, ...list.slice(at)]);
               },
             });
-            setIndex(next);
           }}
         >
           אישור
@@ -170,17 +181,9 @@ export function DevReview() {
             disabled={!item}
             onClick={() => {
               if (!item) return;
-              const next = index + 1;
-              // FLOW-327: the skip toast offers ביטול, as on the live queue, for the shots.
-              toast.show({
-                message: "דילגנו על הפריט",
-                action: "ביטול",
-                place: "bar",
-                onAction: () => {
-                  setIndex(next - 1);
-                },
-              });
-              setIndex(next);
+              // FLOW-365: דלג moves the card to the end of the device order. It writes nothing and shows no toast.
+              const at = index;
+              setItems((list) => [...list.filter((_, position) => position !== at), item]);
             }}
           >
             דלג
@@ -271,7 +274,7 @@ export function DevHome() {
       unpaidGross={50_000n}
       unpaidCount={1}
       missingCount={SAMPLE_MISSING_BILLS.length}
-      missingTo="/e2e/missing-bills"
+      missingTo="/e2e/recurring"
       period={period}
       onPeriod={setPeriod}
     />
@@ -308,7 +311,7 @@ export function DevCash() {
         unpaidGross: 460_000n,
         // FLOW-415: `?recurring=1` adds the late bills and a charge above its usual amount.
         missingCount: params.get("recurring") === "1" ? SAMPLE_MISSING_BILLS.length : 0,
-        missingTo: "/e2e/missing-bills",
+        missingTo: "/e2e/recurring",
         changes: params.get("recurring") === "1" ? chargeChangeViews(SAMPLE_RECURRING_CHANGES, "?preview=1") : [],
         search: "?preview=1",
       })}
@@ -344,15 +347,31 @@ export function DevCashMonth() {
   return <CashMonthScreen sample={data} monthKey={cashMonthKey(data.months[1]?.month ?? "")} />;
 }
 
-/** FLOW-413: this month's יצא lines; `?side=in` shows נכנס, `?side=kept` לא נספר ברווח (FLOW-418). */
+/** FLOW-413: this month's יצא lines; `?side=in` shows נכנס, `?side=kept` לא נספר ברווח (FLOW-418). FLOW-366: `?order=` and `?pending=1`. */
 export function DevCashLines() {
   const [params] = useSearchParams();
   const asked = params.get("side");
   const side = asked === "in" || asked === "kept" ? asked : "out";
+  // FLOW-366: ?pending=1 flags the first line for review and the second as out of profit.
+  const flagged = params.get("pending") === "1";
+  if (params.get("board") === "1") {
+    // The board frame: an invented USD company with the board's amounts and pending rows, dated as the board
+    // draws them (today is 11/10 there), so the day titles and the rows' dates match the frame.
+    const boardToday = new Date(2026, 9, 11, 12);
+    const board = sampleBoardCashMonths(boardToday);
+    // The board draws only the יצא and נכנס rows, so a לא נספר request shows the יצא rows.
+    const boardSide = side === "in" ? "in" : "out";
+    return (
+      <CashLinesScreen
+        sample={{ months: board, lines: sampleBoardCashLines(boardSide, boardToday), today: "2026-10-11" }}
+        at={{ month: cashMonthKey(board.months[0]?.month ?? ""), side: boardSide, currency: "USD" }}
+      />
+    );
+  }
   const data = sampleCashMonths();
   return (
     <CashLinesScreen
-      sample={{ months: data, lines: sampleCashLines(side) }}
+      sample={{ months: data, lines: flagged ? sampleCashLinesFlagged(side) : sampleCashLines(side) }}
       at={{ month: cashMonthKey(data.months[0]?.month ?? ""), side, currency: "ILS" }}
     />
   );
@@ -383,6 +402,23 @@ export function DevSettings() {
 
 export function DevConnections() {
   return <ConnectionsScreen sample={useDevSettingsSample()} sampleSecret={devAssistantSecret} />;
+}
+
+/** The SUMIT page on the dev fixture: connected, or `?state=problem` for a key that stopped working. */
+export function DevSumitConnection() {
+  const [params] = useSearchParams();
+  const problem = params.get("state") === "problem";
+  return <SumitConnectionRoute sample={problem ? { state: "problem", companyId: "1234567890" } : { state: "connected", companyId: "1234567890", lastSync: "היום, 06:05" }} />;
+}
+
+/** The business page on the dev settings fixture: its name is the fixture's, and its rename sheet opens from it. */
+export function DevBusiness() {
+  return <BusinessScreen sample={useDevSettingsSample()} />;
+}
+
+/** The AI connection page on the dev settings fixture (`?assistant=…`), so a mint shows its code without the server. */
+export function DevAiConnection() {
+  return <AiConnectionPage sample={useDevSettingsSample()?.assistant} sampleSecret={devAssistantSecret} />;
 }
 
 /** FLOW-106 B: the list reads the dev loan store, so a status change or a delete on a loan's page shows here. `?loans=none` is empty. */
@@ -427,14 +463,21 @@ function useDevSettingsSample(): NonNullable<Parameters<typeof SettingsScreen>[0
     : emailParam === "long"
       ? "owner.with.a.very.long.mailbox.name@example.com"
       : "owner@example.com";
+  // FLOW-512 proof: ?board=1 gives the Settings board's own numbers (an invented business name).
+  const board = params.get("board") === "1" && !noCompany;
   return {
-        name: noCompany ? null : "בדיקה",
+        name: noCompany ? null : board ? "Cedar Lane Homes" : "בדיקה",
         connected: noCompany ? false : connected,
         companyId: connected ? 1001 : null,
-        lastError: mode === "auth" ? "sumit_auth" : null,
+        lastError: board ? "sumit_auth" : mode === "auth" ? "sumit_auth" : null,
         email,
         noCompany,
-        teamCount: teamParam == null || noCompany ? undefined : Number(teamParam),
+        teamCount: board ? 2 : teamParam == null || noCompany ? undefined : Number(teamParam),
+        companyCount: board ? 2 : undefined,
+        categoryCount: board ? 12 : undefined,
+        notifications: board
+          ? { new_transaction: true, evening_reminder: false, weekly_summary: true, prompt_answered: true, has_subscription: true }
+          : undefined,
         assistant: noCompany
           ? { state: "no-company" }
           : assistant === "connected"
@@ -496,15 +539,9 @@ export function DevInvoices() {
   return <UnpaidScreen sample={rows} summary={summary} />;
 }
 
-/** FLOW-403. The late-bills list with invented rows; `?empty=1` has none. */
-export function DevMissingBills() {
-  const [params] = useSearchParams();
-  if (params.get("empty") === "1") return <MissingBillsScreen sample={{ late: [] }} />;
-  // FLOW-415 (b-2): `?income=1` adds a late payment from a customer.
-  const base = params.get("income") === "1" ? [...SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME] : SAMPLE_MISSING_BILLS;
-  // FLOW-430: `?match=1` adds a late bill that suggests a renamed supplier.
-  const late = params.get("match") === "1" ? [...base, SAMPLE_MISSING_RENAMED] : base;
-  return <MissingBillsScreen sample={{ late, arrived: SAMPLE_RECURRING_THIS_MONTH, changes: SAMPLE_RECURRING_CHANGES }} />;
+/** FLOW-447: the list on the rule-25 fixture, for the e2e run. */
+export function DevRecurring() {
+  return <RecurringScreen sample={RECURRING_FIXTURE} />;
 }
 
 export function DevTransactionGate() {
@@ -619,6 +656,12 @@ export function DevProjectDetail() {
   );
 }
 
+/** FLOW-140 slice 1: the project profit page on the board's Juniper Ct figures; `?state=empty` is a project with no lines. */
+export function DevProjectProfit() {
+  const [params] = useSearchParams();
+  return <ProjectProfitScreen sample={params.get("state") === "empty" ? NEW_PROJECT_PROFIT : JUNIPER_PROFIT} />;
+}
+
 /** Dev-only months for the "לפי חודש" page: one open month, a loss and a profit. */
 /** `?empty=1` is a project with no month yet (review-cycle fixture, FLOW-335). */
 export function DevProjectMonths() {
@@ -723,32 +766,7 @@ export function DevInstall({ mode }: { mode: InstallMode }) {
 }
 
 export function DevTransaction() {
-  return (
-    <TransactionScreen
-      sample={{
-        id: "t-manual",
-        description: "רשומה ידנית",
-        direction: "expense",
-        doc_date: "2026-09-12",
-        amount_gross: -118n,
-        amount_net: -100n,
-        vat_amount: -18n,
-        vat_status: "assumed",
-        source: "manual",
-        project_id: "p1",
-        project_name: "שיפוץ הרצל 12",
-        category_id: "c1",
-        category_name: "חומרים",
-        supplier_name: "ספק",
-        customer_name: null,
-        paid: true,
-        open_gross_agorot: null,
-        allocations: [],
-      }}
-      sampleProjects={[{ id: "p1", name: "שיפוץ הרצל 12" }, { id: "p2", name: "וילה רעננה" }]}
-      sampleCategories={[{ id: "c1", name: "חומרים" }, { id: "c2", name: "הובלה" }]}
-    />
-  );
+  return <DevTransactionBoard />;
 }
 
 /** FLOW-139. The loans list's summary card alone, for the board proof. */

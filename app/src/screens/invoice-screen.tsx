@@ -68,7 +68,7 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp }: { s
               <p className="t-label ui-inv-match-title">✦ נמצא תשלום תואם בבנק</p>
               <div className="ui-inv-match-row">
                 <span className="ui-inv-match-amount">
-                  <bdi dir="ltr">{formatAmountText(match.amount_agorot, row.currency ?? "ILS")}</bdi>
+                  <bdi dir="ltr">{formatAmountText(match.amount_minor, row.currency ?? "ILS")}</bdi>
                 </span>
                 <span className="ui-inv-match-copy">
                   <span className="t-body">{`${match.account_name} · ${unpaidFullDate(match.date)}`}</span>

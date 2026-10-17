@@ -35,7 +35,7 @@ describe("invites list after sign-in (FLOW-601, mockup invite-3)", () => {
     expect(screen.getByText("צופה · מדנה לוי")).toBeInTheDocument();
     expect(screen.getByText("עורך · מיוסי כהן")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("link", { name: "אחר כך" }));
-    await waitFor(() => { expect(screen.getByTestId("where").textContent).toBe("/setup/0"); });
+    await waitFor(() => { expect(screen.getByTestId("where").textContent).toBe("/setup/welcome"); });
   });
 
   it("joins: the company opens on Home", async () => {
@@ -64,7 +64,7 @@ describe("invites list after sign-in (FLOW-601, mockup invite-3)", () => {
     answer("my_invites", { data: [] });
     fireEvent.click(await screen.findByRole("button", { name: "דחייה של נכסים לדוגמה בע״מ" }));
     expect(await screen.findByText("אין הזמנות פתוחות")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "המשך" })).toHaveAttribute("href", "/setup/0");
+    expect(screen.getByRole("link", { name: "המשך" })).toHaveAttribute("href", "/setup/welcome");
   });
 
   it("says an invite is no longer open, and drops it", async () => {
@@ -94,15 +94,15 @@ describe("landing after sign-in", () => {
   });
 
   it("opens the invites for someone with no company and open invites", async () => {
-    expect(await landingWithInvites(client({ data: [first], error: null }) as never, false, "/setup/0")).toBe(INVITES_PATH);
+    expect(await landingWithInvites(client({ data: [first], error: null }) as never, false, "/setup/welcome")).toBe(INVITES_PATH);
   });
 
   it("changes nothing with a company, no invites, or a failed read", async () => {
     const withInvites = client({ data: [first], error: null });
     expect(await landingWithInvites(withInvites as never, true, "/")).toBe("/");
     expect(withInvites.rpc).not.toHaveBeenCalled();
-    expect(await landingWithInvites(client({ data: [], error: null }) as never, false, "/setup/0")).toBe("/setup/0");
-    expect(await landingWithInvites(client({ data: null, error: { message: "denied" } }) as never, false, "/setup/0")).toBe("/setup/0");
-    expect(await landingWithInvites(client(new Error("Failed to fetch")) as never, false, "/setup/0")).toBe("/setup/0");
+    expect(await landingWithInvites(client({ data: [], error: null }) as never, false, "/setup/welcome")).toBe("/setup/welcome");
+    expect(await landingWithInvites(client({ data: null, error: { message: "denied" } }) as never, false, "/setup/welcome")).toBe("/setup/welcome");
+    expect(await landingWithInvites(client(new Error("Failed to fetch")) as never, false, "/setup/welcome")).toBe("/setup/welcome");
   });
 });

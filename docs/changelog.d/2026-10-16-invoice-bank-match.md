@@ -1,0 +1,1 @@
+Backlog: open invoices can be matched to the bank deposit that paid them. The server side of FLOW-367: list_unpaid rows carry days_open and the matching Mercury deposit, linked invoices leave the list, and two MCP writes (link_invoice_payment, dismiss_invoice_match) with undo. The bar's totals come from unpaid_overview. No screen changes yet.

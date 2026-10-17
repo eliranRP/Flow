@@ -177,7 +177,8 @@ function readTools() {
     }),
     toolSpec("get_recurring_this_month", "Every recurring supplier and customer seen this month (the app's הגיעו החודש), as get_recurring_changes rows without the 20% filter or the dismissals: direction, party_id, party_name, currency, amount_minor, typical_amount_minor, change_percent, changed (true at 20% or more either way), typical_day, transaction_id, project and category, source and pace. Expenses first, then by name.", {}),
     toolSpec("get_recurring_schedule", "Every recurring supplier and customer of the company with its state this month (the app's קבועים list): arrived (seen this month), late (past its expected day, as get_missing_bills), soon (due this month, not yet late) or later (its next month is after this one). Rows: direction, party_id, party_name, currency, state, typical_amount_minor (expenses negative), amount_minor (this month's line, only when arrived), typical_day, pace (month, 2months, quarter or year), next_due_month (YYYY-MM), expected_by, project and category. Order: arrived, late, soon, later; expenses before income; then by day.", {}),
-    toolSpec("list_unpaid", "Open SUMIT invoices (an amount still open after linked receipts and credit notes), oldest first, as the Unpaid screen lists them: customer invoices (direction income, positive) and supplier invoices (direction expense, negative). Each has id (the transaction id), description, doc_date, currency, direction, project_name, customer_name, open_gross_minor, open_net_minor, and marked_paid_at: when the owner marked it paid while SUMIT has no receipt yet (null when not marked; set_invoice_paid), and document_url: the SUMIT document link on pay.sumit.co.il (null until a sync reads it). A marked one stays listed until a sync closes it. totals[] per currency and direction: open_gross_minor sums the rows not marked, marked_gross_minor the marked ones.", {}),
+    toolSpec("list_unpaid", "Open SUMIT invoices (an amount still open after linked receipts and credit notes), oldest first, as the Unpaid screen lists them: customer invoices (direction income, positive) and supplier invoices (direction expense, negative). Each has id (the transaction id), description, doc_date, currency, direction, project_name, customer_name, open_gross_minor, open_net_minor, and marked_paid_at: when the owner marked it paid while SUMIT has no receipt yet (null when not marked; set_invoice_paid), and document_url: the SUMIT document link on pay.sumit.co.il (null until a sync reads it), days_open (days since doc_date), and match: the Mercury deposit that matches it (same gross amount and customer, dated on or after the invoice, not linked or dismissed for it), or null: transaction_id, date, account_name, raw_description and amount_minor (null when none; link_invoice_payment links it, dismiss_invoice_match says it is not the payment). A marked one stays listed until a sync closes it; a linked one leaves the list. totals[] per currency and direction: open_gross_minor sums the rows not marked, marked_gross_minor the marked ones. overview: issued_since (the 1st of last month), billed_minor (income invoices issued since, in minor units), open_minor (their open amount not marked), paid_minor (billed less open) and last_sync_at (the SUMIT connection, null when none). Not returned yet: a due date (SUMIT sync reads none) and the SUMIT document number.", {}),
+    toolSpec("get_setup_suggestions", "Suggestions for the first-time setup, from the company's bank lines (FLOW-514). projects: project names found in the bank lines; empty until a bank source is chosen. lenders: recurring suppliers the company pays in its own currency in at least three months, with no loan of the same name yet. Each has name, monthly_agorot (positive minor units of the company's currency, the usual amount), and since (the date of its first line). Suggestions only: ask the owner first, and do not create a loan or a project from them without the owner's word.", {}),
     toolSpec("list_team", "The company's team: members (the owner first, then editors and viewers, each with user_id, name from their Google profile or else the email, email, role owner, editor or viewer, and you for the token's own user), role (this user's), can_manage (true for the owner), and for the owner the pending invites (id, email, role, created_at).", {}),
   ];
 }
@@ -263,6 +264,32 @@ function writeTools() {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       category_id: { type: "string" },
+    }, true),
+    toolSpec("create_manual_entry", "Add a cash or cheque line with no bank document (FLOW-369; owner or editor). direction is income or expense; amount_minor is whole minor units above zero; doc_date is YYYY-MM-DD; payee (2 to 120 characters) is who the money went to or came from; category_id is required, of the same direction; project_id is optional (null files the line as overhead); method is cash or cheque, and a cheque needs cheque_number (1 to 20 letters, digits or hyphens). Returns id, direction, amount_minor, doc_date and undo_kind (manual_entry: undo deletes the line while it still has this project, category, amount and date).", {
+      idempotency_key: { type: "string" },
+      direction: { type: "string", enum: ["income", "expense"] },
+      amount_minor: { type: "integer", minimum: 1 },
+      doc_date: { type: "string" },
+      payee: { type: "string" },
+      project_id: { type: ["string", "null"] },
+      category_id: { type: "string" },
+      method: { type: "string", enum: ["cash", "cheque"] },
+      cheque_number: { type: ["string", "null"] },
+    }, true),
+    toolSpec("attach_document", "Attach a document to an existing line without making a line (FLOW-369; owner or editor). document is { name (up to 200 characters), mime (image/jpeg, image/png, image/webp, image/heic or application/pdf), bytes (1 to 26214400), sha256 (64 hex characters) }. The file is not stored and not read: this keeps its metadata. The same sha256 twice is refused (document already attached); at most 10 documents a line. Returns id, documents (the count on the line) and undo_kind (document_attach: undo puts the list back while it is the one this write made).", {
+      idempotency_key: { type: "string" },
+      transaction_id: { type: "string" },
+      document: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          mime: { type: "string", enum: ["image/jpeg", "image/png", "image/webp", "image/heic", "application/pdf"] },
+          bytes: { type: "integer", minimum: 1, maximum: 26214400 },
+          sha256: { type: "string" },
+        },
+        required: ["name", "mime", "bytes", "sha256"],
+        additionalProperties: false,
+      },
     }, true),
     toolSpec("create_project", "Create a project in the owner's company (FLOW-445). type (optional, up to 40 characters, free text, e.g. flip or rental) and budget_minor (optional, whole minor units of the company currency, or null for no budget; the project's budget, over which its page warns) are set when given. Returns id and undo_kind (project: undo deletes it while it is empty).", {
       idempotency_key: { type: "string" },
@@ -457,6 +484,16 @@ function writeTools() {
       transaction_id: { type: "string" },
       paid: { type: "boolean" },
     }, true),
+    toolSpec("link_invoice_payment", "Link one open customer invoice from list_unpaid (invoice_id) to the Mercury deposit that paid it (transaction_id, a deposit of the same gross amount and customer, dated on or after the invoice). The invoice leaves list_unpaid; the deposit is linked to it and cannot pay another. A deposit that does not match is refused (payment not matched), a deposit already linked to an invoice is refused (payment already linked), an invoice marked paid is refused (invoice already marked paid), and an invoice list_unpaid does not list is refused (invoice not found). Totals and the P&L do not change. Undo is kind invoice_link with the invoice id: it takes the link away, and is a conflict when the link changed since.", {
+      idempotency_key: { type: "string" },
+      invoice_id: { type: "string" },
+      transaction_id: { type: "string" },
+    }, true),
+    toolSpec("dismiss_invoice_match", "Say that a deposit is not the payment of one open invoice from list_unpaid (\"לא זה\"): list_unpaid stops offering that deposit as the invoice's match, and the invoice stays open. Dismissing again keeps the first time. A deposit of the company is needed (payment not matched otherwise), and an invoice list_unpaid does not list is refused (invoice not found). Undo is kind invoice_dismiss with the invoice id: it takes the dismissal away when this write added it, and is a conflict when it changed since.", {
+      idempotency_key: { type: "string" },
+      invoice_id: { type: "string" },
+      transaction_id: { type: "string" },
+    }, true),
     toolSpec("detach_loan_payment", "Take one line off the loan it was attached to (attach_loan_payment, or matched in the app): its interest, escrow, principal and fees parts are removed, so the line counts whole under its own category again and the loan balance no longer counts its principal. The line keeps its project and category (undo of loan_split gives back a project the attach filed, but only before the detach or after undoing it). A line with no loan split is refused (line has no loan split). Returns the loan_id and the parts taken off, in cents. Undo is kind loan_detach with the transaction id: it puts the same parts back, and is a conflict when the line was matched again, the parts no longer fit (the line or the loan changed), or a demand loan has a later payment matched since.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
@@ -578,7 +615,7 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "recurring_match", "project_update", "project_delete"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, set_lines_cash, create_projects or create_categories batch.", {

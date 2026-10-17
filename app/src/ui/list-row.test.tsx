@@ -2,10 +2,34 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { List, ListRow, type StatementRowProps } from "./list-row";
+import { lineTagText } from "./line-marks";
 import { SuggestTag } from "./suggest-tag";
 import { expectRtl, expectTarget } from "./test-support";
 
 describe("ListRow", () => {
+  it("draws a transaction row's initials in place of its source icon, and its tag line under the hint (FLOW-366)", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <ListRow
+          variant="transaction"
+          title="סטודיו גל"
+          hint="דירת הגפן · חומרים"
+          agorot={120_000n}
+          sign="out"
+          source="invoice"
+          initials="סג"
+          tagLine={lineTagText({ pending: true, inPnl: false, reason: "שיפוץ" })}
+          href="/transactions/t9"
+        />
+      </MemoryRouter>,
+    );
+    const initials = container.querySelector(".ui-row-initials");
+    expect(initials).toHaveTextContent("סג");
+    expect(initials).toHaveAttribute("aria-hidden", "true");
+    expect(container.querySelector(".ui-row-icon")).toBeNull();
+    expect(container.querySelector(".ui-row-tagline")).toHaveTextContent("ממתין לאישור · שיפוץ · לא נספר ברווח");
+  });
+
   it("gives a linked transaction row the trailing chevron (FLOW-328)", () => {
     const { container } = render(
       <MemoryRouter>
