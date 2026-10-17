@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { LineSplitScreen } from "../screens/line-split";
-import { BOARD_SPLIT_CATEGORIES, BOARD_SPLIT_LINE, BOARD_SPLIT_PROJECTS, BOARD_SPLIT_STATES, SAMPLE_EXPENSE_LINE, SAMPLE_REFUND_LINE, SAMPLE_SPLIT_CATEGORIES, SAMPLE_SPLIT_PROJECTS, boardSplitSample, sampleSplitApi, type BoardSplitState } from "./line-split-sample";
+import { BOARD_SPLIT_CATEGORIES, BOARD_SPLIT_LINE, BOARD_SPLIT_PROJECTS, BOARD_SPLIT_STATES, SAMPLE_EXPENSE_LINE, SAMPLE_REFUND_LINE, SAMPLE_SPLIT_CATEGORIES, SAMPLE_SPLIT_PROJECTS, boardSplitSample, sampleSplitApi } from "./line-split-sample";
 
 /**
  * FLOW-325. The parts editor on a sample line for Playwright, with the sample preview and a
@@ -15,7 +15,8 @@ export function DevLineSplit() {
   const [params] = useSearchParams();
   const refund = params.get("line") === "refund";
   const fail = params.get("save") === "fail";
-  const boardState = BOARD_SPLIT_STATES.find((state) => state === params.get("board")) as BoardSplitState | undefined;
+  const boardParam = params.get("board");
+  const boardState = BOARD_SPLIT_STATES.find((state) => state === boardParam);
   const board = boardState != null ? boardSplitSample(boardState) : null;
   const line = board ? BOARD_SPLIT_LINE : refund ? SAMPLE_REFUND_LINE : SAMPLE_EXPENSE_LINE;
   const api = useMemo(() => sampleSplitApi(line, (parts) => {

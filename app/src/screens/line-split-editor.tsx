@@ -26,7 +26,7 @@ import {
   type RestDraft,
   type ServerPart,
 } from "../line-split";
-import { LINE_SPLIT_PARTS_CHANGED, LINE_SPLIT_PLACE, LINE_SPLIT_SAVE_FAILURE, PART_FILL_AMOUNT, PART_PICK_PROJECT, PART_TWICE, lineSplitCopy, lineSplitRefusal, localIssueCopy, type LineSplitRefusal } from "../line-split-copy";
+import { LINE_SPLIT_PARTS_CHANGED, LINE_SPLIT_PLACE, LINE_SPLIT_SAVE_FAILURE, PART_FILL_AMOUNT, PART_LINE_PROJECT_NOTE, PART_PICK_PROJECT, PART_TWICE, lineSplitCopy, partPickTitle, partTakenNote, lineSplitRefusal, localIssueCopy, type LineSplitRefusal } from "../line-split-copy";
 import { usePreviewSearch } from "../preview";
 import { reviewFocusPath } from "../review-paths";
 import { isReversal, reversalChoices, type KindedCategory } from "../reversal";
@@ -112,8 +112,6 @@ export function LineSplitEditor({
   const [confirmClear, setConfirmClear] = useState(false);
   const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
   const [lastEdited, setLastEdited] = useState<string | null>(null);
-  /** FLOW-333 C3b: a new part takes the unit of the last part typed. */
-  const [typedUnit, setTypedUnit] = useState<PartDraft["unit"]>(() => initial.parts.at(-1)?.unit ?? "amount");
   const [previewState, setPreviewState] = useState<PreviewState | null>(null);
   const [serverError, setServerError] = useState<{ reason: LineSplitRefusal; key: string | null } | null>(
     initialError ? { reason: initialError, key: null } : null,
@@ -292,6 +290,25 @@ export function LineSplitEditor({
   const pickerProjects = pickerReversal || line.projectId == null ? projects : projects.filter((project) => project.id !== line.projectId);
   const pickerProjectId = !pickerReversal && pickerProject === line.projectId ? "" : pickerProject;
 
+  // FLOW-922: a split part's picker says which pairs other parts already use, and what the line keeps.
+  const partNo = targetPart != null ? parts.findIndex((part) => part.key === targetPart.key) + 1 : 0;
+  const otherPairs = targetPart != null ? new Set(parts.filter((part) => part.key !== targetPart.key).map((part) => pairKey(part.categoryId, part.projectId, ctx))) : null;
+  const takenProject = (projectId: string) => targetPart != null && otherPairs != null && otherPairs.has(pairKey(targetPart.categoryId, projectId === "" ? null : projectId, ctx));
+  const takenCategory = (categoryId: string) => targetPart != null && otherPairs != null && otherPairs.has(pairKey(categoryId, targetPart.projectId, ctx));
+  const pickerNotes = targetPart == null ? undefined : {
+    project: Object.fromEntries<string>([
+      ...(line.projectId != null && !pickerReversal ? [["", PART_LINE_PROJECT_NOTE] as [string, string]] : []),
+      ...projects.filter((project) => takenProject(project.id)).map((project): [string, string] => [project.id, partTakenNote(categoryName(targetPart.categoryId) ?? "")]),
+    ]),
+    category: Object.fromEntries<string>(
+      ownCategories.filter((category) => takenCategory(category.id)).map((category): [string, string] => [category.id, partTakenNote(projectName(targetPart.projectId) ?? line.projectName ?? "")]),
+    ),
+  };
+  const pickerDisabled = targetPart == null ? undefined : {
+    project: projects.filter((project) => takenProject(project.id)).map((project) => project.id),
+    category: ownCategories.filter((category) => takenCategory(category.id)).map((category) => category.id),
+  };
+
   function openPicker(next: PickTarget, start: "category" | "project", opener: HTMLElement | null) {
     if (busy || blocked) return;
     pickerOpener.current = opener;
@@ -369,7 +386,6 @@ export function LineSplitEditor({
     const left = restMinor != null && restMinor > 0n ? amountText(restMinor) : "";
     setParts((list) => [...list, { key, categoryId: line.categoryId ?? "", projectId: null, unit: "amount", value: left }]);
     setLastEdited(key);
-    setTypedUnit("amount");
   }
 
   /**
@@ -380,7 +396,6 @@ export function LineSplitEditor({
     if (parts.length === 0) {
       const other = projects.find((project) => project.id !== line.projectId);
       setParts(equalSplitParts(lineMinor, line.categoryId ?? "", other?.id ?? null));
-      setTypedUnit("amount");
       setLastEdited(null);
       return;
     }
@@ -393,7 +408,6 @@ export function LineSplitEditor({
       unit: "amount",
       value: amountText(index === list.length - 1 ? share + cents : share),
     })));
-    setTypedUnit("amount");
     setLastEdited(null);
   }
 
@@ -536,7 +550,6 @@ export function LineSplitEditor({
                         enterKeyHint={index === parts.length - 1 ? "done" : "next"}
                         onValueChange={(value) => {
                           update(part.key, { value });
-                          setTypedUnit(part.unit);
                         }}
                       />
                     ) : (
@@ -551,7 +564,6 @@ export function LineSplitEditor({
                         enterKeyHint={index === parts.length - 1 ? "done" : "next"}
                         onValueChange={(value) => {
                           update(part.key, { value });
-                          setTypedUnit(part.unit);
                         }}
                       />
                     )}
@@ -568,7 +580,6 @@ export function LineSplitEditor({
                           ? (cents != null ? amountText(cents) : percent != null ? amountText(percentMinorOf(percent, lineMinor)) : "")
                           : (amount != null ? percentText(shareOfLine(amount, lineMinor)) : "");
                         update(part.key, { unit, value });
-                        setTypedUnit(unit);
                       }}
                     />
                   </div>
@@ -635,6 +646,9 @@ export function LineSplitEditor({
       </form>
       <ChangeAssignment
         host="overlay"
+        title={targetPart ? { project: partPickTitle("project", partNo), category: partPickTitle("category", partNo) } : undefined}
+        choiceNotes={pickerNotes}
+        disabledIds={pickerDisabled}
         open={target != null}
         onOpenChange={(open) => { if (!open) closePicker(); }}
         contained

@@ -67,11 +67,11 @@ describe("split by category editor (FLOW-325)", () => {
     showEditor();
     expect(screen.getByRole("heading", { name: "פיצול" })).toBeInTheDocument();
     fireEvent.click(addPart());
-    const categorySheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    const categorySheet = await screen.findByRole("dialog", { name: /^(בחירת קטגוריה|קטגוריה לחלק \d+)$/ });
     fireEvent.click(within(categorySheet).getByRole("radio", { name: "חשמל" }));
     fireEvent.click(within(categorySheet).getByRole("button", { name: "שמירה" }));
     // The category pick moves straight on to the project list.
-    const projectSheet = await screen.findByRole("dialog", { name: "בחירת פרויקט" });
+    const projectSheet = await screen.findByRole("dialog", { name: /^(בחירת פרויקט|פרויקט לחלק \d+)$/ });
     expect(within(projectSheet).getByRole("radio", { name: "פרויקט גבעתיים · פרויקט השורה" })).toBeInTheDocument();
     fireEvent.click(within(projectSheet).getByRole("radio", { name: "פרויקט הרצליה" }));
     fireEvent.click(within(projectSheet).getByRole("button", { name: "שמירה" }));
@@ -128,12 +128,12 @@ describe("split by category editor (FLOW-325)", () => {
   it("the refund's category picker offers expense categories as reversals, and a reversal asks for a project", async () => {
     showEditor({ line: SAMPLE_REFUND_LINE });
     fireEvent.click(addPart());
-    const sheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    const sheet = await screen.findByRole("dialog", { name: /^(בחירת קטגוריה|קטגוריה לחלק \d+)$/ });
     // FLOW-333 C3c: on a refund line the reversal section starts open.
     expect(within(sheet).getByRole("button", { name: "החזר מספק" })).toHaveAttribute("aria-expanded", "true");
     fireEvent.click(within(sheet).getByRole("radio", { name: "קבלני משנה" }));
     fireEvent.click(within(sheet).getByRole("button", { name: "שמירה" }));
-    const projects = await screen.findByRole("dialog", { name: "בחירת פרויקט" });
+    const projects = await screen.findByRole("dialog", { name: /^(בחירת פרויקט|פרויקט לחלק \d+)$/ });
     expect(within(projects).getByText("חלק החזר צריך פרויקט.")).toBeInTheDocument();
     expect(within(projects).queryByRole("radio", { name: /פרויקט השורה/ })).toBeNull();
   });
@@ -148,7 +148,7 @@ describe("split by category editor (FLOW-325)", () => {
     fireEvent.click(screen.getByRole("button", { name: /^משיכות בעלים, החזר, קטגוריה, שינוי/ }));
     // The part's own kept-out category is the only kept-out reversal listed (0138), and it is the saved value.
     // Keeping the line's project without a project pick is covered by the reversalNeedsProject tests in src/line-split.test.ts.
-    const categorySheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    const categorySheet = await screen.findByRole("dialog", { name: /^(בחירת קטגוריה|קטגוריה לחלק \d+)$/ });
     expect(within(categorySheet).getByRole("radio", { name: "משיכות בעלים" })).toBeChecked();
     expect(within(categorySheet).getByRole("button", { name: "שמירה" })).toBeDisabled();
   });
@@ -187,12 +187,12 @@ describe("split by category editor (FLOW-325)", () => {
     showEditor({ parts: [{ key: "a", categoryId: "c-elec", projectId: "p-herz", unit: "percent", value: "" }] });
     fireEvent.change(screen.getByLabelText("אחוז, חשמל"), { target: { value: "20" } });
     fireEvent.click(addPart());
-    const categorySheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    const categorySheet = await screen.findByRole("dialog", { name: /^(בחירת קטגוריה|קטגוריה לחלק \d+)$/ });
     fireEvent.click(within(categorySheet).getByRole("radio", { name: "ביטוח" }));
     fireEvent.click(within(categorySheet).getByRole("button", { name: "שמירה" }));
     // The project sheet is asked for again before each step: the category sheet's close swaps the
     // page under it, so a sheet element held from the first find can be detached when clicked.
-    const projectSheet = () => screen.getByRole("dialog", { name: "בחירת פרויקט" });
+    const projectSheet = () => screen.getByRole("dialog", { name: /^(בחירת פרויקט|פרויקט לחלק \d+)$/ });
     await waitFor(() => { expect(within(projectSheet()).getByRole("radio", { name: "פרויקט גבעתיים · פרויקט השורה" })).toBeInTheDocument(); });
     expect(within(projectSheet()).queryByRole("radio", { name: "פרויקט גבעתיים" })).toBeNull();
     fireEvent.click(within(projectSheet()).getByRole("radio", { name: "פרויקט הרצליה" }));
@@ -319,6 +319,20 @@ describe("split by category editor (FLOW-325)", () => {
     expect(amounts[1]).toHaveValue("4,470.09");
   });
 
+  it("a part's project picker is headed for its part and greys the project another part already pairs with its category (FLOW-922)", async () => {
+    showEditor({
+      parts: [
+        { key: "a", categoryId: "c-elec", projectId: "p-herz", unit: "amount", value: "100" },
+        { key: "b", categoryId: "c-elec", projectId: "p-raan", unit: "amount", value: "200" },
+      ],
+      target: { partKey: "b", kind: "project" },
+    });
+    const sheet = await screen.findByRole("dialog", { name: "פרויקט לחלק 2" });
+    expect(within(sheet).getByRole("radio", { name: "פרויקט הרצליה" })).toBeDisabled();
+    expect(within(sheet).getByText("כבר בפיצול עם חשמל")).toBeInTheDocument();
+    expect(within(sheet).getByRole("radio", { name: "פרויקט רעננה" })).toBeEnabled();
+  });
+
   it("switching % to ₪ before any preview keeps the money: the line × percent", () => {
     showEditor({ parts: [{ key: "a", categoryId: "c-elec", projectId: "p-herz", unit: "percent", value: "30" }] });
     // No preview has come back yet (it waits 250ms).
@@ -356,7 +370,7 @@ describe("split by category editor (FLOW-325)", () => {
     const pick = screen.getByRole("button", { name: /^ביטוח, קטגוריה, שינוי/ });
     pick.focus();
     fireEvent.click(pick);
-    const sheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    const sheet = await screen.findByRole("dialog", { name: /^(בחירת קטגוריה|קטגוריה לחלק \d+)$/ });
     fireEvent.keyDown(sheet, { key: "Escape" });
     await waitFor(() => { expect(screen.queryByRole("dialog")).toBeNull(); });
     // A part's picker hands focus to its value field on close (FLOW-333 C3a), not back to the pick.

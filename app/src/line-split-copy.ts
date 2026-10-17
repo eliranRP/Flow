@@ -52,6 +52,10 @@ export const LINE_SPLIT_SAVE_FAILURE = "הפיצול לא נשמר";
 export const PART_TWICE = "הפרויקט והקטגוריה האלה כבר בפיצול";
 export const PART_PICK_PROJECT = "בחרו פרויקט";
 export const PART_FILL_AMOUNT = "השלימו סכום";
+/** The part picker's heading and row notes (FLOW-922, the board's SplitPicker). */
+export const partPickTitle = (kind: "project" | "category", no: number) => (kind === "project" ? `פרויקט לחלק ${String(no)}` : `קטגוריה לחלק ${String(no)}`);
+export const PART_LINE_PROJECT_NOTE = "הפרויקט של השורה · מקבל את השאר";
+export const partTakenNote = (name: string) => `כבר בפיצול עם ${name}`;
 export const LINE_SPLIT_CHANGED = "משהו השתנה בינתיים. טענו מחדש ונסו שוב.";
 /**
  * The project split (`SplitScreen`) on a line that has a split by category: the detail row's

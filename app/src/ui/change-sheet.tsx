@@ -100,6 +100,14 @@ type Shared = {
    * Listed under their own heading in the category picker. Omitted on a split line.
    */
   reversals?: ChangeChoice[];
+  /**
+   * FLOW-922: the picker's heading per kind (a split part's "פרויקט לחלק 2"). Omitted: the default.
+   */
+  title?: { project?: string; category?: string };
+  /** FLOW-922: a row's note by choice id ("" is the none row). Shown under the row's name. */
+  choiceNotes?: { project?: Record<string, string>; category?: Record<string, string> };
+  /** FLOW-922: choice ids that cannot be picked; the row shows its choiceNotes entry as the reason. */
+  disabledIds?: { project?: string[]; category?: string[] };
   /** FLOW-333 C3c: the reversal section starts expanded, as on a refund line's split part. */
   reversalsOpen?: boolean;
   loading?: boolean;
@@ -504,7 +512,8 @@ export function ChangeAssignment(props: Props) {
     query,
     pickerKind,
   );
-  const title = view === "project" ? "בחירת פרויקט" : view === "category" ? "בחירת קטגוריה" : view === "new" ? "פרויקט חדש" : "שינוי שיוך";
+  const pickerTitle = view === "project" ? props.title?.project : view === "category" ? props.title?.category : undefined;
+  const title = pickerTitle ?? (view === "project" ? "בחירת פרויקט" : view === "category" ? "בחירת קטגוריה" : view === "new" ? "פרויקט חדש" : "שינוי שיוך");
   const leading = view === "summary" || landedOnPicker() ? undefined : (
     <IconButton label="חזרה" className="ui-back-btn" onClick={back}>
       <BackIcon />
@@ -683,6 +692,8 @@ export function ChangeAssignment(props: Props) {
           suggestionJev={pickerKind === "project" ? props.suggestionProjectJev === true : props.suggestionCategoryJev === true}
           savingId={savingNow}
           note={pickerKind === "project" ? props.projectNote : undefined}
+          choiceNotes={pickerKind === "project" ? props.choiceNotes?.project : props.choiceNotes?.category}
+          disabledIds={pickerKind === "project" ? props.disabledIds?.project : props.disabledIds?.category}
           noneLabel={pickerKind === "project" ? props.noProjectLabel : undefined}
           reversal={pickerKind === "category" && reversalOptions.length > 0 ? {
             heading: REVERSAL_HEADING[props.direction],
