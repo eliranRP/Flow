@@ -2,7 +2,7 @@ import { useSearchParams } from "react-router-dom";
 import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "../../assistant-sample";
 import { AiConnectionPage } from "../../screens/assistant-settings";
 import { BusinessScreen } from "../../screens/business-screen";
-import { SumitConnectionRoute } from "../../screens/connection-pages";
+import { MercuryConnectionRoute, SumitConnectionRoute } from "../../screens/connection-pages";
 import { CategoriesScreen, ConnectionsScreen, SettingsScreen } from "../../screens/flow-screens";
 import type { DevRoute } from "./types";
 
@@ -17,11 +17,19 @@ export function DevConnections() {
   return <ConnectionsScreen sample={useDevSettingsSample()} sampleSecret={devAssistantSecret} />;
 }
 
-/** The SUMIT page on the dev fixture: connected, or `?state=problem` for a key that stopped working. */
+/** The SUMIT page on the dev fixture: connected, `?state=problem` for a key that stopped working, or `?state=new`. */
 export function DevSumitConnection() {
   const [params] = useSearchParams();
-  const problem = params.get("state") === "problem";
-  return <SumitConnectionRoute sample={problem ? { state: "problem", companyId: "1234567890" } : { state: "connected", companyId: "1234567890", lastSync: "היום, 06:05" }} />;
+  const state = params.get("state");
+  if (state === "new") return <SumitConnectionRoute sample={{ state: "new" }} />;
+  return <SumitConnectionRoute sample={state === "problem" ? { state: "problem", companyId: "1234567890" } : { state: "connected", companyId: "1234567890", lastSync: "היום, 06:05" }} />;
+}
+
+/** The Mercury page on the dev fixture: connected, or `?state=new` for a page with no key yet. */
+export function DevMercuryConnection() {
+  const [params] = useSearchParams();
+  if (params.get("state") === "new") return <MercuryConnectionRoute sample={{ state: "new" }} />;
+  return <MercuryConnectionRoute sample={{ state: "connected", accounts: "חשבון תפעול", lastSync: "היום, 06:05" }} />;
 }
 
 /** The business page on the dev settings fixture: its name is the fixture's, and its rename sheet opens from it. */
@@ -29,9 +37,13 @@ export function DevBusiness() {
   return <BusinessScreen sample={useDevSettingsSample()} />;
 }
 
-/** The AI connection page on the dev settings fixture (`?assistant=…`), so a mint shows its code without the server. */
+/** The AI connection page on the dev settings fixture (`?assistant=…`), so a mint shows its code without the server. `?mint=1` opens the code step. */
 export function DevAiConnection() {
-  return <AiConnectionPage sample={useDevSettingsSample()?.assistant} sampleSecret={devAssistantSecret} />;
+  const [params] = useSearchParams();
+  const initialSecret = params.get("mint") === "1" && devAssistantSecret != null
+    ? { id: "mcp-sample", secret: devAssistantSecret, scope: ["read", "write"] }
+    : undefined;
+  return <AiConnectionPage sample={useDevSettingsSample()?.assistant} sampleSecret={devAssistantSecret} initialSecret={initialSecret} />;
 }
 
 /** The dev Settings fixture. `?connected=1|auth`, `?assistant=…`, `?nocompany=1`, `?email=none|long`, `?loans=none`. */
@@ -113,6 +125,7 @@ export const settingsRoutes: DevRoute[] = [
   { path: "connections/ai", element: <DevAiConnection /> },
   { path: "business", element: <DevBusiness /> },
   { path: "connections/sumit", element: <DevSumitConnection /> },
+  { path: "connections/mercury", element: <DevMercuryConnection /> },
   { path: "categories", element: <DevCategories /> },
   { path: "categories/:parentId", element: <DevCategories /> },
 ];
