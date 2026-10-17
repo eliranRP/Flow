@@ -1,1 +1,8 @@
-{}
+{
+  "Search": "/search?preview=search",
+  "SearchResults": "/search?preview=search&q=northline%20supply",
+  "SearchFilters": "/search?preview=search&q=northline%20supply&sheet=filters",
+  "SearchFiltered": "/search?preview=search&q=northline%20supply&project=birch-lane",
+  "SearchProject": "/search?preview=search&q=birch",
+  "SearchEmpty": "/search?preview=search&q=tilemart&period=month&at=2026-10"
+}

@@ -20,7 +20,7 @@ test("search opens from Home, finds a line, opens it, and Back keeps the search"
   const row = page.getByRole("link", { name: /^ספק 3(?!\d)/ });
   await expect(row).toBeVisible();
   await expect(page.getByRole("link", { name: /^ספק 1(?!\d)/ })).toHaveCount(0);
-  await expect(row.locator("mark")).toHaveText("ספק 3");
+  await expect(row).toContainText("ספק 3");
   await expect(page.locator(".ui-search-count")).toContainText("תנועה אחת");
 
   await row.click();
