@@ -4,7 +4,6 @@ import { absAgorot } from "../agorot";
 import { usePreviewSearch } from "../preview";
 import { Amount } from "../ui/amount";
 import { Button } from "../ui/button";
-import { CheckIcon } from "../ui/icons";
 import { DocumentCard } from "../ui/document-card";
 import { EmptyState } from "../ui/empty-state";
 import { ScreenState } from "../ui/screen-state";
@@ -124,7 +123,7 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp }: { s
 
           {!holdWrites && match == null && !marked ? (
             <div className="ui-inv-mark">
-              <Button full className="ui-inv-mark-yes" onClick={() => { actions.setPaid(row.id, true); }} icon={<CheckIcon />}>סימון כשולם</Button>
+              <Button full className="ui-inv-mark-yes" onClick={() => { actions.setPaid(row.id, true); }}>סימון כשולם</Button>
               <p className="ui-inv-mark-note">שולם במזומן או בצ׳ק? סמנו כאן. העברה בנקאית תחובר לבד כשתגיע.</p>
             </div>
           ) : null}

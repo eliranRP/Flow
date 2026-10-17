@@ -63,7 +63,7 @@ export function UnpaidScreen({ sample, summary }: { sample?: UnpaidInvoice[]; su
             <p className="t-label text-text-secondary">לגבייה מלקוחות</p>
             {totals.map((total) => (
               <p key={total.currency} className="ui-inv-total">
-                <Amount agorot={total.minor} currency={total.currency} size="total" income />
+                <Amount agorot={total.minor} currency={total.currency} size="total" income signless />
               </p>
             ))}
             <p className="t-hint text-text-secondary">
@@ -102,13 +102,13 @@ export function UnpaidScreen({ sample, summary }: { sample?: UnpaidInvoice[]; su
 
         {phase.kind === "ready" ? (
           <div className="ui-inv-sortrow">
+            <span className="t-hint text-text-muted">מהוותיקה לחדשה</span>
             {holdWrites ? null : (
               <button type="button" className="ui-inv-refresh" onClick={actions.startSync} disabled={syncing} aria-busy={syncing || undefined}>
                 {syncing ? <span className="ui-spinner" aria-hidden="true" /> : <RefreshIcon size={14} />}
                 <span>{syncing ? "מרענן…" : `רענון מ־SUMIT${actions.lastSyncAt ? ` · ${syncedAgo(actions.lastSyncAt)}` : ""}`}</span>
               </button>
             )}
-            <span className="t-hint text-text-muted">מהוותיקה לחדשה</span>
           </div>
         ) : null}
 
@@ -144,6 +144,7 @@ export function UnpaidScreen({ sample, summary }: { sample?: UnpaidInvoice[]; su
                   agorot={absAgorot(row.open_gross_agorot)}
                   currency={row.currency ?? "ILS"}
                   amountDirection="income"
+                  amountSignless
                   endSub={marked ? null : (
                     <span className="ui-inv-age" data-over={over ? "true" : undefined}>
                       <span className="ui-inv-dot" aria-hidden="true" data-tone={over ? "signal" : "plain"} />

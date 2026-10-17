@@ -350,11 +350,6 @@
   color: var(--color-pill-hurts);
 }
 
-/* FLOW-364 (board): on the band both change pills are white with the helps text; the arrow gives the direction. */
-.ui-band .ui-change-amount.ui-delta-bad {
-  color: var(--color-pill-helps);
-}
-
 /* FLOW-374 (board): Home's change chips are 12px-round, 13/500, with 3px 10px padding. Scoped to Home's rows. */
 .ui-band-rows .ui-change-amount {
   padding: var(--space-1) var(--space-2);

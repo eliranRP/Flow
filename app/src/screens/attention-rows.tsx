@@ -2,7 +2,7 @@ import { formatAmountText } from "@flow/shared";
 import { missingBillsTitle, type ChargeChangeView } from "../forecast";
 import type { BannerRow } from "../ui/banner";
 import { HintParts } from "../ui/hint-parts";
-import { CalendarIcon, DocumentIcon, TrendDownIcon, TrendUpIcon } from "../ui/icons";
+import { CalendarIcon, InvoiceIcon, TrendDownIcon, TrendUpIcon } from "../ui/icons";
 
 // Home's attention rows, in their own file so the project page (FLOW-435) shows them without
 // loading Home. HomeScreen.tsx re-exports attentionRows for its older importers.
@@ -54,7 +54,7 @@ export function attentionRows({
     rows.push({
       id: "unpaid",
       to: `/unpaid${search}`,
-      icon: <DocumentIcon size={24} stroke={1.9} />,
+      icon: <InvoiceIcon />,
       title: unpaidCount === 1 ? "חשבונית פתוחה אחת" : <><bdi dir="ltr">{String(unpaidCount)}</bdi> חשבוניות פתוחות</>,
       hint: unpaidOther.length === 0 ? (
         <><bdi dir="ltr">{formatAmountText(unpaidGross, currency)}</bdi> · לגבייה</>

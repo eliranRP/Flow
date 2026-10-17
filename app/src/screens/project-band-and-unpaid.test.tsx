@@ -151,10 +151,11 @@ describe("FLOW-335 Unpaid", () => {
     expect(screen.getByText("הרענון הסתיים.")).toBeInTheDocument();
   });
 
-  it("shows the open total as money in, with its plus, above the list", () => {
+  it("shows the open total as money in (green, no plus, as on the board) above the list", () => {
     render(wrap(<UnpaidScreen sample={[...unpaid, { ...(unpaid[0] as UnpaidRow), id: "u2", customer_name: "לקוח נוסף" }]} />));
     const total = document.querySelector(".ui-inv-total");
     expect(total).not.toBeNull();
-    expect(total?.textContent).toContain("+");
+    expect(total?.textContent).not.toContain("+");
+    expect(total?.querySelector(".ui-income")).not.toBeNull();
   });
 });

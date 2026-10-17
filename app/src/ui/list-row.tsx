@@ -72,6 +72,8 @@ export type ListRowProps =
     currency?: string;
     amounts?: { minor: bigint; currency: string }[];
     amountDirection?: "expense" | "income";
+    /** Green money in without the plus (the open-invoices list). */
+    amountSignless?: boolean;
     /** A small mark before the amount. The project page's up mark (FLOW-401). */
     mark?: ReactNode;
     /** A muted line under the amount at the end side (FLOW-367: an open invoice's age). */
@@ -560,8 +562,9 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
       currency={props.currency}
       size="list"
       loss={props.loss === true}
-      direction={props.amountDirection}
+      direction={props.amountSignless === true ? undefined : props.amountDirection}
       income={props.amountDirection === "income"}
+      signless={props.amountSignless === true}
     />
   );
 }

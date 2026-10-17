@@ -55,6 +55,12 @@
   justify-content: space-between;
 }
 
+/* The board draws the open part in the strong track tone, dimmer than the muted text grey. */
+.ui-inv-bar-block .ui-parts-part[data-tone="muted"],
+.ui-inv-bar-block .ui-parts-dot[data-tone="muted"] {
+  background: var(--color-track-strong);
+}
+
 .ui-inv-bar-block .t-caption {
   margin: 0;
 }
@@ -410,14 +416,14 @@
 
 .ui-inv-thumb > span {
   display: block;
-  height: 3px;
+  height: 2px;
   border-radius: var(--radius-block);
   background: color-mix(in srgb, var(--color-surface) 35%, var(--color-text));
 }
 
 .ui-inv-thumb > span:first-child {
   width: 70%;
-  height: 4px;
+  height: 3px;
   background: color-mix(in srgb, var(--color-surface) 20%, var(--color-text));
 }
 
@@ -450,7 +456,12 @@
 
 /* The all-paid state: a 80px tint circle with a 40px check, the board's sizes (scoped, EmptyState is shared). */
 .ui-inv-empty {
-  margin-top: var(--space-8);
+  margin-top: var(--space-6);
+}
+
+/* The board's button spans the page column, not the empty state's 40px inset. */
+.ui-inv-empty .ui-empty-state {
+  padding-inline: 0;
 }
 
 .ui-inv-empty .ui-empty-icon {
