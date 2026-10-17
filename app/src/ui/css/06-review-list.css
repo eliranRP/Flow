@@ -1,0 +1,84 @@
+/* The review queue's list and done frames, split from 06-review-card.css (file size). */
+
+/* FLOW-365: the flat list of everything to review (כל הפריטים לאישור): payee over its meta line, the amount, a chevron. */
+.ui-review-all {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-review-all-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--touch-min);
+  padding: var(--space-3) var(--space-side);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.ui-review-all-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-end;
+  min-inline-size: 0;
+  text-align: end;
+}
+
+.ui-review-all-title {
+  align-self: stretch;
+  max-inline-size: 100%;
+  overflow: hidden;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-review-all-meta {
+  font-size: var(--type-hint-size);
+  color: var(--color-text-secondary);
+}
+
+.ui-review-all-amount {
+  flex: none;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-title-3-weight);
+  white-space: nowrap;
+}
+
+.ui-review-all-in {
+  color: var(--color-income);
+}
+
+.ui-review-all-row > svg {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+/* FLOW-365b: the done frame. A check in an 88px tint circle, the title, the two count lines, one action. */
+.ui-review-done .ui-empty-icon {
+  inline-size: 88px;
+  block-size: 88px;
+  margin-bottom: var(--space-5);
+  border-radius: 50%;
+}
+
+/* The board's done frame: the stacked header, then a top-anchored block with a full-width button. */
+.ui-review-done .ui-empty-state {
+  justify-content: flex-start;
+  padding: calc(var(--space-10) + var(--space-3)) var(--space-6) 0;
+}
+
+.ui-review-done .ui-empty-line {
+  margin-top: calc(var(--label-gap) + var(--space-2));
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  white-space: pre-line;
+}
+
+.ui-review-done .ui-empty-action {
+  align-self: stretch;
+  margin-top: var(--space-6);
+}
