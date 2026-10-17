@@ -61,8 +61,10 @@ test("FLOW-345: the words sit at the bottom in the thumb zone, the counter stays
   const count = row.locator(".ui-txn-step-count");
   await expect(row).toContainText("2 מתוך 24");
   const box = await row.boundingBox();
-  // Pinned at the bottom of the screen, above nothing but the safe area.
-  expect(box && box.y + box.height).toBe(700);
+  // Pinned at the bottom of the screen, resting on the tab bar (84px: the page keeps it, as the board does).
+  const tabbar = await page.locator(".ui-tabbar").boundingBox();
+  expect(tabbar && tabbar.y + tabbar.height).toBe(700);
+  expect(box && box.y + box.height).toBe(tabbar?.y);
   const prevBox = await page.getByRole("button", prev).boundingBox();
   const nextBox = await page.getByRole("button", next).boundingBox();
   // הקודמת on the right, הבאה on the left, each a 44px hit area.

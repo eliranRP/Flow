@@ -9,7 +9,7 @@
   position: fixed;
   z-index: 15;
   inset-inline: 0;
-  bottom: 0;
+  bottom: var(--tabbar-height);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
@@ -17,10 +17,16 @@
   inline-size: 100%;
   max-inline-size: var(--content-max);
   margin-inline: auto;
-  padding: var(--space-1) calc(var(--space-side) - var(--space-2)) calc(var(--safe-bottom) + var(--space-2));
+  padding: var(--space-1) calc(var(--space-side) - var(--space-2)) var(--space-2);
   /* Transparent until content is under the row, so the hairline never moves the row. */
   border-top: 1px solid transparent;
   background: var(--color-bg);
+}
+
+/* The page keeps the tab bar (as the board does), so the row rests on it. */
+html:not(:has(.ui-tabbar)) .ui-txn-step {
+  bottom: 0;
+  padding-bottom: calc(var(--safe-bottom) + var(--space-2));
 }
 
 .ui-txn-step[data-under] {
