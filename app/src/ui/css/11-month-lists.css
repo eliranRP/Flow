@@ -186,6 +186,11 @@
   margin-top: var(--space-4);
 }
 
+/* FLOW-513: the board's segment track is the card surface, not the raised tint. */
+.ui-cat-seg .ui-seg {
+  background: var(--color-surface);
+}
+
 .ui-cat-list {
   margin-top: var(--space-2);
   inline-size: auto;

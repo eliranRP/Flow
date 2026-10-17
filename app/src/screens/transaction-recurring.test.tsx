@@ -106,6 +106,8 @@ describe("transaction page: recurring card and counted-in sheet (FLOW-415, FLOW-
     fireEvent.click(recurringRow());
     fireEvent.click(await screen.findByRole("radio", { name: "לא קבוע" }));
     await waitFor(() => { expect(screen.getByText("סומן כלא קבוע")).toBeInTheDocument(); });
+    // The sheet is still closing, and its open dialog hides the toast from the accessibility tree until it unmounts.
+    await waitFor(() => { expect(screen.getByRole("button", { name: "ביטול" })).toBeInTheDocument(); });
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     await waitFor(() => { expect(recurringRow()).toBeInTheDocument(); });
   });
