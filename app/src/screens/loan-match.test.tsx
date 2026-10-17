@@ -5,7 +5,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../ui/toast";
-import { LoanMatchOffer, LoanTransactionSplit, ProjectLoanList, loanAmountChangedHint, loanMatchHint } from "./loan-match";
+import { LoanMatchOffer, LoanTransactionSplit, loanAmountChangedHint, loanMatchHint } from "./loan-match";
 
 const db = vi.hoisted(() => ({
   txn: { company_id: "co-1", amount_original: 100_000, currency: "ILS" },
@@ -239,22 +239,6 @@ describe("LoanMatchOffer", () => {
     render(<OfferHarness savingId="loan-1" />);
     fireEvent.click(screen.getByRole("button", { name: /שיוך להלוואה/ }));
     expect(screen.getByRole("radio", { name: "הלוואת דוגמה" })).toHaveAttribute("aria-busy", "true");
-  });
-});
-
-describe("ProjectLoanList", () => {
-  it("shows each loan's balance and marks a paid-off loan", () => {
-    render(
-      <ProjectLoanList
-        rows={[
-          { id: "loan-1", name: "הלוואת דוגמה", currency: "ILS", balance_minor: 11_700_000n },
-          { id: "loan-2", name: "הלוואה שנפרעה", currency: "ILS", balance_minor: 0n },
-        ]}
-      />,
-    );
-    expect(screen.getByText("₪117,000")).toBeInTheDocument();
-    expect(screen.getAllByText("נפרעה")).toHaveLength(1);
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });
 

@@ -69,7 +69,7 @@
 .ui-pinv-missing {
   color: var(--color-text-secondary);
   font-size: var(--type-line2-size);
-  line-height: var(--type-line2-line);
+  line-height: var(--type-title-line);
 }
 
 .ui-pinv-add {
@@ -365,8 +365,13 @@
   font-size: var(--type-line2-size);
 }
 
+.ui-pinv-rehab .ui-pinv-help:first-child {
+  margin-block-start: calc(var(--space-1) * -1);
+}
+
 .ui-pinv-settings-link {
   align-self: flex-start;
+  margin-block: calc(var(--space-1) * -1) var(--space-1);
   font-size: var(--type-line2-size);
 }
 

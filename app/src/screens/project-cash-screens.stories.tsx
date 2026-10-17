@@ -75,17 +75,3 @@ export const ProjectCashTwoCurrencies: Story = {
     </StoryRoute>
   ),
 };
-
-/** The same project's השקעה והלוואות page: the loan row's balance is the card's יתרת הלוואות. */
-export const ProjectInvestmentLoans: Story = {
-  name: "Project, investment and loans",
-  render: () => (
-    <StoryRoute entry="/projects/p-c/investment" tabs>
-      <ProjectDetailScreen example={exampleOnBand} sample={project} sampleInvestment={investment} section="investment" sectionTo={sectionTo} />
-    </StoryRoute>
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.getAllByText("$210,000").length).toBe(2);
-  },
-};

@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { ProjectLoanList } from "./loan-match";
 import { inSheet } from "../ui/story-support";
 import { LoanProjectPicker, LoanSetupForm, type LoanProjectChoice } from "./loan-setup";
 
@@ -95,10 +94,3 @@ export const FormProjectLongHebrew: Story = {
   render: () => <Form project="שיפוץ מקיף של דירת ארבעה חדרים ברחוב הרצל בראשון לציון כולל מרפסת" />,
   ...sheet("הלוואה"),
 };
-
-const PROJECT_LOANS = [
-  { id: "a", name: "משכנתא דוגמה", currency: "ILS", balance_minor: 45_000_000n },
-  { id: "c", name: "הלוואת בעלים", currency: "ILS", balance_minor: 0n },
-];
-
-export const ProjectLoans: Story = { render: () => <ProjectLoanList rows={PROJECT_LOANS} /> };

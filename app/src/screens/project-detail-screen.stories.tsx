@@ -446,12 +446,3 @@ export const ProjectLoansSection: Story = {
     </StoryRoute>
   ),
 };
-
-export const ProjectInvestmentScreen: Story = {
-  name: "Project, investment and loans section",
-  render: () => (
-    <StoryRoute entry="/projects/p-a/investment" tabs>
-      <ProjectDetailScreen example={exampleOnBand} sample={overviewProject} sampleInvestment={filledInvestment} section="investment" sectionTo={sectionTo} />
-    </StoryRoute>
-  ),
-};
