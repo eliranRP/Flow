@@ -133,55 +133,6 @@
   text-align: start;
 }
 
-.ui-flow {
-  display: flex;
-  flex-direction: column;
-  /* FLOW-334: the הכנסות / הוצאות rows sit on a 52px pitch (44px target + 8px), not 76px. */
-  gap: var(--space-2);
-  margin-top: var(--space-section);
-  padding-inline: var(--space-side);
-  text-align: start;
-}
-
-.ui-flow-line {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin: 0;
-  min-block-size: var(--touch-min);
-}
-
-.ui-flow-label {
-  color: var(--color-text-secondary);
-  /* נכנס / יצא labels read quiet, at 400 (decision 0120, option C). */
-  font-weight: var(--type-meta-weight);
-}
-
-/* FLOW-301. A Home row that opens its breakdown: the whole block is the target. */
-.ui-flow-link {
-  align-items: center;
-  margin-inline: calc(var(--space-2) * -1);
-  padding-inline: var(--space-2);
-  border-radius: var(--radius-chip);
-  color: inherit;
-  text-decoration: none;
-}
-
-.ui-flow-link .ui-flow-amounts {
-  margin-inline-start: auto;
-}
-
-.ui-flow-link:active {
-  background: var(--color-tint-pressed);
-}
-
-.ui-flow-chevron {
-  display: inline-flex;
-  flex: none;
-  color: var(--color-text-secondary);
-}
-
 .ui-breakdown-total {
   display: flex;
   flex-direction: column;
@@ -199,7 +150,6 @@
   margin-top: var(--space-4);
 }
 
-.ui-flow-amounts,
 .ui-row-amounts {
   display: flex;
   flex-direction: column;
