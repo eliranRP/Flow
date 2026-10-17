@@ -171,6 +171,18 @@ describe("mergeSearchPages", () => {
     expect(merged.next).toEqual({ text: 2, amount: null });
   });
 
+  it("counts a line both reads find once in the total and the month totals", () => {
+    // "8940" text: x (both) and a. Amount 8940.xx: x (both) and b. The overlap read finds x alone.
+    const shared = row("x", { doc_date: "2026-10-03", amount_net: -894_017n });
+    const byText = { total: 2, expenses: [shared, row("a", { doc_date: "2026-10-04", amount_net: -10_000n })], months: [{ month: "2026-10", currency: "ILS", income_minor: 0, expense_minor: 904_017 }] } as SearchPage;
+    const byAmount = { total: 2, expenses: [shared, row("b", { doc_date: "2026-10-05", amount_net: -894_017n })], months: [{ month: "2026-10", currency: "ILS", income_minor: 0, expense_minor: 1_788_034 }] } as SearchPage;
+    const both = { total: 1, expenses: [shared], months: [{ month: "2026-10", currency: "ILS", income_minor: 0, expense_minor: 894_017 }] } as SearchPage;
+    const merged = mergeSearchPages({ text: { page: byText, offset: 0 }, amount: { page: byAmount, offset: 0 }, both });
+    expect(merged.expenses.map((line) => line.id)).toEqual(["b", "a", "x"]);
+    expect(merged.total).toBe(3);
+    expect(merged.months).toEqual([{ month: "2026-10", currency: "ILS", income_minor: 0, expense_minor: 1_798_034 }]);
+  });
+
   it("is done when neither read has lines left", () => {
     const merged = mergeSearchPages({ text: { page: page([row("a")], 1), offset: 0 } });
     expect(merged.next).toBeNull();
@@ -223,7 +235,7 @@ describe("filterSearchRows amount and names (sample and dev lists)", () => {
       row("invoice", { description: "חשבונית 8940", amount_net: -10_000n }),
       row("other", { description: "ספק אחר", amount_net: -10_000n }),
     ];
-    expect(filterSearchRows(rows, { ...EMPTY_FILTERS, q: "8940" }).map((r) => r.id)).toEqual(["amount", "invoice"]);
+    expect(filterSearchRows(rows, { ...EMPTY_FILTERS, q: "8940" }).map((r) => r.id)).toEqual(["invoice", "amount"]);
     expect(filterSearchRows(rows, { ...EMPTY_FILTERS, q: "חשבונית 8940" }).map((r) => r.id)).toEqual(["invoice"]);
   });
 

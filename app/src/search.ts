@@ -187,15 +187,26 @@ function resumeAt(page: SearchPage, offset: number): number | null {
   return after < page.total ? after : null;
 }
 
+/** Income and expenses of two month rows, one minus the other (the overlap a both-reads line adds). */
+function minusMonth(all: NonNullable<SearchPage["months"]>[number], part: NonNullable<SearchPage["months"]>[number]) {
+  return { ...all, income_minor: all.income_minor - part.income_minor, expense_minor: all.expense_minor - part.expense_minor };
+}
+
 /**
- * One merged page: the text read's lines and the amount read's, each line once, in the server's
- * order. A line both reads find is kept once. The total adds both reads (an upper bound while
- * paging); `months` add both reads too, so a line both reads find can count twice there.
+ * One merged page. The text read and the amount read can both find a line (a description with the
+ * number in it, at that amount), so the total and the month totals are exact only with the overlap
+ * taken out: total = text + amount - both, and each month the same. `both` is the RPC read with the
+ * text and the amount range together (the server ANDs them), on page 0 only. Lines are deduped by id.
  */
-export function mergeSearchPages(reads: { text?: { page: SearchPage; offset: number }; amount?: { page: SearchPage; offset: number } }): SearchReadPage {
+export function mergeSearchPages(reads: {
+  text?: { page: SearchPage; offset: number };
+  amount?: { page: SearchPage; offset: number };
+  both?: SearchPage;
+}): SearchReadPage {
   const pages = [reads.text?.page, reads.amount?.page].filter((page): page is SearchPage => page != null);
   const [first] = pages;
   if (first == null) throw new Error("mergeSearchPages: no read");
+  const overlap = reads.both;
   const expenses = sortLikeServer(uniqueSearchRows(pages));
   const monthRows = new Map<string, NonNullable<SearchPage["months"]>[number]>();
   for (const page of pages) {
@@ -205,7 +216,13 @@ export function mergeSearchPages(reads: { text?: { page: SearchPage; offset: num
       monthRows.set(key, sum == null ? { ...row } : { ...sum, income_minor: sum.income_minor + row.income_minor, expense_minor: sum.expense_minor + row.expense_minor });
     }
   }
+  for (const row of overlap?.months ?? []) {
+    const key = `${row.month}|${row.currency}`;
+    const sum = monthRows.get(key);
+    if (sum != null) monthRows.set(key, minusMonth(sum, row));
+  }
   const months = pages.some((page) => page.months != null) ? [...monthRows.values()] : undefined;
+  const total = pages.reduce((sum, page) => sum + page.total, 0) - (overlap?.total ?? 0);
   const next: SearchCursor = {
     text: reads.text ? resumeAt(reads.text.page, reads.text.offset) : null,
     amount: reads.amount ? resumeAt(reads.amount.page, reads.amount.offset) : null,
@@ -213,7 +230,7 @@ export function mergeSearchPages(reads: { text?: { page: SearchPage; offset: num
   return {
     ...first,
     expenses,
-    total: pages.reduce((sum, page) => sum + page.total, 0),
+    total,
     months,
     next: next.text == null && next.amount == null ? null : next,
   };
@@ -244,24 +261,21 @@ export function useSearchQuery(filters: SearchFilters, active = true) {
         if (error) throw error;
         return schema.parse(data);
       };
-      // Both reads of a page run at once; each one pages on its own offset.
-      const [text, byAmount] = await Promise.all([
+      // The reads of a page run at once; each one pages on its own offset. The overlap read (both
+      // filters, one line) is needed on the first page only: its total and months are the overlap.
+      const first = pageParam.text === 0;
+      const [text, byAmount, both] = await Promise.all([
         pageParam.text == null ? undefined : read(searchArgs(filters, pageParam.text)),
         amount == null || pageParam.amount == null ? undefined : read(searchArgs(filters, pageParam.amount, amount)),
+        amount == null || !first ? undefined : read({ ...searchArgs(filters, 0, amount), p_query: filters.q.trim(), p_limit: 1 }),
       ]);
       return mergeSearchPages({
         text: text && pageParam.text != null ? { page: text, offset: pageParam.text } : undefined,
         amount: byAmount && pageParam.amount != null ? { page: byAmount, offset: pageParam.amount } : undefined,
+        both,
       });
     },
     getNextPageParam: (last) => last.next ?? undefined,
-    // Once every read is done, the total is the lines actually found, not the sum of the reads.
-    select: (data) => {
-      const done = data.pages[data.pages.length - 1]?.next == null;
-      if (amount == null || !done) return data;
-      const found = uniqueSearchRows(data.pages).length;
-      return { ...data, pages: data.pages.map((page, index) => (index === 0 ? { ...page, total: found } : page)) };
-    },
   });
 }
 
@@ -323,7 +337,7 @@ export function searchCountWords(count: number): string {
 export function filterSearchRows(rows: readonly SearchRow[], filters: SearchFilters): SearchRow[] {
   const q = filters.q.trim().toLowerCase();
   const amount = searchAmountRange(filters.q.trim());
-  return rows.filter((row) => {
+  return sortLikeServer(rows.filter((row) => {
     if (q !== "") {
       const text = [row.description, row.supplier_name, row.customer_name, row.project_name, row.category_name]
         .some((value) => (value ?? "").toLowerCase().includes(q));
@@ -338,7 +352,7 @@ export function filterSearchRows(rows: readonly SearchRow[], filters: SearchFilt
     if (filters.period.to && row.doc_date > filters.period.to) return false;
     if (filters.review && !row.waiting_review) return false;
     return true;
-  });
+  }));
 }
 
 /** A row's money as a month total (income or expense, its own currency; kept-out counts nothing). */

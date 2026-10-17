@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readTxnList } from "../txn-nav";
@@ -134,7 +134,7 @@ describe("Search screen (FLOW-323)", () => {
     expect(income).toHaveTextContent("ממתין לאישור");
   });
 
-  it("waits for typing to stop before it asks, and tints the match", async () => {
+  it("waits for typing to stop before it asks, and matches the text", async () => {
     wrap("/search");
     await screen.findByText("שווה לבדוק");
     const field = screen.getByRole("searchbox", { name: "חיפוש תנועות" });
@@ -146,7 +146,9 @@ describe("Search screen (FLOW-323)", () => {
     });
     expect(searchCalls().filter((call) => call.args.p_query != null).map((call) => call.args.p_query)).toEqual(["חומרי"]);
     const row = await screen.findByRole("link", { name: /^חומרי בניין לדוגמה/ });
-    expect(within(row).getByText("חומרי", { selector: "mark" })).toBeInTheDocument();
+    // The board draws no tint on the match: the row reads as its supplier, category and date.
+    expect(row).toHaveTextContent("חומרי בניין לדוגמה");
+    expect(row.querySelector("mark")).toBeNull();
   });
 
   it("opens with the project chip set from a project's כל התנועות (FLOW-402)", async () => {

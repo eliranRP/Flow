@@ -308,18 +308,6 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
   } else {
     body = (
       <>
-        <p className="ui-search-count" role="status">
-          <span>
-            {searchCountWords(total)}
-            {totalText != null ? (
-              <>
-                {" · "}
-                <bdi dir="ltr" className="ui-num">{totalText}</bdi>
-              </>
-            ) : null}
-          </span>
-          {refreshing ? <span className="ui-spinner" role="img" aria-label="מחפש" /> : null}
-        </p>
         {shortcut != null ? (
           <Link className="ui-search-project" to={`/projects/${shortcut.id}`}>
             <span className="ui-search-project-tile" aria-hidden="true">{initialsOf(shortcut.name)}</span>
@@ -332,6 +320,18 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
             </span>
           </Link>
         ) : null}
+        <p className="ui-search-count" role="status">
+          <span>
+            {searchCountWords(total)}
+            {totalText != null ? (
+              <>
+                {" · "}
+                <bdi dir="ltr" className="ui-num">{totalText}</bdi>
+              </>
+            ) : null}
+          </span>
+          {refreshing ? <span className="ui-spinner" role="img" aria-label="מחפש" /> : null}
+        </p>
         <MonthList
           rows={rows}
           keyOf={(row) => row.id}
@@ -346,7 +346,6 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
               variant="statement"
               title={searchRowTitle(row)}
               fallback="invoice"
-              match={typed}
               details={searchRowDetails(row)}
               note={row.waiting_review ? "ממתין לאישור" : undefined}
               setAside={row.kept_out}
@@ -378,7 +377,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
   return (
     <div className="ui-search-screen">
       <div className="ui-search-head">
-        <div className="ui-search-row">
+        <div className={searching ? "ui-search-row ui-search-row-searching" : "ui-search-row"}>
           {searching ? null : (
             <IconButton to={backTo} label="חזרה לבית" className="ui-search-back">
               <BackIcon size={20} />
@@ -399,7 +398,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
               placeholder="ספק, לקוח, פרויקט או סכום"
               inputRef={inputRef}
               maxLength={SEARCH_MAX_LENGTH}
-              busy={query.isFetching && filtered}
+              busy={searching || (query.isFetching && filtered)}
             />
           </form>
           {searching ? (

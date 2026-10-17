@@ -462,3 +462,9 @@
 .ui-search-results .ui-statement-details {
   font-size: var(--type-label-size);
 }
+
+/* The first read's field: no outline, a filled box with the spinner at its end (board StatesSearching). */
+.ui-search-row-searching .ui-search-field {
+  border-color: transparent;
+  background: var(--color-skeleton);
+}
