@@ -55,7 +55,7 @@ export const CategoryParentPage: Story = {
   ),
 };
 
-/** FLOW-507: a viewer's rows have no ⋯ and keep the owner's row height. */
+/** FLOW-507: a viewer's rows have no sheet and open their lines, as a read. */
 export const CategoriesViewer: Story = {
   render: () => (
     <StoryRoute entry="/settings/categories" tabs viewer>

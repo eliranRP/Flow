@@ -346,7 +346,7 @@ describe("viewer gates", () => {
       expect(screen.getAllByText("לא מחובר").length).toBeGreaterThan(0);
       expect(screen.queryByText("צריך חיבור")).not.toBeInTheDocument();
     }],
-    ["V30", "a category row only opens its lines (a read, FLOW-322), with no ⋯", () => {
+    ["V30", "a category row only opens its lines (a read, FLOW-322), with no sheet", () => {
       viewer(
         <CategoriesScreen
           sample={[{ id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true, count: 1 }]}

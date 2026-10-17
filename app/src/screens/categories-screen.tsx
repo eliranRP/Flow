@@ -61,7 +61,7 @@ function categoryMeta(category: ListedCategory, lines: number | undefined, subCo
   if (lines != null) parts.push(countLine(lines));
   if (subCount != null) parts.push(`${String(subCount)} תתי־קטגוריות`);
   if (category.excluded_from_pnl === true) parts.push("לא נספרת ברווח");
-  else if (countsAsRehab(category)) parts.push("נספרת בשיפוץ");
+  else if (category.kind === "expense" && countsAsRehab(category)) parts.push("נספרת בשיפוץ");
   return parts.length === 0 ? undefined : parts.join(" • ");
 }
 
@@ -78,7 +78,6 @@ export function topLevelCategories(rows: readonly ListedCategory[]): ListedCateg
 function CategoryLine({
   category,
   muted = false,
-  plain = false,
   href,
   subCount,
   onMenu,
@@ -89,8 +88,6 @@ function CategoryLine({
   /** FLOW-406: a parent opens its sub-categories, with a chevron. */
   subCount?: number;
   muted?: boolean;
-  /** A viewer row keeps the height and drops the pointer. */
-  plain?: boolean;
   onMenu?: (opener: HTMLElement) => void;
 }) {
   const lines = rowLines(category, subCount != null);
@@ -115,7 +112,6 @@ function CategoryLine({
   return (
     <ListRow
       variant="item"
-      plain={plain && href == null}
       href={href}
       title={category.name}
       muted={muted}
@@ -345,7 +341,6 @@ export function CategoriesScreen({
           <CategoryLine
             key={category.id}
             category={category}
-            plain={holdWrites}
             href={rowHref(category)}
             subCount={subCountOf(category)}
             onMenu={holdWrites ? undefined : (opener) => {
@@ -383,8 +378,7 @@ export function CategoriesScreen({
                   key={category.id}
                   category={category}
                   muted
-                  plain={holdWrites}
-                  href={linesHref(category)}
+                        href={linesHref(category)}
                   onMenu={holdWrites ? undefined : (opener) => {
                     menuOpener.current = opener;
                     setMenu(category);

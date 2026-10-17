@@ -5,7 +5,7 @@ import { StoryRoute } from "../ui/story-route";
 import { CategoriesScreen } from "./categories-screen";
 
 /**
- * FLOW-405 + FLOW-404: the ⋯ sheet in Settings → Categories, the move picker and the delete
+ * FLOW-405 + FLOW-404: the category sheet in Settings → Categories, the move picker and the delete
  * confirm (mockup v2, approved by the owner 2026-10-08). Invented data only.
  */
 const meta = {

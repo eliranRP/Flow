@@ -62,7 +62,7 @@ export function CategoryMenuSheet({
   category: ManagedCategory | null;
   /** Every category, for the move picker. */
   rows: ManagedCategory[];
-  /** FLOW-322: the category's lines in search, one tap from the sheet (FLOW-513: the row has no link any more). */
+  /** FLOW-322: the category's lines in search, one tap from the sheet (FLOW-513: the sheet's "הצג תנועות" row is the only link to it). */
   linesHref?: string;
   /** The fixed line a built-in loan category shows instead of the P&L, rehab, move and delete rows. */
   loanLine: LoanLine | null;

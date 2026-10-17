@@ -211,6 +211,10 @@
   line-height: var(--type-meta-line);
 }
 
+.ui-cat-foot:empty {
+  display: none;
+}
+
 .ui-cat-foot {
   display: flex;
   flex-wrap: wrap;
