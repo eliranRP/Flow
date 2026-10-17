@@ -19,6 +19,7 @@ export function ScreenState({
   loading,
   children,
   stacked = false,
+  leading,
   trailing,
   below,
   syncing,
@@ -35,6 +36,8 @@ export function ScreenState({
   children?: ReactNode;
   /** The title sits under the bar, like the ready screen it stands in for. */
   stacked?: boolean;
+  /** A stacked bar's start control in place of Back (the Projects tab's "+ פרויקט חדש"). */
+  leading?: ReactNode;
   /** Known chrome that stays real while the data loads, e.g. a period pill. */
   trailing?: ReactNode;
   /** A control under the title that stays real while the data loads (ScreenHeader `below`). */
@@ -59,7 +62,7 @@ export function ScreenState({
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <SyncStrip label={syncing ?? null} />
       {stacked ? (
-        <ScreenHeader layout="stacked" title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} trailing={trailing ?? action} kicker={kicker} below={below} />
+        <ScreenHeader layout="stacked" title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} leading={leading} trailing={trailing ?? action} kicker={kicker} below={below} />
       ) : (
         <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} action={action} trailing={trailing} kicker={kicker} />
       )}

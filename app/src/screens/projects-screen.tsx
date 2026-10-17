@@ -69,7 +69,14 @@ export function ProjectsScreen({ sample, cashSample }: { sample?: Dashboard; cas
   return (
     <>
       <ScreenState
+        stacked
         title="פרויקטים"
+        leading={holdWrites ? undefined : <TextLink tone="accent" chevron={false} onClick={() => { setOpen(true); }}>+ פרויקט חדש</TextLink>}
+        trailing={(
+          <IconButton to={`/search${search}`} label="חיפוש">
+            <SearchIcon />
+          </IconButton>
+        )}
         subtitle={month ? `${String(activeCount)} פעילים · תזרים ${cashMonthName(month.month.slice(0, 7))} עד היום` : undefined}
         phase={phase}
         onRetry={() => { void dashboard.refetch(); void cash.refetch(); }}
@@ -82,7 +89,7 @@ export function ProjectsScreen({ sample, cashSample }: { sample?: Dashboard; cas
             search={search}
             finishedOpen={finishedOpen}
             setFinishedOpen={setFinishedOpen}
-            onNew={() => { setOpen(true); }}
+            onNew={holdWrites ? undefined : () => { setOpen(true); }}
           />
         ) : null}
       </ScreenState>
@@ -104,7 +111,8 @@ function ProjectsBody({
   search: string;
   finishedOpen: boolean;
   setFinishedOpen: (value: boolean) => void;
-  onNew: () => void;
+  /** Undefined while writes are held: the compact bar then has no פרויקט חדש. */
+  onNew?: () => void;
 }) {
   const base = month.base_currency;
   const titleEnd = useRef<HTMLSpanElement>(null);
@@ -117,13 +125,6 @@ function ProjectsBody({
   const groupsShown = groups.filter((group) => members(group.id).length > 0);
   return (
     <>
-      <div className="ui-page-pad ui-projects-top">
-        <TextLink tone="accent" chevron={false} onClick={onNew}>+ פרויקט חדש</TextLink>
-        <IconButton to={`/search${search}`} label="חיפוש">
-          <SearchIcon />
-        </IconButton>
-      </div>
-      <h1 className="ui-page-pad ui-projects-title">פרויקטים</h1>
       <span ref={titleEnd} className="ui-compact-mark" aria-hidden="true" />
       {month.unassigned.count > 0 ? (
         <div className="ui-page-pad ui-projects-unassigned">
@@ -176,9 +177,11 @@ function ProjectsBody({
         shown={past}
         actions={(
           <>
-            <IconButton label="פרויקט חדש" onClick={onNew}>
-              <PlusIcon />
-            </IconButton>
+            {onNew ? (
+              <IconButton label="פרויקט חדש" onClick={onNew}>
+                <PlusIcon />
+              </IconButton>
+            ) : null}
             <IconButton to={`/search${search}`} label="חיפוש">
               <SearchIcon />
             </IconButton>
