@@ -48,7 +48,8 @@ export function ProjectsScreen({ sample, cashSample }: { sample?: Dashboard; cas
   const [finishedOpen, setFinishedOpen] = useState(finishedFromRoute);
   const month = cashSample ?? cash.data;
   const loadingCash = sample == null && cashSample == null && cash.isPending && preview === "off";
-  const phase: ScreenPhase = sample ? { kind: "ready" } : loadingCash ? { kind: "loading" } : screenPhase(preview, dashboard);
+  // A failed cash read is an error, not an empty month: the empty state would say there are no projects.
+  const phase: ScreenPhase = sample ? { kind: "ready" } : loadingCash ? { kind: "loading" } : screenPhase(preview, dashboard.isError ? dashboard : cash.isError ? cash : dashboard);
   const sheet = (
     <ProjectFormSheet open={open} onOpenChange={setOpen} />
   );
@@ -192,8 +193,9 @@ function ProjectsBody({
 /** One project's row: initials, name, its type and status, and this month's cash (or its profit when finished). */
 function ProjectCashRowItem({ row, currency, search, finished = false }: { row: ProjectCashRow; currency: string; search: string; finished?: boolean }) {
   const net = netIn(row.cash, currency);
-  // A project with cash in more than one currency lists each line; the order stays on the base currency.
+  // Cash outside the base currency lists each line; the order stays on the base currency.
   const lines = finished ? [] : row.cash.map((line) => ({ minor: BigInt(line.net_minor), currency: line.currency }));
+  const elsewhere = lines.length > 1 || lines.some((line) => line.currency !== currency);
   const over = !finished && isOverBudget(row);
   const hint = projectMeta(row);
   return (
@@ -204,7 +206,7 @@ function ProjectCashRowItem({ row, currency, search, finished = false }: { row: 
       icon={<Avatar name={row.name} fallback="person" />}
       agorot={BigInt(finished ? row.profit_all_minor : net)}
       currency={currency}
-      amounts={lines.length > 1 ? lines : undefined}
+      amounts={elsewhere ? lines : undefined}
       loss={finished && row.profit_all_minor < 0}
       href={`/projects/${row.id}${search}`}
       className={finished ? "ui-proj-finished" : undefined}
