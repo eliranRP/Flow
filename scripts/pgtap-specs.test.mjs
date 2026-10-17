@@ -52,3 +52,13 @@ test("pgtapSpecs runs every file for a migration that names nothing, or a helper
   assert.deepEqual(pgtapSpecs(["supabase/migrations/1_x.sql"], tests, () => "update public.rows set a = 1;"), all);
   assert.deepEqual(pgtapSpecs(["supabase/tests/helpers.sql"], tests, () => null), all);
 });
+
+test("pgtapSpecs runs a catalog-wide file with any migration change, and not for a change elsewhere", () => {
+  const tests = new Map([
+    [`${T}/all_fks.test.sql`, "-- pgtap: catalog-wide\nselect plan(1);"],
+    [`${T}/one.test.sql`, "select list_widgets();"],
+  ]);
+  const migration = () => "create table public.gadgets (id int);";
+  assert.deepEqual(pgtapSpecs(["supabase/migrations/1_x.sql"], tests, migration), [`${T}/all_fks.test.sql`]);
+  assert.deepEqual(pgtapSpecs(["app/src/x.ts"], tests, () => null), []);
+});

@@ -25,3 +25,21 @@ export function ReviewCount({ value, digits, side }: { value: number; digits: nu
 export function reviewCountDigits(total: number): number {
   return String(total).length;
 }
+
+/**
+ * The queue's segmented progress (FLOW-365): one segment per card. Read from the start side, the
+ * cards already handled fill with the accent, the card on screen is dim, and the rest stay on the track.
+ */
+export function ReviewSegments({ index, total }: { index: number; total: number }) {
+  return (
+    <div className="ui-review-segments" role="meter" aria-label="התקדמות התור" aria-valuemin={0} aria-valuemax={total} aria-valuenow={index}>
+      {Array.from({ length: total }, (_, slot) => (
+        <span
+          key={slot}
+          className="ui-review-seg"
+          data-state={slot < index - 1 ? "done" : slot === index - 1 ? "current" : undefined}
+        />
+      ))}
+    </div>
+  );
+}

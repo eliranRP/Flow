@@ -136,7 +136,7 @@ describe("FLOW-309: the review card swap", () => {
     const approve = screen.getByRole("button", { name: "אישור" });
     approve.focus();
     fireEvent.click(approve);
-    const home = await screen.findByRole("link", { name: "לדף הבית" });
+    const home = await screen.findByRole("link", { name: "חזרה לבית" });
     await waitFor(() => {
       expect(document.activeElement).toBe(home);
     });

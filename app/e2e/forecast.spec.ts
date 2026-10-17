@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 // supplier; the project's "צפוי" month opens the sheet of who makes it up. Invented data only.
 test.use({ viewport: { width: 375, height: 667 } });
 
-test("Home: the late-bills row opens the list, and a bill opens Search on its supplier", async ({ page }) => {
+test("Home: the late-bills row opens the list at its לא הגיעו section", async ({ page }) => {
   await page.goto("/e2e/home?preview=1");
   const row = page.getByRole("link", { name: "2 חשבונות לא הגיעו" });
   await expect(row).toBeVisible();
@@ -12,35 +12,17 @@ test("Home: the late-bills row opens the list, and a bill opens Search on its su
   await expect(row).not.toContainText("₪");
   await row.click();
   // FLOW-415 (b-2): the קבועים screen, at its לא הגיעו section.
-  await expect(page).toHaveURL(/\/e2e\/missing-bills\?preview=1#late$/);
+  await expect(page).toHaveURL(/\/e2e\/recurring\?preview=1#late$/);
   await expect(page.getByRole("heading", { name: "קבועים" })).toBeVisible();
-  const bills = page.getByRole("region", { name: "לא הגיעו" }).getByRole("link");
-  await expect(bills).toHaveCount(2);
-  // FLOW-415: the row says when the bill usually comes and when the last one came.
-  const power = page.getByRole("link", { name: "אור חשמל, בניין הדקל · חשמל, כל חודש ב־2 · אחרון 02/09, בערך ₪1,850" });
-  await expect(power).toContainText("כ־");
-  await power.click();
-  await expect(page).toHaveURL(/\/search\?/);
-  const url = new URL(page.url());
-  expect(url.searchParams.get("q")).toBe("אור חשמל");
-  expect(url.searchParams.get("dir")).toBe("expense");
-  await expect(page.getByRole("searchbox")).toHaveValue("אור חשמל");
+  const late = page.locator("section", { has: page.getByRole("heading", { name: "לא הגיעו" }) });
+  await expect(late.locator("li")).toHaveCount(2);
+  // FLOW-447: the row says how many days late the bill is, counted from its usual day.
+  await expect(late.locator("li").first()).toContainText("באיחור");
 });
 
-test("קבועים: a late row closes for this user with סגירה under עריכה and comes back on ביטול; a change opens its payment", async ({ page }) => {
-  await page.goto("/e2e/missing-bills?preview=1");
-  const late = page.getByRole("region", { name: "לא הגיעו" });
-  await expect(late.getByRole("link")).toHaveCount(2);
-  await page.getByRole("button", { name: "עריכה" }).click();
-  await late.getByRole("button", { name: "סגירה, מים טובים" }).click();
-  await expect(page.getByText("ההתראה נסגרה")).toBeVisible();
-  await expect(late.getByRole("link")).toHaveCount(1);
-  await page.getByRole("button", { name: "ביטול" }).click();
-  await expect(late.getByRole("link")).toHaveCount(2);
-  const arrived = page.getByRole("region", { name: "הגיעו החודש" });
-  await expect(arrived.getByRole("link")).toHaveCount(3);
-  await arrived.getByRole("link", { name: /^אור חשמל, .*עלייה של 38%$/ }).click();
-  await expect(page).toHaveURL(/\/transactions\/t-power-oct\?preview=1$/);
+test("קבועים: a charge up 20% or more shows its change as the bad-news hint", async ({ page }) => {
+  await page.goto("/e2e/recurring?preview=1");
+  await expect(page.getByText("▲ 38%", { exact: true })).toBeVisible();
 });
 
 test("Home: the קבועים tab opens קבועים, and the box has no link to it (FLOW-364)", async ({ page }) => {
@@ -50,19 +32,15 @@ test("Home: the קבועים tab opens קבועים, and the box has no link to 
   await expect(tab).toBeVisible();
   expect((await tab.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
   await tab.click();
-  await expect(page).toHaveURL(/\/missing-bills\?preview=1$/);
-  await expect(page.getByRole("heading", { name: "קבועים" })).toBeVisible();
+  await expect(page).toHaveURL(/\/recurring\?preview=1$/);
 });
 
 test("קבועים on one project shows only its rows and names it (FLOW-424)", async ({ page }) => {
-  await page.goto("/e2e/missing-bills?preview=1&project=p1");
+  await page.goto("/e2e/recurring?preview=1&project=p-birch-lane");
   await expect(page.getByRole("heading", { name: "קבועים" })).toBeVisible();
-  await expect(page.getByText("בניין הדקל", { exact: true }).first()).toBeVisible();
-  const late = page.getByRole("region", { name: "לא הגיעו" });
-  await expect(late.getByRole("link")).toHaveCount(1);
-  await expect(late.getByRole("link").first()).toHaveAccessibleName(/^אור חשמל/);
-  await expect(late.getByRole("link").first()).not.toContainText("בניין הדקל");
-  await expect(page.getByRole("region", { name: "הגיעו החודש" }).getByRole("link")).toHaveCount(1);
+  await expect(page.locator(".ui-recurring-head").getByText("Birch Lane", { exact: true })).toBeVisible();
+  await expect(page.locator(".ui-recurring li")).toHaveCount(4);
+  await expect(page.getByText("Juniper Pointe HOA")).toHaveCount(0);
 });
 
 test("Project: a צפוי month opens the sheet of its parties, and the sheet closes", async ({ page }) => {
@@ -86,21 +64,4 @@ test("Project: with no history the section says so in one line", async ({ page }
   const section = page.getByRole("region", { name: "צפוי" });
   await expect(section).toContainText("אין עדיין צפי.");
   await expect(section.getByRole("button")).toHaveCount(0);
-});
-
-test("קבועים: a late bill suggests a renamed supplier; כן takes the row out and לא its hint, each with ביטול", async ({ page }) => {
-  await page.goto("/e2e/missing-bills?preview=1&match=1");
-  const late = page.getByRole("region", { name: "לא הגיעו" });
-  const hint = late.getByRole("group", { name: "אולי זה: Riverside Water Works" });
-  await expect(hint).toContainText("אולי זה: Riverside Water Works · $57.79 · 06/10");
-  await expect(late.getByRole("link")).toHaveCount(3);
-  await hint.getByRole("button", { name: "כן, אותו ספק: Riverside Water Works" }).click();
-  await expect(page.getByText("סומן כאותו ספק")).toBeVisible();
-  await expect(late.getByRole("link")).toHaveCount(2);
-  await page.getByRole("button", { name: "ביטול" }).click();
-  await expect(late.getByRole("link")).toHaveCount(3);
-  await hint.getByRole("button", { name: /^לא, Riverside Water Works/ }).click();
-  await expect(page.getByText("לא נציע שוב")).toBeVisible();
-  await expect(hint).toBeHidden();
-  await expect(late.getByRole("link")).toHaveCount(3);
 });

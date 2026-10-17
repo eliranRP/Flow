@@ -561,6 +561,11 @@
   color: var(--color-accent-text);
 }
 
+/* At 320px the AI row's title wraps instead of clipping its last letters. */
+.ui-ai-row-list .ui-row-title {
+  white-space: normal;
+}
+
 /* The AI page's status line: the name, and the access level at the end, muted. */
 .ui-ai-status {
   display: flex;

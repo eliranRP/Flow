@@ -5,7 +5,7 @@ import { israelToday } from "../ui/date-math";
 import { StoryRoute } from "../ui/story-route";
 import { SeedLineMeta, storyMeta } from "../ui/story-support";
 import type { TxnMeta } from "../txn-meta";
-import { bareReview, ExampleBar, filedTodayCount, sampleReview, SeedSkipped } from "../ui/screen-stories-support";
+import { bareReview, ExampleBar, filedTodayCount, sampleReview } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -45,7 +45,6 @@ export const ReviewCardViewer: Story = {
 export const ReviewAll: Story = {
   render: () => (
     <StoryRoute entry="/review/all" tabs>
-      <SeedSkipped rows={[]} />
       <ExampleBar />
       <ReviewAllList
         backTo="/review"
@@ -99,7 +98,6 @@ function ReviewStatement() {
   return (
     <StoryRoute entry="/review/all" tabs>
       <SeedLineMeta meta={statementMeta} />
-      <SeedSkipped rows={[]} />
       <ExampleBar />
       <ReviewAllList backTo="/review" search="" rows={statementReviews} />
     </StoryRoute>

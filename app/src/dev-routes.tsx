@@ -18,7 +18,7 @@ import { BandCompany } from "./ui/top-band";
 import { Button } from "./ui/button";
 import { ActionBar, ActionBarRow } from "./ui/action-bar";
 import { CheckIcon } from "./ui/icons";
-import { ProgressBar } from "./ui/progress-bar";
+import { ReviewSegments } from "./ui/review-count";
 import { ReviewCard } from "./ui/review-card";
 import { ScreenHeader } from "./ui/screen-header";
 import { useToast } from "./ui/toast";
@@ -67,10 +67,11 @@ import { JUNIPER_PROFIT, NEW_PROJECT_PROFIT } from "./dev/project-profit-sample"
 import { LoanDetailScreen, type LoanView } from "./screens/loan-detail-screen";
 import { useMemoryLoanStore } from "./screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "./dev/loan-detail-sample";
-import { MissingBillsScreen } from "./screens/missing-bills-screen";
+import { RecurringScreen } from "./screens/recurring-screen";
+import { RECURRING_FIXTURE } from "./recurring-sample";
 import { LoanSummaryCard } from "./screens/loan-summary-card";
 import { LOAN_SUMMARY_SAMPLE } from "./dev/loan-summary-sample";
-import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME, SAMPLE_MISSING_RENAMED, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "./forecast-sample";
+import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS, SAMPLE_RECURRING_CHANGES } from "./forecast-sample";
 
 const devReviewItems = [
   {
@@ -124,31 +125,23 @@ export function DevSplit() {
   );
 }
 
-/** A local queue so the skip toast can be tested without writing a review row. */
+/** A local queue for the review card, so approve and skip can be tried without writing a review row. */
 export function DevReview() {
   const toast = useToast();
-  const [index, setIndex] = useState(0);
+  const [items, setItems] = useState(devReviewItems);
+  const [index] = useState(0);
   const [change, setChange] = useState(false);
-  const item = devReviewItems[index];
-  const total = devReviewItems.length;
+  const item = items[index];
+  const total = items.length;
   return (
     <div className="ui-review-queue" data-bar="">
       <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" />
-      <div className="ui-review-meter">
-        <ProgressBar
-          variant="thin"
-          label="התקדמות התור"
-          value={Math.min(index + 1, total)}
-          max={total}
-          caption={
-            <span className="t-hint">
-              <bdi dir="ltr">{String(Math.min(index + 1, total))}</bdi>
-              {" מתוך "}
-              <bdi dir="ltr">{String(total)}</bdi>
-            </span>
-          }
-        />
-      </div>
+      <ReviewSegments index={Math.min(index + 1, total)} total={total} />
+      <p className="t-hint ui-review-counter">
+        <bdi dir="ltr">{String(Math.min(index + 1, total))}</bdi>
+        {" מתוך "}
+        <bdi dir="ltr">{String(total)}</bdi>
+      </p>
       {item ? (
         <div className="ui-review-motion" data-motion={index === 0 ? undefined : "in"} key={item.id}>
           <ReviewCard
@@ -169,16 +162,16 @@ export function DevReview() {
           disabled={!item}
           onClick={() => {
             if (!item) return;
-            const next = index + 1;
+            const at = index;
+            setItems((list) => list.filter((_, position) => position !== at));
             toast.show({
               message: "הפריט אושר",
               action: "ביטול",
               place: "bar",
               onAction: () => {
-                setIndex(next - 1);
+                setItems((list) => [...list.slice(0, at), item, ...list.slice(at)]);
               },
             });
-            setIndex(next);
           }}
         >
           אישור
@@ -190,17 +183,9 @@ export function DevReview() {
             disabled={!item}
             onClick={() => {
               if (!item) return;
-              const next = index + 1;
-              // FLOW-327: the skip toast offers ביטול, as on the live queue, for the shots.
-              toast.show({
-                message: "דילגנו על הפריט",
-                action: "ביטול",
-                place: "bar",
-                onAction: () => {
-                  setIndex(next - 1);
-                },
-              });
-              setIndex(next);
+              // FLOW-365: דלג moves the card to the end of the device order. It writes nothing and shows no toast.
+              const at = index;
+              setItems((list) => [...list.filter((_, position) => position !== at), item]);
             }}
           >
             דלג
@@ -291,7 +276,7 @@ export function DevHome() {
       unpaidGross={50_000n}
       unpaidCount={1}
       missingCount={SAMPLE_MISSING_BILLS.length}
-      missingTo="/e2e/missing-bills"
+      missingTo="/e2e/recurring"
       period={period}
       onPeriod={setPeriod}
     />
@@ -328,7 +313,7 @@ export function DevCash() {
         unpaidGross: 460_000n,
         // FLOW-415: `?recurring=1` adds the late bills and a charge above its usual amount.
         missingCount: params.get("recurring") === "1" ? SAMPLE_MISSING_BILLS.length : 0,
-        missingTo: "/e2e/missing-bills",
+        missingTo: "/e2e/recurring",
         changes: params.get("recurring") === "1" ? chargeChangeViews(SAMPLE_RECURRING_CHANGES, "?preview=1") : [],
         search: "?preview=1",
       })}
@@ -554,15 +539,9 @@ export function DevInvoices() {
   return <UnpaidScreen sample={rows} summary={summary} />;
 }
 
-/** FLOW-403. The late-bills list with invented rows; `?empty=1` has none. */
-export function DevMissingBills() {
-  const [params] = useSearchParams();
-  if (params.get("empty") === "1") return <MissingBillsScreen sample={{ late: [] }} />;
-  // FLOW-415 (b-2): `?income=1` adds a late payment from a customer.
-  const base = params.get("income") === "1" ? [...SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME] : SAMPLE_MISSING_BILLS;
-  // FLOW-430: `?match=1` adds a late bill that suggests a renamed supplier.
-  const late = params.get("match") === "1" ? [...base, SAMPLE_MISSING_RENAMED] : base;
-  return <MissingBillsScreen sample={{ late, arrived: SAMPLE_RECURRING_THIS_MONTH, changes: SAMPLE_RECURRING_CHANGES }} />;
+/** FLOW-447: the list on the rule-25 fixture, for the e2e run. */
+export function DevRecurring() {
+  return <RecurringScreen sample={RECURRING_FIXTURE} />;
 }
 
 export function DevTransactionGate() {

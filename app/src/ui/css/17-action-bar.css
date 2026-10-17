@@ -190,33 +190,6 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
   overflow-wrap: anywhere;
 }
 
-/* FLOW-309: the skipped cards at the end of הצגת הכול. */
-.ui-review-skipped {
-  margin-block-start: var(--space-8);
-}
-
-.ui-review-skipped-head {
-  justify-content: flex-start;
-  margin-top: 0;
-}
-
-.ui-review-skipped-head .t-heading {
-  margin: 0;
-}
-
-.ui-review-skipped-row > .ui-row {
-  align-self: stretch;
-}
-
-.ui-review-skipped-error {
-  margin: var(--space-2) 0 0;
-  padding-inline: var(--space-side);
-}
-
-.ui-review-none-waiting {
-  margin: var(--space-4) 0 0;
-}
-
 /* FLOW-333 C6: a disabled text link looks disabled, with no pressed tint. */
 .ui-text-link:disabled,
 .ui-text-link[aria-disabled="true"] {
@@ -243,13 +216,6 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
 
 .ui-lsplit-rest:disabled :is(.ui-lsplit-name, .ui-lsplit-project, .ui-lsplit-amount, .ui-lsplit-resolved) {
   color: var(--color-disabled-text);
-}
-
-/* FLOW-309, owner pick 2026-10-08: "N פריטים דולגו" under the empty queue's action. */
-.ui-review-empty-skipped {
-  display: flex;
-  justify-content: center;
-  margin-block-start: var(--space-3);
 }
 
 /* FLOW-704: on a phone-width card the ✦ line starts under the labels, not the values, so Jev's longest

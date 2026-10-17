@@ -53,6 +53,14 @@
 /settings/categories/:parentId/ /settings/categories/:parentId 301
 /settings/connections /app-shell 200
 /settings/connections/ /settings/connections 301
+/settings/business /app-shell 200
+/settings/business/ /settings/business 301
+/settings/connections/ai /app-shell 200
+/settings/connections/ai/ /settings/connections/ai 301
+/settings/connections/mercury /app-shell 200
+/settings/connections/mercury/ /settings/connections/mercury 301
+/settings/connections/sumit /app-shell 200
+/settings/connections/sumit/ /settings/connections/sumit 301
 /settings/notifications /app-shell 200
 /settings/notifications/ /settings/notifications 301
 /settings/team /app-shell 200

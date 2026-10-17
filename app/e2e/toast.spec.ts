@@ -2,31 +2,27 @@ import { expect, test, type Page } from "@playwright/test";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
-test("a skip toast stays clear of the actions and leaves on its own", async ({ page }) => {
-  await page.goto("/e2e/review");
+// The approve toast (הפריט אושר, with ביטול) is the review toast the queue shows; skip is device-only and shows none.
+test("an approve toast stays clear of the actions and leaves on its own", async ({ page }) => {
+  await page.goto("/review?preview=1&e2e=list&rows=2");
   await expect(page.getByText("1 מתוך 2")).toBeVisible();
-  const skip = page.getByRole("button", { name: "דלג" });
-  const change = page.getByRole("button", { name: "שינוי" });
-  await skip.click();
+  const approve = page.getByRole("button", { name: "אישור" });
+  await approve.click();
   const toast = page.locator(".ui-toast");
   await expect(toast).toHaveAttribute("role", "status");
-  await expect(toast).toHaveText(/דילגנו על הפריט/);
-  await expect(page.getByRole("heading", { name: "הובלות לדוגמה" })).toBeVisible();
+  await expect(toast).toHaveText(/הפריט אושר/);
+  await expect(page.getByRole("heading", { name: "Ridge Plumbing Co" })).toBeVisible();
   await expect(page.getByText("2 מתוך 2")).toBeVisible();
 
   const toastBox = await toast.boundingBox();
-  const skipBox = await skip.boundingBox();
+  const approveBox = await approve.boundingBox();
   expect(toastBox).not.toBeNull();
-  expect(skipBox).not.toBeNull();
-  if (toastBox == null || skipBox == null) throw new Error("toast or skip box missing");
-  expect(toastBox.y + toastBox.height).toBeLessThan(skipBox.y);
+  expect(approveBox).not.toBeNull();
+  if (toastBox == null || approveBox == null) throw new Error("toast or approve box missing");
+  expect(toastBox.y + toastBox.height).toBeLessThan(approveBox.y);
   await expect(page.locator(".ui-toast-host")).toHaveCSS("pointer-events", "none");
   await expect(toast).toHaveCSS("pointer-events", "auto");
-
-  await change.click();
-  await expect(page.getByText("השינוי נפתח")).toBeVisible();
-  // The undo toast lives 3s from when it is placed, and placing waits for the sheet to settle,
-  // so a slow runner needs more than 3s here.
+  // The undo toast lives 3s from when it is placed, so it leaves on its own well inside this wait.
   await expect(toast).toHaveCount(0, { timeout: 12_000 });
 });
 
