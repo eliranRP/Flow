@@ -79,7 +79,7 @@ describe("AI connection page", () => {
     expect(screen.getByText("שימוש אחרון")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "יצירת קוד חדש" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ניתוק" })).toBeInTheDocument();
-    expect(screen.queryByText("כמה הוצאתי על Elm Court החודש?")).not.toBeInTheDocument();
+    expect(screen.queryByText('"כמה הוצאתי על Elm Court החודש?"')).not.toBeInTheDocument();
   });
 
   it("asks before disconnecting, and the confirm sheet names what stays", () => {
