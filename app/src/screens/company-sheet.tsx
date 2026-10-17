@@ -4,7 +4,7 @@ import { ROLE_LABEL, SWITCH_FAILED, type MyInvite } from "../team-api";
 import { useLeaveShownCompany, useMyCompaniesQuery, useMyInvitesQuery, useOpenCompany } from "../team-queries";
 import { Button } from "../ui/button";
 import { Sheet } from "../ui/sheet";
-import { Skeleton } from "../ui/skeleton";
+import { List, ListRow } from "../ui/list-row";
 import { useToast } from "../ui/toast";
 import { useWrite } from "../use-write";
 import { useInviteActions } from "./invite-actions";
@@ -113,10 +113,10 @@ export function CompanySheet({
             </Button>
           </div>
         ) : (
-          <div className="cs-skeleton">
-            <Skeleton width="md" />
-            <Skeleton width="md" />
-          </div>
+          <List>
+            <ListRow variant="skeleton" />
+            <ListRow variant="skeleton" />
+          </List>
         )
       ) : (
         <div role="radiogroup" aria-label="העסקים שלך" className="cs-list">

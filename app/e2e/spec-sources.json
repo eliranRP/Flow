@@ -284,6 +284,13 @@
       "screens/company-profit-screen.tsx",
       "screens/company-basis-sheet.tsx",
       "use-company-profit.ts"
+    ],
+    "invite-screen.spec.ts": [
+      "screens/invites-screen.tsx",
+      "screens/invite-screen-parts.tsx",
+      "screens/invite-actions.ts",
+      "screens/company-sheet.tsx",
+      "dev/team-sample.ts"
     ]
   },
   "sweeps": {

@@ -10,7 +10,7 @@ import { CheckIcon, MailIcon } from "../ui/icons";
 import { ScreenHeader } from "../ui/screen-header";
 import { Skeleton } from "../ui/skeleton";
 import { useInviteActions } from "./invite-actions";
-import { FactsCard, RoleCard, Rise, inviteDate, inviterName, roleName } from "./invite-screen-parts";
+import { FactsCard, RoleCard, inviteDate, inviterName, roleName } from "./invite-screen-parts";
 
 /** Where אחר כך goes: Home for someone with a company, else the first setup step. */
 export function laterPath(hasCompany: boolean): string {
@@ -116,18 +116,18 @@ export function InvitesScreen({ sample }: { sample?: { state: InviteState } }) {
         <div className="invite-glow" aria-hidden="true" />
         <div className="invite-center">
           <span className="invite-done" aria-hidden="true"><CheckIcon size={34} /></span>
-          <Rise step={3}><h1 className="invite-title">הצטרפת ל־{business}</h1></Rise>
-          <Rise step={4.5}>
+          <div className="invite-rise invite-step-3"><h1 className="invite-title">הצטרפת ל־{business}</h1></div>
+          <div className="invite-rise invite-step-4-5">
             <p className="invite-lead">
               {own != null
                 ? `הוא מופיע עכשיו בהחלפת עסק, ליד ${own}. Flow זוכר את העסק האחרון שפתחת.`
                 : "זה העסק הראשון שלך ב־Flow. הכל כבר מחובר ומוכן."}
             </p>
-          </Rise>
+          </div>
         </div>
-        <Rise step={6} className="invite-foot">
+        <div className="invite-rise invite-step-6 invite-foot">
           <Button variant="primary" full onClick={() => { void navigate("/", { replace: true }); }}>פתיחת {business}</Button>
-        </Rise>
+        </div>
       </main>
     );
   }
@@ -151,7 +151,7 @@ export function InvitesScreen({ sample }: { sample?: { state: InviteState } }) {
       <div className="invite-glow" aria-hidden="true" />
       <div className="invite-body">
         <span className="invite-tile" aria-hidden="true">{business.trim().charAt(0)}</span>
-        <Rise step={2} className="invite-head">
+        <div className="invite-rise invite-step-2 invite-head">
           <span className="invite-eyebrow">{expired ? "ההזמנה פגה" : "הוזמנת להצטרף"}</span>
           <h1 className="invite-title">{business}</h1>
           <p className="invite-lead">
@@ -159,28 +159,28 @@ export function InvitesScreen({ sample }: { sample?: { state: InviteState } }) {
               ? `${inviter} הזמין אותך לעסק הזה, אבל ההזמנה כבר לא בתוקף.`
               : `${inviter} מזמין אותך לראות את הספרים של העסק ב־Flow${invite.role === "editor" ? " ולעבוד עליהם." : "."}`}
           </p>
-        </Rise>
+        </div>
         {expired ? (
-          <Rise step={4}>
+          <div className="invite-rise invite-step-4">
             <p className="invite-expired-box">
               ההזמנה הייתה בתוקף עד {inviteDate(invite.expires_at ?? invite.created_at, false)}. בקשו מ{inviter} לשלוח הזמנה חדשה מההגדרות של {business}.
             </p>
-          </Rise>
+          </div>
         ) : (
           <>
-            <Rise step={4}><RoleCard role={invite.role} /></Rise>
-            <Rise step={5.5}><FactsCard invite={invite} /></Rise>
-            <Rise step={6.5}>
+            <div className="invite-rise invite-step-4"><RoleCard role={invite.role} /></div>
+            <div className="invite-rise invite-step-5-5"><FactsCard invite={invite} /></div>
+            <div className="invite-rise invite-step-6-5">
               <p className="invite-note">
                 {own != null
                   ? `העסק שלך, ${own}, נשאר כמו שהוא. אפשר לעבור בין העסקים מההגדרות.`
                   : "אם תדחו, אפשר לפתוח עסק משלכם ב־Flow."}
               </p>
-            </Rise>
+            </div>
           </>
         )}
       </div>
-      <Rise step={7.5} className="invite-foot">
+      <div className="invite-rise invite-step-7-5 invite-foot">
         {expired ? toFlow : (
           <>
             <Button
@@ -200,7 +200,7 @@ export function InvitesScreen({ sample }: { sample?: { state: InviteState } }) {
             </div>
           </>
         )}
-      </Rise>
+      </div>
     </main>
   );
 }

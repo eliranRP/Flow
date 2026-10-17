@@ -1,4 +1,3 @@
-import type { CSSProperties, ReactNode } from "react";
 import { ROLE_LABEL, type MyInvite } from "../team-api";
 import { CheckIcon, CloseIcon } from "../ui/icons";
 
@@ -31,15 +30,6 @@ export function inviteDate(iso: string, withYear = true): string {
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0");
   return withYear ? `${day}/${month}/${year}` : `${day}/${month}`;
-}
-
-/** One block that rises in, one stagger step after the one before. */
-export function Rise({ step, className, children }: { step: number; className?: string; children: ReactNode }) {
-  return (
-    <div className={`invite-rise${className ? ` ${className}` : ""}`} style={{ "--step": step } as CSSProperties}>
-      {children}
-    </div>
-  );
 }
 
 export function RoleCard({ role }: { role: MyInvite["role"] }) {
