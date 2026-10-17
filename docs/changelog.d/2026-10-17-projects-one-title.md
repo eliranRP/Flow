@@ -1,0 +1,1 @@
+- The Projects tab shows its title once again. "+ פרויקט חדש" and search sit on the header bar above it, as on the board, and a viewer doesn't see "פרויקט חדש" on the compact bar either.

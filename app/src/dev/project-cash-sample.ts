@@ -6,7 +6,7 @@ import { SAMPLE_PROFIT_FIGURES, sampleProfitLines } from "./project-month-sample
 
 /**
  * The project page's cash-first sample, shared by the stories and the proof build (dev route
- * /e2e/project-detail). USD, invented names; the figures follow the board's flip frame (Lark Hill,
+ * /e2e/project-detail). USD, invented names; the figures follow the board's flip frame (שיפוץ הרצל 12,
  * the month's net −$14,253.42, a $75,000 budget with $61,300 spent).
  */
 
@@ -46,8 +46,8 @@ const currentRow = cash.months[0]?.by_currency[0];
 if (currentRow) currentRow.not_in_profit_categories = [{ name: "השקעת בעלים", amount_minor: 107_000n }];
 
 export const project: NonNullable<ProjectDetail> = {
-  id: "p-c",
-  name: "Lark Hill",
+  id: "p1",
+  name: "שיפוץ הרצל 12",
   status: "active",
   state_label: "flip • בשיפוץ",
   budget_agorot: 7_500_000n,
