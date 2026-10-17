@@ -12,7 +12,7 @@ test("tab bar has four tabs, and each opens its screen (FLOW-364)", async ({ pag
   await page.getByRole("link", { name: "פרויקטים" }).click();
   await expect(page).toHaveURL(/\/projects\?preview=1$/);
   await bar.getByRole("link", { name: "הלוואות" }).click();
-  await expect(page).toHaveURL(/\/settings\/loans\?preview=1$/);
+  await expect(page).toHaveURL(/\/loans\?preview=1$/);
   await bar.getByRole("link", { name: "קבועים" }).click();
   await expect(page).toHaveURL(/\/recurring\?preview=1$/);
   // Let the route change settle before the next tab click: the lazy screen can drop an early click.

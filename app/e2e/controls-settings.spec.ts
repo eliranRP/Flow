@@ -208,7 +208,7 @@ test("settings opens the Connections page, and Back returns to the row (FLOW-501
   await expect(connections).toBeFocused();
   // The Settings menu has no הלוואות row (FLOW-512): the loans page is the tab bar's tab.
   await page.locator(".ui-tabbar").getByRole("link", { name: "הלוואות" }).click();
-  await expect(page).toHaveURL(/\/settings\/loans\?preview=1$/);
+  await expect(page).toHaveURL(/\/loans\?preview=1$/);
   await expect(page.getByText("משכנתא אלון")).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(/\/settings\?preview=1$/);
