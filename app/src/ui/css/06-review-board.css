@@ -17,6 +17,11 @@
     padding-inline: var(--space-4);
   }
 
+  /* Back's usual 18px hang would pass the 16px side and the screen edge at 320 (reviewer.spec overflow). */
+  .ui-review-queue .ui-page-stacked .ui-page-title-row > .ui-back-btn:first-child {
+    margin-inline-start: calc(var(--space-4) * -1);
+  }
+
   .ui-review-queue .ui-page-stacked .t-title {
     margin-top: calc(var(--space-1) * 1.5);
   }
