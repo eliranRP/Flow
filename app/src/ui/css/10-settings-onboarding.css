@@ -549,10 +549,6 @@
   padding-inline: var(--space-1);
 }
 
-.ui-team-invite {
-  padding-block: var(--space-3);
-}
-
 .ui-row-value-signal {
   color: var(--color-signal-soft);
 }

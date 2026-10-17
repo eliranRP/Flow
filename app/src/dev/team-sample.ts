@@ -29,6 +29,8 @@ export type SampleTeamOptions = {
   alone?: boolean;
   /** A pending invite on the team page (mockup invite-2). */
   pendingInvite?: boolean;
+  /** The board's team page (SettingsTeam): the signed-in owner and one editor, no invite. */
+  boardRows?: boolean;
   /** Invites to the signed-in user: none, one (invite-4), or two (invite-3). */
   inbox?: 0 | 1 | 2;
   /** A second company in the switcher (a-3). */
@@ -51,7 +53,9 @@ function initialState(options: SampleTeamOptions): SampleState {
     ];
   const members: Team["members"] = [
     { user_id: role === "owner" ? SAMPLE_USER : "5a5a5a5a-0000-4000-8000-0000000000a1", name: "דנה לוי", email: "dana@example.com", role: "owner", you: role === "owner" },
-    ...(options.alone ? [] : [
+    ...(options.alone ? [] : options.boardRows ? [
+      { user_id: "5a5a5a5a-0000-4000-8000-0000000000a2", name: "Ron S.", email: "ron@example.com", role: "editor" as const, you: false },
+    ] : [
       { user_id: "5a5a5a5a-0000-4000-8000-0000000000a2", name: "יוסי כהן", email: "yossi@example.com", role: "editor" as const, you: false },
       { user_id: "5a5a5a5a-0000-4000-8000-0000000000a3", name: "מיכל אברהם", email: "michal@example.com", role: "viewer" as const, you: false },
     ]),
