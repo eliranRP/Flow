@@ -41,6 +41,7 @@ import {
 } from "./loan-form";
 import { groupLoans, useLoanList, type LoanListRow } from "./loan-list";
 import { useLoanSummary } from "./loan-summary-entries";
+import type { LoanListSummary } from "./loan-list-summary";
 import { type LoanProjectField, LoanProjectPicker, type LoanProjectSource, NO_PROJECT, projectNameOf } from "./loan-project-picker";
 
 // Moved to their own files (FLOW-807). Import from those files in new code.
@@ -520,6 +521,7 @@ export function LoansHost({
   blocked,
   projects,
   sample,
+  summary: sampleSummary,
   children,
 }: {
   companyId: string | null;
@@ -529,6 +531,8 @@ export function LoansHost({
   /** FLOW-119. The projects the loan can sit under. */
   projects?: LoanProjectSource;
   sample?: LoanRowsSample;
+  /** A sample's summary card (the dev fixture and stories); live reads the company's loans. */
+  summary?: LoanListSummary;
   children: (ctx: LoansHostCtx) => ReactNode;
 }) {
   const source: LoanProjectSource = projects ?? { rows: [] };
@@ -589,7 +593,8 @@ export function LoansHost({
     ?? query.data
     ?? (query.isFetched || companyId == null ? "ILS" : null);
   // FLOW-139: the summary card reads each loan's outlook, the same figures the loan page shows.
-  const summary = useLoanSummary(sample == null ? companyId : null, currency);
+  const liveSummary = useLoanSummary(sample == null ? companyId : null, currency);
+  const summary = sampleSummary ?? liveSummary;
   const save = useWrite<Omit<LoanInsert, "company_id">>({
     failure: (error) => {
       const code = (error as { code?: string }).code;

@@ -9,6 +9,7 @@ import { ViewerNote, ViewerScope } from "../use-is-viewer";
 import { type LoanBalanceRow } from "./loan-match";
 import { LoansHost, type LoanCurrency, type LoanProjectChoice, type LoanRowsSample } from "./loan-setup";
 import { LoansList } from "./loans-list";
+import type { LoanListSummary } from "./loan-list-summary";
 
 /** FLOW-501. Invented loans for `?preview=1`. */
 const PREVIEW_LOANS: LoanBalanceRow[] = [
@@ -22,6 +23,8 @@ export type LoansSample = {
   loanProjects?: LoanProjectChoice[];
   loanCurrency?: LoanCurrency;
   noCompany?: boolean;
+  /** The summary card's figures, for a sample. */
+  summary?: LoanListSummary;
 };
 
 /**
@@ -67,6 +70,7 @@ export function LoansScreen({ sample, closedOpen = false }: { sample?: LoansSamp
         companyCurrency={sampled ? (sample?.loanCurrency ?? "ILS") : undefined}
         blocked={blocked}
         sample={sample ? (sample.loans ?? []) : preview !== "off" ? PREVIEW_LOANS : undefined}
+        summary={sample?.summary}
         projects={sampled
           ? { rows: sample?.loanProjects ?? [] }
           : {

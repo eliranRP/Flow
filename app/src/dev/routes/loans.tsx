@@ -21,6 +21,8 @@ export function DevLoans() {
       sample={{
         noCompany: settings?.noCompany,
         loanProjects: SAMPLE_LOAN_PROJECTS,
+        loanCurrency: "USD",
+        summary: params.get("loans") === "none" ? undefined : LOAN_SUMMARY_SAMPLE,
         loans: params.get("loans") === "none" ? [] : store.rows(),
       }}
     />
