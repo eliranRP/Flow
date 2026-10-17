@@ -122,25 +122,28 @@
   margin-inline-start: auto;
 }
 
-/* The board's header rhythm on the review queue (FLOW-365b): back row, title, counter, segments, card. */
-.ui-review-queue .ui-page-stacked {
-  padding-top: var(--space-3);
-}
+/* The board's header rhythm on the review queue (FLOW-365b): back row, title, counter, segments, card.
+   A 320x693 phone keeps the short-height spacing (its worst-case card has to end above the bar). */
+@media (min-height: 721px) {
+  .ui-review-queue .ui-page-stacked {
+    padding-top: var(--space-3);
+  }
 
-.ui-review-queue .ui-focus-title {
-  margin-top: var(--space-1);
-}
+  .ui-review-queue .ui-focus-title {
+    margin-top: var(--space-1);
+  }
 
-.ui-review-queue .ui-review-counts {
-  margin-top: calc(var(--space-1) * 2.5);
-}
+  .ui-review-queue .ui-review-counts {
+    margin-top: calc(var(--space-1) * 2.5);
+  }
 
-.ui-review-queue .ui-review-segments {
-  margin-top: var(--space-2);
-}
+  .ui-review-queue .ui-review-segments {
+    margin-top: var(--space-2);
+  }
 
-.ui-review-queue .ui-review {
-  margin-top: var(--space-3);
+  .ui-review-queue .ui-review {
+    margin-top: var(--space-3);
+  }
 }
 
 .ui-review {
@@ -438,8 +441,15 @@
 .ui-review-ai {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: 0;
   margin-top: 0;
+}
+
+/* The board's 16px between the rows, the split link and the reason line (a 320x693 phone keeps 0). */
+@media (min-height: 721px) {
+  .ui-review-ai {
+    gap: var(--space-4);
+  }
 }
 
 /* 2026-10-09 (option A): an amount spike puts "↑ N%" right after the amount, in the status pill

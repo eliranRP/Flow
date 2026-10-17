@@ -119,8 +119,6 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
   align-items: baseline;
   gap: var(--space-1);
   margin: 0;
-  font-size: var(--type-line2-size);
-  line-height: var(--type-line2-line);
   padding-inline-start: calc(var(--review-label-w) + var(--space-2));
   color: var(--color-text-muted);
 }
