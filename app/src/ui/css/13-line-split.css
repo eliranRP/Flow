@@ -316,7 +316,8 @@
   color: var(--color-text-muted);
   font-size: var(--type-label-size);
   line-height: var(--type-label-line);
-}
+
+  font-weight: var(--type-body-weight);}
 
 .ui-lsplit-board .ui-lsplit-amount {
   margin: 0;
@@ -418,7 +419,8 @@
   color: var(--color-text-muted);
   font-size: var(--type-hint-size);
   line-height: var(--type-body-line);
-}
+
+  font-weight: var(--type-body-weight);}
 
 .ui-lsplit-part-remove {
   min-block-size: 32px;
@@ -619,7 +621,7 @@
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: calc(var(--space-1) / 2);
   min-inline-size: 0;
 }
 
@@ -627,23 +629,25 @@
   display: block;
   color: var(--color-text-muted);
   font-size: var(--type-hint-size);
-  line-height: var(--type-body-line);
+  line-height: var(--type-chip-line);
 }
 
 .ui-lsplit-rest-line {
   display: block;
   overflow: hidden;
   font-size: var(--type-label-size);
-  line-height: var(--type-label-line);
+  line-height: var(--type-chip-line);
   text-overflow: ellipsis;
   white-space: nowrap;
-}
+
+  font-weight: var(--type-body-weight);}
 
 .ui-lsplit-rest-amount {
   flex: none;
   font-size: var(--type-body-size);
   line-height: var(--type-sheet-line);
-}
+
+  font-weight: var(--type-body-weight);}
 
 .ui-lsplit-rest-amount .ui-num {
   font-size: inherit;
