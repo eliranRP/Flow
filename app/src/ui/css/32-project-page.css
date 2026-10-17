@@ -199,19 +199,7 @@
   --compact-bar-detail: 60px;
 }
 
-/* FLOW-445: the Projects list's header, unassigned link, finished section and overhead circle. */
-.ui-projects-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding-block-start: var(--space-2);
-}
-
-.ui-projects-title {
-  margin-block: var(--space-2) 0;
-}
-
+/* FLOW-445: the Projects list's unassigned link, finished section and overhead circle. */
 .ui-projects-head {
   display: flex;
   align-items: baseline;
