@@ -60,7 +60,7 @@ function calls(name: string) {
 
 async function openSheet(name: string, parentId?: string) {
   renderScreen(<CategoriesScreen parentId={parentId} />);
-  fireEvent.click(await screen.findByRole("button", { name: new RegExp(`^${name}`) }));
+  fireEvent.click(await screen.findByRole("button", { name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`) }));
   return screen.findByRole("dialog", { name });
 }
 

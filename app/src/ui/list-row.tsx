@@ -200,7 +200,7 @@ export function ListRow(props: ListRowProps) {
     autoLtr && !props.tag && "ui-row-title-ltr",
   );
   const titleDir = props.ltrTitle || (autoLtr && !props.tag) ? "ltr" : undefined;
-  // FLOW-322: a linked row with an action (the categories ⋯) keeps the action beside the link, not inside it.
+  // FLOW-322: a linked row with an action keeps the action beside the link, not inside it.
   const sideAction = (props.variant === "item" || props.variant === "project" || props.variant === "transaction")
     && props.href != null && props.action != null && props.actionBelow !== true;
   // A transaction row's hint stays on one line and ends in an ellipsis, so a line never ends on a "·".

@@ -99,7 +99,7 @@ describe("viewer write controls", () => {
     );
     expect(screen.getByText("חומרים")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "קטגוריה חדשה" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "עוד, חומרים" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^חומרים/ })).not.toBeInTheDocument();
   });
 
   it("disables settings writes and connect", () => {
@@ -353,7 +353,7 @@ describe("viewer gates", () => {
         />,
       );
       expect(screen.getByRole("link", { name: /חומרים/ })).toHaveAttribute("href", "/search?dir=expense&category=c1");
-      expect(screen.queryByRole("button", { name: "עוד, חומרים" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /^חומרים/ })).not.toBeInTheDocument();
     }],
     ["V31", "the project menu stays off", () => {
       viewer(
