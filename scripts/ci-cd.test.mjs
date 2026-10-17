@@ -1042,6 +1042,13 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
   assert.match(aggregate, /test "\$TESTS" = success\n/);
   assert.match(aggregate, /test "\$DB" = success\n/);
   assert.match(aggregate, /test "\$DB" = skipped\n/);
+  // A docs-only diff skips types and tests, and only then; static runs on every diff (backlog-index reads docs/backlog).
+  assert.match(jobIn(pr, "changes"), /if \[ -n "\$files" \] && ! grep -qvE '\^\(docs\/\|design\/\)\|\\\.md\$' <<<"\$files"; then\n {12}echo "docs=true"/);
+  assert.match(jobIn(pr, "types"), /needs: \[changes\]\n {4}if: needs\.changes\.outputs\.docs != 'true'\n/);
+  assert.match(jobIn(pr, "tests"), /needs: \[changes\]\n {4}if: needs\.changes\.outputs\.docs != 'true'\n/);
+  assert.equal(/needs: \[changes\]\n {4}if: needs\.changes\.outputs\.docs/.test(jobIn(pr, "static")), false);
+  assert.match(aggregate, /if \[ "\$DOCS" = true \]; then\n {12}test "\$TYPES" = skipped\n {12}test "\$TESTS" = skipped\n/);
+  assert.match(aggregate, /DOCS: \$\{\{ needs\.changes\.outputs\.docs \}\}\n/);
   assert.equal(aggregate.includes("|| true"), false);
 });
 

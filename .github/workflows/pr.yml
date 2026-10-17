@@ -22,13 +22,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Whether the diff touches supabase/ (a migration, a seed, a pgTAP file or an edge function).
+  # Whether the diff touches supabase/ (a migration, a seed, a pgTAP file or an edge function), and whether it is
+  # docs-only (docs/, design/, or any .md file).
   changes:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       db: ${{ steps.paths.outputs.db }}
       ui: ${{ steps.paths.outputs.ui }}
+      docs: ${{ steps.paths.outputs.docs }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -50,6 +52,13 @@ jobs:
             echo "ui=true" >> "$GITHUB_OUTPUT"
           else
             echo "ui=false" >> "$GITHUB_OUTPUT"
+          fi
+          # A docs-only diff skips the typecheck and the unit tests. static still runs: backlog-index --check reads
+          # docs/backlog. An empty diff is not docs-only.
+          if [ -n "$files" ] && ! grep -qvE '^(docs/|design/)|\.md$' <<<"$files"; then
+            echo "docs=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs=false" >> "$GITHUB_OUTPUT"
           fi
 
   static:
@@ -87,6 +96,8 @@ jobs:
   # The typecheck, the unused-code and CSS checks (FLOW-835: a job of its own, so it runs beside static).
   types:
     name: pr (types)
+    needs: [changes]
+    if: needs.changes.outputs.docs != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -118,6 +129,8 @@ jobs:
   # image carries the browsers, so the job installs none.
   tests:
     name: pr (tests ${{ matrix.shard }}/6)
+    needs: [changes]
+    if: needs.changes.outputs.docs != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -296,6 +309,7 @@ jobs:
           TESTS: ${{ needs.tests.result }}
           E2E: ${{ needs.e2e.result }}
           UI_CHANGED: ${{ needs.changes.outputs.ui }}
+          DOCS: ${{ needs.changes.outputs.docs }}
           DRAFT: ${{ github.event.pull_request.draft }}
           DB: ${{ needs.db.result }}
           DB_CHANGED: ${{ needs.changes.outputs.db }}
@@ -308,8 +322,14 @@ jobs:
           echo "db: $DB (the diff touches supabase/: $DB_CHANGED)"
           test "$CHANGES" = success
           test "$STATIC" = success
-          test "$TYPES" = success
-          test "$TESTS" = success
+          # A docs-only diff skips types and tests on purpose. Any other diff must have run them.
+          if [ "$DOCS" = true ]; then
+            test "$TYPES" = skipped
+            test "$TESTS" = skipped
+          else
+            test "$TYPES" = success
+            test "$TESTS" = success
+          fi
           if [ "$UI_CHANGED" = true ] && [ "$DRAFT" != true ]; then
             test "$E2E" = success
           else
