@@ -24,6 +24,7 @@ export function ScreenState({
   below,
   syncing,
   barOnly = false,
+  headerClassName,
 }: {
   title: string;
   subtitle?: string;
@@ -47,6 +48,8 @@ export function ScreenState({
   syncing?: string | null;
   /** Draws only the back bar (with `kicker` as Back's label), not the title: the invoice page's board header. */
   barOnly?: boolean;
+  /** The header's own class (the invoice pages scope their bar's spacing with it). */
+  headerClassName?: string;
 }) {
   const preview = useHomePreview();
   const navigate = useNavigate();
@@ -65,11 +68,11 @@ export function ScreenState({
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <SyncStrip label={syncing ?? null} />
       {barOnly ? (
-        <ScreenHeader barOnly backTo={backTo} kicker={kicker} />
+        <ScreenHeader barOnly backTo={backTo} kicker={kicker} className={headerClassName} />
       ) : stacked ? (
-        <ScreenHeader layout="stacked" title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} leading={leading} trailing={trailing ?? action} kicker={kicker} below={below} />
+        <ScreenHeader layout="stacked" title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} leading={leading} trailing={trailing ?? action} kicker={kicker} below={below} className={headerClassName} />
       ) : (
-        <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} action={action} trailing={trailing} kicker={kicker} />
+        <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} action={action} trailing={trailing} kicker={kicker} className={headerClassName} />
       )}
       {/* The body is the overlay's frame: a skeleton fades out over it while the content fades in (FLOW-371). */}
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">

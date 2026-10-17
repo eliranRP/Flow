@@ -41,7 +41,7 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp }: { s
   const documentUrl = row == null ? null : unpaidDocumentUrl(row);
   const customer = row == null ? "" : row.customer_name ?? row.description;
   return (
-    <ScreenState title="חשבונית" kicker="חשבוניות פתוחות" barOnly backTo={`/unpaid${search}`} phase={phase} onRetry={actions.retry}>
+    <ScreenState title="חשבונית" kicker="חשבוניות פתוחות" barOnly backTo={`/unpaid${search}`} phase={phase} onRetry={actions.retry} headerClassName="ui-inv-screen">
       {row == null && phase.kind === "ready" ? (
         <div className="ui-page-pad">
           <EmptyState title="החשבונית כבר לא פתוחה" body="היא סומנה או חוברה לתשלום, ולכן לא נשארה ברשימה." action={<Button full to={`/unpaid${search}`}>חשבוניות פתוחות</Button>} />
