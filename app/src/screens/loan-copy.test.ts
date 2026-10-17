@@ -3,7 +3,6 @@ import {
   LOAN_REFUSALS,
   loanDeleteConsequence,
   loanFailure,
-  loanPartsText,
   loanRefusalOf,
   loanRefusalPlace,
   loanRefusalText,
@@ -101,6 +100,5 @@ describe("loan refusal copy (FLOW-106 §5)", () => {
     expect(loanDeleteConsequence(0)).toBe("אין תשלומים משויכים. שינויי הריבית יימחקו איתה.");
     expect(loanDeleteConsequence(1)).toBe("תשלום אחד יחזור לקטגוריה שלו.");
     expect(loanDeleteConsequence(3)).toBe("3 תשלומים יחזרו לקטגוריה שלהם.");
-    expect(loanPartsText(4)).toBe("4 חלקים");
   });
 });

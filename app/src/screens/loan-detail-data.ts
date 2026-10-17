@@ -1,6 +1,5 @@
 import {
   buildLoanSchedule,
-  demandAccrual,
   LOAN_TERM_MONTHS_MAX,
   rateOnDate,
   regularPaymentMinor,
@@ -9,7 +8,7 @@ import {
   type LoanStatus,
 } from "@flow/shared";
 import { formatDisplay } from "../ui/date-math";
-import { LOAN_KIND_LABEL, LOAN_PART_LABEL, LOAN_STATUS_LABEL, loanPartsText } from "./loan-copy";
+import { LOAN_KIND_LABEL, LOAN_STATUS_LABEL } from "./loan-copy";
 import { formatLoanMoney, type LoanCurrency } from "./loan-form";
 
 /** FLOW-106 B and FLOW-110: one loan's page, as the app reads it. Pure mappers, no reads. */
@@ -168,28 +167,6 @@ export function readLoanPayments(data: unknown): LoanPayment[] {
   return rows.sort((a, b) => (a.docDate < b.docDate ? 1 : a.docDate > b.docDate ? -1 : b.transactionId.localeCompare(a.transactionId)));
 }
 
-/** The payments section shows the last 3; "כל התשלומים" opens the rest. */
-export const LOAN_PAYMENTS_SHOWN = 3;
-
-/**
- * "4 חלקים · עמלות ₪262.50", "2 חלקים" (only the parts with an amount), or the one part's name
- * ("ריבית"). A demand payment names its interest and principal.
- */
-export function paymentHint(payment: LoanPayment, loan: Pick<LoanDetail, "kind" | "currency">): string {
-  if (loan.kind === "demand") {
-    return `ריבית ${formatLoanMoney(payment.interestMinor, loan.currency)} · קרן ${formatLoanMoney(payment.principalMinor, loan.currency)}`;
-  }
-  const fees = `עמלות ${formatLoanMoney(payment.feesMinor, loan.currency)}`;
-  if (payment.parts <= 1) {
-    // FLOW-427: a payment with one part names it; "N חלקים" starts at 2.
-    if (payment.feesMinor > 0n) return fees;
-    const only = (["interest", "escrow", "principal"] as const).find((part) => payment[`${part}Minor`] !== 0n) ?? "interest";
-    return LOAN_PART_LABEL[only];
-  }
-  const parts = loanPartsText(payment.parts);
-  return payment.feesMinor > 0n ? `${parts} · ${fees}` : parts;
-}
-
 /**
  * The categories a part can take, as private.loan_part_category_ok allows them: an expense
  * category whose loan_part is empty or the same part (fees also take the keyed interest
@@ -271,74 +248,6 @@ export function kindValue(loan: Pick<LoanDetail, "kind" | "termMonths" | "intere
       return `${label} · פריסה ${String(loan.amortizationMonths ?? 0)}, נגמרת אחרי ${String(loan.termMonths ?? 0)}`;
     case "demand":
       return `${label} · ריבית יומית, 365 יום`;
-  }
-}
-
-function scheduleOf(loan: LoanDetail) {
-  if (loan.kind === "demand" || loan.termMonths == null || loan.paymentMinor == null) return null;
-  try {
-    return buildLoanSchedule({
-      principalMinor: loan.principalMinor,
-      annualRatePpm: loan.annualRatePpm,
-      termMonths: loan.termMonths,
-      startDate: loan.startDate,
-      paymentMinor: loan.paymentMinor,
-      escrowMinor: loan.escrowMinor,
-      kind: loan.kind,
-      interestOnlyMonths: loan.interestOnlyMonths,
-      amortizationMonths: loan.amortizationMonths,
-      rates: [...loan.rates].reverse().map((rate) => ({ effectiveDate: rate.effectiveDate, annualRatePpm: rate.annualRatePpm })),
-    });
-  } catch {
-    return null;
-  }
-}
-
-/**
- * The תשלום חודשי row (read-only): the payment due next, then what follows it when it
- * changes. Null for a demand loan, which has no fixed payment.
- */
-export function paymentValue(loan: LoanDetail, today: string): string | null {
-  if (loan.kind === "demand" || loan.paymentMinor == null) return null;
-  const schedule = scheduleOf(loan);
-  if (schedule == null) return formatLoanMoney(loan.paymentMinor, loan.currency);
-  const rows = schedule.rows;
-  const next = rows.find((row) => row.dueDate >= today) ?? rows.at(-1) ?? null;
-  const now = next?.paymentMinor ?? loan.paymentMinor;
-  const shown = formatLoanMoney(now, loan.currency);
-  if (loan.kind === "interest_only" && next != null && loan.interestOnlyMonths != null && next.period <= loan.interestOnlyMonths && loan.interestOnlyMonths < (loan.termMonths ?? 0)) {
-    const after = rows[loan.interestOnlyMonths]?.paymentMinor ?? loan.paymentMinor;
-    return `${shown} · אחר כך ${formatLoanMoney(after, loan.currency)}`;
-  }
-  if (loan.kind === "balloon" && schedule.balloon != null) {
-    const last = rows.at(-1);
-    return `${shown} · בלון ${formatLoanMoney(schedule.balloon.amountMinor, loan.currency)}${last ? ` ב־${formatDisplay(last.dueDate)}` : ""}`;
-  }
-  return shown;
-}
-
-/** Interest accrued on a demand loan today, from its attached payments (decision 0132). */
-export function demandInterestToday(loan: LoanDetail, payments: readonly LoanPayment[], today: string): bigint | null {
-  if (loan.kind !== "demand") return null;
-  try {
-    return demandAccrual(
-      {
-        principalMinor: loan.principalMinor,
-        annualRatePpm: loan.annualRatePpm,
-        startDate: loan.startDate,
-        rates: [...loan.rates].reverse().map((rate) => ({ effectiveDate: rate.effectiveDate, annualRatePpm: rate.annualRatePpm })),
-      },
-      payments.filter((payment) => !payment.needsReview).map((payment) => ({
-        date: payment.docDate,
-        interestMinor: payment.interestMinor,
-        escrowMinor: payment.escrowMinor,
-        principalMinor: payment.principalMinor,
-        feesMinor: payment.feesMinor,
-      })),
-      today,
-    ).interestMinor;
-  } catch {
-    return null;
   }
 }
 

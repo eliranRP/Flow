@@ -11,7 +11,6 @@ import {
   partCategoryOptions,
   partCategoryValue,
   partDefaultLabel,
-  paymentHint,
   rateInput,
   ratePpmOfInput,
   readLoanPayments,
@@ -134,9 +133,9 @@ describe("kinds", () => {
   it("stores the regular payment after the interest-only months, above a month of interest", () => {
     const result = kindPatch(SAMPLE_AMORTIZING, { kind: "interest_only", months: "24" });
     if (!result.ok) throw new Error("refused");
-    // $200,000 at 6.00% for a month is $1,000; the payment_below_interest guard needs at least that, plus escrow.
-    expect(result.patch.payment_minor).toBeGreaterThan(100_000 + 31_330);
-    expect(result.patch.escrow_minor).toBe(31_330);
+    // $240,000 at 6.25% for a month is $1,250; the payment_below_interest guard needs at least that, plus escrow.
+    expect(result.patch.payment_minor).toBeGreaterThan(125_000 + 36_300);
+    expect(result.patch.escrow_minor).toBe(36_300);
   });
 });
 
@@ -156,19 +155,6 @@ describe("status", () => {
     expect(readLoanPayments([{ doc_date: "2026-01-01" }, "x"])).toEqual([]);
   });
 
-  it("names a payment's one part, and counts from 2 (FLOW-427)", () => {
-    const usd = { kind: "interest_only" as const, currency: "USD" as const };
-    const one = (interest: number, principal: number, fees: number) => {
-      const [payment] = readLoanPayments([{ transaction_id: "t", doc_date: "2026-09-01", interest_minor: interest, escrow_minor: 0, principal_minor: principal, fees_minor: fees }]);
-      if (payment == null) throw new Error("no payment");
-      return payment;
-    };
-    expect(paymentHint(one(225_000, 0, 0), usd)).toBe("ריבית");
-    expect(paymentHint(one(0, 50_000, 0), usd)).toBe("קרן");
-    expect(paymentHint(one(0, 0, 26_250), usd)).toBe("עמלות $262.50");
-    expect(paymentHint(one(225_000, 0, 26_250), usd)).toBe("2 חלקים · עמלות $262.50");
-  });
-
   it("floors the close date at the last payment and opens on it", () => {
     expect(lastPaymentDate(payments)).toBe("2026-10-01");
     expect(lastPaymentDate([])).toBeNull();
@@ -183,7 +169,7 @@ describe("status", () => {
     expect(statusToast("closed", 5n, "USD")).toBe("סומנה כנסגרה");
     expect(statusToast("open", 0n, "USD")).toBe("ההלוואה נפתחה מחדש");
     expect(statusPill({ status: "paid_off", closedOn: "2026-06-15" })).toBe("נפרעה · 15/06/2026");
-    expect(statusPill({ status: "open", closedOn: null })).toBe("פתוחה");
+    expect(statusPill({ status: "open", closedOn: null })).toBe("פעילה");
   });
 });
 
@@ -251,7 +237,7 @@ describe("the loan row and its patches", () => {
   it("deletes and restores a loan", async () => {
     const store = sampleLoanStore();
     const gone = await store.deleteLoan("loan-mortgage");
-    expect(gone.payments).toBe(2);
+    expect(gone.payments).toBe(22);
     expect(store.read("loan-mortgage").phase).toBe("missing");
     await store.restoreLoan("loan-mortgage");
     expect(store.read("loan-mortgage").phase).toBe("ready");
