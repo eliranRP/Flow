@@ -18,6 +18,7 @@ const ACTION_SHA = {
   "actions/cache": "55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
   "actions/cache/restore": "55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
   "actions/upload-artifact": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+  "actions/download-artifact": "37930b1c2abaa49bbe596cd826c3c89aef350131",
   "pnpm/action-setup": "ea17c68df8912ef543352723c149a84f56e3d413",
   "supabase/setup-cli": "45a513f8c64c0bc8e0e3dfe572b5c95be85f6359",
   "denoland/setup-deno": "22d081ff2d3a40755e97629de92e3bcbfa7cf2ed",
@@ -25,6 +26,9 @@ const ACTION_SHA = {
 const playwrightVersion = JSON.parse(readFileSync(new URL("../app/package.json", import.meta.url), "utf8")).devDependencies.playwright;
 const PLAYWRIGHT_KEY = `key: \${{ runner.os }}-playwright-${playwrightVersion}`;
 const PLAYWRIGHT_APT_KEY = `key: \${{ runner.os }}-playwright-apt-${playwrightVersion}-\${{ github.run_id }}\n          restore-keys: \${{ runner.os }}-playwright-apt-${playwrightVersion}\n`;
+// The readers restore the apt cache by prefix (no run id), and only check (storybook) writes it.
+const PLAYWRIGHT_APT_READ_KEY = `key: \${{ runner.os }}-playwright-apt-${playwrightVersion}-none\n          restore-keys: \${{ runner.os }}-playwright-apt-${playwrightVersion}\n`;
+const APT_WRITER = "check-storybook";
 const INSTALL_DEPS = "run: bash scripts/ci-apt-cache.sh install";
 const APT_RESTORE = "run: bash scripts/ci-apt-cache.sh restore";
 const APT_SAVE = "run: bash scripts/ci-apt-cache.sh save";
@@ -74,18 +78,24 @@ function installDepsStep(body) {
 function playwrightProblems(text) {
   /** @type {string[]} */
   const problems = [];
-  for (const name of ["check-storybook", "check-perf", "check-stories", "e2e-shard"]) {
+  for (const name of ["check-storybook", "check-storybook-dark", "check-perf", "check-stories", "e2e-shard"]) {
     const body = jobIn(text, name);
     if (!body.includes(PLAYWRIGHT_KEY)) problems.push(`${name} cache key`);
     if (body.includes("env.ImageOS") || body.includes("env.ImageVersion")) problems.push(`${name} runner image`);
     const step = installDepsStep(body);
     if (!step.includes(INSTALL_DEPS)) problems.push(`${name} install-deps`);
     if (/\bif:/.test(step)) problems.push(`${name} install-deps condition`);
-    if (!body.includes(PLAYWRIGHT_APT_KEY)) problems.push(`${name} apt cache key`);
     const restoreAt = body.indexOf(APT_RESTORE);
     const depsAt = body.indexOf(INSTALL_DEPS);
     const saveAt = body.indexOf(APT_SAVE);
-    if (restoreAt < 0 || saveAt < 0 || !(restoreAt < depsAt && depsAt < saveAt)) problems.push(`${name} apt cache order`);
+    if (restoreAt < 0 || !(restoreAt < depsAt)) problems.push(`${name} apt cache order`);
+    if (name === APT_WRITER) {
+      if (!body.includes(PLAYWRIGHT_APT_KEY)) problems.push(`${name} apt cache key`);
+      if (saveAt < 0 || !(depsAt < saveAt)) problems.push(`${name} apt cache order`);
+    } else {
+      if (saveAt >= 0) problems.push(`${name} saves the apt cache`);
+      if (!body.includes(PLAYWRIGHT_APT_READ_KEY)) problems.push(`${name} apt cache key`);
+    }
   }
   return problems;
 }
@@ -136,20 +146,31 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(job("plan"), /FLOW_DEPLOY_BATCH: "5"\n/);
   assert.match(job("plan"), /fetch-depth: 0\n/);
   assert.match(job("plan"), /deployments: read\n/);
-  for (const name of ["lint", "check-core", "check-app", "check-storybook", "check-perf", "check-stories", "e2e-shard"]) {
+  for (const name of ["lint", "check-core", "check-app", "check-storybook", "check-storybook-dark", "check-perf", "build-storybook", "e2e-shard"]) {
     assert.match(job(name), /\n {4}needs: \[plan\]\n {4}if: needs\.plan\.outputs\.run == 'true'\n/, name);
   }
+  // The stories shards wait for the one Storybook build, and download it.
+  assert.match(job("check-stories"), /\n {4}needs: \[plan, build-storybook\]\n {4}if: needs\.plan\.outputs\.run == 'true'\n/);
+  assert.equal(job("check-stories").includes("pnpm build-storybook"), false);
+  assert.match(job("check-stories"), /uses: actions\/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7\.0\.0\n {8}with:\n {10}name: storybook-static\n {10}path: app\/storybook-static\n/);
+  assert.match(job("build-storybook"), /run: pnpm build-storybook\n/);
+  assert.match(job("build-storybook"), /name: storybook-static\n {10}path: app\/storybook-static\n/);
   // check and e2e are the required checks. They are gates that run always and pass only on success.
-  assert.match(job("check"), /needs: \[plan, check-core, check-app, check-storybook, check-perf, check-stories\]\n {4}if: always\(\) && needs\.plan\.outputs\.run == 'true'\n/);
+  assert.match(job("check"), /needs: \[plan, check-core, check-app, check-storybook, check-storybook-dark, check-perf, check-stories, build-storybook\]\n {4}if: always\(\) && needs\.plan\.outputs\.run == 'true'\n/);
   assert.match(job("check"), /test "\$CORE" = success\n/);
-  for (const name of ["CORE", "APP", "STORYBOOK", "STORIES"]) {
+  for (const name of ["CORE", "APP", "STORYBOOK", "STORYBOOK_DARK", "STORIES", "STORYBOOK_BUILD"]) {
     assert.match(job("check"), new RegExp(`test "\\$${name}" = success\n`), name);
   }
   assert.match(job("e2e"), /needs: \[plan, e2e-shard\]\n {4}if: always\(\) && needs\.plan\.outputs\.run == 'true'\n/);
   assert.match(job("e2e"), /test "\$SHARDS" = success\n/);
   assert.match(ci, /pnpm check:bundle/);
   assert.match(ci, /pnpm check:reviewer-bundle/);
-  assert.match(ci, /supabase start/);
+  // check (core) typechecks before it builds, so its two builds are vite alone, not `pnpm build` (which runs tsc again).
+  const core = job("check-core");
+  assert.equal(/run: pnpm build\n/.test(core), false);
+  assert.equal((core.match(/run: pnpm --filter @flow\/app exec vite build\n/g) ?? []).length, 1);
+  assert.equal((core.match(/pnpm --filter @flow\/app exec vite build\n/g) ?? []).length, 2);
+  assert.match(ci, /bash scripts\/ci-supabase-start\.sh -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime /);
   assert.match(ci, /supabase test db/);
   // FLOW-812: the sweeps on two runners and the rest of the suite on four, split by one title, so
   // every test runs once; the database checks on a seventh runner.
@@ -165,6 +186,11 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
     steps:
 `));
   assert.equal((job("e2e-shard").match(/if: matrix\.part == 'database'\n/g) ?? []).length, 5);
+  // flow-mcp's smoke reads the local API, so the first Playwright shard runs it and the others do not.
+  assert.match(job("e2e-shard"), /name: flow-mcp answers on the local API\n {8}if: matrix\.part == '1\/4'\n {8}run: bash scripts\/mcp-function-smoke\.sh\n/);
+  assert.equal((job("e2e-shard").match(/mcp-function-smoke/g) ?? []).length, 1);
+  assert.match(jobIn(pr, "e2e"), /name: flow-mcp answers on the local API\n {8}if: matrix\.part == '1\/4'\n {8}run: bash scripts\/mcp-function-smoke\.sh\n/);
+  assert.equal((jobIn(pr, "e2e").match(/mcp-function-smoke/g) ?? []).length, 1);
   assert.match(job("e2e-shard"), /if: matrix\.part != 'database'\n {8}run: \|\n {10}set -euo pipefail\n {10}eval "\$\(bash scripts\/ci-local-supabase-env\.sh\)"\n/);
   // Seven story runners, each with three of the every-story test's groups and a seventh of the other specs.
   // With them the run holds 20 jobs at once, GitHub Free's limit: an eighth runner waited for a free slot.
@@ -173,8 +199,14 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(job("check-stories"), /pnpm test:storybook:smoke --grep-invert "every static story" --shard=\$\{\{ matrix\.shard \}\}\/7\n/);
   const storySpec = readFileSync(new URL("../app/e2e/storybook-static.spec.ts", import.meta.url), "utf8");
   assert.equal(Number(/const STORY_SHARDS = (\d+);/.exec(storySpec)?.[1]) % 7, 0);
-  assert.match(job("check-storybook"), /run: pnpm test:storybook\n/);
+  // Light and dark are two jobs, each one vitest project, so they run side by side.
+  assert.match(job("check-storybook"), /run: pnpm --filter @flow\/app exec vitest run --project storybook\n/);
+  assert.match(job("check-storybook-dark"), /run: pnpm --filter @flow\/app exec vitest run --project storybook-dark\n/);
+  assert.equal(job("check-storybook-dark").includes("--project storybook\n"), false);
+  assert.equal(job("check-storybook-dark").includes("actions/cache@"), false);
   assert.match(job("check-perf"), /pnpm --filter @flow\/app test:perf\n/);
+  // The speed test's Playwright config builds its own dist (playwright.perf.config.ts), so check-perf builds nothing else.
+  assert.equal(job("check-perf").includes("pnpm build"), false);
   assert.equal(job("check-storybook").includes("test:perf"), false);
   assert.equal(ci.includes("check-unit"), false);
   assert.match(
@@ -240,6 +272,10 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(deploy, /functions deploy jev-tag --project-ref sxqpnetmtufkzowutduq/);
   assert.match(deploy, /functions deploy push-send --project-ref sxqpnetmtufkzowutduq/);
   assert.match(job("check-core"), /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
+  const coreDist = job("check-core");
+  const upload = coreDist.indexOf("uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1");
+  assert.ok(upload > coreDist.indexOf("pnpm check:bundle\n") && upload < coreDist.indexOf("rm -rf app/dist"));
+  assert.match(coreDist, /name: hosted-dist\n {10}path: app\/dist\n {10}retention-days: 1\n/);
   assert.equal(deploy.includes("FLOW_JWT_LEGACY"), false);
   assert.equal(deploy.includes("FLOW_SECRET_KEY"), false);
   assert.equal(deploy.includes("service_role"), false);
@@ -255,8 +291,12 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(deploy, /--branch=main/);
   assert.match(deploy, /cd-smoke.sh/);
 
-  const build = deploy.indexOf("pnpm build");
-  const stamp = deploy.indexOf("stamp-build.mjs");
+  // deploy reuses check (core)'s hosted dist: no build, no stamp, and the bundle is checked again before the migration.
+  assert.equal(deploy.includes("pnpm build"), false);
+  assert.equal(deploy.includes("stamp-build.mjs"), false);
+  const download = deploy.indexOf("uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0");
+  assert.match(deploy, /name: hosted-dist\n {10}path: app\/dist\n/);
+  const build = download;
   const guard = deploy.indexOf("pnpm check:bundle");
   const migrate = deploy.indexOf("cd-push.sh");
   const publish = deploy.indexOf("pnpm exec wrangler");
@@ -272,7 +312,7 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   const sumitConnect = deploy.indexOf("functions deploy sumit-connect");
   const sumitResealFn = deploy.indexOf("functions deploy sumit-reseal");
   const reseal = deploy.indexOf("bash scripts/cd-sumit-reseal.sh");
-  assert.ok(build >= 0 && stamp > build && guard > stamp && migrate > guard && publish > migrate && smoke > publish);
+  assert.ok(build >= 0 && guard > build && migrate > guard && publish > migrate && smoke > publish);
   assert.ok(validate >= 0 && validate < probe && probe < migrate && publish < mktemp && mktemp < secretsFile && secretsFile < fn && fn < jevFn && jevFn < smoke);
   const mercuryConnect = deploy.indexOf("functions deploy mercury-connect");
   const mercurySync = deploy.indexOf("functions deploy mercury-sync");
@@ -341,7 +381,7 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.match(ci, /group: ci-\$\{\{ github\.workflow \}\}-\$\{\{ github\.ref \}\}/);
   assert.match(ci, /cancel-in-progress: \$\{\{ github\.ref != 'refs\/heads\/main' \}\}/);
   assert.match(job("deploy"), /cancel-in-progress: false/);
-  for (const name of ["lint", "check-core", "check-app", "check-storybook", "check-perf", "check-stories", "e2e-shard"]) {
+  for (const name of ["lint", "check-core", "check-app", "check-storybook", "check-storybook-dark", "check-perf", "check-stories", "build-storybook", "e2e-shard"]) {
     assert.match(job(name), /timeout-minutes: 20\n/, name);
   }
   for (const name of ["check", "e2e"]) {
@@ -409,7 +449,8 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.match(ci, /timeout-minutes: 5\n\s+run: pnpm --filter @flow\/app exec playwright install chromium\n/);
   assert.match(ci, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\.0\.0/);
   assert.match(ci, /actions\/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0/);
-  assert.equal(ci.includes("upload-artifact"), false);
+  // check (core) keeps the hosted dist for deploy. Only that upload exists until the next artifact is added.
+  assert.equal((ci.match(/uses: actions\/upload-artifact@/g) ?? []).length, 2);
   assert.match(ci, /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
   assert.deepEqual(usesProblems(ci), []);
   assert.deepEqual(playwrightProblems(ci), []);
@@ -539,11 +580,23 @@ test("a wrong pin in one job fails, and install-deps stays unconditional", () =>
   assert.equal(/\bif:/.test(installDepsStep(jobIn(withIf, "check-storybook"))), false);
 });
 
-test("every Playwright job restores the apt cache before install-deps and saves it after", () => {
-  const noSave = replaceInJob(ci, "check-stories", "      - name: Keep Playwright system packages for the next run\n        " + APT_SAVE + "\n", "");
-  assert.deepEqual(playwrightProblems(noSave), ["check-stories apt cache order"]);
-  const wrongKey = replaceInJob(ci, "e2e-shard", PLAYWRIGHT_APT_KEY, "key: ${{ runner.os }}-playwright-apt-0.0.0\n");
-  assert.deepEqual(playwrightProblems(wrongKey), ["e2e-shard apt cache key"]);
+test("every Playwright job restores the apt cache before install-deps, and only check (storybook) saves it", () => {
+  const noSave = replaceInJob(ci, APT_WRITER, "      - name: Keep Playwright system packages for the next run\n        " + APT_SAVE + "\n", "");
+  assert.deepEqual(playwrightProblems(noSave), [`${APT_WRITER} apt cache order`]);
+  const wrongKey = replaceInJob(ci, APT_WRITER, PLAYWRIGHT_APT_KEY, "key: ${{ runner.os }}-playwright-apt-0.0.0\n");
+  assert.deepEqual(playwrightProblems(wrongKey), [`${APT_WRITER} apt cache key`]);
+  const readerSaves = replaceInJob(ci, "check-perf", "      - name: Install Playwright system dependencies\n", "      - name: Keep Playwright system packages for the next run\n        " + APT_SAVE + "\n      - name: Install Playwright system dependencies\n");
+  assert.deepEqual(playwrightProblems(readerSaves), ["check-perf saves the apt cache"]);
+  // One writer for each cache: lint saves the pnpm store, check (storybook) saves the browsers and the apt packages.
+  assert.equal((ci.match(/cache: pnpm/g) ?? []).length, 1);
+  assert.match(jobIn(ci, "lint"), /node-version: 22\n {10}cache: pnpm\n/);
+  assert.equal((ci.match(/uses: actions\/cache@/g) ?? []).length, 2);
+  assert.equal((jobIn(ci, APT_WRITER).match(/uses: actions\/cache@/g) ?? []).length, 2);
+  for (const name of ["check-core", "check-app", "check-storybook", "check-storybook-dark", "check-perf", "check-stories", "build-storybook", "e2e-shard", "deploy"]) {
+    const body = jobIn(ci, name);
+    assert.equal(body.includes("cache: pnpm"), false, `${name} saves the pnpm store`);
+    assert.ok(body.includes("uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0\n        with:\n          path: ${{ steps.pnpm-store.outputs.path }}\n          key: node-cache-Linux-x64-pnpm-"), `${name} restores the pnpm store`);
+  }
 });
 
 test("the cloud agent install script prepares pnpm, Playwright, Supabase CLI, and Deno", () => {
@@ -628,7 +681,6 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
     "pnpm test:storybook\n",
     "pnpm build-storybook",
     "pnpm test:storybook:smoke\n",
-    "supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime",
     "bash scripts/mcp-function-smoke.sh",
     "supabase test db supabase/tests/database",
     "bash scripts/check-db-types.sh",
@@ -640,6 +692,9 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
     assert.ok(local.includes(part), part);
     assert.ok(ci.includes(part.trim().replace(/^pnpm test:e2e$/, "pnpm test:e2e --shard")), `CI ${part}`);
   }
+  const startFlags = "-x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime";
+  assert.ok(local.includes(`supabase start ${startFlags}`), "local gate starts Supabase");
+  assert.ok(ci.includes(`bash scripts/ci-supabase-start.sh ${startFlags}`), "CI starts Supabase through the script");
   // A start can reuse an older database volume: a run that needs a reset resets after it, so the
   // pgTAP files never run against another branch's migrations.
   const start = local.indexOf("supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime");
@@ -936,6 +991,13 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
     assert.ok(body.indexOf("pnpm store path") < body.indexOf("actions/cache/restore"), name);
   }
   assert.equal(pr.includes("actions/cache@"), false, "PR jobs never save a cache");
+  // The e2e shards skip the browser install when the browsers came from the cache exactly.
+  const e2e = jobIn(pr, "e2e");
+  assert.match(e2e, /uses: actions\/cache\/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0\n {8}with:\n {10}path: ~\/\.cache\/ms-playwright\n/);
+  assert.ok(e2e.includes("      - name: Restore Playwright browsers\n        id: playwright-cache\n"));
+  assert.ok(e2e.includes("      - name: Restore Playwright system packages\n        id: apt-cache\n"));
+  assert.match(e2e, /      - name: Install Playwright browsers\n        if: steps\.playwright-cache\.outputs\.cache-hit != 'true'\n/);
+  assert.equal((e2e.match(/if: steps\.playwright-cache/g) ?? []).length, 1);
   // The static slice and the db slice run deno (the flow-mcp tests, the edge-function check, the edge seed).
   assert.match(jobIn(pr, "static"), /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
   assert.match(jobIn(pr, "db"), /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
@@ -965,7 +1027,7 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
   // Database: only when the diff touches supabase/, and Supabase starts without the services the checks don't use.
   const db = jobIn(pr, "db");
   assert.match(db, /needs: \[changes\]\n {4}if: needs\.changes\.outputs\.db == 'true'\n/);
-  const excluded = /supabase start -x ([^\n]+)\n/.exec(db)?.[1]?.split(",") ?? [];
+  const excluded = /ci-supabase-start\.sh -x ([^\n]+)\n/.exec(db)?.[1]?.split(",") ?? [];
   assert.ok(excluded.length > 0, "supabase start excludes services");
   for (const kept of ["kong", "postgrest", "gotrue", "edge-runtime", "postgres"]) {
     assert.equal(excluded.includes(kept), false, kept);
@@ -981,6 +1043,15 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
   assert.match(aggregate, /test "\$TESTS" = success\n/);
   assert.match(aggregate, /test "\$DB" = success\n/);
   assert.match(aggregate, /test "\$DB" = skipped\n/);
+  // A docs-only diff skips types and tests, and only then; static runs on every diff (backlog-index reads docs/backlog).
+  assert.match(jobIn(pr, "changes"), /if \[ -n "\$files" \] && ! grep -qvE '\^\(docs\/\|design\/\)\|\\\.md\$' <<<"\$files"; then\n {12}echo "docs=true"/);
+  assert.match(jobIn(pr, "types"), /needs: \[changes\]\n {4}if: needs\.changes\.outputs\.docs != 'true'\n/);
+  // The e2e run covers the shared packages and the database files the app loads, not only app/ and the root config.
+  assert.ok(jobIn(pr, "changes").includes("|packages/|supabase/(migrations|seed|functions)/)' <<<\"$files\"; then"));
+  assert.match(jobIn(pr, "tests"), /needs: \[changes\]\n {4}if: needs\.changes\.outputs\.docs != 'true'\n/);
+  assert.equal(/needs: \[changes\]\n {4}if: needs\.changes\.outputs\.docs/.test(jobIn(pr, "static")), false);
+  assert.match(aggregate, /if \[ "\$DOCS" = true \]; then\n {12}test "\$TYPES" = skipped\n {12}test "\$TESTS" = skipped\n/);
+  assert.match(aggregate, /DOCS: \$\{\{ needs\.changes\.outputs\.docs \}\}\n/);
   assert.equal(aggregate.includes("|| true"), false);
 });
 
