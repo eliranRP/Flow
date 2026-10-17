@@ -5,6 +5,14 @@
   padding-bottom: var(--space-6);
 }
 
+.ui-cp-screen .ui-page-stacked {
+  padding-top: var(--space-3);
+}
+
+.ui-cp-screen .ui-page-stacked > p {
+  margin-top: calc(var(--space-1) * -0.35);
+}
+
 .ui-cp-head {
   display: flex;
   flex-direction: column;
@@ -13,26 +21,33 @@
 }
 
 .ui-cp-figure {
-  margin: 0;
-  padding-top: var(--space-2);
+  margin: calc(var(--space-1) * -0.5) 0 0;
+  padding-top: 0;
   line-height: var(--type-total-line);
   direction: ltr;
   text-align: right;
 }
 
+/* The board's total is 34px (the total step), not the display step. */
+.ui-cp-figure .ui-num {
+  font-size: var(--type-total-size);
+  line-height: calc(var(--type-total-size) * 1.2);
+}
+
 .ui-cp-ytd {
-  margin: 0;
+  margin: calc(var(--space-1) * -0.675) 0 0;
   font-size: var(--type-label-size);
 }
 
 .ui-cp-card {
   box-sizing: border-box;
   width: auto;
-  margin: var(--space-4) var(--space-5) 0;
-  padding: var(--space-4) var(--space-card-inset);
+  margin: var(--space-3) 0 0;
+  padding: calc(var(--space-1) * 4.5);
+  border-radius: var(--radius-card);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: calc(var(--space-1) * 2.5);
 }
 
 .ui-cp-chips > * {
@@ -42,7 +57,7 @@
 .ui-cp-bar-row {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: calc(var(--space-1) * 1.5);
 }
 
 .ui-cp-bar-top {
@@ -51,6 +66,21 @@
   justify-content: space-between;
   gap: var(--space-3);
   font-size: var(--type-line2-size);
+  line-height: calc(var(--space-1) * 4.5);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-cp-bar-top .ui-num {
+  font-weight: var(--type-body-weight);
+  line-height: calc(var(--space-1) * 4.5);
+}
+
+/* The bar: 6px, rounded, its fills clipped to the rounded ends. */
+.ui-cp-card .ui-pp-bar {
+  height: 6px;
+  margin-top: 0;
+  border-radius: var(--radius-chip);
+  overflow: hidden;
 }
 
 .ui-cp-bar-income {
@@ -70,8 +100,13 @@
   gap: var(--space-2);
   align-items: center;
   overflow-x: auto;
-  margin-top: var(--space-4);
-  padding: 0 var(--space-5);
+  margin-top: calc(var(--space-1) * 4.5);
+  padding: 0;
+}
+
+/* An idle chip sits on the track, not the tint line. */
+.ui-cp-chips .ui-chip-choice[aria-pressed="false"] {
+  border-color: var(--color-track-strong);
 }
 
 .ui-cp-list {
@@ -80,21 +115,13 @@
   padding: 0 var(--space-5);
 }
 
-.ui-cp-row {
-  border-top: 1px solid var(--color-line);
-}
-
-.ui-cp-row:first-child {
-  border-top: 0;
-}
-
 .ui-cp-link {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   width: 100%;
-  min-height: var(--row-height);
-  padding: var(--space-2) 0;
+  min-height: 0;
+  padding: calc(var(--space-1) * 2.75) 0;
   box-sizing: border-box;
   border: 0;
   background: none;
@@ -115,12 +142,21 @@
   min-width: 0;
   overflow: hidden;
   font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: calc(var(--space-1) * 5);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
+.ui-cp-top .ui-num {
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: calc(var(--space-1) * 5);
+}
+
 .ui-cp-meta {
   font-size: var(--type-label-size);
+  line-height: calc(var(--space-1) * 4.5);
 }
 
 .ui-cp-lines {
@@ -133,17 +169,24 @@
   line-height: var(--type-caption-line);
 }
 
+/* Prefixed to beat the .t-hint line on the footer. */
+.ui-cp-screen .ui-cp-foot {
+  margin-top: calc(var(--space-1) * 4.25);
+  line-height: calc(var(--type-caption-size) * 17.25 / 13);
+}
+
 .ui-cp-basis {
   display: flex;
   align-items: center;
   min-height: 40px;
-  margin: 0 var(--space-5);
+  margin: calc(var(--space-1) * 3 / 8) var(--space-5) 0;
   padding: 0;
   border: 0;
   background: none;
   color: var(--color-text-secondary);
   font: inherit;
   font-size: var(--type-hint-size);
+  font-weight: var(--type-body-weight);
 }
 
 .ui-cp-change {
