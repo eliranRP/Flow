@@ -107,6 +107,15 @@
   font-size: var(--type-chip-size);
 }
 
+.ui-search-active .ui-search-active-chip {
+  block-size: calc(var(--space-2) * 4);
+  min-block-size: calc(var(--space-2) * 4);
+  gap: calc(var(--space-1) * 1.5);
+  padding-inline: calc(var(--space-2) + var(--space-1) / 2) var(--space-3);
+  font-size: var(--type-chip-size);
+  font-weight: var(--type-caption-weight);
+}
+
 .ui-search-active-x {
   display: inline-flex;
   color: var(--color-accent-text);
@@ -239,7 +248,7 @@
   gap: var(--space-inset-row);
   min-block-size: 56px;
   margin-block-start: var(--space-3);
-  padding-block: var(--space-2);
+  padding-block: calc(var(--space-2) + var(--space-1) / 2);
   border-block-end: 1px solid var(--color-line);
   color: var(--color-text);
   text-decoration: none;
@@ -268,10 +277,12 @@
 
 .ui-search-project-name {
   font-size: var(--type-body-size);
+  line-height: var(--type-cents-line);
 }
 
 .ui-search-project-hint {
   font-size: var(--type-caption-size);
+  line-height: var(--type-cents-line);
   color: var(--color-text-muted);
 }
 
