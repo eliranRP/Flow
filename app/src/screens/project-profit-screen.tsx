@@ -103,6 +103,7 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
       kicker={fromProfit ? "רווח" : project?.name}
       subtitle={sub}
       backTo={backTo}
+      headerClassName="ui-pp-head"
       phase={phase}
       onRetry={() => { void detail.refetch(); }}
       loading={<ProfitSkeleton />}
@@ -110,7 +111,7 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
       {row == null ? null : (
         <div>
           <p className="ui-pp-figure ui-page-pad">
-            <Amount agorot={profit} currency={currency} size="display" loss={profit < 0n} />
+            <Amount agorot={profit} currency={currency} size="display" loss={profit < 0n} direction={profit > 0n ? "income" : undefined} />
           </p>
           <Card className="ui-pp-card">
             <SummaryRow label="הכנסות" value={<Amount agorot={row.income_minor} currency={currency} income />} />

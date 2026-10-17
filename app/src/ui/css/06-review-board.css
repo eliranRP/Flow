@@ -1,0 +1,190 @@
+/*
+  The review card as the board draws it (Review, ReviewNoSuggestion, ReviewSplitDone): the header at 16px
+  sides with its 6px rhythm, a 20px card with 18px rows, the receipt tile, the 64px field rows, the Jev
+  line and the bar in the page colour. Heights only on a tall phone; a 320x693 phone keeps its compaction.
+*/
+/* The tile's head bar exists only in the board's tall layout. */
+.ui-review-paper-head {
+  display: none;
+}
+
+@media (min-height: 721px) {
+  .ui-review-queue .ui-review-paper-head {
+    display: block;
+  }
+
+  .ui-review-queue .ui-page-stacked {
+    padding-inline: var(--space-4);
+  }
+
+  .ui-review-queue .ui-page-stacked .t-title {
+    margin-top: calc(var(--space-1) * 1.5);
+  }
+
+  .ui-review-queue .ui-review-counts,
+  .ui-review-queue .ui-review-segments,
+  .ui-review-queue .ui-review-next {
+    margin-inline: var(--space-4);
+  }
+
+  .ui-review-queue .ui-review-counter,
+  .ui-review-queue .ui-review-auto {
+    font-size: var(--type-meta-size);
+    line-height: calc(var(--type-title-line) - 0.015);
+  }
+
+  .ui-review-queue .ui-review-segments {
+    margin-top: var(--space-2);
+  }
+
+  .ui-review-queue .ui-review-seg {
+    border-radius: var(--radius-block);
+  }
+
+  .ui-review-queue .ui-review-seg[data-state="current"] {
+    background: color-mix(in srgb, var(--color-accent) 46%, var(--color-line));
+  }
+
+  .ui-review-queue .ui-review,
+  .ui-review-queue .ui-review-ai {
+    gap: calc(var(--space-4) + var(--space-1) / 2);
+  }
+
+  .ui-review-queue .ui-review-doc {
+    gap: var(--space-inset-row);
+  }
+
+  .ui-review-queue .ui-review-source {
+    padding: calc(var(--space-1) * 0.75) calc(var(--space-2) + var(--space-1) / 2);
+    border-radius: var(--radius-seg-btn);
+    font-size: calc(var(--type-caption-size) - 1px);
+    font-weight: var(--type-btn-2-weight);
+    line-height: calc(var(--type-title-line) - 0.015);
+  }
+
+  .ui-review-queue .ui-review-supplier {
+    line-height: calc(var(--type-title-line) + 0.1);
+    font-weight: var(--type-title-weight);
+  }
+
+  .ui-review-queue .ui-review-copy .t-hint {
+    font-size: var(--type-meta-size);
+    line-height: calc(var(--type-title-line) - 0.015);
+  }
+
+  /* The receipt: a 60x76 paper with a head bar, three lines and a total (the board's thumbnail). */
+  .ui-review-queue .ui-review-tile {
+    --review-tile-w: 60px;
+    --review-tile-h: 76px;
+    gap: calc(var(--space-1) + 1px);
+    padding: calc(var(--space-2) + var(--space-1) / 2) var(--space-2);
+    border: 1px solid var(--color-tint-strong);
+  }
+
+  .ui-review-queue .ui-review-paper-head,
+  .ui-review-queue .ui-review-paper-total {
+    block-size: calc(var(--space-1) * 1.5);
+    border-radius: var(--radius-block);
+    opacity: 1;
+  }
+
+  .ui-review-queue .ui-review-paper-head {
+    inline-size: 70%;
+    background: var(--color-text-secondary);
+  }
+
+  .ui-review-queue .ui-review-paper-line {
+    border-radius: var(--radius-block);
+    background: color-mix(in srgb, var(--color-text-secondary) 37%, var(--color-text));
+    opacity: 1;
+  }
+
+  .ui-review-queue .ui-review-paper-total {
+    inline-size: 50%;
+    background: var(--color-control-off);
+  }
+
+  .ui-review-queue .ui-review-figure {
+    line-height: 1;
+    text-align: start;
+  }
+
+  .ui-review-queue .ui-review-field {
+    gap: calc(var(--space-2) + var(--space-1) / 2);
+    min-block-size: 64px;
+    padding: calc(var(--space-2) + var(--space-1) / 2) var(--space-inset-row);
+  }
+
+  .ui-review-queue .ui-review-field-main {
+    gap: calc(var(--space-1) * 0.75);
+  }
+
+  .ui-review-queue .ui-review-field-label {
+    color: var(--color-text-muted);
+    font-size: calc(var(--type-caption-size) - 1px);
+    line-height: calc(var(--type-title-line) - 0.015);
+  }
+
+  .ui-review-queue .ui-review-field-value {
+    line-height: calc(var(--type-title-line) - 0.015);
+  }
+
+  .ui-review-queue .ui-review-field-hint,
+  .ui-review-queue .ui-review-field-hint .ui-suggest-tag {
+    color: var(--color-text-muted);
+    font-size: var(--type-cents-size);
+    line-height: calc(var(--type-title-line) - 0.015);
+  }
+
+  .ui-review-queue .ui-review-split-link {
+    align-self: flex-start;
+    padding-inline: calc(var(--space-1) / 2);
+  }
+
+  .ui-review-queue .ui-review-split-link svg {
+    inline-size: 20px;
+    block-size: 20px;
+  }
+
+  .ui-review-queue .ui-review-reason {
+    gap: var(--space-2);
+    color: var(--color-text-secondary);
+  }
+
+  .ui-review-queue .ui-review-next {
+    padding-inline: var(--space-4);
+    border-radius: var(--radius-card-tight);
+    color: var(--color-text-muted);
+    font-size: var(--type-meta-size);
+    line-height: calc(var(--type-title-line) - 0.015);
+  }
+
+  /* The bar: the page colour, 12px around, 6px between the buttons and the line, three board-sized buttons. */
+  .ui-review-queue .ui-action-bar {
+    gap: calc(var(--space-1) * 1.5);
+    padding-block-end: var(--space-3);
+    background: var(--color-bg);
+  }
+
+  .ui-action-bar-row.ui-review-actions {
+    grid-template-columns: minmax(0, 164fr) minmax(0, 90fr) minmax(0, 88fr);
+  }
+
+  .ui-review-actions .ui-btn svg {
+    inline-size: 20px;
+    block-size: 20px;
+  }
+
+  .ui-review-bar-hint {
+    font-size: calc(var(--type-caption-size) - 1px);
+    line-height: calc(var(--type-title-line) - 0.015);
+  }
+
+  /* The Jev line is the 14px line of the board unless the card is the 320 phone's (FLOW-704's held line). */
+  @container review (inline-size >= 18rem) {
+    .ui-review-queue .ui-review-reason {
+      font-size: var(--type-meta-size);
+      line-height: calc(var(--type-meta-size) * 1.45);
+    }
+  }
+}

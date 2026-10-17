@@ -75,7 +75,7 @@ export function RecurringList({ project, subtitle, currency, outflow, late, grou
   return (
     <div className="ui-recurring">
       <header className="ui-recurring-head">
-        <h1 className="t-display">קבועים</h1>
+        <h1 className="t-title">קבועים</h1>
         {project != null && <p className="t-heading">{project}</p>}
         <p className="t-label">{subtitle}</p>
       </header>
