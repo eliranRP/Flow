@@ -176,14 +176,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         // A retry replaces this toast on the next turn. Leave the pad until
         // that turn has had a chance to claim it, so it never eases through 0.
         const token = ++padToken.current;
+        // The inner frame is scheduled by the outer one, so it is only known once the outer runs.
+        let inner = 0;
         const outer = window.requestAnimationFrame(() => {
-          window.requestAnimationFrame(() => {
+          inner = window.requestAnimationFrame(() => {
             if (padToken.current !== token || toastRef.current) return;
             clearToastPad();
           });
         });
         return () => {
           window.cancelAnimationFrame(outer);
+          window.cancelAnimationFrame(inner);
         };
       }
       return;
