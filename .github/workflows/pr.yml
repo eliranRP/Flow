@@ -181,7 +181,7 @@ jobs:
       # Supabase pulls and starts its containers while node, pnpm, and Playwright install.
       - name: Start local Supabase in the background
         run: |
-          (supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime > "$RUNNER_TEMP/supabase-start.log" 2>&1; echo "$?" > "$RUNNER_TEMP/supabase-start.exit.tmp"; mv "$RUNNER_TEMP/supabase-start.exit.tmp" "$RUNNER_TEMP/supabase-start.exit") > /dev/null 2>&1 &
+          (bash scripts/ci-supabase-start.sh -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime > /dev/null 2>&1; echo "$?" > "$RUNNER_TEMP/supabase-start.exit.tmp"; mv "$RUNNER_TEMP/supabase-start.exit.tmp" "$RUNNER_TEMP/supabase-start.exit") > /dev/null 2>&1 &
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
           version: 10.33.3
@@ -268,7 +268,8 @@ jobs:
           version: 2.118.0
       - run: git fetch --no-tags origin main
       - name: Start local Supabase (database, REST, auth and edge runtime only)
-        run: supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime,storage-api
+        timeout-minutes: 8
+        run: bash scripts/ci-supabase-start.sh -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime,storage-api
       - name: Migrations, flow-mcp smoke, pgTAP and db types
         run: bash scripts/local-ci.sh --part db
 

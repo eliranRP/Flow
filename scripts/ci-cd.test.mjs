@@ -149,7 +149,7 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(job("e2e"), /test "\$SHARDS" = success\n/);
   assert.match(ci, /pnpm check:bundle/);
   assert.match(ci, /pnpm check:reviewer-bundle/);
-  assert.match(ci, /supabase start/);
+  assert.match(ci, /bash scripts\/ci-supabase-start\.sh -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime /);
   assert.match(ci, /supabase test db/);
   // FLOW-812: the sweeps on two runners and the rest of the suite on four, split by one title, so
   // every test runs once; the database checks on a seventh runner.
@@ -628,7 +628,6 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
     "pnpm test:storybook\n",
     "pnpm build-storybook",
     "pnpm test:storybook:smoke\n",
-    "supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime",
     "bash scripts/mcp-function-smoke.sh",
     "supabase test db supabase/tests/database",
     "bash scripts/check-db-types.sh",
@@ -640,6 +639,9 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
     assert.ok(local.includes(part), part);
     assert.ok(ci.includes(part.trim().replace(/^pnpm test:e2e$/, "pnpm test:e2e --shard")), `CI ${part}`);
   }
+  const startFlags = "-x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime";
+  assert.ok(local.includes(`supabase start ${startFlags}`), "local gate starts Supabase");
+  assert.ok(ci.includes(`bash scripts/ci-supabase-start.sh ${startFlags}`), "CI starts Supabase through the script");
   // A start can reuse an older database volume: a run that needs a reset resets after it, so the
   // pgTAP files never run against another branch's migrations.
   const start = local.indexOf("supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime");
@@ -964,7 +966,7 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
   // Database: only when the diff touches supabase/, and Supabase starts without the services the checks don't use.
   const db = jobIn(pr, "db");
   assert.match(db, /needs: \[changes\]\n {4}if: needs\.changes\.outputs\.db == 'true'\n/);
-  const excluded = /supabase start -x ([^\n]+)\n/.exec(db)?.[1]?.split(",") ?? [];
+  const excluded = /ci-supabase-start\.sh -x ([^\n]+)\n/.exec(db)?.[1]?.split(",") ?? [];
   assert.ok(excluded.length > 0, "supabase start excludes services");
   for (const kept of ["kong", "postgrest", "gotrue", "edge-runtime", "postgres"]) {
     assert.equal(excluded.includes(kept), false, kept);
