@@ -47,7 +47,7 @@
       "screens/transaction-screen.tsx",
       "screens/split-screen.tsx",
       "screens/unpaid-screen.tsx",
-      "screens/missing-bills-screen.tsx"
+      "screens/recurring-screen.tsx"
     ],
     "controls-sweep-review.spec.ts": [
       "screens/review-screen.tsx",
@@ -78,14 +78,13 @@
     ],
     "forecast.spec.ts": [
       "screens/HomeScreen.tsx",
-      "screens/missing-bills-screen.tsx",
+      "screens/recurring-screen.tsx",
       "screens/project-detail-screen.tsx",
       "screens/project-expected-months.tsx",
       "screens/search.tsx",
       "forecast.ts",
       "forecast-sample.ts",
       "ui/banner.tsx",
-      "ui/missing-bill-list.tsx",
       "ui/expected-months.tsx",
       "ui/expected-month-sheet.tsx",
       "ui/approx-amount.tsx",
@@ -337,9 +336,9 @@
           "screens/invoice-screen.tsx",
           "dev-routes.tsx#DevInvoices"
         ],
-        "/e2e/missing-bills?preview=1": [
-          "screens/missing-bills-screen.tsx",
-          "dev-routes.tsx#DevMissingBills"
+        "/e2e/recurring?preview=1": [
+          "screens/recurring-screen.tsx",
+          "dev-routes.tsx#DevRecurring"
         ]
       },
       "controls-sweep-review.spec.ts": {

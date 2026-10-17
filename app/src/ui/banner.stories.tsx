@@ -1,9 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Banner, BannerRows, Notice, type BannerRow } from "./banner";
-import { CalendarIcon, CloseIcon, DocumentIcon, ReviewIcon, TrendUpIcon } from "./icons";
+import { CalendarIcon, DocumentIcon, ReviewIcon, TrendUpIcon } from "./icons";
 import { HintParts } from "./hint-parts";
-import { IconButton } from "./icon-button";
-import { filedTodayBannerTitle } from "../filed-today-copy";
 import { longHebrew, padded } from "./story-support";
 import { TextLink } from "./text-link";
 
@@ -85,7 +83,7 @@ export const RowsSingular: Story = {
 // FLOW-403. The third row: late recurring bills, a count with no total.
 const missingRow: BannerRow = {
   id: "missing",
-  to: "/missing-bills",
+  to: "/recurring",
   icon: <CalendarIcon size={24} stroke={1.9} />,
   title: <><bdi dir="ltr">2</bdi> חשבונות לא הגיעו</>,
 };
@@ -140,29 +138,6 @@ export const LongHebrew: Story = {
 export const WithAction: Story = {
   args: { title: "3 שויכו אוטומטית היום" },
   render: (args) => <Banner {...args} icon={<ReviewIcon />} action={<TextLink to="/review">לרשימה</TextLink>} />,
-};
-// The one-line banner on לאישור: the hint sits after the title, the close button at the end.
-function SlimFiled({ count }: { count: number }) {
-  return (
-    <Banner
-      slim
-      icon={<ReviewIcon />}
-      title={filedTodayBannerTitle(count)}
-      hint={<TextLink to="/review/filed">לרשימה</TextLink>}
-      action={
-        <IconButton label="סגירה" onClick={() => undefined}>
-          <CloseIcon />
-        </IconButton>
-      }
-    />
-  );
-}
-export const Slim: Story = { args: { title: "" }, render: () => <SlimFiled count={12} /> };
-export const SlimSingular: Story = { args: { title: "" }, render: () => <SlimFiled count={1} /> };
-export const SlimBigCount: Story = {
-  ...Slim,
-  name: "Slim",
-  render: () => <SlimFiled count={1234} />,
 };
 export const NoticeNeutral: Story = {
   args: { title: "מצב תצוגה" },

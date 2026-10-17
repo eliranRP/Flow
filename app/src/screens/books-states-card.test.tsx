@@ -223,7 +223,8 @@ describe("rejected writes", () => {
     };
     renderAt("/review");
     expect(screen.queryByText("חסר קטגוריה, הקישו לבחירה")).not.toBeInTheDocument();
-    expect(await screen.findByRole("button", { name: "בחירת קטגוריה" }, { timeout: 2500 })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "קטגוריה: לא נבחר" }, { timeout: 2500 })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
   });
 
   it("disables approve when the card has no suggestion", async () => {
@@ -253,8 +254,8 @@ describe("rejected writes", () => {
     };
     renderAt("/review");
     expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
-    const approve = await screen.findByRole("button", { name: "בחירת פרויקט" }, { timeout: 2500 });
-    expect(approve).toBeEnabled();
+    const approve = await screen.findByRole("button", { name: "אישור" }, { timeout: 2500 });
+    expect(approve).toBeDisabled();
     fireEvent.click(approve);
     expect(screen.queryByText(/אי אפשר לאשר/)).not.toBeInTheDocument();
   });

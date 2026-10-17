@@ -42,7 +42,7 @@ const tabs: { section: TabSection; label: string; path: string; icon: ReactNode 
   { section: "home", label: "בית", path: "/", icon: <HomeIcon size={24} stroke={2} /> },
   { section: "projects", label: "פרויקטים", path: "/projects", icon: <ProjectsIcon size={24} stroke={2} /> },
   { section: "loans", label: "הלוואות", path: "/settings/loans", icon: <BankColumnsIcon size={24} stroke={2} /> },
-  { section: "recurring", label: "קבועים", path: "/missing-bills", icon: <RepeatIcon size={24} stroke={2} /> },
+  { section: "recurring", label: "קבועים", path: "/recurring", icon: <RepeatIcon size={24} stroke={2} /> },
 ];
 
 export function TabBar({ label = "ניווט ראשי", section: pinned }: TabBarProps) {

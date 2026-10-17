@@ -1,8 +1,5 @@
 // Shared fixtures for the Screens/Routes stories, split out of screens.stories.tsx (FLOW-807).
 import type { Dashboard, ProfitMonths, ReviewRow } from "@flow/shared";
-import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { skippedReviewQueryKey, type SkippedReviewRow } from "../screens/review-skipped";
 import { within } from "@storybook/test";
 
 export const sampleDashboard: Dashboard = {
@@ -90,15 +87,6 @@ export const pagesBusiness = {
 
 export const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
 
-/** FLOW-309. Puts the skipped list in the story's cache under the key the real read uses. */
-export function SeedSkipped({ rows }: { rows: SkippedReviewRow[] }) {
-  const client = useQueryClient();
-  useState(() => {
-    client.setQueryData(skippedReviewQueryKey("off"), rows);
-    return true;
-  });
-  return null;
-}
 
 export const periodMonths: NonNullable<ProfitMonths> = {
   basis: "invoiced",

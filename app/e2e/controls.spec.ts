@@ -18,7 +18,7 @@ async function cursorOf(locator: Locator) {
 test("צפייה opens today's list, a row opens the transaction, and back returns", async ({ page }) => {
   await page.goto("/e2e/review-banner");
   await expect(page.getByRole("heading", { name: "לאישור" })).toBeVisible();
-  await page.getByRole("link", { name: "לרשימה" }).click();
+  await page.getByRole("link", { name: /אושרו אוטומטית היום/ }).click();
   await expect(page).toHaveURL(/\/review\/filed\?preview=1&sample=1$/);
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
   await page.getByRole("link", { name: /מנופים לדוגמה/ }).click();
@@ -28,16 +28,10 @@ test("צפייה opens today's list, a row opens the transaction, and back retur
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page.getByRole("heading", { name: "לאישור" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "לרשימה" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /אושרו אוטומטית היום/ })).toBeVisible();
 });
 
-test("the banner close hides it for this visit", async ({ page }) => {
-  await page.goto("/e2e/review-banner");
-  await page.getByRole("button", { name: "סגירה" }).click();
-  await expect(page.getByRole("link", { name: "לרשימה" })).toHaveCount(0);
-});
-
-test("review approve, change, and skip give feedback", async ({ page }) => {
+test("review approve gives a toast, change opens, and skip moves the card with no toast", async ({ page }) => {
   await page.goto("/e2e/review-banner");
   await page.getByRole("button", { name: "אישור" }).click();
   await toast(page, previewToast);
@@ -45,21 +39,24 @@ test("review approve, change, and skip give feedback", async ({ page }) => {
   await expect(page).toHaveURL(/\/review\/change/);
   await page.goto("/e2e/review-banner");
   await page.getByRole("button", { name: "דלג" }).click();
-  await toast(page, previewToast);
+  // Skip has no toast; wait for the card's exit to settle before the empty check, so it cannot pass early.
+  await expect(page.locator(".ui-review-motion[data-motion='out']")).toHaveCount(0);
+  await expect(page.locator(".ui-toast")).toHaveCount(0);
 });
 
 test("undo on the approve toast brings the card back", async ({ page }) => {
-  await page.goto("/e2e/review");
+  await page.goto("/review?preview=1&e2e=list&rows=2");
   await expect(page.getByText("1 מתוך 2")).toBeVisible();
   await page.getByRole("button", { name: "אישור" }).click();
   await expect(page.getByText("2 מתוך 2")).toBeVisible();
   await page.locator(".ui-toast button", { hasText: "ביטול" }).click();
-  await expect(page.getByText("1 מתוך 2")).toBeVisible();
+  // The visit meter only grows (decision 0080): the undone card counts again, so the index holds at 2.
+  await expect(page.getByText("2 מתוך 3")).toBeVisible();
 });
 
 test("a near-miss on ביטול undoes the card instead of dismissing the toast", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
-  await page.goto("/e2e/review");
+  await page.goto("/review?preview=1&e2e=list&rows=2");
   await expect(page.getByText("1 מתוך 2")).toBeVisible();
   await page.getByRole("button", { name: "אישור" }).click();
   await expect(page.getByText("2 מתוך 2")).toBeVisible();
@@ -82,12 +79,21 @@ test("a near-miss on ביטול undoes the card instead of dismissing the toast"
   }, point);
   expect(hit).toContain("ביטול");
   await page.mouse.click(point.x, point.y);
-  await expect(page.getByText("1 מתוך 2")).toBeVisible();
+  await expect(page.getByText("2 מתוך 3")).toBeVisible();
+});
+
+test("approving the last card shows הכל מאושר, and חזרה לבית goes home", async ({ page }) => {
+  await page.goto("/review?preview=1&e2e=list&rows=1");
+  await expect(page.getByText("1 מתוך 1")).toBeVisible();
+  await page.getByRole("button", { name: "אישור" }).click();
+  await expect(page.getByText("הכל מאושר")).toBeVisible();
+  await page.getByRole("link", { name: "חזרה לבית" }).click();
+  await expect(page).toHaveURL(/\/$|\/\?/);
 });
 
 test("an empty review queue sends you home", async ({ page }) => {
   await page.goto("/review?preview=1");
-  await page.getByRole("link", { name: "לדף הבית" }).click();
+  await page.getByRole("link", { name: "חזרה לבית" }).click();
   await expect(page).toHaveURL(/\/\?preview=1$/);
 });
 
@@ -100,7 +106,9 @@ test("tab bar has four tabs, and each opens its screen (FLOW-364)", async ({ pag
   await bar.getByRole("link", { name: "הלוואות" }).click();
   await expect(page).toHaveURL(/\/settings\/loans\?preview=1$/);
   await bar.getByRole("link", { name: "קבועים" }).click();
-  await expect(page).toHaveURL(/\/missing-bills\?preview=1$/);
+  await expect(page).toHaveURL(/\/recurring\?preview=1$/);
+  // Let the route change settle before the next tab click: the lazy screen can drop an early click.
+  await expect(bar.getByRole("link", { name: "קבועים" })).toHaveAttribute("aria-current", "page");
   await bar.getByRole("link", { name: "בית", exact: true }).click();
   await expect(page).toHaveURL(/\/\?preview=1$/);
   // The add sits in Home's band, not in the tab bar (FLOW-364).

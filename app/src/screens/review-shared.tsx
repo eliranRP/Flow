@@ -1,6 +1,7 @@
 import { type ReviewRow } from "@flow/shared";
 import { useEffect, useRef, useState } from "react";
 import * as reviewE2eFixture from "../dev/review-e2e-fixture";
+import type { ReviewCase } from "../dev/review-e2e-fixture";
 import { type JevShown } from "./jev-review";
 import { focusReviewEmptyAction, takeReviewFocus } from "./review-focus";
 import { Button } from "../ui/button";
@@ -8,8 +9,7 @@ import { EmptyState } from "../ui/empty-state";
 import { ReviewPushPrompt } from "./review-push-prompt";
 import type { NotificationPrefs, PushSupport } from "../push";
 import { ReviewIcon } from "../ui/icons";
-import { skippedListPath, useSkippedReviewQuery } from "./review-skipped";
-import { ReviewSkippedLink } from "../ui/review-skipped-list";
+import { TextLink } from "../ui/text-link";
 import { ScreenHeader } from "../ui/screen-header";
 
 export const EMPTY_REVIEW: ReviewRow[] = [];
@@ -26,7 +26,7 @@ export const reviewLineFocus: {
 /** Dev-only fixture. A production build folds this to null and drops the module. */
 export const reviewE2e = import.meta.env.DEV ? reviewE2eFixture : null;
 
-export function useE2eReviewRows(active: boolean, size?: number): ReviewRow[] {
+export function useE2eReviewRows(active: boolean, size?: number, kind?: ReviewCase | null): ReviewRow[] {
   const [, bump] = useState(0);
   useEffect(() => {
     if (!import.meta.env.DEV || !active || reviewE2e == null) return;
@@ -35,7 +35,7 @@ export function useE2eReviewRows(active: boolean, size?: number): ReviewRow[] {
     });
   }, [active]);
   if (!import.meta.env.DEV || !active || reviewE2e == null) return EMPTY_REVIEW;
-  return reviewE2e.currentRows(size);
+  return reviewE2e.currentRows(size, kind);
 }
 
 export function reviewListPath(search: string): string {
@@ -113,16 +113,6 @@ export function listPlace(rows: ReviewRow[], ordered: ReviewRow[], fromList: boo
   return { index: index + 1, total: rows.length };
 }
 
-/** הצגת הכול with nothing waiting, above the skipped section. */
-export const REVIEW_NONE_WAITING = "אין פריטים שמחכים לאישור.";
-
-/** "project · category" for the statement row's ✦ line: what the card shows (U11). FLOW-305. */
-export function statementSuggestion(row: ReviewRow): string | null {
-  const suggestion = reviewSuggestion(row);
-  if (suggestion == null) return null;
-  return [suggestion.project, suggestion.category].filter((part) => part != null).join(" · ");
-}
-
 /** `jev` marks the fields whose shown value is Jev's fill, so the card says הצעת Jev there. */
 export function reviewSuggestion(row: ReviewRow, reversal = false, jev?: JevShown) {
   const split = reviewIsSplit(row);
@@ -148,7 +138,6 @@ export function ReviewEmpty({
   homeTo,
   homeLabel,
   backTo,
-  skippedLink = false,
   pushPrompt = false,
   pushSample,
 }: {
@@ -157,14 +146,11 @@ export function ReviewEmpty({
   homeTo?: string;
   homeLabel?: string;
   backTo?: string;
-  /** FLOW-309, owner pick 2026-10-08: "N פריטים דולגו" under the action when cards were skipped. */
-  skippedLink?: boolean;
   /** FLOW-502: the one-time "תזכורת בערב" card under the action. */
   pushPrompt?: boolean;
   /** Stories: the card's prefs and this browser's support, instead of the live read. */
   pushSample?: { prefs: NotificationPrefs; support: PushSupport };
 }) {
-  const skipped = useSkippedReviewQuery(skippedLink && !filtered);
   // FLOW-309: the last card left with focus in its action bar; the action takes it (after the title's).
   // A ref, so StrictMode's second run of the effect still knows (the title focuses itself again).
   const handed = useRef<boolean | null>(null);
@@ -172,18 +158,17 @@ export function ReviewEmpty({
     handed.current ??= takeReviewFocus();
     if (handed.current) focusReviewEmptyAction();
   }, []);
-  const skippedCount = skippedLink && !filtered && !skipped.isError ? (skipped.data?.length ?? 0) : 0;
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} layout="inline" />
+      <ScreenHeader title="לאישור" backTo={backTo ?? "/"} backText={backTo == null ? "בית" : undefined} layout="inline" />
       <EmptyState
         icon={<ReviewIcon />}
         title={filtered ? "אין פריטים לאישור בפרויקט הזה" : "הכל מאושר"}
         body={filtered ? "אין פריטים של הפרויקט הזה בתור." : "אין פריטים שמחכים לך. נעדכן כשיגיע משהו חדש."}
         action={(
           <>
-            <Button variant="pill" to={homeTo ?? `/${search}`}>{homeLabel ?? "לדף הבית"}</Button>
-            <ReviewSkippedLink count={skippedCount} to={skippedListPath(reviewListPath(search))} />
+            <Button full to={homeTo ?? `/${search}`}>{homeLabel ?? "חזרה לבית"}</Button>
+            {filtered ? null : <TextLink to={`/review/filed${search}`} chevron={false}>מה אושר היום</TextLink>}
           </>
         )}
         aside={pushPrompt && !filtered ? <ReviewPushPrompt sample={pushSample?.prefs} support={pushSample?.support} /> : null}

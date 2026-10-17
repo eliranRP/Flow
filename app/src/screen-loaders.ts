@@ -35,7 +35,6 @@ export const screenLoaders = {
   projectProfit: () => import("./screens/project-profit-screen"),
   projectMonthProfit: () => import("./screens/project-month-profit-screen"),
   search: () => import("./screens/search"),
-  missingBills: () => import("./screens/missing-bills-screen"),
   lineSplit: () => import("./screens/line-split"),
   loanDetail: () => import("./screens/loan-detail-screen"),
   help: () => import("./screens/HelpScreen"),

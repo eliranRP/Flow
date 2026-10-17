@@ -78,14 +78,15 @@ describe("reviewer sample saves", () => {
     if (!bolts) throw new Error("missing sample row");
     renderQueue(bolts, "ok");
     expect(screen.queryByText("חסר קטגוריה, הקישו לבחירה")).not.toBeInTheDocument();
-    expect(await screen.findByRole("button", { name: "בחירת קטגוריה" }, { timeout: 2500 })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "קטגוריה: לא נבחר" }, { timeout: 2500 })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
   });
 
-  it("opens the category picker from בחירת קטגוריה (FLOW-309)", async () => {
+  it("opens the category picker from the category row (FLOW-309)", async () => {
     const bolts = reviewerQueue[1];
     if (!bolts) throw new Error("missing sample row");
     renderQueue(bolts, "ok");
-    fireEvent.click(await screen.findByRole("button", { name: "בחירת קטגוריה" }, { timeout: 2500 }));
+    fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: לא נבחר" }, { timeout: 2500 }));
     const where = new URL((await screen.findByTestId("where")).textContent, "https://flow.test");
     expect(where.pathname).toMatch(/\/change$/);
     expect(where.searchParams.get("item")).toBe(bolts.id);

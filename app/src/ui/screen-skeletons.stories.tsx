@@ -20,7 +20,7 @@ export const Projects: Story = { render: () => <ProjectsSkeleton />, tags: ["cli
 /** FLOW-371: Loans loading (board loansLoading). Wired into the loans section of loan-setup.tsx. */
 export const Loans: Story = { render: () => <LoansSkeleton />, tags: ["clip-no-text"] };
 
-/** FLOW-371: קבועים loading (board recurringLoading). Wired into the קבועים list in missing-bill-list.tsx. */
+/** FLOW-371: קבועים loading (board recurringLoading). Wired into the קבועים list (screens/recurring-screen.tsx). */
 export const Recurring: Story = { render: () => <RecurringSkeleton />, tags: ["clip-no-text"] };
 
 /** FLOW-371: Profit loading (board profitLoading). Wired into the Profit screen's ScreenState. */
