@@ -16,13 +16,13 @@ import type { MemoryLoanStore } from "./loan-detail-store";
 function renderLoan(store: MemoryLoanStore, loanId: string, wrap: (ui: ReactNode) => ReactNode = (ui) => ui, path = "details") {
   return renderWithProviders(
     <Routes>
-      <Route path="/settings/loans/:loanId" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" />)} />
-      <Route path="/settings/loans/:loanId/details" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" view="details" />)} />
-      <Route path="/settings/loans/:loanId/future" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" view="future" />)} />
-      <Route path="/settings/loans/:loanId/future/:period" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" view="period" />)} />
-      <Route path="/settings/loans" element={<p>רשימת ההלוואות</p>} />
+      <Route path="/loans/:loanId" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" />)} />
+      <Route path="/loans/:loanId/details" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" view="details" />)} />
+      <Route path="/loans/:loanId/future" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" view="future" />)} />
+      <Route path="/loans/:loanId/future/:period" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" view="period" />)} />
+      <Route path="/loans" element={<p>רשימת ההלוואות</p>} />
     </Routes>,
-    { route: `/settings/loans/${loanId}${path === "" ? "" : `/${path}`}` },
+    { route: `/loans/${loanId}${path === "" ? "" : `/${path}`}` },
   );
 }
 

@@ -165,7 +165,7 @@ function AddSheet({ bank: sampleBank, fromProject }: { bank?: AddBankState; from
             title="הלוואה חדשה"
             icon={<LoanIcon />}
             chevron
-            onClick={() => { go(quickNewPath("/settings/loans", search, "loan")); }}
+            onClick={() => { go(quickNewPath("/loans", search, "loan")); }}
           />
           {ownerOnlyHeld ? null : (
           <ListRow

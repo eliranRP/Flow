@@ -86,8 +86,7 @@
    drops its icon too, so its words start on the same edge as the names above (FLOW-351), and so do
    the list's loading rows (FLOW-358). */
 @media (max-width: 359px) {
-  .ui-loan-list .ui-row-icon,
-  .ui-loan-new .ui-row-icon {
+  .ui-loan-list .ui-row-icon {
     display: none;
   }
 }

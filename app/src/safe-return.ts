@@ -8,7 +8,7 @@ const SETTINGS = "/settings";
 const SETTINGS_SUMIT = "/settings?sheet=sumit";
 const CONNECTIONS = "/settings/connections";
 const CONNECTIONS_SUMIT = "/settings/connections?sheet=sumit";
-const LOANS = "/settings/loans";
+const LOANS = "/loans";
 const APP_PATHS: ReadonlySet<string> = new Set([SETTINGS, SETTINGS_SUMIT, CONNECTIONS, CONNECTIONS_SUMIT]);
 
 function hasControlChar(value: string): boolean {

@@ -713,7 +713,7 @@ First-run setup replaces this strip. The old strips are removed; their notes sta
 
 ### 14b Loans
 
-- Mockup: `flow-501-mockup.html` option A (FLOW-501). Route `/settings/loans`, template A with the tab bar. No tab is current here: Settings sits behind the avatar (FLOW-364). `/settings/loans/:id` is kept for FLOW-110's detail page.
+- Mockup: `flow-501-mockup.html` option A (FLOW-501). Route `/loans`, template A with the tab bar. No tab is current here: Settings sits behind the avatar (FLOW-364). `/loans/:id` is kept for FLOW-110's detail page.
 - Header: Back labelled הגדרות to `/settings`, title הלוואות. No company goes back to Settings.
 - Steps: each loan's name, its hint (project, or ממתין לבדיקה in the warning tone), and the balance with small cents (".00" included); then the הלוואה חדשה row. A row tap opens the project sheet (FLOW-119).
 - States: two skeleton rows while loading; the error layout "לא הצלחנו לטעון את ההלוואות" with ניסיון חוזר and no new-loan row; the empty state "אין הלוואות עדיין" with one primary הלוואה חדשה.

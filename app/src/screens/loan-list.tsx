@@ -1,13 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import type { LoanKind, LoanStatus } from "@flow/shared";
 import { splitCents } from "../ui/amount";
-import { formatDisplay } from "../ui/date-math";
-import { DisclosureGroup } from "../ui/disclosure-group";
-import { BankIcon } from "../ui/icons";
-import { List, ListRow } from "../ui/list-row";
+import { israelToday } from "../ui/date-math";
+import { rateOnDate } from "@flow/shared";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError } from "../use-write";
-import { LOAN_KIND_LABEL, LOAN_STATUS_LABEL } from "./loan-copy";
 import { LOAN_DETAIL_COLUMNS, type LoanDetailDbRow } from "./loan-detail-data";
 import { formatLoanMoney } from "./loan-form";
 import type { LoanBalanceRow } from "./loan-match";
@@ -16,7 +13,7 @@ import { readLoanBalances, readProjectNames } from "./loan-reads";
 /**
  * FLOW-106 §3.1. The loans list: open loans, then paid-off and closed loans under a quiet
  * "נסגרו (N)", collapsed. Loans stay alphabetical (the owner dropped reordering, 2026-10-08).
- * A row opens the loan's page (`/settings/loans/:id`).
+ * A row opens the loan's page (`/loans/:id`).
  */
 export type LoanListRow = LoanBalanceRow & {
   /** Missing reads as amortizing. */
@@ -24,9 +21,10 @@ export type LoanListRow = LoanBalanceRow & {
   /** Missing reads as open. */
   status?: LoanStatus;
   closedOn?: string | null;
+  /** The annual rate in force today, in ppm. Missing (a sample) leaves the rate out of the row. */
+  ratePpm?: number;
 };
 
-export const LOANS_CLOSED_GROUP = "נסגרו";
 export const LOANS_CLOSED_UNDER_EMPTY = "הלוואות שנסגרו";
 
 function showMoney(minor: bigint, currency: string): string {
@@ -45,27 +43,6 @@ export function sortLoans<T extends { name: string; id: string }>(rows: readonly
 export function groupLoans(rows: readonly LoanListRow[]): { open: LoanListRow[]; closed: LoanListRow[] } {
   const sorted = sortLoans(rows);
   return { open: sorted.filter((row) => !isClosed(row)), closed: sorted.filter(isClosed) };
-}
-
-/**
- * The hint under an open loan: its kind when it is not a plain mortgage, then its project, or
- * ממתין לבדיקה. A closed loan says how it ended and when: "נפרעה · 30/11/2025".
- */
-export function loanListHint(row: LoanListRow): string | undefined {
-  const parts = loanListHintParts(row);
-  return parts.length === 0 ? undefined : parts.join(" · ");
-}
-
-/** The same hint as whole parts, so a narrow row drops a part with its "·" instead of wrapping (FLOW-347). */
-export function loanListHintParts(row: LoanListRow): string[] {
-  if (isClosed(row) && row.status != null) {
-    const label = LOAN_STATUS_LABEL[row.status];
-    return row.closedOn ? [label, formatDisplay(row.closedOn)] : [label];
-  }
-  const kind = row.kind != null && row.kind !== "amortizing" ? LOAN_KIND_LABEL[row.kind] : null;
-  // ממתין לבדיקה leads, so a narrow row drops the kind, never the words behind the warning tone.
-  if (row.flaggedParts > 0) return ["ממתין לבדיקה", ...(kind != null ? [kind] : [])];
-  return [kind, row.projectName ?? null].filter((part): part is string => part != null && part !== "");
 }
 
 /**
@@ -88,76 +65,13 @@ export function LoanBalance({ minor, currency, className }: { minor: bigint; cur
   );
 }
 
-function LoanRows({
-  rows,
-  muted = false,
-  onOpen,
-  rowRef,
-}: {
-  rows: readonly LoanListRow[];
-  muted?: boolean;
-  onOpen?: (row: LoanListRow) => void;
-  rowRef?: (id: string, node: HTMLButtonElement | null) => void;
-}) {
-  if (rows.length === 0) return null;
-  return (
-    <List className={muted ? "ui-loan-list ui-loan-closed-list" : "ui-loan-list"}>
-      {rows.map((row) => {
-        const hint = loanListHint(row);
-        const parts = loanListHintParts(row);
-        const balance = showsLoanBalance(row) ? showMoney(row.balanceMinor, row.currency) : null;
-        const common = {
-          title: row.name,
-          icon: <BankIcon />,
-          tone: muted ? ("muted" as const) : row.flaggedParts > 0 ? ("warning" as const) : undefined,
-          muted,
-          hintParts: parts.length > 0 ? parts : undefined,
-          meta: balance != null ? <LoanBalance minor={row.balanceMinor} currency={row.currency} /> : undefined,
-        };
-        return onOpen ? (
-          <ListRow
-            key={row.id}
-            variant="button"
-            {...common}
-            label={[row.name, balance, hint].filter((part) => part != null && part !== "").join(", ")}
-            chevron
-            buttonRef={(node) => { rowRef?.(row.id, node); }}
-            onClick={() => { onOpen(row); }}
-          />
-        ) : (
-          <ListRow key={row.id} variant="static" {...common} />
-        );
-      })}
-    </List>
-  );
-}
-
-/** Open loans, then "נסגרו (N)". Without `onOpen` the rows are static. */
-export function LoanGroupedList({
-  rows,
-  onOpen,
-  rowRef,
-  closedOpen,
-}: {
-  rows: readonly LoanListRow[];
-  onOpen?: (row: LoanListRow) => void;
-  rowRef?: (id: string, node: HTMLButtonElement | null) => void;
-  /** Stories open the group without a tap. */
-  closedOpen?: boolean;
-}) {
-  const { open, closed } = groupLoans(rows);
-  return (
-    <>
-      <LoanRows rows={open} onOpen={onOpen} rowRef={rowRef} />
-      <DisclosureGroup
-        label={open.length === 0 ? LOANS_CLOSED_UNDER_EMPTY : LOANS_CLOSED_GROUP}
-        count={closed.length}
-        defaultOpen={closedOpen}
-      >
-        <LoanRows rows={closed} muted onOpen={onOpen} rowRef={rowRef} />
-      </DisclosureGroup>
-    </>
-  );
+/** The rate in force on a day, as rateInForce reads it (loan-detail-data.ts), from the list's read. */
+function rateInForRow(loan: LoanDetailDbRow, today: string): number | undefined {
+  if (typeof loan.annual_rate_ppm !== "number") return undefined;
+  const rates = (Array.isArray(loan.loan_rates) ? loan.loan_rates : [])
+    .map((rate) => ({ effectiveDate: rate.effective_date, annualRatePpm: rate.annual_rate_ppm }))
+    .sort((a, b) => (a.effectiveDate < b.effectiveDate ? -1 : 1));
+  return rateOnDate(loan.annual_rate_ppm, rates, today);
 }
 
 /** The loans of a company: the list's rows (alphabetical) and each loan's full detail for the summary card. */
@@ -189,6 +103,7 @@ export async function readLoanList(companyId: string | null): Promise<LoanListDa
       kind: loan.kind,
       status: loan.status,
       closedOn: loan.closed_on,
+      ratePpm: rateInForRow(loan, israelToday()),
     };
   }));
   const detailRows = (loans.data ?? []).map((row) => {

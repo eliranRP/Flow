@@ -108,7 +108,7 @@ type ViewProps = { loan: LoanDetail; outlook: LoanOutlook | null; back: string; 
 /** Year rows shown before "לכל השנים": this year and the next four. */
 export const YEARS_SHOWN = 5;
 
-/** `/settings/loans/:id/future`: the next 12 months split by part, the rest of the loan, then one row per year. */
+/** `/loans/:id/future`: the next 12 months split by part, the rest of the loan, then one row per year. */
 export function LoanFutureView({ loan, outlook, back, loanPath, search }: ViewProps) {
   const [allYears, setAllYears] = useState(false);
   const yearsId = useId();
@@ -150,7 +150,7 @@ export function LoanFutureView({ loan, outlook, back, loanPath, search }: ViewPr
   );
 }
 
-/** `/settings/loans/:id/future/:period`: one year, or "end" for the rest of the loan, split by part. */
+/** `/loans/:id/future/:period`: one year, or "end" for the rest of the loan, split by part. */
 export function LoanPeriodView({ loan, outlook, period, back, loanPath, search }: ViewProps & { period: string }) {
   const shown = outlook == null ? null : period === "end" ? outlook.toEnd : outlook.years.find((item) => item.key === period) ?? null;
   const header = <ScreenHeader title={period === "end" ? "עד סוף ההלוואה" : period} kicker="תשלומים הבאים" backTo={back} />;

@@ -13,12 +13,12 @@ const TODAY = "2026-10-09";
 function Page({ loanId, store, viewer = false, path = "" }: { loanId: string; store: () => MemoryLoanStore; viewer?: boolean; path?: string }) {
   const memory = store();
   return (
-    <StoryRoute entry={`/settings/loans/${loanId}${path === "" ? "" : `/${path}`}`} viewer={viewer}>
+    <StoryRoute entry={`/loans/${loanId}${path === "" ? "" : `/${path}`}`} viewer={viewer}>
       <Routes>
-        <Route path="/settings/loans/:loanId" element={<LoanDetailScreen store={memory} today={TODAY} />} />
-        <Route path="/settings/loans/:loanId/details" element={<LoanDetailScreen store={memory} today={TODAY} view="details" />} />
-        <Route path="/settings/loans/:loanId/future" element={<LoanDetailScreen store={memory} today={TODAY} view="future" />} />
-        <Route path="/settings/loans/:loanId/future/:period" element={<LoanDetailScreen store={memory} today={TODAY} view="period" />} />
+        <Route path="/loans/:loanId" element={<LoanDetailScreen store={memory} today={TODAY} />} />
+        <Route path="/loans/:loanId/details" element={<LoanDetailScreen store={memory} today={TODAY} view="details" />} />
+        <Route path="/loans/:loanId/future" element={<LoanDetailScreen store={memory} today={TODAY} view="future" />} />
+        <Route path="/loans/:loanId/future/:period" element={<LoanDetailScreen store={memory} today={TODAY} view="period" />} />
       </Routes>
     </StoryRoute>
   );

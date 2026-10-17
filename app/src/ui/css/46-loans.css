@@ -1,0 +1,146 @@
+/* FLOW-139b. The הלוואות tab (/loans): a top-level list, the board's Loans frame. Flat rows (no card,
+   no hairline), the open loans, then the closed group collapsed under a quiet toggle. */
+
+.ui-loans-screen {
+  padding: var(--space-4) var(--space-side) calc(var(--tabbar-height) + var(--space-section));
+  color: var(--color-text);
+}
+
+.ui-loans-add {
+  display: flex;
+  align-items: center;
+  height: 44px;
+}
+
+.ui-loans-add-btn {
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-body-weight);
+  cursor: pointer;
+}
+
+.ui-loans-title {
+  margin: var(--space-1) 0 0;
+  font-size: var(--type-title-size);
+  line-height: var(--type-title-line);
+  font-weight: var(--type-title-weight);
+}
+
+.ui-loans-count {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-line2-size);
+}
+
+.ui-loans-summary-wrap {
+  margin-top: var(--space-4);
+}
+
+.ui-loans-section-head {
+  margin: 0;
+  padding: var(--space-4) 0 var(--space-1);
+  font-size: var(--type-section-size);
+  line-height: var(--type-section-line);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-loans-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-loans-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--row-height);
+  padding: var(--space-2) 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ui-loans-row-closed {
+  opacity: 0.7;
+}
+
+.ui-loans-initial {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--avatar);
+  height: var(--avatar);
+  border-radius: var(--radius-chip);
+  background: var(--color-avatar);
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-label-weight);
+}
+
+.ui-loans-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.ui-loans-name {
+  overflow: hidden;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-loans-meta {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--type-line2-size);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-loans-meta-warn {
+  color: var(--color-warning);
+}
+
+.ui-loans-amount {
+  flex: none;
+  font-size: var(--type-body-size);
+}
+
+.ui-loans-closed-toggle {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: var(--space-2);
+  padding: var(--space-4) 0 var(--space-2);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ui-loans-closed-title {
+  font-size: var(--type-section-size);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-loans-closed-action {
+  color: var(--color-accent-text);
+  font-size: var(--type-line2-size);
+}

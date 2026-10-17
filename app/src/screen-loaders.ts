@@ -38,6 +38,7 @@ export const screenLoaders = {
   search: () => import("./screens/search"),
   forecast: () => import("./screens/forecast-screen"),
   lineSplit: () => import("./screens/line-split"),
+  loans: () => import("./screens/loans-screen"),
   loanDetail: () => import("./screens/loan-detail-screen"),
   help: () => import("./screens/HelpScreen"),
   legal: () => import("./screens/PlaceholderScreen"),

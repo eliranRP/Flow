@@ -151,8 +151,7 @@
       "screens/loan-setup.tsx",
       "dev/loan-detail-sample.ts",
       "ui/date-sheet.tsx",
-      "ui/month-grid.tsx",
-      "ui/disclosure-group.tsx"
+      "ui/month-grid.tsx"
     ],
     "loan-project.spec.ts": [
       "screens/settings-screen.tsx",
@@ -421,8 +420,9 @@
         "/settings/connections?preview=1": [
           "screens/connections-screen.tsx"
         ],
-        "/settings/loans?preview=1": [
-          "screens/settings-screen.tsx"
+        "/loans?preview=1": [
+          "screens/loans-screen.tsx",
+          "screens/loans-list.tsx"
         ],
         "/onboarding?preview=1": [
           "screens/onboarding-screen.tsx"

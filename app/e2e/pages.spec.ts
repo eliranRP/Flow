@@ -10,7 +10,7 @@ const pages: Array<[string, string]> = [
   ["/settings", "הגדרות"],
   ["/settings/categories", "קטגוריות"],
   ["/settings/connections", "חיבורים"],
-  ["/settings/loans", "הלוואות"],
+  ["/loans", "הלוואות"],
   ["/onboarding", "פרטי העסק"],
   ["/install", "התקנת Flow"],
   ["/transactions/1", "פרטי תנועה"],
