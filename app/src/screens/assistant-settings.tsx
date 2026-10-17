@@ -178,6 +178,9 @@ export function AiConnectionPage({
   const [minting, setMinting] = useState(false);
   const [mintError, setMintError] = useState(false);
   const [manualField, setManualField] = useState<CopyTarget | null>(null);
+  const commandRef = useRef<HTMLInputElement>(null);
+  const urlRef = useRef<HTMLInputElement>(null);
+  const headerRef = useRef<HTMLInputElement>(null);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [revoking, setRevoking] = useState(false);
   const status = useAssistantStatusQuery(sample == null && !liveNoCompany && preview === "off", secret != null);
@@ -243,12 +246,16 @@ export function AiConnectionPage({
     }
   }
 
-  async function copyValue(field: CopyTarget, value: string) {
+  async function copyValue(field: CopyTarget, value: string, node: HTMLInputElement | null) {
     try {
       await navigator.clipboard.writeText(value);
       setManualField(null);
       toast.show({ tone: "info", message: "הועתק" });
     } catch {
+      if (node) {
+        node.focus();
+        node.select();
+      }
       setManualField(field);
     }
   }
@@ -398,9 +405,10 @@ export function AiConnectionPage({
                 label="פקודת חיבור"
                 labelId="ai-command-label"
                 value={command}
+                valueRef={commandRef}
                 failed={manualField === "command"}
                 copyLabel="העתקה: פקודה"
-                onCopy={() => { void copyValue("command", command); }}
+                onCopy={() => { void copyValue("command", command, commandRef.current); }}
               />
             ) : (
               <>
@@ -408,17 +416,19 @@ export function AiConnectionPage({
                   label="כתובת שרת MCP"
                   labelId="ai-url-label"
                   value={mcpUrl}
+                  valueRef={urlRef}
                   failed={manualField === "url"}
                   copyLabel="העתקה: כתובת"
-                  onCopy={() => { void copyValue("url", mcpUrl); }}
+                  onCopy={() => { void copyValue("url", mcpUrl, urlRef.current); }}
                 />
                 <CodeField
                   label="כותרת"
                   labelId="ai-header-label"
                   value={`Authorization: Bearer ${secret.secret}`}
+                  valueRef={headerRef}
                   failed={manualField === "secret"}
                   copyLabel="העתקה: כותרת"
-                  onCopy={() => { void copyValue("secret", `Authorization: Bearer ${secret.secret}`); }}
+                  onCopy={() => { void copyValue("secret", `Authorization: Bearer ${secret.secret}`, headerRef.current); }}
                 />
               </>
             )}

@@ -47,6 +47,7 @@ export const readRpcs = new Set([
   "project_cash_years",
   "project_category_months",
   "project_waiting",
+  "projects_cash_month",
   "recurring_changes",
   "recurring_schedule",
   "project_recurring_changes",
