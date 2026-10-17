@@ -10,16 +10,14 @@ import { LoanDetailScreen } from "./loan-detail-screen";
 import type { MemoryLoanStore } from "./loan-detail-store";
 
 // FLOW-106 B. The loan page on a memory store: the project sheet (moved here from the list,
-// FLOW-119), refusals, and the viewer's static rows.
+// FLOW-119), refusals, and the viewer's static rows. FLOW-139c: the cards and the payments page.
 
-// FLOW-434: the rows these tests open moved to the פרטי הלוואה page, so it is the default entry.
-function renderLoan(store: MemoryLoanStore, loanId: string, wrap: (ui: ReactNode) => ReactNode = (ui) => ui, path = "details") {
+// FLOW-139c: the loan page is one page of cards; every payment is on /loans/:id/payments.
+function renderLoan(store: MemoryLoanStore, loanId: string, wrap: (ui: ReactNode) => ReactNode = (ui) => ui, path = "") {
   return renderWithProviders(
     <Routes>
       <Route path="/loans/:loanId" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" />)} />
-      <Route path="/loans/:loanId/details" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" view="details" />)} />
-      <Route path="/loans/:loanId/future" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" view="future" />)} />
-      <Route path="/loans/:loanId/future/:period" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" view="period" />)} />
+      <Route path="/loans/:loanId/payments" element={wrap(<LoanDetailScreen store={store} today="2026-10-09" view="payments" />)} />
       <Route path="/loans" element={<p>רשימת ההלוואות</p>} />
     </Routes>,
     { route: `/loans/${loanId}${path === "" ? "" : `/${path}`}` },
@@ -105,24 +103,23 @@ describe("loan page: project (FLOW-119 on the loan page)", () => {
 describe("loan page: states and the viewer", () => {
   it("shows a viewer static rows with no sheets and no delete", () => {
     renderLoan(sampleLoanStore(), "loan-bridge", (ui) => <ViewerPreview>{ui}</ViewerPreview>);
-    expect(screen.getByRole("heading", { name: "פרטי הלוואה" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "הלוואת גישור" })).toBeInTheDocument();
     expect(screen.getByText("בית דוגמה 9")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^פרויקט/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^מצב/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^סטטוס/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "מחיקת ההלוואה" })).not.toBeInTheDocument();
   });
 
   it("leads a paid-off loan with נפרעה and its date only, and changes its status from there (FLOW-138, FLOW-356)", async () => {
     renderLoan(sampleLoanStore(), "loan-old", undefined, "");
-    expect(screen.getByText(/^נפרעה · \d\d\/\d\d\/\d{4}$/)).toBeInTheDocument();
-    expect(screen.queryByText("יתרה")).not.toBeInTheDocument();
-    expect(screen.queryByText("תשלום חודשי")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^מצב/ })).not.toBeInTheDocument();
+    expect(screen.getAllByText(/^נפרעה · \d\d\/\d\d\/\d{4}$/)[0]).toBeInTheDocument();
+    expect(screen.queryByText("יתרה היום")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^התשלום הבא/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "שינוי מצב" }));
     await waitFor(() => { expect(screen.getByRole("radio", { name: "נפרעה" })).toHaveAttribute("aria-checked", "true"); });
-    // Reopening brings the balance back; the מצב row lives on the פרטי הלוואה page (FLOW-434).
-    fireEvent.click(screen.getByRole("radio", { name: "פתוחה" }));
-    await waitFor(() => { expect(screen.getByText("יתרה")).toBeInTheDocument(); });
+    // Reopening brings the balance back.
+    fireEvent.click(screen.getByRole("radio", { name: "פעילה" }));
+    await waitFor(() => { expect(screen.getByText("יתרה היום")).toBeInTheDocument(); });
   });
 
   it("offers the tint ניסיון חוזר on a failed read, not the filled one (FLOW-334)", () => {
@@ -143,7 +140,7 @@ describe("loan page: states and the viewer", () => {
     const store = sampleLoanStore();
     vi.spyOn(store, "update").mockRejectedValueOnce(new Error("loan_payments_after_close"));
     renderLoan(store, "loan-bridge");
-    fireEvent.click(screen.getByRole("button", { name: /^מצב/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^סטטוס/ }));
     fireEvent.click(screen.getByRole("radio", { name: "נפרעה" }));
     const dateSheet = screen.getByRole("dialog", { name: "תאריך פירעון" });
     expect(dateSheet).toHaveTextContent("התשלום האחרון שויך ב־01/10/2026. אי אפשר לבחור יום לפניו.");
@@ -155,16 +152,15 @@ describe("loan page: states and the viewer", () => {
 
   it("shows payment amounts without a minus (DESIGN-RULES §3.7)", () => {
     renderLoan(sampleLoanStore(), "loan-mortgage");
-    const row = screen.getByRole("link", { name: /^תשלום 01\/09\/2026/ });
-    expect(row).toHaveAccessibleName("תשלום 01/09/2026, $1,512.40");
-    expect(row.textContent).not.toMatch(/[-−]/);
+    const [row] = screen.getAllByRole("link", { name: /\$5,240$/ });
+    expect(row?.textContent).not.toMatch(/[-−]/);
   });
 
   it("checks the default row when the loan names the keyed category itself", async () => {
     const store = sampleLoanStore();
     await store.update("loan-mortgage", { categoryIds: { interest: "cat-interest" } });
     renderLoan(store, "loan-mortgage");
-    fireEvent.click(screen.getByRole("button", { name: /^ריבית ריבית$/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^ריבית ריבית/ }));
     expect(screen.getByRole("radio", { name: "ברירת מחדל · ריבית" })).toHaveAttribute("aria-checked", "true");
   });
 });
@@ -175,66 +171,66 @@ function firstBack(): HTMLElement {
   return button;
 }
 
-describe("loan page: what it leads with (FLOW-434)", () => {
-  it("leads an amortizing loan with the next payment and opens the years ahead", async () => {
+describe("loan page: what it leads with (FLOW-139c)", () => {
+  it("leads an amortizing loan with its balance, the next payment, the year's parts and the last three payments", () => {
     renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "");
-    expect(screen.getByText(/^תשלום הבא · /)).toBeInTheDocument();
+    expect(screen.getByText("יתרה היום")).toBeInTheDocument();
+    expect(screen.getByText(/^נפרע \$[\d,]+ מתוך \$240,000 · לתשלום עד \d{4}$/)).toBeInTheDocument();
+    expect(screen.getByText(/^התשלום הבא · 01\/11$/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "שולם השנה" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("link", { name: /^תשלומים הבאים/ }));
-    expect(await screen.findByRole("heading", { name: "לפי שנה" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("link", { name: /^2027,/ }));
-    expect(await screen.findByText("לתשלום בשנה")).toBeInTheDocument();
-    expect(screen.getByText("12 תשלומים")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "3 התשלומים האחרונים" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "כל התשלומים" })).toHaveAttribute("href", "/loans/loan-mortgage/payments");
   });
 
   it("opens the part's category sheet from its שולם השנה row", async () => {
     renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "");
-    fireEvent.click(screen.getByRole("button", { name: /^ריבית,/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^ריבית ריבית/ }));
     expect(await screen.findByRole("dialog", { name: "ריבית" })).toBeInTheDocument();
   });
 
-  it("steps Back one page at a time: a year to תשלומים הבאים, that to the loan", async () => {
-    renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "future/2027");
-    fireEvent.click(firstBack());
-    expect(await screen.findByRole("heading", { name: "לפי שנה" })).toBeInTheDocument();
-    fireEvent.click(firstBack());
-    expect(await screen.findByText(/^תשלום הבא · /)).toBeInTheDocument();
-  });
-
-  it("opens the rest of the loan, and says so for a year the schedule does not have", () => {
-    const { unmount } = renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "future/end");
-    expect(screen.getByText(/^לתשלום עד \d{4}$/)).toBeInTheDocument();
-    unmount();
-    renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "future/1999");
-    expect(screen.getByText("אין לוח תשלומים להלוואה הזו")).toBeInTheDocument();
-  });
-
-  it("shows a viewer the שולם השנה rows without a sheet to open", () => {
-    renderLoan(sampleLoanStore(), "loan-mortgage", (ui) => <ViewerPreview>{ui}</ViewerPreview>, "");
-    expect(screen.getByText(/^תשלום הבא · /)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^ריבית,/ })).not.toBeInTheDocument();
+  it("opens the rate sheet from a rate change row, and the ריבית row for a new rate", async () => {
+    renderLoan(sampleLoanStore(), "loan-bridge", undefined, "");
+    expect(screen.getByRole("heading", { name: "שינויי ריבית" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^מ־01\/09\/2026/ }));
+    expect(await screen.findByRole("dialog", { name: "שינוי ריבית" })).toBeInTheDocument();
   });
 
   it("leaves out a part at $0, and leads the bridge loan with its interest (design r1)", () => {
     const { container } = renderLoan(sampleLoanStore(), "loan-bridge", undefined, "");
-    expect(container.querySelector(".ui-loan-next")?.textContent).toMatch(/\$2,250(\.00)?$/);
-    expect(screen.getByRole("button", { name: /^ריבית,/ })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^קרן,/ })).not.toBeInTheDocument();
+    expect(container.querySelector(".ui-loan-next-card")).toHaveTextContent("$2,250");
+    expect(screen.getByRole("button", { name: /^ריבית ריבית/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^קרן/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/^ריבית בלבד: הקרן \(\$240,000\) תיפרע בסוף, /)).toBeInTheDocument();
   });
 
-  it("lists this year and the next four, then opens the rest with לכל השנים", () => {
-    renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "future");
-    expect(screen.getAllByRole("link", { name: /^\d{4},/ })).toHaveLength(5);
-    const more = screen.getByRole("button", { name: "לכל השנים" });
-    expect(more).toHaveAttribute("aria-expanded", "false");
-    fireEvent.click(more);
-    expect(screen.getAllByRole("link", { name: /^\d{4},/ }).length).toBeGreaterThan(5);
-    expect(screen.queryByRole("button", { name: "לכל השנים" })).not.toBeInTheDocument();
-  });
-
-  it("has no next payment for a demand loan, and the future page says why", () => {
-    renderLoan(sampleLoanStore(), "loan-partner", undefined, "future");
-    expect(screen.getByText("אין לוח תשלומים להלוואה הזו")).toBeInTheDocument();
+  it("has no next payment for a demand loan, and says the balance is the principal", () => {
+    renderLoan(sampleLoanStore(), "loan-partner", undefined, "");
+    expect(screen.queryByText(/^התשלום הבא/)).not.toBeInTheDocument();
+    expect(screen.getByText("יתרת קרן")).toBeInTheDocument();
   });
 });
 
+describe("loan page: all payments (FLOW-139c)", () => {
+  it("lists every payment by year, newest year first, with the count and the total", () => {
+    renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "payments");
+    expect(screen.getByText("כל התשלומים")).toBeInTheDocument();
+    expect(screen.getByText("22 תשלומים מאז 01/2025 · שיפוץ דוגמה 12")).toBeInTheDocument();
+    const years = screen.getAllByRole("heading", { level: 2 }).map((node) => node.textContent);
+    expect(years).toEqual(["2026 · 10 תשלומים", "2025 · 12 תשלומים"]);
+    expect(screen.getAllByRole("link", { name: /\$5,240$/ })).toHaveLength(22);
+  });
+
+  it("opens a payment's transaction, and steps Back to the loan page", async () => {
+    renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "payments");
+    expect(screen.getAllByRole("link", { name: /\$5,240$/ })[0]).toHaveAttribute("href", expect.stringMatching(/^\/transactions\/txn-m22/));
+    fireEvent.click(firstBack());
+    expect(await screen.findByText("יתרה היום")).toBeInTheDocument();
+  });
+
+  it("leaves the principal out of an interest-only payment's split", () => {
+    renderLoan(sampleLoanStore(), "loan-bridge", undefined, "payments");
+    const rows = screen.getAllByRole("link");
+    expect(rows.some((row) => row.textContent.includes("קרן"))).toBe(false);
+    expect(rows.some((row) => row.textContent.includes("ריבית $"))).toBe(true);
+  });
+});

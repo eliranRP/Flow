@@ -29,14 +29,25 @@ export function DevLoans() {
   );
 }
 
-/** FLOW-106 B / FLOW-110: a loan's page on fake data. `?reset=1` starts the dev store over. */
+/**
+ * FLOW-106 B / FLOW-110: a loan's page on fake data. `?reset=1` starts the dev store over;
+ * `?today=YYYY-MM-DD` pins the day (the board frames were drawn on 2026-10-17, so the next payment reads 01/11).
+ */
 export function DevLoanDetail({ view }: { view?: LoanView } = {}) {
   const [params] = useSearchParams();
   // StrictMode runs the initializer twice, so the page reads the current store, not the returned one.
   useState(() => (params.get("reset") === "1" ? resetDevLoanStore() : null));
   const store = devLoanStore();
   const preview = params.get("preview");
-  return <LoanDetailScreen store={store} view={view} listPath={`/e2e/loans${preview ? `?preview=${encodeURIComponent(preview)}` : ""}`} />;
+  const today = params.get("today");
+  return (
+    <LoanDetailScreen
+      store={store}
+      view={view}
+      today={today != null && /^\d{4}-\d{2}-\d{2}$/.test(today) ? today : undefined}
+      listPath={`/e2e/loans${preview ? `?preview=${encodeURIComponent(preview)}` : ""}`}
+    />
+  );
 }
 
 /** FLOW-139. The loans list's summary card alone, for the board proof. */
@@ -52,7 +63,5 @@ export const loansRoutes: DevRoute[] = [
   { path: "loans", element: <DevLoans /> },
   { path: "loans-summary", element: <DevLoanSummary /> },
   { path: "loans/:loanId", element: <DevLoanDetail /> },
-  { path: "loans/:loanId/details", element: <DevLoanDetail view="details" /> },
-  { path: "loans/:loanId/future", element: <DevLoanDetail view="future" /> },
-  { path: "loans/:loanId/future/:period", element: <DevLoanDetail view="period" /> },
+  { path: "loans/:loanId/payments", element: <DevLoanDetail view="payments" /> },
 ];

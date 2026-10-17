@@ -46,8 +46,8 @@ export function groupLoans(rows: readonly LoanListRow[]): { open: LoanListRow[];
 }
 
 /**
- * A paid-off loan shows only נפרעה and its date: its balance is no longer news (FLOW-138, Eliran picked "Hide").
- * A closed loan drops a zero balance too, and keeps one that is still owed.
+ * A paid-off loan's balance is no longer news (FLOW-138), so the loan page leads with נפרעה and its date alone.
+ * The list no longer uses this: it shows $0 for a paid-off loan as the board draws it (FLOW-139c).
  */
 export function showsLoanBalance(row: Pick<LoanListRow, "status" | "balanceMinor">): boolean {
   if (row.status === "paid_off") return false;

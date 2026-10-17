@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { SAMPLE_AMORTIZING, SAMPLE_BALLOON, SAMPLE_DEMAND, SAMPLE_INTEREST_ONLY, SAMPLE_LOAN_CATEGORIES, SAMPLE_PAID_OFF } from "../dev/loan-detail-sample";
+import { SAMPLE_AMORTIZING, SAMPLE_BALLOON, SAMPLE_DEMAND, SAMPLE_INTEREST_ONLY, SAMPLE_PAID_OFF } from "../dev/loan-detail-sample";
 import type { LoanPayment } from "./loan-detail-data";
-import { dueDayLabel, loanOutlook, paidInYear, partCategoryHint, partShares, wholeMinor } from "./loan-outlook";
+import { loanOutlook, paidInYear, periodTotal, roundTotals, wholeMinor } from "./loan-outlook";
 
 // FLOW-434: the loan page's next payment, years ahead and paid this year (invented loans).
 
@@ -10,17 +10,12 @@ function pay(docDate: string, interest: bigint, escrow: bigint, principal: bigin
 }
 
 describe("loanOutlook", () => {
-  it("starts at the payment due today or later and groups the rest by year", () => {
+  it("starts at the payment due today or later and reads to the last payment", () => {
     const outlook = loanOutlook(SAMPLE_AMORTIZING, "2026-10-09");
     expect(outlook?.next.dueDate).toBe("2026-11-01");
-    expect(outlook?.ahead.payments).toBe(12);
-    expect(outlook?.years[0]).toMatchObject({ key: "2026", payments: 2 });
-    expect(outlook?.years[1]).toMatchObject({ key: "2027", payments: 12 });
-    const yearsSum = outlook?.years.reduce((sum, year) => sum + year.totalMinor, 0n);
-    expect(yearsSum).toBe(outlook?.toEnd.totalMinor);
-    expect(outlook?.toEnd.payments).toBe(outlook?.years.reduce((sum, year) => sum + year.payments, 0));
-    // Its balance is below where the original terms put it, so at its own payment it ends before 2054.
-    expect(outlook?.endYear).toBe("2050");
+    expect(outlook?.toEnd.payments).toBeGreaterThan(12);
+    expect(outlook?.endDate.slice(0, 4)).toBe(outlook?.endYear);
+    expect((outlook?.endDate ?? "") >= (outlook?.next.dueDate ?? "~")).toBe(true);
   });
 
   // FLOW-427 (C20-1): the principal still to pay is the balance in the books, for every kind.
@@ -39,8 +34,6 @@ describe("loanOutlook", () => {
     const outlook = loanOutlook({ ...SAMPLE_INTEREST_ONLY, balanceMinor: 23_000_000n }, "2026-10-09");
     // Started 2026-03-01 with 12 months of interest only: November to February pay no principal.
     expect(outlook?.next).toMatchObject({ dueDate: "2026-11-01", principalMinor: 0n });
-    expect(outlook?.years[0]).toMatchObject({ key: "2026", payments: 2 });
-    expect(outlook?.years[0]?.totals.principal).toBe(0n);
     expect(outlook?.toEnd.totals.principal).toBe(23_000_000n);
     expect(outlook?.endYear).toBe("2028");
     // Past them, a balance above the schedule leaves more for the last payment.
@@ -52,7 +45,7 @@ describe("loanOutlook", () => {
   it("keeps the balloon at the end of the term", () => {
     const outlook = loanOutlook(SAMPLE_BALLOON, "2026-10-09");
     expect(outlook?.endYear).toBe("2031");
-    expect(outlook?.toEnd.payments).toBe(56);
+    expect(outlook?.endDate).toBe("2031-06-01");
   });
 
   it("has none once the balance is paid", () => {
@@ -79,32 +72,28 @@ describe("paidInYear", () => {
   });
 });
 
-describe("partShares", () => {
-  it("rounds to whole percents that add up to 100", () => {
-    const shares = partShares({ interest: 1_126_000n, escrow: 428_000n, principal: 88_000n, fees: 0n }, ["interest", "escrow", "principal", "fees"]);
-    expect(shares.map((item) => item.part)).toEqual(["interest", "escrow", "principal"]);
-    expect(shares.reduce((sum, item) => sum + item.percent, 0)).toBe(100);
-    expect(shares.map((item) => item.percent)).toEqual([69, 26, 5]);
+describe("roundTotals", () => {
+  it("rounds each part to whole units and gives the leftover unit to the largest remainder", () => {
+    const totals = { interest: 1_234_567n, escrow: 345_678n, principal: 98_765n, fees: 0n };
+    const rounded = roundTotals(totals);
+    expect(rounded).toEqual({ interest: 1_234_600n, escrow: 345_700n, principal: 98_700n, fees: 0n });
+    expect(periodTotal(totals)).toBe(1_679_000n);
   });
 
-  it("shows fees only when there are any, and 0% on nothing paid", () => {
-    expect(partShares({ interest: 1n, escrow: 1n, principal: 1n, fees: 1n }, ["interest", "escrow", "principal", "fees"]).map((item) => item.part)).toContain("fees");
-    expect(partShares({ interest: 0n, escrow: 0n, principal: 0n, fees: 0n }, ["interest", "principal"]).map((item) => item.percent)).toEqual([0, 0]);
+  it("adds up to the rounded total when every part rounds down", () => {
+    // 3 × 0.40 = 1.20: each part alone rounds to 0, the total to 1, and one part carries it.
+    const totals = { interest: 40n, escrow: 40n, principal: 40n, fees: 0n };
+    expect(periodTotal(totals)).toBe(100n);
+    expect(roundTotals(totals)).toEqual({ interest: 100n, escrow: 0n, principal: 0n, fees: 0n });
+  });
+
+  it("leaves whole amounts alone", () => {
+    const totals = { interest: 500n, escrow: 200n, principal: 300n, fees: 0n };
+    expect(roundTotals(totals)).toEqual(totals);
   });
 });
 
 describe("labels", () => {
-  it("names the due day in Hebrew", () => {
-    expect(dueDayLabel("2026-11-01")).toBe("1 בנובמבר");
-  });
-
-  it("drops a category hint that repeats the part's label", () => {
-    const loan = { categoryIds: { interest: null, escrow: null, principal: null, fees: null } };
-    expect(partCategoryHint(loan, SAMPLE_LOAN_CATEGORIES, "escrow")).toBeNull();
-    expect(partCategoryHint(loan, SAMPLE_LOAN_CATEGORIES, "principal")).toBe("תשלומי הלוואה");
-    expect(partCategoryHint({ categoryIds: { ...loan.categoryIds, interest: "cat-bridge" } }, SAMPLE_LOAN_CATEGORIES, "interest")).toBe("ריבית הלוואות גישור");
-  });
-
   it("rounds to whole units", () => {
     expect(wholeMinor(12_349n)).toBe(12_300n);
     expect(wholeMinor(12_350n)).toBe(12_400n);

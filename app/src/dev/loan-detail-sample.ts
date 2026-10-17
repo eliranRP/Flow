@@ -71,17 +71,40 @@ export const SAMPLE_INTEREST_ONLY: LoanDetail = {
   flaggedParts: 0,
 };
 
+/**
+ * The mortgage's history, worked from its terms (FLOW-139c): one payment a month from its start
+ * (the 1st) up to and including `count` months, each month's interest the balance at the rate, the
+ * rest of the principal-and-interest is principal, and the escrow is the same every month. The
+ * balance is what is left, so the books and the schedule agree.
+ */
+function mortgageHistory(principal: bigint, ratePpm: number, piMinor: bigint, escrow: bigint, startYear: number, count: number) {
+  let balance = principal;
+  const list: LoanPayment[] = [];
+  for (let month = 0; month < count; month += 1) {
+    const year = startYear + Math.floor(month / 12);
+    const mm = String((month % 12) + 1).padStart(2, "0");
+    const interest = (balance * BigInt(ratePpm) + 6_000_000n) / 12_000_000n;
+    const principalPart = piMinor - interest;
+    balance -= principalPart;
+    list.push(payment(`txn-m${String(month + 1)}`, `${String(year)}-${mm}-01`, { interest, escrow, principal: principalPart }));
+  }
+  return { payments: list, balance };
+}
+
+/** The mortgage's 22 payments, 01/2025 to 10/2026: the page's pinned day is 17/10/2026 (see the dev route's ?today=). */
+const MORTGAGE = mortgageHistory(24_000_000n, 62_500, 487_700n, 36_300n, 2025, 22);
+
 export const SAMPLE_AMORTIZING: LoanDetail = {
   id: "loan-mortgage",
   companyId: "company-sample",
   name: "משכנתא דוגמה",
   currency: "USD",
-  principalMinor: 20_000_000n,
-  annualRatePpm: 60_000,
+  principalMinor: 24_000_000n,
+  annualRatePpm: 62_500,
   termMonths: 360,
   startDate: "2025-01-01",
-  paymentMinor: 151_240n,
-  escrowMinor: 31_330n,
+  paymentMinor: 524_000n,
+  escrowMinor: 36_300n,
   kind: "amortizing",
   interestOnlyMonths: null,
   amortizationMonths: null,
@@ -90,7 +113,7 @@ export const SAMPLE_AMORTIZING: LoanDetail = {
   projectId: "proj-a",
   categoryIds: NO_CATEGORIES,
   rates: [],
-  balanceMinor: 18_240_955n,
+  balanceMinor: MORTGAGE.balance,
   flaggedParts: 0,
 };
 
@@ -201,10 +224,7 @@ export function sampleLoans(): LoanSample[] {
     {
       loan: SAMPLE_AMORTIZING,
       categories: SAMPLE_LOAN_CATEGORIES,
-      payments: [
-        payment("txn-m2", "2026-09-01", { interest: 91_500n, escrow: 31_330n, principal: 28_410n }),
-        payment("txn-m1", "2026-08-01", { interest: 91_640n, escrow: 31_330n, principal: 28_270n }),
-      ],
+      payments: MORTGAGE.payments,
     },
     {
       loan: SAMPLE_BALLOON,
