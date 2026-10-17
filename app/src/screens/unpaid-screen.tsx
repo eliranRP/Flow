@@ -55,6 +55,7 @@ export function UnpaidScreen({ sample, summary }: { sample?: UnpaidInvoice[]; su
       backTo={`/${search}`}
       phase={phase}
       onRetry={actions.retry}
+      headerClassName="ui-inv-screen"
     >
       <div className={`ui-page-pad ui-inv-page${all.length === 0 && phase.kind === "ready" ? " ui-inv-page-done" : ""}`}>
         {open.length > 0 ? (
