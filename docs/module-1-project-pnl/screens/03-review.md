@@ -1,6 +1,6 @@
 # Review queue
 
-**Status:** Approved. Wireframe [03-review-v2](../wireframes/03-review-v2.png). [03-review](../wireframes/03-review.png) is superseded.
+**Status:** Approved. Wireframe 03-review-v2. 03-review is superseded.
 **Queue:** Suggested rows only. A unique invoice match or an existing supplier rule never enters the card ([0011](../../decisions/0011-auto-approve-high-confidence.md)). Those rows show in the strip `12 אושרו אוטומטית` (the count is `{n} אושרו אוטומטית`). `הצג` opens the list. There is no `אשר הכל` button.
 
 ## Purpose

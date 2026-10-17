@@ -549,24 +549,24 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 21
 
 ## 4. Screen index
 
-Mockups are 390×844 at 2×, light and dark. Paths are under `design/`. HTML sources live in `design/src/` and are not the review images. Flows below are the approved behaviour from the guide §13 and the decisions. They are not a second spec.
+Mockups are 390×844 at 2×, light and dark, on the design board (https://claude.ai/artifact/9grt9spjshVCxerYWrRXiD). Each name below is a board artboard: the file name without `.dc.html`, with `preset` naming the option when the file has one. The light twin is `<Name>Light.dc.html`. The old PNGs and HTML sources were deleted in T-03. Flows below are the approved behaviour from the guide §13 and the decisions. They are not a second spec.
 
-Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [screens/overview-dark.png](../../design/screens/overview-dark.png), [screens/overview-more-light.png](../../design/screens/overview-more-light.png), [screens/overview-more-dark.png](../../design/screens/overview-more-dark.png), [states/overview-states-light.png](../../design/states/overview-states-light.png), [states/overview-states-dark.png](../../design/states/overview-states-dark.png).
+Grids: DesignGuide (DesignGuide.dc.html), the board guide page.
 
 ### 01 Home
 
-- Mockups: the FLOW-364 board frames for Home, the month drawer, a past month and the empty first run (the 01-home, es-01, ld-01 and ld-07 PNGs were removed; the screen, the skeleton and the empty state are in the app, see the FLOW-364 log).
+- Board: Flow (Flow.dc.html preset top), FlowPicker (month drawer), FlowSeptember (past month), StatesHomeEmpty (empty first run).
 - Entry: tab בית. Sunday notification. Returning sign-in. [0018](../decisions/0018-two-notifications.md), guide §7.33.
 - Board (FLOW-364): the band holds the company, search, + and the avatar. The month pill steps by month and opens the month drawer, a 3-by-4 grid whose cells are 60px with the name and amount at the start edge. The split card (ממה מורכב) and the attention box follow. A past month has the darker band with the white back pill and no attention box. The compact bar shows the month and its figure once the band scrolls away.
 - Steps: the band's period pill opens 16. The hero is the label and the number. נכנס and יצא sit below the band. The pending card sits under the first two project rows and has a row to Review and a row to Unpaid with its total, each only when it has items (FLOW-321, FLOW-355). A project row opens 02. + opens 04. Overhead switch starts off ([0022](../decisions/0022-after-overhead-starts-off.md)). On, the hero stays company net profit ([0032](../decisions/0032-home-hero-stays-company-net-profit.md)).
 - Back: none. This is a tab root.
 - Success: the summary. Empty first run follows [0044](../decisions/0044-phase-0-shell-calls.md) and the FLOW-364 board (StatesHomeEmpty): a zero band, the bank card with "חיבור Mercury" opening the connections page and a manual-add link, and the list "מה יופיע כאן". The connections page is the one way in (FLOW-328). No greeting and no wordmark ([0069](../decisions/0069-back-and-one-tap-review.md)).
-- Error: skeleton while loading (`ld-01`). The loading band matches the calm hero. Offline is `ld-08`. A server load failure and the period pill are [0045](../decisions/0045-phase-0-design-gaps.md). Home no longer greets a missing name ([0069](../decisions/0069-back-and-one-tap-review.md) amends that sentence).
+- Error: skeleton while loading (States). The loading band matches the calm hero. Offline has no artboard yet. A server load failure and the period pill are [0045](../decisions/0045-phase-0-design-gaps.md). Home no longer greets a missing name ([0069](../decisions/0069-back-and-one-tap-review.md) amends that sentence).
 
 ### 02 Project
 
-- Mockups: [02-project-light.png](../../design/screens/02-project-light.png), [02-project-dark.png](../../design/screens/02-project-dark.png). Overhead on: [19-project-overhead-on-light.png](../../design/screens/19-project-overhead-on-light.png), [19-project-overhead-on-dark.png](../../design/screens/19-project-overhead-on-dark.png).
-- Empty: [es-02](../../design/states/es-02-project-empty-light.png). Loading: [ld-02](../../design/states/ld-02-project-skeleton-light.png).
+- Board: Projects (Projects.dc.html preset flip). Overhead on: Profit (Profit.dc.html preset project).
+- Empty: StatesProfitEmpty (StatesProfitEmpty.dc.html). Loading: StatesProfitLoading (StatesProfitLoading.dc.html).
 - Entry: a project row on Home or in the projects list.
 - Steps: band header, overhead switch (same preference as Home), optional budget ([0014](../decisions/0014-optional-project-budget.md)), categories. With the switch on: before, overhead share, after. [0032](../decisions/0032-home-hero-stays-company-net-profit.md).
 - Back: chevron, "חזרה", from one shared control. It returns to the screen that opened this one, and a fresh visit opens the parent. Browser back does the same. [0069](../decisions/0069-back-and-one-tap-review.md).
@@ -574,28 +574,28 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 
 ### 03 Review queue
 
-- Mockups: [03-review-light.png](../../design/screens/03-review-light.png), [03-review-dark.png](../../design/screens/03-review-dark.png).
-- Done: [es-03-review-done-light.png](../../design/states/es-03-review-done-light.png), [es-03-review-done-dark.png](../../design/states/es-03-review-done-dark.png). "הכל מאושר".
+- Board: Review (Review.dc.html preset card).
+- Done: Review (Review.dc.html preset done). "הכל מאושר".
 - Entry: tab לאישור, the Home pending card, or the 18:00 nudge. [0006](../decisions/0006-confirm-not-type.md), [0018](../decisions/0018-two-notifications.md).
 - Steps: one card. Project and category are two short rows, with no confidence number. הצעה sits on a line that is a real suggestion. A split line is not one, and a card that only needs a category has no הצעה heading. When Jev filled that line's value, the pill reads "✦ הצעת Jev" on `tint-strong` instead (`JevTag`, ✦ hidden from readers, one line); a supplier rule or a value the user set never carries it. The value cuts with an ellipsis before the pill and the chevron at 320. אישור accepts a complete card. It stays disabled, with a not-allowed cursor, while a remembered Jev on is still unconfirmed or a known-on read is still settling, and when the card says אין הצעה. That read ends within a second, and the card then keeps today's values. A failed read is off. While it waits, a note that will remain reserves its line with no pill and no words, and a card that settles without a note reserves nothing. The list paints as soon as it loads. The card waits on the signed-in user and company for at most a second before it reads the remembered flag. When this user has no remembered on, the stored card paints on the first frame. A miss skips that flag and reads the connector: off leaves the stored card approvable, and on waits for the suggestion. A reload remembers whether Jev was on for that user and company, including when לאישור is the first screen. Sign-out clears that flag. An expired session, a sign-out in another tab, and a switch to another user drop the in-memory connector cache as well. A categorised split closes the review and keeps the shares. Change opens 06. A plain אישור does not write a supplier rule. [0069](../decisions/0069-back-and-one-tap-review.md), [0075](../decisions/0075-save-on-tap-and-on-leave.md). High-confidence rows never appear here. [0011](../decisions/0011-auto-approve-high-confidence.md).
 - Banner: when rows were assigned today without waiting, "N תנועות שויכו היום בלי להמתין בתור". צפייה opens "שויכו היום". A row opens that transaction. Back returns to the queue. סגירה hides the banner for this visit. [0069](../decisions/0069-back-and-one-tap-review.md). An assistant approval in that count drops the queue clause, a count of 1 is singular, and the empty body covers both sources. [0080](../decisions/0080-mcp-connector.md).
 - Back: none on the tab. Change and Split close back to the card.
 - Success: the card leaves and the visit meter advances. The queue-done empty state when none remain. A toast, when it shows, sits under the header and does not cover דלג. Approve can still offer ביטול on that toast. [0069](../decisions/0069-back-and-one-tap-review.md).
-- Error: save failure toast (`er-05`).
+- Error: save failure toast (no artboard yet).
 
 ### 04 Add
 
-- Mockups: [04-add-light.png](../../design/screens/04-add-light.png), [04-add-dark.png](../../design/screens/04-add-dark.png).
+- Board: Add (Add.dc.html preset menu).
 - Entry: the + button.
 - Steps: the sheet opens over the screen that opened it. A direct `/add` still shows Home underneath. Until capture ships ([0020](../decisions/0020-capture-from-the-phone.md)), three quick actions (FLOW-331): פרויקט חדש (the project sheet on Projects), הלוואה חדשה (the new-loan sheet on Loans), חיבור בנק (the Mercury sheet on Connections; "מחובר" as the hint line when connected, "צריך לחבר מחדש" in warning when it needs it). No hints and no line about features to come. A tap replaces the sheet's entry, so Back from the target does not reopen it. Closing returns focus to +.
 - Cancel: ✕, scrim, swipe down, or back. Guide §3.3.
-- Success: processing screens [ld-05](../../design/states/ld-05-upload-processing-light.png) (bank) and [ld-06](../../design/states/ld-06-invoice-reading-light.png) (invoice), then results or the new row.
-- Error: [er-01-bank-file](../../design/states/er-01-bank-file-light.png) wrong file. [er-02-invoice-blurry](../../design/states/er-02-invoice-blurry-light.png) unreadable photo. Each has a dark twin.
+- Success: processing (invoice reading: AddReading (AddReading.dc.html); the bank file path was dropped), then results or the new row.
+- Error: wrong file and unreadable photo have no artboard yet.
 
 ### 05 Projects
 
-- Mockups: [05-projects-light.png](../../design/screens/05-projects-light.png), [05-projects-dark.png](../../design/screens/05-projects-dark.png).
-- Empty: [es-04](../../design/states/es-04-projects-none-light.png). Search miss: [es-06](../../design/states/es-06-search-none-light.png). Loading: [ld-03](../../design/states/ld-03-list-skeleton-light.png).
+- Board: Projects (Projects.dc.html preset list).
+- Empty: StatesProjectsEmpty (StatesProjectsEmpty.dc.html). Search miss: SearchEmpty (SearchEmpty.dc.html). Loading: StatesProjectsLoading (StatesProjectsLoading.dc.html).
 - Entry: tab פרויקטים.
 - Steps: search, open a project, create, archive (sheet 21). [0009](../decisions/0009-scalable-pickers.md).
 - Back: none. This is a tab root.
@@ -603,16 +603,16 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 
 ### 06 Change assignment
 
-- Mockups: [06-change-sheet-light.png](../../design/screens/06-change-sheet-light.png), [06-change-sheet-dark.png](../../design/screens/06-change-sheet-dark.png).
+- Board: Review (Review.dc.html preset sheet).
 - Entry: Change on a review card.
 - Steps: pick a project and a category. Remember-for-supplier starts on and previews the rule. Save. [0006](../decisions/0006-confirm-not-type.md), [0009](../decisions/0009-scalable-pickers.md).
 - Cancel: ✕, scrim, swipe, or back. Nothing is saved.
-- Success: toast, card updated. Error: [er-05](../../design/states/er-05-save-failed-light.png).
+- Success: toast, card updated. Error: no artboard yet.
 
 ### 07 Categories
 
-- Mockups: [07-categories-light.png](../../design/screens/07-categories-light.png), [07-categories-dark.png](../../design/screens/07-categories-dark.png).
-- Income empty: [es-07](../../design/states/es-07-categories-income-light.png).
+- Board: Settings (Settings.dc.html preset categories).
+- Income empty: no artboard yet.
 - Entry: Settings → קטגוריות.
 - Steps: expense and income segments. Rename, reorder, hide (23), merge (22a then 22b). Delete only when the category has no transactions. [0008](../decisions/0008-flat-categories-hide-or-merge.md).
 - Kept out of the P&L: a ⊘ mark in `--color-text-muted` right after the name (`role="img"`, label "לא נספר ברווח"). The name keeps `--color-text`, so the row does not read as hidden, and only the name truncates. A legend line under the list explains ⊘ when the segment has a kept-out row. The row sheet's third button toggles the flag on tap, with a hint line under it and a ביטול toast. The three loan categories show a locked line instead. [0106](../decisions/0106-kept-out-toggle.md).
@@ -621,27 +621,27 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 
 ### 08 Upload results
 
-Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The mockups stay for history.
+Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The old mockup is removed.
 
-- Mockups: [08-upload-results-light.png](../../design/screens/08-upload-results-light.png), [08-upload-results-dark.png](../../design/screens/08-upload-results-dark.png).
-- Entry: end of a bank import (`ld-05`). That path is not built.
+- Board: none.
+- Entry: end of a bank import (no artboard). That path is not built.
 - Steps: summary counts. ✕ closes the task. Guide §13, template A with ✕.
-- Error: stay on `er-01` if the file was rejected before this screen. That error is not a build task either.
+- Error: stay on the wrong-file error if the file was rejected before this screen. That error is not a build task either.
 
 ### 09 Onboarding
 
-First-run setup replaces this strip. The files stay. 09, 09c, and 09e are superseded and are not build tasks. 09b is merged into step 0 (פרטי העסק, uncounted) and then retired. 09d is merged into step 3 and then retired. 09a is unchanged. דלג sits in the top bar, not as a ghost under the primary. The counter is "שלב N מתוך 5". [0089](../decisions/0089-setup-runner.md).
+First-run setup replaces this strip. The old strips are removed; their notes stay. 09, 09c, and 09e are superseded and are not build tasks. 09b is merged into step 0 (פרטי העסק, uncounted) and then retired. 09d is merged into step 3 and then retired. 09a is unchanged. דלג sits in the top bar, not as a ghost under the primary. The counter is "שלב N מתוך 5". [0089](../decisions/0089-setup-runner.md).
 
-- Strip (not a screen), superseded: [09-onboarding-light.png](../../design/screens/09-onboarding-light.png), [09-onboarding-dark.png](../../design/screens/09-onboarding-dark.png).
-- 09a sign-in: [09a-onboarding-light.png](../../design/screens/09a-onboarding-light.png), [09a-onboarding-dark.png](../../design/screens/09a-onboarding-dark.png). No top bar, no progress. Wordmark, one value line, "כניסה או הרשמה", Google button, privacy line. [0033](../decisions/0033-google-sign-in.md), guide §7.33.
-  - Cancel: [er-03-google-cancelled](../../design/states/er-03-google-cancelled-light.png). Neutral note. The Google button is the retry. No help link.
-  - Fail: [er-04-google-failed](../../design/states/er-04-google-failed-light.png). Same note, red icon, and "צריך עזרה בכניסה?". `/help` is [0045](../decisions/0045-phase-0-design-gaps.md).
+- Strip (not a screen), superseded: Onboarding (Onboarding.dc.html preset welcome).
+- 09a sign-in: Onboarding (Onboarding.dc.html preset welcome). No top bar, no progress. Wordmark, one value line, "כניסה או הרשמה", Google button, privacy line. [0033](../decisions/0033-google-sign-in.md), guide §7.33.
+  - Cancel: no artboard yet. Neutral note. The Google button is the retry. No help link.
+  - Fail: no artboard yet. Same note, red icon, and "צריך עזרה בכניסה?". `/help` is [0045](../decisions/0045-phase-0-design-gaps.md).
   - Success: a new account goes to step 0. A returning account goes to the screen it asked for when that screen is on the sign-in return list (FLOW-308), otherwise Home. The callback line names it ("נכנסתם. עוברים לאישור.").
-- 09b company, merged into step 0 and retired: 09b-onboarding-light.png. The live step has no counter and no דלג.
-- 09c bank report, superseded: 09c-onboarding-light.png. Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The drawing shows a Hapoalim export. Do not build it.
-- 09d projects, merged into step 3 and retired: 09d-onboarding-light.png.
-- 09e install and notifications, superseded: 09e-onboarding-light.png. [0015](../decisions/0015-installable-mobile-web-app.md), [0018](../decisions/0018-two-notifications.md). Install is step 5. Notifications are not a step.
-- Each of 09b–09e has a `-dark.png`. One primary per step. Guide §3.4.
+- 09b company, merged into step 0 and retired: OnboardingBusiness (OnboardingBusiness.dc.html). The live step has no counter and no דלג.
+- 09c bank report, superseded: no artboard (not a build task). [0065](../decisions/0065-review-round5.md) point 40. The drawing shows a Hapoalim export. Do not build it.
+- 09d projects, merged into step 3 and retired: OnboardingProjects (OnboardingProjects.dc.html).
+- 09e install and notifications, superseded: OnboardingInstall (OnboardingInstall.dc.html). [0015](../decisions/0015-installable-mobile-web-app.md), [0018](../decisions/0018-two-notifications.md). Install is step 5. Notifications are not a step.
+- Each of 09b–09e has a light and a dark artboard (`<Name>Light.dc.html` and `<Name>.dc.html`). One primary per step. Guide §3.4.
 
 ### 10 Transaction detail
 
@@ -652,11 +652,11 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 - Split (FLOW-325): a "פיצול" section with two rows, "בין פרויקטים" (11) and "לפי קטגוריות" (11a). A line split by category lists its parts instead (category, the project in the hint, the amount and its percent at the end, "השאר · <category>" for the rest) and a "סה״כ" row, as the loan split does; a part row opens 11a. The project and category rows then say "מפוצל · N חלקים · לא נספר כאן". An open review (other than `split_mismatch`) or a loan split keeps "לפי קטגוריות" visible but off, with the reason under it; a line of zero hides it. A viewer sees the parts only.
 - Back: chevron. Delete opens 20. What delete removes is still an open question. [0030](../decisions/0030-confirmation-sheets.md).
 - Prev and next (FLOW-303): opened from a list, the top bar is Back · title · ˄ ˅ ⋯. ˄ is the row above and ˅ the row below, in the order the list showed; the chevrons are not mirrored. A move replaces the history entry, so Back returns to the list at its scroll spot. At a list end the button stays, `aria-disabled` in `disabled-text`, with a hidden hint. While a card loads or fails, ⋯ keeps its slot and the title sits under the bar. A deep link or a one-row list shows no arrows. No position on screen; screen readers hear "תנועה N מתוך M". Swipe is FLOW-314. Mockup: flow-303 option A.
-- Error: save toast `er-05`.
+- Error: save-failed toast.
 
 ### 11 Split
 
-- Mockups: [11-split-light.png](../../design/screens/11-split-light.png), [11-split-dark.png](../../design/screens/11-split-dark.png). Behaviour is [0069](../decisions/0069-back-and-one-tap-review.md) point 10 (Split v2: presets first). This amends the earlier "divide by amount or percent" rule: presets come first, there is no ₪ typing, and a manual percent sits behind "פיצול ידני".
+- Board: Split (Split.dc.html preset split). Behaviour is [0069](../decisions/0069-back-and-one-tap-review.md) point 10 (Split v2: presets first). This amends the earlier "divide by amount or percent" rule: presets come first, there is no ₪ typing, and a manual percent sits behind "פיצול ידני".
 - Entry: Split on a review card, or from detail.
 - Title: "פיצול בין פרויקטים". Then the amount, then "איך לפצל?".
 - Nothing is selected until a tap, unless a saved split is being re-edited. Four choices, one tap each: "שווה בין כל הפרויקטים", "שווה בין פרויקטים שאבחר", "לפי הכנסות", "לפרויקט אחד". Chosen opens a checklist of active projects. A ticked row shows its ₪ share. Nothing to type there. Income with no income in the period is disabled, with the reason "אין הכנסות בתקופה הזו". "לפרויקט אחד" opens the project picker. That picker does not offer "פיצול בין פרויקטים". The note above the list uses the hint colour, with space above and below it. [0075](../decisions/0075-save-on-tap-and-on-leave.md), [0076](../decisions/0076-collapse-split-to-one-project.md).
@@ -664,7 +664,7 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 - There is no שמירה button. A valid choice is saved by leaving. The saving row shows a small spinner in place of the check (`--spinner-radio`), and the other choices are disabled, with the disabled colour and the not-allowed cursor, until the save settles. The hold sentence is the muted hint. ביטול השינוי is the quiet link. One summary line, for example "₪250 לכל אחד מ־4 פרויקטים" when every part is the same amount, or "₪1,000 מתחלק שווה בין 3 פרויקטים" when an even split does not land on equal shekels, or "לפי הכנסות · N פרויקטים". Nothing chosen says "בחרו איך לפצל" in the primary text colour. A short manual split says "נשארו 30% לפצל". Over says "הסך 120%. צריך 100%." with only the total in the bad colour, and each row shows its own percent of the amount. A valid manual split says "הסך 100%" and "פיצול ידני · N פרויקטים". An invalid choice stays open. ביטול השינוי sits next to that sentence, and a second dismiss discards the change and closes. [0072](../decisions/0072-design-review-rulings.md), [0075](../decisions/0075-save-on-tap-and-on-leave.md).
 - Displayed shekel parts put the leftover agora on the last project so the line adds up. The save sends those shares reversed, so the stored agorot match the screen. Stored shares still sum to 10000 basis points.
 - Cancel: ✕. Guide §13.
-- Success: toast "הפיצול נשמר", then close. Error: `er-05`, "הפיצול לא נשמר", with "ניסיון חוזר". Values stay.
+- Success: toast "הפיצול נשמר", then close. Error: save-failed toast, "הפיצול לא נשמר", with "ניסיון חוזר". Values stay.
 
 ### 11a Split by category
 
@@ -679,8 +679,8 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 
 ### 12 Unpaid
 
-- Mockups: [12-unpaid-light.png](../../design/screens/12-unpaid-light.png), [12-unpaid-dark.png](../../design/screens/12-unpaid-dark.png).
-- Empty: [es-05-unpaid-none-light.png](../../design/states/es-05-unpaid-none-light.png), [es-05-unpaid-none-dark.png](../../design/states/es-05-unpaid-none-dark.png).
+- Board: Invoices (Invoices.dc.html preset list).
+- Empty: InvoicesDone (InvoicesDone.dc.html).
 - Entry: the unpaid figure on Home.
 - Steps: list invoices that are not in the cash P&L until paid or marked paid. [0004](../decisions/0004-cash-basis-for-v1.md), [0007](../decisions/0007-bank-statement-is-primary-input.md).
 - Back: chevron.
@@ -688,14 +688,14 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 
 ### 13 Notifications reference
 
-- Mockups: [13-notifications-light.png](../../design/screens/13-notifications-light.png), [13-notifications-dark.png](../../design/screens/13-notifications-dark.png).
+- Board: Settings (Settings.dc.html preset notifications).
 - This is the lock screen, not an app screen. Guide §3.
 - Copy and taps: [0018](../decisions/0018-two-notifications.md). Sunday summary opens Home. The 18:00 nudge opens Review, and only if the queue is not empty.
-- Off state inside the product: [es-08-notifications-off-light.png](../../design/states/es-08-notifications-off-light.png), [es-08-notifications-off-dark.png](../../design/states/es-08-notifications-off-dark.png).
+- Off state inside the product: SettingsNotifications (SettingsNotifications.dc.html).
 
 ### 14 Settings
 
-- Mockups: [14-settings-light.png](../../design/screens/14-settings-light.png), [14-settings-dark.png](../../design/screens/14-settings-dark.png).
+- Board: Settings (Settings.dc.html preset main).
 - Entry: tab הגדרות.
 - Steps: the account row, then one group with no section head (חיבורים and הלוואות, each opening a page), תצוגה (categories and the overhead switch, which starts off), and עוד. Projects stay on `/projects`. Notification times are not on this screen. [0082](../decisions/0082-settings-redesign.md), [0116](../decisions/0116-settings-connections-and-loans-pages.md), [0022](../decisions/0022-after-overhead-starts-off.md), [0033](../decisions/0033-google-sign-in.md).
 - With a company, the account area is two rows: the business name, which opens the one-field "שם העסק" sheet for an owner (static for a viewer), and the static Google email. [0108](../decisions/0108-rename-company-row.md).
@@ -721,16 +721,16 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 
 ### 15 Date picker
 
-- Field: [15a-date-field-light.png](../../design/screens/15a-date-field-light.png), [15a-date-field-dark.png](../../design/screens/15a-date-field-dark.png).
-- Single: [15b-date-single-light.png](../../design/screens/15b-date-single-light.png), [15b-date-single-dark.png](../../design/screens/15b-date-single-dark.png). Shortcuts היום / אתמול.
-- Range: [15c-date-range-light.png](../../design/screens/15c-date-range-light.png), [15c-date-range-dark.png](../../design/screens/15c-date-range-dark.png). Shortcuts החודש / חודש קודם / מתחילת השנה.
+- Field: no artboard yet.
+- Single: no artboard yet. Shortcuts היום / אתמול.
+- Range: no artboard yet. Shortcuts החודש / חודש קודם / מתחילת השנה.
 - Entry: a date field (manual entry, filters).
 - Steps: sheet, Sunday-first grid, one confirm button. Future days disabled. [0027](../decisions/0027-date-picker.md), guide §7.26.
 - Cancel: ✕ or scrim leaves the previous date.
 
 ### 16 Period sheet
 
-- Mockups: [16-period-sheet-light.png](../../design/screens/16-period-sheet-light.png), [16-period-sheet-dark.png](../../design/screens/16-period-sheet-dark.png).
+- Board: no artboard yet.
 - Entry: the period pill on Home, the project band and elsewhere.
 - Steps: the five presets (חודש · 3 חודשים · 6 חודשים · שנה · הכול) apply on tap. "טווח מותאם" opens 15c; with a custom range no preset is selected and the label shows the dates. [0019](../decisions/0019-home-periods-and-comparison.md), [0028](../decisions/0028-period-sheet-with-custom-range.md).
 - Cancel: ✕ or scrim keeps the current period.
@@ -739,66 +739,66 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 
 17a stays the later Android offer: the benefit rows, התקנה, and לא עכשיו. That `beforeinstallprompt` path is also step 5, where התקנה appears only after the event. Without it, step 5 shows the three ⋮ rows. 17b stays the later iPhone offer and shares `install-screen.tsx` with step 5. Both use the iOS 26 rows: מקישים ••• בספארי, בוחרים שיתוף ואז ״הוספה למסך הבית״, מקישים הוספה. "ההתקנה באייפון עובדת רק מספארי." and "פותחים את הקישור הזה בספארי" are retired. Step 5's primary is סיום. The later offer keeps הבנתי. The Hebrew labels (•••, שיתוף, הוספה למסך הבית, Open as Web App drawn as פתיחה כאפליקציה, הוספה, and Compact, Bottom, and Top tab layouts) need a check on a real device before release. The host is `location.host`, and in production `https://flow-app-dx5.pages.dev`.
 
-- Android: [17a-install-android-light.png](../../design/screens/17a-install-android-light.png), [17a-install-android-dark.png](../../design/screens/17a-install-android-dark.png). "התקנה" / "לא עכשיו" on the later offer.
-- iPhone: [17b-install-iphone-light.png](../../design/screens/17b-install-iphone-light.png), [17b-install-iphone-dark.png](../../design/screens/17b-install-iphone-dark.png). The iOS 26 rows, then "הבנתי" on the later offer.
+- Android: OnboardingInstall (OnboardingInstall.dc.html). "התקנה" / "לא עכשיו" on the later offer.
+- iPhone: OnboardingInstall (OnboardingInstall.dc.html). The iOS 26 rows, then "הבנתי" on the later offer.
 - Entry: after the first successful report, and only if the app is not installed. Also setup step 5. [0029](../decisions/0029-pwa-install-prompt.md), [0015](../decisions/0015-installable-mobile-web-app.md).
 - Dismiss: "לא עכשיו" or "הבנתי". Do not show it again inside the installed app.
 
 ### 20–23 Confirmation sheets
 
-| Action | Light | Dark | Flow |
+| Action | Board | Flow |
 |---|---|---|---|
-| Delete | [20-confirm-delete-light.png](../../design/screens/20-confirm-delete-light.png) | [20-confirm-delete-dark.png](../../design/screens/20-confirm-delete-dark.png) | Question, item, consequence, bad-tint confirm, ביטול, then undo toast |
-| Archive | [21-confirm-archive-light.png](../../design/screens/21-confirm-archive-light.png) | [21-confirm-archive-dark.png](../../design/screens/21-confirm-archive-dark.png) | Same pattern. Entry from the project menu |
-| Merge pick | [22a-merge-pick-light.png](../../design/screens/22a-merge-pick-light.png) | [22a-merge-pick-dark.png](../../design/screens/22a-merge-pick-dark.png) | Pick the surviving category |
-| Merge confirm | [22b-merge-confirm-light.png](../../design/screens/22b-merge-confirm-light.png) | [22b-merge-confirm-dark.png](../../design/screens/22b-merge-confirm-dark.png) | "X תנועות יעברו ל…", then confirm |
-| Hide | [23-confirm-hide-light.png](../../design/screens/23-confirm-hide-light.png) | [23-confirm-hide-dark.png](../../design/screens/23-confirm-hide-dark.png) | Hide, not delete. [0008](../decisions/0008-flat-categories-hide-or-merge.md) |
+| Delete | Projects (Projects.dc.html preset confirm) | Question, item, consequence, bad-tint confirm, ביטול, then undo toast |
+| Archive | Projects (Projects.dc.html preset confirm) | Same pattern. Entry from the project menu |
+| Merge pick | no artboard yet | Pick the surviving category |
+| Merge confirm | no artboard yet | "X תנועות יעברו ל…", then confirm |
+| Hide | no artboard yet | Hide, not delete. [0008](../decisions/0008-flat-categories-hide-or-merge.md) |
 
 Cancel on every sheet is ביטול, ✕, or the scrim. [0030](../decisions/0030-confirmation-sheets.md).
 
 ### Empty, loading, and error files
 
-Every file has `-light.png` and `-dark.png`. [0026](../decisions/0026-empty-loading-error-states.md).
+Each state has a dark artboard (`<Name>.dc.html`) and a light one (`<Name>Light.dc.html`). [0026](../decisions/0026-empty-loading-error-states.md).
 
-| Id | Path prefix | When |
+| Id | Board artboard | When |
 |---|---|---|
-| es-01 | `design/states/es-01-home-first-run` | Home before any data |
-| es-02 | `design/states/es-02-project-empty` | Project with no transactions |
-| es-03 | `design/states/es-03-review-done` | Queue cleared |
-| es-04 | `design/states/es-04-projects-none` | No projects |
-| es-05 | `design/states/es-05-unpaid-none` | No unpaid invoices |
-| es-06 | `design/states/es-06-search-none` | Search with no hits |
-| es-07 | `design/states/es-07-categories-income` | No income categories |
-| es-08 | `design/states/es-08-notifications-off` | Notifications off |
-| ld-01 | `design/states/ld-01-home-skeleton` | Home loading |
-| ld-02 | `design/states/ld-02-project-skeleton` | Project loading |
-| ld-03 | `design/states/ld-03-list-skeleton` | List loading |
-| ld-04 | `design/states/ld-04-button-loading` | Primary button busy |
-| ld-05 | `design/states/ld-05-upload-processing` | Not a build task. Bank file processing was dropped ([0065](../decisions/0065-review-round5.md) point 40) |
-| ld-06 | `design/states/ld-06-invoice-reading` | Invoice photo reading |
-| ld-07 | `design/states/ld-07-pull-to-refresh` | Pull to refresh |
-| ld-08 | `design/states/ld-08-offline` | Offline, nothing cached |
-| ld-09 | `design/states/ld-09-offline-cached` | Offline, cached data kept |
-| er-01 | `design/states/er-01-bank-file` | Wrong or unreadable bank file |
-| er-02 | `design/states/er-02-invoice-blurry` | Photo cannot be read |
-| er-03 | `design/states/er-03-google-cancelled` | Google window closed |
-| er-04 | `design/states/er-04-google-failed` | Google sign-in failed |
-| er-05 | `design/states/er-05-save-failed` | Save failed. Toast with "ניסיון חוזר" |
+| es-01 | StatesHomeEmpty | Home before any data |
+| es-02 | StatesProfitEmpty | Project with no transactions |
+| es-03 | Review (preset done) | Queue cleared |
+| es-04 | StatesProjectsEmpty | No projects |
+| es-05 | InvoicesDone | No unpaid invoices |
+| es-06 | SearchEmpty | Search with no hits |
+| es-07 | none yet | No income categories |
+| es-08 | none yet | Notifications off |
+| ld-01 | States | Home loading |
+| ld-02 | StatesProfitLoading | Project loading |
+| ld-03 | StatesProjectsLoading | List loading |
+| ld-04 | StatesSaving | Primary button busy |
+| ld-05 | none yet | Not a build task. Bank file processing was dropped ([0065](../decisions/0065-review-round5.md) point 40) |
+| ld-06 | AddReading | Invoice photo reading |
+| ld-07 | none yet | Pull to refresh |
+| ld-08 | none yet | Offline, nothing cached |
+| ld-09 | none yet | Offline, cached data kept |
+| er-01 | none yet | Wrong or unreadable bank file |
+| er-02 | none yet | Photo cannot be read |
+| er-03 | none yet | Google window closed |
+| er-04 | none yet | Google sign-in failed |
+| er-05 | none yet | Save failed. Toast with "ניסיון חוזר" |
 
 ### Design-system boards
 
-The live board is the Design canvas: its pages are Design guide, Ready for dev, Light theme · ready for dev, Flow & motion, Explorations and In design. The PNGs kept here are the earlier boards that the guide still cites.
+The design board (https://claude.ai/artifact/9grt9spjshVCxerYWrRXiD) is the design source. Its guide is the DesignGuide artboard (page guide). The screens are on the ready page (dark) and the light page.
 
-| Board | Light | Dark |
+| Board | Artboard |
 |---|---|---|
-| Empty and loading | [ds-7-empty-loading-light.png](../../design/system/ds-7-empty-loading-light.png) | [ds-7-empty-loading-dark.png](../../design/system/ds-7-empty-loading-dark.png) |
-| Pickers and sheets | [ds-8-pickers-sheets-light.png](../../design/system/ds-8-pickers-sheets-light.png) | [ds-8-pickers-sheets-dark.png](../../design/system/ds-8-pickers-sheets-dark.png) |
+| Empty and loading | States (States.dc.html) |
+| Pickers and sheets | DesignGuide (DesignGuide.dc.html) |
 
 ---
 
 ## 5. Do and don't
 
-Distilled from the owner's choices in [0023](../decisions/0023-violet-coloured-top-band.md), the superseded explorations in [docs/module-1-project-pnl/design/README.md](../module-1-project-pnl/design/README.md), and the principles in [design-system.md](../../design/system/design-system.md). The rejected boards stay in the repo. Do not build from them.
+Distilled from the owner's choices in [0023](../decisions/0023-violet-coloured-top-band.md), the superseded explorations in [docs/module-1-project-pnl/design/README.md](../module-1-project-pnl/design/README.md), and the principles in [design-system.md](../../design/system/design-system.md). The rejected explorations are not kept in the repo. Do not build from them.
 
 **Do**
 

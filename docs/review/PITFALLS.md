@@ -33,7 +33,7 @@ These notes are the section 7 rules used for the PR #6 review: the 12-point self
 Open these before editing the screen:
 
 - [design/system/implementation-guide.md](../../design/system/implementation-guide.md), including its section 12 checklists. Decision [0025](../decisions/0025-implementation-guide-is-mandatory.md).
-- The screen's source under `design/src/`. Settings is `design/src/14-settings-light.html` and `design/src/14-settings-dark.html`. This repo has no `design/screens/14-settings-*.png`.
+- The screen's board artboard. Settings is `Settings.dc.html` (dark) and `SettingsLight.dc.html` (light) on the design board. This repo has no settings PNG.
 - [docs/design/DESIGN-RULES.md](../design/DESIGN-RULES.md).
 - [docs/qa/CONTROLS.md](../qa/CONTROLS.md). A new control gets a row. The row is marked pass only after the test that exercises it.
 

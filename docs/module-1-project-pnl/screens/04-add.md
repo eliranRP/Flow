@@ -1,6 +1,6 @@
 # Add sheet
 
-**Status:** Approved. Wireframe [04-add](../wireframes/04-add.png), drawn over Home. The sheet is the same from every tab.
+**Status:** Approved. Wireframe 04-add, drawn over Home. The sheet is the same from every tab.
 **Bank files:** Not a build task. The add sheet has no bank row ([0066](../../decisions/0066-review-round7.md)). Bank lines come from the SUMIT sync.
 
 ## Purpose

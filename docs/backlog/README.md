@@ -387,7 +387,7 @@ A brief is short. It points the builder to exactly what to read and change:
 | Backlog | [TASKS.md](TASKS.md) |
 | Contributing rules, MCP-first, review handoff | [CONTRIBUTING.md](../../CONTRIBUTING.md) |
 | Pitfalls and checklists | [PITFALLS](../review/PITFALLS.md), [code checklist](../review/CHECKLIST-code.md), [design checklist](../review/CHECKLIST-design.md) |
-| Design rules and controls | [DESIGN-TEAM](../design/DESIGN-TEAM.md), [design log](../design/log/README.md), [DESIGN-RULES](../design/DESIGN-RULES.md), [CONTROLS.md](../qa/CONTROLS.md), [implementation guide](../../design/system/implementation-guide.md), screen sources in `design/src/` |
+| Design rules and controls | [DESIGN-TEAM](../design/DESIGN-TEAM.md), [design log](../design/log/README.md), [DESIGN-RULES](../design/DESIGN-RULES.md), [CONTROLS.md](../qa/CONTROLS.md), [implementation guide](../../design/system/implementation-guide.md), the design board (https://claude.ai/artifact/9grt9spjshVCxerYWrRXiD) |
 | MCP tools | [TOOLS.md](../mcp/TOOLS.md), code in `supabase/functions/flow-mcp/` |
 | Decisions | [docs/decisions](../decisions/README.md) |
 | Changelog | [docs/changelog.md](../changelog.md), and entries not yet folded in: [docs/changelog.d/](../changelog.d/README.md) |

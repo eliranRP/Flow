@@ -23,7 +23,7 @@ function Svg({ size = 24, stroke = 1.9, children }: IconProps & { children: Reac
   );
 }
 
-/** Paths from design/src/flow.py, the 24-grid set the mockups use. */
+/** Paths from the 24-grid icon set the design board uses. */
 export function HomeIcon(props: IconProps) {
   return (
     <Svg {...props}>
