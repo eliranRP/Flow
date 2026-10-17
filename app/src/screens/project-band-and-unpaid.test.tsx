@@ -64,7 +64,7 @@ describe("FLOW-335 project band", () => {
     expect(screen.queryByText("פעיל")).not.toBeInTheDocument();
   });
 
-  it("keeps the overhead switch in the ⋯ menu, and לפי חודש is a plain row with a chevron (FLOW-340 C, FLOW-438 cash row)", () => {
+  it("keeps the overhead switch in the edit sheet (from the ⋯ menu), and לפי חודש is a plain row with a chevron (FLOW-340 C, FLOW-438 cash row)", () => {
     render(wrap(<ProjectDetailScreen sample={project()} section="profit" />, "/projects/p1?period=month&at=2026-09"));
     const row = screen.getByRole("link", { name: /לפי חודש/ });
     expect(row).toHaveClass("ui-flow-line");
@@ -72,6 +72,7 @@ describe("FLOW-335 project band", () => {
     expect(row.closest(".ui-banner")).toBeNull();
     expect(screen.queryByRole("switch", { name: /רווח אחרי הוצאות כלליות/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+    fireEvent.click(screen.getByRole("button", { name: /עריכת פרטים/ }));
     expect(screen.getByRole("switch", { name: /רווח אחרי הוצאות כלליות/ })).toBeInTheDocument();
   });
 });

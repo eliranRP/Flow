@@ -1,5 +1,5 @@
 import { shekelsToAgorot } from "@flow/shared";
-import { useRef, useState, type SubmitEvent } from "react";
+import { useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { getSupabase } from "../lib/supabase";
 import { useCompanyCurrency } from "../company-currency";
@@ -23,14 +23,17 @@ export function ProjectFormSheet({
   open,
   onOpenChange,
   project,
+  extras,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   project?: ProjectFormValues;
+  /** The edit sheet's own controls after the fields: the overhead switch and the group. */
+  extras?: ReactNode;
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={project ? "עריכת פרויקט" : "פרויקט חדש"} panelClassName="ui-sheet-wide ui-sheet-g14 ui-sheet-pad28 ui-project-new">
-      <ProjectForm key={project == null ? "new" : `${project.id}:${project.name}:${project.type ?? ""}:${String(project.budget)}`} project={project} onClose={() => { onOpenChange(false); }} />
+      <ProjectForm key={project == null ? "new" : `${project.id}:${project.name}:${project.type ?? ""}:${String(project.budget)}`} project={project} extras={extras} onClose={() => { onOpenChange(false); }} />
     </Sheet>
   );
 }
@@ -39,7 +42,7 @@ function shekelsText(agorot: bigint | null): string {
   return agorot == null ? "" : String(Number(agorot) / 100);
 }
 
-function ProjectForm({ project, onClose }: { project?: ProjectFormValues; onClose: () => void }) {
+function ProjectForm({ project, extras, onClose }: { project?: ProjectFormValues; extras?: ReactNode; onClose: () => void }) {
   const blocked = useBlockedPreview();
   const companyCurrency = useCompanyCurrency();
   // The budget is in the company currency, so its field shows that currency's mark.
@@ -101,6 +104,7 @@ function ProjectForm({ project, onClose }: { project?: ProjectFormValues; onClos
       <MoneyField label="תקציב (אופציונלי)" prefix={mark} value={budget} onValueChange={setBudget} />
       <p className="ui-muted">נראה כמה נוצל, ונסמן כשעוברים אותו.</p>
       <p className="ui-muted">רק השם חובה. פרויקטים מ־SUMIT נוספים לבד.</p>
+      {extras}
       <Button type="submit" busy={save.isPending} disabled={holdWrites || trimmed.length < 2}>
         {project ? "שמירה" : "יצירת פרויקט"}
       </Button>

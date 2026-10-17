@@ -26,6 +26,10 @@ type ConfirmSheetProps = {
   returnFocusRef?: RefObject<HTMLElement | null>;
   /** A quiet link under ביטול to the path that loses nothing, such as moving the lines before a delete. */
   alternative?: { label: string; onClick: () => void };
+  /** false where the board draws no ✕ (swipe, the scrim and Escape still close). */
+  closeButton?: boolean;
+  /** Opt-in classes for the panel (the project finish confirm's roomier board rhythm). */
+  panelClassName?: string;
 };
 
 export function ConfirmSheet({
@@ -44,9 +48,11 @@ export function ConfirmSheet({
   onConfirm,
   returnFocusRef,
   alternative,
+  closeButton = true,
+  panelClassName,
 }: ConfirmSheetProps) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title={title} returnFocusRef={returnFocusRef} busy={busy}>
+    <Sheet open={open} onOpenChange={onOpenChange} title={title} returnFocusRef={returnFocusRef} busy={busy} closeButton={closeButton} panelClassName={panelClassName}>
       {item ? <p className="t-label text-text-secondary">{item}</p> : null}
       <p className={consequenceSize === "body" ? "ui-confirm-body" : "t-hint text-text-secondary"}>{consequence}</p>
       {warning ? <p className="ui-confirm-warning">{warning}</p> : null}

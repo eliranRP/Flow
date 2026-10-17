@@ -2,6 +2,7 @@ import { formatAmountText, type CashLine, type CashMonths, type ProjectDetail } 
 import { useRef, type ReactNode } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import {
+  cashMonthName,
   cashMonthKey,
   cashSideLabel,
   cashTitle,
@@ -13,8 +14,10 @@ import {
 } from "../cash";
 import { useHeldOrder } from "../list-hold";
 import { anchorOf, monthPeriod, shiftMonthKey, type PeriodChoice } from "../period";
+import { withPeriodSearch } from "../project-period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import {
+  PROJECT_CASH_MONTHS,
   projectCashHistoryPath,
   projectCashLinesPath,
   projectCashMonthPath,
@@ -32,6 +35,7 @@ import { BackButton, useBackTarget } from "../ui/back";
 import { Amount } from "../ui/amount";
 import { CashLineRows, CashMonthLines, cashLineKey } from "../ui/cash-line-rows";
 import { CashRows } from "../ui/cash-rows";
+import { ProjectMonthsCard, ProjectProfitCard } from "./project-page-cards";
 import { israelToday } from "../ui/date-math";
 import { FocusTitle } from "../ui/focus-title";
 import { BannerRows, type BannerRow } from "../ui/banner";
@@ -83,7 +87,9 @@ export function ProjectCashOverview({
   stateLine,
   menu,
   attention = [],
+  sinceProfit = null,
   budget,
+  budgetAdd,
   example,
   now,
 }: {
@@ -98,8 +104,12 @@ export function ProjectCashOverview({
   menu: ReactNode;
   /** Home's attention rows for this project: its late bills and income, and its changed charges. */
   attention?: BannerRow[];
+  /** The project's profit over its whole life, per currency (null while unread). */
+  sinceProfit?: { currency: string; minor: bigint }[] | null;
   /** FLOW-445: the budget card, when the project has a budget (the edit sheet lives with the page). */
   budget?: ReactNode;
+  /** The quiet "+ הוספת תקציב" a project with no budget shows after its profit rows. */
+  budgetAdd?: ReactNode;
   example?: ReactNode;
   /** Stories and tests pin the month names. */
   now?: Date;
@@ -124,9 +134,15 @@ export function ProjectCashOverview({
   // FLOW-445: נכנס and יצא sit in the band on one line; the month's profit and the rest stay in the list.
   const summaryRows = key == null ? [] : projectCashSummaryRows(project.id, key, rows, search, now);
   const bandRows = summaryRows.filter((row) => row.id === "in" || row.id === "out");
-  const listRows = summaryRows.filter((row) => !bandRows.includes(row));
+  // The read holds the last PROJECT_CASH_MONTHS months: a project younger than that began in its oldest one.
+  const oldest = data == null ? undefined : data.months[data.months.length - 1];
+  const sinceHint = oldest == null || data == null || data.months.length >= PROJECT_CASH_MONTHS
+    ? "כל התקופה עד היום"
+    : `מאז ${cashMonthName(cashMonthKey(oldest.month), new Date(0))}`;
+  const profitRow = summaryRows.find((row) => row.id === "profit");
+  const keptRow = summaryRows.find((row) => row.id === "kept");
   return (
-    <div className="ui-project-cash flex min-h-full flex-1 flex-col">
+    <div className="ui-project-cash ui-project-page flex min-h-full flex-1 flex-col">
       <TopBand
         wordmark={false}
         example={example}
@@ -140,10 +156,10 @@ export function ProjectCashOverview({
           {data == null ? (
             <Skeleton tone="band" className="ui-skel-project-num" />
           ) : (
-            <div className="t-display ui-project-profits">
+            <div className="ui-project-profits t-display">
               {rows.map((row) => (
                 <p key={row.currency}>
-                  <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} presentation="detail" />
+                  <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} presentation="detail" zeroCents={row.net_minor === 0n} />
                 </p>
               ))}
             </div>
@@ -175,39 +191,48 @@ export function ProjectCashOverview({
         actions={menu}
       />
       {data == null ? <ListSkeleton /> : null}
-      {listRows.length === 0 ? null : <CashRows rows={listRows} />}
-      {budget ? <div className="ui-page-pad">{budget}</div> : null}
-      {summaryFigures == null ? null : (
-        <div className="ui-page-pad">
-          <InvestmentSummary figures={summaryFigures} href={investmentHref} />
-        </div>
-      )}
-      {investment == null || summary ? null : (
-        <List className="ui-project-cash-more">
-          <ListRow
-            variant="item"
-            title="השקעה והלוואות"
-            hint={investment.hint}
-            meta={investment.figure == null ? undefined : <bdi className="ui-num ui-project-row-figure" dir="ltr">{investment.figure}</bdi>}
-            href={investmentHref}
-            chevron
+      <div className="ui-project-stack">
+        {/* The board puts the rows that need a hand first: its pending approvals, late bills and changed charges. */}
+        <BannerRows rows={attention} />
+        {budget}
+        {profitRow == null ? null : (
+          <ProjectProfitCard
+            monthName={cashMonthName(key ?? "", now)}
+            monthLabel={profitRow.name}
+            month={profitRow.amounts}
+            since={sinceProfit}
+            sinceHint={sinceHint}
+            monthHref={profitRow.href ?? "#"}
+            sinceHref={`/projects/${project.id}/profit${withPeriodSearch(search, { kind: "all", from: null, to: null })}`}
+            extra={keptRow}
           />
-        </List>
-      )}
-      {/* As on Home: the rows that need a hand, after the figures; an empty box hides. */}
-      <BannerRows rows={attention} />
-      {earlier.length > 0 ? (
-        <>
-          <SectionHead title="חודשים קודמים" />
-          <CashRows rows={earlier} months />
-          {/* As on Home (FLOW-417): the project's whole history, years then months, under the last month. */}
-          <p className="ui-page-pad">
-            <TextLink to={projectCashHistoryPath(project.id, search)} tone="quiet">
-              לכל החודשים
-            </TextLink>
-          </p>
-        </>
-      ) : null}
+        )}
+        {budgetAdd}
+        {summaryFigures == null ? null : <InvestmentSummary figures={summaryFigures} href={investmentHref} />}
+        {investment == null || summary ? null : (
+          <List className="ui-project-cash-more">
+            <ListRow
+              variant="item"
+              title="השקעה והלוואות"
+              hint={investment.hint}
+              meta={investment.figure == null ? undefined : <bdi className="ui-num ui-project-row-figure" dir="ltr">{investment.figure}</bdi>}
+              href={investmentHref}
+              chevron
+            />
+          </List>
+        )}
+        {earlier.length > 0 ? (
+          <ProjectMonthsCard
+            rows={earlier}
+            footer={(
+              /* As on Home (FLOW-417): the project's whole history, years then months, under the last month. */
+              <p className="ui-project-card-more">
+                <TextLink to={projectCashHistoryPath(project.id, search)} tone="quiet">לכל החודשים</TextLink>
+              </p>
+            )}
+          />
+        ) : null}
+      </div>
     </div>
   );
 }

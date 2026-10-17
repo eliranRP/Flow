@@ -7,7 +7,7 @@ import { absAgorot } from "../agorot";
 import { overheadHint, shownProfit } from "../overhead";
 import { useHoldWrites } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
-import { anchorOf, monthPeriod, periodPhrase, shiftMonthKey, windowLabel } from "../period";
+import { anchorOf, monthPeriod, periodPhrase, type PeriodChoice, shiftMonthKey, windowLabel } from "../period";
 import { cashMonthName } from "../cash";
 import { MonthStepper } from "../ui/month-stepper";
 import { useProjectPeriod, withPeriodSearch } from "../project-period";
@@ -40,7 +40,7 @@ import { useProjectGroups, type ProjectGroups } from "./project-group-sheets";
 import { ProjectInvestmentSection, type ProjectInvestment } from "./project-investment";
 import { ProjectCategories } from "./project-categories";
 import { ProjectExpectedMonths } from "./project-expected-months";
-import { investmentFigure, openLoans, PROJECT_RECENT_CAP, ProjectProfitRows } from "./project-overview";
+import { PROJECT_RECENT_CAP, ProjectProfitRows } from "./project-overview";
 import { ProjectTransactions } from "./project-transactions";
 import { ProjectCashOverview } from "./project-cash-screens";
 import { ProjectFormSheet } from "./project-form-sheet";
@@ -98,6 +98,8 @@ function ProjectLoading({ search, example, pill = true }: { search: string; exam
     </div>
   );
 }
+
+const ALL_PERIOD: PeriodChoice = { kind: "all", from: null, to: null };
 
 function projectRowProfit(
   project: NonNullable<ProjectDetail>,
@@ -197,6 +199,8 @@ export function ProjectDetailScreen({
   // FLOW-804: read once the project's own read has landed, so they never slow the page's paint.
   const liveGroups = useProjectGroups(projectId, sample == null && detail.data != null && !detail.isFetching);
   const groups = sampleGroups ?? liveGroups;
+  // The profit since the project began: a read over every period, once the page's own read has landed.
+  const lifetime = useProjectQuery(sample == null && section === "overview" && detail.data != null && !detail.isFetching ? projectId : "", ALL_PERIOD);
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();
   const blocked = useBlockedPreview();
@@ -338,10 +342,8 @@ export function ProjectDetailScreen({
   const bandSign = profitSign(profitRows.map(({ profit }) => profit));
   const bandWord = bandSign === "mixed" ? "רווח והפסד" : bandSign === "loss" ? "הפסד" : "רווח";
   const stateLine = projectStateLine(project);
-  const loans = openLoans(project);
   const projectSearch = withParams(periodQuery, { project: project.id });
   const investmentData = sampleInvestment ?? toProjectInvestment(project);
-  const investmentShown = investmentFigure(investmentData) != null;
   const overhead = (
     <Toggle
       label="רווח אחרי הוצאות כלליות"
@@ -378,8 +380,7 @@ export function ProjectDetailScreen({
       sample={sample != null}
       sampleRow={sampleMenuRow}
       overhead={overhead}
-      // FLOW-340 C: with no investment data the page hides its row, so the menu keeps the way in.
-      investmentTo={investmentShown || investmentData.isOverhead || loans.length > 0 ? undefined : sectionHref("investment")}
+      investmentTo={sectionHref("investment")}
     />
   );
   if (section === "overview") {
@@ -393,9 +394,9 @@ export function ProjectDetailScreen({
         investmentHref={sectionHref("investment")}
         stateLine={stateLine}
         menu={menu}
-        budget={(
-          <ProjectBudget project={project} spentAgorot={absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot)} />
-        )}
+        budget={<ProjectBudget project={project} spentAgorot={absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot)} part="card" />}
+        budgetAdd={<ProjectBudget project={project} spentAgorot={0n} part="add" />}
+        sinceProfit={(lifetime.data ?? (sample ? project : null)) == null ? null : projectRows(lifetime.data ?? project, companyCurrency).map((row) => ({ currency: row.currency, minor: row.profit_minor }))}
         attention={projectAttentionRows({
           projectId: project.id,
           pending: project.pending_count ?? 0,
@@ -575,12 +576,14 @@ function LegacyEmptyProject() {
 
 /** FLOW-445: the budget card with its edit sheet, on the expenses section. */
 /** FLOW-445: the budget card when a budget is set; with none, a quiet "+ הוספת תקציב" at the end of the page. */
-function ProjectBudget({ project, spentAgorot }: { project: NonNullable<ProjectDetail>; spentAgorot: bigint }) {
+function ProjectBudget({ project, spentAgorot, part = "both" }: { project: NonNullable<ProjectDetail>; spentAgorot: bigint; part?: "card" | "add" | "both" }) {
   const [editing, setEditing] = useState(false);
   // The owner's type text is on the month's row (the same cached read the menu uses).
   const type = useProjectsCashMonth(undefined, project.id).data?.projects.find((row) => row.id === project.id)?.type ?? null;
   const budget = project.budget_agorot ?? null;
   const currency = useCompanyCurrency();
+  // The overview draws the card first and the add link after the profit rows, as two parts of the one budget.
+  if ((budget == null && part === "card") || (budget != null && part === "add")) return null;
   return (
     <>
       {budget == null ? (

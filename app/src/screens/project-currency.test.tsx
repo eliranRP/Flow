@@ -172,6 +172,7 @@ describe("ProjectDetailScreen currency", () => {
     expect(screen.getByText("$2,000")).toBeInTheDocument();
     expect(screen.getByText("₪800")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+    fireEvent.click(screen.getByRole("button", { name: /עריכת פרטים/ }));
     expect(screen.getByText("החלק בהוצאות כלליות $750")).toBeInTheDocument();
   });
 

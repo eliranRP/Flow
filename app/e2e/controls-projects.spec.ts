@@ -47,9 +47,13 @@ test("a project opens its menu, categories, and a transaction", async ({ page })
   await toast(page, previewToast);
   await page.getByRole("button", { name: "ביטול" }).click();
   await expect(page.getByRole("dialog", { name: /^לסיים את/ })).toHaveCount(0);
-  // FLOW-340 C: the overhead switch lives in the ⋯ menu.
+  // The menu is the board's three rows; the overhead switch lives in the edit sheet it opens.
   await page.getByRole("button", { name: "עוד" }).click();
-  const overhead = page.getByRole("dialog", { name: "שיפוץ הרצל 12" }).getByRole("switch", { name: "רווח אחרי הוצאות כלליות" });
+  const menu = page.getByRole("dialog", { name: "שיפוץ הרצל 12" });
+  await expect(menu.getByRole("switch")).toHaveCount(0);
+  await expect(menu.getByRole("button", { name: "סגירה" })).toHaveCount(0);
+  await menu.getByRole("button", { name: /^עריכת פרטים/ }).click();
+  const overhead = page.getByRole("dialog", { name: "עריכת פרויקט" }).getByRole("switch", { name: "רווח אחרי הוצאות כלליות" });
   await overhead.click();
   await expect(overhead).toBeChecked();
   // FLOW-411: the lines show on open, with no extra tap and no jump to Settings (FLOW-340 C: on the expenses screen).
@@ -104,7 +108,7 @@ test("a category row opens its transactions and the waiting line opens that proj
   await expect(page.getByRole("heading", { name: "חומרים" })).toBeVisible();
   await expect(page.getByText("מלט")).toBeVisible();
   await page.goto("/e2e/project-detail?preview=1&section=expenses");
-  await page.getByRole("link", { name: /ממתינה לאישור/ }).click();
+  await page.getByRole("link", { name: /ממתינות לאישור/ }).click();
   await expect(page).toHaveURL(/project=p1/);
   await expect(page.getByRole("heading", { name: "לאישור" })).toBeVisible();
 });

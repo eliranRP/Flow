@@ -4,7 +4,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { BackButton } from "../../ui/back";
 import { ProjectCategoryScreen, ProjectDetailScreen, ProjectsScreen } from "../../screens/flow-screens";
 import { useHomePreview } from "../../preview";
-import { cash as devCash, investment as devInvestment, project as devProject } from "../project-cash-sample";
+import { cash as devCash, cashRow as devCashRow, investment as devInvestment, months as devMonths, project as devProject } from "../project-cash-sample";
 import { devProjectsCash } from "../projects-sample";
 import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY } from "../../forecast-sample";
 import { ProfitMonthsScreen } from "../../screens/profit-months";
@@ -19,10 +19,28 @@ const DEV_SCROLLED_Y = 320;
 const e2eProject: typeof devProject = {
   ...devProject,
   categories_by_currency: [{ currency: "USD", id: "c1", name: "חומרים", amount_minor: 4_000_000n }],
-  pending_count: 1,
+  pending_count: 2,
   pending_agorot: 40_000n,
+  // The profit since the start (the board's second profit row).
+  by_currency: (devProject.by_currency ?? []).map((row) => ({ ...row, profit_minor: -6_130_000n })),
   transactions: devProject.transactions.map((line) => (line.id === "t1" ? { ...line, description: "מלט" } : line)),
 };
+
+/** `?deletable=1`: a project with no activity and no investment card (the board's deletable frame), invented name. */
+const idleProject: typeof devProject = {
+  ...devProject,
+  name: "מטבח לקוח לדוגמה",
+  state_label: "ריצוף • עבודת לקוח",
+  budget_agorot: null,
+  direct_agorot: 0n,
+  by_currency: [],
+  pending_count: 0,
+  pending_agorot: 0n,
+  transactions: [],
+  loans: [],
+};
+const idleCash = devMonths([[devCashRow(0n, 0n, 0n)]]);
+const idleInvestment = { isOverhead: false, figures: null, categories: [], loans: [] };
 
 export function DevProjects() {
   return <ProjectsScreen sample={devDashboard} cashSample={devProjectsCash} />;
@@ -71,8 +89,9 @@ export function DevProjectDetail() {
     return () => { window.clearTimeout(timer); };
   }, [params]);
   // The menu's month row: the sample project's pending line (the finish warning), and deletable with `?deletable=1`.
+  const deletable = params.get("deletable") === "1";
   const menuBase = devProjectsCash.projects[0];
-  const menuRow = menuBase == null ? undefined : { ...menuBase, id: "p1", pending_count: 1, deletable: params.get("deletable") === "1" };
+  const menuRow = menuBase == null ? undefined : { ...menuBase, id: "p1", pending_count: deletable ? 0 : 2, deletable };
   return (
     <>
     <OpenProjectMenu sheet={params.get("sheet")} />
@@ -83,9 +102,9 @@ export function DevProjectDetail() {
       sectionTo={(target) => (target === "overview" ? "/e2e/project-detail?preview=1" : `/e2e/project-detail?preview=1&section=${target}`)}
       sampleExpected={params.get("expected") === "none" ? SAMPLE_EXPECTED_EMPTY : SAMPLE_EXPECTED}
       // `?budget=1` draws the flip with its budget (the board's flip frame, invented names and figures).
-      sample={{ ...e2eProject, budget_agorot: params.get("budget") === "1" ? e2eProject.budget_agorot : null }}
-      sampleCash={devCash}
-      sampleInvestment={devInvestment}
+      sample={deletable ? idleProject : { ...e2eProject, budget_agorot: params.get("budget") === "1" ? e2eProject.budget_agorot : null }}
+      sampleCash={deletable ? idleCash : devCash}
+      sampleInvestment={deletable ? idleInvestment : devInvestment}
       categoryTo="/e2e/project-category"
     />
     {params.get("add") === "1" ? <AddForm /> : null}
