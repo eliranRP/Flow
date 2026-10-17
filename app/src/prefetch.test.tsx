@@ -9,7 +9,7 @@ describe("projectLink", () => {
   it("reads a project page link and nothing deeper", () => {
     expect(projectLink("/projects/p1?period=all")).toEqual({ projectId: "p1", search: "?period=all" });
     expect(projectLink("/projects/p%201")).toEqual({ projectId: "p 1", search: "" });
-    expect(projectLink("/projects/p1/months")).toBeNull();
+    expect(projectLink("/projects/p1/profit")).toBeNull();
     expect(projectLink("/projects")).toBeNull();
     expect(projectLink("/review")).toBeNull();
   });

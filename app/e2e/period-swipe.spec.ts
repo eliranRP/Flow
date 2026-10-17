@@ -25,43 +25,37 @@ async function figureRow(page: Page) {
   return { y, left: box.x, right: box.x + box.width };
 }
 
-test("a swipe right on the figure goes to the earlier window, left comes back, and the edge and a vertical move do nothing", async ({ page, browserName }) => {
+test("a swipe right on the figure goes to the earlier month, and the edge, a vertical move and a swipe left at the current month do nothing", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "CDP touch events");
   await page.goto("/e2e/cash?preview=1");
-  // The band names the month on its pill; the swipe steps it.
-  const label = page.locator(".ui-band-month-name");
-  const current = await label.textContent();
+  // The dev route keeps no month of its own: a step shows as the route's `?month=` (the real Home steps its state).
+  const start = page.url();
   const cdp = await page.context().newCDPSession(page);
   const row = await figureRow(page);
 
-  // Finger moves right: the earlier window.
-  await touchSwipe(cdp, { x: 80, y: row.y }, { x: 280, y: row.y + 6 });
-  await expect(label).not.toHaveText(current ?? "");
-
-  // Finger moves left: the later window, back to the current one.
+  // At the current month a swipe left does nothing: there is no later month.
   await touchSwipe(cdp, { x: 280, y: row.y }, { x: 80, y: row.y });
-  await expect(label).toHaveText(current ?? "");
-
-  // At the current window a further swipe left does nothing.
-  await touchSwipe(cdp, { x: 280, y: row.y }, { x: 80, y: row.y });
-  await expect(label).toHaveText(current ?? "");
+  await expect(page).toHaveURL(start);
 
   // A start inside the 24px start-edge zone belongs to swipe-back (FLOW-332): no step.
   await touchSwipe(cdp, { x: 365, y: row.y }, { x: 165, y: row.y });
   await touchSwipe(cdp, { x: 10, y: row.y }, { x: 210, y: row.y });
-  await expect(label).toHaveText(current ?? "");
+  await expect(page).toHaveURL(start);
 
-  // Mostly vertical: the page scrolls, the period stays.
+  // Mostly vertical: the page scrolls, the month stays.
   await touchSwipe(cdp, { x: 120, y: row.y }, { x: 170, y: row.y - 200 });
-  await expect(label).toHaveText(current ?? "");
+  await expect(page).toHaveURL(start);
+  await page.evaluate(() => { window.scrollTo(0, 0); });
+
+  // Finger moves right: the earlier month.
+  await touchSwipe(cdp, { x: 80, y: row.y }, { x: 280, y: row.y + 6 });
+  await expect(page).toHaveURL(/\/e2e\/cash\?month=\d{4}-\d{2}$/);
 });
 
 test("Reduced motion: the figure stays put during the drag and the period swaps on release", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "CDP touch events");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/e2e/cash?preview=1");
-  const label = page.locator(".ui-band-month-name");
-  const current = await label.textContent();
   const cdp = await page.context().newCDPSession(page);
   const row = await figureRow(page);
   await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: 80, y: row.y }] });
@@ -70,5 +64,5 @@ test("Reduced motion: the figure stays put during the drag and the period swaps 
   }
   await expect(page.locator(".ui-pswipe").first()).toHaveCSS("transform", "none");
   await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-  await expect(label).not.toHaveText(current ?? "");
+  await expect(page).toHaveURL(/\/e2e\/cash\?month=\d{4}-\d{2}$/);
 });
