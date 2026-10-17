@@ -553,25 +553,6 @@ export function ClockIcon(props: IconProps) {
   );
 }
 
-/** FLOW-514: the movie's pause control (two bars). */
-export function PauseIcon(props: IconProps) {
-  return (
-    <Svg {...props}>
-      <line x1="9" y1="6" x2="9" y2="18" />
-      <line x1="15" y1="6" x2="15" y2="18" />
-    </Svg>
-  );
-}
-
-/** FLOW-514: the movie's play control. */
-export function PlayIcon(props: IconProps) {
-  return (
-    <Svg {...props}>
-      <polygon points="8 5 19 12 8 19 8 5" />
-    </Svg>
-  );
-}
-
 /** The project menu's rows (board Projects.dc.html): pencil for the edit row. */
 export function PencilIcon(props: IconProps) {
   return (

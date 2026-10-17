@@ -5,7 +5,7 @@ import { BooksProvider } from "../use-books";
 import { useParams } from "react-router-dom";
 import { SetupWelcome } from "../setup/welcome";
 import { SkipSheet } from "../setup/skip-sheet";
-import { StepConnect, type StepProps } from "../setup/steps";
+import { StepBusiness, StepConnect, type StepProps } from "../setup/steps";
 
 /** Dev-only e2e fixtures for the onboarding proofs: the same components the Storybook stories draw, with invented data and no session. */
 const noop: StepProps = {
@@ -38,6 +38,13 @@ export function DevSetupFrame() {
   const { frame = "connect" } = useParams();
   if (frame === "welcome") {
     return <SetupWelcome onStart={() => undefined} onSkipAll={() => undefined} />;
+  }
+  if (frame === "business") {
+    return (
+      <FixtureFrame>
+        <StepBusiness {...noop} onBack={undefined} companyId={null} initial={null} />
+      </FixtureFrame>
+    );
   }
   if (frame === "skip") {
     return (

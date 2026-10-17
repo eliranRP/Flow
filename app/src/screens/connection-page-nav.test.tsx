@@ -5,7 +5,6 @@ import { renderWithProviders } from "../test-render";
 import { backend, DASHBOARD, resetBackend, serve } from "./connection-page-test-backend";
 import { ConnectionsScreen } from "./connections-screen";
 import { ConnectionDetailPage } from "./connection-pages";
-import { OnboardingScreen } from "./onboarding-screen";
 import { SettingsScreen } from "./settings-screen";
 
 vi.mock("../lib/supabase", async () => (await import("./connection-page-test-backend")).supabaseModule());
@@ -27,7 +26,7 @@ function renderRoutes(route: string) {
         <Route path="/settings/connections/sumit" element={<ConnectionDetailPage provider="sumit" />} />
         <Route path="/settings/connections/mercury" element={<ConnectionDetailPage provider="mercury" />} />
         <Route path="/settings/connections/ai" element={<h1>AI page</h1>} />
-        <Route path="/onboarding" element={<OnboardingScreen />} />
+        <Route path="/setup/1" element={<h1>צעד העסק</h1>} />
         <Route path="/" element={<h1>בית</h1>} />
       </Routes>
       <Place />
@@ -78,47 +77,20 @@ describe("Back from a connection page (FLOW-918)", () => {
   });
 });
 
-describe("the page and the business form (FLOW-918)", () => {
-  /** Creating a business answers its id; `company` is what the dashboard says before that. */
+describe("the page without a business (FLOW-918)", () => {
   function serveForm(company: string | null) {
     serve({});
     const live = backend.answer;
     backend.answer = (name, args) => {
       if (name === "get_dashboard") return Promise.resolve({ data: { ...DASHBOARD, company_id: company }, error: null });
-      if (name === "create_company") return Promise.resolve({ data: "company-1", error: null });
       return live(name, args);
     };
   }
 
-  it("sends a business-less visit to the business form and returns to the same page", async () => {
+  it("sends a business-less visit to the setup's business step", async () => {
     serveForm(null);
     renderRoutes("/settings/connections/sumit");
     fireEvent.click(await screen.findByRole("link", { name: "פרטי העסק" }));
-    await waitFor(() => { expect(where()).toBe("/onboarding?return=%2Fsettings%2Fconnections%2Fsumit"); });
-    fireEvent.change(screen.getByLabelText("שם העסק"), { target: { value: "אלפא" } });
-    fireEvent.click(screen.getByRole("button", { name: "המשך" }));
-    await waitFor(() => { expect(where()).toMatch(/^\/settings\/connections\/sumit/); });
-  });
-
-  it("drops an off-site return and keeps Home as the default", async () => {
-    serveForm(null);
-    const { unmount } = renderRoutes("/onboarding?return=https://evil.example/steal");
-    fireEvent.change(screen.getByLabelText("שם העסק"), { target: { value: "אלפא" } });
-    fireEvent.click(screen.getByRole("button", { name: "המשך" }));
-    expect(await screen.findByRole("heading", { name: "בית" })).toBeInTheDocument();
-    expect(where()).toBe("/");
-    unmount();
-    renderRoutes("/onboarding");
-    fireEvent.change(screen.getByLabelText("שם העסק"), { target: { value: "אלפא" } });
-    fireEvent.click(screen.getByRole("button", { name: "המשך" }));
-    expect(await screen.findByRole("heading", { name: "בית" })).toBeInTheDocument();
-  });
-
-  it("keeps a preview visit to the business form on Home", async () => {
-    serveForm(null);
-    renderRoutes("/onboarding?preview=1");
-    fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
-    expect(await screen.findByRole("heading", { name: "בית" })).toBeInTheDocument();
-    expect(where()).toBe("/?preview=1");
+    await waitFor(() => { expect(where()).toBe("/setup/1"); });
   });
 });

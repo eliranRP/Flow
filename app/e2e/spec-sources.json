@@ -62,8 +62,7 @@
     "controls-sweep-settings.spec.ts": [
       "screens/settings-screen.tsx",
       "screens/categories-screen.tsx",
-      "screens/connections-screen.tsx",
-      "screens/onboarding-screen.tsx"
+      "screens/connections-screen.tsx"
     ],
     "controls-review.spec.ts": [
       "screens/",
@@ -434,9 +433,6 @@
         "/loans?preview=1": [
           "screens/loans-screen.tsx",
           "screens/loans-list.tsx"
-        ],
-        "/onboarding?preview=1": [
-          "screens/onboarding-screen.tsx"
         ],
         "/e2e/settings?preview=1": [
           "screens/settings-screen.tsx",

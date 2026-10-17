@@ -106,6 +106,6 @@ describe("AI connection page", () => {
   it("offers a link to the business details when there is no company", () => {
     renderWithProviders(<AiConnectionPage sample={{ state: "no-company" }} />);
     expect(screen.getByText("כדי לחבר עוזר צריך עסק.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "פרטי העסק" })).toHaveAttribute("href", expect.stringContaining("/onboarding"));
+    expect(screen.getByRole("link", { name: "פרטי העסק" })).toHaveAttribute("href", "/setup/1");
   });
 });

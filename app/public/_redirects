@@ -15,8 +15,6 @@
 /privacy/ /privacy 301
 /help /app-shell 200
 /help/ /help 301
-/onboarding /app-shell 200
-/onboarding/ /onboarding 301
 /invites /app-shell 200
 /invites/ /invites 301
 /setup /app-shell 200

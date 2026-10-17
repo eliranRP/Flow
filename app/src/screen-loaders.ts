@@ -8,7 +8,6 @@ export const screenLoaders = {
   review: () => import("./screens/review-screen"),
   changeForm: () => import("./screens/change-form"),
   addForm: () => import("./screens/add-sheet"),
-  onboarding: () => import("./screens/onboarding-screen"),
   projects: () => import("./screens/projects-screen"),
   projectDetail: () => import("./screens/project-detail-screen"),
   projectCash: () => import("./screens/project-cash-screens"),

@@ -15,6 +15,7 @@ import {
   sampleInvite,
 } from "../team-test-harness";
 import { CompanySwitcher } from "./company-switcher";
+import { NEW_COMPANY_PATH } from "./company-sheet";
 
 vi.mock("../lib/supabase", async () => {
   const { teamClient } = await import("../team-test-client");
@@ -100,7 +101,8 @@ describe("company switcher and the העסקים שלך sheet (FLOW-601, FLOW-513
   it("goes to the company form for + עסק חדש with no company named, and hides it from a viewer", async () => {
     const dialog = await openSheet();
     fireEvent.click(within(dialog).getByRole("button", { name: "עסק חדש" }));
-    await waitFor(() => { expect(screen.getByTestId("where")).toHaveTextContent("/onboarding"); });
+    await waitFor(() => { expect(screen.getByTestId("where")).toHaveTextContent("/setup/1"); });
+    expect(NEW_COMPANY_PATH).toBe("/setup/1?new=1");
     expect(shownCompanyFor(TEAM_USER)).toBeNull();
   });
 

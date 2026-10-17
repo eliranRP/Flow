@@ -2,15 +2,7 @@
 
 export const SETUP_TOTAL = 7;
 
-/** Production host. Drawings use `location.host`, never a stand-in domain. */
-export const SETUP_PRODUCTION_ORIGIN = "https://flow-app-dx5.pages.dev";
-
 export const SAVE_ERROR = "לא הצלחנו לשמור.";
-
-export const VAT_HINT = {
-  registered: "עוסק מורשה: מע״מ 18%.",
-  exempt: "עוסק פטור: בלי מע״מ.",
-} as const;
 
 /** The name the business gets when the skip-all sheet creates it (board: "העסק שלי"). */
 export const SKIP_ALL_COMPANY_NAME = "העסק שלי";
@@ -28,7 +20,6 @@ export const STEP_TITLE: Record<number, string> = {
 export const WELCOME_TITLE = "ברוכים הבאים ל־Flow";
 export const WELCOME_LEAD = "רואים בכל יום כמה כסף יש, ובכל חודש כמה כל פרויקט מרוויח. ההגדרה לוקחת כ־3 דקות.";
 export const WELCOME_NEXT = "בואו נתחיל";
-export const WELCOME_MOVIE_LABEL = "סרטון קצר";
 export const WELCOME_LATER = "דילוג, אגדיר אחר כך";
 
 export const NEXT = "המשך";
@@ -128,8 +119,3 @@ export const SETUP_ERROR_RETRY = "לא הצלחנו לשמור. נסו שוב.";
 /** Still used by the Home card and the old review path until FLOW-365/FLOW-514 step C. */
 export const COMPLETED_TOAST = "ההגדרה הושלמה.";
 export const SAMPLE_TOAST = "אישור ראשון. אפשר להמשיך בהגדרה.";
-
-export function setupHost(): string {
-  if (typeof location === "undefined" || location.host === "") return new URL(SETUP_PRODUCTION_ORIGIN).host;
-  return location.host;
-}

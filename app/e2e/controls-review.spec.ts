@@ -89,9 +89,8 @@ test("an empty review queue sends you home", async ({ page }) => {
 });
 
 test("a toast dismisses on tap", async ({ page }) => {
-  await page.goto("/onboarding?preview=1");
-  await page.getByRole("textbox", { name: "שם העסק" }).fill("בדיקה");
-  await page.getByRole("button", { name: "המשך" }).click();
+  await page.goto("/e2e/review-banner");
+  await page.getByRole("button", { name: "אישור" }).click();
   const note = page.locator(".ui-toast");
   await expect(note).toBeVisible();
   await note.click();

@@ -254,27 +254,6 @@
   white-space: nowrap;
 }
 
-.ui-onboard {
-  display: flex;
-  min-height: 100%;
-  flex: 1;
-  flex-direction: column;
-}
-
-.ui-onboard form {
-  display: flex;
-  min-height: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--space-4);
-  /* FLOW-334: 10px under the stacked subtitle was too tight. */
-  margin-top: var(--space-5);
-}
-
-.ui-onboard .ui-btn {
-  margin-top: auto;
-}
-
 .ui-gsi-spinner {
   width: var(--space-5);
   height: var(--space-5);
