@@ -2,11 +2,11 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { israelSyncPhrase } from "../sumit-copy";
 import { ViewerPreview } from "../use-is-viewer";
-import { backend, invokeEdge, mercuryStatus, resetBackend, serve } from "./connection-page-backend";
+import { backend, invokeEdge, mercuryStatus, resetBackend, serve } from "./connection-page-test-backend";
 import { renderPage } from "./connection-page-test-support";
 
-vi.mock("../lib/supabase", async () => (await import("./connection-page-backend")).supabaseModule());
-vi.mock("../edge", async () => (await import("./connection-page-backend")).edgeModule());
+vi.mock("../lib/supabase", async () => (await import("./connection-page-test-backend")).supabaseModule());
+vi.mock("../edge", async () => (await import("./connection-page-test-backend")).edgeModule());
 
 afterEach(resetBackend);
 

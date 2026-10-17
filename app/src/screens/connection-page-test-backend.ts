@@ -4,8 +4,8 @@ import { vi } from "vitest";
 /**
  * The fake server behind the connection page tests (FLOW-918). A test file declares its own `vi.mock`s
  * (they hoist) and hands them these factories, so every file shares one backend:
- *   vi.mock("../lib/supabase", async () => (await import("./connection-page-backend")).supabaseModule());
- *   vi.mock("../edge", async () => (await import("./connection-page-backend")).edgeModule());
+ *   vi.mock("../lib/supabase", async () => (await import("./connection-page-test-backend")).supabaseModule());
+ *   vi.mock("../edge", async () => (await import("./connection-page-test-backend")).edgeModule());
  * This file imports nothing from the app: the mocked modules would wait on it. Invented data only.
  */
 

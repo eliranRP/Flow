@@ -3,12 +3,12 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defaultPeriod } from "../period";
 import { renderWithProviders } from "../test-render";
-import { backend, DASHBOARD, resetBackend, serve, sumitStatus } from "./connection-page-backend";
+import { backend, DASHBOARD, resetBackend, serve, sumitStatus } from "./connection-page-test-backend";
 import { renderPage } from "./connection-page-test-support";
 import { ConnectionDetailPage } from "./connection-pages";
 
-vi.mock("../lib/supabase", async () => (await import("./connection-page-backend")).supabaseModule());
-vi.mock("../edge", async () => (await import("./connection-page-backend")).edgeModule());
+vi.mock("../lib/supabase", async () => (await import("./connection-page-test-backend")).supabaseModule());
+vi.mock("../edge", async () => (await import("./connection-page-test-backend")).edgeModule());
 
 afterEach(resetBackend);
 

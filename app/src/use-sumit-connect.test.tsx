@@ -1,12 +1,12 @@
-import { act, renderHook, screen, waitFor } from "@testing-library/react";
+import { act, renderHook, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { backend, invokeEdge, resetBackend } from "./screens/connection-page-backend";
+import { backend, invokeEdge, resetBackend } from "./screens/connection-page-test-backend";
 import { HookProviders } from "./screens/connection-page-test-support";
 import { useSumitConnect } from "./use-sumit-connect";
 
-vi.mock("./lib/supabase", async () => (await import("./screens/connection-page-backend")).supabaseModule());
-vi.mock("./edge", async () => (await import("./screens/connection-page-backend")).edgeModule());
+vi.mock("./lib/supabase", async () => (await import("./screens/connection-page-test-backend")).supabaseModule());
+vi.mock("./edge", async () => (await import("./screens/connection-page-test-backend")).edgeModule());
 
 afterEach(resetBackend);
 

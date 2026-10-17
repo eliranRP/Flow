@@ -2,14 +2,14 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
-import { backend, DASHBOARD, resetBackend, serve } from "./connection-page-backend";
+import { backend, DASHBOARD, resetBackend, serve } from "./connection-page-test-backend";
 import { ConnectionsScreen } from "./connections-screen";
 import { ConnectionDetailPage } from "./connection-pages";
 import { OnboardingScreen } from "./onboarding-screen";
 import { SettingsScreen } from "./settings-screen";
 
-vi.mock("../lib/supabase", async () => (await import("./connection-page-backend")).supabaseModule());
-vi.mock("../edge", async () => (await import("./connection-page-backend")).edgeModule());
+vi.mock("../lib/supabase", async () => (await import("./connection-page-test-backend")).supabaseModule());
+vi.mock("../edge", async () => (await import("./connection-page-test-backend")).edgeModule());
 
 afterEach(resetBackend);
 
