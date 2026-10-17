@@ -47,8 +47,9 @@ jobs:
             echo "db=false" >> "$GITHUB_OUTPUT"
           fi
           # FLOW-836: the app's source, its e2e specs, and the build, test and package config that the
-          # dev server and Playwright read. Script-only and doc-only changes skip the e2e job.
-          if grep -Eq '^(app/(src|e2e)/|app/(vite|playwright[^/]*|vitest)\.config\.[mc]?[jt]s$|app/package\.json$|package\.json$|pnpm-lock\.yaml$)' <<<"$files"; then
+          # dev server and Playwright read. The shared packages and the database files the app loads (migrations,
+          # seed, edge functions) count too. Script-only and doc-only changes skip the e2e job.
+          if grep -Eq '^(app/(src|e2e)/|app/(vite|playwright[^/]*|vitest)\.config\.[mc]?[jt]s$|app/package\.json$|package\.json$|pnpm-lock\.yaml$|packages/|supabase/(migrations|seed|functions)/)' <<<"$files"; then
             echo "ui=true" >> "$GITHUB_OUTPUT"
           else
             echo "ui=false" >> "$GITHUB_OUTPUT"

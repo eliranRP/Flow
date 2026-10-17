@@ -1045,6 +1045,8 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
   // A docs-only diff skips types and tests, and only then; static runs on every diff (backlog-index reads docs/backlog).
   assert.match(jobIn(pr, "changes"), /if \[ -n "\$files" \] && ! grep -qvE '\^\(docs\/\|design\/\)\|\\\.md\$' <<<"\$files"; then\n {12}echo "docs=true"/);
   assert.match(jobIn(pr, "types"), /needs: \[changes\]\n {4}if: needs\.changes\.outputs\.docs != 'true'\n/);
+  // The e2e run covers the shared packages and the database files the app loads, not only app/ and the root config.
+  assert.ok(jobIn(pr, "changes").includes("|packages/|supabase/(migrations|seed|functions)/)' <<<\"$files\"; then"));
   assert.match(jobIn(pr, "tests"), /needs: \[changes\]\n {4}if: needs\.changes\.outputs\.docs != 'true'\n/);
   assert.equal(/needs: \[changes\]\n {4}if: needs\.changes\.outputs\.docs/.test(jobIn(pr, "static")), false);
   assert.match(aggregate, /if \[ "\$DOCS" = true \]; then\n {12}test "\$TYPES" = skipped\n {12}test "\$TESTS" = skipped\n/);
