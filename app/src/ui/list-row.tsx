@@ -97,7 +97,7 @@ export type ListRowProps =
     tagLine?: ReactNode;
   })
   | StatementRowProps
-  | (Common & { variant: "item"; plain?: boolean })
+  | (Common & { variant: "item" })
   | (Common & { variant: "static"; busy?: boolean })
   | (Common & { variant: "button"; onClick?: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean; ariaDisabled?: boolean; buttonRef?: Ref<HTMLButtonElement>; clearHint?: boolean })
   | {
@@ -333,9 +333,7 @@ export function ListRow(props: ListRowProps) {
   const className = cx(
     props.variant === "project"
       ? "ui-row ui-row-project ui-hit"
-      : props.variant === "item" && props.plain === true
-        ? "ui-row"
-        : "ui-row ui-hit",
+      : "ui-row ui-hit",
     tappable && "m-press",
     layoutClass,
     toneClass,

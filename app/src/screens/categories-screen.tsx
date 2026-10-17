@@ -378,7 +378,7 @@ export function CategoriesScreen({
                   key={category.id}
                   category={category}
                   muted
-                        href={linesHref(category)}
+                  href={linesHref(category)}
                   onMenu={holdWrites ? undefined : (opener) => {
                     menuOpener.current = opener;
                     setMenu(category);
