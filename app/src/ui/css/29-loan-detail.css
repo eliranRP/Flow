@@ -168,6 +168,14 @@
   min-height: var(--loan-legend-pitch);
 }
 
+/* The legend dot is 8px on the board's loan cards (the shared dot is 6px). */
+.ui-loan-next-card .ui-parts-dot,
+.ui-loan-split .ui-parts-dot,
+.ui-loan-summary .ui-parts-dot {
+  width: var(--space-2);
+  height: var(--space-2);
+}
+
 /* The escrow part is the track tone in dark and the outline tint in light, as in the summary card. */
 .ui-loan-next-card .ui-parts-part[data-tone="muted"],
 .ui-loan-next-card .ui-parts-dot[data-tone="muted"],
