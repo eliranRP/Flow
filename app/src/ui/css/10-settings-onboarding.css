@@ -674,7 +674,7 @@
 
 .ui-settings-page .ui-settings-page-row:not(:last-child) > .ui-row {
   border-bottom: 1px solid var(--color-line);
-  min-block-size: 57px;
+  min-block-size: 56px;
 }
 
 .ui-settings-page .ui-settings-signout {
@@ -695,4 +695,38 @@
   margin-block-start: var(--space-3);
   font-weight: var(--type-detail-weight);
   line-height: calc(var(--type-caption-size) * 1.5);
+}
+
+/* A settings page's switch is the board's 52x32 with a 26px knob; a two-line switch row is 56px. */
+.ui-settings-page {
+  --size-switch: 52px;
+  --switch-track-h: 32px;
+  --switch-knob: 26px;
+}
+
+.ui-settings-page .ui-list-inset .ui-switch-row {
+  padding-block: calc(var(--space-2) - 1px);
+}
+
+.ui-settings-page .ui-switch-row .ui-row-text {
+  gap: 0;
+}
+
+.ui-settings-page > .ui-settings-note {
+  margin-inline: var(--space-side);
+}
+
+/* The settings header already ends 14px lower than the pages' own, so these start flush under it. */
+.ui-settings-page > .ui-cat-seg,
+.ui-settings-page > .ui-team-list {
+  margin-block-start: 0;
+}
+
+/* Categories: the new-category link sits 4px lower under the segment, and the card 4px lower under the link. */
+.ui-settings-page > .ui-cat-foot {
+  margin-top: var(--space-2);
+}
+
+.ui-settings-page > .ui-cat-list {
+  margin-top: var(--space-3);
 }

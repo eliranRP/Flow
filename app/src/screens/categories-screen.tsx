@@ -297,7 +297,7 @@ export function CategoriesScreen({
     );
   }
   return (
-    <div>
+    <div className="ui-settings-page">
       <ScreenHeader title={title} kicker={kicker} backTo={backTo} subtitle={parent == null ? "איך התנועות מתחלקות ומה נספר ברווח" : lines == null ? undefined : countLine(lines)} />
       {parent != null ? null : (
       <div className="ui-page-pad ui-cat-seg">

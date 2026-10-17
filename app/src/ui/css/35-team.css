@@ -142,7 +142,12 @@
   line-height: var(--type-cents-line);
 }
 
-.ui-invite-sheet .ui-role-choice .ui-radio-desc {
-  font-size: calc(var(--type-cents-size) + 1px);
+.ui-invite-sheet .ui-role-choice .ui-row-hint {
+  font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
+}
+
+/* The field is LTR for the address, but the board sets it on the page's end side. */
+.ui-invite-sheet .ui-field-control {
+  text-align: end;
 }

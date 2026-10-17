@@ -65,13 +65,13 @@ describe("TabBar", () => {
     expect(screen.getByRole("link", { name: "בית" })).not.toHaveAttribute("aria-current");
   });
 
-  it("marks no tab current on settings, and the loans tab on the loans page", () => {
+  it("marks Home current on settings, and the loans tab on the loans page", () => {
     const { unmount } = render(
       <MemoryRouter initialEntries={["/settings"]}>
         <TabBar />
       </MemoryRouter>,
     );
-    expect(document.querySelector('[aria-current="page"]')).toBeNull();
+    expect(screen.getByRole("link", { name: "בית" })).toHaveAttribute("aria-current", "page");
     unmount();
     render(
       <MemoryRouter initialEntries={["/loans/loan-1"]}>
@@ -117,8 +117,8 @@ describe("tabSection", () => {
     ["/loans", "loans"],
     ["/recurring", "recurring"],
     ["/missing-bills", "recurring"],
-    ["/settings", null],
-    ["/settings/categories", null],
+    ["/settings", "home"],
+    ["/settings/categories", "home"],
     ["/add", null],
   ] as const)("maps %s to %s", (path, expected) => {
     expect(tabSection(path)).toBe(expected);
