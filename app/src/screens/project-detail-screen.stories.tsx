@@ -281,7 +281,7 @@ export const ProjectMenu: Story = {
   render: ProjectOverview.render,
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole("button", { name: "עוד" }));
-    await storyBody(canvasElement).findByRole("dialog", { name: "עוד" });
+    await storyBody(canvasElement).findByRole("dialog", { name: "וילה לדוגמה" });
   },
 };
 

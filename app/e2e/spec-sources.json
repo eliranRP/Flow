@@ -44,6 +44,7 @@
     "controls-sweep-projects.spec.ts": [
       "screens/projects-screen.tsx",
       "screens/project-detail-screen.tsx",
+      "screens/project-menu.tsx",
       "screens/profit-months.tsx",
       "screens/transaction-screen.tsx",
       "screens/line-split.tsx",
@@ -353,6 +354,7 @@
         ],
         "/e2e/project-detail?preview=1": [
           "screens/project-detail-screen.tsx",
+          "screens/project-menu.tsx",
           "dev/routes/projects.tsx#DevProjectDetail"
         ],
         "/e2e/project-months?preview=1": [

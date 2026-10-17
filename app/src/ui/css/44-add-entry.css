@@ -7,7 +7,6 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
-  padding-block: var(--space-4);
 }
 
 .ui-add-tile {
@@ -16,10 +15,10 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1);
-  padding: var(--space-3);
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-2);
   border: 0;
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-card-tight);
   background: var(--color-raised);
   color: var(--color-text);
   font: inherit;
@@ -49,8 +48,8 @@
 }
 
 .ui-add-tile-name {
-  font-size: var(--type-body-size);
-  font-weight: var(--type-body-weight);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-btn-weight);
 }
 
 .ui-add-tile-sub {
@@ -59,16 +58,27 @@
 }
 
 .ui-add-rows {
-  margin-block: var(--space-4);
   overflow: hidden;
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-card-tight);
   background: var(--color-raised);
+}
+
+/* The menu's rows are text and a chevron, 72px each on the board, with a hairline between them. */
+.ui-add-menu .ui-row {
+  min-block-size: 72px;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-inset-row);
+  gap: var(--space-3);
+}
+
+.ui-add-menu .ui-row + .ui-row {
+  border-block-start: 1px solid var(--color-line);
 }
 
 .ui-add-body {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--space-3) - 1px);
+  gap: var(--space-inset-row);
   padding-block: 0 var(--space-4);
   padding-inline: 0;
 }
@@ -102,12 +112,12 @@
   display: flex;
   min-inline-size: 0;
   flex-direction: column;
-  gap: calc(var(--space-1) / 2);
+  gap: var(--space-2);
 }
 
 .ui-add-label {
-  color: var(--color-text-secondary);
-  font-size: var(--type-label-size);
+  color: var(--color-text-muted);
+  font-size: var(--type-hint-size);
   font-weight: var(--type-label-weight);
 }
 
@@ -123,7 +133,7 @@
 
 .ui-add-input {
   block-size: 48px;
-  padding-inline: var(--space-4);
+  padding-inline: var(--space-3);
   border: 1.5px solid var(--color-tint-strong);
   border-radius: var(--radius-input);
   background: var(--color-raised);
@@ -148,7 +158,7 @@
   align-items: center;
   gap: var(--space-1);
   block-size: 48px;
-  padding-inline: var(--space-4);
+  padding-inline: var(--space-3);
   border: 1.5px solid var(--color-tint-strong);
   border-radius: var(--radius-input);
   background: var(--color-raised);
@@ -179,7 +189,7 @@
 .ui-add-row2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 /* The board: a raised track with 2px padding, and the chosen item a filled tint-strong pill. */
@@ -194,7 +204,7 @@
 .ui-add-seg-btn {
   block-size: 40px;
   border: 0;
-  border-radius: var(--radius-input);
+  border-radius: var(--radius-seg-btn);
   background: transparent;
   color: var(--color-text-secondary);
   font: inherit;
@@ -211,7 +221,7 @@
 .ui-add-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: calc(var(--space-1) * 1.5);
+  gap: var(--space-1);
 }
 
 .ui-add-chip-new {
@@ -297,12 +307,13 @@
 }
 
 .ui-add-attach {
-  min-block-size: var(--touch-min);
-  border: 0;
+  min-block-size: 52px;
+  border: 1.5px dashed var(--color-line);
+  border-radius: var(--radius-input);
   background: transparent;
   color: var(--color-accent-text);
   font: inherit;
-  font-size: var(--type-label-size);
+  font-size: var(--type-body-size);
   cursor: pointer;
 }
 
@@ -336,13 +347,32 @@
   cursor: default;
 }
 
-/* FLOW-369: the form head is the title and subtitle with a line under them (board y 129 css px). */
-.ui-add-entry .ui-sheet-head {
-  padding-block: 0;
-  border-block-end: 1px solid var(--color-tint-strong);
+/* The form is a 790px board sheet, 54px below the top of the screen (the panel is 100dvh - 54). The
+   320px keyboard rule of 01-base keeps its 16px gap here too. */
+.ui-add-entry {
+  --sheet-gap: 54px;
+  --sheet-pad-bottom: 0px;
 }
 
-/* FLOW-369: the form's body ends at board y 751 (its last row peeks above the footer), so the footer sits at 767 (the footer slot adds 16px above the save). */
+@media (max-width: 359px) {
+  :root[data-kb="open"] .ui-add-entry {
+    --sheet-gap: var(--space-4);
+  }
+}
+
+/* The head's rule is the hairline colour (board), not the tint. */
+.ui-add-entry .ui-sheet-head {
+  padding-block: 0;
+  border-block-end: 1px solid var(--color-line);
+}
+
+/* The body takes the height the head and foot leave, and scrolls under the fixed foot. */
 .ui-add-entry .ui-sheet-body {
-  max-height: 609px;
+  max-height: none;
+}
+
+/* The foot: a hairline above, then the 52px save pill (board: 12 20 24). */
+.ui-add-entry .ui-sheet-foot {
+  padding: var(--space-3) var(--sheet-side) var(--space-6);
+  border-block-start: 1px solid var(--color-line);
 }

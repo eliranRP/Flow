@@ -1,23 +1,23 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter, MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { App } from "../App";
-import { addBankState, AddForm, type AddBankState } from "./add-sheet";
+import { AddForm } from "./add-sheet";
 
-// FLOW-331 r1: the bank row's states and targets, and Back after a quick action.
+// FLOW-331 r1: Back after a quick action.
 function Landed() {
   const location = useLocation();
   return <p>{`landed ${location.pathname}${location.search}`}</p>;
 }
 
-function renderAdd(bank: AddBankState) {
+function renderAdd() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={["/add?preview=1"]}>
         <Routes>
-          <Route path="/add" element={<AddForm bank={bank} />} />
+          <Route path="/add" element={<AddForm />} />
           <Route path="/settings/connections" element={<Landed />} />
         </Routes>
       </MemoryRouter>
@@ -25,36 +25,18 @@ function renderAdd(bank: AddBankState) {
   );
 }
 
-describe("addBankState", () => {
-  const status = (data?: { connected: boolean; last_error: string | null }, isLoading = false, isError = false) => ({ data, isLoading, isError });
-  it("reads each Mercury status", () => {
-    expect(addBankState(status(undefined, true))).toBe("unknown");
-    expect(addBankState(status(undefined, false, true))).toBe("unknown");
-    expect(addBankState(status({ connected: true, last_error: null }, true))).toBe("unknown");
-    expect(addBankState(status({ connected: true, last_error: "auth" }))).toBe("reconnect");
-    expect(addBankState(status({ connected: false, last_error: "auth" }))).toBe("reconnect");
-    expect(addBankState(status({ connected: true, last_error: null }))).toBe("active");
-    expect(addBankState(status({ connected: false, last_error: null }))).toBe("off");
+describe("AddForm rows", () => {
+  it("offers no bank row to anyone: connecting a bank stays in Settings", async () => {
+    renderAdd();
+    expect(await screen.findByRole("button", { name: /פרויקט חדש/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /הלוואה חדשה/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /חיבור בנק/ })).toBeNull();
   });
-});
 
-describe("AddForm bank row", () => {
-  it.each([
-    ["active", "landed /settings/connections?preview=1", "מחובר", null],
-    ["off", "landed /settings/connections?preview=1&sheet=mercury", null, null],
-    ["unknown", "landed /settings/connections?preview=1&sheet=mercury", null, null],
-    ["reconnect", "landed /settings/connections?preview=1&sheet=mercury", null, "צריך לחבר מחדש"],
-  ] as const)("%s", async (bank, target, connected, warning) => {
-    renderAdd(bank);
-    const row = await screen.findByRole("button", { name: /חיבור בנק/ });
-    // Both are the row's hint line: "מחובר" muted, "צריך לחבר מחדש" in the warning tone.
-    if (connected == null) expect(within(row).queryByText("מחובר")).not.toBeInTheDocument();
-    else expect(within(row).getByText(connected)).toBeInTheDocument();
-    if (warning == null) expect(within(row).queryByText("צריך לחבר מחדש")).not.toBeInTheDocument();
-    else expect(within(row).getByText(warning)).toBeInTheDocument();
-    expect(row.classList.contains("ui-row-tone-warning")).toBe(bank === "reconnect");
-    fireEvent.click(row);
-    expect(await screen.findByText(target)).toBeInTheDocument();
+  it("draws the rows as text and a chevron, with no icon", async () => {
+    renderAdd();
+    const row = await screen.findByRole("button", { name: /הלוואה חדשה/ });
+    expect(row.querySelector(".ui-row-icon")).toBeNull();
   });
 });
 

@@ -57,27 +57,6 @@ export const AddSheet: Story = {
   ),
 };
 
-// FLOW-331: the bank row says מחובר when connected, and צריך לחבר מחדש (warning) when it needs it.
-export const AddSheetBankConnected: Story = {
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
-  render: () => (
-    <StoryRoute entry="/add">
-      <ExampleBar />
-      <AddForm bank="active" />
-    </StoryRoute>
-  ),
-};
-
-export const AddSheetBankReconnect: Story = {
-  render: () => (
-    <StoryRoute entry="/add">
-      <ExampleBar />
-      <AddForm bank="reconnect" />
-    </StoryRoute>
-  ),
-};
-
-
 export const InstallAndroid: Story = {
   name: "Android (prompt)",
   render: () => (

@@ -7,21 +7,12 @@ import { documentOf } from "../add-entry-doc";
 import { quickNewPath, quickNewState } from "../open-from-query";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { readSheetBackground } from "../sheet-background";
-import { useDashboardQuery, useMercuryStatusQuery } from "../use-books";
-import { useHoldOwnerSettings, useWriteGate } from "../use-is-viewer";
-import { BankIcon, CameraIcon, CoinIcon, DocumentIcon, LoanIcon, ProjectsIcon } from "../ui/icons";
+import { useDashboardQuery } from "../use-books";
+import { useWriteGate } from "../use-is-viewer";
+import { CameraIcon, CoinIcon, DocumentIcon } from "../ui/icons";
 import { ListRow } from "../ui/list-row";
 import { RouteSheet } from "../ui/route-sheet";
 import { AddEntrySheet } from "./add-entry-sheet";
-
-export type AddBankState = "off" | "active" | "reconnect" | "unknown";
-
-/** The bank row's state from the Mercury status read; a read still loading or failed shows the plain row. */
-export function addBankState(status: { isLoading: boolean; isError: boolean; data?: { connected: boolean; last_error: string | null } }): AddBankState {
-  if (status.isLoading || status.data == null) return "unknown";
-  if (status.data.last_error === "auth") return "reconnect";
-  return status.data.connected ? "active" : "off";
-}
 
 /** What the + sheet opens next: a form for a receipt (a photo or a file) or a cash/cheque line. */
 interface OpenEntry {
@@ -34,33 +25,29 @@ interface OpenEntry {
  * Each one replaces the /add entry, so Back from the screen it opens does not reopen this sheet.
  * Opened from a project (?project=), the title names it and the new-project row is not offered.
  */
-export function AddForm({ bank }: { bank?: AddBankState } = {}) {
+export function AddForm() {
   const search = usePreviewSearch();
   const [params] = useSearchParams();
   // FLOW-369: `?entry=project` is the preview's from-project sheet, with an invented project (add-entry-sample.ts). Only the preview opens it.
   const sample = useHomePreview() !== "off";
-  if (sample && params.get("entry") === "project") return <AddSheet bank={bank} fromProject={SAMPLE_FROM_PROJECT} />;
+  if (sample && params.get("entry") === "project") return <AddSheet fromProject={SAMPLE_FROM_PROJECT} />;
   const projectId = new URLSearchParams(search).get("project");
   // The project's name is read only when the sheet opens from one (the books query needs its provider).
-  if (projectId == null) return <AddSheet bank={bank} fromProject={null} />;
-  return <AddSheetFromProject bank={bank} projectId={projectId} />;
+  if (projectId == null) return <AddSheet fromProject={null} />;
+  return <AddSheetFromProject projectId={projectId} />;
 }
 
-function AddSheetFromProject({ bank, projectId }: { bank?: AddBankState; projectId: string }) {
+function AddSheetFromProject({ projectId }: { projectId: string }) {
   const dashboard = useDashboardQuery();
   const project = dashboard.data?.projects.find((p) => p.id === projectId);
-  return <AddSheet bank={bank} fromProject={project == null ? null : { id: project.id, name: project.name }} />;
+  return <AddSheet fromProject={project == null ? null : { id: project.id, name: project.name }} />;
 }
 
-function AddSheet({ bank: sampleBank, fromProject }: { bank?: AddBankState; fromProject: { id: string; name: string } | null }) {
+function AddSheet({ fromProject }: { fromProject: { id: string; name: string } | null }) {
   const search = usePreviewSearch();
-  const mercury = useMercuryStatusQuery(sampleBank == null);
-  const bank = sampleBank ?? addBankState(mercury);
   const navigate = useNavigate();
   const over = readSheetBackground(useLocation().state)?.pathname;
   const writeGate = useWriteGate("/");
-  // FLOW-601: an editor adds projects and loans; connecting a bank is the owner's.
-  const ownerOnlyHeld = useHoldOwnerSettings();
   // FLOW-369: the preview's `?entry=` opens the form with the board's values (add-entry-sample.ts).
   const [params] = useSearchParams();
   const fillName = params.get("entry");
@@ -130,6 +117,7 @@ function AddSheet({ bank: sampleBank, fromProject }: { bank?: AddBankState; from
       hint={fromProject == null ? undefined : "כל מה שתוסיפו ישויך לפרויקט הזה"}
       closeTo={`/${search}`}
       returnFocusRef={addTriggerRef}
+      panelClassName="ui-sheet-g14 ui-sheet-pad28 ui-add-menu"
     >
       <div>
         <div className="ui-add-tiles">
@@ -155,7 +143,6 @@ function AddSheet({ bank: sampleBank, fromProject }: { bank?: AddBankState; from
             <ListRow
               variant="button"
               title="פרויקט חדש"
-              icon={<ProjectsIcon />}
               chevron
               onClick={() => { go(quickNewPath("/projects", search, "project")); }}
             />
@@ -163,27 +150,9 @@ function AddSheet({ bank: sampleBank, fromProject }: { bank?: AddBankState; from
           <ListRow
             variant="button"
             title="הלוואה חדשה"
-            icon={<LoanIcon />}
             chevron
             onClick={() => { go(quickNewPath("/loans", search, "loan")); }}
           />
-          {ownerOnlyHeld ? null : (
-          <ListRow
-            variant="button"
-            title="חיבור בנק"
-            icon={<BankIcon />}
-            hint={bank === "active" ? "מחובר" : bank === "reconnect" ? "צריך לחבר מחדש" : undefined}
-            tone={bank === "reconnect" ? "warning" : undefined}
-            chevron
-            onClick={() => {
-              const params = new URLSearchParams(search);
-              // Connected: the connections page. Otherwise its Mercury sheet opens to connect.
-              if (bank !== "active") params.set("sheet", "mercury");
-              const query = params.toString();
-              go(`/settings/connections${query === "" ? "" : `?${query}`}`);
-            }}
-          />
-          )}
         </div>
       </div>
       {inputs}

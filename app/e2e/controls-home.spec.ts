@@ -43,10 +43,11 @@ test("the current tab stays put and capture rows stay disabled", async ({ page }
   await expect(page.getByRole("dialog", { name: "הוספה" })).toHaveCount(0);
   await expect(page).toHaveURL(/\/\?preview=1$/);
   await page.goto("/add?preview=1");
-  // FLOW-331: three quick actions, all enabled.
-  for (const name of [/פרויקט חדש/, /הלוואה חדשה/, /חיבור בנק/]) {
+  // FLOW-331: two quick actions, all enabled; the bank row is gone (Settings connects a bank).
+  for (const name of [/פרויקט חדש/, /הלוואה חדשה/]) {
     await expect(page.getByRole("button", { name })).toBeEnabled();
   }
+  await expect(page.getByRole("button", { name: /חיבור בנק/ })).toHaveCount(0);
   // FLOW-339: ✕ closes it; ביטול belongs to confirm sheets.
   await page.getByRole("dialog", { name: "הוספה" }).getByRole("button", { name: "סגירה" }).click();
   await expect(page.getByRole("dialog", { name: "הוספה" })).toHaveCount(0);
