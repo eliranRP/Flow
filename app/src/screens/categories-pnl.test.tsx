@@ -184,6 +184,6 @@ describe("categories kept out of the P&L", () => {
       </ViewerPreview>,
     );
     expect(screen.getByText(/לא נספרת ברווח$/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "עוד, פיקדונות", exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "עוד, פיקדונות" })).not.toBeInTheDocument();
   });
 });
