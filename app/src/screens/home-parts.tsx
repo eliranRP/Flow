@@ -15,6 +15,7 @@ import { CompactBar } from "../ui/compact-bar";
 import { cx } from "../ui/cx";
 import { HEBREW_MONTHS } from "../ui/date-math";
 import { IconButton } from "../ui/icon-button";
+import { SEARCH_FOCUS_STATE } from "../ui/search-entry";
 import { ChevronDownIcon, ChevronIcon, OutwardChevron, PersonIcon, PlusIcon, SearchIcon } from "../ui/icons";
 import { MonthStepper } from "../ui/month-stepper";
 import { PartsBar } from "../ui/parts-bar";
@@ -71,7 +72,8 @@ export function HomeBandActions({ isPast, currentName, search, avatarInitial }: 
           <PlusIcon size={22} />
         </IconButton>
       ) : null}
-      <IconButton label="חיפוש" onBand to={`/search${search}`} className="ui-band-action">
+      {/* The search opens with its field focused, as the entry on the other screens does (FLOW-323). */}
+      <IconButton label="חיפוש" onBand to={`/search${search}`} state={SEARCH_FOCUS_STATE} className="ui-band-action">
         <SearchIcon size={22} />
       </IconButton>
       <IconButton label="הגדרות וחשבון" onBand to={`/settings${search}`} className="ui-band-action">

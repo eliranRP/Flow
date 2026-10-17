@@ -57,10 +57,11 @@ test("home connects, filters the period, and opens a project", async ({ page }) 
   await page.getByRole("link", { name: "חיבור Mercury" }).click();
   await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
 
-  await page.goto("/e2e/home?preview=1");
+  // The period pill sits on the project's profit section, which still hosts the period sheet and the range sheet.
+  await page.goto("/e2e/project-detail?preview=1&section=profit");
   // FLOW-355 (A): one period pill on the band; it opens the period sheet, and a row applies on tap.
-  await expect(page.locator(".ui-band").getByRole("radiogroup", { name: "תקופה" })).toHaveCount(0);
-  const label = page.locator(".ui-band").getByRole("button", { name: /בחירת תקופה$/ });
+  await expect(page.getByRole("radiogroup", { name: "תקופה" })).toHaveCount(0);
+  const label = page.getByRole("button", { name: /בחירת תקופה$/ });
   const before = await label.textContent();
   await label.click();
   const periodSheet = page.getByRole("dialog", { name: "תקופה" });
@@ -69,7 +70,7 @@ test("home connects, filters the period, and opens a project", async ({ page }) 
   await expect(periodSheet).toHaveCount(0);
   await expect(label).not.toHaveText(before ?? "");
   // FLOW-358: the pill names the year, so the label is the word alone.
-  await expect(page.locator(".ui-band .ui-band-label")).toHaveText(/^(רווח|הפסד|רווח והפסד)$/);
+  await expect(page.getByRole("heading", { name: /^(רווח|הפסד|רווח והפסד)$/ })).toBeVisible();
 
   await label.click();
   await page.getByRole("button", { name: "טווח מותאם" }).click();
@@ -93,13 +94,15 @@ test("home connects, filters the period, and opens a project", async ({ page }) 
   await apply.click();
   await expect(range).toHaveCount(0);
 
+  // Home's pending row, then the company profit page's project row, then the Projects tab (the profit page has no link to the list).
+  await page.goto("/e2e/cash?preview=1");
   await page.getByRole("link", { name: /פריטים ממתינים/ }).click();
   await expect(page).toHaveURL(/\/review\?preview=1$/);
-  await page.goto("/e2e/home?preview=1");
-  await page.getByRole("link", { name: "שיפוץ הרצל 12" }).click();
-  await expect(page).toHaveURL(/\/projects\/p1\?preview=1$/);
-  await page.goto("/e2e/home?preview=1");
-  await page.getByRole("link", { name: "לכל הפרויקטים" }).click();
+  await page.goto("/e2e/company-profit?preview=1");
+  await page.getByRole("link", { name: /^בית הדקל/ }).click();
+  await expect(page).toHaveURL(/\/projects\/p1\/profit\?from=profit&preview=1$/);
+  await page.goto("/e2e/cash?preview=1");
+  await page.getByRole("navigation", { name: "ניווט ראשי" }).getByRole("link", { name: "פרויקטים" }).click();
   await expect(page).toHaveURL(/\/projects\?preview=1$/);
 });
 

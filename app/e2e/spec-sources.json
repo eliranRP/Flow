@@ -272,6 +272,11 @@
       "screens/cash-screens.tsx",
       "dev/routes/",
       "cash.ts"
+    ],
+    "company-profit.spec.ts": [
+      "screens/company-profit-screen.tsx",
+      "screens/company-basis-sheet.tsx",
+      "use-company-profit.ts"
     ]
   },
   "sweeps": {
@@ -288,12 +293,8 @@
         "/?preview=error": [
           "screens/HomeScreen.tsx"
         ],
-        "/e2e/home?preview=1": [
-          "screens/HomeScreen.tsx",
-          "dev/routes/home.tsx#DevHome"
-        ],
         "/profit?preview=1": [
-          "screens/HomeScreen.tsx"
+          "screens/company-profit-screen.tsx"
         ],
         "/e2e/cash?preview=1": [
           "screens/HomeScreen.tsx",

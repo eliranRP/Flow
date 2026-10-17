@@ -4,9 +4,10 @@ import { expect, test } from "@playwright/test";
 // src/dev/search-e2e-fixture.ts in preview, so no server is needed.
 test.use({ viewport: { width: 390, height: 700 } });
 
-test("search opens from Home, finds a line, opens it, and Back keeps the search", async ({ page }) => {
-  await page.goto("/e2e/home?preview=1");
-  await page.getByRole("link", { name: "חיפוש תנועות" }).click();
+test("search opens from the cash Home, finds a line, opens it, and Back keeps the search", async ({ page }) => {
+  await page.goto("/e2e/cash?preview=1");
+  // The band's search icon (its label is חיפוש; the search screen names its field חיפוש תנועות).
+  await page.getByRole("link", { name: "חיפוש", exact: true }).click();
   await expect(page).toHaveURL(/\/search\?preview=1$/);
   const field = page.getByRole("searchbox", { name: "חיפוש תנועות" });
   // The icon opened the screen, so the field takes focus.

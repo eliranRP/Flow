@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
 test.use({ viewport: { width: 375, height: 667 } });
 
 test("Home: the late-bills row opens the list at its לא הגיעו section", async ({ page }) => {
-  await page.goto("/e2e/home?preview=1");
+  await page.goto("/e2e/cash?preview=1&recurring=1");
   const row = page.getByRole("link", { name: "2 חשבונות לא הגיעו" });
   await expect(row).toBeVisible();
   // A count only: no total on the row.

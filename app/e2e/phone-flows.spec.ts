@@ -32,7 +32,8 @@ test.beforeAll(async ({ browser }) => {
   test.setTimeout(120_000);
   const page = await browser.newPage();
   for (const path of [
-    "/e2e/home?preview=1",
+    "/e2e/cash?preview=1",
+    "/e2e/company-profit?preview=1",
     "/projects/p1?preview=1",
     "/e2e/review",
     "/e2e/change?preview=1",
@@ -50,13 +51,14 @@ for (const width of [390, 320]) {
   test.describe(`phone ${String(width)} wide`, () => {
     test.use({ viewport: { width, height: width === 390 ? 844 : 693 }, hasTouch: true, isMobile: true });
 
-    test("Home, a project page, and back", async ({ page }) => {
-      await open(page, "/e2e/home?preview=1", page.getByRole("navigation", { name: "ניווט ראשי" }));
-      const project = page.locator(".ui-project-list").getByRole("link").first();
-      // The Home fixture links to the preview project page, which has its own sample title.
-      await step("open the project", () => project.tap(), page.getByRole("heading", { name: "פרויקט", exact: true }));
-      await expect(page).toHaveURL(/\/projects\/p1\?preview=1$/);
-      await step("Back to Home", () => page.getByRole("button", { name: "חזרה" }).tap(), project);
+    test("the profit page, a project page, and back", async ({ page }) => {
+      await open(page, "/e2e/company-profit?preview=1", page.getByRole("heading", { name: "רווח", exact: true }));
+      const project = page.locator('a[href^="/projects/"]').first();
+      // The profit page links to the preview project's profit page (its own sample figures).
+      await step("open the project", () => project.tap(), async () => {
+        await expect(page).toHaveURL(/\/projects\/p1\/profit\?from=profit&preview=1$/);
+      });
+      await step("Back to the profit page", () => page.getByRole("button", { name: "חזרה" }).tap(), project);
     });
 
     test("Review: אישור, then ביטול on the toast", async ({ page }) => {
@@ -84,9 +86,9 @@ for (const width of [390, 320]) {
     });
 
     test("Search for a supplier and open the line", async ({ page }) => {
-      await open(page, "/e2e/home?preview=1", page.getByRole("link", { name: "חיפוש תנועות" }));
+      await open(page, "/e2e/cash?preview=1", page.getByRole("link", { name: "חיפוש", exact: true }));
       const field = page.getByRole("searchbox", { name: "חיפוש תנועות" });
-      await step("open search", () => page.getByRole("link", { name: "חיפוש תנועות" }).tap(), field);
+      await step("open search", () => page.getByRole("link", { name: "חיפוש", exact: true }).tap(), field);
       const row = page.getByRole("link", { name: /^ספק 3(?!\d)/ });
       await step("type the supplier", () => field.fill("ספק 3"), row);
       await step("open the line", () => row.tap(), page.getByText("ספק 3", { exact: true }));
