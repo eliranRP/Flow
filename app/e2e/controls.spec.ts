@@ -293,11 +293,11 @@ test("projects list, finished projects, and the new-project sheet", async ({ pag
   await page.goto("/e2e/projects?preview=1");
   // FLOW-445: the list has no search field; its top row links to search.
   await expect(page.getByRole("searchbox", { name: "חיפוש פרויקט" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: /^שיפוץ הרצל 12/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Lark Hill/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /^פרויקט ישן/ })).toHaveCount(0);
   await page.getByRole("button", { name: /הסתיימו/ }).click();
   await expect(page.getByRole("link", { name: /^פרויקט ישן/ })).toContainText("הסתיים");
-  await page.getByRole("link", { name: /^וילה רעננה/ }).click();
+  await page.getByRole("link", { name: /^Lark Hill/ }).click();
   await expect(page).toHaveURL(/\/projects\/p2/);
   await page.goto("/e2e/projects?preview=1&new=project");
   const dialog = page.getByRole("dialog", { name: "פרויקט חדש" });
