@@ -1665,6 +1665,9 @@ isOneToOne: false
 "recurring_changes":
 { Args: { "p_today"?: string }; Returns: Json
                            },
+"recurring_party_line":
+{ Args: { "p_direction": string,"p_party_id": string,"p_currency": string,"p_today"?: string }; Returns: string
+                           },
 "recurring_schedule":
 { Args: { "p_today"?: string }; Returns: Json
                            },

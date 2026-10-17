@@ -68,6 +68,11 @@
   background: var(--color-accent);
 }
 
+/* A month with no charge: a 3px line, not a bar (FLOW-447c). */
+.ui-charge-bar-empty {
+  background: var(--color-line);
+}
+
 .ui-charge-bar-label {
   overflow: hidden;
   color: var(--color-text-muted);

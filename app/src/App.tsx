@@ -47,6 +47,7 @@ const BreakdownScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ defa
 const BreakdownLinesScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownLinesScreen })));
 const ForecastScreen = lazy(() => screenLoaders.forecast().then((m) => ({ default: m.ForecastScreen })));
 const RecurringScreen = lazy(() => screenLoaders.recurring().then((m) => ({ default: m.RecurringScreen })));
+const RecurringChargeScreen = lazy(() => screenLoaders.recurringCharge().then((m) => ({ default: m.RecurringChargeScreen })));
 const LineSplitScreen = lazy(() => screenLoaders.lineSplit().then((m) => ({ default: m.LineSplitScreen })));
 const HelpScreen = lazy(() => screenLoaders.help().then((m) => ({ default: m.HelpScreen })));
 const LegalScreen = lazy(() => screenLoaders.legal().then((m) => ({ default: m.LegalScreen })));
@@ -202,6 +203,7 @@ function AppRoutes() {
                 {UnpaidRoute()}
                 <Route path="missing-bills" element={<RecurringRedirect />} />
                 <Route path="recurring" element={<RecurringScreen />} />
+                <Route path="recurring/:direction/:partyId" element={<RecurringChargeScreen />} />
                 {UnpaidInvoiceRoute()}
                 <Route path="forecast" element={<ForecastScreen />} />
                 {SettingsRoutes()}

@@ -3,27 +3,18 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMissingBillsQuery } from "../forecast";
-import { useHomePreview } from "../preview";
+import { useHomePreview, usePreviewSearch } from "../preview";
+import { RECURRING_KEYS } from "../pace-write";
 import { liveRecurringWrites, type RecurringWrites } from "../recurring-actions";
+import { chargeHref, dayMonth } from "../recurring-charge";
 import { groupRecurring, monthOutflow, type RecurringLine } from "../recurring-layout";
-import { alertState, type RecurringAlert, type ScheduleRow, scheduleLines, useRecurringScheduleQuery } from "../recurring-schedule";
+import { alertState, changePercentOf, daysBetween, israelToday, type RecurringAlert, type ScheduleRow, scheduleLines, useRecurringScheduleQuery } from "../recurring-schedule";
 import { ErrorState } from "../ui/error-state";
 import { type RecurringListGroup, type RecurringListRow, RecurringList } from "../ui/recurring-list";
 import { RecurringSkeleton } from "../ui/screen-skeletons";
 import { useToast } from "../ui/toast";
-
-/** The keys an alert write changes: the schedule, the late bills, Home's rows and the party's history. */
-const RECURRING_KEYS = ["recurring-schedule", "missing-bills", "recurring-changes", "expected-months", "party-charges", "home"];
-
-/** The Israel calendar day as YYYY-MM-DD, the day the server counts lateness from. */
-function israelToday(now: Date): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(now);
-}
-
-/** Whole days from one YYYY-MM-DD day to another. */
-function daysBetween(from: string, to: string): number {
-  return Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000);
-}
+import { EmptyState } from "../ui/empty-state";
+import { RepeatIcon } from "../ui/icons";
 
 /** "אוקטובר 2026" for the day's month. */
 function monthTitle(today: string): string {
@@ -41,15 +32,16 @@ const NO_WRITES: RecurringWrites = {
 /** The alert state a screen computes from the schedule and the late bills. */
 type AlertState = ReturnType<typeof alertState>;
 
-/** "dd/mm" from a YYYY-MM-DD day. */
-function dayMonth(day: string): string {
-  const [, month = "", date = ""] = day.split("-");
-  return `${date}/${month}`;
-}
-
-/** Search on the charge's supplier (FLOW-403's link); the name is the query. */
-function searchHref(name: string): string {
-  return `/search?q=${encodeURIComponent(name)}`;
+/** No recurring charge yet: the title and the one line of what will show here (FLOW-447c, StatesRecurringEmpty). */
+function RecurringEmpty() {
+  return (
+    <div className="ui-recurring">
+      <header className="ui-recurring-head">
+        <h1 className="t-title">קבועים</h1>
+      </header>
+      <EmptyState icon={<RepeatIcon />} title="עוד Flow לומד" body="חיובים והכנסות שחוזרים כל חודש יופיעו כאן אחרי חודשיים של תנועות. אפשר גם לסמן שורה כקבועה מדף התנועה." />
+    </div>
+  );
 }
 
 /**
@@ -91,7 +83,8 @@ export function RecurringScreen({
   const rows = sample ?? (preview === "off" ? query.data : preview === "loading" ? undefined : NO_ROWS);
   const today = israelToday(now);
   const alerts = useMemo(() => (rows == null ? undefined : alertState(rows, bills)), [rows, bills]);
-  const view = useMemo(() => (rows == null ? null : recurringView(rows, today, project, alerts)), [rows, today, project, alerts]);
+  const search = usePreviewSearch();
+  const view = useMemo(() => (rows == null ? null : recurringView(rows, today, project, alerts, search)), [rows, today, project, alerts, search]);
 
   const failedNow = live ? query.isError && query.data == null : failed;
   if (failedNow) {
@@ -105,6 +98,7 @@ export function RecurringScreen({
     );
   }
   if (view == null) return sample == null ? <RecurringSkeleton /> : null;
+  if (rows != null && rows.length === 0 && project == null) return <RecurringEmpty />;
 
   /** Changes the late bills on screen at once: the cache when live, the fixture's state otherwise. */
   const editBills = (update: (list: readonly MissingBill[]) => MissingBill[]) => {
@@ -158,7 +152,7 @@ export function RecurringScreen({
  * charge; a late charge leaves its group's rows (it leads the list) but still counts in its group's
  * monthly cost, as the board does.
  */
-export function recurringView(allRows: readonly ScheduleRow[], today: string, project: string | null = null, alerts?: AlertState) {
+export function recurringView(allRows: readonly ScheduleRow[], today: string, project: string | null = null, alerts?: AlertState, search = "") {
   const rows = project == null ? allRows : allRows.filter((row) => row.project_id === project);
   const projectName = project == null ? undefined : allRows.find((row) => row.project_id === project)?.project_name ?? undefined;
   const lines = scheduleLines(rows);
@@ -180,7 +174,7 @@ export function recurringView(allRows: readonly ScheduleRow[], today: string, pr
       minor: line.minor,
       ...hintFor(row, line, today, state.dismissed.has(line.id)),
       ...(alert == null ? {} : { alertKey: alert.alertKey, suggestion: alert.suggestion == null ? null : suggestionRow(alert.suggestion) }),
-      ...(lateIds.has(line.id) ? { href: searchHref(row.party_name) } : {}),
+      href: chargeHref(row.direction, row.party_id, search),
     };
   };
   const late = lines.filter((line) => lateIds.has(line.id)).map((line) => toRow(line));
@@ -212,8 +206,7 @@ function hintFor(row: ScheduleRow, line: RecurringLine, today: string, dismissed
     return { hint: `באיחור ${String(daysBetween(usualDay, today))} ימים`, alert: true };
   }
   if (row.state === "arrived" && line.usual > 0n && line.minor * 100n >= line.usual * 120n) {
-    const percent = Math.round(Number(((line.minor - line.usual) * 10000n) / line.usual) / 100);
-    return { hint: `▲ ${String(percent)}%`, alert: true };
+    return { hint: `▲ ${String(changePercentOf(line.minor, line.usual))}%`, alert: true };
   }
   return {};
 }

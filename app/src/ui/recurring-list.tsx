@@ -34,8 +34,8 @@ export type RecurringListRow = {
   alertKey?: string | null;
   /** FLOW-447b: a late bill that may be another party under another name. */
   suggestion?: RecurringListSuggestion | null;
-  /** FLOW-447b: where a late row opens (Search on its supplier). */
-  href?: string;
+  /** FLOW-447c: where the row opens, the party's charge page. */
+  href: string;
 };
 
 export type RecurringListGroup = {
@@ -123,18 +123,14 @@ function RowView({
 }) {
   // An active late bill can be ignored: by the swipe, and by a button that is hidden until it has focus.
   const ignorable = row.alertKey != null && onIgnore != null;
-  const body = (
-    <div className={cx("ui-recurring-row", !row.paid && "ui-recurring-row-open")}>
+  // The whole row opens the charge's page (FLOW-447c); the ignore control stays outside that link.
+  const className = cx("ui-recurring-row", !row.paid && "ui-recurring-row-open");
+  const inner = (
+    <>
       <Avatar name={row.name} fallback="person" />
-      {row.href != null ? (
-        <Link className="ui-recurring-name" to={row.href}>
-          <RowName row={row} />
-        </Link>
-      ) : (
-        <span className="ui-recurring-name">
-          <RowName row={row} />
-        </span>
-      )}
+      <span className="ui-recurring-name">
+        <RowName row={row} />
+      </span>
       <span className="ui-recurring-amount">
         <span className={cx(row.income && row.paid && "ui-recurring-income")}>
           {row.income && row.paid ? "+" : ""}
@@ -142,7 +138,12 @@ function RowView({
         </span>
         {row.hint != null && <span className={cx("t-label", row.alert && "ui-recurring-alert")}>{row.hint}</span>}
       </span>
-    </div>
+    </>
+  );
+  const body = (
+    <Link className={className} to={row.href}>
+      {inner}
+    </Link>
   );
   return (
     <li className="ui-recurring-item">

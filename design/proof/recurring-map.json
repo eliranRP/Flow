@@ -1,5 +1,10 @@
 {
   "Recurring": "/e2e/recurring",
   "RecurringSwipe": "/e2e/recurring?preset=swipe",
-  "RecurringIgnored": "/e2e/recurring?preset=ignored"
+  "RecurringIgnored": "/e2e/recurring?preset=ignored",
+  "RecurringItem": "/e2e/recurring-charge?preset=item",
+  "RecurringLate": "/e2e/recurring-charge?preset=late",
+  "RecurringPace": "/e2e/recurring-charge?preset=pace",
+  "StatesRecurringLoading": "/recurring?preview=loading",
+  "StatesRecurringEmpty": "/recurring?preview=1"
 }

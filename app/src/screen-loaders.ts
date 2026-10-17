@@ -18,6 +18,7 @@ export const screenLoaders = {
   projectCategory: () => import("./screens/project-category-screen"),
   unpaid: () => import("./screens/unpaid-screen"),
   recurring: () => import("./screens/recurring-screen"),
+  recurringCharge: () => import("./screens/recurring-charge-screen"),
   invoice: () => import("./screens/invoice-screen"),
   transaction: () => import("./screens/transaction-screen"),
   settings: () => import("./screens/settings-screen"),

@@ -46,11 +46,21 @@ describe("the recurring list's ignore (FLOW-447b)", () => {
     expect(await screen.findByText("התעלמת מההתראה")).toBeTruthy();
   });
 
-  it("gives a non-late row no ignore control and no link", () => {
+  it("gives a non-late row no ignore control, and opens its charge page", () => {
     renderScreen();
     const hoa = screen.getByText("Juniper Pointe HOA").closest("li") as HTMLElement;
     expect(within(hoa).queryByRole("button")).toBeNull();
-    expect(within(hoa).queryByRole("link")).toBeNull();
+    expect(within(hoa).getByRole("link")).toHaveAttribute("href", "/recurring/expense/hoa");
+  });
+
+  it("opens the charge page of every row, late or not", () => {
+    renderScreen();
+    for (const name of ["Brightline Power", "Elm Row unit 2", "Harborlink Internet", "Bayside Water Utility"]) {
+      const item = screen.getByText(name).closest("li") as HTMLElement;
+      const link = within(item).getByRole("link");
+      expect(link.getAttribute("href")).toMatch(/^\/recurring\/(expense|income)\//);
+    }
+    expect(screen.getByText("Elm Row unit 2").closest("a")).toHaveAttribute("href", "/recurring/income/rent-elm");
   });
 
   it("shows the error state with a retry when the schedule read fails", () => {
