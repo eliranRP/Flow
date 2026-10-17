@@ -32,6 +32,18 @@ export function wholeMoney(minor: bigint, currency: LoanCurrency): string {
   return formatLoanMoney(wholeMinor(minor), currency);
 }
 
+/**
+ * A loan whose payment has cents ($1,837.50) shows its figures with cents; one that pays whole
+ * dollars shows whole dollars (the board's rule), so the schedule's rounding noise stays hidden.
+ */
+export function loanShowsCents(loan: Pick<LoanDetail, "paymentMinor">): boolean {
+  return (loan.paymentMinor ?? 0n) % 100n !== 0n;
+}
+
+export function loanMoney(loan: Pick<LoanDetail, "paymentMinor" | "currency">, minor: bigint): string {
+  return loanShowsCents(loan) ? formatLoanMoney(minor, loan.currency) : wholeMoney(minor, loan.currency);
+}
+
 /** The paid part of the principal and what is left of it. The paid part never goes below zero. */
 export function balanceProgress(loan: Pick<LoanDetail, "principalMinor" | "balanceMinor">): { paidMinor: bigint; remainingMinor: bigint } {
   const paid = loan.principalMinor - loan.balanceMinor;

@@ -14,6 +14,8 @@ import {
   balanceProgressText,
   dayMonth,
   LOAN_PART_BOARD_LABEL,
+  loanMoney,
+  loanShowsCents,
   partCategory,
   partInProfit,
   paymentRow,
@@ -54,7 +56,7 @@ export function LoanBalanceCard({ loan, outlook }: { loan: LoanDetail; outlook: 
 /** The next payment: its figure and its parts, with the legend, and one line on what the parts do. */
 export function LoanNextCard({ loan, outlook }: { loan: LoanDetail; outlook: LoanOutlook }) {
   const next = outlook.next;
-  const money = (minor: bigint) => <bdi dir="ltr">{wholeMoney(minor, loan.currency)}</bdi>;
+  const money = (minor: bigint) => <bdi dir="ltr">{loanMoney(loan, minor)}</bdi>;
   const parts = [
     { key: "principal", value: next.principalMinor, tone: "accent" },
     { key: "interest", value: next.interestMinor, tone: "accent-dim" },
@@ -153,12 +155,13 @@ export function LoanYtdCard({ loan, paid, categories, onOpenPart }: {
 }) {
   if (paid.payments === 0) return null;
   const rounded = roundTotals(paid.totals);
+  const exactTotal = (totals: OutlookPeriod["totals"]) => totals.interest + totals.escrow + totals.principal + totals.fees;
   const rows = loanParts(loan).filter((part) => rounded[part] > 0n);
   return (
     <Card className="ui-loan-card ui-loan-ytd">
       <div className="ui-loan-card-head ui-loan-card-pad">
         <h2 className="ui-loan-card-title">שולם השנה</h2>
-        <span className="ui-loan-card-meta"><bdi dir="ltr">{formatLoanMoney(periodTotal(paid.totals), loan.currency)}</bdi></span>
+        <span className="ui-loan-card-meta"><bdi dir="ltr">{loanMoney(loan, loanShowsCents(loan) ? exactTotal(paid.totals) : periodTotal(paid.totals))}</bdi></span>
       </div>
       {rows.map((part) => {
         const name = partCategory(loan, categories, part)?.name ?? null;
@@ -170,7 +173,7 @@ export function LoanYtdCard({ loan, paid, categories, onOpenPart }: {
               <span className="ui-loan-row-title">{LOAN_PART_BOARD_LABEL[part]}</span>{" "}
               <span className="ui-loan-row-note">{note}</span>
             </span>
-            <bdi className="ui-loan-row-amount" dir="ltr">{wholeMoney(rounded[part], loan.currency)}</bdi>
+            <bdi className="ui-loan-row-amount" dir="ltr">{loanMoney(loan, loanShowsCents(loan) ? paid.totals[part] : rounded[part])}</bdi>
           </>
         );
         return onOpenPart == null ? (
@@ -184,12 +187,14 @@ export function LoanYtdCard({ loan, paid, categories, onOpenPart }: {
 }
 
 /** One payment as a row that opens its transaction: date (with the year when it is not this year), split, amount. */
-export function PaymentRowLink({ row, currency, search, year }: {
+export function PaymentRowLink({ row, currency, search, year, withSplit = true }: {
   row: PaymentRow;
   currency: LoanCurrency;
   search: string;
   /** The page's year: a date in another year shows its year too. */
   year: string;
+  /** The split under the date: the all-payments page has it, the loan page's last payments do not (the board's). */
+  withSplit?: boolean;
 }) {
   const showYear = row.dateIso.slice(0, 4) !== year;
   const date = showYear ? `${row.date}/${row.dateIso.slice(0, 4)}` : row.date;
@@ -197,7 +202,9 @@ export function PaymentRowLink({ row, currency, search, year }: {
     <Link className={`ui-loan-row${row.needsReview ? " ui-loan-row-review" : ""}`} to={`/transactions/${row.transactionId}${search}`}>
       <span className="ui-loan-row-text">
         <bdi className="ui-loan-row-title" dir="ltr">{date}</bdi>
-        <span className="ui-loan-row-note">{row.needsReview ? "ממתין לבדיקה" : paymentSplitText(row, currency)}</span>
+        {row.needsReview || withSplit ? (
+          <span className="ui-loan-row-note">{row.needsReview ? "ממתין לבדיקה" : paymentSplitText(row, currency)}</span>
+        ) : null}
       </span>
       <bdi className="ui-loan-row-amount" dir="ltr">{formatLoanMoney(row.totalMinor, currency)}</bdi>
       <span className="ui-loan-term-chevron" aria-hidden="true"><ChevronIcon size={18} /></span>
@@ -216,7 +223,7 @@ export function LoanRecentCard({ loan, payments, search, loanPath, year }: {
   const rows = payments.slice(0, 3);
   return (
     <Card className="ui-loan-card ui-loan-recent">
-      <h2 className="ui-loan-card-title ui-loan-card-pad">{payments.length > 3 ? "3 התשלומים האחרונים" : "התשלומים"}</h2>
+      <h2 className="ui-loan-card-title ui-loan-card-pad">{payments.length >= 3 ? "3 התשלומים האחרונים" : "התשלומים"}</h2>
       {payments.length === 0 ? (
         <p className="ui-loan-card-note ui-loan-card-pad">אין עדיין תשלומים משויכים.</p>
       ) : (
@@ -228,6 +235,7 @@ export function LoanRecentCard({ loan, payments, search, loanPath, year }: {
               currency={loan.currency}
               search={search}
               year={year}
+              withSplit={false}
             />
           ))}
           <Link className="ui-loan-all" to={`${loanPath}/payments${search}`}>כל התשלומים</Link>

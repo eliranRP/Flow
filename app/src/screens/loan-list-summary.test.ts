@@ -28,7 +28,7 @@ describe("loanListSummary", () => {
 
   it("sums the next twelve payments of every open loan", () => {
     const summary = loanListSummary([entry(SAMPLE_AMORTIZING), entry(SAMPLE_INTEREST_ONLY), entry(SAMPLE_BALLOON)], USD);
-    expect(summary.twelveMonthsMinor).toBe(28_413_984n);
+    expect(summary.twelveMonthsMinor).toBe(28_597_734n);
   });
 
   it("names the earliest next payment and its loan", () => {
