@@ -133,6 +133,15 @@ jobs:
         run: |
           node scripts/stamp-build.mjs "$GITHUB_SHA"
           pnpm check:bundle
+      # deploy reuses this dist (same run, same commit) instead of building it again. Upload it before the
+      # reviewers-only build below empties app/dist.
+      - name: Keep the hosted dist for deploy
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: hosted-dist
+          path: app/dist
+          retention-days: 1
+          if-no-files-found: error
       - name: Build the reviewers-only dist and check it
         env:
           VITE_REVIEWER_BUILD: "1"
@@ -498,13 +507,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build the hosted dist
-        run: pnpm build
+      # check (core) built, stamped and checked the hosted dist for this run's commit.
+      - name: Download the hosted dist from check (core)
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: hosted-dist
+          path: app/dist
 
-      - name: Stamp the commit and check the hosted bundle
-        run: |
-          node scripts/stamp-build.mjs "$GITHUB_SHA"
-          pnpm check:bundle
+      - name: Check the hosted bundle before the migration
+        run: pnpm check:bundle
 
       - name: Probe the access token
         env:

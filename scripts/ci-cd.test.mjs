@@ -18,6 +18,7 @@ const ACTION_SHA = {
   "actions/cache": "55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
   "actions/cache/restore": "55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
   "actions/upload-artifact": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+  "actions/download-artifact": "37930b1c2abaa49bbe596cd826c3c89aef350131",
   "pnpm/action-setup": "ea17c68df8912ef543352723c149a84f56e3d413",
   "supabase/setup-cli": "45a513f8c64c0bc8e0e3dfe572b5c95be85f6359",
   "denoland/setup-deno": "22d081ff2d3a40755e97629de92e3bcbfa7cf2ed",
@@ -247,6 +248,10 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(deploy, /functions deploy jev-tag --project-ref sxqpnetmtufkzowutduq/);
   assert.match(deploy, /functions deploy push-send --project-ref sxqpnetmtufkzowutduq/);
   assert.match(job("check-core"), /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
+  const coreDist = job("check-core");
+  const upload = coreDist.indexOf("uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1");
+  assert.ok(upload > coreDist.indexOf("pnpm check:bundle\n") && upload < coreDist.indexOf("rm -rf app/dist"));
+  assert.match(coreDist, /name: hosted-dist\n {10}path: app\/dist\n {10}retention-days: 1\n/);
   assert.equal(deploy.includes("FLOW_JWT_LEGACY"), false);
   assert.equal(deploy.includes("FLOW_SECRET_KEY"), false);
   assert.equal(deploy.includes("service_role"), false);
@@ -262,8 +267,12 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(deploy, /--branch=main/);
   assert.match(deploy, /cd-smoke.sh/);
 
-  const build = deploy.indexOf("pnpm build");
-  const stamp = deploy.indexOf("stamp-build.mjs");
+  // deploy reuses check (core)'s hosted dist: no build, no stamp, and the bundle is checked again before the migration.
+  assert.equal(deploy.includes("pnpm build"), false);
+  assert.equal(deploy.includes("stamp-build.mjs"), false);
+  const download = deploy.indexOf("uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0");
+  assert.match(deploy, /name: hosted-dist\n {10}path: app\/dist\n/);
+  const build = download;
   const guard = deploy.indexOf("pnpm check:bundle");
   const migrate = deploy.indexOf("cd-push.sh");
   const publish = deploy.indexOf("pnpm exec wrangler");
@@ -279,7 +288,7 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   const sumitConnect = deploy.indexOf("functions deploy sumit-connect");
   const sumitResealFn = deploy.indexOf("functions deploy sumit-reseal");
   const reseal = deploy.indexOf("bash scripts/cd-sumit-reseal.sh");
-  assert.ok(build >= 0 && stamp > build && guard > stamp && migrate > guard && publish > migrate && smoke > publish);
+  assert.ok(build >= 0 && guard > build && migrate > guard && publish > migrate && smoke > publish);
   assert.ok(validate >= 0 && validate < probe && probe < migrate && publish < mktemp && mktemp < secretsFile && secretsFile < fn && fn < jevFn && jevFn < smoke);
   const mercuryConnect = deploy.indexOf("functions deploy mercury-connect");
   const mercurySync = deploy.indexOf("functions deploy mercury-sync");
@@ -416,7 +425,8 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.match(ci, /timeout-minutes: 5\n\s+run: pnpm --filter @flow\/app exec playwright install chromium\n/);
   assert.match(ci, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\.0\.0/);
   assert.match(ci, /actions\/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0/);
-  assert.equal(ci.includes("upload-artifact"), false);
+  // check (core) keeps the hosted dist for deploy. Only that upload exists until the next artifact is added.
+  assert.equal((ci.match(/uses: actions\/upload-artifact@/g) ?? []).length, 1);
   assert.match(ci, /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
   assert.deepEqual(usesProblems(ci), []);
   assert.deepEqual(playwrightProblems(ci), []);
