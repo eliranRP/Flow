@@ -5,7 +5,7 @@ import { PeriodPicker, PresetPeriodSheet, RangeSheet } from "./period-picker";
 import { longHebrew } from "./story-support";
 import { TopBand } from "./top-band";
 
-/** FLOW-351: the pill opens the shared sheet (FLOW-349), as Home and the breakdown do. */
+/** FLOW-351: the pill opens the shared sheet (FLOW-349), as Home does. */
 function Demo({ initialOpen, pill }: { initialOpen: boolean; pill?: string }) {
   const [open, setOpen] = useState(initialOpen);
   const [period, setPeriod] = useState<PeriodChoice>(allTime());
@@ -52,7 +52,7 @@ export const Range: Story = {
   render: () => <RangeSheet open onOpenChange={() => undefined} onApply={() => undefined} />,
 };
 
-/** FLOW-349: the one period list Home, the breakdown and Search share. */
+/** FLOW-349: the one period list Home and Search share. */
 function Shared() {
   const [period, setPeriod] = useState<PeriodChoice>(allTime());
   return <PresetPeriodSheet period={period} onChange={setPeriod} open onOpenChange={() => undefined} />;

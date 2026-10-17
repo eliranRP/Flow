@@ -24,8 +24,6 @@ describe("ledger focus refresh", () => {
     for (const key of LEDGER_FOCUS_KEYS) {
       expect(invalidate).toHaveBeenCalledWith({ queryKey: [key] });
     }
-    // Home's breakdown (FLOW-301) shows the same figures as Home.
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["breakdown"] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["breakdown-lines"] });
   });
 

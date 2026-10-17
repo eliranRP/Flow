@@ -109,7 +109,6 @@ describe("tabSection", () => {
     ["/", "home"],
     ["/review", "home"],
     ["/unpaid", "home"],
-    ["/flow/expense/category/ILS/c1", "home"],
     ["/profit", "home"],
     ["/cash/2026-06", "home"],
     ["/projects/villa", "projects"],

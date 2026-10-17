@@ -1,8 +1,4 @@
 import type {
-  Breakdown,
-  BreakdownDirection,
-  BreakdownGroupBy,
-  BreakdownLinesPage,
   CategoryRow,
   Dashboard,
   FiledTodayRow,
@@ -430,68 +426,6 @@ export function useProjectCategoryQuery(
       return (await loadReadSchemas()).projectCategorySchema.parse(data);
     },
     getNextPageParam: (page) => page?.next_offset ?? undefined,
-  });
-}
-
-/** FLOW-301. Home's income or expenses by group, for Home's period and basis. */
-export function useBreakdownQuery(direction: BreakdownDirection, groupBy: BreakdownGroupBy, active = true) {
-  const preview = useHomePreview();
-  const { period } = useBooks();
-  return useQuery({
-    queryKey: ["breakdown", preview, period, direction, groupBy],
-    enabled: active && preview === "off",
-    // A regroup or a new period keeps the screen and its controls; rows follow the data's own group_by.
-    placeholderData: keepPreviousData,
-    queryFn: async (): Promise<Breakdown> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
-      const { data, error } = await supabase.rpc("get_breakdown", {
-        ...rpcArgs(period),
-        p_direction: direction,
-        p_group_by: groupBy,
-      });
-      if (error) throw error;
-      return (await loadReadSchemas()).breakdownSchema.parse(data);
-    },
-  });
-}
-
-const BREAKDOWN_PAGE = 40;
-
-/** One group's lines, or the kept-out lines when excluded. */
-export function useBreakdownLinesQuery(
-  direction: BreakdownDirection,
-  groupBy: BreakdownGroupBy,
-  key: string,
-  currency: string,
-  excluded: boolean,
-  active = true,
-) {
-  const preview = useHomePreview();
-  const { period } = useBooks();
-  return useInfiniteQuery({
-    queryKey: ["breakdown-lines", preview, period, direction, groupBy, key, currency, excluded],
-    enabled: active && preview === "off" && (excluded || key !== ""),
-    initialPageParam: 0,
-    queryFn: async ({ pageParam }): Promise<BreakdownLinesPage> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
-      const { data, error } = await supabase.rpc("get_breakdown_lines", {
-        ...rpcArgs(period),
-        p_direction: direction,
-        p_group_by: groupBy,
-        p_group_key: key,
-        p_currency: currency,
-        p_excluded: excluded,
-        p_limit: BREAKDOWN_PAGE,
-        p_offset: pageParam,
-      });
-      if (error) throw error;
-      return (await loadReadSchemas()).breakdownLinesSchema.parse(data);
-    },
-    getNextPageParam: (page, pages) => (page?.has_more === true ? pages.length * BREAKDOWN_PAGE : undefined),
   });
 }
 
