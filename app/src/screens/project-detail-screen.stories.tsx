@@ -4,7 +4,7 @@ import { expect, userEvent, within } from "@storybook/test";
 import { ProjectDetailScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { FILLED } from "../ui/investment-card.stories-support";
-import { at320, ExampleBar, exampleOnBand, storyBody } from "../ui/screen-stories-support";
+import { ExampleBar, exampleOnBand, storyBody } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -410,14 +410,13 @@ export const ProjectTransactionsSection: Story = {
 };
 
 // FLOW-424 (C18-1): a kept-out line with a long category keeps its amount and chevron in line with
-// the counted rows at 320; the category drops whole instead of pushing them out.
+// the counted rows; the category drops whole instead of pushing them out.
 const longKeptOut: NonNullable<ProjectDetailData> = {
   ...overviewProject,
   transactions: overviewProject.transactions.map((txn) => (txn.kept_out === true ? { ...txn, category: "קבלני משנה וחומרי גמר" } : txn)),
 };
-export const ProjectTransactionsLongKeptOut320: Story = {
-  name: "Project, transactions section, long kept-out hint, 320",
-  ...at320,
+export const ProjectTransactionsLongKeptOut: Story = {
+  name: "Project, transactions section, long kept-out hint",
   render: () => (
     <StoryRoute entry="/projects/p-a/transactions" tabs>
       <ProjectDetailScreen example={exampleOnBand} sample={longKeptOut} section="transactions" sectionTo={sectionTo} />

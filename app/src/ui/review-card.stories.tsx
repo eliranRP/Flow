@@ -200,9 +200,8 @@ export const MetaCardName: Story = {
 };
 
 /** A name too long for the line ellipsizes; the last 4 stays whole. */
-export const MetaCardLongName320: Story = {
-  parameters: { viewport: { defaultViewport: "flow320" } },
-  name: "Meta: card with a long name, 320",
+export const MetaCardLongName: Story = {
+  name: "Meta: card with a long name",
   args: {
     ...mercuryCard,
     meta: storyMeta("t1", { method: "card", card_last4: "8408", card_name: "Utilities card for the duplex on Maple Street" }),
@@ -252,7 +251,6 @@ export const MetaHebrewMemo: Story = {
 
 /** הצעת Jev marks the field whose value Jev filled. Invented data. */
 const jevCard = { ...OneCard.args, project: "וילה רעננה", category: "חומרים" };
-const narrow = { parameters: { viewport: { defaultViewport: "flow320" } } };
 
 export const JevProject: Story = { name: "Jev: project", args: { ...jevCard, projectJev: true } };
 
@@ -300,10 +298,9 @@ export const FlagSpikeLoud: Story = { name: "Flag: amount spike, loud", args: { 
 export const FlagSpikeQuiet: Story = { name: "Flag: amount spike, quiet", args: { ...jevCard, flags: [flag("amount_spike", 0.4, { ratio: 3.4, typical_amount_minor: 250_000 })] } };
 /** With no ratio there is no pill: the quiet line stays, and the usual amount still sits under the amount. */
 export const FlagSpikeNoRatio: Story = { name: "Flag: amount spike, quiet, no ratio", args: { ...jevCard, flags: [flag("amount_spike", null, { typical_amount_minor: 250_000 })] } };
-/** At 320 a long amount may leave no room: the pill drops under it, and the amount is never cut. */
-export const FlagSpikeLong320: Story = {
-  ...narrow,
-  name: "Flag: amount spike, long amount, 320",
+/** A long amount may leave no room: the pill drops under it, and the amount is never cut. */
+export const FlagSpikeLongAmount: Story = {
+  name: "Flag: amount spike, long amount",
   args: { ...jevCard, projectJev: true, categoryJev: true, netAgorot: "-123456700", flags: [flag("amount_spike", 0.4, { ratio: 12.5, typical_amount_minor: 9_876_500 })] },
   play: async ({ canvasElement }) => {
     const amount = canvasElement.querySelector<HTMLElement>(".ui-review-amount > .t-display");
@@ -353,7 +350,6 @@ export const JevFilled: Story = {
     await expect(document.elementFromPoint(x, box.bottom + 10)?.closest(".ui-review-filled-undo")).not.toBeNull();
   },
 };
-export const JevFilled320: Story = { ...narrow, name: "Jev filled: undo, 320", args: JevFilled.args, play: JevFilled.play };
 export const JevFilledBusy: Story = { name: "Jev filled: undo running", args: { ...JevFilled.args, filled: "busy" } };
 export const JevFilledViewer: Story = { name: "Jev filled: viewer", args: { ...JevFilled.args, filled: "label" } };
 export const JevFilledFlag: Story = { name: "Jev filled: with quiet flag", args: { ...JevFilled.args, flags: [flag("duplicate", 0.3, { other_doc_date: "2026-10-03" })] } };

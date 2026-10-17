@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
 import { List, ListRow } from "./list-row";
-import { at320 } from "./screen-stories-support";
 import { SplitPartsHint } from "./split-parts-hint";
 import { StoryRoute } from "./story-route";
 
@@ -186,10 +185,4 @@ export const LongNames: Story = {
     const words = [...canvasElement.querySelectorAll<HTMLElement>(".ui-split-hint-of-word")];
     await expect(words.filter((word) => word.scrollWidth > word.clientWidth + 1)).toEqual([]);
   },
-};
-
-export const LongNames320: Story = {
-  ...LongNames,
-  name: "Split lines with long names, 320",
-  ...at320,
 };

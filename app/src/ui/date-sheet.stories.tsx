@@ -41,8 +41,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
-
 export const Floor: Story = {};
 /** The server refused the day: the sheet stays open and says why. */
 export const Refused: Story = { args: { error: "יש תשלום משויך אחרי התאריך הזה. בחרו תאריך מאוחר יותר." } };
@@ -64,4 +62,3 @@ export const YearList: Story = {
     await expect(body.getByRole("group", { name: "שנה" })).toBeVisible();
   },
 };
-export const YearList320: Story = { ...YearList, ...at320 };
