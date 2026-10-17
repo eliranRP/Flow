@@ -16,7 +16,6 @@ function Figures({ figures, detail = true }: { figures: Figure[]; detail?: boole
           currency={figure.currency}
           presentation={detail ? "detail" : "summary"}
           size="list"
-          income={figure.minor > 0n}
           loss={figure.minor < 0n}
         />
       ))}

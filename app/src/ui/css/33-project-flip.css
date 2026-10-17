@@ -188,3 +188,20 @@
 .ui-confirm-roomy .ui-confirm-warning {
   line-height: calc(var(--type-body-line) * 1.035);
 }
+
+/* The menu's title sits 5px under the handle's gap and 5px above the first row, as the board draws it. */
+.ui-project-menu .ui-sheet-head {
+  margin-block: calc(var(--space-1) + var(--space-1) / 4);
+}
+
+/* The Projects list: a zero amount is muted, and the general-expenses circle is dashed with its icon. */
+.ui-row-amount-zero {
+  color: var(--color-text-muted);
+}
+
+.ui-row-initials.ui-row-dashed {
+  border-width: 1.5px;
+  border-color: var(--color-text-muted);
+  color: var(--color-text-muted);
+  background: transparent;
+}

@@ -18,7 +18,7 @@ import { IconButton } from "../ui/icon-button";
 import { CompactBar } from "../ui/compact-bar";
 import { useScrolledPast } from "../ui/screen-header";
 import { formatAmount } from "../ui/amount";
-import { PlusIcon, ProjectsIcon, SearchIcon } from "../ui/icons";
+import { HomeIcon, PlusIcon, ProjectsIcon, SearchIcon } from "../ui/icons";
 import { Avatar } from "../ui/avatar";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
@@ -149,8 +149,9 @@ function ProjectsBody({
             variant="project"
             title="הוצאות כלליות"
             hint="תקורה · לא פרויקט"
-            icon={<span className="ui-row-initials ui-row-dashed" aria-hidden="true" />}
+            icon={<span className="ui-row-initials ui-row-dashed" aria-hidden="true"><HomeIcon size={18} /></span>}
             agorot={BigInt(netIn(overhead.cash, base))}
+            signed
             currency={base}
             href={`/projects/${overhead.id}${search}`}
           />
@@ -209,7 +210,7 @@ function ProjectCashRowItem({ row, currency, search, finished = false }: { row: 
       agorot={BigInt(finished ? row.profit_all_minor : net)}
       currency={currency}
       amounts={elsewhere ? lines : undefined}
-      loss={finished && row.profit_all_minor < 0}
+      signed
       href={`/projects/${row.id}${search}`}
       className={finished ? "ui-proj-finished" : undefined}
     />

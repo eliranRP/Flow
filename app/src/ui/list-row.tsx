@@ -72,6 +72,8 @@ export type ListRowProps =
     currency?: string;
     amounts?: { minor: bigint; currency: string }[];
     amountDirection?: "expense" | "income";
+    /** The Projects list's amount (board): signed, green when money in, muted at zero, cents drawn small and raised. */
+    signed?: boolean;
     /** A small mark before the amount. The project page's up mark (FLOW-401). */
     mark?: ReactNode;
     /** A muted line under the amount at the end side (FLOW-367: an open invoice's age). */
@@ -551,6 +553,15 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
             loss={amount.minor < 0n}
           />
         ))}
+      </span>
+    );
+  }
+  if (props.signed === true) {
+    const abs = props.agorot < 0n ? -props.agorot : props.agorot;
+    const income = props.agorot > 0n;
+    return (
+      <span className={cx("t-amount", props.agorot === 0n && "ui-row-amount-zero")}>
+        <Amount agorot={abs} currency={props.currency} direction={income ? "income" : "expense"} income={income} cents="always" zeroCents />
       </span>
     );
   }
