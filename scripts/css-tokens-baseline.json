@@ -58,7 +58,7 @@
     "spacing": 1
   },
   "app/src/ui/css/27-compact-header.css": {
-    "spacing": 4
+    "spacing": 3
   },
   "app/src/ui/css/30-prompt-card.css": {
     "font-weight": 1
