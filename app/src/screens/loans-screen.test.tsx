@@ -75,7 +75,8 @@ describe("Loans tab", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     const closed = screen.getByRole("button", { name: /^הלוואת גשר, / });
     expect(closed).toHaveTextContent("וילה אלון · בלון · נפרעה 11/2025");
-    expect(closed.querySelector(".ui-loans-amount")).toBeNull();
+    expect(closed.querySelector(".ui-loans-amount")).toHaveTextContent("$0");
+    expect(closed).toHaveAccessibleName(/^הלוואת גשר, \$0, /);
   });
 
   it("opens the closed group from the URL (the dev fixture's ?closed=1)", () => {

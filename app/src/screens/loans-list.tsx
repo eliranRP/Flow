@@ -10,7 +10,7 @@ import { cx } from "../ui/cx";
 import { LOAN_KIND_LIST_LABEL, LOAN_STATUS_LABEL } from "./loan-copy";
 import { formatRatePpm } from "./loan-detail-data";
 import { formatLoanMoney } from "./loan-form";
-import { groupLoans, LoanBalance, showsLoanBalance, LOANS_CLOSED_UNDER_EMPTY, type LoanListRow } from "./loan-list";
+import { groupLoans, LoanBalance, LOANS_CLOSED_UNDER_EMPTY, type LoanListRow } from "./loan-list";
 import { LoanSummaryCard } from "./loan-summary-card";
 import { LOANS_EMPTY_OWNER, LOANS_EMPTY_TITLE, LOANS_EMPTY_VIEWER, LOANS_ERROR_TITLE, type LoansHostCtx } from "./loan-setup";
 
@@ -40,7 +40,6 @@ function closedWhen(row: LoanListRow): string {
 }
 
 function LoanRow({ row, muted, onOpen }: { row: LoanListRow; muted: boolean; onOpen: (id: string) => void }) {
-  const showBalance = showsLoanBalance(row);
   const meta = loanRowMeta(row);
   return (
     <li className="ui-loans-li">
@@ -48,14 +47,14 @@ function LoanRow({ row, muted, onOpen }: { row: LoanListRow; muted: boolean; onO
         type="button"
         className={cx("ui-loans-row", muted && "ui-loans-row-closed")}
         onClick={() => { onOpen(row.id); }}
-        aria-label={[row.name, showBalance ? formatLoanMoney(row.balanceMinor, row.currency === "USD" ? "USD" : "ILS") : null, meta].filter((part) => part != null).join(", ")}
+        aria-label={[row.name, formatLoanMoney(row.balanceMinor, row.currency === "USD" ? "USD" : "ILS"), meta].join(", ")}
       >
         <span className="ui-loans-initial" aria-hidden="true">{row.name.trim().slice(0, 1)}</span>
         <span className="ui-loans-text">
           <span className="ui-loans-name">{row.name}</span>
           <span className={cx("ui-loans-meta", row.flaggedParts > 0 && !muted && "ui-loans-meta-warn")}>{meta}</span>
         </span>
-        {showBalance ? <LoanBalance className="ui-loans-amount" minor={row.balanceMinor} currency={row.currency} /> : null}
+        <LoanBalance className="ui-loans-amount" minor={row.balanceMinor} currency={row.currency} />
       </button>
     </li>
   );

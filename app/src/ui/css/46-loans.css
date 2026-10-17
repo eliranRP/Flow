@@ -74,6 +74,10 @@
   opacity: 0.7;
 }
 
+.ui-loans-row-closed .ui-loans-amount {
+  color: var(--color-text-muted);
+}
+
 .ui-loans-initial {
   display: inline-grid;
   place-items: center;

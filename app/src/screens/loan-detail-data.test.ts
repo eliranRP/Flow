@@ -273,7 +273,7 @@ describe("the list", () => {
     expect(closed.map((row) => row.id)).toEqual(["c", "d"]);
   });
 
-  it("hides the balance of a paid-off loan and of a closed loan with nothing owed (FLOW-138)", () => {
+  it("the loan page leads with נפרעה only: no balance for a paid-off loan or a closed loan with nothing owed (FLOW-138)", () => {
     expect(rows.map((row) => showsLoanBalance(row))).toEqual([true, true, false, false]);
     expect(showsLoanBalance({ ...(rows[2] as LoanListRow), balanceMinor: 1200n })).toBe(true);
   });
