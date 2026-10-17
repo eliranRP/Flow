@@ -48,19 +48,19 @@
 .ui-lines-count {
   margin: 0;
   color: var(--color-text-muted);
-  /* board: 18px lines, and the count sits 4px under the total (the head's 12px gap less 8px). */
-  line-height: 18px;
+  /* board: 15px lines at 1.2 (the token), and the count sits 8px under the head gap (the total to count gap is 4px). */
+  line-height: var(--type-card-line);
   margin-block-start: calc(var(--space-2) * -1);
 }
 
 .ui-lines-head > .ui-breakdown-total {
   /* board: the total sits 3px lower than the title block's gap gives it. */
-  padding-block-start: 3px;
+  padding-block-start: var(--pill-pad-block);
 }
 
 /* The board's tag line sits right under its hint (the hint and tag share one block). */
 .ui-lines-group .ui-row-tagline {
-  margin-block-start: -7px;
+  margin-block-start: calc(var(--space-2) * -1);
 }
 
 /* FLOW-366: the lines head stacks its switch, total, count and chips in one column. The page's
@@ -130,7 +130,7 @@
   justify-content: space-between;
   gap: var(--space-3);
   /* board: 20px above the head, 6px under it. */
-  padding: var(--space-5) 0 6px;
+  padding: var(--space-5) 0 var(--status-gap);
   background: var(--color-bg);
 }
 
@@ -150,11 +150,11 @@
 
 /* FLOW-366b: the chip row as the board draws it: 36px chips, 14px sides, 1.5px border, 14/500 type. */
 .ui-lines-chips .ui-chip {
-  block-size: 36px;
-  min-block-size: 36px;
+  block-size: var(--control-height-sm);
+  min-block-size: var(--control-height-sm);
   gap: var(--space-2);
-  padding-inline: 14px;
-  border-width: 1.5px;
+  padding-inline: var(--space-inset-row);
+  border-width: var(--stroke-strong);
   font-size: var(--type-chip-size);
   line-height: var(--type-chip-line);
   font-weight: var(--type-chip-weight);

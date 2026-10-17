@@ -1,7 +1,11 @@
 /* FLOW-431 and FLOW-366: the party's history under the recurring row, and the sheet with all of it. */
 
+/* FLOW-366b: the board's history block is a column of 12px gaps, 14px sides (inside the card). */
 .ui-charges-history {
-  padding: var(--space-3) var(--space-side) var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-inset-row) var(--space-inset-row) var(--space-3);
   border-top: 1px solid var(--color-line);
 }
 
@@ -14,7 +18,7 @@
 }
 
 .ui-charges-line {
-  margin: var(--space-1) 0 var(--space-3);
+  margin: 0;
   color: var(--color-text-secondary);
   font-size: var(--type-meta-size);
   line-height: var(--type-meta-line);
@@ -36,7 +40,6 @@
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: var(--space-2);
   block-size: 76px;
-  margin-block-end: var(--space-3);
 }
 
 .ui-charge-bar-col {
@@ -44,7 +47,8 @@
   min-inline-size: 0;
   flex-direction: column;
   justify-content: flex-end;
-  gap: var(--space-1);
+  /* board: the bars sit 6px above their month label. */
+  gap: var(--status-gap);
 }
 
 .ui-charge-bar-track {
@@ -98,6 +102,11 @@
   font-size: var(--type-meta-size);
   line-height: var(--type-meta-line);
   text-decoration: none;
+}
+
+/* The board's earlier rows are 34px: the row's own padding, with no 44px touch minimum (the history is a list). */
+.ui-charges-history .ui-charges-row {
+  min-height: 0;
 }
 
 .ui-charges-row-now {
