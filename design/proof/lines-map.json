@@ -1,4 +1,9 @@
 {
   "Lines": "/e2e/cash-lines?board=1",
-  "LinesIn": "/e2e/cash-lines?board=1&side=in"
+  "LinesIn": "/e2e/cash-lines?board=1&side=in",
+  "LinesDetail": "/e2e/txn?board=1",
+  "LinesRecurring": "/e2e/txn?board=recurring",
+  "LinesFreq": "/e2e/txn?board=recurring&sheet=pace",
+  "LinesAll": "/e2e/txn?board=recurring&sheet=all",
+  "LinesDetailLoan": "/e2e/txn?board=loan"
 }

@@ -178,25 +178,16 @@ function pathOf(to: string): string {
 
 /**
  * True when Back lands on `fallback`'s screen: a deep link replaces itself with the fallback, and a
- * pop lands there only when the previous entry is that screen. MemoryRouter (unit tests) has no index.
+ * pop lands there only when the previous screen (not a sheet of this one) is that screen. MemoryRouter (unit tests) has no index.
  */
 export function useBackLandsOn(fallback: string): boolean {
-  useLocation();
+  const { pathname } = useLocation();
   const idx = historyIndex();
   if (idx == null || idx === 0) return true;
-  return pathsByIndex.get(idx - 1) === pathOf(fallback);
-}
-
-/**
- * FLOW-444: the screen Back returns to. A page opened from one of `via` (a project's month from its
- * "לפי חודש" list) goes back there, so its labelled Back still shows; otherwise `fallback`.
- */
-export function useBackTarget(fallback: string, via: readonly string[]): string {
-  useLocation();
-  const idx = historyIndex();
-  if (idx == null || idx === 0) return fallback;
-  const previous = pathsByIndex.get(idx - 1);
-  return via.find((to) => pathOf(to) === previous) ?? fallback;
+  // An open sheet is a history entry on the same screen: Back's label looks past those to the screen below.
+  let previous = idx - 1;
+  while (previous >= 0 && pathsByIndex.get(previous) === pathname) previous -= 1;
+  return previous < 0 || pathsByIndex.get(previous) === pathOf(fallback);
 }
 
 export function ScrollMemory() {

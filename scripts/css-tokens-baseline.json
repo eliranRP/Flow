@@ -1,7 +1,4 @@
 {
-  "app/src/styles/app.css": {
-    "font-weight": 1
-  },
   "app/src/ui/css/02-fields-sheets.css": {
     "spacing": 1,
     "font-weight": 2
@@ -58,7 +55,7 @@
     "spacing": 1
   },
   "app/src/ui/css/27-compact-header.css": {
-    "spacing": 4
+    "spacing": 3
   },
   "app/src/ui/css/30-prompt-card.css": {
     "font-weight": 1
@@ -69,9 +66,6 @@
   },
   "app/src/ui/css/34-swipe-row.css": {
     "duration": 1
-  },
-  "app/src/ui/css/35-team.css": {
-    "font-weight": 1
   },
   "app/src/ui/css/38-related-charges.css": {
     "radius": 1

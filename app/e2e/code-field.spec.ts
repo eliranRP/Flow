@@ -60,7 +60,11 @@ async function assertEndClear(field: Locator) {
 
 async function swipeEndAndClear(page: Page, field: Locator) {
   await expect(field).toBeVisible();
-  await field.scrollIntoViewIfNeeded();
+  // Centre the field: scrollIntoViewIfNeeded leaves a field at the bottom edge under the fixed tab bar,
+  // where the swipe would land on the bar (the AI page's minted code card sits low since the board pass).
+  await field.evaluate((input) => {
+    input.scrollIntoView({ block: "center" });
+  });
   await expect(field).toBeInViewport();
   const before = await field.evaluate((input: HTMLInputElement) => input.scrollLeft);
   await touchSwipe(page, field);

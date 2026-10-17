@@ -14,11 +14,13 @@ export function formatAmount(
   presentation: AmountPresentation = "summary",
   currency = "ILS",
   direction?: "income" | "expense",
+  keepZeroCents = false,
 ): string {
   return formatAmountText(agorot, currency, {
     detail: presentation === "detail",
     direction,
     plus: direction === "income",
+    keepZeroCents,
   });
 }
 
@@ -35,12 +37,16 @@ type AmountProps = {
    * shows no minus turns green; a negative income keeps its minus in the main text colour. Never on the band.
    */
   income?: boolean;
+  /** With `income`, keeps the income colour but draws no "+" (the invoice page's board figure). */
+  signless?: boolean;
   /**
    * "always": transaction rows show agorot like Mercury, drawn small and raised (decision 0120,
    * option C). A whole amount shows no ".00" (owner, 2026-10-10). Other lists, totals and
    * summaries stay whole units.
    */
   cents?: "always";
+  /** FLOW-366b: with cents="always", a whole amount keeps its ".00" (the month lines rows, as the board draws them). */
+  zeroCents?: boolean;
 };
 
 /** True when the formatted figure starts with a minus sign. */
@@ -88,13 +94,15 @@ export function Amount({
   loss = false,
   direction,
   income = false,
+  signless = false,
   cents,
+  zeroCents = false,
 }: AmountProps) {
   const ref = useRef<HTMLElement>(null);
   const [step, setStep] = useState(0);
   const shown = cents === "always" ? "detail" : presentation;
   // Money in gets a plus (decision 0181). Only a non-zero figure with no loss: zero has no sign.
-  const text = formatAmount(agorot, shown, currency, direction ?? (income && !loss && agorot > 0n ? "income" : undefined));
+  const text = formatAmount(agorot, shown, currency, direction ?? (income && !signless && !loss && agorot > 0n ? "income" : undefined), zeroCents);
   useLayoutEffect(() => {
     const first = firstStep(size);
     if (first == null) return;

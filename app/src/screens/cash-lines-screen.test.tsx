@@ -5,7 +5,6 @@ import { shiftMonthKey } from "../period";
 import { renderWithProviders } from "../test-render";
 import { israelToday } from "../ui/date-math";
 import { CashLinesScreen } from "./cash-lines-screen";
-import { CashMonthScreen } from "./cash-screens";
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
@@ -73,9 +72,7 @@ const lines = {
 function wrap(path: string) {
   return renderWithProviders(
     <Routes>
-      <Route path="/cash/:month" element={<CashMonthScreen />} />
       <Route path="/cash/:month/:side/:currency" element={<CashLinesScreen />} />
-      <Route path="/cash/year/:year" element={<p>שנה</p>} />
       <Route path="/" element={<p>בית</p>} />
     </Routes>,
     { route: path },
@@ -104,6 +101,13 @@ describe("Cash lines", () => {
     expect(screen.getByRole("heading", { name: "יצא" })).toBeInTheDocument();
     expect(screen.queryByText(/^−₪1,200/)).toBeNull();
     expect(screen.getByRole("link", { name: /בנק לדוגמה/ })).toHaveAttribute("href", "/transactions/t1");
+  });
+
+  it("goes Back to Home on an earlier month", async () => {
+    wrap(`/cash/${earlier}/out/ILS`);
+    await screen.findByText("בנק לדוגמה");
+    fireEvent.click(screen.getByRole("button", { name: /חזרה|חזור|back/i }));
+    expect(await screen.findByText("בית")).toBeInTheDocument();
   });
 
   it("switches currency in place", async () => {

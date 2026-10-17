@@ -8,7 +8,7 @@
 **Company profit (from Home's רווח החודש; Back "בית")**
 - [ ] Title רווח 32/600, "<month year> · עד היום", profit 34/400 (a loss in the signal colour with U+2212), one grey line "מתחילת השנה +$X".
 - [ ] Card: two thin bars scaled to the larger: הכנסות (amount green) and הוצאות שנספרות ברווח. Nothing else.
-- [ ] Chips: לפי פרויקט (default) · לפי קטגוריה · לפי תאריך · לפי סכום. Project: one row per project, no heads (name, "N תנועות", profit; a loss in the signal colour), largest first, כללי = no project; a row opens that project's profit. Category: one row per category ("N תנועות · N פרויקטים", total; income green, expenses plain, never red); a tap opens the row in place to show its lines, a second tap closes it. Date and amount: the lines as on month lines; a line opens the transaction.
+- [x] Chips: לפי פרויקט (default) · לפי קטגוריה · לפי תאריך · לפי סכום. Project: one row per project, no heads (name, "N תנועות", profit; a loss in the signal colour), largest first, כללי = no project; a row opens that project's profit. Category: one row per category ("N תנועות · N פרויקטים", total; income green, expenses plain, never red); a tap opens the row in place to show its lines, a second tap closes it. Date and amount: the lines as on month lines; a line opens the transaction.
 - [ ] Bottom, small: what is not counted in profit (FLOW-440's row and list), and "נספר לפי תאריך תשלום · שינוי" → the basis sheet.
 
 **Project profit (pushed from the left; Back "רווח")**

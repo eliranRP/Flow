@@ -132,7 +132,7 @@ FLOW-363 leaves their slots and tokens in place and adds no loader of its own.
 
 ### 2.3 Tokens (363.1)
 
-- **Source of truth.** `design/system/implementation-tokens.css` becomes the one hand-edited token file. Its header says "generated from design-tokens.json", but the generator has drifted: running `design/src/gen_implementation_tokens.py` today drops `--surface-hover`, `--tabbar-min-inset`, `--toast-duration-error` and the `.t-hint` colour, and no code reads `design-tokens.json`. So 363.1 deletes `design-tokens.json` and `gen_implementation_tokens.py`, rewrites the header, and updates every doc that names them (`design/README.md`, `design/system/design-system.md`, implementation-guide §2.1, DESIGN-RULES, `docs/tech/tech-plan.md`, `design/MANIFEST.txt`). `design/src/tokens.py` stays only while the old mockup generators in `design/src` use it (363.1 also removes the `design-tokens.json` write in `design/src/flow.py`); R11 deletes `design/src` with the last old board.
+- **Source of truth.** `design/system/implementation-tokens.css` becomes the one hand-edited token file. Its header says "generated from design-tokens.json", but the generator has drifted: running the old generator `gen_implementation_tokens.py` (deleted in T-03) today drops `--surface-hover`, `--tabbar-min-inset`, `--toast-duration-error` and the `.t-hint` colour, and no code reads `design-tokens.json`. So 363.1 deletes `design-tokens.json` and `gen_implementation_tokens.py`, rewrites the header, and updates every doc that names them (`design/README.md`, `design/system/design-system.md`, implementation-guide §2.1, DESIGN-RULES, `docs/tech/tech-plan.md`, `design/MANIFEST.txt`). the old `tokens.py` stays only while the old mockup generators in the old `src` folder use it (363.1 also removes the `design-tokens.json` write in the old `flow.py`); R11 deletes the old `src` folder with the last old board (done in T-03).
 - **Type.** One token per role in REDESIGN-BUILD's table: `--type-band`, `--type-detail`, `--type-total`, `--type-title`, `--type-card`, `--type-name`, `--type-sheet`, `--type-section`, `--type-body`, `--type-btn`, `--type-btn-2`, `--type-line2`, `--type-meta`, `--type-chip`, `--type-caption`, `--type-cents`.
   - Each role keeps today's pattern: `--type-<role>-size`, `-line` and `-weight`, a `.t-<role>` class, and the `--text-<role>` aliases in `app/src/styles/app.css`. `--type-wordmark` is kept as it is.
   - The old `--type-hero`, `display`, `title-1`, `band-title`, `title-2`, `heading`, `title-3`, `amount`, `body`, `label`, `meta`, `hint` and `micro` go once nothing reads them. 363.1 aliases each old name to its new role, so screens keep working; each screen PR switches to the new names; R11 deletes the aliases.
@@ -246,13 +246,13 @@ Each file is deleted in the PR that removes its last reference. Before deleting,
 
 | Files | Delete in |
 | --- | --- |
-| `design/screens/09b-` to `09e-onboarding-dark.png` (named only by `design/src/09-onboarding-dark.html`) | R11, with `design/src` |
-| `docs/module-1-project-pnl/design/style-{a-calm,b-dark,c-warm}.png` | Kept: the module-1 design README links them as superseded options |
-| `design/system/ds-1..3*.png` (colour, type, spacing) | R11. 363.1 removed their links from DESIGN-RULES, the guide and 0024 (which now says "superseded by 0181"), but a past `docs/changelog.md` entry still links ds-1, and the changelog is not edited by task PRs |
-| `design/system/ds-4..6*.png`, `ds-8*.png` | 363.4, with the rewritten §2.8 and guide §7 |
-| `design/system/ds-7*.png`, all `design/states/*.png` | FLOW-371, with the rewritten empty and loading section and the `design-system.md` and implementation-guide §7.20 and §8 references |
-| `design/screens/NN-*.png` | The screen PR that rewrites that screen's DESIGN-RULES §4 entry (e.g. `01-home-*` in FLOW-364, `14-settings-*` in FLOW-512, which also updates `scripts/ci-cd.test.mjs`) |
-| `design/src` (the old mockup generators and the HTML they render, including `ds-*.html`, `overview*.html` and `09-onboarding-*.html`) | R11, with the last old board. `design/src/tokens.py` stays until then |
+| Old 09b to 09e onboarding PNGs and their HTML source (deleted in T-03) | R11 |
+| `docs/module-1-project-pnl/design/style-{a-calm,b-dark,c-warm}.png` | Deleted in T-03 with the module-1 PNGs; the design README now names them only as text |
+| Old `ds-1..3` PNGs (colour, type, spacing) | Deleted in T-03. Their links are gone from the live docs; old changelog entries keep their text |
+| Old `ds-4..6` and `ds-8` PNGs | Deleted in T-03, with the rewritten §2.8 and guide §7 |
+| Old `ds-7` PNG and all old state PNGs (deleted in T-03) | FLOW-371, with the rewritten empty and loading section and the `design-system.md` and implementation-guide §7.20 and §8 references |
+| Old screen PNGs (deleted in T-03) | The screen PR that rewrites that screen's DESIGN-RULES §4 entry (e.g. `01-home-*` in FLOW-364, `14-settings-*` in FLOW-512, which also updates `scripts/ci-cd.test.mjs`) |
+| Old mockup generators and HTML (deleted in T-03) | R11, with the last old board |
 | `docs/module-1-project-pnl/wireframes` | Kept: the wireframes document the product spec |
 
 ## 6. Design review team

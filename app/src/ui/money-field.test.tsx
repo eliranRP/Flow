@@ -121,3 +121,18 @@ describe("MoneyField", () => {
     expect(input).toHaveValue("6.125");
   });
 });
+
+describe("MoneyField trailing and hint (FLOW-139d)", () => {
+  it("draws the trailing control after the input, and a hint while there is no error", () => {
+    render(<MoneyField label="סכום" value="" onValueChange={() => undefined} prefix="" trailing={<button type="button">$</button>} hint="אחרת השאירו 0" />);
+    expect(screen.getByRole("button", { name: "$" })).toBeInTheDocument();
+    expect(screen.getByText("אחרת השאירו 0")).toHaveClass("ui-field-hint");
+  });
+
+  it("shows the error in place of the hint", () => {
+    render(<MoneyField label="סכום" value="-1" keepMinus onValueChange={() => undefined} error="כתבו סכום בלי מינוס." hint="אחרת השאירו 0" />);
+    expect(screen.getByText("כתבו סכום בלי מינוס.")).toBeInTheDocument();
+    expect(screen.queryByText("אחרת השאירו 0")).toBeNull();
+  });
+});
+

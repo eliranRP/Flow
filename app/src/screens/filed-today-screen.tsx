@@ -12,7 +12,7 @@ import { ReviewIcon } from "../ui/icons";
 import { ListRow } from "../ui/list-row";
 import { GroupList } from "../ui/month-list";
 import { groupByKey } from "../ui/month-groups";
-import { lineCountHint } from "../breakdown";
+import { lineCountHint } from "../line-count-hint";
 import { KeptOutTag, rowSource } from "../ui/line-marks";
 import { KEPT_OUT } from "./screen-shared";
 import { ScreenState } from "../ui/screen-state";

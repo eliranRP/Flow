@@ -25,7 +25,16 @@ function reopenFailure(error: Error): WriteFailure {
  * server already made it the last one opened); דחייה declines with ביטול on the toast, which
  * reopens the invite while the server still allows it. A gone invite leaves the list.
  */
-export function useInviteActions({ onJoined }: { onJoined: (invite: MyInvite) => void }) {
+export function useInviteActions({
+  onJoined,
+  onDeclined,
+  onReopened,
+}: {
+  onJoined: (invite: MyInvite) => void;
+  /** The invitation screen shows its own declined state, so no toast: it offers `reopen` itself. */
+  onDeclined?: (invite: MyInvite) => void;
+  onReopened?: (invite: MyInvite) => void;
+}) {
   const api = useTeamApi();
   const toast = useToast();
   const client = useQueryClient();
@@ -50,6 +59,7 @@ export function useInviteActions({ onJoined }: { onJoined: (invite: MyInvite) =>
   const reopen = useWrite<MyInvite>({
     keys: [MY_INVITES_KEY],
     failure: reopenFailure,
+    onSuccess: onReopened,
     run: async (invite) => {
       await api.reopenInvite(invite.id);
     },
@@ -61,6 +71,10 @@ export function useInviteActions({ onJoined }: { onJoined: (invite: MyInvite) =>
       return teamFailure(DECLINE_FAILED)(error);
     },
     onSuccess: (invite) => {
+      if (onDeclined) {
+        onDeclined(invite);
+        return;
+      }
       toast.show({
         message: INVITE_DECLINED,
         action: "ביטול",
@@ -84,5 +98,7 @@ export function useInviteActions({ onJoined }: { onJoined: (invite: MyInvite) =>
     decline: (invite: MyInvite) => {
       if (busy == null) decline.mutate(invite);
     },
+    reopen: (invite: MyInvite) => { reopen.mutate(invite); },
+    reopening: reopen.isPending,
   };
 }

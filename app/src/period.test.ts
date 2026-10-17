@@ -1,11 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { formatDayMonth, inclusiveDays, rangeLengthLabel } from "./ui/date-math";
+import { formatDayMonth } from "./ui/date-math";
 import {
   allTime,
-  comparisonWords,
   customRange,
   defaultPeriod,
-  heroProfitLabel,
   isCurrentPeriod,
   monthPeriod,
   periodFromSearch,
@@ -14,7 +12,6 @@ import {
   periodPhrase,
   periodSearch,
   presetPeriod,
-  samePeriod,
   stepPeriod,
   thisMonth,
   windowLabel,
@@ -54,13 +51,6 @@ describe("period windows", () => {
     expect(stepPeriod(customRange("2026-01-01", "2026-02-01"), -1, now)).toBeNull();
     expect(presetPeriod("month", now, "2027-03")).toMatchObject({ anchor: "2026-10" });
   });
-
-  it("selects by kind and anchor, not by the Hebrew label", () => {
-    expect(samePeriod(thisMonth(now), presetPeriod("month", now), now)).toBe(true);
-    expect(samePeriod(thisMonth(now), monthPeriod("2026-09", now), now)).toBe(false);
-    expect(samePeriod(thisMonth(now), customRange("2026-10-01", "2026-10-08"), now)).toBe(false);
-    expect(samePeriod({ kind: "month", from: "2026-09-01", to: "2026-09-30" }, monthPeriod("2026-09", now), now)).toBe(true);
-  });
 });
 
 describe("period labels", () => {
@@ -78,14 +68,6 @@ describe("period labels", () => {
     expect(periodLabel(thisMonth(now), now)).toBe("החודש");
     expect(periodLabel(monthPeriod("2026-09", now), now)).toBe("ספטמבר 2026");
     expect(periodLabel(presetPeriod("months3", now), now)).toBe("3 חודשים");
-    expect(heroProfitLabel(thisMonth(now), 1n, now)).toBe("רווח החודש");
-    expect(heroProfitLabel(thisMonth(now), 0n, now)).toBe("רווח החודש");
-    expect(heroProfitLabel(monthPeriod("2026-09", now), -1n, now)).toBe("הפסד");
-    expect(heroProfitLabel(thisMonth(now), "mixed", now)).toBe("רווח והפסד החודש");
-    expect(heroProfitLabel(presetPeriod("months3", now), 1n, now)).toBe("רווח ב־3 חודשים");
-    expect(heroProfitLabel(presetPeriod("year", now), 1n, now)).toBe("רווח");
-    expect(heroProfitLabel(allTime(), 1n, now)).toBe("רווח");
-    expect(heroProfitLabel(customRange("2026-01-01", "2026-02-01"), 1n, now)).toBe("רווח בטווח שנבחר");
     expect(periodPhrase(allTime(), now, "project")).toBe("מתחילת הפרויקט");
   });
 
@@ -98,20 +80,13 @@ describe("period labels", () => {
     expect(periodPillLabel(monthPeriod("2026-09", now), now)).toBe("ספטמבר 2026");
     expect(periodPillLabel(customRange("2026-01-01", "2026-02-01"), now)).toBe("טווח מותאם");
   });
-
-  it("compares with the window before", () => {
-    expect(comparisonWords(thisMonth(now), now)).toBe("מחודש שעבר");
-    expect(comparisonWords(monthPeriod("2026-09", now), now)).toBe("מהחודש שלפניו");
-    expect(comparisonWords(presetPeriod("months3", now), now)).toBe("מ־3 החודשים שלפניהם");
-    expect(comparisonWords(allTime(), now)).toBeNull();
-  });
 });
 
 describe("period in the URL", () => {
   it("round-trips every kind and ignores a broken value", () => {
     for (const period of [monthPeriod("2026-09", now), presetPeriod("months6", now), presetPeriod("year", now), allTime(), customRange("2026-01-02", "2026-03-04")]) {
       const back = periodFromSearch(new URLSearchParams(periodSearch(period, now)), now);
-      expect(back && samePeriod(back, period, now)).toBe(true);
+      expect(back).toMatchObject({ kind: period.kind, from: period.from, to: period.to });
     }
     expect(periodFromSearch(new URLSearchParams("period=custom&from=2026-05-01&to=2026-01-01"), now)).toBeNull();
     expect(periodFromSearch(new URLSearchParams("period=week"), now)).toBeNull();
@@ -123,10 +98,5 @@ describe("dates", () => {
   it("keeps the year when the row is outside the current year", () => {
     expect(formatDayMonth("2026-09-21", new Date("2026-09-28T12:00:00Z"))).toBe("21/09");
     expect(formatDayMonth("2025-03-01", new Date("2026-09-28T12:00:00Z"))).toBe("01/03/25");
-  });
-
-  it("uses the singular day label for a one-day range", () => {
-    expect(rangeLengthLabel(inclusiveDays("2026-09-01", "2026-09-01"))).toBe("הצגת יום אחד");
-    expect(rangeLengthLabel(2)).toBe("הצגת 2 ימים");
   });
 });

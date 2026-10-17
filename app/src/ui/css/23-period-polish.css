@@ -29,11 +29,6 @@
   padding-top: var(--space-2);
 }
 
-/* FLOW-359 (A): Home's one period pill, with Home's --space-2 above and below it. */
-.ui-band-hero-project .ui-hero-pill {
-  margin-block: var(--space-2);
-}
-
 .ui-project-budget {
   margin-block-start: var(--space-3);
 }

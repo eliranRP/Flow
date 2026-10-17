@@ -1345,9 +1345,6 @@ isOneToOne: false
 "list_review":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
-"list_skipped_review":
-{ Args: Record<PropertyKey, never>; Returns: Json
-                           },
 "list_team":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -1664,6 +1661,9 @@ isOneToOne: false
                            },
 "recurring_changes":
 { Args: { "p_today"?: string }; Returns: Json
+                           },
+"recurring_party_line":
+{ Args: { "p_currency": string,"p_direction": string,"p_party_id": string,"p_today"?: string }; Returns: string
                            },
 "recurring_schedule":
 { Args: { "p_today"?: string }; Returns: Json

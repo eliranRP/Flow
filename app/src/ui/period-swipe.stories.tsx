@@ -29,8 +29,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
-
 /** A steppable window: the figure takes the swipe and leaves vertical moves to the page. */
 export const Steppable: Story = {
   args: { start: "months3" },
@@ -42,7 +40,6 @@ export const Steppable: Story = {
     await expect(within(canvasElement).getByRole("heading", { name: "₪18,400" })).toBeVisible();
   },
 };
-export const Steppable320: Story = { ...Steppable, name: "Steppable, 320", ...at320 };
 /** הכול has no arrows, so the figure takes no swipe either. */
 export const All: Story = {
   args: { start: "all" },

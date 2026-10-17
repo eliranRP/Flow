@@ -50,38 +50,61 @@ export const SAMPLE_INTEREST_ONLY: LoanDetail = {
   companyId: "company-sample",
   name: "הלוואת גישור",
   currency: "USD",
-  principalMinor: 24_000_000n,
+  principalMinor: 21_000_000n,
   annualRatePpm: 105_000,
-  termMonths: 24,
-  startDate: "2026-03-01",
-  paymentMinor: 2_115_566n,
+  termMonths: 7,
+  startDate: "2026-07-01",
+  paymentMinor: 183_750n,
   escrowMinor: 0n,
   kind: "interest_only",
-  interestOnlyMonths: 12,
+  interestOnlyMonths: 7,
   amortizationMonths: null,
   status: "open",
   closedOn: null,
   projectId: "proj-b",
   categoryIds: { interest: "cat-bridge", escrow: null, principal: null, fees: null },
-  rates: [
-    { id: "rate-2", effectiveDate: "2026-09-01", annualRatePpm: 112_500 },
-    { id: "rate-1", effectiveDate: "2026-06-01", annualRatePpm: 107_500 },
-  ],
-  balanceMinor: 24_000_000n,
+  rates: [],
+  balanceMinor: 21_000_000n,
   flaggedParts: 0,
 };
+
+/**
+ * The mortgage's history (FLOW-139c), worked backward from its balance today: the payments of 01/2025 to
+ * 10/2026 (`count` of them, the last one in `lastYear`/`lastMonth`), paid on the 7th. Each payment's
+ * interest is the balance before it at the rate per month, the rest of the principal-and-interest is
+ * principal, and the escrow is the same every month. Walking back from `balance` keeps the schedule and
+ * the balance in agreement.
+ */
+function mortgageHistory(balance: bigint, ratePpm: number, piMinor: bigint, escrow: bigint, lastYear: number, lastMonth: number, count: number): LoanPayment[] {
+  const rate = BigInt(ratePpm);
+  const list: LoanPayment[] = [];
+  let after = balance;
+  for (let back = 0; back < count; back += 1) {
+    const monthIndex = lastYear * 12 + (lastMonth - 1) - back;
+    const year = Math.floor(monthIndex / 12);
+    const mm = String((monthIndex % 12) + 1).padStart(2, "0");
+    const before = ((after + piMinor) * 12_000_000n + (12_000_000n + rate) / 2n) / (12_000_000n + rate);
+    const interest = (before * rate + 6_000_000n) / 12_000_000n;
+    list.unshift(payment(`txn-${String(year)}-${mm}`, `${String(year)}-${mm}-07`, { interest, escrow, principal: piMinor - interest }));
+    after = before;
+  }
+  return list;
+}
+
+/** The mortgage's 22 payments, 01/2025 to 10/2026: the page's pinned day is 17/10/2026 (see the dev route's ?today=). */
+const MORTGAGE_PAYMENTS = mortgageHistory(17_650_000n, 62_500, 487_700n, 36_300n, 2026, 10, 22);
 
 export const SAMPLE_AMORTIZING: LoanDetail = {
   id: "loan-mortgage",
   companyId: "company-sample",
   name: "משכנתא דוגמה",
   currency: "USD",
-  principalMinor: 20_000_000n,
-  annualRatePpm: 60_000,
+  principalMinor: 24_000_000n,
+  annualRatePpm: 62_500,
   termMonths: 360,
   startDate: "2025-01-01",
-  paymentMinor: 151_240n,
-  escrowMinor: 31_330n,
+  paymentMinor: 524_000n,
+  escrowMinor: 36_300n,
   kind: "amortizing",
   interestOnlyMonths: null,
   amortizationMonths: null,
@@ -90,7 +113,7 @@ export const SAMPLE_AMORTIZING: LoanDetail = {
   projectId: "proj-a",
   categoryIds: NO_CATEGORIES,
   rates: [],
-  balanceMinor: 18_240_955n,
+  balanceMinor: 17_650_000n,
   flaggedParts: 0,
 };
 
@@ -192,19 +215,15 @@ export function sampleLoans(): LoanSample[] {
       loan: SAMPLE_INTEREST_ONLY,
       categories: SAMPLE_LOAN_CATEGORIES,
       payments: [
-        payment("txn-b3", "2026-10-01", { interest: 225_000n, principal: 0n }),
-        payment("txn-b2", "2026-09-01", { interest: 215_000n, principal: 0n }),
-        payment("txn-b1", "2026-08-01", { interest: 215_000n, principal: 0n, fees: 26_250n }),
-        payment("txn-b0", "2026-07-01", { interest: 215_000n, principal: 0n }),
+        payment("txn-b3", "2026-10-01", { interest: 183_750n, principal: 0n }),
+        payment("txn-b2", "2026-09-01", { interest: 183_750n, principal: 0n }),
+        payment("txn-b1", "2026-08-01", { interest: 183_750n, principal: 0n }),
       ],
     },
     {
       loan: SAMPLE_AMORTIZING,
       categories: SAMPLE_LOAN_CATEGORIES,
-      payments: [
-        payment("txn-m2", "2026-09-01", { interest: 91_500n, escrow: 31_330n, principal: 28_410n }),
-        payment("txn-m1", "2026-08-01", { interest: 91_640n, escrow: 31_330n, principal: 28_270n }),
-      ],
+      payments: MORTGAGE_PAYMENTS,
     },
     {
       loan: SAMPLE_BALLOON,

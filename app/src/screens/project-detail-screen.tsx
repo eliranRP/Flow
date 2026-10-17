@@ -1,28 +1,23 @@
-import { formatAmountText, type CashMonths, type ExpectedMonths, type ProjectCategoryMonthRow, type ProjectDetail } from "@flow/shared";
+import { formatAmountText, type CashMonths, type ExpectedMonths, type ProjectCategoryMonthRow, type ProjectCashRow, type ProjectDetail } from "@flow/shared";
 import { useCompanyCurrency } from "../company-currency";
-import { profitSign, projectExpenseMinor, projectRows, type ProjectCurrencyRow } from "../by-currency";
+import { projectExpenseMinor, projectRows } from "../by-currency";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
-import { overheadHint, shownProfit } from "../overhead";
+import { overheadHint } from "../overhead";
 import { useHoldWrites } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
-import { anchorOf, monthPeriod, periodPhrase, shiftMonthKey, windowLabel } from "../period";
-import { cashMonthName } from "../cash";
-import { MonthStepper } from "../ui/month-stepper";
+import { periodPhrase, type PeriodChoice } from "../period";
 import { useProjectPeriod, withPeriodSearch } from "../project-period";
-import { PeriodPicker } from "../ui/period-picker";
-import { PeriodSwipe } from "../ui/period-swipe";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useProjectQuery } from "../use-books";
 import { useProjectCashMonthsQuery, useProjectsCashMonth } from "../project-cash";
 import { assertNoError, useWrite } from "../use-write";
 import { Amount } from "../ui/amount";
-import { ConfirmSheet } from "../ui/confirm-sheet";
 import { BudgetCard } from "../ui/budget-card";
 import { EmptyState } from "../ui/empty-state";
-import { BackButton, useBackTarget } from "../ui/back";
+import { BackButton } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
 import { DocumentIcon, MoreIcon } from "../ui/icons";
 import { BandHero, SectionHead } from "../ui/layout";
@@ -37,14 +32,14 @@ import { TopBand } from "../ui/top-band";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { israelToday } from "../ui/date-math";
 import { ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
-import { ProjectGroupSheets, NO_GROUP, useProjectGroups, type ProjectGroups } from "./project-group-sheets";
+import { useProjectGroups, type ProjectGroups } from "./project-group-sheets";
 import { ProjectInvestmentSection, type ProjectInvestment } from "./project-investment";
 import { ProjectCategories } from "./project-categories";
 import { ProjectExpectedMonths } from "./project-expected-months";
-import { investmentFigure, openLoans, PROJECT_RECENT_CAP, ProjectProfitRows } from "./project-overview";
 import { ProjectTransactions } from "./project-transactions";
 import { ProjectCashOverview } from "./project-cash-screens";
 import { ProjectFormSheet } from "./project-form-sheet";
+import { ProjectMenu } from "./project-menu";
 import { projectAttentionRows, useProjectRecurring, type ProjectRecurringSample } from "./project-attention";
 import { toProjectInvestment } from "./project-investment-data";
 
@@ -99,38 +94,13 @@ function ProjectLoading({ search, example, pill = true }: { search: string; exam
   );
 }
 
-function projectRowProfit(
-  project: NonNullable<ProjectDetail>,
-  row: ProjectCurrencyRow,
-  overheadOn: boolean,
-  singleCurrency: boolean,
-): bigint {
-  // The overhead share comes off the company currency's row only (0147).
-  const base = project.base_currency ?? "ILS";
-  if (base !== "ILS") {
-    const share = project.overhead_share_minor;
-    if (row.currency !== base || !overheadOn || project.overhead_weighted !== true || share == null) return row.profit_minor;
-    return row.profit_minor - share;
-  }
-  if (row.currency === "ILS" && singleCurrency) {
-    return shownProfit(
-      overheadOn,
-      project.overhead_weighted === true,
-      project.profit_agorot,
-      project.profit_after_overhead_agorot,
-    );
-  }
-  if (row.currency === "ILS" && overheadOn && project.overhead_weighted === true && project.profit_after_overhead_agorot != null) {
-    return project.profit_after_overhead_agorot;
-  }
-  return row.profit_minor;
-}
+const ALL_PERIOD: PeriodChoice = { kind: "all", from: null, to: null };
 
 /**
  * FLOW-340 C: the overview, or one of the screens its rows open. FLOW-419: the overview is the
  * project's cash, and "profit" is the page the project used to open on.
  */
-export type ProjectSection = "overview" | "profit" | "expenses" | "investment" | "loans" | "transactions";
+export type ProjectSection = "overview" | "expenses" | "investment" | "loans" | "transactions";
 
 function withParams(search: string, params: Record<string, string>): string {
   const next = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
@@ -150,6 +120,7 @@ export function ProjectDetailScreen({
   sampleGroups,
   sampleCash,
   sampleRecurring,
+  sampleMenuRow,
   now,
 }: {
   sample?: NonNullable<ProjectDetail>;
@@ -159,6 +130,8 @@ export function ProjectDetailScreen({
   sampleCash?: NonNullable<CashMonths>;
   /** Stories and tests pin the month names. */
   now?: Date;
+  /** A sample project's row for the ⋯ menu (its deletable flag); the menu reads no cash in a preview. */
+  sampleMenuRow?: ProjectCashRow;
   /** FLOW-404. The השקעה data of a sample project; without it a sample project shows no investment. */
   sampleInvestment?: ProjectInvestment;
   example?: ReactNode;
@@ -178,8 +151,7 @@ export function ProjectDetailScreen({
   const { projectId = "" } = useParams();
   const search = usePreviewSearch();
   // The project's own period (decision 0141): it starts as Home's, and changing it leaves Home alone.
-  const [period, setPeriod] = useProjectPeriod();
-  const [periodSheet, setPeriodSheet] = useState(false);
+  const [period] = useProjectPeriod();
   const detail = useProjectQuery(sample ? "" : projectId, period);
   // FLOW-419: the project page opens on its cash, read beside the project (its name, investment and loans).
   const cash = useProjectCashMonthsQuery(sample ? "" : projectId, section === "overview");
@@ -194,6 +166,8 @@ export function ProjectDetailScreen({
   // FLOW-804: read once the project's own read has landed, so they never slow the page's paint.
   const liveGroups = useProjectGroups(projectId, sample == null && detail.data != null && !detail.isFetching);
   const groups = sampleGroups ?? liveGroups;
+  // The profit since the project began: a read over every period, once the page's own read has landed.
+  const lifetime = useProjectQuery(sample == null && section === "overview" && detail.data != null && !detail.isFetching ? projectId : "", ALL_PERIOD);
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();
   const blocked = useBlockedPreview();
@@ -222,11 +196,7 @@ export function ProjectDetailScreen({
     },
   });
   const holdWrites = useHoldWrites();
-  // FLOW-444: a month opened from the project's "לפי חודש" list goes back to it ("‹ לפי חודש"); the project's name stays a line.
-  const monthsBack = useBackTarget("", [`/projects/${projectId}/months${search}`]);
   if (phase.kind === "loading") {
-    // FLOW-438: the profit page waits in its own white layout, so nothing jumps when it lands.
-    if (section === "profit") return <ScreenState stacked title="רווח" backTo={`/projects/${projectId}${search}`} phase={phase} onRetry={() => { void detail.refetch(); }} />;
     return <ProjectLoading search={search} example={example} pill={section !== "overview"} />;
   }
   if (phase.kind === "error") {
@@ -315,30 +285,8 @@ export function ProjectDetailScreen({
       </div>
     );
   }
-  const currencyRows = projectRows(project, companyCurrency);
-  const singleCurrency = currencyRows.length === 1;
-  const profitRows = currencyRows.map((row) => ({
-    row,
-    profit: projectRowProfit(project, row, overheadOn, singleCurrency),
-  }));
-  const marginShown = singleCurrency
-    ? (() => {
-      const row = currencyRows[0];
-      if (row == null || row.income_minor <= 0n) return null;
-      const profit = profitRows[0]?.profit ?? 0n;
-      const margin = Number((profit * 100n) / row.income_minor);
-      return margin < 0 ? `−${String(Math.abs(margin))}%` : `${String(margin)}%`;
-    })()
-    : null;
-  // A loss is named in the label: red on the violet band does not read (DESIGN-RULES 3.5).
-  // FLOW-339: with a profit in one currency and a loss in another, the label names both.
-  const bandSign = profitSign(profitRows.map(({ profit }) => profit));
-  const bandWord = bandSign === "mixed" ? "רווח והפסד" : bandSign === "loss" ? "הפסד" : "רווח";
   const stateLine = projectStateLine(project);
-  const loans = openLoans(project);
-  const projectSearch = withParams(periodQuery, { project: project.id });
   const investmentData = sampleInvestment ?? toProjectInvestment(project);
-  const investmentShown = investmentFigure(investmentData) != null;
   const overhead = (
     <Toggle
       label="רווח אחרי הוצאות כלליות"
@@ -373,122 +321,34 @@ export function ProjectDetailScreen({
       finished={project.status === "finished"}
       groups={groups}
       sample={sample != null}
+      sampleRow={sampleMenuRow}
       overhead={overhead}
-      // FLOW-340 C: with no investment data the page hides its row, so the menu keeps the way in.
-      investmentTo={investmentShown || investmentData.isOverhead || loans.length > 0 ? undefined : sectionHref("investment")}
+      investmentTo={sectionHref("investment")}
     />
   );
-  if (section === "overview") {
-    const cashData = sampleCash ?? (sample ? sampleCashOf(sample, now) : cash.data) ?? null;
-    return (
-      <ProjectCashOverview
-        project={project}
-        data={cashData}
-        search={search}
-        investmentData={investmentData}
-        investmentHref={sectionHref("investment")}
-        stateLine={stateLine}
-        menu={menu}
-        budget={(
-          <ProjectBudget project={project} spentAgorot={absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot)} />
-        )}
-        attention={projectAttentionRows({
-          projectId: project.id,
-          pending: project.pending_count ?? 0,
-          late: recurring.late,
-          changes: recurring.changes,
-          search,
-        })}
-        example={example}
-        now={now}
-      />
-    );
-  }
-  // FLOW-438 (owner, 2026-10-10): the profit page takes the cash month page's layout: a white
-  // stacked header that names the project on Back, then the figure. On a month, the title names it
-  // ("רווח אוקטובר") with the cash page's ‹ › pager by it; another period keeps its pill.
-  // The title or the pill names the period, so the line under the figure carries the margin only.
-  const profitHint = marginShown == null ? "" : `רווחיות ${marginShown}`;
-  const monthKey = period.kind === "month" ? anchorOf(period) : null;
-  const thisMonthKey = israelToday().slice(0, 7);
-  const monthTitle = (key: string) => `${bandWord} ${cashMonthName(key)}`;
-  const profitAside = monthKey == null ? (
-    <PeriodPicker
-      pill={windowLabel(period, undefined, "project")}
-      name={`${windowLabel(period, undefined, "project")} – בחירת תקופה`}
-      open={periodSheet}
-      onOpenChange={setPeriodSheet}
-      period={period}
-      onChange={setPeriod}
-      tone="page"
-      scope="project"
-    />
-  ) : (
-    <MonthStepper
-      earlier={monthTitle(shiftMonthKey(monthKey, -1))}
-      later={monthKey < thisMonthKey ? monthTitle(shiftMonthKey(monthKey, 1)) : null}
-      onStep={(delta) => {
-        setPeriod(monthPeriod(shiftMonthKey(monthKey, delta)));
-      }}
-    />
-  );
-  // Counted lines only: a line kept out of profit is on the cash pages, not here (design lead).
-  const profitLines = project.transactions.filter((txn) => txn.kept_out !== true);
+  const cashData = sampleCash ?? (sample ? sampleCashOf(sample, now) : cash.data) ?? null;
   return (
-    <div className="flex min-h-full flex-1 flex-col">
-      {/* A new period shows the last figures until its read lands; the spinner says they are not its yet. */}
-      {!sample && detail.isPlaceholderData ? (
-        <div className="ui-ptr">
-          <span className="ui-spinner" role="status" aria-label="מרענן" />
-        </div>
-      ) : null}
-      <ScreenHeader
-        layout="stacked"
-        title={monthKey == null ? bandWord : monthTitle(monthKey)}
-        kicker={project.name}
-        backTo={monthsBack === "" ? sectionHref("overview") : monthsBack}
-        backText={monthsBack === "" ? undefined : "לפי חודש"}
-        trailing={menu}
-        titleAside={profitAside}
-      />
-      {/* FLOW-335: an active project says nothing here; only another state takes the line. */}
-      {stateLine == null ? null : <p className="ui-page-pad t-hint">{stateLine}</p>}
-      {/* FLOW-336: a sideways swipe on the figure steps the period (decision 0150). */}
-      <PeriodSwipe period={period} onChange={setPeriod}>
-        <p className="ui-breakdown-total ui-page-pad">
-          {profitRows.map(({ row, profit: rowProfit }) => (
-            <span key={row.currency} className="ui-breakdown-total-line">
-              <Amount agorot={rowProfit} currency={row.currency} size="display" loss={rowProfit < 0n} />
-            </span>
-          ))}
-        </p>
-        {profitHint === "" ? null : <p className="ui-breakdown-hint ui-page-pad t-hint">{profitHint}</p>}
-      </PeriodSwipe>
-      <div className="ui-profit-rows">
-        <ProjectProfitRows
-          currencyRows={currencyRows}
-          periodWords={periodWords}
-          links={{
-            income: `/search${withParams(projectSearch, { dir: "income" })}`,
-            expenses: sectionHref("expenses"),
-            months: `/projects/${project.id}/months${periodQuery}`,
-          }}
-        />
-      </div>
-      {/* FLOW-438 (owner, 2026-10-10): the period's lines under the rows, as the project's תנועות page lists them. */}
-      {profitLines.length === 0 ? null : (
-        <section aria-label="תנועות">
-          <SectionHead title="תנועות" />
-          <ProjectTransactions transactions={profitLines} search={search} live={sample == null} />
-          {/* The read stops at its cap, so a full list keeps the way to every line. */}
-          {project.transactions.length < PROJECT_RECENT_CAP ? null : (
-            <div className="ui-page-pad">
-              <TextLink to={sectionHref("transactions")} tone="quiet">לכל התנועות</TextLink>
-            </div>
-          )}
-        </section>
-      )}
-    </div>
+    <ProjectCashOverview
+      project={project}
+      data={cashData}
+      search={search}
+      investmentData={investmentData}
+      investmentHref={sectionHref("investment")}
+      stateLine={stateLine}
+      menu={menu}
+      budget={<ProjectBudget project={project} spentAgorot={absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot)} part="card" />}
+      budgetAdd={<ProjectBudget project={project} spentAgorot={0n} part="add" />}
+      sinceProfit={(lifetime.data ?? (sample ? project : null)) == null ? null : projectRows(lifetime.data ?? project, companyCurrency).map((row) => ({ currency: row.currency, minor: row.profit_minor }))}
+      attention={projectAttentionRows({
+        projectId: project.id,
+        pending: project.pending_count ?? 0,
+        late: recurring.late,
+        changes: recurring.changes,
+        search,
+      })}
+      example={example}
+      now={now}
+    />
   );
 }
 
@@ -530,7 +390,7 @@ function ProjectLoansList({ project, search }: { project: NonNullable<ProjectDet
           title={loan.name}
           hint={loan.balance_minor <= 0n ? "נפרעה" : undefined}
           meta={<bdi className="ui-num ui-project-row-figure" dir="ltr">{formatAmountText(loan.balance_minor, loan.currency)}</bdi>}
-          href={`/settings/loans/${loan.id}${search}`}
+          href={`/loans/${loan.id}${search}`}
           chevron
         />
       ))}
@@ -569,211 +429,16 @@ function LegacyEmptyProject() {
   );
 }
 
-function ProjectMenu({
-  projectId,
-  name,
-  budget,
-  finished,
-  groups,
-  sample = false,
-  overhead,
-  investmentTo,
-}: {
-  projectId: string;
-  name: string;
-  budget: bigint | null;
-  finished: boolean;
-  /** FLOW-360 A: the קבוצה row shows once the groups are read. */
-  groups?: ProjectGroups;
-  sample?: boolean;
-  /** FLOW-340 C: the overhead switch left the page body for this menu. */
-  overhead?: ReactNode;
-  /** FLOW-340 C: set when the overview hides its השקעה row, so the data can still be added. */
-  investmentTo?: string;
-}) {
-  const blocked = useBlockedPreview();
-  const navigate = useNavigate();
-  const [menu, setMenu] = useState(false);
-  const [confirm, setConfirm] = useState(false);
-  const [removing, setRemoving] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [groupView, setGroupView] = useState<"pick" | "new" | null>(null);
-  const opener = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
-  // FLOW-445: the month's row for this project: the pending lines (the finish warning) and whether it can be deleted.
-  const cash = useProjectsCashMonth(undefined, projectId);
-  const row = cash.data?.projects.find((project) => project.id === projectId);
-  const pending = row?.pending_count ?? 0;
-  const deletable = row?.deletable === true;
-  const action = finished ? "החזרה לפעיל" : "סיום הפרויקט";
-  const save = useWrite({
-    failure: "לא הצלחנו לעדכן את הפרויקט.",
-    success: finished ? "הפרויקט חזר לפעיל" : `${name} סומן כהסתיים`,
-    keys: ["dashboard", "project", "projects-cash"],
-    onSuccess: () => {
-      setConfirm(false);
-      // A finish lands on the list with הסתיימו open (FLOW-445).
-      if (!finished) void navigate("/projects", { state: { finishedOpen: true } });
-    },
-    run: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      // No p_type: upsert_project keeps the stored type when none is sent.
-      assertNoError(await supabase.rpc("upsert_project", {
-        p_id: projectId,
-        p_name: name,
-        ...(budget == null ? {} : { p_budget_agorot: Number(budget) }),
-        p_status: finished ? "active" : "finished",
-      }));
-    },
-  });
-  const remove = useWrite({
-    failure: (error) => (error.message.includes("in use") ? "יש בפרויקט תנועות, אז אי אפשר למחוק אותו." : "לא הצלחנו למחוק את הפרויקט."),
-    success: `${name} נמחק`,
-    keys: ["dashboard", "project", "projects-cash"],
-    onSuccess: () => {
-      setRemoving(false);
-      void navigate("/projects");
-    },
-    run: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      assertNoError(await supabase.rpc("delete_project", { p_id: projectId }));
-    },
-  });
-  const pendingWarning = pending === 1
-    ? "יש בו פריט אחד ממתין לאישור. כדאי לאשר אותו לפני הסיום."
-    : `יש בו ${String(pending)} פריטים ממתינים לאישור. כדאי לאשר אותם לפני הסיום.`;
-  return (
-    <>
-      <IconButton
-        ref={opener}
-        label="עוד"
-        onBand
-        onClick={() => {
-          setMenu(true);
-        }}
-      >
-        <MoreIcon />
-      </IconButton>
-      <Sheet open={menu} onOpenChange={setMenu} title="עוד">
-        {overhead}
-        {/* FLOW-334: the menu's actions are rows, so "סיום הפרויקט" is not a second kind of control. */}
-        <List className="ui-project-menu-list">
-          {finished ? null : (
-            <ListRow
-              variant="button"
-              title="עריכת פרטים"
-              meta="שם, סוג ותקציב"
-              chevron
-              onClick={() => {
-                setMenu(false);
-                setEditing(true);
-              }}
-            />
-          )}
-          {finished ? null : (
-            <ListRow variant="item" title="הוספה לפרויקט" meta="תנועה ידנית לפרויקט הזה" href={`/add?project=${projectId}`} chevron />
-          )}
-          {investmentTo == null ? null : (
-            <ListRow variant="item" title="נתוני השקעה" href={investmentTo} chevron />
-          )}
-          {groups == null ? null : (
-            <ListRow
-              variant="button"
-              title="קבוצה"
-              meta={groups.groups.find((group) => group.id === groups.currentId)?.name ?? NO_GROUP}
-              chevron
-              onClick={() => {
-                setMenu(false);
-                setGroupView("pick");
-              }}
-            />
-          )}
-          <ListRow
-            variant="button"
-            title={action}
-            meta={finished ? "יחזור לרשימת הפעילים" : "יעבור ל״הסתיימו״. שום דבר לא נמחק"}
-            onClick={() => {
-              setMenu(false);
-              setConfirm(true);
-            }}
-          />
-          {deletable ? (
-            <ListRow
-              variant="button"
-              title="מחיקת הפרויקט"
-              meta="אין בו תנועות, אז אפשר למחוק אותו"
-              className="ui-project-menu-delete"
-              onClick={() => {
-                setMenu(false);
-                setRemoving(true);
-              }}
-            />
-          ) : null}
-        </List>
-      </Sheet>
-      <ProjectFormSheet open={editing} onOpenChange={setEditing} project={{ id: projectId, name, type: row?.type ?? null, budget, status: row?.status ?? "active" }} />
-      {groups == null ? null : (
-        <ProjectGroupSheets
-          projectId={projectId}
-          groups={groups.groups}
-          currentId={groups.currentId}
-          view={groupView}
-          onView={setGroupView}
-          onBack={() => {
-            setGroupView(null);
-            setMenu(true);
-          }}
-          blocked={blocked}
-          returnFocusRef={opener}
-          sample={sample}
-        />
-      )}
-      {/* Either way can be undone, so the confirm is neutral: no red and no bin (FLOW-341 rule). */}
-      <ConfirmSheet
-        open={confirm}
-        onOpenChange={setConfirm}
-        title={finished ? "להחזיר את הפרויקט לפעיל?" : `לסיים את ${name}?`}
-        consequenceSize="body"
-        consequence={finished
-          ? "הפרויקט יחזור לרשימת הפעילים, ואפשר לסיים אותו שוב בכל רגע."
-          : "הפרויקט יעבור ל״הסתיימו״ ויצא מבחירת הפרויקטים בשיוך. התנועות, הרווח והמסמכים נשמרים, ואפשר להחזיר אותו לפעיל בכל רגע."}
-        warning={!finished && pending > 0 ? pendingWarning : undefined}
-        confirmLabel={action}
-        returnFocusRef={opener}
-        busy={save.isPending}
-        onConfirm={() => {
-          if (blocked()) return;
-          save.mutate();
-        }}
-      />
-      <ConfirmSheet
-        open={removing}
-        onOpenChange={setRemoving}
-        title={`למחוק את ${name}?`}
-        consequenceSize="body"
-        consequence="אין בפרויקט תנועות, חשבוניות או מסמכים, אז שום מספר לא משתנה. אי אפשר לשחזר אחרי המחיקה."
-        confirmLabel="מחיקה"
-        destructive="outline"
-        returnFocusRef={opener}
-        busy={remove.isPending}
-        onConfirm={() => {
-          if (blocked()) return;
-          remove.mutate();
-        }}
-      />
-    </>
-  );
-}
-
 /** FLOW-445: the budget card with its edit sheet, on the expenses section. */
 /** FLOW-445: the budget card when a budget is set; with none, a quiet "+ הוספת תקציב" at the end of the page. */
-function ProjectBudget({ project, spentAgorot }: { project: NonNullable<ProjectDetail>; spentAgorot: bigint }) {
+function ProjectBudget({ project, spentAgorot, part = "both" }: { project: NonNullable<ProjectDetail>; spentAgorot: bigint; part?: "card" | "add" | "both" }) {
   const [editing, setEditing] = useState(false);
   // The owner's type text is on the month's row (the same cached read the menu uses).
   const type = useProjectsCashMonth(undefined, project.id).data?.projects.find((row) => row.id === project.id)?.type ?? null;
   const budget = project.budget_agorot ?? null;
   const currency = useCompanyCurrency();
+  // The overview draws the card first and the add link after the profit rows, as two parts of the one budget.
+  if ((budget == null && part === "card") || (budget != null && part === "add")) return null;
   return (
     <>
       {budget == null ? (

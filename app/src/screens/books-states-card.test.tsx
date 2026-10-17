@@ -5,7 +5,8 @@ import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { renderWithProviders } from "../test-render";
-import { CategoriesScreen, ProjectDetailScreen, ProjectsScreen, ChangeForm, ReviewQueue, ReviewScreen, SettingsScreen, SplitScreen, TransactionScreen, UnpaidScreen } from "./flow-screens";
+import { CategoriesScreen, ProjectDetailScreen, ProjectsScreen, ChangeForm, ReviewQueue, ReviewScreen, SettingsScreen, TransactionScreen, UnpaidScreen } from "./flow-screens";
+import { LineSplitScreen } from "./line-split";
 import { HomeScreen } from "./HomeScreen";
 
 const rpc = vi.hoisted(() => ({
@@ -56,7 +57,7 @@ function renderAt(path: string) {
         <Route path="/settings" element={<SettingsScreen />} />
         <Route path="/settings/categories" element={<CategoriesScreen />} />
         <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
-        <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
+        <Route path="/transactions/:transactionId/split-category" element={<LineSplitScreen />} />
       </Routes>
     </AuthProvider>,
     { route: path },

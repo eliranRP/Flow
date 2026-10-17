@@ -4,7 +4,7 @@ import { afterSignInMessage, afterSignInPath, peekSignInReturn, rememberSignInRe
 import { useAuth } from "./auth";
 import { SessionProviders } from "./session-providers";
 import { CashHomeSkeleton } from "./screens/home-skeleton";
-import { TabBar, type TabSection } from "./ui/tab-bar";
+import { TabBar } from "./ui/tab-bar";
 import { AuthCallbackView } from "./ui/auth-callback-view";
 import { ThemeColor } from "./components/ThemeColor";
 import { getSupabase } from "./lib/supabase";
@@ -18,9 +18,7 @@ import { BooksProvider } from "./use-books";
 import { detectInstallMode, isStandalone, listenForInstallPrompt } from "./ui/install-prompt";
 import { DropRestoredSheet, ScrollMemory, useGoBack } from "./ui/back";
 import { EdgeSwipeBack } from "./ui/edge-back";
-import { HomeScreen, ProfitScreen } from "./screens/HomeScreen";
-// Before the router mounts: the split screen holds Back through this listener.
-import "./screens/split-pop";
+import { HomeScreen } from "./screens/HomeScreen";
 import { SetupLanding, SetupResume } from "./setup/route";
 import { INVITES_PATH, landingWithInvites } from "./invite-landing";
 import { useKeyboardInset } from "./ui/keyboard-inset";
@@ -36,18 +34,15 @@ import { SetupRoutes } from "./routes/setup";
 import { SettingsRoutes } from "./routes/settings";
 import { UnpaidInvoiceRoute, UnpaidRoute } from "./routes/unpaid";
 
+const CompanyProfitScreen = lazy(() => screenLoaders.companyProfit().then((m) => ({ default: m.CompanyProfitScreen })));
 const ReviewScreen = lazy(() => screenLoaders.review().then((m) => ({ default: m.ReviewScreen })));
 const ChangeForm = lazy(() => screenLoaders.changeForm().then((m) => ({ default: m.ChangeForm })));
 const FiledTodayScreen = lazy(() => screenLoaders.filedToday().then((m) => ({ default: m.FiledTodayScreen })));
 const TransactionScreen = lazy(() => screenLoaders.transaction().then((m) => ({ default: m.TransactionScreen })));
-const CashMonthScreen = lazy(() => screenLoaders.cash().then((m) => ({ default: m.CashMonthScreen })));
 const CashLinesScreen = lazy(() => screenLoaders.cashLines().then((m) => ({ default: m.CashLinesScreen })));
-const CashHistoryScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ default: m.CashHistoryScreen })));
-const CashYearScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ default: m.CashYearScreen })));
-const BreakdownScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownScreen })));
-const BreakdownLinesScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownLinesScreen })));
 const ForecastScreen = lazy(() => screenLoaders.forecast().then((m) => ({ default: m.ForecastScreen })));
 const RecurringScreen = lazy(() => screenLoaders.recurring().then((m) => ({ default: m.RecurringScreen })));
+const RecurringChargeScreen = lazy(() => screenLoaders.recurringCharge().then((m) => ({ default: m.RecurringChargeScreen })));
 const LineSplitScreen = lazy(() => screenLoaders.lineSplit().then((m) => ({ default: m.LineSplitScreen })));
 const HelpScreen = lazy(() => screenLoaders.help().then((m) => ({ default: m.HelpScreen })));
 const LegalScreen = lazy(() => screenLoaders.legal().then((m) => ({ default: m.LegalScreen })));
@@ -58,63 +53,15 @@ const InvitesScreen = lazy(() => screenLoaders.invites().then((m) => ({ default:
  * Dev and e2e fixtures. Every use sits behind import.meta.env.DEV, so a production build drops
  * them; the pure mark lets the bundler drop the lazy() calls too.
  */
-const devLineSplit = () => import("./dev/line-split-e2e");
-const DevLineSplit = /* @__PURE__ */ lazy(() => devLineSplit().then((m) => ({ default: m.DevLineSplit })));
-const devBreakdown = () => import("./dev/breakdown-sample");
-const DevBreakdownGate = /* @__PURE__ */ lazy(() => devBreakdown().then((m) => ({ default: m.DevBreakdownGate })));
-const DevBreakdownLinesGate = /* @__PURE__ */ lazy(() => devBreakdown().then((m) => ({ default: m.DevBreakdownLinesGate })));
-const jevReviewCard = () => import("./screens/jev-review-card");
-const JevReviewE2e = /* @__PURE__ */ lazy(() => jevReviewCard().then((m) => ({ default: m.JevReviewE2e })));
-const devSetup = () => import("./dev/setup-e2e");
-const DevSetupFrame = /* @__PURE__ */ lazy(() => devSetup().then((m) => ({ default: m.DevSetupFrame })));
-const devRoutes = () => import("./dev-routes");
-const DevCategories = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCategories })));
-const DevChange = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevChange })));
-const DevConnections = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevConnections })));
-const DevAiConnection = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevAiConnection })));
-const DevBusiness = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevBusiness })));
-const DevSumitConnection = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevSumitConnection })));
-const DevExpense = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevExpense })));
-const DevFiled = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevFiled })));
-const DevHome = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevHome })));
-const DevCash = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCash })));
-const DevCashEmpty = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCashEmpty })));
-const DevCashMonth = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCashMonth })));
-const DevCashLines = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCashLines })));
-const DevCashHistory = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCashHistory })));
-const DevCashYear = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevCashYear })));
-const DevInstall = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevInstall })));
-const DevLoanDetail = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoanDetail })));
-const DevLoans = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoans })));
-const DevRecurring = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevRecurring })));
-const DevLoanSummary = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoanSummary })));
-const DevForecast = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevForecast })));
-const DevProject = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProject })));
-const DevProjectCategory = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectCategory })));
-const DevProjectDetail = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectDetail })));
-const DevProjectProfit = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectProfit })));
-const DevProjectMonthProfit = /* @__PURE__ */ lazy(() => import("./dev-routes-profit").then((m) => ({ default: m.DevProjectMonthProfit })));
-const DevProjectMonths = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectMonths })));
-const DevProjects = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjects })));
-const DevReview = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevReview })));
-const DevReviewBanner = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevReviewBanner })));
-const DevSettings = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevSettings })));
-const DevSplit = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevSplit })));
-const DevTransaction = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevTransaction })));
-const DevTransactionGate = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevTransactionGate })));
-const DevTxnList = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevTxnList })));
-const DevTxnPagedList = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevTxnPagedList })));
-const DevInvoices = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevInvoices })));
-const devTeam = () => import("./dev/team-fixtures");
-const DevCompany = /* @__PURE__ */ lazy(() => devTeam().then((m) => ({ default: m.DevCompany })));
-const DevInvites = /* @__PURE__ */ lazy(() => devTeam().then((m) => ({ default: m.DevInvites })));
-const DevTeam = /* @__PURE__ */ lazy(() => devTeam().then((m) => ({ default: m.DevTeam })));
+const DevTransactionGate = /* @__PURE__ */ lazy(() => import("./dev/routes/transaction").then((m) => ({ default: m.DevTransactionGate })));
+const DevRoutes = /* @__PURE__ */ lazy(() => import("./dev/routes/render").then((m) => ({ default: m.DevRoutes })));
+const devFixtures = () => import("./dev/routes/render");
 
 // The dev server serves each module on request, so a screen loaded on its tap would wait for a
 // chain of requests there. In dev every screen and fixture is fetched at start, as before FLOW-804.
 if (import.meta.env.DEV) {
   // The e2e sweeps wait for this mark, so a screen or sheet never mounts between their look and their tap.
-  void Promise.all([preloadScreens(), devRoutes(), devLineSplit(), devBreakdown(), jevReviewCard(), devTeam()])
+  void Promise.all([preloadScreens(), devFixtures().then((m) => m.preloadDevFixtures())])
     .catch(() => undefined)
     .then(() => {
       document.documentElement.dataset.screensLoaded = "1";
@@ -207,67 +154,7 @@ function AppRoutes() {
             <Route path="/help" element={<HelpScreen />} />
             {import.meta.env.DEV ? (
               <>
-                <Route path="/e2e/setup/:frame" element={<DevSetupFrame />} />
-                <Route path="/e2e/project" element={<DevProject />} />
-                <Route path="/e2e/expense" element={<DevExpense />} />
-                {/* FLOW-334: a fixture of a screen that has the tab bar draws it, on that screen's tab. */}
-                <Route element={<DevShell section="home" />}>
-                  <Route path="/e2e/review" element={<DevReview />} />
-                  <Route path="/e2e/jev-review" element={<JevReviewE2e />} />
-                  <Route path="/e2e/review-banner" element={<DevReviewBanner />} />
-                  <Route path="/e2e/filed" element={<DevFiled />} />
-                  <Route path="/e2e/txn-list" element={<DevTxnList />} />
-                  <Route path="/e2e/txn-paged" element={<DevTxnPagedList />} />
-                  <Route path="/e2e/change" element={<DevChange />} />
-                </Route>
-                <Route element={<DevShell section="home" />}>
-                  <Route path="/e2e/home" element={<DevHome />} />
-                  <Route path="/e2e/cash" element={<DevCash />} />
-                  <Route path="/e2e/cash-empty" element={<DevCashEmpty />} />
-                  <Route path="/e2e/cash-month" element={<DevCashMonth />} />
-                  <Route path="/e2e/cash-lines" element={<DevCashLines />} />
-                  <Route path="/e2e/cash-history" element={<DevCashHistory />} />
-                  <Route path="/e2e/cash-year" element={<DevCashYear />} />
-                  <Route path="/e2e/recurring" element={<DevRecurring />} />
-                  <Route path="/e2e/invoices" element={<DevInvoices />} />
-                  <Route path="/e2e/forecast" element={<DevForecast />} />
-                </Route>
-                <Route element={<DevShell section="projects" />}>
-                  <Route path="/e2e/projects" element={<DevProjects />} />
-                  <Route path="/e2e/project-detail" element={<DevProjectDetail />} />
-                  <Route path="/e2e/project-category" element={<DevProjectCategory />} />
-                  <Route path="/e2e/project-months" element={<DevProjectMonths />} />
-                  <Route path="/e2e/project-profit" element={<DevProjectProfit />} />
-                  <Route path="/e2e/project-month-profit" element={<DevProjectMonthProfit />} />
-                </Route>
-                {/* Settings has no tab (FLOW-364); the loans pages open the loans tab. */}
-                <Route element={<DevShell section="loans" />}>
-                  <Route path="/e2e/loans" element={<DevLoans />} />
-                  <Route path="/e2e/loans-summary" element={<DevLoanSummary />} />
-                  <Route path="/e2e/loans/:loanId" element={<DevLoanDetail />} />
-                  <Route path="/e2e/loans/:loanId/details" element={<DevLoanDetail view="details" />} />
-                  <Route path="/e2e/loans/:loanId/future" element={<DevLoanDetail view="future" />} />
-                  <Route path="/e2e/loans/:loanId/future/:period" element={<DevLoanDetail view="period" />} />
-                </Route>
-                <Route element={<DevShell section={null} />}>
-                  <Route path="/e2e/settings" element={<DevSettings />} />
-                  <Route path="/e2e/connections" element={<DevConnections />} />
-                  <Route path="/e2e/connections/ai" element={<DevAiConnection />} />
-                  <Route path="/e2e/business" element={<DevBusiness />} />
-                  <Route path="/e2e/connections/sumit" element={<DevSumitConnection />} />
-                  <Route path="/e2e/categories" element={<DevCategories />} />
-                  <Route path="/e2e/categories/:parentId" element={<DevCategories />} />
-                  <Route path="/e2e/team" element={<DevTeam />} />
-                </Route>
-                <Route element={<DevShell section="home" />}>
-                  <Route path="/e2e/company" element={<DevCompany />} />
-                </Route>
-                <Route path="/e2e/invites" element={<DevInvites />} />
-                <Route path="/e2e/txn" element={<DevTransaction />} />
-                <Route path="/e2e/install-android" element={<DevInstall mode="android-prompt" />} />
-                <Route path="/e2e/install-other" element={<DevInstall mode="iphone-other" />} />
-                <Route path="/e2e/split" element={<DevSplit />} />
-                <Route path="/e2e/split-category" element={<DevLineSplit />} />
+                <Route path="/e2e/*" element={<DevRoutes />} />
                 <Route path="/reviewer/*" element={<ReviewerPreviewRoute />} />
               </>
             ) : import.meta.env.VITE_REVIEWER_BUILD === "1" ? (
@@ -278,8 +165,6 @@ function AppRoutes() {
                 {SetupRoutes()}
                 <Route path="invites" element={<InvitesScreen />} />
                 {SearchRoute()}
-                <Route path="transactions/:transactionId" element={<TransactionRoute />} />
-                <Route path="transactions/:transactionId/split" element={<SplitRedirect />} />
                 <Route path="transactions/:transactionId/split-category" element={<LineSplitScreen />} />
                 <Route path="install" element={<InstallRoute />} />
               </Route>
@@ -289,17 +174,9 @@ function AppRoutes() {
                   {AddRoute()}
                 </Route>
                 {/* FLOW-413: Home is the month's cash; its rows open the profit view, a month, and a month's lines. */}
-                <Route path="profit" element={<ProfitScreen />} />
-                {/* FLOW-417: "לכל החודשים" opens the years, a year its months. */}
-                <Route path="cash/history" element={<CashHistoryScreen />} />
-                <Route path="cash/year/:year" element={<CashYearScreen />} />
-                <Route path="cash/:month" element={<CashMonthScreen />} />
+                <Route path="profit" element={<CompanyProfitScreen />} />
                 <Route path="cash/:month/:side/:currency" element={<CashLinesScreen />} />
                 {ProjectRoutes()}
-                {/* FLOW-334: on the dev server ?preview=1 shows sample figures here; a build keeps the screen. */}
-                <Route path="flow/:direction" element={import.meta.env.DEV ? <DevBreakdownGate /> : <BreakdownScreen />} />
-                <Route path="flow/:direction/excluded/:currency" element={import.meta.env.DEV ? <DevBreakdownLinesGate excluded /> : <BreakdownLinesScreen excluded />} />
-                <Route path="flow/:direction/:groupBy/:currency/:groupKey" element={import.meta.env.DEV ? <DevBreakdownLinesGate /> : <BreakdownLinesScreen />} />
                 <Route element={<ReviewWithSheet />}>
                   <Route path="review" element={null} />
                   <Route path="review/all" element={null} />
@@ -309,7 +186,9 @@ function AppRoutes() {
                 {UnpaidRoute()}
                 <Route path="missing-bills" element={<RecurringRedirect />} />
                 <Route path="recurring" element={<RecurringScreen />} />
+                <Route path="recurring/:direction/:partyId" element={<RecurringChargeScreen />} />
                 {UnpaidInvoiceRoute()}
+                <Route path="transactions/:transactionId" element={<TransactionRoute />} />
                 <Route path="forecast" element={<ForecastScreen />} />
                 {SettingsRoutes()}
                 {LoanRoutes()}
@@ -377,13 +256,6 @@ function InstallRoute() {
   );
 }
 
-/** FLOW-370: one split screen. The old project-split route opens the parts editor. */
-function SplitRedirect() {
-  const { transactionId = "" } = useParams();
-  const { search } = useLocation();
-  return <Navigate to={`/transactions/${transactionId}/split-category${search}`} replace />;
-}
-
 /** A local split so each mode can be saved without writing a ledger row. */
 function ReviewerPreviewRoute() {
   const preview = useRef<LazyExoticComponent<ComponentType> | null>(null);
@@ -420,18 +292,6 @@ function Shell() {
         </ScreenSuspense>
       </div>
       <TabBar />
-    </div>
-  );
-}
-
-/** Dev only (FLOW-334): the Shell's tab bar for an /e2e/ fixture, on the tab its real screen belongs to. */
-function DevShell({ section }: { section: TabSection | null }) {
-  return (
-    <div className="flex min-h-dvh flex-col">
-      <div className="below-tabbar flex min-h-0 min-w-0 flex-1 flex-col">
-        <Outlet />
-      </div>
-      <TabBar section={section} />
     </div>
   );
 }

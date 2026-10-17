@@ -10,6 +10,7 @@ import {
   openMonthDue,
 } from "./forecast";
 import {
+  monthForecastBoardSample,
   SAMPLE_EXPECTED,
   SAMPLE_EXPECTED_EMPTY,
   SAMPLE_EXPECTED_OPEN_DONE,
@@ -18,7 +19,6 @@ import {
   SAMPLE_RECURRING_THIS_MONTH,
 } from "./forecast-sample";
 import { attentionRows } from "./screens/HomeScreen";
-import { ApproxAmount } from "./ui/approx-amount";
 import { forecastMinor } from "./home-month";
 import { ExpectedMonths } from "./ui/expected-months";
 
@@ -37,7 +37,7 @@ describe("the קבועים screen (FLOW-415, b-2)", () => {
       SAMPLE_RECURRING_THIS_MONTH.slice(0, 2).map((change) => ({ ...change, change_percent: -30, party_name: "", category_name: null })),
       "",
     );
-    expect(drops.map((change) => change.title)).toEqual(["אור חשמל ירד ב־30%", "ארנונה עירונית ירד ב־30%"]);
+    expect(drops.map((change) => change.title)).toEqual(["אור חשמל ירד", "ארנונה עירונית ירד"]);
     const [dropRow] = attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, changes: drops, search: "" });
     const icon = render(<MemoryRouter><span>{dropRow?.icon}</span></MemoryRouter>);
     const upIcon = render(<MemoryRouter><span>{row?.icon}</span></MemoryRouter>);
@@ -102,20 +102,6 @@ describe("expected months", () => {
   });
 });
 
-describe("ApproxAmount", () => {
-  it("puts כ־ before a whole amount and drops it on a zero", () => {
-    const { container, rerender } = render(<ApproxAmount minor={-185_060n} />);
-    expect(container.textContent).toBe("בערך כ־₪1,851");
-    rerender(<ApproxAmount minor={0n} currency="USD" />);
-    expect(container.textContent).toBe("$0");
-  });
-
-  it("paints income green", () => {
-    const { container } = render(<ApproxAmount minor={1_200_000n} income />);
-    expect(container.querySelector(".ui-approx-income")).not.toBeNull();
-  });
-});
-
 describe("openMonthDue (FLOW-364)", () => {
   it("reads the open month's recurring money still due in one currency, or 0", () => {
     const data = {
@@ -141,5 +127,23 @@ describe("openMonthDue (FLOW-364)", () => {
     } as unknown as ExpectedMonthsData;
     expect(openMonthDue(data, "ILS")).toEqual({ income: 0n, expense: 283_000n });
     expect(forecastMinor(-100_000n, 0n, openMonthDue(data, "ILS").expense, 0n).minor).toBe(-383_000n);
+  });
+});
+
+describe("the month forecast's board samples (FLOW-141b)", () => {
+  it("moves the largest invoice out in the changed state: one moved item, the income without it", () => {
+    const { build } = monthForecastBoardSample("changed").data;
+    expect(build.changed).toBe(1);
+    expect(build.moved).toHaveLength(1);
+    expect(build.incomeTotal).toBe(725_000n);
+    expect(build.expenseTotal).toBe(830_000n);
+  });
+
+  it("has nothing left to arrive in the empty state", () => {
+    const { build } = monthForecastBoardSample("empty").data;
+    expect(build.income).toHaveLength(0);
+    expect(build.expense).toHaveLength(0);
+    expect(build.small).toHaveLength(0);
+    expect(build.moved).toHaveLength(0);
   });
 });

@@ -107,6 +107,8 @@ export type LineSplitSample = {
   /** Rows to open on, in place of the saved split. Stories set the state here, not in a play. */
   parts?: PartDraft[];
   rest?: RestDraft;
+  /** The part picker open on load: part `partKey`, starting on its project or its category. */
+  target?: { partKey: string; kind: "project" | "category" };
   /** The saving story: fields, links and ✕ stay disabled. */
   saving?: boolean;
   /** A reason the server already gave, as after a refused save. */
@@ -155,6 +157,7 @@ export function LineSplitScreen({ sample, backTo }: { sample?: LineSplitSample; 
         initial={sample.parts != null || sample.rest != null
           ? { parts: sample.parts ?? [], rest: sample.rest ?? { categoryId: null, projectId: null } }
           : draftFromRead(sample.split, sample.line.categoryId)}
+        initialTarget={sample.target}
         api={api}
         draftId=""
         fallback={fallback}

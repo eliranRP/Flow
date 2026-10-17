@@ -493,3 +493,77 @@ describe("ChangeAssignment split by categories link (FLOW-325 §10)", () => {
     expect(screen.getByRole("button", { name: "פיצול בין פרויקטים" })).toBeDisabled();
   });
 });
+
+/** FLOW-922: a compact picker (a split part's list) opened straight on its projects. */
+function CompactHarness({ onProjectId, disabledIds = [] }: { onProjectId: (id: string) => void; disabledIds?: string[] }) {
+  const [open, setOpen] = useState(true);
+  const [projectId, setProjectId] = useState("p2");
+  return (
+    <MemoryRouter>
+      <ChangeAssignment
+        host="overlay"
+        open={open}
+        onOpenChange={setOpen}
+        contained
+        start="project"
+        compact
+        supplier="נגרייה לדוגמה"
+        amount="₪100"
+        direction="expense"
+        title={{ project: "פרויקט לחלק 2" }}
+        projects={[{ id: "p1", name: "בית הכרם" }, { id: "p2", name: "גבעת אורנים" }, { id: "p3", name: "נווה שלום" }]}
+        choiceNotes={{ project: { p2: "הפרויקט של השורה · מקבל את השאר", ...(disabledIds.includes("p3") ? { p3: "כבר בפיצול עם חשמל" } : {}) } }}
+        disabledIds={{ project: disabledIds }}
+        categories={fewCategories}
+        projectId={projectId}
+        categoryId=""
+        onProjectId={(id) => {
+          setProjectId(id);
+          onProjectId(id);
+        }}
+        onCategoryId={() => undefined}
+        onCommitPick={() => Promise.resolve(undefined)}
+        onSplit={() => undefined}
+        onCreateProject={(name) => Promise.resolve({ id: "new", name })}
+      />
+    </MemoryRouter>
+  );
+}
+
+describe("ChangeAssignment compact list (FLOW-922)", () => {
+  it("lists the projects in the given order with no search, no footer, no back and no links", () => {
+    render(<CompactHarness onProjectId={() => undefined} />);
+    const sheet = screen.getByRole("dialog", { name: "פרויקט לחלק 2" });
+    expect(within(sheet).queryByRole("searchbox")).toBeNull();
+    expect(within(sheet).queryByRole("button", { name: "שמירה" })).toBeNull();
+    expect(within(sheet).queryByRole("button", { name: "חזרה" })).toBeNull();
+    expect(within(sheet).queryByRole("button", { name: "פרויקט חדש" })).toBeNull();
+    expect(within(sheet).queryByRole("button", { name: "פיצול בין פרויקטים" })).toBeNull();
+    const names = within(sheet).getAllByRole("radio").map((row) => row.textContent);
+    expect(names[0]).toContain("בית הכרם");
+    expect(names[1]).toContain("גבעת אורנים");
+    expect(names[1]).toContain("הפרויקט של השורה · מקבל את השאר");
+    expect(names[2]).toContain("נווה שלום");
+  });
+
+  it("a tap on a row picks it and closes the sheet", async () => {
+    const onProjectId = vi.fn();
+    render(<CompactHarness onProjectId={onProjectId} />);
+    fireEvent.click(screen.getByRole("radio", { name: /בית הכרם/ }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(onProjectId).toHaveBeenCalledWith("p1");
+  });
+
+  it("a taken row does nothing on a tap", () => {
+    const onProjectId = vi.fn();
+    render(<CompactHarness onProjectId={onProjectId} disabledIds={["p3"]} />);
+    const taken = screen.getByRole("radio", { name: /נווה שלום/ });
+    expect(taken).toBeDisabled();
+    expect(taken).toHaveTextContent("כבר בפיצול עם חשמל");
+    fireEvent.click(taken);
+    expect(onProjectId).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+});

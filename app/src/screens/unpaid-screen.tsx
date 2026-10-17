@@ -8,7 +8,7 @@ import { Avatar } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { EmptyState } from "../ui/empty-state";
-import { RefreshIcon, ReviewIcon } from "../ui/icons";
+import { CheckIcon, RefreshIcon } from "../ui/icons";
 import { PartsBar } from "../ui/parts-bar";
 import { ListRow } from "../ui/list-row";
 import { ScreenState } from "../ui/screen-state";
@@ -51,17 +51,19 @@ export function UnpaidScreen({ sample, summary }: { sample?: UnpaidInvoice[]; su
   return (
     <ScreenState
       title="חשבוניות פתוחות"
+      kicker="בית"
       backTo={`/${search}`}
       phase={phase}
       onRetry={actions.retry}
+      headerClassName="ui-inv-screen"
     >
-      <div className="ui-page-pad ui-inv-page">
+      <div className={`ui-page-pad ui-inv-page${all.length === 0 && phase.kind === "ready" ? " ui-inv-page-done" : ""}`}>
         {open.length > 0 ? (
           <Card as="section" className="ui-inv-summary" aria-label="לגבייה מלקוחות">
             <p className="t-label text-text-secondary">לגבייה מלקוחות</p>
             {totals.map((total) => (
               <p key={total.currency} className="ui-inv-total">
-                <Amount agorot={total.minor} currency={total.currency} size="total" income />
+                <Amount agorot={total.minor} currency={total.currency} size="total" income signless />
               </p>
             ))}
             <p className="t-hint text-text-secondary">
@@ -98,25 +100,27 @@ export function UnpaidScreen({ sample, summary }: { sample?: UnpaidInvoice[]; su
           </Card>
         ) : null}
 
-        {all.length > 0 ? (
+        {phase.kind === "ready" ? (
           <div className="ui-inv-sortrow">
+            <span className="t-hint text-text-muted">מהוותיקה לחדשה</span>
             {holdWrites ? null : (
               <button type="button" className="ui-inv-refresh" onClick={actions.startSync} disabled={syncing} aria-busy={syncing || undefined}>
                 {syncing ? <span className="ui-spinner" aria-hidden="true" /> : <RefreshIcon size={14} />}
                 <span>{syncing ? "מרענן…" : `רענון מ־SUMIT${actions.lastSyncAt ? ` · ${syncedAgo(actions.lastSyncAt)}` : ""}`}</span>
               </button>
             )}
-            <span className="t-hint text-text-muted">מהוותיקה לחדשה</span>
           </div>
         ) : null}
 
         {all.length === 0 && phase.kind === "ready" ? (
-          <EmptyState
-            icon={<ReviewIcon />}
-            title="הכל שולם"
-            body={"אין חשבוניות פתוחות כרגע.\nחשבוניות שסימנת ייצאו מהרשימה אחרי הסנכרון עם SUMIT."}
-            action={<Button full to="/">חזרה לבית</Button>}
-          />
+          <div className="ui-inv-empty">
+            <EmptyState
+              icon={<CheckIcon size={40} stroke={2.2} />}
+              title="הכל שולם"
+              body={"אין חשבוניות פתוחות כרגע.\nחשבוניות שסימנת ייצאו מהרשימה אחרי הסנכרון עם SUMIT."}
+              action={<Button full to="/">חזרה לבית</Button>}
+            />
+          </div>
         ) : null}
 
         <ul className="ui-inv-list" aria-label="חשבוניות פתוחות">
@@ -140,6 +144,7 @@ export function UnpaidScreen({ sample, summary }: { sample?: UnpaidInvoice[]; su
                   agorot={absAgorot(row.open_gross_agorot)}
                   currency={row.currency ?? "ILS"}
                   amountDirection="income"
+                  amountSignless
                   endSub={marked ? null : (
                     <span className="ui-inv-age" data-over={over ? "true" : undefined}>
                       <span className="ui-inv-dot" aria-hidden="true" data-tone={over ? "signal" : "plain"} />

@@ -31,6 +31,20 @@ describe("buildMonthForecast", () => {
     expect(build.changed).toBe(0);
   });
 
+  it("without payment terms (live data) guesses no date and marks nothing late", () => {
+    const build = buildMonthForecast({ base: "ILS", expected, unpaid, overrides: [] });
+    expect(build.items.every((item) => item.expected_on === null && item.late_days === 0)).toBe(true);
+  });
+
+  it("with payment terms (sample data) expects the date and counts the late days", () => {
+    const build = buildMonthForecast({ base: "ILS", expected, unpaid, overrides: [], paymentTermsDays: 30 });
+    const rent = build.items.find((item) => item.key === "party:expense:p-rent:ILS");
+    expect(rent?.expected_on).toBe("2026-10-01");
+    expect(rent?.late_days).toBe(15);
+    const invoice = build.items.find((item) => item.kind === "invoice");
+    expect(invoice?.expected_on).toBe(new Date(Date.parse(`${unpaid[0]?.doc_date ?? ""}T00:00:00Z`) + 30 * 86_400_000).toISOString().slice(0, 10));
+  });
+
   it("uses the same total as Home's line: the cash net plus income minus charges", () => {
     const build = buildMonthForecast({ base: "ILS", expected, unpaid, overrides: [] });
     expect(forecastTotal(100000n, build)).toBe(100000n + 1050000n - 503000n);

@@ -36,6 +36,12 @@
 
 /* FLOW-141: the month-end forecast screen (צפי). Flat sections, no card; the big number and the
    line under it are the same figure Home shows. */
+.ui-forecast-screen > .ui-page-stacked { margin-inline: calc(-1 * var(--space-side)); padding-top: var(--space-3); padding-bottom: 0; }
+.ui-forecast-screen > .ui-page-stacked .ui-focus-title + * { margin-top: var(--space-1); }
+/* The all-arrived state's header is the board's states header: 16 above, the title 4 down (ui-tab-root-head). */
+.ui-forecast-screen > .ui-page-stacked.ui-tab-root-head { padding-top: var(--space-4); }
+.ui-forecast-screen > .ui-page-stacked.ui-tab-root-head .ui-focus-title + * { margin-top: 0; }
+
 .ui-forecast-screen {
   position: relative;
   padding: 0 var(--space-side) calc(var(--tabbar-height) + var(--space-section));
@@ -64,8 +70,16 @@
 }
 
 .ui-forecast-big {
-  margin: var(--space-4) 0 0;
+  margin: var(--space-1) 0 0;
+  padding-top: calc(var(--space-1) * 3 / 4);
   font-variant-numeric: tabular-nums lining-nums;
+  font-size: var(--type-total-size);
+  line-height: var(--type-total-line);
+}
+
+.ui-forecast-big .t-display {
+  font-size: var(--type-total-size);
+  line-height: var(--type-total-line);
 }
 
 .ui-forecast-big-neg {
@@ -75,7 +89,8 @@
 .ui-forecast-today {
   margin: var(--space-1) 0 0;
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
 }
 
 .ui-forecast-section {
@@ -85,14 +100,20 @@
 .ui-forecast-section-head {
   display: flex;
   justify-content: space-between;
-  margin: var(--space-1) 0 var(--space-2);
+  align-items: baseline;
+  margin: 0 0 var(--space-1);
   font-size: var(--type-section-size);
-  font-weight: var(--type-heading-weight);
+  font-weight: var(--type-section-weight);
+  line-height: calc(var(--type-section-line) * 12 / 13);
 }
 
 .ui-forecast-section-total {
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-body-weight);
   font-variant-numeric: tabular-nums lining-nums;
 }
+
+.ui-forecast-section-total bdi { font-size: inherit; line-height: inherit; font-weight: inherit; }
 
 .ui-forecast-total-out {
   color: var(--color-text-muted);
@@ -120,7 +141,7 @@
 .ui-forecast-row {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-inset-row);
   width: 100%;
   min-height: var(--row-height);
   padding: var(--space-2) 0;
@@ -148,17 +169,27 @@
   display: flex;
   flex: 1;
   flex-direction: column;
+  gap: calc(var(--space-1) / 2);
   min-width: 0;
 }
 
 .ui-forecast-name {
-  font-size: var(--type-body-size);
+  font-size: var(--type-title-3-size);
   font-weight: var(--type-body-weight);
+  line-height: var(--type-title-3-line);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .ui-forecast-meta {
   color: var(--color-text-muted);
   font-size: var(--type-meta-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-meta-line);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .ui-forecast-amount {
@@ -177,48 +208,90 @@
   list-style: none;
 }
 
-.ui-forecast-moved {
-  opacity: 0.8;
+/* FLOW-141b: the all-arrived state sits lower and wider than the shared empty block, as on the board. */
+.ui-forecast-empty { --empty-measure: 300px; }
+.ui-forecast-empty > .ui-empty-state {
+  padding: calc(var(--space-6) * 2 + var(--space-3)) var(--space-6) var(--space-6);
+}
+
+/* FLOW-141b: the moved heading follows the list directly; its own top padding spaces it. */
+.ui-forecast-section-moved { margin-top: 0; }
+
+/* FLOW-141b: an item moved to next month is one muted line, not a full row. */
+.ui-forecast-head-moved {
+  margin: 0;
+  padding: calc(var(--space-6) * 11 / 12) 0 calc(var(--space-1) * 3 / 2);
+}
+
+.ui-forecast-moved-li {
   animation: ui-forecast-drop var(--motion-page) var(--ease-enter) both;
+}
+
+.ui-forecast-moved-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-inset-row);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--space-2) 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  text-align: start;
+  cursor: pointer;
 }
 
 @keyframes ui-forecast-drop {
   from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 0.8; transform: translateY(0); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
+/* The reset line: the text and איפוס sit together at the start side; hidden keeps the 36px row. */
 .ui-forecast-changed {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: var(--space-2);
   height: 36px;
   color: var(--color-text-muted);
   font-size: var(--type-hint-size);
+  visibility: hidden;
   opacity: 0;
-  transition: opacity var(--motion-fade) var(--ease-standard);
+  transition: opacity var(--motion-fade) linear, visibility var(--motion-fade) linear;
 }
 
 .ui-forecast-changed-on {
+  visibility: visible;
   opacity: 1;
 }
 
 .ui-forecast-reset {
+  height: 36px;
   border: 0;
   background: transparent;
   color: var(--color-accent-text);
   font: inherit;
+  font-size: var(--type-meta-size);
   cursor: pointer;
 }
 
 .ui-forecast-foot {
-  margin: var(--space-section) 0 0;
+  margin: 0;
+  padding-top: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--type-hint-size);
+  line-height: calc(var(--type-hint-line) + 0.1);
 }
 
 .ui-forecast-form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding-bottom: var(--space-4);
+  gap: var(--space-inset-row);
+  padding-bottom: 0;
 }
 
 .ui-forecast-field,
@@ -232,29 +305,43 @@
 }
 
 .ui-forecast-field-label {
-  color: var(--color-text-secondary);
-  font-size: var(--type-label-size);
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
 }
 
 .ui-forecast-input {
-  min-height: var(--field-height);
-  padding: 0 var(--space-3);
-  border: 1px solid var(--color-control-border);
+  min-block-size: 48px;
+  padding: 0 var(--space-inset-row);
+  border: 1.5px solid var(--color-tint-strong);
   border-radius: var(--radius-input);
-  background: var(--color-surface);
+  background: var(--color-raised);
   color: var(--color-text);
   font: inherit;
+  font-size: var(--type-body-size);
   font-variant-numeric: tabular-nums lining-nums;
 }
 
 .ui-forecast-source {
   margin: 0;
-  font-size: var(--type-meta-size);
+  font-size: var(--type-label-size);
+  line-height: var(--control-height-sm);
 }
 
 .ui-forecast-source a {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
 }
+
+/* The sheet: the head is the board's (title and invoice line share a column; the x sits in the gutter). */
+.ui-forecast-sheet .ui-sheet-head > .ui-icon-btn { margin-block: 0; }
+.ui-forecast-sheet .ui-sheet-head > .ui-icon-btn:last-child:not(:first-child) { margin-inline-end: 0; }
+.ui-forecast-sheet .ui-sheet-title,
+.ui-forecast-sheet .ui-sheet-subtitle { line-height: var(--type-sheet-line); }
+.ui-forecast-sheet .ui-forecast-field,
+.ui-forecast-sheet .ui-forecast-when .ui-field { gap: calc(var(--space-1) * 1.5); }
+.ui-forecast-sheet .ui-forecast-when .ui-field-label { color: var(--color-text-muted); font-size: var(--type-caption-size); line-height: var(--type-caption-line); }
+.ui-forecast-sheet .ui-seg { padding: calc(var(--space-1) / 2); gap: calc(var(--space-1) / 2); border-radius: var(--radius-input); }
+.ui-forecast-sheet .ui-seg-btn { border-radius: var(--radius-seg-btn); font-size: var(--type-meta-size); font-weight: var(--type-btn-weight); }
 
 .ui-forecast-error {
   margin: var(--space-4) 0 0;
@@ -270,7 +357,7 @@
   .ui-forecast-li,
   .ui-forecast-compact,
   .ui-forecast-changed,
-  .ui-forecast-moved {
+  .ui-forecast-moved-li {
     transition: none;
     animation: none;
   }

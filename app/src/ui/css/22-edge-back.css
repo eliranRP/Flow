@@ -23,6 +23,11 @@
   pointer-events: none;
 }
 
+/* A sheet is open: its scrim and panel sit under the mark, so the mark hides rather than draw over them. */
+html:has([data-vaul-drawer][data-state="open"]) .ui-edge-back {
+  visibility: hidden;
+}
+
 .ui-edge-back-armed {
   background: var(--color-accent);
   color: var(--color-on-accent);

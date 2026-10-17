@@ -63,6 +63,7 @@ export function SwipeRow({
   label = "הסרה",
   peek = false,
   reveal,
+  defaultOpen = false,
   children,
 }: {
   onRemove: () => void;
@@ -74,6 +75,8 @@ export function SwipeRow({
   disabled?: boolean;
   /** FLOW-363 (3c): the row opens over an action instead of removing itself. */
   reveal?: SwipeRowReveal;
+  /** FLOW-447b: a revealed row that opens over its action on mount (the dev route's swiped row). */
+  defaultOpen?: boolean;
   children: ReactNode;
 }) {
   const row = useRef<HTMLDivElement>(null);
@@ -83,8 +86,8 @@ export function SwipeRow({
   // click right after the drag is dropped, so a later keyboard or mouse press always goes through.
   const dragEnd = useRef<number | null>(null);
   const leaving = useRef<number | null>(null);
-  const [open, setOpen] = useState(false);
-  const openRef = useRef(false);
+  const [open, setOpen] = useState(() => reveal != null && defaultOpen);
+  const openRef = useRef(open);
   // The removal lands a moment after the release; a save that started meanwhile keeps the part.
   const off = useRef(disabled);
   off.current = disabled;
@@ -127,8 +130,6 @@ export function SwipeRow({
   function setOpenState(next: boolean) {
     openRef.current = next;
     setOpen(next);
-    if (next) frame.current?.setAttribute("data-open", "");
-    else frame.current?.removeAttribute("data-open");
   }
 
   function finishLeave() {
@@ -237,6 +238,7 @@ export function SwipeRow({
       ref={frame}
       className="ui-swipe-row"
       data-on={disabled ? undefined : ""}
+      data-open={open ? "" : undefined}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}

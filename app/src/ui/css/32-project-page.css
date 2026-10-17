@@ -237,7 +237,150 @@
   color: var(--color-bad);
 }
 
+/* The project menu (board): a short sheet titled with the project's name, 4px between rows, each row
+   64px with a 36px icon circle. The delete row takes the bad colour on its circle too. */
+.ui-project-menu {
+  --sheet-gap-y: var(--space-1);
+}
+
+.ui-project-menu .ui-sheet-title {
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-project-menu .ui-row {
+  min-block-size: 64px;
+  padding-block: var(--space-2);
+  padding-inline: 0;
+  gap: var(--space-3);
+}
+
+.ui-project-menu .ui-row-icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: var(--radius-chip);
+  background: var(--color-avatar);
+  color: var(--color-text-secondary);
+}
+
+.ui-project-menu-delete .ui-row-icon {
+  color: var(--color-bad);
+}
+
 /* The secondary line under a title or amount: the shared muted text colour. */
 .ui-muted {
   color: var(--color-text-muted);
+}
+
+/* The new-project sheet (board): a 14px rhythm between the fields and the note, the 52px pill last. */
+.ui-project-new .ui-stack {
+  gap: var(--space-3);
+}
+
+/* The new-project sheet at the board's rhythm: title 9px lower, 14px between the 50px fields, 13px hints under the last one. */
+.ui-project-new .ui-sheet-head {
+  margin-block: calc(var(--space-2) + 1px) 0;
+}
+
+.ui-project-new .ui-focus-title {
+  line-height: var(--type-title-line);
+}
+
+.ui-project-new .ui-stack {
+  gap: var(--space-inset-row);
+  margin-block-start: var(--space-2);
+}
+
+.ui-project-new .ui-field-label {
+  line-height: calc(var(--type-title-line) - 0.05);
+}
+
+.ui-project-new .ui-field-control,
+.ui-project-new .ui-money-field {
+  min-block-size: 50px;
+}
+
+.ui-project-new .ui-muted {
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: calc(var(--type-title-line) - 0.05);
+}
+
+.ui-project-new .ui-muted:has(+ .ui-muted) {
+  margin-block-start: calc(var(--space-2) * -1);
+}
+
+/* The Projects list at the board's rhythm: a 44px link row, a 20px section title, 64px rows. */
+.ui-projects-unassigned {
+  display: flex;
+  align-items: center;
+  min-block-size: 44px;
+  margin-block: var(--space-4) var(--space-5);
+  padding-block: 0;
+}
+
+.ui-projects-head {
+  padding-block-end: calc(var(--space-1) * 1.5);
+}
+
+.ui-projects-finished-toggle {
+  margin-block-start: calc(var(--space-1) * 1.25);
+  padding-block-start: var(--space-5);
+  color: var(--color-text);
+}
+
+.ui-projects-unassigned .ui-text-link {
+  gap: var(--space-2);
+}
+
+.ui-projects-unassigned .ui-text-link-label {
+  display: flex;
+  gap: var(--space-2);
+  overflow: visible;
+}
+
+.ui-projects-unassigned bdi {
+  font-variant-numeric: normal;
+}
+
+.ui-projects-head h2 {
+  font-size: var(--type-section-size);
+  font-weight: var(--type-section-weight);
+  line-height: var(--type-title-line);
+}
+
+.ui-projects-head .ui-muted {
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-line2-weight);
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-projects-head ~ * .ui-row-project {
+  padding-block: var(--space-3);
+}
+
+.ui-projects-head ~ * .ui-row-initials {
+  font-weight: var(--type-section-weight);
+}
+
+.ui-projects-head ~ * .ui-row-project .ui-row-text {
+  gap: calc(var(--space-1) / 2);
+}
+
+.ui-projects-head ~ * .ui-row-project .ui-row-title,
+.ui-projects-head ~ * .ui-row-project .ui-row-hint {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+/* A tab root's header under its "+ new" row (board Projects): the title keeps a 4px lead and 2px under it, and the
+   subtitle takes its 15px at the natural 1.2 line (18px), not the 1.4 label line. */
+.ui-tab-root-head .t-title {
+  margin-block: calc(var(--space-1)) calc(var(--space-1) / 2);
+}
+
+.ui-tab-root-head > p {
+  line-height: var(--type-cents-line);
 }

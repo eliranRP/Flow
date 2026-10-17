@@ -26,10 +26,12 @@
 - **Acceptance:** stories of the lines in each of the 4 orders, scrolled with the compact panel, and the transaction page pending, not in profit, and recurring with a +27% change, plus both sheets, at 320 and 393 with invented lines that add up to the summary; a sample test that the listed rows add up to the summary and to Home's row; a unit test that the change colour follows "hurts" for expense and income; an e2e that a row opens the page and Back returns to the same scroll; design review against the boards.
 - **Design spec:** the counted-in row and sheet are written down in [implementation-guide §7.10](../../../design/system/implementation-guide.md) (FLOW-363 (4)). The code is built here, for the transaction line.
 
-**Lines follow-up (text-masked proofs, scripts/board-proof.mjs; figures from PR #686)**
-- [x] LinesIn under the 3% gate (2.4% dark), by the chip row margin and the group head gap scoped to the נכנס view (`ui-lines-group-head-in`).
-- [ ] LinesRecurring (`/e2e/txn?board=recurring`): the recurring row and its pace line.
-- [ ] LinesFreq (`/e2e/txn?board=recurring&sheet=pace`): the pace sheet rows.
-- [ ] LinesAll (`/e2e/txn?board=recurring&sheet=all`): the all-charges sheet rows.
-- [ ] LinesDetailLoan (`/e2e/txn?board=loan`): the loan detail card.
-- [ ] Lines dark stays a named exception (3.7%); the light frame is 2.7%.
+**Lines follow-up (text-masked proofs, scripts/board-proof.mjs; FLOW-366b, 2026-10-17, dark / light)**
+- [x] Lines (month, יצא): 3.7% / 2.7% before, 0.9% / 0.8% after: under the 3% gate in both themes.
+- [x] LinesIn (נכנס): 2.4% / 1.4% before, 2.0% / 1.3% after (no regression).
+- [x] LinesDetail: 2.9% / 2.7% before, 2.6% / 2.4% after (no regression).
+- [x] LinesRecurring (`/e2e/txn?board=recurring`): 5.7% / 5.5% before (pass 1: 6.2% / 6.0%), 2.2% / 2.0% after. The header figure sits at 40px and unsigned on the board's frames, the fact rows are 58px, the recurring tag sits on the title line, and the history rows are 34px at regular weight.
+- [x] LinesFreq (`/e2e/txn?board=recurring&sheet=pace`): 6.6% / 6.9% before, 1.7% / 2.0% after. The pace sheet (`panelClassName` on ChoiceSheet, scoped to `.ui-pace-sheet`) has 56px options with 16px titles and 12px notes.
+- [x] LinesAll (`/e2e/txn?board=recurring&sheet=all`): 7.5% / 8.0% before, 2.5% / 2.5% after. The sheet starts 90px down, its rows are 52px with a hairline under each, and the summary box is 36px.
+- [x] LinesDetailLoan (`/e2e/txn?board=loan`): 5.7% / 5.7% before (pass 1: 5.9% / 5.9%), 2.1% / 2.1% after. The loan line is a Mercury bank line (no invoice). The counted row's "תזרים בלבד · קרן הלוואה" copy is not yet changed.
+- Named exception: none. All seven frames are under 3% in both themes.

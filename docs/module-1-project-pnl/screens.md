@@ -1,5 +1,7 @@
 # Flow — Module 1 screens
 
+The design board is the spec for every screen: https://claude.ai/artifact/9grt9spjshVCxerYWrRXiD. The wireframe PNGs and their source were deleted in T-03; these notes keep what each one showed and its status.
+
 Each section is one wireframe. The detailed spec for each product screen is a separate file, linked below. Figures in the wireframes are example data for September 2026, not a real company. Numbers follow [calculations](calculations.md). Two example companies appear: screens from the first pass use three projects, and the v2 Home uses a larger company (17 active projects this month). Do not expect the month totals on Home to equal the lifetime totals on a project screen. Home is this month, last month, or year to date. The project screen is since the job started.
 
 The phone UI is Hebrew only, right to left. Profit is green, loss is red, and a negative amount uses a minus sign. Income and expense totals on the summary tiles are neutral. The English notes beside the phone in the PNG are annotations for design review. They are not in the product.
@@ -38,7 +40,7 @@ Behavior that these screens illustrate is specified in [spec.md](spec.md).
 
 **Status:** Superseded by [01-home-v4](#01-home-v4). Kept. It was pending owner approval and did not include the after-overhead switch.
 **Supersedes:** [01-home-v2](#01-home-v2).
-**File:** [wireframes/01-home-v3.png](wireframes/01-home-v3.png)
+**File:** wireframes/01-home-v3.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -91,7 +93,6 @@ The 8%, 12%, and 10% figures are example data on this image. The formula is in [
 
 ### Wireframe
 
-![Home v3, pending owner approval: three periods, comparison arrows, unpaid line](wireframes/01-home-v3.png)
 
 ### Detailed spec
 
@@ -103,7 +104,7 @@ The 8%, 12%, and 10% figures are example data on this image. The formula is in [
 
 **Status:** Pending owner approval.
 **Supersedes:** [01-home-v3](#01-home-v3).
-**File:** [wireframes/01-home-v4.png](wireframes/01-home-v4.png)
+**File:** wireframes/01-home-v4.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -154,7 +155,6 @@ Same as [Home](screens/01-home.md), plus the switch. This image is the on state.
 
 ### Wireframe
 
-![Home v4, pending owner approval: after-overhead switch on](wireframes/01-home-v4.png)
 
 ### Detailed spec
 
@@ -166,7 +166,7 @@ Same as [Home](screens/01-home.md), plus the switch. This image is the on state.
 
 **Status:** Superseded by [01-home-v3](#01-home-v3).
 **Supersedes:** [01-home](#01-home).
-**File:** [wireframes/01-home-v2.png](wireframes/01-home-v2.png)
+**File:** wireframes/01-home-v2.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -201,7 +201,6 @@ The example arithmetic, so the tiles can be checked against the rows: top-5 inco
 
 ### Wireframe
 
-![Approved wireframe: Home with many projects](wireframes/01-home-v2.png)
 
 ### Detailed spec
 
@@ -212,7 +211,7 @@ The example arithmetic, so the tiles can be checked against the rows: top-5 inco
 ## 02-project — Project
 
 **Status:** Superseded by [02-project-v2](#02-project-v2). Kept. This image has no after-overhead switch.
-**File:** [wireframes/02-project.png](wireframes/02-project.png)
+**File:** wireframes/02-project.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -239,7 +238,6 @@ Answer "is this job profitable?" for one project, from the day it started, and s
 
 ### Wireframe
 
-![Approved wireframe: project view](wireframes/02-project.png)
 
 ### Detailed spec
 
@@ -251,7 +249,7 @@ Answer "is this job profitable?" for one project, from the day it started, and s
 
 **Status:** Pending owner approval.
 **Supersedes:** [02-project](#02-project).
-**File:** [wireframes/02-project-v2.png](wireframes/02-project-v2.png)
+**File:** wireframes/02-project-v2.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -297,7 +295,6 @@ Same as [Project](screens/02-project.md). This image is the on state.
 
 ### Wireframe
 
-![Project v2, pending owner approval: before, share, and after](wireframes/02-project-v2.png)
 
 ### Detailed spec
 
@@ -309,7 +306,7 @@ Same as [Project](screens/02-project.md). This image is the on state.
 
 **Status:** Approved. This is the review queue to build.
 **Supersedes:** [03-review](#03-review).
-**File:** [wireframes/03-review-v2.png](wireframes/03-review-v2.png)
+**File:** wireframes/03-review-v2.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -343,7 +340,6 @@ Confirm what Flow did not auto-approve. One card at a time. Rows that already ma
 
 ### Wireframe
 
-![Approved wireframe: review queue with an auto-approved strip](wireframes/03-review-v2.png)
 
 ### Detailed spec
 
@@ -354,7 +350,7 @@ Confirm what Flow did not auto-approve. One card at a time. Rows that already ma
 ## 03-review — Review queue, with Approve all
 
 **Status:** Superseded by [03-review-v2](#03-review-v2). Kept for history. Do not build this layout. It includes a bulk `אשר הכל` button for high-confidence items, which now auto-approve and skip this card.
-**File:** [wireframes/03-review.png](wireframes/03-review.png)
+**File:** wireframes/03-review.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -376,7 +372,6 @@ The first review queue: one card, plus a dashed bulk action for high-confidence 
 
 ### Wireframe
 
-![Superseded wireframe: review queue with Approve all](wireframes/03-review.png)
 
 ### Detailed spec
 
@@ -387,7 +382,7 @@ Do not build this screen. The spec to build is [Review queue](screens/03-review.
 ## 04-add — Add sheet
 
 **Status:** Approved.
-**File:** [wireframes/04-add.png](wireframes/04-add.png)
+**File:** wireframes/04-add.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -413,7 +408,6 @@ The only way to bring new data in. The center `+` opens this sheet on top of wha
 
 ### Wireframe
 
-![Approved wireframe: add sheet over Home](wireframes/04-add.png)
 
 ### Detailed spec
 
@@ -424,7 +418,7 @@ The only way to bring new data in. The center `+` opens this sheet on top of wha
 ## 05-projects — Projects list and create
 
 **Status:** Approved.
-**File:** [wireframes/05-projects.png](wireframes/05-projects.png)
+**File:** wireframes/05-projects.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -459,7 +453,6 @@ Create sheet, in front:
 
 ### Wireframe
 
-![Approved wireframe: projects list with the create sheet open](wireframes/05-projects.png)
 
 ### Detailed spec
 
@@ -471,7 +464,7 @@ Create sheet, in front:
 
 **Status:** Approved. This is the change sheet to build.
 **Supersedes:** [06-change-sheet](#06-change-sheet).
-**File:** [wireframes/06-change-sheet-v2.png](wireframes/06-change-sheet-v2.png)
+**File:** wireframes/06-change-sheet-v2.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -507,7 +500,6 @@ The review card behind the sheet still shows the earlier suggestion (`וילה �
 
 ### Wireframe
 
-![Approved wireframe: change sheet with search and a short suggestion row](wireframes/06-change-sheet-v2.png)
 
 ### Detailed spec
 
@@ -518,7 +510,7 @@ The review card behind the sheet still shows the earlier suggestion (`וילה �
 ## 07-categories — Categories
 
 **Status:** Approved.
-**File:** [wireframes/07-categories.png](wireframes/07-categories.png)
+**File:** wireframes/07-categories.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -553,7 +545,6 @@ Light category maintenance. The seven expense defaults and the two income defaul
 
 ### Wireframe
 
-![Approved wireframe: expense categories with the row menu open](wireframes/07-categories.png)
 
 ### Detailed spec
 
@@ -565,7 +556,7 @@ Light category maintenance. The seven expense defaults and the two income defaul
 
 **Status:** Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The wireframe stays for history. Bank lines come from the SUMIT sync.
 **Supersedes:** [08-upload-results](#08-upload-results).
-**File:** [wireframes/08-upload-results-v2.png](wireframes/08-upload-results-v2.png)
+**File:** wireframes/08-upload-results-v2.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -595,7 +586,6 @@ Show what a Bank Hapoalim file became. High-confidence rows are already approved
 
 ### Wireframe
 
-![Approved wireframe: Hapoalim upload results with an auto-approved group](wireframes/08-upload-results-v2.png)
 
 ### Detailed spec
 
@@ -606,7 +596,7 @@ Show what a Bank Hapoalim file became. High-confidence rows are already approved
 ## 08-upload-results — Statement upload results, with bulk approve
 
 **Status:** Superseded by [08-upload-results-v2](#08-upload-results-v2). Kept for history. Do not build this layout. It shows a Leumi file name and a button that asks the owner to approve the 33 classified rows.
-**File:** [wireframes/08-upload-results.png](wireframes/08-upload-results.png)
+**File:** wireframes/08-upload-results.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -627,7 +617,6 @@ The primary button opens review for the 7. The secondary button was the manual c
 
 ### Wireframe
 
-![Superseded wireframe: upload results with a Leumi file and a bulk-approve button](wireframes/08-upload-results.png)
 
 ### Detailed spec
 
@@ -638,7 +627,7 @@ Do not build this screen. Upload results is not a build task ([0065](../decision
 ## 01-home — Home, few projects
 
 **Status:** Superseded by [01-home-v2](#01-home-v2). Kept for history. Do not build this layout. It does not scale past a short project list, and it has no sort and no collapsed "more projects" row.
-**File:** [wireframes/01-home.png](wireframes/01-home.png)
+**File:** wireframes/01-home.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -666,7 +655,6 @@ Same as v2 for the period switch, the banner, a project row, overhead, and the c
 
 ### Wireframe
 
-![Superseded wireframe: Home with three projects](wireframes/01-home.png)
 
 ### Detailed spec
 
@@ -677,7 +665,7 @@ Do not build this screen. The spec to build is [Home](screens/01-home.md). This 
 ## 06-change-sheet — Change sheet, all chips
 
 **Status:** Superseded by [06-change-sheet-v2](#06-change-sheet-v2). Kept for history. Do not build this layout. A chip for every project and every category does not fit once the lists grow.
-**File:** [wireframes/06-change-sheet.png](wireframes/06-change-sheet.png)
+**File:** wireframes/06-change-sheet.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -702,7 +690,6 @@ Select one project chip and one category chip, leave the remember toggle on, and
 
 ### Wireframe
 
-![Superseded wireframe: change sheet with a chip for every project and category](wireframes/06-change-sheet.png)
 
 ### Detailed spec
 
@@ -713,7 +700,7 @@ Do not build this screen. The spec to build is [Change sheet](screens/06-change-
 ## overview — Board of screens 01–05
 
 **Status:** Approved composite. The Home phone is the superseded [01-home](#01-home). The review phone is the superseded [03-review](#03-review). Project, Add, and Projects match the approved screens.
-**File:** [wireframes/overview.png](wireframes/overview.png)
+**File:** wireframes/overview.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -735,7 +722,6 @@ None. This file is a board, not a screen.
 
 ### Wireframe
 
-![Overview board of the first five wireframes](wireframes/overview.png)
 
 ### Detailed spec
 
@@ -746,7 +732,7 @@ Not a product screen. No fields, states, or acceptance criteria. The Home phone 
 ## overview-2 — Board of screens 06–08
 
 **Status:** Approved composite. The change-sheet phone is the superseded [06-change-sheet](#06-change-sheet). The upload phone is the superseded [08-upload-results](#08-upload-results). Categories match the approved screen.
-**File:** [wireframes/overview-2.png](wireframes/overview-2.png)
+**File:** wireframes/overview-2.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -766,7 +752,6 @@ None. This file is a board, not a screen.
 
 ### Wireframe
 
-![Overview board of the change sheet, categories, and upload results](wireframes/overview-2.png)
 
 ### Detailed spec
 
@@ -777,7 +762,7 @@ Not a product screen. The change sheet and the upload results on this board are 
 ## overview-3 — Board of the v2 screens
 
 **Status:** Approved composite. The Home phone is the superseded [01-home-v2](#01-home-v2). The change sheet is current. Later Homes are [01-home-v3](#01-home-v3) and [01-home-v4](#01-home-v4).
-**File:** [wireframes/overview-3.png](wireframes/overview-3.png)
+**File:** wireframes/overview-3.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -798,7 +783,6 @@ None. This file is a board, not a screen.
 
 ### Wireframe
 
-![Overview board of Home v2 and the scalable change sheet](wireframes/overview-3.png)
 
 ### Detailed spec
 
@@ -809,7 +793,7 @@ Not a product screen. Build [Home](screens/01-home.md) from [01-home-v3](#01-hom
 ## overview-4 — Board of review v2 and upload results v2
 
 **Status:** Approved composite. Both phones are current.
-**File:** [wireframes/overview-4.png](wireframes/overview-4.png)
+**File:** wireframes/overview-4.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -828,7 +812,6 @@ None. This file is a board, not a screen.
 
 ### Wireframe
 
-![Overview board of review v2 and Hapoalim upload results](wireframes/overview-4.png)
 
 ### Detailed spec
 
@@ -839,7 +822,7 @@ Not a product screen. Build [Review](screens/03-review.md). Upload results is no
 ## 09-onboarding — First-run onboarding
 
 **Status:** Pending owner approval.
-**File:** [wireframes/09-onboarding.png](wireframes/09-onboarding.png)
+**File:** wireframes/09-onboarding.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -942,7 +925,6 @@ Five phones on one board.
 
 ### Wireframe
 
-![Onboarding, pending owner approval: sign-in, company, Hapoalim export, proposed projects, install](wireframes/09-onboarding.png)
 
 ### Detailed spec
 
@@ -953,7 +935,7 @@ This section. There is no separate file until the owner approves the image.
 ## 10-transaction-detail — Transaction detail
 
 **Status:** Pending owner approval.
-**File:** [wireframes/10-transaction-detail.png](wireframes/10-transaction-detail.png)
+**File:** wireframes/10-transaction-detail.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -1021,7 +1003,6 @@ The big number is net of VAT. VAT 1,530 is 18% of 8,500 in this example. The ban
 
 ### Wireframe
 
-![Transaction detail, pending owner approval](wireframes/10-transaction-detail.png)
 
 ### Detailed spec
 
@@ -1032,7 +1013,7 @@ This section. There is no separate file until the owner approves the image.
 ## 11-split — Split sheet
 
 **Status:** Superseded by [11-split-v2](#11-split-v2). Kept.
-**File:** [wireframes/11-split.png](wireframes/11-split.png)
+**File:** wireframes/11-split.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -1095,7 +1076,6 @@ The image draws a category control on each line, defaulting to the invoice categ
 
 ### Wireframe
 
-![Split sheet, pending owner approval, over transaction detail](wireframes/11-split.png)
 
 ### Detailed spec
 
@@ -1107,7 +1087,7 @@ This section, plus [Splits](calculations.md#splits). There is no separate file u
 
 **Status:** Pending owner approval.
 **Supersedes:** [11-split](#11-split).
-**File:** [wireframes/11-split-v2.png](wireframes/11-split-v2.png)
+**File:** wireframes/11-split-v2.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -1158,7 +1138,6 @@ Sheet over the ₪12,000 materials detail (`חומרי בניין השרון`).
 
 ### Wireframe
 
-![Split v2, pending owner approval: by income, all active projects, monthly rule](wireframes/11-split-v2.png)
 
 ### Detailed spec
 
@@ -1169,7 +1148,7 @@ Sheet over the ₪12,000 materials detail (`חומרי בניין השרון`).
 ## 12-unpaid — Unpaid invoices
 
 **Status:** Pending owner approval.
-**File:** [wireframes/12-unpaid.png](wireframes/12-unpaid.png)
+**File:** wireframes/12-unpaid.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -1229,7 +1208,6 @@ List invoices that have no matching payment yet. Cash basis: they are waiting, a
 
 ### Wireframe
 
-![Unpaid invoices, pending owner approval, with mark-paid open](wireframes/12-unpaid.png)
 
 ### Detailed spec
 
@@ -1240,7 +1218,7 @@ This section. There is no separate file until the owner approves the image.
 ## 13-notifications — Notifications
 
 **Status:** Pending owner approval.
-**File:** [wireframes/13-notifications.png](wireframes/13-notifications.png)
+**File:** wireframes/13-notifications.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -1295,7 +1273,6 @@ The ₪42,000, the 15%, the count 7, and "about 2 minutes" are example data. Whi
 
 ### Wireframe
 
-![Notifications, pending owner approval: Sunday summary and the 18:00 nudge](wireframes/13-notifications.png)
 
 ### Detailed spec
 
@@ -1306,7 +1283,7 @@ This section, plus [0018](../decisions/0018-two-notifications.md). There is no s
 ## 14-settings — Settings
 
 **Status:** Pending owner approval.
-**File:** [wireframes/14-settings.png](wireframes/14-settings.png)
+**File:** wireframes/14-settings.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -1369,7 +1346,6 @@ Title `הגדרות`. Subtitle is the business name, example `א.ב. בנייה 
 
 ### Wireframe
 
-![Settings, pending owner approval](wireframes/14-settings.png)
 
 ### Detailed spec
 
@@ -1380,7 +1356,7 @@ This section, plus the [Settings draft](settings.md). There is no separate file 
 ## overview-5 — Board of detail, split, unpaid, and Home v3
 
 **Status:** Pending owner approval. Composite of four phones that are themselves pending.
-**File:** [wireframes/overview-5.png](wireframes/overview-5.png)
+**File:** wireframes/overview-5.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -1403,7 +1379,6 @@ None. This file is a board, not a screen.
 
 ### Wireframe
 
-![Overview board, pending owner approval: transaction detail, split, unpaid, Home v3](wireframes/overview-5.png)
 
 ### Detailed spec
 
@@ -1414,7 +1389,7 @@ Not a product screen. The four phones are specified in the sections above.
 ## overview-6 — Board of split v2, Home v4, and project v2
 
 **Status:** Pending owner approval. Composite of three phones that are themselves pending.
-**File:** [wireframes/overview-6.png](wireframes/overview-6.png)
+**File:** wireframes/overview-6.png (PNG deleted; the design board is the spec)
 
 ### Purpose
 
@@ -1434,7 +1409,6 @@ None. This file is a board, not a screen.
 
 ### Wireframe
 
-![Overview board, pending owner approval: split v2, Home v4, project v2](wireframes/overview-6.png)
 
 ### Detailed spec
 

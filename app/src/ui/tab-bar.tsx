@@ -15,15 +15,17 @@ type TabBarProps = {
 export type TabSection = "home" | "projects" | "loans" | "recurring";
 
 /**
- * The tab a path belongs to. Settings is behind the avatar on Home, so no tab is current there,
- * except the loans page, which the loans tab opens (FLOW-364).
+ * The tab a path belongs to. Settings is behind the avatar on Home, so Home stays current there, as
+ * on the board; the loans page is the loans tab's (FLOW-364).
  */
 export function tabSection(pathname: string): TabSection | null {
-  if (pathname === "/" || pathname.startsWith("/unpaid") || pathname.startsWith("/flow/")) return "home";
+  if (pathname === "/" || pathname.startsWith("/unpaid")) return "home";
   // The profit view and the cash months open from Home; the review queue opens from Home's box.
-  if (pathname === "/profit" || pathname.startsWith("/cash/") || pathname.startsWith("/review")) return "home";
+  if (pathname === "/profit" || pathname.startsWith("/cash/") || pathname.startsWith("/review") || pathname.startsWith("/settings")) return "home";
+  // A project's profit pages open from Home's profit view, so the board lights Home there too.
+  if (/^\/projects\/[^/]+\/profit(\/|$)/.test(pathname)) return "home";
   if (pathname.startsWith("/projects")) return "projects";
-  if (pathname.startsWith("/settings/loans") || pathname.startsWith("/loans")) return "loans";
+  if (pathname.startsWith("/loans")) return "loans";
   if (pathname.startsWith("/missing-bills") || pathname.startsWith("/recurring")) return "recurring";
   return null;
 }
@@ -41,7 +43,7 @@ function TabFace({ icon, label }: { icon: ReactNode; label: string }) {
 const tabs: { section: TabSection; label: string; path: string; icon: ReactNode }[] = [
   { section: "home", label: "בית", path: "/", icon: <HomeIcon size={24} stroke={2} /> },
   { section: "projects", label: "פרויקטים", path: "/projects", icon: <ProjectsIcon size={24} stroke={2} /> },
-  { section: "loans", label: "הלוואות", path: "/settings/loans", icon: <BankColumnsIcon size={24} stroke={2} /> },
+  { section: "loans", label: "הלוואות", path: "/loans", icon: <BankColumnsIcon size={24} stroke={2} /> },
   { section: "recurring", label: "קבועים", path: "/recurring", icon: <RepeatIcon size={24} stroke={2} /> },
 ];
 

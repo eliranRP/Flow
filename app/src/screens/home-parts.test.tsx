@@ -2,7 +2,7 @@ import type { CashCurrencyRow } from "@flow/shared";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { AttentionBox, ForecastRow, HomeMonthPill, SplitCard, homeMonthLabel } from "./home-parts";
+import { AttentionBox, ForecastRow, HomeFigures, HomeMonthPill, SplitCard, homeMonthLabel, type HomeFigureRows } from "./home-parts";
 
 // Invented figures only; amounts are agorot.
 function row(net: number, profit: number): CashCurrencyRow {
@@ -22,6 +22,30 @@ function row(net: number, profit: number): CashCurrencyRow {
 const nav = { earlierKey: "2026-09", laterKey: null, onStep: vi.fn(), onOpenDrawer: vi.fn() };
 
 describe("Home's band parts (FLOW-364)", () => {
+  it("draws each figure row as label, amount, change chip, the amount beside the chip (FLOW-374)", () => {
+    const figures: HomeFigureRows = {
+      currency: "ILS",
+      rows: [row(-200_000, 0)],
+      compare: { in_minor: 900_000n, out_minor: 1_100_000n },
+      previousName: "ספטמבר",
+      day: 11,
+      isPast: false,
+    };
+    const { container } = render(
+      <MemoryRouter>
+        <HomeFigures monthKey="2026-10" figures={figures} search="" animate={null} />
+      </MemoryRouter>,
+    );
+    const rowLinks = container.querySelectorAll<HTMLElement>(".ui-band-rows .ui-band-row-link");
+    expect(rowLinks).toHaveLength(2);
+    for (const link of rowLinks) {
+      const [label, amount, chip] = Array.from(link.children);
+      expect(label?.className).toContain("ui-band-row-label");
+      expect(amount?.className).toContain("ui-band-row-amount");
+      expect(chip?.querySelector(".ui-change-amount")).not.toBeNull();
+    }
+  });
+
   it("names the month pill and disables the later arrow on the current month", () => {
     render(
       <MemoryRouter>

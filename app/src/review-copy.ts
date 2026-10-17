@@ -55,7 +55,10 @@ export function jevReasonText(
         " הפעמים האחרונות",
       ];
     case "new_party":
-      return hasParty ? [`${partyWord(direction)} חדש · בלי היסטוריה`] : ["בלי היסטוריה קודמת"];
+      if (!hasParty) return ["בלי היסטוריה קודמת"];
+      // The card Jev can't fill names the next step: the board's two lines under the card.
+      if (project == null || project === "") return [`${partyWord(direction)} חדש, בלי היסטוריה. בחרו פרויקט ונזכור להבא.`];
+      return [`${partyWord(direction)} חדש · בלי היסטוריה`];
     case "model_only":
       return ["הערכה של Jev בלבד"];
   }

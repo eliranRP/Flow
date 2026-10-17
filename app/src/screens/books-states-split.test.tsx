@@ -5,7 +5,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { renderWithProviders } from "../test-render";
 import { roleShows } from "../test-waits";
-import { CategoriesScreen, ProjectDetailScreen, ProjectsScreen, ChangeForm, ReviewScreen, SettingsScreen, SplitScreen, TransactionScreen, UnpaidScreen } from "./flow-screens";
+import { CategoriesScreen, ProjectDetailScreen, ProjectsScreen, ChangeForm, ReviewScreen, SettingsScreen, TransactionScreen, UnpaidScreen } from "./flow-screens";
+import { LineSplitScreen } from "./line-split";
 import { HomeScreen } from "./HomeScreen";
 
 const rpc = vi.hoisted(() => ({
@@ -77,7 +78,7 @@ function renderAt(path: string) {
         <Route path="/settings" element={<SettingsScreen />} />
         <Route path="/settings/categories" element={<CategoriesScreen />} />
         <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
-        <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
+        <Route path="/transactions/:transactionId/split-category" element={<LineSplitScreen />} />
       </Routes>
     </AuthProvider>,
     { route: path },
@@ -132,7 +133,7 @@ describe("rejected writes", () => {
     const approve = screen.getByRole("button", { name: "אישור" });
     expect(approve).toBeEnabled();
     fireEvent.click(approve);
-    expect(await screen.findByRole("heading", { name: "פיצול בין פרויקטים" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "פיצול" })).toBeInTheDocument();
     expect(calls).not.toContain("resolve_review");
     expect(calls).not.toContain("approve_split_review");
   });

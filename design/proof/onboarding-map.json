@@ -1,0 +1,6 @@
+{
+  "Onboarding": "/e2e/setup/welcome",
+  "OnboardingBusiness": "/e2e/setup/business",
+  "OnboardingConnect": "/e2e/setup/connect",
+  "OnboardingSkip": "/e2e/setup/skip"
+}

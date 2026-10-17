@@ -217,13 +217,13 @@ describe("the project page", () => {
     expect(row).toHaveTextContent("הלוואה לדוגמה");
   });
 
-  it("hides the row with no investment and no loan, and keeps the way in under עוד", async () => {
+  it("hides the row with no investment and no loan, and keeps the way in under the ⋯ menu", async () => {
     rpc.impl = readsFor({ ...base, is_overhead: undefined, loans: [] });
     renderPage();
     await screen.findByRole("link", { name: /^נכנס ב/ });
     expect(screen.queryByRole("link", { name: /^השקעה/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
-    expect(screen.getByRole("link", { name: /נתוני השקעה/ })).toHaveAttribute("href", expect.stringMatching(/^\/projects\/p1\/investment/));
+    expect(screen.getByRole("link", { name: /^השקעה והלוואות/ })).toHaveAttribute("href", expect.stringMatching(/^\/projects\/p1\/investment/));
   });
 
   it("parses an older payload with no investment, and its loans still open the investment and loans page", async () => {

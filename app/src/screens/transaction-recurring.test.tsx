@@ -135,4 +135,19 @@ describe("transaction page: recurring card and counted-in sheet (FLOW-415, FLOW-
     show({ ...base, pnl_state: "mixed" }, found);
     expect(screen.getAllByText("לפי הקטגוריות בפיצול").length).toBeGreaterThan(0);
   });
+  it("draws the document row when the line has a SUMIT link, with the photo note, and none without one", async () => {
+    show({ ...base, doc_kind: "photo", document_url: "https://pay.sumit.co.il/example/doc-1" }, null);
+    const link = await screen.findByRole("link", { name: /חשבונית/ });
+    expect(link).toHaveAttribute("href", "https://pay.sumit.co.il/example/doc-1");
+    expect(link).toHaveTextContent("צולמה 04/10 · הקישו להגדלה");
+    cleanup();
+    show({ ...base, document_url: "https://example.com/not-sumit" }, null);
+    await screen.findByText("בניין לדוגמה");
+    expect(screen.queryByRole("link", { name: /חשבונית/ })).toBeNull();
+  });
+
+  it("names a loan line's principal in the title", async () => {
+    show({ ...base, pnl_fixed: true }, null);
+    expect(await screen.findByText("אור חשמל · קרן")).toBeInTheDocument();
+  });
 });

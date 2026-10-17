@@ -4,9 +4,10 @@ import { expect, test } from "@playwright/test";
 // src/dev/search-e2e-fixture.ts in preview, so no server is needed.
 test.use({ viewport: { width: 390, height: 700 } });
 
-test("search opens from Home, finds a line, opens it, and Back keeps the search", async ({ page }) => {
-  await page.goto("/e2e/home?preview=1");
-  await page.getByRole("link", { name: "חיפוש תנועות" }).click();
+test("search opens from the cash Home, finds a line, opens it, and Back keeps the search", async ({ page }) => {
+  await page.goto("/e2e/cash?preview=1");
+  // The band's search icon (its label is חיפוש; the search screen names its field חיפוש תנועות).
+  await page.getByRole("link", { name: "חיפוש", exact: true }).click();
   await expect(page).toHaveURL(/\/search\?preview=1$/);
   const field = page.getByRole("searchbox", { name: "חיפוש תנועות" });
   // The icon opened the screen, so the field takes focus.
@@ -20,8 +21,8 @@ test("search opens from Home, finds a line, opens it, and Back keeps the search"
   const row = page.getByRole("link", { name: /^ספק 3(?!\d)/ });
   await expect(row).toBeVisible();
   await expect(page.getByRole("link", { name: /^ספק 1(?!\d)/ })).toHaveCount(0);
-  await expect(row.locator("mark")).toHaveText("ספק 3");
-  await expect(page.locator(".ui-search-count")).toContainText("תנועה אחת");
+  await expect(row).toContainText("ספק 3");
+  await expect(page.locator(".ui-search-count")).toContainText("1 תנועה");
 
   await row.click();
   await expect(page).toHaveURL(/\/transactions\/t-step-3\?preview=1$/);

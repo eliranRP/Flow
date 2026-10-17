@@ -4,7 +4,7 @@ import { expect, userEvent, within } from "@storybook/test";
 import { ProjectDetailScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { FILLED } from "../ui/investment-card.stories-support";
-import { at320, ExampleBar, exampleOnBand, storyBody } from "../ui/screen-stories-support";
+import { ExampleBar, exampleOnBand, storyBody } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -281,11 +281,11 @@ export const ProjectMenu: Story = {
   render: ProjectOverview.render,
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole("button", { name: "עוד" }));
-    await storyBody(canvasElement).findByRole("dialog", { name: "עוד" });
+    await storyBody(canvasElement).findByRole("dialog", { name: "וילה לדוגמה" });
   },
 };
 
-/** FLOW-360 A: the ⋯ menu's קבוצה row, then its picker and the new group sheet. */
+/** FLOW-360 A: the edit sheet's קבוצה row (opened from the ⋯ menu), then its picker and the new group sheet. */
 const sampleGroups = {
   groups: [{ id: "g1", name: "בניין לדוגמה" }, { id: "g2", name: "מתחם לדוגמה" }],
   currentId: null,
@@ -301,17 +301,23 @@ const groupedRender = (currentId: string | null) => () => (
     />
   </StoryRoute>
 );
+const openEditSheet: NonNullable<Story["play"]> = async (context) => {
+  await ProjectMenu.play?.(context);
+  await userEvent.click(await storyBody(context.canvasElement).findByRole("button", { name: /^עריכת פרטים/ }));
+  await storyBody(context.canvasElement).findByRole("dialog", { name: "עריכת פרויקט" });
+};
+
 export const ProjectMenuGroup: Story = {
-  name: "Project, ⋯ menu with קבוצה",
+  name: "Project, edit sheet with קבוצה",
   render: groupedRender(null),
-  play: ProjectMenu.play,
+  play: openEditSheet,
 };
 
 export const ProjectGroupPicker: Story = {
   name: "Project, group picker",
   render: groupedRender("g1"),
   play: async (context) => {
-    await ProjectMenu.play?.(context);
+    await openEditSheet(context);
     await userEvent.click(await storyBody(context.canvasElement).findByRole("button", { name: /קבוצה/ }));
     await storyBody(context.canvasElement).findByRole("radiogroup", { name: "קבוצה" });
   },
@@ -410,14 +416,13 @@ export const ProjectTransactionsSection: Story = {
 };
 
 // FLOW-424 (C18-1): a kept-out line with a long category keeps its amount and chevron in line with
-// the counted rows at 320; the category drops whole instead of pushing them out.
+// the counted rows; the category drops whole instead of pushing them out.
 const longKeptOut: NonNullable<ProjectDetailData> = {
   ...overviewProject,
   transactions: overviewProject.transactions.map((txn) => (txn.kept_out === true ? { ...txn, category: "קבלני משנה וחומרי גמר" } : txn)),
 };
-export const ProjectTransactionsLongKeptOut320: Story = {
-  name: "Project, transactions section, long kept-out hint, 320",
-  ...at320,
+export const ProjectTransactionsLongKeptOut: Story = {
+  name: "Project, transactions section, long kept-out hint",
   render: () => (
     <StoryRoute entry="/projects/p-a/transactions" tabs>
       <ProjectDetailScreen example={exampleOnBand} sample={longKeptOut} section="transactions" sectionTo={sectionTo} />

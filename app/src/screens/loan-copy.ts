@@ -10,14 +10,22 @@ import { formatLoanMoney, type LoanCurrency } from "./loan-form";
  */
 
 export const LOAN_KIND_LABEL: Record<LoanKind, string> = {
-  amortizing: "רגילה",
+  amortizing: "פריסה רגילה",
+  interest_only: "ריבית בלבד",
+  balloon: "בלון",
+  demand: "לפי דרישה",
+};
+
+/** The kind word under a row on the Loans tab (board: short words; the detail page keeps LOAN_KIND_LABEL). */
+export const LOAN_KIND_LIST_LABEL: Record<LoanKind, string> = {
+  amortizing: "פריסה רגילה",
   interest_only: "ריבית בלבד",
   balloon: "בלון",
   demand: "לפי דרישה",
 };
 
 export const LOAN_STATUS_LABEL: Record<LoanStatus, string> = {
-  open: "פתוחה",
+  open: "פעילה",
   paid_off: "נפרעה",
   closed: "נסגרה",
 };
@@ -252,9 +260,4 @@ export function loanDeleteConsequence(payments: number): string {
 /** The toast after a delete. */
 export function loanDeletedToast(name: string): string {
   return `${name} נמחקה`;
-}
-
-/** "N חלקים" for a payment row, counting the parts with an amount; "חלק אחד" for one. */
-export function loanPartsText(parts: number): string {
-  return parts === 1 ? "חלק אחד" : `${String(parts)} חלקים`;
 }

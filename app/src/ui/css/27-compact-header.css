@@ -87,15 +87,22 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  padding-block: 8px 30px;
-  padding-inline: var(--space-2);
+  padding-block: calc(var(--space-1) * 1.5);
+  padding-inline: var(--pill-pad-inline);
+}
+
+/* The bar is its figure's height, not the 44px list bar: 6 + 52 + 6 (the board). */
+.ui-compact-bar-band .ui-compact-bar-band-row {
+  block-size: auto;
 }
 
 .ui-compact-bar-band .ui-compact-bar-centre {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0;
+  justify-content: center;
+  block-size: calc(var(--touch-min) + var(--space-2));
+  gap: 1px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -104,19 +111,23 @@
   cursor: pointer;
 }
 
+/* FLOW-374 (board): the band's bar title is 13px secondary, the net 20px/600 white, both LTR-safe. */
 .ui-compact-bar-centre-title {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  font-size: var(--type-btn-2-size);
-  font-weight: var(--type-btn-2-weight);
-  line-height: var(--type-btn-2-line);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-cents-line);
+  color: var(--color-on-band-secondary);
 }
 
 .ui-compact-bar-centre-net {
   font-size: var(--type-section-size);
-  font-weight: var(--type-section-weight);
-  line-height: var(--type-section-line);
+  font-weight: var(--type-sheet-weight);
+  line-height: var(--type-cents-line);
+  font-variant-numeric: normal;
+  white-space: nowrap;
 }
 
 .ui-compact-bar-band-row > .ui-compact-bar-centre {

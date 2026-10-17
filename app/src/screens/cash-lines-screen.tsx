@@ -7,7 +7,6 @@ import {
   cashLinesPath,
   cashMonthKey,
   cashMonthName,
-  cashMonthPath,
   cashSideLabel,
   cashTitle,
   isCashMonthKey,
@@ -24,6 +23,7 @@ import {
   linesSummary,
   type LinesOrder,
 } from "../cash-lines-groups";
+import { homeMonthPath } from "../home-month";
 import { useHeldOrder } from "../list-hold";
 import { usePreviewSearch, useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
@@ -120,9 +120,9 @@ function CashLinesBody({
   const title = cashSideLabel(side);
   const kicker = cashTitle(monthKey);
   const data = sample?.months ?? months.data ?? null;
-  const isCurrent = (sample != null || monthData.recent) && data != null && data.months[0] != null && cashMonthKey(data.months[0].month) === monthKey;
-  const back = isCurrent ? `/${search}` : cashMonthPath(monthKey, search);
   const isThisMonth = monthKey === israelToday().slice(0, 7);
+  // Back goes to Home on this month (Home is the month's cash page).
+  const back = homeMonthPath(monthKey, search, israelToday().slice(0, 7));
   // The board draws the month with its year, even in the current year ("אוקטובר 2026 • עד היום").
   const monthName = cashMonthName(monthKey);
   const monthTitle = /\d{4}$/.test(monthName) ? monthName : `${monthName} ${monthKey.slice(0, 4)}`;
@@ -190,9 +190,10 @@ function CashLinesBody({
     <div>
       <ScreenHeader
         layout="stacked"
+        className="ui-lines-header"
         title={title}
         backTo={back}
-        backText={isCurrent ? "בית" : kicker}
+        backText={isThisMonth ? "בית" : kicker}
         aboveTitle={side === "kept" ? undefined : <div className="ui-lines-switch">{sideSwitch}</div>}
         subtitle={subtitle}
         compactFigure={figureText}
@@ -229,6 +230,7 @@ function CashLinesBody({
                     hint={split == null ? hint : <SplitPartsHint parts={split.parts} total={split.total} date={formatDayMonth(row.cash_month_date)} />}
                     wrapHint={split != null}
                     agorot={row.amount_minor < 0n ? -row.amount_minor : row.amount_minor}
+                    wholeCents
                     currency={row.currency}
                     sign={lineSign(side, row)}
                     inWord={side === "out" ? "זיכוי" : undefined}

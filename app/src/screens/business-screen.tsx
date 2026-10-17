@@ -125,10 +125,10 @@ export function BusinessScreen({ sample }: { sample?: SettingsSample } = {}) {
 
   return (
     <ViewerScope>
-    <div>
+    <div className="ui-settings-page">
       <ScreenHeader title={TITLE} kicker="הגדרות" backTo={`${BACK}${search}`} />
       <ViewerNote />
-      <List>
+      <List layout="inset">
         {holdOwner ? (
           <ListRow variant="static" title="שם" value={namedBusiness} icon={<BuildingIcon />} />
         ) : (
@@ -206,7 +206,7 @@ export function BusinessScreen({ sample }: { sample?: SettingsSample } = {}) {
           returnFocusRef={renameRowRef}
         />
       ) : null}
-      <List>
+      <List layout="inset">
         <Toggle
           label={OVERHEAD_LABEL}
           icon={<SplitIcon />}

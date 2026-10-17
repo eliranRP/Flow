@@ -1,16 +1,12 @@
 import { buildLoanSchedule, type LoanScheduleRow, type LoanSplitPart, type LoanTerms } from "@flow/shared";
-import { HEBREW_MONTHS } from "../ui/date-math";
-import { keyedCategory, type LoanCategory, type LoanDetail, type LoanPayment } from "./loan-detail-data";
-import { LOAN_PART_LABEL } from "./loan-copy";
+import type { LoanDetail, LoanPayment } from "./loan-detail-data";
 
 /**
  * FLOW-434: what the loan page leads with (owner's pick A, 2026-10-10). The next payment, the
- * months ahead by year with their parts, and what was paid this year. Pure, no reads.
+ * payments left, and what was paid this year. Pure, no reads.
  */
 
 export type PartTotals = Record<LoanSplitPart, bigint>;
-
-export type PartShare = { part: LoanSplitPart; minor: bigint; percent: number };
 
 export type OutlookPeriod = {
   /** "2027", or "end" for the rest of the loan. */
@@ -22,15 +18,17 @@ export type OutlookPeriod = {
 
 export type LoanOutlook = {
   next: LoanScheduleRow;
-  /** The next 12 payments (fewer near the end). */
+  /** The next 12 payments (fewer near the end): the list's "12 החודשים הבאים". */
   ahead: OutlookPeriod;
-  /** Calendar years from the next payment on, oldest first. */
-  years: OutlookPeriod[];
   /** Every payment left on the schedule. */
   toEnd: OutlookPeriod;
   /** The year of the last scheduled payment. */
   endYear: string;
+  /** The due date of the last scheduled payment, ISO. */
+  endDate: string;
 };
+
+const PART_KEYS = ["interest", "escrow", "principal", "fees"] as const;
 
 const NONE: PartTotals = { interest: 0n, escrow: 0n, principal: 0n, fees: 0n };
 
@@ -78,19 +76,13 @@ export function loanOutlook(loan: LoanDetail, today: string): LoanOutlook | null
   }
   const next = left[0];
   if (next == null) return null;
-  const byYear = new Map<string, LoanScheduleRow[]>();
-  for (const row of left) {
-    const year = row.dueDate.slice(0, 4);
-    const list = byYear.get(year) ?? [];
-    list.push(row);
-    byYear.set(year, list);
-  }
+  const endDate = left.at(-1)?.dueDate ?? next.dueDate;
   return {
     next,
     ahead: sumRows("ahead", left.slice(0, 12)),
-    years: [...byYear.entries()].map(([year, list]) => sumRows(year, list)),
     toEnd: sumRows("end", left),
-    endYear: left.at(-1)?.dueDate.slice(0, 4) ?? next.dueDate.slice(0, 4),
+    endYear: endDate.slice(0, 4),
+    endDate,
   };
 }
 
@@ -127,38 +119,26 @@ export function paidInYear(payments: readonly LoanPayment[], year: string): Outl
 }
 
 /**
- * The parts with their whole-percent share, the shares adding up to 100 (largest remainder).
- * Escrow shows only when the loan files it; fees only when there are any.
+ * Each part in whole units, rounded so the parts on screen add up to the rounded total (the
+ * part with the largest remainder takes the leftover unit).
  */
-export function partShares(totals: PartTotals, parts: readonly LoanSplitPart[]): PartShare[] {
-  const shown = parts.filter((part) => part !== "fees" || totals.fees > 0n);
-  const total = shown.reduce((sum, part) => sum + totals[part], 0n);
-  if (total <= 0n) return shown.map((part) => ({ part, minor: totals[part], percent: 0 }));
-  const raw = shown.map((part) => {
-    const scaled = totals[part] * 10_000n / total;
-    return { part, minor: totals[part], floor: Number(scaled / 100n), rest: Number(scaled % 100n) };
-  });
-  let missing = 100 - raw.reduce((sum, item) => sum + item.floor, 0);
-  const order = [...raw].sort((a, b) => b.rest - a.rest);
-  for (const item of order) {
-    if (missing <= 0) break;
-    item.floor += 1;
-    missing -= 1;
+export function roundTotals(totals: PartTotals): PartTotals {
+  const target = wholeMinor(PART_KEYS.reduce((sum, key) => sum + totals[key], 0n));
+  const out: PartTotals = { interest: 0n, escrow: 0n, principal: 0n, fees: 0n };
+  for (const key of PART_KEYS) out[key] = (totals[key] / 100n) * 100n;
+  let left = target - PART_KEYS.reduce((sum, key) => sum + out[key], 0n);
+  for (const key of [...PART_KEYS].sort((a, b) => Number((totals[b] % 100n) - (totals[a] % 100n)))) {
+    if (left <= 0n) break;
+    out[key] += 100n;
+    left -= 100n;
   }
-  return raw.map((item) => ({ part: item.part, minor: item.minor, percent: item.floor }));
+  return out;
 }
 
-/** A part's category name for its hint, or null when it would only repeat the part's own label. */
-export function partCategoryHint(loan: Pick<LoanDetail, "categoryIds">, categories: readonly LoanCategory[], part: LoanSplitPart): string | null {
-  const id = loan.categoryIds[part];
-  const name = (id == null ? null : categories.find((category) => category.id === id)?.name) ?? keyedCategory(categories, part)?.name ?? null;
-  return name == null || name === LOAN_PART_LABEL[part] ? null : name;
-}
-
-/** "1 בנובמבר" for a due date. */
-export function dueDayLabel(iso: string): string {
-  const month = HEBREW_MONTHS[Number(iso.slice(5, 7)) - 1];
-  return month == null ? iso : `${String(Number(iso.slice(8, 10)))} ב${month}`;
+/** The rounded total, equal to the rounded parts on screen. */
+export function periodTotal(totals: PartTotals): bigint {
+  const rounded = roundTotals(totals);
+  return PART_KEYS.reduce((sum, key) => sum + rounded[key], 0n);
 }
 
 /** Rounded to whole units, for the summary rows (no .00 and no cents on a projection). */

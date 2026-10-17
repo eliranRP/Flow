@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { monthForecastSample, type ForecastSampleKind } from "../forecast-sample";
+import { type BoardForecastVariant, monthForecastBoardSample, monthForecastSample, type ForecastSampleKind } from "../forecast-sample";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
 import { ForecastScreen } from "./forecast-screen";
@@ -28,6 +28,19 @@ export const Positive: Story = { name: "Forecast · positive", args: { kind: "po
 export const Negative: Story = { name: "Forecast · negative", args: { kind: "negative" }, render: (args) => <Forecast kind={args.kind} /> };
 /** After a change: the moved row sits in לא החודש and the reset line counts it (FLOW-141). */
 export const MovedItem: Story = { name: "Forecast · moved to next month, reset line", args: { kind: "moved" }, render: (args) => <Forecast kind={args.kind} /> };
+
+/** The board's frames on the invented USD company: the changed list (one invoice moved) and everything arrived (FLOW-141b). */
+function BoardForecast({ variant }: { variant: BoardForecastVariant }) {
+  return (
+    <StoryRoute entry="/forecast" tabs>
+      <ExampleBar />
+      <ForecastScreen sample={monthForecastBoardSample(variant)} />
+    </StoryRoute>
+  );
+}
+
+export const Changed: Story = { name: "Forecast · changed, reset line", render: () => <BoardForecast variant="changed" /> };
+export const AllArrived: Story = { name: "Forecast · all arrived", render: () => <BoardForecast variant="empty" /> };
 
 /** The change sheet on the largest income row. Its save and the moved state are the screen's. */
 function ChangeSheet({ kind }: { kind: ForecastSampleKind }) {

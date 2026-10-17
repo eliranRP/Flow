@@ -6,7 +6,6 @@ export { resetReviewListFocus, ReviewScreen, ReviewAllList, ProjectWaitingList }
 export { type ReviewPreviewWrite, ReviewQueue } from "./review-queue";
 export { ChangeForm } from "./change-form";
 export { AddForm } from "./add-sheet";
-export { OnboardingScreen } from "./onboarding-screen";
 export { ProjectsScreen } from "./projects-screen";
 export { ProjectDetailScreen } from "./project-detail-screen";
 export { projectMonthAmount } from "./project-transactions";
@@ -16,8 +15,7 @@ export { ProjectCategoryScreen } from "./project-category-screen";
 export { UnpaidScreen } from "./unpaid-screen";
 export { InvoiceScreen } from "./invoice-screen";
 export { linePnlState, TransactionScreen } from "./transaction-screen";
-export { SplitScreen } from "./split-screen";
-export { type ConnectorTally, type ConnectionsHint, connectionsHint, SettingsScreen, LoansScreen } from "./settings-screen";
+export { type ConnectorTally, type ConnectionsHint, connectionsHint, SettingsScreen } from "./settings-screen";
 export { BusinessScreen } from "./business-screen";
 export { ConnectionsScreen } from "./connections-screen";
 export { NotificationsScreen } from "./notifications-screen";

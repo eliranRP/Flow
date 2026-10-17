@@ -18,12 +18,20 @@ import { KEPT_OUT, invoiceDate } from "./screen-shared";
 import { ChevronIcon } from "../ui/icons";
 import { ScreenState } from "../ui/screen-state";
 import { EMPTY_REVIEW, listFocusId, listPlace, queueAfterFocus, reviewE2e, ReviewEmpty, reviewLineFocus, reviewListPath, rotateReview, useE2eReviewRows } from "./review-shared";
+import { E2E_DONE_COUNTS } from "../dev/review-e2e-fixture";
 import { type ReviewPreviewWrite, ReviewQueue } from "./review-queue";
 import type { ReviewCase } from "../dev/review-e2e-fixture";
 
 /** FLOW-365: the dev `case` param names a board state for the proofs; anything else is the default queue. */
 function reviewCaseOf(value: string | null): ReviewCase | null {
   return value === "suggest" || value === "none" || value === "split" || value === "photo" ? value : null;
+}
+
+/** FLOW-365b: `&rows=N` seeds N cards; `rows=0` is an empty queue (the done frame). */
+function reviewRowsParam(value: string | null): number | undefined {
+  if (value == null || value === "") return undefined;
+  const size = Number(value);
+  return Number.isInteger(size) && size >= 0 ? size : undefined;
 }
 
 /** The row opened from the list. A later URL replace must not move this. */
@@ -48,11 +56,16 @@ export function ReviewScreen() {
   const waiting = useProjectWaitingQuery(projectFilter ?? "");
   const focusedOrder = useRef<ReviewRow[] | null>(null);
   const e2eList = reviewE2e != null && params.get("preview") != null && params.get("e2e") === "list";
-  const e2eRows = useE2eReviewRows(e2eList, Number(params.get("rows") ?? "") || undefined, reviewCaseOf(params.get("case")));
+  // FLOW-365b: `&board=` opens one board state for the proofs: sheet (the project picker open),
+  // nosuggestion (three cards handled before this one), done (the queue just emptied).
+  const e2eBoard = e2eList ? params.get("board") : null;
+  const e2eRows = useE2eReviewRows(e2eList, reviewRowsParam(params.get("rows")), reviewCaseOf(params.get("case")));
   // FLOW-309: `&fit=1` is the short-phone worst case (a wrapping supplier, Jev's reason, the banner).
   const e2eFit = e2eList && reviewE2e != null && params.get("fit") === "1";
   // FLOW-365: the suggest case shows Jev's repeat-supplier line under the card.
   const e2eSuggest = e2eList && params.get("case") === "suggest";
+  // The none and split cards carry Jev's reason line too (the board's two-line copy under the card).
+  const e2eCaseJev = e2eList && reviewE2e != null ? reviewE2e.e2eCaseJev(params.get("case")) : undefined;
   const e2eShown = useMemo(() => (e2eFit && reviewE2e != null ? reviewE2e.e2eFitRows(e2eRows) : e2eRows), [e2eFit, e2eRows]);
   const phase = e2eList ? ({ kind: "ready" } as const) : screenPhase(preview, review);
   const source = e2eList ? e2eShown : (review.data ?? EMPTY_REVIEW);
@@ -140,7 +153,14 @@ export function ReviewScreen() {
   }
   if (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0)) {
     if (listing) return <ReviewAllList rows={EMPTY_REVIEW} search={search} backTo={`/review${search}`} />;
-    return <ReviewEmpty search={search} backTo={fromList ? `/review${search}` : undefined} pushPrompt />;
+    return (
+      <ReviewEmpty
+        search={search}
+        backTo={fromList ? `/review${search}` : undefined}
+        pushPrompt={e2eBoard == null}
+        done={e2eBoard === "done" ? E2E_DONE_COUNTS : undefined}
+      />
+    );
   }
   if (phase.kind !== "ready") {
     return <ScreenState title="לאישור" phase={phase} onRetry={() => { void review.refetch(); }} backTo={listing ? `/review${search}` : undefined} />;
@@ -154,10 +174,12 @@ export function ReviewScreen() {
       rows={ordered}
       search={search}
       previewWrite={e2eWrite}
-      sampleJev={e2eFit && reviewE2e != null ? reviewE2e.e2eFitJev : e2eSuggest && reviewE2e != null ? reviewE2e.e2eSuggestJev : undefined}
+      sampleJev={e2eFit && reviewE2e != null ? reviewE2e.e2eFitJev : e2eSuggest && reviewE2e != null ? reviewE2e.e2eSuggestJev : e2eCaseJev}
       listPlace={listPlace(rows, ordered, fromList)}
       backTo={fromList ? reviewListPath(search) : undefined}
       setupHandoff={setupRun ? { fromCard: setupFromCard } : undefined}
+      openPicker={e2eBoard === "sheet"}
+      handledBefore={e2eBoard === "nosuggestion" ? 3 : undefined}
     />
   );
 }
@@ -185,11 +207,11 @@ export function ReviewAllList({
   const ordered = useHeldOrder(rows, (row) => row.id);
   if (rows.length === 0) return <ReviewEmpty search={search} backTo={backTo} />;
   return (
-    <div>
+    <div className="ui-review-all-page">
       {/* FLOW-365: the flat list's title, its count line, and one row per item (no date groups, no avatars). */}
       <ScreenHeader
         title="כל הפריטים לאישור"
-        subtitle={`${String(rows.length)} פריטים מחכים • הקישו על פריט כדי לפתוח אותו`}
+        subtitle={`${String(rows.length)} פריטים מחכים · הקישו על פריט כדי לפתוח אותו`}
         backTo={backTo}
         backText="בית"
       />
@@ -204,7 +226,7 @@ export function ReviewAllList({
   );
 }
 
-/** FLOW-365: a list row. The payee, then "<date> • חשבונית|בנק" (and "חסר פרויקט"), the amount and a chevron. */
+/** FLOW-365: a list row. The payee, then "<date> · חשבונית|בנק" (and "חסר פרויקט"), the amount and a chevron. */
 function ReviewAllRow({ row, href }: { row: ReviewRow; href: string }) {
   const income = row.direction === "income";
   const shown = row.amount_net < 0n ? -row.amount_net : row.amount_net;
@@ -215,7 +237,7 @@ function ReviewAllRow({ row, href }: { row: ReviewRow; href: string }) {
     invoiceDate(row.doc_date),
     row.source === "mercury" ? "בנק" : "חשבונית",
     row.project_id == null ? "חסר פרויקט" : null,
-  ].filter((part): part is string => part != null).join(" • ");
+  ].filter((part): part is string => part != null).join(" · ");
   return (
     <Link className="ui-review-all-row ui-hit" to={href}>
       <span className="ui-review-all-text">

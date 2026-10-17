@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(22);
+select plan(21);
 
 do $users$
 begin
@@ -65,7 +65,6 @@ values (tests.get_supabase_uid('vr_viewer'), (select id from vr where label = 'c
 select tests.authenticate_as('vr_viewer');
 
 select is(jsonb_array_length(public.list_review()), 1, 'the viewer reads the review queue');
-select is(jsonb_array_length(public.list_skipped_review()), 1, 'and the skipped list');
 select isnt(public.get_transaction((select id from vr where label = 'txn_open')), null, 'and a transaction');
 select is(
   jsonb_array_length(public.get_line_meta(array[(select id from vr where label = 'txn_open')])), 1,

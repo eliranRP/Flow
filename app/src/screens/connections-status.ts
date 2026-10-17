@@ -20,13 +20,6 @@ export function sumitKind(input: {
   return "disconnected";
 }
 
-/** Connections → onboarding, then back to that connector's page (FLOW-512). */
-export function onboardingFromSettings(search: string, provider: "sumit" | "mercury"): string {
-  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : "");
-  params.set("return", `/settings/connections/${provider}`);
-  return `/onboarding?${params.toString()}`;
-}
-
 export const MERCURY_REFRESH_KEYS = ["mercury", "dashboard", "unpaid", "review", "project"];
 
 /** A connector's one-word status (FLOW-512, the board's words). A read-only view can't reconnect,

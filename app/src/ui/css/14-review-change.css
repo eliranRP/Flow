@@ -4,13 +4,6 @@
   color: var(--color-text-secondary);
 }
 
-.ui-ptr {
-  display: grid;
-  place-items: center;
-  min-block-size: var(--touch-min);
-  color: var(--color-on-band);
-}
-
 .ui-change-summary {
   display: flex;
   flex-direction: column;
@@ -21,9 +14,10 @@
   color: var(--color-text-muted);
 }
 
-/* Mockup 06: the supplier line sits 2px under the sheet title, like a subtitle (FLOW-328). */
+/* Mockup 06: the supplier line sits 2px under the sheet title, like a subtitle (FLOW-328). The gap between
+   blocks is the panel's, so the margin takes it back out and leaves 2px. */
 .ui-sheet-body:has(> .ui-change-swap > .ui-change-summary:first-child) {
-  margin-top: 2px;
+  margin-top: calc(2px - var(--sheet-gap-y));
 }
 
 /* 56px rows, as the sheet gap was; the gap shrinks with the keyboard at 320 and these rows don't. */
@@ -168,6 +162,31 @@
   border-bottom: 0;
 }
 
+/* FLOW-922: a compact part list is the board's sheet: 52px rows, 8px apart, no inner padding above or below. */
+.ui-change-picker.ui-choice-sheet [role="radiogroup"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-change-picker.ui-choice-sheet {
+  margin-block-end: var(--space-2);
+}
+
+/* The board's compact sheet has a 44px title row (the ✕'s own height), not the 26px title. */
+.ui-sheet-compact .ui-sheet-head {
+  min-block-size: var(--touch-min);
+}
+
+.ui-change-picker.ui-choice-sheet .ui-radio-row {
+  min-block-size: 52px;
+  padding-block: 0;
+}
+
+.ui-change-picker.ui-choice-sheet .ui-radio-desc {
+  line-height: var(--type-cents-line);
+}
+
 .ui-change-links .ui-text-link {
   gap: var(--space-2);
   justify-content: flex-start;
@@ -198,3 +217,38 @@
     animation-name: ui-change-fade;
   }
 }
+
+/* FLOW-922: the radio row's hint line and start-side marker (radio-row.tsx). */
+/* The line under an option reads as a row hint, lighter than the option's name (FLOW-352). */
+.ui-radio-desc {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-meta-weight);
+  line-height: var(--type-meta-line);
+  white-space: normal;
+}
+
+.ui-radio-start {
+  gap: var(--space-3);
+}
+
+/* ReviewSheet: opt-in class .ui-review-pick on the review picker sheet panel (replaces ui-sheet-pad28) */
+.ui-review-pick .ui-sheet-head > .ui-icon-btn { margin-block: 0; }
+.ui-review-pick .ui-sheet-head > .ui-icon-btn:last-child:not(:first-child) { margin-inline-end: 0; }
+.ui-review-pick .ui-change-picker { gap: var(--space-3); }
+.ui-review-pick .ui-search { block-size: 46px; border-radius: var(--radius-input); }
+.ui-review-pick .ui-pick-group-head { min-height: 0; font-size: var(--type-caption-size); line-height: var(--type-title-line); letter-spacing: 0.02em; color: var(--color-text-muted); }
+.ui-review-pick .ui-radio-row { min-block-size: 52px; padding-block: 0; padding-inline: var(--space-1); box-sizing: border-box; }
+.ui-review-pick .ui-radio-row::before { display: none; }
+.ui-review-pick .ui-change-picker [role="radiogroup"] > .ui-radio-row:last-child { border-bottom: 1px solid var(--color-line); }
+.ui-review-pick .ui-pick-row > .ui-radio { order: -1; margin-inline-start: 0; inline-size: 20px; block-size: 20px; font-size: 0; border-radius: 50%; position: relative; }
+.ui-review-pick .ui-pick-row > .ui-radio[data-on="true"] { border: var(--stroke-strong) solid var(--color-accent); background: none; }
+.ui-review-pick .ui-pick-row > .ui-radio[data-on="true"]::after { content: ""; inline-size: 10px; block-size: 10px; border-radius: 50%; background: var(--color-accent); }
+.ui-review-pick .ui-pick-name { flex: 1; }
+.ui-review-pick .ui-pick-name .ui-suggest-tag { margin-inline-start: auto; background: none; padding: 0; color: var(--color-text-muted); font-weight: var(--type-line2-weight); }
+.ui-review-pick .ui-change-links { margin-top: calc(-1 * var(--space-3)); border-top: 0; }
+.ui-review-pick .ui-change-links .ui-text-link { min-block-size: 52px; padding-inline: var(--space-1); font-weight: var(--type-btn-weight); }
+.ui-review-pick .ui-switch-row { min-block-size: 52px; padding-block: 0; padding-inline: calc(var(--space-4) - var(--space-1) / 2); border-radius: var(--radius-toast); background: var(--color-raised); }
+.ui-review-pick .ui-switch-label { font-size: var(--type-line2-size); }

@@ -2,9 +2,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState, type Ref } from "react";
 import { getSupabase } from "../lib/supabase";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
-import { ConnectorRow } from "../ui/connector-row";
-import { ChevronDownIcon, SparkIcon } from "../ui/icons";
-import { List } from "../ui/list-row";
+import { AlertIcon, ChevronDownIcon, SparkIcon } from "../ui/icons";
+import { List, ListRow } from "../ui/list-row";
+import { Skeleton } from "../ui/skeleton";
 import { SegmentedControl } from "../ui/segmented-control";
 import { TextLink } from "../ui/text-link";
 import { Toggle } from "../ui/toggle";
@@ -207,12 +207,29 @@ export function JevSettingsCard({
   const threshold = roundJevThreshold(state.threshold);
   const offered = JEV_THRESHOLDS.some((value) => value === threshold);
 
-  const row = state.status === "loading" || state.status === "error" ? (
-    <ConnectorRow
+  const row = state.status === "loading" ? (
+    <ListRow variant="static" title={TITLE} icon={<SparkIcon size={24} />} hint={<Skeleton width="sm" />} skelHint busy />
+  ) : state.status === "error" ? (
+    <ListRow
+      variant="static"
       title={TITLE}
-      icon={<SparkIcon size={24} />}
-      state={state.status}
-      retry={{ hint: "שגיאה", label: "ניסיון חוזר: תיוג חכם", busy: retryBusy, retryRef, onRetry }}
+      icon={<AlertIcon size={24} />}
+      tone="muted"
+      describeHint
+      hintStatus
+      hint="שגיאה"
+      action={(
+        <TextLink
+          size="label"
+          chevron={false}
+          label="ניסיון חוזר: תיוג חכם"
+          busy={retryBusy}
+          buttonRef={retryRef}
+          onClick={onRetry}
+        >
+          ניסיון חוזר
+        </TextLink>
+      )}
     />
   ) : (
     <Toggle

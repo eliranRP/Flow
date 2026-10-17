@@ -196,9 +196,12 @@
   --size-seg-track: 48px; /* --size-seg plus the track's 4px padding on each side */
   --swipe-action: 120px;
   --dur-shimmer: 1400ms;   /* until FLOW-371 replaces the shimmer with --motion-pulse */
-  /* FLOW-363 (3b): the sheet's panel top and bottom (board: 10 above the handle, 28 below the content). */
+  /* The sheet panel (board): 10 above the handle, 24 below the content (a choice sheet sets 28), 16 at the
+     sides, 12 between its blocks. A sheet that differs opts in with a ui-sheet-* panel class. */
   --sheet-pad-top: 10px;
-  --sheet-pad-bottom: 28px;
+  --sheet-pad-bottom: 24px;
+  --sheet-side: 16px;
+  --sheet-gap-y: 12px;
 
   /* ---- colour: light (default) ---- */
   --color-bg: #F6F4FA;
@@ -237,8 +240,6 @@
   --color-warning: #8A5700;
   --color-scrim: rgba(29,23,40,.45);
   --color-movie-from: #E9DDFF;
-  --movie-finger-fill: rgba(255,255,255,.28);
-  --movie-finger-ring: rgba(255,255,255,.7);
   --sheet-scrim: rgba(29,23,40,.38);
   --sheet-grab: #A69EB8;
   --color-toast-bg: #1D1728;
@@ -248,6 +249,7 @@
   --color-tint-pressed: #E7DAFD;
   --color-disabled-bg: #F1EEF6;
   --color-disabled-text: #8F889C;
+  --color-btn-disabled-text: #8F879F;  /* disabled primary in a form: label on the --color-line fill (board) */
   --color-error: #D23B2F;
   --color-skeleton: #F1EEF6;     /* skeleton blocks use the inner-box value (board, States light) */
   --color-skeleton-band: rgba(255, 255, 255, 0.16);
@@ -304,8 +306,6 @@
     --color-warning: #EDB866;
     --color-scrim: rgba(5,3,10,.62);
     --color-movie-from: #2A1A55;
-    --movie-finger-fill: rgba(255,255,255,.28);
-    --movie-finger-ring: rgba(255,255,255,.7);
     --sheet-scrim: rgba(8,6,12,.6);
     --sheet-grab: #564E66;
     --color-toast-bg: #F1EDF8;
@@ -315,6 +315,7 @@
     --color-tint-pressed: #382A5E;
     --color-disabled-bg: #2A2438;
     --color-disabled-text: #7A7290;
+    --color-btn-disabled-text: #6A627A;
     --color-error: #FF8A80;
     --color-skeleton: #251F33;
     --color-track: #2E2740;
@@ -383,6 +384,7 @@
   --color-tint-pressed: #382A5E;
   --color-disabled-bg: #2A2438;
   --color-disabled-text: #7A7290;
+  --color-btn-disabled-text: #6A627A;
   --color-error: #FF8A80;
   --color-skeleton: #251F33;
   --color-track: #2E2740;

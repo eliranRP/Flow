@@ -2,7 +2,8 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { useState } from "react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { SplitScreen } from "../screens/flow-screens";
+import { LineSplitScreen, type LineSplitSample } from "../screens/line-split";
+import { SAMPLE_EXPENSE_LINE, sampleSplitApi } from "../dev/line-split-sample";
 import { BooksProvider } from "../use-books";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ChangeAssignment } from "./change-sheet";
@@ -167,31 +168,28 @@ describe("change sheet discard", () => {
 });
 
 describe("split discard", () => {
-  function renderSplit(onSave?: () => Promise<undefined | boolean>, rest: string | null = "p1") {
+  function renderSplit(onSave?: () => Promise<void>, rest: string | null = "p1", value = "250") {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const line = { ...SAMPLE_EXPENSE_LINE, id: "t", amountNet: -100_000n, categoryId: "c1", categoryName: "מלט", projectId: "p1", projectName: "בית הספר אלון" };
+    const sample: LineSplitSample = {
+      line,
+      categories: [{ id: "c1", name: "מלט", kind: "expense", hidden: false }],
+      projects: [
+        { id: "p1", name: "בית הספר אלון" },
+        { id: "p2", name: "מחסן הנמל" },
+      ],
+      parts: [{ key: "p2", categoryId: "c1", projectId: "p2", unit: "amount", value }],
+      rest: { categoryId: "c1", projectId: rest },
+      api: sampleSplitApi(line, onSave),
+    };
     return render(
       <QueryClientProvider client={client}>
         <ToastProvider>
           <BooksProvider>
-            <MemoryRouter initialEntries={["/split"]}>
+            <MemoryRouter initialEntries={["/transactions/t/split-category"]}>
               <Routes>
-                <Route
-                  path="/split"
-                  element={
-                    <SplitScreen
-                      sampleAmount={100_000n}
-                      sampleProjects={[
-                        { id: "p1", name: "בית הספר אלון" },
-                        { id: "p2", name: "מחסן הנמל" },
-                      ]}
-                      sampleParts={[{ projectId: "p2", value: "250" }]}
-                      sampleRestProject={rest}
-                      backTo="/review"
-                      onSave={onSave}
-                    />
-                  }
-                />
-                <Route path="/review" element={<h1>התור</h1>} />
+                <Route path="/transactions/:transactionId/split-category" element={<LineSplitScreen sample={sample} />} />
+                <Route path="/transactions/:transactionId" element={<h1>התור</h1>} />
               </Routes>
             </MemoryRouter>
           </BooksProvider>
@@ -201,28 +199,27 @@ describe("split discard", () => {
   }
 
   it("discards an incomplete split from ביטול השינוי", async () => {
-    renderSplit(undefined, null);
+    renderSplit(undefined, "p1", "");
     fireEvent.click(await screen.findByRole("button", { name: "סגירה" }));
     const cancel = await screen.findByRole("button", { name: "ביטול השינוי" });
     expect(cancel).toHaveClass("ui-text-link-quiet");
-    expect(screen.getAllByText("בחרו פרויקט לשאר.").length).toBeGreaterThan(0);
     fireEvent.click(cancel);
     expect(await screen.findByRole("heading", { name: "התור" })).toBeInTheDocument();
   });
 
   it("waits for an in-flight save and then leaves", async () => {
     let finish: (() => void) | null = null;
-    const onSave = vi.fn(() => new Promise<undefined>((resolve) => {
-      finish = () => { resolve(undefined); };
+    const onSave = vi.fn(() => new Promise<void>((resolve) => {
+      finish = () => { resolve(); };
     }));
     renderSplit(onSave);
-    fireEvent.change(await screen.findByRole("textbox", { name: "סכום, מחסן הנמל" }), { target: { value: "300" } });
+    fireEvent.change(await screen.findByRole("textbox", { name: "סכום, מלט" }), { target: { value: "300" } });
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     expect(onSave).toHaveBeenCalledOnce();
-    expect(screen.getByRole("textbox", { name: "סכום, מחסן הנמל" })).toBeDisabled();
+    expect(screen.getByRole("textbox", { name: "סכום, מלט" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     expect(onSave).toHaveBeenCalledOnce();
-    expect(screen.getByRole("heading", { name: "פיצול בין פרויקטים" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "פיצול" })).toBeInTheDocument();
     await act(() => {
       finish?.();
       return Promise.resolve();

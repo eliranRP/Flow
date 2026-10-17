@@ -72,6 +72,12 @@ export type ListRowProps =
     currency?: string;
     amounts?: { minor: bigint; currency: string }[];
     amountDirection?: "expense" | "income";
+    /** Green money in without the plus (the open-invoices list). */
+    amountSignless?: boolean;
+    /** A plus before a positive amount, in the row's own colour (a project's month profit). */
+    amountPlus?: boolean;
+    /** The Projects list's amount (board): signed, green when money in, muted at zero, cents drawn small and raised. */
+    signed?: boolean;
     /** A small mark before the amount. The project page's up mark (FLOW-401). */
     mark?: ReactNode;
     /** A muted line under the amount at the end side (FLOW-367: an open invoice's age). */
@@ -95,6 +101,8 @@ export type ListRowProps =
     initials?: string;
     /** FLOW-366: the tag line under the hint (13px): "ממתין לאישור", or the reason a line is out of profit. */
     tagLine?: ReactNode;
+    /** FLOW-366b: the amount keeps ".00" on a whole figure (the month lines page). Off: whole figures have no cents. */
+    wholeCents?: boolean;
   })
   | StatementRowProps
   | (Common & { variant: "item" })
@@ -120,6 +128,8 @@ export type ListRowProps =
  */
 export type StatementRowProps = {
   variant: "statement";
+  /** A whole amount keeps its ".00" (the board's search results). */
+  wholeCents?: boolean;
   /** The counterparty: supplier name, else the line's description. */
   title: string;
   /** The avatar's icon when the name has no letter. */
@@ -146,6 +156,8 @@ export type StatementRowProps = {
   details?: StatementDetail[];
   /** A line kept out of profit: it fades but keeps line 2 at full muted grey (owner's pick C; FLOW-352). */
   setAside?: boolean;
+  /** Optional accent line under line 2, for a state to act on (Search: "ממתין לאישור"). Off unless passed. */
+  note?: string;
 };
 
 export function ListRow(props: ListRowProps) {
@@ -436,7 +448,7 @@ function withAction(props: { actionBelow?: boolean; action?: ReactNode }, row: R
   );
 }
 
-function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "out" | "cost"; inWord?: string }) {
+function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "out" | "cost"; inWord?: string; wholeCents?: boolean }) {
   const abs = props.agorot < 0n ? -props.agorot : props.agorot;
   const cost = props.sign === "cost";
   // The amount's sign wins over the direction: a negative income (an income credit) shows its
@@ -452,6 +464,7 @@ function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "
         direction={income ? "income" : cost ? undefined : "expense"}
         income={income}
         cents="always"
+        zeroCents={props.wholeCents === true}
       />
     </span>
   );
@@ -498,7 +511,7 @@ function StatementRow(props: StatementRowProps) {
                       className={detail.tone === "accent" || detail.keep === true ? "ui-hint-part ui-hint-part-keep" : "ui-hint-part"}
                       data-clip-ok=""
                     >
-                      {index > 0 ? HINT_SEPARATOR : null}
+                      {index > 0 ? <span className="ui-hint-sep">{HINT_SEPARATOR}</span> : null}
                       <span className={detail.tone === "accent" ? "ui-statement-accent" : undefined}>{detail.text}</span>
                     </span>
                   ))}
@@ -506,10 +519,11 @@ function StatementRow(props: StatementRowProps) {
               ) : null}
             </span>
           ) : null}
+          {props.note ? <span className="ui-statement-note">{props.note}</span> : null}
         </span>
       </span>
       <span className="ui-statement-end">
-        <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} />
+        <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} wholeCents={props.wholeCents} />
         {props.method != null ? (
           <span className="ui-statement-method t-meta">
             <span className="ui-statement-method-icon" aria-hidden="true">{props.method.icon}</span>
@@ -523,7 +537,7 @@ function StatementRow(props: StatementRowProps) {
 
 function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transaction" }>) {
   if (props.variant === "transaction") {
-    return <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} />;
+    return <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} wholeCents={props.wholeCents} />;
   }
   if (props.missing != null) {
     return (
@@ -548,14 +562,24 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
       </span>
     );
   }
+  if (props.signed === true) {
+    const abs = props.agorot < 0n ? -props.agorot : props.agorot;
+    const income = props.agorot > 0n;
+    return (
+      <span className={cx("t-amount", props.agorot === 0n && "ui-row-amount-zero")}>
+        <Amount agorot={abs} currency={props.currency} direction={income ? "income" : "expense"} income={income} cents="always" zeroCents />
+      </span>
+    );
+  }
   return (
     <Amount
       agorot={props.agorot}
       currency={props.currency}
       size="list"
       loss={props.loss === true}
-      direction={props.amountDirection}
+      direction={props.amountSignless === true ? undefined : props.amountDirection ?? (props.amountPlus === true && props.agorot > 0n ? "income" : undefined)}
       income={props.amountDirection === "income"}
+      signless={props.amountSignless === true}
     />
   );
 }

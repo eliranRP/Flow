@@ -39,7 +39,7 @@ export function lateCounts(rows: readonly Pick<MissingBill, "direction">[]): { e
 
 export type ChargeChangeView = {
   id: string;
-  /** "חשמל עלה ב־38%" or "חשמל ירד ב־25%". */
+  /** "חשמל עלה" or "חשמל ירד" (the board words no percent; the row's hint carries the amounts). */
   title: string;
   /** A drop draws the down arrow. */
   down: boolean;
@@ -61,7 +61,7 @@ export function chargeChangeViews(rows: readonly RecurringChange[], search: stri
     const percent = row.change_percent;
     return {
       id: row.transaction_id,
-      title: `${name} ${percent < 0 ? "ירד" : "עלה"} ב־${String(Math.abs(percent))}%`,
+      title: `${name} ${percent < 0 ? "ירד" : "עלה"}`,
       down: percent < 0,
       now: formatAmountText(abs(row.amount_minor), row.currency),
       usual: formatAmountText(abs(row.typical_amount_minor), row.currency),

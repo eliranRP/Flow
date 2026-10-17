@@ -32,3 +32,14 @@ describe("TextField", () => {
     expect(container.querySelector(".ui-field")).not.toHaveClass("ui-field-readonly");
   });
 });
+
+describe("TextField hint (FLOW-139d)", () => {
+  it("draws the hint under the field, and the error replaces it", () => {
+    const { rerender } = render(<TextField label="תקופה" value="360" onChange={() => undefined} hint="30 שנה" />);
+    expect(screen.getByText("30 שנה")).toHaveClass("ui-field-hint");
+    rerender(<TextField label="תקופה" value="" onChange={() => undefined} hint="30 שנה" error="כתבו את מספר החודשים." />);
+    expect(screen.getByText("כתבו את מספר החודשים.")).toBeInTheDocument();
+    expect(screen.queryByText("30 שנה")).toBeNull();
+  });
+});
+

@@ -3,9 +3,9 @@
 .ui-home-split {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  margin: var(--space-5) var(--space-4) var(--space-1);
-  padding: var(--space-4);
+  gap: calc(var(--space-3) + var(--space-1) / 2);
+  margin: calc(var(--space-5) - var(--space-1) / 2) var(--space-4) var(--space-1);
+  padding: calc(var(--space-4) + var(--space-1) / 2);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
   background: var(--color-surface);
@@ -14,7 +14,7 @@
 .ui-home-split-title {
   margin: 0;
   font-size: var(--type-section-size);
-  line-height: var(--type-section-line);
+  line-height: var(--type-cents-line);
   font-weight: var(--type-section-weight);
 }
 
@@ -57,12 +57,15 @@
 }
 
 .ui-home-split-label {
-  font-size: var(--type-btn-2-size);
-  line-height: var(--type-line2-line);
+  font-size: var(--type-btn-size);
+  font-weight: var(--type-line2-weight);
+  line-height: var(--type-cents-line);
 }
 
 .ui-home-split-sub {
+  margin-block-start: calc(var(--space-1) / 2);
   color: var(--color-text-muted);
+  line-height: var(--type-cents-line);
   font-size: var(--type-caption-size);
   font-weight: var(--type-caption-weight);
 }
@@ -70,6 +73,11 @@
 .ui-home-split-value {
   font-size: var(--type-btn-size);
   font-weight: var(--type-btn-2-weight);
+}
+
+.ui-home-split-value .t-amount {
+  font-weight: var(--type-btn-2-weight);
+  font-variant-numeric: normal;
 }
 
 .ui-home-split-value.ui-home-split-loss {
@@ -88,8 +96,9 @@
 
 /* FLOW-364 (board): the box is one tint card; its rows are divided lines, 20px in. */
 .ui-home-attention {
-  margin: var(--space-3) var(--space-4) var(--space-4);
-  padding: var(--space-5) 0 0;
+  margin: calc(var(--space-3) - var(--space-1) / 2) var(--space-4) var(--space-4);
+  /* FLOW-374 (board): the title sits 9px higher than the 20px inset it had. */
+  padding: var(--space-3) 0 0;
   border-radius: var(--radius-card);
   background: var(--color-tint);
 }
@@ -111,8 +120,23 @@
   border-radius: 0;
 }
 
+/* Board: 18px accent chevrons, a 13px secondary hint under the 17px title. */
+.ui-home-attention .ui-banner-chevron {
+  color: var(--color-accent-text);
+}
+
+.ui-home-attention .ui-banner-chevron svg {
+  transform: scale(0.9);
+}
+
+.ui-home-attention .ui-row-hint {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-btn-2-line);
+}
+
 .ui-home-attention-title {
-  margin: 0 var(--space-5) var(--space-3);
+  margin: 0 var(--space-5) var(--space-1);
   font-size: var(--type-section-size);
   line-height: var(--type-section-line);
   font-weight: var(--type-section-weight);
@@ -131,12 +155,18 @@
   gap: var(--space-2);
 }
 
-.ui-month-drawer-step {
+.ui-month-drawer .ui-month-drawer-step {
   inline-size: var(--touch-min);
   block-size: var(--touch-min);
   border-radius: 50%;
-  background: color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: var(--color-raised);
   color: var(--color-text);
+}
+
+/* The board's year arrows draw an 18px chevron in the 44px disc. */
+.ui-month-drawer-step svg {
+  inline-size: 18px;
+  block-size: 18px;
 }
 
 .ui-month-drawer-step-off {
@@ -164,9 +194,9 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: var(--band-label-gap);
+  gap: var(--space-1);
   min-block-size: var(--month-cell-min);
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-2) calc(var(--space-3) - var(--space-1) / 2);
   text-align: start;
   border: 2px solid transparent;
   border-radius: var(--radius-month-cell);
@@ -181,7 +211,7 @@
 
 .ui-month-cell-name {
   font-size: var(--type-line2-size);
-  line-height: var(--type-line2-line);
+  line-height: var(--type-cents-line);
 }
 
 .ui-month-cell-amount {
@@ -191,7 +221,8 @@
 
 /* FLOW-364 (board): the cells' figures are one step under the list size. */
 .ui-month-cell-amount .t-amount {
-  font-size: var(--type-label-size);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-cents-line);
 }
 
 .ui-month-cell-selected {
@@ -218,25 +249,27 @@
 }
 
 
-.ui-month-drawer-foot {
-  margin: 0;
-  text-align: center;
-}
-
 /* FLOW-364 (board): the empty band is shorter than a figure band; no padding above the month. */
 .ui-band-body-empty {
   gap: 0;
-  padding-block-start: var(--space-3);
 }
 
 .ui-band:has(.ui-band-body-empty) {
-  padding-bottom: var(--space-1);
+  padding-bottom: calc(var(--space-1) * 4.5);
 }
 
 /* FLOW-364 (board): the zero figure on the empty band is a dim lavender, not white. */
 .ui-band-body-empty .ui-hero-figure {
   opacity: 0.6;
 }
+
+/* FLOW-375 (board, StatesHomeEmpty): the zero figure sits on the band body's edge, not inside the hero's own gutter. */
+.ui-band-body-empty .ui-band-hero {
+  padding-inline: 0;
+  padding-top: calc(var(--space-1) * 3.375);
+}
+.ui-band-body-empty .ui-hero { gap: calc(var(--space-1) * 1.15); }
+.ui-band-body-empty .t-hero { line-height: 1; }
 
 /* FLOW-364 (board, StatesHomeEmpty): the month on the band with no figure, then a bank card and what will show here. */
 .ui-band-month-static {
@@ -261,7 +294,7 @@
   align-items: stretch;
   gap: var(--space-3);
   margin: var(--space-4) var(--space-side) 0;
-  padding: var(--space-5);
+  padding: calc(var(--space-1) * 4.5) calc(var(--space-1) * 4.5) calc(var(--space-1) * 6.5);
   border-radius: var(--radius-card);
   background: var(--color-surface);
   text-align: start;
@@ -286,7 +319,9 @@
 }
 
 .ui-home-empty-body {
-  margin: 0;
+  margin: calc(var(--space-1) * -0.875) 0 0;
+  font-size: var(--type-label-size);
+  line-height: calc(var(--space-1) * 5.75);
   color: var(--color-text-secondary);
   text-align: start;
 }
@@ -294,7 +329,7 @@
 .ui-home-empty-what {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: calc(var(--space-1) * 0.75);
   margin: var(--space-5) var(--space-side) 0;
 }
 
@@ -309,11 +344,13 @@
   display: flex;
   flex-direction: column;
   /* FLOW-364 (board): the two rows sit 12px closer than the 16px gap. */
-  gap: var(--space-1);
+  gap: calc(var(--space-1) * 0.5);
   margin: 0;
   padding: 0;
   list-style: none;
   color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  line-height: calc(var(--space-1) * 5.25);
   text-align: start;
 }
 
@@ -330,11 +367,12 @@
   inline-size: 8px;
   block-size: 8px;
   border-radius: 50%;
-  background: var(--color-line);
+  background: var(--color-outline-secondary);
 }
 
+.ui-home-empty-card .ui-btn { margin-top: var(--space-1); }
 .ui-home-empty-link-row {
-  margin: 0;
+  margin: calc(var(--space-1) * 2.5) 0 0;
   text-align: center;
 }
 

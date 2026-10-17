@@ -118,7 +118,7 @@ export function RehabSheet({
     line.id == null ? undefined : categoryHref(projectId, line.id, figures.currency, rehabLinesSearch(search));
   const breakdown = categories == null ? null : rehabBreakdown(costs, categories, figures.currency, figures.rehabMinor);
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title="שיפוץ" returnFocusRef={returnFocusRef}>
+    <Sheet open={open} onOpenChange={onOpenChange} title="שיפוץ" returnFocusRef={returnFocusRef} panelClassName="ui-sheet-wide ui-sheet-g10">
       <div className="ui-invest-total">
         <span className="t-title-2">
           <Amount agorot={figures.rehabMinor} currency={figures.currency} />
@@ -215,7 +215,7 @@ export function LoansSheet({
   const own = loans.filter((loan) => loan.currency === figures.currency);
   const other = loans.filter((loan) => loan.currency !== figures.currency);
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title={LOANS_LABEL} returnFocusRef={returnFocusRef}>
+    <Sheet open={open} onOpenChange={onOpenChange} title={LOANS_LABEL} returnFocusRef={returnFocusRef} panelClassName="ui-sheet-wide">
       <div className="ui-invest-total">
         <span className="t-title-2">
           <Amount agorot={figures.loanMinor} currency={figures.currency} />
@@ -424,6 +424,7 @@ export function InvestmentEditSheet({
       onOpenChange={setSheet}
       title={label}
       returnFocusRef={returnFocusRef}
+      panelClassName="ui-sheet-wide ui-sheet-g14"
       onBeforeClose={guard}
       action={(
         <div className="ui-invest-actions">

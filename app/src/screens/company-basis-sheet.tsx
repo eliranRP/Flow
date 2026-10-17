@@ -3,6 +3,7 @@ import { getSupabase } from "../lib/supabase";
 import { forgetProjectReads } from "../project-cache";
 import { ChoiceSheet } from "../ui/choice-sheet";
 import { BASIS_COPY, type BasisChoice } from "../ui/company-choices";
+import type { ChoiceSheetCopy } from "../ui/choice-sheet";
 import { useToast } from "../ui/toast";
 import { assertNoError, useWrite, type WriteFailure } from "../use-write";
 
@@ -41,6 +42,7 @@ export function CompanyBasisSheet({
   basis,
   blocked,
   returnFocusRef,
+  copy = BASIS_COPY,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -48,6 +50,8 @@ export function CompanyBasisSheet({
   /** Preview mode toasts and returns true. */
   blocked: () => boolean;
   returnFocusRef?: RefObject<HTMLElement | null>;
+  /** The sheet's words: Settings keeps BASIS_COPY, the profit page passes BASIS_PROFIT_COPY. */
+  copy?: ChoiceSheetCopy<BasisChoice>;
 }) {
   const toast = useToast();
   const undo = useWrite<Change>({
@@ -76,7 +80,7 @@ export function CompanyBasisSheet({
   });
   return (
     <ChoiceSheet
-      copy={BASIS_COPY}
+      copy={copy}
       open={open}
       onOpenChange={onOpenChange}
       value={basis}

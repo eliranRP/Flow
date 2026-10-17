@@ -135,7 +135,7 @@ Open: where that given name is captured.
 
 ## Home's big number when after-overhead is on
 
-Resolved by [0032](decisions/0032-home-hero-stays-company-net-profit.md). With the switch on, Home's hero number stays company net profit. The band's small figures show profit before overhead and the overhead amount. Each project row shows profit after its share. The project screen shows before, share, then after. Evidence: [18 light](../design/screens/18-home-overhead-on-light.png), [18 dark](../design/screens/18-home-overhead-on-dark.png), [19 light](../design/screens/19-project-overhead-on-light.png), [19 dark](../design/screens/19-project-overhead-on-dark.png).
+Resolved by [0032](decisions/0032-home-hero-stays-company-net-profit.md). With the switch on, Home's hero number stays company net profit. The band's small figures show profit before overhead and the overhead amount. Each project row shows profit after its share. The project screen shows before, share, then after. Evidence: the overhead-on screens 18 and 19 (PNGs deleted in T-03; the decision holds the rule).
 
 ## Technical plan
 

@@ -1,15 +1,13 @@
 /**
- * Where onboarding may send the owner. Anything else, including a normalised
- * `//host`, goes home. `safeAppPath` accepts a few Settings paths;
- * `safeSignInReturn` a short list of screens (FLOW-308).
+ * Where a signed-out deep link may return after sign-in: `safeSignInReturn` accepts a short list
+ * of screens (FLOW-308). Anything else, including a normalised `//host`, goes home.
  */
 const SETTINGS = "/settings";
 /** The pre-FLOW-501 link. Settings redirects it to {@link CONNECTIONS_SUMIT}. */
 const SETTINGS_SUMIT = "/settings?sheet=sumit";
 const CONNECTIONS = "/settings/connections";
 const CONNECTIONS_SUMIT = "/settings/connections?sheet=sumit";
-const LOANS = "/settings/loans";
-const APP_PATHS: ReadonlySet<string> = new Set([SETTINGS, SETTINGS_SUMIT, CONNECTIONS, CONNECTIONS_SUMIT]);
+const LOANS = "/loans";
 
 function hasControlChar(value: string): boolean {
   for (let index = 0; index < value.length; index += 1) {
@@ -35,18 +33,6 @@ function normalisedPath(value: string): string | null {
     return null;
   }
   if (path.startsWith("//") || decoded.startsWith("//") || path.includes("\\") || decoded.includes("\\")) return null;
-  return path;
-}
-
-/** Settings, Connections, or either with the SUMIT sheet open. Every other value is dropped. */
-export function safeAppPath(value: string | null | undefined): string | null {
-  if (value == null || value === "") return null;
-  if (value !== value.trim() || hasControlChar(value)) return null;
-  if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) return null;
-  if (value.includes("\\") || value.includes("://") || value.includes("@")) return null;
-  const path = normalisedPath(value);
-  if (path == null || path.startsWith("//") || path.includes("\\")) return null;
-  if (!APP_PATHS.has(path)) return null;
   return path;
 }
 

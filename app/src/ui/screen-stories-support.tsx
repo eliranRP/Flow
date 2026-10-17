@@ -85,9 +85,6 @@ export const pagesBusiness = {
   assistant: { state: "connected" as const, scope: "read_write" as const, id: "mcp-1" },
 };
 
-export const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
-
-
 export const periodMonths: NonNullable<ProfitMonths> = {
   basis: "invoiced",
   from: "2026-05-01",

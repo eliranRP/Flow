@@ -19,7 +19,7 @@ type HeaderChrome = {
   leading?: ReactNode;
   /** Sits on the end of the bar. */
   trailing?: ReactNode;
-  /** A stacked page's own control under the title, on the start side (the breakdown's period pill, FLOW-334). */
+  /** A stacked page's own control under the title, on the start side. */
   below?: ReactNode;
   /** A stacked title's own controls at the end of its line (a month page's chevrons, FLOW-362). */
   titleAside?: ReactNode;
@@ -30,6 +30,8 @@ type HeaderChrome = {
   /** Compact is the t-title-3 used on a transaction. */
   size?: "default" | "compact";
   subtitleClassName?: string;
+  /** A screen's own class on the bar, for the rules that scope one screen's header (the invoice pages). */
+  className?: string;
 };
 
 /**
@@ -66,6 +68,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
     panel,
     size = "default",
     subtitleClassName,
+    className,
   } = props;
   const barOnly = props.barOnly === true;
   const title = props.title;
@@ -81,7 +84,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
   const titleEnd = useRef<HTMLSpanElement>(null);
   const past = useScrolledPast(titleEnd, compact);
   return (
-    <header className={stacked ? "ui-page ui-page-stacked" : props.layout === "inline" && start != null ? "ui-page ui-page-inline" : "ui-page"}>
+    <header className={[stacked ? "ui-page ui-page-stacked" : props.layout === "inline" && start != null ? "ui-page ui-page-inline" : "ui-page", className].filter(Boolean).join(" ")}>
       {stacked ? null : kickerLine}
       <div className="ui-page-title-row">
         {start}

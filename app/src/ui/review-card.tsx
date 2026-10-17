@@ -238,6 +238,7 @@ export function ReviewCard({
         {/* FLOW-365: a photographed document's thumbnail at the card's end-side top corner (the board's receipt). A bank line has no document. */}
         {photo ? (
         <span className="ui-review-tile" aria-hidden="true">
+          <span className="ui-review-paper-head" />
           <span className="ui-review-paper-line" data-w="long" />
           <span className="ui-review-paper-line" data-w="long" />
           <span className="ui-review-paper-line" data-w="short" />
@@ -274,9 +275,13 @@ export function ReviewCard({
         ) : splitSummary ? (
           <div className="ui-review-split-sum">
             <div className="ui-review-split-head">
+              <SplitIcon size={20} />
               <span className="ui-review-split-title">
-                {`פיצול · ${String(splitSummary.parts.length)} חלקים · `}
-                <bdi className="ui-num" dir="ltr">{splitSummary.total}</bdi>
+                <span className="t-hint">פיצול</span>
+                <span>
+                  {`${String(splitSummary.parts.length)} חלקים · `}
+                  <bdi className="ui-num" dir="ltr">{splitSummary.total}</bdi>
+                </span>
               </span>
               {onSplit ? (
                 <button type="button" className="ui-review-split-edit ui-hit" onClick={onSplit}>עריכה</button>
@@ -454,7 +459,7 @@ function ReviewPanelLine({
         <span className={missing ? "ui-review-field-value ui-review-field-missing" : "ui-review-field-value"}>{line.value}</span>
       </span>
       {line.jev ? <span className="ui-review-field-hint"><JevTag /></span> : hint ? <span className="ui-review-field-hint">{hint}</span> : null}
-      {line.onOpen ? <span className="ui-review-field-chevron" aria-hidden="true"><ChevronIcon size={16} /></span> : null}
+      {line.onOpen ? <span className="ui-review-field-chevron" aria-hidden="true"><ChevronIcon size={18} /></span> : null}
     </>
   );
   if (line.onOpen == null) return <div className="ui-review-field">{inner}</div>;

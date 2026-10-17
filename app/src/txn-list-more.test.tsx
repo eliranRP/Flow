@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { grownIds, resetTxnListMore, uniqueIds, useTxnListMore, type TxnMoreLoad } from "./txn-list-more";
+import { grownIds, resetTxnListMore, useTxnListMore, type TxnMoreLoad } from "./txn-list-more";
 import { TxnStepNav, usePrefetchNextPage, useTxnNav } from "./txn-nav";
 
 function Card({ prefetch }: { prefetch: boolean }) {
@@ -128,10 +128,6 @@ describe("the next page of a paged list on the card (FLOW-314)", () => {
 });
 
 describe("list ids", () => {
-  it("keeps each id once, at its first place", () => {
-    expect(uniqueIds(["a", "b", "a", "c"])).toEqual(["a", "b", "c"]);
-  });
-
   it("appends only the ids the list did not send", () => {
     const ids = ["a", "b"];
     expect(grownIds(ids, [])).toBe(ids);

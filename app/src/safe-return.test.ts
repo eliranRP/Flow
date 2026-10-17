@@ -4,71 +4,16 @@ import {
   afterSignInPath,
   peekSignInReturn,
   rememberSignInReturn,
-  safeAppPath,
   safeSignInReturn,
   signInPathFor,
 } from "./safe-return";
 
-describe("safeAppPath", () => {
-  it("accepts only the settings and connections paths", () => {
-    expect(safeAppPath("/settings")).toBe("/settings");
-    expect(safeAppPath("/settings?sheet=sumit")).toBe("/settings?sheet=sumit");
-    expect(safeAppPath("/settings/connections")).toBe("/settings/connections");
-    expect(safeAppPath("/settings/connections?sheet=sumit")).toBe("/settings/connections?sheet=sumit");
-    expect(safeAppPath("/settings/connections?sheet=mercury")).toBeNull();
-    expect(safeAppPath("/settings/connections/")).toBeNull();
-    expect(safeAppPath("/settings/loans")).toBeNull();
-  });
-
-  it("drops dot-segment, scheme, and encoded open redirects", () => {
-    const rejected = [
-      "/..//evil.com",
-      "/.//evil.com",
-      "/%2e%2e//evil.com",
-      "/%252e%252e//evil.com",
-      "/%2e%2e/%2e%2e//evil.com",
-      "/a/..//evil.com",
-      "/\\evil",
-      "\\\\evil",
-      "javascript:alert(1)",
-      "data:text/html,hi",
-      "/%2F%2Fevil.com",
-      "/%5Cevil",
-      "/settings\t",
-      "/settings\n",
-      "/settings@evil.com",
-      " /settings",
-      "https://flow.invalid/settings?sheet=sumit",
-      "https://evil.example/settings",
-      "//evil.example",
-      "/settings?preview=empty&sheet=sumit",
-      "/Settings",
-      "/SETTINGS",
-      "/settings?Sheet=sumit",
-      "/settings?sheet=SUMIT",
-      "/settings/",
-      "/settings/?sheet=sumit",
-      "/settings?sheet=sumit&x=1",
-      "/settings?foo=1",
-      "/settings#x",
-      "/settings?sheet=sumit#x",
-      "/settings%3Fsheet=sumit",
-      "/settings?sheet=sumit%26evil=1",
-      "/onboarding",
-      "settings",
-      "",
-      null,
-    ];
-    for (const value of rejected) expect(safeAppPath(value)).toBeNull();
-  });
-});
-
 describe("safeSignInReturn", () => {
   it("accepts only listed screens, exactly", () => {
-    for (const path of ["/review", "/review/filed", "/unpaid", "/projects", "/settings", "/settings/categories", "/settings?sheet=sumit", "/settings/connections", "/settings/connections?sheet=sumit", "/settings/loans"]) {
+    for (const path of ["/review", "/review/filed", "/unpaid", "/projects", "/settings", "/settings/categories", "/settings?sheet=sumit", "/settings/connections", "/settings/connections?sheet=sumit", "/loans"]) {
       expect(safeSignInReturn(path)).toBe(path);
     }
-    expect(afterSignInMessage(true, "/settings/loans")).toBe("נכנסתם. עוברים להלוואות.");
+    expect(afterSignInMessage(true, "/loans")).toBe("נכנסתם. עוברים להלוואות.");
     expect(afterSignInMessage(true, "/settings/connections")).toBe("נכנסתם. עוברים לחיבורים.");
   });
 

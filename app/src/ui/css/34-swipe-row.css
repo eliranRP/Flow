@@ -9,6 +9,8 @@
 */
 .ui-swipe-row {
   position: relative;
+  /* The width a revealed row opens over its action (swipe-row.tsx OPEN_PX). */
+  --swipe-action: 120px;
 }
 
 .ui-swipe-row[data-on] {

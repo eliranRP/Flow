@@ -16,14 +16,13 @@ import {
   CategoriesScreen,
   ChangeForm,
   ConnectionsScreen,
-  OnboardingScreen,
   ProjectDetailScreen,
   ProjectsScreen,
   ReviewQueue,
   SettingsScreen,
-  SplitScreen,
   TransactionScreen,
 } from "./flow-screens";
+import { LineSplitScreen } from "./line-split";
 
 const reviewRow: ReviewRow = {
   id: "r1",
@@ -235,24 +234,13 @@ describe("viewer gates", () => {
     ["V20", "split route leaves the screen", () => {
       viewer(
         <Routes>
-          <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
+          <Route path="/transactions/:transactionId/split-category" element={<LineSplitScreen />} />
           <Route path="/transactions/:transactionId" element={<h1>תנועה</h1>} />
         </Routes>,
-        "/transactions/t1/split",
+        "/transactions/t1/split-category",
       );
       expect(screen.getByRole("heading", { name: "תנועה" })).toBeInTheDocument();
-      expect(screen.queryByRole("heading", { name: "פיצול בין פרויקטים" })).not.toBeInTheDocument();
-    }],
-    ["V21", "onboarding leaves the screen", () => {
-      viewer(
-        <Routes>
-          <Route path="/onboarding" element={<OnboardingScreen />} />
-          <Route path="/" element={<h1>בית</h1>} />
-        </Routes>,
-        "/onboarding",
-      );
-      expect(screen.getByRole("heading", { name: "בית" })).toBeInTheDocument();
-      expect(screen.queryByRole("heading", { name: "פרטי העסק" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "פיצול" })).not.toBeInTheDocument();
     }],
     ["V22", "empty home hides connect", () => {
       viewer(<HomeScreen />, "/?preview=1");

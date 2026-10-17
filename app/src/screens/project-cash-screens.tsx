@@ -1,54 +1,30 @@
-import { formatAmountText, type CashLine, type CashMonths, type ProjectDetail } from "@flow/shared";
+import { formatAmountText, type CashMonths, type ProjectDetail } from "@flow/shared";
 import { useRef, type ReactNode } from "react";
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
+  cashMonthName,
   cashMonthKey,
-  cashSideLabel,
   cashTitle,
-  cashYearTitle,
-  isCashMonthKey,
-  isCashSide,
   shownCashRows,
-  type CashListSide,
 } from "../cash";
-import { useHeldOrder } from "../list-hold";
-import { anchorOf, monthPeriod, shiftMonthKey, type PeriodChoice } from "../period";
-import { useHomePreview, usePreviewSearch } from "../preview";
+import { withPeriodSearch } from "../project-period";
 import {
-  projectCashHistoryPath,
-  projectCashLinesPath,
-  projectCashMonthPath,
-  projectCashYearPath,
+  PROJECT_CASH_MONTHS,
   projectCashSummaryRows,
   projectEarlierMonthRows,
-  useProjectCashLinesQuery,
-  useProjectCashMonthData,
-  useProjectCashMonthLinesQuery,
-  type ProjectCashMonthLines,
-  useProjectCashMonthsQuery,
 } from "../project-cash";
-import { screenPhase } from "../query-phase";
-import { BackButton, useBackTarget } from "../ui/back";
+import { BackButton } from "../ui/back";
 import { Amount } from "../ui/amount";
-import { CashLineRows, CashMonthLines, cashLineKey } from "../ui/cash-line-rows";
-import { CashRows } from "../ui/cash-rows";
-import { israelToday } from "../ui/date-math";
+import { ProjectMonthsCard, ProjectProfitCard } from "./project-page-cards";
 import { FocusTitle } from "../ui/focus-title";
 import { BannerRows, type BannerRow } from "../ui/banner";
-import { BandHero, SectionHead } from "../ui/layout";
+import { BandHero } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { InvestmentSummary } from "../ui/investment-card";
-import { MonthStepper } from "../ui/month-stepper";
-import { PeriodSwipe } from "../ui/period-swipe";
-import { ScreenHeader, useScrolledPast } from "../ui/screen-header";
+import { useScrolledPast } from "../ui/screen-header";
 import { CompactBar } from "../ui/compact-bar";
-import { ScreenState } from "../ui/screen-state";
-import { TextLink } from "../ui/text-link";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { TopBand } from "../ui/top-band";
-import { useProjectQuery } from "../use-books";
-import { CashCurrencySwitch, CashLinesEmpty, CashLinesHead, CashLinesMore, cashLinesFigures } from "./cash-lines-parts";
-import { monthOf } from "./cash-lines-screen";
 import { loansFigure } from "./project-overview";
 import type { ProjectInvestment } from "./project-investment-data";
 
@@ -57,8 +33,7 @@ type Project = NonNullable<ProjectDetail>;
 /**
  * FLOW-419 (owner's option A "Like Home", decision 0176). The project page is the project's cash,
  * as Home is the company's: this month's תזרים, נכנס, יצא and רווח החודש, one row for השקעה
- * והלוואות, then the earlier months. An earlier month opens its own page, and נכנס or יצא the
- * project's lines.
+ * והלוואות, then the earlier months. An earlier month, נכנס and יצא open the project's month page.
  */
 
 /** השקעה והלוואות: הון עצמי בנכס when known, else the loans; null with neither (the row hides). */
@@ -83,7 +58,9 @@ export function ProjectCashOverview({
   stateLine,
   menu,
   attention = [],
+  sinceProfit = null,
   budget,
+  budgetAdd,
   example,
   now,
 }: {
@@ -98,8 +75,12 @@ export function ProjectCashOverview({
   menu: ReactNode;
   /** Home's attention rows for this project: its late bills and income, and its changed charges. */
   attention?: BannerRow[];
+  /** The project's profit over its whole life, per currency (null while unread). */
+  sinceProfit?: { currency: string; minor: bigint }[] | null;
   /** FLOW-445: the budget card, when the project has a budget (the edit sheet lives with the page). */
   budget?: ReactNode;
+  /** The quiet "+ הוספת תקציב" a project with no budget shows after its profit rows. */
+  budgetAdd?: ReactNode;
   example?: ReactNode;
   /** Stories and tests pin the month names. */
   now?: Date;
@@ -124,9 +105,15 @@ export function ProjectCashOverview({
   // FLOW-445: נכנס and יצא sit in the band on one line; the month's profit and the rest stay in the list.
   const summaryRows = key == null ? [] : projectCashSummaryRows(project.id, key, rows, search, now);
   const bandRows = summaryRows.filter((row) => row.id === "in" || row.id === "out");
-  const listRows = summaryRows.filter((row) => !bandRows.includes(row));
+  // The read holds the last PROJECT_CASH_MONTHS months: a project younger than that began in its oldest one.
+  const oldest = data == null ? undefined : data.months[data.months.length - 1];
+  const sinceHint = oldest == null || data == null || data.months.length >= PROJECT_CASH_MONTHS
+    ? "כל התקופה עד היום"
+    : `מאז ${cashMonthName(cashMonthKey(oldest.month), new Date(0))}`;
+  const profitRow = summaryRows.find((row) => row.id === "profit");
+  const keptRow = summaryRows.find((row) => row.id === "kept");
   return (
-    <div className="ui-project-cash flex min-h-full flex-1 flex-col">
+    <div className="ui-project-cash ui-project-page flex min-h-full flex-1 flex-col">
       <TopBand
         wordmark={false}
         example={example}
@@ -140,10 +127,10 @@ export function ProjectCashOverview({
           {data == null ? (
             <Skeleton tone="band" className="ui-skel-project-num" />
           ) : (
-            <div className="t-display ui-project-profits">
+            <div className="ui-project-profits t-display">
               {rows.map((row) => (
                 <p key={row.currency}>
-                  <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} presentation="detail" />
+                  <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} presentation="detail" zeroCents={row.net_minor === 0n} />
                 </p>
               ))}
             </div>
@@ -175,230 +162,40 @@ export function ProjectCashOverview({
         actions={menu}
       />
       {data == null ? <ListSkeleton /> : null}
-      {listRows.length === 0 ? null : <CashRows rows={listRows} />}
-      {budget ? <div className="ui-page-pad">{budget}</div> : null}
-      {summaryFigures == null ? null : (
-        <div className="ui-page-pad">
-          <InvestmentSummary figures={summaryFigures} href={investmentHref} />
-        </div>
-      )}
-      {investment == null || summary ? null : (
-        <List className="ui-project-cash-more">
-          <ListRow
-            variant="item"
-            title="השקעה והלוואות"
-            hint={investment.hint}
-            meta={investment.figure == null ? undefined : <bdi className="ui-num ui-project-row-figure" dir="ltr">{investment.figure}</bdi>}
-            href={investmentHref}
-            chevron
+      <div className="ui-project-stack">
+        {/* The board puts the rows that need a hand first: its pending approvals, late bills and changed charges. */}
+        <BannerRows rows={attention} />
+        {budget}
+        {profitRow == null ? null : (
+          <ProjectProfitCard
+            monthName={cashMonthName(key ?? "", now)}
+            monthLabel={profitRow.name}
+            month={profitRow.amounts}
+            since={sinceProfit}
+            sinceHint={sinceHint}
+            monthHref={profitRow.href ?? "#"}
+            sinceHref={`/projects/${project.id}/profit${withPeriodSearch(search, { kind: "all", from: null, to: null })}`}
+            extra={keptRow}
           />
-        </List>
-      )}
-      {/* As on Home: the rows that need a hand, after the figures; an empty box hides. */}
-      <BannerRows rows={attention} />
-      {earlier.length > 0 ? (
-        <>
-          <SectionHead title="חודשים קודמים" />
-          <CashRows rows={earlier} months />
-          {/* As on Home (FLOW-417): the project's whole history, years then months, under the last month. */}
-          <p className="ui-page-pad">
-            <TextLink to={projectCashHistoryPath(project.id, search)} tone="quiet">
-              לכל החודשים
-            </TextLink>
-          </p>
-        </>
-      ) : null}
-    </div>
-  );
-}
-
-/** An earlier month of the project: its figure, נכנס, יצא and רווח החודש. */
-export function ProjectCashMonthScreen({
-  sample,
-  monthKey,
-  projectId: sampleProjectId,
-  projectName,
-  sampleLines,
-}: { sample?: NonNullable<CashMonths>; monthKey?: string; projectId?: string; projectName?: string; sampleLines?: ProjectCashMonthLines } = {}) {
-  const params = useParams();
-  const month = monthKey ?? params.month;
-  const projectId = sampleProjectId ?? params.projectId ?? "";
-  const search = usePreviewSearch();
-  if (!isCashMonthKey(month)) return <Navigate to={`/projects/${projectId}${search}`} replace />;
-  return <ProjectCashMonthBody projectId={projectId} monthKey={month} search={search} sample={sample} sampleName={projectName} sampleLines={sampleLines} />;
-}
-
-function ProjectCashMonthBody({
-  projectId,
-  monthKey,
-  search,
-  sample,
-  sampleName,
-  sampleLines,
-}: {
-  projectId: string;
-  monthKey: string;
-  search: string;
-  sample?: NonNullable<CashMonths>;
-  sampleName?: string;
-  sampleLines?: ProjectCashMonthLines;
-}) {
-  const preview = useHomePreview();
-  // An older month (opened from the history) reads its year's months.
-  const query = useProjectCashMonthData(projectId, monthKey, sample == null);
-  const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, query);
-  const title = cashTitle(monthKey);
-  // FLOW-444: a month opened from its year's page goes back there ("‹ 2025"); the project's name stays a line.
-  const projectBack = `/projects/${projectId}${search}`;
-  const year = Number(monthKey.slice(0, 4));
-  const back = useBackTarget(projectBack, [projectCashYearPath(projectId, year, search)]);
-  const backText = back === projectBack ? undefined : cashYearTitle(year);
-  // FLOW-422 (design lead): Back names the project it returns to; the page says which project it is.
-  const project = useProjectQuery(sample ? "" : projectId);
-  const kicker = sampleName ?? project.data?.name ?? undefined;
-  const navigate = useNavigate();
-  const data = sample ?? query.data ?? null;
-  // FLOW-438: the month's lines, in the base currency's figures (the first row's currency).
-  const linesCurrency = data == null ? "" : (shownCashRows(monthOf(data, monthKey), data.base_currency)[0]?.currency ?? "");
-  const lines = useProjectCashMonthLinesQuery(projectId, monthKey, linesCurrency, sample == null);
-  // FLOW-422: Home's month pager and swipe, within the months the project's read holds.
-  const opens = (key: string) => monthOf(data ?? undefined, key) != null && key <= israelToday().slice(0, 7);
-  const go = (key: string) => {
-    void navigate(projectCashMonthPath(projectId, key, search), { replace: true });
-  };
-  const earlierKey = shiftMonthKey(monthKey, -1);
-  const laterKey = shiftMonthKey(monthKey, 1);
-  const stepper = (
-    <MonthStepper
-      earlier={opens(earlierKey) ? cashTitle(earlierKey) : null}
-      later={opens(laterKey) ? cashTitle(laterKey) : null}
-      onStep={(delta) => {
-        go(delta < 0 ? earlierKey : laterKey);
-      }}
-    />
-  );
-  if (phase.kind !== "ready") {
-    return <ScreenState stacked title={title} backTo={back} kicker={kicker} phase={phase} onRetry={() => { void query.refetch(); }} />;
-  }
-  const month = monthOf(data ?? undefined, monthKey);
-  // A month outside the project's books (or after this one) has no page.
-  if (data == null || month == null) return <Navigate to={back} replace />;
-  const rows = shownCashRows(month, data.base_currency);
-  return (
-    <div>
-      <ScreenHeader layout="stacked" title={title} backTo={back} backText={backText} kicker={kicker} titleAside={stepper} />
-      <PeriodSwipe
-        period={monthPeriod(monthKey)}
-        allow={(next: PeriodChoice) => opens(anchorOf(next))}
-        onChange={(next) => {
-          go(anchorOf(next));
-        }}
-      >
-        <p className="ui-breakdown-total ui-page-pad">
-          {rows.map((row) => (
-            <span key={row.currency} className="ui-breakdown-total-line">
-              <Amount agorot={row.net_minor} currency={row.currency} size="display" loss={row.net_minor < 0n} />
-            </span>
-          ))}
-        </p>
-      </PeriodSwipe>
-      <CashRows rows={projectCashSummaryRows(projectId, monthKey, rows, search)} />
-      <ProjectMonthLines lines={sampleLines ?? lines.data} loading={sampleLines == null && lines.isPending} search={search} />
-    </div>
-  );
-}
-
-/** FLOW-438 (owner, 2026-10-10): the month's תנועות under its figures; a month with none shows nothing more. */
-function ProjectMonthLines({ lines, loading, search }: { lines: ProjectCashMonthLines | undefined; loading: boolean; search: string }) {
-  if (loading) return <ListSkeleton />;
-  if (lines == null || lines.counted.length + lines.kept.length === 0) return null;
-  return (
-    <section aria-label="תנועות">
-      <SectionHead title="תנועות" />
-      <CashMonthLines counted={lines.counted} kept={lines.kept} search={search} />
-    </section>
-  );
-}
-
-type LinesSample = { months: NonNullable<CashMonths>; lines: CashLine[] };
-
-/** The project's lines behind one month's נכנס, יצא or לא נספר ברווח; a shared bill shows the project's share. */
-export function ProjectCashLinesScreen({
-  sample,
-  at,
-}: { sample?: LinesSample; at?: { projectId: string; month: string; side: CashListSide; currency: string } } = {}) {
-  const params = useParams();
-  const projectId = at?.projectId ?? params.projectId ?? "";
-  const month = at?.month ?? params.month;
-  const side = at?.side ?? params.side;
-  const currency = at?.currency ?? params.currency ?? "";
-  const search = usePreviewSearch();
-  if (!isCashMonthKey(month) || !isCashSide(side) || !/^[A-Z]{3}$/.test(currency)) {
-    return <Navigate to={`/projects/${projectId}${search}`} replace />;
-  }
-  return <ProjectCashLinesBody projectId={projectId} monthKey={month} side={side} currency={currency} search={search} sample={sample} />;
-}
-
-function ProjectCashLinesBody({
-  projectId,
-  monthKey,
-  side,
-  currency,
-  search,
-  sample,
-}: {
-  projectId: string;
-  monthKey: string;
-  side: CashListSide;
-  currency: string;
-  search: string;
-  sample?: LinesSample;
-}) {
-  const preview = useHomePreview();
-  const navigate = useNavigate();
-  const months = useProjectCashMonthsQuery(projectId, sample == null);
-  const lines = useProjectCashLinesQuery(projectId, monthKey, side, currency, sample == null);
-  const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, lines);
-  const loaded = sample?.lines ?? (lines.data?.pages ?? []).flatMap((page) => page?.rows ?? []);
-  const rows = useHeldOrder(loaded, cashLineKey);
-  const title = cashSideLabel(side);
-  const kicker = cashTitle(monthKey);
-  const data = sample?.months ?? months.data ?? null;
-  const isCurrent = data != null && data.months[0] != null && cashMonthKey(data.months[0].month) === monthKey;
-  const back = isCurrent ? `/projects/${projectId}${search}` : projectCashMonthPath(projectId, monthKey, search);
-
-  if (phase.kind !== "ready") {
-    return <ScreenState stacked title={title} backTo={back} kicker={kicker} phase={phase} onRetry={() => { void lines.refetch(); }} />;
-  }
-
-  const month = data == null ? undefined : monthOf(data, monthKey);
-  const shown = data == null ? [] : shownCashRows(month, data.base_currency);
-  const { figure, rest } = cashLinesFigures(shown, side, currency);
-  const more = sample ? false : lines.hasNextPage;
-  return (
-    <div>
-      <ScreenHeader layout="stacked" title={title} backTo={back} kicker={kicker} />
-      <CashLinesHead side={side} currency={currency} figure={figure} rest={rest} />
-      <CashCurrencySwitch
-        currencies={shown.map((row) => row.currency)}
-        currency={currency}
-        onChange={(next) => {
-          void navigate(projectCashLinesPath(projectId, monthKey, side, next, search), { replace: true });
-        }}
-      />
-      {rows.length === 0 ? (
-        <CashLinesEmpty side={side} rest={rest} />
-      ) : (
-        <CashLineRows rows={rows} list={side} search={search} />
-      )}
-      {more ? (
-        <CashLinesMore
-          busy={lines.isFetchingNextPage}
-          onMore={() => {
-            void lines.fetchNextPage();
-          }}
-        />
-      ) : null}
+        )}
+        {budgetAdd}
+        {summaryFigures == null ? null : <InvestmentSummary figures={summaryFigures} href={investmentHref} />}
+        {investment == null || summary ? null : (
+          <List className="ui-project-cash-more">
+            <ListRow
+              variant="item"
+              title="השקעה והלוואות"
+              hint={investment.hint}
+              meta={investment.figure == null ? undefined : <bdi className="ui-num ui-project-row-figure" dir="ltr">{investment.figure}</bdi>}
+              href={investmentHref}
+              chevron
+            />
+          </List>
+        )}
+        {earlier.length > 0 ? (
+          <ProjectMonthsCard rows={earlier} />
+        ) : null}
+      </div>
     </div>
   );
 }

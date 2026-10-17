@@ -1,30 +1,79 @@
 #!/usr/bin/env bash
 # Pull requests have no GitHub CI before the merge, but the pr workflow (.github/workflows/pr.yml) runs the
 # rest of the gate on GitHub as parallel jobs. This hook runs the quick slice of scripts/local-ci.sh (under
-# 20 s, FLOW-832) before a push. It skips a branch delete, and a commit that already passed (the stamp the
-# default run writes).
+# 20 s, FLOW-832) before a push. It skips a branch delete, and a commit that already passed (the shared stamp
+# the default run writes in the common git dir, so a task worktree's pass counts in the main clone).
+# A ref that is not checked out (a task branch pushed from the main clone) is checked in a throwaway detached
+# worktree of its sha, with this clone's node_modules linked in; the worktree is removed afterwards.
 # FLOW_LOCAL_CI=default runs the scoped default gate (scripts/local-ci.sh, about 3 to 24 minutes for a UI push)
 # instead; FLOW_LOCAL_CI=full runs the full suite (scripts/local-ci.sh --full).
 # Turn it on once per clone: git config core.hooksPath .githooks
 set -euo pipefail
 
 root="$(git rev-parse --show-toplevel)"
-stamp="$(git rev-parse --git-dir)/flow-local-ci"
+stamp="$(git rev-parse --path-format=absolute --git-common-dir)/flow-local-ci"
 zero="0000000000000000000000000000000000000000"
 
-while read -r local_ref local_sha remote_ref remote_sha; do
-  [[ "$local_sha" == "$zero" ]] && continue
-  if [[ -f "$stamp" && "$(cat "$stamp")" == "$local_sha" ]]; then
-    echo "pre-push: local CI already passed on ${local_sha:0:7}."
-    continue
-  fi
-  if [[ "$local_sha" != "$(git rev-parse HEAD)" ]]; then
-    echo "pre-push: ${local_ref} is not checked out. Check it out and push again, so local CI tests it." >&2
-    exit 1
-  fi
+# Runs the gate on the tree at $root (the checked-out clone, or a throwaway worktree).
+gate() {
   case "${FLOW_LOCAL_CI:-}" in
     full) bash "$root/scripts/local-ci.sh" --full </dev/null ;;
     default) bash "$root/scripts/local-ci.sh" </dev/null ;;
     *) bash "$root/scripts/local-ci.sh" --part quick </dev/null ;;
   esac
+}
+
+# Links the clone's dependencies into the worktree $2 (never installs): the root node_modules, app/ and packages/*.
+link_deps() {
+  local repo="$1" wt="$2" d rel
+  if [[ ! -d "$repo/node_modules" ]]; then
+    echo "pre-push: $repo/node_modules is missing, so the check cannot run on a throwaway worktree. Run pnpm install in this clone, then push again. The hook does not install." >&2
+    return 1
+  fi
+  for d in "$repo/node_modules" "$repo/app/node_modules" "$repo"/packages/*/node_modules; do
+    [[ -d "$d" ]] || continue
+    rel="${d#"$repo"/}"
+    [[ -d "$(dirname "$wt/$rel")" ]] || continue
+    ln -s "$d" "$wt/$rel" || return 1
+  done
+}
+
+# Checks the sha $1 in a throwaway detached worktree. The trap removes the worktree and its links on every exit.
+check_detached() {
+  local sha="$1" repo="$root" wt rc=0
+  wt="$(mktemp -d)" || { echo "pre-push: cannot make a temp directory to check ${sha:0:7}." >&2; return 1; }
+  (
+    trap 'find "$wt" -name node_modules -type l -delete 2>/dev/null || true
+      git -C "$repo" worktree remove --force "$wt" >/dev/null 2>&1 || rm -rf "$wt"
+      git -C "$repo" worktree prune >/dev/null 2>&1 || true' EXIT
+    git -C "$repo" worktree add --detach "$wt" "$sha" >/dev/null || exit 1
+    unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE
+    link_deps "$repo" "$wt" || exit 1
+    cd "$wt" || exit 1
+    root="$wt" # the gate runs this tree's own scripts
+    gate
+  ) || rc=$?
+  return "$rc"
+}
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [[ "$local_sha" == "$zero" ]] && continue
+  if [[ -f "$stamp" ]] && grep -qx "$local_sha" "$stamp"; then
+    echo "pre-push: local CI already passed on ${local_sha:0:7}."
+    continue
+  fi
+  if [[ "$local_sha" == "$(git rev-parse HEAD)" ]]; then
+    gate || { echo "pre-push: local CI failed on ${local_ref}." >&2; exit 1; }
+  else
+    # A linked node_modules would be changed by the slice's pnpm install when the lock differs, so such a ref is
+    # checked from a checkout. An unreadable lock on either side counts as a difference.
+    theirs="$(git rev-parse -q --verify "$local_sha:pnpm-lock.yaml" 2>/dev/null || echo none)"
+    ours="$(git hash-object "$root/pnpm-lock.yaml" 2>/dev/null || echo none)"
+    if [[ "$theirs" != "$ours" ]]; then
+      echo "pre-push: ${local_ref} changes pnpm-lock.yaml; check it out here (pnpm install) and push again" >&2
+      exit 1
+    fi
+    echo "pre-push: ${local_ref} is not checked out; checking ${local_sha:0:7} in a throwaway worktree."
+    check_detached "$local_sha" || { echo "pre-push: local CI failed on ${local_ref}." >&2; exit 1; }
+  fi
 done

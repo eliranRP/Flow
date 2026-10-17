@@ -170,7 +170,7 @@ describe("LoanSetupForm", () => {
   it("cancels Enter's implicit submit on a middle field and leaves it alone on the last", () => {
     renderForm(<LoanSetupForm companyCurrency="ILS" />);
     const lender = screen.getByLabelText("מלווה");
-    const escrow = screen.getByLabelText("מסים וביטוח לחודש");
+    const escrow = screen.getByLabelText("מסים וביטוח לחודש (escrow)");
     // fireEvent returns false when the handler called preventDefault (jsdom has no implicit submit).
     expect(fireEvent.keyDown(lender, { key: "Enter", code: "Enter" })).toBe(false);
     escrow.focus();
@@ -195,7 +195,7 @@ describe("LoanSetupForm", () => {
     expect(prefixes.length).toBeGreaterThan(0);
     expect(prefixes.every((mark) => mark === "$")).toBe(true);
     expect(screen.getByLabelText("תקופה בחודשים")).toHaveValue("360");
-    expect(screen.getByLabelText("מסים וביטוח לחודש")).toHaveValue("0");
+    expect(screen.getByLabelText("מסים וביטוח לחודש (escrow)")).toHaveValue("0");
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 
@@ -292,7 +292,7 @@ describe("LoanSetupForm", () => {
 
   it("hides the preview while a field is incomplete and brings it back once valid (FLOW-344)", () => {
     renderForm(<LoanSetupForm companyCurrency="ILS" initial={mortgage} />);
-    expect(screen.getByText("₪599.55")).toBeInTheDocument();
+    expect(screen.getAllByText("₪599.55").length).toBeGreaterThan(0);
     fireEvent.change(screen.getByLabelText("ריבית שנתית"), { target: { value: "6." } });
     expect(screen.getByLabelText("ריבית שנתית")).toHaveValue("6.");
     expect(screen.queryByText("₪599.55")).not.toBeInTheDocument();
@@ -300,7 +300,7 @@ describe("LoanSetupForm", () => {
     expect(screen.getByRole("button", { name: "שמירה" })).toBeEnabled();
     expect(screen.queryByText("כתבו ריבית עד 100%.")).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("ריבית שנתית"), { target: { value: "6" } });
-    expect(screen.getByText("₪599.55")).toBeInTheDocument();
+    expect(screen.getAllByText("₪599.55").length).toBeGreaterThan(0);
     fireEvent.change(screen.getByLabelText("ריבית שנתית"), { target: { value: "" } });
     fireEvent.change(screen.getByLabelText("סכום מקורי"), { target: { value: "" } });
     expect(screen.queryByText("₪599.55")).not.toBeInTheDocument();
@@ -323,7 +323,7 @@ describe("LoanSetupForm", () => {
 
   it("hides the preview while a field is incomplete, and says 0 is too small (FLOW-344, FLOW-115)", () => {
     renderForm(<LoanSetupForm companyCurrency="ILS" initial={mortgage} />);
-    expect(screen.getByText("₪599.55")).toBeInTheDocument();
+    expect(screen.getAllByText("₪599.55").length).toBeGreaterThan(0);
     fireEvent.change(screen.getByLabelText("סכום מקורי"), { target: { value: "" } });
     expect(screen.queryByText("₪599.55")).not.toBeInTheDocument();
     expect(screen.queryByText(/ריבית כוללת/)).not.toBeInTheDocument();
@@ -360,7 +360,7 @@ describe("LoanSetupForm", () => {
     expect(screen.getByLabelText("מלווה").closest(".ui-field")).toHaveClass("ui-field-error");
     expect(screen.getByLabelText("סכום מקורי").closest(".ui-field")).toHaveClass("ui-field-error");
     expect(screen.getByLabelText("תקופה בחודשים").closest(".ui-field")).toHaveClass("ui-field-error");
-    expect(screen.getByLabelText("מסים וביטוח לחודש").closest(".ui-field")).toHaveClass("ui-field-error");
+    expect(screen.getByLabelText("מסים וביטוח לחודש (escrow)").closest(".ui-field")).toHaveClass("ui-field-error");
 
     fireEvent.change(screen.getByLabelText("סכום מקורי"), { target: { value: "-12" } });
     expect(screen.getByLabelText("סכום מקורי")).toHaveValue("-12");
@@ -405,10 +405,10 @@ describe("LoanSetupForm", () => {
       />,
     );
     expect(screen.getByRole("button", { name: "סוג בלון" })).toBeInTheDocument();
-    expect(screen.getByLabelText("פריסה בחודשים")).toHaveValue("360");
+    expect(screen.getByLabelText("פריסה לחישוב התשלום (חודשים)")).toHaveValue("360");
     expect(screen.getByText(/בלון בסוף התקופה/)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("פריסה בחודשים"), { target: { value: "30" } });
-    fireEvent.blur(screen.getByLabelText("פריסה בחודשים"));
+    fireEvent.change(screen.getByLabelText("פריסה לחישוב התשלום (חודשים)"), { target: { value: "30" } });
+    fireEvent.blur(screen.getByLabelText("פריסה לחישוב התשלום (חודשים)"));
     expect(screen.getByText("כתבו בין 60 ל־600 חודשים.")).toBeInTheDocument();
   });
 
@@ -418,17 +418,17 @@ describe("LoanSetupForm", () => {
     expect(screen.getByText("כתבו בין 1 ל־12 חודשים.")).toBeInTheDocument();
   });
 
-  it("keeps the computed payment under עוד and shows interest", () => {
+  it("keeps the computed payment under שינוי and shows the split", () => {
     renderForm(<LoanSetupForm companyCurrency="ILS" initial={mortgage} />);
     expect(screen.queryByLabelText("תשלום חודשי")).not.toBeInTheDocument();
-    expect(screen.getByText("₪599.55")).toBeInTheDocument();
-    expect(screen.getByText("₪115,838.45")).toBeInTheDocument();
-    expect(screen.getByText("₪600")).toBeInTheDocument();
+    expect(screen.getAllByText("₪599.55").length).toBeGreaterThan(0);
+    expect(screen.getByText(/קרן וריבית/)).toBeInTheDocument();
+    expect(screen.getAllByText("₪600").length).toBeGreaterThan(0);
     expect(screen.getByText(/תשלום אחרון מותאם/)).toBeInTheDocument();
     expect(screen.queryByText(/גבוה יותר/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "שמירה" })).toBeEnabled();
 
-    fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+    fireEvent.click(screen.getByRole("button", { name: "שינוי" }));
     const payment = screen.getByLabelText("תשלום חודשי");
     expect(payment).toHaveValue("599.55");
     fireEvent.change(payment, { target: { value: "" } });
@@ -439,8 +439,8 @@ describe("LoanSetupForm", () => {
 
   it("adds escrow to the stored payment and keeps an edited payment", () => {
     renderForm(<LoanSetupForm companyCurrency="ILS" initial={{ ...mortgage, escrow: "100" }} advancedOpen />);
-    expect(screen.getByText("₪699.55")).toBeInTheDocument();
-    expect(screen.getByText("₪115,838.45")).toBeInTheDocument();
+    expect(screen.getAllByText("₪699.55").length).toBeGreaterThan(0);
+    expect(screen.getByText(/קרן וריבית/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("תשלום חודשי"), { target: { value: "800" } });
     fireEvent.change(screen.getByLabelText("סכום מקורי"), { target: { value: "120000" } });
     expect(screen.getByLabelText("תשלום חודשי")).toHaveValue("800");
@@ -463,8 +463,8 @@ describe("LoanSetupForm", () => {
         }}
       />,
     );
-    expect(screen.getByText("$50,000")).toBeInTheDocument();
-    expect(screen.getByText("$10,050,000")).toBeInTheDocument();
+    expect(screen.getAllByText("$50,000").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("$10,050,000").length).toBeGreaterThan(0);
     expect(screen.getByText(/התשלום האחרון גבוה יותר/)).toBeInTheDocument();
   });
 
@@ -485,7 +485,7 @@ describe("LoanSetupForm", () => {
         }}
       />,
     );
-    expect(screen.getByText("₪6")).toBeInTheDocument();
+    expect(screen.getAllByText("₪6").length).toBeGreaterThan(0);
     expect(screen.getAllByText("₪12")).toHaveLength(1);
     expect(screen.getByText(/התשלום האחרון כפול/)).toBeInTheDocument();
     expect(screen.queryByText(/תשלום אחרון מותאם/)).not.toBeInTheDocument();
@@ -507,7 +507,7 @@ describe("LoanSetupForm", () => {
         }}
       />,
     );
-    expect(screen.getByText("₪866.94")).toBeInTheDocument();
+    expect(screen.getAllByText("₪866.94").length).toBeGreaterThan(0);
     expect(screen.getAllByText("₪2,541.65")).toHaveLength(1);
     expect(screen.getByText("2.9")).toBeInTheDocument();
     expect(screen.queryByText("2.90")).not.toBeInTheDocument();
@@ -533,8 +533,8 @@ describe("LoanSetupForm", () => {
         }}
       />,
     );
-    expect(screen.getByText("₪0.01")).toBeInTheDocument();
-    expect(screen.getByText("₪0.03")).toBeInTheDocument();
+    expect(screen.getAllByText("₪0.01").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("₪0.03").length).toBeGreaterThan(0);
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.queryByText("3.0")).not.toBeInTheDocument();
     expect(screen.getByText(/התשלום האחרון גבוה פי/)).toBeInTheDocument();
@@ -557,8 +557,8 @@ describe("LoanSetupForm", () => {
         }}
       />,
     );
-    expect(screen.getByText("₪6")).toBeInTheDocument();
-    expect(screen.getByText("₪11.99")).toBeInTheDocument();
+    expect(screen.getAllByText("₪6").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("₪11.99").length).toBeGreaterThan(0);
     expect(screen.getByText(/תשלום אחרון מותאם/)).toBeInTheDocument();
     expect(screen.queryByText(/כפול/)).not.toBeInTheDocument();
     expect(screen.queryByText(/גבוה פי/)).not.toBeInTheDocument();
@@ -579,7 +579,7 @@ describe("LoanSetupForm", () => {
         }}
       />,
     );
-    expect(screen.getByText("₪3")).toBeInTheDocument();
+    expect(screen.getAllByText("₪3").length).toBeGreaterThan(0);
     expect(screen.queryByText(/כפול/)).not.toBeInTheDocument();
     expect(screen.queryByText(/תשלום אחרון מותאם/)).not.toBeInTheDocument();
   });
