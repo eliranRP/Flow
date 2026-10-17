@@ -259,6 +259,10 @@
 }
 
 /* board: the body starts right under the title, so the panel's gap between blocks comes back out here. */
+.ui-charges-sheet .ui-sheet-head {
+  padding-top: calc(var(--space-4) - var(--sheet-gap-y));
+}
+
 .ui-charges-sheet .ui-sheet-body {
   margin-top: calc(-1 * var(--sheet-gap-y));
 }
@@ -289,8 +293,13 @@
 }
 
 /* The pace sheet (how often a party's charge recurs): the board's panel, rows and radio. Only this sheet. */
+/* The grab-to-title space is 16 (the grab's 12 and the head's 4 before the panel gap): the panel's gap is 10 here. */
+.ui-pace-sheet .ui-sheet-head {
+  padding-top: calc(var(--space-4) - var(--sheet-gap-y));
+}
+
 .ui-pace-sheet .ui-sheet-body {
-  margin-top: 0;
+  margin-top: calc(-1 * var(--sheet-gap-y));
 }
 
 .ui-pace-sheet .ui-choice-sheet {

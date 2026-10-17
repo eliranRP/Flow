@@ -198,6 +198,11 @@
   --sheet-side: var(--space-side);
 }
 
+/* A sheet whose board panel keeps the older 28px below its content (the month drawer, the review picker). */
+.ui-sheet-pad28 {
+  --sheet-pad-bottom: 28px;
+}
+
 /* A dialog focused for the screen reader is not a control, so it never draws a ring. */
 .ui-sheet-panel:focus,
 .ui-sheet-panel:focus-visible {
