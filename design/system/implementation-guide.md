@@ -610,7 +610,7 @@ See §8.2.
   - Use `text-secondary` (`.lnk.q`) for quiet "see all" links.
 
 ### 7.26 Date picker
-Screens: `15a-date-field` (the field), `15b-date-single`, `15c-date-range`. Board: `ds-8-pickers-sheets`.
+Screens: the date field, single date and range (no artboard yet). Board: DesignGuide (DesignGuide.dc.html).
 - **The field:** a normal text input (§7.13) showing `dd/mm/yyyy` (LTR number, §6.3) with a calendar icon on the end side. Tapping anywhere on it opens the sheet. Don't allow free typing on phones.
 - **The sheet** (§3.3): title ("תאריך ההוצאה"), quick chips, then the month header, then the grid, then one primary button at the bottom ("בחירה").
   - Quick chips (choice style, §7.7): **single** היום / אתמול. **Range** החודש / חודש קודם / מתחילת השנה. A chip fills the value, and it's highlighted only while the value matches it.
@@ -985,8 +985,8 @@ All paths are relative to `/workspace/wireframes-pnl/final/`. Every screen exist
 
 | Board | Content | Use it for |
 |---|---|---|
-| `ds-7-empty-loading-*` | **Empty and loading states** board | §8 |
-| `ds-8-pickers-sheets-*` | Date picker, period sheet, confirmation sheet, error pattern, install prompt, overhead breakdown, fixed switch | §7.9, §7.26–7.31 |
+| `States` (`States.dc.html`) | **Empty and loading states** | §8 |
+| `DesignGuide` (`DesignGuide.dc.html`) | Date picker, period sheet, confirmation sheet, error pattern, install prompt, overhead breakdown, fixed switch | §7.9, §7.26–7.31 |
 | `overview-more-*` | All screens from 15 onwards, plus the updated 10, in one grid | §7.26–7.31 |
 | `overview-states-*` | All empty and loading screens in one grid | §8 |
 

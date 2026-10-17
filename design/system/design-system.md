@@ -128,6 +128,6 @@ Weights: 400 hints, row titles, secondary lines and list amounts · 500 body, in
 - `flow.py` + `render.sh`: shared component CSS (logical properties only), icons, and the 14 screens.
 - `states.py` + `render-states.sh`: empty states (`es-NN`), loaders (`ld-NN`) and the `overview-states` grid. PNGs are frozen frames; open an HTML file with `#live` to see the shimmer and spinners move.
 - `render-logo.sh`: re-renders only the screens touched by the logo decision (09a, 09e, 13, 17a/b, the overviews and boards 1–8).
-- `more.py` + `render-more.sh`: screens 15–23, er-01…05 and `overview-more`. Board 8 (`ds-8-pickers-sheets`) shows the date picker, period sheet, confirmation sheet, error pattern, install prompt, overhead breakdown and the fixed switch.
-- Board 7 (`ds-7-empty-loading`) shows skeleton tokens, skeletons, busy button, spinner, file processing, empty states and error/offline.
+- Board DesignGuide (DesignGuide.dc.html) shows the date picker, period sheet, confirmation sheet, error pattern, install prompt, overhead breakdown and the fixed switch.
+- Board States (States.dc.html) shows skeleton tokens, skeletons, busy button, spinner, file processing, empty states and error/offline.
 - `implementation-tokens.css`: the one hand-edited token file. There is no generator and no JSON copy.

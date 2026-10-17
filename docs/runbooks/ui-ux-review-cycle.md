@@ -6,7 +6,7 @@ A recurring review of the running app on real phone sizes. The owner asked for i
 
 1. Run the dev server (`pnpm dev`, with no empty `VITE_SUPABASE_*` variables). The `/e2e/*` fixture routes carry sample data. The `?preview=1` routes show the real shell with the tab bar.
 2. Capture every main screen with Playwright at 375x667 (iPhone SE), 393x852 (iPhone 15) and 412x915 (Pixel 7), in Hebrew RTL. Capture light everywhere, dark at 393, and a full page at 393. Save each element's tap box, any clipped text and the page height with the shots. The capture script and the shots live in the project's shared folder under `reviews/ui-ux-cycle-<n>/`.
-3. A design reviewer compares the shots with [DESIGN-RULES.md](../design/DESIGN-RULES.md), the mockups in `design/screens/` and the [design checklist](../review/CHECKLIST-design.md).
+3. A design reviewer compares the shots with [DESIGN-RULES.md](../design/DESIGN-RULES.md), the board artboards that DESIGN-RULES §4 names and the [design checklist](../review/CHECKLIST-design.md).
 4. A UX auditor reviews for a one-handed phone user:
    - primary actions out of thumb reach
    - taps per core job

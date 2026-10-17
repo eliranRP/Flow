@@ -88,14 +88,10 @@ Only a Blocking item or a Should item blocks the merge. A nit is written down an
 
 ## Wireframes
 
-Wireframes for Module 1 live in [docs/module-1-project-pnl/wireframes/](docs/module-1-project-pnl/wireframes/README.md).
+The design board is the spec for every screen: https://claude.ai/artifact/9grt9spjshVCxerYWrRXiD. The module 1 wireframe PNGs, their source and the PNG index were deleted in T-03. [screens.md](docs/module-1-project-pnl/screens.md) keeps the notes for each screen: what it shows and its status.
 
-- Keep the existing file. A new version uses the same stem plus `-v2`, `-v3`, and so on (`06-change-sheet-v2.png`). Do not overwrite an approved or superseded PNG.
-- Mark the previous file `Superseded` in `wireframes/README.md` and in [screens.md](docs/module-1-project-pnl/screens.md). The new file is `Approved` once it is the one to build.
-- Add a section in `screens.md` for the new file (purpose, main elements, key interactions, and the image). Add the field-level spec as `docs/module-1-project-pnl/screens/NN-name.md` and link it from that section.
-- Overview boards are composites. If a board still shows an old screen, say so in the wireframes table. Do not delete it.
-- Regenerate from [source/gen.py](docs/module-1-project-pnl/wireframes/source/gen.py) and [source/render.sh](docs/module-1-project-pnl/wireframes/source/render.sh) when the HTML source changes. Commit both the source change and the PNGs.
-- Add a changelog entry.
+- Change a screen on the board, not in a PNG or HTML file in this repo.
+- Update the screen's note in [screens.md](docs/module-1-project-pnl/screens.md) when its status changes, and log it in the changelog.
 
 ## Screen specs
 

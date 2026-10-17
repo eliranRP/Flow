@@ -2,7 +2,7 @@
 
 Use this with [PITFALLS.md](PITFALLS.md) before changing a screen, and again before handoff.
 
-- [ ] Opened [implementation-guide.md](../../design/system/implementation-guide.md), the screen file under `design/src/`, [DESIGN-RULES.md](../design/DESIGN-RULES.md), and [CONTROLS.md](../qa/CONTROLS.md).
+- [ ] Opened [implementation-guide.md](../../design/system/implementation-guide.md), the screen's board artboard (DESIGN-RULES §4), [DESIGN-RULES.md](../design/DESIGN-RULES.md), and [CONTROLS.md](../qa/CONTROLS.md).
 - [ ] Hints use `t-hint` (13px) and the control points at them with `aria-describedby`.
 - [ ] Rows use `ListRow` and the same icon slot as the rows beside them.
 - [ ] A component, story or CSS block this change replaces is deleted in the same PR, with its stories and tests ([CONTRIBUTING](../../CONTRIBUTING.md#remove-what-your-change-leaves-unused)). Main opens every story on every deploy, so an orphan story costs every batch.

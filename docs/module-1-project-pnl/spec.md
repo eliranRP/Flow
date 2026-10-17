@@ -188,5 +188,5 @@ A Hashavshevet-compatible format is a later export, not the proof of concept. [0
 - [Screens and wireframe notes](screens.md)
 - [Calculations](calculations.md)
 - [Settings draft](settings.md)
-- [Wireframe files](wireframes/README.md)
+- [Wireframe notes](screens.md) (PNGs deleted; the design board is the spec)
 - [Open questions](../open-questions.md)

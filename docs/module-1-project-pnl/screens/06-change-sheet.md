@@ -1,6 +1,6 @@
 # Change sheet
 
-**Status:** Approved. Build [06-change-sheet-v2](../wireframes/06-change-sheet-v2.png). The all-chips [06-change-sheet](../screens.md#06-change-sheet) wireframe is superseded.
+**Status:** Approved. Build 06-change-sheet-v2. The all-chips [06-change-sheet](../screens.md#06-change-sheet) wireframe is superseded.
 **Rules:** Remember defaults on ([0006](../../decisions/0006-confirm-not-type.md)). Picker shape is [0009](../../decisions/0009-scalable-pickers.md).
 
 ## Purpose

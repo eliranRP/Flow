@@ -91,9 +91,9 @@ The migration revokes the default `EXECUTE` privilege from `PUBLIC` for every fu
 | [Calculations](docs/module-1-project-pnl/calculations.md) | Income, expenses, profit, margin, periods, rounding |
 | [Screens](docs/module-1-project-pnl/screens.md) | One section per wireframe, with links to the detailed specs |
 | [Settings (Draft)](docs/module-1-project-pnl/settings.md) | Proposed Settings screen, not approved |
-| [Wireframes](docs/module-1-project-pnl/wireframes/README.md) | PNG files, version, and approved / superseded status |
+| [Wireframes](docs/module-1-project-pnl/screens.md) | Screen notes. The PNGs were deleted; the design board is the spec |
 | [UI directions](docs/module-1-project-pnl/design/README.md) | Superseded exploration (styles A/B/C, then Mercury). Not the approved system |
-| [Approved design](design/README.md) | V1 Violet package: screens, states, system, and logo. [Implementation guide](design/system/implementation-guide.md) is mandatory. [Logo](design/logo/LOGO.md) |
+| [Approved design](design/README.md) | The design board is the design source (https://claude.ai/artifact/9grt9spjshVCxerYWrRXiD). Kept here: system tokens and the logo package. [Implementation guide](design/system/implementation-guide.md) is mandatory. [Logo](design/logo/LOGO.md) |
 | [Technical plan](docs/tech/tech-plan.md) | Supabase pilot. The Cloudflare version is superseded |
 | [Decisions](docs/decisions/README.md) | Decision records 0001–0043 and the record format |
 | [Open questions](docs/open-questions.md) | What is not decided yet |
