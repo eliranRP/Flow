@@ -167,6 +167,37 @@
   outline: none;
 }
 
+/* Opt-in panel classes: a sheet whose board block differs from the default (12 between blocks, 16 at the sides,
+   24 below) sets one or more of these. Later rules win, so a choice sheet's 10 can be raised by its caller. */
+.ui-sheet-choice {
+  --sheet-gap-y: 10px;
+  --sheet-pad-bottom: 28px;
+}
+
+.ui-sheet-g8 {
+  --sheet-gap-y: 8px;
+}
+
+.ui-sheet-g10 {
+  --sheet-gap-y: 10px;
+}
+
+.ui-sheet-g12 {
+  --sheet-gap-y: 12px;
+}
+
+.ui-sheet-g14 {
+  --sheet-gap-y: 14px;
+}
+
+.ui-sheet-g16 {
+  --sheet-gap-y: 16px;
+}
+
+.ui-sheet-wide {
+  --sheet-side: var(--space-side);
+}
+
 /* A dialog focused for the screen reader is not a control, so it never draws a ring. */
 .ui-sheet-panel:focus,
 .ui-sheet-panel:focus-visible {

@@ -110,7 +110,7 @@ export function ForecastItemSheet({ item, today, onOpenChange, onSave }: {
   onSave: (item: ForecastItem, patch: ForecastPatch) => void;
 }) {
   return (
-    <Sheet open={item != null} onOpenChange={onOpenChange} title={item?.name ?? ""}>
+    <Sheet open={item != null} onOpenChange={onOpenChange} title={item?.name ?? ""} panelClassName="ui-sheet-g14">
       {item == null ? null : (
         <ForecastItemForm key={item.key} item={item} today={today} onSave={onSave} onDone={() => { onOpenChange(false); }} />
       )}

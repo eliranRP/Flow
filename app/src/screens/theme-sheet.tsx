@@ -43,6 +43,7 @@ export function ThemeSheet({
       value={value}
       saving={null}
       returnFocusRef={returnFocusRef}
+      panelClassName="ui-sheet-g12"
       onPick={(next, close) => {
         const previous = value;
         onChange(next);

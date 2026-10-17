@@ -682,6 +682,7 @@ export function LoansHost({
         open={holdWrites ? false : open}
         onOpenChange={setLoanSheet}
         title={view === "kind" ? "סוג ההלוואה" : picking ? "פרויקט" : "הלוואה"}
+        panelClassName={view === "kind" ? "ui-sheet-wide ui-sheet-g8" : undefined}
         titleRef={sheetTitle}
         returnFocusRef={newLoanReturn}
         leading={picking ? (
