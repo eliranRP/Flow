@@ -25,7 +25,7 @@
 }
 
 .ui-loans-title {
-  margin: var(--space-1) 0 2px;
+  margin: var(--space-1) 0 0;
   font-size: var(--type-title-size);
   line-height: var(--type-title-line);
   font-weight: var(--type-title-weight);
@@ -91,7 +91,7 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
   min-width: 0;
 }
 

@@ -1,3 +1,4 @@
 {
-  "Loans": "/e2e/loans"
+  "Loans": "/e2e/loans",
+  "LoansClosed": "/e2e/loans?closed=1"
 }
