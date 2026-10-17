@@ -1,6 +1,6 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   SAMPLE_EXPENSE_LINE,
   SAMPLE_REFUND_LINE,
@@ -54,12 +54,6 @@ const expenseParts: PartDraft[] = [
 function restRow() {
   return screen.getByRole("button", { name: /^השאר,/ });
 }
-
-// The picker sheets wait out --motion-sheet-out before they leave the DOM (220 ms when jsdom has no
-// stylesheet), and a part picks two sheets in a row; on a loaded CI runner that close chain ran past
-// the 3 s wait. The close is not what these tests check, so it takes no time here.
-beforeAll(() => { document.documentElement.style.setProperty("--motion-sheet-out", "0ms"); });
-afterAll(() => { document.documentElement.style.removeProperty("--motion-sheet-out"); });
 
 describe("split by category editor (FLOW-325)", () => {
   it("adds a part through the picker, flips its unit, and the rest follows the server preview", async () => {

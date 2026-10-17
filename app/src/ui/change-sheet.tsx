@@ -197,6 +197,13 @@ export function ChangeAssignment(props: Props) {
   useEffect(() => () => {
     splitTicket.current += 1;
   }, [view, sheetOpen]);
+  // A view change ends the picker's unsaved check: reopening shows the saved value. Reset during
+  // render, not in an effect: an effect could land after a row tapped on the fresh view and wipe it.
+  const [viewSeen, setViewSeen] = useState(view);
+  if (viewSeen !== view) {
+    setViewSeen(view);
+    setPick(null);
+  }
   if (openSeen !== sheetOpen) {
     setOpenSeen(sheetOpen);
     setPick(null);
@@ -248,10 +255,6 @@ export function ChangeAssignment(props: Props) {
     };
   }, []);
 
-  // A view change ends the picker's unsaved check: reopening shows the saved value.
-  useEffect(() => {
-    setPick(null);
-  }, [view]);
 
   useEffect(() => {
     if (view !== "summary") {
