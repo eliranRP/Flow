@@ -204,6 +204,6 @@ test("the real sweep map: every route draws files that exist, and a screen reach
     }
   }
   const urls = (file) => sweepRoutes([file], { root, map }).map(({ url }) => url);
-  assert.deepEqual(urls("app/src/screens/categories-screen.tsx"), ["/settings/categories?preview=1", "/e2e/categories?preview=1"]);
+  assert.deepEqual(urls("app/src/screens/categories-screen.tsx"), ["/settings/categories?preview=1", "/e2e/categories?preview=1", "/e2e/categories?preview=1&hidden=1"]);
   assert.equal(urls("app/src/ui/tab-bar.tsx").length, Object.values(map.sweeps.routes).flatMap(Object.keys).length);
 });

@@ -1,0 +1,1 @@
+- The gate-scope test knows the Categories hidden-rows route that FLOW-513 added to the sweep map.
