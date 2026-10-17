@@ -246,7 +246,7 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, linesOn }:
   const failed = dashboard.isError || projectIncome.isError || projectExpense.isError || categoryIncome.isError || categoryExpense.isError;
   const ytdTotals = ytdDashboard.data == null ? null : monthTotals(ytdDashboard.data, currency);
   const ready = dashboard.data != null && projectIncome.data !== undefined && projectExpense.data !== undefined && categoryIncome.data !== undefined && categoryExpense.data !== undefined;
-  const inputs: ProfitInputs | null = ready && dashboard.data != null
+  const inputs: ProfitInputs | null = ready
     ? {
         currency,
         basis: dashboard.data.basis,
