@@ -213,6 +213,7 @@ function MonthLine({ month, title, currency, href }: { month: ProfitMonth; title
       agorot={figures.profit_minor}
       currency={currency}
       loss={loss}
+      amountPlus
       href={href}
     />
   );
