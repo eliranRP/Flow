@@ -20,7 +20,7 @@ import { ProfitSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 import { SummaryRow } from "./project-profit-screen";
 
-export type ProjectMonthProfitSample = { project: NonNullable<ProjectDetail>; month: string; lines: CashLine[]; overheadShare?: bigint };
+export type ProjectMonthProfitSample = { project: NonNullable<ProjectDetail>; month: string; lines: CashLine[] };
 
 const ORDERS: readonly { key: LinesOrder; label: string }[] = [
   { key: "date", label: "לפי תאריך" },
@@ -31,8 +31,8 @@ const ORDERS: readonly { key: LinesOrder; label: string }[] = [
 /**
  * FLOW-140 slice 2, the ProfitMonth frame: a project's profit for one month, its four-figure card, and the
  * month's counted lines. The chips live in the URL (`order=`), so Back from a line restores the order. The
- * per-month share of the general expenses is not on the server yet, so the card shows the income and the
- * expenses that count, and the profit it leaves (a named exception on the PR).
+ * month's share of the general expenses comes with get_project for the month's range (the weights are the
+ * month's income), so the card shows it and the profit it leaves where the project has one.
  */
 export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProfitSample } = {}) {
   const params = useParams();
@@ -50,8 +50,11 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
   const currency = figures?.currency ?? companyCurrency;
   const linesRead = useProjectCashMonthLinesQuery(sample ? "" : projectId, month, currency, !sample && figures != null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
-  // The month's share of the general expenses is not on the server yet (FLOW-920): only a fixture carries it.
-  const share = sample?.overheadShare ?? null;
+  // The share and its weights are the requested month's (get_project reads the range); same rule as the project page.
+  const share = project?.overhead_weighted === true && (project.base_currency ?? "ILS") === currency
+    ? project.overhead_share_minor ?? null
+    : null;
+  const after = share == null || figures == null ? null : figures.profit_minor - share;
   const counted = sample?.lines ?? linesRead.data?.counted ?? [];
   const today = israelToday();
   const open = month === today.slice(0, 7);
@@ -101,8 +104,8 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
             <SummaryRow label="הכנסות" value={<Amount agorot={figures.income_minor} currency={currency} income />} />
             <SummaryRow label="הוצאות שנספרות ברווח" value={<Amount agorot={projectExpenseMinor(figures)} currency={currency} />} />
             {share == null ? null : <SummaryRow label="חלק בהוצאות הכלליות" value={<Amount agorot={share} currency={currency} />} />}
-            {share == null ? null : (
-              <SummaryRow strong label="רווח אחרי הוצאות כלליות" value={<Amount agorot={figures.profit_minor - share} currency={currency} />} />
+            {after == null ? null : (
+              <SummaryRow strong label="רווח אחרי הוצאות כלליות" value={<Amount agorot={after} currency={currency} loss={after < 0n} />} />
             )}
           </Card>
           <div role="group" aria-label="סידור" className="ui-pp-chips">
