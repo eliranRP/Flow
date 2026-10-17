@@ -26,6 +26,12 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
   min-block-size: var(--control-height);
 }
 
+/* The review bar: the board's tighter gap between its two rows, and its hint sits closer to the bottom. */
+.ui-review-queue .ui-action-bar {
+  gap: var(--space-1);
+  padding-block-end: calc(var(--space-1) * 2.5);
+}
+
 /* A grid, not flex: a padded button's basis would take its padding on top of the share. */
 .ui-action-bar-row {
   display: grid;
@@ -113,6 +119,8 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
   align-items: baseline;
   gap: var(--space-1);
   margin: 0;
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
   padding-inline-start: calc(var(--review-label-w) + var(--space-2));
   color: var(--color-text-muted);
 }

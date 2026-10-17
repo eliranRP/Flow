@@ -122,6 +122,27 @@
   margin-inline-start: auto;
 }
 
+/* The board's header rhythm on the review queue (FLOW-365b): back row, title, counter, segments, card. */
+.ui-review-queue .ui-page-stacked {
+  padding-top: var(--space-3);
+}
+
+.ui-review-queue .ui-focus-title {
+  margin-top: var(--space-1);
+}
+
+.ui-review-queue .ui-review-counts {
+  margin-top: calc(var(--space-1) * 2.5);
+}
+
+.ui-review-queue .ui-review-segments {
+  margin-top: var(--space-2);
+}
+
+.ui-review-queue .ui-review {
+  margin-top: var(--space-3);
+}
+
 .ui-review {
   container: review / inline-size;
   display: flex;
@@ -163,6 +184,9 @@
 }
 
 .ui-review-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   min-inline-size: 0;
   flex: 1;
 }
@@ -312,7 +336,7 @@
 .ui-review-panel {
   display: flex;
   flex-direction: column;
-  margin-block-start: var(--space-3);
+  margin-block-start: 0;
   border-radius: var(--radius-card-tight);
   background: var(--color-raised);
   overflow: hidden;
@@ -350,14 +374,14 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   min-inline-size: 0;
-  text-align: end;
+  text-align: start;
 }
 
 .ui-review-field-label {
   font-size: var(--type-hint-size);
-  line-height: var(--type-hint-line);
+  line-height: var(--type-title-line);
   color: var(--color-text-secondary);
 }
 
@@ -381,6 +405,28 @@
   color: var(--color-text-secondary);
 }
 
+/* The board's suggestion beside a value is plain "הצעה" text, not a pill with the ✦ mark. */
+.ui-review-field-hint .ui-suggest-tag {
+  padding: 0;
+  margin: 0;
+  background: none;
+  color: var(--color-text-secondary);
+  font-weight: var(--type-meta-weight);
+}
+
+.ui-review-field-hint .ui-suggest-tag-jev > [aria-hidden] {
+  display: none;
+}
+
+.ui-review-field-hint .ui-suggest-tag-jev .ui-suggest-tag-words {
+  position: static;
+  inline-size: auto;
+  block-size: auto;
+  margin: 0;
+  clip: auto;
+  overflow: visible;
+}
+
 .ui-review-reason-held {
   visibility: hidden;
 }
@@ -392,10 +438,8 @@
 .ui-review-ai {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--color-line);
+  gap: var(--space-4);
+  margin-top: 0;
 }
 
 /* 2026-10-09 (option A): an amount spike puts "↑ N%" right after the amount, in the status pill
@@ -627,12 +671,13 @@
 
 /* The source pill at the top of the card's text column (חשבונית מצולמת, שורת בנק). */
 .ui-review-source {
-  align-self: flex-end;
-  padding: var(--pill-pad-block) var(--space-3);
+  align-self: flex-start;
+  padding: calc(var(--space-1) / 2) var(--space-3);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-chip);
   color: var(--color-text-secondary);
   font-size: var(--type-hint-size);
+  line-height: var(--type-title-line);
 }
 
 /* The split link under the rows: a text link with the split icon, 44px tall. */
@@ -671,8 +716,9 @@
 .ui-review-split-sum {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-card);
+  border: 0;
+  border-radius: var(--radius-card-tight);
+  background: var(--color-raised);
   overflow: hidden;
 }
 
@@ -686,7 +732,8 @@
 }
 
 .ui-review-split-head {
-  background: var(--color-tint);
+  padding-block: var(--space-1);
+  background: none;
   color: var(--color-text-secondary);
 }
 
@@ -700,15 +747,21 @@
   font-size: var(--type-line2-size);
 }
 
+/* The board's row: the amount on the start side, the name and its category on the end side. */
 .ui-review-split-part {
+  flex-direction: row-reverse;
   border-top: 1px solid var(--color-line);
 }
 
 .ui-review-split-name {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   min-inline-size: 0;
+}
+
+.ui-review-split-name .t-hint {
+  line-height: var(--type-title-line);
 }
 
 /* FLOW-704: a pending line holds the value line a settled line's text has, so the waiting card keeps its height. */
@@ -782,8 +835,20 @@
   border-radius: 50%;
 }
 
+/* The board's done frame: the stacked header, then a top-anchored block with a full-width button. */
+.ui-review-done .ui-empty-state {
+  justify-content: flex-start;
+  padding: calc(var(--space-10) + var(--space-3)) var(--space-6) 0;
+}
+
 .ui-review-done .ui-empty-line {
+  margin-top: calc(var(--label-gap) + var(--space-2));
   font-size: var(--type-body-size);
   line-height: var(--type-body-line);
   white-space: pre-line;
+}
+
+.ui-review-done .ui-empty-action {
+  align-self: stretch;
+  margin-top: var(--space-6);
 }

@@ -163,7 +163,7 @@ export function ReviewEmpty({
   }, []);
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <ScreenHeader title="לאישור" backTo={backTo ?? "/"} backText={backTo == null ? "בית" : undefined} layout="inline" />
+      <ScreenHeader title="לאישור" backTo={backTo ?? "/"} backText={backTo == null ? "בית" : undefined} />
       <div className={done == null || filtered ? undefined : "ui-review-done"}>
         <EmptyState
           icon={done == null || filtered ? <ReviewIcon /> : <CheckIcon size={44} stroke={2.2} />}

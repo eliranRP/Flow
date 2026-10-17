@@ -12,8 +12,10 @@ describe("jevReasonText (FLOW-327, decision 0134)", () => {
   it("says each reason in Hebrew, with ספק on an expense and לקוח on income", () => {
     expect(copyText(jevReasonText(info("same_as_last"), "expense"))).toBe("כמו בפעם הקודמת");
     expect(copyText(jevReasonText(info("usual_for_party", 5, 3), "expense"))).toBe("כמו ב־3 מתוך 5 הפעמים האחרונות");
-    expect(copyText(jevReasonText(info("new_party"), "expense"))).toBe("ספק חדש · בלי היסטוריה");
-    expect(copyText(jevReasonText(info("new_party"), "income"))).toBe("לקוח חדש · בלי היסטוריה");
+    expect(copyText(jevReasonText(info("new_party"), "expense", true, "הרצל 12"))).toBe("ספק חדש · בלי היסטוריה");
+    expect(copyText(jevReasonText(info("new_party"), "income", true, "הרצל 12"))).toBe("לקוח חדש · בלי היסטוריה");
+    expect(copyText(jevReasonText(info("new_party"), "expense"))).toBe("ספק חדש, בלי היסטוריה. בחרו פרויקט ונזכור להבא.");
+    expect(copyText(jevReasonText(info("new_party"), "income"))).toBe("לקוח חדש, בלי היסטוריה. בחרו פרויקט ונזכור להבא.");
     expect(copyText(jevReasonText(info("new_party"), "expense", false))).toBe("בלי היסטוריה קודמת");
     expect(copyText(jevReasonText(info("model_only"), "income"))).toBe("הערכה של Jev בלבד");
   });
