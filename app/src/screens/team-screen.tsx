@@ -97,7 +97,7 @@ export function TeamList({ team, business }: { team: Team; business?: string }) 
   // The board's card: one inset list with a hairline between rows. Alone, the owner stands on the page with no card.
   const layout = alone ? undefined : "inset";
   return (
-    <div className="ui-settings-page">
+    <div className={alone ? "ui-settings-page ui-team-alone" : "ui-settings-page"}>
       <ScreenHeader title={TITLE} kicker="הגדרות" subtitle={business && !alone ? `מי רואה את הספרים של ${business}` : undefined} backTo={BACK} />
       <List className="ui-team-list" layout={layout}>
         {members.map((row) => {

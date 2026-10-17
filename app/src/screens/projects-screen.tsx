@@ -130,7 +130,7 @@ function ProjectsBody({
       {month.unassigned.count > 0 ? (
         <div className="ui-page-pad ui-projects-unassigned">
           <TextLink to={`/review${search}`} tone="accent">
-            {unassignedCountLabel(month.unassigned.count)} · <bdi dir="ltr">{formatAmount(BigInt(unassignedNet), "summary", base)}</bdi> · לשיוך
+            {unassignedCountLabel(month.unassigned.count)} · <bdi dir="ltr">{formatAmount(BigInt(unassignedNet), "detail", base)}</bdi> · לשיוך
           </TextLink>
         </div>
       ) : null}

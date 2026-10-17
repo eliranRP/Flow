@@ -1,6 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type Ref, type SubmitEvent } from "react";
 import type { LoanKind } from "@flow/shared";
-import { CalendarIcon } from "../ui/icons";
 import { MoneyField, PercentField } from "../ui/money-field";
 import { SegmentedControl } from "../ui/segmented-control";
 import { DateSheet } from "../ui/date-sheet";
@@ -390,10 +389,9 @@ export function LoanSetupForm({
           onClick={() => { setDateOpen(true); }}
         >
           <bdi className="ui-num" dir="ltr">{formatDisplay(startDate)}</bdi>
-          <CalendarIcon size={20} />
         </button>
-        {/* Same rhythm as the fields around it, which reserve their message line. */}
-        <span className="ui-field-message ui-field-message-slot" aria-hidden="true" />
+        {/* Same rhythm as the fields around it, which reserve their message line (not in the sheet). */}
+        {sheetMode ? null : <span className="ui-field-message ui-field-message-slot" aria-hidden="true" />}
       </div>
       <DateSheet
         open={dateOpen}

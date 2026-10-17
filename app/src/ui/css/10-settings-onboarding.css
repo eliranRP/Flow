@@ -620,12 +620,21 @@
   padding-bottom: calc(var(--space-3) - 1px);
 }
 
+/* A subtitle sits 1px higher (the board's), and the header's end keeps the cards where they were plus 1px. */
+.ui-settings-page > .ui-page-stacked:has(.ui-compact-mark + p) {
+  padding-bottom: calc(var(--space-3) + 1px);
+}
+
 .ui-settings-page > .ui-page-stacked .ui-focus-title {
   margin-top: var(--space-1);
 }
 
 .ui-settings-page > .ui-page-stacked .ui-focus-title + * {
   margin-top: var(--space-1);
+}
+
+.ui-settings-page > .ui-page-stacked .ui-compact-mark + p {
+  margin-top: calc(var(--space-1) / -4);
 }
 
 .ui-settings-page > .ui-list-inset {
