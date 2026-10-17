@@ -429,18 +429,6 @@
   block-size: 14px;
 }
 
-/* The search entry on Home's band sits on the end side of the bar, as ⋯ does on a project. */
-.ui-band-row > .ui-search-entry {
-  margin-inline-start: auto;
-}
-
-.ui-head-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-inline-start: auto;
-}
-
 /* FLOW-368: the count line sits in the scroll area under the head, as on the board (15px muted). */
 .ui-search-results > .ui-search-count {
   margin: 0;

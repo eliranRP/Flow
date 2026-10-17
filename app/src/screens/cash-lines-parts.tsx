@@ -1,7 +1,6 @@
 import { formatAmountText, type CashCurrencyRow } from "@flow/shared";
 import { type CashListSide, notInProfitMinor, notInProfitRest } from "../cash";
 import { Amount } from "../ui/amount";
-import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 import { DocumentIcon } from "../ui/icons";
 import { SegmentedControl } from "../ui/segmented-control";
@@ -80,23 +79,6 @@ export function CashLinesEmpty({ side, rest }: { side: CashListSide; rest: bigin
       title={side === "in" ? "לא נכנס כסף בחודש הזה" : side === "out" ? "לא יצא כסף בחודש הזה" : rest === 0n ? "הכול נספר ברווח החודש" : "אין תנועות שמחוץ לרווח"}
       body="תנועות שנכנסות לתזרים יופיעו כאן."
     />
-  );
-}
-
-/** The next page of lines, when the read has one. */
-export function CashLinesMore({ busy, onMore }: { busy: boolean; onMore: () => void }) {
-  return (
-    <div className="ui-page-pad">
-      <Button
-        variant="pill"
-        busy={busy}
-        onClick={() => {
-          onMore();
-        }}
-      >
-        עוד תנועות
-      </Button>
-    </div>
   );
 }
 

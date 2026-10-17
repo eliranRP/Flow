@@ -73,6 +73,8 @@
 }
 
 .ui-pp-chips {
+  display: flex;
+  gap: calc(var(--space-3) + var(--space-1) / 2);
   margin-top: calc(var(--space-4) + var(--space-1) / 2);
   padding: 0 var(--space-5);
 }
@@ -140,7 +142,7 @@
 
 /* The month rows and the month page's lines: 64px, the 17px name over the 15px line, 4px between. */
 .ui-pp-months .ui-row,
-.ui-pm-month .ui-row {
+.ui-pm-month .ui-lines-group .ui-project-list .ui-row {
   min-block-size: calc(var(--space-10) * 1.6);
   padding-block: 0;
 }
@@ -163,4 +165,17 @@
 .ui-pm-month .ui-lines-group-title,
 .ui-pm-month .ui-lines-group-sum {
   line-height: calc(var(--type-title-line) - 0.015);
+}
+
+/* The amount sits on the title's line, not centred in the row (the board top-aligns it). */
+.ui-pp-months .ui-row > .ui-num,
+.ui-pp-months .ui-row > .t-amount,
+.ui-pm-month .ui-row > .t-amount {
+  align-self: flex-start;
+  margin-block-start: calc(var(--space-2) + var(--space-1) / 4);
+}
+
+/* A day that left more than it took in shows its sum as a loss; a gain stays muted (the board). */
+.ui-pm-month .ui-lines-group-sum.ui-loss {
+  color: var(--color-bad);
 }

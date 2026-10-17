@@ -39,10 +39,7 @@ const ReviewScreen = lazy(() => screenLoaders.review().then((m) => ({ default: m
 const ChangeForm = lazy(() => screenLoaders.changeForm().then((m) => ({ default: m.ChangeForm })));
 const FiledTodayScreen = lazy(() => screenLoaders.filedToday().then((m) => ({ default: m.FiledTodayScreen })));
 const TransactionScreen = lazy(() => screenLoaders.transaction().then((m) => ({ default: m.TransactionScreen })));
-const CashMonthScreen = lazy(() => screenLoaders.cash().then((m) => ({ default: m.CashMonthScreen })));
 const CashLinesScreen = lazy(() => screenLoaders.cashLines().then((m) => ({ default: m.CashLinesScreen })));
-const CashHistoryScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ default: m.CashHistoryScreen })));
-const CashYearScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ default: m.CashYearScreen })));
 const ForecastScreen = lazy(() => screenLoaders.forecast().then((m) => ({ default: m.ForecastScreen })));
 const RecurringScreen = lazy(() => screenLoaders.recurring().then((m) => ({ default: m.RecurringScreen })));
 const RecurringChargeScreen = lazy(() => screenLoaders.recurringCharge().then((m) => ({ default: m.RecurringChargeScreen })));
@@ -178,10 +175,6 @@ function AppRoutes() {
                 </Route>
                 {/* FLOW-413: Home is the month's cash; its rows open the profit view, a month, and a month's lines. */}
                 <Route path="profit" element={<CompanyProfitScreen />} />
-                {/* FLOW-417: "לכל החודשים" opens the years, a year its months. */}
-                <Route path="cash/history" element={<CashHistoryScreen />} />
-                <Route path="cash/year/:year" element={<CashYearScreen />} />
-                <Route path="cash/:month" element={<CashMonthScreen />} />
                 <Route path="cash/:month/:side/:currency" element={<CashLinesScreen />} />
                 {ProjectRoutes()}
                 <Route element={<ReviewWithSheet />}>

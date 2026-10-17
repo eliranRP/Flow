@@ -70,36 +70,12 @@ test("a project opens its menu, categories, and a transaction", async ({ page })
   await expect(page).toHaveURL(/\/projects\?preview=1$/);
 });
 
-test("a project's by-month list opens a month, and Back steps back one screen at a time", async ({ page }) => {
-  // FLOW-419: the by-month row lives on the profit page, one tap in from the project's cash.
-  await page.goto("/e2e/project-detail?preview=1&section=profit");
-  await page.getByRole("link", { name: /לפי חודש/ }).click();
-  await expect(page).toHaveURL(/\/projects\/p1\/months\?preview=1&period=months3&at=\d{4}-\d{2}$/);
-  await page.getByRole("button", { name: /^חזרה/ }).first().click();
-  await expect(page).toHaveURL(/\/e2e\/project-detail\?preview=1&section=profit$/);
-  await page.goto("/e2e/project-months?preview=1");
-  await expect(page.getByRole("heading", { name: "לפי חודש" })).toBeVisible();
-  await page.getByRole("link", { name: /^ספטמבר, הפסד/ }).click();
-  await expect(page).toHaveURL(/\/projects\/p1\/profit\/2026-09\?preview=1&period=month&at=2026-09$/);
+test("a project's profit page opens a month, and Back steps back one screen at a time", async ({ page }) => {
+  await page.goto("/e2e/project-profit?preview=1");
+  await page.getByRole("link", { name: /^ספטמבר/ }).first().click();
+  await expect(page).toHaveURL(/\/projects\/[^/]+\/profit\/\d{4}-\d{2}\?preview=1&period=month&at=\d{4}-\d{2}$/);
   await page.goBack();
-  await expect(page).toHaveURL(/\/e2e\/project-months\?preview=1$/);
-});
-
-test("the project page lists one row per section and each opens its screen (FLOW-340 C)", async ({ page }) => {
-  // FLOW-419: these rows moved to the profit page.
-  await page.goto("/e2e/project-detail?preview=1&section=profit");
-  // FLOW-438: the lines are listed under the rows, so there is no תנועות row.
-  for (const name of ["הכנסות", "הוצאות", "לפי חודש"]) {
-    await expect(page.getByRole("link", { name: new RegExp(`^${name}`) })).toBeVisible();
-  }
-  await expect(page.getByRole("heading", { name: "תנועות" })).toBeVisible();
-  await page.getByRole("link", { name: /^הוצאות/ }).click();
-  await expect(page).toHaveURL(/section=expenses/);
-  await expect(page.getByRole("heading", { name: "הוצאות" })).toBeVisible();
-  await page.getByRole("button", { name: /^חזרה/ }).first().click();
-  await expect(page).toHaveURL(/\/e2e\/project-detail\?preview=1&section=profit$/);
-  await page.getByRole("link", { name: /^הכנסות/ }).click();
-  await expect(page).toHaveURL(/\/search\?.*dir=income/);
+  await expect(page).toHaveURL(/\/e2e\/project-profit\?preview=1$/);
 });
 
 test("a category row opens its transactions and the waiting line opens that project's queue", async ({ page }) => {

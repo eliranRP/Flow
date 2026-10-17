@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDayMonth, inclusiveDays, rangeLengthLabel } from "./ui/date-math";
+import { formatDayMonth } from "./ui/date-math";
 import {
   allTime,
   customRange,
@@ -12,7 +12,6 @@ import {
   periodPhrase,
   periodSearch,
   presetPeriod,
-  samePeriod,
   stepPeriod,
   thisMonth,
   windowLabel,
@@ -52,13 +51,6 @@ describe("period windows", () => {
     expect(stepPeriod(customRange("2026-01-01", "2026-02-01"), -1, now)).toBeNull();
     expect(presetPeriod("month", now, "2027-03")).toMatchObject({ anchor: "2026-10" });
   });
-
-  it("selects by kind and anchor, not by the Hebrew label", () => {
-    expect(samePeriod(thisMonth(now), presetPeriod("month", now), now)).toBe(true);
-    expect(samePeriod(thisMonth(now), monthPeriod("2026-09", now), now)).toBe(false);
-    expect(samePeriod(thisMonth(now), customRange("2026-10-01", "2026-10-08"), now)).toBe(false);
-    expect(samePeriod({ kind: "month", from: "2026-09-01", to: "2026-09-30" }, monthPeriod("2026-09", now), now)).toBe(true);
-  });
 });
 
 describe("period labels", () => {
@@ -94,7 +86,7 @@ describe("period in the URL", () => {
   it("round-trips every kind and ignores a broken value", () => {
     for (const period of [monthPeriod("2026-09", now), presetPeriod("months6", now), presetPeriod("year", now), allTime(), customRange("2026-01-02", "2026-03-04")]) {
       const back = periodFromSearch(new URLSearchParams(periodSearch(period, now)), now);
-      expect(back && samePeriod(back, period, now)).toBe(true);
+      expect(back).toMatchObject({ kind: period.kind, from: period.from, to: period.to });
     }
     expect(periodFromSearch(new URLSearchParams("period=custom&from=2026-05-01&to=2026-01-01"), now)).toBeNull();
     expect(periodFromSearch(new URLSearchParams("period=week"), now)).toBeNull();
@@ -106,10 +98,5 @@ describe("dates", () => {
   it("keeps the year when the row is outside the current year", () => {
     expect(formatDayMonth("2026-09-21", new Date("2026-09-28T12:00:00Z"))).toBe("21/09");
     expect(formatDayMonth("2025-03-01", new Date("2026-09-28T12:00:00Z"))).toBe("01/03/25");
-  });
-
-  it("uses the singular day label for a one-day range", () => {
-    expect(rangeLengthLabel(inclusiveDays("2026-09-01", "2026-09-01"))).toBe("הצגת יום אחד");
-    expect(rangeLengthLabel(2)).toBe("הצגת 2 ימים");
   });
 });

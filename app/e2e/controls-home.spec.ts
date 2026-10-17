@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import { cursorOf } from "./controls-helpers";
 
 test.use({ viewport: { width: 390, height: 844 } });
 // Preview-mode tests, one page per test (see controls-review.spec.ts).
@@ -53,47 +52,10 @@ test("the current tab stays put and capture rows stay disabled", async ({ page }
   await expect(page.getByRole("dialog", { name: "הוספה" })).toHaveCount(0);
 });
 
-test("home connects, filters the period, and opens a project", async ({ page }) => {
+test("home connects and opens a project", async ({ page }) => {
   await page.goto("/?preview=1");
   await page.getByRole("link", { name: "חיבור Mercury" }).click();
   await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
-
-  // The period pill sits on the project's profit section, which still hosts the period sheet and the range sheet.
-  await page.goto("/e2e/project-detail?preview=1&section=profit");
-  // FLOW-355 (A): one period pill on the band; it opens the period sheet, and a row applies on tap.
-  await expect(page.getByRole("radiogroup", { name: "תקופה" })).toHaveCount(0);
-  const label = page.getByRole("button", { name: /בחירת תקופה$/ });
-  const before = await label.textContent();
-  await label.click();
-  const periodSheet = page.getByRole("dialog", { name: "תקופה" });
-  await expect(periodSheet).toBeVisible();
-  await periodSheet.getByRole("radio", { name: "שנה" }).click();
-  await expect(periodSheet).toHaveCount(0);
-  await expect(label).not.toHaveText(before ?? "");
-  // FLOW-358: the pill names the year, so the label is the word alone.
-  await expect(page.getByRole("heading", { name: /^(רווח|הפסד|רווח והפסד)$/ })).toBeVisible();
-
-  await label.click();
-  await page.getByRole("button", { name: "טווח מותאם" }).click();
-  await expect(page.getByRole("dialog", { name: "תקופה" })).toHaveCount(0);
-  const range = page.getByRole("dialog", { name: "טווח מותאם" });
-  await expect(range).toBeVisible();
-  const year = range.getByRole("button", { name: "מתחילת השנה" });
-  await expect(year).toBeInViewport();
-  await year.click();
-  await expect(year).toHaveAttribute("aria-pressed", "true");
-  const forward = range.getByRole("button", { name: "חודש הבא" });
-  await expect(forward).toBeDisabled();
-  expect(await cursorOf(forward)).toBe("not-allowed");
-  await range.locator('button.ui-icon-btn[aria-label="חודש קודם"]').click();
-  await expect(forward).toBeEnabled();
-  const day = range.getByRole("group", { name: "טווח מותאם" }).getByRole("button").first();
-  await day.click();
-  await expect(day).toHaveAttribute("aria-selected", "true");
-  const apply = range.getByRole("button", { name: /הצגת/ });
-  await expect(apply).toBeInViewport();
-  await apply.click();
-  await expect(range).toHaveCount(0);
 
   // Home's pending row, then the company profit page's project row, then the Projects tab (the profit page has no link to the list).
   await page.goto("/e2e/cash?preview=1");

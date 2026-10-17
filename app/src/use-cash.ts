@@ -3,11 +3,8 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { CASH_MONTHS, cashMonthKey, type CashListSide } from "./cash";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
-import { monthPeriod } from "./period";
 import { israelToday } from "./ui/date-math";
 import { useHomePreview, type HomePreview } from "./preview";
-import type { CashRow } from "./ui/cash-rows";
-import { useOptionalBooks } from "./use-books";
 import { waitForAccessToken } from "./wait-for-session";
 
 /**
@@ -113,10 +110,3 @@ export function useCashLinesQuery(month: string, side: CashListSide, currency: s
   });
 }
 
-/** "רווח החודש" opens the profit view on its month: the shared period follows before the tap navigates. */
-export function useOpenCashRow(): (row: CashRow) => void {
-  const books = useOptionalBooks();
-  return (row) => {
-    if (row.profitMonth != null) books?.setPeriod(monthPeriod(row.profitMonth));
-  };
-}

@@ -7,7 +7,6 @@ import { useHomePreview } from "../../preview";
 import { cash as devCash, cashRow as devCashRow, investment as devInvestment, months as devMonths, project as devProject } from "../project-cash-sample";
 import { devProjectsCash } from "../projects-sample";
 import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY } from "../../forecast-sample";
-import { ProfitMonthsScreen } from "../../screens/profit-months";
 import { devDashboard } from "./home";
 import { AddForm } from "../../screens/add-sheet";
 import type { DevRoute } from "./types";
@@ -97,8 +96,8 @@ export function DevProjectDetail() {
     <OpenProjectMenu sheet={params.get("sheet")} />
     <ProjectDetailScreen
       sampleMenuRow={menuRow}
-      // FLOW-340 C: `?section=` draws the screen a row opens, on the same sample (FLOW-419: `profit` too).
-      section={section === "profit" || section === "expenses" || section === "investment" || section === "loans" || section === "transactions" ? section : "overview"}
+      // FLOW-340 C: `?section=` draws the screen a row opens, on the same sample .
+      section={section === "expenses" || section === "investment" || section === "loans" || section === "transactions" ? section : "overview"}
       sectionTo={(target) => (target === "overview" ? "/e2e/project-detail?preview=1" : `/e2e/project-detail?preview=1&section=${target}`)}
       sampleExpected={params.get("expected") === "none" ? SAMPLE_EXPECTED_EMPTY : SAMPLE_EXPECTED}
       // `?budget=1` draws the flip with its budget (the board's flip frame, invented names and figures).
@@ -109,42 +108,6 @@ export function DevProjectDetail() {
     />
     {params.get("add") === "1" ? <AddForm /> : null}
     </>
-  );
-}
-
-/** Dev-only months for the "לפי חודש" page: one open month, a loss and a profit. */
-/** `?empty=1` is a project with no month yet (review-cycle fixture, FLOW-335). */
-export function DevProjectMonths() {
-  const [params] = useSearchParams();
-  if (params.get("empty") === "1") {
-    return (
-      <ProfitMonthsScreen
-        sample={{
-          projectName: "שיפוץ הרצל 12",
-          data: { basis: "invoiced", from: null, to: null, project_id: "p1", after_overhead: false, months: [], by_currency: [] },
-        }}
-      />
-    );
-  }
-  return (
-    <ProfitMonthsScreen
-      sample={{
-        projectName: "שיפוץ הרצל 12",
-        data: {
-          basis: "invoiced",
-          from: "2026-08-01",
-          to: "2026-10-08",
-          project_id: "p1",
-          after_overhead: false,
-          months: [
-            { month: "2026-10", from: "2026-10-01", to: "2026-10-08", open: true, by_currency: [{ currency: "ILS", income_minor: 0n, expense_minor: 40_000n, profit_minor: -40_000n }] },
-            { month: "2026-09", from: "2026-09-01", to: "2026-09-30", open: false, by_currency: [{ currency: "ILS", income_minor: 0n, expense_minor: 120_000n, profit_minor: -120_000n }] },
-            { month: "2026-08", from: "2026-08-01", to: "2026-08-31", open: false, by_currency: [{ currency: "ILS", income_minor: 1_000_000n, expense_minor: 300_000n, profit_minor: 700_000n }] },
-          ],
-          by_currency: [{ currency: "ILS", income_minor: 1_000_000n, expense_minor: 460_000n, profit_minor: 540_000n }],
-        },
-      }}
-    />
   );
 }
 
@@ -212,5 +175,4 @@ export const projectsRoutes: DevRoute[] = [
   { path: "projects", element: <DevProjects /> },
   { path: "project-detail", element: <DevProjectDetail /> },
   { path: "project-category", element: <DevProjectCategory /> },
-  { path: "project-months", element: <DevProjectMonths /> },
 ];

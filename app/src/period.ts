@@ -9,8 +9,6 @@ export type PeriodKind = "month" | "months3" | "months6" | "year" | "all" | "cus
 
 export type PresetKind = Exclude<PeriodKind, "custom">;
 
-export const PRESET_KINDS: readonly PresetKind[] = ["month", "months3", "months6", "year", "all"];
-
 /** Identity is the kind and the anchor, plus the dates when the kind is custom. The label is derived. */
 export interface PeriodChoice {
   kind: PeriodKind;
@@ -128,13 +126,6 @@ export function stepPeriod(period: PeriodChoice, delta: -1 | 1, now = new Date()
   return presetPeriod(kind, now, next);
 }
 
-export function samePeriod(left: PeriodChoice, right: PeriodChoice, now = new Date()): boolean {
-  if (left.kind !== right.kind) return false;
-  if (left.kind === "all") return true;
-  if (left.kind === "custom") return left.from === right.from && left.to === right.to;
-  return anchorOf(left, now) === anchorOf(right, now);
-}
-
 /** The preset's name on the segmented control. */
 export function presetLabel(kind: PresetKind): string {
   switch (kind) {
@@ -234,12 +225,6 @@ export function periodPhrase(period: PeriodChoice, now = new Date(), scope: Peri
       return unreachable;
     }
   }
-}
-
-/** The hint under a row of the period sheet. */
-export function periodHint(period: PeriodChoice, now = new Date()): string | undefined {
-  if (period.kind === "all") return "כל החשבוניות";
-  return windowLabel(period, now);
 }
 
 /** The period in a URL, so a project and its "לפי חודש" page can be linked and restored. */

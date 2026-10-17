@@ -74,6 +74,8 @@ export type ListRowProps =
     amountDirection?: "expense" | "income";
     /** Green money in without the plus (the open-invoices list). */
     amountSignless?: boolean;
+    /** A plus before a positive amount, in the row's own colour (a project's month profit). */
+    amountPlus?: boolean;
     /** The Projects list's amount (board): signed, green when money in, muted at zero, cents drawn small and raised. */
     signed?: boolean;
     /** A small mark before the amount. The project page's up mark (FLOW-401). */
@@ -573,7 +575,7 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
       currency={props.currency}
       size="list"
       loss={props.loss === true}
-      direction={props.amountSignless === true ? undefined : props.amountDirection}
+      direction={props.amountSignless === true ? undefined : props.amountDirection ?? (props.amountPlus === true && props.agorot > 0n ? "income" : undefined)}
       income={props.amountDirection === "income"}
       signless={props.amountSignless === true}
     />

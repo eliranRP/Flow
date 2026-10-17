@@ -7,7 +7,6 @@ import { AddForm } from "../../screens/add-sheet";
 import { CashHomeSkeleton } from "../../screens/home-skeleton";
 import { chargeChangeViews } from "../../forecast";
 import { CashLinesScreen } from "../../screens/cash-lines-screen";
-import { CashMonthScreen } from "../../screens/cash-screens";
 import {
   sampleBoardCashLines,
   sampleBoardCashMonths,
@@ -18,10 +17,7 @@ import {
   sampleCashUsdLoss,
   sampleCashUsdToDay,
   sampleCashUsdYear,
-  sampleCashYearMonths,
-  sampleCashYears,
 } from "../cash-sample";
-import { CashHistoryScreen, CashYearScreen } from "../../screens/cash-history";
 import { cashMonthKey } from "../../cash";
 import { SAMPLE_MISSING_BILLS, SAMPLE_RECURRING_CHANGES } from "../../forecast-sample";
 import type { DevRoute } from "./types";
@@ -145,12 +141,6 @@ export function DevCashLoading() {
   return <CashHomeSkeleton company="Northwind Test Co" />;
 }
 
-/** FLOW-413: the earlier month's cash page. */
-export function DevCashMonth() {
-  const data = sampleCashMonths();
-  return <CashMonthScreen sample={data} monthKey={cashMonthKey(data.months[1]?.month ?? "")} />;
-}
-
 /** FLOW-413: this month's יצא lines; `?side=in` shows נכנס, `?side=kept` לא נספר ברווח (FLOW-418). FLOW-366: `?order=` and `?pending=1`. */
 export function DevCashLines() {
   const [params] = useSearchParams();
@@ -181,24 +171,9 @@ export function DevCashLines() {
   );
 }
 
-/** FLOW-417: the cash history, years then months. `?currencies=two` adds a USD line. */
-export function DevCashHistory() {
-  const [params] = useSearchParams();
-  return <CashHistoryScreen sample={sampleCashYears(new Date(), params.get("currencies") === "two" ? "two" : "one")} />;
-}
-
-/** FLOW-417: last year's page: its net, נכנס, יצא and its months. */
-export function DevCashYear() {
-  const months = sampleCashYearMonths();
-  return <CashYearScreen sample={{ years: sampleCashYears(), months }} year={Number(months.months[0]?.month.slice(0, 4))} />;
-}
-
 export const homeRoutes: DevRoute[] = [
   { path: "cash", element: <DevCash /> },
   { path: "cash-empty", element: <DevCashEmpty /> },
   { path: "cash-loading", element: <DevCashLoading /> },
-  { path: "cash-month", element: <DevCashMonth /> },
   { path: "cash-lines", element: <DevCashLines /> },
-  { path: "cash-history", element: <DevCashHistory /> },
-  { path: "cash-year", element: <DevCashYear /> },
 ];

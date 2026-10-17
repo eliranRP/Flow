@@ -1,7 +1,7 @@
 // @vitest-environment node
 import type { ProjectRow } from "@flow/shared";
 import { describe, expect, it } from "vitest";
-import { profitSign, projectRows } from "./by-currency";
+import { projectRows } from "./by-currency";
 
 function project(overrides: Partial<ProjectRow> = {}): ProjectRow {
   return {
@@ -53,15 +53,4 @@ describe("empty period in a non-shekel company", () => {
   });
 
 
-});
-
-describe("profitSign (FLOW-339)", () => {
-  it("calls a profit in one currency and a loss in another mixed", () => {
-    expect(profitSign([100n, -50n])).toBe("mixed");
-    expect(profitSign([-100n, -50n])).toBe("loss");
-    expect(profitSign([0n, -50n])).toBe("loss");
-    expect(profitSign([0n, 50n])).toBe("profit");
-    expect(profitSign([0n])).toBe("profit");
-    expect(profitSign([])).toBe("profit");
-  });
 });

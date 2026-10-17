@@ -42,8 +42,6 @@ export const readRpcs = new Set([
   "receipt_match",
   "project_cash_month_lines",
   "project_cash_months",
-  "project_cash_year_months",
-  "project_cash_years",
   "project_category_months",
   "project_waiting",
   "projects_cash_month",

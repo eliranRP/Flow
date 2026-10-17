@@ -4,13 +4,6 @@
   color: var(--color-text-secondary);
 }
 
-.ui-ptr {
-  display: grid;
-  place-items: center;
-  min-block-size: var(--touch-min);
-  color: var(--color-on-band);
-}
-
 .ui-change-summary {
   display: flex;
   flex-direction: column;
