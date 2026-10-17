@@ -402,13 +402,46 @@
   background: var(--color-accent);
 }
 
-/* The choice sheet (pace, currency, basis, theme) draws the board's radio: a solid accent disc
-   for the chosen row, and no dividers between its rows. */
+/* The choice sheet (pace, currency, basis, theme) draws the board's choice: one card per row, 14px round, the
+   chosen row tinted, a solid accent disc for it, and no dividers. A row is 56px at least, 8px above and below
+   its text; the title is 16px and the note 12px under it, 2px apart. */
+.ui-choice-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 .ui-choice-sheet .ui-radio-row {
-  border-bottom: 0;
+  min-block-size: 56px;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-inset-row);
+  border: 0;
+  border-radius: var(--radius-toast);
+  gap: var(--space-3);
+}
+
+.ui-choice-sheet .ui-radio-row[aria-checked="true"] {
+  background: var(--color-tint);
+}
+
+.ui-choice-sheet .ui-row-text {
+  gap: calc(var(--space-1) / 2);
+}
+
+.ui-choice-sheet .ui-row-title {
+  font-size: var(--type-btn-2-size);
+  line-height: var(--type-btn-line);
+}
+
+.ui-choice-sheet .ui-radio-desc {
+  font-size: calc(var(--type-cents-size) + 1px);
+  line-height: calc(var(--type-cents-size) * 1.45);
 }
 
 .ui-choice-sheet .ui-radio {
+  inline-size: 22px;
+  block-size: 22px;
+  border-width: 2px;
   border-radius: 50%;
 }
 
