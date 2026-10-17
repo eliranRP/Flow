@@ -264,10 +264,10 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
   );
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/onboarding");
+  await page.goto("/setup/1");
   await page.getByLabel("שם העסק").fill("Flow Test");
   await page.getByRole("button", { name: "המשך" }).click();
-  await expect(page.getByText("חברו את הבנק")).toBeVisible();
+  await expect(page).toHaveURL(/\/setup\/2$/);
 
   const operationsBefore = operationsUsed(await sumit("/website/companies/listquotas/", {}));
 

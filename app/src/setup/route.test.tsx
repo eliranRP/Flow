@@ -1,13 +1,13 @@
 import type { Session } from "@supabase/supabase-js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { RouterProvider, createMemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { ToastProvider } from "../ui/toast";
 import { BooksProvider } from "../use-books";
 import { SetupStepScreen, SetupWelcomeScreen } from "./route-screens";
-import { SETUP_TOTAL, SKIP_SHEET_CONFIRM, WELCOME_LATER, WELCOME_TITLE } from "./copy";
+import { SETUP_TOTAL, SKIP_ALL, SKIP_SHEET_CONFIRM, WELCOME_LATER, WELCOME_TITLE } from "./copy";
 import { myCompaniesFor } from "../team-test-support";
 
 const userId = "user-1";
@@ -26,7 +26,7 @@ const invoke = vi.hoisted(() => vi.fn(
     Promise.resolve({ data: null, error: null }),
 ));
 
-const created = vi.hoisted(() => ({ calls: [] as unknown[] }));
+const created = vi.hoisted(() => ({ calls: [] as unknown[], rpcs: [] as string[] }));
 
 const dashboard = {
   company_id: companyId,
@@ -71,6 +71,7 @@ const supabase = {
     },
   },
   rpc: (name: string, args?: unknown) => {
+    created.rpcs.push(name);
     if (name === "list_my_companies") return Promise.resolve({ data: myCompaniesFor(userId, gate.owner), error: null });
     if (name === "create_company") {
       created.calls.push(args);
@@ -103,6 +104,7 @@ function renderRoute(path: string, entries: string[] = [path]) {
   const router = createMemoryRouter(
     [
       { path: "/", element: <p>home</p> },
+      { path: "/projects", element: <p>projects</p> },
       { path: "/setup/welcome", element: <SetupWelcomeScreen /> },
       { path: "/setup/:step", element: <SetupStepScreen /> },
       { path: "/settings", element: <p>settings</p> },
@@ -131,6 +133,7 @@ describe("setup route (FLOW-514)", () => {
     gate.owner = userId;
     gate.company = true;
     created.calls.length = 0;
+    created.rpcs.length = 0;
     invoke.mockReset();
     window.history.replaceState(null, "");
   });
@@ -161,11 +164,57 @@ describe("setup route (FLOW-514)", () => {
     expect(SETUP_TOTAL).toBe(7);
   });
 
+  it("sends a viewer home from the new-company step", async () => {
+    gate.owner = "other";
+    const viewer = renderRoute("/setup/1?new=1");
+    await waitFor(() => {
+      expect(viewer.state.location.pathname).toBe("/");
+    });
+    expect(screen.queryByLabelText("שם העסק")).not.toBeInTheDocument();
+  });
+
   it("sends a viewer home from a step", async () => {
     gate.owner = "other";
     const viewer = renderRoute("/setup/2");
     await waitFor(() => {
       expect(viewer.state.location.pathname).toBe("/");
+    });
+  });
+
+  describe("a new company from the company sheet (?new=1)", () => {
+    it("shows an empty name, creates a company (never renames) and goes on to step 2", async () => {
+      const router = renderRoute("/setup/1?new=1");
+      const field = await screen.findByLabelText("שם העסק");
+      expect(field).toHaveValue("");
+      fireEvent.change(field, { target: { value: "בטא" } });
+      fireEvent.click(screen.getByRole("button", { name: "המשך" }));
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe("/setup/2");
+      });
+      expect(router.state.location.search).toBe("");
+      expect(created.calls).toEqual([{ p_name: "בטא", p_vat_registered: true }]);
+      expect(created.rpcs).not.toContain("rename_company");
+      expect(created.rpcs).toContain("apply_starter_categories");
+    });
+
+    it("הקודם goes back to where the owner came from", async () => {
+      const router = renderRoute("/projects");
+      await waitFor(() => { expect(screen.getByText("projects")).toBeInTheDocument(); });
+      await act(() => router.navigate("/setup/1?new=1"));
+      fireEvent.click(await screen.findByRole("button", { name: "הקודם" }));
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe("/projects");
+      });
+    });
+
+    it("skip all creates another company and goes home", async () => {
+      const router = renderRoute("/setup/1?new=1");
+      fireEvent.click(await screen.findByText(SKIP_ALL));
+      fireEvent.click(await screen.findByRole("button", { name: SKIP_SHEET_CONFIRM }));
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe("/");
+      });
+      expect(created.calls).toEqual([{ p_name: "העסק שלי", p_vat_registered: true }]);
     });
   });
 });

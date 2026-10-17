@@ -66,8 +66,6 @@ import {
   projectsPrimary,
 } from "./copy";
 import { SampleCard } from "./sample-card";
-import { CONNECT_MOVIE, JEV_MOVIE, LOANS_MOVIE, installMovie } from "./movie-scenes";
-import { SetupMovie } from "./movie";
 import { NewLoanSheet, openNewLoan } from "./loan-entry";
 import { OnboardingFrame } from "./shell";
 import { useSetupSuggestions } from "./suggestions";
@@ -96,6 +94,7 @@ export function StepBusiness({
   companyId,
   initial,
   onDone,
+  onBack,
   onSkipAll,
 }: StepProps & { companyId: string | null; initial: BusinessInitial | null }) {
   const [currency, setCurrency] = useState<"USD" | "ILS">(initial?.currency ?? "USD");
@@ -106,7 +105,6 @@ export function StepBusiness({
   const form = useCompanyForm({
     initialName: initial?.name ?? "",
     namePlaceholder: BUSINESS_NAME_PLACEHOLDER,
-    hideVat: true,
     onCreated: (created) => {
       // create_company succeeded: the first settings follow, then the run starts.
       void (async () => {
@@ -171,6 +169,7 @@ export function StepBusiness({
       step={1}
       title={STEP_TITLE[1] ?? ""}
       lead={BUSINESS_LEAD}
+      onBack={onBack}
       onSkipAll={onSkipAll}
       primary={
         <Button type="submit" form="setup-business" full disabled={empty} busy={saving || form.busy}>
@@ -272,7 +271,6 @@ export function StepConnect({
       }
       secondary={<Button type="button" variant="link" full onClick={onSkipStep}>{SKIP_STEP}</Button>}
     >
-      <SetupMovie scenes={CONNECT_MOVIE.scenes} label={CONNECT_MOVIE.label} />
       <div className="ui-onb-card">
         {(["mercury", "sumit"] as const).map((kind) => {
           const row = rowState(kind, kind === "mercury" ? mercuryConnected : sumitConnected);
@@ -465,7 +463,6 @@ export function StepLoans({
       }
       secondary={total === 0 ? undefined : <Button type="button" variant="link" full onClick={onSkipStep}>{SKIP_STEP}</Button>}
     >
-      {total === 0 ? <SetupMovie scenes={LOANS_MOVIE.scenes} label={LOANS_MOVIE.label} /> : null}
       {picks.length > 0 ? (
         <div className="ui-onb-card">
           {picks.map((lender) => (
@@ -532,7 +529,6 @@ export function StepJev({ onDone, onSkipStep, onSkipAll, onBack }: StepProps) {
       primary={<Button type="button" full busy={saving} onClick={save}>{NEXT}</Button>}
       secondary={<Button type="button" variant="link" full onClick={onSkipStep}>{SKIP_STEP}</Button>}
     >
-      <SetupMovie scenes={JEV_MOVIE.scenes} label={JEV_MOVIE.label} />
       <div className="ui-onb-card ui-onb-switch">
         <Toggle label={JEV_LABEL} hint={JEV_HINT} checked={on} busy={saving} onChange={setOn} />
       </div>
@@ -609,7 +605,6 @@ export function StepInstall({
       }
       secondary={<Button type="button" variant="link" full onClick={onSkipStep}>{INSTALL_LATER}</Button>}
     >
-      <SetupMovie scenes={installMovie().scenes} label="סרטון קצר" />
       <div className="ui-onb-card ui-onb-switch">
         <Toggle label={NOTIFY_LABEL} hint={NOTIFY_HINT} checked={notify} onChange={setNotify} />
       </div>

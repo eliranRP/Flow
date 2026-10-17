@@ -1,13 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as supabaseModule from "../lib/supabase";
 import { StepBusiness } from "../setup/steps";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
-import { OnboardingScreen } from "./flow-screens";
 import { RENAME_CONTROL_CHAR, RENAME_TOO_LONG, RENAME_TOO_SHORT } from "./rename-company";
 
 /** FLOW-606: the business step and onboarding check the create_company rule on the field. */
@@ -38,16 +37,6 @@ function wrap(node: ReactNode, entry = "/") {
   );
 }
 
-function onboarding(initialName?: string) {
-  return wrap(
-    <Routes>
-      <Route path="/onboarding" element={<OnboardingScreen initialName={initialName} />} />
-      <Route path="/" element={<h1>בית</h1>} />
-    </Routes>,
-    "/onboarding",
-  );
-}
-
 function field(): HTMLInputElement {
   return screen.getByLabelText("שם העסק");
 }
@@ -62,12 +51,11 @@ afterEach(() => {
 
 const stepNoop = { onDone: () => undefined, onStamp: () => undefined, onSkipStep: () => undefined, onSkipAll: () => undefined };
 
-const forms = [
-  ["onboarding", (initialName?: string) => onboarding(initialName)],
-  ["setup business step", (initialName?: string) => wrap(<StepBusiness companyId={null} initial={initialName == null ? null : { name: initialName, currency: "ILS", basis: "paid" }} {...stepNoop} />)],
-] as const;
+function show(initialName?: string) {
+  return wrap(<StepBusiness companyId={null} initial={initialName == null ? null : { name: initialName, currency: "ILS", basis: "paid" }} {...stepNoop} />);
+}
 
-describe.each(forms)("%s company name", (_label, show) => {
+describe("setup business step company name", () => {
   it("refuses a pasted tab on the field and does not call create_company", () => {
     const calls = mockRpc();
     show();
@@ -120,21 +108,5 @@ describe.each(forms)("%s company name", (_label, show) => {
       expect(creates(calls)).toEqual([{ name: "create_company", args: { p_name: "סטודיו אלפא", p_vat_registered: true } }]);
     });
     expect(screen.queryByText(RENAME_CONTROL_CHAR)).not.toBeInTheDocument();
-  });
-
-  // FLOW-514 Q2: step 1 hides the VAT question (registered by default), so only onboarding has it.
-  it.runIf(_label === "onboarding")("describes the business type with its own hint and sends the exempt choice (FLOW-506)", async () => {
-    const calls = mockRpc();
-    show();
-    const exempt = screen.getByRole("radio", { name: "עוסק פטור" });
-    fireEvent.click(exempt);
-    expect(screen.getByText("עוסק פטור: בלי מע״מ.")).toBeInTheDocument();
-    expect(screen.queryByText("עוסק מורשה: מע״מ 18%.")).not.toBeInTheDocument();
-    expect(screen.getByRole("radiogroup", { name: "סוג העסק" })).toHaveAccessibleDescription("עוסק פטור: בלי מע״מ.");
-    fireEvent.change(field(), { target: { value: "סטודיו אלפא" } });
-    fireEvent.click(screen.getByRole("button", { name: "המשך" }));
-    await waitFor(() => {
-      expect(creates(calls)).toEqual([{ name: "create_company", args: { p_name: "סטודיו אלפא", p_vat_registered: false } }]);
-    });
   });
 });

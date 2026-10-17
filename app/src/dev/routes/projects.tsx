@@ -157,7 +157,6 @@ const devLinks: Array<[string, string]> = [
   ["/settings/connections?preview=1", "חיבורים לדוגמה"],
   ["/loans?preview=1", "הלוואות לדוגמה"],
   ["/unpaid?preview=1", "חשבוניות לדוגמה"],
-  ["/onboarding?preview=1", "הצטרפות לדוגמה"],
   ["/install?preview=1", "התקנה לדוגמה"],
   ["/review/change?preview=1", "שינוי לדוגמה"],
   ["/e2e/split-category?save=fail", "פיצול שנכשל"],

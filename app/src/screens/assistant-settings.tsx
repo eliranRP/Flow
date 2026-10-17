@@ -303,7 +303,7 @@ export function AiConnectionPage({
       <ConnectionPage title="חיבור ל־AI" subtitle={headerSubtitle} backTo={backTo}>
         <div className="ui-stack">
           <p>כדי לחבר עוזר צריך עסק.</p>
-          <TextLink to={`/onboarding?return=${encodeURIComponent(backTo)}`}>פרטי העסק</TextLink>
+          <TextLink to="/setup/1">פרטי העסק</TextLink>
         </div>
       </ConnectionPage>
       </ViewerScope>

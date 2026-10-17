@@ -11,7 +11,6 @@ const pages: Array<[string, string]> = [
   ["/settings/categories", "קטגוריות"],
   ["/settings/connections", "חיבורים"],
   ["/loans", "הלוואות"],
-  ["/onboarding", "פרטי העסק"],
   ["/install", "התקנת Flow"],
   ["/transactions/1", "פרטי תנועה"],
   ["/transactions/1/split-category", "פיצול"],

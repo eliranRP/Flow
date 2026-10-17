@@ -16,7 +16,6 @@ import {
   CategoriesScreen,
   ChangeForm,
   ConnectionsScreen,
-  OnboardingScreen,
   ProjectDetailScreen,
   ProjectsScreen,
   ReviewQueue,
@@ -242,17 +241,6 @@ describe("viewer gates", () => {
       );
       expect(screen.getByRole("heading", { name: "תנועה" })).toBeInTheDocument();
       expect(screen.queryByRole("heading", { name: "פיצול" })).not.toBeInTheDocument();
-    }],
-    ["V21", "onboarding leaves the screen", () => {
-      viewer(
-        <Routes>
-          <Route path="/onboarding" element={<OnboardingScreen />} />
-          <Route path="/" element={<h1>בית</h1>} />
-        </Routes>,
-        "/onboarding",
-      );
-      expect(screen.getByRole("heading", { name: "בית" })).toBeInTheDocument();
-      expect(screen.queryByRole("heading", { name: "פרטי העסק" })).not.toBeInTheDocument();
     }],
     ["V22", "empty home hides connect", () => {
       viewer(<HomeScreen />, "/?preview=1");

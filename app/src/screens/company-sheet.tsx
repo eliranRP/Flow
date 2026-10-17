@@ -9,8 +9,8 @@ import { useToast } from "../ui/toast";
 import { useWrite } from "../use-write";
 import { useInviteActions } from "./invite-actions";
 
-/** Where "+ עסק חדש" goes: the company form, back to Home once it is made. */
-export const NEW_COMPANY_PATH = "/onboarding?return=%2F";
+/** Where "+ עסק חדש" goes: the setup's business step in new-company mode (FLOW-514). */
+export const NEW_COMPANY_PATH = "/setup/1?new=1";
 
 function InviteBlock({
   invite,

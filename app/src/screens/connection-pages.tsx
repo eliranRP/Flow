@@ -13,7 +13,7 @@ import { useSumitConnect } from "../use-sumit-connect";
 import { useMercuryConnect } from "../use-mercury-connect";
 import { REFRESH_DONE, SUMIT_REFRESH_KEYS, useSumitRefresh } from "../use-sumit-refresh";
 import { useSyncSettled } from "../use-sync-settled";
-import { MERCURY_REFRESH_KEYS, onboardingFromSettings } from "./connections-status";
+import { MERCURY_REFRESH_KEYS } from "./connections-status";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { Button } from "../ui/button";
 import { ImportFromField } from "../ui/import-from-field";
@@ -242,7 +242,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
       <ConnectionPage title={copy.title} subtitle={copy.subtitle} backTo={backTo}>
         <div className="ui-stack">
           <p>כדי לחבר את {copy.title} צריך עסק.</p>
-          <TextLink to={onboardingFromSettings(search, provider)}>פרטי העסק</TextLink>
+          <TextLink to="/setup/1">פרטי העסק</TextLink>
         </div>
       </ConnectionPage>
       </ViewerScope>

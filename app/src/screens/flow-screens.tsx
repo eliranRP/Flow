@@ -6,7 +6,6 @@ export { resetReviewListFocus, ReviewScreen, ReviewAllList, ProjectWaitingList }
 export { type ReviewPreviewWrite, ReviewQueue } from "./review-queue";
 export { ChangeForm } from "./change-form";
 export { AddForm } from "./add-sheet";
-export { OnboardingScreen } from "./onboarding-screen";
 export { ProjectsScreen } from "./projects-screen";
 export { ProjectDetailScreen } from "./project-detail-screen";
 export { projectMonthAmount } from "./project-transactions";
