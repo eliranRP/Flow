@@ -10,7 +10,8 @@
 }
 
 .ui-charges-title {
-  margin: 0;
+  /* board: the usual line sits about 8px under the title, not the column gap of 12px. */
+  margin: 0 0 calc(var(--space-1) * -1);
   color: var(--color-text);
   font-size: var(--type-line2-size);
   line-height: var(--type-line2-line);
