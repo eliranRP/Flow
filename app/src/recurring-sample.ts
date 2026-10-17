@@ -19,10 +19,10 @@ const row = (over: Partial<ScheduleRow> & Pick<ScheduleRow, "party_id" | "party_
 
 export const RECURRING_FIXTURE: ScheduleRow[] = [
   row({ party_id: "power", party_name: "Brightline Power", state: "late", typical_amount_minor: 18600, typical_day: 3, project_name: "Birch Lane", category_name: "חשמל ומים" }),
+  row({ party_id: "insurance", party_name: "Keystone Mutual", state: "soon", typical_amount_minor: 21200, typical_day: 20, project_name: "Juniper Ct", category_name: "ביטוח ומסים" }),
   row({ party_id: "rent-elm", party_name: "Elm Row unit 2", direction: "income", state: "late", typical_amount_minor: 165000, typical_day: 1, project_name: "Elm Row", category_name: "שכירות" }),
   row({ party_id: "hoa", party_name: "Juniper Pointe HOA", state: "soon", typical_amount_minor: 31000, typical_day: 15, project_name: "Juniper Ct", category_name: "אחזקה" }),
   row({ party_id: "internet", party_name: "Harborlink Internet", state: "soon", typical_amount_minor: 13000, typical_day: 18, category_name: "משרד" }),
-  row({ party_id: "insurance", party_name: "Keystone Mutual", state: "soon", typical_amount_minor: 21200, typical_day: 20, project_name: "Juniper Ct", category_name: "ביטוח ומסים" }),
   row({ party_id: "waste", party_name: "Clearway Waste", state: "soon", typical_amount_minor: 8800, typical_day: 25, project_name: "Sable Ct", category_name: "אחזקה" }),
   row({ party_id: "software", party_name: "Docsuite", state: "soon", typical_amount_minor: 3600, typical_day: 28, category_name: "משרד" }),
   row({ party_id: "water", party_name: "Bayside Water Utility", state: "arrived", typical_amount_minor: 10300, amount_minor: 14200, typical_day: 5, project_name: "Elm Row", category_name: "חשמל ומים" }),
