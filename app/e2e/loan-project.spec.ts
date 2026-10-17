@@ -139,8 +139,7 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
   await page.goto("/loans");
   await page.getByRole("button", { name: new RegExp(`^${lender}, .*פרויקט א`) }).click();
   await expect(page.getByRole("heading", { name: lender })).toBeVisible();
-  // FLOW-434: the project row lives on the פרטי הלוואה page.
-  await page.getByRole("link", { name: /^פרטי הלוואה/ }).click();
+  // FLOW-139c: the project row is in the loan page's terms card (the פרטי הלוואה page is gone).
   await page.getByRole("button", { name: /^פרויקט פרויקט א/ }).click();
   await pickProject(page, "פרויקט ב");
   await expect(page.getByRole("status").filter({ hasText: "ההלוואה שויכה לפרויקט" })).toBeVisible();
