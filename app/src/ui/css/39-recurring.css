@@ -239,5 +239,5 @@
 }
 
 .ui-recurring-skeleton-card {
-  border-radius: calc(var(--radius-block) + var(--space-1) / 2);
+  border-radius: var(--radius-input);
 }
