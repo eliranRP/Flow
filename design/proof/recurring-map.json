@@ -1,3 +1,5 @@
 {
-  "Recurring": "/e2e/recurring"
+  "Recurring": "/e2e/recurring",
+  "RecurringSwipe": "/e2e/recurring?preset=swipe",
+  "RecurringIgnored": "/e2e/recurring?preset=ignored"
 }

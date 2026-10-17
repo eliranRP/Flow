@@ -1,4 +1,4 @@
-import type { RecurringPace } from "@flow/shared";
+import type { MissingBill, RecurringPace } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabase } from "./lib/supabase";
 import type { RecurringLine } from "./recurring-layout";
@@ -45,6 +45,35 @@ export function scheduleLines(rows: readonly ScheduleRow[]): RecurringLine[] {
       day: row.typical_day,
     };
   });
+}
+
+/** The suggestion `missing_bills` carries for a late bill (decision 0179): a party that may be this one. */
+export type RecurringSuggestion = NonNullable<MissingBill["suggestion"]>;
+
+/** A late charge that still alerts: the key its dismissal takes (null when the read failed), and its match. */
+export type RecurringAlert = { alertKey: string | null; suggestion: RecurringSuggestion | null };
+
+/**
+ * FLOW-447b: which late charges still alert. `missing_bills` holds the late bills the user has not
+ * dismissed, so a late row found there is active and a late row missing from it is dismissed.
+ * With no missing data (the read failed or is loading) every late row stays active with no key,
+ * so an error never hides an alert.
+ */
+export function alertState(rows: readonly ScheduleRow[], missing: readonly MissingBill[] | undefined): { active: Map<string, RecurringAlert>; dismissed: Set<string> } {
+  const active = new Map<string, RecurringAlert>();
+  const dismissed = new Set<string>();
+  const late = rows.filter((row) => row.state === "late");
+  if (missing === undefined) {
+    for (const row of late) active.set(row.party_id, { alertKey: null, suggestion: null });
+    return { active, dismissed };
+  }
+  const bills = new Map(missing.filter((bill) => bill.party_id != null).map((bill) => [`${String(bill.direction)}:${String(bill.party_id)}`, bill] as const));
+  for (const row of late) {
+    const bill = bills.get(`${row.direction}:${row.party_id}`);
+    if (bill == null) dismissed.add(row.party_id);
+    else active.set(row.party_id, { alertKey: bill.alert_key ?? null, suggestion: bill.suggestion ?? null });
+  }
+  return { active, dismissed };
 }
 
 function magnitude(minor: number): bigint {
