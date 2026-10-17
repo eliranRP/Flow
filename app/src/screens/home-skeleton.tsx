@@ -22,9 +22,10 @@ function CashSkeletonRow() {
 /**
  * FLOW-364 / FLOW-375: Home's cash while it loads, in the shape it lands in: the band (the company, the icons
  * and the month pill are real; the figures are band bars), the split card and the attention box at the loaded
- * Home's geometry, then the board's third block (a title and three rows).
+ * Home's geometry, then the board's third block (a title and three rows). A known `company` shows its name and
+ * initial in the band, as the board's loading frame does, in place of the label bar.
  */
-export function CashHomeSkeleton({ preview = false, example }: { preview?: boolean; example?: ReactNode }) {
+export function CashHomeSkeleton({ preview = false, example, company }: { preview?: boolean; example?: ReactNode; company?: string }) {
   const search = usePreviewSearch();
   const currentKey = israelToday().slice(0, 7);
   return (
@@ -39,11 +40,17 @@ export function CashHomeSkeleton({ preview = false, example }: { preview?: boole
         preview={preview}
         example={example}
         leading={
-          <DelayedSkeleton>
-            <Skeleton tone="band" className="ui-skel-label" />
-          </DelayedSkeleton>
+          company != null ? (
+            <span className="ui-band-company">
+              <span className="ui-band-company-name">{company}</span>
+            </span>
+          ) : (
+            <DelayedSkeleton>
+              <Skeleton tone="band" className="ui-skel-label" />
+            </DelayedSkeleton>
+          )
         }
-        trailing={<HomeBandActions isPast={false} currentName="" search={search} avatarInitial="" />}
+        trailing={<HomeBandActions isPast={false} currentName="" search={search} avatarInitial={company?.slice(0, 1) ?? ""} />}
       >
         <div className="ui-band-body">
           <p className="ui-band-month-static">{homeMonthLabel(currentKey)}</p>

@@ -327,7 +327,7 @@
 
 .ui-lsplit-board .ui-lsplit-body {
   display: flex;
-  flex: 1 0 auto;
+  flex: 0 0 auto;
   flex-direction: column;
   gap: calc(var(--space-2) + var(--space-1) / 2);
   padding: var(--space-4);
@@ -658,6 +658,21 @@ html:has(.ui-lsplit-board)::-webkit-scrollbar {
 .ui-lsplit-board .ui-lsplit-actions,
 .ui-lsplit-board .ui-lsplit-footnote {
   padding-inline: var(--space-side);
+}
+
+/* The board's link is 15px and its footnote 13px muted, both directly under the rest card. */
+.ui-lsplit-board .ui-lsplit-actions button {
+  font-size: var(--type-label-size);
+}
+
+.ui-lsplit-board .ui-lsplit-actions {
+  margin-block-start: calc(var(--space-1) * -1);
+}
+
+.ui-lsplit-board .ui-lsplit-footnote {
+  margin-block-start: calc(var(--space-2) + var(--space-1) / 2);
+  font-size: var(--type-hint-size);
+  font-weight: var(--type-body-weight);
 }
 
 .ui-lsplit-board .ui-lsplit-rest {

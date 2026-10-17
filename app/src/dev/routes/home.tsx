@@ -142,7 +142,7 @@ export function DevCashEmpty() {
 
 /** FLOW-375 (board, States homeLoading and homeReveal): the cash Home while it loads. */
 export function DevCashLoading() {
-  return <CashHomeSkeleton />;
+  return <CashHomeSkeleton company="Northwind Test Co" />;
 }
 
 /** FLOW-413: the earlier month's cash page. */
