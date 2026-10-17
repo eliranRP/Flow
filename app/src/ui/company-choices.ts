@@ -28,6 +28,9 @@ export type BasisChoice = (typeof BASIS_CHOICES)[number]["value"];
 
 export const BASIS_TITLE = "רווח ותזרים לפי";
 export const BASIS_SHEET_SUBTITLE = "חל על כל החברה";
+/** The profit page's sheet names where the date counts (board ProfitBasis); Settings keeps the short copy. */
+export const BASIS_PROFIT_SUBTITLE = "חל על כל החברה, בבית, בפרויקטים ובדוחות";
+const BASIS_PROFIT_CASH_DESCRIPTION = "הכנסה נספרת כשהכסף נכנס, הוצאה כשהיא שולמה. חשבונית פתוחה עוד לא נספרת.";
 
 /** "תאריך תשלום" for the cash basis, "תאריך חשבונית" for the invoiced one. */
 export function basisChoiceLabel(basis: BasisChoice): string {
@@ -47,4 +50,11 @@ export const BASIS_COPY: ChoiceSheetCopy<BasisChoice> = {
   title: BASIS_TITLE,
   subtitle: BASIS_SHEET_SUBTITLE,
   choices: BASIS_CHOICES,
+};
+
+/** The same sheet opened from the profit page (board ProfitBasis): the longer subtitle and cash note. */
+export const BASIS_PROFIT_COPY: ChoiceSheetCopy<BasisChoice> = {
+  ...BASIS_COPY,
+  subtitle: BASIS_PROFIT_SUBTITLE,
+  choices: BASIS_CHOICES.map((choice) => (choice.value === "cash" ? { ...choice, description: BASIS_PROFIT_CASH_DESCRIPTION } : choice)),
 };
