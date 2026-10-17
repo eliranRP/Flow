@@ -196,7 +196,7 @@ export function PaymentRowLink({ row, currency, search, year }: {
   return (
     <Link className={`ui-loan-row${row.needsReview ? " ui-loan-row-review" : ""}`} to={`/transactions/${row.transactionId}${search}`}>
       <span className="ui-loan-row-text">
-        <bdi className="ui-loan-row-title" dir="ltr">{date}</bdi>{" "}
+        <bdi className="ui-loan-row-title" dir="ltr">{date}</bdi>
         <span className="ui-loan-row-note">{row.needsReview ? "ממתין לבדיקה" : paymentSplitText(row, currency)}</span>
       </span>
       <bdi className="ui-loan-row-amount" dir="ltr">{formatLoanMoney(row.totalMinor, currency)}</bdi>

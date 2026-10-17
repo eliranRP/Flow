@@ -221,6 +221,11 @@
   min-inline-size: 0;
 }
 
+.ui-loan-payments .ui-loan-row-text {
+  align-items: flex-end;
+  text-align: end;
+}
+
 .ui-loan-row-title {
   font-size: var(--type-body-size);
   line-height: var(--type-body-line);
@@ -346,9 +351,10 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The board's payment row: the date over its split, on the start side (the right in RTL), the amount after it. */
 .ui-loan-payments .ui-loan-row {
   min-block-size: var(--touch-min);
-  padding: var(--space-2) 0;
+  padding: var(--space-3) 0;
   border-block-end: var(--stroke-hairline) solid var(--color-line-soft);
 }
 
