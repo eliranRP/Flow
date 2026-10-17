@@ -29,9 +29,9 @@
 **Lines follow-up (text-masked proofs, scripts/board-proof.mjs; FLOW-366b, 2026-10-17, dark / light)**
 - [x] Lines (month, יצא): 3.7% / 2.7% before, 0.9% / 0.8% after: under the 3% gate in both themes.
 - [x] LinesIn (נכנס): 2.4% / 1.4% before, 2.0% / 1.3% after (no regression).
-- [x] LinesDetail: 2.9% / 2.7%, unchanged (no regression).
-- [ ] LinesRecurring (`/e2e/txn?board=recurring`): 5.7% / 5.5% before, 6.2% / 6.0% after. The history block now takes the board's spacing; the card above it (the project and category rows) and the bar labels still differ.
-- [ ] LinesFreq (`/e2e/txn?board=recurring&sheet=pace`): 6.6% / 6.9% before, 6.4% / 6.7% after. The pace sheet's rows are not yet restyled.
-- [ ] LinesAll (`/e2e/txn?board=recurring&sheet=all`): 7.5% / 8.0% before, unchanged. The all-charges sheet is not yet restyled.
-- [ ] LinesDetailLoan (`/e2e/txn?board=loan`): 5.7% / 5.7% before, 5.9% / 5.9% after. The loan branch of the detail fixture is not yet changed to the board's loan line.
-- Named exception: none for Lines. The four frames above are open, and each still needs its own pass.
+- [x] LinesDetail: 2.9% / 2.7% before, 2.6% / 2.4% after (no regression).
+- [x] LinesRecurring (`/e2e/txn?board=recurring`): 5.7% / 5.5% before (pass 1: 6.2% / 6.0%), 2.2% / 2.0% after. The header figure sits at 40px and unsigned on the board's frames, the fact rows are 58px, the recurring tag sits on the title line, and the history rows are 34px at regular weight.
+- [x] LinesFreq (`/e2e/txn?board=recurring&sheet=pace`): 6.6% / 6.9% before, 1.7% / 2.0% after. The pace sheet (`panelClassName` on ChoiceSheet, scoped to `.ui-pace-sheet`) has 56px options with 16px titles and 12px notes.
+- [x] LinesAll (`/e2e/txn?board=recurring&sheet=all`): 7.5% / 8.0% before, 2.5% / 2.5% after. The sheet starts 90px down, its rows are 52px with a hairline under each, and the summary box is 36px.
+- [x] LinesDetailLoan (`/e2e/txn?board=loan`): 5.7% / 5.7% before (pass 1: 5.9% / 5.9%), 2.1% / 2.1% after. The loan line is a Mercury bank line (no invoice). The counted row's "תזרים בלבד · קרן הלוואה" copy is not yet changed.
+- Named exception: none. All seven frames are under 3% in both themes.

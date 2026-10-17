@@ -199,7 +199,9 @@
 
 .ui-txn-status {
   color: var(--color-text-secondary);
-  font-size: var(--type-meta-size);
+  /* board: the status chip is 12px, medium (no 12px token). */
+  font-size: calc(var(--type-cents-size) + 1px);
+  font-weight: var(--type-btn-weight);
   line-height: var(--type-meta-line);
 }
 
@@ -208,8 +210,16 @@
   overflow-wrap: anywhere;
 }
 
+/* The board's fact rows (project, category) are 58px high, the text centred in them. */
+.ui-txn-body .ui-icon-row {
+  min-block-size: 58px;
+  padding-block: var(--space-2);
+}
+
 .ui-txn-amount {
   margin: 0;
+  /* The head's column is stretched, so the figure fits its full width at 40px, not its own shrunk width. */
+  align-self: stretch;
   line-height: var(--type-detail-line);
 }
 

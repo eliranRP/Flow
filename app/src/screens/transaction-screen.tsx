@@ -143,6 +143,7 @@ export function TransactionScreen({
   sampleMeta,
   sampleFrom,
   sampleNoFooter = false,
+  sampleUnsigned = false,
   onOpenSplit,
 }: {
   sample?: NonNullable<TransactionDetail>;
@@ -162,6 +163,8 @@ export function TransactionScreen({
   sampleFrom?: string;
   /** The board's frame draws no footer under the cards. */
   sampleNoFooter?: boolean;
+  /** The board's frame draws the header figure without a minus (an expense line's figure is unsigned there). */
+  sampleUnsigned?: boolean;
   /** Reviewer preview stays on its own split instead of the ledger route. */
   onOpenSplit?: () => void;
 } = {}) {
@@ -569,7 +572,7 @@ export function TransactionScreen({
       <CardSwipe key={txn.id} canNext={nav?.next != null} canPrev={nav?.prev != null} enter={nav?.enter} peekNext={peekNext} peekPrev={peekPrev} onStep={(step) => { nav?.move(step, "swipe"); }}>
         <div className="ui-txn-body">
           <div className="ui-txn-intro">
-          <TxnHead txn={txn} party={party} moneyIn={moneyIn} meta={meta ?? undefined} />
+          <TxnHead txn={txn} party={party} moneyIn={moneyIn} meta={meta ?? undefined} unsigned={sampleUnsigned} />
           {pending ? (
             <Link className="ui-txn-banner" to={txn.review_id ? `/review?item=${encodeURIComponent(txn.review_id)}&from=all` : "/review?from=all"}>
               <span className="ui-txn-banner-text">השורה מחכה לאישור שלך</span>
