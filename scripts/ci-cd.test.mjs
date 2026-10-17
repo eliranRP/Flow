@@ -647,8 +647,9 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   assert.match(afterStart, /\|\| return 0\n.*resetting it.*\n\s+fi\n\s+rm -f "\$cache\/supabase-db-tree"\n\s+supabase db reset >>"\$supabase_log" 2>&1 \|\| return\n/);
   // passed() stamps the commit and marks the branch's patch. The fast gate calls it after the scoped
   // Storybook smoke and the e2e specs; --full calls it only after e2e. The same-patch exit stamps too.
-  assert.match(local, /passed\(\) \{\n  echo "\$head" >"\$\(git rev-parse --git-dir\)\/flow-local-ci"\n/);
-  assert.equal([...local.matchAll(/echo "\$head" >/g)].length, 2);
+  assert.match(local, /passed\(\) \{\n  record_pass\n/);
+  assert.match(local, /record_pass\(\) \{\n[\s\S]*?git rev-parse --git-common-dir\)\/flow-local-ci"[\s\S]*?tail -n 50/);
+  assert.equal([...local.matchAll(/^\s*record_pass$/gm)].length, 2);
   const fast = local.indexOf('  passed\n  phase "passed on ${head:0:7} (main opens');
   const scoped = local.indexOf('FLOW_STORY_SCOPE="$scope" pnpm test:storybook:smoke --reporter=line --grep "every static story"');
   assert.ok(scoped > local.indexOf("pnpm test:storybook\n") && fast > scoped);
