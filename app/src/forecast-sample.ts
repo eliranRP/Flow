@@ -298,7 +298,7 @@ export function monthForecastBoardSample(variant: BoardForecastVariant = "board"
         name,
         currency: "USD",
         typical_amount_minor: -minor,
-        typical_day: 5,
+        typical_day: 15 + index,
         months_seen: 6,
         seen_this_month: false,
       })),
@@ -306,14 +306,14 @@ export function monthForecastBoardSample(variant: BoardForecastVariant = "board"
     ],
   };
   const unpaid = empty ? [] : [
-    { id: "inv-1043", description: "Invoice #1043", doc_date: "2026-09-22", project_name: null, customer_name: "Northgate Co", open_gross_agorot: 1250000, open_net_agorot: 1250000, currency: "USD", direction: "income" as const },
+    { id: "inv-1043", description: "Invoice #1043", doc_date: "2026-08-08", project_name: null, customer_name: "Northgate Co", open_gross_agorot: 1250000, open_net_agorot: 1250000, currency: "USD", direction: "income" as const },
     { id: "inv-1047", description: "Invoice #1047", doc_date: "2026-09-22", project_name: null, customer_name: "Lakeside HOA", open_gross_agorot: 560000, open_net_agorot: 560000, currency: "USD", direction: "income" as const },
     { id: "bill-118", description: "Bill VD-118", doc_date: "2026-09-15", project_name: null, customer_name: "Varga Drywall", open_gross_agorot: 420000, open_net_agorot: 420000, currency: "USD", direction: "expense" as const },
-    { id: "bill-hd", description: "Monthly bill", doc_date: "2026-09-25", project_name: null, customer_name: "Harbor Supply Pro", open_gross_agorot: 313800, open_net_agorot: 313800, currency: "USD", direction: "expense" as const },
+    { id: "bill-hd", description: "Bill HD-22", doc_date: "2026-09-25", project_name: null, customer_name: "Harbor Supply Pro", open_gross_agorot: 313800, open_net_agorot: 313800, currency: "USD", direction: "expense" as const },
   ];
   const overrides: ForecastOverrideRow[] = variant === "changed"
     ? [{ item_key: "invoice:inv-1043", amount_minor: null, due_on: null, moved_out: true }]
-    : empty ? [] : [{ item_key: "invoice:inv-1043", amount_minor: null, due_on: "2026-10-17", moved_out: false }];
+    : [];
   const build = buildMonthForecast({
     base: "USD",
     expected: expectedMonthsSchema.parse(expected),
@@ -321,5 +321,5 @@ export function monthForecastBoardSample(variant: BoardForecastVariant = "board"
     overrides,
   });
   // The changed frame's reset line reads these, so the undo has the prior state to send back.
-  return { today, net: -1719100n, base: "USD", data: { month: "2026-10", build, overrides: variant === "changed" ? overrides : [] } };
+  return { today, net: -1719100n, base: "USD", data: { month: "2026-10", build, overrides } };
 }

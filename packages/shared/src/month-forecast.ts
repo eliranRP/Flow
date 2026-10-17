@@ -38,6 +38,10 @@ export type ForecastItem = {
   due_on: string | null;
   moved_out: boolean;
   overridden: boolean;
+  /** Where Flow itself expects it (yyyy-mm-dd): the usual day this month, or the invoice's date plus its terms. Null without a today. */
+  expected_on: string | null;
+  /** Whole days past `expected_on` (0 when it is not late yet). */
+  late_days: number;
 };
 
 export type ForecastBuild = {
@@ -56,6 +60,23 @@ export type ForecastBuild = {
   changed: number;
 };
 
+/** An open invoice or bill counts as due this many days after its date (the app has no per-document terms). */
+const PAYMENT_TERMS_DAYS = 30;
+
+const DAY_MS = 86_400_000;
+
+function dayNumber(date: string): number {
+  return Math.floor(Date.parse(`${date}T00:00:00Z`) / DAY_MS);
+}
+
+function monthLength(today: string): number {
+  return new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)), 0)).getUTCDate();
+}
+
+function addDays(date: string, days: number): string {
+  return new Date((dayNumber(date) + days) * DAY_MS).toISOString().slice(0, 10);
+}
+
 /** A recurring charge under this many minor units (₪100) goes to the grouped row. */
 export const SMALL_CHARGE_MINOR = 10000n;
 
@@ -72,10 +93,11 @@ function overrideOf(overrides: ReadonlyMap<string, ForecastOverrideRow>, key: st
   return overrides.get(key) ?? null;
 }
 
-function applyOverride(item: Omit<ForecastItem, "minor" | "due_on" | "moved_out" | "overridden">, row: ForecastOverrideRow | null): ForecastItem {
+function applyOverride(item: Omit<ForecastItem, "minor" | "due_on" | "moved_out" | "overridden" | "late_days">, row: ForecastOverrideRow | null, today: string | null): ForecastItem {
   const amount = row?.amount_minor ?? null;
   return {
     ...item,
+    late_days: today != null && item.expected_on != null ? Math.max(0, dayNumber(today) - dayNumber(item.expected_on)) : 0,
     minor: amount == null ? item.usual : BigInt(amount),
     due_on: row?.due_on ?? null,
     moved_out: row?.moved_out ?? false,
@@ -90,7 +112,8 @@ export function buildMonthForecast(input: {
   overrides: readonly ForecastOverrideRow[];
 }): ForecastBuild {
   const overrides = new Map(input.overrides.map((row) => [row.item_key, row] as const));
-  const raw: Omit<ForecastItem, "minor" | "due_on" | "moved_out" | "overridden">[] = [];
+  const today = input.expected?.today ?? null;
+  const raw: Omit<ForecastItem, "minor" | "due_on" | "moved_out" | "overridden" | "late_days">[] = [];
 
   for (const party of input.expected?.recurring ?? []) {
     if (party.seen_this_month || party.currency !== input.base) continue;
@@ -103,6 +126,7 @@ export function buildMonthForecast(input: {
       usual: abs(party.typical_amount_minor),
       day: party.typical_day > 0 ? party.typical_day : null,
       description: null,
+      expected_on: today != null && party.typical_day > 0 ? `${today.slice(0, 7)}-${String(Math.min(party.typical_day, monthLength(today))).padStart(2, "0")}` : null,
     });
   }
 
@@ -120,10 +144,11 @@ export function buildMonthForecast(input: {
       usual,
       day: null,
       description: row.description,
+      expected_on: today != null ? addDays(row.doc_date, PAYMENT_TERMS_DAYS) : null,
     });
   }
 
-  const items = raw.map((item) => applyOverride(item, overrideOf(overrides, item.key)));
+  const items = raw.map((item) => applyOverride(item, overrideOf(overrides, item.key), today));
   const moved = items.filter((item) => item.moved_out).sort(byAmountThenName);
   const counted = items.filter((item) => !item.moved_out);
   const income = counted.filter((item) => item.direction === "income").sort(byAmountThenName);
