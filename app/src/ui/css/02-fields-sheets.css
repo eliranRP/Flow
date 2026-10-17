@@ -610,3 +610,18 @@
   border-color: var(--color-accent);
   outline: none;
 }
+
+/* FLOW-445: the confirm sheet's explaining line (17/1.5) and its pending warning (signal-soft). */
+.ui-confirm-body {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+}
+
+.ui-confirm-warning {
+  margin: 0;
+  color: var(--color-signal-soft);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}

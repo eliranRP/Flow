@@ -48,6 +48,10 @@
   Content-Type: text/html; charset=utf-8
 /missing-bills
   Content-Type: text/html; charset=utf-8
+/recurring
+  Content-Type: text/html; charset=utf-8
+/forecast
+  Content-Type: text/html; charset=utf-8
 /notifications
   Content-Type: text/html; charset=utf-8
 /settings

@@ -1,16 +1,16 @@
-import type { CashLine, CashMonths, ProjectDetail } from "@flow/shared";
+import type { CashLine } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
 import { cashMonthKey, cashMonthName } from "../cash";
-import { monthPeriod, shiftMonthKey } from "../period";
+import { monthPeriod } from "../period";
 import { withPeriodSearch } from "../project-period";
+import { cash, cashRow, investment, months, project, thisMonth } from "../dev/project-cash-sample";
 import { israelToday } from "../ui/date-math";
-import { FILLED } from "../ui/investment-card.stories-support";
 import { exampleOnBand } from "../ui/screen-stories-support";
 import { StoryRoute } from "../ui/story-route";
 import { ProjectDetailScreen } from "./flow-screens";
 import { ProjectCashLinesScreen, ProjectCashMonthScreen } from "./project-cash-screens";
-import { SAMPLE_MONTH_FIGURES, SAMPLE_MONTH_KEPT, SAMPLE_PROFIT_FIGURES, sampleMonthLines, sampleProfitLines } from "../dev/project-month-sample";
+import { sampleMonthLines } from "../dev/project-month-sample";
 
 /** FLOW-419 (owner's option A "Like Home"): a project opens on its cash. Invented figures. */
 
@@ -22,75 +22,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function cashRow(inMinor: bigint, outMinor: bigint, profit: bigint, currency = "USD") {
-  return {
-    currency,
-    in_minor: inMinor,
-    out_minor: outMinor,
-    net_minor: inMinor - outMinor,
-    profit_minor: profit,
-    excluded_count: 0,
-    excluded_in_minor: 0n,
-    excluded_out_minor: 0n,
-    not_in_profit_categories: [] as { name: string; amount_minor: bigint }[],
-  };
-}
-
-const thisMonth = israelToday().slice(0, 7);
-
-function months(rows: ReturnType<typeof cashRow>[][], base = "USD"): NonNullable<CashMonths> {
-  const current = israelToday().slice(0, 7);
-  return {
-    basis: "paid",
-    base_currency: base,
-    months: rows.map((byCurrency, back) => ({ month: `${shiftMonthKey(current, -back)}-01`, by_currency: byCurrency })),
-  };
-}
-
-const cash = months([
-  [cashRow(310_000n, 75_000n, 128_000n)],
-  // FLOW-438: the earlier month's figures are the ones its listed lines add up to.
-  [{ ...cashRow(SAMPLE_MONTH_FIGURES.in_minor, SAMPLE_MONTH_FIGURES.out_minor, SAMPLE_MONTH_FIGURES.profit_minor), not_in_profit_categories: SAMPLE_MONTH_KEPT }],
-  [cashRow(310_000n, 195_000n, 101_000n)],
-  [cashRow(310_000n, 212_000n, 98_000n)],
-]);
-// This month's net less its profit (לא נספר ברווח, FLOW-418): the owner's money put into the project.
-const currentRow = cash.months[0]?.by_currency[0];
-if (currentRow) currentRow.not_in_profit_categories = [{ name: "השקעת בעלים", amount_minor: 107_000n }];
-
-const project: NonNullable<ProjectDetail> = {
-  id: "p-c",
-  name: "Cedar Ave 410",
-  status: "active",
-  state_label: "פעיל",
-  budget_agorot: null,
-  base_currency: "USD",
-  income_agorot: 0n,
-  direct_agorot: 0n,
-  shared_agorot: 0n,
-  profit_agorot: 0n,
-  by_currency: [{ currency: "USD", ...SAMPLE_PROFIT_FIGURES, shared_minor: 0n }],
-  categories: [],
-  pending_count: 0,
-  pending_agorot: 0n,
-  // FLOW-438: the profit page lists these under its figures; they add up to them.
-  transactions: sampleProfitLines(thisMonth),
-  loans: [{ id: "l1", name: "הלוואת DSCR לדוגמה", currency: "USD", balance_minor: 21_360_000n, status: "open" }],
-};
-
-/** A dollar project's investment, so the row's figure is in the project's currency. */
-const usdFigures = {
-  ...FILLED,
-  currency: "USD",
-  purchaseMinor: 28_500_000n,
-  arvMinor: 41_000_000n,
-  valueMinor: 37_000_000n,
-  rehabMinor: 6_200_000n,
-  loanMinor: 21_360_000n,
-  forcedEquityMinor: 6_300_000n,
-  currentEquityMinor: 15_640_000n,
-};
-const investment = { isOverhead: false, figures: usdFigures, categories: [], loans: [] };
 const sectionTo = (target: string) => (target === "overview" ? "/projects/p-c" : `/projects/p-c/${target}`);
 
 export const ProjectCash: Story = {
@@ -104,7 +35,7 @@ export const ProjectCash: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("link", { name: /^נכנס ב/ })).toBeInTheDocument();
     await expect(canvas.getByRole("link", { name: /^רווח ב/ })).toBeInTheDocument();
-    await expect(canvas.getByRole("link", { name: /השקעה והלוואות/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("heading", { name: "השקעה והלוואות" })).toBeInTheDocument();
     await expect(canvas.getByRole("heading", { name: "חודשים קודמים" })).toBeInTheDocument();
   },
 };
@@ -186,7 +117,7 @@ export const ProjectInvestmentLoans: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getAllByText("$213,600").length).toBe(2);
+    await expect(canvas.getAllByText("$210,000").length).toBe(2);
   },
 };
 
@@ -263,9 +194,12 @@ export const ProjectCashKept: Story = {
     const owner: CashLine = { ...line("4", "השקעת בעלים לדוגמה", "השקעת בעלים", 107_000n), supplier_name: null, side: "in" };
     // FLOW-442: a $1,500 loan payment's principal ($900) names its part, out of the whole payment.
     const principal: CashLine = { ...line("7", "מלווה לדוגמה", "תשלומי הלוואה", 90_000n), transaction_id: "loan-7", part: "principal", line_minor: 150_000n };
+    // The month's net is above its profit by the owner's money, so this story keeps its own month.
+    const keptMonth = cashRow(310_000n, 75_000n, 128_000n);
+    keptMonth.not_in_profit_categories = [{ name: "השקעת בעלים", amount_minor: 107_000n }];
     return (
       <StoryRoute entry={`/projects/p-c/cash/${key}/kept/USD`} tabs>
-        <ProjectCashLinesScreen sample={{ months: cash, lines: [principal, owner] }} at={{ projectId: "p-c", month: key, side: "kept", currency: "USD" }} />
+        <ProjectCashLinesScreen sample={{ months: months([[keptMonth]]), lines: [principal, owner] }} at={{ projectId: "p-c", month: key, side: "kept", currency: "USD" }} />
       </StoryRoute>
     );
   },

@@ -130,3 +130,28 @@ export const DeleteEmpty: Story = {
     onConfirm: () => undefined,
   },
 };
+export const OutlineDestructive: Story = {
+  args: {
+    open: true,
+    onOpenChange: () => undefined,
+    title: "למחוק את הפרויקט?",
+    item: "Juniper Ct",
+    consequence: "הפרויקט ייעלם מהרשימה. התנועות נשארות.",
+    confirmLabel: "מחיקה",
+    destructive: "outline",
+    onConfirm: () => undefined,
+  },
+};
+export const Warning: Story = {
+  args: {
+    open: true,
+    onOpenChange: () => undefined,
+    title: "לסיים את הפרויקט?",
+    item: "Tidewater",
+    consequence: "אחרי הסיום הפרויקט עובר לרשימת הסיומים.",
+    confirmLabel: "סיום",
+    consequenceSize: "body",
+    warning: "יש הוצאה אחת שעוד לא שולמה.",
+    onConfirm: () => undefined,
+  },
+};

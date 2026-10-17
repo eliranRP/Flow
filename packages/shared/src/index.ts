@@ -127,6 +127,16 @@ export type {
   RecurringChange,
   RecurringPace,
 } from "./forecast.ts";
+export {
+  SMALL_CHARGE_MINOR,
+  buildMonthForecast,
+  forecastTotal,
+} from "./month-forecast.ts";
+export type {
+  ForecastBuild,
+  ForecastItem,
+  ForecastOverrideRow,
+} from "./month-forecast.ts";
 export { cashLinesSchema, cashMonthsSchema, cashToDaySchema, cashYearsSchema } from "./cash.ts";
 export type {
   CashCurrencyRow,

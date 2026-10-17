@@ -11,6 +11,7 @@ export type ButtonVariant =
   | "pill"
   | "danger"
   | "danger-tint"
+  | "danger-outline"
   | "ghost";
 
 type Common = {
@@ -59,6 +60,7 @@ const variantClass: Record<ButtonVariant, string> = {
   pill: "ui-btn-pill",
   danger: "ui-btn-danger",
   "danger-tint": "ui-btn-danger-tint",
+  "danger-outline": "ui-btn-danger-outline",
   ghost: "ui-btn-ghost",
 };
 

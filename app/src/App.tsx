@@ -46,7 +46,8 @@ const CashHistoryScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ 
 const CashYearScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ default: m.CashYearScreen })));
 const BreakdownScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownScreen })));
 const BreakdownLinesScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownLinesScreen })));
-const RecurringScreen = lazy(() => import("./screens/recurring-screen").then((m) => ({ default: m.RecurringScreen })));
+const ForecastScreen = lazy(() => screenLoaders.forecast().then((m) => ({ default: m.ForecastScreen })));
+const RecurringScreen = lazy(() => screenLoaders.recurring().then((m) => ({ default: m.RecurringScreen })));
 const LineSplitScreen = lazy(() => screenLoaders.lineSplit().then((m) => ({ default: m.LineSplitScreen })));
 const HelpScreen = lazy(() => screenLoaders.help().then((m) => ({ default: m.HelpScreen })));
 const LegalScreen = lazy(() => screenLoaders.legal().then((m) => ({ default: m.LegalScreen })));
@@ -87,6 +88,7 @@ const DevLoanDetail = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ defa
 const DevLoans = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoans })));
 const DevRecurring = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevRecurring })));
 const DevLoanSummary = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoanSummary })));
+const DevForecast = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevForecast })));
 const DevProject = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProject })));
 const DevProjectCategory = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectCategory })));
 const DevProjectDetail = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectDetail })));
@@ -228,6 +230,7 @@ function AppRoutes() {
                   <Route path="/e2e/cash-year" element={<DevCashYear />} />
                   <Route path="/e2e/recurring" element={<DevRecurring />} />
                   <Route path="/e2e/invoices" element={<DevInvoices />} />
+                  <Route path="/e2e/forecast" element={<DevForecast />} />
                 </Route>
                 <Route element={<DevShell section="projects" />}>
                   <Route path="/e2e/projects" element={<DevProjects />} />
@@ -307,6 +310,7 @@ function AppRoutes() {
                 <Route path="missing-bills" element={<RecurringRedirect />} />
                 <Route path="recurring" element={<RecurringScreen />} />
                 {UnpaidInvoiceRoute()}
+                <Route path="forecast" element={<ForecastScreen />} />
                 {SettingsRoutes()}
                 {LoanRoutes()}
               </Route>

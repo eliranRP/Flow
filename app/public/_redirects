@@ -29,6 +29,8 @@
 /projects/ /projects 301
 /search /app-shell 200
 /search/ /search 301
+/forecast /app-shell 200
+/forecast/ /forecast 301
 /review /app-shell 200
 /review/ /review 301
 /review/all /app-shell 200
@@ -43,6 +45,8 @@
 /unpaid/:invoiceId/ /unpaid/:invoiceId 301
 /missing-bills /app-shell 200
 /missing-bills/ /missing-bills 301
+/recurring /app-shell 200
+/recurring/ /recurring 301
 /notifications /app-shell 200
 /notifications/ /notifications 301
 /settings /app-shell 200
