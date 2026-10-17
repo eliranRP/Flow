@@ -59,7 +59,7 @@ function OpenInviteSheet() {
   return null;
 }
 
-/** `/e2e/team?team=` pending (invite-2), alone, editor, loading, error, or nothing for a-1. */
+/** `/e2e/team?team=` pending (invite-2), alone, editor, loading, error, or nothing for a-1. `&board=1` is the board's rows. */
 export function DevTeam() {
   const [params] = useSearchParams();
   const state = params.get("team");
@@ -68,6 +68,7 @@ export function DevTeam() {
     ...(params.get("proof") === "1" ? { delayMs: 0 } : {}),
     pendingInvite: state === "pending",
     alone: state === "alone",
+    boardRows: params.get("board") === "1",
     role: state === "editor" ? "editor" : "owner",
     hold: state === "loading" ? ["listTeam"] : undefined,
     fail: state === "error" ? { listTeam: "Failed to fetch" } : state === "full" ? { inviteMember: "too many invites" } : undefined,
