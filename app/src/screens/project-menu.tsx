@@ -207,6 +207,7 @@ export function ProjectMenu({
         confirmLabel={action}
         returnFocusRef={opener}
         closeButton={false}
+        panelClassName="ui-sheet-g14 ui-confirm-roomy"
         busy={save.isPending}
         onConfirm={() => {
           if (blocked()) return;

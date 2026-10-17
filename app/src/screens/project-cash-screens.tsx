@@ -89,6 +89,7 @@ export function ProjectCashOverview({
   attention = [],
   sinceProfit = null,
   budget,
+  budgetAdd,
   example,
   now,
 }: {
@@ -107,6 +108,8 @@ export function ProjectCashOverview({
   sinceProfit?: { currency: string; minor: bigint }[] | null;
   /** FLOW-445: the budget card, when the project has a budget (the edit sheet lives with the page). */
   budget?: ReactNode;
+  /** The quiet "+ הוספת תקציב" a project with no budget shows after its profit rows. */
+  budgetAdd?: ReactNode;
   example?: ReactNode;
   /** Stories and tests pin the month names. */
   now?: Date;
@@ -156,7 +159,7 @@ export function ProjectCashOverview({
             <div className="ui-project-profits t-display">
               {rows.map((row) => (
                 <p key={row.currency}>
-                  <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} presentation="detail" />
+                  <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} presentation="detail" zeroCents={row.net_minor === 0n} />
                 </p>
               ))}
             </div>
@@ -203,6 +206,7 @@ export function ProjectCashOverview({
             extra={keptRow}
           />
         )}
+        {budgetAdd}
         {summaryFigures == null ? null : <InvestmentSummary figures={summaryFigures} href={investmentHref} />}
         {investment == null || summary ? null : (
           <List className="ui-project-cash-more">

@@ -396,9 +396,8 @@ export function ProjectDetailScreen({
         investmentHref={sectionHref("investment")}
         stateLine={stateLine}
         menu={menu}
-        budget={(
-          <ProjectBudget project={project} spentAgorot={absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot)} />
-        )}
+        budget={<ProjectBudget project={project} spentAgorot={absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot)} part="card" />}
+        budgetAdd={<ProjectBudget project={project} spentAgorot={0n} part="add" />}
         sinceProfit={(lifetime.data ?? (sample ? project : null)) == null ? null : projectRows(lifetime.data ?? project, companyCurrency).map((row) => ({ currency: row.currency, minor: row.profit_minor }))}
         attention={projectAttentionRows({
           projectId: project.id,
@@ -579,12 +578,14 @@ function LegacyEmptyProject() {
 
 /** FLOW-445: the budget card with its edit sheet, on the expenses section. */
 /** FLOW-445: the budget card when a budget is set; with none, a quiet "+ הוספת תקציב" at the end of the page. */
-function ProjectBudget({ project, spentAgorot }: { project: NonNullable<ProjectDetail>; spentAgorot: bigint }) {
+function ProjectBudget({ project, spentAgorot, part = "both" }: { project: NonNullable<ProjectDetail>; spentAgorot: bigint; part?: "card" | "add" | "both" }) {
   const [editing, setEditing] = useState(false);
   // The owner's type text is on the month's row (the same cached read the menu uses).
   const type = useProjectsCashMonth(undefined, project.id).data?.projects.find((row) => row.id === project.id)?.type ?? null;
   const budget = project.budget_agorot ?? null;
   const currency = useCompanyCurrency();
+  // The overview draws the card first and the add link after the profit rows, as two parts of the one budget.
+  if ((budget == null && part === "card") || (budget != null && part === "add")) return null;
   return (
     <>
       {budget == null ? (

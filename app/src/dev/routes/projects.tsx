@@ -30,7 +30,7 @@ const e2eProject: typeof devProject = {
 const idleProject: typeof devProject = {
   ...devProject,
   name: "מטבח לקוח לדוגמה",
-  state_label: "עבודת לקוח",
+  state_label: "ריצוף • עבודת לקוח",
   budget_agorot: null,
   direct_agorot: 0n,
   by_currency: [],

@@ -8,12 +8,12 @@
 
 .ui-project-page .ui-band-hero-project .t-band-title {
   font-size: var(--type-name-size);
-  line-height: normal;
+  line-height: calc(var(--type-title-line) - 0.015);
   font-weight: var(--type-name-weight);
 }
 
 .ui-project-page .ui-band-hero-project .t-label {
-  line-height: normal;
+  line-height: calc(var(--type-title-line) - 0.015);
 }
 
 .ui-project-page .ui-band-hero-project .t-band-title + .t-label {
@@ -42,7 +42,7 @@
   min-block-size: 0;
   gap: var(--space-1);
   font-size: var(--type-btn-2-size);
-  line-height: normal;
+  line-height: calc(var(--type-title-line) - 0.015);
 }
 
 .ui-project-page .ui-band-row-label {
@@ -58,7 +58,7 @@
 .ui-project-page .ui-band-row-amount .t-amount {
   font-size: var(--type-btn-2-size);
   font-weight: var(--type-line2-weight);
-  line-height: normal;
+  line-height: calc(var(--type-title-line) - 0.015);
 }
 
 .ui-project-stack {
@@ -80,13 +80,13 @@
 }
 
 .ui-project-stack > .ui-banner .ui-row-title {
-  line-height: normal;
+  line-height: calc(var(--type-title-line) - 0.015);
 }
 
 .ui-project-stack .ui-budget-card,
 .ui-project-stack .ui-investment-summary {
   padding: calc(var(--space-4) + var(--space-1) / 2);
-  line-height: normal;
+  line-height: calc(var(--type-title-line) - 0.015);
 }
 
 .ui-project-stack .ui-budget-card {
@@ -101,7 +101,7 @@
 .ui-project-stack .ui-investment-head h2,
 .ui-project-stack .ui-budget-spent,
 .ui-project-stack .ui-budget-note {
-  line-height: normal;
+  line-height: calc(var(--type-title-line) - 0.015);
 }
 
 .ui-project-stack .ui-budget-head .ui-text-link {
@@ -126,7 +126,7 @@
 
 .ui-project-card .ui-row-title,
 .ui-project-card .ui-row-hint {
-  line-height: normal;
+  line-height: calc(var(--type-title-line) - 0.015);
 }
 
 .ui-project-card .ui-row-hint {
@@ -156,4 +156,35 @@
 .ui-project-card-more {
   margin: 0;
   padding: var(--space-2) var(--space-card-inset);
+}
+
+/* The board draws a figure's cents at the figure's size. */
+.ui-project-figures .ui-num-cents {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.ui-project-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ui-project-menu .ui-row-title,
+.ui-project-menu .ui-row-hint {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-project-menu .ui-row-hint {
+  font-size: var(--type-caption-size);
+}
+
+/* The finish confirm at the board's rhythm: 14px between its parts, 1.5 line height on its text. */
+.ui-confirm-roomy {
+  --sheet-pad-bottom: calc(var(--space-6) + var(--space-2));
+}
+
+.ui-confirm-roomy .ui-confirm-body,
+.ui-confirm-roomy .ui-confirm-warning {
+  line-height: calc(var(--type-body-line) * 1.035);
 }
