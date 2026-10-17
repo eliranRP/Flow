@@ -22,7 +22,7 @@ test("search opens from the cash Home, finds a line, opens it, and Back keeps th
   await expect(row).toBeVisible();
   await expect(page.getByRole("link", { name: /^ספק 1(?!\d)/ })).toHaveCount(0);
   await expect(row).toContainText("ספק 3");
-  await expect(page.locator(".ui-search-count")).toContainText("תנועה אחת");
+  await expect(page.locator(".ui-search-count")).toContainText("1 תנועה");
 
   await row.click();
   await expect(page).toHaveURL(/\/transactions\/t-step-3\?preview=1$/);

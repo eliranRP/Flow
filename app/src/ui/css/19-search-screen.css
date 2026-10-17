@@ -284,19 +284,46 @@
 .ui-search-filter-group {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: calc(var(--space-1) * 1.5);
 }
 
 .ui-search-filter-label {
   margin: 0;
   font-size: var(--type-caption-size);
+  line-height: calc(var(--type-caption-size) * 15 / 13);
+  font-weight: var(--type-caption-weight);
   color: var(--color-text-muted);
 }
 
 .ui-search-filter-projects {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: calc(var(--space-1) * 1.5);
+}
+
+/* The board's sheet: the title sits 11.5px under the grabber and 8.5px above the filters. */
+.ui-sheet-panel:has(.ui-search-filter) .ui-sheet-head {
+  margin-top: calc(var(--space-1) * 2.875);
+  margin-bottom: calc(var(--space-1) * 2.125);
+}
+
+.ui-search-filter .ui-seg {
+  padding: calc(var(--space-1) / 2);
+  border-radius: var(--radius-input);
+}
+
+.ui-search-filter .ui-switch {
+  inline-size: 52px;
+  block-size: 32px;
+}
+
+.ui-search-filter .ui-switch i {
+  inline-size: 26px;
+  block-size: 26px;
+}
+
+.ui-search-filter .ui-switch-row {
+  margin-block: calc(var(--space-1) / 2);
 }
 
 .ui-search-filter-foot {
@@ -341,6 +368,49 @@
   color: var(--color-accent-text);
 }
 
+/* The board's head (not the searching state): 63px bar, the filter text at 20px, the field a 44px pill. */
+.ui-search-head:not(:has(.ui-search-row-searching)) {
+  padding: var(--space-2) var(--space-4) calc(var(--space-1) * 2.75) var(--space-5);
+}
+
+.ui-search-row:not(.ui-search-row-searching) {
+  gap: var(--space-3);
+}
+
+.ui-search-row:not(.ui-search-row-searching) .ui-search-back {
+  margin-inline-start: calc(var(--space-3) * -1);
+}
+
+.ui-search-row:not(.ui-search-row-searching) .ui-search-filter-btn {
+  font-size: var(--type-line2-size);
+  padding: 0;
+}
+
+.ui-search-row:not(.ui-search-row-searching) .ui-search-form .ui-search {
+  background: var(--color-surface);
+  border: 1px solid var(--color-tint-strong);
+  border-radius: var(--radius-button);
+  block-size: 44px;
+  box-sizing: border-box;
+}
+
+.ui-search-row:not(.ui-search-row-searching) .ui-search-form .ui-search-field {
+  border: 0;
+  background: none;
+  min-block-size: 42px;
+}
+
+/* The clear X: a 28px disc in the track colour, its glyph 14px, the disc inset in its 44px hit area. */
+.ui-search-form .ui-search-clear {
+  background: radial-gradient(circle, var(--color-track-strong) 14px, transparent 14.5px);
+  translate: 6px -1px;
+}
+
+.ui-search-form .ui-search-clear svg {
+  inline-size: 14px;
+  block-size: 14px;
+}
+
 /* The search entry on Home's band sits on the end side of the bar, as ⋯ does on a project. */
 .ui-band-row > .ui-search-entry {
   margin-inline-start: auto;
@@ -356,10 +426,68 @@
 /* FLOW-368: the count line sits in the scroll area under the head, as on the board (15px muted). */
 .ui-search-results > .ui-search-count {
   margin: 0;
-  padding: var(--space-4) var(--space-4) 0;
-  font-size: var(--type-body-size);
+  min-block-size: 0;
+  padding: var(--space-4) 0 0;
+  font-size: var(--type-line2-size);
+  line-height: calc(var(--type-line2-size) * 1.2);
   font-weight: var(--type-body-weight);
   color: var(--color-text-muted);
+}
+
+/* The board's results: the rows and month heads run the full width of the list (no second inset). */
+.ui-search-results .ui-project-list {
+  padding-inline: 0;
+}
+
+.ui-search-results .ui-month-head {
+  margin-inline: 0;
+  padding: calc(var(--space-1) * 4.5) 0 calc(var(--space-1) * 1.5);
+}
+
+.ui-search-results .ui-month + .ui-month .ui-month-head {
+  margin-block-start: 0;
+}
+
+.ui-search-results .ui-month-title {
+  font-weight: var(--type-section-weight);
+  line-height: calc(var(--space-1) * 6);
+}
+
+.ui-search-results .ui-month-signed {
+  font-size: var(--type-line2-size);
+}
+
+/* A result row is 80px: 20px above and below, the title and lines at the board's line heights. */
+.ui-search-results .ui-row-statement {
+  padding-block: var(--space-5);
+}
+
+.ui-search-results .ui-statement-title {
+  line-height: calc(var(--space-1) * 5);
+}
+
+.ui-search-results .ui-statement-line {
+  line-height: calc(var(--space-1) * 4.5);
+}
+
+.ui-search-results .ui-statement-line .ui-hint-part {
+  line-height: calc(var(--space-1) * 4.5);
+}
+
+.ui-search-results .ui-row-text {
+  gap: calc(var(--space-1) / 2);
+}
+
+/* Line 2 stays on one line and ends in "…" (board). */
+.ui-search-results .ui-statement-details {
+  flex-wrap: nowrap;
+}
+
+.ui-search-results .ui-statement-details .ui-hint-part {
+  min-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* The line-3 note: a state to act on, in the accent, 13px, on its own line. */

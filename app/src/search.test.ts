@@ -11,13 +11,14 @@ import {
   readSearchFilters,
   searchAmountRange,
   searchArgs,
-  searchTotalText,
-  uniqueSearchRows,
   searchCountWords,
   searchFiltersQuery,
-  searchRowAmount,
+  searchMonthTitle,
   searchMonthTotals,
+  searchRowAmount,
   searchRowTitle,
+  searchTotalText,
+  uniqueSearchRows,
 } from "./search";
 
 // Invented lines only.
@@ -222,9 +223,15 @@ describe("rows", () => {
   });
 
   it("counts in words", () => {
-    expect(searchCountWords(1)).toBe("תנועה אחת");
+    expect(searchCountWords(1)).toBe("1 תנועה");
     expect(searchCountWords(7)).toBe("7 תנועות");
     expect(searchCountWords(0)).toBe("0 תנועות");
+  });
+
+  it("draws the current year's months without the year, other years with it", () => {
+    const now = new Date(2026, 9, 17);
+    expect(searchMonthTitle(2026, 9, now)).toBe("אוקטובר");
+    expect(searchMonthTitle(2025, 9, now)).toBe("אוקטובר 2025");
   });
 });
 

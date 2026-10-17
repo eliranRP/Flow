@@ -85,9 +85,9 @@ type BoardLine = {
 
 const boardProjects = [
   { id: "birch-lane", name: "Birch Lane", status: "active" },
-  { id: "juniper-ct", name: "Juniper Ct", status: "active" },
+  { id: "juniper-ct", name: "Larch St", status: "active" },
   { id: "elm-row", name: "Elm Row", status: "active" },
-  { id: "sable-ct", name: "Sable Ct", status: "active" },
+  { id: "sable-ct", name: "Wren Ct", status: "active" },
   { id: "okafor", name: "Okafor", status: "active" },
 ] as const;
 
