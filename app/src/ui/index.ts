@@ -61,8 +61,6 @@ export { ChoiceSheet } from "./choice-sheet";
 export { PeriodSwipe } from "./period-swipe";
 export { MonthStepper } from "./month-stepper";
 export { ApproxAmount, approxAmountText } from "./approx-amount";
-export { MissingBillList } from "./missing-bill-list";
-export type { MissingBillRow } from "./missing-bill-list";
 export { ExpectedMonths } from "./expected-months";
 export type { ExpectedMonthRow, ExpectedPartyRow } from "./expected-months";
 export { ExpectedMonthParties, ExpectedMonthSheet } from "./expected-month-sheet";

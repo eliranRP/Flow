@@ -65,10 +65,11 @@ import { JUNIPER_PROFIT, NEW_PROJECT_PROFIT } from "./dev/project-profit-sample"
 import { LoanDetailScreen, type LoanView } from "./screens/loan-detail-screen";
 import { useMemoryLoanStore } from "./screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "./dev/loan-detail-sample";
-import { MissingBillsScreen } from "./screens/missing-bills-screen";
+import { RecurringScreen } from "./screens/recurring-screen";
+import { RECURRING_FIXTURE } from "./recurring-sample";
 import { LoanSummaryCard } from "./screens/loan-summary-card";
 import { LOAN_SUMMARY_SAMPLE } from "./dev/loan-summary-sample";
-import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME, SAMPLE_MISSING_RENAMED, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "./forecast-sample";
+import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY, SAMPLE_MISSING_BILLS, SAMPLE_RECURRING_CHANGES } from "./forecast-sample";
 
 const devReviewItems = [
   {
@@ -273,7 +274,7 @@ export function DevHome() {
       unpaidGross={50_000n}
       unpaidCount={1}
       missingCount={SAMPLE_MISSING_BILLS.length}
-      missingTo="/e2e/missing-bills"
+      missingTo="/e2e/recurring"
       period={period}
       onPeriod={setPeriod}
     />
@@ -310,7 +311,7 @@ export function DevCash() {
         unpaidGross: 460_000n,
         // FLOW-415: `?recurring=1` adds the late bills and a charge above its usual amount.
         missingCount: params.get("recurring") === "1" ? SAMPLE_MISSING_BILLS.length : 0,
-        missingTo: "/e2e/missing-bills",
+        missingTo: "/e2e/recurring",
         changes: params.get("recurring") === "1" ? chargeChangeViews(SAMPLE_RECURRING_CHANGES, "?preview=1") : [],
         search: "?preview=1",
       })}
@@ -534,15 +535,9 @@ export function DevInvoices() {
   return <UnpaidScreen sample={rows} summary={summary} />;
 }
 
-/** FLOW-403. The late-bills list with invented rows; `?empty=1` has none. */
-export function DevMissingBills() {
-  const [params] = useSearchParams();
-  if (params.get("empty") === "1") return <MissingBillsScreen sample={{ late: [] }} />;
-  // FLOW-415 (b-2): `?income=1` adds a late payment from a customer.
-  const base = params.get("income") === "1" ? [...SAMPLE_MISSING_BILLS, SAMPLE_MISSING_INCOME] : SAMPLE_MISSING_BILLS;
-  // FLOW-430: `?match=1` adds a late bill that suggests a renamed supplier.
-  const late = params.get("match") === "1" ? [...base, SAMPLE_MISSING_RENAMED] : base;
-  return <MissingBillsScreen sample={{ late, arrived: SAMPLE_RECURRING_THIS_MONTH, changes: SAMPLE_RECURRING_CHANGES }} />;
+/** FLOW-447: the list on the rule-25 fixture, for the e2e run. */
+export function DevRecurring() {
+  return <RecurringScreen sample={RECURRING_FIXTURE} />;
 }
 
 export function DevTransactionGate() {

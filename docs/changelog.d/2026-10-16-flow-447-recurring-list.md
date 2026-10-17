@@ -1,0 +1,1 @@
+The קבועים tab now opens a new list at /recurring: the month's outflow, the late bills first, then one group per category with its monthly cost. Late bills and changes of 20% or more say so on their row.

@@ -106,7 +106,9 @@ test("tab bar has four tabs, and each opens its screen (FLOW-364)", async ({ pag
   await bar.getByRole("link", { name: "הלוואות" }).click();
   await expect(page).toHaveURL(/\/settings\/loans\?preview=1$/);
   await bar.getByRole("link", { name: "קבועים" }).click();
-  await expect(page).toHaveURL(/\/missing-bills\?preview=1$/);
+  await expect(page).toHaveURL(/\/recurring\?preview=1$/);
+  // Let the route change settle before the next tab click: the lazy screen can drop an early click.
+  await expect(bar.getByRole("link", { name: "קבועים" })).toHaveAttribute("aria-current", "page");
   await bar.getByRole("link", { name: "בית", exact: true }).click();
   await expect(page).toHaveURL(/\/\?preview=1$/);
   // The add sits in Home's band, not in the tab bar (FLOW-364).
