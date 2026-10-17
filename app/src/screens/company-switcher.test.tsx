@@ -30,15 +30,16 @@ beforeEach(() => {
 async function openSheet(fallbackName?: string) {
   renderTeam(<CompanySwitcher fallbackName={fallbackName} />, "/");
   fireEvent.click(await screen.findByRole("button", { name: "חברה: חברה לדוגמה" }));
-  return screen.findByRole("dialog", { name: "חברה" });
+  return screen.findByRole("dialog", { name: "העסקים שלך" });
 }
 
-describe("company switcher (FLOW-601, mockup a-3)", () => {
+describe("company switcher and the העסקים שלך sheet (FLOW-601, FLOW-513)", () => {
   it("names the shown company on the band and lists every company with the shown one checked", async () => {
     answer("list_my_companies", { data: companiesFor("owner", true) });
     const dialog = await openSheet();
     expect(within(dialog).getByRole("radio", { name: "חברה לדוגמה" })).toHaveAttribute("aria-checked", "true");
     expect(within(dialog).getByRole("radio", { name: "נכסים לדוגמה בע״מ" })).toHaveAttribute("aria-checked", "false");
+    expect(within(dialog).getByText("בעלים · פתוח עכשיו")).toBeInTheDocument();
     expect(within(dialog).queryByRole("heading", { name: "הזמנות" })).toBeNull();
     expect(shownCompanyFor(TEAM_USER)).toBe(COMPANY_A);
   });
@@ -51,9 +52,10 @@ describe("company switcher (FLOW-601, mockup a-3)", () => {
     fireEvent.click(within(dialog).getByRole("radio", { name: "נכסים לדוגמה בע״מ" }));
     await waitFor(() => { expect(rpcCalls("switch_company")).toEqual([{ p_company_id: COMPANY_B }]); });
     expect(shownCompanyFor(TEAM_USER)).toBe(COMPANY_B);
+    expect(await screen.findByText("עברת ל־נכסים לדוגמה בע״מ")).toBeInTheDocument();
     await waitFor(() => { expect(rpcCalls("list_my_companies").length).toBeGreaterThan(reads); });
     expect(await screen.findByRole("button", { name: "חברה: נכסים לדוגמה בע״מ" })).toBeInTheDocument();
-    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "חברה" })).toBeNull(); });
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "העסקים שלך" })).toBeNull(); });
   });
 
   it("leaves out the old demo book, which a switch cannot open", async () => {
@@ -95,18 +97,18 @@ describe("company switcher (FLOW-601, mockup a-3)", () => {
     expect(await within(dialog).findByRole("radio", { name: "חברה לדוגמה" })).toBeInTheDocument();
   });
 
-  it("goes to the company form for + חברה חדשה with no company named, and hides it from a viewer", async () => {
+  it("goes to the company form for + עסק חדש with no company named, and hides it from a viewer", async () => {
     const dialog = await openSheet();
-    fireEvent.click(within(dialog).getByRole("button", { name: "חברה חדשה" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "עסק חדש" }));
     await waitFor(() => { expect(screen.getByTestId("where")).toHaveTextContent("/onboarding"); });
     expect(shownCompanyFor(TEAM_USER)).toBeNull();
   });
 
-  it("has no + חברה חדשה for a viewer", async () => {
+  it("has no + עסק חדש for a viewer", async () => {
     answer("list_my_companies", { data: companiesFor("viewer") });
     const dialog = await openSheet();
     await within(dialog).findByRole("radio", { name: "חברה לדוגמה" });
-    expect(within(dialog).queryByRole("button", { name: "חברה חדשה" })).toBeNull();
+    expect(within(dialog).queryByRole("button", { name: "עסק חדש" })).toBeNull();
   });
 });
 
@@ -123,12 +125,20 @@ describe("invites in the switcher (mockups invite-4, invite-5)", () => {
     });
     const dialog = await openSheet();
     expect(await within(dialog).findByRole("heading", { name: "הזמנות" })).toBeInTheDocument();
-    expect(within(dialog).getByText("עורך · מיוסי כהן")).toBeInTheDocument();
+    expect(within(dialog).getByText("יוסי כהן הזמין אותך כעורך")).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: "הצטרפות לנכסים לדוגמה בע״מ" }));
     await waitFor(() => { expect(rpcCalls("accept_invite")).toEqual([{ p_invite_id: sampleInvite.id }]); });
     await waitFor(() => { expect(shownCompanyFor(TEAM_USER)).toBe(COMPANY_B); });
+    expect(await screen.findByText("הצטרפת ל־נכסים לדוגמה בע״מ")).toBeInTheDocument();
     // accept_invite already saved it as the last one opened.
     expect(rpcCalls("switch_company")).toHaveLength(0);
+  });
+
+  it("leaves an expired invite out of the sheet", async () => {
+    answer("my_invites", { data: [{ ...sampleInvite, status: "expired" }] });
+    const dialog = await openSheet();
+    await within(dialog).findByRole("radio", { name: "חברה לדוגמה" });
+    expect(within(dialog).queryByRole("heading", { name: "הזמנות" })).toBeNull();
   });
 
   it("declines with ביטול on the toast, which reopens the invite", async () => {

@@ -10,8 +10,8 @@ import { sampleCashMonths } from "./cash-sample";
 import { createSampleTeamApi, type SampleTeamOptions } from "./team-sample";
 
 /**
- * Dev-only fixtures for FLOW-601 (the design review opens these): the team page, the invites
- * list and Home's חברה sheet, on an in-memory team. Invented names and example.com only.
+ * Dev-only fixtures for FLOW-601 (the design review opens these): the team page, the invitation
+ * screen and Home's העסקים שלך sheet, on an in-memory team. Invented names and example.com only.
  */
 
 function SampleTeam({ options, children }: { options: SampleTeamOptions; children: ReactNode }) {
@@ -79,23 +79,25 @@ export function DevTeam() {
   );
 }
 
-/** `/e2e/invites?inbox=` 1, empty, loading, error, late (ביטול after ten minutes), or nothing for two (invite-3). */
+/**
+ * `/e2e/invites?state=` viewer, editor, newuser (no business of their own), joined, expired or
+ * declined: the board's invitation states, on fixed invented data.
+ */
 export function DevInvites() {
   const [params] = useSearchParams();
-  const state = params.get("inbox");
+  const state = params.get("state") ?? "viewer";
   const options: SampleTeamOptions = {
-    noCompany: true,
-    inbox: state === "1" ? 1 : state === "empty" ? 0 : 2,
-    hold: state === "loading" ? ["myInvites"] : undefined,
-    fail: state === "error" ? { myInvites: "Failed to fetch" } : state === "late" ? { reopenInvite: "invite is not declined" } : undefined,
+    delayMs: 0,
+    noCompany: state === "newuser",
+    invite: { role: state === "editor" ? "editor" : "viewer", expired: state === "expired", seen: true },
   };
+  const sample = state === "joined" ? "joined" : state === "declined" ? "declined" : "open";
   return (
     <SampleTeam key={state} options={options}>
-      <InvitesScreen />
+      <InvitesScreen sample={{ state: sample }} />
     </SampleTeam>
   );
 }
-
 
 /**
  * `/e2e/company?company=` invite (invite-4), viewer, error, or nothing for two companies (a-3). Tap the name.

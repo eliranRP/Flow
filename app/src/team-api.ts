@@ -45,6 +45,8 @@ export type TeamApi = {
   acceptInvite: (inviteId: string) => Promise<AcceptResult>;
   declineInvite: (inviteId: string) => Promise<void>;
   reopenInvite: (inviteId: string) => Promise<void>;
+  /** The invitation screen opened this invite (idempotent write: the first-sign-in landing then stops). */
+  markInviteSeen: (inviteId: string) => Promise<void>;
 };
 
 function client() {
@@ -115,6 +117,9 @@ export const liveTeamApi: TeamApi = {
   reopenInvite: async (inviteId) => {
     assertNoError(await client().rpc("reopen_invite", { p_invite_id: inviteId }));
   },
+  markInviteSeen: async (inviteId) => {
+    assertNoError(await client().rpc("mark_invite_seen", { p_invite_id: inviteId }));
+  },
 };
 
 const TeamApiContext = createContext<TeamApi>(liveTeamApi);
@@ -181,12 +186,6 @@ export function teamFailure(words: string): (error: Error) => WriteFailure {
     if (/invite not found|not pending|not declined/.test(error.message)) return { message: INVITE_GONE, retry: false };
     return words;
   };
-}
-
-/** "עורך · מיוסי כהן": the role, then who sent it when the server knows. */
-export function inviteLine(invite: Pick<MyInvite, "role" | "invited_by_name">): string {
-  const from = invite.invited_by_name?.trim();
-  return from ? `${ROLE_LABEL[invite.role]} · מ${from}` : ROLE_LABEL[invite.role];
 }
 
 /** The name a member row shows: the Google name, else the email. */

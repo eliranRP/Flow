@@ -13,7 +13,7 @@ import { isStandalone } from "../ui/install-prompt";
 import { useCategoriesQuery, useDashboardQuery, useMercuryStatusQuery, useSumitStatusQuery } from "../use-books";
 import { useWrite } from "../use-write";
 import { useAssistantStatusQuery, type AssistantSample } from "./assistant-settings";
-import { CompanySheet } from "./company-switcher";
+import { CompanySheet } from "./company-sheet";
 import { bindJevConnectorScope, clearJevConnectorFlag } from "./jev-review";
 import { JEV_DEFAULT, jevLocked, jevSwitchOn, useJevIntegrationQuery, useJevKeyStatusQuery, type JevCardState } from "./jev-settings";
 import { type LoanCurrency } from "./loan-setup";

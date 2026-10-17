@@ -13,5 +13,6 @@
   "StatesTeamEmpty": "/e2e/team?proof=1&team=alone",
   "SettingsRename": "/e2e/business?board=1&sheet=rename",
   "SettingsNotifications": "/e2e/notifications?board=1",
-  "SettingsTheme": "/e2e/settings?board=1&sheet=theme"
+  "SettingsTheme": "/e2e/settings?board=1&sheet=theme",
+  "SettingsSwitch": "/e2e/settings?board=1&sheet=switch"
 }
