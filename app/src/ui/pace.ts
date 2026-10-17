@@ -33,7 +33,7 @@ export function paceSheetCopy(detected: RecurringPace | null, party?: string): C
     // The board's subtitle: the rule covers every payment of this party.
     subtitle: party ? `חל על כל התשלומים של ${party}` : undefined,
     choices: [
-      { value: "never", label: "לא קבוע", description: "לא יופיע בקבועים, בהתראות ובתחזית" },
+      { value: "never", label: "לא קבוע", description: "לא יופיע בקבועים" },
       ...PACE_CHOICES.map((pace) => ({
         value: pace,
         label: PACE_LABEL[pace],

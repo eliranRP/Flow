@@ -132,7 +132,7 @@ export function TxnRecurring({
         label="קבוע"
         value={valueWord}
         hint={hint}
-        tag={<span className={isRecurring ? "ui-recurring-tag" : "ui-recurring-tag ui-recurring-tag-off"}>{tag}</span>}
+        endTag={<span className={isRecurring ? "ui-recurring-tag" : "ui-recurring-tag ui-recurring-tag-off"}>{tag}</span>}
         disabled={holdWrites || noParty || (sample === undefined && recurringQuery.isError)}
         busy={sample === undefined && recurringQuery.isLoading}
         buttonRef={paceRow}

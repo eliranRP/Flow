@@ -114,7 +114,7 @@ describe("the charge page: the item (the water bill, arrived 38% over)", () => {
       expect(within(sheet).getByText(label)).toBeTruthy();
     }
     expect(within(sheet).getByText("זוהה לבד מהתשלומים הקודמים")).toBeTruthy();
-    expect(within(sheet).getByText("לא יופיע בקבועים, בהתראות ובתחזית")).toBeTruthy();
+    expect(within(sheet).getByText("לא יופיע בקבועים")).toBeTruthy();
   });
 });
 

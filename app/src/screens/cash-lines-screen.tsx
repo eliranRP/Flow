@@ -190,6 +190,7 @@ function CashLinesBody({
     <div>
       <ScreenHeader
         layout="stacked"
+        className="ui-lines-header"
         title={title}
         backTo={back}
         backText={isCurrent ? "בית" : kicker}

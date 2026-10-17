@@ -60,7 +60,28 @@
 
 /* The board's tag line sits right under its hint (the hint and tag share one block). */
 .ui-lines-group .ui-row-tagline {
-  margin-block-start: calc(var(--space-2) * -1);
+  margin-block-start: 0;
+}
+
+/* board: a line is 73px at least, its three lines set at their natural height. */
+.ui-lines-group .ui-project-list .ui-row {
+  min-block-size: 73px;
+}
+
+.ui-lines-group :is(.ui-row-title, .ui-row-hint, .ui-row-tagline) {
+  line-height: var(--type-card-line);
+}
+
+/* board: the back row sits 4px higher and the period line 3px lower than the shared header draws them
+   (offsets only, so the switch, the figure and the chips keep their places). */
+.ui-lines-header .ui-page-title-row {
+  position: relative;
+  inset-block-start: calc(var(--space-1) * -1);
+}
+
+.ui-lines-header .t-label {
+  position: relative;
+  inset-block-start: calc(var(--space-1) * 0.75);
 }
 
 /* FLOW-366: the lines head stacks its switch, total, count and chips in one column. The page's

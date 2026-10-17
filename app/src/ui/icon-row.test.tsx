@@ -15,6 +15,21 @@ describe("IconRow", () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
+  it("titled puts the label first as the bold title and the value under it as the muted line, the name unchanged", () => {
+    render(<IconRow {...base} titled label="פיצול" value="בין פרויקטים" onClick={() => undefined} />);
+    const row = screen.getByRole("button", { name: "פיצול בין פרויקטים" });
+    expect(row.querySelector(".ui-icon-row-label")).toBeNull();
+    expect(row.querySelector(".ui-icon-row-value")).toHaveTextContent("פיצול");
+    expect(row.querySelector(".ui-icon-row-hint")).toHaveTextContent("בין פרויקטים");
+  });
+
+  it("endTag sits in the row, outside the text block", () => {
+    render(<IconRow {...base} endTag={<span>כל חודש</span>} onClick={() => undefined} />);
+    const tag = screen.getByText("כל חודש");
+    expect(tag.closest(".ui-icon-row-text")).toBeNull();
+    expect(tag.closest(".ui-icon-row")).not.toBeNull();
+  });
+
   it("shows the hint as its description", () => {
     render(<IconRow {...base} hint="כסף שזז בבנק" onClick={() => undefined} />);
     expect(screen.getByRole("button", { name: "פרויקט שיפוץ דירה" })).toHaveAccessibleDescription("כסף שזז בבנק");

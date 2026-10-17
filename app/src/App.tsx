@@ -173,7 +173,6 @@ function AppRoutes() {
                 {SetupRoutes()}
                 <Route path="invites" element={<InvitesScreen />} />
                 {SearchRoute()}
-                <Route path="transactions/:transactionId" element={<TransactionRoute />} />
                 <Route path="transactions/:transactionId/split-category" element={<LineSplitScreen />} />
                 <Route path="install" element={<InstallRoute />} />
               </Route>
@@ -205,6 +204,7 @@ function AppRoutes() {
                 <Route path="recurring" element={<RecurringScreen />} />
                 <Route path="recurring/:direction/:partyId" element={<RecurringChargeScreen />} />
                 {UnpaidInvoiceRoute()}
+                <Route path="transactions/:transactionId" element={<TransactionRoute />} />
                 <Route path="forecast" element={<ForecastScreen />} />
                 {SettingsRoutes()}
                 {LoanRoutes()}

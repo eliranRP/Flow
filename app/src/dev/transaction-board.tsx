@@ -52,7 +52,7 @@ export function DevTransactionBoard() {
   if (params.get("board") === "1") {
     return (
       <TransactionScreen
-        sample={BOARD_TXN}
+        sample={{ ...BOARD_TXN, doc_kind: "photo", document_url: "https://pay.sumit.co.il/example/doc-board" }}
         sampleSheet={sheetParam(params.get("sheet"))}
         sampleProjects={[{ id: "p1", name: "Elmwood • flip" }]}
         sampleCategories={[{ id: "c1", name: "חומרים" }]}
@@ -77,6 +77,7 @@ export function DevTransactionBoard() {
           source: "mercury",
           amount_gross: -395700n,
           amount_net: -395700n,
+          pnl_fixed: true,
           review_status: "approved",
           review_id: null,
           paid: false,

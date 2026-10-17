@@ -249,30 +249,30 @@ export function sampleBoardCashMonths(now = new Date()): NonNullable<CashMonths>
  * for approval; the loan principal and the rehab are the two lines profit leaves out ($13,757).
  */
 const BOARD_OUT: Array<[number, string, string | null, string, bigint, boolean, boolean]> = [
-  [0, "Redfield", "Maple St", "ביטוח", 124_000n, true, true],
-  [1, "Bayside Water Works", "Maple St", "אחר", 8_640n, true, true],
+  [0, "Redfield", "Maple St · השכרה", "ביטוח", 124_000n, true, true],
+  [1, "Bayside Water Works", "Maple St · השכרה", "אחר", 8_640n, true, true],
   [1, "Harlow's", null, "חומרים", 41_218n, true, true],
-  [2, "Pike Plumbing LLC", "Pine Ridge", "שירותים", 240_000n, true, true],
-  [3, "Norvell Builders", "Birch Court", "שיפוץ", 128_450n, true, true],
-  [4, "Ridgeway Loans", "Birch Court", "תשלומי הלוואה", 395_700n, false, false],
-  [5, "Hillcrest Renovations", "Birch Court", "שיפוץ", 980_000n, false, false],
-  [6, "Clearwater Clean", "Birch Court", "שירותים", 650_000n, false, true],
+  [2, "Pike Plumbing LLC", "Pine Ridge · שיפוץ", "שירותים", 240_000n, true, true],
+  [3, "Norvell Builders", "Birch Court · דופלקס להשכרה", "שיפוץ", 128_450n, true, true],
+  [4, "Ridgeway Loans", "Birch Court · דופלקס להשכרה", "תשלומי הלוואה", 395_700n, false, false],
+  [5, "Hillcrest Renovations", "Birch Court · דופלקס להשכרה", "שיפוץ", 980_000n, false, false],
+  [6, "Clearwater Clean", "Birch Court · דופלקס להשכרה", "שירותים", 650_000n, false, true],
   [7, "Cloudline Software", null, "תוכנות ומנויים", 118_000n, false, true],
-  [8, "Tilecraft Supply", "Maple St", "חומרים", 745_000n, false, true],
-  [9, "Payroll Partners", "Pine Ridge", "שכר", 211_892n, false, true],
+  [8, "Tilecraft Supply", "Maple St · השכרה", "חומרים", 745_000n, false, true],
+  [9, "Payroll Partners", "Pine Ridge · שיפוץ", "שכר", 211_892n, false, true],
   [9, "Harbor Bistro", null, "אחר", 64_000n, false, true],
-  [10, "Flameline Gas", "Pine Ridge", "חשמל", 195_000n, false, true],
-  [10, "Lantern Paint Co", "Pine Ridge", "חומרים", 290_000n, false, true],
-  [10, "Kestrel Electric", "Maple St", "חשמל", 15_000n, false, true],
+  [10, "Flameline Gas", "Pine Ridge · שיפוץ", "חשמל", 195_000n, false, true],
+  [10, "Lantern Paint Co", "Pine Ridge · שיפוץ", "חומרים", 290_000n, false, true],
+  [10, "Kestrel Electric", "Maple St · השכרה", "חשמל", 15_000n, false, true],
 ];
 
 /** The board's income lines: a tenant's rent, and the lines that make up the day totals. */
 const BOARD_IN: Array<[number, string, string | null, string, bigint, boolean]> = [
-  [2, "R. Delgado", "Birch Court", "שכר דירה", 185_000n, true],
-  [6, "T. Lindqvist", "Pine Ridge", "שכר דירה", 172_500n, false],
-  [8, "S. Whitfield", "Maple St", "שכר דירה", 215_000n, false],
-  [9, "Moreno Co", "Birch Court", "שכר דירה", 260_000n, false],
-  [9, "Harborline Ltd", null, "הכנסה מלקוחות", 155_200n, false],
+  [2, "R. Delgado · שכר דירה", "Birch Court · דופלקס להשכרה", "הכנסה מלקוחות", 185_000n, true],
+  [6, "T. Lindqvist · שכר דירה", "Maple St · השכרה", "הכנסה מלקוחות", 172_500n, false],
+  [8, "S. Whitfield · שכר דירה", "Maple St · השכרה", "הכנסה מלקוחות", 215_000n, false],
+  [9, "Moreno Co · החזר נאמנות", "Birch Court · דופלקס להשכרה", "הכנסה אחרת", 260_000n, false],
+  [9, "Harborline Ltd · תשלום 2 מתוך 4", "Harborline · עבודת לקוח", "הכנסה מלקוחות", 155_200n, false],
 ];
 
 function isoDaysBack(now: Date, back: number): string {

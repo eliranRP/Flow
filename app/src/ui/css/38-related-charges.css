@@ -171,11 +171,6 @@
   gap: var(--space-3);
 }
 
-.ui-charges-context {
-  margin: 0;
-  color: var(--color-text-muted);
-}
-
 .ui-charges-summary {
   display: flex;
   justify-content: space-between;
@@ -199,14 +194,11 @@
   display: none;
 }
 
-.ui-recurring-card .ui-icon-row-value {
-  font-weight: var(--type-name-weight);
-}
-
 .ui-recurring-tag {
+  padding-inline: var(--space-2);
   color: var(--color-accent-text);
-  font-size: var(--type-meta-size);
-  font-weight: var(--type-name-weight);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-btn-2-weight);
   white-space: nowrap;
 }
 
@@ -218,38 +210,10 @@
   margin: 0;
 }
 
-/* The board's recurring row is 61px: 10px above and below its two lines. */
+/* The board's recurring row is two lines: the value is the title, the hint wraps under it, and the pace
+   sits at the end of the row, centred, before the chevron. */
 .ui-recurring-card .ui-icon-row {
-  padding-block: calc(var(--space-1) * 2.5);
-}
-
-/* The board's recurring row is two lines: the value is the title, and the tag sits at the end of the
-   title line while the hint wraps under the title. */
-.ui-recurring-card .ui-icon-row-text {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: var(--space-3);
-  row-gap: var(--space-1);
-}
-
-.ui-recurring-card .ui-icon-row-value-line {
-  display: contents;
-}
-
-.ui-recurring-card .ui-icon-row-value {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.ui-recurring-card .ui-recurring-tag {
-  grid-column: 2;
-  grid-row: 1;
-  align-self: start;
-}
-
-.ui-recurring-card .ui-icon-row-hint {
-  grid-column: 1;
-  grid-row: 2;
+  min-block-size: 64px;
 }
 
 /* The board's earlier-charge rows have no chevron: the row is the link, and its label names it. */
@@ -272,11 +236,6 @@
   margin-top: calc(-1 * var(--sheet-gap-y));
 }
 
-/* board: the context line sits 10px higher, so the summary and the rows follow it up. */
-.ui-charges-sheet .ui-charges-context {
-  margin-block: calc(var(--space-1) * -2.5) 0;
-}
-
 .ui-charges-sheet .ui-charges-summary {
   padding: calc(var(--space-1) * 2.5) var(--space-3);
   line-height: calc(var(--type-meta-size) * 1.2);
@@ -291,6 +250,14 @@
   min-height: 52px;
   padding-inline: calc(var(--space-1) * 2.5);
   border-radius: var(--radius-seg-btn);
+}
+
+.ui-charges-sheet .ui-charges-badge {
+  padding: calc(var(--space-1) / 2) calc(var(--space-1) * 1.5);
+  border-radius: var(--radius-block);
+  background: var(--color-tint);
+  font-size: calc(var(--type-caption-size) - 2px);
+  font-weight: var(--type-btn-weight);
 }
 
 .ui-charges-sheet .ui-charges-row-now {
@@ -329,12 +296,13 @@
 
 .ui-pace-sheet .ui-row-title {
   font-size: var(--type-btn-2-size);
-  line-height: var(--type-btn-line);
+  line-height: var(--type-card-line);
 }
 
 .ui-pace-sheet .ui-radio-desc {
+  margin-top: 0;
   font-size: calc(var(--type-cents-size) + 1px);
-  line-height: calc(var(--type-cents-size) * 1.45);
+  line-height: var(--type-card-line);
 }
 
 .ui-pace-sheet .ui-radio {
