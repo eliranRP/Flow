@@ -134,14 +134,6 @@
   animation: ui-onb-pop var(--motion-page) var(--ease-enter) both;
 }
 
-.ui-onb-note,
-.ui-onb-pending {
-  margin: 0;
-  font-size: var(--type-caption-size);
-  line-height: var(--type-caption-line);
-  color: var(--color-text-muted);
-}
-
 .ui-onb-form {
   display: flex;
   flex-direction: column;
@@ -188,6 +180,8 @@
   font-size: var(--type-caption-size);
   line-height: var(--onb-line-read);
   color: var(--color-text-muted);
+  /* The board wraps its notes greedily; .t-hint's balanced wrap moves the last word down. */
+  text-wrap: wrap;
 }
 
 /* The basis note under the segments is 12px on the board. */
