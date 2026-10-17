@@ -58,3 +58,18 @@ test("the compact bar shows after scrolling and its motion is off with reduced m
   const duration = await bar.evaluate((node) => getComputedStyle(node).transitionDuration);
   expect(duration.split(",").every((value) => value.trim().startsWith("0s"))).toBe(true);
 });
+
+// FLOW-374: the bar is the board's 64px and its figure is whole inside it, at a phone and a narrow width.
+for (const width of [390, 320]) {
+  test(`the compact bar's figure is inside the bar at ${String(width)}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/e2e/cash?preview=1&scrolled=1&recurring=1");
+    const bar = page.locator(".ui-compact-bar-band");
+    await expect(bar).toBeVisible();
+    const barBox = await bar.boundingBox();
+    const netBox = await page.locator(".ui-compact-bar-centre-net").boundingBox();
+    if (barBox == null || netBox == null) throw new Error("the compact bar or its figure is not drawn");
+    expect(netBox.y + netBox.height).toBeLessThanOrEqual(barBox.y + barBox.height);
+    expect(netBox.y).toBeGreaterThanOrEqual(barBox.y);
+  });
+}

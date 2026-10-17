@@ -355,6 +355,14 @@
   color: var(--color-pill-helps);
 }
 
+/* FLOW-374 (board): Home's change chips are 12px-round, 13/500, with 3px 10px padding. Scoped to Home's rows. */
+.ui-band-rows .ui-change-amount {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
 .ui-radio-row {
   display: flex;
   align-items: center;
