@@ -16,7 +16,6 @@ export { ProjectCategoryScreen } from "./project-category-screen";
 export { UnpaidScreen } from "./unpaid-screen";
 export { InvoiceScreen } from "./invoice-screen";
 export { linePnlState, TransactionScreen } from "./transaction-screen";
-export { SplitScreen } from "./split-screen";
 export { type ConnectorTally, type ConnectionsHint, connectionsHint, SettingsScreen } from "./settings-screen";
 export { BusinessScreen } from "./business-screen";
 export { ConnectionsScreen } from "./connections-screen";

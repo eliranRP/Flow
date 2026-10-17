@@ -63,6 +63,8 @@ export function Picker({
   savingId,
   note,
   noneLabel,
+  choiceNotes,
+  disabledIds,
   reversal,
   splitLink = true,
   onSelect,
@@ -84,6 +86,10 @@ export function Picker({
   note?: string;
   /** A first row with id "", such as "בלי פרויקט". Hidden while searching. */
   noneLabel?: string;
+  /** A row's note by id ("" for the none row). FLOW-922. */
+  choiceNotes?: Record<string, string>;
+  /** Rows that cannot be picked, by id. Their choiceNotes entry says why. FLOW-922. */
+  disabledIds?: string[];
   /** The other kind's section. Shown only when it has categories. */
   reversal?: {
     heading: string;
@@ -113,6 +119,7 @@ export function Picker({
   const sections = kind === "project" && needle === "" ? groupSections(listed, suggestionId) : null;
   const pinned = sections != null ? listed.find((option) => option.id === suggestionId) : undefined;
   function row(option: ChangeChoice) {
+    const taken = disabledIds?.includes(option.id) === true;
     return (
       <RadioRow
         key={option.id}
@@ -121,10 +128,11 @@ export function Picker({
         code={option.code}
         date={needle === "" ? option.recent : undefined}
         tag={option.id === suggestionId ? (suggestionJev ? "jev" : true) : false}
-        description={groupHint(option, needle)}
+        description={choiceNotes?.[option.id] ?? groupHint(option, needle)}
+        disabledReason={taken ? choiceNotes?.[option.id] : undefined}
         selected={option.id === selectedId}
         busy={option.id === savingId}
-        disabled={savingId != null && option.id !== savingId}
+        disabled={taken || (savingId != null && option.id !== savingId)}
         onSelect={() => {
           onSelect(option.id);
         }}
@@ -161,6 +169,7 @@ export function Picker({
                   key="none"
                   layout="picker"
                   label={noneLabel}
+                  description={choiceNotes?.[""]}
                   selected={selectedId === ""}
                   busy={savingId === ""}
                   disabled={savingId != null && savingId !== ""}
@@ -184,6 +193,7 @@ export function Picker({
                   key="none"
                   layout="picker"
                   label={noneLabel}
+                  description={choiceNotes?.[""]}
                   selected={selectedId === ""}
                   busy={savingId === ""}
                   disabled={savingId != null && savingId !== ""}

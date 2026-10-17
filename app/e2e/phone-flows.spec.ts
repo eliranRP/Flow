@@ -38,7 +38,7 @@ test.beforeAll(async ({ browser }) => {
     "/e2e/change?preview=1",
     "/search?preview=1",
     "/transactions/t-step-3?preview=1",
-    "/e2e/split",
+    "/e2e/split-category",
   ]) {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
@@ -94,26 +94,27 @@ for (const width of [390, 320]) {
     });
 
     test("Split a line between two projects", async ({ page }) => {
-      await open(page, "/e2e/split", page.getByRole("heading", { name: "פיצול בין פרויקטים" }));
-      const picker = page.getByRole("dialog", { name: "בחירת פרויקט" });
-      await step("add a part", () => page.getByRole("button", { name: "הוספת חלק" }).tap(), picker);
+      await open(page, "/e2e/split-category", page.getByRole("heading", { name: "פיצול", exact: true }));
+      const picker = page.getByRole("dialog", { name: /^(בחירת פרויקט|פרויקט לחלק \d+)$/ });
+      await step("add a part", () => page.getByRole("button", { name: "חלק נוסף" }).tap(), page.getByRole("button", { name: /, פרויקט, שינוי$/ }).last());
       await step(
         "pick a project",
         async () => {
-          await picker.getByRole("radio", { name: "פרגולה בית כהן" }).tap();
+          await page.getByRole("button", { name: /, פרויקט, שינוי$/ }).last().tap();
+          await picker.getByRole("radio", { name: "פרויקט רעננה" }).tap();
           await picker.getByRole("button", { name: "שמירה", exact: true }).tap();
         },
-        page.getByRole("radiogroup", { name: "יחידה, פרגולה בית כהן" }),
+        page.getByRole("radiogroup", { name: "יחידה, חומרי בניין" }),
       );
-      const share = page.getByRole("textbox", { name: "אחוז, פרגולה בית כהן" });
+      const share = page.getByRole("textbox", { name: "אחוז, חומרי בניין" });
       await step(
         "percent",
-        () => page.getByRole("radiogroup", { name: "יחידה, פרגולה בית כהן" }).getByRole("radio", { name: "%" }).tap(),
+        () => page.getByRole("radiogroup", { name: "יחידה, חומרי בניין" }).getByRole("radio", { name: "%" }).tap(),
         share,
       );
       await share.fill("50");
-      const saved = page.locator("#e2e-split-saved");
-      await step("save", () => page.getByRole("button", { name: "סגירה" }).tap(), () => expect(saved).not.toHaveText(""));
+      const saved = () => page.evaluate(() => sessionStorage.getItem("e2e-line-split-saved"));
+      await step("save", () => page.getByRole("button", { name: "סגירה" }).tap(), () => expect.poll(saved).not.toBeNull());
     });
   });
 }

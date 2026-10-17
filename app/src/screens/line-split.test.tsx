@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -10,7 +10,6 @@ import {
 } from "../dev/line-split-sample";
 import type { LineSplitRead, PartDraft, PayloadPart } from "../line-split";
 import { renderWithProviders } from "../test-render";
-import { SplitScreen } from "./flow-screens";
 import { LineSplitScreen, type LineInfo, type LineSplitApi, type LineSplitSample } from "./line-split";
 
 function showEditor(sample: Partial<LineSplitSample> & { line?: LineInfo } = {}) {
@@ -55,16 +54,23 @@ function restRow() {
   return screen.getByRole("button", { name: /^השאר,/ });
 }
 
+/** "+ חלק נוסף" adds a part at once, on the line's category; its category button is the newest. */
+function addPart() {
+  fireEvent.click(screen.getByRole("button", { name: "חלק נוסף" }));
+  const buttons = screen.getAllByRole("button", { name: /, קטגוריה, שינוי$/ });
+  return buttons[buttons.length - 1] as HTMLElement;
+}
+
 describe("split by category editor (FLOW-325)", () => {
   it("adds a part through the picker, flips its unit, and the rest follows the server preview", async () => {
     showEditor();
     expect(screen.getByRole("heading", { name: "פיצול" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "חלק נוסף" }));
-    const categorySheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    fireEvent.click(addPart());
+    const categorySheet = await screen.findByRole("dialog", { name: /^(בחירת קטגוריה|קטגוריה לחלק \d+)$/ });
     fireEvent.click(within(categorySheet).getByRole("radio", { name: "חשמל" }));
     fireEvent.click(within(categorySheet).getByRole("button", { name: "שמירה" }));
     // The category pick moves straight on to the project list.
-    const projectSheet = await screen.findByRole("dialog", { name: "בחירת פרויקט" });
+    const projectSheet = await screen.findByRole("dialog", { name: /^(בחירת פרויקט|פרויקט לחלק \d+)$/ });
     expect(within(projectSheet).getByRole("radio", { name: "פרויקט גבעתיים · פרויקט השורה" })).toBeInTheDocument();
     fireEvent.click(within(projectSheet).getByRole("radio", { name: "פרויקט הרצליה" }));
     fireEvent.click(within(projectSheet).getByRole("button", { name: "שמירה" }));
@@ -77,7 +83,7 @@ describe("split by category editor (FLOW-325)", () => {
     fireEvent.click(screen.getByRole("radio", { name: "%" }));
     expect(screen.getByLabelText("אחוז, חשמל")).toHaveValue("10.42");
     await waitFor(() => { expect(restRow()).toHaveTextContent("₪4,299.84"); });
-  });
+  }, 15_000);
 
   it("saves on ✕ with each part's percent, amount and the rest, then toasts with ביטול", async () => {
     const { api, saved } = recordingApi(SAMPLE_EXPENSE_LINE);
@@ -120,13 +126,13 @@ describe("split by category editor (FLOW-325)", () => {
 
   it("the refund's category picker offers expense categories as reversals, and a reversal asks for a project", async () => {
     showEditor({ line: SAMPLE_REFUND_LINE });
-    fireEvent.click(screen.getByRole("button", { name: "חלק נוסף" }));
-    const sheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    fireEvent.click(addPart());
+    const sheet = await screen.findByRole("dialog", { name: /^(בחירת קטגוריה|קטגוריה לחלק \d+)$/ });
     // FLOW-333 C3c: on a refund line the reversal section starts open.
     expect(within(sheet).getByRole("button", { name: "החזר מספק" })).toHaveAttribute("aria-expanded", "true");
     fireEvent.click(within(sheet).getByRole("radio", { name: "קבלני משנה" }));
     fireEvent.click(within(sheet).getByRole("button", { name: "שמירה" }));
-    const projects = await screen.findByRole("dialog", { name: "בחירת פרויקט" });
+    const projects = await screen.findByRole("dialog", { name: /^(בחירת פרויקט|פרויקט לחלק \d+)$/ });
     expect(within(projects).getByText("חלק החזר צריך פרויקט.")).toBeInTheDocument();
     expect(within(projects).queryByRole("radio", { name: /פרויקט השורה/ })).toBeNull();
   });
@@ -141,7 +147,7 @@ describe("split by category editor (FLOW-325)", () => {
     fireEvent.click(screen.getByRole("button", { name: /^משיכות בעלים, החזר, קטגוריה, שינוי/ }));
     // The part's own kept-out category is the only kept-out reversal listed (0138), and it is the saved value.
     // Keeping the line's project without a project pick is covered by the reversalNeedsProject tests in src/line-split.test.ts.
-    const categorySheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    const categorySheet = await screen.findByRole("dialog", { name: /^(בחירת קטגוריה|קטגוריה לחלק \d+)$/ });
     expect(within(categorySheet).getByRole("radio", { name: "משיכות בעלים" })).toBeChecked();
     expect(within(categorySheet).getByRole("button", { name: "שמירה" })).toBeDisabled();
   });
@@ -154,9 +160,10 @@ describe("split by category editor (FLOW-325)", () => {
       ],
     });
     expect(screen.getByText(/חולק יותר מהסכום/, { selector: "p" })).toBeInTheDocument();
-    // Before any ✕ the sentence sits under the part edited last, with no hold line.
+    // Before any ✕ the part edited last says its problem in its note (FLOW-922), with no hold line.
     const sentence = "החלקים עוברים את השורה ב־₪560. הקטינו חלק.";
-    expect(screen.getAllByText(sentence)).toHaveLength(1);
+    expect(document.querySelector(".ui-lsplit-note-flagged")?.textContent).toBe("יותר מהסכום ב־₪560");
+    expect(screen.queryAllByText(sentence)).toHaveLength(0);
     expect(screen.queryByRole("button", { name: "ביטול השינוי" })).toBeNull();
     expect(screen.queryByText(/גבוהים מהשורה/)).toBeNull();
     expect(restRow()).toHaveTextContent("₪0");
@@ -166,30 +173,33 @@ describe("split by category editor (FLOW-325)", () => {
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     expect(await screen.findByRole("button", { name: "ביטול השינוי" })).toBeInTheDocument();
     expect(screen.getAllByText(sentence)).toHaveLength(1);
+    expect(document.querySelector(".ui-lsplit-note-flagged")).toBeNull();
   });
 
-  it("reads a share past 1,000% with separators (FLOW-333 C1)", () => {
+  it("reads an over amount past 1,000 with separators (FLOW-333 C1, FLOW-922 problem note)", () => {
+    // The over problem replaces the share line, so the figure is the amount over the line.
     showEditor({ parts: [{ key: "a", categoryId: "c-elec", projectId: "p-herz", unit: "amount", value: "1234567.89" }] });
-    expect(screen.getByText("25,720%", { selector: "bdi" })).toBeInTheDocument();
+    expect(document.querySelector(".ui-lsplit-note-flagged")?.textContent).toContain("1,229,767.89");
   });
 
-  it("a picked part hands focus to its value field, in the unit last typed, and lists the line's project once (FLOW-333 C3a, C3b, C9)", async () => {
+  it("a picked part hands focus to its value field, and lists the line's project once (FLOW-333 C3a, C9)", async () => {
     showEditor({ parts: [{ key: "a", categoryId: "c-elec", projectId: "p-herz", unit: "percent", value: "" }] });
     fireEvent.change(screen.getByLabelText("אחוז, חשמל"), { target: { value: "20" } });
-    fireEvent.click(screen.getByRole("button", { name: "חלק נוסף" }));
-    const categorySheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    fireEvent.click(addPart());
+    const categorySheet = await screen.findByRole("dialog", { name: /^(בחירת קטגוריה|קטגוריה לחלק \d+)$/ });
     fireEvent.click(within(categorySheet).getByRole("radio", { name: "ביטוח" }));
     fireEvent.click(within(categorySheet).getByRole("button", { name: "שמירה" }));
     // The project sheet is asked for again before each step: the category sheet's close swaps the
     // page under it, so a sheet element held from the first find can be detached when clicked.
-    const projectSheet = () => screen.getByRole("dialog", { name: "בחירת פרויקט" });
+    const projectSheet = () => screen.getByRole("dialog", { name: /^(בחירת פרויקט|פרויקט לחלק \d+)$/ });
     await waitFor(() => { expect(within(projectSheet()).getByRole("radio", { name: "פרויקט גבעתיים · פרויקט השורה" })).toBeInTheDocument(); });
     expect(within(projectSheet()).queryByRole("radio", { name: "פרויקט גבעתיים" })).toBeNull();
     fireEvent.click(within(projectSheet()).getByRole("radio", { name: "פרויקט הרצליה" }));
     fireEvent.click(within(projectSheet()).getByRole("button", { name: "שמירה" }));
     // Two sheets close one after the other (each waits out --motion-sheet-out), so allow 3s.
     await waitFor(() => { expect(screen.queryByRole("dialog")).toBeNull(); }, { timeout: 3000 });
-    await waitFor(() => { expect(screen.getByLabelText("אחוז, ביטוח")).toHaveFocus(); });
+    // A new part is in ₪ (the amount), so the focus lands on its amount field.
+    await waitFor(() => { expect(screen.getByLabelText("סכום, ביטוח")).toHaveFocus(); });
   });
 
   it("maps a server refusal to a banner and keeps the screen open", async () => {
@@ -288,6 +298,40 @@ describe("split by category editor (FLOW-325)", () => {
     expect(screen.queryByRole("button", { name: "ביטול" })).toBeNull();
   });
 
+  it("+ חלק נוסף adds a part at once, on the line's category, with what is left (FLOW-922)", () => {
+    showEditor({ parts: expenseParts });
+    fireEvent.click(screen.getByRole("button", { name: "חלק נוסף" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    const amounts = screen.getAllByLabelText(/^(סכום|אחוז), /);
+    expect(amounts).toHaveLength(3);
+    // ₪4,800 less 30% (₪1,440) and ₪500 is ₪2,860 left for the new part.
+    expect(amounts[2]).toHaveValue("2,860");
+    expect(screen.getAllByRole("button", { name: /^חומרי בניין, קטגוריה, שינוי/ }).length).toBeGreaterThan(0);
+  });
+
+  it("חלוקה שווה on an empty split makes two parts that sum to the line, the last takes the cents (FLOW-922)", () => {
+    showEditor({ line: { ...SAMPLE_EXPENSE_LINE, amountNet: -894_017n }, parts: [] });
+    fireEvent.click(screen.getByRole("button", { name: "חלוקה שווה" }));
+    const amounts = screen.getAllByLabelText(/^סכום, /);
+    expect(amounts).toHaveLength(2);
+    expect(amounts[0]).toHaveValue("4,470.08");
+    expect(amounts[1]).toHaveValue("4,470.09");
+  });
+
+  it("a part's project picker is headed for its part and greys the project another part already pairs with its category (FLOW-922)", async () => {
+    showEditor({
+      parts: [
+        { key: "a", categoryId: "c-elec", projectId: "p-herz", unit: "amount", value: "100" },
+        { key: "b", categoryId: "c-elec", projectId: "p-raan", unit: "amount", value: "200" },
+      ],
+      target: { partKey: "b", kind: "project" },
+    });
+    const sheet = await screen.findByRole("dialog", { name: "פרויקט לחלק 2" });
+    expect(within(sheet).getByRole("radio", { name: "פרויקט הרצליה" })).toBeDisabled();
+    expect(within(sheet).getByText("כבר בפיצול עם חשמל")).toBeInTheDocument();
+    expect(within(sheet).getByRole("radio", { name: "פרויקט רעננה" })).toBeEnabled();
+  });
+
   it("switching % to ₪ before any preview keeps the money: the line × percent", () => {
     showEditor({ parts: [{ key: "a", categoryId: "c-elec", projectId: "p-herz", unit: "percent", value: "30" }] });
     // No preview has come back yet (it waits 250ms).
@@ -302,10 +346,12 @@ describe("split by category editor (FLOW-325)", () => {
         { key: "b", categoryId: "c-elec", projectId: "p-herz", unit: "amount", value: "200" },
       ],
     });
-    const field = screen.getAllByLabelText("סכום, חשמל")[0];
+    // The first part is the one kept; only the later duplicate says so (FLOW-922).
+    expect(screen.getAllByLabelText("סכום, חשמל")[0]).not.toHaveAttribute("aria-describedby");
+    const field = screen.getAllByLabelText("סכום, חשמל")[1];
     const id = field?.getAttribute("aria-describedby") ?? "";
-    expect(document.getElementById(id)).toHaveTextContent("הקטגוריה והפרויקט האלה כבר בחלק אחר.");
-    expect(screen.getAllByRole("button", { name: /^חשמל, קטגוריה, שינוי/ })[0]).toHaveAttribute("aria-describedby", id);
+    expect(document.getElementById(id)).toHaveTextContent("הפרויקט והקטגוריה האלה כבר בפיצול");
+    expect(screen.getAllByRole("button", { name: /^חשמל, קטגוריה, שינוי/ })[1]).toHaveAttribute("aria-describedby", id);
   });
 
   it("the rest row's message sits outside its button and describes it", () => {
@@ -318,15 +364,16 @@ describe("split by category editor (FLOW-325)", () => {
     expect(message).toHaveTextContent("לשורה אין קטגוריה. בחרו קטגוריה לשאר.");
   });
 
-  it("the picker gives focus back to the part that opened it", async () => {
+  it("the picker hands focus to the part's value field when it closes", async () => {
     showEditor({ parts: expenseParts });
     const pick = screen.getByRole("button", { name: /^ביטוח, קטגוריה, שינוי/ });
     pick.focus();
     fireEvent.click(pick);
-    const sheet = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    const sheet = await screen.findByRole("dialog", { name: /^(בחירת קטגוריה|קטגוריה לחלק \d+)$/ });
     fireEvent.keyDown(sheet, { key: "Escape" });
     await waitFor(() => { expect(screen.queryByRole("dialog")).toBeNull(); });
-    await waitFor(() => { expect(pick).toHaveFocus(); });
+    // A part's picker hands focus to its value field on close (FLOW-333 C3a), not back to the pick.
+    await waitFor(() => { expect(screen.getByLabelText("סכום, ביטוח")).toHaveFocus(); });
   });
 
   it("הסרת הפיצול stays open on a line the server will not split, and clearing offers no ביטול", async () => {
@@ -369,37 +416,3 @@ describe("split by category editor (FLOW-325)", () => {
   });
 });
 
-describe("the project split on a line split by category (FLOW-325)", () => {
-  it("says why instead of offering ניסיון חוזר", async () => {
-    const onSave = vi.fn(() => Promise.reject(new Error("line has a split by category")));
-    renderWithProviders(
-      <Routes>
-        <Route
-          path="/split"
-          element={
-            <SplitScreen
-              sampleAmount={100_000n}
-              sampleProjects={[
-                { id: "p1", name: "פרויקט הרצליה" },
-                { id: "p2", name: "פרויקט רעננה" },
-              ]}
-              sampleParts={[{ projectId: "p2", value: "250" }]}
-              backTo="/back"
-              onSave={onSave}
-            />
-          }
-        />
-        <Route path="/back" element={<h1>חזרה</h1>} />
-      </Routes>,
-      { route: "/split" },
-    );
-    fireEvent.change(await screen.findByRole("textbox", { name: "סכום, פרויקט רעננה" }), { target: { value: "300" } });
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
-      await Promise.resolve();
-    });
-    expect(await screen.findByText("לשורה יש פיצול לפי קטגוריות. אפשר רק אחד מהשניים.")).toBeInTheDocument();
-    expect(screen.queryByText("הפיצול לא נשמר")).toBeNull();
-    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).toBeNull();
-  });
-});

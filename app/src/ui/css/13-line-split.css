@@ -1,11 +1,44 @@
-/* FLOW-325: the split-by-category editor (plan option A). Built on the ui-split-* frame. */
-.ui-lsplit .ui-split-cta {
-  gap: var(--space-2);
+/* FLOW-922: the split screen's frame, the card that wraps a part list, and the bad tone. The editor root carries ui-split. */
+.ui-split {
+  min-height: 100dvh;
+  overflow-x: hidden;
+  padding-block-end: calc(var(--split-foot) + var(--space-2));
 }
 
-.ui-lsplit-head {
-  margin-top: var(--space-2);
+/* FLOW-328: the 24px side gutter of every other screen. */
+.ui-split .ui-page {
   padding-inline: var(--space-side);
+}
+
+.ui-split-body {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ui-split-body:disabled {
+  opacity: 1;
+}
+
+.ui-split-bad {
+  color: var(--color-bad);
+}
+
+/* The rows' 16px padding lines their text up with the title; in dark the surface edge sits 8px in (FLOW-334). */
+.ui-split-card {
+  margin: var(--space-3) calc(var(--space-side) - var(--space-4)) 0;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ui-split-card .ui-row-title {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .ui-lsplit-meta {
@@ -136,61 +169,7 @@
   color: var(--color-text-muted);
 }
 
-.ui-lsplit-end {
-  display: flex;
-  flex: 0 0 auto;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-1);
-  margin-inline-start: auto;
-}
 
-.ui-lsplit-entry {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-
-/* FLOW-333 C1: a part's entry takes its own full-width line, so ₪9,999,999.99 fits at 320. */
-.ui-lsplit-end-entry {
-  flex: 1 0 100%;
-  align-items: stretch;
-  margin-inline-start: 0;
-}
-
-.ui-lsplit-end-entry .ui-lsplit-resolved {
-  align-self: flex-end;
-}
-
-.ui-lsplit-entry > .ui-field:first-child,
-.ui-lsplit-entry .ui-seg-input {
-  flex: none;
-  inline-size: auto;
-}
-
-.ui-lsplit-entry > .ui-field:last-child {
-  flex: 1 1 0;
-  inline-size: auto;
-}
-
-/* FLOW-333 C7: each ₪ / % button is a full touch target. FLOW-346: the switch is as tall as the
-   amount field beside it, so the two read as one row. */
-.ui-lsplit-entry .ui-seg-input {
-  box-sizing: border-box;
-  block-size: var(--field-height);
-  min-block-size: var(--touch-min);
-}
-
-.ui-lsplit-entry .ui-seg-btn {
-  block-size: 100%;
-  min-block-size: 0;
-  min-inline-size: var(--touch-min);
-}
-
-.ui-lsplit-resolved {
-  min-block-size: 1lh;
-  color: var(--color-text-muted);
-}
 
 .ui-lsplit-msg {
   flex: 1 0 100%;
@@ -217,45 +196,15 @@
   cursor: default;
 }
 
-.ui-lsplit-empty {
-  margin: var(--space-2) var(--space-4) 0;
-}
-
-/* FLOW-333 C4: הוספת חלק sits in the sticky bar, at the start of the totals line. */
-.ui-lsplit-add {
-  display: flex;
-  flex: none;
-  align-self: center;
-}
 
 .ui-lsplit-clear-link {
   color: var(--color-bad);
-}
-
-.ui-lsplit-totals {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--space-2) var(--space-4);
-}
-
-/* The two sums keep their width; past 320 with eight-figure sums they wrap under the link. */
-.ui-lsplit-sums {
-  display: flex;
-  flex: none;
-  gap: var(--space-4);
-  margin-inline-start: auto;
 }
 
 .ui-lsplit-total {
   display: flex;
   flex-direction: column;
   min-inline-size: 0;
-}
-
-.ui-lsplit-total-end {
-  align-items: flex-end;
-  text-align: end;
 }
 
 /* A turning 18px square reaches ~3.7px past its box on each side; the start margin keeps that
@@ -266,7 +215,7 @@
 
 
 /* FLOW-370 board: the line split frame (top box, part cards, rest card, footer). Scoped to the
-   editor root, so the project split (split-screen.tsx) keeps the rules above. */
+   editor root. */
 .ui-lsplit-board {
   display: flex;
   flex-direction: column;

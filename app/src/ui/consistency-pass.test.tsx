@@ -20,17 +20,9 @@ function declared(selector: string, property: string): string {
 }
 
 describe("mobile UI consistency pass (FLOW-328)", () => {
-  it("gives Split the 24px gutter, a start-side amount, and no hairlines between choices", () => {
+  it("gives Split the 24px gutter and the card's inset", () => {
     expect(declared(".ui-split .ui-page", "padding-inline")).toBe("var(--space-side)");
-    expect(declared(".ui-split-amount", "padding-inline")).toBe("var(--space-side)");
-    expect(declared(".ui-split-amount", "text-align")).not.toBe("center");
-    expect(declared(".ui-split-question", "padding-inline")).toBe("var(--space-side)");
     expect(declared(".ui-split-card", "margin")).toContain("var(--space-side)");
-    for (const row of [".ui-split-card .ui-radio-row", ".ui-split-card .ui-split-manual"]) {
-      expect(declared(row, "border-bottom")).toMatch(/^(0|0px|none)/);
-      // The card's surface shows in dark, so the choices keep their inset from its edge.
-      expect(declared(row, "padding-inline")).toBe("var(--space-4)");
-    }
   });
 
   it("keeps the turning save spinner inside the line split total", () => {

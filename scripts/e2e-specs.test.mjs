@@ -32,12 +32,12 @@ test("a screen's copy change runs the specs that open that screen", () => {
   const specs = select("app/src/screens/jev-settings.tsx");
   assert.ok(specs.includes("code-field.spec.ts"));
   assert.ok(specs.includes("sheet-stack.spec.ts"));
-  assert.ok(!specs.includes("split.spec.ts"));
+  assert.ok(!specs.includes("split-category.spec.ts"));
   assert.ok(!specs.includes("reviewer.spec.ts"));
 });
 
 test("a spec, or a file only it imports, runs that spec", () => {
-  assert.deepEqual(select("app/e2e/split.spec.ts"), ["split.spec.ts"]);
+  assert.deepEqual(select("app/e2e/split-category.spec.ts"), ["split-category.spec.ts"]);
   assert.ok(select("app/src/assistant-sample.ts").includes("sheet-stack.spec.ts"));
 });
 

@@ -72,12 +72,10 @@ test("amount and text fields focus on either edge and do not clip", async ({ pag
   });
   expect(prefixInside).toBe(true);
 
-  await page.goto("/e2e/split");
-  await page.getByRole("button", { name: "הוספת חלק" }).click();
-  await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "פרגולה בית כהן" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
-  await page.getByRole("radiogroup", { name: "יחידה, פרגולה בית כהן" }).getByRole("radio", { name: "%" }).click();
-  const share = page.locator("input[id^='psplit-pct-']").first();
+  await page.goto("/e2e/split-category");
+  await page.getByRole("button", { name: "חלק נוסף" }).click();
+  await page.getByRole("radiogroup", { name: "יחידה, חומרי בניין" }).getByRole("radio", { name: "%" }).click();
+  const share = page.locator("input[id^='lsplit-pct-']").first();
   const shareBox = share.locator("xpath=ancestor::*[contains(@class,'ui-percent-control')]");
   await focusAt(page, shareBox, share, 0.02);
   await focusAt(page, shareBox, share, 0.5);
