@@ -404,6 +404,18 @@ export function LoanIcon(props: IconProps) {
   );
 }
 
+/** The loan empty state (States board): a percent in a circle, the loan's rate. */
+export function PercentIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9 15l6-6" />
+      <circle cx="9.5" cy="9.5" r="0.6" />
+      <circle cx="14.5" cy="14.5" r="0.6" />
+    </Svg>
+  );
+}
+
 /** FLOW-304. A payment card. */
 export function CardIcon(props: IconProps) {
   return (

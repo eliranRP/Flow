@@ -10,5 +10,8 @@
   "SettingsSumitConnected": "/e2e/connections/sumit",
   "SettingsMercury": "/e2e/connections/mercury",
   "SettingsMercuryNew": "/e2e/connections/mercury?state=new",
-  "StatesTeamEmpty": "/e2e/team?proof=1&team=alone"
+  "StatesTeamEmpty": "/e2e/team?proof=1&team=alone",
+  "SettingsRename": "/e2e/business?board=1&sheet=rename",
+  "SettingsNotifications": "/e2e/notifications?board=1",
+  "SettingsTheme": "/e2e/settings?board=1&sheet=theme"
 }

@@ -606,3 +606,33 @@
   flex-direction: column;
   gap: var(--space-4);
 }
+
+/* FLOW-512b C: the categories list's rows are 56px tall, as on the board (one- and two-line rows alike). */
+.ui-cat-list .ui-row {
+  min-block-size: 56px;
+}
+
+/* FLOW-512b C: the segmented track is 2px around its 40px buttons (44px), as on the board. */
+.ui-cat-seg .ui-seg {
+  padding: calc(var(--space-1) / 2);
+}
+
+/* FLOW-512b C: the theme sheet's board block: 24px under the last option, options 60px tall, 12px apart. */
+.ui-theme-sheet {
+  --sheet-pad-bottom: calc(var(--space-6) + var(--space-3));
+}
+
+.ui-theme-sheet .ui-radio-row {
+  min-block-size: calc(var(--control-height) + var(--space-2));
+}
+
+/* FLOW-512b C: the rename sheet's board block: a 44px title row, 12px to the field and 12px to the note. */
+.ui-rename-sheet .ui-sheet-head {
+  min-block-size: calc(var(--control-height) - var(--space-2));
+}
+
+.ui-rename-sheet .ui-settings-note {
+  margin-block-start: var(--space-3);
+  font-weight: var(--type-detail-weight);
+  line-height: calc(var(--type-caption-size) * 1.5);
+}
