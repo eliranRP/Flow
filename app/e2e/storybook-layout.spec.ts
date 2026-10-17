@@ -459,7 +459,7 @@ test("loading band skeletons stay inside the gutter and do not touch", async ({ 
       await page.locator("#storybook-root").waitFor({ state: "attached" });
       // A screen can mount its band a few ticks after the root attaches, so wait until the story has
       // drawn something: its band, or any content for a story without one. The Home cash skeleton's
-      // band has no hero (BandHero is only in HomeSkeleton), so the content box is the hero's when
+      // band has no hero (the skeleton draws no BandHero), so the content box is the hero's when
       // there is one and the band's own when there is not.
       await page.waitForFunction(() => document.querySelector(".ui-band") !== null || (document.querySelector("#storybook-root")?.childElementCount ?? 0) > 0);
       const problems = await page.evaluate(() => {
