@@ -23,6 +23,7 @@ export function ScreenState({
   trailing,
   below,
   syncing,
+  barOnly = false,
 }: {
   title: string;
   subtitle?: string;
@@ -44,6 +45,8 @@ export function ScreenState({
   below?: ReactNode;
   /** A background refresh is running: the strip says what it syncs (FLOW-371). Null when none runs. */
   syncing?: string | null;
+  /** Draws only the back bar (with `kicker` as Back's label), not the title: the invoice page's board header. */
+  barOnly?: boolean;
 }) {
   const preview = useHomePreview();
   const navigate = useNavigate();
@@ -61,7 +64,9 @@ export function ScreenState({
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <SyncStrip label={syncing ?? null} />
-      {stacked ? (
+      {barOnly ? (
+        <ScreenHeader barOnly backTo={backTo} kicker={kicker} />
+      ) : stacked ? (
         <ScreenHeader layout="stacked" title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} leading={leading} trailing={trailing ?? action} kicker={kicker} below={below} />
       ) : (
         <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} action={action} trailing={trailing} kicker={kicker} />

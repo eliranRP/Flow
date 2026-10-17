@@ -50,6 +50,53 @@ describe("Open invoices (FLOW-367)", () => {
   });
 });
 
+// FLOW-367b: the invoice page and the all-paid state follow the board (copy before amount, a back row, no title).
+describe("Invoice page follows the board (FLOW-367b)", () => {
+  it("the bank match shows the date first and then the account, with the copy before the amount", () => {
+    renderPage("inv-1051");
+    const card = screen.getByRole("region", { name: "תשלום תואם בבנק" });
+    const when = card.querySelector(".ui-inv-match-when");
+    expect(when?.textContent).toMatch(/^\d{2}\/\d{2}\/\d{4} · \S/);
+    expect(when?.textContent).toContain("Mercury");
+    const amount = card.querySelector(".ui-inv-match-amount");
+    expect(when && amount && when.compareDocumentPosition(amount) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("has no page title, and the back row is labelled with the list's name", () => {
+    renderPage("inv-1043");
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+    expect(screen.getByRole("button", { name: "חזרה לחשבוניות פתוחות" })).toBeInTheDocument();
+  });
+
+  it("does not colour the open-days fact value as over-due", () => {
+    renderPage("inv-1043");
+    const facts = screen.getByRole("region", { name: "פרטי החשבונית" });
+    expect(facts.querySelector("[data-over]")).toBeNull();
+  });
+
+  it("pushes the ready detail in from the start side", () => {
+    renderPage("inv-1043");
+    expect(document.querySelector(".ui-inv-detail")?.classList.contains("m-push-in")).toBe(true);
+  });
+});
+
+describe("All paid state (FLOW-367b)", () => {
+  it("keeps the all-paid block, its home button and the SUMIT refresh line", () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <ToastProvider>
+            <UnpaidScreen sample={[]} summary={invoicesSummary()} />
+          </ToastProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByText("הכל שולם")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "חזרה לבית" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /רענון מ־SUMIT/ })).toBeInTheDocument();
+  });
+});
+
 function renderList(rows: ReturnType<typeof invoicesSample>) {
   render(
     <QueryClientProvider client={new QueryClient()}>

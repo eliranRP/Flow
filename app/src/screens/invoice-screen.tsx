@@ -4,7 +4,7 @@ import { absAgorot } from "../agorot";
 import { usePreviewSearch } from "../preview";
 import { Amount } from "../ui/amount";
 import { Button } from "../ui/button";
-import { CheckIcon, ExternalIcon } from "../ui/icons";
+import { CheckIcon, ChevronIcon } from "../ui/icons";
 import { EmptyState } from "../ui/empty-state";
 import { ScreenState } from "../ui/screen-state";
 import { israelToday } from "../ui/date-math";
@@ -41,20 +41,20 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp }: { s
   const documentUrl = row == null ? null : unpaidDocumentUrl(row);
   const customer = row == null ? "" : row.customer_name ?? row.description;
   return (
-    <ScreenState title="חשבונית" backTo={`/unpaid${search}`} phase={phase} onRetry={actions.retry}>
+    <ScreenState title="חשבונית" kicker="חשבוניות פתוחות" barOnly backTo={`/unpaid${search}`} phase={phase} onRetry={actions.retry}>
       {row == null && phase.kind === "ready" ? (
         <div className="ui-page-pad">
           <EmptyState title="החשבונית כבר לא פתוחה" body="היא סומנה או חוברה לתשלום, ולכן לא נשארה ברשימה." action={<Button full to={`/unpaid${search}`}>חשבוניות פתוחות</Button>} />
         </div>
       ) : row == null ? null : (
-        <div className="ui-page-pad ui-inv-detail">
+        <div className="ui-page-pad ui-inv-detail m-push-in">
           <div className="ui-inv-head">
             <p className="ui-inv-chip" data-over={over && !marked ? "true" : undefined} data-marked={marked ? "true" : undefined}>
               {marked ? UNPAID_MARKED : `פתוחה ${String(days)} ימים`}
             </p>
             <h2 className="ui-inv-customer">{customer}</h2>
             <Amount agorot={absAgorot(row.open_gross_agorot)} currency={row.currency ?? "ILS"} size="display" income />
-            <p className="t-hint text-text-secondary">
+            <p className="ui-inv-meta text-text-secondary">
               {[
                 row.doc_number ? `חשבונית #${row.doc_number}` : "חשבונית",
                 `הופקה ${unpaidFullDate(row.doc_date)}`,
@@ -67,15 +67,15 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp }: { s
             <section className="ui-inv-match" aria-label="תשלום תואם בבנק">
               <p className="t-label ui-inv-match-title">✦ נמצא תשלום תואם בבנק</p>
               <div className="ui-inv-match-row">
+                <span className="ui-inv-match-copy">
+                  <span className="ui-inv-match-when">{`${unpaidFullDate(match.date)} · ${match.account_name}`}</span>
+                  <span className="ui-inv-raw" dir="ltr">{match.raw_description}</span>
+                </span>
                 <span className="ui-inv-match-amount">
                   <bdi dir="ltr">{formatAmountText(match.amount_minor, row.currency ?? "ILS")}</bdi>
                 </span>
-                <span className="ui-inv-match-copy">
-                  <span className="t-body">{`${match.account_name} · ${unpaidFullDate(match.date)}`}</span>
-                  <span className="ui-inv-raw" dir="ltr">{match.raw_description}</span>
-                </span>
               </div>
-              <p className="t-hint text-text-secondary">
+              <p className="ui-inv-explain t-hint text-text-secondary">
                 {`אותו סכום ואותו לקוח, ${String(Math.max(0, daysBetween(row.doc_date, match.date)))} ימים אחרי החשבונית.`}
               </p>
               <div className="ui-inv-match-actions">
@@ -98,17 +98,17 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp }: { s
 
           <section className="ui-inv-facts" aria-label="פרטי החשבונית">
             <div className="ui-inv-fact">
-              <span className="t-caption text-text-muted">פרויקט</span>
-              <span className="t-body ui-inv-fact-value">{row.project_name ?? "בלי פרויקט"}</span>
+              <span className="ui-inv-fact-label">פרויקט</span>
+              <span className="ui-inv-fact-value">{row.project_name ?? "בלי פרויקט"}</span>
             </div>
             <div className="ui-inv-fact">
-              <span className="t-caption text-text-muted">פתוחה</span>
-              <span className="t-body ui-inv-fact-value" data-over={over && !marked ? "true" : undefined}>
+              <span className="ui-inv-fact-label">פתוחה</span>
+              <span className="ui-inv-fact-value">
                 {`${String(days)} ימים · מאז ${unpaidFullDate(row.doc_date)}`}
               </span>
             </div>
             <div className="ui-inv-fact">
-              <span className="t-caption text-text-muted">בתזרים</span>
+              <span className="ui-inv-fact-label">בתזרים</span>
               <span className="ui-inv-fact-note text-text-secondary">לא נספרת עד שהתשלום מגיע. נכללת בצפי לסוף החודש.</span>
             </div>
           </section>
@@ -117,17 +117,17 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp }: { s
             <a className="ui-inv-doc" href={documentUrl} target="_blank" rel="noopener noreferrer">
               <span className="ui-inv-thumb" aria-hidden="true"><span /><span /><span /></span>
               <span className="ui-inv-doc-copy">
-                <span className="t-body">{row.doc_number ? `חשבונית #${row.doc_number}` : "החשבונית"}</span>
-                <span className="t-caption text-text-secondary">PDF מ־SUMIT · הקישו לפתיחה</span>
+                <span className="ui-inv-doc-title">{row.doc_number ? `חשבונית #${row.doc_number}` : "החשבונית"}</span>
+                <span className="ui-inv-doc-sub">PDF מ־SUMIT · הקישו לפתיחה</span>
               </span>
-              <ExternalIcon />
+              <span className="ui-inv-doc-chevron" aria-hidden="true"><ChevronIcon size={18} /></span>
             </a>
           ) : null}
 
           {!holdWrites && match == null && !marked ? (
             <div className="ui-inv-mark">
-              <Button full onClick={() => { actions.setPaid(row.id, true); }} icon={<CheckIcon />}>סימון כשולם</Button>
-              <p className="ui-inv-mark-note t-hint text-text-secondary">שולם במזומן או בצ׳ק? סמנו כאן. העברה בנקאית תחובר לבד כשתגיע.</p>
+              <Button full className="ui-inv-mark-yes" onClick={() => { actions.setPaid(row.id, true); }} icon={<CheckIcon />}>סימון כשולם</Button>
+              <p className="ui-inv-mark-note">שולם במזומן או בצ׳ק? סמנו כאן. העברה בנקאית תחובר לבד כשתגיע.</p>
             </div>
           ) : null}
           {!holdWrites && marked ? (
