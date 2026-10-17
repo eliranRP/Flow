@@ -201,11 +201,10 @@ reset role;
 select pg_temp.sync();
 reset role;
 select is(pg_temp.open_rows('rec_b'), 0, 'a skipped invoice''s receipt is not queued');
-select tests.authenticate_as('rrp_owner');
 select is(
-  (select count(*)::integer from jsonb_array_elements(public.list_skipped_review())),
-  1, 'only the invoice is on the skipped list');
-reset role;
+  (select count(*)::integer from public.review_queue q
+   where q.status = 'skipped' and q.transaction_id in (pg_temp.id('inv_b'), pg_temp.id('rec_b'))),
+  1, 'only the invoice has a skipped row');
 
 -- 5. A receipt that arrives after its invoice was approved follows it.
 select tests.authenticate_as('rrp_owner');

@@ -31,9 +31,11 @@ function line(id: string, day: string, payee: string, category: string, signedMi
  */
 export const JUNIPER_MONTH_PROFIT: ProjectMonthProfitSample = {
   month: "2026-10",
-  overheadShare: 15_200n,
   project: {
     ...JUNIPER_PROFIT.project,
+    overhead_weighted: true,
+    overhead_share_minor: 15_200n,
+    base_currency: "USD",
     income_agorot: 630_200n,
     direct_agorot: 250_640n,
     profit_agorot: 379_560n,

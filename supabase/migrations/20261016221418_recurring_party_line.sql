@@ -2,6 +2,7 @@
 -- of a party in one currency. The charge page reads its charges (party_charges), sets its pace and
 -- keys its change alert by it. The lines counted are party_charges' (not removed, not void, income
 -- only invoices, credits and invoice receipts). "Today" is Asia/Jerusalem. The caller's company only.
+-- FLOW-920: also drops list_skipped_review, which no screen calls.
 
 begin;
 
@@ -48,5 +49,9 @@ comment on function public.recurring_party_line(text, uuid, text, date) is
 
 revoke all on function public.recurring_party_line(text, uuid, text, date) from public, anon;
 grant execute on function public.recurring_party_line(text, uuid, text, date) to authenticated, service_role;
+
+-- FLOW-920: no screen calls list_skipped_review (grep app/ packages/ supabase/functions finds nothing);
+-- the skipped review rows and reopen_review stay. The drop also removes its grants.
+drop function public.list_skipped_review();
 
 commit;
