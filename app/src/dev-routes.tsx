@@ -623,7 +623,7 @@ export function DevProjectDetail() {
   // The fixture company is in dollars: the preview's company-currency read answers USD.
   const queryClient = useQueryClient();
   const preview = useHomePreview();
-  useState(() => { queryClient.setQueryData(["company-currency", preview], "USD"); });
+  useEffect(() => { queryClient.setQueryData(["company-currency", preview], "USD"); }, [queryClient, preview]);
   // `?scrolled=1` is the board's scrolled frame: the page is scrolled past the band, so the compact bar shows.
   useEffect(() => {
     if (params.get("scrolled") !== "1") return;

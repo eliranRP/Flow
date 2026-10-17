@@ -112,7 +112,7 @@ function ProjectsBody({
   const active = orderActiveProjects(month.projects, base);
   const overhead = overheadRow(month);
   const finished = month.projects.filter((row) => row.status === "finished" && !row.is_overhead);
-  const unassignedNet = Math.abs(netIn(month.unassigned.cash, base));
+  const unassignedNet = netIn(month.unassigned.cash, base);
   const members = (groupId: string) => active.filter((row) => row.group_id === groupId);
   const groupsShown = groups.filter((group) => members(group.id).length > 0);
   return (

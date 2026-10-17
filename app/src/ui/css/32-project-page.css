@@ -248,3 +248,8 @@
 .ui-project-menu-delete {
   color: var(--color-bad);
 }
+
+/* The secondary line under a title or amount: the shared muted text colour. */
+.ui-muted {
+  color: var(--color-text-muted);
+}

@@ -712,7 +712,7 @@ function ProjectMenu({
           ) : null}
         </List>
       </Sheet>
-      <ProjectFormSheet open={editing} onOpenChange={setEditing} project={{ id: projectId, name, type: row?.type ?? null, budget }} />
+      <ProjectFormSheet open={editing} onOpenChange={setEditing} project={{ id: projectId, name, type: row?.type ?? null, budget, status: row?.status ?? "active" }} />
       {groups == null ? null : (
         <ProjectGroupSheets
           projectId={projectId}
@@ -781,7 +781,7 @@ function ProjectBudget({ project, spentAgorot }: { project: NonNullable<ProjectD
       ) : (
         <BudgetCard spentMinor={spentAgorot} budgetMinor={budget} currency={currency} onEdit={() => { setEditing(true); }} />
       )}
-      <ProjectFormSheet open={editing} onOpenChange={setEditing} project={{ id: project.id, name: project.name, type, budget }} />
+      <ProjectFormSheet open={editing} onOpenChange={setEditing} project={{ id: project.id, name: project.name, type, budget, status: project.status }} />
     </>
   );
 }

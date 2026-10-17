@@ -11,7 +11,7 @@ import { TextField } from "../ui/text-field";
 import { useBlockedPreview } from "./screen-shared";
 
 /** The project an edit sheet opens on. `type` is the owner's own text (or none); `budget` is in agorot. */
-export type ProjectFormValues = { id: string; name: string; type: string | null; budget: bigint | null };
+export type ProjectFormValues = { id: string; name: string; type: string | null; budget: bigint | null; status: string };
 
 /**
  * FLOW-445: the new-project sheet (no project) and the edit sheet (a project). Both save through
@@ -63,7 +63,7 @@ function ProjectForm({ project, onClose }: { project?: ProjectFormValues; onClos
         p_name: trimmed,
         // An empty type clears it on an edit. When the stored type is not known (none, or not read yet), an empty field sends nothing, so it keeps the stored one.
         ...(project != null && project.type == null && type.trim() === "" ? {} : { p_type: type.trim() }),
-        p_status: "active",
+        p_status: project?.status ?? "active",
         ...(agorot == null ? {} : { p_budget_agorot: agorot }),
       });
       assertNoError(result);
@@ -73,7 +73,7 @@ function ProjectForm({ project, onClose }: { project?: ProjectFormValues; onClos
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
-    if (holdWrites || blocked() || trimmed === "") return;
+    if (holdWrites || blocked() || trimmed.length < 2) return;
     save.mutate();
   }
 
@@ -96,7 +96,7 @@ function ProjectForm({ project, onClose }: { project?: ProjectFormValues; onClos
       <MoneyField label="תקציב (אופציונלי)" value={budget} onValueChange={setBudget} />
       <p className="ui-muted">נראה כמה נוצל, ונסמן כשעוברים אותו.</p>
       <p className="ui-muted">רק השם חובה. פרויקטים מ־SUMIT נוספים לבד.</p>
-      <Button type="submit" busy={save.isPending} disabled={holdWrites || trimmed === ""}>
+      <Button type="submit" busy={save.isPending} disabled={holdWrites || trimmed.length < 2}>
         {project ? "שמירה" : "יצירת פרויקט"}
       </Button>
     </form>
