@@ -28,10 +28,10 @@
 - [ ] TOOLS.md: say the order of `get_recurring_schedule` rows (arrived, late, soon, later; expenses first; by day).
 - [ ] The months-seen filter on the schedule's `arrived` state (a party seen only in an earlier month should not count as arrived).
 - [ ] The group order: the board's order (חשמל ומים, ביטוח ומסים, אחזקה, משרד, שכירות) is not the server's first-appearance order; decide how the category order is set.
-- [ ] Error state for the list (today a failed read shows nothing after the skeleton).
-- [ ] Close a late bill (עריכה, סגירה, ביטול) on the list again: #667 drops it, so a late row only shows its lateness.
-- [ ] The match suggestion for a late bill (אולי זה, כן / לא): #667 drops it, so a renamed supplier shows as late until it is fixed in Search.
-- [ ] A late row opens Search on its supplier (FLOW-403): #667 makes the rows plain, so they do not link anywhere yet.
-- [ ] Ignoring alerts (a change or late bill the user dismisses): #667 has no dismiss.
+- [x] Error state for the list (today a failed read shows nothing after the skeleton). (#447b)
+- [x] Close a late bill (עריכה, סגירה, ביטול) on the list again: #667 drops it, so a late row only shows its lateness. (#447b: closed by the ignore swipe and button)
+- [ ] The match suggestion for a late bill (אולי זה, כן / לא): #667 drops it, so a renamed supplier shows as late until it is fixed in Search. (#447b: the list shows "אולי הגיע בשם אחר" only; the yes/no answer is on the charge page, 447c)
+- [x] A late row opens Search on its supplier (FLOW-403): #667 makes the rows plain, so they do not link anywhere yet. (#447b)
+- [x] Ignoring alerts (a change or late bill the user dismisses): #667 has no dismiss. (#447b: late bills only; changes still have no dismiss)
 - [ ] Clamp a charge's day to the month's last day in the lateness count (a day 31 in a 30-day month).
 - [ ] Charge page and pace sheet, after #648 (FLOW-366) merges.

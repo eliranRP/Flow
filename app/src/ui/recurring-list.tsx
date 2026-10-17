@@ -147,12 +147,16 @@ function RowView({
   return (
     <li className="ui-recurring-item">
       {ignorable && (
-        <button type="button" className="ui-recurring-ignore" aria-label={`התעלמות מההתראה: ${row.name}`} onClick={() => onIgnore?.(row)}>
+        <button type="button" className="ui-recurring-ignore" aria-label={`התעלמות מההתראה: ${row.name}`} onClick={() => {
+            onIgnore(row);
+          }}>
           התעלמות מההתראה
         </button>
       )}
       {ignorable ? (
-        <SwipeRow reveal={{ label: "התעלמות מההתראה", onAct: () => onIgnore?.(row) }} onRemove={noop} defaultOpen={defaultOpen}>
+        <SwipeRow reveal={{ label: "התעלמות מההתראה", onAct: () => {
+            onIgnore(row);
+          } }} onRemove={noop} defaultOpen={defaultOpen}>
           {body}
         </SwipeRow>
       ) : (

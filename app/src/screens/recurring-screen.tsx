@@ -34,8 +34,8 @@ const NO_ROWS: readonly ScheduleRow[] = [];
 
 /** The dev fixture's writes: nothing reaches the server. */
 const NO_WRITES: RecurringWrites = {
-  dismiss: async () => undefined,
-  restore: async () => undefined,
+  dismiss: () => Promise.resolve(),
+  restore: () => Promise.resolve(),
 };
 
 /** The alert state a screen computes from the schedule and the late bills. */
