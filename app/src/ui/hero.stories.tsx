@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { FlowLines, Hero } from "./hero";
+import { Hero } from "./hero";
 import { PeriodPicker } from "./period-picker";
 import { TopBand } from "./top-band";
 
@@ -8,12 +8,10 @@ type HeroArgs = {
   label: string;
   agorot: string;
   explanation: string;
-  income: string;
-  expense: string;
   pill: string;
 };
 
-function HeroView({ label, agorot, explanation, income, expense, pill }: HeroArgs) {
+function HeroView({ label, agorot, explanation, pill }: HeroArgs) {
   const [open, setOpen] = useState(false);
   const figure = agorot === "" ? undefined : BigInt(agorot);
   return (
@@ -37,7 +35,6 @@ function HeroView({ label, agorot, explanation, income, expense, pill }: HeroArg
       >
         <Hero label={label} agorot={figure} explanation={explanation || undefined} />
       </TopBand>
-      {income !== "" && expense !== "" ? <FlowLines income={BigInt(income)} expense={BigInt(expense)} /> : null}
     </>
   );
 }
@@ -57,8 +54,6 @@ export const YearToDate: Story = {
     label: "רווח מתחילת השנה",
     agorot: "3916400",
     explanation: ytd,
-    income: "47200000",
-    expense: "43283600",
     pill: "מתחילת השנה",
   },
 };
@@ -68,8 +63,6 @@ export const ThisMonth: Story = {
     label: "רווח החודש",
     agorot: "1840000",
     explanation: "הכנסות פחות הוצאות",
-    income: "8200000",
-    expense: "6360000",
     pill: "החודש",
   },
 };
@@ -79,8 +72,6 @@ export const Loss: Story = {
     label: "הפסד מתחילת השנה",
     agorot: "-7630000",
     explanation: ytd,
-    income: "21000000",
-    expense: "28630000",
     pill: "מתחילת השנה",
   },
 };
@@ -90,34 +81,13 @@ export const Empty: Story = {
     label: "כאן יופיע הרווח של העסק",
     agorot: "",
     explanation: "",
-    income: "",
-    expense: "",
     pill: "",
   },
 };
 
-/** FLOW-355: Home's period pill between the label and the figure, with no explanation line. */
-function PillHero({ label, agorot, pill }: { label: string; agorot: string; pill: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <TopBand wordmark={false}>
-      <Hero
-        label={label}
-        agorot={BigInt(agorot)}
-        pill={<PeriodPicker pill={pill} name={`${pill} – בחירת תקופה`} open={open} onOpenChange={setOpen} options={[{ label: pill, selected: true, onSelect: () => undefined }]} />}
-      />
-    </TopBand>
-  );
-}
-
-export const WithPill: Story = {
-  args: { label: "רווח ב־3 חודשים", agorot: "20000000", explanation: "", income: "", expense: "", pill: "אוגוסט – אוקטובר 2026" },
-  render: (args) => <PillHero label={args.label} agorot={args.agorot} pill={args.pill} />,
-};
-
 /** FLOW-435: a project's history names the project on a small line above Home's label. */
 export const WithKicker: Story = {
-  args: { label: "תזרים מאז מרץ 2023", agorot: "4130000", explanation: "", income: "", expense: "", pill: "" },
+  args: { label: "תזרים מאז מרץ 2023", agorot: "4130000", explanation: "", pill: "" },
   render: (args) => (
     <TopBand wordmark={false}>
       <Hero kicker="Cedar Ave 410" label={args.label} figures={[{ agorot: BigInt(args.agorot), currency: "ILS" }]} />

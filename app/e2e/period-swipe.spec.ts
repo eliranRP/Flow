@@ -25,10 +25,10 @@ async function figureRow(page: Page) {
   return { y, left: box.x, right: box.x + box.width };
 }
 
-test("Home: a swipe right on the figure goes to the earlier window, left comes back, and the edge and a vertical move do nothing", async ({ page, browserName }) => {
+test("a swipe right on the figure goes to the earlier window, left comes back, and the edge and a vertical move do nothing", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "CDP touch events");
-  await page.goto("/e2e/home?preview=1");
-  // FLOW-355: Home's band has one period pill and no arrows; the pill names the window.
+  await page.goto("/e2e/project-detail?preview=1&section=profit");
+  // FLOW-355: the band has one period pill and no arrows; the pill names the window.
   const label = page.getByRole("button", { name: /בחירת תקופה/ });
   const current = await label.textContent();
   const cdp = await page.context().newCDPSession(page);
@@ -73,7 +73,7 @@ test("Project profit page: a swipe right on the profit steps the project's own p
 test("Reduced motion: the figure stays put during the drag and the period swaps on release", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "CDP touch events");
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/e2e/home?preview=1");
+  await page.goto("/e2e/project-detail?preview=1&section=profit");
   const label = page.getByRole("button", { name: /בחירת תקופה/ });
   const current = await label.textContent();
   const cdp = await page.context().newCDPSession(page);

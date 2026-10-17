@@ -1,0 +1,152 @@
+/* FLOW-140c1: the company profit page (CompanyProfitScreen, board Profit and ProfitBasis). Every colour is a token. */
+
+.ui-cp-screen {
+  min-width: 0;
+  padding-bottom: var(--space-6);
+}
+
+.ui-cp-head {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+
+.ui-cp-figure {
+  margin: 0;
+  padding-top: var(--space-2);
+  line-height: var(--type-total-line);
+  direction: ltr;
+  text-align: right;
+}
+
+.ui-cp-ytd {
+  margin: 0;
+  font-size: var(--type-label-size);
+}
+
+.ui-cp-card {
+  box-sizing: border-box;
+  width: auto;
+  margin: var(--space-4) var(--space-5) 0;
+  padding: var(--space-4) var(--space-card-inset);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-cp-chips > * {
+  flex: none;
+}
+
+.ui-cp-bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-cp-bar-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--type-line2-size);
+}
+
+.ui-cp-bar-income {
+  display: block;
+  height: 100%;
+  background: var(--color-accent);
+}
+
+.ui-cp-bar-expense {
+  display: block;
+  height: 100%;
+  background: var(--color-band-past);
+}
+
+.ui-cp-chips {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  overflow-x: auto;
+  margin-top: var(--space-4);
+  padding: 0 var(--space-5);
+}
+
+.ui-cp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--space-5);
+}
+
+.ui-cp-row {
+  border-top: 1px solid var(--color-line);
+}
+
+.ui-cp-row:first-child {
+  border-top: 0;
+}
+
+.ui-cp-link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: var(--row-height);
+  padding: var(--space-2) 0;
+  box-sizing: border-box;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+}
+
+.ui-cp-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.ui-cp-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--type-body-size);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ui-cp-meta {
+  font-size: var(--type-label-size);
+}
+
+.ui-cp-lines {
+  padding: 0;
+}
+
+.ui-cp-foot {
+  margin: var(--space-4) var(--space-5) 0;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-cp-basis {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  margin: 0 var(--space-5);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--type-hint-size);
+}
+
+.ui-cp-change {
+  color: var(--color-accent);
+  margin-inline-start: var(--space-1);
+}

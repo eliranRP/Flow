@@ -29,7 +29,7 @@ export { MonthGrid } from "./month-grid";
 export { ScreenState } from "./screen-state";
 export { PeriodPicker, RangeSheet } from "./period-picker";
 export { MoneyField } from "./money-field";
-export { FlowLines, Hero } from "./hero";
+export { Hero } from "./hero";
 export { BandHero, FormError, HelpBack, HelpMail, SectionHead, SignInActions, SignInBrand, SignInFrame, SignInHeading, SignInHelp, SignInPanel, SignInPrivacy, SignInTagline } from "./layout";
 export { ScreenHeader } from "./screen-header";
 export type { PeriodOption } from "./period-picker";
@@ -53,7 +53,6 @@ export { CopyLine, JEV_NO_PROJECT, REVIEW_MISSING_BOTH, SPLIT_MISMATCH_KEEP } fr
 export { toastFloor } from "./toast";
 export { OutwardChevron } from "./icons";
 export { PeriodSheet } from "./period-picker";
-export { ProfitMark } from "./profit-mark";
 export { SearchEntry, SEARCH_FOCUS_STATE, wantsSearchFocus } from "./search-entry";
 export { MatchText, matchRange } from "./match-text";
 export type { StatementDetail } from "./statement";

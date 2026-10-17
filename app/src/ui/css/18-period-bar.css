@@ -60,15 +60,6 @@
   color: var(--color-disabled-text);
 }
 
-/* "▲ ברווח" stays muted; "▼ הפסד" is bad. Profit is never green (0120). */
-.ui-profit-mark {
-  color: var(--color-text-muted);
-}
-
-.ui-profit-mark-loss {
-  color: var(--color-bad);
-}
-
 /* The note under the "לפי חודש" list. */
 .ui-months-note {
   margin-block-start: var(--space-4);

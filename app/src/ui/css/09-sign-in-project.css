@@ -239,8 +239,6 @@
 .ui-skel-list { display: flex; flex-direction: column; gap: var(--space-3); margin-block-start: var(--space-5); padding-inline: var(--space-5); }
 .ui-skel-list-title { inline-size: calc(var(--skel-sm) * 3 / 2); block-size: var(--space-4); }
 .ui-skel-list .ui-skel-row { padding-inline: 0; }
-.ui-skel-dot { inline-size: var(--switch-knob); block-size: var(--switch-knob); border-radius: var(--radius-chip); }
-
 .ui-row-stack {
   display: flex;
   flex-direction: column;

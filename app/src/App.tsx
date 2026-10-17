@@ -18,7 +18,7 @@ import { BooksProvider } from "./use-books";
 import { detectInstallMode, isStandalone, listenForInstallPrompt } from "./ui/install-prompt";
 import { DropRestoredSheet, ScrollMemory, useGoBack } from "./ui/back";
 import { EdgeSwipeBack } from "./ui/edge-back";
-import { HomeScreen, ProfitScreen } from "./screens/HomeScreen";
+import { HomeScreen } from "./screens/HomeScreen";
 import { SetupLanding, SetupResume } from "./setup/route";
 import { INVITES_PATH, landingWithInvites } from "./invite-landing";
 import { useKeyboardInset } from "./ui/keyboard-inset";
@@ -34,6 +34,7 @@ import { SetupRoutes } from "./routes/setup";
 import { SettingsRoutes } from "./routes/settings";
 import { UnpaidInvoiceRoute, UnpaidRoute } from "./routes/unpaid";
 
+const CompanyProfitScreen = lazy(() => screenLoaders.companyProfit().then((m) => ({ default: m.CompanyProfitScreen })));
 const ReviewScreen = lazy(() => screenLoaders.review().then((m) => ({ default: m.ReviewScreen })));
 const ChangeForm = lazy(() => screenLoaders.changeForm().then((m) => ({ default: m.ChangeForm })));
 const FiledTodayScreen = lazy(() => screenLoaders.filedToday().then((m) => ({ default: m.FiledTodayScreen })));
@@ -181,7 +182,7 @@ function AppRoutes() {
                   {AddRoute()}
                 </Route>
                 {/* FLOW-413: Home is the month's cash; its rows open the profit view, a month, and a month's lines. */}
-                <Route path="profit" element={<ProfitScreen />} />
+                <Route path="profit" element={<CompanyProfitScreen />} />
                 {/* FLOW-417: "לכל החודשים" opens the years, a year its months. */}
                 <Route path="cash/history" element={<CashHistoryScreen />} />
                 <Route path="cash/year/:year" element={<CashYearScreen />} />

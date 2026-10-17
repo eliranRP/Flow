@@ -1,12 +1,10 @@
-import type { Dashboard } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
-import { useState } from "react";
 import { TeamStory } from "../dev/team-story";
 import type { SampleTeamOptions } from "../dev/team-sample";
-import { defaultPeriod } from "../period";
-import { sampleDashboard } from "../ui/screen-stories-support";
-import { HomeBooks } from "./HomeScreen";
+import { sampleCashMonths } from "../dev/cash-sample";
+import { cashMonthKey } from "../cash";
+import { attentionRows, CashHome } from "./HomeScreen";
 import { CompanySwitcher } from "./company-switcher";
 
 /**
@@ -21,20 +19,20 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const data: Dashboard = { ...sampleDashboard, name: "חברה לדוגמה" };
+const cash = sampleCashMonths();
+const currentKey = cashMonthKey(cash.months[0]?.month ?? "");
 
 function Home() {
-  const [period, setPeriod] = useState(defaultPeriod());
   return (
-    <HomeBooks
-      data={data}
+    <CashHome
+      data={cash}
+      monthKey={currentKey}
+      currentKey={currentKey}
       previewing={false}
       search=""
-      unpaidGross={0n}
-      unpaidCount={0}
-      period={period}
-      onPeriod={setPeriod}
-      company={<CompanySwitcher fallbackName={data.name} />}
+      attention={attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, search: "" })}
+      company={<CompanySwitcher fallbackName="חברה לדוגמה" />}
+      onStepMonth={() => undefined}
     />
   );
 }

@@ -1,4 +1,6 @@
 {
+  "Profit": "/e2e/company-profit",
+  "ProfitBasis": "/e2e/company-profit?sheet=basis",
   "ProfitProject": "/e2e/project-profit",
   "ProfitMonth": "/e2e/project-month-profit"
 }

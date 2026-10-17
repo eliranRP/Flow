@@ -122,13 +122,6 @@
 }
 
 /* FLOW-355: Home's one period pill sits under the label, at its own width. */
-.ui-hero-pill {
-  display: flex;
-  align-self: flex-start;
-  max-inline-size: 100%;
-  min-inline-size: 0;
-}
-
 .ui-hero-explain {
   margin: 0;
   max-inline-size: 100%;
@@ -221,12 +214,6 @@
   white-space: nowrap;
 }
 
-.ui-flow-note {
-  margin: var(--space-6) 0 0;
-  padding-inline: var(--space-side);
-  text-align: start;
-}
-
 .ui-example,
 .ui-band-example {
   color: var(--color-on-band-secondary);
@@ -248,25 +235,6 @@
   inline-size: 72%;
   block-size: var(--skel-hero);
   border-radius: var(--radius-input);
-}
-
-.ui-skel-pill {
-  display: block;
-  inline-size: var(--skel-pill);
-  block-size: var(--size-period);
-  border-radius: var(--radius-chip);
-  background: color-mix(in srgb, var(--color-on-band) 25%, transparent);
-}
-
-.ui-skel-card {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-top: var(--space-6);
-  margin-inline: var(--space-card-inset);
-  padding: var(--space-4);
-  border-radius: var(--radius-card);
-  background: var(--color-tint);
 }
 
 .ui-band-label {
