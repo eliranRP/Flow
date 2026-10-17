@@ -1,5 +1,4 @@
 import {
-  buildLoanSchedule,
   LOAN_TERM_MONTHS_MAX,
   rateOnDate,
   regularPaymentMinor,
