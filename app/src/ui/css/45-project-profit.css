@@ -8,9 +8,24 @@
   text-align: right;
 }
 
+/* The board's figure is the 34px total, not the display step. */
+.ui-pp-figure .ui-num {
+  font-size: var(--type-total-size);
+  line-height: calc(var(--type-total-size) * var(--type-total-line));
+}
+
+/* The header on the project's profit pages: the back row at 12px, the subtitle at its own line height. */
+.ui-pp-head {
+  padding-top: var(--space-3);
+}
+
+.ui-pp-head > p {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
 .ui-pp-card {
   margin: var(--space-4) var(--space-5) 0;
-  padding: var(--space-2) var(--space-card-inset);
+  padding: calc(var(--space-1) * 1.5) calc(var(--space-4) + var(--space-1) / 2);
 }
 
 .ui-pp-row {
@@ -20,10 +35,14 @@
   min-height: 44px;
   gap: var(--space-3);
   font-size: var(--type-line2-size);
+  font-weight: var(--type-body-weight);
+  line-height: calc(var(--type-title-line) - 0.015);
   color: var(--color-text);
 }
 
+/* The hairline sits outside the 44px: rows 2 to 4 are 45 high on the board. */
 .ui-pp-row + .ui-pp-row {
+  min-height: calc(var(--space-10) + var(--space-1) + 1px);
   border-top: 1px solid var(--color-line);
 }
 
@@ -32,7 +51,7 @@
 }
 
 .ui-pp-row-strong {
-  min-height: 48px;
+  min-height: calc(var(--space-10) + var(--space-1) + 1px);
   font-size: var(--type-body-size);
   font-weight: var(--type-btn-weight);
 }
@@ -42,10 +61,10 @@
 }
 
 .ui-pp-note {
-  margin: var(--space-3) var(--space-5) 0;
-  padding: 0 var(--space-1);
+  margin: calc(var(--space-2) + var(--space-1) / 2) var(--space-5) 0;
+  padding: 0;
   font-size: var(--type-caption-size);
-  line-height: var(--type-caption-line);
+  line-height: calc(var(--type-caption-size) * 1.5);
 }
 
 .ui-pp-months {
@@ -54,7 +73,7 @@
 }
 
 .ui-pp-chips {
-  margin-top: var(--space-3);
+  margin-top: calc(var(--space-4) + var(--space-1) / 2);
   padding: 0 var(--space-5);
 }
 
@@ -107,7 +126,7 @@
 
 /* The month page's groups sit closer than the shared month lines (the board's spacing). */
 .ui-pm-month .ui-lines-group {
-  padding: 0 var(--space-side) var(--space-1);
+  padding: 0 var(--space-side);
 }
 
 .ui-pm-month .ui-lines-group-head {
@@ -117,4 +136,31 @@
 /* The month page's list sits in the group's own side padding, as on the board, not inside a second one. */
 .ui-pm-month .ui-project-list {
   padding-inline: 0;
+}
+
+/* The month rows and the month page's lines: 64px, the 17px name over the 15px line, 4px between. */
+.ui-pp-months .ui-row,
+.ui-pm-month .ui-row {
+  min-block-size: calc(var(--space-10) * 1.6);
+  padding-block: 0;
+}
+
+.ui-pp-months .ui-row-text,
+.ui-pm-month .ui-row-text {
+  gap: var(--space-1);
+}
+
+.ui-pp-months :is(.ui-row-title, .ui-row-hint),
+.ui-pm-month :is(.ui-row-title, .ui-row-hint) {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+/* The group head: 20px above the date, 6px under it, the day's sum on the other side. */
+.ui-pm-month .ui-lines-group-head {
+  padding: var(--space-5) 0 calc(var(--space-1) * 1.5);
+}
+
+.ui-pm-month .ui-lines-group-title,
+.ui-pm-month .ui-lines-group-sum {
+  line-height: calc(var(--type-title-line) - 0.015);
 }

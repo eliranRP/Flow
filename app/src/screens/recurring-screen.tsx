@@ -91,7 +91,7 @@ export function RecurringScreen({
     return (
       <div className="ui-recurring">
         <header className="ui-recurring-head">
-          <h1 className="t-display">קבועים</h1>
+          <h1 className="t-title">קבועים</h1>
         </header>
         <ErrorState offline={!navigator.onLine} onRetry={() => void (live ? query.refetch() : undefined)} />
       </div>

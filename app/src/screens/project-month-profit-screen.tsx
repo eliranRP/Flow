@@ -20,7 +20,7 @@ import { ProfitSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 import { SummaryRow } from "./project-profit-screen";
 
-export type ProjectMonthProfitSample = { project: NonNullable<ProjectDetail>; month: string; lines: CashLine[] };
+export type ProjectMonthProfitSample = { project: NonNullable<ProjectDetail>; month: string; lines: CashLine[]; overheadShare?: bigint };
 
 const ORDERS: readonly { key: LinesOrder; label: string }[] = [
   { key: "date", label: "לפי תאריך" },
@@ -50,6 +50,8 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
   const currency = figures?.currency ?? companyCurrency;
   const linesRead = useProjectCashMonthLinesQuery(sample ? "" : projectId, month, currency, !sample && figures != null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
+  // The month's share of the general expenses is not on the server yet (FLOW-920): only a fixture carries it.
+  const share = sample?.overheadShare ?? null;
   const counted = sample?.lines ?? linesRead.data?.counted ?? [];
   const today = israelToday();
   const open = month === today.slice(0, 7);
@@ -85,6 +87,7 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
       kicker={project?.name}
       subtitle={sub}
       backTo={backTo}
+      headerClassName="ui-pp-head"
       phase={phase}
       onRetry={() => { void detail.refetch(); }}
       loading={<ProfitSkeleton />}
@@ -92,11 +95,15 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
       {figures == null ? null : (
         <div className="ui-pm-month">
           <p className="ui-pp-figure ui-page-pad">
-            <Amount agorot={figures.profit_minor} currency={currency} size="display" loss={figures.profit_minor < 0n} />
+            <Amount agorot={figures.profit_minor} currency={currency} size="display" loss={figures.profit_minor < 0n} direction={figures.profit_minor > 0n ? "income" : undefined} />
           </p>
           <Card className="ui-pp-card">
             <SummaryRow label="הכנסות" value={<Amount agorot={figures.income_minor} currency={currency} income />} />
             <SummaryRow label="הוצאות שנספרות ברווח" value={<Amount agorot={projectExpenseMinor(figures)} currency={currency} />} />
+            {share == null ? null : <SummaryRow label="חלק בהוצאות הכלליות" value={<Amount agorot={share} currency={currency} />} />}
+            {share == null ? null : (
+              <SummaryRow strong label="רווח אחרי הוצאות כלליות" value={<Amount agorot={figures.profit_minor - share} currency={currency} />} />
+            )}
           </Card>
           <div role="group" aria-label="סידור" className="ui-pp-chips">
             {ORDERS.map((option) => (
@@ -136,6 +143,7 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
                           agorot={minor < 0n ? -minor : minor}
                           currency={line.currency}
                           sign={line.side}
+                          wholeCents
                           source={rowSource(line.source)}
                           initials={lineInitials(name)}
                           href={`/transactions/${line.transaction_id}${search}`}

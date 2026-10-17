@@ -7,7 +7,7 @@
 
 .ui-recurring .t-label {
   font-size: var(--type-line2-size);
-  line-height: normal;
+  line-height: var(--type-title-line);
   color: var(--color-text-muted);
 }
 
@@ -20,7 +20,7 @@
   margin: var(--space-1) 0 calc(var(--space-1) / 2);
   font-size: var(--type-title-size);
   font-weight: var(--type-title-weight);
-  line-height: normal;
+  line-height: var(--type-title-line);
 }
 
 .ui-recurring-head > .t-heading {
@@ -50,7 +50,7 @@
 
 .ui-recurring-bar {
   height: var(--space-2);
-  border-radius: var(--space-1);
+  border-radius: var(--radius-chip);
   background: var(--color-track-strong);
   overflow: hidden;
 }
@@ -71,7 +71,7 @@
 .ui-recurring .ui-section-head > h2 {
   font-size: var(--type-section-size);
   font-weight: var(--type-section-weight);
-  line-height: normal;
+  line-height: var(--type-title-line);
 }
 
 .ui-recurring-rows {
@@ -97,7 +97,7 @@
 }
 
 .ui-recurring .ui-avatar {
-  font-weight: 500;
+  font-weight: var(--type-chip-weight);
 }
 
 .ui-recurring-name {
@@ -118,7 +118,7 @@
 .ui-recurring-title {
   font-size: var(--type-body-size);
   font-weight: var(--type-body-weight);
-  line-height: normal;
+  line-height: var(--type-title-line);
   color: var(--color-text);
 }
 
@@ -129,7 +129,7 @@
   align-items: flex-end;
   gap: calc(var(--space-1) / 2);
   font-size: var(--type-body-size);
-  line-height: normal;
+  line-height: var(--type-title-line);
 }
 
 .ui-recurring-amount > span:first-child {
@@ -239,5 +239,5 @@
 }
 
 .ui-recurring-skeleton-card {
-  border-radius: var(--space-2);
+  border-radius: calc(var(--radius-block) + var(--space-1) / 2);
 }

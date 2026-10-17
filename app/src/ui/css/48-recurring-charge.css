@@ -9,7 +9,7 @@
 .ui-charge-body {
   display: grid;
   gap: var(--space-inset-row);
-  padding: var(--space-4) var(--space-4) calc(var(--space-6) + var(--space-1));
+  padding: var(--space-3) var(--space-4) calc(var(--space-6) + var(--space-1));
 }
 
 .ui-charge-head {
@@ -21,7 +21,10 @@
 .ui-charge-status {
   margin: 0;
   color: var(--color-accent-text);
+  /* board: 12px, its own line height, and 5px more than the column gap before the name. */
+  margin-block-end: calc(var(--space-1) + 1px);
   font-size: calc(var(--type-cents-size) + 1px);
+  line-height: calc(var(--type-title-line) - 0.015);
   font-weight: var(--type-chip-weight);
   text-align: start;
 }
@@ -34,7 +37,7 @@
   margin: 0;
   color: var(--color-text);
   font-size: var(--type-name-size);
-  line-height: var(--type-name-line);
+  line-height: calc(var(--type-title-line) - 0.015);
   font-weight: var(--type-name-weight);
   overflow-wrap: anywhere;
 }
@@ -60,7 +63,7 @@
   margin: 0;
   color: var(--color-text-secondary);
   font-size: var(--type-meta-size);
-  line-height: var(--type-meta-line);
+  line-height: calc(var(--type-title-line) - 0.015);
 }
 
 /* The alert banner: a tint, 14px corners, the words and the action at the end. */
@@ -78,7 +81,7 @@
 .ui-charge-banner-text {
   color: var(--color-text);
   font-size: var(--type-line2-size);
-  line-height: var(--type-line2-line);
+  line-height: calc(var(--type-title-line) - 0.015);
 }
 
 .ui-charge-banner-action,
@@ -119,11 +122,37 @@
 .ui-charge-card {
   padding: 0;
   overflow: hidden;
+  border-radius: var(--radius-card-tight);
 }
 
+/* board: 61px rows, 14px sides, a 22px icon, the 12px label and the 16px value 3px under it. */
 .ui-charge-card .ui-charge-row {
-  min-block-size: calc(var(--touch-min) + var(--space-4));
-  padding-inline: var(--space-4);
+  min-block-size: 61px;
+  padding-inline: var(--space-inset-row);
+}
+
+.ui-charge-card .ui-icon-row-text {
+  gap: calc(var(--space-1) * 0.75);
+}
+
+.ui-charge-card .ui-icon-row-label {
+  font-size: calc(var(--type-caption-size) - 1px);
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-charge-card .ui-icon-row-value {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-charge-card .ui-icon-row-icon svg {
+  inline-size: 22px;
+  block-size: 22px;
+}
+
+/* The project name is the 17px regular line on the board; the category is the 16px medium one. */
+.ui-charge-card .ui-charge-row:first-child .ui-icon-row-value {
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
 }
 
 .ui-charge-card .ui-charge-row + .ui-charge-row {
@@ -134,15 +163,25 @@
 .ui-charge-recurring {
   padding: 0;
   overflow: hidden;
+  border-radius: var(--radius-card-tight);
+}
+
+/* The history block on this page: the board's own line heights, 12px between title and line. */
+.ui-charge-recurring .ui-charges-title {
+  margin: 0;
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-charge-recurring .ui-charges-line {
+  line-height: calc(var(--type-title-line) - 0.015);
 }
 
 .ui-charge-rec {
   display: flex;
-  min-block-size: calc(var(--touch-min) + var(--space-4));
   width: 100%;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-inset-row);
   border: 0;
   background: transparent;
   color: var(--color-text);
@@ -161,7 +200,8 @@
   display: grid;
   flex: 1;
   min-inline-size: 0;
-  gap: 0;
+  gap: calc(var(--space-1) * 0.75);
+  line-height: calc(var(--type-title-line) - 0.015);
 }
 
 .ui-charge-rec-title {
@@ -184,7 +224,7 @@
 /* The match box: a tint, 14px corners, the suggested party and the two answers. */
 .ui-recurring-match {
   display: grid;
-  gap: var(--space-2);
+  gap: calc(var(--space-2) + var(--space-1) / 2);
   padding: var(--space-inset-row);
   border-radius: var(--radius-toast);
   background: var(--color-tint);
@@ -194,14 +234,14 @@
   margin: 0;
   color: var(--color-text);
   font-size: var(--type-line2-size);
-  line-height: var(--type-line2-line);
+  line-height: calc(var(--type-line2-size) * 1.2);
 }
 
 .ui-recurring-match-detail {
   margin: 0;
   color: var(--color-text-secondary);
   font-size: var(--type-meta-size);
-  line-height: var(--type-meta-line);
+  line-height: calc(var(--type-meta-size) * 1.2);
 }
 
 .ui-recurring-match-actions {
@@ -214,7 +254,7 @@
   display: inline-flex;
   min-block-size: calc(var(--touch-min) - var(--space-2));
   align-items: center;
-  padding-inline: var(--space-4);
+  padding-inline: var(--space-inset-row);
   border-radius: var(--radius-chip);
   font: inherit;
   font-size: var(--type-line2-size);
