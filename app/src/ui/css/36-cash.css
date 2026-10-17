@@ -48,6 +48,19 @@
 .ui-lines-count {
   margin: 0;
   color: var(--color-text-muted);
+  /* board: 18px lines, and the count sits 4px under the total (the head's 12px gap less 8px). */
+  line-height: 18px;
+  margin-block-start: calc(var(--space-2) * -1);
+}
+
+.ui-lines-head > .ui-breakdown-total {
+  /* board: the total sits 3px lower than the title block's gap gives it. */
+  padding-block-start: 3px;
+}
+
+/* The board's tag line sits right under its hint (the hint and tag share one block). */
+.ui-lines-group .ui-row-tagline {
+  margin-block-start: -7px;
 }
 
 /* FLOW-366: the lines head stacks its switch, total, count and chips in one column. The page's
@@ -86,7 +99,7 @@
   min-inline-size: 0;
   overflow-x: auto;
   scrollbar-width: none;
-  margin-block: 0 var(--space-1);
+  margin-block: 0;
   margin-inline: calc(var(--space-4) * -1);
   padding-inline: var(--space-side);
 }
