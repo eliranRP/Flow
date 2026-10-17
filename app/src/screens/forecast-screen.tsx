@@ -184,6 +184,10 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
             <Amount agorot={total} size="display" currency={base} />
           </p>
           <p className="ui-forecast-today">היום <bdi dir="ltr">{forecastBigText(net, base)}</bdi></p>
+          <div className={cx("ui-forecast-changed", changed > 0 && "ui-forecast-changed-on")} aria-hidden={changed === 0}>
+            <span>{`שינית ${String(changed)} ${changed === 1 ? "פריט" : "פריטים"} בצפי`}</span>
+            <button type="button" className="ui-forecast-reset" onClick={resetAll} disabled={changed === 0}>איפוס</button>
+          </div>
           <ForecastSection
             title="צפוי להיכנס"
             total={<Amount agorot={build.incomeTotal} size="list" currency={base} direction="income" income />}
@@ -236,10 +240,6 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
               </ul>
             </section>
           ) : null}
-          <div className={cx("ui-forecast-changed", changed > 0 && "ui-forecast-changed-on")} aria-hidden={changed === 0}>
-            <span>{`שינית ${String(changed)} ${changed === 1 ? "פריט" : "פריטים"} בצפי`}</span>
-            <button type="button" className="ui-forecast-reset" onClick={resetAll} disabled={changed === 0}>איפוס</button>
-          </div>
           <p className="ui-forecast-foot t-hint">
             בצפי: הקבועים והתנועות הקבועות שעוד לא הגיעו החודש (הסכום הרגיל), חשבוניות לקוח פתוחות שטרם נגבו, חשבונות ספקים
             וחיובי הלוואה שעוד צפויים החודש. <Link to="/missing-bills">לקבועים</Link>
