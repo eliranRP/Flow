@@ -15,13 +15,13 @@ type TabBarProps = {
 export type TabSection = "home" | "projects" | "loans" | "recurring";
 
 /**
- * The tab a path belongs to. Settings is behind the avatar on Home, so no tab is current there,
- * except the loans page, which the loans tab opens (FLOW-364).
+ * The tab a path belongs to. Settings is behind the avatar on Home, so Home stays current there, as
+ * on the board; the loans page is the loans tab's (FLOW-364).
  */
 export function tabSection(pathname: string): TabSection | null {
   if (pathname === "/" || pathname.startsWith("/unpaid") || pathname.startsWith("/flow/")) return "home";
   // The profit view and the cash months open from Home; the review queue opens from Home's box.
-  if (pathname === "/profit" || pathname.startsWith("/cash/") || pathname.startsWith("/review")) return "home";
+  if (pathname === "/profit" || pathname.startsWith("/cash/") || pathname.startsWith("/review") || pathname.startsWith("/settings")) return "home";
   if (pathname.startsWith("/projects")) return "projects";
   if (pathname.startsWith("/loans")) return "loans";
   if (pathname.startsWith("/missing-bills") || pathname.startsWith("/recurring")) return "recurring";

@@ -178,13 +178,16 @@ function pathOf(to: string): string {
 
 /**
  * True when Back lands on `fallback`'s screen: a deep link replaces itself with the fallback, and a
- * pop lands there only when the previous entry is that screen. MemoryRouter (unit tests) has no index.
+ * pop lands there only when the previous screen (not a sheet of this one) is that screen. MemoryRouter (unit tests) has no index.
  */
 export function useBackLandsOn(fallback: string): boolean {
-  useLocation();
+  const { pathname } = useLocation();
   const idx = historyIndex();
   if (idx == null || idx === 0) return true;
-  return pathsByIndex.get(idx - 1) === pathOf(fallback);
+  // An open sheet is a history entry on the same screen: Back's label looks past those to the screen below.
+  let previous = idx - 1;
+  while (previous >= 0 && pathsByIndex.get(previous) === pathname) previous -= 1;
+  return previous < 0 || pathsByIndex.get(previous) === pathOf(fallback);
 }
 
 /**

@@ -201,8 +201,8 @@ test("settings opens the Connections page, and Back returns to the row (FLOW-501
   await connections.click();
   await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
   await expect(page.getByRole("heading", { name: "חיבורים" })).toBeVisible();
-  // Settings has no tab (FLOW-364): no tab is current.
-  await expect(page.locator(".ui-tabbar [aria-current=page]")).toHaveCount(0);
+  // Settings keeps Home current, as on the board.
+  await expect(page.locator(".ui-tabbar [aria-current=page]")).toHaveText("בית");
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page).toHaveURL(/\/settings\?preview=1$/);
   await expect(connections).toBeFocused();

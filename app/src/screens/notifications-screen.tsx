@@ -120,14 +120,15 @@ export function NotificationsScreen({ sample, support }: { sample?: Notification
   }
 
   return (
-    <div>
+    <div className="ui-settings-page">
       <ScreenHeader
         title="התראות"
+        kicker="הגדרות"
         subtitle="מה נשלח לטלפון"
         backTo={backTo}
         below={note != null ? <p className="t-hint" id={noteId} data-push-note="">{noteBody}</p> : undefined}
       />
-      <List>
+      <List layout="inset">
         {SWITCHES.map((item) => (
           <Toggle
             key={item.key}
