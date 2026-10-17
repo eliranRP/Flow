@@ -30,6 +30,8 @@ function rpcBody(name: string, args: Record<string, unknown>): unknown {
       return projectCash();
     case "project_cash_years":
       return projectCashYears();
+    case "projects_cash_month":
+      return projectsCashMonth();
     case "list_unpaid":
       return demoUnpaid();
     case "list_review":
@@ -79,6 +81,41 @@ function projectCash() {
     };
   });
   return { basis: "paid", base_currency: "ILS", months };
+}
+
+/** FLOW-445: the Projects list's month cash, one row per demo project (invented figures from the same books). */
+function projectsCashMonth() {
+  const now = new Date();
+  const month = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
+  return {
+    month,
+    base_currency: "ILS",
+    basis: "paid",
+    projects: demoDashboard(null, null, "invoiced").projects.map((project) => {
+      const income = Number(project.income_agorot);
+      const out = Math.abs(Number(project.direct_agorot)) + Math.abs(Number(project.shared_agorot));
+      const net = income - out;
+      return {
+        id: project.id,
+        name: project.name,
+        type: null,
+        status: project.status,
+        is_overhead: false,
+        group_id: null,
+        created_at: "2026-01-01T00:00:00Z",
+        finished_on: null,
+        budget_minor: null,
+        spent_minor: out,
+        cash: [{ currency: "ILS", in_minor: income, out_minor: out, net_minor: net }],
+        profit_month_minor: net,
+        profit_all_minor: Number(project.profit_agorot),
+        first_month: null,
+        pending_count: 0,
+        deletable: false,
+      };
+    }),
+    unassigned: { count: 0, cash: [] },
+  };
 }
 
 /** FLOW-435: the project's history, its net since its first month and per year (invented figures). */

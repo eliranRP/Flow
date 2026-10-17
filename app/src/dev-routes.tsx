@@ -626,6 +626,15 @@ function DevStepTransaction({ n }: { n: number }) {
 /** The scroll the board's scrolled frame shows the page at (CSS px). */
 const DEV_SCROLLED_Y = 320;
 
+/** The e2e route's project: one category with a waiting line, so the expenses rows and the queue link open. */
+const e2eProject: typeof devProject = {
+  ...devProject,
+  categories_by_currency: [{ currency: "USD", id: "c1", name: "חומרים", amount_minor: 4_000_000n }],
+  pending_count: 1,
+  pending_agorot: 40_000n,
+  transactions: devProject.transactions.map((line) => (line.id === "t1" ? { ...line, description: "מלט" } : line)),
+};
+
 export function DevProjectDetail() {
   const [params] = useSearchParams();
   const section = params.get("section");
@@ -646,7 +655,7 @@ export function DevProjectDetail() {
       sectionTo={(target) => (target === "overview" ? "/e2e/project-detail?preview=1" : `/e2e/project-detail?preview=1&section=${target}`)}
       sampleExpected={params.get("expected") === "none" ? SAMPLE_EXPECTED_EMPTY : SAMPLE_EXPECTED}
       // `?budget=1` draws the flip with its budget (the board's flip frame, invented names and figures).
-      sample={{ ...devProject, budget_agorot: params.get("budget") === "1" ? devProject.budget_agorot : null }}
+      sample={{ ...e2eProject, budget_agorot: params.get("budget") === "1" ? e2eProject.budget_agorot : null }}
       sampleCash={devCash}
       sampleInvestment={devInvestment}
       categoryTo="/e2e/project-category"

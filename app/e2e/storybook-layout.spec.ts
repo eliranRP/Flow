@@ -233,24 +233,23 @@ test("long hebrew and large amount stories stay inside 390 and 320", async ({ pa
   expect(failures, failures.join("\n")).toEqual([]);
 });
 
-test("the project search stories stay inside 320 and 390, light and dark", async ({ page }) => {
+test("the project list stories, finished and many active, stay inside 320 and 390, light and dark", async ({ page }) => {
   test.setTimeout(120_000);
   const failures: string[] = [];
   for (const theme of ["light", "dark"]) {
     for (const width of widths) {
       await page.setViewportSize({ width, height: 844 });
-      for (const id of ["screens-routes--projects-search", "screens-routes--projects-many-active"]) {
+      for (const id of ["screens-routes--projects-finished", "screens-routes--projects-list"]) {
         const globals = `&globals=theme:${theme}`;
         await page.goto(`/iframe.html?id=${id}&viewMode=story${globals}`, { waitUntil: "domcontentloaded" });
         await page.locator("#storybook-root").waitFor({ state: "attached" });
-        if (id.endsWith("search")) {
-          // The play types תמר: the active and the finished match both show, and the finished one says so.
-          await expect(page.getByRole("link", { name: /^בית תמר/ })).toBeVisible();
-          await expect(page.getByRole("link", { name: /^מחסן תמר/ })).toContainText("הסתיים");
-          await expect(page.getByRole("link", { name: /^בית ארז/ })).toHaveCount(0);
+        if (id.endsWith("finished")) {
+          // FLOW-445: the finished projects show in their own section, and the finished one says so.
+          await expect(page.getByRole("link", { name: /^Ashby Rd/ })).toContainText("הסתיים");
+          await expect(page.getByRole("link", { name: /^Juniper Ct/ })).toBeVisible();
         } else {
-          await expect(page.getByRole("link", { name: /^בית כלנית/ })).toBeVisible();
-          await expect(page.getByRole("link", { name: /^מחסן תמר/ })).toHaveCount(0);
+          await expect(page.getByRole("link", { name: /^Juniper Ct/ })).toBeVisible();
+          await expect(page.getByRole("link", { name: /^Ashby Rd/ })).toHaveCount(0);
         }
         const problems = await layoutProblems(page);
         if (problems.length > 0) failures.push(`${theme} ${String(width)} ${id}: ${problems.join(" | ")}`);
@@ -890,7 +889,9 @@ test("hebrew counts keep their reading order around the numbers", async ({ page 
     return parts.sort((left, right) => right.x - left.x).map((part) => part.text);
   });
   expect(order.slice(0, 3)).toEqual(["עוד", "2", "שהסתיימו"]);
-  const used = await page.locator(".ui-row-hint").evaluate((node) => {
+  // FLOW-445: the used-percent hint is the budget card's line now: נשארו ₪X · N%.
+  await page.goto("/iframe.html?id=components-budgetcard--default&viewMode=story", { waitUntil: "domcontentloaded" });
+  const used = await page.locator(".ui-budget-note").evaluate((node) => {
     const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
     let word: DOMRect | null = null;
     let number: DOMRect | null = null;
@@ -900,7 +901,7 @@ test("hebrew counts keep their reading order around the numbers", async ({ page 
       const range = document.createRange();
       range.selectNodeContents(walker.currentNode);
       const box = range.getBoundingClientRect();
-      if (text.startsWith("נוצלו")) word = box;
+      if (text.startsWith("נשארו")) word = box;
       if (text.includes("%")) number = box;
     }
     if (!word || !number) return [];

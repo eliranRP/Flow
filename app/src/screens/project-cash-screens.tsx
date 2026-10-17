@@ -109,10 +109,11 @@ export function ProjectCashOverview({
   const rows = data == null ? [] : shownCashRows(month, data.base_currency);
   const earlier = data == null ? [] : projectEarlierMonthRows(project.id, data, search, now);
   const investment = investmentLoansRow(investmentData, project);
-  // FLOW-445: the summary card shows once a figure is entered (or a loan is open).
+  // FLOW-445: the summary card shows for a property once its purchase or value is entered. A project
+  // whose only entry is an open loan keeps the FLOW-419 row, which names the loan.
   const figures = investmentData.figures;
   const summaryFigures = figures != null && !investmentData.isOverhead
-    && (figures.purchaseMinor != null || figures.valueMinor != null || figures.arvMinor != null || figures.loanMinor !== 0n)
+    && (figures.purchaseMinor != null || figures.valueMinor != null || figures.arvMinor != null)
     ? figures
     : null;
   const summary = summaryFigures != null;
