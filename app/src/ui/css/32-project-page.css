@@ -345,3 +345,13 @@
 .ui-projects-head ~ * .ui-row-project .ui-row-hint {
   line-height: calc(var(--type-title-line) - 0.015);
 }
+
+/* A tab root's header under its "+ new" row (board Projects): the title keeps a 4px lead and 2px under it, and the
+   subtitle takes its 15px at the natural 1.2 line (18px), not the 1.4 label line. */
+.ui-tab-root-head .t-title {
+  margin-block: calc(var(--space-1)) calc(var(--space-1) / 2);
+}
+
+.ui-tab-root-head > p {
+  line-height: var(--type-cents-line);
+}

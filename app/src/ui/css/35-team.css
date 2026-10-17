@@ -29,6 +29,10 @@
   border-radius: var(--radius-card);
 }
 
+.ui-role-choice .ui-radio-row::before {
+  display: none;
+}
+
 .ui-role-choice .ui-radio-row[aria-checked="true"] {
   background: var(--color-tint);
 }

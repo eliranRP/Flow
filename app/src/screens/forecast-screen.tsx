@@ -160,7 +160,7 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
   if (build != null && income.length + expense.length + build.small.length === 0 && moved.length === 0) {
     return (
       <div className="ui-forecast-screen">
-        <ScreenHeader title="צפי" backTo="/" backText="בית" subtitle={`${monthName(month)} · נכון ל־${today.slice(8, 10)}/${today.slice(5, 7)}`} />
+        <ScreenHeader className="ui-tab-root-head" title="צפי" backTo="/" backText="בית" subtitle={`${monthName(month)} · נכון ל־${today.slice(8, 10)}/${today.slice(5, 7)}`} />
         <div className="ui-forecast-empty">
           <EmptyState
             icon={<CalendarCheckIcon />}

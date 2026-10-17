@@ -112,6 +112,8 @@ describe("tabSection", () => {
     ["/profit", "home"],
     ["/cash/2026-06", "home"],
     ["/projects/villa", "projects"],
+    ["/projects/villa/profit", "home"],
+    ["/projects/villa/profit/2026-06", "home"],
     ["/loans", "loans"],
     ["/loans", "loans"],
     ["/recurring", "recurring"],

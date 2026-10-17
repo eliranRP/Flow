@@ -70,6 +70,7 @@ export function ProjectsScreen({ sample, cashSample }: { sample?: Dashboard; cas
     <>
       <ScreenState
         stacked
+        headerClassName="ui-tab-root-head"
         title="פרויקטים"
         leading={holdWrites ? undefined : <TextLink tone="accent" chevron={false} onClick={() => { setOpen(true); }}>+ פרויקט חדש</TextLink>}
         trailing={(

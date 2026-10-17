@@ -22,6 +22,8 @@ export function tabSection(pathname: string): TabSection | null {
   if (pathname === "/" || pathname.startsWith("/unpaid")) return "home";
   // The profit view and the cash months open from Home; the review queue opens from Home's box.
   if (pathname === "/profit" || pathname.startsWith("/cash/") || pathname.startsWith("/review") || pathname.startsWith("/settings")) return "home";
+  // A project's profit pages open from Home's profit view, so the board lights Home there too.
+  if (/^\/projects\/[^/]+\/profit(\/|$)/.test(pathname)) return "home";
   if (pathname.startsWith("/projects")) return "projects";
   if (pathname.startsWith("/loans")) return "loans";
   if (pathname.startsWith("/missing-bills") || pathname.startsWith("/recurring")) return "recurring";

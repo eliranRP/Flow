@@ -38,6 +38,9 @@
    line under it are the same figure Home shows. */
 .ui-forecast-screen > .ui-page-stacked { margin-inline: calc(-1 * var(--space-side)); padding-top: var(--space-3); padding-bottom: 0; }
 .ui-forecast-screen > .ui-page-stacked .ui-focus-title + * { margin-top: var(--space-1); }
+/* The all-arrived state's header is the board's states header: 16 above, the title 4 down (ui-tab-root-head). */
+.ui-forecast-screen > .ui-page-stacked.ui-tab-root-head { padding-top: var(--space-4); }
+.ui-forecast-screen > .ui-page-stacked.ui-tab-root-head .ui-focus-title + * { margin-top: 0; }
 
 .ui-forecast-screen {
   position: relative;

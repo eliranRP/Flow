@@ -90,7 +90,7 @@ export function attentionRows({
       icon: only.down ? <TrendDownIcon size={24} stroke={1.9} /> : <TrendUpIcon size={24} stroke={1.9} />,
       title: only.title,
       // Each half wraps whole, and no "·" is left at the break.
-      hint: <HintParts parts={[<bdi key="now" dir="ltr">{only.now}</bdi>, <>בדרך כלל <bdi dir="ltr">{only.usual}</bdi></>]} />,
+      hint: <HintParts parts={[<span key="was"><bdi dir="ltr">{only.now}</bdi> במקום <bdi dir="ltr">{only.usual}</bdi></span>, "חיוב קבוע"]} />,
     });
   } else if (changes.length > 1) {
     rows.push({

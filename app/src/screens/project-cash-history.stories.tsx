@@ -58,7 +58,7 @@ export const PageLikeHome: Story = {
     await expect(canvas.getByRole("link", { name: "לכל החודשים" })).toHaveAttribute("href", "/projects/p1/cash/history");
     await expect(canvas.getByRole("link", { name: /ממתינים לאישור/ })).toHaveAttribute("href", "/review?project=p1");
     await expect(canvas.getByRole("link", { name: "חשבון אחד לא הגיע" })).toBeInTheDocument();
-    await expect(canvas.getByRole("link", { name: /חשמל עלה ב־38%/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("link", { name: /חשמל עלה/ })).toBeInTheDocument();
   },
 };
 

@@ -150,12 +150,18 @@
   gap: var(--space-2);
 }
 
-.ui-month-drawer-step {
+.ui-month-drawer .ui-month-drawer-step {
   inline-size: var(--touch-min);
   block-size: var(--touch-min);
   border-radius: 50%;
-  background: color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: var(--color-raised);
   color: var(--color-text);
+}
+
+/* The board's year arrows draw an 18px chevron in the 44px disc. */
+.ui-month-drawer-step svg {
+  inline-size: 18px;
+  block-size: 18px;
 }
 
 .ui-month-drawer-step-off {
@@ -183,9 +189,9 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: var(--band-label-gap);
+  gap: var(--space-1);
   min-block-size: var(--month-cell-min);
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-2) calc(var(--space-3) - var(--space-1) / 2);
   text-align: start;
   border: 2px solid transparent;
   border-radius: var(--radius-month-cell);
@@ -200,7 +206,7 @@
 
 .ui-month-cell-name {
   font-size: var(--type-line2-size);
-  line-height: var(--type-line2-line);
+  line-height: var(--type-cents-line);
 }
 
 .ui-month-cell-amount {
@@ -210,7 +216,8 @@
 
 /* FLOW-364 (board): the cells' figures are one step under the list size. */
 .ui-month-cell-amount .t-amount {
-  font-size: var(--type-label-size);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-cents-line);
 }
 
 .ui-month-cell-selected {
@@ -240,7 +247,6 @@
 /* FLOW-364 (board): the empty band is shorter than a figure band; no padding above the month. */
 .ui-band-body-empty {
   gap: 0;
-  padding-block-start: var(--space-4);
 }
 
 .ui-band:has(.ui-band-body-empty) {
