@@ -175,7 +175,7 @@ describe("categories kept out of the P&L", () => {
     });
   });
 
-  it("shows the mark to a viewer, with no row menu", () => {
+  it("shows the kept-out words in a viewer's row meta, with no sheet", () => {
     renderScreen(
       <ViewerPreview>
         <CategoriesScreen

@@ -66,7 +66,7 @@ describe("FLOW-406 sub-categories in Settings → Categories", () => {
     const parent = screen.getByRole("link", { name: /תחזוקה/ });
     // FLOW-356: the same unit as the other rows, its own lines and its sub-categories'.
     expect(parent).toHaveTextContent("48 תנועות");
-    expect(parent).not.toHaveTextContent("תת־קטגוריות");
+    expect(parent).toHaveTextContent(/\d+ תת־קטגוריות/);
     expect(screen.getByRole("button", { name: /חומרים/ })).toHaveTextContent("42 תנועות");
     fireEvent.click(parent);
     expect(await screen.findByRole("heading", { name: "תחזוקה" })).toBeInTheDocument();
