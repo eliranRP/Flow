@@ -48,6 +48,10 @@ export const LINE_SPLIT_PLACE: Record<LineSplitRefusal, RefusalPlace> = {
 };
 
 export const LINE_SPLIT_SAVE_FAILURE = "הפיצול לא נשמר";
+/** The problem notes on a part (FLOW-922): they replace the part's share line, as on the board. */
+export const PART_TWICE = "הפרויקט והקטגוריה האלה כבר בפיצול";
+export const PART_PICK_PROJECT = "בחרו פרויקט";
+export const PART_FILL_AMOUNT = "השלימו סכום";
 export const LINE_SPLIT_CHANGED = "משהו השתנה בינתיים. טענו מחדש ונסו שוב.";
 /**
  * The project split (`SplitScreen`) on a line that has a split by category: the detail row's
@@ -94,7 +98,7 @@ export function lineSplitCopy(
     case "line has an open review":
       return "אשרו את התנועה בתור לאישור, ואז פצלו.";
     case "same category and project twice":
-      return "הקטגוריה והפרויקט האלה כבר בחלק אחר.";
+      return PART_TWICE;
     case "line amount is zero":
       return "סכום השורה אפס. אין מה לפצל.";
     case "transaction not found":

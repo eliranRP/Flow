@@ -1,4 +1,4 @@
-import type { LineSplitRead, PayloadPart, ServerPart } from "../line-split";
+import type { LineSplitRead, PartDraft, PayloadPart, RestDraft, ServerPart } from "../line-split";
 
 /**
  * A stand-in for `save_line_split(..., p_preview => true)` in stories, unit tests and the dev
@@ -166,7 +166,7 @@ export function sampleSplitApi(
 
 /**
  * FLOW-370 proof fixture: the split board's amounts, dates, counts and order with invented names
- * (lane rule 25). Only `?board=1` on the dev route uses it, so the unit tests keep the sample above.
+ * (lane rule 25). Only `?board=<state>` on the dev route uses it, so the unit tests keep the sample above.
  */
 export const BOARD_SPLIT_CATEGORIES = [
   { id: "b-materials", name: "חומרים", kind: "expense" as const, hidden: false },
@@ -212,3 +212,34 @@ export const BOARD_SPLIT_READ: LineSplitRead = {
     { category_id: "b-materials", category_name: "חומרים", project_id: "b-juniper", project_name: "Juniper Ct", amount_minor: 94_017n, percent: null, rest: true },
   ],
 };
+
+/** The five split board frames (FLOW-922). The dev route reads `?board=<state>` and nothing else drives them. */
+export type BoardSplitState = "split" | "empty" | "picker" | "over" | "twice";
+
+export const BOARD_SPLIT_STATES: readonly BoardSplitState[] = ["split", "empty", "picker", "over", "twice"];
+
+/** The board's two parts: Birch Lane $6,000 and Sable Ct $2,000, both on materials. */
+const BOARD_PART_BIRCH: PartDraft = { key: "board-1", categoryId: "b-materials", projectId: "b-birch", unit: "amount", value: "6000" };
+const BOARD_PART_SABLE: PartDraft = { key: "board-2", categoryId: "b-materials", projectId: "b-sable", unit: "amount", value: "2000" };
+
+/** The pieces of a LineSplitSample for one board frame; the line and the lists are the constants above. */
+export function boardSplitSample(state: BoardSplitState): {
+  split: LineSplitRead | null;
+  parts: PartDraft[];
+  rest: RestDraft;
+  target?: { partKey: string; kind: "project" | "category" };
+} {
+  const none: RestDraft = { categoryId: null, projectId: null };
+  switch (state) {
+    case "split":
+      return { split: BOARD_SPLIT_READ, parts: [BOARD_PART_BIRCH, BOARD_PART_SABLE], rest: none };
+    case "empty":
+      return { split: null, parts: [], rest: none };
+    case "picker":
+      return { split: null, parts: [BOARD_PART_BIRCH, BOARD_PART_SABLE], rest: none, target: { partKey: "board-2", kind: "project" } };
+    case "over":
+      return { split: null, parts: [BOARD_PART_BIRCH, { ...BOARD_PART_SABLE, value: "3500" }], rest: none };
+    case "twice":
+      return { split: null, parts: [BOARD_PART_BIRCH, { ...BOARD_PART_BIRCH, key: "board-2", value: "2000" }], rest: none };
+  }
+}

@@ -304,7 +304,7 @@ describe("split by category editor (FLOW-325)", () => {
     });
     const field = screen.getAllByLabelText("סכום, חשמל")[0];
     const id = field?.getAttribute("aria-describedby") ?? "";
-    expect(document.getElementById(id)).toHaveTextContent("הקטגוריה והפרויקט האלה כבר בחלק אחר.");
+    expect(document.getElementById(id)).toHaveTextContent("הפרויקט והקטגוריה האלה כבר בפיצול");
     expect(screen.getAllByRole("button", { name: /^חשמל, קטגוריה, שינוי/ })[0]).toHaveAttribute("aria-describedby", id);
   });
 

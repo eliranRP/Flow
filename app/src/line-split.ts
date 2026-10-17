@@ -198,7 +198,7 @@ export type LocalCheck = {
   restMinor: bigint | null;
 };
 
-function pairKey(categoryId: string, projectId: string | null, ctx: LineContext): string {
+export function pairKey(categoryId: string, projectId: string | null, ctx: LineContext): string {
   // A part with no project keeps the line's project, so both name the same pair.
   return `${categoryId}|${projectId ?? ctx.lineProjectId ?? ""}`;
 }
@@ -261,6 +261,18 @@ let keySeed = 0;
  * A stable key for a new part row. Random, so a draft restored from sessionStorage after a
  * reload (whose rows already hold keys) never meets a repeat.
  */
+/**
+ * The two parts of a split made from nothing (חלוקה שווה on an empty split): the first on
+ * `otherProjectId` (a project other than the line's, or null), the last takes the cents.
+ */
+export function equalSplitParts(lineMinor: bigint, categoryId: string, otherProjectId: string | null): PartDraft[] {
+  const first = lineMinor / 2n;
+  return [
+    { key: newPartKey(), categoryId, projectId: otherProjectId, unit: "amount", value: amountText(first) },
+    { key: newPartKey(), categoryId, projectId: null, unit: "amount", value: amountText(lineMinor - first) },
+  ];
+}
+
 export function newPartKey(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return `part-${crypto.randomUUID()}`;
   keySeed += 1;
