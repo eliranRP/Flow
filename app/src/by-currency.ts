@@ -196,16 +196,6 @@ export function projectAmountFigures(project: ProjectRow): { minor: bigint; curr
   return rows.map((row) => ({ minor: row.profit_minor, currency: row.currency }));
 }
 
-export function projectMarginHint(project: ProjectRow): string | undefined {
-  const rows = projectRows(project);
-  if (rows.length !== 1) return undefined;
-  const row = rows[0];
-  if (row == null || row.income_minor <= 0n) return undefined;
-  const pct = Number((row.profit_minor * 100n) / row.income_minor);
-  const shown = pct < 0 ? `−${String(Math.abs(pct))}%` : `${String(pct)}%`;
-  return shown;
-}
-
 export function dashboardHasBooks(data: Dashboard): boolean {
   if (data.projects.length > 0) return true;
   if (data.income_agorot !== 0n || data.expense_agorot !== 0n) return true;

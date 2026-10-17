@@ -208,6 +208,7 @@
   --color-tint: #EEE6FD;
   --color-track: #E7E2F0;        /* job bar track, States board (light line); dark is #2E2740 */
   --color-avatar: #F3F0F8;       /* FLOW-366: a row's initials circle (board; dark is #2A2540) */
+  --color-track-strong: #DAD3E6;   /* FLOW-445: budget track, loan part of the equity bar */
   --shadow-pill: 0 6px 18px rgba(40, 20, 90, 0.12); /* sync pill, States board (FLOW-371) */
   --shadow-toast: 0 8px 24px rgba(40, 20, 90, 0.12); /* toast, LinesLight and StatesLight board (FLOW-363 3c) */
   --color-tint-strong: #D9CBF6;  /* selected outline and selected row fill (board) */
@@ -281,6 +282,7 @@
     --color-line-soft: #231E30;
     --color-accent-dim: #7E66B8;
     --color-avatar: #2A2540;
+    --color-track-strong: #3A3350;   /* FLOW-445: budget track, loan part of the equity bar */
     --color-control-off: #736A8C;
     --color-control-border: #736A8C;
     --color-switch-off: #3A3350;  /* switch track, off (board: Settings switch off; FLOW-512) */
@@ -351,6 +353,7 @@
   --color-line-soft: #231E30;
   --color-accent-dim: #7E66B8;
   --color-avatar: #2A2540;
+  --color-track-strong: #3A3350;   /* FLOW-445: budget track, loan part of the equity bar */
   --color-control-off: #736A8C;
   --color-control-border: #736A8C;
   --color-switch-off: #3A3350;  /* switch track, off (board: Settings switch off; FLOW-512) */

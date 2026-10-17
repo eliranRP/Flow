@@ -87,14 +87,14 @@ async function layoutProblems(page: Page): Promise<string[]> {
       if (box.width < 8 || box.left < host.left - 1 || box.right > host.right + 1) problems.push("period chevron is clipped");
     }
 
-    const title = document.querySelector(".ui-budget-title");
+    const title = document.querySelector(".ui-budget-card .ui-budget-head");
     if (title instanceof HTMLElement) {
       const line = Number.parseFloat(getComputedStyle(title).lineHeight);
       if (Number.isFinite(line) && title.getBoundingClientRect().height > line * 2.4) {
         problems.push("budget title is more than 2 lines");
       }
     }
-    for (const amount of document.querySelectorAll(".ui-budget-amounts bdi, .ui-num")) {
+    for (const amount of document.querySelectorAll(".ui-budget-spent bdi, .ui-num")) {
       if (!(amount instanceof HTMLElement)) continue;
       const style = getComputedStyle(amount);
       const line = Number.parseFloat(style.lineHeight);

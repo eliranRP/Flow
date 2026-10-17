@@ -40,6 +40,8 @@ import {
   sampleCashYearMonths,
   sampleCashYears,
 } from "./dev/cash-sample";
+import { cash as devCash, investment as devInvestment, project as devProject } from "./dev/project-cash-sample";
+import { devProjectsCash } from "./dev/projects-sample";
 import { CashHistoryScreen, CashYearScreen } from "./screens/cash-history";
 import { cashMonthKey } from "./cash";
 import {
@@ -391,7 +393,7 @@ export function DevCashYear() {
 }
 
 export function DevProjects() {
-  return <ProjectsScreen sample={devDashboard} />;
+  return <ProjectsScreen sample={devDashboard} cashSample={devProjectsCash} />;
 }
 
 /** Dev-only. A production build drops the sample secret with this flag. */
@@ -613,41 +615,32 @@ function DevStepTransaction({ n }: { n: number }) {
   );
 }
 
+/** The scroll the board's scrolled frame shows the page at (CSS px). */
+const DEV_SCROLLED_Y = 320;
+
 export function DevProjectDetail() {
   const [params] = useSearchParams();
   const section = params.get("section");
+  // The fixture company is in dollars: the preview's company-currency read answers USD.
+  const queryClient = useQueryClient();
+  const preview = useHomePreview();
+  useEffect(() => { queryClient.setQueryData(["company-currency", preview], "USD"); }, [queryClient, preview]);
+  // `?scrolled=1` is the board's scrolled frame: the page is scrolled past the band, so the compact bar shows.
+  useEffect(() => {
+    if (params.get("scrolled") !== "1") return;
+    const timer = window.setTimeout(() => { window.scrollTo(0, DEV_SCROLLED_Y); }, 0);
+    return () => { window.clearTimeout(timer); };
+  }, [params]);
   return (
     <ProjectDetailScreen
       // FLOW-340 C: `?section=` draws the screen a row opens, on the same sample (FLOW-419: `profit` too).
       section={section === "profit" || section === "expenses" || section === "investment" || section === "loans" || section === "transactions" ? section : "overview"}
       sectionTo={(target) => (target === "overview" ? "/e2e/project-detail?preview=1" : `/e2e/project-detail?preview=1&section=${target}`)}
       sampleExpected={params.get("expected") === "none" ? SAMPLE_EXPECTED_EMPTY : SAMPLE_EXPECTED}
-      sample={{
-        id: "p1",
-        name: "שיפוץ הרצל 12",
-        status: "active",
-        state_label: "פעיל",
-        budget_agorot: null,
-        income_agorot: 1_000n,
-        direct_agorot: 400n,
-        shared_agorot: 0n,
-        profit_agorot: 600n,
-        after_overhead: false,
-        overhead_share_agorot: 0n,
-        profit_after_overhead_agorot: 600n,
-        overhead_weighted: true,
-        categories: [{ id: "c1", name: "חומרים", amount_agorot: 400n }],
-        pending_count: 1,
-        pending_agorot: 200n,
-        transactions: [{
-          id: "t1",
-          description: "מלט",
-          doc_date: "2026-09-12",
-          amount_net: -400n,
-          direction: "expense",
-          category: "חומרים",
-        }],
-      }}
+      // `?budget=1` draws the flip with its budget (the board's flip frame, invented names and figures).
+      sample={{ ...devProject, budget_agorot: params.get("budget") === "1" ? devProject.budget_agorot : null }}
+      sampleCash={devCash}
+      sampleInvestment={devInvestment}
       categoryTo="/e2e/project-category"
     />
   );

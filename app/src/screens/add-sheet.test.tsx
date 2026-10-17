@@ -80,9 +80,9 @@ describe("+ quick action history", () => {
   it("Back after + → פרויקט חדש closes the sheet, then leaves Projects for the screen before +", async () => {
     const view = renderBrowser("/?preview=1");
     await quickAction(/פרויקט חדש/);
-    expect(await screen.findByRole("dialog", { name: "פרויקט" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "פרויקט חדש" })).toBeInTheDocument();
     window.history.back();
-    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "פרויקט" })).not.toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "פרויקט חדש" })).not.toBeInTheDocument(); });
     expect(window.location.pathname).toBe("/projects");
     expect(window.location.search).not.toContain("new=");
     window.history.back();

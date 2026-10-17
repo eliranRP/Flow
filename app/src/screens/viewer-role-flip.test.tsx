@@ -112,7 +112,7 @@ describe("inner write gates after the role changes", () => {
       renderAt(<ProjectsScreen sample={{ projects: [] } as never} />, "/projects");
       fireEvent.click(screen.getByRole("button", { name: "פרויקט חדש" }));
       const dialog = await screen.findByRole("dialog");
-      fireEvent.change(within(dialog).getByLabelText("שם"), { target: { value: "פרויקט לדוגמה" } });
+      fireEvent.change(within(dialog).getByLabelText("שם הפרויקט"), { target: { value: "פרויקט לדוגמה" } });
       return dialog;
     }
 
@@ -125,10 +125,11 @@ describe("inner write gates after the role changes", () => {
     it.each(["viewer", "unknown"] as const)("writes nothing once the role is %s", async (next) => {
       const dialog = await openAndType();
       flip(next);
-      expect(within(dialog).getByRole("button", { name: "שמירה" })).toBeDisabled();
+      expect(within(dialog).getByRole("button", { name: "יצירת פרויקט" })).toBeDisabled();
       fireEvent.submit(formIn(dialog));
       await new Promise((resolve) => setTimeout(resolve, 50));
-      expect(rpc).not.toHaveBeenCalled();
+      // The list reads projects_cash_month through rpc too; only a write is refused.
+      expect(rpc).not.toHaveBeenCalledWith("upsert_project", expect.anything());
     });
   });
 

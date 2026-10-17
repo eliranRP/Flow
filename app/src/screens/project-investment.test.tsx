@@ -196,10 +196,11 @@ describe("the project page", () => {
   it("shows הון עצמי בנכס on the השקעה והלוואות row, and the card on its own screen (FLOW-419)", async () => {
     rpc.impl = readsFor(payload());
     const overview = renderPage();
-    const row = await screen.findByRole("link", { name: /^השקעה והלוואות/ });
-    expect(row).toHaveTextContent("הון עצמי בנכס");
-    expect(row).toHaveTextContent("₪850,000");
-    expect(row).toHaveAttribute("href", expect.stringMatching(/^\/projects\/p1\/investment\?period=/));
+    // FLOW-445: the card replaces the row; its לפרטים link opens the investment page.
+    const card = (await screen.findByRole("heading", { name: "השקעה והלוואות" })).closest(".ui-investment-summary");
+    expect(card).toHaveTextContent("₪337,600");
+    const more = within(card as HTMLElement).getByRole("link", { name: "לפרטים" });
+    expect(more).toBeInTheDocument();
     overview.unmount();
     renderPage("/projects/p1/investment");
     expect(await screen.findByText("₪1,250,000")).toBeInTheDocument();

@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { ProgressBar } from "./progress-bar";
 import { padded } from "./story-support";
 
 function Counts() {
@@ -11,7 +10,6 @@ function Counts() {
       <p data-bidi="queue">
         <bdi dir="ltr">1</bdi> <span>מתוך</span> <bdi dir="ltr">7</bdi>
       </p>
-      <ProgressBar variant="split" label="טק-ליין" spentAgorot={4_000_000n} budgetAgorot={10_000_000n} />
     </div>
   );
 }

@@ -230,3 +230,28 @@ export function useProjectCashMonthData(projectId: string, monthKey: string, act
   const year = useProjectCashYearMonthsQuery(projectId, Number(monthKey.slice(0, 4)), active && older);
   return older ? year : recent;
 }
+
+/**
+ * FLOW-445: one month's cash for every project and the unassigned bucket (projects_cash_month). The
+ * list reads it with no project; the project page reads its own row. `month` is `YYYY-MM`, or the
+ * current month when omitted.
+ */
+export function useProjectsCashMonth(month?: string, projectId?: string) {
+  const preview = useHomePreview();
+  return useQuery({
+    queryKey: ["projects-cash", month, projectId],
+    enabled: preview === "off",
+    queryFn: async () => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
+      const { data, error } = await supabase.rpc("projects_cash_month", {
+        p_month: month == null ? undefined : `${month}-01`,
+        p_today: israelToday(),
+        p_project: projectId,
+      });
+      if (error) throw error;
+      return (await loadReadSchemas()).projectsCashMonthSchema.parse(data);
+    },
+  });
+}
