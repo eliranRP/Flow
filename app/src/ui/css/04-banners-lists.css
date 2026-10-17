@@ -457,6 +457,11 @@
   font-size: 0;
 }
 
+/* The board keeps a disabled choice's circle as drawn; only its words dim. */
+.ui-choice-sheet .ui-radio-row:is(:disabled, [aria-disabled="true"]):not([aria-busy="true"]) .ui-radio {
+  border-color: var(--color-control-border);
+}
+
 .ui-radio > .ui-spinner {
   inline-size: var(--spinner-radio);
   block-size: var(--spinner-radio);
