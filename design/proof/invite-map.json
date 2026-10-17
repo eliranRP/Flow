@@ -1,1 +1,7 @@
-{}
+{
+  "Invite": "/e2e/invites?state=viewer",
+  "InviteEditor": "/e2e/invites?state=editor",
+  "InviteNewUser": "/e2e/invites?state=newuser",
+  "InviteJoined": "/e2e/invites?state=joined",
+  "InviteExpired": "/e2e/invites?state=expired"
+}

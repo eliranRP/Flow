@@ -1,0 +1,439 @@
+/* FLOW-513 (board Invite): the full-screen invitation, in its five states. The tile is the
+   board's #7B3FE4 initial tile: --color-band is that colour in both themes. The board's text uses the
+   browser's natural line height, which has no token: --invite-natural is never set, so `normal` applies. */
+.invite-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  block-size: 100dvh;
+  overflow: hidden;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-weight: var(--type-body-weight);
+  line-height: var(--invite-natural, normal);
+}
+
+.invite-glow {
+  position: absolute;
+  inset: 0 0 auto;
+  block-size: 300px;
+  background: linear-gradient(180deg, var(--color-movie-from) 0%, var(--color-bg) 100%);
+}
+
+.invite-body {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: calc(var(--space-4) + var(--space-1) / 2);
+  min-block-size: 0;
+  overflow-y: auto;
+  padding: calc(var(--space-10) + var(--space-8)) var(--space-6) var(--space-4);
+}
+
+.invite-rise {
+  animation: invite-rise var(--motion-page) var(--ease-enter) calc(var(--motion-stagger) * var(--step, 0)) both;
+}
+
+.invite-step-2 { --step: 2; }
+.invite-step-3 { --step: 3; }
+.invite-step-4 { --step: 4; }
+.invite-step-4-5 { --step: 4.5; }
+.invite-step-5-5 { --step: 5.5; }
+.invite-step-6 { --step: 6; }
+.invite-step-6-5 { --step: 6.5; }
+.invite-step-7-5 { --step: 7.5; }
+
+@keyframes invite-rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--rise-page));
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.invite-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  inline-size: calc(var(--space-10) + var(--space-4));
+  block-size: calc(var(--space-10) + var(--space-4));
+  border-radius: var(--radius-card-tight);
+  background: var(--color-band);
+  color: var(--color-on-band);
+  font-size: calc(var(--type-sheet-size) + 2px);
+  font-weight: var(--type-title-weight);
+  animation: invite-pop var(--motion-width) var(--ease-enter);
+}
+
+@keyframes invite-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  70% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.invite-head {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-1) * 1.5);
+}
+
+.invite-eyebrow {
+  color: var(--color-accent-text);
+  font-size: var(--type-line2-size);
+}
+
+.invite-title {
+  margin: 0;
+  font-size: var(--type-title-size);
+  font-weight: var(--type-title-weight);
+  line-height: calc(var(--type-title-line) + 0.05);
+}
+
+.invite-lead {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  line-height: calc(var(--type-body-line) + 0.05);
+}
+
+.invite-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-card-tight);
+  background: var(--color-surface);
+}
+
+.invite-role-card {
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.invite-role-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.invite-role-name {
+  font-size: var(--type-btn-size);
+  font-weight: var(--type-btn-weight);
+}
+
+.invite-muted {
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+}
+
+.invite-role-line {
+  display: flex;
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+  font-size: var(--type-line2-size);
+  line-height: calc(var(--type-body-line) + 0.05);
+}
+
+.invite-icon {
+  display: flex;
+  flex: none;
+  margin-block-start: calc(var(--space-1) * 0.75);
+}
+
+.invite-can {
+  color: var(--color-good);
+}
+
+.invite-cannot {
+  color: var(--color-text-muted);
+}
+
+.invite-facts {
+  padding: calc(var(--space-1) * 1.5) var(--space-4);
+}
+
+.invite-fact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-block-size: var(--touch-min);
+  font-size: var(--type-line2-size);
+}
+
+.invite-fact + .invite-fact {
+  border-block-start: 1px solid var(--color-line);
+}
+
+.invite-fact-key {
+  color: var(--color-text-secondary);
+}
+
+.invite-note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: calc(var(--type-body-line) + 0.05);
+}
+
+.invite-expired-box {
+  margin: 0;
+  padding: var(--space-inset-row);
+  border-radius: var(--radius-toast);
+  background: var(--color-tint);
+  font-size: var(--type-line2-size);
+  line-height: calc(var(--type-body-line) + 0.05);
+}
+
+.invite-foot {
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: calc(var(--space-1) * 1.5);
+  padding: var(--space-3) var(--space-6) calc(var(--space-6) + var(--space-1));
+}
+
+.invite-foot-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.invite-foot-row .ui-btn {
+  padding-inline: var(--space-1);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-line2-weight);
+}
+
+.invite-foot-row .ui-btn-danger-link {
+  color: var(--color-signal-soft);
+}
+
+.invite-foot .invite-soft {
+  background: var(--color-tint);
+  color: var(--color-text);
+}
+
+/* Joined and declined: the block sits in the middle of the screen. */
+.invite-center {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-inset-row);
+  padding-inline: var(--space-8);
+  text-align: center;
+}
+
+.invite-center-declined {
+  gap: var(--space-2);
+}
+
+.invite-done {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: calc(var(--space-10) + var(--space-8));
+  block-size: calc(var(--space-10) + var(--space-8));
+  border-radius: var(--radius-chip);
+  background: var(--color-tint);
+  color: var(--color-accent);
+  animation: invite-pop var(--motion-width) var(--ease-enter);
+}
+
+/* No invite to show (loading, failed, none left): the plain screen. */
+.invite-plain {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100dvh;
+}
+
+.invite-plain-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-block-start: var(--space-4);
+  padding-inline: var(--space-side);
+}
+
+.invite-plain-later {
+  display: flex;
+  justify-content: center;
+  margin-block-start: auto;
+  padding-block: var(--space-6) calc(var(--safe-bottom, 0px) + var(--space-4));
+}
+
+/* FLOW-513 (board SettingsSwitch): the העסקים שלך sheet. One 12px rhythm between the rows, the
+   invites head, the invite card and the dashed button, as on the board. */
+.cs-sheet .ui-sheet-body,
+.cs-list,
+.cs-invites {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sheet-gap-y);
+}
+
+.cs-sheet .ui-sheet-body {
+  line-height: var(--invite-natural, normal);
+}
+
+.cs-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: calc(var(--row-height) - var(--space-1));
+  padding: var(--space-2) var(--space-inset-row);
+  border: 0;
+  border-radius: var(--radius-toast);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--type-btn-2-size);
+  text-align: start;
+}
+
+.cs-row[data-on="true"] {
+  background: var(--color-tint);
+}
+
+.cs-tile {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--avatar);
+  block-size: var(--avatar);
+  border-radius: var(--radius-field-btn);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-chip-weight);
+}
+
+.cs-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: calc(var(--space-1) / 2);
+  min-inline-size: 0;
+}
+
+.cs-note {
+  color: var(--color-text-muted);
+  font-size: calc(var(--type-caption-size) - 1px);
+}
+
+.cs-radio {
+  flex: none;
+  box-sizing: border-box;
+  inline-size: 22px;
+  block-size: 22px;
+  border: 2px solid var(--color-control-border);
+  border-radius: var(--radius-chip);
+}
+
+.cs-row[data-on="true"] .cs-radio {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+.cs-invites-head {
+  margin: 0;
+  padding: calc(var(--space-1) * 1.5) var(--space-1) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-section-weight);
+}
+
+.cs-invite {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+  padding: var(--space-3) var(--space-inset-row);
+  border-radius: var(--radius-toast);
+  background: var(--color-tint);
+}
+
+.cs-invite-name,
+.cs-invite-line {
+  margin: 0;
+}
+
+.cs-invite-text {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-1) / 2);
+}
+
+.cs-sheet .ui-sheet-head > .ui-icon-btn {
+  margin-block: 0;
+}
+
+.cs-sheet .ui-sheet-head > .ui-icon-btn:last-child:not(:first-child) {
+  margin-inline-end: 0;
+}
+
+.cs-invite-name {
+  font-size: var(--type-btn-2-size);
+}
+
+.cs-invite-line {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+}
+
+.cs-invite-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.cs-invite-actions .ui-btn {
+  block-size: var(--control-height-sm);
+  min-block-size: var(--control-height-sm);
+  min-inline-size: 0;
+  font-size: var(--type-line2-size);
+}
+
+.cs-invite-actions .cs-join {
+  padding-inline: var(--space-4);
+  font-weight: var(--type-btn-weight);
+}
+
+.cs-invite-actions .cs-decline {
+  padding-inline: var(--space-inset-row);
+  border-width: 1px;
+  border-color: var(--color-control-off);
+  color: var(--color-text-secondary);
+  font-weight: var(--type-line2-weight);
+}
+
+.cs-new {
+  block-size: var(--field-height);
+  border: 1.5px dashed var(--color-track-strong);
+  border-radius: var(--radius-toast);
+  background: none;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-btn-weight);
+}
+
+.cs-error {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}

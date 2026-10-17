@@ -67,9 +67,6 @@
   "app/src/ui/css/34-swipe-row.css": {
     "duration": 1
   },
-  "app/src/ui/css/35-team.css": {
-    "font-weight": 1
-  },
   "app/src/ui/css/38-related-charges.css": {
     "radius": 1
   },

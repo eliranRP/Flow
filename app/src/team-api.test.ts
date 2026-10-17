@@ -46,3 +46,29 @@ describe("inviteMember sends the invite email (FLOW-601)", () => {
     await expect(liveTeamApi.inviteMember("noa@example.com", "viewer")).resolves.toMatchObject({ id: "i-1" });
   });
 });
+
+describe("the invitation screen's reads and writes (FLOW-513)", () => {
+  const base = { id: "i-1", company_id: "c-1", company_name: "נכסי הגפן בע״מ", role: "viewer", invited_by_name: "יוסי כהן", created_at: "2026-10-01T09:00:00Z" };
+  beforeEach(() => { mocks.rpc.mockReset(); });
+
+  it("reads the expiry fields, and an older payload without them", async () => {
+    mocks.rpc.mockResolvedValue({
+      data: [
+        { ...base, email: "you@example.com", status: "expired", invited_by_role: "owner", expires_at: "2026-10-09T12:00:00Z", seen_at: null },
+        base,
+      ],
+      error: null,
+    });
+    const rows = await liveTeamApi.myInvites();
+    expect(rows[0]).toMatchObject({ status: "expired", invited_by_role: "owner", email: "you@example.com", seen_at: null });
+    expect(rows[1]?.status).toBeUndefined();
+  });
+
+  it("marks an invite seen through mark_invite_seen, and throws its refusal", async () => {
+    mocks.rpc.mockResolvedValue({ data: { id: "i-1" }, error: null });
+    await liveTeamApi.markInviteSeen("i-1");
+    expect(mocks.rpc).toHaveBeenCalledWith("mark_invite_seen", { p_invite_id: "i-1" });
+    mocks.rpc.mockResolvedValue({ data: null, error: { message: "invite not found" } });
+    await expect(liveTeamApi.markInviteSeen("i-1")).rejects.toThrow("invite not found");
+  });
+});

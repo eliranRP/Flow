@@ -1,29 +1,34 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import type { ReactNode } from "react";
 import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "../../assistant-sample";
 import { AiConnectionPage } from "../../screens/assistant-settings";
 import { BusinessScreen } from "../../screens/business-screen";
 import { MercuryConnectionRoute, SumitConnectionRoute } from "../../screens/connection-pages";
 import { CategoriesScreen, ConnectionsScreen, SettingsScreen } from "../../screens/flow-screens";
 import { NotificationsScreen } from "../../screens/notifications-screen";
+import { TeamApiProvider } from "../../team-api";
 import { writeThemeChoice } from "../../theme-store";
+import { createSampleTeamApi } from "../team-sample";
 import type { DevRoute } from "./types";
 
 /** Dev-only. A production build drops the sample secret with this flag. */
 const devAssistantSecret = import.meta.env.DEV ? assistantSampleSecret : undefined;
 
 /**
- * FLOW-512 proof: `?sheet=rename` (on the business page) or `?sheet=theme` (on Settings) taps the
- * row that opens the sheet, once it has drawn. `rename` also types an invented name, as the board's frame has.
+ * FLOW-512 proof: `?sheet=rename` (on the business page), `?sheet=theme` or `?sheet=switch` (on Settings)
+ * taps the row that opens the sheet, once it has drawn. `rename` also types an invented name, as the board's frame has.
  */
 function OpenSettingsSheet() {
   const [params] = useSearchParams();
   useEffect(() => {
     const sheet = params.get("sheet");
-    if (sheet !== "rename" && sheet !== "theme") return;
+    if (sheet !== "rename" && sheet !== "theme" && sheet !== "switch") return;
     const started = Date.now();
     const timer = window.setInterval(() => {
-      const row = document.querySelector<HTMLButtonElement>(sheet === "rename" ? 'button[aria-label^="שם העסק:"]' : 'button[aria-label^="מראה:"]');
+      const row = sheet === "switch"
+        ? [...document.querySelectorAll<HTMLButtonElement>("button")].find((el) => el.textContent.startsWith("החלפת עסק"))
+        : document.querySelector<HTMLButtonElement>(sheet === "rename" ? 'button[aria-label^="שם העסק:"]' : 'button[aria-label^="מראה:"]');
       if (row) {
         row.click();
         window.clearInterval(timer);
@@ -60,7 +65,15 @@ export function DevNotifications() {
   );
 }
 
+/** `?sheet=switch`: Settings on a sample team (two businesses, one invite as a viewer), so the switch sheet has its rows. */
+function SwitchSampleTeam({ children }: { children: ReactNode }) {
+  const [api] = useState(() => createSampleTeamApi({ delayMs: 0, twoCompanies: true, invite: { role: "viewer", seen: true } }));
+  return <TeamApiProvider api={api}>{children}</TeamApiProvider>;
+}
+
 export function DevSettings() {
+  const [params] = useSearchParams();
+  const Team = params.get("sheet") === "switch" ? SwitchSampleTeam : Fragment;
   // The board's theme frame has its own mode selected: כהה in the dark frame, בהיר in the light one.
   useState(() => {
     if (new URLSearchParams(window.location.search).get("sheet") === "theme") {
@@ -69,10 +82,10 @@ export function DevSettings() {
     return null;
   });
   return (
-    <>
+    <Team>
       <OpenSettingsSheet />
       <SettingsScreen sample={useDevSettingsSample()} />
-    </>
+    </Team>
   );
 }
 

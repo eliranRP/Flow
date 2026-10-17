@@ -8,8 +8,7 @@ import { attentionRows, CashHome } from "./HomeScreen";
 import { CompanySwitcher } from "./company-switcher";
 
 /**
- * FLOW-601: the company's name on Home's band and the חברה sheet (mockups a-3, invite-4,
- * invite-5), on an in-memory team. Invented names only.
+ * FLOW-601: the company's name on Home's band and the העסקים שלך sheet (board SettingsSwitch), on an in-memory team. Invented names only.
  */
 const meta = {
   title: "Screens/Company switcher",
@@ -47,19 +46,19 @@ function home(options: SampleTeamOptions) {
 
 async function open(canvasElement: HTMLElement) {
   await userEvent.click(await within(canvasElement).findByRole("button", { name: "חברה: חברה לדוגמה" }));
-  return within(canvasElement.ownerDocument.body).findByRole("dialog", { name: "חברה" });
+  return within(canvasElement.ownerDocument.body).findByRole("dialog", { name: "העסקים שלך" });
 }
 
 export const Band: Story = { name: "Band, the company's name", render: home({ twoCompanies: true }) };
 
 export const Switcher: Story = {
-  name: "Switcher (a-3)",
+  name: "Switcher",
   render: home({ twoCompanies: true }),
   play: async ({ canvasElement }) => { await open(canvasElement); },
 };
 
 export const WithInvite: Story = {
-  name: "Switcher with an invite (invite-4)",
+  name: "Switcher with an invite",
   render: home({ inbox: 1 }),
   play: async ({ canvasElement }) => {
     const dialog = await open(canvasElement);
@@ -68,7 +67,7 @@ export const WithInvite: Story = {
 };
 
 export const Declined: Story = {
-  name: "Declined, with ביטול (invite-5)",
+  name: "Declined, with ביטול",
   render: home({ inbox: 1 }),
   play: async ({ canvasElement }) => {
     const dialog = await open(canvasElement);
@@ -78,7 +77,7 @@ export const Declined: Story = {
 };
 
 export const ViewerNoNew: Story = {
-  name: "Switcher, a viewer (no + חברה חדשה)",
+  name: "Switcher, a viewer (no + עסק חדש)",
   render: home({ role: "viewer", twoCompanies: true }),
   play: async ({ canvasElement }) => { await open(canvasElement); },
 };

@@ -17,7 +17,7 @@ type SampleState = {
   activeId: string | null;
   members: Team["members"];
   invites: Team["invites"];
-  inbox: (MyInvite & { status: "pending" | "declined" })[];
+  inbox: (Omit<MyInvite, "status"> & { status: "pending" | "declined" | "expired" })[];
 };
 
 export type SampleTeamOptions = {
@@ -33,6 +33,11 @@ export type SampleTeamOptions = {
   boardRows?: boolean;
   /** Invites to the signed-in user: none, one (invite-4), or two (invite-3). */
   inbox?: 0 | 1 | 2;
+  /**
+   * One invitation to a business the user is not in (the invitation screen's board states):
+   * fixed dates, an example.com address, seen or not. Replaces `inbox`.
+   */
+  invite?: { role: "viewer" | "editor"; expired?: boolean; seen?: boolean };
   /** A second company in the switcher (a-3). */
   twoCompanies?: boolean;
   /** These calls fail with this server message. */
@@ -69,7 +74,23 @@ function initialState(options: SampleTeamOptions): SampleState {
   ];
   const count = options.inbox ?? 0;
   // invite-3 lists חברה לדוגמה first; invite-4 has the one from נכסים לדוגמה.
-  const inbox = count === 2 ? [inboxAll[1], inboxAll[0]] : inboxAll.slice(0, count);
+  const inboxPair = count === 2 ? [inboxAll[1], inboxAll[0]] : inboxAll.slice(0, count);
+  const one = options.invite;
+  const inbox = one
+    ? [{
+      id: "5a5a5a5a-0000-4000-8000-0000000000f3",
+      company_id: "5a5a5a5a-0000-4000-8000-0000000000c3",
+      company_name: "נכסי הגפן בע״מ",
+      role: one.role,
+      invited_by_name: "יוסי כהן",
+      invited_by_role: "owner" as const,
+      email: "you@example.com",
+      expires_at: one.expired ? "2026-10-09T12:00:00Z" : "2026-10-23T12:00:00Z",
+      seen_at: one.seen ? "2026-10-10T09:00:00Z" : null,
+      created_at: "2026-10-02T09:00:00Z",
+      status: one.expired ? "expired" as const : "pending" as const,
+    }]
+    : inboxPair;
   return {
     companies,
     activeId: companies[0]?.id ?? null,
@@ -162,8 +183,8 @@ export function createSampleTeamApi(options: SampleTeamOptions = {}): TeamApi {
     myInvites: async () => {
       await wait("myInvites");
       return state.inbox
-        .filter((invite) => invite.status === "pending")
-        .map(({ status: _status, ...invite }) => invite);
+        .filter((invite) => invite.status !== "declined")
+        .map(({ status, ...invite }) => ({ ...invite, status }) as MyInvite);
     },
     acceptInvite: async (inviteId): Promise<AcceptResult> => {
       await wait("acceptInvite");
@@ -187,6 +208,11 @@ export function createSampleTeamApi(options: SampleTeamOptions = {}): TeamApi {
       const invite = state.inbox.find((row) => row.id === inviteId && row.status === "declined");
       if (!invite) throw refusal("invite is not declined");
       invite.status = "pending";
+    },
+    markInviteSeen: async (inviteId) => {
+      await wait("markInviteSeen");
+      const invite = state.inbox.find((row) => row.id === inviteId);
+      if (invite) invite.seen_at = "2026-10-17T09:00:00Z";
     },
   };
 }
