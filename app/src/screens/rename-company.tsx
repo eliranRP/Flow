@@ -154,7 +154,7 @@ export function RenameCompanySheet({
         onOpenChange(next);
       }}
       title="שם העסק"
-      panelClassName="ui-sheet-g16 ui-rename-sheet"
+      panelClassName="ui-sheet-g12 ui-rename-sheet"
       returnFocusRef={returnFocusRef}
       action={
         <Button full busy={save.isPending} disabled={name.trim() === "" || name.trim() === currentName.trim()} onClick={submit}>

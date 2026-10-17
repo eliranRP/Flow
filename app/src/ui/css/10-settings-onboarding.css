@@ -612,20 +612,27 @@
   min-block-size: 56px;
 }
 
-/* FLOW-512b C: the theme sheet's board block: 24px under the last option, and the options 16px apart. */
+/* FLOW-512b C: the segmented track is 2px around its 40px buttons (44px), as on the board. */
+.ui-cat-seg .ui-seg {
+  padding: calc(var(--space-1) / 2);
+}
+
+/* FLOW-512b C: the theme sheet's board block: 24px under the last option, options 60px tall, 12px apart. */
 .ui-theme-sheet {
-  --sheet-pad-bottom: 36px;
+  --sheet-pad-bottom: calc(var(--space-6) + var(--space-3));
 }
 
-.ui-theme-sheet .ui-choice-sheet {
-  gap: var(--space-4);
+.ui-theme-sheet .ui-radio-row {
+  min-block-size: calc(var(--control-height) + var(--space-2));
 }
 
-/* FLOW-512b C: the rename sheet's board block: the title sits lower under the grip, and its note is regular weight. */
+/* FLOW-512b C: the rename sheet's board block: a 44px title row, 12px to the field and 12px to the note. */
 .ui-rename-sheet .ui-sheet-head {
-  margin-block-start: var(--space-1);
+  min-block-size: calc(var(--control-height) - var(--space-2));
 }
 
 .ui-rename-sheet .ui-settings-note {
+  margin-block-start: var(--space-3);
   font-weight: var(--type-detail-weight);
+  line-height: calc(var(--type-caption-size) * 1.5);
 }
