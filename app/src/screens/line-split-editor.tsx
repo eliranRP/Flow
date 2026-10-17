@@ -311,7 +311,8 @@ export function LineSplitEditor({
   function closePicker() {
     if (target?.kind === "part") {
       const part = parts.find((item) => item.key === target.key);
-      const field = part ? document.getElementById(`lsplit-${part.unit === "percent" ? "pct" : "amt"}-${part.key}`) : null;
+      // A money field's id gets its flow- prefix (flowControlName), so the lookup names both forms.
+      const field = part ? document.getElementById(part.unit === "percent" ? `lsplit-pct-${part.key}` : `flow-lsplit-amt-${part.key}`) : null;
       if (field) pickerOpener.current = field;
     }
     setTarget(null);
@@ -541,7 +542,7 @@ export function LineSplitEditor({
                     ) : (
                       <MoneyField
                         hideLabel
-                        id={`lsplit-amt-${part.key}`}
+                        id={`flow-lsplit-amt-${part.key}`}
                         label={`סכום, ${name}`}
                         prefix=""
                         value={part.value}
