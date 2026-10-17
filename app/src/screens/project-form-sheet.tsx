@@ -2,12 +2,14 @@ import { shekelsToAgorot } from "@flow/shared";
 import { useRef, useState, type SubmitEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { getSupabase } from "../lib/supabase";
+import { useCompanyCurrency } from "../company-currency";
 import { useHoldWrites } from "../use-is-viewer";
 import { assertNoError, useWrite } from "../use-write";
 import { Button } from "../ui/button";
 import { MoneyField } from "../ui/money-field";
 import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
+import { LOAN_CURRENCY_MARK, type LoanCurrency } from "./loan-form";
 import { useBlockedPreview } from "./screen-shared";
 
 /** The project an edit sheet opens on. `type` is the owner's own text (or none); `budget` is in agorot. */
@@ -39,6 +41,9 @@ function shekelsText(agorot: bigint | null): string {
 
 function ProjectForm({ project, onClose }: { project?: ProjectFormValues; onClose: () => void }) {
   const blocked = useBlockedPreview();
+  const companyCurrency = useCompanyCurrency();
+  // The budget is in the company currency, so its field shows that currency's mark.
+  const mark = LOAN_CURRENCY_MARK[companyCurrency as LoanCurrency] ?? companyCurrency;
   const holdWrites = useHoldWrites();
   const navigate = useNavigate();
   const [name, setName] = useState(project?.name ?? "");
@@ -93,7 +98,7 @@ function ProjectForm({ project, onClose }: { project?: ProjectFormValues; onClos
         onChange={(event) => { setType(event.target.value); }}
         placeholder="מה שמתאים לך: flip, השכרה, שיפוץ…"
       />
-      <MoneyField label="תקציב (אופציונלי)" value={budget} onValueChange={setBudget} />
+      <MoneyField label="תקציב (אופציונלי)" prefix={mark} value={budget} onValueChange={setBudget} />
       <p className="ui-muted">נראה כמה נוצל, ונסמן כשעוברים אותו.</p>
       <p className="ui-muted">רק השם חובה. פרויקטים מ־SUMIT נוספים לבד.</p>
       <Button type="submit" busy={save.isPending} disabled={holdWrites || trimmed.length < 2}>

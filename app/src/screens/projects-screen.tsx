@@ -192,6 +192,8 @@ function ProjectsBody({
 /** One project's row: initials, name, its type and status, and this month's cash (or its profit when finished). */
 function ProjectCashRowItem({ row, currency, search, finished = false }: { row: ProjectCashRow; currency: string; search: string; finished?: boolean }) {
   const net = netIn(row.cash, currency);
+  // A project with cash in more than one currency lists each line; the order stays on the base currency.
+  const lines = finished ? [] : row.cash.map((line) => ({ minor: BigInt(line.net_minor), currency: line.currency }));
   const over = !finished && isOverBudget(row);
   const hint = projectMeta(row);
   return (
@@ -202,6 +204,7 @@ function ProjectCashRowItem({ row, currency, search, finished = false }: { row: 
       icon={<Avatar name={row.name} fallback="person" />}
       agorot={BigInt(finished ? row.profit_all_minor : net)}
       currency={currency}
+      amounts={lines.length > 1 ? lines : undefined}
       loss={finished && row.profit_all_minor < 0}
       href={`/projects/${row.id}${search}`}
       className={finished ? "ui-proj-finished" : undefined}
