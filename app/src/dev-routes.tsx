@@ -507,6 +507,9 @@ function useDevSettingsSample(): NonNullable<Parameters<typeof SettingsScreen>[0
 
 export function DevCategories() {
   // FLOW-513 fixture: the board's Settings › קטגוריות frame (SettingsCategories), same names, counts and order.
+  // `hidden=1` (the e2e flow only) adds one hidden category, so the hidden footer and its un-hide step run.
+  const [params] = useSearchParams();
+  const hidden = params.get("hidden") === "1";
   return (
     <CategoriesScreen
       listPath="/e2e/categories"
@@ -523,6 +526,7 @@ export function DevCategories() {
         { id: "c10", name: "משיכות בעלים", kind: "expense", hidden: false, is_default: false, count: 6, excluded_from_pnl: true, in_rehab: false },
         { id: "c11", name: "העברות בין חשבונות", kind: "expense", hidden: false, is_default: false, count: 9, excluded_from_pnl: true, in_rehab: false },
         { id: "c13", name: "הכנסות משכירות", kind: "income", hidden: false, is_default: false, count: 1 },
+        ...(hidden ? [{ id: "c14", name: "ישנה", kind: "expense" as const, hidden: true, is_default: false, count: 0 }] : []),
       ]}
     />
   );

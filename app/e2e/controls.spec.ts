@@ -567,10 +567,10 @@ test("settings connect, refresh, categories, and the account row", async ({ page
 });
 
 test("categories filter, hide, merge, and create", async ({ page }) => {
-  await page.goto("/e2e/categories?preview=1");
+  await page.goto("/e2e/categories?preview=1&hidden=1");
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page).toHaveURL(/\/settings/);
-  await page.goto("/e2e/categories?preview=1");
+  await page.goto("/e2e/categories?preview=1&hidden=1");
   await page.getByRole("radio", { name: "הכנסות" }).click();
   await expect(page.getByText("הכנסות משכירות")).toBeVisible();
   await expect(page.getByText("חומרים")).toHaveCount(0);
