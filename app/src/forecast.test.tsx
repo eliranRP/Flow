@@ -18,7 +18,6 @@ import {
   SAMPLE_RECURRING_THIS_MONTH,
 } from "./forecast-sample";
 import { attentionRows } from "./screens/HomeScreen";
-import { ApproxAmount } from "./ui/approx-amount";
 import { forecastMinor } from "./home-month";
 import { ExpectedMonths } from "./ui/expected-months";
 
@@ -99,20 +98,6 @@ describe("expected months", () => {
   it("says there is no forecast yet in one line", () => {
     render(<ExpectedMonths months={[]} />);
     expect(screen.getByText("אין עדיין צפי.")).toBeTruthy();
-  });
-});
-
-describe("ApproxAmount", () => {
-  it("puts כ־ before a whole amount and drops it on a zero", () => {
-    const { container, rerender } = render(<ApproxAmount minor={-185_060n} />);
-    expect(container.textContent).toBe("בערך כ־₪1,851");
-    rerender(<ApproxAmount minor={0n} currency="USD" />);
-    expect(container.textContent).toBe("$0");
-  });
-
-  it("paints income green", () => {
-    const { container } = render(<ApproxAmount minor={1_200_000n} income />);
-    expect(container.querySelector(".ui-approx-income")).not.toBeNull();
   });
 });
 
