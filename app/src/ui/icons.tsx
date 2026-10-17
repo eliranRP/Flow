@@ -561,3 +561,41 @@ export function PlayIcon(props: IconProps) {
     </Svg>
   );
 }
+
+/** The project menu's rows (board Projects.dc.html): pencil for the edit row. */
+export function PencilIcon(props: IconProps) {
+  return (
+    <Svg size={18} stroke={1.8} {...props}>
+      <path d="M4 20h4L19 9l-4-4L4 16z" />
+      <path d="M14 6l4 4" />
+    </Svg>
+  );
+}
+
+/** The project menu's investment row: a house with columns. */
+export function InvestIcon(props: IconProps) {
+  return (
+    <Svg size={18} stroke={1.8} {...props}>
+      <path d="M3 10l9-6 9 6" />
+      <path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18" />
+    </Svg>
+  );
+}
+
+/** The project menu's finish row: a flag. */
+export function FlagIcon(props: IconProps) {
+  return (
+    <Svg size={18} stroke={1.8} {...props}>
+      <path d="M5 21V4h11l-1.5 4L16 12H5" />
+    </Svg>
+  );
+}
+
+/** The project menu's delete row: a bin. */
+export function BinIcon(props: IconProps) {
+  return (
+    <Svg size={18} stroke={1.8} {...props}>
+      <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+    </Svg>
+  );
+}

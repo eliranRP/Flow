@@ -29,7 +29,7 @@ export function ProjectFormSheet({
   project?: ProjectFormValues;
 }) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title={project ? "עריכת פרויקט" : "פרויקט חדש"}>
+    <Sheet open={open} onOpenChange={onOpenChange} title={project ? "עריכת פרויקט" : "פרויקט חדש"} panelClassName="ui-sheet-wide ui-sheet-g14 ui-sheet-pad28 ui-project-new">
       <ProjectForm key={project == null ? "new" : `${project.id}:${project.name}:${project.type ?? ""}:${String(project.budget)}`} project={project} onClose={() => { onOpenChange(false); }} />
     </Sheet>
   );

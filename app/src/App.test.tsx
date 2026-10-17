@@ -93,7 +93,7 @@ describe("App", () => {
     const dialog = screen.getByRole("dialog", { name: "הוספה" });
     expect(dialog).toBeInTheDocument();
     // FLOW-331: quick actions that work today, all enabled, and no "coming later" line.
-    for (const name of ["פרויקט חדש", "הלוואה חדשה", "חיבור בנק"]) {
+    for (const name of ["פרויקט חדש", "הלוואה חדשה"]) {
       expect(screen.getByRole("button", { name: new RegExp(name) })).toBeEnabled();
     }
     expect(screen.queryByText(/צילום חשבונית/)).not.toBeInTheDocument();
@@ -136,12 +136,6 @@ describe("App", () => {
     await renderAt("/add?preview=1");
     fireEvent.click(screen.getByRole("button", { name: /הלוואה חדשה/ }));
     expect(await screen.findByRole("dialog", { name: "הלוואה חדשה" })).toBeInTheDocument();
-  });
-
-  it("opens the bank sheet on Connections from + → חיבור בנק", async () => {
-    await renderAt("/add?preview=1");
-    fireEvent.click(screen.getByRole("button", { name: /חיבור בנק/ }));
-    expect(await screen.findByRole("heading", { name: "Mercury", hidden: true })).toBeInTheDocument();
   });
 
   it("closes the add sheet on Escape after the exit animation", async () => {

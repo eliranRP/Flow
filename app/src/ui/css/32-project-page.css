@@ -237,7 +237,45 @@
   color: var(--color-bad);
 }
 
+/* The project menu (board): a short sheet titled with the project's name, 4px between rows, each row
+   64px with a 36px icon circle. The delete row takes the bad colour on its circle too. */
+.ui-project-menu {
+  --sheet-gap-y: var(--space-1);
+}
+
+.ui-project-menu .ui-sheet-title {
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-project-menu .ui-row {
+  min-block-size: 64px;
+  padding-block: var(--space-2);
+  padding-inline: 0;
+  gap: var(--space-3);
+}
+
+.ui-project-menu .ui-row-icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: var(--radius-chip);
+  background: var(--color-avatar);
+  color: var(--color-text-secondary);
+}
+
+.ui-project-menu-delete .ui-row-icon {
+  color: var(--color-bad);
+}
+
 /* The secondary line under a title or amount: the shared muted text colour. */
 .ui-muted {
   color: var(--color-text-muted);
+}
+
+/* The new-project sheet (board): a 14px rhythm between the fields and the note, the 52px pill last. */
+.ui-project-new .ui-stack {
+  gap: var(--space-3);
 }

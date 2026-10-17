@@ -278,7 +278,7 @@ describe("the project's finish row (FLOW-334)", () => {
     expect(row).toHaveClass("ui-row");
     fireEvent.click(row);
     // The menu closes as the confirm opens.
-    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "עוד" })).not.toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "וילה רעננה" })).not.toBeInTheDocument(); });
     const confirm = await screen.findByRole("dialog", { name: /^לסיים את/ });
     const button = within(confirm).getByRole("button", { name: "סיום הפרויקט" });
     expect(button.querySelector("svg")).toBeNull();

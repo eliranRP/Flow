@@ -1,8 +1,8 @@
-import { formatAmountText, type CashMonths, type ExpectedMonths, type ProjectCategoryMonthRow, type ProjectDetail } from "@flow/shared";
+import { formatAmountText, type CashMonths, type ExpectedMonths, type ProjectCategoryMonthRow, type ProjectCashRow, type ProjectDetail } from "@flow/shared";
 import { useCompanyCurrency } from "../company-currency";
 import { profitSign, projectExpenseMinor, projectRows, type ProjectCurrencyRow } from "../by-currency";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
 import { overheadHint, shownProfit } from "../overhead";
 import { useHoldWrites } from "../use-is-viewer";
@@ -19,7 +19,6 @@ import { useProjectQuery } from "../use-books";
 import { useProjectCashMonthsQuery, useProjectsCashMonth } from "../project-cash";
 import { assertNoError, useWrite } from "../use-write";
 import { Amount } from "../ui/amount";
-import { ConfirmSheet } from "../ui/confirm-sheet";
 import { BudgetCard } from "../ui/budget-card";
 import { EmptyState } from "../ui/empty-state";
 import { BackButton, useBackTarget } from "../ui/back";
@@ -37,7 +36,7 @@ import { TopBand } from "../ui/top-band";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { israelToday } from "../ui/date-math";
 import { ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
-import { ProjectGroupSheets, NO_GROUP, useProjectGroups, type ProjectGroups } from "./project-group-sheets";
+import { useProjectGroups, type ProjectGroups } from "./project-group-sheets";
 import { ProjectInvestmentSection, type ProjectInvestment } from "./project-investment";
 import { ProjectCategories } from "./project-categories";
 import { ProjectExpectedMonths } from "./project-expected-months";
@@ -45,6 +44,7 @@ import { investmentFigure, openLoans, PROJECT_RECENT_CAP, ProjectProfitRows } fr
 import { ProjectTransactions } from "./project-transactions";
 import { ProjectCashOverview } from "./project-cash-screens";
 import { ProjectFormSheet } from "./project-form-sheet";
+import { ProjectMenu } from "./project-menu";
 import { projectAttentionRows, useProjectRecurring, type ProjectRecurringSample } from "./project-attention";
 import { toProjectInvestment } from "./project-investment-data";
 
@@ -150,6 +150,7 @@ export function ProjectDetailScreen({
   sampleGroups,
   sampleCash,
   sampleRecurring,
+  sampleMenuRow,
   now,
 }: {
   sample?: NonNullable<ProjectDetail>;
@@ -159,6 +160,8 @@ export function ProjectDetailScreen({
   sampleCash?: NonNullable<CashMonths>;
   /** Stories and tests pin the month names. */
   now?: Date;
+  /** A sample project's row for the ⋯ menu (its deletable flag); the menu reads no cash in a preview. */
+  sampleMenuRow?: ProjectCashRow;
   /** FLOW-404. The השקעה data of a sample project; without it a sample project shows no investment. */
   sampleInvestment?: ProjectInvestment;
   example?: ReactNode;
@@ -373,6 +376,7 @@ export function ProjectDetailScreen({
       finished={project.status === "finished"}
       groups={groups}
       sample={sample != null}
+      sampleRow={sampleMenuRow}
       overhead={overhead}
       // FLOW-340 C: with no investment data the page hides its row, so the menu keeps the way in.
       investmentTo={investmentShown || investmentData.isOverhead || loans.length > 0 ? undefined : sectionHref("investment")}
@@ -566,203 +570,6 @@ function LegacyEmptyProject() {
         body="חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן."
       />
     </div>
-  );
-}
-
-function ProjectMenu({
-  projectId,
-  name,
-  budget,
-  finished,
-  groups,
-  sample = false,
-  overhead,
-  investmentTo,
-}: {
-  projectId: string;
-  name: string;
-  budget: bigint | null;
-  finished: boolean;
-  /** FLOW-360 A: the קבוצה row shows once the groups are read. */
-  groups?: ProjectGroups;
-  sample?: boolean;
-  /** FLOW-340 C: the overhead switch left the page body for this menu. */
-  overhead?: ReactNode;
-  /** FLOW-340 C: set when the overview hides its השקעה row, so the data can still be added. */
-  investmentTo?: string;
-}) {
-  const blocked = useBlockedPreview();
-  const navigate = useNavigate();
-  const [menu, setMenu] = useState(false);
-  const [confirm, setConfirm] = useState(false);
-  const [removing, setRemoving] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [groupView, setGroupView] = useState<"pick" | "new" | null>(null);
-  const opener = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
-  // FLOW-445: the month's row for this project: the pending lines (the finish warning) and whether it can be deleted.
-  const cash = useProjectsCashMonth(undefined, projectId);
-  const row = cash.data?.projects.find((project) => project.id === projectId);
-  const pending = row?.pending_count ?? 0;
-  const deletable = row?.deletable === true;
-  const action = finished ? "החזרה לפעיל" : "סיום הפרויקט";
-  const save = useWrite({
-    failure: "לא הצלחנו לעדכן את הפרויקט.",
-    success: finished ? "הפרויקט חזר לפעיל" : `${name} סומן כהסתיים`,
-    keys: ["dashboard", "project", "projects-cash"],
-    onSuccess: () => {
-      setConfirm(false);
-      // A finish lands on the list with הסתיימו open (FLOW-445).
-      if (!finished) void navigate("/projects", { state: { finishedOpen: true } });
-    },
-    run: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      // No p_type: upsert_project keeps the stored type when none is sent.
-      assertNoError(await supabase.rpc("upsert_project", {
-        p_id: projectId,
-        p_name: name,
-        ...(budget == null ? {} : { p_budget_agorot: Number(budget) }),
-        p_status: finished ? "active" : "finished",
-      }));
-    },
-  });
-  const remove = useWrite({
-    failure: (error) => (error.message.includes("in use") ? "יש בפרויקט תנועות, אז אי אפשר למחוק אותו." : "לא הצלחנו למחוק את הפרויקט."),
-    success: `${name} נמחק`,
-    keys: ["dashboard", "project", "projects-cash"],
-    onSuccess: () => {
-      setRemoving(false);
-      void navigate("/projects");
-    },
-    run: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      assertNoError(await supabase.rpc("delete_project", { p_id: projectId }));
-    },
-  });
-  const pendingWarning = pending === 1
-    ? "יש בו פריט אחד ממתין לאישור. כדאי לאשר אותו לפני הסיום."
-    : `יש בו ${String(pending)} פריטים ממתינים לאישור. כדאי לאשר אותם לפני הסיום.`;
-  return (
-    <>
-      <IconButton
-        ref={opener}
-        label="עוד"
-        onBand
-        onClick={() => {
-          setMenu(true);
-        }}
-      >
-        <MoreIcon />
-      </IconButton>
-      <Sheet open={menu} onOpenChange={setMenu} title="עוד">
-        {overhead}
-        {/* FLOW-334: the menu's actions are rows, so "סיום הפרויקט" is not a second kind of control. */}
-        <List className="ui-project-menu-list">
-          {finished ? null : (
-            <ListRow
-              variant="button"
-              title="עריכת פרטים"
-              meta="שם, סוג ותקציב"
-              chevron
-              onClick={() => {
-                setMenu(false);
-                setEditing(true);
-              }}
-            />
-          )}
-          {finished ? null : (
-            <ListRow variant="item" title="הוספה לפרויקט" meta="תנועה ידנית לפרויקט הזה" href={`/add?project=${projectId}`} chevron />
-          )}
-          {investmentTo == null ? null : (
-            <ListRow variant="item" title="נתוני השקעה" href={investmentTo} chevron />
-          )}
-          {groups == null ? null : (
-            <ListRow
-              variant="button"
-              title="קבוצה"
-              meta={groups.groups.find((group) => group.id === groups.currentId)?.name ?? NO_GROUP}
-              chevron
-              onClick={() => {
-                setMenu(false);
-                setGroupView("pick");
-              }}
-            />
-          )}
-          <ListRow
-            variant="button"
-            title={action}
-            meta={finished ? "יחזור לרשימת הפעילים" : "יעבור ל״הסתיימו״. שום דבר לא נמחק"}
-            onClick={() => {
-              setMenu(false);
-              setConfirm(true);
-            }}
-          />
-          {deletable ? (
-            <ListRow
-              variant="button"
-              title="מחיקת הפרויקט"
-              meta="אין בו תנועות, אז אפשר למחוק אותו"
-              className="ui-project-menu-delete"
-              onClick={() => {
-                setMenu(false);
-                setRemoving(true);
-              }}
-            />
-          ) : null}
-        </List>
-      </Sheet>
-      <ProjectFormSheet open={editing} onOpenChange={setEditing} project={{ id: projectId, name, type: row?.type ?? null, budget, status: row?.status ?? "active" }} />
-      {groups == null ? null : (
-        <ProjectGroupSheets
-          projectId={projectId}
-          groups={groups.groups}
-          currentId={groups.currentId}
-          view={groupView}
-          onView={setGroupView}
-          onBack={() => {
-            setGroupView(null);
-            setMenu(true);
-          }}
-          blocked={blocked}
-          returnFocusRef={opener}
-          sample={sample}
-        />
-      )}
-      {/* Either way can be undone, so the confirm is neutral: no red and no bin (FLOW-341 rule). */}
-      <ConfirmSheet
-        open={confirm}
-        onOpenChange={setConfirm}
-        title={finished ? "להחזיר את הפרויקט לפעיל?" : `לסיים את ${name}?`}
-        consequenceSize="body"
-        consequence={finished
-          ? "הפרויקט יחזור לרשימת הפעילים, ואפשר לסיים אותו שוב בכל רגע."
-          : "הפרויקט יעבור ל״הסתיימו״ ויצא מבחירת הפרויקטים בשיוך. התנועות, הרווח והמסמכים נשמרים, ואפשר להחזיר אותו לפעיל בכל רגע."}
-        warning={!finished && pending > 0 ? pendingWarning : undefined}
-        confirmLabel={action}
-        returnFocusRef={opener}
-        busy={save.isPending}
-        onConfirm={() => {
-          if (blocked()) return;
-          save.mutate();
-        }}
-      />
-      <ConfirmSheet
-        open={removing}
-        onOpenChange={setRemoving}
-        title={`למחוק את ${name}?`}
-        consequenceSize="body"
-        consequence="אין בפרויקט תנועות, חשבוניות או מסמכים, אז שום מספר לא משתנה. אי אפשר לשחזר אחרי המחיקה."
-        confirmLabel="מחיקה"
-        destructive="outline"
-        returnFocusRef={opener}
-        busy={remove.isPending}
-        onConfirm={() => {
-          if (blocked()) return;
-          remove.mutate();
-        }}
-      />
-    </>
   );
 }
 

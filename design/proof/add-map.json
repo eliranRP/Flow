@@ -1,1 +1,6 @@
-{}
+{
+  "Add": "/add?preview=1",
+  "AddProject": "/add?preview=1&entry=project",
+  "AddCash": "/add?preview=1&entry=cash",
+  "AddCheque": "/add?preview=1&entry=cheque"
+}

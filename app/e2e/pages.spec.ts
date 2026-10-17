@@ -32,9 +32,10 @@ test("add sheet offers the quick actions that work today (FLOW-331)", async ({ p
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/add?preview=1");
   await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();
-  for (const name of [/פרויקט חדש/, /הלוואה חדשה/, /חיבור בנק/]) {
+  for (const name of [/פרויקט חדש/, /הלוואה חדשה/]) {
     await expect(page.getByRole("button", { name })).toBeEnabled();
   }
+  await expect(page.getByRole("button", { name: /חיבור בנק/ })).toHaveCount(0);
   await expect(page.getByText(/צילום חשבונית/)).toHaveCount(0);
 });
 

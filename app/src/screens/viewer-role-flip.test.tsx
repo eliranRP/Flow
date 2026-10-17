@@ -303,7 +303,7 @@ describe("inner write gates after the role changes", () => {
     function show() {
       renderAt(
         <Routes>
-          <Route path="/add" element={<AddForm bank="off" />} />
+          <Route path="/add" element={<AddForm />} />
           <Route path="/" element={<h1>בית</h1>} />
         </Routes>,
         "/add",

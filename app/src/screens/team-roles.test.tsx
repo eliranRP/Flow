@@ -110,14 +110,15 @@ describe("Connections by role (FLOW-601, FLOW-512)", () => {
 
 describe("Add sheet by role (FLOW-601)", () => {
   it("gives an editor new projects and loans, but not a bank connection", async () => {
-    renderAs("editor", <AddForm bank="off" />, "/add?preview=1");
+    renderAs("editor", <AddForm />, "/add?preview=1");
     expect(await screen.findByRole("button", { name: /פרויקט חדש/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /הלוואה חדשה/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /חיבור בנק/ })).toBeNull();
   });
 
-  it("keeps the bank row for the owner", async () => {
-    renderAs("owner", <AddForm bank="off" />, "/add?preview=1");
-    expect(await screen.findByRole("button", { name: /חיבור בנק/ })).toBeInTheDocument();
+  it("offers the owner no bank row either: connecting stays in Settings", async () => {
+    renderAs("owner", <AddForm />, "/add?preview=1");
+    expect(await screen.findByRole("button", { name: /פרויקט חדש/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /חיבור בנק/ })).toBeNull();
   });
 });

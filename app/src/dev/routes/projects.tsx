@@ -27,6 +27,35 @@ export function DevProjects() {
   return <ProjectsScreen sample={devDashboard} cashSample={devProjectsCash} />;
 }
 
+/**
+ * Proof: `?sheet=menu` taps the page's ⋯ button once it has drawn; `?sheet=finish` then taps the menu's
+ * finish row, so the confirm sheet draws (the real triggers, not a state flag).
+ */
+function OpenProjectMenu({ sheet }: { sheet: string | null }) {
+  useEffect(() => {
+    if (sheet !== "menu" && sheet !== "finish") return;
+    const started = Date.now();
+    let step: "more" | "finish" = "more";
+    const timer = window.setInterval(() => {
+      const target = step === "more"
+        ? document.querySelector<HTMLButtonElement>('button[aria-label="עוד"]')
+        : [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find((button) => button.textContent.startsWith("סיום הפרויקט"));
+      if (target) {
+        target.click();
+        if (sheet === "menu" || step === "finish") {
+          window.clearInterval(timer);
+          return;
+        }
+        step = "finish";
+      } else if (Date.now() - started > 4000) {
+        window.clearInterval(timer);
+      }
+    }, 100);
+    return () => { window.clearInterval(timer); };
+  }, [sheet]);
+  return null;
+}
+
 export function DevProjectDetail() {
   const [params] = useSearchParams();
   const section = params.get("section");
@@ -40,8 +69,14 @@ export function DevProjectDetail() {
     const timer = window.setTimeout(() => { window.scrollTo(0, DEV_SCROLLED_Y); }, 0);
     return () => { window.clearTimeout(timer); };
   }, [params]);
+  // The menu's month row: the sample project's pending line (the finish warning), and deletable with `?deletable=1`.
+  const menuBase = devProjectsCash.projects[0];
+  const menuRow = menuBase == null ? undefined : { ...menuBase, id: "p1", pending_count: 1, deletable: params.get("deletable") === "1" };
   return (
+    <>
+    <OpenProjectMenu sheet={params.get("sheet")} />
     <ProjectDetailScreen
+      sampleMenuRow={menuRow}
       // FLOW-340 C: `?section=` draws the screen a row opens, on the same sample (FLOW-419: `profit` too).
       section={section === "profit" || section === "expenses" || section === "investment" || section === "loans" || section === "transactions" ? section : "overview"}
       sectionTo={(target) => (target === "overview" ? "/e2e/project-detail?preview=1" : `/e2e/project-detail?preview=1&section=${target}`)}
@@ -52,6 +87,7 @@ export function DevProjectDetail() {
       sampleInvestment={devInvestment}
       categoryTo="/e2e/project-category"
     />
+    </>
   );
 }
 

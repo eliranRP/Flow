@@ -93,7 +93,7 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Projects | שם on the new-project sheet | A tap on the left edge, the centre, or the right edge focuses the field. | never | no | the text field is focused | none | pass |
 | Projects | תקציב בשקלים, או ריק | A tap on the left edge, the centre, or the right edge focuses the field. `9,999,999.99` stays fully visible at 320px. | never | no | decimal keypad, `scrollWidth` <= `clientWidth`, ₪ inside the box | none | pass |
 | Project | Back | Returns to the project list. | never | no | route `/projects` | none | pass |
-| Project | עוד | Opens the more sheet. While the project is loading, the sheet only says it is still loading. | never | no | sheet title עוד | none | pass |
+| Project | עוד | Opens the project menu, titled with the project name (board: edit, investment, finish, delete). While the project is loading, the sheet is titled עוד and only says it is still loading. | never | no | sheet title is the project name | none | pass |
 | Project | סיום הפרויקט / החזרה לפעיל | A row in the עוד sheet (FLOW-334). Closes the sheet and opens the confirm sheet. | never | no | confirm sheet | none | pass |
 | Project | confirm סיום הפרויקט / החזרה לפעיל | Neutral: the button repeats the action, with no red and no bin. Calls `upsert_project` with the other status; closing returns focus to עוד. | never | the confirm button | toast "הפרויקט סומן כהסתיים" or "הפרויקט חזר לפעיל" | toast "לא הצלחנו לעדכן את הפרויקט." | pass |
 | Project | רווח אחרי הוצאות כלליות | Calls `set_after_overhead` for this project. | never | the switch stays on the chosen side until the write fails | the profit figure follows the switch | toast "לא הצלחנו לשמור את התצוגה.", switch returns | pass |
