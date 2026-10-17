@@ -122,6 +122,16 @@ export function DocumentIcon(props: IconProps) {
   );
 }
 
+/** An invoice: a folded sheet with two lines of text. */
+export function InvoiceIcon(props: IconProps) {
+  return (
+    <Svg size={24} stroke={1.9} {...props}>
+      <path d="M7 3h7l5 5v13H7z" />
+      <path d="M14 3v5h5M10 13h6M10 17h6" />
+    </Svg>
+  );
+}
+
 export function CameraIcon(props: IconProps) {
   return (
     <Svg size={20} stroke={2} {...props}>
