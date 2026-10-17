@@ -580,12 +580,15 @@ test("categories filter, hide, merge, and create", async ({ page }) => {
   await page.getByRole("dialog", { name: "להסתיר את הקטגוריה?" }).getByRole("button", { name: "הסתרה", exact: true }).click();
   await toast(page, previewToast);
   await expect(page.getByRole("dialog", { name: "חשמל ומים" })).toHaveCount(0);
+  // In preview a blocked write leaves the confirm sheet open; dismiss it so its open dialog does not hide the footer.
+  await page.getByRole("dialog", { name: "להסתיר את הקטגוריה?" }).getByRole("button", { name: "ביטול" }).click();
+  await expect(page.getByRole("dialog", { name: "להסתיר את הקטגוריה?" })).toHaveCount(0);
   await page.getByRole("button", { name: /מוסתרות/ }).click();
-  await expect(page.getByText("חשמל ומים")).toBeVisible();
-  await page.getByRole("button", { name: /^חשמל ומים/ }).click();
+  await page.getByRole("button", { name: /^ישנה/ }).click();
   await page.getByRole("button", { name: "החזרה לרשימה" }).click();
-  await expect(page.getByRole("dialog", { name: "להחזיר את הקטגוריה לרשימה?" })).toBeVisible();
-  await page.getByRole("button", { name: "ביטול" }).click();
+  await page.getByRole("dialog", { name: "להחזיר את הקטגוריה לרשימה?" }).getByRole("button", { name: "החזרה לרשימה", exact: true }).click();
+  await toast(page, previewToast);
+  await expect(page.getByRole("button", { name: /^ישנה/ })).toBeVisible();
   await page.getByRole("button", { name: /^חומרים/ }).click();
   await page.getByRole("button", { name: "העברה לקטגוריה אחרת" }).click();
   await expect(page.getByRole("switch", { name: "להסתיר את חומרים" })).toBeVisible();
