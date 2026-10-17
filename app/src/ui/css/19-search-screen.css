@@ -15,7 +15,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-4) var(--space-2);
+  /* The board's head: the field 12px from the top, 11px from the physical left edge (FLOW-368b, States board). */
+  padding: var(--space-3) var(--space-4) var(--space-2) calc(var(--space-1) * 2.75);
   background: var(--color-bg);
 }
 
@@ -132,6 +133,9 @@
   min-inline-size: 0;
   padding-inline: var(--space-side);
 }
+
+/* Searching: the skeleton rows span the full results width, 16px from each edge of the panel (States board). */
+.ui-search-results:has(.ui-search-searching) { padding-inline: 0; }
 
 .ui-search-more {
   margin-block-start: var(--space-4);
@@ -406,7 +410,7 @@
   min-block-size: 44px;
   display: inline-flex;
   align-items: center;
-  font-size: var(--type-body-size);
+  font-size: var(--type-line2-size);
   color: var(--color-accent-text);
   text-decoration: none;
 }
@@ -414,7 +418,7 @@
 /* Searching: the note, then five skeleton rows of the board's row shape. */
 .ui-search-searching-note {
   margin: 0;
-  padding: var(--space-2) var(--space-4) var(--space-2);
+  padding: calc(var(--space-1) * 1.5) var(--space-4) calc(var(--space-1) * 0.75);
   font-size: var(--type-hint-size);
   color: var(--color-text-muted);
 }

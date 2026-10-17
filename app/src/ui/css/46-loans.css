@@ -148,3 +148,9 @@
   color: var(--color-accent-text);
   font-size: var(--type-line2-size);
 }
+
+/* The empty Loans tab (States board, StatesLoansEmpty): the icon and copy sit lower, the primary action follows. */
+.ui-loans-screen .ui-empty-state { padding-top: calc(var(--space-1) * 14.4); }
+.ui-loans-screen .ui-empty-icon { margin-bottom: calc(var(--space-1) * 4.25); }
+.ui-loans-screen .ui-empty-line { margin-top: calc(var(--space-1) * 2.5); }
+.ui-loans-screen .ui-empty-action { margin-top: calc(var(--space-1) * 5.5); }

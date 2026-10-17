@@ -101,7 +101,8 @@ describe("Loans tab", () => {
   it("shows the empty state, and the viewer's has no button", () => {
     const owner = renderAt(<LoansScreen sample={{ ...business, loans: [] }} />);
     expect(screen.getByText("אין הלוואות עדיין")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "הלוואה חדשה" })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "הוספת הלוואה" })).toBeInTheDocument();
+    expect(screen.queryByText("0 פעילות")).not.toBeInTheDocument();
     owner.unmount();
     renderAt(
       <ViewerPreview>
