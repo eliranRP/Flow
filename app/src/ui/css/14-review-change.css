@@ -174,12 +174,24 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin-block-start: var(--space-3);
+}
+
+.ui-change-picker.ui-choice-sheet {
+  margin-block-end: var(--space-2);
+}
+
+/* The board's compact sheet has a 44px title row (the ✕'s own height), not the 26px title. */
+.ui-sheet-compact .ui-sheet-head {
+  min-block-size: var(--touch-min);
 }
 
 .ui-change-picker.ui-choice-sheet .ui-radio-row {
   min-block-size: 52px;
   padding-block: 0;
+}
+
+.ui-change-picker.ui-choice-sheet .ui-radio-desc {
+  line-height: var(--type-cents-line);
 }
 
 .ui-change-links .ui-text-link {

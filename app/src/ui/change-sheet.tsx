@@ -780,7 +780,8 @@ export function ChangeAssignment(props: Props) {
     titleRef,
     action: footer,
     footClassName: "ui-change-foot",
-    panelClassName: (view === "project" && !compact) || view === "new" ? "ui-sheet-tall" : "ui-sheet-fit",
+    // A compact list is the board's sheet: 8px between blocks (ui-sheet-g8), the rest from the picker CSS.
+    panelClassName: compact ? "ui-sheet-fit ui-sheet-g8 ui-sheet-compact" : (view === "project" || view === "new") ? "ui-sheet-tall" : "ui-sheet-fit",
     onEscape: view === "summary" ? undefined : back,
     onBeforeClose: allowClose,
     onRequestClose: requestClose,
