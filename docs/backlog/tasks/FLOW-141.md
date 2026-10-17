@@ -12,6 +12,7 @@
 - [ ] Scroll: after 150px the compact bar slides down: בית · "צפי · $X".
 - [ ] Footnote on what goes in: recurring charges and income not in yet this month (usual amount), open customer invoices (left to collect), open supplier bills due this month, loan payments due this month.
 - [ ] Loading and empty: use the shared skeleton, empty state, inline spinner and sync strip of [FLOW-371](FLOW-371.md).
+- (#141b) board states: moved item compact row, one-item reset line, reset undo (done: איפוס restores the captured overrides with ביטול), all-arrived state.
 - **MCP:** a `get_forecast` read (items, totals, overrides) and a `set_forecast_item` write (amount, when, or reset; idempotency key, write rate limit, undo) plus `reset_forecast`, listed in TOOLS.md; a `forecast_overrides` table scoped to the company and month, with a cross-tenant pgTAP test.
 - **Acceptance:** stories of the forecast (positive, negative), the sheet, a moved item in לא החודש, the איפוס line, at 320 and 393 with invented payees and round amounts; a unit test that the big number equals the sum of the sections and Home's line; a test that moving an item updates the totals and ביטול restores it; a pgTAP test that overrides expire with the month and another company can't read them; reduced motion moves rows without the fold; design review against the boards.
 - **Follow-ups from the review of #641 (not blocking, filed 2026-10-16):**

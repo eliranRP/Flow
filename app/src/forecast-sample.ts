@@ -261,12 +261,19 @@ export function monthForecastSample(kind: ForecastSampleKind): MonthForecastSamp
 }
 
 /**
- * FLOW-141: the dev fixture that matches the board frame (MonthForecast): an invented USD company
- * with the same parties, invoices and count of small charges. Its amounts are the board's, except
- * the six small charges, which total less than the board's (each one is under the 100 units rule).
+ * `board` is the MonthForecast frame; `changed` moves its largest invoice to next month (the
+ * MonthForecastChanged frame); `empty` has nothing left to arrive (StatesForecastEmpty).
  */
-export function monthForecastBoardSample(): MonthForecastSampleShape {
-  const today = "2026-10-11";
+export type BoardForecastVariant = "board" | "changed" | "empty";
+
+/**
+ * FLOW-141: the dev fixture that matches the board frames: an invented USD company with the same
+ * parties, invoices and count of small charges. Its amounts are the board's, except the six small
+ * charges, which total less than the board's (each one is under the 100 units rule).
+ */
+export function monthForecastBoardSample(variant: BoardForecastVariant = "board"): MonthForecastSampleShape {
+  const empty = variant === "empty";
+  const today = empty ? "2026-10-30" : "2026-10-11";
   const small = [
     ["Streaming", 8700],
     ["Cloud storage", 8700],
@@ -284,7 +291,7 @@ export function monthForecastBoardSample(): MonthForecastSampleShape {
     today,
     project_id: null,
     months: [{ month: "2026-10", open: true, by_currency: [{ currency: "USD", income_minor: 0, expense_minor: 0 }] }],
-    recurring: [
+    recurring: empty ? [] : [
       ...small.map(([name, minor], index) => ({
         direction: "expense" as const,
         party_id: `small-${String(index + 1)}`,
@@ -298,17 +305,21 @@ export function monthForecastBoardSample(): MonthForecastSampleShape {
       { direction: "income" as const, party_id: "elm", name: "Elm St, unit 2", currency: "USD", typical_amount_minor: 165000, typical_day: 1, months_seen: 6, seen_this_month: false },
     ],
   };
-  const unpaid = [
+  const unpaid = empty ? [] : [
     { id: "inv-1043", description: "Invoice #1043", doc_date: "2026-09-22", project_name: null, customer_name: "Northgate Co", open_gross_agorot: 1250000, open_net_agorot: 1250000, currency: "USD", direction: "income" as const },
     { id: "inv-1047", description: "Invoice #1047", doc_date: "2026-09-22", project_name: null, customer_name: "Lakeside HOA", open_gross_agorot: 560000, open_net_agorot: 560000, currency: "USD", direction: "income" as const },
     { id: "bill-118", description: "Bill VD-118", doc_date: "2026-09-15", project_name: null, customer_name: "Varga Drywall", open_gross_agorot: 420000, open_net_agorot: 420000, currency: "USD", direction: "expense" as const },
     { id: "bill-hd", description: "Monthly bill", doc_date: "2026-09-25", project_name: null, customer_name: "Harbor Supply Pro", open_gross_agorot: 313800, open_net_agorot: 313800, currency: "USD", direction: "expense" as const },
   ];
+  const overrides: ForecastOverrideRow[] = variant === "changed"
+    ? [{ item_key: "invoice:inv-1043", amount_minor: null, due_on: null, moved_out: true }]
+    : empty ? [] : [{ item_key: "invoice:inv-1043", amount_minor: null, due_on: "2026-10-17", moved_out: false }];
   const build = buildMonthForecast({
     base: "USD",
     expected: expectedMonthsSchema.parse(expected),
     unpaid: unpaidRowSchema.array().parse(unpaid),
-    overrides: [{ item_key: "invoice:inv-1043", amount_minor: null, due_on: "2026-10-17", moved_out: false }],
+    overrides,
   });
-  return { today, net: -1719100n, base: "USD", data: { month: "2026-10", build, overrides: [] } };
+  // The changed frame's reset line reads these, so the undo has the prior state to send back.
+  return { today, net: -1719100n, base: "USD", data: { month: "2026-10", build, overrides: variant === "changed" ? overrides : [] } };
 }

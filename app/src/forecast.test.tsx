@@ -10,6 +10,7 @@ import {
   openMonthDue,
 } from "./forecast";
 import {
+  monthForecastBoardSample,
   SAMPLE_EXPECTED,
   SAMPLE_EXPECTED_EMPTY,
   SAMPLE_EXPECTED_OPEN_DONE,
@@ -126,5 +127,23 @@ describe("openMonthDue (FLOW-364)", () => {
     } as unknown as ExpectedMonthsData;
     expect(openMonthDue(data, "ILS")).toEqual({ income: 0n, expense: 283_000n });
     expect(forecastMinor(-100_000n, 0n, openMonthDue(data, "ILS").expense, 0n).minor).toBe(-383_000n);
+  });
+});
+
+describe("the month forecast's board samples (FLOW-141b)", () => {
+  it("moves the largest invoice out in the changed state: one moved item, the income without it", () => {
+    const { build } = monthForecastBoardSample("changed").data;
+    expect(build.changed).toBe(1);
+    expect(build.moved).toHaveLength(1);
+    expect(build.incomeTotal).toBe(725_000n);
+    expect(build.expenseTotal).toBe(830_000n);
+  });
+
+  it("has nothing left to arrive in the empty state", () => {
+    const { build } = monthForecastBoardSample("empty").data;
+    expect(build.income).toHaveLength(0);
+    expect(build.expense).toHaveLength(0);
+    expect(build.small).toHaveLength(0);
+    expect(build.moved).toHaveLength(0);
   });
 });

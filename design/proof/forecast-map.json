@@ -1,4 +1,6 @@
 {
   "MonthForecast": "/e2e/forecast?kind=board",
-  "MonthForecastEdit": "/e2e/forecast?kind=board&sheet=1"
+  "MonthForecastEdit": "/e2e/forecast?kind=board&sheet=1",
+  "MonthForecastChanged": "/e2e/forecast?kind=board&state=changed",
+  "StatesForecastEmpty": "/e2e/forecast?kind=board&state=empty"
 }

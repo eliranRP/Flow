@@ -1,14 +1,15 @@
 import { formatAmountText, type ForecastBuild, type ForecastItem } from "@flow/shared";
 import { type ReactNode, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { cashMonthKey, cashRows } from "../cash";
-import { daysLeftInMonth, type ForecastPatch, type MonthForecast, priorPatch, useMonthForecastQuery, useResetForecastMonth, useSetForecastItem } from "../forecast-month";
+import { daysLeftInMonth, type ForecastPatch, type MonthForecast, nextMonth, priorPatch, useMonthForecastQuery, useResetForecastMonth, useRestoreForecast, useSetForecastItem } from "../forecast-month";
 import { useCashMonthsQuery } from "../use-cash";
 import { israelToday } from "../ui/date-math";
 import { ScreenHeader } from "../ui/screen-header";
 import { DelayedSkeleton, ListSkeleton } from "../ui/skeleton";
 import { EmptyState } from "../ui/empty-state";
+import { CalendarCheckIcon } from "../ui/icons";
 import { useToast } from "../ui/toast";
+import { ChangedLine, ForecastFootnote, MovedRow, signed } from "./forecast-parts";
 import { ForecastItemSheet } from "./forecast-sheet";
 import { monthName } from "./home-parts";
 import { Amount } from "../ui/amount";
@@ -24,11 +25,6 @@ export type ForecastSample = { data: MonthForecast; net: bigint; today: string; 
 const COMPACT_AFTER = 150;
 /** The moved row folds away this long before its write, then the list is refreshed. */
 const FOLD_MS = 280;
-
-function signed(minor: bigint, sign: "+" | "−" | "", currency: string): string {
-  const text = formatAmountText(minor < 0n ? -minor : minor, currency);
-  return `${sign}${text}`;
-}
 
 /** The big number: the sign is U+2212 when it is negative, as Home's line writes it. */
 export function forecastBigText(minor: bigint, currency = "ILS"): string {
@@ -102,6 +98,7 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
   const cash = useCashMonthsQuery();
   const write = useSetForecastItem(month);
   const reset = useResetForecastMonth(month);
+  const restore = useRestoreForecast(month);
   const [open, setOpen] = useState<ForecastItem | null>(null);
   const [smallOpen, setSmallOpen] = useState(false);
   const [leavingKey, setLeavingKey] = useState<string | null>(null);
@@ -147,9 +144,13 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
     });
   }
 
+  /** The reset clears every override; the undo sends the captured ones back (FLOW-141b). */
   function resetAll() {
+    const before = data?.overrides ?? [];
     reset.mutate(undefined, {
-      onSuccess: () => toast.show({ message: "הצפי חזר למספרים של Flow" }),
+      onSuccess: () => {
+        toast.show({ message: "הצפי חזר לחישוב של Flow", action: "ביטול", onAction: () => { restore.mutate(before); } });
+      },
     });
   }
 
@@ -162,6 +163,22 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
   }, [openFirst]);
   const expense = build?.expense ?? [];
   const moved = build?.moved ?? [];
+
+  // Everything arrived: the header, the calendar icon and the copy only (FLOW-141b, StatesForecastEmpty).
+  if (build != null && income.length + expense.length + build.small.length === 0 && moved.length === 0) {
+    return (
+      <div className="ui-forecast-screen">
+        <ScreenHeader title="צפי" backTo="/" backText="בית" subtitle={`${monthName(month)} · נכון ל־${today.slice(8, 10)}/${today.slice(5, 7)}`} />
+        <div className="ui-forecast-empty">
+          <EmptyState
+            icon={<CalendarCheckIcon />}
+            title="הכל כבר הגיע"
+            body={`כל החיובים וההכנסות הצפויים ל${monthName(month)} נכנסו לחשבון. הצפי ל${monthName(nextMonth(month))} ייפתח ב־1 בחודש.`}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="ui-forecast-screen">
@@ -184,10 +201,7 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
             <Amount agorot={total} size="display" currency={base} />
           </p>
           <p className="ui-forecast-today">היום <bdi dir="ltr">{forecastBigText(net, base)}</bdi></p>
-          <div className={cx("ui-forecast-changed", changed > 0 && "ui-forecast-changed-on")} aria-hidden={changed === 0}>
-            <span>{`שינית ${String(changed)} ${changed === 1 ? "פריט" : "פריטים"} בצפי`}</span>
-            <button type="button" className="ui-forecast-reset" onClick={resetAll} disabled={changed === 0}>איפוס</button>
-          </div>
+          <ChangedLine changed={changed} onReset={resetAll} />
           <ForecastSection
             title="צפוי להיכנס"
             total={<Amount agorot={build.incomeTotal} size="list" currency={base} direction="income" income />}
@@ -225,25 +239,17 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
               ) : null}
             </ul>
           </section>
-          {income.length + expense.length + build.small.length === 0 && moved.length === 0 ? (
-            <EmptyState title="הכל הגיע החודש" body="כל החיובים וההכנסות הצפויים לחודש נכנסו לחשבון." />
-          ) : null}
           {moved.length > 0 ? (
-            <section className="ui-forecast-section ui-forecast-moved">
-              <h2 className="ui-forecast-section-head">
-                <span>לא החודש</span>
-              </h2>
+            <section className="ui-forecast-section ui-forecast-section-moved">
+              <h2 className="ui-forecast-section-head ui-forecast-head-moved">לא החודש</h2>
               <ul className="ui-forecast-list">
                 {moved.map((item) => (
-                  <ForecastRowButton key={item.key} item={item} onOpen={setOpen} leaving={false} />
+                  <MovedRow key={item.key} item={item} onOpen={setOpen} />
                 ))}
               </ul>
             </section>
           ) : null}
-          <p className="ui-forecast-foot t-hint">
-            בצפי: הקבועים והתנועות הקבועות שעוד לא הגיעו החודש (הסכום הרגיל), חשבוניות לקוח פתוחות שטרם נגבו, חשבונות ספקים
-            וחיובי הלוואה שעוד צפויים החודש. <Link to="/missing-bills">לקבועים</Link>
-          </p>
+          <ForecastFootnote />
         </>
       )}
       <ForecastItemSheet item={open} today={today} onOpenChange={(value) => { if (!value) setOpen(null); }} onSave={save} />

@@ -26,6 +26,12 @@ export function monthEndDay(month: string): string {
   return `${month}-${String(last).padStart(2, "0")}`;
 }
 
+/** The month after a YYYY-MM month (December rolls into the next year). */
+export function nextMonth(month: string): string {
+  const [year = 1970, mon = 1] = month.split("-").map(Number);
+  return mon === 12 ? `${String(year + 1)}-01` : `${String(year)}-${String(mon + 1).padStart(2, "0")}`;
+}
+
 /** Days from `today` (yyyy-mm-dd) to the month's last day, the day included in neither. */
 export function daysLeftInMonth(today: string, month: string): number {
   const end = monthEndDay(month);
@@ -102,7 +108,22 @@ export function useResetForecastMonth(month: string) {
       assertNoError(await supabase.rpc("reset_forecast_month", { p_month: month }));
     },
     keys: ["month-forecast"],
-    success: "הצפי חזר למספרים של Flow",
     failure: "לא הצלחנו לאפס את הצפי",
+  });
+}
+
+/** The undo of a reset: each override the reset cleared is set back, the same write as a tap. */
+export function useRestoreForecast(month: string) {
+  return useWrite<ForecastOverrideRow[]>({
+    run: async (rows) => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      for (const row of rows) {
+        const patch = { amount_minor: row.amount_minor, due_on: row.due_on, moved_out: row.moved_out };
+        assertNoError(await supabase.rpc("set_forecast_item", { p_month: month, p_item_key: row.item_key, p_patch: patch }));
+      }
+    },
+    keys: ["month-forecast"],
+    failure: "לא הצלחנו להחזיר את הצפי",
   });
 }

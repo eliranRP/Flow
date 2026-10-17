@@ -228,6 +228,16 @@ export function CalendarIcon(props: IconProps) {
   );
 }
 
+/** FLOW-141b: the all-arrived state's calendar with a check (the board's 28px icon). */
+export function CalendarCheckIcon(props: IconProps) {
+  return (
+    <Svg size={28} stroke={1.8} {...props}>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4" />
+    </Svg>
+  );
+}
+
 export function SearchIcon(props: IconProps) {
   return (
     <Svg size={20} stroke={2} {...props}>
