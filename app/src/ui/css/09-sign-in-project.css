@@ -230,9 +230,8 @@
 /* The board draws the attention box on the surface, not the loaded tint. */
 .ui-home-attention.ui-skel-attention { background: var(--color-surface); }
 .ui-skel-attention-title { inline-size: calc(var(--skel-sm) * 4 / 3); block-size: var(--skel-block-lg); margin: 0 var(--space-5) var(--space-1); }
-.ui-skel-attention-rows { display: flex; flex-direction: column; }
-.ui-skel-row { display: flex; align-items: center; gap: var(--space-3); min-block-size: calc(var(--touch-min) + var(--space-5)); padding: var(--space-3) var(--space-5); }
-.ui-home-attention .ui-skel-row { min-block-size: calc(var(--touch-min) + var(--space-5) + var(--space-1) * 1.5); }
+.ui-skel-attention-rows { display: flex; flex-direction: column; gap: var(--space-3); }
+.ui-skel-row { display: flex; align-items: center; gap: var(--space-3); min-block-size: calc(var(--touch-min) + var(--space-5)); padding-inline: var(--space-5); }
 .ui-skel-row-dot { flex: none; inline-size: calc(var(--touch-min) - var(--space-1)); block-size: calc(var(--touch-min) - var(--space-1)); border-radius: var(--radius-chip); }
 .ui-skel-row-trail { flex: none; inline-size: calc(var(--skel-sm) - var(--space-2)); block-size: var(--skel-block-lg); }
 .ui-skel-line-a { inline-size: 100%; block-size: var(--skel-block-lg); }

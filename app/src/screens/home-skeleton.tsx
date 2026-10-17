@@ -130,7 +130,7 @@ export function CashHomeSkeleton({ preview = false, example }: { preview?: boole
             <Skeleton tone="band" className="ui-skel-label" />
           </DelayedSkeleton>
         }
-        trailing={<HomeBandActions isPast={false} currentName="" search={search} />}
+        trailing={<HomeBandActions isPast={false} currentName="" search={search} avatarInitial="" />}
       >
         <div className="ui-band-body">
           <p className="ui-band-month-static">{homeMonthLabel(currentKey)}</p>
