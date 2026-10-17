@@ -47,9 +47,8 @@ export function ProjectsScreen({ sample, cashSample }: { sample?: Dashboard; cas
   const finishedFromRoute = (location.state as { finishedOpen?: boolean } | null)?.finishedOpen === true;
   const [finishedOpen, setFinishedOpen] = useState(finishedFromRoute);
   const month = cashSample ?? cash.data;
-  const loadingCash = sample == null && cashSample == null && cash.isPending && preview === "off";
-  // A failed cash read is an error, not an empty month: the empty state would say there are no projects.
-  const phase: ScreenPhase = sample ? { kind: "ready" } : loadingCash ? { kind: "loading" } : screenPhase(preview, dashboard.isError ? dashboard : cash.isError ? cash : dashboard);
+  // The dashboard first, then the cash month: a pending or failed cash read is the screen's phase too.
+  const phase: ScreenPhase = sample ? { kind: "ready" } : screenPhase(preview, dashboard.isPending || dashboard.isError || cashSample != null ? dashboard : cash);
   const sheet = (
     <ProjectFormSheet open={open} onOpenChange={setOpen} />
   );
@@ -120,7 +119,7 @@ function ProjectsBody({
     <>
       <div className="ui-page-pad ui-projects-top">
         <TextLink tone="accent" chevron={false} onClick={onNew}>+ פרויקט חדש</TextLink>
-        <IconButton to="/search" label="חיפוש">
+        <IconButton to={`/search${search}`} label="חיפוש">
           <SearchIcon />
         </IconButton>
       </div>
@@ -180,7 +179,7 @@ function ProjectsBody({
             <IconButton label="פרויקט חדש" onClick={onNew}>
               <PlusIcon />
             </IconButton>
-            <IconButton to="/search" label="חיפוש">
+            <IconButton to={`/search${search}`} label="חיפוש">
               <SearchIcon />
             </IconButton>
           </>
