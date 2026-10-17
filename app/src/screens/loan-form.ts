@@ -98,7 +98,6 @@ export type LoanPreview =
       kind: LoanKind;
       /** 0 for a demand loan, which has no fixed payment. */
       paymentMinor: bigint;
-      interestMinor: bigint;
       escrowMinor: bigint;
       balloon: LoanBalloon | null;
       /** The schedule's adjusted final payment. Null on an early payoff. */
@@ -168,6 +167,34 @@ function termOf(text: string): number | null {
   return term;
 }
 
+/**
+ * The MM/YYYY of the last due date: the first payment's month plus term - 1 months (360 months from
+ * 2026-11-01 is 10/2056).
+ */
+export function lastPaymentLabel(startDate: string, termMonths: number): string {
+  const index = Number(startDate.slice(0, 4)) * 12 + (Number(startDate.slice(5, 7)) - 1) + (termMonths - 1);
+  const year = Math.floor(index / 12);
+  const month = (index % 12) + 1;
+  return `${String(month).padStart(2, "0")}/${String(year)}`;
+}
+
+/** The term's years, under the months field: "30 שנה", "2 שנה ו־6 חודשים", "6 חודשים"; empty for no term. */
+export function termYearsLabel(term: string): string {
+  if (!/^\d{1,3}$/.test(term) || Number(term) < 1) return "";
+  const months = Number(term);
+  if (months < 12) return `${String(months)} חודשים`;
+  const years = Math.floor(months / 12);
+  const rest = months % 12;
+  return rest === 0 ? `${String(years)} שנה` : `${String(years)} שנה ו־${String(rest)} חודשים`;
+}
+
+/** The payment card's split line: principal and interest (or interest only) beside the escrow. */
+export function paymentSplitText(kind: LoanKind, paymentMinor: bigint, escrowMinor: bigint, currency: LoanCurrency): string {
+  const interestPart = formatLoanMoney(paymentMinor - escrowMinor, currency);
+  const escrowPart = formatLoanMoney(escrowMinor, currency);
+  return `${kind === "interest_only" ? "ריבית בלבד" : "קרן וריבית"} ${interestPart} · מסים וביטוח ${escrowPart}`;
+}
+
 /** The months field's starting value for a kind on the new-loan form (the loan page's defaults). */
 export function newLoanKindMonths(kind: LoanKind, term: string): string {
   const months = termOf(term);
@@ -195,7 +222,6 @@ function demandPreview(draft: LoanDraft): LoanPreview {
     status: "ready",
     kind: "demand",
     paymentMinor: 0n,
-    interestMinor: 0n,
     escrowMinor: 0n,
     balloon: null,
     finalAdjustment: null,
@@ -252,13 +278,11 @@ export function loanPreview(draft: LoanDraft): LoanPreview {
       interestOnlyMonths: io,
       amortizationMonths: amortization,
     });
-    const interestMinor = schedule.rows.reduce((sum, row) => sum + row.interestMinor, 0n);
     const name = draft.name.trim();
     return {
       status: "ready",
       kind,
       paymentMinor,
-      interestMinor,
       escrowMinor,
       balloon: schedule.balloon,
       finalAdjustment: schedule.finalAdjustment,

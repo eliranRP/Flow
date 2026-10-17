@@ -7,7 +7,8 @@ import { contractualPaymentMinor, regularPaymentMinor } from "@flow/shared";
 import { ToastProvider } from "../ui/toast";
 import { ViewerPreview } from "../use-is-viewer";
 import { firstOfNextMonth } from "./loan-form";
-import { LoanProjectPicker, LoansHost } from "./loan-setup";
+import { LoanProjectPicker } from "./loan-setup";
+import { LoansHost } from "./loans-host";
 import { LoansList } from "./loans-list";
 
 /** The Loans tab's list and sheet: the host with the list drawn from its context (FLOW-139b). */

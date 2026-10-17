@@ -1,25 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
-import { useLocation, useNavigate } from "react-router-dom";
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type Ref, type SubmitEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type Ref, type SubmitEvent } from "react";
 import type { LoanKind } from "@flow/shared";
-import { BackIcon, CalendarIcon, ChevronDownIcon } from "../ui/icons";
-import { IconButton } from "../ui/icon-button";
+import { CalendarIcon } from "../ui/icons";
 import { MoneyField, PercentField } from "../ui/money-field";
 import { SegmentedControl } from "../ui/segmented-control";
-import { Skeleton } from "../ui/skeleton";
 import { DateSheet } from "../ui/date-sheet";
-import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
-import { TextLink } from "../ui/text-link";
 import { Button } from "../ui/button";
-import { useSheetHistory } from "../ui/back";
-import { useToast } from "../ui/toast";
-import { usePreviewSearch } from "../preview";
 import { formatDisplay } from "../ui/date-math";
-import { getSupabase } from "../lib/supabase";
-import { assertNoError, useWrite } from "../use-write";
-import { useOpenFromQuery } from "../open-from-query";
-import { useHoldWrites } from "../use-is-viewer";
 import { RadioRow } from "../ui/radio-row";
 import { LOAN_KIND_LABEL } from "./loan-copy";
 import { LOAN_KIND_DESCRIPTION } from "./loan-detail-data";
@@ -27,22 +14,22 @@ import {
   LOAN_CURRENCY_MARK,
   firstOfNextMonth,
   formatLoanMoney,
+  lastPaymentLabel,
   loanFieldErrors,
   loanFinalLine,
   loanPreview,
   minorToInput,
   newLoanKindMonths,
-  readCompanyLoanCurrency,
+  paymentSplitText,
+  termYearsLabel,
   type LoanCurrency,
   type LoanDraft,
   type LoanField,
   type LoanInsert,
   type LoanPreview,
 } from "./loan-form";
-import { groupLoans, useLoanList, type LoanListRow } from "./loan-list";
-import { useLoanSummary } from "./loan-summary-entries";
-import type { LoanListSummary } from "./loan-list-summary";
-import { type LoanProjectField, LoanProjectPicker, type LoanProjectSource, NO_PROJECT, projectNameOf } from "./loan-project-picker";
+import { type LoanProjectField } from "./loan-project-picker";
+import { LoanCurrencySwitch, LoanPaymentCard, LoanPickRow, LoanSectionTitle } from "./loan-new-parts";
 
 // Moved to their own files (FLOW-807). Import from those files in new code.
 export { type LoanProjectChoice, type LoanProjectField, type LoanProjectSource, LoanProjectPicker } from "./loan-project-picker";
@@ -79,7 +66,7 @@ const LOAN_KINDS: readonly LoanKind[] = ["amortizing", "interest_only", "balloon
 /** The סוג view inside the new-loan sheet: one row per kind, each with its one-line description. */
 export function LoanKindPicker({ selected, onSelect }: { selected: LoanKind; onSelect: (kind: LoanKind) => void }) {
   return (
-    <div role="radiogroup" aria-label="סוג ההלוואה">
+    <div role="radiogroup" aria-label="סוג ההלוואה" className="ui-choice-sheet ui-loan-kinds">
       {LOAN_KINDS.map((option) => (
         <RadioRow
           key={option}
@@ -130,12 +117,10 @@ export function LoanSetupForm({
 }) {
   const panelId = useId();
   const dateLabelId = useId();
-  const projectLabelId = useId();
-  const projectValueId = useId();
-  const kindLabelId = useId();
-  const kindValueId = useId();
   const kind: LoanKind = kindField?.value ?? "amortizing";
   const demand = kind === "demand";
+  // The sheet's board layout (the kind field is its mark): titled blocks, pick rows, a 2-column pair.
+  const sheetMode = kindField != null;
   const [name, setName] = useState(initial?.name ?? "");
   const [principal, setPrincipal] = useState(initial?.principal ?? "");
   const [rate, setRate] = useState(initial?.rate ?? "");
@@ -244,81 +229,16 @@ export function LoanSetupForm({
     fields[index + 1]?.focus();
   }
 
-  return (
-    <form ref={formRef} id={formId} className="ui-stack" onSubmit={submit} onKeyDown={onFormEnter}>
-      {kindField ? (
-        <div className="ui-field">
-          <span id={kindLabelId} className="ui-field-label">סוג</span>
-          <button
-            type="button"
-            ref={kindField.buttonRef}
-            className="ui-field-control ui-date-field"
-            aria-labelledby={`${kindLabelId} ${kindValueId}`}
-            aria-haspopup="dialog"
-            disabled={busy}
-            onClick={kindField.onOpen}
-          >
-            <span id={kindValueId} className="ui-pick-value" data-clip-ok="">{LOAN_KIND_LABEL[kind]}</span>
-            <ChevronDownIcon size={20} />
-          </button>
-          <span className="ui-field-message ui-field-message-slot" aria-hidden="true" />
-        </div>
-      ) : null}
-      <TextField
-        label="מלווה"
-        value={name}
-        maxLength={80}
-        disabled={busy}
-        reserveMessage
-        enterKeyHint="next"
-        error={shownError("name")}
-        onBlur={() => { touch("name"); }}
-        onChange={(event) => { setName(event.target.value); }}
-      />
-      {project ? (
-        <div className="ui-field">
-          <span id={projectLabelId} className="ui-field-label">פרויקט</span>
-          <button
-            type="button"
-            ref={project.buttonRef}
-            className="ui-field-control ui-date-field"
-            aria-labelledby={`${projectLabelId} ${projectValueId}`}
-            aria-haspopup="dialog"
-            disabled={busy}
-            onClick={project.onOpen}
-          >
-            <span id={projectValueId} className="ui-pick-value" data-empty={project.name == null ? "true" : "false"} data-clip-ok="">
-              {project.name ?? NO_PROJECT}
-            </span>
-            <ChevronDownIcon size={20} />
-          </button>
-          {/* Same rhythm as the fields around it, which reserve their message line. */}
-          <span className="ui-field-message ui-field-message-slot" aria-hidden="true" />
-        </div>
-      ) : null}
-      {/* FLOW-115: the currency belongs to the amount, --space-2 under it; a message-height slot keeps the field rhythm. */}
-      <div className="ui-loan-amount-field">
-      <MoneyField
-        label="סכום מקורי"
-        value={principal}
-        prefix={mark}
-        disabled={busy}
-        keepMinus
-        enterKeyHint="next"
-        error={shownError("principal")}
-        onBlur={() => { touch("principal"); }}
-        onValueChange={setPrincipal}
-      />
-      <SegmentedControl
-        label="מטבע"
-        showLabel={false}
-        value={currency}
-        options={CURRENCIES}
-        disabled={busy}
-        onChange={setCurrency}
-      />
-      <span className="ui-field-message ui-field-message-slot" aria-hidden="true" />
-      </div>
+  // The payment card: the figures show only while every field is valid (FLOW-344), else zeros or a dash.
+  const figures = canSave && shown != null ? shown : null;
+  const termNumber = /^\d{1,3}$/.test(term) && Number(term) >= 1 ? Number(term) : null;
+  const until = !demand && termNumber != null && /^\d{4}-\d{2}-\d{2}$/.test(startDate)
+    ? `תשלום אחרון ${lastPaymentLabel(startDate, termNumber)}`
+    : "";
+  const interestOnly = kind === "interest_only";
+
+  const rateAndTerm = (
+    <>
       <PercentField
         label="ריבית שנתית"
         value={rate}
@@ -341,14 +261,88 @@ export function LoanSetupForm({
           disabled={busy}
           reserveMessage
           enterKeyHint="next"
+          hint={sheetMode ? termYearsLabel(term) : undefined}
           error={shownError("term")}
           onBlur={() => { touch("term"); }}
           onChange={(event) => { onTerm(event.target.value); }}
         />
       )}
+    </>
+  );
+
+  return (
+    <form ref={formRef} id={formId} className="ui-stack ui-loan-form" onSubmit={submit} onKeyDown={onFormEnter}>
+      {sheetMode ? <LoanSectionTitle>מלווה ופרויקט</LoanSectionTitle> : null}
+      <TextField
+        label="מלווה"
+        value={name}
+        maxLength={80}
+        disabled={busy}
+        reserveMessage
+        enterKeyHint="next"
+        placeholder={sheetMode ? "למשל: Pinecrest Lending" : undefined}
+        error={shownError("name")}
+        onBlur={() => { touch("name"); }}
+        onChange={(event) => { setName(event.target.value); }}
+      />
+      {project ? (
+        <LoanPickRow
+          label="פרויקט"
+          value={project.name ?? "ללא פרויקט"}
+          empty={project.name == null}
+          buttonRef={project.buttonRef}
+          disabled={busy}
+          onOpen={project.onOpen}
+        />
+      ) : null}
+      {kindField ? (
+        <>
+          <LoanSectionTitle className="ui-loan-section-gap">תנאים</LoanSectionTitle>
+          <LoanPickRow label="סוג" value={LOAN_KIND_LABEL[kind]} buttonRef={kindField.buttonRef} disabled={busy} onOpen={kindField.onOpen} />
+        </>
+      ) : null}
+      {/* FLOW-115: the currency belongs to the amount. In the sheet it sits inside the field; onboarding keeps it under. */}
+      {sheetMode ? (
+        <MoneyField
+          label="סכום מקורי"
+          value={principal}
+          prefix=""
+          disabled={busy}
+          keepMinus
+          enterKeyHint="next"
+          error={shownError("principal")}
+          onBlur={() => { touch("principal"); }}
+          onValueChange={setPrincipal}
+          trailing={<LoanCurrencySwitch value={currency} disabled={busy} onChange={setCurrency} />}
+        />
+      ) : (
+        <div className="ui-loan-amount-field">
+          <MoneyField
+            label="סכום מקורי"
+            value={principal}
+            prefix={mark}
+            disabled={busy}
+            keepMinus
+            enterKeyHint="next"
+            error={shownError("principal")}
+            onBlur={() => { touch("principal"); }}
+            onValueChange={setPrincipal}
+          />
+          <SegmentedControl
+            label="מטבע"
+            showLabel={false}
+            value={currency}
+            options={CURRENCIES}
+            disabled={busy}
+            onChange={setCurrency}
+          />
+          <span className="ui-field-message ui-field-message-slot" aria-hidden="true" />
+        </div>
+      )}
+      {sheetMode ? <div className="ui-loan-grid">{rateAndTerm}</div> : rateAndTerm}
       {kind === "interest_only" || kind === "balloon" ? (
         <TextField
-          label={kind === "interest_only" ? "חודשי ריבית בלבד" : "פריסה בחודשים"}
+          label={interestOnly ? "חודשי ריבית בלבד" : "פריסה לחישוב התשלום (חודשים)"}
           value={kindMonths}
           dir="ltr"
           inputMode="numeric"
@@ -356,6 +350,7 @@ export function LoanSetupForm({
           disabled={busy}
           reserveMessage
           enterKeyHint="next"
+          hint={sheetMode ? (interestOnly ? "אחריהם הקרן נפרסת על שאר התקופה" : "היתרה בסוף התקופה תשולם בתשלום אחד") : undefined}
           error={shownError("months")}
           onBlur={() => { touch("months"); }}
           onChange={(event) => { setKindMonths(event.target.value.replace(/\D/g, "").slice(0, 3)); }}
@@ -388,82 +383,56 @@ export function LoanSetupForm({
         onApply={setStartDate}
       />
       {demand ? null : (
-      <>
-      <MoneyField
-        label="מסים וביטוח לחודש"
-        value={escrow}
-        prefix={mark}
-        disabled={busy}
-        keepMinus
-        reserveMessage
-        enterKeyHint={advanced ? "next" : "done"}
-        error={shownError("escrow")}
-        onBlur={() => { touch("escrow"); }}
-        onValueChange={setEscrow}
-      />
-      <TextLink
-        chevron={false}
+        <MoneyField
+          label="מסים וביטוח לחודש (escrow)"
+          value={escrow}
+          prefix={sheetMode ? "" : mark}
+          disabled={busy}
+          keepMinus
+          reserveMessage
+          enterKeyHint={advanced ? "next" : "done"}
+          hint={sheetMode ? "אם נגבים יחד עם התשלום. אחרת השאירו 0" : undefined}
+          error={shownError("escrow")}
+          onBlur={() => { touch("escrow"); }}
+          onValueChange={setEscrow}
+        />
+      )}
+      <LoanPaymentCard
+        label={interestOnly ? "תשלום אחרי חודשי הריבית" : "תשלום חודשי"}
+        total={demand ? "—" : formatLoanMoney(figures?.paymentMinor ?? 0n, currency)}
+        split={demand ? "לפי דרישה: בלי לוח תשלומים קבוע" : figures ? paymentSplitText(kind, figures.paymentMinor, figures.escrowMinor, currency) : ""}
+        until={until}
+        note={figures && finalLine ? {
+          text: `${finalLine.lead}${finalLine.times ? ` ${finalLine.times}` : ""}, ${formatLoanMoney(finalLine.amountMinor, currency)}`,
+          caution: finalLine.tone === "caution",
+        } : null}
         expanded={advanced}
         controls={panelId}
         disabled={busy}
-        trailing={<ChevronDownIcon size={16} />}
-        onClick={() => { setAdvanced((open) => !open); }}
+        changeable={!demand}
+        onToggle={() => { setAdvanced((open) => !open); }}
       >
-        עוד
-      </TextLink>
-      {advanced ? (
-        <div id={panelId}>
-          <MoneyField
-            label="תשלום חודשי"
-            value={shownPayment}
-            prefix={mark}
-            disabled={busy}
-            keepMinus
-            reserveMessage
-            enterKeyHint="done"
-            error={shownError("payment")}
-            onValueChange={(next) => { setPayment(next); }}
-            onBlur={() => {
-              touch("payment");
-              setPayment((current) => (current == null || current.trim() === "" ? null : current));
-            }}
-          />
-        </div>
-      ) : null}
-      </>
-      )}
-      {/* FLOW-344 (B): the preview shows only while every field is valid, so it never reads as another loan's payment. */}
-      {/* Empty, the region leaves the layout, so the gap above שמירה is the usual one between fields. */}
-      <div aria-live="polite" className={canSave && shown ? undefined : "sr-only"}>
-        {canSave && shown && demand ? (
-          <p className="ui-row-hint">ריבית יומית על היתרה, בלי לוח תשלומים.</p>
-        ) : canSave && shown ? (
-          <>
-          <p>
-            {kind === "interest_only" ? "תשלום אחרי חודשי הריבית" : "תשלום חודשי"}{" "}
-            <bdi className="ui-num" dir="ltr">{formatLoanMoney(shown.paymentMinor, currency)}</bdi>
-          </p>
-          <p>
-            ריבית כוללת{" "}
-            <bdi className="ui-num" dir="ltr">{formatLoanMoney(shown.interestMinor, currency)}</bdi>
-          </p>
-          {finalLine ? (
-            <p className={finalLine.tone === "caution" ? "t-hint ui-loan-caution" : undefined}>
-              {finalLine.lead}
-              {finalLine.times ? (
-                <>
-                  {" "}
-                  <bdi className="ui-num" dir="ltr">{finalLine.times}</bdi>
-                </>
-              ) : null}
-              {", "}
-              <bdi className="ui-num" dir="ltr">{formatLoanMoney(finalLine.amountMinor, currency)}</bdi>
-            </p>
-          ) : null}
-          </>
+        {advanced && !demand ? (
+          <div id={panelId} className="ui-loan-pay-override">
+            <MoneyField
+              label="תשלום חודשי"
+              value={shownPayment}
+              prefix={mark}
+              disabled={busy}
+              keepMinus
+              reserveMessage
+              enterKeyHint="done"
+              error={shownError("payment")}
+              onValueChange={(next) => { setPayment(next); }}
+              onBlur={() => {
+                touch("payment");
+                setPayment((current) => (current == null || current.trim() === "" ? null : current));
+              }}
+            />
+          </div>
         ) : null}
-      </div>
-      {/* FLOW-344: the payment error takes a line only when there is one; the preview above no longer jumps. */}
+      </LoanPaymentCard>
+      {/* FLOW-344: the payment error takes a line only when there is one; the card above no longer jumps. */}
       {!advanced && !demand && shownError("payment") != null ? (
         <p className="ui-field-message" role="alert">{shownError("payment")}</p>
       ) : null}
@@ -479,305 +448,4 @@ export function LoanSetupForm({
  */
 export function LoanSaveButton({ formId, busy = false, buttonRef }: { formId: string; busy?: boolean; buttonRef?: Ref<HTMLButtonElement> }) {
   return <Button type="submit" form={formId} full buttonRef={buttonRef} busy={busy}>שמירה</Button>;
-}
-
-/** Sample balances for stories and preview. Live omits it and reads `loans`. */
-export type LoanRowsSample = readonly LoanListRow[] | "loading" | "error";
-
-export const LOANS_EMPTY_TITLE = "אין הלוואות עדיין";
-export const LOANS_EMPTY_OWNER = "הוסיפו הלוואה כדי לפצל כל תשלום לריבית, מסים וביטוח וקרן.";
-export const LOANS_EMPTY_VIEWER = "כשיתווספו הלוואות הן יופיעו כאן.";
-export const LOANS_ERROR_TITLE = "לא הצלחנו לטעון את ההלוואות";
-
-/** What the Loans tab's list draws (LoansList in loans-list.tsx), with the host's reads and actions. */
-export type LoansHostCtx = {
-  rows: readonly LoanListRow[];
-  loading: boolean;
-  failed: boolean;
-  /** No open loan: the empty state shows, with the closed group under it. */
-  empty: boolean;
-  summary: ReturnType<typeof useLoanSummary>;
-  currency: LoanCurrency | null;
-  holdWrites: boolean;
-  /** A background refresh of the list is running. */
-  retrying: boolean;
-  retry: () => void;
-  /** Opens the new-loan sheet (הלוואה חדשה). */
-  openNew: () => void;
-  newRef: Ref<HTMLButtonElement>;
-  emptyRef: Ref<HTMLButtonElement>;
-  /** Opens one loan's page. */
-  openLoan: (id: string) => void;
-};
-
-/**
- * The Loans tab's data and the new-loan sheet (FLOW-139b). The list is the render prop: the screen
- * draws it from `ctx`, and the sheet and everything it saves stay here. A viewer gets no new-loan
- * action (U10). A row opens the loan's page under /loans, or /e2e/loans in the dev fixture.
- */
-export function LoansHost({
-  companyId,
-  companyCurrency,
-  blocked,
-  projects,
-  sample,
-  summary: sampleSummary,
-  children,
-}: {
-  companyId: string | null;
-  /** Preview passes this. Live omits it and reads the company's lines. */
-  companyCurrency?: LoanCurrency;
-  blocked?: () => boolean;
-  /** FLOW-119. The projects the loan can sit under. */
-  projects?: LoanProjectSource;
-  sample?: LoanRowsSample;
-  /** A sample's summary card (the dev fixture and stories); live reads the company's loans. */
-  summary?: LoanListSummary;
-  children: (ctx: LoansHostCtx) => ReactNode;
-}) {
-  const source: LoanProjectSource = projects ?? { rows: [] };
-  const navigate = useNavigate();
-  const location = useLocation();
-  const search = usePreviewSearch();
-  const toast = useToast();
-  const savedId = useRef<string | null>(null);
-  // The loan's page sits under the tab: /loans/:id, or /e2e/loans/:id in the dev fixture.
-  // The first segment is "loans", or the dev fixture's prefix (built here, so no fixture path ships in the build).
-  const first = location.pathname.split("/")[1] ?? "";
-  const base = first === "loans" ? "/loans" : `/${first}/loans`;
-  const loanHref = (id: string) => `${base}/${encodeURIComponent(id)}${search}`;
-  const [open, setOpenState] = useState(false);
-  const [view, setView] = useState<"form" | "project" | "kind">("form");
-  const [draftProject, setDraftProject] = useState<string | null>(null);
-  const [draftKind, setDraftKind] = useState<LoanKind>("amortizing");
-  // The picker keeps the form's height, so the sheet does not jump when they swap.
-  const [formHeight, setFormHeight] = useState<number | null>(null);
-  const formRef = useRef<HTMLDivElement>(null);
-  const newButton = useRef<HTMLButtonElement>(null);
-  const projectFieldRef = useRef<HTMLButtonElement>(null);
-  const kindFieldRef = useRef<HTMLButtonElement>(null);
-  const sheetTitle = useRef<HTMLHeadingElement>(null);
-  const saveButton = useRef<HTMLButtonElement>(null);
-  const loanFormId = useId();
-  const posted = useRef(false);
-  const draftRef = useRef<LoanSetupInitial | null>(null);
-  const keepDraft = useRef(false);
-  const clearDraft = useCallback(() => {
-    keepDraft.current = false;
-    draftRef.current = null;
-    setDraftProject(null);
-    setDraftKind("amortizing");
-    setView("form");
-  }, []);
-  const setOpen = useCallback((next: boolean) => {
-    if (!next) clearDraft();
-    setOpenState(next);
-  }, [clearDraft]);
-  // Back in the picker view returns to the form, like Escape and חזרה.
-  const adoptNew = useRef(false);
-  const setSheet = useSheetHistory("loan-new", open, setOpen, () => {
-    // FLOW-115: Back during a save waits for it, like ✕ and Escape (0075).
-    if (posted.current) return false;
-    if (view === "form") return true;
-    backToForm();
-    return false;
-  }, adoptNew);
-  const balances = useLoanList(sample == null ? companyId : null);
-  const holdWrites = useHoldWrites();
-  const emptyButton = useRef<HTMLButtonElement>(null);
-  const query = useQuery({
-    queryKey: ["loan-currency", companyId],
-    enabled: companyCurrency == null && companyId != null,
-    retry: false,
-    queryFn: readCompanyLoanCurrency,
-  });
-  const currency: LoanCurrency | null = companyCurrency
-    ?? query.data
-    ?? (query.isFetched || companyId == null ? "ILS" : null);
-  // FLOW-139: the summary card reads each loan's outlook, the same figures the loan page shows.
-  const liveSummary = useLoanSummary(sample == null ? companyId : null, currency);
-  const summary = sampleSummary ?? liveSummary;
-  const save = useWrite<Omit<LoanInsert, "company_id">>({
-    failure: (error) => {
-      const code = (error as { code?: string }).code;
-      if (code === "42501") return "אין הרשאה לשמור הלוואה.";
-      if (code === "23503") return "הפרויקט לא נמצא.";
-      return "לא הצלחנו לשמור את ההלוואה.";
-    },
-    keys: ["loans", "project"],
-    onSuccess: () => {
-      posted.current = false;
-      clearDraft();
-      setSheet(false);
-      const id = savedId.current;
-      // FLOW-106 B: the toast opens the new loan's page, where its categories are set.
-      toast.show({
-        message: "ההלוואה נשמרה",
-        ...(id == null ? {} : { action: "פתיחה", onAction: () => { void navigate(loanHref(id)); } }),
-      });
-    },
-    run: async (row) => {
-      if (holdWrites) throw new Error("preview");
-      const supabase = getSupabase();
-      if (!supabase || companyId == null) throw new Error("supabase");
-      savedId.current = null;
-      const inserted = await supabase.from("loans").insert({ ...row, company_id: companyId }).select("id").single();
-      assertNoError(inserted);
-      savedId.current = typeof inserted.data?.id === "string" ? inserted.data.id : null;
-    },
-  });
-
-  function setLoanSheet(next: boolean) {
-    if (next && holdWrites) return;
-    if (next) keepDraft.current = true;
-    else clearDraft();
-    setSheet(next);
-  }
-
-  // FLOW-331: + → הלוואה חדשה lands on /loans with ?new=loan.
-  useOpenFromQuery("loan", !holdWrites && currency != null, (sameEntry) => {
-    adoptNew.current = sameEntry;
-    setLoanSheet(true);
-  });
-
-  function openPicker(next: "project" | "kind" = "project") {
-    setFormHeight(formRef.current?.offsetHeight ?? null);
-    setView(next);
-    // The פרויקט field is hidden now. Focus the title, like the change sheet's picker.
-    requestAnimationFrame(() => { sheetTitle.current?.focus({ preventScroll: true }); });
-  }
-
-  function backToForm() {
-    const field = view === "kind" ? kindFieldRef : projectFieldRef;
-    setView("form");
-    requestAnimationFrame(() => { field.current?.focus({ preventScroll: true }); });
-  }
-
-  const picking = view !== "form";
-  const loading = sample === "loading" || (sample == null && balances.isLoading);
-  const failed = sample === "error" || (sample == null && balances.isError);
-  const rows: readonly LoanListRow[] = Array.isArray(sample) ? sample : sample == null ? (balances.data ?? []) : [];
-  // Only closed loans: the empty state shows, with "הלוואות שנסגרו (N)" under it (§3.1).
-  const empty = !loading && !failed && groupLoans(rows).open.length === 0;
-  const newLoanReturn = empty ? emptyButton : newButton;
-
-  return (
-    <>
-      {children({
-        rows,
-        loading,
-        failed,
-        empty,
-        summary,
-        currency,
-        holdWrites,
-        retrying: sample == null && balances.isFetching,
-        retry: () => { if (sample == null) void balances.refetch(); },
-        openNew: () => { setLoanSheet(true); },
-        newRef: newButton,
-        emptyRef: emptyButton,
-        openLoan: (id) => { void navigate(loanHref(id)); },
-      })}
-      <Sheet
-        open={holdWrites ? false : open}
-        onOpenChange={setLoanSheet}
-        title={view === "kind" ? "סוג ההלוואה" : picking ? "פרויקט" : "הלוואה"}
-        panelClassName={view === "kind" ? "ui-sheet-wide ui-sheet-g8" : undefined}
-        titleRef={sheetTitle}
-        returnFocusRef={newLoanReturn}
-        leading={picking ? (
-          <IconButton label="חזרה" className="ui-back-btn" onClick={backToForm}>
-            <BackIcon />
-          </IconButton>
-        ) : undefined}
-        onEscape={picking ? backToForm : undefined}
-        onBeforeClose={() => !posted.current}
-        action={currency == null || picking ? undefined : (
-          <LoanSaveButton formId={loanFormId} busy={save.isPending} buttonRef={saveButton} />
-        )}
-      >
-        {currency == null ? (
-          // FLOW-115: the form's shape while the currency read lands, so the sheet does not jump.
-          <div className="ui-stack ui-loan-skeleton" aria-busy="true">
-            <p className="sr-only" role="status">טוען…</p>
-            <div className="ui-loan-skel-field" key="a">
-              <Skeleton width="sm" />
-              <Skeleton className="ui-loan-skel-control" />
-            </div>
-            <div className="ui-loan-skel-field" key="b">
-              <Skeleton width="sm" />
-              <Skeleton className="ui-loan-skel-control" />
-            </div>
-            <div className="ui-loan-skel-field" key="c">
-              <Skeleton width="sm" />
-              <Skeleton className="ui-loan-skel-control" />
-            </div>
-            <div className="ui-loan-skel-field" key="d">
-              <Skeleton width="sm" />
-              <Skeleton className="ui-loan-skel-control" />
-            </div>
-          </div>
-        ) : (
-          <>
-            {view === "kind" ? (
-              <div style={formHeight ? { minHeight: formHeight } : undefined}>
-                <LoanKindPicker
-                  selected={draftKind}
-                  onSelect={(next) => {
-                    setDraftKind(next);
-                    backToForm();
-                  }}
-                />
-              </div>
-            ) : null}
-            {view === "project" ? (
-              <div style={formHeight ? { minHeight: formHeight } : undefined}>
-                <LoanProjectPicker
-                  source={source}
-                  selectedId={draftProject}
-                  onSelect={(id) => {
-                    setDraftProject(id);
-                    backToForm();
-                  }}
-                />
-              </div>
-            ) : null}
-            <div hidden={picking} ref={formRef}>
-              <LoanSetupForm
-                companyCurrency={currency}
-                initial={draftRef.current ?? undefined}
-                busy={save.isPending}
-                formId={loanFormId}
-                saveInFoot
-                keepDraft={keepDraft}
-                onDraft={(next) => { draftRef.current = next; }}
-                project={{
-                  name: projectNameOf(source, draftProject),
-                  buttonRef: projectFieldRef,
-                  onOpen: () => { openPicker("project"); },
-                }}
-                kind={{
-                  value: draftKind,
-                  buttonRef: kindFieldRef,
-                  onOpen: () => { openPicker("kind"); },
-                }}
-                onSave={(row) => {
-                  if (holdWrites || blocked?.()) return;
-                  if (posted.current || save.isPending) return;
-                  posted.current = true;
-                  save.mutate({ ...row, project_id: draftProject }, {
-                    onError: (error) => {
-                      if ((error as { code?: string }).code === "23503") setDraftProject(null);
-                      saveButton.current?.focus();
-                    },
-                    onSettled: () => { posted.current = false; },
-                  });
-                }}
-              />
-            </div>
-          </>
-        )}
-      </Sheet>
-    </>
-  );
 }

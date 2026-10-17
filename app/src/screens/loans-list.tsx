@@ -12,7 +12,7 @@ import { formatRatePpm } from "./loan-detail-data";
 import { formatLoanMoney } from "./loan-form";
 import { groupLoans, LoanBalance, LOANS_CLOSED_UNDER_EMPTY, type LoanListRow } from "./loan-list";
 import { LoanSummaryCard } from "./loan-summary-card";
-import { LOANS_EMPTY_OWNER, LOANS_EMPTY_TITLE, LOANS_EMPTY_VIEWER, LOANS_ERROR_TITLE, type LoansHostCtx } from "./loan-setup";
+import { LOANS_EMPTY_OWNER, LOANS_EMPTY_TITLE, LOANS_EMPTY_VIEWER, LOANS_ERROR_TITLE, type LoansHostCtx } from "./loans-host";
 
 /** The page scrolls past this many pixels: the compact bar slides down (the forecast's rule). */
 const COMPACT_AFTER = 90;

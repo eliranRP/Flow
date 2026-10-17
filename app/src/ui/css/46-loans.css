@@ -154,3 +154,255 @@
 .ui-loans-screen .ui-empty-icon { margin-bottom: calc(var(--space-1) * 4.25); }
 .ui-loans-screen .ui-empty-line { margin-top: calc(var(--space-1) * 2.5); }
 .ui-loans-screen .ui-empty-action { margin-top: calc(var(--space-1) * 5.5); }
+
+/* FLOW-139d. The new-loan sheet (board LoanAdd) and the kind sheet (board LoanKind). Opt-in classes only:
+   the shared sheet, field and radio rules stay as they are for every other sheet. The 10px pair gap and
+   the 64px sheet top have no token: they are calc()s of tokens. */
+.ui-loan-new {
+  --sheet-gap: calc(var(--space-4) * 4);
+  --loan-pair-gap: calc(var(--space-1) * 2.5);
+}
+
+@media (max-width: 359px) {
+  :root[data-kb="open"] .ui-loan-new {
+    --sheet-gap: var(--space-4);
+  }
+}
+
+.ui-loan-new .ui-sheet-head {
+  padding-block-end: var(--space-2);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.ui-loan-new .ui-sheet-body {
+  gap: var(--space-inset-row);
+  padding-block: var(--space-4);
+}
+
+.ui-loan-new .ui-sheet-foot {
+  padding: var(--space-3) var(--space-side) var(--space-6);
+  border-top: 1px solid var(--color-line);
+}
+
+.ui-loan-form {
+  gap: var(--space-inset-row);
+}
+
+.ui-loan-section-title {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-btn-weight);
+  line-height: var(--type-line2-line);
+}
+
+.ui-loan-section-gap {
+  margin-block-start: var(--space-2);
+}
+
+/* A pick row (פרויקט, סוג): 52px, the label over the value, the back chevron at the end. */
+.ui-loan-pick {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  inline-size: 100%;
+  min-block-size: calc(var(--touch-min) + var(--space-2));
+  padding: 0 var(--space-inset-row);
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-input);
+  background: var(--color-raised);
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ui-loan-pick:disabled {
+  color: var(--color-disabled-text);
+}
+
+.ui-loan-pick:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.ui-loan-pick svg {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.ui-loan-pick-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.ui-loan-pick-label {
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-loan-pick-value {
+  overflow: hidden;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The $ / ₪ switch sits inside the amount field, at its start side (the field is LTR). */
+.ui-money-field:has(> .ui-loan-currency) input {
+  padding-inline-start: calc(var(--touch-min) * 2 + var(--space-1));
+}
+
+.ui-loan-currency {
+  position: absolute;
+  inset-inline-start: var(--space-1);
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  gap: calc(var(--space-1) / 2);
+  padding: calc(var(--space-1) / 2);
+  border-radius: var(--radius-seg-btn);
+  background: var(--color-surface);
+  translate: 0 -50%;
+}
+
+.ui-loan-currency-btn {
+  display: grid;
+  inline-size: calc(var(--touch-min) - var(--space-2));
+  block-size: calc(var(--touch-min) - var(--space-2));
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-note);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-btn-weight);
+  cursor: pointer;
+}
+
+.ui-loan-currency-btn[aria-checked="true"] {
+  background: var(--color-tint-strong);
+}
+
+.ui-loan-currency-btn:disabled {
+  color: var(--color-disabled-text);
+}
+
+.ui-loan-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--loan-pair-gap);
+}
+
+.ui-loan-grid > :only-child {
+  grid-column: 1 / -1;
+}
+
+/* A field's hint under the input, in the message line (no error). */
+.ui-field-hint {
+  color: var(--color-text-muted);
+  font-size: var(--type-hint-size);
+  font-weight: var(--type-hint-weight);
+  line-height: var(--type-hint-line);
+}
+
+.ui-loan-new .ui-date-field {
+  min-block-size: calc(var(--touch-min) + var(--space-1));
+  border: 1.5px solid var(--color-line);
+}
+
+/* The live payment card: the accent tint, 16px corners, a 24px total. */
+.ui-loan-pay {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-start: calc(var(--space-1) * 1.5);
+  padding: var(--space-card-inset);
+  border-radius: var(--radius-card-tight);
+  background: var(--color-tint);
+}
+
+.ui-loan-pay-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.ui-loan-pay-label {
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+}
+
+.ui-loan-pay-total {
+  color: var(--color-text);
+  font-size: var(--type-name-size);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-loan-pay-split {
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-loan-pay-split.ui-loan-caution {
+  color: var(--color-warning);
+}
+
+.ui-loan-pay-live {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-loan-pay-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.ui-loan-pay-change {
+  block-size: calc(var(--touch-min) - var(--space-3));
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: var(--type-meta-size);
+  cursor: pointer;
+}
+
+.ui-loan-pay-change:disabled {
+  color: var(--color-disabled-text);
+}
+
+.ui-loan-pay-override {
+  margin-block-start: var(--space-2);
+}
+
+/* The kind sheet (board LoanKind): 60px rows, 14px corners, a 17px name, the disc at the end. */
+.ui-loan-kinds {
+  gap: var(--space-2);
+}
+
+.ui-loan-kinds .ui-radio-row {
+  min-block-size: calc(var(--touch-min) + var(--space-4));
+  border-radius: var(--radius-segment);
+}
+
+.ui-loan-kinds .ui-row-title {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+}
+
+.ui-loan-kinds .ui-radio[data-on="true"] {
+  font-size: 0;
+}
