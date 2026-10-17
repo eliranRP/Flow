@@ -737,12 +737,11 @@ test("the categories hidden link wraps on the end side and does not truncate", a
       onEnd: Math.abs(endBox.x - (footBox.x + pad)) < 2,
       fits: label.scrollWidth <= label.clientWidth + 1,
       ellipsis: getComputedStyle(label).textOverflow === "ellipsis",
+      // The long label wraps onto a second line rather than cutting: its box is taller than one line.
+      wrapsToTwoLines: label.getBoundingClientRect().height > Number.parseFloat(getComputedStyle(label).fontSize) * 1.5,
     };
   });
-  const createBox = await page.getByRole("button", { name: "קטגוריה חדשה" }).boundingBox();
-  const toggleBox = await hidden.boundingBox();
-  const ownLine = createBox != null && toggleBox != null && toggleBox.y >= createBox.y + createBox.height - 1;
-  expect({ ...wrapped, ownLine }).toEqual({ ownLine: true, onEnd: true, fits: true, ellipsis: false });
+  expect(wrapped).toEqual({ onEnd: true, fits: true, ellipsis: false, wrapsToTwoLines: true });
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/iframe.html?id=screens-routes--categories-hidden-expanded&viewMode=story", { waitUntil: "domcontentloaded" });
