@@ -137,13 +137,19 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(job("plan"), /FLOW_DEPLOY_BATCH: "5"\n/);
   assert.match(job("plan"), /fetch-depth: 0\n/);
   assert.match(job("plan"), /deployments: read\n/);
-  for (const name of ["lint", "check-core", "check-app", "check-storybook", "check-perf", "check-stories", "e2e-shard"]) {
+  for (const name of ["lint", "check-core", "check-app", "check-storybook", "check-perf", "build-storybook", "e2e-shard"]) {
     assert.match(job(name), /\n {4}needs: \[plan\]\n {4}if: needs\.plan\.outputs\.run == 'true'\n/, name);
   }
+  // The stories shards wait for the one Storybook build, and download it.
+  assert.match(job("check-stories"), /\n {4}needs: \[plan, build-storybook\]\n {4}if: needs\.plan\.outputs\.run == 'true'\n/);
+  assert.equal(job("check-stories").includes("pnpm build-storybook"), false);
+  assert.match(job("check-stories"), /uses: actions\/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7\.0\.0\n {8}with:\n {10}name: storybook-static\n {10}path: app\/storybook-static\n/);
+  assert.match(job("build-storybook"), /run: pnpm build-storybook\n/);
+  assert.match(job("build-storybook"), /name: storybook-static\n {10}path: app\/storybook-static\n/);
   // check and e2e are the required checks. They are gates that run always and pass only on success.
-  assert.match(job("check"), /needs: \[plan, check-core, check-app, check-storybook, check-perf, check-stories\]\n {4}if: always\(\) && needs\.plan\.outputs\.run == 'true'\n/);
+  assert.match(job("check"), /needs: \[plan, check-core, check-app, check-storybook, check-perf, check-stories, build-storybook\]\n {4}if: always\(\) && needs\.plan\.outputs\.run == 'true'\n/);
   assert.match(job("check"), /test "\$CORE" = success\n/);
-  for (const name of ["CORE", "APP", "STORYBOOK", "STORIES"]) {
+  for (const name of ["CORE", "APP", "STORYBOOK", "STORIES", "STORYBOOK_BUILD"]) {
     assert.match(job("check"), new RegExp(`test "\\$${name}" = success\n`), name);
   }
   assert.match(job("e2e"), /needs: \[plan, e2e-shard\]\n {4}if: always\(\) && needs\.plan\.outputs\.run == 'true'\n/);
@@ -357,7 +363,7 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.match(ci, /group: ci-\$\{\{ github\.workflow \}\}-\$\{\{ github\.ref \}\}/);
   assert.match(ci, /cancel-in-progress: \$\{\{ github\.ref != 'refs\/heads\/main' \}\}/);
   assert.match(job("deploy"), /cancel-in-progress: false/);
-  for (const name of ["lint", "check-core", "check-app", "check-storybook", "check-perf", "check-stories", "e2e-shard"]) {
+  for (const name of ["lint", "check-core", "check-app", "check-storybook", "check-perf", "check-stories", "build-storybook", "e2e-shard"]) {
     assert.match(job(name), /timeout-minutes: 20\n/, name);
   }
   for (const name of ["check", "e2e"]) {
@@ -426,7 +432,7 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.match(ci, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\.0\.0/);
   assert.match(ci, /actions\/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0/);
   // check (core) keeps the hosted dist for deploy. Only that upload exists until the next artifact is added.
-  assert.equal((ci.match(/uses: actions\/upload-artifact@/g) ?? []).length, 1);
+  assert.equal((ci.match(/uses: actions\/upload-artifact@/g) ?? []).length, 2);
   assert.match(ci, /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
   assert.deepEqual(usesProblems(ci), []);
   assert.deepEqual(playwrightProblems(ci), []);
