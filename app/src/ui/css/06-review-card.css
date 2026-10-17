@@ -17,7 +17,7 @@
 }
 
 .ui-review-queue .ui-review {
-  margin-top: var(--space-2);
+  margin-top: var(--space-4);
 }
 
 /* FLOW-327 1.2: the card stands clear of the filed-today banner. */
@@ -126,13 +126,13 @@
   container: review / inline-size;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-4);
   min-inline-size: 0;
   max-inline-size: 100%;
   margin: var(--space-2) var(--space-card-inset) 0;
-  padding: var(--space-4);
+  padding: var(--space-5);
   border: 1px solid var(--color-line);
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-sheet);
   background: var(--color-surface);
   box-sizing: border-box;
 }
@@ -313,8 +313,8 @@
   display: flex;
   flex-direction: column;
   margin-block-start: var(--space-3);
-  border-radius: var(--radius-input);
-  background: color-mix(in srgb, var(--color-text) 8%, var(--color-surface));
+  border-radius: var(--radius-card-tight);
+  background: var(--color-raised);
   overflow: hidden;
 }
 
@@ -393,7 +393,7 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  margin-top: var(--space-2);
+  margin-top: var(--space-3);
   padding-top: var(--space-3);
   border-top: 1px solid var(--color-line);
 }
@@ -573,7 +573,7 @@
 .ui-review-segments {
   display: flex;
   gap: var(--space-1);
-  margin: var(--space-3) var(--space-side) 0;
+  margin: var(--space-2) var(--space-side) 0;
 }
 
 .ui-review-seg {
@@ -597,11 +597,16 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  margin: var(--space-2) var(--space-side) 0;
+  margin: 0 var(--space-side);
 }
 
-/* FLOW-309: the plural auto count stays on one line at 320, beside the counter. */
+/* FLOW-309: the plural auto count stays on one line at 320, beside the counter. FLOW-365b: the board
+   sets it as plain secondary text, so it keeps the text height, not the 44px link hit area. */
 .ui-review-auto {
+  min-block-size: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-hint-size);
+  line-height: var(--type-hint-line);
   min-inline-size: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -767,4 +772,18 @@
 .ui-review-all-row > svg {
   flex: none;
   color: var(--color-text-secondary);
+}
+
+/* FLOW-365b: the done frame. A check in an 88px tint circle, the title, the two count lines, one action. */
+.ui-review-done .ui-empty-icon {
+  inline-size: 88px;
+  block-size: 88px;
+  margin-bottom: var(--space-5);
+  border-radius: 50%;
+}
+
+.ui-review-done .ui-empty-line {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  white-space: pre-line;
 }

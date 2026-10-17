@@ -1,3 +1,8 @@
 {
+  "Review": "/review?preview=1&e2e=list&case=suggest",
+  "ReviewSheet": "/review?preview=1&e2e=list&case=suggest&board=sheet",
+  "ReviewNoSuggestion": "/review?preview=1&e2e=list&case=none&rows=4&board=nosuggestion",
+  "ReviewDone": "/review?preview=1&e2e=list&rows=0&board=done",
+  "ReviewSplitDone": "/review?preview=1&e2e=list&case=split",
   "ReviewList": "/review/all?preview=1&e2e=list"
 }

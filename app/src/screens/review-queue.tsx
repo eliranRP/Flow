@@ -57,6 +57,8 @@ export function ReviewQueue({
   listPlace,
   setupHandoff,
   sampleJev,
+  openPicker = false,
+  handledBefore,
 }: {
   rows: ReviewRow[];
   search: string;
@@ -79,6 +81,10 @@ export function ReviewQueue({
   homeLabel?: string;
   /** Preview opens its own split instead of the ledger split. */
   onShared?: (transactionId: string) => void;
+  /** FLOW-365b dev board state: the project picker opens on the first card. */
+  openPicker?: boolean;
+  /** FLOW-365b dev board state: this many cards of the visit were handled before the first one shown. */
+  handledBefore?: number;
 }) {
   const preview = useHomePreview();
   const navigate = useNavigate();
@@ -151,7 +157,7 @@ export function ReviewQueue({
     rows.map((item) => item.transaction_id),
     !sample && preview === "off" && previewWrite == null,
   );
-  const visit = useRef(emptyVisit());
+  const visit = useRef(seededVisit(handledBefore));
   /** The card whose אישור is in flight. Only a second tap on that same card waits for it (decision 0180). */
   const approving = useRef<string | null>(null);
   const approveSlot = useRef<HTMLDivElement>(null);
@@ -177,6 +183,8 @@ export function ReviewQueue({
     };
   }, []);
   const setupHandoffShown = useRef(false);
+  /** FLOW-365b: the day's auto count from the last card on screen, read by the done copy after the queue empties. */
+  const lastAuto = useRef(0);
   const [, bumpVisit] = useState(0);
   const openIds = rows.map((item) => item.id);
   const present = notePresence(visit.current, openIds);
@@ -284,7 +292,7 @@ export function ReviewQueue({
     setDeferred((list) => [...list.filter((id) => id !== target.id), target.id]);
   }
   // FLOW-365: the project picker (a sheet over the card) saves that one field and returns to the card.
-  const [pickProject, setPickProject] = useState(false);
+  const [pickProject, setPickProject] = useState(openPicker);
   const [pickQuery, setPickQuery] = useState("");
   const [rememberPick, setRememberPick] = useState(true);
   async function savePickedProject(choice: ChangeChoice) {
@@ -361,7 +369,11 @@ export function ReviewQueue({
     ? splitRead.data.parts.length
     : splitRead.isPending && splitRead.fetchStatus === "fetching" ? "loading" : undefined;
   const card = shown;
-  if (!card) return <ReviewEmpty search={search} homeTo={homeTo} homeLabel={homeLabel} backTo={backTo} />;
+  if (!card) {
+    // FLOW-365b: the queue emptied after this visit's cards: the done copy counts what this visit approved.
+    const approved = visit.current.handled.size;
+    return <ReviewEmpty search={search} homeTo={homeTo} homeLabel={homeLabel} backTo={backTo} done={approved > 0 ? { approved, auto: lastAuto.current } : undefined} />;
+  }
   const current = card;
   const change = assignmentPath(changeTo, search, current.id, undefined, fromList);
   function openProject() {
@@ -390,6 +402,7 @@ export function ReviewQueue({
     void navigate(assignmentPath(changeTo, search, current.id, "category", fromList, true));
   }
   const auto = card.auto_approved_today ?? 0;
+  lastAuto.current = auto;
   const view = withJev(card, jev);
   const suggestion = reviewSuggestion(
     view,
@@ -540,7 +553,7 @@ export function ReviewQueue({
           suggestion={shownSuggestion}
           sourcePill={card.source === "mercury" ? "שורת בנק" : "חשבונית מצולמת"}
           photo={card.source === "photo"}
-          sourceLine={`${invoiceDate(card.doc_date)} • ${card.direction === "income" ? "הכנסה" : "הוצאה"}`}
+          sourceLine={`${invoiceDate(card.doc_date)} · ${card.direction === "income" ? "הכנסה" : "הוצאה"}`}
           onSplit={holdWrites || leaving ? undefined : openSplit}
           splitSummary={splitSummary}
           pending={jevLoading}
@@ -649,6 +662,13 @@ export function deferOrder<T extends { id: string }>(rows: readonly T[], deferre
     .filter((row) => late.has(row.id))
     .sort((a, b) => (late.get(a.id) ?? 0) - (late.get(b.id) ?? 0));
   return [...head, ...tail];
+}
+
+/** FLOW-365b dev board state: a visit that already handled `count` cards (none of them open). */
+function seededVisit(count: number | undefined) {
+  let meter = emptyVisit();
+  for (let index = 1; index <= (count ?? 0); index += 1) meter = noteHandled(meter, `handled-${String(index)}`);
+  return meter;
 }
 
 /** The queue's own header title (it focuses itself on mount), not a sheet's title. */

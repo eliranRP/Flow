@@ -99,7 +99,7 @@ function caseRow(kind: ReviewCase): ReviewRow {
     source: "photo",
     auto_approved_today: 12,
   };
-  if (kind === "none") return { ...base, project_id: null, project_name: null, project_suggested: false, category_suggested: false, supplier_name: "Northwind Supply", source: "mercury" };
+  if (kind === "none") return { ...base, amount_net: -45_000n, project_id: null, project_name: null, project_suggested: false, category_suggested: false, supplier_name: "Northwind Supply", source: "mercury" };
   if (kind === "split") return { ...base, project_id: null, project_name: null, category_id: null, category_name: null, project_suggested: false, category_suggested: false, reason: null, pnl_role: "shared", share_count: 3, supplier_name: "Summit Equipment" };
   if (kind === "photo") return { ...base, source: "photo", supplier_name: "Voltline Electric" };
   return base;
@@ -129,7 +129,7 @@ function ensure(size?: number, kind?: ReviewCase | null): ReviewRow[] {
 
 /** The size belongs to the seeded queue: a page with another `rows` (or none, 5) seeds afresh. */
 export function currentRows(size?: number, kind?: ReviewCase | null): ReviewRow[] {
-  return ensure(size != null && size > 0 ? size : 7, kind);
+  return ensure(size ?? 7, kind);
 }
 
 export function subscribe(listener: () => void): () => void {
@@ -215,8 +215,13 @@ export const e2eFitJev: JevQueueData = {
 export const e2eProjectChoices: ChangeChoice[] = [
   { id: "p1", name: "שיפוץ הרצל 12", code: "P-12", status: "active" },
   { id: "p2", name: "וילה רעננה", code: "P-07", status: "active" },
-  { id: "p3", name: "מחסן הנמל", code: "P-03", status: "finished" },
+  { id: "p3", name: "מחסן הנמל", code: "P-03", status: "active" },
+  { id: "p4", name: "דירת הים", code: "P-11", status: "active" },
+  { id: "p5", name: "הוצאות כלליות · תקורה", code: "P-00", status: "active" },
 ];
+
+/** FLOW-365b: what the done frame says (the board's "אישרת 7 פריטים עכשיו." and the auto count). */
+export const E2E_DONE_COUNTS = { approved: 7, auto: 12 };
 
 /** FLOW-365: the suggest case's Jev read: a supplier that repeats its project, so Jev's line sits under the card. */
 export const e2eSuggestJev: JevQueueData = {
