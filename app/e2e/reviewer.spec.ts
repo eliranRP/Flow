@@ -5,7 +5,7 @@ async function addPart(page: Page, project: string) {
   await page.getByRole("button", { name: "חלק נוסף" }).click();
   await page.getByRole("button", { name: /, פרויקט, שינוי$/ }).last().click();
   await page.getByRole("dialog", { name: /^(בחירת פרויקט|פרויקט לחלק \d+)$/ }).getByRole("radio", { name: project }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
+  // FLOW-922b: the compact part picker picks and closes on the tap; it has no שמירה.
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
 

@@ -103,8 +103,8 @@ for (const width of [390, 320]) {
         "pick a project",
         async () => {
           await page.getByRole("button", { name: /, פרויקט, שינוי$/ }).last().tap();
+          // FLOW-922b: the part picker picks and closes on the tap.
           await picker.getByRole("radio", { name: "פרויקט רעננה" }).tap();
-          await picker.getByRole("button", { name: "שמירה", exact: true }).tap();
         },
         page.getByRole("radiogroup", { name: "יחידה, חומרי בניין" }),
       );

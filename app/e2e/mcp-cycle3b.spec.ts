@@ -114,7 +114,8 @@ for (const scheme of ["light", "dark"] as const) {
     await page.getByRole("button", { name: "חלק נוסף" }).click();
     await page.getByRole("button", { name: /, פרויקט, שינוי$/ }).last().click();
     await page.getByRole("dialog", { name: /^(בחירת פרויקט|פרויקט לחלק \d+)$/ }).getByRole("radio", { name: "מחסן הנמל" }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
+    // FLOW-922b: the part picker picks and closes on the tap.
+    await expect(page.getByRole("dialog", { name: /^(בחירת פרויקט|פרויקט לחלק \d+)$/ })).toHaveCount(0);
     await page.getByLabel("סכום, מלט").fill("1");
     await page.getByRole("button", { name: "סגירה" }).click();
     await page.getByRole("button", { name: "אישור" }).click();
