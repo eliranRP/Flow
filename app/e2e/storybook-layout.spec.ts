@@ -756,13 +756,11 @@ test("the categories hidden link wraps on the end side and does not truncate", a
   expect(motion.transform).not.toBe("none");
 });
 
-test("split between projects pins its totals and keeps names on one line", async ({ page }) => {
+test("the line split pins its save bar and keeps names on one line (FLOW-922)", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/iframe.html?id=screens-routes--split-exact&viewMode=story", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("radio")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
-  await expect(page.getByText("נשאר לשורה")).toBeVisible();
-  const foot = page.locator(".ui-split-cta");
+  await page.goto("/iframe.html?id=screens-line-split--expense&viewMode=story", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("button", { name: "שמירה" })).toBeVisible();
+  const foot = page.locator(".ui-lsplit-foot");
   const footBox = await foot.boundingBox();
   expect(footBox).not.toBeNull();
   if (footBox) {
@@ -771,7 +769,7 @@ test("split between projects pins its totals and keeps names on one line", async
   }
 
   await page.setViewportSize({ width: 320, height: 844 });
-  await page.goto("/iframe.html?id=screens-routes--split-mixed&viewMode=story", { waitUntil: "domcontentloaded" });
+  await page.goto("/iframe.html?id=screens-line-split--expense&viewMode=story", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".ui-lsplit-part").first()).toBeVisible();
   expect(await layoutProblems(page)).toEqual([]);
 });

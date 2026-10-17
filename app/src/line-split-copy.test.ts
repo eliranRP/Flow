@@ -39,7 +39,7 @@ describe("line split refusal copy (FLOW-325)", () => {
     expect(lineSplitCopy("parts exceed the line")).toBe("החלקים עוברים את השורה. הקטינו חלק.");
     expect(lineSplitCopy("parts must sum to the line", { lineMinor: 480_000n, missingMinor: 1_050n })).toBe("החלקים צריכים להסתכם ב־₪4,800. חסרים ₪10.50.");
     expect(lineSplitCopy("a reversal part needs a project")).toBe("חלק החזר צריך פרויקט.");
-    expect(lineSplitCopy("same category and project twice")).toBe("הקטגוריה והפרויקט האלה כבר בחלק אחר.");
+    expect(lineSplitCopy("same category and project twice")).toBe("הפרויקט והקטגוריה האלה כבר בפיצול");
     expect(lineSplitCopy("transaction not found")).toBe(lineSplitCopy("project not found"));
     expect(localIssueCopy("too few parts")).toBe("פיצול צריך לפחות שני חלקים.");
   });

@@ -1,5 +1,14 @@
 {
   "Settings": "/e2e/settings?board=1",
   "SettingsCategories": "/e2e/categories?preview=1",
-  "SettingsTeam": "/e2e/team?proof=1&sheet=invite&email=1"
+  "SettingsTeam": "/e2e/team?proof=1&sheet=invite&email=1&board=1",
+  "SettingsMcp": "/e2e/connections/ai",
+  "SettingsMcpCode": "/e2e/connections/ai?assistant=empty&mint=1",
+  "SettingsMcpConnected": "/e2e/connections/ai?assistant=connected",
+  "SettingsSumit": "/e2e/connections/sumit?state=problem",
+  "SettingsSumitNew": "/e2e/connections/sumit?state=new",
+  "SettingsSumitConnected": "/e2e/connections/sumit",
+  "SettingsMercury": "/e2e/connections/mercury",
+  "SettingsMercuryNew": "/e2e/connections/mercury?state=new",
+  "StatesTeamEmpty": "/e2e/team?proof=1&team=alone"
 }

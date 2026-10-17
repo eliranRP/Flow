@@ -36,12 +36,12 @@ async function openInvite() {
 }
 
 describe("team page (FLOW-601, mockup a-1)", () => {
-  it("lists the owner first with each role, and only the others open a sheet", async () => {
+  it("lists the owner first as את/ה with each role, and only the others open a sheet", async () => {
     renderTeam(<TeamScreen />, "/settings/team");
-    expect(await screen.findByText("דנה לוי")).toBeInTheDocument();
+    expect(await screen.findByText("את/ה")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "צוות" })).toBeInTheDocument();
-    expect(screen.getByText("את/ה")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /דנה לוי/ })).toBeNull();
+    expect(screen.getByText("בעלים")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /את\/ה/ })).toBeNull();
     expect(screen.getByRole("button", { name: "יוסי כהן, עורך" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "מיכל אברהם, צופה" })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "הזמנה לצוות" })).toHaveLength(1);
@@ -53,10 +53,13 @@ describe("team page (FLOW-601, mockup a-1)", () => {
     expect(await screen.findByRole("button", { name: "noa@example.com, הוזמן · ממתין" })).toBeInTheDocument();
   });
 
-  it("says when the owner is alone", async () => {
+  it("says when the owner is alone, and the empty state's button opens the invite sheet", async () => {
     answer("list_team", { data: { ...sampleTeam, members: sampleTeam.members.slice(0, 1) } });
     renderTeam(<TeamScreen />, "/settings/team");
-    expect(await screen.findByText("עוד אין אנשים בצוות")).toBeInTheDocument();
+    expect(await screen.findByText("רק אתם כאן")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "הזמנה לצוות" })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "הזמנה לצוות" }));
+    expect(await screen.findByRole("dialog", { name: "הזמנה לצוות" })).toBeInTheDocument();
   });
 
   it("shows a failed read with a retry that reads again", async () => {
@@ -65,7 +68,7 @@ describe("team page (FLOW-601, mockup a-1)", () => {
     const retry = await screen.findByRole("button", { name: "נסו שוב" });
     answer("list_team", { data: sampleTeam });
     fireEvent.click(retry);
-    expect(await screen.findByText("דנה לוי")).toBeInTheDocument();
+    expect(await screen.findByText("את/ה")).toBeInTheDocument();
   });
 
   it("lets an editor read the team, with nothing to change", async () => {

@@ -8,7 +8,7 @@ import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 import { ReviewPushPrompt } from "./review-push-prompt";
 import type { NotificationPrefs, PushSupport } from "../push";
-import { ReviewIcon } from "../ui/icons";
+import { CheckIcon, ReviewIcon } from "../ui/icons";
 import { TextLink } from "../ui/text-link";
 import { ScreenHeader } from "../ui/screen-header";
 
@@ -140,6 +140,7 @@ export function ReviewEmpty({
   backTo,
   pushPrompt = false,
   pushSample,
+  done,
 }: {
   search: string;
   filtered?: boolean;
@@ -150,6 +151,8 @@ export function ReviewEmpty({
   pushPrompt?: boolean;
   /** Stories: the card's prefs and this browser's support, instead of the live read. */
   pushSample?: { prefs: NotificationPrefs; support: PushSupport };
+  /** FLOW-365b: the queue just emptied. What this visit approved, and the auto count of the day. */
+  done?: { approved: number; auto: number };
 }) {
   // FLOW-309: the last card left with focus in its action bar; the action takes it (after the title's).
   // A ref, so StrictMode's second run of the effect still knows (the title focuses itself again).
@@ -161,18 +164,24 @@ export function ReviewEmpty({
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <ScreenHeader title="לאישור" backTo={backTo ?? "/"} backText={backTo == null ? "בית" : undefined} layout="inline" />
-      <EmptyState
-        icon={<ReviewIcon />}
-        title={filtered ? "אין פריטים לאישור בפרויקט הזה" : "הכל מאושר"}
-        body={filtered ? "אין פריטים של הפרויקט הזה בתור." : "אין פריטים שמחכים לך. נעדכן כשיגיע משהו חדש."}
-        action={(
-          <>
-            <Button full to={homeTo ?? `/${search}`}>{homeLabel ?? "חזרה לבית"}</Button>
-            {filtered ? null : <TextLink to={`/review/filed${search}`} chevron={false}>מה אושר היום</TextLink>}
-          </>
-        )}
-        aside={pushPrompt && !filtered ? <ReviewPushPrompt sample={pushSample?.prefs} support={pushSample?.support} /> : null}
-      />
+      <div className={done == null || filtered ? undefined : "ui-review-done"}>
+        <EmptyState
+          icon={done == null || filtered ? <ReviewIcon /> : <CheckIcon size={44} stroke={2.2} />}
+          title={filtered ? "אין פריטים לאישור בפרויקט הזה" : "הכל מאושר"}
+          body={filtered
+            ? "אין פריטים של הפרויקט הזה בתור."
+            : done == null
+              ? "אין פריטים שמחכים לך. נעדכן כשיגיע משהו חדש."
+              : `אישרת ${String(done.approved)} פריטים עכשיו.\n${String(done.auto)} נוספים אושרו אוטומטית היום.`}
+          action={(
+            <>
+              <Button full to={homeTo ?? `/${search}`}>{homeLabel ?? "חזרה לבית"}</Button>
+              {filtered ? null : <TextLink to={`/review/filed${search}`} chevron={false}>מה אושר היום</TextLink>}
+            </>
+          )}
+          aside={pushPrompt && !filtered ? <ReviewPushPrompt sample={pushSample?.prefs} support={pushSample?.support} /> : null}
+        />
+      </div>
     </div>
   );
 }

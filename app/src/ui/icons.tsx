@@ -382,17 +382,6 @@ export function BuildingIcon(props: IconProps) {
   );
 }
 
-/** FLOW-107. The interest part of a loan payment. */
-export function PercentIcon(props: IconProps) {
-  return (
-    <Svg {...props}>
-      <path d="M19 5 5 19" />
-      <circle cx="7" cy="7" r="2.5" />
-      <circle cx="17" cy="17" r="2.5" />
-    </Svg>
-  );
-}
-
 /** FLOW-501. The Settings חיבורים row. */
 export function PlugIcon(props: IconProps) {
   return (

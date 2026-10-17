@@ -34,11 +34,6 @@
   opacity: 0.45;
 }
 
-.ui-row.ui-row-ring:is(:focus-visible, [data-focus-ring]:focus) {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 2px;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .ui-spinner {
     animation: none;

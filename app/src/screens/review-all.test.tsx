@@ -6,7 +6,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { refreshLedger } from "../books-focus";
 import { renderWithProviders } from "../test-render";
-import { ChangeForm, ReviewAllList, ReviewScreen, SplitScreen, queueAfterFocus, resetReviewListFocus, reviewFocusPath, reviewListPath, rotateReview } from "./flow-screens";
+import { ChangeForm, ReviewAllList, ReviewScreen, queueAfterFocus, resetReviewListFocus, reviewFocusPath, reviewListPath, rotateReview } from "./flow-screens";
+import { LineSplitScreen } from "./line-split";
 
 
 const rpc = vi.hoisted(() => ({
@@ -144,7 +145,7 @@ function renderAt(path: string) {
         <Route path="/review" element={<ReviewScreen />} />
         <Route path="/review/all" element={<ReviewScreen />} />
         <Route path="/review/change" element={<ChangeForm />} />
-        <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
+        <Route path="/transactions/:transactionId/split-category" element={<LineSplitScreen />} />
       </Routes>
     </AuthProvider>,
     { route: path },
@@ -452,7 +453,7 @@ describe("review queue list", () => {
     expect(await screen.findByRole("button", { name: "פרויקט: מפוצל · 2 פרויקטים" })).toBeInTheDocument();
     expect(screen.queryByText("חסר קטגוריה, הקישו לבחירה")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "פרויקט: מפוצל · 2 פרויקטים" }));
-    expect(await screen.findByRole("heading", { name: "פיצול בין פרויקטים" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "פיצול" })).toBeInTheDocument();
     expect(rpc.calls.some((call) => call.name === "collapse_split")).toBe(false);
   });
 

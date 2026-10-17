@@ -19,8 +19,6 @@ import { detectInstallMode, isStandalone, listenForInstallPrompt } from "./ui/in
 import { DropRestoredSheet, ScrollMemory, useGoBack } from "./ui/back";
 import { EdgeSwipeBack } from "./ui/edge-back";
 import { HomeScreen } from "./screens/HomeScreen";
-// Before the router mounts: the split screen holds Back through this listener.
-import "./screens/split-pop";
 import { SetupLanding, SetupResume } from "./setup/route";
 import { INVITES_PATH, landingWithInvites } from "./invite-landing";
 import { useKeyboardInset } from "./ui/keyboard-inset";
@@ -175,7 +173,6 @@ function AppRoutes() {
                 <Route path="invites" element={<InvitesScreen />} />
                 {SearchRoute()}
                 <Route path="transactions/:transactionId" element={<TransactionRoute />} />
-                <Route path="transactions/:transactionId/split" element={<SplitRedirect />} />
                 <Route path="transactions/:transactionId/split-category" element={<LineSplitScreen />} />
                 <Route path="install" element={<InstallRoute />} />
               </Route>
@@ -271,13 +268,6 @@ function InstallRoute() {
       }}
     />
   );
-}
-
-/** FLOW-370: one split screen. The old project-split route opens the parts editor. */
-function SplitRedirect() {
-  const { transactionId = "" } = useParams();
-  const { search } = useLocation();
-  return <Navigate to={`/transactions/${transactionId}/split-category${search}`} replace />;
 }
 
 /** A local split so each mode can be saved without writing a ledger row. */

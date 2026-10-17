@@ -1,19 +1,44 @@
 /* FLOW-601: the team page, the invite cards, and the company on Home's band (decision 0167). */
 
-/* Mockup a-1: a person row is a 40px initials circle, the name, and the role under it. */
-.ui-person-row .ui-row-icon {
-  display: inline-flex;
-  flex: none;
+/* The board's team page: the card sits a step below the subtitle, and the invite button under it, in the flow. */
+.ui-team-list {
+  margin-block-start: var(--space-4);
 }
 
-/* Mockup invite-1: the roles sit a step below the email field. */
-form + .ui-role-choice {
-  margin-block-start: var(--space-3);
+.ui-team-list.ui-list-inset > .ui-row {
+  min-block-size: 56px;
 }
 
-/* The page scrolls above the pinned הזמנה bar. */
-.ui-team-page {
-  padding-block-end: calc(var(--control-height) + 2 * var(--space-3) + var(--space-4));
+.ui-team-invite {
+  margin-block-start: var(--space-4);
+}
+
+/* Mockup invite-1 (board, FLOW-512): the email field, then the two roles as cards. The selected
+   role is a tinted card with a filled accent dot (no check mark); the other has a plain ring. No dividers. */
+.ui-role-choice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ui-role-choice .ui-radio-row {
+  min-block-size: 60px;
+  padding-block: 0;
+  padding-inline: var(--space-4);
+  border-bottom: 0;
+  border-radius: var(--radius-card);
+}
+
+.ui-role-choice .ui-radio-row[aria-checked="true"] {
+  background: var(--color-tint);
+}
+
+.ui-role-choice .ui-radio {
+  border-radius: 50%;
+}
+
+.ui-role-choice .ui-radio[data-on="true"] {
+  font-size: 0;
 }
 
 /* Mockups invite-3 and invite-4: the company, "role · מ<name>", then הצטרפות and דחייה. */

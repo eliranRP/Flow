@@ -32,6 +32,11 @@ type MonthListProps<T> = {
    * still paging, and a month missing from the map shows none. Search (month totals bug).
    */
   monthTotals?: ReadonlyMap<string, readonly MonthTotal[]>;
+  /**
+   * Opt-in (Search, FLOW-368): the month head shows one muted signed whole-unit total at its end,
+   * income minus expenses in the first currency ("−$9,465"), instead of the per-currency lines.
+   */
+  signedTotal?: boolean;
 };
 
 /**
@@ -53,6 +58,7 @@ export function MonthList<T>({
   cost = false,
   net = false,
   monthTotals,
+  signedTotal = false,
 }: MonthListProps<T>) {
   const baseId = useId();
   const groups = groupByMonth(rows, dateOf, amountOf, cents);
@@ -93,6 +99,7 @@ export function MonthList<T>({
           cents={cents}
           cost={cost}
           net={net}
+          signedTotal={signedTotal}
         />
       ))}
     </List>
@@ -159,6 +166,7 @@ function MonthSection<T>({
   cents,
   cost = false,
   net = false,
+  signedTotal = false,
 }: {
   id: string;
   group: MonthGroup<T>;
@@ -174,6 +182,7 @@ function MonthSection<T>({
   cents: boolean;
   cost?: boolean;
   net?: boolean;
+  signedTotal?: boolean;
 }) {
   // A currency that rounds to zero draws no line, so it can't take the first slot.
   const shown = group.totals.filter((total) => total.incomeMinor > 0n || total.expenseMinor > 0n);
@@ -186,8 +195,9 @@ function MonthSection<T>({
       ) : head ? (
         <div className="ui-month-head">
           <h2 className="ui-month-title t-heading" id={id}>{group.title}</h2>
+          {showTotals && signedTotal && shown[0] != null ? <MonthSigned total={shown[0]} /> : null}
           {showTotals && net && shown.length > 0 ? <MonthNet totals={shown} /> : null}
-          {showTotals && !net ? (
+          {showTotals && !net && !signedTotal ? (
             <p className="ui-month-totals t-label">
               {shown.map((total, index) => <MonthTotalLine key={total.currency} total={total} cents={cents} cost={cost} first={index === 0} />)}
             </p>
@@ -225,6 +235,11 @@ function Rows<T>({
       ))}
     </>
   );
+}
+
+/** The month's income minus expenses in its first currency, signed, whole units (opt-in: Search). */
+function MonthSigned({ total }: { total: MonthTotal }) {
+  return <p className="ui-month-signed t-label ui-num">{formatAmountText(total.incomeMinor - total.expenseMinor, total.currency)}</p>;
 }
 
 const CURRENCY_WORD: Record<string, string> = { ILS: "בשקלים", USD: "בדולר", EUR: "באירו" };

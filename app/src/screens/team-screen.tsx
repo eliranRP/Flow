@@ -5,11 +5,11 @@ import { screenPhase } from "../query-phase";
 import { ROLE_LABEL, memberName, type Team, type TeamMember } from "../team-api";
 import { useMyCompaniesQuery, useTeamQuery } from "../team-queries";
 import { useSheetHistory } from "../ui/back";
+import { Avatar } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
-import { PeopleIcon } from "../ui/icons";
+import { MailIcon, PeopleIcon, PersonIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
-import { PersonRow } from "../ui/person-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { InviteSheet, MemberSheet, PendingInviteSheet } from "./team-sheets";
@@ -94,47 +94,70 @@ export function TeamList({ team, business }: { team: Team; business?: string }) 
   const remember = () => {
     opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   };
+  // The board's card: one inset list with a hairline between rows. Alone, the owner stands on the page with no card.
+  const layout = alone ? undefined : "inset";
   return (
-    <div className={manage ? "ui-team-page" : undefined}>
+    <div>
       <ScreenHeader title={TITLE} subtitle={business ? `מי רואה את הספרים של ${business}` : undefined} backTo={BACK} />
-      <List>
+      <List className="ui-team-list" layout={layout}>
         {members.map((row) => {
-          const name = memberName(row);
-          const role = ROLE_LABEL[row.role];
           const opens = manage && row.role !== "owner" && !row.you;
+          const name = row.you ? "את/ה" : memberName(row);
+          const role = ROLE_LABEL[row.role];
+          if (alone) {
+            return <ListRow key={row.user_id} variant="static" title={name} hint="בעלים • עריכה מלאה" icon={<Avatar name={memberName(row)} fallback="person" />} />;
+          }
+          if (!opens) {
+            return <ListRow key={row.user_id} variant="static" layout={layout} title={name} value={role} icon={<PersonIcon />} />;
+          }
           return (
-            <PersonRow
+            <ListRow
               key={row.user_id}
-              name={name}
-              value={row.you ? "את/ה" : role}
-              onOpen={opens ? () => { remember(); setMemberId(row.user_id); } : undefined}
+              variant="button"
+              layout={layout}
+              title={name}
+              value={role}
+              icon={<PersonIcon />}
+              chevron
+              label={`${name}, ${role}`}
+              onClick={() => { remember(); setMemberId(row.user_id); }}
             />
           );
         })}
         {invites.map((row) => (
-          <PersonRow
+          <ListRow
             key={row.id}
-            name={row.email}
-            value={PENDING_WORD}
-            invite
-            onOpen={() => { remember(); setInviteId(row.id); }}
+            variant="button"
+            layout={layout}
+            title={row.email}
+            ltrTitle
+            value={<span className="ui-row-value-accent">{PENDING_WORD}</span>}
+            icon={<MailIcon />}
+            chevron
+            label={`${row.email}, ${PENDING_WORD}`}
+            onClick={() => { remember(); setInviteId(row.id); }}
           />
         ))}
       </List>
       {alone && manage ? (
         <EmptyState
           icon={<PeopleIcon />}
-          title="עוד אין אנשים בצוות"
-          body="הזמינו מישהו לראות את הספרים או לעבוד עליהם איתכם."
+          title="רק אתם כאן"
+          body="הזמינו רואה חשבון או שותף. אפשר לתת צפייה בלבד, והגישה נשלחת במייל."
+          action={(
+            <Button variant="secondary" buttonRef={inviteButton} onClick={() => { setInviteSheet(true); }}>
+              הזמנה לצוות
+            </Button>
+          )}
         />
       ) : null}
       {manage ? (
         <>
-          <div className="ui-team-invite">
-            <Button full buttonRef={inviteButton} onClick={() => { setInviteSheet(true); }}>
+          {alone ? null : (
+            <Button full className="ui-team-invite" buttonRef={inviteButton} onClick={() => { setInviteSheet(true); }}>
               הזמנה לצוות
             </Button>
-          </div>
+          )}
           <InviteSheet
             open={inviteOpen}
             onOpenChange={setInviteSheet}

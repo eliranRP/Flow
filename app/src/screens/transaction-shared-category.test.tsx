@@ -2,7 +2,9 @@ import { type Session } from "@supabase/supabase-js";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { SplitScreen, TransactionScreen } from "./flow-screens";
+import { TransactionScreen } from "./flow-screens";
+import { LineSplitScreen } from "./line-split";
+import { SAMPLE_EXPENSE_LINE, sampleSplitApi } from "../dev/line-split-sample";
 import { renderWithProviders } from "../test-render";
 
 const rpc = vi.hoisted(() => ({
@@ -142,7 +144,7 @@ function mountShared(extra: Record<string, unknown>, more: Handler = () => undef
   return renderWithProviders(
     <Routes>
       <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
-      <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
+      <Route path="/transactions/:transactionId/split-category" element={<LineSplitScreen />} />
     </Routes>,
     { route },
   );
@@ -168,7 +170,7 @@ describe("shared transaction category", () => {
     mountShared({ allocations: twoShares }, savedUndo);
     expect(await screen.findByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /מפוצל · 2 פרויקטים/ }));
-    expect(await screen.findByRole("heading", { name: "פיצול בין פרויקטים" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "פיצול" })).toBeInTheDocument();
   });
 
   it("saves a shared category without calling reassign", async () => {
@@ -203,7 +205,7 @@ describe("shared transaction category", () => {
     });
     expect(await screen.findByText("עלות משותפת · טרם פוצלה")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /עלות משותפת · טרם פוצלה/ }));
-    expect(await screen.findByRole("heading", { name: "פיצול בין פרויקטים" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "פיצול" })).toBeInTheDocument();
   });
 
   it("names the single project on a one-share row", async () => {
@@ -294,45 +296,23 @@ describe("shared transaction category", () => {
     expect(rpc.calls.some((call) => call.name === "set_transaction_category" || call.name === "collapse_split")).toBe(false);
   });
 
-  it("moves a split to one project by removing its part, and ביטול puts the shares back (FLOW-346)", async () => {
-    mountShared({ allocations: twoShares }, (name) => (name === "collapse_split" ? Promise.resolve({ data: "undo-one", error: null }) : undefined), "/transactions/tx/split");
-    fireEvent.click(await screen.findByRole("button", { name: "הסרת החלק וילה" }));
-    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
-    await waitFor(() => {
-      expect(rpc.calls.find((call) => call.name === "save_split")?.args).toEqual({
-        p_transaction_id: "tx",
-        p_shares: [{ project_id: "p1", amount_minor: 1_000_000 }],
-      });
-    });
-    expect(rpc.calls.some((call) => call.name === "collapse_split")).toBe(false);
-    fireEvent.click(await screen.findByRole("button", { name: "ביטול", hidden: true }));
-    await waitFor(() => {
-      expect(rpc.calls.filter((call) => call.name === "save_split").at(-1)?.args).toEqual({
-        p_transaction_id: "tx",
-        p_shares: [
-          { project_id: "p2", amount_minor: 400_000 },
-          { project_id: "p1", amount_minor: 600_000 },
-        ],
-      });
-    });
-  });
-
   it("holds a shared line until the rest has a project", () => {
     rpc.calls.length = 0;
+    const line = { ...SAMPLE_EXPENSE_LINE, id: "tx", amountNet: -1_000n, categoryId: "c-build", categoryName: "חומרים", projectId: null, projectName: null };
     renderWithProviders(
-      <SplitScreen
-        sampleAmount={1_000n}
-        sampleProjects={[
-          { id: "p1", name: "חולון" },
-          { id: "p2", name: "וילה" },
-        ]}
-        sampleRestProject={null}
-        sampleParts={[{ projectId: "p2", value: "4" }]}
+      <LineSplitScreen
+        sample={{
+          line,
+          categories: [{ id: "c-build", name: "חומרים", kind: "expense", hidden: false }],
+          projects: [{ id: "p1", name: "חולון" }, { id: "p2", name: "וילה" }],
+          parts: [{ key: "a", categoryId: "c-build", projectId: "p2", unit: "amount", value: "4" }],
+          rest: { categoryId: "c-build", projectId: null },
+          api: sampleSplitApi(line),
+        }}
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
-    expect(screen.getByRole("heading", { name: "פיצול בין פרויקטים" })).toBeInTheDocument();
-    expect(screen.getAllByText("בחרו פרויקט לשאר.").length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: "פיצול" })).toBeInTheDocument();
     expect(rpc.calls.some((call) => call.name === "collapse_split" || call.name === "save_split")).toBe(false);
   });
 });

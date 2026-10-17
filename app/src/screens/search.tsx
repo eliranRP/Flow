@@ -15,8 +15,10 @@ import {
   readSearchFilters,
   searchCountWords,
   searchRowAmount,
+  searchRowTotals,
   searchMonthTotals,
   searchRowTitle,
+  searchTotalText,
   useDebounced,
   uniqueSearchRows,
   useSearchQuery,
@@ -26,18 +28,17 @@ import { txnListState } from "../txn-nav";
 import { useCategoriesQuery, useDashboardQuery } from "../use-books";
 import { useSheetHistory } from "../ui/back";
 import { Button } from "../ui/button";
-import { EmptyState } from "../ui/empty-state";
 import { ErrorState } from "../ui/error-state";
-import { BackIcon, CloseIcon, SearchIcon } from "../ui/icons";
+import { BackIcon, CloseIcon } from "../ui/icons";
 import { IconButton } from "../ui/icon-button";
 import { ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
 import { wantsSearchFocus } from "../ui/search-entry";
 import { SearchField } from "../ui/search-field";
 import { TabBar } from "../ui/tab-bar";
-import { ListSkeleton } from "../ui/skeleton";
 import type { StatementDetail } from "../ui/statement";
 import { SearchFilterSheet, activeFilterCount, type SearchSheetProject } from "./search-filter-sheet";
+import { SearchEmptyState, SearchingRows } from "./search-parts";
 import { SearchStart, type QuickCheck } from "./search-start";
 import { readRecentSearches, rememberRecentSearch } from "./search-recent";
 
@@ -141,6 +142,11 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
   const complete = localRows ? rows.length >= total : !query.hasNextPage;
   // Live: every month's totals come with the first page, so a month still paging shows its own.
   const monthTotals = useMemo(() => searchMonthTotals(localRows ? null : query.data?.pages[0]?.months), [localRows, query.data]);
+  // The count line's money: every matching line (the server's months), or the sample's rows.
+  const totalText = useMemo(
+    () => searchTotalText(monthTotals ? [...monthTotals.values()].flat() : searchRowTotals(rows)),
+    [monthTotals, rows],
+  );
   const refreshing = live && query.isPlaceholderData;
   const projects: SearchProject[] = local?.projects ?? dashboard.data?.projects ?? [];
   const categoryList: SearchCategory[] = local?.categories ?? categoryQuery.data ?? [];
@@ -148,9 +154,11 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
 
   // The quick checks' counts, read on the start only. The month's first page decides the busiest
   // project (its most lines), so a month with more lines than one page may name another project.
+  // The board's sample pins its month, so its proof does not drift after the month turns.
+  const [checkNow] = useState(() => (boardSample ? new Date(2026, 9, 17) : new Date()));
   const reviewFilters = useMemo<SearchFilters>(() => ({ ...EMPTY_FILTERS, review: true }), []);
-  const incomeFilters = useMemo<SearchFilters>(() => ({ ...EMPTY_FILTERS, direction: "income", period: presetPeriod("month") }), []);
-  const monthFilters = useMemo<SearchFilters>(() => ({ ...EMPTY_FILTERS, period: presetPeriod("month") }), []);
+  const incomeFilters = useMemo<SearchFilters>(() => ({ ...EMPTY_FILTERS, direction: "income", period: presetPeriod("month", checkNow) }), [checkNow]);
+  const monthFilters = useMemo<SearchFilters>(() => ({ ...EMPTY_FILTERS, period: presetPeriod("month", checkNow) }), [checkNow]);
   const reviewQuery = useSearchQuery(reviewFilters, live && !filtered);
   const incomeQuery = useSearchQuery(incomeFilters, live && !filtered);
   const monthQuery = useSearchQuery(monthFilters, live && !filtered);
@@ -193,10 +201,6 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
   };
   const clearChips = () => {
     setFilters((current) => ({ ...current, direction: null, period: allTime(), project: null, category: null, review: false }));
-  };
-  const clearAll = () => {
-    setFilters(EMPTY_FILTERS);
-    setText("");
   };
   const search = (value: string) => {
     setText(value);
@@ -241,7 +245,11 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
     return best;
   }, [monthRows]);
   const busiestName = busiest == null ? null : projects.find((project) => project.id === busiest.id)?.name ?? null;
-  const monthName = new Intl.DateTimeFormat("he-IL", { month: "long" }).format(new Date());
+  // The project check counts every line of the project, as tapping it shows them (all time).
+  const projectFilters = useMemo<SearchFilters>(() => ({ ...EMPTY_FILTERS, project: busiest?.id ?? null }), [busiest?.id]);
+  const projectQuery = useSearchQuery(projectFilters, live && !filtered && busiest != null);
+  const projectAllCount = local ? filterSearchRows(local.rows, projectFilters).length : projectQuery.data?.pages[0]?.total ?? null;
+  const monthName = new Intl.DateTimeFormat("he-IL", { month: "long" }).format(checkNow);
   const countOf = (pages: { total: number } | undefined, applied: SearchFilters) => (
     local ? filterSearchRows(local.rows, applied).length : pages?.total ?? null
   );
@@ -258,7 +266,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
       title: "הכנסות החודש",
       hint: `כל מה שנכנס ב${monthName}`,
       count: countOf(incomeQuery.data?.pages[0], incomeFilters),
-      onPick: () => { update({ direction: "income", period: presetPeriod("month") }); },
+      onPick: () => { update({ direction: "income", period: presetPeriod("month", checkNow) }); },
     },
   ];
   if (busiestName != null && busiest != null) {
@@ -266,7 +274,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
       key: "project",
       title: busiestName,
       hint: "כל התנועות של הפרויקט",
-      count: busiest.count,
+      count: projectAllCount,
       onPick: () => { update({ project: busiest.id }); },
     });
   }
@@ -275,16 +283,13 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
     ? projects.find((project) => project.name.toLowerCase().includes(typed.toLowerCase())) ?? null
     : null;
 
+  // The first read with text, before any line is in hand: the searching view, with no tab bar.
+  const searching = filtered && (phase.kind === "loading" || (rows.length === 0 && refreshing));
   let body;
   if (!filtered) {
-    body = (
-      <>
-        <SearchStart recent={recent} checks={checks} onRecent={search} />
-        <TabBar section="home" />
-      </>
-    );
-  } else if (phase.kind === "loading") {
-    body = <ListSkeleton />;
+    body = <SearchStart recent={recent} checks={checks} onRecent={search} />;
+  } else if (searching) {
+    body = <SearchingRows allTime={active.period.kind === "all"} />;
   } else if (phase.kind === "error") {
     body = (
       <ErrorState
@@ -294,24 +299,8 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
         }}
       />
     );
-  } else if (rows.length === 0 && refreshing) {
-    // The previous read found nothing and the next one is on its way: "לא מצאנו" would name
-    // text the server has not answered yet.
-    body = <ListSkeleton />;
   } else if (rows.length === 0) {
-    const withChips = hasChipFilters(active);
-    body = (
-      <EmptyState
-        icon={<SearchIcon />}
-        title={typed !== "" ? `לא מצאנו ״${typed}״` : "אין תנועות שמתאימות לסינון"}
-        body={withChips ? "החיפוש הוא לפי ספק, לקוח או תיאור, בתוך הסינון שנבחר." : "החיפוש הוא לפי ספק, לקוח או תיאור."}
-        action={(
-          <Button variant="pill" onClick={withChips ? clearChips : clearAll}>
-            {withChips ? "חיפוש בלי הסינון" : "ניקוי החיפוש"}
-          </Button>
-        )}
-      />
-    );
+    body = <SearchEmptyState text={typed} withChips={hasChipFilters(active)} onClearChips={clearChips} />;
   } else {
     body = (
       <>
@@ -327,6 +316,18 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
             </span>
           </Link>
         ) : null}
+        <p className="ui-search-count" role="status">
+          <span>
+            {searchCountWords(total)}
+            {totalText != null ? (
+              <>
+                {" · "}
+                <bdi dir="ltr" className="ui-num">{totalText}</bdi>
+              </>
+            ) : null}
+          </span>
+          {refreshing ? <span className="ui-spinner" role="img" aria-label="מחפש" /> : null}
+        </p>
         <MonthList
           rows={rows}
           keyOf={(row) => row.id}
@@ -335,16 +336,15 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
           complete={complete}
           monthTotals={monthTotals}
           cents
-          net
+          signedTotal
           renderRow={(row) => (
             <ListRow
               variant="statement"
               title={searchRowTitle(row)}
               fallback="invoice"
-              match={typed}
               details={searchRowDetails(row)}
+              note={row.waiting_review ? "ממתין לאישור" : undefined}
               setAside={row.kept_out}
-              pending={row.line_status === "pending"}
               agorot={row.amount_net}
               currency={row.currency}
               sign={row.direction === "income" ? "in" : "out"}
@@ -373,10 +373,12 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
   return (
     <div className="ui-search-screen">
       <div className="ui-search-head">
-        <div className="ui-search-row">
-          <IconButton to={backTo} label="חזרה לבית" className="ui-search-back">
-            <BackIcon size={20} />
-          </IconButton>
+        <div className={searching ? "ui-search-row ui-search-row-searching" : "ui-search-row"}>
+          {searching ? null : (
+            <IconButton to={backTo} label="חזרה לבית" className="ui-search-back">
+              <BackIcon size={20} />
+            </IconButton>
+          )}
           <form
             role="search"
             className="ui-search-form"
@@ -389,18 +391,22 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
               label="חיפוש תנועות"
               value={text}
               onChange={setText}
-              placeholder="ספק, לקוח או תיאור"
+              placeholder="ספק, לקוח, פרויקט או סכום"
               inputRef={inputRef}
               maxLength={SEARCH_MAX_LENGTH}
-              busy={query.isFetching && filtered}
+              busy={searching || (query.isFetching && filtered)}
             />
           </form>
-          <button ref={filterBtnRef} type="button" className="ui-search-filter-btn" onClick={openSheet} aria-haspopup="dialog">
-            סינון
-            {activeFilterCount(filters) > 0 ? (
-              <span className="ui-search-badge">{String(activeFilterCount(filters))}</span>
-            ) : null}
-          </button>
+          {searching ? (
+            <Link className="ui-search-cancel" to={backTo}>ביטול</Link>
+          ) : (
+            <button ref={filterBtnRef} type="button" className="ui-search-filter-btn" onClick={openSheet} aria-haspopup="dialog">
+              סינון
+              {activeFilterCount(filters) > 0 ? (
+                <span className="ui-search-badge">{String(activeFilterCount(filters))}</span>
+              ) : null}
+            </button>
+          )}
         </div>
         {chips.length > 0 ? (
           <div className="ui-search-active" role="list" aria-label="הסינון שנבחר">
@@ -426,18 +432,10 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
           </div>
         ) : null}
       </div>
-      {filtered && phase.kind === "ready" && rows.length > 0 ? (
-        <p className="ui-search-count t-label" role="status">
-          <span>{searchCountWords(total)}</span>
-          {refreshing ? <span className="ui-spinner" role="img" aria-label="מחפש" /> : null}
-        </p>
-      ) : null}
-      {filtered && refreshing && rows.length === 0 ? (
-        <p className="ui-search-count t-label" role="status">
-          <span className="ui-spinner" role="img" aria-label="מחפש" />
-        </p>
-      ) : null}
-      <div className="ui-search-results">{body}</div>
+      <div className="ui-search-results">
+        {body}
+        {!searching ? <TabBar section="home" /> : null}
+      </div>
       <SearchFilterSheet
         open={sheetOpen}
         onOpenChange={setSheet}
@@ -453,13 +451,13 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
 }
 
 /**
- * Line 2 of a result holds a status only (FLOW-339 option C): "לא נספר ברווח" on a kept-out line
- * (decision 0141 log), "ממתינה לאישור" on a line waiting for review. No date, project, category or
- * split: the month head dates the row, and the row's own screen shows the rest. בהמתנה is the chip.
+ * Line 2 of a result (FLOW-368 §2.1): the day and month, the project, the category, all muted on one
+ * line. A kept-out line adds "לא נספר ברווח" (decision 0141 log). "ממתין לאישור" is the line 3 note.
  */
-export function searchRowDetails(row: Pick<SearchRow, "kept_out" | "waiting_review">): StatementDetail[] {
-  const details: StatementDetail[] = [];
+export function searchRowDetails(row: Pick<SearchRow, "kept_out" | "doc_date" | "project_name" | "category_name">): StatementDetail[] {
+  const details: StatementDetail[] = [{ text: `${row.doc_date.slice(8, 10)}/${row.doc_date.slice(5, 7)}` }];
+  if (row.project_name) details.push({ text: row.project_name });
+  if (row.category_name) details.push({ text: row.category_name });
   if (row.kept_out) details.push({ text: "לא נספר ברווח" });
-  if (row.waiting_review) details.push({ text: "ממתינה לאישור", keep: true });
   return details;
 }

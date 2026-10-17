@@ -47,10 +47,11 @@ export const ListClosedShown: Story = {
   play: async ({ canvasElement }) => {
     const body = storyBody(canvasElement);
     const paid = await body.findByRole("button", { name: /נפרעה/ });
-    await expect(paid.getAttribute("aria-label")).not.toMatch(/\$/);
-    await expect(paid.querySelector(".ui-loans-amount")).toBeNull();
+    // A paid-off loan still owing a balance shows it, as the list does for every loan.
+    await expect(paid.getAttribute("aria-label")).toMatch(/\$1,240/);
+    await expect(paid.querySelector(".ui-loans-amount")).not.toBeNull();
     const closed = within(canvasElement).getByRole("button", { name: /נסגרה/ });
-    await expect(closed.querySelector(".ui-loans-amount")).toBeNull();
+    await expect(closed.querySelector(".ui-loans-amount")?.textContent).toMatch(/\$0/);
   },
 };
 

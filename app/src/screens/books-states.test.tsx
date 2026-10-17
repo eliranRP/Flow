@@ -8,7 +8,8 @@ import { resetShownCompanyForTests, setShownCompany } from "../lib/company-heade
 import { forgetProjectReads } from "../project-cache";
 import { renderWithProviders } from "../test-render";
 import { BusinessScreen } from "./business-screen";
-import { CategoriesScreen, ProjectDetailScreen, ProjectsScreen, ChangeForm, ReviewScreen, SettingsScreen, SplitScreen, TransactionScreen, UnpaidScreen } from "./flow-screens";
+import { CategoriesScreen, ProjectDetailScreen, ProjectsScreen, ChangeForm, ReviewScreen, SettingsScreen, TransactionScreen, UnpaidScreen } from "./flow-screens";
+import { LineSplitScreen } from "./line-split";
 import { HomeScreen } from "./HomeScreen";
 
 const rpc = vi.hoisted(() => ({
@@ -95,7 +96,7 @@ function renderAt(path: string) {
         <Route path="/settings/business" element={<BusinessScreen />} />
         <Route path="/settings/categories" element={<CategoriesScreen />} />
         <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
-        <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
+        <Route path="/transactions/:transactionId/split-category" element={<LineSplitScreen />} />
       </Routes>
     </AuthProvider>,
     { route: path },
@@ -253,7 +254,7 @@ describe("rejected reads", () => {
   });
 
   it("shows the split form error instead of an empty project list when projects fail", async () => {
-    renderAt("/transactions/abc/split");
+    renderAt("/transactions/abc/split-category");
     expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     expect(screen.queryByText("אין פרויקטים לפיצול")).not.toBeInTheDocument();
   });

@@ -49,7 +49,9 @@ Raw = mismatch, masked = text-masked mismatch (percent). Pass = masked under 3% 
 | settings | Settings | /e2e/settings?board=1 | 5.0 | 2.9 | 5.0 | 2.9 | yes | FLOW-512b |
 | settings | SettingsCategories | /e2e/categories?preview=1 | 7.4 | 3.4 | 7.4 | 3.4 | no | FLOW-512b |
 | settings | SettingsTeam | /e2e/team?proof=1&sheet=invite&email=1 | 23.7 | 20.2 | 28.2 | 24.7 | no | FLOW-512b |
-| states | StatesHomeEmpty | /e2e/cash-empty | 8.6 | 3.8 | 8.6 | 3.8 | no | FLOW-375 |
+| states | States | /e2e/cash-loading | 6.8 | 6.4 | 4.3 | 3.8 | no | FLOW-375 |
+| states | StatesHomeReveal | /e2e/cash-loading | 4.5 | 4.1 | 4.3 | 3.8 | no | FLOW-375 |
+| states | StatesHomeEmpty | /e2e/cash-empty | 8.4 | 3.7 | 8.4 | 3.7 | no | FLOW-375 |
 | states | StatesLoansEmpty | /e2e/loans?loans=none | 7.7 | 5.5 | 4.7 | 3.2 | no | FLOW-375 |
 
 Result: 30 frames measured, 6 pass, 24 fail. No route was blank or errored, so no "route broken" entries. The maps for add, invest, invite, search and split are empty (no frames mapped).

@@ -234,6 +234,11 @@
   opacity: 0.6;
 }
 
+/* FLOW-375 (board, StatesHomeEmpty): the zero figure sits on the band body's edge, not inside the hero's own gutter. */
+.ui-band-body-empty .ui-band-hero {
+  padding-inline: 0;
+}
+
 /* FLOW-364 (board, StatesHomeEmpty): the month on the band with no figure, then a bank card and what will show here. */
 .ui-band-month-static {
   margin: 0;

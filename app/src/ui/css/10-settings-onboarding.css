@@ -549,10 +549,6 @@
   padding-inline: var(--space-1);
 }
 
-.ui-team-invite {
-  padding-block: var(--space-3);
-}
-
 .ui-row-value-signal {
   color: var(--color-signal-soft);
 }
@@ -589,6 +585,19 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+}
+
+/* The board's scope choice: a filled disc at the end side, no divider, the chosen row tinted, no check. */
+.ui-ai-scope .ui-radio-row {
+  border-bottom: 0;
+}
+
+.ui-ai-scope .ui-radio {
+  border-radius: 50%;
+}
+
+.ui-ai-scope .ui-radio[data-on="true"] {
+  font-size: 0;
 }
 
 .ui-ai-fields {

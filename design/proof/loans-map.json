@@ -1,4 +1,7 @@
 {
   "Loans": "/e2e/loans",
-  "LoansClosed": "/e2e/loans?closed=1"
+  "LoansClosed": "/e2e/loans?closed=1",
+  "LoanAmortizing": "/e2e/loans/loan-mortgage?today=2026-10-17",
+  "LoanInterestOnly": "/e2e/loans/loan-bridge?today=2026-10-17",
+  "LoanPayments": "/e2e/loans/loan-mortgage/payments?today=2026-10-17"
 }

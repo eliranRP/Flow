@@ -39,7 +39,7 @@ export type SheetSave<T> = (value: T) => Promise<string | null>;
 const SEARCH_FROM = 8;
 
 /**
- * מצב: פתוחה saves on tap; נפרעה and נסגרה open the date sheet, whose floor is the last attached
+ * סטטוס: פעילה saves on tap; נפרעה and נסגרה open the date sheet, whose floor is the last attached
  * payment (plan §3.2). A refusal (loan_payments_after_close) stays in the date sheet.
  */
 export function LoanStatusSheet({

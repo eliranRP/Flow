@@ -1,18 +1,16 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState, type ReactElement, type ReactNode, type Ref } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { LoanSplitPart } from "@flow/shared";
 import { useSheetHistory } from "../ui/back";
 import { Banner } from "../ui/banner";
-import { Amount } from "../ui/amount";
 import { Button } from "../ui/button";
 import { StatusDot } from "../ui/status-dot";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { formatDisplay, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
-import { AlertIcon, BankIcon, CalendarIcon, HomeIcon, InfoIcon, LoanIcon, PercentIcon, ProjectsIcon, RefreshIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { AlertIcon, InfoIcon, LoanIcon, RefreshIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
-import { HintParts } from "../ui/hint-parts";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { Sheet } from "../ui/sheet";
@@ -23,6 +21,7 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { useDashboardQuery } from "../use-books";
 import { useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";
 import {
+  LOAN_KIND_LIST_LABEL,
   LOAN_PART_LABEL,
   loanDeleteConsequence,
   loanDeletedToast,
@@ -33,21 +32,18 @@ import {
   type LoanRefusalPlace,
 } from "./loan-copy";
 import {
-  LOAN_PAYMENTS_SHOWN,
   closeDateDefault,
-  demandInterestToday,
-  formatRatePpm,
   kindValue,
   lastPaymentDate,
-  loanParts,
   partCategoryValue,
-  paymentHint,
-  paymentValue,
-  rateInForce,
   statusPill,
   statusToast,
   type LoanRateRow,
 } from "./loan-detail-data";
+import { LoanBalanceCard, LoanNextCard, LoanRateChangesCard, LoanRecentCard, LoanRowsCard, LoanYtdCard, RateValue, type LoanTermRow } from "./loan-detail-cards";
+import { LoanPaymentsView } from "./loan-payments-view";
+import { loanSubtitle, paymentTotals, wholeMoney } from "./loan-detail-view-data";
+import { TransactionTopBar } from "./transaction-top-bar";
 import { LoanKindSheet, LoanPartSheet, LoanRateSheet, LoanStatusSheet } from "./loan-detail-sheets";
 import {
   inversePatch,
@@ -60,17 +56,11 @@ import {
   type LoanWrites,
   type MemoryLoanStore,
 } from "./loan-detail-store";
-import { formatLoanMoney } from "./loan-form";
-import { LoanBalance, showsLoanBalance } from "./loan-list";
+import { showsLoanBalance } from "./loan-list";
 import { LOAN_WRITE_KEYS } from "./loan-match-api";
 import { LoanProjectPicker, NO_PROJECT, type LoanProjectSource } from "./loan-project-picker";
-import { dueDayLabel, loanOutlook, paidInYear, wholeMinor, type PartTotals } from "./loan-outlook";
-import { aheadLabel, LoanFutureView, LoanPartRows, LoanPeriodView, periodTotal } from "./loan-outlook-views";
+import { loanOutlook, paidInYear } from "./loan-outlook";
 
-/** FLOW-427 (C20-4): a value or hint in parts ("a · b") wraps only between whole parts. */
-function inParts(value: ReactNode): ReactNode {
-  return typeof value === "string" && value.includes(" · ") ? <HintParts text={value} /> : value;
-}
 
 
 /**
@@ -85,14 +75,7 @@ export const LOAN_MISSING_TITLE = "ההלוואה לא נמצאה";
 
 type SheetName = "kind" | "rate" | "status" | "part" | "project" | "delete";
 
-export type LoanView = "summary" | "details" | "future" | "period";
-
-const PART_ICON: Record<LoanSplitPart, () => ReactElement> = {
-  interest: () => <PercentIcon />,
-  escrow: () => <HomeIcon />,
-  principal: () => <BankIcon />,
-  fees: () => <TagIcon />,
-};
+export type LoanView = "summary" | "payments";
 
 export function LoanDetailScreen({
   store: givenStore,
@@ -100,7 +83,7 @@ export function LoanDetailScreen({
   today: givenToday,
   view = "summary",
 }: {
-  /** FLOW-434: the page, its פרטי הלוואה page, its תשלומים הבאים page, or one year (or the rest of the loan) under it. */
+  /** The page, or its all-payments page (FLOW-139c). */
   view?: LoanView;
   /** Stories, tests and the dev route pass a memory store. Live omits it. */
   store?: MemoryLoanStore;
@@ -109,7 +92,7 @@ export function LoanDetailScreen({
   /** Stories pin the day, so the rate in force and the accrual stay put. */
   today?: string;
 } = {}) {
-  const { loanId = "", period = "" } = useParams();
+  const { loanId = "" } = useParams();
   const location = useLocation();
   const search = usePreviewSearch();
   const preview = useHomePreview();
@@ -130,10 +113,10 @@ export function LoanDetailScreen({
   const isLive = givenStore == null && !wantsPreview;
   const live = useLiveLoan(loanId, isLive);
   const dashboard = useDashboardQuery(isLive);
-  // The sub-pages sit under the loan's own path, so Back steps up one page at a time.
+  // The all-payments page sits under the loan's own path, so Back steps up to the loan page.
   const loanPath = loanId === "" ? location.pathname : location.pathname.slice(0, location.pathname.lastIndexOf(loanId) + loanId.length);
   const listBack = listPath ?? `${loanPath.replace(/\/[^/]*\/?$/, "")}${search}`;
-  const back = view === "summary" ? listBack : view === "period" ? `${loanPath}/future${search}` : `${loanPath}${search}`;
+  const back = view === "payments" ? `${loanPath}${search}` : listBack;
   const read: LoanRead = preview === "loading"
     ? { phase: "loading" }
     : preview === "error" || preview === "error-server"
@@ -190,11 +173,11 @@ export function LoanDetailScreen({
       listBack={listBack}
       loanPath={loanPath}
       view={view}
-      period={period}
       today={givenToday ?? israelToday()}
       search={search}
     />
   );
+
 }
 
 function LoanDetailLoading({ back }: { back: string }) {
@@ -229,7 +212,6 @@ function LoanDetailReady({
   listBack,
   loanPath,
   view,
-  period,
   today,
   search,
 }: {
@@ -241,7 +223,6 @@ function LoanDetailReady({
   listBack: string;
   loanPath: string;
   view: LoanView;
-  period: string;
   today: string;
   search: string;
 }) {
@@ -340,212 +321,64 @@ function LoanDetailReady({
   }
 
   const projectName = loan.projectId == null ? null : (projects.rows.find((row) => row.id === loan.projectId)?.name ?? null);
-  const shownRates = loan.rates;
   const flagged = payments.filter((item) => item.needsReview);
-  const payment = paymentValue(loan, today);
-  const accrued = demandInterestToday(loan, payments, today);
-  const lastPaid = lastPaymentDate(payments);
-  const [allPayments, setAllPayments] = useState(false);
-  const listed = allPayments ? payments : payments.slice(0, LOAN_PAYMENTS_SHOWN);
-  const parts = loanParts(loan);
   // FLOW-138 "Hide" (FLOW-356): a paid-off loan leads with "נפרעה · date" alone, as on the list.
   const ended = !showsLoanBalance(loan);
-
-  function row(key: string, label: string, rawValue: ReactNode, icon: ReactElement, onOpen: (() => void) | null, rawHint?: string, buttonRef?: Ref<HTMLButtonElement>) {
-    const value = inParts(rawValue);
-    const hint = rawHint == null ? undefined : inParts(rawHint);
-    return holdWrites || onOpen == null ? (
-      <ListRow key={key} variant="static" eyebrow={label} title={value} icon={icon} hint={hint} />
-    ) : (
-      <ListRow key={key} variant="button" eyebrow={label} title={value} icon={icon} hint={hint} chevron onClick={onOpen} buttonRef={buttonRef} />
-    );
-  }
-
   const outlook = loanOutlook(loan, today);
   const paid = paidInYear(payments, today.slice(0, 4));
-  const loanHref = (rest: string) => `${loanPath}/${rest}${search}`;
-
-  function partRows(totals: PartTotals, onOpen: ((item: LoanSplitPart) => void) | null) {
-    return <LoanPartRows loan={loan} categories={categories} totals={totals} onOpen={holdWrites ? null : onOpen} />;
-  }
-
-  const summaryView = (
-    <>
-      <ScreenHeader
-        title={loan.name}
-        kicker="הלוואות"
-        backTo={back}
-        subtitle={outlook == null || ended ? undefined : `יתרה ${formatLoanMoney(wholeMinor(loan.balanceMinor), loan.currency)} · ${formatRatePpm(rateInForce(loan, today).ppm)}`}
-      />
-      <ViewerNote />
-      {outlook == null || ended ? (
-          <div className="ui-page-pad ui-loan-head">
-            {ended ? null : (
-              <p className="t-display">
-                <Amount agorot={loan.balanceMinor} presentation="detail" cents="always" currency={loan.currency} size="display" />
-              </p>
-            )}
-            <div className="ui-status-row">
-              <StatusDot>{statusPill(loan)}</StatusDot>
-              {ended ? (
-                // The מצב row goes, so the status changes from here (reopening a loan stays one tap away).
-                holdWrites ? null : (
-                  <TextLink size="label" tone="quiet" chevron={false} label="שינוי מצב" buttonRef={statusRef} onClick={() => { open("status"); }}>שינוי</TextLink>
-                )
-              ) : (
-                <span className="t-hint">{loan.kind === "demand" ? "יתרת קרן" : "יתרה"}</span>
-              )}
-            </div>
-          </div>
-      ) : (
-        <div className="ui-page-pad ui-loan-next">
-          <p className="t-label">תשלום הבא · {dueDayLabel(outlook.next.dueDate)}</p>
-          <p className="t-display"><Amount agorot={outlook.next.paymentMinor} presentation="detail" cents="always" currency={loan.currency} size="display" /></p>
-        </div>
-      )}
-        {flagged.length > 0 ? (
-          <div className="ui-page-pad">
-            <Banner
-              icon={<AlertIcon size={20} />}
-              title={flagged.length === 1 ? "תשלום אחד ממתין לבדיקה" : `${String(flagged.length)} תשלומים ממתינים לבדיקה`}
-              hint={<bdi className="ui-num" dir="ltr">{formatDisplay(flagged[0]?.docDate ?? "")}</bdi>}
-              to={`/transactions/${flagged[0]?.transactionId ?? ""}${search}`}
-            />
-          </div>
-        ) : null}
-
-      {outlook == null || ended ? null : (
-        <List>
-          <ListRow
-            variant="item"
-            href={loanHref("future")}
-            title="תשלומים הבאים"
-            hint={inParts(`${aheadLabel(outlook.ahead.payments)} · ${formatLoanMoney(periodTotal(outlook.ahead.totals), loan.currency)}`)}
-            chevron
-          />
-        </List>
-      )}
-
-      <SectionHead title="שולם השנה">
-        {paid.payments > 0 ? <bdi className="ui-num t-amount" dir="ltr">{formatLoanMoney(periodTotal(paid.totals), loan.currency)}</bdi> : null}
-      </SectionHead>
-      {partRows(paid.totals, (item) => { setPart(item); open("part"); })}
-
-      <List className="ui-loan-more">
-        <ListRow
-          variant="item"
-          href={loanHref("details")}
-          title="פרטי הלוואה"
-          hint={inParts(projectName == null ? kindValue(loan) : `${kindValue(loan)} · ${projectName}`)}
-          chevron
-        />
-      </List>
-    </>
-  );
-
-  const detailsView = (
-    <>
-      <ScreenHeader title="פרטי הלוואה" kicker={loan.name} backTo={back} />
-      <ViewerNote />
-        <SectionHead title="פרטים" />
-        <List>
-          {row("kind", "סוג", kindValue(loan), <LoanIcon />, () => { open("kind"); })}
-          {row("rate", "ריבית", <RateValue loan={loan} today={today} />, <PercentIcon />, () => { setRate(null); open("rate"); })}
-          {payment == null || ended ? null : row("payment", "תשלום חודשי", payment, <CalendarIcon />, null)}
-          {row("project", "פרויקט", projectName ?? NO_PROJECT, <ProjectsIcon />, () => { open("project"); })}
-          {row("status", "מצב", statusPill(loan), <InfoIcon size={24} />, () => { open("status"); }, undefined, statusRef)}
-        </List>
-
-        {/* No rate rows yet: the ריבית row above opens קביעת ריבית, so the section waits (mockup B6). */}
-        {shownRates.length > 0 ? (
-          <>
-            <SectionHead title="שינויי ריבית" />
-            <List>
-              {shownRates.map((item) => (
-                holdWrites ? (
-                  <ListRow key={item.id} variant="static" title={<bdi className="ui-num" dir="ltr">{formatDisplay(item.effectiveDate)}</bdi>} meta={<bdi className="ui-num t-amount" dir="ltr">{formatRatePpm(item.annualRatePpm)}</bdi>} />
-                ) : (
-                  <ListRow
-                    key={item.id}
-                    variant="button"
-                    title={<bdi className="ui-num" dir="ltr">{formatDisplay(item.effectiveDate)}</bdi>}
-                    label={`שינוי ריבית מ־${formatDisplay(item.effectiveDate)}, ${formatRatePpm(item.annualRatePpm)}`}
-                    meta={<bdi className="ui-num t-amount" dir="ltr">{formatRatePpm(item.annualRatePpm)}</bdi>}
-                    chevron
-                    onClick={() => { setRate(item); open("rate"); }}
-                  />
-                )
-              ))}
-              <ListRow
-                variant="static"
-                title={<>מההתחלה · <bdi className="ui-num" dir="ltr">{formatDisplay(loan.startDate)}</bdi></>}
-                meta={<bdi className="ui-num t-amount" dir="ltr">{formatRatePpm(loan.annualRatePpm)}</bdi>}
-                tone="muted"
-              />
-            </List>
-            {holdWrites ? null : (
-              <div className="ui-page-pad ui-loan-link">
-                <TextLink chevron={false} onClick={() => { setRate(null); open("rate"); }}>+ קביעת ריבית</TextLink>
-              </div>
-            )}
-          </>
-        ) : null}
-
-        <SectionHead title="קטגוריות לחלקים" />
-        <List>
-          {parts.map((item) => row(item, LOAN_PART_LABEL[item], partCategoryValue(loan, categories, item), PART_ICON[item](), () => { setPart(item); open("part"); }))}
-        </List>
-
-        <SectionHead title="תשלומים">
-          {accrued != null ? (
-            <span className="t-hint">ריבית צבורה היום <bdi className="ui-num" dir="ltr">{formatLoanMoney(accrued, loan.currency)}</bdi></span>
-          ) : null}
-        </SectionHead>
-        {payments.length === 0 ? (
-          <p className="ui-page-pad t-hint">אין עדיין תשלומים משויכים.</p>
-        ) : (
-          <List>
-            {listed.map((item) => (
-              <ListRow
-                key={item.transactionId}
-                variant="item"
-                href={`/transactions/${item.transactionId}${search}`}
-                title={<bdi className="ui-num" dir="ltr">{formatDisplay(item.docDate)}</bdi>}
-                label={`תשלום ${formatDisplay(item.docDate)}, ${formatLoanMoney(item.totalMinor, loan.currency)}${item.needsReview ? ", ממתין לבדיקה" : ""}`}
-                hint={item.needsReview ? "ממתין לבדיקה" : inParts(paymentHint(item, loan))}
-                tone={item.needsReview ? "warning" : undefined}
-                meta={<LoanBalance minor={item.totalMinor} currency={loan.currency} className="t-amount" />}
-                chevron
-              />
-            ))}
-          </List>
-        )}
-        {payments.length > LOAN_PAYMENTS_SHOWN ? (
-          <div className="ui-page-pad ui-loan-link">
-            <TextLink chevron={false} expanded={allPayments} onClick={() => { setAllPayments((value) => !value); }}>
-              {allPayments ? "פחות תשלומים" : <>כל התשלומים (<bdi className="ui-num">{String(payments.length)}</bdi>)</>}
-            </TextLink>
-          </div>
-        ) : null}
-
-        {holdWrites ? null : (
-          <List className="ui-loan-delete">
-            <ListRow variant="danger" title="מחיקת ההלוואה" icon={<TrashIcon />} onClick={() => { open("delete"); }} />
-          </List>
-        )}
-
-    </>
-  );
-
-  const futureView = <LoanFutureView loan={loan} outlook={outlook} back={back} loanPath={loanPath} search={search} />;
-  const periodView = <LoanPeriodView loan={loan} outlook={outlook} period={period} back={back} loanPath={loanPath} search={search} />;
+  const paidTotal = paymentTotals(payments).total;
+  const lastPaid = lastPaymentDate(payments);
+  const termRows: LoanTermRow[] = [
+    { key: "kind", label: "סוג", value: LOAN_KIND_LIST_LABEL[loan.kind], onOpen: holdWrites ? null : () => { open("kind"); } },
+    { key: "rate", label: "ריבית", value: <RateValue loan={loan} today={today} />, onOpen: holdWrites ? null : () => { setRate(null); open("rate"); } },
+    { key: "project", label: "פרויקט", value: projectName ?? NO_PROJECT, onOpen: holdWrites ? null : () => { open("project"); } },
+    { key: "status", label: "סטטוס", value: statusPill(loan), onOpen: holdWrites ? null : () => { open("status"); }, buttonRef: statusRef },
+  ];
+  const topBar = view === "payments"
+    ? <TransactionTopBar fallback={`${loanPath}${search}`} backLabel={loan.name} title={`כל התשלומים · ${wholeMoney(paidTotal, loan.currency)}`} end={null} />
+    : <TransactionTopBar fallback={back} backLabel="הלוואות" title={`${loan.name} · ${wholeMoney(loan.balanceMinor, loan.currency)}`} end={null} />;
 
   return (
     <ViewerScope>
-      <div className="ui-loan-page">
-        {view === "details" ? detailsView : view === "future" ? futureView : view === "period" ? periodView : summaryView}
-
-        {holdWrites ? null : (
+      {topBar}
+      {view === "payments" ? (
+          <LoanPaymentsView loan={loan} payments={payments} projectName={projectName} search={search} />
+        ) : (
+          <div className="ui-loan-page">
+            <ViewerNote />
+            <header className="ui-loan-title">
+              <h1 className="ui-loan-name">{loan.name}</h1>
+              <p className="ui-loan-sub">{loanSubtitle(loan, projectName)}</p>
+            </header>
+            {ended ? (
+              <div className="ui-loan-status">
+                <StatusDot>{statusPill(loan)}</StatusDot>
+                {/* The סטטוס row below goes on the page too; this reopens the same sheet beside the pill. */}
+                {holdWrites ? null : <TextLink size="label" tone="quiet" chevron={false} label="שינוי מצב" onClick={() => { open("status"); }}>שינוי</TextLink>}
+              </div>
+            ) : null}
+            {flagged.length > 0 ? (
+              <Banner
+                icon={<AlertIcon size={20} />}
+                title={flagged.length === 1 ? "תשלום אחד ממתין לבדיקה" : `${String(flagged.length)} תשלומים ממתינים לבדיקה`}
+                hint={<bdi className="ui-num" dir="ltr">{formatDisplay(flagged[0]?.docDate ?? "")}</bdi>}
+                to={`/transactions/${flagged[0]?.transactionId ?? ""}${search}`}
+              />
+            ) : null}
+            {ended ? null : <LoanBalanceCard loan={loan} outlook={outlook} />}
+            {outlook == null || ended ? null : <LoanNextCard loan={loan} outlook={outlook} />}
+            <LoanRowsCard className="ui-loan-terms" rows={termRows} />
+            {loan.rates.length > 0 ? (
+              <LoanRateChangesCard rates={loan.rates} onOpen={holdWrites ? null : (rate) => { setRate(rate); open("rate"); }} />
+            ) : null}
+            <LoanYtdCard loan={loan} paid={paid} categories={categories} onOpenPart={holdWrites ? null : (item) => { setPart(item); open("part"); }} />
+            <LoanRecentCard loan={loan} payments={payments} search={search} loanPath={loanPath} year={today.slice(0, 4)} />
+            {holdWrites ? null : (
+              <button type="button" className="ui-loan-delete" onClick={() => { open("delete"); }}>מחיקת ההלוואה</button>
+            )}
+          </div>
+        )}
+      {holdWrites ? null : (
           <>
             <LoanKindSheet
               loan={loan}
@@ -656,10 +489,10 @@ function LoanDetailReady({
               }}
             />
           </>
-        )}
-      </div>
+      )}
     </ViewerScope>
   );
+
 
   async function deleteLoan() {
     const loanId = loan.id;
@@ -693,15 +526,4 @@ function LoanDetailReady({
       },
     });
   }
-}
-
-/** "11.25% · מ־01/09/2026", the date kept left to right, or "6% · מההתחלה". */
-function RateValue({ loan, today }: { loan: Pick<LoanBundle["loan"], "annualRatePpm" | "rates">; today: string }) {
-  const { ppm, from } = rateInForce(loan, today);
-  return (
-    <>
-      <bdi className="ui-num" dir="ltr">{formatRatePpm(ppm)}</bdi>
-      {from == null ? " · מההתחלה" : <> · מ־<bdi className="ui-num" dir="ltr">{formatDisplay(from)}</bdi></>}
-    </>
-  );
 }

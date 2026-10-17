@@ -31,7 +31,6 @@ export const readRpcs = new Set([
   "list_project_category",
   "list_project_groups",
   "list_review",
-  "list_skipped_review",
   "list_team",
   "list_unpaid",
   "mcp_company_loan_currency",

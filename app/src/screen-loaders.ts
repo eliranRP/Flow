@@ -20,7 +20,6 @@ export const screenLoaders = {
   recurring: () => import("./screens/recurring-screen"),
   invoice: () => import("./screens/invoice-screen"),
   transaction: () => import("./screens/transaction-screen"),
-  split: () => import("./screens/split-screen"),
   settings: () => import("./screens/settings-screen"),
   connections: () => import("./screens/connections-screen"),
   business: () => import("./screens/business-screen"),
