@@ -1,6 +1,12 @@
 /* FLOW-514: the first-time setup (seven steps, welcome, done, the skip sheet). Colours,
  * type, spacing and motion come from design/system/implementation-tokens.css only. */
 
+/* The board's 1.5 reading line and its browser-default ("normal") line, about 1.19 for Rubik. */
+:root {
+  --onb-line-read: calc(1em * 3 / 2);
+  --onb-line-natural: calc(1em * 19 / 16);
+}
+
 /* -- The page: OnboardingFrame (shell.tsx) ----------------------------------------------------- */
 /* The onboarding tile is the board's #7B3FE4, the band token in both themes. Measures are the board's
  * (Onboarding.dc.html); 10px, 14px, 6px and 2px are token steps in calc(). */
@@ -95,13 +101,13 @@
 .ui-onb-title {
   margin: 0;
   color: var(--color-text);
-  line-height: 1.25;
+  line-height: var(--type-name-line);
 }
 
 .ui-onb-lead {
   margin: 0;
   color: var(--color-text-secondary);
-  line-height: 1.5;
+  line-height: var(--onb-line-read);
 }
 
 .ui-onb-foot {
@@ -154,7 +160,7 @@
 }
 
 .ui-onb-form .ui-field-label {
-  line-height: normal;
+  line-height: var(--onb-line-natural);
 }
 
 .ui-onb-form .ui-field-control {
@@ -180,14 +186,14 @@
 .ui-onb-pending {
   margin: 0;
   font-size: var(--type-caption-size);
-  line-height: 1.5;
+  line-height: var(--onb-line-read);
   color: var(--color-text-muted);
 }
 
 /* The basis note under the segments is 12px on the board. */
 .ui-onb-field .ui-onb-note {
   font-size: calc(var(--type-caption-size) - var(--space-1) / 4);
-  line-height: normal;
+  line-height: var(--onb-line-natural);
 }
 
 .ui-onb-error {
@@ -305,7 +311,7 @@
 
 .ui-onb-conn .t-name,
 .ui-onb-conn .t-hint {
-  line-height: normal;
+  line-height: var(--onb-line-natural);
 }
 
 /* The board's connect pills are solid accent with on-accent text, 14/500, padding 0 16. */
@@ -407,7 +413,7 @@
 .ui-steps-seg {
   display: block;
   block-size: var(--space-1);
-  border-radius: calc(var(--space-1) / 2);
+  border-radius: var(--radius-chip);
   background: var(--color-track);
 }
 
@@ -500,14 +506,14 @@
 }
 
 .ui-skip-sheet .ui-sheet-title {
-  line-height: normal;
+  line-height: var(--onb-line-natural);
 }
 
 .ui-skip-body {
   margin: 0;
   color: var(--color-text-secondary);
   font-size: var(--type-line2-size);
-  line-height: 1.5;
+  line-height: var(--onb-line-read);
 }
 
 .ui-setup-error {
