@@ -14,6 +14,10 @@ type CommonProps = {
   hint?: ReactNode;
   /** A small mark after the value, such as the reversal tag. */
   tag?: ReactNode;
+  /** The board's two-line fact row: the label is the bold title and the value the muted line under it. */
+  titled?: boolean;
+  /** A mark at the end of the row, before the chevron and centred on the row (the recurring row's pace). */
+  endTag?: ReactNode;
   /** A line that needs a look: its icon and hint take the warning colour. */
   tone?: "warning";
   /** Replaces the accessible name "label value" when the row needs its own (a loan split names its title). */
@@ -60,13 +64,23 @@ export function IconRow(props: IconRowProps) {
     <>
       <span className="ui-icon-row-icon" aria-hidden="true">{props.icon}</span>
       <span className="ui-icon-row-text">
-        <span className="ui-icon-row-label">{props.label}</span>
-        <span className="ui-icon-row-value-line">
-          <span className={cx("ui-icon-row-value", props.valueTone === "accent" && "ui-icon-row-value-accent")}>{props.value}</span>
-          {props.tag}
-        </span>
+        {props.titled === true ? (
+          <>
+            <span className="ui-icon-row-value">{props.label}</span>
+            <span className="ui-icon-row-hint">{props.value}</span>
+          </>
+        ) : (
+          <>
+            <span className="ui-icon-row-label">{props.label}</span>
+            <span className="ui-icon-row-value-line">
+              <span className={cx("ui-icon-row-value", props.valueTone === "accent" && "ui-icon-row-value-accent")}>{props.value}</span>
+              {props.tag}
+            </span>
+          </>
+        )}
         {props.hint != null ? <span id={hintId} className="ui-icon-row-hint">{props.hint}</span> : null}
       </span>
+      {props.endTag}
     </>
   );
   if (props.action != null) {

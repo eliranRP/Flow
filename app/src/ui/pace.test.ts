@@ -4,7 +4,7 @@ import { paceSheetCopy, paceToast } from "./pace";
 describe("the pace sheet (FLOW-415, FLOW-447c)", () => {
   it("says what לא קבוע does, on the board's words", () => {
     const copy = paceSheetCopy("month", "Bayside Water Utility");
-    expect(copy.choices[0]).toEqual({ value: "never", label: "לא קבוע", description: "לא יופיע בקבועים, בהתראות ובתחזית" });
+    expect(copy.choices[0]).toEqual({ value: "never", label: "לא קבוע", description: "לא יופיע בקבועים" });
     expect(copy.subtitle).toBe("חל על כל התשלומים של Bayside Water Utility");
   });
 

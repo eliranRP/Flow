@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { absAgorot } from "../agorot";
 import { chargeMark, chargesTitle, earlierCharges, partyChangeView, shortMonth, type PartyChangeView } from "../party-charges";
 import { cx } from "./cx";
-import { formatDayMonth } from "./date-math";
+import { formatDayMonth, formatDisplay } from "./date-math";
 import { ChevronIcon } from "./icons";
 import { Sheet } from "./sheet";
 import "./css/38-related-charges.css";
@@ -26,6 +26,7 @@ function ChargeRows({
   typical,
   chevron = true,
   plain = false,
+  longDate = false,
 }: {
   data: PartyCharges;
   charges: PartyCharges["charges"];
@@ -35,6 +36,8 @@ function ChargeRows({
   /** The board's all-charges list has no chevron on its rows; the page's history keeps it. */
   chevron?: boolean;
   plain?: boolean;
+  /** The sheet writes every date with its year (11/09/26); the card under the row keeps day and month. */
+  longDate?: boolean;
 }) {
   const currency = data.party?.currency ?? "ILS";
   const income = data.party?.direction === "income";
@@ -43,7 +46,7 @@ function ChargeRows({
       {charges.map((charge) => {
         const current = !plain && charge.id === data.transaction_id;
         const amount = formatAmountText(absAgorot(charge.amount_minor), currency, { detail: true });
-        const date = formatDayMonth(charge.doc_date);
+        const date = longDate ? formatDisplay(charge.doc_date).replace(/\/\d{2}(\d{2})$/, "/$1") : formatDayMonth(charge.doc_date);
         const mark = typical == null ? null : chargeMark(charge.amount_minor, typical, income);
         const name = `${date}, ${amount}${charge.pending ? ", ממתין" : ""}${current ? ", השורה הזו" : ""}`;
         const body = (
@@ -168,14 +171,13 @@ export function ChargeMonthBars({ months, plain = false }: { months: PartyCharge
   );
 }
 
-/** The sheet's body, as the board draws it: the context, the summary box, then the twelve newest charges with their marks. */
-export function PartyChargesBody({ data, search = "", context }: { data: PartyCharges; search?: string; context: string }) {
+/** The sheet's body, as the board draws it: the summary box, then the twelve newest charges with their marks. */
+export function PartyChargesBody({ data, search = "" }: { data: PartyCharges; search?: string }) {
   const currency = data.party?.currency ?? "ILS";
   const usual = data.typical_amount_minor == null ? null : formatAmountText(absAgorot(data.typical_amount_minor), currency, { detail: true });
   const total = data.charges.reduce((sum, charge) => sum + absAgorot(charge.amount_minor), 0n);
   return (
     <div className="ui-charges">
-      <p className="ui-charges-context t-caption">{context}</p>
       <div className="ui-charges-summary">
         {usual == null ? <span /> : <span>בדרך כלל <bdi dir="ltr">{usual}</bdi></span>}
         <span>
@@ -183,7 +185,7 @@ export function PartyChargesBody({ data, search = "", context }: { data: PartyCh
           <bdi dir="ltr">{formatAmountText(total, currency, { detail: true })}</bdi>
         </span>
       </div>
-      <ChargeRows data={data} charges={data.charges} search={search} typical={data.typical_amount_minor} chevron={false} />
+      <ChargeRows data={data} charges={data.charges} search={search} typical={data.typical_amount_minor} chevron={false} longDate />
     </div>
   );
 }
@@ -205,8 +207,8 @@ export function PartyChargesSheet({
 }) {
   const title = `${data.party?.name ?? ""} · ${data.party?.direction === "income" ? "כל התקבולים" : "כל החיובים"}`;
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title={title} returnFocusRef={returnFocusRef} panelClassName="ui-sheet-tall ui-charges-sheet">
-      <PartyChargesBody data={data} search={search} context={context} />
+    <Sheet open={open} onOpenChange={onOpenChange} title={title} subtitle={context} returnFocusRef={returnFocusRef} panelClassName="ui-sheet-tall ui-charges-sheet">
+      <PartyChargesBody data={data} search={search} />
     </Sheet>
   );
 }

@@ -22,7 +22,7 @@ const pendingMailbox: PartyCharges = {
 };
 
 function Demo({ sample, pending }: { sample: keyof typeof samples; pending: boolean }) {
-  return <PartyChargesBody data={pending ? pendingMailbox : samples[sample]} context="דירת הגפן · חשבונות · 12 האחרונים" />;
+  return <PartyChargesBody data={pending ? pendingMailbox : samples[sample]} />;
 }
 
 const meta = {

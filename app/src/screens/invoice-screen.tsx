@@ -4,7 +4,8 @@ import { absAgorot } from "../agorot";
 import { usePreviewSearch } from "../preview";
 import { Amount } from "../ui/amount";
 import { Button } from "../ui/button";
-import { CheckIcon, ChevronIcon } from "../ui/icons";
+import { CheckIcon } from "../ui/icons";
+import { DocumentCard } from "../ui/document-card";
 import { EmptyState } from "../ui/empty-state";
 import { ScreenState } from "../ui/screen-state";
 import { israelToday } from "../ui/date-math";
@@ -114,14 +115,11 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp }: { s
           </section>
 
           {documentUrl != null ? (
-            <a className="ui-inv-doc" href={documentUrl} target="_blank" rel="noopener noreferrer">
-              <span className="ui-inv-thumb" aria-hidden="true"><span /><span /><span /></span>
-              <span className="ui-inv-doc-copy">
-                <span className="ui-inv-doc-title">{row.doc_number ? `חשבונית #${row.doc_number}` : "החשבונית"}</span>
-                <span className="ui-inv-doc-sub">PDF מ־SUMIT · הקישו לפתיחה</span>
-              </span>
-              <span className="ui-inv-doc-chevron" aria-hidden="true"><ChevronIcon size={18} /></span>
-            </a>
+            <DocumentCard
+              href={documentUrl}
+              title={row.doc_number ? `חשבונית #${row.doc_number}` : "החשבונית"}
+              note="PDF מ־SUMIT · הקישו לפתיחה"
+            />
           ) : null}
 
           {!holdWrites && match == null && !marked ? (

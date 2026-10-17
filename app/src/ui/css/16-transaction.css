@@ -9,7 +9,7 @@
   position: fixed;
   z-index: 15;
   inset-inline: 0;
-  bottom: 0;
+  bottom: var(--tabbar-height);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
@@ -17,10 +17,16 @@
   inline-size: 100%;
   max-inline-size: var(--content-max);
   margin-inline: auto;
-  padding: var(--space-1) calc(var(--space-side) - var(--space-2)) calc(var(--safe-bottom) + var(--space-2));
+  padding: var(--space-1) calc(var(--space-side) - var(--space-2)) var(--space-2);
   /* Transparent until content is under the row, so the hairline never moves the row. */
   border-top: 1px solid transparent;
   background: var(--color-bg);
+}
+
+/* The page keeps the tab bar (as the board does), so the row rests on it. */
+html:not(:has(.ui-tabbar)) .ui-txn-step {
+  bottom: 0;
+  padding-bottom: calc(var(--safe-bottom) + var(--space-2));
 }
 
 .ui-txn-step[data-under] {
@@ -210,10 +216,49 @@
   overflow-wrap: anywhere;
 }
 
-/* The board's fact rows (project, category) are 58px high, the text centred in them. */
+/* The board's fact rows: 60px high, a 22px icon, a 12px label over a 17px regular value (the
+   category and the two-line rows keep a 16px medium title), the cards 16px round. */
+.ui-txn-body :is(.ui-list-inset, .ui-recurring-card) {
+  border-radius: var(--radius-card-tight);
+}
+
 .ui-txn-body .ui-icon-row {
-  min-block-size: 58px;
-  padding-block: var(--space-2);
+  min-block-size: 60px;
+  padding-block: var(--space-3);
+}
+
+.ui-txn-body .ui-icon-row-icon svg {
+  inline-size: 22px;
+  block-size: 22px;
+}
+
+.ui-txn-body .ui-icon-row-text {
+  gap: calc(var(--space-1) * 0.75);
+}
+
+.ui-txn-body :is(.ui-icon-row-label, .ui-icon-row-hint) {
+  font-size: calc(var(--type-caption-size) - 1px);
+  line-height: var(--type-card-line);
+}
+
+.ui-txn-body .ui-icon-row-value {
+  font-size: var(--type-btn-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-card-line);
+}
+
+.ui-txn-body :is(.ui-txn-row-strong, .ui-recurring-card .ui-icon-row) .ui-icon-row-value,
+.ui-txn-body .ui-icon-row-text > .ui-icon-row-value:first-child {
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-2-weight);
+}
+
+.ui-txn-body .ui-inv-doc-title {
+  font-size: var(--type-btn-size);
+}
+
+.ui-txn-body .ui-inv-doc-sub {
+  font-size: calc(var(--type-caption-size) - 1px);
 }
 
 .ui-txn-amount {
@@ -397,4 +442,9 @@
 
 .ui-pick-group + .ui-pick-group {
   margin-top: var(--space-2);
+}
+
+/* board: the split row, last in its card, is 84px high with its two lines centred. */
+.ui-txn-body .ui-txn-row-split {
+  min-block-size: 84px;
 }

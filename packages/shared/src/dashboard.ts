@@ -496,6 +496,8 @@ export const transactionDetailSchema = z
     currency: z.string().regex(/^[A-Z]{3}$/).optional(),
     vat_status: z.string(),
     doc_kind: z.string().optional(),
+    /** The line's document link (a SUMIT PDF or a photo), null or missing when it has none. get_transaction does not send it yet. */
+    document_url: z.string().nullable().optional(),
     source: z.string(),
     pnl_role: z.enum(["project", "shared", "overhead"]).nullable().optional(),
     review_reason: z.string().nullable().optional(),
