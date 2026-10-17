@@ -207,11 +207,11 @@ export function ReviewAllList({
   const ordered = useHeldOrder(rows, (row) => row.id);
   if (rows.length === 0) return <ReviewEmpty search={search} backTo={backTo} />;
   return (
-    <div>
+    <div className="ui-review-all-page">
       {/* FLOW-365: the flat list's title, its count line, and one row per item (no date groups, no avatars). */}
       <ScreenHeader
         title="כל הפריטים לאישור"
-        subtitle={`${String(rows.length)} פריטים מחכים • הקישו על פריט כדי לפתוח אותו`}
+        subtitle={`${String(rows.length)} פריטים מחכים · הקישו על פריט כדי לפתוח אותו`}
         backTo={backTo}
         backText="בית"
       />
@@ -226,7 +226,7 @@ export function ReviewAllList({
   );
 }
 
-/** FLOW-365: a list row. The payee, then "<date> • חשבונית|בנק" (and "חסר פרויקט"), the amount and a chevron. */
+/** FLOW-365: a list row. The payee, then "<date> · חשבונית|בנק" (and "חסר פרויקט"), the amount and a chevron. */
 function ReviewAllRow({ row, href }: { row: ReviewRow; href: string }) {
   const income = row.direction === "income";
   const shown = row.amount_net < 0n ? -row.amount_net : row.amount_net;
@@ -237,7 +237,7 @@ function ReviewAllRow({ row, href }: { row: ReviewRow; href: string }) {
     invoiceDate(row.doc_date),
     row.source === "mercury" ? "בנק" : "חשבונית",
     row.project_id == null ? "חסר פרויקט" : null,
-  ].filter((part): part is string => part != null).join(" • ");
+  ].filter((part): part is string => part != null).join(" · ");
   return (
     <Link className="ui-review-all-row ui-hit" to={href}>
       <span className="ui-review-all-text">

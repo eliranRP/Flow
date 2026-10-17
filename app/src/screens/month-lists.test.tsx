@@ -165,7 +165,7 @@ describe("review list rows (FLOW-365 flat list)", () => {
     />);
     expect(screen.queryAllByRole("group")).toHaveLength(0);
     expect(container.querySelectorAll(".ui-review-all-row")).toHaveLength(3);
-    expect(screen.getByText("3 פריטים מחכים • הקישו על פריט כדי לפתוח אותו")).toBeTruthy();
+    expect(screen.getByText("3 פריטים מחכים · הקישו על פריט כדי לפתוח אותו")).toBeTruthy();
     expect(amountsOf(container)).toEqual(["+$100", "₪250", "₪50"]);
   });
 
@@ -205,7 +205,7 @@ describe("review list row details (FLOW-305, flat list)", () => {
     const { container } = wrap(<ReviewAllList rows={[base]} search="" backTo="/review" />);
     const row = container.querySelector(".ui-review-all-row");
     expect(row?.querySelector(".ui-review-all-title")?.textContent).toBe("Northwind Traders");
-    expect(row?.querySelector(".ui-review-all-meta")?.textContent).toBe("29/09/2026 • בנק");
+    expect(row?.querySelector(".ui-review-all-meta")?.textContent).toBe("29/09/2026 · בנק");
     expect(row?.querySelector(".ui-review-all-amount")?.textContent).toBe("$1,200.50");
     expect(row?.querySelector(".ui-review-all-amount")?.getAttribute("dir")).toBe("ltr");
     expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
@@ -218,7 +218,7 @@ describe("review list row details (FLOW-305, flat list)", () => {
       backTo="/review"
     />);
     const row = container.querySelector(".ui-review-all-row");
-    expect(row?.querySelector(".ui-review-all-meta")?.textContent).toBe("29/09/2026 • חשבונית • חסר פרויקט");
+    expect(row?.querySelector(".ui-review-all-meta")?.textContent).toBe("29/09/2026 · חשבונית · חסר פרויקט");
     expect(row?.querySelector(".ui-review-all-amount")?.textContent).toBe("+₪5,000");
     expect(row?.querySelector(".ui-review-all-amount")?.classList.contains("ui-review-all-in")).toBe(true);
   });
