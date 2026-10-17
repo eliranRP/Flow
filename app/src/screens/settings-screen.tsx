@@ -289,7 +289,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
 
   return (
     <ViewerScope>
-    <div>
+    <div className="ui-settings-page">
       <ScreenHeader title="הגדרות" backTo="/" backText="בית" subtitle={subtitle} />
       <ViewerNote />
       {noCompany ? null : (

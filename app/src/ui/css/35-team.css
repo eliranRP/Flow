@@ -120,3 +120,29 @@
   padding-block: var(--space-6) calc(var(--safe-bottom, 0px) + var(--space-4));
 }
 
+/* The invite sheet (team-sheets.tsx InviteSheet, panelClassName ui-invite-sheet): the board's 44px head,
+   13px label, 12px role note. */
+.ui-invite-sheet .ui-sheet-head > .ui-icon-btn {
+  margin-block: 0;
+}
+
+.ui-invite-sheet .ui-sheet-head > .ui-icon-btn:last-child:not(:first-child) {
+  margin-inline-end: 0;
+}
+
+.ui-invite-sheet .ui-field-label {
+  line-height: var(--type-cents-line);
+}
+
+.ui-invite-sheet .ui-role-choice .ui-row-text {
+  gap: calc(var(--space-1) / 2);
+}
+
+.ui-invite-sheet .ui-role-choice .ui-row-title {
+  line-height: var(--type-cents-line);
+}
+
+.ui-invite-sheet .ui-role-choice .ui-radio-desc {
+  font-size: calc(var(--type-cents-size) + 1px);
+  line-height: var(--type-caption-line);
+}
