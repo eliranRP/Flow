@@ -27,6 +27,8 @@ export type ChoiceSheetProps<T extends string, V extends string = T> = {
    */
   onPick: (choice: T, close: () => void) => void;
   returnFocusRef?: RefObject<HTMLElement | null>;
+  /** A caller's class on the sheet's panel, for a sheet whose board frame differs (the pace sheet). */
+  panelClassName?: string;
 };
 
 /**
@@ -41,6 +43,7 @@ export function ChoiceSheet<T extends string, V extends string = T>({
   saving,
   onPick,
   returnFocusRef,
+  panelClassName,
 }: ChoiceSheetProps<T, V>) {
   // Set by `close`: the save has settled, so Back's popstate must not wait on a stale `saving`.
   const closing = useRef(false);
@@ -60,6 +63,7 @@ export function ChoiceSheet<T extends string, V extends string = T>({
       returnFocusRef={returnFocusRef}
       busy={saving != null}
       onRequestClose={requestSheetClose}
+      panelClassName={panelClassName}
     >
       <div role="radiogroup" aria-label={copy.title} className="ui-choice-sheet">
         {copy.choices.map((choice) => (

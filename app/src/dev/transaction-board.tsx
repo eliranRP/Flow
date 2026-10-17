@@ -59,6 +59,7 @@ export function DevTransactionBoard() {
         sampleMeta={BOARD_BANK_LINE}
         sampleFrom={BOARD_FROM}
         sampleNoFooter
+        sampleUnsigned
       />
     );
   }
@@ -73,6 +74,7 @@ export function DevTransactionBoard() {
           supplier_name: "Harbor Loan Servicing",
           project_name: "Maple Ave • דופלקס להשכרה",
           category_name: "תשלומי הלוואה",
+          source: "mercury",
           amount_gross: -395700n,
           amount_net: -395700n,
           review_status: "approved",
@@ -95,13 +97,14 @@ export function DevTransactionBoard() {
         sampleCharges={loanCharges}
         sampleFrom={BOARD_FROM}
         sampleNoFooter
+        sampleUnsigned
       />
     );
   }
   if (params.get("board") === "recurring") {
     return (
       <TransactionScreen
-        sample={{ ...BOARD_TXN, amount_gross: -124000n, amount_net: -124000n, doc_date: "2026-10-11" }}
+        sample={{ ...BOARD_TXN, amount_gross: -124000n, amount_net: -124000n, doc_date: "2026-10-11", source: "mercury" }}
         sampleSheet={sheetParam(params.get("sheet"))}
         sampleProjects={[{ id: "p1", name: "Elmwood • flip" }]}
         sampleCategories={[{ id: "c1", name: "חומרים" }]}
@@ -119,6 +122,7 @@ export function DevTransactionBoard() {
         sampleCharges={boardCharges}
         sampleFrom={BOARD_FROM}
         sampleNoFooter
+        sampleUnsigned
       />
     );
   }

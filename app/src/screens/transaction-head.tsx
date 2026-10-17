@@ -42,11 +42,14 @@ export function TxnHead({
   party,
   moneyIn,
   meta,
+  unsigned = false,
 }: {
   txn: NonNullable<TransactionDetail>;
   party: string;
   moneyIn: boolean;
   meta: TxnMeta | undefined;
+  /** The board's frames draw the header figure without its minus (a story or proof opt-in). */
+  unsigned?: boolean;
 }) {
   const status = txnStatus(txn);
   const direction = moneyIn ? "הכנסה" : "הוצאה";
@@ -61,7 +64,7 @@ export function TxnHead({
       )}
       <p className="t-name ui-txn-supplier ui-party">{party}</p>
       <p className="t-detail ui-txn-amount">
-        <Amount agorot={absAgorot(txn.amount_net)} presentation="detail" currency={txn.currency} direction={moneyIn ? "income" : "expense"} income={moneyIn} size="display" />
+        <Amount agorot={absAgorot(txn.amount_net)} presentation="detail" currency={txn.currency} direction={unsigned ? undefined : moneyIn ? "income" : "expense"} income={moneyIn} size="display" />
       </p>
       <p className="t-meta ui-txn-meta">
         <span className="ui-nowrap"><bdi dir="ltr">{formatDisplay(txn.doc_date)}</bdi> · {direction} · {txnSourceLabel(txn.source, bankMatched)}</span>

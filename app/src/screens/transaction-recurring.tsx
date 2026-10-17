@@ -174,6 +174,7 @@ export function TxnRecurring({
         value={choice}
         saving={saving}
         returnFocusRef={paceRow}
+        panelClassName="ui-pace-sheet"
         onPick={(next, close) => {
           if (write.isPending || (sample === undefined && blocked())) return;
           if (next === choice) {
