@@ -586,8 +586,12 @@ test("categories filter, hide, merge, and create", async ({ page }) => {
   await page.getByRole("button", { name: /מוסתרות/ }).click();
   await page.getByRole("button", { name: /^ישנה/ }).click();
   await page.getByRole("button", { name: "החזרה לרשימה" }).click();
-  await page.getByRole("dialog", { name: "להחזיר את הקטגוריה לרשימה?" }).getByRole("button", { name: "החזרה לרשימה", exact: true }).click();
+  const unhide = page.getByRole("dialog", { name: "להחזיר את הקטגוריה לרשימה?" });
+  await unhide.getByRole("button", { name: "החזרה לרשימה", exact: true }).click();
+  // The preview guard blocks the write: the confirm stays open with the blocked-write toast, and nothing moves.
   await toast(page, previewToast);
+  await unhide.getByRole("button", { name: "ביטול" }).click();
+  await expect(unhide).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^ישנה/ })).toBeVisible();
   await page.getByRole("button", { name: /^חומרים/ }).click();
   await page.getByRole("button", { name: "העברה לקטגוריה אחרת" }).click();
