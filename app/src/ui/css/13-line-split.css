@@ -228,11 +228,6 @@
   align-self: center;
 }
 
-.ui-lsplit-clear {
-  display: flex;
-  margin: var(--space-4) var(--space-side) 0;
-}
-
 .ui-lsplit-clear-link {
   color: var(--color-bad);
 }
