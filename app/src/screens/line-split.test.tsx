@@ -67,13 +67,11 @@ describe("split by category editor (FLOW-325)", () => {
     expect(screen.getByRole("heading", { name: "פיצול" })).toBeInTheDocument();
     fireEvent.click(addPart());
     const categorySheet = await screen.findByRole("dialog", { name: /^(בחירת קטגוריה|קטגוריה לחלק \d+)$/ });
+    // A part's list is compact (FLOW-922): a tap picks, so the category tap moves straight on to the project list.
     fireEvent.click(within(categorySheet).getByRole("radio", { name: "חשמל" }));
-    fireEvent.click(within(categorySheet).getByRole("button", { name: "שמירה" }));
-    // The category pick moves straight on to the project list.
     const projectSheet = await screen.findByRole("dialog", { name: /^(בחירת פרויקט|פרויקט לחלק \d+)$/ });
-    expect(within(projectSheet).getByRole("radio", { name: "פרויקט גבעתיים · פרויקט השורה" })).toBeInTheDocument();
+    expect(within(projectSheet).getByRole("radio", { name: "פרויקט גבעתיים" })).toBeInTheDocument();
     fireEvent.click(within(projectSheet).getByRole("radio", { name: "פרויקט הרצליה" }));
-    fireEvent.click(within(projectSheet).getByRole("button", { name: "שמירה" }));
     // Two sheets close one after the other (each waits out --motion-sheet-out); under a loaded
     // full run that took longer than waitFor's 1s default (FLOW-363 2b gate), so allow 3s.
     await waitFor(() => { expect(screen.queryByRole("dialog")).toBeNull(); }, { timeout: 3000 });
@@ -131,13 +129,12 @@ describe("split by category editor (FLOW-325)", () => {
     // FLOW-333 C3c: on a refund line the reversal section starts open.
     expect(within(sheet).getByRole("button", { name: "החזר מספק" })).toHaveAttribute("aria-expanded", "true");
     fireEvent.click(within(sheet).getByRole("radio", { name: "קבלני משנה" }));
-    fireEvent.click(within(sheet).getByRole("button", { name: "שמירה" }));
     const projects = await screen.findByRole("dialog", { name: /^(בחירת פרויקט|פרויקט לחלק \d+)$/ });
     expect(within(projects).getByText("חלק החזר צריך פרויקט.")).toBeInTheDocument();
     expect(within(projects).queryByRole("radio", { name: /פרויקט השורה/ })).toBeNull();
   });
 
-  it("a reversal part in a kept-out category shows its own category checked, and שמירה waits for a change (FLOW-325, 0138, FLOW-831)", async () => {
+  it("a reversal part in a kept-out category shows its own category checked, and the list has no שמירה (FLOW-325, 0138, FLOW-922)", async () => {
     showEditor({
       line: SAMPLE_REFUND_LINE,
       categories: [...SAMPLE_SPLIT_CATEGORIES, { id: "c-owner", name: "משיכות בעלים", kind: "expense", hidden: false, excluded_from_pnl: true }],
@@ -149,7 +146,7 @@ describe("split by category editor (FLOW-325)", () => {
     // Keeping the line's project without a project pick is covered by the reversalNeedsProject tests in src/line-split.test.ts.
     const categorySheet = await screen.findByRole("dialog", { name: /^(בחירת קטגוריה|קטגוריה לחלק \d+)$/ });
     expect(within(categorySheet).getByRole("radio", { name: "משיכות בעלים" })).toBeChecked();
-    expect(within(categorySheet).getByRole("button", { name: "שמירה" })).toBeDisabled();
+    expect(within(categorySheet).queryByRole("button", { name: "שמירה" })).toBeNull();
   });
 
   it("shows the over amount in the footer and on the part edited last, once (FLOW-333 C5)", async () => {
@@ -188,14 +185,13 @@ describe("split by category editor (FLOW-325)", () => {
     fireEvent.click(addPart());
     const categorySheet = await screen.findByRole("dialog", { name: /^(בחירת קטגוריה|קטגוריה לחלק \d+)$/ });
     fireEvent.click(within(categorySheet).getByRole("radio", { name: "ביטוח" }));
-    fireEvent.click(within(categorySheet).getByRole("button", { name: "שמירה" }));
     // The project sheet is asked for again before each step: the category sheet's close swaps the
     // page under it, so a sheet element held from the first find can be detached when clicked.
     const projectSheet = () => screen.getByRole("dialog", { name: /^(בחירת פרויקט|פרויקט לחלק \d+)$/ });
-    await waitFor(() => { expect(within(projectSheet()).getByRole("radio", { name: "פרויקט גבעתיים · פרויקט השורה" })).toBeInTheDocument(); });
-    expect(within(projectSheet()).queryByRole("radio", { name: "פרויקט גבעתיים" })).toBeNull();
+    await waitFor(() => { expect(within(projectSheet()).getByRole("radio", { name: "פרויקט גבעתיים" })).toBeInTheDocument(); });
+    // The line's project is one row in project order, not a second top row (FLOW-922).
+    expect(within(projectSheet()).getAllByRole("radio", { name: "פרויקט גבעתיים" })).toHaveLength(1);
     fireEvent.click(within(projectSheet()).getByRole("radio", { name: "פרויקט הרצליה" }));
-    fireEvent.click(within(projectSheet()).getByRole("button", { name: "שמירה" }));
     // Two sheets close one after the other (each waits out --motion-sheet-out), so allow 3s.
     await waitFor(() => { expect(screen.queryByRole("dialog")).toBeNull(); }, { timeout: 3000 });
     // A new part is in ₪ (the amount), so the focus lands on its amount field.
@@ -330,6 +326,33 @@ describe("split by category editor (FLOW-325)", () => {
     expect(within(sheet).getByRole("radio", { name: "פרויקט הרצליה" })).toBeDisabled();
     expect(within(sheet).getByText("כבר בפיצול עם חשמל")).toBeInTheDocument();
     expect(within(sheet).getByRole("radio", { name: "פרויקט רעננה" })).toBeEnabled();
+  });
+
+  it("a part's picker lists the line's project as a normal row in project order, and picking it makes the part follow the line (FLOW-922)", async () => {
+    showEditor({
+      parts: [
+        { key: "a", categoryId: "c-elec", projectId: "p-herz", unit: "amount", value: "100" },
+        { key: "b", categoryId: "c-ins", projectId: "p-raan", unit: "amount", value: "200" },
+      ],
+      target: { partKey: "a", kind: "project" },
+    });
+    const sheet = await screen.findByRole("dialog", { name: "פרויקט לחלק 1" });
+    const rows = within(sheet).getAllByRole("radio");
+    // The sample's project order: Herzliya, Raanana, Givatayim (the line's), Office.
+    expect(rows.map((row) => row.textContent)).toEqual([
+      expect.stringContaining("פרויקט הרצליה"),
+      expect.stringContaining("פרויקט רעננה"),
+      expect.stringContaining("פרויקט גבעתיים"),
+      expect.stringContaining("משרד"),
+    ]);
+    expect(rows[2]).toHaveTextContent("הפרויקט של השורה · מקבל את השאר");
+    expect(within(sheet).queryByRole("button", { name: "שמירה" })).toBeNull();
+    fireEvent.click(rows[2] as HTMLElement);
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    // A part that follows the line shows the line's project with the line's mark.
+    expect(screen.getByRole("button", { name: /^פרויקט גבעתיים · פרויקט השורה, פרויקט, שינוי/ })).toBeInTheDocument();
   });
 
   it("switching % to ₪ before any preview keeps the money: the line × percent", () => {

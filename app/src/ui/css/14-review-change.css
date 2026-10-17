@@ -169,6 +169,31 @@
   border-bottom: 0;
 }
 
+/* FLOW-922: a compact part list is the board's sheet: 52px rows, 8px apart, no inner padding above or below. */
+.ui-change-picker.ui-choice-sheet [role="radiogroup"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-change-picker.ui-choice-sheet {
+  margin-block-end: var(--space-2);
+}
+
+/* The board's compact sheet has a 44px title row (the ✕'s own height), not the 26px title. */
+.ui-sheet-compact .ui-sheet-head {
+  min-block-size: var(--touch-min);
+}
+
+.ui-change-picker.ui-choice-sheet .ui-radio-row {
+  min-block-size: 52px;
+  padding-block: 0;
+}
+
+.ui-change-picker.ui-choice-sheet .ui-radio-desc {
+  line-height: var(--type-cents-line);
+}
+
 .ui-change-links .ui-text-link {
   gap: var(--space-2);
   justify-content: flex-start;

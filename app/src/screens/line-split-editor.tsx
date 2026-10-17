@@ -287,8 +287,10 @@ export function LineSplitEditor({
   // A part's own category stays listed even when kept out, so its project can be changed without losing it.
   const reversals: ChangeChoice[] = target?.kind === "rest" ? [] : reversalChoices(categories, line.direction, targetPart?.categoryId || line.categoryId);
   // FLOW-333 C9: unless a project is required, the top row already stands for the line's project.
-  const pickerProjects = pickerReversal || line.projectId == null ? projects : projects.filter((project) => project.id !== line.projectId);
-  const pickerProjectId = !pickerReversal && pickerProject === line.projectId ? "" : pickerProject;
+  // FLOW-922: a split part's picker lists the line's project as a normal row, in project order (a part with no project is the line's).
+  const lineRow = targetPart != null && !pickerReversal && line.projectId != null;
+  const pickerProjects = pickerReversal || line.projectId == null || lineRow ? projects : projects.filter((project) => project.id !== line.projectId);
+  const pickerProjectId = lineRow ? (pickerProject === "" ? line.projectId ?? "" : pickerProject) : !pickerReversal && pickerProject === line.projectId ? "" : pickerProject;
 
   // FLOW-922: a split part's picker says which pairs other parts already use, and what the line keeps.
   const partNo = targetPart != null ? parts.findIndex((part) => part.key === targetPart.key) + 1 : 0;
@@ -297,7 +299,7 @@ export function LineSplitEditor({
   const takenCategory = (categoryId: string) => targetPart != null && otherPairs != null && otherPairs.has(pairKey(categoryId, targetPart.projectId, ctx));
   const pickerNotes = targetPart == null ? undefined : {
     project: Object.fromEntries<string>([
-      ...(line.projectId != null && !pickerReversal ? [["", PART_LINE_PROJECT_NOTE] as [string, string]] : []),
+      ...(lineRow && line.projectId != null ? [[line.projectId, PART_LINE_PROJECT_NOTE] as [string, string]] : []),
       ...projects.filter((project) => takenProject(project.id)).map((project): [string, string] => [project.id, partTakenNote(categoryName(targetPart.categoryId) ?? "")]),
     ]),
     category: Object.fromEntries<string>(
@@ -336,7 +338,8 @@ export function LineSplitEditor({
   }
 
   function pickProject(id: string) {
-    const projectId = id === "" ? null : id;
+    // A part's line project is stored as no project: the part follows the line.
+    const projectId = id === "" || (lineRow && id === line.projectId) ? null : id;
     if (target?.kind === "rest") {
       setRest((value) => ({ ...value, projectId }));
       return;
@@ -367,7 +370,7 @@ export function LineSplitEditor({
         : line.reviewBlocked ? "line has an open review" : null;
 
   const dateShort = line.docDate ? `${line.docDate.slice(8, 10)}/${line.docDate.slice(5, 7)}` : "";
-  const meta = [line.direction === "income" && line.categoryId != null && isReversal(categories, line.categoryId, "income") ? "החזר" : null, line.supplier, dateShort, line.categoryName].filter(Boolean);
+  const meta = [line.direction === "income" && line.categoryId != null && isReversal(categories, line.categoryId, "income") ? "החזר" : null, line.categoryName, line.supplier, dateShort].filter(Boolean);
   const restCategory = categoryName(rest.categoryId);
   const restProject = rest.projectId == null ? (line.projectName ?? "בלי פרויקט") : (projectName(rest.projectId) ?? "פרויקט");
   const restDuplicate = check.restDuplicate;
@@ -416,7 +419,7 @@ export function LineSplitEditor({
     ? <>{"חולק יותר מהסכום ב־"}<Amount minor={check.overMinor} currency={currency} /></>
     : parts.length === 0
       ? "הוסיפו חלק כדי לפצל. מה שלא פוצל נשאר בשורה."
-      : <>{"חולק "}{splitShown == null ? "…" : <Amount minor={splitShown} currency={currency} />}{" · נשאר "}{restShown == null ? "…" : <Amount minor={restShown} currency={currency} />}</>;
+      : <>{"חולק "}{splitShown == null ? "…" : <Amount minor={splitShown} currency={currency} cents />}{" · נשאר "}{restShown == null ? "…" : <Amount minor={restShown} currency={currency} cents />}</>;
 
   return (
     <>
@@ -618,7 +621,7 @@ export function LineSplitEditor({
             </span>
             <span className="ui-lsplit-rest-amount">
               {restShown != null
-                ? <Amount minor={restShown} currency={currency} />
+                ? <Amount minor={restShown} currency={currency} cents />
                 : pending ? "…" : <Amount minor={lineMinor} currency={currency} />}
             </span>
           </button>
@@ -667,7 +670,8 @@ export function LineSplitEditor({
         onCategoryId={pickCategory}
         onCommitPick={() => Promise.resolve(undefined)}
         chainProject
-        noProjectLabel={pickerReversal ? undefined : partProjectLabel(null, line.projectName)}
+        noProjectLabel={pickerReversal || lineRow ? undefined : partProjectLabel(null, line.projectName)}
+        compact={targetPart != null}
         projectNote={pickerReversal ? lineSplitCopy("a reversal part needs a project") : undefined}
         hideSplitLink
         returnFocusRef={pickerOpener}

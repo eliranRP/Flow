@@ -43,8 +43,10 @@ export function money(minor: bigint, currency: string): string {
   return formatAmountText(minor, currency, { detail: true });
 }
 
-export function Amount({ minor, currency, className }: { minor: bigint; currency: string; className?: string }) {
-  return <bdi className={className ? `ui-num ${className}` : "ui-num"} dir="ltr">{money(minor, currency)}</bdi>;
+/** `cents`: a caption figure keeps ".00" on a whole amount, as the board's "$8,000.00" and "$0.00" do. */
+export function Amount({ minor, currency, className, cents = false }: { minor: bigint; currency: string; className?: string; cents?: boolean }) {
+  const text = cents ? formatAmountText(minor, currency, { detail: true, keepZeroCents: true }) : money(minor, currency);
+  return <bdi className={className ? `ui-num ${className}` : "ui-num"} dir="ltr">{text}</bdi>;
 }
 
 export function partProjectLabel(projectName: string | null | undefined, lineProject: string | null): string {
