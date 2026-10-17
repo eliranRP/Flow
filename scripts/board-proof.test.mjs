@@ -8,6 +8,7 @@ import {
   mismatchPercent,
   parseArgs,
   proofFileName,
+  appRenderProblem,
   proofPlan,
   readFrameMap,
 } from "./board-proof.mjs";
@@ -99,4 +100,11 @@ test("counts a pixel as different when a channel is more than the tolerance apar
 
 test("refuses two images of different sizes", () => {
   assert.throws(() => mismatchPercent([0, 0, 0, 255], [0, 0, 0, 255, 0, 0, 0, 255], 16), /differ in size/);
+});
+
+test("refuses an app that logged no routes matched or drew nothing in #root", () => {
+  assert.equal(appRenderProblem(["some warning"], true), null);
+  assert.match(appRenderProblem(["Warning: No routes matched location \"/e2e/cash\""], true), /No routes matched/);
+  assert.match(appRenderProblem([], false), /#root is empty/);
+  assert.match(appRenderProblem(["No routes matched"], false), /No routes matched/);
 });

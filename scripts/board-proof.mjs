@@ -220,6 +220,24 @@ async function proofInBrowser(input) {
   };
 }
 
+/** The router's message for a route no <Route> matches: the build has no such dev route. */
+const NO_ROUTE_MESSAGE = "No routes matched";
+
+/**
+ * Whether the app drew the route. A build without the dev routes logs "No routes matched" and leaves #root
+ * empty; a proof of that screen would be a fake number, so the run refuses it.
+ * @param {string[]} logs the page's console and page error messages
+ * @param {boolean} rootHasContent whether #root has any child element once the screen settled
+ * @returns {string | null} the reason the app did not render, or null when it did
+ */
+export function appRenderProblem(logs, rootHasContent) {
+  if (logs.some((line) => line.includes(NO_ROUTE_MESSAGE))) {
+    return "the page logged \"No routes matched\": this build has no dev routes";
+  }
+  if (!rootHasContent) return "#root is empty after the screen settled";
+  return null;
+}
+
 /**
  * Runs in the page: waits for every finite animation and transition (a sheet's scrim fade, say) to finish,
  * so the shot shows the settled screen. Endless ones (spinners) are skipped. Gives up after 3 s.
@@ -278,8 +296,16 @@ async function main(argv) {
         colorScheme: shot.theme,
       });
       const page = await context.newPage();
+      const logs = /** @type {string[]} */ ([]);
+      page.on("console", (message) => logs.push(message.text()));
+      page.on("pageerror", (error) => logs.push(String(error)));
       await page.goto(new URL(shot.route, options.base).toString(), { waitUntil: "networkidle" });
       await page.evaluate(settleAnimations);
+      const problem = appRenderProblem(logs, await page.evaluate(() => (document.querySelector("#root")?.childElementCount ?? 0) > 0));
+      if (problem !== null) {
+        await context.close();
+        throw new Error(`${shot.frame} ${shot.theme}: the app did not draw ${shot.route}: ${problem}. Build the proof app with scripts/board-proof-build.sh and serve it at --base`);
+      }
       const appPng = await page.screenshot({ fullPage: false });
       const textRects = await page.evaluate(collectTextRects);
       await context.close();
