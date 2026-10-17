@@ -88,7 +88,7 @@ function renderAt(path: string) {
       <Routes>
         <Route path="/" element={<HomeScreen />} />
         <Route path="/projects" element={<ProjectsScreen />} />
-        <Route path="/projects/:projectId" element={<ProjectDetailScreen section="profit" />} />
+        <Route path="/projects/:projectId" element={<ProjectDetailScreen section="expenses" />} />
         <Route path="/review" element={<ReviewScreen />} />
         <Route path="/review/change" element={<ChangeForm />} />
         <Route path="/unpaid" element={<UnpaidScreen />} />

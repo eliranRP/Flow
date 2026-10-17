@@ -152,11 +152,6 @@
   padding-block: calc(var(--space-1) + var(--space-1) / 2);
 }
 
-.ui-project-card-more {
-  margin: 0;
-  padding: var(--space-2) var(--space-card-inset);
-}
-
 /* The board draws a figure's cents at the figure's size. */
 .ui-project-figures .ui-num-cents {
   font-size: inherit;

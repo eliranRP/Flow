@@ -196,23 +196,6 @@ test("the split-by-category stories stay inside 320 and 390, light and dark (FLO
   expect(failures, failures.join("\n")).toEqual([]);
 });
 
-test("the closed period picker is only the band and the on-band pill", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/iframe.html?id=components-periodpicker--closed&globals=theme:light&viewMode=story", { waitUntil: "domcontentloaded" });
-  await page.locator(".ui-band-period").waitFor();
-  await expect(page.locator("[role=dialog]")).toHaveCount(0);
-  await expect(page.locator("[data-vaul-overlay]")).toHaveCount(0);
-  await expect(page.locator(".ui-band-label")).toHaveCount(0);
-  const paint = await page.locator(".ui-band-period").evaluate((el) => {
-    const style = getComputedStyle(el);
-    return { background: style.backgroundColor, color: style.color };
-  });
-  expect(paint.background).toBe("rgb(255, 255, 255)");
-  expect(paint.color).toBe("rgb(29, 23, 40)");
-  const clipped = await page.locator(".ui-band").evaluate((el) => el.getBoundingClientRect().top < -1);
-  expect(clipped).toBe(false);
-});
-
 test("long hebrew and large amount stories stay inside 390 and 320", async ({ page }) => {
   test.setTimeout(180_000);
   const index = (await (await page.request.get("/index.json")).json()) as StoryIndex;
@@ -317,7 +300,6 @@ test("sheet titles stay on screen at 320 and 390", async ({ page }) => {
   const cases = [
     ["screens-routes--change-sheet", "שינוי שיוך"],
     ["screens-routes--change-project-picker", "בחירת פרויקט"],
-    ["components-periodpicker--range", "טווח מותאם"],
   ] as const;
   const viewports = [
     { width: 320, height: 693 },
@@ -417,28 +399,6 @@ test("change sheet picks a project and a category without a summary save", async
   await expect(page.getByRole("button", { name: "קטגוריה: הובלה, שינוי" })).toBeVisible();
   await expect(page.getByRole("button", { name: "שמירה ואישור" })).toHaveCount(0);
   await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();
-});
-
-// FLOW-351: the Open story draws the shared sheet, whose whole-period row is הכול.
-test("the whole-period option stays inside the sheet and nothing uses a native title", async ({ page }) => {
-  const viewports = [
-    { width: 320, height: 693 },
-    { width: 390, height: 844 },
-  ] as const;
-  for (const viewport of viewports) {
-    await page.setViewportSize(viewport);
-    await page.goto("/iframe.html?id=components-periodpicker--open&viewMode=story", { waitUntil: "domcontentloaded" });
-    const option = page.getByRole("radio", { name: "הכול" });
-    await expect(option).toBeVisible();
-    await expect(async () => {
-      const box = await option.boundingBox();
-      expect(box, `הכול at ${String(viewport.width)}`).not.toBeNull();
-      if (!box) return;
-      expect(box.y, `option top at ${String(viewport.width)}`).toBeGreaterThanOrEqual(0);
-      expect(box.y + box.height, `option bottom at ${String(viewport.width)}`).toBeLessThanOrEqual(viewport.height);
-    }).toPass();
-    expect(await page.locator("#storybook-root [title]").count()).toBe(0);
-  }
 });
 
 test("loading band skeletons stay inside the gutter and do not touch", async ({ page }) => {

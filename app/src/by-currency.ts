@@ -68,17 +68,6 @@ export function projectRows(project: ProjectRow | NonNullable<ProjectDetail>, em
   return rows;
 }
 
-/**
- * FLOW-339: what a band's label calls its figures. A loss in one currency and a profit in another
- * is "mixed", so the label can name both instead of reading רווח over a loss.
- */
-export function profitSign(profits: readonly bigint[]): "profit" | "loss" | "mixed" {
-  const loss = profits.some((profit) => profit < 0n);
-  const gain = profits.some((profit) => profit > 0n);
-  if (loss && gain) return "mixed";
-  return loss ? "loss" : "profit";
-}
-
 export function projectExpenseMinor(row: ProjectCurrencyRow): bigint {
   const raw = row.direct_minor + row.shared_minor;
   return raw < 0n ? -raw : raw;

@@ -45,7 +45,6 @@
       "screens/projects-screen.tsx",
       "screens/project-detail-screen.tsx",
       "screens/project-menu.tsx",
-      "screens/profit-months.tsx",
       "screens/transaction-screen.tsx",
       "screens/line-split.tsx",
       "screens/unpaid-screen.tsx",
@@ -180,7 +179,7 @@
     ],
     "period-swipe.spec.ts": [
       "screens/HomeScreen.tsx",
-      "screens/project-detail-screen.tsx"
+      "screens/home-parts.tsx"
     ],
     "phone-flows.spec.ts": [
       "screens/HomeScreen.tsx",
@@ -276,7 +275,6 @@
     ],
     "cash-lines.spec.ts": [
       "screens/cash-lines-screen.tsx",
-      "screens/cash-screens.tsx",
       "dev/routes/",
       "cash.ts"
     ],
@@ -313,10 +311,6 @@
         "/e2e/cash?preview=1": [
           "screens/HomeScreen.tsx",
           "dev/routes/home.tsx#DevCash"
-        ],
-        "/e2e/cash-month?preview=1": [
-          "screens/cash-screens.tsx",
-          "dev/routes/home.tsx#DevCashMonth"
         ],
         "/e2e/cash-lines?preview=1": [
           "screens/cash-lines-screen.tsx",
@@ -369,10 +363,6 @@
           "screens/project-detail-screen.tsx",
           "screens/project-menu.tsx",
           "dev/routes/projects.tsx#DevProjectDetail"
-        ],
-        "/e2e/project-months?preview=1": [
-          "screens/profit-months.tsx",
-          "dev/routes/projects.tsx#DevProjectMonths"
         ],
         "/transactions/1?preview=1": [
           "screens/transaction-screen.tsx"
@@ -481,10 +471,6 @@
     "project-open.spec.ts": [
       "screens/projects-screen.tsx",
       "screens/project-detail-screen.tsx"
-    ],
-    "project-history-open.spec.ts": [
-      "screens/project-detail-screen.tsx",
-      "screens/project-cash-history.tsx"
     ],
     "project-reopen.spec.ts": [
       "screens/projects-screen.tsx",

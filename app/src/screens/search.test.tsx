@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { Link, MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readTxnList } from "../txn-nav";
-import { SearchEntry } from "../ui/search-entry";
+import { SEARCH_FOCUS_STATE } from "../ui/search-entry";
 import { BooksProvider } from "../use-books";
 import { resetSearchMemory, SearchScreen, searchRowDetails } from "./search";
 
@@ -93,7 +93,7 @@ function wrap(entry: string | { pathname: string; search?: string; state?: unkno
           <Routes>
             <Route path="/search" element={<SearchScreen />} />
             <Route path="/transactions/:id" element={<Where />} />
-            <Route path="/" element={<SearchEntry to="/search" />} />
+            <Route path="/" element={<Link to="/search" state={SEARCH_FOCUS_STATE} aria-label="חיפוש תנועות">חיפוש</Link>} />
           </Routes>
         </MemoryRouter>
       </BooksProvider>

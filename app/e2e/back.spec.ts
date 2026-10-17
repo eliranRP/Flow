@@ -68,21 +68,6 @@ test("each screen returns to where it was opened, and a fresh visit uses its par
   }
 });
 
-test("the period sheet closes on browser back and on its own close", async ({ page }) => {
-  await page.goto("/e2e/project");
-  await page.goto("/e2e/project-detail?preview=1&section=profit");
-  await page.getByRole("button", { name: /בחירת תקופה$/ }).click();
-  await expect(page.getByRole("dialog", { name: "תקופה" })).toBeVisible();
-  await page.goBack();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page).toHaveURL(/section=profit/);
-  await page.getByRole("button", { name: /בחירת תקופה$/ }).click();
-  await page.getByRole("button", { name: "סגירה" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-  await page.goBack();
-  await expect(page).toHaveURL(/\/e2e\/project$/);
-});
-
 test("the SUMIT page returns to Connections on browser back and on its Back link", async ({ page }) => {
   await page.goto("/settings/connections?preview=1");
   await page.getByRole("link", { name: /^SUMIT/ }).click();

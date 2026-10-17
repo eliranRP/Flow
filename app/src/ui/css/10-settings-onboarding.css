@@ -338,11 +338,6 @@
   background: var(--color-tint-pressed);
 }
 
-.ui-page-period {
-  background: var(--color-tint);
-  color: var(--color-accent-text);
-}
-
 .ui-period-chevron {
   display: inline-flex;
   color: var(--color-accent-text);

@@ -27,9 +27,9 @@ async function figureRow(page: Page) {
 
 test("a swipe right on the figure goes to the earlier window, left comes back, and the edge and a vertical move do nothing", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "CDP touch events");
-  await page.goto("/e2e/project-detail?preview=1&section=profit");
-  // FLOW-355: the band has one period pill and no arrows; the pill names the window.
-  const label = page.getByRole("button", { name: /בחירת תקופה/ });
+  await page.goto("/e2e/cash?preview=1");
+  // The band names the month on its pill; the swipe steps it.
+  const label = page.locator(".ui-band-month-name");
   const current = await label.textContent();
   const cdp = await page.context().newCDPSession(page);
   const row = await figureRow(page);
@@ -56,25 +56,11 @@ test("a swipe right on the figure goes to the earlier window, left comes back, a
   await expect(label).toHaveText(current ?? "");
 });
 
-test("Project profit page: a swipe right on the profit steps the project's own period", async ({ page, browserName }) => {
-  test.skip(browserName !== "chromium", "CDP touch events");
-  // FLOW-419: the project opens on its cash; the profit and its period live on the profit page.
-  await page.goto("/e2e/project-detail?preview=1&section=profit");
-  // FLOW-438: the pill sits by the title on the white page; it names the window the swipe moved to.
-  const pill = page.getByRole("button", { name: /בחירת תקופה$/ });
-  await expect(pill).toBeVisible();
-  const before = await pill.textContent();
-  const cdp = await page.context().newCDPSession(page);
-  const row = await figureRow(page);
-  await touchSwipe(cdp, { x: 80, y: row.y }, { x: 280, y: row.y });
-  await expect(pill).not.toHaveText(before ?? "");
-});
-
 test("Reduced motion: the figure stays put during the drag and the period swaps on release", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "CDP touch events");
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/e2e/project-detail?preview=1&section=profit");
-  const label = page.getByRole("button", { name: /בחירת תקופה/ });
+  await page.goto("/e2e/cash?preview=1");
+  const label = page.locator(".ui-band-month-name");
   const current = await label.textContent();
   const cdp = await page.context().newCDPSession(page);
   const row = await figureRow(page);

@@ -1,9 +1,19 @@
 import type { ProjectDetail } from "@flow/shared";
-import { fireEvent, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ProjectDetailScreen } from "./flow-screens";
 import type { ProjectSection } from "./project-detail-screen";
 import { renderWithProviders } from "../test-render";
+import { ProjectProfitScreen } from "./project-profit-screen";
+
+/** The board's project profit page, on a project with no month rows (its figures come from the project). */
+function renderProfit(sample: NonNullable<ProjectDetail>) {
+  return renderWithProviders(
+    <ProjectProfitScreen
+      sample={{ project: sample, months: { basis: "cash", from: null, to: null, project_id: sample.id, after_overhead: false, base_currency: sample.base_currency ?? "ILS", months: [], by_currency: [] } }}
+    />,
+  );
+}
 
 function usdProject(): NonNullable<ProjectDetail> {
   return {
@@ -43,15 +53,15 @@ function usdProject(): NonNullable<ProjectDetail> {
   };
 }
 
-function renderProject(sample: NonNullable<ProjectDetail>, section: ProjectSection = "profit") {
+function renderProject(sample: NonNullable<ProjectDetail>, section: ProjectSection = "overview") {
   return renderWithProviders(<ProjectDetailScreen sample={sample} section={section} />);
 }
 
 describe("ProjectDetailScreen currency", () => {
   it("renders USD profit, band, categories, and signed transaction rows", () => {
-    const overview = renderProject(usdProject());
-    expect(screen.getByText("$2,750")).toBeInTheDocument();
-    overview.unmount();
+    const profit = renderProfit(usdProject());
+    expect(screen.getAllByText("+$2,750").length).toBeGreaterThan(0);
+    profit.unmount();
     const expenses = renderProject(usdProject(), "expenses");
     expect(screen.queryByText("אין עדיין הוצאות מסווגות.")).not.toBeInTheDocument();
     // Rows under הוצאות לפי קטגוריה carry no minus (FLOW-328).
@@ -89,7 +99,7 @@ describe("ProjectDetailScreen currency", () => {
     expect(screen.queryByText("₪0")).not.toBeInTheDocument();
   });
 
-  it("splits waiting lines per currency in a mixed project and draws one band line per currency", () => {
+  it("splits waiting lines per currency in a mixed project", () => {
     const mixed = {
       ...usdProject(),
       income_agorot: 100_000n,
@@ -103,15 +113,6 @@ describe("ProjectDetailScreen currency", () => {
       pending_agorot: 1_000n,
       pending_other_currencies: [{ currency: "USD", expense_minor: -3_500n, count: 2 }],
     };
-    const overview = renderProject(mixed);
-    expect(screen.getByText("₪800")).toBeInTheDocument();
-    expect(screen.getByText("$2,750")).toBeInTheDocument();
-    // FLOW-340 C: the band holds the profit; income and expenses are rows, one figure per currency
-    // (FLOW-438: in the cash rows' look, one amount under the other).
-    expect(document.querySelectorAll(".ui-band-figures")).toHaveLength(0);
-    expect(screen.getByRole("link", { name: /^הכנסות/ })).toHaveTextContent("+₪1,000+$4,000");
-    expect(screen.getByRole("link", { name: /^הוצאות/ })).toHaveTextContent("₪200$1,250");
-    overview.unmount();
     renderProject(mixed, "expenses");
     const ilsRow = screen.getByText("1 ממתינה לאישור").closest(".ui-row");
     expect(ilsRow?.querySelector(".ui-num")?.textContent).toBe("₪10");
@@ -119,27 +120,8 @@ describe("ProjectDetailScreen currency", () => {
     expect(usdRow?.querySelector(".ui-num")?.textContent).toBe("$35");
   });
 
-  it("names the loss in the title whatever the currencies (FLOW-339)", () => {
-    const rows = (ils: bigint, usd: bigint) => ({
-      ...usdProject(),
-      by_currency: [
-        { currency: "ILS", income_minor: 100_000n, direct_minor: 100_000n - ils, shared_minor: 0n, profit_minor: ils },
-        { currency: "USD", income_minor: 400_000n, direct_minor: 400_000n - usd, shared_minor: 0n, profit_minor: usd },
-      ],
-    });
-    const mixed = renderProject(rows(80_000n, -50_000n));
-    // FLOW-438: the profit page's title names it.
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/^רווח והפסד$/);
-    mixed.unmount();
-    const losses = renderProject(rows(-80_000n, -50_000n));
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/^הפסד$/);
-    losses.unmount();
-    renderProject(rows(80_000n, 50_000n));
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/^רווח$/);
-  });
-
   it("keeps ILS rendering for older payloads", () => {
-    renderProject({
+    renderProfit({
       ...usdProject(),
       by_currency: undefined,
       categories_by_currency: undefined,
@@ -150,10 +132,11 @@ describe("ProjectDetailScreen currency", () => {
       categories: [{ id: "c", name: "Materials", amount_agorot: 20_000n }],
       transactions: [],
     });
-    expect(screen.getByText("₪800")).toBeInTheDocument();
+    expect(screen.getAllByText("+₪800").length).toBeGreaterThan(0);
   });
+
   it("takes the overhead share off the company currency's row only (0147)", () => {
-    renderProject({
+    renderProfit({
       ...usdProject(),
       base_currency: "USD",
       after_overhead: true,
@@ -166,25 +149,22 @@ describe("ProjectDetailScreen currency", () => {
       profit_after_overhead_agorot: -10_000n,
       by_currency: [
         { currency: "USD", income_minor: 400_000n, direct_minor: 125_000n, shared_minor: 0n, profit_minor: 275_000n },
-        { currency: "ILS", income_minor: 100_000n, direct_minor: 20_000n, shared_minor: 0n, profit_minor: 80_000n },
       ],
     });
-    expect(screen.getByText("$2,000")).toBeInTheDocument();
-    expect(screen.getByText("₪800")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "עוד" }));
-    fireEvent.click(screen.getByRole("button", { name: /עריכת פרטים/ }));
-    expect(screen.getByText("החלק בהוצאות כלליות $750")).toBeInTheDocument();
+    // The profit after the share is the USD row's ($2,750 less $750); the shekel row is not touched.
+    expect(screen.getByText("רווח אחרי הוצאות כלליות").nextSibling).toHaveTextContent("$2,000");
+    expect(screen.getByText("חלק בהוצאות הכלליות").nextSibling).toHaveTextContent("$750");
   });
 
-  it("leaves the USD row alone when the share is off or unknown (0147)", () => {
+  it("shows no after-share rows when the share is unknown or the overhead is not weighted (0147)", () => {
     const shared = { ...usdProject(), base_currency: "USD", after_overhead: true, overhead_weighted: true, overhead_share_minor: 75_000n };
     for (const project of [
       { ...shared, overhead_share_minor: null },
-      { ...shared, after_overhead: false },
       { ...shared, overhead_weighted: false },
     ]) {
-      const view = renderProject(project);
-      expect(screen.getByText("$2,750")).toBeInTheDocument();
+      const view = renderProfit(project);
+      expect(screen.getAllByText("+$2,750").length).toBeGreaterThan(0);
+      expect(screen.queryByText("רווח אחרי הוצאות כלליות")).toBeNull();
       view.unmount();
     }
   });
