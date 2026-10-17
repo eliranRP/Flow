@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { samplePreview } from "./dev/line-split-sample";
+import { samplePreview } from "./line-split-preview";
 import {
   amountOf,
   amountText,

@@ -1,8 +1,9 @@
-import { amountText } from "./line-split";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { formatIls, type ProjectWaitingRow, type ReviewRow } from "@flow/shared";
-import { FiledTodayScreen, ProjectCategoryScreen, ProjectWaitingList, ReviewEmpty, ReviewQueue, SplitScreen, TransactionScreen, reviewIsSplit, reviewSplitTitle } from "./screens/flow-screens";
+import { FiledTodayScreen, ProjectCategoryScreen, ProjectWaitingList, ReviewEmpty, ReviewQueue, TransactionScreen, reviewIsSplit, reviewSplitTitle } from "./screens/flow-screens";
+import { LineSplitScreen } from "./screens/line-split";
+import { leasingSplitSample, sharedSplitSample, unsplitNet, unsplitProjects, unsplitShare } from "./reviewer-split-sample";
 import {
   patchReviewerCategory,
   reviewerBooks,
@@ -14,9 +15,7 @@ import {
   reviewerProjectChoices,
   reviewerProjectName,
   reviewerQueueView,
-  reviewerSharedAgorot,
   reviewerSharesFor,
-  reviewerSplitProjects,
   reviewerWaitingPaintAgorot,
   sampleSaveMode,
   subscribeReviewerFiled,
@@ -378,35 +377,13 @@ function ReviewerSave() {
   );
 }
 
-const unsplitProjects = [
-  { id: "p-alon", name: reviewerProjectName, bp: 1667 },
-  { id: "p-raanana", name: reviewerOtherProjectName, bp: 1667 },
-  { id: "p-north", name: "מגרש לדוגמה", bp: 1667 },
-  { id: "p-south", name: "מחסן לדוגמה", bp: 1667 },
-  { id: "p-east", name: "גג המזרח", bp: 1666 },
-  { id: "p-west", name: "חניון המערב", bp: 1666 },
-] as const;
-
-const unsplitNet = 320_000n;
-
-function unsplitShare(bp: number): bigint {
-  return (unsplitNet * BigInt(bp)) / 10_000n;
-}
-
 function ReviewerUnsplit() {
-  const toast = useToast();
-  const [collapsed, setCollapsed] = useState<string | null>(null);
-  const [showSplit, setShowSplit] = useState(true);
-  const pendingSave = useRef(false);
-  useEffect(() => {
-    if (!pendingSave.current || showSplit) return;
-    pendingSave.current = false;
-    toast.show({
-      message: "השיוך נשמר",
-      action: "ביטול",
-      onAction: () => { setCollapsed(null); },
-    });
-  }, [showSplit, collapsed, toast]);
+  const { collapsed, closed } = useSyncExternalStore(subscribeUnsplit, unsplitState);
+  const showSplit = !closed;
+  // A cleared split puts the whole line back on its own project; a split keeps it shared.
+  const sample = leasingSplitSample((parts) => {
+    setUnsplitState({ collapsed: parts.length === 0 ? unsplitProjects[0].id : null, closed: true });
+  });
   const projects = unsplitProjects.map((project) => ({ id: project.id, name: project.name }));
   const spent = (id: string, bp: number) => collapsed == null
     ? unsplitShare(bp)
@@ -418,7 +395,7 @@ function ReviewerUnsplit() {
       <div className="ui-page-pad">
         <Button
           variant="secondary"
-          onClick={() => { setShowSplit((open) => !open); }}
+          onClick={() => { setUnsplitState({ collapsed, closed: !closed }); }}
         >
           {showSplit ? "שינוי שיוך" : "איך לפצל?"}
         </Button>
@@ -438,22 +415,7 @@ function ReviewerUnsplit() {
         })}
       </section>
       {showSplit ? (
-        <SplitScreen
-          sampleAmount={unsplitNet}
-          sampleProjects={projects}
-          sampleMeta="ליסינג הדרך בע״מ · 01/07/2026"
-          // Opens like the saved six-way split: the first project keeps the rest, the others are exact parts.
-          sampleRestProject={unsplitProjects[0].id}
-          sampleParts={unsplitProjects.slice(1).map((project) => ({ projectId: project.id, value: amountText(unsplitShare(project.bp)) }))}
-          backTo="/reviewer"
-          onSave={(rows) => {
-            pendingSave.current = true;
-            // One project takes the whole line; parts across projects keep it shared.
-            setCollapsed(rows.length === 1 ? (rows[0]?.project_id ?? null) : null);
-            setShowSplit(false);
-            return "left";
-          }}
-        />
+        <LineSplitScreen sample={sample} backTo="/reviewer/unsplit" />
       ) : (
         <TransactionScreen
           sample={{
@@ -490,7 +452,7 @@ function ReviewerUnsplit() {
           }}
           sampleProjects={projects}
           sampleCategories={reviewerCategories}
-          onOpenSplit={() => { setShowSplit(true); }}
+          onOpenSplit={() => { setUnsplitState({ collapsed, closed: false }); }}
         />
       )}
     </>
@@ -548,6 +510,27 @@ function leasingSplit(state: unknown): boolean {
   return state.sample === "leasing";
 }
 
+/**
+ * The six-way leasing sample's state. A save leaves the editor for the page's own route, so the
+ * page reads it from here rather than from its own state.
+ */
+let unsplitValue: { collapsed: string | null; closed: boolean } = { collapsed: null, closed: false };
+const unsplitListeners = new Set<() => void>();
+
+function unsplitState() {
+  return unsplitValue;
+}
+
+function setUnsplitState(next: { collapsed: string | null; closed: boolean }) {
+  unsplitValue = next;
+  for (const listener of unsplitListeners) listener();
+}
+
+function subscribeUnsplit(listener: () => void) {
+  unsplitListeners.add(listener);
+  return () => { unsplitListeners.delete(listener); };
+}
+
 /** The sample queue's saves live here, because a saved split leaves the queue for a new mount. */
 let sharedSplitSaved = false;
 const sampleApproved = new Set<string>();
@@ -561,32 +544,22 @@ function afterSharedSplit(row: ReviewRow): ReviewRow {
 function ReviewerSplit() {
   const [params] = useSearchParams();
   const location = useLocation();
-  const navigate = useNavigate();
   const leasing = leasingSplit(location.state);
   const mode = sampleSaveMode(params.get("save"));
-  const write = useSampleWrite(mode, "הפיצול נשמר", () => {
+  // The editor toasts its own saved message, so this write toasts only a refusal.
+  const write = useSampleWrite(mode, "");
+  // The editor leaves for backTo once the save resolves. A refused save keeps the screen, with its
+  // reason on the footer: useWrite has toasted the failure, so the editor gets a named refusal and no retry.
+  const save = async () => {
+    try {
+      await write.mutateAsync();
+    } catch {
+      throw new Error("validation");
+    }
     if (!leasing) sharedSplitSaved = true;
-    void navigate(`/reviewer/review?save=${mode}`);
-  });
-  return (
-    <SplitScreen
-      sampleAmount={leasing ? unsplitNet : reviewerSharedAgorot}
-      sampleProjects={leasing ? unsplitProjects.map((project) => ({ id: project.id, name: project.name })) : reviewerSplitProjects}
-      sampleMeta={leasing ? "ליסינג הדרך בע״מ · 01/07/2026" : "עגורני החוף בע״מ · 29/09/2026"}
-      sampleRestProject={null}
-      backTo={`/reviewer/review?save=${mode}`}
-      onSave={async () => {
-        try {
-          await write.mutateAsync();
-        } catch {
-          // useWrite already toasted. Returning false keeps that toast and the screen.
-          return false;
-        }
-        // The sample write already moved to the queue.
-        return "left";
-      }}
-    />
-  );
+  };
+  const sample = leasing ? leasingSplitSample(save) : sharedSplitSample(save);
+  return <LineSplitScreen sample={sample} backTo={`/reviewer/review?save=${mode}`} />;
 }
 
 function useSampleWrite(mode: SampleSave, success: string, onSuccess?: () => void, onSplit?: () => void) {

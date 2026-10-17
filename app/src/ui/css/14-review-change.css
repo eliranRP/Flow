@@ -198,3 +198,19 @@
     animation-name: ui-change-fade;
   }
 }
+
+/* FLOW-922: the radio row's hint line and start-side marker (radio-row.tsx). */
+/* The line under an option reads as a row hint, lighter than the option's name (FLOW-352). */
+.ui-radio-desc {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-meta-weight);
+  line-height: var(--type-meta-line);
+  white-space: normal;
+}
+
+.ui-radio-start {
+  gap: var(--space-3);
+}

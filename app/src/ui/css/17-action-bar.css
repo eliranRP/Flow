@@ -214,7 +214,7 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
   cursor: not-allowed;
 }
 
-.ui-lsplit-rest:disabled :is(.ui-lsplit-name, .ui-lsplit-project, .ui-lsplit-amount, .ui-lsplit-resolved) {
+.ui-lsplit-rest:disabled :is(.ui-lsplit-name, .ui-lsplit-project, .ui-lsplit-amount) {
   color: var(--color-disabled-text);
 }
 

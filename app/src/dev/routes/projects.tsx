@@ -95,7 +95,7 @@ const devLinks: Array<[string, string]> = [
   ["/e2e/expense", "הוצאה לבדיקה"],
   ["/projects/herzl?preview=1", "פרויקט לדוגמה"],
   ["/transactions/1?preview=1", "תנועה לדוגמה"],
-  ["/transactions/1/split?preview=1", "פיצול לדוגמה"],
+  ["/transactions/1/split-category?preview=1", "פיצול לדוגמה"],
   ["/settings/categories?preview=1", "קטגוריות לדוגמה"],
   ["/settings/connections?preview=1", "חיבורים לדוגמה"],
   ["/settings/loans?preview=1", "הלוואות לדוגמה"],
@@ -103,7 +103,7 @@ const devLinks: Array<[string, string]> = [
   ["/onboarding?preview=1", "הצטרפות לדוגמה"],
   ["/install?preview=1", "התקנה לדוגמה"],
   ["/review/change?preview=1", "שינוי לדוגמה"],
-  ["/e2e/split?save=fail", "פיצול שנכשל"],
+  ["/e2e/split-category?save=fail", "פיצול שנכשל"],
 ];
 
 export function DevProject() {

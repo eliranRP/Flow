@@ -388,7 +388,7 @@ export function TransactionScreen({
         onOpenSplit();
         return;
       }
-      void navigate(`/transactions/${transactionId}/split${search}`, { replace: true });
+      void navigate(`/transactions/${transactionId}/split-category${search}`, { replace: true });
     },
     keys: ASSIGN_KEYS,
     onSuccess: assignSaved,
@@ -411,7 +411,7 @@ export function TransactionScreen({
     onError: (_error, payload) => { restorePick(payload); },
     optimistic: (payload) => pickCache(payload, false),
     onSplit: () => {
-      void navigate(`/transactions/${transactionId}/split${search}`, { replace: true });
+      void navigate(`/transactions/${transactionId}/split-category${search}`, { replace: true });
     },
     keys: ASSIGN_KEYS,
     onSuccess: assignSaved,
@@ -458,7 +458,7 @@ export function TransactionScreen({
       onOpenSplit();
       return;
     }
-    void navigate(`/transactions/${detailRow.id}/split${search}`);
+    void navigate(`/transactions/${detailRow.id}/split-category${search}`);
   }
   function commitPick(kind: "project" | "category", id: string) {
     const previous = { projectId, categoryId };
@@ -540,7 +540,7 @@ export function TransactionScreen({
   // A split's row is set only while no review is open on the line, and not in the reviewer's preview.
   const reviewBlocked = txn.review_status === "open" && txn.review_reason !== "split_mismatch";
   splitOpen.current = !(onOpenSplit || holdWrites || reviewBlocked);
-  const splitTo = `/transactions/${txn.id}/${splitByCategory ? "split-category" : "split"}${search}`;
+  const splitTo = `/transactions/${txn.id}/split-category${search}`;
   // The reason a line is out of the P&L, as the counted-in row names it (FLOW-366, guide §7.10).
   const category = categories.data?.find((entry) => entry.id === shownCategoryId);
   const countedReason = loanLine ? COUNTED_REASON_LOAN : category?.in_rehab === true ? COUNTED_REASON_RENO : null;

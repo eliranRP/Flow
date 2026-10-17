@@ -56,7 +56,7 @@ import {
   money,
   partProjectLabel,
 } from "./line-split-parts";
-import { listenPopState, useSaveOnBack } from "./split-back";
+import { useSaveOnBack } from "./split-back";
 
 type PickTarget = { kind: "part"; key: string } | { kind: "rest" };
 
@@ -269,7 +269,7 @@ export function LineSplitEditor({
     await write(payload, "save");
   }
 
-  useSaveOnBack({ dirty, busy, leave, leaving, listen: listenPopState });
+  useSaveOnBack({ dirty, busy, leave, leaving });
 
   const categoryName = (id: string | null) => (id == null ? line.categoryName : categories.find((category) => category.id === id)?.name ?? null);
   const projectName = (id: string | null) => (id == null ? null : projects.find((project) => project.id === id)?.name ?? null);
@@ -378,7 +378,8 @@ export function LineSplitEditor({
   const restShown: bigint | null = restMinor == null ? null : restMinor < 0n ? 0n : restMinor;
   const splitShown: bigint | null = check.overMinor > 0n ? lineMinor + check.overMinor : splitMinor;
   const fillPercent = check.overMinor > 0n ? 100 : splitShown != null && lineMinor > 0n ? Math.min(100, Number((splitShown * 10_000n) / lineMinor) / 100) : 0;
-  const saveCount = parts.length + (restShown != null && restShown > 0n ? 1 : 0);
+  // The board counts the rest as a part only once a part exists; an empty split reads "שמירה".
+  const saveCount = parts.length === 0 ? 0 : parts.length + (restShown != null && restShown > 0n ? 1 : 0);
 
   /** "+ חלק נוסף": a part on the line's category and no project, for what is left (no picker). */
   function addPart() {

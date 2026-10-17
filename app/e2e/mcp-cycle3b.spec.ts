@@ -114,10 +114,11 @@ for (const scheme of ["light", "dark"] as const) {
     await page.getByRole("button", { name: LINE_REST }).click();
     await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "בית הספר אלון" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
-    await page.getByRole("button", { name: "הוספת חלק" }).click();
+    await page.getByRole("button", { name: "חלק נוסף" }).click();
+    await page.getByRole("button", { name: /, פרויקט, שינוי$/ }).last().click();
     await page.getByRole("dialog", { name: "בחירת פרויקט" }).getByRole("radio", { name: "מחסן הנמל" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
-    await page.getByLabel("סכום, מחסן הנמל").fill("1");
+    await page.getByLabel("סכום, מלט").fill("1");
     await page.getByRole("button", { name: "סגירה" }).click();
     await page.getByRole("button", { name: "אישור" }).click();
     // ברגי is still held without a category; picking one lets it approve, and the queue ends.

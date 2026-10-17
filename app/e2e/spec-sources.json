@@ -46,7 +46,7 @@
       "screens/project-detail-screen.tsx",
       "screens/profit-months.tsx",
       "screens/transaction-screen.tsx",
-      "screens/split-screen.tsx",
+      "screens/line-split.tsx",
       "screens/unpaid-screen.tsx",
       "screens/recurring-screen.tsx"
     ],
@@ -179,7 +179,7 @@
       "screens/change-form.tsx",
       "screens/search.tsx",
       "screens/transaction-screen.tsx",
-      "screens/split-screen.tsx",
+      "screens/line-split.tsx",
       "ui/review-card.tsx",
       "ui/change-sheet.tsx",
       "ui/toast.tsx"
@@ -231,11 +231,6 @@
     "split-category.spec.ts": [
       "dev/line-split-e2e.tsx",
       "screens/line-split.tsx"
-    ],
-    "split.spec.ts": [
-      "project-split.ts",
-      "screens/split-screen.tsx",
-      "screens/project-detail-screen.tsx"
     ],
     "toast.spec.ts": [
       "reviewer-preview.tsx",
@@ -366,10 +361,6 @@
         "/e2e/txn?preview=1": [
           "screens/transaction-screen.tsx",
           "dev/routes/transaction.tsx#DevTransaction"
-        ],
-        "/e2e/split": [
-          "screens/split-screen.tsx",
-          "dev/routes/split.tsx#DevSplit"
         ],
         "/unpaid?preview=1": [
           "screens/unpaid-screen.tsx"

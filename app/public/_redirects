@@ -123,8 +123,6 @@
 /flow/:direction/:groupBy/:currency/:groupKey/ /flow/:direction/:groupBy/:currency/:groupKey 301
 /flow/:direction /app-shell 200
 /flow/:direction/ /flow/:direction 301
-/transactions/:transactionId/split /app-shell 200
-/transactions/:transactionId/split/ /transactions/:transactionId/split 301
 /transactions/:transactionId/split-category /app-shell 200
 /transactions/:transactionId/split-category/ /transactions/:transactionId/split-category 301
 /transactions/:transactionId /app-shell 200

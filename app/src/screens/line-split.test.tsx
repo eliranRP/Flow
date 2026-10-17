@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -10,7 +10,6 @@ import {
 } from "../dev/line-split-sample";
 import type { LineSplitRead, PartDraft, PayloadPart } from "../line-split";
 import { renderWithProviders } from "../test-render";
-import { SplitScreen } from "./flow-screens";
 import { LineSplitScreen, type LineInfo, type LineSplitApi, type LineSplitSample } from "./line-split";
 
 function showEditor(sample: Partial<LineSplitSample> & { line?: LineInfo } = {}) {
@@ -417,37 +416,3 @@ describe("split by category editor (FLOW-325)", () => {
   });
 });
 
-describe("the project split on a line split by category (FLOW-325)", () => {
-  it("says why instead of offering ניסיון חוזר", async () => {
-    const onSave = vi.fn(() => Promise.reject(new Error("line has a split by category")));
-    renderWithProviders(
-      <Routes>
-        <Route
-          path="/split"
-          element={
-            <SplitScreen
-              sampleAmount={100_000n}
-              sampleProjects={[
-                { id: "p1", name: "פרויקט הרצליה" },
-                { id: "p2", name: "פרויקט רעננה" },
-              ]}
-              sampleParts={[{ projectId: "p2", value: "250" }]}
-              backTo="/back"
-              onSave={onSave}
-            />
-          }
-        />
-        <Route path="/back" element={<h1>חזרה</h1>} />
-      </Routes>,
-      { route: "/split" },
-    );
-    fireEvent.change(await screen.findByRole("textbox", { name: "סכום, פרויקט רעננה" }), { target: { value: "300" } });
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
-      await Promise.resolve();
-    });
-    expect(await screen.findByText("לשורה יש פיצול לפי קטגוריות. אפשר רק אחד מהשניים.")).toBeInTheDocument();
-    expect(screen.queryByText("הפיצול לא נשמר")).toBeNull();
-    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).toBeNull();
-  });
-});

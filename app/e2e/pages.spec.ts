@@ -14,7 +14,7 @@ const pages: Array<[string, string]> = [
   ["/onboarding", "פרטי העסק"],
   ["/install", "התקנת Flow"],
   ["/transactions/1", "פרטי תנועה"],
-  ["/transactions/1/split", "פיצול"],
+  ["/transactions/1/split-category", "פיצול"],
 ];
 
 for (const [path, heading] of pages) {

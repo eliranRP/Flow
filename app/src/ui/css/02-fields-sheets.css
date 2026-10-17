@@ -625,3 +625,39 @@
   font-size: var(--type-line2-size);
   line-height: var(--type-line2-line);
 }
+
+/* FLOW-922: the percent field of a part (money-field.tsx). */
+.ui-percent-field {
+  flex: 0 0 auto;
+  inline-size: auto;
+  min-inline-size: 96px;
+  max-inline-size: 100%;
+}
+
+.ui-percent-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  inline-size: auto;
+  width: auto;
+  min-inline-size: 96px;
+  block-size: var(--field-height);
+  height: var(--field-height);
+  padding-inline: var(--field-pad);
+  border-radius: var(--radius-input);
+  font-size: var(--type-title-3-size);
+}
+
+.ui-percent-suffix {
+  inset-inline-end: var(--space-3);
+  color: var(--color-text-secondary);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-percent-field .ui-money-field input {
+  padding-inline-end: 1.75em;
+  font-size: inherit;
+  text-align: right;
+  white-space: nowrap;
+}

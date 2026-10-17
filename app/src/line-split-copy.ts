@@ -57,12 +57,6 @@ export const partPickTitle = (kind: "project" | "category", no: number) => (kind
 export const PART_LINE_PROJECT_NOTE = "הפרויקט של השורה · מקבל את השאר";
 export const partTakenNote = (name: string) => `כבר בפיצול עם ${name}`;
 export const LINE_SPLIT_CHANGED = "משהו השתנה בינתיים. טענו מחדש ונסו שוב.";
-/**
- * The project split (`SplitScreen`) on a line that has a split by category: the detail row's
- * reason hint, and the copy for the refusal "line has a split by category".
- */
-export const LINE_HAS_CATEGORY_SPLIT = "לשורה יש פיצול לפי קטגוריות. אפשר רק אחד מהשניים.";
-export const LINE_HAS_CATEGORY_SPLIT_REASON = "line has a split by category";
 /** FLOW-333 C8. "מפוצל · N חלקים", and "מפוצל · חלק אחד" for one. */
 export function lineSplitPartsLabel(count: number): string {
   return count === 1 ? "מפוצל · חלק אחד" : `מפוצל · ${String(count)} חלקים`;
@@ -138,10 +132,5 @@ export function lineSplitRefusal(error: unknown): LineSplitRefusal | null {
   // Longer reasons first, so "validation" never shadows a named one.
   const named = [...LINE_SPLIT_REFUSALS].sort((a, b) => b.length - a.length);
   return named.find((reason) => message.includes(reason)) ?? null;
-}
-
-/** FLOW-325: the two split kinds exclude each other; the server refuses a project split on a line split by category. */
-export function hasCategorySplit(error: unknown): boolean {
-  return error instanceof Error && error.message.includes(LINE_HAS_CATEGORY_SPLIT_REASON);
 }
 

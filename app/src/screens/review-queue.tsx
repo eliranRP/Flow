@@ -371,7 +371,7 @@ export function ReviewQueue({
         onShared(current.transaction_id);
         return;
       }
-      void navigate(`/transactions/${current.transaction_id}/split${search}`);
+      void navigate(`/transactions/${current.transaction_id}/split-category${search}`);
       return;
     }
     // FLOW-365: the owner's project row opens the picker sheet; a route change (changeTo) keeps the reviewer's own screen.
@@ -384,7 +384,7 @@ export function ReviewQueue({
   /** FLOW-365: the card's split link opens the split screen for this line (FLOW-370 owns that screen). */
   function openSplit() {
     if (!current.transaction_id) return;
-    void navigate(`/transactions/${current.transaction_id}/split${search}`);
+    void navigate(`/transactions/${current.transaction_id}/split-category${search}`);
   }
   function openCategory() {
     void navigate(assignmentPath(changeTo, search, current.id, "category", fromList, true));
@@ -456,7 +456,7 @@ export function ReviewQueue({
         onShared(current.transaction_id);
         return;
       }
-      void navigate(`/transactions/${current.transaction_id}/split${search}`);
+      void navigate(`/transactions/${current.transaction_id}/split-category${search}`);
       return;
     }
     approving.current = current.id;
