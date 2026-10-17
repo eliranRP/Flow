@@ -1,5 +1,6 @@
 import { useEffect, useRef, type RefObject } from "react";
 import { useSheetHistory } from "./back";
+import { cx } from "./cx";
 import { RadioRow } from "./radio-row";
 import { Sheet } from "./sheet";
 
@@ -63,7 +64,7 @@ export function ChoiceSheet<T extends string, V extends string = T>({
       returnFocusRef={returnFocusRef}
       busy={saving != null}
       onRequestClose={requestSheetClose}
-      panelClassName={panelClassName}
+      panelClassName={cx("ui-sheet-choice", panelClassName)}
     >
       <div role="radiogroup" aria-label={copy.title} className="ui-choice-sheet">
         {copy.choices.map((choice) => (

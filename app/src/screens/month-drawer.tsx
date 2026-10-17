@@ -47,7 +47,7 @@ export function MonthDrawer({
   const canEarlier = canStepYear(year, -1, firstKey, today);
   const canLater = canStepYear(year, 1, firstKey, today);
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title="בחירת חודש" returnFocusRef={returnFocusRef}>
+    <Sheet open={open} onOpenChange={onOpenChange} title="בחירת חודש" returnFocusRef={returnFocusRef} panelClassName="ui-sheet-wide ui-sheet-g16 ui-sheet-pad28">
       <div className="ui-month-drawer">
         <div className="ui-month-drawer-years">
           <YearStep label="שנה קודמת" side="start" disabled={!canEarlier} onClick={() => { setYear((value) => value - 1); }} />

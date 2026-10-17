@@ -127,7 +127,7 @@ export function AddEntryView(props: AddEntryViewProps) {
       onOpenChange={(open) => { if (!open) props.onClose(); }}
       title={titleText}
       subtitle={headerSub}
-      panelClassName="ui-sheet-tall ui-add-entry"
+      panelClassName="ui-sheet-tall ui-add-entry ui-sheet-g14"
       action={(
         <div className="ui-add-foot">
           {props.error ? <p role="alert" className="ui-add-error">{props.error}</p> : null}

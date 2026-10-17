@@ -21,9 +21,10 @@
   color: var(--color-text-muted);
 }
 
-/* Mockup 06: the supplier line sits 2px under the sheet title, like a subtitle (FLOW-328). */
+/* Mockup 06: the supplier line sits 2px under the sheet title, like a subtitle (FLOW-328). The gap between
+   blocks is the panel's, so the margin takes it back out and leaves 2px. */
 .ui-sheet-body:has(> .ui-change-swap > .ui-change-summary:first-child) {
-  margin-top: 2px;
+  margin-top: calc(2px - var(--sheet-gap-y));
 }
 
 /* 56px rows, as the sheet gap was; the gap shrinks with the keyboard at 320 and these rows don't. */
