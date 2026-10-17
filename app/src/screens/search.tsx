@@ -349,6 +349,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
               setAside={row.kept_out}
               agorot={row.amount_net}
               currency={row.currency}
+              wholeCents
               sign={row.direction === "income" ? "in" : "out"}
               href={`/transactions/${row.id}${previewSearch}`}
               state={txnListState(ids, row.id, listFrom)}

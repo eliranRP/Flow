@@ -126,6 +126,8 @@ export type ListRowProps =
  */
 export type StatementRowProps = {
   variant: "statement";
+  /** A whole amount keeps its ".00" (the board's search results). */
+  wholeCents?: boolean;
   /** The counterparty: supplier name, else the line's description. */
   title: string;
   /** The avatar's icon when the name has no letter. */
@@ -519,7 +521,7 @@ function StatementRow(props: StatementRowProps) {
         </span>
       </span>
       <span className="ui-statement-end">
-        <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} />
+        <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} wholeCents={props.wholeCents} />
         {props.method != null ? (
           <span className="ui-statement-method t-meta">
             <span className="ui-statement-method-icon" aria-hidden="true">{props.method.icon}</span>

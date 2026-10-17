@@ -475,9 +475,14 @@
   font-size: var(--type-line2-size);
 }
 
-/* A result row is 80px: 20px above and below, the title and lines at the board's line heights. */
+/* A result row is 80px (a note line fits inside): 8px padding, the content centred, the title and lines at the board's line heights. */
 .ui-search-results .ui-row-statement {
-  padding-block: var(--space-5);
+  padding-block: var(--space-2);
+  min-block-size: calc(var(--space-5) * 4);
+}
+
+.ui-search-results .ui-statement-note {
+  line-height: var(--type-cents-line);
 }
 
 .ui-search-results .ui-statement-title {
