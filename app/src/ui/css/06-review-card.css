@@ -130,7 +130,7 @@
   }
 
   .ui-review-queue .ui-focus-title {
-    margin-top: var(--space-1);
+    margin-top: calc(var(--space-1) * 1.5);
   }
 
   .ui-review-queue .ui-review-counts {
@@ -138,11 +138,11 @@
   }
 
   .ui-review-queue .ui-review-segments {
-    margin-top: var(--space-2);
+    margin-top: calc(var(--space-1) * 1.5);
   }
 
   .ui-review-queue .ui-review {
-    margin-top: var(--space-3);
+    margin-top: calc(var(--space-3) - 1px);
   }
 }
 
@@ -744,11 +744,21 @@
 .ui-review-split-head {
   padding-block: var(--space-1);
   background: none;
-  color: var(--color-text-secondary);
+  color: var(--color-accent-text);
 }
 
 .ui-review-split-title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  color: var(--color-text);
   font-weight: var(--type-title-weight);
+}
+
+.ui-review-split-title > .t-hint {
+  color: var(--color-text-secondary);
+  line-height: var(--type-title-line);
 }
 
 .ui-review-split-edit {

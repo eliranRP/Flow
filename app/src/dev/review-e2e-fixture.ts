@@ -100,7 +100,7 @@ function caseRow(kind: ReviewCase): ReviewRow {
     auto_approved_today: 12,
   };
   if (kind === "none") return { ...base, description: "Alder Supply", supplier_name: "Alder Supply", amount_net: -41_218n, doc_date: "2026-10-10", project_id: null, project_name: null, project_suggested: false };
-  if (kind === "split") return { ...base, project_id: null, project_name: null, category_id: null, category_name: null, project_suggested: false, category_suggested: false, reason: null, pnl_role: "shared", share_count: 3, supplier_name: "Summit Equipment" };
+  if (kind === "split") return { ...base, project_id: null, project_name: null, project_suggested: false, category_suggested: false, reason: null, pnl_role: "shared", share_count: 3, supplier_name: "Summit Equipment" };
   if (kind === "photo") return { ...base, source: "photo", supplier_name: "Voltline Electric" };
   return base;
 }
@@ -109,8 +109,8 @@ function caseRow(kind: ReviewCase): ReviewRow {
 export function e2eSplitParts(transactionId: string | null | undefined): Array<{ project: string; category: string; amount: string; rest: boolean }> | null {
   if (transactionId !== "t-r1" || seedCase !== "split") return null;
   return [
-    { project: "שיפוץ הרצל 12", category: "ציוד והשכרה", amount: "$340.00", rest: false },
-    { project: "וילה רעננה", category: "חומרים", amount: "$420.00", rest: false },
+    { project: "שיפוץ הרצל 12", category: "ציוד והשכרה", amount: "$340", rest: false },
+    { project: "וילה רעננה", category: "חומרים", amount: "$420", rest: false },
     { project: "שיפוץ הרצל 12", category: "חומרים", amount: "$524.50", rest: true },
   ];
 }

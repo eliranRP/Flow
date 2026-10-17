@@ -274,9 +274,13 @@ export function ReviewCard({
         ) : splitSummary ? (
           <div className="ui-review-split-sum">
             <div className="ui-review-split-head">
+              <SplitIcon size={20} />
               <span className="ui-review-split-title">
-                {`פיצול · ${String(splitSummary.parts.length)} חלקים · `}
-                <bdi className="ui-num" dir="ltr">{splitSummary.total}</bdi>
+                <span className="t-hint">פיצול</span>
+                <span>
+                  {`${String(splitSummary.parts.length)} חלקים · `}
+                  <bdi className="ui-num" dir="ltr">{splitSummary.total}</bdi>
+                </span>
               </span>
               {onSplit ? (
                 <button type="button" className="ui-review-split-edit ui-hit" onClick={onSplit}>עריכה</button>
