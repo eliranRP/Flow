@@ -175,12 +175,20 @@ a.ui-row,
   cursor: progress;
 }
 
-/* A disabled route link (`<Button to disabled>`) is an <a aria-disabled>; busy keeps its own look below. */
+/*
+  A disabled button in a form (board: a --color-line fill with its own label colour). A disabled route link
+  (`<Button to disabled>`) is an <a aria-disabled>; busy keeps its own look below.
+*/
 .ui-btn-primary:disabled,
 .ui-btn-secondary:disabled,
 .ui-btn-pill:disabled,
 .ui-btn-danger-tint:disabled,
-a:is(.ui-btn-primary, .ui-btn-secondary, .ui-btn-pill, .ui-btn-danger-tint)[aria-disabled="true"]:not([aria-busy="true"]),
+a:is(.ui-btn-primary, .ui-btn-secondary, .ui-btn-pill, .ui-btn-danger-tint)[aria-disabled="true"]:not([aria-busy="true"]) {
+  background: var(--color-line);
+  color: var(--color-btn-disabled-text);
+  border-color: transparent;
+}
+
 .ui-field-control:disabled,
 .ui-field-control:has(input:disabled),
 .ui-money-field:has(input:disabled) {
