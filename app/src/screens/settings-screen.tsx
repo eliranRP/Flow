@@ -30,7 +30,6 @@ import { notificationsHint } from "./notifications-screen";
 import { themeChoiceLabel, THEME_TITLE } from "../ui/theme-choices";
 import { readThemeChoice, writeThemeChoice, type ThemeChoice } from "../theme-store";
 import { ThemeSheet } from "./theme-sheet";
-import { useBlockedPreview } from "./screen-shared";
 
 /** Shown on `/settings?preview=` when the value is not `empty` and no sample is passed. */
 const previewAccountName = "בית הספר אלון";

@@ -21,7 +21,7 @@ import {
   type LoanDetailDbRow,
 } from "./loan-detail-data";
 import { applyPatch, inversePatch, patchColumns } from "./loan-detail-store";
-import { groupLoans, loanListHint, loanListHintParts, showsLoanBalance, sortLoans, type LoanListRow } from "./loan-list";
+import { groupLoans, showsLoanBalance, sortLoans, type LoanListRow } from "./loan-list";
 
 // FLOW-106 B / FLOW-110: the loan page's mappers and rules, without a screen.
 
@@ -273,21 +273,8 @@ describe("the list", () => {
     expect(closed.map((row) => row.id)).toEqual(["c", "d"]);
   });
 
-  it("hints the kind and project, a review, or how and when a loan ended", () => {
-    expect(loanListHint(rows[0] as LoanListRow)).toBe("ריבית בלבד · פרויקט א");
-    expect(loanListHint(rows[1] as LoanListRow)).toBe("ממתין לבדיקה");
-    expect(loanListHint(rows[2] as LoanListRow)).toBe("נסגרה · 30/11/2025");
-    expect(loanListHint(rows[3] as LoanListRow)).toBe("נפרעה");
-    expect(loanListHint({ ...(rows[0] as LoanListRow), kind: "amortizing", projectName: null })).toBeUndefined();
-  });
-
   it("hides the balance of a paid-off loan and of a closed loan with nothing owed (FLOW-138)", () => {
     expect(rows.map((row) => showsLoanBalance(row))).toEqual([true, true, false, false]);
     expect(showsLoanBalance({ ...(rows[2] as LoanListRow), balanceMinor: 1200n })).toBe(true);
-  });
-
-  it("leads with ממתין לבדיקה, so a narrow row drops the kind and keeps the warning in words (FLOW-347)", () => {
-    expect(loanListHintParts({ ...(rows[0] as LoanListRow), flaggedParts: 2 })).toEqual(["ממתין לבדיקה", "ריבית בלבד"]);
-    expect(loanListHintParts(rows[0] as LoanListRow)).toEqual(["ריבית בלבד", "פרויקט א"]);
   });
 });

@@ -1,11 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import type { LoanKind, LoanStatus } from "@flow/shared";
 import { splitCents } from "../ui/amount";
-import { formatDisplay, israelToday } from "../ui/date-math";
+import { israelToday } from "../ui/date-math";
 import { rateOnDate } from "@flow/shared";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError } from "../use-write";
-import { LOAN_KIND_LABEL, LOAN_STATUS_LABEL } from "./loan-copy";
 import { LOAN_DETAIL_COLUMNS, type LoanDetailDbRow } from "./loan-detail-data";
 import { formatLoanMoney } from "./loan-form";
 import type { LoanBalanceRow } from "./loan-match";
@@ -44,27 +43,6 @@ export function sortLoans<T extends { name: string; id: string }>(rows: readonly
 export function groupLoans(rows: readonly LoanListRow[]): { open: LoanListRow[]; closed: LoanListRow[] } {
   const sorted = sortLoans(rows);
   return { open: sorted.filter((row) => !isClosed(row)), closed: sorted.filter(isClosed) };
-}
-
-/**
- * The hint under an open loan: its kind when it is not a plain mortgage, then its project, or
- * ממתין לבדיקה. A closed loan says how it ended and when: "נפרעה · 30/11/2025".
- */
-export function loanListHint(row: LoanListRow): string | undefined {
-  const parts = loanListHintParts(row);
-  return parts.length === 0 ? undefined : parts.join(" · ");
-}
-
-/** The same hint as whole parts, so a narrow row drops a part with its "·" instead of wrapping (FLOW-347). */
-export function loanListHintParts(row: LoanListRow): string[] {
-  if (isClosed(row) && row.status != null) {
-    const label = LOAN_STATUS_LABEL[row.status];
-    return row.closedOn ? [label, formatDisplay(row.closedOn)] : [label];
-  }
-  const kind = row.kind != null && row.kind !== "amortizing" ? LOAN_KIND_LABEL[row.kind] : null;
-  // ממתין לבדיקה leads, so a narrow row drops the kind, never the words behind the warning tone.
-  if (row.flaggedParts > 0) return ["ממתין לבדיקה", ...(kind != null ? [kind] : [])];
-  return [kind, row.projectName ?? null].filter((part): part is string => part != null && part !== "");
 }
 
 /**
