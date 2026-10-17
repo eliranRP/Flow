@@ -223,7 +223,7 @@ export function LoanRecentCard({ loan, payments, search, loanPath, year }: {
   const rows = payments.slice(0, 3);
   return (
     <Card className="ui-loan-card ui-loan-recent">
-      <h2 className="ui-loan-card-title ui-loan-card-pad">{payments.length > 3 ? "3 התשלומים האחרונים" : "התשלומים"}</h2>
+      <h2 className="ui-loan-card-title ui-loan-card-pad">{payments.length >= 3 ? "3 התשלומים האחרונים" : "התשלומים"}</h2>
       {payments.length === 0 ? (
         <p className="ui-loan-card-note ui-loan-card-pad">אין עדיין תשלומים משויכים.</p>
       ) : (

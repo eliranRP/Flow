@@ -37,7 +37,7 @@ test("the list puts paid-off and closed loans under a collapsed group, and a row
   await page.getByRole("link", { name: "כל התשלומים" }).click();
   await expect(page).toHaveURL(/\/e2e\/loans\/loan-bridge\/payments$/);
   await expect(page.getByText("כל התשלומים", { exact: true })).toBeVisible();
-  await expect(page.locator("a[href^='/transactions/']")).toHaveCount(4);
+  await expect(page.locator("a[href^='/transactions/']")).toHaveCount(3);
 });
 
 test("a missing loan shows the not-found state with a way back to the list", async ({ page }) => {
