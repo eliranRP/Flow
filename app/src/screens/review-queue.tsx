@@ -754,9 +754,10 @@ function ProjectPickSheet({
     [dashboard.data, samplePreview],
   );
   return (
-    <Sheet open onOpenChange={(open) => { if (!open) onClose(); }} title="בחירת פרויקט" panelClassName="ui-sheet-g16 ui-sheet-pad28">
+    <Sheet open onOpenChange={(open) => { if (!open) onClose(); }} title="בחירת פרויקט" panelClassName="ui-review-pick">
       <Picker
         kind="project"
+        heading="פרויקטים פעילים"
         searchable
         query={query}
         onQuery={onQuery}

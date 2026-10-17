@@ -119,8 +119,10 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
   align-items: baseline;
   gap: var(--space-1);
   margin: 0;
-  padding-inline-start: calc(var(--review-label-w) + var(--space-2));
+  padding-inline-start: 0;
   color: var(--color-text-muted);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
 }
 
 /* FLOW-704: the line held while Jev's read waits; it takes the line's height and shows nothing. */
@@ -230,5 +232,14 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
 @container review (inline-size < 25rem) {
   .ui-review-reason {
     padding-inline-start: 0;
+  }
+}
+
+/* FLOW-704 on the 320 phone: at 15px the longest reason wraps to two lines, one more than the held
+   line keeps, so the narrowest card keeps the hint size (the height the held line was built for). */
+@container review (inline-size < 22rem) {
+  .ui-review-reason {
+    font-size: var(--type-hint-size);
+    line-height: var(--type-hint-line);
   }
 }

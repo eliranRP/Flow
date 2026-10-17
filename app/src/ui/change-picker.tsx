@@ -63,6 +63,7 @@ export function Picker({
   savingId,
   note,
   noneLabel,
+  heading,
   choiceNotes,
   disabledIds,
   reversal,
@@ -87,6 +88,8 @@ export function Picker({
   note?: string;
   /** A first row with id "", such as "בלי פרויקט". Hidden while searching. */
   noneLabel?: string;
+  /** A label over a flat list (the review sheet's "פרויקטים פעילים"). Hidden while searching. */
+  heading?: string;
   /** A row's note by id ("" for the none row). FLOW-922. */
   choiceNotes?: Record<string, string>;
   /** Rows that cannot be picked, by id. Their choiceNotes entry says why. FLOW-922. */
@@ -190,23 +193,26 @@ export function Picker({
               ))}
             </div>
           ) : listed.length > 0 || (noneLabel != null && needle === "") ? (
-            <div role="radiogroup" aria-label={kind === "project" ? "פרויקט" : "קטגוריה"}>
-              {noneLabel != null && needle === "" ? (
-                <RadioRow
-                  key="none"
-                  layout="picker"
-                  label={noneLabel}
-                  description={choiceNotes?.[""]}
-                  selected={selectedId === ""}
-                  busy={savingId === ""}
-                  disabled={savingId != null && savingId !== ""}
-                  onSelect={() => {
-                    onSelect("");
-                  }}
-                />
-              ) : null}
-              {listed.map(row)}
-            </div>
+            <>
+              {heading != null && needle === "" ? <p className="t-label ui-pick-group-head">{heading}</p> : null}
+              <div role="radiogroup" aria-label={kind === "project" ? "פרויקט" : "קטגוריה"}>
+                {noneLabel != null && needle === "" ? (
+                  <RadioRow
+                    key="none"
+                    layout="picker"
+                    label={noneLabel}
+                    description={choiceNotes?.[""]}
+                    selected={selectedId === ""}
+                    busy={savingId === ""}
+                    disabled={savingId != null && savingId !== ""}
+                    onSelect={() => {
+                      onSelect("");
+                    }}
+                  />
+                ) : null}
+                {listed.map(row)}
+              </div>
+            </>
           ) : null}
           {reversal && reversalVisible ? (
             <div className="ui-reversal">
