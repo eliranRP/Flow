@@ -2,9 +2,6 @@ import { formatAmountText, type ProjectDetail } from "@flow/shared";
 
 type Project = NonNullable<ProjectDetail>;
 
-/** get_project returns at most this many recent transactions, so a full page may hide older rows. */
-export const PROJECT_RECENT_CAP = 40;
-
 /** The loans the project still owes on; a paid-off or closed loan lives on the loans page only. */
 export function openLoans(project: Project): NonNullable<Project["loans"]> {
   return (project.loans ?? []).filter((loan) => loan.status == null || loan.status === "open");

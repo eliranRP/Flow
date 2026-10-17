@@ -206,27 +206,6 @@ export function periodPillLabel(period: PeriodChoice, now = new Date()): string 
   return isCurrentPeriod(period, now) ? presetLabel(period.kind) : windowLabel(period, now);
 }
 
-/** The period as an adverbial phrase: החודש, בספטמבר 2026, ב־3 חודשים, ב־2026, מתחילת הפרויקט. */
-export function periodPhrase(period: PeriodChoice, now = new Date(), scope: PeriodScope = "company"): string {
-  switch (period.kind) {
-    case "month":
-      return isCurrentPeriod(period, now) ? "החודש" : `ב${windowLabel(period, now, scope)}`;
-    case "months3":
-    case "months6":
-      return isCurrentPeriod(period, now) ? `ב־${presetLabel(period.kind)}` : `ב${windowLabel(period, now, scope)}`;
-    case "year":
-      return `ב־${windowLabel(period, now, scope)}`;
-    case "all":
-      return scope === "project" ? "מתחילת הפרויקט" : "בכל התקופה";
-    case "custom":
-      return "בטווח שנבחר";
-    default: {
-      const unreachable: never = period.kind;
-      return unreachable;
-    }
-  }
-}
-
 /** The period in a URL, so a project and its "לפי חודש" page can be linked and restored. */
 export function periodSearch(period: PeriodChoice, now = new Date()): Record<string, string> {
   if (period.kind === "all") return { period: "all" };

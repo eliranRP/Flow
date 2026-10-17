@@ -1,26 +1,18 @@
 import type { ExpectedMonths as ExpectedMonthsData } from "@flow/shared";
-import { render, screen, within } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import {
   chargeChangeViews,
-  expectedMonthLabel,
-  expectedMonthViews,
-  hasExpectedHistory,
   openMonthDue,
 } from "./forecast";
 import {
   monthForecastBoardSample,
-  SAMPLE_EXPECTED,
-  SAMPLE_EXPECTED_EMPTY,
-  SAMPLE_EXPECTED_OPEN_DONE,
-  SAMPLE_EXPECTED_TWO_CURRENCIES,
   SAMPLE_RECURRING_CHANGES,
   SAMPLE_RECURRING_THIS_MONTH,
 } from "./forecast-sample";
 import { attentionRows } from "./screens/HomeScreen";
 import { forecastMinor } from "./home-month";
-import { ExpectedMonths } from "./ui/expected-months";
 
 describe("the קבועים screen (FLOW-415, b-2)", () => {
   it("opens one change's payment, and shares one row for two or more that opens הגיעו החודש", () => {
@@ -44,62 +36,6 @@ describe("the קבועים screen (FLOW-415, b-2)", () => {
     expect(icon.container.innerHTML).not.toBe(upIcon.container.innerHTML);
   });
 
-});
-
-describe("expected months", () => {
-  it("labels the open month as the rest of it", () => {
-    expect(expectedMonthLabel("2026-10", true)).toBe("שאר אוקטובר");
-    expect(expectedMonthLabel("2026-11", false)).toBe("נובמבר");
-    expect(expectedMonthLabel("2027-01", false)).toBe("ינואר");
-  });
-
-  it("shows the expected expense per month, unsigned, never the income", () => {
-    const months = expectedMonthViews(SAMPLE_EXPECTED);
-    expect(months.map((month) => [month.label, month.figures])).toEqual([
-      ["שאר אוקטובר", [{ currency: "ILS", minor: 233_000n }]],
-      ["נובמבר", [{ currency: "ILS", minor: 409_000n }]],
-      ["דצמבר", [{ currency: "ILS", minor: 409_000n }]],
-    ]);
-  });
-
-  it("lists the open month's parties not seen yet, and every expense party for later months by size, never income", () => {
-    const [october, november] = expectedMonthViews(SAMPLE_EXPECTED);
-    expect(october?.parties.map((party) => party.name)).toEqual(["אור חשמל", "שי ניקיון"]);
-    expect(november?.parties.map((party) => [party.name, party.direction, party.minor])).toEqual([
-      ["אור חשמל", "expense", 185_000n],
-      ["בטוח בית", "expense", 126_000n],
-      ["גז לדוגמה", "expense", 50_000n],
-      ["שי ניקיון", "expense", 48_000n],
-    ]);
-  });
-
-  it("gives a second figure only with a second currency, and a zero for an open month with nothing left", () => {
-    expect(expectedMonthViews(SAMPLE_EXPECTED_TWO_CURRENCIES)[1]?.figures).toEqual([
-      { currency: "ILS", minor: 409_000n },
-      { currency: "USD", minor: 2_000n },
-    ]);
-    const done = expectedMonthViews(SAMPLE_EXPECTED_OPEN_DONE, "ILS")[0];
-    expect(done?.figures).toEqual([{ currency: "ILS", minor: 0n }]);
-    expect(done?.parties).toEqual([]);
-  });
-
-  it("knows when there is no history yet", () => {
-    expect(hasExpectedHistory(SAMPLE_EXPECTED)).toBe(true);
-    expect(hasExpectedHistory(SAMPLE_EXPECTED_EMPTY)).toBe(false);
-    expect(hasExpectedHistory(null)).toBe(false);
-  });
-
-  it("draws a month with parties as a button and an empty one as a plain row", () => {
-    render(<ExpectedMonths months={expectedMonthViews(SAMPLE_EXPECTED_OPEN_DONE)} onOpen={() => undefined} />);
-    const section = screen.getByRole("region", { name: "צפוי" });
-    expect(within(section).getAllByRole("button")).toHaveLength(2);
-    expect(within(section).getByRole("group", { name: "שאר אוקטובר, ₪0" })).toBeTruthy();
-  });
-
-  it("says there is no forecast yet in one line", () => {
-    render(<ExpectedMonths months={[]} />);
-    expect(screen.getByText("אין עדיין צפי.")).toBeTruthy();
-  });
 });
 
 describe("openMonthDue (FLOW-364)", () => {

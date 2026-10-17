@@ -1,4 +1,4 @@
-import { buildMonthForecast, expectedMonthsSchema, type ExpectedMonths, type ForecastOverrideRow, type MissingBill, type RecurringChange, unpaidRowSchema } from "@flow/shared";
+import { buildMonthForecast, expectedMonthsSchema, type ForecastOverrideRow, type MissingBill, type RecurringChange, unpaidRowSchema } from "@flow/shared";
 import type { ForecastSample as MonthForecastSampleShape } from "./screens/forecast-screen";
 
 /**
@@ -155,69 +155,6 @@ export const SAMPLE_MISSING_USD: MissingBill = {
   last_doc_date: "2026-09-03",
   project_id: null,
   category_id: null,
-};
-
-const party = (
-  direction: "income" | "expense",
-  id: string,
-  name: string,
-  minor: bigint,
-  seen = false,
-  currency = "ILS",
-) => ({
-  direction,
-  party_id: id,
-  name,
-  currency,
-  typical_amount_minor: direction === "expense" ? -minor : minor,
-  typical_day: 5,
-  months_seen: 5,
-  seen_this_month: seen,
-  project_id: "p1",
-  category_id: null,
-});
-
-/** October open (two parties already in), November and December full. */
-export const SAMPLE_EXPECTED: ExpectedMonths = {
-  today: "2026-10-08",
-  project_id: "p1",
-  months: [
-    { month: "2026-10", open: true, by_currency: [{ currency: "ILS", income_minor: 0n, expense_minor: -233_000n }] },
-    { month: "2026-11", open: false, by_currency: [{ currency: "ILS", income_minor: 1_200_000n, expense_minor: -409_000n }] },
-    { month: "2026-12", open: false, by_currency: [{ currency: "ILS", income_minor: 1_200_000n, expense_minor: -409_000n }] },
-  ],
-  recurring: [
-    party("expense", "s-power", "אור חשמל", 185_000n),
-    party("expense", "s-home", "בטוח בית", 126_000n, true),
-    party("expense", "s-gas", "גז לדוגמה", 50_000n, true),
-    party("expense", "s-clean", "שי ניקיון", 48_000n),
-    party("income", "c-rent", "שוכר לדוגמה", 1_200_000n, true),
-  ],
-};
-
-/** A second currency in every month: the row then carries a second line. */
-export const SAMPLE_EXPECTED_TWO_CURRENCIES: ExpectedMonths = {
-  ...SAMPLE_EXPECTED,
-  months: SAMPLE_EXPECTED.months.map((month) => ({
-    ...month,
-    by_currency: [...month.by_currency, { currency: "USD", income_minor: 0n, expense_minor: -2_000n }],
-  })),
-  recurring: [...SAMPLE_EXPECTED.recurring, party("expense", "s-cloud", "ענן לדוגמה", 2_000n, false, "USD")],
-};
-
-/** The open month has nothing left: every party already came in. */
-export const SAMPLE_EXPECTED_OPEN_DONE: ExpectedMonths = {
-  ...SAMPLE_EXPECTED,
-  months: SAMPLE_EXPECTED.months.map((month) => (month.open ? { ...month, by_currency: [] } : month)),
-  recurring: SAMPLE_EXPECTED.recurring.map((row) => ({ ...row, seen_this_month: true })),
-};
-
-/** Not enough history: no recurring party yet. */
-export const SAMPLE_EXPECTED_EMPTY: ExpectedMonths = {
-  today: "2026-10-08",
-  project_id: "p1",
-  months: SAMPLE_EXPECTED.months.map((month) => ({ ...month, by_currency: [] })),
-  recurring: [],
 };
 
 /**

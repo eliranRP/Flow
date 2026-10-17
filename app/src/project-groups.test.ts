@@ -1,26 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { findGroup, groupHref, projectChoices, projectCountLabel } from "./project-groups";
+import { projectChoices } from "./project-groups";
 import { projectsGrouped } from "./screens/project-groups-sample";
 import { groupHint, groupSections, PICK_REST_HEADING } from "./ui/change-picker";
 
 describe("project groups (FLOW-406)", () => {
-  it("finds one group with its projects, or null", () => {
-    expect(findGroup(projectsGrouped, "g1")?.projects).toHaveLength(4);
-    expect(findGroup(projectsGrouped, "gone")).toBeNull();
-    expect(findGroup({ projects: projectsGrouped.projects }, "g1")).toBeNull();
-  });
-
   it("gives each picker choice its group's name", () => {
     const choices = projectChoices(projectsGrouped);
     expect(choices.find((choice) => choice.id === "u1")?.group).toBe("בניין לדוגמה");
     expect(choices.find((choice) => choice.id === "a")).not.toHaveProperty("group");
     expect(projectChoices(undefined)).toEqual([]);
-  });
-
-  it("counts projects and links a group", () => {
-    expect(projectCountLabel(1)).toBe("פרויקט אחד");
-    expect(projectCountLabel(4)).toBe("4 פרויקטים");
-    expect(groupHref("g 1", "?period=3m")).toBe("/projects/groups/g%201?period=3m");
   });
 
   it("sections the picker by group, then the rest, and not at all with no groups", () => {

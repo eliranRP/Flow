@@ -11,7 +11,6 @@ const ProjectDetailScreen = lazy(() => screenLoaders.projectDetail().then((m) =>
 const ProjectCategoryScreen = lazy(() => screenLoaders.projectCategory().then((m) => ({ default: m.ProjectCategoryScreen })));
 const ProjectProfitScreen = lazy(() => screenLoaders.projectProfit().then((m) => ({ default: m.ProjectProfitScreen })));
 const ProjectMonthProfitScreen = lazy(() => screenLoaders.projectMonthProfit().then((m) => ({ default: m.ProjectMonthProfitScreen })));
-const ProjectGroupScreen = lazy(() => screenLoaders.projectGroup().then((m) => ({ default: m.ProjectGroupScreen })));
 
 /**
  * A month's profit page (FLOW-140): the period comes from the month in the path. A link or an address that
@@ -30,22 +29,17 @@ function ProjectMonthProfitRoute() {
   return <ProjectMonthProfitScreen />;
 }
 
-/** The projects tab: the list, a group, and a project's pages (its cash, profit, expenses, loans, transactions). */
+/** The projects tab: the list and a project's pages (its cash, profit, investment, a category). */
 export function ProjectRoutes() {
   return (
     <>
       <Route path="projects" element={<ProjectsScreen />} />
-      {/* FLOW-406 (proj-b-2): a project group's page. */}
-      <Route path="projects/groups/:groupId" element={<ProjectGroupScreen />} />
       <Route path="projects/:projectId" element={<ProjectDetailScreen />} />
       {/* FLOW-340 C: the screens the project page's rows open. */}
       {/* FLOW-419: the project opens on its cash; its profit page, a month and a month's lines are one tap in. */}
       <Route path="projects/:projectId/profit" element={<ProjectProfitScreen />} />
       <Route path="projects/:projectId/profit/:month" element={<ProjectMonthProfitRoute />} />
-      <Route path="projects/:projectId/expenses" element={<ProjectDetailScreen section="expenses" />} />
       <Route path="projects/:projectId/investment" element={<ProjectDetailScreen section="investment" />} />
-      <Route path="projects/:projectId/loans" element={<ProjectDetailScreen section="loans" />} />
-      <Route path="projects/:projectId/transactions" element={<ProjectDetailScreen section="transactions" />} />
       <Route path="projects/:projectId/categories/:categoryId" element={<ProjectCategoryScreen />} />
     </>
   );

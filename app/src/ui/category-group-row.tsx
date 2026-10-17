@@ -1,7 +1,3 @@
-import { useId, type ReactNode } from "react";
-import { Amount } from "./amount";
-import { ChevronDownIcon } from "./icons";
-
 /** The hidden word of each up mark: one icon, two meanings. */
 export const UP_MARK_LABEL = { high: "גבוה מהרגיל", new: "חדש" } as const;
 
@@ -13,66 +9,5 @@ export function UpMark({ kind }: { kind: keyof typeof UP_MARK_LABEL }) {
         <path d="M12 19V5M6 11l6-6 6 6" />
       </svg>
     </span>
-  );
-}
-
-/**
- * A group of categories as one row that opens in place (FLOW-401). The down chevron turns
- * when open; the members follow, indented, with no rule between them.
- */
-export function CategoryGroupRow({
-  name,
-  agorot,
-  currency,
-  up = null,
-  missing,
-  expanded,
-  onToggle,
-  children,
-}: {
-  name: string;
-  agorot: bigint;
-  currency?: string;
-  /** A member is above its usual month (high) or new this month. */
-  up?: keyof typeof UP_MARK_LABEL | null;
-  /** Every member is a bill not in yet: a muted "—" with this hidden word instead of the total. */
-  missing?: string;
-  expanded: boolean;
-  onToggle: () => void;
-  /** The member rows, shown while open. */
-  children: ReactNode;
-}) {
-  const membersId = useId();
-  return (
-    <>
-      <button
-        type="button"
-        className="ui-row ui-row-project ui-hit ui-group-row"
-        aria-expanded={expanded}
-        aria-controls={membersId}
-        onClick={onToggle}
-      >
-        <span className="ui-row-main">
-          <span className="ui-row-text">
-            <span className="ui-row-title">{name}</span>
-          </span>
-        </span>
-        {up != null ? <UpMark kind={up} /> : null}
-        {missing != null ? (
-          <span className="ui-row-missing ui-row-missing-group t-amount">
-            <span aria-hidden="true">—</span>
-            <span className="sr-only">{missing}</span>
-          </span>
-        ) : (
-          <Amount agorot={agorot} currency={currency} size="list" loss={false} />
-        )}
-        <span className="ui-group-caret" aria-hidden="true">
-          <ChevronDownIcon size={20} />
-        </span>
-      </button>
-      <div id={membersId} className="ui-group-members" hidden={!expanded}>
-        {expanded ? children : null}
-      </div>
-    </>
   );
 }

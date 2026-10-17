@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ProjectCashRow } from "@flow/shared";
-import { isOverBudget, netIn, orderActiveProjects, projectInitials, projectMeta, unassignedCountLabel } from "./project-list";
+import { isOverBudget, netIn, orderActiveProjects, projectMeta, unassignedCountLabel } from "./project-list";
 
 function row(over: Partial<ProjectCashRow> & { id: string; name: string }): ProjectCashRow {
   return {
@@ -25,12 +25,6 @@ function row(over: Partial<ProjectCashRow> & { id: string; name: string }): Proj
 const ILS = "ILS";
 
 describe("project list helpers (FLOW-445)", () => {
-  it("initials are the first letter of the first two words, Latin uppercased", () => {
-    expect(projectInitials("lark hill")).toBe("LH");
-    expect(projectInitials("Okafor")).toBe("O");
-    expect(projectInitials("  Juniper  Ct  Extra ")).toBe("JC");
-  });
-
   it("meta is the type then the status, or פעיל when neither", () => {
     expect(projectMeta(row({ id: "a", name: "x", type: "flip", first_month: null }))).toBe("flip · חדש");
     expect(projectMeta(row({ id: "a", name: "x", type: "השכרה" }))).toBe("השכרה");

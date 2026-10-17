@@ -6,7 +6,6 @@ import { ProjectCategoryScreen, ProjectDetailScreen, ProjectsScreen } from "../.
 import { useHomePreview } from "../../preview";
 import { cash as devCash, cashRow as devCashRow, investment as devInvestment, months as devMonths, project as devProject } from "../project-cash-sample";
 import { devProjectsCash } from "../projects-sample";
-import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY } from "../../forecast-sample";
 import { devDashboard } from "./home";
 import { AddForm } from "../../screens/add-sheet";
 import type { DevRoute } from "./types";
@@ -97,14 +96,12 @@ export function DevProjectDetail() {
     <ProjectDetailScreen
       sampleMenuRow={menuRow}
       // FLOW-340 C: `?section=` draws the screen a row opens, on the same sample .
-      section={section === "expenses" || section === "investment" || section === "loans" || section === "transactions" ? section : "overview"}
+      section={section === "investment" ? section : "overview"}
       sectionTo={(target) => (target === "overview" ? "/e2e/project-detail?preview=1" : `/e2e/project-detail?preview=1&section=${target}`)}
-      sampleExpected={params.get("expected") === "none" ? SAMPLE_EXPECTED_EMPTY : SAMPLE_EXPECTED}
       // `?budget=1` draws the flip with its budget (the board's flip frame, invented names and figures).
       sample={deletable ? idleProject : { ...e2eProject, budget_agorot: params.get("budget") === "1" ? e2eProject.budget_agorot : null }}
       sampleCash={deletable ? idleCash : devCash}
       sampleInvestment={deletable ? idleInvestment : devInvestment}
-      categoryTo="/e2e/project-category"
     />
     {params.get("add") === "1" ? <AddForm /> : null}
     </>

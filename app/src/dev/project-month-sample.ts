@@ -48,6 +48,23 @@ export function sampleMonthLines(month: string): ProjectCashMonthLines {
 
 type ProjectLine = NonNullable<ProjectDetail>["transactions"][number];
 
+/**
+ * What a project line adds to its month head: a kept-out line adds nothing (0099), a split line adds
+ * this project's share, `parts_minor`, signed in the line's own terms (decision 0138).
+ */
+export function projectMonthAmount(txn: ProjectLine): { minor: bigint; currency: string; direction: "income" | "expense" } {
+  const direction = txn.direction === "income" ? "income" : "expense";
+  const currency = txn.currency ?? "ILS";
+  if (txn.kept_out === true) return { minor: 0n, currency, direction };
+  if (txn.parts_minor != null) {
+    const share = txn.parts_minor;
+    if (share >= 0n) return { minor: direction === "income" ? share : -share, currency, direction };
+    const other = direction === "income" ? "expense" : "income";
+    return { minor: other === "income" ? -share : share, currency, direction: other };
+  }
+  return { minor: txn.amount_net, currency, direction };
+}
+
 /** A month's profit figures (USD): הכנסות $3,100, הוצאות $1,820, רווח $1,280. */
 export const SAMPLE_PROFIT_FIGURES = { income_minor: 310_000n, direct_minor: 182_000n, profit_minor: 128_000n };
 

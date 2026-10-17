@@ -4,7 +4,6 @@ import { expect, userEvent, within } from "@storybook/test";
 import { ProjectsScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar, sampleDashboard } from "../ui/screen-stories-support";
-import { projectsGrouped } from "./project-groups-sample";
 
 /** FLOW-445: one project's row in the month's cash (the list reads projects_cash_month). Invented names only. */
 function cashRow(input: { id: string; name: string; net?: number; type?: string | null; status?: "active" | "finished"; overhead?: boolean; group?: string | null; fresh?: boolean; spent?: number; budget?: number; profitAll?: number }): ProjectCashRow {
@@ -65,10 +64,6 @@ const withNew = cashMonth([
   cashRow({ id: "harrow", name: "Harrow Ln", type: "flip", fresh: true }),
 ]);
 
-const withGroup = cashMonth(
-  projectsGrouped.projects.map((project) => cashRow({ id: project.id, name: project.name, group: project.group_id ?? null, net: 1_000_00 })),
-);
-
 const meta = {
   title: "Screens/Routes",
   parameters: { flowRouter: false },
@@ -119,17 +114,6 @@ export const ProjectsNew: Story = {
     <StoryRoute entry="/projects" tabs>
       <ExampleBar />
       <ProjectsScreen sample={sampleDashboard} cashSample={withNew} />
-    </StoryRoute>
-  ),
-};
-
-/** FLOW-445: a group is one row among the active rows; its members' month net is its amount. */
-export const ProjectsGrouped: Story = {
-  name: "Projects, grouped",
-  render: () => (
-    <StoryRoute entry="/projects" tabs>
-      <ExampleBar />
-      <ProjectsScreen sample={projectsGrouped} cashSample={withGroup} />
     </StoryRoute>
   ),
 };

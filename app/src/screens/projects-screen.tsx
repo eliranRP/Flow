@@ -1,13 +1,11 @@
-import { type Dashboard, type ProjectRow, type ProjectCashRow, type ProjectsCashMonth } from "@flow/shared";
-import { projectAmountFigures } from "../by-currency";
+import { type Dashboard, type ProjectCashRow, type ProjectsCashMonth } from "@flow/shared";
 import { useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useHoldWrites } from "../use-is-viewer";
 import { useOpenFromQuery } from "../open-from-query";
-import { groupHref, projectCountLabel } from "../project-groups";
 import { cashMonthName } from "../cash";
 import { useProjectsCashMonth } from "../project-cash";
-import { netIn, orderActiveProjects, overheadRow, isOverBudget, projectInitials, projectMeta, unassignedCountLabel } from "../project-list";
+import { netIn, orderActiveProjects, overheadRow, isOverBudget, projectMeta, unassignedCountLabel } from "../project-list";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import { useDashboardQuery } from "../use-books";
@@ -86,7 +84,6 @@ export function ProjectsScreen({ sample, cashSample }: { sample?: Dashboard; cas
         {month ? (
           <ProjectsBody
             month={month}
-            groups={sample?.groups ?? dashboard.data?.groups ?? []}
             search={search}
             finishedOpen={finishedOpen}
             setFinishedOpen={setFinishedOpen}
@@ -101,14 +98,12 @@ export function ProjectsScreen({ sample, cashSample }: { sample?: Dashboard; cas
 
 function ProjectsBody({
   month,
-  groups,
   search,
   finishedOpen,
   setFinishedOpen,
   onNew,
 }: {
   month: NonNullable<ProjectsCashMonth>;
-  groups: NonNullable<Dashboard["groups"]>;
   search: string;
   finishedOpen: boolean;
   setFinishedOpen: (value: boolean) => void;
@@ -122,8 +117,6 @@ function ProjectsBody({
   const overhead = overheadRow(month);
   const finished = month.projects.filter((row) => row.status === "finished" && !row.is_overhead);
   const unassignedNet = netIn(month.unassigned.cash, base);
-  const members = (groupId: string) => active.filter((row) => row.group_id === groupId);
-  const groupsShown = groups.filter((group) => members(group.id).length > 0);
   return (
     <>
       <span ref={titleEnd} className="ui-compact-mark" aria-hidden="true" />
@@ -139,10 +132,7 @@ function ProjectsBody({
         <span className="ui-muted">לפי פעילות</span>
       </div>
       <List>
-        {groupsShown.map((group) => (
-          <GroupCashRow key={`group-${group.id}`} name={group.name} count={members(group.id).length} agorot={members(group.id).reduce((sum, row) => sum + netIn(row.cash, base), 0)} currency={base} href={groupHref(group.id, search)} />
-        ))}
-        {active.filter((row) => row.group_id == null || !groupsShown.some((group) => group.id === row.group_id)).map((row) => (
+        {active.map((row) => (
           <ProjectCashRowItem key={row.id} row={row} currency={base} search={search} />
         ))}
         {overhead ? (
@@ -214,42 +204,6 @@ function ProjectCashRowItem({ row, currency, search, finished = false }: { row: 
       signed
       href={`/projects/${row.id}${search}`}
       className={finished ? "ui-proj-finished" : undefined}
-    />
-  );
-}
-
-/** A group among the active rows: its members' month net, opening the group's page. */
-function GroupCashRow({ name, count, agorot, currency, href }: { name: string; count: number; agorot: number; currency: string; href: string }) {
-  return (
-    <ListRow
-      variant="project"
-      title={name}
-      hint={projectCountLabel(count)}
-      icon={<span className="ui-row-initials" aria-hidden="true">{projectInitials(name)}</span>}
-      agorot={BigInt(agorot)}
-      currency={currency}
-      href={href}
-      chevron
-    />
-  );
-}
-
-/** One project's row on the Projects tab and on a group's page. */
-export function ProjectRowItem({ project, search, alignWithChevron = false }: { project: ProjectRow; search: string; alignWithChevron?: boolean }) {
-  const amounts = projectAmountFigures(project);
-  const single = amounts.length === 1 ? amounts[0] : undefined;
-  return (
-    <ListRow
-      variant="project"
-      title={project.name}
-      hint={project.status === "finished" ? "הסתיים" : (project.state_label ?? undefined)}
-      agorot={single?.minor ?? project.profit_agorot}
-      currency={single?.currency}
-      amounts={amounts.length > 1 ? amounts : undefined}
-      loss={(single?.minor ?? project.profit_agorot) < 0n}
-      href={`/projects/${project.id}${search}`}
-      // Beside a group row's chevron, the amounts keep one column (FLOW-408).
-      chevronSpace={alignWithChevron}
     />
   );
 }

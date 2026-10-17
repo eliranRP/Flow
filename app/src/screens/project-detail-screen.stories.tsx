@@ -1,6 +1,6 @@
 import type { ProjectDetail as ProjectDetailData } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import { userEvent, within } from "@storybook/test";
 import { ProjectDetailScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { FILLED } from "../ui/investment-card.stories-support";
@@ -380,71 +380,6 @@ export const ProjectFinishConfirm: Story = {
     await userEvent.click(await body.findByRole("button", { name: /^סיום הפרויקט/ }));
     await body.findByRole("dialog", { name: /^לסיים את/ });
   },
-};
-
-export const ProjectExpenses: Story = {
-  name: "Project, expenses section",
-  render: () => (
-    <StoryRoute entry="/projects/p-a/expenses" tabs>
-      <ProjectDetailScreen example={exampleOnBand} sample={overviewProject} section="expenses" sectionTo={sectionTo} />
-    </StoryRoute>
-  ),
-};
-
-/** FLOW-334: the waiting row reads as Home's review row (inbox icon, tint), not a category. */
-export const ProjectExpensesWaiting: Story = {
-  name: "Project, expenses section, waiting row",
-  render: () => (
-    <StoryRoute entry="/projects/p-a/expenses" tabs>
-      <ProjectDetailScreen
-        example={exampleOnBand}
-        sample={{ ...overviewProject, pending_count: 2, pending_agorot: 1_250_000n }}
-        section="expenses"
-        sectionTo={sectionTo}
-      />
-    </StoryRoute>
-  ),
-};
-
-export const ProjectTransactionsSection: Story = {
-  name: "Project, transactions section",
-  render: () => (
-    <StoryRoute entry="/projects/p-a/transactions" tabs>
-      <ProjectDetailScreen example={exampleOnBand} sample={overviewProject} section="transactions" sectionTo={sectionTo} />
-    </StoryRoute>
-  ),
-};
-
-// FLOW-424 (C18-1): a kept-out line with a long category keeps its amount and chevron in line with
-// the counted rows; the category drops whole instead of pushing them out.
-const longKeptOut: NonNullable<ProjectDetailData> = {
-  ...overviewProject,
-  transactions: overviewProject.transactions.map((txn) => (txn.kept_out === true ? { ...txn, category: "קבלני משנה וחומרי גמר" } : txn)),
-};
-export const ProjectTransactionsLongKeptOut: Story = {
-  name: "Project, transactions section, long kept-out hint",
-  render: () => (
-    <StoryRoute entry="/projects/p-a/transactions" tabs>
-      <ProjectDetailScreen example={exampleOnBand} sample={longKeptOut} section="transactions" sectionTo={sectionTo} />
-    </StoryRoute>
-  ),
-  play: async ({ canvasElement }) => {
-    const rows = [...canvasElement.querySelectorAll<HTMLElement>("a.ui-row")].filter((row) => row.querySelector(".ui-row-chevron"));
-    const kept = rows.find((row) => row.classList.contains("ui-row-set-aside"));
-    const counted = rows.find((row) => !row.classList.contains("ui-row-set-aside"));
-    const edge = (row: HTMLElement | undefined) => Math.round(row?.querySelector(".ui-row-chevron")?.getBoundingClientRect().left ?? -1);
-    await expect(kept).toBeDefined();
-    await expect(edge(kept)).toBe(edge(counted));
-  },
-};
-
-export const ProjectLoansSection: Story = {
-  name: "Project, loans section",
-  render: () => (
-    <StoryRoute entry="/projects/p-a/loans" tabs>
-      <ProjectDetailScreen example={exampleOnBand} sample={overviewProject} section="loans" sectionTo={sectionTo} />
-    </StoryRoute>
-  ),
 };
 
 export const ProjectInvestmentScreen: Story = {

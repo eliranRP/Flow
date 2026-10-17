@@ -86,27 +86,3 @@
   block-size: calc(1em * var(--type-meta-line));
   content: "";
 }
-
-/* FLOW-424 (C18-1): only the kept-out words set that minimum. They lead on their own line box;
-   the later parts are out of the intrinsic width and take what is left, dropping whole. */
-.ui-hint-kept-line {
-  display: flex;
-  min-inline-size: min-content;
-}
-
-.ui-hint-kept {
-  flex: none;
-  white-space: pre;
-}
-
-.ui-hint-rest {
-  flex: 1 1 0;
-  contain: inline-size;
-}
-
-/* A line tall, so a later part that does not fit drops to the hidden second line. */
-.ui-hint-rest::before {
-  content: "";
-  inline-size: 0;
-  block-size: calc(var(--type-line2-size) * var(--type-line2-line));
-}
