@@ -151,9 +151,11 @@ export function ProjectCashOverview({
             <div className="ui-project-band-pair">
               {bandRows.map((row) => (
                 <Link key={row.id} to={row.href ?? "#"} className="ui-band-row-link m-press" aria-label={row.name}>
-                  <span className="ui-band-row-label">{row.id === "in" ? "נכנס" : row.id === "out" ? "יצא" : "רווח"}</span>
+                  <span className="ui-band-row-label">{row.id === "in" ? "נכנס" : "יצא"}</span>
                   <span className="ui-band-row-amount">
-                    {row.amounts[0] == null ? null : <Amount agorot={row.amounts[0].minor} currency={row.amounts[0].currency} size="list" loss={row.id === "profit" && row.amounts[0].minor < 0n} />}
+                    {row.amounts.map((amount) => (
+                      <Amount key={amount.currency} agorot={amount.minor} currency={amount.currency} size="list" />
+                    ))}
                   </span>
                 </Link>
               ))}
@@ -164,6 +166,7 @@ export function ProjectCashOverview({
       </TopBand>
       <CompactBar
         title={project.name}
+        figureFirst
         figure={first == null ? undefined : <Amount agorot={first.net_minor} currency={first.currency} loss={first.net_minor < 0n} presentation="detail" />}
         backTo={`/projects${search}`}
         size="detail"

@@ -659,16 +659,18 @@ function ProjectMenu({
         {overhead}
         {/* FLOW-334: the menu's actions are rows, so "סיום הפרויקט" is not a second kind of control. */}
         <List className="ui-project-menu-list">
-          <ListRow
-            variant="button"
-            title="עריכת פרטים"
-            meta="שם, סוג ותקציב"
-            chevron
-            onClick={() => {
-              setMenu(false);
-              setEditing(true);
-            }}
-          />
+          {finished ? null : (
+            <ListRow
+              variant="button"
+              title="עריכת פרטים"
+              meta="שם, סוג ותקציב"
+              chevron
+              onClick={() => {
+                setMenu(false);
+                setEditing(true);
+              }}
+            />
+          )}
           {finished ? null : (
             <ListRow variant="item" title="הוספה לפרויקט" meta="תנועה ידנית לפרויקט הזה" href={`/add?project=${projectId}`} chevron />
           )}

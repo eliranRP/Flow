@@ -40,7 +40,7 @@ import {
   sampleCashYears,
 } from "./dev/cash-sample";
 import { cash as devCash, investment as devInvestment, project as devProject } from "./dev/project-cash-sample";
-import { devProjectsCash, devProjectsRows } from "./dev/projects-sample";
+import { devProjectsCash } from "./dev/projects-sample";
 import { CashHistoryScreen, CashYearScreen } from "./screens/cash-history";
 import { cashMonthKey } from "./cash";
 import {
@@ -391,10 +391,8 @@ export function DevCashYear() {
   return <CashYearScreen sample={{ years: sampleCashYears(), months }} year={Number(months.months[0]?.month.slice(0, 4))} />;
 }
 
-const devProjectsDashboard: Dashboard = { ...devDashboard, projects: devProjectsRows };
-
 export function DevProjects() {
-  return <ProjectsScreen sample={devProjectsDashboard} cashSample={devProjectsCash} />;
+  return <ProjectsScreen sample={devDashboard} cashSample={devProjectsCash} />;
 }
 
 /** Dev-only. A production build drops the sample secret with this flag. */
