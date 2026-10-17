@@ -15,7 +15,7 @@ import {
 } from "../project-cash";
 import { BackButton } from "../ui/back";
 import { Amount } from "../ui/amount";
-import { ProjectMonthsCard, ProjectProfitCard } from "./project-page-cards";
+import { ProjectEmptyCard, ProjectMonthsCard, ProjectProfitCard } from "./project-page-cards";
 import { FocusTitle } from "../ui/focus-title";
 import { BannerRows, type BannerRow } from "../ui/banner";
 import { BandHero } from "../ui/layout";
@@ -25,6 +25,7 @@ import { useScrolledPast } from "../ui/screen-header";
 import { CompactBar } from "../ui/compact-bar";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { TopBand } from "../ui/top-band";
+import { israelToday } from "../ui/date-math";
 import { loansFigure } from "./project-overview";
 import type { ProjectInvestment } from "./project-investment-data";
 
@@ -59,6 +60,8 @@ export function ProjectCashOverview({
   menu,
   attention = [],
   sinceProfit = null,
+  firstMonth = null,
+  fresh = false,
   budget,
   budgetAdd,
   example,
@@ -77,6 +80,10 @@ export function ProjectCashOverview({
   attention?: BannerRow[];
   /** The project's profit over its whole life, per currency (null while unread). */
   sinceProfit?: { currency: string; minor: bigint }[] | null;
+  /** The month the project began ("YYYY-MM"), from its row on the Projects list; null while unread. */
+  firstMonth?: string | null;
+  /** A project with no line, invoice or month yet: the profit rows give way to the empty card. */
+  fresh?: boolean;
   /** FLOW-445: the budget card, when the project has a budget (the edit sheet lives with the page). */
   budget?: ReactNode;
   /** The quiet "+ הוספת תקציב" a project with no budget shows after its profit rows. */
@@ -107,9 +114,11 @@ export function ProjectCashOverview({
   const bandRows = summaryRows.filter((row) => row.id === "in" || row.id === "out");
   // The read holds the last PROJECT_CASH_MONTHS months: a project younger than that began in its oldest one.
   const oldest = data == null ? undefined : data.months[data.months.length - 1];
-  const sinceHint = oldest == null || data == null || data.months.length >= PROJECT_CASH_MONTHS
-    ? "כל התקופה עד היום"
-    : `מאז ${cashMonthName(cashMonthKey(oldest.month), new Date(0))}`;
+  const sinceHint = firstMonth != null
+    ? `מאז ${cashMonthName(firstMonth, new Date(0))}`
+    : oldest == null || data == null || data.months.length >= PROJECT_CASH_MONTHS
+      ? "כל התקופה עד היום"
+      : `מאז ${cashMonthName(cashMonthKey(oldest.month), new Date(0))}`;
   const profitRow = summaryRows.find((row) => row.id === "profit");
   const keptRow = summaryRows.find((row) => row.id === "kept");
   return (
@@ -117,20 +126,20 @@ export function ProjectCashOverview({
       <TopBand
         wordmark={false}
         example={example}
-        leading={<BackButton fallback={`/projects${search}`} onBand />}
+        leading={<BackButton fallback={`/projects${search}`} text="פרויקטים" onBand />}
         trailing={menu}
       >
         <BandHero className="ui-band-hero-project">
           <FocusTitle className="t-band-title">{project.name}</FocusTitle>
           {stateLine == null ? null : <p className="t-label">{stateLine}</p>}
-          <p className="ui-band-label t-label">{key == null ? "תזרים" : cashTitle(key, now)}</p>
+          <p className="ui-band-label t-label">{key == null ? "תזרים" : `${cashTitle(key, now)}${key === israelToday(now).slice(0, 7) ? " · עד היום" : ""}`}</p>
           {data == null ? (
             <Skeleton tone="band" className="ui-skel-project-num" />
           ) : (
             <div className="ui-project-profits t-display">
               {rows.map((row) => (
                 <p key={row.currency}>
-                  <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} presentation="detail" zeroCents={row.net_minor === 0n} />
+                  <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} presentation="detail" zeroCents />
                 </p>
               ))}
             </div>
@@ -142,7 +151,7 @@ export function ProjectCashOverview({
                   <span className="ui-band-row-label">{row.id === "in" ? "נכנס" : "יצא"}</span>
                   <span className="ui-band-row-amount">
                     {row.amounts.map((amount) => (
-                      <Amount key={amount.currency} agorot={amount.minor} currency={amount.currency} size="list" />
+                      <Amount key={amount.currency} agorot={amount.minor} currency={amount.currency} presentation="detail" size="list" />
                     ))}
                   </span>
                 </Link>
@@ -166,7 +175,7 @@ export function ProjectCashOverview({
         {/* The board puts the rows that need a hand first: its pending approvals, late bills and changed charges. */}
         <BannerRows rows={attention} />
         {budget}
-        {profitRow == null ? null : (
+        {profitRow == null || fresh ? null : (
           <ProjectProfitCard
             monthName={cashMonthName(key ?? "", now)}
             monthLabel={profitRow.name}
@@ -178,7 +187,8 @@ export function ProjectCashOverview({
             extra={keptRow}
           />
         )}
-        {budgetAdd}
+        {summary ? null : budgetAdd}
+        {fresh ? <ProjectEmptyCard /> : null}
         {summaryFigures == null ? null : <InvestmentSummary figures={summaryFigures} href={investmentHref} />}
         {investment == null || summary ? null : (
           <List className="ui-project-cash-more">

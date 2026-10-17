@@ -16,7 +16,7 @@ import { IconButton } from "../ui/icon-button";
 import { CompactBar } from "../ui/compact-bar";
 import { useScrolledPast } from "../ui/screen-header";
 import { formatAmount } from "../ui/amount";
-import { HomeIcon, PlusIcon, ProjectsIcon, SearchIcon } from "../ui/icons";
+import { CheckIcon, HomeIcon, PlusIcon, SearchIcon } from "../ui/icons";
 import { Avatar } from "../ui/avatar";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
@@ -26,7 +26,7 @@ import { TextLink } from "../ui/text-link";
 import { ProjectFormSheet } from "./project-form-sheet";
 
 /** FLOW-445: the Projects tab. Rows are this month's cash per project, the overhead row last. */
-export function ProjectsScreen({ sample, cashSample }: { sample?: Dashboard; cashSample?: ProjectsCashMonth } = {}) {
+export function ProjectsScreen({ sample, cashSample, finishedOpen: openFinished = false }: { sample?: Dashboard; cashSample?: ProjectsCashMonth; /** Stories and the proof build open הסתיימו at once. */ finishedOpen?: boolean } = {}) {
   const preview = useHomePreview();
   const search = usePreviewSearch();
   const dashboard = useDashboardQuery(sample == null);
@@ -43,7 +43,7 @@ export function ProjectsScreen({ sample, cashSample }: { sample?: Dashboard; cas
     setOpen(true);
   });
   const finishedFromRoute = (location.state as { finishedOpen?: boolean } | null)?.finishedOpen === true;
-  const [finishedOpen, setFinishedOpen] = useState(finishedFromRoute);
+  const [finishedOpen, setFinishedOpen] = useState(finishedFromRoute || openFinished);
   const month = cashSample ?? cash.data;
   // The dashboard first, then the cash month: a pending or failed cash read is the screen's phase too.
   const phase: ScreenPhase = sample ? { kind: "ready" } : screenPhase(preview, dashboard.isPending || dashboard.isError || cashSample != null ? dashboard : cash);
@@ -52,13 +52,15 @@ export function ProjectsScreen({ sample, cashSample }: { sample?: Dashboard; cas
   );
   const empty = (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <ScreenHeader title="פרויקטים" />
-      <EmptyState
-        icon={<ProjectsIcon />}
-        title="עוד אין פרויקטים"
-        body={holdWrites ? "פרויקטים מגיעים מ־SUMIT." : "פרויקטים מגיעים מ־SUMIT, ואפשר גם לפתוח אחד כאן."}
-        action={holdWrites ? undefined : <Button variant="pill" icon={<PlusIcon size={16} />} onClick={() => { setOpen(true); }}>פרויקט חדש</Button>}
-      />
+      <ScreenHeader layout="stacked" title="פרויקטים" trailing={<span className="ui-header-slot" aria-hidden="true" />} className="ui-tab-root-head" />
+      <div className="ui-projects-empty flex min-h-0 flex-1 flex-col">
+        <EmptyState
+          icon={<HomeIcon />}
+          title="עוד אין פרויקטים"
+          body={holdWrites ? "פרויקטים מגיעים מ־SUMIT." : "פרויקט מרכז את ההכנסות וההוצאות של נכס או עבודה, ומראה אם הוא מרוויח."}
+          action={holdWrites ? undefined : <Button onClick={() => { setOpen(true); }}>פרויקט חדש</Button>}
+        />
+      </div>
       {sheet}
     </div>
   );
@@ -70,8 +72,8 @@ export function ProjectsScreen({ sample, cashSample }: { sample?: Dashboard; cas
         stacked
         headerClassName="ui-tab-root-head"
         title="פרויקטים"
-        leading={holdWrites ? undefined : <TextLink tone="accent" chevron={false} onClick={() => { setOpen(true); }}>+ פרויקט חדש</TextLink>}
-        trailing={(
+        leading={holdWrites || phase.kind !== "ready" ? undefined : <TextLink tone="accent" chevron={false} onClick={() => { setOpen(true); }}>+ פרויקט חדש</TextLink>}
+        trailing={phase.kind !== "ready" ? <span className="ui-header-slot" aria-hidden="true" /> : (
           <IconButton to={`/search${search}`} label="חיפוש">
             <SearchIcon />
           </IconButton>
@@ -191,19 +193,34 @@ function ProjectCashRowItem({ row, currency, search, finished = false }: { row: 
   const lines = finished ? [] : row.cash.map((line) => ({ minor: BigInt(line.net_minor), currency: line.currency }));
   const elsewhere = lines.length > 1 || lines.some((line) => line.currency !== currency);
   const over = !finished && isOverBudget(row);
-  const hint = projectMeta(row);
+  // The board's finished row: a tick, the owner's own words ("flip · נמכר ביוני 2026"), and the final result in whole dollars.
+  const hint = finished ? (row.type ?? "הסתיים") : projectMeta(row);
+  if (finished) {
+    return (
+      <ListRow
+        variant="project"
+        title={row.name}
+        hint={hint}
+        icon={<span className="ui-row-initials ui-row-done" aria-hidden="true"><CheckIcon size={18} /></span>}
+        agorot={BigInt(row.profit_all_minor)}
+        currency={currency}
+        amountDirection={row.profit_all_minor > 0 ? "income" : undefined}
+        href={`/projects/${row.id}${search}`}
+        className="ui-proj-finished"
+      />
+    );
+  }
   return (
     <ListRow
       variant="project"
       title={row.name}
-      hint={over ? <>{hint}<span className="ui-proj-over"> · מעל התקציב</span></> : hint}
+      hint={<span className="ui-proj-hint-line">{hint}{over ? <span className="ui-proj-over"> · מעל התקציב</span> : null}</span>}
       icon={<Avatar name={row.name} fallback="person" />}
-      agorot={BigInt(finished ? row.profit_all_minor : net)}
+      agorot={BigInt(net)}
       currency={currency}
       amounts={elsewhere ? lines : undefined}
       signed
       href={`/projects/${row.id}${search}`}
-      className={finished ? "ui-proj-finished" : undefined}
     />
   );
 }

@@ -150,6 +150,9 @@ export function ProjectDetailScreen({
   const groups = sampleGroups ?? liveGroups;
   // The profit since the project began: a read over every period, once the page's own read has landed.
   const lifetime = useProjectQuery(sample == null && section === "overview" && detail.data != null && !detail.isFetching ? projectId : "", ALL_PERIOD);
+  // The project's row on the Projects list (the same cached read the ⋯ menu uses): the month it began.
+  const monthRows = useProjectsCashMonth(undefined, sample ? "" : projectId);
+  const monthRow = sampleMenuRow ?? monthRows.data?.projects.find((row) => row.id === projectId);
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();
   const blocked = useBlockedPreview();
@@ -270,6 +273,8 @@ export function ProjectDetailScreen({
       menu={menu}
       budget={<ProjectBudget project={project} spentAgorot={absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot)} part="card" />}
       budgetAdd={<ProjectBudget project={project} spentAgorot={0n} part="add" />}
+      firstMonth={monthRow?.first_month?.slice(0, 7) ?? null}
+      fresh={monthRow != null && monthRow.first_month == null}
       sinceProfit={(lifetime.data ?? (sample ? project : null)) == null ? null : projectRows(lifetime.data ?? project, companyCurrency).map((row) => ({ currency: row.currency, minor: row.profit_minor }))}
       attention={projectAttentionRows({
         projectId: project.id,

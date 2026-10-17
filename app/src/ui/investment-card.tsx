@@ -367,11 +367,11 @@ export function InvestmentCard({
   );
 }
 
-/** FLOW-445: a count of minor units rounded to whole thousands, for the summary's grid ("₪185,000"). */
+/** FLOW-445: a count of minor units rounded to whole thousands and written with a K, for the summary's grid ("₪185K"). */
 export function roundedThousands(minor: bigint, currency: string): string {
   const step = 100_000n;
   const rounded = ((minor < 0n ? -minor : minor) + step / 2n) / step * step;
-  return formatAmount(minor < 0n ? -rounded : rounded, "summary", currency);
+  return formatAmount(minor < 0n ? -rounded : rounded, "summary", currency).replace(/,000$/u, "K");
 }
 
 /**

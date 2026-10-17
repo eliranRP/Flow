@@ -5,6 +5,8 @@ import { ProjectDetailScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { FILLED } from "../ui/investment-card.stories-support";
 import { ExampleBar, exampleOnBand, storyBody } from "../ui/screen-stories-support";
+import { kindSample, type ProjectKind } from "../dev/project-kinds-sample";
+import { devProjectsCash } from "../dev/projects-sample";
 
 const meta = {
   title: "Screens/Routes",
@@ -390,3 +392,26 @@ export const ProjectInvestmentScreen: Story = {
     </StoryRoute>
   ),
 };
+
+/** The board's three other kinds of project page: a rental, a client job, and a project with nothing filed yet. */
+function kindStory(kind: Exclude<ProjectKind, "flip">): Story {
+  const data = kindSample(kind, devProjectsCash.projects[0]);
+  return {
+    render: () => (
+      <StoryRoute entry={`/projects/${data.project.id}`} tabs>
+        <ProjectDetailScreen
+          example={exampleOnBand}
+          sample={data.project}
+          sampleCash={data.cash}
+          sampleInvestment={data.investment}
+          sampleMenuRow={data.row}
+          sectionTo={(target) => (target === "overview" ? `/projects/${data.project.id}` : `/projects/${data.project.id}/${target}`)}
+        />
+      </StoryRoute>
+    ),
+  };
+}
+
+export const ProjectRentalPage: Story = { name: "Project, rental", ...kindStory("rental") };
+export const ProjectClientPage: Story = { name: "Project, client job", ...kindStory("client") };
+export const ProjectNewPage: Story = { name: "Project, nothing filed yet", ...kindStory("new") };

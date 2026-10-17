@@ -184,7 +184,8 @@
 .ui-projects-finished-toggle {
   background: none;
   border: 0;
-  padding: 0;
+  padding: 0 var(--space-side);
+  inline-size: 100%;
   font: inherit;
   color: var(--color-accent-text);
   cursor: pointer;
@@ -195,12 +196,25 @@
   background: transparent;
 }
 
+/* The board keeps a project row to one line and cuts a long type and status at the end. */
+.ui-proj-hint-line {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .ui-proj-over {
   color: var(--color-bad);
 }
 
+/* The board's finished row: a grey tick in the circle, the whole row at 75%. */
+.ui-row-initials.ui-row-done {
+  color: var(--color-text-muted);
+}
+
 .ui-proj-finished {
-  opacity: 0.6;
+  opacity: 0.75;
 }
 
 .ui-project-menu-delete {

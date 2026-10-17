@@ -16,7 +16,10 @@ function Figures({ figures, detail = true }: { figures: Figure[]; detail?: boole
           currency={figure.currency}
           presentation={detail ? "detail" : "summary"}
           size="list"
-          loss={figure.minor < 0n}
+          // The board: a profit row signs a gain in the text colour; a month's net is green when it gained.
+          direction={detail && figure.minor > 0n ? "income" : undefined}
+          income={!detail}
+          loss={detail && figure.minor < 0n}
         />
       ))}
     </span>
@@ -79,6 +82,16 @@ export function ProjectMonthsCard({ rows, footer }: { rows: CashRow[]; footer?: 
         ))}
       </List>
       {footer}
+    </Card>
+  );
+}
+
+/** A project with nothing filed yet: what will appear here, and that suppliers are remembered. */
+export function ProjectEmptyCard() {
+  return (
+    <Card className="ui-project-card ui-project-empty-card">
+      <h2 className="ui-project-card-title">אין עדיין תנועות</h2>
+      <p>חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן. ספקים שתשייך לכאן ייזכרו להבא.</p>
     </Card>
   );
 }
