@@ -65,7 +65,7 @@ export function ProjectsScreen({ sample, cashSample }: { sample?: Dashboard; cas
       {sheet}
     </div>
   );
-  if (phase.kind === "ready" && (month?.projects.length ?? 0) === 0) return empty;
+  if (phase.kind === "empty" || (phase.kind === "ready" && (month?.projects.length ?? 0) === 0)) return empty;
   const activeCount = month?.projects.filter((row) => row.status === "active" && !row.is_overhead).length ?? 0;
   return (
     <>
