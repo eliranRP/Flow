@@ -606,3 +606,26 @@
   flex-direction: column;
   gap: var(--space-4);
 }
+
+/* FLOW-512b C: the categories list's rows are 56px tall, as on the board (one- and two-line rows alike). */
+.ui-cat-list .ui-row {
+  min-block-size: 56px;
+}
+
+/* FLOW-512b C: the theme sheet's board block: 24px under the last option, and the options 16px apart. */
+.ui-theme-sheet {
+  --sheet-pad-bottom: 36px;
+}
+
+.ui-theme-sheet .ui-choice-sheet {
+  gap: var(--space-4);
+}
+
+/* FLOW-512b C: the rename sheet's board block: the title sits lower under the grip, and its note is regular weight. */
+.ui-rename-sheet .ui-sheet-head {
+  margin-block-start: var(--space-1);
+}
+
+.ui-rename-sheet .ui-settings-note {
+  font-weight: var(--type-detail-weight);
+}

@@ -1,16 +1,79 @@
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "../../assistant-sample";
 import { AiConnectionPage } from "../../screens/assistant-settings";
 import { BusinessScreen } from "../../screens/business-screen";
 import { MercuryConnectionRoute, SumitConnectionRoute } from "../../screens/connection-pages";
 import { CategoriesScreen, ConnectionsScreen, SettingsScreen } from "../../screens/flow-screens";
+import { NotificationsScreen } from "../../screens/notifications-screen";
+import { writeThemeChoice } from "../../theme-store";
 import type { DevRoute } from "./types";
 
 /** Dev-only. A production build drops the sample secret with this flag. */
 const devAssistantSecret = import.meta.env.DEV ? assistantSampleSecret : undefined;
 
+/**
+ * FLOW-512 proof: `?sheet=rename` (on the business page) or `?sheet=theme` (on Settings) taps the
+ * row that opens the sheet, once it has drawn. `rename` also types an invented name, as the board's frame has.
+ */
+function OpenSettingsSheet() {
+  const [params] = useSearchParams();
+  useEffect(() => {
+    const sheet = params.get("sheet");
+    if (sheet !== "rename" && sheet !== "theme") return;
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      const row = document.querySelector<HTMLButtonElement>(sheet === "rename" ? 'button[aria-label^="שם העסק:"]' : 'button[aria-label^="מראה:"]');
+      if (row) {
+        row.click();
+        window.clearInterval(timer);
+        if (sheet === "rename") fillRenameDraft();
+      } else if (Date.now() - started > 4000) {
+        window.clearInterval(timer);
+      }
+    }, 100);
+  }, [params]);
+  return null;
+}
+
+function fillRenameDraft() {
+  const started = Date.now();
+  const timer = window.setInterval(() => {
+    const field = document.querySelector<HTMLInputElement>('[role="dialog"] input');
+    if (field) {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(field, "Cedar Lane Homes LLC");
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+      window.clearInterval(timer);
+    } else if (Date.now() - started > 4000) {
+      window.clearInterval(timer);
+    }
+  }, 100);
+}
+
+/** The notifications page on the board's preset: one switch on, one off, one on (no push support needed to draw it). */
+export function DevNotifications() {
+  return (
+    <NotificationsScreen
+      sample={{ new_transaction: true, evening_reminder: false, weekly_summary: true, prompt_answered: true, has_subscription: true }}
+      support="ok"
+    />
+  );
+}
+
 export function DevSettings() {
-  return <SettingsScreen sample={useDevSettingsSample()} />;
+  // The board's theme frame has its own mode selected: כהה in the dark frame, בהיר in the light one.
+  useState(() => {
+    if (new URLSearchParams(window.location.search).get("sheet") === "theme") {
+      writeThemeChoice(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    }
+    return null;
+  });
+  return (
+    <>
+      <OpenSettingsSheet />
+      <SettingsScreen sample={useDevSettingsSample()} />
+    </>
+  );
 }
 
 export function DevConnections() {
@@ -34,7 +97,12 @@ export function DevMercuryConnection() {
 
 /** The business page on the dev settings fixture: its name is the fixture's, and its rename sheet opens from it. */
 export function DevBusiness() {
-  return <BusinessScreen sample={useDevSettingsSample()} />;
+  return (
+    <>
+      <OpenSettingsSheet />
+      <BusinessScreen sample={useDevSettingsSample()} />
+    </>
+  );
 }
 
 /** The AI connection page on the dev settings fixture (`?assistant=…`), so a mint shows its code without the server. `?mint=1` opens the code step. */
@@ -128,4 +196,5 @@ export const settingsRoutes: DevRoute[] = [
   { path: "connections/mercury", element: <DevMercuryConnection /> },
   { path: "categories", element: <DevCategories /> },
   { path: "categories/:parentId", element: <DevCategories /> },
+  { path: "notifications", element: <DevNotifications /> },
 ];
