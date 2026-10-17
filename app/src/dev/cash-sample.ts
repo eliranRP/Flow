@@ -244,23 +244,26 @@ export function sampleBoardCashMonths(now = new Date()): NonNullable<CashMonths>
   };
 }
 
-/** The board's lines: [days back, supplier, project, category, minor, pending, in P&L]. */
+/**
+ * The board's lines: [days back, supplier, project, category, minor, pending, in P&L]. The first five wait
+ * for approval; the loan principal and the rehab are the two lines profit leaves out ($13,757).
+ */
 const BOARD_OUT: Array<[number, string, string | null, string, bigint, boolean, boolean]> = [
   [0, "Redfield", "Maple St", "ביטוח", 124_000n, true, true],
   [1, "Bayside Water Works", "Maple St", "אחר", 8_640n, true, true],
   [1, "Harlow's", null, "חומרים", 41_218n, true, true],
   [2, "Pike Plumbing LLC", "Pine Ridge", "שירותים", 240_000n, true, true],
-  [3, "Norvell Builders", "Birch Court", "שיפוץ", 320_000n, false, true],
-  [4, "Kestrel Electric", "Maple St", "חשמל", 96_000n, false, true],
-  [5, "Lantern Paint Co", "Pine Ridge", "חומרים", 78_500n, true, true],
-  [6, "Clearwater Clean", "Birch Court", "שירותים", 45_000n, false, true],
-  [7, "Summit Equipment", "Birch Court", "ציוד לעסק", 900_000n, false, false],
-  [8, "Tilecraft Supply", "Maple St", "חומרים", 220_000n, false, true],
-  [9, "Vertex Lifts", "Birch Court", "שיפוץ והשבחה", 475_700n, false, false],
-  [10, "Payroll Partners", "Pine Ridge", "שכר", 90_000n, false, true],
-  [12, "Harbor Bistro", null, "אחר", 12_500n, false, true],
-  [14, "Cloudline Software", null, "תוכנות ומנויים", 2_990n, false, true],
-  [15, "Flameline Gas", "Pine Ridge", "חשמל", 18_990n, false, true],
+  [3, "Norvell Builders", "Birch Court", "שיפוץ", 128_450n, true, true],
+  [4, "Ridgeway Loans", "Birch Court", "תשלומי הלוואה", 395_700n, false, false],
+  [5, "Hillcrest Renovations", "Birch Court", "שיפוץ", 980_000n, false, false],
+  [6, "Clearwater Clean", "Birch Court", "שירותים", 650_000n, false, true],
+  [7, "Cloudline Software", null, "תוכנות ומנויים", 118_000n, false, true],
+  [8, "Tilecraft Supply", "Maple St", "חומרים", 745_000n, false, true],
+  [9, "Payroll Partners", "Pine Ridge", "שכר", 211_892n, false, true],
+  [9, "Harbor Bistro", null, "אחר", 64_000n, false, true],
+  [10, "Flameline Gas", "Pine Ridge", "חשמל", 195_000n, false, true],
+  [10, "Lantern Paint Co", "Pine Ridge", "חומרים", 290_000n, false, true],
+  [10, "Kestrel Electric", "Maple St", "חשמל", 15_000n, false, true],
 ];
 
 /** The board's income lines: a tenant's rent, and the lines that make up the day totals. */
@@ -278,7 +281,9 @@ function isoDaysBack(now: Date, back: number): string {
 }
 
 function boardLine(id: number, day: string, supplier: string, project: string | null, category: string, minor: bigint, side: "in" | "out", pending: boolean, inPnl: boolean): CashLine {
-  return { ...line(String(id), day, supplier, project, category, minor, side, "mercury"), currency: "USD", pending, in_pnl: inPnl };
+  // The loan's installment is its principal part, which profit leaves out (the tag reads "קרן הלוואה").
+  const part = category === "תשלומי הלוואה" ? "principal" : null;
+  return { ...line(String(id), day, supplier, project, category, minor, side, "mercury"), part, currency: "USD", pending, in_pnl: inPnl };
 }
 
 export function sampleBoardCashLines(side: "in" | "out", now = new Date()): CashLine[] {

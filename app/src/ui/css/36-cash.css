@@ -44,14 +44,22 @@
   margin-block-start: var(--space-4);
 }
 
-/* FLOW-366: the month lines page. The count line sits under the total, in muted text. */
+/* FLOW-366: the month lines page. The count line sits under the total, in muted text, at the board's 15px. */
 .ui-lines-count {
   margin: 0;
   color: var(--color-text-muted);
-  /* One line at 390px: the board's count is the caption size. */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* board: 15px lines at 1.2 (the token), and the count sits 8px under the head gap (the total to count gap is 4px). */
+  line-height: var(--type-card-line);
+  margin-block-start: calc(var(--space-2) * -1);
+}
+
+.ui-lines-head > .ui-breakdown-total {
+  /* board: the total sits 3px lower than the title block's gap gives it. */
+  padding-block-start: var(--pill-pad-block);
+}
+
+/* The board's tag line sits right under its hint (the hint and tag share one block). */
+.ui-lines-group .ui-row-tagline {
   margin-block-start: calc(var(--space-2) * -1);
 }
 
@@ -91,7 +99,7 @@
   min-inline-size: 0;
   overflow-x: auto;
   scrollbar-width: none;
-  margin-block: 0 var(--space-1);
+  margin-block: 0;
   margin-inline: calc(var(--space-4) * -1);
   padding-inline: var(--space-side);
 }
@@ -108,6 +116,11 @@
   padding: 0 var(--space-side) var(--space-2);
 }
 
+/* The group's own side padding is the page edge; the flat list under it adds none (the board's rows start at the edge). */
+.ui-lines-group .ui-project-list {
+  padding-inline: 0;
+}
+
 .ui-lines-group-head {
   position: sticky;
   inset-block-start: var(--month-sticky-top, 0);
@@ -116,7 +129,8 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-5) 0 var(--space-2);
+  /* board: 20px above the head, 6px under it. */
+  padding: var(--space-5) 0 var(--status-gap);
   background: var(--color-bg);
 }
 
@@ -132,4 +146,16 @@
 .ui-lines-group-sum {
   color: var(--color-text-muted);
   white-space: nowrap;
+}
+
+/* FLOW-366b: the chip row as the board draws it: 36px chips, 14px sides, 1.5px border, 14/500 type. */
+.ui-lines-chips .ui-chip {
+  block-size: var(--control-height-sm);
+  min-block-size: var(--control-height-sm);
+  gap: var(--space-2);
+  padding-inline: var(--space-inset-row);
+  border-width: var(--stroke-strong);
+  font-size: var(--type-chip-size);
+  line-height: var(--type-chip-line);
+  font-weight: var(--type-chip-weight);
 }

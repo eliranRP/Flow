@@ -14,11 +14,13 @@ export function formatAmount(
   presentation: AmountPresentation = "summary",
   currency = "ILS",
   direction?: "income" | "expense",
+  keepZeroCents = false,
 ): string {
   return formatAmountText(agorot, currency, {
     detail: presentation === "detail",
     direction,
     plus: direction === "income",
+    keepZeroCents,
   });
 }
 
@@ -43,6 +45,8 @@ type AmountProps = {
    * summaries stay whole units.
    */
   cents?: "always";
+  /** FLOW-366b: with cents="always", a whole amount keeps its ".00" (the month lines rows, as the board draws them). */
+  zeroCents?: boolean;
 };
 
 /** True when the formatted figure starts with a minus sign. */
@@ -92,12 +96,13 @@ export function Amount({
   income = false,
   signless = false,
   cents,
+  zeroCents = false,
 }: AmountProps) {
   const ref = useRef<HTMLElement>(null);
   const [step, setStep] = useState(0);
   const shown = cents === "always" ? "detail" : presentation;
   // Money in gets a plus (decision 0181). Only a non-zero figure with no loss: zero has no sign.
-  const text = formatAmount(agorot, shown, currency, direction ?? (income && !signless && !loss && agorot > 0n ? "income" : undefined));
+  const text = formatAmount(agorot, shown, currency, direction ?? (income && !signless && !loss && agorot > 0n ? "income" : undefined), zeroCents);
   useLayoutEffect(() => {
     const first = firstStep(size);
     if (first == null) return;

@@ -97,9 +97,9 @@ function currencyPrefix(currency: string): string {
   return `${currency} `;
 }
 
-function formatUnsignedMinor(abs: bigint, currency: string, detail: boolean): string {
+function formatUnsignedMinor(abs: bigint, currency: string, detail: boolean, keepZeroCents = false): string {
   const prefix = currencyPrefix(currency);
-  if (detail && abs % 100n !== 0n) {
+  if (detail && (keepZeroCents || abs % 100n !== 0n)) {
     const whole = (abs / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     const fraction = (abs % 100n).toString().padStart(2, "0");
     return `${prefix}${whole}.${fraction}`;
@@ -120,6 +120,8 @@ type FormatAmountOptions = {
   direction?: "income" | "expense";
   detail?: boolean;
   plus?: boolean;
+  /** FLOW-366b: a detail figure keeps ".00" on a whole amount (the month lines rows). Off by default. */
+  keepZeroCents?: boolean;
 };
 
 /**
@@ -131,7 +133,7 @@ export function formatAmountText(minor: bigint, currency = "ILS", options?: Form
   const detail = options?.detail === true;
   const direction = options?.direction;
   const abs = minor < 0n ? -minor : minor;
-  const body = formatUnsignedMinor(abs, currency, detail);
+  const body = formatUnsignedMinor(abs, currency, detail, options?.keepZeroCents === true);
   if (shownAsZero(abs, detail)) return body;
   if (direction === "expense") return `−${body}`;
   if (direction === "income") return options?.plus === true ? `+${body}` : body;

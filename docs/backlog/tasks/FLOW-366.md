@@ -26,10 +26,12 @@
 - **Acceptance:** stories of the lines in each of the 4 orders, scrolled with the compact panel, and the transaction page pending, not in profit, and recurring with a +27% change, plus both sheets, at 320 and 393 with invented lines that add up to the summary; a sample test that the listed rows add up to the summary and to Home's row; a unit test that the change colour follows "hurts" for expense and income; an e2e that a row opens the page and Back returns to the same scroll; design review against the boards.
 - **Design spec:** the counted-in row and sheet are written down in [implementation-guide §7.10](../../../design/system/implementation-guide.md) (FLOW-363 (4)). The code is built here, for the transaction line.
 
-**Lines follow-up (text-masked proofs, scripts/board-proof.mjs; figures from PR #686)**
-- [x] LinesIn under the 3% gate (2.4% dark), by the chip row margin and the group head gap scoped to the נכנס view (`ui-lines-group-head-in`).
-- [ ] LinesRecurring (`/e2e/txn?board=recurring`): the recurring row and its pace line.
-- [ ] LinesFreq (`/e2e/txn?board=recurring&sheet=pace`): the pace sheet rows.
-- [ ] LinesAll (`/e2e/txn?board=recurring&sheet=all`): the all-charges sheet rows.
-- [ ] LinesDetailLoan (`/e2e/txn?board=loan`): the loan detail card.
-- [ ] Lines dark stays a named exception (3.7%); the light frame is 2.7%.
+**Lines follow-up (text-masked proofs, scripts/board-proof.mjs; FLOW-366b, 2026-10-17, dark / light)**
+- [x] Lines (month, יצא): 3.7% / 2.7% before, 0.9% / 0.8% after: under the 3% gate in both themes.
+- [x] LinesIn (נכנס): 2.4% / 1.4% before, 2.0% / 1.3% after (no regression).
+- [x] LinesDetail: 2.9% / 2.7%, unchanged (no regression).
+- [ ] LinesRecurring (`/e2e/txn?board=recurring`): 5.7% / 5.5% before, 6.2% / 6.0% after. The history block now takes the board's spacing; the card above it (the project and category rows) and the bar labels still differ.
+- [ ] LinesFreq (`/e2e/txn?board=recurring&sheet=pace`): 6.6% / 6.9% before, 6.4% / 6.7% after. The pace sheet's rows are not yet restyled.
+- [ ] LinesAll (`/e2e/txn?board=recurring&sheet=all`): 7.5% / 8.0% before, unchanged. The all-charges sheet is not yet restyled.
+- [ ] LinesDetailLoan (`/e2e/txn?board=loan`): 5.7% / 5.7% before, 5.9% / 5.9% after. The loan branch of the detail fixture is not yet changed to the board's loan line.
+- Named exception: none for Lines. The four frames above are open, and each still needs its own pass.

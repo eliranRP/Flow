@@ -229,6 +229,7 @@ function CashLinesBody({
                     hint={split == null ? hint : <SplitPartsHint parts={split.parts} total={split.total} date={formatDayMonth(row.cash_month_date)} />}
                     wrapHint={split != null}
                     agorot={row.amount_minor < 0n ? -row.amount_minor : row.amount_minor}
+                    wholeCents
                     currency={row.currency}
                     sign={lineSign(side, row)}
                     inWord={side === "out" ? "זיכוי" : undefined}
