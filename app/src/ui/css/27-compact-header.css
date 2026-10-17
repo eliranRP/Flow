@@ -71,7 +71,7 @@
 /* FLOW-364: Home's bar, in the colour band: the earlier arrow, the centre button, the later arrow. */
 .ui-compact-bar-band {
   border-bottom: 0;
-  border-radius: 0 0 20px 20px;
+  border-radius: 0 0 var(--radius-card) var(--radius-card);
   background: var(--color-band);
   color: var(--color-on-band);
   box-shadow: var(--shadow-pill);
@@ -86,9 +86,9 @@
 .ui-compact-bar-band-row {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding-block: 6px;
-  padding-inline: 10px;
+  gap: var(--space-1);
+  padding-block: var(--space-2);
+  padding-inline: var(--pill-pad-inline);
 }
 
 /* The bar is its figure's height, not the 44px list bar: 6 + 52 + 6 (the board). */
@@ -101,7 +101,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  block-size: 52px;
+  block-size: calc(var(--touch-min) + var(--space-1));
   gap: 1px;
   padding: 0;
   border: 0;
@@ -115,17 +115,17 @@
 .ui-compact-bar-centre-title {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  font-weight: 400;
-  line-height: normal;
+  gap: var(--space-1);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-caption-line);
   color: var(--color-on-band-secondary);
 }
 
 .ui-compact-bar-centre-net {
   font-size: var(--type-section-size);
-  font-weight: 600;
-  line-height: 1.3;
+  font-weight: var(--type-sheet-weight);
+  line-height: var(--type-section-line);
   white-space: nowrap;
 }
 
