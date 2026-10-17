@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useHomePreview } from "../preview";
 import { groupRecurring, monthOutflow, type RecurringLine } from "../recurring-layout";
 import { type ScheduleRow, scheduleLines, useRecurringScheduleQuery } from "../recurring-schedule";
 import { type RecurringListGroup, type RecurringListRow, RecurringList } from "../ui/recurring-list";
@@ -20,6 +21,8 @@ function monthTitle(today: string): string {
   return new Intl.DateTimeFormat("he-IL", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${today}T12:00:00Z`));
 }
 
+const NO_ROWS: readonly ScheduleRow[] = [];
+
 /**
  * FLOW-447: the קבועים list. Late bills lead; the rest group by category, in the server's order.
  * `?project=` narrows it to one project (FLOW-424); an unknown id shows an empty list.
@@ -27,8 +30,10 @@ function monthTitle(today: string): string {
 export function RecurringScreen({ now = new Date(), sample }: { now?: Date; sample?: readonly ScheduleRow[] } = {}) {
   const [params] = useSearchParams();
   const project = params.get("project");
-  const query = useRecurringScheduleQuery(sample == null);
-  const rows = sample ?? query.data;
+  // ?preview= has no server: the loading preview keeps the skeleton, the others show an empty list.
+  const preview = useHomePreview();
+  const query = useRecurringScheduleQuery(sample == null && preview === "off");
+  const rows = sample ?? (preview === "off" ? query.data : preview === "loading" ? undefined : NO_ROWS);
   const today = israelToday(now);
   const view = useMemo(() => (rows == null ? null : recurringView(rows, today, project)), [rows, today, project]);
   if (view == null) return sample == null ? <RecurringSkeleton /> : null;
