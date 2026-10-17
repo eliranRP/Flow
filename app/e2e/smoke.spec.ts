@@ -30,7 +30,7 @@ test("preview error and loading states are reachable", async ({ page }) => {
   await expect(page.locator("[aria-busy=true] .ui-band")).toBeVisible();
 });
 
-test("add is a sheet over Home and transaction detail has no tab bar", async ({ page }) => {
+test("add is a sheet over Home and transaction detail keeps the tab bar (the board's LinesDetail)", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/?preview=1");
   expect(await page.evaluate(() => (history.state as { idx?: number }).idx)).toBe(0);
@@ -76,7 +76,7 @@ test("add is a sheet over Home and transaction detail has no tab bar", async ({ 
   await expect(page.getByRole("heading", { name: "פרויקטים" })).toBeVisible();
   await page.goto("/transactions/1?preview=1");
   await expect(page.getByRole("heading", { name: "פרטי תנועה" })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "ניווט ראשי" })).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "ניווט ראשי" })).toHaveCount(1);
 });
 
 test("help links are at least 44px and sign-in help does not grow the stack", async ({ page }) => {
