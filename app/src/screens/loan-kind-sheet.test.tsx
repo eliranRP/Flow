@@ -14,7 +14,7 @@ const regular: LoanDetail = {
   annualRatePpm: 62_500,
   termMonths: 360,
   startDate: "2026-11-01",
-  paymentMinor: 183_776n,
+  paymentMinor: 183_772n,
   escrowMinor: 36_000n,
   kind: "amortizing",
   interestOnlyMonths: null,
@@ -26,9 +26,9 @@ const regular: LoanDetail = {
   rates: [],
   balanceMinor: 24_000_000n,
   flaggedParts: 0,
-} as LoanDetail;
+};
 
-function renderSheet(loan: LoanDetail, onSave: Parameters<typeof LoanKindSheet>[0]["onSave"] = vi.fn(async () => null)) {
+function renderSheet(loan: LoanDetail, onSave: Parameters<typeof LoanKindSheet>[0]["onSave"] = vi.fn(() => Promise.resolve(null))) {
   const onOpenChange = vi.fn();
   function Host() {
     const [open, setOpen] = useState(true);
@@ -57,7 +57,7 @@ describe("LoanKindSheet, the board's pick list (FLOW-139d)", () => {
       interestOnlyMonths: null,
       amortizationMonths: null,
       termMonths: 360,
-      paymentMinor: 183_776n,
+      paymentMinor: 183_772n,
       escrowMinor: 36_000n,
     });
   });
@@ -89,7 +89,7 @@ describe("LoanKindSheet, the board's pick list (FLOW-139d)", () => {
     fireEvent.change(months, { target: { value: "24" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => { expect(onSave).toHaveBeenCalledTimes(1); });
-    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ kind: "interest_only", interestOnlyMonths: 24, paymentMinor: expect.any(BigInt) }));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ kind: "interest_only", interestOnlyMonths: 24, escrowMinor: 36_000n }));
   });
 
   it("checks the interest-only range and keeps the sheet open", async () => {

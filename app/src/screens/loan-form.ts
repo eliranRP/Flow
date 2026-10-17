@@ -188,11 +188,13 @@ export function termYearsLabel(term: string): string {
   return rest === 0 ? `${String(years)} שנה` : `${String(years)} שנה ו־${String(rest)} חודשים`;
 }
 
-/** The payment card's split line: principal and interest (or interest only) beside the escrow. */
-export function paymentSplitText(kind: LoanKind, paymentMinor: bigint, escrowMinor: bigint, currency: LoanCurrency): string {
-  const interestPart = formatLoanMoney(paymentMinor - escrowMinor, currency);
-  const escrowPart = formatLoanMoney(escrowMinor, currency);
-  return `${kind === "interest_only" ? "ריבית בלבד" : "קרן וריבית"} ${interestPart} · מסים וביטוח ${escrowPart}`;
+/** The payment card's split: the part's label, the interest (or interest-only) part and the escrow, each amount on its own. */
+export function paymentSplitParts(kind: LoanKind, paymentMinor: bigint, escrowMinor: bigint, currency: LoanCurrency): { label: string; interest: string; escrow: string } {
+  return {
+    label: kind === "interest_only" ? "ריבית בלבד" : "קרן וריבית",
+    interest: formatLoanMoney(paymentMinor - escrowMinor, currency),
+    escrow: formatLoanMoney(escrowMinor, currency),
+  };
 }
 
 /** The months field's starting value for a kind on the new-loan form (the loan page's defaults). */

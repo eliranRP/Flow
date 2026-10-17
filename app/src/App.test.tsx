@@ -135,7 +135,7 @@ describe("App", () => {
   it("opens the new-loan sheet from + → הלוואה חדשה", async () => {
     await renderAt("/add?preview=1");
     fireEvent.click(screen.getByRole("button", { name: /הלוואה חדשה/ }));
-    expect(await screen.findByRole("dialog", { name: "הלוואה" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "הלוואה חדשה" })).toBeInTheDocument();
   });
 
   it("opens the bank sheet on Connections from + → חיבור בנק", async () => {

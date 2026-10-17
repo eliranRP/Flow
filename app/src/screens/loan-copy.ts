@@ -10,7 +10,7 @@ import { formatLoanMoney, type LoanCurrency } from "./loan-form";
  */
 
 export const LOAN_KIND_LABEL: Record<LoanKind, string> = {
-  amortizing: "רגילה",
+  amortizing: "פריסה רגילה",
   interest_only: "ריבית בלבד",
   balloon: "בלון",
   demand: "לפי דרישה",

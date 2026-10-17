@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type Ref, type SubmitEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type Ref, type SubmitEvent } from "react";
 import type { LoanKind } from "@flow/shared";
 import { CalendarIcon } from "../ui/icons";
 import { MoneyField, PercentField } from "../ui/money-field";
@@ -17,10 +17,11 @@ import {
   lastPaymentLabel,
   loanFieldErrors,
   loanFinalLine,
+  type LoanFinalLine,
   loanPreview,
   minorToInput,
   newLoanKindMonths,
-  paymentSplitText,
+  paymentSplitParts,
   termYearsLabel,
   type LoanCurrency,
   type LoanDraft,
@@ -82,6 +83,28 @@ export function LoanKindPicker({ selected, onSelect }: { selected: LoanKind; onS
 }
 
 type ReadyPreview = Extract<LoanPreview, { status: "ready" }>;
+
+/** The card's split line: the label, then the interest and the escrow, each amount LTR on its own. */
+function splitNode(kind: LoanKind, figures: ReadyPreview, currency: LoanCurrency): ReactNode {
+  const parts = paymentSplitParts(kind, figures.paymentMinor, figures.escrowMinor, currency);
+  return (
+    <>
+      {parts.label} <bdi className="ui-num" dir="ltr">{parts.interest}</bdi> · מסים וביטוח <bdi className="ui-num" dir="ltr">{parts.escrow}</bdi>
+    </>
+  );
+}
+
+/** The final-payment line: its lead, the times (above twice), and the amount. */
+function finalLineNode(line: LoanFinalLine, currency: LoanCurrency): ReactNode {
+  return (
+    <>
+      {line.lead}
+      {line.times ? <>{" "}<bdi className="ui-num" dir="ltr">{line.times}</bdi></> : null}
+      {", "}
+      <bdi className="ui-num" dir="ltr">{formatLoanMoney(line.amountMinor, currency)}</bdi>
+    </>
+  );
+}
 
 export function LoanSetupForm({
   companyCurrency,
@@ -245,7 +268,7 @@ export function LoanSetupForm({
         decimals={4}
         disabled={busy}
         keepMinus
-        reserveMessage
+        reserveMessage={!sheetMode}
         enterKeyHint="next"
         error={shownError("rate")}
         onBlur={() => { touch("rate"); }}
@@ -259,7 +282,7 @@ export function LoanSetupForm({
           inputMode="numeric"
           numeric
           disabled={busy}
-          reserveMessage
+          reserveMessage={!sheetMode}
           enterKeyHint="next"
           hint={sheetMode ? termYearsLabel(term) : undefined}
           error={shownError("term")}
@@ -278,7 +301,7 @@ export function LoanSetupForm({
         value={name}
         maxLength={80}
         disabled={busy}
-        reserveMessage
+        reserveMessage={!sheetMode}
         enterKeyHint="next"
         placeholder={sheetMode ? "למשל: Pinecrest Lending" : undefined}
         error={shownError("name")}
@@ -348,7 +371,7 @@ export function LoanSetupForm({
           inputMode="numeric"
           numeric
           disabled={busy}
-          reserveMessage
+          reserveMessage={!sheetMode}
           enterKeyHint="next"
           hint={sheetMode ? (interestOnly ? "אחריהם הקרן נפרסת על שאר התקופה" : "היתרה בסוף התקופה תשולם בתשלום אחד") : undefined}
           error={shownError("months")}
@@ -389,7 +412,7 @@ export function LoanSetupForm({
           prefix={sheetMode ? "" : mark}
           disabled={busy}
           keepMinus
-          reserveMessage
+          reserveMessage={!sheetMode}
           enterKeyHint={advanced ? "next" : "done"}
           hint={sheetMode ? "אם נגבים יחד עם התשלום. אחרת השאירו 0" : undefined}
           error={shownError("escrow")}
@@ -400,10 +423,10 @@ export function LoanSetupForm({
       <LoanPaymentCard
         label={interestOnly ? "תשלום אחרי חודשי הריבית" : "תשלום חודשי"}
         total={demand ? "—" : formatLoanMoney(figures?.paymentMinor ?? 0n, currency)}
-        split={demand ? "לפי דרישה: בלי לוח תשלומים קבוע" : figures ? paymentSplitText(kind, figures.paymentMinor, figures.escrowMinor, currency) : ""}
+        split={demand ? "לפי דרישה: בלי לוח תשלומים קבוע" : figures ? splitNode(kind, figures, currency) : ""}
         until={until}
         note={figures && finalLine ? {
-          text: `${finalLine.lead}${finalLine.times ? ` ${finalLine.times}` : ""}, ${formatLoanMoney(finalLine.amountMinor, currency)}`,
+          content: finalLineNode(finalLine, currency),
           caution: finalLine.tone === "caution",
         } : null}
         expanded={advanced}

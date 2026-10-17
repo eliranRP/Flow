@@ -89,10 +89,10 @@ export function LoanPaymentCard({
 }: {
   label: string;
   total: string;
-  split: string;
+  split: ReactNode;
   until: string;
   /** The final-payment caution line: one more line in the card. */
-  note?: { text: string; caution: boolean } | null;
+  note?: { content: ReactNode; caution: boolean } | null;
   expanded: boolean;
   controls: string;
   disabled: boolean;
@@ -109,7 +109,7 @@ export function LoanPaymentCard({
           <bdi className="ui-loan-pay-total ui-num" dir="ltr">{total}</bdi>
         </div>
         {split ? <span className="ui-loan-pay-split">{split}</span> : null}
-        {note ? <span className={note.caution ? "ui-loan-pay-split ui-loan-caution" : "ui-loan-pay-split"}>{note.text}</span> : null}
+        {note ? <span className={note.caution ? "ui-loan-pay-split ui-loan-caution" : "ui-loan-pay-split"}>{note.content}</span> : null}
       </div>
       <div className="ui-loan-pay-foot">
         <span className="ui-loan-pay-split">{until}</span>

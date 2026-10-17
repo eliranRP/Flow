@@ -13,7 +13,7 @@ describe("loan-new-parts", () => {
     render(<LoanPickRow label="פרויקט" value="ללא פרויקט" empty onOpen={onOpen} />);
     const row = screen.getByRole("button", { name: "פרויקט ללא פרויקט" });
     expect(row).toHaveAttribute("aria-haspopup", "dialog");
-    expect(row).toHaveAttribute("data-empty", "true");
+    expect(row.querySelector(".ui-loan-pick-value")).toHaveAttribute("data-empty", "true");
     fireEvent.click(row);
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
@@ -65,7 +65,7 @@ describe("loan-new-parts", () => {
 
   it("marks a caution line in the warning tone", () => {
     render(
-      <LoanPaymentCard label="תשלום חודשי" total="$1" split="" until="" note={{ text: "התשלום האחרון כפול, $2", caution: true }} expanded={false} controls="x" disabled={false} onToggle={() => undefined} />,
+      <LoanPaymentCard label="תשלום חודשי" total="$1" split="" until="" note={{ content: "התשלום האחרון כפול, $2", caution: true }} expanded={false} controls="x" disabled={false} onToggle={() => undefined} />,
     );
     expect(screen.getByText("התשלום האחרון כפול, $2")).toHaveClass("ui-loan-caution");
   });

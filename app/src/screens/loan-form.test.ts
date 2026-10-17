@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { lastPaymentLabel, loanFinalLine, paymentSplitText, termYearsLabel, type LoanPreview } from "./loan-form";
+import { lastPaymentLabel, loanFinalLine, paymentSplitParts, termYearsLabel, type LoanPreview } from "./loan-form";
 
 function ready(pi: bigint, finalPi: bigint): Extract<LoanPreview, { status: "ready" }> {
   return {
@@ -60,8 +60,8 @@ describe("the new-loan sheet's helpers (FLOW-139d)", () => {
   });
 
   it("splits the payment into principal and interest beside the escrow", () => {
-    expect(paymentSplitText("amortizing", 183_776n, 36_000n, "USD")).toBe("קרן וריבית $1,477.76 · מסים וביטוח $360");
-    expect(paymentSplitText("interest_only", 183_776n, 0n, "ILS")).toBe("ריבית בלבד ₪1,837.76 · מסים וביטוח ₪0");
+    expect(paymentSplitParts("amortizing", 183_776n, 36_000n, "USD")).toEqual({ label: "קרן וריבית", interest: "$1,477.76", escrow: "$360" });
+    expect(paymentSplitParts("interest_only", 183_776n, 0n, "ILS")).toEqual({ label: "ריבית בלבד", interest: "₪1,837.76", escrow: "₪0" });
   });
 
   it("writes the term in years, and in months under a year", () => {

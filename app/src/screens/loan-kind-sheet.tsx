@@ -136,6 +136,7 @@ export function LoanKindSheet({
             numeric
             reserveMessage
             disabled={busy}
+            hint={kind === "interest_only" ? "אחריהם הקרן נפרסת על שאר התקופה" : "היתרה בסוף התקופה תשולם בתשלום אחד"}
             error={monthsError}
             onChange={(event) => { setMonths(event.target.value.replace(/\D/g, "").slice(0, 3)); }}
           />

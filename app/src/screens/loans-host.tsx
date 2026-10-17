@@ -198,7 +198,9 @@ export function LoansHost({
     if (!openNew || openedForProof.current || holdWrites || currency == null) return;
     openedForProof.current = true;
     setLoanSheet(true);
-  }, [openNew, holdWrites, currency, setLoanSheet]);
+    // setLoanSheet is rebuilt each render; the ref makes this run once, so its identity is left out.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openNew, holdWrites, currency]);
 
   // FLOW-331: + → הלוואה חדשה lands on /loans with ?new=loan.
   useOpenFromQuery("loan", !holdWrites && currency != null, (sameEntry) => {
