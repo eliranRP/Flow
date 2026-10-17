@@ -118,6 +118,11 @@ type Shared = {
   noProjectLabel?: string;
   /** FLOW-325: a category pick moves on to the project list instead of closing. */
   chainProject?: boolean;
+  /**
+   * FLOW-922: a short list-only sheet (a split part's picker): no search, no footer, no new or split
+   * links, and no back step. A tap picks and closes, the rows keep the given order, and the height is the content.
+   */
+  compact?: boolean;
 };
 
 type Props = Shared & (
@@ -134,7 +139,7 @@ function keptState(current: { readonly state: unknown }): unknown {
   return current.state;
 }
 
-function ordered(options: ChangeChoice[], suggestionId: string, currentId: string, query: string, kind: "project" | "category"): ChangeChoice[] {
+function ordered(options: ChangeChoice[], suggestionId: string, currentId: string, query: string, kind: "project" | "category", keepOrder = false): ChangeChoice[] {
   const active = options.filter((option) => {
     if (option.hidden && option.id !== currentId && option.id !== suggestionId) return false;
     return option.status !== "finished" || option.id === currentId || option.id === suggestionId;
@@ -145,7 +150,7 @@ function ordered(options: ChangeChoice[], suggestionId: string, currentId: strin
     : active.filter((option) => option.name.includes(needle)
       || (option.code ?? "").toLowerCase().includes(needle.toLowerCase())
       || (option.group ?? "").includes(needle));
-  if (needle !== "") return matched;
+  if (needle !== "" || keepOrder) return matched;
   const suggestion = matched.find((option) => option.id === suggestionId);
   const rest = matched.filter((option) => option.id !== suggestionId);
   if (kind === "category") return suggestion ? [suggestion, ...rest] : rest;
@@ -505,16 +510,18 @@ export function ChangeAssignment(props: Props) {
   // A saved value that is still a suggestion (the summary says הצעה) can be confirmed by שמירה (FLOW-831).
   const savedIsSuggestion = pickerKind === "project" ? projectSuggested : categorySuggested;
   const savingNow = savingId ?? (props.splitCategoryBusy === true ? SPLIT_CATEGORY_SAVING : null);
+  const compact = props.compact === true;
   const listed = ordered(
     pickerKind === "project" ? props.projects : props.categories,
     pickerKind === "project" ? (props.suggestionProjectId ?? "") : categorySuggestionId,
     pickerKind === "project" ? props.projectId : props.categoryId,
     query,
     pickerKind,
+    compact,
   );
   const pickerTitle = view === "project" ? props.title?.project : view === "category" ? props.title?.category : undefined;
   const title = pickerTitle ?? (view === "project" ? "בחירת פרויקט" : view === "category" ? "בחירת קטגוריה" : view === "new" ? "פרויקט חדש" : "שינוי שיוך");
-  const leading = view === "summary" || landedOnPicker() ? undefined : (
+  const leading = view === "summary" || landedOnPicker() || compact ? undefined : (
     <IconButton label="חזרה" className="ui-back-btn" onClick={back}>
       <BackIcon />
     </IconButton>
@@ -682,7 +689,8 @@ export function ChangeAssignment(props: Props) {
       {view === "project" || view === "category" ? (
         <Picker
           kind={pickerKind}
-          searchable={pickerKind === "project" || pickerTotal > 8}
+          searchable={!compact && (pickerKind === "project" || pickerTotal > 8)}
+          compact={compact}
           query={query}
           onQuery={setQuery}
           loading={props.loading === true}
@@ -706,17 +714,22 @@ export function ChangeAssignment(props: Props) {
           } : undefined}
           splitLink={pickerKind === "project" && props.hideSplitLink !== true}
           onSelect={(id) => {
+            // A compact list has no שמירה: a tap is the pick, and the sheet closes through choose.
+            if (compact) {
+              void choose(pickerKind, id);
+              return;
+            }
             setPick({ kind: pickerKind, id });
           }}
-          onCreate={pickerKind === "project" ? () => {
+          onCreate={pickerKind === "project" && !compact ? () => {
             setNewName("");
             setNameError("");
             setCreatingNew(true);
           } : undefined}
-          onSplit={pickerKind === "project" && props.hideSplitLink !== true ? () => {
+          onSplit={pickerKind === "project" && props.hideSplitLink !== true && !compact ? () => {
             afterHistory(props.onSplit);
           } : undefined}
-          splitCategory={pickerKind === "project" && props.onSplitCategory != null ? {
+          splitCategory={pickerKind === "project" && props.onSplitCategory != null && !compact ? {
             busy: props.splitCategoryBusy === true,
             onPress: () => {
               // A pick or the approve is still writing: the press does nothing.
@@ -750,7 +763,7 @@ export function ChangeAssignment(props: Props) {
 
   // The pinned שמירה: the only write a picker makes. Disabled while the check is the saved value,
   // unless that value is a suggestion the owner has not confirmed yet.
-  const footer = pickerView ? (
+  const footer = pickerView && !compact ? (
     <Button
       full
       busy={savingNow != null}
@@ -767,7 +780,7 @@ export function ChangeAssignment(props: Props) {
     titleRef,
     action: footer,
     footClassName: "ui-change-foot",
-    panelClassName: view === "project" || view === "new" ? "ui-sheet-tall" : "ui-sheet-fit",
+    panelClassName: (view === "project" && !compact) || view === "new" ? "ui-sheet-tall" : "ui-sheet-fit",
     onEscape: view === "summary" ? undefined : back,
     onBeforeClose: allowClose,
     onRequestClose: requestClose,

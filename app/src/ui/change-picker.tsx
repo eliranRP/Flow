@@ -67,6 +67,7 @@ export function Picker({
   disabledIds,
   reversal,
   splitLink = true,
+  compact = false,
   onSelect,
   onCreate,
   onSplit,
@@ -99,6 +100,8 @@ export function Picker({
     onToggle: () => void;
   };
   splitLink?: boolean;
+  /** FLOW-922: a compact list (a split part's picker): plain rows, no date, code or tag, and no links under it. */
+  compact?: boolean;
   onSelect: (id: string) => void;
   onCreate?: () => void;
   onSplit?: () => void;
@@ -125,9 +128,9 @@ export function Picker({
         key={option.id}
         layout="picker"
         label={option.name}
-        code={option.code}
-        date={needle === "" ? option.recent : undefined}
-        tag={option.id === suggestionId ? (suggestionJev ? "jev" : true) : false}
+        code={compact ? undefined : option.code}
+        date={needle === "" && !compact ? option.recent : undefined}
+        tag={option.id === suggestionId && !compact ? (suggestionJev ? "jev" : true) : false}
         description={choiceNotes?.[option.id] ?? groupHint(option, needle)}
         disabledReason={taken ? choiceNotes?.[option.id] : undefined}
         selected={option.id === selectedId}
@@ -140,7 +143,7 @@ export function Picker({
     );
   }
   return (
-    <div className="ui-change-picker">
+    <div className={compact ? "ui-change-picker ui-choice-sheet" : "ui-change-picker"}>
       {searchable ? (
         <SearchField
           label={kind === "project" ? "חיפוש פרויקט" : "חיפוש קטגוריה"}
@@ -235,7 +238,7 @@ export function Picker({
           {empty ? <p className="t-hint">{kind === "project" ? "לא נמצא פרויקט בשם הזה" : "לא נמצאה קטגוריה בשם הזה"}</p> : null}
         </>
       )}
-      {kind === "project" && !loading ? (
+      {kind === "project" && !loading && !compact ? (
         <div className="ui-change-links">
           <TextLink icon={<PlusIcon size={16} />} chevron={false} disabled={splitCategory?.busy === true} onClick={onCreate}>פרויקט חדש</TextLink>
           {splitLink && onSplit ? <TextLink icon={<SplitIcon size={16} />} chevron={false} disabled={splitCategory?.busy === true} onClick={onSplit}>פיצול בין פרויקטים</TextLink> : null}

@@ -169,6 +169,19 @@
   border-bottom: 0;
 }
 
+/* FLOW-922: a compact part list is the board's sheet: 52px rows, 8px apart, no inner padding above or below. */
+.ui-change-picker.ui-choice-sheet [role="radiogroup"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
+}
+
+.ui-change-picker.ui-choice-sheet .ui-radio-row {
+  min-block-size: 52px;
+  padding-block: 0;
+}
+
 .ui-change-links .ui-text-link {
   gap: var(--space-2);
   justify-content: flex-start;

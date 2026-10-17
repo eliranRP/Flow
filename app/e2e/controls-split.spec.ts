@@ -11,7 +11,6 @@ test("split parts, units, the hold, and close", async ({ page }) => {
   await page.getByRole("button", { name: "חלק נוסף" }).click();
   await page.getByRole("button", { name: /, פרויקט, שינוי$/ }).last().click();
   await page.getByRole("dialog", { name: /^(בחירת פרויקט|פרויקט לחלק \d+)$/ }).getByRole("radio", { name: "פרויקט רעננה" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   await page.getByRole("radiogroup", { name: "יחידה, חומרי בניין" }).getByRole("radio", { name: "%" }).click();
   const field = page.getByRole("textbox", { name: "אחוז, חומרי בניין" });
   await field.fill("120");
@@ -25,7 +24,6 @@ test("split parts, units, the hold, and close", async ({ page }) => {
   await page.getByRole("button", { name: "חלק נוסף" }).click();
   await page.getByRole("button", { name: /, פרויקט, שינוי$/ }).last().click();
   await page.getByRole("dialog", { name: /^(בחירת פרויקט|פרויקט לחלק \d+)$/ }).getByRole("radio", { name: "פרויקט הרצליה" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
   await page.getByRole("radiogroup", { name: "יחידה, חומרי בניין" }).getByRole("radio", { name: "%" }).click();
   await page.getByRole("textbox", { name: "אחוז, חומרי בניין" }).fill("50");
   await page.getByRole("button", { name: "סגירה" }).click();
