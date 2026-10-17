@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { type Dashboard } from "@flow/shared";
 import { defaultPeriod } from "../../period";
@@ -75,11 +75,17 @@ export function DevHome() {
 
 /**
  * FLOW-413: Home's cash with invented figures (frame b). `?box=none` hides the attention box,
- * as a month with nothing waiting does.
+ * as a month with nothing waiting does. FLOW-374: `?scrolled=1` scrolls the page to the board's 328px, as the
+ * FlowScrolled frame is.
  */
 export function DevCash() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  useEffect(() => {
+    if (params.get("scrolled") !== "1") return;
+    const frame = requestAnimationFrame(() => { window.scrollTo(0, 328); });
+    return () => { cancelAnimationFrame(frame); };
+  }, [params]);
   // FLOW-364: `?state=usd-loss` is the board's negative month in dollars (its past frame with `?month=past`).
   const usdLoss = params.get("state") === "usd-loss";
   const past = params.get("month") === "past";

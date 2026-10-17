@@ -1,5 +1,6 @@
 {
   "Flow": "/e2e/cash?state=usd-loss",
   "FlowPicker": "/e2e/cash?state=usd-loss&drawer=1",
-  "FlowSeptember": "/e2e/cash?state=usd-loss&month=past"
+  "FlowSeptember": "/e2e/cash?state=usd-loss&month=past",
+  "FlowScrolled": "/e2e/cash?state=usd-loss&scrolled=1&recurring=1"
 }

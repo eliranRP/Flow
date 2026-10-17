@@ -365,7 +365,16 @@ export const HomeScrolled: Story = {
   render: () => <CashHomeStory />,
   play: async ({ canvasElement }) => {
     window.scrollTo(0, 400);
-    await expect(await waitFor(() => canvasElement.ownerDocument.querySelector(".ui-compact-bar"))).toBeInTheDocument();
+    const bar = await waitFor(() => canvasElement.ownerDocument.querySelector<HTMLElement>(".ui-compact-bar-band"));
+    if (bar == null) throw new Error("the compact bar is not drawn");
+    await expect(bar).toBeInTheDocument();
+    // FLOW-374: the figure is whole inside the bar (the bar is 64px, the net sits in its centre).
+    const net = bar.querySelector(".ui-compact-bar-centre-net");
+    if (net == null) throw new Error("the bar's figure is not drawn");
+    const barBox = bar.getBoundingClientRect();
+    const netBox = net.getBoundingClientRect();
+    await expect(netBox.bottom).toBeLessThanOrEqual(barBox.bottom);
+    await expect(netBox.top).toBeGreaterThanOrEqual(barBox.top);
     window.scrollTo(0, 0);
   },
 };

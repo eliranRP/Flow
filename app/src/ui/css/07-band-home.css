@@ -470,6 +470,22 @@ html[data-kb="open"] .ui-sheet-body {
   font-weight: var(--type-btn-2-weight);
 }
 
+/* FLOW-374 (board): Home's two rows. The amount is LTR and sits at the chip's side (the cell's left edge),
+   16/500, as the board draws it; the label keeps the row's end. Scoped here: other bands keep their rows. */
+.ui-band-rows .ui-band-row-link {
+  font-size: var(--type-btn-2-size);
+}
+
+.ui-band-rows .ui-band-row-amount {
+  direction: ltr;
+  text-align: left;
+}
+
+.ui-band-rows .ui-band-row-amount .t-amount {
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-2-weight);
+}
+
 .ui-band-caption {
   margin: 0;
   color: var(--color-on-band-secondary);
