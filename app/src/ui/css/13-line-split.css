@@ -478,7 +478,7 @@
 
 .ui-lsplit-board .ui-lsplit-field {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: var(--space-1);
   box-sizing: border-box;
   block-size: 48px;
@@ -492,7 +492,8 @@
   border-color: var(--color-signal-soft);
 }
 
-.ui-lsplit-board .ui-lsplit-field .ui-field {
+/* The amount wrapper stretches to the field's height, so the input (absolute, inset 0) sits inside it. */
+.ui-lsplit-board .ui-lsplit-field .ui-field:has(.ui-money-field) {
   display: block;
   flex: 1 1 0;
   inline-size: auto;
@@ -505,19 +506,7 @@
   display: none;
 }
 
-.ui-lsplit-board .ui-lsplit-field .ui-field-control {
-  display: flex;
-  align-items: center;
-  inline-size: 100%;
-}
-
-.ui-lsplit-board .ui-lsplit-field .ui-field-control input {
-  flex: 1 1 auto;
-  inline-size: 100%;
-  min-inline-size: 0;
-}
-
-.ui-lsplit-board .ui-lsplit-field .ui-field-control {
+.ui-lsplit-board .ui-lsplit-field .ui-money-field {
   block-size: 100%;
   min-block-size: 0;
   padding: 0;
@@ -526,25 +515,35 @@
   box-shadow: none;
 }
 
-.ui-lsplit-board .ui-lsplit-field input {
-  font-size: var(--type-body-size);
+.ui-lsplit-board .ui-lsplit-field .ui-money-field input {
+  padding-inline: var(--space-1) var(--space-3);
+  font-size: var(--type-sheet-size);
   font-weight: var(--type-body-weight);
   text-align: end;
 }
 
-.ui-lsplit-board .ui-lsplit-field .ui-seg-input {
+/* The $ / % switch: two 36px segments on a 2px track, at the field's start edge. */
+.ui-lsplit-board .ui-lsplit-field .ui-field:not(:has(.ui-money-field)) {
   flex: none;
   inline-size: auto;
+  margin: 0;
+  align-self: center;
+}
+
+.ui-lsplit-board .ui-lsplit-field .ui-seg-input {
+  inline-size: max-content;
+  box-sizing: border-box;
   block-size: 40px;
   min-block-size: 40px;
   gap: 0;
-  padding: var(--space-1);
+  padding: calc(var(--space-1) / 2);
   border: 0;
   border-radius: var(--radius-field-btn);
   background: var(--color-surface);
 }
 
 .ui-lsplit-board .ui-lsplit-field .ui-seg-btn {
+  flex: none;
   inline-size: 36px;
   min-inline-size: 36px;
   block-size: 36px;
