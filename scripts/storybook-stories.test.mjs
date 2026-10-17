@@ -16,13 +16,13 @@ const select = (...changed) => selectStories(changed, { root });
 const tierOf = (stories, file) => stories.find(([, story]) => story === file)?.[0];
 
 test("a changed story file is tier 1", () => {
-  const stories = select("app/src/screens/loan-list.stories.tsx");
-  assert.deepEqual(stories, [[1, "./src/screens/loan-list.stories.tsx"]]);
+  const stories = select("app/src/screens/loans-screen.stories.tsx");
+  assert.deepEqual(stories, [[1, "./src/screens/loans-screen.stories.tsx"]]);
 });
 
 test("a story importing a changed source is tier 2, one reaching it further down is tier 3", () => {
-  const stories = select("app/src/screens/loan-list.tsx");
-  assert.equal(tierOf(stories, "./src/screens/loan-list.stories.tsx"), 2);
+  const stories = select("app/src/ui/amount.tsx");
+  assert.equal(tierOf(stories, "./src/ui/amount.stories.tsx"), 2);
   assert.ok(stories.some(([tier]) => tier === 3));
   assert.deepEqual(stories, [...stories].sort((a, b) => a[0] - b[0] || a[1].localeCompare(b[1])));
 });
@@ -38,7 +38,7 @@ test("CSS and files outside the app pick no story; the Storybook config and lock
     assert.equal(reachesBuild(`app/e2e/storybook-${spec}.spec.ts`, { root }), true);
     assert.deepEqual(select(`app/e2e/storybook-${spec}.spec.ts`), []);
   }
-  assert.equal(tierOf(select("app/e2e/storybook-layout.spec.ts", "app/src/screens/loan-list.stories.tsx"), "./src/screens/loan-list.stories.tsx"), 1);
+  assert.equal(tierOf(select("app/e2e/storybook-layout.spec.ts", "app/src/screens/loans-screen.stories.tsx"), "./src/screens/loans-screen.stories.tsx"), 1);
   assert.equal(select("app/e2e/storybook-layout.spec.ts", "app/e2e/storybook-static.spec.ts"), "all");
   // A vitest test of a smoke helper runs in the unit project; it opens no story.
   assert.deepEqual(select("app/e2e/storybook-network.test.ts", "app/e2e/smoke-allow.test.ts"), []);
