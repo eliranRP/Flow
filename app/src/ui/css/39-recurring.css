@@ -1,0 +1,87 @@
+/* FLOW-447: the קבועים list. Tokens only; the card comes from 40-card.css (ui-card). */
+.ui-recurring {
+  display: grid;
+  gap: 0;
+  padding: calc(var(--space-8) * 2) var(--space-4) var(--space-4);
+}
+
+.ui-recurring > section {
+  margin-top: var(--space-6);
+}
+
+.ui-recurring .ui-section-head {
+  margin-top: 0;
+  margin-bottom: var(--space-2);
+}
+
+.ui-recurring-head {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.ui-recurring-outflow {
+  display: grid;
+  gap: var(--space-2);
+  padding: calc(var(--space-6) + var(--space-1)) var(--space-4) var(--space-5);
+  margin-bottom: calc(var(--space-2) * -1);
+}
+
+.ui-recurring > .ui-recurring-outflow {
+  margin-top: calc(var(--space-1) * -1);
+}
+
+.ui-recurring-bar {
+  height: 8px;
+  border-radius: var(--radius-chip);
+  background: var(--color-track-strong);
+  overflow: hidden;
+}
+
+.ui-recurring-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--color-accent);
+}
+
+.ui-recurring-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ui-recurring-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.ui-recurring-row-open .ui-recurring-amount > span:first-child {
+  color: var(--color-text-secondary);
+}
+
+.ui-recurring-name {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  text-align: end;
+}
+
+.ui-recurring-amount {
+  display: grid;
+  flex: none;
+  text-align: start;
+}
+
+.ui-recurring-income {
+  color: var(--color-income);
+}
+
+.ui-recurring-alert {
+  color: var(--color-bad);
+}
+
+.ui-recurring-title {
+  color: var(--color-text);
+}

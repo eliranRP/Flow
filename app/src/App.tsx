@@ -47,8 +47,8 @@ const CashHistoryScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ 
 const CashYearScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ default: m.CashYearScreen })));
 const BreakdownScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownScreen })));
 const BreakdownLinesScreen = lazy(() => screenLoaders.breakdown().then((m) => ({ default: m.BreakdownLinesScreen })));
-const MissingBillsScreen = lazy(() => screenLoaders.missingBills().then((m) => ({ default: m.MissingBillsScreen })));
 const ForecastScreen = lazy(() => screenLoaders.forecast().then((m) => ({ default: m.ForecastScreen })));
+const RecurringScreen = lazy(() => screenLoaders.recurring().then((m) => ({ default: m.RecurringScreen })));
 const LineSplitScreen = lazy(() => screenLoaders.lineSplit().then((m) => ({ default: m.LineSplitScreen })));
 const HelpScreen = lazy(() => screenLoaders.help().then((m) => ({ default: m.HelpScreen })));
 const LegalScreen = lazy(() => screenLoaders.legal().then((m) => ({ default: m.LegalScreen })));
@@ -87,8 +87,8 @@ const DevCashYear = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ defaul
 const DevInstall = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevInstall })));
 const DevLoanDetail = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoanDetail })));
 const DevLoans = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoans })));
+const DevRecurring = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevRecurring })));
 const DevLoanSummary = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevLoanSummary })));
-const DevMissingBills = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevMissingBills })));
 const DevForecast = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevForecast })));
 const DevProject = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProject })));
 const DevProjectCategory = /* @__PURE__ */ lazy(() => devRoutes().then((m) => ({ default: m.DevProjectCategory })));
@@ -229,8 +229,8 @@ function AppRoutes() {
                   <Route path="/e2e/cash-lines" element={<DevCashLines />} />
                   <Route path="/e2e/cash-history" element={<DevCashHistory />} />
                   <Route path="/e2e/cash-year" element={<DevCashYear />} />
+                  <Route path="/e2e/recurring" element={<DevRecurring />} />
                   <Route path="/e2e/invoices" element={<DevInvoices />} />
-                  <Route path="/e2e/missing-bills" element={<DevMissingBills />} />
                   <Route path="/e2e/forecast" element={<DevForecast />} />
                 </Route>
                 <Route element={<DevShell section="projects" />}>
@@ -308,8 +308,9 @@ function AppRoutes() {
                 </Route>
                 <Route path="review/filed" element={<FiledTodayScreen />} />
                 {UnpaidRoute()}
+                <Route path="missing-bills" element={<RecurringRedirect />} />
+                <Route path="recurring" element={<RecurringScreen />} />
                 {UnpaidInvoiceRoute()}
-                <Route path="missing-bills" element={<MissingBillsScreen />} />
                 <Route path="forecast" element={<ForecastScreen />} />
                 {SettingsRoutes()}
                 {LoanRoutes()}
@@ -494,4 +495,10 @@ function AuthCallback() {
   }, [navigate]);
 
   return <AuthCallbackView message={message} />;
+}
+
+/** FLOW-447: the old missing-bills address (Home's rows link to it) opens קבועים, keeping its query and hash. */
+function RecurringRedirect() {
+  const { search, hash } = useLocation();
+  return <Navigate to={{ pathname: "/recurring", search, hash }} replace />;
 }

@@ -146,7 +146,7 @@ export function ConnectionsScreen({ sample }: { sample?: SettingsSample; sampleS
                   : undefined
             }
           />
-          <List>
+          <List className="ui-ai-row-list">
             <ListRow
               variant="item"
               href={`/settings/connections/ai${search}`}
