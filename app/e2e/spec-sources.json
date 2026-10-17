@@ -132,6 +132,11 @@
       "ui/approx-amount.tsx",
       "ui/sheet.tsx"
     ],
+    "invest.spec.ts": [
+      "screens/",
+      "setup/",
+      "ui/tab-bar.tsx"
+    ],
     "jev-review-open.spec.ts": [
       "screens/review-screen.tsx",
       "screens/review-queue.tsx",

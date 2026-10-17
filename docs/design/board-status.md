@@ -37,6 +37,10 @@ Raw = mismatch, masked = text-masked mismatch (percent). Pass = masked under 3% 
 | lines | LinesAll | /e2e/txn?board=recurring&sheet=all | 14.2 | 7.5 | 15.4 | 8.0 | no | FLOW-366b |
 | lines | LinesDetailLoan | /e2e/txn?board=loan | 10.1 | 5.7 | 10.1 | 5.7 | no | FLOW-366b |
 | loans | Loans | /e2e/loans | 8.2 | 5.2 | 7.0 | 3.9 | no | FLOW-139b/139c |
+| invest | Invest | /e2e/project-investment | 6.9 | 1.8 | 6.9 | 1.8 | yes | FLOW-446 |
+| invest | InvestEdit | /e2e/project-investment?sheet=edit&field=arv | 3.8 | 0.6 | 5.0 | 1.5 | yes | FLOW-446 |
+| invest | InvestNoArv | /e2e/project-investment?arv=none | 6.4 | 1.6 | 6.3 | 1.6 | yes | FLOW-446 |
+| invest | InvestRehab | /e2e/project-investment?sheet=rehab | 6.3 | 2.3 | 6.8 | 2.7 | yes | FLOW-446 |
 | onboarding | Onboarding | /e2e/setup/welcome | 27.6 | 16.2 | 8.1 | 4.0 | no | FLOW-514b |
 | onboarding | OnboardingConnect | /e2e/setup/connect | 21.1 | 16.6 | 22.8 | 14.5 | no | FLOW-514b |
 | onboarding | OnboardingSkip | /e2e/setup/skip | 7.5 | 4.6 | 9.4 | 5.9 | no | FLOW-514b |
@@ -59,11 +63,10 @@ Result: 30 frames measured, 6 pass, 24 fail. No route was blank or errored, so n
 
 ## Unmapped board frames
 
-99 of 129 board frames have no proof map entry (from `board-coverage.mjs`). Grouped by area:
+95 of 129 board frames have no proof map entry (from `board-coverage.mjs`). Grouped by area:
 
 - **add** (7): Add, AddCamera, AddCash, AddCheque, AddProject, AddReading, AddReceipt
 - **home** (1): FlowScrolled
-- **invest** (4): Invest, InvestEdit, InvestNoArv, InvestRehab
 - **invite** (5): Invite, InviteEditor, InviteExpired, InviteJoined, InviteNewUser
 - **invoices** (1): InvoicesMatch
 - **loans** (6): LoanAdd, LoanAmortizing, LoanInterestOnly, LoanKind, LoanPayments, LoansClosed
