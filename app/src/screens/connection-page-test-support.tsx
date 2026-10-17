@@ -6,9 +6,9 @@ import { BooksProvider } from "../use-books";
 import { ConnectionDetailPage, type Provider } from "./connection-pages";
 
 /** Renders the live connection page with the app's providers; `wrap` puts something beside it. */
-export function renderPage(provider: Provider, options: { wrap?: (page: ReactNode) => ReactNode; route?: string } = {}) {
+export function renderPage(provider: Provider, options: { wrap?: (page: ReactNode) => ReactNode; route?: string; client?: QueryClient } = {}) {
   const page = <ConnectionDetailPage provider={provider} />;
-  return renderWithProviders(options.wrap ? options.wrap(page) : page, { route: options.route ?? `/settings/connections/${provider}` });
+  return renderWithProviders(options.wrap ? options.wrap(page) : page, { route: options.route ?? `/settings/connections/${provider}`, client: options.client });
 }
 
 

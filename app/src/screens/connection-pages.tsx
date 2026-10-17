@@ -11,7 +11,8 @@ import { useRefreshingNow } from "../israel-clock";
 import { assertNoError, useWrite } from "../use-write";
 import { useSumitConnect } from "../use-sumit-connect";
 import { useMercuryConnect } from "../use-mercury-connect";
-import { useSumitRefresh } from "../use-sumit-refresh";
+import { REFRESH_DONE, SUMIT_REFRESH_KEYS, useSumitRefresh } from "../use-sumit-refresh";
+import { useSyncSettled } from "../use-sync-settled";
 import { MERCURY_REFRESH_KEYS, onboardingFromSettings } from "./connections-status";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { Button } from "../ui/button";
@@ -167,6 +168,17 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
         throw new Error("sync_held");
       }
     },
+  });
+
+  // A refresh started before a reload or in another tab: when its claim clears, reload the books and say so.
+  const liveStatus = live ? status.data : undefined;
+  useSyncSettled({
+    syncing: liveStatus?.syncing === true,
+    pending: provider === "sumit" ? refreshSumit.isPending : mercuryRefresh.isPending,
+    lastSyncAt: liveStatus?.last_sync_at,
+    lastError: liveStatus?.last_error,
+    keys: provider === "sumit" ? SUMIT_REFRESH_KEYS : MERCURY_REFRESH_KEYS,
+    success: REFRESH_DONE,
   });
 
   if (live && (dashboard.isLoading || status.isLoading)) {

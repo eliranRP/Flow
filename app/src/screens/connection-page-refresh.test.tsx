@@ -1,6 +1,7 @@
+import { QueryClient } from "@tanstack/react-query";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { invokeEdge, mercuryStatus, resetBackend, serve, sumitStatus } from "./connection-page-test-backend";
+import { backend, invokeEdge, mercuryStatus, resetBackend, serve, sumitStatus } from "./connection-page-test-backend";
 import { renderPage } from "./connection-page-test-support";
 
 vi.mock("../lib/supabase", async () => (await import("./connection-page-test-backend")).supabaseModule());
@@ -55,6 +56,21 @@ describe.each([
     expect(refresh).toHaveAttribute("aria-busy", "true");
     expect(refresh.querySelector(".ui-spinner")).not.toBeNull();
     fireEvent.click(refresh);
+    expect(invokeEdge).not.toHaveBeenCalled();
+  });
+
+  it("reloads the books and says so when a run started elsewhere finishes", async () => {
+    serve(busyStatus);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderPage(provider, { client });
+    const refresh = await refreshButton();
+    expect(refresh).toHaveAttribute("aria-busy", "true");
+    const dashboardReads = backend.calls.filter((name) => name === "get_dashboard").length;
+    serve(provider === "sumit" ? { sumit: { ...status, last_sync_at: "2026-10-03T10:00:00.000Z" } } : { mercury: { ...status, last_sync_at: "2026-10-03T10:00:00.000Z" } });
+    await client.refetchQueries({ queryKey: [provider] });
+    expect(await screen.findByText("הרענון הסתיים.")).toBeInTheDocument();
+    await waitFor(() => { expect(backend.calls.filter((name) => name === "get_dashboard").length).toBeGreaterThan(dashboardReads); });
+    expect(refresh).not.toHaveAttribute("aria-busy");
     expect(invokeEdge).not.toHaveBeenCalled();
   });
 

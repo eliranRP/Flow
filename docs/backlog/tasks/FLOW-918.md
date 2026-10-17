@@ -13,7 +13,6 @@
 - Focus returns to the SUMIT or Mercury row after a retry, and a failed retry keeps focus on ניסיון חוזר: the row and its `ניסיון חוזר: <name>` button went with ConnectorRow. The page shows `נסו שוב`, which unmounts when the read starts, so focus falls to the body; a successful retry focuses the page title.
 - A reconnect that passes through loading returns focus to the row: no row to return to.
 - "SUMIT לא זמין כרגע." and the rate-limited "הרענון נכשל. נסו שוב." line in the connected sheet: the connection page shows no `last_error` text for a connected connector.
-- The claim clearing (another tab's run ends) reloads the books and says the refresh finished: `useSyncSettled` is now used only by Unpaid, the connection pages do not call it.
 - The busy refresh button renamed to `מרענן…`: the page keeps the label and sets `aria-busy` with the spinner.
 - Cold deep link to ניתוק lands on that settings entry, a SUMIT layer on the history entry, onboarding pushed or replaced entries (old nav 313-515): the sheet-over-settings history layer is gone, ConfirmSheet is not a URL layer.
 - A paused status read shows the error row: the page shows its skeleton (and never the disconnected form).
