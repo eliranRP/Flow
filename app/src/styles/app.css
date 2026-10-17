@@ -237,7 +237,7 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-family);
-  font-weight: 500;
+  font-weight: var(--type-body-weight);
   font-variant-numeric: tabular-nums lining-nums;
 }
 
