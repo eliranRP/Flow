@@ -40,7 +40,7 @@
   padding-inline: var(--space-1);
 }
 
-.ui-loan-card {
+.ui-card.ui-loan-card {
   display: flex;
   flex-direction: column;
   gap: calc(var(--space-2) * 1.25);
@@ -48,33 +48,49 @@
   border-radius: var(--radius-card);
 }
 
-.ui-loan-next-card {
+.ui-card.ui-loan-next-card {
   gap: calc(var(--space-2) + 1px);
   padding-top: calc(var(--space-4) - 1px);
+  padding-bottom: calc(var(--space-card-inset) + var(--space-1) / 2);
+}
+
+.ui-card.ui-loan-balance {
+  padding-bottom: calc(var(--space-card-inset) + var(--space-1) / 4);
+}
+
+.ui-loan-balance .ui-parts {
+  margin-top: 1px;
 }
 
 .ui-loan-balance .ui-loan-card-text {
+  margin-top: calc(var(--space-1) * 0.625);
   font-size: var(--type-line2-size);
-  line-height: var(--type-line2-line);
+  line-height: calc(var(--type-caption-size) * var(--type-caption-line));
 }
 
 /* The cards of rows (terms, the year's parts, the last payments) hold their rows edge to edge. */
-.ui-loan-rows,
-.ui-loan-ytd,
-.ui-loan-recent {
+.ui-card.ui-loan-rows,
+.ui-card.ui-loan-ytd,
+.ui-card.ui-loan-recent {
   gap: 0;
   padding: 0;
   overflow: hidden;
 }
 
-.ui-loan-rows > * + *,
-.ui-loan-ytd > * + *,
-.ui-loan-recent > * + * {
+/* The year's parts and the last payments sit in a card with 6px above and 4px below (the board's). */
+.ui-card.ui-loan-ytd,
+.ui-card.ui-loan-recent {
+  padding-block: calc(var(--space-1) * 1.5) var(--space-1);
+}
+
+.ui-loan-card.ui-loan-rows > * + *,
+.ui-loan-card.ui-loan-ytd > * + *,
+.ui-loan-card.ui-loan-recent > * + * {
   border-block-start: var(--stroke-hairline) solid var(--color-line);
 }
 
 .ui-loan-card-pad {
-  padding: var(--space-3) var(--space-4) var(--space-1);
+  padding: var(--space-3) calc(var(--space-4) + var(--space-1) / 2) var(--space-1);
 }
 
 .ui-loan-card-label,
@@ -107,7 +123,7 @@
 }
 
 .ui-loan-next-card .ui-loan-card-note {
-  margin-top: calc(var(--space-1) * -1);
+  margin-top: calc(var(--space-1) * -0.75);
 }
 
 .ui-loan-card-head {
@@ -124,11 +140,15 @@
   font-weight: var(--type-section-weight);
 }
 
-.ui-loan-card-total,
-.ui-loan-card-meta bdi {
+.ui-loan-card-total {
   font-size: var(--type-section-size);
-  font-weight: var(--type-section-weight);
   font-variant-numeric: tabular-nums;
+}
+
+.ui-loan-card-meta bdi {
+  font-size: var(--type-line2-size);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
 }
 
 /* The next payment's legend rows sit close, as the summary card's do (FLOW-139). */
@@ -144,6 +164,7 @@
 
 .ui-loan-next-card .ui-parts-legend-item,
 .ui-loan-split .ui-parts-legend-item {
+  font-size: var(--type-line2-size);
   min-height: var(--loan-legend-pitch);
 }
 
@@ -177,8 +198,8 @@
   align-items: center;
   gap: var(--space-3);
   width: 100%;
-  min-block-size: var(--row-height);
-  padding: var(--status-gap) var(--space-4);
+  min-block-size: calc(var(--row-height) - var(--space-1));
+  padding: 0 calc(var(--space-4) + var(--space-1) / 2);
   border: 0;
   background: transparent;
   color: inherit;
@@ -198,19 +219,19 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: calc(var(--space-1) / 2);
   min-inline-size: 0;
 }
 
 .ui-loan-term-label {
   font-size: var(--type-caption-size);
-  line-height: var(--type-caption-line);
+  line-height: calc(var(--space-4) - 1px);
   color: var(--color-text-muted);
 }
 
 .ui-loan-term-value {
   font-size: var(--type-body-size);
-  line-height: var(--type-body-line);
+  line-height: calc(var(--space-4) + var(--space-1));
   color: var(--color-text);
   overflow-wrap: anywhere;
 }
@@ -227,8 +248,8 @@
   align-items: center;
   gap: var(--space-3);
   width: 100%;
-  min-block-size: var(--row-height);
-  padding: var(--space-2) var(--space-4);
+  min-block-size: calc(var(--row-height) - var(--space-3));
+  padding: 0 calc(var(--space-4) + var(--space-1) / 2);
   border: 0;
   background: transparent;
   color: inherit;
@@ -241,8 +262,18 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: calc(var(--space-1) / 2);
   min-inline-size: 0;
+}
+
+.ui-loan-payments .ui-loan-row-title {
+  line-height: var(--type-body-line);
+}
+
+.ui-loan-payments .ui-loan-row-note {
+  font-size: var(--type-line2-size);
+  line-height: calc(var(--type-line2-size) * 1.2);
+  color: var(--color-text-muted);
 }
 
 .ui-loan-payments .ui-loan-row-text {
@@ -253,7 +284,7 @@
 
 .ui-loan-row-title {
   font-size: var(--type-body-size);
-  line-height: var(--type-body-line);
+  line-height: calc(var(--space-4) + var(--space-1));
   color: var(--color-text);
 }
 
@@ -278,7 +309,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-block-size: var(--touch-min);
+  min-block-size: calc(var(--row-height) - var(--space-4));
   color: var(--color-accent-text);
   font-size: var(--type-meta-size);
   text-decoration: none;
@@ -309,7 +340,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin-bottom: calc(var(--space-1) * -0.5);
+  margin-bottom: calc(var(--space-1) * -0.75);
 }
 
 .ui-loan-chip {
@@ -337,10 +368,10 @@
   color: var(--color-text-secondary);
 }
 
-.ui-loan-split {
+.ui-card.ui-loan-split {
   gap: var(--space-3);
-  padding-top: calc(var(--space-4) + var(--space-1) / 2);
-  padding-bottom: calc(var(--space-2) * 1.25);
+  padding-top: calc(var(--space-4) + var(--space-1) * 0.75);
+  padding-bottom: calc(var(--space-2) * 1.25 + var(--space-1) / 4);
 }
 
 .ui-loan-year {
@@ -357,7 +388,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-3) 0 var(--space-2);
+  padding: calc(var(--space-3) + var(--space-1) / 4) 0 calc(var(--space-1) + var(--space-1) / 4);
   border-block-end: var(--stroke-hairline) solid var(--color-line);
   background: var(--color-bg);
 }

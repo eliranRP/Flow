@@ -199,10 +199,17 @@ describe("loan page: what it leads with (FLOW-139c)", () => {
 
   it("leaves out a part at $0, and leads the bridge loan with its interest (design r1)", () => {
     const { container } = renderLoan(sampleLoanStore(), "loan-bridge", undefined, "");
-    expect(container.querySelector(".ui-loan-next-card")).toHaveTextContent("$1,838");
+    expect(container.querySelector(".ui-loan-next-card")).toHaveTextContent("$1,837.50");
     expect(screen.getByRole("button", { name: /^ריבית ריבית/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^קרן/ })).not.toBeInTheDocument();
-    expect(screen.getByText(/^ריבית בלבד: הקרן \(\$210,000\) תיפרע בסוף, /)).toBeInTheDocument();
+    expect(screen.getByText(/^ריבית בלבד: הקרן \(\$210,000\) תיפרע בסוף, 01\/2027$/)).toBeInTheDocument();
+  });
+
+  it("shows whole dollars when the loan pays whole dollars, cents when it pays cents", () => {
+    const { container } = renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "");
+    const text = container.querySelector(".ui-loan-next-card")?.textContent ?? "";
+    expect(text).toContain("$5,240");
+    expect(text).not.toMatch(/\.\d\d/);
   });
 
   it("has no next payment for a demand loan, and says the balance is the principal", () => {

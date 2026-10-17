@@ -80,7 +80,7 @@ test("marking a loan paid off takes a date from the last payment on, then undo r
 });
 
 test("a part's category saves on tap, and undo puts the default back", async ({ page }) => {
-  await page.goto(`/e2e/loans/loan-bridge?reset=1&today=${TODAY}`);
+  await page.goto(`/e2e/loans/loan-note?reset=1&today=${TODAY}`);
   await page.getByRole("button", { name: /^עמלות/ }).click();
   const sheet = page.getByRole("dialog", { name: "עמלות" });
   await expect(sheet.getByRole("radio", { name: "בלי קבועה" })).toHaveAttribute("aria-checked", "true");

@@ -106,7 +106,7 @@ export const KindSheetDemand: Story = {
 
 export const PartSheet: Story = {
   name: "Fees category sheet",
-  ...loan("loan-bridge"),
+  ...loan("loan-note"),
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole("button", { name: /^עמלות/ }));
     await expect(await bodyOf(canvasElement).findByRole("dialog", { name: "עמלות" })).toBeInTheDocument();

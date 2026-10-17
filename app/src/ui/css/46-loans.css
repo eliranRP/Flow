@@ -32,9 +32,10 @@
 }
 
 .ui-loans-count {
-  margin: 0;
+  margin: calc(var(--space-1) / 2) 0 0;
   color: var(--color-text-muted);
   font-size: var(--type-line2-size);
+  line-height: calc(var(--type-line2-size) * 1.2);
 }
 
 .ui-loans-summary-wrap {
@@ -43,9 +44,9 @@
 
 .ui-loans-section-head {
   margin: 0;
-  padding: var(--space-4) 0 var(--space-1);
+  padding: calc(var(--space-5) + var(--space-1) / 2) 0 calc(var(--space-1) * 1.5);
   font-size: var(--type-section-size);
-  line-height: var(--type-section-line);
+  line-height: calc(var(--type-section-size) * 1.2);
   font-weight: var(--type-section-weight);
 }
 
@@ -58,7 +59,7 @@
 .ui-loans-row {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: calc(var(--space-3) + var(--space-1) / 2);
   width: 100%;
   min-height: var(--row-height);
   padding: var(--space-2) 0;
@@ -95,12 +96,13 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: calc(var(--space-1) / 2);
   min-width: 0;
 }
 
 .ui-loans-name {
   overflow: hidden;
+  line-height: calc(var(--space-4) + var(--space-1));
   font-size: var(--type-body-size);
   font-weight: var(--type-body-weight);
   text-overflow: ellipsis;
@@ -109,6 +111,7 @@
 
 .ui-loans-meta {
   overflow: hidden;
+  line-height: calc(var(--type-line2-size) * 1.2);
   color: var(--color-text-muted);
   font-size: var(--type-line2-size);
   text-overflow: ellipsis;
