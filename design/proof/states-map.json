@@ -1,4 +1,5 @@
 {
   "StatesHomeEmpty": "/e2e/cash-empty",
-  "StatesLoansEmpty": "/e2e/loans?loans=none"
+  "StatesLoansEmpty": "/e2e/loans?loans=none",
+  "StatesSearching": "/search?preview=loading&q=northline"
 }

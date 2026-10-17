@@ -7,9 +7,11 @@ import {
   SEARCH_PAGE,
   filterSearchRows,
   hasChipFilters,
-  nextSearchOffset,
+  mergeSearchPages,
   readSearchFilters,
+  searchAmountRange,
   searchArgs,
+  searchTotalText,
   uniqueSearchRows,
   searchCountWords,
   searchFiltersQuery,
@@ -126,22 +128,63 @@ describe("searchArgs", () => {
   });
 });
 
-describe("paging", () => {
-  const page = (count: number, total: number): SearchPage => ({ total, expenses: Array.from({ length: count }, (_, i) => row(`r${String(i)}`)) });
-
-  it("asks for the next offset until every line is loaded", () => {
-    const first = page(SEARCH_PAGE, 120);
-    expect(nextSearchOffset(first, [first])).toBe(SEARCH_PAGE);
-    const second = page(SEARCH_PAGE, 120);
-    expect(nextSearchOffset(second, [first, second])).toBe(SEARCH_PAGE * 2);
-    const last = page(20, 120);
-    expect(nextSearchOffset(last, [first, second, last])).toBeUndefined();
+describe("searchAmountRange", () => {
+  it("reads a whole number as its whole range of cents, and a decimal as its own cent or tenth", () => {
+    expect(searchAmountRange("8940")).toEqual({ min: 894000n, max: 894099n });
+    expect(searchAmountRange("8940.17")).toEqual({ min: 894017n, max: 894017n });
+    expect(searchAmountRange("8940.1")).toEqual({ min: 894010n, max: 894019n });
   });
 
-  it("stops on an empty page even if the total moved", () => {
-    const first = page(SEARCH_PAGE, 120);
-    const empty = page(0, 120);
-    expect(nextSearchOffset(empty, [first, empty])).toBeUndefined();
+  it("ignores separators and a currency sign", () => {
+    expect(searchAmountRange("8,940.17")).toEqual({ min: 894017n, max: 894017n });
+    expect(searchAmountRange("$8940")).toEqual({ min: 894000n, max: 894099n });
+    expect(searchAmountRange("₪ 8 940")).toEqual({ min: 894000n, max: 894099n });
+  });
+
+  it("is null for text that is not an amount", () => {
+    expect(searchAmountRange("2024-inv")).toBeNull();
+    expect(searchAmountRange("INV-8940")).toBeNull();
+    expect(searchAmountRange("")).toBeNull();
+  });
+});
+
+describe("searchArgs amount read", () => {
+  it("sends the range and no text for the amount read, and the text for the text read", () => {
+    const filters = { ...EMPTY_FILTERS, q: "8940" };
+    const range = searchAmountRange("8940");
+    expect(searchArgs(filters, 0, range)).toEqual({ p_scope: "all", p_limit: SEARCH_PAGE, p_offset: 0, p_amount_min: 894000, p_amount_max: 894099 });
+    expect(searchArgs(filters, 0)).toMatchObject({ p_query: "8940" });
+    expect(searchArgs(filters, 0)).not.toHaveProperty("p_amount_min");
+  });
+});
+
+describe("mergeSearchPages", () => {
+  const page = (expenses: SearchRow[], total: number): SearchPage => ({ total, expenses });
+
+  it("merges the text and amount reads once per line, newest first, and resumes each read on its own offset", () => {
+    const byText = page([row("a", { doc_date: "2026-10-01", description: "8940 ref" }), row("b", { doc_date: "2026-09-01" })], 3);
+    const byAmount = page([row("b", { doc_date: "2026-09-01" }), row("c", { doc_date: "2026-10-05", amount_net: -894_017n })], 2);
+    const merged = mergeSearchPages({ text: { page: byText, offset: 0 }, amount: { page: byAmount, offset: 0 } });
+    expect(merged.expenses.map((line) => line.id)).toEqual(["c", "a", "b"]);
+    expect(merged.total).toBe(5);
+    // The text read has 3 lines and two are in hand; the amount read's two are all of its lines.
+    expect(merged.next).toEqual({ text: 2, amount: null });
+  });
+
+  it("is done when neither read has lines left", () => {
+    const merged = mergeSearchPages({ text: { page: page([row("a")], 1), offset: 0 } });
+    expect(merged.next).toBeNull();
+  });
+});
+
+describe("searchTotalText", () => {
+  it("signs the first currency's net in whole units", () => {
+    const totals = [
+      { currency: "USD", incomeMinor: 0n, expenseMinor: 2_106_100n },
+      { currency: "USD", incomeMinor: 0n, expenseMinor: 0n },
+    ];
+    expect(searchTotalText(totals)).toBe("−$21,061");
+    expect(searchTotalText([])).toBeNull();
   });
 });
 
@@ -170,6 +213,24 @@ describe("rows", () => {
     expect(searchCountWords(1)).toBe("תנועה אחת");
     expect(searchCountWords(7)).toBe("7 תנועות");
     expect(searchCountWords(0)).toBe("0 תנועות");
+  });
+});
+
+describe("filterSearchRows amount and names (sample and dev lists)", () => {
+  it("matches the amount range, with a numeric description still matching by its text", () => {
+    const rows = [
+      row("amount", { description: "ספק", amount_net: -894_017n }),
+      row("invoice", { description: "חשבונית 8940", amount_net: -10_000n }),
+      row("other", { description: "ספק אחר", amount_net: -10_000n }),
+    ];
+    expect(filterSearchRows(rows, { ...EMPTY_FILTERS, q: "8940" }).map((r) => r.id)).toEqual(["amount", "invoice"]);
+    expect(filterSearchRows(rows, { ...EMPTY_FILTERS, q: "חשבונית 8940" }).map((r) => r.id)).toEqual(["invoice"]);
+  });
+
+  it("matches the project and category names", () => {
+    const rows = [row("p", { project_name: "Harbor Pier", category_name: "חומרים" }), row("q", { project_name: null })];
+    expect(filterSearchRows(rows, { ...EMPTY_FILTERS, q: "harbor" }).map((r) => r.id)).toEqual(["p"]);
+    expect(filterSearchRows(rows, { ...EMPTY_FILTERS, q: "חומרים" }).map((r) => r.id)).toEqual(["p"]);
   });
 });
 

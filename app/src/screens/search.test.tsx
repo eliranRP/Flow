@@ -128,10 +128,10 @@ describe("Search screen (FLOW-323)", () => {
     expect(await screen.findByRole("link", { name: /^חומרי בניין לדוגמה/ })).toBeInTheDocument();
     expect(searchCalls().some((call) => call.args.p_scope === "pending")).toBe(true);
     const status = screen.getByRole("status");
-    expect(status).toHaveTextContent(/^2 תנועות$/);
+    expect(status).toHaveTextContent(/^2 תנועות/);
     // The income line names its customer and waits for review, in words on the row.
     const income = screen.getByRole("link", { name: /^לקוח לדוגמה/ });
-    expect(income).toHaveAccessibleName(/ממתינה לאישור/);
+    expect(income).toHaveTextContent("ממתין לאישור");
   });
 
   it("waits for typing to stop before it asks, and tints the match", async () => {
@@ -183,11 +183,22 @@ describe("Search screen (FLOW-323)", () => {
     page = { total: 0, expenses: [] };
     wrap("/search?q=%D7%9E%D7%A2%D7%9C%D7%99%D7%95%D7%AA");
     expect(await screen.findByText("לא מצאנו ״מעליות״")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "ניקוי החיפוש" }));
+    // The board's empty state has no action without chips: the field's own clear button is the way out.
+    expect(screen.queryByRole("button", { name: "ניקוי החיפוש" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "ניקוי" }));
     await waitFor(() => {
       expect(searchCalls().at(-1)?.args).not.toHaveProperty("p_query");
     });
     expect(screen.getByRole("searchbox", { name: "חיפוש תנועות" })).toHaveValue("");
+  });
+
+  it("reads a typed amount by its range and by its text, both at once", async () => {
+    page = { total: 1, expenses: [line("amt")] };
+    wrap("/search?q=8940");
+    await screen.findByRole("link", { name: /^חומרי בניין לדוגמה/ });
+    const args = searchCalls().map((call) => call.args);
+    expect(args).toContainEqual(expect.objectContaining({ p_amount_min: 894000, p_amount_max: 894099 }));
+    expect(args).toContainEqual(expect.objectContaining({ p_query: "8940" }));
   });
 
   it("does not say nothing matched for text the server has not answered yet", async () => {
@@ -231,7 +242,7 @@ describe("Search screen (FLOW-323)", () => {
     page = { total: 51, expenses: Array.from({ length: 50 }, (_, i) => line(`p${String(i)}`)) };
     wrap("/search?dir=expense");
     const more = await screen.findByRole("button", { name: "עוד תנועות" });
-    expect(screen.getByRole("status")).toHaveTextContent(/^51 תנועות$/);
+    expect(screen.getByRole("status")).toHaveTextContent(/^51 תנועות/);
     page = { total: 51, expenses: [line("p50")] };
     fireEvent.click(more);
     await waitFor(() => {
@@ -256,7 +267,7 @@ describe("Search screen (FLOW-323)", () => {
     expect(await screen.findByRole("button", { name: "עוד תנועות" })).toBeInTheDocument();
     const heads = [...container.querySelectorAll(".ui-month-head")];
     expect(heads).toHaveLength(2);
-    expect(heads[1]?.querySelector(".ui-month-totals")?.textContent).toBe("נטו ₪800");
+    expect(heads[1]?.querySelector(".ui-month-signed")?.textContent).toBe("₪800");
   });
 
   it("draws a line the next page repeats once, and still ends the paging", async () => {
@@ -301,9 +312,9 @@ describe("Search screen (FLOW-323)", () => {
 });
 
 describe("searchRowDetails", () => {
-  it("holds a status only: no date, project, category or split (FLOW-339 option C)", () => {
-    expect(searchRowDetails({ kept_out: false, waiting_review: false })).toEqual([]);
-    expect(searchRowDetails({ kept_out: true, waiting_review: false })).toEqual([{ text: "לא נספר ברווח" }]);
-    expect(searchRowDetails({ kept_out: false, waiting_review: true })).toEqual([{ text: "ממתינה לאישור", keep: true }]);
+  it("reads day, project and category on line 2, and a kept-out line adds its status", () => {
+    const base = { kept_out: false, doc_date: "2026-10-10", project_name: "Juniper Ct", category_name: "תיקונים ותחזוקה" };
+    expect(searchRowDetails(base)).toEqual([{ text: "10/10" }, { text: "Juniper Ct" }, { text: "תיקונים ותחזוקה" }]);
+    expect(searchRowDetails({ ...base, project_name: null, kept_out: true })).toEqual([{ text: "10/10" }, { text: "תיקונים ותחזוקה" }, { text: "לא נספר ברווח" }]);
   });
 });

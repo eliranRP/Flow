@@ -348,3 +348,117 @@
   gap: var(--space-2);
   margin-inline-start: auto;
 }
+
+/* FLOW-368: the count line sits in the scroll area under the head, as on the board (15px muted). */
+.ui-search-results > .ui-search-count {
+  margin: 0;
+  padding: var(--space-4) var(--space-4) 0;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  color: var(--color-text-muted);
+}
+
+/* The line-3 note: a state to act on, in the accent, 13px, on its own line. */
+.ui-statement-note {
+  display: block;
+  font-size: var(--type-hint-size);
+  line-height: var(--type-hint-line);
+  color: var(--color-accent-text);
+}
+
+/* The month's signed total: one muted figure at the end of the head. */
+.ui-month-head:has(.ui-month-signed) {
+  justify-content: space-between;
+}
+
+.ui-month-signed {
+  margin: 0;
+  font-size: var(--type-body-size);
+  color: var(--color-text-muted);
+}
+
+/* Empty: the name searched, one muted line, and a text link when filters are on. */
+.ui-search-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-10) var(--space-4) 0;
+  text-align: center;
+}
+
+.ui-search-empty-title {
+  margin: 0;
+  font-size: var(--type-title-2-size);
+  font-weight: var(--type-title-2-weight);
+}
+
+.ui-search-empty-body {
+  margin: 0;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  color: var(--color-text-muted);
+}
+
+/* The field's cancel link, shown while the first read loads. */
+.ui-search-cancel {
+  flex: none;
+  min-block-size: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--type-body-size);
+  color: var(--color-accent-text);
+  text-decoration: none;
+}
+
+/* Searching: the note, then five skeleton rows of the board's row shape. */
+.ui-search-searching-note {
+  margin: 0;
+  padding: var(--space-2) var(--space-4) var(--space-2);
+  font-size: var(--type-hint-size);
+  color: var(--color-text-muted);
+}
+
+.ui-search-skel-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-search-skel-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: 64px;
+  padding: var(--space-2) var(--space-4);
+}
+
+.ui-search-skel-avatar {
+  flex: none;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: 50%;
+}
+
+.ui-search-skel-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-search-skel-bar-long,
+.ui-search-skel-bar-short,
+.ui-search-skel-end {
+  display: block;
+  block-size: 12px;
+  border-radius: var(--radius-chip);
+}
+
+.ui-search-skel-bar-long { inline-size: 58%; }
+.ui-search-skel-bar-short { inline-size: 38%; block-size: 10px; }
+.ui-search-skel-end { flex: none; inline-size: 64px; }
+
+/* Line 2 of a result is 15px muted (board), one line. */
+.ui-search-results .ui-statement-details {
+  font-size: var(--type-label-size);
+}

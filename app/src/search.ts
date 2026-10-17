@@ -1,4 +1,4 @@
-import type { SearchPage, SearchRow } from "@flow/shared";
+import { formatAmountText, type SearchPage, type SearchRow } from "@flow/shared";
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { getSupabase } from "./lib/supabase";
@@ -109,14 +109,46 @@ export function hasChipFilters(filters: SearchFilters): boolean {
     || filters.period.kind !== "all";
 }
 
-/** The RPC's arguments for one page (decision 0140). The text is trimmed; empty means every line. */
-export function searchArgs(filters: SearchFilters, offset: number) {
+/**
+ * A typed amount as a minor-unit range: "8940" is every line from 8,940.00 to 8,940.99, "8940.1"
+ * is 8,940.10 to 8,940.19, "8940.17" is that cent alone. Separators and a currency sign are
+ * ignored. Null when the text is not a plain amount (an invoice number, a date).
+ */
+export function searchAmountRange(text: string): { min: bigint; max: bigint } | null {
+  const cleaned = text.replace(/[\s,]/g, "").replace(/^[$₪-]+/, "");
+  const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(cleaned);
+  if (match == null) return null;
+  const base = BigInt(match[1] ?? "0") * 100n;
+  const frac = match[2];
+  if (frac == null) return { min: base, max: base + 99n };
+  // "8940.1" is ten agorot, so it spans the tenth of the cent range: 10 to 19.
+  const low = frac.length === 1 ? BigInt(frac) * 10n : BigInt(frac);
+  return { min: base + low, max: base + low + (frac.length === 1 ? 9n : 0n) };
+}
+
+export type AmountRange = { min: bigint; max: bigint };
+
+/**
+ * Where each read of a page resumes: `text` for the typed text, `amount` for the amount range
+ * (null once that read has no more lines, or when the text is not an amount).
+ */
+export type SearchCursor = { text: number | null; amount: number | null };
+
+/** A page as the screen reads it: the merged lines, the total, the months, and where to resume. */
+export type SearchReadPage = SearchPage & { next: SearchCursor | null };
+
+/**
+ * The RPC's arguments for one page (decision 0140). The text is trimmed; empty means every line.
+ * With `amount`, the read takes that range and no text: the amount read of a numeric search.
+ */
+export function searchArgs(filters: SearchFilters, offset: number, amount: AmountRange | null = null) {
   const q = filters.q.trim().slice(0, SEARCH_MAX_LENGTH);
   return {
     p_scope: filters.review ? "pending" : "all",
     p_limit: SEARCH_PAGE,
     p_offset: offset,
-    ...(q === "" ? {} : { p_query: q }),
+    ...(q === "" || amount != null ? {} : { p_query: q }),
+    ...(amount ? { p_amount_min: Number(amount.min), p_amount_max: Number(amount.max) } : {}),
     ...(filters.period.from ? { p_from: filters.period.from } : {}),
     ...(filters.period.to ? { p_to: filters.period.to } : {}),
     ...(filters.project ? { p_project: filters.project } : {}),
@@ -125,10 +157,7 @@ export function searchArgs(filters: SearchFilters, offset: number) {
   };
 }
 
-/**
- * Each line once. Offset pages can repeat a line when a new one lands between two reads; a repeat
- * would draw twice and break the row keys and the ˄ ˅ list.
- */
+/** Each line once, newest first as the server orders them (date, then description, then id). */
 export function uniqueSearchRows(pages: readonly SearchPage[]): SearchRow[] {
   const seen = new Set<string>();
   const rows: SearchRow[] = [];
@@ -142,31 +171,97 @@ export function uniqueSearchRows(pages: readonly SearchPage[]): SearchRow[] {
   return rows;
 }
 
-/** Pages until every matching line is loaded. */
-export function nextSearchOffset(page: SearchPage, pages: readonly SearchPage[]): number | undefined {
-  const loaded = pages.reduce((sum, item) => sum + item.expenses.length, 0);
-  if (page.expenses.length === 0) return undefined;
-  return loaded < page.total ? loaded : undefined;
+/** The order the server sends a page in, so a merged page reads the same. */
+function sortLikeServer(rows: SearchRow[]): SearchRow[] {
+  return rows.sort((a, b) => {
+    if (a.doc_date !== b.doc_date) return a.doc_date < b.doc_date ? 1 : -1;
+    if (a.description !== b.description) return a.description < b.description ? -1 : 1;
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  });
+}
+
+/** Where one read resumes after `page`, which started at `offset`; null when it has no more. */
+function resumeAt(page: SearchPage, offset: number): number | null {
+  if (page.expenses.length === 0) return null;
+  const after = offset + page.expenses.length;
+  return after < page.total ? after : null;
+}
+
+/**
+ * One merged page: the text read's lines and the amount read's, each line once, in the server's
+ * order. A line both reads find is kept once. The total adds both reads (an upper bound while
+ * paging); `months` add both reads too, so a line both reads find can count twice there.
+ */
+export function mergeSearchPages(reads: { text?: { page: SearchPage; offset: number }; amount?: { page: SearchPage; offset: number } }): SearchReadPage {
+  const pages = [reads.text?.page, reads.amount?.page].filter((page): page is SearchPage => page != null);
+  const [first] = pages;
+  if (first == null) throw new Error("mergeSearchPages: no read");
+  const expenses = sortLikeServer(uniqueSearchRows(pages));
+  const monthRows = new Map<string, NonNullable<SearchPage["months"]>[number]>();
+  for (const page of pages) {
+    for (const row of page.months ?? []) {
+      const key = `${row.month}|${row.currency}`;
+      const sum = monthRows.get(key);
+      monthRows.set(key, sum == null ? { ...row } : { ...sum, income_minor: sum.income_minor + row.income_minor, expense_minor: sum.expense_minor + row.expense_minor });
+    }
+  }
+  const months = pages.some((page) => page.months != null) ? [...monthRows.values()] : undefined;
+  const next: SearchCursor = {
+    text: reads.text ? resumeAt(reads.text.page, reads.text.offset) : null,
+    amount: reads.amount ? resumeAt(reads.amount.page, reads.amount.offset) : null,
+  };
+  return {
+    ...first,
+    expenses,
+    total: pages.reduce((sum, page) => sum + page.total, 0),
+    months,
+    next: next.text == null && next.amount == null ? null : next,
+  };
+}
+
+/** The first page's cursor: the text read always, the amount read too when the text is an amount. */
+export function initialSearchCursor(filters: SearchFilters): SearchCursor {
+  return { text: 0, amount: searchAmountRange(filters.q.trim()) == null ? null : 0 };
 }
 
 export function useSearchQuery(filters: SearchFilters, active = true) {
   const preview = useHomePreview();
   const key = searchArgs(filters, 0);
+  const amount = searchAmountRange(filters.q.trim());
   return useInfiniteQuery({
     queryKey: ["search", preview, key],
     enabled: active && preview === "off",
     // Typing keeps the last results on screen until the new read lands.
     placeholderData: keepPreviousData,
-    initialPageParam: 0,
-    queryFn: async ({ pageParam }): Promise<SearchPage> => {
+    initialPageParam: initialSearchCursor(filters),
+    queryFn: async ({ pageParam }): Promise<SearchReadPage> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       await waitForAccessToken(supabase);
-      const { data, error } = await supabase.rpc("search_transactions", searchArgs(filters, pageParam));
-      if (error) throw error;
-      return (await loadReadSchemas()).searchPageSchema.parse(data);
+      const schema = (await loadReadSchemas()).searchPageSchema;
+      const read = async (args: ReturnType<typeof searchArgs>) => {
+        const { data, error } = await supabase.rpc("search_transactions", args);
+        if (error) throw error;
+        return schema.parse(data);
+      };
+      // Both reads of a page run at once; each one pages on its own offset.
+      const [text, byAmount] = await Promise.all([
+        pageParam.text == null ? undefined : read(searchArgs(filters, pageParam.text)),
+        amount == null || pageParam.amount == null ? undefined : read(searchArgs(filters, pageParam.amount, amount)),
+      ]);
+      return mergeSearchPages({
+        text: text && pageParam.text != null ? { page: text, offset: pageParam.text } : undefined,
+        amount: byAmount && pageParam.amount != null ? { page: byAmount, offset: pageParam.amount } : undefined,
+      });
     },
-    getNextPageParam: nextSearchOffset,
+    getNextPageParam: (last) => last.next ?? undefined,
+    // Once every read is done, the total is the lines actually found, not the sum of the reads.
+    select: (data) => {
+      const done = data.pages[data.pages.length - 1]?.next == null;
+      if (amount == null || !done) return data;
+      const found = uniqueSearchRows(data.pages).length;
+      return { ...data, pages: data.pages.map((page, index) => (index === 0 ? { ...page, total: found } : page)) };
+    },
   });
 }
 
@@ -221,13 +316,21 @@ export function searchCountWords(count: number): string {
 
 /**
  * The server's rules on rows already in hand, for sample and dev lists only: the text in the
- * description, supplier or customer (any case), the direction, the line's own project and
+ * description, supplier, customer, project or category name (any case), or with a typed amount
+ * the line's amount in that range (the live read's OR); the direction, the line's own project and
  * category (or `none`), the dates and the review state. Split parts and shares are the server's.
  */
 export function filterSearchRows(rows: readonly SearchRow[], filters: SearchFilters): SearchRow[] {
   const q = filters.q.trim().toLowerCase();
+  const amount = searchAmountRange(filters.q.trim());
   return rows.filter((row) => {
-    if (q !== "" && ![row.description, row.supplier_name, row.customer_name].some((text) => (text ?? "").toLowerCase().includes(q))) return false;
+    if (q !== "") {
+      const text = [row.description, row.supplier_name, row.customer_name, row.project_name, row.category_name]
+        .some((value) => (value ?? "").toLowerCase().includes(q));
+      const abs = row.amount_net < 0n ? -row.amount_net : row.amount_net;
+      const byAmount = amount != null && abs >= amount.min && abs <= amount.max;
+      if (!text && !byAmount) return false;
+    }
     if (filters.direction && row.direction !== filters.direction) return false;
     if (filters.project === "none" ? row.project_id != null : filters.project != null && row.project_id !== filters.project) return false;
     if (filters.category === "none" ? row.category_id != null : filters.category != null && row.category_id !== filters.category) return false;
@@ -236,4 +339,27 @@ export function filterSearchRows(rows: readonly SearchRow[], filters: SearchFilt
     if (filters.review && !row.waiting_review) return false;
     return true;
   });
+}
+
+/** A row's money as a month total (income or expense, its own currency; kept-out counts nothing). */
+export function searchRowTotals(rows: readonly SearchRow[]): MonthTotal[] {
+  return rows.map((row) => {
+    const { minor, direction } = searchRowAmount(row);
+    const abs = minor < 0n ? -minor : minor;
+    return { currency: row.currency, incomeMinor: direction === "income" ? abs : 0n, expenseMinor: direction === "expense" ? abs : 0n };
+  });
+}
+
+/**
+ * The count line's money (FLOW-368 §2.4): income minus expenses over every matching line, in the
+ * first currency (ILS first). Null when there are no lines.
+ */
+export function searchTotalText(totals: readonly MonthTotal[]): string | null {
+  const first = totals.find((total) => total.currency === "ILS") ?? totals[0];
+  if (first == null) return null;
+  let minor = 0n;
+  for (const total of totals) {
+    if (total.currency === first.currency) minor += total.incomeMinor - total.expenseMinor;
+  }
+  return formatAmountText(minor, first.currency);
 }

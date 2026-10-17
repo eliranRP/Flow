@@ -148,6 +148,8 @@ export type StatementRowProps = {
   details?: StatementDetail[];
   /** A line kept out of profit: it fades but keeps line 2 at full muted grey (owner's pick C; FLOW-352). */
   setAside?: boolean;
+  /** Optional accent line under line 2, for a state to act on (Search: "ממתין לאישור"). Off unless passed. */
+  note?: string;
 };
 
 export function ListRow(props: ListRowProps) {
@@ -509,6 +511,7 @@ function StatementRow(props: StatementRowProps) {
               ) : null}
             </span>
           ) : null}
+          {props.note ? <span className="ui-statement-note">{props.note}</span> : null}
         </span>
       </span>
       <span className="ui-statement-end">
