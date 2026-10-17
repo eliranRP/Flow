@@ -172,7 +172,7 @@ export function LineSplitScreen({ sample, backTo }: { sample?: LineSplitSample; 
   if (phase.kind !== "ready" || !txn.data) {
     return (
       <ScreenState
-        title="פיצול לפי קטגוריות"
+        title="פיצול"
         backTo={fallback}
         phase={phase.kind === "ready" ? { kind: "empty" } : phase}
         onRetry={() => { for (const query of queries) void query.refetch(); }}

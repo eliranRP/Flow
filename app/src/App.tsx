@@ -40,7 +40,6 @@ const ReviewScreen = lazy(() => screenLoaders.review().then((m) => ({ default: m
 const ChangeForm = lazy(() => screenLoaders.changeForm().then((m) => ({ default: m.ChangeForm })));
 const FiledTodayScreen = lazy(() => screenLoaders.filedToday().then((m) => ({ default: m.FiledTodayScreen })));
 const TransactionScreen = lazy(() => screenLoaders.transaction().then((m) => ({ default: m.TransactionScreen })));
-const SplitScreen = lazy(() => screenLoaders.split().then((m) => ({ default: m.SplitScreen })));
 const CashMonthScreen = lazy(() => screenLoaders.cash().then((m) => ({ default: m.CashMonthScreen })));
 const CashLinesScreen = lazy(() => screenLoaders.cashLines().then((m) => ({ default: m.CashLinesScreen })));
 const CashHistoryScreen = lazy(() => screenLoaders.cashHistory().then((m) => ({ default: m.CashHistoryScreen })));
@@ -280,7 +279,7 @@ function AppRoutes() {
                 <Route path="invites" element={<InvitesScreen />} />
                 {SearchRoute()}
                 <Route path="transactions/:transactionId" element={<TransactionRoute />} />
-                <Route path="transactions/:transactionId/split" element={<SplitScreen />} />
+                <Route path="transactions/:transactionId/split" element={<SplitRedirect />} />
                 <Route path="transactions/:transactionId/split-category" element={<LineSplitScreen />} />
                 <Route path="install" element={<InstallRoute />} />
               </Route>
@@ -376,6 +375,13 @@ function InstallRoute() {
       }}
     />
   );
+}
+
+/** FLOW-370: one split screen. The old project-split route opens the parts editor. */
+function SplitRedirect() {
+  const { transactionId = "" } = useParams();
+  const { search } = useLocation();
+  return <Navigate to={`/transactions/${transactionId}/split-category${search}`} replace />;
 }
 
 /** A local split so each mode can be saved without writing a ledger row. */

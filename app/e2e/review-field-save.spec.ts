@@ -178,9 +178,9 @@ test("פיצול לפי קטגוריות in the change sheet approves, then open
   await expect(projects).toBeVisible();
   await projects.getByRole("button", { name: "פיצול לפי קטגוריות" }).click();
   await expect(page).toHaveURL(/\/transactions\/[^/]+\/split-category/);
-  await expect(page.getByRole("heading", { name: "פיצול לפי קטגוריות" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "פיצול", exact: true })).toBeVisible();
   // The line is approved, so the editor is open for parts (no "approve first" banner).
-  await expect(page.getByRole("button", { name: "הוספת חלק" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "חלק נוסף" })).toBeEnabled();
   await expect(page.getByText("אשרו את התנועה בתור לאישור, ואז פצלו.")).toHaveCount(0);
   const review = await admin.from("review_queue").select("status").eq("id", reviewId).single();
   expect(review.data?.status).toBe("approved");
