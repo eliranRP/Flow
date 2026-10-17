@@ -72,6 +72,14 @@ describe("categories hidden footer", () => {
     expect(screen.getByRole("link", { name: "הצג תנועות" })).toHaveAttribute("href", "/search?dir=expense&category=c1");
   });
 
+  it("opens an income category's lines in search from its sheet (FLOW-322)", async () => {
+    renderScreen(<CategoriesScreen sample={sample} />);
+    fireEvent.click(screen.getByRole("radio", { name: "הכנסות" }));
+    fireEvent.click(screen.getByRole("button", { name: /^תקבול/ }));
+    expect(await screen.findByRole("dialog", { name: "תקבול" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "הצג תנועות" })).toHaveAttribute("href", "/search?dir=income&category=c5");
+  });
+
   it("saves unhide through set_category_hidden", async () => {
     rpc.calls.length = 0;
     renderScreen(<CategoriesScreen />);
