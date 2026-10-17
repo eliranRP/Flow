@@ -1,0 +1,4 @@
+{
+  "StatesHomeEmpty": "/e2e/cash-empty",
+  "StatesLoansEmpty": "/e2e/loans?loans=none"
+}

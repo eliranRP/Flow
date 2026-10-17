@@ -1,0 +1,5 @@
+{
+  "Settings": "/e2e/settings?board=1",
+  "SettingsCategories": "/e2e/categories?preview=1",
+  "SettingsTeam": "/e2e/team?proof=1&sheet=invite&email=1"
+}

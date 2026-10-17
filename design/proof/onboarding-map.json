@@ -1,0 +1,5 @@
+{
+  "Onboarding": "/e2e/setup/welcome",
+  "OnboardingConnect": "/e2e/setup/connect",
+  "OnboardingSkip": "/e2e/setup/skip"
+}

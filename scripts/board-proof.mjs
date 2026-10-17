@@ -11,11 +11,10 @@
  * The map is JSON: { "<frame>": "<route>" }, where <frame> is the board frame's file name without the theme
  * suffix (Flow, FlowPicker, ...) and <route> is the app path the frame is drawn from (for example "/?preview=1").
  * The light theme's board is "<frame>Light.png", the dark theme's is "<frame>.png", both in --boards
- * (default /mnt/project-files/design/board-png).
+ * (default $FLOW_BOARD_PNG). Make the renders with scripts/board-render.mjs.
  * Output: <out>/<frame>--<theme>.png, and <out>/summary.json with each frame's raw and text-masked mismatch.
  *
- * Render method: see the board renders note in team memory (redesign-approval-proofs). The app shot is
- * taken from a dev-fixture build served at --base; the board PNGs were rendered at the same size.
+ * The app shot is taken from a dev-fixture build served at --base; the board PNGs were rendered at the same size.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -28,14 +27,14 @@ const PROOF_HEIGHT = 844;
 const PROOF_DPR = 2;
 /** A channel difference up to this (of 255) counts as the same pixel: anti-aliasing and sub-pixel text. */
 const CHANNEL_TOLERANCE = 16;
-const DEFAULT_BOARDS = "/mnt/project-files/design/board-png";
 
 /**
  * @param {string[]} argv the arguments after the script name
+ * @param {Record<string, string | undefined>} [env] the environment, for FLOW_BOARD_PNG
  * @returns {{ base: string, map: string, out: string, boards: string, frames: string[] }}
  */
-export function parseArgs(argv) {
-  const options = { base: "", map: "", out: "", boards: DEFAULT_BOARDS, frames: /** @type {string[]} */ ([]) };
+export function parseArgs(argv, env = process.env) {
+  const options = { base: "", map: "", out: "", boards: "", frames: /** @type {string[]} */ ([]) };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--base" || arg === "--map" || arg === "--out" || arg === "--boards") {
@@ -57,6 +56,12 @@ export function parseArgs(argv) {
   if (options.base === "") throw new Error("--base is required (the running app, for example http://localhost:4173)");
   if (options.map === "") throw new Error("--map is required (the JSON frame map)");
   if (options.out === "") throw new Error("--out is required (the folder for the PNGs)");
+  if (options.boards === "") options.boards = env.FLOW_BOARD_PNG ?? "";
+  if (options.boards === "") {
+    throw new Error(
+      "--boards or FLOW_BOARD_PNG is required: the folder of fresh board renders. Make it with node scripts/board-render.mjs --project <board project dir> --runtime <dc-runtime.js> --out <dir>",
+    );
+  }
   return options;
 }
 
@@ -215,6 +220,24 @@ async function proofInBrowser(input) {
   };
 }
 
+/** The router's message for a route no <Route> matches: the build has no such dev route. */
+const NO_ROUTE_MESSAGE = "No routes matched";
+
+/**
+ * Whether the app drew the route. A build without the dev routes logs "No routes matched" and leaves #root
+ * empty; a proof of that screen would be a fake number, so the run refuses it.
+ * @param {string[]} logs the page's console and page error messages
+ * @param {boolean} rootHasContent whether #root has any child element once the screen settled
+ * @returns {string | null} the reason the app did not render, or null when it did
+ */
+export function appRenderProblem(logs, rootHasContent) {
+  if (logs.some((line) => line.includes(NO_ROUTE_MESSAGE))) {
+    return "the page logged \"No routes matched\": this build has no dev routes";
+  }
+  if (!rootHasContent) return "#root is empty after the screen settled";
+  return null;
+}
+
 /**
  * Runs in the page: waits for every finite animation and transition (a sheet's scrim fade, say) to finish,
  * so the shot shows the settled screen. Endless ones (spinners) are skipped. Gives up after 3 s.
@@ -273,8 +296,16 @@ async function main(argv) {
         colorScheme: shot.theme,
       });
       const page = await context.newPage();
+      const logs = /** @type {string[]} */ ([]);
+      page.on("console", (message) => logs.push(message.text()));
+      page.on("pageerror", (error) => logs.push(String(error)));
       await page.goto(new URL(shot.route, options.base).toString(), { waitUntil: "networkidle" });
       await page.evaluate(settleAnimations);
+      const problem = appRenderProblem(logs, await page.evaluate(() => (document.querySelector("#root")?.childElementCount ?? 0) > 0));
+      if (problem !== null) {
+        await context.close();
+        throw new Error(`${shot.frame} ${shot.theme}: the app did not draw ${shot.route}: ${problem}. Build the proof app with scripts/board-proof-build.sh and serve it at --base`);
+      }
       const appPng = await page.screenshot({ fullPage: false });
       const textRects = await page.evaluate(collectTextRects);
       await context.close();
