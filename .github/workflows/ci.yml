@@ -73,7 +73,6 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-          cache: pnpm
       # The base is this run's own first parent, not live origin/main: main can move on while the run
       # waits, and a migration added by that later merge would read as removed here.
       - name: Migration filenames are append-only
@@ -96,6 +95,16 @@ jobs:
         run: node scripts/check-file-size.mjs
       - name: Backlog index is up to date
         run: node scripts/backlog-index.mjs --check
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      # Read only: lint is the one job that saves the pnpm store. Every other job restores it and never saves.
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-Linux-x64-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: node-cache-Linux-x64-pnpm-
       - run: pnpm install --frozen-lockfile
       - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
         with:
@@ -172,7 +181,16 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-          cache: pnpm
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      # Read only: lint is the one job that saves the pnpm store. Every other job restores it and never saves.
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-Linux-x64-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: node-cache-Linux-x64-pnpm-
       - run: pnpm install --frozen-lockfile
       - name: App unit tests (shard ${{ matrix.shard }}/2)
         run: pnpm --filter @flow/app test --shard=${{ matrix.shard }}/2
@@ -193,7 +211,16 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-          cache: pnpm
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      # Read only: lint is the one job that saves the pnpm store. Every other job restores it and never saves.
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-Linux-x64-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: node-cache-Linux-x64-pnpm-
       - run: pnpm install --frozen-lockfile
       - name: Cache Playwright browsers
         id: playwright-cache
@@ -236,29 +263,36 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-          cache: pnpm
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      # Read only: lint is the one job that saves the pnpm store. Every other job restores it and never saves.
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-Linux-x64-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: node-cache-Linux-x64-pnpm-
       - run: pnpm install --frozen-lockfile
-      - name: Cache Playwright browsers
+      - name: Restore the Playwright browser cache
         id: playwright-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-1.63.0
       # The Ubuntu mirror can stall on the font packages, so their .deb files come from this cache.
-      - name: Cache Playwright system packages
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # Read only: check (storybook) saves the packages for the next run.
+      - name: Restore the Playwright apt cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/flow-apt
-          # A new entry each run, so a package the mirror updated is cached on the next run.
-          key: ${{ runner.os }}-playwright-apt-1.63.0-${{ github.run_id }}
+          key: ${{ runner.os }}-playwright-apt-1.63.0-none
           restore-keys: ${{ runner.os }}-playwright-apt-1.63.0
       - name: Restore Playwright system packages
         run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
         timeout-minutes: 8
         run: bash scripts/ci-apt-cache.sh install
-      - name: Keep Playwright system packages for the next run
-        run: bash scripts/ci-apt-cache.sh save
       - name: Install Playwright browsers
         timeout-minutes: 5
         run: pnpm --filter @flow/app exec playwright install chromium
@@ -281,6 +315,16 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      # Read only: lint is the one job that saves the pnpm store. Every other job restores it and never saves.
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-Linux-x64-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: node-cache-Linux-x64-pnpm-
       - run: pnpm install --frozen-lockfile
       - run: pnpm build-storybook
       - name: Keep the Storybook build for the stories shards
@@ -312,29 +356,36 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-          cache: pnpm
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      # Read only: lint is the one job that saves the pnpm store. Every other job restores it and never saves.
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-Linux-x64-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: node-cache-Linux-x64-pnpm-
       - run: pnpm install --frozen-lockfile
-      - name: Cache Playwright browsers
+      - name: Restore the Playwright browser cache
         id: playwright-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-1.63.0
       # The Ubuntu mirror can stall on the font packages, so their .deb files come from this cache.
-      - name: Cache Playwright system packages
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # Read only: check (storybook) saves the packages for the next run.
+      - name: Restore the Playwright apt cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/flow-apt
-          # A new entry each run, so a package the mirror updated is cached on the next run.
-          key: ${{ runner.os }}-playwright-apt-1.63.0-${{ github.run_id }}
+          key: ${{ runner.os }}-playwright-apt-1.63.0-none
           restore-keys: ${{ runner.os }}-playwright-apt-1.63.0
       - name: Restore Playwright system packages
         run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
         timeout-minutes: 8
         run: bash scripts/ci-apt-cache.sh install
-      - name: Keep Playwright system packages for the next run
-        run: bash scripts/ci-apt-cache.sh save
       - name: Install Playwright browsers
         timeout-minutes: 5
         run: pnpm --filter @flow/app exec playwright install chromium
@@ -415,29 +466,36 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-          cache: pnpm
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      # Read only: lint is the one job that saves the pnpm store. Every other job restores it and never saves.
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-Linux-x64-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: node-cache-Linux-x64-pnpm-
       - run: pnpm install --frozen-lockfile
-      - name: Cache Playwright browsers
+      - name: Restore the Playwright browser cache
         id: playwright-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-1.63.0
       # The Ubuntu mirror can stall on the font packages, so their .deb files come from this cache.
-      - name: Cache Playwright system packages
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # Read only: check (storybook) saves the packages for the next run.
+      - name: Restore the Playwright apt cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/flow-apt
-          # A new entry each run, so a package the mirror updated is cached on the next run.
-          key: ${{ runner.os }}-playwright-apt-1.63.0-${{ github.run_id }}
+          key: ${{ runner.os }}-playwright-apt-1.63.0-none
           restore-keys: ${{ runner.os }}-playwright-apt-1.63.0
       - name: Restore Playwright system packages
         run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
         timeout-minutes: 8
         run: bash scripts/ci-apt-cache.sh install
-      - name: Keep Playwright system packages for the next run
-        run: bash scripts/ci-apt-cache.sh save
       - name: Install Playwright browsers
         timeout-minutes: 5
         run: pnpm --filter @flow/app exec playwright install chromium
@@ -528,7 +586,6 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-          cache: pnpm
 
       - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
         with:
@@ -538,6 +595,16 @@ jobs:
         timeout-minutes: 5
         run: bash scripts/ci-apt-cache.sh psql
 
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      # Read only: lint is the one job that saves the pnpm store. Every other job restores it and never saves.
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-Linux-x64-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: node-cache-Linux-x64-pnpm-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 

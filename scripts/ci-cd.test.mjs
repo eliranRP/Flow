@@ -26,6 +26,9 @@ const ACTION_SHA = {
 const playwrightVersion = JSON.parse(readFileSync(new URL("../app/package.json", import.meta.url), "utf8")).devDependencies.playwright;
 const PLAYWRIGHT_KEY = `key: \${{ runner.os }}-playwright-${playwrightVersion}`;
 const PLAYWRIGHT_APT_KEY = `key: \${{ runner.os }}-playwright-apt-${playwrightVersion}-\${{ github.run_id }}\n          restore-keys: \${{ runner.os }}-playwright-apt-${playwrightVersion}\n`;
+// The readers restore the apt cache by prefix (no run id), and only check (storybook) writes it.
+const PLAYWRIGHT_APT_READ_KEY = `key: \${{ runner.os }}-playwright-apt-${playwrightVersion}-none\n          restore-keys: \${{ runner.os }}-playwright-apt-${playwrightVersion}\n`;
+const APT_WRITER = "check-storybook";
 const INSTALL_DEPS = "run: bash scripts/ci-apt-cache.sh install";
 const APT_RESTORE = "run: bash scripts/ci-apt-cache.sh restore";
 const APT_SAVE = "run: bash scripts/ci-apt-cache.sh save";
@@ -82,11 +85,17 @@ function playwrightProblems(text) {
     const step = installDepsStep(body);
     if (!step.includes(INSTALL_DEPS)) problems.push(`${name} install-deps`);
     if (/\bif:/.test(step)) problems.push(`${name} install-deps condition`);
-    if (!body.includes(PLAYWRIGHT_APT_KEY)) problems.push(`${name} apt cache key`);
     const restoreAt = body.indexOf(APT_RESTORE);
     const depsAt = body.indexOf(INSTALL_DEPS);
     const saveAt = body.indexOf(APT_SAVE);
-    if (restoreAt < 0 || saveAt < 0 || !(restoreAt < depsAt && depsAt < saveAt)) problems.push(`${name} apt cache order`);
+    if (restoreAt < 0 || !(restoreAt < depsAt)) problems.push(`${name} apt cache order`);
+    if (name === APT_WRITER) {
+      if (!body.includes(PLAYWRIGHT_APT_KEY)) problems.push(`${name} apt cache key`);
+      if (saveAt < 0 || !(depsAt < saveAt)) problems.push(`${name} apt cache order`);
+    } else {
+      if (saveAt >= 0) problems.push(`${name} saves the apt cache`);
+      if (!body.includes(PLAYWRIGHT_APT_READ_KEY)) problems.push(`${name} apt cache key`);
+    }
   }
   return problems;
 }
@@ -567,11 +576,23 @@ test("a wrong pin in one job fails, and install-deps stays unconditional", () =>
   assert.equal(/\bif:/.test(installDepsStep(jobIn(withIf, "check-storybook"))), false);
 });
 
-test("every Playwright job restores the apt cache before install-deps and saves it after", () => {
-  const noSave = replaceInJob(ci, "check-stories", "      - name: Keep Playwright system packages for the next run\n        " + APT_SAVE + "\n", "");
-  assert.deepEqual(playwrightProblems(noSave), ["check-stories apt cache order"]);
-  const wrongKey = replaceInJob(ci, "e2e-shard", PLAYWRIGHT_APT_KEY, "key: ${{ runner.os }}-playwright-apt-0.0.0\n");
-  assert.deepEqual(playwrightProblems(wrongKey), ["e2e-shard apt cache key"]);
+test("every Playwright job restores the apt cache before install-deps, and only check (storybook) saves it", () => {
+  const noSave = replaceInJob(ci, APT_WRITER, "      - name: Keep Playwright system packages for the next run\n        " + APT_SAVE + "\n", "");
+  assert.deepEqual(playwrightProblems(noSave), [`${APT_WRITER} apt cache order`]);
+  const wrongKey = replaceInJob(ci, APT_WRITER, PLAYWRIGHT_APT_KEY, "key: ${{ runner.os }}-playwright-apt-0.0.0\n");
+  assert.deepEqual(playwrightProblems(wrongKey), [`${APT_WRITER} apt cache key`]);
+  const readerSaves = replaceInJob(ci, "check-perf", "      - name: Install Playwright system dependencies\n", "      - name: Keep Playwright system packages for the next run\n        " + APT_SAVE + "\n      - name: Install Playwright system dependencies\n");
+  assert.deepEqual(playwrightProblems(readerSaves), ["check-perf saves the apt cache"]);
+  // One writer for each cache: lint saves the pnpm store, check (storybook) saves the browsers and the apt packages.
+  assert.equal((ci.match(/cache: pnpm/g) ?? []).length, 1);
+  assert.match(jobIn(ci, "lint"), /node-version: 22\n {10}cache: pnpm\n/);
+  assert.equal((ci.match(/uses: actions\/cache@/g) ?? []).length, 2);
+  assert.equal((jobIn(ci, APT_WRITER).match(/uses: actions\/cache@/g) ?? []).length, 2);
+  for (const name of ["check-core", "check-app", "check-storybook", "check-perf", "check-stories", "build-storybook", "e2e-shard", "deploy"]) {
+    const body = jobIn(ci, name);
+    assert.equal(body.includes("cache: pnpm"), false, `${name} saves the pnpm store`);
+    assert.ok(body.includes("uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0\n        with:\n          path: ${{ steps.pnpm-store.outputs.path }}\n          key: node-cache-Linux-x64-pnpm-"), `${name} restores the pnpm store`);
+  }
 });
 
 test("the cloud agent install script prepares pnpm, Playwright, Supabase CLI, and Deno", () => {
