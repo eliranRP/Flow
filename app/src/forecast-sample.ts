@@ -308,7 +308,7 @@ export function monthForecastBoardSample(): MonthForecastSampleShape {
     base: "USD",
     expected: expectedMonthsSchema.parse(expected),
     unpaid: unpaidRowSchema.array().parse(unpaid),
-    overrides: [],
+    overrides: [{ item_key: "invoice:inv-1043", amount_minor: null, due_on: "2026-10-17", moved_out: false }],
   });
   return { today, net: -1719100n, base: "USD", data: { month: "2026-10", build, overrides: [] } };
 }

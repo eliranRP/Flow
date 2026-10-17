@@ -36,6 +36,9 @@
 
 /* FLOW-141: the month-end forecast screen (צפי). Flat sections, no card; the big number and the
    line under it are the same figure Home shows. */
+.ui-forecast-screen > .ui-page-stacked { margin-inline: calc(-1 * var(--space-side)); padding-top: var(--space-3); padding-bottom: 0; }
+.ui-forecast-screen > .ui-page-stacked .ui-focus-title + * { margin-top: var(--space-1); }
+
 .ui-forecast-screen {
   position: relative;
   padding: 0 var(--space-side) calc(var(--tabbar-height) + var(--space-section));
@@ -64,8 +67,16 @@
 }
 
 .ui-forecast-big {
-  margin: var(--space-4) 0 0;
+  margin: var(--space-1) 0 0;
+  padding-top: calc(var(--space-1) * 3 / 4);
   font-variant-numeric: tabular-nums lining-nums;
+  font-size: var(--type-total-size);
+  line-height: var(--type-total-line);
+}
+
+.ui-forecast-big .t-display {
+  font-size: var(--type-total-size);
+  line-height: var(--type-total-line);
 }
 
 .ui-forecast-big-neg {
@@ -75,7 +86,8 @@
 .ui-forecast-today {
   margin: var(--space-1) 0 0;
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
 }
 
 .ui-forecast-section {
@@ -85,9 +97,10 @@
 .ui-forecast-section-head {
   display: flex;
   justify-content: space-between;
-  margin: var(--space-1) 0 var(--space-2);
+  margin: 0 0 var(--space-1);
   font-size: var(--type-section-size);
-  font-weight: var(--type-heading-weight);
+  font-weight: var(--type-section-weight);
+  line-height: var(--type-section-line);
 }
 
 .ui-forecast-section-total {
@@ -120,7 +133,7 @@
 .ui-forecast-row {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-inset-row);
   width: 100%;
   min-height: var(--row-height);
   padding: var(--space-2) 0;
@@ -148,17 +161,20 @@
   display: flex;
   flex: 1;
   flex-direction: column;
+  gap: calc(var(--space-1) / 2);
   min-width: 0;
 }
 
 .ui-forecast-name {
-  font-size: var(--type-body-size);
+  font-size: var(--type-title-3-size);
   font-weight: var(--type-body-weight);
+  line-height: var(--type-title-3-line);
 }
 
 .ui-forecast-meta {
   color: var(--color-text-muted);
-  font-size: var(--type-meta-size);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
 }
 
 .ui-forecast-amount {
@@ -217,8 +233,8 @@
 .ui-forecast-form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding-bottom: var(--space-4);
+  gap: var(--space-inset-row);
+  padding-bottom: 0;
 }
 
 .ui-forecast-field,
@@ -232,29 +248,43 @@
 }
 
 .ui-forecast-field-label {
-  color: var(--color-text-secondary);
-  font-size: var(--type-label-size);
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
 }
 
 .ui-forecast-input {
-  min-height: var(--field-height);
-  padding: 0 var(--space-3);
-  border: 1px solid var(--color-control-border);
+  min-block-size: 48px;
+  padding: 0 var(--space-inset-row);
+  border: 1.5px solid var(--color-tint-strong);
   border-radius: var(--radius-input);
-  background: var(--color-surface);
+  background: var(--color-raised);
   color: var(--color-text);
   font: inherit;
+  font-size: var(--type-body-size);
   font-variant-numeric: tabular-nums lining-nums;
 }
 
 .ui-forecast-source {
   margin: 0;
-  font-size: var(--type-meta-size);
+  font-size: var(--type-label-size);
+  line-height: var(--control-height-sm);
 }
 
 .ui-forecast-source a {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
 }
+
+/* The sheet: the head is the board's (title and invoice line share a column; the x sits in the gutter). */
+.ui-forecast-sheet .ui-sheet-head > .ui-icon-btn { margin-block: 0; }
+.ui-forecast-sheet .ui-sheet-head > .ui-icon-btn:last-child:not(:first-child) { margin-inline-end: 0; }
+.ui-forecast-sheet .ui-sheet-title,
+.ui-forecast-sheet .ui-sheet-subtitle { line-height: var(--type-sheet-line); }
+.ui-forecast-sheet .ui-forecast-field,
+.ui-forecast-sheet .ui-forecast-when .ui-field { gap: calc(var(--space-1) * 1.5); }
+.ui-forecast-sheet .ui-forecast-when .ui-field-label { color: var(--color-text-muted); font-size: var(--type-caption-size); line-height: var(--type-caption-line); }
+.ui-forecast-sheet .ui-seg { padding: calc(var(--space-1) / 2); gap: calc(var(--space-1) / 2); border-radius: var(--radius-input); }
+.ui-forecast-sheet .ui-seg-btn { border-radius: var(--radius-seg-btn); font-size: var(--type-meta-size); font-weight: var(--type-btn-weight); }
 
 .ui-forecast-error {
   margin: var(--space-4) 0 0;

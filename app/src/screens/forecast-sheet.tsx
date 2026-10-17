@@ -66,7 +66,6 @@ function ForecastItemForm({ item, today, onSave, onDone }: {
 
   return (
     <div className="ui-forecast-form">
-      <p className="ui-forecast-form-sub t-hint">{subtitle(item)}</p>
       <label className="ui-forecast-field">
         <span className="ui-forecast-field-label">סכום צפוי</span>
         <input
@@ -81,7 +80,6 @@ function ForecastItemForm({ item, today, onSave, onDone }: {
       <div className="ui-forecast-when">
         <SegmentedControl
           label="מתי"
-          showLabel={false}
           value={when}
           onChange={setWhen}
           options={[
@@ -110,7 +108,7 @@ export function ForecastItemSheet({ item, today, onOpenChange, onSave }: {
   onSave: (item: ForecastItem, patch: ForecastPatch) => void;
 }) {
   return (
-    <Sheet open={item != null} onOpenChange={onOpenChange} title={item?.name ?? ""} panelClassName="ui-sheet-g14">
+    <Sheet open={item != null} onOpenChange={onOpenChange} title={item?.name ?? ""} subtitle={item == null ? undefined : subtitle(item)} panelClassName="ui-sheet-g14 ui-forecast-sheet">
       {item == null ? null : (
         <ForecastItemForm key={item.key} item={item} today={today} onSave={onSave} onDone={() => { onOpenChange(false); }} />
       )}
