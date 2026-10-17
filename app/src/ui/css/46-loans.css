@@ -43,7 +43,7 @@
 
 .ui-loans-section-head {
   margin: 0;
-  padding: var(--space-5) 0 var(--space-2);
+  padding: var(--space-4) 0 var(--space-1);
   font-size: var(--type-section-size);
   line-height: var(--type-section-line);
   font-weight: var(--type-section-weight);
