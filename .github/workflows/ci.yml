@@ -126,8 +126,9 @@ jobs:
         run: |
           pnpm test:connectors
           node scripts/check-deny-list.mjs
+      # `pnpm typecheck` ran above, so these build with vite alone (as scripts/local-ci.sh's build_part does).
       - name: Build the hosted dist
-        run: pnpm build
+        run: pnpm --filter @flow/app exec vite build
       - name: Stamp the commit and check the hosted bundle
         run: |
           node scripts/stamp-build.mjs "$GITHUB_SHA"
@@ -139,7 +140,7 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ""
         run: |
           rm -rf app/dist
-          pnpm build
+          pnpm --filter @flow/app exec vite build
           pnpm check:reviewer-bundle
           test ! -f app/dist/build.txt
 

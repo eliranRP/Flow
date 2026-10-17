@@ -149,6 +149,11 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(job("e2e"), /test "\$SHARDS" = success\n/);
   assert.match(ci, /pnpm check:bundle/);
   assert.match(ci, /pnpm check:reviewer-bundle/);
+  // check (core) typechecks before it builds, so its two builds are vite alone, not `pnpm build` (which runs tsc again).
+  const core = job("check-core");
+  assert.equal(/run: pnpm build\n/.test(core), false);
+  assert.equal((core.match(/run: pnpm --filter @flow\/app exec vite build\n/g) ?? []).length, 1);
+  assert.equal((core.match(/pnpm --filter @flow\/app exec vite build\n/g) ?? []).length, 2);
   assert.match(ci, /bash scripts\/ci-supabase-start\.sh -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime /);
   assert.match(ci, /supabase test db/);
   // FLOW-812: the sweeps on two runners and the rest of the suite on four, split by one title, so
