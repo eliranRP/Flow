@@ -1,0 +1,1 @@
+- The app's total JavaScript budget is now 520 KB (gzip), raised for the Forecast, Projects and Recurring screens, which load on demand. Home's own limit stays at 240 KB.
