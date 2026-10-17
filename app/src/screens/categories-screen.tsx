@@ -59,7 +59,7 @@ function countLine(count: number): string {
 function categoryMeta(category: ListedCategory, lines: number | undefined, subCount: number | undefined): string | undefined {
   const parts: string[] = [];
   if (lines != null) parts.push(countLine(lines));
-  if (subCount != null) parts.push(`${String(subCount)} תת־קטגוריות`);
+  if (subCount != null) parts.push(subCount === 1 ? "תת־קטגוריה אחת" : `${String(subCount)} תת־קטגוריות`);
   if (category.excluded_from_pnl === true) parts.push("לא נספרת ברווח");
   else if (category.kind === "expense" && countsAsRehab(category)) parts.push("נספרת בשיפוץ");
   return parts.length === 0 ? undefined : parts.join(" · ");
