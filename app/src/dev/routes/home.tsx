@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { type Dashboard } from "@flow/shared";
 import { BandCompany } from "../../ui/top-band";
 import { attentionRows, CashEmptyHome, CashHome } from "../../screens/HomeScreen";
+import { AddForm } from "../../screens/add-sheet";
 import { CashHomeSkeleton } from "../../screens/home-skeleton";
 import { chargeChangeViews } from "../../forecast";
 import { CashLinesScreen } from "../../screens/cash-lines-screen";
@@ -85,7 +86,7 @@ export function DevCash() {
   const yearMonths = usdLoss ? sampleCashUsdYear() : undefined;
   // FLOW-364: `?month=past` shows the previous month (the darker band); `?drawer=1` opens the month drawer.
   const monthKey = past ? cashMonthKey(data.months[1]?.month ?? "") : currentKey;
-  return (
+  const home = (
     <CashHome
       data={data}
       monthKey={monthKey}
@@ -114,6 +115,14 @@ export function DevCash() {
       initialDrawerOpen={params.get("drawer") === "1"}
       drawerYearMonths={yearMonths}
     />
+  );
+  // The board draws the + sheet (menu, or the form with `?entry=`) over this populated month; `?add=1` opens it here.
+  if (params.get("add") !== "1") return home;
+  return (
+    <>
+      {home}
+      <AddForm />
+    </>
   );
 }
 

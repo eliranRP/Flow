@@ -410,3 +410,52 @@
 .ui-loan-kinds .ui-radio[data-on="true"] {
   font-size: 0;
 }
+
+/* The new-loan sheet at the board's rhythm: the head 18px lower with nothing under its row, text at its natural
+   line height (sections 18, field labels 15, hints 14, pick rows 15 over 20), the amount field 50 tall. */
+.ui-loan-new .ui-sheet-head {
+  margin-block-start: calc(var(--space-4) + var(--space-1) / 2);
+  padding-block-end: 0;
+}
+
+.ui-loan-new .ui-focus-title,
+.ui-loan-new .ui-loan-section-title {
+  line-height: var(--type-title-line);
+}
+
+.ui-loan-new .ui-field-label,
+.ui-loan-new .ui-loan-pick-label,
+.ui-loan-new .ui-loan-pick-value {
+  line-height: calc(var(--type-title-line) - 0.05);
+}
+
+.ui-loan-new .ui-field-hint {
+  font-size: calc(var(--type-caption-size) - 1px);
+  line-height: calc(var(--type-title-line) - 0.05);
+}
+
+.ui-loan-new .ui-money-field:has(> .ui-loan-currency) {
+  min-block-size: calc(var(--touch-min) + var(--space-1) + 2px);
+}
+
+/* The loan kind sheet: 60px option rows, title and description at their natural line heights (13px description). */
+.ui-loan-kind .ui-focus-title {
+  line-height: var(--type-title-line);
+}
+
+.ui-loan-kind .ui-radio-row {
+  min-block-size: 60px;
+}
+
+.ui-loan-kind .ui-row-title {
+  line-height: calc(var(--type-title-line) - 0.05);
+}
+
+.ui-loan-kind .ui-radio-desc {
+  font-size: var(--type-caption-size);
+  line-height: calc(var(--type-title-line) - 0.05);
+}
+
+.ui-loan-kind .ui-row-text {
+  gap: calc(var(--space-1) / 2);
+}

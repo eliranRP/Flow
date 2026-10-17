@@ -279,3 +279,69 @@
 .ui-project-new .ui-stack {
   gap: var(--space-3);
 }
+
+/* The new-project sheet at the board's rhythm: title 9px lower, 14px between the 50px fields, 13px hints under the last one. */
+.ui-project-new .ui-sheet-head {
+  margin-block: calc(var(--space-2) + 1px) 0;
+}
+
+.ui-project-new .ui-focus-title {
+  line-height: var(--type-title-line);
+}
+
+.ui-project-new .ui-stack {
+  gap: var(--space-inset-row);
+  margin-block-start: var(--space-2);
+}
+
+.ui-project-new .ui-field-label {
+  line-height: calc(var(--type-title-line) - 0.05);
+}
+
+.ui-project-new .ui-field-control,
+.ui-project-new .ui-money-field {
+  min-block-size: 50px;
+}
+
+.ui-project-new .ui-muted {
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: calc(var(--type-title-line) - 0.05);
+}
+
+.ui-project-new .ui-muted:has(+ .ui-muted) {
+  margin-block-start: calc(var(--space-2) * -1);
+}
+
+/* The Projects list at the board's rhythm: a 44px link row, a 20px section title, 64px rows. */
+.ui-projects-unassigned {
+  display: flex;
+  align-items: center;
+  min-block-size: 44px;
+  margin-block: calc(var(--space-4) + var(--space-1) / 2) var(--space-5);
+  padding-block: 0;
+}
+
+.ui-projects-head h2 {
+  font-size: var(--type-section-size);
+  line-height: var(--type-title-line);
+}
+
+.ui-projects-head .ui-muted {
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-line2-weight);
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-projects-head ~ * .ui-row-project {
+  padding-block: var(--space-3);
+}
+
+.ui-projects-head ~ * .ui-row-project .ui-row-text {
+  gap: calc(var(--space-1) / 2);
+}
+
+.ui-projects-head ~ * .ui-row-project .ui-row-title,
+.ui-projects-head ~ * .ui-row-project .ui-row-hint {
+  line-height: calc(var(--type-title-line) - 0.015);
+}

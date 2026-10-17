@@ -112,10 +112,11 @@
   display: flex;
   min-inline-size: 0;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: calc(var(--space-1) * 1.5);
 }
 
 .ui-add-label {
+  line-height: calc(var(--type-title-line) - 0.05);
   color: var(--color-text-muted);
   font-size: var(--type-hint-size);
   font-weight: var(--type-label-weight);
@@ -140,6 +141,7 @@
   color: var(--color-text);
   font: inherit;
   font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
 }
 
 .ui-add-input[dir="ltr"] {
@@ -157,7 +159,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  block-size: 48px;
+  block-size: 50px;
   padding-inline: var(--space-3);
   border: 1.5px solid var(--color-tint-strong);
   border-radius: var(--radius-input);
@@ -175,7 +177,8 @@
   background: transparent;
   color: var(--color-text);
   font: inherit;
-  font-size: var(--type-title-3-size);
+  font-size: var(--type-name-size);
+  font-weight: var(--type-body-weight);
   font-variant-numeric: tabular-nums;
   text-align: right;
   outline: none;
@@ -184,6 +187,7 @@
 .ui-add-currency {
   color: var(--color-text-secondary);
   font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
 }
 
 .ui-add-row2 {
@@ -221,7 +225,7 @@
 .ui-add-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
+  gap: calc(var(--space-1) * 1.5);
 }
 
 .ui-add-chip-new {
@@ -352,6 +356,7 @@
 .ui-add-entry {
   --sheet-gap: 54px;
   --sheet-pad-bottom: 0px;
+  --sheet-side: var(--space-side);
 }
 
 @media (max-width: 359px) {
@@ -375,4 +380,53 @@
 .ui-add-entry .ui-sheet-foot {
   padding: var(--space-3) var(--sheet-side) var(--space-6);
   border-block-start: 1px solid var(--color-line);
+}
+
+/* The head's title and hint sit at their natural line heights (board: 24 and 15). */
+.ui-add-entry .ui-focus-title,
+.ui-add-entry .ui-sheet-subtitle {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+/* The form head starts 4px higher and has 8px under its text; the body opens 4px lower (board). */
+.ui-add-entry .ui-sheet-head {
+  margin-block-start: calc(var(--space-1) * -1);
+  padding-block-end: var(--space-2);
+}
+
+.ui-add-entry .ui-sheet-body {
+  padding-block-start: var(--space-1);
+}
+
+/* The menu: title 9px lower, 24px above the tiles, 14px between the tiles and the rows; the tile text at the board's sizes. */
+.ui-add-menu .ui-sheet-head {
+  margin-block: calc(var(--space-2) + 1px) calc(var(--space-2) + var(--space-1) / 2);
+}
+
+.ui-add-menu .ui-add-rows {
+  margin-block-start: var(--space-inset-row);
+}
+
+.ui-add-menu .ui-focus-title,
+.ui-add-menu .ui-add-tile-name,
+.ui-add-menu .ui-add-tile-sub,
+.ui-add-menu .ui-row-title {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-add-menu .ui-add-tile-sub {
+  font-size: calc(var(--type-caption-size) - 1px);
+  font-weight: var(--type-caption-weight);
+}
+
+/* From a project the menu has a hint under the title: the title sits as on the form, the hint is a 13px muted line. */
+.ui-add-menu .ui-sheet-head:has(+ .ui-sheet-hint) {
+  margin-block: 0 calc(var(--space-inset-row) * -1);
+}
+
+.ui-add-menu .ui-sheet-hint {
+  padding: 0 var(--sheet-side) calc(var(--space-1) / 2);
+  color: var(--color-text-muted);
+  font-size: var(--type-hint-size);
+  line-height: calc(var(--type-title-line) - 0.05);
 }

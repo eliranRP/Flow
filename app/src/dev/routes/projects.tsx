@@ -9,6 +9,7 @@ import { devProjectsCash } from "../projects-sample";
 import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY } from "../../forecast-sample";
 import { ProfitMonthsScreen } from "../../screens/profit-months";
 import { devDashboard } from "./home";
+import { AddForm } from "../../screens/add-sheet";
 import type { DevRoute } from "./types";
 
 /** The scroll the board's scrolled frame shows the page at (CSS px). */
@@ -87,6 +88,7 @@ export function DevProjectDetail() {
       sampleInvestment={devInvestment}
       categoryTo="/e2e/project-category"
     />
+    {params.get("add") === "1" ? <AddForm /> : null}
     </>
   );
 }

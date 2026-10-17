@@ -1,6 +1,6 @@
 {
-  "Add": "/add?preview=1",
-  "AddProject": "/add?preview=1&entry=project",
-  "AddCash": "/add?preview=1&entry=cash",
-  "AddCheque": "/add?preview=1&entry=cheque"
+  "Add": "/e2e/cash?state=usd-loss&preview=1&add=1",
+  "AddProject": "/e2e/project-detail?preview=1&budget=1&add=1&entry=project",
+  "AddCash": "/e2e/cash?state=usd-loss&preview=1&add=1&entry=cash",
+  "AddCheque": "/e2e/cash?state=usd-loss&preview=1&add=1&entry=cheque"
 }

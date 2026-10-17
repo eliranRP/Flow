@@ -104,7 +104,7 @@ export function LoanKindSheet({
         onOpenChange(next);
       }}
       title="סוג ההלוואה"
-      panelClassName="ui-sheet-choice ui-sheet-g8 ui-sheet-wide"
+      panelClassName="ui-sheet-choice ui-sheet-g8 ui-sheet-wide ui-loan-kind"
       returnFocusRef={returnFocusRef}
     >
       <div role="radiogroup" aria-label="סוג ההלוואה" className="ui-choice-sheet ui-loan-kinds">
