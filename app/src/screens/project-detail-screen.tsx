@@ -33,7 +33,6 @@ import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { israelToday } from "../ui/date-math";
 import { ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
 import { useProjectGroups, type ProjectGroups } from "./project-group-sheets";
-import { ProjectInvestmentSection, type ProjectInvestment } from "./project-investment";
 import { ProjectCategories } from "./project-categories";
 import { ProjectExpectedMonths } from "./project-expected-months";
 import { ProjectTransactions } from "./project-transactions";
@@ -41,7 +40,7 @@ import { ProjectCashOverview } from "./project-cash-screens";
 import { ProjectFormSheet } from "./project-form-sheet";
 import { ProjectMenu } from "./project-menu";
 import { projectAttentionRows, useProjectRecurring, type ProjectRecurringSample } from "./project-attention";
-import { toProjectInvestment } from "./project-investment-data";
+import { toProjectInvestment, type ProjectInvestment } from "./project-investment-data";
 
 function ProjectLoading({ search, example, pill = true }: { search: string; example?: ReactNode; pill?: boolean }) {
   const holdWrites = useHoldWrites();
@@ -242,21 +241,6 @@ export function ProjectDetailScreen({
         />
         {/* FLOW-403: expected months under the categories (plan option A3). */}
         <ProjectExpectedMonths projectId={project.id} live={sample == null} sample={sampleExpected} />
-      </div>
-    );
-  }
-  if (section === "investment") {
-    return (
-      <div className="flex min-h-full flex-1 flex-col">
-        {/* FLOW-419: investment and loans share one page, one row from the project's cash. */}
-        <ScreenHeader title="השקעה והלוואות" kicker={project.name} backTo={sectionHref("overview")} />
-        <ProjectInvestmentSection project={project} sample={sampleInvestment} />
-        {(project.loans ?? []).length === 0 ? null : (
-          <>
-            <SectionHead title="הלוואות" />
-            <ProjectLoansList project={project} search={search} />
-          </>
-        )}
       </div>
     );
   }

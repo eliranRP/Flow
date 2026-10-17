@@ -11,6 +11,7 @@ const ProjectDetailScreen = lazy(() => screenLoaders.projectDetail().then((m) =>
 const ProjectCategoryScreen = lazy(() => screenLoaders.projectCategory().then((m) => ({ default: m.ProjectCategoryScreen })));
 const ProjectProfitScreen = lazy(() => screenLoaders.projectProfit().then((m) => ({ default: m.ProjectProfitScreen })));
 const ProjectMonthProfitScreen = lazy(() => screenLoaders.projectMonthProfit().then((m) => ({ default: m.ProjectMonthProfitScreen })));
+const ProjectInvestmentScreen = lazy(() => screenLoaders.projectInvestment().then((m) => ({ default: m.ProjectInvestmentScreen })));
 const ProjectGroupScreen = lazy(() => screenLoaders.projectGroup().then((m) => ({ default: m.ProjectGroupScreen })));
 
 /**
@@ -43,7 +44,7 @@ export function ProjectRoutes() {
       <Route path="projects/:projectId/profit" element={<ProjectProfitScreen />} />
       <Route path="projects/:projectId/profit/:month" element={<ProjectMonthProfitRoute />} />
       <Route path="projects/:projectId/expenses" element={<ProjectDetailScreen section="expenses" />} />
-      <Route path="projects/:projectId/investment" element={<ProjectDetailScreen section="investment" />} />
+      <Route path="projects/:projectId/investment" element={<ProjectInvestmentScreen />} />
       <Route path="projects/:projectId/loans" element={<ProjectDetailScreen section="loans" />} />
       <Route path="projects/:projectId/transactions" element={<ProjectDetailScreen section="transactions" />} />
       <Route path="projects/:projectId/categories/:categoryId" element={<ProjectCategoryScreen />} />
