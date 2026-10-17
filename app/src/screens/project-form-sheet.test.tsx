@@ -58,7 +58,7 @@ describe("the project sheet (FLOW-445)", () => {
   });
 
   it("edits an existing project under its id and keeps the stored values on screen", async () => {
-    renderSheet({ id: "p1", name: "Okafor", type: "flip", budget: null });
+    renderSheet({ id: "p1", name: "Okafor", type: "flip", budget: null, status: "active" });
     expect(screen.getByRole("dialog", { name: "עריכת פרויקט" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "סוג (אופציונלי)" })).toHaveValue("flip");
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
