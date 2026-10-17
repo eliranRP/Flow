@@ -271,6 +271,23 @@ function collectTextRects() {
 }
 
 /** Takes the proofs for the planned shots and writes the PNGs and the summary. */
+/**
+ * Waits until the page's text is drawn and has stopped changing. A screen whose sample loads after a
+ * short dev delay (the loan page) was captured blank about one run in three. A frame with no text at
+ * all (a skeleton) gives up after five seconds and is captured as it is.
+ * @param {import("playwright").Page} page
+ */
+async function waitForSettledText(page) {
+  let last = "";
+  let same = 0;
+  for (let tries = 0; tries < 33 && same < 3; tries += 1) {
+    const text = await page.evaluate(() => document.body.innerText.trim());
+    same = text !== "" && text === last ? same + 1 : 0;
+    last = text;
+    await page.waitForTimeout(150);
+  }
+}
+
 async function main(argv) {
   const options = parseArgs(argv);
   const frames = readFrameMap(JSON.parse(readFileSync(options.map, "utf8")));
@@ -300,6 +317,7 @@ async function main(argv) {
       page.on("console", (message) => logs.push(message.text()));
       page.on("pageerror", (error) => logs.push(String(error)));
       await page.goto(new URL(shot.route, options.base).toString(), { waitUntil: "networkidle" });
+      await waitForSettledText(page);
       await page.evaluate(settleAnimations);
       const problem = appRenderProblem(logs, await page.evaluate(() => (document.querySelector("#root")?.childElementCount ?? 0) > 0));
       if (problem !== null) {
