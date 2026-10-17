@@ -2,10 +2,8 @@ import { describe, expect, it } from "vitest";
 import { formatDayMonth, inclusiveDays, rangeLengthLabel } from "./ui/date-math";
 import {
   allTime,
-  comparisonWords,
   customRange,
   defaultPeriod,
-  heroProfitLabel,
   isCurrentPeriod,
   monthPeriod,
   periodFromSearch,
@@ -78,14 +76,6 @@ describe("period labels", () => {
     expect(periodLabel(thisMonth(now), now)).toBe("החודש");
     expect(periodLabel(monthPeriod("2026-09", now), now)).toBe("ספטמבר 2026");
     expect(periodLabel(presetPeriod("months3", now), now)).toBe("3 חודשים");
-    expect(heroProfitLabel(thisMonth(now), 1n, now)).toBe("רווח החודש");
-    expect(heroProfitLabel(thisMonth(now), 0n, now)).toBe("רווח החודש");
-    expect(heroProfitLabel(monthPeriod("2026-09", now), -1n, now)).toBe("הפסד");
-    expect(heroProfitLabel(thisMonth(now), "mixed", now)).toBe("רווח והפסד החודש");
-    expect(heroProfitLabel(presetPeriod("months3", now), 1n, now)).toBe("רווח ב־3 חודשים");
-    expect(heroProfitLabel(presetPeriod("year", now), 1n, now)).toBe("רווח");
-    expect(heroProfitLabel(allTime(), 1n, now)).toBe("רווח");
-    expect(heroProfitLabel(customRange("2026-01-01", "2026-02-01"), 1n, now)).toBe("רווח בטווח שנבחר");
     expect(periodPhrase(allTime(), now, "project")).toBe("מתחילת הפרויקט");
   });
 
@@ -97,13 +87,6 @@ describe("period labels", () => {
     expect(periodPillLabel(allTime(), now)).toBe("הכול");
     expect(periodPillLabel(monthPeriod("2026-09", now), now)).toBe("ספטמבר 2026");
     expect(periodPillLabel(customRange("2026-01-01", "2026-02-01"), now)).toBe("טווח מותאם");
-  });
-
-  it("compares with the window before", () => {
-    expect(comparisonWords(thisMonth(now), now)).toBe("מחודש שעבר");
-    expect(comparisonWords(monthPeriod("2026-09", now), now)).toBe("מהחודש שלפניו");
-    expect(comparisonWords(presetPeriod("months3", now), now)).toBe("מ־3 החודשים שלפניהם");
-    expect(comparisonWords(allTime(), now)).toBeNull();
   });
 });
 

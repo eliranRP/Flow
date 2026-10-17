@@ -1,77 +1,44 @@
 // vitest-css: these queries rely on the app's CSS hiding elements.
-import type { Dashboard, ProjectRow } from "@flow/shared";
-import { render, screen, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { HomeBooks } from "./HomeScreen";
-import { thisMonth } from "../period";
+import { cashMonthKey } from "../cash";
+import { sampleCashMonths } from "../dev/cash-sample";
+import { renderWithProviders } from "../test-render";
+import { attentionRows, CashHome } from "./HomeScreen";
 
-function project(id: string, profit: bigint): ProjectRow {
-  return {
-    id,
-    name: `פרויקט ${id}`,
-    status: "active",
-    income_agorot: profit,
-    direct_agorot: 0n,
-    shared_agorot: 0n,
-    profit_before_shared_agorot: profit,
-    profit_agorot: profit,
-    by_currency: [],
-  };
-}
-
-function books(review: number, projects: ProjectRow[] = []): Dashboard {
-  return {
-    company_id: "co",
-    name: "Flow Test",
-    vat_registered: true,
-    basis: "invoiced",
-    from: "2026-09-01",
-    to: "2026-09-28",
-    income_agorot: 10_000_000n,
-    direct_agorot: 4_000_000n,
-    shared_agorot: 0n,
-    overhead_agorot: 0n,
-    expense_agorot: 4_000_000n,
-    net_profit_agorot: 6_000_000n,
-    prev_income_agorot: null,
-    prev_expense_agorot: null,
-    prev_net_agorot: null,
-    active_projects: 0,
-    review_count: review,
-    projects,
-    by_currency: [],
-  };
-}
-
+/** The live Home's rows: the unpaid figures count only while unpaid is ready (HomeScreen). */
 function renderHome({
   review,
   unpaid,
   gross = 0n,
   phase = "ready",
   search = "",
-  projects = [],
 }: {
-  projects?: ProjectRow[];
   review: number;
   unpaid: number;
   gross?: bigint;
   phase?: "loading" | "error" | "empty" | "ready";
   search?: string;
 }) {
-  return render(
-    <MemoryRouter>
-      <HomeBooks
-        data={books(review, projects)}
-        previewing={false}
-        search={search}
-        unpaidGross={gross}
-        unpaidCount={unpaid}
-        unpaidPhase={phase}
-        period={thisMonth()}
-        onPeriod={() => undefined}
-      />
-    </MemoryRouter>,
+  const data = sampleCashMonths();
+  const currentKey = cashMonthKey(data.months[0]?.month ?? "");
+  const ready = phase === "ready";
+  return renderWithProviders(
+    <CashHome
+      data={data}
+      monthKey={currentKey}
+      currentKey={currentKey}
+      previewing={false}
+      search={search}
+      attention={attentionRows({
+        pending: review,
+        unpaidCount: ready ? unpaid : 0,
+        unpaidGross: ready ? gross : 0n,
+        search,
+      })}
+      onStepMonth={() => undefined}
+    />,
+    { route: `/${search}` },
   );
 }
 
@@ -144,41 +111,5 @@ describe("Home attention card (FLOW-321)", () => {
       expect(unpaidLink()).toBeNull();
       unmount();
     }
-  });
-
-  it("sits under the first two projects, so a project shows on a 667px screen (FLOW-355)", () => {
-    renderHome({ review: 2, unpaid: 0, projects: [project("א", 3_000n), project("ב", 2_000n), project("ג", 1_000n)] });
-    const card = document.querySelector(".ui-banner, .ui-banner-rows");
-    const lists = document.querySelectorAll(".ui-project-list");
-    expect(lists).toHaveLength(2);
-    expect(within(lists[0] as HTMLElement).getAllByRole("listitem")).toHaveLength(2);
-    expect(within(lists[1] as HTMLElement).getAllByRole("listitem")).toHaveLength(1);
-    const follows = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(follows(lists[0] as Element, card as Element)).toBe(true);
-    expect(follows(card as Element, lists[1] as Element)).toBe(true);
-  });
-
-  it("follows the list when there are two projects or fewer (FLOW-355)", () => {
-    renderHome({ review: 2, unpaid: 0, projects: [project("א", 3_000n)] });
-    const lists = document.querySelectorAll(".ui-project-list");
-    expect(lists).toHaveLength(1);
-    expect(Boolean((lists[0] as Element).compareDocumentPosition(document.querySelector(".ui-banner, .ui-banner-rows") as Element) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
-  });
-
-  it("keeps לכל הפרויקטים under the last project row, before the card, with two projects or fewer (FLOW-358)", () => {
-    renderHome({ review: 2, unpaid: 0, projects: [project("א", 3_000n), project("ב", 2_000n)] });
-    const link = screen.getByRole("link", { name: "לכל הפרויקטים" });
-    const card = document.querySelector(".ui-banner, .ui-banner-rows") as Element;
-    const list = document.querySelector(".ui-project-list") as Element;
-    const follows = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(follows(list, link)).toBe(true);
-    expect(follows(link, card)).toBe(true);
-  });
-
-  it("puts לכל הפרויקטים after the remaining projects when the card splits the list (FLOW-358)", () => {
-    renderHome({ review: 2, unpaid: 0, projects: [project("א", 3_000n), project("ב", 2_000n), project("ג", 1_000n)] });
-    const link = screen.getByRole("link", { name: "לכל הפרויקטים" });
-    const lists = document.querySelectorAll(".ui-project-list");
-    expect(Boolean((lists[1] as Element).compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
   });
 });

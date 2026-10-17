@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { type Dashboard } from "@flow/shared";
-import { defaultPeriod } from "../../period";
-import { BackButton } from "../../ui/back";
 import { BandCompany } from "../../ui/top-band";
-import { attentionRows, CashEmptyHome, CashHome, HomeBooks } from "../../screens/HomeScreen";
+import { attentionRows, CashEmptyHome, CashHome } from "../../screens/HomeScreen";
 import { CashHomeSkeleton } from "../../screens/home-skeleton";
 import { chargeChangeViews } from "../../forecast";
 import { CashLinesScreen } from "../../screens/cash-lines-screen";
@@ -53,26 +51,6 @@ export const devDashboard: Dashboard = {
     { id: "p3", name: "פרויקט ישן", status: "finished", income_agorot: 0n, direct_agorot: 0n, shared_agorot: 0n, profit_before_shared_agorot: 0n, profit_agorot: 0n, by_currency: [] },
   ],
 };
-
-export function DevHome() {
-  const [period, setPeriod] = useState(defaultPeriod());
-  const [params] = useSearchParams();
-  return (
-    <HomeBooks
-      // FLOW-413: `?back=1` draws the profit view as /profit opens it, with its way back to the cash.
-      back={params.get("back") === "1" ? <BackButton fallback="/e2e/cash" onBand text="תזרים" label="חזרה לתזרים" /> : undefined}
-      data={devDashboard}
-      previewing
-      search="?preview=1"
-      unpaidGross={50_000n}
-      unpaidCount={1}
-      missingCount={SAMPLE_MISSING_BILLS.length}
-      missingTo="/e2e/recurring"
-      period={period}
-      onPeriod={setPeriod}
-    />
-  );
-}
 
 /**
  * FLOW-413: Home's cash with invented figures (frame b). `?box=none` hides the attention box,
@@ -207,7 +185,6 @@ export function DevCashYear() {
 }
 
 export const homeRoutes: DevRoute[] = [
-  { path: "home", element: <DevHome /> },
   { path: "cash", element: <DevCash /> },
   { path: "cash-empty", element: <DevCashEmpty /> },
   { path: "cash-loading", element: <DevCashLoading /> },

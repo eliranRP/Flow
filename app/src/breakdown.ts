@@ -1,4 +1,4 @@
-import { formatAmountText, type BreakdownDirection, type BreakdownGroupBy } from "@flow/shared";
+import { type BreakdownDirection, type BreakdownGroupBy } from "@flow/shared";
 
 /** FLOW-301. Paths, names and the remembered grouping for Home's income and expense breakdown. Decision 0110. */
 
@@ -68,10 +68,6 @@ export function lineCountHint(count: number, shared: boolean): string {
   return shared ? `${lines} · כולל חלק משותף` : lines;
 }
 
-export function breakdownPath(direction: BreakdownDirection, search: string): string {
-  return `/flow/${direction}${search}`;
-}
-
 export function groupLinesPath(
   direction: BreakdownDirection,
   groupBy: BreakdownGroupBy,
@@ -84,30 +80,6 @@ export function groupLinesPath(
 
 export function excludedLinesPath(direction: BreakdownDirection, currency: string, search: string): string {
   return `/flow/${direction}/excluded/${currency}${search}`;
-}
-
-/**
- * How Home shows an expense total under its "יצא" label: the label already says the money went
- * out, so a cost reads with no minus (owner, FLOW-334 H3). The minus stays only for a period
- * where refunds beat costs, the one case where the money came back.
- */
-export function expenseFigure(agorot: bigint): { agorot: bigint; direction: "expense" | undefined } {
-  return agorot < 0n ? { agorot: -agorot, direction: "expense" } : { agorot, direction: undefined };
-}
-
-/** "יצא החודש ₪48,320 – פירוט". Every currency is read, in Home's order. */
-export function flowLinkName(
-  direction: BreakdownDirection,
-  period: string,
-  rows: Array<{ currency: string; agorot: bigint }>,
-): string {
-  const amounts = rows
-    .map((row) => {
-      const figure = direction === "expense" ? expenseFigure(row.agorot) : { agorot: row.agorot, direction: undefined };
-      return formatAmountText(figure.agorot, row.currency, { direction: figure.direction });
-    })
-    .join(", ");
-  return `${directionLabel(direction)} ${period} ${amounts} – פירוט`;
 }
 
 /** The line's title is who it was with; the hint says where it went, so it never repeats the group. */

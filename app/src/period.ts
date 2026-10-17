@@ -236,59 +236,10 @@ export function periodPhrase(period: PeriodChoice, now = new Date(), scope: Peri
   }
 }
 
-/** The word matches the figure. A loss says הפסד. */
-export function heroProfitLabel(period: PeriodChoice, profitAgorot: bigint | "mixed", now = new Date()): string {
-  // FLOW-339: a profit in one currency and a loss in another names both.
-  const word = profitAgorot === "mixed" ? "רווח והפסד" : profitAgorot < 0n ? "הפסד" : "רווח";
-  // FLOW-358: the period pill under the label already names a past window, a year or כל התקופה,
-  // so the label is the word alone. "החודש", "ב־3 חודשים" and a custom range still add what the pill's dates don't say.
-  return pillNamesPeriod(period, now) ? word : `${word} ${periodPhrase(period, now)}`;
-}
-
-/** FLOW-358: the period pill already names a past window, a year or all time, so a label beside it leaves the period out. */
-export function pillNamesPeriod(period: PeriodChoice, now = new Date()): boolean {
-  switch (period.kind) {
-    case "month":
-    case "months3":
-    case "months6":
-      return !isCurrentPeriod(period, now);
-    case "year":
-    case "all":
-      return true;
-    case "custom":
-      return false;
-    default: {
-      const unreachable: never = period.kind;
-      return unreachable;
-    }
-  }
-}
-
 /** The hint under a row of the period sheet. */
 export function periodHint(period: PeriodChoice, now = new Date()): string | undefined {
   if (period.kind === "all") return "כל החשבוניות";
   return windowLabel(period, now);
-}
-
-/** The words after the change pill. The comparison is the window of the same length just before. */
-export function comparisonWords(period: PeriodChoice, now = new Date()): string | null {
-  switch (period.kind) {
-    case "month":
-      return isCurrentPeriod(period, now) ? "מחודש שעבר" : "מהחודש שלפניו";
-    case "months3":
-      return "מ־3 החודשים שלפניהם";
-    case "months6":
-      return "מ־6 החודשים שלפניהם";
-    case "year":
-      return "מהתקופה שלפניה";
-    case "all":
-    case "custom":
-      return null;
-    default: {
-      const unreachable: never = period.kind;
-      return unreachable;
-    }
-  }
 }
 
 /** The period in a URL, so a project and its "לפי חודש" page can be linked and restored. */

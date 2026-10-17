@@ -1,4 +1,4 @@
-import { roundedProfitAgorot, type Dashboard, type ProjectDetail, type ProjectRow } from "@flow/shared";
+import { type Dashboard, type ProjectDetail, type ProjectRow } from "@flow/shared";
 
 export type ProjectCurrencyRow = {
   currency: string;
@@ -6,20 +6,6 @@ export type ProjectCurrencyRow = {
   direct_minor: bigint;
   shared_minor: bigint;
   profit_minor: bigint;
-};
-
-export type CompanyCurrencyRow = {
-  currency: string;
-  income_minor: bigint;
-  direct_minor: bigint;
-  shared_minor: bigint;
-  overhead_minor: bigint;
-  expense_minor: bigint;
-  net_profit_minor: bigint;
-  count: number;
-  prev_income_minor?: bigint | null;
-  prev_expense_minor?: bigint | null;
-  prev_net_profit_minor?: bigint | null;
 };
 
 /** The company currency first (0147), then the rest by code. */
@@ -39,18 +25,6 @@ function projectBucketAllZero(row: ProjectCurrencyRow): boolean {
   );
 }
 
-function companyBucketAllZero(row: CompanyCurrencyRow): boolean {
-  return (
-    row.income_minor === 0n
-    && row.direct_minor === 0n
-    && row.shared_minor === 0n
-    && row.overhead_minor === 0n
-    && row.expense_minor === 0n
-    && row.net_profit_minor === 0n
-    && row.count === 0
-  );
-}
-
 function fallbackProjectRow(source: {
   income_agorot: bigint;
   direct_agorot: bigint;
@@ -63,19 +37,6 @@ function fallbackProjectRow(source: {
     direct_minor: source.direct_agorot,
     shared_minor: source.shared_agorot,
     profit_minor: source.profit_agorot,
-  };
-}
-
-function fallbackCompanyRow(source: Dashboard): CompanyCurrencyRow {
-  return {
-    currency: "ILS",
-    income_minor: source.income_agorot,
-    direct_minor: source.direct_agorot,
-    shared_minor: source.shared_agorot,
-    overhead_minor: source.overhead_agorot,
-    expense_minor: source.expense_agorot,
-    net_profit_minor: source.net_profit_agorot,
-    count: 0,
   };
 }
 
@@ -108,54 +69,6 @@ export function projectRows(project: ProjectRow | NonNullable<ProjectDetail>, em
 }
 
 /**
- * The company's figures per currency, the company currency first. An empty period shows one zero row in
- * `emptyCurrency` (the company's currency), so a USD company reads $0, not ₪0.
- */
-export function companyRows(dashboard: Dashboard, emptyCurrency = "ILS"): CompanyCurrencyRow[] {
-  const fromPayload = dashboard.by_currency;
-  const base = fromPayload.length > 0
-    ? fromPayload.map((row) => ({ ...row }))
-    : [fallbackCompanyRow(dashboard)];
-  const filtered = base.filter((row) => !companyBucketAllZero(row));
-  const fallback = fallbackCompanyRow(dashboard);
-  const zero = emptyCurrency === "ILS" || !companyBucketAllZero(fallback)
-    ? fallback
-    : { ...fallback, currency: emptyCurrency };
-  // A quiet period keeps its currency's previous figures (0147), so Home can still compare.
-  const quiet = fromPayload.find((row) => row.currency === zero.currency);
-  const empty = quiet == null
-    ? zero
-    : {
-      ...zero,
-      prev_income_minor: quiet.prev_income_minor,
-      prev_expense_minor: quiet.prev_expense_minor,
-      prev_net_profit_minor: quiet.prev_net_profit_minor,
-    };
-  const rows = (filtered.length > 0 ? filtered : [empty]).sort((a, b) => sortCurrency(a.currency, b.currency, emptyCurrency));
-  return rows;
-}
-
-export function primaryCurrency(dashboard: Dashboard): string {
-  if (dashboard.base_currency) return dashboard.base_currency;
-  const rows = companyRows(dashboard);
-  let best = rows[0]?.currency ?? "ILS";
-  let bestCount = rows[0]?.count ?? 0;
-  for (const row of rows) {
-    if (row.count > bestCount) {
-      best = row.currency;
-      bestCount = row.count;
-    }
-  }
-  return best;
-}
-
-export function profitInCurrency(project: ProjectRow, currency: string): bigint {
-  const row = projectRows(project).find((entry) => entry.currency === currency);
-  if (row) return row.profit_minor;
-  return currency === "ILS" ? project.profit_agorot : 0n;
-}
-
-/**
  * FLOW-339: what a band's label calls its figures. A loss in one currency and a profit in another
  * is "mixed", so the label can name both instead of reading רווח over a loss.
  */
@@ -164,21 +77,6 @@ export function profitSign(profits: readonly bigint[]): "profit" | "loss" | "mix
   const gain = profits.some((profit) => profit > 0n);
   if (loss && gain) return "mixed";
   return loss ? "loss" : "profit";
-}
-
-export function heroLabelProfit(figures: { agorot: bigint }[]): bigint {
-  if (figures.length === 0) return 0n;
-  const allNonNegative = figures.every((figure) => figure.agorot >= 0n);
-  const allNonPositive = figures.every((figure) => figure.agorot <= 0n);
-  if (allNonNegative || allNonPositive) {
-    return figures.reduce((sum, figure) => sum + figure.agorot, 0n);
-  }
-  const nonNegative = figures.find((figure) => figure.agorot >= 0n);
-  return nonNegative?.agorot ?? 0n;
-}
-
-export function roundedHeroProfit(incomeMinor: bigint, expenseMinor: bigint): bigint {
-  return roundedProfitAgorot(incomeMinor, expenseMinor);
 }
 
 export function projectExpenseMinor(row: ProjectCurrencyRow): bigint {
