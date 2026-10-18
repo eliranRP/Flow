@@ -1,9 +1,8 @@
 import { formatAmountText, type CashLine, type ProjectDetail } from "@flow/shared";
-import { useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { projectExpenseMinor, projectRows } from "../by-currency";
 import { cashMonthName } from "../cash";
-import { groupLines, lineInitials, linesOrder, sideMinor, type LinesOrder } from "../cash-lines-groups";
+import { groupLines, linesOrder, type LinesOrder } from "../cash-lines-groups";
 import { useCompanyCurrency } from "../company-currency";
 import { monthPeriod } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
@@ -14,10 +13,10 @@ import { Amount } from "../ui/amount";
 import { Card } from "../ui/card";
 import { Chip } from "../ui/chip";
 import { formatDayMonth, israelToday } from "../ui/date-math";
-import { rowSource } from "../ui/line-marks";
-import { List, ListRow } from "../ui/list-row";
+import { List } from "../ui/list-row";
 import { ProfitSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
+import { MonthCategories, MonthLineRow } from "./project-month-categories";
 import { SummaryRow } from "./project-profit-screen";
 
 export type ProjectMonthProfitSample = { project: NonNullable<ProjectDetail>; month: string; lines: CashLine[] };
@@ -60,8 +59,7 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
   const open = month === today.slice(0, 7);
   const requested = linesOrder(new URLSearchParams(location.search).get("order"));
   const order: LinesOrder = requested === "project" ? "date" : requested;
-  const groups = groupLines(counted, order, "kept", today);
-  const [openKeys, setOpenKeys] = useState<ReadonlySet<string>>(() => new Set());
+  const groups = order === "category" ? [] : groupLines(counted, order, "kept", today);
   const id = sample ? sample.project.id : projectId;
   const backTo = `/projects/${id}/profit${search}`;
   const sub = project == null
@@ -75,15 +73,6 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
     const query = params.toString();
     void navigate({ pathname: location.pathname, search: query === "" ? "" : `?${query}` }, { replace: true });
   };
-  const toggle = (key: string) => {
-    setOpenKeys((current) => {
-      const next = new Set(current);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
   return (
     <ScreenState
       title={`רווח ${cashMonthName(month)}`}
@@ -114,50 +103,19 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
             ))}
           </div>
           {counted.length === 0 ? <p className="ui-pp-note t-caption t-muted">אין תנועות בחודש הזה.</p> : null}
-          {groups.map((group) => {
-            const expanded = order !== "category" || openKeys.has(group.key);
-            const head = (
-              <>
+          {order === "category" ? <MonthCategories lines={counted} currency={currency} search={search} /> : groups.map((group) => (
+            <section key={group.key} className="ui-lines-group" aria-label={group.title}>
+              <div className="ui-lines-group-head">
                 <h2 className="t-section ui-lines-group-title">{group.title}</h2>
                 {group.total == null ? null : <GroupSum total={group.total} currency={currency} />}
-              </>
-            );
-            return (
-              <section key={group.key} className="ui-lines-group" aria-label={group.title}>
-                {order === "category" ? (
-                  <button type="button" className="ui-lines-group-head" aria-expanded={expanded} onClick={() => { toggle(group.key); }}>
-                    {head}
-                  </button>
-                ) : (
-                  <div className="ui-lines-group-head">{head}</div>
-                )}
-                {expanded ? (
-                  <List layout="flat">
-                    {group.rows.map((line) => {
-                      const name = line.supplier_name ?? line.description;
-                      const minor = sideMinor(line, "kept");
-                      return (
-                        <ListRow
-                          key={`${line.transaction_id}:${line.part ?? ""}`}
-                          layout="flat"
-                          variant="transaction"
-                          title={name}
-                          hint={order === "category" ? formatDayMonth(line.cash_month_date) : (line.category_name ?? "")}
-                          agorot={minor < 0n ? -minor : minor}
-                          currency={line.currency}
-                          sign={line.side}
-                          wholeCents
-                          source={rowSource(line.source)}
-                          initials={lineInitials(name)}
-                          href={`/transactions/${line.transaction_id}${search}`}
-                        />
-                      );
-                    })}
-                  </List>
-                ) : null}
-              </section>
-            );
-          })}
+              </div>
+              <List layout="flat">
+                {group.rows.map((line) => (
+                  <MonthLineRow key={`${line.transaction_id}:${line.part ?? ""}`} line={line} hint={line.category_name ?? ""} search={search} />
+                ))}
+              </List>
+            </section>
+          ))}
         </div>
       )}
     </ScreenState>

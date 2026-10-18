@@ -19,12 +19,17 @@ test("the chips sort the page, a category opens in place, and a project opens it
   const chips = page.getByRole("group", { name: "סידור" }).first();
   await chips.getByRole("button", { name: "לפי קטגוריה" }).click();
   await expect(page).toHaveURL(/\?preview=1&by=category$/);
-  const category = page.locator(".ui-cp-list .ui-cp-row > button").first();
+  const categories = page.locator(".ui-pcat-button");
+  const category = categories.first();
   await expect(category).toHaveAttribute("aria-expanded", "false");
   await category.click();
   await expect(category).toHaveAttribute("aria-expanded", "true");
-  await category.click();
+  // One category open at a time: opening another closes the first.
+  await categories.nth(1).click();
+  await expect(categories.nth(1)).toHaveAttribute("aria-expanded", "true");
   await expect(category).toHaveAttribute("aria-expanded", "false");
+  await categories.nth(1).click();
+  await expect(categories.nth(1)).toHaveAttribute("aria-expanded", "false");
   await chips.getByRole("button", { name: "לפי פרויקט" }).click();
   await expect(page).toHaveURL(/\/e2e\/company-profit\?preview=1$/);
   await page.locator('a[href^="/projects/"]').first().click();

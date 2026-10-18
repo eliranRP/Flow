@@ -17,8 +17,6 @@ export type CashRow = {
   amounts: { currency: string; minor: bigint }[];
   /** Where the row opens. A row without one is a figure only (a year's נכנס and יצא). */
   href?: string;
-  /** רווח החודש: the month the profit view opens on. */
-  profitMonth?: string;
   /** Read in full by a screen reader: "נכנס באוקטובר ₪18,000 – פירוט". */
   name: string;
 };
