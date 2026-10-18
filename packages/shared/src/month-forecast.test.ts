@@ -45,6 +45,15 @@ describe("buildMonthForecast", () => {
     expect(invoice?.expected_on).toBe(new Date(Date.parse(`${unpaid[0]?.doc_date ?? ""}T00:00:00Z`) + 30 * 86_400_000).toISOString().slice(0, 10));
   });
 
+  it("gives each item its category: the recurring charge's usual one, the invoice's own, else null", () => {
+    const withCategories = { ...expected, recurring: expected.recurring.map((party) => party.party_id === "p-rent" ? { ...party, category_id: "cat-rent" } : party) };
+    const filed: UnpaidRow[] = [{ ...unpaid[0], category_id: "cat-clients" } as UnpaidRow];
+    const build = buildMonthForecast({ base: "ILS", expected: withCategories, unpaid: filed, overrides: [] });
+    expect(build.items.find((item) => item.key === "party:expense:p-rent:ILS")?.category_id).toBe("cat-rent");
+    expect(build.items.find((item) => item.key === "invoice:inv-1")?.category_id).toBe("cat-clients");
+    expect(build.items.find((item) => item.key === "party:expense:p-tea:ILS")?.category_id).toBeNull();
+  });
+
   it("uses the same total as Home's line: the cash net plus income minus charges", () => {
     const build = buildMonthForecast({ base: "ILS", expected, unpaid, overrides: [] });
     expect(forecastTotal(100000n, build)).toBe(100000n + 1050000n - 503000n);

@@ -38,11 +38,51 @@ export async function answerRecurringMatch(client: RpcClient, answer: RecurringM
   );
 }
 
+/** One recurring charge, as the list names it to a write: its party, currency and (when split) project. */
+export type ChargeTarget = {
+  direction: "income" | "expense";
+  partyId: string;
+  currency: string;
+  /** The charge's project when its party is split by project (decision 0185); null otherwise. */
+  projectId: string | null;
+};
+
 /** The writes the list makes, as the screen calls them. */
 export type RecurringWrites = {
   dismiss: (alertKey: string) => Promise<void>;
   restore: (alertKey: string) => Promise<void>;
+  /**
+   * The ask's "הסתיים": the charge's party is no longer recurring (decision 0172), through its newest
+   * line. Returns the undo, which writes back the switch the party had before.
+   */
+  end: (target: ChargeTarget) => Promise<() => Promise<void>>;
 };
+
+/** The owner's switch before a write, as `set_payment_recurring` returns it: true, false, or null (the rule decided). */
+function priorOverride(data: unknown): boolean | null {
+  if (data == null || typeof data !== "object" || !("prior_override" in data)) return null;
+  return typeof data.prior_override === "boolean" ? data.prior_override : null;
+}
+
+/** "הסתיים" on the live client: the newest line of the charge, then its party's switch off. The undo writes the prior switch back. */
+export async function endRecurringCharge(client: RpcClient, target: ChargeTarget): Promise<() => Promise<void>> {
+  const line = await client.rpc("recurring_party_line", {
+    p_direction: target.direction,
+    p_party_id: target.partyId,
+    p_currency: target.currency,
+    ...(target.projectId == null ? {} : { p_project_id: target.projectId }),
+  });
+  assertNoError(line);
+  const id = typeof line.data === "string" ? line.data : null;
+  if (id == null) throw new Error("no line");
+  const set = await client.rpc("set_payment_recurring", { p_id: id, p_recurring: false });
+  assertNoError(set);
+  const prior = priorOverride(set.data);
+  return async () => {
+    // null hands the choice back to the rule; the generated type shows the parameter as boolean only.
+    assertNoError(await client.rpc("set_payment_recurring", { p_id: id, p_recurring: prior as boolean }));
+  };
+}
 
 function supabaseClient(): RpcClient {
   const supabase = getSupabase();
@@ -54,6 +94,7 @@ function supabaseClient(): RpcClient {
 export const liveRecurringWrites: RecurringWrites = {
   dismiss: (alertKey) => dismissRecurringAlert(supabaseClient(), alertKey),
   restore: (alertKey) => restoreRecurringAlert(supabaseClient(), alertKey),
+  end: (target) => endRecurringCharge(supabaseClient(), target),
 };
 
 /** The live client, for the charge page's writes. */

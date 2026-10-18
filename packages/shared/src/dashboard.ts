@@ -137,6 +137,9 @@ export const unpaidRowSchema = z.object({
   days_open: z.number().int().optional(),
   /** FLOW-367. The deposit to offer, null when none (and when the invoice is marked). */
   match: unpaidMatchSchema.nullable().optional(),
+  /** The document's category, null when it is not filed (the forecast's לפי קטגוריה). Older payloads omit it. */
+  category_id: z.string().nullable().optional(),
+  category_name: z.string().nullable().optional(),
 });
 
 /**

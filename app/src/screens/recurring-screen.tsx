@@ -1,13 +1,13 @@
 import type { MissingBill } from "@flow/shared";
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMissingBillsQuery } from "../forecast";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { RECURRING_KEYS } from "../pace-write";
 import { liveRecurringWrites, type RecurringWrites } from "../recurring-actions";
-import { chargeHref, dayMonth } from "../recurring-charge";
-import { groupRecurring, monthOutflow, type RecurringLine } from "../recurring-layout";
+import { chargeHref, dayMonth, endedText } from "../recurring-charge";
+import { groupRecurring, monthInflow, monthOutflow, type RecurringLine } from "../recurring-layout";
 import { alertState, changePercentOf, daysBetween, isSplitParty, israelToday, rowId, type RecurringAlert, type ScheduleRow, scheduleLines, useRecurringScheduleQuery } from "../recurring-schedule";
 import { EmptyState, FailureLine } from "../ui/empty-state";
 import { type RecurringListGroup, type RecurringListRow, RecurringList } from "../ui/recurring-list";
@@ -26,6 +26,7 @@ const NO_ROWS: readonly ScheduleRow[] = [];
 const NO_WRITES: RecurringWrites = {
   dismiss: () => Promise.resolve(),
   restore: () => Promise.resolve(),
+  end: () => Promise.resolve(() => Promise.resolve()),
 };
 
 /** The alert state a screen computes from the schedule and the late bills. */
@@ -84,6 +85,8 @@ export function RecurringScreen({
   const alerts = useMemo(() => (rows == null ? undefined : alertState(rows, bills)), [rows, bills]);
   const search = usePreviewSearch();
   const view = useMemo(() => (rows == null ? null : recurringView(rows, today, project, alerts, search)), [rows, today, project, alerts, search]);
+  // The row whose "הסתיים" is still writing: a second tap on it sends nothing.
+  const ending = useRef<string | null>(null);
 
   const failedNow = live ? query.isError && query.data == null : failed;
   if (failedNow) {
@@ -109,7 +112,8 @@ export function RecurringScreen({
   };
   const failure = () => toast.show({ message: "לא הצלחנו לעדכן את השורה." });
 
-  async function ignore(alertKey: string) {
+  /** An ignore, or the ask's "כן, עדיין קבוע": the late alert is set aside until the next late bill. */
+  async function ignore(alertKey: string, message = "התעלמת מההתראה") {
     const removed = (bills ?? []).filter((bill) => bill.alert_key === alertKey);
     editBills((list) => list.filter((bill) => bill.alert_key !== alertKey));
     try {
@@ -120,7 +124,34 @@ export function RecurringScreen({
       return;
     }
     refresh();
-    toast.show({ message: "התעלמת מההתראה", action: "ביטול", onAction: () => void restore(alertKey, removed) });
+    toast.show({ message, action: "ביטול", onAction: () => void restore(alertKey, removed) });
+  }
+
+  /** The ask's "הסתיים": the charge leaves the list and the forecast; the undo brings it back. */
+  async function end(row: RecurringListRow) {
+    const charge = rows?.find((item) => rowId(rows, item) === row.id);
+    if (charge == null || ending.current === row.id) return;
+    const split = isSplitParty(rows ?? [], charge);
+    const target = { direction: charge.direction, partyId: charge.party_id, currency: charge.currency, projectId: split ? charge.project_id : null };
+    ending.current = row.id;
+    let undo: () => Promise<void>;
+    try {
+      undo = await writer.end(target);
+    } catch {
+      failure();
+      return;
+    } finally {
+      ending.current = null;
+    }
+    refresh();
+    toast.show({
+      // The switch is the party's: ending a split party's charge ends it in every project.
+      message: endedText(charge.party_name, split),
+      action: "ביטול",
+      onAction: () => {
+        void undo().then(refresh, failure);
+      },
+    });
   }
 
   async function restore(alertKey: string, removed: readonly MissingBill[]) {
@@ -142,6 +173,10 @@ export function RecurringScreen({
       onIgnore={(row) => {
         if (row.alertKey != null) void ignore(row.alertKey);
       }}
+      onStill={(row) => {
+        if (row.alertKey != null) void ignore(row.alertKey, "נמשיך לצפות לו");
+      }}
+      onEnded={(row) => void end(row)}
     />
   );
 }
@@ -173,6 +208,8 @@ export function recurringView(allRows: readonly ScheduleRow[], today: string, pr
       minor: line.minor,
       ...hintFor(row, line, today, state.dismissed.has(line.id)),
       ...(alert == null ? {} : { alertKey: alert.alertKey, suggestion: alert.suggestion == null ? null : suggestionRow(alert.suggestion) }),
+      // A late charge with no match to offer asks whether it still recurs (the board's "עדיין קבוע?").
+      ...(alert != null && alert.alertKey != null && alert.suggestion == null && row.state === "late" ? { ask: lateAskText(row) } : {}),
       href: chargeHref(row.direction, row.party_id, search, isSplitParty(allRows, row) ? row.project_id : null),
     };
   };
@@ -186,23 +223,39 @@ export function recurringView(allRows: readonly ScheduleRow[], today: string, pr
   }));
   return {
     project: projectName,
-    subtitle: `${monthTitle(today)} • ${String(rows.length)} קבועים`,
+    subtitle: `${monthTitle(today)} • נכון ל־${dayMonth(today)} • ${String(rows.length)} קבועים`,
     currency: rows[0]?.currency ?? "ILS",
     outflow: monthOutflow(lines),
+    inflow: monthInflow(lines),
     late,
     groups,
   };
 }
 
+/** The usual day in the due month, YYYY-MM-DD. */
+function usualDayOf(row: ScheduleRow): string {
+  return `${row.next_due_month}-${String(row.typical_day).padStart(2, "0")}`;
+}
+
+/** The ask under a late row: "לא שולם ב־03/10. עדיין קבוע?" (income: לא התקבל). */
+function lateAskText(row: ScheduleRow): string {
+  return `${row.direction === "income" ? "לא התקבל ב־" : "לא שולם ב־"}${dayMonth(usualDayOf(row))}. עדיין קבוע?`;
+}
+
 /**
  * The one extra line a row may carry: "באיחור N ימים" for a late charge (counted from its usual day),
- * or "▲ N%" when it arrived 20% or more above its usual amount. Only bad news is shown.
+ * "▲ N%" when it arrived 20% or more above its usual amount, or, for a charge due this month whose day
+ * has come but which is not late yet, "בדרך כלל היום" or "עוד לא הגיע · N ימים" (grey). Only bad news is red.
  */
 function hintFor(row: ScheduleRow, line: RecurringLine, today: string, dismissed: boolean): Pick<RecurringListRow, "hint" | "alert"> {
   if (row.state === "late") {
     if (dismissed) return {};
-    const usualDay = `${row.next_due_month}-${String(row.typical_day).padStart(2, "0")}`;
-    return { hint: `באיחור ${String(daysBetween(usualDay, today))} ימים`, alert: true };
+    return { hint: `באיחור ${String(daysBetween(usualDayOf(row), today))} ימים`, alert: true };
+  }
+  if (row.state === "soon") {
+    const days = daysBetween(usualDayOf(row), today);
+    if (days === 0) return { hint: "בדרך כלל היום" };
+    if (days > 0) return { hint: `עוד לא הגיע · ${days === 1 ? "יום אחד" : `${String(days)} ימים`}` };
   }
   if (row.state === "arrived" && line.usual > 0n && line.minor * 100n >= line.usual * 120n) {
     return { hint: `▲ ${String(changePercentOf(line.minor, line.usual))}%`, alert: true };

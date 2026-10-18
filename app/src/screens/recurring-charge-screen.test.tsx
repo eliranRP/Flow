@@ -33,6 +33,7 @@ const NOW = new Date("2026-10-11T12:00:00Z");
 /** A ready page's data from a fixture, with its reads overridden where a test needs. */
 type ChargeFixture = {
   row: ScheduleRow;
+  split?: boolean;
   bills?: MissingBill[];
   changes?: RecurringChange[];
   lineId: string | null;
@@ -186,6 +187,39 @@ describe("the charge page: the late bill (the power bill, with its suggested mat
     state.data = ready({ ...RECURRING_CHARGES_FIXTURE_POWER, row: income, bills });
     renderPage("/recurring/income/rent-elm");
     expect(screen.getByRole("button", { name: "כן, אותו לקוח" })).toBeTruthy();
+  });
+
+  it("asks עדיין קבוע? once the match is answered as not this one", async () => {
+    renderPage("/recurring/expense/power");
+    expect(screen.queryByRole("region", { name: "עדיין קבוע?" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "לא" }));
+    const ask = await screen.findByRole("region", { name: "עדיין קבוע?" });
+    expect(within(ask).getByText("לא שולם ב־03/10, 8 ימים אחרי המועד הרגיל. אם הסתיים, נפסיק לצפות לו בתחזית ובהתראות.")).toBeTruthy();
+    expect(within(ask).getByText("אמרת שהשורה שהצענו היא לא זה.")).toBeTruthy();
+  });
+
+  it("a late bill with no match asks עדיין קבוע?; כן sets the alert aside, הסתיים ends it", async () => {
+    const bills = RECURRING_MISSING_FIXTURE.map((bill) => (bill.party_id === "power" ? { ...bill, suggestion: null } : bill));
+    state.data = ready({ ...RECURRING_CHARGES_FIXTURE_POWER, bills });
+    const view = renderPage("/recurring/expense/power");
+    const ask = screen.getByRole("region", { name: "עדיין קבוע?" });
+    expect(within(ask).getByText("הגיע בשם אחר? אפשר לשייך אותו מדף השורה.")).toBeTruthy();
+    fireEvent.click(within(ask).getByRole("button", { name: "כן, עדיין קבוע" }));
+    expect(await screen.findByText("נמשיך לצפות לו")).toBeTruthy();
+    expect(calls()).toContainEqual(["dismiss_recurring_alert", { p_kind: "missing", p_key: "expense:power:USD:2026-10" }]);
+    view.unmount();
+    renderPage("/recurring/expense/power");
+    fireEvent.click(within(screen.getByRole("region", { name: "עדיין קבוע?" })).getByRole("button", { name: "הסתיים" }));
+    expect(await screen.findByText("Brightline Power הוסר מהקבועים ומהצפי")).toBeTruthy();
+    expect(calls()).toContainEqual(["set_payment_recurring", { p_id: RECURRING_CHARGES_FIXTURE_POWER.lineId, p_recurring: false }]);
+  });
+
+  it("הסתיים on a party split by project says the party ends in every project", async () => {
+    const bills = RECURRING_MISSING_FIXTURE.map((bill) => (bill.party_id === "power" ? { ...bill, suggestion: null } : bill));
+    state.data = ready({ ...RECURRING_CHARGES_FIXTURE_POWER, bills, split: true });
+    renderPage("/recurring/expense/power?project=p-birch-lane");
+    fireEvent.click(within(screen.getByRole("region", { name: "עדיין קבוע?" })).getByRole("button", { name: "הסתיים" }));
+    expect(await screen.findByText("Brightline Power הוסר מהקבועים ומהצפי בכל הפרויקטים")).toBeTruthy();
   });
 
   it("an ignored late bill shows its grey line, and no match box", () => {
