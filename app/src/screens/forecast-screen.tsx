@@ -15,11 +15,8 @@ import { monthName } from "./home-parts";
 import { Amount } from "../ui/amount";
 import { cx } from "../ui/cx";
 
-/**
- * A story's data: the builder's output and the cash net today, both in the base's minor units.
- * `base` is the currency the builder counted (ILS for the app; a sample may use another).
- */
-export type ForecastSample = { data: MonthForecast; net: bigint; today: string; base?: string };
+/** A story's data: the builder's output (in `data.base`, the currency it counted) and the cash net today, in its minor units. */
+export type ForecastSample = { data: MonthForecast; net: bigint; today: string };
 
 /** The page scrolls past this many pixels: the compact bar slides down (FLOW-141). */
 const COMPACT_AFTER = 150;
@@ -96,7 +93,7 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
   const [compact, setCompact] = useState(false);
 
   const data = sample?.data ?? query.data ?? null;
-  const base = sample?.base ?? "ILS";
+  const base = data?.base ?? "ILS";
   const currentRow = cash.data?.months.find((row) => cashMonthKey(row.month) === month);
   const net = sample?.net ?? cashRows(currentRow, base).find((row) => row.currency === base)?.net_minor ?? 0n;
   const build: ForecastBuild | null = data?.build ?? null;

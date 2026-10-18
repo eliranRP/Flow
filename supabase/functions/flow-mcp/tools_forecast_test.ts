@@ -50,11 +50,27 @@ Deno.test("get_forecast reads three RPCs and builds the items, totals and change
   assertEquals(data?.changed, 1);
   assertEquals(data?.expense[0]?.minor, 480000);
   assertEquals(data?.expense[0]?.usual_minor, 500000);
-  assertEquals(calls.map((call) => call.name).sort(), ["cash_months", "expected_months", "forecast_overrides_for", "list_unpaid"]);
+  assertEquals(calls.map((call) => call.name).sort(), ["cash_months", "expected_months", "forecast_overrides_for", "list_unpaid", "mcp_company_loan_currency"]);
   // Home's number: the cash net + the income still to come - the charges still to go (small ones included).
   assertEquals(data?.cash_net_minor, 120000);
   assertEquals(data?.big_number_minor, 120000 + 250000 - 480000);
   assertEquals(calls.find((call) => call.name === "forecast_overrides_for")?.body, { p_month: "2026-10" });
+});
+
+Deno.test("get_forecast counts a dollar company's items and cash in dollars", async () => {
+  const usd = (value: unknown) => JSON.parse(JSON.stringify(value).replaceAll('"ILS"', '"USD"').replaceAll(":ILS", ":USD"));
+  const { rpc } = rpcOf((name) => name === "mcp_company_loan_currency" ? { status: 200, json: "USD" } : { ...reads(name), json: usd(reads(name).json) });
+  const result = await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc);
+  const data = (result.structuredContent.ok ? result.structuredContent.data : null) as {
+    base_currency: string;
+    income_total_minor: number;
+    expense_total_minor: number;
+    cash_net_minor: number | null;
+  } | null;
+  assertEquals(data?.base_currency, "USD");
+  assertEquals(data?.income_total_minor, 250000);
+  assertEquals(data?.expense_total_minor, 480000);
+  assertEquals(data?.cash_net_minor, 120000);
 });
 
 Deno.test("get_forecast defaults to this month in Israel time and refuses a bad month before any read", async () => {
