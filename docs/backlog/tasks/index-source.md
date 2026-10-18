@@ -313,6 +313,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-917
 - FLOW-919
 - FLOW-923
+- FLOW-926
 
 ## Projects and reports
 
@@ -371,6 +372,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-514
 
 - FLOW-918
+- FLOW-924
+- FLOW-925
 
 ## Multi-company and team
 

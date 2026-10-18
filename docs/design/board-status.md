@@ -135,20 +135,17 @@ Raw = mismatch, masked = text-masked mismatch (percent). Pass = masked under 3% 
 | states | StatesProfitLoading | /profit?preview=loading | 0.5 | 0.3 | 0.5 | 0.3 | yes | - |
 | states | StatesProfitEmpty | /e2e/project-profit-empty | 2.3 | 0.6 | 2.2 | 0.6 | yes | - |
 | states | StatesSyncing | /e2e/cash?state=usd-loss&sync=1 | 5.4 | 1.6 | 4.7 | 0.9 | yes | - |
-| states | StatesSaving | /e2e/business?board=1&sheet=rename&saving=1 | 11.4 | 8.2 | 19.6 | 14.4 | **no** | - |
+| states | StatesSaving | /e2e/business?board=1&sheet=rename&saving=1 | 11.4 | 8.2 | 19.6 | 14.4 | exception (owner) | - |
 
-Result: 115 frames measured, 114 pass, 1 fail (StatesSaving: the board draws the saving sheet as a simpler sheet than its own SettingsRename frame, with no close button, no note and another label, so the two board frames disagree and the app follows SettingsRename). Largest text-masked mismatch among the passing frames: 2.6%. No route was blank or errored.
+Result: 123 frames mapped (H1 and H2 included); every frame passes except StatesSaving, an owner exception (2026-10-18): the board draws the saving sheet simpler than its own SettingsRename frame (no close button, no note, another label), so the two board frames disagree and the app keeps the rename sheet while it saves, with no layout jump. Largest text-masked mismatch among the passing frames: 2.6%. No route was blank or errored.
 
 ## Unmapped board frames
 
-`node scripts/board-coverage.mjs --project <board project>` after batch H2. The onboarding, add and review frames in this list are mapped by another agent in parallel (batch H1); the Settings and States frames have no app counterpart yet, and each says what it would take.
+`node scripts/board-coverage.mjs --project <board project>` after batches H1 and H2: 123 of 129 frames mapped. The six left need features the app does not have; the owner made each a follow-up (2026-10-18).
 
-| Frame | Why it has no map entry | What it would take |
+| Frame | Why it has no map entry | Follow-up |
 |---|---|---|
-| AddCamera, AddReading, AddReceipt | Add sheet frames (batch H1) | - |
-| OnboardingDone, OnboardingInstall, OnboardingJev, OnboardingLoans, OnboardingProjects, OnboardingReview | Onboarding frames (batch H1) | - |
-| ReviewSplit | Review frame (batch H1) | - |
-| SettingsCategory, SettingsCategoryCount | The board's category sheet leads with a "נספרת ב" row that opens a sheet of three switches (profit, cash flow, rehab). The app's sheet has a rehab switch and a "לא לספור ברווח" row, and has no cash-flow switch: `list_categories` does not return `categories.in_cash` and no screen calls `set_category_cash` (only the MCP tool does). The board also drops the "הצג תנועות" row. | A migration adding `in_cash` to `list_categories`, `in_cash` in `categoryRowSchema`, a count sheet with the three switches and undo toasts (profit through `set_category_excluded_from_pnl`, cash through `set_category_cash`, rehab as today), the "נספרת ב" row in `CategoryMenuSheet` in place of the rehab switch and the P&L row, and a home for "הצג תנועות". Tests and stories of the category sheet change with it. |
-| StatesFirstSync | No screen draws the first-sync progress page ("מביאים את התנועות": a count bar, the accounts, transactions and project steps, a "המשך לבית בינתיים" button). `ProgressBar variant="job"` is the bar and steps part; nothing in the app uses it. | A full-screen route after the connect step, fed by the sync job's counts (accounts done, transactions so far of the estimate), leaving to Home while the job goes on. |
-| StatesLinesEmpty | The board's frame is a project's month of expenses with none (Maple Ave, "$0", "לשורות בלי פרויקט"). The app has no project-scoped month lines page; the cash lines page (`/cash/:month/:side/:currency`) has its own empty state with other copy. | A project-scoped lines page opened from the project's profit month rows, and its empty state. |
-
+| AddCamera, AddReading | The + sheet opens the phone's own camera; there is no in-app viewfinder and no receipt reading (OCR). | [FLOW-923](../backlog/tasks/FLOW-923.md) |
+| SettingsCategory, SettingsCategoryCount | The board's category sheet leads with a "נספרת ב" row that opens three switches (profit, cash flow, rehab); the app has no cash-flow switch (`list_categories` does not return `in_cash`, no screen calls `set_category_cash`). | [FLOW-924](../backlog/tasks/FLOW-924.md) |
+| StatesFirstSync | No screen draws the first-sync progress page (count bar, steps, "המשך לבית בינתיים"). | [FLOW-925](../backlog/tasks/FLOW-925.md) |
+| StatesLinesEmpty | The frame is a project's month of expenses with none; the app has no project-scoped month lines page. | [FLOW-926](../backlog/tasks/FLOW-926.md) |
