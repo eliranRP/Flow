@@ -98,7 +98,7 @@
   gap: var(--space-2);
 }
 
-.ui-loan-empty > .t-caption.t-muted {
+.ui-loan-empty > .t-muted {
   margin: 0;
 }
 

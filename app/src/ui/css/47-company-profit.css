@@ -169,7 +169,7 @@
   line-height: var(--type-caption-line);
 }
 
-/* Prefixed to beat the .t-caption.t-muted line on the footer. */
+/* Prefixed to beat the .t-muted line on the footer. */
 .ui-cp-screen .ui-cp-foot {
   margin-top: calc(var(--space-1) * 4.25);
   line-height: calc(var(--type-caption-size) * 17.25 / 13);

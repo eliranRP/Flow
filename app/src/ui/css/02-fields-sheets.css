@@ -1,4 +1,4 @@
-.t-caption.t-muted {
+.t-muted {
   text-wrap: pretty;
 }
 
@@ -108,7 +108,7 @@
 
 /* A hint tied with aria-describedby is a field hint and stays `hint` 13 (decision 0120 moves only
    the row secondary line to `meta`). Matches the skeleton and status reserve. */
-.ui-row-hint.t-caption.t-muted {
+.ui-row-hint.t-muted {
   font-size: var(--type-caption-size);
   font-weight: var(--type-caption-weight);
   line-height: var(--type-caption-line);

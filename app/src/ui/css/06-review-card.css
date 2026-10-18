@@ -216,7 +216,7 @@
   align-items: flex-start;
 }
 
-.ui-review-doc .t-caption.t-muted {
+.ui-review-doc .t-muted {
   color: var(--color-text-secondary);
 }
 
@@ -756,7 +756,7 @@
   font-weight: var(--type-title-weight);
 }
 
-.ui-review-split-title > .t-caption.t-muted {
+.ui-review-split-title > .t-muted {
   color: var(--color-text-secondary);
   line-height: var(--type-title-line);
 }
@@ -780,7 +780,7 @@
   min-inline-size: 0;
 }
 
-.ui-review-split-name .t-caption.t-muted {
+.ui-review-split-name .t-muted {
   line-height: var(--type-title-line);
 }
 

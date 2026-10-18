@@ -102,7 +102,7 @@
   transform: translateX(calc(-1 * (var(--size-switch) - var(--switch-knob) - 2 * var(--switch-inset))));
 }
 
-.ui-switch-copy .t-caption.t-muted {
+.ui-switch-copy .t-muted {
   min-inline-size: 0;
   color: var(--color-text-muted);
 }
