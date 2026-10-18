@@ -17,12 +17,13 @@ import { ProfitSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 import { SummaryRow, type ProjectProfitSample } from "./project-profit-screen";
 
-export type ProjectNextMonthSample = ProjectProfitSample & { next: NonNullable<ProjectProfitSample["next"]> };
+type ProjectNextMonthSample = ProjectProfitSample & { next: NonNullable<ProjectProfitSample["next"]> };
 
-const NOTE = "לפי הקבועים של הנכס וממוצע שאר ההוצאות ב־6 החודשים האחרונים. מתעדכן כשהתנועות מגיעות.";
+const NOTE = "לפי הקבועים של הנכס וממוצע שאר ההוצאות ב־6 החודשים האחרונים. תשלום הלוואה נספר בריבית ובמסים שלו, בלי הקרן. מתעדכן כשהתנועות מגיעות.";
 
-function rowHint(row: NextMonthRow): string {
-  return row.date == null ? "ממוצע 6 חודשים" : `צפוי ${formatDayMonth(row.date)} · קבוע`;
+function rowHint(row: NextMonthRow, months: number): string {
+  if (row.date != null) return `צפוי ${formatDayMonth(row.date)} · קבוע`;
+  return months === 1 ? "ממוצע חודש אחד" : `ממוצע ${String(months)} חודשים`;
 }
 
 /**
@@ -80,7 +81,11 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
       }}
       loading={<ProfitSkeleton />}
     >
-      {forecast == null ? null : (
+      {forecast == null ? (
+        <div className="ui-pm-month">
+          <p className="ui-pp-note t-caption t-muted">אין עדיין מספיק נתונים לצפי</p>
+        </div>
+      ) : (
         <div className="ui-pm-month">
           <p className="ui-pp-figure ui-page-pad">
             <Amount agorot={net} currency={currency} size="display" loss={net < 0n} direction={net > 0n ? "income" : undefined} />
@@ -102,7 +107,7 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
                   layout="flat"
                   variant="transaction"
                   title={row.name}
-                  hint={rowHint(row)}
+                  hint={rowHint(row, forecast.averageMonths)}
                   agorot={row.minor < 0n ? -row.minor : row.minor}
                   currency={currency}
                   sign={row.minor < 0n ? "out" : "in"}

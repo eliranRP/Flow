@@ -87,6 +87,20 @@ describe("dueInMonth (the pace filter)", () => {
     expect(dueInMonth("2026-08", "2months", "2026-11", "2026-10")).toBe(false);
     expect(dueInMonth("2026-08", "2months", "2026-12", "2026-10")).toBe(true);
   });
+
+  it("counts a monthly charge with no due month from this month", () => {
+    expect(dueInMonth(null, "month", "2026-11", "2026-10")).toBe(true);
+  });
+
+  it("counts a yearly charge only in its due month", () => {
+    expect(dueInMonth("2026-11", "year", "2026-11", "2026-10")).toBe(true);
+    expect(dueInMonth("2027-11", "year", "2026-11", "2026-10")).toBe(false);
+  });
+
+  it("counts a late yearly charge from this month, so not next month", () => {
+    // Due last November and not come: expected from October, a gap of 1 to November.
+    expect(dueInMonth("2025-11", "year", "2026-11", "2026-10")).toBe(false);
+  });
 });
 
 describe("expectedDate", () => {
@@ -128,7 +142,6 @@ describe("nextMonthForecast", () => {
         { id: "garden", name: "גינה", months: [0, 0, 0, 0, 0, 0] },
         { id: "refunds", name: "החזרים", months: [0, -6_000, 0, 0, 0, 0] },
         { id: "eur", name: "אירו", months: [6_000, 0, 0, 0, 0, 0], currency: "EUR" },
-        { id: null, name: "", months: [6_000, 0, 0, 0, 0, 0] },
       ]),
     );
     expect(result.rows.map((row) => [row.kind, row.name, row.minor])).toEqual([
@@ -136,6 +149,65 @@ describe("nextMonthForecast", () => {
       ["average", "תיקונים", -31_000n],
     ]);
     expect(result.averageNames).toEqual(["תיקונים"]);
+    expect(result.averageMonths).toBe(6);
+  });
+
+  it("drops a one-off cost in a category a recurring charge files to", () => {
+    // The recurring charge is due in January, not next month, and still keeps its category out.
+    const result = forecast(
+      [party({ pace: "quarter", next_due_month: "2027-01", category_id: "cat-a" })],
+      categories([{ id: "cat-a", name: "ריבית", months: [0, 0, 0, 60_000, 0, 0] }]),
+    );
+    expect(result.rows).toEqual([]);
+  });
+
+  it("averages the uncategorized expenses as one row named אחר", () => {
+    const result = forecast([], categories([
+      { id: "repairs", name: "תיקונים", months: [6_000, 6_000, 6_000, 6_000, 6_000, 6_000] },
+      { id: null, name: "", months: [3_000, 0, 3_000, 0, 3_000, 3_000] },
+    ]));
+    expect(result.rows.map((row) => [row.key, row.name, row.minor])).toEqual([
+      ["avg:repairs", "תיקונים", -6_000n],
+      ["avg:none", "אחר", -2_000n],
+    ]);
+  });
+
+  it("averages a younger project over the months since its first expense", () => {
+    // The first expense of any category is in June: four months to September, not six.
+    const result = forecast([], categories([
+      { id: "repairs", name: "תיקונים", months: [0, 0, 0, 0, 20_000, 20_000] },
+      { id: "garden", name: "גינה", months: [0, 0, 8_000, 0, 0, 0] },
+    ]));
+    expect(result.averageMonths).toBe(4);
+    expect(result.rows.map((row) => [row.name, row.minor])).toEqual([["תיקונים", -10_000n], ["גינה", -2_000n]]);
+  });
+
+  it("averages over one month when the only expense is last month's", () => {
+    const result = forecast([], categories([{ id: "repairs", name: "תיקונים", months: [0, 0, 0, 0, 0, 7_000] }]));
+    expect(result.averageMonths).toBe(1);
+    expect(result.rows.map((row) => row.minor)).toEqual([-7_000n]);
+  });
+
+  it("leaves a loan payment out and counts its interest and escrow from their categories, without principal", () => {
+    // The servicer's usual amount is the whole payment: 1,180 interest + 280 escrow + 420 principal.
+    const result = forecast(
+      [
+        party({ party_id: "s-loan", name: "Example Mortgage", typical_amount_minor: -188_000n, category_id: "interest", pays_loan: true }),
+        party({ party_id: "s-water", name: "Example Water", typical_amount_minor: -12_000n, category_id: "water" }),
+      ],
+      categories([
+        { id: "interest", name: "ריבית הלוואות", months: [118_000, 118_000, 118_000, 118_000, 118_000, 118_000] },
+        { id: "escrow", name: "מסים וביטוח", months: [28_000, 28_000, 28_000, 28_000, 28_000, 28_000] },
+        { id: "water", name: "מים", months: [12_000, 12_000, 12_000, 12_000, 12_000, 12_000] },
+      ]),
+    );
+    expect(result.rows.map((row) => [row.kind, row.name, row.minor])).toEqual([
+      ["recurring", "Example Water", -12_000n],
+      ["average", "ריבית הלוואות", -118_000n],
+      ["average", "מסים וביטוח", -28_000n],
+    ]);
+    expect(result.expenseMinor).toBe(158_000n);
+    expect(result.recurringCount).toBe(1);
   });
 
   it("rounds an average to the cent and orders averages by size", () => {
@@ -151,8 +223,14 @@ describe("nextMonthForecast", () => {
     expect(result.incomeMinor).toBe(415_000n);
     expect(result.expenseMinor).toBe(177_000n);
     expect(result.netMinor).toBe(238_000n);
-    expect(result.rows.map((row) => row.name)).toEqual(["M. Ortiz", "S. Kim", "Northgate Mortgage", "Northgate Mortgage · escrow", "תיקונים ותחזוקה"]);
-    expect(basisLine(result.recurringCount, result.averageNames)).toBe("4 קבועים וממוצע תיקונים ותחזוקה");
+    expect(result.rows.map((row) => [row.name, row.minor])).toEqual([
+      ["M. Ortiz", 185_000n],
+      ["S. Kim", 230_000n],
+      ["ריבית הלוואות", -118_000n],
+      ["תיקונים ותחזוקה", -31_000n],
+      ["מסים וביטוח", -28_000n],
+    ]);
+    expect(basisLine(result.recurringCount, result.averageNames)).toBe("2 קבועים וממוצע 3 קטגוריות");
   });
 });
 

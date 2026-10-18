@@ -12,6 +12,7 @@ function charge(
   categoryId: string,
   pace: NonNullable<ExpectedParty["pace"]> = "month",
   nextDue = "2026-11",
+  paysLoan = false,
 ): ExpectedParty {
   return {
     direction,
@@ -26,6 +27,7 @@ function charge(
     category_id: categoryId,
     pace,
     next_due_month: nextDue,
+    pays_loan: paysLoan,
   };
 }
 
@@ -46,9 +48,11 @@ function category(id: string, name: string, months: number[]): ProjectCategoryMo
 
 /**
  * The ProfitProject card and the ProfitNext page on the board's figures (USD, cents), today 11/10/2026, so
- * next month is November: rent 1,850 + 2,300 in, the loan's interest 1,180 and escrow 280 out (monthly), and
- * repairs averaging 310 over April to September (1,860 / 6). A quarterly water bill is due in December, so it
- * stays out of November; it and the other recurring categories have no average row.
+ * next month is November: rent 1,850 + 2,300 in; out, the loan's interest 1,180 and escrow 280 and repairs
+ * 310, each its category's average over April to September (repairs 1,860 / 6). The servicer's monthly
+ * charge is the whole payment, 1,880 with 420 of principal: it pays a loan, so it is not a row, and its
+ * interest and escrow come from their categories. A quarterly water bill is due in December, so it stays
+ * out of November, and its category has no average row.
  */
 export const JUNIPER_NEXT: NextMonthSample = {
   today: "2026-10-11",
@@ -57,11 +61,10 @@ export const JUNIPER_NEXT: NextMonthSample = {
     project_id: PROJECT,
     months: [
       { month: "2026-10", open: true, by_currency: [] },
-      { month: "2026-11", open: false, by_currency: [{ currency: "USD", income_minor: 415_000n, expense_minor: -146_000n }] },
+      { month: "2026-11", open: false, by_currency: [{ currency: "USD", income_minor: 415_000n, expense_minor: -188_000n }] },
     ],
     recurring: [
-      charge("s-northgate", "Northgate Mortgage", "expense", 118_000n, 4, "loan-interest"),
-      charge("s-northgate-escrow", "Northgate Mortgage · escrow", "expense", 28_000n, 4, "taxes"),
+      charge("s-northgate", "Northgate Mortgage", "expense", 188_000n, 4, "loan-interest", "month", "2026-11", true),
       charge("s-riverbend", "Riverbend Water", "expense", 21_000n, 18, "utilities", "quarter", "2026-12"),
       charge("c-ortiz", "M. Ortiz", "income", 185_000n, 1, "rent"),
       charge("c-kim", "S. Kim", "income", 230_000n, 3, "rent"),

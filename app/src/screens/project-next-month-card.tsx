@@ -19,7 +19,7 @@ export function NextMonthCard({ forecast, currency, href }: { forecast: NextMont
     <Link
       to={href}
       className="ui-pn-card ui-hit m-press"
-      aria-label={`צפי ${name}, ${net < 0n ? "הפסד" : "רווח"} ${formatAmountText(net, currency)}`}
+      aria-label={`צפי ${name}, ${net < 0n ? "הפסד" : "רווח"} ${formatAmountText(net < 0n ? -net : net, currency)}`}
     >
       <span className="ui-pn-card-text">
         <span className="ui-pn-card-top">

@@ -210,7 +210,6 @@
   --color-accent-dim: #7E66B8;   /* bar fill only, never text (interest part of the loan bar, FLOW-139); dark is #7E66B8 */
   --color-outline-secondary: #DAD3E6; /* secondary button border (board); dark aliases tint-strong */
   --color-outline-forecast: #CDBFEA; /* the dashed next-month card and its צפי tag (ProfitProject board); dark #4A3F66 */
-  --color-text-faint: #8F879F;       /* the next-month card's basis line (ProfitProject board); dark #6A627A */
   --color-control-off: #8F86A3;
   --color-control-border: #8F86A3;
   --color-switch-off: #DAD3E6;  /* switch track, off (board: Settings switch off; FLOW-512) */
@@ -337,7 +336,6 @@
     --color-pill-hurts: #C3302B;
     --color-outline-secondary: var(--color-tint-strong);
     --color-outline-forecast: #4A3F66;
-    --color-text-faint: #6A627A;
     --shadow-pill: 0 6px 18px rgba(0, 0, 0, 0.4);
     --shadow-toast: 0 8px 24px rgba(0, 0, 0, 0.4); /* toast, Lines board (FLOW-363 3c) */
   }
@@ -410,7 +408,6 @@
   --color-pill-hurts: #C3302B;
   --color-outline-secondary: var(--color-tint-strong);
   --color-outline-forecast: #4A3F66;
-  --color-text-faint: #6A627A;
   --shadow-pill: 0 6px 18px rgba(0, 0, 0, 0.4);
   --shadow-toast: 0 8px 24px rgba(0, 0, 0, 0.4); /* toast, Lines board (FLOW-363 3c) */
 }

@@ -242,7 +242,7 @@
 
 .ui-pn-card-basis {
   font-size: var(--type-caption-size);
-  color: var(--color-text-faint);
+  color: var(--color-text-muted);
 }
 
 .ui-pn-card-chevron {
