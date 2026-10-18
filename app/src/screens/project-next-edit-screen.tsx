@@ -116,7 +116,7 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
 
   const forecast = next.forecast;
   const month = next.month;
-  const categories = sample?.next.categories ?? companyCategories.data ?? [];
+  const categories = useMemo(() => sample?.next.categories ?? companyCategories.data ?? [], [sample?.next.categories, companyCategories.data]);
   const row = add || forecast == null ? null : forecast.rows.find((item) => item.key === rowKey) ?? forecast.removed.find((item) => item.key === rowKey) ?? null;
   const choices = useMemo(() => categoryChoices({
     categories,

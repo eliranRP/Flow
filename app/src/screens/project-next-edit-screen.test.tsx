@@ -6,7 +6,7 @@ import { JUNIPER_PROFIT } from "../dev/project-profit-sample";
 import { renderWithProviders } from "../test-render";
 import { ProjectNextEditScreen, type ProjectNextEditSample } from "./project-next-edit-screen";
 
-const rpc = vi.hoisted(() => vi.fn((_name: string, _args?: unknown) => Promise.resolve({ data: null as unknown, error: null })));
+const rpc = vi.hoisted(() => vi.fn((_name: string, _args?: unknown) => Promise.resolve<{ data: unknown; error: null }>({ data: null, error: null })));
 vi.mock("../lib/supabase", () => ({ getSupabase: () => ({ rpc }) }));
 
 afterEach(() => {

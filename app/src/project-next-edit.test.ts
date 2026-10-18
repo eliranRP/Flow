@@ -120,7 +120,9 @@ describe("categoryChoices", () => {
   });
 
   it("hints a category used once and one used often by their months", () => {
-    const months = { ...JUNIPER_NEXT.categoryMonths!, categories: JUNIPER_NEXT.categoryMonths!.categories.filter((row) => row.id !== "taxes") };
+    const base = JUNIPER_NEXT.categoryMonths;
+    if (base == null) throw new Error("the fixture has its category months");
+    const months = { ...base, categories: base.categories.filter((row) => row.id !== "taxes") };
     const result = categoryChoices({
       categories: JUNIPER_NEXT.categories ?? [],
       categoryMonths: months,

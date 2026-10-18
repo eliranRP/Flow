@@ -8,7 +8,7 @@ import { renderWithProviders } from "../test-render";
 import { ProjectNextMonthScreen } from "./project-next-month-screen";
 import { ProjectProfitScreen, type ProjectProfitSample } from "./project-profit-screen";
 
-const rpc = vi.hoisted(() => vi.fn((_name: string, _args?: unknown) => Promise.resolve({ data: null as unknown, error: null })));
+const rpc = vi.hoisted(() => vi.fn((_name: string, _args?: unknown) => Promise.resolve<{ data: unknown; error: null }>({ data: null, error: null })));
 vi.mock("../lib/supabase", () => ({ getSupabase: () => ({ rpc }) }));
 
 // Lets one test stand for a project whose forecast has nothing to read; the others read the sample.
@@ -149,7 +149,7 @@ describe("ProjectNextMonthScreen", () => {
     expect(screen.getByText("Juniper Ct · עוד לא התחיל · 6 צפויות")).toBeTruthy();
     expect(container.querySelector(".ui-pp-figure")?.textContent).toBe("+$1,185");
     const rows = Array.from(container.querySelectorAll(".ui-pn-rows .ui-row"));
-    const repairs = rows.find((row) => row.textContent?.includes("תיקונים ותחזוקה"));
+    const repairs = rows.find((row) => row.textContent.includes("תיקונים ותחזוקה"));
     expect(repairs?.textContent).toContain("−$1,200");
     expect(repairs?.querySelector(".ui-pn-edited")?.textContent).toBe("שינית · היה $310");
     const added = rows.at(-1);
