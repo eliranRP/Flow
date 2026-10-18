@@ -16,8 +16,9 @@
   margin-top: calc(var(--space-1) / 2);
 }
 
+/* The board's labels and legend sit on a plain 13px line, not the hint's 1.4. */
 .ui-pinv-equity-col > .ui-pinv-hint:first-child,
-.ui-pinv-legend {
+.ui-pinv-hint.ui-pinv-legend {
   line-height: var(--type-title-line);
 }
 
@@ -140,7 +141,8 @@
 .ui-pinv-card-title {
   margin: var(--space-4) calc(var(--space-4) + var(--space-1) / 2) var(--space-1);
   font-size: var(--type-section-size);
-  line-height: var(--type-section-line);
+  /* The board's 20px titles sit on a plain line. */
+  line-height: var(--type-title-line);
   font-weight: var(--type-section-weight);
 }
 
@@ -224,6 +226,12 @@
 .ui-pinv-loan + .ui-pinv-loan,
 .ui-pinv-other-head + .ui-pinv-loan {
   border-block-start: 1px solid var(--color-line);
+}
+
+/* The board sets the loan's figures in Rubik's own digits, so its next payment fits the first line. */
+.ui-pinv-loan,
+.ui-pinv-loan .ui-num {
+  font-variant-numeric: normal;
 }
 
 .ui-pinv-loan-closed {
