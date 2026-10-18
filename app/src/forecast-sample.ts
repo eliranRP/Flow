@@ -1,4 +1,5 @@
 import { buildMonthForecast, expectedMonthsSchema, type ForecastOverrideRow, type MissingBill, type RecurringChange, unpaidRowSchema } from "@flow/shared";
+import type { ForecastSoFar } from "./screens/forecast-categories";
 import type { ForecastSample as MonthForecastSampleShape } from "./screens/forecast-screen";
 
 /**
@@ -199,9 +200,10 @@ export function monthForecastSample(kind: ForecastSampleKind): MonthForecastSamp
 
 /**
  * `board` is the MonthForecast frame; `changed` moves its largest invoice to next month (the
- * MonthForecastChanged frame); `empty` has nothing left to arrive (StatesForecastEmpty).
+ * MonthForecastChanged frame); `empty` has nothing left to arrive (StatesForecastEmpty); `category` opens
+ * לפי קטגוריה with the rent category open (MonthForecastCategory).
  */
-export type BoardForecastVariant = "board" | "changed" | "empty";
+export type BoardForecastVariant = "board" | "changed" | "empty" | "category";
 
 /**
  * FLOW-141: the dev fixture that matches the board frames: an invented USD company with the same
@@ -235,18 +237,20 @@ export function monthForecastBoardSample(variant: BoardForecastVariant = "board"
         name,
         currency: "USD",
         typical_amount_minor: -minor,
-        typical_day: 15 + index,
+        // The first one is 8 days late, as the board's.
+        typical_day: index === 0 ? 3 : 15 + index,
         months_seen: 6,
         seen_this_month: false,
+        category_id: "cat-bills",
       })),
-      { direction: "income" as const, party_id: "elm", name: "Elm St, unit 2", currency: "USD", typical_amount_minor: 165000, typical_day: 1, months_seen: 6, seen_this_month: false },
+      { direction: "income" as const, party_id: "elm", name: "Elm St, unit 2", currency: "USD", typical_amount_minor: 165000, typical_day: 1, months_seen: 6, seen_this_month: false, category_id: "cat-rent" },
     ],
   };
   const unpaid = empty ? [] : [
-    { id: "inv-1043", description: "Invoice #1043", doc_date: "2026-08-08", project_name: null, customer_name: "Northgate Co", open_gross_agorot: 1250000, open_net_agorot: 1250000, currency: "USD", direction: "income" as const },
-    { id: "inv-1047", description: "Invoice #1047", doc_date: "2026-09-22", project_name: null, customer_name: "Lakeside HOA", open_gross_agorot: 560000, open_net_agorot: 560000, currency: "USD", direction: "income" as const },
-    { id: "bill-118", description: "Bill VD-118", doc_date: "2026-09-15", project_name: null, customer_name: "Varga Drywall", open_gross_agorot: 420000, open_net_agorot: 420000, currency: "USD", direction: "expense" as const },
-    { id: "bill-hd", description: "Bill HD-22", doc_date: "2026-09-25", project_name: null, customer_name: "Harbor Supply Pro", open_gross_agorot: 313800, open_net_agorot: 313800, currency: "USD", direction: "expense" as const },
+    { id: "inv-1043", description: "Invoice #1043", doc_date: "2026-08-08", project_name: null, customer_name: "Northgate Co", open_gross_agorot: 1250000, open_net_agorot: 1250000, currency: "USD", direction: "income" as const, category_id: "cat-clients" },
+    { id: "inv-1047", description: "Invoice #1047", doc_date: "2026-09-22", project_name: null, customer_name: "Lakeside HOA", open_gross_agorot: 560000, open_net_agorot: 560000, currency: "USD", direction: "income" as const, category_id: "cat-clients" },
+    { id: "bill-118", description: "Bill VD-118", doc_date: "2026-09-15", project_name: null, customer_name: "Varga Drywall", open_gross_agorot: 420000, open_net_agorot: 420000, currency: "USD", direction: "expense" as const, category_id: "cat-subs" },
+    { id: "bill-hd", description: "Bill HD-22", doc_date: "2026-09-25", project_name: null, customer_name: "Harbor Supply Pro", open_gross_agorot: 313800, open_net_agorot: 313800, currency: "USD", direction: "expense" as const, category_id: "cat-materials" },
   ];
   const overrides: ForecastOverrideRow[] = variant === "changed"
     ? [{ item_key: "invoice:inv-1043", amount_minor: null, due_on: null, moved_out: true }]
@@ -259,5 +263,27 @@ export function monthForecastBoardSample(variant: BoardForecastVariant = "board"
     paymentTermsDays: 30,
   });
   // The changed frame's reset line reads these, so the undo has the prior state to send back.
-  return { today, net: -1719100n, data: { month: "2026-10", base: "USD", build, overrides } };
+  // What each category already had in October, as the board's (it adds up to today's cash).
+  const soFar: ForecastSoFar = {
+    expense: [
+      { key: "cat-materials", name: "חומרים", minor: 1_524_000n },
+      { key: "cat-subs", name: "קבלני משנה", minor: 1_186_000n },
+      { key: "cat-loans", name: "תשלומי הלוואות", minor: 1_018_200n },
+      { key: "cat-bills", name: "חשבונות קבועים", minor: 298_700n },
+      { key: "none", name: null, minor: 180_000n },
+    ],
+    income: [
+      { key: "cat-clients", name: "הכנסה מלקוחות", minor: 2_092_800n },
+      { key: "cat-rent", name: "שכירות", minor: 395_000n },
+    ],
+  };
+  const category = variant === "category";
+  return {
+    today,
+    net: -1719100n,
+    data: { month: "2026-10", base: "USD", build, overrides },
+    soFar,
+    view: category ? "categories" : "items",
+    openCategories: category ? ["income:cat-rent"] : [],
+  };
 }

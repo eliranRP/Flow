@@ -244,31 +244,24 @@
   line-height: calc(var(--type-meta-size) * 1.2);
 }
 
-.ui-recurring-match-actions {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.ui-recurring-match-yes,
-.ui-recurring-match-no {
-  display: inline-flex;
-  min-block-size: calc(var(--touch-min) - var(--space-2));
-  align-items: center;
-  padding-inline: var(--space-inset-row);
-  border-radius: var(--radius-chip);
-  font: inherit;
-  font-size: var(--type-line2-size);
-  font-weight: var(--type-btn-2-weight);
-}
-
-.ui-recurring-match-yes {
-  border: 0;
-  background: var(--color-tint-strong);
+/* The charge page's "עדיין קבוע?" box: the match box's tint, a 17px question, a 14px line and a grey hint. */
+.ui-recurring-askbox-title {
+  margin: 0;
+  font-size: var(--type-body-size);
+  line-height: var(--type-title-line);
   color: var(--color-text);
 }
 
-.ui-recurring-match-no {
-  border: 1px solid var(--sheet-grab);
-  background: transparent;
+.ui-recurring-askbox-text {
+  margin: 0;
+  font-size: var(--type-meta-size);
+  line-height: var(--type-note-line);
   color: var(--color-text-secondary);
+}
+
+.ui-recurring-askbox-hint {
+  margin: 0;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-title-line);
+  color: var(--color-text-muted);
 }

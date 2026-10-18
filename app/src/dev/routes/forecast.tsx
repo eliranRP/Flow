@@ -6,10 +6,10 @@ import type { DevRoute } from "./types";
 /** FLOW-141: the forecast on invented fixture data; `?kind=positive|negative|moved` picks the state. */
 export function DevForecast() {
   const [params] = useSearchParams();
-  // `board` is the USD company that matches the MonthForecast board frame; `state=changed|empty` the others.
+  // `board` is the USD company that matches the MonthForecast board frame; `state=changed|empty|category` the others.
   if (params.get("kind") === "board") {
     const state = params.get("state");
-    const variant = state === "changed" || state === "empty" ? state : "board";
+    const variant = state === "changed" || state === "empty" || state === "category" ? state : "board";
     return <ForecastScreen sample={monthForecastBoardSample(variant)} openFirst={params.get("sheet") === "1"} />;
   }
   const kind = (["positive", "negative", "moved"] as const).find((k) => k === params.get("kind")) ?? "positive";

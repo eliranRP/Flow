@@ -28,28 +28,54 @@
   font-weight: var(--type-section-weight);
 }
 
-.ui-recurring-outflow {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+/* The month card: income and expenses side by side, each a 28px total, a 6px bar and two grey lines. */
+.ui-recurring-sums {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: calc(var(--space-4) + var(--space-1) / 2);
   margin-top: var(--space-4);
   padding: calc(var(--space-4) + var(--space-1) / 2);
   border-radius: var(--radius-card);
 }
 
-.ui-recurring-outflow > .t-line2:first-child {
+.ui-recurring-sum {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.ui-recurring-sum-label {
+  margin: 0;
+  font-size: var(--type-line2-size);
+  line-height: var(--type-title-line);
   color: var(--color-text-secondary);
 }
 
-.ui-recurring-outflow > .t-detail {
-  margin: 0;
-  font-size: var(--type-total-size);
-  font-weight: var(--type-total-weight);
+.ui-recurring-sum-total {
+  font-size: var(--type-card-size);
+  font-weight: var(--type-card-weight);
   line-height: var(--type-total-line);
+  text-align: start;
+  color: var(--color-text);
+}
+
+.ui-recurring-sum-total.ui-recurring-income {
+  color: var(--color-income);
+}
+
+.ui-recurring-sum-note {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-title-line);
+  color: var(--color-text-muted);
 }
 
 .ui-recurring-bar {
-  height: var(--space-2);
+  height: var(--bar-thin);
   border-radius: var(--radius-chip);
   background: var(--color-track-strong);
   overflow: hidden;
@@ -58,7 +84,122 @@
 .ui-recurring-bar > span {
   display: block;
   height: 100%;
+  border-radius: var(--radius-chip);
   background: var(--color-accent);
+}
+
+/* The late bills: a tinted box (14px in, 22px above) headed by a clock and the line that asks for a decision. */
+.ui-recurring-late {
+  margin-top: calc(var(--space-5) + var(--space-1) / 2);
+  padding: 0 var(--space-inset-row) calc(var(--space-1) * 1.5);
+  border-radius: var(--radius-card);
+  background: var(--color-tint);
+}
+
+.ui-recurring-late-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-inset-row) 0 calc(var(--space-1) * 1.5);
+}
+
+.ui-recurring-late-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  inline-size: var(--avatar);
+  block-size: var(--avatar);
+  border-radius: var(--radius-chip);
+  background: var(--color-tint-strong);
+  color: var(--color-signal-soft);
+}
+
+.ui-recurring-late-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-half);
+}
+
+.ui-recurring-late-title {
+  margin: 0;
+  font-size: var(--type-section-size);
+  font-weight: var(--type-section-weight);
+  line-height: var(--type-title-line);
+}
+
+.ui-recurring-late-lead {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-title-line);
+  color: var(--color-text-secondary);
+}
+
+.ui-recurring .ui-recurring-late .ui-swipe-row-body {
+  background: var(--color-tint);
+}
+
+/* A side's head: "הכנסות קבועות" or "הוצאות קבועות" in a raised strip, 28px above, with what it expects. */
+.ui-recurring-side {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--space-2) + var(--space-half));
+  margin-top: calc(var(--space-6) + var(--space-1));
+  padding: var(--space-3) var(--space-inset-row);
+  border-radius: var(--radius-card-tight);
+  background: var(--color-surface);
+}
+
+.ui-recurring-side-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-section-weight);
+  color: var(--color-text);
+}
+
+.ui-recurring-side-dot {
+  inline-size: calc(var(--space-1) * 1.5);
+  block-size: calc(var(--space-1) * 1.5);
+  border-radius: var(--radius-chip);
+  background: var(--color-text-muted);
+}
+
+.ui-recurring-side-income .ui-recurring-side-dot {
+  background: var(--color-income);
+}
+
+.ui-recurring-side-note {
+  font-size: var(--type-caption-size);
+  color: var(--color-text-muted);
+}
+
+.ui-recurring-side-note > bdi {
+  font-size: var(--type-line2-size);
+  color: var(--color-text);
+}
+
+.ui-recurring-side-income .ui-recurring-side-note > bdi {
+  color: var(--color-income);
+}
+
+/* A late charge's question under its row: 50px in from the start, the card tone, two answers. */
+.ui-recurring-ask {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-2) + var(--space-half));
+  margin: 0 0 calc(var(--space-2) + var(--space-half));
+  margin-inline-start: calc(var(--avatar) + var(--space-inset-row));
+  padding: var(--space-3) var(--space-inset-row);
+  border-radius: var(--radius-toast);
+  background: var(--color-surface);
+}
+
+.ui-recurring-ask-text {
+  margin: 0;
+  font-size: var(--type-line2-size);
+  line-height: var(--type-title-line);
 }
 
 /* A section head: 22px above, 6px under, the title 20/500 and the note on its baseline. */

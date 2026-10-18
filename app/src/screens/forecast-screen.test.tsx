@@ -11,6 +11,59 @@ vi.mock("../lib/supabase", () => ({
 }));
 
 describe("ForecastScreen", () => {
+  it("switches to לפי קטגוריה: each side's categories, their sums, and an open category's items", () => {
+    renderWithProviders(<ForecastScreen sample={monthForecastBoardSample("board")} />, { route: "/forecast" });
+    expect(screen.getByRole("radio", { name: "לפי פריט" })).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(screen.getByRole("radio", { name: "לפי קטגוריה" }));
+    expect(screen.getByRole("radio", { name: "לפי קטגוריה" })).toHaveAttribute("aria-checked", "true");
+    const out = screen.getByRole("region", { name: "יוצא" });
+    expect(within(out).getByText("$50,369")).toBeTruthy();
+    expect(within(out).getByText("Streaming באיחור · עוד $962")).toBeTruthy();
+    const into = screen.getByRole("region", { name: "נכנס" });
+    expect(within(into).getByText("+$44,628")).toBeTruthy();
+    const rent = within(into).getByRole("button", { name: /^שכירות/ });
+    expect(rent).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(rent);
+    expect(rent).toHaveAttribute("aria-expanded", "true");
+    expect(within(into).getByRole("button", { name: "Elm St, unit 2, +$1,650" })).toBeTruthy();
+    expect(within(into).getByRole("link", { name: "עדיין קבוע? לאישור ←" })).toHaveAttribute("href", "/recurring/income/elm");
+    // A category with nothing still to come is a plain row: not a button, and nothing to expand.
+    expect(within(out).queryByRole("button", { name: /^אחר/ })).toBeNull();
+    const other = within(out).getByText("אחר").closest(".ui-forecast-cat-row");
+    expect(other?.tagName).toBe("DIV");
+    expect(other).not.toHaveAttribute("aria-expanded");
+  });
+
+  it("moves between the views with the arrow keys, focus following the checked chip (roving tabindex)", () => {
+    renderWithProviders(<div dir="rtl"><ForecastScreen sample={monthForecastBoardSample("board")} /></div>, { route: "/forecast" });
+    const items = screen.getByRole("radio", { name: "לפי פריט" });
+    const categories = screen.getByRole("radio", { name: "לפי קטגוריה" });
+    expect(items).toHaveAttribute("tabindex", "0");
+    expect(categories).toHaveAttribute("tabindex", "-1");
+    // Under dir=rtl the next chip is to the left (with two chips, either arrow reaches the other one).
+    fireEvent.keyDown(items, { key: "ArrowLeft" });
+    expect(categories).toHaveAttribute("aria-checked", "true");
+    expect(categories).toHaveAttribute("tabindex", "0");
+    expect(document.activeElement).toBe(categories);
+    expect(screen.getByRole("region", { name: "יוצא" })).toBeTruthy();
+    fireEvent.keyDown(categories, { key: "ArrowRight" });
+    expect(items).toHaveAttribute("aria-checked", "true");
+    expect(document.activeElement).toBe(items);
+  });
+
+  it("keeps the page's query on the ask's link", () => {
+    renderWithProviders(<ForecastScreen sample={monthForecastBoardSample("board")} />, { route: "/forecast?from=home" });
+    fireEvent.click(screen.getByRole("radio", { name: "לפי קטגוריה" }));
+    fireEvent.click(within(screen.getByRole("region", { name: "נכנס" })).getByRole("button", { name: /^שכירות/ }));
+    expect(screen.getByRole("link", { name: "עדיין קבוע? לאישור ←" })).toHaveAttribute("href", "/recurring/income/elm?from=home");
+  });
+
+  it("draws a sample with no month by category with nothing so far, not a skeleton", () => {
+    renderWithProviders(<ForecastScreen sample={{ ...monthForecastBoardSample("board"), soFar: undefined }} />, { route: "/forecast" });
+    fireEvent.click(screen.getByRole("radio", { name: "לפי קטגוריה" }));
+    expect(screen.getByRole("region", { name: "יוצא" })).toBeTruthy();
+  });
+
   it("live, counts a dollar company's items in dollars (the company currency, not shekels)", async () => {
     const reads: Record<string, unknown> = {
       mcp_company_loan_currency: "USD",

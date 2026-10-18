@@ -1,7 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import { RecurringChargeScreen } from "../../screens/recurring-charge-screen";
 import { RecurringScreen } from "../../screens/recurring-screen";
-import { RECURRING_CHARGES_FIXTURE_POWER, RECURRING_CHARGES_FIXTURE_WATER, RECURRING_FIXTURE, RECURRING_MISSING_FIXTURE } from "../../recurring-sample";
+import { RECURRING_CHARGES_FIXTURE_POWER, RECURRING_CHARGES_FIXTURE_RENT, RECURRING_CHARGES_FIXTURE_WATER, RECURRING_FIXTURE, RECURRING_MISSING_FIXTURE } from "../../recurring-sample";
 import type { DevRoute } from "./types";
 
 /** The board fixture date: 11/10/2026 (the late days count from it). */
@@ -21,8 +21,8 @@ export function DevRecurring() {
 
 /**
  * FLOW-447c: the charge page on the board's two parties. `item` is the water bill (arrived, 38% over),
- * `late` the power bill with its suggested match, `pace` the water bill with its pace sheet open, and
- * `ignored` the power bill with its late alert ignored.
+ * `late` the power bill with its suggested match, `pace` the water bill with its pace sheet open,
+ * `ignored` the power bill with its late alert ignored, and `ask` the late rent with no match (עדיין קבוע?).
  */
 export function DevRecurringCharge() {
   const [params] = useSearchParams();
@@ -30,6 +30,7 @@ export function DevRecurringCharge() {
   const power = RECURRING_CHARGES_FIXTURE_POWER;
   const water = RECURRING_CHARGES_FIXTURE_WATER;
   if (preset === "late") return <RecurringChargeScreen now={CHARGE_NOW} sample={power} />;
+  if (preset === "ask") return <RecurringChargeScreen now={CHARGE_NOW} sample={RECURRING_CHARGES_FIXTURE_RENT} />;
   if (preset === "ignored") return <RecurringChargeScreen now={CHARGE_NOW} sample={{ ...power, bills: RECURRING_MISSING_FIXTURE.filter((bill) => bill.party_id !== "power") }} />;
   if (preset === "pace") return <RecurringChargeScreen now={CHARGE_NOW} sample={water} openSheet="pace" />;
   return <RecurringChargeScreen now={CHARGE_NOW} sample={water} />;

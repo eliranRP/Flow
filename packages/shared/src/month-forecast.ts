@@ -45,6 +45,8 @@ export type ForecastItem = {
   expected_on: string | null;
   /** Whole days past `expected_on` (0 when it is not late yet). */
   late_days: number;
+  /** The category it files to (the recurring charge's usual one, the invoice's own), or null. */
+  category_id: string | null;
 };
 
 export type ForecastBuild = {
@@ -137,6 +139,7 @@ export function buildMonthForecast(input: {
       usual: abs(party.typical_amount_minor),
       day: party.typical_day > 0 ? party.typical_day : null,
       description: null,
+      category_id: party.category_id ?? null,
       expected_on: today != null && party.typical_day > 0 ? `${today.slice(0, 7)}-${String(Math.min(party.typical_day, monthLength(today))).padStart(2, "0")}` : null,
     });
   }
@@ -155,6 +158,7 @@ export function buildMonthForecast(input: {
       usual,
       day: null,
       description: row.description,
+      category_id: row.category_id ?? null,
       expected_on: terms != null ? addDays(row.doc_date, terms) : null,
     });
   }
