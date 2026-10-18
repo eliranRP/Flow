@@ -124,14 +124,16 @@ html:not(:has(.ui-tabbar)) .ui-txn-step {
 .ui-txn-top {
   position: sticky;
   inset-block-start: 0;
-  /* Clear of the status bar once it sticks, as the compact header does (27-compact-header.css). */
+  /* Clear of the status bar once it sticks, as the compact header does (27-compact-header.css). The bar's
+     56px row sits under the status bar, so the inset adds to its height: inside it, an iPhone's 47px inset
+     squeezed the row to 9px and Back's label ran into the title. */
   padding-block-start: var(--safe-top);
   z-index: 2;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-2);
-  block-size: var(--compact-bar-detail);
+  block-size: calc(var(--compact-bar-detail) + var(--safe-top));
   padding-inline: var(--space-4);
   border-block-end: 1px solid transparent;
   background: var(--color-bg);

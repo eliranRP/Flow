@@ -1,0 +1,1 @@
+The detail pages' top bar (a recurring charge, a line, a loan) no longer squeezes Back into the line under it on an iPhone: the status-bar inset now adds to the bar's height instead of eating into it.
