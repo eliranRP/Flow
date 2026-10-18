@@ -1,4 +1,4 @@
-import { formatAmountText, type CashMonths, type ProjectCashRow, type ProjectDetail } from "@flow/shared";
+import { type CashMonths, type ProjectCashRow, type ProjectDetail } from "@flow/shared";
 import { useCompanyCurrency } from "../company-currency";
 import { projectExpenseMinor, projectRows } from "../by-currency";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -22,7 +22,6 @@ import { IconButton } from "../ui/icon-button";
 import { DocumentIcon, MoreIcon } from "../ui/icons";
 import { BandHero, SectionHead } from "../ui/layout";
 import { TextLink } from "../ui/text-link";
-import { List, ListRow } from "../ui/list-row";
 import { FocusTitle } from "../ui/focus-title";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
@@ -33,14 +32,13 @@ import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { israelToday } from "../ui/date-math";
 import { ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
 import { useProjectGroups, type ProjectGroups } from "./project-group-sheets";
-import { ProjectInvestmentSection, type ProjectInvestment } from "./project-investment";
 import { investmentLoansRow, ProjectCashOverview } from "./project-cash-screens";
 import { ProjectFormSheet } from "./project-form-sheet";
 import { ProjectMenu } from "./project-menu";
 import { projectAttentionRows, useProjectRecurring, type ProjectRecurringSample } from "./project-attention";
-import { toProjectInvestment } from "./project-investment-data";
+import { toProjectInvestment, type ProjectInvestment } from "./project-investment-data";
 
-function ProjectLoading({ search, example, pill = true }: { search: string; example?: ReactNode; pill?: boolean }) {
+function ProjectLoading({ search, example }: { search: string; example?: ReactNode }) {
   const holdWrites = useHoldWrites();
   const [menu, setMenu] = useState(false);
   return (
@@ -64,13 +62,6 @@ function ProjectLoading({ search, example, pill = true }: { search: string; exam
               <Skeleton tone="band" className="ui-skel-project-title-bar" />
             </span>
             <Skeleton tone="band" className="ui-skel-project-label" />
-            {/* FLOW-359 (A): the period pill sits between the label and the figure, as on Home.
-                FLOW-419: only the profit page has it; the project page opens on its cash. */}
-            {pill ? (
-              <span className="ui-skel-project-period">
-                <Skeleton tone="band" className="ui-skel-project-period-bar" />
-              </span>
-            ) : null}
             {/* The loaded band ends at the figure, so the skeleton does too (FLOW-115: no shrink on load). */}
             <Skeleton tone="band" className="ui-skel-project-num" />
           </div>
@@ -103,7 +94,6 @@ export function ProjectDetailScreen({
   sample,
   example,
   sampleInvestment,
-  section = "overview",
   sectionTo,
   sampleGroups,
   sampleCash,
@@ -123,8 +113,6 @@ export function ProjectDetailScreen({
   /** FLOW-404. The השקעה data of a sample project; without it a sample project shows no investment. */
   sampleInvestment?: ProjectInvestment;
   example?: ReactNode;
-  /** FLOW-340 C. Which screen of the project this route draws. */
-  section?: ProjectSection;
   /** Dev fixtures send the overview's rows (and the sections' Back) here. Production builds the project routes. */
   sectionTo?: (section: ProjectSection) => string;
   /** FLOW-360. A sample project's groups and its own, for the ⋯ menu's קבוצה row (stories). */
@@ -136,12 +124,12 @@ export function ProjectDetailScreen({
   const [period] = useProjectPeriod();
   const detail = useProjectQuery(sample ? "" : projectId, period);
   // FLOW-419: the project page opens on its cash, read beside the project (its name, investment and loans).
-  const cash = useProjectCashMonthsQuery(sample ? "" : projectId, section === "overview");
+  const cash = useProjectCashMonthsQuery(sample ? "" : projectId);
   // Home's late bills and changed charges; the page shows the project's own. FLOW-912: read once the
   // project's own read has landed, like its groups, so two more reads stay out of the page's paint.
   const recurring = useProjectRecurring(
     projectId,
-    sample == null && section === "overview" && detail.data != null && !detail.isFetching,
+    sample == null && detail.data != null && !detail.isFetching,
     sampleRecurring,
   );
   // FLOW-360: the project's group and the company's groups, for the ⋯ menu's קבוצה row.
@@ -149,7 +137,7 @@ export function ProjectDetailScreen({
   const liveGroups = useProjectGroups(projectId, sample == null && detail.data != null && !detail.isFetching);
   const groups = sampleGroups ?? liveGroups;
   // The profit since the project began: a read over every period, once the page's own read has landed.
-  const lifetime = useProjectQuery(sample == null && section === "overview" && detail.data != null && !detail.isFetching ? projectId : "", ALL_PERIOD);
+  const lifetime = useProjectQuery(sample == null && detail.data != null && !detail.isFetching ? projectId : "", ALL_PERIOD);
   // The project's row on the Projects list (the same cached read the ⋯ menu uses): the month it began.
   const monthRows = useProjectsCashMonth(undefined, sample ? "" : projectId);
   const monthRow = sampleMenuRow ?? monthRows.data?.projects.find((row) => row.id === projectId);
@@ -159,7 +147,7 @@ export function ProjectDetailScreen({
   // FLOW-804: a page showing a read (its last one, or the one saved on the phone) keeps it when a
   // refresh fails; the server is slow or away, and the figures it has are still the project's.
   const detailPhase = sample || (preview === "off" && detail.data != null) ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
-  const cashRead = sample || section !== "overview" || (preview === "off" && cash.data != null)
+  const cashRead = sample || (preview === "off" && cash.data != null)
     ? ({ kind: "ready" } as const)
     : screenPhase(preview, cash);
   // FLOW-419: the page paints the project's name from its own read while the cash read is still out.
@@ -182,7 +170,7 @@ export function ProjectDetailScreen({
   });
   const holdWrites = useHoldWrites();
   if (phase.kind === "loading") {
-    return <ProjectLoading search={search} example={example} pill={section !== "overview"} />;
+    return <ProjectLoading search={search} example={example} />;
   }
   if (phase.kind === "error") {
     return (
@@ -192,7 +180,7 @@ export function ProjectDetailScreen({
         phase={phase}
         onRetry={() => {
           void detail.refetch();
-          if (section === "overview") void cash.refetch();
+          void cash.refetch();
         }}
       />
     );
@@ -205,21 +193,6 @@ export function ProjectDetailScreen({
   const periodQuery = withPeriodSearch(search, period);
   const sectionHref = (target: ProjectSection) => sectionTo?.(target)
     ?? (target === "overview" ? `/projects/${project.id}${periodQuery}` : `/projects/${project.id}/${target}${periodQuery}`);
-  if (section === "investment") {
-    return (
-      <div className="flex min-h-full flex-1 flex-col">
-        {/* FLOW-419: investment and loans share one page, one row from the project's cash. */}
-        <ScreenHeader title="השקעה והלוואות" kicker={project.name} backTo={sectionHref("overview")} />
-        <ProjectInvestmentSection project={project} sample={sampleInvestment} />
-        {(project.loans ?? []).length === 0 ? null : (
-          <>
-            <SectionHead title="הלוואות" />
-            <ProjectLoansList project={project} search={search} />
-          </>
-        )}
-      </div>
-    );
-  }
   const stateLine = projectStateLine(project);
   const investmentData = sampleInvestment ?? toProjectInvestment(project);
   const overhead = (
@@ -317,25 +290,6 @@ function sampleCashOf(project: NonNullable<ProjectDetail>, now = new Date()): No
   };
 }
 
-/** The project's loans, each opening its own page; a paid-off loan says so. */
-function ProjectLoansList({ project, search }: { project: NonNullable<ProjectDetail>; search: string }) {
-  return (
-    <List>
-      {(project.loans ?? []).map((loan) => (
-        <ListRow
-          key={loan.id}
-          variant="item"
-          title={loan.name}
-          hint={loan.balance_minor <= 0n ? "נפרעה" : undefined}
-          meta={<bdi className="ui-num ui-project-row-figure" dir="ltr">{formatAmountText(loan.balance_minor, loan.currency)}</bdi>}
-          href={`/loans/${loan.id}${search}`}
-          chevron
-        />
-      ))}
-    </List>
-  );
-}
-
 /** The line under the project's name: only a state other than active ("הסתיים"), else nothing. */
 export function projectStateLine(project: Pick<NonNullable<ProjectDetail>, "state_label" | "status">): string | null {
   const label = project.state_label ?? (project.status === "finished" ? "הסתיים" : null);
@@ -367,7 +321,6 @@ function LegacyEmptyProject() {
   );
 }
 
-/** FLOW-445: the budget card with its edit sheet, on the expenses section. */
 /** FLOW-445: the budget card when a budget is set; with none, a quiet "+ הוספת תקציב" at the end of the page. */
 function ProjectBudget({ project, spentAgorot, part = "both" }: { project: NonNullable<ProjectDetail>; spentAgorot: bigint; part?: "card" | "add" | "both" }) {
   const [editing, setEditing] = useState(false);

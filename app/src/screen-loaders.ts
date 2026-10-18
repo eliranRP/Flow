@@ -11,6 +11,7 @@ export const screenLoaders = {
   projects: () => import("./screens/projects-screen"),
   projectDetail: () => import("./screens/project-detail-screen"),
   filedToday: () => import("./screens/filed-today-screen"),
+  projectInvestment: () => import("./screens/project-investment-screen"),
   projectCategory: () => import("./screens/project-category-screen"),
   unpaid: () => import("./screens/unpaid-screen"),
   recurring: () => import("./screens/recurring-screen"),

@@ -3,10 +3,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { BackButton } from "../../ui/back";
 import { ProjectCategoryScreen, ProjectDetailScreen, ProjectsScreen } from "../../screens/flow-screens";
+import { ProjectInvestmentScreen } from "../../screens/project-investment-screen";
 import { useHomePreview } from "../../preview";
 import { cash as devCash, cashRow as devCashRow, investment as devInvestment, months as devMonths, project as devProject } from "../project-cash-sample";
 import { devProjectsCash } from "../projects-sample";
 import { kindOf, kindSample } from "../project-kinds-sample";
+import { birchLaneInvestment, birchLaneNegativeInvestment, birchLaneNoArvInvestment, birchLaneRehabCategories } from "../investment-sample";
 import { devDashboard } from "./home";
 import { AddForm } from "../../screens/add-sheet";
 import type { DevRoute } from "./types";
@@ -81,7 +83,6 @@ function OpenProjectMenu({ sheet }: { sheet: string | null }) {
 
 export function DevProjectDetail() {
   const [params] = useSearchParams();
-  const section = params.get("section");
   // The fixture company is in dollars: the preview's company-currency read answers USD.
   const queryClient = useQueryClient();
   const preview = useHomePreview();
@@ -103,15 +104,58 @@ export function DevProjectDetail() {
     <OpenProjectMenu sheet={params.get("sheet")} />
     <ProjectDetailScreen
       sampleMenuRow={menuRow}
-      // FLOW-340 C: `?section=` draws the screen a row opens, on the same sample .
-      section={section === "investment" ? section : "overview"}
-      sectionTo={(target) => (target === "overview" ? "/e2e/project-detail?preview=1" : `/e2e/project-detail?preview=1&section=${target}`)}
+      // The investment row opens the investment page fixture.
+      sectionTo={(target) => (target === "overview" ? "/e2e/project-detail?preview=1" : "/e2e/project-investment?preview=1")}
       // `?budget=1` draws the flip with its budget (the board's flip frame, invented names and figures).
       sample={kinded?.project ?? (deletable ? idleProject : { ...e2eProject, budget_agorot: params.get("budget") === "1" ? e2eProject.budget_agorot : null })}
       sampleCash={kinded?.cash ?? (deletable ? idleCash : devCash)}
       sampleInvestment={kinded?.investment ?? (deletable ? idleInvestment : devInvestment)}
     />
     {params.get("add") === "1" ? <AddForm /> : null}
+    </>
+  );
+}
+
+/** Proof: taps the row that opens a sheet once the page has drawn (the real trigger, not a state flag). */
+function OpenInvestmentSheet({ sheet, field }: { sheet: string | null; field: string | null }) {
+  useEffect(() => {
+    if (sheet !== "edit" && sheet !== "rehab") return;
+    const label = sheet === "rehab" ? "שיפוץ עד היום" : field === "purchase" ? "מחיר רכישה" : field === "value" ? "שווי היום" : "שווי אחרי שיפוץ (ARV)";
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      const target = [...document.querySelectorAll<HTMLButtonElement>("main button, #root button")].find((button) => button.textContent.startsWith(label));
+      if (target) {
+        target.click();
+        window.clearInterval(timer);
+      } else if (Date.now() - started > 4000) {
+        window.clearInterval(timer);
+      }
+    }, 100);
+    return () => { window.clearInterval(timer); };
+  }, [sheet, field]);
+  return null;
+}
+
+/**
+ * FLOW-446 (board Invest): `?arv=none` the missing ARV, `?negative=1` today's value under the loans,
+ * `?sheet=edit&field=arv|purchase|value` and `?sheet=rehab` open a sheet through its row.
+ */
+export function DevProjectInvestment() {
+  const [params] = useSearchParams();
+  const queryClient = useQueryClient();
+  const preview = useHomePreview();
+  useEffect(() => { queryClient.setQueryData(["company-currency", preview], "USD"); }, [queryClient, preview]);
+  const data = params.get("arv") === "none" ? birchLaneNoArvInvestment : params.get("negative") === "1" ? birchLaneNegativeInvestment : birchLaneInvestment;
+  return (
+    <>
+      <OpenInvestmentSheet sheet={params.get("sheet")} field={params.get("field")} />
+      <ProjectInvestmentScreen
+        sample={devProject}
+        sampleInvestment={data}
+        sampleCategories={birchLaneRehabCategories}
+        backTo="/e2e/project-detail?preview=1"
+        today="2026-10-17"
+      />
     </>
   );
 }
@@ -180,4 +224,5 @@ export const projectsRoutes: DevRoute[] = [
   { path: "projects", element: <DevProjects /> },
   { path: "project-detail", element: <DevProjectDetail /> },
   { path: "project-category", element: <DevProjectCategory /> },
+  { path: "project-investment", element: <DevProjectInvestment /> },
 ];

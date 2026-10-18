@@ -50,7 +50,12 @@ function sumRows(key: string, rows: readonly LoanScheduleRow[]): OutlookPeriod {
  * only and its balloon; a balance below the schedule ends the loan sooner, one above it leaves more
  * for the last payment.
  */
-export function loanOutlook(loan: LoanDetail, today: string): LoanOutlook | null {
+export type OutlookLoan = Pick<
+  LoanDetail,
+  "status" | "kind" | "termMonths" | "paymentMinor" | "balanceMinor" | "rates" | "principalMinor" | "annualRatePpm" | "startDate" | "escrowMinor" | "interestOnlyMonths" | "amortizationMonths"
+>;
+
+export function loanOutlook(loan: OutlookLoan, today: string): LoanOutlook | null {
   if (loan.status !== "open" || loan.kind === "demand" || loan.termMonths == null || loan.paymentMinor == null) return null;
   if (loan.balanceMinor <= 0n) return null;
   const rates = [...loan.rates].reverse().map((rate) => ({ effectiveDate: rate.effectiveDate, annualRatePpm: rate.annualRatePpm }));

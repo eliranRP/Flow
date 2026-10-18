@@ -79,6 +79,14 @@ describe("the project's ⋯ menu matches the board", () => {
     expect(within(edit).getByRole("link", { name: /^נתוני השקעה/ })).toHaveAttribute("href", expect.stringMatching(/^\/projects\/p1\/investment/));
   });
 
+  it("shows the השקעה והלוואות row for a project with a loan and no investment figure, opening the investment page", () => {
+    const withLoan = { ...project, loans: [{ id: "l1", name: "הלוואת גישור", currency: "ILS", balance_minor: 80_000_000n, status: "open" }] };
+    render(wrap(<ProjectDetailScreen sample={withLoan} sampleGroups={groups} sampleMenuRow={{ id: "p1", deletable: true } as never} />));
+    fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+    const menu = screen.getByRole("dialog", { name: "פרויקט לדוגמה" });
+    expect(within(menu).getByRole("link", { name: /^השקעה והלוואות/ })).toHaveAttribute("href", expect.stringMatching(/^\/projects\/p1\/investment/));
+  });
+
   it("has no add row, group row, overhead switch or ✕, and shows delete for a deletable project", () => {
     const menu = openMenu();
     expect(within(menu).queryByText("הוספה לפרויקט")).not.toBeInTheDocument();

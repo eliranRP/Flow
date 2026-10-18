@@ -202,10 +202,20 @@ export function LoansHost({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openNew, holdWrites, currency]);
 
+  // FLOW-446: a project's "+ הוספת הלוואה" asks for this sheet with the project set (history state, read before the param is dropped).
+  const askedProject = useRef<string | null>(null);
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get("new") !== "loan") return;
+    const asked = (location.state as { newLoanProject?: unknown } | null)?.newLoanProject;
+    if (typeof asked === "string") askedProject.current = asked;
+  }, [location.search, location.state]);
+
   // FLOW-331: + → הלוואה חדשה lands on /loans with ?new=loan.
   useOpenFromQuery("loan", !holdWrites && currency != null, (sameEntry) => {
     adoptNew.current = sameEntry;
     setLoanSheet(true);
+    if (askedProject.current != null) setDraftProject(askedProject.current);
+    askedProject.current = null;
   });
 
   function openPicker(next: "project" | "kind" = "project") {

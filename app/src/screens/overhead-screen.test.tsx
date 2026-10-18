@@ -55,14 +55,14 @@ const cashMonths = {
   }],
 };
 
-function renderProject(sample: NonNullable<ProjectDetail>, section: "overview" = "overview") {
+function renderProject(sample: NonNullable<ProjectDetail>) {
   const client = new QueryClient();
   return render(
     <QueryClientProvider client={client}>
       <ToastProvider>
         <MemoryRouter initialEntries={["/projects/a"]}>
           <Routes>
-            <Route path="/projects/:projectId" element={<ProjectDetailScreen section={section} sample={sample} />} />
+            <Route path="/projects/:projectId" element={<ProjectDetailScreen sample={sample} />} />
           </Routes>
         </MemoryRouter>
       </ToastProvider>
@@ -133,7 +133,7 @@ describe("project overhead hero", () => {
   });
 
   it("names the share in the edit sheet from the ⋯ menu", () => {
-    renderProject(overheadProject, "overview");
+    renderProject(overheadProject);
     // FLOW-340 C: the switch lives in the ⋯ menu.
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
     fireEvent.click(screen.getByRole("button", { name: /עריכת פרטים/ }));
@@ -224,7 +224,7 @@ describe("the project's finish row (FLOW-334)", () => {
       calls.push({ name, args });
       return Promise.resolve({ data: null, error: null });
     };
-    renderProject({ ...projectBase }, "overview");
+    renderProject({ ...projectBase });
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
     const row = await screen.findByRole("button", { name: /^סיום הפרויקט/ });
     expect(row).toHaveClass("ui-row");
@@ -244,7 +244,7 @@ describe("the project's finish row (FLOW-334)", () => {
   });
 
   it("returns focus to עוד when the confirm is cancelled", async () => {
-    renderProject({ ...projectBase }, "overview");
+    renderProject({ ...projectBase });
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
     fireEvent.click(await screen.findByRole("button", { name: /^סיום הפרויקט/ }));
     const confirm = await screen.findByRole("dialog", { name: /^לסיים את/ });
@@ -254,7 +254,7 @@ describe("the project's finish row (FLOW-334)", () => {
   });
 
   it("offers החזרה לפעיל on a finished project", async () => {
-    renderProject({ ...projectBase, status: "finished" }, "overview");
+    renderProject({ ...projectBase, status: "finished" });
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
     expect(await screen.findByRole("button", { name: /^החזרה לפעיל/ })).toBeInTheDocument();
   });

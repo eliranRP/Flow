@@ -169,31 +169,15 @@
   max-inline-size: 100%;
 }
 
-.ui-skel-project-title,
-.ui-skel-project-period {
+.ui-skel-project-title {
   display: flex;
   align-items: flex-start;
-}
-
-.ui-skel-project-title {
   block-size: calc(var(--type-title-2-size) * var(--type-title-2-line));
 }
 
 .ui-skel-project-title-bar {
   inline-size: var(--skel-md);
   block-size: calc(var(--type-title-2-size) * var(--type-title-2-line) - var(--space-1));
-}
-
-.ui-skel-project-period {
-  block-size: var(--size-period);
-  margin-bottom: var(--space-2);
-}
-
-/* FLOW-359 (A): the loading pill has the loaded pill's height and shape. */
-.ui-skel-project-period-bar {
-  inline-size: var(--skel-lg);
-  block-size: var(--size-period);
-  border-radius: var(--radius-chip);
 }
 
 .ui-skel-project-label {

@@ -384,15 +384,6 @@ export const ProjectFinishConfirm: Story = {
   },
 };
 
-export const ProjectInvestmentScreen: Story = {
-  name: "Project, investment and loans section",
-  render: () => (
-    <StoryRoute entry="/projects/p-a/investment" tabs>
-      <ProjectDetailScreen example={exampleOnBand} sample={overviewProject} sampleInvestment={filledInvestment} section="investment" sectionTo={sectionTo} />
-    </StoryRoute>
-  ),
-};
-
 /** The board's three other kinds of project page: a rental, a client job, and a project with nothing filed yet. */
 function kindStory(kind: Exclude<ProjectKind, "flip">): Story {
   const data = kindSample(kind, devProjectsCash.projects[0]);

@@ -11,6 +11,7 @@ const ProjectDetailScreen = lazy(() => screenLoaders.projectDetail().then((m) =>
 const ProjectCategoryScreen = lazy(() => screenLoaders.projectCategory().then((m) => ({ default: m.ProjectCategoryScreen })));
 const ProjectProfitScreen = lazy(() => screenLoaders.projectProfit().then((m) => ({ default: m.ProjectProfitScreen })));
 const ProjectMonthProfitScreen = lazy(() => screenLoaders.projectMonthProfit().then((m) => ({ default: m.ProjectMonthProfitScreen })));
+const ProjectInvestmentScreen = lazy(() => screenLoaders.projectInvestment().then((m) => ({ default: m.ProjectInvestmentScreen })));
 
 /**
  * A month's profit page (FLOW-140): the period comes from the month in the path. A link or an address that
@@ -39,7 +40,7 @@ export function ProjectRoutes() {
       {/* FLOW-419: the project opens on its cash; its profit page, a month and a month's lines are one tap in. */}
       <Route path="projects/:projectId/profit" element={<ProjectProfitScreen />} />
       <Route path="projects/:projectId/profit/:month" element={<ProjectMonthProfitRoute />} />
-      <Route path="projects/:projectId/investment" element={<ProjectDetailScreen section="investment" />} />
+      <Route path="projects/:projectId/investment" element={<ProjectInvestmentScreen />} />
       <Route path="projects/:projectId/categories/:categoryId" element={<ProjectCategoryScreen />} />
     </>
   );

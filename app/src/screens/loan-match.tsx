@@ -175,29 +175,6 @@ export function LoanMatchOffer({
   );
 }
 
-/** FLOW-119. The loans under a project, on the project screen. Static for everyone. */
-export function ProjectLoanList({
-  rows,
-}: {
-  rows: ReadonlyArray<{ id: string; name: string; currency: string; balance_minor: bigint }>;
-}) {
-  if (rows.length === 0) return null;
-  return (
-    <List className="ui-loan-list">
-      {rows.map((row) => (
-        <ListRow
-          key={row.id}
-          variant="static"
-          title={row.name}
-          icon={<BankIcon />}
-          hint={row.balance_minor <= 0n ? "נפרעה" : undefined}
-          meta={<bdi className="ui-num ui-loan-amount" dir="ltr">{showMoney(row.balance_minor, row.currency)}</bdi>}
-        />
-      ))}
-    </List>
-  );
-}
-
 export function LoanReadError({ label, busy, onRetry }: { label: string; busy: boolean; onRetry: () => void }) {
   const retryRef = useRef<HTMLButtonElement>(null);
   return (

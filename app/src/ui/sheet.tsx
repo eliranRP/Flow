@@ -54,6 +54,7 @@ export function SheetSurface({
   footClassName,
   busy = false,
   closeButton = true,
+  aside,
 }: {
   title: string;
   /** Under the title, in the title's column (FLOW-372: the board's "רק בטלפון הזה"). */
@@ -73,6 +74,8 @@ export function SheetSurface({
   busy?: boolean;
   /** Off where the sheet has its own way out (the setup skip sheet draws none). */
   closeButton?: boolean;
+  /** At the end of the head, on the title's line (the rehab sheet's total). */
+  aside?: ReactNode;
 }) {
   const Title = drawer ? sheetDrawer?.Drawer.Title : undefined;
   const heading0 = Title ? (
@@ -97,6 +100,7 @@ export function SheetSurface({
       <div className="ui-sheet-head">
         {leading}
         {heading}
+        {aside}
         {onClose && closeButton && !busy ? (
           <IconButton ref={closeRef} label="סגירה" onClick={onClose}>
             <CloseIcon size={22} />
@@ -159,6 +163,7 @@ export function Sheet({
   closeOnBackdrop = true,
   busy = false,
   closeButton = true,
+  aside,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -195,6 +200,8 @@ export function Sheet({
   busy?: boolean;
   /** Off where the sheet has its own way out (the setup skip sheet draws none). */
   closeButton?: boolean;
+  /** At the end of the head, on the title's line (the rehab sheet's total). */
+  aside?: ReactNode;
 }) {
   const vaul = useSheetDrawer();
   // Until vaul arrives the sheet counts as closed, so its open runs in full once it can draw.
@@ -476,6 +483,7 @@ export function Sheet({
             footClassName={footClassName}
             busy={busy}
             closeButton={closeButton}
+            aside={aside}
             onClose={() => {
               void requestClose();
             }}

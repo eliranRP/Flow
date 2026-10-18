@@ -136,6 +136,9 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
   // FLOW-419: the project's השקעה והלוואות row names its one open loan.
   await page.goto(`/projects/${projectA}`);
   await expect(page.getByRole("link", { name: /^השקעה והלוואות/ })).toContainText(lender);
+  // FLOW-446: the investment page lists the loan in its loans card.
+  await page.goto(`/projects/${projectA}/investment`);
+  await expect(page.getByRole("link", { name: new RegExp(lender) })).toBeVisible();
 
   await page.goto("/loans");
   await page.getByRole("button", { name: new RegExp(`^${lender}, .*פרויקט א`) }).click();
