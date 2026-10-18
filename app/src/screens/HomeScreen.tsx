@@ -219,6 +219,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
         pending: dashboard.data.review_count,
         unpaidCount: unpaidPhase.kind === "ready" ? unpaidOpenRows(unpaid.data ?? []).length : 0,
         unpaidGross,
+        currency: base,
         unpaidOther: unpaidPhase.kind === "ready" ? unpaidTotals(unpaid.data ?? []).filter((total) => total.currency !== base && total.minor !== 0n) : [],
         missingCount: late.expense,
         missingIncome: late.income,
