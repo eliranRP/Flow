@@ -216,6 +216,11 @@
   gap: var(--space-2);
 }
 
+/* The board's chips wrap 6px apart. */
+.ui-onb-chips {
+  gap: calc(var(--space-1) + var(--space-half));
+}
+
 .ui-onb-chip {
   display: inline-flex;
   align-items: center;
@@ -238,17 +243,30 @@
 }
 
 .ui-onb-chip-added {
+  gap: calc(var(--space-1) + var(--space-half));
+  block-size: var(--control-height-sm);
+  padding-inline: var(--space-2) calc(var(--space-3) + var(--space-half));
   background: var(--color-tint);
   font-weight: var(--type-body-weight);
 }
 
-.ui-onb-chip-x {
-  min-width: var(--space-6);
-  min-height: var(--space-6);
+/* A 24px ✕ as drawn; its 44px tap area is an invisible ring around it. */
+.ui-onb-chip-added .ui-onb-chip-x {
+  position: relative;
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
+  min-inline-size: var(--space-6);
+  min-block-size: var(--space-6);
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--color-accent-text);
+}
+
+.ui-onb-chip-added .ui-onb-chip-x::before {
+  content: "";
+  position: absolute;
+  inset: calc((var(--touch-min) - var(--space-6)) / -2);
 }
 
 .ui-onb-chip-x svg {
@@ -261,6 +279,20 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+/* The name field takes the row; הוספה is as wide as its word (16px sides, 15/500). */
+.ui-onb-add-field,
+.ui-onb-add-field > * {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.ui-onb-add > .ui-btn {
+  flex: none;
+  min-inline-size: 0;
+  padding-inline: var(--space-4);
+  font-size: var(--type-line2-size);
 }
 
 /* The board draws the name field with its prompt inside and no label above; the label stays for screen readers. */
