@@ -20,7 +20,10 @@ export type ForecastOverrideRow = {
 };
 
 export type ForecastItem = {
-  /** `party:<direction>:<party id>:<currency>` for a recurring party, `invoice:<id>` for an invoice. */
+  /**
+   * `party:<direction>:<party id>:<currency>` for a recurring party (`:<project id>` added when the party is
+   * split by project, decision 0185), `invoice:<id>` for an invoice.
+   */
   key: string;
   direction: "income" | "expense";
   kind: "recurring" | "invoice";
@@ -115,10 +118,18 @@ export function buildMonthForecast(input: {
   const today = terms == null ? null : input.expected?.today ?? null;
   const raw: Omit<ForecastItem, "minor" | "due_on" | "moved_out" | "overridden" | "late_days">[] = [];
 
+  // A party split by project (decision 0185) is one item per project; a party with one charge keeps its key,
+  // so the overrides saved for it still apply.
+  const charges = new Map<string, number>();
+  for (const party of input.expected?.recurring ?? []) {
+    const base = `party:${party.direction}:${party.party_id}:${party.currency}`;
+    charges.set(base, (charges.get(base) ?? 0) + 1);
+  }
   for (const party of input.expected?.recurring ?? []) {
     if (party.seen_this_month || party.currency !== input.base) continue;
+    const base = `party:${party.direction}:${party.party_id}:${party.currency}`;
     raw.push({
-      key: `party:${party.direction}:${party.party_id}:${party.currency}`,
+      key: (charges.get(base) ?? 0) > 1 ? `${base}:${party.project_id ?? "none"}` : base,
       direction: party.direction,
       kind: "recurring",
       name: party.name === "" ? "ללא שם" : party.name,
