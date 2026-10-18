@@ -36,7 +36,6 @@ function line(id: string, patch: Record<string, unknown> = {}) {
     direction: "expense",
     currency: "ILS",
     amount_original: 14_632,
-    line_status: "posted",
     project_id: PROJECT,
     category_id: null,
     project_name: "שיפוץ לדוגמה",

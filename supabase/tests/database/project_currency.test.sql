@@ -182,8 +182,8 @@ select is(
   (select jsonb_agg('USD'::text order by t.idempotency_key)
    from public.transactions t
    where t.idempotency_key in ('dock:invoice', 'dock:receipt', 'dock:materials', 'dock:fuel', 'dock:suggested', 'dock:in_review',
-                               'dock:overhead', 'dock:pend_inc', 'dock:pend_exp', 'dock:void', 'co:shared_usd', 'co:shared_pend')),
-  'usd-only project: every transaction row says USD'
+                               'dock:overhead', 'dock:void', 'co:shared_usd')),
+  'usd-only project: every transaction row says USD (pending lines are not listed, 0184)'
 );
 
 select is(
@@ -245,8 +245,8 @@ select is(
     from jsonb_array_elements(pg_temp.out_of('pier') -> 'transactions') x
     join public.transactions t on t.id = (x ->> 'id')::uuid
   ),
-  '{"pier:ils_inc": "ILS", "pier:ils_exp": "ILS", "pier:ils_pend": "ILS", "co:shared_ils": "ILS", "pier:usd_inc": "USD", "pier:usd_exp": "USD", "co:shared_usd": "USD"}'::jsonb,
-  'mixed project: each transaction row carries its own currency'
+  '{"pier:ils_inc": "ILS", "pier:ils_exp": "ILS", "co:shared_ils": "ILS", "pier:usd_inc": "USD", "pier:usd_exp": "USD", "co:shared_usd": "USD"}'::jsonb,
+  'mixed project: each transaction row carries its own currency (the pending line is not listed, 0184)'
 );
 
 select is(

@@ -406,19 +406,19 @@ describe("ListRow statement (FLOW-305)", () => {
     expect(link.querySelector(".ui-row-title")).toHaveAttribute("dir", "rtl");
     expect(link.querySelector(".t-body")?.textContent).toBe("−₪1,200.50");
     expect(link.querySelector(".ui-num-cents")?.textContent).toBe(".50");
-    // No suggestion and not pending: no second line, no method unless one is passed.
+    // No suggestion and no details: no second line, no method unless one is passed.
     expect(link.querySelector(".ui-statement-line")).toBeNull();
     expect(link.querySelector(".ui-statement-method")).toBeNull();
     expect(link).toHaveAttribute("aria-label", "חשמל לדוגמה בע״מ, הוצאה −₪1,200.50");
   });
 
-  it("puts the pending chip before the suggestion and hides the ✦ mark", () => {
-    renderRow({ pending: true, suggestion: "וילה לדוגמה · חומרים" });
+  it("leads line 2 with the suggestion and hides the ✦ mark", () => {
+    renderRow({ suggestion: "וילה לדוגמה · חומרים" });
     const line = screen.getByRole("link").querySelector(".ui-statement-line");
-    expect(line?.firstElementChild).toHaveClass("ui-status");
+    expect(line?.firstElementChild).toHaveClass("ui-statement-suggest");
     expect(line?.querySelector(".ui-statement-suggest")).toHaveAttribute("data-clip-ok");
     expect(line?.querySelector(".ui-statement-spark")).toHaveAttribute("aria-hidden", "true");
-    expect(screen.getByRole("link")).toHaveAttribute("aria-label", "חשמל לדוגמה בע״מ, הצעה: וילה לדוגמה · חומרים, הוצאה −₪1,200.50, בהמתנה");
+    expect(screen.getByRole("link")).toHaveAttribute("aria-label", "חשמל לדוגמה בע״מ, הצעה: וילה לדוגמה · חומרים, הוצאה −₪1,200.50");
   });
 
   it("draws the details as whole parts, each carrying its separator, so one that does not fit drops whole (FLOW-339 C6-6)", () => {

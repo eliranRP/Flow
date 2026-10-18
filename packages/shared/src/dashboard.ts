@@ -158,8 +158,6 @@ export const reviewRowSchema = z.object({
   amount_net: agorotSchema,
   currency: z.string().regex(/^[A-Z]{3}$/).optional(),
   direction: z.enum(["income", "expense"]),
-  /** Bank state of the line. A pending line may still change; the statement row shows a chip. FLOW-305. */
-  line_status: z.enum(["pending", "posted", "void"]).optional().catch(undefined),
   /** Where the line came from. Older payloads omit it. FLOW-305. */
   source: z.enum(["sumit", "mercury", "manual", "photo"]).optional().catch(undefined),
   reason: z.string().nullable(),
@@ -430,8 +428,6 @@ export const projectDetailSchema = z
         direction: z.string(),
         source: z.string().optional(),
         doc_kind: z.string().optional(),
-        /** FLOW-209. A pending line is an unsettled bank line that no total counts yet. Omitted on older payloads. */
-        line_status: z.enum(["pending", "posted", "void"]).optional().catch(undefined),
         category: z.string().nullable(),
         /** Out of the P&L (its category, or the owner took the line out), so month sums leave it out. Omitted on older payloads. */
         kept_out: z.boolean().optional().catch(undefined),
@@ -661,7 +657,6 @@ export const searchPageSchema = z.object({
       direction: z.enum(["income", "expense"]),
       currency: z.string().regex(/^[A-Z]{3}$/),
       amount_original: agorotOrNull.optional(),
-      line_status: z.enum(["pending", "posted", "void"]).nullable().optional().catch(undefined),
       project_id: z.string().nullable(),
       category_id: z.string().nullable(),
       project_name: z.string().nullable(),

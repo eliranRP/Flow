@@ -1,9 +1,9 @@
 -- Shekel totals ignore USD. A Mercury row keeps a null fx pair.
--- Pending income is queued and is not in the total. A zero-insert re-run does not wipe.
+-- Pending income is not queued (0184) and is not in the total. A zero-insert re-run does not wipe.
 
 begin;
 
-select plan(26);
+select plan(27);
 
 do $users$
 begin
@@ -163,15 +163,14 @@ select is(
 
 select is(
   (
-    select q.reason
+    select count(*)::integer
     from public.review_queue q
     join public.transactions t on t.id = q.transaction_id
     where t.company_id = (select id from ils_co)
       and t.external_id = 'usd-pending'
-      and q.status = 'open'
   ),
-  'pending_income',
-  'pending mercury income is queued for review'
+  0,
+  'pending mercury income is not queued for review (0184)'
 );
 
 do $$
@@ -415,7 +414,19 @@ select is(
       and q.status = 'open'
   ),
   'missing_category',
-  'a posted line trades the pending income label for a real reason (FLOW-309)'
+  'a line that posts is queued with a real reason (FLOW-309)'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from public.review_queue q
+    join public.transactions t on t.id = q.transaction_id
+    where t.company_id = (select id from ils_co)
+      and t.external_id = 'usd-posts'
+  ),
+  1,
+  'a line that posts is queued once (0184)'
 );
 
 select is(
@@ -586,10 +597,37 @@ select is(
   'project returns the dollar expense on its own'
 );
 
+-- 0184: the waiting lines above are pending at the bank, so no waiting figure counts them. The
+-- same lines, posted, are counted by currency.
+reset role;
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, line_status,
+  amount_gross, amount_net, vat_amount, vat_status, currency,
+  doc_date, source, idempotency_key, project_id, category_id, category_suggested, description
+)
+select c.id, 'expense', 'expense', 'project', 'posted',
+  v.amount, v.amount, 0, 'unknown', v.currency,
+  v.d::date, 'manual', v.ikey, p.id,
+  case when v.queued then cat.id end, not v.queued, v.ikey
+from ils_co c
+join ils_project p on true
+join public.categories cat on cat.company_id = c.id and cat.kind = 'expense' and cat.name = 'חומרים'
+cross join (values
+  (-1500, 'ILS', '2026-09-13', 'ils:waiting_posted', false),
+  (-2000, 'USD', '2026-09-14', 'usd:waiting_posted', false),
+  (-700, 'USD', '2026-09-15', 'usd:queued_posted', true)
+) as v(amount, currency, d, ikey, queued);
+insert into public.review_queue (company_id, transaction_id, status, reason)
+select t.company_id, t.id, 'open', 'missing_category'
+from public.transactions t
+where t.company_id = (select id from ils_co)
+  and t.idempotency_key = 'usd:queued_posted';
+select tests.authenticate_as('ils_owner');
+
 select is(
   (public.get_project((select id from ils_project)) ->> 'pending_agorot')::bigint,
   1500::bigint,
-  'a waiting dollar expense is not added to the shekel pending total'
+  'a waiting dollar expense is not added to the shekel pending total, and a pending one is in neither'
 );
 
 select is(
@@ -609,7 +647,7 @@ select is(
     where item ->> 'currency' = 'USD'
   ),
   2,
-  'the waiting dollar expense and the pending dollar expense are both counted'
+  'the posted waiting dollar expense and the queued one are both counted, the pending ones are not'
 );
 
 select * from finish();

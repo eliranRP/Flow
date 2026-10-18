@@ -14,7 +14,7 @@ export type StatementDetail = { text: string; tone?: "accent"; keep?: boolean };
 
 /**
  * The statement row's link name, in reading order: counterparty, method in words, the suggestion,
- * the line-2 details, the direction word and the amount, then "בהמתנה". The avatar, icons and ✦ are hidden.
+ * the line-2 details, then the direction word and the amount. The avatar, icons and ✦ are hidden.
  */
 export function statementRowLabel(input: {
   title: string;
@@ -25,7 +25,6 @@ export function statementRowLabel(input: {
   currency?: string;
   sign: "in" | "out";
   inWord?: string;
-  pending?: boolean;
   details?: readonly StatementDetail[];
 }): string {
   const abs = input.agorot < 0n ? -input.agorot : input.agorot;
@@ -38,7 +37,6 @@ export function statementRowLabel(input: {
     input.suggestion ? `${input.suggestionJev === true ? "הצעת Jev" : "הצעה"}: ${input.suggestion}` : null,
     ...(input.details ?? []).map((detail) => detail.text),
     `${word} ${text}`,
-    input.pending ? "בהמתנה" : null,
   ];
   return parts.filter((part): part is string => part != null && part !== "").join(", ");
 }

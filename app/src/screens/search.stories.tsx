@@ -26,7 +26,6 @@ function line(id: string, patch: Partial<SearchRow>): SearchRow {
     direction: "expense",
     currency: "ILS",
     amount_original: 118_000n,
-    line_status: "posted",
     project_id: "p1",
     category_id: "c1",
     project_name: "שיפוץ לדוגמה 12",
@@ -49,7 +48,7 @@ const rows: SearchRow[] = [
   line("s5", { doc_date: "2026-09-18", supplier_name: null, customer_name: "לקוח לדוגמה", direction: "income", amount_net: 1_500_000n, project_name: "שיפוץ לדוגמה 12", category_id: "c3", category_name: "עבודה" }),
   line("s6", { doc_date: "2026-09-12", supplier_name: "Northwind Traders", currency: "USD", amount_net: -42_990n, category_id: "c4", category_name: "תוכנה", project_id: null, project_name: null }),
   line("s7", { doc_date: "2026-09-03", supplier_name: "ריבית בנק לדוגמה", amount_net: -41_200n, kept_out: true, category_id: "c5", category_name: "ריבית" }),
-  line("s8", { doc_date: "2026-08-28", supplier_name: "חשמל לדוגמה", amount_net: -64_000n, line_status: "pending", project_id: "p2", project_name: "וילה לדוגמה" }),
+  line("s8", { doc_date: "2026-08-28", supplier_name: "חשמל לדוגמה", amount_net: -64_000n, project_id: "p2", project_name: "וילה לדוגמה" }),
 ];
 
 const sample: SearchSample = {

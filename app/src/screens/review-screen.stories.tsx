@@ -48,7 +48,7 @@ export const ReviewAll: Story = {
         backTo="/review"
         search=""
         rows={[
-          { ...sampleReview, source: "sumit", doc_kind: "invoice", line_status: "posted" },
+          { ...sampleReview, source: "sumit", doc_kind: "invoice" },
           {
             ...sampleReview,
             id: "r2",
@@ -60,7 +60,6 @@ export const ReviewAll: Story = {
             project_name: null,
             category_name: "שינוע",
             source: "mercury",
-            line_status: "pending",
           },
         ]}
       />

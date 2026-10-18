@@ -2,7 +2,6 @@ import { useId, type ReactNode, type Ref } from "react";
 import { Link } from "react-router-dom";
 import { Avatar } from "./avatar";
 import { Amount } from "./amount";
-import { StatusDot } from "./status-dot";
 import { cx } from "./cx";
 import { MatchText } from "./match-text";
 import { statementRowLabel, textDir, type StatementDetail, type StatementMethod } from "./statement";
@@ -221,8 +220,8 @@ function RadioControlRow({
 }
 
 /**
- * A bank-statement row (FLOW-305, option A): initials avatar, the counterparty, then a pending chip
- * and "✦ project · category"; the amount with small cents at the end and the method under it.
+ * A bank-statement row (FLOW-305, option A): initials avatar, the counterparty, then
+ * "✦ project · category"; the amount with small cents at the end and the method under it.
  * Same ui-row base, hit area, pressed tint and focus ring as the other link rows.
  */
 export type StatementRowProps = {
@@ -239,7 +238,6 @@ export type StatementRowProps = {
   suggestion?: string | null;
   /** The suggestion is Jev's fill: line 2 reads "✦ Jev · …" and the name says הצעת Jev (FLOW-704). */
   suggestionJev?: boolean;
-  pending?: boolean;
   agorot: bigint;
   currency?: string;
   sign: "in" | "out";
@@ -574,7 +572,7 @@ function StatementRow(props: StatementRowProps) {
   const dir = textDir(props.title);
   const label = props.label ?? statementRowLabel(props);
   const details = (props.details ?? []).filter((detail) => detail.text !== "");
-  const line2 = props.pending === true || (props.suggestion != null && props.suggestion !== "") || details.length > 0;
+  const line2 = (props.suggestion != null && props.suggestion !== "") || details.length > 0;
   return (
     <Link to={props.href} state={props.state} className={cx("ui-row ui-hit ui-row-statement", props.setAside === true && "ui-row-set-aside")} aria-label={label}>
       <span className="ui-row-main">
@@ -585,7 +583,6 @@ function StatementRow(props: StatementRowProps) {
           </span>
           {line2 ? (
             <span className="ui-row-hint ui-statement-line">
-              {props.pending === true ? <StatusDot>בהמתנה</StatusDot> : null}
               {props.suggestion ? (
                 // FLOW-704: whole parts, as in the details below. "✦" always shows; on a Jev fill
                 // "Jev" follows when it fits, then the values, which end in "…".

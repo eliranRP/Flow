@@ -132,10 +132,6 @@
   font-weight: var(--type-btn-weight);
 }
 
-.ui-charges-pending {
-  color: var(--color-warning);
-}
-
 .ui-charges-mark {
   white-space: nowrap;
 }

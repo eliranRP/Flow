@@ -1,9 +1,10 @@
 -- FLOW-305. list_review returns each line's source and line_status for the statement row.
 -- FLOW-704. Each row also carries its company_id, so the app can bind the Jev flag to it.
+-- 0184. A line still pending at the bank is not listed, even with an open row in the queue.
 
 begin;
 
-select plan(6);
+select plan(7);
 
 do $users$
 begin
@@ -29,14 +30,25 @@ insert into public.transactions (
 )
 select c.id, 'expense', 'expense', 'project',
   -120050, -120050, 0, 'unknown',
-  current_date, 'sumit', 'pending', 'f305:pending', 'חשמל השרון', now()
+  current_date, 'sumit', 'posted', 'f305:posted', 'חשמל השרון', now()
+from f305 c
+where c.label = 'company';
+
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, line_status, idempotency_key, description, created_at
+)
+select c.id, 'expense', 'expense', 'project',
+  -30000, -30000, 0, 'unknown',
+  current_date, 'sumit', 'pending', 'f305:pending', 'ביטוח לדוגמה', now()
 from f305 c
 where c.label = 'company';
 
 insert into public.review_queue (company_id, transaction_id, status, reason)
 select t.company_id, t.id, 'open', 'missing_project'
 from public.transactions t
-where t.idempotency_key = 'f305:pending';
+where t.idempotency_key in ('f305:posted', 'f305:pending');
 
 select tests.authenticate_as('f305_owner');
 
@@ -48,8 +60,14 @@ select is(
 
 select is(
   (select public.list_review() -> 0 ->> 'line_status'),
-  'pending',
+  'posted',
   'a review row carries its line status'
+);
+
+select is(
+  (select array_agg(x ->> 'description') from jsonb_array_elements(public.list_review()) x),
+  array['חשמל השרון'],
+  'the pending line is not listed although it has an open row (0184)'
 );
 
 select ok(

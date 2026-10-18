@@ -11,7 +11,6 @@ function charges(count: number, current = "tx-10"): PartyCharges {
     id: index === 0 ? current : `tx-${String(10 - index)}`,
     doc_date: `2026-${String(10 - index).padStart(2, "0")}-05`,
     amount_minor: BigInt(14200 - index * 100),
-    pending: false,
   }));
   return {
     transaction_id: current,

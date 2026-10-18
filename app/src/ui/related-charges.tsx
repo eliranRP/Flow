@@ -48,12 +48,11 @@ function ChargeRows({
         const amount = formatAmountText(absAgorot(charge.amount_minor), currency, { detail: true });
         const date = longDate ? formatDisplay(charge.doc_date).replace(/\/\d{2}(\d{2})$/, "/$1") : formatDayMonth(charge.doc_date);
         const mark = typical == null ? null : chargeMark(charge.amount_minor, typical, income);
-        const name = `${date}, ${amount}${charge.pending ? ", ממתין" : ""}${current ? ", השורה הזו" : ""}`;
+        const name = `${date}, ${amount}${current ? ", השורה הזו" : ""}`;
         const body = (
           <>
             <span className="ui-charges-date">
               <bdi dir="ltr">{date}</bdi>
-              {charge.pending ? <span className="ui-charges-pending"> · ממתין</span> : null}
               {current ? <span className="ui-charges-badge">השורה הזו</span> : null}
             </span>
             {mark == null ? null : (

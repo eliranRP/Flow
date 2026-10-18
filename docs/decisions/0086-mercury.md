@@ -15,7 +15,7 @@ Import every Mercury line, in and out, including income. There is no switch to h
 
 A Mercury line has no VAT. The VAT amount is 0 and the status is `source`.
 
-A pending line appears in לאישור (the review queue) with the tag ממתין (pending). It is in no P&L and no total until it is posted. A failed, cancelled, reversed, or blocked line leaves the books.
+~~A pending line appears in לאישור (the review queue) with the tag ממתין (pending).~~ Superseded by [0184](0184-pending-bank-lines-hidden.md): a pending line is stored but shows nowhere in the app until it posts. It is in no P&L and no total until it is posted. A failed, cancelled, reversed, or blocked line leaves the books.
 
 A payment whose counterparty is NEWREZ, Lakeview, or Servease is hinted to the seeded expense `תשלומי הלוואה` (loan payments). That category is excluded from P&L and still shows as cash in לאישור. A transfer to an own account that is not connected is hinted to `העברות` (transfers). The expense row and the income row are both seeded and both excluded from P&L, and the hint matches the line's direction. An `IO Cashback` credit is hinted to `הכנסה אחרת` (other income). Treasury interest and dividends from `GET /treasury/{id}/transactions` use that same income category. The own-account set is every org account, rebuilt before every sync. A card refund stays an expense in the original category. The flag and the sums are in the [connector contract](../tech/connector-contract.md).
 
@@ -25,7 +25,7 @@ The field rules, status map, and allowlist are in [the connector contract](../te
 
 ## Alternatives rejected
 
-A read-write token. Skipping income. Deduping against SUMIT. Treating a Mercury line as VAT-inclusive. Hiding pending lines. Keeping failed lines as expenses. Importing per checking account and missing the card. Storing account or routing numbers.
+A read-write token. Skipping income. Deduping against SUMIT. Treating a Mercury line as VAT-inclusive. Hiding pending lines (adopted later in [0184](0184-pending-bank-lines-hidden.md)). Keeping failed lines as expenses. Importing per checking account and missing the card. Storing account or routing numbers.
 
 ## Consequences
 

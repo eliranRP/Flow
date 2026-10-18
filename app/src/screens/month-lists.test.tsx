@@ -76,7 +76,6 @@ describe("review list row details (FLOW-305, flat list)", () => {
     project_name: "וילה לדוגמה",
     category_name: "חומרים",
     supplier_name: null,
-    line_status: "pending",
     source: "mercury",
   };
 
@@ -92,7 +91,7 @@ describe("review list row details (FLOW-305, flat list)", () => {
 
   it("flags a row without a project and labels an invoice row with its document source", () => {
     const { container } = wrap(<ReviewAllList
-      rows={[{ ...base, description: "לקוח לדוגמה", amount_net: 500_000n, currency: "ILS", direction: "income", line_status: "posted", source: "sumit", doc_kind: "invoice", project_id: null, project_name: null, category_id: null, category_name: null }]}
+      rows={[{ ...base, description: "לקוח לדוגמה", amount_net: 500_000n, currency: "ILS", direction: "income", source: "sumit", doc_kind: "invoice", project_id: null, project_name: null, category_id: null, category_name: null }]}
       search=""
       backTo="/review"
     />);

@@ -92,8 +92,9 @@ $$;
 select is(pg_temp.kept_out('pko:rent'), false, 'a line in the P&L is not kept out');
 select is(pg_temp.kept_out('pko:deposit'), true, 'a line in a kept-out category is kept out');
 select is(pg_temp.kept_out('pko:taken_out'), true, 'a line the owner took out is kept out');
-select is(pg_temp.kept_out('pko:pending_deposit'), true, 'a pending line in a kept-out category is kept out');
-select is(pg_temp.kept_out('pko:pending_rent'), false, 'a pending line in the P&L is not kept out');
+-- 0184: a line still pending at the bank is not listed at all.
+select is(pg_temp.kept_out('pko:pending_deposit') is null, true, 'a pending line in a kept-out category is not listed');
+select is(pg_temp.kept_out('pko:pending_rent') is null, true, 'a pending line in the P&L is not listed');
 select is(pg_temp.kept_out('pko:split'), true, 'a split line whose part here is kept out is kept out here');
 select is(
   (select (row->>'kept_out')::boolean

@@ -1,9 +1,11 @@
 -- FLOW-309. A pending income line that posts takes a real review reason or leaves review; a
--- row resolved as changed is not queued again. Invented data only. Amounts are agorot.
+-- row resolved as changed is not queued again. 0184: a pending line is not queued at all, an open
+-- row of a line still pending is removed, and the line is queued once when it posts.
+-- Invented data only. Amounts are agorot.
 
 begin;
 
-select plan(11);
+select plan(13);
 
 do $users$
 begin
@@ -89,12 +91,19 @@ grant execute on function pg_temp.open_reason(text) to authenticated, service_ro
 
 select pg_temp.sync();
 reset role;
-select is(pg_temp.open_reason('txn_open'), 'pending_income', 'setup: a pending income line waits as pending_income');
-select is(pg_temp.open_reason('txn_filed'), 'pending_income', 'setup: so does the filed one');
+select is(pg_temp.open_reason('txn_open'), 'none', 'a pending income line is not queued (0184)');
+select is(pg_temp.open_reason('txn_filed'), 'none', 'nor is the filed one');
 
--- The owner resolves the third as changed, then all three post.
-update public.review_queue set status = 'changed', resolved_at = now()
-where transaction_id in (pg_temp.id('txn_changed'), pg_temp.id('txn_legacy')) and status = 'open';
+-- Rows from before 0184: the owner resolved two pending lines as changed, and one pending line
+-- still has an open row.
+insert into public.review_queue (company_id, transaction_id, status, reason, resolved_at)
+select pg_temp.id('co'), pg_temp.id(v.label), 'changed', 'pending_income', now()
+from (values ('txn_changed'), ('txn_legacy')) as v(label);
+insert into public.review_queue (company_id, transaction_id, status, reason)
+values (pg_temp.id('co'), pg_temp.id('txn_open'), 'open', 'pending_income');
+select pg_temp.sync();
+reset role;
+select is(pg_temp.open_reason('txn_open'), 'none', 'the open row of a line still pending is removed (0184)');
 
 -- While still pending, a changed line is not queued again.
 select pg_temp.sync();
@@ -109,6 +118,9 @@ update public.transactions set line_status = 'posted' where idempotency_key like
 select pg_temp.sync();
 reset role;
 select is(pg_temp.open_reason('txn_open'), 'missing_category', 'a posted unfiled line takes a real reason, not null (a guessed category is still missing)');
+select is(
+  (select count(*)::integer from public.review_queue where transaction_id = pg_temp.id('txn_open')),
+  1, 'the posted line is queued once');
 select is(pg_temp.open_reason('txn_filed'), 'none', 'a posted line the owner already filed leaves review');
 select is(pg_temp.open_reason('txn_changed'), 'none', 'a row resolved as changed is not queued again');
 select is(pg_temp.open_reason('txn_kept_out'), 'suggested', 'a guessed kept-out category with a project takes suggested');
