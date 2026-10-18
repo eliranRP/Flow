@@ -1,0 +1,1 @@
+- The app's total JavaScript budget is now 540 KB (gzip), raised for the project month and company "by category" views, the forecast item page and the editable project forecast, which load on demand. Home's own limit stays at 240 KB.
