@@ -196,3 +196,27 @@ describe("recurring change alert and match writes (FLOW-447c)", () => {
     await expect(answerRecurringMatch(client, { direction: "income", partyId: "a", matchPartyId: "b", same: true })).rejects.toThrow("validation");
   });
 });
+describe("a party split by project (decision 0185)", () => {
+  const birch: ScheduleRow = { ...POWER, party_id: "servicer", project_id: "p-birch", project_name: "Birch Lane" };
+  const juniper: ScheduleRow = { ...POWER, party_id: "servicer", project_id: "p-juniper", project_name: "Juniper Ct" };
+  const bill = (project: string): MissingBill => ({ ...RECURRING_MISSING_FIXTURE[0], party_id: "servicer", project_id: project, alert_key: `key-${project}` }) as MissingBill;
+
+  it("finds the late bill of its own project", () => {
+    const bills = [bill("p-birch"), bill("p-juniper")];
+    expect(chargeAlert(juniper, bills, undefined, null, true)?.key).toBe("key-p-juniper");
+    expect(chargeAlert(birch, bills, undefined, null, true)?.key).toBe("key-p-birch");
+  });
+
+  it("an ignored bill's key carries the project, as the server builds it", () => {
+    expect(chargeAlert(juniper, [bill("p-birch")], undefined, null, true)).toEqual({
+      kind: "missing",
+      key: `expense:servicer:USD:${juniper.next_due_month}:p-juniper`,
+      active: false,
+    });
+  });
+
+  it("the page path names the project and keeps the preview query", () => {
+    expect(chargeHref("expense", "servicer", "?preview=1", "p-juniper")).toBe("/recurring/expense/servicer?preview=1&project=p-juniper");
+    expect(chargeHref("expense", "water", "")).toBe("/recurring/expense/water");
+  });
+});

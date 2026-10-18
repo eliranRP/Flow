@@ -101,3 +101,34 @@ describe("buildMonthForecast", () => {
     expect(build.expenseTotal).toBe(420000n);
   });
 });
+
+describe("buildMonthForecast: a party split by project (decision 0185)", () => {
+  const split = {
+    ...expected,
+    recurring: [
+      ...expected.recurring,
+      { direction: "expense", party_id: "p-servicer", name: "Example Servicing", currency: "ILS", typical_amount_minor: -400000n, typical_day: 1, months_seen: 6, seen_this_month: false, project_id: "a" },
+      { direction: "expense", party_id: "p-servicer", name: "Example Servicing", currency: "ILS", typical_amount_minor: -250000n, typical_day: 2, months_seen: 6, seen_this_month: false, project_id: "b" },
+    ],
+  } as unknown as ExpectedMonths;
+
+  it("keys each of the party's charges by its project, and leaves one-charge parties' keys alone", () => {
+    const build = buildMonthForecast({ base: "ILS", expected: split, unpaid: [], overrides: [] });
+    const keys = build.items.map((item) => item.key);
+    expect(keys).toContain("party:expense:p-servicer:ILS:a");
+    expect(keys).toContain("party:expense:p-servicer:ILS:b");
+    expect(keys).toContain("party:expense:p-rent:ILS");
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("applies an override to the one charge it names", () => {
+    const build = buildMonthForecast({
+      base: "ILS",
+      expected: split,
+      unpaid: [],
+      overrides: [{ item_key: "party:expense:p-servicer:ILS:b", amount_minor: 260000n, due_on: null, moved_out: false }] as never,
+    });
+    expect(build.items.find((item) => item.key.endsWith(":b"))?.minor).toBe(260000n);
+    expect(build.items.find((item) => item.key.endsWith(":a"))?.minor).toBe(400000n);
+  });
+});

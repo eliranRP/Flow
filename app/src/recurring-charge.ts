@@ -150,24 +150,36 @@ export function chargeAlert(
   bills: readonly MissingBill[] | undefined,
   changes: readonly RecurringChange[] | undefined,
   lineId: string | null,
+  split = false,
 ): ChargeAlert | null {
+  // A party split by project (decision 0185): each charge is its own project's.
+  const mine = (item: { party_id?: string | null; project_id?: string | null }) =>
+    item.party_id === row.party_id && (!split || (item.project_id ?? null) === row.project_id);
   if (row.state === "late") {
     if (bills === undefined) return { kind: "missing", key: null, active: true };
-    const bill = bills.find((item) => item.party_id === row.party_id && item.direction === row.direction);
+    const bill = bills.find((item) => mine(item) && item.direction === row.direction);
     if (bill != null) return { kind: "missing", key: bill.alert_key ?? null, active: true, suggestion: bill.suggestion ?? null };
-    // Not listed: ignored. The key is the one the server built for this bill (direction:party:currency:month).
-    return { kind: "missing", key: `${row.direction}:${row.party_id}:${row.currency}:${row.next_due_month}`, active: false };
+    // Not listed: ignored. The key is the one the server built for this bill (direction:party:currency:month,
+    // and :project for a split party).
+    const key = `${row.direction}:${row.party_id}:${row.currency}:${row.next_due_month}`;
+    return { kind: "missing", key: split ? `${key}:${row.project_id ?? "none"}` : key, active: false };
   }
   if (!isBigChange(changeFor(row))) return null;
   if (changes === undefined) return { kind: "change", key: lineId, active: true };
-  const change = changes.find((item) => item.party_id === row.party_id);
+  const change = changes.find((item) => mine(item));
   if (change != null) return { kind: "change", key: change.transaction_id, active: true };
   return { kind: "change", key: lineId, active: false };
 }
 
-/** The page's path for a party, carrying the preview query when the page is a preview. */
-export function chargeHref(direction: "income" | "expense", partyId: string, search = ""): string {
-  return `/recurring/${direction}/${encodeURIComponent(partyId)}${search}`;
+/**
+ * The page's path for a charge, carrying the preview query when the page is a preview. A charge with a
+ * project names it (?project=), so a party split by project opens the right one (decision 0185).
+ */
+export function chargeHref(direction: "income" | "expense", partyId: string, search = "", projectId: string | null = null): string {
+  const query = new URLSearchParams(search);
+  if (projectId != null) query.set("project", projectId);
+  const text = query.toString();
+  return `/recurring/${direction}/${encodeURIComponent(partyId)}${text === "" ? "" : `?${text}`}`;
 }
 
 /** The amount the page draws: this month's arrival, else the usual amount (muted). */

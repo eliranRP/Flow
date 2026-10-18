@@ -8,7 +8,7 @@ import { RECURRING_KEYS } from "../pace-write";
 import { liveRecurringWrites, type RecurringWrites } from "../recurring-actions";
 import { chargeHref, dayMonth } from "../recurring-charge";
 import { groupRecurring, monthOutflow, type RecurringLine } from "../recurring-layout";
-import { alertState, changePercentOf, daysBetween, israelToday, type RecurringAlert, type ScheduleRow, scheduleLines, useRecurringScheduleQuery } from "../recurring-schedule";
+import { alertState, changePercentOf, daysBetween, isSplitParty, israelToday, rowId, type RecurringAlert, type ScheduleRow, scheduleLines, useRecurringScheduleQuery } from "../recurring-schedule";
 import { EmptyState, FailureLine } from "../ui/empty-state";
 import { type RecurringListGroup, type RecurringListRow, RecurringList } from "../ui/recurring-list";
 import { RecurringSkeleton } from "../ui/screen-skeletons";
@@ -109,9 +109,9 @@ export function RecurringScreen({
   };
   const failure = () => toast.show({ message: "לא הצלחנו לעדכן את השורה." });
 
-  async function ignore(row: RecurringListRow, alertKey: string) {
-    const removed = (bills ?? []).filter((bill) => bill.party_id === row.id);
-    editBills((list) => list.filter((bill) => bill.party_id !== row.id));
+  async function ignore(alertKey: string) {
+    const removed = (bills ?? []).filter((bill) => bill.alert_key === alertKey);
+    editBills((list) => list.filter((bill) => bill.alert_key !== alertKey));
     try {
       await writer.dismiss(alertKey);
     } catch {
@@ -120,15 +120,15 @@ export function RecurringScreen({
       return;
     }
     refresh();
-    toast.show({ message: "התעלמת מההתראה", action: "ביטול", onAction: () => void restore(row, alertKey, removed) });
+    toast.show({ message: "התעלמת מההתראה", action: "ביטול", onAction: () => void restore(alertKey, removed) });
   }
 
-  async function restore(row: RecurringListRow, alertKey: string, removed: readonly MissingBill[]) {
+  async function restore(alertKey: string, removed: readonly MissingBill[]) {
     editBills((list) => [...list, ...removed]);
     try {
       await writer.restore(alertKey);
     } catch {
-      editBills((list) => list.filter((bill) => bill.party_id !== row.id));
+      editBills((list) => list.filter((bill) => bill.alert_key !== alertKey));
       failure();
       return;
     }
@@ -140,7 +140,7 @@ export function RecurringScreen({
       {...view}
       openId={openId}
       onIgnore={(row) => {
-        if (row.alertKey != null) void ignore(row, row.alertKey);
+        if (row.alertKey != null) void ignore(row.alertKey);
       }}
     />
   );
@@ -154,17 +154,17 @@ export function RecurringScreen({
 export function recurringView(allRows: readonly ScheduleRow[], today: string, project: string | null = null, alerts?: AlertState, search = "") {
   const rows = project == null ? allRows : allRows.filter((row) => row.project_id === project);
   const projectName = project == null ? undefined : allRows.find((row) => row.project_id === project)?.project_name ?? undefined;
-  const lines = scheduleLines(rows);
-  const byId = new Map(rows.map((row) => [row.party_id, row] as const));
+  const lines = scheduleLines(rows, allRows);
+  const byId = new Map(rows.map((row) => [rowId(allRows, row), row] as const));
   // A late charge that still alerts leads the list; one the user ignored is an ordinary row again.
-  const state = alerts ?? alertState(rows, undefined);
-  const lateIds = new Set(rows.filter((row) => row.state === "late" && state.active.has(row.party_id)).map((row) => row.party_id));
+  const state = alerts ?? alertState(allRows, undefined);
+  const lateIds = new Set(rows.filter((row) => row.state === "late" && state.active.has(rowId(allRows, row))).map((row) => rowId(allRows, row)));
   const toRow = (line: RecurringLine): RecurringListRow => {
     const row = byId.get(line.id);
     if (row == null) throw new Error("recurring row");
     const alert: RecurringAlert | undefined = state.active.get(line.id);
     return {
-      id: row.party_id,
+      id: line.id,
       name: row.party_name,
       // The place is the project; a charge with no project shows its category instead.
       place: row.project_name || row.category_name || null,
@@ -173,7 +173,7 @@ export function recurringView(allRows: readonly ScheduleRow[], today: string, pr
       minor: line.minor,
       ...hintFor(row, line, today, state.dismissed.has(line.id)),
       ...(alert == null ? {} : { alertKey: alert.alertKey, suggestion: alert.suggestion == null ? null : suggestionRow(alert.suggestion) }),
-      href: chargeHref(row.direction, row.party_id, search),
+      href: chargeHref(row.direction, row.party_id, search, isSplitParty(allRows, row) ? row.project_id : null),
     };
   };
   const late = lines.filter((line) => lateIds.has(line.id)).map((line) => toRow(line));

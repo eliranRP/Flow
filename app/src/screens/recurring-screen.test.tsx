@@ -87,3 +87,51 @@ describe("recurringView with the late bills (FLOW-447b)", () => {
     ]);
   });
 });
+
+describe("recurringView: a party split by project (decision 0185)", () => {
+  // One servicer paying two properties: two charges, each its own row, amount and page.
+  const base = FIXTURE.find((item) => item.party_id === "insurance");
+  if (base == null) throw new Error("fixture");
+  const split = [
+    ...FIXTURE.filter((item) => item.party_id !== "insurance"),
+    { ...base, party_id: "servicer", party_name: "Example Servicing", typical_amount_minor: 400000, project_id: "p-birch-lane", project_name: "Birch Lane" },
+    { ...base, party_id: "servicer", party_name: "Example Servicing", typical_amount_minor: 250000, project_id: "p-juniper-ct", project_name: "Juniper Ct" },
+  ];
+  const view = recurringView(split, "2026-10-11");
+  const rows = view.groups.flatMap((group) => group.rows).filter((item) => item.name === "Example Servicing");
+
+  it("draws one row per project, each with its own amount and place", () => {
+    expect(rows.map((item) => [item.place, item.minor])).toEqual([["Birch Lane", 400000n], ["Juniper Ct", 250000n]]);
+    expect(new Set(rows.map((item) => item.id)).size).toBe(2);
+  });
+
+  it("links each row to its own charge page", () => {
+    expect(rows.map((item) => item.href)).toEqual([
+      "/recurring/expense/servicer?project=p-birch-lane",
+      "/recurring/expense/servicer?project=p-juniper-ct",
+    ]);
+  });
+
+  it("leaves a party with one charge linked by its party alone", () => {
+    const water = view.groups.flatMap((group) => group.rows).find((item) => item.name === "Bayside Water Utility");
+    expect(water?.href).toBe("/recurring/expense/water");
+  });
+});
+
+describe("recurringView: a split party in one project's view (decision 0185)", () => {
+  const power = FIXTURE.find((item) => item.party_id === "power");
+  if (power == null) throw new Error("fixture");
+  const rows = [
+    ...FIXTURE.filter((item) => item.party_id !== "power"),
+    { ...power, project_id: "p-birch-lane", project_name: "Birch Lane" },
+    { ...power, state: "soon" as const, project_id: "p-juniper-ct", project_name: "Juniper Ct" },
+  ];
+  const bills = MISSING.map((bill) => (bill.party_id === "power" ? { ...bill, alert_key: "expense:power:USD:2026-10:p-birch-lane" } : bill));
+
+  it("keeps the late alert of the project's own charge, linked to it", () => {
+    const view = recurringView(rows, "2026-10-11", "p-birch-lane", alertState(rows, bills));
+    const late = view.late.find((item) => item.name === "Brightline Power");
+    expect(late?.alertKey).toBe("expense:power:USD:2026-10:p-birch-lane");
+    expect(late?.href).toBe("/recurring/expense/power?project=p-birch-lane");
+  });
+});

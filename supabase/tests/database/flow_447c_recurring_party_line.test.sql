@@ -147,11 +147,11 @@ select throws_ok(
 
 -- 12-14. Grants and volatility.
 select ok(
-  not has_function_privilege('anon', 'public.recurring_party_line(text, uuid, text, date)', 'execute'),
+  not has_function_privilege('anon', 'public.recurring_party_line(text, uuid, text, date, uuid)', 'execute'),
   'anon cannot call it'
 );
 select ok(
-  has_function_privilege('authenticated', 'public.recurring_party_line(text, uuid, text, date)', 'execute'),
+  has_function_privilege('authenticated', 'public.recurring_party_line(text, uuid, text, date, uuid)', 'execute'),
   'a signed-in user can call it'
 );
 select is(
