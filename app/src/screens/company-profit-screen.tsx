@@ -20,7 +20,7 @@ import { rowSource } from "../ui/line-marks";
 import { BASIS_PROFIT_COPY, basisChoiceLabel } from "../ui/company-choices";
 import { buildProfitModel, useCompanyProfitRead, type ProfitInputs, type ProfitLine, type ProfitModel } from "../use-company-profit";
 import { CompanyBasisSheet } from "./company-basis-sheet";
-import { ProfitCategories, profitCategoryGroups, type ProfitCategoryGroup } from "./profit-categories";
+import { countWord, ProfitCategories, profitCategoryGroups, type ProfitCategoryGroup } from "./profit-categories";
 import { useBlockedPreview } from "./screen-shared";
 
 /** A fixture: the reads' inputs for the page, plus the day heads' today and the month it shows. */
@@ -43,10 +43,6 @@ function orderOf(value: string | null): Order {
 function signedText(minor: bigint, currency: string): string {
   if (minor === 0n) return formatAmountText(0n, currency);
   return minor < 0n ? `−${formatAmountText(-minor, currency)}` : `+${formatAmountText(minor, currency)}`;
-}
-
-function countWord(count: number): string {
-  return `${String(count)} ${count === 1 ? "תנועה" : "תנועות"}`;
 }
 
 /** `dd/mm` of an ISO date. */

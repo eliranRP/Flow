@@ -54,7 +54,7 @@ export function profitCategoryGroups<L>(income: readonly ProfitCategoryInput<L>[
 }
 
 /** "1 תנועה", otherwise "N תנועות". */
-function countWord(count: number): string {
+export function countWord(count: number): string {
   return count === 1 ? "1 תנועה" : `${String(count)} תנועות`;
 }
 
