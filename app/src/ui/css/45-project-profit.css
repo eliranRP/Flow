@@ -261,3 +261,65 @@
 .ui-pn-rows .ui-row .ui-num:not(.ui-income) {
   color: var(--color-text-secondary);
 }
+
+/* The ProfitMonthCategory frame: a category row is 64px at least, 8px above and below, the 17px name and
+   amount over the 15px share line, then the 4px bar 6px under it, scaled to the group's largest. */
+.ui-pm-cat-button {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: calc(var(--space-10) * 1.6);
+  padding: var(--space-2) 0;
+  box-sizing: border-box;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+}
+
+.ui-pm-cat-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+  font-size: var(--type-body-size);
+  line-height: var(--type-title-line);
+}
+
+.ui-pm-cat-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ui-pm-cat-top .ui-num {
+  flex: none;
+  font-size: var(--type-body-size);
+  line-height: var(--type-title-line);
+}
+
+.ui-pm-cat-meta {
+  overflow: hidden;
+  font-size: var(--type-line2-size);
+  line-height: var(--type-title-line);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ui-pm-cat-bar {
+  display: flex;
+  height: 4px;
+  margin-top: calc(var(--space-1) / 2);
+  border-radius: var(--radius-bar-hair);
+  background: var(--color-track);
+}
+
+.ui-pm-cat-bar-fill {
+  display: block;
+  border-radius: var(--radius-bar-hair);
+  background: var(--color-band-past);
+}

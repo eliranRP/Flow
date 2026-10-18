@@ -3,6 +3,7 @@
   "ProfitBasis": "/e2e/company-profit?sheet=basis",
   "ProfitProject": "/e2e/project-profit",
   "ProfitMonth": "/e2e/project-month-profit",
+  "ProfitMonthCategory": "/e2e/project-month-profit?order=category",
   "ProfitNext": "/e2e/project-next-month",
   "ProfitByCategory": "/e2e/company-profit?by=category"
 }

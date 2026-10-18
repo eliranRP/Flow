@@ -34,7 +34,7 @@ export const ProjectMonthLongName: Story = {
   render: () => <MonthRoute entry="/projects/juniper-ct/profit/2026-10" name="שיפוץ דירת גן ברחוב הדוגמה הארוך 128" />,
 };
 
-/** Grouped by category: each category closed until tapped. */
+/** Grouped by category (board frame ProfitMonthCategory): income then expenses, a row per category, each closed until tapped. */
 export const ProjectMonthByCategory: Story = {
   name: "Project, one month, by category",
   render: () => <MonthRoute entry="/projects/juniper-ct/profit/2026-10?order=category" />,
