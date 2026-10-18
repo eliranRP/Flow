@@ -314,22 +314,6 @@ function companyNameIsValid(name: string): boolean {
   const points = Array.from(name);
   return points.length >= 2 && points.length <= 100;
 }
-// FLOW-601. The database lower-cases and checks the email; this only bounds it.
-export const inviteMemberSchema = z.object({
-  idempotency_key: IDEMPOTENCY_KEY,
-  email: z.string().trim().min(3).max(254),
-  role: z.enum(["editor", "viewer"]).default("viewer"),
-}).strict();
-// member_id is the member's user id from list_team (user_id is reserved for the token's identity).
-export const setMemberRoleSchema = z.object({
-  idempotency_key: IDEMPOTENCY_KEY,
-  member_id: UUID_TEXT,
-  role: z.enum(["editor", "viewer"]),
-}).strict();
-export const removeMemberSchema = z.object({
-  idempotency_key: IDEMPOTENCY_KEY,
-  member_id: UUID_TEXT,
-}).strict();
 export const renameCompanySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   name: z.string().trim().transform(plainSpaces)

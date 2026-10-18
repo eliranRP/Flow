@@ -33,9 +33,7 @@ import {
   hideCategorySchema,
   invalid,
   INVESTMENT_KEYS,
-  inviteMemberSchema,
   moveCategoryLinesSchema,
-  removeMemberSchema,
   renameCategorySchema,
   renameCompanySchema,
   reorderLoansSchema,
@@ -48,7 +46,6 @@ import {
   setCompanyCurrencySchema,
   setInvoicePaidSchema,
   invoiceBankWriteSchema,
-  setMemberRoleSchema,
   setJevModeSchema,
   setLineCashSchema,
   setLinePaceSchema,
@@ -71,6 +68,7 @@ import {
   updateProjectSchema,
   WRITE_TOOL_NAMES,
 } from "./tools_schemas.ts";
+import { inviteMemberSchema, removeMemberSchema, setMemberRoleSchema } from "./tools_team_schemas.ts";
 import { addLoanWrite, attachLoanWrite, updateLoanWrite } from "./tools_loans.ts";
 import { syncBank } from "./tools_sync.ts";
 import { resetForecastSchema, setForecastItemSchema } from "./tools_forecast_schemas.ts";
