@@ -16,23 +16,25 @@ import type { DevRoute } from "./types";
 const devAssistantSecret = import.meta.env.DEV ? assistantSampleSecret : undefined;
 
 /**
- * FLOW-512 proof: `?sheet=rename` (on the business page), `?sheet=theme` or `?sheet=switch` (on Settings)
- * taps the row that opens the sheet, once it has drawn. `rename` also types an invented name, as the board's frame has.
+ * FLOW-512 proof: `?sheet=rename` (on the business page), `?sheet=theme` or `?sheet=switch` (on Settings), or
+ * `?sheet=create` (on the categories page) taps the row that opens the sheet, once it has drawn. `rename` and `create`
+ * also type an invented name, as the board's frames have.
  */
 function OpenSettingsSheet() {
   const [params] = useSearchParams();
   useEffect(() => {
     const sheet = params.get("sheet");
-    if (sheet !== "rename" && sheet !== "theme" && sheet !== "switch") return;
+    if (sheet !== "rename" && sheet !== "theme" && sheet !== "switch" && sheet !== "create") return;
     const started = Date.now();
     const timer = window.setInterval(() => {
-      const row = sheet === "switch"
-        ? [...document.querySelectorAll<HTMLButtonElement>("button")].find((el) => el.textContent.startsWith("החלפת עסק"))
+      const row = sheet === "switch" || sheet === "create"
+        ? [...document.querySelectorAll<HTMLButtonElement>("button")].find((el) => el.textContent.trim().startsWith(sheet === "switch" ? "החלפת עסק" : "קטגוריה חדשה"))
         : document.querySelector<HTMLButtonElement>(sheet === "rename" ? 'button[aria-label^="שם העסק:"]' : 'button[aria-label^="מראה:"]');
       if (row) {
         row.click();
         window.clearInterval(timer);
-        if (sheet === "rename") fillRenameDraft();
+        if (sheet === "rename") fillRenameDraft("Cedar Lane Homes LLC");
+        if (sheet === "create") fillRenameDraft("ציוד וכלים");
       } else if (Date.now() - started > 4000) {
         window.clearInterval(timer);
       }
@@ -41,12 +43,12 @@ function OpenSettingsSheet() {
   return null;
 }
 
-function fillRenameDraft() {
+function fillRenameDraft(text: string) {
   const started = Date.now();
   const timer = window.setInterval(() => {
     const field = document.querySelector<HTMLInputElement>('[role="dialog"] input');
     if (field) {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(field, "Cedar Lane Homes LLC");
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(field, text);
       field.dispatchEvent(new Event("input", { bubbles: true }));
       window.clearInterval(timer);
     } else if (Date.now() - started > 4000) {
@@ -154,6 +156,9 @@ export function useDevSettingsSample(): NonNullable<Parameters<typeof SettingsSc
         teamCount: board ? 2 : teamParam == null || noCompany ? undefined : Number(teamParam),
         companyCount: board ? 2 : undefined,
         categoryCount: board ? 12 : undefined,
+        loanCurrency: board ? "USD" : undefined,
+        afterOverhead: board ? true : undefined,
+        renameSaving: params.get("saving") === "1" ? true : undefined,
         notifications: board
           ? { new_transaction: true, evening_reminder: false, weekly_summary: true, prompt_answered: true, has_subscription: true }
           : undefined,
@@ -174,11 +179,14 @@ export function useDevSettingsSample(): NonNullable<Parameters<typeof SettingsSc
 }
 
 export function DevCategories() {
+  // `?sheet=create`: the new-category sheet over the list (the board's SettingsNewCategory).
   // FLOW-513 fixture: the board's Settings › קטגוריות frame (SettingsCategories), same names, counts and order.
   // `hidden=1` (the e2e flow only) adds one hidden category, so the hidden footer and its un-hide step run.
   const [params] = useSearchParams();
   const hidden = params.get("hidden") === "1";
   return (
+    <>
+    <OpenSettingsSheet />
     <CategoriesScreen
       listPath="/e2e/categories"
       sample={[
@@ -197,6 +205,7 @@ export function DevCategories() {
         ...(hidden ? [{ id: "c14", name: "ישנה", kind: "expense" as const, hidden: true, is_default: false, count: 0 }] : []),
       ]}
     />
+    </>
   );
 }
 

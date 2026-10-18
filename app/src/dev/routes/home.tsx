@@ -110,6 +110,7 @@ export function DevCash() {
       }}
       initialDrawerOpen={params.get("drawer") === "1"}
       drawerYearMonths={yearMonths}
+      syncing={params.get("sync") === "1" ? "מסנכרן עם Mercury…" : null}
     />
   );
   // The board draws the + sheet (menu, or the form with `?entry=`) over this populated month; `?add=1` opens it here.

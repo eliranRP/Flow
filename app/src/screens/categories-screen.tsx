@@ -412,9 +412,11 @@ export function CategoriesScreen({
         open={createOpen}
         onOpenChange={setCreateOpen}
         title={parent == null ? "קטגוריה חדשה" : "תת־קטגוריה חדשה"}
+        subtitle={parent == null ? (kind === "income" ? "קטגוריה של הכנסה" : "קטגוריה של הוצאה") : undefined}
         returnFocusRef={createOpener}
         action={
           <Button
+            full
             busy={createCategory.isPending}
             onClick={() => {
               if (writeBlocked()) return;
@@ -425,7 +427,7 @@ export function CategoriesScreen({
           </Button>
         }
       >
-        <TextField label="שם" value={categoryName} onChange={(event) => { setCategoryName(event.target.value); }} />
+        <TextField label="שם" value={categoryName} hint="נספרת ברווח. אפשר לשנות אחרי השמירה." onChange={(event) => { setCategoryName(event.target.value); }} />
       </Sheet>
       <ConfirmSheet
         open={hideTarget != null}

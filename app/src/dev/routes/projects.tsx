@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { DevProjectProfitEmpty } from "./profit";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { BackButton } from "../../ui/back";
@@ -206,4 +207,5 @@ export const projectsRoutes: DevRoute[] = [
   { path: "projects", element: <DevProjects /> },
   { path: "project-detail", element: <DevProjectDetail /> },
   { path: "project-investment", element: <DevProjectInvestment /> },
+  { path: "project-profit-empty", element: <DevProjectProfitEmpty /> },
 ];

@@ -382,10 +382,12 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 
 .ui-sync-pill {
   position: absolute;
-  top: var(--space-4);
+  top: calc(var(--space-4) - var(--space-half));
   inset-inline: 0;
   margin-inline: auto;
   inline-size: max-content;
+  /* The board's pill is 210px wide for "מסנכרן עם Mercury…". */
+  min-inline-size: calc(var(--space-10) * 5 + var(--space-2) + var(--space-half));
   max-inline-size: calc(100% - var(--space-10));
   block-size: 36px;
   padding-inline: var(--space-5);

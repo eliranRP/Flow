@@ -52,7 +52,7 @@ export function ProjectsScreen({ sample, cashSample, finishedOpen: openFinished 
   const empty = (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <ScreenHeader layout="stacked" title="פרויקטים" trailing={<span className="ui-header-slot" aria-hidden="true" />} className="ui-tab-root-head" />
-      <div className="ui-projects-empty flex min-h-0 flex-1 flex-col">
+      <div className="ui-state-empty flex min-h-0 flex-1 flex-col">
         <EmptyState
           icon={<HomeIcon />}
           title="עוד אין פרויקטים"

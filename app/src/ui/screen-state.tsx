@@ -22,6 +22,7 @@ export function ScreenState({
   leading,
   trailing,
   below,
+  stateSubtitle,
   syncing,
   barOnly = false,
   headerClassName,
@@ -44,6 +45,8 @@ export function ScreenState({
   trailing?: ReactNode;
   /** A control under the title that stays real while the data loads (ScreenHeader `below`). */
   below?: ReactNode;
+  /** The subtitle the header keeps while the data loads or the screen is empty, when the board's frame draws it (a month page's month). */
+  stateSubtitle?: string;
   /** A background refresh is running: the strip says what it syncs (FLOW-371). Null when none runs. */
   syncing?: string | null;
   /** Draws only the back bar (with `kicker` as Back's label), not the title: the invoice page's board header. */
@@ -70,9 +73,9 @@ export function ScreenState({
       {barOnly ? (
         <ScreenHeader barOnly backTo={backTo} kicker={kicker} className={headerClassName} />
       ) : stacked ? (
-        <ScreenHeader layout="stacked" title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} leading={leading} trailing={trailing ?? action} kicker={kicker} below={below} className={headerClassName} />
+        <ScreenHeader layout="stacked" title={title} subtitle={phase.kind === "ready" ? subtitle : stateSubtitle} backTo={backTo} leading={leading} trailing={trailing ?? action} kicker={kicker} below={below} className={headerClassName} />
       ) : (
-        <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} action={action} trailing={trailing} kicker={kicker} className={headerClassName} />
+        <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : stateSubtitle} backTo={backTo} action={action} trailing={trailing} kicker={kicker} className={headerClassName} />
       )}
       {/* The body is the overlay's frame: a skeleton fades out over it while the content fades in (FLOW-371). */}
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">

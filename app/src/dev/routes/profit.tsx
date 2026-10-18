@@ -7,10 +7,14 @@ import { ProjectMonthProfitScreen } from "../../screens/project-month-profit-scr
 import { JUNIPER_MONTH_PROFIT } from "../profit-month-sample";
 import type { DevRoute } from "./types";
 
-/** FLOW-140 slice 1: the project profit page on the board's Juniper Ct figures; `?state=empty` is a project with no lines. */
+/** FLOW-140 slice 1: the project profit page on the board's Juniper Ct figures. */
 export function DevProjectProfit() {
-  const [params] = useSearchParams();
-  return <ProjectProfitScreen sample={params.get("state") === "empty" ? NEW_PROJECT_PROFIT : JUNIPER_PROFIT} />;
+  return <ProjectProfitScreen sample={JUNIPER_PROFIT} />;
+}
+
+/** A project with no lines (board States, profitEmpty). It sits under the Projects tab, as the board's frame does. */
+export function DevProjectProfitEmpty() {
+  return <ProjectProfitScreen sample={NEW_PROJECT_PROFIT} />;
 }
 
 export function DevProjectMonthProfit() {

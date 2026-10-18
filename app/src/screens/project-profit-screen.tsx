@@ -8,11 +8,15 @@ import { allTime, monthPeriod } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { withPeriodSearch } from "../project-period";
 import { screenPhase } from "../query-phase";
+import { EMPTY_FILTERS, searchFiltersQuery } from "../search";
 import { useProfitMonthsQuery, useProjectQuery } from "../use-books";
 import { Amount } from "../ui/amount";
+import { Button } from "../ui/button";
 import { Card } from "../ui/card";
+import { EmptyState } from "../ui/empty-state";
 import { Chip } from "../ui/chip";
 import { HEBREW_MONTHS } from "../ui/date-math";
+import { BarsIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ProfitSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
@@ -97,6 +101,30 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
     const query = params.toString();
     void navigate({ pathname: location.pathname, search: query === "" ? "" : `?${query}` }, { replace: true });
   };
+  // The board's empty frame (States profitEmpty): a project with no income or expense yet has nothing to add up.
+  if (project != null && phase.kind === "ready" && rows.length === 0 && (row == null || (row.income_minor === 0n && projectExpenseMinor(row) === 0n))) {
+    return (
+      <ScreenState
+        title={`רווח · ${project.name}`}
+        kicker={fromProfit ? "רווח" : project.name}
+        stateSubtitle="מתחילת הפרויקט"
+        backTo={backTo}
+        headerClassName="ui-state-header"
+        phase={{ kind: "empty" }}
+        onRetry={() => { void detail.refetch(); }}
+        empty={(
+          <div className="ui-state-empty flex min-h-0 flex-1 flex-col">
+            <EmptyState
+              icon={<BarsIcon />}
+              title="עוד אין מה לחשב"
+              body={`כשתשייכו ל־${project.name} הכנסה או הוצאה, הרווח שלו יופיע כאן.`}
+              action={<Button variant="secondary" href={`/search${searchFiltersQuery({ ...EMPTY_FILTERS, project: "none" }, new URLSearchParams(search))}`}>לשורות בלי פרויקט</Button>}
+            />
+          </div>
+        )}
+      />
+    );
+  }
   return (
     <ScreenState
       title="רווח"

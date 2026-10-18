@@ -68,6 +68,10 @@ export type SettingsSample = {
   companyCount?: number;
   /** FLOW-103. The company's profit basis, for the העסק page's row (a sample or preview). */
   basis?: BasisChoice;
+  /** The העסק page's after-overhead switch, on (a sample only; live reads the company). */
+  afterOverhead?: boolean;
+  /** The rename sheet while its write runs (the board's saving frame): a busy button, a disabled field. */
+  renameSaving?: boolean;
   /** Setup steps still to do (the הגדרה ראשונה row shows only while any is left). */
   setupLeft?: number;
 };
