@@ -1,6 +1,6 @@
 -- Review follow-ups to decision 0185 (one recurring charge per party and project):
 -- - The owner's "recurring" switch is per party, so it now makes only the party's main charge recurring
---   (the project of its latest line). Another project's lines count only when they recur on their own;
+--   (the project it billed in the most of the last six complete months, then the latest). Another project's lines count only when they recur on their own;
 --   before, one stray bill filed to another project became a monthly charge with a late alert.
 -- - party_charges_json reads the usual amount of the line's own charge. A party merged with another
 --   ("the same", FLOW-430) or a loan filed to two projects has two charges, and the scalar read failed.
@@ -74,7 +74,8 @@ AS $function$
       end as auto_pace
     from stats s, bounds b
   ),
-  -- The party's main charge: the project it bills most months of the last six (then the latest). The
+  -- The party's main charge: the project it billed in the most of the last six complete months (then the
+  -- latest). The
   -- owner's switch is per party, so it makes this charge recurring; another project's lines count only
   -- when they recur on their own (decision 0185).
   main as (
@@ -82,7 +83,7 @@ AS $function$
     from lines l, bounds b
     group by l.direction, l.party_id, l.currency, l.stream_project
     order by l.direction, l.party_id, l.currency,
-      count(distinct l.month) filter (where l.month >= b.window6) desc, max(l.doc_date) desc,
+      count(distinct l.month) filter (where l.month >= b.window6 and l.month < b.this_month) desc, max(l.doc_date) desc,
       l.stream_project nulls last
   ),
   parties as (
@@ -243,10 +244,12 @@ AS $function$
       -- The rule's usual is the whole party's; it stands for this context only when every one of the
       -- party's charges is in it.
       and not exists (select 1 from party_lines pl where not pl.in_scope)
-      -- A party has one charge per project (decision 0185): the line's own charge.
-      and r.project_id is not distinct from (
-        select sl.stream_project from private.recurring_stream_lines(p_company, p.as_of) sl
-        where sl.id = p_transaction_id
+      -- A party has one charge per project (decision 0185): the line's own charge. A line the streams
+      -- leave out (dated after today, or an income receipt) reads its own project's.
+      and r.project_id is not distinct from coalesce(
+        (select sl.stream_project from private.recurring_stream_lines(p_company, p.as_of) sl
+         where sl.id = p_transaction_id),
+        (select s.project_id from scope s)
       )
   ),
   -- Otherwise: the median of the context's earlier complete months, at least 2 of the last 6.

@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(8);
+select plan(10);
 
 do $users$
 begin
@@ -32,7 +32,9 @@ insert into public.suppliers (company_id, name) values
   (pg_temp.id('co'), 'Example Fees'),
   (pg_temp.id('co'), 'Example Main'),
   (pg_temp.id('co'), 'Example Alias'),
-  (pg_temp.id('co'), 'Example Servicing');
+  (pg_temp.id('co'), 'Example Servicing'),
+  (pg_temp.id('co'), 'Example Later'),
+  (pg_temp.id('co'), 'Example Off');
 insert into sr (label, id)
 select lower(replace(s.name, 'Example ', '')), s.id from public.suppliers s where s.company_id = pg_temp.id('co');
 
@@ -41,6 +43,8 @@ select lower(replace(s.name, 'Example ', '')), s.id from public.suppliers s wher
 -- 50,000 to Birch in March. The owner marked both recurring.
 -- Main: 70,000 to Alder, April to September. Alias, answered "the same" as Main: 40,000 to Birch.
 -- Servicing: 400,000 to Alder and 250,000 to Birch, April to September.
+-- Later: 60,000 to Alder, April to September, and one line dated after today (October 28).
+-- Off: 10,000 to Alder, April to September, and the owner marked it not recurring.
 create temp table sr_lines (key text, party text, project text, doc_date date, amount bigint);
 insert into sr_lines
 select 'power:' || d::date, 'power', 'alder', d::date, 30000 from generate_series('2026-04-05'::date, '2026-10-05', interval '1 month') d;
@@ -57,6 +61,11 @@ insert into sr_lines
 select 'servicing-a:' || d::date, 'servicing', 'alder', d::date, 400000 from generate_series('2026-04-01'::date, '2026-09-01', interval '1 month') d;
 insert into sr_lines
 select 'servicing-b:' || d::date, 'servicing', 'birch', d::date, 250000 from generate_series('2026-04-02'::date, '2026-09-02', interval '1 month') d;
+insert into sr_lines
+select 'later:' || d::date, 'later', 'alder', d::date, 60000 from generate_series('2026-04-09'::date, '2026-09-09', interval '1 month') d;
+insert into sr_lines values ('later-next', 'later', 'alder', '2026-10-28', 60000);
+insert into sr_lines
+select 'off:' || d::date, 'off', 'alder', d::date, 10000 from generate_series('2026-04-11'::date, '2026-09-11', interval '1 month') d;
 
 insert into sr (label, id)
 select l.key, tests.fixture_line(
@@ -69,6 +78,8 @@ where t.id = pg_temp.id(l.key);
 
 insert into public.recurring_overrides (company_id, direction, party_id, currency, recurring)
 select pg_temp.id('co'), 'expense', pg_temp.id(p), 'ILS', true from unnest(array['power', 'fees']) p;
+insert into public.recurring_overrides (company_id, direction, party_id, currency, recurring)
+values (pg_temp.id('co'), 'expense', pg_temp.id('off'), 'ILS', false);
 insert into public.recurring_matches (company_id, direction, party_id, match_party_id, same)
 values (pg_temp.id('co'), 'expense', pg_temp.id('main'), pg_temp.id('alias'), true);
 
@@ -111,7 +122,17 @@ select is(
   'the usual amount is the line''s own charge'
 );
 
--- 7-8. The setup's lenders: one per supplier, its loans summed.
+-- 7. A line dated after today still reads its charge's usual amount.
+select is(
+  public.party_charges(pg_temp.id('later-next'), '2026-10-20') ->> 'typical_source',
+  'recurring',
+  'a line dated after today reads the usual amount of its project''s charge'
+);
+
+-- 8. "Not recurring" still takes out a party the rule finds.
+select is((select count(*)::integer from pg_temp.charges('off')), 0, 'a party marked not recurring has no charge');
+
+-- 9-10. The setup's lenders: one per supplier, its loans summed.
 select is(
   (select count(*)::integer from jsonb_array_elements(public.get_setup_suggestions('2026-10-20') -> 'lenders') e
    where e ->> 'name' = 'Example Servicing'),
