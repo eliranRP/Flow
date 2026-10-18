@@ -105,7 +105,7 @@ describe("ProjectNextMonthScreen", () => {
       "רווח אחרי הוצאות כלליות$2,228",
     ]);
     expect(container.querySelector(".ui-pp-figure")?.textContent).toBe("+$2,380");
-    expect(screen.getByText(/^לפי הקבועים של הנכס וממוצע שאר ההוצאות ב־6 החודשים האחרונים\. תשלום הלוואה נספר בריבית ובמסים שלו, בלי הקרן\./)).toBeTruthy();
+    expect(screen.getByText(/^לפי הקבועים של הנכס וממוצע שאר ההוצאות ב־6 החודשים האחרונים, בלי קרן הלוואות\./)).toBeTruthy();
   });
 
   it("lists the recurring rows by day and the average last, with no chips", () => {

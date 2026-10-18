@@ -19,7 +19,7 @@ import { SummaryRow, type ProjectProfitSample } from "./project-profit-screen";
 
 type ProjectNextMonthSample = ProjectProfitSample & { next: NonNullable<ProjectProfitSample["next"]> };
 
-const NOTE = "לפי הקבועים של הנכס וממוצע שאר ההוצאות ב־6 החודשים האחרונים. תשלום הלוואה נספר בריבית ובמסים שלו, בלי הקרן. מתעדכן כשהתנועות מגיעות.";
+const NOTE = "לפי הקבועים של הנכס וממוצע שאר ההוצאות ב־6 החודשים האחרונים, בלי קרן הלוואות. מתעדכן כשהתנועות מגיעות.";
 
 function rowHint(row: NextMonthRow, months: number): string {
   if (row.date != null) return `צפוי ${formatDayMonth(row.date)} · קבוע`;
