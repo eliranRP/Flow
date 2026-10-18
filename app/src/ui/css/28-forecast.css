@@ -251,61 +251,112 @@
   line-height: calc(var(--type-caption-line) + 0.1);
 }
 
-.ui-forecast-form {
+/* MonthForecastEdit: a row's page over the list. The list stays mounted under it, out of view. */
+.ui-forecast-screen-paged > :not(.ui-forecast-page) { display: none; }
+
+.ui-forecast-page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-inset-row);
-  padding-bottom: 0;
+  gap: var(--space-4);
+  padding-top: var(--space-3);
 }
 
-.ui-forecast-field,
-.ui-forecast-when {
+.ui-forecast-page-back { display: flex; min-block-size: var(--touch-min); align-items: center; }
+
+.ui-forecast-page-head {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
+}
+
+.ui-forecast-page-status {
+  align-self: flex-start;
+  padding: var(--space-1) calc(var(--space-2) + var(--space-half));
+  border-radius: var(--radius-seg-btn-small);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-size: calc(var(--type-cents-size) + 1px);
+  font-weight: var(--type-chip-weight);
+  line-height: var(--type-cents-line);
+}
+
+.ui-forecast-page-status-late { color: var(--color-signal-soft); }
+
+.ui-forecast-page-title {
   margin: 0;
+  font-size: var(--type-name-size);
+  font-weight: var(--type-name-weight);
+  line-height: var(--type-sheet-line);
+  overflow-wrap: anywhere;
+}
+
+.ui-forecast-page-amount {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-2) + var(--space-half));
+  padding-bottom: var(--space-1);
+  border-bottom: 1.5px solid var(--color-tint-strong);
+}
+
+.ui-forecast-page-pencil { display: flex; flex: none; color: var(--color-text-muted); }
+
+.ui-forecast-page-input {
+  flex: 1;
+  min-inline-size: 0;
   padding: 0;
   border: 0;
-}
-
-.ui-forecast-field-label {
-  color: var(--color-text-muted);
-  font-size: var(--type-caption-size);
-  line-height: var(--type-caption-line);
-}
-
-.ui-forecast-input {
-  min-block-size: 48px;
-  padding: 0 var(--space-inset-row);
-  border: 1.5px solid var(--color-tint-strong);
-  border-radius: var(--radius-input);
-  background: var(--color-raised);
+  background: none;
   color: var(--color-text);
   font: inherit;
-  font-size: var(--type-body-size);
+  font-size: var(--type-detail-size);
+  font-weight: var(--type-detail-weight);
+  line-height: var(--type-band-line);
   font-variant-numeric: tabular-nums lining-nums;
+  text-align: end;
+  outline: none;
 }
 
-.ui-forecast-source {
+.ui-forecast-page-input-in { color: var(--color-income); }
+
+.ui-forecast-page-amount:focus-within { border-bottom-color: var(--color-accent); }
+
+.ui-forecast-page-meta {
   margin: 0;
-  font-size: var(--type-line2-size);
-  line-height: var(--control-height-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
 }
 
-.ui-forecast-source a {
+.ui-forecast-page-card {
+  overflow: hidden;
+  border-radius: var(--radius-card-tight);
+  background: var(--color-surface);
+}
+
+.ui-forecast-page-card .ui-icon-row { min-block-size: 84px; padding-inline: var(--space-inset-row); }
+.ui-forecast-page-card .ui-icon-row + .ui-icon-row { border-top: 1px solid var(--color-line); }
+.ui-forecast-page-card .ui-icon-row-text { gap: calc(var(--space-1) - 1px); }
+.ui-forecast-page-project .ui-icon-row-value { font-size: var(--type-body-size); font-weight: var(--type-body-weight); }
+.ui-forecast-page-card .ui-forecast-page-row { min-block-size: 64px; }
+/* The board's source row is a link, drawn taller than the When row above it. */
+.ui-forecast-page-card a.ui-forecast-page-row { min-block-size: 88px; }
+.ui-forecast-page-row .ui-icon-row-hint { font-size: calc(var(--type-cents-size) + 1px); line-height: var(--type-cents-line); }
+
+.ui-forecast-page-when {
+  flex: none;
+  padding: var(--space-1) calc(var(--space-2) + var(--space-half));
   color: var(--color-accent-text);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-chip-weight);
 }
 
-/* The sheet: the head is the board's (title and invoice line share a column; the x sits in the gutter). */
-.ui-forecast-sheet .ui-sheet-head > .ui-icon-btn { margin-block: 0; }
-.ui-forecast-sheet .ui-sheet-head > .ui-icon-btn:last-child:not(:first-child) { margin-inline-end: 0; }
-.ui-forecast-sheet .ui-sheet-title,
-.ui-forecast-sheet .ui-sheet-subtitle { line-height: var(--type-sheet-line); }
-.ui-forecast-sheet .ui-forecast-field,
-.ui-forecast-sheet .ui-forecast-when .ui-field { gap: calc(var(--space-1) * 1.5); }
-.ui-forecast-sheet .ui-forecast-when .ui-field-label { color: var(--color-text-muted); font-size: var(--type-caption-size); line-height: var(--type-caption-line); }
-.ui-forecast-sheet .ui-seg { padding: calc(var(--space-1) / 2); gap: calc(var(--space-1) / 2); border-radius: var(--radius-input); }
-.ui-forecast-sheet .ui-seg-btn { border-radius: var(--radius-seg-btn); font-size: var(--type-meta-size); font-weight: var(--type-btn-weight); }
+.ui-forecast-page-hint {
+  margin: 0;
+  padding: 0 var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-note-line);
+}
 
 .ui-forecast-error {
   margin: var(--space-4) 0 0;

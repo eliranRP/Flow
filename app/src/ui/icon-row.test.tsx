@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { IconRow } from "./icon-row";
 import { ProjectsIcon } from "./icons";
@@ -17,6 +18,14 @@ describe("IconRow", () => {
     expect(row).toHaveClass("ui-icon-row", "ui-row");
     fireEvent.click(row);
     expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("to makes it a link with the chevron, named by its label and value", () => {
+    render(<MemoryRouter><IconRow {...base} to="/unpaid" /></MemoryRouter>);
+    const row = screen.getByRole("link", { name: "פרויקט שיפוץ דירה" });
+    expect(row).toHaveAttribute("href", "/unpaid");
+    expect(row).toHaveClass("ui-icon-row", "ui-row");
+    expect(row.querySelector(".ui-icon-row-end svg")).toBeTruthy();
   });
 
   it("titled puts the label first as the bold title and the value under it as the muted line, the name unchanged", () => {

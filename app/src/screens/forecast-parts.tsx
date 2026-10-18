@@ -25,7 +25,7 @@ export function MovedRow({ item, onOpen }: { item: ForecastItem; onOpen: (item: 
   const amount = signed(item.minor, item.direction === "income" ? "+" : "−", item.currency);
   return (
     <li className="ui-forecast-moved-li">
-      <button type="button" className="ui-forecast-moved-row" onClick={() => { onOpen(item); }} aria-label={`${name}, ${amount}`}>
+      <button type="button" className="ui-forecast-moved-row" data-forecast-key={item.key} onClick={() => { onOpen(item); }} aria-label={`${name}, ${amount}`}>
         <span>{name}</span>
         <bdi dir="ltr">{amount}</bdi>
       </button>
