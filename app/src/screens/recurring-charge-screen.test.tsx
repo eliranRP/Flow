@@ -3,6 +3,7 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
+import { ViewerPreview } from "../use-is-viewer";
 import {
   RECURRING_CHARGES_FIXTURE_POWER,
   RECURRING_CHARGES_FIXTURE_WATER,
@@ -148,6 +149,15 @@ describe("the charge page: the late bill (the power bill, with its suggested mat
     expect(within(box).getByText("Brightline Energy Svcs")).toBeTruthy();
     expect(within(box).getByText("$191")).toBeTruthy();
     expect(within(box).getByText("08/10")).toBeTruthy();
+  });
+
+  it("shows a viewer no match answer and no pace sheet, and keeps the ignore", () => {
+    renderPage("/recurring/expense/power", <ViewerPreview><RecurringChargeScreen now={NOW} /></ViewerPreview>);
+    expect(screen.getByText("החשבון באיחור 8 ימים")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "אולי הגיע בשם אחר" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "כן, אותו ספק" })).toBeNull();
+    expect(screen.getByRole("button", { name: /תשלום קבוע/ })).toBeDisabled();
+    expect(calls()).not.toContainEqual(expect.arrayContaining(["set_payment_pace"]));
   });
 
   it("כן, אותו ספק answers the match as the same party, and ביטול takes it back", async () => {

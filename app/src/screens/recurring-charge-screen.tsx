@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { RECURRING_KEYS, runPaceChange, type PaceWrite } from "../pace-write";
 import { useHomePreview, usePreviewSearch } from "../preview";
+import { useHoldWrites } from "../use-is-viewer";
 import { dismissRecurringAlert, answerRecurringMatch, liveRpcClient, restoreRecurringAlert, type AlertKind } from "../recurring-actions";
 import { type ChargePageData, useChargePageData } from "../recurring-charge-data";
 import { amountOf, bannerText, changeLine, chargeAlert, dayMonth, ignoredText, metaOf, monthsThrough, statusOf } from "../recurring-charge";
@@ -106,6 +107,8 @@ function ChargeBody({
   const client = useQueryClient();
   const navigate = useNavigate();
   const blocked = useBlockedPreview();
+  // A viewer (or a role still unknown) reads the page: no match answer and no pace sheet; ignore stays, as the server allows it.
+  const holdWrites = useHoldWrites();
   const income = row.direction === "income";
   const currency = row.currency;
   const thisMonth = today.slice(0, 7);
@@ -134,7 +137,7 @@ function ChargeBody({
   const alert = chargeAlert(row, data.bills, data.changes, lineId);
   const ignored = alert != null && (ignoredLocal ?? !alert.active);
   const suggestion = alert?.kind === "missing" && !ignored ? alert.suggestion : null;
-  const showMatch = suggestion != null && matchLocal == null;
+  const showMatch = suggestion != null && matchLocal == null && !holdWrites;
   const isRecurring = paceLocal?.recurring ?? true;
   const pace: RecurringPace = paceLocal?.pace ?? row.pace;
   const overridden = recurring?.override != null;
@@ -263,7 +266,7 @@ function ChargeBody({
             title={income ? "הכנסה קבועה" : "תשלום קבוע"}
             sub={subLine}
             pace={pace}
-            disabled={lineId == null && live}
+            disabled={(lineId == null && live) || holdWrites}
             onOpen={() => {
               if (write.isPending || (live && blocked())) return;
               setPaceOpen(true);

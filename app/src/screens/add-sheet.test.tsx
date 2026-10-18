@@ -94,7 +94,7 @@ describe("+ quick action history", () => {
 // --- add-entry-view.test.tsx
 
 const TODAY = "16/10/2026";
-const projects = [{ id: "p1", name: "Oak Ridge" }];
+const projects = [{ id: "p1", name: "Fernbrook Ln" }];
 const categories = [{ id: "c1", name: "ציוד", kind: "expense" as const }];
 
 function setup(overrides: Partial<AddEntryViewProps> = {}, draft: Partial<EntryDraft> = {}) {
@@ -136,7 +136,7 @@ describe("AddEntryView inline new project", () => {
   it("keeps הוספה off for a name that already exists", () => {
     setup();
     fireEvent.click(screen.getByRole("button", { name: "+ פרויקט חדש" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "שם הפרויקט החדש" }), { target: { value: "Oak Ridge" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "שם הפרויקט החדש" }), { target: { value: "Fernbrook Ln" } });
     expect(screen.getByRole("button", { name: "הוספה" })).toBeDisabled();
     expect(screen.getByText("כבר יש פרויקט בשם הזה")).toBeInTheDocument();
   });
@@ -151,7 +151,7 @@ describe("AddEntryView inline new project", () => {
   });
 
   it("is not offered when the form opened from a project", () => {
-    setup({ fromProject: "Oak Ridge" });
+    setup({ fromProject: "Fernbrook Ln" });
     expect(screen.queryByRole("button", { name: "+ פרויקט חדש" })).not.toBeInTheDocument();
   });
 });
