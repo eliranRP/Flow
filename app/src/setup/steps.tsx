@@ -389,7 +389,7 @@ export function StepProjects({
         }}
       >
         <div className="ui-onb-add-field">
-          <TextField label={PROJECT_PLACEHOLDER} value={draft} onChange={(event) => { setDraft(event.target.value); }} />
+          <TextField label={PROJECT_PLACEHOLDER} placeholder={PROJECT_PLACEHOLDER} value={draft} onChange={(event) => { setDraft(event.target.value); }} />
         </div>
         <Button type="submit" variant="secondary" disabled={!addable}>{PROJECT_ADD}</Button>
       </form>

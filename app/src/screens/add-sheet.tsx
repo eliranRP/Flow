@@ -53,7 +53,7 @@ function AddSheet({ fromProject }: { fromProject: { id: string; name: string } |
   const fillName = params.get("entry");
   const sample = useHomePreview() !== "off";
   const fill = sample && fillName != null && Object.hasOwn(SAMPLE_ENTRY_FILLS, fillName) ? SAMPLE_ENTRY_FILLS[fillName] : null;
-  const [entry, setEntry] = useState<OpenEntry | null>(() => (fill == null ? null : { kind: "cash", document: null }));
+  const [entry, setEntry] = useState<OpenEntry | null>(() => (fill == null ? null : { kind: fill.kind ?? "cash", document: fill.document ?? null }));
   const [pickError, setPickError] = useState<string | null>(null);
   const cameraPicker = useRef<HTMLInputElement>(null);
   const filePicker = useRef<HTMLInputElement>(null);

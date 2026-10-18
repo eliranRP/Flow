@@ -69,6 +69,7 @@ export function sampleSplitApi(
  */
 export const BOARD_SPLIT_CATEGORIES = [
   { id: "b-materials", name: "חומרים", kind: "expense" as const, hidden: false },
+  { id: "b-equipment", name: "ציוד והשכרה", kind: "expense" as const, hidden: false },
   { id: "b-labour", name: "עבודה", kind: "expense" as const, hidden: false },
   { id: "b-repairs", name: "תיקונים ותחזוקה", kind: "expense" as const, hidden: false },
   { id: "b-power", name: "חשמל ומים", kind: "expense" as const, hidden: false },
@@ -100,6 +101,9 @@ export const BOARD_SPLIT_LINE: SampleLine = {
   loanSplit: false,
 };
 
+/** The review board's line: 08/10, $1,284.50 to a supplier, filed as materials on the Elm Row project. */
+export const BOARD_REVIEW_SPLIT_LINE: SampleLine = { ...BOARD_SPLIT_LINE, id: "t-board-review-split", amountNet: -128_450n, docDate: "2026-10-08" };
+
 /** The board's saved split: Birch Lane $6,000 and Sable Ct $2,000, the rest on Elm Row. */
 export const BOARD_SPLIT_READ: LineSplitRead = {
   transactionId: "t-board-split",
@@ -113,10 +117,10 @@ export const BOARD_SPLIT_READ: LineSplitRead = {
   ],
 };
 
-/** The five split board frames (FLOW-922). The dev route reads `?board=<state>` and nothing else drives them. */
-export type BoardSplitState = "split" | "empty" | "picker" | "over" | "twice";
+/** The six split board frames (FLOW-922; review is the sheet opened from the review queue). The dev route reads `?board=<state>` and nothing else drives them. */
+export type BoardSplitState = "split" | "empty" | "picker" | "over" | "twice" | "review";
 
-export const BOARD_SPLIT_STATES: readonly BoardSplitState[] = ["split", "empty", "picker", "over", "twice"];
+export const BOARD_SPLIT_STATES: readonly BoardSplitState[] = ["split", "empty", "picker", "over", "twice", "review"];
 
 /** The board's two parts: Birch Lane $6,000 and Sable Ct $2,000, both on materials (part 2 is the picker's target). */
 const BOARD_PART_BIRCH: PartDraft = { key: "board-1", categoryId: "b-materials", projectId: "b-birch", unit: "amount", value: "6000" };
@@ -124,6 +128,7 @@ const BOARD_PART_SABLE: PartDraft = { key: "board-2", categoryId: "b-materials",
 
 /** The pieces of a LineSplitSample for one board frame; the line and the lists are the constants above. */
 export function boardSplitSample(state: BoardSplitState): {
+  line?: SampleLine;
   split: LineSplitRead | null;
   parts: PartDraft[];
   rest: RestDraft;
@@ -139,6 +144,16 @@ export function boardSplitSample(state: BoardSplitState): {
       return { split: null, parts: [BOARD_PART_BIRCH, BOARD_PART_SABLE], rest: none, target: { partKey: "board-2", kind: "project" } };
     case "over":
       return { split: null, parts: [BOARD_PART_BIRCH, { ...BOARD_PART_SABLE, value: "3500" }], rest: none };
+    case "review":
+      return {
+        line: BOARD_REVIEW_SPLIT_LINE,
+        split: null,
+        parts: [
+          { ...BOARD_PART_BIRCH, categoryId: "b-equipment", value: "340" },
+          { ...BOARD_PART_SABLE, categoryId: "b-materials", value: "420" },
+        ],
+        rest: none,
+      };
     case "twice":
       return { split: null, parts: [BOARD_PART_BIRCH, { ...BOARD_PART_BIRCH, key: "board-2", value: "2000" }], rest: none };
   }

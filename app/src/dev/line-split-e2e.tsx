@@ -9,7 +9,7 @@ import { BOARD_SPLIT_CATEGORIES, BOARD_SPLIT_LINE, BOARD_SPLIT_PROJECTS, BOARD_S
  * the screen closing. Dev builds only.
  * `?line=refund` opens the inflow; `?save=fail` refuses every save as a dropped connection.
  * `?board=<state>` opens one of the split board's frames (FLOW-922 proof fixtures): split, empty,
- * picker, over, twice. Nothing else drives those states.
+ * picker, over, twice, review. Nothing else drives those states.
  */
 export function DevLineSplit() {
   const [params] = useSearchParams();
@@ -18,7 +18,7 @@ export function DevLineSplit() {
   const boardParam = params.get("board");
   const boardState = BOARD_SPLIT_STATES.find((state) => state === boardParam);
   const board = boardState != null ? boardSplitSample(boardState) : null;
-  const line = board ? BOARD_SPLIT_LINE : refund ? SAMPLE_REFUND_LINE : SAMPLE_EXPENSE_LINE;
+  const line = board ? (board.line ?? BOARD_SPLIT_LINE) : refund ? SAMPLE_REFUND_LINE : SAMPLE_EXPENSE_LINE;
   const api = useMemo(() => sampleSplitApi(line, (parts) => {
     if (fail) throw new Error("Failed to fetch");
     sessionStorage.setItem("e2e-line-split-saved", JSON.stringify(parts));

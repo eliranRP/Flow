@@ -88,24 +88,46 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3);
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-card-row);
   background: var(--color-tint);
 }
 
+/* The attached document drawn as a small sheet of paper: a title line and two text lines. */
 .ui-add-doc-thumb {
+  display: flex;
   flex: none;
-  inline-size: 40px;
-  block-size: 52px;
+  flex-direction: column;
+  gap: var(--space-1);
+  inline-size: calc(var(--touch-min));
+  block-size: calc(var(--touch-min) + var(--space-3));
+  padding: var(--space-2) calc(var(--space-1) + var(--space-half));
+  box-sizing: border-box;
+  border-radius: var(--radius-thumb);
+  background: var(--color-paper);
+}
+
+.ui-add-doc-thumb i {
+  block-size: calc(var(--space-1) - var(--space-half) / 2);
   border-radius: var(--radius-chip);
-  background: var(--color-line);
+  background: var(--color-paper-line);
+}
+
+.ui-add-doc-thumb i:first-child {
+  inline-size: 70%;
+  block-size: var(--space-1);
+  background: var(--color-paper-ink);
 }
 
 .ui-add-doc-text {
   display: flex;
   min-inline-size: 0;
   flex-direction: column;
-  gap: var(--space-1);
-  font-size: var(--type-body-size);
+  gap: var(--space-half);
+  font-size: var(--type-line2-size);
+}
+
+.ui-add-doc-text .ui-add-hint {
+  color: var(--color-text-secondary);
 }
 
 .ui-add-field {

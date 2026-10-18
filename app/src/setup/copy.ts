@@ -60,7 +60,7 @@ export const CONNECT_ROWS = {
 
 // 3 · פרויקטים
 export const PROJECTS_LEAD = "נכס, שיפוץ או עבודה ללקוח. כל שורה תשויך לאחד מהם.";
-export const PROJECT_PLACEHOLDER = "שם הפרויקט, למשל Birch Lane";
+export const PROJECT_PLACEHOLDER = "שם הפרויקט, למשל Elm Row";
 export const PROJECT_ADD = "הוספה";
 export const SUGGESTED_PROJECTS_LABEL = "מהבנק נראה שיש לכם עוד:";
 
