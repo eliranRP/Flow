@@ -27,7 +27,7 @@ Every reader that keyed by party now keys by party and project:
 
 A late bill's `alert_key` adds `:<project_id>` for a party with more than one charge. A party with one charge keeps the key it had, so no dismissal comes back.
 
-The owner's switches stay per party and currency: recurring or not ([0172](0172-recurring-charges.md)) and the pace ([0175](0175-recurring-pace-dismissals.md)). So does the answer that two parties are the same (FLOW-430). Each switch applies to every one of the party's charges.
+The owner's switches stay per party and currency: recurring or not ([0172](0172-recurring-charges.md)) and the pace ([0175](0175-recurring-pace-dismissals.md)). So does the answer that two parties are the same (FLOW-430). "Not recurring" and the pace apply to every one of the party's charges. "Recurring" makes the party's **main** charge recurring: the project it billed in the most of the last six complete months, then the latest. Another project's charge counts only when its own lines recur.
 
 In the app, a split party's charges are separate rows in קבועים. Each one opens its own page (`/recurring/:direction/:partyId?project=`).
 
@@ -41,4 +41,7 @@ In the app, a split party's charges are separate rows in קבועים. Each one 
 
 - A party whose lines are filed to one project reads exactly as before.
 - A line filed once to another project starts a separate charge there. It shows only if that project's lines recur on their own.
-- The line page's charges (`party_charges`, [0178](0178-party-charges.md)) already compared a line with its own loan or project, so it does not change.
+- The line page's charges (`party_charges`, [0178](0178-party-charges.md)) compare a line with its own loan or project; their usual amount is the line's own charge's.
+- The setup's lenders (`get_setup_suggestions`) sum a supplier's charges, so a servicer with several loans is one lender.
+- A bill that moves between projects month to month (A, B, A, B) splits into one charge per project, each read as every two (or three) months. With a short history none of them recurs. Filing it to one project keeps it one charge.
+- A late bill's key and a forecast item's key gain the project suffix when a party's second charge appears, so that month's dismissal or forecast change for the first charge no longer matches: the alert comes back and the change is dropped.
