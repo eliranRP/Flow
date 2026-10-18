@@ -138,12 +138,13 @@ select is(
 -- The private read helpers those reads call. Excluded: the two company lookups themselves,
 -- MCP-only helpers (mcp_*) and the owner's SUMIT connection rows. A helper that must stay
 -- owner-only (a permission check for a write, say) goes in this exclusion list; switching it to
--- readable_company_id() would let a viewer through.
+-- readable_company_id() would let a viewer through. pfe_writer is the project forecast edits'
+-- write check (owner or editor).
 select is(
   (select coalesce(array_agg(p.proname::text order by p.proname), '{}')
    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'private' and p.prokind = 'f' and p.provolatile = 's'
-     and p.proname not in ('current_company_id', 'readable_company_id', 'sumit_connection_rows')
+     and p.proname not in ('current_company_id', 'readable_company_id', 'sumit_connection_rows', 'pfe_writer')
      and p.proname not like 'mcp\_%'
      and p.prosrc like '%current_company_id()%'
      and p.prosrc not like '%readable_company_id()%'),
