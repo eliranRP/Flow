@@ -43,11 +43,14 @@ export function useProjectForecastWrites(projectId: string, month: string) {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       lastUndo.current = null;
+      // Each RPC by its name as a string, so the deploy smoke's guard can see it.
       const result = call.fn === "set_project_forecast_edit"
-        ? await supabase.rpc(call.fn, { p_project_id: projectId, p_month: month, p_edit: call.edit as never })
+        ? await supabase.rpc("set_project_forecast_edit", { p_project_id: projectId, p_month: month, p_edit: call.edit as never })
         : call.fn === "reset_project_forecast"
-          ? await supabase.rpc(call.fn, { p_project_id: projectId, p_month: month })
-          : await supabase.rpc(call.fn, { p_project_id: projectId, p_month: month, p_row_key: call.rowKey });
+          ? await supabase.rpc("reset_project_forecast", { p_project_id: projectId, p_month: month })
+          : call.fn === "remove_project_forecast_row"
+            ? await supabase.rpc("remove_project_forecast_row", { p_project_id: projectId, p_month: month, p_row_key: call.rowKey })
+            : await supabase.rpc("restore_project_forecast_row", { p_project_id: projectId, p_month: month, p_row_key: call.rowKey });
       assertNoError(result);
       lastUndo.current = undoOf(result.data);
     },
