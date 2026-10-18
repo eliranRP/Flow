@@ -129,7 +129,7 @@ function CashLinesBody({
   const subtitle = `${monthTitle}${isThisMonth ? " • עד היום" : ""}`;
 
   if (phase.kind !== "ready") {
-    return <ScreenState stacked title={title} backTo={back} kicker={kicker} phase={phase} onRetry={() => { void lines.refetch(); }} loading={<LinesSkeleton />} />;
+    return <ScreenState stacked title={title} backTo={back} kicker={isThisMonth ? "בית" : kicker} stateSubtitle={monthTitle} headerClassName="ui-state-header" phase={phase} onRetry={() => { void lines.refetch(); }} loading={<LinesSkeleton />} />;
   }
 
   const month = data == null ? undefined : monthOf(data, monthKey);

@@ -13,12 +13,14 @@ function renderHome({
   gross = 0n,
   phase = "ready",
   search = "",
+  syncing = null,
 }: {
   review: number;
   unpaid: number;
   gross?: bigint;
   phase?: "loading" | "error" | "empty" | "ready";
   search?: string;
+  syncing?: string | null;
 }) {
   const data = sampleCashMonths();
   const currentKey = cashMonthKey(data.months[0]?.month ?? "");
@@ -36,6 +38,7 @@ function renderHome({
         unpaidGross: ready ? gross : 0n,
         search,
       })}
+      syncing={syncing}
       onStepMonth={() => undefined}
     />,
     { route: `/${search}` },
@@ -111,5 +114,17 @@ describe("Home attention card (FLOW-321)", () => {
       expect(unpaidLink()).toBeNull();
       unmount();
     }
+  });
+});
+
+describe("Home's sync strip (board States, syncing)", () => {
+  it("says what syncs while a refresh runs", () => {
+    renderHome({ review: 0, unpaid: 0, syncing: "מסנכרן עם Mercury…" });
+    expect(document.querySelector(".ui-sync")?.textContent).toBe("מסנכרן עם Mercury…");
+  });
+
+  it("draws no strip when nothing syncs", () => {
+    renderHome({ review: 0, unpaid: 0 });
+    expect(document.querySelector(".ui-sync")).toBeNull();
   });
 });

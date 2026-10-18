@@ -3,7 +3,7 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useDashboardQuery } from "../use-books";
 import { ScreenState } from "../ui/screen-state";
-import { List, ListRow } from "../ui/list-row";
+import { LoansSkeleton } from "../ui/screen-skeletons";
 import { useBlockedPreview } from "./screen-shared";
 import { ViewerNote, ViewerScope } from "../use-is-viewer";
 import { type LoanBalanceRow } from "./loan-match";
@@ -53,15 +53,13 @@ export function LoansScreen({ sample, closedOpen = false }: { sample?: LoansSamp
   if (phase.kind === "loading" || phase.kind === "error") {
     return (
       <ScreenState
+        stacked
+        headerClassName="ui-state-header"
+        leading={<span className="ui-skel-lead" aria-hidden="true" />}
         title="הלוואות"
         phase={phase}
         onRetry={() => { void dashboard.refetch(); }}
-        loading={(
-          <List>
-            <ListRow variant="skeleton" />
-            <ListRow variant="skeleton" />
-          </List>
-        )}
+        loading={<LoansSkeleton />}
       />
     );
   }

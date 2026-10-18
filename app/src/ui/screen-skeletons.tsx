@@ -7,10 +7,16 @@ import type { CSSProperties } from "react";
  * decides when to show one; each caller waits 300ms first (ScreenState's SkeletonSwap, or DelayedSkeleton).
  */
 
-type BarProps = { w: string; h: number; pill?: boolean; className?: string };
+/** `r`: the board's own corner radius in px, for the blocks that are not the 6px default. */
+type BarProps = { w: string; h: number; pill?: boolean; r?: number; className?: string };
 
-function Bar({ w, h, pill = false, className }: BarProps) {
-  const style: CSSProperties = { inlineSize: w, blockSize: h, flex: "none", ...(pill ? { borderRadius: "var(--radius-chip)" } : {}) };
+function Bar({ w, h, pill = false, r, className }: BarProps) {
+  const style: CSSProperties = {
+    inlineSize: w,
+    blockSize: h,
+    flex: "none",
+    ...(pill ? { borderRadius: "var(--radius-chip)" } : r == null ? {} : { borderRadius: `${String(r)}px` }),
+  };
   return <span aria-hidden="true" className={`ui-skeleton-bar ${className ?? ""}`.trim()} style={style} />;
 }
 
@@ -22,24 +28,44 @@ function Loading() {
   );
 }
 
-const rows = [0, 1, 2, 3, 4, 5] as const;
 const cards = [0, 1, 2] as const;
 
-/** Month lines: a title and a chip, then the lines of the month. */
+/** One avatar row of a list skeleton: a 40px circle, two lines and a trailing figure (board linesLoading, loansLoading). */
+function ListRowSkeleton({ first, second }: { first: string; second: string }) {
+  return (
+    <div className="ui-skel-list-row">
+      <Bar w="40px" h={40} r={20} />
+      <div className="ui-skel-list-lines">
+        <Bar w={first} h={12} />
+        <Bar w={second} h={10} />
+      </div>
+      <Bar w="64px" h={12} />
+    </div>
+  );
+}
+
+/** Month lines (board States, linesLoading): a figure, its caption, three chips, then two date groups of avatar rows. */
 export function LinesSkeleton() {
   return (
-    <div className="ui-page-pad ui-stack" aria-busy="true">
+    <div className="ui-state-skel" aria-busy="true">
       <Loading />
-      <Bar w="150px" h={34} />
-      <Bar w="84px" h={36} pill />
-      <div className="ui-stack">
-        {rows.map((key) => (
-          <div className="ui-skel-row" key={key}>
-            <Bar w="38%" h={10} />
-            <Bar w="20%" h={10} />
-          </div>
-        ))}
+      <div className="ui-skel-lines-figure">
+        <Bar w="150px" h={34} r={8} />
+        <Bar w="110px" h={12} />
       </div>
+      <div className="ui-skel-lines-chips">
+        <Bar w="96px" h={36} pill />
+        <Bar w="84px" h={36} pill />
+        <Bar w="74px" h={36} pill />
+      </div>
+      {[3, 3].map((count, group) => (
+        <div className="ui-skel-group" key={group}>
+          <Bar w={group === 0 ? "100px" : "120px"} h={16} />
+          {Array.from({ length: count }, (_, line) => (
+            <ListRowSkeleton key={line} first="58%" second="38%" />
+          ))}
+        </div>
+      ))}
     </div>
   );
 }
@@ -72,21 +98,26 @@ export function ProjectsSkeleton() {
   );
 }
 
-/** Loans: a title and a row of figures per loan, with its payments line. */
+/** Loans (board States, loansLoading): the summary card's blocks, then a head and three avatar rows. */
 export function LoansSkeleton() {
   return (
-    <div className="ui-page-pad ui-stack" aria-busy="true">
+    <div className="ui-state-skel" aria-busy="true">
       <Loading />
-      <Bar w="90px" h={12} />
-      {cards.map((key) => (
-        <div className="ui-stack" key={key}>
-          <div className="ui-skel-row">
-            <Bar w="80px" h={12} />
-            <Bar w="64px" h={12} />
-          </div>
-          <Bar w="64%" h={10} />
+      <section className="ui-skel-card ui-skel-loans-card">
+        <Bar w="90px" h={12} />
+        <Bar w="180px" h={34} r={8} />
+        <div className="ui-skel-card-split">
+          <Bar w="100px" h={12} />
+          <Bar w="80px" h={12} />
         </div>
-      ))}
+        <Bar w="100%" h={8} r={4} />
+      </section>
+      <div className="ui-skel-group">
+        <Bar w="70px" h={16} />
+        {cards.map((key) => (
+          <ListRowSkeleton key={key} first="50%" second="64%" />
+        ))}
+      </div>
     </div>
   );
 }
@@ -126,39 +157,71 @@ export function RecurringSkeleton() {
   );
 }
 
-/** Profit: a headline, a pair of figures, the period's total and its progress track. */
+function ProfitFigureRow() {
+  return (
+    <div className="ui-skel-figure-row">
+      <Bar w="90px" h={14} />
+      <Bar w="84px" h={14} />
+    </div>
+  );
+}
+
+/** Profit (board States, profitLoading): a figure and a line, a card of three figure rows, a head and three rows with a track. */
 export function ProfitSkeleton() {
   return (
-    <div className="ui-page-pad ui-stack" aria-busy="true">
+    <div className="ui-state-skel" aria-busy="true">
       <Loading />
-      <Bar w="180px" h={12} />
-      <div className="ui-skel-row">
-        <Bar w="84px" h={14} />
-        <Bar w="90px" h={14} />
+      <div className="ui-skel-lines-figure">
+        <Bar w="150px" h={34} r={8} />
+        <Bar w="180px" h={12} />
       </div>
-      <Bar w="120px" h={16} />
-      <Bar w="100%" h={6} className="ui-skel-track" />
-      <div className="ui-skel-row">
-        <Bar w="84px" h={14} />
-        <Bar w="90px" h={14} />
+      <section className="ui-skel-card">
+        {cards.map((key) => (
+          <ProfitFigureRow key={key} />
+        ))}
+      </section>
+      <div className="ui-skel-group ui-skel-profit-group">
+        <Bar w="120px" h={16} />
+        {cards.map((key) => (
+          <div className="ui-skel-profit-row" key={key}>
+            <ProfitFigureRow />
+            <Bar w="100%" h={6} className="ui-skel-track" />
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-/** A transaction page: its title and amount, then the fields as label and value pairs. */
+function DetailFieldSkeleton() {
+  return (
+    <div className="ui-skel-detail-row">
+      <Bar w="24px" h={24} />
+      <div className="ui-skel-detail-lines">
+        <Bar w="60px" h={10} />
+        <Bar w="44%" h={13} />
+      </div>
+    </div>
+  );
+}
+
+/** A transaction page (board States, detailLoading): an avatar, a title, an amount and a line, then two cards of three and two fields. */
 export function DetailSkeleton() {
   return (
-    <div className="ui-page-pad ui-stack" aria-busy="true">
+    <div className="ui-state-skel ui-skel-detail" aria-busy="true">
       <Loading />
-      <Bar w="150px" h={22} />
-      <Bar w="120px" h={12} />
-      <Bar w="44%" h={13} />
-      {rows.slice(0, 3).map((key) => (
-        <div className="ui-skel-row" key={key}>
-          <Bar w="24px" h={24} />
-          <Bar w="60px" h={10} />
-        </div>
+      <div className="ui-skel-detail-head">
+        <Bar w="56px" h={56} r={28} />
+        <Bar w="150px" h={22} r={8} />
+        <Bar w="170px" h={40} r={8} />
+        <Bar w="120px" h={12} />
+      </div>
+      {[3, 2].map((count, card) => (
+        <section className="ui-skel-card ui-skel-detail-card" key={card}>
+          {Array.from({ length: count }, (_, line) => (
+            <DetailFieldSkeleton key={line} />
+          ))}
+        </section>
       ))}
     </div>
   );

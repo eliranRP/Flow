@@ -49,6 +49,8 @@ function sheetParam(value: string | null): "all" | "pace" | undefined {
 
 export function DevTransactionBoard() {
   const [params] = useSearchParams();
+  // The loading frame (States detailLoading): the card as a line of the month's יצא list opens it, before its data is in.
+  if (params.get("board") === "loading") return <TransactionScreen sampleFrom={BOARD_FROM} />;
   if (params.get("board") === "1") {
     return (
       <TransactionScreen

@@ -104,6 +104,15 @@ export function ChartIcon(props: IconProps) {
   );
 }
 
+/** Three bars on a baseline: the empty profit page (board States profitEmpty). */
+export function BarsIcon(props: IconProps) {
+  return (
+    <Svg size={28} stroke={1.8} {...props}>
+      <path d="M5 20V11M11 20V5M17 20v-6M3 20h18" />
+    </Svg>
+  );
+}
+
 export function RefreshIcon(props: IconProps) {
   return (
     <Svg size={20} stroke={2} {...props}>

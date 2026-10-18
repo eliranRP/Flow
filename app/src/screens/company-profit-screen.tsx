@@ -102,7 +102,8 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   const basisRef = useRef<HTMLButtonElement>(null);
   const back = `/${search}`;
   if (phase.kind !== "ready" || model == null) {
-    return <ScreenState title="רווח" backTo={back} phase={phase} onRetry={live.refetch} loading={<ProfitSkeleton />} />;
+    // The board's loading frame names the month in the title: the stacked header's own bar, Back labelled בית.
+    return <ScreenState stacked headerClassName="ui-state-header" title={`רווח ${HEBREW_MONTHS[Number(monthKey.slice(5, 7)) - 1] ?? monthKey}`} kicker="בית" backTo={back} phase={phase} onRetry={live.refetch} loading={<ProfitSkeleton />} />;
   }
   const currency = model.currency;
   const firstCategory = model.categories[0];

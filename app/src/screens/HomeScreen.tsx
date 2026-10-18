@@ -1,4 +1,5 @@
 import { type CashMonths, type CashToDay } from "@flow/shared";
+import { SyncStrip } from "../ui/sync-strip";
 import { dashboardHasBooks } from "../by-currency";
 import { onlineManager } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -259,6 +260,7 @@ export function CashHome({
   onStepMonth,
   initialDrawerOpen = false,
   drawerYearMonths,
+  syncing = null,
 }: {
   data: NonNullable<CashMonths>;
   /** The month shown (YYYY-MM). */
@@ -287,6 +289,8 @@ export function CashHome({
   initialDrawerOpen?: boolean;
   /** Dev route: the drawer's year, in place of the live query. */
   drawerYearMonths?: NonNullable<CashMonths>;
+  /** A background refresh runs: the strip over the band says what it syncs (the board's syncing frame). A fixture only for now: the live Home reads no sync status. */
+  syncing?: string | null;
 }) {
   const isPast = monthKey < currentKey;
   const base = data.base_currency;
@@ -349,6 +353,7 @@ export function CashHome({
 
   return (
     <div className="flex min-h-full min-w-0 flex-1 flex-col">
+      <SyncStrip label={syncing} />
       <div className="m-page-enter" style={pageEnterStyle(0)}>
         <TopBand
           wordmark={false}

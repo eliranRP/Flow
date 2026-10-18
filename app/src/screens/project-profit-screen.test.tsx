@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { JUNIPER_PROFIT } from "../dev/project-profit-sample";
+import { JUNIPER_PROFIT, NEW_PROJECT_PROFIT } from "../dev/project-profit-sample";
 import { ProjectProfitScreen, type ProjectProfitSample } from "./project-profit-screen";
 
 const base = {
@@ -85,5 +85,15 @@ describe("ProjectProfitScreen", () => {
     expect(shares).toEqual([44, 23, 20, 11, 2]);
     expect(shares.reduce((sum, share) => sum + share, 0)).toBe(100);
     expect(container.querySelector(".ui-pp-months")).toBeNull();
+  });
+
+  it("a project with no income or expense shows the empty state and a link to the lines with no project", () => {
+    renderScreen(NEW_PROJECT_PROFIT, "/projects/linden-ct/profit");
+    expect(screen.getByRole("heading", { name: "רווח · Linden Ct" })).toBeTruthy();
+    expect(screen.getByText("מתחילת הפרויקט")).toBeTruthy();
+    expect(screen.getByText("עוד אין מה לחשב")).toBeTruthy();
+    expect(screen.getByText("כשתשייכו ל־Linden Ct הכנסה או הוצאה, הרווח שלו יופיע כאן.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "לשורות בלי פרויקט" }).getAttribute("href")).toContain("project=none");
+    expect(screen.queryByText("הכנסות")).toBeNull();
   });
 });
