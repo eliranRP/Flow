@@ -48,6 +48,8 @@ export type TagExpense = {
   flags?: TagFlag[];
   /** How the owner filed this supplier before, newest first (decision 0127). */
   history?: TagFiling[];
+  /** The line the user added to a project's forecast that this line matched (decision 0187). */
+  expected?: TagExpectedLine;
   amountGross: number;
   amountNet: number;
   vatAmount: number;
@@ -70,6 +72,9 @@ export type TagExpense = {
 };
 
 export type TagDirection = "expense" | "income";
+
+/** A forecast line the user added: its month (yyyy-mm), the amount expected (unsigned) and its names. */
+export type TagExpectedLine = { month: string; amountMinor: number; categoryName: string | null; projectName: string | null };
 
 /** One SQL flag: its kind and the numbers behind it, as SQL returned them. */
 export type TagFlag = { kind: string; detail: Record<string, JsonValue> };
@@ -294,6 +299,7 @@ export function lineCategories(expense: TagExpense, company: TagCompanyWork): Ta
 
 /**
  * Amounts are context for the model. planTag does not write them back.
+ * `expected_line` is the line the user added to a project's forecast that this line matched.
  * `past_filings` is how the owner filed the same supplier before, with the same ids the
  * questions offer; an archived project or hidden category comes through as a name of null.
  */
@@ -318,6 +324,15 @@ export function buildTagState(
   const flags = expense.flags ?? [];
   if (flags.length > 0) {
     state.flags = flags.map((flag) => ({ kind: flag.kind, ...flag.detail }));
+  }
+  // The user's own forecast expects this line: the project and category they gave it (decision 0187).
+  if (expense.expected) {
+    state.expected_line = {
+      month: expense.expected.month,
+      amount_minor: expense.expected.amountMinor,
+      category_name: expense.expected.categoryName,
+      project_name: expense.expected.projectName,
+    };
   }
   const history = expense.history ?? [];
   if (history.length > 0) {

@@ -143,6 +143,12 @@ Deno.test("the store reads income lines with the customer, income categories, an
         { transaction_id: income, kind: "duplicate", other_transaction_id: EXPENSE, other_doc_date: "2026-04-10" },
       ]));
     }
+    if (url.includes("/rpc/jev_forecast_lines")) {
+      return Promise.resolve(Response.json([
+        { transaction_id: EXPENSE, month: "2026-04", amount_minor: 9000, category_name: "חומרים", project_name: "שיפוץ" },
+        { transaction_id: income, month: "bad", amount_minor: 1 },
+      ]));
+    }
     if (url.includes("/transactions")) {
       return Promise.resolve(Response.json([
         txnRow(),
@@ -174,6 +180,13 @@ Deno.test("the store reads income lines with the customer, income categories, an
   assertEquals(line.history?.map((filing) => filing.description), ["חשבונית"]);
   assertEquals(line.flags, [{ kind: "duplicate", detail: { other_doc_date: "2026-04-10" } }]);
   assertEquals(work[0].expenses.find((item) => item.id === EXPENSE)?.flags, undefined);
+  assertEquals(work[0].expenses.find((item) => item.id === EXPENSE)?.expected, {
+    month: "2026-04",
+    amountMinor: 9000,
+    categoryName: "חומרים",
+    projectName: "שיפוץ",
+  });
+  assertEquals(line.expected, undefined);
   const flagsUrl = urls.find((url) => url.includes("/rpc/jev_line_flags"));
   assert(flagsUrl);
   assertEquals((bodies.get(flagsUrl) as { p_ids: string[] }).p_ids.sort(), [EXPENSE, income].sort());
@@ -196,6 +209,7 @@ Deno.test("expense-only runs do not read income categories, and a failed flag re
   const work = await createTagStore(fetch, "http://db.test/", "service-role-test").listWork(20);
   assertEquals(work[0].expenses.length, 1);
   assertEquals(work[0].expenses[0].flags, undefined);
+  assertEquals(work[0].expenses[0].expected, undefined);
   assertEquals(work[0].incomeCategories, []);
   assert(urls.every((url) => !url.includes("kind=eq.income")));
 });

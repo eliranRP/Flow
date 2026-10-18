@@ -1,5 +1,5 @@
 import { formatAmountText } from "@flow/shared";
-import { formatDayMonth } from "./ui/date-math";
+import { formatDayMonth, HEBREW_MONTHS } from "./ui/date-math";
 
 /**
  * FLOW-327 / FLOW-701. The words on the review card for Jev's reason (decision 0134) and the
@@ -15,7 +15,8 @@ export function copyText(parts: readonly CopyPart[]): string {
   return parts.map((part) => (typeof part === "string" ? part : part.num)).join("");
 }
 
-export type JevReasonKind = "same_as_last" | "usual_for_party" | "new_party" | "model_only";
+/** forecast_line (decision 0187): the line is one the user added to a project's forecast. */
+export type JevReasonKind = "same_as_last" | "usual_for_party" | "new_party" | "model_only" | "forecast_line";
 
 export type JevReasonInfo = {
   reason: JevReasonKind;
@@ -24,7 +25,8 @@ export type JevReasonInfo = {
 };
 
 export function isJevReasonKind(value: unknown): value is JevReasonKind {
-  return value === "same_as_last" || value === "usual_for_party" || value === "new_party" || value === "model_only";
+  return value === "same_as_last" || value === "usual_for_party" || value === "new_party" || value === "model_only"
+    || value === "forecast_line";
 }
 
 /** ספק on an expense, לקוח on income. */
@@ -61,7 +63,42 @@ export function jevReasonText(
       return [`${partyWord(direction)} חדש · בלי היסטוריה`];
     case "model_only":
       return ["הערכה של Jev בלבד"];
+    case "forecast_line":
+      // The card says which line with forecastMatchText; this is the line with no forecast_match to hand.
+      return [FORECAST_LINE_WHY];
   }
+}
+
+const FORECAST_LINE_WHY = "לפי הצפי שהוספת";
+
+/** A review row's forecast_match (decision 0187): the forecast line the user added that the line is. */
+export type ReviewForecastMatch = {
+  month: string;
+  amount_minor: bigint;
+  category_name: string | null;
+};
+
+/** "לפי הצפי שהוספת לנובמבר: שכירות $2,500" */
+export function forecastMatchText(match: ReviewForecastMatch, currency = "ILS"): CopyPart[] {
+  const month = HEBREW_MONTHS[Number(match.month.slice(5, 7)) - 1] ?? match.month;
+  const category = match.category_name == null || match.category_name === "" ? "" : `${match.category_name} `;
+  return [`${FORECAST_LINE_WHY} ל${month}: ${category}`, { num: formatAmountText(match.amount_minor, currency) }];
+}
+
+/**
+ * The reason line under a review card's rows: Jev's reason, or the forecast line the user added when the
+ * line matched one (also with Jev off, and when Jev's reason is that forecast line), else none.
+ */
+export function reviewWhy(
+  row: { direction: "income" | "expense"; currency?: string; forecast_match?: ReviewForecastMatch | null },
+  why: JevReasonInfo | null | undefined,
+  hasParty: boolean,
+  project?: string,
+): CopyPart[] | null {
+  if (row.forecast_match != null && (why == null || why.reason === "forecast_line")) {
+    return forecastMatchText(row.forecast_match, row.currency);
+  }
+  return why == null ? null : jevReasonText(why, row.direction, hasParty, project);
 }
 
 export type ReviewFlagKind = "duplicate" | "amount_spike" | "new_party_large";

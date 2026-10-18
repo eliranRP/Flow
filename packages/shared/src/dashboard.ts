@@ -194,6 +194,20 @@ export const reviewRowSchema = z.object({
   paid: z.boolean().optional().catch(undefined),
   /** FLOW-309: the latest receipt's date, or null when there is none. */
   paid_on: z.string().nullable().optional().catch(undefined),
+  /**
+   * Decision 0187: the line the user added to a project's forecast that this line is (yyyy-mm, the amount
+   * the forecast expected, unsigned). Null with no match; a malformed object drops to undefined.
+   */
+  forecast_match: z
+    .object({
+      month: z.string().regex(/^\d{4}-\d{2}$/),
+      amount_minor: agorotSchema,
+      category_name: z.string().nullable(),
+      project_name: z.string().nullable(),
+    })
+    .nullable()
+    .optional()
+    .catch(undefined),
 });
 
 /** A SUMIT row filed today with no open review item. Same filter as auto_approved_today. */

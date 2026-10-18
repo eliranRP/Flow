@@ -1,11 +1,11 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest";
-import { copyText, flagTone, jevReasonText, REVIEW_FLAG_LOUD, type ReviewFlag, reviewFlagView, spikePercentText } from "./review-copy";
+import { copyText, flagTone, forecastMatchText, jevReasonText, REVIEW_FLAG_LOUD, type ReviewFlag, reviewFlagView, reviewWhy, spikePercentText } from "./review-copy";
 import { pinReviewHead, pinReviewLine, releaseReviewHold, reviewHold, reviewPin } from "./review-pin";
 
 // --- review-copy.test.ts
 
-const info = (reason: "same_as_last" | "usual_for_party" | "new_party" | "model_only", partyFilings = 5, matchingFilings = 3) => ({
+const info = (reason: "same_as_last" | "usual_for_party" | "new_party" | "model_only" | "forecast_line", partyFilings = 5, matchingFilings = 3) => ({
   reason,
   partyFilings,
   matchingFilings,
@@ -25,6 +25,28 @@ describe("jevReasonText (FLOW-327, decision 0134)", () => {
 
   it("keeps each count its own number part, for a bdi", () => {
     expect(jevReasonText(info("usual_for_party", 4, 2), "expense").filter((part) => typeof part !== "string")).toEqual([{ num: "2" }, { num: "4" }]);
+  });
+});
+
+describe("the forecast line on a review card (decision 0187)", () => {
+  const match = { month: "2026-11", amount_minor: 250_000n, category_name: "שכירות" };
+  const row = { direction: "expense" as const, currency: "USD", forecast_match: match };
+
+  it("names the month, the category and the amount the user expected", () => {
+    expect(copyText(forecastMatchText(match, "USD"))).toBe("לפי הצפי שהוספת לנובמבר: שכירות $2,500");
+    expect(forecastMatchText(match, "USD").filter((part) => typeof part !== "string")).toEqual([{ num: "$2,500" }]);
+    expect(copyText(forecastMatchText({ ...match, category_name: null }, "ILS"))).toBe("לפי הצפי שהוספת לנובמבר: ₪2,500");
+  });
+
+  it("shows the forecast line with no Jev reason, and for Jev's forecast_line reason", () => {
+    expect(copyText(reviewWhy(row, null, true) ?? [])).toBe("לפי הצפי שהוספת לנובמבר: שכירות $2,500");
+    expect(copyText(reviewWhy(row, info("forecast_line"), true) ?? [])).toBe("לפי הצפי שהוספת לנובמבר: שכירות $2,500");
+  });
+
+  it("keeps Jev's own reason when Jev suggests something else, and none with neither", () => {
+    expect(copyText(reviewWhy(row, info("same_as_last"), true) ?? [])).toBe("כמו בפעם הקודמת");
+    expect(reviewWhy({ direction: "expense", forecast_match: null }, null, true)).toBeNull();
+    expect(copyText(jevReasonText(info("forecast_line"), "expense"))).toBe("לפי הצפי שהוספת");
   });
 });
 
