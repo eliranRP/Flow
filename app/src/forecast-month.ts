@@ -1,6 +1,6 @@
 import { buildMonthForecast, type ForecastBuild, type ForecastOverrideRow } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
-import { readCompanyCurrency } from "./company-currency";
+import { readStoredCurrency } from "./company-currency";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview } from "./preview";
@@ -63,7 +63,8 @@ export function useMonthForecastQuery(month: string, active = true) {
         supabase.rpc("expected_months", { p_months: 1 }),
         supabase.rpc("list_unpaid", {}),
         supabase.rpc("forecast_overrides_for", { p_month: month }),
-        readCompanyCurrency(),
+        // A failed read fails the forecast: counting a dollar company in shekels would show nothing due.
+        readStoredCurrency(),
       ]);
       if (expected.error) throw expected.error;
       if (unpaid.error) throw unpaid.error;

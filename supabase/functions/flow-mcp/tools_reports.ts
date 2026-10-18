@@ -181,10 +181,6 @@ function forecastItemJson(item: ForecastItem) {
 }
 
 /**
- * FLOW-141 get_forecast: the items, the sections and their totals for one month, built by the
- * same arithmetic as the app (packages/shared/src/month-forecast.ts). Null when a read is malformed.
- */
-/**
  * The month's cash net in the company's currency from a cash_months read, when that read's newest month is the
  * forecast month (Home's figure is the current month only). Null for any other month.
  */
@@ -198,7 +194,11 @@ function cashNetMinor(cash: unknown, month: string, base: string): bigint | null
   return row == null ? 0n : BigInt(String(row.net_minor ?? 0));
 }
 
-export function forecastReport(month: string, expected: unknown, unpaid: unknown, overrides: unknown, cash: unknown, base = "ILS"): Review | null {
+/**
+ * FLOW-141 get_forecast: the items, the sections and their totals for one month, built by the
+ * same arithmetic as the app (packages/shared/src/month-forecast.ts). Null when a read is malformed.
+ */
+export function forecastReport(month: string, expected: unknown, unpaid: unknown, overrides: unknown, cash: unknown, base: string): Review | null {
   const parsedExpected = expectedMonthsSchema.safeParse(expected);
   const parsedUnpaid = z.array(unpaidRowSchema).safeParse(unpaid);
   if (!parsedExpected.success || !parsedUnpaid.success || !Array.isArray(overrides)) return null;

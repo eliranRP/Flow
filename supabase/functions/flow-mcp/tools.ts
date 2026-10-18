@@ -264,11 +264,12 @@ export async function callTool(
       rpc("cash_months", { p_months: 1 }),
       rpc("mcp_company_loan_currency", {}),
     ]);
-    if (expected.status >= 400 || unpaid.status >= 400 || overrides.status >= 400 || cash.status >= 400) {
+    if (expected.status >= 400 || unpaid.status >= 400 || overrides.status >= 400 || cash.status >= 400 || currency.status >= 400) {
       return fail("refused", READ_REFUSED);
     }
-    // The company's currency (0147); a failed or odd read stays ILS, as in the app.
-    const base = currency.status < 400 && typeof currency.json === "string" && /^[A-Z]{3}$/.test(currency.json) ? currency.json : "ILS";
+    // The company's currency (0147). Counting a dollar company in shekels would list nothing, so an odd read refuses.
+    const base = currency.json;
+    if (typeof base !== "string" || !/^[A-Z]{3}$/.test(base)) return fail("refused", READ_REFUSED);
     const report = forecastReport(month, expected.json, unpaid.json, overrides.json, cash.json, base);
     if (report == null) return fail("refused", READ_REFUSED);
     return ok(report);

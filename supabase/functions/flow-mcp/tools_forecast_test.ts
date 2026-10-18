@@ -1,5 +1,5 @@
 // Flow MCP tools tests: the month-end forecast (FLOW-141). get_forecast builds the items and the
-// totals from three reads; set_forecast_item and reset_forecast forward to their RPCs.
+// totals from its reads (the company currency among them); set_forecast_item and reset_forecast forward to their RPCs.
 import { assertEquals } from "jsr:@std/assert@1";
 import { callTool } from "./tools.ts";
 import { rpcOf } from "./tools_test_support.ts";
@@ -28,10 +28,11 @@ function reads(name: string) {
   if (name === "forecast_overrides_for") {
     return { status: 200, json: [{ item_key: "party:expense:p-rent:ILS", amount_minor: 480000, due_on: null, moved_out: false }] };
   }
+  if (name === "mcp_company_loan_currency") return { status: 200, json: "ILS" };
   return { status: 500, json: null };
 }
 
-Deno.test("get_forecast reads three RPCs and builds the items, totals and changed count", async () => {
+Deno.test("get_forecast reads its RPCs and builds the items, totals and changed count", async () => {
   const { calls, rpc } = rpcOf(reads);
   const result = await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc);
   assertEquals(result.isError, false);
@@ -87,6 +88,13 @@ Deno.test("get_forecast refuses when a read fails", async () => {
   const { rpc } = rpcOf((name) => name === "list_unpaid" ? { status: 500, json: null } : reads(name));
   const result = await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc);
   assertEquals(result.isError, true);
+});
+
+Deno.test("get_forecast refuses when the company currency cannot be read, never counting in shekels", async () => {
+  const { rpc } = rpcOf((name) => name === "mcp_company_loan_currency" ? { status: 500, json: null } : reads(name));
+  assertEquals((await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc)).isError, true);
+  const odd = rpcOf((name) => name === "mcp_company_loan_currency" ? { status: 200, json: "dollars" } : reads(name));
+  assertEquals((await callTool("get_forecast", { month: "2026-10" }, ["read"], odd.rpc)).isError, true);
 });
 
 Deno.test("set_forecast_item forwards the patch and refuses a reset with other fields", async () => {
