@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useHomePreview } from "../preview";
 import type { ScreenPhase } from "./screen-phase";
-import { ErrorState } from "./error-state";
+import { FailureLine } from "./empty-state";
 import { ScreenHeader } from "./screen-header";
 import { ListSkeleton, SkeletonSwap } from "./skeleton";
 import { SyncStrip } from "./sync-strip";
@@ -77,7 +77,7 @@ export function ScreenState({
       {/* The body is the overlay's frame: a skeleton fades out over it while the content fades in (FLOW-371). */}
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         <SkeletonSwap loading={phase.kind === "loading"}>{loading ?? <ListSkeleton />}</SkeletonSwap>
-        {phase.kind === "error" ? <ErrorState offline={phase.offline} onRetry={retry} /> : null}
+        {phase.kind === "error" ? <FailureLine offline={phase.offline} onRetry={retry} /> : null}
         {phase.kind === "empty" ? empty : null}
         {phase.kind === "ready" ? <div className="ui-phase-in flex min-h-0 min-w-0 flex-1 flex-col">{children}</div> : null}
       </div>

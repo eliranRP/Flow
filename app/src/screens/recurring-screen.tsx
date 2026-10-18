@@ -9,11 +9,10 @@ import { liveRecurringWrites, type RecurringWrites } from "../recurring-actions"
 import { chargeHref, dayMonth } from "../recurring-charge";
 import { groupRecurring, monthOutflow, type RecurringLine } from "../recurring-layout";
 import { alertState, changePercentOf, daysBetween, israelToday, type RecurringAlert, type ScheduleRow, scheduleLines, useRecurringScheduleQuery } from "../recurring-schedule";
-import { ErrorState } from "../ui/error-state";
+import { EmptyState, FailureLine } from "../ui/empty-state";
 import { type RecurringListGroup, type RecurringListRow, RecurringList } from "../ui/recurring-list";
 import { RecurringSkeleton } from "../ui/screen-skeletons";
 import { useToast } from "../ui/toast";
-import { EmptyState } from "../ui/empty-state";
 import { RepeatIcon } from "../ui/icons";
 
 /** "אוקטובר 2026" for the day's month. */
@@ -93,7 +92,7 @@ export function RecurringScreen({
         <header className="ui-recurring-head">
           <h1 className="t-title">קבועים</h1>
         </header>
-        <ErrorState offline={!navigator.onLine} onRetry={() => void (live ? query.refetch() : undefined)} />
+        <FailureLine offline={!navigator.onLine} onRetry={() => void (live ? query.refetch() : undefined)} />
       </div>
     );
   }

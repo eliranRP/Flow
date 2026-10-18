@@ -1,5 +1,5 @@
 import { Component, Suspense, type ReactNode } from "react";
-import { ErrorState } from "./ui/error-state";
+import { FailureLine } from "./ui/empty-state";
 
 type BoundaryState = { failed: boolean };
 
@@ -22,7 +22,7 @@ class ScreenLoadBoundary extends Component<{ children: ReactNode }, BoundaryStat
   override render() {
     if (this.state.failed) {
       return (
-        <ErrorState
+        <FailureLine
           offline={typeof navigator !== "undefined" && !navigator.onLine}
           onRetry={() => {
             window.location.reload();

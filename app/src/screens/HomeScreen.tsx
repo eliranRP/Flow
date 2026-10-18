@@ -17,7 +17,7 @@ import { HomeBandActions, HomeCompactBar, HomeMonthPill, HomeSwipeFigures, Split
 import { MonthDrawer } from "./month-drawer";
 import type { BannerRow } from "../ui/banner";
 import { Button } from "../ui/button";
-import { ErrorState } from "../ui/error-state";
+import { FailureLine } from "../ui/empty-state";
 import { Hero } from "../ui/hero";
 import { BankIcon } from "../ui/icons";
 import { CashHomeSkeleton } from "./home-skeleton";
@@ -171,7 +171,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   if (loading) return <CashHomeSkeleton preview={previewing} example={example} />;
 
   if (failed) {
-    return <ErrorState offline={offline || !onlineManager.isOnline()} onRetry={retry} />;
+    return <FailureLine offline={offline || !onlineManager.isOnline()} onRetry={retry} />;
   }
 
   if (!showBooks || cash.data == null) {
@@ -372,7 +372,7 @@ export function CashHome({
 
       {unpaidFailed ? (
         <div className="ui-page-pad">
-          <ErrorState
+          <FailureLine
             offline={false}
             onRetry={() => {
               onUnpaidRetry?.();

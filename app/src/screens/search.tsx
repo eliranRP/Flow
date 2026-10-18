@@ -29,7 +29,7 @@ import { txnListState } from "../txn-nav";
 import { useCategoriesQuery, useDashboardQuery } from "../use-books";
 import { useSheetHistory } from "../ui/back";
 import { Button } from "../ui/button";
-import { ErrorState } from "../ui/error-state";
+import { FailureLine } from "../ui/empty-state";
 import { BackIcon, CloseIcon } from "../ui/icons";
 import { IconButton } from "../ui/icon-button";
 import { ListRow } from "../ui/list-row";
@@ -293,7 +293,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
     body = <SearchingRows allTime={active.period.kind === "all"} />;
   } else if (phase.kind === "error") {
     body = (
-      <ErrorState
+      <FailureLine
         offline={phase.offline || !onlineManager.isOnline()}
         onRetry={() => {
           void query.refetch();

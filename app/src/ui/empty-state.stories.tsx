@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Button } from "./button";
-import { EmptyState } from "./empty-state";
+import { EmptyState, FailureLine } from "./empty-state";
 import { CalendarIcon, CheckIcon, ChartIcon, LoanIcon, PeopleIcon, ProjectsIcon, RepeatIcon, TrendUpIcon } from "./icons";
 import { longHebrew, padded } from "./story-support";
 
@@ -126,4 +126,10 @@ export const LongHebrew: Story = {
       </Button>
     ),
   },
+};
+
+/** A load that failed: one line and the retry link. Offline names the connection instead. */
+export const Failure: StoryObj<typeof FailureLine> = {
+  args: { offline: false, onRetry: () => undefined },
+  render: (args) => <FailureLine {...args} />,
 };
