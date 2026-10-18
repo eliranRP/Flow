@@ -3,7 +3,6 @@ import { type BoardForecastVariant, monthForecastBoardSample, monthForecastSampl
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
 import { ForecastScreen } from "./forecast-screen";
-import { ForecastItemSheet } from "./forecast-sheet";
 
 const meta: Meta<{ kind: ForecastSampleKind }> = {
   title: "Screens/Routes",
@@ -44,14 +43,15 @@ export const AllArrived: Story = { name: "Forecast · all arrived", render: () =
 /** לפי קטגוריה: each category's month so far and still to come, with the rent category open (MonthForecastCategory). */
 export const ForecastByCategory: Story = { name: "Forecast · by category", render: () => <BoardForecast variant="category" /> };
 
-/** The change sheet on the largest income row. Its save and the moved state are the screen's. */
-function ChangeSheet({ kind }: { kind: ForecastSampleKind }) {
-  const item = monthForecastSample(kind).data.build.income[0] ?? null;
+/** A row's page over the list (MonthForecastEdit): the board's late invoice. Its save and the moved state are the screen's. */
+function ItemPage({ when }: { when: boolean }) {
   return (
-    <StoryRoute entry="/forecast">
-      <ForecastItemSheet item={item} today="2026-10-16" onOpenChange={() => undefined} onSave={() => undefined} />
+    <StoryRoute entry="/forecast/item/invoice%3Ainv-1043" tabs>
+      <ForecastScreen sample={monthForecastBoardSample("board")} openWhen={when} />
     </StoryRoute>
   );
 }
 
-export const ChangeItem: Story = { name: "Forecast · change an item", args: { kind: "positive" }, render: (args) => <ChangeSheet kind={args.kind} /> };
+export const ChangeItem: Story = { name: "Forecast · change an item", render: () => <ItemPage when={false} /> };
+/** The page's מתי צפוי sheet (MonthForecastWhen): the three choices, this week picked. */
+export const ChangeItemWhen: Story = { name: "Forecast · change an item, when", render: () => <ItemPage when /> };

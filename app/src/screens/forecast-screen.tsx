@@ -1,10 +1,11 @@
-import { formatAmountText, type ForecastBuild, type ForecastItem } from "@flow/shared";
-import { type ReactNode, useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { formatAmountText, type ForecastBuild, type ForecastItem, type ForecastOverrideRow } from "@flow/shared";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { cashMonthKey, cashRows } from "../cash";
 import { daysLeftInMonth, type ForecastPatch, type MonthForecast, nextMonth, priorPatch, useMonthForecastQuery, useResetForecastMonth, useRestoreForecast, useSetForecastItem } from "../forecast-month";
-import { useCategoriesQuery } from "../use-books";
+import { useCategoriesQuery, useDashboardQuery } from "../use-books";
 import { useCashMonthsQuery } from "../use-cash";
+import { useGoBack } from "../ui/back";
 import { israelToday } from "../ui/date-math";
 import { ScreenHeader } from "../ui/screen-header";
 import { DelayedSkeleton, ListSkeleton } from "../ui/skeleton";
@@ -14,9 +15,10 @@ import { useToast } from "../ui/toast";
 import { ChangedLine, dayMonth, ForecastFootnote, itemWhat, itemWhen, MovedRow, signed } from "./forecast-parts";
 import { forecastCategories, type ForecastSoFar, useForecastSoFarQuery } from "./forecast-categories";
 import { ForecastCategoryView, type ForecastView, ForecastViewSwitch } from "./forecast-category-view";
-import { ForecastItemSheet } from "./forecast-sheet";
+import { ForecastItemPage } from "./forecast-item-page";
 import { monthName } from "./home-parts";
 import { Amount } from "../ui/amount";
+import { NO_CATEGORY } from "../recurring-layout";
 import { cx } from "../ui/cx";
 
 /**
@@ -39,6 +41,17 @@ const COMPACT_AFTER = 150;
 /** The moved row folds away this long before its write, then the list is refreshed. */
 const FOLD_MS = 280;
 
+/** `<list path>/item/<key>`: a row's page is open over the list (MonthForecastEdit). */
+const ITEM_PATH = /^(.*?)\/item\/([^/]+)\/?$/;
+
+function decodeKey(raw: string): string | null {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+}
+
 /** The big number: the sign is U+2212 when it is negative, as Home's line writes it. */
 export function forecastBigText(minor: bigint, currency = "ILS"): string {
   return minor < 0n ? signed(minor, "−", currency) : formatAmountText(minor, currency);
@@ -50,7 +63,7 @@ function ForecastRowButton({ item, today, onOpen, leaving }: { item: ForecastIte
   const figure = <Amount agorot={item.minor} size="list" currency={item.currency} direction={item.direction} income={item.direction === "income"} />;
   return (
     <li className={cx("ui-forecast-li", leaving && "ui-forecast-leaving")}>
-      <button type="button" className="ui-forecast-row" onClick={() => { onOpen(item); }} aria-label={`${name}, ${amount}`}>
+      <button type="button" className="ui-forecast-row" data-forecast-key={item.key} onClick={() => { onOpen(item); }} aria-label={`${name}, ${amount}`}>
         <span className="ui-forecast-initial" aria-hidden="true">{name.slice(0, 1)}</span>
         <span className="ui-forecast-text">
           <span className="ui-forecast-name">{name}</span>
@@ -92,8 +105,11 @@ function ForecastSection({
   );
 }
 
-/** `openFirst` opens the change sheet on the first income row (the dev route's sheet frame, FLOW-141). */
-export function ForecastScreen({ sample, openFirst = false }: { sample?: ForecastSample; openFirst?: boolean } = {}) {
+/**
+ * FLOW-141: the month-end forecast. A row opens its page at `<this path>/item/<key>`, over the list,
+ * which stays mounted under it. `openWhen` opens the page's When sheet with it (the dev route's frame).
+ */
+export function ForecastScreen({ sample, openWhen = false }: { sample?: ForecastSample; openWhen?: boolean } = {}) {
   const toast = useToast();
   const live = sample == null;
   const today = sample?.today ?? israelToday();
@@ -103,7 +119,6 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
   const write = useSetForecastItem(month);
   const reset = useResetForecastMonth(month);
   const restore = useRestoreForecast(month);
-  const [open, setOpen] = useState<ForecastItem | null>(null);
   const [smallOpen, setSmallOpen] = useState(false);
   const [leavingKey, setLeavingKey] = useState<string | null>(null);
   const [compact, setCompact] = useState(false);
@@ -118,11 +133,54 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
   const total = build == null ? 0n : net + build.incomeTotal - build.expenseTotal;
   const days = daysLeftInMonth(today, month);
   const byCategory = view === "categories";
+  const { pathname, search } = useLocation();
+  const navigate = useNavigate();
+  const goBack = useGoBack();
+  const itemPath = ITEM_PATH.exec(pathname);
+  const listPath = itemPath?.[1] ?? pathname.replace(/\/$/, "");
+  const listTo = `${listPath}${search}`;
+  const openKey = itemPath?.[2] == null ? null : decodeKey(itemPath[2]);
+  const open = openKey == null ? null : build?.items.find((item) => item.key === openKey) ?? null;
   const soFarQuery = useForecastSoFarQuery(month, base, live && byCategory && data != null);
-  const categories = useCategoriesQuery(live && byCategory);
+  const categories = useCategoriesQuery(live && (byCategory || open?.category_id != null));
+  const projects = useDashboardQuery(live && open?.project_id != null);
   // A sample with no month by category draws its categories with nothing so far, never a skeleton that stays.
   const soFar = live ? soFarQuery.data ?? null : sample.soFar ?? NO_SO_FAR;
-  const { search } = useLocation();
+  // The row that opened the page takes the focus back when it closes.
+  const opener = useRef<string | null>(null);
+  /** A move to next month saved on the page: its row folds once the list is back on screen. */
+  const pendingLeave = useRef<(() => void) | null>(null);
+
+  /** Where the list was scrolled when a row's page opened: the page starts at the top, the list comes back here. */
+  const listScroll = useRef<number | null>(null);
+
+  function openItem(item: ForecastItem) {
+    opener.current = item.key;
+    listScroll.current = window.scrollY;
+    void navigate(`${listPath}/item/${encodeURIComponent(item.key)}${search}`);
+  }
+
+  // A key that is not in the month (an old link, or an item that arrived) goes back to the list.
+  const missing = openKey != null && build != null && open == null;
+  useEffect(() => {
+    if (missing) void navigate(listTo, { replace: true });
+  }, [missing, listTo, navigate]);
+
+  useEffect(() => {
+    if (openKey != null) return;
+    const fold = pendingLeave.current;
+    pendingLeave.current = null;
+    // Two frames: the list is drawn again before its row starts to fold.
+    if (fold != null) requestAnimationFrame(() => { requestAnimationFrame(fold); });
+    const scroll = listScroll.current;
+    listScroll.current = null;
+    if (scroll != null && window.scrollY !== scroll) window.scrollTo(0, scroll);
+    if (opener.current == null) return;
+    const key = opener.current;
+    opener.current = null;
+    const row = Array.from(document.querySelectorAll<HTMLElement>("[data-forecast-key]")).find((node) => node.dataset.forecastKey === key);
+    row?.focus({ preventScroll: true });
+  }, [openKey]);
 
   useEffect(() => {
     const onScroll = () => { setCompact(window.scrollY > COMPACT_AFTER); };
@@ -142,14 +200,20 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
   const changed = build?.changed ?? 0;
   const smallUntil = build?.small.reduce<string | null>((latest, item) => { const day = item.due_on ?? item.expected_on; return day != null && (latest == null || day > latest) ? day : latest; }, null) ?? null;
 
+  /** The row folds away, then the move is written; the page has closed first, so the list shows the fold. */
+  function leave(item: ForecastItem, patch: ForecastPatch, prior: ForecastOverrideRow | null) {
+    setLeavingKey(item.key);
+    window.setTimeout(() => {
+      setLeavingKey(null);
+      write.mutate({ key: item.key, patch, undo: false, prior });
+    }, FOLD_MS);
+  }
+
   function save(item: ForecastItem, patch: ForecastPatch) {
     const prior = data?.overrides.find((row) => row.item_key === item.key) ?? null;
     if (patch.moved_out) {
-      setLeavingKey(item.key);
-      window.setTimeout(() => {
-        setLeavingKey(null);
-        write.mutate({ key: item.key, patch, undo: false, prior });
-      }, FOLD_MS);
+      if (openKey == null) leave(item, patch, prior);
+      else pendingLeave.current = () => { leave(item, patch, prior); };
       toast.show({
         message: `${item.name} הועבר לחודש הבא`,
         action: "ביטול",
@@ -176,12 +240,6 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
   }
 
   const income = build?.income ?? [];
-  const firstIncome = income[0];
-  useEffect(() => {
-    if (openFirst && firstIncome != null) setOpen(firstIncome);
-    // Only on mount of the dev route: the sample is fixed for the page.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openFirst]);
   const expense = build?.expense ?? [];
   const moved = build?.moved ?? [];
 
@@ -201,8 +259,20 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
     );
   }
 
+  const categoryNames = new Map<string, string>([
+    ...[...soFar?.income ?? [], ...soFar?.expense ?? []].flatMap((row): Array<[string, string]> => (row.name == null ? [] : [[row.key, row.name]])),
+    ...(categories.data ?? []).map((row): [string, string] => [row.id, row.name]),
+  ]);
+  // A name still loading shows nothing, never "כללי" or "ללא קטגוריה" for a moment.
+  const projectName = open == null
+    ? ""
+    : open.project_name ?? (open.project_id == null ? "כללי" : live && projects.isPending ? "" : projects.data?.projects.find((row) => row.id === open.project_id)?.name ?? "כללי");
+  const categoryName = open?.category_id == null
+    ? NO_CATEGORY
+    : categoryNames.get(open.category_id) ?? (live && categories.isPending ? "" : NO_CATEGORY);
+
   return (
-    <div className="ui-forecast-screen">
+    <div className={cx("ui-forecast-screen", open != null && "ui-forecast-screen-paged")}>
       <div className={cx("ui-forecast-compact", compact && "ui-forecast-compact-on")} aria-hidden={!compact}>
         <span>בית</span>
         <span className="ui-forecast-compact-figure">צפי · <bdi dir="ltr">{forecastBigText(total, base)}</bdi></span>
@@ -240,7 +310,7 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
                 today={today}
                 open={openCategories}
                 onToggle={toggleCategory}
-                onOpenItem={setOpen}
+                onOpenItem={openItem}
                 search={search}
               />
             )
@@ -251,7 +321,7 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
               total={<Amount agorot={build.incomeTotal} size="list" currency={base} direction="income" income />}
               items={income}
               today={today}
-              onOpen={setOpen}
+              onOpen={openItem}
               leavingKey={leavingKey}
             />
             <section className="ui-forecast-section">
@@ -261,7 +331,7 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
               </h2>
               <ul className="ui-forecast-list">
                 {expense.map((item) => (
-                  <ForecastRowButton key={item.key} item={item} today={today} onOpen={setOpen} leaving={leavingKey === item.key} />
+                  <ForecastRowButton key={item.key} item={item} today={today} onOpen={openItem} leaving={leavingKey === item.key} />
                 ))}
                 {build.small.length > 0 ? (
                   <li className="ui-forecast-li">
@@ -276,7 +346,7 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
                     {smallOpen ? (
                       <ul className="ui-forecast-small-list">
                         {build.small.map((item) => (
-                          <ForecastRowButton key={item.key} item={item} today={today} onOpen={setOpen} leaving={false} />
+                          <ForecastRowButton key={item.key} item={item} today={today} onOpen={openItem} leaving={false} />
                         ))}
                       </ul>
                     ) : null}
@@ -289,7 +359,7 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
                 <h2 className="ui-forecast-section-head ui-forecast-head-moved">לא החודש</h2>
                 <ul className="ui-forecast-list">
                   {moved.map((item) => (
-                    <MovedRow key={item.key} item={item} onOpen={setOpen} />
+                    <MovedRow key={item.key} item={item} onOpen={openItem} />
                   ))}
                 </ul>
               </section>
@@ -299,7 +369,19 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
           <ForecastFootnote />
         </>
       )}
-      <ForecastItemSheet item={open} today={today} onOpenChange={(value) => { if (!value) setOpen(null); }} onSave={save} />
+      {open == null ? null : (
+        <ForecastItemPage
+          key={open.key}
+          item={open}
+          today={today}
+          backTo={listTo}
+          projectName={projectName}
+          categoryName={categoryName}
+          openWhen={openWhen}
+          onSave={save}
+          onClose={() => { goBack(listTo); }}
+        />
+      )}
     </div>
   );
 }

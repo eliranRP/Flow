@@ -108,13 +108,6 @@ describe("ForecastScreen", () => {
     expect(today?.textContent.startsWith("−₪")).toBe(true);
   });
 
-  it("opens the change sheet from a row", () => {
-    renderWithProviders(<ForecastScreen sample={monthForecastSample("positive")} />, { route: "/forecast" });
-    fireEvent.click(screen.getByRole("button", { name: /^לקוח לדוגמה,/ }));
-    expect(screen.getByText("סכום צפוי")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "שמירה" })).toBeTruthy();
-  });
-
   it("lists a moved item under לא החודש and counts it in the reset line", () => {
     renderWithProviders(<ForecastScreen sample={monthForecastSample("moved")} />, { route: "/forecast" });
     expect(screen.getByText("לא החודש")).toBeTruthy();

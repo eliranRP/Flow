@@ -130,6 +130,17 @@ describe("buildMonthForecast: a party split by project (decision 0185)", () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
+  it("carries each charge's project, and an invoice's project name, for the item's page", () => {
+    const withProject = { ...unpaid[0], project_name: "Example Lane" } as UnpaidRow;
+    const build = buildMonthForecast({ base: "ILS", expected: split, unpaid: [withProject], overrides: [] });
+    const charge = build.items.find((item) => item.key.endsWith(":a"));
+    expect(charge?.project_id).toBe("a");
+    expect(charge?.project_name).toBeNull();
+    const invoice = build.items.find((item) => item.key === "invoice:inv-1");
+    expect(invoice?.project_id).toBeNull();
+    expect(invoice?.project_name).toBe("Example Lane");
+  });
+
   it("applies an override to the one charge it names", () => {
     const build = buildMonthForecast({
       base: "ILS",
