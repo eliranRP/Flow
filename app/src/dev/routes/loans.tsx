@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { LoanDetailScreen, type LoanView } from "../../screens/loan-detail-screen";
+import { LoansSummaryScreen } from "../../screens/loans-summary-screen";
 import { LoansScreen } from "../../screens/loans-screen";
-import { useMemoryLoanStore } from "../../screens/loan-detail-store";
-import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "../loan-detail-sample";
+import { memoryLoanStore, useMemoryLoanStore } from "../../screens/loan-detail-store";
+import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS, sampleLoans } from "../loan-detail-sample";
 import { LOAN_SUMMARY_SAMPLE } from "../loan-summary-sample";
 import { useDevSettingsSample } from "./settings";
 import type { DevRoute } from "./types";
@@ -55,6 +56,30 @@ export function DevLoanDetail({ view }: { view?: LoanView } = {}) {
   );
 }
 
+/**
+ * The loans summary on the dev loan store (USD). `?today=YYYY-MM-DD` pins the day, so "this year" stays put;
+ * `?period=year` opens on this year; `?board=1` drops the payments' fees, as the board's loans have none.
+ */
+export function DevLoanSummary() {
+  const [params] = useSearchParams();
+  const board = params.get("board") === "1";
+  const [boardStore] = useState(() => memoryLoanStore(sampleLoans().map((sample) => ({
+    ...sample,
+    payments: sample.payments.map((payment) => ({ ...payment, feesMinor: 0n, totalMinor: payment.totalMinor - payment.feesMinor })),
+  }))));
+  const devStore = devLoanStore();
+  const store = board ? boardStore : devStore;
+  const today = params.get("today");
+  return (
+    <LoansSummaryScreen
+      store={store}
+      currency="USD"
+      period={params.get("period") === "year" ? "year" : "all"}
+      today={today != null && /^\d{4}-\d{2}-\d{2}$/.test(today) ? today : undefined}
+    />
+  );
+}
+
 /** FLOW-139d proof: `?sheet=kind` taps the סוג row once the page has drawn, so the kind sheet opens. */
 function useOpenKindRow(wanted: boolean) {
   useEffect(() => {
@@ -75,6 +100,7 @@ function useOpenKindRow(wanted: boolean) {
 
 export const loansRoutes: DevRoute[] = [
   { path: "loans", element: <DevLoans /> },
+  { path: "loans/summary", element: <DevLoanSummary /> },
   { path: "loans/:loanId", element: <DevLoanDetail /> },
   { path: "loans/:loanId/payments", element: <DevLoanDetail view="payments" /> },
 ];

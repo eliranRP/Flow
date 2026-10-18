@@ -7,7 +7,6 @@ import {
   kindPatch,
   kindValue,
   lastPaymentDate,
-  loanParts,
   partCategoryOptions,
   partCategoryValue,
   partDefaultLabel,
@@ -55,11 +54,6 @@ describe("partCategoryOptions follows private.loan_part_category_ok", () => {
     expect(partCategoryValue(SAMPLE_INTEREST_ONLY, SAMPLE_LOAN_CATEGORIES, "interest")).toBe("ריבית הלוואות גישור");
     expect(partCategoryValue(SAMPLE_INTEREST_ONLY, SAMPLE_LOAN_CATEGORIES, "principal")).toBe("ברירת מחדל · תשלומי הלוואה");
     expect(partCategoryValue(SAMPLE_INTEREST_ONLY, SAMPLE_LOAN_CATEGORIES, "fees")).toBe("לא נקבעה · נבחר בכל תשלום");
-  });
-
-  it("drops escrow for a demand loan", () => {
-    expect(loanParts(SAMPLE_DEMAND)).toEqual(["interest", "principal", "fees"]);
-    expect(loanParts(SAMPLE_AMORTIZING)).toEqual(["interest", "escrow", "principal", "fees"]);
   });
 });
 

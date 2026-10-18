@@ -17,6 +17,14 @@ export const LOAN_PART_BOARD_LABEL: Record<LoanSplitPart, string> = {
   fees: "עמלות",
 };
 
+/** A part's one-word name, for the next payment's line: "קרן $1,066 · ריבית $1,087 · נאמנות $363". */
+export const LOAN_PART_SHORT_LABEL: Record<LoanSplitPart, string> = {
+  principal: "קרן",
+  interest: "ריבית",
+  escrow: "נאמנות",
+  fees: "עמלות",
+};
+
 /** dd/mm from an ISO date. */
 export function dayMonth(iso: string): string {
   return `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;

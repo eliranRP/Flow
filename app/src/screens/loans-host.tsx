@@ -61,6 +61,8 @@ export type LoansHostCtx = {
   emptyRef: Ref<HTMLButtonElement>;
   /** Opens one loan's page. */
   openLoan: (id: string) => void;
+  /** The summary page: what was paid and what is left (/loans/summary). */
+  summaryHref: string;
 };
 
 /**
@@ -255,6 +257,7 @@ export function LoansHost({
         newRef: newButton,
         emptyRef: emptyButton,
         openLoan: (id) => { void navigate(loanHref(id)); },
+        summaryHref: `${base}/summary${search}`,
       })}
       <Sheet
         open={holdWrites ? false : open}

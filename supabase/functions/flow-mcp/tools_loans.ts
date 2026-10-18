@@ -156,6 +156,79 @@ export async function loadLoanPayments(loanId: string, rpc: ToolRpc): Promise<To
   return result.json as LoanPaymentRow[];
 }
 
+type PaidParts = { principal_minor: number; interest_minor: number; escrow_minor: number; fees_minor: number; total_minor: number };
+
+function partsOut(principal: number, interest: number, escrow: number, fees: number): PaidParts {
+  return { principal_minor: principal, interest_minor: interest, escrow_minor: escrow, fees_minor: fees, total_minor: principal + interest + escrow + fees };
+}
+
+/**
+ * get_loans_paid (FLOW-142): what each loan paid since it started (period all) or in one calendar
+ * year (period year), part by part, the figures the app's loans summary and loan page show. Since
+ * the start the principal is principal_minor less balance_minor (never below zero); in a year it is
+ * the principal parts of that year's payments. Interest, escrow and fees are the saved splits of the
+ * attached payments (parts waiting for review included, as the app shows them). `totals` sums the
+ * open loans per currency, with the debt at the start (all: the principal; year: today's balance
+ * plus the year's principal). Read only.
+ */
+export async function loansPaidRead(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
+  const period = args.period ?? "all";
+  if (period !== "all" && period !== "year") return fail("validation", "period: expected all or year");
+  const thisYear = Number(todayIso().slice(0, 4));
+  const year = args.year ?? thisYear;
+  if (typeof year !== "number" || !Number.isInteger(year) || year < 1900 || year > 2200) return fail("validation", "year: expected a year such as 2026");
+  if (period === "all" && args.year != null) return fail("validation", "year: only with period year");
+  const loans = await loadLoans(rpc);
+  if (!Array.isArray(loans)) return loans;
+  const prefix = `${String(year)}-`;
+  const out: Array<Record<string, unknown>> = [];
+  const totals = new Map<string, { open_loans: number; start: number; balance: number; principal: number; interest: number; escrow: number; fees: number }>();
+  for (const loan of loans) {
+    const payments = await loadLoanPayments(loan.id, rpc);
+    if (!Array.isArray(payments)) return payments;
+    const inPeriod = period === "all" ? payments : payments.filter((row) => row.doc_date.startsWith(prefix));
+    const sum = (key: "principal_minor" | "interest_minor" | "escrow_minor" | "fees_minor") => inPeriod.reduce((acc, row) => acc + row[key], 0);
+    const principal = period === "all" ? Math.max(0, loan.principal_minor - loan.balance_minor) : sum("principal_minor");
+    const paid = partsOut(principal, sum("interest_minor"), sum("escrow_minor"), sum("fees_minor"));
+    const status = loan.status ?? "open";
+    out.push({
+      loan_id: loan.id,
+      name: loan.name,
+      currency: loan.currency,
+      status,
+      closed_on: loan.closed_on ?? null,
+      kind: loanKindOf(loan),
+      principal_minor: loan.principal_minor,
+      balance_minor: loan.balance_minor,
+      paid,
+      payments: inPeriod.length,
+      splits_saved: payments.length > 0,
+    });
+    if (status !== "open") continue;
+    const row = totals.get(loan.currency) ?? { open_loans: 0, start: 0, balance: 0, principal: 0, interest: 0, escrow: 0, fees: 0 };
+    row.open_loans += 1;
+    row.start += period === "all" ? loan.principal_minor : loan.balance_minor + paid.principal_minor;
+    row.balance += loan.balance_minor;
+    row.principal += paid.principal_minor;
+    row.interest += paid.interest_minor;
+    row.escrow += paid.escrow_minor;
+    row.fees += paid.fees_minor;
+    totals.set(loan.currency, row);
+  }
+  return ok({
+    period,
+    year: period === "year" ? year : null,
+    loans: out,
+    totals: [...totals.entries()].map(([currency, row]) => ({
+      currency,
+      open_loans: row.open_loans,
+      start_debt_minor: row.start,
+      balance_minor: row.balance,
+      paid: partsOut(row.principal, row.interest, row.escrow, row.fees),
+    })),
+  });
+}
+
 /** Payments that count: not waiting for review, and not the line being attached. */
 export function countedPayments(payments: LoanPaymentRow[], exceptTransactionId: string | null): LoanPaymentRow[] {
   return payments.filter((row) => !row.needs_review && row.transaction_id !== exceptTransactionId);

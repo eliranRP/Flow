@@ -19,6 +19,7 @@ export const READ_TOOL_NAMES = [
   "get_totals",
   "list_loans",
   "get_loan_schedule",
+  "get_loans_paid",
   "get_sync_status",
   "get_breakdown",
   "get_jev_status",
@@ -119,6 +120,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   get_totals: new Set(["from", "to", "basis"]),
   list_loans: new Set(["include_closed"]),
   get_loan_schedule: new Set(["loan_id", "from", "limit", "as_of"]),
+  get_loans_paid: new Set(["period", "year"]),
   get_sync_status: new Set(["job_id"]),
   get_breakdown: new Set(["direction", "from", "to", "group_by", "level", "basis", "group", "currency", "excluded", "limit", "offset"]),
   get_jev_status: new Set(),
@@ -312,22 +314,6 @@ function companyNameIsValid(name: string): boolean {
   const points = Array.from(name);
   return points.length >= 2 && points.length <= 100;
 }
-// FLOW-601. The database lower-cases and checks the email; this only bounds it.
-export const inviteMemberSchema = z.object({
-  idempotency_key: IDEMPOTENCY_KEY,
-  email: z.string().trim().min(3).max(254),
-  role: z.enum(["editor", "viewer"]).default("viewer"),
-}).strict();
-// member_id is the member's user id from list_team (user_id is reserved for the token's identity).
-export const setMemberRoleSchema = z.object({
-  idempotency_key: IDEMPOTENCY_KEY,
-  member_id: UUID_TEXT,
-  role: z.enum(["editor", "viewer"]),
-}).strict();
-export const removeMemberSchema = z.object({
-  idempotency_key: IDEMPOTENCY_KEY,
-  member_id: UUID_TEXT,
-}).strict();
 export const renameCompanySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   name: z.string().trim().transform(plainSpaces)

@@ -1,22 +1,23 @@
 import type { LoanSplitPart } from "@flow/shared";
-import type { ReactNode, Ref } from "react";
+import { useState, type ReactNode, type Ref } from "react";
 import { Link } from "react-router-dom";
 import { Card } from "../ui/card";
 import { formatDisplay } from "../ui/date-math";
 import { ChevronIcon } from "../ui/icons";
-import { PartsBar, type BarLegendItem, type BarPart } from "../ui/parts-bar";
+import { PartsBar } from "../ui/parts-bar";
+import { SegmentedControl } from "../ui/segmented-control";
 import type { LoanCategory, LoanDetail, LoanPayment, LoanRateRow } from "./loan-detail-data";
-import { formatRatePpm, loanParts, rateInForce } from "./loan-detail-data";
+import { formatRatePpm, rateInForce } from "./loan-detail-data";
 import { formatLoanMoney, type LoanCurrency } from "./loan-form";
-import { periodTotal, roundTotals, type LoanOutlook, type OutlookPeriod } from "./loan-outlook";
+import type { LoanOutlook } from "./loan-outlook";
+import { loanPaidCard, PAID_PARTS, paidMoney, type PaidPeriod } from "./loans-paid";
 import {
   balanceProgress,
   balanceProgressText,
   dayMonth,
   LOAN_PART_BOARD_LABEL,
+  LOAN_PART_SHORT_LABEL,
   loanMoney,
-  loanShowsCents,
-  partCategory,
   partInProfit,
   paymentRow,
   paymentSplitText,
@@ -53,33 +54,97 @@ export function LoanBalanceCard({ loan, outlook }: { loan: LoanDetail; outlook: 
   );
 }
 
-/** The next payment: its figure and its parts, with the legend, and one line on what the parts do. */
+/** The next payment, one line: its date and figure, and its parts in a row ("קרן $1,066 · ריבית $1,087 · נאמנות $363"). */
 export function LoanNextCard({ loan, outlook }: { loan: LoanDetail; outlook: LoanOutlook }) {
   const next = outlook.next;
-  const money = (minor: bigint) => <bdi dir="ltr">{loanMoney(loan, minor)}</bdi>;
   const parts = [
-    { key: "principal", value: next.principalMinor, tone: "accent" },
-    { key: "interest", value: next.interestMinor, tone: "accent-dim" },
-    { key: "escrow", value: next.escrowMinor, tone: "muted" },
+    { key: "principal", value: next.principalMinor },
+    { key: "interest", value: next.interestMinor },
+    { key: "escrow", value: next.escrowMinor },
   ] as const;
-  const shown = parts.filter((part) => part.value > 0n);
-  const bars: BarPart[] = shown.map((part) => ({ key: part.key, value: part.value, tone: part.tone }));
-  const legend: BarLegendItem[] = shown.map((part) => ({
-    key: part.key,
-    label: LOAN_PART_BOARD_LABEL[part.key],
-    value: money(part.value),
-  }));
-  const interestOnly = next.principalMinor === 0n;
+  const line = parts
+    .filter((part) => part.value > 0n)
+    .map((part) => `${LOAN_PART_SHORT_LABEL[part.key]} ${loanMoney(loan, part.value)}`)
+    .join(" · ");
   return (
-    <Card className="ui-loan-card ui-loan-next-card">
+    <Card as="section" className="ui-loan-card ui-loan-next-card" aria-label="התשלום הבא">
       <div className="ui-loan-card-head">
-        <h2 className="ui-loan-card-title">התשלום הבא · {dayMonth(next.dueDate)}</h2>
-        <span className="ui-loan-card-total">{money(next.paymentMinor)}</span>
+        <h2 className="ui-loan-next-title">התשלום הבא · {dayMonth(next.dueDate)}</h2>
+        <bdi className="ui-loan-next-amount" dir="ltr">{loanMoney(loan, next.paymentMinor)}</bdi>
       </div>
-      <PartsBar parts={bars} height={8} gap={2} radius="block" legend={legend} label="התשלום הבא לפי חלקים" />
-      <p className="ui-loan-card-note">
-        {interestOnly ? "רק ריבית בכל חודש. הקרן לא קטנה עד הסוף." : "הקרן מקטינה את החוב ולא נספרת ברווח. הריבית והנאמנות נספרות."}
-      </p>
+      <p className="ui-loan-card-note">{line}</p>
+    </Card>
+  );
+}
+
+/** The line under each part of the שולם card: what the part does, and whether it counts in the profit. */
+function paidPartNote(loan: LoanDetail, categories: readonly LoanCategory[], part: LoanSplitPart): string {
+  const profit = partInProfit(loan, categories, part) ? "נספרת ברווח" : "לא נספרת ברווח";
+  if (part === "principal") return `מקטינה את החוב · ${profit}`;
+  if (part === "escrow") return `מסים וביטוח · ${profit}`;
+  return profit;
+}
+
+/**
+ * שולם: what the loan's attached payments paid, since the loan started or this year (the period
+ * switch), part by part, with what each part does. An owner taps a part to set its category, as
+ * the parts rows did before (the part sheet). The principal since the start is the original less
+ * the balance (loanPaidParts).
+ */
+export function LoanPaidCard({ loan, payments, categories, today, onOpenPart }: {
+  loan: LoanDetail;
+  payments: readonly LoanPayment[];
+  categories: readonly LoanCategory[];
+  today: string;
+  onOpenPart: ((part: LoanSplitPart) => void) | null;
+}) {
+  const [period, setPeriod] = useState<PaidPeriod>("all");
+  const card = loanPaidCard(loan, payments, period, today);
+  // Nothing attached and nothing paid off: no card.
+  if (payments.length === 0 && card.totalMinor === 0n) return null;
+  const shown = PAID_PARTS.filter(({ part }) => card.totals[part] > 0n);
+  return (
+    <Card as="section" className="ui-loan-card ui-loan-paid" aria-label="שולם">
+      <div className="ui-loan-paid-head">
+        <p className="ui-loan-card-label">{card.label}</p>
+        <SegmentedControl<PaidPeriod>
+          label="תקופה"
+          showLabel={false}
+          value={period}
+          onChange={setPeriod}
+          options={[{ value: "all", label: "מההתחלה" }, { value: "year", label: today.slice(0, 4), numeric: true }]}
+        />
+      </div>
+      <bdi className="ui-loan-paid-total" dir="ltr">{paidMoney(card.totalMinor, loan.currency)}</bdi>
+      {shown.length === 0 ? null : (
+        <PartsBar parts={shown.map(({ part, tone }) => ({ key: part, value: card.totals[part], tone }))} height={8} gap={2} radius="block" label={card.label} />
+      )}
+      {shown.length === 0 ? null : (
+        <ul className="ui-loan-paid-parts">
+          {shown.map(({ part, tone }) => {
+            const body = (
+              <>
+                <span className="ui-parts-dot" data-tone={tone} aria-hidden="true" />
+                <span className="ui-loan-paid-text">
+                  <span className="ui-loan-paid-name">{LOAN_PART_BOARD_LABEL[part]}</span>{" "}
+                  <span className="ui-loan-paid-note">{paidPartNote(loan, categories, part)}</span>
+                </span>
+                <bdi className="ui-loan-paid-amount" dir="ltr">{paidMoney(card.totals[part], loan.currency)}</bdi>
+              </>
+            );
+            return (
+              <li key={part}>
+                {onOpenPart == null ? (
+                  <div className="ui-loan-paid-part">{body}</div>
+                ) : (
+                  <button type="button" className="ui-loan-paid-part" onClick={() => { onOpenPart(part); }}>{body}</button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <p className="ui-loan-card-note ui-loan-paid-foot">{card.note}</p>
     </Card>
   );
 }
@@ -140,49 +205,6 @@ export function LoanRateChangesCard({ rates, onOpen }: { rates: readonly LoanRat
         onOpen: onOpen == null ? null : () => { onOpen(rate); },
       }))}
     />
-  );
-}
-
-/**
- * שולם השנה: one row per part paid this year (a part at $0 is left out), with its category and
- * whether it counts in the profit. Nothing paid this year: no card.
- */
-export function LoanYtdCard({ loan, paid, categories, onOpenPart }: {
-  loan: LoanDetail;
-  paid: OutlookPeriod;
-  categories: readonly LoanCategory[];
-  onOpenPart: ((part: LoanSplitPart) => void) | null;
-}) {
-  if (paid.payments === 0) return null;
-  const rounded = roundTotals(paid.totals);
-  const exactTotal = (totals: OutlookPeriod["totals"]) => totals.interest + totals.escrow + totals.principal + totals.fees;
-  const rows = loanParts(loan).filter((part) => rounded[part] > 0n);
-  return (
-    <Card className="ui-loan-card ui-loan-ytd">
-      <div className="ui-loan-card-head ui-loan-card-pad">
-        <h2 className="ui-loan-card-title">שולם השנה</h2>
-        <span className="ui-loan-card-meta"><bdi dir="ltr">{loanMoney(loan, loanShowsCents(loan) ? exactTotal(paid.totals) : periodTotal(paid.totals))}</bdi></span>
-      </div>
-      {rows.map((part) => {
-        const name = partCategory(loan, categories, part)?.name ?? null;
-        const profit = partInProfit(loan, categories, part) ? "נספר ברווח" : "לא נספר ברווח";
-        const note = [name, profit].filter((item) => item != null).join(" · ");
-        const body = (
-          <>
-            <span className="ui-loan-row-text">
-              <span className="ui-loan-row-title">{LOAN_PART_BOARD_LABEL[part]}</span>{" "}
-              <span className="ui-loan-row-note">{note}</span>
-            </span>
-            <bdi className="ui-loan-row-amount" dir="ltr">{loanMoney(loan, loanShowsCents(loan) ? paid.totals[part] : rounded[part])}</bdi>
-          </>
-        );
-        return onOpenPart == null ? (
-          <div key={part} className="ui-loan-row ui-loan-ytd-row">{body}</div>
-        ) : (
-          <button key={part} type="button" className="ui-loan-row ui-loan-ytd-row" onClick={() => { onOpenPart(part); }}>{body}</button>
-        );
-      })}
-    </Card>
   );
 }
 

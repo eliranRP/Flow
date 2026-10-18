@@ -81,15 +81,23 @@ export const DeleteConfirm: Story = {
   },
 };
 
-/** FLOW-139c: the page's cards in order, and the next payment's figure. */
+/** FLOW-142: the page's cards in order: the balance, what was paid, the next payment, then the last payments. */
 export const CardsInOrder: Story = {
   name: "Cards in order",
   ...loan("loan-mortgage"),
   play: async ({ canvasElement }) => {
     const page = within(canvasElement);
-    await expect(page.getByText("יתרה היום")).toBeInTheDocument();
-    await expect(page.getByText(/^התשלום הבא · /)).toBeInTheDocument();
-    await expect(page.getByText("שולם השנה")).toBeInTheDocument();
-    await expect(page.getByText("3 התשלומים האחרונים")).toBeInTheDocument();
+    const order = [
+      page.getByText("יתרה היום"),
+      page.getByText("שולם מאז 01/2025"),
+      page.getByText(/^התשלום הבא · /),
+      page.getByText("3 התשלומים האחרונים"),
+    ];
+    for (let index = 1; index < order.length; index += 1) {
+      const before = order[index - 1];
+      const after = order[index];
+      if (before == null || after == null) throw new Error("missing card");
+      await expect(before.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
   },
 };

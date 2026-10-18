@@ -34,6 +34,7 @@ export const screenLoaders = {
   lineSplit: () => import("./screens/line-split"),
   loans: () => import("./screens/loans-screen"),
   loanDetail: () => import("./screens/loan-detail-screen"),
+  loansSummary: () => import("./screens/loans-summary-screen"),
   help: () => import("./screens/HelpScreen"),
   legal: () => import("./screens/PlaceholderScreen"),
   install: () => import("./ui/install-screen"),

@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { ViewerPreview } from "../use-is-viewer";
+import { LOAN_SUMMARY_SAMPLE } from "../dev/loan-summary-sample";
 import { LoansScreen } from "./loans-screen";
 
 // FLOW-139b. The הלוואות tab: a top-level list at /loans, with the open loans, then the closed group.
@@ -96,6 +97,11 @@ describe("Loans tab", () => {
     fireEvent.click(await screen.findByRole("button", { name: /^הלוואת ציוד, / }));
     expect(router.state.location.pathname).toBe("/loans/l2");
     expect(await screen.findByText("עמוד ההלוואה")).toBeInTheDocument();
+  });
+
+  it("links the summary card to the summary page (/loans/summary)", () => {
+    renderAt(<LoansScreen sample={{ ...business, loans: twoLoans, summary: LOAN_SUMMARY_SAMPLE }} />);
+    expect(screen.getByRole("link", { name: /^מה שולם עד היום, וכמה נשאר מהחוב/ })).toHaveAttribute("href", "/loans/summary");
   });
 
   it("shows the empty state, and the viewer's has no button", () => {

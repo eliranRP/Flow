@@ -160,7 +160,7 @@ describe("loan page: states and the viewer", () => {
     const store = sampleLoanStore();
     await store.update("loan-mortgage", { categoryIds: { interest: "cat-interest" } });
     renderLoan(store, "loan-mortgage");
-    fireEvent.click(screen.getByRole("button", { name: /^ריבית ריבית/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^ריבית נספרת ברווח/ }));
     expect(screen.getByRole("radio", { name: "ברירת מחדל · ריבית" })).toHaveAttribute("aria-checked", "true");
   });
 });
@@ -172,19 +172,33 @@ function firstBack(): HTMLElement {
 }
 
 describe("loan page: what it leads with (FLOW-139c)", () => {
-  it("leads an amortizing loan with its balance, the next payment, the year's parts and the last three payments", () => {
+  it("leads an amortizing loan with its balance, what was paid, the next payment and the last three payments", () => {
     renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "");
     expect(screen.getByText("יתרה היום")).toBeInTheDocument();
     expect(screen.getByText(/^נפרע \$[\d,]+ מתוך \$240,000 · לתשלום עד \d{4}$/)).toBeInTheDocument();
-    expect(screen.getByText(/^התשלום הבא · 01\/11$/)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "שולם השנה" })).toBeInTheDocument();
+    const paid = screen.getByRole("region", { name: "שולם" });
+    const next = screen.getByRole("region", { name: "התשלום הבא" });
+    // FLOW-142: the paid card comes before the next payment.
+    expect(paid.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(paid).getByText("שולם מאז 01/2025")).toBeInTheDocument();
+    expect(within(next).getByText(/^התשלום הבא · 01\/11$/)).toBeInTheDocument();
+    expect(within(next).getByText(/^קרן \$[\d,]+ · ריבית \$[\d,]+ · נאמנות \$363$/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "3 התשלומים האחרונים" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "כל התשלומים" })).toHaveAttribute("href", "/loans/loan-mortgage/payments");
   });
 
-  it("opens the part's category sheet from its שולם השנה row", async () => {
+  it("counts the principal since the start as the original less the balance, and switches to this year", () => {
     renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "");
-    fireEvent.click(screen.getByRole("button", { name: /^ריבית ריבית/ }));
+    const paid = screen.getByRole("region", { name: "שולם" });
+    expect(within(paid).getByRole("button", { name: /^קרן מקטינה את החוב/ })).toHaveTextContent("$63,500");
+    fireEvent.click(within(paid).getByRole("radio", { name: "2026" }));
+    expect(within(paid).getByText("שולם ב־2026")).toBeInTheDocument();
+    expect(within(paid).getByText("הריבית היא מה שההלוואה עלתה השנה.")).toBeInTheDocument();
+  });
+
+  it("opens the part's category sheet from its שולם row", async () => {
+    renderLoan(sampleLoanStore(), "loan-mortgage", undefined, "");
+    fireEvent.click(screen.getByRole("button", { name: /^ריבית נספרת ברווח/ }));
     expect(await screen.findByRole("dialog", { name: "ריבית" })).toBeInTheDocument();
   });
 
@@ -200,7 +214,7 @@ describe("loan page: what it leads with (FLOW-139c)", () => {
   it("leaves out a part at $0, and leads the bridge loan with its interest (design r1)", () => {
     const { container } = renderLoan(sampleLoanStore(), "loan-bridge", undefined, "");
     expect(container.querySelector(".ui-loan-next-card")).toHaveTextContent("$1,837.50");
-    expect(screen.getByRole("button", { name: /^ריבית ריבית/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^ריבית נספרת ברווח/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^קרן/ })).not.toBeInTheDocument();
     expect(screen.getByText(/^ריבית בלבד: הקרן \(\$210,000\) תיפרע בסוף, 01\/2027$/)).toBeInTheDocument();
   });

@@ -128,7 +128,7 @@ export function LoansList({ ctx, closedOpen = false }: { ctx: LoansHostCtx; clos
           ) : null}
           {ctx.summary != null && ctx.summary.openCount > 0 && ctx.currency != null ? (
             <div className="ui-loans-summary-wrap">
-              <LoanSummaryCard summary={ctx.summary} currency={ctx.currency} />
+              <LoanSummaryCard summary={ctx.summary} currency={ctx.currency} summaryHref={ctx.summaryHref} />
             </div>
           ) : null}
           {open.length > 0 ? <h2 className="ui-loans-section-head">פעילות</h2> : null}
