@@ -118,6 +118,8 @@
   --radius-card: 20px;
   --radius-card-inner: calc(var(--radius-card) - var(--space-1)); /* a part inside a card */
   --radius-card-tight: 16px;     /* connection and AI pages (implementation-guide §7.14, FLOW-512) */
+  --radius-thumb: 6px;           /* a document thumbnail's corners */
+  --radius-card-row: 14px;       /* the onboarding switch and add-loan cards (board) */
   --radius-sheet: 24px;
   --radius-band: 28px;
   --radius-fab: 9999px;
@@ -237,6 +239,9 @@
   --color-skeleton: #F1EEF6;     /* skeleton blocks use the inner-box value (board, States light) */
   --color-skeleton-band: rgba(255, 255, 255, 0.16);
   --color-knob: #FFFFFF;
+  --color-paper: #EDEAE4;        /* the receipt thumbnail's paper and its two line greys (Add board) */
+  --color-paper-ink: #9C97A3;
+  --color-paper-line: #C9C4CF;
   --color-knob-on: #FFFFFF;
   --color-bad-tint: #FCEDEC;
   --color-toast-bad: #FF8A80;

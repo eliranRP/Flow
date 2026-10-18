@@ -232,7 +232,8 @@
 }
 
 .ui-onb-chip-suggest {
-  border-style: dashed;
+  border: var(--stroke-strong) dashed var(--sheet-grab);
+  background: transparent;
   color: var(--color-accent-text);
 }
 
@@ -242,8 +243,9 @@
 }
 
 .ui-onb-chip-x {
-  min-width: var(--touch-min);
-  min-height: var(--touch-min);
+  min-width: var(--space-6);
+  min-height: var(--space-6);
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--color-text-muted);
@@ -261,17 +263,32 @@
   gap: var(--space-2);
 }
 
+/* The board draws the name field with its prompt inside and no label above; the label stays for screen readers. */
+.ui-onb-add-field .ui-field-label {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.ui-onb-add-field .ui-field-control,
+.ui-onb-add .ui-btn {
+  min-block-size: calc(var(--touch-min) + var(--space-1));
+  block-size: calc(var(--touch-min) + var(--space-1));
+}
+
 .ui-onb-add-loan {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(var(--touch-min) + var(--space-3));
-  border: 1px dashed var(--color-line);
-  border-radius: var(--radius-card);
-  background: var(--color-surface);
+  min-height: var(--control-height);
+  border: var(--stroke-strong) dashed var(--color-switch-off);
+  border-radius: var(--radius-card-row);
+  background: transparent;
   font-size: var(--type-line2-size);
   line-height: var(--type-line2-line);
-  font-weight: var(--type-line2-weight);
+  font-weight: var(--type-btn-weight);
   color: var(--color-accent-text);
 }
 
@@ -336,8 +353,7 @@
 .ui-onb-done {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: 0;
+  padding: calc(var(--space-1) + var(--space-half)) var(--space-4);
   margin: 0;
   list-style: none;
 }
@@ -345,43 +361,40 @@
 .ui-onb-done-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding-block: var(--space-3);
-  border-bottom: 1px solid var(--color-line);
+  gap: calc(var(--space-2) + var(--space-half));
+  min-height: calc(var(--touch-min) + var(--space-1) + 1px);
+  border-top: 1px solid var(--color-line);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  font-weight: var(--type-body-weight);
   animation: ui-onb-rise var(--motion-fade) var(--ease-enter) both;
 }
 
-.ui-onb-done-label {
-  color: var(--color-text-secondary);
-  margin-inline-end: auto;
+.ui-onb-done-row:first-child {
+  min-height: calc(var(--touch-min) + var(--space-1));
+  border-top: 0;
 }
 
-.ui-onb-done .ui-onb-mark {
-  inline-size: auto;
-  block-size: auto;
-  background: transparent;
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line);
-  font-weight: var(--type-name-weight);
+.ui-onb-done-label {
+  flex: 1 1 auto;
+  color: var(--color-text);
 }
 
 .ui-onb-mark {
-  display: inline-grid;
-  place-items: center;
-  inline-size: var(--size-seg);
-  block-size: var(--size-seg);
-  border-radius: var(--radius-fab);
-  background: var(--color-tint);
-  color: var(--color-accent-text);
+  inline-size: calc(var(--space-5) + var(--space-half));
+  text-align: center;
+  color: var(--color-btn-disabled-text);
 }
 
 .ui-onb-mark-good {
-  background: var(--color-tint);
   color: var(--color-good);
 }
 
-.ui-onb-install {
+.ui-onb-done-value {
+  color: var(--color-text-muted);
+}
+
+.ui-onb-done .ui-onb-install {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -389,21 +402,68 @@
 
 .ui-onb-loan {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding-block: var(--space-3);
-  border-bottom: 1px solid var(--color-line);
+  align-items: center;
+  gap: var(--space-3);
+  min-height: calc(var(--touch-min) + var(--space-8));
+  padding: var(--space-2) var(--space-inset-row);
+  border-top: 1px solid var(--color-line);
+}
+
+.ui-onb-loan:first-child {
+  border-top: 0;
 }
 
 .ui-onb-loan .t-name {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
   font-weight: var(--type-body-weight);
 }
 
+.ui-onb-loan .ui-onb-pending {
+  color: var(--color-accent-text);
+}
+
+/* The board's switch card: a 64px row, 16/12 text, and a white knob that sits at the start when on. */
 .ui-onb-switch {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+  min-height: calc(var(--touch-min) + var(--space-5));
+  padding: var(--space-2) var(--space-inset-row);
+  border-radius: var(--radius-card-row);
+}
+
+.ui-onb-switch .ui-switch-row {
+  flex: 1;
+  padding-block: 0;
+}
+
+.ui-onb-switch .ui-switch-copy {
+  gap: calc(var(--space-1) - var(--space-half) / 2);
+}
+
+.ui-onb-switch .ui-switch-label {
+  font-size: var(--type-btn-2-size);
+  line-height: var(--type-btn-2-line);
+}
+
+.ui-onb-switch .ui-switch-copy .t-muted {
+  font-size: calc(var(--type-caption-size) - var(--space-1) / 4);
+  line-height: var(--onb-line-natural);
+}
+
+.ui-onb-switch .ui-switch i {
+  background: var(--color-knob);
+}
+
+.ui-onb-switch .ui-switch-row:dir(rtl) .ui-switch i {
+  transform: translateX(calc(-1 * (var(--size-switch) - var(--switch-knob) - 2 * var(--switch-inset))));
+}
+
+.ui-onb-switch .ui-switch-row:dir(rtl) input:checked + .ui-switch i {
+  background: var(--color-knob);
+  transform: none;
 }
 
 /* -- The steps bar (ProgressBar variant "steps") ------------------------------------------------ */
@@ -437,7 +497,7 @@
 .ui-sample {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   padding: var(--space-card-inset);
   border-radius: var(--radius-card);
   border: 1px solid var(--color-line);
@@ -447,7 +507,7 @@
 
 .ui-sample-head {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: var(--space-3);
 }
@@ -455,32 +515,37 @@
 .ui-sample-name {
   color: var(--color-text);
   font-size: var(--type-body-size);
-  line-height: var(--type-body-line);
+  line-height: var(--onb-line-natural);
   font-weight: var(--type-body-weight);
 }
 
 .ui-sample-chip {
   display: inline-flex;
   align-items: center;
-  min-height: var(--control-height-sm);
+  min-height: calc(var(--control-height-sm) - var(--space-1));
   padding-inline: var(--space-3);
   border-radius: var(--radius-chip);
   background: var(--color-tint);
   color: var(--color-accent-text);
   font-size: var(--type-chip-size);
   line-height: var(--type-chip-line);
-  font-weight: var(--type-chip-weight);
+  font-weight: var(--type-body-weight);
 }
 
 .ui-sample-meta {
-  font-size: var(--type-meta-size);
-  line-height: var(--type-meta-line);
+  font-size: var(--type-caption-size);
+  line-height: var(--onb-line-natural);
   color: var(--color-text-muted);
 }
 
+.ui-sample .ui-btn {
+  block-size: calc(var(--touch-min) + var(--space-1));
+  min-block-size: calc(var(--touch-min) + var(--space-1));
+}
+
 .ui-sample-amount {
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line);
+  font-size: var(--type-sheet-size);
+  line-height: var(--onb-line-natural);
   font-weight: var(--type-body-weight);
   color: var(--color-text);
 }

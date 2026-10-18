@@ -37,7 +37,7 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
   const [error, setError] = useState<string | null>(null);
   const picker = useRef<HTMLInputElement>(null);
   const matchQuery = useReceiptMatch(draft, kind === "receipt");
-  const match = kind === "receipt" ? (matchQuery.data ?? null) : null;
+  const match = kind === "receipt" ? (fill?.match ?? matchQuery.data ?? null) : null;
 
   const projects = sample ? SAMPLE_PROJECTS : (dashboard.data?.projects ?? [])
     .filter((project) => project.status === "active")
