@@ -99,6 +99,7 @@ export function LoansSummaryScreen({
   listPath,
   today: givenToday,
   phase,
+  period: initialPeriod = "all",
 }: {
   /** Stories, tests and the dev route pass a memory store. Live omits it. */
   store?: MemoryLoanStore;
@@ -110,6 +111,8 @@ export function LoansSummaryScreen({
   today?: string;
   /** A story pins the page to loading or error. */
   phase?: "loading" | "error";
+  /** The period the switch opens on (the dev route's ?period=year). Default: since the start. */
+  period?: PaidPeriod;
 } = {}) {
   const location = useLocation();
   const search = usePreviewSearch();
@@ -144,14 +147,14 @@ export function LoansSummaryScreen({
             : dashboard.data?.company_id == null ? { phase: "ready", entries: [], currency: "ILS" } : live;
   return (
     <ViewerScope>
-      <LoanSummaryBody read={read} back={back} loanHref={(id) => `${listBase}/${encodeURIComponent(id)}${search}`} today={givenToday ?? israelToday()} />
+      <LoansSummaryBody read={read} period={initialPeriod} back={back} loanHref={(id) => `${listBase}/${encodeURIComponent(id)}${search}`} today={givenToday ?? israelToday()} />
     </ViewerScope>
   );
 }
 
-function LoanSummaryBody({ read, back, loanHref, today }: { read: SummaryRead; back: string; loanHref: (id: string) => string; today: string }) {
+function LoansSummaryBody({ read, period: initialPeriod, back, loanHref, today }: { read: SummaryRead; period: PaidPeriod; back: string; loanHref: (id: string) => string; today: string }) {
   const navigate = useNavigate();
-  const [period, setPeriod] = useState<PaidPeriod>("all");
+  const [period, setPeriod] = useState<PaidPeriod>(initialPeriod);
   const year = today.slice(0, 4);
   const summary = read.phase === "ready" ? loansPaid(read.entries, read.currency, period, today) : null;
   const money = (minor: bigint) => (read.phase === "ready" ? wholeMoney(minor, read.currency) : "");

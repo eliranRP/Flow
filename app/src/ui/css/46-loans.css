@@ -470,7 +470,7 @@
 /* /loans/summary (the board's Loans · summary): the period switch, the debt card, the paid card, one row per open
    loan with its thin progress bar, the closed line and the footnote. The cards are the list's summary card. */
 .ui-loans-sum {
-  padding: calc(var(--space-1) + 1px) var(--space-side) calc(var(--tabbar-height) + var(--space-section));
+  padding: var(--space-2) var(--space-side) calc(var(--tabbar-height) + var(--space-section));
   color: var(--color-text);
 }
 
@@ -499,6 +499,7 @@
   margin-top: var(--space-inset-row);
 }
 
+/* The card's two-sided lines keep the board's tight leading (1.2), not the body's. */
 .ui-loans-sum-line {
   display: flex;
   align-items: baseline;
@@ -508,10 +509,12 @@
 
 .ui-loans-sum-start {
   font-size: var(--type-body-size);
+  line-height: calc(var(--type-body-size) * 1.2);
 }
 
 .ui-loans-sum-repaid bdi {
   font-size: var(--type-line2-size);
+  line-height: calc(var(--type-line2-size) * 1.2);
 }
 
 .ui-loans-sum-note,
@@ -577,4 +580,14 @@
 
 .ui-loans-sum-scope {
   --txn-bar-scroll: calc(var(--space-10) + var(--space-5));
+}
+
+/* The paid card's rows sit 12px under the bar and the note 12px under the last row's text (the board's),
+   though each legend row keeps the 30px pitch. */
+.ui-loans-sum-paid .ui-parts {
+  gap: calc(var(--space-1) * 1.5);
+}
+
+.ui-loans-sum-paid .ui-parts-legend-item:last-child {
+  margin-bottom: calc(var(--space-1) * -1.5);
 }

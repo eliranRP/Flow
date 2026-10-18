@@ -5,5 +5,7 @@
   "LoanInterestOnly": "/e2e/loans/loan-bridge?today=2026-10-17",
   "LoanPayments": "/e2e/loans/loan-mortgage/payments?today=2026-10-17",
   "LoanAdd": "/e2e/loans?sheet=new&today=2026-10-17",
-  "LoanKind": "/e2e/loans/loan-mortgage?today=2026-10-17&sheet=kind"
+  "LoanKind": "/e2e/loans/loan-mortgage?today=2026-10-17&sheet=kind",
+  "LoansSummary": "/e2e/loans/summary?today=2026-10-17&board=1",
+  "LoansSummaryYear": "/e2e/loans/summary?today=2026-10-17&period=year&board=1"
 }

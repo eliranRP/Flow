@@ -53,11 +53,13 @@ Raw = mismatch, masked = text-masked mismatch (percent). Pass = masked under 3% 
 | lines | LinesFreq | /e2e/txn?board=recurring&sheet=pace | 4.3 | 0.8 | 4.6 | 1 | yes | FLOW-366b |
 | lines | LinesAll | /e2e/txn?board=recurring&sheet=all | 4.2 | 0.1 | 4.7 | 0.5 | yes | FLOW-366b |
 | lines | LinesDetailLoan | /e2e/txn?board=loan | 6.6 | 2.2 | 6.6 | 2.2 | yes | FLOW-366b |
-| loans | Loans | /e2e/loans | 4.9 | 0.4 | 4.8 | 0.3 | yes | FLOW-139b/139c |
-| loans | LoansClosed | /e2e/loans?closed=1 | 4.9 | 0.4 | 4.8 | 0.3 | yes | - |
-| loans | LoanAmortizing | /e2e/loans/loan-mortgage?today=2026-10-17 | 3.9 | 0.4 | 3.9 | 0.4 | yes | - |
-| loans | LoanInterestOnly | /e2e/loans/loan-bridge?today=2026-10-17 | 3.5 | 0.3 | 3.4 | 0.2 | yes | - |
+| loans | Loans | /e2e/loans | 4.4 | 0.3 | 4.4 | 0.3 | yes | FLOW-139b/139c, FLOW-142 |
+| loans | LoansClosed | /e2e/loans?closed=1 | 4.4 | 0.3 | 4.4 | 0.3 | yes | - |
+| loans | LoanAmortizing | /e2e/loans/loan-mortgage?today=2026-10-17 | 5.8 | 0.7 | 5.8 | 0.7 | yes | FLOW-142 |
+| loans | LoanInterestOnly | /e2e/loans/loan-bridge?today=2026-10-17 | 5.1 | 0.9 | 5.1 | 0.9 | yes | FLOW-142 |
 | loans | LoanPayments | /e2e/loans/loan-mortgage/payments?today=2026-10-17 | 6.6 | 1.6 | 5.7 | 0.7 | yes | - |
+| loans | LoansSummary | /e2e/loans/summary?today=2026-10-17&board=1 | 5.5 | 1.5 | 5.5 | 1.5 | yes | FLOW-142 |
+| loans | LoansSummaryYear | /e2e/loans/summary?today=2026-10-17&period=year&board=1 | 5.5 | 1.5 | 5.5 | 1.5 | yes | FLOW-142 |
 | loans | LoanAdd | /e2e/loans?sheet=new&today=2026-10-17 | 2.8 | 1.4 | 3 | 1.6 | yes | - |
 | loans | LoanKind | /e2e/loans/loan-mortgage?today=2026-10-17&sheet=kind | 5.2 | 0.5 | 5.4 | 0.5 | yes | - |
 | onboarding | Onboarding | /e2e/setup/welcome | 0 | 0 | 0 | 0 | yes | FLOW-514b |
