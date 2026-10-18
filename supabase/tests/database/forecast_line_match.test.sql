@@ -6,7 +6,7 @@
 
 begin;
 
-select plan(50);
+select plan(52);
 
 do $users$
 begin
@@ -349,6 +349,9 @@ select is(pg_temp.matched('clean-a'), null, 'and the line that moved has none');
 
 -- From here a change drops a match at once (the trigger is deferred to the end of a transaction).
 set constraints transactions_forecast_line_refiled immediate;
+-- Switching it fires the events the syncs above queued: the matches they kept still stand.
+select is(pg_temp.matched('rent-1'), pg_temp.id('e_rent')::text || ':' || pg_temp.m('next'), 'the queued re-sync events keep the suggested line''s match');
+select is(pg_temp.matched('sumit-1'), pg_temp.id('e_clean')::text || ':' || pg_temp.m('next'), 'and the pending match');
 
 -- A line the owner set is never changed by the pass.
 update public.transactions

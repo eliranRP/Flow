@@ -50,3 +50,5 @@ Decision [0186](0186-project-forecast-edits.md) lets the user add a line to a pr
 - A forecast line in another currency than the company's books never matches.
 - The next-month page shows next month, which has not started, so `arrived` is empty there in practice; the logic keeps a line from being counted twice if one comes early.
 - Approving the suggested line keeps the match: the forecast line counts as arrived for that month.
+
+A line that ever had an approved, changed or skipped review row never gets a project from the pass, even if it changed since; that errs on the safe side and leaves it to the owner.
