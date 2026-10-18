@@ -8,7 +8,7 @@
   "StatesLinesLoading": "/cash/2026-10/out/ILS?preview=loading",
   "StatesLoansLoading": "/loans?preview=loading",
   "StatesProfitLoading": "/profit?preview=loading",
-  "StatesProfitEmpty": "/e2e/project-profit?state=empty",
+  "StatesProfitEmpty": "/e2e/project-profit-empty",
   "StatesSaving": "/e2e/business?board=1&sheet=rename&saving=1",
   "StatesSyncing": "/e2e/cash?state=usd-loss&sync=1"
 }

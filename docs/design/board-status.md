@@ -113,10 +113,12 @@ Raw = mismatch, masked = text-masked mismatch (percent). Pass = masked under 3% 
 | settings | SettingsMercury | /e2e/connections/mercury | 2.6 | 0.9 | 2.6 | 0.9 | yes | - |
 | settings | SettingsMercuryNew | /e2e/connections/mercury?state=new | 4.3 | 0.5 | 4.1 | 0.4 | yes | - |
 | settings | StatesTeamEmpty | /e2e/team?proof=1&team=alone | 1.6 | 0.4 | 1.4 | 0.3 | yes | - |
-| settings | SettingsRename | /e2e/business?board=1&sheet=rename | 4 | 1.5 | 4.2 | 1.5 | yes | - |
+| settings | SettingsRename | /e2e/business?board=1&sheet=rename | 3.6 | 1.1 | 3.8 | 1.1 | yes | - |
 | settings | SettingsNotifications | /e2e/notifications?board=1 | 2.4 | 1.4 | 2.4 | 1.4 | yes | - |
 | settings | SettingsTheme | /e2e/settings?board=1&sheet=theme | 2.6 | 0.5 | 2.7 | 0.5 | yes | - |
 | settings | SettingsSwitch | /e2e/settings?board=1&sheet=switch | 2.3 | 0.5 | 2.3 | 0.5 | yes | - |
+| settings | SettingsBusiness | /e2e/business?board=1 | 2.6 | 0.6 | 2.6 | 0.6 | yes | - |
+| settings | SettingsNewCategory | /e2e/categories?sheet=create | 4.3 | 1.5 | 4.7 | 1.7 | yes | - |
 | split | Split | /e2e/split-category?board=split | 2.9 | 0.3 | 2.9 | 0.4 | yes | - |
 | split | SplitEmpty | /e2e/split-category?board=empty | 1.9 | 0.1 | 1.9 | 0.1 | yes | - |
 | split | SplitPicker | /e2e/split-category?board=picker | 2.9 | 0.3 | 3 | 0.3 | yes | - |
@@ -127,5 +129,26 @@ Raw = mismatch, masked = text-masked mismatch (percent). Pass = masked under 3% 
 | states | StatesHomeEmpty | /e2e/cash-empty | 4.7 | 1.4 | 4.7 | 1.4 | yes | FLOW-375 |
 | states | StatesLoansEmpty | /e2e/loans?loans=none | 1.8 | 0.6 | 1.7 | 0.6 | yes | FLOW-375 |
 | states | StatesSearching | /search?preview=loading&q=northline | 0.2 | 0.1 | 0.2 | 0.1 | yes | - |
+| states | StatesLinesLoading | /cash/2026-10/out/ILS?preview=loading | 1.3 | 1 | 0.6 | 0.3 | yes | - |
+| states | StatesDetailLoading | /e2e/txn?board=loading&preview=loading | 0.5 | 0.3 | 0.5 | 0.3 | yes | - |
+| states | StatesLoansLoading | /loans?preview=loading | 0.4 | 0.3 | 0.4 | 0.2 | yes | - |
+| states | StatesProfitLoading | /profit?preview=loading | 0.5 | 0.3 | 0.5 | 0.3 | yes | - |
+| states | StatesProfitEmpty | /e2e/project-profit-empty | 2.3 | 0.6 | 2.2 | 0.6 | yes | - |
+| states | StatesSyncing | /e2e/cash?state=usd-loss&sync=1 | 5.4 | 1.6 | 4.7 | 0.9 | yes | - |
+| states | StatesSaving | /e2e/business?board=1&sheet=rename&saving=1 | 11.4 | 8.2 | 19.6 | 14.4 | **no** | - |
 
-Result: 106 frames measured, 106 pass, 0 fail. Largest text-masked mismatch: 2.6%. No route was blank or errored.
+Result: 115 frames measured, 114 pass, 1 fail (StatesSaving: the board draws the saving sheet as a simpler sheet than its own SettingsRename frame, with no close button, no note and another label, so the two board frames disagree and the app follows SettingsRename). Largest text-masked mismatch among the passing frames: 2.6%. No route was blank or errored.
+
+## Unmapped board frames
+
+`node scripts/board-coverage.mjs --project <board project>` after batch H2. The onboarding, add and review frames in this list are mapped by another agent in parallel (batch H1); the Settings and States frames have no app counterpart yet, and each says what it would take.
+
+| Frame | Why it has no map entry | What it would take |
+|---|---|---|
+| AddCamera, AddReading, AddReceipt | Add sheet frames (batch H1) | - |
+| OnboardingDone, OnboardingInstall, OnboardingJev, OnboardingLoans, OnboardingProjects, OnboardingReview | Onboarding frames (batch H1) | - |
+| ReviewSplit | Review frame (batch H1) | - |
+| SettingsCategory, SettingsCategoryCount | The board's category sheet leads with a "נספרת ב" row that opens a sheet of three switches (profit, cash flow, rehab). The app's sheet has a rehab switch and a "לא לספור ברווח" row, and has no cash-flow switch: `list_categories` does not return `categories.in_cash` and no screen calls `set_category_cash` (only the MCP tool does). The board also drops the "הצג תנועות" row. | A migration adding `in_cash` to `list_categories`, `in_cash` in `categoryRowSchema`, a count sheet with the three switches and undo toasts (profit through `set_category_excluded_from_pnl`, cash through `set_category_cash`, rehab as today), the "נספרת ב" row in `CategoryMenuSheet` in place of the rehab switch and the P&L row, and a home for "הצג תנועות". Tests and stories of the category sheet change with it. |
+| StatesFirstSync | No screen draws the first-sync progress page ("מביאים את התנועות": a count bar, the accounts, transactions and project steps, a "המשך לבית בינתיים" button). `ProgressBar variant="job"` is the bar and steps part; nothing in the app uses it. | A full-screen route after the connect step, fed by the sync job's counts (accounts done, transactions so far of the estimate), leaving to Home while the job goes on. |
+| StatesLinesEmpty | The board's frame is a project's month of expenses with none (Maple Ave, "$0", "לשורות בלי פרויקט"). The app has no project-scoped month lines page; the cash lines page (`/cash/:month/:side/:currency`) has its own empty state with other copy. | A project-scoped lines page opened from the project's profit month rows, and its empty state. |
+
