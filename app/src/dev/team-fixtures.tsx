@@ -1,12 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
-import { cashMonthKey } from "../cash";
-import { attentionRows, CashHome } from "../screens/HomeScreen";
-import { CompanySwitcher } from "../screens/company-switcher";
 import { InvitesScreen } from "../screens/invites-screen";
 import { TeamScreen } from "../screens/team-screen";
 import { TeamApiProvider } from "../team-api";
-import { sampleCashMonths } from "./cash-sample";
 import { createSampleTeamApi, type SampleTeamOptions } from "./team-sample";
 
 /**
@@ -95,37 +91,6 @@ export function DevInvites() {
   return (
     <SampleTeam key={state} options={options}>
       <InvitesScreen sample={{ state: sample }} />
-    </SampleTeam>
-  );
-}
-
-/**
- * `/e2e/company?company=` invite (invite-4), viewer, error, or nothing for two companies (a-3). Tap the name.
- * Home is the cash view (FLOW-413): the name sits on its band.
- */
-export function DevCompany() {
-  const [params] = useSearchParams();
-  const state = params.get("company");
-  const options: SampleTeamOptions = {
-    twoCompanies: state !== "invite",
-    inbox: state === "invite" ? 1 : 0,
-    role: state === "viewer" ? "viewer" : "owner",
-    fail: state === "error" ? { switchCompany: "Failed to fetch" } : undefined,
-  };
-  const cash = sampleCashMonths();
-  const currentKey = cashMonthKey(cash.months[0]?.month ?? "");
-  return (
-    <SampleTeam key={state} options={options}>
-      <CashHome
-        data={cash}
-        monthKey={currentKey}
-        currentKey={currentKey}
-        previewing={false}
-        search=""
-        attention={attentionRows({ pending: 7, unpaidCount: 3, unpaidGross: 460_000n, missingCount: 0, search: "" })}
-        company={<CompanySwitcher />}
-        onStepMonth={() => undefined}
-      />
     </SampleTeam>
   );
 }

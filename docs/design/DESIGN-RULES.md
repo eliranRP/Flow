@@ -316,7 +316,7 @@ Guide §6.4 and §11.3. Do not use `Intl.NumberFormat('he-IL', {style:'currency'
 
 Figures read in a row get a spoken pause between them (hidden text, not a visible separator). A list that changes its grouping keeps its rows mounted where it can, so focus is not lost (FLOW-313).
 
-Home rounding: whole shekels, never "1.3M" or "אלף". The visible profit is rounded income minus rounded expenses, so the line adds up. If the hero does not fit, step to `display` (36px). Do not scale continuously. The hero number stays the on-band white, including a minus. A loss is named "הפסד" in the label, because red on the violet band does not read. Figure budget on Home: the label, the profit, one explanation, הכנסות, הוצאות, the comparison under those rows, the pending count, the unpaid total, and up to 5 projects (FLOW-411). [0069](../decisions/0069-back-and-one-tap-review.md). [guide §1 P2](../../design/system/implementation-guide.md), §11.3.
+Home rounding: whole shekels, never "1.3M" or "אלף". The visible profit is rounded income minus rounded expenses, so the line adds up. If the band figure does not fit, step to `detail` (40px). Do not scale continuously. The hero number stays the on-band white, including a minus. A loss is named "הפסד" in the label, because red on the violet band does not read. Figure budget on Home: the label, the profit, one explanation, הכנסות, הוצאות, the comparison under those rows, the pending count, the unpaid total, and up to 5 projects (FLOW-411). [0069](../decisions/0069-back-and-one-tap-review.md). [guide §1 P2](../../design/system/implementation-guide.md), §11.3.
 
 P&L figures are before VAT. [0041](../decisions/0041-amounts-before-vat.md), [0043](../decisions/0043-assumed-vat-on-expenses.md).
 
@@ -442,7 +442,7 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 21
 
 **Sheets and settings**
 
-- A short read-only list that belongs to one card opens as a bottom sheet, not a pushed page. An edit sheet focuses its title, not the field. A link or retry in a sheet uses the 44px text-link size, with a retry on its own line (FLOW-404).
+- A short read-only list that belongs to one card opens as a bottom sheet, not a pushed page. An edit sheet focuses its title, not the field. A link or retry in a sheet uses the 44px link size (`Button variant="link"`), with a retry on its own line (FLOW-404).
 - A sheet lists only actions that work today, with no "coming soon" and no disabled-only rows. A quick action that opens a sheet on another screen lands with a one-shot `?new=<what>` (FLOW-331).
 - A destructive row sits last in a sheet, after a 1px line or in its own group. A refused one stays visible, disabled, with its reason. A delete confirm that can lose data offers the safe path as a quiet link under ביטול (FLOW-405, FLOW-335).
 - A rename is a one-field sheet with שמירה in the action slot and an undo toast, with no confirm (category rename).
@@ -530,7 +530,7 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 21
 **Projects, sheets and paging (folded at cycle 18)**
 
 - A month page steps its months the same way everywhere: the pager segment by the title plus a swipe on the figure. Back names the page it returns to, a project by its name (FLOW-422).
-- A screen Home opens only from an alert also gets a fixed quiet TextLink at the end of Home, so it stays reachable once the alert is gone (FLOW-423).
+- A screen Home opens only from an alert also gets a fixed quiet link button (`Button variant="link"`) at the end of Home, so it stays reachable once the alert is gone (FLOW-423).
 - A sheet row that drills into a list brings Back to the same sheet, open (FLOW-433).
 - The project page is Home for one project: Home's rows, words and order, with the project's own figures and alerts. Its history pages name the project above the band label (FLOW-435).
 - A bank-side name shares the row with its last 4: a card reads "כרטיס ••1234 · <name>", an account reads "<name> ••1234". The name clips; the card word and the last 4 never do (FLOW-707).

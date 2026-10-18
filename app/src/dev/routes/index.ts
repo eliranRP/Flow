@@ -11,7 +11,7 @@ import { settingsRoutes } from "./settings";
 import { transactionRoutes } from "./transaction";
 import { splitRoutes } from "./split";
 import { setupRoutes, installRoutes } from "./onboarding";
-import { companyRoutes, invitesRoutes, teamRoutes } from "./team";
+import { invitesRoutes, teamRoutes } from "./team";
 
 /** The /e2e/ fixtures (paths under /e2e/), by the shell each one draws. Empty outside the dev server. */
 export const devRouteGroups: DevRouteGroup[] = import.meta.env.DEV
@@ -23,7 +23,7 @@ export const devRouteGroups: DevRouteGroup[] = import.meta.env.DEV
       { section: "projects", routes: projectsRoutes },
       { section: "loans", routes: loansRoutes },
       { section: "home", routes: settingsRoutes },
-      { section: "home", routes: [...companyRoutes, ...transactionRoutes] },
+      { section: "home", routes: transactionRoutes },
       { section: "none", routes: [...teamRoutes, ...invitesRoutes, ...installRoutes, ...splitRoutes] },
     ]
   : [];

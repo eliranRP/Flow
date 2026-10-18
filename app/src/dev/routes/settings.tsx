@@ -208,6 +208,5 @@ export const settingsRoutes: DevRoute[] = [
   { path: "connections/sumit", element: <DevSumitConnection /> },
   { path: "connections/mercury", element: <DevMercuryConnection /> },
   { path: "categories", element: <DevCategories /> },
-  { path: "categories/:parentId", element: <DevCategories /> },
   { path: "notifications", element: <DevNotifications /> },
 ];

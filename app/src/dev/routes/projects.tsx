@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { BackButton } from "../../ui/back";
-import { ProjectCategoryScreen, ProjectDetailScreen, ProjectsScreen } from "../../screens/flow-screens";
+import { ProjectDetailScreen, ProjectsScreen } from "../../screens/flow-screens";
 import { ProjectInvestmentScreen } from "../../screens/project-investment-screen";
 import { useHomePreview } from "../../preview";
 import { cash as devCash, cashRow as devCashRow, investment as devInvestment, months as devMonths, project as devProject } from "../project-cash-sample";
@@ -197,24 +197,6 @@ export function DevExpense() {
   );
 }
 
-export function DevProjectCategory() {
-  return (
-    <ProjectCategoryScreen
-      backTo="/e2e/project-detail"
-      sample={{
-        categoryName: "חומרים",
-        projectName: "שיפוץ הרצל 12",
-        rows: [{
-          id: "t1",
-          description: "מלט",
-          doc_date: "2026-09-12",
-          amount_net: -400n,
-        }],
-      }}
-    />
-  );
-}
-
 export const projectRoutes: DevRoute[] = [
   { path: "project", element: <DevProject /> },
   { path: "expense", element: <DevExpense /> },
@@ -223,6 +205,5 @@ export const projectRoutes: DevRoute[] = [
 export const projectsRoutes: DevRoute[] = [
   { path: "projects", element: <DevProjects /> },
   { path: "project-detail", element: <DevProjectDetail /> },
-  { path: "project-category", element: <DevProjectCategory /> },
   { path: "project-investment", element: <DevProjectInvestment /> },
 ];

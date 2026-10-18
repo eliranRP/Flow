@@ -4,7 +4,6 @@ import { LoanDetailScreen, type LoanView } from "../../screens/loan-detail-scree
 import { LoansScreen } from "../../screens/loans-screen";
 import { useMemoryLoanStore } from "../../screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "../loan-detail-sample";
-import { LoanSummaryCard } from "../../screens/loan-summary-card";
 import { LOAN_SUMMARY_SAMPLE } from "../loan-summary-sample";
 import { useDevSettingsSample } from "./settings";
 import type { DevRoute } from "./types";
@@ -74,18 +73,8 @@ function useOpenKindRow(wanted: boolean) {
   }, [wanted]);
 }
 
-/** FLOW-139. The loans list's summary card alone, for the board proof. */
-export function DevLoanSummary() {
-  return (
-    <div className="ui-page-pad">
-      <LoanSummaryCard summary={LOAN_SUMMARY_SAMPLE} currency="USD" />
-    </div>
-  );
-}
-
 export const loansRoutes: DevRoute[] = [
   { path: "loans", element: <DevLoans /> },
-  { path: "loans-summary", element: <DevLoanSummary /> },
   { path: "loans/:loanId", element: <DevLoanDetail /> },
   { path: "loans/:loanId/payments", element: <DevLoanDetail view="payments" /> },
 ];

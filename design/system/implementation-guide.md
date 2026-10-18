@@ -185,7 +185,7 @@ From top to bottom:
 - You **MUST NOT** use the band on any other screen: not on sheets, not on onboarding, not "just for emphasis".
 - It is solid `--color-band`: no gradient, no image, no shadow. The bottom corners use `--radius-band` (28px) and there is 28px of padding at the bottom. It starts under the status bar.
 - It holds **only the summary**:
-  - **Home:** wordmark "Flow" and period pill → greeting (plus example tag) → label "רווח ב…" → profit in `hero` → change pill with "מחודש שעבר" → income and expenses line.
+  - **Home:** wordmark "Flow" and period pill → greeting (plus example tag) → label "רווח ב…" → profit in `band` → change pill with "מחודש שעבר" → income and expenses line.
   - **Project:** back and ⋯ → project name (`title-2`) with client and period (`label`) → "רווח · רווחיות X%" → profit → income and expenses line.
 - Inside the band, text is `on-band`, labels are `on-band-secondary`, and pills use `band-pill` or `band-chip` backgrounds with `text` or `bad`/`good` inside.
 - The first content block below the band starts 24px under it (the Home pending card).
@@ -463,13 +463,13 @@ Don't:
 - Don't add a kicker or an inline layout to a new screen. The options are kept only until their last screen moves.
 - The month lines page (נכנס / יצא) stacks its head in one column (`.ui-lines-head`): the side switch spans the 20px gutters, then the total, the count line, the currency switch and the order chips. The chips keep their words and scroll sideways. The shared `.ui-page-below` row is for a single control, so a page with several blocks wraps them.
 
-### 7.7 OrganizeChips
-- No screen builds this component now: FLOW-368 removed `organize-chips.tsx` when the search row, its only user, moved to the removable filter chips. The look below still holds for choice chips.
+### 7.7 Choice chips
+- The organize chips are gone: FLOW-368 removed `organize-chips.tsx` when the search row, its only user, moved to the removable filter chips. The look below still holds for choice chips.
 - Chips group a screen's views or filters. One chip is always selected: the chips are not filters you can clear.
 - Look: suggested (`tint` fill, ✦ in `accent-text`, optional hint), outlined choice (`surface`, 1px `control-border`), selected (`tint-strong` fill with an `accent` border, no ✓), disabled (`disabled-text`).
 - Chips are 36px drawn, 14px inline padding, a full radius, a 44px hit area, and they wrap. Show at most about 4 chips, then "עוד…".
 - Use `role="radiogroup"` with `radio` or `aria-pressed`. Don't use chips as navigation or as action buttons.
-- The organize row sticks under the compact bar in a StickyPanel (240ms, with the compact bar). Chips change colour in 150ms.
+- Chips change colour in 150ms.
 - A read-only status is a ChangePill (7.16), not a chip.
 
 ### 7.8 Segment
@@ -759,7 +759,7 @@ Screens **MUST** stay honest and calm when data is incomplete:
 | Fewer than 3 projects on Home | Show what exists and don't add placeholder rows. With 0 projects, hide the section. |
 | Budget not set | Hide the budget block. Offer "הוספת תקציב" in the ⋯ menu. |
 | Long names | Row titles truncate to one line with an ellipsis. Project and page titles wrap to two lines at most. |
-| Very large numbers | Never abbreviate. The hero steps down to `display` if it doesn't fit (§11.3). |
+| Very large numbers | Never abbreviate. The band figure steps down to `detail` (40px) if it doesn't fit (§11.3). |
 
 ### 8.5 Interaction states
 Every interactive element **MUST** implement all of these:
@@ -890,7 +890,7 @@ Home is for a glance, so figures are whole and stable:
    - A non-zero value that rounds to 0 shows as "0%" in a neutral pill (§8.4).
    - Margin with zero income shows "—".
 5. **Change pill:** the absolute % with ▼/▲. The direction comes from the sign of the exact change, not the rounded one. Hide it when there is no comparison period.
-6. **Hero fit:** if the hero figure doesn't fit the width at `hero` (52px), step it down to `display` (36px). Never scale the font continuously, and never truncate.
+6. **Band fit:** if the band figure doesn't fit the width at `band` (52px), step it down to `detail` (40px). Never scale the font continuously, and never truncate.
 7. **Counts** are exact integers ("7 פריטים").
 8. **Figure budget on Home:** profit, change, income, expenses, pending count, unpaid total, and up to 3 top projects (profit and margin each). Adding any other figure needs a design decision.
 
@@ -1061,7 +1061,7 @@ Note: `flow.py` itself says its screens are an early pass. The **boards and toke
 
 | Draft value | Where | Use instead |
 |---|---|---|
-| Amount at 44px / 40px | 02 Project header, 12 Unpaid, 10 Detail | `display` (36). `hero` (52) is for Home only. |
+| Amount at 44px / 40px | 02 Project header, 12 Unpaid, 10 Detail | `detail` (40). `band` (52) is for Home only. |
 | "42" at 52px | 08 Upload results | `display` (36) |
 | Example tag at 12px | all screens | `hint` (13) |
 | Field label 13px / 500 | inputs | `hint` size in `text-secondary` (the weight is an open question below) |

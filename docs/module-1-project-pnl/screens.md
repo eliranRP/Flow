@@ -91,9 +91,6 @@ The 8%, 12%, and 10% figures are example data on this image. The formula is in [
 
 [01-home-v4](#01-home-v4) is drawn and pending owner approval. It adds the view-only toggle for profit after an overhead share. This image does not have it. Company tiles on v3 stay the stored totals.
 
-### Wireframe
-
-
 ### Detailed spec
 
 [Home](screens/01-home.md). `☰` opens the [Settings draft](settings.md), which is not approved. The unpaid wireframe also names `☰` as a way into the unpaid list; what that button opens is still [open](../open-questions.md#settings-screen).
@@ -153,9 +150,6 @@ Same as [Home](screens/01-home.md), plus the switch. This image is the on state.
 - [ ] Shares are multiples of ₪100 except the one project that absorbs the rounding difference, and they sum to overhead.
 - [ ] Every figure on the image is example data.
 
-### Wireframe
-
-
 ### Detailed spec
 
 [Home](screens/01-home.md) and [overhead share](calculations.md#overhead-share).
@@ -199,9 +193,6 @@ The example arithmetic, so the tiles can be checked against the rows: top-5 inco
 - The pending banner opens the review queue.
 - The center `+` opens the add sheet from any tab.
 
-### Wireframe
-
-
 ### Detailed spec
 
 [Home](screens/01-home.md). `☰` opens the [Settings draft](settings.md), which is not approved.
@@ -235,9 +226,6 @@ Answer "is this job profitable?" for one project, from the day it started, and s
 - The `⋯` menu, from the annotation on this wireframe: edit name, client, and budget, and close the project (status becomes finished).
 - Tapping a category focuses that category's transactions. Tapping a transaction opens it for a project or category change (the change sheet).
 - `הכל` opens the full transaction list for the project. That list is not a separate wireframe yet.
-
-### Wireframe
-
 
 ### Detailed spec
 
@@ -293,9 +281,6 @@ Same as [Project](screens/02-project.md). This image is the on state.
 - [ ] Income, expenses, categories, and budget stay the stored project figures.
 - [ ] Every figure on the image is example data.
 
-### Wireframe
-
-
 ### Detailed spec
 
 [Project](screens/02-project.md) and [overhead share](calculations.md#overhead-share).
@@ -338,9 +323,6 @@ Confirm what Flow did not auto-approve. One card at a time. Rows that already ma
 - The thumbnail opens the document larger. That viewer is not wireframed.
 - The dimmed "next" row is a preview, not a second set of actions.
 
-### Wireframe
-
-
 ### Detailed spec
 
 [Review queue](screens/03-review.md).
@@ -369,9 +351,6 @@ The first review queue: one card, plus a dashed bulk action for high-confidence 
 ### Key interactions
 
 `אישור`, `שינוי`, and `דלג` match v2. `אשר הכל` was the bulk confirm this version replaced.
-
-### Wireframe
-
 
 ### Detailed spec
 
@@ -405,9 +384,6 @@ The only way to bring new data in. The center `+` opens this sheet on top of wha
 - The add sheet has no bank row. Bank lines come from the SUMIT sync. [0066](../decisions/0066-review-round7.md). Screen 08 is not a build task.
 - `הזנה ידנית` is the cash and cheque fallback. The form itself is not wireframed.
 - `ביטול`, or tapping the scrim, closes the sheet and leaves the data unchanged.
-
-### Wireframe
-
 
 ### Detailed spec
 
@@ -450,9 +426,6 @@ Create sheet, in front:
 - Search (`⌕`) finds a job by name when the list is long. Finished jobs are included in search; they stay collapsed until `הצג`.
 - `צור פרויקט` requires a name. Client and budget can be left empty and filled later from the project menu.
 - The sheet dismisses the same way as Add: cancel or scrim. The wireframe does not draw a cancel button on this sheet.
-
-### Wireframe
-
 
 ### Detailed spec
 
@@ -498,9 +471,6 @@ The review card behind the sheet still shows the earlier suggestion (`וילה �
 - The remember toggle defaults to on and writes the rule shown in the preview. Turning it off approves this row only.
 - `שמור ואשר` stores the choice, writes the rule if the toggle is on, approves the transaction, and returns to the next review card.
 
-### Wireframe
-
-
 ### Detailed spec
 
 [Change sheet](screens/06-change-sheet.md), including search, inline create, overhead, and the split form. Split lines must sum to the parent net in agorot.
@@ -543,9 +513,6 @@ Light category maintenance. The seven expense defaults and the two income defaul
 - `+ קטגוריה חדשה` adds a row on the current tab (expense or income).
 - The same create action exists inline on the change sheet, so an owner mid-review does not have to come here.
 
-### Wireframe
-
-
 ### Detailed spec
 
 [Categories](screens/07-categories.md).
@@ -584,9 +551,6 @@ Show what a Bank Hapoalim file became. High-confidence rows are already approved
 - `הצג את כל 42 השורות` opens the imported rows, including the removed transfers. That list is not a separate wireframe.
 - Close returns without undoing the import. The 33 already count. The 7 stay suggested.
 
-### Wireframe
-
-
 ### Detailed spec
 
 [Upload results](screens/08-upload-results.md).
@@ -614,9 +578,6 @@ The first upload summary: four separate outcome rows, and a secondary button to 
 ### Key interactions
 
 The primary button opens review for the 7. The secondary button was the manual confirm of the 33. v2 collapses those 33 into `אושרו אוטומטית` and removes that button.
-
-### Wireframe
-
 
 ### Detailed spec
 
@@ -653,9 +614,6 @@ Example check: income 180,000 + 180,000 + 60,000 = 420,000. Expenses 130,000 + 1
 
 Same as v2 for the period switch, the banner, a project row, overhead, and the center `+`. `הכל` opens the projects list. There is no top-5 cutoff and no losses-first sort. That is why v2 replaced it.
 
-### Wireframe
-
-
 ### Detailed spec
 
 Do not build this screen. The spec to build is [Home](screens/01-home.md). This wireframe is the earlier layout: every project is a full row, there is no top-5 cutoff, and there is no losses-first sort. The same calculation rules apply to the tiles.
@@ -688,9 +646,6 @@ The selected project (`בניין מגורים חולון`) differs from the AI 
 
 Select one project chip and one category chip, leave the remember toggle on, and save. `+ פרויקט חדש` and `+ קטגוריה חדשה` create inline. Split works as on v2. v2 replaces the full chip sets with three suggestions, search, and a list.
 
-### Wireframe
-
-
 ### Detailed spec
 
 Do not build this screen. The spec to build is [Change sheet](screens/06-change-sheet.md). This wireframe shows a chip for every project and every category, which [0009](../decisions/0009-scalable-pickers.md) replaced.
@@ -720,9 +675,6 @@ A header line `Construction P&L – mobile POC · Hebrew RTL · 390×844` and a 
 
 None. This file is a board, not a screen.
 
-### Wireframe
-
-
 ### Detailed spec
 
 Not a product screen. No fields, states, or acceptance criteria. The Home phone on this board is superseded. Build [Home](screens/01-home.md), [Project](screens/02-project.md), [Review](screens/03-review.md), [Add](screens/04-add.md), and [Projects](screens/05-projects.md).
@@ -749,9 +701,6 @@ Labeled `Example data · low-fi wireframe · POC · part 2`, with the same produ
 ### Key interactions
 
 None. This file is a board, not a screen.
-
-### Wireframe
-
 
 ### Detailed spec
 
@@ -781,9 +730,6 @@ The "~40 projects" label is the annotation's round number. The sheet's list head
 
 None. This file is a board, not a screen.
 
-### Wireframe
-
-
 ### Detailed spec
 
 Not a product screen. Build [Home](screens/01-home.md) from [01-home-v3](#01-home-v3) once it is approved, and [Change sheet](screens/06-change-sheet.md).
@@ -809,9 +755,6 @@ Labeled `Example data · low-fi wireframe · auto-approve`. Two phones:
 ### Key interactions
 
 None. This file is a board, not a screen.
-
-### Wireframe
-
 
 ### Detailed spec
 
@@ -923,9 +866,6 @@ Five phones on one board.
 - [ ] Proposed projects come from repeated incoming payers, start checked, and can be renamed, unchecked, or added.
 - [ ] `לדוח הרווח שלי` opens Home. Enabling notifications is a separate button and lists only the Sunday summary and the 18:00 review nudge.
 
-### Wireframe
-
-
 ### Detailed spec
 
 This section. There is no separate file until the owner approves the image.
@@ -1001,9 +941,6 @@ The big number is net of VAT. VAT 1,530 is 18% of 8,500 in this example. The ban
 - [ ] Split, move, and a confirmed delete are the actions. Delete does not run on the first tap.
 - [ ] There is no bottom nav.
 
-### Wireframe
-
-
 ### Detailed spec
 
 This section. There is no separate file until the owner approves the image.
@@ -1074,9 +1011,6 @@ The image draws a category control on each line, defaulting to the invoice categ
 - [ ] Saving from this image does not write a one-project rule. A recurring split rule exists only on v2, and only if the owner turns it on.
 - [ ] Until per-line categories are approved, every line uses the one invoice category.
 
-### Wireframe
-
-
 ### Detailed spec
 
 This section, plus [Splits](calculations.md#splits). There is no separate file until the owner approves the image.
@@ -1135,9 +1069,6 @@ Sheet over the ₪12,000 materials detail (`חומרי בניין השרון`).
 - [ ] Save is impossible until the remainder is ₪0 and the percents are 100%.
 - [ ] `פצל ככה כל חודש` is the recurring rule, and it is off unless the owner turns it on.
 - [ ] Every figure on the image is example data.
-
-### Wireframe
-
 
 ### Detailed spec
 
@@ -1206,9 +1137,6 @@ List invoices that have no matching payment yet. Cash basis: they are waiting, a
 - [ ] Saving counts the net on that date and removes the row.
 - [ ] A later matching bank row does not add a second amount to profit.
 
-### Wireframe
-
-
 ### Detailed spec
 
 This section. There is no separate file until the owner approves the image.
@@ -1270,9 +1198,6 @@ The ₪42,000, the 15%, the count 7, and "about 2 minutes" are example data. Whi
 - [ ] The nudge is 18:00, only if something is waiting, at most once a day, and opens Review.
 - [ ] The nudge body is a count and an estimated duration.
 - [ ] There is no notification per bank row.
-
-### Wireframe
-
 
 ### Detailed spec
 
@@ -1344,9 +1269,6 @@ Title `הגדרות`. Subtitle is the business name, example `א.ב. בנייה 
 - [ ] Every name, account, date, and the version string are example data.
 - [ ] The image does not by itself change 0011 or 0018.
 
-### Wireframe
-
-
 ### Detailed spec
 
 This section, plus the [Settings draft](settings.md). There is no separate file until the owner approves the image.
@@ -1377,9 +1299,6 @@ Onboarding and the lock-screen notifications are on their own boards, not on thi
 
 None. This file is a board, not a screen.
 
-### Wireframe
-
-
 ### Detailed spec
 
 Not a product screen. The four phones are specified in the sections above.
@@ -1406,9 +1325,6 @@ Labeled `Example data · low-fi wireframe · Flow`. Three phones:
 ### Key interactions
 
 None. This file is a board, not a screen.
-
-### Wireframe
-
 
 ### Detailed spec
 
