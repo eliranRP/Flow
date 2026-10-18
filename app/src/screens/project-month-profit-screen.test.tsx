@@ -66,9 +66,9 @@ describe("ProjectMonthProfitScreen", () => {
 
   it("lists one row per category, largest first, with its share, count and total", () => {
     const { container } = renderAt("/projects/juniper-ct/profit/2026-10?order=category", JUNIPER_MONTH_PROFIT);
-    const rows = Array.from(container.querySelectorAll(".ui-pm-cat-button"));
-    expect(rows.map((row) => row.querySelector(".ui-pm-cat-name")?.textContent)).toEqual(["שכירות", "החזר ביטוח", "ריבית הלוואות", "תיקונים ותחזוקה", "מסים וביטוח"]);
-    expect(rows.map((row) => row.querySelector(".ui-pm-cat-meta")?.textContent)).toEqual([
+    const rows = Array.from(container.querySelectorAll(".ui-pcat-button"));
+    expect(rows.map((row) => row.querySelector(".ui-pcat-name")?.textContent)).toEqual(["שכירות", "החזר ביטוח", "ריבית הלוואות", "תיקונים ותחזוקה", "מסים וביטוח"]);
+    expect(rows.map((row) => row.querySelector(".ui-pcat-meta")?.textContent)).toEqual([
       "66% מההכנסות · 2 תנועות",
       "34% מההכנסות · 1 תנועה",
       "47% מההוצאות · 1 תנועה",
@@ -84,14 +84,14 @@ describe("ProjectMonthProfitScreen", () => {
 
   it("scales each bar to the largest category of its group", () => {
     const { container } = renderAt("/projects/juniper-ct/profit/2026-10?order=category", JUNIPER_MONTH_PROFIT);
-    const widths = Array.from(container.querySelectorAll<HTMLElement>(".ui-pm-cat-bar-fill")).map((bar) => bar.style.width);
+    const widths = Array.from(container.querySelectorAll<HTMLElement>(".ui-pcat-bar-fill")).map((bar) => bar.style.width);
     expect(widths).toEqual(["100%", "52%", "100%", "89%", "24%"]);
   });
 
   it("opens a category in place to its lines, newest first, and closes it on a second tap", () => {
     const { container } = renderAt("/projects/juniper-ct/profit/2026-10?order=category", JUNIPER_MONTH_PROFIT);
     const links = () => Array.from(container.querySelectorAll("a[href^=\"/transactions/\"]")).map((link) => link.getAttribute("href"));
-    const rows = Array.from(container.querySelectorAll(".ui-pm-cat-button"));
+    const rows = Array.from(container.querySelectorAll(".ui-pcat-button"));
     const [rent, , , repairs] = rows;
     if (rent == null || repairs == null) throw new Error("missing category rows");
     expect(rows.map((row) => row.getAttribute("aria-expanded"))).toEqual(["false", "false", "false", "false", "false"]);

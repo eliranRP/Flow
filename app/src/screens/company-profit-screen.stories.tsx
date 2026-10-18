@@ -25,7 +25,7 @@ function ProfitRoute({ entry, sample = COMPANY_PROFIT_SAMPLE }: { entry: string;
 
 export const ByProject: Story = { name: "By project", render: () => <ProfitRoute entry="/profit" /> };
 
-/** One category open: its counted lines under the row, the row's chevron turned. */
+/** By category (board frame ProfitByCategory): income then expenses, the first category open to its lines. */
 export const ByCategory: Story = {
   name: "By category, one row open",
   render: () => <ProfitRoute entry="/profit?by=category" sample={{ ...COMPANY_PROFIT_SAMPLE, openFirst: true }} />,

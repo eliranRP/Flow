@@ -262,9 +262,23 @@
   color: var(--color-text-secondary);
 }
 
-/* The ProfitMonthCategory frame: a category row is 64px at least, 8px above and below, the 17px name and
-   amount over the 15px share line, then the 4px bar 6px under it, scaled to the group's largest. */
-.ui-pm-cat-button {
+/* The category view of ProfitMonthCategory and ProfitByCategory (profit-categories.tsx): a group in the page's side padding. */
+.ui-pcat-group {
+  padding: 0 var(--space-side);
+}
+
+/* The group head: 20px above the title, 6px under it, the group's total on the other side. */
+.ui-pcat-group .ui-lines-group-head {
+  padding: var(--space-5) 0 calc(var(--space-1) * 1.5);
+}
+
+.ui-pcat-group :is(.ui-lines-group-title, .ui-lines-group-sum) {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+/* A category row is 64px at least, 8px above and below, the 17px name and amount over the 15px share line,
+   then the 4px bar 6px under it, scaled to the group's largest. */
+.ui-pcat-button {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -279,7 +293,7 @@
   text-align: start;
 }
 
-.ui-pm-cat-top {
+.ui-pcat-top {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -288,20 +302,20 @@
   line-height: var(--type-title-line);
 }
 
-.ui-pm-cat-name {
+.ui-pcat-name {
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.ui-pm-cat-top .ui-num {
+.ui-pcat-top .ui-num {
   flex: none;
   font-size: var(--type-body-size);
   line-height: var(--type-title-line);
 }
 
-.ui-pm-cat-meta {
+.ui-pcat-meta {
   overflow: hidden;
   font-size: var(--type-line2-size);
   line-height: var(--type-title-line);
@@ -310,7 +324,7 @@
   text-overflow: ellipsis;
 }
 
-.ui-pm-cat-bar {
+.ui-pcat-bar {
   display: flex;
   height: 4px;
   margin-top: calc(var(--space-1) / 2);
@@ -318,7 +332,7 @@
   background: var(--color-track);
 }
 
-.ui-pm-cat-bar-fill {
+.ui-pcat-bar-fill {
   display: block;
   border-radius: var(--radius-bar-hair);
   background: var(--color-band-past);

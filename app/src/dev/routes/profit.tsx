@@ -28,7 +28,7 @@ export function DevProjectNextMonth() {
   return <ProjectNextMonthScreen sample={{ ...JUNIPER_PROFIT, next: JUNIPER_NEXT }} />;
 }
 
-/** FLOW-140c1: the company profit page; `?open=1` opens the first category, `?sheet=basis` the basis sheet. */
+/** FLOW-140c1: the company profit page; `?open=1` opens the first income category, `?sheet=basis` the basis sheet. */
 export function DevCompanyProfit() {
   const [params] = useSearchParams();
   return (
