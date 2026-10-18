@@ -12,7 +12,7 @@ Where the approved-redesign build stopped and what is left. The work stopped on 
 | FLOW-363 (2b): Card, StatusDot, ChangePill, ProgressBar | Merged | #592 |
 | FLOW-363 (2c): Amount, "+" on income, list cents | Merged | #593 |
 | **FLOW-363 (2d): ListRow and List layouts, list-row stories 61 → 21** | **Open, in review.** Head f1bf5c9 passed local CI. Motion review APPROVED. Code and pixel reviews were cut off by the limit and must be re-run. One fix is already decided (see below). | #594 |
-| **FLOW-363 (3a): ScreenHeader and the shared CompactBar** | **Not pushed.** The builder stopped mid-way. Its unfinished work is saved as [handoff/flow-363-3a-wip.patch](handoff/flow-363-3a-wip.patch) (applies on f1bf5c9) with its brief, [handoff/brief-363-3a.md](handoff/brief-363-3a.md) | — |
+| **FLOW-363 (3a): ScreenHeader and the shared CompactBar** | **Not pushed.** The builder stopped mid-way. Its unfinished work was saved as `handoff/flow-363-3a-wip.patch` (applies on f1bf5c9) with its brief, `handoff/brief-363-3a.md`; neither was committed, so they are not in the repo | — |
 | FLOW-363 (3b), (3c), (4) | Not started | — |
 | FLOW-371, FLOW-372, the screens (R4–R11) | Not started; they wait for FLOW-363 | — |
 
@@ -24,12 +24,10 @@ The open branch is `claude/nice-cerf-um5fkw` (#594). This lane pushes every FLOW
    - Add the decided fix: tappable rows get the approved press, `m-press` without `m-press-scale` (opacity .72, 120ms, no scale), on the button, danger, selectable, link and project-button branches of `app/src/ui/list-row.tsx`, with a test. Also reword the comment at `app/src/ui/css/41-rows.css:33` to "selected and focus tint".
    - Re-run the code review and the pixel review (both were cut off; the briefs are in the backlog README and REDESIGN-PLAN §6). The pixel review should also check that the default row, now about 3px taller (row title on the body role, line-height 1.45), breaks no screen.
    - Merge once code, pixel and motion approve the same head.
-2. **Finish 3a.** Restart the branch from `main`, then `git apply docs/design/handoff/flow-363-3a-wip.patch`. Finish against [handoff/brief-363-3a.md](handoff/brief-363-3a.md):
-   - Its first line names base f1bf5c9; use the new `main` instead.
-   - Its "do not push" and worktree lines were for a sub-agent builder.
-   - The patch was not checked or tested; run the brief's whole gate, `pnpm clip-check` included.
+2. **Finish 3a.** The patch and brief were never committed, so start 3a from the FLOW-363 task on a branch restarted from `main`.
+   - Nothing in the lost patch was checked or tested; run the whole gate, `pnpm clip-check` included.
 
-   Delete the `handoff/` folder and this file in the PR that merges the last of them (CONTRIBUTING: remove what your change leaves unused).
+   Delete this file in the PR that merges the last of the FLOW-363 parts (CONTRIBUTING: remove what your change leaves unused).
 3. **3b: sheets, ChoiceSheet and controls.** In scope:
    - Sheet title on the sheet role (20/600), and the scrim token.
    - `radio-sheet` becomes `choice-sheet`. The currency, basis and pace sheets become ChoiceSheet calls; first move their exported copy constants to a small `ui/company-choices.ts`.

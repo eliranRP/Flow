@@ -20,5 +20,5 @@ Use this with [PITFALLS.md](PITFALLS.md) before changing a screen, and again bef
 - [ ] A quick diagonal mouse drag over selectable or shown-once content does not dismiss the sheet.
 - [ ] A clip-check pass is not treated as evidence for copy, select, or gesture. Those have their own probe.
 - [ ] A `min-block-size` step-jump fix was re-sampled at 320, where the content wraps.
-- [ ] Button labels use the action name from `ErrorState` and the toasts ("ניסיון חוזר"), not a sentence.
+- [ ] Button labels use the action name from the failure line of `EmptyState` and the toasts ("ניסיון חוזר"), not a sentence.
 - [ ] An owner call that shipped in code is also a row in that decision's state table.
