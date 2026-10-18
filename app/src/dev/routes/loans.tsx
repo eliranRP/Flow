@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { LoanDetailScreen, type LoanView } from "../../screens/loan-detail-screen";
+import { LoansSummaryScreen } from "../../screens/loans-summary-screen";
 import { LoansScreen } from "../../screens/loans-screen";
 import { useMemoryLoanStore } from "../../screens/loan-detail-store";
 import { devLoanStore, resetDevLoanStore, SAMPLE_LOAN_PROJECTS } from "../loan-detail-sample";
@@ -55,6 +56,20 @@ export function DevLoanDetail({ view }: { view?: LoanView } = {}) {
   );
 }
 
+/** The loans summary on the dev loan store (USD). `?today=YYYY-MM-DD` pins the day, so "this year" stays put. */
+export function DevLoanSummary() {
+  const [params] = useSearchParams();
+  const store = devLoanStore();
+  const today = params.get("today");
+  return (
+    <LoansSummaryScreen
+      store={store}
+      currency="USD"
+      today={today != null && /^\d{4}-\d{2}-\d{2}$/.test(today) ? today : undefined}
+    />
+  );
+}
+
 /** FLOW-139d proof: `?sheet=kind` taps the סוג row once the page has drawn, so the kind sheet opens. */
 function useOpenKindRow(wanted: boolean) {
   useEffect(() => {
@@ -75,6 +90,7 @@ function useOpenKindRow(wanted: boolean) {
 
 export const loansRoutes: DevRoute[] = [
   { path: "loans", element: <DevLoans /> },
+  { path: "loans/summary", element: <DevLoanSummary /> },
   { path: "loans/:loanId", element: <DevLoanDetail /> },
   { path: "loans/:loanId/payments", element: <DevLoanDetail view="payments" /> },
 ];

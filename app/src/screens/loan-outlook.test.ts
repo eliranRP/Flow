@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SAMPLE_AMORTIZING, SAMPLE_BALLOON, SAMPLE_DEMAND, SAMPLE_INTEREST_ONLY, SAMPLE_PAID_OFF } from "../dev/loan-detail-sample";
 import type { LoanPayment } from "./loan-detail-data";
-import { loanOutlook, paidInYear, periodTotal, roundTotals, wholeMinor } from "./loan-outlook";
+import { loanOutlook, paidInPeriod, periodTotal, roundTotals, wholeMinor } from "./loan-outlook";
 
 // FLOW-434: the loan page's next payment, years ahead and paid this year (invented loans).
 
@@ -67,10 +67,17 @@ describe("loanOutlook", () => {
   });
 });
 
-describe("paidInYear", () => {
+describe("paidInPeriod", () => {
+  const payments = [pay("2026-01-01", 100n, 50n, 10n), pay("2025-12-01", 999n, 0n, 0n), pay("2026-02-01", 100n, 50n, 12n, 5n)];
+
   it("adds up the year's attached payments part by part", () => {
-    const paid = paidInYear([pay("2026-01-01", 100n, 50n, 10n), pay("2025-12-01", 999n, 0n, 0n), pay("2026-02-01", 100n, 50n, 12n, 5n)], "2026");
+    const paid = paidInPeriod(payments, "2026");
     expect(paid).toMatchObject({ payments: 2, totalMinor: 327n, totals: { interest: 200n, escrow: 100n, principal: 22n, fees: 5n } });
+  });
+
+  it("adds up every attached payment since the loan started for \"all\"", () => {
+    const paid = paidInPeriod(payments, "all");
+    expect(paid).toMatchObject({ payments: 3, totalMinor: 1326n, totals: { interest: 1199n, escrow: 100n, principal: 22n, fees: 5n } });
   });
 });
 

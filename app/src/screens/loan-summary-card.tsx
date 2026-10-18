@@ -1,10 +1,15 @@
+import { Link } from "react-router-dom";
 import { Card } from "../ui/card";
+import { ChevronIcon } from "../ui/icons";
 import { PartsBar, type BarPart, type BarLegendItem } from "../ui/parts-bar";
 import { formatLoanMoney, type LoanCurrency } from "./loan-form";
 import type { LoanListSummary } from "./loan-list-summary";
 
-/** FLOW-139. The loans list's summary card: the debt today, this month's parts, and the next payment. */
-export function LoanSummaryCard({ summary, currency }: { summary: LoanListSummary; currency: LoanCurrency }) {
+/**
+ * FLOW-139. The loans list's summary card: the debt today, this month's parts, and the next payment,
+ * then the link to the summary page (what was paid and what is left).
+ */
+export function LoanSummaryCard({ summary, currency, summaryHref }: { summary: LoanListSummary; currency: LoanCurrency; summaryHref: string }) {
   const money = (minor: bigint) => <bdi dir="ltr">{formatLoanMoney(minor, currency)}</bdi>;
   const parts = [
     { key: "principal", label: "קרן", value: summary.monthlyParts.principal, tone: "accent" },
@@ -35,6 +40,10 @@ export function LoanSummaryCard({ summary, currency }: { summary: LoanListSummar
           {money(summary.twelveMonthsMinor)}
         </p>
       )}
+      <Link className="ui-loan-summary-link" to={summaryHref}>
+        <span>מה שולם עד היום, וכמה נשאר מהחוב</span>
+        <ChevronIcon size={18} />
+      </Link>
     </Card>
   );
 }

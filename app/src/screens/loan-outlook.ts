@@ -108,19 +108,19 @@ function remainingFromBalance(terms: LoanTerms, balanceMinor: bigint, first: Loa
   }).rows.map((row) => ({ ...row, period: row.period + done }));
 }
 
-/** What the attached payments of a calendar year paid, part by part. */
-export function paidInYear(payments: readonly LoanPayment[], year: string): OutlookPeriod {
+/** What the attached payments paid, part by part: in one calendar year ("2026"), or since the loan started ("all"). */
+export function paidInPeriod(payments: readonly LoanPayment[], period: string): OutlookPeriod {
   const totals: PartTotals = { ...NONE };
   let count = 0;
   for (const payment of payments) {
-    if (!payment.docDate.startsWith(`${year}-`)) continue;
+    if (period !== "all" && !payment.docDate.startsWith(`${period}-`)) continue;
     totals.interest += payment.interestMinor;
     totals.escrow += payment.escrowMinor;
     totals.principal += payment.principalMinor;
     totals.fees += payment.feesMinor;
     count += 1;
   }
-  return { key: year, totals, totalMinor: totals.interest + totals.escrow + totals.principal + totals.fees, payments: count };
+  return { key: period, totals, totalMinor: totals.interest + totals.escrow + totals.principal + totals.fees, payments: count };
 }
 
 /**

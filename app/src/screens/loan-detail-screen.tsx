@@ -39,7 +39,7 @@ import {
   statusToast,
   type LoanRateRow,
 } from "./loan-detail-data";
-import { LoanBalanceCard, LoanNextCard, LoanRateChangesCard, LoanRecentCard, LoanRowsCard, LoanYtdCard, RateValue, type LoanTermRow } from "./loan-detail-cards";
+import { LoanBalanceCard, LoanNextCard, LoanRateChangesCard, LoanPaidCard, LoanRecentCard, LoanRowsCard, RateValue, type LoanTermRow } from "./loan-detail-cards";
 import { LoanPaymentsView } from "./loan-payments-view";
 import { loanSubtitle, paymentTotals, wholeMoney } from "./loan-detail-view-data";
 import { TransactionTopBar } from "./transaction-top-bar";
@@ -59,7 +59,7 @@ import {
 import { showsLoanBalance } from "./loan-list";
 import { LOAN_WRITE_KEYS } from "./loan-match-api";
 import { LoanProjectPicker, NO_PROJECT, type LoanProjectSource } from "./loan-project-picker";
-import { loanOutlook, paidInYear } from "./loan-outlook";
+import { loanOutlook } from "./loan-outlook";
 
 
 
@@ -325,7 +325,6 @@ function LoanDetailReady({
   // FLOW-138 "Hide" (FLOW-356): a paid-off loan leads with "נפרעה · date" alone, as on the list.
   const ended = !showsLoanBalance(loan);
   const outlook = loanOutlook(loan, today);
-  const paid = paidInYear(payments, today.slice(0, 4));
   const paidTotal = paymentTotals(payments).total;
   const lastPaid = lastPaymentDate(payments);
   const termRows: LoanTermRow[] = [
@@ -366,12 +365,12 @@ function LoanDetailReady({
               />
             ) : null}
             {ended ? null : <LoanBalanceCard loan={loan} outlook={outlook} />}
+            <LoanPaidCard loan={loan} payments={payments} categories={categories} today={today} onOpenPart={holdWrites ? null : (item) => { setPart(item); open("part"); }} />
             {outlook == null || ended ? null : <LoanNextCard loan={loan} outlook={outlook} />}
             <LoanRowsCard className="ui-loan-terms" rows={termRows} />
             {loan.rates.length > 0 ? (
               <LoanRateChangesCard rates={loan.rates} onOpen={holdWrites ? null : (rate) => { setRate(rate); open("rate"); }} />
             ) : null}
-            <LoanYtdCard loan={loan} paid={paid} categories={categories} onOpenPart={holdWrites ? null : (item) => { setPart(item); open("part"); }} />
             <LoanRecentCard loan={loan} payments={payments} search={search} loanPath={loanPath} year={today.slice(0, 4)} />
             {holdWrites ? null : (
               <button type="button" className="ui-loan-delete" onClick={() => { open("delete"); }}>מחיקת ההלוואה</button>

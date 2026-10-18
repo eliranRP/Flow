@@ -45,6 +45,7 @@ import {
   loadLoanPayments,
   loadLoans,
   loanKindOf,
+  loansPaidRead,
   storedLoanSchedule,
 } from "./tools_loans.ts";
 import { scopeAllows } from "./tools_specs.ts";
@@ -695,6 +696,8 @@ export async function callTool(
     }
     return ok({ loans: out });
   }
+
+  if (name === "get_loans_paid") return loansPaidRead(args, rpc);
 
   if (name === "get_loan_schedule") {
     const loanId = args.loan_id;
