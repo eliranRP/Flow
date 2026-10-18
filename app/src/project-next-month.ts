@@ -50,6 +50,8 @@ export type NextMonthRow = {
   key: string;
   /** A recurring charge, a category's average, or a line the user added. */
   kind: "recurring" | "average" | "added";
+  /** Money in or out: a change keeps it, whatever the amount (a zero row included). */
+  direction: "income" | "expense";
   name: string;
   /** yyyy-mm-dd, the expected day; null on an average row and an added line. */
   date: string | null;
@@ -152,7 +154,7 @@ function averageRows(
     const average = roundDiv(total, BigInt(divisor));
     // A category whose refunds outweigh its costs has nothing to expect.
     if (average <= 0n) continue;
-    const base = { kind: "average" as const, date: null, minor: -average, categoryId: category.id, wasMinor: null, pace: null };
+    const base = { kind: "average" as const, direction: "expense" as const, date: null, minor: -average, categoryId: category.id, wasMinor: null, pace: null };
     rows.push(category.id == null
       ? { ...base, key: "avg:none", name: UNCATEGORIZED }
       : { ...base, key: `avg:${category.id}`, name: category.name ?? "" });
@@ -186,6 +188,7 @@ export function nextMonthForecast(input: {
     .map((party): NextMonthRow => ({
       key: `rec:${party.direction}:${party.party_id}`,
       kind: "recurring",
+      direction: party.direction,
       name: party.name,
       date: expectedDate(month, party.typical_day),
       minor: signedAmount(party),
@@ -244,6 +247,7 @@ export function applyForecastEdits(forecast: NextMonthForecast, edits: readonly 
     return [{
       key: addedKey(edit.id),
       kind: "added",
+      direction: edit.direction === "income" ? "income" : "expense",
       name: edit.category_name ?? "",
       date: null,
       minor: edit.direction === "income" ? amount : -amount,
@@ -265,14 +269,17 @@ export function applyForecastEdits(forecast: NextMonthForecast, edits: readonly 
     const change = changes.get(row.key);
     if (change?.amount_minor == null) return row;
     const amount = BigInt(change.amount_minor);
-    return { ...row, minor: row.minor > 0n ? amount : -amount, wasMinor: row.minor };
+    return { ...row, minor: row.direction === "income" ? amount : -amount, wasMinor: row.minor };
   });
+  // An edit counts once it reaches a row the forecast has: an added line, or a change or removal of one.
+  const keys = new Set(rows.map((row) => row.key));
+  const counted = applying.filter((edit) => edit.kind === "add" || (edit.row_key != null && keys.has(edit.row_key))).length;
   return withTotals(
     month,
     rows.filter((row) => !removedKeys.has(row.key)),
     forecast.averageMonths,
     rows.filter((row) => removedKeys.has(row.key)),
-    applying.length,
+    counted,
   );
 }
 

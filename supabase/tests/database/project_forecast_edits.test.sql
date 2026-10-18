@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(37);
+select plan(54);
 
 do $users$
 begin
@@ -69,7 +69,7 @@ select throws_ok(
 
 -- A change of an average row for this month only.
 insert into pfe_out (label, body)
-values ('set1', public.set_project_forecast_edit(pg_temp.id('project'), pg_temp.m('now'), '{"row_key": "avg:repairs", "amount_minor": 120000}'));
+values ('set1', public.set_project_forecast_edit(pg_temp.id('project'), pg_temp.m('now'), '{"row_key": "avg:00000000-0000-4000-8000-0000000000a1", "amount_minor": 120000}'));
 select is(pg_temp.out_of('set1')->'edit'->>'amount_minor', '120000', 'the change is stored with its amount');
 select is(pg_temp.out_of('set1')->'edit'->>'pace', 'once', 'a change with no pace is for its month only');
 select is(
@@ -82,7 +82,7 @@ select is(pg_temp.count_for(pg_temp.m('next')), 0, 'a once change does not reach
 
 -- The same row and month again replaces the change; the undo puts the old amount back.
 insert into pfe_out (label, body)
-values ('set2', public.set_project_forecast_edit(pg_temp.id('project'), pg_temp.m('now'), '{"row_key": "avg:repairs", "amount_minor": 90000}'));
+values ('set2', public.set_project_forecast_edit(pg_temp.id('project'), pg_temp.m('now'), '{"row_key": "avg:00000000-0000-4000-8000-0000000000a1", "amount_minor": 90000}'));
 select is(pg_temp.out_of('set2')->'edit'->>'id', pg_temp.out_of('set1')->'edit'->>'id', 'a second change of the row replaces the first');
 select is(pg_temp.out_of('set2')->'undo'->'put'->0->>'amount_minor', '120000', 'its undo holds the amount it replaced');
 select is(
@@ -103,7 +103,7 @@ select is(
 select is(pg_temp.count_for(pg_temp.m('now')), 0, 'the month is back at Flow''s numbers');
 
 -- Paces: a monthly change and a quarterly added line, from this month on.
-select public.set_project_forecast_edit(pg_temp.id('project'), pg_temp.m('now'), '{"row_key": "rec:income:p-rent", "amount_minor": 200000, "pace": "month"}');
+select public.set_project_forecast_edit(pg_temp.id('project'), pg_temp.m('now'), '{"row_key": "rec:income:00000000-0000-4000-8000-0000000000b1", "amount_minor": 200000, "pace": "month"}');
 insert into pfe_out (label, body)
 values ('add1', public.set_project_forecast_edit(pg_temp.id('project'), pg_temp.m('now'),
   jsonb_build_object('category_id', pg_temp.id('category'), 'amount_minor', 6500, 'pace', 'quarter')));
@@ -116,20 +116,21 @@ select is(
   'Pest control',
   'an added line is listed with its category name'
 );
-select public.set_project_forecast_edit(pg_temp.id('project'), pg_temp.m('next'), jsonb_build_object('category_id', pg_temp.id('category'), 'amount_minor', 9000, 'pace', 'year'));
+insert into pfe_out (label, body)
+values ('add2', public.set_project_forecast_edit(pg_temp.id('project'), pg_temp.m('next'), jsonb_build_object('category_id', pg_temp.id('category'), 'amount_minor', 9000, 'pace', 'year')));
 select is(pg_temp.count_for(pg_temp.m('next2')), 1, 'a yearly line skips the months between');
 
 -- Removal and restore of one row, and the undo of the restore.
 insert into pfe_out (label, body)
-values ('remove1', public.remove_project_forecast_row(pg_temp.id('project'), pg_temp.m('now'), 'avg:utilities'));
+values ('remove1', public.remove_project_forecast_row(pg_temp.id('project'), pg_temp.m('now'), 'avg:00000000-0000-4000-8000-0000000000a2'));
 select is(pg_temp.out_of('remove1')->'edit'->>'kind', 'remove', 'a row is taken out of the month');
 select is(
-  public.remove_project_forecast_row(pg_temp.id('project'), pg_temp.m('now'), 'avg:utilities')->'undo',
+  public.remove_project_forecast_row(pg_temp.id('project'), pg_temp.m('now'), 'avg:00000000-0000-4000-8000-0000000000a2')->'undo',
   '{"drop": [], "put": []}'::jsonb,
   'a row already out stays out, with nothing to undo'
 );
 insert into pfe_out (label, body)
-values ('restore1', public.restore_project_forecast_row(pg_temp.id('project'), pg_temp.m('now'), 'avg:utilities'));
+values ('restore1', public.restore_project_forecast_row(pg_temp.id('project'), pg_temp.m('now'), 'avg:00000000-0000-4000-8000-0000000000a2'));
 select is(pg_temp.out_of('restore1')->>'removed', '1', 'the restore brings the row back');
 select is(
   public.undo_project_forecast(pg_temp.id('project'), pg_temp.out_of('restore1')->'undo')->>'put',
@@ -139,13 +140,13 @@ select is(
 
 -- A month that has ended, and a bad edit.
 select throws_ok(
-  format($$select public.set_project_forecast_edit(%L, %L, '{"row_key": "avg:repairs", "amount_minor": 1}')$$, pg_temp.id('project'), pg_temp.m('past')),
+  format($$select public.set_project_forecast_edit(%L, %L, '{"row_key": "avg:00000000-0000-4000-8000-0000000000a1", "amount_minor": 1}')$$, pg_temp.id('project'), pg_temp.m('past')),
   '22023',
   'month ended',
   'a write to a month that has ended is refused'
 );
 select throws_ok(
-  format($$select public.set_project_forecast_edit(%L, %L, '{"row_key": "avg:repairs", "amount_minor": 1, "pace": "weekly"}')$$, pg_temp.id('project'), pg_temp.m('now')),
+  format($$select public.set_project_forecast_edit(%L, %L, '{"row_key": "avg:00000000-0000-4000-8000-0000000000a1", "amount_minor": 1, "pace": "weekly"}')$$, pg_temp.id('project'), pg_temp.m('now')),
   '22023',
   'validation',
   'an unknown pace is refused'
@@ -162,7 +163,7 @@ select throws_ok(
 select tests.authenticate_as('pfe_viewer');
 select is(pg_temp.count_for(pg_temp.m('now')), 3, 'a viewer reads the month''s edits');
 select throws_ok(
-  format($$select public.remove_project_forecast_row(%L, %L, 'avg:repairs')$$, pg_temp.id('project'), pg_temp.m('now')),
+  format($$select public.remove_project_forecast_row(%L, %L, 'avg:00000000-0000-4000-8000-0000000000a1')$$, pg_temp.id('project'), pg_temp.m('now')),
   '42501',
   null,
   'a viewer cannot edit the forecast'
@@ -194,6 +195,72 @@ select is(
   'its undo puts them all back'
 );
 
+-- Categories a line may not take (as the app's sheet): the loan principal, a hidden one, one out of the profit.
+insert into pfe (label, id) values ('hidden', public.create_category('Hidden upkeep', 'expense'));
+insert into pfe (label, id) values ('excluded', public.create_category('Owner draws test', 'expense'));
+reset role;
+insert into pfe (label, id)
+select 'principal', c.id from public.categories c join public.projects p on p.company_id = c.company_id
+where p.id = pg_temp.id('project') and c.loan_part = 'principal';
+update public.categories set hidden = true where id = pg_temp.id('hidden');
+update public.categories set excluded_from_pnl = true where id = pg_temp.id('excluded');
+select tests.authenticate_as('pfe_owner');
+select throws_ok(
+  format($$select public.set_project_forecast_edit(%L, %L, %L)$$, pg_temp.id('project'), pg_temp.m('now'), jsonb_build_object('category_id', pg_temp.id('principal'), 'amount_minor', 100)),
+  'P0002', 'category not found', 'a line of the loan principal is refused'
+);
+select throws_ok(
+  format($$select public.set_project_forecast_edit(%L, %L, %L)$$, pg_temp.id('project'), pg_temp.m('now'), jsonb_build_object('category_id', pg_temp.id('hidden'), 'amount_minor', 100)),
+  'P0002', 'category not found', 'a line of a hidden category is refused'
+);
+select throws_ok(
+  format($$select public.set_project_forecast_edit(%L, %L, %L)$$, pg_temp.id('project'), pg_temp.m('now'), jsonb_build_object('category_id', pg_temp.id('excluded'), 'amount_minor', 100)),
+  'P0002', 'category not found', 'a line of a category out of the profit is refused'
+);
+select throws_ok(
+  format($$select public.undo_project_forecast(%L, %L)$$, pg_temp.id('project'), jsonb_build_object('drop', '[]'::jsonb, 'put', jsonb_build_array(jsonb_build_object(
+    'id', gen_random_uuid(), 'kind', 'add', 'row_key', null, 'category_id', pg_temp.id('principal'), 'direction', 'expense', 'amount_minor', 100, 'pace', 'once', 'start_month', pg_temp.m('now'))))),
+  'P0002', 'category not found', 'an undo cannot put back a line of the loan principal'
+);
+
+-- Row keys and months an undo may put back.
+select throws_ok(
+  format($$select public.remove_project_forecast_row(%L, %L, 'avg:repairs')$$, pg_temp.id('project'), pg_temp.m('now')),
+  '22023', 'validation', 'a row key the forecast does not make is refused'
+);
+select throws_ok(
+  format($$select public.undo_project_forecast(%L, %L)$$, pg_temp.id('project'), jsonb_build_object('drop', '[]'::jsonb, 'put', jsonb_build_array(jsonb_build_object(
+    'id', gen_random_uuid(), 'kind', 'change', 'row_key', 'avg:00000000-0000-4000-8000-0000000000a9', 'amount_minor', 100, 'pace', 'once', 'start_month', pg_temp.m('past'))))),
+  '22023', 'validation', 'an undo cannot put back a once edit of a month that has ended'
+);
+select throws_ok(
+  format($$select public.undo_project_forecast(%L, %L)$$, pg_temp.id('project'), jsonb_build_object('drop', '[]'::jsonb, 'put', jsonb_build_array(jsonb_build_object(
+    'id', gen_random_uuid(), 'kind', 'remove', 'row_key', 'whatever', 'amount_minor', null, 'pace', 'once', 'start_month', pg_temp.m('now'))))),
+  '22023', 'validation', 'an undo cannot put back a row key the forecast does not make'
+);
+
+-- A month's reset drops the edits made for that month only.
+insert into pfe_out (label, body) values ('reset2', public.reset_project_forecast(pg_temp.id('project'), pg_temp.m('next')));
+select is(pg_temp.out_of('reset2')->>'removed', '1', 'a month''s reset drops the edits made for that month');
+select is(pg_temp.count_for(pg_temp.m('now')), 3, 'this month''s edits stay');
+select public.undo_project_forecast(pg_temp.id('project'), pg_temp.out_of('reset2')->'undo');
+
+-- An added line that starts this month is removed outright; a paced one that started earlier, for one month.
+insert into pfe_out (label, body)
+values ('remove2', public.remove_project_forecast_row(pg_temp.id('project'), pg_temp.m('now'), 'add:' || (pg_temp.out_of('add1')->'edit'->>'id')));
+select is(pg_temp.out_of('remove2')->'edit', 'null'::jsonb, 'removing a line added this month deletes it');
+select is(pg_temp.count_for(pg_temp.m('next3')), 1, 'it is gone from the months after too');
+select is(
+  public.undo_project_forecast(pg_temp.id('project'), pg_temp.out_of('remove2')->'undo')->>'put',
+  '1',
+  'its undo puts the line back'
+);
+select is(
+  public.remove_project_forecast_row(pg_temp.id('project'), pg_temp.m('next12'), 'add:' || (pg_temp.out_of('add2')->'edit'->>'id'))->'edit'->>'kind',
+  'remove',
+  'a yearly line added for an earlier month is taken out of that month only'
+);
+
 -- MCP writes, with a write token for the owner.
 reset role;
 select public.store_mcp_credential(tests.get_supabase_uid('pfe_owner'), 'hash-pfe-write-0001', array['read','write'],
@@ -218,10 +285,10 @@ grant execute on function pg_temp.as_mcp(text) to authenticated, service_role;
 
 select pg_temp.as_mcp('write');
 insert into pfe_out (label, body)
-values ('mcp1', public.mcp_set_project_forecast_edit('pfe-s-1', pg_temp.id('project'), pg_temp.m('next'), '{"row_key": "avg:taxes", "amount_minor": 30000}'));
+values ('mcp1', public.mcp_set_project_forecast_edit('pfe-s-1', pg_temp.id('project'), pg_temp.m('next'), '{"row_key": "avg:00000000-0000-4000-8000-0000000000a3", "amount_minor": 30000}'));
 select is(pg_temp.out_of('mcp1')->'data'->>'undo_kind', 'project_forecast', 'the MCP set returns the project_forecast undo kind');
 select is(
-  public.mcp_set_project_forecast_edit('pfe-s-1', pg_temp.id('project'), pg_temp.m('next'), '{"row_key": "avg:taxes", "amount_minor": 30000}'),
+  public.mcp_set_project_forecast_edit('pfe-s-1', pg_temp.id('project'), pg_temp.m('next'), '{"row_key": "avg:00000000-0000-4000-8000-0000000000a3", "amount_minor": 30000}'),
   pg_temp.out_of('mcp1'),
   'the same key and the same call replays the response'
 );
@@ -238,12 +305,60 @@ select is(
 
 -- An MCP reset, a change since it, and its undo refused as a conflict.
 insert into pfe_out (label, body) values ('mcp2', public.mcp_reset_project_forecast('pfe-r-1', pg_temp.id('project'), null));
-select public.mcp_set_project_forecast_edit('pfe-s-2', pg_temp.id('project'), pg_temp.m('now'), '{"row_key": "avg:repairs", "amount_minor": 5000}');
-select public.mcp_set_project_forecast_edit('pfe-s-3', pg_temp.id('project'), pg_temp.m('now'), '{"row_key": "rec:income:p-rent", "amount_minor": 1, "pace": "month"}');
+select public.mcp_set_project_forecast_edit('pfe-s-2', pg_temp.id('project'), pg_temp.m('now'), '{"row_key": "avg:00000000-0000-4000-8000-0000000000a1", "amount_minor": 5000}');
+select public.mcp_set_project_forecast_edit('pfe-s-3', pg_temp.id('project'), pg_temp.m('now'), '{"row_key": "rec:income:00000000-0000-4000-8000-0000000000b1", "amount_minor": 1, "pace": "month"}');
 select is(
   public.mcp_undo('pfe-u-3', 'project_forecast', (pg_temp.out_of('mcp2')->'data'->>'id')::uuid)->'error'->>'code',
   'conflict',
   'the undo of a reset is a conflict once a row it would put back was set again'
+);
+
+-- Company B of the same owner cannot undo company A's write (the reviewer's repro): a reset with A's token,
+-- then an undo with B's token finds no write, and no edit of A's project lands in B.
+reset role;
+select tests.authenticate_as('pfe_owner');
+select public.create_company('Forecast Edits Books B', true);
+insert into pfe (label, id) select 'co_b', id from public.companies where name = 'Forecast Edits Books B';
+reset role;
+insert into pfe (label, id) select 'co', p.company_id from public.projects p where p.id = pg_temp.id('project');
+select public.store_mcp_credential(tests.get_supabase_uid('pfe_owner'), 'hash-pfe-aaaa-00001', array['read','write'], now() + interval '9 days', 'pepper-pfe', pg_temp.id('co'));
+insert into pfe (label, id) select 'token_a', id from private.mcp_credentials where token_hash = 'hash-pfe-aaaa-00001';
+create function pg_temp.as_mcp_in(p_token text, p_company text)
+returns void
+language plpgsql
+as $$
+declare
+  uid uuid := tests.get_supabase_uid('pfe_owner');
+begin
+  perform set_config('role', 'authenticated', true);
+  perform set_config('request.jwt.claim.sub', uid::text, true);
+  perform set_config('request.jwt.claims', json_build_object('sub', uid, 'role', 'authenticated', 'aal', 'aal1', 'mcp_tid', pg_temp.id(p_token))::text, true);
+  perform set_config('request.headers', json_build_object('x-flow-company', pg_temp.id(p_company))::text, true);
+end;
+$$;
+grant execute on function pg_temp.as_mcp_in(text, text) to authenticated, service_role;
+select pg_temp.as_mcp_in('token_a', 'co');
+select public.mcp_remove_project_forecast_row('pfe-x-1', pg_temp.id('project'), pg_temp.m('next'), 'avg:none');
+insert into pfe_out (label, body) values ('reset_a', public.mcp_reset_project_forecast('pfe-x-2', pg_temp.id('project'), null));
+select is(pg_temp.out_of('reset_a')->>'ok', 'true', 'company A''s token resets its project''s forecast');
+reset role;
+select public.store_mcp_credential(tests.get_supabase_uid('pfe_owner'), 'hash-pfe-bbbb-00001', array['read','write'], now() + interval '9 days', 'pepper-pfe', pg_temp.id('co_b'));
+insert into pfe (label, id) select 'token_b', id from private.mcp_credentials where token_hash = 'hash-pfe-bbbb-00001';
+select pg_temp.as_mcp_in('token_b', 'co_b');
+select is(
+  public.mcp_undo('pfe-x-3', 'project_forecast', (pg_temp.out_of('reset_a')->'data'->>'id')::uuid)->'error'->>'code',
+  'not_found',
+  'company B''s token does not find company A''s write'
+);
+reset role;
+select is(
+  (select count(*)::int from public.project_forecast_edits e where e.project_id = pg_temp.id('project') and e.company_id <> pg_temp.id('co')),
+  0,
+  'no edit of company A''s project lands in company B'
+);
+select throws_ok(
+  format($$select private.pfe_undo(%L, %L, %L)$$, pg_temp.id('co_b'), pg_temp.id('project'), '{"drop": [], "put": []}'),
+  'P0002', 'project not found', 'an undo refuses a project of another company'
 );
 
 select * from finish();

@@ -332,6 +332,23 @@ describe("applyForecastEdits", () => {
     expect(applyForecastEdits(base, [added, edit({ id: "r-1", kind: "remove", row_key: "add:a-1", amount_minor: null })]).removed[0]?.name).toBe("הדברה");
   });
 
+  it("keeps a zero row's direction when it is changed", () => {
+    const zero = { ...base, rows: base.rows.map((row) => (row.key === "rec:income:c-kim" ? { ...row, minor: 0n } : row)) };
+    const result = applyForecastEdits(zero, [edit({ row_key: "rec:income:c-kim", amount_minor: 230_000 }), edit({ id: "e-2", row_key: "avg:repairs", amount_minor: 0 })]);
+    expect(result.rows.find((row) => row.key === "rec:income:c-kim")?.minor).toBe(230_000n);
+    const cleared = applyForecastEdits(result, [edit({ id: "e-3", row_key: "avg:repairs", amount_minor: 4_000 })]);
+    expect(cleared.rows.find((row) => row.key === "avg:repairs")?.minor).toBe(-4_000n);
+  });
+
+  it("counts only the edits that reach a row the forecast has", () => {
+    const result = applyForecastEdits(base, [
+      edit({}),
+      edit({ id: "e-gone", row_key: "avg:no-longer-here" }),
+      edit({ id: "r-gone", kind: "remove", row_key: "rec:expense:s-stopped", amount_minor: null }),
+    ]);
+    expect(result.editCount).toBe(1);
+  });
+
   it("makes the board's edited November from the dev fixture", () => {
     const result = applyForecastEdits(base, JUNIPER_NEXT_EDITED.edits ?? []);
     expect(result.expenseMinor).toBe(296_500n);

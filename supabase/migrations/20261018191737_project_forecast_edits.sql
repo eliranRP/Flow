@@ -10,6 +10,8 @@
 --   No direct table access: reads and writes go through the functions below, scoped to the
 --   caller's company, and writes need an owner or an editor.
 -- - public.project_forecast_edits_for(project, month): the edits that apply to that month.
+--   A line may take only a category the app offers: not hidden, not out of the profit, never the loan
+--   principal. A reset with a month drops the edits made for that month; with none, every edit.
 -- - public.set_project_forecast_edit, remove_project_forecast_row, restore_project_forecast_row,
 --   reset_project_forecast: the app's writes. Each returns `undo` ({drop, put}), which
 --   public.undo_project_forecast takes back.
@@ -143,6 +145,7 @@ begin
 end;
 $$;
 
+-- A row key the forecast makes: rec:<direction>:<party uuid>, avg:<category uuid>, avg:none or add:<edit uuid>.
 create function private.pfe_check_row_key(p_row_key text)
 returns void
 language plpgsql
@@ -150,10 +153,27 @@ immutable
 set search_path = ''
 as $$
 begin
-  if p_row_key is null or char_length(p_row_key) < 1 or char_length(p_row_key) > 200 then
+  if p_row_key is null or p_row_key !~ (
+    '^(rec:(income|expense):|avg:|add:)[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+  ) and p_row_key <> 'avg:none' then
     raise exception 'validation' using errcode = '22023';
   end if;
 end;
+$$;
+
+-- A category a forecast line may take, as the app's category sheet offers them: the company's own, not
+-- hidden, not kept out of the profit, and never the loan principal (principal is not a profit line).
+create function private.pfe_category_ok(p_company uuid, p_category uuid)
+returns boolean
+language sql
+stable
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.categories c
+    where c.id = p_category and c.company_id = p_company
+      and not c.hidden and not c.excluded_from_pnl and c.loan_part is distinct from 'principal'
+  );
 $$;
 
 -- A change of a row (row_key) or an added line (category_id, direction), with its amount and pace.
@@ -215,10 +235,10 @@ begin
       raise exception 'validation' using errcode = '22023';
     end if;
     cat := (p_edit->>'category_id')::uuid;
-    select c.kind::text into cat_kind from public.categories c where c.id = cat and c.company_id = p_company;
-    if cat_kind is null then
+    if not private.pfe_category_ok(p_company, cat) then
       raise exception 'category not found' using errcode = 'P0002';
     end if;
+    select c.kind::text into cat_kind from public.categories c where c.id = cat and c.company_id = p_company;
     dir := coalesce(p_edit->>'direction', cat_kind);
     insert into public.project_forecast_edits (company_id, project_id, kind, category_id, direction, amount_minor, pace, start_month, created_by)
     values (p_company, p_project, 'add', cat, dir, v_amount, v_pace, p_month, auth.uid())
@@ -229,7 +249,9 @@ begin
 end;
 $$;
 
--- Takes a row out of one month's forecast. A row already out stays out (an empty undo).
+-- Takes a row out of one month's forecast. A line the user added that starts this month goes outright
+-- (its undo puts it back); one that started earlier, on a pace, is taken out of this month only. A row
+-- already out stays out (an empty undo), also when two removals race.
 create function private.pfe_remove(p_company uuid, p_project uuid, p_month text, p_row_key text)
 returns jsonb
 language plpgsql
@@ -237,19 +259,31 @@ set search_path = ''
 as $$
 declare
   written public.project_forecast_edits%rowtype;
+  added public.project_forecast_edits%rowtype;
 begin
   perform private.pfe_check_month(p_month);
   perform private.pfe_check_row_key(p_row_key);
-  select * into written from public.project_forecast_edits e
-  where e.project_id = p_project and e.kind = 'remove' and e.row_key = p_row_key and e.start_month = p_month;
-  if found then
-    return jsonb_build_object('edit', private.pfe_json(written), 'undo', jsonb_build_object('drop', '[]'::jsonb, 'put', '[]'::jsonb),
-      'after', jsonb_build_array(private.pfe_json(written)));
+  if p_row_key like 'add:%' then
+    select * into added from public.project_forecast_edits e
+    where e.id = substr(p_row_key, 5)::uuid and e.project_id = p_project and e.company_id = p_company and e.kind = 'add'
+    for update;
+    if found and added.start_month = p_month then
+      delete from public.project_forecast_edits e where e.id = added.id;
+      return jsonb_build_object('edit', null, 'undo', jsonb_build_object('drop', '[]'::jsonb, 'put', jsonb_build_array(private.pfe_json(added))),
+        'after', '[]'::jsonb);
+    end if;
   end if;
   insert into public.project_forecast_edits (company_id, project_id, kind, row_key, pace, start_month, created_by)
   values (p_company, p_project, 'remove', p_row_key, 'once', p_month, auth.uid())
+  on conflict (project_id, kind, row_key, start_month) where kind <> 'add' do nothing
   returning * into written;
-  return jsonb_build_object('edit', private.pfe_json(written), 'undo', jsonb_build_object('drop', jsonb_build_array(written.id), 'put', '[]'::jsonb),
+  if found then
+    return jsonb_build_object('edit', private.pfe_json(written), 'undo', jsonb_build_object('drop', jsonb_build_array(written.id), 'put', '[]'::jsonb),
+      'after', jsonb_build_array(private.pfe_json(written)));
+  end if;
+  select * into written from public.project_forecast_edits e
+  where e.project_id = p_project and e.kind = 'remove' and e.row_key = p_row_key and e.start_month = p_month;
+  return jsonb_build_object('edit', private.pfe_json(written), 'undo', jsonb_build_object('drop', '[]'::jsonb, 'put', '[]'::jsonb),
     'after', jsonb_build_array(private.pfe_json(written)));
 end;
 $$;
@@ -276,7 +310,8 @@ begin
 end;
 $$;
 
--- Drops the project's edits that apply to one month, or every edit of the project (month null).
+-- Drops the project's edits made for one month (start_month, its removals included), or every edit of the
+-- project (month null). The undo leaves out a past month's once edit: it applies to no month to come.
 create function private.pfe_reset(p_company uuid, p_project uuid, p_month text)
 returns jsonb
 language plpgsql
@@ -291,11 +326,14 @@ begin
   with d as (
     delete from public.project_forecast_edits e
     where e.project_id = p_project and e.company_id = p_company
-      and (p_month is null or private.pfe_hits(e.start_month, e.pace, p_month))
+      and (p_month is null or e.start_month = p_month)
     returning private.pfe_json(e) as j
   )
   select coalesce(jsonb_agg(d.j), '[]'::jsonb) into gone from d;
-  return jsonb_build_object('removed', jsonb_array_length(gone), 'undo', jsonb_build_object('drop', '[]'::jsonb, 'put', gone), 'after', '[]'::jsonb);
+  return jsonb_build_object('removed', jsonb_array_length(gone), 'after', '[]'::jsonb, 'undo', jsonb_build_object('drop', '[]'::jsonb, 'put', (
+    select coalesce(jsonb_agg(x), '[]'::jsonb) from jsonb_array_elements(gone) x
+    where x->>'pace' <> 'once' or x->>'start_month' >= to_char(private.flow_today(), 'YYYY-MM')
+  )));
 end;
 $$;
 
@@ -330,6 +368,9 @@ begin
   then
     raise exception 'validation' using errcode = '22023';
   end if;
+  if p_project is null or not exists (select 1 from public.projects p where p.id = p_project and p.company_id = p_company) then
+    raise exception 'project not found' using errcode = 'P0002';
+  end if;
 
   delete from public.project_forecast_edits e
   where e.project_id = p_project and e.company_id = p_company
@@ -337,9 +378,17 @@ begin
   get diagnostics dropped = row_count;
 
   for item in select x from jsonb_array_elements(coalesce(p_undo->'put', '[]'::jsonb)) x loop
-    if item->>'category_id' is not null and not exists (
-      select 1 from public.categories c where c.id = (item->>'category_id')::uuid and c.company_id = p_company
-    ) then
+    -- What a write could make: a key the forecast makes, a category a line may take, and a month to come
+    -- (a paced edit may start earlier: a reset of it puts it back as it was).
+    if item->>'row_key' is not null then
+      perform private.pfe_check_row_key(item->>'row_key');
+    end if;
+    if item->>'start_month' is null or item->>'start_month' !~ '^[0-9]{4}-(0[1-9]|1[0-2])$'
+      or (coalesce(item->>'pace', 'once') = 'once' and item->>'start_month' < to_char(private.flow_today(), 'YYYY-MM'))
+    then
+      raise exception 'validation' using errcode = '22023';
+    end if;
+    if item->>'category_id' is not null and not private.pfe_category_ok(p_company, (item->>'category_id')::uuid) then
       raise exception 'category not found' using errcode = 'P0002';
     end if;
     insert into public.project_forecast_edits as e
@@ -382,6 +431,7 @@ revoke all on function private.pfe_json(public.project_forecast_edits) from publ
 revoke all on function private.pfe_writer(uuid) from public, anon, authenticated;
 revoke all on function private.pfe_check_month(text) from public, anon, authenticated;
 revoke all on function private.pfe_check_row_key(text) from public, anon, authenticated;
+revoke all on function private.pfe_category_ok(uuid, uuid) from public, anon, authenticated;
 revoke all on function private.pfe_set(uuid, uuid, text, jsonb) from public, anon, authenticated;
 revoke all on function private.pfe_remove(uuid, uuid, text, text) from public, anon, authenticated;
 revoke all on function private.pfe_restore(uuid, uuid, text, text) from public, anon, authenticated;
@@ -529,9 +579,9 @@ begin
       when 'restore' then private.pfe_restore(cid, p_project, p_month, p_arg #>> '{}')
       when 'reset' then private.pfe_reset(cid, p_project, p_month)
     end;
-    insert into private.mcp_writes (token_id, user_id, kind, prior, created_at)
+    insert into private.mcp_writes (token_id, user_id, company_id, kind, prior, created_at)
     values (
-      token, auth.uid(), 'project_forecast',
+      token, auth.uid(), cid, 'project_forecast',
       jsonb_build_object('project_id', p_project, 'undo', result->'undo', 'after', result->'after'),
       clock_timestamp()
     )
@@ -637,7 +687,7 @@ begin
   execute 'alter table private.mcp_writes drop constraint mcp_writes_target';
   execute 'alter table private.mcp_writes add constraint mcp_writes_target '
     || left(def, length(def) - 2)
-    || $n$ OR ((kind = 'project_forecast'::text) AND (prior ? 'project_id'::text) AND (prior ? 'undo'::text) AND (prior ? 'after'::text))))$n$;
+    || $n$ OR ((kind = 'project_forecast'::text) AND (company_id IS NOT NULL) AND (prior ? 'project_id'::text) AND (prior ? 'undo'::text) AND (prior ? 'after'::text))))$n$;
 end
 $kinds$;
 
@@ -661,7 +711,7 @@ begin
     raise exception 'mcp_undo lookup is not the expected definition';
   end if;
   def := replace(def, anchor, anchor || $n$
-        or (p_kind = 'project_forecast' and w.kind = p_kind and w.id = p_id)$n$);
+        or (p_kind = 'project_forecast' and w.kind = p_kind and w.id = p_id and w.company_id = cid)$n$);
 
   anchor := $a$    elsif p_kind = 'forecast_item' then$a$;
   if pg_temp.anchor_count(def, anchor) <> 1 then

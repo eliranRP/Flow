@@ -330,7 +330,7 @@ function writeTools() {
       idempotency_key: { type: "string" },
       month: { type: "string" },
     }, true),
-    toolSpec("set_project_forecast_edit", "Change a row of a project's next-month forecast, or add a line to it (owner or editor). Changes the forecast only, never a recurring charge, a line or a category. project_id; month is YYYY-MM (this month or later; a past month is refused: month ended). Send row_key (from get_project_forecast_edits' keys: rec:<direction>:<party_id>, avg:<category_id>, avg:none or add:<id>) to change that row, or category_id (and optionally direction, default the category's kind) to add a line. amount_minor is whole minor units, unsigned (the row keeps its sign). pace: once (default, that month only), month, 2months, quarter or year from that month. A second change of the same row and month replaces the first. Returns id, project_id, month, edit and undo_kind (project_forecast: undo puts the forecast back, a conflict once the edit changed again). Idempotency key and write rate limit apply.", {
+    toolSpec("set_project_forecast_edit", "Change a row of a project's next-month forecast, or add a line to it (owner or editor). Changes the forecast only, never a recurring charge, a line or a category. project_id; month is YYYY-MM (this month or later; a past month is refused: month ended). Send row_key (from get_project_forecast_edits' keys: rec:<direction>:<party_id>, avg:<category_id>, avg:none or add:<id>) to change that row, or category_id (and optionally direction, default the category's kind) to add a line, of a category that is not hidden, not kept out of the profit and not the loan principal. amount_minor is whole minor units, unsigned (the row keeps its sign). pace: once (default, that month only), month, 2months, quarter or year from that month. A second change of the same row and month replaces the first. Returns id, project_id, month, edit and undo_kind (project_forecast: undo puts the forecast back, a conflict once the edit changed again). Idempotency key and write rate limit apply.", {
       idempotency_key: { type: "string" },
       project_id: { type: "string" },
       month: { type: "string" },
@@ -340,7 +340,7 @@ function writeTools() {
       amount_minor: { type: "integer", minimum: 0 },
       pace: { type: "string", enum: ["once", "month", "2months", "quarter", "year"] },
     }, true),
-    toolSpec("remove_project_forecast_row", "Take one row out of a project's forecast for one month (הסרה מהצפי; owner or editor). project_id, month (YYYY-MM, this month or later) and row_key. A row already out stays out. Returns id, edit and undo_kind (project_forecast).", {
+    toolSpec("remove_project_forecast_row", "Take one row out of a project's forecast for one month (הסרה מהצפי; owner or editor). project_id, month (YYYY-MM, this month or later) and row_key. A line added for that month (add:<id>) is deleted outright, on every month of its pace; one added for an earlier month is taken out of that month only. A row already out stays out. Returns id, edit (null when a line was deleted) and undo_kind (project_forecast).", {
       idempotency_key: { type: "string" },
       project_id: { type: "string" },
       month: { type: "string" },
@@ -352,7 +352,7 @@ function writeTools() {
       month: { type: "string" },
       row_key: { type: "string" },
     }, true),
-    toolSpec("reset_project_forecast", "Go back to Flow's forecast for a project (חזרה לצפי של Flow; owner or editor): with month (YYYY-MM, this month or later), the edits that apply to that month go; without it, every edit of the project. Returns id, removed and undo_kind (project_forecast: undo puts them back, a conflict when one was set again since).", {
+    toolSpec("reset_project_forecast", "Go back to Flow's forecast for a project (חזרה לצפי של Flow; owner or editor): with month (YYYY-MM, this month or later), the edits made for that month go (start_month, its removals included; a paced edit made for an earlier month stays); without it, every edit of the project. Returns id, removed and undo_kind (project_forecast: undo puts them back, a conflict when one was set again since).", {
       idempotency_key: { type: "string" },
       project_id: { type: "string" },
       month: { type: "string" },

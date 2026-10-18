@@ -176,7 +176,8 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
                   ))}
                 </section>
               )}
-              {forecast.editCount === 0 ? null : (
+              {/* The reset drops the edits made for this month; a paced edit made for an earlier month stays. */}
+              {next.edits.some((edit) => edit.start_month === forecast.month) ? (
                 <Button
                   variant="link"
                   className="ui-pn-reset"
@@ -185,7 +186,7 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
                 >
                   חזרה לצפי של Flow
                 </Button>
-              )}
+              ) : null}
             </div>
           )}
         </div>

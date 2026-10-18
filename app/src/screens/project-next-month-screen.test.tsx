@@ -172,12 +172,12 @@ describe("ProjectNextMonthScreen", () => {
     await waitFor(() => { expect(rpc).toHaveBeenCalledWith("undo_project_forecast", { p_project_id: "juniper-ct", p_undo: undo }); });
   });
 
-  it("goes back to Flow's forecast: every edit of the project, with an undo", async () => {
+  it("goes back to Flow's forecast for November: the edits made for that month, with an undo", async () => {
     const undo = { drop: [], put: JUNIPER_NEXT_EDITED.edits };
     rpc.mockImplementation((name: string) => Promise.resolve({ data: name === "reset_project_forecast" ? { removed: 3, undo } : null, error: null }));
     renderNext(JUNIPER_NEXT_EDITED);
     fireEvent.click(screen.getByRole("button", { name: "חזרה לצפי של Flow" }));
-    await waitFor(() => { expect(rpc).toHaveBeenCalledWith("reset_project_forecast", { p_project_id: "juniper-ct" }); });
+    await waitFor(() => { expect(rpc).toHaveBeenCalledWith("reset_project_forecast", { p_project_id: "juniper-ct", p_month: "2026-11" }); });
     expect(await screen.findByText("חזרת לצפי של Flow")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     await waitFor(() => { expect(rpc).toHaveBeenCalledWith("undo_project_forecast", { p_project_id: "juniper-ct", p_undo: undo }); });

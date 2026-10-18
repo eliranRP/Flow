@@ -373,11 +373,11 @@ Puts back every item of one month's forecast to Flow's numbers (איפוס, FLOW
 { "idempotency_key": "pf-1", "project_id": "<project id>", "month": "2026-11", "row_key": "avg:<category id>", "amount_minor": 120000, "pace": "once" }
 ```
 
-Changes a row of a project's next-month forecast, or adds a line ([0186](../decisions/0186-project-forecast-edits.md); owner or editor). It changes the forecast only, never a recurring charge, a line or a category. `month` is `YYYY-MM`, this month or later (a past month is `refused` with `month ended`). Send `row_key` (a key from `get_project_forecast_edits`) to change that row, or `category_id` (and optionally `direction`, default the category's kind) to add a line; one of the two. `amount_minor` is whole minor units, unsigned. `pace` is `once` (default: that month only), `month`, `2months`, `quarter` or `year` from that month. A second change of the same row and month replaces the first. Returns `id`, `project_id`, `month`, `edit` and `undo_kind` (`project_forecast`: undo puts the forecast back, `conflict` once the edit changed again). Idempotency key and the write rate limit apply.
+Changes a row of a project's next-month forecast, or adds a line ([0186](../decisions/0186-project-forecast-edits.md); owner or editor). It changes the forecast only, never a recurring charge, a line or a category. `month` is `YYYY-MM`, this month or later (a past month is `refused` with `month ended`). Send `row_key` (a key from `get_project_forecast_edits`) to change that row, or `category_id` (and optionally `direction`, default the category's kind) to add a line, of a category that is not hidden, not kept out of the profit and not the loan principal (else `not_found`); one of the two. A row key must have the forecast's shape (`validation` otherwise). `amount_minor` is whole minor units, unsigned. `pace` is `once` (default: that month only), `month`, `2months`, `quarter` or `year` from that month. A second change of the same row and month replaces the first. Returns `id`, `project_id`, `month`, `edit` and `undo_kind` (`project_forecast`: undo puts the forecast back, `conflict` once the edit changed again). Idempotency key and the write rate limit apply.
 
 ### remove_project_forecast_row
 
-`idempotency_key`, `project_id`, `month`, `row_key`. Takes one row out of the project's forecast for that month (הסרה מהצפי; owner or editor). A row already out stays out. Returns `id`, `edit` and `undo_kind` (`project_forecast`).
+`idempotency_key`, `project_id`, `month`, `row_key`. Takes one row out of the project's forecast for that month (הסרה מהצפי; owner or editor). A line added for that month (`add:<id>`) is deleted outright, on every month of its pace; one added for an earlier month is taken out of that month only. A row already out stays out. Returns `id`, `edit` (`null` when a line was deleted) and `undo_kind` (`project_forecast`).
 
 ### restore_project_forecast_row
 
@@ -385,7 +385,7 @@ Changes a row of a project's next-month forecast, or adds a line ([0186](../deci
 
 ### reset_project_forecast
 
-`idempotency_key`, `project_id`, optional `month`. Goes back to Flow's forecast (חזרה לצפי של Flow; owner or editor): with `month`, the edits that apply to that month go; without it, every edit of the project. Returns `id`, `removed` and `undo_kind` (`project_forecast`: undo puts them back, `conflict` when one was set again since).
+`idempotency_key`, `project_id`, optional `month`. Goes back to Flow's forecast (חזרה לצפי של Flow; owner or editor): with `month`, the edits made for that month go (their `start_month`, its removals included; a paced edit made for an earlier month stays); without it, every edit of the project. Returns `id`, `removed` and `undo_kind` (`project_forecast`: undo puts them back, `conflict` when one was set again since).
 
 ### update_project
 

@@ -46,7 +46,7 @@ export function useProjectForecastWrites(projectId: string, month: string) {
       const result = call.fn === "set_project_forecast_edit"
         ? await supabase.rpc(call.fn, { p_project_id: projectId, p_month: month, p_edit: call.edit as never })
         : call.fn === "reset_project_forecast"
-          ? await supabase.rpc(call.fn, { p_project_id: projectId })
+          ? await supabase.rpc(call.fn, { p_project_id: projectId, p_month: month })
           : await supabase.rpc(call.fn, { p_project_id: projectId, p_month: month, p_row_key: call.rowKey });
       assertNoError(result);
       lastUndo.current = undoOf(result.data);
