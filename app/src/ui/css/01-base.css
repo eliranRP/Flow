@@ -60,7 +60,7 @@
 }
 
 .ui-chip-label,
-.ui-btn-link:not(.ui-btn-full) .ui-btn-label {
+.ui-btn-link:where(:not(.ui-btn-full)) .ui-btn-label {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -103,8 +103,8 @@
 }
 
 /* Text only: no fill, no padding, the 44px hit area. The chevron (if any) sits after the label. */
-.ui-btn.ui-btn-link,
-.ui-btn.ui-btn-danger-link {
+.ui-btn-link,
+.ui-btn-danger-link {
   min-width: var(--touch-min);
   min-height: var(--touch-min);
   padding-inline: 0;
@@ -117,16 +117,16 @@
   transition: opacity var(--motion-press) var(--ease-standard), transform var(--motion-press) var(--ease-standard);
 }
 
-.ui-btn.ui-btn-link {
+.ui-btn-link {
   gap: var(--space-half);
   color: var(--color-accent-text);
 }
 
-.ui-btn.ui-btn-link:not(.ui-btn-full) {
+.ui-btn-link:where(:not(.ui-btn-full)) {
   justify-content: flex-start;
 }
 
-.ui-btn.ui-btn-danger-link {
+.ui-btn-danger-link {
   color: var(--color-signal);
 }
 

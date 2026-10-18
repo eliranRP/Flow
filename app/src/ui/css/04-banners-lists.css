@@ -213,17 +213,17 @@
   flex: none;
 }
 
-.ui-btn.ui-btn-link.ui-btn-quiet {
+.ui-btn-quiet {
   color: var(--color-text-secondary);
 }
 
-.ui-btn-link.ui-btn-link-wrap {
+.ui-btn-link-wrap {
   flex: 0 0 auto;
   max-inline-size: 100%;
   white-space: normal;
 }
 
-.ui-btn-link.ui-btn-link-wrap .ui-btn-label {
+.ui-btn-link-wrap .ui-btn-label {
   overflow: visible;
   text-overflow: clip;
   white-space: normal;
@@ -246,7 +246,7 @@
   }
 }
 
-.ui-btn.ui-btn-link.ui-btn-link-hint {
+.ui-btn-link-hint {
   min-height: 0;
   min-width: 0;
   color: var(--color-text-muted);
@@ -259,7 +259,7 @@
 
 /* FLOW-502: a link inside a sentence of hint text: the sentence's own size and line height, the
    link colour, and a 44px tap area that grows into the note's own lines (§3.7) without moving them. */
-.ui-btn.ui-btn-link.ui-btn-link-inline {
+.ui-btn-link-inline {
   position: relative;
   display: inline;
   min-width: 0;
