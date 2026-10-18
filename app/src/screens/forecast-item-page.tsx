@@ -1,7 +1,9 @@
 import { formatAmountText, type ForecastItem } from "@flow/shared";
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { monthEndDay, nextMonth, type ForecastPatch, weekEndDay } from "../forecast-month";
-import { BackButton } from "../ui/back";
+import { chargeHref } from "../recurring-charge";
+import { BackButton, liveSheetStack } from "../ui/back";
 import { Button } from "../ui/button";
 import { ChoiceSheet, type ChoiceSheetCopy } from "../ui/choice-sheet";
 import { cx } from "../ui/cx";
@@ -9,8 +11,11 @@ import { FocusTitle } from "../ui/focus-title";
 import { IconRow } from "../ui/icon-row";
 import { CalendarIcon, DocumentIcon, PencilIcon, ProjectsIcon, TagIcon } from "../ui/icons";
 import { List } from "../ui/list-row";
+import { itemCharge } from "./forecast-categories";
 import { dayMonth, itemLate, itemWhat } from "./forecast-parts";
 import { monthName } from "./home-parts";
+
+const WHEN_LAYER = "forecast-when";
 
 /** The board's three choices: this week, to the month's end (or the item's own date), or not this month. */
 export type ForecastWhen = "week" | "monthEnd" | "moved";
@@ -33,9 +38,16 @@ function lateText(days: number): string {
   return `באיחור ${days === 1 ? "יום" : `${String(days)} ימים`}`;
 }
 
-/** What the page names the item's source: the row's title, the line under it, and where it links. */
-function sourceOf(item: ForecastItem): { title: string; hint: string; to: string } {
-  if (item.kind !== "invoice") return { title: "חיוב קבוע", hint: "פתיחת החיוב בקבועים", to: "/recurring" };
+/**
+ * What the page names the item's source: the row's title, the line under it, and where it links. A
+ * recurring charge opens its own page (קבועים › the charge); the list is the fallback for a key with no party.
+ */
+function sourceOf(item: ForecastItem, search: string): { title: string; hint: string; to: string } {
+  if (item.kind !== "invoice") {
+    const charge = itemCharge(item);
+    const to = charge == null ? "/recurring" : chargeHref(charge.direction, charge.partyId, search, charge.projectId);
+    return { title: "חיוב קבוע", hint: "פתיחת החיוב בקבועים", to };
+  }
   return { title: itemWhat(item), hint: item.direction === "income" ? "פתיחת החשבונית" : "פתיחת החשבון", to: "/unpaid" };
 }
 
@@ -44,7 +56,7 @@ export function whenSheetCopy(item: ForecastItem, today: string, monthEndChoice:
   const month = today.slice(0, 7);
   const ownDate = monthEndChoice !== monthEndDay(month);
   return {
-    historyKey: "forecast-when",
+    historyKey: WHEN_LAYER,
     title: "מתי צפוי",
     subtitle: `${item.name === "" ? "ללא שם" : item.name} · בצפי של ${monthName(month)}`,
     choices: [
@@ -89,13 +101,33 @@ export function ForecastItemPage({
   whenOpenRef.current = whenOpen;
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const location = useLocation();
+  const locationState: unknown = location.state;
+  // The When sheet's history entry is popped after the sheet closes. A close (a save, Escape) in that gap
+  // waits for the pop: Back now would take the sheet's entry, and the pop after it would reopen the page.
+  const sheetEntry = whenOpen || liveSheetStack(locationState).includes(WHEN_LAYER);
+  const sheetEntryRef = useRef(sheetEntry);
+  sheetEntryRef.current = sheetEntry;
+  const closeWaiting = useRef(false);
+  const close = useRef(() => {
+    if (sheetEntryRef.current || liveSheetStack(window.history.state).includes(WHEN_LAYER)) {
+      closeWaiting.current = true;
+      return;
+    }
+    onCloseRef.current();
+  }).current;
+  useEffect(() => {
+    if (sheetEntry || !closeWaiting.current) return;
+    closeWaiting.current = false;
+    onCloseRef.current();
+  }, [sheetEntry, location.key]);
   const month = today.slice(0, 7);
   const monthLabel = monthName(month);
   const income = item.direction === "income";
   const late = item.late_days > 0;
   const monthEnd = monthEndDay(month);
   const monthEndChoice = item.expected_on != null && item.expected_on > weekEndDay(today) ? item.expected_on : monthEnd;
-  const source = sourceOf(item);
+  const source = sourceOf(item, location.search);
   const symbol = formatAmountText(0n, item.currency).replace(/0$/, "");
   const shownAmount = amount === "" ? "" : `${income ? "+" : "−"}${symbol}${groupThousands(amount)}`;
   const whenText = when === "week" ? "השבוע" : when === "moved" ? "לא החודש" : `עד ${dayMonth(monthEndChoice)}`;
@@ -110,11 +142,11 @@ export function ForecastItemPage({
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (event.key !== "Escape" || event.defaultPrevented || whenOpenRef.current) return;
-      onCloseRef.current();
+      close();
     }
     document.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("keydown", onKey); };
-  }, []);
+  }, [close]);
 
   function save() {
     if (when === "moved") {
@@ -125,7 +157,7 @@ export function ForecastItemPage({
       const due = when === "week" ? weekEndDay(today) : monthEndChoice;
       onSave(item, { amount_minor: amountMinor, due_on: due, moved_out: false });
     }
-    onClose();
+    close();
   }
 
   return (

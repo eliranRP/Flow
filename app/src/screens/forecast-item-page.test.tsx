@@ -70,7 +70,7 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
     expect(screen.getByText("אוקטובר · הכנסה · קבוע")).toBeTruthy();
     expect(screen.getByText("כללי")).toBeTruthy();
     expect(screen.getByText("ללא קטגוריה")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "חיוב קבוע, פתיחת החיוב בקבועים" })).toHaveAttribute("href", "/recurring");
+    expect(screen.getByRole("link", { name: "חיוב קבוע, פתיחת החיוב בקבועים" })).toHaveAttribute("href", "/recurring/income/retainer");
     expect(screen.getByText("משנה רק את הצפי של אוקטובר. החיוב הקבוע לא משתנה.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "מתי צפוי: עד 31/10" }).textContent).toContain("בצפי של אוקטובר");
   });
@@ -134,6 +134,27 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
         p_patch: { amount_minor: null, due_on: "2026-10-31", moved_out: false },
       });
     });
+  });
+
+  it("a save right after a pick, before the sheet's history step, closes the page for good", async () => {
+    rpc.mockClear();
+    renderForecast(board());
+    openNorthgate();
+    fireEvent.click(screen.getByRole("button", { name: "מתי צפוי: השבוע" }));
+    fireEvent.click(await screen.findByRole("radio", { name: /^עד 31\/10/ }));
+    // No wait: the sheet is still closing (the page is still behind its modal) and its entry may still be on the history.
+    fireEvent.click(screen.getByRole("button", { name: "שמירה", hidden: true }));
+    await waitFor(() => { expect(screen.getByTestId("where").textContent).toBe("/forecast"); });
+    await waitFor(() => { expect(screen.getByTestId("where").dataset.layers).toBe(""); });
+    // Settled: still the list, the page gone and the row back on screen.
+    await new Promise((resolve) => { setTimeout(resolve, 400); });
+    expect(screen.getByTestId("where").textContent).toBe("/forecast");
+    expect(screen.queryByRole("textbox", { name: "סכום צפוי" })).toBeNull();
+    expect(document.querySelector(".ui-forecast-screen")?.classList.contains("ui-forecast-screen-paged")).toBe(false);
+    expect(screen.getByRole("button", { name: "Northgate Co, +$12,500" })).toBeTruthy();
+    expect(rpc.mock.calls.filter(([name]) => name === "set_forecast_item")).toEqual([
+      ["set_forecast_item", { p_month: "2026-10", p_item_key: "invoice:inv-1043", p_patch: { amount_minor: null, due_on: "2026-10-31", moved_out: false } }],
+    ]);
   });
 
   it("moves an item to next month: the page closes, the row folds, then the move is written", async () => {
