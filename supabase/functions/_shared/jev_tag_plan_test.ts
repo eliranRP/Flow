@@ -34,7 +34,7 @@ import {
   projects,
   txnRow,
 } from "./jev_tag_test_support.ts";
-import { CARD_NAME_HINT, lineQuestions } from "./jev_tag_plan.ts";
+import { CARD_NAME_HINT, EXPECTED_LINE_HINT, lineQuestions, PAST_FILINGS_HINT } from "./jev_tag_plan.ts";
 
 Deno.test("questions use project and category ids, and 256 options omit that question", () => {
   const questions = buildTagQuestions(projects, categories);
@@ -248,6 +248,26 @@ Deno.test("the store reads only enabled Jev rows and open untagged expenses", as
 });
 
 const SUPPLIER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+Deno.test("the questions describe expected_line and past_filings only when the state has them", () => {
+  const company = { companyId: COMPANY, mode: "shadow" as const, threshold: 0.9, projects, categories, expenses: [] };
+  const expected = { month: "2026-11", amountMinor: 250000, categoryName: "שכירות", projectName: "שיפוץ" };
+  const asked = lineQuestions(expense({ expected, history: [filing()] }), company);
+  assert(String(asked.project.instructions).endsWith(`${PAST_FILINGS_HINT} ${EXPECTED_LINE_HINT}`));
+  assert(String(asked.category.instructions).endsWith(EXPECTED_LINE_HINT));
+  assertEquals(lineQuestions(expense(), company).project.instructions, "Choose the project id for this expense.");
+});
+
+Deno.test("state carries the forecast line the user added when the line matched one, and none otherwise", () => {
+  const plain = buildTagState(expense(), projects, categories) as Record<string, unknown>;
+  assertEquals("expected_line" in plain, false);
+  const state = buildTagState(
+    expense({ expected: { month: "2026-11", amountMinor: 250000, categoryName: "שכירות", projectName: "שיפוץ" } }),
+    projects,
+    categories,
+  ) as Record<string, unknown>;
+  assertEquals(state.expected_line, { month: "2026-11", amount_minor: 250000, category_name: "שכירות", project_name: "שיפוץ" });
+});
 
 Deno.test("state carries the supplier's past filings with names, and none without history", () => {
   const plain = buildTagState(expense(), projects, categories);

@@ -17,6 +17,7 @@ import {
   type TagCompanyWork,
   type TagDirection,
   type TagExpense,
+  type TagExpectedLine,
   type TagFiling,
   type TagFlag,
   type TagJobStore,
@@ -363,6 +364,47 @@ async function attachFlags(
   }
 }
 
+/**
+ * One SQL call per company: the forecast lines the user added that the lines in the run matched
+ * (decision 0187). Optional: a failed read tags the lines without them.
+ */
+async function attachExpected(
+  fetch: FetchLike,
+  base: string,
+  serviceKey: string,
+  companyId: string,
+  expenses: TagExpense[],
+): Promise<void> {
+  const ids = expenses.map((expense) => expense.id).filter(isUuid);
+  if (ids.length === 0) return;
+  let matched: RestRow[];
+  try {
+    matched = rows(await rest(fetch, `${base}/rest/v1/rpc/jev_forecast_lines`, serviceKey, {
+      method: "POST",
+      body: { p_company: companyId, p_ids: ids },
+    }));
+  } catch {
+    return;
+  }
+  const byLine = new Map<string, TagExpectedLine>();
+  for (const row of matched) {
+    const id = asString(row.transaction_id);
+    const month = asString(row.month);
+    const amountMinor = asNumber(row.amount_minor);
+    if (!id || !month || !/^\d{4}-\d{2}$/.test(month) || !Number.isFinite(amountMinor)) continue;
+    byLine.set(id, {
+      month,
+      amountMinor,
+      categoryName: asString(row.category_name) ?? null,
+      projectName: asString(row.project_name) ?? null,
+    });
+  }
+  for (const expense of expenses) {
+    const expected = byLine.get(expense.id);
+    if (expected) expense.expected = expected;
+  }
+}
+
 type EnabledCompany = { companyId: string; mode: TagMode; threshold: number };
 
 function enabledCompanies(integrations: readonly RestRow[], onlyCompanyId?: string | null): EnabledCompany[] {
@@ -417,6 +459,7 @@ export function createTagStore(
         const expenses = capNewest(loaded, quota);
         await attachHistory(fetch, base, serviceKey, company.companyId, expenses);
         await attachFlags(fetch, base, serviceKey, company.companyId, expenses);
+        await attachExpected(fetch, base, serviceKey, company.companyId, expenses);
         await attachBankNames(get, company.companyId, expenses);
         const incomeCategories = expenses.some((expense) => expense.direction === "income")
           ? rows(await get(categoriesPath(company.companyId, "income"))).flatMap((row) => {

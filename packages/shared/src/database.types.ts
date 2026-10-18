@@ -270,6 +270,37 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"forecast_line_matches": {
+                  Row: {
+                    "company_id": string,"edit_id": string,"expected_minor": number,"id": string,"matched_at": string,"month": string,"transaction_id": string
+                  }
+                  Insert: {
+                    "company_id": string,"edit_id": string,"expected_minor": number,"id"?: string,"matched_at"?: string,"month": string,"transaction_id": string
+                  }
+                  Update: {
+                    "company_id"?: string,"edit_id"?: string,"expected_minor"?: number,"id"?: string,"matched_at"?: string,"month"?: string,"transaction_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "forecast_line_matches_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "forecast_line_matches_edit_id_fkey"
+      columns: ["edit_id"]
+isOneToOne: false
+      referencedRelation: "project_forecast_edits"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "forecast_line_matches_transaction_id_fkey"
+      columns: ["transaction_id"]
+isOneToOne: true
+      referencedRelation: "transactions"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"forecast_overrides": {
                   Row: {
                     "amount_minor": number | null,"company_id": string,"created_at": string,"due_on": string | null,"id": string,"item_key": string,"month": string,"moved_out": boolean,"updated_at": string
@@ -1314,6 +1345,9 @@ isOneToOne: false
                            },
 "jev_finish_usage":
 { Args: { "p_calls": number,"p_company": string,"p_failed"?: number,"p_input_tokens"?: number,"p_output_tokens"?: number,"p_run": string,"p_tagged"?: number }; Returns: undefined
+                           },
+"jev_forecast_lines":
+{ Args: { "p_company": string,"p_ids": (string)[] }; Returns: Json
                            },
 "jev_key_status":
 { Args: Record<PropertyKey, never>; Returns: string

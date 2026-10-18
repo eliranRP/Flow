@@ -43,6 +43,8 @@ export type ProjectForecastEdit = {
   pace: ForecastPace;
   /** yyyy-mm */
   start_month: string;
+  /** An added line: the bank line that came as it in the month read (decision 0187); null when none came. */
+  matched_transaction_id?: string | null;
 };
 
 /** One expected line next month: signed (income positive, an expense negative), in minor units. */
@@ -79,6 +81,11 @@ export type NextMonthForecast = {
   averageMonths: number;
   /** Rows the user took out of the month, with the amount they would have. */
   removed: NextMonthRow[];
+  /**
+   * Lines the user added whose bank line already came in the month (decision 0187). Like a recurring
+   * charge seen this month, they are no longer expected: they leave the totals.
+   */
+  arrived: NextMonthRow[];
   /** How many of the user's edits apply to the month. */
   editCount: number;
 };
@@ -199,10 +206,17 @@ export function nextMonthForecast(input: {
     .sort((a, b) => ((a.date ?? "") === (b.date ?? "") ? a.name.localeCompare(b.name, "he") : (a.date ?? "") < (b.date ?? "") ? -1 : 1));
   const divisor = averageMonths(input.categoryMonths);
   const averages = averageRows(input.categoryMonths, input.currency, recurringCategories, divisor);
-  return withTotals(month, [...recurring, ...averages], divisor, [], 0);
+  return withTotals(month, [...recurring, ...averages], divisor, [], [], 0);
 }
 
-function withTotals(month: string, rows: NextMonthRow[], divisor: number, removed: NextMonthRow[], editCount: number): NextMonthForecast {
+function withTotals(
+  month: string,
+  rows: NextMonthRow[],
+  divisor: number,
+  removed: NextMonthRow[],
+  arrived: NextMonthRow[],
+  editCount: number,
+): NextMonthForecast {
   const incomeMinor = rows.reduce((sum, row) => (row.minor > 0n ? sum + row.minor : sum), 0n);
   const expenseMinor = rows.reduce((sum, row) => (row.minor < 0n ? sum - row.minor : sum), 0n);
   return {
@@ -215,6 +229,7 @@ function withTotals(month: string, rows: NextMonthRow[], divisor: number, remove
     averageCount: rows.filter((row) => row.kind === "average").length,
     averageMonths: divisor,
     removed,
+    arrived,
     editCount,
   };
 }
@@ -236,11 +251,14 @@ export function addedKey(editId: string): string {
  * The forecast with the user's edits on top: the lines they added (each in its category's name), then
  * each row's change (the latest start that applies wins, the sign stays the row's) and the rows they
  * took out, which leave the totals and are listed apart. Edits that do not apply to the month are ignored.
+ * An added line whose bank line already came in the month (`matched_transaction_id`) is arrived: it leaves
+ * the totals too, so a line is never counted as both expected and in.
  */
 export function applyForecastEdits(forecast: NextMonthForecast, edits: readonly ProjectForecastEdit[]): NextMonthForecast {
   const month = forecast.month;
   const applying = edits.filter((edit) => editApplies(edit.start_month, edit.pace, month));
   if (applying.length === 0) return forecast;
+  const arrivedKeys = new Set(applying.flatMap((edit) => (edit.kind === "add" && edit.matched_transaction_id != null ? [addedKey(edit.id)] : [])));
   const added = applying.flatMap((edit): NextMonthRow[] => {
     if (edit.kind !== "add" || edit.amount_minor == null) return [];
     const amount = BigInt(edit.amount_minor);
@@ -276,9 +294,10 @@ export function applyForecastEdits(forecast: NextMonthForecast, edits: readonly 
   const counted = applying.filter((edit) => edit.kind === "add" || (edit.row_key != null && keys.has(edit.row_key))).length;
   return withTotals(
     month,
-    rows.filter((row) => !removedKeys.has(row.key)),
+    rows.filter((row) => !removedKeys.has(row.key) && !arrivedKeys.has(row.key)),
     forecast.averageMonths,
     rows.filter((row) => removedKeys.has(row.key)),
+    rows.filter((row) => !removedKeys.has(row.key) && arrivedKeys.has(row.key)),
     counted,
   );
 }

@@ -332,6 +332,24 @@ describe("applyForecastEdits", () => {
     expect(applyForecastEdits(base, [added, edit({ id: "r-1", kind: "remove", row_key: "add:a-1", amount_minor: null })]).removed[0]?.name).toBe("הדברה");
   });
 
+  it("leaves an added line whose bank line came out of the totals, listed as arrived", () => {
+    const added = edit({ id: "a-1", kind: "add", row_key: null, category_id: "rent", category_name: "שכירות", direction: "expense", amount_minor: 250_000 });
+    const waiting = applyForecastEdits(base, [added]);
+    const arrived = applyForecastEdits(base, [{ ...added, matched_transaction_id: "t-1" }]);
+    expect(arrived.rows.some((row) => row.key === "add:a-1")).toBe(false);
+    expect(arrived.arrived.map((row) => [row.key, row.minor])).toEqual([["add:a-1", -250_000n]]);
+    expect(arrived.expenseMinor).toBe(waiting.expenseMinor - 250_000n);
+    expect(arrived.removed).toEqual([]);
+    expect(waiting.arrived).toEqual([]);
+  });
+
+  it("keeps a removed added line under removed, not arrived", () => {
+    const added = edit({ id: "a-1", kind: "add", row_key: null, category_id: "rent", category_name: "שכירות", direction: "expense", amount_minor: 250_000, matched_transaction_id: "t-1" });
+    const result = applyForecastEdits(base, [added, edit({ id: "r-1", kind: "remove", row_key: "add:a-1", amount_minor: null })]);
+    expect(result.removed.map((row) => row.key)).toEqual(["add:a-1"]);
+    expect(result.arrived).toEqual([]);
+  });
+
   it("keeps a zero row's direction when it is changed", () => {
     const zero = { ...base, rows: base.rows.map((row) => (row.key === "rec:income:c-kim" ? { ...row, minor: 0n } : row)) };
     const result = applyForecastEdits(zero, [edit({ row_key: "rec:income:c-kim", amount_minor: 230_000 }), edit({ id: "e-2", row_key: "avg:repairs", amount_minor: 0 })]);

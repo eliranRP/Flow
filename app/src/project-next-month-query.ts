@@ -35,6 +35,7 @@ const editSchema = z.object({
   amount_minor: z.number().nullable(),
   pace: z.enum(["once", "month", "2months", "quarter", "year"]),
   start_month: z.string(),
+  matched_transaction_id: z.string().nullable().optional(),
 });
 
 /** expected_months for one project: this month and the next (decision 0185: a charge's project is its own). */
