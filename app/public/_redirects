@@ -71,6 +71,8 @@
 /settings/team/ /settings/team 301
 /loans /app-shell 200
 /loans/ /loans 301
+/loans/summary /app-shell 200
+/loans/summary/ /loans/summary 301
 /loans/:loanId /app-shell 200
 /loans/:loanId/ /loans/:loanId 301
 /loans/:loanId/payments /app-shell 200
