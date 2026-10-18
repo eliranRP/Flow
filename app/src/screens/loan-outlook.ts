@@ -28,8 +28,6 @@ export type LoanOutlook = {
   endDate: string;
 };
 
-const PART_KEYS = ["interest", "escrow", "principal", "fees"] as const;
-
 const NONE: PartTotals = { interest: 0n, escrow: 0n, principal: 0n, fees: 0n };
 
 function sumRows(key: string, rows: readonly LoanScheduleRow[]): OutlookPeriod {
@@ -121,29 +119,6 @@ export function paidInPeriod(payments: readonly LoanPayment[], period: string): 
     count += 1;
   }
   return { key: period, totals, totalMinor: totals.interest + totals.escrow + totals.principal + totals.fees, payments: count };
-}
-
-/**
- * Each part in whole units, rounded so the parts on screen add up to the rounded total (the
- * part with the largest remainder takes the leftover unit).
- */
-export function roundTotals(totals: PartTotals): PartTotals {
-  const target = wholeMinor(PART_KEYS.reduce((sum, key) => sum + totals[key], 0n));
-  const out: PartTotals = { interest: 0n, escrow: 0n, principal: 0n, fees: 0n };
-  for (const key of PART_KEYS) out[key] = (totals[key] / 100n) * 100n;
-  let left = target - PART_KEYS.reduce((sum, key) => sum + out[key], 0n);
-  for (const key of [...PART_KEYS].sort((a, b) => Number((totals[b] % 100n) - (totals[a] % 100n)))) {
-    if (left <= 0n) break;
-    out[key] += 100n;
-    left -= 100n;
-  }
-  return out;
-}
-
-/** The rounded total, equal to the rounded parts on screen. */
-export function periodTotal(totals: PartTotals): bigint {
-  const rounded = roundTotals(totals);
-  return PART_KEYS.reduce((sum, key) => sum + rounded[key], 0n);
 }
 
 /** Rounded to whole units, for the summary rows (no .00 and no cents on a projection). */

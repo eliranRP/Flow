@@ -62,8 +62,6 @@ export type LoanCategory = {
   hidden: boolean;
 };
 
-export const LOAN_PARTS: readonly LoanSplitPart[] = ["interest", "escrow", "principal", "fees"];
-
 /** The loan's columns the page reads, with the rate rows embedded. */
 export const LOAN_DETAIL_COLUMNS =
   "id, company_id, name, currency, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, kind, interest_only_months, amortization_months, status, closed_on, project_id, interest_category_id, escrow_category_id, principal_category_id, fees_category_id, loan_rates(id, effective_date, annual_rate_ppm)";
@@ -212,11 +210,6 @@ export function partDefaultLabel(categories: readonly LoanCategory[], part: Loan
   if (part === "fees") return FEES_NONE_ROW;
   const keyed = keyedCategory(categories, part);
   return keyed ? `ברירת מחדל · ${keyed.name}` : "ברירת מחדל";
-}
-
-/** The parts a loan files: a demand loan has no escrow. */
-export function loanParts(loan: Pick<LoanDetail, "kind">): LoanSplitPart[] {
-  return loan.kind === "demand" ? ["interest", "principal", "fees"] : [...LOAN_PARTS];
 }
 
 /** 112500 → "11.25%", 60000 → "6%", 105000 → "10.5%", 8250 → "0.825%": no trailing zeros (FLOW-347, §3.5). */

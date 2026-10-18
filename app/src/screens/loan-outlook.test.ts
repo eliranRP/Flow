@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SAMPLE_AMORTIZING, SAMPLE_BALLOON, SAMPLE_DEMAND, SAMPLE_INTEREST_ONLY, SAMPLE_PAID_OFF } from "../dev/loan-detail-sample";
 import type { LoanPayment } from "./loan-detail-data";
-import { loanOutlook, paidInPeriod, periodTotal, roundTotals, wholeMinor } from "./loan-outlook";
+import { loanOutlook, paidInPeriod, wholeMinor } from "./loan-outlook";
 
 // FLOW-434: the loan page's next payment, years ahead and paid this year (invented loans).
 
@@ -78,27 +78,6 @@ describe("paidInPeriod", () => {
   it("adds up every attached payment since the loan started for \"all\"", () => {
     const paid = paidInPeriod(payments, "all");
     expect(paid).toMatchObject({ payments: 3, totalMinor: 1326n, totals: { interest: 1199n, escrow: 100n, principal: 22n, fees: 5n } });
-  });
-});
-
-describe("roundTotals", () => {
-  it("rounds each part to whole units and gives the leftover unit to the largest remainder", () => {
-    const totals = { interest: 1_234_567n, escrow: 345_678n, principal: 98_765n, fees: 0n };
-    const rounded = roundTotals(totals);
-    expect(rounded).toEqual({ interest: 1_234_600n, escrow: 345_700n, principal: 98_700n, fees: 0n });
-    expect(periodTotal(totals)).toBe(1_679_000n);
-  });
-
-  it("adds up to the rounded total when every part rounds down", () => {
-    // 3 × 0.40 = 1.20: each part alone rounds to 0, the total to 1, and one part carries it.
-    const totals = { interest: 40n, escrow: 40n, principal: 40n, fees: 0n };
-    expect(periodTotal(totals)).toBe(100n);
-    expect(roundTotals(totals)).toEqual({ interest: 100n, escrow: 0n, principal: 0n, fees: 0n });
-  });
-
-  it("leaves whole amounts alone", () => {
-    const totals = { interest: 500n, escrow: 200n, principal: 300n, fees: 0n };
-    expect(roundTotals(totals)).toEqual(totals);
   });
 });
 
