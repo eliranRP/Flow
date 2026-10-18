@@ -310,7 +310,7 @@
   font: inherit;
   font-size: var(--type-detail-size);
   font-weight: var(--type-detail-weight);
-  line-height: 1.1;
+  line-height: var(--type-band-line);
   font-variant-numeric: tabular-nums lining-nums;
   text-align: end;
   outline: none;
@@ -335,7 +335,7 @@
 
 .ui-forecast-page-card .ui-icon-row { min-block-size: 84px; padding-inline: var(--space-inset-row); }
 .ui-forecast-page-card .ui-icon-row + .ui-icon-row { border-top: 1px solid var(--color-line); }
-.ui-forecast-page-card .ui-icon-row-text { gap: 3px; }
+.ui-forecast-page-card .ui-icon-row-text { gap: calc(var(--space-1) - 1px); }
 .ui-forecast-page-project .ui-icon-row-value { font-size: var(--type-body-size); font-weight: var(--type-body-weight); }
 .ui-forecast-page-card .ui-forecast-page-row { min-block-size: 64px; }
 /* The board's source row is a link, drawn taller than the When row above it. */
