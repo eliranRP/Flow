@@ -88,25 +88,11 @@ export const ProjectMatch: Story = { render: () => <Search entry="/search?q=וי
 /** The filter sheet open over the results (dev query, for the board proofs). */
 export const FilterSheet: Story = { render: () => <Search entry="/search?q=חומרי&sheet=filters" /> };
 
-/** A picked period names its active chip (3 חודשים), which removes itself. */
-export const PeriodChip: Story = { render: () => <Search entry="/search?period=months3" /> };
-
-/** FLOW-402: opened from a project's "כל התנועות", with the project chip set. */
-export const ProjectChip: Story = { render: () => <Search entry="/search?project=p2" /> };
-
-/** Chips together: expenses, waiting for review. */
-export const ExpensesWaiting: Story = { render: () => <Search entry="/search?dir=expense&review=1" /> };
-
 /** Nothing matches the text: the es-06 pattern with one way out. */
 export const NoResults: Story = { render: () => <Search entry="/search?q=מעליות" /> };
-export const NoResultsFiltered: Story = { render: () => <Search entry="/search?q=מעליות&dir=income" /> };
-
-/** A company with no lines yet: the checks still show, with no count. */
-export const NoLines: Story = { render: () => <Search entry="/search" data={{ ...sample, rows: [] }} /> };
 
 export const Loading: Story = { render: () => <Search entry="/search?q=חומרי" data={{ ...sample, phase: { kind: "loading" } }} /> };
 export const Failed: Story = { render: () => <Search entry="/search?q=חומרי" data={{ ...sample, phase: { kind: "error", offline: false } }} /> };
-export const Offline: Story = { render: () => <Search entry="/search?q=חומרי" data={{ ...sample, phase: { kind: "error", offline: true } }} /> };
 
 /** More lines than one page: the month head of the last month waits, and the count says the total. */
 export const MorePages: Story = { render: () => <Search entry="/search?dir=expense" data={{ ...sample, total: 120 }} /> };

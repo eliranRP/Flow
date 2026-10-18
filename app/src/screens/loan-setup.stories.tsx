@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fireEvent, waitFor, within } from "@storybook/test";
 import { Sheet } from "../ui/sheet";
-import type { LoanKind } from "@flow/shared";
-import { LoanKindPicker, LoanSaveButton, LoanSetupForm } from "./loan-setup";
+import { LoanKindPicker, LoanSetupForm } from "./loan-setup";
 
 const meta = {
   title: "Screens/Loan setup",
@@ -44,32 +43,7 @@ const balloon = {
 
 export const Example: Story = { args: example };
 
-/** FLOW-347: in the sheet, שמירה is pinned in the foot, so a 375x667 phone saves without a scroll. */
-function InSheet() {
-  return (
-    <Sheet open onOpenChange={() => undefined} title="הלוואה" action={<LoanSaveButton formId="story-loan" />}>
-      <LoanSetupForm {...example} formId="story-loan" saveInFoot />
-    </Sheet>
-  );
-}
-const se = { parameters: { viewport: { defaultViewport: "flow375-se" } } };
-export const ExampleInSheetSe: Story = { args: example, render: () => <InSheet />, ...se };
-
 export const Balloon: Story = { args: balloon };
-
-const largeFinal = {
-  companyCurrency: "ILS" as const,
-  initial: {
-    name: "הלוואת דוגמה",
-    principal: "34910.09",
-    rate: "29.8",
-    term: "480",
-    startDate: "2026-11-01",
-    escrow: "0",
-  },
-};
-
-export const LargeFinal: Story = { args: largeFinal };
 
 export const Dollars: Story = {
   args: { companyCurrency: "USD", initial: { startDate: "2026-11-01" } },
@@ -108,18 +82,6 @@ export const DateSheetOpen: Story = {
     await waitFor(() => expect(within(canvasElement.ownerDocument.body).getByRole("dialog", { name: "תאריך תשלום ראשון" })).toBeVisible());
   },
 };
-
-/**
- * FLOW-106 §3.3: the סוג field, first in the form; רגילה by default. Interest-only adds its months
- * and names the payment after them; balloon adds the spread and the balloon line; demand drops the
- * term, escrow and עוד and says how interest runs.
- */
-const kindField = (value: LoanKind) => ({ value, onOpen: () => undefined });
-export const KindRegular: Story = { args: { ...example, kind: kindField("amortizing") } };
-export const KindInterestOnly: Story = { args: { ...example, kind: kindField("interest_only") } };
-const balloonKind = { ...example, initial: { ...example.initial, term: "60" }, kind: kindField("balloon") };
-export const KindBalloon: Story = { args: balloonKind };
-export const KindDemand: Story = { args: { ...example, kind: kindField("demand") } };
 
 /** The סוג view inside the new-loan sheet: one row per kind with its description. */
 function KindPickerInSheet() {

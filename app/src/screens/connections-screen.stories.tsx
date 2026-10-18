@@ -74,22 +74,6 @@ export const ConnectionsAssistantError: Story = {
   ),
 };
 
-export const ConnectionsAssistantMixed: Story = {
-  name: "Assistant mixed",
-  render: () => (
-    <StoryRoute entry="/settings/connections" tabs>
-      <ExampleBar />
-      <ConnectionsScreen
-        sample={{
-          ...assistantBusiness,
-          lastError: "sumit_auth",
-          assistant: { state: "expired", scope: "read", id: "mcp-1" },
-        }}
-      />
-    </StoryRoute>
-  ),
-};
-
 export const ConnectionsAssistantExpired: Story = {
   name: "Assistant expired",
   render: () => (
@@ -106,23 +90,6 @@ export const ConnectionsAssistantNoCompany: Story = {
     <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
       <ConnectionsScreen sample={{ ...assistantBusiness, name: null, connected: false, companyId: null, noCompany: true, assistant: { state: "no-company" } }} />
-    </StoryRoute>
-  ),
-};
-
-export const ConnectionsConnected: Story = {
-  render: () => (
-    <StoryRoute entry="/settings/connections" tabs>
-      <ExampleBar />
-      <ConnectionsScreen
-        sample={{
-          name: "בית הספר אלון",
-          connected: true,
-          companyId: 1001,
-          lastError: null,
-          email: "owner@example.com",
-        }}
-      />
     </StoryRoute>
   ),
 };
@@ -144,78 +111,11 @@ export const ConnectionsSyncError: Story = {
   ),
 };
 
-export const ConnectionsBackoff: Story = {
-  name: "Backoff",
-  render: () => (
-    <StoryRoute entry="/settings/connections" tabs>
-      <ExampleBar />
-      <ConnectionsScreen
-        sample={{
-          name: "בית הספר אלון",
-          connected: true,
-          companyId: 1001,
-          lastError: "sumit_rejected",
-          nextAttemptAt: "2099-01-01T10:00:00.000Z",
-          email: "owner@example.com",
-        }}
-      />
-    </StoryRoute>
-  ),
-};
-
-export const ConnectionsAuth: Story = {
-  name: "Auth",
-  render: () => (
-    <StoryRoute entry="/settings/connections" tabs>
-      <ExampleBar />
-      <ConnectionsScreen
-        sample={{
-          name: "בית הספר אלון",
-          connected: true,
-          companyId: 1001,
-          lastError: "sumit_auth",
-          email: "owner@example.com",
-        }}
-      />
-    </StoryRoute>
-  ),
-};
-
 const sumitBusiness = {
   name: "בית הספר אלון",
   email: "owner@example.com",
   companyId: 1001,
   lastError: null,
-};
-
-export const ConnectionsSumitConnected: Story = {
-  name: "SUMIT connected",
-  render: () => (
-    <StoryRoute entry="/settings/connections" tabs>
-      <ExampleBar />
-      <ConnectionsScreen sample={{ ...sumitBusiness, connected: true, lastSyncAt: "2026-10-03T09:05:00.000Z" }} />
-    </StoryRoute>
-  ),
-};
-
-export const ConnectionsSumitDisconnected: Story = {
-  name: "SUMIT disconnected",
-  render: () => (
-    <StoryRoute entry="/settings/connections" tabs>
-      <ExampleBar />
-      <ConnectionsScreen sample={{ ...sumitBusiness, connected: false, companyId: null }} />
-    </StoryRoute>
-  ),
-};
-
-export const ConnectionsSumitNoCompany: Story = {
-  name: "SUMIT no company",
-  render: () => (
-    <StoryRoute entry="/settings/connections?preview=empty" tabs>
-      <ExampleBar />
-      <ConnectionsScreen sample={{ ...sumitBusiness, name: null, connected: false, companyId: null, noCompany: true }} />
-    </StoryRoute>
-  ),
 };
 
 export const ConnectionsSumitReconnect: Story = {
@@ -224,86 +124,6 @@ export const ConnectionsSumitReconnect: Story = {
     <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
       <ConnectionsScreen sample={{ ...sumitBusiness, connected: true, lastError: "sumit_auth" }} />
-    </StoryRoute>
-  ),
-};
-
-export const ConnectionsSumitError: Story = {
-  name: "SUMIT error",
-  render: () => (
-    <StoryRoute entry="/settings/connections" tabs>
-      <ExampleBar />
-      <ConnectionsScreen sample={{ ...sumitBusiness, connected: false, companyId: null, sumit: "error" }} />
-    </StoryRoute>
-  ),
-};
-
-export const ConnectionsSumitLoading: Story = {
-  name: "SUMIT loading",
-  render: () => (
-    <StoryRoute entry="/settings/connections" tabs>
-      <ExampleBar />
-      <ConnectionsScreen sample={{ ...sumitBusiness, connected: false, companyId: null, sumit: "loading" }} />
-    </StoryRoute>
-  ),
-};
-
-const mercuryBusiness = {
-  name: "בית הספר אלון",
-  email: "owner@example.com",
-  companyId: 1001,
-  lastError: null,
-  connected: true,
-  mercuryConnected: false,
-  mercuryLastError: null,
-};
-
-export const ConnectionsMercuryConnected: Story = {
-  name: "Mercury connected",
-  render: () => (
-    <StoryRoute entry="/settings/connections" tabs>
-      <ExampleBar />
-      <ConnectionsScreen sample={{ ...mercuryBusiness, mercuryConnected: true, mercuryLastSyncAt: "2026-10-03T09:05:00.000Z" }} />
-    </StoryRoute>
-  ),
-};
-
-export const ConnectionsMercuryDisconnected: Story = {
-  name: "Mercury disconnected",
-  render: () => (
-    <StoryRoute entry="/settings/connections" tabs>
-      <ExampleBar />
-      <ConnectionsScreen sample={{ ...mercuryBusiness, mercuryConnected: false }} />
-    </StoryRoute>
-  ),
-};
-
-export const ConnectionsMercuryReconnect: Story = {
-  name: "Mercury reconnect",
-  render: () => (
-    <StoryRoute entry="/settings/connections" tabs>
-      <ExampleBar />
-      <ConnectionsScreen sample={{ ...mercuryBusiness, mercuryConnected: false, mercuryLastError: "auth" }} />
-    </StoryRoute>
-  ),
-};
-
-export const ConnectionsMercuryError: Story = {
-  name: "Mercury error",
-  render: () => (
-    <StoryRoute entry="/settings/connections" tabs>
-      <ExampleBar />
-      <ConnectionsScreen sample={{ ...mercuryBusiness, mercuryConnected: false, mercury: "error" }} />
-    </StoryRoute>
-  ),
-};
-
-export const ConnectionsMercuryLoading: Story = {
-  name: "Mercury loading",
-  render: () => (
-    <StoryRoute entry="/settings/connections" tabs>
-      <ExampleBar />
-      <ConnectionsScreen sample={{ ...mercuryBusiness, mercuryConnected: false, mercury: "loading" }} />
     </StoryRoute>
   ),
 };
@@ -371,19 +191,6 @@ export const ConnectionsViewer: Story = {
       <ExampleBar />
       <ViewerPreview>
         <ConnectionsScreen sample={pagesBusiness} />
-      </ViewerPreview>
-    </StoryRoute>
-  ),
-};
-
-/** FLOW-507: a viewer can't reconnect, so expired keys read "לא מחובר כרגע" with no warning tone. */
-export const ConnectionsViewerReconnect: Story = {
-  name: "Connections, viewer, reconnect",
-  render: () => (
-    <StoryRoute entry="/settings/connections" tabs>
-      <ExampleBar />
-      <ViewerPreview>
-        <ConnectionsScreen sample={{ ...pagesBusiness, lastError: "sumit_auth", mercuryLastError: "auth", assistant: { state: "expired", scope: "read", id: "mcp-1" } }} />
       </ViewerPreview>
     </StoryRoute>
   ),

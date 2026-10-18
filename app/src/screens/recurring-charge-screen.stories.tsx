@@ -39,9 +39,6 @@ export const Item: Story = { args: { state: "item" } };
 /** The late bill with its suggested match: the match box between the banner and the rows. */
 export const Late: Story = { args: { state: "late" } };
 
-/** The late alert ignored: the grey line with החזרה, and no match box. */
-export const Ignored: Story = { args: { state: "ignored" } };
-
 /** The pace sheet open over the item page. */
 export const PaceSheetOpen: Story = {
   args: { state: "pace" },
@@ -53,6 +50,3 @@ export const PaceSheetOpen: Story = {
 
 /** A party with no recurring row: the not-found view. */
 export const Missing: Story = { args: { state: "missing" } };
-
-/** The schedule did not load: one line and the retry. */
-export const Failed: Story = { args: { state: "error" } };

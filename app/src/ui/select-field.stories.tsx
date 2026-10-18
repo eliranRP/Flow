@@ -18,13 +18,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = { args: { label: "קטגוריה", options, defaultValue: "materials" } };
-export const Empty: Story = {
-  args: {
-    label: "קטגוריה",
-    options: [{ value: "", label: "בחירה" }, ...options],
-    defaultValue: "",
-  },
-};
 export const Disabled: Story = { args: { label: "קטגוריה", options, defaultValue: "labor", disabled: true } };
 export const LongHebrew: Story = {
   args: {

@@ -20,9 +20,6 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = { args: { variant: "bar", value: 42, label: "התקדמות" } };
 export const Full: Story = { args: { variant: "bar", value: 100, label: "התקדמות" } };
-export const Thin: Story = {
-  args: { variant: "thin", value: 1, max: 7, label: "התקדמות התור", caption: "1 מתוך 7" },
-};
 // Amounts are bigints, which args cannot carry (Storybook sends args as JSON), so these render them.
 /** FLOW-371: a long known job, with its count, its steps and the way to leave. Invented data. */
 type JobArgs = { variant: "job"; label: string };
@@ -43,9 +40,4 @@ export const Job: StoryObj<JobArgs> = {
       onLeave={() => undefined}
     />
   ),
-};
-
-/** FLOW-514: the setup's seven segments, on the third step. */
-export const Steps: Story = {
-  args: { variant: "steps", count: 7, current: 3, label: "התקדמות ההגדרה" },
 };

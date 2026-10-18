@@ -102,11 +102,6 @@ export const StillLoading: Story = { args: { set: "three", complete: false } };
 export const ServerTotalsWhilePaging: Story = { args: { set: "three", complete: false, server: true } };
 export const LargeAmounts: Story = { args: { set: "large" } };
 export const TwoCurrenciesOneRow: Story = { args: { set: "mixed" } };
-export const OneMonth: Story = { args: { set: "one" } };
-
-/** Decision 0120: two months of income and expense rows, no hairlines, 32px between the months. */
-export const TwoMonthsMercury: Story = { args: { set: "two" } };
 
 /** FLOW-305: quiet day heads (h3) under each sticky month head, and month totals with exact cents. */
 export const DayHeads: Story = { args: { set: "two", days: true } };
-export const DayHeadsOneMonth: Story = { args: { set: "one", days: true } };

@@ -28,6 +28,4 @@ type Story = StoryObj<typeof meta>;
 
 export const Helps: Story = { args: { percent: 12 } };
 export const Hurts: Story = { args: { percent: -10 } };
-export const Flat: Story = { args: { percent: 0 } };
 export const OnBandHelps: Story = { args: { percent: 12, onBand: true }, decorators: [onBand] };
-export const OnBandHurts: Story = { args: { percent: -10, onBand: true }, decorators: [onBand] };

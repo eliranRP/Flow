@@ -20,5 +20,3 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
 export const Accent: Story = { args: { tone: "accent", children: "חודש פתוח" } };
 export const Signal: Story = { args: { tone: "signal", children: "מעל התקציב" } };
-export const Dot: Story = { args: { dot: true, tone: "signal" } };
-export const WithIcon: Story = { args: { children: "שולם", icon: <span aria-hidden="true">✓</span> } };

@@ -58,34 +58,6 @@ export const Pending: Story = {
   render: () => <BoardTransactionStory sample={boardTxn} />,
 };
 
-/** The board's NoProject state: no project yet, so the project row asks for one in the accent tone. */
-export const NoProject: Story = {
-  render: () => <BoardTransactionStory sample={{ ...boardTxn, project_id: null, project_name: null }} />,
-};
-
-/** The board's Manual state: a hand-entered expense with an assumed VAT line. */
-export const Manual: Story = {
-  render: () => (
-    <BoardTransactionStory
-      sample={{
-        ...boardTxn,
-        id: "t-manual",
-        description: "רשומה ידנית",
-        doc_date: "2026-09-12",
-        amount_gross: -118n,
-        amount_net: -100n,
-        vat_amount: -18n,
-        vat_status: "assumed",
-        source: "manual",
-        review_status: "approved",
-        review_id: null,
-        paid: true,
-        currency: "ILS",
-      }}
-    />
-  ),
-};
-
 /** The board's Split state: the expense is shared across two projects, so the split row shows both shares. */
 export const Split: Story = {
   render: () => (

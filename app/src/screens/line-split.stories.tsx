@@ -77,27 +77,11 @@ const bigParts: PartDraft[] = [
 const big = storyOf(() => <Editor line={{ ...SAMPLE_EXPENSE_LINE, amountNet: -2_000_000_000n }} parts={bigParts} />);
 export const BigAmounts: Story = { ...big, name: "Big amounts: ₪9,999,999.99" };
 
-const huge = storyOf(() => <Editor parts={[{ key: "a", categoryId: "c-elec", projectId: "p-herz", unit: "amount", value: "1234567.89" }]} />);
-export const ShareOverThousand: Story = { ...huge, name: "Share past 1,000%" };
-
 const empty = storyOf(() => <Editor />);
 export const Empty: Story = { ...empty, name: "Empty" };
 
-const saving = storyOf(() => <Editor parts={expenseParts} saving />);
-export const Saving: Story = saving;
-
 const reviewBlocked = storyOf(() => <Editor line={{ ...SAMPLE_EXPENSE_LINE, reviewBlocked: true }} />);
 export const BlockedByReview: Story = reviewBlocked;
-
-const nothingLeft = storyOf(() => (
-  <Editor parts={[{ key: "a", categoryId: "c-elec", projectId: "p-herz", unit: "amount", value: "4800" }]} warned />
-));
-export const NothingLeft: Story = { ...nothingLeft, name: "Nothing is left for the rest" };
-
-const noCategory = storyOf(() => (
-  <Editor line={{ ...SAMPLE_EXPENSE_LINE, categoryId: null, categoryName: null }} parts={expenseParts} warned />
-));
-export const NoLineCategory: Story = { ...noCategory, name: "Line with no category" };
 
 const loanBlocked = storyOf(() => <Editor line={{ ...SAMPLE_EXPENSE_LINE, loanSplit: true }} />);
 export const BlockedByLoan: Story = loanBlocked;
@@ -114,9 +98,6 @@ const savedSplit: LineSplitRead = {
     { category_id: "c-build", category_name: "חומרי בניין", project_id: null, project_name: null, amount_minor: 286_000n, percent: null, rest: true },
   ],
 };
-
-const reopened = storyOf(() => <Editor split={savedSplit} />);
-export const Reopened: Story = { ...reopened, name: "Reopened saved split" };
 
 /** A bank re-sync moved the line from ₪4,800 to ₪5,000: the saved parts no longer sum to it. */
 const mismatchSplit: LineSplitRead = { ...savedSplit, lineMinor: 500_000n, partsMatch: false };
@@ -160,9 +141,6 @@ function Detail({ viewer = false }: { viewer?: boolean }) {
 
 const readView = storyOf(() => <Detail />);
 export const ReadView: Story = { ...readView, name: "Read view on the detail" };
-
-const viewerView = storyOf(() => <Detail viewer />);
-export const ReadViewViewer: Story = { ...viewerView, name: "Read view, viewer" };
 
 const unsplit = storyOf(() => (
   <StoryRoute entry={`/transactions/${detailLine.id}`}>

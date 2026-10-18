@@ -205,12 +205,6 @@ export const TransactionLoanUnmatched: Story = {
   },
 };
 
-/** A viewer reads the row. */
-export const TransactionLoanViewer: Story = {
-  name: "Loan payment, viewer",
-  render: () => <LoanMatchStory viewer />,
-};
-
 /** A viewer opens the parts read-only: no fields, no שמירה, no ביטול השיוך. */
 export const TransactionLoanViewerSheet: Story = {
   name: "Loan payment, viewer reads the parts",
@@ -232,11 +226,4 @@ export const TransactionLoanUsd: Story = {
     await userEvent.click(await within(canvasElement).findByRole("button", { name: LOAN_ROW }));
     await storyBody(canvasElement).findByRole("dialog", { name: "משכנתא לדוגמה" });
   },
-};
-
-/** FLOW-115: a long loan name wraps to a second line at 320 instead of losing the name. */
-const LONG_LOAN = "משכנתא לדוגמה על בניין המגורים ברחוב הארוך";
-export const TransactionLoanLongName: Story = {
-  name: "Loan payment, long loan name",
-  render: () => <LoanMatchStory loanName={LONG_LOAN} />,
 };

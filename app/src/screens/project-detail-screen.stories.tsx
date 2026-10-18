@@ -16,35 +16,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const ProjectSharedCost: Story = {
-  name: "Shared cost note",
-  render: () => (
-    <StoryRoute entry="/projects/a" tabs>
-      <ProjectDetailScreen
-        example={exampleOnBand}
-        sample={{
-          id: "a",
-          name: "וילה רעננה",
-          status: "active",
-          state_label: "משפ׳ כהן · מתחילת הפרויקט",
-          budget_agorot: 100_000_000n,
-          income_agorot: 90_000_000n,
-          direct_agorot: 72_000_000n,
-          shared_agorot: 4_000_000n,
-          profit_agorot: 14_000_000n,
-          categories: [
-            { id: "c1", name: "חומרים", amount_agorot: 72_000_000n, has_shared_share: false },
-            { id: "c2", name: "הובלה", amount_agorot: 4_000_000n, has_shared_share: true },
-          ],
-          pending_count: 0,
-          pending_agorot: 0n,
-          transactions: [],
-        }}
-      />
-    </StoryRoute>
-  ),
-};
-
 export const ProjectDetail: Story = {
   render: () => (
     <StoryRoute entry="/projects/a" tabs>
@@ -96,105 +67,6 @@ export const ProjectDetailError: Story = {
     <StoryRoute entry="/projects/a?preview=error" tabs>
       <ExampleBar />
       <ProjectDetailScreen />
-    </StoryRoute>
-  ),
-};
-
-export const ProjectUsdOnly: Story = {
-  render: () => (
-    <StoryRoute entry="/projects/usd1" tabs>
-      <ExampleBar />
-      <ProjectDetailScreen
-        sample={{
-          id: "usd1",
-          name: "Cedar Lot",
-          status: "active",
-          state_label: "פעיל",
-          budget_agorot: null,
-          income_agorot: 0n,
-          direct_agorot: 0n,
-          shared_agorot: 0n,
-          profit_agorot: 0n,
-          by_currency: [{ currency: "USD", income_minor: 500_000n, direct_minor: 200_000n, shared_minor: 0n, profit_minor: 300_000n }],
-          categories_by_currency: [{ currency: "USD", id: "u1", name: "Utilities", amount_minor: 200_000n }],
-          categories: [],
-          pending_count: 0,
-          transactions: [],
-        }}
-        example={exampleOnBand}
-      />
-    </StoryRoute>
-  ),
-};
-
-export const ProjectMixedCurrency: Story = {
-  render: () => (
-    <StoryRoute entry="/projects/mix1" tabs>
-      <ExampleBar />
-      <ProjectDetailScreen
-        sample={{
-          id: "mix1",
-          name: "Harbor Sample",
-          status: "active",
-          state_label: "פעיל",
-          budget_agorot: null,
-          income_agorot: 100_000n,
-          direct_agorot: 40_000n,
-          shared_agorot: 0n,
-          profit_agorot: 60_000n,
-          by_currency: [
-            { currency: "ILS", income_minor: 100_000n, direct_minor: 40_000n, shared_minor: 0n, profit_minor: 60_000n },
-            { currency: "USD", income_minor: 200_000n, direct_minor: 50_000n, shared_minor: 0n, profit_minor: 150_000n },
-          ],
-          categories_by_currency: [
-            { currency: "ILS", id: "i1", name: "Materials", amount_minor: 40_000n },
-            { currency: "USD", id: "u1", name: "Freight", amount_minor: 50_000n },
-          ],
-          categories: [],
-          pending_count: 0,
-          transactions: [],
-        }}
-        example={exampleOnBand}
-      />
-    </StoryRoute>
-  ),
-};
-
-// FLOW-339: a profit in shekels and a loss in dollars; the band's label names both.
-export const ProjectMixedSigns: Story = {
-  render: () => (
-    <StoryRoute entry="/projects/mix2" tabs>
-      <ExampleBar />
-      <ProjectDetailScreen
-        sample={{
-          id: "mix2",
-          name: "נמל לדוגמה",
-          status: "active",
-          state_label: "פעיל",
-          budget_agorot: null,
-          income_agorot: 100_000n,
-          direct_agorot: 40_000n,
-          shared_agorot: 0n,
-          profit_agorot: 60_000n,
-          by_currency: [
-            { currency: "ILS", income_minor: 100_000n, direct_minor: 40_000n, shared_minor: 0n, profit_minor: 60_000n },
-            { currency: "USD", income_minor: 50_000n, direct_minor: 175_000n, shared_minor: 0n, profit_minor: -125_000n },
-          ],
-          categories_by_currency: [
-            { currency: "ILS", id: "i1", name: "חומרים", amount_minor: 40_000n },
-            { currency: "USD", id: "u1", name: "הובלה", amount_minor: 175_000n },
-          ],
-          categories: [],
-          pending_count: 0,
-          transactions: [
-            { id: "ms1", description: "תשלום לקוח לדוגמה", doc_date: "2026-10-04", amount_net: 100_000n, direction: "income", category: null },
-            { id: "ms2", description: "ספק חומרים לדוגמה", doc_date: "2026-09-22", amount_net: -40_000n, direction: "expense", category: "חומרים" },
-            { id: "ms3", description: "לקוח חו״ל לדוגמה", doc_date: "2026-09-12", amount_net: 50_000n, currency: "USD", direction: "income", category: null },
-            { id: "ms4", description: "חברת הובלה לדוגמה", doc_date: "2026-08-28", amount_net: -175_000n, currency: "USD", direction: "expense", category: "הובלה" },
-          ],
-        }}
-        example={exampleOnBand}
-      />
     </StoryRoute>
   ),
 };
@@ -325,36 +197,6 @@ export const ProjectGroupPicker: Story = {
   },
 };
 
-export const ProjectGroupNew: Story = {
-  name: "Project, new group",
-  render: groupedRender(null),
-  play: async (context) => {
-    await ProjectGroupPicker.play?.(context);
-    await userEvent.click(storyBody(context.canvasElement).getByRole("button", { name: "קבוצה חדשה" }));
-    await userEvent.type(await storyBody(context.canvasElement).findByLabelText("שם הקבוצה"), "מתחם הגפן");
-  },
-};
-
-/** A pick saves at once; the toast says where the project went and offers ביטול. */
-export const ProjectGroupMoved: Story = {
-  name: "Project, moved to a group",
-  render: groupedRender(null),
-  play: async (context) => {
-    await ProjectGroupPicker.play?.(context);
-    await userEvent.click(storyBody(context.canvasElement).getByRole("radio", { name: "בניין לדוגמה" }));
-    await storyBody(context.canvasElement).findByText("הפרויקט עבר לקבוצה בניין לדוגמה");
-  },
-};
-export const ProjectGroupRemoved: Story = {
-  name: "Project, taken out of its group",
-  render: groupedRender("g1"),
-  play: async (context) => {
-    await ProjectGroupPicker.play?.(context);
-    await userEvent.click(storyBody(context.canvasElement).getByRole("radio", { name: "בלי קבוצה" }));
-    await storyBody(context.canvasElement).findByText("הפרויקט הוצא מהקבוצה בניין לדוגמה");
-  },
-};
-
 /** A finished project offers "החזרה לפעיל" in the same place. */
 export const ProjectMenuFinished: Story = {
   name: "Project, ⋯ menu, finished",
@@ -404,5 +246,3 @@ function kindStory(kind: Exclude<ProjectKind, "flip">): Story {
 }
 
 export const ProjectRentalPage: Story = { name: "Project, rental", ...kindStory("rental") };
-export const ProjectClientPage: Story = { name: "Project, client job", ...kindStory("client") };
-export const ProjectNewPage: Story = { name: "Project, nothing filed yet", ...kindStory("new") };

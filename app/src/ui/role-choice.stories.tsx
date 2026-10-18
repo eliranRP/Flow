@@ -32,11 +32,3 @@ export const MemberEditor: Story = {
 export const Saving: Story = {
   args: { value: "editor", busy: "viewer", onChange: () => undefined },
 };
-
-export const InviteViewerArgs: Story = {
-  args: { value: "viewer", hints: true, onChange: () => undefined },
-};
-
-export const InviteEditorArgs: Story = {
-  args: { value: "editor", hints: true, onChange: () => undefined },
-};

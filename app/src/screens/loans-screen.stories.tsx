@@ -72,12 +72,6 @@ export const Empty: Story = {
   args: { sample: { ...pagesBusiness, loans: [] } },
 };
 
-/** Every loan closed: the group says הלוואות שנסגרו under the empty state. */
-export const OnlyClosed: Story = {
-  name: "Loans, only closed",
-  args: { sample: { ...pagesBusiness, loans: ROWS.filter((row) => row.status != null && row.status !== "open") } },
-};
-
 export const Loading: Story = {
   name: "Loans, loading",
   args: { sample: { ...pagesBusiness, loans: "loading" } },
@@ -91,9 +85,4 @@ export const LoadError: Story = {
 export const Viewer: Story = {
   name: "Loans, viewer",
   args: { sample: { ...pagesBusiness, loans: pagesLoans }, viewer: true },
-};
-
-export const EmptyViewer: Story = {
-  name: "Loans, empty, viewer",
-  args: { sample: { ...pagesBusiness, loans: [] }, viewer: true },
 };

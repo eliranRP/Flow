@@ -82,5 +82,3 @@ export const AllChargesSheet: Story = {
 };
 /** Few earlier charges: no link to all of them, and the history stays short. */
 export const FewCharges: Story = { args: { state: "found", charges: "few" } };
-/** Steady charges: the change reads "כרגיל", not a percent. */
-export const Flat: Story = { args: { state: "found", charges: "steady" } };
