@@ -9,7 +9,7 @@ function Demo({ destructive, item }: { destructive: boolean; item: string }) {
   return (
     <>
       <Button
-        variant="danger"
+        variant="danger-link"
         onClick={() => {
           setOpen(true);
         }}

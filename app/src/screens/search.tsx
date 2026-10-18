@@ -359,7 +359,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
         {!complete && live && query.hasNextPage ? (
           <div className="ui-page-pad ui-search-more">
             <Button
-              variant="pill"
+              variant="link"
               busy={query.isFetchingNextPage}
               onClick={() => {
                 void query.fetchNextPage();

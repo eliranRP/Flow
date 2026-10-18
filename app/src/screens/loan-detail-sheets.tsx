@@ -8,7 +8,6 @@ import { PercentField } from "../ui/money-field";
 import { RadioRow } from "../ui/radio-row";
 import { SearchField } from "../ui/search-field";
 import { Sheet } from "../ui/sheet";
-import { TextLink } from "../ui/text-link";
 import { LOAN_PART_LABEL, LOAN_STATUS_LABEL } from "./loan-copy";
 import {
   FEES_NONE_DESC,
@@ -345,10 +344,9 @@ export function LoanRateSheet({
         <Button type="submit" full busy={busy === "save"} disabled={busy === "remove"}>שמירה</Button>
         {rate ? (
           <div className="ui-loan-sheet-quiet">
-            <TextLink
-              tone="quiet"
-              chevron={false}
-              className="ui-text-link-bad"
+            <Button
+              variant="link"
+              quiet
               busy={busy === "remove"}
               disabled={busy === "save"}
               onClick={() => {
@@ -361,9 +359,10 @@ export function LoanRateSheet({
                   else if (failed !== "") setError({ field: "form", text: failed });
                 });
               }}
+              className="ui-btn-link-bad"
             >
               הסרת השינוי
-            </TextLink>
+            </Button>
           </div>
         ) : null}
       </form>

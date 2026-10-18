@@ -99,7 +99,7 @@ describe("change sheet discard", () => {
   it("discards from ביטול השינוי through this sheet, not the first dialog", async () => {
     const onDiscard = vi.fn();
     renderSheet({ onDiscard });
-    expect(await screen.findByRole("button", { name: "ביטול השינוי" })).toHaveClass("ui-text-link-quiet");
+    expect(await screen.findByRole("button", { name: "ביטול השינוי" })).toHaveClass("ui-btn-quiet");
     const hold = document.querySelector(".ui-hold-line");
     if (!(hold instanceof HTMLElement)) throw new Error("hold line missing");
     expect(hold.getAttribute("role")).toBeNull();
@@ -202,7 +202,7 @@ describe("split discard", () => {
     renderSplit(undefined, "p1", "");
     fireEvent.click(await screen.findByRole("button", { name: "סגירה" }));
     const cancel = await screen.findByRole("button", { name: "ביטול השינוי" });
-    expect(cancel).toHaveClass("ui-text-link-quiet");
+    expect(cancel).toHaveClass("ui-btn-quiet");
     fireEvent.click(cancel);
     expect(await screen.findByRole("heading", { name: "התור" })).toBeInTheDocument();
   });

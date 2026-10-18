@@ -107,7 +107,7 @@ export function LoansList({ ctx, closedOpen = false }: { ctx: LoansHostCtx; clos
           body="נסו שוב בעוד רגע"
           action={(
             // The tint action every empty and error state uses (DESIGN-RULES §2.8, FLOW-334), not a fill.
-            <Button variant="pill" icon={<RefreshIcon />} busy={ctx.retrying} onClick={ctx.retry}>
+            <Button variant="secondary" icon={<RefreshIcon />} busy={ctx.retrying} onClick={ctx.retry}>
               ניסיון חוזר
             </Button>
           )}

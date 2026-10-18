@@ -22,7 +22,6 @@ import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ProjectsSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
-import { TextLink } from "../ui/text-link";
 import { ProjectFormSheet } from "./project-form-sheet";
 
 /** FLOW-445: the Projects tab. Rows are this month's cash per project, the overhead row last. */
@@ -72,7 +71,7 @@ export function ProjectsScreen({ sample, cashSample, finishedOpen: openFinished 
         stacked
         headerClassName="ui-tab-root-head"
         title="פרויקטים"
-        leading={holdWrites || phase.kind !== "ready" ? undefined : <TextLink tone="accent" chevron={false} onClick={() => { setOpen(true); }}>+ פרויקט חדש</TextLink>}
+        leading={holdWrites || phase.kind !== "ready" ? undefined : <Button variant="link" onClick={() => { setOpen(true); }}>+ פרויקט חדש</Button>}
         trailing={phase.kind !== "ready" ? <span className="ui-header-slot" aria-hidden="true" /> : (
           <IconButton to={`/search${search}`} label="חיפוש">
             <SearchIcon />
@@ -124,9 +123,9 @@ function ProjectsBody({
       <span ref={titleEnd} className="ui-compact-mark" aria-hidden="true" />
       {month.unassigned.count > 0 ? (
         <div className="ui-page-pad ui-projects-unassigned">
-          <TextLink to={`/review${search}`} tone="accent">
+          <Button variant="link" to={`/review${search}`} chevron>
             {unassignedCountLabel(month.unassigned.count)} · <bdi dir="ltr">{formatAmount(BigInt(unassignedNet), "detail", base)}</bdi> · לשיוך
-          </TextLink>
+          </Button>
         </div>
       ) : null}
       <div className="ui-page-pad ui-projects-head">
@@ -154,7 +153,7 @@ function ProjectsBody({
         <>
           <button type="button" className="ui-page-pad ui-projects-head ui-projects-finished-toggle" aria-expanded={finishedOpen} onClick={() => { setFinishedOpen(!finishedOpen); }}>
             <h2>הסתיימו · <bdi dir="ltr">{String(finished.length)}</bdi></h2>
-            <span className="ui-text-link">{finishedOpen ? "הסתר" : "הצג"}</span>
+            <span className="ui-projects-toggle-word">{finishedOpen ? "הסתר" : "הצג"}</span>
           </button>
           {finishedOpen ? (
             <List>

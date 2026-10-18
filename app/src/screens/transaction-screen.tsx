@@ -719,7 +719,7 @@ export function TransactionScreen({
       />
       <Sheet open={menu && canDelete} onOpenChange={setMenu} title="עוד" returnFocusRef={moreRef}>
         <div className="ui-stack">
-          <Button variant="danger" icon={<TrashIcon />} onClick={() => { setMenu(false); setConfirm(true); }}>מחיקה</Button>
+          <Button variant="danger-link" icon={<TrashIcon />} onClick={() => { setMenu(false); setConfirm(true); }}>מחיקה</Button>
         </div>
       </Sheet>
       <ConfirmSheet

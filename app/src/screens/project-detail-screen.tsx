@@ -21,7 +21,7 @@ import { BackButton } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
 import { DocumentIcon, MoreIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
-import { TextLink } from "../ui/text-link";
+import { Button } from "../ui/button";
 import { FocusTitle } from "../ui/focus-title";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
@@ -333,7 +333,7 @@ function ProjectBudget({ project, spentAgorot, part = "both" }: { project: NonNu
   return (
     <>
       {budget == null ? (
-        <TextLink tone="quiet" chevron={false} onClick={() => { setEditing(true); }}>+ הוספת תקציב</TextLink>
+        <Button variant="link" quiet onClick={() => { setEditing(true); }}>+ הוספת תקציב</Button>
       ) : (
         <BudgetCard spentMinor={spentAgorot} budgetMinor={budget} currency={currency} onEdit={() => { setEditing(true); }} />
       )}

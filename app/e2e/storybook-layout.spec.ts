@@ -56,7 +56,7 @@ async function layoutProblems(page: Page): Promise<string[]> {
     }
     if (offenders.length > 0) problems.push(`overflow: ${offenders.slice(0, 6).join("; ")}`);
 
-    const singleLine = document.querySelectorAll(".ui-chip-label, .ui-pill-label, .ui-text-link-label, .ui-seg-btn, .ui-seg-label");
+    const singleLine = document.querySelectorAll(".ui-chip-label, .ui-pill-label, .ui-btn-link .ui-btn-label, .ui-seg-btn, .ui-seg-label");
     for (const node of singleLine) {
       if (!(node instanceof HTMLElement)) continue;
       const style = getComputedStyle(node);
@@ -561,9 +561,8 @@ test("pressed buttons and chips keep the hover box", async ({ page }) => {
   const cases = [
     ["components-button--primary", ".ui-btn"],
     ["components-button--secondary", ".ui-btn"],
-    ["components-button--legacy", ".ui-btn-pill"],
-    ["components-button--legacy", ".ui-btn-ghost"],
-    ["components-button--legacy", ".ui-btn-danger"],
+    ["components-button--link", ".ui-btn-link"],
+    ["components-button--danger-link", ".ui-btn-danger-link"],
     ["components-chip--choice-off", ".ui-chip"],
     ["components-chip--suggested", ".ui-chip"],
     ["components-chip--selected", ".ui-chip"],
@@ -641,7 +640,7 @@ test("the categories hidden link wraps on the end side and does not truncate", a
     const buttons = [...node.querySelectorAll("button")];
     const end = buttons.find((button) => button.classList.contains("ui-cat-foot-end"));
     if (!(end instanceof HTMLElement)) return null;
-    const label = end.querySelector(".ui-text-link-label");
+    const label = end.querySelector(".ui-btn-label");
     if (!(label instanceof HTMLElement)) return null;
     const style = getComputedStyle(label);
     const footBox = node.getBoundingClientRect();
@@ -656,14 +655,14 @@ test("the categories hidden link wraps on the end side and does not truncate", a
   });
   expect(placed).toEqual({ ellipsis: false, fits: true, onEnd: true, inside: true });
 
-  await hidden.locator(".ui-text-link-label").evaluate((node) => {
+  await hidden.locator(".ui-btn-label").evaluate((node) => {
     node.textContent = "מוסתרות ארוכות מאוד שאי אפשר לקטוע באמצע השורה";
   });
   const wrapped = await foot.evaluate((node) => {
     const buttons = [...node.querySelectorAll("button")];
     const end = buttons.find((button) => button.classList.contains("ui-cat-foot-end"));
     if (!(end instanceof HTMLElement)) return null;
-    const label = end.querySelector(".ui-text-link-label");
+    const label = end.querySelector(".ui-btn-label");
     if (!(label instanceof HTMLElement)) return null;
     const footBox = node.getBoundingClientRect();
     const pad = Number.parseFloat(getComputedStyle(node).paddingLeft);

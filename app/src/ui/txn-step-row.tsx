@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type Ref, type RefObject } from "react";
 import { cx } from "./cx";
 import { ReviewCount, reviewCountDigits } from "./review-count";
-import { TextLink } from "./text-link";
+import { Button } from "./button";
 
 /**
  * True while the mark (the end of the stepped content) sits below the row's top edge, that is while
@@ -72,9 +72,9 @@ export function TxnStepRow({ index, total, atStart, atEnd, onPrev, onNext, prevR
         data-toast-floor=""
         data-under={under ? "" : undefined}
       >
-        <TextLink className={cx("ui-txn-step-btn", atStart && "ui-txn-step-off")} chevron={false} label="התנועה הקודמת" buttonRef={prevRef} onClick={onPrev}>
+        <Button variant="link" aria-label="התנועה הקודמת" buttonRef={prevRef} onClick={onPrev} className={cx("ui-txn-step-btn", atStart && "ui-txn-step-off")}>
           הקודמת
-        </TextLink>
+        </Button>
         <p ref={countRef} className="ui-txn-step-count" tabIndex={-1}>
           {/* The reserved digits are drawing only; a screen reader hears the plain place. */}
           <span aria-hidden="true">
@@ -88,9 +88,9 @@ export function TxnStepRow({ index, total, atStart, atEnd, onPrev, onNext, prevR
           </span>
           <span className="sr-only">{place}</span>
         </p>
-        <TextLink className={cx("ui-txn-step-btn", atEnd && "ui-txn-step-off")} chevron={false} label="התנועה הבאה" buttonRef={nextRef} onClick={onNext} busy={nextBusy}>
+        <Button variant="link" aria-label="התנועה הבאה" buttonRef={nextRef} onClick={onNext} busy={nextBusy} className={cx("ui-txn-step-btn", atEnd && "ui-txn-step-off")}>
           הבאה
-        </TextLink>
+        </Button>
       </div>
     </>
   );

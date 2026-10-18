@@ -3,7 +3,7 @@ import { Banner, BannerRows, Notice, type BannerRow } from "./banner";
 import { CalendarIcon, DocumentIcon, ReviewIcon, TrendUpIcon } from "./icons";
 import { HintParts } from "./hint-parts";
 import { longHebrew, padded } from "./story-support";
-import { TextLink } from "./text-link";
+import { Button } from "./button";
 
 const meta = {
   title: "Components/Banner",
@@ -137,7 +137,7 @@ export const LongHebrew: Story = {
 };
 export const WithAction: Story = {
   args: { title: "3 שויכו אוטומטית היום" },
-  render: (args) => <Banner {...args} icon={<ReviewIcon />} action={<TextLink to="/review">לרשימה</TextLink>} />,
+  render: (args) => <Banner {...args} icon={<ReviewIcon />} action={<Button variant="link" to="/review" chevron>לרשימה</Button>} />,
 };
 export const NoticeNeutral: Story = {
   args: { title: "מצב תצוגה" },

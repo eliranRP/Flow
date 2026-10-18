@@ -35,7 +35,7 @@ function AboveFloor(props: { children: string; action: string; tone?: "ok" | "ba
       <div className="ui-toast-slot" />
       <ActionBar>
         <button className="ui-btn ui-btn-primary" type="button">אישור</button>
-        <button className="ui-btn ui-btn-ghost" type="button">דלג</button>
+        <button className="ui-btn ui-btn-link" type="button">דלג</button>
       </ActionBar>
       <div className="ui-toast-host" ref={host}>
         <Toast action={props.action} onAction={() => undefined} tone={props.tone}>
@@ -167,7 +167,7 @@ function AboveBar({ children }: { children: string }) {
         <Button full>אישור</Button>
         <ActionBarRow>
           <Button variant="secondary">שינוי</Button>
-          <Button variant="ghost">דלג</Button>
+          <Button variant="link">דלג</Button>
         </ActionBarRow>
       </ActionBar>
       <div className="ui-toast-host" data-place="bar" ref={host}>

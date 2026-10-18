@@ -44,7 +44,6 @@ import { AlertIcon, CloseIcon, PlusIcon } from "../ui/icons";
 import { MoneyField, PercentField } from "../ui/money-field";
 import { ReversalTag } from "../ui/suggest-tag";
 import { SwipeRow } from "../ui/swipe-row";
-import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 import {
   Amount,
@@ -465,7 +464,7 @@ export function LineSplitEditor({
             <Banner
               icon={<AlertIcon />}
               title={lineSplitCopy(bannerReason)}
-              hint={bannerReason === "line has an open review" ? <TextLink to={line.reviewId ? reviewFocusPath(search, line.reviewId) : `/review${search}`}>לתור</TextLink> : undefined}
+              hint={bannerReason === "line has an open review" ? <Button variant="link" to={line.reviewId ? reviewFocusPath(search, line.reviewId) : `/review${search}`} chevron>לתור</Button> : undefined}
             />
           </div>
         ) : split?.partsMatch === false ? (
@@ -631,9 +630,9 @@ export function LineSplitEditor({
         </fieldset>
         {/* Outside the fieldset: the server clears a line it would not split (a loan split, an open review). */}
         <div className="ui-lsplit-actions">
-          <TextLink chevron={false} disabled={busy || blocked} onClick={splitEqually}>חלוקה שווה</TextLink>
+          <Button variant="link" disabled={busy || blocked} onClick={splitEqually}>חלוקה שווה</Button>
           {split != null && split.parts.length > 0 ? (
-            <TextLink chevron={false} className="ui-lsplit-clear-link" disabled={busy} onClick={() => { setConfirmClear(true); }}>הסרת הפיצול</TextLink>
+            <Button variant="link" disabled={busy} onClick={() => { setConfirmClear(true); }} className="ui-lsplit-clear-link">הסרת הפיצול</Button>
           ) : null}
         </div>
         <p className="ui-lsplit-footnote">כל חלק נספר ברווח של הפרויקט שלו ובקטגוריה שלו. אפשר אותו פרויקט עם כמה קטגוריות. בבנק נשארת תנועה אחת.</p>

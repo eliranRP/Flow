@@ -4,12 +4,10 @@
   .ui-review-line:hover::before {
     background: var(--surface-hover);
   }
-
-  .ui-chip-choice:hover,
-  .ui-btn-ghost:hover,
-  .ui-text-link:hover,
-  .ui-banner:hover,
-  .ui-banner-row:hover {
+.ui-chip-choice:hover,
+.ui-btn-link:hover,
+.ui-banner:hover,
+.ui-banner-row:hover {
     background: var(--surface-hover);
   }
 }

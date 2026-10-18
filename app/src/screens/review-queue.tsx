@@ -30,7 +30,6 @@ import { REVIEW_MISMATCH_ID, REVIEW_MISSING_ID, ReviewCard, SPLIT_MISMATCH_ACTIO
 import { ActionBar, ActionBarRow } from "../ui/action-bar";
 import { jevReasonText, reviewFlagView, reviewPaidView } from "../review-copy";
 import { ScreenHeader } from "../ui/screen-header";
-import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 import { isReversal } from "../reversal";
 import { useLineSplitQuery } from "./line-split";
@@ -477,7 +476,7 @@ export function ReviewQueue({
   }
   const skipButton = (
     <Button
-      variant="ghost"
+      variant="link"
       disabled={leaving}
       onClick={() => {
         if (leaving) return;
@@ -513,7 +512,7 @@ export function ReviewQueue({
         title="לאישור"
         backTo={backTo ?? "/"}
         backText={backTo == null ? "בית" : undefined}
-        trailing={changeTo == null && listPlace == null ? <TextLink className="ui-review-show-all" to={reviewListPath(search)} chevron={false}>הצגת הכול</TextLink> : undefined}
+        trailing={changeTo == null && listPlace == null ? <Button variant="link" to={reviewListPath(search)} className="ui-review-show-all">הצגת הכול</Button> : undefined}
       />
       {rows.length > 0 ? (
         <>
@@ -534,10 +533,10 @@ export function ReviewQueue({
               </span>
             )}
             {auto > 0 ? (
-              <TextLink className="ui-review-auto" to={filedTo ?? `/review/filed${search}`} chevron={false}>
+              <Button variant="link" to={filedTo ?? `/review/filed${search}`} className="ui-review-auto">
                 <ReviewCount value={auto} digits={reviewCountDigits(auto)} side="total" />
                 {" אושרו אוטומטית היום"}
-              </TextLink>
+              </Button>
             ) : null}
           </div>
           {listPlace == null && !holdWrites ? <ReviewSegments index={index} total={total} /> : null}

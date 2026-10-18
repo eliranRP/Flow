@@ -31,9 +31,9 @@ describe("mobile UI consistency pass (FLOW-328)", () => {
   });
 
   it("gives empty and error state actions the standard 44px button shape", () => {
-    expect(declared(".ui-empty-action .ui-btn-pill", "min-height")).toBe("var(--touch-min)");
-    expect(declared(".ui-empty-action .ui-btn-pill", "border-radius")).toBe("var(--radius-button)");
-    expect(declared(".ui-empty-action .ui-btn-pill", "height")).toBe("auto");
+    expect(declared(".ui-empty-action .ui-btn-secondary", "min-height")).toBe("var(--touch-min)");
+    expect(declared(".ui-empty-action .ui-btn-secondary", "height")).toBe("var(--touch-min)");
+    expect(declared(".ui-btn.ui-btn-secondary", "border-radius")).toBe("var(--radius-button)");
   });
 
   it("puts the מצב תצוגה tag on the start side at the gutter, clear of the band curve", () => {

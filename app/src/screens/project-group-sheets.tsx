@@ -9,7 +9,6 @@ import { IconButton } from "../ui/icon-button";
 import { RadioRow } from "../ui/radio-row";
 import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
-import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 
 /** FLOW-360 A: the project's group, picked from its ⋯ menu. */
@@ -240,16 +239,16 @@ export function ProjectGroupSheets({
             ))}
           </div>
           <div className="ui-change-links">
-            <TextLink
+            <Button
+              variant="link"
               icon={<PlusIcon size={16} />}
-              chevron={false}
               disabled={move.isPending}
               onClick={() => {
                 onView("new");
               }}
             >
               קבוצה חדשה
-            </TextLink>
+            </Button>
           </div>
         </div>
       </Sheet>

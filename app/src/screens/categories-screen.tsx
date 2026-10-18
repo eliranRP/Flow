@@ -11,7 +11,7 @@ import { mergeFailureText, pnlFailureText } from "../category-copy";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { EmptyState } from "../ui/empty-state";
-import { ChevronDownIcon, PlusIcon, TagIcon } from "../ui/icons";
+import { PlusIcon, TagIcon } from "../ui/icons";
 import { EMPTY_FILTERS, searchFiltersQuery } from "../search";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
@@ -19,7 +19,6 @@ import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
 import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
-import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 import { CategoryMenuSheet, countsAsRehab } from "./category-sheet";
 import { loanUseLine, useCategoryLoanUses, type LoanCategoryColumns, type LoanLine } from "./category-loan-use";
@@ -320,17 +319,17 @@ export function CategoriesScreen({
       {/* FLOW-513: the board puts the new-category link above the card, the hidden toggle below it. */}
       <div className="ui-cat-foot">
         {holdWrites ? null : (
-        <TextLink
-          chevron={false}
-          wrap
+        <Button
+          variant="link"
           buttonRef={createOpener}
           icon={<PlusIcon size={16} stroke={2.2} />}
           onClick={() => {
             setCreateOpen(true);
           }}
+          className="ui-btn-link-wrap"
         >
           {parent == null ? "קטגוריה חדשה" : "הוספת תת־קטגוריה"}
-        </TextLink>
+        </Button>
         )}
       </div>
       {shown.length === 0 && hiddenRows.length === 0 && parent == null ? (
@@ -353,20 +352,18 @@ export function CategoriesScreen({
       ) : null}
       <div className="ui-cat-foot">
         {hiddenRows.length > 0 ? (
-          <TextLink
-            tone="quiet"
-            chevron={false}
-            wrap
-            className="ui-cat-foot-end"
+          <Button
+            variant="link"
+            quiet
             expanded={hiddenExpanded}
             controls="categories-hidden"
-            trailing={<ChevronDownIcon size={16} />}
             onClick={() => {
               setShowHidden((current) => !current);
             }}
+            className="ui-cat-foot-end ui-btn-link-wrap"
           >
             מוסתרות · <bdi className="ui-num">{String(hiddenRows.length)}</bdi>
-          </TextLink>
+          </Button>
         ) : null}
       </div>
       {hiddenRows.length > 0 ? (

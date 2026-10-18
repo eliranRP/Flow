@@ -15,7 +15,6 @@ import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { Sheet } from "../ui/sheet";
 import { Skeleton } from "../ui/skeleton";
-import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { useDashboardQuery } from "../use-books";
@@ -142,7 +141,7 @@ export function LoanDetailScreen({
           title={LOAN_ERROR_TITLE}
           body="נסו שוב בעוד רגע"
           action={(
-            <Button variant="pill" icon={<RefreshIcon />} busy={read.retrying} onClick={read.retry}>
+            <Button variant="secondary" icon={<RefreshIcon />} busy={read.retrying} onClick={read.retry}>
               ניסיון חוזר
             </Button>
           )}
@@ -158,7 +157,7 @@ export function LoanDetailScreen({
           icon={<LoanIcon />}
           title={LOAN_MISSING_TITLE}
           body="ייתכן שנמחקה או שייכת לעסק אחר."
-          action={<Button variant="pill" to={listBack}>לרשימת ההלוואות</Button>}
+          action={<Button variant="secondary" to={listBack}>לרשימת ההלוואות</Button>}
         />
       </div>
     );
@@ -355,7 +354,7 @@ function LoanDetailReady({
               <div className="ui-loan-status">
                 <StatusDot>{statusPill(loan)}</StatusDot>
                 {/* The סטטוס row below goes on the page too; this reopens the same sheet beside the pill. */}
-                {holdWrites ? null : <TextLink size="label" tone="quiet" chevron={false} label="שינוי מצב" onClick={() => { open("status"); }}>שינוי</TextLink>}
+                {holdWrites ? null : <Button variant="link" quiet aria-label="שינוי מצב" onClick={() => { open("status"); }}>שינוי</Button>}
               </div>
             ) : null}
             {flagged.length > 0 ? (

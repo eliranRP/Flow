@@ -109,7 +109,7 @@
   align-items: baseline;
 }
 
-.ui-project-stack .ui-investment-head .ui-text-link {
+.ui-project-stack .ui-investment-head .ui-btn-link {
   block-size: auto;
   min-block-size: 0;
 }
@@ -128,7 +128,7 @@
   color: var(--color-text-secondary);
 }
 
-.ui-project-stack .ui-budget-head .ui-text-link {
+.ui-project-stack .ui-budget-head .ui-btn-link {
   block-size: 32px;
   min-block-size: 32px;
 }

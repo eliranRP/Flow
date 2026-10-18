@@ -24,6 +24,7 @@
 .ui-split-bad {
   color: var(--color-bad);
 }
+
 .ui-lsplit-meta {
   margin: var(--space-1) 0 0;
   color: var(--color-text-muted);
@@ -48,6 +49,7 @@
   font: inherit;
   text-align: start;
 }
+
 .ui-lsplit-pick {
   display: flex;
   flex: 1 1 auto;

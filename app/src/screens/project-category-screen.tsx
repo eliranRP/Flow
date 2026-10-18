@@ -153,7 +153,7 @@ export function ProjectCategoryScreen({
       {more ? (
         <div className="ui-page-pad">
           <Button
-            variant="pill"
+            variant="link"
             busy={!sample && category.isFetchingNextPage}
             onClick={() => {
               if (sample) {

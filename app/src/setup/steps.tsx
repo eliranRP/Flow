@@ -285,7 +285,7 @@ export function StepConnect({
               ) : (
                 <Button
                   type="button"
-                  variant="pill"
+                  variant="link"
                   busy={row.busy}
                   disabled={pending != null && pending !== kind}
                   onClick={() => { openConnection(kind, open); }}
@@ -392,7 +392,7 @@ export function StepProjects({
         <div className="ui-onb-add-field">
           <TextField label={PROJECT_PLACEHOLDER} value={draft} onChange={(event) => { setDraft(event.target.value); }} />
         </div>
-        <Button type="submit" variant="pill" disabled={!addable}>{PROJECT_ADD}</Button>
+        <Button type="submit" variant="secondary" disabled={!addable}>{PROJECT_ADD}</Button>
       </form>
       {chips.length > 0 ? (
         <div className="ui-onb-chips">

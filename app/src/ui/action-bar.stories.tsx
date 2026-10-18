@@ -51,7 +51,7 @@ function ReviewWithBar({ kind, busy = false, disabled = false, toast }: BarArgs)
               <div className="ui-review-approve">
                 <Button variant="secondary" busy={busy} aria-describedby={REVIEW_MISMATCH_ID}>{SPLIT_MISMATCH_KEEP}</Button>
               </div>
-              <Button variant="ghost" disabled={busy}>דלג</Button>
+              <Button variant="link" disabled={busy}>דלג</Button>
             </ActionBarRow>
           </>
         ) : (
@@ -63,7 +63,7 @@ function ReviewWithBar({ kind, busy = false, disabled = false, toast }: BarArgs)
             </div>
             <ActionBarRow>
               <Button variant="secondary">שינוי</Button>
-              <Button variant="ghost">דלג</Button>
+              <Button variant="link">דלג</Button>
             </ActionBarRow>
           </>
         )}

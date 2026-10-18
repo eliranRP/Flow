@@ -435,8 +435,8 @@
   justify-content: center;
 }
 
-.ui-text-link-bad,
-.ui-text-link-bad.ui-text-link-quiet {
+.ui-btn.ui-btn-link.ui-btn-link-bad,
+.ui-btn.ui-btn-link.ui-btn-link-bad.ui-btn-quiet {
   color: var(--color-bad);
 }
 

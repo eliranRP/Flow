@@ -40,7 +40,6 @@ export { SelectField } from "./select-field";
 export { Sheet, SheetSurface } from "./sheet";
 export { TabBar } from "./tab-bar";
 export { TextField } from "./text-field";
-export { TextLink } from "./text-link";
 export { Toast, ToastProvider, useToast } from "./toast";
 export { TopBand } from "./top-band";
 export { Wordmark } from "./wordmark";

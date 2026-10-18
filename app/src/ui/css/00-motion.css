@@ -5,10 +5,12 @@
 .m-press {
   transition: opacity var(--motion-press) var(--ease-standard), transform var(--motion-press) var(--ease-standard);
 }
+
 /* A disabled, aria-disabled or busy control (Button sets aria-disabled when busy) does not answer a tap. */
 .m-press:active:not(:disabled, [aria-disabled="true"]) {
   opacity: 0.72;
 }
+
 .m-press.m-press-scale:active:not(:disabled, [aria-disabled="true"]) {
   transform: scale(0.985);
 }
@@ -23,6 +25,7 @@
     transform: none;
   }
 }
+
 .m-page-enter {
   animation: m-page-enter var(--motion-page) var(--ease-enter) both;
   animation-delay: calc(min(var(--i, 0), 4) * var(--motion-stagger));
@@ -38,6 +41,7 @@
     transform: none;
   }
 }
+
 .m-push-in {
   animation: m-push-in var(--motion-page) var(--ease-enter);
 }
@@ -50,6 +54,7 @@
     transform: translateY(0);
   }
 }
+
 .m-bar-in {
   animation: m-bar-in var(--motion-bar) var(--ease-enter);
 }
@@ -62,6 +67,7 @@
     transform: translateY(-110%);
   }
 }
+
 .m-bar-out {
   animation: m-bar-out var(--motion-bar) var(--ease-exit) forwards;
 }
@@ -79,10 +85,12 @@
     opacity: 0;
   }
 }
+
 .m-row-leave {
   display: grid;
   animation: m-row-leave var(--motion-sheet-out) var(--ease-exit) forwards;
 }
+
 .m-row-leave > * {
   min-height: 0;
   overflow: hidden;
@@ -98,6 +106,7 @@
     opacity: 1;
   }
 }
+
 @keyframes m-toast-rise {
   from {
     transform: translateY(var(--rise-toast));
@@ -106,6 +115,7 @@
     transform: none;
   }
 }
+
 @keyframes m-toast-fade-out {
   from {
     opacity: 1;
@@ -114,6 +124,7 @@
     opacity: 0;
   }
 }
+
 @keyframes m-toast-sink {
   from {
     transform: none;
@@ -131,6 +142,7 @@
     transform: scaleX(1);
   }
 }
+
 .m-bar-grow {
   transform-origin: right;
   animation: m-bar-grow var(--motion-bar-grow) var(--ease-enter) both;

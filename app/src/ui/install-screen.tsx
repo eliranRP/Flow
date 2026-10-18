@@ -66,7 +66,7 @@ export function InstallScreen({
         {mode === "android-prompt" ? (
           <>
             <Button full icon={<DownloadIcon size={20} />} onClick={() => { void install(); }}>התקנה</Button>
-            <Button variant="ghost" full quiet className="ui-install-later" onClick={onDismiss}>לא עכשיו</Button>
+            <Button variant="link" full quiet className="ui-install-later" onClick={onDismiss}>לא עכשיו</Button>
           </>
         ) : (
           <Button variant="secondary" full onClick={onDismiss}>הבנתי</Button>

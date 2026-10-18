@@ -110,7 +110,7 @@ export function LoanPartsSheet({
           {onEdit != null ? (
             <Button
               type="button"
-              variant="pill"
+              variant="secondary"
               full
               className="ui-loan-parts-edit"
               disabled={loading || unmatching || editDisabled}
@@ -133,7 +133,7 @@ export function LoanPartsSheet({
           )}
           <Button
             type="button"
-            variant="ghost"
+            variant="link"
             quiet
             full
             busy={unmatching}

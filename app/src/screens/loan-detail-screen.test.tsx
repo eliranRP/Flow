@@ -122,10 +122,10 @@ describe("loan page: states and the viewer", () => {
     await waitFor(() => { expect(screen.getByText("יתרה היום")).toBeInTheDocument(); });
   });
 
-  it("offers the tint ניסיון חוזר on a failed read, not the filled one (FLOW-334)", () => {
+  it("offers the outline ניסיון חוזר on a failed read, not the filled one (FLOW-334)", () => {
     renderLoan(oneLoanStore("loan-mortgage", { phase: "error" }), "loan-mortgage");
     const retry = screen.getByRole("button", { name: "ניסיון חוזר" });
-    expect(retry).toHaveClass("ui-btn-pill");
+    expect(retry).toHaveClass("ui-btn-secondary");
     expect(retry).not.toHaveClass("ui-btn-retry");
   });
 

@@ -204,7 +204,7 @@ describe("App", () => {
     // FLOW-326: the shared Back chevron in the header bar, not a text link.
     const back = screen.getByRole("button", { name: "חזרה" });
     expect(back).toHaveClass("ui-icon-btn");
-    expect(back).not.toHaveClass("ui-text-link");
+    expect(back).not.toHaveClass("ui-btn-link");
     expect(back.closest(".ui-page-title-row")).not.toBeNull();
     expect(screen.getByRole("link", { name: HELP_EMAIL }).closest(".ui-page-pad")).not.toBeNull();
   });

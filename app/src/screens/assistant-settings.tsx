@@ -16,7 +16,6 @@ import { FormError } from "../ui/layout";
 import { RadioRow } from "../ui/radio-row";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
-import { TextLink } from "../ui/text-link";
 import { useBlockedPreview } from "./screen-shared";
 import { screenPhase } from "../query-phase";
 
@@ -303,7 +302,7 @@ export function AiConnectionPage({
       <ConnectionPage title="חיבור ל־AI" subtitle={headerSubtitle} backTo={backTo}>
         <div className="ui-stack">
           <p>כדי לחבר עוזר צריך עסק.</p>
-          <TextLink to="/setup/1">פרטי העסק</TextLink>
+          <Button variant="link" to="/setup/1" chevron>פרטי העסק</Button>
         </div>
       </ConnectionPage>
       </ViewerScope>

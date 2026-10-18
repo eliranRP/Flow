@@ -227,7 +227,7 @@ describe("LoanMatchOffer", () => {
     expect(screen.getByText("אפשר להוסיף הלוואה חדשה, ואז לשייך אליה את התשלום.")).toBeInTheDocument();
     const next = screen.getByRole("link", { name: "הלוואה חדשה" });
     expect(next).toHaveAttribute("href", "/loans?new=loan");
-    expect(next).toHaveClass("ui-btn-pill");
+    expect(next).toHaveClass("ui-btn-secondary");
   });
 
   it("hides matching for a viewer", () => {

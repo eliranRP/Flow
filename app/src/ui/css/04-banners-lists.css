@@ -208,36 +208,22 @@
   text-align: center;
 }
 
-.ui-text-link {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-half);
-  max-width: 100%;
-  min-width: var(--touch-min);
-  min-height: var(--touch-min);
-  color: var(--color-accent-text);
-  font-size: var(--type-label-size);
-  font-weight: var(--type-label-weight);
-  text-decoration: none;
-}
-
-.ui-text-link > svg,
 .ui-btn > svg,
 .ui-btn > .ui-spinner {
   flex: none;
 }
 
-.ui-text-link-quiet {
+.ui-btn.ui-btn-link.ui-btn-quiet {
   color: var(--color-text-secondary);
 }
 
-.ui-text-link-wrap {
+.ui-btn-link.ui-btn-link-wrap {
   flex: 0 0 auto;
   max-inline-size: 100%;
   white-space: normal;
 }
 
-.ui-text-link-wrap .ui-text-link-label {
+.ui-btn-link.ui-btn-link-wrap .ui-btn-label {
   overflow: visible;
   text-overflow: clip;
   white-space: normal;
@@ -260,7 +246,7 @@
   }
 }
 
-.ui-text-link-hint {
+.ui-btn.ui-btn-link.ui-btn-link-hint {
   min-height: 0;
   min-width: 0;
   color: var(--color-text-muted);
@@ -273,7 +259,7 @@
 
 /* FLOW-502: a link inside a sentence of hint text: the sentence's own size and line height, the
    link colour, and a 44px tap area that grows into the note's own lines (§3.7) without moving them. */
-.ui-text-link-inline {
+.ui-btn.ui-btn-link.ui-btn-link-inline {
   position: relative;
   display: inline;
   min-width: 0;
@@ -283,25 +269,20 @@
   line-height: inherit;
 }
 
-.ui-text-link-inline::after {
+.ui-btn-link-inline::after {
   content: "";
   position: absolute;
   inset-inline: 0;
   inset-block: calc((var(--touch-min) - 100%) / -2);
 }
 
-.ui-text-link:is(:focus-visible, [data-focus-ring]:focus) {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 2px;
-}
-
-.ui-row > .ui-text-link {
+.ui-row > .ui-btn-link {
   flex: none;
   max-width: none;
   margin-block: calc(var(--space-half) * -1);
 }
 
-.ui-row > .ui-text-link .ui-text-link-label {
+.ui-row > .ui-btn-link .ui-btn-label {
   overflow: visible;
   text-overflow: clip;
 }

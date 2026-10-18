@@ -187,7 +187,7 @@
   line-height: var(--type-cents-line);
 }
 
-.ui-change-links .ui-text-link {
+.ui-change-links .ui-btn-link {
   gap: var(--space-2);
   justify-content: flex-start;
 }
@@ -249,6 +249,6 @@
 .ui-review-pick .ui-pick-name { flex: 1; }
 .ui-review-pick .ui-pick-name .ui-suggest-tag { margin-inline-start: auto; background: none; padding: 0; color: var(--color-text-muted); font-weight: var(--type-line2-weight); }
 .ui-review-pick .ui-change-links { margin-top: calc(-1 * var(--space-3)); border-top: 0; }
-.ui-review-pick .ui-change-links .ui-text-link { min-block-size: 52px; padding-inline: var(--space-1); font-weight: var(--type-btn-weight); }
+.ui-review-pick .ui-change-links .ui-btn-link { min-block-size: 52px; padding-inline: var(--space-1); font-weight: var(--type-btn-weight); }
 .ui-review-pick .ui-switch-row { min-block-size: 52px; padding-block: 0; padding-inline: calc(var(--space-4) - var(--space-1) / 2); border-radius: var(--radius-toast); background: var(--color-raised); }
 .ui-review-pick .ui-switch-label { font-size: var(--type-line2-size); }

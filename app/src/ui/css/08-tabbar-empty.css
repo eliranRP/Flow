@@ -122,13 +122,6 @@
   margin-top: var(--space-2);
 }
 
-/* Empty and error states share the standard 44px button shape, not the 36px pill (FLOW-328, ds-7). */
-.ui-empty-action .ui-btn-pill {
-  height: auto;
-  min-height: var(--touch-min);
-  border-radius: var(--radius-button);
-}
-
 /* The outline pill that only helps is 44px on the board, the primary next step 52px. */
 .ui-empty-action .ui-btn-secondary {
   height: var(--touch-min);
