@@ -164,4 +164,15 @@ describe("Home's cash (FLOW-364: the redesigned Home)", () => {
     expect(reads.map((c) => c.args)).toContainEqual(expect.objectContaining({ p_from: `${current}-01` }));
     for (const read of reads) expect(read.args).not.toHaveProperty("p_basis");
   });
+
+  it("opens the profit page on the past month Home shows, not the current one", async () => {
+    wrap(0, `/?month=${month(1)}`);
+    await screen.findByText("תזרים · חודש סגור");
+    rpc.calls.length = 0;
+    fireEvent.click(await screen.findByRole("button", { name: /^רווח החודש/ }));
+    expect(await screen.findByRole("heading", { name: "רווח" })).toBeInTheDocument();
+    const reads = rpc.calls.filter((c) => c.name === "get_dashboard");
+    expect(reads.map((c) => c.args)).toContainEqual(expect.objectContaining({ p_from: `${month(1)}-01` }));
+    expect(reads.map((c) => c.args)).not.toContainEqual(expect.objectContaining({ p_from: `${current}-01` }));
+  });
 });
