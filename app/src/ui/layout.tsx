@@ -3,10 +3,6 @@ import { useGoBack } from "./back";
 import { FocusTitle } from "./focus-title";
 import { TextLink } from "./text-link";
 
-export function BandHero({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={className == null ? "ui-band-hero" : `ui-band-hero ${className}`}>{children}</div>;
-}
-
 export function FormError({ children }: { children: ReactNode }) {
   return (
     <p className="ui-form-error" role="alert" dir="rtl">

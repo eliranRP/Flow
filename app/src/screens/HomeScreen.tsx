@@ -8,6 +8,7 @@ import { useAuth } from "../auth";
 import { cashMonthKey, cashRows, profitPath, shownCashRows } from "../cash";
 import { useCashMonthData, useCashMonthsQuery, useCashYearsQuery } from "../use-cash";
 import { useCashToDayQuery } from "../use-cash-to-day";
+import { Amount } from "../ui/amount";
 import { useSheetHistory } from "../ui/back";
 import { pageEnterStyle } from "../ui/motion";
 import { israelToday } from "../ui/date-math";
@@ -18,7 +19,6 @@ import { MonthDrawer } from "./month-drawer";
 import type { BannerRow } from "../ui/banner";
 import { Button } from "../ui/button";
 import { FailureLine } from "../ui/empty-state";
-import { Hero } from "../ui/hero";
 import { BankIcon } from "../ui/icons";
 import { CashHomeSkeleton } from "./home-skeleton";
 import { TopBand } from "../ui/top-band";
@@ -83,7 +83,13 @@ export function CashEmptyHome({
       >
         <div className="ui-band-body ui-band-body-empty">
           <p className="ui-band-month-static">{homeMonthLabel(currentKey)}</p>
-          <Hero label={`תזרים ${monthName(currentKey)}`} agorot={0n} currency={currency} explanation="עוד אין תנועות. הן יגיעו מהבנק." />
+          <div className="ui-band-hero">
+            <div className="ui-hero">
+              <p className="ui-band-label t-label">{`תזרים ${monthName(currentKey)}`}</p>
+              <h1 className="ui-hero-figure ui-band-fade"><span><Amount agorot={0n} currency={currency} size="hero" /></span></h1>
+              <p className="ui-hero-explain t-label">עוד אין תנועות. הן יגיעו מהבנק.</p>
+            </div>
+          </div>
         </div>
       </TopBand>
       <section className="ui-home-empty-card" dir="rtl" aria-labelledby="home-empty-title">
