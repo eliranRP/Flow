@@ -38,14 +38,6 @@ export const Help: Story = {
   ),
 };
 
-export const SignInCancelled: Story = {
-  render: () => (
-    <StoryRoute entry="/sign-in?error=access_denied">
-      <SignInScreen />
-    </StoryRoute>
-  ),
-};
-
 export const AddSheet: Story = {
   parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => (

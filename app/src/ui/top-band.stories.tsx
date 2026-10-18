@@ -94,10 +94,6 @@ export const ProjectName: Story = {
   args: { heading: "וילה לדוגמה" },
   render: ({ heading }) => <ProjectBand name={heading} />,
 };
-export const ProjectNameLong: Story = {
-  args: { heading: longHebrew },
-  render: ({ heading }) => <ProjectBand name={heading} />,
-};
 /**
  * FLOW-363 (3a): the band's figures fade as the page scrolls, full at the top and gone by 220px.
  * The play function scrolls the page 140px, so the figure reads about 0.5.

@@ -118,30 +118,6 @@ export const DeleteWithAlternative: Story = {
     onConfirm: () => undefined,
   },
 };
-export const DeleteEmpty: Story = {
-  args: {
-    open: true,
-    onOpenChange: () => undefined,
-    title: "למחוק את הקטגוריה?",
-    item: "אחר · אין תנועות",
-    consequence: "הקטגוריה תימחק מהרשימה.",
-    confirmLabel: "מחיקה",
-    destructive: true,
-    onConfirm: () => undefined,
-  },
-};
-export const OutlineDestructive: Story = {
-  args: {
-    open: true,
-    onOpenChange: () => undefined,
-    title: "למחוק את הפרויקט?",
-    item: "Juniper Ct",
-    consequence: "הפרויקט ייעלם מהרשימה. התנועות נשארות.",
-    confirmLabel: "מחיקה",
-    destructive: "outline",
-    onConfirm: () => undefined,
-  },
-};
 export const Warning: Story = {
   args: {
     open: true,

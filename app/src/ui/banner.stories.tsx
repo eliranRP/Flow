@@ -60,47 +60,12 @@ const unpaidOne: BannerRow = {
   hint: <><bdi dir="ltr">₪4,680</bdi> · לגבייה</>,
 };
 
-export const RowsBoth: Story = {
-  name: "Rows, review and unpaid",
-  args: { title: "" },
-  render: () => <BannerRows rows={[reviewRow, unpaidRow]} />,
-};
-export const RowsReviewOnly: Story = {
-  name: "Rows, review only",
-  args: { title: "" },
-  render: () => <BannerRows rows={[reviewRow]} />,
-};
-export const RowsUnpaidOnly: Story = {
-  name: "Rows, unpaid only",
-  args: { title: "" },
-  render: () => <BannerRows rows={[unpaidRow]} />,
-};
-export const RowsSingular: Story = {
-  name: "Rows, one of each",
-  args: { title: "" },
-  render: () => <BannerRows rows={[reviewOne, unpaidOne]} />,
-};
 // FLOW-403. The third row: late recurring bills, a count with no total.
 const missingRow: BannerRow = {
   id: "missing",
   to: "/recurring",
   icon: <CalendarIcon size={24} stroke={1.9} />,
   title: <><bdi dir="ltr">2</bdi> חשבונות לא הגיעו</>,
-};
-export const RowsThree: Story = {
-  name: "Rows, three",
-  args: { title: "" },
-  render: () => <BannerRows rows={[reviewRow, unpaidRow, missingRow]} />,
-};
-export const RowsMissingOnly: Story = {
-  name: "Rows, missing only",
-  args: { title: "" },
-  render: () => <BannerRows rows={[missingRow]} />,
-};
-export const RowsMissingOne: Story = {
-  name: "Rows, one late bill",
-  args: { title: "" },
-  render: () => <BannerRows rows={[reviewRow, { ...missingRow, title: "חשבון אחד לא הגיע" }]} />,
 };
 // FLOW-415 (layout A). The last row: a payment well above its usual amount; a tap opens the payment.
 const changeRow: BannerRow = {
@@ -110,18 +75,24 @@ const changeRow: BannerRow = {
   title: "חשמל עלה ב־38%",
   hint: <HintParts parts={[<bdi key="now" dir="ltr">₪2,550</bdi>, <>בדרך כלל <bdi dir="ltr">₪1,850</bdi></>]} />,
 };
-export const RowsChargeUp: Story = {
-  name: "Rows, a charge above usual",
-  args: { title: "" },
-  render: () => <BannerRows rows={[{ ...reviewRow, title: <><bdi dir="ltr">2</bdi> פריטים ממתינים לאישור</> }, missingRow, changeRow]} />,
+/** The pending card's rows: review, unpaid, late bills and a charge above usual, alone or together (the control picks the set). */
+const ROW_SETS: Record<string, BannerRow[]> = {
+  "review and unpaid": [reviewRow, unpaidRow],
+  "review only": [reviewRow],
+  "unpaid only": [unpaidRow],
+  "one of each": [reviewOne, unpaidOne],
+  "three": [reviewRow, unpaidRow, missingRow],
+  "late bill only": [missingRow],
+  "one late bill": [reviewRow, { ...missingRow, title: "חשבון אחד לא הגיע" }],
+  "a charge above usual": [{ ...reviewRow, title: <><bdi dir="ltr">2</bdi> פריטים ממתינים לאישור</> }, missingRow, changeRow],
+  "a charge above usual only": [changeRow],
 };
-export const RowsChargeUpOnly: Story = {
-  name: "Rows, a charge above usual only",
-  args: { title: "" },
-  render: () => <BannerRows rows={[changeRow]} />,
+export const Rows: StoryObj<{ set: string }> = {
+  args: { set: "review and unpaid" },
+  argTypes: { set: { control: "select", options: Object.keys(ROW_SETS) } },
+  render: ({ set }) => <BannerRows rows={ROW_SETS[set] ?? []} />,
 };
 export const RowsLongHebrew: Story = {
-  name: "Rows, long Hebrew",
   args: { title: "" },
   render: () => (
     <BannerRows
@@ -131,9 +102,6 @@ export const RowsLongHebrew: Story = {
       ]}
     />
   ),
-};
-export const LongHebrew: Story = {
-  args: { title: longHebrew, hint: longHebrew, to: "/review" },
 };
 export const WithAction: Story = {
   args: { title: "3 שויכו אוטומטית היום" },
@@ -152,8 +120,4 @@ export const NoticeError: Story = {
       body="אולי אין חיבור לאינטרנט, או ש־Google לא אישרה את החשבון. כדאי לבדוק את החיבור ולנסות שוב."
     />
   ),
-};
-export const NoticeLong: Story = {
-  args: { title: longHebrew },
-  render: () => <Notice tone="bad" title={longHebrew} body={longHebrew} />,
 };

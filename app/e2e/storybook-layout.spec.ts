@@ -456,8 +456,8 @@ test("a row tint is wider than its content by the spacing token on both sides", 
   await page.setViewportSize({ width: 390, height: 844 });
   const cases: Array<{ id: string; selector: string; hover: boolean; name?: string }> = [
     { id: "components-listrow--project", selector: ".ui-row", hover: true },
-    { id: "components-radiorow--idle", selector: ".ui-radio-row", hover: true },
-    { id: "components-radiorow--selected", selector: ".ui-radio-row", hover: false },
+    { id: "components-listrow--radio", selector: ".ui-radio-row", hover: true },
+    { id: "components-listrow--radio-selected", selector: ".ui-radio-row", hover: false },
     { id: "components-listrow--flat-list", selector: ".ui-row", hover: true },
   ];
   const failures: string[] = [];
@@ -485,7 +485,7 @@ test("a row tint is wider than its content by the spacing token on both sides", 
       return "";
     });
     if (problem) failures.push(`${item.id}: ${problem}`);
-    if (item.hover || item.id === "components-radiorow--selected") {
+    if (item.hover || item.id === "components-listrow--radio-selected") {
       const read = () => row.evaluate((node) => {
         const content = node.getBoundingClientRect();
         const tint = getComputedStyle(node, "::before");

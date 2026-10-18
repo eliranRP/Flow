@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { LOAN_TERM_MONTHS_MAX, type LoanKind } from "@flow/shared";
 import { Button } from "../ui/button";
-import { RadioRow } from "../ui/radio-row";
+import { ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
 import { LOAN_KIND_LABEL } from "./loan-copy";
@@ -110,9 +110,9 @@ export function LoanKindSheet({
     >
       <div role="radiogroup" aria-label="סוג ההלוואה" className="ui-choice-sheet ui-loan-kinds">
         {KINDS.map((option) => (
-          <RadioRow
+          <ListRow control="radio"
             key={option}
-            label={LOAN_KIND_LABEL[option]}
+            title={LOAN_KIND_LABEL[option]}
             description={LOAN_KIND_DESCRIPTION[option]}
             disabledReason={loan.kind === "demand" && option !== "demand" ? "להלוואה לפי דרישה אין תקופה" : undefined}
             disabled={busy}

@@ -1,6 +1,6 @@
 import { useId } from "react";
 import { PlusIcon, SplitIcon, TagIcon } from "./icons";
-import { RadioRow } from "./radio-row";
+import { ListRow } from "./list-row";
 import { SearchField } from "./search-field";
 import { Skeleton } from "./skeleton";
 import { Button } from "./button";
@@ -127,10 +127,10 @@ export function Picker({
   function row(option: ChangeChoice) {
     const taken = disabledIds?.includes(option.id) === true;
     return (
-      <RadioRow
+      <ListRow control="radio"
         key={option.id}
         layout="picker"
-        label={option.name}
+        title={option.name}
         code={compact ? undefined : option.code}
         date={needle === "" && !compact ? option.recent : undefined}
         tag={option.id === suggestionId && !compact ? (suggestionJev ? "jev" : true) : false}
@@ -171,10 +171,10 @@ export function Picker({
           {sections != null ? (
             <div role="radiogroup" aria-label="פרויקט">
               {noneLabel != null ? (
-                <RadioRow
+                <ListRow control="radio"
                   key="none"
                   layout="picker"
-                  label={noneLabel}
+                  title={noneLabel}
                   description={choiceNotes?.[""]}
                   selected={selectedId === ""}
                   busy={savingId === ""}
@@ -197,10 +197,10 @@ export function Picker({
               {heading != null && needle === "" ? <p className="t-label ui-pick-group-head">{heading}</p> : null}
               <div role="radiogroup" aria-label={kind === "project" ? "פרויקט" : "קטגוריה"}>
                 {noneLabel != null && needle === "" ? (
-                  <RadioRow
+                  <ListRow control="radio"
                     key="none"
                     layout="picker"
-                    label={noneLabel}
+                    title={noneLabel}
                     description={choiceNotes?.[""]}
                     selected={selectedId === ""}
                     busy={savingId === ""}

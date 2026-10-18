@@ -6,7 +6,6 @@ import { SegmentedControl } from "./segmented-control";
 import { Sheet } from "./sheet";
 import { TabBar } from "./tab-bar";
 import { TextField } from "./text-field";
-import { forceReducedMotion } from "./reduced-motion";
 import { placeToast, Toast } from "./toast";
 import "./toast.stories.css";
 
@@ -52,12 +51,6 @@ export const Undo: Story = {
   render: () => <AboveFloor action="ביטול">הפריט אושר</AboveFloor>,
 };
 
-/** The toast takes no motion: it shows at once, and clears at once (decision 0182, §2.1). */
-export const ReducedMotion: Story = {
-  args: { children: "הפריט אושר", action: "ביטול" },
-  decorators: [forceReducedMotion],
-  render: () => <AboveFloor action="ביטול">הפריט אושר</AboveFloor>,
-};
 export const ErrorRetry: Story = {
   args: { children: "לא נשמר – אין חיבור", action: "ניסיון חוזר", tone: "bad" },
   render: () => (

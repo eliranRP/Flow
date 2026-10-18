@@ -13,7 +13,7 @@ import { CodeField, type CopyTarget } from "../ui/code-field";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { ConnectionFacts, ConnectionHead, ConnectionNote, ConnectionPage, StepList } from "../ui/connection-page";
 import { FormError } from "../ui/layout";
-import { RadioRow } from "../ui/radio-row";
+import { ListRow } from "../ui/list-row";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
 import { useBlockedPreview } from "./screen-shared";
@@ -362,15 +362,15 @@ export function AiConnectionPage({
           </div>
               <ConnectionHead>1 · מה העוזר יכול לעשות</ConnectionHead>
               <div role="radiogroup" aria-label={SCOPE_FIELD} className="ui-ai-scope">
-                <RadioRow
-                  label="קריאה בלבד"
+                <ListRow control="radio"
+                  title="קריאה בלבד"
                   description={scopeHint("read")}
                   selected={shownScope === "read"}
                   disabled={minting}
                   onSelect={() => { pickScope("read"); }}
                 />
-                <RadioRow
-                  label="קריאה וכתיבה"
+                <ListRow control="radio"
+                  title="קריאה וכתיבה"
                   description={scopeHint("read_write")}
                   selected={shownScope === "read_write"}
                   disabled={minting}

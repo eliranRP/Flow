@@ -5,7 +5,6 @@ import type { TransactionLoanSplit } from "@flow/shared";
 import { BankIcon, AlertIcon, PlusIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
-import { RadioRow } from "../ui/radio-row";
 import { Button } from "../ui/button";
 import { currencyWord } from "../ui/investment-card";
 import { sheetStack, useSheetHistory } from "../ui/back";
@@ -143,10 +142,10 @@ export function LoanMatchOffer({
         ) : (
           <div role="radiogroup" aria-label="הלוואה">
             {selectableLoans.map((loan) => (
-              <RadioRow
+              <ListRow control="radio"
                 key={loan.id}
                 layout="picker"
-                label={loan.name}
+                title={loan.name}
                 description={byId.get(loan.id)?.description}
                 busy={loan.id === savingId}
                 value={loan.id}

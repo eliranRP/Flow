@@ -6,7 +6,7 @@ import { DateSheet } from "../ui/date-sheet";
 import { TextField } from "../ui/text-field";
 import { Button } from "../ui/button";
 import { formatDisplay } from "../ui/date-math";
-import { RadioRow } from "../ui/radio-row";
+import { ListRow } from "../ui/list-row";
 import { LOAN_KIND_LABEL } from "./loan-copy";
 import { LOAN_KIND_DESCRIPTION } from "./loan-detail-data";
 import {
@@ -68,10 +68,10 @@ export function LoanKindPicker({ selected, onSelect }: { selected: LoanKind; onS
   return (
     <div role="radiogroup" aria-label="סוג ההלוואה" className="ui-choice-sheet ui-loan-kinds">
       {LOAN_KINDS.map((option) => (
-        <RadioRow
+        <ListRow control="radio"
           key={option}
           value={option}
-          label={LOAN_KIND_LABEL[option]}
+          title={LOAN_KIND_LABEL[option]}
           description={LOAN_KIND_DESCRIPTION[option]}
           selected={selected === option}
           onSelect={() => { onSelect(option); }}

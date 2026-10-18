@@ -7,7 +7,7 @@ import { largeAgorot, longHebrew, padded } from "./story-support";
 
 /** Args are JSON: agorot is a decimal string, and the icon and the tag are flags the view draws. */
 type RowArgs = {
-  variant: "item" | "static" | "button" | "danger" | "skeleton" | "project" | "transaction" | "statement";
+  variant: "item" | "static" | "button" | "danger" | "skeleton" | "project" | "transaction" | "statement" | "radio";
   layout: "none" | ListLayout;
   title: string;
   hint?: string;
@@ -25,6 +25,11 @@ type RowArgs = {
   sign?: "in" | "out" | "cost";
   source?: "invoice" | "bank";
   currency?: string;
+  /** The radio control: the chosen row, its live description, the start-side marker, the reason it cannot be chosen. */
+  selected?: boolean;
+  description?: string;
+  marker?: "start" | "end";
+  disabledReason?: string;
 };
 
 const noop = () => undefined;
@@ -36,6 +41,22 @@ function RowView(args: RowArgs) {
     return <ListRow variant="statement" title={args.title} fallback={args.source === "bank" ? "bank" : "invoice"} agorot={amount} sign={args.sign === "in" ? "in" : "out"} href={args.href ?? "/review/all?item=1"} setAside={args.setAside} />;
   }
   if (args.variant === "skeleton") return <ListRow variant="skeleton" icon={args.icon} />;
+  if (args.variant === "radio") {
+    return (
+      <ListRow
+        control="radio"
+        title={args.title}
+        hint={args.hint}
+        description={args.description}
+        marker={args.marker}
+        disabled={args.disabled}
+        disabledReason={args.disabledReason}
+        busy={args.busy}
+        selected={args.selected === true}
+        onSelect={noop}
+      />
+    );
+  }
   const copy = {
     layout,
     title: args.title,
@@ -66,7 +87,7 @@ const meta = {
   argTypes: {
     variant: {
       control: "select",
-      options: ["item", "static", "button", "danger", "skeleton", "project", "transaction", "statement"],
+      options: ["item", "static", "button", "danger", "skeleton", "project", "transaction", "statement", "radio"],
     },
     layout: { control: "select", options: ["none", "flat", "inset"] },
     tone: { control: "select", options: [undefined, "warning", "muted"] },
@@ -75,6 +96,7 @@ const meta = {
     setAside: { control: "boolean" },
     busy: { control: "boolean" },
     disabled: { control: "boolean" },
+    selected: { control: "boolean" },
   },
   render: (args) => <RowView {...args} />,
 } satisfies Meta<RowArgs>;
@@ -106,6 +128,13 @@ export const Button: Story = {
 export const Danger: Story = {
   args: { variant: "danger", title: "התנתקות", hint: "הנתונים נשארים בחשבון" },
 };
+/** A choice-list row: the check circle at the end. Busy swaps the check for the spinner; a disabled reason replaces the description. */
+export const Radio: Story = {
+  args: { variant: "radio", title: "חודש קודם", hint: "אוגוסט 2026", selected: false },
+};
+export const RadioSelected: Story = {
+  args: { variant: "radio", title: "החודש", hint: "ספטמבר 2026", selected: true },
+};
 export const Skeleton: Story = {
   tags: ["clip-no-text"],
   args: { variant: "skeleton" },
@@ -121,14 +150,8 @@ export const Skeleton: Story = {
 export const Project: Story = {
   args: { variant: "project", title: "טק-ליין", hint: "שיפוץ", agorot: "2940000", href: "/projects/tek" },
 };
-export const ProjectLoss: Story = {
-  args: { variant: "project", title: "טק-ליין", hint: "שיפוץ", agorot: "-2940000", loss: true, href: "/projects/tek" },
-};
 export const Transaction: Story = {
   args: { variant: "transaction", title: "העברה", hint: "בנק · 12/09", agorot: "450000", sign: "out", source: "bank" },
-};
-export const TransactionIncome: Story = {
-  args: { variant: "transaction", title: "קבלה 1042", hint: "חומרים · 12/09", agorot: "1800000", sign: "in", source: "invoice" },
 };
 export const Statement: Story = {
   args: { variant: "statement", title: "לקוח לדוגמה", agorot: "500000", sign: "in", source: "invoice" },
@@ -142,9 +165,6 @@ export const WithTag: Story = {
 export const Muted: Story = {
   args: { variant: "item", title: "קטגוריה מוסתרת", hint: "מוסתרת", muted: true },
 };
-export const SetAside: Story = {
-  args: { variant: "transaction", title: "החזר ציוד לדוגמה", hint: "לא נספר ברווח · ציוד · 02/10", agorot: "150000", sign: "out", setAside: true },
-};
 export const Busy: Story = {
   args: { variant: "button", title: "מרענן…", hint: "רענון הנתונים", busy: true },
 };
@@ -154,10 +174,6 @@ export const Disabled: Story = {
 export const LongHebrew: Story = {
   args: { variant: "project", title: longHebrew, hint: longHebrew, agorot: String(largeAgorot), href: "/projects/long" },
 };
-export const LatinTitle: Story = {
-  args: { variant: "transaction", title: "Sample vendor", hint: "Utilities · 10/09", agorot: "125000", sign: "out", source: "bank", currency: "USD" },
-};
-
 /** FLOW-363 (2d): four rows on the background, no dividers, 64px tall. Invented names, round amounts. */
 export const FlatList: Story = {
   args: { variant: "transaction", title: "קבלה 1042", layout: "flat" },
@@ -184,22 +200,12 @@ export const InsetList: Story = {
   ),
 };
 
-/** FLOW-366: a transaction row with the supplier's initials in place of the source icon. Invented names and figures. */
-export const TransactionInitials: Story = {
+/** FLOW-366: a transaction row with the supplier's initials in place of the source icon, and the tag line under the hint: awaiting review, or left out of profit. */
+export const TransactionTags: Story = {
   args: { variant: "transaction", title: "סטודיו גל", hint: "דירת הגפן · חומרים", agorot: "120000", sign: "out", source: "invoice" },
   render: () => (
     <List layout="flat">
       <ListRow layout="flat" variant="transaction" title="סטודיו גל" hint="דירת הגפן · חומרים" agorot={120_000n} sign="out" source="invoice" initials="סג" href="/transactions/1" />
-      <ListRow layout="flat" variant="transaction" title="מים ושות׳" hint="בלי פרויקט · מים" agorot={45_000n} sign="out" source="invoice" initials="מו" href="/transactions/2" />
-    </List>
-  ),
-};
-
-/** FLOW-366: the tag line for a line awaiting review. */
-export const TransactionPending: Story = {
-  args: { variant: "transaction", title: "אור חשמל", hint: "בית הים · חשמל", agorot: "86000", sign: "out", source: "invoice" },
-  render: () => (
-    <List layout="flat">
       <ListRow
         layout="flat"
         variant="transaction"
@@ -212,15 +218,6 @@ export const TransactionPending: Story = {
         tagLine={lineTagText({ pending: true, inPnl: true, reason: null })}
         href="/transactions/3"
       />
-    </List>
-  ),
-};
-
-/** FLOW-366: the tag line for a loan's principal, which profit leaves out, and for a line that is both pending and out of profit. */
-export const TransactionNotInProfit: Story = {
-  args: { variant: "transaction", title: "בנק לדוגמה", hint: "בית הים · תשלום הלוואה", agorot: "150000", sign: "out", source: "bank" },
-  render: () => (
-    <List layout="flat">
       <ListRow
         layout="flat"
         variant="transaction"
@@ -232,18 +229,6 @@ export const TransactionNotInProfit: Story = {
         initials="בל"
         tagLine={lineTagText({ pending: false, inPnl: false, reason: "קרן הלוואה" })}
         href="/transactions/4"
-      />
-      <ListRow
-        layout="flat"
-        variant="transaction"
-        title="מים ושות׳"
-        hint="דירת הגפן · שיפוץ"
-        agorot={300_000n}
-        sign="out"
-        source="invoice"
-        initials="מו"
-        tagLine={lineTagText({ pending: true, inPnl: false, reason: "שיפוץ" })}
-        href="/transactions/5"
       />
     </List>
   ),

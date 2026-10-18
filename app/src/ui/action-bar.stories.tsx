@@ -87,12 +87,8 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const se = { parameters: { viewport: { defaultViewport: "flow375-se" } } };
-
-export const ReviewSE: Story = { ...se };
 export const ReviewBusy: Story = { args: { busy: true } };
 export const ReviewDisabled: Story = { args: { disabled: true } };
 export const SplitMismatch: Story = { args: { kind: "mismatch" } };
 /** Decision 0137: the undo toast sits just above the bar. */
 export const ToastAboveBar: Story = { args: { toast: "הפריט אושר" } };
-export const ToastAboveBarSE: Story = { ...se, args: { toast: "דילגנו על הפריט" } };

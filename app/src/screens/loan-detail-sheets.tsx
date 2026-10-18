@@ -5,7 +5,7 @@ import { formatDisplay, israelToday } from "../ui/date-math";
 import { DateSheet } from "../ui/date-sheet";
 import { CalendarIcon } from "../ui/icons";
 import { PercentField } from "../ui/money-field";
-import { RadioRow } from "../ui/radio-row";
+import { ListRow } from "../ui/list-row";
 import { SearchField } from "../ui/search-field";
 import { Sheet } from "../ui/sheet";
 import { LOAN_PART_LABEL, LOAN_STATUS_LABEL } from "./loan-copy";
@@ -76,10 +76,10 @@ export function LoanStatusSheet({
       >
         <div role="radiogroup" aria-label="מצב">
           {statuses.map((status) => (
-            <RadioRow
+            <ListRow control="radio"
               key={status}
               layout="picker"
-              label={LOAN_STATUS_LABEL[status]}
+              title={LOAN_STATUS_LABEL[status]}
               selected={loan.status === status}
               busy={saving === status}
               disabled={saving != null && saving !== status}
@@ -212,9 +212,9 @@ export function LoanPartSheet({
           <SearchField label="חיפוש קטגוריה" value={query} onChange={setQuery} placeholder="חיפוש קטגוריה" autoFocus={false} />
         ) : null}
         <div role="radiogroup" aria-label={LOAN_PART_LABEL[part]}>
-          <RadioRow
+          <ListRow control="radio"
             layout="picker"
-            label={partDefaultLabel(categories, part)}
+            title={partDefaultLabel(categories, part)}
             description={part === "fees" ? FEES_NONE_DESC : undefined}
             selected={onDefault}
             busy={saving != null && saving.id == null}
@@ -222,10 +222,10 @@ export function LoanPartSheet({
             onSelect={() => { choose(null); }}
           />
           {shown.map((row) => (
-            <RadioRow
+            <ListRow control="radio"
               key={row.id}
               layout="picker"
-              label={row.name}
+              title={row.name}
               description={part !== "principal" && row.excludedFromPnl ? "לא נספר ברווח" : undefined}
               selected={row.id === current}
               busy={saving?.id === row.id}
