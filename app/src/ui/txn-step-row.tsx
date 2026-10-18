@@ -88,7 +88,7 @@ export function TxnStepRow({ index, total, atStart, atEnd, onPrev, onNext, prevR
           </span>
           <span className="sr-only">{place}</span>
         </p>
-        <Button variant="link" aria-label="התנועה הבאה" buttonRef={nextRef} onClick={onNext} busy={nextBusy} className={cx("ui-txn-step-btn", atEnd && "ui-txn-step-off")}>
+        <Button variant="link" aria-label="התנועה הבאה" buttonRef={nextRef} onClick={onNext} aria-busy={nextBusy || undefined} className={cx("ui-txn-step-btn", atEnd && "ui-txn-step-off")}>
           הבאה
         </Button>
       </div>
