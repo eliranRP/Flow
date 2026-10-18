@@ -296,7 +296,7 @@
 
 .ui-page .t-title,
 .ui-page .t-total,
-.ui-page .t-line2 {
+.ui-page .t-line2:where(:not(.ui-lines-count, .ui-lines-group-sum, .ui-onb-lead)) {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
