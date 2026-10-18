@@ -1,0 +1,1 @@
+- CI: the deploy job's reused build now carries `app/bundle-graph.json`, so its bundle check before the migration can run (the first deploy after #703 stopped there).

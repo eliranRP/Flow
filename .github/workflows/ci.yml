@@ -143,12 +143,15 @@ jobs:
           node scripts/stamp-build.mjs "$GITHUB_SHA"
           pnpm check:bundle
       # deploy reuses this dist (same run, same commit) instead of building it again. Upload it before the
-      # reviewers-only build below empties app/dist.
+      # reviewers-only build below empties app/dist. The module graph sits beside dist, and deploy's
+      # check:bundle reads it, so it goes in the same artifact (stored relative to app/).
       - name: Keep the hosted dist for deploy
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: hosted-dist
-          path: app/dist
+          path: |
+            app/dist
+            app/bundle-graph.json
           retention-days: 1
           if-no-files-found: error
       - name: Build the reviewers-only dist and check it
@@ -665,7 +668,7 @@ jobs:
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: hosted-dist
-          path: app/dist
+          path: app
 
       - name: Check the hosted bundle before the migration
         run: pnpm check:bundle

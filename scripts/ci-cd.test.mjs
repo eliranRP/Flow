@@ -275,7 +275,8 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   const coreDist = job("check-core");
   const upload = coreDist.indexOf("uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1");
   assert.ok(upload > coreDist.indexOf("pnpm check:bundle\n") && upload < coreDist.indexOf("rm -rf app/dist"));
-  assert.match(coreDist, /name: hosted-dist\n {10}path: app\/dist\n {10}retention-days: 1\n/);
+  // The module graph sits beside dist; deploy's check:bundle reads it, so it rides in the same artifact.
+  assert.match(coreDist, /name: hosted-dist\n {10}path: \|\n {12}app\/dist\n {12}app\/bundle-graph\.json\n {10}retention-days: 1\n/);
   assert.equal(deploy.includes("FLOW_JWT_LEGACY"), false);
   assert.equal(deploy.includes("FLOW_SECRET_KEY"), false);
   assert.equal(deploy.includes("service_role"), false);
@@ -295,7 +296,8 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.equal(deploy.includes("pnpm build"), false);
   assert.equal(deploy.includes("stamp-build.mjs"), false);
   const download = deploy.indexOf("uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0");
-  assert.match(deploy, /name: hosted-dist\n {10}path: app\/dist\n/);
+  // Stored relative to app/, so it lands as app/dist and app/bundle-graph.json.
+  assert.match(deploy, /name: hosted-dist\n {10}path: app\n/);
   const build = download;
   const guard = deploy.indexOf("pnpm check:bundle");
   const migrate = deploy.indexOf("cd-push.sh");
