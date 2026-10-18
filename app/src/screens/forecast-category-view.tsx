@@ -135,7 +135,7 @@ function CategoryRow({
             const charge = late ? itemCharge(item) : null;
             return (
               <li key={item.key} className="ui-forecast-cat-kid-li">
-                <button type="button" className="ui-forecast-cat-kid" onClick={() => { onOpenItem(item); }} aria-label={`${item.name}, ${itemAmount(item)}`}>
+                <button type="button" className="ui-forecast-cat-kid" data-forecast-key={item.key} onClick={() => { onOpenItem(item); }} aria-label={`${item.name}, ${itemAmount(item)}`}>
                   <span className="ui-forecast-cat-kid-text">
                     <span className="ui-forecast-cat-kid-name">{item.name}</span>
                     <span className={cx("ui-forecast-cat-kid-when", late && "ui-forecast-late")}>{itemWhen(item, today)}</span>

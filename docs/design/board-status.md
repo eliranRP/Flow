@@ -26,7 +26,8 @@ Raw = mismatch, masked = text-masked mismatch (percent). Pass = masked under 3% 
 | add | AddCash | /e2e/cash?state=usd-loss&preview=1&add=1&entry=cash | 3.8 | 1.3 | 3.8 | 1.3 | yes | - |
 | add | AddCheque | /e2e/cash?state=usd-loss&preview=1&add=1&entry=cheque | 4.1 | 1.5 | 4.1 | 1.5 | yes | - |
 | forecast | MonthForecast | /e2e/forecast?kind=board | 6.3 | 0.5 | 6.2 | 0.4 | yes | FLOW-141b |
-| forecast | MonthForecastEdit | /e2e/forecast?kind=board&sheet=1 | 5.6 | 1.5 | 6.2 | 1.6 | yes | FLOW-141b |
+| forecast | MonthForecastEdit | /e2e/forecast/item/invoice%3Ainv-1043?kind=board | 4.3 | 2.2 | 4.3 | 2.2 | yes | FLOW-141b |
+| forecast | MonthForecastWhen | /e2e/forecast/item/invoice%3Ainv-1043?kind=board&when=1 | 4.5 | 1.5 | 5.3 | 2.2 | yes | FLOW-141b |
 | forecast | MonthForecastChanged | /e2e/forecast?kind=board&state=changed | 5.9 | 0.3 | 5.8 | 0.2 | yes | - |
 | forecast | StatesForecastEmpty | /e2e/forecast?kind=board&state=empty | 2.1 | 0.5 | 1.9 | 0.4 | yes | - |
 | home | Flow | /e2e/cash?state=usd-loss | 5.4 | 1.7 | 4.6 | 0.9 | yes | FLOW-374 |

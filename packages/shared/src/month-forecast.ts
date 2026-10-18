@@ -47,6 +47,10 @@ export type ForecastItem = {
   late_days: number;
   /** The category it files to (the recurring charge's usual one, the invoice's own), or null. */
   category_id: string | null;
+  /** A recurring charge's project (decision 0185), or null. An invoice names its project instead. */
+  project_id: string | null;
+  /** An invoice's project, as the open-invoices list names it, or null. */
+  project_name: string | null;
 };
 
 export type ForecastBuild = {
@@ -140,6 +144,8 @@ export function buildMonthForecast(input: {
       day: party.typical_day > 0 ? party.typical_day : null,
       description: null,
       category_id: party.category_id ?? null,
+      project_id: party.project_id ?? null,
+      project_name: null,
       expected_on: today != null && party.typical_day > 0 ? `${today.slice(0, 7)}-${String(Math.min(party.typical_day, monthLength(today))).padStart(2, "0")}` : null,
     });
   }
@@ -159,6 +165,8 @@ export function buildMonthForecast(input: {
       day: null,
       description: row.description,
       category_id: row.category_id ?? null,
+      project_id: null,
+      project_name: row.project_name,
       expected_on: terms != null ? addDays(row.doc_date, terms) : null,
     });
   }

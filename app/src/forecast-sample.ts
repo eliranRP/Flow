@@ -247,7 +247,7 @@ export function monthForecastBoardSample(variant: BoardForecastVariant = "board"
     ],
   };
   const unpaid = empty ? [] : [
-    { id: "inv-1043", description: "Invoice #1043", doc_date: "2026-08-08", project_name: null, customer_name: "Northgate Co", open_gross_agorot: 1250000, open_net_agorot: 1250000, currency: "USD", direction: "income" as const, category_id: "cat-clients" },
+    { id: "inv-1043", description: "Invoice #1043", doc_date: "2026-08-08", project_name: "Northgate Co", customer_name: "Northgate Co", open_gross_agorot: 1250000, open_net_agorot: 1250000, currency: "USD", direction: "income" as const, category_id: "cat-clients" },
     { id: "inv-1047", description: "Invoice #1047", doc_date: "2026-09-22", project_name: null, customer_name: "Lakeside HOA", open_gross_agorot: 560000, open_net_agorot: 560000, currency: "USD", direction: "income" as const, category_id: "cat-clients" },
     { id: "bill-118", description: "Bill VD-118", doc_date: "2026-09-15", project_name: null, customer_name: "Varga Drywall", open_gross_agorot: 420000, open_net_agorot: 420000, currency: "USD", direction: "expense" as const, category_id: "cat-subs" },
     { id: "bill-hd", description: "Bill HD-22", doc_date: "2026-09-25", project_name: null, customer_name: "Harbor Supply Pro", open_gross_agorot: 313800, open_net_agorot: 313800, currency: "USD", direction: "expense" as const, category_id: "cat-materials" },

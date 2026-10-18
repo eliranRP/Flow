@@ -1,4 +1,5 @@
 import { useId, type ReactNode, type Ref } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "./button";
 import { cx } from "./cx";
 import { ChevronIcon } from "./icons";
@@ -33,6 +34,15 @@ type OpenProps = CommonProps & {
   onClick: () => void;
   buttonRef?: Ref<HTMLButtonElement>;
   action?: undefined;
+  to?: undefined;
+};
+
+/** The row goes to another screen (the forecast item's source), with the chevron row's look. */
+type LinkProps = CommonProps & {
+  to: string;
+  onClick?: undefined;
+  buttonRef?: undefined;
+  action?: undefined;
 };
 
 /** The row stays put, and its text link at the end does the work (שינוי). */
@@ -40,6 +50,7 @@ type ActionProps = CommonProps & {
   onClick?: undefined;
   buttonRef?: undefined;
   action: { label: string; onClick: () => void };
+  to?: undefined;
 };
 
 /** A fact with nothing to tap. */
@@ -47,12 +58,13 @@ type StaticProps = CommonProps & {
   onClick?: undefined;
   buttonRef?: undefined;
   action?: undefined;
+  to?: undefined;
 };
 
-export type IconRowProps = OpenProps | ActionProps | StaticProps;
+export type IconRowProps = OpenProps | LinkProps | ActionProps | StaticProps;
 
 /**
- * FLOW-363 (4): a detail page's fact row. The chevron row (`onClick`) is the default; the text link
+ * FLOW-363 (4): a detail page's fact row. The chevron row (`onClick`, or `to` for a link) is the default; the text link
  * (`action`) is the board's "שינוי" row. Values and labels come from the type roles, and the row
  * takes its press, focus and disabled looks from `.ui-row`.
  */
@@ -91,6 +103,19 @@ export function IconRow(props: IconRowProps) {
           {props.action.label}
         </Button>
       </div>
+    );
+  }
+  if (props.to != null) {
+    return (
+      <Link
+        to={props.to}
+        className={cx("ui-row", "ui-hit", "m-press", "ui-icon-row", toneClass, props.className)}
+        aria-label={props.name ?? `${props.label} ${props.value}`}
+        aria-describedby={describedBy}
+      >
+        {body}
+        <span className="ui-icon-row-end" aria-hidden="true"><ChevronIcon size={18} /></span>
+      </Link>
     );
   }
   if (props.onClick == null) {

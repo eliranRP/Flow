@@ -189,7 +189,10 @@ function AppRoutes() {
                 <Route path="recurring/:direction/:partyId" element={<RecurringChargeScreen />} />
                 {UnpaidInvoiceRoute()}
                 <Route path="transactions/:transactionId" element={<TransactionRoute />} />
-                <Route path="forecast" element={<ForecastScreen />} />
+                {/* MonthForecastEdit: a row's page opens over the list, which stays mounted under it. */}
+                <Route path="forecast" element={<ForecastScreen />}>
+                  <Route path="item/:itemKey" element={null} />
+                </Route>
                 {SettingsRoutes()}
                 {LoanRoutes()}
               </Route>
