@@ -280,6 +280,7 @@
     ],
     "company-profit.spec.ts": [
       "screens/company-profit-screen.tsx",
+      "screens/profit-categories.tsx",
       "screens/company-basis-sheet.tsx",
       "use-company-profit.ts"
     ],

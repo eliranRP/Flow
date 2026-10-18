@@ -57,16 +57,55 @@ describe("ProjectMonthProfitScreen", () => {
     expect(screen.getByRole("heading", { name: /רווח/ })).toBeTruthy();
   });
 
-  it("the category order keeps each category closed until it is tapped", () => {
+  it("the category view groups income then expenses, each head with its total", () => {
     const { container } = renderAt("/projects/juniper-ct/profit/2026-10?order=category", JUNIPER_MONTH_PROFIT);
-    const heads = Array.from(container.querySelectorAll(".ui-lines-group-head[aria-expanded]"));
-    expect(heads.map((head) => head.getAttribute("aria-expanded"))).toEqual(["false", "false", "false", "false", "false"]);
-    expect(container.querySelectorAll("a[href^=\"/transactions/\"]")).toHaveLength(0);
-    const first = heads[0];
-    if (first == null) throw new Error("no category head");
-    fireEvent.click(first);
-    expect(first.getAttribute("aria-expanded")).toBe("true");
-    expect(container.querySelectorAll("a[href^=\"/transactions/\"]").length).toBeGreaterThan(0);
+    const heads = Array.from(container.querySelectorAll(".ui-lines-group-head"));
+    expect(heads.map((head) => head.querySelector(".ui-lines-group-title")?.textContent)).toEqual(["הכנסות", "הוצאות"]);
+    expect(heads.map((head) => head.querySelector(".ui-lines-group-sum")?.textContent)).toEqual(["+$6,302", "$2,506"]);
+  });
+
+  it("lists one row per category, largest first, with its share, count and total", () => {
+    const { container } = renderAt("/projects/juniper-ct/profit/2026-10?order=category", JUNIPER_MONTH_PROFIT);
+    const rows = Array.from(container.querySelectorAll(".ui-pcat-button"));
+    expect(rows.map((row) => row.querySelector(".ui-pcat-name")?.textContent)).toEqual(["שכירות", "החזר ביטוח", "ריבית הלוואות", "תיקונים ותחזוקה", "מסים וביטוח"]);
+    expect(rows.map((row) => row.querySelector(".ui-pcat-meta")?.textContent)).toEqual([
+      "66% מההכנסות · 2 תנועות",
+      "34% מההכנסות · 1 תנועה",
+      "47% מההוצאות · 1 תנועה",
+      "42% מההוצאות · 2 תנועות",
+      "11% מההוצאות · 1 תנועה",
+    ]);
+    expect(rows[0]).toHaveTextContent("+$4,150");
+    expect(rows[0]?.querySelector(".ui-income")).not.toBeNull();
+    expect(rows[2]).toHaveTextContent("$1,180");
+    expect(rows[2]?.textContent).not.toContain("+");
+    expect(rows[2]?.querySelector(".ui-income")).toBeNull();
+  });
+
+  it("scales each bar to the largest category of its group", () => {
+    const { container } = renderAt("/projects/juniper-ct/profit/2026-10?order=category", JUNIPER_MONTH_PROFIT);
+    const widths = Array.from(container.querySelectorAll<HTMLElement>(".ui-pcat-bar-fill")).map((bar) => bar.style.width);
+    expect(widths).toEqual(["100%", "52%", "100%", "89%", "24%"]);
+  });
+
+  it("opens a category in place to its lines, newest first, and closes it on a second tap", () => {
+    const { container } = renderAt("/projects/juniper-ct/profit/2026-10?order=category", JUNIPER_MONTH_PROFIT);
+    const links = () => Array.from(container.querySelectorAll("a[href^=\"/transactions/\"]")).map((link) => link.getAttribute("href"));
+    const rows = Array.from(container.querySelectorAll(".ui-pcat-button"));
+    const [rent, , , repairs] = rows;
+    if (rent == null || repairs == null) throw new Error("missing category rows");
+    expect(rows.map((row) => row.getAttribute("aria-expanded"))).toEqual(["false", "false", "false", "false", "false"]);
+    expect(links()).toEqual([]);
+    fireEvent.click(rent);
+    expect(rent.getAttribute("aria-expanded")).toBe("true");
+    expect(links()).toEqual(["/transactions/t-kim", "/transactions/t-ortiz"]);
+    expect(rent.parentElement).toHaveTextContent("03/10");
+    fireEvent.click(repairs);
+    expect(rent.getAttribute("aria-expanded")).toBe("false");
+    expect(links()).toEqual(["/transactions/t-northline", "/transactions/t-clearflow"]);
+    fireEvent.click(repairs);
+    expect(repairs.getAttribute("aria-expanded")).toBe("false");
+    expect(links()).toEqual([]);
   });
 
   it("shows the month's share of the general expenses and the profit it leaves", () => {

@@ -61,31 +61,35 @@ describe("CompanyProfitScreen (FLOW-140c1)", () => {
     expect(sum).toBe(headProfit());
   });
 
-  it("category rows match the card: income and expense are the two sums", () => {
+  it("the category view has income then expenses, each head's total matching the card", () => {
     renderPage(COMPANY_PROFIT_SAMPLE, "/profit?by=category");
-    const rows = [...document.querySelectorAll(".ui-cp-list .ui-cp-row")];
-    const amounts = rows.map(rowAmount);
-    const income = amounts.filter((amount) => amount > 0n).reduce((total, amount) => total + amount, 0n);
-    const expense = amounts.filter((amount) => amount < 0n).reduce((total, amount) => total - amount, 0n);
+    const heads = [...document.querySelectorAll(".ui-lines-group-head")];
+    expect(heads.map((head) => head.querySelector(".ui-lines-group-title")?.textContent)).toEqual(["הכנסות", "הוצאות"]);
+    const [income, expense] = heads.map((head) => minorOf(head.querySelector(".ui-lines-group-sum")?.textContent));
+    expect(heads[0]?.querySelector(".ui-lines-group-sum")?.textContent).toMatch(/^\+/);
     const card = cardFigures();
-    expect(card.income).toBe(income);
-    expect(card.expense).toBe(expense);
-    expect(income - expense).toBe(headProfit());
+    expect(income).toBe(card.income);
+    expect(expense).toBe(card.expense);
+    expect((income ?? 0n) - (expense ?? 0n)).toBe(headProfit());
   });
 
-  it("category rows run by size across income and expense, with the project count only when above one", () => {
+  it("each group's rows run largest first and add to its head, with shares, counts and projects only above one", () => {
     renderPage(COMPANY_PROFIT_SAMPLE, "/profit?by=category");
-    const rows = [...document.querySelectorAll(".ui-cp-list .ui-cp-row")];
-    const sizes = rows.map((row) => {
-      const amount = rowAmount(row);
-      return amount < 0n ? -amount : amount;
+    const groups = [...document.querySelectorAll(".ui-lines-group")];
+    expect(groups).toHaveLength(2);
+    groups.forEach((group, index) => {
+      const rows = [...group.querySelectorAll(".ui-pcat-button")];
+      const amounts = rows.map((row) => minorOf(row.querySelector(".ui-pcat-top")?.lastElementChild?.textContent));
+      expect(amounts.every((amount, at) => at === 0 || (amounts[at - 1] ?? 0n) >= amount)).toBe(true);
+      expect(amounts.reduce((sum, amount) => sum + amount, 0n)).toBe(minorOf(group.querySelector(".ui-lines-group-sum")?.textContent));
+      const word = index === 0 ? "מההכנסות" : "מההוצאות";
+      for (const row of rows) expect(row.querySelector(".ui-pcat-meta")?.textContent).toMatch(new RegExp(`^\\d+% ${word} · (1 תנועה|\\d+ תנועות)`));
+      expect(rows[0]?.querySelector<HTMLElement>(".ui-pcat-bar-fill")?.style.width).toBe("100%");
+      expect(rows.every((row) => (row.querySelector(".ui-income") != null) === (index === 0))).toBe(true);
     });
-    expect(sizes.some((_, index) => rowAmount(rows[index] as Element) > 0n)).toBe(true);
-    expect(sizes.some((_, index) => rowAmount(rows[index] as Element) < 0n)).toBe(true);
-    expect(sizes.every((size, index) => index === 0 || (sizes[index - 1] ?? 0n) >= size)).toBe(true);
-    const metas = rows.map((row) => row.querySelector(".ui-cp-meta")?.textContent ?? "");
-    expect(metas.some((text) => text.includes("פרויקטים"))).toBe(true);
-    expect(metas.some((text) => /^1 תנועה$/.test(text))).toBe(true);
+    const metas = [...document.querySelectorAll(".ui-pcat-meta")].map((meta) => meta.textContent);
+    expect(metas.some((text) => / · 2 פרויקטים$/.test(text))).toBe(true);
+    expect(metas.some((text) => / · 1 תנועה$/.test(text))).toBe(true);
     for (const text of metas) {
       const match = /(\d+) פרויקטים/.exec(text);
       if (match) expect(Number(match[1])).toBeGreaterThan(1);
@@ -100,16 +104,23 @@ describe("CompanyProfitScreen (FLOW-140c1)", () => {
     expect(figure?.querySelector(".ui-loss")).not.toBeNull();
   });
 
-  it("opens a category on one tap and closes it on the next", () => {
+  it("opens a category in place to its lines with day and project, one at a time, and closes it on the next tap", () => {
     renderPage(COMPANY_PROFIT_SAMPLE, "/profit?by=category");
-    const row = document.querySelector(".ui-cp-list .ui-cp-row button") as HTMLButtonElement;
-    expect(row).toHaveAttribute("aria-expanded", "false");
-    fireEvent.click(row);
-    expect(row).toHaveAttribute("aria-expanded", "true");
-    expect(row.parentElement?.querySelectorAll(".ui-cp-lines .ui-row").length ?? 0).toBeGreaterThan(0);
-    fireEvent.click(row);
-    expect(row).toHaveAttribute("aria-expanded", "false");
-    expect(row.parentElement?.querySelector(".ui-cp-lines")).toBeNull();
+    const [first, second] = [...document.querySelectorAll<HTMLButtonElement>(".ui-pcat-button")];
+    if (first == null || second == null) throw new Error("missing category rows");
+    expect(first).toHaveAttribute("aria-expanded", "false");
+    expect(document.querySelectorAll(".ui-pcat .ui-row")).toHaveLength(0);
+    fireEvent.click(first);
+    expect(first).toHaveAttribute("aria-expanded", "true");
+    const lines = [...(first.parentElement?.querySelectorAll(".ui-row") ?? [])];
+    expect(lines.length).toBeGreaterThan(0);
+    expect(lines[0]?.textContent).toMatch(/\d{2}\/\d{2} · /);
+    fireEvent.click(second);
+    expect(first).toHaveAttribute("aria-expanded", "false");
+    expect(second).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(second);
+    expect(second).toHaveAttribute("aria-expanded", "false");
+    expect(document.querySelectorAll(".ui-pcat .ui-row")).toHaveLength(0);
   });
 
   it("the chips set ?by= and reorder the rows; the project order is the default", () => {
@@ -126,7 +137,7 @@ describe("CompanyProfitScreen (FLOW-140c1)", () => {
     fireEvent.click(within(group).getByRole("button", { name: "לפי קטגוריה" }));
     expect(search()).toBe("?by=category");
     expect(within(group).getByRole("button", { name: "לפי קטגוריה" })).toHaveAttribute("aria-pressed", "true");
-    expect(document.querySelector(".ui-cp-list .ui-cp-row button")).not.toBeNull();
+    expect(document.querySelector(".ui-pcat-button")).not.toBeNull();
     fireEvent.click(within(group).getByRole("button", { name: "לפי סכום" }));
     expect(search()).toBe("?by=amount");
     expect(screen.getByRole("heading", { name: "מהגדול לקטן" })).toBeInTheDocument();

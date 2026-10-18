@@ -21,6 +21,7 @@ import { rowSource } from "../ui/line-marks";
 import { BASIS_PROFIT_COPY, basisChoiceLabel } from "../ui/company-choices";
 import { buildProfitModel, useCompanyProfitRead, type ProfitInputs, type ProfitLine, type ProfitModel } from "../use-company-profit";
 import { CompanyBasisSheet } from "./company-basis-sheet";
+import { countWord, ProfitCategories, profitCategoryGroups, type ProfitCategoryGroup } from "./profit-categories";
 import { useBlockedPreview } from "./screen-shared";
 
 /** A fixture: the reads' inputs for the page, plus the day heads' today and the month it shows. */
@@ -45,10 +46,6 @@ function signedText(minor: bigint, currency: string): string {
   return minor < 0n ? `−${formatAmountText(-minor, currency)}` : `+${formatAmountText(minor, currency)}`;
 }
 
-function countWord(count: number): string {
-  return `${String(count)} ${count === 1 ? "תנועה" : "תנועות"}`;
-}
-
 /** `dd/mm` of an ISO date. */
 function dayMonth(date: string): string {
   return `${date.slice(8, 10)}/${date.slice(5, 7)}`;
@@ -70,6 +67,21 @@ function bySizeOnly(a: ProfitLine, b: ProfitLine): number {
 function byDateThenSize(a: ProfitLine, b: ProfitLine): number {
   if (a.date !== b.date) return a.date < b.date ? 1 : -1;
   return bySizeOnly(a, b);
+}
+
+/** The month's categories as the board's two groups; a category's lines come newest first. */
+function companyCategoryGroups(model: ProfitModel): ProfitCategoryGroup<ProfitLine>[] {
+  const inputs = (direction: "income" | "expense") => model.categories
+    .filter((row) => row.direction === direction)
+    .map((row) => ({
+      key: row.key,
+      name: row.name,
+      total: direction === "income" ? row.amount : -row.amount,
+      count: row.count,
+      projects: row.projects,
+      lines: model.lines.filter((line) => line.direction === direction && line.categoryKey === row.key).sort(byDateThenSize),
+    }));
+  return profitCategoryGroups(inputs("income"), inputs("expense"));
 }
 
 /**
@@ -101,7 +113,6 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   });
   const model: ProfitModel | null = sample ? buildProfitModel(sample) : live.model;
   const phase: ScreenPhase = sample != null ? { kind: "ready" } : preview !== "off" ? screenPhase(preview) : live.failed ? { kind: "error", offline: !onlineManager.isOnline() } : model == null ? { kind: "loading" } : { kind: "ready" };
-  const [openState, setOpenState] = useState<string | null | undefined>(undefined);
   const [sheetState, setSheetOpen] = useState<boolean | undefined>(undefined);
   const basisRef = useRef<HTMLButtonElement>(null);
   const back = homeMonthPath(monthKey, search, currentKey);
@@ -110,9 +121,6 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
     return <ScreenState stacked headerClassName="ui-state-header" title={phase.kind === "loading" ? `רווח ${HEBREW_MONTHS[Number(monthKey.slice(5, 7)) - 1] ?? monthKey}` : "רווח"} kicker="בית" backTo={back} phase={phase} onRetry={live.refetch} loading={<ProfitSkeleton />} />;
   }
   const currency = model.currency;
-  const firstCategory = model.categories[0];
-  const firstOpen = firstCategory == null ? null : `${firstCategory.direction}:${firstCategory.key}`;
-  const openKey = openState === undefined ? (sample?.openFirst === true ? firstOpen : null) : openState;
   const sheetOpen = sheetState ?? sample?.sheetOpen === true;
   const setBy = (next: Order) => {
     const nextParams = new URLSearchParams(location.search);
@@ -155,7 +163,6 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
       </div>
     </Card>
   );
-  const linesOf = (direction: "income" | "expense", categoryKey: string) => model.lines.filter((line) => line.direction === direction && line.categoryKey === categoryKey);
   const lineRow = (line: ProfitLine, hint: string) => (
     <ListRow
       key={line.id}
@@ -194,27 +201,15 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
       </List>
     );
   } else if (by === "category") {
+    const groups = companyCategoryGroups(model);
+    const firstOpen = sample?.openFirst === true ? groups[0]?.categories[0]?.key ?? null : null;
     body = (
-      <List layout="flat" className="ui-cp-list">
-        {model.categories.map((row) => {
-          const id = `${row.direction}:${row.key}`;
-          const isOpen = openKey === id;
-          const lines = isOpen ? linesOf(row.direction, row.key).sort(byDateThenSize) : [];
-          const meta = `${countWord(row.count)}${row.projects > 1 ? ` · ${String(row.projects)} פרויקטים` : ""}`;
-          return (
-            <li key={id} className="ui-cp-row">
-              <button type="button" className="ui-cp-link" aria-expanded={isOpen} onClick={() => { setOpenState(isOpen ? null : id); }}>
-                <span className="ui-cp-top">
-                  <span className="ui-cp-name">{row.name}</span>
-                  <Amount agorot={row.amount} currency={currency} income={row.amount > 0n} />
-                </span>
-                <span className="ui-cp-meta t-caption t-muted">{meta}</span>
-              </button>
-              {isOpen ? <List layout="flat" className="ui-cp-lines">{lines.map((line) => lineRow(line, `${dayMonth(line.date)} · ${line.project ?? "בלי פרויקט"}`))}</List> : null}
-            </li>
-          );
-        })}
-      </List>
+      <ProfitCategories
+        groups={groups}
+        currency={currency}
+        initialOpen={firstOpen}
+        renderLine={(line) => lineRow(line, `${dayMonth(line.date)} · ${line.project ?? "בלי פרויקט"}`)}
+      />
     );
   } else {
     const sorted = [...model.lines].sort(byDateThenSize);
