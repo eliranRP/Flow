@@ -127,11 +127,7 @@ describe("Home's cash (FLOW-364: the redesigned Home)", () => {
     // No profit band, period pill or projects: those are the profit view's.
     expect(screen.queryByRole("button", { name: /בחירת תקופה/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "פרויקטים" })).not.toBeInTheDocument();
-  });
-
-  it("drops the old earlier-months list and its two links (FLOW-364)", async () => {
-    wrap();
-    await screen.findByText("תזרים · עד היום");
+    // FLOW-364: the old earlier-months list and its two links are gone (the board's Home has nothing there).
     expect(screen.queryByRole("heading", { name: "חודשים קודמים" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "לכל החודשים" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "לכל הקבועים" })).not.toBeInTheDocument();
