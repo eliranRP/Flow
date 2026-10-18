@@ -13,13 +13,11 @@ import { CodeField, type CopyTarget } from "../ui/code-field";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { ConnectionFacts, ConnectionHead, ConnectionNote, ConnectionPage, StepList } from "../ui/connection-page";
 import { FormError } from "../ui/layout";
-import { RadioRow } from "../ui/radio-row";
+import { ListRow } from "../ui/list-row";
 import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
-import { TextLink } from "../ui/text-link";
 import { useBlockedPreview } from "./screen-shared";
 import { screenPhase } from "../query-phase";
-import { LogoutIcon } from "../ui/icons";
 
 export type AssistantScope = "read" | "read_write";
 export type AssistantClient = "claude-code" | "claude-ai" | "chatgpt" | "other";
@@ -53,9 +51,9 @@ const CLIENTS: Array<{ value: AssistantClient; label: string }> = [
 
 /** The three questions the board shows under "מה אפשר לשאול" (the project and supplier are invented). */
 export const EXAMPLE_QUESTIONS = [
-  "כמה הוצאתי על Elm Court החודש?",
-  "מה מהקבועים עוד לא הגיע?",
-  "שייך את כל Hardware Plus מהשבוע ל־Elm Court",
+  '"כמה הוצאתי על Elm Court החודש?"',
+  '"מה מהקבועים עוד לא הגיע?"',
+  '"שייך את כל Harlow מהשבוע ל־Elm Court"',
 ];
 
 export const MINT_ERROR = "לא הצלחנו להתחבר. נסו שוב.";
@@ -287,8 +285,13 @@ export function AiConnectionPage({
   const connected = view.state === "connected" && secret == null && !setupOpen;
   // An expired code shows its box and one button; the setup steps follow the button.
   const expiredWaiting = view.state === "expired" && secret == null && !setupOpen;
-  const current = secret != null;
-  const showSetup = !connected && !expiredWaiting && !current;
+  const showSetup = !connected && !expiredWaiting;
+  // The code on screen stays tied to the scope it was minted for; picking the other scope drops it (board: SettingsMcpCode).
+  const shownScope = secret != null ? scopeChoice(secret.scope) : scope;
+  function pickScope(next: AssistantScope) {
+    if (next !== shownScope) setSecret(null);
+    setScope(next);
+  }
   const month = currentMonthName(new Date(now));
   const headerSubtitle = "MCP · העוזר שלכם עובד עם הספרים של Flow";
   const backTo = `/settings/connections${search}`;
@@ -299,7 +302,7 @@ export function AiConnectionPage({
       <ConnectionPage title="חיבור ל־AI" subtitle={headerSubtitle} backTo={backTo}>
         <div className="ui-stack">
           <p>כדי לחבר עוזר צריך עסק.</p>
-          <TextLink to={`/onboarding?return=${encodeURIComponent(backTo)}`}>פרטי העסק</TextLink>
+          <Button variant="link" to="/setup/1" chevron>פרטי העסק</Button>
         </div>
       </ConnectionPage>
       </ViewerScope>
@@ -327,7 +330,7 @@ export function AiConnectionPage({
       <ViewerNote />
       {connected ? (
         <>
-          <div className="ui-settings-card ui-connection-card">
+          <div className="ui-settings-card ui-connection-card ui-ai-connected-card">
             <p className="ui-ai-status">
               <span className="ui-ai-status-name">מחובר</span>
               <span className="ui-ai-status-scope">{scopeLabel(view.scope ?? "read_write")}</span>
@@ -338,12 +341,12 @@ export function AiConnectionPage({
                 ...(expires != null ? [{ label: "הקוד בתוקף עד", value: expires, ltr: true }] : []),
               ]}
             />
+            <p className="ui-ai-code-note">{CONNECTED_NOTE}</p>
           </div>
-          <ConnectionNote>{CONNECTED_NOTE}</ConnectionNote>
           {readonly ? null : (
             <div className="ui-connection-actions">
               <Button variant="secondary" onClick={() => { setSetupOpen(true); }}>יצירת קוד חדש</Button>
-              <Button variant="danger-link" icon={<LogoutIcon size={18} />} onClick={(event) => { disconnectFocus.current = event.currentTarget; setDisconnectOpen(true); }}>ניתוק</Button>
+              <Button variant="danger-link" onClick={(event) => { disconnectFocus.current = event.currentTarget; setDisconnectOpen(true); }}>ניתוק</Button>
             </div>
           )}
         </>
@@ -359,84 +362,81 @@ export function AiConnectionPage({
           </div>
               <ConnectionHead>1 · מה העוזר יכול לעשות</ConnectionHead>
               <div role="radiogroup" aria-label={SCOPE_FIELD} className="ui-ai-scope">
-                <RadioRow
-                  label="קריאה בלבד"
+                <ListRow control="radio"
+                  title="קריאה בלבד"
                   description={scopeHint("read")}
-                  marker="start"
-                  selected={scope === "read"}
+                  selected={shownScope === "read"}
                   disabled={minting}
-                  onSelect={() => { setScope("read"); }}
+                  onSelect={() => { pickScope("read"); }}
                 />
-                <RadioRow
-                  label="קריאה וכתיבה"
+                <ListRow control="radio"
+                  title="קריאה וכתיבה"
                   description={scopeHint("read_write")}
-                  marker="start"
-                  selected={scope === "read_write"}
+                  selected={shownScope === "read_write"}
                   disabled={minting}
-                  onSelect={() => { setScope("read_write"); }}
+                  onSelect={() => { pickScope("read_write"); }}
                 />
               </div>
               <ConnectionHead>2 · באיזה עוזר</ConnectionHead>
               <SegmentedControl<AssistantClient>
                 label="באיזה עוזר"
+                showLabel={false}
                 value={assistant}
                 disabled={minting}
                 options={CLIENTS}
                 onChange={(next) => { setAssistant(next); }}
               />
               <ConnectionHead>3 · מחברים</ConnectionHead>
-              <ConnectionNote>Flow ייצור קוד גישה אישי. הוא מוצג פעם אחת, כמו סיסמה.</ConnectionNote>
-              {minting ? <p className="t-hint" role="status">{MINT_REASON}</p> : null}
-              {mintError ? <FormError>{MINT_ERROR}</FormError> : null}
-              <Button busy={minting} onClick={() => { void mint(); }}>יצירת קוד</Button>
-        </>
-      ) : null}
-      {current ? (
-        <>
-          <ConnectionHead>1 · מה העוזר יכול לעשות</ConnectionHead>
-          <ConnectionNote>{`${scopeLabel(scopeChoice(secret.scope))}. ${scopeHint(scopeChoice(secret.scope))}`}</ConnectionNote>
-          <ConnectionHead>2 · {CLIENTS.find((item) => item.value === assistant)?.label ?? ""}</ConnectionHead>
-          <div className="ui-settings-card ui-connection-steps">
-            <StepList steps={clientSteps(assistant).steps} />
-          </div>
-          <div className="ui-ai-fields">
-            {clientSteps(assistant).fields === "command" ? (
-              <CodeField
-                label="פקודת חיבור"
-                labelId="ai-command-label"
-                value={command}
-                valueRef={commandRef}
-                failed={manualField === "command"}
-                copyLabel="העתקה: פקודה"
-                onCopy={() => { void copyValue("command", command, commandRef.current); }}
-              />
-            ) : (
-              <>
-                <CodeField
-                  label="כתובת שרת MCP"
-                  labelId="ai-url-label"
-                  value={mcpUrl}
-                  valueRef={urlRef}
-                  failed={manualField === "url"}
-                  copyLabel="העתקה: כתובת"
-                  onCopy={() => { void copyValue("url", mcpUrl, urlRef.current); }}
-                />
-                <CodeField
-                  label="כותרת"
-                  labelId="ai-header-label"
-                  value={`Authorization: Bearer ${secret.secret}`}
-                  valueRef={headerRef}
-                  failed={manualField === "secret"}
-                  copyLabel="העתקה: כותרת"
-                  onCopy={() => { void copyValue("secret", `Authorization: Bearer ${secret.secret}`, headerRef.current); }}
-                />
-              </>
-            )}
-          </div>
-          <ConnectionNote>{CODE_NOTE}</ConnectionNote>
-          <ConnectionHead>4 · בודקים</ConnectionHead>
-          <ConnectionNote>{`שאלו את העוזר: "מה מצב התזרים של ${month}?". כשהוא עונה, החיבור מוכן ויופיע כאן כמחובר.`}</ConnectionNote>
-          <Button onClick={() => { setSecret(null); setSetupOpen(false); }}>סיום</Button>
+              {secret == null ? (
+                <>
+                  <ConnectionNote>Flow ייצור קוד גישה אישי. הוא מוצג פעם אחת, כמו סיסמה.</ConnectionNote>
+                  {minting ? <p className="t-caption t-muted" role="status">{MINT_REASON}</p> : null}
+                  {mintError ? <FormError>{MINT_ERROR}</FormError> : null}
+                  <Button busy={minting} onClick={() => { void mint(); }}>יצירת קוד</Button>
+                </>
+              ) : (
+                <>
+                  <div className="ui-settings-card ui-connection-steps">
+                    <StepList steps={clientSteps(assistant).steps} />
+                  {clientSteps(assistant).fields === "command" ? (
+                    <CodeField
+                      label="פקודת חיבור"
+                      labelId="ai-command-label"
+                      value={command}
+                      valueRef={commandRef}
+                      failed={manualField === "command"}
+                      copyLabel="העתקה: פקודה"
+                      onCopy={() => { void copyValue("command", command, commandRef.current); }}
+                    />
+                  ) : (
+                    <>
+                      <CodeField
+                        label="כתובת שרת MCP"
+                        labelId="ai-url-label"
+                        value={mcpUrl}
+                        valueRef={urlRef}
+                        failed={manualField === "url"}
+                        copyLabel="העתקה: כתובת"
+                        onCopy={() => { void copyValue("url", mcpUrl, urlRef.current); }}
+                      />
+                      <CodeField
+                        label="כותרת"
+                        labelId="ai-header-label"
+                        value={`Authorization: Bearer ${secret.secret}`}
+                        valueRef={headerRef}
+                        failed={manualField === "secret"}
+                        copyLabel="העתקה: כותרת"
+                        onCopy={() => { void copyValue("secret", `Authorization: Bearer ${secret.secret}`, headerRef.current); }}
+                      />
+                    </>
+                  )}
+                    <p className="ui-ai-code-note">{CODE_NOTE}</p>
+                  </div>
+                  <ConnectionHead>4 · בודקים</ConnectionHead>
+                  <ConnectionNote>{`שאלו את העוזר: "מה מצב התזרים של ${month}?". כשהוא עונה, החיבור מוכן ויופיע כאן כמחובר.`}</ConnectionNote>
+                  <Button onClick={() => { setSecret(null); setSetupOpen(false); }}>סיום</Button>
+                </>
+              )}
         </>
       ) : null}
       <ConfirmSheet

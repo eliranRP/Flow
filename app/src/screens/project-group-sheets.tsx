@@ -6,10 +6,9 @@ import { assertNoError, useWrite } from "../use-write";
 import { Button } from "../ui/button";
 import { BackIcon, PlusIcon } from "../ui/icons";
 import { IconButton } from "../ui/icon-button";
-import { RadioRow } from "../ui/radio-row";
+import { ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
-import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 
 /** FLOW-360 A: the project's group, picked from its ⋯ menu. */
@@ -226,10 +225,10 @@ export function ProjectGroupSheets({
         <div className="ui-change-picker">
           <div role="radiogroup" aria-label="קבוצה">
             {[{ id: null, name: NO_GROUP }, ...groups].map((group) => (
-              <RadioRow
+              <ListRow control="radio"
                 key={group.id ?? "none"}
                 layout="picker"
-                label={group.name}
+                title={group.name}
                 selected={group.id === currentId}
                 busy={savingId === (group.id ?? "")}
                 disabled={savingId != null && savingId !== (group.id ?? "")}
@@ -240,16 +239,16 @@ export function ProjectGroupSheets({
             ))}
           </div>
           <div className="ui-change-links">
-            <TextLink
+            <Button
+              variant="link"
               icon={<PlusIcon size={16} />}
-              chevron={false}
               disabled={move.isPending}
               onClick={() => {
                 onView("new");
               }}
             >
               קבוצה חדשה
-            </TextLink>
+            </Button>
           </div>
         </div>
       </Sheet>

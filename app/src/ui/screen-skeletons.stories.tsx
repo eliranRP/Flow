@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { DetailSkeleton, LinesSkeleton, LoansSkeleton, ProfitSkeleton, ProjectsSkeleton, RecurringSkeleton } from "./screen-skeletons";
+import { LinesSkeleton, LoansSkeleton, ProfitSkeleton, ProjectsSkeleton, RecurringSkeleton } from "./screen-skeletons";
 import { padded } from "./story-support";
 
 const meta = {
@@ -25,6 +25,3 @@ export const Recurring: Story = { render: () => <RecurringSkeleton />, tags: ["c
 
 /** FLOW-371: Profit loading (board profitLoading). Wired into the Profit screen's ScreenState. */
 export const Profit: Story = { render: () => <ProfitSkeleton />, tags: ["clip-no-text"] };
-
-/** FLOW-371: a transaction page loading (board detailLoading). Wired into the transaction page in transaction-screen.tsx. */
-export const Detail: Story = { render: () => <DetailSkeleton />, tags: ["clip-no-text"] };

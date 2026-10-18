@@ -4,8 +4,6 @@ import { UnpaidScreen } from "./unpaid-screen";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
 import { invoicesSample, invoicesSummary } from "../dev/invoices-sample";
-import { israelToday, shiftDays } from "../ui/date-math";
-import type { UnpaidInvoice } from "../unpaid";
 
 const meta = {
   title: "Screens/Routes",
@@ -24,20 +22,6 @@ export const UnpaidList: Story = {
     <StoryRoute entry="/unpaid" tabs>
       <ExampleBar />
       <UnpaidScreen sample={rows} summary={summary} />
-    </StoryRoute>
-  ),
-};
-
-/** No invoice is over 30 days: the signal line in the summary card is not drawn. */
-export const UnpaidNoOverdue: Story = {
-  name: "Unpaid, none over 30 days",
-  render: () => (
-    <StoryRoute entry="/unpaid" tabs>
-      <ExampleBar />
-      <UnpaidScreen
-        sample={rows.map((row) => ({ ...row, doc_date: shiftDays(israelToday(), -10) }))}
-        summary={summary}
-      />
     </StoryRoute>
   ),
 };
@@ -73,21 +57,6 @@ export const UnpaidDetailNoMatch: Story = {
     <StoryRoute entry="/unpaid/inv-1043" tabs>
       <ExampleBar />
       <InvoiceScreen sample={rows} summary={summary} invoiceId="inv-1043" />
-    </StoryRoute>
-  ),
-};
-
-/** No PDF link on SUMIT for this invoice: the document row is not drawn. */
-export const UnpaidDetailNoDocument: Story = {
-  name: "Invoice page, no document",
-  render: () => (
-    <StoryRoute entry="/unpaid/inv-1043" tabs>
-      <ExampleBar />
-      <InvoiceScreen
-        sample={rows.map((row): UnpaidInvoice => (row.id === "inv-1043" ? { ...row, document_url: null } : row))}
-        summary={summary}
-        invoiceId="inv-1043"
-      />
     </StoryRoute>
   ),
 };

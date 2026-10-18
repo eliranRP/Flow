@@ -50,7 +50,7 @@ export function ConnectSheet({
     >
       {noCompanyBody ?? (
         <div className="ui-stack">
-          {hint != null ? <p className="t-hint">{hint}</p> : null}
+          {hint != null ? <p className="t-caption t-muted">{hint}</p> : null}
           {authReconnect ? authReconnectLead ?? <p>המזהה או המפתח לא התקבלו</p> : null}
           <form
             id={formId}

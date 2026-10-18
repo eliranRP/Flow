@@ -24,7 +24,7 @@ One source per question. When two disagree, the higher row wins, and the lower o
 | The rules a reviewer checks | [DESIGN-RULES.md](DESIGN-RULES.md), with the [design checklist](../review/CHECKLIST-design.md) and [CONTROLS.md](../qa/CONTROLS.md) |
 | Colours, type, spacing, radii, motion | The tokens: [design/system](../../design/system/) and their CSS variables in `design/system/implementation-tokens.css`. Never a raw value in a screen |
 | What a control looks like and which states it has | The shared component in `app/src/ui` and its Storybook story. Storybook is the living catalogue |
-| What a screen looks like | The approved mockup: `design/screens/`, or the plan's mockup under the project's `plans/` folder once the owner approved it |
+| What a screen looks like | The approved board artboard (https://claude.ai/artifact/9grt9spjshVCxerYWrRXiD), or the plan's mockup under the project's `plans/` folder once the owner approved it |
 | What changed and when | The [design log](log/README.md) |
 
 A screen only composes shared components. If a control is missing, the lane adds it to `app/src/ui` with a story ([component library](../runbooks/component-library.md)).

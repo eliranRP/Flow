@@ -1,13 +1,12 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { loanFinalLine, type LoanPreview } from "./loan-form";
+import { lastPaymentLabel, loanFinalLine, paymentSplitParts, termYearsLabel, type LoanPreview } from "./loan-form";
 
 function ready(pi: bigint, finalPi: bigint): Extract<LoanPreview, { status: "ready" }> {
   return {
     status: "ready",
     kind: "amortizing",
     paymentMinor: pi,
-    interestMinor: 0n,
     escrowMinor: 0n,
     balloon: null,
     finalAdjustment: null,
@@ -49,5 +48,27 @@ describe("loanFinalLine multiple", () => {
     const line = loanFinalLine(ready(100n, 200n));
     expect(line?.lead).toBe("התשלום האחרון כפול");
     expect(line?.times).toBeUndefined();
+  });
+});
+
+describe("the new-loan sheet's helpers (FLOW-139d)", () => {
+  it("labels the last due date as MM/YYYY: start plus term minus one month", () => {
+    expect(lastPaymentLabel("2026-11-01", 360)).toBe("10/2056");
+    expect(lastPaymentLabel("2026-11-01", 1)).toBe("11/2026");
+    expect(lastPaymentLabel("2026-12-01", 2)).toBe("01/2027");
+    expect(lastPaymentLabel("2026-01-15", 12)).toBe("12/2026");
+  });
+
+  it("splits the payment into principal and interest beside the escrow", () => {
+    expect(paymentSplitParts("amortizing", 183_776n, 36_000n, "USD")).toEqual({ label: "קרן וריבית", interest: "$1,477.76", escrow: "$360" });
+    expect(paymentSplitParts("interest_only", 183_776n, 0n, "ILS")).toEqual({ label: "ריבית בלבד", interest: "₪1,837.76", escrow: "₪0" });
+  });
+
+  it("writes the term in years, and in months under a year", () => {
+    expect(termYearsLabel("360")).toBe("30 שנה");
+    expect(termYearsLabel("30")).toBe("2 שנה ו־6 חודשים");
+    expect(termYearsLabel("6")).toBe("6 חודשים");
+    expect(termYearsLabel("")).toBe("");
+    expect(termYearsLabel("0")).toBe("");
   });
 });

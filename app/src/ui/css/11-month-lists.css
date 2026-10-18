@@ -100,7 +100,7 @@
   margin: var(--space-4) 0 var(--space-1);
   color: var(--color-text-secondary);
   font-size: var(--type-meta-size);
-  font-weight: var(--type-label-weight);
+  font-weight: var(--type-line2-weight);
   line-height: var(--type-meta-line);
 }
 
@@ -118,7 +118,7 @@
   background: var(--color-avatar);
   color: var(--color-text-secondary);
   font-size: var(--type-meta-size);
-  font-weight: 600;
+  font-weight: var(--type-name-weight);
   line-height: 1;
 }
 
@@ -175,11 +175,6 @@
 .ui-section-head,
 .ui-page-pad {
   padding-inline: var(--space-side);
-}
-
-/* Mockup 02: 20px between the project band and the overhead switch (FLOW-328). */
-.ui-project-overhead {
-  margin-top: var(--space-5);
 }
 
 .ui-cat-seg {
@@ -243,7 +238,7 @@
   min-block-size: var(--touch-min);
   margin: 0;
   color: var(--color-text-secondary);
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   text-wrap: balance;
 }
 
@@ -338,13 +333,4 @@ html:has(.ui-split) {
   flex-basis: 100%;
   margin: 0;
   color: var(--color-text-secondary);
-}
-
-/* By month: the open month's pill sits 8px after the name, centred on the title line (#367). */
-.ui-profit-months .ui-row-title-with-tag {
-  gap: var(--space-2);
-}
-
-.ui-profit-months .ui-row-title-with-tag .ui-row-title-text {
-  flex: 0 1 auto;
 }

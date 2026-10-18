@@ -71,7 +71,6 @@ export function withChoice(options: ChangeChoice[], id: string, name: string | n
 }
 
 export const KEPT_OUT = "לא נספר ברווח";
-export const KEPT_OUT_SHORT = "לא נספר ברווח";
 export function combinePhase(left: ScreenPhase, right: ScreenPhase): ScreenPhase {
   if (left.kind === "error") return left;
   if (right.kind === "error") return right;

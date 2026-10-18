@@ -181,7 +181,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     onError: (_error, payload) => { restorePick(payload); },
     onSplit: () => {
       if (!row?.transaction_id) return;
-      void navigate(`/transactions/${row.transaction_id}/split${search}`, { replace: true });
+      void navigate(`/transactions/${row.transaction_id}/split-category${search}`, { replace: true });
     },
     onSuccess: () => {
       setSavedRemember(picked.current.remember);
@@ -522,7 +522,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       }}
       onSplit={() => {
         if (row?.transaction_id) {
-          void navigate(`/transactions/${row.transaction_id}/split${search}`, { replace: true });
+          void navigate(`/transactions/${row.transaction_id}/split-category${search}`, { replace: true });
           return;
         }
         toast.show({ message: "הפיצול נעשה ממסך התנועה, אחרי השיוך." });

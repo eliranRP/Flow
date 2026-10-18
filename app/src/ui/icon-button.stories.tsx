@@ -20,14 +20,3 @@ export const Disabled: Story = {
   tags: ["clip-no-text"],
   args: { label: "סגירה", disabled: true, children: <CloseIcon /> },
 };
-export const OnBand: Story = {
-  tags: ["clip-no-text"],
-  args: { label: "סגירה", onBand: true, children: <CloseIcon /> },
-  decorators: [
-    (Story) => (
-      <div className="ui-band p-4">
-        <Story />
-      </div>
-    ),
-  ],
-};

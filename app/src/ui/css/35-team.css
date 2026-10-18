@@ -1,97 +1,113 @@
 /* FLOW-601: the team page, the invite cards, and the company on Home's band (decision 0167). */
 
-/* Mockup a-1: a person row is a 40px initials circle, the name, and the role under it. */
-.ui-person-row .ui-row-icon {
-  display: inline-flex;
-  flex: none;
-}
-
-/* Mockup invite-1: the roles sit a step below the email field. */
-form + .ui-role-choice {
-  margin-block-start: var(--space-3);
-}
-
-/* The page scrolls above the pinned הזמנה bar. */
-.ui-team-page {
-  padding-block-end: calc(var(--control-height) + 2 * var(--space-3) + var(--space-4));
-}
-
-/* Mockups invite-3 and invite-4: the company, "role · מ<name>", then הצטרפות and דחייה. */
-.ui-invite-card {
-  display: flex;
-  flex-direction: column;
-  min-inline-size: 0;
-  padding-block: var(--space-3);
-}
-
-.ui-invite-name {
-  margin: 0;
-  color: var(--color-text);
-  font-size: var(--type-title-3-size);
-  line-height: var(--type-title-3-line);
-  font-weight: 400;
-  overflow-wrap: anywhere;
-}
-
-.ui-invite-line {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--type-meta-size);
-  line-height: var(--type-meta-line);
-  font-weight: var(--type-meta-weight);
-  overflow-wrap: anywhere;
-}
-
-.ui-invite-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-4) var(--space-6);
-  margin-block-start: var(--space-3);
-}
-
-.ui-invite-actions > .ui-btn {
-  min-inline-size: 6.5rem;
-  padding-inline: var(--space-6);
-}
-
-.ui-invite-actions > .ui-text-link {
-  min-block-size: var(--touch-min);
-}
-
-/* The switcher's הזמנות head: the hint size, muted, as in mockup invite-4. */
-.ui-company-invites-head {
-  margin: var(--space-6) 0 var(--space-1);
-  color: var(--color-text-secondary);
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line);
-  font-weight: var(--type-label-weight);
-}
-
-.ui-company-new {
-  display: flex;
-  margin-block-start: var(--space-6);
-}
-
-/* Mockup invite-3: a full-screen list after sign-in, with אחר כך at the bottom. */
-.ui-invites-screen {
-  display: flex;
-  flex-direction: column;
-  min-block-size: 100dvh;
-}
-
-.ui-invites-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+/* The board's team page: the card sits a step below the subtitle, and the invite button under it, in the flow. */
+.ui-team-list {
   margin-block-start: var(--space-4);
-  padding-inline: var(--space-side);
 }
 
-.ui-invites-later {
+.ui-team-list.ui-list-inset > .ui-row {
+  min-block-size: 56px;
+}
+
+.ui-team-invite {
+  margin-block-start: var(--space-4);
+}
+
+/* Mockup invite-1 (board, FLOW-512): the email field, then the two roles as cards. The selected
+   role is a tinted card with a filled accent dot (no check mark); the other has a plain ring. No dividers. */
+.ui-role-choice {
   display: flex;
-  justify-content: center;
-  margin-block-start: auto;
-  padding-block: var(--space-6) calc(var(--safe-bottom, 0px) + var(--space-4));
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
+.ui-role-choice .ui-radio-row {
+  min-block-size: 60px;
+  padding-block: 0;
+  padding-inline: var(--space-4);
+  border-bottom: 0;
+  border-radius: var(--radius-card);
+}
+
+.ui-role-choice .ui-radio-row::before {
+  display: none;
+}
+
+.ui-role-choice .ui-radio-row[aria-checked="true"] {
+  background: var(--color-tint);
+}
+
+.ui-role-choice .ui-radio {
+  border-radius: 50%;
+}
+
+.ui-role-choice .ui-radio[data-on="true"] {
+  font-size: 0;
+}
+
+/* The invite sheet (team-sheets.tsx InviteSheet, panelClassName ui-invite-sheet): the board's 44px head,
+   13px label, 12px role note. */
+.ui-invite-sheet .ui-sheet-head > .ui-icon-btn {
+  margin-block: 0;
+}
+
+.ui-invite-sheet .ui-sheet-head > .ui-icon-btn:last-child:not(:first-child) {
+  margin-inline-end: 0;
+}
+
+.ui-invite-sheet .ui-field-label {
+  line-height: var(--type-cents-line);
+}
+
+.ui-invite-sheet .ui-role-choice .ui-row-text {
+  gap: calc(var(--space-1) / 2);
+}
+
+.ui-invite-sheet .ui-role-choice .ui-row-title {
+  line-height: var(--type-cents-line);
+}
+
+.ui-invite-sheet .ui-role-choice .ui-row-hint {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+/* The field is LTR for the address, but the board sets it on the page's end side. */
+.ui-invite-sheet .ui-field-control {
+  text-align: end;
+}
+
+/* The board's owner-only page (States, teamEmpty): its Back row starts 16px down with a 16/500 label, and the
+   empty block (64px icon, 24px title, 15px/1.5 line, button) is stacked on a 10px rhythm 51px under the owner row. */
+.ui-settings-page.ui-team-alone > .ui-page-stacked {
+  padding-top: var(--space-4);
+  padding-bottom: calc(var(--space-1) * 1.75);
+}
+
+.ui-team-alone .ui-back-text {
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-2-weight);
+}
+
+.ui-team-alone .ui-empty-state {
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+  padding-block-start: calc(var(--space-6) * 2 + var(--space-1) / 2);
+}
+
+.ui-team-alone .ui-empty-icon {
+  margin-bottom: var(--space-2);
+}
+
+.ui-team-alone .ui-empty-title {
+  line-height: var(--type-cents-line);
+}
+
+.ui-team-alone .ui-empty-line {
+  max-inline-size: calc(var(--empty-measure) + var(--space-5));
+  margin-top: 0;
+  line-height: var(--type-body-line);
+}
+
+.ui-team-alone .ui-empty-action {
+  margin-top: var(--space-2);
+}

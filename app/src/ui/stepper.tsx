@@ -32,8 +32,8 @@ export function Stepper({
   return (
     <div className="ui-stepper" data-disabled={disabled ? "true" : undefined}>
       <span className="ui-stepper-copy">
-        <span id={labelId} className="t-label">{label}</span>
-        {hint ? <span id={hintId} className="t-hint ui-stepper-hint"><bdi className="ui-num" dir="ltr">{hint}</bdi></span> : null}
+        <span id={labelId} className="t-line2">{label}</span>
+        {hint ? <span id={hintId} className="t-caption t-muted ui-stepper-hint"><bdi className="ui-num" dir="ltr">{hint}</bdi></span> : null}
       </span>
       <span className="ui-stepper-controls">
         <button

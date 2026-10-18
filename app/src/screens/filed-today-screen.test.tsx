@@ -1,8 +1,13 @@
-import { filedTodaySchema, type FiledTodayRow } from "@flow/shared";
-import { screen } from "@testing-library/react";
+import { type FiledTodayRow, filedTodaySchema } from "@flow/shared";
+import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { FiledTodayScreen } from "./filed-today-screen";
+import { FILED_NO_PROJECT, FiledTodayScreen } from "./filed-today-screen";
 import { renderWithProviders } from "../test-render";
+import { Route, Routes, useLocation } from "react-router-dom";
+import { readTxnList } from "../txn-nav";
+import { groupByKey } from "../ui/month-groups";
+
+// --- filed-today-screen.test.tsx
 
 const row: FiledTodayRow = {
   id: "t-ils",
@@ -29,5 +34,102 @@ describe("FiledTodayScreen (FLOW-408)", () => {
     expect(usdRow?.textContent).toContain("$");
     expect(usdRow?.textContent).not.toContain("₪");
     expect(screen.getByText("ספק לדוגמה").closest("a")?.textContent).toContain("₪");
+  });
+});
+// --- filed-today-groups.test.tsx
+
+/** FLOW-334: שויכו היום under one head per project, with its count and total. */
+
+const line = (id: string, project: string | null, minor: bigint, category = "חומרים", direction: "income" | "expense" = "expense"): FiledTodayRow => ({
+  id,
+  description: `Line ${id}`,
+  doc_date: "2026-09-29",
+  amount_net: minor,
+  direction,
+  supplier_name: `Supplier ${id}`,
+  project_name: project,
+  category_name: category,
+});
+
+const ROWS = [
+  line("a", "Project A", -350_000n),
+  line("b", "Project B", -120_000n, "הובלה"),
+  line("c", "Project A", -84_050n),
+  line("d", null, -2_500n, "עמלות"),
+  line("e", "Project A", 1_000_000n, "עבודות", "income"),
+];
+
+function CardProbe() {
+  const location = useLocation();
+  return <p data-testid="ids">{readTxnList(location.state)?.ids.join(",") ?? "none"}</p>;
+}
+
+function renderList(rows: FiledTodayRow[]) {
+  return renderWithProviders(
+    <Routes>
+      <Route path="/review/filed" element={<FiledTodayScreen sample={rows} />} />
+      <Route path="/transactions/:transactionId" element={<CardProbe />} />
+    </Routes>,
+    { route: "/review/filed" },
+  );
+}
+
+describe("groupByKey", () => {
+  it("keeps the order each key first appears and the rows' order inside it", () => {
+    const groups = groupByKey(
+      ROWS,
+      (row) => ({ key: row.project_name ?? "", title: row.project_name ?? "none" }),
+      (row) => ({ minor: row.amount_net, currency: "ILS", direction: row.direction }),
+      true,
+    );
+    expect(groups.map((group) => group.title)).toEqual(["Project A", "Project B", "none"]);
+    expect(groups[0]?.rows.map((row) => row.id)).toEqual(["a", "c", "e"]);
+    expect(groups[0]?.totals).toEqual([{ currency: "ILS", incomeMinor: 1_000_000n, expenseMinor: 434_050n }]);
+  });
+
+  it("puts the no-project group last, wherever its first row is", () => {
+    const rows = [ROWS[3], ...ROWS.slice(0, 3)].filter((row): row is FiledTodayRow => row != null);
+    const groups = groupByKey(rows, (row) => ({ key: row.project_name ?? "", title: row.project_name ?? "none" }), (row) => ({ minor: row.amount_net, currency: "ILS", direction: row.direction }));
+    expect(groups.map((group) => group.key)).toEqual(["Project A", "Project B", ""]);
+  });
+
+  it("draws a lone group too", () => {
+    const groups = groupByKey([ROWS[0]], () => ({ key: "k", title: "t" }), () => ({ minor: 1n, currency: "ILS", direction: "expense" }));
+    expect(groups).toHaveLength(1);
+  });
+});
+
+describe("FiledTodayScreen by project", () => {
+  it("puts each project's rows under its head with the count and the total", () => {
+    renderList(ROWS);
+    const heads = screen.getAllByRole("heading", { level: 2 }).map((head) => head.textContent);
+    expect(heads).toEqual(["Project A", "Project B", FILED_NO_PROJECT]);
+    const projectA = screen.getByRole("group", { name: "Project A" });
+    expect(projectA).toHaveTextContent("3 תנועות");
+    const figuresA = [...(projectA.querySelectorAll(".ui-month-totals bdi"))];
+    expect(figuresA.map((node) => node.textContent)).toEqual(["+₪10,000", "−₪4,340.50"]);
+    expect(figuresA[0]).toHaveClass("ui-income");
+    // Agorot are drawn small, as on the rows (FLOW-334); a whole figure has no ".00" (owner, 2026-10-10).
+    expect(figuresA.map((node) => node.querySelector(".ui-num-cents")?.textContent ?? null)).toEqual([null, ".50"]);
+    const projectB = screen.getByRole("group", { name: "Project B" });
+    // FLOW-347: every head takes one shape, a one-line group's too: the count, then the total.
+    const headB = projectB.querySelector(".ui-month-totals");
+    expect(headB).toHaveTextContent(/^תנועה אחת, הוצאות −₪1,200$/);
+    const none = screen.getByRole("group", { name: FILED_NO_PROJECT }).querySelector(".ui-month-totals");
+    expect(none?.firstElementChild).toHaveClass("ui-group-count");
+    expect(none).toHaveTextContent(/^תנועה אחת, הוצאות −₪25$/);
+  });
+
+  it("keeps only the category in each row's hint", () => {
+    renderList(ROWS);
+    const row = screen.getByRole("link", { name: /Supplier b/ });
+    expect(row).toHaveTextContent("הובלה");
+    expect(row).not.toHaveTextContent("Project B");
+  });
+
+  it("steps through the rows in the order drawn", () => {
+    renderList(ROWS);
+    fireEvent.click(screen.getByRole("link", { name: /Supplier c/ }));
+    expect(screen.getByTestId("ids")).toHaveTextContent("a,c,e,b,d");
   });
 });

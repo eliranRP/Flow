@@ -73,7 +73,6 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-          cache: pnpm
       # The base is this run's own first parent, not live origin/main: main can move on while the run
       # waits, and a migration added by that later merge would read as removed here.
       - name: Migration filenames are append-only
@@ -96,6 +95,16 @@ jobs:
         run: node scripts/check-file-size.mjs
       - name: Backlog index is up to date
         run: node scripts/backlog-index.mjs --check
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      # Read only: lint is the one job that saves the pnpm store. Every other job restores it and never saves.
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-Linux-x64-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: node-cache-Linux-x64-pnpm-
       - run: pnpm install --frozen-lockfile
       - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
         with:
@@ -126,12 +135,22 @@ jobs:
         run: |
           pnpm test:connectors
           node scripts/check-deny-list.mjs
+      # `pnpm typecheck` ran above, so these build with vite alone (as scripts/local-ci.sh's build_part does).
       - name: Build the hosted dist
-        run: pnpm build
+        run: pnpm --filter @flow/app exec vite build
       - name: Stamp the commit and check the hosted bundle
         run: |
           node scripts/stamp-build.mjs "$GITHUB_SHA"
           pnpm check:bundle
+      # deploy reuses this dist (same run, same commit) instead of building it again. Upload it before the
+      # reviewers-only build below empties app/dist.
+      - name: Keep the hosted dist for deploy
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: hosted-dist
+          path: app/dist
+          retention-days: 1
+          if-no-files-found: error
       - name: Build the reviewers-only dist and check it
         env:
           VITE_REVIEWER_BUILD: "1"
@@ -139,7 +158,7 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ""
         run: |
           rm -rf app/dist
-          pnpm build
+          pnpm --filter @flow/app exec vite build
           pnpm check:reviewer-bundle
           test ! -f app/dist/build.txt
 
@@ -162,15 +181,24 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-          cache: pnpm
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      # Read only: lint is the one job that saves the pnpm store. Every other job restores it and never saves.
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-Linux-x64-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: node-cache-Linux-x64-pnpm-
       - run: pnpm install --frozen-lockfile
       - name: App unit tests (shard ${{ matrix.shard }}/2)
         run: pnpm --filter @flow/app test --shard=${{ matrix.shard }}/2
 
-  # The Storybook tests in the browser. FLOW-812: the Home speed test has its own runner, so the two
-  # run side by side.
+  # The Storybook tests in the browser, light and dark on their own runners (FLOW-812 kept the Home speed test
+  # apart). check-storybook (light) saves the Playwright caches; check-storybook-dark restores them.
   check-storybook:
-    name: check (storybook)
+    name: check (storybook light)
     needs: [plan]
     if: needs.plan.outputs.run == 'true'
     runs-on: ubuntu-latest
@@ -183,7 +211,16 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-          cache: pnpm
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      # Read only: lint is the one job that saves the pnpm store. Every other job restores it and never saves.
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-Linux-x64-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: node-cache-Linux-x64-pnpm-
       - run: pnpm install --frozen-lockfile
       - name: Cache Playwright browsers
         id: playwright-cache
@@ -209,7 +246,56 @@ jobs:
       - name: Install Playwright browsers
         timeout-minutes: 5
         run: pnpm --filter @flow/app exec playwright install chromium
-      - run: pnpm test:storybook
+      - run: pnpm --filter @flow/app exec vitest run --project storybook
+
+  check-storybook-dark:
+    name: check (storybook dark)
+    needs: [plan]
+    if: needs.plan.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 10.33.3
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      # Read only: lint is the one job that saves the pnpm store. Every other job restores it and never saves.
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-Linux-x64-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: node-cache-Linux-x64-pnpm-
+      - run: pnpm install --frozen-lockfile
+      - name: Restore the Playwright browser cache
+        id: playwright-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-1.63.0
+      # The Ubuntu mirror can stall on the font packages, so their .deb files come from this cache.
+      # Read only: check (storybook light) saves the packages for the next run.
+      - name: Restore the Playwright apt cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/flow-apt
+          key: ${{ runner.os }}-playwright-apt-1.63.0-none
+          restore-keys: ${{ runner.os }}-playwright-apt-1.63.0
+      - name: Restore Playwright system packages
+        run: bash scripts/ci-apt-cache.sh restore
+      - name: Install Playwright system dependencies
+        timeout-minutes: 8
+        run: bash scripts/ci-apt-cache.sh install
+      - name: Install Playwright browsers
+        timeout-minutes: 5
+        run: pnpm --filter @flow/app exec playwright install chromium
+      - run: pnpm --filter @flow/app exec vitest run --project storybook-dark
 
   # FLOW-804's Home speed test, on the hosted build.
   check-perf:
@@ -226,44 +312,84 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-          cache: pnpm
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      # Read only: lint is the one job that saves the pnpm store. Every other job restores it and never saves.
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-Linux-x64-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: node-cache-Linux-x64-pnpm-
       - run: pnpm install --frozen-lockfile
-      - name: Cache Playwright browsers
+      - name: Restore the Playwright browser cache
         id: playwright-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-1.63.0
       # The Ubuntu mirror can stall on the font packages, so their .deb files come from this cache.
-      - name: Cache Playwright system packages
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # Read only: check (storybook) saves the packages for the next run.
+      - name: Restore the Playwright apt cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/flow-apt
-          # A new entry each run, so a package the mirror updated is cached on the next run.
-          key: ${{ runner.os }}-playwright-apt-1.63.0-${{ github.run_id }}
+          key: ${{ runner.os }}-playwright-apt-1.63.0-none
           restore-keys: ${{ runner.os }}-playwright-apt-1.63.0
       - name: Restore Playwright system packages
         run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
         timeout-minutes: 8
         run: bash scripts/ci-apt-cache.sh install
-      - name: Keep Playwright system packages for the next run
-        run: bash scripts/ci-apt-cache.sh save
       - name: Install Playwright browsers
         timeout-minutes: 5
         run: pnpm --filter @flow/app exec playwright install chromium
       # FLOW-804: Home ready within 2 s on a throttled mid-range phone, on the hosted build.
       - name: Home speed test
-        run: |
-          pnpm build
-          pnpm --filter @flow/app test:perf
+        run: pnpm --filter @flow/app test:perf
+
+  # The Storybook build, once. The seven stories shards below download this build instead of building it.
+  build-storybook:
+    name: build (storybook)
+    needs: [plan]
+    if: needs.plan.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 10.33.3
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      # Read only: lint is the one job that saves the pnpm store. Every other job restores it and never saves.
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-Linux-x64-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: node-cache-Linux-x64-pnpm-
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build-storybook
+      - name: Keep the Storybook build for the stories shards
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: storybook-static
+          path: app/storybook-static
+          retention-days: 1
+          if-no-files-found: error
 
   # The Storybook smoke on seven runners: three of the every-story test's 21 story groups each, then
   # a seventh of the layout, clip and secret specs in a run of their own (next to the every-story
   # groups they miss their timing).
   check-stories:
     name: check (stories ${{ matrix.shard }}/7)
-    needs: [plan]
+    needs: [plan, build-storybook]
     if: needs.plan.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -279,33 +405,44 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-          cache: pnpm
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      # Read only: lint is the one job that saves the pnpm store. Every other job restores it and never saves.
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-Linux-x64-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: node-cache-Linux-x64-pnpm-
       - run: pnpm install --frozen-lockfile
-      - name: Cache Playwright browsers
+      - name: Restore the Playwright browser cache
         id: playwright-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-1.63.0
       # The Ubuntu mirror can stall on the font packages, so their .deb files come from this cache.
-      - name: Cache Playwright system packages
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # Read only: check (storybook) saves the packages for the next run.
+      - name: Restore the Playwright apt cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/flow-apt
-          # A new entry each run, so a package the mirror updated is cached on the next run.
-          key: ${{ runner.os }}-playwright-apt-1.63.0-${{ github.run_id }}
+          key: ${{ runner.os }}-playwright-apt-1.63.0-none
           restore-keys: ${{ runner.os }}-playwright-apt-1.63.0
       - name: Restore Playwright system packages
         run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
         timeout-minutes: 8
         run: bash scripts/ci-apt-cache.sh install
-      - name: Keep Playwright system packages for the next run
-        run: bash scripts/ci-apt-cache.sh save
       - name: Install Playwright browsers
         timeout-minutes: 5
         run: pnpm --filter @flow/app exec playwright install chromium
-      - run: pnpm build-storybook
+      - name: Download the Storybook build
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: storybook-static
+          path: app/storybook-static
       - name: Every static story (shard ${{ matrix.shard }}/7)
         run: pnpm test:storybook:smoke --grep "every static story" --shard=${{ matrix.shard }}/7
       - name: Storybook smoke without the every-story test (shard ${{ matrix.shard }}/7)
@@ -313,7 +450,7 @@ jobs:
 
   # always(), not !cancelled(): a skipped required check counts as passing, so the gate must run and fail.
   check:
-    needs: [plan, check-core, check-app, check-storybook, check-perf, check-stories]
+    needs: [plan, check-core, check-app, check-storybook, check-storybook-dark, check-perf, check-stories, build-storybook]
     if: always() && needs.plan.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -323,19 +460,25 @@ jobs:
           CORE: ${{ needs.check-core.result }}
           APP: ${{ needs.check-app.result }}
           STORYBOOK: ${{ needs.check-storybook.result }}
+          STORYBOOK_DARK: ${{ needs.check-storybook-dark.result }}
           PERF: ${{ needs.check-perf.result }}
           STORIES: ${{ needs.check-stories.result }}
+          STORYBOOK_BUILD: ${{ needs.build-storybook.result }}
         run: |
           echo "check (core): $CORE"
           echo "check (app): $APP"
-          echo "check (storybook): $STORYBOOK"
+          echo "check (storybook light): $STORYBOOK"
+          echo "check (storybook dark): $STORYBOOK_DARK"
           echo "check (perf): $PERF"
           echo "check (stories): $STORIES"
+          echo "build (storybook): $STORYBOOK_BUILD"
           test "$CORE" = success
           test "$APP" = success
           test "$STORYBOOK" = success
+          test "$STORYBOOK_DARK" = success
           test "$PERF" = success
           test "$STORIES" = success
+          test "$STORYBOOK_BUILD" = success
 
   # Seven runners, each with its own local Supabase (FLOW-812): one runs the database checks, and the main
   # Playwright suite runs on the other six, its slow control sweeps on two and the rest on four.
@@ -367,36 +510,44 @@ jobs:
       - name: Start local Supabase in the background
         run: |
           # The exit file appears only once it holds the full status (written, then renamed).
-          (supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime > "$RUNNER_TEMP/supabase-start.log" 2>&1; echo "$?" > "$RUNNER_TEMP/supabase-start.exit.tmp"; mv "$RUNNER_TEMP/supabase-start.exit.tmp" "$RUNNER_TEMP/supabase-start.exit") > /dev/null 2>&1 &
+          # The script times a start out at 3 minutes, stops, retries once, and logs docker ps -a on failure.
+          (bash scripts/ci-supabase-start.sh -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime > /dev/null 2>&1; echo "$?" > "$RUNNER_TEMP/supabase-start.exit.tmp"; mv "$RUNNER_TEMP/supabase-start.exit.tmp" "$RUNNER_TEMP/supabase-start.exit") > /dev/null 2>&1 &
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
           version: 10.33.3
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-          cache: pnpm
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      # Read only: lint is the one job that saves the pnpm store. Every other job restores it and never saves.
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-Linux-x64-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: node-cache-Linux-x64-pnpm-
       - run: pnpm install --frozen-lockfile
-      - name: Cache Playwright browsers
+      - name: Restore the Playwright browser cache
         id: playwright-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-1.63.0
       # The Ubuntu mirror can stall on the font packages, so their .deb files come from this cache.
-      - name: Cache Playwright system packages
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # Read only: check (storybook) saves the packages for the next run.
+      - name: Restore the Playwright apt cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/flow-apt
-          # A new entry each run, so a package the mirror updated is cached on the next run.
-          key: ${{ runner.os }}-playwright-apt-1.63.0-${{ github.run_id }}
+          key: ${{ runner.os }}-playwright-apt-1.63.0-none
           restore-keys: ${{ runner.os }}-playwright-apt-1.63.0
       - name: Restore Playwright system packages
         run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
         timeout-minutes: 8
         run: bash scripts/ci-apt-cache.sh install
-      - name: Keep Playwright system packages for the next run
-        run: bash scripts/ci-apt-cache.sh save
       - name: Install Playwright browsers
         timeout-minutes: 5
         run: pnpm --filter @flow/app exec playwright install chromium
@@ -411,7 +562,9 @@ jobs:
           while [ ! -f "$RUNNER_TEMP/supabase-start.exit" ]; do sleep 2; done
           cat "$RUNNER_TEMP/supabase-start.log"
           test "$(cat "$RUNNER_TEMP/supabase-start.exit")" = 0
+      # The smoke reads the same local API in every shard, so the first Playwright shard runs it alone.
       - name: flow-mcp answers on the local API
+        if: matrix.part == '1/4'
         run: bash scripts/mcp-function-smoke.sh
       - name: pgTAP
         if: matrix.part == 'database'
@@ -485,7 +638,6 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-          cache: pnpm
 
       - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
         with:
@@ -495,16 +647,28 @@ jobs:
         timeout-minutes: 5
         run: bash scripts/ci-apt-cache.sh psql
 
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      # Read only: lint is the one job that saves the pnpm store. Every other job restores it and never saves.
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-Linux-x64-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: node-cache-Linux-x64-pnpm-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build the hosted dist
-        run: pnpm build
+      # check (core) built, stamped and checked the hosted dist for this run's commit.
+      - name: Download the hosted dist from check (core)
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: hosted-dist
+          path: app/dist
 
-      - name: Stamp the commit and check the hosted bundle
-        run: |
-          node scripts/stamp-build.mjs "$GITHUB_SHA"
-          pnpm check:bundle
+      - name: Check the hosted bundle before the migration
+        run: pnpm check:bundle
 
       - name: Probe the access token
         env:

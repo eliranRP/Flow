@@ -1,4 +1,5 @@
--- FLOW-309. Skipped review cards: list_skipped_review lists a line's latest skipped row, and
+-- FLOW-309. Skipped review cards: a line's latest skipped row is its card (list_skipped_review was
+-- dropped in FLOW-920; the rows are read from review_queue), and
 -- reopen_review on a skipped row reopens it without restoring the skip-time snapshot.
 -- Invented data only.
 
@@ -57,15 +58,27 @@ join (values
   ('fsk:other', 'skipped', now() - interval '1 hour', now() - interval '2 hours', null)
 ) as v(ikey, status, resolved, created, prior) on v.ikey = t.idempotency_key;
 
-select tests.authenticate_as('fsk_owner');
+reset role;
+-- The latest skipped rows of the owner's company: not a card that came back, a removed line, or another company.
+create temp view fsk_skipped as
+select t.id as transaction_id, t.description, q.resolved_at
+from public.review_queue q
+join public.transactions t on t.id = q.transaction_id
+where q.company_id = (select id from fsk where label = 'company')
+  and q.status = 'skipped'
+  and t.removed_at is null
+  and not exists (
+    select 1 from public.review_queue newer
+    where newer.transaction_id = q.transaction_id and newer.created_at > q.created_at);
 select is(
-  (select jsonb_agg(elem->>'description') from jsonb_array_elements(public.list_skipped_review()) elem),
+  (select jsonb_agg(description order by resolved_at desc) from fsk_skipped),
   '["fsk:new", "fsk:old"]'::jsonb,
   'the latest skipped rows, newest skip first; not a card that came back, a removed line, or another company');
 select is(
-  (public.list_skipped_review() -> 0 ->> 'transaction_id')::uuid,
+  (select transaction_id from fsk_skipped order by resolved_at desc limit 1),
   (select id from fsk where label = 'txn_new'),
   'a row names its line');
+drop view fsk_skipped;
 
 -- The owner files the old line in the app after skipping it, then puts the card back.
 reset role;

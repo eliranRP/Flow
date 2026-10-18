@@ -1,0 +1,376 @@
+/* The project page at the board's layout (ProjectFlip): a 259px band (name 24px, a status line, the month's
+   figure at 52px, one stats line), then a stack of 16px-gutter cards: the pending banner, the budget, the
+   profit rows, the investment and the months. */
+.ui-project-page .ui-band-hero-project {
+  padding-block-start: calc(var(--space-3) + var(--space-1) / 2 * 1);
+  margin-block-end: calc(var(--space-3) / -2);
+}
+
+.ui-project-page .ui-band-hero-project .t-title {
+  font-size: var(--type-name-size);
+  line-height: calc(var(--type-title-line) - 0.015);
+  font-weight: var(--type-name-weight);
+}
+
+.ui-project-page .ui-band-hero-project .t-line2 {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-project-page .ui-band-hero-project .t-title + .t-line2 {
+  margin-block-start: calc(var(--space-1) / 2);
+}
+
+.ui-project-page .ui-band-hero-project .ui-band-label {
+  margin-block: calc(var(--space-3) + var(--space-1) / 2) calc(var(--space-1) + var(--space-1) / 2);
+}
+
+.ui-project-page .ui-project-profits {
+  font-size: var(--type-band-size);
+  font-weight: var(--type-band-weight);
+  line-height: 1;
+}
+
+.ui-project-page .ui-project-band-pair {
+  justify-content: flex-start;
+  gap: var(--space-5);
+  margin-block-start: calc(var(--space-1) + var(--space-1) / 2);
+  padding-block-start: var(--space-1);
+  font-size: var(--type-btn-2-size);
+}
+
+.ui-project-page .ui-band-row-link {
+  min-block-size: 0;
+  gap: var(--space-1);
+  font-size: var(--type-btn-2-size);
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-project-page .ui-band-row-label {
+  inline-size: auto;
+  font-weight: var(--type-line2-weight);
+}
+
+.ui-project-page .ui-band-row-amount {
+  flex: none;
+  font-weight: var(--type-line2-weight);
+}
+
+.ui-project-page .ui-band-row-amount .t-body {
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-line2-weight);
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-project-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-inset-row);
+  padding: calc(var(--space-4) + var(--space-1) / 2) var(--space-4) 0;
+}
+
+.ui-project-stack > .ui-banner,
+.ui-project-stack > .ui-banner-rows,
+.ui-project-stack > .ui-card {
+  margin: 0;
+}
+
+.ui-project-stack > .ui-banner {
+  min-block-size: 56px;
+  padding: calc(var(--space-3) + var(--space-1) / 2) calc(var(--space-4) + var(--space-1) / 2);
+}
+
+.ui-project-stack > .ui-banner .ui-row-title {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-project-stack .ui-budget-card,
+.ui-project-stack .ui-investment-summary {
+  padding: calc(var(--space-4) + var(--space-1) / 2);
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-project-stack .ui-budget-card {
+  gap: var(--space-3);
+}
+
+.ui-project-stack .ui-investment-summary {
+  gap: var(--space-inset-row);
+}
+
+.ui-project-stack .ui-budget-head h2,
+.ui-project-stack .ui-investment-head h2,
+.ui-project-stack .ui-budget-spent,
+.ui-project-stack .ui-budget-note {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+/* The summary card at the board's rhythm: the title row on one baseline, 14px between the facts. */
+.ui-project-stack .ui-investment-head {
+  align-items: baseline;
+}
+
+.ui-project-stack .ui-investment-head .ui-btn-link {
+  block-size: auto;
+  min-block-size: 0;
+}
+
+.ui-project-stack .ui-investment-grid {
+  gap: calc(var(--space-3) + var(--space-1) / 2) var(--space-4);
+}
+
+.ui-project-stack .ui-investment-equity {
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+  padding-top: calc(var(--space-3) + var(--space-1) / 2);
+}
+
+.ui-project-stack .ui-investment-equity-label {
+  font-size: var(--type-line2-size);
+  color: var(--color-text-secondary);
+}
+
+.ui-project-stack .ui-budget-head .ui-btn-link {
+  block-size: 32px;
+  min-block-size: 32px;
+}
+
+.ui-project-card {
+  padding: 0;
+}
+
+.ui-project-card .ui-project-list {
+  padding-inline: 0;
+}
+
+.ui-project-card .ui-row {
+  margin-inline: 0;
+}
+
+.ui-project-card .ui-row {
+  min-block-size: 84px;
+  padding-block: var(--space-3);
+  padding-inline: calc(var(--space-4) + var(--space-1) / 2);
+}
+
+.ui-project-card .ui-row-title,
+.ui-project-card .ui-row-hint {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-project-card .ui-row-hint {
+  font-size: var(--type-caption-size);
+}
+
+.ui-project-card .ui-row + .ui-row {
+  border-block-start: 1px solid var(--color-line);
+}
+
+.ui-project-figures {
+  display: inline-flex;
+  color: var(--color-text);
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.ui-project-card-title {
+  margin: var(--space-3) var(--space-card-inset) var(--space-1);
+  font-size: var(--type-section-size);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-project-months-card {
+  padding-block: calc(var(--space-1) + var(--space-1) / 2);
+}
+
+/* The board's month rows: 52px, the title at 10px over 18px sides. */
+.ui-project-months-card .ui-row {
+  min-block-size: calc(var(--space-10) + var(--space-3));
+  padding-block: 0;
+}
+
+.ui-project-months-card .ui-project-card-title {
+  margin: calc(var(--space-2) + var(--space-1) / 2) calc(var(--space-4) + var(--space-1) / 2) var(--space-1);
+  font-size: var(--type-section-size);
+}
+
+/* The board draws a figure's cents at the figure's size. */
+.ui-project-figures .ui-num-cents,
+.ui-band-row-amount .ui-num-cents {
+  font-size: inherit;
+  line-height: inherit;
+  vertical-align: baseline;
+}
+
+/* A project with nothing filed yet: the board's card, 22px over 18px sides, a 20px title and a 15px line. */
+.ui-project-empty-card {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+  padding: calc(var(--space-5) + var(--space-1) / 2) calc(var(--space-4) + var(--space-1) / 2);
+}
+
+.ui-project-empty-card .ui-project-card-title {
+  margin: 0;
+}
+
+.ui-project-empty-card p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  line-height: calc(var(--type-body-line) * 1.035);
+}
+
+.ui-project-figures .t-body {
+  font-size: var(--type-body-size);
+}
+
+.ui-project-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ui-project-menu .ui-row-title,
+.ui-project-menu .ui-row-hint {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-project-menu .ui-row-hint {
+  font-size: var(--type-caption-size);
+}
+
+/* The project confirms at the board's rhythm: 20px sides, 14px between the parts, 28px below,
+   1.5 line height on the text and a 48px ביטול in the text colour. */
+.ui-confirm-roomy {
+  --sheet-side: var(--space-5);
+  --sheet-pad-bottom: calc(var(--space-6) + var(--space-1));
+}
+
+.ui-confirm-roomy .ui-sheet-body {
+  gap: calc(var(--space-3) + var(--space-half));
+}
+
+.ui-confirm-roomy .ui-sheet-title {
+  line-height: var(--type-title-line);
+}
+
+.ui-confirm-roomy .ui-btn-quiet {
+  min-block-size: calc(var(--touch-min) + var(--space-1));
+  color: var(--color-text);
+  font-size: var(--type-btn-2-size);
+}
+
+.ui-confirm-roomy .ui-confirm-body,
+.ui-confirm-roomy .ui-confirm-warning {
+  line-height: calc(var(--type-body-line) * 1.035);
+}
+
+/* The menu's title sits 5px under the handle's gap and 5px above the first row, as the board draws it. */
+.ui-project-menu .ui-sheet-head {
+  margin-block: calc(var(--space-1) + var(--space-1) / 4);
+}
+
+/* The Projects list: a zero amount is muted, and the general-expenses circle is dashed with its icon. */
+.ui-row-amount-zero {
+  color: var(--color-text-muted);
+}
+
+.ui-row-initials.ui-row-dashed {
+  border-width: 1.5px;
+  border-color: var(--color-text-muted);
+  color: var(--color-text-muted);
+  background: transparent;
+}
+
+/* The Projects skeleton at the board's rhythm: 14px under the title, 20px before the cards, 12px between them. */
+.ui-projects-skel {
+  display: flex;
+  flex-direction: column;
+  padding-block-start: calc(var(--space-3) + var(--space-1) / 2);
+}
+
+.ui-projects-skel-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-projects-skel-head .ui-skel-figure {
+  border-radius: var(--radius-block);
+}
+
+.ui-projects-skel-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-block-start: var(--space-5);
+}
+
+.ui-projects-skel-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ui-projects-skel-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ui-projects-skel-row .ui-skel-tile {
+  border-radius: var(--radius-input);
+}
+
+.ui-projects-skel-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* A title-only header keeps the row the board reserves above the title for the actions (44px). */
+.ui-header-slot {
+  display: block;
+  block-size: calc(var(--space-10) + var(--space-1));
+  inline-size: calc(var(--space-10) + var(--space-1));
+}
+
+/* The board's empty states (Projects, a project's profit): from 56px under the title, not centred; a 64px tile, a 24px title, a
+   15px line at most 300px wide, and the 52px pill. */
+.ui-state-empty .ui-empty-state {
+  flex: none;
+  justify-content: flex-start;
+  gap: calc(var(--space-2) + var(--space-1) / 2 * 1);
+  padding: calc(var(--space-10) + var(--space-4)) var(--space-3) 0;
+}
+
+.ui-state-empty .ui-empty-icon,
+.ui-state-empty .ui-empty-title,
+.ui-state-empty .ui-empty-line {
+  margin: 0;
+}
+
+.ui-state-empty .ui-empty-title {
+  margin-block-start: var(--space-2);
+  font-size: var(--type-name-size);
+}
+
+.ui-state-empty .ui-empty-line {
+  max-inline-size: calc(var(--space-10) * 7 + var(--space-5));
+  font-size: var(--type-line2-size);
+  line-height: calc(var(--type-body-line) * 1.035);
+}
+
+.ui-state-empty .ui-empty-action {
+  margin-block-start: var(--space-2);
+}
+
+.ui-state-empty .ui-empty-action .ui-btn {
+  min-block-size: calc(var(--space-10) + var(--space-3));
+  padding-inline: calc(var(--space-6) + var(--space-1));
+  border-radius: var(--radius-button);
+  font-size: var(--type-btn-size);
+}

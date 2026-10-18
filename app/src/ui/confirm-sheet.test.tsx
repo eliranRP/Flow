@@ -4,7 +4,7 @@ import { ConfirmSheet } from "./confirm-sheet";
 import { expectRtl, expectTarget, expectThemePaint } from "./test-support";
 
 describe("ConfirmSheet", () => {
-  it("confirms a delete on bad-tint, not a solid red fill", () => {
+  it("confirms a delete as the outline button in the signal colour, not a solid red fill", () => {
     expectRtl();
     render(
       <ConfirmSheet
@@ -19,10 +19,11 @@ describe("ConfirmSheet", () => {
       />,
     );
     const confirm = screen.getByRole("button", { name: "מחיקה" });
-    expect(confirm).toHaveClass("ui-btn-danger-tint");
+    expect(confirm).toHaveClass("ui-btn-secondary", "ui-btn-signal");
     expectTarget(confirm);
     expectTarget(screen.getByRole("button", { name: "ביטול" }));
-    expectThemePaint(confirm, "backgroundColor");
+    expectThemePaint(confirm, "color");
+    expect(getComputedStyle(confirm).backgroundColor).toBe("rgba(0, 0, 0, 0)");
   });
 
   it("shows no ✕ and ignores Escape while busy (the save closes it)", async () => {
@@ -92,7 +93,7 @@ describe("ConfirmSheet", () => {
     );
     expect(screen.getByText("1 מהן מפוצלת, והפיצול שלה יימחק.")).toBeInTheDocument();
     const link = screen.getByRole("button", { name: "להעביר את התנועות לקטגוריה אחרת במקום" });
-    expect(link).toHaveClass("ui-text-link-quiet");
+    expect(link).toHaveClass("ui-btn-quiet");
     fireEvent.click(link);
     expect(instead).toHaveBeenCalledOnce();
   });

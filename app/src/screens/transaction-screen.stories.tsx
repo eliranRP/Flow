@@ -57,41 +57,6 @@ export const Transaction: Story = {
   render: () => <TransactionStory />,
 };
 
-/** FLOW-351: a five-digit assumed VAT at 320. The line breaks before a "·", never leaving the date alone. */
-function AssumedVatStory() {
-  return (
-    <StoryRoute entry="/transactions/t1">
-      <ExampleBar />
-      <TransactionScreen
-        sample={{
-          id: "t1",
-          description: "חשבונית חומרים",
-          direction: "expense",
-          doc_date: "2026-09-21",
-          amount_gross: -10_030_000n,
-          amount_net: -8_500_000n,
-          vat_amount: -1_530_000n,
-          vat_status: "assumed",
-          doc_kind: "invoice",
-          source: "sumit",
-          project_id: "p1",
-          project_name: "פרויקט לדוגמה",
-          category_id: "c1",
-          category_name: "חומרים",
-          supplier_name: "חומרי בניין לדוגמה בע״מ",
-          customer_name: null,
-          review_status: "approved",
-          paid: true,
-          open_gross_agorot: null,
-        }}
-        sampleProjects={[{ id: "p1", name: "פרויקט לדוגמה", code: "P-01" }]}
-        sampleCategories={[{ id: "c1", name: "חומרים" }]}
-      />
-    </StoryRoute>
-  );
-}
-export const TransactionAssumedVat: Story = { render: () => <AssumedVatStory /> };
-
 /** FLOW-320: the project row opens the change sheet straight on the project picker. */
 export const TransactionProjectPicker: Story = {
   name: "Project row opens the project picker",
@@ -187,39 +152,6 @@ export const TransactionPnlMixed: Story = {
     <StoryRoute entry="/transactions/t1">
       <ExampleBar />
       <TransactionScreen sample={pnlSample({ pnl_state: "mixed" })} sampleCategories={[{ id: "c1", name: "חומרים" }]} />
-    </StoryRoute>
-  ),
-};
-
-/** FLOW-329: a loan line's P&L row is locked; its parts decide what counts. */
-export const TransactionPnlLoanLine: Story = {
-  name: "P&L locked (loan payment)",
-  render: () => (
-    <StoryRoute entry="/transactions/t1">
-      <ExampleBar />
-      <TransactionScreen sample={pnlSample({ category_name: "תשלומי הלוואה", pnl_fixed: true, pnl_state: "mixed" })} sampleCategories={[{ id: "c1", name: "תשלומי הלוואה" }]} />
-    </StoryRoute>
-  ),
-};
-
-/** FLOW-124: the category is kept out, so the hint names it and the switch brings back this line only. */
-export const TransactionPnlCategoryOut: Story = {
-  name: "P&L kept out by its category",
-  render: () => (
-    <StoryRoute entry="/transactions/t1">
-      <ExampleBar />
-      <TransactionScreen sample={pnlSample({ category_name: "פיקדונות", category_excluded_from_pnl: true, in_pnl: false, pnl_state: "out" })} sampleCategories={[{ id: "c1", name: "פיקדונות" }]} />
-    </StoryRoute>
-  ),
-};
-
-/** FLOW-124: one line of a kept-out category brought back in shows the "נספר ברווח" pill. */
-export const TransactionPnlForcedIn: Story = {
-  name: "P&L forced back in",
-  render: () => (
-    <StoryRoute entry="/transactions/t1">
-      <ExampleBar />
-      <TransactionScreen sample={pnlSample({ category_name: "פיקדונות", category_excluded_from_pnl: true, in_pnl_override: true, in_pnl: true, pnl_state: "in" })} sampleCategories={[{ id: "c1", name: "פיקדונות" }]} />
     </StoryRoute>
   ),
 };
@@ -320,85 +252,6 @@ export const TransactionUnsplit: Story = {
   ),
 };
 
-export const TransactionUsdExpense: Story = {
-  render: () => (
-    <StoryRoute entry="/transactions/t-usd" tabs>
-      <ExampleBar />
-      <TransactionScreen
-        sample={{
-          id: "t-usd",
-          description: "Sample vendor",
-          direction: "expense",
-          doc_date: "2026-09-10",
-          amount_gross: -125_000n,
-          amount_net: -125_000n,
-          vat_amount: 0n,
-          currency: "USD",
-          vat_status: "source",
-          source: "mercury",
-          project_name: "Cedar Lot",
-          category_name: "Utilities",
-          supplier_name: "Sample vendor",
-          customer_name: null,
-        }}
-      />
-    </StoryRoute>
-  ),
-};
-
-/** FLOW-307: the largest detail amounts step down from 36px until they fit the side padding. */
-export const TransactionLargestExpense: Story = {
-  render: () => (
-    <StoryRoute entry="/transactions/t-large">
-      <ExampleBar />
-      <TransactionScreen
-        sample={{
-          id: "t-large",
-          description: "חשבונית חומרים",
-          direction: "expense",
-          doc_date: "2026-09-21",
-          amount_gross: -9_999_999_999n,
-          amount_net: -9_999_999_999n,
-          vat_amount: 0n,
-          vat_status: "source",
-          doc_kind: "invoice",
-          source: "sumit",
-          project_name: "בניין מגורים חולון",
-          category_name: "חומרים",
-          supplier_name: "חומרי בניין לדוגמה בע״מ",
-          customer_name: null,
-        }}
-      />
-    </StoryRoute>
-  ),
-};
-
-export const TransactionLargestUsdIncome: Story = {
-  render: () => (
-    <StoryRoute entry="/transactions/t-large-usd">
-      <ExampleBar />
-      <TransactionScreen
-        sample={{
-          id: "t-large-usd",
-          description: "Sample customer",
-          direction: "income",
-          doc_date: "2026-09-10",
-          amount_gross: 9_999_999_999n,
-          amount_net: 9_999_999_999n,
-          vat_amount: 0n,
-          currency: "USD",
-          vat_status: "source",
-          source: "mercury",
-          project_name: "Cedar Lot",
-          category_name: "Rent",
-          supplier_name: null,
-          customer_name: "Sample customer",
-        }}
-      />
-    </StoryRoute>
-  ),
-};
-
 /** FLOW-415 (a-3): the cash view and recurring switches under נספר ברווח. Invented data. */
 const recurringSample = {
   transaction_id: "t1",
@@ -424,4 +277,3 @@ function RecurringStory({ income = false }: { income?: boolean }) {
   );
 }
 export const TransactionRecurring: Story = { name: "Recurring charge, found by itself", render: () => <RecurringStory /> };
-export const TransactionRecurringIncome: Story = { name: "Recurring income", render: () => <RecurringStory income /> };

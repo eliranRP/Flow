@@ -23,7 +23,7 @@ function Svg({ size = 24, stroke = 1.9, children }: IconProps & { children: Reac
   );
 }
 
-/** Paths from design/src/flow.py, the 24-grid set the mockups use. */
+/** Paths from the 24-grid icon set the design board uses. */
 export function HomeIcon(props: IconProps) {
   return (
     <Svg {...props}>
@@ -104,6 +104,15 @@ export function ChartIcon(props: IconProps) {
   );
 }
 
+/** Three bars on a baseline: the empty profit page (board States profitEmpty). */
+export function BarsIcon(props: IconProps) {
+  return (
+    <Svg size={28} stroke={1.8} {...props}>
+      <path d="M5 20V11M11 20V5M17 20v-6M3 20h18" />
+    </Svg>
+  );
+}
+
 export function RefreshIcon(props: IconProps) {
   return (
     <Svg size={20} stroke={2} {...props}>
@@ -113,22 +122,21 @@ export function RefreshIcon(props: IconProps) {
   );
 }
 
-/** An outside page: a box with an arrow leaving it (FLOW-357, the invoice's SUMIT link). */
-export function ExternalIcon(props: IconProps) {
-  return (
-    <Svg size={16} stroke={2} {...props}>
-      <path d="M14 4h6v6" />
-      <path d="M20 4 11 13" />
-      <path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
-    </Svg>
-  );
-}
-
 export function DocumentIcon(props: IconProps) {
   return (
     <Svg size={36} stroke={1.6} {...props}>
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <polyline points="14 2 14 8 20 8" />
+    </Svg>
+  );
+}
+
+/** An invoice: a folded sheet with two lines of text. */
+export function InvoiceIcon(props: IconProps) {
+  return (
+    <Svg size={24} stroke={1.9} {...props}>
+      <path d="M7 3h7l5 5v13H7z" />
+      <path d="M14 3v5h5M10 13h6M10 17h6" />
     </Svg>
   );
 }
@@ -235,6 +243,16 @@ export function CalendarIcon(props: IconProps) {
     <Svg size={20} stroke={2} {...props}>
       <rect x="3" y="5" width="18" height="16" rx="2" />
       <path d="M3 10h18M8 3v4M16 3v4" />
+    </Svg>
+  );
+}
+
+/** FLOW-141b: the all-arrived state's calendar with a check (the board's 28px icon). */
+export function CalendarCheckIcon(props: IconProps) {
+  return (
+    <Svg size={28} stroke={1.8} {...props}>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4" />
     </Svg>
   );
 }
@@ -350,11 +368,10 @@ export function LogoutIcon(props: IconProps) {
 const APP_F_PATH =
   "M35.07 75 C34.07 75 33.29 74.21 33.29 73.21 L33.29 26.79 C33.29 25.79 34.07 25 35.07 25 L67.93 25 C68.93 25 69.71 25.79 69.71 26.79 L69.71 34 C69.71 35 68.93 35.79 67.93 35.79 L45.86 35.79 L45.86 46.29 L66.5 46.29 C67.5 46.29 68.29 47.07 68.29 48.07 L68.29 55.29 C68.29 56.29 67.5 57.07 66.5 57.07 L45.86 57.07 L45.86 73.21 C45.86 74.21 45.07 75 44.07 75 Z";
 
-/** White F on the band tile. Install uses 72px; a lock-screen row uses 38px. */
-/** install: the install screen; note: a line's leading icon; tile: a home-screen tile in the setup demos. */
-export function AppIcon({ size = "install" }: { size?: "install" | "note" | "tile" }) {
+/** White F on the band tile (72px, the install screen's icon). */
+export function AppIcon() {
   return (
-    <span className={`ui-app-icon ui-app-icon-${size}`} role="img" aria-label="Flow">
+    <span className="ui-app-icon ui-app-icon-install" role="img" aria-label="Flow">
       <svg viewBox="0 0 100 100" aria-hidden="true">
         <path fill="currentColor" d={APP_F_PATH} />
       </svg>
@@ -393,17 +410,6 @@ export function BuildingIcon(props: IconProps) {
   );
 }
 
-/** FLOW-107. The interest part of a loan payment. */
-export function PercentIcon(props: IconProps) {
-  return (
-    <Svg {...props}>
-      <path d="M19 5 5 19" />
-      <circle cx="7" cy="7" r="2.5" />
-      <circle cx="17" cy="17" r="2.5" />
-    </Svg>
-  );
-}
-
 /** FLOW-501. The Settings חיבורים row. */
 export function PlugIcon(props: IconProps) {
   return (
@@ -422,6 +428,18 @@ export function LoanIcon(props: IconProps) {
       <rect x="3" y="6" width="18" height="13" rx="2" />
       <path d="M3 10h18" />
       <path d="M7 15h4" />
+    </Svg>
+  );
+}
+
+/** The loan empty state (States board): a percent in a circle, the loan's rate. */
+export function PercentIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9 15l6-6" />
+      <circle cx="9.5" cy="9.5" r="0.6" />
+      <circle cx="14.5" cy="14.5" r="0.6" />
     </Svg>
   );
 }
@@ -543,21 +561,40 @@ export function ClockIcon(props: IconProps) {
   );
 }
 
-/** FLOW-514: the movie's pause control (two bars). */
-export function PauseIcon(props: IconProps) {
+/** The project menu's rows (board Projects.dc.html): pencil for the edit row. */
+export function PencilIcon(props: IconProps) {
   return (
-    <Svg {...props}>
-      <line x1="9" y1="6" x2="9" y2="18" />
-      <line x1="15" y1="6" x2="15" y2="18" />
+    <Svg size={18} stroke={1.8} {...props}>
+      <path d="M4 20h4L19 9l-4-4L4 16z" />
+      <path d="M14 6l4 4" />
     </Svg>
   );
 }
 
-/** FLOW-514: the movie's play control. */
-export function PlayIcon(props: IconProps) {
+/** The project menu's investment row: a house with columns. */
+export function InvestIcon(props: IconProps) {
   return (
-    <Svg {...props}>
-      <polygon points="8 5 19 12 8 19 8 5" />
+    <Svg size={18} stroke={1.8} {...props}>
+      <path d="M3 10l9-6 9 6" />
+      <path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18" />
+    </Svg>
+  );
+}
+
+/** The project menu's finish row: a flag. */
+export function FlagIcon(props: IconProps) {
+  return (
+    <Svg size={18} stroke={1.8} {...props}>
+      <path d="M5 21V4h11l-1.5 4L16 12H5" />
+    </Svg>
+  );
+}
+
+/** The project menu's delete row: a bin. */
+export function BinIcon(props: IconProps) {
+  return (
+    <Svg size={18} stroke={1.8} {...props}>
+      <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
     </Svg>
   );
 }

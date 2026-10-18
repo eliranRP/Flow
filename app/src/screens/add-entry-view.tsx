@@ -127,7 +127,7 @@ export function AddEntryView(props: AddEntryViewProps) {
       onOpenChange={(open) => { if (!open) props.onClose(); }}
       title={titleText}
       subtitle={headerSub}
-      panelClassName="ui-sheet-tall ui-add-entry"
+      panelClassName="ui-sheet-tall ui-add-entry ui-sheet-g14"
       action={(
         <div className="ui-add-foot">
           {props.error ? <p role="alert" className="ui-add-error">{props.error}</p> : null}
@@ -146,7 +146,7 @@ export function AddEntryView(props: AddEntryViewProps) {
       <div className="ui-add-body">
         {props.document != null ? (
           <div className="ui-add-doc">
-            <span className="ui-add-doc-thumb" aria-hidden="true" />
+            <span className="ui-add-doc-thumb" aria-hidden="true"><i /><i /><i /></span>
             <span className="ui-add-doc-text">
               <span>המסמך צורף</span>
               <span className="ui-add-hint">הפרטים ממלאים אתם</span>

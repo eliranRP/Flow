@@ -184,8 +184,8 @@ export function LoanSplitEditor({
     >
       <div className="ui-lsedit">
         <div className="ui-lsedit-head">
-          <bdi className="ui-num t-title-2" dir="ltr">{money(line.lineMinor)}</bdi>
-          <span className="t-hint ui-lsedit-meta">{formatDisplay(line.docDate)}</span>
+          <bdi className="ui-num t-name" dir="ltr">{money(line.lineMinor)}</bdi>
+          <span className="t-caption t-muted ui-lsedit-meta">{formatDisplay(line.docDate)}</span>
         </div>
         {loans.length > 1 && edit == null ? (
           <SelectField
@@ -244,7 +244,7 @@ export function LoanSplitEditor({
                 if (part === "fees" && (amount ?? 0n) === 0n) return null;
                 return (
                   <div key={part} className="ui-loan-parts-row">
-                    <span className="t-label ui-loan-parts-label">{LOAN_PART_LABEL[part]}</span>
+                    <span className="t-line2 ui-loan-parts-label">{LOAN_PART_LABEL[part]}</span>
                     <bdi className="ui-num" dir="ltr">{money(amount ?? 0n)}</bdi>
                   </div>
                 );
@@ -259,7 +259,7 @@ export function LoanSplitEditor({
           <div className="ui-loan-parts">
             {LOAN_PART_ORDER.map((part, index) => (
               <div key={part} className="ui-loan-parts-row">
-                <span className="t-label ui-loan-parts-label">{LOAN_PART_LABEL[part]}</span>
+                <span className="t-line2 ui-loan-parts-label">{LOAN_PART_LABEL[part]}</span>
                 <div className="ui-loan-parts-field">
                   <MoneyField
                     hideLabel
@@ -301,7 +301,7 @@ export function LoanSplitEditor({
             ) : null}
           </>
         ) : null}
-        {problem && !exactGap ? <p id={problemId} className="t-hint ui-loan-parts-problem" role="status">{problem}</p> : null}
+        {problem && !exactGap ? <p id={problemId} className="t-caption t-muted ui-loan-parts-problem" role="status">{problem}</p> : null}
       </div>
     </Sheet>
   );

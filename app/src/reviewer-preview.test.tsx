@@ -38,7 +38,7 @@ function renderQueue(row: ReviewRow, mode: "ok" | "fail" | "offline") {
               path="/reviewer/review"
               element={<ReviewQueue rows={[row]} search="" sample previewWrite={previewWrite(mode)} />}
             />
-            <Route path="/transactions/:transactionId/split" element={<p>חלוקה לדוגמה</p>} />
+            <Route path="/transactions/:transactionId/split-category" element={<p>חלוקה לדוגמה</p>} />
             <Route path="*" element={<Where />} />
           </Routes>
         </MemoryRouter>

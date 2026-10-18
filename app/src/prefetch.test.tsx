@@ -2,23 +2,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { cashHistoryLink, PrefetchProjects, projectLink } from "./prefetch";
+import { PrefetchProjects, projectLink } from "./prefetch";
 import { BooksProvider } from "./use-books";
-
-describe("cashHistoryLink (FLOW-417)", () => {
-  it("reads the history and a year's page, and nothing else", () => {
-    expect(cashHistoryLink("/cash/history?preview=1")).toEqual({ year: null });
-    expect(cashHistoryLink("/cash/year/2025")).toEqual({ year: 2025 });
-    expect(cashHistoryLink("/cash/2025-03")).toBeNull();
-    expect(cashHistoryLink("/projects/p1")).toBeNull();
-  });
-});
 
 describe("projectLink", () => {
   it("reads a project page link and nothing deeper", () => {
     expect(projectLink("/projects/p1?period=all")).toEqual({ projectId: "p1", search: "?period=all" });
     expect(projectLink("/projects/p%201")).toEqual({ projectId: "p 1", search: "" });
-    expect(projectLink("/projects/p1/months")).toBeNull();
+    expect(projectLink("/projects/p1/profit")).toBeNull();
     expect(projectLink("/projects")).toBeNull();
     expect(projectLink("/review")).toBeNull();
   });

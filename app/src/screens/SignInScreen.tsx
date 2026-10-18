@@ -4,7 +4,7 @@ import { useAuth } from "../auth";
 import { Notice } from "../ui/banner";
 import { GoogleButton } from "../ui/google-button";
 import { SignInActions, SignInBrand, SignInFrame, SignInHeading, SignInHelp, SignInPanel, SignInPrivacy, SignInTagline } from "../ui/layout";
-import { TextLink } from "../ui/text-link";
+import { Button } from "../ui/button";
 import { Wordmark } from "../ui/wordmark";
 import { getSupabase } from "../lib/supabase";
 import { rememberSignInReturn, safeSignInReturn } from "../safe-return";
@@ -87,7 +87,7 @@ export function SignInScreen() {
         ) : null}
 
         <SignInHeading>כניסה או הרשמה</SignInHeading>
-        <p className="t-label text-text-secondary">בלי סיסמה – עם חשבון Google שכבר יש לך</p>
+        <p className="t-line2 text-text-secondary">בלי סיסמה – עם חשבון Google שכבר יש לך</p>
 
         <SignInActions>
           <GoogleButton pending={pending} disabled={!ready} onClick={() => void continueWithGoogle()} />
@@ -95,22 +95,22 @@ export function SignInScreen() {
 
         {notice === "failed" ? (
           <SignInHelp>
-            <TextLink to="/help" tone="quiet" chevron={false}>
+            <Button variant="link" to="/help" quiet>
               צריך עזרה בכניסה?
-            </TextLink>
+            </Button>
           </SignInHelp>
         ) : null}
 
         <SignInPrivacy>
           נקבל מ־Google רק שם ואימייל. אין לנו גישה לתיבת הדואר.
           <br />
-          <TextLink to="/terms" size="hint" chevron={false}>
+          <Button variant="link" to="/terms" className="ui-btn-link-hint">
             תנאי שימוש
-          </TextLink>
+          </Button>
           {" · "}
-          <TextLink to="/privacy" size="hint" chevron={false}>
+          <Button variant="link" to="/privacy" className="ui-btn-link-hint">
             מדיניות פרטיות
-          </TextLink>
+          </Button>
         </SignInPrivacy>
       </SignInPanel>
     </SignInFrame>

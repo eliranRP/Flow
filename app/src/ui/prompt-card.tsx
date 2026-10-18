@@ -39,15 +39,15 @@ export function PromptCard({
       <p className="ui-prompt-question" id={questionId} dir="rtl">{question}</p>
       {note != null ? (
         <>
-          <p className="ui-prompt-note t-hint" id={noteId} dir="rtl">{note}</p>
+          <p className="ui-prompt-note t-caption t-muted" id={noteId} dir="rtl">{note}</p>
           <div className="ui-prompt-actions">
-            <Button variant="ghost" buttonRef={dismissRef} aria-describedby={noteId} onClick={onNoteDismiss ?? onNo}>{noteDismissLabel}</Button>
+            <Button variant="link" buttonRef={dismissRef} aria-describedby={noteId} onClick={onNoteDismiss ?? onNo}>{noteDismissLabel}</Button>
           </div>
         </>
       ) : (
         <div className="ui-prompt-actions">
-          <Button variant="pill" busy={busy} onClick={() => { if (!busy) onYes(); }}>{yesLabel}</Button>
-          <Button variant="ghost" disabled={busy} onClick={onNo}>{noLabel}</Button>
+          <Button variant="secondary" busy={busy} onClick={() => { if (!busy) onYes(); }}>{yesLabel}</Button>
+          <Button variant="link" disabled={busy} onClick={onNo}>{noLabel}</Button>
         </div>
       )}
     </Card>

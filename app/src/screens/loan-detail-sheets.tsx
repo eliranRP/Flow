@@ -1,22 +1,17 @@
-import { useEffect, useId, useState, type ReactNode } from "react";
-import { LOAN_TERM_MONTHS_MAX, type LoanKind, type LoanSplitPart, type LoanStatus } from "@flow/shared";
+import { useEffect, useId, useState } from "react";
+import type { LoanSplitPart, LoanStatus } from "@flow/shared";
 import { Button } from "../ui/button";
 import { formatDisplay, israelToday } from "../ui/date-math";
 import { DateSheet } from "../ui/date-sheet";
 import { CalendarIcon } from "../ui/icons";
 import { PercentField } from "../ui/money-field";
-import { RadioRow } from "../ui/radio-row";
+import { ListRow } from "../ui/list-row";
 import { SearchField } from "../ui/search-field";
 import { Sheet } from "../ui/sheet";
-import { TextField } from "../ui/text-field";
-import { TextLink } from "../ui/text-link";
-import { LOAN_KIND_LABEL, LOAN_PART_LABEL, LOAN_STATUS_LABEL } from "./loan-copy";
+import { LOAN_PART_LABEL, LOAN_STATUS_LABEL } from "./loan-copy";
 import {
-  LOAN_KIND_DESCRIPTION,
   FEES_NONE_DESC,
   keyedCategory,
-  kindMonthsDefault,
-  kindPatch,
   partCategoryOptions,
   partDefaultLabel,
   rateInput,
@@ -25,8 +20,7 @@ import {
   type LoanDetail,
   type LoanRateRow,
 } from "./loan-detail-data";
-import { formatLoanMoney } from "./loan-form";
-import type { LoanPatch, LoanRateWrite } from "./loan-detail-store";
+import type { LoanRateWrite } from "./loan-detail-store";
 
 /**
  * A sheet's save: null when it saved, else the Hebrew to show inside the sheet. An empty string
@@ -39,7 +33,7 @@ export type SheetSave<T> = (value: T) => Promise<string | null>;
 const SEARCH_FROM = 8;
 
 /**
- * מצב: פתוחה saves on tap; נפרעה and נסגרה open the date sheet, whose floor is the last attached
+ * סטטוס: פעילה saves on tap; נפרעה and נסגרה open the date sheet, whose floor is the last attached
  * payment (plan §3.2). A refusal (loan_payments_after_close) stays in the date sheet.
  */
 export function LoanStatusSheet({
@@ -82,10 +76,10 @@ export function LoanStatusSheet({
       >
         <div role="radiogroup" aria-label="מצב">
           {statuses.map((status) => (
-            <RadioRow
+            <ListRow control="radio"
               key={status}
               layout="picker"
-              label={LOAN_STATUS_LABEL[status]}
+              title={LOAN_STATUS_LABEL[status]}
               selected={loan.status === status}
               busy={saving === status}
               disabled={saving != null && saving !== status}
@@ -218,9 +212,9 @@ export function LoanPartSheet({
           <SearchField label="חיפוש קטגוריה" value={query} onChange={setQuery} placeholder="חיפוש קטגוריה" autoFocus={false} />
         ) : null}
         <div role="radiogroup" aria-label={LOAN_PART_LABEL[part]}>
-          <RadioRow
+          <ListRow control="radio"
             layout="picker"
-            label={partDefaultLabel(categories, part)}
+            title={partDefaultLabel(categories, part)}
             description={part === "fees" ? FEES_NONE_DESC : undefined}
             selected={onDefault}
             busy={saving != null && saving.id == null}
@@ -228,10 +222,10 @@ export function LoanPartSheet({
             onSelect={() => { choose(null); }}
           />
           {shown.map((row) => (
-            <RadioRow
+            <ListRow control="radio"
               key={row.id}
               layout="picker"
-              label={row.name}
+              title={row.name}
               description={part !== "principal" && row.excludedFromPnl ? "לא נספר ברווח" : undefined}
               selected={row.id === current}
               busy={saving?.id === row.id}
@@ -240,7 +234,7 @@ export function LoanPartSheet({
             />
           ))}
         </div>
-        {searchable && needle !== "" && shown.length === 0 ? <p className="t-hint">לא נמצאה קטגוריה בשם הזה</p> : null}
+        {searchable && needle !== "" && shown.length === 0 ? <p className="t-caption t-muted">לא נמצאה קטגוריה בשם הזה</p> : null}
         {error ? <p className="ui-field-message ui-loan-sheet-error" role="alert">{error}</p> : null}
       </div>
     </Sheet>
@@ -345,15 +339,14 @@ export function LoanRateSheet({
           error={rateError}
           onValueChange={setPercent}
         />
-        <p className="t-hint">מהתאריך הזה החישוב לפי הריבית החדשה. תשלומים שכבר שויכו לא משתנים.</p>
+        <p className="t-caption t-muted">מהתאריך הזה החישוב לפי הריבית החדשה. תשלומים שכבר שויכו לא משתנים.</p>
         {error?.field === "form" ? <p className="ui-field-message ui-loan-sheet-error" role="alert">{error.text}</p> : null}
         <Button type="submit" full busy={busy === "save"} disabled={busy === "remove"}>שמירה</Button>
         {rate ? (
           <div className="ui-loan-sheet-quiet">
-            <TextLink
-              tone="quiet"
-              chevron={false}
-              className="ui-text-link-bad"
+            <Button
+              variant="link"
+              quiet
               busy={busy === "remove"}
               disabled={busy === "save"}
               onClick={() => {
@@ -366,9 +359,10 @@ export function LoanRateSheet({
                   else if (failed !== "") setError({ field: "form", text: failed });
                 });
               }}
+              className="ui-btn-link-bad"
             >
               הסרת השינוי
-            </TextLink>
+            </Button>
           </div>
         ) : null}
       </form>
@@ -385,128 +379,6 @@ export function LoanRateSheet({
           setError(null);
         }}
       />
-    </Sheet>
-  );
-}
-
-/**
- * סוג (plan §3.2): a multi-field form, so it has שמירה. Each kind has a one-line description;
- * interest-only and balloon add their months. A demand loan has no term to come back to, so
- * the other kinds are off for it.
- */
-export function LoanKindSheet({
-  loan,
-  open,
-  onOpenChange,
-  onSave,
-  returnFocusRef,
-}: {
-  loan: LoanDetail;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSave: SheetSave<LoanPatch>;
-  returnFocusRef?: { current: HTMLElement | null };
-}) {
-  const [kind, setKind] = useState<LoanKind>(loan.kind);
-  const [months, setMonths] = useState(kindMonthsDefault(loan, loan.kind));
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [checked, setChecked] = useState(false);
-  useEffect(() => {
-    if (!open) return;
-    setKind(loan.kind);
-    setMonths(kindMonthsDefault(loan, loan.kind));
-    setError(null);
-    setChecked(false);
-  }, [open, loan]);
-  const result = kindPatch(loan, { kind, months });
-  const term = loan.termMonths ?? 0;
-  const monthsLabel = kind === "interest_only" ? "חודשי ריבית בלבד" : "פריסה לחישוב התשלום (חודשים)";
-  const monthsHint = kind === "interest_only" ? `בין 1 ל־${String(term)}` : `בין ${String(term)} ל־${String(LOAN_TERM_MONTHS_MAX)}`;
-  const monthsError = checked && !result.ok && result.error === "months" ? monthsHint : undefined;
-  const preview: ReactNode = result.ok && result.patch.payment_minor != null && kind !== loan.kind
-    ? <>תשלום חודשי <bdi className="ui-num" dir="ltr">{formatLoanMoney(BigInt(result.patch.payment_minor), loan.currency)}</bdi></>
-    : null;
-  async function save() {
-    setChecked(true);
-    if (busy || !result.ok) return;
-    if (kind === loan.kind && (kind === "amortizing" || kind === "demand" || months === kindMonthsDefault(loan, kind))) {
-      onOpenChange(false);
-      return;
-    }
-    const patch = result.patch;
-    setBusy(true);
-    setError(null);
-    const failed = await onSave({
-      kind: patch.kind,
-      interestOnlyMonths: patch.interest_only_months,
-      amortizationMonths: patch.amortization_months,
-      termMonths: patch.term_months,
-      paymentMinor: patch.payment_minor == null ? null : BigInt(patch.payment_minor),
-      escrowMinor: BigInt(patch.escrow_minor),
-    });
-    setBusy(false);
-    if (failed == null) onOpenChange(false);
-    else setError(failed === "" ? null : failed);
-  }
-  const kinds: LoanKind[] = ["amortizing", "interest_only", "balloon", "demand"];
-  return (
-    <Sheet
-      open={open}
-      onOpenChange={(next) => {
-        if (!next && busy) return;
-        onOpenChange(next);
-      }}
-      title="סוג ההלוואה"
-      hint={loan.name}
-      returnFocusRef={returnFocusRef}
-    >
-      <form
-        className="ui-stack"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void save();
-        }}
-      >
-        <div role="radiogroup" aria-label="סוג ההלוואה">
-          {kinds.map((option) => (
-            <RadioRow
-              key={option}
-              label={LOAN_KIND_LABEL[option]}
-              description={LOAN_KIND_DESCRIPTION[option]}
-              disabledReason={loan.kind === "demand" && option !== "demand" ? "להלוואה לפי דרישה אין תקופה" : undefined}
-              disabled={busy}
-              selected={kind === option}
-              onSelect={() => {
-                setKind(option);
-                setMonths(kindMonthsDefault(loan, option));
-                setChecked(false);
-                setError(null);
-              }}
-            />
-          ))}
-        </div>
-        {kind === "interest_only" || kind === "balloon" ? (
-          <TextField
-            label={monthsLabel}
-            value={months}
-            dir="ltr"
-            inputMode="numeric"
-            numeric
-            reserveMessage
-            disabled={busy}
-            error={monthsError}
-            onChange={(event) => { setMonths(event.target.value.replace(/\D/g, "").slice(0, 3)); }}
-          />
-        ) : null}
-        {kind === "demand" && loan.kind !== "demand" ? (
-          <p className="t-hint ui-loan-caution">לפי דרישה: בלי תקופה, בלי תשלום קבוע ובלי מסים וביטוח.</p>
-        ) : null}
-        {preview ? <p aria-live="polite">{preview}</p> : null}
-        <p className="t-hint">תשלומים שכבר שויכו לא משתנים.</p>
-        {error ? <p className="ui-field-message ui-loan-sheet-error" role="alert">{error}</p> : null}
-        <Button type="submit" full busy={busy}>שמירה</Button>
-      </form>
     </Sheet>
   );
 }

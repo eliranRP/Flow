@@ -8,7 +8,8 @@ import { resetShownCompanyForTests, setShownCompany } from "../lib/company-heade
 import { forgetProjectReads } from "../project-cache";
 import { renderWithProviders } from "../test-render";
 import { BusinessScreen } from "./business-screen";
-import { CategoriesScreen, ProjectDetailScreen, ProjectsScreen, ChangeForm, ReviewScreen, SettingsScreen, SplitScreen, TransactionScreen, UnpaidScreen } from "./flow-screens";
+import { CategoriesScreen, ProjectDetailScreen, ProjectsScreen, ChangeForm, ReviewScreen, SettingsScreen, TransactionScreen, UnpaidScreen } from "./flow-screens";
+import { LineSplitScreen } from "./line-split";
 import { HomeScreen } from "./HomeScreen";
 
 const rpc = vi.hoisted(() => ({
@@ -87,7 +88,7 @@ function renderAt(path: string) {
       <Routes>
         <Route path="/" element={<HomeScreen />} />
         <Route path="/projects" element={<ProjectsScreen />} />
-        <Route path="/projects/:projectId" element={<ProjectDetailScreen section="profit" />} />
+        <Route path="/projects/:projectId" element={<ProjectDetailScreen />} />
         <Route path="/review" element={<ReviewScreen />} />
         <Route path="/review/change" element={<ChangeForm />} />
         <Route path="/unpaid" element={<UnpaidScreen />} />
@@ -95,7 +96,7 @@ function renderAt(path: string) {
         <Route path="/settings/business" element={<BusinessScreen />} />
         <Route path="/settings/categories" element={<CategoriesScreen />} />
         <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
-        <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
+        <Route path="/transactions/:transactionId/split-category" element={<LineSplitScreen />} />
       </Routes>
     </AuthProvider>,
     { route: path },
@@ -139,9 +140,11 @@ describe("rejected reads", () => {
     const wire = JSON.parse(JSON.stringify(demoProject("herzl"), (_key, value: unknown) => (
       typeof value === "bigint" ? value.toString() : value
     ))) as unknown;
-    rpc.impl = (name) => Promise.resolve(name === "get_project" ? { data: wire, error: null } : { data: null, error: { message: "db down" } });
+    rpc.impl = (name) => Promise.resolve(
+      name === "get_project" ? { data: wire, error: null } : name === "project_cash_months" ? { data: cashMonths, error: null } : { data: null, error: { message: "db down" } },
+    );
     const first = renderAt("/projects/herzl");
-    expect(await screen.findByRole("button", { name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
     first.unmount();
     // That visit was an hour ago, so the saved read is stale and is read again.
     const saved = JSON.parse(localStorage.getItem("flow-project-reads") ?? "null") as { entries: { at: number }[] };
@@ -151,13 +154,13 @@ describe("rejected reads", () => {
     const reads: string[] = [];
     rpc.impl = (name) => {
       reads.push(name);
-      return Promise.resolve({ data: null, error: { message: "db down" } });
+      return Promise.resolve(name === "project_cash_months" ? { data: cashMonths, error: null } : { data: null, error: { message: "db down" } });
     };
     renderAt("/projects/herzl");
-    expect(screen.getByRole("button", { name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
     await waitFor(() => { expect(reads).toContain("get_project"); });
     await act(async () => { await Promise.resolve(); });
-    expect(screen.getByRole("button", { name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "נסו שוב" })).not.toBeInTheDocument();
     forgetProjectReads();
     resetShownCompanyForTests();
@@ -172,6 +175,7 @@ describe("rejected reads", () => {
     rpc.impl = (name) => {
       reads.push(name);
       if (name === "get_project") return new Promise((resolve) => { answer = resolve; });
+      if (name === "project_cash_months") return Promise.resolve({ data: cashMonths, error: null });
       return Promise.resolve({ data: [], error: null });
     };
     renderAt("/projects/herzl");
@@ -179,7 +183,7 @@ describe("rejected reads", () => {
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
     expect(reads).not.toContain("list_project_groups");
     await act(async () => { answer({ data: wire, error: null }); await Promise.resolve(); });
-    expect(await screen.findByRole("button", { name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
     await waitFor(() => { expect(reads).toContain("list_project_groups"); });
   });
 
@@ -253,7 +257,7 @@ describe("rejected reads", () => {
   });
 
   it("shows the split form error instead of an empty project list when projects fail", async () => {
-    renderAt("/transactions/abc/split");
+    renderAt("/transactions/abc/split-category");
     expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     expect(screen.queryByText("אין פרויקטים לפיצול")).not.toBeInTheDocument();
   });

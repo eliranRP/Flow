@@ -21,7 +21,6 @@ export const Both: Story = {
     await expect(within(canvasElement).getAllByRole("button")).toHaveLength(2);
   },
 };
-export const BothNoPlay: Story = { args: { earlier: "תזרים אוגוסט", later: "תזרים אוקטובר" } };
 /** The current month: the later chevron stays, dimmed and disabled. */
 export const CurrentMonth: Story = {
   args: { earlier: "תזרים ספטמבר", later: null },
@@ -29,6 +28,5 @@ export const CurrentMonth: Story = {
     await expect(within(canvasElement).getByRole("button", { name: "חודש הבא" })).toHaveAttribute("aria-disabled", "true");
   },
 };
-export const CurrentMonthNoPlay: Story = { args: { earlier: "תזרים ספטמבר", later: null } };
 /** The books' first month: the earlier chevron is disabled. */
 export const FirstMonth: Story = { args: { earlier: null, later: "תזרים אפריל" } };

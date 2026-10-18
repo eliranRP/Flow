@@ -1,8 +1,8 @@
-import { formatAmountText, formatIls } from "@flow/shared";
+import { formatAmountText } from "@flow/shared";
 import { missingBillsTitle, type ChargeChangeView } from "../forecast";
 import type { BannerRow } from "../ui/banner";
 import { HintParts } from "../ui/hint-parts";
-import { CalendarIcon, DocumentIcon, TrendDownIcon, TrendUpIcon } from "../ui/icons";
+import { CalendarIcon, InvoiceIcon, TrendDownIcon, TrendUpIcon } from "../ui/icons";
 
 // Home's attention rows, in their own file so the project page (FLOW-435) shows them without
 // loading Home. HomeScreen.tsx re-exports attentionRows for its older importers.
@@ -19,6 +19,7 @@ export function attentionRows({
   pending,
   unpaidCount,
   unpaidGross,
+  currency = "ILS",
   unpaidOther = [],
   missingCount = 0,
   missingIncome = 0,
@@ -29,6 +30,8 @@ export function attentionRows({
   pending: number;
   unpaidCount: number;
   unpaidGross: bigint;
+  /** The company's base currency for the open invoices' total (ILS when not given). */
+  currency?: string;
   unpaidOther?: { currency: string; minor: bigint }[];
   /** Late bills (expenses). */
   missingCount?: number;
@@ -51,14 +54,14 @@ export function attentionRows({
     rows.push({
       id: "unpaid",
       to: `/unpaid${search}`,
-      icon: <DocumentIcon size={24} stroke={1.9} />,
+      icon: <InvoiceIcon />,
       title: unpaidCount === 1 ? "חשבונית פתוחה אחת" : <><bdi dir="ltr">{String(unpaidCount)}</bdi> חשבוניות פתוחות</>,
       hint: unpaidOther.length === 0 ? (
-        <><bdi dir="ltr">{formatIls(unpaidGross)}</bdi> · לגבייה</>
+        <><bdi dir="ltr">{formatAmountText(unpaidGross, currency)}</bdi> · לגבייה</>
       ) : (
         <>
           {[
-            ...(unpaidGross !== 0n ? [formatIls(unpaidGross)] : []),
+            ...(unpaidGross !== 0n ? [formatAmountText(unpaidGross, currency)] : []),
             ...unpaidOther.map((total) => formatAmountText(total.minor, total.currency)),
           ].map((text) => (
             <span key={text}><bdi dir="ltr">{text}</bdi> · </span>
@@ -87,7 +90,7 @@ export function attentionRows({
       icon: only.down ? <TrendDownIcon size={24} stroke={1.9} /> : <TrendUpIcon size={24} stroke={1.9} />,
       title: only.title,
       // Each half wraps whole, and no "·" is left at the break.
-      hint: <HintParts parts={[<bdi key="now" dir="ltr">{only.now}</bdi>, <>בדרך כלל <bdi dir="ltr">{only.usual}</bdi></>]} />,
+      hint: <HintParts parts={[<span key="was"><bdi dir="ltr">{only.now}</bdi> במקום <bdi dir="ltr">{only.usual}</bdi></span>, "חיוב קבוע"]} />,
     });
   } else if (changes.length > 1) {
     rows.push({

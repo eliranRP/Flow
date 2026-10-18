@@ -8,15 +8,16 @@
 @import "./css/04-banners-lists.css";
 @import "./css/05-search-toast.css";
 @import "./css/06-review-card.css";
+@import "./css/06-review-list.css";
 @import "./css/07-band-home.css";
 @import "./css/08-tabbar-empty.css";
 @import "./css/09-sign-in-project.css";
 @import "./css/10-settings-onboarding.css";
+@import "./css/10-settings-connect.css";
 @import "./css/11-month-lists.css";
-@import "./css/12-split.css";
 @import "./css/13-line-split.css";
 @import "./css/14-review-change.css";
-@import "./css/15-install-reference.css";
+@import "./css/15-install.css";
 @import "./css/16-transaction.css";
 @import "./css/17-action-bar.css";
 @import "./css/18-period-bar.css";
@@ -38,6 +39,7 @@
 @import "./css/35-team.css";
 @import "./css/36-cash.css";
 @import "./css/40-card.css";
+@import "./css/33-project-flip.css";
 @import "./css/41-rows.css";
 @import "./css/42-icon-row.css";
 @import "./css/43-counted-in.css";
@@ -46,3 +48,8 @@
 @import "./css/45-project-profit.css";
 @import "./css/45-invoices.css";
 @import "./css/44-add-entry.css";
+@import "./css/46-loans.css";
+@import "./css/47-company-profit.css";
+@import "./css/06-review-board.css";
+@import "./css/48-invite.css";
+@import "./css/49-state-skeletons.css";

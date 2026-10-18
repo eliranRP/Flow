@@ -10,7 +10,7 @@ import { preloadScreens } from "./screen-loaders";
 // FLOW-804: screens load on demand. With every screen (and the dev fixtures) fetched first, a
 // few ticks settle a route.
 beforeAll(async () => {
-  await Promise.all([preloadScreens(), import("./dev-routes")]);
+  await Promise.all([preloadScreens(), import("./dev/routes")]);
 }, 60_000);
 
 async function settle(): Promise<void> {
@@ -93,7 +93,7 @@ describe("App", () => {
     const dialog = screen.getByRole("dialog", { name: "הוספה" });
     expect(dialog).toBeInTheDocument();
     // FLOW-331: quick actions that work today, all enabled, and no "coming later" line.
-    for (const name of ["פרויקט חדש", "הלוואה חדשה", "חיבור בנק"]) {
+    for (const name of ["פרויקט חדש", "הלוואה חדשה"]) {
       expect(screen.getByRole("button", { name: new RegExp(name) })).toBeEnabled();
     }
     expect(screen.queryByText(/צילום חשבונית/)).not.toBeInTheDocument();
@@ -135,13 +135,7 @@ describe("App", () => {
   it("opens the new-loan sheet from + → הלוואה חדשה", async () => {
     await renderAt("/add?preview=1");
     fireEvent.click(screen.getByRole("button", { name: /הלוואה חדשה/ }));
-    expect(await screen.findByRole("dialog", { name: "הלוואה" })).toBeInTheDocument();
-  });
-
-  it("opens the bank sheet on Connections from + → חיבור בנק", async () => {
-    await renderAt("/add?preview=1");
-    fireEvent.click(screen.getByRole("button", { name: /חיבור בנק/ }));
-    expect(await screen.findByRole("heading", { name: "Mercury", hidden: true })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "הלוואה חדשה" })).toBeInTheDocument();
   });
 
   it("closes the add sheet on Escape after the exit animation", async () => {
@@ -177,10 +171,10 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "לאישור", hidden: true })).toBeInTheDocument();
   });
 
-  it("leaves the tab bar off transaction detail", async () => {
+  it("keeps the tab bar on transaction detail, as on the board (LinesDetail)", async () => {
     await renderAt("/transactions/1?preview=1");
     expect(screen.getByRole("heading", { name: "פרטי תנועה" })).toBeInTheDocument();
-    expect(screen.queryByRole("navigation", { name: "ניווט ראשי" })).not.toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "ניווט ראשי" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "חזרה לבית" })).not.toBeInTheDocument();
   });
 
@@ -210,7 +204,7 @@ describe("App", () => {
     // FLOW-326: the shared Back chevron in the header bar, not a text link.
     const back = screen.getByRole("button", { name: "חזרה" });
     expect(back).toHaveClass("ui-icon-btn");
-    expect(back).not.toHaveClass("ui-text-link");
+    expect(back).not.toHaveClass("ui-btn-link");
     expect(back.closest(".ui-page-title-row")).not.toBeNull();
     expect(screen.getByRole("link", { name: HELP_EMAIL }).closest(".ui-page-pad")).not.toBeNull();
   });
@@ -241,7 +235,7 @@ describe("App", () => {
   it("routes Settings to the Connections and Loans pages under the הגדרות tab (FLOW-501)", async () => {
     const settings = await renderAt("/settings?preview=1");
     expect(screen.getByRole("link", { name: /^חיבורים/ })).toHaveAttribute("href", "/settings/connections?preview=1");
-    expect(within(screen.getByRole("navigation", { name: "ניווט ראשי" })).getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/settings/loans?preview=1");
+    expect(within(screen.getByRole("navigation", { name: "ניווט ראשי" })).getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/loans?preview=1");
     expect(screen.queryByRole("button", { name: "SUMIT" })).not.toBeInTheDocument();
     settings.unmount();
 
@@ -253,10 +247,10 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "עזרים" })).toBeInTheDocument();
     connections.unmount();
 
-    await renderAt("/settings/loans?preview=1");
+    await renderAt("/loans?preview=1");
     expect(await screen.findByRole("heading", { name: "הלוואות" })).toBeInTheDocument();
     expect(screen.getByText("משכנתא אלון")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "הלוואה חדשה" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "+ הלוואה חדשה" })).toBeInTheDocument();
   });
 
   it("moves an old Settings sheet link to the SUMIT page", async () => {
@@ -270,7 +264,7 @@ describe("App", () => {
   });
 
   it("sends Loans with no company back to Settings", async () => {
-    await renderAt("/settings/loans?preview=empty");
+    await renderAt("/loans?preview=empty");
     expect(await screen.findByRole("heading", { name: "הגדרות" })).toBeInTheDocument();
   });
 

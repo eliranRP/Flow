@@ -66,8 +66,6 @@ import {
   projectsPrimary,
 } from "./copy";
 import { SampleCard } from "./sample-card";
-import { CONNECT_MOVIE, JEV_MOVIE, LOANS_MOVIE, installMovie } from "./movie-scenes";
-import { SetupMovie } from "./movie";
 import { NewLoanSheet, openNewLoan } from "./loan-entry";
 import { OnboardingFrame } from "./shell";
 import { useSetupSuggestions } from "./suggestions";
@@ -96,6 +94,7 @@ export function StepBusiness({
   companyId,
   initial,
   onDone,
+  onBack,
   onSkipAll,
 }: StepProps & { companyId: string | null; initial: BusinessInitial | null }) {
   const [currency, setCurrency] = useState<"USD" | "ILS">(initial?.currency ?? "USD");
@@ -106,7 +105,6 @@ export function StepBusiness({
   const form = useCompanyForm({
     initialName: initial?.name ?? "",
     namePlaceholder: BUSINESS_NAME_PLACEHOLDER,
-    hideVat: true,
     onCreated: (created) => {
       // create_company succeeded: the first settings follow, then the run starts.
       void (async () => {
@@ -171,6 +169,7 @@ export function StepBusiness({
       step={1}
       title={STEP_TITLE[1] ?? ""}
       lead={BUSINESS_LEAD}
+      onBack={onBack}
       onSkipAll={onSkipAll}
       primary={
         <Button type="submit" form="setup-business" full disabled={empty} busy={saving || form.busy}>
@@ -195,9 +194,9 @@ export function StepBusiness({
             onChange={setBasis}
             options={BASIS_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
           />
-          <p className="ui-onb-note t-hint">{BASIS_NOTE[basis]}</p>
+          <p className="ui-onb-note t-caption t-muted">{BASIS_NOTE[basis]}</p>
         </div>
-        {failed ? <p className="t-hint ui-onb-error" role="alert">{SAVE_ERROR}</p> : null}
+        {failed ? <p className="t-caption t-muted ui-onb-error" role="alert">{SAVE_ERROR}</p> : null}
       </form>
     </OnboardingFrame>
   );
@@ -272,7 +271,6 @@ export function StepConnect({
       }
       secondary={<Button type="button" variant="link" full onClick={onSkipStep}>{SKIP_STEP}</Button>}
     >
-      <SetupMovie scenes={CONNECT_MOVIE.scenes} label={CONNECT_MOVIE.label} />
       <div className="ui-onb-card">
         {(["mercury", "sumit"] as const).map((kind) => {
           const row = rowState(kind, kind === "mercury" ? mercuryConnected : sumitConnected);
@@ -280,14 +278,13 @@ export function StepConnect({
             <div key={kind} className="ui-onb-conn">
               <div className="ui-onb-conn-text">
                 <span className="t-name">{CONNECT_ROWS[kind].name}</span>
-                <span className={row.connected ? "t-hint ui-onb-good" : "t-hint"}>{row.sub}</span>
+                <span className={row.connected ? "t-caption t-muted ui-onb-good" : "t-caption t-muted"}>{row.sub}</span>
               </div>
               {row.connected ? (
-                <span className="ui-onb-conn-done t-hint">{CONNECT_DONE_LABEL}</span>
+                <span className="ui-onb-conn-done t-caption t-muted">{CONNECT_DONE_LABEL}</span>
               ) : (
                 <Button
                   type="button"
-                  variant="pill"
                   busy={row.busy}
                   disabled={pending != null && pending !== kind}
                   onClick={() => { openConnection(kind, open); }}
@@ -299,7 +296,7 @@ export function StepConnect({
           );
         })}
       </div>
-      <p className="t-hint ui-onb-note">{CONNECT_NOTE}</p>
+      <p className="t-caption t-muted ui-onb-note">{CONNECT_NOTE}</p>
       <SumitConnectSheet
         open={sumitOpen}
         onOpenChange={(next) => { setSumitSheet(next); if (!next) setPending(null); }}
@@ -392,9 +389,9 @@ export function StepProjects({
         }}
       >
         <div className="ui-onb-add-field">
-          <TextField label={PROJECT_PLACEHOLDER} value={draft} onChange={(event) => { setDraft(event.target.value); }} />
+          <TextField label={PROJECT_PLACEHOLDER} placeholder={PROJECT_PLACEHOLDER} value={draft} onChange={(event) => { setDraft(event.target.value); }} />
         </div>
-        <Button type="submit" variant="pill" disabled={!addable}>{PROJECT_ADD}</Button>
+        <Button type="submit" variant="secondary" disabled={!addable}>{PROJECT_ADD}</Button>
       </form>
       {chips.length > 0 ? (
         <div className="ui-onb-chips">
@@ -410,7 +407,7 @@ export function StepProjects({
       ) : null}
       {shown.length > 0 ? (
         <div className="ui-onb-suggest">
-          <p className="t-hint">{SUGGESTED_PROJECTS_LABEL}</p>
+          <p className="t-caption t-muted">{SUGGESTED_PROJECTS_LABEL}</p>
           <div className="ui-onb-chips">
             {shown.map((name) => (
               <button key={name} type="button" className="ui-onb-chip ui-onb-chip-suggest" onClick={() => { add(name); }}>
@@ -420,7 +417,7 @@ export function StepProjects({
           </div>
         </div>
       ) : null}
-      {failed ? <p className="t-hint ui-onb-error" role="alert">{SAVE_ERROR}</p> : null}
+      {failed ? <p className="t-caption t-muted ui-onb-error" role="alert">{SAVE_ERROR}</p> : null}
     </OnboardingFrame>
   );
 }
@@ -465,23 +462,22 @@ export function StepLoans({
       }
       secondary={total === 0 ? undefined : <Button type="button" variant="link" full onClick={onSkipStep}>{SKIP_STEP}</Button>}
     >
-      {total === 0 ? <SetupMovie scenes={LOANS_MOVIE.scenes} label={LOANS_MOVIE.label} /> : null}
       {picks.length > 0 ? (
         <div className="ui-onb-card">
           {picks.map((lender) => (
             <div key={lender.name} className="ui-onb-loan">
               <div className="ui-onb-conn-text">
                 <span className="t-name">{lender.name}</span>
-                <span className="t-hint">{`משלמים ${formatMoney(BigInt(lender.monthly_agorot), currency)} בחודש · מ־${monthYear(lender.since)}`}</span>
+                <span className="t-caption t-muted">{`משלמים ${formatMoney(BigInt(lender.monthly_agorot), currency)} בחודש · מ־${monthYear(lender.since)}`}</span>
               </div>
-              <span className="t-hint ui-onb-pending">{LOAN_PENDING}</span>
+              <span className="t-caption t-muted ui-onb-pending">{LOAN_PENDING}</span>
             </div>
           ))}
         </div>
       ) : null}
       {shown.length > 0 ? (
         <div className="ui-onb-suggest">
-          <p className="t-hint">{LOANS_SUGGESTED_LABEL}</p>
+          <p className="t-caption t-muted">{LOANS_SUGGESTED_LABEL}</p>
           <div className="ui-onb-chips">
             {shown.map((lender) => (
               <button key={lender.name} type="button" className="ui-onb-chip ui-onb-chip-suggest" onClick={() => { onPick(lender); }}>
@@ -494,7 +490,7 @@ export function StepLoans({
       <button type="button" className="ui-onb-add-loan" onClick={() => { openNewLoan(() => { setSheet(true); }); }}>
         {LOAN_ADD_OTHER}
       </button>
-      <p className="t-hint ui-onb-note">{LOAN_NOTE}</p>
+      <p className="t-caption t-muted ui-onb-note">{LOAN_NOTE}</p>
       <NewLoanSheet
         open={sheet}
         onOpenChange={setSheet}
@@ -532,11 +528,10 @@ export function StepJev({ onDone, onSkipStep, onSkipAll, onBack }: StepProps) {
       primary={<Button type="button" full busy={saving} onClick={save}>{NEXT}</Button>}
       secondary={<Button type="button" variant="link" full onClick={onSkipStep}>{SKIP_STEP}</Button>}
     >
-      <SetupMovie scenes={JEV_MOVIE.scenes} label={JEV_MOVIE.label} />
       <div className="ui-onb-card ui-onb-switch">
         <Toggle label={JEV_LABEL} hint={JEV_HINT} checked={on} busy={saving} onChange={setOn} />
       </div>
-      {failed ? <p className="t-hint ui-onb-error" role="alert">{SAVE_ERROR}</p> : null}
+      {failed ? <p className="t-caption t-muted ui-onb-error" role="alert">{SAVE_ERROR}</p> : null}
     </OnboardingFrame>
   );
 }
@@ -568,7 +563,7 @@ export function StepReview({
           onStamp({ sample_review_at: nowIso() });
         }}
       />
-      <p className="t-hint ui-onb-note">{REVIEW_SAMPLE_NOTE}</p>
+      <p className="t-caption t-muted ui-onb-note">{REVIEW_SAMPLE_NOTE}</p>
     </OnboardingFrame>
   );
 }
@@ -609,7 +604,6 @@ export function StepInstall({
       }
       secondary={<Button type="button" variant="link" full onClick={onSkipStep}>{INSTALL_LATER}</Button>}
     >
-      <SetupMovie scenes={installMovie().scenes} label="סרטון קצר" />
       <div className="ui-onb-card ui-onb-switch">
         <Toggle label={NOTIFY_LABEL} hint={NOTIFY_HINT} checked={notify} onChange={setNotify} />
       </div>

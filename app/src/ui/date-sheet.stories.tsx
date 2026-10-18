@@ -41,16 +41,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
-
 export const Floor: Story = {};
 /** The server refused the day: the sheet stays open and says why. */
 export const Refused: Story = { args: { error: "יש תשלום משויך אחרי התאריך הזה. בחרו תאריך מאוחר יותר." } };
-export const Saving: Story = { args: { busy: true } };
 export const Range: Story = { args: { min: "2026-09-10", max: "2026-10-20", reason: undefined } };
-
-/** FLOW-350: outward chevrons and the picked day as a filled circle, as in mockup 15b. */
-export const PickedDay: Story = { args: { min: undefined, reason: undefined } };
 
 // FLOW-115: the month title swaps the days for the years, newest first, the picked year filled.
 export const YearList: Story = {
@@ -64,4 +58,3 @@ export const YearList: Story = {
     await expect(body.getByRole("group", { name: "שנה" })).toBeVisible();
   },
 };
-export const YearList320: Story = { ...YearList, ...at320 };

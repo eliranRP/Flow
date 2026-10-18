@@ -154,6 +154,7 @@ export function InviteSheet({
         onOpenChange(next);
       }}
       title="הזמנה לצוות"
+      panelClassName="ui-invite-sheet"
       returnFocusRef={returnFocusRef}
       action={(
         <Button full busy={send.isPending} disabled={!INVITE_EMAIL_SHAPE.test(email.trim())} onClick={submit}>

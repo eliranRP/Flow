@@ -29,8 +29,8 @@ function Demo({ start }: { start: number }) {
       }}
     >
       <div className="ui-page-pad">
-        <p className="t-title-3 ui-party">{rows[at]}</p>
-        <p className="t-hint">{`תנועה ${String(at + 1)} מתוך ${String(rows.length)}`}</p>
+        <p className="t-btn ui-party">{rows[at]}</p>
+        <p className="t-caption t-muted">{`תנועה ${String(at + 1)} מתוך ${String(rows.length)}`}</p>
       </div>
       <List>
         <ListRow variant="static" eyebrow="פרויקט" title="בניין מגורים חולון" />
@@ -48,8 +48,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
-
 /** A middle card: both sides have a card, so the card takes sideways moves and leaves vertical ones to the page. */
 export const Middle: Story = {
   args: { start: 1 },
@@ -60,6 +58,5 @@ export const Middle: Story = {
     await expect(within(canvasElement).getByText("ספק 2")).toBeVisible();
   },
 };
-export const Middle320: Story = { ...Middle, name: "Middle, 320", ...at320 };
 /** The last card: a swipe right gives a little and springs back, with nothing peeking in. */
 export const Last: Story = { args: { start: 2 } };

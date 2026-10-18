@@ -6,10 +6,10 @@ import { describe, expect, it } from "vitest";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { ViewerPreview } from "../use-is-viewer";
-import { connectionsHint, ConnectionsScreen, LoansScreen, SettingsScreen } from "./flow-screens";
+import { connectionsHint, ConnectionsScreen, SettingsScreen } from "./flow-screens";
 
 // FLOW-501, FLOW-512. Settings is a menu: the business, connections, team, notifications and
-// categories rows open pages. The loans list still lives at /settings/loans.
+// categories rows open pages. The loans tab is its own screen (loans-screen.test.tsx).
 
 const business = {
   name: "אלפא בנייה",
@@ -21,11 +21,6 @@ const business = {
   jev: { enabled: false, mode: "shadow" as const, threshold: 0.9, status: "ready" as const },
   assistant: { state: "connected" as const, scope: "read_write" as const, id: "mcp-1" },
 };
-
-const twoLoans = [
-  { id: "l1", name: "משכנתא אלון", currency: "USD", balanceMinor: 20_000_000n, flaggedParts: 0, projectId: "p1", projectName: "וילה אלון" },
-  { id: "l2", name: "הלוואת ציוד", currency: "ILS", balanceMinor: 5_000_000n, flaggedParts: 1, projectId: null, projectName: null },
-];
 
 function providers(ui: ReactNode) {
   return (
@@ -81,7 +76,7 @@ describe("Settings rows", () => {
   });
 
   it("opens the connections page from the menu, and the loans list is not in the menu", () => {
-    renderAt(<SettingsScreen sample={{ ...business, loans: twoLoans }} />);
+    renderAt(<SettingsScreen sample={business} />);
     const connections = screen.getByRole("link", { name: /^חיבורים/ });
     expect(connections).toHaveAttribute("href", "/settings/connections");
     expect(valueOf(connections)).toContain("3 פעילים");
@@ -206,65 +201,6 @@ describe("Connections page", () => {
     renderAt(<ConnectionsScreen sample={{ ...business, name: null, noCompany: true, assistant: { state: "no-company" } }} />, "/settings/connections");
     expect(screen.getByRole("link", { name: /^SUMIT/ })).toHaveTextContent("אין עסק עדיין");
     expect(screen.queryByRole("link", { name: /^חיבור ל־AI/ })).not.toBeInTheDocument();
-  });
-});
-
-describe("Loans page", () => {
-  it("lists the balances with cents and a new-loan row for the owner", () => {
-    renderAt(<LoansScreen sample={{ ...business, loans: twoLoans }} />, "/settings/loans");
-    expect(screen.getByRole("heading", { name: "הלוואות" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^משכנתא אלון, \$200,000,/ })).toBeInTheDocument();
-    expect(screen.getByText("ממתין לבדיקה")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "הלוואה חדשה" })).toBeInTheDocument();
-  });
-
-  it("lets a viewer read the balances and open a loan's page, with no new loan (FLOW-106 B)", () => {
-    renderAt(
-      <ViewerPreview>
-        <LoansScreen sample={{ ...business, loans: twoLoans }} />
-      </ViewerPreview>,
-      "/settings/loans",
-    );
-    expect(screen.getByText("משכנתא אלון")).toBeInTheDocument();
-    expect(screen.getByText("הלוואת ציוד")).toBeInTheDocument();
-    // The loan page reads as static rows for a viewer, so the list row still opens it.
-    expect(screen.getByRole("button", { name: /^משכנתא אלון, / })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "הלוואה חדשה" })).not.toBeInTheDocument();
-  });
-
-  it("shows the empty state, and the viewer's has no button", () => {
-    const owner = renderAt(<LoansScreen sample={{ ...business, loans: [] }} />, "/settings/loans");
-    expect(screen.getByText("אין הלוואות עדיין")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "הלוואה חדשה" })).toHaveLength(1);
-    owner.unmount();
-    renderAt(
-      <ViewerPreview>
-        <LoansScreen sample={{ ...business, loans: [] }} />
-      </ViewerPreview>,
-      "/settings/loans",
-    );
-    expect(screen.getByText("כשיתווספו הלוואות הן יופיעו כאן.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "הלוואה חדשה" })).not.toBeInTheDocument();
-  });
-
-  it("shows the error layout with ניסיון חוזר and no live primary action", () => {
-    renderAt(<LoansScreen sample={{ ...business, loans: "error" }} />, "/settings/loans");
-    expect(screen.getByText("לא הצלחנו לטעון את ההלוואות")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "הלוואה חדשה" })).not.toBeInTheDocument();
-  });
-
-  it("goes back to Settings with no company", async () => {
-    const router = createMemoryRouter(
-      [
-        { path: "/settings", element: <h1>הגדרות</h1> },
-        { path: "/settings/loans", element: <LoansScreen sample={{ ...business, noCompany: true }} /> },
-      ],
-      { initialEntries: ["/settings/loans"] },
-    );
-    render(providers(<RouterProvider router={router} />));
-    expect(await screen.findByRole("heading", { name: "הגדרות" })).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe("/settings");
   });
 });
 

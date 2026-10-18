@@ -1,6 +1,6 @@
 # Projects list and create
 
-**Status:** Approved. Wireframe [05-projects](../wireframes/05-projects.png). The wireframe shows the create sheet already open over the list. In the product the sheet opens only after `+ פרויקט חדש`.
+**Status:** Approved. Wireframe 05-projects. The wireframe shows the create sheet already open over the list. In the product the sheet opens only after `+ פרויקט חדש`.
 
 ## Purpose
 

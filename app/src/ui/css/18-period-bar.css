@@ -14,7 +14,7 @@
   flex: 1 1 auto;
   padding-inline: var(--space-2);
   color: var(--color-on-band);
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
 }
 
 /* Pressed darkens with the scrim instead of lightening, so the white label keeps AA while pressed. */
@@ -60,27 +60,13 @@
   color: var(--color-disabled-text);
 }
 
-/* "▲ ברווח" stays muted; "▼ הפסד" is bad. Profit is never green (0120). */
-.ui-profit-mark {
-  color: var(--color-text-muted);
-}
-
-.ui-profit-mark-loss {
-  color: var(--color-bad);
-}
-
-/* The note under the "לפי חודש" list. */
-.ui-months-note {
-  margin-block-start: var(--space-4);
-}
-
 /* FLOW-362 (C15-6): a month page's earlier and later chevrons, one quiet segment in the period
    pill's tint, so the pair reads as a pager and not as the rows' drill-in chevrons (design lead). */
 .ui-month-step {
   display: flex;
   flex: none;
   align-items: center;
-  border-radius: 22px;
+  border-radius: var(--radius-pager);
   background: var(--color-tint);
   color: var(--color-accent-text);
 }
@@ -98,9 +84,16 @@
   justify-content: space-between;
   inline-size: 100%;
   block-size: 48px;
-  border-radius: 24px;
+  border-radius: var(--radius-pager-band);
   background: var(--band-track);
   color: var(--color-on-band);
+  padding-inline: calc(var(--space-1) / 2);
+}
+
+/* The board's pager chevrons are 20px, not the 24px icon button's default. */
+.ui-month-step-band .ui-month-step-arrow svg {
+  inline-size: var(--space-5);
+  block-size: var(--space-5);
 }
 
 /* No month that way: the chevron stays, dimmed, and does not respond (2026-10-10). */

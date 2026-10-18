@@ -49,12 +49,10 @@ test("each screen returns to where it was opened, and a fresh visit uses its par
   const paths: Array<[string, string, string, RegExp]> = [
     ["פרויקט לדוגמה", "חזרה", "/projects/herzl?preview=1", /\/projects\?preview=1$/],
     ["תנועה לדוגמה", "חזרה", "/transactions/1?preview=1", /\/projects\?preview=1$/],
-    ["פיצול לדוגמה", "חזרה", "/transactions/1/split?preview=1", /\/transactions\/1\?preview=1$/],
+    ["פיצול לדוגמה", "חזרה", "/transactions/1/split-category?preview=1", /\/transactions\/1\?preview=1$/],
     ["קטגוריות לדוגמה", "חזרה", "/settings/categories?preview=1", /\/settings\?preview=1$/],
     ["חיבורים לדוגמה", "חזרה", "/settings/connections?preview=1", /\/settings\?preview=1$/],
-    ["הלוואות לדוגמה", "חזרה", "/settings/loans?preview=1", /\/settings\?preview=1$/],
     ["חשבוניות לדוגמה", "חזרה", "/unpaid?preview=1", /\/\?preview=1$/],
-    ["הצטרפות לדוגמה", "חזרה", "/onboarding?preview=1", /\/\?preview=1$/],
     ["התקנה לדוגמה", "סגירה", "/install?preview=1", /\/settings\?preview=1$/],
     ["שינוי לדוגמה", "סגירה", "/review/change?preview=1", /\/review\?preview=1$/],
   ];
@@ -67,21 +65,6 @@ test("each screen returns to where it was opened, and a fresh visit uses its par
     await backTo(page, control);
     await expect(page).toHaveURL(parent);
   }
-});
-
-test("the period sheet closes on browser back and on its own close", async ({ page }) => {
-  await page.goto("/e2e/project");
-  await page.goto("/profit?preview=loading");
-  await page.getByRole("button", { name: /בחירת תקופה$/ }).click();
-  await expect(page.getByRole("dialog", { name: "תקופה" })).toBeVisible();
-  await page.goBack();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page).toHaveURL(/preview=loading/);
-  await page.getByRole("button", { name: /בחירת תקופה$/ }).click();
-  await page.getByRole("button", { name: "סגירה" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-  await page.goBack();
-  await expect(page).toHaveURL(/\/e2e\/project$/);
 });
 
 test("the SUMIT page returns to Connections on browser back and on its Back link", async ({ page }) => {

@@ -176,7 +176,7 @@ export function CodeField({
       )}
     </div>
   );
-  const hint = failed ? <p className="t-hint" role="status">העתיקו ידנית</p> : null;
+  const hint = failed ? <p className="t-caption t-muted" role="status">העתיקו ידנית</p> : null;
   if (!named) {
     return (
       <div className="ui-code-field">

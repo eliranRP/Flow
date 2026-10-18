@@ -73,40 +73,6 @@
   --type-cents-size: 11px;
   --type-cents-line: 1.2;
   --type-cents-weight: 400;
-  /* old names, kept as aliases of the roles above (screens still use them) */
-  --type-hero-size: var(--type-band-size);
-  --type-hero-line: var(--type-band-line);
-  --type-hero-weight: var(--type-band-weight);
-  --type-display-size: var(--type-detail-size);
-  --type-display-line: var(--type-detail-line);
-  --type-display-weight: var(--type-detail-weight);
-  --type-title-1-size: var(--type-total-size);
-  --type-title-1-line: var(--type-total-line);
-  --type-title-1-weight: var(--type-total-weight);
-  --type-title-2-size: var(--type-name-size);
-  --type-title-2-line: var(--type-name-line);
-  --type-title-2-weight: var(--type-name-weight);
-  --type-band-title-size: var(--type-title-size);
-  --type-band-title-line: var(--type-title-line);
-  --type-band-title-weight: var(--type-title-weight);
-  --type-heading-size: var(--type-sheet-size);
-  --type-heading-line: var(--type-sheet-line);
-  --type-heading-weight: var(--type-sheet-weight);
-  --type-title-3-size: var(--type-btn-size);
-  --type-title-3-line: var(--type-btn-line);
-  --type-title-3-weight: var(--type-btn-weight);
-  --type-amount-size: var(--type-body-size);
-  --type-amount-line: var(--type-body-line);
-  --type-amount-weight: var(--type-body-weight);
-  --type-label-size: var(--type-line2-size);
-  --type-label-line: var(--type-line2-line);
-  --type-label-weight: var(--type-line2-weight);
-  --type-hint-size: var(--type-caption-size);
-  --type-hint-line: var(--type-caption-line);
-  --type-hint-weight: var(--type-caption-weight);
-  --type-micro-size: var(--type-cents-size);
-  --type-micro-line: var(--type-cents-line);
-  --type-micro-weight: var(--type-cents-weight);
   --type-wordmark-size: 1.375rem; /* 22px */
   --type-wordmark-line: 1.2;
   --type-wordmark-weight: 700;
@@ -121,6 +87,7 @@
   --space-6: 24px;
   --space-8: 32px;
   --space-10: 40px;
+  --space-half: 2px;             /* a hairline gap between two lines of one block */
   --space-side: 20px;
   --row-height: 64px;
   --avatar: 36px;
@@ -136,16 +103,31 @@
   --space-card-inset: 16px;
   --space-inset-row: 14px;       /* a row inside an inset list (FLOW-363 2d) */
   --space-section: 36px;
+  --icon-check: 24px;            /* the 24px glyph box of a back chevron and a tick */
+  /* The back chevron sits flush with the page gutter: the touch box is wider than the glyph, so the
+     header pulls it out by half the difference (and the glyph's own 8px / 6px inset). */
+  --back-pad: calc((var(--touch-min) - var(--icon-check)) / 2);
+  --back-pull-start: calc((var(--touch-min) - var(--icon-check)) / -2 - var(--space-2));
+  --back-pull-end: calc((var(--touch-min) - var(--icon-check)) / -2 - var(--space-1) - var(--space-half));
+  --edge-back-rest: calc(var(--space-8) + var(--space-1)); /* the edge-back mark's width past the edge at rest */
 
   /* ---- corner radii ---- */
   --radius-chip: 9999px;
   --radius-input: 12px;
   --radius-button: 9999px;
   --radius-card: 20px;
+  --radius-card-inner: calc(var(--radius-card) - var(--space-1)); /* a part inside a card */
   --radius-card-tight: 16px;     /* connection and AI pages (implementation-guide §7.14, FLOW-512) */
+  --radius-thumb: 6px;           /* a document thumbnail's corners */
+  --radius-card-row: 14px;       /* the onboarding switch and add-loan cards (board) */
   --radius-sheet: 24px;
   --radius-band: 28px;
   --radius-fab: 9999px;
+  --radius-review: 10px;         /* the review card's tile */
+  --radius-grab: 3px;            /* the sheet's grab handle */
+  --radius-swatch: 3px;          /* a legend swatch */
+  --radius-pager: 22px;          /* the month pager track */
+  --radius-pager-band: 24px;     /* the month pager track on the band */
   --radius-block: 6px;           /* skeleton blocks, States board (FLOW-371) */
   --radius-field-btn: 10px;      /* copy and show/hide pills in a field (FLOW-363 (4)) */
 
@@ -187,6 +169,9 @@
   --motion-pulse: 1.2s;
   --motion-indet: 1.4s;          /* sync strip line, States board (FLOW-371) */
   --motion-spin: 800ms;
+  --motion-peek: 900ms;          /* the swipe row's first-view peek */
+  --motion-peek-delay: 400ms;
+  --dur-reduced: 1ms;             /* a user who asks for less motion: an animation still ends and fires animationend */
   --rise-page: 8px;
   --rise-push: 24px;
   --rise-toast: 12px;
@@ -196,9 +181,12 @@
   --size-seg-track: 48px; /* --size-seg plus the track's 4px padding on each side */
   --swipe-action: 120px;
   --dur-shimmer: 1400ms;   /* until FLOW-371 replaces the shimmer with --motion-pulse */
-  /* FLOW-363 (3b): the sheet's panel top and bottom (board: 10 above the handle, 28 below the content). */
+  /* The sheet panel (board): 10 above the handle, 24 below the content (a choice sheet sets 28), 16 at the
+     sides, 12 between its blocks. A sheet that differs opts in with a ui-sheet-* panel class. */
   --sheet-pad-top: 10px;
-  --sheet-pad-bottom: 28px;
+  --sheet-pad-bottom: 24px;
+  --sheet-side: 16px;
+  --sheet-gap-y: 12px;
 
   /* ---- colour: light (default) ---- */
   --color-bg: #F6F4FA;
@@ -237,8 +225,6 @@
   --color-warning: #8A5700;
   --color-scrim: rgba(29,23,40,.45);
   --color-movie-from: #E9DDFF;
-  --movie-finger-fill: rgba(255,255,255,.28);
-  --movie-finger-ring: rgba(255,255,255,.7);
   --sheet-scrim: rgba(29,23,40,.38);
   --sheet-grab: #A69EB8;
   --color-toast-bg: #1D1728;
@@ -248,10 +234,14 @@
   --color-tint-pressed: #E7DAFD;
   --color-disabled-bg: #F1EEF6;
   --color-disabled-text: #8F889C;
+  --color-btn-disabled-text: #8F879F;  /* disabled primary in a form: label on the --color-line fill (board) */
   --color-error: #D23B2F;
   --color-skeleton: #F1EEF6;     /* skeleton blocks use the inner-box value (board, States light) */
   --color-skeleton-band: rgba(255, 255, 255, 0.16);
   --color-knob: #FFFFFF;
+  --color-paper: #EDEAE4;        /* the receipt thumbnail's paper and its two line greys (Add board) */
+  --color-paper-ink: #9C97A3;
+  --color-paper-line: #C9C4CF;
   --color-knob-on: #FFFFFF;
   --color-bad-tint: #FCEDEC;
   --color-toast-bad: #FF8A80;
@@ -262,6 +252,8 @@
   --color-gsi-bg: #FFFFFF;
   --color-gsi-border: #747775;
   --color-gsi-text: #1F1F1F;
+  --color-gsi-press: rgb(31 31 31 / 12%);
+  --color-gsi-disabled-text: rgb(31 31 31 / 38%);
   --color-signal: #D23B2F;
   --color-signal-soft: #B9503F;
   --color-band-past: #5A2DB0;
@@ -304,8 +296,6 @@
     --color-warning: #EDB866;
     --color-scrim: rgba(5,3,10,.62);
     --color-movie-from: #2A1A55;
-    --movie-finger-fill: rgba(255,255,255,.28);
-    --movie-finger-ring: rgba(255,255,255,.7);
     --sheet-scrim: rgba(8,6,12,.6);
     --sheet-grab: #564E66;
     --color-toast-bg: #F1EDF8;
@@ -315,6 +305,7 @@
     --color-tint-pressed: #382A5E;
     --color-disabled-bg: #2A2438;
     --color-disabled-text: #7A7290;
+    --color-btn-disabled-text: #6A627A;
     --color-error: #FF8A80;
     --color-skeleton: #251F33;
     --color-track: #2E2740;
@@ -330,6 +321,8 @@
     --color-gsi-bg: #FFFFFF;
     --color-gsi-border: #747775;
     --color-gsi-text: #1F1F1F;
+    --color-gsi-press: rgb(31 31 31 / 12%);
+    --color-gsi-disabled-text: rgb(31 31 31 / 38%);
     --color-signal: #FF8A80;
     --color-signal-soft: #E8A598;
     --color-band-past: #5A2DB0;
@@ -383,6 +376,7 @@
   --color-tint-pressed: #382A5E;
   --color-disabled-bg: #2A2438;
   --color-disabled-text: #7A7290;
+  --color-btn-disabled-text: #6A627A;
   --color-error: #FF8A80;
   --color-skeleton: #251F33;
   --color-track: #2E2740;
@@ -398,6 +392,8 @@
   --color-gsi-bg: #FFFFFF;
   --color-gsi-border: #747775;
   --color-gsi-text: #1F1F1F;
+  --color-gsi-press: rgb(31 31 31 / 12%);
+  --color-gsi-disabled-text: rgb(31 31 31 / 38%);
   --color-signal: #FF8A80;
   --color-signal-soft: #E8A598;
   --color-band-past: #5A2DB0;
@@ -428,6 +424,8 @@
     --motion-pulse: 0ms;
     --motion-indet: 0ms;
     --motion-spin: 0ms;
+    --motion-peek: 0ms;
+    --motion-peek-delay: 0ms;
     --rise-page: 0px;
     --rise-push: 0px;
     --rise-toast: 0px;
@@ -439,19 +437,9 @@
    Optional helpers: type styles and the number span. Components may use the
    variables directly instead; either way, no other sizes are allowed.
    ========================================================================== */
-.t-hero { font-size: var(--type-hero-size); line-height: var(--type-hero-line); font-weight: var(--type-hero-weight); }
-.t-display { font-size: var(--type-display-size); line-height: var(--type-display-line); font-weight: var(--type-display-weight); }
-.t-title-1 { font-size: var(--type-title-1-size); line-height: var(--type-title-1-line); font-weight: var(--type-title-1-weight); }
-.t-title-2 { font-size: var(--type-title-2-size); line-height: var(--type-title-2-line); font-weight: var(--type-title-2-weight); }
-.t-band-title { font-size: var(--type-band-title-size); line-height: var(--type-band-title-line); font-weight: var(--type-band-title-weight); }
-.t-heading { font-size: var(--type-heading-size); line-height: var(--type-heading-line); font-weight: var(--type-heading-weight); }
-.t-title-3 { font-size: var(--type-title-3-size); line-height: var(--type-title-3-line); font-weight: var(--type-title-3-weight); }
-.t-amount { font-size: var(--type-amount-size); line-height: var(--type-amount-line); font-weight: var(--type-amount-weight); }
 .t-body { font-size: var(--type-body-size); line-height: var(--type-body-line); font-weight: var(--type-body-weight); }
-.t-label { font-size: var(--type-label-size); line-height: var(--type-label-line); font-weight: var(--type-label-weight); }
 .t-meta { font-size: var(--type-meta-size); line-height: var(--type-meta-line); font-weight: var(--type-meta-weight); }
-.t-hint { font-size: var(--type-hint-size); line-height: var(--type-hint-line); font-weight: var(--type-hint-weight); color: var(--color-text-muted); }
-.t-micro { font-size: var(--type-micro-size); line-height: var(--type-micro-line); font-weight: var(--type-micro-weight); }
+.t-muted { color: var(--color-text-muted); }
 .t-wordmark { font-size: var(--type-wordmark-size); line-height: var(--type-wordmark-line); font-weight: var(--type-wordmark-weight); }
 .t-band { font-size: var(--type-band-size); line-height: var(--type-band-line); font-weight: var(--type-band-weight); }
 .t-detail { font-size: var(--type-detail-size); line-height: var(--type-detail-line); font-weight: var(--type-detail-weight); }

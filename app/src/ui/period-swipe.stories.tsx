@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
 import { allTime, presetPeriod, windowLabel, type PeriodChoice } from "../period";
-import { Hero } from "./hero";
+import { Amount } from "./amount";
 import { PeriodSwipe } from "./period-swipe";
 import { TopBand } from "./top-band";
 
@@ -13,11 +13,16 @@ import { TopBand } from "./top-band";
 function Demo({ start }: { start: "months3" | "all" }) {
   const [period, setPeriod] = useState<PeriodChoice>(() => (start === "all" ? allTime() : presetPeriod("months3")));
   return (
-    <TopBand wordmark={false}>
-      <PeriodSwipe period={period} onChange={setPeriod}>
-        <Hero label={`רווח, ${windowLabel(period)}`} agorot={1_840_000n} explanation="הכנסות פחות הוצאות" />
-      </PeriodSwipe>
-    </TopBand>
+    <TopBand
+      wordmark={false}
+      hero={
+        <PeriodSwipe period={period} onChange={setPeriod}>
+          <p className="ui-band-label t-line2">{`רווח, ${windowLabel(period)}`}</p>
+          <h1 className="ui-band-fade t-band"><Amount agorot={1_840_000n} /></h1>
+          <p className="t-line2">הכנסות פחות הוצאות</p>
+        </PeriodSwipe>
+      }
+    />
   );
 }
 
@@ -28,8 +33,6 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
 
 /** A steppable window: the figure takes the swipe and leaves vertical moves to the page. */
 export const Steppable: Story = {
@@ -42,7 +45,6 @@ export const Steppable: Story = {
     await expect(within(canvasElement).getByRole("heading", { name: "₪18,400" })).toBeVisible();
   },
 };
-export const Steppable320: Story = { ...Steppable, name: "Steppable, 320", ...at320 };
 /** הכול has no arrows, so the figure takes no swipe either. */
 export const All: Story = {
   args: { start: "all" },

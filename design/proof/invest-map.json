@@ -1,0 +1,6 @@
+{
+  "Invest": "/e2e/project-investment",
+  "InvestNoArv": "/e2e/project-investment?arv=none",
+  "InvestEdit": "/e2e/project-investment?sheet=edit&field=arv",
+  "InvestRehab": "/e2e/project-investment?sheet=rehab"
+}

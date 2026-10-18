@@ -1,6 +1,5 @@
 :root {
   --size-chip: 36px;
-  --size-period: 32px;
   --size-switch: 46px;
   --switch-track-h: 28px;
   --switch-knob: 22px;
@@ -11,17 +10,10 @@
   --toast-gap: 10px;
   --icon-app: 72px;
   --radius-app: 18px;
-  --icon-note: 38px;
   --radius-note: 9px;
-  --doc-tile-w: 84px;
-  --doc-tile-h: 100px;
-  --invoice-w: 188px;
-  --invoice-h: 248px;
-  --lock-time: 5.5rem;
   --sheet-gap: 56px;
   --spinner: 18px;
   --spinner-radio: 12px;
-  --icon-check: 24px;
   --empty-measure: 280px;
   --figure-gap: 6px;
   --day-mark: var(--space-10);
@@ -33,9 +25,8 @@
   --skel-hero: 52px;
   --skel-pill: 88px;
   --review-gap: 14px;
-  --review-tile-w: 52px;
-  --review-tile-h: 64px;
-  --review-radius: 10px;
+  --review-tile-w: 58px;
+  --review-tile-h: 74px;
 }
 
 /* FLOW-310: with the keyboard up on a 320 phone the visual viewport is short, so an open sheet
@@ -68,10 +59,8 @@
   white-space: normal;
 }
 
-.ui-pill-label,
 .ui-chip-label,
-.ui-period-label,
-.ui-text-link-label {
+.ui-btn-link:where(:not(.ui-btn-full)) .ui-btn-label {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -106,9 +95,17 @@
   transition: opacity var(--motion-press) var(--ease-standard), transform var(--motion-press) var(--ease-standard);
 }
 
+/* A destructive confirm: the outline button in the signal colour, so the red stays on the one action. */
+.ui-btn.ui-btn-secondary.ui-btn-signal {
+  border-color: var(--color-signal-soft);
+  color: var(--color-signal-soft);
+  font-size: var(--type-btn-size);
+}
+
 /* Text only: no fill, no padding, the 44px hit area. The chevron (if any) sits after the label. */
-.ui-btn.ui-btn-link,
-.ui-btn.ui-btn-danger-link {
+.ui-btn-link,
+.ui-btn-danger-link {
+  min-width: var(--touch-min);
   min-height: var(--touch-min);
   padding-inline: 0;
   border-radius: var(--radius-button);
@@ -120,11 +117,16 @@
   transition: opacity var(--motion-press) var(--ease-standard), transform var(--motion-press) var(--ease-standard);
 }
 
-.ui-btn.ui-btn-link {
+.ui-btn-link {
+  gap: var(--space-half);
   color: var(--color-accent-text);
 }
 
-.ui-btn.ui-btn-danger-link {
+.ui-btn-link:where(:not(.ui-btn-full)) {
+  justify-content: flex-start;
+}
+
+.ui-btn-danger-link {
   color: var(--color-signal);
 }
 
@@ -147,9 +149,7 @@
 .ui-icon-btn,
 .ui-chip,
 .ui-seg-btn,
-.ui-text-link,
 .ui-hit,
-.ui-band-period,
 .ui-radio,
 .ui-radio-row,
 .ui-tab-slot,
@@ -175,12 +175,18 @@ a.ui-row,
   cursor: progress;
 }
 
-/* A disabled route link (`<Button to disabled>`) is an <a aria-disabled>; busy keeps its own look below. */
+/*
+  A disabled button in a form (board: a --color-line fill with its own label colour). A disabled route link
+  (`<Button to disabled>`) is an <a aria-disabled>; busy keeps its own look below.
+*/
 .ui-btn-primary:disabled,
 .ui-btn-secondary:disabled,
-.ui-btn-pill:disabled,
-.ui-btn-danger-tint:disabled,
-a:is(.ui-btn-primary, .ui-btn-secondary, .ui-btn-pill, .ui-btn-danger-tint)[aria-disabled="true"]:not([aria-busy="true"]),
+a:is(.ui-btn-primary, .ui-btn-secondary)[aria-disabled="true"]:not([aria-busy="true"]) {
+  background: var(--color-line);
+  color: var(--color-btn-disabled-text);
+  border-color: transparent;
+}
+
 .ui-field-control:disabled,
 .ui-field-control:has(input:disabled),
 .ui-money-field:has(input:disabled) {
@@ -193,11 +199,9 @@ a:is(.ui-btn-primary, .ui-btn-secondary, .ui-btn-pill, .ui-btn-danger-tint)[aria
   color: var(--color-disabled-text);
 }
 
-.ui-btn-ghost:disabled,
-.ui-btn-danger:disabled,
 .ui-btn-link:disabled,
 .ui-btn-danger-link:disabled,
-a:is(.ui-btn-ghost, .ui-btn-danger, .ui-btn-link, .ui-btn-danger-link)[aria-disabled="true"]:not([aria-busy="true"]),
+a:is(.ui-btn-link, .ui-btn-danger-link)[aria-disabled="true"]:not([aria-busy="true"]),
 .ui-icon-btn:disabled {
   background: transparent;
   color: var(--color-disabled-text);
@@ -209,8 +213,7 @@ a:is(.ui-btn-ghost, .ui-btn-danger, .ui-btn-link, .ui-btn-danger-link)[aria-disa
   color: var(--color-on-accent);
 }
 
-.ui-btn-secondary[aria-busy="true"],
-.ui-btn-pill[aria-busy="true"] {
+.ui-btn-secondary[aria-busy="true"] {
   /* FLOW-371: busy keeps the look and the spinner replaces the tint fill. */
   background: transparent;
   color: var(--color-accent-text);
@@ -220,92 +223,17 @@ a:is(.ui-btn-ghost, .ui-btn-danger, .ui-btn-link, .ui-btn-danger-link)[aria-disa
   width: 100%;
 }
 
-.ui-btn-pill {
-  height: var(--size-chip);
-  min-height: var(--size-chip);
-  max-width: 100%;
-  border-radius: var(--radius-chip);
-  background: var(--color-tint);
-  color: var(--color-accent-text);
-  font-size: var(--type-label-size);
-  font-weight: var(--type-btn-weight);
-}
-
-.ui-btn-pill,
 .ui-chip,
-.ui-seg-btn,
-.ui-band-period {
+.ui-seg-btn {
   --hit-block: var(--touch-min);
 }
 
-.ui-btn-pill::after,
 .ui-chip::after,
-.ui-seg-btn::after,
-.ui-band-period::after {
+.ui-seg-btn::after {
   content: "";
   position: absolute;
   inset-inline: 0;
   inset-block: calc((var(--hit-block) - 100%) / -2);
-}
-
-.ui-btn-pill:active:not(:disabled) {
-  background: var(--color-tint-pressed);
-}
-
-.ui-btn-danger,
-.ui-btn-danger-tint {
-  min-height: var(--touch-min);
-  border-radius: var(--radius-button);
-  color: var(--color-bad);
-  font-size: var(--type-label-size);
-  font-weight: var(--type-btn-weight);
-}
-
-.ui-btn-danger {
-  background: transparent;
-}
-
-/* FLOW-445: a delete that is not a red fill: a signal outline, no bin (the consequence says what goes). */
-.ui-btn-danger-outline {
-  min-height: 52px;
-  border: 1.5px solid var(--color-signal-soft);
-  border-radius: var(--radius-button);
-  background: transparent;
-  color: var(--color-signal-soft);
-  font-size: var(--type-btn-size);
-  font-weight: var(--type-btn-weight);
-}
-
-.ui-btn-danger-tint {
-  height: var(--control-height);
-  min-height: var(--control-height);
-  background: var(--color-bad-tint);
-}
-
-.ui-btn-danger:active:not(:disabled) {
-  background: var(--color-bad-tint);
-}
-
-.ui-btn-danger-tint:active:not(:disabled) {
-  background: color-mix(in srgb, var(--color-bad) 18%, var(--color-bad-tint));
-}
-
-.ui-btn-ghost {
-  min-height: var(--touch-min);
-  /* FLOW-350: the focus ring and the pressed tint follow the button's radius, not a square box. */
-  border-radius: var(--radius-button);
-  background: transparent;
-  color: var(--color-accent-text);
-  font-size: var(--type-label-size);
-  font-weight: var(--type-btn-weight);
-}
-
-.ui-btn-ghost.ui-btn-quiet {
-  color: var(--color-text-secondary);
-}
-
-.ui-btn-ghost:active:not(:disabled) {
-  background: var(--color-tint);
 }
 
 .ui-icon-btn {
@@ -349,7 +277,7 @@ a:is(.ui-btn-ghost, .ui-btn-danger, .ui-btn-link, .ui-btn-danger-link)[aria-disa
 
 /* List amount and the month totals over list rows: cents at 11px, raised 5px (Design guide, FLOW-363, FLOW-334). A detail figure keeps its
    cents at the figure's size ("$1,284.50" at 40/400 on the Design guide). */
-.t-amount .ui-num-cents,
+.t-body .ui-num-cents,
 .ui-loan-amount .ui-num-cents,
 .ui-month-totals .ui-num-cents {
   font-size: var(--type-cents-size);
@@ -378,8 +306,8 @@ a:is(.ui-btn-ghost, .ui-btn-danger, .ui-btn-link, .ui-btn-danger-link)[aria-disa
 }
 
 .ui-row > .ui-num,
-.ui-row > .t-title-3,
-.ui-row > .t-amount {
+.ui-row > .t-btn,
+.ui-row > .t-body {
   flex: none;
 }
 
@@ -404,18 +332,10 @@ a:is(.ui-btn-ghost, .ui-btn-danger, .ui-btn-link, .ui-btn-danger-link)[aria-disa
   pointer-events: none;
 }
 
-.ui-show-hover {
-  display: contents;
-}
-
 .ui-row:is(:focus-visible, [data-focus-ring]:focus, [aria-pressed="true"])::before,
 .ui-radio-row:is(:focus-visible, [data-focus-ring]:focus, [aria-checked="true"])::before,
 .ui-review-line:focus-visible::before {
   background: var(--color-tint);
-}
-
-.ui-show-hover > :is(.ui-row, .ui-radio-row, .ui-review-line)::before {
-  background: var(--surface-hover);
 }
 
 /* The square focus ring would draw a second box. The tint is the indicator. `[data-focus-ring]:focus`

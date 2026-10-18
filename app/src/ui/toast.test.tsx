@@ -842,3 +842,39 @@ describe("placeToast", () => {
     host.remove();
   });
 });
+describe("Toast frames (FLOW-915)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("cancels the frame it scheduled in turn, not only the first one, when the provider unmounts", () => {
+    // A fake frame queue: a callback runs only when the test flushes it, so the test
+    // can unmount between the outer frame and the inner frame it schedules.
+    const frames = new Map<number, FrameRequestCallback>();
+    let nextId = 1;
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      const id = nextId;
+      nextId += 1;
+      frames.set(id, callback);
+      return id;
+    });
+    vi.spyOn(window, "cancelAnimationFrame").mockImplementation((id) => {
+      frames.delete(id);
+    });
+    function flushFrame() {
+      const due = [...frames.entries()];
+      frames.clear();
+      for (const [, callback] of due) callback(performance.now());
+    }
+
+    const { unmount } = render(
+      <ToastProvider>
+        <Probe />
+      </ToastProvider>,
+    );
+    flushFrame();
+    expect(frames.size).toBe(1);
+    unmount();
+    expect(frames.size).toBe(0);
+  });
+});

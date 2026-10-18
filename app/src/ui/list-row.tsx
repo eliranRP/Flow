@@ -8,6 +8,7 @@ import { MatchText } from "./match-text";
 import { statementRowLabel, textDir, type StatementDetail, type StatementMethod } from "./statement";
 import { BankIcon, ChevronIcon, DocumentIcon, GripIcon } from "./icons";
 import { Skeleton } from "./skeleton";
+import { JevTag, SuggestTag } from "./suggest-tag";
 
 /**
  * FLOW-363 (2d): `flat` is a long list's row (no divider, about a 64px line, no chevron); `inset` is a
@@ -26,7 +27,7 @@ type Common = {
   wrapHint?: boolean;
   /** The hint's whole parts on one line; a part that does not fit drops (a transaction row always does). */
   hintParts?: readonly ReactNode[];
-  /** Hint uses t-hint, and the control points at it with aria-describedby. */
+  /** Hint uses t-caption t-muted, and the control points at it with aria-describedby. */
   describeHint?: boolean;
   href?: string;
   /** The href is an outside page: it opens in a new tab, and the name says so. */
@@ -64,7 +65,41 @@ type Common = {
   heading?: boolean;
 };
 
+/**
+ * `control="radio"`: a row in a choice list. A role=radio button with the check circle at the inline
+ * end (or the start with `marker="start"`); `layout="picker"` puts name, project code and date on one line.
+ */
+export type RadioListRowProps = {
+  control: "radio";
+  variant?: undefined;
+  /** The name. It is also the accessible name. */
+  title: string;
+  hint?: string;
+  /** Project code, kept on one line. */
+  code?: string;
+  /** Relative last use, at the inline end. */
+  date?: string;
+  /** Tint הצעה after the name. The suggestion row sets this; "jev" says הצעת Jev (FLOW-704). */
+  tag?: boolean | "jev";
+  /** Name, code, and date on one line. The change picker uses this. */
+  layout?: "picker";
+  /** Live result under the title. Split uses this. */
+  description?: ReactNode;
+  /** The radio sits on the start side. Split uses this; the period sheet keeps the end. */
+  marker?: "start" | "end";
+  disabled?: boolean;
+  /** Replaces the description while the row cannot be chosen. */
+  disabledReason?: string;
+  /** The row is writing. A spinner replaces the check, and the cursor is progress. */
+  busy?: boolean;
+  /** Set as data-value, so a screen can find the row again (FLOW-115). */
+  value?: string;
+  selected: boolean;
+  onSelect: () => void;
+};
+
 export type ListRowProps =
+  | RadioListRowProps
   | (Common & {
     variant: "project";
     agorot: bigint;
@@ -72,6 +107,12 @@ export type ListRowProps =
     currency?: string;
     amounts?: { minor: bigint; currency: string }[];
     amountDirection?: "expense" | "income";
+    /** Green money in without the plus (the open-invoices list). */
+    amountSignless?: boolean;
+    /** A plus before a positive amount, in the row's own colour (a project's month profit). */
+    amountPlus?: boolean;
+    /** The Projects list's amount (board): signed, green when money in, muted at zero, cents drawn small and raised. */
+    signed?: boolean;
     /** A small mark before the amount. The project page's up mark (FLOW-401). */
     mark?: ReactNode;
     /** A muted line under the amount at the end side (FLOW-367: an open invoice's age). */
@@ -95,6 +136,8 @@ export type ListRowProps =
     initials?: string;
     /** FLOW-366: the tag line under the hint (13px): "ממתין לאישור", or the reason a line is out of profit. */
     tagLine?: ReactNode;
+    /** FLOW-366b: the amount keeps ".00" on a whole figure (the month lines page). Off: whole figures have no cents. */
+    wholeCents?: boolean;
   })
   | StatementRowProps
   | (Common & { variant: "item" })
@@ -113,6 +156,70 @@ export type ListRowProps =
   | (Common & { variant: "danger"; onClick: () => void; busy?: boolean; disabled?: boolean; /** A refused delete keeps its reason at full contrast (FLOW-405). */ clearHint?: boolean; buttonRef?: Ref<HTMLButtonElement> })
   | (Common & { variant: "selectable"; selected: boolean; onSelect: () => void });
 
+function RadioControlRow({
+  title,
+  hint,
+  code,
+  date,
+  tag,
+  layout,
+  description,
+  marker = "end",
+  disabled = false,
+  disabledReason,
+  busy = false,
+  value,
+  selected,
+  onSelect,
+}: RadioListRowProps) {
+  const picker = layout === "picker" || code != null || date != null || (tag != null && tag !== false);
+  const descId = useId();
+  const off = disabled || disabledReason != null;
+  const sub = off && disabledReason ? disabledReason : description;
+  const radio = (
+    <span className="ui-radio" data-on={selected || busy ? "true" : "false"} aria-hidden="true">
+      {busy ? <span className="ui-spinner" /> : selected ? "✓" : ""}
+    </span>
+  );
+  const text = picker ? (
+    <span className="ui-pick-name">
+      <span className="ui-pick-label">{title}</span>
+      {tag === "jev" ? <JevTag /> : tag ? <SuggestTag /> : null}
+      {sub ? <span className="ui-radio-desc" id={descId}>{sub}</span> : null}
+    </span>
+  ) : (
+    <span className="ui-row-text">
+      <span className="ui-row-title">{title}</span>
+      {hint ? <span className="ui-row-hint">{hint}</span> : null}
+      {sub ? <span className="ui-radio-desc" id={descId}>{sub}</span> : null}
+    </span>
+  );
+  return (
+    <button
+      type="button"
+      className={picker ? "ui-radio-row ui-pick-row" : marker === "start" ? "ui-radio-row ui-radio-start" : "ui-radio-row"}
+      role="radio"
+      aria-checked={selected}
+      aria-disabled={off || busy || undefined}
+      aria-busy={busy || undefined}
+      aria-label={title}
+      data-value={value}
+      aria-describedby={sub ? descId : undefined}
+      // A busy row keeps focus while it saves (aria-disabled only), so a failure can hand it back (FLOW-115).
+      disabled={off}
+      onClick={() => {
+        if (!off && !busy) onSelect();
+      }}
+    >
+      {marker === "start" ? radio : null}
+      {text}
+      {code ? <bdi className="ui-pick-code" dir="ltr">{code}</bdi> : null}
+      {date ? <span className="ui-pick-date">{date}</span> : null}
+      {marker === "start" ? null : radio}
+    </button>
+  );
+}
+
 /**
  * A bank-statement row (FLOW-305, option A): initials avatar, the counterparty, then a pending chip
  * and "✦ project · category"; the amount with small cents at the end and the method under it.
@@ -120,6 +227,8 @@ export type ListRowProps =
  */
 export type StatementRowProps = {
   variant: "statement";
+  /** A whole amount keeps its ".00" (the board's search results). */
+  wholeCents?: boolean;
   /** The counterparty: supplier name, else the line's description. */
   title: string;
   /** The avatar's icon when the name has no letter. */
@@ -146,10 +255,13 @@ export type StatementRowProps = {
   details?: StatementDetail[];
   /** A line kept out of profit: it fades but keeps line 2 at full muted grey (owner's pick C; FLOW-352). */
   setAside?: boolean;
+  /** Optional accent line under line 2, for a state to act on (Search: "ממתין לאישור"). Off unless passed. */
+  note?: string;
 };
 
 export function ListRow(props: ListRowProps) {
   const hintId = useId();
+  if ("control" in props) return <RadioControlRow {...props} />;
   if (props.variant === "statement") return <StatementRow {...props} />;
   const layoutClass = props.layout === "flat" ? "ui-row-flat" : false;
   if (props.variant === "skeleton") {
@@ -235,7 +347,7 @@ export function ListRow(props: ListRowProps) {
               role={props.hintStatus ? "status" : undefined}
               className={cx(
                 "ui-row-hint",
-                props.describeHint === true && "t-hint",
+                props.describeHint === true && "t-caption t-muted",
                 props.wrapHint && "ui-row-hint-wrap",
                 props.skelHint && "ui-row-hint-skel",
                 oneLineHint && "ui-row-hint-line",
@@ -256,7 +368,7 @@ export function ListRow(props: ListRowProps) {
         </span>
       ) : props.variant === "project" || props.variant === "transaction" ? <RowAmount {...props} /> : null}
       {props.value != null ? <span className="ui-row-value">{props.value}</span> : null}
-      {props.meta ? <span className="ui-row-meta t-hint">{props.meta}</span> : null}
+      {props.meta ? <span className="ui-row-meta t-caption t-muted">{props.meta}</span> : null}
       {props.actionBelow ? null : props.action}
       {showChevron ? (
         <span className="ui-row-chevron" aria-hidden="true">
@@ -436,7 +548,7 @@ function withAction(props: { actionBelow?: boolean; action?: ReactNode }, row: R
   );
 }
 
-function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "out" | "cost"; inWord?: string }) {
+function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "out" | "cost"; inWord?: string; wholeCents?: boolean }) {
   const abs = props.agorot < 0n ? -props.agorot : props.agorot;
   const cost = props.sign === "cost";
   // The amount's sign wins over the direction: a negative income (an income credit) shows its
@@ -444,7 +556,7 @@ function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "
   const income = props.sign === "in" && props.agorot >= 0n;
   // Income is green with a "+" (decision 0181); the hidden word keeps direction out of colour alone (WCAG 1.4.1).
   return (
-    <span className="t-amount">
+    <span className="t-body">
       {income ? <span className="sr-only">{props.inWord ?? "הכנסה"} </span> : null}
       <Amount
         agorot={abs}
@@ -452,6 +564,7 @@ function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "
         direction={income ? "income" : cost ? undefined : "expense"}
         income={income}
         cents="always"
+        zeroCents={props.wholeCents === true}
       />
     </span>
   );
@@ -498,7 +611,7 @@ function StatementRow(props: StatementRowProps) {
                       className={detail.tone === "accent" || detail.keep === true ? "ui-hint-part ui-hint-part-keep" : "ui-hint-part"}
                       data-clip-ok=""
                     >
-                      {index > 0 ? HINT_SEPARATOR : null}
+                      {index > 0 ? <span className="ui-hint-sep">{HINT_SEPARATOR}</span> : null}
                       <span className={detail.tone === "accent" ? "ui-statement-accent" : undefined}>{detail.text}</span>
                     </span>
                   ))}
@@ -506,10 +619,11 @@ function StatementRow(props: StatementRowProps) {
               ) : null}
             </span>
           ) : null}
+          {props.note ? <span className="ui-statement-note">{props.note}</span> : null}
         </span>
       </span>
       <span className="ui-statement-end">
-        <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} />
+        <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} wholeCents={props.wholeCents} />
         {props.method != null ? (
           <span className="ui-statement-method t-meta">
             <span className="ui-statement-method-icon" aria-hidden="true">{props.method.icon}</span>
@@ -523,11 +637,11 @@ function StatementRow(props: StatementRowProps) {
 
 function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transaction" }>) {
   if (props.variant === "transaction") {
-    return <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} />;
+    return <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} wholeCents={props.wholeCents} />;
   }
   if (props.missing != null) {
     return (
-      <span className="ui-row-missing t-amount">
+      <span className="ui-row-missing t-body">
         <span aria-hidden="true">—</span>
         <span className="sr-only">{props.missing}</span>
       </span>
@@ -535,7 +649,7 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
   }
   if (props.amounts != null && props.amounts.length > 0) {
     return (
-      <span className="ui-row-amounts t-amount">
+      <span className="ui-row-amounts t-body">
         {props.amounts.map((amount) => (
           <Amount
             key={amount.currency}
@@ -548,14 +662,24 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
       </span>
     );
   }
+  if (props.signed === true) {
+    const abs = props.agorot < 0n ? -props.agorot : props.agorot;
+    const income = props.agorot > 0n;
+    return (
+      <span className={cx("t-body", props.agorot === 0n && "ui-row-amount-zero")}>
+        <Amount agorot={abs} currency={props.currency} direction={income ? "income" : "expense"} income={income} cents="always" zeroCents />
+      </span>
+    );
+  }
   return (
     <Amount
       agorot={props.agorot}
       currency={props.currency}
       size="list"
       loss={props.loss === true}
-      direction={props.amountDirection}
+      direction={props.amountSignless === true ? undefined : props.amountDirection ?? (props.amountPlus === true && props.agorot > 0n ? "income" : undefined)}
       income={props.amountDirection === "income"}
+      signless={props.amountSignless === true}
     />
   );
 }

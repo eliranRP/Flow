@@ -53,7 +53,7 @@ export function BusinessScreen({ sample }: { sample?: SettingsSample } = {}) {
   const currencyRowRef = useRef<HTMLButtonElement>(null);
   const [basisOpen, setBasisOpen] = useState(false);
   const basisRowRef = useRef<HTMLButtonElement>(null);
-  const [overheadOn, setOverheadOn] = useState(false);
+  const [overheadOn, setOverheadOn] = useState(sample?.afterOverhead === true);
   const wantedOverhead = useRef(false);
   useEffect(() => {
     if (sample) return;
@@ -125,10 +125,10 @@ export function BusinessScreen({ sample }: { sample?: SettingsSample } = {}) {
 
   return (
     <ViewerScope>
-    <div>
+    <div className="ui-settings-page">
       <ScreenHeader title={TITLE} kicker="הגדרות" backTo={`${BACK}${search}`} />
       <ViewerNote />
-      <List>
+      <List layout="inset">
         {holdOwner ? (
           <ListRow variant="static" title="שם" value={namedBusiness} icon={<BuildingIcon />} />
         ) : (
@@ -204,9 +204,10 @@ export function BusinessScreen({ sample }: { sample?: SettingsSample } = {}) {
           currentName={namedBusiness}
           blocked={() => blocked(sample != null ? "empty" : undefined)}
           returnFocusRef={renameRowRef}
+          sampleSaving={sample?.renameSaving === true}
         />
       ) : null}
-      <List>
+      <List layout="inset">
         <Toggle
           label={OVERHEAD_LABEL}
           icon={<SplitIcon />}

@@ -49,16 +49,19 @@ function sheetParam(value: string | null): "all" | "pace" | undefined {
 
 export function DevTransactionBoard() {
   const [params] = useSearchParams();
+  // The loading frame (States detailLoading): the card as a line of the month's יצא list opens it, before its data is in.
+  if (params.get("board") === "loading") return <TransactionScreen sampleFrom={BOARD_FROM} />;
   if (params.get("board") === "1") {
     return (
       <TransactionScreen
-        sample={BOARD_TXN}
+        sample={{ ...BOARD_TXN, doc_kind: "photo", document_url: "https://pay.sumit.co.il/example/doc-board" }}
         sampleSheet={sheetParam(params.get("sheet"))}
         sampleProjects={[{ id: "p1", name: "Elmwood • flip" }]}
         sampleCategories={[{ id: "c1", name: "חומרים" }]}
         sampleMeta={BOARD_BANK_LINE}
         sampleFrom={BOARD_FROM}
         sampleNoFooter
+        sampleUnsigned
       />
     );
   }
@@ -73,8 +76,10 @@ export function DevTransactionBoard() {
           supplier_name: "Harbor Loan Servicing",
           project_name: "Maple Ave • דופלקס להשכרה",
           category_name: "תשלומי הלוואה",
+          source: "mercury",
           amount_gross: -395700n,
           amount_net: -395700n,
+          pnl_fixed: true,
           review_status: "approved",
           review_id: null,
           paid: false,
@@ -95,13 +100,14 @@ export function DevTransactionBoard() {
         sampleCharges={loanCharges}
         sampleFrom={BOARD_FROM}
         sampleNoFooter
+        sampleUnsigned
       />
     );
   }
   if (params.get("board") === "recurring") {
     return (
       <TransactionScreen
-        sample={{ ...BOARD_TXN, amount_gross: -124000n, amount_net: -124000n, doc_date: "2026-10-11" }}
+        sample={{ ...BOARD_TXN, amount_gross: -124000n, amount_net: -124000n, doc_date: "2026-10-11", source: "mercury" }}
         sampleSheet={sheetParam(params.get("sheet"))}
         sampleProjects={[{ id: "p1", name: "Elmwood • flip" }]}
         sampleCategories={[{ id: "c1", name: "חומרים" }]}
@@ -119,6 +125,7 @@ export function DevTransactionBoard() {
         sampleCharges={boardCharges}
         sampleFrom={BOARD_FROM}
         sampleNoFooter
+        sampleUnsigned
       />
     );
   }

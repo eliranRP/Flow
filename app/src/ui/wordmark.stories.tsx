@@ -12,14 +12,4 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Logo: Story = { args: { tone: "logo", size: "band" } };
-export const OnBand: Story = {
-  args: { tone: "on-band", size: "band" },
-  decorators: [
-    (Story) => (
-      <div className="ui-band p-4">
-        <Story />
-      </div>
-    ),
-  ],
-};
 export const SignIn: Story = { args: { tone: "logo", size: "signin" } };

@@ -1,19 +1,13 @@
-import type { Dashboard } from "@flow/shared";
 import { useEffect, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
-import { cashMonthKey } from "../cash";
-import { defaultPeriod } from "../period";
-import { attentionRows, CashHome, HomeBooks } from "../screens/HomeScreen";
-import { CompanySwitcher } from "../screens/company-switcher";
 import { InvitesScreen } from "../screens/invites-screen";
 import { TeamScreen } from "../screens/team-screen";
 import { TeamApiProvider } from "../team-api";
-import { sampleCashMonths } from "./cash-sample";
 import { createSampleTeamApi, type SampleTeamOptions } from "./team-sample";
 
 /**
- * Dev-only fixtures for FLOW-601 (the design review opens these): the team page, the invites
- * list and Home's חברה sheet, on an in-memory team. Invented names and example.com only.
+ * Dev-only fixtures for FLOW-601 (the design review opens these): the team page, the invitation
+ * screen and Home's העסקים שלך sheet, on an in-memory team. Invented names and example.com only.
  */
 
 function SampleTeam({ options, children }: { options: SampleTeamOptions; children: ReactNode }) {
@@ -59,7 +53,7 @@ function OpenInviteSheet() {
   return null;
 }
 
-/** `/e2e/team?team=` pending (invite-2), alone, editor, loading, error, or nothing for a-1. */
+/** `/e2e/team?team=` pending (invite-2), alone, editor, loading, error, or nothing for a-1. `&board=1` is the board's rows. */
 export function DevTeam() {
   const [params] = useSearchParams();
   const state = params.get("team");
@@ -68,6 +62,7 @@ export function DevTeam() {
     ...(params.get("proof") === "1" ? { delayMs: 0 } : {}),
     pendingInvite: state === "pending",
     alone: state === "alone",
+    boardRows: params.get("board") === "1",
     role: state === "editor" ? "editor" : "owner",
     hold: state === "loading" ? ["listTeam"] : undefined,
     fail: state === "error" ? { listTeam: "Failed to fetch" } : state === "full" ? { inviteMember: "too many invites" } : undefined,
@@ -80,89 +75,22 @@ export function DevTeam() {
   );
 }
 
-/** `/e2e/invites?inbox=` 1, empty, loading, error, late (ביטול after ten minutes), or nothing for two (invite-3). */
+/**
+ * `/e2e/invites?state=` viewer, editor, newuser (no business of their own), joined, expired or
+ * declined: the board's invitation states, on fixed invented data.
+ */
 export function DevInvites() {
   const [params] = useSearchParams();
-  const state = params.get("inbox");
+  const state = params.get("state") ?? "viewer";
   const options: SampleTeamOptions = {
-    noCompany: true,
-    inbox: state === "1" ? 1 : state === "empty" ? 0 : 2,
-    hold: state === "loading" ? ["myInvites"] : undefined,
-    fail: state === "error" ? { myInvites: "Failed to fetch" } : state === "late" ? { reopenInvite: "invite is not declined" } : undefined,
+    delayMs: 0,
+    noCompany: state === "newuser",
+    invite: { role: state === "editor" ? "editor" : "viewer", expired: state === "expired", seen: true },
   };
+  const sample = state === "joined" ? "joined" : state === "declined" ? "declined" : "open";
   return (
     <SampleTeam key={state} options={options}>
-      <InvitesScreen />
-    </SampleTeam>
-  );
-}
-
-const devDashboard: Dashboard = {
-  company_id: "dev-company",
-  name: "חברה לדוגמה",
-  vat_registered: true,
-  basis: "invoiced",
-  from: "2026-08-01",
-  to: "2026-10-09",
-  income_agorot: 131_000_000n,
-  direct_agorot: 90_000_000n,
-  shared_agorot: 0n,
-  overhead_agorot: 21_000_000n,
-  expense_agorot: 111_000_000n,
-  net_profit_agorot: 20_000_000n,
-  prev_income_agorot: null,
-  prev_expense_agorot: null,
-  prev_net_agorot: null,
-  active_projects: 1,
-  review_count: 0,
-  by_currency: [],
-  projects: [
-    { id: "dev-a", name: "פרויקט לדוגמה", status: "active", income_agorot: 30_000_000n, direct_agorot: 22_000_000n, shared_agorot: 0n, profit_before_shared_agorot: 8_000_000n, profit_agorot: 8_000_000n, by_currency: [] },
-  ],
-};
-
-/**
- * `/e2e/company?company=` invite (invite-4), viewer, error, or nothing for two companies (a-3). Tap the name.
- * `&home=cash` draws the name on Home's cash band (FLOW-413).
- */
-export function DevCompany() {
-  const [params] = useSearchParams();
-  const state = params.get("company");
-  const [period, setPeriod] = useState(defaultPeriod());
-  const options: SampleTeamOptions = {
-    twoCompanies: state !== "invite",
-    inbox: state === "invite" ? 1 : 0,
-    role: state === "viewer" ? "viewer" : "owner",
-    fail: state === "error" ? { switchCompany: "Failed to fetch" } : undefined,
-  };
-  if (params.get("home") === "cash") {
-    return (
-      <SampleTeam key={state} options={options}>
-        <CashHome
-          data={sampleCashMonths()}
-          monthKey={cashMonthKey(sampleCashMonths().months[0]?.month ?? "")}
-          currentKey={cashMonthKey(sampleCashMonths().months[0]?.month ?? "")}
-          previewing={false}
-          search=""
-          attention={attentionRows({ pending: 7, unpaidCount: 3, unpaidGross: 460_000n, missingCount: 0, search: "" })}
-          company={<CompanySwitcher />}
-          onStepMonth={() => undefined}
-        />
-      </SampleTeam>
-    );
-  }
-  return (
-    <SampleTeam key={state} options={options}>
-      <HomeBooks
-        data={devDashboard}
-        previewing={false}
-        search=""
-        unpaidGross={0n}
-        unpaidCount={0}
-        period={period}
-        onPeriod={setPeriod}
-        company={<CompanySwitcher />}
-      />
+      <InvitesScreen sample={{ state: sample }} />
     </SampleTeam>
   );
 }

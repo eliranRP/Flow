@@ -1,17 +1,19 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
+import { useOpenCompany } from "../team-queries";
+import { useGoBack } from "../ui/back";
 import { getSupabase } from "../lib/supabase";
 import { usePreviewMode, usePreviewSearch } from "../preview";
 import { useDashboardQuery } from "../use-books";
 import { SKIP_ALL_COMPANY_NAME } from "./copy";
+import { runSkipAll } from "./skip-all";
 import { useSetupFacts } from "./facts";
 import {
   indexTarget,
   nextPath,
   parseStep,
   previousPath,
-  skipAllPatch,
   skipPatch,
   withPatch,
   type SetupFacts,
@@ -86,50 +88,25 @@ export function SetupWelcomeScreen() {
   );
 }
 
-/** Skip all (the sheet, from any screen): a business "העסק שלי" when there is none, every step not done skipped, then Home. */
-async function runSkipAll({
-  userId,
-  facts,
-  navigate,
-  client,
-}: {
-  userId: string | null;
-  facts: SetupFacts;
-  navigate: ReturnType<typeof useNavigate>;
-  client: ReturnType<typeof useQueryClient>;
-}): Promise<void> {
-  if (userId == null) return;
-  let companyId = facts.companyId;
-  if (companyId == null) {
-    const supabase = getSupabase();
-    if (!supabase) return;
-    const { data, error } = await supabase.rpc("create_company", { p_name: SKIP_ALL_COMPANY_NAME, p_vat_registered: true });
-    if (error || typeof data !== "string" || data === "") return;
-    companyId = data;
-    await client.refetchQueries({ queryKey: ["dashboard"], type: "all" });
-  }
-  const at = new Date().toISOString();
-  const current = readSetupStore(userId, companyId);
-  writeSetupStore(userId, companyId, skipAllPatch(current, { ...facts, companyId }, at));
-  void navigate("/", { replace: true });
-}
-
 /** /setup/1 … /setup/7: one step. Each screen gets the route's writes, its navigation and its skip actions. */
 export function SetupStepScreen() {
   const params = useParams();
   const step = parseStep(params.step);
   const route = useSetupRoute();
+  const [query] = useSearchParams();
+  const fresh = step === 1 && query.get("new") === "1";
   const { preview, search, viewer, facts, store, loading, userId, navigate, client, dashboard } = route;
   if (preview) return <Navigate to={`/${search}`} replace />;
   if (step == null || step === "welcome" || step === "done") return <Navigate to="/setup" replace />;
   if (loading || userId == null) return null;
   if (viewer.viewer) return <Navigate to={`/${search}`} replace />;
   if (facts.companyId == null && step !== 1) return <Navigate to="/setup/welcome" replace />;
-  return <StepBody key={step} step={step} userId={userId} facts={facts} store={store} navigate={navigate} client={client} dashboardName={dashboard.data?.name ?? null} dashboardBasis={dashboard.data?.basis ?? null} existingNames={(dashboard.data?.projects ?? []).map((project) => project.name)} />;
+  return <StepBody key={step} step={step} fresh={fresh} userId={userId} facts={facts} store={store} navigate={navigate} client={client} dashboardName={dashboard.data?.name ?? null} dashboardBasis={dashboard.data?.basis ?? null} existingNames={(dashboard.data?.projects ?? []).map((project) => project.name)} />;
 }
 
 function StepBody({
   step,
+  fresh,
   userId,
   facts,
   store,
@@ -140,6 +117,8 @@ function StepBody({
   existingNames,
 }: {
   step: StepNumber;
+  /** Step 1 with ?new=1: a new company for a user who has one (the company sheet's "+ עסק חדש"). */
+  fresh: boolean;
   userId: string;
   facts: SetupFacts;
   store: SetupStore;
@@ -153,27 +132,32 @@ function StepBody({
   const currency = useBaseCurrency(companyId);
   const back = previousPath(step);
   const toStep = nextPath(step);
+  const goBack = useGoBack();
+  const openCompany = useOpenCompany();
+  const openNew = fresh ? (id: string) => openCompany(id, { opened: true }) : undefined;
 
   const props: StepProps = {
     onDone: (patch, id) => {
       commit(userId, id === undefined ? companyId : id, patch ?? {});
-      void navigate(toStep);
+      // FLOW-601: create_company opened the new company; show it and drop the last one's cached rows.
+      if (openNew && id != null) void openNew(id).catch(() => undefined).then(() => navigate(toStep));
+      else void navigate(toStep);
     },
     onStamp: (patch) => { commit(userId, companyId, patch); },
-    onBack: back == null ? undefined : () => { void navigate(back); },
+    onBack: fresh ? () => { goBack("/"); } : back == null ? undefined : () => { void navigate(back); },
     onSkipStep: () => {
       const current = readSetupStore(userId, companyId);
       writeSetupStore(userId, companyId, skipPatch(current, step, new Date().toISOString()));
       void navigate(toStep);
     },
-    onSkipAll: () => runSkipAll({ userId, facts, navigate, client }),
+    onSkipAll: () => runSkipAll({ userId, facts, navigate, client, openNew }),
   };
 
   if (step === 1) {
-    const initial: BusinessInitial | null = companyId != null && currency != null && dashboardName != null
+    const initial: BusinessInitial | null = !fresh && companyId != null && currency != null && dashboardName != null
       ? { name: dashboardName, currency, basis: dashboardBasis === "cash" ? "paid" : "invoice" }
       : null;
-    return <StepBusiness {...props} companyId={companyId} initial={initial} />;
+    return <StepBusiness {...props} companyId={fresh ? null : companyId} initial={initial} />;
   }
   if (step === 2) {
     return <StepConnect {...props} mercuryConnected={facts.mercuryConnected} sumitConnected={facts.sumitConnected} />;

@@ -19,7 +19,7 @@ type HeaderChrome = {
   leading?: ReactNode;
   /** Sits on the end of the bar. */
   trailing?: ReactNode;
-  /** A stacked page's own control under the title, on the start side (the breakdown's period pill, FLOW-334). */
+  /** A stacked page's own control under the title, on the start side. */
   below?: ReactNode;
   /** A stacked title's own controls at the end of its line (a month page's chevrons, FLOW-362). */
   titleAside?: ReactNode;
@@ -27,9 +27,11 @@ type HeaderChrome = {
   compactFigure?: ReactNode;
   /** A row under the compact bar, e.g. the organize chips (FLOW-363 3c). The bar then shows once it scrolls off. */
   panel?: ReactNode;
-  /** Compact is the t-title-3 used on a transaction. */
+  /** Compact is the t-btn used on a transaction. */
   size?: "default" | "compact";
   subtitleClassName?: string;
+  /** A screen's own class on the bar, for the rules that scope one screen's header (the invoice pages). */
+  className?: string;
 };
 
 /**
@@ -45,8 +47,8 @@ export type ScreenHeaderProps =
 function subtitleClass(extra: string | undefined, stacked: boolean): string {
   // A stacked subtitle keeps the secondary colour with an extra class too: the reviewer card's
   // supplier line (`ui-party`) stacks now that Back stacks by default (FLOW-326).
-  if (stacked) return extra ? `t-label text-text-secondary ${extra}` : "t-label text-text-secondary";
-  return extra ? `t-label mt-4 text-text-secondary ${extra}` : "t-label mt-4 text-text-secondary";
+  if (stacked) return extra ? `t-line2 text-text-secondary ${extra}` : "t-line2 text-text-secondary";
+  return extra ? `t-line2 mt-4 text-text-secondary ${extra}` : "t-line2 mt-4 text-text-secondary";
 }
 
 /** One title block for every screen. A back control is for screens that are not tab roots. */
@@ -66,6 +68,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
     panel,
     size = "default",
     subtitleClassName,
+    className,
   } = props;
   const barOnly = props.barOnly === true;
   const title = props.title;
@@ -75,18 +78,18 @@ export function ScreenHeader(props: ScreenHeaderProps) {
   const start = leading ?? (backTo ? <BackButton fallback={backTo} text={labelledBack ? backLabel : undefined} /> : null);
   const stacked = props.layout === "stacked"
     || (props.layout == null && !barOnly && start != null && size !== "compact");
-  const kickerLine = kicker && (!labelledBack || backText != null) ? <p className="t-hint">{kicker}</p> : null;
+  const kickerLine = kicker && (!labelledBack || backText != null) ? <p className="t-caption t-muted">{kicker}</p> : null;
   // FLOW-334 H1: a long stacked page keeps Back in a compact bar once the large title scrolls off.
   const compact = stacked && leading == null && backTo != null && title != null;
   const titleEnd = useRef<HTMLSpanElement>(null);
   const past = useScrolledPast(titleEnd, compact);
   return (
-    <header className={stacked ? "ui-page ui-page-stacked" : props.layout === "inline" && start != null ? "ui-page ui-page-inline" : "ui-page"}>
+    <header className={[stacked ? "ui-page ui-page-stacked" : props.layout === "inline" && start != null ? "ui-page ui-page-inline" : "ui-page", className].filter(Boolean).join(" ")}>
       {stacked ? null : kickerLine}
       <div className="ui-page-title-row">
         {start}
         {barOnly || stacked || title == null ? null : (
-          <FocusTitle className={size === "compact" ? "t-title-3" : "t-title-1"}>{title}</FocusTitle>
+          <FocusTitle className={size === "compact" ? "t-btn" : "t-total"}>{title}</FocusTitle>
         )}
         {trailing ?? action}
       </div>

@@ -1,26 +1,14 @@
-import type { ExpectedMonths as ExpectedMonthsData } from "@flow/shared";
-import { render, screen, within } from "@testing-library/react";
+import { type ExpectedMonths as ExpectedMonthsData } from "@flow/shared";
+import { render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import {
-  chargeChangeViews,
-  expectedMonthLabel,
-  expectedMonthViews,
-  hasExpectedHistory,
-  openMonthDue,
-} from "./forecast";
-import {
-  SAMPLE_EXPECTED,
-  SAMPLE_EXPECTED_EMPTY,
-  SAMPLE_EXPECTED_OPEN_DONE,
-  SAMPLE_EXPECTED_TWO_CURRENCIES,
-  SAMPLE_RECURRING_CHANGES,
-  SAMPLE_RECURRING_THIS_MONTH,
-} from "./forecast-sample";
+import { chargeChangeViews, openMonthDue } from "./forecast";
+import { monthForecastBoardSample, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "./forecast-sample";
 import { attentionRows } from "./screens/HomeScreen";
-import { ApproxAmount } from "./ui/approx-amount";
 import { forecastMinor } from "./home-month";
-import { ExpectedMonths } from "./ui/expected-months";
+import { nextMonth } from "./forecast-month";
+
+// --- forecast.test.tsx
 
 describe("the קבועים screen (FLOW-415, b-2)", () => {
   it("opens one change's payment, and shares one row for two or more that opens הגיעו החודש", () => {
@@ -37,83 +25,13 @@ describe("the קבועים screen (FLOW-415, b-2)", () => {
       SAMPLE_RECURRING_THIS_MONTH.slice(0, 2).map((change) => ({ ...change, change_percent: -30, party_name: "", category_name: null })),
       "",
     );
-    expect(drops.map((change) => change.title)).toEqual(["אור חשמל ירד ב־30%", "ארנונה עירונית ירד ב־30%"]);
+    expect(drops.map((change) => change.title)).toEqual(["אור חשמל ירד", "ארנונה עירונית ירד"]);
     const [dropRow] = attentionRows({ pending: 0, unpaidCount: 0, unpaidGross: 0n, changes: drops, search: "" });
     const icon = render(<MemoryRouter><span>{dropRow?.icon}</span></MemoryRouter>);
     const upIcon = render(<MemoryRouter><span>{row?.icon}</span></MemoryRouter>);
     expect(icon.container.innerHTML).not.toBe(upIcon.container.innerHTML);
   });
 
-});
-
-describe("expected months", () => {
-  it("labels the open month as the rest of it", () => {
-    expect(expectedMonthLabel("2026-10", true)).toBe("שאר אוקטובר");
-    expect(expectedMonthLabel("2026-11", false)).toBe("נובמבר");
-    expect(expectedMonthLabel("2027-01", false)).toBe("ינואר");
-  });
-
-  it("shows the expected expense per month, unsigned, never the income", () => {
-    const months = expectedMonthViews(SAMPLE_EXPECTED);
-    expect(months.map((month) => [month.label, month.figures])).toEqual([
-      ["שאר אוקטובר", [{ currency: "ILS", minor: 233_000n }]],
-      ["נובמבר", [{ currency: "ILS", minor: 409_000n }]],
-      ["דצמבר", [{ currency: "ILS", minor: 409_000n }]],
-    ]);
-  });
-
-  it("lists the open month's parties not seen yet, and every expense party for later months by size, never income", () => {
-    const [october, november] = expectedMonthViews(SAMPLE_EXPECTED);
-    expect(october?.parties.map((party) => party.name)).toEqual(["אור חשמל", "שי ניקיון"]);
-    expect(november?.parties.map((party) => [party.name, party.direction, party.minor])).toEqual([
-      ["אור חשמל", "expense", 185_000n],
-      ["בטוח בית", "expense", 126_000n],
-      ["גז לדוגמה", "expense", 50_000n],
-      ["שי ניקיון", "expense", 48_000n],
-    ]);
-  });
-
-  it("gives a second figure only with a second currency, and a zero for an open month with nothing left", () => {
-    expect(expectedMonthViews(SAMPLE_EXPECTED_TWO_CURRENCIES)[1]?.figures).toEqual([
-      { currency: "ILS", minor: 409_000n },
-      { currency: "USD", minor: 2_000n },
-    ]);
-    const done = expectedMonthViews(SAMPLE_EXPECTED_OPEN_DONE, "ILS")[0];
-    expect(done?.figures).toEqual([{ currency: "ILS", minor: 0n }]);
-    expect(done?.parties).toEqual([]);
-  });
-
-  it("knows when there is no history yet", () => {
-    expect(hasExpectedHistory(SAMPLE_EXPECTED)).toBe(true);
-    expect(hasExpectedHistory(SAMPLE_EXPECTED_EMPTY)).toBe(false);
-    expect(hasExpectedHistory(null)).toBe(false);
-  });
-
-  it("draws a month with parties as a button and an empty one as a plain row", () => {
-    render(<ExpectedMonths months={expectedMonthViews(SAMPLE_EXPECTED_OPEN_DONE)} onOpen={() => undefined} />);
-    const section = screen.getByRole("region", { name: "צפוי" });
-    expect(within(section).getAllByRole("button")).toHaveLength(2);
-    expect(within(section).getByRole("group", { name: "שאר אוקטובר, ₪0" })).toBeTruthy();
-  });
-
-  it("says there is no forecast yet in one line", () => {
-    render(<ExpectedMonths months={[]} />);
-    expect(screen.getByText("אין עדיין צפי.")).toBeTruthy();
-  });
-});
-
-describe("ApproxAmount", () => {
-  it("puts כ־ before a whole amount and drops it on a zero", () => {
-    const { container, rerender } = render(<ApproxAmount minor={-185_060n} />);
-    expect(container.textContent).toBe("בערך כ־₪1,851");
-    rerender(<ApproxAmount minor={0n} currency="USD" />);
-    expect(container.textContent).toBe("$0");
-  });
-
-  it("paints income green", () => {
-    const { container } = render(<ApproxAmount minor={1_200_000n} income />);
-    expect(container.querySelector(".ui-approx-income")).not.toBeNull();
-  });
 });
 
 describe("openMonthDue (FLOW-364)", () => {
@@ -141,5 +59,34 @@ describe("openMonthDue (FLOW-364)", () => {
     } as unknown as ExpectedMonthsData;
     expect(openMonthDue(data, "ILS")).toEqual({ income: 0n, expense: 283_000n });
     expect(forecastMinor(-100_000n, 0n, openMonthDue(data, "ILS").expense, 0n).minor).toBe(-383_000n);
+  });
+});
+
+describe("the month forecast's board samples (FLOW-141b)", () => {
+  it("moves the largest invoice out in the changed state: one moved item, the income without it", () => {
+    const { build } = monthForecastBoardSample("changed").data;
+    expect(build.changed).toBe(1);
+    expect(build.moved).toHaveLength(1);
+    expect(build.incomeTotal).toBe(725_000n);
+    expect(build.expenseTotal).toBe(830_000n);
+  });
+
+  it("has nothing left to arrive in the empty state", () => {
+    const { build } = monthForecastBoardSample("empty").data;
+    expect(build.income).toHaveLength(0);
+    expect(build.expense).toHaveLength(0);
+    expect(build.small).toHaveLength(0);
+    expect(build.moved).toHaveLength(0);
+  });
+});
+// --- forecast-month.test.ts
+
+describe("nextMonth (FLOW-141b)", () => {
+  it("steps to the following month", () => {
+    expect(nextMonth("2026-10")).toBe("2026-11");
+  });
+
+  it("rolls December into January of the next year", () => {
+    expect(nextMonth("2026-12")).toBe("2027-01");
   });
 });

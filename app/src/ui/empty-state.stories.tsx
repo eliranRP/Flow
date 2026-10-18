@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Button } from "./button";
-import { EmptyState } from "./empty-state";
-import { CalendarIcon, CheckIcon, ChartIcon, LoanIcon, PeopleIcon, ProjectsIcon, RepeatIcon, TrendUpIcon } from "./icons";
+import { EmptyState, FailureLine } from "./empty-state";
+import { CalendarIcon, CheckIcon, ChartIcon, LoanIcon, PeopleIcon, ProjectsIcon, RepeatIcon } from "./icons";
 import { longHebrew, padded } from "./story-support";
 
 const meta = {
@@ -68,31 +68,12 @@ export const LoansNone: Story = {
   },
 };
 
-/** A viewer reads the page and cannot add, so there is no action. */
-export const LoansViewer: Story = {
-  args: {
-    icon: <LoanIcon />,
-    title: "אין הלוואות",
-    body: "כשיתווספו הלוואות הן יופיעו כאן.",
-  },
-};
-
 /** recurringEmpty: קבועים still learning. The user waits two months. */
 export const RecurringLearning: Story = {
   args: {
     icon: <RepeatIcon />,
     title: "Flow עוד לומד",
     body: "חיובים והכנסות שחוזרים כל חודש יופיעו כאן אחרי חודשיים של תנועות. אפשר גם לסמן שורה כקבועה מדף התנועה.",
-  },
-};
-
-/** profitEmpty: a new project. It only helps to find the lines without a project. */
-export const ProfitNewProject: Story = {
-  args: {
-    icon: <TrendUpIcon />,
-    title: "עוד אין מה לחשב",
-    body: "כשתשייכו ל־Elm St הכנסה או הוצאה, הרווח שלו יופיע כאן.",
-    action: <Button variant="secondary">לשורות בלי פרויקט</Button>,
   },
 };
 
@@ -126,4 +107,10 @@ export const LongHebrew: Story = {
       </Button>
     ),
   },
+};
+
+/** A load that failed: one line and the retry link. Offline names the connection instead. */
+export const Failure: StoryObj<typeof FailureLine> = {
+  args: { offline: false, onRetry: () => undefined },
+  render: (args) => <FailureLine {...args} />,
 };

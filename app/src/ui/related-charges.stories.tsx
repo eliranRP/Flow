@@ -22,7 +22,7 @@ const pendingMailbox: PartyCharges = {
 };
 
 function Demo({ sample, pending }: { sample: keyof typeof samples; pending: boolean }) {
-  return <PartyChargesBody data={pending ? pendingMailbox : samples[sample]} context="דירת הגפן · חשבונות · 12 האחרונים" />;
+  return <PartyChargesBody data={pending ? pendingMailbox : samples[sample]} />;
 }
 
 const meta = {
@@ -47,5 +47,3 @@ export const Body: Story = { name: "Sheet: the body, an expense up 92%" };
 export const Income: Story = { name: "Sheet: income", args: { sample: "rent" } };
 /** An earlier charge still awaiting its review shows ממתין on its row. */
 export const PendingRow: Story = { name: "Sheet: a pending charge", args: { pending: true } };
-/** The ±20% marks: an expense down, and an expense that is near its usual amount (no mark). */
-export const Marks: Story = { name: "Sheet: the marks, an expense down", args: { sample: "cheaper" } };

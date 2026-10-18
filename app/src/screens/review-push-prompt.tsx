@@ -11,7 +11,7 @@ import {
   type PushSupport,
 } from "../push";
 import { PromptCard } from "../ui/prompt-card";
-import { TextLink } from "../ui/text-link";
+import { Button } from "../ui/button";
 import { useToast } from "../ui/toast";
 import { focusReviewEmptyAction } from "./review-focus";
 
@@ -26,7 +26,7 @@ export function IosHomeNote() {
   return (
     <>
       {IOS_HOME_BEFORE}
-      <TextLink to={`/install${search}`} className="ui-text-link-inline" chevron={false}>{IOS_HOME_LINK}</TextLink>
+      <Button variant="link" to={`/install${search}`} className="ui-btn-link-inline">{IOS_HOME_LINK}</Button>
       {IOS_HOME_AFTER}
     </>
   );

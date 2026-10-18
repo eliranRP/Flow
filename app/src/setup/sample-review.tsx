@@ -54,7 +54,7 @@ export function SetupSampleReview({
   return (
     <div className="ui-review-queue" data-bar="">
       <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} layout="inline" />
-      <p className="ui-example-bar t-hint">{SAMPLE_TAG}</p>
+      <p className="ui-example-bar t-caption t-muted">{SAMPLE_TAG}</p>
       <ReviewCard
         supplier="ספק לדוגמה בע״מ"
         sourceLine="חשבונית · 01/09/2026"

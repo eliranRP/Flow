@@ -106,7 +106,7 @@ function emit(event: string, next: Session | null) {
 // FLOW-804: screens load on demand. With every screen (and the dev fixtures) fetched first, a
 // few ticks settle a route.
 beforeAll(async () => {
-  await Promise.all([preloadScreens(), import("./dev-routes")]);
+  await Promise.all([preloadScreens(), import("./dev/routes")]);
 }, 60_000);
 
 async function renderAt(path: string) {

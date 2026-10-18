@@ -7,7 +7,7 @@ import { userEvent, within } from "@storybook/test";
 import { ReviewQueue } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { pinReviewLine } from "../review-pin";
-import { bareReview, sampleReview } from "../ui/screen-stories-support";
+import { sampleReview } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -18,7 +18,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const se = { parameters: { viewport: { defaultViewport: "flow375-se" } } };
-const tall = { parameters: { viewport: { defaultViewport: "flow393" } } };
 
 /** FLOW-327: the card with its bar pinned on the tab bar. */
 function ReviewQueueStory({ row = sampleReview, viewer = false }: { row?: ReviewRow; viewer?: boolean }) {
@@ -29,26 +28,10 @@ function ReviewQueueStory({ row = sampleReview, viewer = false }: { row?: Review
   );
 }
 export const ReviewBar375: Story = { ...se, render: () => <ReviewQueueStory /> };
-export const ReviewBar393: Story = { ...tall, render: () => <ReviewQueueStory /> };
 const plainRow: ReviewRow = { ...sampleReview, auto_approved_today: 0 };
-export const ReviewBarNoBanner375: Story = { ...se, render: () => <ReviewQueueStory row={plainRow} /> };
-export const ReviewBarBothMissing375: Story = { ...se, render: () => <ReviewQueueStory row={{ ...bareReview, auto_approved_today: 0 }} /> };
-const sharedRow: ReviewRow = { ...plainRow, project_id: null, project_name: null, reason: "unallocated_shared" };
-export const ReviewBarSharedCost375: Story = { ...se, render: () => <ReviewQueueStory row={sharedRow} /> };
 const mismatchRow: ReviewRow = { ...plainRow, reason: "split_mismatch" };
 export const ReviewBarSplitMismatch375: Story = { ...se, render: () => <ReviewQueueStory row={mismatchRow} /> };
 export const ReviewBarViewer375: Story = { ...se, render: () => <ReviewQueueStory viewer /> };
-
-/** FLOW-327 r1: a project's queue has Back; its header stays on one line so the bar clears the tab bar. */
-function ReviewFilteredBarStory({ row }: { row: ReviewRow }) {
-  return (
-    <StoryRoute entry="/review?project=a" tabs>
-      <ReviewQueue rows={[row]} search="?project=a" sample backTo="/projects/a" homeTo="/projects/a" homeLabel="חזרה לפרויקט" />
-    </StoryRoute>
-  );
-}
-const sharedBannerRow: ReviewRow = { ...sampleReview, project_id: null, project_name: null, reason: "unallocated_shared" };
-export const ReviewFilteredBarSharedBanner375: Story = { ...se, render: () => <ReviewFilteredBarStory row={sharedBannerRow} /> };
 
 /** Puts flags in the story's cache under the key the real read uses. */
 function SeedFlags({ ids, flags }: { ids: string[]; flags: ReviewFlagsData }) {
@@ -79,9 +62,7 @@ function ReviewQueueFlagStory({ banner = false }: { banner?: boolean }) {
     </StoryRoute>
   );
 }
-const view390 = { parameters: { viewport: { defaultViewport: "flow390" } } };
 export const ReviewQueueFlag375se: Story = { ...se, render: () => <ReviewQueueFlagStory /> };
-export const ReviewQueueFlag390: Story = { ...view390, render: () => <ReviewQueueFlagStory banner /> };
 
 /**
  * FLOW-333 C13: the tallest everyday Jev card at 375x667. Jev filled both fields ("✦ מולא ע״י Jev" + ביטול),
@@ -112,11 +93,6 @@ const quietSpike: ReviewFlagsData = {
     transaction_id: jevRow.transaction_id, kind: "amount_spike", jev_score: 0.4, other_doc_date: null, typical_amount_minor: 250_000, ratio: 3.4,
   }],
 };
-const loudDuplicate: ReviewFlagsData = {
-  [jevRow.transaction_id]: [{
-    transaction_id: jevRow.transaction_id, kind: "duplicate", jev_score: 0.9, other_doc_date: "2026-09-20", typical_amount_minor: null, ratio: null,
-  }],
-};
 function ReviewJevFitStory({ jev = jevFilled, flags = quietSpike }: { jev?: JevQueueData; flags?: ReviewFlagsData }) {
   return (
     <StoryRoute entry="/review" tabs>
@@ -126,8 +102,6 @@ function ReviewJevFitStory({ jev = jevFilled, flags = quietSpike }: { jev?: JevQ
   );
 }
 export const ReviewJevFit375: Story = { ...se, render: () => <ReviewJevFitStory /> };
-export const ReviewJevReason375: Story = { ...se, render: () => <ReviewJevFitStory jev={jevSuggested} /> };
-export const ReviewJevFitLoud375: Story = { ...se, render: () => <ReviewJevFitStory flags={loudDuplicate} /> };
 
 /**
  * FLOW-365: the picker sheet from the card's project row. The preview list is the dev fixture's (invented

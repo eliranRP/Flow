@@ -1,6 +1,6 @@
 // FLOW-369: the add form's preview data. The preview route (?preview=) has no books, so the form
 // reads this invented USD company instead. Nothing here is a real name.
-import type { EntryDraft } from "./add-entry";
+import type { AttachedDocument, BankMatch, EntryDraft, EntryKind } from "./add-entry";
 
 export const SAMPLE_CURRENCY = "USD";
 
@@ -28,11 +28,23 @@ export const SAMPLE_CATEGORIES = [
  */
 export interface SampleEntryFill {
   values: Partial<EntryDraft>;
+  /** receipt opens the form from a document, with the bank line it matches. Cash (the default) has neither. */
+  kind?: EntryKind;
+  document?: AttachedDocument;
+  match?: BankMatch;
 }
+
+const SAMPLE_RECEIPT_DOCUMENT: AttachedDocument = { name: "Harlow Supply · 10/10", mime: "image/jpeg", bytes: 180_000, sha256: "sample-receipt" };
 
 export const SAMPLE_ENTRY_FILLS: Record<string, SampleEntryFill> = {
   cash: { values: { amount: "350.00", payee: "Dana R.", date: "11/10/2026", method: "cash", projectId: "sp-3", categoryId: "sc-2" } },
   cheque: { values: { amount: "2,400.00", payee: "Morales Framing", date: "11/10/2026", method: "cheque", cheque: "1048", projectId: "sp-3", categoryId: "sc-2" } },
+  receipt: {
+    kind: "receipt",
+    document: SAMPLE_RECEIPT_DOCUMENT,
+    match: { id: "sample-bank-line", description: "Harlow Supply", doc_date: "2026-10-10", amount_minor: -40_901, source: "Mercury ••1234" },
+    values: { amount: "409.01", payee: "Harlow Supply", date: "10/10/2026", projectId: "sp-3", categoryId: "sc-1" },
+  },
 };
 
 /** FLOW-369: `?entry=project` opens the + sheet from this invented project (the board's from-project frame). */

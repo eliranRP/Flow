@@ -8,24 +8,40 @@ import {
   mismatchPercent,
   parseArgs,
   proofFileName,
+  appRenderProblem,
   proofPlan,
   readFrameMap,
 } from "./board-proof.mjs";
 
 test("parses the base, the map, the output folder, the board folder and the frames", () => {
   assert.deepEqual(
-    parseArgs(["--base", "http://localhost:4173", "--map", "m.json", "--out", "proofs", "--boards", "b", "Flow"]),
+    parseArgs(["--base", "http://localhost:4173", "--map", "m.json", "--out", "proofs", "--boards", "b", "Flow"], {}),
     { base: "http://localhost:4173", map: "m.json", out: "proofs", boards: "b", frames: ["Flow"] },
   );
 });
 
 test("refuses a missing value, a missing required option, an unknown option and a frame with a path", () => {
-  assert.throws(() => parseArgs(["--base", "--map", "m", "--out", "o"]), /--base needs a value/);
-  assert.throws(() => parseArgs(["--map", "m", "--out", "o"]), /--base is required/);
-  assert.throws(() => parseArgs(["--base", "b", "--out", "o"]), /--map is required/);
-  assert.throws(() => parseArgs(["--base", "b", "--map", "m"]), /--out is required/);
-  assert.throws(() => parseArgs(["--base", "b", "--map", "m", "--out", "o", "--width", "1"]), /unknown option --width/);
-  assert.throws(() => parseArgs(["--base", "b", "--map", "m", "--out", "o", "../x"]), /not a frame name/);
+  const env = { FLOW_BOARD_PNG: "b" };
+  assert.throws(() => parseArgs(["--base", "--map", "m", "--out", "o"], env), /--base needs a value/);
+  assert.throws(() => parseArgs(["--map", "m", "--out", "o"], env), /--base is required/);
+  assert.throws(() => parseArgs(["--base", "b", "--out", "o"], env), /--map is required/);
+  assert.throws(() => parseArgs(["--base", "b", "--map", "m"], env), /--out is required/);
+  assert.throws(() => parseArgs(["--base", "b", "--map", "m", "--out", "o", "--width", "1"], env), /unknown option --width/);
+  assert.throws(() => parseArgs(["--base", "b", "--map", "m", "--out", "o", "../x"], env), /not a frame name/);
+});
+
+test("takes the board folder from FLOW_BOARD_PNG when --boards is not given, and --boards wins", () => {
+  assert.equal(parseArgs(["--base", "u", "--map", "m", "--out", "o"], { FLOW_BOARD_PNG: "env-boards" }).boards, "env-boards");
+  assert.equal(parseArgs(["--base", "u", "--map", "m", "--out", "o", "--boards", "x"], { FLOW_BOARD_PNG: "env-boards" }).boards, "x");
+});
+
+test("refuses a run with neither --boards nor FLOW_BOARD_PNG, and says how to make the renders", () => {
+  assert.throws(
+    () => parseArgs(["--base", "u", "--map", "m", "--out", "o"], {}),
+    /FLOW_BOARD_PNG[\s\S]*board-render\.mjs/,
+  );
+  // The four required-option checks still run first and keep their own messages.
+  assert.throws(() => parseArgs(["--map", "m", "--out", "o"], {}), /--base is required/);
 });
 
 test("names the board file per theme: dark has no suffix, light has Light", () => {
@@ -84,4 +100,11 @@ test("counts a pixel as different when a channel is more than the tolerance apar
 
 test("refuses two images of different sizes", () => {
   assert.throws(() => mismatchPercent([0, 0, 0, 255], [0, 0, 0, 255, 0, 0, 0, 255], 16), /differ in size/);
+});
+
+test("refuses an app that logged no routes matched or drew nothing in #root", () => {
+  assert.equal(appRenderProblem(["some warning"], true), null);
+  assert.match(appRenderProblem(["Warning: No routes matched location \"/e2e/cash\""], true), /No routes matched/);
+  assert.match(appRenderProblem([], false), /#root is empty/);
+  assert.match(appRenderProblem(["No routes matched"], false), /No routes matched/);
 });

@@ -21,6 +21,4 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
 /** Spend past the budget: the bar turns signal and the note names the overspend. */
 export const Over: Story = { args: { spent: 6_480_000, budget: 6_000_000 } };
-/** A budget of zero shows an empty bar and no percentage. */
-export const Zero: Story = { args: { spent: 0, budget: 0 } };
 export const ReducedMotion: Story = { decorators: [forceReducedMotion] };

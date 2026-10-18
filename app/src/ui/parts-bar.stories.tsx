@@ -16,11 +16,6 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-// Bars take bigint amounts in the app; the stories use plain numbers, which args can carry.
-export const SinglePart: Story = {
-  args: { parts: [{ key: "paid", value: 42, tone: "accent" }], total: 100, label: "שולם 42%" },
-};
 export const TwoParts: Story = {
   args: {
     parts: [
@@ -38,15 +33,6 @@ export const TwoParts: Story = {
 export const WithGap: Story = { args: { ...TwoParts.args, gap: 2, height: 8 } };
 export const Over: Story = {
   args: { parts: [{ key: "spent", value: 130, tone: "signal-soft" }], total: 100, label: "מעל התקציב" },
-};
-export const NoTotal: Story = {
-  args: {
-    parts: [
-      { key: "a", value: 3, tone: "accent" },
-      { key: "b", value: 1, tone: "band-past" },
-    ],
-    label: "חלוקה",
-  },
 };
 // Home's split card: an 8px bar with a 2px gap and block corners, a loss in the bad tone.
 export const HomeSplitLoss: Story = {

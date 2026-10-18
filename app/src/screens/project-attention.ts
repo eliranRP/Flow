@@ -1,8 +1,13 @@
 import type { MissingBill, RecurringChange } from "@flow/shared";
 import { chargeChangeViews, lateCounts, useMissingBillsQuery, useProjectRecurringChangesQuery } from "../forecast";
-import { withParam } from "./project-categories";
 import type { BannerRow } from "../ui/banner";
 import { attentionRows } from "./attention-rows";
+
+function withParam(search: string, key: string, value: string): string {
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  params.set(key, value);
+  return `?${params.toString()}`;
+}
 
 /** A sample project's recurring alerts (stories and tests). */
 export type ProjectRecurringSample = { late: MissingBill[]; changes: RecurringChange[] };

@@ -32,12 +32,12 @@ test("a screen's copy change runs the specs that open that screen", () => {
   const specs = select("app/src/screens/jev-settings.tsx");
   assert.ok(specs.includes("code-field.spec.ts"));
   assert.ok(specs.includes("sheet-stack.spec.ts"));
-  assert.ok(!specs.includes("split.spec.ts"));
+  assert.ok(!specs.includes("split-category.spec.ts"));
   assert.ok(!specs.includes("reviewer.spec.ts"));
 });
 
 test("a spec, or a file only it imports, runs that spec", () => {
-  assert.deepEqual(select("app/e2e/split.spec.ts"), ["split.spec.ts"]);
+  assert.deepEqual(select("app/e2e/split-category.spec.ts"), ["split-category.spec.ts"]);
   assert.ok(select("app/src/assistant-sample.ts").includes("sheet-stack.spec.ts"));
 });
 
@@ -63,7 +63,7 @@ test("a source only App.tsx reaches runs every spec", () => {
 
 test("a screen change ranks the specs that open its route (#504: the project page)", () => {
   const specs = routeSpecs(["app/src/screens/project-detail-screen.tsx"], { root, map });
-  for (const spec of ["controls.spec.ts", "loan-project.spec.ts", "period-swipe.spec.ts"]) assert.ok(specs.includes(spec), spec);
+  for (const spec of ["controls-projects.spec.ts", "loan-project.spec.ts"]) assert.ok(specs.includes(spec), spec);
   assert.ok(specs.every((spec) => !spec.startsWith("controls-sweep-")), "the sweep specs pick their own routes");
   // A file that is no route's screen ranks nothing: the cap stays at 6.
   assert.deepEqual(routeSpecs(["app/src/ui/review-card.tsx", "docs/x.md"], { root, map }), []);
@@ -76,7 +76,7 @@ test("every page-speed spec is mapped, and a change runs only the ones whose pag
     for (const entry of entries) assert.ok(fs.existsSync(path.join(root, "app/src", entry)), `app/src/${entry}`);
   }
   const perf = (...changed) => perfSpecs(changed, { root, map });
-  assert.deepEqual(perf("app/src/screens/project-detail-screen.tsx"), ["project-history-open.spec.ts", "project-open.spec.ts", "project-reopen.spec.ts"]);
+  assert.deepEqual(perf("app/src/screens/project-detail-screen.tsx"), ["project-open.spec.ts", "project-reopen.spec.ts"]);
   assert.deepEqual(perf("app/src/screens/HomeScreen.tsx"), ["home-speed.spec.ts"]);
   assert.deepEqual(perf("docs/x.md", "supabase/migrations/x.sql"), []);
   // The bundle's entry or the perf setup runs them all.

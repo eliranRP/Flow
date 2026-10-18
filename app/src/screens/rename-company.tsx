@@ -70,6 +70,7 @@ export function RenameCompanySheet({
   currentName,
   blocked,
   returnFocusRef,
+  sampleSaving = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -79,6 +80,8 @@ export function RenameCompanySheet({
   /** Preview mode toasts and returns true. */
   blocked: () => boolean;
   returnFocusRef?: RefObject<HTMLElement | null>;
+  /** A fixture: draws the sheet as it is while the write runs. */
+  sampleSaving?: boolean;
 }) {
   const toast = useToast();
   const [name, setName] = useState(currentName);
@@ -124,6 +127,8 @@ export function RenameCompanySheet({
     },
   });
 
+  const saving = save.isPending || sampleSaving;
+
   // The field is disabled while saving, so a failed save hands focus back to it.
   const failed = save.isError;
   useEffect(() => {
@@ -131,7 +136,7 @@ export function RenameCompanySheet({
   }, [failed, open]);
 
   const submit = () => {
-    if (save.isPending) return;
+    if (saving) return;
     const problem = companyNameError(name);
     setError(problem);
     if (problem) return;
@@ -150,13 +155,14 @@ export function RenameCompanySheet({
     <Sheet
       open={open}
       onOpenChange={(next) => {
-        if (!next && save.isPending) return;
+        if (!next && saving) return;
         onOpenChange(next);
       }}
       title="שם העסק"
+      panelClassName="ui-sheet-g12 ui-rename-sheet"
       returnFocusRef={returnFocusRef}
       action={
-        <Button busy={save.isPending} disabled={name.trim() === "" || name.trim() === currentName.trim()} onClick={submit}>
+        <Button full busy={saving} disabled={name.trim() === "" || name.trim() === currentName.trim()} onClick={submit}>
           שמירה
         </Button>
       }
@@ -173,7 +179,7 @@ export function RenameCompanySheet({
           value={name}
           maxLength={RENAME_FIELD_MAX}
           error={error}
-          disabled={save.isPending}
+          disabled={saving}
           onChange={(event) => {
             setName(event.target.value);
             if (error) setError(undefined);

@@ -58,6 +58,12 @@ export const myInviteSchema = z.object({
   role: memberRole,
   invited_by_name: z.string().nullable(),
   created_at: z.string(),
+  // FLOW-513: the invitation screen. An older payload lacks these: pending, not seen.
+  email: z.string().optional(),
+  status: z.enum(["pending", "expired"]).optional(),
+  invited_by_role: teamRole.nullable().optional(),
+  expires_at: z.string().optional(),
+  seen_at: z.string().nullable().optional(),
 });
 export type MyInvite = z.infer<typeof myInviteSchema>;
 export const myInvitesSchema = z.array(myInviteSchema);

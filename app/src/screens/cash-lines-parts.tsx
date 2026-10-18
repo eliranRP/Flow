@@ -1,7 +1,6 @@
 import { formatAmountText, type CashCurrencyRow } from "@flow/shared";
 import { type CashListSide, notInProfitMinor, notInProfitRest } from "../cash";
 import { Amount } from "../ui/amount";
-import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 import { DocumentIcon } from "../ui/icons";
 import { SegmentedControl } from "../ui/segmented-control";
@@ -40,7 +39,7 @@ export function CashLinesHead({ side, currency, figure, rest }: { side: CashList
         </p>
       ) : null}
       {side === "kept" ? (
-        <p className="ui-breakdown-hint ui-page-pad t-hint">
+        <p className="ui-breakdown-hint ui-page-pad t-caption t-muted">
           {rest === 0n ? KEPT_NOTE : `${KEPT_NOTE} מזה ${formatAmountText(rest, currency)} מע״מ והפרשים, שאינם ברשימה.`}
         </p>
       ) : null}
@@ -83,23 +82,6 @@ export function CashLinesEmpty({ side, rest }: { side: CashListSide; rest: bigin
   );
 }
 
-/** The next page of lines, when the read has one. */
-export function CashLinesMore({ busy, onMore }: { busy: boolean; onMore: () => void }) {
-  return (
-    <div className="ui-page-pad">
-      <Button
-        variant="pill"
-        busy={busy}
-        onClick={() => {
-          onMore();
-        }}
-      >
-        עוד תנועות
-      </Button>
-    </div>
-  );
-}
-
 /**
  * FLOW-366: the total of a lines page on נכנס or יצא, in Home's figure for the side. A skeleton bar
  * until every page is in, because the total comes from the lines.
@@ -132,5 +114,5 @@ export function LinesCount({
   const parts = [summary.count === 1 ? "תנועה אחת" : `${String(summary.count)} תנועות`];
   if (summary.pending > 0) parts.push(`${String(summary.pending)} ממתינות לאישור`);
   if (summary.notInProfit > 0n) parts.push(`${formatAmountText(summary.notInProfit, currency)} לא נספרים ברווח`);
-  return <p className="t-caption ui-lines-count">{parts.join(" • ")}</p>;
+  return <p className="t-line2 ui-lines-count">{parts.join(" • ")}</p>;
 }

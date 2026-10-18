@@ -3,7 +3,7 @@ import { TeamStory } from "../dev/team-story";
 import type { SampleTeamOptions } from "../dev/team-sample";
 import { InvitesScreen } from "./invites-screen";
 
-/** FLOW-601: the invites list after sign-in (mockup invite-3), on an in-memory team. Invented names only. */
+/** FLOW-513: the invitation screen's states (board Invite), on an in-memory team. Invented names only. */
 const meta = {
   title: "Screens/Invites",
   parameters: { flowRouter: false },
@@ -12,16 +12,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function screen(options: SampleTeamOptions) {
+function screen(options: SampleTeamOptions, state: "open" | "joined" | "declined" = "open") {
   return () => (
-    <TeamStory entry="/invites" options={{ noCompany: true, ...options }}>
-      <InvitesScreen />
+    <TeamStory entry="/invites" options={{ invite: { role: "viewer", seen: true }, ...options }}>
+      <InvitesScreen sample={{ state }} />
     </TeamStory>
   );
 }
 
-export const Two: Story = { name: "Two invites (invite-3)", render: screen({ inbox: 2 }) };
-export const One: Story = { name: "One invite", render: screen({ inbox: 1 }) };
-export const Empty: Story = { name: "None left", render: screen({ inbox: 0 }) };
-export const Loading: Story = { render: screen({ inbox: 2, hold: ["myInvites"] }) };
-export const Failed: Story = { name: "Read failed", render: screen({ fail: { myInvites: "Failed to fetch" } }) };
+export const Viewer: Story = { render: screen({}) };
+export const Editor: Story = { render: screen({ invite: { role: "editor", seen: true } }) };
+export const NewUser: Story = { render: screen({ noCompany: true }) };
+export const Joined: Story = { render: screen({}, "joined") };
+export const Expired: Story = { render: screen({ invite: { role: "viewer", expired: true, seen: true } }) };

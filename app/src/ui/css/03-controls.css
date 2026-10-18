@@ -80,8 +80,7 @@
   transition: background-color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), opacity var(--motion-press) var(--ease-linear);
 }
 
-.ui-chip-spark,
-.ui-period-chevron {
+.ui-chip-spark {
   flex: none;
 }
 

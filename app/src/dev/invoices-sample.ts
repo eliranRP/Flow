@@ -3,7 +3,8 @@ import type { UnpaidInvoice, UnpaidSummary } from "../unpaid";
 
 /**
  * FLOW-367 fixture: the board's amounts, counts and order, with invented names and project lines.
- * Dates are counted back from today, so the days open match the board (34, 19 and 5).
+ * Dates are counted back from today, so the days open match the board (34 and 19). The matched deposit
+ * falls 4 days after its invoice, as on the board (06/10 invoice, 10/10 deposit).
  */
 export function invoicesSample(state?: string | null): UnpaidInvoice[] {
   if (state === "done") return [];
@@ -43,9 +44,9 @@ export function invoicesSample(state?: string | null): UnpaidInvoice[] {
       id: "inv-1051",
       doc_number: "1051",
       description: "מטבח",
-      doc_date: shiftDays(today, -5),
-      customer_name: "R. Chen · מטבח",
-      project_name: "Chen · עבודת לקוח",
+      doc_date: shiftDays(today, -11),
+      customer_name: "D. Okoro · מטבח",
+      project_name: "Okoro · עבודת לקוח",
       open_gross_agorot: 320_000n,
       open_net_agorot: 320_000n,
       currency: "USD",
@@ -54,9 +55,9 @@ export function invoicesSample(state?: string | null): UnpaidInvoice[] {
       document_url: "https://pay.sumit.co.il/example/inv-1051",
       match: {
         transaction_id: "tx-1051",
-        date: shiftDays(today, -1),
+        date: shiftDays(today, -7),
         account_name: "Mercury",
-        raw_description: "ZELLE FROM R CHEN",
+        raw_description: "ZELLE FROM D OKORO",
         amount_minor: 320_000n,
       },
     },

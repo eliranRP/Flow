@@ -194,8 +194,15 @@ export function sweepControls(spec: string): void {
         try {
           await target.click({ timeout: 2_000 });
         } catch {
-          failures.push(`${control.name || control.tag} at ${url} could not be clicked`);
-          continue;
+          // A control drawn only on keyboard focus (FLOW-447b's ignore button beside a swipe row) is used
+          // from the keyboard: focus it and press Enter. It must still change the page, as below.
+          try {
+            await target.focus({ timeout: 2_000 });
+            await page.keyboard.press("Enter");
+          } catch {
+            failures.push(`${control.name || control.tag} at ${url} could not be clicked`);
+            continue;
+          }
         }
         try {
           // A loaded runner can take a few seconds to answer a tap; a real no-op stays the same throughout.

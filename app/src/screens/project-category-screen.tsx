@@ -2,7 +2,7 @@ import { formatAmountText } from "@flow/shared";
 import { useCallback, useState } from "react";
 import { useLocation, useParams, useSearchParams } from "react-router-dom";
 import { loanRowProps, useLoanMarks, type LoanMark } from "./loan-marks";
-import { lineCountHint } from "../breakdown";
+import { lineCountHint } from "../line-count-hint";
 import { periodFromSearch, periodLabel } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
@@ -153,7 +153,7 @@ export function ProjectCategoryScreen({
       {more ? (
         <div className="ui-page-pad">
           <Button
-            variant="pill"
+            variant="link"
             busy={!sample && category.isFetchingNextPage}
             onClick={() => {
               if (sample) {

@@ -1,13 +1,11 @@
 import { useLayoutEffect, useRef } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect } from "@storybook/test";
 import { ActionBar, ActionBarRow } from "./action-bar";
 import { Button } from "./button";
 import { SegmentedControl } from "./segmented-control";
 import { Sheet } from "./sheet";
 import { TabBar } from "./tab-bar";
 import { TextField } from "./text-field";
-import { forceReducedMotion } from "./reduced-motion";
 import { placeToast, Toast } from "./toast";
 import "./toast.stories.css";
 
@@ -30,13 +28,13 @@ function AboveFloor(props: { children: string; action: string; tone?: "ok" | "ba
   return (
     <div className="relative min-h-dvh">
       <header className="ui-page">
-        <h1 className="t-title-1">לאישור</h1>
-        <p className="t-label mt-4 text-text-secondary">תנועות שמחכות לשיוך</p>
+        <h1 className="t-total">לאישור</h1>
+        <p className="t-line2 mt-4 text-text-secondary">תנועות שמחכות לשיוך</p>
       </header>
       <div className="ui-toast-slot" />
       <ActionBar>
         <button className="ui-btn ui-btn-primary" type="button">אישור</button>
-        <button className="ui-btn ui-btn-ghost" type="button">דלג</button>
+        <button className="ui-btn ui-btn-link" type="button">דלג</button>
       </ActionBar>
       <div className="ui-toast-host" ref={host}>
         <Toast action={props.action} onAction={() => undefined} tone={props.tone}>
@@ -53,12 +51,6 @@ export const Undo: Story = {
   render: () => <AboveFloor action="ביטול">הפריט אושר</AboveFloor>,
 };
 
-/** The toast takes no motion: it shows at once, and clears at once (decision 0182, §2.1). */
-export const ReducedMotion: Story = {
-  args: { children: "הפריט אושר", action: "ביטול" },
-  decorators: [forceReducedMotion],
-  render: () => <AboveFloor action="ביטול">הפריט אושר</AboveFloor>,
-};
 export const ErrorRetry: Story = {
   args: { children: "לא נשמר – אין חיבור", action: "ניסיון חוזר", tone: "bad" },
   render: () => (
@@ -96,8 +88,8 @@ function ShortSheetToast() {
   return (
     <>
       <header className="ui-page">
-        <p className="t-label">הגדרות</p>
-        <h1 className="t-title-1">קטגוריות</h1>
+        <p className="t-line2">הגדרות</p>
+        <h1 className="t-total">קטגוריות</h1>
       </header>
       <Sheet
         open
@@ -117,7 +109,7 @@ function FormToastStory() {
   return (
     <>
       <header className="ui-page">
-        <h1 className="t-title-1">פרטי העסק</h1>
+        <h1 className="t-total">פרטי העסק</h1>
       </header>
       <form className="ui-page-pad ui-stack">
         <TextField label="שם העסק" value="בדיקה" onChange={() => undefined} />
@@ -162,13 +154,13 @@ function AboveBar({ children }: { children: string }) {
   return (
     <div className="ui-review-queue" data-bar="">
       <header className="ui-page">
-        <h1 className="t-title-1">לאישור</h1>
+        <h1 className="t-total">לאישור</h1>
       </header>
       <ActionBar>
         <Button full>אישור</Button>
         <ActionBarRow>
           <Button variant="secondary">שינוי</Button>
-          <Button variant="ghost">דלג</Button>
+          <Button variant="link">דלג</Button>
         </ActionBarRow>
       </ActionBar>
       <div className="ui-toast-host" data-place="bar" ref={host}>
@@ -188,48 +180,4 @@ export const PlaceBar: Story = {
 export const ViewerNote: Story = {
   args: { children: "צפייה בלבד · שינויים נעשים על ידי בעל העסק", tone: "info" },
   render: () => <AboveBar>צפייה בלבד · שינויים נעשים על ידי בעל העסק</AboveBar>,
-};
-
-/** The text of each hint part, without its "·" box, as boxes on screen. */
-function partTextRects(part: Element): DOMRect[] {
-  const walker = document.createTreeWalker(part, NodeFilter.SHOW_TEXT);
-  const rects: DOMRect[] = [];
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    if (node.parentElement?.closest(".ui-hint-wrap-sep")) continue;
-    const range = document.createRange();
-    range.selectNodeContents(node);
-    rects.push(...[...range.getClientRects()].filter((rect) => rect.width > 0));
-  }
-  return rects;
-}
-
-/**
- * FLOW-429: in the toast at 320 (288px wide between the gutters, with ביטול) the line is narrower than the part
- * "שינויים נעשים על ידי בעל העסק", so that part wraps at its own spaces; no word is clipped.
- */
-export const ViewerNoteWidePart320: Story = {
-  args: { children: "צפייה בלבד · שינויים נעשים על ידי בעל העסק", tone: "info" },
-  render: () => (
-    <div style={{ inlineSize: 288 }}>
-      <Toast action="ביטול" onAction={() => undefined} tone="info">
-        צפייה בלבד · שינויים נעשים על ידי בעל העסק
-      </Toast>
-    </div>
-  ),
-  play: async ({ canvasElement }) => {
-    const clip = canvasElement.querySelector(".ui-hint-wrap");
-    if (!clip) throw new Error("the toast has no hint parts");
-    const box = clip.getBoundingClientRect();
-    const parts = [...clip.querySelectorAll(".ui-hint-wrap-part")];
-    await expect(parts).toHaveLength(2);
-    const [, widePart] = parts;
-    if (!widePart) throw new Error("the second part is missing");
-    const wide = partTextRects(widePart);
-    // The part is wider than its line, so it takes more than one line.
-    await expect(new Set(wide.map((rect) => Math.round(rect.top))).size).toBeGreaterThan(1);
-    const cut = parts.flatMap(partTextRects).filter(
-      (rect) => rect.left < box.left - 0.5 || rect.right > box.right + 0.5 || rect.top < box.top - 0.5 || rect.bottom > box.bottom + 0.5,
-    );
-    await expect(cut).toEqual([]);
-  },
 };

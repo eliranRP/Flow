@@ -112,7 +112,3 @@ export const SumitImportFromDateSe: Story = {
   parameters: { viewport: { defaultViewport: "flow375-se" } },
   play: pinnedPlay,
 };
-export const SumitImportFromDate: Story = {
-  render: () => <SumitDemo initialFrom="2026-01-01" />,
-  parameters: { viewport: { defaultViewport: "flow320" } },
-};

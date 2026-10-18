@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { JUNIPER_PROFIT } from "../dev/project-profit-sample";
+import { JUNIPER_PROFIT, NEW_PROJECT_PROFIT } from "../dev/project-profit-sample";
 import { ProjectProfitScreen } from "./project-profit-screen";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
@@ -14,11 +14,11 @@ type Story = StoryObj<typeof meta>;
 
 const sample = JUNIPER_PROFIT;
 
-function ProfitRoute({ entry }: { entry: string }) {
+function ProfitRoute({ entry, data = sample }: { entry: string; data?: typeof sample }) {
   return (
     <StoryRoute entry={entry} tabs>
       <ExampleBar />
-      <ProjectProfitScreen sample={sample} />
+      <ProjectProfitScreen sample={data} />
     </StoryRoute>
   );
 }
@@ -32,4 +32,10 @@ export const ProjectProfit: Story = {
 export const ProjectProfitFromCompany: Story = {
   name: "Project profit, opened from company profit",
   render: () => <ProfitRoute entry="/projects/juniper-ct/profit?from=profit" />,
+};
+
+/** A project with no lines yet (board States, profitEmpty). */
+export const ProjectProfitEmpty: Story = {
+  name: "Project profit, nothing to add up yet",
+  render: () => <ProfitRoute entry="/projects/linden-ct/profit" data={NEW_PROJECT_PROFIT} />,
 };

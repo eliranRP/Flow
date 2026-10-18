@@ -14,12 +14,3 @@ export function overheadHint(
   return `החלק בהוצאות כלליות ${formatAmountText(detail.shareAgorot ?? 0n, detail.currency ?? "ILS")}`;
 }
 
-export function shownProfit(
-  on: boolean,
-  available: boolean,
-  profit: bigint,
-  after: bigint | null | undefined,
-): bigint {
-  if (!on || !available) return profit;
-  return after ?? profit;
-}

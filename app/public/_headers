@@ -14,8 +14,6 @@
   Content-Type: text/html; charset=utf-8
 /help
   Content-Type: text/html; charset=utf-8
-/onboarding
-  Content-Type: text/html; charset=utf-8
 /invites
   Content-Type: text/html; charset=utf-8
 /setup
@@ -29,8 +27,6 @@
 /projects
   Content-Type: text/html; charset=utf-8
 /projects/*
-  Content-Type: text/html; charset=utf-8
-/flow/*
   Content-Type: text/html; charset=utf-8
 /profit
   Content-Type: text/html; charset=utf-8
@@ -50,7 +46,13 @@
   Content-Type: text/html; charset=utf-8
 /recurring
   Content-Type: text/html; charset=utf-8
+/recurring/:direction/:partyId
+  Content-Type: text/html; charset=utf-8
 /forecast
+  Content-Type: text/html; charset=utf-8
+/loans
+  Content-Type: text/html; charset=utf-8
+/loans/*
   Content-Type: text/html; charset=utf-8
 /notifications
   Content-Type: text/html; charset=utf-8

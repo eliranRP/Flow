@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { ProjectLoanList } from "./loan-match";
 import { inSheet } from "../ui/story-support";
 import { LoanProjectPicker, LoanSetupForm, type LoanProjectChoice } from "./loan-setup";
 
@@ -61,14 +60,10 @@ function sheet(sheetTitle: string) {
 }
 
 export const PickerNone: Story = { args: {}, ...sheet("פרויקט") };
-export const PickerCurrentFinished: Story = { args: { selectedId: "p3" }, ...sheet("פרויקט") };
 export const PickerSearch: Story = { args: { rows: "many", selectedId: "m3" }, ...sheet("פרויקט") };
 export const PickerLongHebrew: Story = { args: { rows: "long", selectedId: "l1" }, ...sheet("פרויקט") };
 export const PickerLoading: Story = { args: { loading: true }, ...sheet("פרויקט") };
 export const PickerError: Story = { args: { error: true }, ...sheet("פרויקט") };
-export const PickerEmpty: Story = { args: { rows: "none" }, ...sheet("פרויקט") };
-export const PickerNoCodes: Story = { args: { rows: "noCodes" }, ...sheet("פרויקט") };
-export const PickerSaving: Story = { args: { selectedId: "p1", savingId: "p2" }, ...sheet("פרויקט") };
 
 const form = {
   name: "הלוואת דוגמה",
@@ -91,14 +86,3 @@ function Form({ project }: { project: string | null }) {
 
 export const FormNoProject: Story = { render: () => <Form project={null} />, ...sheet("הלוואה") };
 export const FormProject: Story = { render: () => <Form project="שיפוץ הרצל 12" />, ...sheet("הלוואה") };
-export const FormProjectLongHebrew: Story = {
-  render: () => <Form project="שיפוץ מקיף של דירת ארבעה חדרים ברחוב הרצל בראשון לציון כולל מרפסת" />,
-  ...sheet("הלוואה"),
-};
-
-const PROJECT_LOANS = [
-  { id: "a", name: "משכנתא דוגמה", currency: "ILS", balance_minor: 45_000_000n },
-  { id: "c", name: "הלוואת בעלים", currency: "ILS", balance_minor: 0n },
-];
-
-export const ProjectLoans: Story = { render: () => <ProjectLoanList rows={PROJECT_LOANS} /> };

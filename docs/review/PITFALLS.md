@@ -6,7 +6,7 @@ These notes are the section 7 rules used for the PR #6 review: the 12-point self
 
 ## Self-check
 
-1. Open the design sources for every screen you touch. Hints use `t-hint` and are tied with `aria-describedby`. Rows use the same `ListRow` icon pattern as the neighbouring rows.
+1. Open the design sources for every screen you touch. Hints use `t-caption t-muted` and are tied with `aria-describedby`. Rows use the same `ListRow` icon pattern as the neighbouring rows.
 2. Clip check: at 320, 360, and 390, light and dark, assert the text fits its own box, not only the page. The command is `pnpm build-storybook` then `pnpm clip-check`. An inline element's box is as wide as its text and never clips, so measure the nearest ancestor that is not `display: inline` or `display: contents`, once per container. An inline `<bdi>` is not the box. The ellipsis exemption is `.ui-row-title` and `[data-clip-ok]`. A single-line `.ui-row-hint` is measured. A hint that wraps is still measured. Text hidden from sight is not measured, down to its nested blocks: `.sr-only`, `.visually-hidden`, a zero `clip` rect, a 50% `clip-path` inset, or a box of about 1px. Each block measures only its own text, so a clipped nested block is one line. Every story sees the same frozen date, and a story that does not render gets one more load. A story tagged `clip-no-text` is measured too; only measuring nothing is waived for it. `parameters.clipCheck.noText` is not read. Any other story that measures nothing exits 2. The tint that sticks out of a row is not text. Zero overflow is not evidence for copy, select, or gesture. The full list is `clip-report.json` and `clip-report.txt` at the repo root. Stdout keeps the first 40 clips.
 3. Walk a changed row together with the states it sits beside. Never show a state you do not know. A failed load is an error with a retry, not an empty or disconnected row with an active action.
 4. Run the repo gate before handoff: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `deno test --allow-env supabase/functions/flow-mcp`, `node --test scripts/*.test.mjs`, the database tests, and `pnpm db:types:check`. Hand off only when CI is green on the pushed head.
@@ -33,7 +33,7 @@ These notes are the section 7 rules used for the PR #6 review: the 12-point self
 Open these before editing the screen:
 
 - [design/system/implementation-guide.md](../../design/system/implementation-guide.md), including its section 12 checklists. Decision [0025](../decisions/0025-implementation-guide-is-mandatory.md).
-- The screen's source under `design/src/`. Settings is `design/src/14-settings-light.html` and `design/src/14-settings-dark.html`. This repo has no `design/screens/14-settings-*.png`.
+- The screen's board artboard. Settings is `Settings.dc.html` (dark) and `SettingsLight.dc.html` (light) on the design board. This repo has no settings PNG.
 - [docs/design/DESIGN-RULES.md](../design/DESIGN-RULES.md).
 - [docs/qa/CONTROLS.md](../qa/CONTROLS.md). A new control gets a row. The row is marked pass only after the test that exercises it.
 
@@ -66,7 +66,7 @@ Catch these before handoff. The matching lines are in the two checklists.
 12. A drag-to-dismiss sheet can read a fast selection drag as a dismiss. Probe a quick diagonal mouse drag over selectable or shown-once content.
 13. The clip test is horizontal only. Zero overflow is not evidence for a copy, select, or gesture flow.
 14. A `min-block-size` step-jump fix is re-sampled at 320, where the content wraps.
-15. A button label uses the action name from `ErrorState` and the toasts ("ניסיון חוזר"), not a sentence.
+15. A button label uses the action name from the failure line of `EmptyState` and the toasts ("ניסיון חוזר"), not a sentence.
 16. An owner call that is in the code and missing from the decision's state table is spec drift.
 17. An inline element's box is as wide as its text and never clips. Measure the nearest block ancestor, the one whose `display` is not `inline` or `contents`, once per container. A `<bdi>` inside a hint, mixed text, or a display amount is not the clipping box.
 18. Focus and blur hooks need a browser-mode test, because jsdom doesn't fire blur on removal.

@@ -117,8 +117,9 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
     return row.data == null ? undefined : (row.data.project_id as string | null);
   }
 
-  await page.goto("/settings/loans");
-  await page.getByRole("button", { name: "הלוואה חדשה" }).click();
+  await page.goto("/loans");
+  // An empty list offers הוספת הלוואה in place of the header's + הלוואה חדשה (the board's StatesLoansEmpty).
+  await page.getByRole("button", { name: /^(\+ הלוואה חדשה|הוספת הלוואה)$/ }).first().click();
   const sheet = page.getByRole("dialog");
   await sheet.getByLabel("מלווה").fill(lender);
   await sheet.getByLabel("סכום מקורי").fill("100000");
@@ -129,18 +130,20 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
   await expect(page.getByRole("status").filter({ hasText: "ההלוואה נשמרה" })).toBeVisible();
   await expect.poll(storedProject).toBe(projectA);
   // FLOW-106 B: the row opens the loan's page, where the project sheet now lives.
-  const row = page.getByRole("button", { name: new RegExp(`^${lender}, .*פרויקט א$`) });
+  const row = page.getByRole("button", { name: new RegExp(`^${lender}, .*פרויקט א`) });
   await expect(row).toBeVisible();
 
   // FLOW-419: the project's השקעה והלוואות row names its one open loan.
   await page.goto(`/projects/${projectA}`);
   await expect(page.getByRole("link", { name: /^השקעה והלוואות/ })).toContainText(lender);
+  // FLOW-446: the investment page lists the loan in its loans card.
+  await page.goto(`/projects/${projectA}/investment`);
+  await expect(page.getByRole("link", { name: new RegExp(lender) })).toBeVisible();
 
-  await page.goto("/settings/loans");
-  await page.getByRole("button", { name: new RegExp(`^${lender}, .*פרויקט א$`) }).click();
+  await page.goto("/loans");
+  await page.getByRole("button", { name: new RegExp(`^${lender}, .*פרויקט א`) }).click();
   await expect(page.getByRole("heading", { name: lender })).toBeVisible();
-  // FLOW-434: the project row lives on the פרטי הלוואה page.
-  await page.getByRole("link", { name: /^פרטי הלוואה/ }).click();
+  // FLOW-139c: the project row is in the loan page's terms card (the פרטי הלוואה page is gone).
   await page.getByRole("button", { name: /^פרויקט פרויקט א/ }).click();
   await pickProject(page, "פרויקט ב");
   await expect(page.getByRole("status").filter({ hasText: "ההלוואה שויכה לפרויקט" })).toBeVisible();

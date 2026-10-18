@@ -19,7 +19,6 @@ import {
   LogoutIcon,
   MailIcon,
   PeopleIcon,
-  PercentIcon,
   PlugIcon,
   ProjectsIcon,
   RefreshIcon,
@@ -30,8 +29,6 @@ import {
   SplitIcon,
   TagIcon,
   TrashIcon,
-  PauseIcon,
-  PlayIcon,
   TrendDownIcon,
   TrendUpIcon,
 } from "./icons";
@@ -39,7 +36,7 @@ import { padded } from "./story-support";
 
 type Entry = [string, ComponentType<{ size?: number }>];
 
-/** The 24-grid line icons, stroke 1.9. FLOW-501 adds PlugIcon (חיבורים) and LoanIcon (הלוואות); FLOW-601 PeopleIcon (צוות) and MailIcon (an invite); FLOW-415 RepeatIcon (חיוב קבוע) and TrendUpIcon and TrendDownIcon (a charge above or below usual); FLOW-514 PauseIcon and PlayIcon (the setup movie). */
+/** The 24-grid line icons, stroke 1.9. FLOW-501 adds PlugIcon (חיבורים) and LoanIcon (הלוואות); FLOW-601 PeopleIcon (צוות) and MailIcon (an invite); FLOW-415 RepeatIcon (חיוב קבוע) and TrendUpIcon and TrendDownIcon (a charge above or below usual); */
 const ICONS: Entry[] = [
   ["PlugIcon", PlugIcon],
   ["LoanIcon", LoanIcon],
@@ -61,7 +58,6 @@ const ICONS: Entry[] = [
   ["KeptOutIcon", KeptOutIcon],
   ["LockIcon", LockIcon],
   ["LogoutIcon", LogoutIcon],
-  ["PercentIcon", PercentIcon],
   ["RefreshIcon", RefreshIcon],
   ["SearchIcon", SearchIcon],
   ["SplitIcon", SplitIcon],
@@ -72,8 +68,6 @@ const ICONS: Entry[] = [
   ["RepeatIcon", RepeatIcon],
   ["TrendUpIcon", TrendUpIcon],
   ["TrendDownIcon", TrendDownIcon],
-  ["PauseIcon", PauseIcon],
-  ["PlayIcon", PlayIcon],
 ];
 
 function IconGrid() {
@@ -82,7 +76,7 @@ function IconGrid() {
       {ICONS.map(([name, Icon]) => (
         <li key={name} className="flex min-w-0 flex-col items-center gap-1 text-text">
           <Icon size={24} />
-          <span className="t-hint min-w-0 break-all text-center">{name}</span>
+          <span className="t-caption t-muted min-w-0 break-all text-center">{name}</span>
         </li>
       ))}
     </ul>

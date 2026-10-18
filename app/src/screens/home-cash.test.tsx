@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { shiftMonthKey } from "../period";
 import { renderWithProviders } from "../test-render";
 import { israelToday } from "../ui/date-math";
-import { HomeScreen, ProfitScreen } from "./HomeScreen";
+import { HomeScreen } from "./HomeScreen";
+import { CompanyProfitScreen } from "./company-profit-screen";
 import { homeMonthLabel } from "./home-parts";
 
 const rpc = vi.hoisted(() => ({
@@ -89,7 +90,7 @@ function wrap(reviewCount = 0, path = "/") {
   return renderWithProviders(
     <Routes>
       <Route path="/" element={<HomeScreen />} />
-      <Route path="/profit" element={<ProfitScreen />} />
+      <Route path="/profit" element={<CompanyProfitScreen />} />
     </Routes>,
     { route: path },
   );
@@ -126,11 +127,7 @@ describe("Home's cash (FLOW-364: the redesigned Home)", () => {
     // No profit band, period pill or projects: those are the profit view's.
     expect(screen.queryByRole("button", { name: /בחירת תקופה/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "פרויקטים" })).not.toBeInTheDocument();
-  });
-
-  it("drops the old earlier-months list and its two links (FLOW-364)", async () => {
-    wrap();
-    await screen.findByText("תזרים · עד היום");
+    // FLOW-364: the old earlier-months list and its two links are gone (the board's Home has nothing there).
     expect(screen.queryByRole("heading", { name: "חודשים קודמים" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "לכל החודשים" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "לכל הקבועים" })).not.toBeInTheDocument();
@@ -158,13 +155,13 @@ describe("Home's cash (FLOW-364: the redesigned Home)", () => {
     expect(screen.queryByRole("region", { name: "דורש טיפול" })).not.toBeInTheDocument();
   });
 
-  it("opens the profit view on the month from רווח החודש", async () => {
+  it("opens the profit page on the month from רווח החודש", async () => {
     wrap();
     fireEvent.click(await screen.findByRole("button", { name: /^רווח החודש/ }));
-    expect(await screen.findByRole("button", { name: /בחירת תקופה/ })).toBeInTheDocument();
-    const profit = rpc.calls.filter((c) => c.name === "get_dashboard").at(-1);
-    expect(profit?.args).toMatchObject({ p_from: `${current}-01` });
-    // FLOW-103: no basis of its own, so the server counts on the company's choice (0170).
-    expect(profit?.args).not.toHaveProperty("p_basis");
+    expect(await screen.findByRole("heading", { name: "רווח" })).toBeInTheDocument();
+    // The month's read, and the year's read for מתחילת השנה: neither sends a basis of its own (FLOW-103), so the server counts on the company's choice (0170).
+    const reads = rpc.calls.filter((c) => c.name === "get_dashboard");
+    expect(reads.map((c) => c.args)).toContainEqual(expect.objectContaining({ p_from: `${current}-01` }));
+    for (const read of reads) expect(read.args).not.toHaveProperty("p_basis");
   });
 });

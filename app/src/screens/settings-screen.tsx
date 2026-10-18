@@ -13,11 +13,10 @@ import { isStandalone } from "../ui/install-prompt";
 import { useCategoriesQuery, useDashboardQuery, useMercuryStatusQuery, useSumitStatusQuery } from "../use-books";
 import { useWrite } from "../use-write";
 import { useAssistantStatusQuery, type AssistantSample } from "./assistant-settings";
-import { CompanySheet } from "./company-switcher";
+import { CompanySheet } from "./company-sheet";
 import { bindJevConnectorScope, clearJevConnectorFlag } from "./jev-review";
 import { JEV_DEFAULT, jevLocked, jevSwitchOn, useJevIntegrationQuery, useJevKeyStatusQuery, type JevCardState } from "./jev-settings";
-import { LoanSettingsSection, type LoanCurrency, type LoanProjectChoice, type LoanRowsSample } from "./loan-setup";
-import { type LoanBalanceRow } from "./loan-match";
+import { type LoanCurrency } from "./loan-setup";
 import { useSetupSettingsEntry } from "../setup/settings-row";
 import { useSheetHistory } from "../ui/back";
 import { BellIcon, BuildingIcon, DownloadIcon, PeopleIcon, PlugIcon, SparkIcon, TagIcon, ThemeIcon, TransferIcon } from "../ui/icons";
@@ -31,13 +30,6 @@ import { notificationsHint } from "./notifications-screen";
 import { themeChoiceLabel, THEME_TITLE } from "../ui/theme-choices";
 import { readThemeChoice, writeThemeChoice, type ThemeChoice } from "../theme-store";
 import { ThemeSheet } from "./theme-sheet";
-import { useBlockedPreview } from "./screen-shared";
-
-/** FLOW-501. Invented loans for `?preview=1`. */
-const PREVIEW_LOANS: LoanBalanceRow[] = [
-  { id: "preview-loan-1", name: "משכנתא אלון", currency: "USD", balanceMinor: 20_000_000n, flaggedParts: 0, projectId: "preview-alon", projectName: "וילה אלון" },
-  { id: "preview-loan-2", name: "הלוואת ציוד", currency: "ILS", balanceMinor: 5_000_000n, flaggedParts: 1, projectId: "preview-gefen", projectName: "פרויקט גפן" },
-];
 
 /** Shown on `/settings?preview=` when the value is not `empty` and no sample is passed. */
 const previewAccountName = "בית הספר אלון";
@@ -66,10 +58,6 @@ export type SettingsSample = {
   jev?: JevCardState;
   /** Preview only. Live settings read the company's lines. */
   loanCurrency?: LoanCurrency;
-  /** FLOW-119. Projects for the loan's project picker. */
-  loanProjects?: LoanProjectChoice[];
-  /** FLOW-501. The Loans page. */
-  loans?: LoanRowsSample;
   /** FLOW-502. The התראות row's count. */
   notifications?: NotificationPrefs;
   /** FLOW-601. The צוות row's count; left out, a sample has no צוות row. */
@@ -80,6 +68,10 @@ export type SettingsSample = {
   companyCount?: number;
   /** FLOW-103. The company's profit basis, for the העסק page's row (a sample or preview). */
   basis?: BasisChoice;
+  /** The העסק page's after-overhead switch, on (a sample only; live reads the company). */
+  afterOverhead?: boolean;
+  /** The rename sheet while its write runs (the board's saving frame): a busy button, a disabled field. */
+  renameSaving?: boolean;
   /** Setup steps still to do (the הגדרה ראשונה row shows only while any is left). */
   setupLeft?: number;
 };
@@ -301,7 +293,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
 
   return (
     <ViewerScope>
-    <div>
+    <div className="ui-settings-page">
       <ScreenHeader title="הגדרות" backTo="/" backText="בית" subtitle={subtitle} />
       <ViewerNote />
       {noCompany ? null : (
@@ -402,7 +394,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
           </Button>
         </div>
       ) : null}
-      <p className="ui-poc t-hint"><bdi dir="ltr">Flow 0.1</bdi></p>
+      <p className="ui-poc t-caption t-muted"><bdi dir="ltr">Flow 0.1</bdi></p>
     </div>
     </ViewerScope>
   );
@@ -439,68 +431,6 @@ function SettingsPageRow({
         chevron
       />
     </span>
-  );
-}
-
-/**
- * `/settings/loans` (FLOW-501): the balances and הלוואה חדשה, moved out of
- * Settings. Viewers read the balances (U10). No company goes back to Settings,
- * like Categories. `/settings/loans/:id` is kept for FLOW-110's detail page.
- */
-export function LoansScreen({ sample }: { sample?: SettingsSample } = {}) {
-  const preview = useHomePreview();
-  const [params] = useSearchParams();
-  const previewValue = params.get("preview");
-  const search = usePreviewSearch();
-  const blocked = useBlockedPreview();
-  const dashboard = useDashboardQuery(sample == null);
-  const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, dashboard);
-  const previewNoCompany = sample == null && previewValue === "empty";
-  const sampleNoCompany = sample?.noCompany === true;
-  const liveNoCompany = sample == null && preview === "off" && dashboard.isSuccess && dashboard.data.company_id == null;
-  if (previewNoCompany || sampleNoCompany || liveNoCompany) {
-    return <Navigate to={`/settings${search}`} replace />;
-  }
-  if (phase.kind === "loading" || phase.kind === "error") {
-    return (
-      <ScreenState
-        title="הלוואות"
-        kicker="הגדרות"
-        backTo={`/settings${search}`}
-        phase={phase}
-        onRetry={() => { void dashboard.refetch(); }}
-        loading={(
-          <List>
-            <ListRow variant="skeleton" />
-            <ListRow variant="skeleton" />
-          </List>
-        )}
-      />
-    );
-  }
-  const sampled = sample != null || preview !== "off";
-  return (
-    <ViewerScope>
-    <div>
-      <ScreenHeader title="הלוואות" kicker="הגדרות" backTo={`/settings${search}`} />
-      <ViewerNote />
-      <LoanSettingsSection
-        companyId={sampled ? null : (dashboard.data?.company_id ?? null)}
-        companyCurrency={sampled ? (sample?.loanCurrency ?? "ILS") : undefined}
-        blocked={blocked}
-        sample={sample ? (sample.loans ?? []) : preview !== "off" ? PREVIEW_LOANS : undefined}
-        projects={sampled
-          ? { rows: sample?.loanProjects ?? [] }
-          : {
-            rows: (dashboard.data?.projects ?? []).map((project) => ({ id: project.id, name: project.name, status: project.status, code: project.code })),
-            loading: dashboard.isLoading,
-            error: dashboard.isError,
-            retrying: dashboard.isFetching,
-            onRetry: () => { void dashboard.refetch(); },
-          }}
-      />
-    </div>
-    </ViewerScope>
   );
 }
 

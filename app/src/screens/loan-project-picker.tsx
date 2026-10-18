@@ -1,5 +1,5 @@
 import { useState, type Ref } from "react";
-import { RadioRow } from "../ui/radio-row";
+import { ListRow } from "../ui/list-row";
 import { SearchField } from "../ui/search-field";
 import { Skeleton } from "../ui/skeleton";
 import { LoanReadError } from "./loan-match";
@@ -65,19 +65,19 @@ export function LoanProjectPicker({
         />
       ) : null}
       <div role="radiogroup" aria-label="פרויקט">
-        <RadioRow
+        <ListRow control="radio"
           layout="picker"
-          label={NO_PROJECT}
+          title={NO_PROJECT}
           selected={selectedId == null}
           busy={busy && saving.id == null}
           disabled={busy && saving.id != null}
           onSelect={() => { onSelect(null); }}
         />
         {loading || failed ? null : shown.map((row) => (
-          <RadioRow
+          <ListRow control="radio"
             key={row.id}
             layout="picker"
-            label={row.name}
+            title={row.name}
             code={row.code ?? undefined}
             description={row.status === "finished" ? "הסתיים" : undefined}
             selected={row.id === selectedId}
@@ -100,8 +100,8 @@ export function LoanProjectPicker({
       {failed ? (
         <LoanReadError label="פרויקטים" busy={source.retrying === true} onRetry={() => { source.onRetry?.(); }} />
       ) : null}
-      {!loading && !failed && listed.length === 0 ? <p className="t-hint">אין עדיין פרויקטים.</p> : null}
-      {searchable && needle !== "" && shown.length === 0 ? <p className="t-hint">לא נמצא פרויקט בשם הזה</p> : null}
+      {!loading && !failed && listed.length === 0 ? <p className="t-caption t-muted">אין עדיין פרויקטים.</p> : null}
+      {searchable && needle !== "" && shown.length === 0 ? <p className="t-caption t-muted">לא נמצא פרויקט בשם הזה</p> : null}
     </div>
   );
 }

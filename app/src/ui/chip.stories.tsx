@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Chip } from "./chip";
-import { longHebrew, padded, Stack } from "./story-support";
+import { longHebrew, padded } from "./story-support";
 
 function Choice() {
   const [pressed, setPressed] = useState(false);
@@ -32,14 +32,3 @@ export const ChoiceOff: Story = { args: { kind: "choice", children: "עבודה"
 export const Selected: Story = { args: { kind: "choice", pressed: true, children: "נבחר" } };
 export const Disabled: Story = { args: { kind: "disabled", children: "לא זמין" } };
 export const LongHebrew: Story = { args: { kind: "choice", children: longHebrew } };
-export const All: Story = {
-  args: { children: "חומרים" },
-  render: () => (
-    <Stack>
-      <Chip kind="suggested">הצעה</Chip>
-      <Chip kind="choice">בחירה</Chip>
-      <Chip kind="choice" pressed>נבחר</Chip>
-      <Chip kind="disabled">כבוי</Chip>
-    </Stack>
-  ),
-};

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useHomePreview } from "../preview";
 import type { ScreenPhase } from "./screen-phase";
-import { ErrorState } from "./error-state";
+import { FailureLine } from "./empty-state";
 import { ScreenHeader } from "./screen-header";
 import { ListSkeleton, SkeletonSwap } from "./skeleton";
 import { SyncStrip } from "./sync-strip";
@@ -22,7 +22,10 @@ export function ScreenState({
   leading,
   trailing,
   below,
+  stateSubtitle,
   syncing,
+  barOnly = false,
+  headerClassName,
 }: {
   title: string;
   subtitle?: string;
@@ -42,8 +45,14 @@ export function ScreenState({
   trailing?: ReactNode;
   /** A control under the title that stays real while the data loads (ScreenHeader `below`). */
   below?: ReactNode;
+  /** The subtitle the header keeps while the data loads or the screen is empty, when the board's frame draws it (a month page's month). */
+  stateSubtitle?: string;
   /** A background refresh is running: the strip says what it syncs (FLOW-371). Null when none runs. */
   syncing?: string | null;
+  /** Draws only the back bar (with `kicker` as Back's label), not the title: the invoice page's board header. */
+  barOnly?: boolean;
+  /** The header's own class (the invoice pages scope their bar's spacing with it). */
+  headerClassName?: string;
 }) {
   const preview = useHomePreview();
   const navigate = useNavigate();
@@ -61,15 +70,17 @@ export function ScreenState({
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <SyncStrip label={syncing ?? null} />
-      {stacked ? (
-        <ScreenHeader layout="stacked" title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} leading={leading} trailing={trailing ?? action} kicker={kicker} below={below} />
+      {barOnly ? (
+        <ScreenHeader barOnly backTo={backTo} kicker={kicker} className={headerClassName} />
+      ) : stacked ? (
+        <ScreenHeader layout="stacked" title={title} subtitle={phase.kind === "ready" ? subtitle : stateSubtitle} backTo={backTo} leading={leading} trailing={trailing ?? action} kicker={kicker} below={below} className={headerClassName} />
       ) : (
-        <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} action={action} trailing={trailing} kicker={kicker} />
+        <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : stateSubtitle} backTo={backTo} action={action} trailing={trailing} kicker={kicker} className={headerClassName} />
       )}
       {/* The body is the overlay's frame: a skeleton fades out over it while the content fades in (FLOW-371). */}
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         <SkeletonSwap loading={phase.kind === "loading"}>{loading ?? <ListSkeleton />}</SkeletonSwap>
-        {phase.kind === "error" ? <ErrorState offline={phase.offline} onRetry={retry} /> : null}
+        {phase.kind === "error" ? <FailureLine offline={phase.offline} onRetry={retry} /> : null}
         {phase.kind === "empty" ? empty : null}
         {phase.kind === "ready" ? <div className="ui-phase-in flex min-h-0 min-w-0 flex-1 flex-col">{children}</div> : null}
       </div>

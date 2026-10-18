@@ -9,7 +9,7 @@ function Demo({ destructive, item }: { destructive: boolean; item: string }) {
   return (
     <>
       <Button
-        variant="danger"
+        variant="danger-link"
         onClick={() => {
           setOpen(true);
         }}
@@ -115,30 +115,6 @@ export const DeleteWithAlternative: Story = {
     confirmLabel: "מחיקה",
     destructive: true,
     alternative: { label: "להעביר את התנועות לקטגוריה אחרת במקום", onClick: () => undefined },
-    onConfirm: () => undefined,
-  },
-};
-export const DeleteEmpty: Story = {
-  args: {
-    open: true,
-    onOpenChange: () => undefined,
-    title: "למחוק את הקטגוריה?",
-    item: "אחר · אין תנועות",
-    consequence: "הקטגוריה תימחק מהרשימה.",
-    confirmLabel: "מחיקה",
-    destructive: true,
-    onConfirm: () => undefined,
-  },
-};
-export const OutlineDestructive: Story = {
-  args: {
-    open: true,
-    onOpenChange: () => undefined,
-    title: "למחוק את הפרויקט?",
-    item: "Juniper Ct",
-    consequence: "הפרויקט ייעלם מהרשימה. התנועות נשארות.",
-    confirmLabel: "מחיקה",
-    destructive: "outline",
     onConfirm: () => undefined,
   },
 };

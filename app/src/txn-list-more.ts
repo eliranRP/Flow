@@ -53,11 +53,6 @@ export function useTxnListMore(from: string, more: boolean, load: TxnMoreLoad | 
   }, [from, more, load]);
 }
 
-/** Each id once, at its first place: a line shown in parts is one card. */
-export function uniqueIds(ids: readonly string[]): readonly string[] {
-  return [...new Set(ids)];
-}
-
 /** The list's ids with the ones a card loaded since, appended after the last one the list sent. */
 export function grownIds(ids: readonly string[], extra: readonly string[]): readonly string[] {
   if (extra.length === 0) return ids;

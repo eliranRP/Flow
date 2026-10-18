@@ -66,10 +66,6 @@ type Story = StoryObj<typeof meta>;
 
 
 export const MatchRow: Story = {};
-/** FLOW-115: two loans in the line's currency; the hint counts them, so the row keeps its height. */
-export const MatchRowTwoLoans: Story = { args: { loanCount: 2 } };
-/** FLOW-115: no loan in the line's currency; the hint says so in the sheet's words. */
-export const MatchRowNoLoanInCurrency: Story = { args: { lineCurrency: "ILS" } };
 /** FLOW-115: no loan yet. The sheet says so and offers הלוואה חדשה. */
 export const SheetNoLoans: Story = { args: { loanCount: 0, open: true } };
 /** FLOW-115: a long loan name stays on one line, so the row keeps its height. */
@@ -78,41 +74,3 @@ export const MatchRowLongName: Story = { args: { matchHint: "משכנתא ארו
 export const MatchRowLoading: StoryObj = { render: () => <LoanMatchSkeleton /> };
 /** Two loans: the picker lists both; the paid-off one is off with its reason. */
 export const Picker: Story = { args: { loanCount: 2, open: true } };
-/** FLOW-115: the only loans are in another currency, so the sheet names the line's currency. */
-export const PickerOtherCurrency: Story = { args: { lineCurrency: "ILS", open: true } };
-export const PickerSaving: Story = { args: { loanCount: 2, open: true, savingId: "loan-1" } };
-
-/**
- * FLOW-106 §3.4: each loan says what one tap writes. A schedule row, a catch-up of several rows, a
- * demand loan's accrued interest, and a loan closed before the line's date (off, with the day).
- */
-const KIND_LOANS = [
-  { ...LOANS[0], id: "k-1", name: "משכנתא לדוגמה" },
-  { ...LOANS[0], id: "k-2", name: "הלוואת שיפוץ לדוגמה" },
-  { ...LOANS[0], id: "k-3", name: "הלוואה לפי דרישה", kind: "demand" as const, termMonths: null, paymentMinor: null },
-  { ...LOANS[0], id: "k-4", name: "הלוואה שנסגרה", status: "closed" as const, closedOn: "2025-11-30" },
-];
-const KIND_OFFERS = [
-  { loanId: "k-1", description: "לפי הלוח · $599.55", parts: [] },
-  { loanId: "k-2", description: "3 תשלומים לפי הלוח · $1,798.65", parts: [] },
-  { loanId: "k-3", description: "ריבית צבורה $328.77 · השאר לקרן", parts: [] },
-  { loanId: "k-4", disabledReason: "נסגרה ב־30/11/2025", parts: null },
-];
-
-function KindsPicker() {
-  const [open, setOpen] = useState(true);
-  return (
-    <LoanMatchOffer
-      lineCurrency="USD"
-      loans={KIND_LOANS}
-      offers={KIND_OFFERS}
-      busy={false}
-      matchHint="4 הלוואות"
-      sheetOpen={open}
-      onSheetOpenChange={setOpen}
-      onMatch={() => undefined}
-    />
-  );
-}
-
-export const PickerKinds: StoryObj = { render: () => <KindsPicker /> };

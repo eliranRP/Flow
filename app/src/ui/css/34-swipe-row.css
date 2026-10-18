@@ -9,6 +9,8 @@
 */
 .ui-swipe-row {
   position: relative;
+  /* The width a revealed row opens over its action (swipe-row.tsx OPEN_PX). */
+  --swipe-action: 120px;
 }
 
 .ui-swipe-row[data-on] {
@@ -77,7 +79,7 @@
 
 /* FLOW-913: a one-time peek. The row slides toward the start side and back, showing the word under it. */
 .ui-swipe-row[data-peek] .ui-swipe-row-body {
-  animation: ui-swipe-row-peek 900ms var(--ease-standard) 400ms both;
+  animation: ui-swipe-row-peek var(--motion-peek) var(--ease-standard) var(--motion-peek-delay) both;
 }
 
 @keyframes ui-swipe-row-peek {

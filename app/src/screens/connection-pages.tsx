@@ -11,8 +11,9 @@ import { useRefreshingNow } from "../israel-clock";
 import { assertNoError, useWrite } from "../use-write";
 import { useSumitConnect } from "../use-sumit-connect";
 import { useMercuryConnect } from "../use-mercury-connect";
-import { useSumitRefresh } from "../use-sumit-refresh";
-import { MERCURY_REFRESH_KEYS, onboardingFromSettings } from "./connections-status";
+import { REFRESH_DONE, SUMIT_REFRESH_KEYS, useSumitRefresh } from "../use-sumit-refresh";
+import { useSyncSettled } from "../use-sync-settled";
+import { MERCURY_REFRESH_KEYS } from "./connections-status";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { Button } from "../ui/button";
 import { ImportFromField } from "../ui/import-from-field";
@@ -20,11 +21,9 @@ import { ConnectionFacts, ConnectionHead, ConnectionNote, ConnectionPage, StepLi
 import { List, ListRow } from "../ui/list-row";
 import { ScreenState } from "../ui/screen-state";
 import { TextField } from "../ui/text-field";
-import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 import { useBlockedPreview } from "./screen-shared";
 import { screenPhase } from "../query-phase";
-import { LogoutIcon, RefreshIcon } from "../ui/icons";
 
 export type Provider = "sumit" | "mercury";
 
@@ -35,6 +34,10 @@ export type ConnectionSample = {
   companyId?: string;
   /** Mercury: the account labels on file. */
   accounts?: string;
+  /** Mercury: the card labels on file. */
+  cards?: string;
+  /** What has come in so far, already in words ("312 מסמכים"). */
+  imported?: string;
   /** The last sync, already in words ("היום, 06:05"). */
   lastSync?: string;
   /** A connect is in flight. */
@@ -166,6 +169,17 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
     },
   });
 
+  // A refresh started before a reload or in another tab: when its claim clears, reload the books and say so.
+  const liveStatus = live ? status.data : undefined;
+  useSyncSettled({
+    syncing: liveStatus?.syncing === true,
+    pending: provider === "sumit" ? refreshSumit.isPending : mercuryRefresh.isPending,
+    lastSyncAt: liveStatus?.last_sync_at,
+    lastError: liveStatus?.last_error,
+    keys: provider === "sumit" ? SUMIT_REFRESH_KEYS : MERCURY_REFRESH_KEYS,
+    success: REFRESH_DONE,
+  });
+
   if (live && (dashboard.isLoading || status.isLoading)) {
     return <ScreenState title={copy.title} kicker="חיבורים" backTo={backTo} phase={{ kind: "loading" }} onRetry={() => { void status.refetch(); }} loading={<List><ListRow variant="skeleton" /><ListRow variant="skeleton" /></List>} />;
   }
@@ -211,11 +225,14 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
       { label: "מספר חברה", value: view.companyId ?? companyValue, ltr: true },
       { label: "עדכון אחרון", value: syncLine ?? "—" },
       { label: "מה מגיע", value: "חשבוניות, קבלות והוצאות" },
+      ...(view.imported != null ? [{ label: "נכנסו עד היום", value: view.imported }] : []),
     ]
     : [
       { label: "מצב", value: "מחובר" },
       { label: "חשבונות", value: accountLine ?? "—", ltr: true },
+      ...(view.cards != null ? [{ label: "כרטיס", value: view.cards, ltr: true }] : []),
       { label: "עדכון אחרון", value: syncLine ?? "—" },
+      ...(view.imported != null ? [{ label: "נכנסו עד היום", value: view.imported }] : []),
     ];
 
   if (noCompany) {
@@ -224,7 +241,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
       <ConnectionPage title={copy.title} subtitle={copy.subtitle} backTo={backTo}>
         <div className="ui-stack">
           <p>כדי לחבר את {copy.title} צריך עסק.</p>
-          <TextLink to={onboardingFromSettings(search, provider)}>פרטי העסק</TextLink>
+          <Button variant="link" to="/setup/1" chevron>פרטי העסק</Button>
         </div>
       </ConnectionPage>
       </ViewerScope>
@@ -254,16 +271,16 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
           {viewerOnly ? null : (
             <div className="ui-connection-actions">
               {provider === "sumit" ? (
-                <Button variant="secondary" busy={refreshSumit.isPending || live && sumit.data?.syncing === true} onClick={() => { if (!blocked()) refreshSumit.mutate(); }} icon={<RefreshIcon size={18} />}>
+                <Button variant="secondary" busy={refreshSumit.isPending || live && sumit.data?.syncing === true} onClick={() => { if (!blocked()) refreshSumit.mutate(); }}>
                   רענון עכשיו
                 </Button>
               ) : (
-                <Button variant="secondary" busy={mercuryRefresh.isPending || live && mercury.data?.syncing === true} onClick={() => { if (!blocked()) mercuryRefresh.mutate(); }} icon={<RefreshIcon size={18} />}>
+                <Button variant="secondary" busy={mercuryRefresh.isPending || live && mercury.data?.syncing === true} onClick={() => { if (!blocked()) mercuryRefresh.mutate(); }}>
                   רענון עכשיו
                 </Button>
               )}
               <Button variant="link" onClick={() => { setReplacing(true); }}>החלפת מפתח API</Button>
-              <Button variant="danger-link" icon={<LogoutIcon size={18} />} onClick={(event) => { disconnectFocus.current = event.currentTarget; setDisconnectOpen(true); }}>ניתוק</Button>
+              <Button variant="danger-link" onClick={(event) => { disconnectFocus.current = event.currentTarget; setDisconnectOpen(true); }}>ניתוק</Button>
             </div>
           )}
         </>
@@ -325,7 +342,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
       {viewerOnly && !connected ? <ConnectionNote>רק הבעלים יכולים לחבר.</ConnectionNote> : null}
       {viewerOnly && connected ? <ConnectionNote>רק בעל העסק יכול לשנות חיבורים.</ConnectionNote> : null}
       {connected && replacing ? (
-        <Button variant="link" onClick={() => { setReplacing(false); }}>ביטול</Button>
+        <Button variant="link" onClick={() => { setForm({ key: "" }); setShowKey(false); setReplacing(false); }}>ביטול</Button>
       ) : null}
       <ConfirmSheet
         open={disconnectOpen}

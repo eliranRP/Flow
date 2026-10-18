@@ -2,7 +2,6 @@ import type { ReactNode, RefObject } from "react";
 import { Button } from "./button";
 import { TrashIcon } from "./icons";
 import { Sheet } from "./sheet";
-import { TextLink } from "./text-link";
 
 type ConfirmSheetProps = {
   open: boolean;
@@ -26,6 +25,10 @@ type ConfirmSheetProps = {
   returnFocusRef?: RefObject<HTMLElement | null>;
   /** A quiet link under ביטול to the path that loses nothing, such as moving the lines before a delete. */
   alternative?: { label: string; onClick: () => void };
+  /** false where the board draws no ✕ (swipe, the scrim and Escape still close). */
+  closeButton?: boolean;
+  /** Opt-in classes for the panel (the project finish confirm's roomier board rhythm). */
+  panelClassName?: string;
 };
 
 export function ConfirmSheet({
@@ -44,15 +47,18 @@ export function ConfirmSheet({
   onConfirm,
   returnFocusRef,
   alternative,
+  closeButton = true,
+  panelClassName,
 }: ConfirmSheetProps) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title={title} returnFocusRef={returnFocusRef} busy={busy}>
-      {item ? <p className="t-label text-text-secondary">{item}</p> : null}
-      <p className={consequenceSize === "body" ? "ui-confirm-body" : "t-hint text-text-secondary"}>{consequence}</p>
+    <Sheet open={open} onOpenChange={onOpenChange} title={title} returnFocusRef={returnFocusRef} busy={busy} closeButton={closeButton} panelClassName={panelClassName}>
+      {item ? <p className="t-line2 text-text-secondary">{item}</p> : null}
+      <p className={consequenceSize === "body" ? "ui-confirm-body" : "t-caption t-muted text-text-secondary"}>{consequence}</p>
       {warning ? <p className="ui-confirm-warning">{warning}</p> : null}
-      {detail ? <p className="t-hint text-text-secondary">{detail}</p> : null}
+      {detail ? <p className="t-caption t-muted text-text-secondary">{detail}</p> : null}
       <Button
-        variant={destructive === "outline" ? "danger-outline" : destructive ? "danger-tint" : "primary"}
+        variant={destructive === false ? "primary" : "secondary"}
+        className={destructive === false ? undefined : "ui-btn-signal"}
         full
         busy={busy}
         icon={icon !== undefined ? icon ?? undefined : destructive === true ? <TrashIcon /> : undefined}
@@ -63,7 +69,7 @@ export function ConfirmSheet({
         {confirmLabel}
       </Button>
       <Button
-        variant="ghost"
+        variant="link"
         quiet
         full
         disabled={busy}
@@ -75,9 +81,9 @@ export function ConfirmSheet({
       </Button>
       {alternative ? (
         <div className="ui-confirm-alt flex justify-center">
-          <TextLink tone="quiet" chevron={false} wrap disabled={busy} onClick={alternative.onClick}>
+          <Button variant="link" quiet disabled={busy} onClick={alternative.onClick} className="ui-btn-link-wrap">
             {alternative.label}
-          </TextLink>
+          </Button>
         </div>
       ) : null}
     </Sheet>

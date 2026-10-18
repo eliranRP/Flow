@@ -1,11 +1,28 @@
-/* FLOW-325: the split-by-category editor (plan option A). Built on the ui-split-* frame. */
-.ui-lsplit .ui-split-cta {
-  gap: var(--space-2);
+/* FLOW-922: the split screen's frame, the card that wraps a part list, and the bad tone. The editor root carries ui-split. */
+.ui-split {
+  min-height: 100dvh;
+  overflow-x: hidden;
+  padding-block-end: calc(var(--split-foot) + var(--space-2));
 }
 
-.ui-lsplit-head {
-  margin-top: var(--space-2);
+/* FLOW-328: the 24px side gutter of every other screen. */
+.ui-split .ui-page {
   padding-inline: var(--space-side);
+}
+
+.ui-split-body {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ui-split-body:disabled {
+  opacity: 1;
+}
+
+.ui-split-bad {
+  color: var(--color-bad);
 }
 
 .ui-lsplit-meta {
@@ -15,18 +32,6 @@
 
 .ui-lsplit-banner {
   margin: var(--space-4) var(--space-side) 0;
-}
-
-/* FLOW-370: each part is its own surface card (board Split frame), 10 apart, on the page. */
-.ui-lsplit-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-inline: var(--space-side);
-  margin-top: var(--space-4);
-  padding: 0;
-  border: 0;
-  background: transparent;
 }
 
 .ui-lsplit-part {
@@ -43,15 +48,6 @@
   color: inherit;
   font: inherit;
   text-align: start;
-}
-
-.ui-lsplit-text {
-  display: flex;
-  /* Wide enough for a name, a החזר tag and ✕; below that the entry wraps to its own line. */
-  flex: 1 1 10rem;
-  align-items: flex-start;
-  gap: var(--space-1);
-  min-inline-size: 0;
 }
 
 .ui-lsplit-pick {
@@ -121,8 +117,8 @@
 .ui-lsplit-project {
   max-inline-size: 100%;
   color: var(--color-text-muted);
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
   overflow-wrap: anywhere;
 }
 
@@ -130,74 +126,12 @@
   color: var(--color-error);
 }
 
-.ui-lsplit-remove {
-  flex: none;
-  margin-block-start: calc(var(--space-2) * -1);
-  color: var(--color-text-muted);
-}
-
-.ui-lsplit-end {
-  display: flex;
-  flex: 0 0 auto;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-1);
-  margin-inline-start: auto;
-}
-
-.ui-lsplit-entry {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-
-/* FLOW-333 C1: a part's entry takes its own full-width line, so ₪9,999,999.99 fits at 320. */
-.ui-lsplit-end-entry {
-  flex: 1 0 100%;
-  align-items: stretch;
-  margin-inline-start: 0;
-}
-
-.ui-lsplit-end-entry .ui-lsplit-resolved {
-  align-self: flex-end;
-}
-
-.ui-lsplit-entry > .ui-field:first-child,
-.ui-lsplit-entry .ui-seg-input {
-  flex: none;
-  inline-size: auto;
-}
-
-.ui-lsplit-entry > .ui-field:last-child {
-  flex: 1 1 0;
-  inline-size: auto;
-}
-
-/* FLOW-333 C7: each ₪ / % button is a full touch target. FLOW-346: the switch is as tall as the
-   amount field beside it, so the two read as one row. */
-.ui-lsplit-entry .ui-seg-input {
-  box-sizing: border-box;
-  block-size: var(--field-height);
-  min-block-size: var(--touch-min);
-}
-
-.ui-lsplit-entry .ui-seg-btn {
-  block-size: 100%;
-  min-block-size: 0;
-  min-inline-size: var(--touch-min);
-}
-
-.ui-lsplit-resolved {
-  min-block-size: 1lh;
-  color: var(--color-text-muted);
-}
-
 .ui-lsplit-msg {
   flex: 1 0 100%;
   margin: 0;
   color: var(--color-error);
-  font-size: var(--type-hint-size);
-  line-height: var(--type-hint-line);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
 }
 
 .ui-lsplit-rest {
@@ -217,56 +151,12 @@
   cursor: default;
 }
 
-.ui-lsplit-empty {
-  margin: var(--space-2) var(--space-4) 0;
-}
-
-/* FLOW-333 C4: הוספת חלק sits in the sticky bar, at the start of the totals line. */
-.ui-lsplit-add {
-  display: flex;
-  flex: none;
-  align-self: center;
-}
-
 .ui-lsplit-clear-link {
   color: var(--color-bad);
 }
 
-.ui-lsplit-totals {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--space-2) var(--space-4);
-}
-
-/* The two sums keep their width; past 320 with eight-figure sums they wrap under the link. */
-.ui-lsplit-sums {
-  display: flex;
-  flex: none;
-  gap: var(--space-4);
-  margin-inline-start: auto;
-}
-
-.ui-lsplit-total {
-  display: flex;
-  flex-direction: column;
-  min-inline-size: 0;
-}
-
-.ui-lsplit-total-end {
-  align-items: flex-end;
-  text-align: end;
-}
-
-/* A turning 18px square reaches ~3.7px past its box on each side; the start margin keeps that
-   corner inside the total so the saving figure does not overflow (clip-check at 320/360/390). */
-.ui-lsplit-total .ui-spinner {
-  margin-inline: var(--space-1) var(--space-2);
-}
-
-
 /* FLOW-370 board: the line split frame (top box, part cards, rest card, footer). Scoped to the
-   editor root, so the project split (split-screen.tsx) keeps the rules above. */
+   editor root. */
 .ui-lsplit-board {
   display: flex;
   flex-direction: column;
@@ -314,8 +204,8 @@
 .ui-lsplit-board .ui-lsplit-meta {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
 
   font-weight: var(--type-body-weight);}
 
@@ -336,7 +226,7 @@
 
 /* The cents sit raised, at 13px, as on the board. */
 .ui-lsplit-board .ui-lsplit-amount .ui-num-cents {
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   line-height: 1;
   vertical-align: top;
   margin-inline-start: 0;
@@ -365,7 +255,7 @@
   margin: 0;
   padding-inline: var(--space-1);
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
   font-weight: var(--type-body-weight);
   line-height: var(--type-body-line);
 }
@@ -378,7 +268,7 @@
 
 .ui-lsplit-board .ui-lsplit-body {
   display: flex;
-  flex: 1 0 auto;
+  flex: 0 0 auto;
   flex-direction: column;
   gap: calc(var(--space-2) + var(--space-1) / 2);
   padding: var(--space-4);
@@ -417,7 +307,7 @@
 
 .ui-lsplit-board .ui-lsplit-part-no {
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
   line-height: var(--type-body-line);
 
   font-weight: var(--type-body-weight);}
@@ -429,7 +319,7 @@
   background: transparent;
   color: var(--color-text-muted);
   font: inherit;
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
   cursor: pointer;
 }
 
@@ -455,7 +345,7 @@
   background: var(--color-raised);
   color: var(--color-text);
   font: inherit;
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   font-weight: var(--type-body-weight);
   text-align: start;
   cursor: pointer;
@@ -470,7 +360,7 @@
 .ui-lsplit-board .ui-lsplit-project {
   overflow: hidden;
   color: inherit;
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -563,7 +453,7 @@
 .ui-lsplit-board .ui-lsplit-note {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
   line-height: var(--type-body-line);
 }
 
@@ -628,14 +518,14 @@
 .ui-lsplit-rest-label {
   display: block;
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
   line-height: var(--type-chip-line);
 }
 
 .ui-lsplit-rest-line {
   display: block;
   overflow: hidden;
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   line-height: var(--type-chip-line);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -674,7 +564,7 @@
   margin: 0;
   padding-inline: var(--space-1);
   color: var(--color-text-muted);
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   line-height: var(--type-body-line);
 }
 
@@ -711,6 +601,53 @@ html:has(.ui-lsplit-board)::-webkit-scrollbar {
   padding-inline: var(--space-side);
 }
 
+/* The board's link is 15px and its footnote 13px muted, both directly under the rest card. */
+.ui-lsplit-board .ui-lsplit-actions button {
+  font-size: var(--type-line2-size);
+}
+
+.ui-lsplit-board .ui-lsplit-actions {
+  margin-block-start: calc(var(--space-1) * -1);
+}
+
+.ui-lsplit-board .ui-lsplit-footnote {
+  margin-block-start: calc(var(--space-2) + var(--space-1) / 2);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-body-weight);
+}
+
 .ui-lsplit-board .ui-lsplit-rest {
   padding-block: calc(var(--space-3) - var(--space-1) / 2);
+}
+
+/* d4: the board's split header rhythm (header gaps 10, bar 6 above the status) and the part card gaps. */
+.ui-lsplit-board .ui-lsplit-top {
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+}
+
+.ui-lsplit-board .ui-lsplit-line {
+  gap: calc(var(--space-1) / 2);
+}
+
+.ui-lsplit-board .ui-lsplit-meta,
+.ui-lsplit-board .ui-lsplit-amount,
+.ui-lsplit-board .ui-lsplit-note {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-lsplit-board .ui-lsplit-bar {
+  margin-block-end: calc(var(--space-1) * -1);
+}
+
+.ui-lsplit-board .ui-lsplit-status {
+  font-size: calc(var(--type-caption-size) + 1px);
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-lsplit-board .ui-lsplit-status-over {
+  color: var(--color-signal-soft);
+}
+
+.ui-lsplit-board .ui-lsplit-part {
+  gap: calc(var(--space-2) + var(--space-1) / 2);
 }

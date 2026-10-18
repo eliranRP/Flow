@@ -3,7 +3,6 @@ import { HelpScreen } from "../screens/HelpScreen";
 import { AddForm } from "../screens/flow-screens";
 import { SignInScreen } from "../screens/SignInScreen";
 import { InstallScreen } from "./install-screen";
-import { InvoiceReadingFrame } from "./reference-frames.stories-support";
 import { StoryRoute } from "./story-route";
 import { ExampleBar, exampleLabel } from "./screen-stories-support";
 
@@ -39,14 +38,6 @@ export const Help: Story = {
   ),
 };
 
-export const SignInCancelled: Story = {
-  render: () => (
-    <StoryRoute entry="/sign-in?error=access_denied">
-      <SignInScreen />
-    </StoryRoute>
-  ),
-};
-
 export const AddSheet: Story = {
   parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => (
@@ -57,32 +48,11 @@ export const AddSheet: Story = {
   ),
 };
 
-// FLOW-331: the bank row says מחובר when connected, and צריך לחבר מחדש (warning) when it needs it.
-export const AddSheetBankConnected: Story = {
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
-  render: () => (
-    <StoryRoute entry="/add">
-      <ExampleBar />
-      <AddForm bank="active" />
-    </StoryRoute>
-  ),
-};
-
-export const AddSheetBankReconnect: Story = {
-  render: () => (
-    <StoryRoute entry="/add">
-      <ExampleBar />
-      <AddForm bank="reconnect" />
-    </StoryRoute>
-  ),
-};
-
-
 export const InstallAndroid: Story = {
   name: "Android (prompt)",
   render: () => (
     <StoryRoute entry="/">
-      <InstallScreen mode="android-prompt" example={<span className="t-hint">{exampleLabel}</span>} onDismiss={() => undefined} />
+      <InstallScreen mode="android-prompt" example={<span className="t-caption t-muted">{exampleLabel}</span>} onDismiss={() => undefined} />
     </StoryRoute>
   ),
 };
@@ -91,7 +61,7 @@ export const InstallAndroidSteps: Story = {
   name: "Android (no prompt)",
   render: () => (
     <StoryRoute entry="/">
-      <InstallScreen mode="android-steps" example={<span className="t-hint">{exampleLabel}</span>} onDismiss={() => undefined} />
+      <InstallScreen mode="android-steps" example={<span className="t-caption t-muted">{exampleLabel}</span>} onDismiss={() => undefined} />
     </StoryRoute>
   ),
 };
@@ -100,7 +70,7 @@ export const InstallIphone: Story = {
   name: "iPhone Safari",
   render: () => (
     <StoryRoute entry="/">
-      <InstallScreen mode="iphone" example={<span className="t-hint">{exampleLabel}</span>} onDismiss={() => undefined} />
+      <InstallScreen mode="iphone" example={<span className="t-caption t-muted">{exampleLabel}</span>} onDismiss={() => undefined} />
     </StoryRoute>
   ),
 };
@@ -109,7 +79,7 @@ export const InstallIphoneOther: Story = {
   name: "iPhone other browser",
   render: () => (
     <StoryRoute entry="/">
-      <InstallScreen mode="iphone-other" browser="other" example={<span className="t-hint">{exampleLabel}</span>} onDismiss={() => undefined} />
+      <InstallScreen mode="iphone-other" browser="other" example={<span className="t-caption t-muted">{exampleLabel}</span>} onDismiss={() => undefined} />
     </StoryRoute>
   ),
 };
@@ -118,18 +88,7 @@ export const InstallIpad: Story = {
   name: "iPad",
   render: () => (
     <StoryRoute entry="/">
-      <InstallScreen mode="ipad" example={<span className="t-hint">{exampleLabel}</span>} onDismiss={() => undefined} />
-    </StoryRoute>
-  ),
-};
-
-
-
-
-export const InvoiceReading: Story = {
-  render: () => (
-    <StoryRoute entry="/">
-      <InvoiceReadingFrame />
+      <InstallScreen mode="ipad" example={<span className="t-caption t-muted">{exampleLabel}</span>} onDismiss={() => undefined} />
     </StoryRoute>
   ),
 };

@@ -20,6 +20,8 @@ import { ConfirmSheet } from "../ui/confirm-sheet";
 import { transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
 import { IconRow } from "../ui/icon-row";
+import { DocumentCard } from "../ui/document-card";
+import { unpaidDocumentUrl } from "../unpaid";
 import { ChevronIcon, MoreIcon, ProjectsIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { List } from "../ui/list-row";
 import { ChangeAssignment, changeSaveFailure, type ChangeChoice } from "../ui/change-sheet";
@@ -143,6 +145,7 @@ export function TransactionScreen({
   sampleMeta,
   sampleFrom,
   sampleNoFooter = false,
+  sampleUnsigned = false,
   onOpenSplit,
 }: {
   sample?: NonNullable<TransactionDetail>;
@@ -162,6 +165,8 @@ export function TransactionScreen({
   sampleFrom?: string;
   /** The board's frame draws no footer under the cards. */
   sampleNoFooter?: boolean;
+  /** The board's frame draws the header figure without a minus (an expense line's figure is unsigned there). */
+  sampleUnsigned?: boolean;
   /** Reviewer preview stays on its own split instead of the ledger route. */
   onOpenSplit?: () => void;
 } = {}) {
@@ -388,7 +393,7 @@ export function TransactionScreen({
         onOpenSplit();
         return;
       }
-      void navigate(`/transactions/${transactionId}/split${search}`, { replace: true });
+      void navigate(`/transactions/${transactionId}/split-category${search}`, { replace: true });
     },
     keys: ASSIGN_KEYS,
     onSuccess: assignSaved,
@@ -411,7 +416,7 @@ export function TransactionScreen({
     onError: (_error, payload) => { restorePick(payload); },
     optimistic: (payload) => pickCache(payload, false),
     onSplit: () => {
-      void navigate(`/transactions/${transactionId}/split${search}`, { replace: true });
+      void navigate(`/transactions/${transactionId}/split-category${search}`, { replace: true });
     },
     keys: ASSIGN_KEYS,
     onSuccess: assignSaved,
@@ -440,7 +445,7 @@ export function TransactionScreen({
   );
   if (phase.kind === "loading" || phase.kind === "error" || phase.kind === "empty") {
     return frame(
-      <ScreenState title="פרטי תנועה" backTo={parent} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} loading={<DetailSkeleton />} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />,
+      <ScreenState title="פרטי תנועה" barOnly={phase.kind === "loading"} kicker={(nav ? cashLinesBackLabel(nav.list.from) : sampleFrom != null ? cashLinesBackLabel(sampleFrom) : null) ?? undefined} backTo={parent} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} loading={<DetailSkeleton />} empty={<p className="ui-page-pad t-caption t-muted">אין תנועה להצגה.</p>} />,
     );
   }
   if (!txn) {
@@ -458,7 +463,7 @@ export function TransactionScreen({
       onOpenSplit();
       return;
     }
-    void navigate(`/transactions/${detailRow.id}/split${search}`);
+    void navigate(`/transactions/${detailRow.id}/split-category${search}`);
   }
   function commitPick(kind: "project" | "category", id: string) {
     const previous = { projectId, categoryId };
@@ -540,7 +545,7 @@ export function TransactionScreen({
   // A split's row is set only while no review is open on the line, and not in the reviewer's preview.
   const reviewBlocked = txn.review_status === "open" && txn.review_reason !== "split_mismatch";
   splitOpen.current = !(onOpenSplit || holdWrites || reviewBlocked);
-  const splitTo = `/transactions/${txn.id}/${splitByCategory ? "split-category" : "split"}${search}`;
+  const splitTo = `/transactions/${txn.id}/split-category${search}`;
   // The reason a line is out of the P&L, as the counted-in row names it (FLOW-366, guide §7.10).
   const category = categories.data?.find((entry) => entry.id === shownCategoryId);
   const countedReason = loanLine ? COUNTED_REASON_LOAN : category?.in_rehab === true ? COUNTED_REASON_RENO : null;
@@ -556,6 +561,9 @@ export function TransactionScreen({
     if (holdWrites || cashLine.isPending || (sample == null && blocked())) return;
     cashLine.mutate({ id: detailRow.id, party, next, previous: cashOverride, on: next, undo: false });
   }
+  const documentUrl = unpaidDocumentUrl(txn);
+  // A loan line the server fixes by its category, with no parts of its own, is the principal alone: the board names it so.
+  const heading = loanLine && loanSplitView == null && !loanSplitFlag ? `${party} · קרן` : party;
   const pending = txn.review_status === "open";
   const amountText = formatAmountText(absAgorot(txn.amount_net), txn.currency ?? "ILS", { detail: true });
   return frame(
@@ -563,13 +571,13 @@ export function TransactionScreen({
       <TransactionTopBar
         fallback={parent}
         backLabel={nav ? cashLinesBackLabel(nav.list.from) : sampleFrom != null ? cashLinesBackLabel(sampleFrom) : null}
-        title={`${party} · ${amountText}`}
+        title={`${heading} · ${amountText}`}
         end={menuButton}
       />
       <CardSwipe key={txn.id} canNext={nav?.next != null} canPrev={nav?.prev != null} enter={nav?.enter} peekNext={peekNext} peekPrev={peekPrev} onStep={(step) => { nav?.move(step, "swipe"); }}>
         <div className="ui-txn-body">
           <div className="ui-txn-intro">
-          <TxnHead txn={txn} party={party} moneyIn={moneyIn} meta={meta ?? undefined} />
+          <TxnHead txn={txn} party={heading} moneyIn={moneyIn} meta={meta ?? undefined} unsigned={sampleUnsigned} />
           {pending ? (
             <Link className="ui-txn-banner" to={txn.review_id ? `/review?item=${encodeURIComponent(txn.review_id)}&from=all` : "/review?from=all"}>
               <span className="ui-txn-banner-text">השורה מחכה לאישור שלך</span>
@@ -594,9 +602,9 @@ export function TransactionScreen({
           {/* FLOW-114: a matched loan payment shows its loan here instead, and its category is locked. */}
           <LoanCategoryRow transactionId={txn.id} split={txn.loan_split} direction={txn.direction} currency={txn.currency} docDate={txn.doc_date} active={sample == null} readOnly={holdWrites}>
             {holdWrites ? (
-              <IconRow icon={<TagIcon />} label="קטגוריה" value={shownCategory} valueTone={shownCategory === "בחרו קטגוריה" ? "accent" : undefined} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} />
+              <IconRow className="ui-txn-row-strong" icon={<TagIcon />} label="קטגוריה" value={shownCategory} valueTone={shownCategory === "בחרו קטגוריה" ? "accent" : undefined} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} />
             ) : (
-              <IconRow icon={<TagIcon />} label="קטגוריה" value={shownCategory} valueTone={shownCategory === "בחרו קטגוריה" ? "accent" : undefined} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} buttonRef={categoryRowRef} onClick={() => {
+              <IconRow className="ui-txn-row-strong" icon={<TagIcon />} label="קטגוריה" value={shownCategory} valueTone={shownCategory === "בחרו קטגוריה" ? "accent" : undefined} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} buttonRef={categoryRowRef} onClick={() => {
                 setChangeStart("category");
                 setChangeSheet(true);
               }} />
@@ -621,6 +629,13 @@ export function TransactionScreen({
           openSheet={sample ? sampleSheet : undefined}
           context={`${shownProject} · ${shownCategory}`}
         />
+        {documentUrl == null ? null : (
+          <DocumentCard
+            href={documentUrl}
+            title="חשבונית"
+            note={txn.doc_kind === "photo" ? `צולמה ${txn.doc_date.slice(8, 10)}/${txn.doc_date.slice(5, 7)} · הקישו להגדלה` : "PDF · הקישו לפתיחה"}
+          />
+        )}
         <List layout="inset">
           <CountedInRow
             pnl={!pnl.out}
@@ -634,9 +649,9 @@ export function TransactionScreen({
             buttonRef={countedRef}
           />
           {holdWrites ? (
-            <IconRow icon={<SplitIcon />} label="פיצול" value={lineSplitHint ?? "בין פרויקטים או לפי קטגוריות"} />
+            <IconRow titled className="ui-txn-row-split" icon={<SplitIcon />} label="פיצול" value={lineSplitHint ?? "בין פרויקטים או לפי קטגוריות"} />
           ) : (
-            <IconRow icon={<SplitIcon />} label="פיצול" value={lineSplitHint ?? "בין פרויקטים או לפי קטגוריות"} disabled={loanSplitFlag || loanSplitView != null} onClick={() => {
+            <IconRow titled className="ui-txn-row-split" icon={<SplitIcon />} label="פיצול" value={lineSplitHint ?? "בין פרויקטים או לפי קטגוריות"} disabled={loanSplitFlag || loanSplitView != null} onClick={() => {
               if (onOpenSplit) {
                 onOpenSplit();
                 return;
@@ -704,7 +719,7 @@ export function TransactionScreen({
       />
       <Sheet open={menu && canDelete} onOpenChange={setMenu} title="עוד" returnFocusRef={moreRef}>
         <div className="ui-stack">
-          <Button variant="danger" icon={<TrashIcon />} onClick={() => { setMenu(false); setConfirm(true); }}>מחיקה</Button>
+          <Button variant="danger-link" icon={<TrashIcon />} onClick={() => { setMenu(false); setConfirm(true); }}>מחיקה</Button>
         </div>
       </Sheet>
       <ConfirmSheet

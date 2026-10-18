@@ -1,0 +1,12 @@
+{
+  "Onboarding": "/e2e/setup/welcome",
+  "OnboardingBusiness": "/e2e/setup/business",
+  "OnboardingConnect": "/e2e/setup/connect",
+  "OnboardingSkip": "/e2e/setup/skip",
+  "OnboardingProjects": "/e2e/setup/projects",
+  "OnboardingLoans": "/e2e/setup/loans",
+  "OnboardingJev": "/e2e/setup/jev",
+  "OnboardingReview": "/e2e/setup/review",
+  "OnboardingInstall": "/e2e/setup/install",
+  "OnboardingDone": "/e2e/setup/done"
+}

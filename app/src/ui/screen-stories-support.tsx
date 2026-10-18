@@ -53,10 +53,10 @@ export const sampleReview: ReviewRow = {
 export const exampleLabel = "נתוני דוגמה · Example data";
 
 export function ExampleBar() {
-  return <p className="ui-example-bar t-hint">{exampleLabel}</p>;
+  return <p className="ui-example-bar t-caption t-muted">{exampleLabel}</p>;
 }
 
-export const exampleOnBand = <span className="ui-example t-hint">{exampleLabel}</span>;
+export const exampleOnBand = <span className="ui-example t-caption t-muted">{exampleLabel}</span>;
 
 export const bareReview: ReviewRow = {
   ...sampleReview,
@@ -84,9 +84,6 @@ export const pagesBusiness = {
   jev: { enabled: false, mode: "shadow" as const, threshold: 0.9, status: "ready" as const },
   assistant: { state: "connected" as const, scope: "read_write" as const, id: "mcp-1" },
 };
-
-export const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
-
 
 export const periodMonths: NonNullable<ProfitMonths> = {
   basis: "invoiced",

@@ -1,6 +1,6 @@
 # Project
 
-**Status:** [02-project-v2](../screens.md#02-project-v2) is pending owner approval and supersedes [02-project](../wireframes/02-project.png). The v2 image adds the after-overhead switch and the before / share / after card. Every number on it is example data.
+**Status:** [02-project-v2](../screens.md#02-project-v2) is pending owner approval and supersedes 02-project. The v2 image adds the after-overhead switch and the before / share / after card. Every number on it is example data.
 **Numbers:** Project to date, [calculations](../calculations.md). Budget card only when a budget is set ([0014](../../decisions/0014-optional-project-budget.md)).
 
 ## Purpose

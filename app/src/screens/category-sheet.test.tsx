@@ -76,7 +76,7 @@ describe("category sheet: move all lines and delete (FLOW-405)", () => {
     expect(hide).toBeLessThan(remove);
     // FLOW-341: one move row, and no row carries a sentence.
     expect(names.filter((name) => name.includes("מיזוג"))).toEqual([]);
-    expect(sheet.querySelectorAll(".t-hint")).toHaveLength(0);
+    expect(sheet.querySelectorAll(".t-caption.t-muted")).toHaveLength(0);
     expect(within(sheet).getByRole("switch", { name: "נספרת בשיפוץ" })).toBeChecked();
   });
 

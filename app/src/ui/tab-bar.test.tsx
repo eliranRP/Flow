@@ -36,7 +36,7 @@ describe("TabBar", () => {
     const nav = screen.getByRole("navigation", { name: "ניווט ראשי" });
     const links = [...nav.querySelectorAll("a")];
     expect(links.map((link) => link.textContent.trim())).toEqual(["בית", "פרויקטים", "הלוואות", "קבועים"]);
-    expect(links.map((link) => link.getAttribute("href"))).toEqual(["/", "/projects", "/settings/loans", "/recurring"]);
+    expect(links.map((link) => link.getAttribute("href"))).toEqual(["/", "/projects", "/loans", "/recurring"]);
     expectTarget(screen.getByRole("link", { name: "הלוואות" }));
   });
 
@@ -65,16 +65,16 @@ describe("TabBar", () => {
     expect(screen.getByRole("link", { name: "בית" })).not.toHaveAttribute("aria-current");
   });
 
-  it("marks no tab current on settings, and the loans tab on the loans page", () => {
+  it("marks Home current on settings, and the loans tab on the loans page", () => {
     const { unmount } = render(
       <MemoryRouter initialEntries={["/settings"]}>
         <TabBar />
       </MemoryRouter>,
     );
-    expect(document.querySelector('[aria-current="page"]')).toBeNull();
+    expect(screen.getByRole("link", { name: "בית" })).toHaveAttribute("aria-current", "page");
     unmount();
     render(
-      <MemoryRouter initialEntries={["/settings/loans/loan-1"]}>
+      <MemoryRouter initialEntries={["/loans/loan-1"]}>
         <TabBar />
       </MemoryRouter>,
     );
@@ -109,16 +109,17 @@ describe("tabSection", () => {
     ["/", "home"],
     ["/review", "home"],
     ["/unpaid", "home"],
-    ["/flow/expense/category/ILS/c1", "home"],
     ["/profit", "home"],
     ["/cash/2026-06", "home"],
     ["/projects/villa", "projects"],
-    ["/settings/loans", "loans"],
+    ["/projects/villa/profit", "home"],
+    ["/projects/villa/profit/2026-06", "home"],
+    ["/loans", "loans"],
     ["/loans", "loans"],
     ["/recurring", "recurring"],
     ["/missing-bills", "recurring"],
-    ["/settings", null],
-    ["/settings/categories", null],
+    ["/settings", "home"],
+    ["/settings/categories", "home"],
     ["/add", null],
   ] as const)("maps %s to %s", (path, expected) => {
     expect(tabSection(path)).toBe(expected);

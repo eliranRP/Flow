@@ -5,7 +5,7 @@ import { shownCompanyFor } from "./lib/company-header";
 import { usePreviewSearch } from "./preview";
 import { readRoleCache, VIEWER_NOTE } from "./company-role-cache";
 import { MY_COMPANIES_KEY, useMyCompaniesQuery, useTeamUser } from "./team-queries";
-import { TextLink } from "./ui/text-link";
+import { Button } from "./ui/button";
 
 type PinnedRole = "owner" | "editor" | "viewer";
 
@@ -116,7 +116,7 @@ export function ViewerScope({ children }: { children: ReactNode }) {
   return <ViewerNoteContext.Provider value={noted ? id : null}>{children}</ViewerNoteContext.Provider>;
 }
 
-export function ViewerNote({ className = "ui-page-pad t-hint ui-viewer-note" }: { className?: string }) {
+export function ViewerNote({ className = "ui-page-pad t-caption t-muted ui-viewer-note" }: { className?: string }) {
   const id = useContext(ViewerNoteContext);
   const role = useCompanyRole();
   const retry = useRetryCompanyRole();
@@ -130,7 +130,7 @@ export function ViewerNote({ className = "ui-page-pad t-hint ui-viewer-note" }: 
       {role === "unknown" ? (
         <>
           {" "}
-          <TextLink size="hint" chevron={false} onClick={retry}>ניסיון חוזר</TextLink>
+          <Button variant="link" onClick={retry} className="ui-btn-link-hint">ניסיון חוזר</Button>
         </>
       ) : null}
     </p>

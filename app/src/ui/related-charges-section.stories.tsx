@@ -27,7 +27,5 @@ type Story = StoryObj<typeof meta>;
 export const Hurts: Story = { name: "An expense up 92%" };
 /** An expense down: the change is not in the signal colour. */
 export const Good: Story = { name: "An expense down", args: { sample: "cheaper" } };
-/** The usual amount: the change reads כרגיל. */
-export const Flat: Story = { name: "The usual amount", args: { sample: "steady" } };
 /** Income down 20%: the signal colour, since income falling hurts. */
 export const Income: Story = { name: "Income down 20%", args: { sample: "rent" } };

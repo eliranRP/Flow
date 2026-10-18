@@ -54,7 +54,7 @@ function AmountChangePill({
           <bdi dir="ltr">{text}</bdi>
         </span>
       </span>
-      {comparison === "" ? null : <span className="t-label text-on-band-secondary">{comparison}</span>}
+      {comparison === "" ? null : <span className="t-line2 text-on-band-secondary">{comparison}</span>}
     </span>
   );
 }
@@ -81,7 +81,7 @@ function PercentChangePill({ percent, comparison, onBand = false, upHurts = fals
           <bdi dir="ltr">{change.text}</bdi>
         </span>
       </span>
-      <span className={onBand ? "t-label text-on-band-secondary" : "t-label text-text-secondary"}>{comparison}</span>
+      <span className={onBand ? "t-line2 text-on-band-secondary" : "t-line2 text-text-secondary"}>{comparison}</span>
     </span>
   );
 }

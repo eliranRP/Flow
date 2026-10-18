@@ -23,7 +23,7 @@ export const mailboxCharges: PartyCharges = {
 /** FLOW-366 board frame: an invented monthly charge of 980 with its last twelve months, this month 1,240. */
 export const boardCharges: PartyCharges = {
   transaction_id: "t-board",
-  party: { direction: "expense", id: "s-sample", name: "ספק לדוגמה", currency: "USD" },
+  party: { direction: "expense", id: "s-sample", name: "Hardwood Depot", currency: "USD" },
   month: "2026-10",
   month_amount_minor: -124_000n,
   typical_amount_minor: -98_000n,

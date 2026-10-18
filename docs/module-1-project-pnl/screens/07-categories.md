@@ -1,6 +1,6 @@
 # Categories
 
-**Status:** Approved. Wireframe [07-categories](../wireframes/07-categories.png).
+**Status:** Approved. Wireframe 07-categories.
 **Rules:** [0008](../../decisions/0008-flat-categories-hide-or-merge.md). Flat list. No sub-groups.
 
 ## Purpose

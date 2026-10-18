@@ -64,12 +64,8 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
-/** Three parts: a payment with no fees. */
-export const ThreeParts: Story = { args: { fields: FIELDS.slice(0, 3), total: "₪6,160" } };
 /** The parts no longer add up to the line: שמירה stays off and the line says the total it needs. */
 export const DoesNotAddUp: Story = { args: { fields: [{ part: "principal", value: "4000" }, ...FIELDS.slice(1)], total: "₪6,050", problem: "חסרים ₪150 כדי להגיע לסכום השורה." } };
-export const Saving: Story = { args: { saving: true } };
-export const Unmatching: Story = { args: { unmatching: true } };
 /** A part waits for review: one line above the parts says why. */
 export const NeedsReview: Story = { args: { note: "סכום השורה עלה ב־₪100, אז החלקים צריכים בדיקה. בדקו ושמרו." } };
 /** A dollar loan. Largest amounts still fit at 320. */

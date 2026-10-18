@@ -3,24 +3,29 @@
 .ui-edge-back {
   position: fixed;
   inset-block-start: clamp(
-    calc(env(safe-area-inset-top, 0px) + 40px),
+    calc(env(safe-area-inset-top, 0px) + var(--space-10)),
     var(--edge-back-y, 50dvh),
-    calc(100dvh - env(safe-area-inset-bottom, 0px) - 40px)
+    calc(100dvh - env(safe-area-inset-bottom, 0px) - var(--space-10))
   );
-  inset-inline-start: -36px;
+  inset-inline-start: calc(var(--edge-back-rest) * -1);
   z-index: 40;
   display: grid;
   place-items: center;
   width: 40px;
   height: 40px;
-  margin-block-start: -20px;
-  border-radius: 999px;
+  margin-block-start: calc(var(--space-5) * -1);
+  border-radius: var(--radius-chip);
   background: var(--color-raised);
   color: var(--color-text);
   /* An inset ring, not a drop shadow (DESIGN-RULES 2.6): the edge on a same-colour page. */
   box-shadow: inset 0 0 0 1px var(--color-control-border);
   transform: translateX(var(--edge-back-x, 0px));
   pointer-events: none;
+}
+
+/* A sheet is open: its scrim and panel sit under the mark, so the mark hides rather than draw over them. */
+html:has([data-vaul-drawer][data-state="open"]) .ui-edge-back {
+  visibility: hidden;
 }
 
 .ui-edge-back-armed {
@@ -31,6 +36,6 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .ui-edge-back {
-    transition: background-color 120ms ease, color 120ms ease;
+    transition: background-color var(--motion-press) ease, color var(--motion-press) ease;
   }
 }

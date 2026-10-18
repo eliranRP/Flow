@@ -1,4 +1,4 @@
-import { initialsOf, type ProjectCashRow, type ProjectsCashMonth } from "@flow/shared";
+import { type ProjectCashRow, type ProjectsCashMonth } from "@flow/shared";
 
 /**
  * FLOW-445: the Projects tab's list, as pure functions. The rows come from `projects_cash_month`;
@@ -10,11 +10,6 @@ type Cash = ProjectCashRow["cash"];
 /** A project's net for the month in one currency (minor units); zero when it has no line in it. */
 export function netIn(cash: Cash, currency: string): number {
   return cash.find((row) => row.currency === currency)?.net_minor ?? 0;
-}
-
-/** Initials for the circle, the same rule as the shared Avatar, so a group row and a person row agree. */
-export function projectInitials(name: string): string {
-  return initialsOf(name)?.text ?? "";
 }
 
 /** "חדש" while the project has no line, invoice or month. A finished project shows "הסתיים" instead. */

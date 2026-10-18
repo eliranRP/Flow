@@ -25,11 +25,9 @@ const focus = ({ canvasElement }: { canvasElement: HTMLElement }) => {
 };
 
 export const Default: Story = {};
-export const Empty: Story = { args: { defaultValue: "", placeholder: "למשל שיפוץ דירה" } };
 export const Focused: Story = { play: focus };
 export const Error: Story = { args: { defaultValue: "", error: "חסר שם" } };
 export const Disabled: Story = { args: { disabled: true } };
-export const ReadOnly: Story = { args: { readOnly: true, defaultValue: "טק-ליין, שמור" } };
 export const LongHebrew: Story = { args: { label: longHebrew, defaultValue: longHebrew } };
 /** The focus border changes at once under reduced motion. */
 export const ReducedMotion: Story = { args: { placeholder: "שם" }, decorators: [forceReducedMotion], play: focus };

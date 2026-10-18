@@ -40,7 +40,6 @@ function renderDrawer(props: Partial<Parameters<typeof MonthDrawer>[0]> = {}) {
       selectedKey={currentKey}
       firstKey={`${String(year)}-03`}
       base="ILS"
-      search=""
       onPick={onPick}
       {...props}
     />,

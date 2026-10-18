@@ -99,8 +99,8 @@ function caseRow(kind: ReviewCase): ReviewRow {
     source: "photo",
     auto_approved_today: 12,
   };
-  if (kind === "none") return { ...base, project_id: null, project_name: null, project_suggested: false, category_suggested: false, supplier_name: "Northwind Supply", source: "mercury" };
-  if (kind === "split") return { ...base, project_id: null, project_name: null, category_id: null, category_name: null, project_suggested: false, category_suggested: false, reason: null, pnl_role: "shared", share_count: 3, supplier_name: "Summit Equipment" };
+  if (kind === "none") return { ...base, description: "Alder Supply", supplier_name: "Alder Supply", amount_net: -41_218n, doc_date: "2026-10-10", project_id: null, project_name: null, project_suggested: false };
+  if (kind === "split") return { ...base, project_id: null, project_name: null, project_suggested: false, category_suggested: false, reason: null, pnl_role: "shared", share_count: 3, supplier_name: "Summit Equipment" };
   if (kind === "photo") return { ...base, source: "photo", supplier_name: "Voltline Electric" };
   return base;
 }
@@ -109,8 +109,8 @@ function caseRow(kind: ReviewCase): ReviewRow {
 export function e2eSplitParts(transactionId: string | null | undefined): Array<{ project: string; category: string; amount: string; rest: boolean }> | null {
   if (transactionId !== "t-r1" || seedCase !== "split") return null;
   return [
-    { project: "שיפוץ הרצל 12", category: "ציוד והשכרה", amount: "$340.00", rest: false },
-    { project: "וילה רעננה", category: "חומרים", amount: "$420.00", rest: false },
+    { project: "שיפוץ הרצל 12", category: "ציוד והשכרה", amount: "$340", rest: false },
+    { project: "וילה רעננה", category: "חומרים", amount: "$420", rest: false },
     { project: "שיפוץ הרצל 12", category: "חומרים", amount: "$524.50", rest: true },
   ];
 }
@@ -129,7 +129,7 @@ function ensure(size?: number, kind?: ReviewCase | null): ReviewRow[] {
 
 /** The size belongs to the seeded queue: a page with another `rows` (or none, 5) seeds afresh. */
 export function currentRows(size?: number, kind?: ReviewCase | null): ReviewRow[] {
-  return ensure(size != null && size > 0 ? size : 7, kind);
+  return ensure(size ?? 7, kind);
 }
 
 export function subscribe(listener: () => void): () => void {
@@ -211,12 +211,52 @@ export const e2eFitJev: JevQueueData = {
   },
 };
 
-/** The project list the picker sheet shows in a preview (the live dashboard read is off there). Invented names. */
+/** The project list the picker sheet shows in a preview (the live dashboard read is off there). Invented names, in the board's order: five rows, the suggested one first, the overhead one last. */
 export const e2eProjectChoices: ChangeChoice[] = [
-  { id: "p1", name: "שיפוץ הרצל 12", code: "P-12", status: "active" },
-  { id: "p2", name: "וילה רעננה", code: "P-07", status: "active" },
-  { id: "p3", name: "מחסן הנמל", code: "P-03", status: "finished" },
+  { id: "p1", name: "הרצל 12 • שיפוץ", status: "active" },
+  { id: "p2", name: "וילה רעננה • דופלקס להשכרה", status: "active" },
+  { id: "p3", name: "מחסן הנמל • השכרה", status: "active" },
+  { id: "p4", name: "דירת הים • שיפוץ", status: "active" },
+  { id: "p5", name: "הוצאות כלליות • תקורה", status: "active" },
 ];
+
+/** FLOW-365b: what the done frame says (the board's "אישרת 7 פריטים עכשיו." and the auto count). */
+export const E2E_DONE_COUNTS = { approved: 7, auto: 12 };
+
+/** The none case's Jev read: a new supplier with no project, so Jev gives its reason and nothing to fill. */
+const e2eNoneJev: JevQueueData = {
+  connectorOn: true,
+  byId: {
+    "t-r1": {
+      suggestionId: "s-none",
+      transactionId: "t-r1",
+      project: null,
+      category: null,
+      why: { reason: "new_party", partyFilings: 0, matchingFilings: 0 },
+    },
+  },
+};
+
+/** The split case's Jev read: a repeat supplier whose earlier invoices went to one project. */
+const e2eSplitJev: JevQueueData = {
+  connectorOn: true,
+  byId: {
+    "t-r1": {
+      suggestionId: "s-split",
+      transactionId: "t-r1",
+      project: { id: "p1", name: "שיפוץ הרצל 12" },
+      category: null,
+      why: { reason: "usual_for_party", partyFilings: 6, matchingFilings: 6 },
+    },
+  },
+};
+
+/** The Jev read a `&case=` card shows under its rows (none: why it is new; split: the repeat supplier). */
+export function e2eCaseJev(kind: string | null): JevQueueData | undefined {
+  if (kind === "none") return e2eNoneJev;
+  if (kind === "split") return e2eSplitJev;
+  return undefined;
+}
 
 /** FLOW-365: the suggest case's Jev read: a supplier that repeats its project, so Jev's line sits under the card. */
 export const e2eSuggestJev: JevQueueData = {

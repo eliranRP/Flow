@@ -1,11 +1,7 @@
 import type { ReactNode } from "react";
 import { useGoBack } from "./back";
 import { FocusTitle } from "./focus-title";
-import { TextLink } from "./text-link";
-
-export function BandHero({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={className == null ? "ui-band-hero" : `ui-band-hero ${className}`}>{children}</div>;
-}
+import { Button } from "./button";
 
 export function FormError({ children }: { children: ReactNode }) {
   return (
@@ -25,13 +21,13 @@ export function FigureLine({ label, value }: { label: string; value: string }) {
 
 /** Shown only when a category line includes this project's share of a shared cost. */
 export function SharedCostNote() {
-  return <p className="ui-page-pad ui-shared-note t-hint">כולל חלק מהוצאות משותפות</p>;
+  return <p className="ui-page-pad ui-shared-note t-caption t-muted">כולל חלק מהוצאות משותפות</p>;
 }
 
 export function SectionHead({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <div className="ui-section-head">
-      <h2 className="t-heading">{title}</h2>
+      <h2 className="t-sheet">{title}</h2>
       {children}
     </div>
   );
@@ -54,7 +50,7 @@ export function SignInPanel({ children }: { children: ReactNode }) {
 }
 
 export function SignInHeading({ children }: { children: ReactNode }) {
-  return <FocusTitle className="t-title-2 ui-signin-heading">{children}</FocusTitle>;
+  return <FocusTitle className="t-name ui-signin-heading">{children}</FocusTitle>;
 }
 
 export function SignInActions({ children }: { children: ReactNode }) {
@@ -66,15 +62,15 @@ export function SignInHelp({ children }: { children: ReactNode }) {
 }
 
 export function SignInPrivacy({ children }: { children: ReactNode }) {
-  return <p className="ui-signin-privacy t-hint">{children}</p>;
+  return <p className="ui-signin-privacy t-caption t-muted">{children}</p>;
 }
 
 export function HelpMail({ email }: { email: string }) {
   return (
     <p className="ui-page-pad mt-4">
-      <TextLink href={`mailto:${email}`} chevron={false}>
+      <Button variant="link" href={`mailto:${email}`}>
         {email}
-      </TextLink>
+      </Button>
     </p>
   );
 }
@@ -83,15 +79,15 @@ export function HelpBack({ to = "/sign-in" }: { to?: string }) {
   const goBack = useGoBack();
   return (
     <p className="ui-page-pad">
-      <TextLink
-        tone="quiet"
-        chevron={false}
+      <Button
+        variant="link"
+        quiet
         onClick={() => {
           goBack(to);
         }}
       >
         חזרה
-      </TextLink>
+      </Button>
     </p>
   );
 }

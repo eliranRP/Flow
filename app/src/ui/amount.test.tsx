@@ -17,19 +17,19 @@ describe("Amount", () => {
   });
 
   it("steps a hero figure down from state, without writing the class onto the node first", () => {
-    expect(heroStepClass("hero", 0)).toBe("t-hero");
-    expect(heroStepClass("hero", 1)).toBe("t-display");
-    expect(heroStepClass("display", 0)).toBe("t-display");
-    expect(heroStepClass("display", 2)).toBe("t-title-2");
-    expect(heroStepClass("display", 9)).toBe("t-title-3");
-    expect(heroStepClass("list", 3)).toBe("t-amount");
+    expect(heroStepClass("hero", 0)).toBe("t-band");
+    expect(heroStepClass("hero", 1)).toBe("t-detail");
+    expect(heroStepClass("display", 0)).toBe("t-detail");
+    expect(heroStepClass("display", 2)).toBe("t-name");
+    expect(heroStepClass("display", 9)).toBe("t-btn");
+    expect(heroStepClass("list", 3)).toBe("t-body");
     const rect = Object.getOwnPropertyDescriptor(Element.prototype, "getBoundingClientRect");
     if (!rect) throw new Error("getBoundingClientRect is missing");
     const original = rect.value as (this: Element) => DOMRect;
     const client = Object.getOwnPropertyDescriptor(Element.prototype, "clientWidth");
     Element.prototype.getBoundingClientRect = function (this: Element) {
       if (this.getAttribute("aria-hidden") === "true") {
-        const hero = this.className.includes("t-hero");
+        const hero = this.className.includes("t-band");
         return DOMRect.fromRect({ width: hero ? 480 : 120, height: 44 });
       }
       return original.call(this);
@@ -42,8 +42,8 @@ describe("Amount", () => {
         </div>,
       );
       const shown = screen.getByText("₪12,345,678", { selector: "bdi[dir=ltr]" });
-      expect(shown).toHaveClass("t-display");
-      expect(shown).not.toHaveClass("t-hero");
+      expect(shown).toHaveClass("t-detail");
+      expect(shown).not.toHaveClass("t-band");
     } finally {
       Object.defineProperty(Element.prototype, "getBoundingClientRect", rect);
       if (client) Object.defineProperty(Element.prototype, "clientWidth", client);
@@ -56,11 +56,11 @@ describe("Amount", () => {
     if (!rect) throw new Error("getBoundingClientRect is missing");
     const original = rect.value as (this: Element) => DOMRect;
     const client = Object.getOwnPropertyDescriptor(Element.prototype, "clientWidth");
-    const widths: Record<string, number> = { "t-hero": 400, "t-display": 300, "t-title-1": 240, "t-title-2": 190, "t-title-3": 170 };
+    const widths: Record<string, number> = { "t-band": 400, "t-detail": 300, "t-total": 240, "t-name": 190, "t-btn": 170 };
     const probed: string[] = [];
     Element.prototype.getBoundingClientRect = function (this: Element) {
       if (this.getAttribute("aria-hidden") === "true") {
-        const type = this.className.split(" ").find((name) => name in widths) ?? "t-hero";
+        const type = this.className.split(" ").find((name) => name in widths) ?? "t-band";
         probed.push(type);
         return DOMRect.fromRect({ width: widths[type] ?? 0, height: 40 });
       }
@@ -83,9 +83,9 @@ describe("Amount", () => {
       );
       // The agorot sit in their own smaller span, so match the whole figure by its text content.
       const shown = screen.getByText((_, el) => el?.matches("bdi[dir=ltr]") === true && el.textContent === "−₪99,999,999.99");
-      expect(shown).toHaveClass("t-title-2");
-      expect(shown).not.toHaveClass("t-display");
-      expect(probed).not.toContain("t-hero");
+      expect(shown).toHaveClass("t-name");
+      expect(shown).not.toHaveClass("t-detail");
+      expect(probed).not.toContain("t-band");
     } finally {
       Object.defineProperty(Element.prototype, "getBoundingClientRect", rect);
       if (client) Object.defineProperty(Element.prototype, "clientWidth", client);
@@ -205,13 +205,13 @@ describe("Amount", () => {
 
   it("uses the amount style for list figures", () => {
     render(<Amount agorot={150000n} size="list" />);
-    expect(screen.getByText("₪1,500")).toHaveClass("t-amount");
+    expect(screen.getByText("₪1,500")).toHaveClass("t-body");
   });
 
   it("draws a list figure's cents as a small raised span", () => {
     const { container } = render(<Amount agorot={1234_50n} size="list" cents="always" />);
     const cents = container.querySelector("bdi .ui-num-cents");
     expect(cents?.textContent).toBe(".50");
-    expect(container.querySelector("bdi")).toHaveClass("t-amount");
+    expect(container.querySelector("bdi")).toHaveClass("t-body");
   });
 });

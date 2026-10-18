@@ -11,7 +11,6 @@ export const LEDGER_FOCUS_KEYS = [
   "project-waiting",
   "filed-today",
   "txn",
-  "breakdown",
   "breakdown-lines",
   "missing-bills",
   "expected-months",

@@ -56,16 +56,7 @@ async function layoutProblems(page: Page): Promise<string[]> {
     }
     if (offenders.length > 0) problems.push(`overflow: ${offenders.slice(0, 6).join("; ")}`);
 
-    const word = document.querySelector(".text-wordmark");
-    const pill = document.querySelector(".ui-band-period");
-    if (word instanceof HTMLElement && pill instanceof HTMLElement) {
-      const a = word.getBoundingClientRect();
-      const b = pill.getBoundingClientRect();
-      const separated = a.right <= b.left + 0.5 || b.right <= a.left + 0.5 || a.bottom <= b.top + 0.5 || b.bottom <= a.top + 0.5;
-      if (!separated) problems.push("period pill overlaps the wordmark");
-    }
-
-    const singleLine = document.querySelectorAll(".ui-period-label, .ui-chip-label, .ui-pill-label, .ui-text-link-label, .ui-seg-btn, .ui-seg-label");
+    const singleLine = document.querySelectorAll(".ui-chip-label, .ui-pill-label, .ui-btn-link .ui-btn-label, .ui-seg-btn, .ui-seg-label");
     for (const node of singleLine) {
       if (!(node instanceof HTMLElement)) continue;
       const style = getComputedStyle(node);
@@ -78,13 +69,6 @@ async function layoutProblems(page: Page): Promise<string[]> {
         const line = Number.parseFloat(style.lineHeight) || rects[0]?.height || 0;
         if (line > 0 && span > line * 1.4) problems.push(`${node.className || node.tagName} wraps`);
       }
-    }
-
-    const chevron = document.querySelector(".ui-period-chevron");
-    if (pill instanceof HTMLElement && chevron instanceof HTMLElement) {
-      const host = pill.getBoundingClientRect();
-      const box = chevron.getBoundingClientRect();
-      if (box.width < 8 || box.left < host.left - 1 || box.right > host.right + 1) problems.push("period chevron is clipped");
     }
 
     const title = document.querySelector(".ui-budget-card .ui-budget-head");
@@ -196,23 +180,6 @@ test("the split-by-category stories stay inside 320 and 390, light and dark (FLO
   expect(failures, failures.join("\n")).toEqual([]);
 });
 
-test("the closed period picker is only the band and the on-band pill", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/iframe.html?id=components-periodpicker--closed&globals=theme:light&viewMode=story", { waitUntil: "domcontentloaded" });
-  await page.locator(".ui-band-period").waitFor();
-  await expect(page.locator("[role=dialog]")).toHaveCount(0);
-  await expect(page.locator("[data-vaul-overlay]")).toHaveCount(0);
-  await expect(page.locator(".ui-band-label")).toHaveCount(0);
-  const paint = await page.locator(".ui-band-period").evaluate((el) => {
-    const style = getComputedStyle(el);
-    return { background: style.backgroundColor, color: style.color };
-  });
-  expect(paint.background).toBe("rgb(255, 255, 255)");
-  expect(paint.color).toBe("rgb(29, 23, 40)");
-  const clipped = await page.locator(".ui-band").evaluate((el) => el.getBoundingClientRect().top < -1);
-  expect(clipped).toBe(false);
-});
-
 test("long hebrew and large amount stories stay inside 390 and 320", async ({ page }) => {
   test.setTimeout(180_000);
   const index = (await (await page.request.get("/index.json")).json()) as StoryIndex;
@@ -288,7 +255,7 @@ test("the assistant settings stories stay inside 320, 360, and 390", async ({ pa
           const problems: string[] = [];
           const seen = new Set<Element>();
           for (const root of roots) {
-            for (const node of root.querySelectorAll(".ui-row-title, .ui-row-hint, .t-hint, .ui-field-label, .t-title-2, .ui-section-title, .ui-btn-label, p")) {
+            for (const node of root.querySelectorAll(".ui-row-title, .ui-row-hint, .t-caption.t-muted, .ui-field-label, .t-name, .ui-section-title, .ui-btn-label, p")) {
               if (!(node instanceof HTMLElement) || seen.has(node)) continue;
               seen.add(node);
               const style = getComputedStyle(node);
@@ -317,7 +284,6 @@ test("sheet titles stay on screen at 320 and 390", async ({ page }) => {
   const cases = [
     ["screens-routes--change-sheet", "שינוי שיוך"],
     ["screens-routes--change-project-picker", "בחירת פרויקט"],
-    ["components-periodpicker--range", "טווח מותאם"],
   ] as const;
   const viewports = [
     { width: 320, height: 693 },
@@ -419,28 +385,6 @@ test("change sheet picks a project and a category without a summary save", async
   await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();
 });
 
-// FLOW-351: the Open story draws the shared sheet, whose whole-period row is הכול.
-test("the whole-period option stays inside the sheet and nothing uses a native title", async ({ page }) => {
-  const viewports = [
-    { width: 320, height: 693 },
-    { width: 390, height: 844 },
-  ] as const;
-  for (const viewport of viewports) {
-    await page.setViewportSize(viewport);
-    await page.goto("/iframe.html?id=components-periodpicker--open&viewMode=story", { waitUntil: "domcontentloaded" });
-    const option = page.getByRole("radio", { name: "הכול" });
-    await expect(option).toBeVisible();
-    await expect(async () => {
-      const box = await option.boundingBox();
-      expect(box, `הכול at ${String(viewport.width)}`).not.toBeNull();
-      if (!box) return;
-      expect(box.y, `option top at ${String(viewport.width)}`).toBeGreaterThanOrEqual(0);
-      expect(box.y + box.height, `option bottom at ${String(viewport.width)}`).toBeLessThanOrEqual(viewport.height);
-    }).toPass();
-    expect(await page.locator("#storybook-root [title]").count()).toBe(0);
-  }
-});
-
 test("loading band skeletons stay inside the gutter and do not touch", async ({ page }) => {
   const index = (await (await page.request.get("/index.json")).json()) as StoryIndex;
   const stories = Object.values(index.entries).filter(
@@ -459,7 +403,7 @@ test("loading band skeletons stay inside the gutter and do not touch", async ({ 
       await page.locator("#storybook-root").waitFor({ state: "attached" });
       // A screen can mount its band a few ticks after the root attaches, so wait until the story has
       // drawn something: its band, or any content for a story without one. The Home cash skeleton's
-      // band has no hero (BandHero is only in HomeSkeleton), so the content box is the hero's when
+      // band has no hero (the skeleton draws no BandHero), so the content box is the hero's when
       // there is one and the band's own when there is not.
       await page.waitForFunction(() => document.querySelector(".ui-band") !== null || (document.querySelector("#storybook-root")?.childElementCount ?? 0) > 0);
       const problems = await page.evaluate(() => {
@@ -511,10 +455,9 @@ test("loading band skeletons stay inside the gutter and do not touch", async ({ 
 test("a row tint is wider than its content by the spacing token on both sides", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const cases: Array<{ id: string; selector: string; hover: boolean; name?: string }> = [
-    { id: "components-listrow--hover", selector: ".ui-show-hover .ui-row", hover: false },
     { id: "components-listrow--project", selector: ".ui-row", hover: true },
-    { id: "components-radiorow--idle", selector: ".ui-radio-row", hover: true },
-    { id: "components-radiorow--selected", selector: ".ui-radio-row", hover: false },
+    { id: "components-listrow--radio", selector: ".ui-radio-row", hover: true },
+    { id: "components-listrow--radio-selected", selector: ".ui-radio-row", hover: false },
     { id: "components-listrow--flat-list", selector: ".ui-row", hover: true },
   ];
   const failures: string[] = [];
@@ -542,7 +485,7 @@ test("a row tint is wider than its content by the spacing token on both sides", 
       return "";
     });
     if (problem) failures.push(`${item.id}: ${problem}`);
-    if (item.hover || item.id === "components-radiorow--selected") {
+    if (item.hover || item.id === "components-listrow--radio-selected") {
       const read = () => row.evaluate((node) => {
         const content = node.getBoundingClientRect();
         const tint = getComputedStyle(node, "::before");
@@ -575,13 +518,6 @@ test("a row tint is wider than its content by the spacing token on both sides", 
         if (active.geometry.join("|") !== hovered.geometry.join("|")) failures.push(`${item.id}: press changes margin, padding, border, or transform`);
         if (active.color === "rgba(0, 0, 0, 0)") failures.push(`${item.id}: active tint is transparent`);
       }
-    }
-    if (item.id === "components-listrow--hover") {
-      const shifted = await page.locator(".ui-row-title").evaluateAll((nodes) => {
-        const edges = nodes.map((node) => Math.round(node.getBoundingClientRect().right));
-        return edges.length >= 2 && edges.every((edge) => edge === edges[0]) ? "" : `titles sit at ${edges.join(", ")}`;
-      });
-      if (shifted) failures.push(`${item.id}: ${shifted}`);
     }
   }
   await page.goto("/iframe.html?id=components-listrow--project&viewMode=story", { waitUntil: "domcontentloaded" });
@@ -625,9 +561,8 @@ test("pressed buttons and chips keep the hover box", async ({ page }) => {
   const cases = [
     ["components-button--primary", ".ui-btn"],
     ["components-button--secondary", ".ui-btn"],
-    ["components-button--legacy", ".ui-btn-pill"],
-    ["components-button--legacy", ".ui-btn-ghost"],
-    ["components-button--legacy", ".ui-btn-danger"],
+    ["components-button--link", ".ui-btn-link"],
+    ["components-button--danger-link", ".ui-btn-danger-link"],
     ["components-chip--choice-off", ".ui-chip"],
     ["components-chip--suggested", ".ui-chip"],
     ["components-chip--selected", ".ui-chip"],
@@ -705,7 +640,7 @@ test("the categories hidden link wraps on the end side and does not truncate", a
     const buttons = [...node.querySelectorAll("button")];
     const end = buttons.find((button) => button.classList.contains("ui-cat-foot-end"));
     if (!(end instanceof HTMLElement)) return null;
-    const label = end.querySelector(".ui-text-link-label");
+    const label = end.querySelector(".ui-btn-label");
     if (!(label instanceof HTMLElement)) return null;
     const style = getComputedStyle(label);
     const footBox = node.getBoundingClientRect();
@@ -720,14 +655,14 @@ test("the categories hidden link wraps on the end side and does not truncate", a
   });
   expect(placed).toEqual({ ellipsis: false, fits: true, onEnd: true, inside: true });
 
-  await hidden.locator(".ui-text-link-label").evaluate((node) => {
+  await hidden.locator(".ui-btn-label").evaluate((node) => {
     node.textContent = "מוסתרות ארוכות מאוד שאי אפשר לקטוע באמצע השורה";
   });
   const wrapped = await foot.evaluate((node) => {
     const buttons = [...node.querySelectorAll("button")];
     const end = buttons.find((button) => button.classList.contains("ui-cat-foot-end"));
     if (!(end instanceof HTMLElement)) return null;
-    const label = end.querySelector(".ui-text-link-label");
+    const label = end.querySelector(".ui-btn-label");
     if (!(label instanceof HTMLElement)) return null;
     const footBox = node.getBoundingClientRect();
     const pad = Number.parseFloat(getComputedStyle(node).paddingLeft);
@@ -756,13 +691,11 @@ test("the categories hidden link wraps on the end side and does not truncate", a
   expect(motion.transform).not.toBe("none");
 });
 
-test("split between projects pins its totals and keeps names on one line", async ({ page }) => {
+test("the line split pins its save bar and keeps names on one line (FLOW-922)", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/iframe.html?id=screens-routes--split-exact&viewMode=story", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("radio")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
-  await expect(page.getByText("נשאר לשורה")).toBeVisible();
-  const foot = page.locator(".ui-split-cta");
+  await page.goto("/iframe.html?id=screens-line-split--expense&viewMode=story", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("button", { name: "שמירה" })).toBeVisible();
+  const foot = page.locator(".ui-lsplit-foot");
   const footBox = await foot.boundingBox();
   expect(footBox).not.toBeNull();
   if (footBox) {
@@ -771,7 +704,7 @@ test("split between projects pins its totals and keeps names on one line", async
   }
 
   await page.setViewportSize({ width: 320, height: 844 });
-  await page.goto("/iframe.html?id=screens-routes--split-mixed&viewMode=story", { waitUntil: "domcontentloaded" });
+  await page.goto("/iframe.html?id=screens-line-split--expense&viewMode=story", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".ui-lsplit-part").first()).toBeVisible();
   expect(await layoutProblems(page)).toEqual([]);
 });

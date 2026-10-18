@@ -1,4 +1,4 @@
-.t-hint {
+.t-muted {
   text-wrap: pretty;
 }
 
@@ -33,7 +33,7 @@
   min-height: calc(
     2 * var(--row-pad)
     + 2 * var(--type-line2-size) * var(--type-line2-line)
-    + var(--type-title-3-size) * var(--type-title-3-line)
+    + var(--type-btn-size) * var(--type-btn-line)
   );
 }
 
@@ -43,7 +43,7 @@
   min-height: calc(
     2 * var(--row-pad)
     + var(--type-line2-size) * var(--type-line2-line)
-    + var(--type-title-3-size) * var(--type-title-3-line)
+    + var(--type-btn-size) * var(--type-btn-line)
   );
 }
 
@@ -64,32 +64,10 @@
    so its agorot (.ui-num-cents) are not 7.8px (FLOW-339). */
 .ui-loan-amount {
   color: var(--color-text);
-  font-size: var(--type-amount-size);
-  line-height: var(--type-amount-line);
-  font-weight: var(--type-amount-weight);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: var(--type-body-weight);
   white-space: nowrap;
-}
-
-/* A loan's name is the row's identity: at 320 it wraps to two lines instead of losing the name
-   to an ellipsis (FLOW-339, design lead). The hint is one line of whole parts (FLOW-347). */
-.ui-loan-list .ui-row-title {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow-wrap: anywhere;
-  white-space: normal;
-}
-
-/* FLOW-347: under 360px the bank icon (the same on every row) gives its 36px to the name, so a
-   short name like "משכנתא דוגמה" stays on one line next to its balance. The הלוואה חדשה row
-   drops its icon too, so its words start on the same edge as the names above (FLOW-351), and so do
-   the list's loading rows (FLOW-358). */
-@media (max-width: 359px) {
-  .ui-loan-list .ui-row-icon,
-  .ui-loan-new .ui-row-icon {
-    display: none;
-  }
 }
 
 .ui-num-field {
@@ -117,19 +95,6 @@
   cursor: not-allowed;
 }
 
-/* FLOW-119. The loan's project: one line, the empty value muted. */
-.ui-pick-value {
-  flex: 1;
-  min-inline-size: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ui-pick-value[data-empty="true"] {
-  color: var(--color-text-muted);
-}
-
 .ui-row-hint {
   display: block;
   overflow-wrap: anywhere;
@@ -143,10 +108,10 @@
 
 /* A hint tied with aria-describedby is a field hint and stays `hint` 13 (decision 0120 moves only
    the row secondary line to `meta`). Matches the skeleton and status reserve. */
-.ui-row-hint.t-hint {
-  font-size: var(--type-hint-size);
-  font-weight: var(--type-hint-weight);
-  line-height: var(--type-hint-line);
+.ui-row-hint.t-muted {
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-caption-line);
 }
 
 .ui-row-hint-wrap {
@@ -204,11 +169,11 @@
 .ui-row-hint-skel {
   display: flex;
   align-items: center;
-  min-block-size: calc(var(--type-hint-size) * var(--type-hint-line));
+  min-block-size: calc(var(--type-caption-size) * var(--type-caption-line));
 }
 
 .ui-row-hint[role="status"] {
-  min-block-size: calc(var(--type-hint-size) * var(--type-hint-line));
+  min-block-size: calc(var(--type-caption-size) * var(--type-caption-line));
 }
 
 .ui-row-tone-warning :is(.ui-row-hint, .ui-row-icon) {
@@ -292,7 +257,7 @@
 
 .ui-row-icon > .ui-spinner {
   display: block;
-  margin: calc((20px - var(--spinner)) / 2);
+  margin: calc((var(--space-5) - var(--spinner)) / 2);
 }
 
 .ui-sheet-surface {
@@ -300,6 +265,7 @@
   min-block-size: 0;
   flex: 1 1 auto;
   flex-direction: column;
+  gap: var(--sheet-gap-y);
   overflow: hidden;
   /* FLOW-363 (3b): the panel's top (08, 10px) is the space above the handle. The surface adds
      only the toast pad. The panel's bottom is in 08; the surface adds nothing below. */
@@ -317,8 +283,7 @@
   flex: 1 1 auto;
   flex-direction: column;
   gap: var(--space-3);
-  margin-top: var(--space-4);
-  padding-inline: var(--space-side);
+  padding-inline: var(--sheet-side);
   overflow-x: hidden;
   overflow-y: auto;
   overflow-wrap: anywhere;
@@ -371,11 +336,11 @@
 
 .ui-sheet-foot {
   flex: none;
-  padding: var(--space-4) var(--space-side) 0;
+  padding: 0 var(--sheet-side);
 }
 
 /* FLOW-363 (3b): the sheet title is the sheet role (20/600, t-sheet). This two-line clamp is the
-   only one a sheet head has: the old `.ui-sheet-head .t-title-2` clamp in 08 is deleted. */
+   only one a sheet head has: the old `.ui-sheet-head .t-name` clamp in 08 is deleted. */
 .ui-sheet-head .ui-sheet-title {
   display: -webkit-box;
   flex: 1;
@@ -465,9 +430,9 @@
   border-radius: var(--radius-field-btn);
   background: var(--color-tint);
   color: var(--color-accent-text);
-  font-size: var(--type-chip-size);
+  font-size: var(--type-caption-size);
   font-weight: var(--type-chip-weight);
-  line-height: var(--type-chip-line);
+  line-height: var(--type-caption-line);
   white-space: nowrap;
 }
 
@@ -529,9 +494,9 @@
 
 .ui-field-message {
   color: var(--color-error);
-  font-size: var(--type-hint-size);
-  font-weight: var(--type-hint-weight);
-  line-height: var(--type-hint-line);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-caption-line);
 }
 
 .ui-field-error .ui-field-message {
@@ -539,7 +504,7 @@
 }
 
 .ui-field-message-slot {
-  min-block-size: calc(var(--type-hint-size) * var(--type-hint-line));
+  min-block-size: calc(var(--type-caption-size) * var(--type-caption-line));
 }
 
 .ui-money-field {
@@ -563,7 +528,7 @@
 }
 
 .ui-percent-suffix {
-  font-weight: 600;
+  font-weight: var(--type-title-weight);
 }
 
 /* The prefix sits just to the left of the right-aligned digits: the lead lays out the prefix and a
@@ -578,7 +543,7 @@
 
 .ui-money-prefix {
   flex: none;
-  font-weight: 600;
+  font-weight: var(--type-title-weight);
 }
 
 .ui-money-mirror {
@@ -624,4 +589,40 @@
   color: var(--color-signal-soft);
   font-size: var(--type-line2-size);
   line-height: var(--type-line2-line);
+}
+
+/* FLOW-922: the percent field of a part (money-field.tsx). */
+.ui-percent-field {
+  flex: 0 0 auto;
+  inline-size: auto;
+  min-inline-size: 96px;
+  max-inline-size: 100%;
+}
+
+.ui-percent-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  inline-size: auto;
+  width: auto;
+  min-inline-size: 96px;
+  block-size: var(--field-height);
+  height: var(--field-height);
+  padding-inline: var(--field-pad);
+  border-radius: var(--radius-input);
+  font-size: var(--type-btn-size);
+}
+
+.ui-percent-suffix {
+  inset-inline-end: var(--space-3);
+  color: var(--color-text-secondary);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-percent-field .ui-money-field input {
+  padding-inline-end: 1.75em;
+  font-size: inherit;
+  text-align: right;
+  white-space: nowrap;
 }

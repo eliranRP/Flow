@@ -6,7 +6,7 @@ The accent is also on the `+` button, the active tab, the tinted pending card, a
 
 The font is Rubik. Hero and titles are 600, body is 500, hints are 400, and the wordmark is 700.
 
-A light and dark design system, and hi-fi screens, are not in this folder yet. The low-fi wireframes in [../wireframes](../wireframes/README.md) stay the screen spec until those images land. No image in this folder is the chosen direction.
+The design board is the spec for the screens and the design system: https://claude.ai/artifact/9grt9spjshVCxerYWrRXiD. The PNGs in this folder were deleted in T-03. No image was kept, and none is the chosen direction.
 
 Every number on the boards below is example data for September 2026. Those boards are superseded. The English caption above a phone is a design label. It is not product copy.
 
@@ -16,11 +16,11 @@ Superseded by [0023](../../decisions/0023-violet-coloured-top-band.md). Kept. To
 
 | File | What it is |
 | --- | --- |
-| [ui-mercury-p1.png](ui-mercury-p1.png) | Home in P1 Graphite |
-| [ui-mercury-p2.png](ui-mercury-p2.png) | Home in P2 Cobalt |
-| [ui-mercury-p3.png](ui-mercury-p3.png) | Home in P3 Petrol |
-| [ui-mercury-overview.png](ui-mercury-overview.png) | The three palettes together |
-| [ui-refs.png](ui-refs.png) | Reference fonts. Not those products' UI. |
+| ui-mercury-p1.png | Home in P1 Graphite |
+| ui-mercury-p2.png | Home in P2 Cobalt |
+| ui-mercury-p3.png | Home in P3 Petrol |
+| ui-mercury-overview.png | The three palettes together |
+| ui-refs.png | Reference fonts. Not those products' UI. |
 
 Cards sit on white (`#FFFFFF`). The hairline is the palette's line color. Radius 12 on the list card, radius 8 on the add button.
 
@@ -50,7 +50,7 @@ On P1 the accent and the ink are the same color.
 
 ### Reference fonts
 
-Recorded from live CSS. Flow does not ship these faces. [ui-refs.png](ui-refs.png) is a note, not a copy of those products.
+Recorded from live CSS. Flow does not ship these faces. ui-refs.png is a note, not a copy of those products.
 
 | Product | Faces named in CSS |
 | --- | --- |
@@ -77,17 +77,8 @@ Superseded. The files stay. A, B, and C were rejected before the Mercury set, an
 
 | File | Direction | Status |
 | --- | --- | --- |
-| [style-a-calm.png](style-a-calm.png) | A · Calm fintech. Background `#F5F7F9`, card `#FFFFFF`, accent `#0F4C5C`, good `#12875A`, bad `#D14343`. IBM Plex Sans Hebrew. | Superseded |
-| [style-b-dark.png](style-b-dark.png) | B · Bold dark. Background `#07090C`, card `#12171E`, accent `#22E4F0`, good `#35E07D`, bad `#FF5D5D`. Heebo. | Superseded |
-| [style-c-warm.png](style-c-warm.png) | C · Warm practical. Background `#F3ECE1`, card `#FFFBF4`, accent `#F2A516`, text `#2A2019`, good `#2E8A4E`, bad `#C73B2C`. Rubik. | Superseded |
-| [style-overview.png](style-overview.png) | A, B, and C together. | Superseded |
+| style-a-calm.png | A · Calm fintech. Background `#F5F7F9`, card `#FFFFFF`, accent `#0F4C5C`, good `#12875A`, bad `#D14343`. IBM Plex Sans Hebrew. | Superseded |
+| style-b-dark.png | B · Bold dark. Background `#07090C`, card `#12171E`, accent `#22E4F0`, good `#35E07D`, bad `#FF5D5D`. Heebo. | Superseded |
+| style-c-warm.png | C · Warm practical. Background `#F3ECE1`, card `#FFFBF4`, accent `#F2A516`, text `#2A2019`, good `#2E8A4E`, bad `#C73B2C`. Rubik. | Superseded |
+| style-overview.png | A, B, and C together. | Superseded |
 
-## Source
-
-[../wireframes/source/palettes.py](../wireframes/source/palettes.py) holds the type scale, spacing, radii, and the three palettes. [../wireframes/source/hifi.py](../wireframes/source/hifi.py) writes the HTML. [../wireframes/source/render.sh](../wireframes/source/render.sh) screenshots it into this folder.
-
-```bash
-cd docs/module-1-project-pnl/wireframes/source
-python3 hifi.py
-bash render.sh ui-mercury-p1 ui-mercury-p2 ui-mercury-p3 ui-mercury-overview ui-refs
-```

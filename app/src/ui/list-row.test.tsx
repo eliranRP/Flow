@@ -317,7 +317,7 @@ describe("ListRow", () => {
     expect(container.querySelector(".sr-only")?.textContent).toBe("הכנסה ");
     const expense = screen.getByText("−₪1,200");
     expect(expense).not.toHaveClass("ui-income");
-    expect(expense.closest(".t-amount")).not.toBeNull();
+    expect(expense.closest(".t-body")).not.toBeNull();
   });
 
   it("shows transaction agorot small and raised, no .00 on a whole amount, and keeps project rows whole (decision 0120, option C)", () => {
@@ -371,9 +371,9 @@ describe("ListRow", () => {
       </MemoryRouter>,
     );
     const hint = screen.getByText("מחובר");
-    expect(hint).toHaveClass("t-hint");
+    expect(hint).toHaveClass("t-caption t-muted");
     // jsdom keeps the custom property unresolved, so the token name is what is compared.
-    expect(getComputedStyle(hint).fontSize).toBe("var(--type-hint-size)");
+    expect(getComputedStyle(hint).fontSize).toBe("var(--type-caption-size)");
   });
 });
 
@@ -404,7 +404,7 @@ describe("ListRow statement (FLOW-305)", () => {
     expect(avatar).toHaveAttribute("dir", "rtl");
     expect(avatar).toHaveAttribute("aria-hidden", "true");
     expect(link.querySelector(".ui-row-title")).toHaveAttribute("dir", "rtl");
-    expect(link.querySelector(".t-amount")?.textContent).toBe("−₪1,200.50");
+    expect(link.querySelector(".t-body")?.textContent).toBe("−₪1,200.50");
     expect(link.querySelector(".ui-num-cents")?.textContent).toBe(".50");
     // No suggestion and not pending: no second line, no method unless one is passed.
     expect(link.querySelector(".ui-statement-line")).toBeNull();
@@ -446,7 +446,7 @@ describe("ListRow statement (FLOW-305)", () => {
     renderRow({ title: "Northwind Traders", agorot: 500_000n, sign: "in", currency: "USD" });
     const link = screen.getByRole("link");
     expect(link.querySelector(".ui-income")?.textContent).toBe("+$5,000");
-    expect(link.querySelector(".t-amount")?.textContent).toBe("הכנסה +$5,000");
+    expect(link.querySelector(".t-body")?.textContent).toBe("הכנסה +$5,000");
     expect(link.querySelector(".ui-avatar")?.textContent).toBe("NT");
     expect(link.querySelector(".ui-row-title")).toHaveAttribute("dir", "ltr");
   });
@@ -641,5 +641,52 @@ describe("ListRow press (FLOW-363 2d)", () => {
       expect(row).not.toHaveClass("m-press");
       expect(row).not.toHaveClass("m-press-scale");
     }
+  });
+});
+
+describe('ListRow control="radio"', () => {
+  it("keeps a busy row focusable but ignores its clicks (FLOW-115)", () => {
+    const onSelect = vi.fn();
+    render(<ListRow control="radio" layout="picker" title="הלוואת דוגמה" value="loan-1" busy selected={false} onSelect={onSelect} />);
+    const radio = screen.getByRole("radio", { name: "הלוואת דוגמה" });
+    expect(radio).not.toBeDisabled();
+    expect(radio).toHaveAttribute("aria-disabled", "true");
+    expect(radio).toHaveAttribute("aria-busy", "true");
+    expect(radio).toHaveAttribute("data-value", "loan-1");
+    fireEvent.click(radio);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("shows disabledReason in picker layout with an accessible description", () => {
+    render(<ListRow control="radio" layout="picker" title="הלוואת דוגמה" disabledReason="ההלוואה נפרעה" selected={false} onSelect={vi.fn()} />);
+    const radio = screen.getByRole("radio", { name: "הלוואת דוגמה" });
+    expect(radio).toBeDisabled();
+    expect(radio).toHaveAccessibleDescription("ההלוואה נפרעה");
+    expect(screen.getByText("ההלוואה נפרעה")).toBeInTheDocument();
+  });
+
+  it("omits aria-describedby in picker layout when there is no description", () => {
+    render(<ListRow control="radio" layout="picker" title="הלוואת דוגמה" selected={false} onSelect={vi.fn()} />);
+    expect(screen.getByRole("radio", { name: "הלוואת דוגמה" })).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("does not call onSelect when disabledReason is set, and calls it once for a live row", () => {
+    const onSelect = vi.fn();
+    const { rerender } = render(<ListRow control="radio" layout="picker" title="הלוואת דוגמה" disabledReason="ההלוואה נפרעה" selected={false} onSelect={onSelect} />);
+    fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
+    expect(onSelect).not.toHaveBeenCalled();
+    rerender(<ListRow control="radio" title="הלוואת דוגמה" selected={false} onSelect={onSelect} />);
+    fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
+    expect(onSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it("draws the check on the selected row and the marker on the start side when asked", () => {
+    const { container } = render(<ListRow control="radio" title="שווה בין כל הפרויקטים" description="₪250 לכל אחד" marker="start" selected onSelect={vi.fn()} />);
+    const row = screen.getByRole("radio", { name: "שווה בין כל הפרויקטים" });
+    expect(row).toHaveAttribute("aria-checked", "true");
+    expect(row).toHaveClass("ui-radio-row", "ui-radio-start");
+    expect(container.querySelector(".ui-radio")).toHaveTextContent("✓");
+    expect(row.firstElementChild).toHaveClass("ui-radio");
+    expect(container.querySelector(".ui-radio-desc")).toHaveTextContent("₪250 לכל אחד");
   });
 });

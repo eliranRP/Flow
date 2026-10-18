@@ -9,13 +9,13 @@ test("the four tabs open their screens, and the old paths still land", async ({ 
   await expect(bar.getByRole("link")).toHaveCount(4);
   await expect(bar.getByRole("link", { name: "בית", exact: true })).toHaveAttribute("href", "/?preview=1");
   await expect(bar.getByRole("link", { name: "פרויקטים" })).toHaveAttribute("href", "/projects?preview=1");
-  await expect(bar.getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/settings/loans?preview=1");
+  await expect(bar.getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/loans?preview=1");
   await expect(bar.getByRole("link", { name: "קבועים" })).toHaveAttribute("href", "/recurring?preview=1");
 
   await page.goto("/review?preview=1");
   await expect(page.getByRole("heading", { name: "לאישור" })).toBeVisible();
-  await page.goto("/settings/loans?preview=1");
-  await expect(page).toHaveURL(/\/settings\/loans\?preview=1$/);
+  await page.goto("/loans?preview=1");
+  await expect(page).toHaveURL(/\/loans\?preview=1$/);
   await page.goto("/missing-bills?preview=1");
   await expect(page).toHaveURL(/\/recurring\?preview=1$/);
 });
@@ -58,3 +58,20 @@ test("the compact bar shows after scrolling and its motion is off with reduced m
   const duration = await bar.evaluate((node) => getComputedStyle(node).transitionDuration);
   expect(duration.split(",").every((value) => value.trim().startsWith("0s"))).toBe(true);
 });
+
+// FLOW-374: the bar is the board's 64px and its figure is whole inside it, at a phone and a narrow width.
+for (const width of [390, 320]) {
+  test(`the compact bar's figure is inside the bar at ${String(width)}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/e2e/cash?preview=1&scrolled=1&recurring=1");
+    const bar = page.locator(".ui-compact-bar-band");
+    await expect(bar).toBeVisible();
+    // The bar slides in: measure once it has arrived (CI once read it mid-slide, 6px above the top).
+    await bar.evaluate((node) => Promise.all(node.getAnimations({ subtree: true }).map((animation) => animation.finished)));
+    const barBox = await bar.boundingBox();
+    const netBox = await page.locator(".ui-compact-bar-centre-net").boundingBox();
+    if (barBox == null || netBox == null) throw new Error("the compact bar or its figure is not drawn");
+    expect(netBox.y + netBox.height).toBeLessThanOrEqual(barBox.y + barBox.height);
+    expect(netBox.y).toBeGreaterThanOrEqual(barBox.y);
+  });
+}

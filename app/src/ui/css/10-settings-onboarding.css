@@ -33,15 +33,15 @@
   min-inline-size: 0;
   flex: 1;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-half);
 }
 
 /* The switch label reads like a row title, 17/400 (FLOW-326, decision 0120 option C). */
 .ui-switch-label {
   overflow: hidden;
-  font-size: var(--type-title-3-size);
+  font-size: var(--type-btn-size);
   font-weight: var(--type-meta-weight);
-  line-height: var(--type-title-3-line);
+  line-height: var(--type-btn-line);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -102,7 +102,7 @@
   transform: translateX(calc(-1 * (var(--size-switch) - var(--switch-knob) - 2 * var(--switch-inset))));
 }
 
-.ui-switch-copy .t-hint {
+.ui-switch-copy .t-muted {
   min-inline-size: 0;
   color: var(--color-text-muted);
 }
@@ -202,7 +202,7 @@
   min-width: 0;
 }
 
-.ui-page-title-row .t-title-1 {
+.ui-page-title-row .t-total {
   min-width: 0;
 }
 
@@ -212,7 +212,7 @@
   justify-content: flex-start;
 }
 
-.ui-page-inline .ui-page-title-row > .t-title-1 + * {
+.ui-page-inline .ui-page-title-row > .t-total + * {
   margin-inline-start: auto;
 }
 
@@ -225,16 +225,16 @@
 
 .ui-loan-skel-title {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: var(--type-card-size);
 }
 
 .ui-page-stacked .ui-page-title-row > .ui-back-btn:first-child {
-  margin-inline-start: calc((var(--touch-min) - 24px) / -2 - 8px);
+  margin-inline-start: var(--back-pull-start);
 }
 
 /* A page's own end icon (✕ or ⋯) lines up with the content's end edge the same way. */
 .ui-page-stacked .ui-page-title-row > .ui-icon-btn:last-child:not(:first-child) {
-  margin-inline-end: calc((var(--touch-min) - 24px) / -2 - 6px);
+  margin-inline-end: var(--back-pull-end);
 }
 
 .ui-banner .ui-row-title,
@@ -252,27 +252,6 @@
 .ui-banner bdi,
 .ui-banner-row bdi {
   white-space: nowrap;
-}
-
-.ui-onboard {
-  display: flex;
-  min-height: 100%;
-  flex: 1;
-  flex-direction: column;
-}
-
-.ui-onboard form {
-  display: flex;
-  min-height: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--space-4);
-  /* FLOW-334: 10px under the stacked subtitle was too tight. */
-  margin-top: var(--space-5);
-}
-
-.ui-onboard .ui-btn {
-  margin-top: auto;
 }
 
 .ui-gsi-spinner {
@@ -310,47 +289,14 @@
   [data-vaul-drawer][data-state="closed"]:not(.vaul-dragging),
   body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"],
   body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="closed"] {
-    animation-duration: 1ms !important;
-    transition-duration: 1ms !important;
+    animation-duration: var(--dur-reduced) !important;
+    transition-duration: var(--dur-reduced) !important;
   }
 }
 
-.ui-band-period {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  max-width: 100%;
-  min-width: 0;
-  height: var(--size-period);
-  min-height: var(--size-period);
-  flex: 0 1 auto;
-  padding-inline: var(--space-3);
-  overflow: visible;
-  border-radius: var(--radius-chip);
-  background: var(--color-band-pill);
-  color: var(--color-text);
-  font-size: var(--type-label-size);
-  font-weight: var(--type-label-weight);
-}
-
-.ui-band-period:active {
-  background: var(--color-tint-pressed);
-}
-
-.ui-page-period {
-  background: var(--color-tint);
-  color: var(--color-accent-text);
-}
-
-.ui-period-chevron {
-  display: inline-flex;
-  color: var(--color-accent-text);
-}
-
 .ui-page .t-title,
-.ui-page .t-title-1,
-.ui-page .t-label {
+.ui-page .t-total,
+.ui-page .t-line2:where(:not(.ui-lines-count, .ui-lines-group-sum, .ui-onb-lead)) {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
@@ -527,11 +473,12 @@
   padding-inline-end: calc(var(--space-10) + var(--space-3));
 }
 
+/* Level with the input: the label sits above the 48px box, so the pill centres on the box, not the wrap. */
 .ui-secret-toggle {
   position: absolute;
   inset-inline-end: var(--space-2);
-  top: calc(var(--type-caption-size) * 2 + var(--space-2));
-  min-block-size: 36px;
+  top: calc(var(--type-caption-size) * var(--type-caption-line) + var(--label-gap) + (var(--field-height) - var(--control-height-sm)) / 2);
+  min-block-size: var(--control-height-sm);
   padding: 0 var(--space-3);
   border: 0;
   border-radius: var(--radius-field-btn);
@@ -539,7 +486,7 @@
   color: var(--color-accent-text);
   font: inherit;
   font-size: var(--type-caption-size);
-  font-weight: var(--type-title-3-weight);
+  font-weight: var(--type-chip-weight);
   cursor: pointer;
 }
 
@@ -547,10 +494,6 @@
   display: flex;
   justify-content: flex-start;
   padding-inline: var(--space-1);
-}
-
-.ui-team-invite {
-  padding-block: var(--space-3);
 }
 
 .ui-row-value-signal {
@@ -576,7 +519,7 @@
 }
 
 .ui-ai-status-name {
-  font-size: var(--type-title-3-size);
+  font-size: var(--type-btn-size);
   font-weight: var(--type-section-weight);
 }
 
@@ -591,8 +534,154 @@
   gap: var(--space-1);
 }
 
-.ui-ai-fields {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+/* The board's scope choice: a filled disc at the end side, no divider, the chosen row tinted, no check. */
+.ui-ai-scope .ui-radio-row {
+  border-bottom: 0;
+}
+
+.ui-ai-scope .ui-radio {
+  border-radius: 50%;
+}
+
+.ui-ai-scope .ui-radio[data-on="true"] {
+  font-size: 0;
+}
+
+/* FLOW-512b C: the categories list's rows are 56px tall, as on the board (one- and two-line rows alike). */
+.ui-cat-list .ui-row {
+  min-block-size: 56px;
+}
+
+/* FLOW-512b C: the segmented track is 2px around its 40px buttons (44px), as on the board. */
+.ui-cat-seg .ui-seg {
+  padding: calc(var(--space-1) / 2);
+}
+
+/* FLOW-512b C: the theme sheet's board block: 24px under the last option, options 60px tall, 12px apart. */
+.ui-theme-sheet {
+  --sheet-pad-bottom: var(--space-6);
+}
+
+.ui-theme-sheet .ui-radio-row {
+  min-block-size: calc(var(--control-height) + var(--space-2));
+}
+
+/* board quirk: the opposite-theme row is an <a> (content-box), 60 + 16 = 76 tall */
+.ui-theme-sheet .ui-radio-row:not(:first-child):not([aria-checked="true"]) {
+  min-block-size: calc(var(--control-height) + var(--space-2) + var(--space-4));
+}
+
+.ui-theme-sheet .ui-sheet-head > .ui-icon-btn {
+  margin-block: 0;
+}
+
+.ui-theme-sheet .ui-sheet-head > .ui-icon-btn:last-child:not(:first-child) {
+  margin-inline-end: 0;
+}
+
+.ui-theme-sheet .ui-sheet-title,
+.ui-theme-sheet .ui-sheet-subtitle,
+.ui-theme-sheet .ui-row-title {
+  line-height: var(--type-cents-line);
+}
+
+/* The settings list page (settings-screen.tsx root .ui-settings-page): cards inset 16 with a 16px radius,
+   14px between them, 56px rows with hairlines, as on the board. */
+.ui-settings-page > .ui-page-stacked {
+  padding-top: var(--space-3);
+  padding-bottom: calc(var(--space-3) - 1px);
+}
+
+/* A subtitle sits 1px higher (the board's), and the header's end keeps the cards where they were plus 1px. */
+.ui-settings-page > .ui-page-stacked:has(.ui-compact-mark + p) {
+  padding-bottom: calc(var(--space-3) + 1px);
+}
+
+.ui-settings-page > .ui-page-stacked .ui-focus-title {
+  margin-top: var(--space-1);
+}
+
+.ui-settings-page > .ui-page-stacked .ui-focus-title + * {
+  margin-top: var(--space-1);
+}
+
+.ui-settings-page > .ui-page-stacked .ui-compact-mark + p {
+  margin-top: calc(var(--space-1) / -4);
+}
+
+.ui-settings-page > .ui-list-inset {
+  margin-inline: var(--space-4);
+  inline-size: auto;
+  border-radius: var(--radius-card-tight);
+}
+
+.ui-settings-page > .ui-list-inset + .ui-list-inset {
+  margin-top: var(--space-inset-row);
+}
+
+.ui-settings-page .ui-list-inset .ui-row {
+  min-block-size: 56px;
+}
+
+.ui-settings-page .ui-settings-page-row > .ui-row {
+  padding-inline: var(--space-inset-row);
+}
+
+.ui-settings-page .ui-settings-page-row:not(:last-child) > .ui-row {
+  border-bottom: 1px solid var(--color-line);
+  min-block-size: 56px;
+}
+
+.ui-settings-page .ui-settings-signout {
+  margin-top: var(--space-inset-row);
+  padding-inline: var(--space-side);
+}
+
+.ui-settings-page .ui-poc {
+  padding-top: calc(var(--space-3) - var(--space-1) / 2);
+}
+
+/* FLOW-512b C: the rename sheet's board block: a 44px title row, 12px to the field and 12px to the note. */
+.ui-rename-sheet .ui-sheet-head {
+  min-block-size: calc(var(--control-height) - var(--space-2));
+}
+
+.ui-rename-sheet .ui-settings-note {
+  margin-block-start: var(--space-3);
+  font-weight: var(--type-detail-weight);
+  line-height: calc(var(--type-caption-size) * 1.5);
+}
+
+/* A settings page's switch is the board's 52x32 with a 26px knob; a two-line switch row is 56px. */
+.ui-settings-page {
+  --size-switch: 52px;
+  --switch-track-h: 32px;
+  --switch-knob: 26px;
+}
+
+.ui-settings-page .ui-list-inset .ui-switch-row {
+  padding-block: calc(var(--space-2) - 1px);
+}
+
+.ui-settings-page .ui-switch-row .ui-row-text {
+  gap: 0;
+}
+
+.ui-settings-page > .ui-settings-note {
+  margin-inline: var(--space-side);
+}
+
+/* The settings header already ends 14px lower than the pages' own, so these start flush under it. */
+.ui-settings-page > .ui-cat-seg,
+.ui-settings-page > .ui-team-list {
+  margin-block-start: 0;
+}
+
+/* Categories: the new-category link sits 4px lower under the segment, and the card 4px lower under the link. */
+.ui-settings-page > .ui-cat-foot {
+  margin-top: var(--space-2);
+}
+
+.ui-settings-page > .ui-cat-list {
+  margin-top: var(--space-3);
 }

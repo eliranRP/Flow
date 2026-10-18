@@ -22,13 +22,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Whether the diff touches supabase/ (a migration, a seed, a pgTAP file or an edge function).
+  # Whether the diff touches supabase/ (a migration, a seed, a pgTAP file or an edge function), and whether it is
+  # docs-only (docs/, design/, or any .md file).
   changes:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       db: ${{ steps.paths.outputs.db }}
       ui: ${{ steps.paths.outputs.ui }}
+      docs: ${{ steps.paths.outputs.docs }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -45,11 +47,19 @@ jobs:
             echo "db=false" >> "$GITHUB_OUTPUT"
           fi
           # FLOW-836: the app's source, its e2e specs, and the build, test and package config that the
-          # dev server and Playwright read. Script-only and doc-only changes skip the e2e job.
-          if grep -Eq '^(app/(src|e2e)/|app/(vite|playwright[^/]*|vitest)\.config\.[mc]?[jt]s$|app/package\.json$|package\.json$|pnpm-lock\.yaml$)' <<<"$files"; then
+          # dev server and Playwright read. The shared packages and the database files the app loads (migrations,
+          # seed, edge functions) count too. Script-only and doc-only changes skip the e2e job.
+          if grep -Eq '^(app/(src|e2e)/|app/(vite|playwright[^/]*|vitest)\.config\.[mc]?[jt]s$|app/package\.json$|package\.json$|pnpm-lock\.yaml$|packages/|supabase/(migrations|seed|functions)/)' <<<"$files"; then
             echo "ui=true" >> "$GITHUB_OUTPUT"
           else
             echo "ui=false" >> "$GITHUB_OUTPUT"
+          fi
+          # A docs-only diff skips the typecheck and the unit tests. static still runs: backlog-index --check reads
+          # docs/backlog. An empty diff is not docs-only.
+          if [ -n "$files" ] && ! grep -qvE '^(docs/|design/)|\.md$' <<<"$files"; then
+            echo "docs=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs=false" >> "$GITHUB_OUTPUT"
           fi
 
   static:
@@ -87,6 +97,8 @@ jobs:
   # The typecheck, the unused-code and CSS checks (FLOW-835: a job of its own, so it runs beside static).
   types:
     name: pr (types)
+    needs: [changes]
+    if: needs.changes.outputs.docs != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -118,6 +130,8 @@ jobs:
   # image carries the browsers, so the job installs none.
   tests:
     name: pr (tests ${{ matrix.shard }}/6)
+    needs: [changes]
+    if: needs.changes.outputs.docs != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -181,7 +195,7 @@ jobs:
       # Supabase pulls and starts its containers while node, pnpm, and Playwright install.
       - name: Start local Supabase in the background
         run: |
-          (supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime > "$RUNNER_TEMP/supabase-start.log" 2>&1; echo "$?" > "$RUNNER_TEMP/supabase-start.exit.tmp"; mv "$RUNNER_TEMP/supabase-start.exit.tmp" "$RUNNER_TEMP/supabase-start.exit") > /dev/null 2>&1 &
+          (bash scripts/ci-supabase-start.sh -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime > /dev/null 2>&1; echo "$?" > "$RUNNER_TEMP/supabase-start.exit.tmp"; mv "$RUNNER_TEMP/supabase-start.exit.tmp" "$RUNNER_TEMP/supabase-start.exit") > /dev/null 2>&1 &
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
           version: 10.33.3
@@ -199,11 +213,13 @@ jobs:
           restore-keys: node-cache-Linux-x64-pnpm-
       - run: pnpm install --frozen-lockfile
       - name: Restore Playwright browsers
+        id: playwright-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-1.63.0
       - name: Restore Playwright system packages
+        id: apt-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/flow-apt
@@ -214,7 +230,10 @@ jobs:
       - name: Install Playwright system dependencies
         timeout-minutes: 8
         run: bash scripts/ci-apt-cache.sh install
+      # An exact hit means the browsers are already in the cache. The apt restore is prefix-only, so its cache-hit
+      # is never exact: ci-apt-cache.sh install already returns at once when no package is missing.
       - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         timeout-minutes: 5
         run: pnpm --filter @flow/app exec playwright install chromium
       - name: Wait for local Supabase
@@ -224,7 +243,9 @@ jobs:
           while [ ! -f "$RUNNER_TEMP/supabase-start.exit" ]; do sleep 2; done
           cat "$RUNNER_TEMP/supabase-start.log"
           test "$(cat "$RUNNER_TEMP/supabase-start.exit")" = 0
+      # The smoke reads the same local API in every shard, so the first Playwright shard runs it alone.
       - name: flow-mcp answers on the local API
+        if: matrix.part == '1/4'
         run: bash scripts/mcp-function-smoke.sh
       - name: Main Playwright suite against local Supabase (${{ matrix.part }})
         run: |
@@ -268,7 +289,8 @@ jobs:
           version: 2.118.0
       - run: git fetch --no-tags origin main
       - name: Start local Supabase (database, REST, auth and edge runtime only)
-        run: supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime,storage-api
+        timeout-minutes: 8
+        run: bash scripts/ci-supabase-start.sh -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime,storage-api
       - name: Migrations, flow-mcp smoke, pgTAP and db types
         run: bash scripts/local-ci.sh --part db
 
@@ -288,6 +310,7 @@ jobs:
           TESTS: ${{ needs.tests.result }}
           E2E: ${{ needs.e2e.result }}
           UI_CHANGED: ${{ needs.changes.outputs.ui }}
+          DOCS: ${{ needs.changes.outputs.docs }}
           DRAFT: ${{ github.event.pull_request.draft }}
           DB: ${{ needs.db.result }}
           DB_CHANGED: ${{ needs.changes.outputs.db }}
@@ -300,8 +323,14 @@ jobs:
           echo "db: $DB (the diff touches supabase/: $DB_CHANGED)"
           test "$CHANGES" = success
           test "$STATIC" = success
-          test "$TYPES" = success
-          test "$TESTS" = success
+          # A docs-only diff skips types and tests on purpose. Any other diff must have run them.
+          if [ "$DOCS" = true ]; then
+            test "$TYPES" = skipped
+            test "$TESTS" = skipped
+          else
+            test "$TYPES" = success
+            test "$TESTS" = success
+          fi
           if [ "$UI_CHANGED" = true ] && [ "$DRAFT" != true ]; then
             test "$E2E" = success
           else

@@ -31,8 +31,8 @@ const ORDERS: readonly { key: LinesOrder; label: string }[] = [
 /**
  * FLOW-140 slice 2, the ProfitMonth frame: a project's profit for one month, its four-figure card, and the
  * month's counted lines. The chips live in the URL (`order=`), so Back from a line restores the order. The
- * per-month share of the general expenses is not on the server yet, so the card shows the income and the
- * expenses that count, and the profit it leaves (a named exception on the PR).
+ * month's share of the general expenses comes with get_project for the month's range (the weights are the
+ * month's income), so the card shows it and the profit it leaves where the project has one.
  */
 export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProfitSample } = {}) {
   const params = useParams();
@@ -50,6 +50,11 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
   const currency = figures?.currency ?? companyCurrency;
   const linesRead = useProjectCashMonthLinesQuery(sample ? "" : projectId, month, currency, !sample && figures != null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
+  // The share and its weights are the requested month's (get_project reads the range); same rule as the project page.
+  const share = project?.overhead_weighted === true && (project.base_currency ?? "ILS") === currency
+    ? project.overhead_share_minor ?? null
+    : null;
+  const after = share == null || figures == null ? null : figures.profit_minor - share;
   const counted = sample?.lines ?? linesRead.data?.counted ?? [];
   const today = israelToday();
   const open = month === today.slice(0, 7);
@@ -85,6 +90,7 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
       kicker={project?.name}
       subtitle={sub}
       backTo={backTo}
+      headerClassName="ui-pp-head"
       phase={phase}
       onRetry={() => { void detail.refetch(); }}
       loading={<ProfitSkeleton />}
@@ -92,18 +98,22 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
       {figures == null ? null : (
         <div className="ui-pm-month">
           <p className="ui-pp-figure ui-page-pad">
-            <Amount agorot={figures.profit_minor} currency={currency} size="display" loss={figures.profit_minor < 0n} />
+            <Amount agorot={figures.profit_minor} currency={currency} size="display" loss={figures.profit_minor < 0n} direction={figures.profit_minor > 0n ? "income" : undefined} />
           </p>
           <Card className="ui-pp-card">
             <SummaryRow label="הכנסות" value={<Amount agorot={figures.income_minor} currency={currency} income />} />
             <SummaryRow label="הוצאות שנספרות ברווח" value={<Amount agorot={projectExpenseMinor(figures)} currency={currency} />} />
+            {share == null ? null : <SummaryRow label="חלק בהוצאות הכלליות" value={<Amount agorot={share} currency={currency} />} />}
+            {after == null ? null : (
+              <SummaryRow strong label="רווח אחרי הוצאות כלליות" value={<Amount agorot={after} currency={currency} loss={after < 0n} />} />
+            )}
           </Card>
           <div role="group" aria-label="סידור" className="ui-pp-chips">
             {ORDERS.map((option) => (
               <Chip key={option.key} pressed={order === option.key} onClick={() => { setOrder(option.key); }}>{option.label}</Chip>
             ))}
           </div>
-          {counted.length === 0 ? <p className="ui-pp-note t-hint">אין תנועות בחודש הזה.</p> : null}
+          {counted.length === 0 ? <p className="ui-pp-note t-caption t-muted">אין תנועות בחודש הזה.</p> : null}
           {groups.map((group) => {
             const expanded = order !== "category" || openKeys.has(group.key);
             const head = (
@@ -136,6 +146,7 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
                           agorot={minor < 0n ? -minor : minor}
                           currency={line.currency}
                           sign={line.side}
+                          wholeCents
                           source={rowSource(line.source)}
                           initials={lineInitials(name)}
                           href={`/transactions/${line.transaction_id}${search}`}
@@ -156,5 +167,5 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
 /** A group's sum on the page's side: a plus on profit, a minus on a loss. */
 function GroupSum({ total, currency }: { total: bigint; currency: string }) {
   const sign = total < 0n ? "−" : total > 0n ? "+" : "";
-  return <bdi className="t-line2 ui-lines-group-sum" dir="ltr">{`${sign}${formatAmountText(total < 0n ? -total : total, currency)}`}</bdi>;
+  return <bdi className={total < 0n ? "t-line2 ui-lines-group-sum ui-loss" : "t-line2 ui-lines-group-sum"} dir="ltr">{`${sign}${formatAmountText(total < 0n ? -total : total, currency)}`}</bdi>;
 }
