@@ -35,7 +35,7 @@ A push to `main`, or a manual run (Actions, then `ci`, then Run workflow), start
 On a push to `main` that `plan` lets through, and on a manual run:
 
 - `lint`: `pnpm lint`. It is the one job that saves the pnpm store. Every other job restores that store read-only.
-- `check (core)`: the migration checks, Deno, the edge-function typecheck, `pnpm typecheck`, the unused-code and CSS checks, `pnpm test:unit` (its root parts and the scripts suite), the connector tests and the Mercury deny-list check. Then the hosted build (`vite build`, stamped, then `pnpm check:bundle`), which is uploaded as the `hosted-dist` artifact for deploy, and the reviewers-only build with `pnpm check:reviewer-bundle`.
+- `check (core)`: the migration checks, Deno, the edge-function typecheck, `pnpm typecheck`, the unused-code and CSS checks, `pnpm test:unit` (its root parts and the scripts suite), the connector tests and the Mercury deny-list check. Then the hosted build (`vite build`, stamped, then `pnpm check:bundle`), which is uploaded with its module graph (`app/bundle-graph.json`, which deploy's `check:bundle` reads) as the `hosted-dist` artifact for deploy, and the reviewers-only build with `pnpm check:reviewer-bundle`.
 - `check (app 1/2)` and `check (app 2/2)`: the `@flow/app` unit tests, split by file.
 - `build (storybook)`: `pnpm build-storybook`, uploaded as the `storybook-static` artifact for the stories shards.
 - `check (storybook light)` and `check (storybook dark)`: `vitest run --project storybook` and `--project storybook-dark`, side by side. The light job saves the Playwright browser and apt caches. The dark job restores them.
