@@ -8,7 +8,7 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { useHoldWrites } from "../use-is-viewer";
 import { dismissRecurringAlert, answerRecurringMatch, liveRpcClient, restoreRecurringAlert, type AlertKind } from "../recurring-actions";
 import { type ChargePageData, useChargePageData } from "../recurring-charge-data";
-import { amountOf, askText, bannerText, changeLine, chargeAlert, dayMonth, ignoredText, metaOf, monthsThrough, statusOf } from "../recurring-charge";
+import { amountOf, askText, bannerText, changeLine, chargeAlert, dayMonth, endedText, ignoredText, metaOf, monthsThrough, statusOf } from "../recurring-charge";
 import { chargeKey, israelToday, type ScheduleRow } from "../recurring-schedule";
 import { Button } from "../ui/button";
 import { ChoiceSheet } from "../ui/choice-sheet";
@@ -262,7 +262,7 @@ function ChargeBody({
             onStill={() => void ignore("נמשיך לצפות לו")}
             onEnded={() => {
               if (write.isPending || (live && blocked()) || (live && lineId == null)) return;
-              write.mutate({ id: lineId ?? "", next: "never", before: { recurring: isRecurring, pace }, undo: false, toast: `${row.party_name} הוסר מהקבועים ומהצפי` });
+              write.mutate({ id: lineId ?? "", next: "never", before: { recurring: isRecurring, pace }, undo: false, toast: endedText(row.party_name, data.split) });
             }}
           />
         ) : null}

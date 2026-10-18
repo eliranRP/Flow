@@ -1,5 +1,6 @@
 import { formatAmountText, type ForecastBuild, type ForecastItem } from "@flow/shared";
 import { type ReactNode, useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { cashMonthKey, cashRows } from "../cash";
 import { daysLeftInMonth, type ForecastPatch, type MonthForecast, nextMonth, priorPatch, useMonthForecastQuery, useResetForecastMonth, useRestoreForecast, useSetForecastItem } from "../forecast-month";
 import { useCategoriesQuery } from "../use-books";
@@ -30,6 +31,8 @@ export type ForecastSample = {
   view?: ForecastView;
   openCategories?: readonly string[];
 };
+
+const NO_SO_FAR: ForecastSoFar = { income: [], expense: [] };
 
 /** The page scrolls past this many pixels: the compact bar slides down (FLOW-141). */
 const COMPACT_AFTER = 150;
@@ -117,7 +120,9 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
   const byCategory = view === "categories";
   const soFarQuery = useForecastSoFarQuery(month, base, live && byCategory && data != null);
   const categories = useCategoriesQuery(live && byCategory);
-  const soFar = sample?.soFar ?? soFarQuery.data ?? null;
+  // A sample with no month by category draws its categories with nothing so far, never a skeleton that stays.
+  const soFar = live ? soFarQuery.data ?? null : sample.soFar ?? NO_SO_FAR;
+  const { search } = useLocation();
 
   useEffect(() => {
     const onScroll = () => { setCompact(window.scrollY > COMPACT_AFTER); };
@@ -236,6 +241,7 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
                 open={openCategories}
                 onToggle={toggleCategory}
                 onOpenItem={setOpen}
+                search={search}
               />
             )
           ) : (

@@ -1,12 +1,12 @@
 import type { MissingBill } from "@flow/shared";
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMissingBillsQuery } from "../forecast";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { RECURRING_KEYS } from "../pace-write";
 import { liveRecurringWrites, type RecurringWrites } from "../recurring-actions";
-import { chargeHref, dayMonth } from "../recurring-charge";
+import { chargeHref, dayMonth, endedText } from "../recurring-charge";
 import { groupRecurring, monthInflow, monthOutflow, type RecurringLine } from "../recurring-layout";
 import { alertState, changePercentOf, daysBetween, isSplitParty, israelToday, rowId, type RecurringAlert, type ScheduleRow, scheduleLines, useRecurringScheduleQuery } from "../recurring-schedule";
 import { EmptyState, FailureLine } from "../ui/empty-state";
@@ -85,6 +85,8 @@ export function RecurringScreen({
   const alerts = useMemo(() => (rows == null ? undefined : alertState(rows, bills)), [rows, bills]);
   const search = usePreviewSearch();
   const view = useMemo(() => (rows == null ? null : recurringView(rows, today, project, alerts, search)), [rows, today, project, alerts, search]);
+  // The row whose "הסתיים" is still writing: a second tap on it sends nothing.
+  const ending = useRef<string | null>(null);
 
   const failedNow = live ? query.isError && query.data == null : failed;
   if (failedNow) {
@@ -128,18 +130,23 @@ export function RecurringScreen({
   /** The ask's "הסתיים": the charge leaves the list and the forecast; the undo brings it back. */
   async function end(row: RecurringListRow) {
     const charge = rows?.find((item) => rowId(rows, item) === row.id);
-    if (charge == null) return;
-    const target = { direction: charge.direction, partyId: charge.party_id, currency: charge.currency, projectId: isSplitParty(rows ?? [], charge) ? charge.project_id : null };
+    if (charge == null || ending.current === row.id) return;
+    const split = isSplitParty(rows ?? [], charge);
+    const target = { direction: charge.direction, partyId: charge.party_id, currency: charge.currency, projectId: split ? charge.project_id : null };
+    ending.current = row.id;
     let undo: () => Promise<void>;
     try {
       undo = await writer.end(target);
     } catch {
       failure();
       return;
+    } finally {
+      ending.current = null;
     }
     refresh();
     toast.show({
-      message: `${row.name} הוסר מהקבועים ומהצפי`,
+      // The switch is the party's: ending a split party's charge ends it in every project.
+      message: endedText(charge.party_name, split),
       action: "ביטול",
       onAction: () => {
         void undo().then(refresh, failure);
@@ -202,7 +209,7 @@ export function recurringView(allRows: readonly ScheduleRow[], today: string, pr
       ...hintFor(row, line, today, state.dismissed.has(line.id)),
       ...(alert == null ? {} : { alertKey: alert.alertKey, suggestion: alert.suggestion == null ? null : suggestionRow(alert.suggestion) }),
       // A late charge with no match to offer asks whether it still recurs (the board's "עדיין קבוע?").
-      ...(alert != null && alert.alertKey != null && alert.suggestion == null && row.state === "late" ? { ask: askText(row) } : {}),
+      ...(alert != null && alert.alertKey != null && alert.suggestion == null && row.state === "late" ? { ask: lateAskText(row) } : {}),
       href: chargeHref(row.direction, row.party_id, search, isSplitParty(allRows, row) ? row.project_id : null),
     };
   };
@@ -231,7 +238,7 @@ function usualDayOf(row: ScheduleRow): string {
 }
 
 /** The ask under a late row: "לא שולם ב־03/10. עדיין קבוע?" (income: לא התקבל). */
-function askText(row: ScheduleRow): string {
+function lateAskText(row: ScheduleRow): string {
   return `${row.direction === "income" ? "לא התקבל ב־" : "לא שולם ב־"}${dayMonth(usualDayOf(row))}. עדיין קבוע?`;
 }
 

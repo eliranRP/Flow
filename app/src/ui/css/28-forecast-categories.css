@@ -70,6 +70,14 @@
   cursor: pointer;
 }
 
+.ui-forecast-cat-row-still {
+  cursor: default;
+}
+
+.ui-forecast-cat-row-still .ui-forecast-cat-chev {
+  visibility: hidden;
+}
+
 .ui-forecast-cat-top {
   display: flex;
   align-items: center;

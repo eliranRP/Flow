@@ -149,6 +149,14 @@ export function askText(row: ScheduleRow, today: string): string {
   return `${missed}${dayMonth(usualDay)}, ${String(lateDays(row, today))} ימים אחרי המועד הרגיל. אם הסתיים, נפסיק לצפות לו בתחזית ובהתראות.`;
 }
 
+/**
+ * The toast after "הסתיים". The switch is the party's (decision 0185), so ending one charge of a party
+ * split by project ends all of them, and the toast says so.
+ */
+export function endedText(partyName: string, split: boolean): string {
+  return split ? `${partyName} הוסר מהקבועים ומהצפי בכל הפרויקטים` : `${partyName} הוסר מהקבועים ומהצפי`;
+}
+
 /** The grey line after an ignore: it comes back on the next late bill, or the next change. */
 export function ignoredText(kind: ChargeAlert["kind"]): string {
   return kind === "missing" ? "התעלמת מההתראה. היא תחזור אם גם החיוב הבא יאחר." : "התעלמת מההתראה. היא תחזור בשינוי הבא.";

@@ -1,4 +1,5 @@
 import { formatAmountText, type ForecastItem } from "@flow/shared";
+import { type KeyboardEvent, useRef } from "react";
 import { Link } from "react-router-dom";
 import { chargeHref } from "../recurring-charge";
 import { cx } from "../ui/cx";
@@ -14,15 +15,42 @@ const VIEWS: readonly (readonly [ForecastView, string])[] = [
   ["categories", "לפי קטגוריה"],
 ];
 
+/**
+ * The board's chips as a radio group. The keys are SegmentedControl's (roving tabindex, arrows that follow
+ * the reading direction, so they reverse under dir=rtl); the look stays the board's chips.
+ */
 export function ForecastViewSwitch({ view, onPick }: { view: ForecastView; onPick: (view: ForecastView) => void }) {
+  const buttons = useRef<Array<HTMLButtonElement | null>>([]);
+  const index = Math.max(0, VIEWS.findIndex(([value]) => value === view));
+
+  function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const rtl = getComputedStyle(event.currentTarget).direction === "rtl";
+    let delta = 0;
+    if (event.key === "ArrowDown") delta = 1;
+    else if (event.key === "ArrowUp") delta = -1;
+    else if (event.key === "ArrowRight") delta = rtl ? -1 : 1;
+    else if (event.key === "ArrowLeft") delta = rtl ? 1 : -1;
+    else return;
+    event.preventDefault();
+    const next = (index + delta + VIEWS.length) % VIEWS.length;
+    const option = VIEWS[next];
+    if (option == null) return;
+    onPick(option[0]);
+    buttons.current[next]?.focus();
+  }
+
   return (
-    <div className="ui-forecast-views" role="radiogroup" aria-label="תצוגה">
-      {VIEWS.map(([value, label]) => (
+    <div className="ui-forecast-views" role="radiogroup" aria-label="תצוגה" onKeyDown={onKeyDown}>
+      {VIEWS.map(([value, label], optionIndex) => (
         <button
           key={value}
+          ref={(node) => {
+            buttons.current[optionIndex] = node;
+          }}
           type="button"
           role="radio"
           aria-checked={view === value}
+          tabIndex={view === value ? 0 : -1}
           className={cx("ui-forecast-view", view === value && "ui-forecast-view-on")}
           onClick={() => { onPick(value); }}
         >
@@ -69,24 +97,33 @@ function CategoryRow({
   onOpenItem: (item: ForecastItem) => void;
   search: string;
 }) {
-  const expanded = open && row.items.length > 0;
+  const hasItems = row.items.length > 0;
+  const expanded = open && hasItems;
   const end = money(row.end, currency);
+  const top = (
+    <>
+      <span className="ui-forecast-cat-top">
+        <span className="ui-forecast-cat-text">
+          <span className="ui-forecast-cat-name">{row.name}</span>
+          <span className={cx("ui-forecast-cat-meta", row.late.length > 0 && "ui-forecast-late")}>{rowMeta(row, currency)}</span>
+        </span>
+        <bdi dir="ltr" className={cx("ui-forecast-cat-end", income && "ui-forecast-income")}>{income ? `+${end}` : end}</bdi>
+        <span className={cx("ui-forecast-cat-chev", expanded && "ui-forecast-cat-chev-open")} aria-hidden="true"><ChevronDownIcon size={18} /></span>
+      </span>
+      <span className="ui-forecast-cat-bar" role="img" aria-label={`עד היום ${money(row.soFar, currency)}, צפוי עוד ${money(row.ahead, currency)}`}>
+        <span className="ui-forecast-cat-bar-so-far" style={{ flexGrow: Number(row.soFar) || 0.0001 }} />
+        <span className="ui-forecast-cat-bar-ahead" style={{ flexGrow: Number(row.ahead) || 0.0001 }} />
+      </span>
+    </>
+  );
   return (
     <li className="ui-forecast-cat-li">
-      <button type="button" className="ui-forecast-cat-row" aria-expanded={expanded} onClick={onToggle}>
-        <span className="ui-forecast-cat-top">
-          <span className="ui-forecast-cat-text">
-            <span className="ui-forecast-cat-name">{row.name}</span>
-            <span className={cx("ui-forecast-cat-meta", row.late.length > 0 && "ui-forecast-late")}>{rowMeta(row, currency)}</span>
-          </span>
-          <bdi dir="ltr" className={cx("ui-forecast-cat-end", income && "ui-forecast-income")}>{income ? `+${end}` : end}</bdi>
-          <span className={cx("ui-forecast-cat-chev", expanded && "ui-forecast-cat-chev-open")} aria-hidden="true"><ChevronDownIcon size={18} /></span>
-        </span>
-        <span className="ui-forecast-cat-bar" role="img" aria-label={`עד היום ${money(row.soFar, currency)}, צפוי עוד ${money(row.ahead, currency)}`}>
-          <span className="ui-forecast-cat-bar-so-far" style={{ flexGrow: Number(row.soFar) || 0.0001 }} />
-          <span className="ui-forecast-cat-bar-ahead" style={{ flexGrow: Number(row.ahead) || 0.0001 }} />
-        </span>
-      </button>
+      {hasItems ? (
+        <button type="button" className="ui-forecast-cat-row" aria-expanded={expanded} onClick={onToggle}>{top}</button>
+      ) : (
+        // No items to open: the same row, not a control (its chevron keeps its place, hidden).
+        <div className="ui-forecast-cat-row ui-forecast-cat-row-still">{top}</div>
+      )}
       {expanded ? (
         <ul className="ui-forecast-cat-kids">
           <li className="ui-forecast-cat-so-far">
@@ -157,7 +194,7 @@ export function ForecastCategoryView({
                     currency={currency}
                     today={today}
                     open={open.has(key)}
-                    onToggle={() => { if (row.items.length > 0) onToggle(key); }}
+                    onToggle={() => { onToggle(key); }}
                     onOpenItem={onOpenItem}
                     search={search}
                   />
@@ -171,6 +208,7 @@ export function ForecastCategoryView({
         <span><span className="ui-forecast-dot ui-forecast-dot-so-far" aria-hidden="true" />עד היום</span>
         <span><span className="ui-forecast-dot ui-forecast-dot-ahead" aria-hidden="true" />צפוי עד סוף החודש</span>
       </p>
+      <p className="ui-forecast-foot">עד היום לפי הקטגוריות שנספרות ברווח, לפני מע״מ. העברות וקרן הלוואות לא נכללות.</p>
     </>
   );
 }

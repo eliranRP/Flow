@@ -12,7 +12,7 @@ const expected = {
   project_id: null,
   months: [{ month: "2026-10", open: true, by_currency: [{ currency: "ILS", income_minor: 250000, expense_minor: -500000 }] }],
   recurring: [
-    { direction: "expense", party_id: "p-rent", name: "Rent Co", currency: "ILS", typical_amount_minor: -500000, typical_day: 1, months_seen: 6, seen_this_month: false },
+    { direction: "expense", party_id: "p-rent", name: "Rent Co", currency: "ILS", typical_amount_minor: -500000, typical_day: 1, months_seen: 6, seen_this_month: false, category_id: "c-rent" },
   ],
 };
 const unpaid = [
@@ -43,7 +43,7 @@ Deno.test("get_forecast reads its RPCs and builds the items, totals and changed 
     changed: number;
     cash_net_minor: number | null;
     big_number_minor: number | null;
-    expense: { minor: number; usual_minor: number }[];
+    expense: { minor: number; usual_minor: number; category_id: string | null }[];
   } | null;
   assertEquals(data?.month, "2026-10");
   assertEquals(data?.income_total_minor, 250000);
@@ -51,6 +51,8 @@ Deno.test("get_forecast reads its RPCs and builds the items, totals and changed 
   assertEquals(data?.changed, 1);
   assertEquals(data?.expense[0]?.minor, 480000);
   assertEquals(data?.expense[0]?.usual_minor, 500000);
+  // לפי קטגוריה groups the items by their category.
+  assertEquals(data?.expense[0]?.category_id, "c-rent");
   assertEquals(calls.map((call) => call.name).sort(), ["cash_months", "expected_months", "forecast_overrides_for", "list_unpaid", "mcp_company_loan_currency"]);
   // Home's number: the cash net + the income still to come - the charges still to go (small ones included).
   assertEquals(data?.cash_net_minor, 120000);

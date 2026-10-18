@@ -1,4 +1,5 @@
 import { formatAmountText } from "@flow/shared";
+import { useId } from "react";
 import { Link } from "react-router-dom";
 import { Avatar } from "./avatar";
 import { ClockIcon } from "./icons";
@@ -80,6 +81,7 @@ export type RecurringListProps = {
  */
 export function RecurringList({ project, subtitle, currency, outflow, inflow, late, groups, onIgnore, onStill, onEnded, openId }: RecurringListProps) {
   const money = (minor: bigint) => formatAmountText(minor, currency);
+  const lateHead = useId();
   const rowView = (row: RecurringListRow) => (
     <RowView key={row.id} row={row} money={money} onIgnore={onIgnore} onStill={onStill} onEnded={onEnded} defaultOpen={row.id === openId} />
   );
@@ -95,13 +97,13 @@ export function RecurringList({ project, subtitle, currency, outflow, inflow, la
         <MonthSum label="יוצא החודש" total={money(outflow.total)} done={outflow.paid} whole={outflow.total} doneText={`שולם ${money(outflow.paid)}`} leftText={`עוד ${money(outflow.toCome)}`} />
       </section>
       {late.length > 0 && (
-        <section className="ui-recurring-late" aria-label="לא הגיעו">
+        <section className="ui-recurring-late" aria-labelledby={lateHead}>
           <div className="ui-recurring-late-head">
             <span className="ui-recurring-late-icon" aria-hidden="true"><ClockIcon size={18} /></span>
-            <span className="ui-recurring-late-text">
-              <h2 className="ui-recurring-late-title">לא הגיעו · {late.length}</h2>
+            <div className="ui-recurring-late-text">
+              <h2 id={lateHead} className="ui-recurring-late-title">לא הגיעו · {late.length}</h2>
               <span className="ui-recurring-late-lead">היה אמור להגיע עד היום ומחכה להחלטה שלך.</span>
-            </span>
+            </div>
           </div>
           <ul className="ui-recurring-rows">{late.map(rowView)}</ul>
         </section>
