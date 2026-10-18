@@ -38,11 +38,43 @@ export async function answerRecurringMatch(client: RpcClient, answer: RecurringM
   );
 }
 
+/** One recurring charge, as the list names it to a write: its party, currency and (when split) project. */
+export type ChargeTarget = {
+  direction: "income" | "expense";
+  partyId: string;
+  currency: string;
+  /** The charge's project when its party is split by project (decision 0185); null otherwise. */
+  projectId: string | null;
+};
+
 /** The writes the list makes, as the screen calls them. */
 export type RecurringWrites = {
   dismiss: (alertKey: string) => Promise<void>;
   restore: (alertKey: string) => Promise<void>;
+  /**
+   * The ask's "הסתיים": the charge's party is no longer recurring (decision 0172), through its newest
+   * line. Returns the undo, which hands the choice back to the rule.
+   */
+  end: (target: ChargeTarget) => Promise<() => Promise<void>>;
 };
+
+/** "הסתיים" on the live client: the newest line of the charge, then its party's switch off. */
+export async function endRecurringCharge(client: RpcClient, target: ChargeTarget): Promise<() => Promise<void>> {
+  const line = await client.rpc("recurring_party_line", {
+    p_direction: target.direction,
+    p_party_id: target.partyId,
+    p_currency: target.currency,
+    ...(target.projectId == null ? {} : { p_project_id: target.projectId }),
+  });
+  assertNoError(line);
+  const id = typeof line.data === "string" ? line.data : null;
+  if (id == null) throw new Error("no line");
+  assertNoError(await client.rpc("set_payment_recurring", { p_id: id, p_recurring: false }));
+  return async () => {
+    // null hands the choice back to the rule; the generated type shows the parameter as boolean only.
+    assertNoError(await client.rpc("set_payment_recurring", { p_id: id, p_recurring: null as unknown as boolean }));
+  };
+}
 
 function supabaseClient(): RpcClient {
   const supabase = getSupabase();
@@ -54,6 +86,7 @@ function supabaseClient(): RpcClient {
 export const liveRecurringWrites: RecurringWrites = {
   dismiss: (alertKey) => dismissRecurringAlert(supabaseClient(), alertKey),
   restore: (alertKey) => restoreRecurringAlert(supabaseClient(), alertKey),
+  end: (target) => endRecurringCharge(supabaseClient(), target),
 };
 
 /** The live client, for the charge page's writes. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compareInGroup, groupRecurring, monthlyCostMinor, monthOutflow, NO_CATEGORY, type RecurringLine } from "./recurring-layout";
+import { compareInGroup, groupRecurring, monthInflow, monthlyCostMinor, monthOutflow, NO_CATEGORY, type RecurringLine } from "./recurring-layout";
 
 /** One charge of the rule-25 fixture (invented names; amounts in cents). */
 const line = (over: Partial<RecurringLine> & Pick<RecurringLine, "id" | "usual">): RecurringLine => ({
@@ -80,9 +80,9 @@ describe("groupRecurring", () => {
   const groups = groupRecurring(BOARD);
   const monthly = Object.fromEntries(groups.map((group) => [group.name, group.monthlyMinor]));
 
-  it("puts income last and each expense category in one group", () => {
-    expect(groups.map((group) => group.name)).toEqual(["חשמל ומים", "אחזקה", "משרד", "ביטוח ומסים", "שכירות"]);
-    expect(groups.at(-1)?.income).toBe(true);
+  it("puts income first and each expense category in one group", () => {
+    expect(groups.map((group) => group.name)).toEqual(["שכירות", "חשמל ומים", "אחזקה", "משרד", "ביטוח ומסים"]);
+    expect(groups[0]?.income).toBe(true);
   });
 
   it("sums each group at its usual amount, so an arrived charge counts as usual", () => {
@@ -98,8 +98,13 @@ describe("groupRecurring", () => {
     expect(monthly["שכירות"]).toBe(560000n);
   });
 
-  it("puts charges with no category last among the expenses, before income", () => {
+  it("puts charges with no category last among the expenses", () => {
     const withNone = groupRecurring([...BOARD, line({ id: "none", category: null, usual: 100n })]);
-    expect(withNone.map((group) => group.name)).toEqual(["חשמל ומים", "אחזקה", "משרד", "ביטוח ומסים", NO_CATEGORY, "שכירות"]);
+    expect(withNone.map((group) => group.name)).toEqual(["שכירות", "חשמל ומים", "אחזקה", "משרד", "ביטוח ומסים", NO_CATEGORY]);
+  });
+
+  it("totals the month's income: what came in, and what is still to come", () => {
+    // Board: נכנס החודש +$5,600, התקבל $3,950 (two rents), עוד $1,650 (the late one).
+    expect(monthInflow(BOARD)).toEqual({ total: 560000n, got: 395000n, toCome: 165000n });
   });
 });

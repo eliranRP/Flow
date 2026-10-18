@@ -6,5 +6,6 @@
   "RecurringLate": "/e2e/recurring-charge?preset=late",
   "RecurringPace": "/e2e/recurring-charge?preset=pace",
   "StatesRecurringLoading": "/recurring?preview=loading",
-  "StatesRecurringEmpty": "/recurring?preview=1"
+  "StatesRecurringEmpty": "/recurring?preview=1",
+  "RecurringAsk": "/e2e/recurring-charge?preset=ask"
 }

@@ -98,8 +98,11 @@ export function monthsThrough(months: PartyCharges["months"], thisMonth: string)
   });
 }
 
-/** The status line: a late bill, what arrived and when, the day it is due, or the month it is next due. */
-export function statusOf(row: ScheduleRow, arrivedOn: string | null): ChargeStatus {
+/**
+ * The status line: a late bill, what arrived and when, "עוד לא הגיע" once its usual day has come but it
+ * is not late yet, the day it is due, or the month it is next due.
+ */
+export function statusOf(row: ScheduleRow, arrivedOn: string | null, today: string | null = null): ChargeStatus {
   const income = row.direction === "income";
   if (row.state === "late") return { text: "לא הגיע", tone: "bad" };
   if (row.state === "arrived") {
@@ -107,6 +110,7 @@ export function statusOf(row: ScheduleRow, arrivedOn: string | null): ChargeStat
     return { text: arrivedOn == null ? word : `${word} ${dayMonth(arrivedOn)}`, tone: "accent" };
   }
   if (row.state === "soon") {
+    if (today != null && lateDays(row, today) >= 0) return { text: "עוד לא הגיע", tone: "accent" };
     return { text: `צפוי ב־${String(row.typical_day).padStart(2, "0")}/${row.next_due_month.slice(5, 7)}`, tone: "accent" };
   }
   return { text: `הבא ב־${row.next_due_month.slice(5, 7)}/${row.next_due_month.slice(0, 4)}`, tone: "accent" };
@@ -133,6 +137,16 @@ export function bannerText(row: ScheduleRow, alert: ChargeAlert, today: string):
   }
   const percent = changeFor(row) ?? 0;
   return `${percent > 0 ? "גבוה ב־" : "נמוך ב־"}${String(Math.abs(percent))}% מהרגיל`;
+}
+
+/**
+ * The ask under a late bill with no match: "לא שולם ב־03/10, 8 ימים אחרי המועד הרגיל. אם הסתיים, נפסיק
+ * לצפות לו בתחזית ובהתראות." (income: לא התקבל).
+ */
+export function askText(row: ScheduleRow, today: string): string {
+  const usualDay = `${row.next_due_month}-${String(row.typical_day).padStart(2, "0")}`;
+  const missed = row.direction === "income" ? "לא התקבל ב־" : "לא שולם ב־";
+  return `${missed}${dayMonth(usualDay)}, ${String(lateDays(row, today))} ימים אחרי המועד הרגיל. אם הסתיים, נפסיק לצפות לו בתחזית ובהתראות.`;
 }
 
 /** The grey line after an ignore: it comes back on the next late bill, or the next change. */

@@ -48,6 +48,21 @@ export function monthOutflow(lines: readonly RecurringLine[]): { total: bigint; 
   return { total: paid + toCome, paid, toCome };
 }
 
+/**
+ * The card's "נכנס החודש": every income that came in this month at its amount, plus every income due
+ * this month that has not come yet at its usual amount. Expenses are left out.
+ */
+export function monthInflow(lines: readonly RecurringLine[]): { total: bigint; got: bigint; toCome: bigint } {
+  let got = 0n;
+  let toCome = 0n;
+  for (const line of lines) {
+    if (!line.income) continue;
+    if (line.arrived) got += line.minor;
+    else if (line.due) toCome += line.minor;
+  }
+  return { total: got + toCome, got, toCome };
+}
+
 /** The order inside a group: paid first, then still to come, then later; by day within each. */
 export function compareInGroup(a: RecurringLine, b: RecurringLine): number {
   return rankInGroup(a) - rankInGroup(b) || a.day - b.day;
@@ -72,7 +87,8 @@ export const NO_CATEGORY = "ללא קטגוריה";
 
 /**
  * One group per category, in the order the categories first appear in `lines` (the caller sorts them
- * by the server's order), with income last and "ללא קטגוריה" last among the expenses.
+ * by the server's order): the income groups first (the board's "הכנסות קבועות"), then the expenses,
+ * "ללא קטגוריה" last among them.
  */
 export function groupRecurring(lines: readonly RecurringLine[]): RecurringGroup[] {
   const groups = new Map<string, RecurringGroup>();
@@ -89,8 +105,8 @@ export function groupRecurring(lines: readonly RecurringLine[]): RecurringGroup[
   }
   const ordered = [...groups.values()].map((group) => ({ ...group, lines: [...group.lines].sort(compareInGroup) }));
   return [
+    ...ordered.filter((group) => group.income),
     ...ordered.filter((group) => !group.income && group.name !== NO_CATEGORY),
     ...ordered.filter((group) => !group.income && group.name === NO_CATEGORY),
-    ...ordered.filter((group) => group.income),
   ];
 }

@@ -136,6 +136,27 @@ export const RECURRING_POWER_CHARGES = chargesOf(
   [["2026-09-03", "tx-power-09", 18600n], ["2026-08-03", "tx-power-08", 19800n], ["2026-07-03", "tx-power-07", 21400n], ["2026-06-03", "tx-power-06", 20200n], ["2026-05-03", "tx-power-05", 17100n]],
 );
 
+/** The board's late rent (income, no match): five months at $1,650 and an empty October. */
+export const RECURRING_RENT_CHARGES = chargesOf(
+  { id: "rent-elm", name: "Elm Row unit 2", direction: "income" },
+  [["2026-05", 165000n], ["2026-06", 165000n], ["2026-07", 165000n], ["2026-08", 165000n], ["2026-09", 165000n], ["2026-10", 0n]],
+  [["2026-09-01", "tx-rent-09", 165000n], ["2026-08-01", "tx-rent-08", 165000n], ["2026-07-01", "tx-rent-07", 165000n], ["2026-06-01", "tx-rent-06", 165000n], ["2026-05-01", "tx-rent-05", 165000n]],
+);
+
+/** The rent's recurring switch: on by the rule, every month. */
+export const RECURRING_RENT_SWITCH: PaymentRecurring = {
+  transaction_id: "tx-rent-09",
+  party: { direction: "income", id: "rent-elm", name: "Elm Row unit 2", currency: "USD" },
+  recurring: true,
+  override: null,
+  detected: true,
+  typical_day: 1,
+  typical_amount_minor: 165000n,
+  pace: "month",
+  pace_override: null,
+  detected_pace: "month",
+};
+
 /** The water bill's recurring switch: on by the rule, every month. */
 export const RECURRING_WATER_SWITCH: PaymentRecurring = {
   transaction_id: "tx-water-10",
@@ -189,4 +210,14 @@ export const RECURRING_CHARGES_FIXTURE_POWER = {
   lineId: "tx-power-09",
   charges: RECURRING_POWER_CHARGES,
   recurring: RECURRING_POWER_SWITCH,
+};
+
+/** The charge page's sample for the late rent with no match: it asks עדיין קבוע? (`ask`). */
+export const RECURRING_CHARGES_FIXTURE_RENT = {
+  row: rowOf("rent-elm"),
+  bills: RECURRING_MISSING_FIXTURE,
+  changes: RECURRING_CHANGES_FIXTURE,
+  lineId: "tx-rent-09",
+  charges: RECURRING_RENT_CHARGES,
+  recurring: RECURRING_RENT_SWITCH,
 };

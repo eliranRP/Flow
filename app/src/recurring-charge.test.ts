@@ -220,3 +220,12 @@ describe("a party split by project (decision 0185)", () => {
     expect(chargeHref("expense", "water", "")).toBe("/recurring/expense/water");
   });
 });
+
+describe("a charge whose day has come but is not late yet", () => {
+  it("reads עוד לא הגיע, from its usual day on", () => {
+    const soon = row("hoa");
+    expect(statusOf(soon, null, "2026-10-14").text).toBe("צפוי ב־15/10");
+    expect(statusOf(soon, null, "2026-10-15").text).toBe("עוד לא הגיע");
+    expect(statusOf(soon, null, "2026-10-17").text).toBe("עוד לא הגיע");
+  });
+});

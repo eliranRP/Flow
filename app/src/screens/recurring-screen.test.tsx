@@ -7,7 +7,7 @@ describe("recurringView (rule-25 fixture)", () => {
   const view = recurringView(FIXTURE, "2026-10-11");
 
   it("shows the month and the count, and the outflow the board does", () => {
-    expect(view.subtitle).toBe("אוקטובר 2026 • 15 קבועים");
+    expect(view.subtitle).toBe("אוקטובר 2026 • נכון ל־11/10 • 15 קבועים");
     expect(view.outflow.total).toBe(125300n);
     expect(view.outflow.paid).toBe(29100n);
     expect(view.outflow.toCome).toBe(96200n);
@@ -31,7 +31,7 @@ describe("recurringView (rule-25 fixture)", () => {
   it("narrows to one project, named, with its own count", () => {
     const birch = recurringView(FIXTURE, "2026-10-11", "p-birch-lane");
     expect(birch.project).toBe("Birch Lane");
-    expect(birch.subtitle).toBe("אוקטובר 2026 • 4 קבועים");
+    expect(birch.subtitle).toBe("אוקטובר 2026 • נכון ל־11/10 • 4 קבועים");
     const names = [...birch.late, ...birch.groups.flatMap((group) => group.rows)].map((item) => item.name);
     expect(names.sort()).toEqual(["Bay County Tax", "Birch Lane rent", "Brightline Power", "Brightside Pest"]);
   });

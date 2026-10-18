@@ -45,3 +45,27 @@ export function RecurringMatchBox({
     </section>
   );
 }
+
+/**
+ * A late bill with no match to offer asks whether it still recurs (the board's "עדיין קבוע?"): the
+ * question, what was missed, the two answers and a hint under them.
+ */
+export function RecurringAskBox({ text, hint, onStill, onEnded }: {
+  /** What was missed, and what ending it does. */
+  text: string;
+  hint: string;
+  onStill: () => void;
+  onEnded: () => void;
+}) {
+  return (
+    <section className="ui-recurring-match ui-recurring-askbox" aria-label="עדיין קבוע?">
+      <p className="ui-recurring-askbox-title">עדיין קבוע?</p>
+      <p className="ui-recurring-askbox-text">{text}</p>
+      <div className="ui-recurring-match-actions">
+        <button type="button" className="ui-recurring-match-yes ui-hit" onClick={onStill}>כן, עדיין קבוע</button>
+        <button type="button" className="ui-recurring-match-no ui-hit" onClick={onEnded}>הסתיים</button>
+      </div>
+      <p className="ui-recurring-askbox-hint">{hint}</p>
+    </section>
+  );
+}

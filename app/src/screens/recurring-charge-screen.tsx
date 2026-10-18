@@ -8,7 +8,7 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { useHoldWrites } from "../use-is-viewer";
 import { dismissRecurringAlert, answerRecurringMatch, liveRpcClient, restoreRecurringAlert, type AlertKind } from "../recurring-actions";
 import { type ChargePageData, useChargePageData } from "../recurring-charge-data";
-import { amountOf, bannerText, changeLine, chargeAlert, dayMonth, ignoredText, metaOf, monthsThrough, statusOf } from "../recurring-charge";
+import { amountOf, askText, bannerText, changeLine, chargeAlert, dayMonth, ignoredText, metaOf, monthsThrough, statusOf } from "../recurring-charge";
 import { chargeKey, israelToday, type ScheduleRow } from "../recurring-schedule";
 import { Button } from "../ui/button";
 import { ChoiceSheet } from "../ui/choice-sheet";
@@ -17,7 +17,7 @@ import { DelayedSkeleton, ListSkeleton } from "../ui/skeleton";
 import { paceSheetCopy, paceToast, type PaceChoice } from "../ui/pace";
 import { PartyChargesHistory, PartyChargesSheet } from "../ui/related-charges";
 import { ChargeBanner, ChargeCard, ChargeHead, ChargeIgnored, RecurringRow } from "../ui/recurring-charge-parts";
-import { RecurringMatchBox } from "../ui/recurring-match-box";
+import { RecurringAskBox, RecurringMatchBox } from "../ui/recurring-match-box";
 import { useToast } from "../ui/toast";
 import { useWrite } from "../use-write";
 import { TransactionTopBar } from "./transaction-top-bar";
@@ -36,7 +36,7 @@ export type ChargeSample = {
 };
 
 /** What a pace pick changes here: the choice, and the state before it. The undo writes it back. */
-type PaceChange = PaceWrite & { undo: boolean; close?: () => void };
+type PaceChange = PaceWrite & { undo: boolean; close?: () => void; /** The toast after it, when not the pace sheet's own. */ toast?: string };
 
 /**
  * FLOW-447c: the charge page (קבועים › one party), opened from a row of the list. Its own writes are
@@ -135,12 +135,14 @@ function ChargeBody({
   }, [paceOpen, navigate]);
 
   const arrivedOn = row.state === "arrived" ? charges?.charges[0]?.doc_date ?? null : null;
-  const status = statusOf(row, arrivedOn);
+  const status = statusOf(row, arrivedOn, today);
   const amount = amountOf(row);
   const alert = chargeAlert(row, data.bills, data.changes, lineId, data.split);
   const ignored = alert != null && (ignoredLocal ?? !alert.active);
   const suggestion = alert?.kind === "missing" && !ignored ? alert.suggestion : null;
   const showMatch = suggestion != null && matchLocal == null && !holdWrites;
+  // A late bill with no match to offer (or one the owner said is not it) asks whether it still recurs.
+  const showAsk = alert?.kind === "missing" && !ignored && alert.key != null && !showMatch && !holdWrites && (suggestion == null || matchLocal === "never");
   const isRecurring = paceLocal?.recurring ?? true;
   const pace: RecurringPace = paceLocal?.pace ?? row.pace;
   const overridden = recurring?.override != null;
@@ -153,7 +155,7 @@ function ChargeBody({
     for (const key of RECURRING_KEYS) void client.invalidateQueries({ queryKey: [key] });
   };
 
-  async function ignore() {
+  async function ignore(message = "התעלמת מההתראה") {
     if (alert?.key == null) return;
     const { key, kind } = alert;
     setIgnoredLocal(true);
@@ -165,7 +167,7 @@ function ChargeBody({
       return;
     }
     if (live) refresh();
-    toast.show({ message: "התעלמת מההתראה", action: "ביטול", onAction: () => void restore(key, kind) });
+    toast.show({ message, action: "ביטול", onAction: () => void restore(key, kind) });
   }
 
   async function restore(key: string, kind: AlertKind) {
@@ -205,7 +207,7 @@ function ChargeBody({
       if (done.next === "never" && !done.undo) leaving.current = true;
       done.close?.();
       if (done.undo) return;
-      const message = done.next === "never" ? "סומן כלא קבוע" : paceToast(done.next);
+      const message = done.toast ?? (done.next === "never" ? "סומן כלא קבוע" : paceToast(done.next));
       toast.show({ message, action: "ביטול", onAction: () => {
         undoPace(done);
       } });
@@ -252,6 +254,17 @@ function ChargeBody({
         ) : null}
         {alert != null && ignored && alertText != null ? (
           <ChargeIgnored text={alertText} onRestore={() => void restore(alert.key ?? "", alert.kind)} disabled={alert.key == null} />
+        ) : null}
+        {showAsk ? (
+          <RecurringAskBox
+            text={askText(row, today)}
+            hint={matchLocal === "never" ? "אמרת שהשורה שהצענו היא לא זה." : "הגיע בשם אחר? אפשר לשייך אותו מדף השורה."}
+            onStill={() => void ignore("נמשיך לצפות לו")}
+            onEnded={() => {
+              if (write.isPending || (live && blocked()) || (live && lineId == null)) return;
+              write.mutate({ id: lineId ?? "", next: "never", before: { recurring: isRecurring, pace }, undo: false, toast: `${row.party_name} הוסר מהקבועים ומהצפי` });
+            }}
+          />
         ) : null}
         {showMatch ? (
           <RecurringMatchBox
