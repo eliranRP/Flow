@@ -4,5 +4,11 @@
   "ProfitProject": "/e2e/project-profit",
   "ProfitMonth": "/e2e/project-month-profit",
   "ProfitNext": "/e2e/project-next-month",
-  "ProfitByCategory": "/e2e/company-profit?by=category"
+  "ProfitByCategory": "/e2e/company-profit?by=category",
+  "ProfitNextEdit": "/e2e/project-next-edit",
+  "ProfitNextAdd": "/e2e/project-next-add",
+  "ProfitNextEdited": "/e2e/project-next-month?state=edited",
+  "ProfitNextSearch": "/e2e/project-next-add?preset=search",
+  "ProfitNextNoMatch": "/e2e/project-next-add?preset=nomatch",
+  "ProfitNextPace": "/e2e/project-next-add?preset=pace"
 }

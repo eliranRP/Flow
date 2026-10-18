@@ -30,7 +30,7 @@ export function NextMonthCard({ forecast, currency, href }: { forecast: NextMont
           <Amount agorot={net} currency={currency} direction={net > 0n ? "income" : undefined} />
         </span>
         <span className="ui-pn-card-meta">{totals}</span>
-        <span className="ui-pn-card-basis">{basisLine(forecast.recurringCount, forecast.averageNames)}</span>
+        <span className="ui-pn-card-basis">{basisLine(forecast)}</span>
       </span>
       <span className="ui-pn-card-chevron" aria-hidden="true"><ChevronIcon size={18} /></span>
     </Link>

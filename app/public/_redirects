@@ -85,6 +85,10 @@
 /projects/:projectId/profit/ /projects/:projectId/profit 301
 /projects/:projectId/profit/next /app-shell 200
 /projects/:projectId/profit/next/ /projects/:projectId/profit/next 301
+/projects/:projectId/profit/next/edit/:rowKey /app-shell 200
+/projects/:projectId/profit/next/edit/:rowKey/ /projects/:projectId/profit/next/edit/:rowKey 301
+/projects/:projectId/profit/next/add /app-shell 200
+/projects/:projectId/profit/next/add/ /projects/:projectId/profit/next/add 301
 /projects/:projectId/profit/:month /app-shell 200
 /projects/:projectId/profit/:month/ /projects/:projectId/profit/:month 301
 /projects/:projectId /app-shell 200

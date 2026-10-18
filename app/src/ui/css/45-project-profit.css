@@ -261,3 +261,82 @@
 .ui-pn-rows .ui-row .ui-num:not(.ui-income) {
   color: var(--color-text-secondary);
 }
+
+/* A row the user changed or added says so in the accent colour (ProfitNextEdited). */
+.ui-pn-edited {
+  color: var(--color-accent-text);
+}
+
+/* Under the forecast rows: add a line, the rows taken out with החזרה, and back to Flow's forecast. */
+.ui-pn-edits {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--space-1) var(--space-side) var(--space-6);
+}
+
+.ui-pn-add {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-3) + var(--space-1) / 2);
+  min-block-size: 52px;
+  color: var(--color-accent-text);
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-weight);
+  text-decoration: none;
+}
+
+.ui-pn-add-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 36px;
+  block-size: 36px;
+  border: 1.5px dashed var(--color-outline-forecast);
+  border-radius: var(--radius-chip);
+}
+
+.ui-pn-off {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  padding-block-start: var(--space-4);
+}
+
+.ui-pn-off-title {
+  margin: 0;
+  padding-block-end: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-pn-off-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+  min-block-size: 56px;
+}
+
+.ui-pn-off-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-half);
+  min-inline-size: 0;
+}
+
+.ui-pn-off-name {
+  color: var(--color-text-muted);
+  font-size: var(--type-body-size);
+  text-decoration: line-through;
+}
+
+.ui-pn-off-meta {
+  color: var(--color-btn-disabled-text);
+  font-size: var(--type-caption-size);
+}
+
+.ui-pn-reset {
+  margin-block-start: var(--space-3);
+}

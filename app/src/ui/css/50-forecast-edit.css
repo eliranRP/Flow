@@ -1,0 +1,320 @@
+/*
+  The ProfitNextEdit and ProfitNextAdd pages (a project forecast row's edit page): the status pill, the
+  title, the amount field with its pencil, the meta line, the two cards, the history bars, the hint and the
+  actions. Imported by ui/forecast-edit-parts.tsx, so it loads with the page, not with Home.
+*/
+.ui-fe-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: calc(var(--space-2) + var(--space-half)) var(--space-side) var(--space-6);
+}
+
+.ui-fe-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-fe-pill {
+  align-self: flex-start;
+  padding: var(--space-1) calc(var(--space-2) + var(--space-1) / 2);
+  border-radius: var(--radius-seg-btn-small);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-btn-weight);
+  line-height: var(--type-caption-line);
+}
+
+.ui-fe-title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--type-name-size);
+  font-weight: var(--type-name-weight);
+  line-height: var(--type-section-line);
+  overflow-wrap: anywhere;
+}
+
+.ui-fe-amount {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+  padding-block-end: var(--space-1);
+  border-block-end: 1.5px solid var(--color-tint-strong);
+  cursor: text;
+}
+
+.ui-fe-amount-pencil {
+  display: flex;
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.ui-fe-amount-figure {
+  display: flex;
+  flex: 1;
+  justify-content: flex-end;
+  align-items: baseline;
+  min-inline-size: 0;
+  color: var(--color-text);
+  font-size: var(--type-detail-size);
+  line-height: var(--type-band-line);
+}
+
+.ui-fe-amount-income {
+  color: var(--color-income);
+}
+
+.ui-fe-amount-empty {
+  color: var(--color-text-muted);
+}
+
+.ui-fe-amount-input {
+  min-inline-size: 1ch;
+  max-inline-size: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+
+.ui-fe-amount-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.ui-fe-amount:focus-within {
+  border-block-end-color: var(--color-accent);
+}
+
+.ui-fe-meta {
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+}
+
+.ui-fe-error {
+  color: var(--color-error);
+  font-size: var(--type-caption-size);
+}
+
+.ui-fe-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-card-tight);
+  background: var(--color-surface);
+}
+
+.ui-fe-card > * + * {
+  border-block-start: 1px solid var(--color-line);
+}
+
+.ui-fe-card .ui-icon-row {
+  min-block-size: 60px;
+  padding-inline: calc(var(--space-3) + var(--space-1) / 2);
+}
+
+.ui-fe-pace {
+  flex: none;
+  padding: var(--space-1) calc(var(--space-2) + var(--space-1) / 2);
+  color: var(--color-accent-text);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-fe-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: calc(var(--space-3) + var(--space-1) / 2);
+}
+
+.ui-fe-history-title {
+  margin: 0;
+  line-height: var(--type-title-line);
+  color: var(--color-text);
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-fe-history-line {
+  margin: 0;
+  line-height: var(--type-title-line);
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+}
+
+.ui-fe-history-line bdi {
+  color: var(--color-text);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-fe-diff {
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-fe-diff-high {
+  color: var(--color-signal-soft);
+}
+
+.ui-fe-no-history {
+  margin: 0;
+  line-height: var(--type-title-line);
+  padding: calc(var(--space-3) + var(--space-1) / 2);
+  color: var(--color-text-muted);
+  font-size: var(--type-meta-size);
+}
+
+.ui-fe-bars {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: end;
+  gap: var(--space-2);
+  block-size: 76px;
+}
+
+.ui-fe-bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--space-1) * 1.5);
+}
+
+.ui-fe-bar {
+  display: block;
+  inline-size: 100%;
+  box-sizing: border-box;
+  border-radius: var(--radius-thumb);
+  background: var(--color-track-strong);
+}
+
+.ui-fe-bar-next {
+  border: 1.5px dashed var(--color-accent);
+  background: var(--color-tint);
+}
+
+.ui-fe-bar-label {
+  line-height: var(--type-cents-line);
+  color: var(--color-text-muted);
+  font-size: var(--type-cents-size);
+  white-space: nowrap;
+}
+
+.ui-fe-bar-label-next {
+  color: var(--color-accent-text);
+}
+
+.ui-fe-hint {
+  margin: 0;
+  padding: 0 var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-note-line);
+}
+
+.ui-fe-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* The category sheet: the search, then the two lists in one raised box. */
+.ui-fe-choices {
+  display: flex;
+  flex-direction: column;
+  max-block-size: 420px;
+  overflow-y: auto;
+  padding: var(--space-half) calc(var(--space-3) + var(--space-1) / 2);
+  border-radius: var(--radius-card-tight);
+  background: var(--color-raised);
+}
+
+.ui-fe-choices-title {
+  margin: 0;
+  line-height: var(--type-title-line);
+  padding: var(--space-3) 0 var(--space-half);
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-fe-no-match {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(var(--space-1) * 1.5);
+  padding: calc(var(--space-3) + var(--space-1) / 2) 0;
+}
+
+.ui-fe-no-match-text {
+  margin: 0;
+  line-height: var(--type-title-line);
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+}
+
+.ui-fe-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: 52px;
+  padding: calc(var(--space-1) * 1.5) 0;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+}
+
+.ui-fe-choice + .ui-fe-choice {
+  border-block-start: 1px solid var(--color-line);
+}
+
+.ui-fe-ring {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 20px;
+  block-size: 20px;
+  box-sizing: border-box;
+  border: 2px solid var(--color-control-border);
+  border-radius: var(--radius-chip);
+}
+
+.ui-fe-dot {
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: var(--radius-chip);
+}
+
+.ui-fe-choice[aria-checked="true"] .ui-fe-ring {
+  border-color: var(--color-accent);
+}
+
+.ui-fe-choice[aria-checked="true"] .ui-fe-dot {
+  background: var(--color-accent);
+}
+
+.ui-fe-choice-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-half);
+  min-inline-size: 0;
+}
+
+.ui-fe-choice-name {
+  font-size: var(--type-body-size);
+  line-height: var(--type-title-line);
+}
+
+.ui-fe-choice-hint {
+  line-height: var(--type-title-line);
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+}
+

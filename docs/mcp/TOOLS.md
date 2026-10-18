@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `create_manual_entry`, `attach_document`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `create_manual_entry`, `attach_document`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -25,6 +25,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "project_delete"` | `id` | the project id `delete_project` returned |
 | `undo` `kind: "forecast_item"` | `id` | the write id `set_forecast_item` returned |
 | `undo` `kind: "forecast_reset"` | `id` | the write id `reset_forecast` returned |
+| `undo` `kind: "project_forecast"` | `id` | the write id `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row` or `reset_project_forecast` returned |
 | `undo` `kind: "category"` | `id` | the category id `create_category` or a `create_categories` row returned |
 | `undo` `kind: "category_hidden"` | `id` | the category id `hide_category` returned |
 | `undo` `kind: "category_pnl"` | `id` | the category id `set_category_pnl` returned |
@@ -366,6 +367,26 @@ Changes one item of the month-end forecast (FLOW-141; owner or editor). It chang
 
 Puts back every item of one month's forecast to Flow's numbers (איפוס, FLOW-141; owner or editor). `month` is `YYYY-MM`, this month or later. Returns `month`, `removed` (how many items had a change), `id` and `undo_kind` (`forecast_reset`: undo puts the month's changes back, `conflict` when one was set since).
 
+### set_project_forecast_edit
+
+```json
+{ "idempotency_key": "pf-1", "project_id": "<project id>", "month": "2026-11", "row_key": "avg:<category id>", "amount_minor": 120000, "pace": "once" }
+```
+
+Changes a row of a project's next-month forecast, or adds a line ([0186](../decisions/0186-project-forecast-edits.md); owner or editor). It changes the forecast only, never a recurring charge, a line or a category. `month` is `YYYY-MM`, this month or later (a past month is `refused` with `month ended`). Send `row_key` (a key from `get_project_forecast_edits`) to change that row, or `category_id` (and optionally `direction`, default the category's kind) to add a line; one of the two. `amount_minor` is whole minor units, unsigned. `pace` is `once` (default: that month only), `month`, `2months`, `quarter` or `year` from that month. A second change of the same row and month replaces the first. Returns `id`, `project_id`, `month`, `edit` and `undo_kind` (`project_forecast`: undo puts the forecast back, `conflict` once the edit changed again). Idempotency key and the write rate limit apply.
+
+### remove_project_forecast_row
+
+`idempotency_key`, `project_id`, `month`, `row_key`. Takes one row out of the project's forecast for that month (הסרה מהצפי; owner or editor). A row already out stays out. Returns `id`, `edit` and `undo_kind` (`project_forecast`).
+
+### restore_project_forecast_row
+
+`idempotency_key`, `project_id`, `month`, `row_key`. Brings a removed row back into the month's forecast (החזרה; owner or editor). Returns `id`, `removed` and `undo_kind` (`project_forecast`).
+
+### reset_project_forecast
+
+`idempotency_key`, `project_id`, optional `month`. Goes back to Flow's forecast (חזרה לצפי של Flow; owner or editor): with `month`, the edits that apply to that month go; without it, every edit of the project. Returns `id`, `removed` and `undo_kind` (`project_forecast`: undo puts them back, `conflict` when one was set again since).
+
 ### update_project
 
 ```json
@@ -592,6 +613,10 @@ Takes back Jev's auto fill on one open review line ([FLOW-702](../backlog/TASKS.
 ### get_forecast
 
 `month` (`YYYY-MM`, default this month in Israel time). Read tool (FLOW-141). The month-end forecast (צפי): `data` has `month`, `base_currency` (the company's currency, decision 0147; the items and the cash net are in it), `income[]` and `expense[]` (largest first; `key`, `direction`, `kind` (`recurring` or `invoice`), `name`, `currency`, `usual_minor`, `minor` (the figure the forecast uses, unsigned), `day`, `description` (an invoice's own description, such as "Invoice #1043", or null for a recurring charge; added with FLOW-141), `due_on`, `moved_out`, `overridden`, `category_id` (the recurring charge's usual category or the invoice's own, else null)), `small` (recurring charges under 100 units of the currency: `count`, `total_minor`, `items`), `moved[]` (moved to next month, not counted), `income_total_minor`, `expense_total_minor` (both unsigned; small included in the expenses) and `changed` (how many items were changed), `cash_net_minor` (this month's cash net in `base_currency`, the same figure Home starts from) and `big_number_minor` (Home's number: `cash_net_minor` plus `income_total_minor` minus `expense_total_minor`). Both are `null` when the month is not the newest cash month. Built from `expected_months`, `list_unpaid`, `forecast_overrides_for`, `cash_months` and the company currency; a failed currency read is `refused`.
+
+### get_project_forecast_edits
+
+`project_id`, `month` (`YYYY-MM`). Read tool ([0186](../decisions/0186-project-forecast-edits.md)). A project's edits of its next-month forecast (ProfitNext), from `project_forecast_edits_for`. The forecast itself is the project's recurring charges (`get_expected_months` with `project_id`; a loan payment is left out) and the six-month average of every other expense category (`get_project_categories`). `data`: `project_id`, `month`, `edits[]`, the edits that apply to that month: `id`, `kind` (`change`: the row's amount becomes `amount_minor`; `remove`: the row is out of the month; `add`: a line of `category_id` / `category_name` with `direction` and `amount_minor`, its row key `add:<id>`), `row_key` (`rec:<direction>:<party_id>` for a recurring charge, `avg:<category_id>` or `avg:none` for an average, `add:<id>` for an added line), `amount_minor` (unsigned; the row keeps its sign), `pace` (`once`, `month`, `2months`, `quarter`, `year`) and `start_month`. A paced edit applies every pace months from `start_month`; for one row the latest start wins. Another company's project reads as no edits.
 
 ### get_expected_months
 

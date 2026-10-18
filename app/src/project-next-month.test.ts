@@ -1,13 +1,16 @@
 import type { ExpectedParty, ProjectCategoryMonths } from "@flow/shared";
 import { describe, expect, it } from "vitest";
-import { JUNIPER_NEXT } from "./dev/project-next-month-sample";
+import { JUNIPER_NEXT, JUNIPER_NEXT_EDITED } from "./dev/project-next-month-sample";
 import {
+  applyForecastEdits,
   basisLine,
   dueInMonth,
+  editApplies,
   expectedDate,
   monthlyOverheadShare,
   nextMonthForecast,
   nextMonthKey,
+  type ProjectForecastEdit,
 } from "./project-next-month";
 
 function party(overrides: Partial<ExpectedParty>): ExpectedParty {
@@ -148,7 +151,7 @@ describe("nextMonthForecast", () => {
       ["recurring", "Example Servicing", -10_000n],
       ["average", "תיקונים", -31_000n],
     ]);
-    expect(result.averageNames).toEqual(["תיקונים"]);
+    expect(result.averageCount).toBe(1);
     expect(result.averageMonths).toBe(6);
   });
 
@@ -221,26 +224,120 @@ describe("nextMonthForecast", () => {
   it("makes the board's November from the dev fixture", () => {
     const result = nextMonthForecast({ projectId: "juniper-ct", currency: "USD", today: JUNIPER_NEXT.today, recurring: JUNIPER_NEXT.expected.recurring, categoryMonths: JUNIPER_NEXT.categoryMonths });
     expect(result.incomeMinor).toBe(415_000n);
-    expect(result.expenseMinor).toBe(177_000n);
-    expect(result.netMinor).toBe(238_000n);
+    expect(result.expenseMinor).toBe(186_500n);
+    expect(result.netMinor).toBe(228_500n);
     expect(result.rows.map((row) => [row.name, row.minor])).toEqual([
       ["M. Ortiz", 185_000n],
       ["S. Kim", 230_000n],
       ["ריבית הלוואות", -118_000n],
       ["תיקונים ותחזוקה", -31_000n],
       ["מסים וביטוח", -28_000n],
+      ["חשמל ומים", -9_500n],
     ]);
-    expect(basisLine(result.recurringCount, result.averageNames)).toBe("2 קבועים וממוצע 3 קטגוריות");
+    expect(basisLine(result)).toBe("2 קבועים ו־4 ממוצעים");
   });
 });
 
 describe("basisLine", () => {
-  it("names one average category, counts several, and leaves out none", () => {
-    expect(basisLine(4, ["תיקונים"])).toBe("4 קבועים וממוצע תיקונים");
-    expect(basisLine(4, ["תיקונים", "גינה"])).toBe("4 קבועים וממוצע 2 קטגוריות");
-    expect(basisLine(4, [])).toBe("4 קבועים");
-    expect(basisLine(1, [])).toBe("קבוע אחד");
-    expect(basisLine(0, ["תיקונים"])).toBe("ממוצע תיקונים");
+  it("counts the recurring rows and the averages, and the edits when there are any", () => {
+    expect(basisLine({ recurringCount: 4, averageCount: 2, editCount: 0 })).toBe("4 קבועים ו־2 ממוצעים");
+    expect(basisLine({ recurringCount: 4, averageCount: 2, editCount: 3 })).toBe("4 קבועים ו־2 ממוצעים · ערכת 3");
+    expect(basisLine({ recurringCount: 1, averageCount: 1, editCount: 0 })).toBe("קבוע אחד ו־ממוצע אחד");
+    expect(basisLine({ recurringCount: 4, averageCount: 0, editCount: 0 })).toBe("4 קבועים");
+    expect(basisLine({ recurringCount: 0, averageCount: 3, editCount: 1 })).toBe("3 ממוצעים · ערכת 1");
+  });
+});
+
+describe("editApplies (an edit's pace)", () => {
+  it("applies a once edit to its month only", () => {
+    expect(editApplies("2026-11", "once", "2026-11")).toBe(true);
+    expect(editApplies("2026-11", "once", "2026-12")).toBe(false);
+  });
+
+  it("applies a paced edit from its month on, every pace months, across the year end", () => {
+    expect(editApplies("2026-11", "month", "2027-03")).toBe(true);
+    expect(editApplies("2026-11", "2months", "2027-01")).toBe(true);
+    expect(editApplies("2026-11", "2months", "2026-12")).toBe(false);
+    expect(editApplies("2026-11", "quarter", "2027-02")).toBe(true);
+    expect(editApplies("2026-11", "quarter", "2027-01")).toBe(false);
+    expect(editApplies("2026-11", "year", "2027-11")).toBe(true);
+    expect(editApplies("2026-11", "year", "2027-10")).toBe(false);
+  });
+
+  it("never applies before its month", () => {
+    expect(editApplies("2026-12", "month", "2026-11")).toBe(false);
+  });
+});
+
+function edit(overrides: Partial<ProjectForecastEdit>): ProjectForecastEdit {
+  return { id: "e-1", kind: "change", row_key: "avg:repairs", category_id: null, direction: null, amount_minor: 50_000, pace: "once", start_month: "2026-11", ...overrides };
+}
+
+describe("applyForecastEdits", () => {
+  const base = nextMonthForecast({ projectId: "juniper-ct", currency: "USD", today: JUNIPER_NEXT.today, recurring: JUNIPER_NEXT.expected.recurring, categoryMonths: JUNIPER_NEXT.categoryMonths });
+
+  it("leaves the forecast as it is with no edit for the month", () => {
+    expect(applyForecastEdits(base, [])).toBe(base);
+    expect(applyForecastEdits(base, [edit({ start_month: "2026-12" })])).toBe(base);
+  });
+
+  it("changes a row's amount, keeps its sign, and remembers Flow's number", () => {
+    const result = applyForecastEdits(base, [edit({}), edit({ id: "e-2", row_key: "rec:income:c-kim", amount_minor: 240_000 })]);
+    const repairs = result.rows.find((row) => row.key === "avg:repairs");
+    expect(repairs?.minor).toBe(-50_000n);
+    expect(repairs?.wasMinor).toBe(-31_000n);
+    expect(result.rows.find((row) => row.key === "rec:income:c-kim")?.minor).toBe(240_000n);
+    expect(result.expenseMinor).toBe(186_500n - 31_000n + 50_000n);
+    expect(result.incomeMinor).toBe(425_000n);
+    expect(result.editCount).toBe(2);
+  });
+
+  it("takes the latest start that applies when two changes reach the month", () => {
+    const result = applyForecastEdits(base, [
+      edit({ id: "e-old", amount_minor: 40_000, pace: "month", start_month: "2026-10" }),
+      edit({ id: "e-new", amount_minor: 60_000, start_month: "2026-11" }),
+    ]);
+    expect(result.rows.find((row) => row.key === "avg:repairs")?.minor).toBe(-60_000n);
+  });
+
+  it("applies a monthly change made last month to this forecast", () => {
+    const result = applyForecastEdits(base, [edit({ amount_minor: 45_000, pace: "month", start_month: "2026-09" })]);
+    expect(result.rows.find((row) => row.key === "avg:repairs")?.minor).toBe(-45_000n);
+  });
+
+  it("lists a removed row apart, out of the totals and the counts", () => {
+    const result = applyForecastEdits(base, [edit({ kind: "remove", row_key: "avg:power", amount_minor: null })]);
+    expect(result.rows.some((row) => row.key === "avg:power")).toBe(false);
+    expect(result.removed.map((row) => [row.key, row.minor])).toEqual([["avg:power", -9_500n]]);
+    expect(result.expenseMinor).toBe(177_000n);
+    expect(result.averageCount).toBe(3);
+  });
+
+  it("adds a line in its category's name, signed by its direction, after the rows", () => {
+    const result = applyForecastEdits(base, [
+      edit({ id: "a-1", kind: "add", row_key: null, category_id: "property-mgmt", category_name: "ניהול נכס", direction: "expense", amount_minor: 30_500, pace: "month", start_month: "2026-10" }),
+      edit({ id: "a-2", kind: "add", row_key: null, category_id: "other-income", category_name: "הכנסה אחרת", direction: "income", amount_minor: 10_000 }),
+      edit({ id: "a-3", kind: "add", row_key: null, category_id: "pest", category_name: "הדברה", direction: "expense", amount_minor: 6_500, pace: "quarter", start_month: "2026-10" }),
+    ]);
+    expect(result.rows.slice(-2).map((row) => [row.key, row.kind, row.name, row.minor, row.pace])).toEqual([
+      ["add:a-1", "added", "ניהול נכס", -30_500n, "month"],
+      ["add:a-2", "added", "הכנסה אחרת", 10_000n, "once"],
+    ]);
+    expect(result.editCount).toBe(2);
+  });
+
+  it("changes and removes an added line by its key", () => {
+    const added = edit({ id: "a-1", kind: "add", row_key: null, category_id: "pest", category_name: "הדברה", direction: "expense", amount_minor: 6_500 });
+    expect(applyForecastEdits(base, [added, edit({ id: "c-1", row_key: "add:a-1", amount_minor: 7_000 })]).rows.at(-1)?.minor).toBe(-7_000n);
+    expect(applyForecastEdits(base, [added, edit({ id: "r-1", kind: "remove", row_key: "add:a-1", amount_minor: null })]).removed[0]?.name).toBe("הדברה");
+  });
+
+  it("makes the board's edited November from the dev fixture", () => {
+    const result = applyForecastEdits(base, JUNIPER_NEXT_EDITED.edits ?? []);
+    expect(result.expenseMinor).toBe(296_500n);
+    expect(result.netMinor).toBe(118_500n);
+    expect(result.rows).toHaveLength(6);
+    expect(basisLine(result)).toBe("2 קבועים ו־3 ממוצעים · ערכת 3");
   });
 });
 
