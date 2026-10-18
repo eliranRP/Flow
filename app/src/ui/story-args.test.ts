@@ -5,7 +5,7 @@ type StoryModule = {
   default?: { args?: unknown };
 } & Record<string, unknown>;
 
-const modules = import.meta.glob<StoryModule>("./**/*.stories.tsx", { eager: true });
+const modules = import.meta.glob<StoryModule>("../**/*.stories.tsx", { eager: true });
 
 /** Paths of bigint values. Storybook sends args across the manager channel with JSON.stringify. */
 export function bigintPaths(value: unknown, path = "args", seen = new WeakSet()): string[] {

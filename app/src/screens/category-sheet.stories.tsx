@@ -55,33 +55,11 @@ export const Menu: Story = {
   play: async ({ canvasElement }) => { await openMenu(canvasElement, "חומרים"); },
 };
 
-export const MenuLoanUsed: Story = {
-  name: "Menu, a loan uses it (delete disabled)",
-  render: () => <Screen />,
-  play: async ({ canvasElement }) => { await openMenu(canvasElement, "ביטוח נכס"); },
-};
-
 /** FLOW-106 §3.5: a loan names the category for escrow, so it is locked like the built-in loan ones. */
 export const MenuLoanOwnCategory: Story = {
   name: "Menu, a loan's own escrow category (locked)",
   render: () => <Screen withLoans />,
   play: async ({ canvasElement }) => { await openMenu(canvasElement, "ביטוח נכס"); },
-};
-
-export const MenuLoanCategory: Story = {
-  name: "Menu, a built-in loan category",
-  render: () => <Screen />,
-  play: async ({ canvasElement }) => { await openMenu(canvasElement, "תשלומי הלוואה"); },
-};
-
-/** FLOW-347: the only income category has nowhere to move, so its sheet has no move row. */
-export const MenuNowhereToMove: Story = {
-  name: "Menu, the only category of its kind (no move row)",
-  render: () => <Screen />,
-  play: async ({ canvasElement }) => {
-    await userEvent.click(await within(canvasElement).findByRole("radio", { name: "הכנסות" }));
-    await openMenu(canvasElement, "שכר דירה");
-  },
 };
 
 export const MovePicker: Story = {
@@ -94,34 +72,11 @@ export const MovePicker: Story = {
   },
 };
 
-export const MoveAndHide: Story = {
-  name: "Move with the hide switch on: confirm the merge",
-  render: () => <Screen />,
-  play: async ({ canvasElement }) => {
-    const sheet = await openMenu(canvasElement, "חומרים");
-    await userEvent.click(within(sheet).getByRole("button", { name: "העברה לקטגוריה אחרת" }));
-    const picker = await body(canvasElement).findByRole("dialog", { name: "העברת 42 תנועות אל" });
-    await userEvent.click(within(picker).getByRole("switch", { name: "להסתיר את חומרים" }));
-    await userEvent.click(within(picker).getByRole("button", { name: /קבלנים/ }));
-    await body(canvasElement).findByRole("dialog", { name: "למזג את הקטגוריה?" });
-  },
-};
-
 export const DeleteConfirm: Story = {
   name: "Delete, a category with lines",
   render: () => <Screen />,
   play: async ({ canvasElement }) => {
     const sheet = await openMenu(canvasElement, "חומרים");
-    await userEvent.click(within(sheet).getByRole("button", { name: "מחיקה" }));
-    await body(canvasElement).findByRole("dialog", { name: "למחוק את הקטגוריה?" });
-  },
-};
-
-export const DeleteEmpty: Story = {
-  name: "Delete, an empty category",
-  render: () => <Screen />,
-  play: async ({ canvasElement }) => {
-    const sheet = await openMenu(canvasElement, "אחר");
     await userEvent.click(within(sheet).getByRole("button", { name: "מחיקה" }));
     await body(canvasElement).findByRole("dialog", { name: "למחוק את הקטגוריה?" });
   },

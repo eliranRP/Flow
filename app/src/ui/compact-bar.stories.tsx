@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Amount } from "./amount";
-import { Chip } from "./chip";
 import { CompactBar } from "./compact-bar";
 import { IconButton } from "./icon-button";
 import { ChevronDownIcon, OutwardChevron } from "./icons";
@@ -25,39 +24,10 @@ type Story = StoryObj<typeof meta>;
 /** A list page: Back (icon), the title, 44px. Invented rows. */
 export const List: Story = {};
 
-/** The parent's name as Back's label, "‹ הגדרות" (decision 0156). */
-export const ListWithFigure: Story = {
-  args: {
-    title: "קטגוריות",
-    label: "הגדרות",
-    backTo: "/settings",
-  },
-  render: (args) => <CompactBar {...args} figure={<Amount agorot={125_000n} size="list" />} />,
-};
-
 /** A detail page: 56px. */
 export const Detail: Story = {
   args: { title: "שיפוץ הרצל 12", label: "פרויקטים", backTo: "/projects", size: "detail" },
   render: (args) => <CompactBar {...args} figure={<Amount agorot={2_940_000n} size="list" />} />,
-};
-
-/** FLOW-363 (3c): the organize chips ride under the bar, so they stay one tap away once the page scrolls. */
-export const Panel: Story = {
-  args: { title: "יצא", label: "בית", backTo: "/" },
-  render: (args) => (
-    <CompactBar
-      {...args}
-      figure={<Amount agorot={125_000n} size="list" />}
-      panel={
-        <>
-          <Chip kind="choice" pressed>לפי תאריך</Chip>
-          <Chip kind="choice">לפי סכום</Chip>
-          <Chip kind="choice">לפי פרויקט</Chip>
-          <Chip kind="choice">לפי קטגוריה</Chip>
-        </>
-      }
-    />
-  ),
 };
 
 /** Hidden from the start: no slide, no focus, no clicks. */
@@ -99,5 +69,3 @@ function HomeBar({ past = false }: { past?: boolean }) {
 }
 
 export const Band: Story = { render: () => <HomeBar />, args: { title: "" } };
-
-export const BandPast: Story = { render: () => <HomeBar past />, args: { title: "" } };

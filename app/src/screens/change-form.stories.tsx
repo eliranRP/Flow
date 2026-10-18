@@ -12,30 +12,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const ChangeSplitUnallocated: Story = {
-  name: "Change split, unallocated",
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
-  render: () => (
-    <ChangeStory
-      supplier="עגורני החוף בע״מ"
-      projectId=""
-      categoryId=""
-      suggestionId=""
-      suggestionCategoryId=""
-      split
-      splitTitle="עלות משותפת · טרם פוצלה"
-      projects={[
-        { id: "p-alon", name: "בית הספר אלון", code: "P-01" },
-        { id: "p-namal", name: "מחסן הנמל", code: "P-02" },
-      ]}
-      categories={[
-        { id: "c1", name: "מלט", hidden: false, kind: "expense" },
-        { id: "c2", name: "שינוע", hidden: false, kind: "expense" },
-      ]}
-    />
-  ),
-};
-
 const changeProjects = [
   { id: "holon", name: "בניין מגורים חולון", code: "P-14" },
   { id: "p14", name: "מגדל משרדים פ״ת", code: "P-08", recent: "היום" },
@@ -120,32 +96,10 @@ export const ChangeJevSummary: Story = {
   render: () => <ChangeStory jev={{ project: true, category: true }} />,
 };
 
-
-export const ChangeJevPicker: Story = {
-  name: "Project picker (Jev fill)",
-  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" jev={{ project: true }} />,
-};
-
-
-export const ChangeSummaryChanged: Story = {
-  name: "Summary (changed)",
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
-  render: () => <ChangeStory projectId="villa" categoryId="c3" suggestionCategoryId="c1" />,
-};
-
 export const ChangeProjectPicker: Story = {
   name: "Project picker",
   parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <ChangeStory entry="/review/change?item=r1&pick=project" />,
-};
-
-
-
-/** No category yet: the line cannot be approved, so the sheet offers no split by categories. */
-export const ChangeProjectPickerNoCategory: Story = {
-  name: "Project picker, no category",
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
-  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" categoryId="" suggestionCategoryId="" />,
 };
 
 /** FLOW-831: a row tap only moves the check, so שמירה is enabled once the check differs from the saved project. */
@@ -182,19 +136,6 @@ export const ChangeCategoryChoicePending: Story = {
   },
 };
 
-
-export const ChangeProjectSearching: Story = {
-  name: "Project picker searching",
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
-  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" initialQuery="ויל" />,
-};
-
-export const ChangeProjectEmpty: Story = {
-  name: "Project picker no results",
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
-  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" initialQuery="קסם" />,
-};
-
 export const ChangeProjectLoading: Story = {
   name: "Project picker loading",
   parameters: { viewport: { defaultViewport: "flow390-short" } },
@@ -217,32 +158,6 @@ export const ChangeReversalPicker: Story = {
   name: "Category picker with reversals",
   parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <ChangeStory entry="/review/change?item=r1&pick=category" categories={reversalCategories} />,
-};
-
-export const ChangeReversalPicked: Story = {
-  name: "Reversal picked",
-  render: () => <ChangeStory entry="/review/change?item=r1&pick=category" categories={reversalCategories} categoryId="i1" suggestionCategoryId="" />,
-};
-
-export const ChangeReversalSummary: Story = {
-  name: "Reversal on the summary",
-  render: () => <ChangeStory categories={reversalCategories} categoryId="i1" suggestionCategoryId="" />,
-};
-
-/** FLOW-118: a kept-out income category filed through MCP stays marked החזר and sits in the reversal section. */
-const keptOutReversalCategories = [
-  ...reversalCategories,
-  { id: "i3", name: "העברות בין חשבונות", hidden: false, kind: "income", excluded_from_pnl: true },
-];
-
-export const ChangeReversalKeptOutSummary: Story = {
-  name: "Kept-out reversal on the summary",
-  render: () => <ChangeStory categories={keptOutReversalCategories} categoryId="i3" suggestionCategoryId="" />,
-};
-
-export const ChangeReversalKeptOutPicker: Story = {
-  name: "Kept-out reversal in the picker",
-  render: () => <ChangeStory entry="/review/change?item=r1&pick=category" categories={keptOutReversalCategories} categoryId="i3" suggestionCategoryId="" />,
 };
 
 export const ChangeSaveError: Story = {
@@ -290,14 +205,4 @@ export const ChangeProjectPickerGrouped: Story = {
   name: "Project picker, grouped",
   parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <ChangeStory entry="/review/change?item=r1&pick=project" projects={groupedChangeProjects} />,
-};
-
-
-
-
-/** A search lists the matches flat, a group's name included in what it matches. */
-export const ChangeProjectPickerGroupedSearch: Story = {
-  name: "Project picker, grouped, searching the group",
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
-  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" projects={groupedChangeProjects} initialQuery="לדוגמה" />,
 };

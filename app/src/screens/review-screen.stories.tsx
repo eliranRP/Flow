@@ -1,11 +1,9 @@
 import type { ReviewRow } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react";
-import { ReviewAllList, ReviewEmpty as ReviewEmptyState, ReviewQueue, ReviewScreen } from "./flow-screens";
-import { israelToday } from "../ui/date-math";
+import { ReviewAllList, ReviewQueue, ReviewScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { SeedLineMeta, storyMeta } from "../ui/story-support";
-import type { TxnMeta } from "../txn-meta";
-import { bareReview, ExampleBar, filedTodayCount, sampleReview } from "../ui/screen-stories-support";
+import { ExampleBar, filedTodayCount, sampleReview } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -70,83 +68,11 @@ export const ReviewAll: Story = {
   ),
 };
 
-/** FLOW-305: the review list as a bank statement, two months, with היום / אתמול / date heads. Invented data. */
-function reviewDay(daysAgo: number): string {
-  const today = israelToday();
-  const date = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 1, Number(today.slice(8, 10)) - daysAgo));
-  return date.toISOString().slice(0, 10);
-}
-
-const statementReviews: ReviewRow[] = [
-  { ...sampleReview, id: "s1", transaction_id: "ts1", doc_date: reviewDay(0), supplier_name: null, description: "Northwind Traders", amount_net: -4_299n, currency: "USD", source: "mercury", line_status: "pending", project_name: null, category_name: null },
-  { ...sampleReview, id: "s2", transaction_id: "ts2", doc_date: reviewDay(0), supplier_name: "חשמל לדוגמה בע״מ", amount_net: -120_050n, source: "mercury", line_status: "posted" },
-  { ...sampleReview, id: "s3", transaction_id: "ts3", doc_date: reviewDay(1), supplier_name: "לקוח לדוגמה", direction: "income", amount_net: 500_000n, source: "sumit", doc_kind: "invoice", project_name: "וילה רעננה", category_name: "מקדמות" },
-  { ...sampleReview, id: "s4", transaction_id: "ts4", doc_date: reviewDay(3), supplier_name: "שיש לדוגמה", amount_net: -345_000n, source: "sumit", doc_kind: "receipt" },
-  { ...sampleReview, id: "s5", transaction_id: "ts5", doc_date: reviewDay(40), supplier_name: "Contoso Building Supplies International", amount_net: -999_999_999n, currency: "USD", source: "mercury", line_status: "pending", category_name: "שיפוץ דירת הגג ברחוב הרצל, כולל הריסה וחשמל" },
-  { ...sampleReview, id: "s6", transaction_id: "ts6", doc_date: reviewDay(41), supplier_name: null, description: "4242-1234", amount_net: -10_000n, source: "mercury", project_name: null, category_name: null },
-];
-
-/** FLOW-304 bank details for the bank lines above, seeded so the rows show card, ACH, wire and no method. */
-const statementMeta: TxnMeta[] = [
-  storyMeta("ts1", { method: "card", card_last4: "4242" }),
-  storyMeta("ts2", { method: "ach" }),
-  storyMeta("ts5", { method: "wire" }),
-  storyMeta("ts6", {}),
-];
-
-function ReviewStatement() {
-  return (
-    <StoryRoute entry="/review/all" tabs>
-      <SeedLineMeta meta={statementMeta} />
-      <ExampleBar />
-      <ReviewAllList backTo="/review" search="" rows={statementReviews} />
-    </StoryRoute>
-  );
-}
-
-export const ReviewAllStatement: Story = { render: () => <ReviewStatement /> };
-
-export const ReviewWithoutSuggestion: Story = {
-  render: () => (
-    <StoryRoute entry="/review" tabs>
-      <ExampleBar />
-      <ReviewQueue rows={[bareReview]} search="" sample />
-    </StoryRoute>
-  ),
-};
-
 export const ReviewBanner: Story = {
   render: () => (
     <StoryRoute entry="/review" tabs>
       <ExampleBar />
       <ReviewQueue rows={[sampleReview]} search="" sample />
-    </StoryRoute>
-  ),
-};
-
-export const ReviewBannerOne: Story = {
-  render: () => (
-    <StoryRoute entry="/review" tabs>
-      <ExampleBar />
-      <ReviewQueue rows={[{ ...sampleReview, auto_approved_today: 1, assistant_filed_today: false }]} search="" sample />
-    </StoryRoute>
-  ),
-};
-
-export const ReviewBannerAssistant: Story = {
-  render: () => (
-    <StoryRoute entry="/review" tabs>
-      <ExampleBar />
-      <ReviewQueue rows={[{ ...sampleReview, auto_approved_today: 3, assistant_filed_today: true }]} search="" sample />
-    </StoryRoute>
-  ),
-};
-
-export const ReviewBannerAssistantOne: Story = {
-  render: () => (
-    <StoryRoute entry="/review" tabs>
-      <ExampleBar />
-      <ReviewQueue rows={[{ ...sampleReview, auto_approved_today: 1, assistant_filed_today: true }]} search="" sample />
     </StoryRoute>
   ),
 };
@@ -229,45 +155,6 @@ export const ReviewSplitMissingCategory: Story = {
   ),
 };
 
-export const ReviewSplitCategorySaved: Story = {
-  name: "Split category saved",
-  render: () => (
-    <StoryRoute entry="/review" tabs>
-      <ExampleBar />
-      <ReviewQueue
-        rows={[{
-          ...splitReviewRow,
-          category_id: "c-haul",
-          category_name: "שינוע",
-          category_suggested: false,
-        }]}
-        search=""
-        sample
-      />
-    </StoryRoute>
-  ),
-};
-
-export const ReviewSharedCost: Story = {
-  render: () => (
-    <StoryRoute entry="/review" tabs>
-      <ExampleBar />
-      <ReviewQueue
-        rows={[{
-          ...sampleReview,
-          project_id: null,
-          project_name: null,
-          category_id: "c1",
-          category_name: "חומרים",
-          reason: "unallocated_shared",
-        }]}
-        search=""
-        sample
-      />
-    </StoryRoute>
-  ),
-};
-
 export const ReviewFiltered: Story = {
   render: () => (
     <StoryRoute entry="/review?project=a" tabs>
@@ -279,41 +166,6 @@ export const ReviewFiltered: Story = {
         backTo="/projects/a"
         homeTo="/projects/a"
         homeLabel="חזרה לפרויקט"
-      />
-    </StoryRoute>
-  ),
-};
-
-export const ReviewFilteredEmpty: Story = {
-  render: () => (
-    <StoryRoute entry="/review?project=a" tabs>
-      <ExampleBar />
-      <ReviewEmptyState
-        search="?project=a"
-        filtered
-        backTo="/projects/a"
-        homeTo="/projects/a"
-        homeLabel="חזרה לפרויקט"
-      />
-    </StoryRoute>
-  ),
-};
-
-export const ReviewMissingCategory: Story = {
-  render: () => (
-    <StoryRoute entry="/review" tabs>
-      <ExampleBar />
-      <ReviewQueue
-        rows={[{
-          ...sampleReview,
-          project_id: "a",
-          project_name: "וילה רעננה",
-          category_id: null,
-          category_name: null,
-          reason: "missing_category",
-        }]}
-        search=""
-        sample
       />
     </StoryRoute>
   ),
@@ -359,17 +211,6 @@ export const ReviewMetaFold: Story = {
       />
       <ExampleBar />
       <ReviewQueue rows={[metaReviewRow]} search="" sample listPlace={{ index: 14, total: 15 }} />
-    </StoryRoute>
-  ),
-};
-
-export const ReviewMetaCard: Story = {
-  name: "Review bank details: card",
-  render: () => (
-    <StoryRoute entry="/review" tabs>
-      <SeedLineMeta meta={[storyMeta("t-meta", { method: "card", card_last4: "4242" })]} />
-      <ExampleBar />
-      <ReviewQueue rows={[metaReviewRow]} search="" sample />
     </StoryRoute>
   ),
 };

@@ -1,8 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { TransactionDetail } from "@flow/shared";
-import type { TxnMeta } from "../txn-meta";
+import { type TransactionDetail } from "@flow/shared";
+import { type TxnMeta } from "../txn-meta";
 import { jevNote, TxnFooter, txnSourceLabel, txnStatus } from "./transaction-head";
+import { MemoryRouter } from "react-router-dom";
+import { TransactionTopBar } from "./transaction-top-bar";
+
+// --- transaction-head.test.tsx
 
 const base = {
   id: "t1",
@@ -52,5 +56,18 @@ describe("TxnFooter", () => {
     render(<TxnFooter txn={base} meta={meta({ account: "EXAMPLE OFFICE SUITE ••6789", bank_description: "EXAMPLE OFFICE SUITE 123456789" })} />);
     expect(screen.getByText("EXAMPLE OFFICE SUITE ••6789")).toHaveAttribute("dir", "ltr");
     expect(screen.getByText("EXAMPLE OFFICE SUITE 123456789")).toBeInTheDocument();
+  });
+});
+// --- transaction-top-bar.test.tsx
+
+describe("TransactionTopBar (FLOW-366)", () => {
+  it("names the back step by the lines it came from, and hides the title until it is scrolled past", () => {
+    render(
+      <MemoryRouter>
+        <TransactionTopBar fallback="/cash/2026-10/in/ILS" backLabel="נכנס" title="Harbor Hardware · $1,284.50" end={<span />} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("נכנס")).toBeInTheDocument();
+    expect(screen.getByText("Harbor Hardware · $1,284.50")).toHaveAttribute("aria-hidden", "true");
   });
 });

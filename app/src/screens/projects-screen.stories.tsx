@@ -59,11 +59,6 @@ const withFinished = cashMonth([
   cashRow({ id: "ashby", name: "Ashby Rd", type: "השכרה", status: "finished", profitAll: -4_000_00 }),
 ], { count: 2, net: -1_500_00 });
 
-const withNew = cashMonth([
-  ...activeMonth.projects,
-  cashRow({ id: "harrow", name: "Harrow Ln", type: "flip", fresh: true }),
-]);
-
 const meta = {
   title: "Screens/Routes",
   parameters: { flowRouter: false },
@@ -105,17 +100,6 @@ export const ProjectsFinished: Story = {
     await userEvent.click(await canvas.findByRole("button", { name: /הסתיימו/u }));
     await expect(await canvas.findByText("Wren St")).toBeInTheDocument();
   },
-};
-
-/** FLOW-445: a project with no line yet reads חדש and sorts first. */
-export const ProjectsNew: Story = {
-  name: "Projects, a new project first",
-  render: () => (
-    <StoryRoute entry="/projects" tabs>
-      <ExampleBar />
-      <ProjectsScreen sample={sampleDashboard} cashSample={withNew} />
-    </StoryRoute>
-  ),
 };
 
 /** FLOW-445: the new-project sheet; its save stays disabled until a name is typed. */

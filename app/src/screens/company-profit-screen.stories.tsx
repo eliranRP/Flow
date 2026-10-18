@@ -56,20 +56,3 @@ export const BasisSheet: Story = {
   name: "Basis sheet",
   render: () => <ProfitRoute entry="/profit" sample={{ ...COMPANY_PROFIT_SAMPLE, sheetOpen: true }} />,
 };
-
-// The board draws the frames at 320 and 393 (the flow320 and flow393 viewports).
-const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
-const at393 = { parameters: { viewport: { defaultViewport: "flow393" } } };
-
-export const ByProject320: Story = { ...ByProject, name: "By project, 320", ...at320 };
-export const ByProject393: Story = { ...ByProject, name: "By project, 393", ...at393 };
-export const ByCategory320: Story = { ...ByCategory, name: "By category, one row open, 320", ...at320 };
-export const ByCategory393: Story = { ...ByCategory, name: "By category, one row open, 393", ...at393 };
-export const ByDate320: Story = { ...ByDate, name: "By date, 320", ...at320 };
-export const ByDate393: Story = { ...ByDate, name: "By date, 393", ...at393 };
-export const ByAmount320: Story = { ...ByAmount, name: "By amount, 320", ...at320 };
-export const ByAmount393: Story = { ...ByAmount, name: "By amount, 393", ...at393 };
-export const Loss320: Story = { ...Loss, name: "Loss, 320", ...at320 };
-export const Loss393: Story = { ...Loss, name: "Loss, 393", ...at393 };
-export const BasisSheet320: Story = { ...BasisSheet, name: "Basis sheet, 320", ...at320 };
-export const BasisSheet393: Story = { ...BasisSheet, name: "Basis sheet, 393", ...at393 };

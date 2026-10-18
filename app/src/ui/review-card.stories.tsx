@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { ReviewCard, type ReviewSplitSummary } from "./review-card";
 import { jevReasonText, reviewFlagView, reviewPaidView, type JevReasonKind, type ReviewFlag } from "../review-copy";
-import { expect, userEvent, within } from "@storybook/test";
+import { expect } from "@storybook/test";
 import type { TxnMeta } from "../txn-meta";
 import { padded, storyMeta } from "./story-support";
 
@@ -103,15 +103,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const NoSuggestion: Story = {
-  args: {
-    supplier: "חומרי בניין לדוגמה בע״מ",
-    sourceLine: "הוצאה · 12/04/2026",
-    netAgorot: "-2200000",
-    vatLine: "לפני מע״מ · מע״מ ₪3,960",
-  },
-};
-
 export const OneCard: Story = {
   args: {
     supplier: "חומרי בניין לדוגמה בע״מ",
@@ -125,13 +116,6 @@ export const MissingProject: Story = {
   args: {
     ...OneCard.args,
     category: "חומרים",
-  },
-};
-
-export const MissingCategory: Story = {
-  args: {
-    ...OneCard.args,
-    project: "וילה רעננה",
   },
 };
 
@@ -151,23 +135,6 @@ export const SharedCost: Story = {
   },
 };
 
-export const Suggestion: Story = {
-  args: {
-    ...OneCard.args,
-    project: "וילה רעננה",
-    category: "חומרים",
-  },
-};
-
-export const NoScore: Story = {
-  args: {
-    ...OneCard.args,
-    project: "וילה רעננה",
-    category: "חומרים",
-    confidence: 92,
-  },
-};
-
 /** FLOW-304. Bank details. A USD Mercury line has no VAT line. */
 const mercuryCard = {
   supplier: "Example Office Suite",
@@ -177,16 +144,6 @@ const mercuryCard = {
   vatLine: "",
   project: "Cedar Lot",
   category: "Office",
-};
-
-export const MetaNone: Story = {
-  name: "Meta: none (today)",
-  args: { ...mercuryCard, meta: storyMeta("t1", {}) },
-};
-
-export const MetaCard: Story = {
-  name: "Meta: card",
-  args: { ...mercuryCard, meta: storyMeta("t1", { method: "card", card_last4: "4242" }) },
 };
 
 /** FLOW-439: the card's nickname from the bank after its last 4. Invented names. */
@@ -214,47 +171,8 @@ export const MetaCardLongName: Story = {
   },
 };
 
-/** A transfer names the account it left from, without the account's last 4. */
-export const MetaAchAccount: Story = {
-  name: "Meta: ACH from a named account",
-  args: { ...mercuryCard, meta: storyMeta("t1", { method: "ach", account: "Operating ••1234" }) },
-};
-
-export const MetaAchMemo: Story = {
-  name: "Meta: ACH and memo",
-  args: {
-    ...mercuryCard,
-    meta: storyMeta("t1", { method: "ach", memo: "Invoice 1042 for the September office lease, parking, and storage" }),
-  },
-};
-
-export const MetaAchMemoOpen: Story = {
-  name: "Meta: ACH and memo, open",
-  args: MetaAchMemo.args,
-  play: async ({ canvasElement }) => {
-    await userEvent.click(await within(canvasElement).findByRole("button", { name: /^הערה:/ }));
-  },
-};
-
-export const MetaWire: Story = {
-  name: "Meta: wire",
-  args: { ...mercuryCard, meta: storyMeta("t1", { method: "wire" }) },
-};
-
-export const MetaHebrewMemo: Story = {
-  name: "Meta: Hebrew memo",
-  args: {
-    ...mercuryCard,
-    meta: storyMeta("t1", { method: "card", card_last4: "4242", memo: "תשלום על חשבונית 1042 עבור שכירות משרד חודש ספטמבר" }),
-  },
-};
-
 /** הצעת Jev marks the field whose value Jev filled. Invented data. */
 const jevCard = { ...OneCard.args, project: "וילה רעננה", category: "חומרים" };
-
-export const JevProject: Story = { name: "Jev: project", args: { ...jevCard, projectJev: true } };
-
-export const JevCategory: Story = { name: "Jev: category", args: { ...jevCard, categoryJev: true } };
 
 export const JevBoth: Story = { name: "Jev: both", args: { ...jevCard, projectJev: true, categoryJev: true } };
 
@@ -271,19 +189,13 @@ export const JevBothLong: Story = {
 
 /** FLOW-327 item 3: the mismatch card names the parts in one row; the actions sit in the bar. */
 export const SplitMismatchParts: Story = { args: { ...splitMismatchArgs, splitParts: 2 } };
-export const SplitMismatchOnePart: Story = { args: { ...splitMismatchArgs, splitParts: 1 } };
-export const SplitMismatchPartsLoading: Story = { args: { ...splitMismatchArgs, splitParts: "loading" } };
 
 /** FLOW-333 C8: both fields empty, so אישור is off and this line says why. */
 export const BothMissingHint: Story = { args: { ...OneCard.args, missingBoth: true } };
 
 /** FLOW-327 / 0134: Jev's reason, one line under the rows. Invented data. */
 const jevBoth = { ...jevCard, projectJev: true, categoryJev: true };
-export const JevReasonSameAsLast: Story = { name: "Jev reason: same as last", args: { ...jevBoth, why: "same_as_last" } };
 export const JevReasonUsual: Story = { name: "Jev reason: usual for party", args: { ...jevBoth, why: "usual_for_party", partyFilings: 5, matchingFilings: 3 } };
-export const JevReasonNewParty: Story = { name: "Jev reason: new party", args: { ...jevBoth, why: "new_party" } };
-export const JevReasonNewPartyIncome: Story = { name: "Jev reason: new party, income", args: { ...jevBoth, why: "new_party", direction: "income", netAgorot: "1850000" } };
-export const JevReasonModelOnly: Story = { name: "Jev reason: model only", args: { ...jevBoth, why: "model_only" } };
 
 /** FLOW-703: Jev's answer is "no project"; the field shows it with the pill. */
 export const JevNoProject: Story = { name: "Jev: no project", args: { ...OneCard.args, category: "משרד", categoryJev: true, projectNoneJev: true, why: "usual_for_party" } };
@@ -292,12 +204,7 @@ export const JevNoProject: Story = { name: "Jev: no project", args: { ...OneCard
 const flag = (kind: ReviewFlag["kind"], score: number | null, extra: Partial<ReviewFlag> = {}): ReviewFlag => ({
   transaction_id: "t1", kind, jev_score: score, ...extra,
 });
-export const FlagDuplicateLoud: Story = { name: "Flag: duplicate, loud", args: { ...jevCard, flags: [flag("duplicate", 0.86, { other_doc_date: "2026-10-03" })] } };
-/** 2026-10-09 option A: "↑ 240%" right after the amount and "בדרך כלל ₪2,500" under it; no flag row beside the pill. */
-export const FlagSpikeLoud: Story = { name: "Flag: amount spike, loud", args: { ...jevCard, flags: [flag("amount_spike", 0.74, { ratio: 3.4, typical_amount_minor: 250_000 })] } };
 export const FlagSpikeQuiet: Story = { name: "Flag: amount spike, quiet", args: { ...jevCard, flags: [flag("amount_spike", 0.4, { ratio: 3.4, typical_amount_minor: 250_000 })] } };
-/** With no ratio there is no pill: the quiet line stays, and the usual amount still sits under the amount. */
-export const FlagSpikeNoRatio: Story = { name: "Flag: amount spike, quiet, no ratio", args: { ...jevCard, flags: [flag("amount_spike", null, { typical_amount_minor: 250_000 })] } };
 /** A long amount may leave no room: the pill drops under it, and the amount is never cut. */
 export const FlagSpikeLongAmount: Story = {
   name: "Flag: amount spike, long amount",
@@ -326,9 +233,6 @@ export const FlagSpikeLongAmount: Story = {
   },
 };
 export const FlagNewPartyLoudIncome: Story = { name: "Flag: new party, loud, income", args: { ...jevCard, direction: "income", netAgorot: "4800000", flags: [flag("new_party_large", 0.9)] } };
-export const FlagDuplicateQuiet: Story = { name: "Flag: duplicate, quiet", args: { ...jevCard, flags: [flag("duplicate", 0.4, { other_doc_date: "2026-10-03" })] } };
-export const FlagSpikeQuietIncome: Story = { name: "Flag: amount spike, quiet, income", args: { ...jevCard, direction: "income", flags: [flag("amount_spike", 0.5, { ratio: 3 })] } };
-export const FlagNewPartyUnscored: Story = { name: "Flag: new party, unscored (Jev off)", args: { ...jevCard, flags: [flag("new_party_large", null)] } };
 export const FlagWithJevReason: Story = { name: "Flag: loud, with Jev reason", args: { ...jevBoth, why: "usual_for_party", flags: [flag("amount_spike", 0.8, { ratio: 3.1, typical_amount_minor: 95_000 })] } };
 
 // FLOW-702: the auto job filled the line. "✦ מולא ע״י Jev" with ביטול at the end, one line, no reason.
@@ -350,11 +254,6 @@ export const JevFilled: Story = {
     await expect(document.elementFromPoint(x, box.bottom + 10)?.closest(".ui-review-filled-undo")).not.toBeNull();
   },
 };
-export const JevFilledBusy: Story = { name: "Jev filled: undo running", args: { ...JevFilled.args, filled: "busy" } };
-export const JevFilledViewer: Story = { name: "Jev filled: viewer", args: { ...JevFilled.args, filled: "label" } };
-export const JevFilledFlag: Story = { name: "Jev filled: with quiet flag", args: { ...JevFilled.args, flags: [flag("duplicate", 0.3, { other_doc_date: "2026-10-03" })] } };
-// FLOW-702 plan item 3: the anomaly gate held the auto fill back. The flag shows, the values stay suggestions, no fill line.
-export const JevAutoHeldFlag: Story = { name: "Jev auto: held flagged line", args: { ...jevBoth, why: "usual_for_party", flags: [flag("duplicate", 0.8, { other_doc_date: "2026-10-03" })] } };
 // FLOW-706: Jev is off. The stored values with הצעה, no הצעת Jev pill, and the fill still undoable.
 export const JevFilledOff: Story = { name: "Jev filled: Jev off", args: { ...jevCard, filled: "off" } };
 
@@ -374,35 +273,6 @@ const pairCard = {
 };
 
 export const PairPaid: Story = { name: "Pair: paid", args: { ...pairCard, receipts: ["2026-10-12"], paid: true, paidOn: "2026-10-12" } };
-
-/** A part payment: the receipts don't cover the invoice yet. No ✓, the latest receipt's date. */
-export const PairPartPaid: Story = {
-  name: "Pair: part paid",
-  args: { ...pairCard, receipts: ["2026-10-06", "2026-10-12"], paid: false, paidOn: "2026-10-12" },
-};
-
-/** An invoice with no receipt yet: no line. */
-export const PairUnpaid: Story = { name: "Pair: unpaid invoice", args: { ...pairCard, receipts: [], paid: false, paidOn: null } };
-
-/** A receipt whose invoice isn't in Flow is a card like any other, with no line. */
-export const PairReceiptOnly: Story = {
-  name: "Pair: receipt only",
-  args: { ...pairCard, sourceLine: "הכנסה · 12/10/2026", vatLine: "", receipts: [], paid: false, paidOn: null },
-};
-
-/** Stress: a supplier name that takes three lines at 320 wraps whole; a fourth line would end in an ellipsis. */
-export const SupplierThreeLines: Story = {
-  name: "Stress: supplier on three lines",
-  args: {
-    ...jevCard,
-    editable: true,
-    supplier: "חברת ההובלות והשינוע לדוגמה בע״מ סניף צפון",
-  },
-};
-
-/** FLOW-352 1 (cycle 11): beside the הצעה pill at 320 a long value wraps to a second line. Invented names. */
-const longValueCard = { ...OneCard.args, project: "וילה הדקלים", category: "חומרי גמר וצבע", editable: true };
-export const ValueWraps: Story = { name: "Stress: value on two lines beside הצעה", args: longValueCard };
 
 const usdSplit: ReviewSplitSummary = {
   total: "$1,284.50",

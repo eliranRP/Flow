@@ -40,18 +40,9 @@ const failedArgs = {
   failed: true,
   onCopy,
 };
-const emptyArgs = {
-  label: "כתובת",
-  labelId: "code-empty",
-  value: "",
-  copyLabel: "העתקה: כתובת",
-  failed: false,
-  onCopy,
-};
 
 export const Short: Story = { args: shortArgs };
 export const Long: Story = { args: longArgs };
 export const Failed: Story = { args: failedArgs };
-export const Empty: Story = { args: emptyArgs };
 /** The copy button presses with opacity; under reduced motion it changes at once. */
 export const ReducedMotion: Story = { args: shortArgs, decorators: [forceReducedMotion] };

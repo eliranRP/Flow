@@ -117,9 +117,3 @@ export const ExactOver: Story = {
     await expect(body.getByText(/עודף/)).toBeVisible();
   },
 };
-
-/** A demand loan: its accrued interest, no installments. */
-export const Demand: Story = { args: { demand: true, lineMinor: 100_000 } };
-
-/** Two loans that can take the line: the editor asks which one. */
-export const TwoLoans: Story = { args: { twoLoans: true } };

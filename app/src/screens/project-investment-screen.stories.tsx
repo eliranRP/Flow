@@ -45,10 +45,8 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Flip: Story = {};
-export const ValueOnly: Story = { args: { data: "valueOnly" } };
 export const MissingArv: Story = { args: { data: "noArv" } };
 export const Negative: Story = { args: { data: "negative" } };
 export const Viewer: Story = { args: { data: "noArv", viewer: true } };
 export const EditArv: Story = { args: { sheet: "arv" } };
-export const EditValue: Story = { args: { sheet: "value" } };
 export const RehabBreakdown: Story = { args: { sheet: "rehab" } };

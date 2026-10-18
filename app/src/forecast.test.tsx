@@ -1,18 +1,14 @@
-import type { ExpectedMonths as ExpectedMonthsData } from "@flow/shared";
+import { type ExpectedMonths as ExpectedMonthsData } from "@flow/shared";
 import { render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import {
-  chargeChangeViews,
-  openMonthDue,
-} from "./forecast";
-import {
-  monthForecastBoardSample,
-  SAMPLE_RECURRING_CHANGES,
-  SAMPLE_RECURRING_THIS_MONTH,
-} from "./forecast-sample";
+import { chargeChangeViews, openMonthDue } from "./forecast";
+import { monthForecastBoardSample, SAMPLE_RECURRING_CHANGES, SAMPLE_RECURRING_THIS_MONTH } from "./forecast-sample";
 import { attentionRows } from "./screens/HomeScreen";
 import { forecastMinor } from "./home-month";
+import { nextMonth } from "./forecast-month";
+
+// --- forecast.test.tsx
 
 describe("the קבועים screen (FLOW-415, b-2)", () => {
   it("opens one change's payment, and shares one row for two or more that opens הגיעו החודש", () => {
@@ -81,5 +77,16 @@ describe("the month forecast's board samples (FLOW-141b)", () => {
     expect(build.expense).toHaveLength(0);
     expect(build.small).toHaveLength(0);
     expect(build.moved).toHaveLength(0);
+  });
+});
+// --- forecast-month.test.ts
+
+describe("nextMonth (FLOW-141b)", () => {
+  it("steps to the following month", () => {
+    expect(nextMonth("2026-10")).toBe("2026-11");
+  });
+
+  it("rolls December into January of the next year", () => {
+    expect(nextMonth("2026-12")).toBe("2027-01");
   });
 });

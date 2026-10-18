@@ -98,20 +98,3 @@ export const OnBand: Story = {
   args: { label: "תקופה", value: "expenses", onChange: () => undefined, options: [] },
   render: () => <BandDemo />,
 };
-
-const percents = [
-  { value: "0.8", label: "80%", numeric: true },
-  { value: "0.85", label: "85%", numeric: true },
-  { value: "0.9", label: "90%", numeric: true },
-  { value: "0.95", label: "95%", numeric: true },
-];
-
-/** #231 follow-up: numeric options draw in an LTR bdi, so "90%" keeps its sign on the right. */
-export const Numeric: Story = {
-  args: { label: "סף ביטחון", value: "0.9", onChange: () => undefined, options: percents },
-};
-
-/** #231 follow-up: a save is running. The group is aria-busy and ignores taps, and keeps focus. */
-export const Busy: Story = {
-  args: { label: "סף ביטחון", value: "0.9", onChange: () => undefined, options: percents, busy: true },
-};

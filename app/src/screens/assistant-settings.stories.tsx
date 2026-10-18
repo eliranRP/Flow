@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { SAMPLE_ASSISTANT_SECRET } from "../assistant-sample";
 import { StoryRoute } from "../ui/story-route";
-import { ViewerPreview } from "../use-is-viewer";
 import { ExampleBar } from "../ui/screen-stories-support";
 import { AiConnectionPage } from "./assistant-settings";
 
@@ -26,11 +25,6 @@ function page(props: Parameters<typeof AiConnectionPage>[0], entry = "/settings/
 export const Setup: Story = {
   name: "Setup",
   render: () => page({ sample: { state: "empty" }, sampleSecret: SAMPLE_ASSISTANT_SECRET }),
-};
-
-export const SetupChatGpt: Story = {
-  name: "Setup, ChatGPT",
-  render: () => page({ sample: { state: "empty" }, sampleSecret: SAMPLE_ASSISTANT_SECRET, initialClient: "chatgpt" }),
 };
 
 export const CodeReadyClaudeCode: Story = {
@@ -66,16 +60,4 @@ export const Expired: Story = {
 export const ReadScope: Story = {
   name: "Connected, read only",
   render: () => page({ sample: { state: "connected", scope: "read", id: "mcp-1", lastUsedAt: null } }),
-};
-
-export const ViewerNote: Story = {
-  name: "Viewer",
-  render: () => (
-    <StoryRoute entry="/settings/connections/ai" tabs>
-      <ExampleBar />
-      <ViewerPreview>
-        <AiConnectionPage sample={{ state: "empty" }} />
-      </ViewerPreview>
-    </StoryRoute>
-  ),
 };

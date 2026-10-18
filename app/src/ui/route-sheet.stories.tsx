@@ -20,9 +20,6 @@ export const Default: Story = {
     children: <TextField label="תיאור" placeholder="למשל חומרים" />,
   },
 };
-export const Empty: Story = {
-  args: { title: "הוספה", closeTo: "/", children: null },
-};
 export const LongHebrew: Story = {
   args: {
     title: longHebrew,

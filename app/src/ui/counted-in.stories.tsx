@@ -29,11 +29,8 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-export const BothOn: Story = { args: { pnl: true, cash: true, reason: null } };
 export const CashOnly: Story = { args: { pnl: false, cash: true, reason: COUNTED_REASON_OTHER } };
 export const LoanPart: Story = { args: { pnl: false, cash: true, reason: COUNTED_REASON_LOAN } };
-export const NotInProfitOrCash: Story = { args: { pnl: false, cash: false, reason: null } };
 export const SheetOpen: Story = { args: { pnl: false, cash: true, reason: COUNTED_REASON_OTHER, open: true } };
 /** A loan line or a mixed split: the row says why and does not open a sheet. */
 export const Locked: Story = { args: { pnl: false, cash: true, reason: COUNTED_REASON_LOAN, locked: true } };

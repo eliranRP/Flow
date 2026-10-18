@@ -27,11 +27,6 @@ export const Filled: Story = {
   args: { label: "חיפוש פרויקט", value: "הרצל", onChange: () => undefined },
   render: () => <Demo value="הרצל" />,
 };
-export const Focus: Story = {
-  tags: ["clip-no-text"],
-  args: { label: "חיפוש פרויקט", value: "", onChange: () => undefined },
-  render: () => <Demo value="" autoFocus />,
-};
 /** Results are loading: a spinner at the end, the clear button hidden, and the box is aria-busy. */
 export const Busy: Story = {
   args: { label: "חיפוש פרויקט", value: "הרצל", onChange: () => undefined, busy: true },

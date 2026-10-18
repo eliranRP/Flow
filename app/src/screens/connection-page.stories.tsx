@@ -38,11 +38,6 @@ export const SumitProblem: Story = {
   render: () => sumit({ state: "problem", companyId: "1234567" }),
 };
 
-export const SumitConnecting: Story = {
-  name: "SUMIT, connecting",
-  render: () => sumit({ state: "new", companyId: "1234567", busy: true }),
-};
-
 export const SumitConnected: Story = {
   name: "SUMIT, connected",
   render: () => sumit({ state: "connected", companyId: "1234567", lastSync: "היום, 06:05" }),
@@ -60,16 +55,7 @@ export const SumitViewer: Story = {
   ),
 };
 
-export const SumitLoading: Story = { name: "SUMIT, loading", render: () => sumit({ state: "loading" }) };
-
-export const MercuryNew: Story = { name: "Mercury, new", render: () => mercury({ state: "new" }) };
-
 export const MercuryConnected: Story = {
   name: "Mercury, connected",
   render: () => mercury({ state: "connected", accounts: "עסק ראשי · 0042", lastSync: "היום, 06:10" }),
-};
-
-export const MercuryProblem: Story = {
-  name: "Mercury, key replaced",
-  render: () => mercury({ state: "problem" }),
 };

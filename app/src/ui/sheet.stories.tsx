@@ -112,10 +112,6 @@ export const Default: Story = {
   args: { open: true, onOpenChange: () => undefined, title: "תקופה", children: <p className="t-label">בחירת תקופה</p> },
   render: () => <OpenSheet title="תקופה" body="החודש, חודש קודם, או כל התקופה." />,
 };
-export const Closed: Story = {
-  args: { open: false, onOpenChange: () => undefined, title: "תקופה" },
-  render: () => <OpenSheet title="תקופה" body="סגור בהתחלה" initial={false} />,
-};
 export const LongHebrew: Story = {
   args: { open: true, onOpenChange: () => undefined, title: longHebrew },
   render: () => <OpenSheet title={longHebrew} body={longHebrew} />,

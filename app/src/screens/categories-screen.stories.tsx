@@ -36,15 +36,6 @@ const parentCategories: Array<CategoryRow & { count?: number }> = [
   { id: "p10", name: "שכירות", kind: "income", hidden: false, is_default: true, count: 30 },
 ];
 
-export const CategoriesWithParent: Story = {
-  render: () => (
-    <StoryRoute entry="/settings/categories" tabs>
-      <ExampleBar />
-      <CategoriesScreen sample={parentCategories} />
-    </StoryRoute>
-  ),
-};
-
 /** FLOW-406 (mockup cat-b-2): a parent's page lists its sub-categories, with its lines summed under the title. */
 export const CategoryParentPage: Story = {
   render: () => (
@@ -149,52 +140,6 @@ export const CategoriesKeptOutMenu: Story = {
     await userEvent.click(within(canvasElement).getByRole("button", { name: /^חומרים/ }));
     await storyBody(canvasElement).findByRole("dialog", { name: "חומרים" });
   },
-};
-
-export const CategoriesKeptOutBackMenu: Story = {
-  render: () => (
-    <StoryRoute entry="/settings/categories" tabs>
-      <ExampleBar />
-      <CategoriesScreen sample={keptOutCategories} />
-    </StoryRoute>
-  ),
-  play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button", { name: /^פיקדונות/ }));
-    await storyBody(canvasElement).findByRole("dialog", { name: "פיקדונות" });
-  },
-};
-
-export const CategoriesKeptOutLoanMenu: Story = {
-  render: () => (
-    <StoryRoute entry="/settings/categories" tabs>
-      <ExampleBar />
-      <CategoriesScreen sample={keptOutCategories} />
-    </StoryRoute>
-  ),
-  play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button", { name: /^תשלומי הלוואה/ }));
-    await storyBody(canvasElement).findByRole("dialog", { name: "תשלומי הלוואה" });
-  },
-};
-
-export const CategoriesKeptOutLongHebrew: Story = {
-  render: () => (
-    <StoryRoute entry="/settings/categories" tabs>
-      <ExampleBar />
-      <CategoriesScreen
-        sample={longHebrewCategories.map((category) => ({ ...category, hidden: false, excluded_from_pnl: true, count: 1204 }))}
-      />
-    </StoryRoute>
-  ),
-};
-
-export const CategoriesEmpty: Story = {
-  render: () => (
-    <StoryRoute entry="/settings/categories" tabs>
-      <ExampleBar />
-      <CategoriesScreen sample={[]} />
-    </StoryRoute>
-  ),
 };
 
 export const CategoriesError: Story = {

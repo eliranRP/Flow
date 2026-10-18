@@ -22,6 +22,4 @@ type Story = StoryObj<typeof meta>;
 /** At the minimum: − is off. */
 export const AtMin: Story = { args: { hint: "01/06/2026" } };
 export const Middle: Story = { args: { start: 3, hint: "01/06–01/08/2026" } };
-/** At the maximum: + is off. */
-export const AtMax: Story = { args: { start: 12, max: 12 } };
 export const Disabled: Story = { args: { disabled: true } };

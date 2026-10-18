@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import { CategoriesScreen } from "./categories-screen";
 import { categoryLoanUses, loanUseLine } from "./category-loan-use";
 import { renderWithProviders } from "../test-render";
+import { readDeleted, readMoved } from "./category-manage";
+
+// --- category-loan-use.test.tsx
 
 // FLOW-106 §3.5. Invented data.
 const CATEGORIES = [
@@ -44,5 +47,15 @@ describe("a loan's own category in Settings → Categories (FLOW-106 §3.5)", ()
     const sheet = await openMenu("עמלות בנק");
     expect(within(sheet).queryByText(/קטגוריה של הלוואה/)).not.toBeInTheDocument();
     expect(within(sheet).getByRole("button", { name: "לא לספור ברווח" })).toBeInTheDocument();
+  });
+});
+// --- category-manage.test.ts
+
+describe("category delete and move helpers (FLOW-405)", () => {
+  it("reads delete_category and move_category_lines results", () => {
+    expect(readDeleted({ deletion_id: "x", name: "ציוד", lines: 3 }, "אחר")).toEqual({ name: "ציוד", lines: 3 });
+    expect(readDeleted(null, "אחר")).toEqual({ name: "אחר", lines: 0 });
+    expect(readMoved({ move_id: "m1", lines: 2 })).toEqual({ moveId: "m1", lines: 2 });
+    expect(readMoved({ lines: 2 })).toBeNull();
   });
 });

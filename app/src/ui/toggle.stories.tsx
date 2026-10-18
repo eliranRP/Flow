@@ -44,7 +44,3 @@ export const LongHebrew: Story = {
     hint: "ההודעות לא נשלחות. השורה נשארת על שורה אחת.",
   },
 };
-/** FLOW-326: the Settings switch row, with the icon in the same slot as the rows beside it. */
-export const RowWithIcon: Story = {
-  args: { label: "רווח אחרי הוצאות כלליות", hint: "חלק מההוצאות הכלליות נכנס לכל פרויקט", withIcon: true },
-};

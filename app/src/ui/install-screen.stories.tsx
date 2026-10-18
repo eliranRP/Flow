@@ -19,6 +19,5 @@ export const IphoneChrome: Story = {
     await expect(canvas.queryByText("•••")).toBeNull();
   },
 };
-export const IphoneChromeNoPlay: Story = {};
 export const IphoneFirefox: Story = { args: { browser: "firefox" } };
 export const IphoneOtherBrowser: Story = { args: { browser: "other" } };

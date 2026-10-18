@@ -46,10 +46,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const ByDate: Story = { args: { side: "out", order: "date" } };
-export const ByAmount: Story = { args: { side: "out", order: "amount" } };
-export const ByProject: Story = { args: { side: "out", order: "project" } };
-export const ByCategory: Story = { args: { side: "out", order: "category" } };
-export const Income: Story = { args: { side: "in", order: "date" } };
 
 /** The count line with its pending and out-of-profit parts, and the tag lines on the rows. */
 export const Pending: Story = {
@@ -60,9 +56,6 @@ export const Pending: Story = {
     await expect(canvas.getByText(/לא נספרים ברווח/)).toBeInTheDocument();
   },
 };
-
-/** לא נספר ברווח: the cash profit leaves out, money in and out together. */
-export const NotInProfit: Story = { args: { side: "kept", order: "date" } };
 
 /** The compact bar shows once the chips have scrolled under the top of the screen. */
 export const Scrolled: Story = {

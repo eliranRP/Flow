@@ -5,7 +5,7 @@ import { sampleCashMonths, sampleQuietCashMonths } from "../dev/cash-sample";
 import { shiftMonthKey } from "../period";
 import { israelToday } from "../ui/date-math";
 import { StoryRoute } from "../ui/story-route";
-import { ExampleBar, exampleOnBand } from "../ui/screen-stories-support";
+import { exampleOnBand } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -15,36 +15,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const HomeEmpty: Story = {
-  render: () => (
-    <StoryRoute entry="/?preview=empty" tabs>
-      <HomeScreen example={exampleOnBand} />
-    </StoryRoute>
-  ),
-};
-
 export const HomeLoading: Story = {
   render: () => (
     <StoryRoute entry="/?preview=loading" tabs>
       <HomeScreen example={exampleOnBand} />
-    </StoryRoute>
-  ),
-};
-
-export const HomeOffline: Story = {
-  render: () => (
-    <StoryRoute entry="/?preview=error" tabs>
-      <ExampleBar />
-      <HomeScreen />
-    </StoryRoute>
-  ),
-};
-
-export const HomeServerError: Story = {
-  render: () => (
-    <StoryRoute entry="/?preview=error-server" tabs>
-      <ExampleBar />
-      <HomeScreen />
     </StoryRoute>
   ),
 };
@@ -110,17 +84,8 @@ function CashHomeStory({ monthBack = 0, attention = true, initialDrawerOpen = fa
 /** The current month, with the attention box and the split card. */
 export const HomeCurrent: Story = { render: () => <CashHomeStory /> };
 
-/** Nothing waiting: the attention box is not drawn. */
-export const HomeNoBox: Story = { render: () => <CashHomeStory attention={false} /> };
-
 /** A past month: the darker band, "חזרה ל…" and no forecast or box. */
 export const HomePast: Story = { render: () => <CashHomeStory monthBack={1} attention={false} /> };
-
-/** The month drawer open on the selected month's year. */
-export const HomeDrawer: Story = { render: () => <CashHomeStory initialDrawerOpen /> };
-
-/** A month with nothing moved yet: the figures read zero. */
-export const HomeQuiet: Story = { render: () => <CashHomeStory quiet attention={false} /> };
 
 /** Scrolled past the band: the compact bar pins the month and the arrows, and the band's figures fade away (FLOW-364). */
 export const HomeScrolled: Story = {
