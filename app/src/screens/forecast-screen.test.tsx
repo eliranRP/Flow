@@ -11,6 +11,28 @@ vi.mock("../lib/supabase", () => ({
 }));
 
 describe("ForecastScreen", () => {
+  it("switches to לפי קטגוריה: each side's categories, their sums, and an open category's items", () => {
+    renderWithProviders(<ForecastScreen sample={monthForecastBoardSample("board")} />, { route: "/forecast" });
+    expect(screen.getByRole("radio", { name: "לפי פריט" })).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(screen.getByRole("radio", { name: "לפי קטגוריה" }));
+    expect(screen.getByRole("radio", { name: "לפי קטגוריה" })).toHaveAttribute("aria-checked", "true");
+    const out = screen.getByRole("region", { name: "יוצא" });
+    expect(within(out).getByText("$50,369")).toBeTruthy();
+    expect(within(out).getByText("Streaming באיחור · עוד $962")).toBeTruthy();
+    const into = screen.getByRole("region", { name: "נכנס" });
+    expect(within(into).getByText("+$44,628")).toBeTruthy();
+    const rent = within(into).getByRole("button", { name: /^שכירות/ });
+    expect(rent).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(rent);
+    expect(rent).toHaveAttribute("aria-expanded", "true");
+    expect(within(into).getByRole("button", { name: "Elm St, unit 2, +$1,650" })).toBeTruthy();
+    expect(within(into).getByRole("link", { name: "עדיין קבוע? לאישור ←" })).toHaveAttribute("href", "/recurring/income/elm");
+    // A category with nothing still to come does not open.
+    const other = within(out).getByRole("button", { name: /^אחר/ });
+    fireEvent.click(other);
+    expect(other).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("live, counts a dollar company's items in dollars (the company currency, not shekels)", async () => {
     const reads: Record<string, unknown> = {
       mcp_company_loan_currency: "USD",

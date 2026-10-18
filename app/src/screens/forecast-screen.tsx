@@ -2,6 +2,7 @@ import { formatAmountText, type ForecastBuild, type ForecastItem } from "@flow/s
 import { type ReactNode, useEffect, useState } from "react";
 import { cashMonthKey, cashRows } from "../cash";
 import { daysLeftInMonth, type ForecastPatch, type MonthForecast, nextMonth, priorPatch, useMonthForecastQuery, useResetForecastMonth, useRestoreForecast, useSetForecastItem } from "../forecast-month";
+import { useCategoriesQuery } from "../use-books";
 import { useCashMonthsQuery } from "../use-cash";
 import { israelToday } from "../ui/date-math";
 import { ScreenHeader } from "../ui/screen-header";
@@ -10,13 +11,25 @@ import { EmptyState } from "../ui/empty-state";
 import { CalendarCheckIcon } from "../ui/icons";
 import { useToast } from "../ui/toast";
 import { ChangedLine, dayMonth, ForecastFootnote, itemWhat, itemWhen, MovedRow, signed } from "./forecast-parts";
+import { forecastCategories, type ForecastSoFar, useForecastSoFarQuery } from "./forecast-categories";
+import { ForecastCategoryView, type ForecastView, ForecastViewSwitch } from "./forecast-category-view";
 import { ForecastItemSheet } from "./forecast-sheet";
 import { monthName } from "./home-parts";
 import { Amount } from "../ui/amount";
 import { cx } from "../ui/cx";
 
-/** A story's data: the builder's output (in `data.base`, the currency it counted) and the cash net today, in its minor units. */
-export type ForecastSample = { data: MonthForecast; net: bigint; today: string };
+/**
+ * A story's data: the builder's output (in `data.base`, the currency it counted) and the cash net today, in its minor units.
+ * `soFar` is the month by category for לפי קטגוריה; `view` and `openCategories` are where a frame opens.
+ */
+export type ForecastSample = {
+  data: MonthForecast;
+  net: bigint;
+  today: string;
+  soFar?: ForecastSoFar;
+  view?: ForecastView;
+  openCategories?: readonly string[];
+};
 
 /** The page scrolls past this many pixels: the compact bar slides down (FLOW-141). */
 const COMPACT_AFTER = 150;
@@ -91,6 +104,8 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
   const [smallOpen, setSmallOpen] = useState(false);
   const [leavingKey, setLeavingKey] = useState<string | null>(null);
   const [compact, setCompact] = useState(false);
+  const [view, setView] = useState<ForecastView>(sample?.view ?? "items");
+  const [openCategories, setOpenCategories] = useState<ReadonlySet<string>>(() => new Set(sample?.openCategories ?? []));
 
   const data = sample?.data ?? query.data ?? null;
   const base = data?.base ?? "ILS";
@@ -99,12 +114,24 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
   const build: ForecastBuild | null = data?.build ?? null;
   const total = build == null ? 0n : net + build.incomeTotal - build.expenseTotal;
   const days = daysLeftInMonth(today, month);
+  const byCategory = view === "categories";
+  const soFarQuery = useForecastSoFarQuery(month, base, live && byCategory && data != null);
+  const categories = useCategoriesQuery(live && byCategory);
+  const soFar = sample?.soFar ?? soFarQuery.data ?? null;
 
   useEffect(() => {
     const onScroll = () => { setCompact(window.scrollY > COMPACT_AFTER); };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => { window.removeEventListener("scroll", onScroll); };
   }, []);
+
+  function toggleCategory(key: string) {
+    setOpenCategories((current) => {
+      const next = new Set(current);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
+  }
 
   const smallTotal = build == null ? 0n : build.small.reduce((sum, item) => sum + item.minor, 0n);
   const changed = build?.changed ?? 0;
@@ -191,54 +218,78 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
           </p>
           <p className="ui-forecast-today">היום <bdi dir="ltr">{forecastBigText(net, base)}</bdi></p>
           <ChangedLine changed={changed} onReset={resetAll} />
-          <ForecastSection
-            title="צפוי להיכנס"
-            total={<Amount agorot={build.incomeTotal} size="list" currency={base} direction="income" income />}
-            items={income}
-            today={today}
-            onOpen={setOpen}
-            leavingKey={leavingKey}
-          />
-          <section className="ui-forecast-section">
-            <h2 className="ui-forecast-section-head">
-              <span>צפוי לצאת</span>
-              <span className="ui-forecast-section-total ui-forecast-total-out"><bdi dir="ltr">{formatAmountText(build.expenseTotal, base)}</bdi></span>
-            </h2>
-            <ul className="ui-forecast-list">
-              {expense.map((item) => (
-                <ForecastRowButton key={item.key} item={item} today={today} onOpen={setOpen} leaving={leavingKey === item.key} />
-              ))}
-              {build.small.length > 0 ? (
-                <li className="ui-forecast-li">
-                  <button type="button" className="ui-forecast-row ui-forecast-small" aria-expanded={smallOpen} onClick={() => { setSmallOpen((value) => !value); }}>
-                    <span className="ui-forecast-initial" aria-hidden="true">{`+${String(build.small.length)}`}</span>
-                    <span className="ui-forecast-text">
-                      <span className="ui-forecast-name">חיובים קבועים קטנים</span>
-                      <span className="ui-forecast-meta">{`${build.small.length === 1 ? "חיוב אחד" : `${String(build.small.length)} חיובים`}${smallUntil == null ? "" : ` · עד ${dayMonth(smallUntil)}`}`}</span>
-                    </span>
-                    <span className="ui-forecast-amount"><Amount agorot={smallTotal} size="list" currency={base} direction="expense" /></span>
-                  </button>
-                  {smallOpen ? (
-                    <ul className="ui-forecast-small-list">
-                      {build.small.map((item) => (
-                        <ForecastRowButton key={item.key} item={item} today={today} onOpen={setOpen} leaving={false} />
-                      ))}
-                    </ul>
-                  ) : null}
-                </li>
-              ) : null}
-            </ul>
-          </section>
-          {moved.length > 0 ? (
-            <section className="ui-forecast-section ui-forecast-section-moved">
-              <h2 className="ui-forecast-section-head ui-forecast-head-moved">לא החודש</h2>
+          <ForecastViewSwitch view={view} onPick={setView} />
+          {byCategory ? (
+            soFar == null ? (
+              live && soFarQuery.isError ? (
+                <p className="ui-forecast-error t-caption t-muted" role="alert">לא הצלחנו לטעון את הקטגוריות.</p>
+              ) : (
+                <DelayedSkeleton>
+                  <ListSkeleton />
+                </DelayedSkeleton>
+              )
+            ) : (
+              <ForecastCategoryView
+                sides={forecastCategories(build, soFar, new Map((categories.data ?? []).map((row) => [row.id, row.name])), today)}
+                currency={base}
+                today={today}
+                open={openCategories}
+                onToggle={toggleCategory}
+                onOpenItem={setOpen}
+              />
+            )
+          ) : (
+            <>
+            <ForecastSection
+              title="צפוי להיכנס"
+              total={<Amount agorot={build.incomeTotal} size="list" currency={base} direction="income" income />}
+              items={income}
+              today={today}
+              onOpen={setOpen}
+              leavingKey={leavingKey}
+            />
+            <section className="ui-forecast-section">
+              <h2 className="ui-forecast-section-head">
+                <span>צפוי לצאת</span>
+                <span className="ui-forecast-section-total ui-forecast-total-out"><bdi dir="ltr">{formatAmountText(build.expenseTotal, base)}</bdi></span>
+              </h2>
               <ul className="ui-forecast-list">
-                {moved.map((item) => (
-                  <MovedRow key={item.key} item={item} onOpen={setOpen} />
+                {expense.map((item) => (
+                  <ForecastRowButton key={item.key} item={item} today={today} onOpen={setOpen} leaving={leavingKey === item.key} />
                 ))}
+                {build.small.length > 0 ? (
+                  <li className="ui-forecast-li">
+                    <button type="button" className="ui-forecast-row ui-forecast-small" aria-expanded={smallOpen} onClick={() => { setSmallOpen((value) => !value); }}>
+                      <span className="ui-forecast-initial" aria-hidden="true">{`+${String(build.small.length)}`}</span>
+                      <span className="ui-forecast-text">
+                        <span className="ui-forecast-name">חיובים קבועים קטנים</span>
+                        <span className="ui-forecast-meta">{`${build.small.length === 1 ? "חיוב אחד" : `${String(build.small.length)} חיובים`}${smallUntil == null ? "" : ` · עד ${dayMonth(smallUntil)}`}`}</span>
+                      </span>
+                      <span className="ui-forecast-amount"><Amount agorot={smallTotal} size="list" currency={base} direction="expense" /></span>
+                    </button>
+                    {smallOpen ? (
+                      <ul className="ui-forecast-small-list">
+                        {build.small.map((item) => (
+                          <ForecastRowButton key={item.key} item={item} today={today} onOpen={setOpen} leaving={false} />
+                        ))}
+                      </ul>
+                    ) : null}
+                  </li>
+                ) : null}
               </ul>
             </section>
-          ) : null}
+            {moved.length > 0 ? (
+              <section className="ui-forecast-section ui-forecast-section-moved">
+                <h2 className="ui-forecast-section-head ui-forecast-head-moved">לא החודש</h2>
+                <ul className="ui-forecast-list">
+                  {moved.map((item) => (
+                    <MovedRow key={item.key} item={item} onOpen={setOpen} />
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+            </>
+          )}
           <ForecastFootnote />
         </>
       )}

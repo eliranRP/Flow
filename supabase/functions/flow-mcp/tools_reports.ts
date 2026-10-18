@@ -177,6 +177,7 @@ function forecastItemJson(item: ForecastItem) {
     due_on: item.due_on,
     moved_out: item.moved_out,
     overridden: item.overridden,
+    category_id: item.category_id,
   };
 }
 

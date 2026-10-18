@@ -41,6 +41,8 @@ function BoardForecast({ variant }: { variant: BoardForecastVariant }) {
 
 export const Changed: Story = { name: "Forecast · changed, reset line", render: () => <BoardForecast variant="changed" /> };
 export const AllArrived: Story = { name: "Forecast · all arrived", render: () => <BoardForecast variant="empty" /> };
+/** לפי קטגוריה: each category's month so far and still to come, with the rent category open (MonthForecastCategory). */
+export const ByCategory: Story = { name: "Forecast · by category", render: () => <BoardForecast variant="category" /> };
 
 /** The change sheet on the largest income row. Its save and the moved state are the screen's. */
 function ChangeSheet({ kind }: { kind: ForecastSampleKind }) {
