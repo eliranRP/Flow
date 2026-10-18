@@ -28,7 +28,7 @@ test("projects list, finished projects, and the new-project sheet", async ({ pag
   await expect(page.getByRole("dialog", { name: "פרויקט חדש" })).toHaveCount(0);
 });
 
-test("a project opens its menu, categories, and a transaction", async ({ page }) => {
+test("a project opens its menu, finish confirm, and overhead switch", async ({ page }) => {
   await page.goto("/projects/herzl?preview=loading");
   await page.getByRole("button", { name: "עוד" }).click();
   await expect(page.getByRole("dialog", { name: "עוד" })).toBeVisible();
@@ -56,13 +56,6 @@ test("a project opens its menu, categories, and a transaction", async ({ page })
   const overhead = page.getByRole("dialog", { name: "עריכת פרויקט" }).getByRole("switch", { name: "רווח אחרי הוצאות כלליות" });
   await overhead.click();
   await expect(overhead).toBeChecked();
-  // FLOW-411: the lines show on open, with no extra tap and no jump to Settings (FLOW-340 C: on the expenses screen).
-  await page.goto("/e2e/project-detail?preview=1&section=expenses");
-  await expect(page.getByRole("link", { name: "כל הקטגוריות" })).toHaveCount(0);
-  await page.goto("/e2e/project-detail?preview=1&section=transactions");
-  await page.getByRole("link", { name: /^מלט/ }).click();
-  await expect(page).toHaveURL(/\/transactions\/t1/);
-
   // FLOW-331: + → פרויקט חדש opens the project sheet on Projects; Back does not reopen +.
   await page.goto("/add?preview=1");
   await page.getByRole("button", { name: /פרויקט חדש/ }).click();
@@ -78,13 +71,13 @@ test("a project's profit page opens a month, and Back steps back one screen at a
   await expect(page).toHaveURL(/\/e2e\/project-profit\?preview=1$/);
 });
 
-test("a category row opens its transactions and the waiting line opens that project's queue", async ({ page }) => {
-  await page.goto("/e2e/project-detail?preview=1&section=expenses");
-  await page.getByRole("link", { name: /^חומרים/ }).click();
-  await expect(page.getByRole("heading", { name: "חומרים" })).toBeVisible();
-  await expect(page.getByText("מלט")).toBeVisible();
-  await page.goto("/e2e/project-detail?preview=1&section=expenses");
-  await page.getByRole("link", { name: /ממתינות לאישור/ }).click();
+test("the profit page's category row opens that category, and the project page's waiting line opens the project's queue", async ({ page }) => {
+  await page.goto("/e2e/project-profit?preview=1");
+  await page.getByRole("button", { name: "לפי קטגוריה" }).click();
+  await page.getByRole("link", { name: /^תיקונים ותחזוקה/ }).click();
+  await expect(page).toHaveURL(/\/projects\/[^/]+\/categories\/repairs/);
+  await page.goto("/e2e/project-detail?preview=1");
+  await page.getByRole("link", { name: /ממתינים לאישור/ }).click();
   await expect(page).toHaveURL(/project=p1/);
   await expect(page.getByRole("heading", { name: "לאישור" })).toBeVisible();
 });

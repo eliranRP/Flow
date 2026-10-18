@@ -29,10 +29,6 @@
   padding-top: var(--space-2);
 }
 
-.ui-project-budget {
-  margin-block-start: var(--space-3);
-}
-
 /*
   FLOW-336 (decision 0150): the band figure steps the period with a sideways swipe. pan-y keeps
   the page's vertical scroll with the browser; the figure follows the finger and settles back.

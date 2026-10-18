@@ -122,14 +122,10 @@
       "screens/HomeScreen.tsx",
       "screens/recurring-screen.tsx",
       "screens/project-detail-screen.tsx",
-      "screens/project-expected-months.tsx",
       "screens/search.tsx",
       "forecast.ts",
       "forecast-sample.ts",
       "ui/banner.tsx",
-      "ui/expected-months.tsx",
-      "ui/expected-month-sheet.tsx",
-      "ui/approx-amount.tsx",
       "ui/sheet.tsx"
     ],
     "jev-review-open.spec.ts": [

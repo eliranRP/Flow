@@ -88,7 +88,7 @@ function renderAt(path: string) {
       <Routes>
         <Route path="/" element={<HomeScreen />} />
         <Route path="/projects" element={<ProjectsScreen />} />
-        <Route path="/projects/:projectId" element={<ProjectDetailScreen section="expenses" />} />
+        <Route path="/projects/:projectId" element={<ProjectDetailScreen />} />
         <Route path="/review" element={<ReviewScreen />} />
         <Route path="/review/change" element={<ChangeForm />} />
         <Route path="/unpaid" element={<UnpaidScreen />} />
@@ -140,9 +140,11 @@ describe("rejected reads", () => {
     const wire = JSON.parse(JSON.stringify(demoProject("herzl"), (_key, value: unknown) => (
       typeof value === "bigint" ? value.toString() : value
     ))) as unknown;
-    rpc.impl = (name) => Promise.resolve(name === "get_project" ? { data: wire, error: null } : { data: null, error: { message: "db down" } });
+    rpc.impl = (name) => Promise.resolve(
+      name === "get_project" ? { data: wire, error: null } : name === "project_cash_months" ? { data: cashMonths, error: null } : { data: null, error: { message: "db down" } },
+    );
     const first = renderAt("/projects/herzl");
-    expect(await screen.findByRole("button", { name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
     first.unmount();
     // That visit was an hour ago, so the saved read is stale and is read again.
     const saved = JSON.parse(localStorage.getItem("flow-project-reads") ?? "null") as { entries: { at: number }[] };
@@ -152,13 +154,13 @@ describe("rejected reads", () => {
     const reads: string[] = [];
     rpc.impl = (name) => {
       reads.push(name);
-      return Promise.resolve({ data: null, error: { message: "db down" } });
+      return Promise.resolve(name === "project_cash_months" ? { data: cashMonths, error: null } : { data: null, error: { message: "db down" } });
     };
     renderAt("/projects/herzl");
-    expect(screen.getByRole("button", { name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
     await waitFor(() => { expect(reads).toContain("get_project"); });
     await act(async () => { await Promise.resolve(); });
-    expect(screen.getByRole("button", { name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "נסו שוב" })).not.toBeInTheDocument();
     forgetProjectReads();
     resetShownCompanyForTests();
@@ -173,6 +175,7 @@ describe("rejected reads", () => {
     rpc.impl = (name) => {
       reads.push(name);
       if (name === "get_project") return new Promise((resolve) => { answer = resolve; });
+      if (name === "project_cash_months") return Promise.resolve({ data: cashMonths, error: null });
       return Promise.resolve({ data: [], error: null });
     };
     renderAt("/projects/herzl");
@@ -180,7 +183,7 @@ describe("rejected reads", () => {
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
     expect(reads).not.toContain("list_project_groups");
     await act(async () => { answer({ data: wire, error: null }); await Promise.resolve(); });
-    expect(await screen.findByRole("button", { name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
     await waitFor(() => { expect(reads).toContain("list_project_groups"); });
   });
 

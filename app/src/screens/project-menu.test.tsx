@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { ToastProvider } from "../ui/toast";
 import { BooksProvider } from "../use-books";
 import { ProjectDetailScreen } from "./flow-screens";
+import type { ProjectInvestment } from "./project-investment-data";
 
 function wrap(children: React.ReactNode) {
   return (
@@ -36,19 +37,46 @@ const project: NonNullable<ProjectDetail> = {
 };
 const groups = { groups: [{ id: "g1", name: "בניין לדוגמה" }], currentId: "g1" };
 
-function openMenu() {
-  render(wrap(<ProjectDetailScreen sample={project} sampleGroups={groups} sampleMenuRow={{ id: "p1", deletable: true } as never} />));
+const investment: ProjectInvestment = {
+  isOverhead: false,
+  figures: {
+    currency: "ILS",
+    purchaseMinor: 18_500_000n,
+    arvMinor: null,
+    valueMinor: null,
+    valueDate: null,
+    rehabMinor: 0n,
+    rehabOther: [],
+    loanMinor: 0n,
+    loanOther: [],
+    forcedEquityMinor: null,
+    currentEquityMinor: null,
+  },
+  categories: [],
+  loans: [],
+};
+
+function openMenu(withInvestment = false) {
+  render(wrap(<ProjectDetailScreen sample={project} sampleGroups={groups} sampleInvestment={withInvestment ? investment : undefined} sampleMenuRow={{ id: "p1", deletable: true } as never} />));
   fireEvent.click(screen.getByRole("button", { name: "עוד" }));
   return screen.getByRole("dialog", { name: "פרויקט לדוגמה" });
 }
 
 describe("the project's ⋯ menu matches the board", () => {
-  it("lists edit, השקעה והלוואות (even with no investment data) and finish, with the hint under each title", () => {
-    const menu = openMenu();
+  it("lists edit, השקעה והלוואות (a project with an investment figure) and finish, with the hint under each title", () => {
+    const menu = openMenu(true);
     expect(within(menu).getByRole("button", { name: /^עריכת פרטים/ })).toBeInTheDocument();
     expect(within(menu).getByRole("link", { name: /^השקעה והלוואות/ })).toBeInTheDocument();
     expect(within(menu).getByRole("button", { name: /^סיום הפרויקט/ })).toBeInTheDocument();
     expect(menu.querySelector(".ui-row-hint")).not.toBeNull();
+  });
+
+  it("hides the השקעה והלוואות row for a project with no investment data, and the edit sheet still opens the page", () => {
+    const menu = openMenu();
+    expect(within(menu).queryByRole("link", { name: /^השקעה והלוואות/ })).not.toBeInTheDocument();
+    fireEvent.click(within(menu).getByRole("button", { name: /^עריכת פרטים/ }));
+    const edit = screen.getByRole("dialog", { name: "עריכת פרויקט" });
+    expect(within(edit).getByRole("link", { name: /^נתוני השקעה/ })).toHaveAttribute("href", expect.stringMatching(/^\/projects\/p1\/investment/));
   });
 
   it("has no add row, group row, overhead switch or ✕, and shows delete for a deletable project", () => {

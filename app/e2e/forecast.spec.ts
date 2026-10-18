@@ -42,26 +42,3 @@ test("קבועים on one project shows only its rows and names it (FLOW-424)", 
   await expect(page.locator(".ui-recurring li")).toHaveCount(4);
   await expect(page.getByText("Juniper Pointe HOA")).toHaveCount(0);
 });
-
-test("Project: a צפוי month opens the sheet of its parties, and the sheet closes", async ({ page }) => {
-  await page.goto("/e2e/project-detail?preview=1&section=expenses");
-  const section = page.getByRole("region", { name: "צפוי" });
-  await expect(section).toBeVisible();
-  await expect(section.getByRole("button")).toHaveCount(3);
-  await expect(section.getByRole("button", { name: "שאר אוקטובר, בערך ₪2,330" })).toBeVisible();
-  await section.getByRole("button", { name: "נובמבר, בערך ₪4,090" }).click();
-  const sheet = page.getByRole("dialog", { name: "נובמבר" });
-  await expect(sheet).toBeVisible();
-  await expect(sheet.locator(".ui-expected-parties li")).toHaveCount(4);
-  await expect(sheet.locator(".ui-approx-income")).toHaveCount(0);
-  await sheet.getByRole("button", { name: "סגירה" }).click();
-  await expect(sheet).toBeHidden();
-  await expect(section.getByRole("button", { name: "נובמבר, בערך ₪4,090" })).toBeFocused();
-});
-
-test("Project: with no history the section says so in one line", async ({ page }) => {
-  await page.goto("/e2e/project-detail?preview=1&expected=none&section=expenses");
-  const section = page.getByRole("region", { name: "צפוי" });
-  await expect(section).toContainText("אין עדיין צפי.");
-  await expect(section.getByRole("button")).toHaveCount(0);
-});

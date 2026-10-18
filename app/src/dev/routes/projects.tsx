@@ -6,7 +6,7 @@ import { ProjectCategoryScreen, ProjectDetailScreen, ProjectsScreen } from "../.
 import { useHomePreview } from "../../preview";
 import { cash as devCash, cashRow as devCashRow, investment as devInvestment, months as devMonths, project as devProject } from "../project-cash-sample";
 import { devProjectsCash } from "../projects-sample";
-import { SAMPLE_EXPECTED, SAMPLE_EXPECTED_EMPTY } from "../../forecast-sample";
+import { kindOf, kindSample } from "../project-kinds-sample";
 import { devDashboard } from "./home";
 import { AddForm } from "../../screens/add-sheet";
 import type { DevRoute } from "./types";
@@ -42,7 +42,12 @@ const idleCash = devMonths([[devCashRow(0n, 0n, 0n)]]);
 const idleInvestment = { isOverhead: false, figures: null, categories: [], loans: [] };
 
 export function DevProjects() {
-  return <ProjectsScreen sample={devDashboard} cashSample={devProjectsCash} />;
+  const [params] = useSearchParams();
+  // The fixture company is in dollars: the new-project sheet's budget field reads "$".
+  const queryClient = useQueryClient();
+  const preview = useHomePreview();
+  useEffect(() => { queryClient.setQueryData(["company-currency", preview], "USD"); }, [queryClient, preview]);
+  return <ProjectsScreen sample={devDashboard} cashSample={devProjectsCash} finishedOpen={params.get("finished") === "1"} />;
 }
 
 /**
@@ -90,21 +95,21 @@ export function DevProjectDetail() {
   // The menu's month row: the sample project's pending line (the finish warning), and deletable with `?deletable=1`.
   const deletable = params.get("deletable") === "1";
   const menuBase = devProjectsCash.projects[0];
-  const menuRow = menuBase == null ? undefined : { ...menuBase, id: "p1", pending_count: deletable ? 0 : 2, deletable };
+  const kind = kindOf(params.get("kind"));
+  const kinded = kind == null ? null : kindSample(kind, menuBase);
+  const menuRow = kinded?.row ?? (menuBase == null ? undefined : { ...menuBase, id: "p1", pending_count: deletable ? 0 : 2, deletable, first_month: deletable ? "2026-10-01" : "2026-07-01" });
   return (
     <>
     <OpenProjectMenu sheet={params.get("sheet")} />
     <ProjectDetailScreen
       sampleMenuRow={menuRow}
       // FLOW-340 C: `?section=` draws the screen a row opens, on the same sample .
-      section={section === "expenses" || section === "investment" || section === "loans" || section === "transactions" ? section : "overview"}
+      section={section === "investment" ? section : "overview"}
       sectionTo={(target) => (target === "overview" ? "/e2e/project-detail?preview=1" : `/e2e/project-detail?preview=1&section=${target}`)}
-      sampleExpected={params.get("expected") === "none" ? SAMPLE_EXPECTED_EMPTY : SAMPLE_EXPECTED}
       // `?budget=1` draws the flip with its budget (the board's flip frame, invented names and figures).
-      sample={deletable ? idleProject : { ...e2eProject, budget_agorot: params.get("budget") === "1" ? e2eProject.budget_agorot : null }}
-      sampleCash={deletable ? idleCash : devCash}
-      sampleInvestment={deletable ? idleInvestment : devInvestment}
-      categoryTo="/e2e/project-category"
+      sample={kinded?.project ?? (deletable ? idleProject : { ...e2eProject, budget_agorot: params.get("budget") === "1" ? e2eProject.budget_agorot : null })}
+      sampleCash={kinded?.cash ?? (deletable ? idleCash : devCash)}
+      sampleInvestment={kinded?.investment ?? (deletable ? idleInvestment : devInvestment)}
     />
     {params.get("add") === "1" ? <AddForm /> : null}
     </>

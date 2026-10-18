@@ -1,4 +1,4 @@
-import { formatAmountText, type CashMonths, type ExpectedMonths, type ProjectCategoryMonthRow, type ProjectCashRow, type ProjectDetail } from "@flow/shared";
+import { formatAmountText, type CashMonths, type ProjectCashRow, type ProjectDetail } from "@flow/shared";
 import { useCompanyCurrency } from "../company-currency";
 import { projectExpenseMinor, projectRows } from "../by-currency";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -7,7 +7,7 @@ import { absAgorot } from "../agorot";
 import { overheadHint } from "../overhead";
 import { useHoldWrites } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
-import { periodPhrase, type PeriodChoice } from "../period";
+import { type PeriodChoice } from "../period";
 import { useProjectPeriod, withPeriodSearch } from "../project-period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
@@ -34,10 +34,7 @@ import { israelToday } from "../ui/date-math";
 import { ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
 import { useProjectGroups, type ProjectGroups } from "./project-group-sheets";
 import { ProjectInvestmentSection, type ProjectInvestment } from "./project-investment";
-import { ProjectCategories } from "./project-categories";
-import { ProjectExpectedMonths } from "./project-expected-months";
-import { ProjectTransactions } from "./project-transactions";
-import { ProjectCashOverview } from "./project-cash-screens";
+import { investmentLoansRow, ProjectCashOverview } from "./project-cash-screens";
 import { ProjectFormSheet } from "./project-form-sheet";
 import { ProjectMenu } from "./project-menu";
 import { projectAttentionRows, useProjectRecurring, type ProjectRecurringSample } from "./project-attention";
@@ -100,21 +97,12 @@ const ALL_PERIOD: PeriodChoice = { kind: "all", from: null, to: null };
  * FLOW-340 C: the overview, or one of the screens its rows open. FLOW-419: the overview is the
  * project's cash, and "profit" is the page the project used to open on.
  */
-export type ProjectSection = "overview" | "expenses" | "investment" | "loans" | "transactions";
-
-function withParams(search: string, params: Record<string, string>): string {
-  const next = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
-  for (const [key, value] of Object.entries(params)) next.set(key, value);
-  return `?${next.toString()}`;
-}
+export type ProjectSection = "overview" | "investment";
 
 export function ProjectDetailScreen({
   sample,
   example,
-  categoryTo,
   sampleInvestment,
-  sampleCategories,
-  sampleExpected,
   section = "overview",
   sectionTo,
   sampleGroups,
@@ -135,12 +123,6 @@ export function ProjectDetailScreen({
   /** FLOW-404. The השקעה data of a sample project; without it a sample project shows no investment. */
   sampleInvestment?: ProjectInvestment;
   example?: ReactNode;
-  /** Dev fixtures send a category row here. Production builds the project route. */
-  categoryTo?: string;
-  /** FLOW-401. A sample project's category groups and month marks (stories). */
-  sampleCategories?: { groups: Record<string, string>; months: ProjectCategoryMonthRow[] };
-  /** FLOW-403. The "צפוי" months of a sample project (dev routes and Storybook). */
-  sampleExpected?: ExpectedMonths;
   /** FLOW-340 C. Which screen of the project this route draws. */
   section?: ProjectSection;
   /** Dev fixtures send the overview's rows (and the sections' Back) here. Production builds the project routes. */
@@ -168,6 +150,9 @@ export function ProjectDetailScreen({
   const groups = sampleGroups ?? liveGroups;
   // The profit since the project began: a read over every period, once the page's own read has landed.
   const lifetime = useProjectQuery(sample == null && section === "overview" && detail.data != null && !detail.isFetching ? projectId : "", ALL_PERIOD);
+  // The project's row on the Projects list (the same cached read the ⋯ menu uses): the month it began.
+  const monthRows = useProjectsCashMonth(undefined, sample ? "" : projectId);
+  const monthRow = sampleMenuRow ?? monthRows.data?.projects.find((row) => row.id === projectId);
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();
   const blocked = useBlockedPreview();
@@ -220,31 +205,6 @@ export function ProjectDetailScreen({
   const periodQuery = withPeriodSearch(search, period);
   const sectionHref = (target: ProjectSection) => sectionTo?.(target)
     ?? (target === "overview" ? `/projects/${project.id}${periodQuery}` : `/projects/${project.id}/${target}${periodQuery}`);
-  const periodWords = periodPhrase(period, undefined, "project");
-  if (section === "expenses") {
-    const expenses = absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot);
-    return (
-      <div className="flex min-h-full flex-1 flex-col">
-        <ScreenHeader title="הוצאות" kicker={project.name} subtitle={periodWords} backTo={sectionHref("overview")} />
-        {project.budget_agorot != null && period.kind === "all" ? (
-          <div className="ui-page-pad ui-project-budget">
-            <ProjectBudget project={project} spentAgorot={expenses} />
-          </div>
-        ) : null}
-        <ProjectCategories
-          project={project}
-          search={search}
-          categorySearch={periodQuery}
-          categoryTo={categoryTo == null ? undefined : `${categoryTo}${search}`}
-          period={sample ? undefined : period}
-          sampleGroups={sampleCategories?.groups}
-          sampleMonths={sampleCategories?.months}
-        />
-        {/* FLOW-403: expected months under the categories (plan option A3). */}
-        <ProjectExpectedMonths projectId={project.id} live={sample == null} sample={sampleExpected} />
-      </div>
-    );
-  }
   if (section === "investment") {
     return (
       <div className="flex min-h-full flex-1 flex-col">
@@ -257,31 +217,6 @@ export function ProjectDetailScreen({
             <ProjectLoansList project={project} search={search} />
           </>
         )}
-      </div>
-    );
-  }
-  if (section === "transactions") {
-    return (
-      <div className="flex min-h-full flex-1 flex-col">
-        <ScreenHeader
-          title="תנועות"
-          kicker={project.name}
-          subtitle={periodWords}
-          backTo={sectionHref("overview")}
-          below={
-            // FLOW-402: every line of the project, in Search with the project chip set.
-            <TextLink to={`/search${withParams(search, { project: project.id })}`} tone="quiet">כל התנועות</TextLink>
-          }
-        />
-        <ProjectTransactions transactions={project.transactions} search={search} live={sample == null} />
-      </div>
-    );
-  }
-  if (section === "loans") {
-    return (
-      <div className="flex min-h-full flex-1 flex-col">
-        <ScreenHeader title="הלוואות" kicker={project.name} backTo={sectionHref("overview")} />
-        <ProjectLoansList project={project} search={search} />
       </div>
     );
   }
@@ -324,6 +259,7 @@ export function ProjectDetailScreen({
       sampleRow={sampleMenuRow}
       overhead={overhead}
       investmentTo={sectionHref("investment")}
+      hasInvestment={investmentLoansRow(investmentData, project) != null}
     />
   );
   const cashData = sampleCash ?? (sample ? sampleCashOf(sample, now) : cash.data) ?? null;
@@ -338,6 +274,8 @@ export function ProjectDetailScreen({
       menu={menu}
       budget={<ProjectBudget project={project} spentAgorot={absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot)} part="card" />}
       budgetAdd={<ProjectBudget project={project} spentAgorot={0n} part="add" />}
+      firstMonth={monthRow?.first_month?.slice(0, 7) ?? null}
+      fresh={monthRow != null && monthRow.first_month == null}
       sinceProfit={(lifetime.data ?? (sample ? project : null)) == null ? null : projectRows(lifetime.data ?? project, companyCurrency).map((row) => ({ currency: row.currency, minor: row.profit_minor }))}
       attention={projectAttentionRows({
         projectId: project.id,

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { projectMonthAmount } from "../screens/project-transactions";
-import { SAMPLE_MONTH_FIGURES, SAMPLE_MONTH_KEPT, SAMPLE_PROFIT_FIGURES, sampleMonthLines, sampleProfitLines } from "./project-month-sample";
+import { SAMPLE_MONTH_FIGURES, SAMPLE_MONTH_KEPT, SAMPLE_PROFIT_FIGURES, projectMonthAmount, sampleMonthLines, sampleProfitLines } from "./project-month-sample";
 
 // FLOW-438 (design lead, §3.7): a page's listed lines add up to its figures for the month shown.
 describe("project month samples", () => {

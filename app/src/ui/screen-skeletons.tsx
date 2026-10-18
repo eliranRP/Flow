@@ -44,18 +44,30 @@ export function LinesSkeleton() {
   );
 }
 
-/** Projects: a title, then a card per project with its name, period and a progress track. */
+/** Projects (board States, projectsLoading): under the title, a label and a figure bar, then a card per project. */
 export function ProjectsSkeleton() {
   return (
-    <div className="ui-page-pad ui-stack" aria-busy="true">
+    <div className="ui-page-pad ui-projects-skel" aria-busy="true">
       <Loading />
-      <Bar w="170px" h={34} />
-      {cards.map((key) => (
-        <div className="ui-stack" key={key}>
-          <Bar w="30%" h={10} />
-          <Bar w="100%" h={6} className="ui-skel-track" />
-        </div>
-      ))}
+      <div className="ui-projects-skel-head">
+        <Bar w="130px" h={12} />
+        <Bar w="170px" h={34} className="ui-skel-figure" />
+      </div>
+      <div className="ui-projects-skel-cards">
+        {cards.map((key) => (
+          <div className="ui-projects-skel-card" key={key}>
+            <div className="ui-projects-skel-row">
+              <Bar w="40px" h={40} className="ui-skel-tile" />
+              <span className="ui-projects-skel-text">
+                <Bar w="46%" h={14} />
+                <Bar w="30%" h={10} />
+              </span>
+              <Bar w="70px" h={14} />
+            </div>
+            <Bar w="100%" h={6} className="ui-skel-track" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

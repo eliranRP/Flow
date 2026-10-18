@@ -9,7 +9,6 @@ import {
   periodFromSearch,
   periodLabel,
   periodPillLabel,
-  periodPhrase,
   periodSearch,
   presetPeriod,
   stepPeriod,
@@ -68,7 +67,6 @@ describe("period labels", () => {
     expect(periodLabel(thisMonth(now), now)).toBe("החודש");
     expect(periodLabel(monthPeriod("2026-09", now), now)).toBe("ספטמבר 2026");
     expect(periodLabel(presetPeriod("months3", now), now)).toBe("3 חודשים");
-    expect(periodPhrase(allTime(), now, "project")).toBe("מתחילת הפרויקט");
   });
 
   it("names the pill with the shared sheet's row while the window ends now (FLOW-351)", () => {

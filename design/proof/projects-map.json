@@ -4,5 +4,11 @@
   "ProjectNewSheet": "/e2e/projects?new=project",
   "ProjectMenu": "/e2e/project-detail?preview=1&budget=1&sheet=menu",
   "ProjectMenuDeletable": "/e2e/project-detail?preview=1&budget=1&sheet=menu&deletable=1",
-  "ProjectFinishConfirm": "/e2e/project-detail?preview=1&budget=1&sheet=finish"
+  "ProjectFinishConfirm": "/e2e/project-detail?preview=1&budget=1&sheet=finish",
+  "ProjectsFinished": "/e2e/projects?finished=1",
+  "ProjectRental": "/e2e/project-detail?preview=1&kind=rental",
+  "ProjectClient": "/e2e/project-detail?preview=1&kind=client",
+  "ProjectNewCreated": "/e2e/project-detail?preview=1&kind=new",
+  "StatesProjectsLoading": "/projects?preview=loading",
+  "StatesProjectsEmpty": "/projects?preview=empty"
 }

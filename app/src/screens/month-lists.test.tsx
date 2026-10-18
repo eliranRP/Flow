@@ -1,141 +1,20 @@
-import type { ProjectDetail, ReviewRow } from "@flow/shared";
+import type { ReviewRow } from "@flow/shared";
 import { screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
-import { ProjectCategoryScreen, ProjectDetailScreen, ReviewAllList } from "./flow-screens";
+import { ProjectCategoryScreen, ReviewAllList } from "./flow-screens";
 import { renderWithProviders } from "../test-render";
 
 /** FLOW-302 wiring: each list hands MonthList the amount, currency, and completeness its rows show. */
-
-type Txn = NonNullable<ProjectDetail>["transactions"][number];
 
 function wrap(node: ReactNode) {
   return renderWithProviders(node);
 }
 
-function project(transactions: Txn[]): NonNullable<ProjectDetail> {
-  return {
-    id: "p-sample",
-    name: "Sample project",
-    status: "active",
-    state_label: "פעיל",
-    budget_agorot: null,
-    income_agorot: 0n,
-    direct_agorot: 0n,
-    shared_agorot: 0n,
-    profit_agorot: 0n,
-    categories: [],
-    pending_count: 0,
-    transactions,
-  };
-}
-
-const txn = (id: string, doc_date: string, amount_net: bigint, direction: string, currency?: string): Txn => ({
-  id,
-  description: `Line ${id}`,
-  doc_date,
-  amount_net,
-  ...(currency == null ? {} : { currency }),
-  direction,
-  category: null,
-});
-
 function totalsOf(month: string): string | null {
   const group = screen.getByRole("group", { name: month });
   return group.querySelector(".ui-month-totals")?.textContent ?? null;
 }
-
-describe("project recent list months", () => {
-  it("totals stored-negative expenses with a minus, a missing currency as ₪, and USD apart", () => {
-    wrap(<ProjectDetailScreen section="transactions" sample={project([
-      txn("a", "2026-09-14", 1_200_000n, "income"),
-      txn("b", "2026-09-10", -350_000n, "expense", "ILS"),
-      txn("c", "2026-09-08", -40_000n, "expense", "USD"),
-      txn("d", "2026-08-20", -220_000n, "expense"),
-    ])} />);
-    expect(totalsOf("ספטמבר 2026")).toBe("נטו ₪8,500");
-    // FLOW-340 C: one labeled net per month, as Search; another currency on a muted line under it.
-    expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-more")?.textContent).toBe("ועוד −$400 בדולר");
-    expect(totalsOf("אוגוסט 2026")).toBe("נטו −₪2,200");
-  });
-
-  it("shows only the name of the last month when get_project hit its 40-line cap", () => {
-    const rows = Array.from({ length: 40 }, (_, index) =>
-      txn(`r${String(index)}`, index < 20 ? "2026-09-10" : "2026-08-10", -10_000n, "expense"));
-    wrap(<ProjectDetailScreen section="transactions" sample={project(rows)} />);
-    expect(totalsOf("ספטמבר 2026")).toBe("נטו −₪2,000");
-    expect(totalsOf("אוגוסט 2026")).toBeNull();
-  });
-
-  it("leaves lines kept out of the P&L out of the month totals", () => {
-    wrap(<ProjectDetailScreen section="transactions" sample={project([
-      txn("a", "2026-09-14", 1_200_000n, "income"),
-      { ...txn("b", "2026-09-12", 500_000n, "income"), kept_out: true },
-      txn("c", "2026-09-10", -350_000n, "expense"),
-      { ...txn("d", "2026-08-20", 300_000n, "income"), kept_out: true },
-      txn("e", "2026-08-18", -220_000n, "expense"),
-    ])} />);
-    expect(totalsOf("ספטמבר 2026")).toBe("נטו ₪8,500");
-    expect(totalsOf("אוגוסט 2026")).toBe("נטו −₪2,200");
-    // The owner's pick C: a kept-out row fades whole; a row that counts does not.
-    expect(screen.getByRole("link", { name: /^Line b/ })).toHaveClass("ui-row-set-aside");
-    expect(screen.getByRole("link", { name: /^Line a/ })).not.toHaveClass("ui-row-set-aside");
-  });
-
-  it("adds this project's parts of a line split by category, with the line's sign", () => {
-    wrap(<ProjectDetailScreen section="transactions" sample={project([
-      { ...txn("a", "2026-09-14", -1_200_000n, "expense"), parts_minor: 800_000n },
-      { ...txn("b", "2026-09-12", 900_000n, "income"), parts_minor: 300_000n },
-      txn("c", "2026-09-10", -100_000n, "expense"),
-      { ...txn("d", "2026-08-20", -500_000n, "expense"), parts_minor: null },
-    ])} />);
-    expect(totalsOf("ספטמבר 2026")).toBe("נטו −₪6,000");
-    expect(totalsOf("אוגוסט 2026")).toBe("נטו −₪5,000");
-  });
-
-  it("leads a split line's row with this project's part, and names the whole line quietly (owner, 2026-10-09)", () => {
-    wrap(<ProjectDetailScreen section="transactions" sample={project([
-      { ...txn("a", "2026-09-14", -317_000n, "expense"), parts_minor: 25_000n },
-      txn("c", "2026-09-10", -100_000n, "expense"),
-    ])} />);
-    const split = screen.getByRole("link", { name: /^Line a/ });
-    expect(split.querySelector(".ui-num")?.textContent).toBe("−₪250");
-    expect(split).toHaveTextContent("מתוך ₪3,170");
-    const plain = screen.getByRole("link", { name: /^Line c/ });
-    expect(plain.querySelector(".ui-num")?.textContent).toBe("−₪1,000");
-    expect(plain).not.toHaveTextContent("מתוך");
-  });
-
-  it("takes a signed share as it comes: a reversal part is already minus (decision 0138)", () => {
-    wrap(<ProjectDetailScreen section="transactions" sample={project([
-      // A supplier refund filed as income: 70.00 left as income, 30.00 put back against expenses.
-      { ...txn("a", "2026-09-14", 10_000n, "income"), parts_minor: 4_000n },
-      // An expense line whose reversal parts outweigh its own on this project: money comes back.
-      { ...txn("b", "2026-09-12", -600_000n, "expense"), parts_minor: -50_000n },
-      // An income line whose share here is below zero: money goes out.
-      { ...txn("c", "2026-08-20", 1_000_000n, "income"), parts_minor: -200_000n },
-    ])} />);
-    expect(totalsOf("ספטמבר 2026")).toBe("נטו ₪540");
-    expect(totalsOf("אוגוסט 2026")).toBe("נטו −₪2,000");
-  });
-
-  it("marks a kept-out line on the row and opens the lines without an extra tap (FLOW-411)", () => {
-    wrap(<ProjectDetailScreen section="transactions" sample={project([
-      { ...txn("a", "2026-09-14", -150_000n, "expense"), kept_out: true, category: "ציוד" },
-      txn("b", "2026-08-12", -100_000n, "expense"),
-    ])} />);
-    expect(screen.queryByText("תנועות אחרונות")).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "כל הקטגוריות" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Line a/ })).toHaveTextContent(/לא נספר ברווח · ציוד/);
-  });
-
-  it("totals the last month when the list is under the cap", () => {
-    const rows = Array.from({ length: 39 }, (_, index) =>
-      txn(`r${String(index)}`, index < 20 ? "2026-09-10" : "2026-08-10", -10_000n, "expense"));
-    wrap(<ProjectDetailScreen section="transactions" sample={project(rows)} />);
-    expect(totalsOf("אוגוסט 2026")).toBe("נטו −₪1,900");
-  });
-});
 
 describe("review list rows (FLOW-365 flat list)", () => {
   const review = (id: string, doc_date: string, amount_net: bigint, direction: "income" | "expense", currency?: string): ReviewRow => ({

@@ -1,33 +1,3 @@
-/* FLOW-334: a waiting row in "הוצאות לפי קטגוריה" is tinted like Home's review banner, not a category.
-   The tint is the row's own ::before layer, so the amount stays in the column the categories use. */
-.ui-row.ui-row-pending {
-  margin-block: var(--space-2);
-}
-
-.ui-row.ui-row-pending::before {
-  background: var(--color-tint);
-}
-
-.ui-row.ui-row-pending .ui-row-icon {
-  color: var(--color-accent-text);
-}
-
-/* A tighter icon gap keeps "N ממתינות לאישור" whole at 320. */
-.ui-row.ui-row-pending .ui-row-main {
-  gap: var(--space-2);
-}
-
-.ui-row.ui-row-pending:active::before {
-  background: var(--color-tint-pressed);
-}
-
-/* The row is already tinted, so focus adds a ring around the tint instead of the usual fill. */
-.ui-row.ui-row-pending:is(:focus-visible, [data-focus-ring]:focus)::before {
-  background: var(--color-tint-pressed);
-  outline: 2px solid var(--color-focus);
-  outline-offset: 0;
-}
-
 /* FLOW-408: the reserved chevron slot on a row that opens nothing. */
 .ui-row-chevron-space {
   visibility: hidden;
@@ -214,7 +184,8 @@
 .ui-projects-finished-toggle {
   background: none;
   border: 0;
-  padding: 0;
+  padding: 0 var(--space-side);
+  inline-size: 100%;
   font: inherit;
   color: var(--color-accent-text);
   cursor: pointer;
@@ -225,12 +196,25 @@
   background: transparent;
 }
 
+/* The board keeps a project row to one line and cuts a long type and status at the end. */
+.ui-proj-hint-line {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .ui-proj-over {
   color: var(--color-bad);
 }
 
+/* The board's finished row: a grey tick in the circle, the whole row at 75%. */
+.ui-row-initials.ui-row-done {
+  color: var(--color-text-muted);
+}
+
 .ui-proj-finished {
-  opacity: 0.6;
+  opacity: 0.75;
 }
 
 .ui-project-menu-delete {

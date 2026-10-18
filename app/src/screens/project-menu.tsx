@@ -26,6 +26,7 @@ export function ProjectMenu({
   sampleRow,
   overhead,
   investmentTo,
+  hasInvestment,
 }: {
   projectId: string;
   name: string;
@@ -40,6 +41,8 @@ export function ProjectMenu({
   overhead?: ReactNode;
   /** The investment and loans page the menu's second row opens. */
   investmentTo: string;
+  /** The board shows the menu's השקעה והלוואות row only for a project with an investment figure or a loan; the edit sheet always has the way in. */
+  hasInvestment: boolean;
 }) {
   const blocked = useBlockedPreview();
   const navigate = useNavigate();
@@ -121,7 +124,8 @@ export function ProjectMenu({
               }}
             />
           )}
-          <ListRow
+          {hasInvestment ? (
+            <ListRow
               variant="item"
               title="השקעה והלוואות"
               hint="מחיר קנייה, ARV, שווי והלוואות"
@@ -129,6 +133,7 @@ export function ProjectMenu({
               href={investmentTo}
               chevron
             />
+          ) : null}
           <ListRow
             variant="button"
             title={action}
@@ -161,6 +166,9 @@ export function ProjectMenu({
         extras={(
           <>
             {overhead}
+            <List>
+              <ListRow variant="item" title="נתוני השקעה" hint="מחיר קנייה, ARV, שווי והלוואות" href={investmentTo} chevron />
+            </List>
             {groups == null ? null : (
               <List>
                 <ListRow

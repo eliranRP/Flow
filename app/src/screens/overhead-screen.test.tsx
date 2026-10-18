@@ -55,7 +55,7 @@ const cashMonths = {
   }],
 };
 
-function renderProject(sample: NonNullable<ProjectDetail>, section: "overview" | "expenses" = "expenses") {
+function renderProject(sample: NonNullable<ProjectDetail>, section: "overview" = "overview") {
   const client = new QueryClient();
   return render(
     <QueryClientProvider client={client}>
@@ -83,83 +83,6 @@ const projectBase = {
   categories: [{ id: "h", name: "הובלה", amount_agorot: 3_000n }],
   transactions: [],
 };
-
-describe("project category breakdown", () => {
-  it("adds a waiting line so the category list matches the project expenses", () => {
-    renderProject({
-      ...projectBase,
-      pending_count: 1,
-      pending_agorot: 5_000n,
-    });
-    expect(screen.getByRole("link", { name: /הובלה/ })).toHaveAttribute("href", expect.stringMatching(/^\/projects\/a\/categories\/h\?period=/));
-    expect(screen.getByRole("link", { name: /1 ממתינה לאישור/ })).toHaveAttribute("href", "/review?project=a");
-    // FLOW-334: the waiting row reads as Home's review row, not a category.
-    const waiting = screen.getByRole("link", { name: /1 ממתינה לאישור/ });
-    expect(waiting).toHaveClass("ui-row-pending");
-    expect(waiting.querySelector(".ui-row-icon svg")).not.toBeNull();
-    expect(screen.queryByText("אין עדיין הוצאות מסווגות.")).not.toBeInTheDocument();
-    expect(screen.queryByText("כולל חלק מהוצאות משותפות")).not.toBeInTheDocument();
-  });
-
-  it("keeps a project that is only waiting off the empty category sentence", () => {
-    renderProject({
-      ...projectBase,
-      categories: [],
-      pending_count: 2,
-      pending_agorot: 8_000n,
-    });
-    expect(screen.getByText("2 ממתינות לאישור")).toBeInTheDocument();
-    expect(screen.queryByText("אין עדיין הוצאות מסווגות.")).not.toBeInTheDocument();
-  });
-
-  it("shows the shared-cost note only when a line includes a share", () => {
-    const { rerender } = renderProject({
-      ...projectBase,
-      categories: [
-        { id: "h", name: "הובלה", amount_agorot: 7_000n, has_shared_share: true },
-        { id: "m", name: "חומרים", amount_agorot: 2_000n, has_shared_share: false },
-      ],
-    });
-    const haul = screen.getByRole("link", { name: /הובלה/ });
-    const note = within(haul).getByText("כולל חלק מהוצאות משותפות");
-    expect(note).toHaveClass("ui-shared-note");
-    expect(note).toHaveClass("t-hint");
-    expect(within(screen.getByRole("link", { name: /חומרים/ })).queryByText("כולל חלק מהוצאות משותפות")).not.toBeInTheDocument();
-    rerender(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <MemoryRouter initialEntries={["/projects/a"]}>
-            <Routes>
-              <Route
-                path="/projects/:projectId"
-                element={
-                  <ProjectDetailScreen
-                    section="expenses"
-                    sample={{
-                      ...projectBase,
-                      categories: [{ id: "m", name: "חומרים", amount_agorot: 2_000n, has_shared_share: false }],
-                    }}
-                  />
-                }
-              />
-            </Routes>
-          </MemoryRouter>
-        </ToastProvider>
-      </QueryClientProvider>,
-    );
-    expect(screen.queryByText("כולל חלק מהוצאות משותפות")).not.toBeInTheDocument();
-  });
-
-  it("says there are no classified expenses when nothing is waiting either", () => {
-    renderProject({
-      ...projectBase,
-      direct_agorot: 0n,
-      profit_agorot: 0n,
-      categories: [],
-    });
-    expect(screen.getByText("אין עדיין הוצאות מסווגות.")).toBeInTheDocument();
-  });
-});
 
 describe("project overhead hero", () => {
   const overheadProject = {

@@ -73,16 +73,6 @@ export function projectExpenseMinor(row: ProjectCurrencyRow): bigint {
   return raw < 0n ? -raw : raw;
 }
 
-export function projectAmountFigures(project: ProjectRow): { minor: bigint; currency: string }[] {
-  const rows = projectRows(project);
-  if (rows.length === 1) {
-    const row = rows[0];
-    if (row == null) return [];
-    return [{ minor: row.profit_minor, currency: row.currency }];
-  }
-  return rows.map((row) => ({ minor: row.profit_minor, currency: row.currency }));
-}
-
 export function dashboardHasBooks(data: Dashboard): boolean {
   if (data.projects.length > 0) return true;
   if (data.income_agorot !== 0n || data.expense_agorot !== 0n) return true;
