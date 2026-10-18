@@ -349,7 +349,7 @@ export function CashHome({
   const navigate = useNavigate();
   const openProfit = () => {
     books?.setPeriod(monthPeriod(monthKey));
-    void navigate(profitPath(search));
+    void navigate(profitPath(monthKey, search));
   };
 
   return (

@@ -42,14 +42,15 @@ describe("cashSummaryRows", () => {
       ["יצא", "out", "/cash/2026-10/out/ILS"],
       ["רווח החודש", "quiet", "/profit"],
     ]);
-    // The profit view opens on the row's month.
-    expect(rows[2]?.profitMonth).toBe("2026-10");
     expect(rows[0]?.name).toBe("נכנס באוקטובר ₪18,000 – פירוט");
   });
 
   it("names an earlier month on its profit row, and keeps רווח החודש on the current month (FLOW-362)", () => {
     const rows = cashSummaryRows("2026-09", [row("ILS", 1_800_000n, 1_480_000n)], "", now);
     expect(rows[2]?.label).toBe("רווח בספטמבר");
+    // The profit view opens on the row's month, as Home names it.
+    expect(rows[2]?.href).toBe("/profit?month=2026-09");
+    expect(cashSummaryRows("2026-09", [row("ILS", 0n, 0n)], "?preview=ready", now)[2]?.href).toBe("/profit?month=2026-09&preview=ready");
     expect(rows[2]?.name).toBe("רווח בספטמבר ₪3,200");
     expect(cashSummaryRows("2025-12", [row("ILS", 0n, 0n)], "", now)[2]?.label).toBe("רווח בדצמבר 2025");
   });

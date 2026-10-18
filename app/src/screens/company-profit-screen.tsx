@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import { onlineManager } from "@tanstack/react-query";
 import { lineDayTitle, lineInitials } from "../cash-lines-groups";
 import { useCompanyCurrency } from "../company-currency";
+import { homeMonthKey, homeMonthPath } from "../home-month";
 import { customRange, monthPeriod } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
@@ -86,12 +87,15 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   const companyCurrency = useCompanyCurrency();
   const by = orderOf(params.get("by"));
   const today = sample?.today ?? israelToday();
-  const monthKey = sample?.monthKey ?? today.slice(0, 7);
+  const currentKey = today.slice(0, 7);
+  // Home's ?month= picks an earlier month; its year to date then ends with that month.
+  const monthKey = sample?.monthKey ?? homeMonthKey(location.search, today, null);
   const year = monthKey.slice(0, 4);
+  const month = monthPeriod(monthKey);
   const live = useCompanyProfitRead({
     enabled: sample == null,
-    month: monthPeriod(monthKey),
-    ytd: customRange(`${year}-01-01`, today),
+    month,
+    ytd: customRange(`${year}-01-01`, month.to ?? today),
     currency: companyCurrency,
     linesOn: by !== "project",
   });
@@ -100,7 +104,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   const [openState, setOpenState] = useState<string | null | undefined>(undefined);
   const [sheetState, setSheetOpen] = useState<boolean | undefined>(undefined);
   const basisRef = useRef<HTMLButtonElement>(null);
-  const back = `/${search}`;
+  const back = homeMonthPath(monthKey, search, currentKey);
   if (phase.kind !== "ready" || model == null) {
     // The board's loading frame names the month in the title: the stacked header's own bar, Back labelled בית.
     return <ScreenState stacked headerClassName="ui-state-header" title={phase.kind === "loading" ? `רווח ${HEBREW_MONTHS[Number(monthKey.slice(5, 7)) - 1] ?? monthKey}` : "רווח"} kicker="בית" backTo={back} phase={phase} onRetry={live.refetch} loading={<ProfitSkeleton />} />;
@@ -130,7 +134,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   const widthOf = (value: bigint) => (largest <= 0n ? 0 : Number((value * 1000n) / largest) / 10);
   const incomeWidth = widthOf(model.income);
   const expenseWidth = widthOf(model.expense);
-  const subtitle = `${HEBREW_MONTHS[Number(monthKey.slice(5, 7)) - 1] ?? monthKey} ${year} · עד היום`;
+  const subtitle = `${HEBREW_MONTHS[Number(monthKey.slice(5, 7)) - 1] ?? monthKey} ${year} · ${monthKey === currentKey ? "עד היום" : "חודש סגור"}`;
   const figure = (
     <p className="ui-cp-figure">
       <Amount agorot={profit} currency={currency} size="display" loss={profit < 0n} direction={profit > 0n ? "income" : undefined} />

@@ -1,6 +1,7 @@
 import { formatAmountText, type CashCurrencyRow, type CashLine, type CashMonth, type CashSide } from "@flow/shared";
 import { cashAmountsText, type CashRow } from "./ui/cash-rows";
 import { HEBREW_MONTHS, israelToday } from "./ui/date-math";
+import { homeMonthPath } from "./home-month";
 import { LOAN_PART_LABEL, LOAN_PART_ORDER, type LoanPartKey } from "./ui/loan-part-terms";
 import type { SplitHintPart } from "./ui/split-parts-hint";
 
@@ -101,9 +102,9 @@ export function shownCashRows(month: CashMonth | undefined, base: string): CashC
   );
 }
 
-/** The profit view (frame b-2). "רווח החודש" opens it on its month (the row's `profitMonth`). */
-export function profitPath(search: string): string {
-  return `/profit${search}`;
+/** The profit view (frame b-2). "רווח החודש" opens it on its month: `?month=` for an earlier month, as Home does. */
+export function profitPath(key: string, search: string, now = new Date()): string {
+  return `/profit${homeMonthPath(key, search, israelToday(now).slice(0, 7)).slice(1)}`;
 }
 
 /**
@@ -156,8 +157,7 @@ export function cashSummaryRows(key: string, rows: CashCurrencyRow[], search: st
       label: key === israelToday(now).slice(0, 7) ? "רווח החודש" : `רווח ב${name}`,
       tone: "quiet",
       amounts: profit,
-      href: profitPath(search),
-      profitMonth: key,
+      href: profitPath(key, search, now),
       name: `רווח ב${name} ${cashAmountsText(profit)}`,
     },
     ...keptRow,
