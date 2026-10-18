@@ -60,7 +60,7 @@
 }
 
 .ui-chip-label,
-.ui-btn-link:where(:not(.ui-btn-full)) .ui-btn-label {
+.ui-btn-link .ui-btn-label {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
