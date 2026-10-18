@@ -150,6 +150,12 @@ const expectedPartySchema = z.object({
   seen_this_month: z.boolean(),
   project_id: z.string().nullable().optional(),
   category_id: z.string().nullable().optional(),
+  /** How often it comes (decision 0175); omitted on older payloads. */
+  pace: paceSchema.nullable().optional(),
+  /** yyyy-mm, the month the next payment is due. */
+  next_due_month: z.string().nullable().optional(),
+  /** True when the charge pays a loan (its lines have loan parts): its amount is the whole payment, principal included. */
+  pays_loan: z.boolean().optional(),
 });
 
 /** `expected_months(months, project_id)`: this month (still to come) and the next ones. */

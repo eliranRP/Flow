@@ -6,6 +6,7 @@ import { useCompanyCurrency } from "../company-currency";
 import { projectExpenseMinor, projectRows } from "../by-currency";
 import { allTime, monthPeriod } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
+import { useNextMonthForecast, type NextMonthSample } from "../project-next-month-query";
 import { withPeriodSearch } from "../project-period";
 import { screenPhase } from "../query-phase";
 import { EMPTY_FILTERS, searchFiltersQuery } from "../search";
@@ -20,8 +21,9 @@ import { BarsIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ProfitSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
+import { NextMonthCard } from "./project-next-month-card";
 
-export type ProjectProfitSample = { project: NonNullable<ProjectDetail>; months: NonNullable<ProfitMonths> };
+export type ProjectProfitSample = { project: NonNullable<ProjectDetail>; months: NonNullable<ProfitMonths>; next?: NextMonthSample };
 
 const NOTE = "ההוצאות הכלליות מתחלקות בין הפרויקטים לפי ההכנסות שלהם. ככה רואים אם הנכס באמת מרוויח.";
 
@@ -80,6 +82,7 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
   const share = project?.overhead_weighted === true && (project.base_currency ?? "ILS") === currency
     ? project.overhead_share_minor ?? null
     : null;
+  const nextMonth = useNextMonthForecast(id, currency, sample?.next, sample == null);
   const profit = row?.profit_minor ?? 0n;
   const after = share == null ? null : profit - share;
   const newestYear = rows[0]?.month.slice(0, 4) ?? "";
@@ -161,18 +164,23 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
               currency={currency}
               search={search}
             />
-          ) : rows.length === 0 ? null : (
-            <List className="ui-pp-months">
-              {rows.map((month) => (
-                <MonthLine
-                  key={month.month}
-                  month={month}
-                  title={monthName(month.month, newestYear)}
-                  currency={currency}
-                  href={`/projects/${id}/profit/${month.month}${withPeriodSearch(search, monthPeriod(month.month))}`}
-                />
-              ))}
-            </List>
+          ) : (
+            <>
+              <NextMonthCard forecast={nextMonth.forecast} currency={currency} href={`/projects/${id}/profit/next${search}`} />
+              {rows.length === 0 ? null : (
+                <List className="ui-pp-months">
+                  {rows.map((month) => (
+                    <MonthLine
+                      key={month.month}
+                      month={month}
+                      title={monthName(month.month, newestYear)}
+                      currency={currency}
+                      href={`/projects/${id}/profit/${month.month}${withPeriodSearch(search, monthPeriod(month.month))}`}
+                    />
+                  ))}
+                </List>
+              )}
+            </>
           )}
         </div>
       )}

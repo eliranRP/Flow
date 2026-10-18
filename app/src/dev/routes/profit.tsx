@@ -5,6 +5,8 @@ import { COMPANY_PROFIT_SAMPLE } from "../company-profit-sample";
 import { JUNIPER_PROFIT, NEW_PROJECT_PROFIT } from "../project-profit-sample";
 import { ProjectMonthProfitScreen } from "../../screens/project-month-profit-screen";
 import { JUNIPER_MONTH_PROFIT } from "../profit-month-sample";
+import { ProjectNextMonthScreen } from "../../screens/project-next-month-screen";
+import { JUNIPER_NEXT } from "../project-next-month-sample";
 import type { DevRoute } from "./types";
 
 /** FLOW-140 slice 1: the project profit page on the board's Juniper Ct figures. */
@@ -21,6 +23,11 @@ export function DevProjectMonthProfit() {
   return <ProjectMonthProfitScreen sample={JUNIPER_MONTH_PROFIT} />;
 }
 
+/** The ProfitNext frame: Juniper Ct's November forecast, opened from the profit page's dashed card. */
+export function DevProjectNextMonth() {
+  return <ProjectNextMonthScreen sample={{ ...JUNIPER_PROFIT, next: JUNIPER_NEXT }} />;
+}
+
 /** FLOW-140c1: the company profit page; `?open=1` opens the first category, `?sheet=basis` the basis sheet. */
 export function DevCompanyProfit() {
   const [params] = useSearchParams();
@@ -34,5 +41,6 @@ export function DevCompanyProfit() {
 export const profitRoutes: DevRoute[] = [
   { path: "project-profit", element: <DevProjectProfit /> },
   { path: "project-month-profit", element: <DevProjectMonthProfit /> },
+  { path: "project-next-month", element: <DevProjectNextMonth /> },
   { path: "company-profit", element: <DevCompanyProfit /> },
 ];

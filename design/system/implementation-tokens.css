@@ -130,6 +130,7 @@
   --radius-pager-band: 24px;     /* the month pager track on the band */
   --radius-block: 6px;           /* skeleton blocks, States board (FLOW-371) */
   --radius-field-btn: 10px;      /* copy and show/hide pills in a field (FLOW-363 (4)) */
+  --radius-tag: 10px;            /* the outlined צפי tag on the next-month card (ProfitProject board) */
 
   /* ---- layout (guide-defined, from design-system.md) ---- */
   --touch-min: 44px;
@@ -209,6 +210,7 @@
   --color-line-soft: #F0EDF5;    /* row hairlines inside search results and filter sheets (FLOW-368); dark is #231E30 */
   --color-accent-dim: #7E66B8;   /* bar fill only, never text (interest part of the loan bar, FLOW-139); dark is #7E66B8 */
   --color-outline-secondary: #DAD3E6; /* secondary button border (board); dark aliases tint-strong */
+  --color-outline-forecast: #CDBFEA; /* the dashed next-month card and its צפי tag (ProfitProject board); dark #4A3F66 */
   --color-control-off: #8F86A3;
   --color-control-border: #8F86A3;
   --color-switch-off: #DAD3E6;  /* switch track, off (board: Settings switch off; FLOW-512) */
@@ -335,6 +337,7 @@
     --color-pill-helps: #4A4458;
     --color-pill-hurts: #C3302B;
     --color-outline-secondary: var(--color-tint-strong);
+    --color-outline-forecast: #4A3F66;
     --shadow-pill: 0 6px 18px rgba(0, 0, 0, 0.4);
     --shadow-toast: 0 8px 24px rgba(0, 0, 0, 0.4); /* toast, Lines board (FLOW-363 3c) */
   }
@@ -407,6 +410,7 @@
   --color-pill-helps: #4A4458;
   --color-pill-hurts: #C3302B;
   --color-outline-secondary: var(--color-tint-strong);
+  --color-outline-forecast: #4A3F66;
   --shadow-pill: 0 6px 18px rgba(0, 0, 0, 0.4);
   --shadow-toast: 0 8px 24px rgba(0, 0, 0, 0.4); /* toast, Lines board (FLOW-363 3c) */
 }
