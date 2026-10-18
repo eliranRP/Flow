@@ -103,7 +103,7 @@
 .ui-loan-paid-head .ui-seg-btn {
   flex: none;
   padding-inline: var(--space-3);
-  border-radius: calc(var(--radius-seg-btn) - var(--space-half));
+  border-radius: var(--radius-seg-btn-small);
 }
 
 .ui-loan-paid-total {

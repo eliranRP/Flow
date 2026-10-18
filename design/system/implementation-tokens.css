@@ -177,6 +177,10 @@
   --rise-toast: 12px;
   --radius-toast: 14px;
   --radius-seg-btn: 10px;
+  --radius-seg-btn-page: 9px;    /* the loans summary's period switch on the page (board, FLOW-142) */
+  --radius-seg-btn-small: 8px;   /* the loan page's small period switch in its paid card (board, FLOW-142) */
+  --radius-bar-hair: 2px;        /* a 4px progress bar, a loan's row on the loans summary (board, FLOW-142) */
+  --type-note-line: 1.5;         /* a card's two-line note on the loans summary (board, FLOW-142) */
   --size-seg: 40px;
   --size-seg-track: 48px; /* --size-seg plus the track's 4px padding on each side */
   --swipe-action: 120px;

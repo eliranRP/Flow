@@ -488,7 +488,7 @@
 }
 
 .ui-loans-sum-period .ui-seg-btn {
-  border-radius: calc(var(--radius-seg-btn) - 1px);
+  border-radius: var(--radius-seg-btn-page);
 }
 
 .ui-card.ui-loans-sum-debt {
@@ -522,7 +522,7 @@
   margin: 0;
   color: var(--color-text-muted);
   font-size: var(--type-caption-size);
-  line-height: 1.5;
+  line-height: var(--type-note-line);
 }
 
 .ui-loans-sum-foot {
@@ -550,13 +550,13 @@
   display: flex;
   height: var(--space-1);
   overflow: hidden;
-  border-radius: var(--space-half);
+  border-radius: var(--radius-bar-hair);
   background: var(--color-line);
 }
 
 .ui-loans-sum-bar > span {
   display: block;
-  border-radius: var(--space-half);
+  border-radius: var(--radius-bar-hair);
   background: var(--color-accent);
 }
 
