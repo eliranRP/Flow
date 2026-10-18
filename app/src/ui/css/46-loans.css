@@ -89,7 +89,7 @@
   background: var(--color-avatar);
   color: var(--color-text-secondary);
   font-size: var(--type-meta-size);
-  font-weight: var(--type-label-weight);
+  font-weight: var(--type-line2-weight);
 }
 
 .ui-loans-text {
@@ -314,9 +314,9 @@
 /* A field's hint under the input, in the message line (no error). */
 .ui-field-hint {
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
-  font-weight: var(--type-hint-weight);
-  line-height: var(--type-hint-line);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-caption-line);
 }
 
 .ui-loan-new .ui-percent-suffix {

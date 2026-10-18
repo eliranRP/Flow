@@ -41,7 +41,7 @@ describe("ScreenHeader", () => {
     const title = screen.getByRole("heading", { name: "פיצול בין פרויקטים" });
     // FLOW-363 3a: the stacked title is 32/600, the `t-title` role.
     expect(title).toHaveClass("t-title");
-    expect(title).not.toHaveClass("t-title-1");
+    expect(title).not.toHaveClass("t-total");
     expect(title.closest("header")).toHaveClass("ui-page-stacked");
     expect(screen.getByText("מלט")).toHaveClass("ui-split-context");
     expect(screen.getByText("מלט")).toHaveClass("text-text-secondary");
@@ -62,7 +62,7 @@ describe("ScreenHeader", () => {
     expect(bar).toContainElement(back);
     expect(back).toHaveTextContent("הגדרות");
     expect(bar).not.toContainElement(title);
-    expect(header?.querySelector("p.t-hint")).toBeNull();
+    expect(header?.querySelector("p.t-caption.t-muted")).toBeNull();
     // The compact bar is mounted at the end, hidden; the page's own order is what is checked.
     const order = Array.from(header?.children ?? [])
       .filter((node) => !node.classList.contains("ui-compact-bar"))
@@ -107,7 +107,7 @@ describe("ScreenHeader", () => {
     );
     expect(screen.getByRole("button", { name: "חזרה" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^חזרה ל/ })).not.toBeInTheDocument();
-    expect(screen.getByText("פרויקט")).toHaveClass("t-hint");
+    expect(screen.getByText("פרויקט")).toHaveClass("t-caption t-muted");
   });
 
   it("keeps a tab root, a compact bar, and an explicit inline title on the bar", () => {

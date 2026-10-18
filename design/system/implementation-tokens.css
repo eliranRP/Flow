@@ -73,40 +73,6 @@
   --type-cents-size: 11px;
   --type-cents-line: 1.2;
   --type-cents-weight: 400;
-  /* old names, kept as aliases of the roles above (screens still use them) */
-  --type-hero-size: var(--type-band-size);
-  --type-hero-line: var(--type-band-line);
-  --type-hero-weight: var(--type-band-weight);
-  --type-display-size: var(--type-detail-size);
-  --type-display-line: var(--type-detail-line);
-  --type-display-weight: var(--type-detail-weight);
-  --type-title-1-size: var(--type-total-size);
-  --type-title-1-line: var(--type-total-line);
-  --type-title-1-weight: var(--type-total-weight);
-  --type-title-2-size: var(--type-name-size);
-  --type-title-2-line: var(--type-name-line);
-  --type-title-2-weight: var(--type-name-weight);
-  --type-band-title-size: var(--type-title-size);
-  --type-band-title-line: var(--type-title-line);
-  --type-band-title-weight: var(--type-title-weight);
-  --type-heading-size: var(--type-sheet-size);
-  --type-heading-line: var(--type-sheet-line);
-  --type-heading-weight: var(--type-sheet-weight);
-  --type-title-3-size: var(--type-btn-size);
-  --type-title-3-line: var(--type-btn-line);
-  --type-title-3-weight: var(--type-btn-weight);
-  --type-amount-size: var(--type-body-size);
-  --type-amount-line: var(--type-body-line);
-  --type-amount-weight: var(--type-body-weight);
-  --type-label-size: var(--type-line2-size);
-  --type-label-line: var(--type-line2-line);
-  --type-label-weight: var(--type-line2-weight);
-  --type-hint-size: var(--type-caption-size);
-  --type-hint-line: var(--type-caption-line);
-  --type-hint-weight: var(--type-caption-weight);
-  --type-micro-size: var(--type-cents-size);
-  --type-micro-line: var(--type-cents-line);
-  --type-micro-weight: var(--type-cents-weight);
   --type-wordmark-size: 1.375rem; /* 22px */
   --type-wordmark-line: 1.2;
   --type-wordmark-weight: 700;
@@ -466,19 +432,9 @@
    Optional helpers: type styles and the number span. Components may use the
    variables directly instead; either way, no other sizes are allowed.
    ========================================================================== */
-.t-hero { font-size: var(--type-hero-size); line-height: var(--type-hero-line); font-weight: var(--type-hero-weight); }
-.t-display { font-size: var(--type-display-size); line-height: var(--type-display-line); font-weight: var(--type-display-weight); }
-.t-title-1 { font-size: var(--type-title-1-size); line-height: var(--type-title-1-line); font-weight: var(--type-title-1-weight); }
-.t-title-2 { font-size: var(--type-title-2-size); line-height: var(--type-title-2-line); font-weight: var(--type-title-2-weight); }
-.t-band-title { font-size: var(--type-band-title-size); line-height: var(--type-band-title-line); font-weight: var(--type-band-title-weight); }
-.t-heading { font-size: var(--type-heading-size); line-height: var(--type-heading-line); font-weight: var(--type-heading-weight); }
-.t-title-3 { font-size: var(--type-title-3-size); line-height: var(--type-title-3-line); font-weight: var(--type-title-3-weight); }
-.t-amount { font-size: var(--type-amount-size); line-height: var(--type-amount-line); font-weight: var(--type-amount-weight); }
 .t-body { font-size: var(--type-body-size); line-height: var(--type-body-line); font-weight: var(--type-body-weight); }
-.t-label { font-size: var(--type-label-size); line-height: var(--type-label-line); font-weight: var(--type-label-weight); }
 .t-meta { font-size: var(--type-meta-size); line-height: var(--type-meta-line); font-weight: var(--type-meta-weight); }
-.t-hint { font-size: var(--type-hint-size); line-height: var(--type-hint-line); font-weight: var(--type-hint-weight); color: var(--color-text-muted); }
-.t-micro { font-size: var(--type-micro-size); line-height: var(--type-micro-line); font-weight: var(--type-micro-weight); }
+.t-muted { color: var(--color-text-muted); }
 .t-wordmark { font-size: var(--type-wordmark-size); line-height: var(--type-wordmark-line); font-weight: var(--type-wordmark-weight); }
 .t-band { font-size: var(--type-band-size); line-height: var(--type-band-line); font-weight: var(--type-band-weight); }
 .t-detail { font-size: var(--type-detail-size); line-height: var(--type-detail-line); font-weight: var(--type-detail-weight); }

@@ -39,7 +39,7 @@ export function CashLinesHead({ side, currency, figure, rest }: { side: CashList
         </p>
       ) : null}
       {side === "kept" ? (
-        <p className="ui-breakdown-hint ui-page-pad t-hint">
+        <p className="ui-breakdown-hint ui-page-pad t-caption t-muted">
           {rest === 0n ? KEPT_NOTE : `${KEPT_NOTE} מזה ${formatAmountText(rest, currency)} מע״מ והפרשים, שאינם ברשימה.`}
         </p>
       ) : null}

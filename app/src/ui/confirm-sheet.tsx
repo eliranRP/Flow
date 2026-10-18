@@ -52,10 +52,10 @@ export function ConfirmSheet({
 }: ConfirmSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={title} returnFocusRef={returnFocusRef} busy={busy} closeButton={closeButton} panelClassName={panelClassName}>
-      {item ? <p className="t-label text-text-secondary">{item}</p> : null}
-      <p className={consequenceSize === "body" ? "ui-confirm-body" : "t-hint text-text-secondary"}>{consequence}</p>
+      {item ? <p className="t-line2 text-text-secondary">{item}</p> : null}
+      <p className={consequenceSize === "body" ? "ui-confirm-body" : "t-caption t-muted text-text-secondary"}>{consequence}</p>
       {warning ? <p className="ui-confirm-warning">{warning}</p> : null}
-      {detail ? <p className="t-hint text-text-secondary">{detail}</p> : null}
+      {detail ? <p className="t-caption t-muted text-text-secondary">{detail}</p> : null}
       <Button
         variant={destructive === false ? "primary" : "secondary"}
         className={destructive === false ? undefined : "ui-btn-signal"}

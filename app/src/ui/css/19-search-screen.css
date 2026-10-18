@@ -56,7 +56,7 @@
   color: var(--color-accent-text);
   font: inherit;
   font-size: var(--type-btn-size);
-  font-weight: var(--type-title-3-weight);
+  font-weight: var(--type-btn-weight);
 }
 
 .ui-search-badge {
@@ -70,7 +70,7 @@
   background: var(--color-accent);
   color: var(--color-on-accent);
   font-size: var(--type-caption-size);
-  font-weight: var(--type-title-2-weight);
+  font-weight: var(--type-name-weight);
 }
 
 .ui-search-back {
@@ -236,8 +236,8 @@
 
 .ui-search-check-count {
   flex: none;
-  font-size: var(--type-label-size);
-  font-weight: var(--type-label-weight);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-line2-weight);
   color: var(--color-text-muted);
 }
 
@@ -265,7 +265,7 @@
   background: var(--color-tint);
   color: var(--color-accent-text);
   font-size: var(--type-caption-size);
-  font-weight: var(--type-title-3-weight);
+  font-weight: var(--type-btn-weight);
 }
 
 .ui-search-project-text {
@@ -367,7 +367,7 @@
 .ui-match {
   background: var(--color-tint);
   color: inherit;
-  font-weight: var(--type-title-3-weight);
+  font-weight: var(--type-btn-weight);
 }
 
 /* A result's line 2 (its statuses only, FLOW-339 option C): whole parts as many as fit (.ui-hint-parts). */
@@ -515,8 +515,8 @@
 /* The line-3 note: a state to act on, in the accent, 13px, on its own line. */
 .ui-statement-note {
   display: block;
-  font-size: var(--type-hint-size);
-  line-height: var(--type-hint-line);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
   color: var(--color-accent-text);
 }
 
@@ -549,8 +549,8 @@
 
 .ui-search-empty-body {
   margin: 0;
-  font-size: var(--type-label-size);
-  line-height: calc(var(--type-label-line) + 0.1);
+  font-size: var(--type-line2-size);
+  line-height: calc(var(--type-line2-line) + 0.1);
   color: var(--color-text-muted);
 }
 
@@ -569,7 +569,7 @@
 .ui-search-searching-note {
   margin: 0;
   padding: calc(var(--space-1) * 1.5) var(--space-4) calc(var(--space-1) * 0.75);
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
   color: var(--color-text-muted);
 }
 
@@ -614,7 +614,7 @@
 
 /* Line 2 of a result is 15px muted (board), one line. */
 .ui-search-results .ui-statement-details {
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
 }
 
 /* The first read's field: no outline, a filled box with the spinner at its end (board StatesSearching). */

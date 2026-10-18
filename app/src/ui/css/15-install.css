@@ -43,7 +43,7 @@
   padding-inline: var(--space-3);
 }
 
-.ui-install-top .t-hint {
+.ui-install-top .t-muted {
   margin-inline-start: auto;
 }
 
@@ -56,7 +56,7 @@
   text-align: center;
 }
 
-.ui-install-hero .t-title-1 {
+.ui-install-hero .t-total {
   margin-top: var(--space-6);
   white-space: nowrap;
 }
@@ -64,9 +64,9 @@
 .ui-install-sub {
   margin-top: var(--space-2);
   color: var(--color-text-muted);
-  font-size: var(--type-label-size);
-  font-weight: var(--type-label-weight);
-  line-height: var(--type-label-line);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-line2-weight);
+  line-height: var(--type-line2-line);
   text-align: center;
 }
 
@@ -81,7 +81,7 @@
 }
 
 .ui-install-benefits .ui-row-title {
-  font-weight: var(--type-title-3-weight);
+  font-weight: var(--type-btn-weight);
   white-space: normal;
 }
 
@@ -109,8 +109,8 @@
   border-radius: var(--radius-chip);
   background: var(--color-tint);
   color: var(--color-accent-text);
-  font-size: var(--type-hint-size);
-  font-weight: var(--type-title-3-weight);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-btn-weight);
   font-variant-numeric: var(--font-numerals);
 }
 
@@ -122,7 +122,7 @@
 }
 
 .ui-install-step-text strong {
-  font-weight: var(--type-title-3-weight);
+  font-weight: var(--type-btn-weight);
 }
 
 .ui-install-cta {

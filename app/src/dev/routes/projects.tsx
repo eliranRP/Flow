@@ -177,7 +177,7 @@ const devLinks: Array<[string, string]> = [
 export function DevProject() {
   return (
     <main className="ui-page-pad">
-      <h1 className="t-title-1">פרויקט לבדיקה</h1>
+      <h1 className="t-total">פרויקט לבדיקה</h1>
       <div style={{ blockSize: "1800px" }} />
       <nav className="ui-stack">
         {devLinks.map(([to, label]) => (
@@ -191,7 +191,7 @@ export function DevProject() {
 export function DevExpense() {
   return (
     <main className="ui-page-pad">
-      <h1 className="t-title-1">הוצאה לבדיקה</h1>
+      <h1 className="t-total">הוצאה לבדיקה</h1>
       <BackButton fallback="/projects?preview=1" />
     </main>
   );

@@ -87,7 +87,7 @@ export function SignInScreen() {
         ) : null}
 
         <SignInHeading>כניסה או הרשמה</SignInHeading>
-        <p className="t-label text-text-secondary">בלי סיסמה – עם חשבון Google שכבר יש לך</p>
+        <p className="t-line2 text-text-secondary">בלי סיסמה – עם חשבון Google שכבר יש לך</p>
 
         <SignInActions>
           <GoogleButton pending={pending} disabled={!ready} onClick={() => void continueWithGoogle()} />

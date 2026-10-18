@@ -41,7 +41,7 @@ export function LoanPaymentsView({ loan, payments, projectName, search }: {
         <p className="ui-loan-payments-sub">{sub}</p>
       </header>
       {payments.length === 0 ? (
-        <p className="ui-page-pad t-hint">אין עדיין תשלומים משויכים.</p>
+        <p className="ui-page-pad t-caption t-muted">אין עדיין תשלומים משויכים.</p>
       ) : (
         <>
           <Card className="ui-loan-card ui-loan-split">

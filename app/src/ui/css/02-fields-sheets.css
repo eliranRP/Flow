@@ -1,4 +1,4 @@
-.t-hint {
+.t-muted {
   text-wrap: pretty;
 }
 
@@ -33,7 +33,7 @@
   min-height: calc(
     2 * var(--row-pad)
     + 2 * var(--type-line2-size) * var(--type-line2-line)
-    + var(--type-title-3-size) * var(--type-title-3-line)
+    + var(--type-btn-size) * var(--type-btn-line)
   );
 }
 
@@ -43,7 +43,7 @@
   min-height: calc(
     2 * var(--row-pad)
     + var(--type-line2-size) * var(--type-line2-line)
-    + var(--type-title-3-size) * var(--type-title-3-line)
+    + var(--type-btn-size) * var(--type-btn-line)
   );
 }
 
@@ -64,9 +64,9 @@
    so its agorot (.ui-num-cents) are not 7.8px (FLOW-339). */
 .ui-loan-amount {
   color: var(--color-text);
-  font-size: var(--type-amount-size);
-  line-height: var(--type-amount-line);
-  font-weight: var(--type-amount-weight);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: var(--type-body-weight);
   white-space: nowrap;
 }
 
@@ -108,10 +108,10 @@
 
 /* A hint tied with aria-describedby is a field hint and stays `hint` 13 (decision 0120 moves only
    the row secondary line to `meta`). Matches the skeleton and status reserve. */
-.ui-row-hint.t-hint {
-  font-size: var(--type-hint-size);
-  font-weight: var(--type-hint-weight);
-  line-height: var(--type-hint-line);
+.ui-row-hint.t-muted {
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-caption-line);
 }
 
 .ui-row-hint-wrap {
@@ -169,11 +169,11 @@
 .ui-row-hint-skel {
   display: flex;
   align-items: center;
-  min-block-size: calc(var(--type-hint-size) * var(--type-hint-line));
+  min-block-size: calc(var(--type-caption-size) * var(--type-caption-line));
 }
 
 .ui-row-hint[role="status"] {
-  min-block-size: calc(var(--type-hint-size) * var(--type-hint-line));
+  min-block-size: calc(var(--type-caption-size) * var(--type-caption-line));
 }
 
 .ui-row-tone-warning :is(.ui-row-hint, .ui-row-icon) {
@@ -340,7 +340,7 @@
 }
 
 /* FLOW-363 (3b): the sheet title is the sheet role (20/600, t-sheet). This two-line clamp is the
-   only one a sheet head has: the old `.ui-sheet-head .t-title-2` clamp in 08 is deleted. */
+   only one a sheet head has: the old `.ui-sheet-head .t-name` clamp in 08 is deleted. */
 .ui-sheet-head .ui-sheet-title {
   display: -webkit-box;
   flex: 1;
@@ -494,9 +494,9 @@
 
 .ui-field-message {
   color: var(--color-error);
-  font-size: var(--type-hint-size);
-  font-weight: var(--type-hint-weight);
-  line-height: var(--type-hint-line);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-caption-line);
 }
 
 .ui-field-error .ui-field-message {
@@ -504,7 +504,7 @@
 }
 
 .ui-field-message-slot {
-  min-block-size: calc(var(--type-hint-size) * var(--type-hint-line));
+  min-block-size: calc(var(--type-caption-size) * var(--type-caption-line));
 }
 
 .ui-money-field {
@@ -611,7 +611,7 @@
   height: var(--field-height);
   padding-inline: var(--field-pad);
   border-radius: var(--radius-input);
-  font-size: var(--type-title-3-size);
+  font-size: var(--type-btn-size);
 }
 
 .ui-percent-suffix {

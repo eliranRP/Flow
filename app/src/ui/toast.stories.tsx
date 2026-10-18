@@ -28,8 +28,8 @@ function AboveFloor(props: { children: string; action: string; tone?: "ok" | "ba
   return (
     <div className="relative min-h-dvh">
       <header className="ui-page">
-        <h1 className="t-title-1">לאישור</h1>
-        <p className="t-label mt-4 text-text-secondary">תנועות שמחכות לשיוך</p>
+        <h1 className="t-total">לאישור</h1>
+        <p className="t-line2 mt-4 text-text-secondary">תנועות שמחכות לשיוך</p>
       </header>
       <div className="ui-toast-slot" />
       <ActionBar>
@@ -88,8 +88,8 @@ function ShortSheetToast() {
   return (
     <>
       <header className="ui-page">
-        <p className="t-label">הגדרות</p>
-        <h1 className="t-title-1">קטגוריות</h1>
+        <p className="t-line2">הגדרות</p>
+        <h1 className="t-total">קטגוריות</h1>
       </header>
       <Sheet
         open
@@ -109,7 +109,7 @@ function FormToastStory() {
   return (
     <>
       <header className="ui-page">
-        <h1 className="t-title-1">פרטי העסק</h1>
+        <h1 className="t-total">פרטי העסק</h1>
       </header>
       <form className="ui-page-pad ui-stack">
         <TextField label="שם העסק" value="בדיקה" onChange={() => undefined} />
@@ -154,7 +154,7 @@ function AboveBar({ children }: { children: string }) {
   return (
     <div className="ui-review-queue" data-bar="">
       <header className="ui-page">
-        <h1 className="t-title-1">לאישור</h1>
+        <h1 className="t-total">לאישור</h1>
       </header>
       <ActionBar>
         <Button full>אישור</Button>

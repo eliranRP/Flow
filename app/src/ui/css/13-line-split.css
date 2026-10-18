@@ -117,8 +117,8 @@
 .ui-lsplit-project {
   max-inline-size: 100%;
   color: var(--color-text-muted);
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
   overflow-wrap: anywhere;
 }
 
@@ -130,8 +130,8 @@
   flex: 1 0 100%;
   margin: 0;
   color: var(--color-error);
-  font-size: var(--type-hint-size);
-  line-height: var(--type-hint-line);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
 }
 
 .ui-lsplit-rest {
@@ -204,8 +204,8 @@
 .ui-lsplit-board .ui-lsplit-meta {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
 
   font-weight: var(--type-body-weight);}
 
@@ -226,7 +226,7 @@
 
 /* The cents sit raised, at 13px, as on the board. */
 .ui-lsplit-board .ui-lsplit-amount .ui-num-cents {
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   line-height: 1;
   vertical-align: top;
   margin-inline-start: 0;
@@ -255,7 +255,7 @@
   margin: 0;
   padding-inline: var(--space-1);
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
   font-weight: var(--type-body-weight);
   line-height: var(--type-body-line);
 }
@@ -307,7 +307,7 @@
 
 .ui-lsplit-board .ui-lsplit-part-no {
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
   line-height: var(--type-body-line);
 
   font-weight: var(--type-body-weight);}
@@ -319,7 +319,7 @@
   background: transparent;
   color: var(--color-text-muted);
   font: inherit;
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
   cursor: pointer;
 }
 
@@ -345,7 +345,7 @@
   background: var(--color-raised);
   color: var(--color-text);
   font: inherit;
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   font-weight: var(--type-body-weight);
   text-align: start;
   cursor: pointer;
@@ -360,7 +360,7 @@
 .ui-lsplit-board .ui-lsplit-project {
   overflow: hidden;
   color: inherit;
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -453,7 +453,7 @@
 .ui-lsplit-board .ui-lsplit-note {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
   line-height: var(--type-body-line);
 }
 
@@ -518,14 +518,14 @@
 .ui-lsplit-rest-label {
   display: block;
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
   line-height: var(--type-chip-line);
 }
 
 .ui-lsplit-rest-line {
   display: block;
   overflow: hidden;
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   line-height: var(--type-chip-line);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -564,7 +564,7 @@
   margin: 0;
   padding-inline: var(--space-1);
   color: var(--color-text-muted);
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   line-height: var(--type-body-line);
 }
 
@@ -603,7 +603,7 @@ html:has(.ui-lsplit-board)::-webkit-scrollbar {
 
 /* The board's link is 15px and its footnote 13px muted, both directly under the rest card. */
 .ui-lsplit-board .ui-lsplit-actions button {
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
 }
 
 .ui-lsplit-board .ui-lsplit-actions {
@@ -612,7 +612,7 @@ html:has(.ui-lsplit-board)::-webkit-scrollbar {
 
 .ui-lsplit-board .ui-lsplit-footnote {
   margin-block-start: calc(var(--space-2) + var(--space-1) / 2);
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
   font-weight: var(--type-body-weight);
 }
 

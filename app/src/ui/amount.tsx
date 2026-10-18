@@ -64,14 +64,14 @@ export function splitCents(text: string, presentation: AmountPresentation): { wh
 }
 
 const sizeClass = {
-  hero: "t-hero",
-  display: "t-display",
+  hero: "t-band",
+  display: "t-detail",
   total: "t-total",
   card: "t-card",
-  list: "t-amount",
+  list: "t-body",
 } as const;
 
-const heroSteps = ["t-hero", "t-display", "t-title-1", "t-title-2", "t-title-3"] as const;
+const heroSteps = ["t-band", "t-detail", "t-total", "t-name", "t-btn"] as const;
 
 /** Where a fitted size starts on the step list. Hero and display step down until the figure fits; list never does. */
 function firstStep(size: AmountSize | undefined): number | null {
@@ -83,7 +83,7 @@ function firstStep(size: AmountSize | undefined): number | null {
 export function heroStepClass(size: AmountSize | undefined, step: number): string {
   const first = firstStep(size);
   if (first == null) return size ? sizeClass[size] : "";
-  return heroSteps[Math.min(first + Math.max(step, 0), heroSteps.length - 1)] ?? "t-title-3";
+  return heroSteps[Math.min(first + Math.max(step, 0), heroSteps.length - 1)] ?? "t-btn";
 }
 
 export function Amount({
@@ -112,7 +112,7 @@ export function Amount({
     const column = node.closest(".ui-band-hero, .ui-page-pad") ?? node.parentElement;
     if (!(column instanceof HTMLElement)) return;
     const probe = document.createElement("bdi");
-    probe.className = `ui-num ${heroSteps[first] ?? "t-hero"}`;
+    probe.className = `ui-num ${heroSteps[first] ?? "t-band"}`;
     probe.textContent = text;
     probe.setAttribute("aria-hidden", "true");
     probe.style.whiteSpace = "nowrap";

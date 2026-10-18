@@ -5,7 +5,7 @@
   padding: calc(var(--space-4) + var(--space-10) + var(--space-1)) var(--space-side) var(--space-6);
 }
 
-.ui-recurring .t-label {
+.ui-recurring .t-line2 {
   font-size: var(--type-line2-size);
   line-height: var(--type-title-line);
   color: var(--color-text-muted);
@@ -23,7 +23,7 @@
   line-height: var(--type-title-line);
 }
 
-.ui-recurring-head > .t-heading {
+.ui-recurring-head > .t-sheet {
   margin: 0;
   font-weight: var(--type-section-weight);
 }
@@ -37,11 +37,11 @@
   border-radius: var(--radius-card);
 }
 
-.ui-recurring-outflow > .t-label:first-child {
+.ui-recurring-outflow > .t-line2:first-child {
   color: var(--color-text-secondary);
 }
 
-.ui-recurring-outflow > .t-display {
+.ui-recurring-outflow > .t-detail {
   margin: 0;
   font-size: var(--type-total-size);
   font-weight: var(--type-total-weight);
@@ -141,7 +141,7 @@
   color: var(--color-text-muted);
 }
 
-.ui-recurring-amount > .t-label {
+.ui-recurring-amount > .t-line2 {
   font-size: var(--type-caption-size);
 }
 

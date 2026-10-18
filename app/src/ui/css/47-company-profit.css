@@ -36,7 +36,7 @@
 
 .ui-cp-ytd {
   margin: calc(var(--space-1) * -0.675) 0 0;
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
 }
 
 .ui-cp-card {
@@ -155,7 +155,7 @@
 }
 
 .ui-cp-meta {
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   line-height: calc(var(--space-1) * 4.5);
 }
 
@@ -169,7 +169,7 @@
   line-height: var(--type-caption-line);
 }
 
-/* Prefixed to beat the .t-hint line on the footer. */
+/* Prefixed to beat the .t-muted line on the footer. */
 .ui-cp-screen .ui-cp-foot {
   margin-top: calc(var(--space-1) * 4.25);
   line-height: calc(var(--type-caption-size) * 17.25 / 13);
@@ -185,7 +185,7 @@
   background: none;
   color: var(--color-text-secondary);
   font: inherit;
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
   font-weight: var(--type-body-weight);
 }
 

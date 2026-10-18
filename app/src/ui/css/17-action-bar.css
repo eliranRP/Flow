@@ -190,7 +190,7 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
   display: inline-flex;
   flex: none;
   align-items: center;
-  block-size: calc(var(--type-hint-size) * var(--type-hint-line));
+  block-size: calc(var(--type-caption-size) * var(--type-caption-line));
 }
 
 .ui-review-flag-text {
@@ -233,7 +233,7 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
    line keeps, so the narrowest card keeps the hint size (the height the held line was built for). */
 @container review (inline-size < 22rem) {
   .ui-review-reason {
-    font-size: var(--type-hint-size);
-    line-height: var(--type-hint-line);
+    font-size: var(--type-caption-size);
+    line-height: var(--type-caption-line);
   }
 }

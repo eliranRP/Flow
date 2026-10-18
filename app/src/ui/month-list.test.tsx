@@ -150,7 +150,7 @@ describe("MonthList", () => {
 
   it("uses the heading style for month heads and the income colour for the income total", () => {
     renderList(NEWEST_FIRST);
-    for (const head of screen.getAllByRole("heading", { level: 2 })) expect(head).toHaveClass("t-heading");
+    for (const head of screen.getAllByRole("heading", { level: 2 })) expect(head).toHaveClass("t-sheet");
     const august = screen.getByRole("group", { name: "אוגוסט 2026" });
     const figures = Array.from(august.querySelectorAll(".ui-month-totals bdi"));
     expect(figures.filter((node) => node.classList.contains("ui-income")).map((node) => node.textContent)).toEqual(["+₪8,000", "+$1,500"]);

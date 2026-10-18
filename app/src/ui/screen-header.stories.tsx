@@ -43,7 +43,7 @@ export const CompactBarScrolled: Story = {
 /** A tab root keeps the title on the bar next to its action. */
 export const InlineWithAction: Story = {
   args: { title: "פרויקטים", layout: "inline" },
-  render: () => <ScreenHeader title="פרויקטים" layout="inline" action={<span className="t-hint">פעולה</span>} />,
+  render: () => <ScreenHeader title="פרויקטים" layout="inline" action={<span className="t-caption t-muted">פעולה</span>} />,
 };
 export const Stacked: Story = {
   args: { title: "פיצול בין פרויקטים", layout: "stacked", subtitle: "מלט לקיר" },
@@ -53,7 +53,7 @@ export const Stacked: Story = {
       title="פיצול בין פרויקטים"
       subtitle="מלט לקיר"
       leading={<BackButton label="סגירה" fallback="/"><CloseIcon /></BackButton>}
-      trailing={<span className="t-hint">דוגמה</span>}
+      trailing={<span className="t-caption t-muted">דוגמה</span>}
     />
   ),
 };

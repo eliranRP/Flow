@@ -53,7 +53,7 @@ export function InstallScreen({
         </div>
         <header className="ui-install-hero">
           <AppIcon />
-          <FocusTitle className="t-title-1">
+          <FocusTitle className="t-total">
             {android ? <>התקנת <bdi dir="ltr">Flow</bdi></> : "הוספה למסך הבית"}
           </FocusTitle>
           <p className="ui-install-sub">

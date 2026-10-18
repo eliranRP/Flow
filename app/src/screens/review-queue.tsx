@@ -520,12 +520,12 @@ export function ReviewQueue({
           {/* FLOW-365: the counter line ("פריט i מתוך n" and the auto count) sits above the visit bar. */}
           <div className="ui-review-counts">
             {holdWrites ? (
-              <span className="t-hint ui-review-counter">
+              <span className="t-caption t-muted ui-review-counter">
                 <ReviewCount value={total} digits={reviewCountDigits(total)} side="total" />
                 {total === 1 ? " ממתינה" : " ממתינות"}
               </span>
             ) : (
-              <span className="t-hint ui-review-counter">
+              <span className="t-caption t-muted ui-review-counter">
                 {"פריט "}
                 <ReviewCount value={index} digits={reviewCountDigits(total)} side="index" />
                 {" מתוך "}
@@ -592,12 +592,12 @@ export function ReviewQueue({
       ) : null}
       {/* FLOW-365: the card after this one, dashed, so the owner sees what comes next. */}
       {!holdWrites && rows[1] != null ? (
-        <div className="ui-review-next t-hint">
+        <div className="ui-review-next t-caption t-muted">
           <span>{`הבא בתור: ${rows[1].supplier_name ?? rows[1].description}`}</span>
           <bdi className="ui-num" dir="ltr">{formatMoney(rows[1].amount_net < 0n ? -rows[1].amount_net : rows[1].amount_net, rows[1].currency ?? "ILS")}</bdi>
         </div>
       ) : null}
-      {holdWrites ? <ViewerNote className="t-hint ui-viewer-note" /> : (
+      {holdWrites ? <ViewerNote className="t-caption t-muted ui-viewer-note" /> : (
       <ActionBar>
         {mismatch ? (
           <>
@@ -642,7 +642,7 @@ export function ReviewQueue({
               <Button variant="secondary" to={change}>שינוי</Button>
               {skipButton}
             </div>
-            <p className="t-hint ui-review-bar-hint">{barHint}</p>
+            <p className="t-caption t-muted ui-review-bar-hint">{barHint}</p>
           </>
         )}
       </ActionBar>

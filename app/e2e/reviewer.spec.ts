@@ -513,7 +513,7 @@ test("ביטול השינוי is reachable in the reviewer, and a second close d
   const cancel = sheet.getByRole("button", { name: "ביטול השינוי" });
   await expect(cancel).toBeVisible();
   await expect(cancel).toHaveClass(/ui-btn-quiet/);
-  await expect(sheet.locator(".t-hint", { hasText: "בחרו קטגוריה." })).toBeVisible();
+  await expect(sheet.locator(".t-caption.t-muted", { hasText: "בחרו קטגוריה." })).toBeVisible();
   await sheet.getByRole("button", { name: "סגירה" }).click();
   await expect(page).toHaveURL(/\/reviewer$/);
   await expect(page.getByRole("dialog")).toHaveCount(0);

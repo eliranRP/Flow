@@ -145,13 +145,13 @@ export function LoanPartsSheet({
         </div>
       )}
     >
-      {note ? <p className="t-hint ui-loan-parts-note">{note}</p> : null}
+      {note ? <p className="t-caption t-muted ui-loan-parts-note">{note}</p> : null}
       <div className="ui-loan-parts">
         {ordered.map((field, index) => (
           <div key={field.part} className="ui-loan-parts-row">
-            <span className="t-label ui-loan-parts-label">{LOAN_PART_LABEL[field.part]}</span>
+            <span className="t-line2 ui-loan-parts-label">{LOAN_PART_LABEL[field.part]}</span>
             {staticParts ? (
-              <bdi className="ui-num t-amount" dir="ltr">{field.value}</bdi>
+              <bdi className="ui-num t-body" dir="ltr">{field.value}</bdi>
             ) : (
             <div className="ui-loan-parts-field">
               <MoneyField
@@ -173,7 +173,7 @@ export function LoanPartsSheet({
           <span>סה״כ</span>
           <bdi className="ui-num" dir="ltr">{total}</bdi>
         </div>
-        {problem ? <p id={problemId} className="t-hint ui-loan-parts-problem" role="status">{problem}</p> : null}
+        {problem ? <p id={problemId} className="t-caption t-muted ui-loan-parts-problem" role="status">{problem}</p> : null}
         {onRetry ? (
           <Button type="button" variant="secondary" className="ui-loan-parts-retry" busy={retrying} onClick={() => { if (!retrying) onRetry(); }}>ניסיון חוזר</Button>
         ) : null}

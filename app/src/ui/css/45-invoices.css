@@ -29,8 +29,8 @@
   border-radius: var(--radius-card);
 }
 
-.ui-inv-summary > .t-label,
-.ui-inv-summary > .t-hint {
+.ui-inv-summary > .t-line2,
+.ui-inv-summary > .t-muted {
   margin: 0;
 }
 
@@ -61,11 +61,11 @@
   background: var(--color-track-strong);
 }
 
-.ui-inv-bar-block .t-caption {
+.ui-inv-bar-block .t-caption:where(:not(.t-muted)) {
   margin: 0;
 }
 
-.ui-inv-summary .t-caption {
+.ui-inv-summary .t-caption:where(:not(.t-muted)) {
   margin-block-start: calc(var(--space-1) * -1);
 }
 

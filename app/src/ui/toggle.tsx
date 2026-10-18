@@ -39,14 +39,14 @@ export function Toggle({ label, hint, checked, disabled = false, locked = false,
           <span className="ui-row-text">
             <span className="ui-row-title">{label}</span>
             {hint != null ? (
-              <span id={hintId} className="ui-row-hint t-hint">{hint}</span>
+              <span id={hintId} className="ui-row-hint t-caption t-muted">{hint}</span>
             ) : null}
           </span>
         </span>
       ) : (
         <span className="ui-switch-copy">
           <span className="ui-switch-label" data-clip-ok="">{label}</span>
-          {hint != null ? <span id={hintId} className="t-hint">{hint}</span> : null}
+          {hint != null ? <span id={hintId} className="t-caption t-muted">{hint}</span> : null}
         </span>
       )}
       <input

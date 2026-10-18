@@ -340,7 +340,7 @@ html[data-kb="open"] .ui-sheet-body {
   min-inline-size: 0;
 }
 
-.ui-band-net .t-hero {
+.ui-band-net .t-band {
   font-variant-numeric: normal;
   line-height: 1;
 }
@@ -397,7 +397,7 @@ html[data-kb="open"] .ui-sheet-body {
   text-align: left;
 }
 
-.ui-band-rows .ui-band-row-amount .t-amount {
+.ui-band-rows .ui-band-row-amount .t-body {
   font-size: var(--type-btn-2-size);
   font-weight: var(--type-btn-2-weight);
 }
@@ -478,7 +478,7 @@ html[data-kb="open"] .ui-sheet-body {
   font-weight: var(--type-btn-2-weight);
 }
 
-.ui-home-forecast-value .t-amount {
+.ui-home-forecast-value .t-body {
   font-variant-numeric: normal;
 }
 

@@ -180,7 +180,7 @@
   font-size: var(--type-caption-size);
   line-height: var(--onb-line-read);
   color: var(--color-text-muted);
-  /* The board wraps its notes greedily; .t-hint's balanced wrap moves the last word down. */
+  /* The board wraps its notes greedily; .t-muted's balanced wrap moves the last word down. */
   text-wrap: wrap;
 }
 
@@ -269,9 +269,9 @@
   border: 1px dashed var(--color-line);
   border-radius: var(--radius-card);
   background: var(--color-surface);
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line);
-  font-weight: var(--type-label-weight);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  font-weight: var(--type-line2-weight);
   color: var(--color-accent-text);
 }
 
@@ -304,7 +304,7 @@
 }
 
 .ui-onb-conn .t-name,
-.ui-onb-conn .t-hint {
+.ui-onb-conn .t-muted {
   line-height: var(--onb-line-natural);
 }
 
@@ -479,9 +479,9 @@
 }
 
 .ui-sample-amount {
-  font-size: var(--type-amount-size);
-  line-height: var(--type-amount-line);
-  font-weight: var(--type-amount-weight);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: var(--type-body-weight);
   color: var(--color-text);
 }
 

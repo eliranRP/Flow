@@ -113,7 +113,7 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
               <Chip key={option.key} pressed={order === option.key} onClick={() => { setOrder(option.key); }}>{option.label}</Chip>
             ))}
           </div>
-          {counted.length === 0 ? <p className="ui-pp-note t-hint">אין תנועות בחודש הזה.</p> : null}
+          {counted.length === 0 ? <p className="ui-pp-note t-caption t-muted">אין תנועות בחודש הזה.</p> : null}
           {groups.map((group) => {
             const expanded = order !== "category" || openKeys.has(group.key);
             const head = (

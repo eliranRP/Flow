@@ -122,7 +122,7 @@ Rubik 400, 500 and 600. Text is light: weight 400 is for text, 500 for body-size
 | caption | 13 / 400 | Caption |
 | cents | 11 / 400 | Cents on an amount, raised 5px |
 
-Tokens are `--type-<role>-size | -line | -weight`, with a `.t-<role>` class. The old names alias the new roles until the screens move to them (R11 deletes the aliases): hero → band, display → detail, title-1 → total, band-title → title, title-2 → name, heading → sheet, title-3 → btn, amount → body, label → line2, hint → caption, micro → cents. Numbers use `tabular-nums` and `lining-nums`. Input text is at least 16px so iOS does not zoom.
+Tokens are `--type-<role>-size | -line | -weight`, with a `.t-<role>` class. There are no old names: the aliases are deleted and every screen uses the role names. `.t-muted` adds the muted text colour to any role (a note is `t-caption t-muted`). Numbers use `tabular-nums` and `lining-nums`. Input text is at least 16px so iOS does not zoom.
 
 ### 2.4 Spacing
 
@@ -367,7 +367,7 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 21
 **Headers and navigation**
 
 - A stacked page with Back pins a compact bar once its large title scrolls off. The bar is 44px under the safe area on a list page and 56px on a detail page, and shows Back and the title in the `btn` role (17/500) on one line with an ellipsis, over a `line` hairline on the page background, with a 240ms slide (at once under reduced motion). Month heads pin under it. There is no bar on inline headers, tab roots, or screens with their own leading control. [0156](../decisions/0156-labelled-back-and-compact-bar.md) (FLOW-334 H1).
-- A page under Back titles at 28px; tab roots keep `title-1` 34. Back's chevron point, the title and the rows share one start edge, and ✕ sits on the end edge (owner feedback on FLOW-347 shots, #355).
+- A page under Back titles at 28px; tab roots keep `total` 34. Back's chevron point, the title and the rows share one start edge, and ✕ sits on the end edge (owner feedback on FLOW-347 shots, #355).
 - With Back and a kicker, the kicker becomes Back's label ("‹ הגדרות"), in `label` and `accent-text`, cut at about 16 characters. It shows only when Back really goes there (FLOW-334 H2). When Back goes to another page, Back names that page and the kicker stays a line (FLOW-444).
 - A review queue's header uses `layout="inline"` even with Back, so the card and its pinned bar stay off the tab bar at 375×667. הצגת הכול sits on the start side of the counter row, and a card opened from the list leaves it out (FLOW-327).
 - A linked transaction row carries the trailing chevron. A row that opens something keeps one trailing control: when ⋯ holds the end slot, the title and count are the link and ⋯ is its own 44px button (FLOW-326, FLOW-334).

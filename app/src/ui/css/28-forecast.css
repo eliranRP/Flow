@@ -41,7 +41,7 @@
   line-height: var(--type-total-line);
 }
 
-.ui-forecast-big .t-display {
+.ui-forecast-big .t-detail {
   font-size: var(--type-total-size);
   line-height: var(--type-total-line);
 }
@@ -53,8 +53,8 @@
 .ui-forecast-today {
   margin: var(--space-1) 0 0;
   color: var(--color-text-muted);
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
 }
 
 .ui-forecast-section {
@@ -138,9 +138,9 @@
 }
 
 .ui-forecast-name {
-  font-size: var(--type-title-3-size);
+  font-size: var(--type-btn-size);
   font-weight: var(--type-body-weight);
-  line-height: var(--type-title-3-line);
+  line-height: var(--type-btn-line);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -222,7 +222,7 @@
   gap: var(--space-2);
   height: 36px;
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
   visibility: hidden;
   opacity: 0;
   transition: opacity var(--motion-fade) linear, visibility var(--motion-fade) linear;
@@ -247,8 +247,8 @@
   margin: 0;
   padding-top: var(--space-4);
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
-  line-height: calc(var(--type-hint-line) + 0.1);
+  font-size: var(--type-caption-size);
+  line-height: calc(var(--type-caption-line) + 0.1);
 }
 
 .ui-forecast-form {
@@ -288,7 +288,7 @@
 
 .ui-forecast-source {
   margin: 0;
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   line-height: var(--control-height-sm);
 }
 

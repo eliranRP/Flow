@@ -133,7 +133,7 @@ export function LoanMatchOffer({
           // step, a new loan in Settings → הלוואות (the + sheet's quick action, FLOW-331).
           // FLOW-356: one line (the row's hint already says why) and the 44px tint button.
           <div className="ui-loan-empty">
-            <p className="t-hint">{LOAN_EMPTY_NEXT_STEP}</p>
+            <p className="t-caption t-muted">{LOAN_EMPTY_NEXT_STEP}</p>
             <div className="ui-empty-action">
               {/* The link replaces the sheet's own history entry, so Back from Loans returns to the line once. */}
               <Button variant="secondary" icon={<PlusIcon />} to={quickNewPath("/loans", "", "loan")} replace={sheetStack(location.state).includes("loan-match")}>הלוואה חדשה</Button>

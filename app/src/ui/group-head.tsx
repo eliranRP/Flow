@@ -8,8 +8,8 @@ import type { ReactNode } from "react";
 export function GroupHead({ id, title, count, children }: { id: string; title: string; count: string; children: ReactNode }) {
   return (
     <div className="ui-month-head ui-group-head">
-      <h2 className="ui-month-title ui-group-title t-heading" id={id}>{title}</h2>
-      <p className="ui-month-totals t-label">
+      <h2 className="ui-month-title ui-group-title t-sheet" id={id}>{title}</h2>
+      <p className="ui-month-totals t-line2">
         <span className="ui-group-count">{count}</span>
         {children}
       </p>

@@ -234,7 +234,7 @@ export function LoanPartSheet({
             />
           ))}
         </div>
-        {searchable && needle !== "" && shown.length === 0 ? <p className="t-hint">לא נמצאה קטגוריה בשם הזה</p> : null}
+        {searchable && needle !== "" && shown.length === 0 ? <p className="t-caption t-muted">לא נמצאה קטגוריה בשם הזה</p> : null}
         {error ? <p className="ui-field-message ui-loan-sheet-error" role="alert">{error}</p> : null}
       </div>
     </Sheet>
@@ -339,7 +339,7 @@ export function LoanRateSheet({
           error={rateError}
           onValueChange={setPercent}
         />
-        <p className="t-hint">מהתאריך הזה החישוב לפי הריבית החדשה. תשלומים שכבר שויכו לא משתנים.</p>
+        <p className="t-caption t-muted">מהתאריך הזה החישוב לפי הריבית החדשה. תשלומים שכבר שויכו לא משתנים.</p>
         {error?.field === "form" ? <p className="ui-field-message ui-loan-sheet-error" role="alert">{error.text}</p> : null}
         <Button type="submit" full busy={busy === "save"} disabled={busy === "remove"}>שמירה</Button>
         {rate ? (

@@ -2,7 +2,7 @@
 export function AuthCallbackView({ message }: { message: string }) {
   return (
     <main className="flex min-h-dvh items-center justify-center px-side">
-      <p className="t-title-3" role="status">{message}</p>
+      <p className="t-btn" role="status">{message}</p>
     </main>
   );
 }

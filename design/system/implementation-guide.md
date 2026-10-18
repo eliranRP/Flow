@@ -136,7 +136,7 @@ The other token groups are:
 ```
 
 ```css
-/* ✅ */ .row-amount { color: var(--color-text); font: var(--type-title-3-weight) var(--type-title-3-size)/var(--type-title-3-line) var(--font-family); }
+/* ✅ */ .row-amount { color: var(--color-text); font: var(--type-btn-weight) var(--type-btn-size)/var(--type-btn-line) var(--font-family); }
 /* ❌ */ .row-amount { color: #1D1728; font-size: 17px; }
 /* ❌ */ .loss { color: red; }   /* raw colour, and colour alone */
 ```
@@ -164,7 +164,7 @@ From top to bottom:
    - Start side (right in RTL): an icon button, 44×44. It is **back** (chevron pointing right) on inner screens, or **✕** on tasks opened modally. Tab root screens (Review, Projects, Settings) have no button here.
    - End side (left): an optional overflow `⋯` or the example-data tag.
    - A centred title (`title-3`) is only used on detail screens (e.g. "הוצאה").
-3. **Header.** Page title in `title-1`, with an optional `label` subtitle in `text-secondary` underneath, both at 24px side padding.
+3. **Header.** Page title in `total`, with an optional `line2` subtitle in `text-secondary` underneath, both at 24px side padding.
 4. **Content.** Sections 36–40px apart, 24px side padding, cards 16px from the edge. Content scrolls; the top bar MAY stay pinned.
 5. **Bottom tab bar.** Fixed. `surface` background with a `line` hairline on top. Holds בית · פרויקטים · **+** · לאישור · הגדרות. Height is `--tabbar-height` (86px on notched phones).
    - Content **MUST** have `padding-block-end: calc(var(--tabbar-height) + var(--space-4))` so the last row is never hidden.
@@ -175,7 +175,7 @@ From top to bottom:
     <button class="iconbtn" aria-label="חזרה"><svg class="icon">…back…</svg></button>
     <span class="ex">נתוני דוגמה · Example data</span>   <!-- mockups / demo data only -->
   </header>
-  <div class="head"><h1 class="t-title-1">פרויקטים</h1><p class="t-label secondary">17 פעילים</p></div>
+  <div class="head"><h1 class="t-total">פרויקטים</h1><p class="t-line2 secondary">17 פעילים</p></div>
   <main class="content">…</main>
   <nav class="tabbar" aria-label="ניווט ראשי">…</nav>
 </div>
@@ -206,7 +206,7 @@ From top to bottom:
 - There is **no tab bar** and **no band**.
 - The top bar has **back** (steps 2 and later), or **✕** for tasks opened from elsewhere (Split, Upload results).
 - **Onboarding only:** a progress row under the top bar, made of a 4px progress bar (`tint` track, `accent` fill) and the hint "שלב X מתוך 5". Step 0 (פרטי העסק) has no progress row. The sign-in step (09a, Google) has no top bar and no progress row. דלג is the top-bar text link on a counted step, not a second primary under the CTA.
-- The header is `title-1` plus a one-line `label` explaining why this step matters.
+- The header is `total` plus a one-line `line2` explaining why this step matters.
 - **Pinned action area:** the primary CTA (52px) sits `calc(var(--safe-bottom) + 16px)` above the bottom edge. Content scrolls behind it and **MUST NOT** be hidden by it (add bottom padding equal to the action area's height).
 - One primary per step. Step titles are short nouns (e.g. "פרטי החברה", "הפרויקטים שלך").
 
@@ -297,7 +297,7 @@ From top to bottom:
 | `cents` | 11 / 400 | Cents on a list amount, raised 5px | `text` |
 | `wordmark` | 22 / 700 | The "Flow" logo only (LTR) | `on-band` on the band, otherwise `logo` |
 
-- **Old names.** The old role names are aliases until their screens move to the new ones (R11 deletes them): `hero` → `band`, `display` → `detail`, `title-1` → `total`, `band-title` → `title`, `title-2` → `name`, `heading` → `sheet`, `title-3` → `btn`, `amount` → `body`, `label` → `line2`, `hint` → `caption`, `micro` → `cents`. New code uses the new names only.
+- **Old names.** The old role names (`hero`, `display`, `title-1`, `band-title`, `title-2`, `heading`, `title-3`, `amount`, `label`, `hint`, `micro`) are deleted. Use the role names only; `.t-muted` adds the muted colour (`t-caption t-muted` is the old hint).
 - **Tabular digits:** every figure **MUST** use `font-variant-numeric: tabular-nums lining-nums` (the `.num` class does this), so columns and changing numbers don't jitter.
 - **Line heights** come from the token file. Don't set `line-height: 1` on text. Allow multi-line text to wrap. Truncate with an ellipsis only on single-line row titles, and never truncate amounts.
 - Input text **MUST** be at least 16px (`body`) so iOS doesn't zoom on focus.

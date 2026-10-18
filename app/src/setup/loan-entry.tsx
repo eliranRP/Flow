@@ -56,7 +56,7 @@ export function NewLoanSheet({
           })();
         }}
       />
-      {failed ? <p className="t-hint ui-setup-error" role="alert">{SETUP_ERROR_RETRY}</p> : null}
+      {failed ? <p className="t-caption t-muted ui-setup-error" role="alert">{SETUP_ERROR_RETRY}</p> : null}
       <LoanSaveButton formId={formId} busy={busy} />
     </Sheet>
   );

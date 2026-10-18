@@ -211,12 +211,12 @@ export function ReviewCard({
       <div className="ui-review-doc">
         <div className="ui-review-copy">
           {sourcePill ? <span className="ui-review-source">{sourcePill}</span> : null}
-          <h2 className="ui-review-supplier t-title-3">
+          <h2 className="ui-review-supplier t-btn">
             {supplier}
           </h2>
-          <p className="t-hint">{sourceLine}</p>
+          <p className="t-caption t-muted">{sourceLine}</p>
           {method ? (
-            <p className="t-hint ui-review-meta">
+            <p className="t-caption t-muted ui-review-meta">
               <MethodIcon kind={method.icon} />
               {method.icon === "card" && method.short !== method.spoken ? (
                 <>
@@ -248,7 +248,7 @@ export function ReviewCard({
       </div>
       {spike?.pill ? (
         <div className="ui-review-amount">
-          <p className="t-display ui-review-figure" style={figureFit}>
+          <p className="t-detail ui-review-figure" style={figureFit}>
             <bdi dir="ltr">{amountText}</bdi>
           </p>
           <span className="ui-status ui-review-spike" aria-hidden="true">
@@ -257,12 +257,12 @@ export function ReviewCard({
           <span className="sr-only">{spike.spoken}</span>
         </div>
       ) : (
-        <p className="t-display ui-review-figure" style={figureFit}>
+        <p className="t-detail ui-review-figure" style={figureFit}>
           <bdi dir="ltr">{amountText}</bdi>
         </p>
       )}
-      {spike?.usual ? <p className="t-hint ui-review-usual"><CopyLine parts={spike.usual} /></p> : null}
-      {vatLine ? <p className="t-hint">{vatLine}</p> : null}
+      {spike?.usual ? <p className="t-caption t-muted ui-review-usual"><CopyLine parts={spike.usual} /></p> : null}
+      {vatLine ? <p className="t-caption t-muted">{vatLine}</p> : null}
       {paid ? <ReviewPaidLine paid={paid} /> : null}
       {memo ? <ReviewMemo memo={memo} /> : null}
       <div className="ui-review-ai">
@@ -277,7 +277,7 @@ export function ReviewCard({
             <div className="ui-review-split-head">
               <SplitIcon size={20} />
               <span className="ui-review-split-title">
-                <span className="t-hint">פיצול</span>
+                <span className="t-caption t-muted">פיצול</span>
                 <span>
                   {`${String(splitSummary.parts.length)} חלקים · `}
                   <bdi className="ui-num" dir="ltr">{splitSummary.total}</bdi>
@@ -292,7 +292,7 @@ export function ReviewCard({
                 <bdi className="ui-num ui-review-split-amount" dir="ltr">{part.amount}</bdi>
                 <span className="ui-review-split-name">
                   <span>{part.project}</span>
-                  <span className="t-hint">{part.category}</span>
+                  <span className="t-caption t-muted">{part.category}</span>
                 </span>
               </div>
             ))}
@@ -323,7 +323,7 @@ export function ReviewCard({
           </button>
         ) : null}
         {filled ? (
-          <p className="t-hint ui-review-reason ui-review-filled">
+          <p className="t-caption t-muted ui-review-reason ui-review-filled">
             <span className="ui-review-reason-mark" aria-hidden="true">✦</span>
             <span className="ui-review-reason-text">
               {JEV_FILLED}
@@ -342,28 +342,28 @@ export function ReviewCard({
           </p>
         ) : null}
         {why && !filled ? (
-          <p className="t-hint ui-review-reason">
+          <p className="t-caption t-muted ui-review-reason">
             <span className="ui-review-reason-mark" aria-hidden="true">✦</span>
             <span className="ui-review-reason-text"><CopyLine parts={why} /></span>
           </p>
         ) : null}
         {jevSlot ? (
-          <p className="t-hint ui-review-reason ui-review-reason-slot" aria-hidden="true">
+          <p className="t-caption t-muted ui-review-reason ui-review-reason-slot" aria-hidden="true">
             <span className="ui-review-reason-mark">✦</span>
             {/* Held, not shown: the words Jev's fill will carry, so the waiting card keeps its height. */}
             <span className="ui-review-reason-text ui-review-reason-held">{`${JEV_FILLED} ${JEV_FILLED_UNDO}`}</span>
           </p>
         ) : null}
         {note == null ? null : pending ? (
-          <p className="t-label ui-review-note-slot" aria-hidden="true" />
+          <p className="t-line2 ui-review-note-slot" aria-hidden="true" />
         ) : (
-          <p className="t-label">{note}</p>
+          <p className="t-line2">{note}</p>
         )}
         {mismatch ? (
-          <p className="t-label ui-review-mismatch" id={REVIEW_MISMATCH_ID}>{SPLIT_MISMATCH_LINE}</p>
+          <p className="t-line2 ui-review-mismatch" id={REVIEW_MISMATCH_ID}>{SPLIT_MISMATCH_LINE}</p>
         ) : null}
         {missingBoth && !mismatch ? (
-          <p className="t-hint ui-review-missing" id={REVIEW_MISSING_ID}>{REVIEW_MISSING_BOTH}</p>
+          <p className="t-caption t-muted ui-review-missing" id={REVIEW_MISSING_ID}>{REVIEW_MISSING_BOTH}</p>
         ) : null}
       </div>
       {/* A spike pill is the whole warning: no row at the end repeats it (design lead, 2026-10-09). */}
@@ -375,7 +375,7 @@ export function ReviewCard({
 /** FLOW-309: the paid line. Readers hear "שולם, קבלה מ־12/10" instead of the ✓ and the "·". */
 function ReviewPaidLine({ paid }: { paid: ReviewPaidView }) {
   return (
-    <p className="t-hint ui-review-paid">
+    <p className="t-caption t-muted ui-review-paid">
       {paid.check ? (
         <span className="ui-review-paid-icon" aria-hidden="true">
           <CheckIcon size={16} />
@@ -426,7 +426,7 @@ function ReviewFlagBlock({ flag }: { flag: ReviewFlagView }) {
     );
   }
   return (
-    <p className="t-hint ui-review-flag-quiet">
+    <p className="t-caption t-muted ui-review-flag-quiet">
       <span className="ui-review-flag-icon" aria-hidden="true"><AlertIcon size={16} /></span>
       <span className="ui-review-flag-text">
         <span className="sr-only">{`${REVIEW_FLAG_PREFIX} `}</span>
@@ -507,11 +507,11 @@ function ReviewMemo({ memo }: { memo: string }) {
       </span>
     </>
   );
-  if (!clipped) return <p className="t-hint ui-review-memo">{body}</p>;
+  if (!clipped) return <p className="t-caption t-muted ui-review-memo">{body}</p>;
   return (
     <button
       type="button"
-      className="t-hint ui-review-memo ui-review-memo-button ui-hit"
+      className="t-caption t-muted ui-review-memo ui-review-memo-button ui-hit"
       aria-expanded={open}
       data-open={open ? "" : undefined}
       onClick={() => {

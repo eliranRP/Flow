@@ -77,7 +77,7 @@ export function TopBand({ children, hero, heroClassName, trailing, leading, stat
       {example ? <div className="ui-band-example">{example}</div> : null}
       {hero == null ? null : <div className={heroClassName == null ? "ui-band-hero" : `ui-band-hero ${heroClassName}`}>{hero}</div>}
       {children}
-      {preview ? <p className="ui-preview-banner t-hint">מצב תצוגה</p> : null}
+      {preview ? <p className="ui-preview-banner t-caption t-muted">מצב תצוגה</p> : null}
     </header>
   );
 }

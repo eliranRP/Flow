@@ -39,9 +39,9 @@
 /* The switch label reads like a row title, 17/400 (FLOW-326, decision 0120 option C). */
 .ui-switch-label {
   overflow: hidden;
-  font-size: var(--type-title-3-size);
+  font-size: var(--type-btn-size);
   font-weight: var(--type-meta-weight);
-  line-height: var(--type-title-3-line);
+  line-height: var(--type-btn-line);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -102,7 +102,7 @@
   transform: translateX(calc(-1 * (var(--size-switch) - var(--switch-knob) - 2 * var(--switch-inset))));
 }
 
-.ui-switch-copy .t-hint {
+.ui-switch-copy .t-muted {
   min-inline-size: 0;
   color: var(--color-text-muted);
 }
@@ -202,7 +202,7 @@
   min-width: 0;
 }
 
-.ui-page-title-row .t-title-1 {
+.ui-page-title-row .t-total {
   min-width: 0;
 }
 
@@ -212,7 +212,7 @@
   justify-content: flex-start;
 }
 
-.ui-page-inline .ui-page-title-row > .t-title-1 + * {
+.ui-page-inline .ui-page-title-row > .t-total + * {
   margin-inline-start: auto;
 }
 
@@ -295,8 +295,8 @@
 }
 
 .ui-page .t-title,
-.ui-page .t-title-1,
-.ui-page .t-label {
+.ui-page .t-total,
+.ui-page .t-line2:where(:not(.ui-lines-count, .ui-lines-group-sum, .ui-onb-lead)) {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
@@ -519,7 +519,7 @@
 }
 
 .ui-ai-status-name {
-  font-size: var(--type-title-3-size);
+  font-size: var(--type-btn-size);
   font-weight: var(--type-section-weight);
 }
 

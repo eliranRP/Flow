@@ -121,7 +121,7 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
               <SummaryRow strong label="רווח אחרי הוצאות כלליות" value={<Amount agorot={after} currency={currency} loss={after < 0n} />} />
             )}
           </Card>
-          {after == null ? null : <p className="ui-pp-note t-hint">{NOTE}</p>}
+          {after == null ? null : <p className="ui-pp-note t-caption t-muted">{NOTE}</p>}
           <div role="group" aria-label="סידור" className="ui-pp-chips">
             <Chip pressed={by === "month"} onClick={() => { setBy("month"); }}>לפי חודש</Chip>
             <Chip pressed={by === "category"} onClick={() => { setBy("category"); }}>לפי קטגוריה</Chip>
@@ -178,7 +178,7 @@ function CategoryBars({ rows, projectId, currency, search }: { rows: CategoryTot
               <Amount agorot={-row.amount} currency={currency} />
             </span>
             <span className="ui-pp-bar" aria-hidden="true"><span className="ui-pp-bar-fill" style={{ width: `${String(width)}%` }} /></span>
-            <span className="ui-pp-cat-hint t-hint">{`${String(share)}% מההוצאות`}</span>
+            <span className="ui-pp-cat-hint t-caption t-muted">{`${String(share)}% מההוצאות`}</span>
           </>
         );
         return row.id == null ? (

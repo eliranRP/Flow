@@ -123,7 +123,7 @@
 .ui-pp-cat-hint {
   display: block;
   margin-top: var(--space-1);
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
 }
 
 /* The month page's groups sit closer than the shared month lines (the board's spacing). */
@@ -169,8 +169,8 @@
 
 /* The amount sits on the title's line, not centred in the row (the board top-aligns it). */
 .ui-pp-months .ui-row > .ui-num,
-.ui-pp-months .ui-row > .t-amount,
-.ui-pm-month .ui-row > .t-amount {
+.ui-pp-months .ui-row > .t-body,
+.ui-pm-month .ui-row > .t-body {
   align-self: flex-start;
   margin-block-start: calc(var(--space-2) + var(--space-1) / 4);
 }

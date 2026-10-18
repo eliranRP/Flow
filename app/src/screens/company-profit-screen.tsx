@@ -136,7 +136,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
     </p>
   );
   const ytdLine = model.ytdProfit == null ? null : (
-    <p className="ui-cp-ytd t-hint">מתחילת השנה <bdi dir="ltr">{signedText(model.ytdProfit, currency)}</bdi></p>
+    <p className="ui-cp-ytd t-caption t-muted">מתחילת השנה <bdi dir="ltr">{signedText(model.ytdProfit, currency)}</bdi></p>
   );
   const summary = (
     <Card className="ui-cp-card">
@@ -177,7 +177,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
                 <span className="ui-cp-name">{row.name}</span>
                 <Amount agorot={row.profit} currency={currency} loss={row.profit < 0n} direction={row.profit > 0n ? "income" : undefined} />
               </span>
-              <span className="ui-cp-meta t-hint">{countWord(row.count)}</span>
+              <span className="ui-cp-meta t-caption t-muted">{countWord(row.count)}</span>
             </>
           );
           return (
@@ -203,7 +203,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
                   <span className="ui-cp-name">{row.name}</span>
                   <Amount agorot={row.amount} currency={currency} income={row.amount > 0n} />
                 </span>
-                <span className="ui-cp-meta t-hint">{meta}</span>
+                <span className="ui-cp-meta t-caption t-muted">{meta}</span>
               </button>
               {isOpen ? <List layout="flat" className="ui-cp-lines">{lines.map((line) => lineRow(line, `${dayMonth(line.date)} · ${line.project ?? "בלי פרויקט"}`))}</List> : null}
             </li>
@@ -228,7 +228,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
               {group.sum != null ? (
                 <bdi className="t-line2 ui-lines-group-sum" dir="ltr" style={group.sum < 0n ? { color: "var(--color-signal)" } : undefined}>{signedText(group.sum, currency)}</bdi>
               ) : (
-                <span className="t-hint">{countWord(group.lines.length)}</span>
+                <span className="t-caption t-muted">{countWord(group.lines.length)}</span>
               )}
             </div>
             <List layout="flat" className="ui-cp-list">
@@ -252,7 +252,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
         below={<div className="ui-cp-head">{figure}{ytdLine}{summary}{chips}</div>}
       />
       {body}
-      <p className="ui-cp-foot t-hint">לא נספר ברווח: קנייה ושיפוץ של נכס, קרן של הלוואות, הון בעלים והעברות בין חשבונות.</p>
+      <p className="ui-cp-foot t-caption t-muted">לא נספר ברווח: קנייה ושיפוץ של נכס, קרן של הלוואות, הון בעלים והעברות בין חשבונות.</p>
       <button type="button" ref={basisRef} className="ui-cp-basis" onClick={() => { setSheetOpen(true); }}>
         נספר לפי {basisChoiceLabel(model.basis)} · <span className="ui-cp-change">שינוי</span>
       </button>

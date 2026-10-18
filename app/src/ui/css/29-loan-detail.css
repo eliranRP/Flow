@@ -102,9 +102,9 @@
 
 .ui-loan-balance-figure {
   display: block;
-  font-size: var(--type-display-size);
-  line-height: var(--type-display-line);
-  font-weight: var(--type-display-weight);
+  font-size: var(--type-detail-size);
+  line-height: var(--type-detail-line);
+  font-weight: var(--type-detail-weight);
   font-variant-numeric: tabular-nums;
   text-align: start;
 }
@@ -359,14 +359,14 @@
   color: var(--color-accent-text);
   font-size: var(--type-caption-size);
   line-height: var(--type-card-line);
-  font-weight: var(--type-label-weight);
+  font-weight: var(--type-line2-weight);
 }
 
 .ui-loan-payments-total {
   margin: 0;
-  font-size: var(--type-display-size);
-  line-height: var(--type-display-line);
-  font-weight: var(--type-display-weight);
+  font-size: var(--type-detail-size);
+  line-height: var(--type-detail-line);
+  font-weight: var(--type-detail-weight);
   font-variant-numeric: tabular-nums;
 }
 

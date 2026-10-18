@@ -390,7 +390,7 @@ export function AiConnectionPage({
               {secret == null ? (
                 <>
                   <ConnectionNote>Flow ייצור קוד גישה אישי. הוא מוצג פעם אחת, כמו סיסמה.</ConnectionNote>
-                  {minting ? <p className="t-hint" role="status">{MINT_REASON}</p> : null}
+                  {minting ? <p className="t-caption t-muted" role="status">{MINT_REASON}</p> : null}
                   {mintError ? <FormError>{MINT_ERROR}</FormError> : null}
                   <Button busy={minting} onClick={() => { void mint(); }}>יצירת קוד</Button>
                 </>

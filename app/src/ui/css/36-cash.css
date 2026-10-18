@@ -42,7 +42,7 @@
   inset-block-start: calc(var(--space-1) * -1);
 }
 
-.ui-lines-header .t-label {
+.ui-lines-header .t-line2:where(:not(.ui-lines-count)) {
   position: relative;
   inset-block-start: calc(var(--space-1) * 0.75);
 }

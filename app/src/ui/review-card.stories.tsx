@@ -210,7 +210,7 @@ export const FlagSpikeLongAmount: Story = {
   name: "Flag: amount spike, long amount",
   args: { ...jevCard, projectJev: true, categoryJev: true, netAgorot: "-123456700", flags: [flag("amount_spike", 0.4, { ratio: 12.5, typical_amount_minor: 9_876_500 })] },
   play: async ({ canvasElement }) => {
-    const amount = canvasElement.querySelector<HTMLElement>(".ui-review-amount > .t-display");
+    const amount = canvasElement.querySelector<HTMLElement>(".ui-review-amount > .t-detail");
     const pill = canvasElement.querySelector<HTMLElement>(".ui-review-spike");
     await expect(amount).not.toBeNull();
     await expect(pill).not.toBeNull();

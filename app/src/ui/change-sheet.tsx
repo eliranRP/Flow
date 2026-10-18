@@ -628,7 +628,7 @@ export function ChangeAssignment(props: Props) {
     <div key={view} className="ui-change-swap">
       {view === "summary" ? (
         <div className="ui-change-summary">
-          <p className="ui-change-context t-label">
+          <p className="ui-change-context t-line2">
             {props.supplier}
             {props.supplier !== "" && props.amount !== "" ? " · " : null}
             {props.amount !== "" ? <bdi className="ui-num" dir="ltr">{props.amount}</bdi> : null}

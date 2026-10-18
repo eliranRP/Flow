@@ -179,7 +179,7 @@ export function LineSplitScreen({ sample, backTo }: { sample?: LineSplitSample; 
         backTo={fallback}
         phase={phase.kind === "ready" ? { kind: "empty" } : phase}
         onRetry={() => { for (const query of queries) void query.refetch(); }}
-        empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>}
+        empty={<p className="ui-page-pad t-caption t-muted">אין תנועה להצגה.</p>}
       />
     );
   }

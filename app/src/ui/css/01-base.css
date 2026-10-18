@@ -277,7 +277,7 @@ a:is(.ui-btn-link, .ui-btn-danger-link)[aria-disabled="true"]:not([aria-busy="tr
 
 /* List amount and the month totals over list rows: cents at 11px, raised 5px (Design guide, FLOW-363, FLOW-334). A detail figure keeps its
    cents at the figure's size ("$1,284.50" at 40/400 on the Design guide). */
-.t-amount .ui-num-cents,
+.t-body .ui-num-cents,
 .ui-loan-amount .ui-num-cents,
 .ui-month-totals .ui-num-cents {
   font-size: var(--type-cents-size);
@@ -306,8 +306,8 @@ a:is(.ui-btn-link, .ui-btn-danger-link)[aria-disabled="true"]:not([aria-busy="tr
 }
 
 .ui-row > .ui-num,
-.ui-row > .t-title-3,
-.ui-row > .t-amount {
+.ui-row > .t-btn,
+.ui-row > .t-body {
   flex: none;
 }
 

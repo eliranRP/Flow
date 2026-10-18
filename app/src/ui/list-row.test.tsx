@@ -317,7 +317,7 @@ describe("ListRow", () => {
     expect(container.querySelector(".sr-only")?.textContent).toBe("הכנסה ");
     const expense = screen.getByText("−₪1,200");
     expect(expense).not.toHaveClass("ui-income");
-    expect(expense.closest(".t-amount")).not.toBeNull();
+    expect(expense.closest(".t-body")).not.toBeNull();
   });
 
   it("shows transaction agorot small and raised, no .00 on a whole amount, and keeps project rows whole (decision 0120, option C)", () => {
@@ -371,9 +371,9 @@ describe("ListRow", () => {
       </MemoryRouter>,
     );
     const hint = screen.getByText("מחובר");
-    expect(hint).toHaveClass("t-hint");
+    expect(hint).toHaveClass("t-caption t-muted");
     // jsdom keeps the custom property unresolved, so the token name is what is compared.
-    expect(getComputedStyle(hint).fontSize).toBe("var(--type-hint-size)");
+    expect(getComputedStyle(hint).fontSize).toBe("var(--type-caption-size)");
   });
 });
 
@@ -404,7 +404,7 @@ describe("ListRow statement (FLOW-305)", () => {
     expect(avatar).toHaveAttribute("dir", "rtl");
     expect(avatar).toHaveAttribute("aria-hidden", "true");
     expect(link.querySelector(".ui-row-title")).toHaveAttribute("dir", "rtl");
-    expect(link.querySelector(".t-amount")?.textContent).toBe("−₪1,200.50");
+    expect(link.querySelector(".t-body")?.textContent).toBe("−₪1,200.50");
     expect(link.querySelector(".ui-num-cents")?.textContent).toBe(".50");
     // No suggestion and not pending: no second line, no method unless one is passed.
     expect(link.querySelector(".ui-statement-line")).toBeNull();
@@ -446,7 +446,7 @@ describe("ListRow statement (FLOW-305)", () => {
     renderRow({ title: "Northwind Traders", agorot: 500_000n, sign: "in", currency: "USD" });
     const link = screen.getByRole("link");
     expect(link.querySelector(".ui-income")?.textContent).toBe("+$5,000");
-    expect(link.querySelector(".t-amount")?.textContent).toBe("הכנסה +$5,000");
+    expect(link.querySelector(".t-body")?.textContent).toBe("הכנסה +$5,000");
     expect(link.querySelector(".ui-avatar")?.textContent).toBe("NT");
     expect(link.querySelector(".ui-row-title")).toHaveAttribute("dir", "ltr");
   });

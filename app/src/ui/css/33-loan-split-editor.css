@@ -43,8 +43,8 @@
 .ui-stepper-value {
   min-inline-size: 2ch;
   text-align: center;
-  font-size: var(--type-title-3-size);
-  font-weight: var(--type-title-3-weight);
+  font-size: var(--type-btn-size);
+  font-weight: var(--type-btn-weight);
 }
 
 .ui-stepper[data-disabled="true"] .ui-stepper-value {
@@ -82,7 +82,7 @@
 
 /* One figure leads: the part amounts in regular weight, סה״כ keeps its semibold (design lead). */
 .ui-lsedit-parts .ui-loan-parts-row > .ui-num {
-  font-weight: var(--type-amount-weight);
+  font-weight: var(--type-body-weight);
 }
 
 /* "פיצול אחר" under the match sheet's loans. */
@@ -98,7 +98,7 @@
   gap: var(--space-2);
 }
 
-.ui-loan-empty > .t-hint {
+.ui-loan-empty > .t-muted {
   margin: 0;
 }
 

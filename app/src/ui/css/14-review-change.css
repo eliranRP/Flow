@@ -65,9 +65,9 @@
   border-radius: var(--radius-chip);
   background: var(--color-tint);
   color: var(--color-accent-text);
-  font-size: var(--type-hint-size);
-  font-weight: var(--type-title-3-weight);
-  line-height: var(--type-hint-line);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-btn-weight);
+  line-height: var(--type-caption-line);
   vertical-align: middle;
 }
 
@@ -118,9 +118,9 @@
 .ui-pick-date {
   flex: none;
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
-  font-weight: var(--type-hint-weight);
-  line-height: var(--type-hint-line);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-caption-line);
 }
 
 .ui-pick-note,

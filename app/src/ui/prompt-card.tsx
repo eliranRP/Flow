@@ -39,7 +39,7 @@ export function PromptCard({
       <p className="ui-prompt-question" id={questionId} dir="rtl">{question}</p>
       {note != null ? (
         <>
-          <p className="ui-prompt-note t-hint" id={noteId} dir="rtl">{note}</p>
+          <p className="ui-prompt-note t-caption t-muted" id={noteId} dir="rtl">{note}</p>
           <div className="ui-prompt-actions">
             <Button variant="link" buttonRef={dismissRef} aria-describedby={noteId} onClick={onNoteDismiss ?? onNo}>{noteDismissLabel}</Button>
           </div>

@@ -445,7 +445,7 @@ export function TransactionScreen({
   );
   if (phase.kind === "loading" || phase.kind === "error" || phase.kind === "empty") {
     return frame(
-      <ScreenState title="פרטי תנועה" backTo={parent} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} loading={<DetailSkeleton />} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />,
+      <ScreenState title="פרטי תנועה" backTo={parent} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} loading={<DetailSkeleton />} empty={<p className="ui-page-pad t-caption t-muted">אין תנועה להצגה.</p>} />,
     );
   }
   if (!txn) {

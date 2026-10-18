@@ -29,8 +29,8 @@ function Demo({ start }: { start: number }) {
       }}
     >
       <div className="ui-page-pad">
-        <p className="t-title-3 ui-party">{rows[at]}</p>
-        <p className="t-hint">{`תנועה ${String(at + 1)} מתוך ${String(rows.length)}`}</p>
+        <p className="t-btn ui-party">{rows[at]}</p>
+        <p className="t-caption t-muted">{`תנועה ${String(at + 1)} מתוך ${String(rows.length)}`}</p>
       </div>
       <List>
         <ListRow variant="static" eyebrow="פרויקט" title="בניין מגורים חולון" />

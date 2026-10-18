@@ -13,13 +13,13 @@ export function SampleCard({ approved, busy = false, onApprove }: { approved: bo
         <span className="ui-sample-name">Northline Supply</span>
         <bdi className="ui-sample-amount ui-num" dir="ltr">−$409.01</bdi>
       </div>
-      <p className="ui-sample-meta t-hint">{REVIEW_META}</p>
+      <p className="ui-sample-meta t-caption t-muted">{REVIEW_META}</p>
       <div className="ui-sample-chips">
         <span className="ui-sample-chip">Birch Lane</span>
         <span className="ui-sample-chip">חומרים</span>
       </div>
       {approved ? (
-        <p className="ui-sample-done t-label" role="status">{REVIEW_APPROVED}</p>
+        <p className="ui-sample-done t-line2" role="status">{REVIEW_APPROVED}</p>
       ) : (
         <Button type="button" full busy={busy} onClick={onApprove}>{REVIEW_APPROVE}</Button>
       )}

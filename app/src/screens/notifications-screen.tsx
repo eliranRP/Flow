@@ -126,7 +126,7 @@ export function NotificationsScreen({ sample, support }: { sample?: Notification
         kicker="הגדרות"
         subtitle="מה נשלח לטלפון"
         backTo={backTo}
-        below={note != null ? <p className="t-hint" id={noteId} data-push-note="">{noteBody}</p> : undefined}
+        below={note != null ? <p className="t-caption t-muted" id={noteId} data-push-note="">{noteBody}</p> : undefined}
       />
       <List layout="inset">
         {SWITCHES.map((item) => (

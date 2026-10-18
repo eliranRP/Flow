@@ -66,7 +66,7 @@ function JobBar({ value, max, label, count, steps, onLeave, leaveLabel = "המש
   const ratio = Math.min(1, Math.max(0, value / safeMax));
   return (
     <div className="ui-job">
-      <p className="ui-job-count t-hint">{count}</p>
+      <p className="ui-job-count t-caption t-muted">{count}</p>
       <div
         className="ui-job-bar ui-bar"
         role="meter"
@@ -126,7 +126,7 @@ function ValueBar({ variant = "bar", value, max = 100, label, caption }: ValueBa
   }
   return (
     <div>
-      <p className="ui-meter-label t-hint">{label}</p>
+      <p className="ui-meter-label t-caption t-muted">{label}</p>
       {bar}
       {caption}
     </div>

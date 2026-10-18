@@ -20,7 +20,7 @@ function OpenSheet({ title, body, initial = true }: { title: string; body: strin
         פתיחה
       </Button>
       <Sheet open={open} onOpenChange={setOpen} title={title}>
-        <p className="t-label">{body}</p>
+        <p className="t-line2">{body}</p>
       </Sheet>
     </>
   );
@@ -43,7 +43,7 @@ function ReturnFocusSheet() {
         ניתוק
       </button>
       <Sheet open={open} onOpenChange={setOpen} title="לנתק?" returnFocusRef={opener}>
-        <p className="t-label">החיבור יופסק.</p>
+        <p className="t-line2">החיבור יופסק.</p>
       </Sheet>
     </>
   );
@@ -94,7 +94,7 @@ function RefusingSheet() {
         </HoldLine>
       }
     >
-      <p className="t-label">כללי · חומרים</p>
+      <p className="t-line2">כללי · חומרים</p>
     </Sheet>
   );
 }
@@ -109,7 +109,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  args: { open: true, onOpenChange: () => undefined, title: "תקופה", children: <p className="t-label">בחירת תקופה</p> },
+  args: { open: true, onOpenChange: () => undefined, title: "תקופה", children: <p className="t-line2">בחירת תקופה</p> },
   render: () => <OpenSheet title="תקופה" body="החודש, חודש קודם, או כל התקופה." />,
 };
 export const LongHebrew: Story = {

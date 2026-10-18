@@ -65,7 +65,7 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp }: { s
 
           {match != null && !marked ? (
             <section className="ui-inv-match" aria-label="תשלום תואם בבנק">
-              <p className="t-label ui-inv-match-title">✦ נמצא תשלום תואם בבנק</p>
+              <p className="t-line2 ui-inv-match-title">✦ נמצא תשלום תואם בבנק</p>
               <div className="ui-inv-match-row">
                 <span className="ui-inv-match-copy">
                   <span className="ui-inv-match-when">{`${unpaidFullDate(match.date)} · ${match.account_name}`}</span>
@@ -75,7 +75,7 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp }: { s
                   <bdi dir="ltr">{formatAmountText(match.amount_minor, row.currency ?? "ILS")}</bdi>
                 </span>
               </div>
-              <p className="ui-inv-explain t-hint text-text-secondary">
+              <p className="ui-inv-explain t-caption t-muted text-text-secondary">
                 {`אותו סכום ואותו לקוח, ${String(Math.max(0, daysBetween(row.doc_date, match.date)))} ימים אחרי החשבונית.`}
               </p>
               <div className="ui-inv-match-actions">

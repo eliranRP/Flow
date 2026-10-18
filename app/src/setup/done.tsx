@@ -54,11 +54,11 @@ export function SetupDone({ rows, onHome }: { rows: DoneRow[]; onHome: () => voi
           <div key={item.label} className="ui-onb-done-row" style={{ animationDelay: `${String(item.delay)}ms` }}>
             <span className={item.done ? "ui-onb-mark ui-onb-mark-good" : "ui-onb-mark"} aria-hidden="true">{item.done ? "✓" : "—"}</span>
             <span className="ui-onb-done-label">{item.label}</span>
-            <span className="t-hint">{item.value}</span>
+            <span className="t-caption t-muted">{item.value}</span>
           </div>
         ))}
       </section>
-      <p className="t-hint ui-onb-note">{DONE_NOTE}</p>
+      <p className="t-caption t-muted ui-onb-note">{DONE_NOTE}</p>
     </OnboardingFrame>
   );
 }

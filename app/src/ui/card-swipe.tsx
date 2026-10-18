@@ -189,7 +189,7 @@ export function CardSwipe({
 function PeekEdge({ ref, side, name }: { ref: Ref<HTMLDivElement>; side: CardStep; name: string | null }) {
   return (
     <div ref={ref} className="ui-cswipe-peek" data-side={side} aria-hidden="true">
-      {name ? <p className="t-title-3 ui-cswipe-peek-name" data-clip-ok="">{name}</p> : null}
+      {name ? <p className="t-btn ui-cswipe-peek-name" data-clip-ok="">{name}</p> : null}
     </div>
   );
 }

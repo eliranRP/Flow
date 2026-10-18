@@ -390,7 +390,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
           </Button>
         </div>
       ) : null}
-      <p className="ui-poc t-hint"><bdi dir="ltr">Flow 0.1</bdi></p>
+      <p className="ui-poc t-caption t-muted"><bdi dir="ltr">Flow 0.1</bdi></p>
     </div>
     </ViewerScope>
   );

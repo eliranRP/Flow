@@ -6,17 +6,17 @@
   margin-block-end: calc(var(--space-3) / -2);
 }
 
-.ui-project-page .ui-band-hero-project .t-band-title {
+.ui-project-page .ui-band-hero-project .t-title {
   font-size: var(--type-name-size);
   line-height: calc(var(--type-title-line) - 0.015);
   font-weight: var(--type-name-weight);
 }
 
-.ui-project-page .ui-band-hero-project .t-label {
+.ui-project-page .ui-band-hero-project .t-line2 {
   line-height: calc(var(--type-title-line) - 0.015);
 }
 
-.ui-project-page .ui-band-hero-project .t-band-title + .t-label {
+.ui-project-page .ui-band-hero-project .t-title + .t-line2 {
   margin-block-start: calc(var(--space-1) / 2);
 }
 
@@ -55,7 +55,7 @@
   font-weight: var(--type-line2-weight);
 }
 
-.ui-project-page .ui-band-row-amount .t-amount {
+.ui-project-page .ui-band-row-amount .t-body {
   font-size: var(--type-btn-2-size);
   font-weight: var(--type-line2-weight);
   line-height: calc(var(--type-title-line) - 0.015);
@@ -124,7 +124,7 @@
 }
 
 .ui-project-stack .ui-investment-equity-label {
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   color: var(--color-text-secondary);
 }
 
@@ -215,11 +215,11 @@
 .ui-project-empty-card p {
   margin: 0;
   color: var(--color-text-secondary);
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   line-height: calc(var(--type-body-line) * 1.035);
 }
 
-.ui-project-figures .t-amount {
+.ui-project-figures .t-body {
   font-size: var(--type-body-size);
 }
 
@@ -360,7 +360,7 @@
 
 .ui-projects-empty .ui-empty-line {
   max-inline-size: calc(var(--space-10) * 7 + var(--space-5));
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   line-height: calc(var(--type-body-line) * 1.035);
 }
 

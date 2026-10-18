@@ -281,7 +281,7 @@ describe("viewer gates", () => {
         />,
       );
       const note = screen.getByText(VIEWER_NOTE);
-      expect(note).toHaveClass("t-hint");
+      expect(note).toHaveClass("t-caption t-muted");
       const overhead = screen.getByRole("switch", { name: "רווח אחרי הוצאות כלליות" });
       expect(overhead).toHaveAttribute("aria-disabled", "true");
       expect(overhead.getAttribute("aria-describedby") ?? "").toContain(note.id);

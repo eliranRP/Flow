@@ -134,7 +134,7 @@ describe("category drill-down months", () => {
 
   it("puts the lines' total in the subtitle, and the count once every row is shown (FLOW-334)", () => {
     const { unmount } = wrap(<ProjectCategoryScreen sample={sample} backTo="/projects/a" />);
-    const subtitle = () => document.querySelector("header p.t-label")?.textContent ?? "";
+    const subtitle = () => document.querySelector("header p.t-line2")?.textContent ?? "";
     expect(subtitle()).toContain("₪");
     expect(subtitle()).not.toMatch(/תנועות|תנועה אחת/);
     unmount();

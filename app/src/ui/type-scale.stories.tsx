@@ -26,14 +26,14 @@ function TypeScale() {
     <div className="flex flex-col gap-4">
       {STYLES.map((style) => (
         <div key={style.name} className="flex flex-col gap-1">
-          <span className="t-hint" dir="ltr">{style.name}</span>
+          <span className="t-caption t-muted" dir="ltr">{style.name}</span>
           <p className={style.className}>
             {"amount" in style ? <bdi dir="ltr" className="num">{style.text}</bdi> : style.text}
           </p>
         </div>
       ))}
       <div className="flex flex-col gap-1">
-        <span className="t-hint" dir="ltr">list amount · body 17/400, cents 11</span>
+        <span className="t-caption t-muted" dir="ltr">list amount · body 17/400, cents 11</span>
         <p className="t-body flex gap-4">
           <Amount agorot={350_000n} direction="income" income cents="always" />
           <Amount agorot={123_456n} direction="expense" cents="always" />

@@ -89,7 +89,7 @@ export function ChoiceSheet<T extends string, V extends string = T>({
           />
         ))}
       </div>
-      {copy.note ? <p className="t-hint ui-pick-note">{copy.note}</p> : null}
+      {copy.note ? <p className="t-caption t-muted ui-pick-note">{copy.note}</p> : null}
     </Sheet>
   );
 }

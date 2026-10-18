@@ -60,13 +60,13 @@ export function UnpaidScreen({ sample, summary }: { sample?: UnpaidInvoice[]; su
       <div className={`ui-page-pad ui-inv-page${all.length === 0 && phase.kind === "ready" ? " ui-inv-page-done" : ""}`}>
         {open.length > 0 ? (
           <Card as="section" className="ui-inv-summary" aria-label="לגבייה מלקוחות">
-            <p className="t-label text-text-secondary">לגבייה מלקוחות</p>
+            <p className="t-line2 text-text-secondary">לגבייה מלקוחות</p>
             {totals.map((total) => (
               <p key={total.currency} className="ui-inv-total">
                 <Amount agorot={total.minor} currency={total.currency} size="total" income signless />
               </p>
             ))}
-            <p className="t-hint text-text-secondary">
+            <p className="t-caption t-muted text-text-secondary">
               {`${String(open.length)} חשבוניות · הוותיקה פתוחה ${String(oldest)} ימים`}
             </p>
             {summary != null ? (
@@ -102,7 +102,7 @@ export function UnpaidScreen({ sample, summary }: { sample?: UnpaidInvoice[]; su
 
         {phase.kind === "ready" ? (
           <div className="ui-inv-sortrow">
-            <span className="t-hint text-text-muted">מהוותיקה לחדשה</span>
+            <span className="t-caption t-muted text-text-muted">מהוותיקה לחדשה</span>
             {holdWrites ? null : (
               <button type="button" className="ui-inv-refresh" onClick={actions.startSync} disabled={syncing} aria-busy={syncing || undefined}>
                 {syncing ? <span className="ui-spinner" aria-hidden="true" /> : <RefreshIcon size={14} />}
@@ -154,7 +154,7 @@ export function UnpaidScreen({ sample, summary }: { sample?: UnpaidInvoice[]; su
                   actionBelow
                   action={marked ? (
                     <div className="ui-inv-action-line">
-                      <span className="t-hint text-text-secondary">{UNPAID_MARKED}</span>
+                      <span className="t-caption t-muted text-text-secondary">{UNPAID_MARKED}</span>
                       {holdWrites ? null : <button type="button" className="ui-inv-text-action" onClick={() => { actions.setPaid(row.id, false); }}>ביטול</button>}
                     </div>
                   ) : matchText != null ? (

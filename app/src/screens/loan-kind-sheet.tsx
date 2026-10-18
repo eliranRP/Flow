@@ -142,7 +142,7 @@ export function LoanKindSheet({
             onChange={(event) => { setMonths(event.target.value.replace(/\D/g, "").slice(0, 3)); }}
           />
           {preview ? <p aria-live="polite">{preview}</p> : null}
-          <p className="t-hint">תשלומים שכבר שויכו לא משתנים.</p>
+          <p className="t-caption t-muted">תשלומים שכבר שויכו לא משתנים.</p>
           {error ? <p className="ui-field-message ui-loan-sheet-error" role="alert">{error}</p> : null}
           <Button type="submit" full busy={busy}>שמירה</Button>
         </form>

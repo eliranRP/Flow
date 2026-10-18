@@ -19,7 +19,7 @@ type BandArgs = {
 function BandView({ preview, heading, amount, label, company, past }: BandArgs) {
   let body: ReactNode;
   if (label) {
-    body = <h1 className="ui-band-label t-label">{label}</h1>;
+    body = <h1 className="ui-band-label t-line2">{label}</h1>;
   } else {
     body = (
       <h1>
@@ -35,7 +35,7 @@ function BandView({ preview, heading, amount, label, company, past }: BandArgs) 
       leading={company == null ? undefined : <BandCompany name={company} onOpen={() => undefined} />}
       hero={
         <>
-          <p className="t-title-2">{heading}</p>
+          <p className="t-name">{heading}</p>
           {body}
         </>
       }
@@ -79,9 +79,9 @@ function ProjectBand({ name }: { name: string }) {
     <TopBand
       hero={
         <>
-          <p className="t-band-title">{name}</p>
-          <p className="ui-band-label t-label">רווח</p>
-          <p className="t-display">
+          <p className="t-title">{name}</p>
+          <p className="ui-band-label t-line2">רווח</p>
+          <p className="t-detail">
             <Amount agorot={2_940_000n} />
           </p>
         </>
@@ -105,8 +105,8 @@ export const ScrollFade: Story = {
       <TopBand
         hero={
           <>
-            <p className="t-title-2">{heading}</p>
-            <p className="ui-band-fade t-display">
+            <p className="t-name">{heading}</p>
+            <p className="ui-band-fade t-detail">
               <Amount agorot={3_916_400n} />
             </p>
           </>

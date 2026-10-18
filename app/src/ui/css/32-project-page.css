@@ -322,8 +322,8 @@
   min-inline-size: var(--touch-min);
   min-block-size: var(--touch-min);
   color: var(--color-accent-text);
-  font-size: var(--type-label-size);
-  font-weight: var(--type-label-weight);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-line2-weight);
 }
 
 .ui-projects-unassigned .ui-btn-link {

@@ -100,7 +100,7 @@
   margin: var(--space-4) 0 var(--space-1);
   color: var(--color-text-secondary);
   font-size: var(--type-meta-size);
-  font-weight: var(--type-label-weight);
+  font-weight: var(--type-line2-weight);
   line-height: var(--type-meta-line);
 }
 
@@ -238,7 +238,7 @@
   min-block-size: var(--touch-min);
   margin: 0;
   color: var(--color-text-secondary);
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   text-wrap: balance;
 }
 
