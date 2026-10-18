@@ -5,6 +5,7 @@ import { z } from "zod";
 import { LOAN_TERM_MONTHS_MAX, type LoanKind } from "../../../packages/shared/src/loan-schedule.ts";
 import { DATE, fail, isCalendarDate, shownKey, type ToolResult, UUID } from "./tools_args.ts";
 import { FORECAST_ALLOWED } from "./tools_forecast_schemas.ts";
+import { PROJECT_FORECAST_ALLOWED } from "./tools_project_forecast.ts";
 
 export const READ_TOOL_NAMES = [
   "list_projects",
@@ -42,7 +43,7 @@ export const READ_TOOL_NAMES = [
   "get_cash_months",
   "get_cash_years",
   "get_cash_lines",
-  "match_lines", "get_forecast",
+  "match_lines", "get_forecast", "get_project_forecast_edits",
 ] as const;
 
 /** Read tool that a write-only token may also call: it polls that token's own sync job. */
@@ -106,6 +107,7 @@ export const WRITE_TOOL_NAMES = [
   "undo",
   "undo_batch",
   "set_forecast_item", "reset_forecast",
+  "set_project_forecast_edit", "remove_project_forecast_row", "restore_project_forecast_row", "reset_project_forecast",
 ] as const;
 export const ALLOWED: Record<string, Set<string>> = {
   list_projects: new Set(["from", "to", "basis"]),
@@ -145,6 +147,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   get_cash_lines: new Set(["month", "side", "currency", "limit", "offset"]),
   match_lines: new Set(["rows", "window_days", "direction", "currency"]),
   ...FORECAST_ALLOWED,
+  ...PROJECT_FORECAST_ALLOWED,
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
@@ -293,7 +296,7 @@ export const categorySchema = z.object({
 }).strict();
 export const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,

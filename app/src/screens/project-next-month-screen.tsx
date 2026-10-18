@@ -1,17 +1,23 @@
-import { useParams } from "react-router-dom";
+import { formatAmountText } from "@flow/shared";
+import { Link, useParams } from "react-router-dom";
 import { projectRows } from "../by-currency";
 import { cashMonthName } from "../cash";
 import { lineInitials } from "../cash-lines-groups";
 import { useCompanyCurrency } from "../company-currency";
 import { allTime } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
+import { useProjectForecastWrites } from "../project-forecast-writes";
+import { monthWord, PACE_WORDS } from "../project-next-edit";
 import { monthlyOverheadShare, type NextMonthRow } from "../project-next-month";
 import { useNextMonthForecast } from "../project-next-month-query";
 import { screenPhase } from "../query-phase";
+import { useHoldWrites } from "../use-is-viewer";
 import { useProfitMonthsQuery, useProjectQuery } from "../use-books";
 import { Amount } from "../ui/amount";
+import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { formatDayMonth } from "../ui/date-math";
+import { PlusIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ProfitSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
@@ -19,18 +25,37 @@ import { SummaryRow, type ProjectProfitSample } from "./project-profit-screen";
 
 type ProjectNextMonthSample = ProjectProfitSample & { next: NonNullable<ProjectProfitSample["next"]> };
 
-const NOTE = "לפי הקבועים של הנכס וממוצע שאר ההוצאות ב־6 החודשים האחרונים, בלי קרן הלוואות. מתעדכן כשהתנועות מגיעות.";
+const NOTE = "לפי הקבועים של הנכס וממוצע 6 החודשים האחרונים לכל קטגוריה. נגיעה בשורה משנה אותה או מסירה אותה.";
 
-function rowHint(row: NextMonthRow, months: number): string {
+/** What a row is made of: its day and קבוע, its average, or the line the user added. */
+export function rowSource(row: NextMonthRow, months: number, month: string): string {
+  if (row.kind === "added") return `הוספת · ${row.pace == null || row.pace === "once" ? `רק ב${monthWord(month)}` : PACE_WORDS[row.pace]}`;
   if (row.date != null) return `צפוי ${formatDayMonth(row.date)} · קבוע`;
   return months === 1 ? "ממוצע חודש אחד" : `ממוצע ${String(months)} חודשים`;
+}
+
+/** A changed row says so in the accent colour, with Flow's number; an added line says it was added. */
+function rowHint(row: NextMonthRow, months: number, month: string, currency: string) {
+  if (row.wasMinor != null) {
+    const was = formatAmountText(row.wasMinor < 0n ? -row.wasMinor : row.wasMinor, currency);
+    return <span className="ui-pn-edited">שינית · היה <bdi dir="ltr">{was}</bdi></span>;
+  }
+  const source = rowSource(row, months, month);
+  return row.kind === "added" ? <span className="ui-pn-edited">{source}</span> : source;
+}
+
+/** The edit page's path for a row: its key in the last segment. */
+export function editPath(projectId: string, rowKey: string): string {
+  return `/projects/${projectId}/profit/next/edit/${encodeURIComponent(rowKey)}`;
 }
 
 /**
  * The ProfitNext frame: a project's forecast for next month, opened from the dashed card on its profit page.
  * The card's four rows are the expected income and expenses, the project's average monthly share of general
  * expenses (its share since the start over its months, as the profit page shows it) and the profit after it.
- * Then the expected rows: recurring charges by their day, the category averages last. No chips, no grouping.
+ * Then the expected rows: recurring charges by their day, the category averages last, the lines the user
+ * added after them. No chips, no grouping. A tap on a row opens its edit page; under the rows, הוספת קטגוריה
+ * לצפי, the rows taken out (with החזרה) and חזרה לצפי של Flow. A viewer reads the rows only.
  */
 export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSample } = {}) {
   const params = useParams();
@@ -46,6 +71,9 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
   const figures = project == null ? null : projectRows(project, companyCurrency)[0] ?? null;
   const currency = figures?.currency ?? companyCurrency;
   const next = useNextMonthForecast(projectId, currency, sample?.next, sample == null && figures != null);
+  const holdRole = useHoldWrites();
+  const hold = sample == null && holdRole;
+  const writes = useProjectForecastWrites(projectId, next.month);
   const phase = sample
     ? ({ kind: "ready" } as const)
     : screenPhase(preview, {
@@ -107,15 +135,59 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
                   layout="flat"
                   variant="transaction"
                   title={row.name}
-                  hint={rowHint(row, forecast.averageMonths)}
+                  hint={rowHint(row, forecast.averageMonths, forecast.month, currency)}
                   agorot={row.minor < 0n ? -row.minor : row.minor}
                   currency={currency}
                   sign={row.minor < 0n ? "out" : "in"}
                   source="bank"
                   initials={lineInitials(row.name)}
+                  href={hold ? undefined : `${editPath(projectId, row.key)}${search}`}
                 />
               ))}
             </List>
+          )}
+          {hold ? null : (
+            <div className="ui-pn-edits">
+              <Link to={`/projects/${projectId}/profit/next/add${search}`} className="ui-pn-add ui-hit m-press">
+                <span className="ui-pn-add-mark" aria-hidden="true"><PlusIcon size={18} /></span>
+                הוספת קטגוריה לצפי
+              </Link>
+              {forecast.removed.length === 0 ? null : (
+                <section className="ui-pn-off" aria-labelledby="pn-off-title">
+                  <h2 id="pn-off-title" className="ui-pn-off-title">{`הוסרו מהצפי · ${String(forecast.removed.length)}`}</h2>
+                  {forecast.removed.map((row) => (
+                    <div key={row.key} className="ui-pn-off-row">
+                      <span className="ui-pn-off-text">
+                        <span className="ui-pn-off-name">{row.name}</span>
+                        <span className="ui-pn-off-meta">
+                          <bdi dir="ltr">{formatAmountText(row.minor < 0n ? -row.minor : row.minor, currency)}</bdi>
+                          {` · ${rowSource(row, forecast.averageMonths, forecast.month)}`}
+                        </span>
+                      </span>
+                      <Button
+                        variant="link"
+                        aria-label={`החזרה לצפי: ${row.name}`}
+                        disabled={writes.pending}
+                        onClick={() => { writes.mutate({ fn: "restore_project_forecast_row", rowKey: row.key, message: `הוחזר לצפי: ${row.name}` }); }}
+                      >
+                        החזרה
+                      </Button>
+                    </div>
+                  ))}
+                </section>
+              )}
+              {/* The reset drops the edits made for this month; a paced edit made for an earlier month stays. */}
+              {next.edits.some((edit) => edit.start_month === forecast.month) ? (
+                <Button
+                  variant="link"
+                  className="ui-pn-reset"
+                  disabled={writes.pending}
+                  onClick={() => { writes.mutate({ fn: "reset_project_forecast", message: "חזרת לצפי של Flow" }); }}
+                >
+                  חזרה לצפי של Flow
+                </Button>
+              ) : null}
+            </div>
           )}
         </div>
       )}

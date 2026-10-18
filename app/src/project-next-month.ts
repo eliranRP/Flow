@@ -15,6 +15,8 @@ import type { ExpectedParty, ProjectCategoryMonths } from "@flow/shared";
  * - Uncategorized expenses are one average row named אחר.
  * - An average is over the months of the window from the project's first expense in it, so a project
  *   younger than six months is not divided by six.
+ * - The user's edits (project_forecast_edits) go on top: applyForecastEdits changes a row's amount, takes
+ *   a row out, or adds a line of a category, for the edits that apply to the month.
  */
 
 /** The months an average row looks back over: the last six complete months. */
@@ -25,14 +27,41 @@ const UNCATEGORIZED = "אחר";
 
 type Pace = NonNullable<ExpectedParty["pace"]>;
 
+/** How often an edit applies: its month only, or every pace months from it. */
+export type ForecastPace = "once" | "month" | "2months" | "quarter" | "year";
+
+/** One row of project_forecast_edits, as project_forecast_edits_for lists it. */
+export type ProjectForecastEdit = {
+  id: string;
+  kind: "change" | "remove" | "add";
+  /** The row a change or a removal is of; null on an added line (its key is `add:<id>`). */
+  row_key: string | null;
+  category_id: string | null;
+  category_name?: string | null;
+  direction: "income" | "expense" | null;
+  amount_minor: number | null;
+  pace: ForecastPace;
+  /** yyyy-mm */
+  start_month: string;
+};
+
 /** One expected line next month: signed (income positive, an expense negative), in minor units. */
 export type NextMonthRow = {
   key: string;
-  kind: "recurring" | "average";
+  /** A recurring charge, a category's average, or a line the user added. */
+  kind: "recurring" | "average" | "added";
+  /** Money in or out: a change keeps it, whatever the amount (a zero row included). */
+  direction: "income" | "expense";
   name: string;
-  /** yyyy-mm-dd, the expected day; null on an average row. */
+  /** yyyy-mm-dd, the expected day; null on an average row and an added line. */
   date: string | null;
   minor: bigint;
+  /** The category the row files to (an average's own, a charge's, an added line's); null when none. */
+  categoryId: string | null;
+  /** Flow's number before the user changed it; null when the row is Flow's. */
+  wasMinor: bigint | null;
+  /** An added line's pace. */
+  pace: ForecastPace | null;
 };
 
 export type NextMonthForecast = {
@@ -45,10 +74,13 @@ export type NextMonthForecast = {
   /** Income less expenses, before the share of general expenses. */
   netMinor: bigint;
   recurringCount: number;
-  /** The average rows' category names, in row order. */
-  averageNames: string[];
+  averageCount: number;
   /** The months the averages are over: the window from the project's first expense in it. */
   averageMonths: number;
+  /** Rows the user took out of the month, with the amount they would have. */
+  removed: NextMonthRow[];
+  /** How many of the user's edits apply to the month. */
+  editCount: number;
 };
 
 /** yyyy-mm of the month after the day's month. */
@@ -65,7 +97,7 @@ function paceMonths(pace: Pace | null | undefined): number {
   return 1;
 }
 
-function monthIndex(key: string): number {
+export function monthIndex(key: string): number {
   return Number(key.slice(0, 4)) * 12 + Number(key.slice(5, 7)) - 1;
 }
 
@@ -122,9 +154,10 @@ function averageRows(
     const average = roundDiv(total, BigInt(divisor));
     // A category whose refunds outweigh its costs has nothing to expect.
     if (average <= 0n) continue;
+    const base = { kind: "average" as const, direction: "expense" as const, date: null, minor: -average, categoryId: category.id, wasMinor: null, pace: null };
     rows.push(category.id == null
-      ? { key: "avg:none", kind: "average", name: UNCATEGORIZED, date: null, minor: -average }
-      : { key: `avg:${category.id}`, kind: "average", name: category.name ?? "", date: null, minor: -average });
+      ? { ...base, key: "avg:none", name: UNCATEGORIZED }
+      : { ...base, key: `avg:${category.id}`, name: category.name ?? "" });
   }
   return rows.sort((a, b) => (a.minor === b.minor ? a.name.localeCompare(b.name, "he") : a.minor < b.minor ? -1 : 1));
 }
@@ -152,17 +185,24 @@ export function nextMonthForecast(input: {
   const recurringCategories = new Set(charges.flatMap((party) => (party.category_id == null ? [] : [party.category_id])));
   const recurring = charges
     .filter((party) => party.currency === input.currency && dueInMonth(party.next_due_month, party.pace, month, thisMonth))
-    .map((party) => ({
+    .map((party): NextMonthRow => ({
       key: `rec:${party.direction}:${party.party_id}`,
-      kind: "recurring" as const,
+      kind: "recurring",
+      direction: party.direction,
       name: party.name,
       date: expectedDate(month, party.typical_day),
       minor: signedAmount(party),
+      categoryId: party.category_id ?? null,
+      wasMinor: null,
+      pace: null,
     }))
-    .sort((a, b) => (a.date === b.date ? a.name.localeCompare(b.name, "he") : a.date < b.date ? -1 : 1));
+    .sort((a, b) => ((a.date ?? "") === (b.date ?? "") ? a.name.localeCompare(b.name, "he") : (a.date ?? "") < (b.date ?? "") ? -1 : 1));
   const divisor = averageMonths(input.categoryMonths);
   const averages = averageRows(input.categoryMonths, input.currency, recurringCategories, divisor);
-  const rows: NextMonthRow[] = [...recurring, ...averages];
+  return withTotals(month, [...recurring, ...averages], divisor, [], 0);
+}
+
+function withTotals(month: string, rows: NextMonthRow[], divisor: number, removed: NextMonthRow[], editCount: number): NextMonthForecast {
   const incomeMinor = rows.reduce((sum, row) => (row.minor > 0n ? sum + row.minor : sum), 0n);
   const expenseMinor = rows.reduce((sum, row) => (row.minor < 0n ? sum - row.minor : sum), 0n);
   return {
@@ -171,22 +211,85 @@ export function nextMonthForecast(input: {
     incomeMinor,
     expenseMinor,
     netMinor: incomeMinor - expenseMinor,
-    recurringCount: recurring.length,
-    averageNames: averages.map((row) => row.name),
+    recurringCount: rows.filter((row) => row.kind === "recurring").length,
+    averageCount: rows.filter((row) => row.kind === "average").length,
     averageMonths: divisor,
+    removed,
+    editCount,
   };
 }
 
-/** The card's third line: what the forecast is made of. */
-export function basisLine(recurringCount: number, averageNames: readonly string[]): string {
+/** Whether an edit that starts in `start` on `pace` applies to `month` (private.pfe_hits). */
+export function editApplies(start: string, pace: ForecastPace, month: string): boolean {
+  const gap = monthIndex(month) - monthIndex(start);
+  if (gap < 0) return false;
+  if (pace === "once") return gap === 0;
+  return gap % (pace === "month" ? 1 : paceMonths(pace)) === 0;
+}
+
+/** The key of the row a line the user added makes. */
+export function addedKey(editId: string): string {
+  return `add:${editId}`;
+}
+
+/**
+ * The forecast with the user's edits on top: the lines they added (each in its category's name), then
+ * each row's change (the latest start that applies wins, the sign stays the row's) and the rows they
+ * took out, which leave the totals and are listed apart. Edits that do not apply to the month are ignored.
+ */
+export function applyForecastEdits(forecast: NextMonthForecast, edits: readonly ProjectForecastEdit[]): NextMonthForecast {
+  const month = forecast.month;
+  const applying = edits.filter((edit) => editApplies(edit.start_month, edit.pace, month));
+  if (applying.length === 0) return forecast;
+  const added = applying.flatMap((edit): NextMonthRow[] => {
+    if (edit.kind !== "add" || edit.amount_minor == null) return [];
+    const amount = BigInt(edit.amount_minor);
+    return [{
+      key: addedKey(edit.id),
+      kind: "added",
+      direction: edit.direction === "income" ? "income" : "expense",
+      name: edit.category_name ?? "",
+      date: null,
+      minor: edit.direction === "income" ? amount : -amount,
+      categoryId: edit.category_id,
+      wasMinor: null,
+      pace: edit.pace,
+    }];
+  });
+  const changes = new Map<string, ProjectForecastEdit>();
+  const removedKeys = new Set<string>();
+  for (const edit of applying) {
+    if (edit.row_key == null) continue;
+    if (edit.kind === "remove") removedKeys.add(edit.row_key);
+    if (edit.kind !== "change" || edit.amount_minor == null) continue;
+    const held = changes.get(edit.row_key);
+    if (held == null || held.start_month < edit.start_month) changes.set(edit.row_key, edit);
+  }
+  const rows = [...forecast.rows, ...added].map((row) => {
+    const change = changes.get(row.key);
+    if (change?.amount_minor == null) return row;
+    const amount = BigInt(change.amount_minor);
+    return { ...row, minor: row.direction === "income" ? amount : -amount, wasMinor: row.minor };
+  });
+  // An edit counts once it reaches a row the forecast has: an added line, or a change or removal of one.
+  const keys = new Set(rows.map((row) => row.key));
+  const counted = applying.filter((edit) => edit.kind === "add" || (edit.row_key != null && keys.has(edit.row_key))).length;
+  return withTotals(
+    month,
+    rows.filter((row) => !removedKeys.has(row.key)),
+    forecast.averageMonths,
+    rows.filter((row) => removedKeys.has(row.key)),
+    counted,
+  );
+}
+
+/** The card's third line: what the forecast is made of, and how many edits the user made. */
+export function basisLine(forecast: Pick<NextMonthForecast, "recurringCount" | "averageCount" | "editCount">): string {
+  const { recurringCount, averageCount, editCount } = forecast;
   const fixed = recurringCount === 1 ? "קבוע אחד" : `${String(recurringCount)} קבועים`;
-  const average = averageNames.length === 0
-    ? null
-    : averageNames.length === 1
-      ? `ממוצע ${averageNames[0] ?? ""}`
-      : `ממוצע ${String(averageNames.length)} קטגוריות`;
-  if (average == null) return fixed;
-  return recurringCount === 0 ? average : `${fixed} ו${average}`;
+  const average = averageCount === 1 ? "ממוצע אחד" : `${String(averageCount)} ממוצעים`;
+  const parts = averageCount === 0 ? fixed : recurringCount === 0 ? average : `${fixed} ו־${average}`;
+  return editCount === 0 ? parts : `${parts} · ערכת ${String(editCount)}`;
 }
 
 /** The project's average monthly share of general expenses: its share for the period over the period's months. */

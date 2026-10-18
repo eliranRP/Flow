@@ -49,6 +49,7 @@ import {
   storedLoanSchedule,
 } from "./tools_loans.ts";
 import { scopeAllows } from "./tools_specs.ts";
+import { projectForecastRead } from "./tools_project_forecast.ts";
 import { dashboard, filterReviews, forecastReport, israelMonthKey, projectRow, type Review, totalsOf, unpaidReport } from "./tools_reports.ts";
 import { syncStatus } from "./tools_sync.ts";
 import { callWrite } from "./tools_write.ts";
@@ -702,6 +703,7 @@ export async function callTool(
   }
 
   if (name === "get_loans_paid") return loansPaidRead(args, rpc);
+  if (name === "get_project_forecast_edits") return projectForecastRead(args, rpc);
 
   if (name === "get_loan_schedule") {
     const loanId = args.loan_id;

@@ -169,6 +169,10 @@ function readTools() {
     toolSpec("get_forecast", "The month-end forecast (צפי, FLOW-141) for one month (YYYY-MM, default this month in Israel time): the cash net is not in it, only what is still to come. Output: month, base_currency (ILS), income[] and expense[] (largest first; key, direction, kind (recurring or invoice), name, currency, usual_minor, minor (the number the forecast uses, unsigned), day, due_on, moved_out, overridden), small (recurring charges under 100 shekels: count, total_minor, items), moved[] (moved to next month, not counted), income_total_minor, expense_total_minor (both unsigned, small included in expense) and changed (how many items the owner changed). Items: recurring parties not yet seen this month and open customer invoices. Figures are whole minor units.", {
       month: { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$" },
     }),
+    toolSpec("get_project_forecast_edits", "A project's edits of its next-month forecast (ProfitNext; the forecast is its recurring charges from get_expected_months with project_id, and the six-month average of each other expense category from get_project_categories; a loan payment's principal never counts). project_id and month (YYYY-MM). Output: project_id, month, edits[] (the ones that apply to that month): id, kind (change: row_key's amount becomes amount_minor; remove: row_key is out of the month; add: a line of category_id, category_name, direction and amount_minor, its row key add:<id>), row_key (rec:<direction>:<party_id> for a recurring charge, avg:<category_id> or avg:none for an average), amount_minor (unsigned), pace (once, month, 2months, quarter or year) and start_month. A paced edit applies every pace months from start_month; for one row the latest start wins.", {
+      project_id: { type: "string" },
+      month: { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$" },
+    }),
     toolSpec("get_expected_months", "Expected income and expense per month from recurring suppliers and customers (median monthly net), for this month and the next ones. months is 1 to 12 (default 3). This month (open: true) counts only the recurring ones not seen yet this month. project_id limits it to parties whose usual project is that one. Output: today, project_id, months[] (month YYYY-MM, open, by_currency[] with currency, income_minor, expense_minor; expenses are negative) and recurring[] (direction, party_id, name, currency, typical_amount_minor, typical_day, months_seen, seen_this_month, project_id, category_id, source: auto or user, pace, next_due_month). A party counts in its due months only, every pace months from its next due month. A projection from past months, not booked lines.", {
       months: { type: "integer", minimum: 1, maximum: 12 },
       project_id: { type: "string" },
@@ -324,6 +328,33 @@ function writeTools() {
     }, true),
     toolSpec("reset_forecast", "Put back every item of one month's forecast to Flow's numbers (איפוס, FLOW-141; owner or editor). month is YYYY-MM (this month or later). Returns month, removed (how many items had a change) and id and undo_kind (forecast_reset: undo puts the month's changes back, a conflict when one was set since).", {
       idempotency_key: { type: "string" },
+      month: { type: "string" },
+    }, true),
+    toolSpec("set_project_forecast_edit", "Change a row of a project's next-month forecast, or add a line to it (owner or editor). Changes the forecast only, never a recurring charge, a line or a category. project_id; month is YYYY-MM (this month or later; a past month is refused: month ended). Send row_key (from get_project_forecast_edits' keys: rec:<direction>:<party_id>, avg:<category_id>, avg:none or add:<id>) to change that row, or category_id (and optionally direction, default the category's kind) to add a line, of a category that is not hidden, not kept out of the profit and not the loan principal. amount_minor is whole minor units, unsigned (the row keeps its sign). pace: once (default, that month only), month, 2months, quarter or year from that month. A second change of the same row and month replaces the first. Returns id, project_id, month, edit and undo_kind (project_forecast: undo puts the forecast back, a conflict once the edit changed again). Idempotency key and write rate limit apply.", {
+      idempotency_key: { type: "string" },
+      project_id: { type: "string" },
+      month: { type: "string" },
+      row_key: { type: "string" },
+      category_id: { type: "string" },
+      direction: { type: "string", enum: ["income", "expense"] },
+      amount_minor: { type: "integer", minimum: 0 },
+      pace: { type: "string", enum: ["once", "month", "2months", "quarter", "year"] },
+    }, true),
+    toolSpec("remove_project_forecast_row", "Take one row out of a project's forecast for one month (הסרה מהצפי; owner or editor). project_id, month (YYYY-MM, this month or later) and row_key. A line added for that month (add:<id>) is deleted outright, on every month of its pace; one added for an earlier month is taken out of that month only. A row already out stays out. Returns id, edit (null when a line was deleted) and undo_kind (project_forecast).", {
+      idempotency_key: { type: "string" },
+      project_id: { type: "string" },
+      month: { type: "string" },
+      row_key: { type: "string" },
+    }, true),
+    toolSpec("restore_project_forecast_row", "Bring a removed row back into a project's forecast for one month (החזרה; owner or editor). project_id, month and row_key. Returns id, removed (how many removals went) and undo_kind (project_forecast).", {
+      idempotency_key: { type: "string" },
+      project_id: { type: "string" },
+      month: { type: "string" },
+      row_key: { type: "string" },
+    }, true),
+    toolSpec("reset_project_forecast", "Go back to Flow's forecast for a project (חזרה לצפי של Flow; owner or editor): with month (YYYY-MM, this month or later), the edits made for that month go (start_month, its removals included; a paced edit made for an earlier month stays); without it, every edit of the project. Returns id, removed and undo_kind (project_forecast: undo puts them back, a conflict when one was set again since).", {
+      idempotency_key: { type: "string" },
+      project_id: { type: "string" },
       month: { type: "string" },
     }, true),
     toolSpec("delete_project", "Delete a project that nothing refers to (FLOW-445; owner or editor): no line, split, allocation, loan or supplier default. A project in use is refused (in use). Returns id, name and undo_kind (project_delete: undo puts the project back with the same id).", {

@@ -1,0 +1,62 @@
+import type { Json } from "@flow/shared";
+import { useRef } from "react";
+import { getSupabase } from "./lib/supabase";
+import { FORECAST_EDITS_KEY } from "./project-next-month-query";
+import { assertNoError, useWrite } from "./use-write";
+import { useToast } from "./ui/toast";
+
+/**
+ * The project forecast's writes (set_project_forecast_edit, remove_project_forecast_row,
+ * restore_project_forecast_row, reset_project_forecast). Each returns its undo, which the toast's ביטול
+ * sends back through undo_project_forecast, as the month forecast does.
+ */
+
+/** What a write hands back for its undo: the edits it made go, the ones it replaced or deleted come back. */
+export type ForecastUndo = { drop: string[]; put: Json[] };
+
+type Call =
+  | { fn: "set_project_forecast_edit"; edit: Record<string, unknown>; message: string }
+  | { fn: "remove_project_forecast_row" | "restore_project_forecast_row"; rowKey: string; message: string }
+  | { fn: "reset_project_forecast"; message: string };
+
+function undoOf(data: unknown): ForecastUndo | null {
+  const undo = (data as { undo?: unknown } | null)?.undo as { drop?: unknown; put?: unknown } | undefined;
+  if (undo == null || !Array.isArray(undo.drop) || !Array.isArray(undo.put)) return null;
+  if (undo.drop.length === 0 && undo.put.length === 0) return null;
+  return { drop: undo.drop.filter((id): id is string => typeof id === "string"), put: undo.put as Json[] };
+}
+
+export function useProjectForecastWrites(projectId: string, month: string) {
+  const toast = useToast();
+  const lastUndo = useRef<ForecastUndo | null>(null);
+  const undo = useWrite<ForecastUndo>({
+    run: async (body) => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      assertNoError(await supabase.rpc("undo_project_forecast", { p_project_id: projectId, p_undo: body }));
+    },
+    keys: [FORECAST_EDITS_KEY],
+    failure: "לא הצלחנו לבטל את השינוי בצפי",
+  });
+  const write = useWrite<Call>({
+    run: async (call) => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      lastUndo.current = null;
+      const result = call.fn === "set_project_forecast_edit"
+        ? await supabase.rpc(call.fn, { p_project_id: projectId, p_month: month, p_edit: call.edit as never })
+        : call.fn === "reset_project_forecast"
+          ? await supabase.rpc(call.fn, { p_project_id: projectId, p_month: month })
+          : await supabase.rpc(call.fn, { p_project_id: projectId, p_month: month, p_row_key: call.rowKey });
+      assertNoError(result);
+      lastUndo.current = undoOf(result.data);
+    },
+    keys: [FORECAST_EDITS_KEY],
+    failure: "לא הצלחנו לעדכן את הצפי",
+    onSuccess: (call) => {
+      const back = lastUndo.current;
+      toast.show({ message: call.message, ...(back == null ? {} : { action: "ביטול", onAction: () => { undo.mutate(back); } }) });
+    },
+  });
+  return { mutate: write.mutate, pending: write.isPending };
+}

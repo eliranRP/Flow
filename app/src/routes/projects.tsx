@@ -12,6 +12,7 @@ const ProjectCategoryScreen = lazy(() => screenLoaders.projectCategory().then((m
 const ProjectProfitScreen = lazy(() => screenLoaders.projectProfit().then((m) => ({ default: m.ProjectProfitScreen })));
 const ProjectMonthProfitScreen = lazy(() => screenLoaders.projectMonthProfit().then((m) => ({ default: m.ProjectMonthProfitScreen })));
 const ProjectNextMonthScreen = lazy(() => screenLoaders.projectNextMonth().then((m) => ({ default: m.ProjectNextMonthScreen })));
+const ProjectNextEditScreen = lazy(() => screenLoaders.projectNextEdit().then((m) => ({ default: m.ProjectNextEditScreen })));
 const ProjectInvestmentScreen = lazy(() => screenLoaders.projectInvestment().then((m) => ({ default: m.ProjectInvestmentScreen })));
 
 /**
@@ -42,6 +43,9 @@ export function ProjectRoutes() {
       <Route path="projects/:projectId/profit" element={<ProjectProfitScreen />} />
       {/* The ProfitNext frame: next month's forecast, from the dashed card on the profit page. */}
       <Route path="projects/:projectId/profit/next" element={<ProjectNextMonthScreen />} />
+      {/* ProfitNextEdit and ProfitNextAdd: a forecast row's edit page (its key in the last segment) and a new line. */}
+      <Route path="projects/:projectId/profit/next/edit/:rowKey" element={<ProjectNextEditScreen />} />
+      <Route path="projects/:projectId/profit/next/add" element={<ProjectNextEditScreen add />} />
       <Route path="projects/:projectId/profit/:month" element={<ProjectMonthProfitRoute />} />
       <Route path="projects/:projectId/investment" element={<ProjectInvestmentScreen />} />
       <Route path="projects/:projectId/categories/:categoryId" element={<ProjectCategoryScreen />} />

@@ -687,6 +687,37 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
+                },"project_forecast_edits": {
+                  Row: {
+                    "amount_minor": number | null,"category_id": string | null,"company_id": string,"created_at": string,"created_by": string | null,"direction": string | null,"id": string,"kind": string,"pace": string,"project_id": string,"row_key": string | null,"start_month": string
+                  }
+                  Insert: {
+                    "amount_minor"?: number | null,"category_id"?: string | null,"company_id": string,"created_at"?: string,"created_by"?: string | null,"direction"?: string | null,"id"?: string,"kind": string,"pace"?: string,"project_id": string,"row_key"?: string | null,"start_month": string
+                  }
+                  Update: {
+                    "amount_minor"?: number | null,"category_id"?: string | null,"company_id"?: string,"created_at"?: string,"created_by"?: string | null,"direction"?: string | null,"id"?: string,"kind"?: string,"pace"?: string,"project_id"?: string,"row_key"?: string | null,"start_month"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "project_forecast_edits_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "project_forecast_edits_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "project_forecast_edits_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"project_groups": {
                   Row: {
                     "company_id": string,"created_at": string,"id": string,"name": string,"sort_order": number,"updated_at": string
@@ -1455,6 +1486,9 @@ isOneToOne: false
 "mcp_remove_member":
 { Args: { "p_idempotency_key": string,"p_user_id": string }; Returns: Json
                            },
+"mcp_remove_project_forecast_row":
+{ Args: { "p_idempotency_key": string,"p_month": string,"p_project_id": string,"p_row_key": string }; Returns: Json
+                           },
 "mcp_rename_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_name": string }; Returns: Json
                            },
@@ -1466,6 +1500,12 @@ isOneToOne: false
                            },
 "mcp_reset_forecast":
 { Args: { "p_idempotency_key": string,"p_month": string }; Returns: Json
+                           },
+"mcp_reset_project_forecast":
+{ Args: { "p_idempotency_key": string,"p_month"?: string,"p_project_id": string }; Returns: Json
+                           },
+"mcp_restore_project_forecast_row":
+{ Args: { "p_idempotency_key": string,"p_month": string,"p_project_id": string,"p_row_key": string }; Returns: Json
                            },
 "mcp_review_anomalies":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -1535,6 +1575,9 @@ isOneToOne: false
                            },
 "mcp_set_overhead_project":
 { Args: { "p_idempotency_key": string,"p_project_id": string }; Returns: Json
+                           },
+"mcp_set_project_forecast_edit":
+{ Args: { "p_edit": Json,"p_idempotency_key": string,"p_month": string,"p_project_id": string }; Returns: Json
                            },
 "mcp_set_project_group":
 { Args: { "p_group_id": string,"p_idempotency_key": string,"p_project_id": string }; Returns: Json
@@ -1623,6 +1666,9 @@ isOneToOne: false
 "project_category_months":
 { Args: { "p_months"?: number,"p_project_id": string,"p_today"?: string }; Returns: Json
                            },
+"project_forecast_edits_for":
+{ Args: { "p_month": string,"p_project_id": string }; Returns: Json
+                           },
 "project_recurring_changes":
 { Args: { "p_project": string,"p_today"?: string }; Returns: Json
                            },
@@ -1674,6 +1720,9 @@ isOneToOne: false
 "remove_member":
 { Args: { "p_user_id": string }; Returns: Json
                            },
+"remove_project_forecast_row":
+{ Args: { "p_month": string,"p_project_id": string,"p_row_key": string }; Returns: Json
+                           },
 "rename_category":
 { Args: { "p_category_id": string,"p_name": string }; Returns: Json
                            },
@@ -1701,6 +1750,9 @@ isOneToOne: false
 "reset_forecast_month":
 { Args: { "p_month": string }; Returns: number
                            },
+"reset_project_forecast":
+{ Args: { "p_month"?: string,"p_project_id": string }; Returns: Json
+                           },
 "resolve_review":
 { Args: { "p_action": string,"p_category_id"?: string,"p_id": string,"p_project_id"?: string,"p_remember"?: boolean,"p_resolve"?: boolean }; Returns: undefined
                            },
@@ -1709,6 +1761,9 @@ isOneToOne: false
                            },
 "restore_loan":
 { Args: { "p_loan_id": string }; Returns: Json
+                           },
+"restore_project_forecast_row":
+{ Args: { "p_month": string,"p_project_id": string,"p_row_key": string }; Returns: Json
                            },
 "review_anomalies":
 { Args: { "p_transaction_ids": (string)[] }; Returns: Json
@@ -1782,6 +1837,9 @@ isOneToOne: false
 "set_payment_recurring":
 { Args: { "p_id": string,"p_recurring": boolean }; Returns: Json
                            },
+"set_project_forecast_edit":
+{ Args: { "p_edit": Json,"p_month": string,"p_project_id": string }; Returns: Json
+                           },
 "set_project_group":
 { Args: { "p_group_id": string,"p_project_id": string }; Returns: Json
                            },
@@ -1829,6 +1887,9 @@ isOneToOne: false
                            },
 "undo_jev_prefill":
 { Args: { "p_transaction_id": string }; Returns: Json
+                           },
+"undo_project_forecast":
+{ Args: { "p_project_id": string,"p_undo": Json }; Returns: Json
                            },
 "undo_reassign":
 { Args: { "p_id": string }; Returns: undefined

@@ -73,6 +73,7 @@ import { addLoanWrite, attachLoanWrite, updateLoanWrite } from "./tools_loans.ts
 import { syncBank } from "./tools_sync.ts";
 import { resetForecastSchema, setForecastItemSchema } from "./tools_forecast_schemas.ts";
 import { attachDocumentSchema, createManualEntrySchema } from "./tools_manual_schemas.ts";
+import { PROJECT_FORECAST_WRITES, projectForecastWrite } from "./tools_project_forecast.ts";
 
 export async function callWrite(
   name: typeof WRITE_TOOL_NAMES[number],
@@ -85,6 +86,9 @@ export async function callWrite(
   if (isFail(args)) return args;
   let rpcName = "mcp_undo";
   let body: Record<string, unknown> = {};
+  if ((PROJECT_FORECAST_WRITES as readonly string[]).includes(name)) {
+    return projectForecastWrite(name as typeof PROJECT_FORECAST_WRITES[number], args, rpc);
+  }
   if (name === "sync_bank") {
     const parsed = syncBankSchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");
