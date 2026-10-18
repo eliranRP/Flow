@@ -116,7 +116,7 @@ export function ViewerScope({ children }: { children: ReactNode }) {
   return <ViewerNoteContext.Provider value={noted ? id : null}>{children}</ViewerNoteContext.Provider>;
 }
 
-export function ViewerNote({ className = "ui-page-pad t-hint ui-viewer-note" }: { className?: string }) {
+export function ViewerNote({ className = "ui-page-pad t-caption t-muted ui-viewer-note" }: { className?: string }) {
   const id = useContext(ViewerNoteContext);
   const role = useCompanyRole();
   const retry = useRetryCompanyRole();

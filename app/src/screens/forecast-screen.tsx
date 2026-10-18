@@ -180,7 +180,7 @@ export function ForecastScreen({ sample, openFirst = false }: { sample?: Forecas
       </div>
       <ScreenHeader title="צפי" backTo="/" backText="בית" subtitle={`סוף ${monthName(month)} · עוד ${String(days)} ימים`} />
       {data == null && live && query.isError ? (
-        <p className="ui-forecast-error t-hint" role="alert">לא הצלחנו לטעון את הצפי.</p>
+        <p className="ui-forecast-error t-caption t-muted" role="alert">לא הצלחנו לטעון את הצפי.</p>
       ) : null}
       {data == null && !query.isError ? (
         <DelayedSkeleton>

@@ -76,7 +76,7 @@ function IconGrid() {
       {ICONS.map(([name, Icon]) => (
         <li key={name} className="flex min-w-0 flex-col items-center gap-1 text-text">
           <Icon size={24} />
-          <span className="t-hint min-w-0 break-all text-center">{name}</span>
+          <span className="t-caption t-muted min-w-0 break-all text-center">{name}</span>
         </li>
       ))}
     </ul>

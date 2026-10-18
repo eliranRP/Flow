@@ -27,7 +27,7 @@ type Common = {
   wrapHint?: boolean;
   /** The hint's whole parts on one line; a part that does not fit drops (a transaction row always does). */
   hintParts?: readonly ReactNode[];
-  /** Hint uses t-hint, and the control points at it with aria-describedby. */
+  /** Hint uses t-caption t-muted, and the control points at it with aria-describedby. */
   describeHint?: boolean;
   href?: string;
   /** The href is an outside page: it opens in a new tab, and the name says so. */
@@ -347,7 +347,7 @@ export function ListRow(props: ListRowProps) {
               role={props.hintStatus ? "status" : undefined}
               className={cx(
                 "ui-row-hint",
-                props.describeHint === true && "t-hint",
+                props.describeHint === true && "t-caption t-muted",
                 props.wrapHint && "ui-row-hint-wrap",
                 props.skelHint && "ui-row-hint-skel",
                 oneLineHint && "ui-row-hint-line",
@@ -368,7 +368,7 @@ export function ListRow(props: ListRowProps) {
         </span>
       ) : props.variant === "project" || props.variant === "transaction" ? <RowAmount {...props} /> : null}
       {props.value != null ? <span className="ui-row-value">{props.value}</span> : null}
-      {props.meta ? <span className="ui-row-meta t-hint">{props.meta}</span> : null}
+      {props.meta ? <span className="ui-row-meta t-caption t-muted">{props.meta}</span> : null}
       {props.actionBelow ? null : props.action}
       {showChevron ? (
         <span className="ui-row-chevron" aria-hidden="true">
@@ -556,7 +556,7 @@ function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "
   const income = props.sign === "in" && props.agorot >= 0n;
   // Income is green with a "+" (decision 0181); the hidden word keeps direction out of colour alone (WCAG 1.4.1).
   return (
-    <span className="t-amount">
+    <span className="t-body">
       {income ? <span className="sr-only">{props.inWord ?? "הכנסה"} </span> : null}
       <Amount
         agorot={abs}
@@ -641,7 +641,7 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
   }
   if (props.missing != null) {
     return (
-      <span className="ui-row-missing t-amount">
+      <span className="ui-row-missing t-body">
         <span aria-hidden="true">—</span>
         <span className="sr-only">{props.missing}</span>
       </span>
@@ -649,7 +649,7 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
   }
   if (props.amounts != null && props.amounts.length > 0) {
     return (
-      <span className="ui-row-amounts t-amount">
+      <span className="ui-row-amounts t-body">
         {props.amounts.map((amount) => (
           <Amount
             key={amount.currency}
@@ -666,7 +666,7 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
     const abs = props.agorot < 0n ? -props.agorot : props.agorot;
     const income = props.agorot > 0n;
     return (
-      <span className={cx("t-amount", props.agorot === 0n && "ui-row-amount-zero")}>
+      <span className={cx("t-body", props.agorot === 0n && "ui-row-amount-zero")}>
         <Amount agorot={abs} currency={props.currency} direction={income ? "income" : "expense"} income={income} cents="always" zeroCents />
       </span>
     );

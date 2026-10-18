@@ -29,7 +29,7 @@ function ReviewWithBar({ kind, busy = false, disabled = false, toast }: BarArgs)
   return (
     <div className="ui-review-queue" data-bar="">
       <header className="ui-page">
-        <h1 className="t-title-1">לאישור</h1>
+        <h1 className="t-total">לאישור</h1>
       </header>
       <div className="ui-page-pad">
         <ReviewCard

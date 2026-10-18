@@ -37,7 +37,7 @@
 
 /* Waiting reserves the settled note line: the label's height, with no pill and no words. */
 .ui-review-note-slot {
-  min-block-size: calc(var(--type-label-size) * var(--type-label-line));
+  min-block-size: calc(var(--type-line2-size) * var(--type-line2-line));
 }
 
 /* FLOW-327 1.4: "1 מתוך 3" with no padding between a digit and "מתוך". FLOW-309: tabular digits, and
@@ -216,7 +216,7 @@
   align-items: flex-start;
 }
 
-.ui-review-doc .t-hint {
+.ui-review-doc .t-caption.t-muted {
   color: var(--color-text-secondary);
 }
 
@@ -255,8 +255,8 @@
   background: none;
   color: var(--color-text-muted);
   font: inherit;
-  font-size: var(--type-hint-size);
-  line-height: var(--type-hint-line);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
   text-align: start;
 }
 
@@ -278,7 +278,7 @@
 /* 44px hit area; the negative block margin keeps the line its hint height. */
 .ui-review-memo-button {
   min-block-size: var(--touch-min);
-  margin-block: calc((var(--type-hint-size) * var(--type-hint-line) - var(--touch-min)) / 2);
+  margin-block: calc((var(--type-caption-size) * var(--type-caption-line) - var(--touch-min)) / 2);
 }
 
 .ui-review-memo-button[data-open] {
@@ -383,7 +383,7 @@
 }
 
 .ui-review-field-label {
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
   line-height: var(--type-title-line);
   color: var(--color-text-secondary);
 }
@@ -404,7 +404,7 @@
 
 .ui-review-field-hint {
   flex: none;
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
   color: var(--color-text-secondary);
 }
 
@@ -462,7 +462,7 @@
   gap: var(--space-1) var(--space-2);
 }
 
-.ui-review-amount > .t-display {
+.ui-review-amount > .t-detail {
   flex: none;
   white-space: nowrap;
 }
@@ -471,7 +471,7 @@
    0.64em a character, so a figure of N characters fits the card's width (100cqi) at 100cqi / (N × 0.64).
    A figure that fits keeps the display size. */
 .ui-review-figure {
-  font-size: min(var(--type-display-size), calc(100cqi / (var(--figure-chars, 1) * 0.64)));
+  font-size: min(var(--type-detail-size), calc(100cqi / (var(--figure-chars, 1) * 0.64)));
   white-space: nowrap;
 }
 
@@ -479,8 +479,8 @@
   flex: none;
   background: color-mix(in srgb, var(--color-warning) 16%, var(--color-surface));
   color: var(--color-warning);
-  font-size: var(--type-hint-size);
-  font-weight: var(--type-title-3-weight);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-btn-weight);
   white-space: nowrap;
 }
 
@@ -615,7 +615,7 @@
   display: inline-flex;
   flex: none;
   align-items: center;
-  block-size: calc(var(--type-hint-size) * var(--type-hint-line));
+  block-size: calc(var(--type-caption-size) * var(--type-caption-line));
 }
 
 .ui-review-paid-text {
@@ -659,8 +659,8 @@
 .ui-review-auto {
   min-block-size: 0;
   color: var(--color-text-secondary);
-  font-size: var(--type-hint-size);
-  line-height: var(--type-hint-line);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
   min-inline-size: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -686,7 +686,7 @@
   border: 1px solid var(--color-line);
   border-radius: var(--radius-chip);
   color: var(--color-text-secondary);
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
   line-height: var(--type-title-line);
 }
 
@@ -756,7 +756,7 @@
   font-weight: var(--type-title-weight);
 }
 
-.ui-review-split-title > .t-hint {
+.ui-review-split-title > .t-caption.t-muted {
   color: var(--color-text-secondary);
   line-height: var(--type-title-line);
 }
@@ -780,7 +780,7 @@
   min-inline-size: 0;
 }
 
-.ui-review-split-name .t-hint {
+.ui-review-split-name .t-caption.t-muted {
   line-height: var(--type-title-line);
 }
 

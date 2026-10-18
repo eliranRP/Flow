@@ -100,8 +100,8 @@ export function LoanProjectPicker({
       {failed ? (
         <LoanReadError label="פרויקטים" busy={source.retrying === true} onRetry={() => { source.onRetry?.(); }} />
       ) : null}
-      {!loading && !failed && listed.length === 0 ? <p className="t-hint">אין עדיין פרויקטים.</p> : null}
-      {searchable && needle !== "" && shown.length === 0 ? <p className="t-hint">לא נמצא פרויקט בשם הזה</p> : null}
+      {!loading && !failed && listed.length === 0 ? <p className="t-caption t-muted">אין עדיין פרויקטים.</p> : null}
+      {searchable && needle !== "" && shown.length === 0 ? <p className="t-caption t-muted">לא נמצא פרויקט בשם הזה</p> : null}
     </div>
   );
 }

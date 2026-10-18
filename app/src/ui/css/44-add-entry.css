@@ -48,7 +48,7 @@
 }
 
 .ui-add-tile-name {
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   font-weight: var(--type-btn-weight);
 }
 
@@ -118,14 +118,14 @@
 .ui-add-label {
   line-height: calc(var(--type-title-line) - 0.05);
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
-  font-weight: var(--type-label-weight);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-line2-weight);
 }
 
 .ui-add-hint {
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
-  line-height: var(--type-hint-line);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
 }
 
 .ui-add-hint-bad {
@@ -212,8 +212,8 @@
   background: transparent;
   color: var(--color-text-secondary);
   font: inherit;
-  font-size: var(--type-label-size);
-  font-weight: var(--type-label-weight);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-line2-weight);
   cursor: pointer;
 }
 
@@ -237,7 +237,7 @@
   background: transparent;
   color: var(--color-accent-text);
   font: inherit;
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   cursor: pointer;
 }
 
@@ -273,13 +273,13 @@
   border: 0;
   background: transparent;
   font: inherit;
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
   cursor: pointer;
 }
 
 .ui-add-create-add {
   color: var(--color-accent-text);
-  font-weight: var(--type-label-weight);
+  font-weight: var(--type-line2-weight);
 }
 
 .ui-add-create-add:disabled {
@@ -301,8 +301,8 @@
 
 .ui-add-match-title {
   color: var(--color-accent-text);
-  font-size: var(--type-label-size);
-  font-weight: var(--type-label-weight);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-line2-weight);
 }
 
 .ui-add-match-line {
@@ -330,7 +330,7 @@
 .ui-add-error {
   margin: 0;
   color: var(--color-bad);
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
 }
 
 .ui-add-save {
@@ -341,7 +341,7 @@
   color: var(--color-on-accent);
   font: inherit;
   font-size: var(--type-body-size);
-  font-weight: var(--type-label-weight);
+  font-weight: var(--type-line2-weight);
   cursor: pointer;
 }
 
@@ -427,6 +427,6 @@
 .ui-add-menu .ui-sheet-hint {
   padding: 0 var(--sheet-side) calc(var(--space-1) / 2);
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
   line-height: calc(var(--type-title-line) - 0.05);
 }

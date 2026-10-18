@@ -147,7 +147,7 @@ export function DateSheet({
         </Button>
       }
     >
-      {reason != null ? <p className="t-hint ui-date-reason">{reason}</p> : null}
+      {reason != null ? <p className="t-caption t-muted ui-date-reason">{reason}</p> : null}
       {shortcuts ? (
         <div className="flex flex-wrap gap-2">
           <Chip
@@ -183,7 +183,7 @@ export function DateSheet({
         <button
           ref={titleRef}
           type="button"
-          className="t-label ui-date-title"
+          className="t-line2 ui-date-title"
           aria-expanded={years}
           aria-label={`${monthTitle(cursor.year, cursor.month)}, בחירת שנה`}
           disabled={disabled || busy || yearFirst >= yearLast}
@@ -235,8 +235,8 @@ export function DateSheet({
           onPick={choose}
         />
       )}
-      <p className="t-label">{dayLabel(pending)}</p>
-      <p className="t-hint">
+      <p className="t-line2">{dayLabel(pending)}</p>
+      <p className="t-caption t-muted">
         <bdi className="ui-num" dir="ltr">{formatDisplay(pending)}</bdi>
       </p>
       {error ? <p id={errorId} className="ui-field-message ui-date-error" role="alert">{error}</p> : null}

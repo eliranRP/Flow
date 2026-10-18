@@ -107,7 +107,7 @@ export function CompanySheet({
       {data == null ? (
         companies.isError ? (
           <div className="cs-error">
-            <p className="t-hint" role="status">לא הצלחנו לטעון את העסקים.</p>
+            <p className="t-caption t-muted" role="status">לא הצלחנו לטעון את העסקים.</p>
             <Button variant="link" busy={companies.isFetching} onClick={() => { void companies.refetch(); }}>
               ניסיון חוזר
             </Button>

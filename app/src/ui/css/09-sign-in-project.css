@@ -15,8 +15,8 @@
 
 .ui-signin-tagline {
   margin-top: var(--label-gap);
-  font-size: var(--type-title-3-size);
-  line-height: var(--type-title-3-line);
+  font-size: var(--type-btn-size);
+  line-height: var(--type-btn-line);
   font-weight: var(--type-body-weight);
   color: var(--color-text-secondary);
   white-space: nowrap;
@@ -172,24 +172,24 @@
 .ui-skel-project-title {
   display: flex;
   align-items: flex-start;
-  block-size: calc(var(--type-title-2-size) * var(--type-title-2-line));
+  block-size: calc(var(--type-name-size) * var(--type-name-line));
 }
 
 .ui-skel-project-title-bar {
   inline-size: var(--skel-md);
-  block-size: calc(var(--type-title-2-size) * var(--type-title-2-line) - var(--space-1));
+  block-size: calc(var(--type-name-size) * var(--type-name-line) - var(--space-1));
 }
 
 .ui-skel-project-label {
   inline-size: var(--skel-md);
-  block-size: calc(var(--type-label-size) * var(--type-label-line));
+  block-size: calc(var(--type-line2-size) * var(--type-line2-line));
   margin-top: var(--space-2);
   margin-bottom: var(--space-2);
 }
 
 .ui-skel-project-num {
   inline-size: var(--skel-lg);
-  block-size: calc(var(--type-display-size) * var(--type-display-line));
+  block-size: calc(var(--type-detail-size) * var(--type-detail-line));
   border-radius: var(--radius-input);
 }
 

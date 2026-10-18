@@ -104,9 +104,9 @@
 .ui-empty-line {
   max-inline-size: min(100%, var(--empty-measure));
   margin-top: var(--label-gap);
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line);
-  font-weight: var(--type-label-weight);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  font-weight: var(--type-line2-weight);
   color: var(--color-text-secondary);
   display: -webkit-box;
   overflow: hidden;
@@ -301,8 +301,8 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   margin-inline-end: var(--back-pull-end);
 }
 
-.ui-band-hero .t-title-2,
-.ui-band-hero .t-band-title,
+.ui-band-hero .t-name,
+.ui-band-hero .t-title,
 .ui-notice-title {
   display: -webkit-box;
   min-width: 0;
@@ -337,9 +337,9 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 
 .ui-notice-body {
   margin-top: var(--note-body-gap);
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line);
-  font-weight: var(--type-label-weight);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  font-weight: var(--type-line2-weight);
   color: var(--color-text-secondary);
 }
 

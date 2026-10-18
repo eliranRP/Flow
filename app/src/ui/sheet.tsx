@@ -91,7 +91,7 @@ export function SheetSurface({
   const heading = subtitle ? (
     <div className="ui-sheet-titles">
       {heading0}
-      <span className="ui-sheet-subtitle t-hint">{subtitle}</span>
+      <span className="ui-sheet-subtitle t-caption t-muted">{subtitle}</span>
     </div>
   ) : heading0;
   return (
@@ -107,7 +107,7 @@ export function SheetSurface({
           </IconButton>
         ) : null}
       </div>
-      {hint ? <p className="ui-sheet-hint t-label">{hint}</p> : null}
+      {hint ? <p className="ui-sheet-hint t-line2">{hint}</p> : null}
       <div className="ui-sheet-body">{children}</div>
       {action ? <div className={cx("ui-sheet-foot", footClassName)}>{action}</div> : null}
     </div>

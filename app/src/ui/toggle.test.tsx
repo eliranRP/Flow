@@ -44,6 +44,6 @@ describe("Toggle", () => {
     expect(label).toHaveClass("ui-switch-label");
     const style = getComputedStyle(label);
     expect(style.fontWeight).toBe("var(--type-meta-weight)");
-    expect(style.fontSize).toBe("var(--type-title-3-size)");
+    expect(style.fontSize).toBe("var(--type-btn-size)");
   });
 });

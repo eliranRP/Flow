@@ -11,7 +11,7 @@
   margin-top: var(--space-1);
 }
 
-.ui-connection-page > .ui-page-stacked .ui-focus-title ~ .t-label {
+.ui-connection-page > .ui-page-stacked .ui-focus-title ~ .t-line2 {
   margin-top: var(--space-1);
   line-height: calc(var(--type-title-line) - 0.015);
 }

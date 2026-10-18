@@ -37,9 +37,9 @@
 
 .ui-pinv-hint {
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
-  line-height: var(--type-hint-line);
-  font-weight: var(--type-hint-weight);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  font-weight: var(--type-caption-weight);
 }
 
 /* The equity card: two columns, then today's value split between equity and loans. */

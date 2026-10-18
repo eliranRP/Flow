@@ -29,8 +29,8 @@
   border-radius: var(--radius-card);
 }
 
-.ui-inv-summary > .t-label,
-.ui-inv-summary > .t-hint {
+.ui-inv-summary > .t-line2,
+.ui-inv-summary > .t-caption.t-muted {
   margin: 0;
 }
 

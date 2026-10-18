@@ -52,7 +52,7 @@ export const InstallAndroid: Story = {
   name: "Android (prompt)",
   render: () => (
     <StoryRoute entry="/">
-      <InstallScreen mode="android-prompt" example={<span className="t-hint">{exampleLabel}</span>} onDismiss={() => undefined} />
+      <InstallScreen mode="android-prompt" example={<span className="t-caption t-muted">{exampleLabel}</span>} onDismiss={() => undefined} />
     </StoryRoute>
   ),
 };
@@ -61,7 +61,7 @@ export const InstallAndroidSteps: Story = {
   name: "Android (no prompt)",
   render: () => (
     <StoryRoute entry="/">
-      <InstallScreen mode="android-steps" example={<span className="t-hint">{exampleLabel}</span>} onDismiss={() => undefined} />
+      <InstallScreen mode="android-steps" example={<span className="t-caption t-muted">{exampleLabel}</span>} onDismiss={() => undefined} />
     </StoryRoute>
   ),
 };
@@ -70,7 +70,7 @@ export const InstallIphone: Story = {
   name: "iPhone Safari",
   render: () => (
     <StoryRoute entry="/">
-      <InstallScreen mode="iphone" example={<span className="t-hint">{exampleLabel}</span>} onDismiss={() => undefined} />
+      <InstallScreen mode="iphone" example={<span className="t-caption t-muted">{exampleLabel}</span>} onDismiss={() => undefined} />
     </StoryRoute>
   ),
 };
@@ -79,7 +79,7 @@ export const InstallIphoneOther: Story = {
   name: "iPhone other browser",
   render: () => (
     <StoryRoute entry="/">
-      <InstallScreen mode="iphone-other" browser="other" example={<span className="t-hint">{exampleLabel}</span>} onDismiss={() => undefined} />
+      <InstallScreen mode="iphone-other" browser="other" example={<span className="t-caption t-muted">{exampleLabel}</span>} onDismiss={() => undefined} />
     </StoryRoute>
   ),
 };
@@ -88,7 +88,7 @@ export const InstallIpad: Story = {
   name: "iPad",
   render: () => (
     <StoryRoute entry="/">
-      <InstallScreen mode="ipad" example={<span className="t-hint">{exampleLabel}</span>} onDismiss={() => undefined} />
+      <InstallScreen mode="ipad" example={<span className="t-caption t-muted">{exampleLabel}</span>} onDismiss={() => undefined} />
     </StoryRoute>
   ),
 };

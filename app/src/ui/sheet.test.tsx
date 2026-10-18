@@ -77,7 +77,7 @@ describe("Sheet", () => {
       </Sheet>,
     );
     expect(screen.getByRole("heading", { name: "תקופה" })).toHaveClass("t-sheet");
-    expect(screen.getByRole("heading", { name: "תקופה" })).not.toHaveClass("t-title-2");
+    expect(screen.getByRole("heading", { name: "תקופה" })).not.toHaveClass("t-name");
   });
 
   it("sizes the tall sheet with the visual viewport variable", () => {

@@ -76,21 +76,21 @@ export function RecurringList({ project, subtitle, currency, outflow, late, grou
     <div className="ui-recurring">
       <header className="ui-recurring-head">
         <h1 className="t-title">קבועים</h1>
-        {project != null && <p className="t-heading">{project}</p>}
-        <p className="t-label">{subtitle}</p>
+        {project != null && <p className="t-sheet">{project}</p>}
+        <p className="t-line2">{subtitle}</p>
       </header>
       <section className="ui-card ui-recurring-outflow" aria-label="יוצא החודש">
-        <p className="t-label">יוצא החודש</p>
-        <p className="t-display">{money(outflow.total)}</p>
+        <p className="t-line2">יוצא החודש</p>
+        <p className="t-detail">{money(outflow.total)}</p>
         <div className="ui-recurring-bar" role="img" aria-label={`שולם ${money(outflow.paid)}`}>
           <span style={{ width: barWidth(outflow.paid, outflow.total) }} />
         </div>
-        <p className="t-label">עוד {money(outflow.toCome)} עד סוף החודש</p>
+        <p className="t-line2">עוד {money(outflow.toCome)} עד סוף החודש</p>
       </section>
       {late.length > 0 && (
         <section>
           <SectionHead title="לא הגיעו">
-            <span className="t-label">{late.length}</span>
+            <span className="t-line2">{late.length}</span>
           </SectionHead>
           <ul className="ui-recurring-rows">{late.map(rowView)}</ul>
         </section>
@@ -98,7 +98,7 @@ export function RecurringList({ project, subtitle, currency, outflow, late, grou
       {groups.map((group) => (
         <section key={group.id}>
           <SectionHead title={group.title}>
-            <span className="t-label">
+            <span className="t-line2">
               {group.income ? "+" : ""}
               {money(group.monthlyMinor)} לחודש
             </span>
@@ -136,7 +136,7 @@ function RowView({
           {row.income && row.paid ? "+" : ""}
           {money(row.minor)}
         </span>
-        {row.hint != null && <span className={cx("t-label", row.alert && "ui-recurring-alert")}>{row.hint}</span>}
+        {row.hint != null && <span className={cx("t-line2", row.alert && "ui-recurring-alert")}>{row.hint}</span>}
       </span>
     </>
   );
@@ -173,9 +173,9 @@ function RowName({ row }: { row: RecurringListRow }) {
     <>
       <span className="ui-recurring-title">{row.name}</span>
       {row.suggestion != null ? (
-        <span className="t-label ui-recurring-suggest">אולי הגיע בשם אחר</span>
+        <span className="t-line2 ui-recurring-suggest">אולי הגיע בשם אחר</span>
       ) : (
-        row.place != null && <span className="t-label">{row.place}</span>
+        row.place != null && <span className="t-line2">{row.place}</span>
       )}
     </>
   );

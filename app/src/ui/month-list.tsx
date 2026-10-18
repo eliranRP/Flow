@@ -197,11 +197,11 @@ function MonthSection<T>({
         </GroupHead>
       ) : head ? (
         <div className="ui-month-head">
-          <h2 className="ui-month-title t-heading" id={id}>{group.title}</h2>
+          <h2 className="ui-month-title t-sheet" id={id}>{group.title}</h2>
           {showTotals && signedTotal && shown[0] != null ? <MonthSigned total={shown[0]} /> : null}
           {showTotals && net && shown.length > 0 ? <MonthNet totals={shown} /> : null}
           {showTotals && !net && !signedTotal ? (
-            <p className="ui-month-totals t-label">
+            <p className="ui-month-totals t-line2">
               {shown.map((total, index) => <MonthTotalLine key={total.currency} total={total} cents={cents} cost={cost} first={index === 0} />)}
             </p>
           ) : null}
@@ -242,7 +242,7 @@ function Rows<T>({
 
 /** The month's income minus expenses in its first currency, signed, whole units (opt-in: Search). */
 function MonthSigned({ total }: { total: MonthTotal }) {
-  return <p className="ui-month-signed t-label ui-num">{formatAmountText(total.incomeMinor - total.expenseMinor, total.currency)}</p>;
+  return <p className="ui-month-signed t-line2 ui-num">{formatAmountText(total.incomeMinor - total.expenseMinor, total.currency)}</p>;
 }
 
 const CURRENCY_WORD: Record<string, string> = { ILS: "בשקלים", USD: "בדולר", EUR: "באירו" };
@@ -257,13 +257,13 @@ function MonthNet({ totals }: { totals: readonly MonthTotal[] }) {
   if (first == null) return null;
   return (
     <>
-      <p className="ui-month-totals t-label">
+      <p className="ui-month-totals t-line2">
         <span className="ui-month-line">
           נטו <bdi dir="ltr" className="ui-num">{netText(first)}</bdi>
         </span>
       </p>
       {rest.map((total) => (
-        <p key={total.currency} className="ui-month-more t-hint">
+        <p key={total.currency} className="ui-month-more t-caption t-muted">
           {"ועוד "}
           <bdi dir="ltr" className="ui-num">{netText(total)}</bdi>
           {` ${CURRENCY_WORD[total.currency] ?? `ב־${total.currency}`}`}

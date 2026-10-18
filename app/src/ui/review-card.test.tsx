@@ -86,7 +86,7 @@ describe("ReviewCard FLOW-327 additions", () => {
     const quiet = reviewFlagView([{ transaction_id: "t", kind: "new_party_large", jev_score: null }], { direction: "income" });
     rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} flag={quiet} />);
     const hint = container.querySelector(".ui-review-flag-quiet");
-    expect(hint).toHaveClass("t-hint");
+    expect(hint).toHaveClass("t-caption t-muted");
     expect(hint?.textContent).toBe("לבדיקה: לקוח חדש בסכום גבוה");
     expect(container.querySelector(".ui-review-flag")).toBeNull();
   });
@@ -99,7 +99,7 @@ describe("ReviewCard FLOW-327 additions", () => {
     expect(pill).toHaveClass("ui-status");
     expect(pill).toHaveAttribute("aria-hidden", "true");
     expect(pill?.textContent).toBe("↑ 240%");
-    expect(row?.querySelector(".t-display")?.nextElementSibling).toBe(pill);
+    expect(row?.querySelector(".t-detail")?.nextElementSibling).toBe(pill);
     expect(row?.querySelector(".sr-only")?.textContent).toBe("גבוה ב־240% מהרגיל לספק");
     const usual = container.querySelector(".ui-review-usual");
     expect(usual?.textContent).toBe("בדרך כלל ₪2,500");
@@ -454,7 +454,7 @@ describe("ReviewCard paid line (FLOW-309, decision 0165)", () => {
 
   it("sits right under the amount when there is no VAT line", () => {
     const { container } = card(reviewPaidView({ receipts: [receipt("2026-10-12")], paid: true, paid_on: "2026-10-12" }, now));
-    expect(container.querySelector(".ui-review-paid")?.previousElementSibling).toHaveClass("t-display");
+    expect(container.querySelector(".ui-review-paid")?.previousElementSibling).toHaveClass("t-detail");
   });
 
   it("says שולם חלקית with the latest receipt and no ✓ on a part payment", () => {

@@ -187,9 +187,9 @@ function LoanDetailLoading({ back }: { back: string }) {
       <p className="sr-only" role="status">טוען…</p>
       {/* FLOW-115: the name, the balance and the status hold their loaded lines, so nothing moves when the read lands. */}
       <div className="ui-page-pad" aria-hidden="true">
-        <p className="t-title-1 ui-loan-skel-title ui-loan-skel-line"><Skeleton width="md" /></p>
+        <p className="t-total ui-loan-skel-title ui-loan-skel-line"><Skeleton width="md" /></p>
         <div className="ui-loan-head">
-          <p className="t-display ui-loan-skel-line"><Skeleton width="lg" /></p>
+          <p className="t-detail ui-loan-skel-line"><Skeleton width="lg" /></p>
           <div className="ui-status-row">
             <span className="ui-status ui-skeleton-bar ui-loan-skel-pill"><span className="ui-chip-label">{"\u00a0"}</span></span>
           </div>

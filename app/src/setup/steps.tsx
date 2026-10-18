@@ -194,9 +194,9 @@ export function StepBusiness({
             onChange={setBasis}
             options={BASIS_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
           />
-          <p className="ui-onb-note t-hint">{BASIS_NOTE[basis]}</p>
+          <p className="ui-onb-note t-caption t-muted">{BASIS_NOTE[basis]}</p>
         </div>
-        {failed ? <p className="t-hint ui-onb-error" role="alert">{SAVE_ERROR}</p> : null}
+        {failed ? <p className="t-caption t-muted ui-onb-error" role="alert">{SAVE_ERROR}</p> : null}
       </form>
     </OnboardingFrame>
   );
@@ -278,10 +278,10 @@ export function StepConnect({
             <div key={kind} className="ui-onb-conn">
               <div className="ui-onb-conn-text">
                 <span className="t-name">{CONNECT_ROWS[kind].name}</span>
-                <span className={row.connected ? "t-hint ui-onb-good" : "t-hint"}>{row.sub}</span>
+                <span className={row.connected ? "t-caption t-muted ui-onb-good" : "t-caption t-muted"}>{row.sub}</span>
               </div>
               {row.connected ? (
-                <span className="ui-onb-conn-done t-hint">{CONNECT_DONE_LABEL}</span>
+                <span className="ui-onb-conn-done t-caption t-muted">{CONNECT_DONE_LABEL}</span>
               ) : (
                 <Button
                   type="button"
@@ -296,7 +296,7 @@ export function StepConnect({
           );
         })}
       </div>
-      <p className="t-hint ui-onb-note">{CONNECT_NOTE}</p>
+      <p className="t-caption t-muted ui-onb-note">{CONNECT_NOTE}</p>
       <SumitConnectSheet
         open={sumitOpen}
         onOpenChange={(next) => { setSumitSheet(next); if (!next) setPending(null); }}
@@ -407,7 +407,7 @@ export function StepProjects({
       ) : null}
       {shown.length > 0 ? (
         <div className="ui-onb-suggest">
-          <p className="t-hint">{SUGGESTED_PROJECTS_LABEL}</p>
+          <p className="t-caption t-muted">{SUGGESTED_PROJECTS_LABEL}</p>
           <div className="ui-onb-chips">
             {shown.map((name) => (
               <button key={name} type="button" className="ui-onb-chip ui-onb-chip-suggest" onClick={() => { add(name); }}>
@@ -417,7 +417,7 @@ export function StepProjects({
           </div>
         </div>
       ) : null}
-      {failed ? <p className="t-hint ui-onb-error" role="alert">{SAVE_ERROR}</p> : null}
+      {failed ? <p className="t-caption t-muted ui-onb-error" role="alert">{SAVE_ERROR}</p> : null}
     </OnboardingFrame>
   );
 }
@@ -468,16 +468,16 @@ export function StepLoans({
             <div key={lender.name} className="ui-onb-loan">
               <div className="ui-onb-conn-text">
                 <span className="t-name">{lender.name}</span>
-                <span className="t-hint">{`משלמים ${formatMoney(BigInt(lender.monthly_agorot), currency)} בחודש · מ־${monthYear(lender.since)}`}</span>
+                <span className="t-caption t-muted">{`משלמים ${formatMoney(BigInt(lender.monthly_agorot), currency)} בחודש · מ־${monthYear(lender.since)}`}</span>
               </div>
-              <span className="t-hint ui-onb-pending">{LOAN_PENDING}</span>
+              <span className="t-caption t-muted ui-onb-pending">{LOAN_PENDING}</span>
             </div>
           ))}
         </div>
       ) : null}
       {shown.length > 0 ? (
         <div className="ui-onb-suggest">
-          <p className="t-hint">{LOANS_SUGGESTED_LABEL}</p>
+          <p className="t-caption t-muted">{LOANS_SUGGESTED_LABEL}</p>
           <div className="ui-onb-chips">
             {shown.map((lender) => (
               <button key={lender.name} type="button" className="ui-onb-chip ui-onb-chip-suggest" onClick={() => { onPick(lender); }}>
@@ -490,7 +490,7 @@ export function StepLoans({
       <button type="button" className="ui-onb-add-loan" onClick={() => { openNewLoan(() => { setSheet(true); }); }}>
         {LOAN_ADD_OTHER}
       </button>
-      <p className="t-hint ui-onb-note">{LOAN_NOTE}</p>
+      <p className="t-caption t-muted ui-onb-note">{LOAN_NOTE}</p>
       <NewLoanSheet
         open={sheet}
         onOpenChange={setSheet}
@@ -531,7 +531,7 @@ export function StepJev({ onDone, onSkipStep, onSkipAll, onBack }: StepProps) {
       <div className="ui-onb-card ui-onb-switch">
         <Toggle label={JEV_LABEL} hint={JEV_HINT} checked={on} busy={saving} onChange={setOn} />
       </div>
-      {failed ? <p className="t-hint ui-onb-error" role="alert">{SAVE_ERROR}</p> : null}
+      {failed ? <p className="t-caption t-muted ui-onb-error" role="alert">{SAVE_ERROR}</p> : null}
     </OnboardingFrame>
   );
 }
@@ -563,7 +563,7 @@ export function StepReview({
           onStamp({ sample_review_at: nowIso() });
         }}
       />
-      <p className="t-hint ui-onb-note">{REVIEW_SAMPLE_NOTE}</p>
+      <p className="t-caption t-muted ui-onb-note">{REVIEW_SAMPLE_NOTE}</p>
     </OnboardingFrame>
   );
 }

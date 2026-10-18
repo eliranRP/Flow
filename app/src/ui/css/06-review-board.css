@@ -72,7 +72,7 @@
     font-weight: var(--type-title-weight);
   }
 
-  .ui-review-queue .ui-review-copy .t-hint {
+  .ui-review-queue .ui-review-copy .t-caption.t-muted {
     font-size: var(--type-meta-size);
     line-height: calc(var(--type-title-line) - 0.015);
   }

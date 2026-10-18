@@ -44,7 +44,7 @@ export function DevReview() {
     <div className="ui-review-queue" data-bar="">
       <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" />
       <ReviewSegments index={Math.min(index + 1, total)} total={total} />
-      <p className="t-hint ui-review-counter">
+      <p className="t-caption t-muted ui-review-counter">
         <bdi dir="ltr">{String(Math.min(index + 1, total))}</bdi>
         {" מתוך "}
         <bdi dir="ltr">{String(total)}</bdi>
@@ -60,7 +60,7 @@ export function DevReview() {
           />
         </div>
       ) : (
-        <p className="ui-page-pad t-title-3">אין פריטים לאישור</p>
+        <p className="ui-page-pad t-btn">אין פריטים לאישור</p>
       )}
       <ActionBar>
         <Button

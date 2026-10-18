@@ -52,7 +52,7 @@ export function OnboardingFrame({
             ) : (
               <span className="ui-onb-link ui-onb-link-hidden" aria-hidden="true">{BACK}</span>
             )}
-            <span className="t-hint ui-onb-counter" aria-live="polite">
+            <span className="t-caption t-muted ui-onb-counter" aria-live="polite">
               שלב <bdi dir="ltr">{String(step)}</bdi> מתוך <bdi dir="ltr">{String(SETUP_TOTAL)}</bdi>
             </span>
             <Button variant="link" onClick={() => { setSkipOpen(true); }} className="ui-onb-link">

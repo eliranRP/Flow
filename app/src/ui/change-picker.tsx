@@ -156,7 +156,7 @@ export function Picker({
           autoFocus={false}
         />
       ) : null}
-      {note ? <p className="t-hint ui-pick-note">{note}</p> : null}
+      {note ? <p className="t-caption t-muted ui-pick-note">{note}</p> : null}
       {loading ? (
         <div aria-busy="true">
           <p className="sr-only" role="status">טוען…</p>
@@ -187,14 +187,14 @@ export function Picker({
               {pinned != null ? row(pinned) : null}
               {sections.map((section) => (
                 <div key={section.index} className="ui-pick-group" role="group" aria-labelledby={`${sectionId}-${String(section.index)}`}>
-                  <p className="t-label ui-pick-group-head" id={`${sectionId}-${String(section.index)}`}>{section.heading}</p>
+                  <p className="t-line2 ui-pick-group-head" id={`${sectionId}-${String(section.index)}`}>{section.heading}</p>
                   {section.options.map(row)}
                 </div>
               ))}
             </div>
           ) : listed.length > 0 || (noneLabel != null && needle === "") ? (
             <>
-              {heading != null && needle === "" ? <p className="t-label ui-pick-group-head">{heading}</p> : null}
+              {heading != null && needle === "" ? <p className="t-line2 ui-pick-group-head">{heading}</p> : null}
               <div role="radiogroup" aria-label={kind === "project" ? "פרויקט" : "קטגוריה"}>
                 {noneLabel != null && needle === "" ? (
                   <ListRow control="radio"
@@ -217,7 +217,7 @@ export function Picker({
           {reversal && reversalVisible ? (
             <div className="ui-reversal">
               {reversalForced ? (
-                <p className="t-label ui-reversal-head">{reversal.heading}</p>
+                <p className="t-line2 ui-reversal-head">{reversal.heading}</p>
               ) : (
                 <Button
                   variant="link"
@@ -231,7 +231,7 @@ export function Picker({
               <div id={sectionId} hidden={!reversalShown}>
                 {reversalShown ? (
                   <>
-                    <p className="t-hint ui-reversal-hint" id={`${sectionId}-hint`}>{reversal.hint}</p>
+                    <p className="t-caption t-muted ui-reversal-hint" id={`${sectionId}-hint`}>{reversal.hint}</p>
                     <div role="radiogroup" aria-label={reversal.heading} aria-describedby={`${sectionId}-hint`}>
                       {reversalListed.map(row)}
                     </div>
@@ -240,7 +240,7 @@ export function Picker({
               </div>
             </div>
           ) : null}
-          {empty ? <p className="t-hint">{kind === "project" ? "לא נמצא פרויקט בשם הזה" : "לא נמצאה קטגוריה בשם הזה"}</p> : null}
+          {empty ? <p className="t-caption t-muted">{kind === "project" ? "לא נמצא פרויקט בשם הזה" : "לא נמצאה קטגוריה בשם הזה"}</p> : null}
         </>
       )}
       {kind === "project" && !loading && !compact ? (

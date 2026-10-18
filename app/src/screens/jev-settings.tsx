@@ -282,7 +282,7 @@ export function JevSettingsCard({
                   onMode?.(mode);
                 }}
               />
-              <p className="t-hint ui-jev-options-hint" id={modeHintId}>{auto ? AUTO_HINT : SHADOW_HINT}</p>
+              <p className="t-caption t-muted ui-jev-options-hint" id={modeHintId}>{auto ? AUTO_HINT : SHADOW_HINT}</p>
               {auto ? (
                 <>
                   <SegmentedControl
@@ -299,7 +299,7 @@ export function JevSettingsCard({
                     }}
                   />
                   {offered ? null : (
-                    <p className="t-hint ui-jev-options-hint" id={thresholdHintId}>
+                    <p className="t-caption t-muted ui-jev-options-hint" id={thresholdHintId}>
                       {"הסף כרגע "}
                       <bdi className="ui-num" dir="ltr">{percent(threshold)}</bdi>
                     </p>

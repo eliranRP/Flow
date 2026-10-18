@@ -81,7 +81,7 @@ function staticSite(html, entries = { a: { type: "story", id: "a", title: "A", n
 test("a missing build and an empty index exit 2", async () => {
   const { execute } = await import("./clip-check.mjs");
   const reportDir = mkdtempSync(join(tmpdir(), "clip-report-"));
-  const empty = staticSite("<div id=\"storybook-root\"><p class=\"t-hint\">שלום</p></div>", {});
+  const empty = staticSite("<div id=\"storybook-root\"><p class=\"t-caption t-muted\">שלום</p></div>", {});
   try {
     assert.equal(await execute({ staticDir: join(tmpdir(), "clip-check-missing"), reportDir }), 2);
     const missing = JSON.parse(readFileSync(join(reportDir, "clip-report.json"), "utf8"));
@@ -120,7 +120,7 @@ test("a setup failure deletes a stale crash report", async () => {
 
 test("a crash exits 3", { skip: playwrightSkip }, async () => {
   const { execute } = await import("./clip-check.mjs");
-  const dir = staticSite("<div id=\"storybook-root\"><p class=\"t-hint\">שלום</p></div>");
+  const dir = staticSite("<div id=\"storybook-root\"><p class=\"t-caption t-muted\">שלום</p></div>");
   try {
     const code = await execute({
       staticDir: dir,
@@ -142,7 +142,7 @@ test("a crash exits 3", { skip: playwrightSkip }, async () => {
 
 test("the preview server binds an ephemeral port", async () => {
   const { listenStatic } = await import("./clip-check.mjs");
-  const dir = staticSite("<div id=\"storybook-root\"><p class=\"t-hint\">שלום</p></div>");
+  const dir = staticSite("<div id=\"storybook-root\"><p class=\"t-caption t-muted\">שלום</p></div>");
   try {
     const first = await listenStatic(dir);
     const second = await listenStatic(dir);

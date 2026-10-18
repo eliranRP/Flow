@@ -121,7 +121,7 @@ function reviewRow(id: string, supplier: string, projectId: string | null, extra
 
 function showsPlace(text: string) {
   expect(screen.getByText((_content, element) => {
-    return element?.tagName === "SPAN" && element.classList.contains("t-hint") && element.textContent === `פריט ${text}`;
+    return element?.tagName === "SPAN" && element.classList.contains("t-caption t-muted") && element.textContent === `פריט ${text}`;
   })).toBeInTheDocument();
 }
 

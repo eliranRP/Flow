@@ -85,9 +85,9 @@ export function CashEmptyHome({
           <p className="ui-band-month-static">{homeMonthLabel(currentKey)}</p>
           <div className="ui-band-hero">
             <div className="ui-hero">
-              <p className="ui-band-label t-label">{`תזרים ${monthName(currentKey)}`}</p>
+              <p className="ui-band-label t-line2">{`תזרים ${monthName(currentKey)}`}</p>
               <h1 className="ui-hero-figure ui-band-fade"><span><Amount agorot={0n} currency={currency} size="hero" /></span></h1>
-              <p className="ui-hero-explain t-label">עוד אין תנועות. הן יגיעו מהבנק.</p>
+              <p className="ui-hero-explain t-line2">עוד אין תנועות. הן יגיעו מהבנק.</p>
             </div>
           </div>
         </div>

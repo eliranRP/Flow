@@ -53,10 +53,10 @@ export const sampleReview: ReviewRow = {
 export const exampleLabel = "נתוני דוגמה · Example data";
 
 export function ExampleBar() {
-  return <p className="ui-example-bar t-hint">{exampleLabel}</p>;
+  return <p className="ui-example-bar t-caption t-muted">{exampleLabel}</p>;
 }
 
-export const exampleOnBand = <span className="ui-example t-hint">{exampleLabel}</span>;
+export const exampleOnBand = <span className="ui-example t-caption t-muted">{exampleLabel}</span>;
 
 export const bareReview: ReviewRow = {
   ...sampleReview,

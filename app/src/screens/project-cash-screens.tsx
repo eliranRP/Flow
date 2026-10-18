@@ -130,13 +130,13 @@ export function ProjectCashOverview({
         heroClassName="ui-band-hero-project"
         hero={
           <>
-            <FocusTitle className="t-band-title">{project.name}</FocusTitle>
-            {stateLine == null ? null : <p className="t-label">{stateLine}</p>}
-            <p className="ui-band-label t-label">{key == null ? "תזרים" : `${cashTitle(key, now)}${key === israelToday(now).slice(0, 7) ? " · עד היום" : ""}`}</p>
+            <FocusTitle className="t-title">{project.name}</FocusTitle>
+            {stateLine == null ? null : <p className="t-line2">{stateLine}</p>}
+            <p className="ui-band-label t-line2">{key == null ? "תזרים" : `${cashTitle(key, now)}${key === israelToday(now).slice(0, 7) ? " · עד היום" : ""}`}</p>
             {data == null ? (
               <Skeleton tone="band" className="ui-skel-project-num" />
             ) : (
-              <div className="ui-project-profits t-display">
+              <div className="ui-project-profits t-detail">
                 {rows.map((row) => (
                   <p key={row.currency}>
                     <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} presentation="detail" zeroCents />

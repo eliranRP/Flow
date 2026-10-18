@@ -53,7 +53,7 @@ test("a story that renders late and clips exits 1", async () => {
     <script>
       setTimeout(() => {
         const node = document.createElement("p");
-        node.className = "t-hint";
+        node.className = "t-caption t-muted";
         node.style.cssText = "display:block;width:20px;white-space:nowrap";
         node.textContent = "מילהארוכהמאוד";
         document.getElementById("storybook-root").appendChild(node);
@@ -68,7 +68,7 @@ test("a story that renders late and clips exits 1", async () => {
 
 test("a hidden sheet panel is measured once it is visible", async () => {
   const dir = staticSite(`<div id="storybook-root"><div id="mark"></div></div>
-    <div class="ui-sheet-panel" style="display:none"><p class="t-hint" style="display:block;width:20px;white-space:nowrap">מילהארוכהמאוד</p></div>
+    <div class="ui-sheet-panel" style="display:none"><p class="t-caption t-muted" style="display:block;width:20px;white-space:nowrap">מילהארוכהמאוד</p></div>
     <script>setTimeout(() => { document.querySelector(".ui-sheet-panel").style.display = "block"; }, 80);</script>`);
   try {
     expect(await execute({ staticDir: dir, widths: [320], themes: ["light"], reportDir: dir })).toBe(1);
@@ -78,7 +78,7 @@ test("a hidden sheet panel is measured once it is visible", async () => {
 });
 
 test("a Storybook error display and a story with no text exit 2", async () => {
-  const errorDir = staticSite(`<div id="storybook-root"><p class="t-hint">שלום</p></div><p id="error-message">failed</p>
+  const errorDir = staticSite(`<div id="storybook-root"><p class="t-caption t-muted">שלום</p></div><p id="error-message">failed</p>
     <script>document.body.classList.add("sb-show-errordisplay");</script>`);
   const emptyDir = staticSite("<div id=\"storybook-root\"><div class=\"box\"></div></div>");
   try {
@@ -91,7 +91,7 @@ test("a Storybook error display and a story with no text exit 2", async () => {
 });
 
 test("a fitting story exits 0 and a single-line hint is not exempt", async () => {
-  const fit = staticSite("<div id=\"storybook-root\"><p class=\"t-hint\">שלום</p></div>");
+  const fit = staticSite("<div id=\"storybook-root\"><p class=\"t-caption t-muted\">שלום</p></div>");
   const title = staticSite(`<style>.ui-row-title{display:block;width:20px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}</style>
     <div id="storybook-root"><p class="ui-row-title">כותרתארוכהמאודשלאנכנסת</p></div>`);
   const hint = staticSite(`<style>.ui-row-hint{display:block;width:20px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}</style>
@@ -117,11 +117,11 @@ test("a fitting story exits 0 and a single-line hint is not exempt", async () =>
 
 test("a visually hidden 1px line is not measured, so a fitting story can exit 0", async () => {
   const dir = staticSite(`<style>
-    .t-hint { display: block; }
+    .t-caption.t-muted { display: block; }
     .sr-only { display: block; position: absolute; width: 1px; height: 1px; overflow: hidden; white-space: nowrap; line-height: 1px; }
   </style>
   <div id="storybook-root">
-    <p class="t-hint">שלום</p>
+    <p class="t-caption t-muted">שלום</p>
     <p class="sr-only">טוען… מילהארוכהמאודשלאנכנסת</p>
   </div>`);
   const lines: string[] = [];
@@ -139,7 +139,7 @@ test("a visually hidden 1px line is not measured, so a fitting story can exit 0"
     };
     const elements = report.views.flatMap((view) => view.elements);
     expect(elements).toHaveLength(1);
-    expect(elements[0]?.className).toBe("t-hint");
+    expect(elements[0]?.className).toBe("t-caption t-muted");
     expect(elements.some((element) => element.className === "sr-only")).toBe(false);
     expect(report.views[0]?.storyId).toBe("a");
     expect(report.views[0]?.width).toBe(320);
@@ -150,7 +150,7 @@ test("a visually hidden 1px line is not measured, so a fitting story can exit 0"
 });
 
 test("a Storybook error is printed and exits 2 even when another story clips", async () => {
-  const dir = staticSite(`<div id="storybook-root"><p class="t-hint" style="display:block;width:20px;white-space:nowrap">מילהארוכהמאוד</p></div>
+  const dir = staticSite(`<div id="storybook-root"><p class="t-caption t-muted" style="display:block;width:20px;white-space:nowrap">מילהארוכהמאוד</p></div>
     <script>
       const id = new URLSearchParams(location.search).get("id");
       if (id === "err") document.body.classList.add("sb-show-errordisplay");
@@ -185,7 +185,7 @@ test("a Storybook error is printed and exits 2 even when another story clips", a
 });
 
 test("one story that measures nothing exits 2 even when another story fits", async () => {
-  const dir = staticSite(`<div id="storybook-root"><p class="t-hint">שלום</p></div>
+  const dir = staticSite(`<div id="storybook-root"><p class="t-caption t-muted">שלום</p></div>
     <script>
       const id = new URLSearchParams(location.search).get("id");
       if (id === "empty") {
@@ -254,7 +254,7 @@ test("a bare span and a tab label are measured, and a no-text story that measure
 
 test("an inline bdi is measured on the block that clips", async () => {
   const dir = staticSite(`<style>
-      .ui-row-hint, .mixed, .t-display { display: block; width: 80px; overflow: hidden; white-space: nowrap; }
+      .ui-row-hint, .mixed, .t-detail { display: block; width: 80px; overflow: hidden; white-space: nowrap; }
       bdi { display: inline; white-space: nowrap; }
     </style>
     <div id="storybook-root"></div>
@@ -263,7 +263,7 @@ test("an inline bdi is measured on the block that clips", async () => {
       const root = document.getElementById("storybook-root");
       if (id === "email") root.innerHTML = '<p class="ui-row-hint"><bdi dir="ltr">owner@example.com</bdi></p>';
       if (id === "mixed") root.innerHTML = '<p class="mixed">מספר <bdi dir="ltr">123456789012345</bdi></p>';
-      if (id === "amount") root.innerHTML = '<p class="t-display"><bdi class="ui-num">₪12,345,678.90</bdi></p>';
+      if (id === "amount") root.innerHTML = '<p class="t-detail"><bdi class="ui-num">₪12,345,678.90</bdi></p>';
     </script>`, {
     email: { type: "story", id: "email", title: "Email", name: "Email" },
     mixed: { type: "story", id: "mixed", title: "Mixed", name: "Mixed" },
@@ -280,14 +280,14 @@ test("an inline bdi is measured on the block that clips", async () => {
     expect(report.failures.some((line) => line.includes("amount"))).toBe(true);
     expect(report.views.find((view) => view.storyId === "email")?.elements.map((element) => element.className)).toEqual(["ui-row-hint"]);
     expect(report.views.find((view) => view.storyId === "mixed")?.elements.map((element) => element.className)).toEqual(["mixed"]);
-    expect(report.views.find((view) => view.storyId === "amount")?.elements.map((element) => element.className)).toEqual(["t-display"]);
+    expect(report.views.find((view) => view.storyId === "amount")?.elements.map((element) => element.className)).toEqual(["t-detail"]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
 test("a passing run names the stories without text", async () => {
-  const dir = staticSite(`<div id="storybook-root"><p class="t-hint">שלום</p></div>
+  const dir = staticSite(`<div id="storybook-root"><p class="t-caption t-muted">שלום</p></div>
     <script>
       const id = new URLSearchParams(location.search).get("id");
       if (id === "quiet") {
@@ -330,7 +330,7 @@ test("a story that never renders exits 2", async () => {
 
 // FLOW-810: a no-text story is still measured; only measuring nothing is waived.
 test("a clip-no-text story whose text clips still fails", async () => {
-  const dir = staticSite(`<div id="storybook-root"><p class="t-hint" style="display:block;width:20px;white-space:nowrap">מילהארוכהמאוד</p></div>`, {
+  const dir = staticSite(`<div id="storybook-root"><p class="t-caption t-muted" style="display:block;width:20px;white-space:nowrap">מילהארוכהמאוד</p></div>`, {
     quiet: { type: "story", id: "quiet", title: "Quiet", name: "Quiet", tags: ["clip-no-text"] },
   });
   try {
@@ -350,7 +350,7 @@ test("screen-reader-only text is not measured, down to its nested blocks", async
       .wide { display: block; white-space: nowrap; width: 40px; }
     </style>
     <div id="storybook-root">
-      <p class="t-hint">שלום</p>
+      <p class="t-caption t-muted">שלום</p>
       <div class="sr-only"><span class="wide">${wide}</span></div>
       <div class="clipped"><span class="wide">${wide}</span></div>
       <div class="inset"><span class="wide">${wide}</span></div>
@@ -360,7 +360,7 @@ test("screen-reader-only text is not measured, down to its nested blocks", async
     const report = JSON.parse(readFileSync(join(dir, "clip-report.json"), "utf8")) as {
       views: { elements: { className: string }[] }[];
     };
-    expect(report.views[0]?.elements.map((element) => element.className)).toEqual(["t-hint"]);
+    expect(report.views[0]?.elements.map((element) => element.className)).toEqual(["t-caption t-muted"]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -393,7 +393,7 @@ test("stories see the frozen date", async () => {
   const dir = staticSite(`<div id="storybook-root"></div>
     <script>
       const node = document.createElement("p");
-      node.className = "t-hint";
+      node.className = "t-caption t-muted";
       node.textContent = new Date().toISOString().slice(0, 10);
       document.getElementById("storybook-root").appendChild(node);
     </script>`);
@@ -414,7 +414,7 @@ test("a story that renders on its second load passes after a retry", async () =>
     <script>
       const tries = Number(sessionStorage.getItem("tries") ?? "0") + 1;
       sessionStorage.setItem("tries", String(tries));
-      if (tries > 1) document.getElementById("storybook-root").innerHTML = '<p class="t-hint">שלום</p>';
+      if (tries > 1) document.getElementById("storybook-root").innerHTML = '<p class="t-caption t-muted">שלום</p>';
     </script>`);
   const lines: string[] = [];
   try {

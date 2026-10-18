@@ -204,7 +204,7 @@
 
 .ui-cal-head {
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
+  font-size: var(--type-caption-size);
   text-align: center;
 }
 
@@ -250,9 +250,9 @@
   min-height: 0;
   min-width: 0;
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
-  font-weight: var(--type-hint-weight);
-  line-height: var(--type-hint-line);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-caption-line);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -265,7 +265,7 @@
   min-width: 0;
   min-height: 0;
   font-size: inherit;
-  font-weight: var(--type-label-weight);
+  font-weight: var(--type-line2-weight);
   line-height: inherit;
 }
 

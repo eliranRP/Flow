@@ -14,7 +14,7 @@
   flex: 1 1 auto;
   padding-inline: var(--space-2);
   color: var(--color-on-band);
-  font-size: var(--type-label-size);
+  font-size: var(--type-line2-size);
 }
 
 /* Pressed darkens with the scrim instead of lightening, so the white label keeps AA while pressed. */

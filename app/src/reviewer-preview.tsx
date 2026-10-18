@@ -53,7 +53,7 @@ export function ReviewerPreview() {
   else if (path.endsWith("/split")) page = <ReviewerSplit />;
   return (
     <>
-      <p className="ui-example-bar t-hint">{exampleMark}</p>
+      <p className="ui-example-bar t-caption t-muted">{exampleMark}</p>
       {page}
     </>
   );
@@ -85,20 +85,20 @@ function ReviewerHome() {
         subtitle="תור, שיוך מהיום, ושמירה שאפשר להצליח או להכשיל"
       />
       <section className="ui-page-pad">
-        <h2 className="t-title-3">{reviewerProjectName}</h2>
+        <h2 className="t-btn">{reviewerProjectName}</h2>
         {lines.map((line) => (
           <p className="ui-review-line" key={line.label}>
-            <span className="t-label">{line.label}</span>
+            <span className="t-line2">{line.label}</span>
             <bdi className="ui-num" dir="ltr">{money(line.amount)}</bdi>
           </p>
         ))}
-        <p className="t-hint">
+        <p className="t-caption t-muted">
           אושרו הם מלט ועוד שינוע. הוצאות הפרויקט הן אושרו ועוד ממתינות לאישור. הרווח הוא ההכנסות פחות הוצאות הפרויקט.
           {" "}
           <bdi className="ui-num" dir="ltr">{String(filedCount)}</bdi>
           {" תנועות שויכו היום, וזה מספר השורות ברשימה."}
         </p>
-        <p className="t-hint">
+        <p className="t-caption t-muted">
           פיצול לפי הכנסות של העלות המשותפת:
           {" "}
           <bdi className="ui-num" dir="ltr">{alon ? money(alon.agorot) : ""}</bdi>
@@ -261,7 +261,7 @@ function ReviewerTransaction({ path }: { path: string }) {
   return (
     <>
       <ScreenHeader title="הוצאה" subtitle={row.supplier_name ?? row.description} subtitleClassName="ui-party" backTo="/reviewer/filed" />
-      <p className="ui-page-pad t-display">
+      <p className="ui-page-pad t-detail">
         <bdi className="ui-num" dir="ltr">{money(-row.amount_net)}</bdi>
       </p>
       <p className="ui-page-pad t-body">
@@ -407,7 +407,7 @@ function ReviewerUnsplit() {
           const shared = collapsed == null;
           return (
             <article key={project.id} aria-label={project.name}>
-              <h3 className="t-title-3 ui-page-pad">{project.name}</h3>
+              <h3 className="t-btn ui-page-pad">{project.name}</h3>
               <FigureLine label="הוצאות" value={formatIls(amount, { agorot: true })} />
               {shared ? <SharedCostNote /> : null}
             </article>

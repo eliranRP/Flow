@@ -74,7 +74,7 @@ function ProjectLoading({ search, example }: { search: string; example?: ReactNo
       <ListSkeleton />
       {holdWrites ? null : (
         <Sheet open={menu} onOpenChange={setMenu} title="עוד">
-          <p className="t-hint">הפרויקט עדיין נטען.</p>
+          <p className="t-caption t-muted">הפרויקט עדיין נטען.</p>
         </Sheet>
       )}
     </div>
@@ -306,9 +306,9 @@ function LegacyEmptyProject() {
         }
         hero={
           <>
-            <FocusTitle className="t-band-title">פרויקט</FocusTitle>
-            <p className="ui-band-label t-label">רווח</p>
-            <p className="t-display"><Amount agorot={0n} /></p>
+            <FocusTitle className="t-title">פרויקט</FocusTitle>
+            <p className="ui-band-label t-line2">רווח</p>
+            <p className="t-detail"><Amount agorot={0n} /></p>
           </>
         }
       />
