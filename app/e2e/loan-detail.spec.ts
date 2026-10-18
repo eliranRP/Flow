@@ -27,10 +27,10 @@ test("the list puts paid-off and closed loans under a collapsed group, and a row
   await page.getByRole("button", { name: /^הלוואת גישור, / }).click();
   await expect(page).toHaveURL(/\/e2e\/loans\/loan-bridge$/);
   await expect(page.getByRole("heading", { name: "הלוואת גישור" })).toBeVisible();
-  // The page leads with the balance and the next payment; the terms, the year's parts and the last payments follow.
+  // FLOW-142: the page leads with the balance, what was paid and the next payment; the terms and the last payments follow.
   await expect(page.getByText("יתרה היום")).toBeVisible();
+  await expect(page.getByRole("region", { name: "שולם" })).toBeVisible();
   await expect(page.getByText(/^התשלום הבא · /)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "שולם השנה" })).toBeVisible();
   // The bridge loan has no rate change (its rate is from the start), so the card is not drawn.
   await expect(page.getByRole("heading", { name: "שינויי ריבית" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "3 התשלומים האחרונים" })).toBeVisible();
@@ -38,6 +38,19 @@ test("the list puts paid-off and closed loans under a collapsed group, and a row
   await expect(page).toHaveURL(/\/e2e\/loans\/loan-bridge\/payments$/);
   await expect(page.getByText("כל התשלומים", { exact: true })).toBeVisible();
   await expect(page.locator("a[href^='/transactions/']")).toHaveCount(3);
+});
+
+test("the summary card opens the loans summary, its switch moves to this year, and a row opens its loan (FLOW-142)", async ({ page }) => {
+  await page.goto("/e2e/loans?reset=1");
+  await page.getByRole("link", { name: /^מה שולם עד היום, וכמה נשאר מהחוב/ }).click();
+  await expect(page).toHaveURL(/\/e2e\/loans\/summary$/);
+  await expect(page.getByRole("heading", { level: 1, name: "סיכום הלוואות" })).toBeVisible();
+  await expect(page.getByText("החוב בהתחלה")).toBeVisible();
+  await page.getByRole("radio", { name: /^20\d\d$/ }).click();
+  await expect(page.getByText(/^החוב ב־01\/01\/20\d\d$/)).toBeVisible();
+  await page.getByRole("button", { name: /^משכנתא דוגמה, / }).click();
+  await expect(page).toHaveURL(/\/e2e\/loans\/loan-mortgage$/);
+  await expect(page.getByRole("heading", { name: "משכנתא דוגמה" })).toBeVisible();
 });
 
 test("a missing loan shows the not-found state with a way back to the list", async ({ page }) => {
@@ -89,10 +102,13 @@ test("a part's category saves on tap, and undo puts the default back", async ({ 
   await expect(sheet.getByRole("radio", { name: "ישנה" })).toHaveCount(0);
   await sheet.getByRole("radio", { name: "עלויות סגירה" }).click();
   await expect(toast(page, "עמלות · עלויות סגירה")).toBeVisible();
-  await expect(page.getByRole("button", { name: /^עמלות עלויות סגירה/ })).toBeVisible();
+  // FLOW-142: the paid card's row says whether the part counts in the profit; its sheet shows the category.
+  await page.getByRole("button", { name: /^עמלות/ }).click();
+  await expect(page.getByRole("dialog", { name: "עמלות" }).getByRole("radio", { name: "עלויות סגירה" })).toHaveAttribute("aria-checked", "true");
+  await page.keyboard.press("Escape");
   await toast(page, "עמלות · עלויות סגירה").getByRole("button", { name: "ביטול" }).click();
-  // With no category the part's row shows its profit note, as the year's rows do.
-  await expect(page.getByRole("button", { name: /^עמלות נספר ברווח/ })).toBeVisible();
+  await page.getByRole("button", { name: /^עמלות/ }).click();
+  await expect(page.getByRole("dialog", { name: "עמלות" }).getByRole("radio", { name: "בלי קבועה" })).toHaveAttribute("aria-checked", "true");
 });
 
 test("a rate change saves, and undo takes it back", async ({ page }) => {
