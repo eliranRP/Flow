@@ -114,6 +114,20 @@
   white-space: nowrap;
 }
 
+/* A refund part at 320: the name keeps a few letters and the החזר tag gives way (the button's label names both). */
+.ui-lsplit-title > .ui-lsplit-name {
+  flex: 1 1 auto;
+  min-inline-size: calc(var(--space-6) + var(--space-1));
+}
+
+.ui-lsplit-title > .ui-suggest-tag {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .ui-lsplit-project {
   max-inline-size: 100%;
   color: var(--color-text-muted);

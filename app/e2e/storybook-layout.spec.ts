@@ -211,8 +211,9 @@ test("the project list stories, finished and many active, stay inside 320 and 39
         await page.goto(`/iframe.html?id=${id}&viewMode=story${globals}`, { waitUntil: "domcontentloaded" });
         await page.locator("#storybook-root").waitFor({ state: "attached" });
         if (id.endsWith("finished")) {
-          // FLOW-445: the finished projects show in their own section, and the finished one says so.
-          await expect(page.getByRole("link", { name: /^Ashby Rd/ })).toContainText("הסתיים");
+          // FLOW-445b: the finished projects show under their own הסתיימו heading, drawn as finished rows (the board's ProjectsFinished).
+          await expect(page.getByRole("heading", { name: /^הסתיימו/ })).toBeVisible();
+          await expect(page.getByRole("link", { name: /^Ashby Rd/ })).toHaveClass(/\bui-proj-finished\b/);
           await expect(page.getByRole("link", { name: /^Juniper Ct/ })).toBeVisible();
         } else {
           await expect(page.getByRole("link", { name: /^Juniper Ct/ })).toBeVisible();
@@ -694,7 +695,7 @@ test("the categories hidden link wraps on the end side and does not truncate", a
 test("the line split pins its save bar and keeps names on one line (FLOW-922)", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/iframe.html?id=screens-line-split--expense&viewMode=story", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("button", { name: "שמירה" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^שמירת הפיצול/ })).toBeVisible();
   const foot = page.locator(".ui-lsplit-foot");
   const footBox = await foot.boundingBox();
   expect(footBox).not.toBeNull();
