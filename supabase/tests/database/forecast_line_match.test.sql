@@ -6,7 +6,7 @@
 
 begin;
 
-select plan(37);
+select plan(50);
 
 do $users$
 begin
@@ -30,7 +30,7 @@ grant execute on function pg_temp.id(text), pg_temp.m(text) to authenticated, se
 
 insert into flm_month (label, m)
 select label, to_char(date_trunc('month', private.flow_today()) + (n || ' month')::interval, 'YYYY-MM')
-from (values ('now', 0), ('next', 1), ('next2', 2)) v(label, n);
+from (values ('now', 0), ('next', 1), ('next2', 2), ('next3', 3)) v(label, n);
 
 select tests.authenticate_as('flm_other');
 select public.create_company('Other Match Co', true);
@@ -160,6 +160,11 @@ values (pg_temp.id('co'), pg_temp.id('e_rent'), pg_temp.m('next'), pg_temp.id('e
 select is(pg_temp.match_of('in_tol'), null, 'an edit month another line holds is taken');
 delete from public.forecast_line_matches;
 
+-- A line the owner split is never one forecast line.
+select pg_temp.line('shared', 'co', 'expense', -250000, pg_temp.m('next'));
+update public.transactions set pnl_role = 'shared' where id = pg_temp.id('shared');
+select is(pg_temp.match_of('shared'), null, 'a line split as a shared cost does not match');
+
 -- The sync pass, through upsert_connector_lines.
 delete from public.transactions where idempotency_key like 'flm:%';
 
@@ -171,33 +176,35 @@ begin
 end
 $$;
 
-create function pg_temp.sync(p_ext text, p_amount bigint, p_month text, p_negated boolean default true, p_supplier text default null)
-returns void language sql as $$
+-- One bank line: an expense of p_amount (minor units) on the 12th. No pnl_role is a bank line (Mercury);
+-- 'project' with a hint is a SUMIT line filed to a budget section.
+create function pg_temp.ln(p_ext text, p_amount bigint, p_month text, p_role text default null,
+  p_supplier text default null, p_section text default null)
+returns jsonb language sql stable as $$
+  select jsonb_strip_nulls(jsonb_build_object(
+    'source', 'sumit',
+    'external_id', p_ext,
+    'direction', 'expense',
+    'line_status', 'posted',
+    'doc_kind', 'expense',
+    'pnl_role', p_role,
+    'currency', 'ILS',
+    'amount_original', p_amount,
+    'amount_negated', true,
+    'doc_date', p_month || '-12',
+    'description', 'Bank line ' || p_ext,
+    'counterparty', case when p_supplier is null then null else jsonb_build_object('name', p_supplier, 'kind', 'supplier') end,
+    'project_hint', case when p_section is null then null else jsonb_build_object('name', p_section) end,
+    'vat', jsonb_build_object('amount', 0, 'status', 'unknown'),
+    'provider_meta', '{}'::jsonb
+  ));
+$$;
+
+create function pg_temp.sync(variadic p_lines jsonb[]) returns void language sql as $$
   select public.upsert_connector_lines(
-    pg_temp.id('co'),
-    'sumit',
-    jsonb_build_object(
-      'lines', jsonb_build_array(jsonb_build_object(
-        'source', 'sumit',
-        'external_id', p_ext,
-        'direction', 'expense',
-        'line_status', 'posted',
-        'doc_kind', 'expense',
-        'pnl_role', 'project',
-        'currency', 'ILS',
-        'amount_original', p_amount,
-        'amount_negated', p_negated,
-        'doc_date', p_month || '-12',
-        'description', 'Bank line ' || p_ext,
-        'counterparty', case when p_supplier is null then null else jsonb_build_object('name', p_supplier, 'kind', 'supplier') end,
-        'vat', jsonb_build_object('amount', 0, 'status', 'unknown'),
-        'provider_meta', '{}'::jsonb
-      )),
-      'removed_ids', '[]'::jsonb,
-      'complete', false
-    ),
-    null,
-    null
+    pg_temp.id('co'), 'sumit',
+    jsonb_build_object('lines', to_jsonb(p_lines), 'removed_ids', '[]'::jsonb, 'complete', false),
+    null, null
   );
 $$;
 
@@ -205,10 +212,19 @@ create function pg_temp.txn(p_ext text) returns public.transactions language sql
   select t.* from public.transactions t where t.company_id = pg_temp.id('co') and t.external_id = p_ext;
 $$;
 
-select pg_temp.sync('rent-1', 251000, pg_temp.m('next'));
-select is((pg_temp.txn('rent-1')).project_id, pg_temp.id('project'), 'the sync files the line to the forecast line''s project');
-select is((pg_temp.txn('rent-1')).category_id, pg_temp.id('rent'), 'and to its category');
+create function pg_temp.matched(p_ext text) returns text language sql stable as $$
+  select m.edit_id::text || ':' || m.month from public.forecast_line_matches m where m.transaction_id = (pg_temp.txn(p_ext)).id;
+$$;
+
+create function pg_temp.queued(p_ext text) returns text language sql stable as $$
+  select q.reason from public.review_queue q where q.transaction_id = (pg_temp.txn(p_ext)).id and q.status = 'open';
+$$;
+
+select pg_temp.sync(pg_temp.ln('rent-1', 251000, pg_temp.m('next')));
+select is((pg_temp.txn('rent-1')).project_id, pg_temp.id('project'), 'the sync suggests the forecast line''s project');
+select is((pg_temp.txn('rent-1')).category_id, pg_temp.id('rent'), 'and its category');
 select is((pg_temp.txn('rent-1')).category_suggested, true, 'the category stays a suggestion');
+select is((pg_temp.txn('rent-1')).pnl_role, null, 'the line stays unassigned in the P&L until approved');
 select is(
   (select a.project_id::text || ':' || a.share_bp::text || ':' || a.amount_net::text from public.allocations a
    where a.transaction_id = (pg_temp.txn('rent-1')).id),
@@ -221,19 +237,17 @@ select is(
   pg_temp.id('e_rent')::text || ':' || pg_temp.m('next') || ':250000',
   'the match is recorded with the month and the expected amount'
 );
-select is(
-  (select q.reason from public.review_queue q where q.transaction_id = (pg_temp.txn('rent-1')).id and q.status = 'open'),
-  'suggested',
-  'the line waits in review as a suggestion'
-);
+select is(pg_temp.queued('rent-1'), 'suggested', 'the line waits in review as a suggestion');
 
--- The same line synced again keeps its match.
-select pg_temp.sync('rent-1', 251000, pg_temp.m('next'));
+-- The same line synced again keeps its match, matched_at included.
+update public.forecast_line_matches set matched_at = '2026-01-01T00:00:00Z' where transaction_id = (pg_temp.txn('rent-1')).id;
+select pg_temp.sync(pg_temp.ln('rent-1', 251000, pg_temp.m('next')));
 select is(
-  (select count(*)::integer from public.forecast_line_matches m where m.transaction_id = (pg_temp.txn('rent-1')).id),
-  1,
-  'a second sync of the line keeps the match'
+  (select m.matched_at from public.forecast_line_matches m where m.transaction_id = (pg_temp.txn('rent-1')).id),
+  '2026-01-01T00:00:00Z'::timestamptz,
+  'a second sync of the line keeps the match and when it was made'
 );
+select is((pg_temp.txn('rent-1')).project_id, pg_temp.id('project'), 'and the suggested project');
 
 -- What the review, Jev's reasons, the jev-tag read and the forecast read say.
 select tests.authenticate_as('flm_owner');
@@ -299,46 +313,58 @@ select is(
   'the jev-tag read of another company gives nothing'
 );
 
--- A line the owner set is never changed by the pass.
-select pg_temp.sync('clean-1', 40000, pg_temp.m('next'));
-update public.transactions
-set project_id = pg_temp.id('project2'), user_assigned = true, project_assigned = true
-where id = (pg_temp.txn('clean-1')).id;
-select pg_temp.sync('clean-1', 40000, pg_temp.m('next'));
-select is((pg_temp.txn('clean-1')).project_id, pg_temp.id('project2'), 'the owner''s project stays');
-select is(
-  (select count(*)::integer from public.forecast_line_matches m where m.transaction_id = (pg_temp.txn('clean-1')).id),
-  0,
-  'a line the owner filed elsewhere is not the forecast line'
-);
-
--- A supplier rule's category stays: the line matches only an edit of that category.
+-- A supplier rule's line (a firm category) of the same category gets the project as a suggestion,
+-- and waits in review: it is never filed unseen.
 insert into public.suppliers (company_id, name, remembered_category_id)
 values (pg_temp.id('co'), 'Window Team', pg_temp.id('cleaning'));
-select pg_temp.sync('rule-1', 40000, pg_temp.m('next2'), true, 'Window Team');
+select pg_temp.sync(pg_temp.ln('rule-1', 39000, pg_temp.m('next2'), null, 'Window Team'));
 select is(
-  (pg_temp.txn('rule-1')).project_id::text || ':' || (pg_temp.txn('rule-1')).category_suggested::text,
-  pg_temp.id('project')::text || ':false',
-  'a supplier rule''s line of the same category takes the project and keeps the rule''s category'
+  (pg_temp.txn('rule-1')).project_id::text || ':' || (pg_temp.txn('rule-1')).category_id::text || ':' || (pg_temp.txn('rule-1')).category_suggested::text,
+  pg_temp.id('project')::text || ':' || pg_temp.id('cleaning')::text || ':false',
+  'a supplier rule''s line takes the project and keeps the rule''s category'
 );
+select is(pg_temp.queued('rule-1'), 'suggested', 'and waits in review as a suggestion');
 insert into public.suppliers (company_id, name, remembered_category_id)
 values (pg_temp.id('co'), 'Fee Desk', pg_temp.id('fees'));
-select pg_temp.sync('rule-2', 40000, pg_temp.m('next'), true, 'Fee Desk');
+select pg_temp.sync(pg_temp.ln('rule-2', 40000, pg_temp.m('next'), null, 'Fee Desk'));
 select is((pg_temp.txn('rule-2')).project_id, null, 'a supplier rule of another category is not the forecast line');
+
+-- A SUMIT budget section's project is the bookkeeper's: never changed, and not this forecast line.
+select pg_temp.sync(pg_temp.ln('sec-1', 40000, pg_temp.m('next'), 'project', null, 'Aspen Row'));
+select is((pg_temp.txn('sec-1')).project_id, pg_temp.id('project2'), 'a budget section''s project stays');
+select is(pg_temp.matched('sec-1'), null, 'and the line is not the forecast line of another project');
+
+-- A provider project line with no project gets a pending match: no project, the card shows the line.
+select pg_temp.sync(pg_temp.ln('sumit-1', 40000, pg_temp.m('next'), 'project'));
+select is((pg_temp.txn('sumit-1')).project_id, null, 'a provider''s project line gets no project from the forecast');
+select is(pg_temp.matched('sumit-1'), pg_temp.id('e_clean')::text || ':' || pg_temp.m('next'), 'its match is pending');
+select is(pg_temp.queued('sumit-1'), 'missing_project', 'and it waits in review for its project');
+
+-- In one sync, a line that moved out of tolerance frees its month for a better line.
+select pg_temp.sync(pg_temp.ln('clean-a', 40000, pg_temp.m('next3')));
+select is(pg_temp.matched('clean-a'), pg_temp.id('e_clean')::text || ':' || pg_temp.m('next3'), 'a line holds the month');
+select pg_temp.sync(pg_temp.ln('clean-a', 90000, pg_temp.m('next3')), pg_temp.ln('clean-b', 40500, pg_temp.m('next3')));
+select is(pg_temp.matched('clean-b'), pg_temp.id('e_clean')::text || ':' || pg_temp.m('next3'), 'its month goes to the line that fits now');
+select is(pg_temp.matched('clean-a'), null, 'and the line that moved has none');
+
+-- From here a change drops a match at once (the trigger is deferred to the end of a transaction).
+set constraints transactions_forecast_line_refiled immediate;
+
+-- A line the owner set is never changed by the pass.
+update public.transactions
+set project_id = pg_temp.id('project2'), user_assigned = true, project_assigned = true
+where id = (pg_temp.txn('clean-b')).id;
+select pg_temp.sync(pg_temp.ln('clean-b', 40500, pg_temp.m('next3')));
+select is((pg_temp.txn('clean-b')).project_id, pg_temp.id('project2'), 'the owner''s project stays');
+select is(pg_temp.matched('clean-b'), null, 'a line the owner filed elsewhere is not the forecast line');
 
 -- A re-file to another project or category drops the match; so does a removed line.
 update public.transactions set project_id = pg_temp.id('project2') where id = (pg_temp.txn('rent-1')).id;
-select is(
-  (select count(*)::integer from public.forecast_line_matches m where m.transaction_id = (pg_temp.txn('rent-1')).id),
-  0,
-  'a line re-filed to another project loses its match'
-);
+select is(pg_temp.matched('rent-1'), null, 'a line re-filed to another project loses its match');
+update public.transactions set category_id = pg_temp.id('fees') where id = (pg_temp.txn('sumit-1')).id;
+select is(pg_temp.matched('sumit-1'), null, 'a line re-filed to another category loses its match');
 update public.transactions set removed_at = now() where id = (pg_temp.txn('rule-1')).id;
-select is(
-  (select count(*)::integer from public.forecast_line_matches m where m.transaction_id = (pg_temp.txn('rule-1')).id),
-  0,
-  'a removed line loses its match'
-);
+select is(pg_temp.matched('rule-1'), null, 'a removed line loses its match');
 
 select * from finish();
 

@@ -76,13 +76,19 @@ export type ReviewForecastMatch = {
   month: string;
   amount_minor: bigint;
   category_name: string | null;
+  project_name?: string | null;
 };
 
-/** "לפי הצפי שהוספת לנובמבר: שכירות $2,500" */
-export function forecastMatchText(match: ReviewForecastMatch, currency = "ILS"): CopyPart[] {
+/**
+ * "לפי הצפי שהוספת לנובמבר: שכירות $2,500", and " · <project>" when `withProject`: a card whose project
+ * the sync left empty (a pending match) names the forecast line's project for the owner to pick.
+ */
+export function forecastMatchText(match: ReviewForecastMatch, currency = "ILS", withProject = false): CopyPart[] {
   const month = HEBREW_MONTHS[Number(match.month.slice(5, 7)) - 1] ?? match.month;
   const category = match.category_name == null || match.category_name === "" ? "" : `${match.category_name} `;
-  return [`${FORECAST_LINE_WHY} ל${month}: ${category}`, { num: formatAmountText(match.amount_minor, currency) }];
+  const parts: CopyPart[] = [`${FORECAST_LINE_WHY} ל${month}: ${category}`, { num: formatAmountText(match.amount_minor, currency) }];
+  if (withProject && match.project_name != null && match.project_name !== "") parts.push(` · ${match.project_name}`);
+  return parts;
 }
 
 /**
@@ -90,13 +96,13 @@ export function forecastMatchText(match: ReviewForecastMatch, currency = "ILS"):
  * line matched one (also with Jev off, and when Jev's reason is that forecast line), else none.
  */
 export function reviewWhy(
-  row: { direction: "income" | "expense"; currency?: string; forecast_match?: ReviewForecastMatch | null },
+  row: { direction: "income" | "expense"; currency?: string; project_id?: string | null; forecast_match?: ReviewForecastMatch | null },
   why: JevReasonInfo | null | undefined,
   hasParty: boolean,
   project?: string,
 ): CopyPart[] | null {
   if (row.forecast_match != null && (why == null || why.reason === "forecast_line")) {
-    return forecastMatchText(row.forecast_match, row.currency);
+    return forecastMatchText(row.forecast_match, row.currency, row.project_id == null);
   }
   return why == null ? null : jevReasonText(why, row.direction, hasParty, project);
 }

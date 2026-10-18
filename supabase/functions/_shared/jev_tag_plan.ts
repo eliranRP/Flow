@@ -220,17 +220,26 @@ function choiceCriteria(
 export const CARD_NAME_HINT =
   "card_name and account_name in the state are the names the owner gave the paying card and the bank account, often a property or a purpose; weigh them.";
 
+/** Said once per question when the line has past filings in the state. */
+export const PAST_FILINGS_HINT =
+  "past_filings in the state are how the owner filed this party's latest lines, newest first; a steady pattern is a strong hint.";
+
+/** Said once per question when the line matched a forecast line the owner added (decision 0187). */
+export const EXPECTED_LINE_HINT =
+  "expected_line in the state is the owner's own forecast line for that project and month (category, project, amount): strong evidence for its project and category when the amount fits, but not proof.";
+
 export function buildTagQuestions(
   projects: readonly TagProject[],
   categories: readonly TagCategory[],
   direction: TagDirection = "expense",
   flagged = false,
   cardNamed = false,
+  stateHint = "",
 ): Record<string, JevQuestion> {
   const questions: Record<string, JevQuestion> = {};
   const line = direction === "income" ? "income line" : "expense";
   // FLOW-707: only lines with a named card say so, so other lines ask exactly as before.
-  const cardHint = cardNamed ? ` ${CARD_NAME_HINT}` : "";
+  const cardHint = (cardNamed ? ` ${CARD_NAME_HINT}` : "") + (stateHint === "" ? "" : ` ${stateHint}`);
   const projectCriteria = choiceCriteria(projects.map((project) => ({
     id: project.id,
     name: project.overhead
@@ -283,6 +292,10 @@ export function lineQuestions(expense: TagExpense, company: TagCompanyWork): Rec
     direction,
     (expense.flags ?? []).length > 0,
     Boolean(expense.cardName || expense.accountName),
+    [
+      (expense.history ?? []).length > 0 ? PAST_FILINGS_HINT : "",
+      expense.expected ? EXPECTED_LINE_HINT : "",
+    ].filter((hint) => hint !== "").join(" "),
   );
 }
 

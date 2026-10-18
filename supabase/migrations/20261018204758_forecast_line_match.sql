@@ -4,8 +4,10 @@
 -- a month the line applies to, Flow suggests the forecast line's project and category, even with Jev off.
 -- 1. public.forecast_line_matches: one row per add edit and month, and per transaction. RLS on, no
 --    grants to the app's roles: read and written only by the functions below.
--- 2. private.forecast_line_match(company, ids): for each line, the best add edit it fits.
+-- 2. private.forecast_line_candidates(company, ids): every add edit each line fits.
 --    - same company, an active project, an add edit with a category a line may take;
+--    - a posted line, not removed, not split by the owner (shared or overhead, more than one
+--      allocation, or line split parts);
 --    - the line's sign is the edit's direction (an expense is negative, income positive), and its
 --      direction too;
 --    - the line's month (doc_date, the month the books file it in) is the edit's start month or a
@@ -15,17 +17,28 @@
 --      amount, 1.00) of it. The expected amount is the add line's, or the change of it that applies
 --      to the month (the latest start wins, as in the forecast);
 --    - a line whose category is firm (not a guess and not the default: a supplier rule or a bank
---      hint) fits only an edit of that same category;
---    - one line per edit and month: an edit month another line holds is taken.
---    The closest amount wins, then the earliest edit.
+--      hint) fits only an edit of that same category.
+--    private.forecast_line_match(company, ids) picks one per line: a line keeps the match it holds
+--    while it still fits; otherwise the closest amount wins, then the earliest edit, then the earlier
+--    line, one line per edit and month, and an edit month another line holds is taken.
 -- 3. private.forecast_line_sync(company, ids): the sync's pass (upsert_connector_lines, just before
---    sync_review_queue, over the lines that sync touched). A line nobody set (not user_assigned,
---    project_assigned or category_assigned; one project at most, not shared or overhead) takes the
---    edit's project (an expense with its one allocation) and, unless its category is firm, the edit's
---    category with category_suggested. The match is recorded. A line the owner set is never changed;
---    it keeps or gets its match only when its project and category are the edit's.
--- 4. A match is dropped when its line is removed or voided, moves to another month, or is filed to
---    another project or category (a trigger), and when its add edit goes (cascade).
+--    sync_review_queue, over the lines that sync touched). First a touched line that no longer fits
+--    its edit loses the match, so its month is free for a better line. Then each match:
+--    - is recorded first (on conflict do nothing: a month another sync took is skipped, never an error);
+--    - on a line nobody set (not user_assigned, project_assigned or category_assigned) and with no
+--      project: a guessed or missing category becomes the edit's, still category_suggested; a firm one
+--      is the edit's already;
+--    - only an expense line with no pnl_role (a bank line: unassigned in the P&L until approved, as
+--      Jev's pre-fill) also takes the edit's project with its one allocation, and only when it can wait
+--      in review: it is queued as suggested, so the owner always sees and approves it. Any other line
+--      (income, a line filed as a project line by the provider) keeps no project: the match is pending
+--      and the review card shows the forecast line;
+--    - a line that already has a project (the owner's, or a SUMIT budget section) is never changed: it
+--      is the forecast line only when its project and category already are the edit's.
+-- 4. A match is dropped when, at the end of the transaction, its line is removed or voided, moves to
+--    another month, is split, or is filed to another project or category (a deferred trigger that reads
+--    the line as it ends, so a sync that resets a line and sets it again keeps the match and its
+--    matched_at), and when its add edit goes (cascade).
 -- 5. private.jev_suggestions_for: reason forecast_line, and forecast_month, when the line has a match
 --    and Jev's suggestion agrees with it. public.list_review: forecast_match {month, amount_minor,
 --    category_name, project_name}. public.jev_forecast_lines: the matches for the jev-tag job.
@@ -58,7 +71,66 @@ alter table public.forecast_line_matches enable row level security;
 revoke all on public.forecast_line_matches from public, anon, authenticated;
 grant select, insert, update, delete on public.forecast_line_matches to service_role;
 
--- 2. The best add edit for each line.
+-- 2. Every add edit each line fits, with the expected amount and how far the line is from it.
+create function private.forecast_line_candidates(p_company uuid, p_ids uuid[])
+returns table (line_id uuid, line_date date, edit_id uuid, month text, project_id uuid, category_id uuid,
+  expected_minor bigint, diff bigint, edit_created timestamptz)
+language sql
+stable
+set search_path = ''
+as $$
+  with l as (
+    select t.id, t.direction::text as direction, t.amount_net, t.amount_gross, t.category_id, t.doc_date,
+      to_char(t.doc_date, 'YYYY-MM') as line_month,
+      -- A category the line did not guess: a supplier rule or a bank hint, never the default.
+      (t.category_id is not null and not t.category_suggested and not exists (
+        select 1 from public.categories dc where dc.id = t.category_id and dc.is_default
+      )) as firm
+    from public.transactions t
+    where t.company_id = p_company
+      and t.id = any (coalesce(p_ids, array[]::uuid[]))
+      and t.removed_at is null
+      and t.line_status = 'posted'
+      and coalesce(t.currency, 'ILS') = private.company_base_currency(p_company)
+      and ((t.direction = 'expense' and t.amount_net < 0) or (t.direction = 'income' and t.amount_net > 0))
+      -- A line the owner split is several lines, never one forecast line.
+      and coalesce(t.pnl_role::text, 'project') = 'project'
+      and (select count(*) from public.allocations a where a.transaction_id = t.id) <= 1
+      and not exists (select 1 from public.line_splits ls where ls.transaction_id = t.id)
+  )
+  select l.id, l.doc_date, e.id, l.line_month, e.project_id, e.category_id, x.expected, x.diff, e.created_at
+  from l
+  join public.project_forecast_edits e
+    on e.company_id = p_company and e.kind = 'add' and e.direction = l.direction
+   and private.pfe_hits(e.start_month, e.pace, l.line_month)
+  join public.projects p on p.id = e.project_id and p.company_id = p_company and p.status = 'active'
+  cross join lateral (
+    select coalesce((
+      select ch.amount_minor from public.project_forecast_edits ch
+      where ch.company_id = p_company and ch.project_id = e.project_id and ch.kind = 'change'
+        and ch.row_key = 'add:' || e.id::text
+        and private.pfe_hits(ch.start_month, ch.pace, l.line_month)
+      order by ch.start_month desc, ch.created_at desc
+      limit 1
+    ), e.amount_minor) as expected
+  ) a
+  cross join lateral (
+    select a.expected,
+      least(abs(abs(l.amount_net) - a.expected), abs(abs(l.amount_gross) - a.expected)) as diff
+  ) x
+  where private.pfe_category_ok(p_company, e.category_id)
+    and not exists (
+      select 1 from public.project_forecast_edits r
+      where r.company_id = p_company and r.project_id = e.project_id and r.kind = 'remove'
+        and r.row_key = 'add:' || e.id::text
+        and private.pfe_hits(r.start_month, r.pace, l.line_month)
+    )
+    and x.expected > 0
+    and x.diff <= greatest(x.expected / 10, 100)
+    and (not l.firm or l.category_id = e.category_id);
+$$;
+
+-- The best add edit for each line: the one it holds while it still fits, else the closest free one.
 create function private.forecast_line_match(p_company uuid, p_ids uuid[])
 returns table (line_id uuid, edit_id uuid, month text, project_id uuid, category_id uuid, expected_minor bigint)
 language plpgsql
@@ -67,76 +139,33 @@ set search_path = ''
 as $$
 #variable_conflict use_column
 declare
-  base text := private.company_base_currency(p_company);
   c record;
   lines_taken uuid[] := array[]::uuid[];
   months_taken text[] := array[]::text[];
 begin
-  -- Every pair a line fits, closest first: each line takes its best edit month that is still free,
-  -- so of two lines for one edit and month the closer one wins.
   for c in
-    with l as (
-      select t.id, t.direction::text as direction, t.amount_net, t.amount_gross, t.category_id, t.doc_date,
-        to_char(t.doc_date, 'YYYY-MM') as line_month,
-        -- A category the line did not guess: a supplier rule or a bank hint, never the default.
-        (t.category_id is not null and not t.category_suggested and not exists (
-          select 1 from public.categories dc where dc.id = t.category_id and dc.is_default
-        )) as firm
-      from public.transactions t
-      where t.company_id = p_company
-        and t.id = any (coalesce(p_ids, array[]::uuid[]))
-        and t.removed_at is null
-        and t.line_status <> 'void'
-        and coalesce(t.currency, 'ILS') = base
-        and ((t.direction = 'expense' and t.amount_net < 0) or (t.direction = 'income' and t.amount_net > 0))
+    select f.*, exists (
+        select 1 from public.forecast_line_matches h
+        where h.transaction_id = f.line_id and h.edit_id = f.edit_id and h.month = f.month
+      ) as held
+    from private.forecast_line_candidates(p_company, p_ids) f
+    where not exists (
+      select 1 from public.forecast_line_matches m
+      where m.edit_id = f.edit_id and m.month = f.month and m.transaction_id <> f.line_id
     )
-    select l.id as lid, l.line_month, e.id as eid, e.project_id as pid, e.category_id as cid, x.expected, x.diff
-    from l
-    join public.project_forecast_edits e
-      on e.company_id = p_company and e.kind = 'add' and e.direction = l.direction
-     and private.pfe_hits(e.start_month, e.pace, l.line_month)
-    join public.projects p on p.id = e.project_id and p.company_id = p_company and p.status = 'active'
-    cross join lateral (
-      select coalesce((
-        select ch.amount_minor from public.project_forecast_edits ch
-        where ch.company_id = p_company and ch.project_id = e.project_id and ch.kind = 'change'
-          and ch.row_key = 'add:' || e.id::text
-          and private.pfe_hits(ch.start_month, ch.pace, l.line_month)
-        order by ch.start_month desc, ch.created_at desc
-        limit 1
-      ), e.amount_minor) as expected
-    ) a
-    cross join lateral (
-      select a.expected,
-        least(abs(abs(l.amount_net) - a.expected), abs(abs(l.amount_gross) - a.expected)) as diff
-    ) x
-    where private.pfe_category_ok(p_company, e.category_id)
-      and not exists (
-        select 1 from public.project_forecast_edits r
-        where r.company_id = p_company and r.project_id = e.project_id and r.kind = 'remove'
-          and r.row_key = 'add:' || e.id::text
-          and private.pfe_hits(r.start_month, r.pace, l.line_month)
-      )
-      and x.expected > 0
-      and x.diff <= greatest(x.expected / 10, 100)
-      and (not l.firm or l.category_id = e.category_id)
-      and not exists (
-        select 1 from public.forecast_line_matches m
-        where m.edit_id = e.id and m.month = l.line_month and m.transaction_id <> l.id
-      )
-    order by x.diff, e.created_at, e.id, l.doc_date, l.id
+    order by held desc, f.diff, f.edit_created, f.edit_id, f.line_date, f.line_id
   loop
-    if c.lid = any (lines_taken) or (c.eid::text || ':' || c.line_month) = any (months_taken) then
+    if c.line_id = any (lines_taken) or (c.edit_id::text || ':' || c.month) = any (months_taken) then
       continue;
     end if;
-    lines_taken := lines_taken || c.lid;
-    months_taken := months_taken || (c.eid::text || ':' || c.line_month);
-    line_id := c.lid;
-    edit_id := c.eid;
-    month := c.line_month;
-    project_id := c.pid;
-    category_id := c.cid;
-    expected_minor := c.expected;
+    lines_taken := lines_taken || c.line_id;
+    months_taken := months_taken || (c.edit_id::text || ':' || c.month);
+    line_id := c.line_id;
+    edit_id := c.edit_id;
+    month := c.month;
+    project_id := c.project_id;
+    category_id := c.category_id;
+    expected_minor := c.expected_minor;
     return next;
   end loop;
 end;
@@ -149,85 +178,103 @@ language plpgsql
 set search_path = ''
 as $$
 declare
-  found_rows jsonb;
   r record;
   line public.transactions%rowtype;
-  shares integer;
+  held boolean;
+  recorded uuid;
   kept integer := 0;
 begin
   if coalesce(cardinality(p_ids), 0) = 0 then
     return 0;
   end if;
-  select coalesce(jsonb_agg(to_jsonb(f)), '[]'::jsonb) into found_rows
-  from private.forecast_line_match(p_company, p_ids) f;
 
-  -- A touched line that no longer fits its edit (the bank changed its amount) loses the match.
+  -- A touched line that no longer fits its edit (the bank changed its amount, the owner split it)
+  -- loses the match first, so its month is free for a better line in this same sync.
   delete from public.forecast_line_matches m
   where m.company_id = p_company
     and m.transaction_id = any (p_ids)
     and not exists (
-      select 1 from jsonb_to_recordset(found_rows) as f(line_id uuid, edit_id uuid, month text)
-      where f.line_id = m.transaction_id and f.edit_id = m.edit_id and f.month = m.month
+      select 1 from private.forecast_line_candidates(p_company, array[m.transaction_id]) f
+      where f.edit_id = m.edit_id and f.month = m.month
     );
 
-  for r in
-    select * from jsonb_to_recordset(found_rows)
-      as f(line_id uuid, edit_id uuid, month text, project_id uuid, category_id uuid, expected_minor bigint)
-  loop
+  for r in select * from private.forecast_line_match(p_company, p_ids) loop
     select * into line from public.transactions t where t.id = r.line_id and t.company_id = p_company for update;
-    if line.user_assigned or line.project_assigned or line.category_assigned then
-      -- The owner's line is never changed: it is the forecast line only when it is filed as one.
+    -- A line with a project (the owner's, or the provider's budget section) is never changed: it is
+    -- the forecast line only when it already is filed as one.
+    if line.project_id is not null or line.user_assigned or line.project_assigned or line.category_assigned then
       if line.project_id is distinct from r.project_id or line.category_id is distinct from r.category_id then
         continue;
       end if;
-    else
-      select count(*)::integer into shares
-      from public.allocations a
-      where a.company_id = p_company and a.transaction_id = line.id;
-      if coalesce(line.pnl_role::text, 'project') <> 'project' or shares > 1 then
+    end if;
+
+    -- The match first: a month another sync took meanwhile is skipped, never an error.
+    held := exists (
+      select 1 from public.forecast_line_matches m
+      where m.transaction_id = line.id and m.edit_id = r.edit_id and m.month = r.month
+    );
+    if not held then
+      delete from public.forecast_line_matches m where m.transaction_id = line.id;
+      recorded := null;
+      insert into public.forecast_line_matches (company_id, edit_id, month, transaction_id, expected_minor)
+      values (p_company, r.edit_id, r.month, line.id, r.expected_minor)
+      on conflict do nothing
+      returning id into recorded;
+      if recorded is null then
         continue;
       end if;
-      if line.project_id is distinct from r.project_id then
-        update public.transactions t set project_id = r.project_id where t.id = line.id;
-        -- An expense carries one allocation with the line's amount; income has none.
-        if line.direction = 'expense' then
-          delete from public.allocations where company_id = p_company and transaction_id = line.id;
-          insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
-          values (p_company, line.id, r.project_id, 10000, line.amount_net);
-        end if;
-      end if;
-      -- A guessed or missing category takes the forecast line's, still a suggestion. A firm one is
-      -- already the edit's (the match asks for it).
-      if line.category_id is distinct from r.category_id then
-        -- fill_suggested_category reads a category change that keeps the flag as an assignment, so
-        -- the flag is cleared first and set with the new category.
-        if line.category_suggested then
-          update public.transactions t set category_suggested = false where t.id = line.id;
-        end if;
-        update public.transactions t
-        set category_id = r.category_id, category_suggested = true
-        where t.id = line.id;
-      end if;
     end if;
-    insert into public.forecast_line_matches (company_id, edit_id, month, transaction_id, expected_minor)
-    values (p_company, r.edit_id, r.month, line.id, r.expected_minor)
-    on conflict (transaction_id) do update
-    set edit_id = excluded.edit_id, month = excluded.month, expected_minor = excluded.expected_minor,
-        matched_at = case
-          when public.forecast_line_matches.edit_id = excluded.edit_id and public.forecast_line_matches.month = excluded.month
-            then public.forecast_line_matches.matched_at
-          else now()
-        end;
     kept := kept + 1;
+
+    if line.project_id is not null then
+      continue;
+    end if;
+
+    -- A guessed or missing category takes the forecast line's, still a suggestion. A firm one is
+    -- already the edit's (a candidate asks for it).
+    if line.category_id is distinct from r.category_id then
+      -- fill_suggested_category reads a category change that keeps the flag as an assignment, so
+      -- the flag is cleared first and set with the new category.
+      if line.category_suggested then
+        update public.transactions t set category_suggested = false where t.id = line.id;
+      end if;
+      update public.transactions t
+      set category_id = r.category_id, category_suggested = true
+      where t.id = line.id;
+    end if;
+
+    -- The project only on a bank expense with no pnl_role (unassigned in the P&L until the owner
+    -- approves, as Jev's pre-fill), and only when the line waits in review as a suggestion.
+    if line.direction = 'expense' and line.pnl_role is null
+       and not exists (
+         select 1 from public.review_queue q
+         where q.transaction_id = line.id and q.status in ('approved', 'changed', 'skipped')
+       )
+    then
+      update public.transactions t set project_id = r.project_id where t.id = line.id;
+      delete from public.allocations where company_id = p_company and transaction_id = line.id;
+      insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
+      values (p_company, line.id, r.project_id, 10000, line.amount_net);
+      update public.review_queue q
+      set reason = 'suggested'
+      where q.transaction_id = line.id and q.status = 'open' and q.reason is distinct from 'suggested';
+      insert into public.review_queue (company_id, transaction_id, status, reason)
+      select p_company, line.id, 'open', 'suggested'
+      where not exists (select 1 from public.review_queue q where q.transaction_id = line.id and q.status = 'open');
+    end if;
   end loop;
   return kept;
 end;
 $$;
 
+revoke all on function private.forecast_line_candidates(uuid, uuid[]) from public, anon, authenticated;
 revoke all on function private.forecast_line_match(uuid, uuid[]) from public, anon, authenticated;
 revoke all on function private.forecast_line_sync(uuid, uuid[]) from public, anon, authenticated;
 
--- 4. A line removed, voided, moved to another month, or filed elsewhere is no longer the forecast line.
+-- 4. A line removed, voided, moved to another month, split, or filed elsewhere is no longer the
+-- forecast line. Deferred, and it reads the line as the transaction ends: a sync that resets an
+-- unassigned line and sets it again keeps its match. A pending match (no project on the line) stays
+-- while the line has no project.
 create function private.forecast_line_refiled()
 returns trigger
 language plpgsql
@@ -236,15 +283,17 @@ set search_path = ''
 as $$
 begin
   delete from public.forecast_line_matches m
-  using public.project_forecast_edits e
+  using public.project_forecast_edits e, public.transactions t
   where m.transaction_id = new.id
     and e.id = m.edit_id
+    and t.id = m.transaction_id
     and (
-      new.removed_at is not null
-      or new.line_status = 'void'
-      or to_char(new.doc_date, 'YYYY-MM') <> m.month
-      or new.project_id is distinct from e.project_id
-      or new.category_id is distinct from e.category_id
+      t.removed_at is not null
+      or t.line_status = 'void'
+      or to_char(t.doc_date, 'YYYY-MM') <> m.month
+      or coalesce(t.pnl_role::text, 'project') <> 'project'
+      or (t.project_id is not null and t.project_id <> e.project_id)
+      or t.category_id is distinct from e.category_id
     );
   return null;
 end;
@@ -252,8 +301,9 @@ $$;
 
 revoke all on function private.forecast_line_refiled() from public, anon, authenticated;
 
-create trigger transactions_forecast_line_refiled
-after update of project_id, category_id, removed_at, line_status, doc_date on public.transactions
+create constraint trigger transactions_forecast_line_refiled
+after update of project_id, category_id, removed_at, line_status, doc_date, pnl_role on public.transactions
+deferrable initially deferred
 for each row
 when (
   old.project_id is distinct from new.project_id
@@ -261,6 +311,7 @@ when (
   or old.removed_at is distinct from new.removed_at
   or old.line_status is distinct from new.line_status
   or old.doc_date is distinct from new.doc_date
+  or old.pnl_role is distinct from new.pnl_role
 )
 execute function private.forecast_line_refiled();
 

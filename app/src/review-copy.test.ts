@@ -30,7 +30,7 @@ describe("jevReasonText (FLOW-327, decision 0134)", () => {
 
 describe("the forecast line on a review card (decision 0187)", () => {
   const match = { month: "2026-11", amount_minor: 250_000n, category_name: "שכירות" };
-  const row = { direction: "expense" as const, currency: "USD", forecast_match: match };
+  const row = { direction: "expense" as const, currency: "USD", project_id: "p-1", forecast_match: match };
 
   it("names the month, the category and the amount the user expected", () => {
     expect(copyText(forecastMatchText(match, "USD"))).toBe("לפי הצפי שהוספת לנובמבר: שכירות $2,500");
@@ -41,6 +41,12 @@ describe("the forecast line on a review card (decision 0187)", () => {
   it("shows the forecast line with no Jev reason, and for Jev's forecast_line reason", () => {
     expect(copyText(reviewWhy(row, null, true) ?? [])).toBe("לפי הצפי שהוספת לנובמבר: שכירות $2,500");
     expect(copyText(reviewWhy(row, info("forecast_line"), true) ?? [])).toBe("לפי הצפי שהוספת לנובמבר: שכירות $2,500");
+  });
+
+  it("names the forecast line's project when the card has none yet (a pending match)", () => {
+    const pending = { ...row, project_id: null, forecast_match: { ...match, project_name: "Juniper Ct" } };
+    expect(copyText(reviewWhy(pending, null, true) ?? [])).toBe("לפי הצפי שהוספת לנובמבר: שכירות $2,500 · Juniper Ct");
+    expect(copyText(reviewWhy({ ...pending, project_id: "p-1" }, null, true) ?? [])).toBe("לפי הצפי שהוספת לנובמבר: שכירות $2,500");
   });
 
   it("keeps Jev's own reason when Jev suggests something else, and none with neither", () => {
