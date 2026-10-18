@@ -87,7 +87,7 @@ describe("CompanyProfitScreen (FLOW-140c1)", () => {
       expect(rows[0]?.querySelector<HTMLElement>(".ui-pcat-bar-fill")?.style.width).toBe("100%");
       expect(rows.every((row) => (row.querySelector(".ui-income") != null) === (index === 0))).toBe(true);
     });
-    const metas = [...document.querySelectorAll(".ui-pcat-meta")].map((meta) => meta.textContent ?? "");
+    const metas = [...document.querySelectorAll(".ui-pcat-meta")].map((meta) => meta.textContent);
     expect(metas.some((text) => / · 2 פרויקטים$/.test(text))).toBe(true);
     expect(metas.some((text) => / · 1 תנועה$/.test(text))).toBe(true);
     for (const text of metas) {

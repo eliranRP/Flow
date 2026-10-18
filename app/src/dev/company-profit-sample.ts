@@ -3,7 +3,8 @@ import type { CompanyProfitSample } from "../screens/company-profit-screen";
 
 /**
  * FLOW-140c1 fixture: the board's Profit frame's structure and figures with invented names (USD, amounts
- * in cents). October so far: income 24,877, counted expenses 28,310.82 (28,311 whole), so the month is a loss;
+ * in cents). October so far: income 24,877, counted expenses 28,311 (the board's cents rounded per line, so
+ * the project rows' whole figures add up to the head), so the month is a loss;
  * five projects and the general line כללי, the same five lines' categories. Lines are signed (income +).
  */
 type Line = [date: string, payee: string, project: string | null, category: string, signed: number];
@@ -34,9 +35,9 @@ const LINES: Line[] = [
   ["2026-10-08", "ביטוח מטריה", "p3", "החזר ביטוח", 215_200],
   ["2026-10-02", "שוכרת ג׳", "p4", "שכירות", 185_000],
   ["2026-10-09", "שוכר ד׳", "p4", "שכירות", 172_500],
-  ["2026-10-01", "בנק הלוואות", "p2", "ריבית הלוואות", -183_750],
-  ["2026-10-05", "ספק חומרים", "p2", "חומרים", -894_017],
-  ["2026-10-08", "צוות בניה", "p2", "עבודה", -347_575],
+  ["2026-10-01", "בנק הלוואות", "p2", "ריבית הלוואות", -183_800],
+  ["2026-10-05", "ספק חומרים", "p2", "חומרים", -894_000],
+  ["2026-10-08", "צוות בניה", "p2", "עבודה", -347_600],
   ["2026-10-04", "בנק הלוואות", "p3", "ריבית הלוואות", -118_000],
   ["2026-10-04", "נאמנות מסים", "p3", "מסים וביטוח", -28_000],
   ["2026-10-10", "חנות כלים", "p3", "תיקונים ותחזוקה", -52_440],
