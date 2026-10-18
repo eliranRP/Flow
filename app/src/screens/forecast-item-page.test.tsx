@@ -3,6 +3,7 @@ import { Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { monthForecastBoardSample, monthForecastSample, type ForecastSampleKind } from "../forecast-sample";
 import { renderWithProviders } from "../test-render";
+import { sheetStack } from "../ui/back";
 import { type ForecastSample, ForecastScreen } from "./forecast-screen";
 
 const rpc = vi.hoisted(() => vi.fn((_name: string, _args?: unknown) => Promise.resolve({ data: null, error: null })));
@@ -12,8 +13,9 @@ vi.mock("../lib/supabase", () => ({
 }));
 
 function Where() {
-  const { pathname } = useLocation();
-  return <output data-testid="where">{pathname}</output>;
+  const location = useLocation();
+  const state: unknown = location.state;
+  return <output data-testid="where" data-layers={sheetStack(state).join(" ")}>{location.pathname}</output>;
 }
 
 /** The app's tree: the list at /forecast, a row's page at /forecast/item/<key> over it. */
@@ -33,6 +35,12 @@ function renderForecast(sample: ForecastSample, route = "/forecast") {
 
 const board = () => monthForecastBoardSample("board");
 const plain = (kind: ForecastSampleKind) => monthForecastSample(kind);
+
+/** The When sheet has closed and its history entry is gone, so Back and שמירה act on the page. */
+async function sheetGone() {
+  await waitFor(() => { expect(screen.queryByRole("radiogroup", { name: "מתי צפוי" })).toBeNull(); });
+  await waitFor(() => { expect(screen.getByTestId("where").dataset.layers).toBe(""); });
+}
 
 function openNorthgate() {
   fireEvent.click(screen.getByRole("button", { name: "Northgate Co, +$12,500" }));
@@ -109,15 +117,15 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
     expect(within(group).getByText("עד סוף החודש")).toBeTruthy();
     expect(within(group).getByText("יוצא מהצפי של אוקטובר ועובר לנובמבר")).toBeTruthy();
     fireEvent.click(within(group).getByRole("radio", { name: /^עד 31\/10/ }));
-    await waitFor(() => { expect(screen.queryByRole("radiogroup", { name: "מתי צפוי" })).toBeNull(); });
+    await sheetGone();
     // Picking saves nothing: the page's שמירה does.
     expect(rpc.mock.calls.filter(([name]) => name === "set_forecast_item")).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: "מתי צפוי: עד 31/10" }));
     fireEvent.click(await screen.findByRole("radio", { name: /^לא החודש/ }));
-    await waitFor(() => { expect(screen.queryByRole("radiogroup", { name: "מתי צפוי" })).toBeNull(); });
+    await sheetGone();
     fireEvent.click(screen.getByRole("button", { name: "מתי צפוי: לא החודש" }));
     fireEvent.click(await screen.findByRole("radio", { name: /^עד 31\/10/ }));
-    await waitFor(() => { expect(screen.queryByRole("radiogroup", { name: "מתי צפוי" })).toBeNull(); });
+    await sheetGone();
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(rpc).toHaveBeenCalledWith("set_forecast_item", {
@@ -134,13 +142,19 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
     openNorthgate();
     fireEvent.click(screen.getByRole("button", { name: "מתי צפוי: השבוע" }));
     fireEvent.click(await screen.findByRole("radio", { name: /^לא החודש/ }));
-    await waitFor(() => { expect(screen.queryByRole("radiogroup", { name: "מתי צפוי" })).toBeNull(); });
+    await sheetGone();
     expect(screen.getByRole("button", { name: "מתי צפוי: לא החודש" }).textContent).toContain("יוצא מהצפי של אוקטובר");
     expect(screen.getByRole("textbox", { name: "סכום צפוי" })).toBeDisabled();
+    // The fold lasts a moment on a loaded machine: watch for it rather than poll for it.
+    const li = screen.getByRole("button", { name: "Northgate Co, +$12,500" }).closest("li");
+    if (li == null) throw new Error("row");
+    let folded = false;
+    const watch = new MutationObserver(() => { folded ||= li.classList.contains("ui-forecast-leaving"); });
+    watch.observe(li, { attributes: true, attributeFilter: ["class"] });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await screen.findByText("Northgate Co הועבר לחודש הבא");
-    const row = screen.getByRole("button", { name: "Northgate Co, +$12,500" });
-    await waitFor(() => { expect(row.closest("li")?.classList.contains("ui-forecast-leaving")).toBe(true); });
+    await waitFor(() => { expect(folded).toBe(true); });
+    watch.disconnect();
     await waitFor(() => {
       expect(rpc).toHaveBeenCalledWith("set_forecast_item", {
         p_month: "2026-10",
@@ -156,6 +170,18 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
     fireEvent.click(screen.getByRole("button", { name: "חזרה לצפי" }));
     expect(screen.getByTestId("where").textContent).toBe("/forecast");
     await waitFor(() => { expect(document.activeElement).toBe(screen.getByRole("button", { name: "Northgate Co, +$12,500" })); });
+  });
+
+  it("Escape closes the When sheet first, then the page", async () => {
+    renderForecast(board());
+    openNorthgate();
+    fireEvent.click(screen.getByRole("button", { name: "מתי צפוי: השבוע" }));
+    const group = await screen.findByRole("radiogroup", { name: "מתי צפוי" });
+    fireEvent.keyDown(group, { key: "Escape" });
+    await sheetGone();
+    expect(screen.getByTestId("where").textContent).toBe("/forecast/item/invoice%3Ainv-1043");
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.getByTestId("where").textContent).toBe("/forecast");
   });
 
   it("Escape closes the page", () => {
