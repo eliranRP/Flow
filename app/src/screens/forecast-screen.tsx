@@ -151,8 +151,12 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
   /** A move to next month saved on the page: its row folds once the list is back on screen. */
   const pendingLeave = useRef<(() => void) | null>(null);
 
+  /** Where the list was scrolled when a row's page opened: the page starts at the top, the list comes back here. */
+  const listScroll = useRef<number | null>(null);
+
   function openItem(item: ForecastItem) {
     opener.current = item.key;
+    listScroll.current = window.scrollY;
     void navigate(`${listPath}/item/${encodeURIComponent(item.key)}${search}`);
   }
 
@@ -168,6 +172,9 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
     pendingLeave.current = null;
     // Two frames: the list is drawn again before its row starts to fold.
     if (fold != null) requestAnimationFrame(() => { requestAnimationFrame(fold); });
+    const scroll = listScroll.current;
+    listScroll.current = null;
+    if (scroll != null && window.scrollY !== scroll) window.scrollTo(0, scroll);
     if (opener.current == null) return;
     const key = opener.current;
     opener.current = null;
@@ -256,7 +263,13 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
     ...[...soFar?.income ?? [], ...soFar?.expense ?? []].flatMap((row): Array<[string, string]> => (row.name == null ? [] : [[row.key, row.name]])),
     ...(categories.data ?? []).map((row): [string, string] => [row.id, row.name]),
   ]);
-  const projectName = open == null ? "" : open.project_name ?? projects.data?.projects.find((row) => row.id === open.project_id)?.name ?? "כללי";
+  // A name still loading shows nothing, never "כללי" or "ללא קטגוריה" for a moment.
+  const projectName = open == null
+    ? ""
+    : open.project_name ?? (open.project_id == null ? "כללי" : live && projects.isPending ? "" : projects.data?.projects.find((row) => row.id === open.project_id)?.name ?? "כללי");
+  const categoryName = open?.category_id == null
+    ? NO_CATEGORY
+    : categoryNames.get(open.category_id) ?? (live && categories.isPending ? "" : NO_CATEGORY);
 
   return (
     <div className={cx("ui-forecast-screen", open != null && "ui-forecast-screen-paged")}>
@@ -363,7 +376,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
           today={today}
           backTo={listTo}
           projectName={projectName}
-          categoryName={open.category_id == null ? NO_CATEGORY : categoryNames.get(open.category_id) ?? NO_CATEGORY}
+          categoryName={categoryName}
           openWhen={openWhen}
           onSave={save}
           onClose={() => { goBack(listTo); }}

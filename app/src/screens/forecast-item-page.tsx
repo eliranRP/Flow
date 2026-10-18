@@ -27,7 +27,7 @@ function startWhen(item: ForecastItem, today: string): ForecastWhen {
 }
 
 /** Digits with a thousands separator: 12500 reads 12,500 (the board's amount field). */
-export function groupThousands(text: string): string {
+function groupThousands(text: string): string {
   const [whole = "", fraction] = text.split(".");
   const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   return fraction == null ? grouped : `${grouped}.${fraction}`;
@@ -45,14 +45,16 @@ function lateText(days: number): string {
 function sourceOf(item: ForecastItem, search: string): { title: string; hint: string; to: string } {
   if (item.kind !== "invoice") {
     const charge = itemCharge(item);
-    const to = charge == null ? "/recurring" : chargeHref(charge.direction, charge.partyId, search, charge.projectId);
+    const to = charge == null ? `/recurring${search}` : chargeHref(charge.direction, charge.partyId, search, charge.projectId);
     return { title: "חיוב קבוע", hint: "פתיחת החיוב בקבועים", to };
   }
-  return { title: itemWhat(item), hint: item.direction === "income" ? "פתיחת החשבונית" : "פתיחת החשבון", to: "/unpaid" };
+  // The open invoice's own page, as the open-invoices list links it.
+  const id = item.key.replace(/^invoice:/, "");
+  return { title: itemWhat(item), hint: item.direction === "income" ? "פתיחת החשבונית" : "פתיחת החשבון", to: `/unpaid/${encodeURIComponent(id)}${search}` };
 }
 
 /** The "מתי צפוי" sheet's words for this item and month (MonthForecastWhen). */
-export function whenSheetCopy(item: ForecastItem, today: string, monthEndChoice: string): ChoiceSheetCopy<ForecastWhen> {
+function whenSheetCopy(item: ForecastItem, today: string, monthEndChoice: string): ChoiceSheetCopy<ForecastWhen> {
   const month = today.slice(0, 7);
   const ownDate = monthEndChoice !== monthEndDay(month);
   return {

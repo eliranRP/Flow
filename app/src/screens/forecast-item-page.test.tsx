@@ -59,7 +59,7 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
     expect(screen.getByText("הכנסה מלקוחות")).toBeTruthy();
     expect(document.querySelector(".ui-forecast-page-project .ui-icon-row-value")?.textContent).toBe("Northgate Co");
     expect(screen.getByRole("button", { name: "מתי צפוי: השבוע" }).textContent).toContain("עבר המועד הרגיל");
-    expect(screen.getByRole("link", { name: "חשבונית #1043, פתיחת החשבונית" })).toHaveAttribute("href", "/unpaid");
+    expect(screen.getByRole("link", { name: "חשבונית #1043, פתיחת החשבונית" })).toHaveAttribute("href", "/unpaid/inv-1043");
     expect(screen.getByText("משנה רק את הצפי. החשבונית עצמה לא משתנה.")).toBeTruthy();
   });
 
@@ -91,6 +91,9 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
     const input = screen.getByRole("textbox", { name: "סכום צפוי" });
     fireEvent.change(input, { target: { value: "+$13,0000" } });
     expect(input).toHaveValue("+$130,000");
+    // Digits only, grouped by thousands; a fraction keeps its digits.
+    fireEvent.change(input, { target: { value: "+$1234567.5x" } });
+    expect(input).toHaveValue("+$1,234,567.5");
     fireEvent.change(input, { target: { value: "+$13,000" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(screen.getByTestId("where").textContent).toBe("/forecast");
@@ -191,6 +194,31 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
     fireEvent.click(screen.getByRole("button", { name: "חזרה לצפי" }));
     expect(screen.getByTestId("where").textContent).toBe("/forecast");
     await waitFor(() => { expect(document.activeElement).toBe(screen.getByRole("button", { name: "Northgate Co, +$12,500" })); });
+  });
+
+  it("keeps the list's query on the invoice's link", () => {
+    renderForecast(board(), "/forecast?from=home");
+    openNorthgate();
+    expect(screen.getByRole("link", { name: "חשבונית #1043, פתיחת החשבונית" })).toHaveAttribute("href", "/unpaid/inv-1043?from=home");
+  });
+
+  it("puts the list back where it was scrolled, then focuses the row", async () => {
+    let y = 600;
+    Object.defineProperty(window, "scrollY", { configurable: true, get: () => y });
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation((_x: number, top: number) => { y = top; });
+    try {
+      renderForecast(board());
+      openNorthgate();
+      // The page starts at the top.
+      expect(y).toBe(0);
+      fireEvent.click(screen.getByRole("button", { name: "חזרה לצפי" }));
+      await waitFor(() => { expect(document.activeElement).toBe(screen.getByRole("button", { name: "Northgate Co, +$12,500" })); });
+      expect(scrollTo).toHaveBeenLastCalledWith(0, 600);
+      expect(y).toBe(600);
+    } finally {
+      scrollTo.mockRestore();
+      Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
+    }
   });
 
   it("Escape closes the When sheet first, then the page", async () => {
