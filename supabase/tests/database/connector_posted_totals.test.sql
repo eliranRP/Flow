@@ -1,4 +1,4 @@
--- Pending lines stay out of the profit sums and still appear on the project list.
+-- Pending lines stay out of the profit sums and, since 0184, off the project list too.
 
 begin;
 
@@ -57,9 +57,12 @@ select is(
 );
 
 select is(
-  jsonb_array_length(public.get_project((select id from posted_ref where label = 'project')) -> 'transactions'),
-  2,
-  'the project list still shows the pending line'
+  (
+    select array_agg(x ->> 'description' order by x ->> 'description')
+    from jsonb_array_elements(public.get_project((select id from posted_ref where label = 'project')) -> 'transactions') x
+  ),
+  array['נרשם'],
+  'the project list shows the posted line and leaves the pending one out (0184)'
 );
 
 select is(

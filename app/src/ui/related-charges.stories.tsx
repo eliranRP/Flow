@@ -15,14 +15,8 @@ const samples: Record<"mailbox" | "cheaper" | "steady" | "rent", PartyCharges> =
   rent: rentCharges,
 };
 
-/** The mailbox charges with one of the earlier ones still awaiting its review. */
-const pendingMailbox: PartyCharges = {
-  ...mailboxCharges,
-  charges: mailboxCharges.charges.map((charge, index) => (index === 1 ? { ...charge, pending: true } : charge)),
-};
-
-function Demo({ sample, pending }: { sample: keyof typeof samples; pending: boolean }) {
-  return <PartyChargesBody data={pending ? pendingMailbox : samples[sample]} />;
+function Demo({ sample }: { sample: keyof typeof samples }) {
+  return <PartyChargesBody data={samples[sample]} />;
 }
 
 const meta = {
@@ -31,10 +25,9 @@ const meta = {
   tags: ["autodocs"],
   decorators: [inSheet],
   parameters: { sheetTitle: "Example Mailbox · כל החיובים" },
-  args: { sample: "mailbox", pending: false },
+  args: { sample: "mailbox" },
   argTypes: {
     sample: { control: "select", options: ["mailbox", "cheaper", "steady", "rent"] },
-    pending: { control: "boolean" },
   },
 } satisfies Meta<typeof Demo>;
 
@@ -45,5 +38,3 @@ type Story = StoryObj<typeof meta>;
 export const Body: Story = { name: "Sheet: the body, an expense up 92%" };
 /** Money in: the amounts carry the plus and the income colour. */
 export const Income: Story = { name: "Sheet: income", args: { sample: "rent" } };
-/** An earlier charge still awaiting its review shows ממתין on its row. */
-export const PendingRow: Story = { name: "Sheet: a pending charge", args: { pending: true } };

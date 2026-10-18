@@ -53,7 +53,7 @@ from (values
   (6000, 'lso:out', 'draw', 'posted', 'sumit', false),
   (7000, 'lso:taken_out', 'materials', 'posted', 'manual', false),
   (4000, 'lso:split', 'materials', 'posted', 'sumit', false),
-  (3000, 'lso:guess', 'draw', 'pending', 'sumit', true),
+  (3000, 'lso:guess', 'draw', 'posted', 'sumit', true),
   (2000, 'lso:waiting_out', 'draw', 'posted', 'manual', false)
 ) as v(amount, ikey, category, status, source, guess);
 insert into lso (label, id) select replace(idempotency_key, 'lso:', 'txn_'), id
@@ -154,7 +154,7 @@ select is(public.get_transaction(pg_temp.id('txn_out'))->>'pnl_state', 'out', 'a
 select is(public.get_transaction(pg_temp.id('txn_taken_out'))->>'pnl_state', 'out', 'a line the owner took out is out');
 select is(public.get_transaction(pg_temp.id('txn_split'))->>'pnl_state', 'mixed', 'a split line with one part kept out is mixed');
 select is(public.get_transaction(pg_temp.id('txn_guess'))->>'pnl_state', 'in',
-  'a pending line with a guessed kept-out category still counts, as in_pnl says');
+  'a line with a guessed kept-out category still counts, as in_pnl says');
 select is(
   (public.get_transaction(pg_temp.id('txn_split'))->>'in_pnl')::boolean, true,
   'in_pnl is as it was');

@@ -116,7 +116,7 @@ select is(pg_temp.kind('mi-b-skip'), 'invoice_receipt', 'the other company''s Me
 select is(pg_temp.q('mi-b-skip'), 'skipped', 'window: the reopened row is closed again');
 select is(pg_temp.q('mi-skip'), 'skipped', 'a skipped line stays skipped');
 select is(pg_temp.q('mi-appr'), 'approved', 'an approved line stays approved');
-select is(pg_temp.q('mi-pend'), 'open', 'a pending line keeps one open row');
+select is(coalesce(pg_temp.q('mi-pend'), 'none'), 'none', 'a pending line has no review row (0184)');
 select is(
   (select count(*)::integer from public.review_queue q join public.transactions t on t.id = q.transaction_id
    where t.source = 'mercury' and t.direction = 'income' and q.status = 'skipped'
@@ -130,7 +130,7 @@ create temp table mi_before as select (select count(*) from public.review_queue)
 select pg_temp.sync('a', 'invoice_receipt');
 select pg_temp.sync('b', 'invoice_receipt');
 select is(pg_temp.q('mi-skip') || '|' || pg_temp.q('mi-b-skip'), 'skipped|skipped', 'a later sync does not reopen skipped lines');
-select is(pg_temp.q('mi-appr') || '|' || pg_temp.q('mi-pend'), 'approved|open', 'a later sync keeps approved and pending as they were');
+select is(pg_temp.q('mi-appr') || '|' || coalesce(pg_temp.q('mi-pend'), 'none'), 'approved|none', 'a later sync keeps approved as it was and queues no pending line');
 select is(pg_temp.q('mi-b-stale'), 'skipped,open', 'a line the provider changed stays queued (stale fingerprint)');
 select is(
   (select jsonb_build_object('review', (select count(*) from public.review_queue) - rq, 'lines', (select count(*) from public.transactions) - tx) from mi_before),

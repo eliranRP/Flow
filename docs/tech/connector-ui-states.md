@@ -1,6 +1,6 @@
 # Connector UI states
 
-Copy for the design review of the connection card, the import range, the ₪/$ toggle, and the pending tag. L3 builds the screens. This layer does not.
+Copy for the design review of the connection card, the import range, and the ₪/$ toggle. L3 builds the screens. This layer does not.
 
 Hebrew is the UI string. English is the meaning. Keys match `CONNECTOR_COPY_KEYS` in `supabase/functions/_shared/connectors/types.ts`.
 
@@ -13,7 +13,6 @@ Hebrew is the UI string. English is the meaning. Keys match `CONNECTOR_COPY_KEYS
 | `sync.yesterday` | עודכן אתמול ב-{HH:MM} | Updated yesterday at the clock |
 | `sync.older` | עודכן ב-{D.M} | Updated on that day and month |
 | `refresh.failed` | הרענון נכשל. נסו שוב. | The refresh failed. Try again. |
-| `pending.tag` | ממתין | Pending |
 | `range.from_start` | מההתחלה | From the start |
 | `currency.ils` | ₪ | Shekel |
 | `currency.usd` | $ | Dollar |
@@ -50,6 +49,6 @@ One control, two places: the Home header and Settings. It writes the company dis
 
 A Mercury line stays in dollars. The toggle converts a mixed total at read from `fx_rates`. It does not rewrite the row and it does not freeze a rate on the line. Typed amounts stay ₪. The toggle does not rewrite an input. Pending lines stay out of the totals in both currencies.
 
-## Pending tag
+## Pending lines
 
-A review card whose line is pending shows ממתין. The line is in לאישור. It is not in a P&L, a project total, or the filed-today list. A posted line has no tag. A void line is not on the card.
+There is no pending tag. A line still pending at the bank shows nowhere in the app until it posts ([0184](../decisions/0184-pending-bank-lines-hidden.md)). A void line is not shown either.

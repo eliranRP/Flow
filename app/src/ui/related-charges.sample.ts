@@ -15,8 +15,8 @@ export const mailboxCharges: PartyCharges = {
     amount_minor: month === "2026-10" ? -2_299n : -1_199n,
   })),
   charges: [
-    { id: "t1", doc_date: "2026-10-06", amount_minor: -2_299n, pending: false },
-    ...["09", "08", "07", "06", "05", "04"].map((m) => ({ id: `t-${m}`, doc_date: `2026-${m}-06`, amount_minor: -1_199n, pending: false })),
+    { id: "t1", doc_date: "2026-10-06", amount_minor: -2_299n },
+    ...["09", "08", "07", "06", "05", "04"].map((m) => ({ id: `t-${m}`, doc_date: `2026-${m}-06`, amount_minor: -1_199n })),
   ],
 };
 
@@ -43,7 +43,6 @@ export const boardCharges: PartyCharges = {
       id: current ? "t-board" : `t-board-${String(index)}`,
       doc_date: `${month}-11`,
       amount_minor: current ? -124_000n : -98_000n,
-      pending: false,
     };
   }),
 };
@@ -62,7 +61,7 @@ export const loanCharges: PartyCharges = {
   charges: Array.from({ length: 12 }, (_, index) => {
     const month = new Date(Date.UTC(2025, 10 + 11 - index, 1)).toISOString().slice(0, 7);
     const current = index === 0;
-    return { id: current ? "t-loan" : `t-loan-${String(index)}`, doc_date: `${month}-07`, amount_minor: -395_700n, pending: false };
+    return { id: current ? "t-loan" : `t-loan-${String(index)}`, doc_date: `${month}-07`, amount_minor: -395_700n };
   }),
 };
 
@@ -84,10 +83,10 @@ export const rentCharges: PartyCharges = {
     { month: "2026-10", amount_minor: 400_000n },
   ],
   charges: [
-    { id: "r1", doc_date: "2026-10-01", amount_minor: 400_000n, pending: true },
-    { id: "r-09", doc_date: "2026-09-01", amount_minor: 500_000n, pending: false },
-    { id: "r-08", doc_date: "2026-08-01", amount_minor: 500_000n, pending: false },
-    { id: "r-07", doc_date: "2026-07-01", amount_minor: 500_000n, pending: false },
+    { id: "r1", doc_date: "2026-10-01", amount_minor: 400_000n },
+    { id: "r-09", doc_date: "2026-09-01", amount_minor: 500_000n },
+    { id: "r-08", doc_date: "2026-08-01", amount_minor: 500_000n },
+    { id: "r-07", doc_date: "2026-07-01", amount_minor: 500_000n },
   ],
 };
 

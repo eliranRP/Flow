@@ -118,7 +118,7 @@ function chargesOf(party: { id: string; name: string; direction: "expense" | "in
     change_percent: null,
     others: dates.length - 1,
     months: months.map(([month, amount]) => ({ month, amount_minor: amount })),
-    charges: dates.map(([doc_date, id, amount]) => ({ id, doc_date, amount_minor: amount, pending: false })),
+    charges: dates.map(([doc_date, id, amount]) => ({ id, doc_date, amount_minor: amount })),
   };
 }
 

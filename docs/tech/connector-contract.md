@@ -99,7 +99,7 @@ A card refund or reversal (`creditCardCredit`, or a reversal kind) stays `direct
 
 Conflict target is `(company_id, source, external_id)`.
 
-Owned on update: `user_assigned`, `project_assigned`, `category_assigned`. When `user_assigned` or `project_assigned` is set, keep `project_id` and `pnl_role`. When `user_assigned` or `category_assigned` is set, keep `category_id`. A pending line may be assigned and approved. Those flags and ids stay when the same `external_id` posts. The line stays out of totals until `line_status` is `posted`.
+Owned on update: `user_assigned`, `project_assigned`, `category_assigned`. When `user_assigned` or `project_assigned` is set, keep `project_id` and `pnl_role`. When `user_assigned` or `category_assigned` is set, keep `category_id`. A pending line is hidden from the app ([0184](../decisions/0184-pending-bank-lines-hidden.md)), so it is not assigned there; flags and ids set before 0184, or by a rule, stay when the same `external_id` posts. The line stays out of totals until `line_status` is `posted`.
 
 Allocations on an assigned line are stored in the line's currency, the same minor units as `amount_net`. They are recomputed from `share_bp` when `amount_net` changes, including a posting that changes the amount. The remainder still lands on the first project, as today's SUMIT update does. A display conversion does not rewrite `amount_net` or `allocations.amount_net`. A read of an allocation amount goes through `private.to_display_minor` with that line's currency, date, and stored pair.
 
@@ -112,7 +112,7 @@ Mercury, observed and documented 2026-10-03:
 | Provider status | Canonical | Books |
 | --- | --- | --- |
 | `sent` | `posted` | Counts once posted |
-| `pending` | `pending` | In לאישור, tagged ממתין. Assignable. No total until posted |
+| `pending` | `pending` | Stored, shown nowhere in the app and not queued for review until posted ([0184](../decisions/0184-pending-bank-lines-hidden.md)). No total until posted |
 | `cancelled`, `failed`, `reversed`, `blocked` | `void` | Leave the books (`removed_at` set) |
 
 A first-seen failed, cancelled, reversed, or blocked line is skipped. It is not inserted. A line that was stored and later becomes one of those is voided.
@@ -600,13 +600,13 @@ Totals sum `line_status = 'posted'` only. `pending` and `void` do not count. Exi
 
 `list_auto_assigned_today` excludes pending, so a pending line is not filed.
 
-`list_review` shows pending. `get_transaction(p_id uuid) returns jsonb` still returns a line opened from review, including pending. `list_unpaid() returns jsonb` stays document-based and does not gain Mercury cash lines.
+`list_review` does not show pending, and `sync_review_queue` does not queue it; once the line posts it is queued once ([0184](../decisions/0184-pending-bank-lines-hidden.md)). `get_transaction(p_id uuid) returns jsonb` reads a pending line as not found. `list_unpaid() returns jsonb` stays document-based and does not gain Mercury cash lines.
 
 On the invoiced basis, `company_pnl` income is `invoice`, `credit`, and `invoice_receipt`. The planned `private.cash_receipt_counts_on_invoiced(p_source)` predicate was not added. Mercury income is stored as `invoice_receipt` instead (decision [0097](../decisions/0097-mercury-income-invoice-receipt.md)), so it counts there and `company_pnl` does not contain the literal `mercury`. Nothing checks it against a SUMIT invoice, so both can count. That is a known limitation. On the cash basis a receipt and an invoice-receipt both count.
 
-`search_transactions(p_query text, p_scope text, p_limit integer, p_offset integer)` adds `line_status`, `currency`, and `amount_original` on each expense object. The `filed` scope also requires `line_status = 'posted'`. The `all` scope may include pending and still returns those fields. `search_expenses` returns that JSON. Signature and grants stay.
+`search_transactions(p_query text, p_scope text, p_limit integer, p_offset integer)` adds `line_status`, `currency`, and `amount_original` on each expense object. The `filed` scope also requires `line_status = 'posted'`. No scope returns a pending line ([0184](../decisions/0184-pending-bank-lines-hidden.md)). `search_expenses` returns that JSON. Signature and grants stay.
 
-`project_waiting` is a list, not a profit figure. It is not one of these posted sums. Each item carries `currency` and `amount_original`. `get_project`'s `pending_agorot` converts those lines, under Display conversion.
+`project_waiting` is a list, not a profit figure. It is not one of these posted sums. It leaves out pending lines ([0184](../decisions/0184-pending-bank-lines-hidden.md)). Each item carries `currency` and `amount_original`. `get_project`'s `pending_agorot` converts those lines, under Display conversion.
 
 ### Display conversion
 
@@ -660,7 +660,7 @@ These functions sum `private.to_display_minor` for each posted line that already
 | `private.overhead_share(uuid)` | The overhead it shares |
 | allocation amounts on those reads | `allocations.amount_net`, in the line's currency, through the same helper |
 
-`get_project`'s `pending_agorot` is the negation of the sum of `private.to_display_minor` over the waiting lines from `project_waiting`. Each call uses that line's currency, `doc_date`, and stored pair. It does not sum raw `amount_net`. A null is left out of the sum and still counts in `fx_missing_count`. Those lines may be pending. This figure is not a posted P&L total. The sign matches today's `-sum(amount_net)`, in display minor units.
+`get_project`'s `pending_agorot` is the negation of the sum of `private.to_display_minor` over the waiting lines from `project_waiting`. Each call uses that line's currency, `doc_date`, and stored pair. It does not sum raw `amount_net`. A null is left out of the sum and still counts in `fx_missing_count`. Those lines are posted ([0184](../decisions/0184-pending-bank-lines-hidden.md)), but this figure is not a posted P&L total. The sign matches today's `-sum(amount_net)`, in display minor units.
 
 `budget_agorot` stays the stored project budget in ILS agorot. It is not a line. It has no `doc_date` and no stored pair, so `private.to_display_minor` is not applied and a `$` display does not turn the number into cents. `get_project` and each object in `company_pnl`'s `projects` array return `budget_currency` with the value `ILS` beside `budget_agorot`.
 
@@ -829,7 +829,7 @@ Not in this stack:
 | L2a | Registry `open`, engine, `connector-sync` / `connector-connect`, `fx.ts`, aliases, `sumit-sync` moved off the views, `sumit-connect` seals format 3 and the connection RPCs require `'3'` |
 | L2b | Mercury adapter and SUMIT `normalize` over the current mapper. Verifies pending and posted share an id |
 | L3a | ₪/$ toggle |
-| L3b | Connection card, range, ממתין |
+| L3b | Connection card, range (the ממתין tag was dropped by [0184](../decisions/0184-pending-bank-lines-hidden.md)) |
 
 L1b backlog, named here and not specified in this contract: pgTAP expected values for a negative amount, an exact `.5`, a USD display, and `historical`; whether `today` stays the same rule as `original`; the allocation rounding rule; the overhead rounding rule; the duplicate unique index; `sumit-reseal` rejecting a caller that is not `service_role`; the unpaid-list currency note. Reviewer 2 r1, also not in L1a: mixed-sign VAT (B2), B3, the pre-existing lock order (B4), B6, B7, and B8.
 

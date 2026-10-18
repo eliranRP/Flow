@@ -33,7 +33,6 @@ function row(id: string, patch: Partial<SearchRow> = {}): SearchRow {
     direction: "expense",
     currency: "ILS",
     amount_original: null,
-    line_status: null,
     project_id: null,
     category_id: null,
     project_name: null,

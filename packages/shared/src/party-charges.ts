@@ -34,8 +34,8 @@ export const partyChargesSchema = z.object({
   others: z.number().int().nonnegative(),
   /** The 6 months up to the line's month, oldest first. */
   months: z.array(z.object({ month: monthSchema, amount_minor: agorotSchema })),
-  /** The 12 newest charges, newest first. */
-  charges: z.array(z.object({ id: z.string(), doc_date: daySchema, amount_minor: agorotSchema, pending: z.boolean() })),
+  /** The 12 newest posted charges, newest first (a line still pending at the bank is not one, decision 0184). */
+  charges: z.array(z.object({ id: z.string(), doc_date: daySchema, amount_minor: agorotSchema })),
 });
 
 export type PartyCharges = z.infer<typeof partyChargesSchema>;

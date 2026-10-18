@@ -1,4 +1,5 @@
--- FLOW-209. get_project's transactions[] rows carry line_status, and other_currencies counts
+-- FLOW-209. get_project's transactions[] rows carry line_status (0184: a pending line is not
+-- listed), and other_currencies counts
 -- a shared line's share for this project even when the line's own project_id is this project,
 -- as by_currency does. Invented data only.
 
@@ -60,11 +61,11 @@ cross join lateral (values (r.a, 6000, -600), (r.b, 4000, -400)) s(project_id, b
 select tests.authenticate_as('gpf_owner');
 
 select is(
-  (select x->>'line_status'
+  (select count(*)::integer
    from jsonb_array_elements(public.get_project((select a from gpf_ref), 'cash')->'transactions') x
    where x->>'description' = 'example pending'),
-  'pending',
-  'a pending line reads line_status pending'
+  0,
+  'a pending line is not in the transactions list (0184)'
 );
 
 select is(
