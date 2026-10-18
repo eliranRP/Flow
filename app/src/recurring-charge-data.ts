@@ -13,17 +13,25 @@ import { waitForAccessToken } from "./wait-for-session";
  * the server's; the page draws what they return.
  */
 
-/** The newest counted line of a party in one currency (`recurring_party_line`), or null when there is none. */
-export function usePartyLineQuery(direction: "income" | "expense", partyId: string, currency: string, active = true) {
+/**
+ * The newest counted line of a party in one currency (`recurring_party_line`), or null when there is none.
+ * A party split by project names the charge's project, so the line is that project's (decision 0185).
+ */
+export function usePartyLineQuery(direction: "income" | "expense", partyId: string, currency: string, active = true, projectId: string | null = null) {
   const preview = useHomePreview();
   return useQuery({
-    queryKey: ["party-line", preview, direction, partyId, currency],
+    queryKey: ["party-line", preview, direction, partyId, currency, projectId],
     enabled: active && preview === "off" && currency !== "",
     queryFn: async (): Promise<string | null> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       await waitForAccessToken(supabase);
-      const { data, error } = await supabase.rpc("recurring_party_line", { p_direction: direction, p_party_id: partyId, p_currency: currency });
+      const { data, error } = await supabase.rpc("recurring_party_line", {
+        p_direction: direction,
+        p_party_id: partyId,
+        p_currency: currency,
+        ...(projectId == null ? {} : { p_project_id: projectId }),
+      });
       if (error) throw error;
       return typeof data === "string" ? data : null;
     },
@@ -38,6 +46,8 @@ export type ChargePageData =
   | {
       status: "ready";
       row: ScheduleRow;
+      /** The party is split into charges by project (decision 0185). */
+      split: boolean;
       bills: MissingBill[] | undefined;
       changes: RecurringChange[] | undefined;
       lineId: string | null;
@@ -50,11 +60,15 @@ export type ChargePageData =
  * its charges and its recurring switch fill in behind it. A late bill or change that did not load
  * (undefined) still alerts, so the page never hides an alert it cannot check.
  */
-export function useChargePageData(direction: "income" | "expense", partyId: string, enabled = true): ChargePageData {
+export function useChargePageData(direction: "income" | "expense", partyId: string, enabled = true, projectId: string | null = null): ChargePageData {
   const preview = useHomePreview();
   const schedule = useRecurringScheduleQuery(enabled && preview === "off");
-  const row = schedule.data?.find((item) => item.party_id === partyId && item.direction === direction);
-  const line = usePartyLineQuery(direction, partyId, row?.currency ?? "", row != null);
+  const rows = schedule.data ?? [];
+  // The charge: the party's row in the project the link names, else its first (a link from before the split).
+  const party = rows.filter((item) => item.party_id === partyId && item.direction === direction);
+  const row = party.find((item) => item.project_id === projectId) ?? party[0];
+  const split = party.length > 1;
+  const line = usePartyLineQuery(direction, partyId, row?.currency ?? "", row != null, split ? (row?.project_id ?? null) : null);
   const lineId = line.data ?? null;
   const charges = usePartyChargesQuery(lineId ?? "", lineId != null);
   const recurring = usePaymentRecurringQuery(lineId ?? "", lineId != null);
@@ -66,6 +80,7 @@ export function useChargePageData(direction: "income" | "expense", partyId: stri
   return {
     status: "ready",
     row,
+    split,
     bills: bills.data,
     changes: changes.data,
     lineId,

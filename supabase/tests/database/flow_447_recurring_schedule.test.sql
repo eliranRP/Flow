@@ -76,7 +76,7 @@ select ok(has_function_privilege('authenticated', 'public.recurring_schedule(dat
 select is(
   (select count(distinct e ->> 'party_id')::integer from jsonb_array_elements(public.recurring_schedule('2026-10-20')) e),
   jsonb_array_length(public.recurring_schedule('2026-10-20')),
-  'each party appears once'
+  'a party with one project appears once'
 );
 
 select * from finish();

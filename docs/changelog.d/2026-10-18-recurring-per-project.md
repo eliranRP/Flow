@@ -1,0 +1,1 @@
+Recurring charges (קבועים) split a supplier or customer by project (decision 0185). A loan servicer that is paid for several properties now shows one charge per property, each with its own usual amount, arrival, change percent and late alert, instead of one merged charge with one project. A new payment not filed yet joins the property whose amount is closest.

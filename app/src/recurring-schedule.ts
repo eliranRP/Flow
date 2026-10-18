@@ -25,16 +25,35 @@ export type ScheduleRow = {
 };
 
 /**
+ * One recurring charge: a party in one project (decision 0185), so a servicer paying several loans is
+ * several charges. The key the list's rows, their alerts and their pages use.
+ */
+export function chargeKey(row: Pick<ScheduleRow, "direction" | "party_id" | "project_id">): string {
+  return `${row.direction}:${row.party_id}:${row.project_id ?? ""}`;
+}
+
+/** Whether the party is split into charges by project: another row has its party and direction. */
+export function isSplitParty(rows: readonly ScheduleRow[], row: Pick<ScheduleRow, "direction" | "party_id">): boolean {
+  return rows.filter((item) => item.direction === row.direction && item.party_id === row.party_id).length > 1;
+}
+
+/** A list row's id: the party's, or its chargeKey when the party is split by project. */
+export function rowId(rows: readonly ScheduleRow[], row: ScheduleRow): string {
+  return isSplitParty(rows, row) ? chargeKey(row) : row.party_id;
+}
+
+/**
  * Maps the server rows to the layout's lines: "arrived" rows carry the amount they came at, "due" is
  * any row not later than this month (late and soon as well as arrived), and "later" rows stay out of the total.
  * The server signs an expense negative; the list shows amounts unsigned, so the magnitude is taken here.
  */
-export function scheduleLines(rows: readonly ScheduleRow[]): RecurringLine[] {
+export function scheduleLines(rows: readonly ScheduleRow[], all: readonly ScheduleRow[] = rows): RecurringLine[] {
   return rows.map((row) => {
     const arrived = row.state === "arrived";
     const minor = arrived && row.amount_minor != null ? row.amount_minor : row.typical_amount_minor;
     return {
-      id: row.party_id,
+      // Ids come from every row, so a project's view keys a split party's charge as the full list does.
+      id: rowId(all, row),
       income: row.direction === "income",
       category: row.category_name,
       pace: row.pace,
@@ -50,7 +69,7 @@ export function scheduleLines(rows: readonly ScheduleRow[]): RecurringLine[] {
 /** The suggestion `missing_bills` carries for a late bill (decision 0179): a party that may be this one. */
 export type RecurringSuggestion = NonNullable<MissingBill["suggestion"]>;
 
-/** A late charge that still alerts: the key its dismissal takes (null when the read failed), and its match. */
+/** A late charge that still alerts (by rowId): the key its dismissal takes (null when the read failed), and its match. */
 export type RecurringAlert = { alertKey: string | null; suggestion: RecurringSuggestion | null };
 
 /**
@@ -64,14 +83,19 @@ export function alertState(rows: readonly ScheduleRow[], missing: readonly Missi
   const dismissed = new Set<string>();
   const late = rows.filter((row) => row.state === "late");
   if (missing === undefined) {
-    for (const row of late) active.set(row.party_id, { alertKey: null, suggestion: null });
+    for (const row of late) active.set(rowId(rows, row), { alertKey: null, suggestion: null });
     return { active, dismissed };
   }
-  const bills = new Map(missing.filter((bill) => bill.party_id != null).map((bill) => [`${String(bill.direction)}:${String(bill.party_id)}`, bill] as const));
+  const bills = new Map(missing.filter((bill) => bill.party_id != null).map((bill) => [
+    chargeKey({ direction: bill.direction === "income" ? "income" : "expense", party_id: String(bill.party_id), project_id: bill.project_id ?? null }),
+    bill,
+  ] as const));
   for (const row of late) {
-    const bill = bills.get(`${row.direction}:${row.party_id}`);
-    if (bill == null) dismissed.add(row.party_id);
-    else active.set(row.party_id, { alertKey: bill.alert_key ?? null, suggestion: bill.suggestion ?? null });
+    const id = rowId(rows, row);
+    // A party with one charge matches its bill by party; a split party's bill names its project.
+    const bill = bills.get(chargeKey(row)) ?? (isSplitParty(rows, row) ? undefined : missing.find((item) => item.party_id === row.party_id && item.direction === row.direction));
+    if (bill == null) dismissed.add(id);
+    else active.set(id, { alertKey: bill.alert_key ?? null, suggestion: bill.suggestion ?? null });
   }
   return { active, dismissed };
 }

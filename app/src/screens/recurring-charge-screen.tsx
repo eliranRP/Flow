@@ -2,14 +2,14 @@ import type { MissingBill, PaymentRecurring, PartyCharges, RecurringChange, Recu
 import { formatAmountText } from "@flow/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { RECURRING_KEYS, runPaceChange, type PaceWrite } from "../pace-write";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { useHoldWrites } from "../use-is-viewer";
 import { dismissRecurringAlert, answerRecurringMatch, liveRpcClient, restoreRecurringAlert, type AlertKind } from "../recurring-actions";
 import { type ChargePageData, useChargePageData } from "../recurring-charge-data";
 import { amountOf, bannerText, changeLine, chargeAlert, dayMonth, ignoredText, metaOf, monthsThrough, statusOf } from "../recurring-charge";
-import { israelToday, type ScheduleRow } from "../recurring-schedule";
+import { chargeKey, israelToday, type ScheduleRow } from "../recurring-schedule";
 import { Button } from "../ui/button";
 import { ChoiceSheet } from "../ui/choice-sheet";
 import { EmptyState, FailureLine } from "../ui/empty-state";
@@ -26,6 +26,8 @@ import { useBlockedPreview } from "./screen-shared";
 /** A dev fixture's party: the schedule row and the reads the page would make, as the server returns them. */
 export type ChargeSample = {
   row: ScheduleRow;
+  /** The party is split into charges by project (decision 0185). */
+  split?: boolean;
   bills?: MissingBill[];
   changes?: RecurringChange[];
   lineId: string | null;
@@ -42,14 +44,15 @@ type PaceChange = PaceWrite & { undo: boolean; close?: () => void };
  */
 export function RecurringChargeScreen({ sample, openSheet, now = new Date() }: { sample?: ChargeSample; openSheet?: "pace" | "all"; now?: Date } = {}) {
   const params = useParams();
+  const [query] = useSearchParams();
   const direction = sample == null ? params.direction : sample.row.direction;
   const partyId = sample == null ? params.partyId : sample.row.party_id;
   const valid = direction === "income" || direction === "expense";
-  const live = useChargePageData(valid ? direction : "expense", partyId ?? "", sample == null && valid);
+  const live = useChargePageData(valid ? direction : "expense", partyId ?? "", sample == null && valid, query.get("project"));
   const preview = useHomePreview();
   const today = israelToday(now);
   if (sample == null && !valid) return <ChargeMissing />;
-  const data: ChargePageData = sample == null ? live : { status: "ready", ...sample, bills: sample.bills, changes: sample.changes };
+  const data: ChargePageData = sample == null ? live : { status: "ready", ...sample, split: sample.split ?? false, bills: sample.bills, changes: sample.changes };
   if (data.status === "loading") {
     return (
       <div className="ui-charge-page">
@@ -61,7 +64,7 @@ export function RecurringChargeScreen({ sample, openSheet, now = new Date() }: {
   }
   if (data.status === "error") return <ChargeError />;
   if (data.status === "missing" || preview !== "off") return <ChargeMissing />;
-  return <ChargeBody key={`${data.row.direction}:${data.row.party_id}`} data={data} live={sample == null} today={today} openSheet={openSheet} />;
+  return <ChargeBody key={chargeKey(data.row)} data={data} live={sample == null} today={today} openSheet={openSheet} />;
 }
 
 /** The schedule did not load: one line and the retry. */
@@ -134,7 +137,7 @@ function ChargeBody({
   const arrivedOn = row.state === "arrived" ? charges?.charges[0]?.doc_date ?? null : null;
   const status = statusOf(row, arrivedOn);
   const amount = amountOf(row);
-  const alert = chargeAlert(row, data.bills, data.changes, lineId);
+  const alert = chargeAlert(row, data.bills, data.changes, lineId, data.split);
   const ignored = alert != null && (ignoredLocal ?? !alert.active);
   const suggestion = alert?.kind === "missing" && !ignored ? alert.suggestion : null;
   const showMatch = suggestion != null && matchLocal == null && !holdWrites;
