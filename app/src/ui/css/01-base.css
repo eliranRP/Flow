@@ -1,6 +1,5 @@
 :root {
   --size-chip: 36px;
-  --size-period: 32px;
   --size-switch: 46px;
   --switch-track-h: 28px;
   --switch-knob: 22px;
@@ -11,17 +10,10 @@
   --toast-gap: 10px;
   --icon-app: 72px;
   --radius-app: 18px;
-  --icon-note: 38px;
   --radius-note: 9px;
-  --doc-tile-w: 84px;
-  --doc-tile-h: 100px;
-  --invoice-w: 188px;
-  --invoice-h: 248px;
-  --lock-time: 5.5rem;
   --sheet-gap: 56px;
   --spinner: 18px;
   --spinner-radio: 12px;
-  --icon-check: 24px;
   --empty-measure: 280px;
   --figure-gap: 6px;
   --day-mark: var(--space-10);
@@ -35,7 +27,6 @@
   --review-gap: 14px;
   --review-tile-w: 58px;
   --review-tile-h: 74px;
-  --review-radius: 10px;
 }
 
 /* FLOW-310: with the keyboard up on a 320 phone the visual viewport is short, so an open sheet
@@ -67,10 +58,8 @@
   text-align: center;
   white-space: normal;
 }
-
 .ui-pill-label,
 .ui-chip-label,
-.ui-period-label,
 .ui-text-link-label {
   min-width: 0;
   overflow: hidden;
@@ -142,14 +131,12 @@
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
-
 .ui-btn,
 .ui-icon-btn,
 .ui-chip,
 .ui-seg-btn,
 .ui-text-link,
 .ui-hit,
-.ui-band-period,
 .ui-radio,
 .ui-radio-row,
 .ui-tab-slot,
@@ -238,18 +225,14 @@ a:is(.ui-btn-ghost, .ui-btn-danger, .ui-btn-link, .ui-btn-danger-link)[aria-disa
   font-size: var(--type-label-size);
   font-weight: var(--type-btn-weight);
 }
-
 .ui-btn-pill,
 .ui-chip,
-.ui-seg-btn,
-.ui-band-period {
+.ui-seg-btn {
   --hit-block: var(--touch-min);
 }
-
 .ui-btn-pill::after,
 .ui-chip::after,
-.ui-seg-btn::after,
-.ui-band-period::after {
+.ui-seg-btn::after {
   content: "";
   position: absolute;
   inset-inline: 0;
@@ -411,19 +394,10 @@ a:is(.ui-btn-ghost, .ui-btn-danger, .ui-btn-link, .ui-btn-danger-link)[aria-disa
   background: transparent;
   pointer-events: none;
 }
-
-.ui-show-hover {
-  display: contents;
-}
-
 .ui-row:is(:focus-visible, [data-focus-ring]:focus, [aria-pressed="true"])::before,
 .ui-radio-row:is(:focus-visible, [data-focus-ring]:focus, [aria-checked="true"])::before,
 .ui-review-line:focus-visible::before {
   background: var(--color-tint);
-}
-
-.ui-show-hover > :is(.ui-row, .ui-radio-row, .ui-review-line)::before {
-  background: var(--surface-hover);
 }
 
 /* The square focus ring would draw a second box. The tint is the indicator. `[data-focus-ring]:focus`

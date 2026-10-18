@@ -60,7 +60,7 @@
 
 .ui-charge-bar {
   inline-size: 100%;
-  border-radius: 6px;
+  border-radius: var(--radius-block);
   background: var(--color-tint-strong);
 }
 

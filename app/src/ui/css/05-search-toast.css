@@ -110,7 +110,7 @@
   background: transparent;
   color: inherit;
   font-size: var(--type-line2-size);
-  font-weight: 500;
+  font-weight: var(--type-btn-weight);
   text-decoration: none;
 }
 

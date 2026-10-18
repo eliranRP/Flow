@@ -79,13 +79,13 @@
 }
 
 .ui-gsi-button:active:not(:disabled) {
-  box-shadow: inset 0 0 0 999px rgb(var(--gsi-ink) / var(--gsi-press));
+  box-shadow: inset 0 0 0 999px var(--color-gsi-press);
 }
 
 .ui-gsi-dis:disabled {
-  border-color: rgb(var(--gsi-ink) / var(--gsi-press));
+  border-color: var(--color-gsi-press);
   background: color-mix(in srgb, var(--color-gsi-bg) var(--gsi-disabled), transparent);
-  color: rgb(var(--gsi-ink) / var(--gsi-disabled));
+  color: var(--color-gsi-disabled-text);
   opacity: 1;
 }
 

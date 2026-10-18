@@ -257,7 +257,7 @@
 
 .ui-row-icon > .ui-spinner {
   display: block;
-  margin: calc((20px - var(--spinner)) / 2);
+  margin: calc((var(--space-5) - var(--spinner)) / 2);
 }
 
 .ui-sheet-surface {
@@ -528,7 +528,7 @@
 }
 
 .ui-percent-suffix {
-  font-weight: 600;
+  font-weight: var(--type-title-weight);
 }
 
 /* The prefix sits just to the left of the right-aligned digits: the lead lays out the prefix and a
@@ -543,7 +543,7 @@
 
 .ui-money-prefix {
   flex: none;
-  font-weight: 600;
+  font-weight: var(--type-title-weight);
 }
 
 .ui-money-mirror {

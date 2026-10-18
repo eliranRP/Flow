@@ -37,7 +37,7 @@
   flex: none;
   inline-size: 12px;
   block-size: 12px;
-  border-radius: 3px;
+  border-radius: var(--radius-swatch);
   background: var(--color-accent);
 }
 
@@ -279,7 +279,7 @@
   align-items: center;
   justify-content: center;
   padding-block: 0;
-  border-radius: var(--touch-min);
+  border-radius: var(--radius-chip);
   background: var(--band-track);
   color: var(--color-on-band);
   font-size: var(--type-btn-size);

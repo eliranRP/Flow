@@ -66,7 +66,7 @@
   display: flex;
   flex: none;
   align-items: center;
-  border-radius: 22px;
+  border-radius: var(--radius-pager);
   background: var(--color-tint);
   color: var(--color-accent-text);
 }
@@ -84,7 +84,7 @@
   justify-content: space-between;
   inline-size: 100%;
   block-size: 48px;
-  border-radius: 24px;
+  border-radius: var(--radius-pager-band);
   background: var(--band-track);
   color: var(--color-on-band);
   padding-inline: calc(var(--space-1) / 2);

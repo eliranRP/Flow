@@ -42,45 +42,6 @@
   animation: m-push-in var(--motion-page) var(--ease-enter);
 }
 
-@keyframes m-push-back {
-  from {
-    opacity: 1;
-    transform: none;
-  }
-  to {
-    opacity: 0;
-    transform: translateX(calc(-1 * var(--rise-push)));
-  }
-}
-/* Back reverses the push: the detail page came in from the left (RTL), so it leaves to the left. */
-.m-push-back {
-  animation: m-push-back var(--motion-sheet-out) var(--ease-exit) forwards;
-}
-
-@keyframes m-sheet-in {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
-.m-sheet-in {
-  animation: m-sheet-in var(--motion-sheet-in) var(--ease-enter);
-}
-
-@keyframes m-sheet-out {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(100%);
-  }
-}
-.m-sheet-out {
-  animation: m-sheet-out var(--motion-sheet-out) var(--ease-exit) forwards;
-}
-
 @keyframes m-bar-in {
   from {
     transform: translateY(-110%);

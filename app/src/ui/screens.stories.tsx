@@ -3,7 +3,6 @@ import { HelpScreen } from "../screens/HelpScreen";
 import { AddForm } from "../screens/flow-screens";
 import { SignInScreen } from "../screens/SignInScreen";
 import { InstallScreen } from "./install-screen";
-import { InvoiceReadingFrame } from "./reference-frames.stories-support";
 import { StoryRoute } from "./story-route";
 import { ExampleBar, exampleLabel } from "./screen-stories-support";
 
@@ -98,17 +97,6 @@ export const InstallIpad: Story = {
   render: () => (
     <StoryRoute entry="/">
       <InstallScreen mode="ipad" example={<span className="t-hint">{exampleLabel}</span>} onDismiss={() => undefined} />
-    </StoryRoute>
-  ),
-};
-
-
-
-
-export const InvoiceReading: Story = {
-  render: () => (
-    <StoryRoute entry="/">
-      <InvoiceReadingFrame />
     </StoryRoute>
   ),
 };

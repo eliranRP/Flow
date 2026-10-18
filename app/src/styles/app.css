@@ -197,7 +197,6 @@
   --label-gap: 6px;
   --grab-width: 40px;
   --grab-height: 5px;
-  --grab-radius: 3px;
   --row-pad: 14px;
   --stroke-strong: 1.5px;
   --stroke-hairline: 1px;
@@ -209,9 +208,7 @@
   --skel-greet-pad: 10px;
   --skel-hero-pad: 28px;
   --skel-section-pad: 30px;
-  --gsi-press: 12%;
   --gsi-disabled: 38%;
-  --gsi-ink: 31 31 31;
   /* FLOW-364: Home's band and month drawer (the board's values with no token of their own). */
   --band-track: rgba(255, 255, 255, 0.14);
   --band-row: rgba(255, 255, 255, 0.12);

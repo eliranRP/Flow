@@ -307,7 +307,7 @@
   block-size: var(--review-tile-h);
   flex: none;
   box-sizing: border-box;
-  border-radius: var(--review-radius);
+  border-radius: var(--radius-review);
   background: var(--color-text);
 }
 

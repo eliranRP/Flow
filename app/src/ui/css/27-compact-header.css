@@ -7,9 +7,9 @@
   gap: var(--space-1);
   min-inline-size: 0;
   min-block-size: var(--touch-min);
-  margin-inline-start: calc((var(--touch-min) - 24px) / -2 - 8px);
+  margin-inline-start: var(--back-pull-start);
   padding-block: 0;
-  padding-inline: calc((var(--touch-min) - 24px) / 2) var(--space-3);
+  padding-inline: var(--back-pad) var(--space-3);
   border: 0;
   border-radius: var(--radius-chip);
   background: transparent;
@@ -147,7 +147,7 @@
   align-items: center;
   gap: var(--space-1);
   block-size: var(--touch-min);
-  padding-inline: calc(var(--space-side) - (var(--touch-min) - 24px) / 2) var(--space-side);
+  padding-inline: calc(var(--space-side) - var(--back-pad)) var(--space-side);
 }
 
 .ui-compact-bar-detail .ui-compact-bar-row {

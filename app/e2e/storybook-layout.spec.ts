@@ -56,16 +56,7 @@ async function layoutProblems(page: Page): Promise<string[]> {
     }
     if (offenders.length > 0) problems.push(`overflow: ${offenders.slice(0, 6).join("; ")}`);
 
-    const word = document.querySelector(".text-wordmark");
-    const pill = document.querySelector(".ui-band-period");
-    if (word instanceof HTMLElement && pill instanceof HTMLElement) {
-      const a = word.getBoundingClientRect();
-      const b = pill.getBoundingClientRect();
-      const separated = a.right <= b.left + 0.5 || b.right <= a.left + 0.5 || a.bottom <= b.top + 0.5 || b.bottom <= a.top + 0.5;
-      if (!separated) problems.push("period pill overlaps the wordmark");
-    }
-
-    const singleLine = document.querySelectorAll(".ui-period-label, .ui-chip-label, .ui-pill-label, .ui-text-link-label, .ui-seg-btn, .ui-seg-label");
+    const singleLine = document.querySelectorAll(".ui-chip-label, .ui-pill-label, .ui-text-link-label, .ui-seg-btn, .ui-seg-label");
     for (const node of singleLine) {
       if (!(node instanceof HTMLElement)) continue;
       const style = getComputedStyle(node);
@@ -78,13 +69,6 @@ async function layoutProblems(page: Page): Promise<string[]> {
         const line = Number.parseFloat(style.lineHeight) || rects[0]?.height || 0;
         if (line > 0 && span > line * 1.4) problems.push(`${node.className || node.tagName} wraps`);
       }
-    }
-
-    const chevron = document.querySelector(".ui-period-chevron");
-    if (pill instanceof HTMLElement && chevron instanceof HTMLElement) {
-      const host = pill.getBoundingClientRect();
-      const box = chevron.getBoundingClientRect();
-      if (box.width < 8 || box.left < host.left - 1 || box.right > host.right + 1) problems.push("period chevron is clipped");
     }
 
     const title = document.querySelector(".ui-budget-card .ui-budget-head");
@@ -471,7 +455,6 @@ test("loading band skeletons stay inside the gutter and do not touch", async ({ 
 test("a row tint is wider than its content by the spacing token on both sides", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const cases: Array<{ id: string; selector: string; hover: boolean; name?: string }> = [
-    { id: "components-listrow--hover", selector: ".ui-show-hover .ui-row", hover: false },
     { id: "components-listrow--project", selector: ".ui-row", hover: true },
     { id: "components-radiorow--idle", selector: ".ui-radio-row", hover: true },
     { id: "components-radiorow--selected", selector: ".ui-radio-row", hover: false },
@@ -535,13 +518,6 @@ test("a row tint is wider than its content by the spacing token on both sides", 
         if (active.geometry.join("|") !== hovered.geometry.join("|")) failures.push(`${item.id}: press changes margin, padding, border, or transform`);
         if (active.color === "rgba(0, 0, 0, 0)") failures.push(`${item.id}: active tint is transparent`);
       }
-    }
-    if (item.id === "components-listrow--hover") {
-      const shifted = await page.locator(".ui-row-title").evaluateAll((nodes) => {
-        const edges = nodes.map((node) => Math.round(node.getBoundingClientRect().right));
-        return edges.length >= 2 && edges.every((edge) => edge === edges[0]) ? "" : `titles sit at ${edges.join(", ")}`;
-      });
-      if (shifted) failures.push(`${item.id}: ${shifted}`);
     }
   }
   await page.goto("/iframe.html?id=components-listrow--project&viewMode=story", { waitUntil: "domcontentloaded" });

@@ -1,22 +1,19 @@
 #!/usr/bin/env node
 /**
  * FLOW-363: no raw design value in the app's CSS. Colours, type sizes and weights, durations,
- * easings, radii and spacing come from the tokens in design/system/implementation-tokens.css.
- * Each app/src CSS file has a baseline count per rule (scripts/css-tokens-baseline.json): a count
- * above it fails, and a count below it fails too, asking for the baseline to be lowered in the
- * same PR that removes the raw values. In app/src/styles/app.css only the :root and @theme blocks
- * are skipped (they map the tokens into Tailwind and hold the aliases); its other rules are checked.
+ * easings, radii and spacing come from the tokens in design/system/implementation-tokens.css; a
+ * value the board measures that has no token yet is added there as a named token. Any raw value
+ * fails. In app/src/styles/app.css only the :root and @theme blocks are skipped (they map the
+ * tokens into Tailwind and hold the aliases); its other rules are checked.
  *
- * Usage: node scripts/check-css-tokens.mjs            (exits 1 on any count that differs)
- *        node scripts/check-css-tokens.mjs --write-baseline
+ * Usage: node scripts/check-css-tokens.mjs            (exits 1 on any raw value)
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-export const BASELINE_FILE = "scripts/css-tokens-baseline.json";
 export const TOKEN_BLOCK_FILES = new Set(["app/src/styles/app.css"]);
 
 const COLOR_VALUE = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/;
@@ -130,34 +127,6 @@ export function findViolations(css) {
   return violations.sort((a, b) => a.line - b.line);
 }
 
-/** @returns {Record<string, number>} the number of violations per rule */
-export function countRules(violations) {
-  const counts = {};
-  for (const violation of violations) counts[violation.rule] = (counts[violation.rule] ?? 0) + 1;
-  return counts;
-}
-
-/**
- * @param {Record<string, Record<string, number>>} current  file -> rule -> count
- * @param {Record<string, Record<string, number>>} baseline
- * @returns {{ above: Array<{file:string,rule:string,count:number,baseline:number}>, below: Array<{file:string,rule:string,count:number,baseline:number}> }}
- */
-export function compareCounts(current, baseline) {
-  const above = [];
-  const below = [];
-  const files = new Set([...Object.keys(current), ...Object.keys(baseline)]);
-  for (const file of [...files].sort()) {
-    const rules = new Set([...Object.keys(current[file] ?? {}), ...Object.keys(baseline[file] ?? {})]);
-    for (const rule of [...rules].sort()) {
-      const count = current[file]?.[rule] ?? 0;
-      const base = baseline[file]?.[rule] ?? 0;
-      if (count > base) above.push({ file, rule, count, baseline: base });
-      if (count < base) below.push({ file, rule, count, baseline: base });
-    }
-  }
-  return { above, below };
-}
-
 function appCssFiles() {
   return execFileSync("git", ["ls-files", "app/src"], { cwd: root, encoding: "utf8" })
     .split("\n")
@@ -165,37 +134,20 @@ function appCssFiles() {
 }
 
 function main() {
-  const writeBaseline = process.argv.includes("--write-baseline");
-  const current = {};
-  const details = {};
+  let total = 0;
   for (const file of appCssFiles()) {
     const css = readFileSync(path.join(root, file), "utf8");
     const violations = findViolations(TOKEN_BLOCK_FILES.has(file) ? stripTokenBlocks(css) : css);
-    if (violations.length === 0) continue;
-    current[file] = countRules(violations);
-    details[file] = violations;
+    for (const violation of violations) {
+      console.error(`${file}:${String(violation.line)}: ${violation.rule}: ${violation.property}: ${violation.value}`);
+    }
+    total += violations.length;
   }
-  if (writeBaseline) {
-    const sorted = Object.fromEntries(Object.entries(current).sort(([a], [b]) => a.localeCompare(b)));
-    writeFileSync(path.join(root, BASELINE_FILE), `${JSON.stringify(sorted, null, 2)}\n`);
-    console.log(`check-css-tokens: wrote ${BASELINE_FILE} (${String(Object.keys(sorted).length)} file(s)).`);
-    return 0;
-  }
-  const baseline = JSON.parse(readFileSync(path.join(root, BASELINE_FILE), "utf8"));
-  const { above, below } = compareCounts(current, baseline);
-  for (const item of above) {
-    const lines = (details[item.file] ?? []).filter((violation) => violation.rule === item.rule);
-    console.error(`${item.file}: ${item.rule} ${String(item.count)} raw value(s), baseline ${String(item.baseline)}`);
-    for (const violation of lines) console.error(`  line ${String(violation.line)}: ${violation.property}: ${violation.value}`);
-  }
-  for (const item of below) {
-    console.error(`${item.file}: ${item.rule} ${String(item.count)} raw value(s), baseline ${String(item.baseline)}: lower the baseline (node scripts/check-css-tokens.mjs --write-baseline) in this PR.`);
-  }
-  if (above.length > 0 || below.length > 0) {
-    console.error(`\ncheck-css-tokens: ${String(above.length + below.length)} count(s) differ from ${BASELINE_FILE}. Use a token (design/system/implementation-tokens.css) for a new value.`);
+  if (total > 0) {
+    console.error(`\ncheck-css-tokens: ${String(total)} raw value(s). Use a token, or add a named one to design/system/implementation-tokens.css.`);
     return 1;
   }
-  console.log("check-css-tokens: every app CSS file matches its raw-value baseline.");
+  console.log("check-css-tokens: no raw design value in app CSS.");
   return 0;
 }
 

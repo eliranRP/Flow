@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
 import { SettingsScreen } from "./flow-screens";
 import { BusinessScreen } from "./business-screen";
-import { NotificationsLockFrame } from "../ui/reference-frames.stories-support";
 import { StoryRoute } from "../ui/story-route";
 import { ViewerPreview } from "../use-is-viewer";
 import { ExampleBar, pagesBusiness, storyBody } from "../ui/screen-stories-support";
@@ -156,12 +155,4 @@ export const BusinessDateSheet: Story = {
     await userEvent.click(within(canvasElement).getByRole("button", { name: "רווח ותזרים לפי: תאריך תשלום" }));
     await storyBody(canvasElement).findByRole("dialog", { name: "רווח ותזרים לפי" });
   },
-};
-
-export const NotificationsLock: Story = {
-  render: () => (
-    <StoryRoute entry="/">
-      <NotificationsLockFrame />
-    </StoryRoute>
-  ),
 };

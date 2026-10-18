@@ -158,19 +158,6 @@ export const LatinTitle: Story = {
   args: { variant: "transaction", title: "Sample vendor", hint: "Utilities · 10/09", agorot: "125000", sign: "out", source: "bank", currency: "USD" },
 };
 
-/** The show-hover tint: a row that tints on pointer hover only inside its wrapper. The e2e spec opens this id. */
-export const Hover: Story = {
-  args: { variant: "project", title: "וילה הרצליה", hint: "שיפוץ", agorot: "2000000" },
-  render: () => (
-    <div className="ui-project-list">
-      <div className="ui-show-hover">
-        <ListRow variant="project" title="וילה הרצליה" hint="שיפוץ" agorot={2_000_000n} />
-      </div>
-      <ListRow variant="project" title="משרד רמת גן" agorot={4_500_000n} />
-    </div>
-  ),
-};
-
 /** FLOW-363 (2d): four rows on the background, no dividers, 64px tall. Invented names, round amounts. */
 export const FlatList: Story = {
   args: { variant: "transaction", title: "קבלה 1042", layout: "flat" },

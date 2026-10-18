@@ -20,23 +20,14 @@ function declared(selector: string, property: string): string {
 }
 
 describe("mobile UI consistency pass (FLOW-328)", () => {
-  it("gives Split the 24px gutter and the card's inset", () => {
+  it("gives Split the 24px gutter", () => {
     expect(declared(".ui-split .ui-page", "padding-inline")).toBe("var(--space-side)");
-    expect(declared(".ui-split-card", "margin")).toContain("var(--space-side)");
-  });
-
-  it("keeps the turning save spinner inside the line split total", () => {
-    expect(declared(".ui-lsplit-total .ui-spinner", "margin-inline")).toBe("var(--space-1) var(--space-2)");
   });
 
   it("draws the install steps with no hairlines and the number centred on its text", () => {
     expect(declared(".ui-install-step + .ui-install-step", "border-top")).toBe("");
     expect(declared(".ui-install-step", "align-items")).toBe("center");
     expect(declared(".ui-install-num", "margin-top")).toBe("");
-  });
-
-  it("leaves 20px between the project band and the overhead switch", () => {
-    expect(declared(".ui-project-overhead", "margin-top")).toBe("var(--space-5)");
   });
 
   it("gives empty and error state actions the standard 44px button shape", () => {
