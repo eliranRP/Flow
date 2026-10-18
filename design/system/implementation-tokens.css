@@ -121,6 +121,7 @@
   --space-6: 24px;
   --space-8: 32px;
   --space-10: 40px;
+  --space-half: 2px;             /* a hairline gap between two lines of one block */
   --space-side: 20px;
   --row-height: 64px;
   --avatar: 36px;
@@ -136,16 +137,29 @@
   --space-card-inset: 16px;
   --space-inset-row: 14px;       /* a row inside an inset list (FLOW-363 2d) */
   --space-section: 36px;
+  --icon-check: 24px;            /* the 24px glyph box of a back chevron and a tick */
+  /* The back chevron sits flush with the page gutter: the touch box is wider than the glyph, so the
+     header pulls it out by half the difference (and the glyph's own 8px / 6px inset). */
+  --back-pad: calc((var(--touch-min) - var(--icon-check)) / 2);
+  --back-pull-start: calc((var(--touch-min) - var(--icon-check)) / -2 - var(--space-2));
+  --back-pull-end: calc((var(--touch-min) - var(--icon-check)) / -2 - var(--space-1) - var(--space-half));
+  --edge-back-rest: calc(var(--space-8) + var(--space-1)); /* the edge-back mark's width past the edge at rest */
 
   /* ---- corner radii ---- */
   --radius-chip: 9999px;
   --radius-input: 12px;
   --radius-button: 9999px;
   --radius-card: 20px;
+  --radius-card-inner: calc(var(--radius-card) - var(--space-1)); /* a part inside a card */
   --radius-card-tight: 16px;     /* connection and AI pages (implementation-guide §7.14, FLOW-512) */
   --radius-sheet: 24px;
   --radius-band: 28px;
   --radius-fab: 9999px;
+  --radius-review: 10px;         /* the review card's tile */
+  --radius-grab: 3px;            /* the sheet's grab handle */
+  --radius-swatch: 3px;          /* a legend swatch */
+  --radius-pager: 22px;          /* the month pager track */
+  --radius-pager-band: 24px;     /* the month pager track on the band */
   --radius-block: 6px;           /* skeleton blocks, States board (FLOW-371) */
   --radius-field-btn: 10px;      /* copy and show/hide pills in a field (FLOW-363 (4)) */
 
@@ -187,6 +201,9 @@
   --motion-pulse: 1.2s;
   --motion-indet: 1.4s;          /* sync strip line, States board (FLOW-371) */
   --motion-spin: 800ms;
+  --motion-peek: 900ms;          /* the swipe row's first-view peek */
+  --motion-peek-delay: 400ms;
+  --dur-reduced: 1ms;             /* a user who asks for less motion: an animation still ends and fires animationend */
   --rise-page: 8px;
   --rise-push: 24px;
   --rise-toast: 12px;
@@ -264,6 +281,8 @@
   --color-gsi-bg: #FFFFFF;
   --color-gsi-border: #747775;
   --color-gsi-text: #1F1F1F;
+  --color-gsi-press: rgb(31 31 31 / 12%);
+  --color-gsi-disabled-text: rgb(31 31 31 / 38%);
   --color-signal: #D23B2F;
   --color-signal-soft: #B9503F;
   --color-band-past: #5A2DB0;
@@ -331,6 +350,8 @@
     --color-gsi-bg: #FFFFFF;
     --color-gsi-border: #747775;
     --color-gsi-text: #1F1F1F;
+    --color-gsi-press: rgb(31 31 31 / 12%);
+    --color-gsi-disabled-text: rgb(31 31 31 / 38%);
     --color-signal: #FF8A80;
     --color-signal-soft: #E8A598;
     --color-band-past: #5A2DB0;
@@ -400,6 +421,8 @@
   --color-gsi-bg: #FFFFFF;
   --color-gsi-border: #747775;
   --color-gsi-text: #1F1F1F;
+  --color-gsi-press: rgb(31 31 31 / 12%);
+  --color-gsi-disabled-text: rgb(31 31 31 / 38%);
   --color-signal: #FF8A80;
   --color-signal-soft: #E8A598;
   --color-band-past: #5A2DB0;
@@ -430,6 +453,8 @@
     --motion-pulse: 0ms;
     --motion-indet: 0ms;
     --motion-spin: 0ms;
+    --motion-peek: 0ms;
+    --motion-peek-delay: 0ms;
     --rise-page: 0px;
     --rise-push: 0px;
     --rise-toast: 0px;

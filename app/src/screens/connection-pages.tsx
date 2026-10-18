@@ -21,7 +21,6 @@ import { ConnectionFacts, ConnectionHead, ConnectionNote, ConnectionPage, StepLi
 import { List, ListRow } from "../ui/list-row";
 import { ScreenState } from "../ui/screen-state";
 import { TextField } from "../ui/text-field";
-import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 import { useBlockedPreview } from "./screen-shared";
 import { screenPhase } from "../query-phase";
@@ -242,7 +241,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
       <ConnectionPage title={copy.title} subtitle={copy.subtitle} backTo={backTo}>
         <div className="ui-stack">
           <p>כדי לחבר את {copy.title} צריך עסק.</p>
-          <TextLink to="/setup/1">פרטי העסק</TextLink>
+          <Button variant="link" to="/setup/1" chevron>פרטי העסק</Button>
         </div>
       </ConnectionPage>
       </ViewerScope>

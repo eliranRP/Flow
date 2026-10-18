@@ -4,7 +4,6 @@ import { CATEGORY_NAME_MAX, categoryNameError, RENAME_CATEGORY_TAKEN } from "../
 import { Button } from "../ui/button";
 import { PlusIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
-import { RadioRow } from "../ui/radio-row";
 import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
 import { useToast } from "../ui/toast";
@@ -211,17 +210,17 @@ export function CategoryGroupSheet({
       ) : (
         <div className="ui-stack ui-cat-sheet">
           <div role="radiogroup" aria-label="קטגוריית אב">
-            <RadioRow
-              label="בלי קטגוריית אב"
+            <ListRow control="radio"
+              title="בלי קטגוריית אב"
               selected={current == null}
               busy={saving === null}
               disabled={save.isPending}
               onSelect={() => { pick(null); }}
             />
             {choices.map((choice) => (
-              <RadioRow
+              <ListRow control="radio"
                 key={choice.id}
-                label={choice.name}
+                title={choice.name}
                 value={choice.id}
                 selected={current === choice.id}
                 busy={saving === choice.id}

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { FocusTitle } from "../ui/focus-title";
 import { ProgressBar } from "../ui/progress-bar";
-import { TextLink } from "../ui/text-link";
+import { Button } from "../ui/button";
 import { BACK, SETUP_TOTAL, SKIP_ALL } from "./copy";
 import { SkipSheet } from "./skip-sheet";
 import type { StepNumber } from "./model";
@@ -46,18 +46,18 @@ export function OnboardingFrame({
         <div className="ui-onb-top">
           <div className="ui-onb-row">
             {onBack ? (
-              <TextLink className="ui-onb-link" tone="accent" chevron={false} onClick={onBack}>
+              <Button variant="link" onClick={onBack} className="ui-onb-link">
                 {BACK}
-              </TextLink>
+              </Button>
             ) : (
               <span className="ui-onb-link ui-onb-link-hidden" aria-hidden="true">{BACK}</span>
             )}
             <span className="t-hint ui-onb-counter" aria-live="polite">
               שלב <bdi dir="ltr">{String(step)}</bdi> מתוך <bdi dir="ltr">{String(SETUP_TOTAL)}</bdi>
             </span>
-            <TextLink className="ui-onb-link" tone="accent" chevron={false} onClick={() => { setSkipOpen(true); }}>
+            <Button variant="link" onClick={() => { setSkipOpen(true); }} className="ui-onb-link">
               {SKIP_ALL}
-            </TextLink>
+            </Button>
           </div>
           <ProgressBar variant="steps" count={SETUP_TOTAL} current={step} label="התקדמות ההגדרה" />
         </div>

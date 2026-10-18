@@ -2,11 +2,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState, type Ref } from "react";
 import { getSupabase } from "../lib/supabase";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
-import { AlertIcon, ChevronDownIcon, SparkIcon } from "../ui/icons";
+import { AlertIcon, SparkIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { Skeleton } from "../ui/skeleton";
 import { SegmentedControl } from "../ui/segmented-control";
-import { TextLink } from "../ui/text-link";
+import { Button } from "../ui/button";
 import { Toggle } from "../ui/toggle";
 import { useWrite } from "../use-write";
 import {
@@ -219,16 +219,15 @@ export function JevSettingsCard({
       hintStatus
       hint="שגיאה"
       action={(
-        <TextLink
-          size="label"
-          chevron={false}
-          label="ניסיון חוזר: תיוג חכם"
+        <Button
+          variant="link"
+          aria-label="ניסיון חוזר: תיוג חכם"
           busy={retryBusy}
           buttonRef={retryRef}
           onClick={onRetry}
         >
           ניסיון חוזר
-        </TextLink>
+        </Button>
       )}
     />
   ) : (
@@ -261,15 +260,14 @@ export function JevSettingsCard({
         ) : null
       ) : showOptions ? (
         <div className="ui-jev-options">
-          <TextLink
-            chevron={false}
+          <Button
+            variant="link"
             expanded={open}
             controls={panelId}
-            trailing={<ChevronDownIcon size={16} />}
             onClick={() => { setOpen((current) => !current); }}
           >
             אפשרויות
-          </TextLink>
+          </Button>
           {open ? (
             <div id={panelId} className="ui-jev-options-panel">
               <SegmentedControl

@@ -6,7 +6,6 @@ import { SegmentedControl } from "./segmented-control";
 import { Sheet } from "./sheet";
 import { TabBar } from "./tab-bar";
 import { TextField } from "./text-field";
-import { forceReducedMotion } from "./reduced-motion";
 import { placeToast, Toast } from "./toast";
 import "./toast.stories.css";
 
@@ -35,7 +34,7 @@ function AboveFloor(props: { children: string; action: string; tone?: "ok" | "ba
       <div className="ui-toast-slot" />
       <ActionBar>
         <button className="ui-btn ui-btn-primary" type="button">אישור</button>
-        <button className="ui-btn ui-btn-ghost" type="button">דלג</button>
+        <button className="ui-btn ui-btn-link" type="button">דלג</button>
       </ActionBar>
       <div className="ui-toast-host" ref={host}>
         <Toast action={props.action} onAction={() => undefined} tone={props.tone}>
@@ -52,12 +51,6 @@ export const Undo: Story = {
   render: () => <AboveFloor action="ביטול">הפריט אושר</AboveFloor>,
 };
 
-/** The toast takes no motion: it shows at once, and clears at once (decision 0182, §2.1). */
-export const ReducedMotion: Story = {
-  args: { children: "הפריט אושר", action: "ביטול" },
-  decorators: [forceReducedMotion],
-  render: () => <AboveFloor action="ביטול">הפריט אושר</AboveFloor>,
-};
 export const ErrorRetry: Story = {
   args: { children: "לא נשמר – אין חיבור", action: "ניסיון חוזר", tone: "bad" },
   render: () => (
@@ -167,7 +160,7 @@ function AboveBar({ children }: { children: string }) {
         <Button full>אישור</Button>
         <ActionBarRow>
           <Button variant="secondary">שינוי</Button>
-          <Button variant="ghost">דלג</Button>
+          <Button variant="link">דלג</Button>
         </ActionBarRow>
       </ActionBar>
       <div className="ui-toast-host" data-place="bar" ref={host}>

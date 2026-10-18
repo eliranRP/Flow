@@ -15,17 +15,15 @@ describe("disabled cursor", () => {
       <>
         <Button variant="primary" disabled>שמירה</Button>
         <Button variant="secondary" disabled>שינוי</Button>
-        <Button variant="pill" disabled>סימון</Button>
-        <Button variant="danger" disabled>מחיקה</Button>
-        <Button variant="danger-tint" disabled>מחיקה רכה</Button>
-        <Button variant="ghost" disabled>דלג</Button>
+        <Button variant="link" disabled>סימון</Button>
+        <Button variant="danger-link" disabled>מחיקה</Button>
         <Button busy onClick={onClick}>שומר</Button>
         <IconButton label="סגירה" disabled>✕</IconButton>
         <Toggle label="הצגת פרויקטים שהסתיימו" checked={false} disabled onChange={() => undefined} />
       </>,
     );
 
-    for (const name of ["שמירה", "שינוי", "סימון", "מחיקה", "מחיקה רכה", "דלג", "סגירה"]) {
+    for (const name of ["שמירה", "שינוי", "סימון", "מחיקה", "סגירה"]) {
       const control = screen.getByRole("button", { name });
       expect(cursorOf(control), name).toBe("not-allowed");
       expect(getComputedStyle(control).pointerEvents, name).not.toBe("none");

@@ -1,7 +1,7 @@
 import { useEffect, useRef, type RefObject } from "react";
 import { useSheetHistory } from "./back";
 import { cx } from "./cx";
-import { RadioRow } from "./radio-row";
+import { ListRow } from "./list-row";
 import { Sheet } from "./sheet";
 
 /** A choice sheet's own words: its history entry, title, the note under the rows (if any), and the rows. */
@@ -68,9 +68,9 @@ export function ChoiceSheet<T extends string, V extends string = T>({
     >
       <div role="radiogroup" aria-label={copy.title} className="ui-choice-sheet">
         {copy.choices.map((choice) => (
-          <RadioRow
+          <ListRow control="radio"
             key={choice.value}
-            label={choice.label}
+            title={choice.label}
             description={choice.description}
             value={choice.value}
             selected={saving == null && choice.value === stored}

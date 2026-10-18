@@ -89,7 +89,7 @@ html:not(:has(.ui-tabbar)) .ui-txn-step {
   border-top: 1px solid var(--color-line);
 }
 
-.ui-reversal > .ui-text-link {
+.ui-reversal > .ui-btn-link {
   justify-content: flex-start;
   gap: var(--space-2);
 }

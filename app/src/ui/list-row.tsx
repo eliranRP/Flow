@@ -8,6 +8,7 @@ import { MatchText } from "./match-text";
 import { statementRowLabel, textDir, type StatementDetail, type StatementMethod } from "./statement";
 import { BankIcon, ChevronIcon, DocumentIcon, GripIcon } from "./icons";
 import { Skeleton } from "./skeleton";
+import { JevTag, SuggestTag } from "./suggest-tag";
 
 /**
  * FLOW-363 (2d): `flat` is a long list's row (no divider, about a 64px line, no chevron); `inset` is a
@@ -64,7 +65,41 @@ type Common = {
   heading?: boolean;
 };
 
+/**
+ * `control="radio"`: a row in a choice list. A role=radio button with the check circle at the inline
+ * end (or the start with `marker="start"`); `layout="picker"` puts name, project code and date on one line.
+ */
+export type RadioListRowProps = {
+  control: "radio";
+  variant?: undefined;
+  /** The name. It is also the accessible name. */
+  title: string;
+  hint?: string;
+  /** Project code, kept on one line. */
+  code?: string;
+  /** Relative last use, at the inline end. */
+  date?: string;
+  /** Tint הצעה after the name. The suggestion row sets this; "jev" says הצעת Jev (FLOW-704). */
+  tag?: boolean | "jev";
+  /** Name, code, and date on one line. The change picker uses this. */
+  layout?: "picker";
+  /** Live result under the title. Split uses this. */
+  description?: ReactNode;
+  /** The radio sits on the start side. Split uses this; the period sheet keeps the end. */
+  marker?: "start" | "end";
+  disabled?: boolean;
+  /** Replaces the description while the row cannot be chosen. */
+  disabledReason?: string;
+  /** The row is writing. A spinner replaces the check, and the cursor is progress. */
+  busy?: boolean;
+  /** Set as data-value, so a screen can find the row again (FLOW-115). */
+  value?: string;
+  selected: boolean;
+  onSelect: () => void;
+};
+
 export type ListRowProps =
+  | RadioListRowProps
   | (Common & {
     variant: "project";
     agorot: bigint;
@@ -121,6 +156,70 @@ export type ListRowProps =
   | (Common & { variant: "danger"; onClick: () => void; busy?: boolean; disabled?: boolean; /** A refused delete keeps its reason at full contrast (FLOW-405). */ clearHint?: boolean; buttonRef?: Ref<HTMLButtonElement> })
   | (Common & { variant: "selectable"; selected: boolean; onSelect: () => void });
 
+function RadioControlRow({
+  title,
+  hint,
+  code,
+  date,
+  tag,
+  layout,
+  description,
+  marker = "end",
+  disabled = false,
+  disabledReason,
+  busy = false,
+  value,
+  selected,
+  onSelect,
+}: RadioListRowProps) {
+  const picker = layout === "picker" || code != null || date != null || (tag != null && tag !== false);
+  const descId = useId();
+  const off = disabled || disabledReason != null;
+  const sub = off && disabledReason ? disabledReason : description;
+  const radio = (
+    <span className="ui-radio" data-on={selected || busy ? "true" : "false"} aria-hidden="true">
+      {busy ? <span className="ui-spinner" /> : selected ? "✓" : ""}
+    </span>
+  );
+  const text = picker ? (
+    <span className="ui-pick-name">
+      <span className="ui-pick-label">{title}</span>
+      {tag === "jev" ? <JevTag /> : tag ? <SuggestTag /> : null}
+      {sub ? <span className="ui-radio-desc" id={descId}>{sub}</span> : null}
+    </span>
+  ) : (
+    <span className="ui-row-text">
+      <span className="ui-row-title">{title}</span>
+      {hint ? <span className="ui-row-hint">{hint}</span> : null}
+      {sub ? <span className="ui-radio-desc" id={descId}>{sub}</span> : null}
+    </span>
+  );
+  return (
+    <button
+      type="button"
+      className={picker ? "ui-radio-row ui-pick-row" : marker === "start" ? "ui-radio-row ui-radio-start" : "ui-radio-row"}
+      role="radio"
+      aria-checked={selected}
+      aria-disabled={off || busy || undefined}
+      aria-busy={busy || undefined}
+      aria-label={title}
+      data-value={value}
+      aria-describedby={sub ? descId : undefined}
+      // A busy row keeps focus while it saves (aria-disabled only), so a failure can hand it back (FLOW-115).
+      disabled={off}
+      onClick={() => {
+        if (!off && !busy) onSelect();
+      }}
+    >
+      {marker === "start" ? radio : null}
+      {text}
+      {code ? <bdi className="ui-pick-code" dir="ltr">{code}</bdi> : null}
+      {date ? <span className="ui-pick-date">{date}</span> : null}
+      {marker === "start" ? null : radio}
+    </button>
+  );
+}
+
 /**
  * A bank-statement row (FLOW-305, option A): initials avatar, the counterparty, then a pending chip
  * and "✦ project · category"; the amount with small cents at the end and the method under it.
@@ -162,6 +261,7 @@ export type StatementRowProps = {
 
 export function ListRow(props: ListRowProps) {
   const hintId = useId();
+  if ("control" in props) return <RadioControlRow {...props} />;
   if (props.variant === "statement") return <StatementRow {...props} />;
   const layoutClass = props.layout === "flat" ? "ui-row-flat" : false;
   if (props.variant === "skeleton") {

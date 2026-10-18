@@ -23,7 +23,7 @@ test("the plural auto-approved count keeps to one line at 320, inside the header
   const auto = page.locator(".ui-review-queue .ui-review-auto");
   await expect(auto).toHaveText("12 אושרו אוטומטית היום");
   // One line of text: the label is no taller than one line box (the digits sit on the same baseline).
-  const label = await auto.locator(".ui-text-link-label").evaluate((node) => ({
+  const label = await auto.locator(".ui-btn-label").evaluate((node) => ({
     height: node.getBoundingClientRect().height,
     line: Number.parseFloat(getComputedStyle(node).lineHeight),
   }));

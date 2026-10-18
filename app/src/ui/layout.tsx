@@ -1,11 +1,7 @@
 import type { ReactNode } from "react";
 import { useGoBack } from "./back";
 import { FocusTitle } from "./focus-title";
-import { TextLink } from "./text-link";
-
-export function BandHero({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={className == null ? "ui-band-hero" : `ui-band-hero ${className}`}>{children}</div>;
-}
+import { Button } from "./button";
 
 export function FormError({ children }: { children: ReactNode }) {
   return (
@@ -72,9 +68,9 @@ export function SignInPrivacy({ children }: { children: ReactNode }) {
 export function HelpMail({ email }: { email: string }) {
   return (
     <p className="ui-page-pad mt-4">
-      <TextLink href={`mailto:${email}`} chevron={false}>
+      <Button variant="link" href={`mailto:${email}`}>
         {email}
-      </TextLink>
+      </Button>
     </p>
   );
 }
@@ -83,15 +79,15 @@ export function HelpBack({ to = "/sign-in" }: { to?: string }) {
   const goBack = useGoBack();
   return (
     <p className="ui-page-pad">
-      <TextLink
-        tone="quiet"
-        chevron={false}
+      <Button
+        variant="link"
+        quiet
         onClick={() => {
           goBack(to);
         }}
       >
         חזרה
-      </TextLink>
+      </Button>
     </p>
   );
 }

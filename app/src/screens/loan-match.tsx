@@ -5,8 +5,6 @@ import type { TransactionLoanSplit } from "@flow/shared";
 import { BankIcon, AlertIcon, PlusIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
-import { RadioRow } from "../ui/radio-row";
-import { TextLink } from "../ui/text-link";
 import { Button } from "../ui/button";
 import { currencyWord } from "../ui/investment-card";
 import { sheetStack, useSheetHistory } from "../ui/back";
@@ -138,16 +136,16 @@ export function LoanMatchOffer({
             <p className="t-hint">{LOAN_EMPTY_NEXT_STEP}</p>
             <div className="ui-empty-action">
               {/* The link replaces the sheet's own history entry, so Back from Loans returns to the line once. */}
-              <Button variant="pill" icon={<PlusIcon />} to={quickNewPath("/loans", "", "loan")} replace={sheetStack(location.state).includes("loan-match")}>הלוואה חדשה</Button>
+              <Button variant="secondary" icon={<PlusIcon />} to={quickNewPath("/loans", "", "loan")} replace={sheetStack(location.state).includes("loan-match")}>הלוואה חדשה</Button>
             </div>
           </div>
         ) : (
           <div role="radiogroup" aria-label="הלוואה">
             {selectableLoans.map((loan) => (
-              <RadioRow
+              <ListRow control="radio"
                 key={loan.id}
                 layout="picker"
-                label={loan.name}
+                title={loan.name}
                 description={byId.get(loan.id)?.description}
                 busy={loan.id === savingId}
                 value={loan.id}
@@ -160,15 +158,15 @@ export function LoanMatchOffer({
           </div>
         )}
         {onOther != null && (offers ?? []).some((offer) => offer.parts != null) ? (
-          <TextLink
-            className="ui-loan-other"
-            tone="quiet"
-            chevron={false}
+          <Button
+            variant="link"
+            quiet
             disabled={savingId != null}
             onClick={onOther}
+            className="ui-loan-other"
           >
             פיצול אחר
-          </TextLink>
+          </Button>
         ) : null}
       </Sheet>
     </>
@@ -188,16 +186,15 @@ export function LoanReadError({ label, busy, onRetry }: { label: string; busy: b
         hintStatus
         hint="לא הצלחנו לטעון."
         action={(
-          <TextLink
-            size="label"
-            chevron={false}
-            label={`ניסיון חוזר: ${label}`}
+          <Button
+            variant="link"
+            aria-label={`ניסיון חוזר: ${label}`}
             busy={busy}
             buttonRef={retryRef}
             onClick={onRetry}
           >
             ניסיון חוזר
-          </TextLink>
+          </Button>
         )}
       />
     </List>

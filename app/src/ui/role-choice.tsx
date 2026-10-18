@@ -1,4 +1,4 @@
-import { RadioRow } from "./radio-row";
+import { ListRow } from "./list-row";
 
 /** FLOW-601. The roles a member can have, in the order they are listed (צופה first: the default). */
 export type RoleChoiceValue = "viewer" | "editor";
@@ -33,9 +33,9 @@ export function RoleChoice({
   return (
     <div role="radiogroup" aria-label={label} className="ui-role-choice">
       {ORDER.map((role) => (
-        <RadioRow
+        <ListRow control="radio"
           key={role}
-          label={ROLE_CHOICE_LABEL[role]}
+          title={ROLE_CHOICE_LABEL[role]}
           hint={hints ? ROLE_CHOICE_HINT[role] : undefined}
           selected={busy == null ? value === role : false}
           busy={busy === role}

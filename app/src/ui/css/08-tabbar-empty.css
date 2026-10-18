@@ -106,7 +106,7 @@
   margin-top: var(--label-gap);
   font-size: var(--type-label-size);
   line-height: var(--type-label-line);
-  font-weight: 400;
+  font-weight: var(--type-label-weight);
   color: var(--color-text-secondary);
   display: -webkit-box;
   overflow: hidden;
@@ -120,13 +120,6 @@
 .ui-empty-action {
   max-width: 100%;
   margin-top: var(--space-2);
-}
-
-/* Empty and error states share the standard 44px button shape, not the 36px pill (FLOW-328, ds-7). */
-.ui-empty-action .ui-btn-pill {
-  height: auto;
-  min-height: var(--touch-min);
-  border-radius: var(--radius-button);
 }
 
 /* The outline pill that only helps is 44px on the board, the primary next step 52px. */
@@ -258,7 +251,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   width: var(--grab-width);
   height: var(--grab-height);
   margin: 0 auto;
-  border-radius: var(--grab-radius);
+  border-radius: var(--radius-grab);
   background: var(--sheet-grab);
 }
 
@@ -301,11 +294,11 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
    padding and the glyph's own inset (8px for the chevron, 6px for ✕) hang past the gutter, never
    past the panel's edge (a 16px gutter would leave Back 2px off a 320px screen). */
 .ui-sheet-head > .ui-back-btn:first-child {
-  margin-inline-start: max(calc((var(--touch-min) - 24px) / -2 - 8px), calc(var(--sheet-side) * -1));
+  margin-inline-start: max(var(--back-pull-start), calc(var(--sheet-side) * -1));
 }
 
 .ui-sheet-head > .ui-icon-btn:last-child:not(:first-child) {
-  margin-inline-end: calc((var(--touch-min) - 24px) / -2 - 6px);
+  margin-inline-end: var(--back-pull-end);
 }
 
 .ui-band-hero .t-title-2,
@@ -338,7 +331,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 .ui-notice-title {
   font-size: var(--type-body-size);
   line-height: var(--type-body-line);
-  font-weight: 600;
+  font-weight: var(--type-title-weight);
   color: var(--color-text);
 }
 

@@ -2,7 +2,6 @@ import type { ReactNode, RefObject } from "react";
 import { Button } from "./button";
 import { TrashIcon } from "./icons";
 import { Sheet } from "./sheet";
-import { TextLink } from "./text-link";
 
 type ConfirmSheetProps = {
   open: boolean;
@@ -58,7 +57,8 @@ export function ConfirmSheet({
       {warning ? <p className="ui-confirm-warning">{warning}</p> : null}
       {detail ? <p className="t-hint text-text-secondary">{detail}</p> : null}
       <Button
-        variant={destructive === "outline" ? "danger-outline" : destructive ? "danger-tint" : "primary"}
+        variant={destructive === false ? "primary" : "secondary"}
+        className={destructive === false ? undefined : "ui-btn-signal"}
         full
         busy={busy}
         icon={icon !== undefined ? icon ?? undefined : destructive === true ? <TrashIcon /> : undefined}
@@ -69,7 +69,7 @@ export function ConfirmSheet({
         {confirmLabel}
       </Button>
       <Button
-        variant="ghost"
+        variant="link"
         quiet
         full
         disabled={busy}
@@ -81,9 +81,9 @@ export function ConfirmSheet({
       </Button>
       {alternative ? (
         <div className="ui-confirm-alt flex justify-center">
-          <TextLink tone="quiet" chevron={false} wrap disabled={busy} onClick={alternative.onClick}>
+          <Button variant="link" quiet disabled={busy} onClick={alternative.onClick} className="ui-btn-link-wrap">
             {alternative.label}
-          </TextLink>
+          </Button>
         </div>
       ) : null}
     </Sheet>

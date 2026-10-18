@@ -33,7 +33,7 @@
   min-inline-size: 0;
   flex: 1;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-half);
 }
 
 /* The switch label reads like a row title, 17/400 (FLOW-326, decision 0120 option C). */
@@ -225,16 +225,16 @@
 
 .ui-loan-skel-title {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: var(--type-card-size);
 }
 
 .ui-page-stacked .ui-page-title-row > .ui-back-btn:first-child {
-  margin-inline-start: calc((var(--touch-min) - 24px) / -2 - 8px);
+  margin-inline-start: var(--back-pull-start);
 }
 
 /* A page's own end icon (✕ or ⋯) lines up with the content's end edge the same way. */
 .ui-page-stacked .ui-page-title-row > .ui-icon-btn:last-child:not(:first-child) {
-  margin-inline-end: calc((var(--touch-min) - 24px) / -2 - 6px);
+  margin-inline-end: var(--back-pull-end);
 }
 
 .ui-banner .ui-row-title,
@@ -289,37 +289,9 @@
   [data-vaul-drawer][data-state="closed"]:not(.vaul-dragging),
   body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"],
   body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="closed"] {
-    animation-duration: 1ms !important;
-    transition-duration: 1ms !important;
+    animation-duration: var(--dur-reduced) !important;
+    transition-duration: var(--dur-reduced) !important;
   }
-}
-
-.ui-band-period {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  max-width: 100%;
-  min-width: 0;
-  height: var(--size-period);
-  min-height: var(--size-period);
-  flex: 0 1 auto;
-  padding-inline: var(--space-3);
-  overflow: visible;
-  border-radius: var(--radius-chip);
-  background: var(--color-band-pill);
-  color: var(--color-text);
-  font-size: var(--type-label-size);
-  font-weight: var(--type-label-weight);
-}
-
-.ui-band-period:active {
-  background: var(--color-tint-pressed);
-}
-
-.ui-period-chevron {
-  display: inline-flex;
-  color: var(--color-accent-text);
 }
 
 .ui-page .t-title,

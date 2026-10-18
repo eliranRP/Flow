@@ -4,12 +4,10 @@
   .ui-review-line:hover::before {
     background: var(--surface-hover);
   }
-
-  .ui-chip-choice:hover,
-  .ui-btn-ghost:hover,
-  .ui-text-link:hover,
-  .ui-banner:hover,
-  .ui-banner-row:hover {
+.ui-chip-choice:hover,
+.ui-btn-link:hover,
+.ui-banner:hover,
+.ui-banner-row:hover {
     background: var(--surface-hover);
   }
 }
@@ -90,7 +88,7 @@
 /* On the band too, Back's chevron point sits on the title's and rows' start edge (owner,
    2026-10-10), as on stacked pages and sheets. Only the band's own row: sheets reuse .ui-band-row. */
 .ui-band > .ui-band-row > .ui-back-btn:first-child {
-  margin-inline-start: calc((var(--touch-min) - 24px) / -2 - 8px);
+  margin-inline-start: var(--back-pull-start);
 }
 
 /* FLOW-363 (3a): the band's figures fade with the page's scroll (TopBand sets --band-fade). */
@@ -118,11 +116,6 @@
   margin: 0;
   max-inline-size: 100%;
   text-align: start;
-}
-
-/* Mixed currencies: one hero figure per line. Inline spans ran together ("$1,500₪600") and overflowed. */
-.ui-hero-figure-line {
-  display: block;
 }
 
 /* FLOW-355: Home's one period pill sits under the label, at its own width. */
@@ -327,7 +320,7 @@ html[data-kb="open"] .ui-sheet-body {
 
 /* FLOW-364 (board): Home's band ends 22px under its last row, not the 28px band padding. */
 .ui-band:has(.ui-band-body) {
-  padding-bottom: 22px;
+  padding-bottom: calc(var(--space-5) + var(--space-half));
 }
 
 /* FLOW-364 (board): the band's body sits on the page gutter, with the pill, the figures and the forecast stacked. */

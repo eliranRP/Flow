@@ -9,7 +9,6 @@ import { EmptyState } from "../ui/empty-state";
 import { ReviewPushPrompt } from "./review-push-prompt";
 import type { NotificationPrefs, PushSupport } from "../push";
 import { CheckIcon, ReviewIcon } from "../ui/icons";
-import { TextLink } from "../ui/text-link";
 import { ScreenHeader } from "../ui/screen-header";
 
 export const EMPTY_REVIEW: ReviewRow[] = [];
@@ -176,7 +175,7 @@ export function ReviewEmpty({
           action={(
             <>
               <Button full to={homeTo ?? `/${search}`}>{homeLabel ?? "חזרה לבית"}</Button>
-              {filtered ? null : <TextLink to={`/review/filed${search}`} chevron={false}>מה אושר היום</TextLink>}
+              {filtered ? null : <Button variant="link" to={`/review/filed${search}`}>מה אושר היום</Button>}
             </>
           )}
           aside={pushPrompt && !filtered ? <ReviewPushPrompt sample={pushSample?.prefs} support={pushSample?.support} /> : null}

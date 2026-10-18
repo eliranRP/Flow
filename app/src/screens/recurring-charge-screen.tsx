@@ -11,8 +11,7 @@ import { amountOf, bannerText, changeLine, chargeAlert, dayMonth, ignoredText, m
 import { israelToday, type ScheduleRow } from "../recurring-schedule";
 import { Button } from "../ui/button";
 import { ChoiceSheet } from "../ui/choice-sheet";
-import { EmptyState } from "../ui/empty-state";
-import { ErrorState } from "../ui/error-state";
+import { EmptyState, FailureLine } from "../ui/empty-state";
 import { DelayedSkeleton, ListSkeleton } from "../ui/skeleton";
 import { paceSheetCopy, paceToast, type PaceChoice } from "../ui/pace";
 import { PartyChargesHistory, PartyChargesSheet } from "../ui/related-charges";
@@ -71,7 +70,7 @@ export function ChargeError() {
     <div className="ui-charge-page">
       <TransactionTopBar fallback="/recurring" backLabel="קבועים" title="קבועים" end={null} />
       <div className="ui-charge-body">
-        <ErrorState offline={!navigator.onLine} onRetry={() => void client.invalidateQueries({ queryKey: ["recurring-schedule"] })} />
+        <FailureLine offline={!navigator.onLine} onRetry={() => void client.invalidateQueries({ queryKey: ["recurring-schedule"] })} />
       </div>
     </div>
   );

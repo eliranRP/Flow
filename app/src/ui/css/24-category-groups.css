@@ -11,7 +11,7 @@
   flex: none;
   color: var(--color-text-muted);
   /* No chevron on a bill not in yet: the dash keeps the amounts' column. */
-  margin-inline-end: calc(20px + var(--space-3));
+  margin-inline-end: calc(var(--space-5) + var(--space-3));
 }
 
 .ui-usual-line {

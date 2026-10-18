@@ -20,13 +20,8 @@ function declared(selector: string, property: string): string {
 }
 
 describe("mobile UI consistency pass (FLOW-328)", () => {
-  it("gives Split the 24px gutter and the card's inset", () => {
+  it("gives Split the 24px gutter", () => {
     expect(declared(".ui-split .ui-page", "padding-inline")).toBe("var(--space-side)");
-    expect(declared(".ui-split-card", "margin")).toContain("var(--space-side)");
-  });
-
-  it("keeps the turning save spinner inside the line split total", () => {
-    expect(declared(".ui-lsplit-total .ui-spinner", "margin-inline")).toBe("var(--space-1) var(--space-2)");
   });
 
   it("draws the install steps with no hairlines and the number centred on its text", () => {
@@ -35,14 +30,10 @@ describe("mobile UI consistency pass (FLOW-328)", () => {
     expect(declared(".ui-install-num", "margin-top")).toBe("");
   });
 
-  it("leaves 20px between the project band and the overhead switch", () => {
-    expect(declared(".ui-project-overhead", "margin-top")).toBe("var(--space-5)");
-  });
-
   it("gives empty and error state actions the standard 44px button shape", () => {
-    expect(declared(".ui-empty-action .ui-btn-pill", "min-height")).toBe("var(--touch-min)");
-    expect(declared(".ui-empty-action .ui-btn-pill", "border-radius")).toBe("var(--radius-button)");
-    expect(declared(".ui-empty-action .ui-btn-pill", "height")).toBe("auto");
+    expect(declared(".ui-empty-action .ui-btn-secondary", "min-height")).toBe("var(--touch-min)");
+    expect(declared(".ui-empty-action .ui-btn-secondary", "height")).toBe("var(--touch-min)");
+    expect(declared(".ui-btn.ui-btn-secondary", "border-radius")).toBe("var(--radius-button)");
   });
 
   it("puts the מצב תצוגה tag on the start side at the gutter, clear of the band curve", () => {

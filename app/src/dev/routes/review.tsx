@@ -86,7 +86,7 @@ export function DevReview() {
         <ActionBarRow>
           <Button variant="secondary" onClick={() => { setChange(true); }}>שינוי</Button>
           <Button
-            variant="ghost"
+            variant="link"
             disabled={!item}
             onClick={() => {
               if (!item) return;

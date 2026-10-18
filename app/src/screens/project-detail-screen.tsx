@@ -20,8 +20,8 @@ import { EmptyState } from "../ui/empty-state";
 import { BackButton } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
 import { DocumentIcon, MoreIcon } from "../ui/icons";
-import { BandHero, SectionHead } from "../ui/layout";
-import { TextLink } from "../ui/text-link";
+import { SectionHead } from "../ui/layout";
+import { Button } from "../ui/button";
 import { FocusTitle } from "../ui/focus-title";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
@@ -55,8 +55,7 @@ function ProjectLoading({ search, example }: { search: string; example?: ReactNo
             <MoreIcon />
           </IconButton>
         )}
-      >
-        <BandHero>
+        hero={
           <div className="ui-project-skel">
             <span className="ui-skel-project-title">
               <Skeleton tone="band" className="ui-skel-project-title-bar" />
@@ -65,8 +64,8 @@ function ProjectLoading({ search, example }: { search: string; example?: ReactNo
             {/* The loaded band ends at the figure, so the skeleton does too (FLOW-115: no shrink on load). */}
             <Skeleton tone="band" className="ui-skel-project-num" />
           </div>
-        </BandHero>
-      </TopBand>
+        }
+      />
       <div className="ui-page-pad ui-stack">
         <Skeleton width="lg" />
         <Skeleton width="md" />
@@ -305,13 +304,14 @@ function LegacyEmptyProject() {
         leading={
           <BackButton fallback={`/projects${search}`} onBand />
         }
-      >
-        <BandHero>
-          <FocusTitle className="t-band-title">פרויקט</FocusTitle>
-          <p className="ui-band-label t-label">רווח</p>
-          <p className="t-display"><Amount agorot={0n} /></p>
-        </BandHero>
-      </TopBand>
+        hero={
+          <>
+            <FocusTitle className="t-band-title">פרויקט</FocusTitle>
+            <p className="ui-band-label t-label">רווח</p>
+            <p className="t-display"><Amount agorot={0n} /></p>
+          </>
+        }
+      />
       <EmptyState
         icon={<DocumentIcon />}
         title="אין עדיין תנועות"
@@ -333,7 +333,7 @@ function ProjectBudget({ project, spentAgorot, part = "both" }: { project: NonNu
   return (
     <>
       {budget == null ? (
-        <TextLink tone="quiet" chevron={false} onClick={() => { setEditing(true); }}>+ הוספת תקציב</TextLink>
+        <Button variant="link" quiet onClick={() => { setEditing(true); }}>+ הוספת תקציב</Button>
       ) : (
         <BudgetCard spentMinor={spentAgorot} budgetMinor={budget} currency={currency} onEdit={() => { setEditing(true); }} />
       )}

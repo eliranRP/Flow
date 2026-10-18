@@ -13,7 +13,6 @@ import { INVESTMENT_LABELS, currencyWord, type InvestmentField, type InvestmentF
 import { List, ListRow } from "../ui/list-row";
 import { MoneyField } from "../ui/money-field";
 import { Sheet } from "../ui/sheet";
-import { TextLink } from "../ui/text-link";
 import { categoryHref } from "./project-category-screen";
 import {
   REHAB_TOTAL_ONLY,
@@ -113,7 +112,7 @@ export function RehabSheet({
       ) : failed || breakdown == null ? (
         <div className="ui-pinv-retry">
           <p className="ui-pinv-help" role="status">לא הצלחנו לטעון את הפירוט.</p>
-          <TextLink chevron={false} label="ניסיון חוזר: פירוט השיפוץ" onClick={onRetry}>ניסיון חוזר</TextLink>
+          <Button variant="link" aria-label="ניסיון חוזר: פירוט השיפוץ" onClick={onRetry}>ניסיון חוזר</Button>
         </div>
       ) : !breakdown.addsUp ? (
         <p className="ui-pinv-help">{REHAB_TOTAL_ONLY}</p>
@@ -148,9 +147,9 @@ export function RehabSheet({
           ) : null}
         </>
       )}
-      <TextLink to={`/settings/categories${search}`} chevron={false} className="ui-pinv-settings-link">
+      <Button variant="link" to={`/settings/categories${search}`} className="ui-pinv-settings-link">
         מה נספר בשיפוץ? בהגדרות הקטגוריות
-      </TextLink>
+      </Button>
     </Sheet>
   );
 }

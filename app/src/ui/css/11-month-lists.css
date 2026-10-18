@@ -118,7 +118,7 @@
   background: var(--color-avatar);
   color: var(--color-text-secondary);
   font-size: var(--type-meta-size);
-  font-weight: 600;
+  font-weight: var(--type-name-weight);
   line-height: 1;
 }
 
@@ -175,11 +175,6 @@
 .ui-section-head,
 .ui-page-pad {
   padding-inline: var(--space-side);
-}
-
-/* Mockup 02: 20px between the project band and the overhead switch (FLOW-328). */
-.ui-project-overhead {
-  margin-top: var(--space-5);
 }
 
 .ui-cat-seg {

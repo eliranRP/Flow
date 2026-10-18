@@ -51,7 +51,7 @@ function ReviewWithBar({ kind, busy = false, disabled = false, toast }: BarArgs)
               <div className="ui-review-approve">
                 <Button variant="secondary" busy={busy} aria-describedby={REVIEW_MISMATCH_ID}>{SPLIT_MISMATCH_KEEP}</Button>
               </div>
-              <Button variant="ghost" disabled={busy}>דלג</Button>
+              <Button variant="link" disabled={busy}>דלג</Button>
             </ActionBarRow>
           </>
         ) : (
@@ -63,7 +63,7 @@ function ReviewWithBar({ kind, busy = false, disabled = false, toast }: BarArgs)
             </div>
             <ActionBarRow>
               <Button variant="secondary">שינוי</Button>
-              <Button variant="ghost">דלג</Button>
+              <Button variant="link">דלג</Button>
             </ActionBarRow>
           </>
         )}
@@ -87,12 +87,8 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const se = { parameters: { viewport: { defaultViewport: "flow375-se" } } };
-
-export const ReviewSE: Story = { ...se };
 export const ReviewBusy: Story = { args: { busy: true } };
 export const ReviewDisabled: Story = { args: { disabled: true } };
 export const SplitMismatch: Story = { args: { kind: "mismatch" } };
 /** Decision 0137: the undo toast sits just above the bar. */
 export const ToastAboveBar: Story = { args: { toast: "הפריט אושר" } };
-export const ToastAboveBarSE: Story = { ...se, args: { toast: "דילגנו על הפריט" } };

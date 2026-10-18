@@ -4,6 +4,10 @@ import { Wordmark } from "./wordmark";
 
 type TopBandProps = {
   children?: ReactNode;
+  /** The band's figures: the page's gutter, then the title, label and figure stacked (the band's one hero block). */
+  hero?: ReactNode;
+  /** Opt-in class on the hero block, for a page whose band differs (the project's). */
+  heroClassName?: string;
   trailing?: ReactNode;
   leading?: ReactNode;
   /** Sits above the wordmark row. Pull-to-refresh uses it for the spinner. */
@@ -59,7 +63,7 @@ function useBandFade(band: RefObject<HTMLElement | null>): void {
 }
 
 /** Violet band. Home and the Project header only. */
-export function TopBand({ children, trailing, leading, status, example, preview = false, wordmark = true, tone = "current" }: TopBandProps) {
+export function TopBand({ children, hero, heroClassName, trailing, leading, status, example, preview = false, wordmark = true, tone = "current" }: TopBandProps) {
   const band = useRef<HTMLElement>(null);
   useBandFade(band);
   return (
@@ -71,6 +75,7 @@ export function TopBand({ children, trailing, leading, status, example, preview 
         {trailing}
       </div>
       {example ? <div className="ui-band-example">{example}</div> : null}
+      {hero == null ? null : <div className={heroClassName == null ? "ui-band-hero" : `ui-band-hero ${heroClassName}`}>{hero}</div>}
       {children}
       {preview ? <p className="ui-preview-banner t-hint">מצב תצוגה</p> : null}
     </header>

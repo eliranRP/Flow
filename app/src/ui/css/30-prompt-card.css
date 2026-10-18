@@ -8,7 +8,7 @@
 
 .ui-prompt-question {
   margin: 0;
-  font-weight: 500;
+  font-weight: var(--type-section-weight);
   overflow-wrap: anywhere;
   /* FLOW-420: a two-line question splits evenly, so no last word sits alone ("בערב?"). */
   text-wrap: balance;

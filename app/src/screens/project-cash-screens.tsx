@@ -18,7 +18,6 @@ import { Amount } from "../ui/amount";
 import { ProjectEmptyCard, ProjectMonthsCard, ProjectProfitCard } from "./project-page-cards";
 import { FocusTitle } from "../ui/focus-title";
 import { BannerRows, type BannerRow } from "../ui/banner";
-import { BandHero } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { InvestmentSummary } from "../ui/investment-card";
 import { useScrolledPast } from "../ui/screen-header";
@@ -128,39 +127,41 @@ export function ProjectCashOverview({
         example={example}
         leading={<BackButton fallback={`/projects${search}`} text="פרויקטים" onBand />}
         trailing={menu}
-      >
-        <BandHero className="ui-band-hero-project">
-          <FocusTitle className="t-band-title">{project.name}</FocusTitle>
-          {stateLine == null ? null : <p className="t-label">{stateLine}</p>}
-          <p className="ui-band-label t-label">{key == null ? "תזרים" : `${cashTitle(key, now)}${key === israelToday(now).slice(0, 7) ? " · עד היום" : ""}`}</p>
-          {data == null ? (
-            <Skeleton tone="band" className="ui-skel-project-num" />
-          ) : (
-            <div className="ui-project-profits t-display">
-              {rows.map((row) => (
-                <p key={row.currency}>
-                  <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} presentation="detail" zeroCents />
-                </p>
-              ))}
-            </div>
-          )}
-          {bandRows.length === 0 ? null : (
-            <div className="ui-project-band-pair">
-              {bandRows.map((row) => (
-                <Link key={row.id} to={row.href ?? "#"} className="ui-band-row-link m-press" aria-label={row.name}>
-                  <span className="ui-band-row-label">{row.id === "in" ? "נכנס" : "יצא"}</span>
-                  <span className="ui-band-row-amount">
-                    {row.amounts.map((amount) => (
-                      <Amount key={amount.currency} agorot={amount.minor} currency={amount.currency} presentation="detail" size="list" />
-                    ))}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
-          <span ref={titleEnd} className="ui-compact-mark" aria-hidden="true" />
-        </BandHero>
-      </TopBand>
+        heroClassName="ui-band-hero-project"
+        hero={
+          <>
+            <FocusTitle className="t-band-title">{project.name}</FocusTitle>
+            {stateLine == null ? null : <p className="t-label">{stateLine}</p>}
+            <p className="ui-band-label t-label">{key == null ? "תזרים" : `${cashTitle(key, now)}${key === israelToday(now).slice(0, 7) ? " · עד היום" : ""}`}</p>
+            {data == null ? (
+              <Skeleton tone="band" className="ui-skel-project-num" />
+            ) : (
+              <div className="ui-project-profits t-display">
+                {rows.map((row) => (
+                  <p key={row.currency}>
+                    <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} presentation="detail" zeroCents />
+                  </p>
+                ))}
+              </div>
+            )}
+            {bandRows.length === 0 ? null : (
+              <div className="ui-project-band-pair">
+                {bandRows.map((row) => (
+                  <Link key={row.id} to={row.href ?? "#"} className="ui-band-row-link m-press" aria-label={row.name}>
+                    <span className="ui-band-row-label">{row.id === "in" ? "נכנס" : "יצא"}</span>
+                    <span className="ui-band-row-amount">
+                      {row.amounts.map((amount) => (
+                        <Amount key={amount.currency} agorot={amount.minor} currency={amount.currency} presentation="detail" size="list" />
+                      ))}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+            <span ref={titleEnd} className="ui-compact-mark" aria-hidden="true" />
+          </>
+        }
+      />
       <CompactBar
         title={project.name}
         figureFirst

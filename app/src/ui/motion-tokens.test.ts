@@ -117,7 +117,7 @@ describe("00-motion.css", () => {
     // and Vaul-style waits on animationend would hang; the tokens already make each run 0ms (sheets 1ms).
     expect(css).not.toMatch(/prefers-reduced-motion/);
     expect(css).not.toMatch(/animation\s*:\s*none/);
-    for (const name of [".m-push-back", ".m-sheet-out", ".m-bar-out", ".m-row-leave"]) {
+    for (const name of [".m-bar-out", ".m-row-leave"]) {
       expect(css, name).toMatch(new RegExp(`\\${name}\\s*\\{[^}]*animation:[^;]*forwards`));
     }
   });
@@ -145,9 +145,8 @@ describe("00-motion.css", () => {
     expect(frame("m-page-enter", "from")).toMatch(/translateY\(var\(--rise-page\)\)/);
   });
 
-  it("pushes a detail page in from the left and takes it back to the left (RTL)", () => {
+  it("pushes a detail page in from the left (RTL)", () => {
     expect(frame("m-push-in", "from")).toMatch(/translateX\(calc\(-1 \* var\(--rise-push\)\)\)/);
-    expect(frame("m-push-back", "to")).toMatch(/translateX\(calc\(-1 \* var\(--rise-push\)\)\)/);
   });
 
   it("grows thin bars from the right", () => {
@@ -159,11 +158,8 @@ describe("00-motion.css", () => {
     const expected: [string, string, string][] = [
       [".m-page-enter", "--motion-page", "--ease-enter"],
       [".m-push-in", "--motion-page", "--ease-enter"],
-      [".m-sheet-in", "--motion-sheet-in", "--ease-enter"],
       [".m-bar-in", "--motion-bar", "--ease-enter"],
       [".m-bar-grow", "--motion-bar-grow", "--ease-enter"],
-      [".m-push-back", "--motion-sheet-out", "--ease-exit"],
-      [".m-sheet-out", "--motion-sheet-out", "--ease-exit"],
       [".m-bar-out", "--motion-bar", "--ease-exit"],
       [".m-row-leave", "--motion-sheet-out", "--ease-exit"],
     ];
@@ -179,7 +175,7 @@ describe("00-motion.css", () => {
   });
 
   it("names the motion classes the app uses", () => {
-    for (const name of [".m-press", ".m-press-scale", ".m-page-enter", ".m-push-in", ".m-push-back", ".m-sheet-in", ".m-sheet-out", ".m-bar-in", ".m-bar-out", ".m-row-leave", ".m-bar-grow"]) {
+    for (const name of [".m-press", ".m-press-scale", ".m-page-enter", ".m-push-in", ".m-bar-in", ".m-bar-out", ".m-row-leave", ".m-bar-grow"]) {
       expect(css).toContain(name);
     }
   });

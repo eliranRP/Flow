@@ -4,8 +4,7 @@ import { screenPhase } from "../query-phase";
 import { useTeamApi, type MyCompanies, type MyInvite } from "../team-api";
 import { useMyCompaniesQuery, useMyInvitesQuery } from "../team-queries";
 import { Button } from "../ui/button";
-import { EmptyState } from "../ui/empty-state";
-import { ErrorState } from "../ui/error-state";
+import { EmptyState, FailureLine } from "../ui/empty-state";
 import { CheckIcon, MailIcon } from "../ui/icons";
 import { ScreenHeader } from "../ui/screen-header";
 import { Skeleton } from "../ui/skeleton";
@@ -79,7 +78,7 @@ export function InvitesScreen({ sample }: { sample?: { state: InviteState } }) {
       <div className="invite-plain">
         <ScreenHeader title="הזמנות" />
         {phase.kind === "error" ? (
-          <ErrorState offline={phase.offline} onRetry={() => { void invites.refetch(); }} />
+          <FailureLine offline={phase.offline} onRetry={() => { void invites.refetch(); }} />
         ) : phase.kind === "ready" ? (
           <EmptyState
             icon={<MailIcon />}

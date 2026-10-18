@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { compareCounts, countRules, findViolations, stripTokenBlocks } from "./check-css-tokens.mjs";
+import { findViolations, stripTokenBlocks } from "./check-css-tokens.mjs";
 
 const rulesOf = (css) => findViolations(css).map((violation) => violation.rule);
 
@@ -87,26 +87,7 @@ test("violations carry the line they are on", () => {
   assert.equal(violation.value, "14px");
 });
 
-test("countRules counts each rule once per violation", () => {
-  assert.deepEqual(countRules(findViolations(".a { color: #fff; color: #000; font-size: 9px; }")), {
-    color: 2,
-    "font-size": 1,
-  });
-});
-
-test("a count above the baseline fails and names the file and rule", () => {
-  const result = compareCounts({ "app/src/a.css": { color: 3 } }, { "app/src/a.css": { color: 2 } });
-  assert.deepEqual(result.above, [{ file: "app/src/a.css", rule: "color", count: 3, baseline: 2 }]);
-  assert.deepEqual(result.below, []);
-});
-
-test("a count below the baseline asks to lower the baseline", () => {
-  const result = compareCounts({ "app/src/a.css": { color: 1 } }, { "app/src/a.css": { color: 2 } });
-  assert.deepEqual(result.above, []);
-  assert.deepEqual(result.below, [{ file: "app/src/a.css", rule: "color", count: 1, baseline: 2 }]);
-});
-
-test("a file or rule missing from the baseline counts as 0", () => {
-  const result = compareCounts({ "app/src/new.css": { radius: 1 } }, {});
-  assert.deepEqual(result.above, [{ file: "app/src/new.css", rule: "radius", count: 1, baseline: 0 }]);
+test("one raw value is enough to fail, and a clean file passes", () => {
+  assert.equal(findViolations(".a { color: var(--color-text); }\n.b { padding: 14px; }").length, 1);
+  assert.deepEqual(findViolations(".a { color: var(--color-text); padding: var(--space-3); }"), []);
 });

@@ -1,6 +1,6 @@
 import { formatAmount } from "./amount";
 import { Card } from "./card";
-import { TextLink } from "./text-link";
+import { Button } from "./button";
 
 /**
  * The share of the budget spent, to the nearest whole percent (the card's "N%"). Under the budget it
@@ -25,7 +25,7 @@ export function BudgetCard({ spentMinor, budgetMinor, currency = "ILS", onEdit }
       <div className="ui-budget-head">
         <h2>תקציב</h2>
         {onEdit == null ? null : (
-          <TextLink tone="accent" chevron={false} onClick={onEdit}>עריכה</TextLink>
+          <Button variant="link" onClick={onEdit}>עריכה</Button>
         )}
       </div>
       <p className="ui-budget-spent">

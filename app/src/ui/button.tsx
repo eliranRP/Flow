@@ -1,18 +1,13 @@
 import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
 import { Link } from "react-router-dom";
-import { ChevronIcon } from "./icons";
+import { ChevronDownIcon, ChevronIcon } from "./icons";
 import { cx } from "./cx";
 
 export type ButtonVariant =
   | "primary"
   | "secondary"
   | "link"
-  | "danger-link"
-  | "pill"
-  | "danger"
-  | "danger-tint"
-  | "danger-outline"
-  | "ghost";
+  | "danger-link";
 
 type Common = {
   variant?: ButtonVariant;
@@ -24,6 +19,9 @@ type Common = {
   iconEnd?: ReactNode;
   /** A left-pointing chevron after the label (it points left in RTL too). */
   chevron?: boolean;
+  /** A 16px chevron after the label that turns when `expanded` (a link that opens a list in place). */
+  expanded?: boolean;
+  controls?: string;
   children: ReactNode;
   className?: string;
   title?: string;
@@ -32,20 +30,33 @@ type Common = {
 };
 
 type AsButton = Common &
-  Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "className"> & { to?: undefined };
+  Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "className"> & { to?: undefined; href?: undefined };
+
+/** A plain anchor: a mailto, or an outside page that opens in a new tab and says so (FLOW-357). */
+type AsAnchor = Common & {
+  href: string;
+  external?: boolean;
+  to?: undefined;
+  disabled?: boolean;
+};
 
 type AsLink = Common & {
   to: string;
+  href?: undefined;
   state?: unknown;
   /** Replaces the current history entry, as a sheet's own entry does. */
   replace?: boolean;
   disabled?: boolean;
 };
 
-export type ButtonProps = AsButton | AsLink;
+export type ButtonProps = AsButton | AsLink | AsAnchor;
 
 function isLink(props: ButtonProps): props is AsLink {
   return typeof props.to === "string";
+}
+
+function isAnchor(props: ButtonProps): props is AsAnchor {
+  return typeof props.href === "string";
 }
 
 function labelText(children: ReactNode): string | undefined {
@@ -57,14 +68,9 @@ const variantClass: Record<ButtonVariant, string> = {
   secondary: "ui-btn-secondary",
   link: "ui-btn-link",
   "danger-link": "ui-btn-danger-link",
-  pill: "ui-btn-pill",
-  danger: "ui-btn-danger",
-  "danger-tint": "ui-btn-danger-tint",
-  "danger-outline": "ui-btn-danger-outline",
-  ghost: "ui-btn-ghost",
 };
 
-/** Press motion (FLOW-363): the new variants fade, and the two filled or outlined ones also scale. */
+/** Press motion (FLOW-363): the four variants fade, and the filled and the outlined one also scale. */
 const pressClass: Partial<Record<ButtonVariant, string>> = {
   primary: "m-press m-press-scale",
   secondary: "m-press m-press-scale",
@@ -88,13 +94,18 @@ export function Button(props: ButtonProps) {
       {props.busy ? <span className="ui-spinner" aria-hidden="true" /> : null}
       {props.icon}
       <span
-        className={variant === "pill" ? "ui-pill-label" : "ui-btn-label"}
-        data-clip-ok={variant === "pill" ? "" : undefined}
+        className="ui-btn-label"
+        data-clip-ok={variant === "link" ? "" : undefined}
       >
         {props.children}
       </span>
       {props.iconEnd}
       {props.chevron ? <ChevronIcon size={16} /> : null}
+      {props.expanded === undefined ? null : (
+        <span className="ui-chevron-turn" data-open={props.expanded ? "true" : "false"}>
+          <ChevronDownIcon size={16} />
+        </span>
+      )}
     </>
   );
   const named = {
@@ -119,7 +130,26 @@ export function Button(props: ButtonProps) {
       </Link>
     );
   }
-  const { busy, disabled, type = "button", full: _full, quiet: _quiet, variant: _variant, className: _className, children: _children, icon: _icon, iconEnd: _iconEnd, chevron: _chevron, to: _to, title: _title, "aria-label": _aria, buttonRef, onClick, ...rest } = props;
+  if (isAnchor(props)) {
+    const inert = props.busy || props.disabled;
+    return (
+      <a
+        href={props.href}
+        {...(props.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+        className={classes}
+        aria-label={named["aria-label"]}
+        aria-disabled={inert || undefined}
+        aria-busy={props.busy || undefined}
+        onClick={(event) => {
+          if (inert) event.preventDefault();
+        }}
+      >
+        {body}
+        {props.external ? <span className="sr-only">(נפתח בלשונית חדשה)</span> : null}
+      </a>
+    );
+  }
+  const { busy, disabled, type = "button", full: _full, quiet: _quiet, variant: _variant, className: _className, children: _children, icon: _icon, iconEnd: _iconEnd, chevron: _chevron, expanded, controls, to: _to, href: _href, title: _title, "aria-label": _aria, buttonRef, onClick, ...rest } = props;
   return (
     <button
       ref={buttonRef}
@@ -129,6 +159,8 @@ export function Button(props: ButtonProps) {
       aria-label={named["aria-label"]}
       aria-disabled={disabled || busy || undefined}
       aria-busy={busy || undefined}
+      aria-expanded={expanded}
+      aria-controls={controls}
       onClick={(event) => {
         if (busy) {
           event.preventDefault();

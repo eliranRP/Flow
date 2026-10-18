@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { expect, waitFor } from "@storybook/test";
 import type { ReactNode } from "react";
 import { Amount } from "./amount";
-import { BandHero } from "./layout";
 import { longHebrew, largeAgorot } from "./story-support";
 import { BandCompany, TopBand } from "./top-band";
 
@@ -34,12 +33,13 @@ function BandView({ preview, heading, amount, label, company, past }: BandArgs) 
       tone={past ? "past" : "current"}
       wordmark={company == null}
       leading={company == null ? undefined : <BandCompany name={company} onOpen={() => undefined} />}
-    >
-      <BandHero>
-        <p className="t-title-2">{heading}</p>
-        {body}
-      </BandHero>
-    </TopBand>
+      hero={
+        <>
+          <p className="t-title-2">{heading}</p>
+          {body}
+        </>
+      }
+    />
   );
 }
 
@@ -76,24 +76,22 @@ export const Past: Story = {
 /** The project name on the band is `band-title` 32 (decision 0120), above the 36 profit. */
 function ProjectBand({ name }: { name: string }) {
   return (
-    <TopBand>
-      <BandHero>
-        <p className="t-band-title">{name}</p>
-        <p className="ui-band-label t-label">רווח</p>
-        <p className="t-display">
-          <Amount agorot={2_940_000n} />
-        </p>
-      </BandHero>
-    </TopBand>
+    <TopBand
+      hero={
+        <>
+          <p className="t-band-title">{name}</p>
+          <p className="ui-band-label t-label">רווח</p>
+          <p className="t-display">
+            <Amount agorot={2_940_000n} />
+          </p>
+        </>
+      }
+    />
   );
 }
 
 export const ProjectName: Story = {
   args: { heading: "וילה לדוגמה" },
-  render: ({ heading }) => <ProjectBand name={heading} />,
-};
-export const ProjectNameLong: Story = {
-  args: { heading: longHebrew },
   render: ({ heading }) => <ProjectBand name={heading} />,
 };
 /**
@@ -104,14 +102,16 @@ export const ScrollFade: Story = {
   args: { heading: "רווח מתחילת השנה" },
   render: ({ heading }) => (
     <div>
-      <TopBand>
-        <BandHero>
-          <p className="t-title-2">{heading}</p>
-          <p className="ui-band-fade t-display">
-            <Amount agorot={3_916_400n} />
-          </p>
-        </BandHero>
-      </TopBand>
+      <TopBand
+        hero={
+          <>
+            <p className="t-title-2">{heading}</p>
+            <p className="ui-band-fade t-display">
+              <Amount agorot={3_916_400n} />
+            </p>
+          </>
+        }
+      />
       {Array.from({ length: 40 }, (_, index) => (
         <p key={index} className="ui-page-pad t-body" style={{ paddingBlock: 12 }}>
           {`שורה לדוגמה ${String(index + 1)}`}

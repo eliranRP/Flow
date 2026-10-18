@@ -1,9 +1,9 @@
 import { useId } from "react";
-import { ChevronDownIcon, PlusIcon, SplitIcon, TagIcon } from "./icons";
-import { RadioRow } from "./radio-row";
+import { PlusIcon, SplitIcon, TagIcon } from "./icons";
+import { ListRow } from "./list-row";
 import { SearchField } from "./search-field";
 import { Skeleton } from "./skeleton";
-import { TextLink } from "./text-link";
+import { Button } from "./button";
 import type { ChangeChoice } from "./change-sheet-copy";
 
 const skeletonKeys = ["a", "b", "c", "d", "e"] as const;
@@ -127,10 +127,10 @@ export function Picker({
   function row(option: ChangeChoice) {
     const taken = disabledIds?.includes(option.id) === true;
     return (
-      <RadioRow
+      <ListRow control="radio"
         key={option.id}
         layout="picker"
-        label={option.name}
+        title={option.name}
         code={compact ? undefined : option.code}
         date={needle === "" && !compact ? option.recent : undefined}
         tag={option.id === suggestionId && !compact ? (suggestionJev ? "jev" : true) : false}
@@ -171,10 +171,10 @@ export function Picker({
           {sections != null ? (
             <div role="radiogroup" aria-label="פרויקט">
               {noneLabel != null ? (
-                <RadioRow
+                <ListRow control="radio"
                   key="none"
                   layout="picker"
-                  label={noneLabel}
+                  title={noneLabel}
                   description={choiceNotes?.[""]}
                   selected={selectedId === ""}
                   busy={savingId === ""}
@@ -197,10 +197,10 @@ export function Picker({
               {heading != null && needle === "" ? <p className="t-label ui-pick-group-head">{heading}</p> : null}
               <div role="radiogroup" aria-label={kind === "project" ? "פרויקט" : "קטגוריה"}>
                 {noneLabel != null && needle === "" ? (
-                  <RadioRow
+                  <ListRow control="radio"
                     key="none"
                     layout="picker"
-                    label={noneLabel}
+                    title={noneLabel}
                     description={choiceNotes?.[""]}
                     selected={selectedId === ""}
                     busy={savingId === ""}
@@ -219,15 +219,14 @@ export function Picker({
               {reversalForced ? (
                 <p className="t-label ui-reversal-head">{reversal.heading}</p>
               ) : (
-                <TextLink
-                  chevron={false}
+                <Button
+                  variant="link"
                   expanded={reversalShown}
                   controls={sectionId}
-                  trailing={<ChevronDownIcon size={16} />}
                   onClick={reversal.onToggle}
                 >
                   {reversal.heading}
-                </TextLink>
+                </Button>
               )}
               <div id={sectionId} hidden={!reversalShown}>
                 {reversalShown ? (
@@ -246,18 +245,18 @@ export function Picker({
       )}
       {kind === "project" && !loading && !compact ? (
         <div className="ui-change-links">
-          <TextLink icon={<PlusIcon size={16} />} chevron={false} disabled={splitCategory?.busy === true} onClick={onCreate}>פרויקט חדש</TextLink>
-          {splitLink && onSplit ? <TextLink icon={<SplitIcon size={16} />} chevron={false} disabled={splitCategory?.busy === true} onClick={onSplit}>פיצול בין פרויקטים</TextLink> : null}
+          <Button variant="link" icon={<PlusIcon size={16} />} disabled={splitCategory?.busy === true} onClick={onCreate}>פרויקט חדש</Button>
+          {splitLink && onSplit ? <Button variant="link" icon={<SplitIcon size={16} />} disabled={splitCategory?.busy === true} onClick={onSplit}>פיצול בין פרויקטים</Button> : null}
           {splitCategory ? (
-            <TextLink
+            <Button
+              variant="link"
               icon={<TagIcon size={16} />}
-              chevron={false}
               busy={splitCategory.busy}
               disabled={savingId != null && !splitCategory.busy}
               onClick={splitCategory.onPress}
             >
               פיצול לפי קטגוריות
-            </TextLink>
+            </Button>
           ) : null}
         </div>
       ) : null}

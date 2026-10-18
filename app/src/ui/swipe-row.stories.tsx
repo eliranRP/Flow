@@ -19,19 +19,17 @@ function Demo() {
   const [parts, setParts] = useState(PARTS);
   const remove = (key: string) => { setParts((list) => list.filter((part) => part.key !== key)); };
   return (
-    <div className="ui-split-card ui-lsplit-card">
+    <div className="ui-lsplit-body">
       {parts.map((part) => (
         <SwipeRow key={part.key} onRemove={() => { remove(part.key); }}>
           <div className="ui-lsplit-part">
-            <div className="ui-lsplit-text">
-              <span className="ui-lsplit-pick">
-                <span className="ui-lsplit-title"><span className="ui-lsplit-name">{part.name}</span></span>
-                <span className="ui-lsplit-project">{part.project}</span>
-              </span>
-              <IconButton className="ui-lsplit-remove" label={`הסרת החלק ${part.name}`} onClick={() => { remove(part.key); }}>
-                <CloseIcon size={18} />
-              </IconButton>
-            </div>
+            <span className="ui-lsplit-pick">
+              <span className="ui-lsplit-title"><span className="ui-lsplit-name">{part.name}</span></span>
+              <span className="ui-lsplit-project">{part.project}</span>
+            </span>
+            <IconButton label={`הסרת החלק ${part.name}`} onClick={() => { remove(part.key); }}>
+              <CloseIcon size={18} />
+            </IconButton>
           </div>
         </SwipeRow>
       ))}
@@ -74,7 +72,7 @@ export const Dragging: Story = {
 /** Open: the row rests over its action, which names the change: "התעלמות מההתראה". */
 export const Revealed: Story = {
   render: () => (
-    <div className="ui-split-card ui-lsplit-card">
+    <div className="ui-lsplit-body">
       <SwipeRow onRemove={() => undefined} reveal={{ label: "התעלמות מההתראה", onAct: () => undefined }}>
         <div className="ui-lsplit-part">
           <span className="ui-lsplit-name">ביטוח רכב</span>

@@ -643,3 +643,50 @@ describe("ListRow press (FLOW-363 2d)", () => {
     }
   });
 });
+
+describe('ListRow control="radio"', () => {
+  it("keeps a busy row focusable but ignores its clicks (FLOW-115)", () => {
+    const onSelect = vi.fn();
+    render(<ListRow control="radio" layout="picker" title="הלוואת דוגמה" value="loan-1" busy selected={false} onSelect={onSelect} />);
+    const radio = screen.getByRole("radio", { name: "הלוואת דוגמה" });
+    expect(radio).not.toBeDisabled();
+    expect(radio).toHaveAttribute("aria-disabled", "true");
+    expect(radio).toHaveAttribute("aria-busy", "true");
+    expect(radio).toHaveAttribute("data-value", "loan-1");
+    fireEvent.click(radio);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("shows disabledReason in picker layout with an accessible description", () => {
+    render(<ListRow control="radio" layout="picker" title="הלוואת דוגמה" disabledReason="ההלוואה נפרעה" selected={false} onSelect={vi.fn()} />);
+    const radio = screen.getByRole("radio", { name: "הלוואת דוגמה" });
+    expect(radio).toBeDisabled();
+    expect(radio).toHaveAccessibleDescription("ההלוואה נפרעה");
+    expect(screen.getByText("ההלוואה נפרעה")).toBeInTheDocument();
+  });
+
+  it("omits aria-describedby in picker layout when there is no description", () => {
+    render(<ListRow control="radio" layout="picker" title="הלוואת דוגמה" selected={false} onSelect={vi.fn()} />);
+    expect(screen.getByRole("radio", { name: "הלוואת דוגמה" })).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("does not call onSelect when disabledReason is set, and calls it once for a live row", () => {
+    const onSelect = vi.fn();
+    const { rerender } = render(<ListRow control="radio" layout="picker" title="הלוואת דוגמה" disabledReason="ההלוואה נפרעה" selected={false} onSelect={onSelect} />);
+    fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
+    expect(onSelect).not.toHaveBeenCalled();
+    rerender(<ListRow control="radio" title="הלוואת דוגמה" selected={false} onSelect={onSelect} />);
+    fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
+    expect(onSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it("draws the check on the selected row and the marker on the start side when asked", () => {
+    const { container } = render(<ListRow control="radio" title="שווה בין כל הפרויקטים" description="₪250 לכל אחד" marker="start" selected onSelect={vi.fn()} />);
+    const row = screen.getByRole("radio", { name: "שווה בין כל הפרויקטים" });
+    expect(row).toHaveAttribute("aria-checked", "true");
+    expect(row).toHaveClass("ui-radio-row", "ui-radio-start");
+    expect(container.querySelector(".ui-radio")).toHaveTextContent("✓");
+    expect(row.firstElementChild).toHaveClass("ui-radio");
+    expect(container.querySelector(".ui-radio-desc")).toHaveTextContent("₪250 לכל אחד");
+  });
+});

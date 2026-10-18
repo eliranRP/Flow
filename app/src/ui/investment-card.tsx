@@ -1,6 +1,6 @@
 import { formatAmount } from "./amount";
 import { Card } from "./card";
-import { TextLink } from "./text-link";
+import { Button } from "./button";
 
 /** The three figures the owner types in. Each row opens its own sheet (FLOW-404). */
 export type InvestmentField = "purchase" | "arv" | "value";
@@ -108,7 +108,7 @@ export function InvestmentSummary({ figures, href }: { figures: InvestmentFigure
     <Card className="ui-investment-summary">
       <div className="ui-investment-head">
         <h2>השקעה והלוואות</h2>
-        <TextLink to={href} chevron={false}>לפרטים</TextLink>
+        <Button variant="link" to={href}>לפרטים</Button>
       </div>
       <dl className="ui-investment-grid">
         <div>

@@ -79,7 +79,7 @@
 
 /* FLOW-913: a one-time peek. The row slides toward the start side and back, showing the word under it. */
 .ui-swipe-row[data-peek] .ui-swipe-row-body {
-  animation: ui-swipe-row-peek 900ms var(--ease-standard) 400ms both;
+  animation: ui-swipe-row-peek var(--motion-peek) var(--ease-standard) var(--motion-peek-delay) both;
 }
 
 @keyframes ui-swipe-row-peek {

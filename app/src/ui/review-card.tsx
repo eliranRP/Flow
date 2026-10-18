@@ -8,7 +8,7 @@ import { AlertIcon, CheckIcon, ChevronDownIcon, ChevronIcon, NoteIcon, SplitIcon
 import { ListRow } from "./list-row";
 import { JevTag } from "./suggest-tag";
 import { Skeleton } from "./skeleton";
-import { TextLink } from "./text-link";
+import { Button } from "./button";
 
 /** FLOW-312 item 2 / decision 0125: a split line whose bank amount changed. */
 export const SPLIT_MISMATCH_LINE = "הפיצול לא תואם את סכום השורה בבנק.";
@@ -329,16 +329,15 @@ export function ReviewCard({
               {JEV_FILLED}
             </span>
             {filled.onUndo ? (
-              <TextLink
-                className="ui-review-filled-undo"
-                size="hint"
-                chevron={false}
+              <Button
+                variant="link"
                 busy={filled.busy === true}
-                label={`${JEV_FILLED_UNDO} המילוי של Jev`}
+                aria-label={`${JEV_FILLED_UNDO} המילוי של Jev`}
                 onClick={filled.onUndo}
+                className="ui-review-filled-undo ui-btn-link-hint"
               >
                 {JEV_FILLED_UNDO}
-              </TextLink>
+              </Button>
             ) : null}
           </p>
         ) : null}
