@@ -1,5 +1,5 @@
 // Flow MCP tools tests: the month-end forecast (FLOW-141). get_forecast builds the items and the
-// totals from three reads; set_forecast_item and reset_forecast forward to their RPCs.
+// totals from its reads (the company currency among them); set_forecast_item and reset_forecast forward to their RPCs.
 import { assertEquals } from "jsr:@std/assert@1";
 import { callTool } from "./tools.ts";
 import { rpcOf } from "./tools_test_support.ts";
@@ -28,10 +28,11 @@ function reads(name: string) {
   if (name === "forecast_overrides_for") {
     return { status: 200, json: [{ item_key: "party:expense:p-rent:ILS", amount_minor: 480000, due_on: null, moved_out: false }] };
   }
+  if (name === "mcp_company_loan_currency") return { status: 200, json: "ILS" };
   return { status: 500, json: null };
 }
 
-Deno.test("get_forecast reads three RPCs and builds the items, totals and changed count", async () => {
+Deno.test("get_forecast reads its RPCs and builds the items, totals and changed count", async () => {
   const { calls, rpc } = rpcOf(reads);
   const result = await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc);
   assertEquals(result.isError, false);
@@ -50,11 +51,27 @@ Deno.test("get_forecast reads three RPCs and builds the items, totals and change
   assertEquals(data?.changed, 1);
   assertEquals(data?.expense[0]?.minor, 480000);
   assertEquals(data?.expense[0]?.usual_minor, 500000);
-  assertEquals(calls.map((call) => call.name).sort(), ["cash_months", "expected_months", "forecast_overrides_for", "list_unpaid"]);
+  assertEquals(calls.map((call) => call.name).sort(), ["cash_months", "expected_months", "forecast_overrides_for", "list_unpaid", "mcp_company_loan_currency"]);
   // Home's number: the cash net + the income still to come - the charges still to go (small ones included).
   assertEquals(data?.cash_net_minor, 120000);
   assertEquals(data?.big_number_minor, 120000 + 250000 - 480000);
   assertEquals(calls.find((call) => call.name === "forecast_overrides_for")?.body, { p_month: "2026-10" });
+});
+
+Deno.test("get_forecast counts a dollar company's items and cash in dollars", async () => {
+  const usd = (value: unknown) => JSON.parse(JSON.stringify(value).replaceAll('"ILS"', '"USD"').replaceAll(":ILS", ":USD"));
+  const { rpc } = rpcOf((name) => name === "mcp_company_loan_currency" ? { status: 200, json: "USD" } : { ...reads(name), json: usd(reads(name).json) });
+  const result = await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc);
+  const data = (result.structuredContent.ok ? result.structuredContent.data : null) as {
+    base_currency: string;
+    income_total_minor: number;
+    expense_total_minor: number;
+    cash_net_minor: number | null;
+  } | null;
+  assertEquals(data?.base_currency, "USD");
+  assertEquals(data?.income_total_minor, 250000);
+  assertEquals(data?.expense_total_minor, 480000);
+  assertEquals(data?.cash_net_minor, 120000);
 });
 
 Deno.test("get_forecast defaults to this month in Israel time and refuses a bad month before any read", async () => {
@@ -71,6 +88,13 @@ Deno.test("get_forecast refuses when a read fails", async () => {
   const { rpc } = rpcOf((name) => name === "list_unpaid" ? { status: 500, json: null } : reads(name));
   const result = await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc);
   assertEquals(result.isError, true);
+});
+
+Deno.test("get_forecast refuses when the company currency cannot be read, never counting in shekels", async () => {
+  const { rpc } = rpcOf((name) => name === "mcp_company_loan_currency" ? { status: 500, json: null } : reads(name));
+  assertEquals((await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc)).isError, true);
+  const odd = rpcOf((name) => name === "mcp_company_loan_currency" ? { status: 200, json: "dollars" } : reads(name));
+  assertEquals((await callTool("get_forecast", { month: "2026-10" }, ["read"], odd.rpc)).isError, true);
 });
 
 Deno.test("set_forecast_item forwards the patch and refuses a reset with other fields", async () => {

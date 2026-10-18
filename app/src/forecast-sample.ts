@@ -193,7 +193,7 @@ export function monthForecastSample(kind: ForecastSampleKind): MonthForecastSamp
   return {
     today,
     net: kind === "negative" ? -150000n : 120000n,
-    data: { month: "2026-10", build, overrides },
+    data: { month: "2026-10", base: "ILS", build, overrides },
   };
 }
 
@@ -259,5 +259,5 @@ export function monthForecastBoardSample(variant: BoardForecastVariant = "board"
     paymentTermsDays: 30,
   });
   // The changed frame's reset line reads these, so the undo has the prior state to send back.
-  return { today, net: -1719100n, base: "USD", data: { month: "2026-10", build, overrides } };
+  return { today, net: -1719100n, data: { month: "2026-10", base: "USD", build, overrides } };
 }

@@ -24,9 +24,9 @@ export function unpaidTotals(rows: readonly UnpaidRow[]): { currency: string; mi
     .filter((total, index) => index === 0 || total.minor !== 0n);
 }
 
-/** Home's unpaid row: the open ILS gross. Other currencies are on the Unpaid screen. */
-export function unpaidOpenGross(rows: readonly UnpaidRow[]): bigint {
-  return unpaidTotals(rows).find((total) => total.currency === "ILS")?.minor ?? 0n;
+/** Home's unpaid row: the open gross in the company's currency. Other currencies are on the Unpaid screen. */
+export function unpaidOpenGross(rows: readonly UnpaidRow[], base: string): bigint {
+  return unpaidTotals(rows).find((total) => total.currency === base)?.minor ?? 0n;
 }
 
 const SUMIT_DOCUMENT_PREFIX = "https://pay.sumit.co.il/";

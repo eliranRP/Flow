@@ -1,5 +1,6 @@
 import { buildMonthForecast, type ForecastBuild, type ForecastOverrideRow } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
+import { readStoredCurrency } from "./company-currency";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview } from "./preview";
@@ -15,6 +16,8 @@ import { waitForAccessToken } from "./wait-for-session";
 
 export type MonthForecast = {
   month: string;
+  /** The company's currency (0147): the forecast counts its items and its cash. */
+  base: string;
   build: ForecastBuild;
   overrides: ForecastOverrideRow[];
 };
@@ -56,10 +59,12 @@ export function useMonthForecastQuery(month: string, active = true) {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       await waitForAccessToken(supabase);
-      const [expected, unpaid, overrides] = await Promise.all([
+      const [expected, unpaid, overrides, base] = await Promise.all([
         supabase.rpc("expected_months", { p_months: 1 }),
         supabase.rpc("list_unpaid", {}),
         supabase.rpc("forecast_overrides_for", { p_month: month }),
+        // A failed read fails the forecast: counting a dollar company in shekels would show nothing due.
+        readStoredCurrency(),
       ]);
       if (expected.error) throw expected.error;
       if (unpaid.error) throw unpaid.error;
@@ -69,9 +74,10 @@ export function useMonthForecastQuery(month: string, active = true) {
       const current = (overrides.data ?? []) as ForecastOverrideRow[];
       return {
         month,
+        base,
         overrides: current,
         build: buildMonthForecast({
-          base: "ILS",
+          base,
           expected: schemas.expectedMonthsSchema.parse(expected.data),
           unpaid: rows,
           overrides: current,

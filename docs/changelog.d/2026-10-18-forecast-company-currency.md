@@ -1,0 +1,1 @@
+The month forecast (צפי) counts in the company's currency. A dollar company saw "הכל כבר הגיע" with nothing listed, because the forecast kept only shekel items; it now lists its recurring charges and open invoices in dollars, in the app and in the MCP get_forecast.

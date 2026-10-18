@@ -30,7 +30,7 @@ describe("unpaid totals (FLOW-330)", () => {
       { currency: "EUR", minor: 10_000n },
       { currency: "USD", minor: 20_000n },
     ]);
-    expect(unpaidOpenGross(rows)).toBe(50_000n);
+    expect(unpaidOpenGross(rows, "ILS")).toBe(50_000n);
   });
 
   it("keeps ILS at zero and drops another currency whose rows are all marked", () => {

@@ -181,38 +181,38 @@ function forecastItemJson(item: ForecastItem) {
 }
 
 /**
- * FLOW-141 get_forecast: the items, the sections and their totals for one month, built by the
- * same arithmetic as the app (packages/shared/src/month-forecast.ts). Null when a read is malformed.
- */
-/**
- * The month's cash net in ILS from a cash_months read, when that read's newest month is the
+ * The month's cash net in the company's currency from a cash_months read, when that read's newest month is the
  * forecast month (Home's figure is the current month only). Null for any other month.
  */
-function cashNetMinor(cash: unknown, month: string): bigint | null {
+function cashNetMinor(cash: unknown, month: string, base: string): bigint | null {
   const months = (cash as { months?: unknown } | null)?.months;
   if (!Array.isArray(months)) return null;
   const newest = months[0] as { month?: unknown; by_currency?: unknown } | undefined;
   if (typeof newest?.month !== "string" || newest.month.slice(0, 7) !== month) return null;
   const rows = Array.isArray(newest.by_currency) ? (newest.by_currency as { currency?: unknown; net_minor?: unknown }[]) : [];
-  const ils = rows.find((row) => row.currency === "ILS");
-  return ils == null ? 0n : BigInt(String(ils.net_minor ?? 0));
+  const row = rows.find((candidate) => candidate.currency === base);
+  return row == null ? 0n : BigInt(String(row.net_minor ?? 0));
 }
 
-export function forecastReport(month: string, expected: unknown, unpaid: unknown, overrides: unknown, cash: unknown): Review | null {
+/**
+ * FLOW-141 get_forecast: the items, the sections and their totals for one month, built by the
+ * same arithmetic as the app (packages/shared/src/month-forecast.ts). Null when a read is malformed.
+ */
+export function forecastReport(month: string, expected: unknown, unpaid: unknown, overrides: unknown, cash: unknown, base: string): Review | null {
   const parsedExpected = expectedMonthsSchema.safeParse(expected);
   const parsedUnpaid = z.array(unpaidRowSchema).safeParse(unpaid);
   if (!parsedExpected.success || !parsedUnpaid.success || !Array.isArray(overrides)) return null;
   const build = buildMonthForecast({
-    base: "ILS",
+    base,
     expected: parsedExpected.data,
     unpaid: parsedUnpaid.data,
     overrides: overrides as ForecastOverrideRow[],
   });
   const smallTotal = build.small.reduce((total, item) => total + item.minor, 0n);
-  const net = cashNetMinor(cash, month);
+  const net = cashNetMinor(cash, month, base);
   return {
     month,
-    base_currency: "ILS",
+    base_currency: base,
     cash_net_minor: net == null ? null : Number(net),
     big_number_minor: net == null ? null : Number(forecastTotal(net, build)),
     income: build.income.map(forecastItemJson),

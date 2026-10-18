@@ -11,8 +11,8 @@ export async function readCompanyCurrency(): Promise<string> {
   return readStoredCurrency().catch(() => "ILS");
 }
 
-/** The same read, failing loudly, so Settings can tell a failure from a shekel company. */
-async function readStoredCurrency(): Promise<string> {
+/** The same read, failing loudly, so Settings and the forecast can tell a failure from a shekel company. */
+export async function readStoredCurrency(): Promise<string> {
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
   const { data, error } = await supabase.rpc("mcp_company_loan_currency");

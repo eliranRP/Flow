@@ -11,6 +11,29 @@ vi.mock("../lib/supabase", () => ({
 }));
 
 describe("ForecastScreen", () => {
+  it("live, counts a dollar company's items in dollars (the company currency, not shekels)", async () => {
+    const reads: Record<string, unknown> = {
+      mcp_company_loan_currency: "USD",
+      expected_months: {
+        today: "2026-10-11",
+        project_id: null,
+        months: [{ month: "2026-10", open: true, by_currency: [] }],
+        recurring: [{ direction: "expense", party_id: "p-1", name: "Example Utility", currency: "USD", typical_amount_minor: -25000, typical_day: 20, months_seen: 6, seen_this_month: false }],
+      },
+      list_unpaid: [],
+      forecast_overrides_for: [],
+    };
+    rpc.mockImplementation((name: string) => Promise.resolve({ data: (reads[name] ?? null) as null, error: null }));
+    try {
+      renderWithProviders(<ForecastScreen />, { route: "/forecast" });
+      expect(await screen.findByRole("button", { name: /^Example Utility,/ })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /^Example Utility,/ }).getAttribute("aria-label")).toContain("$250");
+      expect(screen.queryByText("הכל כבר הגיע")).toBeNull();
+    } finally {
+      rpc.mockImplementation(() => Promise.resolve({ data: null, error: null }));
+    }
+  });
+
   it("shows the forecast figure, the cash net today, and both sections", () => {
     renderWithProviders(<ForecastScreen sample={monthForecastSample("positive")} />, { route: "/forecast" });
     // Net 1,200 plus income 9,000 minus charges 6,045 (the small one included): 4,155.

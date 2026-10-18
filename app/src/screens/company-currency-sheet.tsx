@@ -11,7 +11,7 @@ export const CURRENCY_REFUSED = "אין הרשאה לשנות את מטבע הע
 export const CURRENCY_UNDONE = "מטבע העסק הוחזר";
 
 /** Everything that reads the company currency: its order, the empty row, the loan default. */
-const CURRENCY_KEYS = ["company-currency", "loan-currency", "dashboard", "project", "profit-months", "breakdown"];
+const CURRENCY_KEYS = ["company-currency", "loan-currency", "dashboard", "project", "profit-months", "breakdown", "month-forecast"];
 
 function currencyFailure(error: Error): WriteFailure {
   const code = (error as Error & { code?: string }).code;

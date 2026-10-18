@@ -198,7 +198,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   if (data == null) return <CashHomeSkeleton preview={previewing} example={example} />;
 
   const unpaidPhase = screenPhase(preview, unpaid);
-  const unpaidGross = unpaidPhase.kind === "ready" ? unpaidOpenGross(unpaid.data ?? []) : 0n;
+  const unpaidGross = unpaidPhase.kind === "ready" ? unpaidOpenGross(unpaid.data ?? [], base) : 0n;
   const currentRow = cash.data.months.find((month) => cashMonthKey(month.month) === currentKey);
   const net = cashRows(currentRow, base).find((row) => row.currency === base)?.net_minor ?? 0n;
   const due = openMonthDue(expected.data, base);
@@ -219,7 +219,8 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
         pending: dashboard.data.review_count,
         unpaidCount: unpaidPhase.kind === "ready" ? unpaidOpenRows(unpaid.data ?? []).length : 0,
         unpaidGross,
-        unpaidOther: unpaidPhase.kind === "ready" ? unpaidTotals(unpaid.data ?? []).filter((total) => total.currency !== "ILS") : [],
+        currency: base,
+        unpaidOther: unpaidPhase.kind === "ready" ? unpaidTotals(unpaid.data ?? []).filter((total) => total.currency !== base && total.minor !== 0n) : [],
         missingCount: late.expense,
         missingIncome: late.income,
         changes: chargeChangeViews(changes.data ?? [], search),
