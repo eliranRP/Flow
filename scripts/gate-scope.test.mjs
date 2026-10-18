@@ -85,9 +85,9 @@ test("lint scope: config, tsconfig, manifests, lockfile, .d.ts, deletes and rena
 });
 
 test("the real tree: a UI component reaches its screen, the app and their tests", () => {
-  const scope = lintScope(["M\tapp/src/ui/hero.tsx"], { root });
+  const scope = lintScope(["M\tapp/src/ui/top-band.tsx"], { root });
   assert.notEqual(scope, "all");
-  for (const file of ["app/src/ui/hero.tsx", "app/src/screens/HomeScreen.tsx", "app/src/App.tsx", "app/src/App.test.tsx"]) {
+  for (const file of ["app/src/ui/top-band.tsx", "app/src/screens/HomeScreen.tsx", "app/src/App.tsx", "app/src/App.test.tsx"]) {
     assert.ok(scope.includes(file), file);
   }
 });
