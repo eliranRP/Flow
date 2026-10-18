@@ -45,7 +45,7 @@ export function projectCashSummaryRows(
   return cashSummaryRows(key, rows, search, now).map((row) => {
     // The month page lists counted lines only: what profit leaves out is found in search, for this project and month.
     if (row.id === "kept") return { ...row, href: projectKeptSearchPath(projectId, monthSearch) };
-    return { ...row, href: projectProfitMonthPath(projectId, key, monthSearch), profitMonth: undefined };
+    return { ...row, href: projectProfitMonthPath(projectId, key, monthSearch) };
   });
 }
 

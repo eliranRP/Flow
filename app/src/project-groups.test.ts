@@ -77,8 +77,6 @@ describe("FLOW-419 project cash rows", () => {
     expect(rows[0]?.href).toMatch(monthPage);
     expect(rows[1]?.href).toMatch(monthPage);
     expect(rows[2]?.href).toMatch(/^\/projects\/p1\/profit\/2026-10\?preview=1&period=month&at=2026-10/);
-    // The profit page reads the month from its link, so Home's period is left alone.
-    expect(rows[2]?.profitMonth).toBeUndefined();
   });
 
   it("lists the earlier months, each opening its own page", () => {

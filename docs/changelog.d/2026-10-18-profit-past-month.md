@@ -1,0 +1,1 @@
+Opening the month's profit from Home while looking at an earlier month now opens the profit page on that month (its lines, a year to date that ends with it, and "חודש סגור"), instead of always on the current month.
