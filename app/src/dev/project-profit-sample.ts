@@ -1,5 +1,6 @@
 import type { ProfitMonth, ProfitMonths } from "@flow/shared";
 import type { ProjectProfitSample } from "../screens/project-profit-screen";
+import { JUNIPER_NEXT } from "./project-next-month-sample";
 
 /**
  * FLOW-140 slice 1 fixture: the ProfitProject board frame's figures (USD, amounts in cents), with an invented
@@ -73,6 +74,8 @@ export const JUNIPER_PROFIT: ProjectProfitSample = {
     months: MONTHS,
     by_currency: [{ currency: "USD", income_minor: 7_605_000n, expense_minor: 5_457_040n, profit_minor: 2_147_960n }],
   } satisfies NonNullable<ProfitMonths>,
+  // The dashed card above the months: November's forecast, net +$2,380.
+  next: JUNIPER_NEXT,
 };
 
 /** A project with no line yet: its page has no months and no figures to show. */

@@ -11,6 +11,7 @@ const ProjectDetailScreen = lazy(() => screenLoaders.projectDetail().then((m) =>
 const ProjectCategoryScreen = lazy(() => screenLoaders.projectCategory().then((m) => ({ default: m.ProjectCategoryScreen })));
 const ProjectProfitScreen = lazy(() => screenLoaders.projectProfit().then((m) => ({ default: m.ProjectProfitScreen })));
 const ProjectMonthProfitScreen = lazy(() => screenLoaders.projectMonthProfit().then((m) => ({ default: m.ProjectMonthProfitScreen })));
+const ProjectNextMonthScreen = lazy(() => screenLoaders.projectNextMonth().then((m) => ({ default: m.ProjectNextMonthScreen })));
 const ProjectInvestmentScreen = lazy(() => screenLoaders.projectInvestment().then((m) => ({ default: m.ProjectInvestmentScreen })));
 
 /**
@@ -39,6 +40,8 @@ export function ProjectRoutes() {
       {/* FLOW-340 C: the screens the project page's rows open. */}
       {/* FLOW-419: the project opens on its cash; its profit page, a month and a month's lines are one tap in. */}
       <Route path="projects/:projectId/profit" element={<ProjectProfitScreen />} />
+      {/* The ProfitNext frame: next month's forecast, from the dashed card on the profit page. */}
+      <Route path="projects/:projectId/profit/next" element={<ProjectNextMonthScreen />} />
       <Route path="projects/:projectId/profit/:month" element={<ProjectMonthProfitRoute />} />
       <Route path="projects/:projectId/investment" element={<ProjectInvestmentScreen />} />
       <Route path="projects/:projectId/categories/:categoryId" element={<ProjectCategoryScreen />} />

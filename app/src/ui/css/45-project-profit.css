@@ -142,7 +142,8 @@
 
 /* The month rows and the month page's lines: 64px, the 17px name over the 15px line, 4px between. */
 .ui-pp-months .ui-row,
-.ui-pm-month .ui-lines-group .ui-project-list .ui-row {
+.ui-pm-month .ui-lines-group .ui-project-list .ui-row,
+.ui-pm-month .ui-pn-rows .ui-row {
   min-block-size: calc(var(--space-10) * 1.6);
   padding-block: 0;
 }
@@ -178,4 +179,84 @@
 /* A day that left more than it took in shows its sum as a loss; a gain stays muted (the board). */
 .ui-pm-month .ui-lines-group-sum.ui-loss {
   color: var(--color-bad);
+}
+
+/* The ProfitProject frame's dashed next-month card above the month rows, and the ProfitNext page's rows. */
+.ui-pn-card {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+  min-height: calc(var(--space-10) * 1.6);
+  margin: var(--space-5) var(--space-5) 0;
+  padding: var(--space-3) calc(var(--space-3) + var(--space-1) / 2);
+  border: 1.5px dashed var(--color-outline-forecast);
+  border-radius: var(--radius-card-tight);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.ui-pn-card-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-pn-card-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+  font-size: var(--type-body-size);
+}
+
+.ui-pn-card-top .ui-num {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.ui-pn-card-month {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.ui-pn-tag {
+  padding: 1px var(--space-2);
+  border: 1px solid var(--color-outline-forecast);
+  border-radius: var(--radius-tag);
+  font-size: var(--type-caption-size);
+  color: var(--color-accent-text);
+}
+
+.ui-pn-card-meta {
+  overflow: hidden;
+  font-size: var(--type-line2-size);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ui-pn-card-basis {
+  font-size: var(--type-caption-size);
+  color: var(--color-text-faint);
+}
+
+.ui-pn-card-chevron {
+  display: flex;
+  flex: none;
+  color: var(--color-accent-text);
+}
+
+/* The forecast rows sit in the page's side padding; an expected cost is the secondary text colour (board). */
+.ui-pm-month .ui-pn-rows {
+  margin-top: var(--space-3);
+  padding: 0 var(--space-side);
+}
+
+.ui-pn-rows .ui-row .ui-num:not(.ui-income) {
+  color: var(--color-text-secondary);
 }
