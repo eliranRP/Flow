@@ -2,6 +2,10 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { IconRow } from "./icon-row";
 import { ProjectsIcon } from "./icons";
+import { IconButton } from "./icon-button";
+import { expectRtl, expectTarget, expectThemePaint } from "./test-support";
+
+// --- icon-row.test.tsx
 
 const base = { icon: <ProjectsIcon />, label: "פרויקט", value: "שיפוץ דירה" };
 
@@ -73,5 +77,23 @@ describe("IconRow", () => {
     expect(container.querySelector(".ui-icon-row-value")).toHaveClass("ui-icon-row-value-accent");
     rerender(<IconRow {...base} onClick={() => undefined} />);
     expect(container.querySelector(".ui-icon-row-value")).not.toHaveClass("ui-icon-row-value-accent");
+  });
+});
+// --- icon-button.test.tsx
+
+describe("IconButton", () => {
+  it("is a 44px target and keeps token colour in dark mode", () => {
+    expectRtl();
+    render(<IconButton label="סגירה">✕</IconButton>);
+    const button = screen.getByRole("button", { name: "סגירה" });
+    expectTarget(button);
+    expectThemePaint(button, "color");
+  });
+
+  it("presses with opacity only", () => {
+    render(<IconButton label="סגירה">✕</IconButton>);
+    const button = screen.getByRole("button", { name: "סגירה" });
+    expect(button).toHaveClass("m-press");
+    expect(button).not.toHaveClass("m-press-scale");
   });
 });

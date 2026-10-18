@@ -1,14 +1,16 @@
 import { QueryClient } from "@tanstack/react-query";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
-import type { Session } from "@supabase/supabase-js";
-import { Outlet, Route, RouterProvider, Routes, createMemoryRouter } from "react-router-dom";
+import { type Session } from "@supabase/supabase-js";
+import { createMemoryRouter, Outlet, Route, RouterProvider, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { refreshLedger } from "../books-focus";
 import { renderWithProviders } from "../test-render";
-import { ChangeForm, ReviewAllList, ReviewScreen, queueAfterFocus, resetReviewListFocus, reviewFocusPath, reviewListPath, rotateReview } from "./flow-screens";
+import { ChangeForm, queueAfterFocus, resetReviewListFocus, ReviewAllList, reviewFocusPath, reviewListPath, ReviewScreen, rotateReview } from "./flow-screens";
 import { LineSplitScreen } from "./line-split";
+import { ViewerPreview } from "../use-is-viewer";
 
+// --- review-all.test.tsx
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args?: unknown }>,
@@ -889,5 +891,242 @@ describe("review amounts keep their currency", () => {
     );
     expect(screen.getByText("+$100")).toHaveClass("ui-review-all-in");
     expect(screen.queryByText("₪100")).not.toBeInTheDocument();
+  });
+});
+// --- review-all-bar.test.tsx
+
+function renderWithLine(path: string, options?: { viewer?: boolean }) {
+  const routes = (
+    <Routes>
+      <Route path="/review" element={<ReviewScreen />} />
+      <Route path="/review/all" element={<ReviewScreen />} />
+      <Route path="/review/change" element={<h1>שינוי</h1>} />
+      <Route path="/transactions/:transactionId/split-category" element={<h1>עורך הפיצול</h1>} />
+      <Route path="/transactions/:transactionId" element={<h1>תנועה</h1>} />
+    </Routes>
+  );
+  return renderWithProviders(
+    <AuthProvider>{options?.viewer ? <ViewerPreview>{routes}</ViewerPreview> : routes}</AuthProvider>,
+    { route: path },
+  );
+}
+
+describe("the pinned review bar (FLOW-327)", () => {
+  it("puts אישור, שינוי and דלג in one bar above the tab bar, and דלג sends the card to the end", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    const approve = await screen.findByRole("button", { name: "אישור" });
+    const bar = approve.closest(".ui-action-bar");
+    expect(bar).toHaveAttribute("data-place", "tabbar");
+    expect(bar).toHaveAttribute("data-toast-floor");
+    expect(within(bar as HTMLElement).getByRole("link", { name: "שינוי" })).toBeInTheDocument();
+    const skip = within(bar as HTMLElement).getByRole("button", { name: "דלג" });
+    expect(document.querySelector(".ui-review-queue")).toHaveAttribute("data-bar");
+    expect(screen.getByText(/^פריט /)).toBeInTheDocument();
+    fireEvent.click(skip);
+    // FLOW-365: דלג moves the card to the end of the queue on this device; nothing is written.
+    expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
+    expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(false);
+  });
+
+  it("keeps focus on the bar's first button when the next card is a split_mismatch (FLOW-327 r1)", async () => {
+    let skipped = false;
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        const mismatch = reviewRow("r2", "עגורני החוף", "p2", { reason: "split_mismatch" });
+        return Promise.resolve({ data: skipped ? [mismatch] : [reviewRow("r1", "מחסן הנמל", "p1"), mismatch], error: null });
+      }
+      if (name === "approve_review_item") skipped = true;
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    const approve = await screen.findByRole("button", { name: "אישור" });
+    approve.focus();
+    fireEvent.click(approve);
+    expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "עדכון הפיצול" })).toHaveFocus();
+    });
+  });
+
+  it("moves focus to אישור when the next card is a normal card (FLOW-327 r2)", async () => {
+    let skipped = false;
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        const next = reviewRow("r2", "עגורני החוף", "p2");
+        return Promise.resolve({ data: skipped ? [next] : [reviewRow("r1", "מחסן הנמל", "p1"), next], error: null });
+      }
+      if (name === "resolve_review") skipped = true;
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    const skip = await screen.findByRole("button", { name: "דלג" });
+    skip.focus();
+    fireEvent.click(skip);
+    // A browser drops focus to the page when the button goes disabled; jsdom does not.
+    (document.activeElement as HTMLElement | null)?.blur();
+    expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "אישור" })).toHaveFocus();
+    });
+  });
+
+  it("disables דלג while אישור is writing (FLOW-327 r1)", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")], error: null });
+      if (name === "approve_review_item") return new Promise(() => undefined);
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    const approve = await screen.findByRole("button", { name: "אישור" });
+    const skip = screen.getByRole("button", { name: "דלג" });
+    expect(skip).toBeEnabled();
+    fireEvent.click(approve);
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "approve_review_item")).toBe(true);
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "דלג" })).toBeDisabled();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "דלג" }));
+    expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(false);
+  });
+
+  it("says why when both fields are missing, and points the button at it", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", null, { category_id: null, category_name: null })], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    const pick = await screen.findByRole("button", { name: "אישור" });
+    expect(pick).toBeDisabled();
+    const hint = screen.getByText("בחרו פרויקט וקטגוריה");
+    expect(pick).toHaveAttribute("aria-describedby", hint.id);
+    expect(hint.closest(".ui-review")).not.toBeNull();
+  });
+
+  it("does not say it when only one field is missing", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", null)], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    const pick = await screen.findByRole("button", { name: "אישור" });
+    expect(pick).not.toHaveAttribute("aria-describedby");
+    expect(screen.queryByText("בחרו פרויקט וקטגוריה")).toBeNull();
+  });
+
+  it("a split_mismatch card leads with עדכון הפיצול; להשאיר כך approves the line as it stands (FLOW-333 C2, C8)", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1", { reason: "split_mismatch" })], error: null });
+      if (name === "get_line_split") {
+        return Promise.resolve({
+          data: { parts: [
+            { id: "a", category_id: "c1", category_name: "חומרים", project_id: null, project_name: null, amount_minor: -6000 },
+            { id: "b", category_id: "c2", category_name: "הובלה", project_id: null, project_name: null, amount_minor: -3000 },
+          ], transaction_id: "t-r1", line_minor: -10000, parts_match: false },
+          error: null,
+        });
+      }
+      if (name === "approve_review_item") return Promise.resolve({ data: { ok: true }, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    const fix = await screen.findByRole("button", { name: "עדכון הפיצול" });
+    expect(fix.closest(".ui-action-bar")).not.toBeNull();
+    expect(screen.queryByRole("link", { name: "שינוי" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "אישור" })).toBeNull();
+    const keep = screen.getByRole("button", { name: "להשאיר כך" });
+    expect(keep).toHaveAttribute("aria-describedby", "review-mismatch");
+    expect(document.getElementById("review-mismatch")).toHaveTextContent("הפיצול לא תואם את סכום השורה בבנק.");
+    expect(screen.getByRole("button", { name: "דלג" })).toBeInTheDocument();
+    expect(screen.queryByText("הצעה")).toBeNull();
+    await waitFor(() => {
+      expect(document.querySelector(".ui-review-split-row")).toHaveTextContent("מפוצל · 2 חלקים");
+    });
+    expect(rpc.calls.find((call) => call.name === "get_line_split")?.args).toEqual({ p_transaction_id: "t-r1" });
+    fireEvent.click(keep);
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "approve_review_item")).toBe(true);
+    });
+  });
+
+  it("עדכון הפיצול opens the parts editor", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1", { reason: "split_mismatch" })], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    fireEvent.click(await screen.findByRole("button", { name: "עדכון הפיצול" }));
+    expect(await screen.findByRole("heading", { name: "עורך הפיצול" })).toBeInTheDocument();
+  });
+
+  it("shows no flag and no error when the anomaly read fails", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
+      if (name === "review_anomalies") return Promise.resolve({ data: null, error: { message: "forbidden" } });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    expect(await screen.findByRole("button", { name: "אישור" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "review_anomalies")).toBe(true);
+    });
+    expect(document.querySelector(".ui-review-flag, .ui-review-flag-quiet")).toBeNull();
+    expect(document.querySelector(".ui-toast-bad")).toBeNull();
+  });
+});
+
+describe("the review queue acceptance (FLOW-365)", () => {
+  it("אישור stays disabled without a project, and the category alone does not enable it", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", null)], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    expect(await screen.findByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(rpc.calls.some((call) => call.name === "approve_review_item")).toBe(false);
+  });
+
+  it("approving a split card saves every part through one call, and creates no vendor rule", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({ data: [reviewRow("r1", "ציוד משותף לדוגמה", null, { pnl_role: "shared", share_count: 3, reason: null, category_id: "c1", project_name: null })], error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "approve_split_review")).toBe(true);
+    });
+    // The one call carries the card and its category; the server saves every part and the rest.
+    expect(rpc.calls.find((call) => call.name === "approve_split_review")?.args).toEqual({ p_id: "r1", p_category_id: "c1" });
+    expect(rpc.calls.some((call) => call.name === "approve_review_item")).toBe(false);
+    expect(rpc.calls.some((call) => call.name === "resolve_review" && (call.args as { p_remember?: boolean } | undefined)?.p_remember === true)).toBe(false);
+    // No vendor or supplier rule is written from a split approve.
+    expect(rpc.calls.some((call) => /rule|vendor|supplier/i.test(call.name))).toBe(false);
+  });
+
+  it("the approve toast's ביטול puts the item back on the card", async () => {
+    const open = new Set(["r1", "r2"]);
+    const rows = [reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")];
+    rpc.impl = (name, args) => {
+      const id = (args as { p_id?: string } | undefined)?.p_id ?? "";
+      if (name === "list_review") return Promise.resolve({ data: rows.filter((row) => open.has(row.id)), error: null });
+      if (name === "approve_review_item") { open.delete(id); return Promise.resolve({ data: { ok: true }, error: null }); }
+      if (name === "reopen_review") { open.add(id); return Promise.resolve({ data: { ok: true }, error: null }); }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
+    expect(await screen.findByText("הפריט אושר")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
+    fireEvent.click(within(document.querySelector(".ui-toast") as HTMLElement).getByRole("button", { name: "ביטול" }));
+    expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
+    expect(rpc.calls.some((call) => call.name === "reopen_review")).toBe(true);
   });
 });
