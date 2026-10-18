@@ -238,9 +238,25 @@
   font-size: var(--type-caption-size);
 }
 
-/* The finish confirm at the board's rhythm: 14px between its parts, 1.5 line height on its text. */
+/* The project confirms at the board's rhythm: 20px sides, 14px between the parts, 28px below,
+   1.5 line height on the text and a 48px ביטול in the text colour. */
 .ui-confirm-roomy {
-  --sheet-pad-bottom: calc(var(--space-6) + var(--space-2));
+  --sheet-side: var(--space-5);
+  --sheet-pad-bottom: calc(var(--space-6) + var(--space-1));
+}
+
+.ui-confirm-roomy .ui-sheet-body {
+  gap: calc(var(--space-3) + var(--space-half));
+}
+
+.ui-confirm-roomy .ui-sheet-title {
+  line-height: var(--type-title-line);
+}
+
+.ui-confirm-roomy .ui-btn-quiet {
+  min-block-size: calc(var(--touch-min) + var(--space-1));
+  color: var(--color-text);
+  font-size: var(--type-btn-2-size);
 }
 
 .ui-confirm-roomy .ui-confirm-body,

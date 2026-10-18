@@ -232,6 +232,7 @@ export function ProjectMenu({
         destructive="outline"
         returnFocusRef={opener}
         closeButton={false}
+        panelClassName="ui-sheet-g14 ui-confirm-roomy"
         busy={remove.isPending}
         onConfirm={() => {
           if (blocked()) return;
