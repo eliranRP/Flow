@@ -285,7 +285,6 @@ export function StepConnect({
               ) : (
                 <Button
                   type="button"
-                  variant="link"
                   busy={row.busy}
                   disabled={pending != null && pending !== kind}
                   onClick={() => { openConnection(kind, open); }}
