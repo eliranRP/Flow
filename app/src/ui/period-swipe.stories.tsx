@@ -18,7 +18,7 @@ function Demo({ start }: { start: "months3" | "all" }) {
       hero={
         <PeriodSwipe period={period} onChange={setPeriod}>
           <p className="ui-band-label t-label">{`רווח, ${windowLabel(period)}`}</p>
-          <p className="ui-band-fade t-hero"><Amount agorot={1_840_000n} /></p>
+          <h1 className="ui-band-fade t-hero"><Amount agorot={1_840_000n} /></h1>
           <p className="t-label">הכנסות פחות הוצאות</p>
         </PeriodSwipe>
       }
