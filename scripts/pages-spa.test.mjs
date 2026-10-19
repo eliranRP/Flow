@@ -5,6 +5,7 @@ import net from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { parseHeaders } from "./security-headers.mjs";
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const redirects = readFileSync(path.join(root, "app/public/_redirects"), "utf8");
@@ -174,11 +175,9 @@ function redirectDrift(appSource, redirectText) {
   };
 }
 
+/** The path rules that type a route as HTML. The /* security-header rule (0192) sets no type. */
 function headerRules(text) {
-  return text
-    .split("\n")
-    .filter((line) => line.startsWith("/"))
-    .map((line) => line.trim());
+  return [...parseHeaders(text)].filter(([, values]) => values.has("content-type")).map(([pattern]) => pattern);
 }
 
 function headerCovers(route, blocks) {
@@ -206,7 +205,10 @@ test("the Pages fallback lists app routes and does not use the rejected splat", 
   }
   assert.match(headers, /^\/settings\n {2}Content-Type: text\/html/m);
   assert.match(headers, /^\/app-shell\n {2}Content-Type: text\/html/m);
-  assert.equal(headers.includes("\n/*\n"), false);
+  // /* holds the security headers only: a Content-Type there would serve /assets as HTML.
+  const all = parseHeaders(headers).get("/*");
+  assert.ok(all, "app/public/_headers has the /* security-header rule (0192)");
+  assert.equal(all.has("content-type"), false);
 });
 
 test("nested relative routes resolve, and a path that is not a double-quoted literal fails", () => {
@@ -295,6 +297,8 @@ test("a deep link is 200 HTML, a trailing slash redirects once, and a missing as
         status: response.status,
         type: response.headers.get("content-type") ?? "",
         location: response.headers.get("location"),
+        frame: response.headers.get("x-frame-options"),
+        sniff: response.headers.get("x-content-type-options"),
         body: await response.text(),
       };
     };
@@ -304,6 +308,9 @@ test("a deep link is 200 HTML, a trailing slash redirects once, and a missing as
     assert.equal(settings.location, null);
     assert.match(settings.type, /^text\/html/);
     assert.match(settings.body, /APP/);
+    // 0192: the /* security headers reach a deep link alongside its route's Content-Type.
+    assert.equal(settings.frame, "DENY");
+    assert.equal(settings.sniff, "nosniff");
 
     const slashed = await get("/settings/?preview=1");
     assert.equal(slashed.status, 301);
@@ -328,6 +335,7 @@ test("a deep link is 200 HTML, a trailing slash redirects once, and a missing as
     const asset = await get("/assets/app.js");
     assert.equal(asset.status, 200);
     assert.match(asset.type, /javascript/);
+    assert.equal(asset.sniff, "nosniff");
     assert.match(asset.body, /console\.log\("real"\)/);
 
     const missing = await get("/assets/missing.js");

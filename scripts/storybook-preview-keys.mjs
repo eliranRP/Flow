@@ -2,6 +2,8 @@
  * FLOW-809. A public Storybook build carries sample data only: no hosted project, no key.
  * node scripts/storybook-preview-keys.mjs [dir] exits 1 and names the file when a needle is found.
  * The Jev secret check (check-jev-bundle.mjs) runs on the same build next to this one.
+ * Decision 0192: the app's Pages rules (_headers, _redirects) must not ship with it either; the
+ * app's X-Frame-Options DENY would blank every story canvas, which the manager loads in an iframe.
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
@@ -17,6 +19,9 @@ export const keyNeedles = [
 
 const TEXT = /\.(?:js|mjs|cjs|css|html|json|map|txt|svg)$/;
 
+/** Pages rule files at the build's root that belong to the app, not to Storybook. */
+export const appPagesRules = ["_headers", "_redirects"];
+
 /**
  * @param {string} dir
  * @returns {string[]} one line per file and needle
@@ -24,6 +29,10 @@ const TEXT = /\.(?:js|mjs|cjs|css|html|json|map|txt|svg)$/;
 export function previewKeyViolations(dir) {
   /** @type {string[]} */
   const problems = [];
+  const top = readdirSync(dir);
+  for (const name of appPagesRules) {
+    if (top.includes(name)) problems.push(`${name}: the app's Pages rules (X-Frame-Options DENY would blank the canvas)`);
+  }
   /** @param {string} at */
   const walk = (at) => {
     for (const name of readdirSync(at)) {
@@ -50,5 +59,5 @@ if (isMain) {
     console.error(`storybook-preview-keys: ${dir} must not be published:\n${problems.join("\n")}`);
     process.exit(1);
   }
-  console.log(`storybook-preview-keys: ${dir} carries no hosted project or key`);
+  console.log(`storybook-preview-keys: ${dir} carries no hosted project, key or app Pages rules`);
 }

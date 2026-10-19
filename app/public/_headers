@@ -1,3 +1,14 @@
+# Security headers for every path (decision 0192). The build replaces the CSP placeholder with the
+# policy, the inline script's sha256 and the Supabase origin (scripts/security-headers.mjs).
+# Report-only for now: violations show in the console and nothing is blocked.
+/*
+  Content-Security-Policy-Report-Only: __FLOW_CSP__
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), hid=(), bluetooth=(), midi=(), display-capture=(), magnetometer=(), gyroscope=(), accelerometer=(), browsing-topics=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
 # app-shell has no extension, so Pages would send application/octet-stream.
 # nosniff would then refuse to render the document. These rules type the route, not /assets.
 /app-shell
