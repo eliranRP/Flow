@@ -7,11 +7,12 @@
 
 begin;
 
-select plan(16);
+select plan(22);
 
 do $users$
 begin
   perform tests.create_supabase_user('ps_owner', 'ps-owner@example.com');
+  perform tests.create_supabase_user('ps_plain', 'ps-plain@example.com');
 end
 $users$;
 
@@ -91,10 +92,136 @@ begin
   -- A refund: an income-category line paid out, on a lot after overhead.
   perform tests.fixture_line(co, 'ps:refund', 25000, 'expense', lots[2], inc,
     '2026-07-20', 'ILS', 'posted', 'manual', 'project', 'receipt');
+  -- December 2025: every share rounds up (9,000 to 10,000; 15,001 to 20,000), so the remainder
+  -- goes by income, to Lot 4, not by rounding gap. January 2026: overhead and no income.
+  -- February 2026: a refund larger than the month's income, so total income is negative.
+  perform tests.fixture_line(co, 'ps:edge:in3', 90000, 'income', lots[3], inc, '2025-12-10');
+  perform tests.fixture_line(co, 'ps:edge:in4', 150010, 'income', lots[4], inc, '2025-12-11');
+  perform tests.fixture_line(co, 'ps:edge:oh12', 24001, 'expense', office, exp, '2025-12-12');
+  perform tests.fixture_line(co, 'ps:edge:oh01', 50000, 'expense', office, exp, '2026-01-12');
+  perform tests.fixture_line(co, 'ps:edge:refund', 300000, 'expense', lots[1], inc, '2026-02-10');
+  perform tests.fixture_line(co, 'ps:edge:in2', 100000, 'income', lots[2], inc, '2026-02-11');
+  perform tests.fixture_line(co, 'ps:edge:oh02', 70000, 'expense', office, exp, '2026-02-12');
+
+  -- A company with no overhead project: its overhead is lines marked overhead.
+  co := tests.fixture_company('ps_plain', 'Example Plain LLC');
+  lots := array[tests.fixture_project(co, 'Plain Lot A'), tests.fixture_project(co, 'Plain Lot B')];
+  inc := tests.fixture_category(co, 'Plain Sales', 'income');
+  exp := tests.fixture_category(co, 'Plain Rent');
+  insert into ps values ('plain', co);
+  for m in 0..1 loop
+    d := ('2026-08-15'::date - make_interval(months => m))::date;
+    perform tests.fixture_line(co, 'pp:in:a' || m, 120000 + m, 'income', lots[1], inc, d);
+    perform tests.fixture_line(co, 'pp:in:b' || m, 70000, 'income', lots[2], inc, d);
+    perform tests.fixture_line(co, 'pp:oh:' || m, 33333 + m, 'expense', lots[1], exp, d, 'ILS', 'posted', 'manual', 'overhead');
+  end loop;
 end
 $fixture$;
 
 -- The previous bodies, as references.
+-- overhead_share_for's base-currency overload (dropped by 20261019124024), as 20261014093004 left it.
+create function pg_temp.ref_share_for(p_company uuid, p_project uuid, p_basis text, p_from date, p_to date, p_currency text)
+ RETURNS TABLE(available boolean, share_agorot bigint)
+ LANGUAGE sql
+ STABLE
+ SET search_path TO ''
+AS $function$
+  with cid as (
+    select
+      p_company as id,
+      (select c.overhead_project_id from public.companies c where c.id = p_company) as overhead_project,
+      case when p_basis = 'invoiced' then 'invoiced' else 'cash' end as basis
+  ),
+  lines as (
+    select l.project_id, l.kind, l.pnl_role, l.direction, l.doc_kind, l.amount_net
+    from private.pnl_lines l
+    where l.company_id = (select id from cid)
+      and l.currency = p_currency
+      and l.in_pnl
+      and (l.kind = 'income' or l.pnl_role = 'overhead')
+      and ((select basis from cid) = 'invoiced' or not l.unpaid)
+      and private.pnl_in_range(l.kind, (select basis from cid), l.doc_date, l.cash_date, p_from, p_to)
+      and l.transaction_id = any(array(
+        select t.id
+        from public.transactions t
+        left join public.categories k on k.id = t.category_id
+        where t.company_id = p_company
+          and (t.direction = 'income' or k.kind = 'income' or t.pnl_role = 'overhead'
+            or t.project_id = (select overhead_project from cid))
+        union
+        select s.transaction_id from public.line_splits s where s.company_id = p_company
+        union
+        select s.transaction_id from public.loan_splits s where s.company_id = p_company
+      ))
+  ),
+  income as (
+    select l.project_id, l.amount_net
+    from lines l
+    where l.kind = 'income'
+      and (
+        l.direction = 'expense'
+        or ((select basis from cid) = 'cash' and l.doc_kind in ('receipt', 'invoice_receipt'))
+        or ((select basis from cid) = 'invoiced' and l.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
+      )
+      and l.project_id is not null
+      and l.project_id is distinct from (select overhead_project from cid)
+  ),
+  totals as (
+    select
+      coalesce((select sum(i.amount_net) from income i), 0)::bigint as total_income,
+      coalesce((
+        select -sum(l.amount_net)::bigint
+        from lines l
+        where l.kind = 'expense' and l.pnl_role = 'overhead'
+      ), 0) as overhead_cost
+  ),
+  rounded as (
+    select
+      p.id as project_id,
+      p.name as project_name,
+      s.income,
+      (select overhead_cost from totals)::numeric * s.income / (select total_income from totals) as exact,
+      private.round_agorot_shekel_hundreds(
+        (select overhead_cost from totals)::numeric * s.income / (select total_income from totals)
+      ) as rounded
+    from public.projects p
+    join (
+      select i.project_id, sum(i.amount_net)::bigint as income
+      from income i
+      group by i.project_id
+      having sum(i.amount_net) > 0
+    ) s on s.project_id = p.id
+    where p.company_id = (select id from cid)
+      and (select id from cid) is not null
+      and (select total_income from totals) <> 0
+  ),
+  chosen as (
+    select r.project_id
+    from rounded r
+    order by
+      case when (select max(x.exact - x.rounded) from rounded x) > 0 then (r.exact - r.rounded) end desc nulls last,
+      case when (select max(x.exact - x.rounded) from rounded x) <= 0 then r.income end desc nulls last,
+      r.project_name asc
+    limit 1
+  ),
+  adjusted as (
+    select
+      r.project_id,
+      r.rounded + case
+        when r.project_id = (select c.project_id from chosen c)
+          then (select overhead_cost from totals) - (select coalesce(sum(x.rounded), 0) from rounded x)
+        else 0
+      end as share
+    from rounded r
+  )
+  select
+    (select id from cid) is not null and (select total_income from totals) <> 0,
+    case
+      when (select id from cid) is null or (select total_income from totals) = 0 then null::bigint
+      else coalesce((select a.share from adjusted a where a.project_id = p_project), 0)
+    end;
+$function$;
+
 -- The live get_profit_months before 20261019124024 (20261009120000 as patched by 20261011120000 and
 -- 20261014064928): two overhead_share_for passes per month.
 create function pg_temp.ref_profit_months(p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_basis text DEFAULT NULL::text, p_project_id uuid DEFAULT NULL::uuid)
@@ -197,7 +324,7 @@ begin
   overhead_base as (
     select m.month, o.available, o.share_agorot
     from months m
-    cross join lateral private.overhead_share_for(cid, p_project_id, basis, m.mfrom, m.mto, private.company_base_currency(cid)) o
+    cross join lateral pg_temp.ref_share_for(cid, p_project_id, basis, m.mfrom, m.mto, private.company_base_currency(cid)) o
     where p_project_id is not null
   )
   select jsonb_build_object(
@@ -866,7 +993,7 @@ as $$
   ),
   sb as (
     select o.available, o.share_agorot
-    from b cross join lateral private.overhead_share_for(p_cid, p_id, b.basis, p_from, p_to, b.base) o
+    from b cross join lateral pg_temp.ref_share_for(p_cid, p_id, b.basis, p_from, p_to, b.base) o
   )
   select p_new || jsonb_build_object(
     'overhead_share_agorot', (select case when coalesce(s.available, false) then coalesce(s.share_agorot, 0) else null end from s),
@@ -1008,14 +1135,63 @@ select * from pg_temp.check_old('_usd', ' (dollars, invoice basis)');
 select tests.authenticate_as('ps_owner');
 select ok(
   (select count(*) from jsonb_array_elements((select val from got where label = 'gpm_projects') -> 0 -> 0 -> 'months') m
-   where (m->>'overhead_weighted')::boolean) = 6,
-  'the fixture weighs overhead in each of its six months'
+   where (m->>'overhead_weighted')::boolean) = 7,
+  'the fixture weighs overhead in each of the first lot''s seven months'
 );
 select ok(
   (select count(*) from jsonb_array_elements((select val from got where label = 'gpm_projects') -> 0 -> 0 -> 'months') m
    where (m->>'overhead_share_agorot')::bigint > 0) > 0,
   'the fixture gives the first lot an overhead share'
 );
+
+reset role;
+-- The edge months, read from the first round (cash, all time; projects in name order).
+create function pg_temp.month_of(p_lot int, p_month text)
+returns jsonb
+language sql
+as $$
+  select m from jsonb_array_elements((select val from got where label = 'gpm_projects') -> (p_lot - 1) -> 0 -> 'months') m
+  where m->>'month' = p_month;
+$$;
+select is(
+  (select jsonb_build_array(pg_temp.month_of(3, '2025-12')->'overhead_share_agorot', pg_temp.month_of(4, '2025-12')->'overhead_share_agorot')),
+  '[10000, 14001]'::jsonb,
+  'every share rounds up: the larger income takes the remainder'
+);
+select is(pg_temp.month_of(3, '2026-01')->'overhead_weighted', 'false'::jsonb, 'a month of overhead and no income weighs nothing');
+select is(
+  (select jsonb_build_array(pg_temp.month_of(2, '2026-02')->'overhead_weighted', pg_temp.month_of(2, '2026-02')->'overhead_share_agorot')),
+  '[true, 70000]'::jsonb,
+  'a month with negative total income still weighs its overhead'
+);
+
+-- The company with no overhead project, and another company's owner asking for this one's share.
+select tests.authenticate_as('ps_plain');
+insert into got
+select 'plain_gpm', jsonb_agg(jsonb_build_array(
+  public.get_profit_months(null, null, 'cash', p.id), public.get_profit_months(null, null, 'invoiced', p.id)
+) order by p.name)
+from public.projects p where p.company_id = (select id from ps where label = 'plain');
+insert into got
+select 'plain_project', jsonb_agg(public.get_project(p.id, 'cash') order by p.name)
+from public.projects p where p.company_id = (select id from ps where label = 'plain');
+select is(
+  (select count(*)::integer from private.overhead_shares(
+    (select id from ps where label = 'co'), (select id from ps where label = 'lot1'), 'cash', null, null, array['ILS', 'USD'], true)),
+  0,
+  'overhead_shares gives another company''s owner nothing'
+);
+reset role;
+select is((select val from got where label = 'plain_gpm'), (
+  select jsonb_agg(jsonb_build_array(
+    pg_temp.ref_profit_months(null, null, 'cash', p.id), pg_temp.ref_profit_months(null, null, 'invoiced', p.id)
+  ) order by p.name)
+  from public.projects p where p.company_id = (select id from ps where label = 'plain')
+), 'get_profit_months with no overhead project equals the previous body');
+select is((select val from got where label = 'plain_project'), (
+  select jsonb_agg(pg_temp.ref_project(x, (select id from ps where label = 'plain'), (x->>'id')::uuid, 'cash', null, null) order by n)
+  from jsonb_array_elements((select val from got where label = 'plain_project')) with ordinality e(x, n)
+), 'get_project with no overhead project: overhead share as before');
 
 select * from finish();
 rollback;

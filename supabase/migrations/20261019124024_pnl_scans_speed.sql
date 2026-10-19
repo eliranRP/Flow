@@ -4,7 +4,10 @@
 --   shekels and once in the base currency: 40 company passes for 20 months. A new
 --   private.overhead_shares reads the company's income and overhead lines once and returns the
 --   share for every month and currency, with overhead_share_for's formula, rounding and
---   remainder rule. get_project reads both currencies' share from it in one pass too.
+--   remainder rule, and the line pre-filter overhead_share_for has since 20261014093004.
+--   get_project reads both currencies' share from it in one pass too, and the base-currency
+--   overload of overhead_share_for, left without a caller, is dropped. A project's months also
+--   read only the project's lines (filed, shared or split to it) instead of the company's.
 -- - company_pnl read the company's lines six times (income, expense, all currencies, counts,
 --   other currencies). It reads them once into a materialized CTE and builds everything from it.
 --   get_dashboard and get_project_group follow.
@@ -13,8 +16,6 @@
 --   lines once and builds the month and all-time project totals as company_pnl's by_currency
 --   counts them (on the basis company_pnl is passed: the company's cash_basis), and every
 --   project's first month in one grouped query.
--- - get_project reads its lines once, unfiltered, and takes both the totals' lines and the
---   transactions' kept_out from that read instead of one pnl_lines lookup per transaction.
 -- - get_home read the company's lines three times; it groups them by currency once.
 -- Bodies are otherwise the latest live ones: get_profit_months as patched by
 -- 20261011120000 and 20261014064928, company_pnl from 20261018085732, projects_cash_month from
@@ -72,6 +73,22 @@ as $$
       and (l.kind = 'income' or l.pnl_role = 'overhead')
       and ((select basis from cid) = 'invoiced' or not l.unpaid)
       and private.pnl_in_range(l.kind, (select basis from cid), l.doc_date, l.cash_date, p_from, p_to)
+      -- Only lines that can be income or overhead reach the view's per-line work, as in
+      -- overhead_share_for (20261014093004): a line of an income kind or direction, filed to
+      -- the overhead project, or split (its parts can be either). A superset: the filters
+      -- above still decide.
+      and l.transaction_id = any(array(
+        select t.id
+        from public.transactions t
+        left join public.categories k on k.id = t.category_id
+        where t.company_id = p_company
+          and (t.direction = 'income' or k.kind = 'income' or t.pnl_role = 'overhead'
+            or t.project_id = (select overhead_project from cid))
+        union
+        select s.transaction_id from public.line_splits s where s.company_id = p_company
+        union
+        select s.transaction_id from public.loan_splits s where s.company_id = p_company
+      ))
   ),
   totals as (
     select
@@ -162,6 +179,7 @@ declare
   cid uuid;
   basis text;
   result jsonb;
+  ids uuid[];
 begin
   cid := private.readable_company_id();
   if cid is null then
@@ -179,6 +197,16 @@ begin
     return null;
   end if;
   basis := private.pnl_basis(cid, p_basis);
+  -- A project's months read only its lines: filed, shared or split to it (as get_project).
+  if p_project_id is not null then
+    ids := array(
+      select t.id from public.transactions t where t.company_id = cid and t.project_id = p_project_id
+      union
+      select a.transaction_id from public.allocations a where a.company_id = cid and a.project_id = p_project_id
+      union
+      select s.transaction_id from public.line_splits s where s.company_id = cid and s.project_id = p_project_id
+    );
+  end if;
 
   with src as (
     select
@@ -186,6 +214,7 @@ begin
       case when l.kind = 'income' and basis = 'cash' then coalesce(l.cash_date, l.doc_date) else l.doc_date end as d
     from private.pnl_lines l
     where l.company_id = cid
+      and (p_project_id is null or l.transaction_id = any(ids))
       and l.in_pnl
       and (basis = 'invoiced' or not l.unpaid)
       and (
@@ -1011,7 +1040,7 @@ $function$;
 revoke all on function public.projects_cash_month(date, date, uuid) from public, anon;
 grant execute on function public.projects_cash_month(date, date, uuid) to authenticated, service_role;
 
--- The project page: one read of its lines and one overhead pass for both currencies.
+-- The project page: one overhead pass for both currencies.
 CREATE OR REPLACE FUNCTION public.get_project(p_id uuid, p_basis text, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -1028,7 +1057,6 @@ declare
   share bigint;
   waiting jsonb;
   ids uuid[];
-  all_rows private.pnl_lines[];
   pl_rows private.pnl_lines[];
   share_base bigint;
   available_base boolean;
@@ -1058,16 +1086,11 @@ begin
     union
     select s.transaction_id from public.line_splits s where s.company_id = cid and s.project_id = p_id
   );
-  -- The project's lines, read once. Every total below reads pl_rows, the ones that count on
-  -- the basis and range, and each transaction's kept_out reads all_rows, instead of reading
-  -- private.pnl_lines again.
-  all_rows := array(
-    select u from private.pnl_lines u
-    where u.transaction_id = any(ids)
-  );
+  -- The project's lines, read once. Every total below reads this array instead of reading
+  -- private.pnl_lines again with the same filter (eight times before).
   pl_rows := array(
-    select u from unnest(all_rows) u
-    where (basis = 'invoiced' or not u.unpaid)
+    select u from private.pnl_lines u
+    where u.transaction_id = any(ids) and (basis = 'invoiced' or not u.unpaid)
       and private.pnl_in_range(u.kind, basis, u.doc_date, u.cash_date, p_from, p_to)
   );
   -- One pass over the project's category entries feeds the three category lists (three before).
@@ -1312,7 +1335,7 @@ begin
         'kept_out', case
           when t.line_status = 'posted' then not coalesce((
             select bool_or(pl.in_pnl)
-            from unnest(all_rows) pl
+            from private.pnl_lines pl
             where pl.transaction_id = t.id
               and (pl.project_id = p.id or exists (
                 select 1 from public.allocations a
@@ -1518,5 +1541,10 @@ $function$;
 
 revoke all on function public.get_home() from public, anon;
 grant execute on function public.get_home() to authenticated, service_role;
+
+-- The base-currency overload of overhead_share_for has no caller left: get_project and
+-- get_profit_months read private.overhead_shares. The shekel overload stays for
+-- private.overhead_share.
+drop function private.overhead_share_for(uuid, uuid, text, date, date, text);
 
 commit;

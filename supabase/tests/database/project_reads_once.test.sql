@@ -93,10 +93,10 @@ select is(
   (select count(*)::integer
    from pg_proc p
    where p.oid in ('private.overhead_share_for(uuid,uuid,text,date,date)'::regprocedure,
-                   'private.overhead_share_for(uuid,uuid,text,date,date,text)'::regprocedure)
+                   'private.overhead_shares(uuid,uuid,text,date,date,text[],boolean)'::regprocedure)
      and pg_get_functiondef(p.oid) like '%select s.transaction_id from public.line_splits s where s.company_id = p_company%'),
   2,
-  'both overhead_share_for overloads pass only the lines that can be income or overhead'
+  'overhead_share_for and overhead_shares pass only the lines that can be income or overhead'
 );
 
 select * from finish();
