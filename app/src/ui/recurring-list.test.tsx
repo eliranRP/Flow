@@ -103,7 +103,7 @@ describe("the late box's question (the board's עדיין קבוע?)", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "הסתיים" }));
     expect(await screen.findByText("Elm Row unit 2 הוסר מהקבועים ומהצפי")).toBeTruthy();
-    expect(ended).toEqual([{ direction: "income", partyId: "rent-elm", currency: "USD", projectId: null }]);
+    expect(ended).toEqual([{ direction: "income", partyId: "rent-elm", currency: "USD", projectId: "p-elm-row" }]);
     act(() => {
       fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     });
@@ -112,12 +112,12 @@ describe("the late box's question (the board's עדיין קבוע?)", () => {
 });
 
 describe("הסתיים on a party split by project (decision 0185)", () => {
-  // The rent's party also pays at Birch Lane: the switch is the party's, so ending one charge ends both.
+  // The rent's party also pays at Birch Lane: the switch is the charge's (decision 0188), so ending one ends that one.
   const elm = RECURRING_FIXTURE.find((item) => item.party_id === "rent-elm");
   if (elm == null) throw new Error("fixture");
   const split = [...RECURRING_FIXTURE, { ...elm, state: "arrived" as const, amount_minor: 165000, project_id: "p-birch-lane", project_name: "Birch Lane" }];
 
-  it("names the charge's project to the write, and says the party ends in every project", async () => {
+  it("names the charge's project to the write and in the toast", async () => {
     const ended: unknown[] = [];
     renderScreen({
       sample: split,
@@ -131,7 +131,7 @@ describe("הסתיים on a party split by project (decision 0185)", () => {
       },
     });
     fireEvent.click(screen.getByRole("button", { name: "הסתיים" }));
-    expect(await screen.findByText("Elm Row unit 2 הוסר מהקבועים ומהצפי בכל הפרויקטים")).toBeTruthy();
+    expect(await screen.findByText("Elm Row unit 2 · Elm Row הוסר מהקבועים ומהצפי")).toBeTruthy();
     expect(ended).toEqual([{ direction: "income", partyId: "rent-elm", currency: "USD", projectId: "p-elm-row" }]);
   });
 

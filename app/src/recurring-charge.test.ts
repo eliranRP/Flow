@@ -243,9 +243,9 @@ describe("endRecurringCharge: הסתיים and its undo", () => {
 });
 
 describe("endedText", () => {
-  it("says the whole party ends when it is split by project", () => {
-    expect(endedText("Example Servicing", false)).toBe("Example Servicing הוסר מהקבועים ומהצפי");
-    expect(endedText("Example Servicing", true)).toBe("Example Servicing הוסר מהקבועים ומהצפי בכל הפרויקטים");
+  it("names the project whose charge ends when the party is split by project (decision 0188)", () => {
+    expect(endedText("Example Servicing", null)).toBe("Example Servicing הוסר מהקבועים ומהצפי");
+    expect(endedText("Example Servicing", "Birch Way")).toBe("Example Servicing · Birch Way הוסר מהקבועים ומהצפי");
   });
 });
 

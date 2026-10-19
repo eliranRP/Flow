@@ -132,7 +132,8 @@ export function RecurringScreen({
     const charge = rows?.find((item) => rowId(rows, item) === row.id);
     if (charge == null || ending.current === row.id) return;
     const split = isSplitParty(rows ?? [], charge);
-    const target = { direction: charge.direction, partyId: charge.party_id, currency: charge.currency, projectId: split ? charge.project_id : null };
+    // The charge's own line, so the switch is that charge's (decision 0188), split or not.
+    const target = { direction: charge.direction, partyId: charge.party_id, currency: charge.currency, projectId: charge.project_id };
     ending.current = row.id;
     let undo: () => Promise<void>;
     try {
@@ -145,8 +146,8 @@ export function RecurringScreen({
     }
     refresh();
     toast.show({
-      // The switch is the party's: ending a split party's charge ends it in every project.
-      message: endedText(charge.party_name, split),
+      // The switch is the charge's: ending a split party's charge ends that project's alone.
+      message: endedText(charge.party_name, split ? (charge.project_name ?? "ללא פרויקט") : null),
       action: "ביטול",
       onAction: () => {
         void undo().then(refresh, failure);

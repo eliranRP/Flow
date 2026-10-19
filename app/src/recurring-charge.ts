@@ -150,11 +150,11 @@ export function askText(row: ScheduleRow, today: string): string {
 }
 
 /**
- * The toast after "הסתיים". The switch is the party's (decision 0185), so ending one charge of a party
- * split by project ends all of them, and the toast says so.
+ * The toast after "הסתיים". The switch is the charge's (decision 0188): ending one charge of a party split
+ * by project ends that project's alone, so the toast names it.
  */
-export function endedText(partyName: string, split: boolean): string {
-  return split ? `${partyName} הוסר מהקבועים ומהצפי בכל הפרויקטים` : `${partyName} הוסר מהקבועים ומהצפי`;
+export function endedText(partyName: string, splitProject: string | null): string {
+  return splitProject == null ? `${partyName} הוסר מהקבועים ומהצפי` : `${partyName} · ${splitProject} הוסר מהקבועים ומהצפי`;
 }
 
 /** The grey line after an ignore: it comes back on the next late bill, or the next change. */

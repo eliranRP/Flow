@@ -38,12 +38,12 @@ export async function answerRecurringMatch(client: RpcClient, answer: RecurringM
   );
 }
 
-/** One recurring charge, as the list names it to a write: its party, currency and (when split) project. */
+/** One recurring charge, as the list names it to a write: its party, currency and project. */
 export type ChargeTarget = {
   direction: "income" | "expense";
   partyId: string;
   currency: string;
-  /** The charge's project when its party is split by project (decision 0185); null otherwise. */
+  /** The charge's project (decision 0185), so the write reaches that charge's line; null for a charge with none. */
   projectId: string | null;
 };
 
@@ -52,8 +52,8 @@ export type RecurringWrites = {
   dismiss: (alertKey: string) => Promise<void>;
   restore: (alertKey: string) => Promise<void>;
   /**
-   * The ask's "הסתיים": the charge's party is no longer recurring (decision 0172), through its newest
-   * line. Returns the undo, which writes back the switch the party had before.
+   * The ask's "הסתיים": the charge is no longer recurring (decisions 0172, 0188), through its newest
+   * line. Returns the undo, which writes back the switch the charge had before.
    */
   end: (target: ChargeTarget) => Promise<() => Promise<void>>;
 };
@@ -64,7 +64,7 @@ function priorOverride(data: unknown): boolean | null {
   return typeof data.prior_override === "boolean" ? data.prior_override : null;
 }
 
-/** "הסתיים" on the live client: the newest line of the charge, then its party's switch off. The undo writes the prior switch back. */
+/** "הסתיים" on the live client: the newest line of the charge, then its switch off. The undo writes the prior switch back. */
 export async function endRecurringCharge(client: RpcClient, target: ChargeTarget): Promise<() => Promise<void>> {
   const line = await client.rpc("recurring_party_line", {
     p_direction: target.direction,
