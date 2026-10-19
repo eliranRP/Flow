@@ -293,8 +293,9 @@ export function useSumitStatusQuery(active = true) {
       return (await loadReadSchemas()).sumitStatusSchema.parse(data);
     },
     refetchInterval: syncPollInterval,
-    // Another tab may have started a run: re-read the claim when this tab is shown again.
-    refetchOnWindowFocus: true,
+    // Another tab may have started a run: re-read the claim every time this tab is shown again,
+    // fresh or not (the 30-minute freshness does not apply to it).
+    refetchOnWindowFocus: "always",
   });
 }
 
@@ -334,8 +335,9 @@ export function useMercuryStatusQuery(active = true) {
       return parsed;
     },
     refetchInterval: syncPollInterval,
-    // Another tab may have started a run: re-read the claim when this tab is shown again.
-    refetchOnWindowFocus: true,
+    // Another tab may have started a run: re-read the claim every time this tab is shown again,
+    // fresh or not (the 30-minute freshness does not apply to it).
+    refetchOnWindowFocus: "always",
   });
 }
 
@@ -570,9 +572,15 @@ export async function readLineMetaPage(client: QueryClient, preview: string, ids
   return out;
 }
 
+/**
+ * Every write path calls this after it saves: it refetches `keys` on screen and marks every
+ * other cached read stale (no read now), so the next screen opened reads again despite the
+ * 30-minute freshness (query-client.ts). A write that bypasses useWrite is covered too.
+ */
 export function useInvalidateBooks() {
   const client = useQueryClient();
   return async (keys: readonly string[] = ["dashboard", "review", "unpaid", "categories", "sumit", "project", "project-category", "project-waiting", "filed-today", "txn", "home", "breakdown", "breakdown-lines", "line-meta", "profit-months", "missing-bills", "expected-months"]) => {
+    await client.invalidateQueries({ refetchType: "none" });
     await Promise.all(keys.map((key) => client.invalidateQueries({ queryKey: [key] })));
   };
 }

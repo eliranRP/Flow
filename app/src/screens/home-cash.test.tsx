@@ -211,4 +211,22 @@ describe("Home's first paint waits on cash_months alone", () => {
     await screen.findByText("תזרים · עד היום");
     expect(screen.queryByRole("heading", { name: "חברו את הבנק" })).not.toBeInTheDocument();
   });
+
+  it("says the review count failed, with a retry, when get_dashboard fails after cash drew the books", async () => {
+    let fail = true;
+    rpc.impl = (name) => {
+      if (name === "cash_months") return Promise.resolve({ data: cash, error: null });
+      if (name === "get_dashboard") return Promise.resolve(fail ? { data: null, error: { message: "db down" } } : { data: dashboard(4), error: null });
+      if (name === "list_unpaid" || name === "list_missing_bills") return Promise.resolve({ data: [], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithProviders(<HomeScreen />);
+    await screen.findByText("תזרים · עד היום");
+    expect(await screen.findByText("לא הצלחנו לטעון.")).toBeInTheDocument();
+    fail = false;
+    fireEvent.click(screen.getByRole("button", { name: "נסו שוב" }));
+    expect(await screen.findByRole("link", { name: /4 פריטים ממתינים לאישור/ })).toBeInTheDocument();
+    expect(screen.queryByText("לא הצלחנו לטעון.")).not.toBeInTheDocument();
+  });
 });
+

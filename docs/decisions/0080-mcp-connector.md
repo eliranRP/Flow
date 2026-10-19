@@ -2,6 +2,7 @@
 
 **Date:** 2026-09-30
 **Status:** Accepted
+**Amended by:** [0191](0191-client-read-freshness.md). Reads stay fresh for 30 minutes (the owner's choice) and go stale after any write; the focus refetch covers every ledger read, at most once every 5 minutes, and marks them stale in between; the sync status refetches on every focus.
 
 Accepted for the first release below. The deferred section is an outline, not a commitment. [0006](0006-confirm-not-type.md), [0011](0011-auto-approve-high-confidence.md), and [0069](0069-back-and-one-tap-review.md) keep their own rules. Each points here, and this record extends them.
 
@@ -135,7 +136,7 @@ Undo accepts only an id recorded there for this user. Any other id is `not_found
 
 #### Refresh and hold
 
-A refetch on focus, or when the document becomes visible, updates `review`, `dashboard`, `unpaid`, `project`, `project-category`, `project-waiting`, `filed-today`, and `txn`. This ships in cycle 3 with the writes. While a sheet for a row is open, a pointer or mouse button is down on it, or keyboard focus is inside that row or its sheet, the refetch does not move that row. Lists take a new order only when none of those holds are active and scrolling has settled.
+A refetch on focus, or when the document becomes visible, updates `review`, `dashboard`, `unpaid`, `project`, `project-category`, `project-waiting`, `filed-today`, and `txn`. This ships in cycle 3 with the writes. ([0191](0191-client-read-freshness.md) amends this: every ledger read, throttled to once every 5 minutes, and stale in between.) While a sheet for a row is open, a pointer or mouse button is down on it, or keyboard focus is inside that row or its sheet, the refetch does not move that row. Lists take a new order only when none of those holds are active and scrolling has settled.
 
 #### שויכו היום
 

@@ -46,7 +46,7 @@ export function LoansScreen({ sample, closedOpen = false }: { sample?: LoansSamp
   const blocked = useBlockedPreview();
   // The company comes from what the app already holds (the shown company, then list_my_companies),
   // so the loans read starts at once. get_dashboard only fills the new-loan sheet's projects.
-  const companies = useMyCompaniesQuery(sample == null && preview === "off");
+  const companies = useMyCompaniesQuery(sample == null && preview === "off", 1);
   const dashboard = useDashboardQuery(sample == null);
   const companyId = companies.data != null ? companies.data.active_id : companies.isPending ? shownCompanyFor(companies.userId) : null;
   const phase = sample ? ({ kind: "ready" } as const) : companyId != null && preview === "off" ? ({ kind: "ready" } as const) : screenPhase(preview, companies);

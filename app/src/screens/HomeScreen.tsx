@@ -230,9 +230,11 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
         changes: chargeChangeViews(changes.data ?? [], search),
         search,
       }) : []}
-      unpaidFailed={isCurrent && unpaidPhase.kind === "error"}
-      onUnpaidRetry={() => {
-        void unpaid.refetch();
+      // A failed unpaid read, or a failed get_dashboard (the review count) once cash drew the books.
+      attentionFailed={isCurrent && (unpaidPhase.kind === "error" || dashboardPhase.kind === "error")}
+      onAttentionRetry={() => {
+        if (unpaidPhase.kind === "error") void unpaid.refetch();
+        if (dashboardPhase.kind === "error") void dashboard.refetch();
       }}
       sameDay={isCurrent ? sameDay.data ?? null : null}
       forecast={forecast != null && forecast.show ? forecast.minor : null}
@@ -255,8 +257,8 @@ export function CashHome({
   previewing,
   search,
   attention,
-  unpaidFailed = false,
-  onUnpaidRetry,
+  attentionFailed = false,
+  onAttentionRetry,
   example,
   checklist,
   company,
@@ -277,8 +279,9 @@ export function CashHome({
   previewing: boolean;
   search: string;
   attention: BannerRow[];
-  unpaidFailed?: boolean;
-  onUnpaidRetry?: () => void;
+  /** A read behind the attention box failed (unpaid, or the review count): a retry line above it. */
+  attentionFailed?: boolean;
+  onAttentionRetry?: () => void;
   /** Storybook sample label. The live home never passes it. */
   example?: ReactNode;
   checklist?: ReactNode;
@@ -386,12 +389,12 @@ export function CashHome({
         </div>
       )}
 
-      {unpaidFailed ? (
+      {attentionFailed ? (
         <div className="ui-page-pad">
           <FailureLine
             offline={false}
             onRetry={() => {
-              onUnpaidRetry?.();
+              onAttentionRetry?.();
             }}
           />
         </div>

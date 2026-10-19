@@ -135,9 +135,12 @@ export function useProjectsCashMonth(month?: string, projectId?: string) {
     queryKey: ["projects-cash", month, projectId],
     enabled: preview === "off",
     // A project's row starts from the list's read of the same month, as old as that read: it reads
-    // again only once the list's copy would have.
+    // again once the list's copy would have, and at once when a write marked the list stale.
     initialData: () => projectRowFromList(client.getQueryData<ProjectsCashMonth>(listKey), projectId),
-    initialDataUpdatedAt: () => client.getQueryState(listKey)?.dataUpdatedAt,
+    initialDataUpdatedAt: () => {
+      const list = client.getQueryState(listKey);
+      return list?.isInvalidated === true ? 0 : list?.dataUpdatedAt;
+    },
     queryFn: async () => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");

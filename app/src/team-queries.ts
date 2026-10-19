@@ -26,7 +26,7 @@ export function useTeamUser(): { userId: string | null; signedIn: boolean; sampl
  * (the `x-flow-company` header when the user still belongs to it, else the last one opened), and
  * the app shows that one from then on. A switch made while this read was out wins over its answer.
  */
-export function useMyCompaniesQuery(active = true) {
+export function useMyCompaniesQuery(active = true, retry: false | number = false) {
   const { userId, signedIn, sample } = useTeamUser();
   const client = useQueryClient();
   const api = useTeamApi();
@@ -42,7 +42,8 @@ export function useMyCompaniesQuery(active = true) {
   const query = useQuery({
     queryKey: [MY_COMPANIES_KEY, userId],
     enabled: active && signedIn && userId != null && canRead,
-    retry: false,
+    // A screen that waits on this read for its company (Loans) retries once, as its old read did.
+    retry,
     // FLOW-804: read once a minute at most, not on every screen that asks for the role. A switch,
     // an accepted invite and sign-out start every read over; the server checks each write anyway.
     // An answer with no company yet stays stale: an invite accepted in another tab makes this user

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useProjectsCashMonth } from "./project-cash";
+import { useInvalidateBooks } from "./use-books";
 import { createQueryClient, QUERY_GC_MS, QUERY_STALE_MS } from "./query-client";
 
 const rpc = vi.hoisted(() => ({ calls: [] as Array<{ name: string; args: unknown }> }));
@@ -102,4 +103,37 @@ describe("a project's row on its page", () => {
     expect(result.current.data).toBeUndefined();
     await waitFor(() => { expect(result.current.data?.projects.map((p) => p.id)).toEqual(["p1"]); });
   });
+
+  it("reads again when a write marked the list stale, though the list's read is recent", async () => {
+    const client = createQueryClient();
+    client.setQueryData(["projects-cash", undefined, undefined], list);
+    // A write that saves through Supabase directly and refreshes only "dashboard" (as upsert_project does).
+    const write = renderHook(() => useInvalidateBooks(), { wrapper: wrapper(client) });
+    await act(async () => { await write.result.current(["dashboard"]); });
+    const { result } = renderHook(() => useProjectsCashMonth(undefined, "p1"), { wrapper: wrapper(client) });
+    expect(result.current.data?.projects.map((p) => p.name)).toEqual(["בית הברוש"]);
+    await waitFor(() => { expect(rpc.calls.map((c) => c.name)).toEqual(["projects_cash_month"]); });
+    expect((rpc.calls[0]?.args as { p_project?: string }).p_project).toBe("p1");
+  });
 });
+
+describe("a write outside useWrite", () => {
+  it("leaves an unrelated read stale, so its next mount reads again", async () => {
+    const client = createQueryClient();
+    const first = renderHook(() => useProjectsCashMonth(), { wrapper: wrapper(client) });
+    await waitFor(() => { expect(first.result.current.data).toBeDefined(); });
+    first.unmount();
+    expect(rpc.calls).toHaveLength(1);
+    // Within the 30 minutes, a remount reads nothing.
+    const again = renderHook(() => useProjectsCashMonth(), { wrapper: wrapper(client) });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+    expect(rpc.calls).toHaveLength(1);
+    again.unmount();
+    const write = renderHook(() => useInvalidateBooks(), { wrapper: wrapper(client) });
+    await act(async () => { await write.result.current(["dashboard"]); });
+    expect(rpc.calls).toHaveLength(1);
+    renderHook(() => useProjectsCashMonth(), { wrapper: wrapper(client) });
+    await waitFor(() => { expect(rpc.calls).toHaveLength(2); });
+  });
+});
+
