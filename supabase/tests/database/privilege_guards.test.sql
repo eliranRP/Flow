@@ -35,6 +35,7 @@ insert into pg_allowed (sig) values
     ('create_manual_line(text,bigint,date,text,uuid,uuid,text,text)'),
     ('decline_invite(uuid)'),
     ('delete_category(uuid)'),
+    ('delete_company(uuid,text)'),
     ('delete_loan(uuid)'),
     ('delete_project(uuid)'),
     ('delete_transaction(uuid)'),

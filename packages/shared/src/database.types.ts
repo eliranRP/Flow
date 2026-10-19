@@ -1272,6 +1272,9 @@ isOneToOne: false
 "delete_category":
 { Args: { "p_category_id": string }; Returns: Json
                            },
+"delete_company":
+{ Args: { "p_company_id": string,"p_confirm": string }; Returns: Json
+                           },
 "delete_loan":
 { Args: { "p_loan_id": string }; Returns: Json
                            },
