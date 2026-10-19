@@ -11,7 +11,7 @@ end
 $users$;
 
 create temp table posted_ref (label text primary key, id uuid);
-grant all on posted_ref to authenticated;
+grant all on posted_ref to authenticated, service_role;
 
 select tests.authenticate_as('posted_owner');
 select lives_ok($$select public.create_company('סכומים', true)$$, 'owner creates a company');
@@ -65,11 +65,15 @@ select is(
   'the project list shows the posted line and leaves the pending one out (0184)'
 );
 
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select is(
   (public.company_pnl((select id from posted_ref where label = 'company'), null, null, 'cash') ->> 'expense_agorot')::bigint,
   10000::bigint,
   'company profit counts the posted expense only'
 );
+set local role authenticated;
 
 reset role;
 
@@ -125,23 +129,29 @@ from posted_ref where label = 'company';
 
 select tests.authenticate_as('posted_owner');
 
+set local role service_role;
 select is(
   (public.company_pnl((select id from posted_ref where label = 'company'), null, null, 'invoiced') ->> 'income_agorot')::bigint,
   8000::bigint,
   'the invoiced basis counts the posted invoice'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   (public.company_pnl((select id from posted_ref where label = 'company'), null, null, 'cash') ->> 'income_agorot')::bigint,
   3000::bigint,
   'the cash basis counts the posted receipt'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   (public.company_pnl((select id from posted_ref where label = 'company'), null, null, 'cash') ->> 'expense_agorot')::bigint,
   10000::bigint,
   'a void line stays out of the expense total'
 );
+set local role authenticated;
 
 select is(
   (public.get_project((select id from posted_ref where label = 'project')) ->> 'income_agorot')::bigint,

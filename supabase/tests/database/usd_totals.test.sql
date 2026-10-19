@@ -15,7 +15,7 @@ $users$;
 
 create temp table usd_ref (label text primary key, id uuid);
 create temp table usd_out (label text primary key, body jsonb);
-grant all on usd_ref, usd_out to authenticated;
+grant all on usd_ref, usd_out to authenticated, service_role;
 
 create function pg_temp.cur(p jsonb, c text) returns jsonb
 language sql immutable
@@ -31,7 +31,7 @@ create function pg_temp.out_of(l text) returns jsonb
 language sql stable
 as $$ select body from usd_out where label = l $$;
 
-grant execute on function pg_temp.cur(jsonb, text), pg_temp.proj(jsonb, text), pg_temp.out_of(text) to authenticated;
+grant execute on function pg_temp.cur(jsonb, text), pg_temp.proj(jsonb, text), pg_temp.out_of(text) to authenticated, service_role;
 
 -- Company A: USD only. Company M: ILS + USD. Company B: ILS only, another owner.
 select tests.authenticate_as('usd_owner');
@@ -96,19 +96,27 @@ join usd_ref p on p.label = case t.idempotency_key when 'a:shared' then 'a_alpha
 where t.idempotency_key in ('a:shared', 'm:ils_shared');
 
 select tests.authenticate_as('usd_owner');
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 insert into usd_out (label, body) values
   ('a_sep_cash', public.company_pnl((select id from usd_ref where label = 'a'), '2026-09-01', '2026-09-30', 'cash')),
   ('a_sep_inv',  public.company_pnl((select id from usd_ref where label = 'a'), '2026-09-01', '2026-09-30', 'invoiced')),
   ('a_aug_cash', public.company_pnl((select id from usd_ref where label = 'a'), '2026-08-01', '2026-08-31', 'cash')),
   ('a_all_cash', public.company_pnl((select id from usd_ref where label = 'a'), null, null, 'cash'));
+set local role authenticated;
 
 select tests.authenticate_as('mix_owner');
+set local role service_role;
 insert into usd_out (label, body) values
   ('m_sep_cash', public.company_pnl((select id from usd_ref where label = 'm'), '2026-09-01', '2026-09-30', 'cash'));
+set local role authenticated;
 
 select tests.authenticate_as('usd_other');
+set local role service_role;
 insert into usd_out (label, body) values
   ('b_sep_cash', public.company_pnl((select id from usd_ref where label = 'b'), '2026-09-01', '2026-09-30', 'cash'));
+set local role authenticated;
 
 reset role;
 
@@ -228,20 +236,24 @@ select is(
 );
 
 select tests.authenticate_as('usd_other');
+set local role service_role;
 select throws_ok(
   format('select public.company_pnl(%L::uuid, null, null, ''cash'')', (select id from usd_ref where label = 'a')),
   'P0001',
   'forbidden',
   'another owner cannot read the usd company totals'
 );
+set local role authenticated;
 
 select tests.authenticate_as('mix_owner');
+set local role service_role;
 select throws_ok(
   format('select public.company_pnl(%L::uuid, null, null, ''cash'')', (select id from usd_ref where label = 'a')),
   'P0001',
   'forbidden',
   'the mixed owner cannot read the usd company totals'
 );
+set local role authenticated;
 
 -- Viewer on a demo company reads the same by_currency as the owner
 reset role;
@@ -250,11 +262,13 @@ insert into public.company_viewers (user_id, company_id)
 select tests.get_supabase_uid('usd_viewer'), id from usd_ref where label = 'a';
 
 select tests.authenticate_as('usd_viewer');
+set local role service_role;
 select is(
   public.company_pnl((select id from usd_ref where label = 'a'), '2026-09-01', '2026-09-30', 'cash') -> 'by_currency',
   pg_temp.out_of('a_sep_cash') -> 'by_currency',
   'a demo viewer reads the owner''s by_currency'
 );
+set local role authenticated;
 
 select is(
   public.get_dashboard('2026-09-01', '2026-09-30', 'cash') -> 'by_currency',
@@ -271,8 +285,9 @@ select ok(
 );
 
 select ok(
-  has_function_privilege('authenticated', 'public.company_pnl(uuid, date, date, text)', 'execute'),
-  'authenticated can execute company_pnl'
+  not has_function_privilege('authenticated', 'public.company_pnl(uuid, date, date, text)', 'execute')
+  and has_function_privilege('authenticated', 'public.get_dashboard(date, date, text)', 'execute'),
+  'authenticated reads company_pnl only through get_dashboard'
 );
 
 select is(

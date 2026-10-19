@@ -30,7 +30,7 @@ The crons are scheduled by the migrations when Vault holds `cron_secret` and `fl
 All need a signed-in user (42501 otherwise). Preferences are per user, not per company.
 
 - `push_subscribe(p_endpoint, p_p256dh, p_auth, p_user_agent)` saves this device. An endpoint saved by another user moves to the caller.
-- `push_unsubscribe(p_endpoint)` removes this device.
+- `push_unsubscribe(p_endpoint)` removes this device. The app does not call it yet, so only `service_role` can ([0193](../decisions/0193-client-privileges.md)).
 - `get_notification_prefs()` returns `new_transaction`, `evening_reminder`, `weekly_summary`, `prompt_answered` and `has_subscription`. All three switches are off until the user turns one on.
 - `set_notification_prefs(p_new_transaction, p_evening_reminder, p_weekly_summary)`. A null leaves that switch as it is. Returns the same object.
 - `answer_push_prompt(p_yes)` records that the review-screen card was answered; yes also turns on תזכורת ערב, and on the first answer תנועה חדשה.

@@ -14,7 +14,7 @@ $users$;
 
 create temp table pc_ref (label text primary key, id uuid);
 create temp table pc_out (label text primary key, body jsonb);
-grant all on pc_ref, pc_out to authenticated;
+grant all on pc_ref, pc_out to authenticated, service_role;
 
 create function pg_temp.cur(p jsonb, c text) returns jsonb
 language sql immutable
@@ -24,7 +24,7 @@ create function pg_temp.out_of(l text) returns jsonb
 language sql stable
 as $$ select body from pc_out where label = l $$;
 
-grant execute on function pg_temp.cur(jsonb, text), pg_temp.out_of(text) to authenticated;
+grant execute on function pg_temp.cur(jsonb, text), pg_temp.out_of(text) to authenticated, service_role;
 
 select tests.authenticate_as('pc_owner');
 select lives_ok($$select public.create_company('Harbor Sample Co', true)$$, 'owner creates company');
@@ -133,9 +133,14 @@ insert into pc_out (label, body) values
   ('quay_inv', public.get_project((select id from pc_ref where label = 'quay'), 'invoiced')),
   ('quay_null', public.get_project((select id from pc_ref where label = 'quay'), null)),
   ('quay_other_word', public.get_project((select id from pc_ref where label = 'quay'), 'accrual')),
-  ('dock_cash', public.get_project((select id from pc_ref where label = 'dock'), 'cash')),
+  ('dock_cash', public.get_project((select id from pc_ref where label = 'dock'), 'cash'));
+-- company_pnl is not granted to authenticated (decision 0193): the test calls it as service_role
+-- with the user's claims, and it still checks the caller's company.
+set local role service_role;
+insert into pc_out (label, body) values
   ('pnl_cash', public.company_pnl((select id from pc_ref where label = 'co'), null, null, 'cash')),
   ('pnl_inv', public.company_pnl((select id from pc_ref where label = 'co'), null, null, 'invoiced'));
+set local role authenticated;
 
 select tests.authenticate_as('pc_other');
 insert into pc_out (label, body) values

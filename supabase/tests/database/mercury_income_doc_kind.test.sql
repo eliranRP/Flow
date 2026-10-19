@@ -141,6 +141,9 @@ select is(
 select is(private.relabel_mercury_income(), '{"closed": 0, "refreshed": 0, "relabeled": 0}'::jsonb, 'running it again changes nothing');
 
 select tests.authenticate_as('mi_a');
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select is(
   (select (x ->> 'income_minor')::bigint from jsonb_array_elements(public.company_pnl((select id from mi_ref where label = 'a'), null, null, 'invoiced') -> 'by_currency') x where x ->> 'currency' = 'USD'),
   395000::bigint,

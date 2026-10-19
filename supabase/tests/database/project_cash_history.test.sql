@@ -74,6 +74,9 @@ grant execute on function pg_temp.year_row(integer) to authenticated, service_ro
 select tests.authenticate_as('pch_owner');
 
 -- 1-2. Cedar's years start at its own first month, not the company's (Maple's 2023).
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select is(
   (select jsonb_agg((y ->> 'year')::integer) from jsonb_array_elements(public.project_cash_years(pg_temp.id('cedar'), '2026-06-15') -> 'years') y),
   '[2026, 2025, 2024]'::jsonb,
@@ -81,9 +84,11 @@ select is(
 );
 select is(public.project_cash_years(pg_temp.id('cedar'), '2026-06-15') ->> 'first_month', '2024-04-01', 'the project''s first cash month');
 select is(public.project_cash_years(pg_temp.id('cedar'), '2026-06-15') ->> 'project_name', 'Cedar', 'the project''s name, for the band');
+set local role authenticated;
 
 -- 3-5. A year's figures: the transfer is out of the view, a shared bill counts the project's share,
 -- and a line after this month is not counted.
+set local role service_role;
 select is(
   pg_temp.year_row(2025),
   '{"currency": "ILS", "in_minor": 500000, "out_minor": 0, "net_minor": 500000}'::jsonb,
@@ -95,8 +100,10 @@ select is(
   '{"currency": "ILS", "in_minor": 500000, "out_minor": 160000, "net_minor": 340000}'::jsonb,
   'the total is every year''s money'
 );
+set local role authenticated;
 
 -- 6-9. One year's months.
+set local role service_role;
 select is(
   jsonb_array_length(public.project_cash_year_months(pg_temp.id('cedar'), 2025, '2026-06-15') -> 'months'),
   12,
@@ -116,18 +123,23 @@ select is(
   'a year''s months add up to its row'
 );
 select throws_ok($$select public.project_cash_year_months(pg_temp.id('cedar'), 2027, '2026-06-15')$$, 'validation', 'a future year is refused');
+set local role authenticated;
 
 -- 10-11. A project of another company, or none, reads nothing.
+set local role service_role;
 select is(public.project_cash_years(pg_temp.id('elsewhere'), '2026-06-15'), null, 'another company''s project reads null');
 select throws_ok($$select public.project_cash_years(null, '2026-06-15')$$, 'validation', 'a project is required');
+set local role authenticated;
 
 -- 12-13. A project with no lines has this year only, at zero.
+set local role service_role;
 select is(
   (select jsonb_agg((y ->> 'year')::integer) from jsonb_array_elements(public.project_cash_years(pg_temp.id('maple'), '2023-01-15') -> 'years') y),
   '[2023]'::jsonb,
   'a project with nothing yet has this year only'
 );
 select is(public.project_cash_years(pg_temp.id('maple'), '2023-01-15') ->> 'first_month', null, 'and no first month');
+set local role authenticated;
 
 -- 14. Signed out, nothing.
 select tests.clear_authentication();

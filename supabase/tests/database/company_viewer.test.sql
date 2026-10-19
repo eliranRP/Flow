@@ -75,6 +75,9 @@ select is(
   'get_dashboard counts the posted invoice'
 );
 
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select throws_ok(
   $$select public.company_pnl(
     (select c.id from public.companies c where c.name = 'חברה אמיתית'),
@@ -84,6 +87,7 @@ select throws_ok(
   null,
   'a viewer cannot read another company'
 );
+set local role authenticated;
 
 select throws_ok(
   $$insert into public.transactions (

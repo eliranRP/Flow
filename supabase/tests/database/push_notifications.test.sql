@@ -121,7 +121,11 @@ select is(
   'a yes after an earlier no leaves תנועה חדשה off'
 );
 select tests.authenticate_as('pn_other');
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select lives_ok($$select public.push_unsubscribe('https://fcm.googleapis.com/fcm/send/dev-1')$$, 'unsubscribing a device that is not yours does nothing');
+set local role authenticated;
 select throws_ok($$select * from public.push_subscriptions$$, '42501', null, 'a user cannot read the subscriptions table');
 select throws_ok($$select * from public.notification_prefs$$, '42501', null, 'a user cannot read the prefs table');
 select throws_ok($$select * from public.push_evening_targets()$$, '42501', null, 'a user cannot list the evening targets');

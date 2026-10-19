@@ -11,8 +11,7 @@ A viewer gets these reads:
 | Read | What it returns |
 | --- | --- |
 | `get_home` | The demo company name and cash net. The smoke does not open `/auth/callback`, so it does not call this. |
-| `get_dashboard` | The demo P&L for the signed-in period, through `company_pnl`. |
-| `company_pnl` | That same company only. Another company is `forbidden`. |
+| `get_dashboard` | The demo P&L for the signed-in period, through `company_pnl` (which a client cannot call directly, [0193](../decisions/0193-client-privileges.md)). |
 | `list_unpaid` | Open invoices for the demo company. |
 | `list_review` | The open review list. `auto_approved_today` and `assistant_filed_today` stay empty, because they call `private.filed_today_rows()`. |
 | `sumit_status` | Whether the demo SUMIT connection is up, and its company number. No secret. |

@@ -514,6 +514,9 @@ insert into mcpsplit (label, id)
 select 'plain_undo', w.reassign_id from private.mcp_writes w where w.transaction_id = (select id from mcpsplit where label = 'plain');
 
 do $$ begin perform pg_temp.as_mcp('write'); end $$;
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select public.save_split(
   (select id from mcpsplit where label = 'plain'),
   jsonb_build_array(
@@ -521,6 +524,7 @@ select public.save_split(
     jsonb_build_object('project_id', (select id from mcpsplit where label = 'south'), 'share_bp', 1000)
   )
 );
+set local role authenticated;
 
 select is(
   public.mcp_undo('undo-plain', 'reassign', (select id from mcpsplit where label = 'plain_undo'))->'error'->>'code',

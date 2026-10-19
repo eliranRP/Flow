@@ -120,10 +120,14 @@ select is(
 select tests.authenticate_as('kog_owner');
 
 -- (a) The guessed kept-out line counts; the confirmed one and the loan principal stay out.
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select is(pg_temp.pnl('cash', 'direct_agorot'), 10000::bigint, 'cash: a guessed kept-out cost counts as direct cost');
 select is(pg_temp.pnl('cash', 'excluded_expense_agorot'), 50000::bigint, 'cash: kept out are the confirmed line and the guessed principal');
 select is(pg_temp.pnl('invoiced', 'direct_agorot'), 10000::bigint, 'invoiced: a guessed kept-out cost counts as direct cost');
 select is(pg_temp.pnl('invoiced', 'excluded_expense_agorot'), 50000::bigint, 'invoiced: same kept-out cost');
+set local role authenticated;
 select is(
   (public.get_project(pg_temp.id('north'), 'cash')->>'direct_agorot')::bigint, 10000::bigint,
   'get_project: the guessed line is in the project''s direct cost'
@@ -151,7 +155,9 @@ select is(
   (public.set_transaction_pnl(pg_temp.id('txn_guess'), false)->>'in_pnl')::boolean, false,
   'set_transaction_pnl false takes the guessed line out'
 );
+set local role service_role;
 select is(pg_temp.pnl('cash', 'excluded_expense_agorot'), 60000::bigint, 'the override moves it to the kept-out total');
+set local role authenticated;
 select is(
   (public.set_transaction_pnl(pg_temp.id('txn_guess'), null)->>'in_pnl')::boolean, true,
   'set_transaction_pnl null: the guessed line counts again'
@@ -161,8 +167,10 @@ select is(
 reset role;
 update public.transactions set category_suggested = false where id = pg_temp.id('txn_guess');
 select tests.authenticate_as('kog_owner');
+set local role service_role;
 select is(pg_temp.pnl('cash', 'direct_agorot'), 0::bigint, 'confirmed: the line leaves direct cost');
 select is(pg_temp.pnl('cash', 'excluded_expense_agorot'), 60000::bigint, 'confirmed: the line is kept out');
+set local role authenticated;
 select is(
   (public.get_transaction(pg_temp.id('txn_guess'))->>'in_pnl')::boolean, false,
   'confirmed: get_transaction says out'
@@ -207,6 +215,7 @@ select lives_ok(
 );
 
 -- A guessed kept-out income line counts, so the income review picks it up until it is confirmed.
+set local role service_role;
 select is(pg_temp.pnl('cash', 'unassigned_income_agorot'), 4000::bigint, 'a guessed kept-out income line counts as unassigned income');
 reset role;
 do $sync$

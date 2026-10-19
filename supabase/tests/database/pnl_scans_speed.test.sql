@@ -1061,7 +1061,7 @@ as $$
   where p.company_id = (select id from ps where label = 'co');
   insert into got values ('home' || p_suffix, public.get_home());
 $$;
-grant execute on function pg_temp.read_new(text) to authenticated;
+grant execute on function pg_temp.read_new(text) to authenticated, service_role;
 
 create function pg_temp.check_old(p_suffix text, p_note text)
 returns setof text
@@ -1120,6 +1120,8 @@ end;
 $$;
 
 select tests.authenticate_as('ps_owner');
+-- company_pnl is not granted to authenticated (decision 0193): read as service_role, same claims.
+set local role service_role;
 select pg_temp.read_new('');
 reset role;
 select * from pg_temp.check_old('', '');
@@ -1128,6 +1130,7 @@ select * from pg_temp.check_old('', '');
 -- basis (company_pnl reads 'invoice' as cash) follow too.
 update public.companies set base_currency = 'USD', cash_basis = 'invoice' where id = (select id from ps where label = 'co');
 select tests.authenticate_as('ps_owner');
+set local role service_role;
 select pg_temp.read_new('_usd');
 reset role;
 select * from pg_temp.check_old('_usd', ' (dollars, invoice basis)');

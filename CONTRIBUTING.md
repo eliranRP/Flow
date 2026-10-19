@@ -49,6 +49,14 @@ Small files keep builders reading less and stop parallel PRs from colliding. Thi
 - A file already over the limit does not grow: put new code in a new file, and move code out when you change a large part of it. Splits are their own PR, with no behaviour or look change ([FLOW-807](docs/backlog/TASKS.md#flow-807)).
 - Stories live next to their screen or component (`<name>.stories.tsx`). CSS lives in `app/src/ui/css/NN-<area>.css`, imported by `ui.css` in cascade order: put a block in its area's file, or start a new file at the end of the import list; never reorder the imports ([DESIGN-TEAM](docs/design/DESIGN-TEAM.md)).
 
+## Database privileges
+
+A migration grants every privilege it needs; nothing comes by default ([0193](docs/decisions/0193-client-privileges.md)). Role `postgres`'s default privileges in `public` give `authenticated` and `anon` nothing, so a new table, view, sequence or function is closed to clients until the migration says otherwise.
+
+- A new table in `public` enables RLS, then `revoke all ... from public, anon, authenticated`, and grants `authenticated` only what its policies allow (usually `select`). Writes go through `security definer` RPCs. Never grant `truncate`, `trigger` or `references`.
+- A new function: `revoke all on function ... from public, anon, authenticated`, then `grant execute ... to authenticated` only when the app or `flow-mcp` calls it as the user. A client-callable `security definer` function in `public` joins the allowlist in `supabase/tests/database/privilege_guards.test.sql` in the same PR; one the clients stop calling loses its grant and leaves the list.
+- `anon` executes nothing in `public`. A table in `private` enables RLS with no policy, and only definers touch it.
+
 ## Remove what your change leaves unused
 
 Every story, test and CSS block costs time on every push and on every deploy run, so nothing stays after the app stops using it.

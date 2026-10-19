@@ -98,31 +98,41 @@ select lives_ok(
   'an overhead outflow and a USD shared outflow take an income category'
 );
 
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 create function pg_temp.pnl() returns jsonb language sql as $$
   select public.company_pnl((select id from rs_ref where label = 'co'), null, null, 'cash');
 $$;
+set local role authenticated;
 create function pg_temp.proj(p_label text) returns jsonb language sql as $$
   select public.get_project((select id from rs_ref where label = p_label), 'cash');
 $$;
-grant execute on function pg_temp.pnl() to authenticated;
-grant execute on function pg_temp.proj(text) to authenticated;
+set local role service_role;
+grant execute on function pg_temp.pnl() to authenticated, service_role;
+set local role authenticated;
+grant execute on function pg_temp.proj(text) to authenticated, service_role;
 
+set local role service_role;
 select is(
   (select jsonb_build_object('income', j->'income_agorot', 'shared', j->'shared_agorot', 'overhead', j->'overhead_agorot')
    from (select pg_temp.pnl() j) s),
   '{"income": 76000, "shared": 8000, "overhead": 6000}'::jsonb,
   'company_pnl: the moved lines are company income, not shared cost or overhead'
 );
+set local role authenticated;
 select is(
   pg_temp.proj('p1')->'shared_agorot',
   '4000'::jsonb,
   'get_project: only the expense-kind shared line counts as a shared cost'
 );
+set local role service_role;
 select is(
   pg_temp.proj('p1')->'shared_agorot',
   (select x->'shared_agorot' from jsonb_array_elements(pg_temp.pnl()->'projects') x where x->>'name' = 'Site One'),
   'get_project agrees with the company_pnl project row'
 );
+set local role authenticated;
 select is(
   (select x->'shared_minor' from jsonb_array_elements(pg_temp.proj('p1')->'by_currency') x where x->>'currency' = 'ILS'),
   '4000'::jsonb,
@@ -138,11 +148,13 @@ select is(
   '[]'::jsonb,
   'get_project other_currencies: nothing in USD'
 );
+set local role service_role;
 select is(
   pg_temp.proj('p2')->'overhead_share_agorot',
   pg_temp.pnl()->'overhead_agorot',
   'overhead share: the only weighted project carries the company overhead, without the moved line'
 );
+set local role authenticated;
 select is(
   pg_temp.proj('p2')->'overhead_share_agorot',
   '6000'::jsonb,

@@ -53,6 +53,9 @@ join (values
 
 select tests.authenticate_as('lc_owner');
 
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select is(
   (select (x->>'count')::int
    from jsonb_array_elements(
@@ -61,7 +64,9 @@ select is(
   2,
   'by_currency.count: the split payment counts as one line, not one per in-P&L part'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   (select (x->>'count')::int
    from jsonb_array_elements(
@@ -70,7 +75,9 @@ select is(
   2,
   'by_currency.count: same without a period'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   (select (x->>'count')::int
    from jsonb_array_elements(
@@ -79,7 +86,9 @@ select is(
   2,
   'other_currencies.count: the split payment counts once'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   (select (x->>'expense_minor')::bigint
    from jsonb_array_elements(
@@ -88,15 +97,18 @@ select is(
   95000::bigint,
   'the amounts still count by part (owner positive control)'
 );
+set local role authenticated;
 
 select tests.authenticate_as('lc_other');
 
+set local role service_role;
 select throws_ok(
   $$select public.company_pnl((select id from lc_ref where label = 'co'), '2026-06-01', '2026-06-30', 'cash')$$,
   'P0001',
   'forbidden',
   'another company''s caller is refused'
 );
+set local role authenticated;
 
 select * from finish();
 

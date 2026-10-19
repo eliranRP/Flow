@@ -15,7 +15,7 @@ end
 $users$;
 
 create temp table pm_ref (label text primary key, id uuid);
-grant all on pm_ref to authenticated;
+grant all on pm_ref to authenticated, service_role;
 
 select tests.authenticate_as('pm_owner');
 select public.create_company('Example Builders LLC', true);
@@ -82,6 +82,9 @@ cross join lateral jsonb_array_elements(public.get_profit_months('2026-07-01', '
 cross join lateral jsonb_array_elements(m -> 'by_currency') c
 group by b.basis, c->>'currency';
 
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 create temp table pm_pnl as
 select b.basis, c->>'currency' as currency,
   (c->>'income_minor')::bigint as income_minor,
@@ -91,6 +94,8 @@ from (values ('cash'), ('invoiced')) as b(basis)
 cross join lateral jsonb_array_elements(
   public.company_pnl((select id from pm_ref where label = 'co'), '2026-07-01', '2026-09-30', b.basis) -> 'by_currency'
 ) c;
+grant select on pm_pnl to authenticated;
+set local role authenticated;
 
 select results_eq(
   'select basis, currency, income_minor, expense_minor, profit_minor from pm_sum order by 1, 2',
@@ -104,9 +109,14 @@ select is(
   'every month of the range, newest first'
 );
 
+set local role service_role;
+create temp table pm_aug as
+select public.company_pnl((select id from pm_ref where label = 'co'), '2026-08-01', '2026-08-31', 'cash') as v;
+grant select on pm_aug to authenticated;
+set local role authenticated;
 select is(
   (public.get_profit_months('2026-07-01', '2026-09-30', 'cash') #>> '{months,1,by_currency,0,profit_minor}')::bigint,
-  (public.company_pnl((select id from pm_ref where label = 'co'), '2026-08-01', '2026-08-31', 'cash') #>> '{by_currency,0,net_profit_minor}')::bigint,
+  (select (v #>> '{by_currency,0,net_profit_minor}')::bigint from pm_aug),
   'company: one month matches company_pnl for that month'
 );
 
@@ -161,7 +171,7 @@ select is(
 select is(
   (public.get_project((select id from pm_ref where label = 'alpha'), 'cash', '2026-08-01', '2026-08-31') ->> 'profit_agorot')::bigint,
   (select (p->>'profit_agorot')::bigint
-   from jsonb_array_elements(public.company_pnl((select id from pm_ref where label = 'co'), '2026-08-01', '2026-08-31', 'cash') -> 'projects') p
+   from pm_aug cross join lateral jsonb_array_elements(v -> 'projects') p
    where p->>'id' = (select id::text from pm_ref where label = 'alpha')),
   'get_project for a month matches company_pnl''s project row'
 );
@@ -255,7 +265,7 @@ select tests.get_supabase_uid('pm_viewer'), id from pm_ref where label = 'co';
 select tests.authenticate_as('pm_owner');
 create temp table pm_owner_view as
 select public.get_profit_months('2026-07-01', '2026-09-30', 'cash', (select id from pm_ref where label = 'alpha')) -> 'by_currency' as v;
-grant all on pm_owner_view to authenticated;
+grant all on pm_owner_view to authenticated, service_role;
 select tests.authenticate_as('pm_viewer');
 select is(
   public.get_profit_months('2026-07-01', '2026-09-30', 'cash', (select id from pm_ref where label = 'alpha')) -> 'by_currency',

@@ -207,12 +207,16 @@ select throws_ok(
   'disconnect_connector rejects an empty role'
 );
 
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select throws_ok(
   $$select public.request_connector_refresh('sumit')$$,
   'P0001',
   'forbidden',
   'request_connector_refresh rejects an empty role'
 );
+set local role authenticated;
 
 select throws_ok(
   $$select public.set_import_from('sumit', '2020-01-01')$$,
@@ -238,10 +242,12 @@ select throws_ok(
   'connector is not connected',
   'the other owner cannot set this company''s import date'
 );
+set local role service_role;
 select lives_ok(
   $$select public.request_connector_refresh('sumit')$$,
   'the other owner queues their own refresh'
 );
+set local role authenticated;
 
 reset role;
 

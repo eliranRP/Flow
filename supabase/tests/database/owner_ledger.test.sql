@@ -285,6 +285,9 @@ select lives_ok(
   'the owner opens a second project for the split'
 );
 
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select throws_ok(
   format(
     $sql$select public.save_split(%L::uuid, '[{"project_id":"%s","share_bp":6000}]'::jsonb)$sql$,
@@ -295,7 +298,9 @@ select throws_ok(
   'allocation shares must sum to 10000',
   'a split that does not sum to 10000 is refused'
 );
+set local role authenticated;
 
+set local role service_role;
 select lives_ok(
   format(
     $sql$select public.save_split(%L::uuid, '[{"project_id":"%s","share_bp":3333},{"project_id":"%s","share_bp":6667}]'::jsonb)$sql$,
@@ -305,6 +310,7 @@ select lives_ok(
   ),
   'the owner can split a shared cost'
 );
+set local role authenticated;
 
 select lives_ok(
   'set constraints all immediate',

@@ -138,10 +138,14 @@ select throws_ok(
 );
 
 select tests.authenticate_as('r20_a');
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select lives_ok(
   format('select public.approve_split_review(%L::uuid)', (select id from r20 where label = 'review')),
   'the owner approves a categorised split'
 );
+set local role authenticated;
 select is(
   (select share_bp from public.allocations
     where transaction_id = (select id from r20 where label = 'leasing')
@@ -200,6 +204,7 @@ select ok(
   'approve records no supplier rule write'
 );
 
+set local role service_role;
 select throws_ok(
   format('select public.approve_split_review(%L::uuid)', (select id from r20 where label = 'income-review')),
   'P0001',
@@ -218,6 +223,7 @@ select throws_ok(
   'shared costs are split, not assigned to one project',
   'an unallocated shared cost is refused'
 );
+set local role authenticated;
 
 reset role;
 insert into public.transactions (
@@ -251,12 +257,14 @@ select 'foreign-review', id from public.review_queue where transaction_id = (sel
 
 select tests.authenticate_as('r20_b');
 select lives_ok($$select public.create_company('סבב 20 ב', true)$$, 'the other owner creates a company');
+set local role service_role;
 select throws_ok(
   format('select public.approve_split_review(%L::uuid)', (select id from r20 where label = 'foreign-review')),
   'P0001',
   'review item not found',
   'a foreign company cannot approve the split'
 );
+set local role authenticated;
 
 reset role;
 select is(

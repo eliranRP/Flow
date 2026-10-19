@@ -181,10 +181,14 @@ update public.categories set in_cash = false where id = pg_temp.cat('כסף שה
 
 select tests.authenticate_as('cfm_owner');
 
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 insert into cfm_val (label, v)
 select 'pnl_before', public.company_pnl(pg_temp.id('co'), '2026-06-01', '2026-06-30', 'cash') -> 'by_currency' -> 0;
 insert into cfm_val (label, v)
 select 'pnl_invoiced', public.company_pnl(pg_temp.id('co'), '2026-06-01', '2026-06-30', 'invoiced') -> 'by_currency' -> 0;
+set local role authenticated;
 
 select is(
   (select (c ->> 'in_cash')::boolean from jsonb_array_elements(public.list_categories()) c
@@ -320,11 +324,13 @@ select is(
   'get_transaction says a line with parts in and out is mixed'
 );
 select lives_ok($$select public.set_category_cash(pg_temp.cat('חומרים', 'expense'), true)$$, 'and back');
+set local role service_role;
 select is(
   public.company_pnl(pg_temp.id('co'), '2026-06-01', '2026-06-30', 'invoiced') -> 'by_currency' -> 0,
   (select v from cfm_val where label = 'pnl_invoiced'),
   'the cash switches leave the P&L as it was'
 );
+set local role authenticated;
 
 -- 37-41. The basis.
 select is(
@@ -359,12 +365,14 @@ select is(pg_temp.april('in_minor'), 100000::bigint, 'on the paid basis the rece
 select lives_ok($$select public.set_cash_basis('invoice')$$, 'invoice basis');
 select is(pg_temp.april('in_minor'), 100000::bigint, 'on the invoice basis the invoice counts and its receipt does not');
 select lives_ok($$select public.set_cash_basis('paid')$$, 'paid basis');
+set local role service_role;
 select is(
   (pg_temp.month_row('2026-05-01', 'USD') ->> 'profit_minor')::bigint,
   ((public.company_pnl(pg_temp.id('co'), '2026-05-01', '2026-05-31', 'cash') -> 'by_currency')
      -> 1 ->> 'net_profit_minor')::bigint,
   'profit_minor matches company_pnl in a second currency'
 );
+set local role authenticated;
 select lives_ok(
   $$select public.rename_category(pg_temp.cat('חומרים', 'expense'), 'Credit card payments')$$,
   'a category in cash is renamed to a non-cash name'
