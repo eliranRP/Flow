@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { shiftMonthKey } from "../period";
@@ -174,5 +174,41 @@ describe("Home's cash (FLOW-364: the redesigned Home)", () => {
     const reads = rpc.calls.filter((c) => c.name === "get_dashboard");
     expect(reads.map((c) => c.args)).toContainEqual(expect.objectContaining({ p_from: `${month(1)}-01` }));
     expect(reads.map((c) => c.args)).not.toContainEqual(expect.objectContaining({ p_from: `${current}-01` }));
+  });
+});
+
+describe("Home's first paint waits on cash_months alone", () => {
+  /** get_dashboard answers only when the test says so. */
+  function held(cashAnswer: unknown) {
+    let answer: (value: { data: unknown; error: null }) => void = () => undefined;
+    rpc.impl = (name) => {
+      if (name === "cash_months") return Promise.resolve({ data: cashAnswer, error: null });
+      if (name === "get_dashboard") return new Promise((resolve) => { answer = resolve; });
+      if (name === "list_unpaid" || name === "list_missing_bills") return Promise.resolve({ data: [], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithProviders(<HomeScreen />);
+    return (data: unknown) => { answer({ data, error: null }); };
+  }
+
+  it("draws the month before get_dashboard answers, then adds the review count", async () => {
+    const answer = held(cash);
+    await screen.findByText("תזרים · עד היום");
+    expect(within(bandOf()).getByText("₪3,200")).toBeInTheDocument();
+    expect(screen.queryByText(/ממתינים לאישור/)).not.toBeInTheDocument();
+    answer(dashboard(3));
+    expect(await screen.findByRole("link", { name: /3 פריטים ממתינים לאישור/ })).toHaveAttribute("href", "/review");
+  });
+
+  it("keeps the skeleton, not the empty state, while a company with no recent cash line waits for get_dashboard to decide", async () => {
+    const answer = held({ ...cash, months: cash.months.map((row) => ({ ...row, by_currency: [] })) });
+    await waitFor(() => { expect(rpc.calls.map((c) => c.name)).toContain("cash_months"); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
+    expect(document.querySelector("[aria-busy=\"true\"]")).not.toBeNull();
+    expect(screen.queryByRole("heading", { name: "חברו את הבנק" })).not.toBeInTheDocument();
+    // get_dashboard decides: this company has books (the month's profit), so Home draws them.
+    answer(dashboard(0));
+    await screen.findByText("תזרים · עד היום");
+    expect(screen.queryByRole("heading", { name: "חברו את הבנק" })).not.toBeInTheDocument();
   });
 });

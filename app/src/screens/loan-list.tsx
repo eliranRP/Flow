@@ -85,10 +85,13 @@ export type LoanListData = {
 export async function readLoanList(companyId: string | null): Promise<LoanListData> {
   const supabase = getSupabase();
   if (!supabase || companyId == null) return { rows: [], loans: [] };
-  const loans = await supabase.from("loans").select(LOAN_DETAIL_COLUMNS).eq("company_id", companyId).order("name");
+  // Three reads at once: none needs another's answer.
+  const [loans, byLoan, projectNames] = await Promise.all([
+    supabase.from("loans").select(LOAN_DETAIL_COLUMNS).eq("company_id", companyId).order("name"),
+    readLoanBalances(supabase, companyId),
+    readProjectNames(supabase, companyId),
+  ]);
   assertNoError(loans);
-  const byLoan = await readLoanBalances(supabase, companyId);
-  const projectNames = await readProjectNames(supabase, loans.data ?? []);
   const rows = sortLoans((loans.data ?? []).map((loan) => {
     const balance = byLoan.get(loan.id);
     return {

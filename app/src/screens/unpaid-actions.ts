@@ -3,7 +3,7 @@ import { getSupabase } from "../lib/supabase";
 import { useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useSumitStatusQuery, useUnpaidQuery } from "../use-books";
-import { REFRESH_DONE, SUMIT_REFRESH_KEYS, useSumitRefresh } from "../use-sumit-refresh";
+import { REFRESH_DONE, useSumitRefresh } from "../use-sumit-refresh";
 import { useSyncSettled } from "../use-sync-settled";
 import { useHoldWrites } from "../use-is-viewer";
 import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
@@ -69,7 +69,6 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
     pending: sync.isPending,
     lastSyncAt: sumitStatus.data?.last_sync_at,
     lastError: sumitStatus.data?.last_error,
-    keys: SUMIT_REFRESH_KEYS,
     success: REFRESH_DONE,
   });
 

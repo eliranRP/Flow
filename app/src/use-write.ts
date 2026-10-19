@@ -56,7 +56,7 @@ type Snapshot = { key: QueryKey; before: unknown };
  */
 export function useWrite<T = void>(options: {
   run: (payload: T) => Promise<void>;
-  keys: string[];
+  keys: readonly string[];
   /** A function reads the toast after the write, so it can say what the write returned. */
   success?: string | (() => string);
   failure: string | ((error: Error) => WriteFailure);

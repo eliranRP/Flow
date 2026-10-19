@@ -2,6 +2,8 @@ import { Navigate, useSearchParams } from "react-router-dom";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useDashboardQuery } from "../use-books";
+import { shownCompanyFor } from "../lib/company-header";
+import { useMyCompaniesQuery } from "../team-queries";
 import { ScreenState } from "../ui/screen-state";
 import { LoansSkeleton } from "../ui/screen-skeletons";
 import { useBlockedPreview } from "./screen-shared";
@@ -42,11 +44,15 @@ export function LoansScreen({ sample, closedOpen = false }: { sample?: LoansSamp
   const previewValue = params.get("preview");
   const search = usePreviewSearch();
   const blocked = useBlockedPreview();
+  // The company comes from what the app already holds (the shown company, then list_my_companies),
+  // so the loans read starts at once. get_dashboard only fills the new-loan sheet's projects.
+  const companies = useMyCompaniesQuery(sample == null && preview === "off");
   const dashboard = useDashboardQuery(sample == null);
-  const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, dashboard);
+  const companyId = companies.data != null ? companies.data.active_id : companies.isPending ? shownCompanyFor(companies.userId) : null;
+  const phase = sample ? ({ kind: "ready" } as const) : companyId != null && preview === "off" ? ({ kind: "ready" } as const) : screenPhase(preview, companies);
   const previewNoCompany = sample == null && previewValue === "empty";
   const sampleNoCompany = sample?.noCompany === true;
-  const liveNoCompany = sample == null && preview === "off" && dashboard.isSuccess && dashboard.data.company_id == null;
+  const liveNoCompany = sample == null && preview === "off" && companies.isSuccess && companies.data.active_id == null;
   if (previewNoCompany || sampleNoCompany || liveNoCompany) {
     return <Navigate to={`/settings${search}`} replace />;
   }
@@ -58,7 +64,7 @@ export function LoansScreen({ sample, closedOpen = false }: { sample?: LoansSamp
         leading={<span className="ui-skel-lead" aria-hidden="true" />}
         title="הלוואות"
         phase={phase}
-        onRetry={() => { void dashboard.refetch(); }}
+        onRetry={() => { void companies.refetch(); }}
         loading={<LoansSkeleton />}
       />
     );
@@ -68,7 +74,7 @@ export function LoansScreen({ sample, closedOpen = false }: { sample?: LoansSamp
     <ViewerScope>
       <ViewerNote />
       <LoansHost
-        companyId={sampled ? null : (dashboard.data?.company_id ?? null)}
+        companyId={sampled ? null : companyId}
         companyCurrency={sampled ? (sample?.loanCurrency ?? "ILS") : undefined}
         blocked={blocked}
         sample={sample ? (sample.loans ?? []) : preview !== "off" ? PREVIEW_LOANS : undefined}

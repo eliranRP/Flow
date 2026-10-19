@@ -11,9 +11,9 @@ import { useRefreshingNow } from "../israel-clock";
 import { assertNoError, useWrite } from "../use-write";
 import { useSumitConnect } from "../use-sumit-connect";
 import { useMercuryConnect } from "../use-mercury-connect";
-import { REFRESH_DONE, SUMIT_REFRESH_KEYS, useSumitRefresh } from "../use-sumit-refresh";
+import { REFRESH_DONE, useSumitRefresh } from "../use-sumit-refresh";
+import { LEDGER_KEYS } from "../ledger-keys";
 import { useSyncSettled } from "../use-sync-settled";
-import { MERCURY_REFRESH_KEYS } from "./connections-status";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { Button } from "../ui/button";
 import { ImportFromField } from "../ui/import-from-field";
@@ -157,7 +157,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
     failure: (error) => hebrewMercuryError(error.message) ?? "הרענון נכשל.",
     silent: (error) => error.message === "sync_held",
     success: () => mercuryRefreshDone(refreshResult.current),
-    keys: MERCURY_REFRESH_KEYS,
+    keys: LEDGER_KEYS,
     run: async () => {
       refreshResult.current = null;
       const data = await invokeEdge("mercury-sync", { force: true });
@@ -176,7 +176,6 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
     pending: provider === "sumit" ? refreshSumit.isPending : mercuryRefresh.isPending,
     lastSyncAt: liveStatus?.last_sync_at,
     lastError: liveStatus?.last_error,
-    keys: provider === "sumit" ? SUMIT_REFRESH_KEYS : MERCURY_REFRESH_KEYS,
     success: REFRESH_DONE,
   });
 

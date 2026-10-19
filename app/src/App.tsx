@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { lazy, useEffect, useRef, useState, type ComponentType, type LazyExoticComponent } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { afterSignInMessage, afterSignInPath, peekSignInReturn, rememberSignInReturn, signInPathFor } from "./safe-return";
@@ -23,6 +24,7 @@ import { SetupLanding, SetupResume } from "./setup/route";
 import { INVITES_PATH, landingWithInvites } from "./invite-landing";
 import { useKeyboardInset } from "./ui/keyboard-inset";
 import { preloadScreens, preloadSheet, screenLoaders } from "./screen-loaders";
+import { whenReadsSettle } from "./reads-settled";
 import { ScreenSuspense } from "./screen-suspense";
 import { PrefetchProjects } from "./prefetch";
 import { SignInScreen } from "./screens/SignInScreen";
@@ -70,6 +72,7 @@ if (import.meta.env.DEV) {
 
 export function App() {
   useKeyboardInset();
+  const queryClient = useQueryClient();
   useEffect(() => {
     listenForInstallPrompt();
     function onKey(event: KeyboardEvent) {
@@ -90,21 +93,27 @@ export function App() {
   useEffect(() => {
     // The dev server already fetched every screen at start (below the imports).
     if (import.meta.env.DEV) return;
-    // After the page has loaded, so the other screens never compete with Home's own reads.
+    // After the page has loaded and its first reads have settled (capped), then on idle, so the
+    // other screens never compete with Home's own reads and first paint.
     let idle = 0;
-    function schedule() {
+    let cancelSettle: () => void = () => undefined;
+    function preload() {
       idle = typeof window.requestIdleCallback === "function"
         ? window.requestIdleCallback(() => void preloadScreens(), { timeout: 3000 })
         : window.setTimeout(() => void preloadScreens(), 1000);
+    }
+    function schedule() {
+      cancelSettle = whenReadsSettle(queryClient, preload);
     }
     if (document.readyState === "complete") schedule();
     else window.addEventListener("load", schedule, { once: true });
     return () => {
       window.removeEventListener("load", schedule);
+      cancelSettle();
       if (typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idle);
       else window.clearTimeout(idle);
     };
-  }, []);
+  }, [queryClient]);
   return (
     <SessionProviders>
       <BooksProvider>

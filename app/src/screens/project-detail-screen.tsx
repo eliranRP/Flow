@@ -124,20 +124,17 @@ export function ProjectDetailScreen({
   const detail = useProjectQuery(sample ? "" : projectId, period);
   // FLOW-419: the project page opens on its cash, read beside the project (its name, investment and loans).
   const cash = useProjectCashMonthsQuery(sample ? "" : projectId);
-  // Home's late bills and changed charges; the page shows the project's own. FLOW-912: read once the
-  // project's own read has landed, like its groups, so two more reads stay out of the page's paint.
-  const recurring = useProjectRecurring(
-    projectId,
-    sample == null && detail.data != null && !detail.isFetching,
-    sampleRecurring,
-  );
+  // Home's late bills (the company read Home already holds) and the project's changed charges. They
+  // need only the project id, so they are read beside the project, not after it.
+  const recurring = useProjectRecurring(projectId, sample == null, sampleRecurring);
   // FLOW-360: the project's group and the company's groups, for the ⋯ menu's קבוצה row.
   // FLOW-804: read once the project's own read has landed, so they never slow the page's paint.
   const liveGroups = useProjectGroups(projectId, sample == null && detail.data != null && !detail.isFetching);
   const groups = sampleGroups ?? liveGroups;
-  // The profit since the project began: a read over every period, once the page's own read has landed.
-  const lifetime = useProjectQuery(sample == null && detail.data != null && !detail.isFetching ? projectId : "", ALL_PERIOD);
-  // The project's row on the Projects list (the same cached read the ⋯ menu uses): the month it began.
+  // The profit since the project began: a read over every period, beside the page's own read.
+  const lifetime = useProjectQuery(sample == null ? projectId : "", ALL_PERIOD);
+  // The project's row (the same cached read the ⋯ menu uses): the month it began. It starts from the
+  // Projects list's read, so a page opened from the list paints that row at once.
   const monthRows = useProjectsCashMonth(undefined, sample ? "" : projectId);
   const monthRow = sampleMenuRow ?? monthRows.data?.projects.find((row) => row.id === projectId);
   const preview = useHomePreview();

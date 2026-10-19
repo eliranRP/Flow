@@ -34,34 +34,40 @@ async function loanCount(companyId: string): Promise<number> {
   return Array.isArray(data) ? data.length : 0;
 }
 
-/** Derived done-state. A failed read is not done. A disabled query does not block the runner. */
-export function useSetupFacts(active = true): SetupFacts {
+/**
+ * Derived done-state. A failed read is not done. A disabled query does not block the runner.
+ * `details` off reads the company alone (Home's own get_dashboard): the step facts stay empty
+ * and ready, for a caller that only needs them while a run is open (SetupResume).
+ */
+export function useSetupFacts(active = true, details = true): SetupFacts {
   const preview = usePreviewMode();
   const { status } = useAuth();
   const live = active && !preview && status === "authed";
   const dashboard = useDashboardQuery(live);
   const companyId = dashboard.data?.company_id ?? null;
   const hasCompany = typeof companyId === "string" && companyId !== "";
-  const sumit = useSumitStatusQuery(live && hasCompany);
-  const mercury = useMercuryStatusQuery(live && hasCompany);
+  const steps = live && hasCompany && details;
+  const sumit = useSumitStatusQuery(steps);
+  const mercury = useMercuryStatusQuery(steps);
   const jev = useQuery({
     queryKey: ["setup-jev", companyId],
-    enabled: live && hasCompany,
+    enabled: steps,
     queryFn: jevRowExists,
   });
   const review = useQuery({
     queryKey: ["setup-review-resolved", companyId],
-    enabled: live && hasCompany,
+    enabled: steps,
     queryFn: resolvedReviewExists,
   });
   const loans = useQuery({
     queryKey: ["setup-loans", companyId],
-    enabled: live && hasCompany,
+    enabled: steps,
     queryFn: () => loanCount(companyId as string),
   });
   const standalone = isStandalone();
   if (!live || !dashboard.data) return { ...emptyFacts(!live), standalone };
   if (!hasCompany) return { ...emptyFacts(true), companyId: null, standalone };
+  if (!details) return { ...emptyFacts(true), companyId, standalone, projectCount: dashboard.data.projects.length };
   const waiting = sumit.isLoading || mercury.isLoading || jev.isLoading || review.isLoading || loans.isLoading;
   return {
     ready: !waiting,

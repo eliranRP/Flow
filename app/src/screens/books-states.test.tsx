@@ -170,11 +170,12 @@ describe("rejected reads", () => {
     const wire = JSON.parse(JSON.stringify(demoProject("herzl"), (_key, value: unknown) => (
       typeof value === "bigint" ? value.toString() : value
     ))) as unknown;
-    let answer: (value: { data: unknown; error: null }) => void = () => undefined;
+    // The page's read and the lifetime read (beside it) are both get_project; both wait.
+    const answers: Array<(value: { data: unknown; error: null }) => void> = [];
     const reads: string[] = [];
     rpc.impl = (name) => {
       reads.push(name);
-      if (name === "get_project") return new Promise((resolve) => { answer = resolve; });
+      if (name === "get_project") return new Promise((resolve) => { answers.push(resolve); });
       if (name === "project_cash_months") return Promise.resolve({ data: cashMonths, error: null });
       return Promise.resolve({ data: [], error: null });
     };
@@ -182,7 +183,10 @@ describe("rejected reads", () => {
     await waitFor(() => { expect(reads).toContain("get_project"); });
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
     expect(reads).not.toContain("list_project_groups");
-    await act(async () => { answer({ data: wire, error: null }); await Promise.resolve(); });
+    // What needs only the project id starts beside the page's read: the lifetime profit and the changed charges.
+    expect(reads.filter((name) => name === "get_project")).toHaveLength(2);
+    expect(reads).toContain("project_recurring_changes");
+    await act(async () => { for (const answer of answers) answer({ data: wire, error: null }); await Promise.resolve(); });
     expect(await screen.findByRole("heading", { level: 1, name: /שיפוץ הרצל 12/ })).toBeInTheDocument();
     await waitFor(() => { expect(reads).toContain("list_project_groups"); });
   });

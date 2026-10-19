@@ -11,7 +11,7 @@ import type { ChangeChoice } from "../ui/change-sheet-copy";
 import { Sheet } from "../ui/sheet";
 import { Toggle } from "../ui/toggle";
 import { approveFailure, approveShown } from "../approve-review";
-import { LEDGER_FOCUS_KEYS } from "../books-focus";
+import { LEDGER_KEYS } from "../ledger-keys";
 import { useHeldOrder } from "../list-hold";
 import { pinReviewHead, pinReviewLine, releaseReviewHold, reviewHold, reviewPin } from "../review-pin";
 import { emptyVisit, noteHandled, notePresence, visitPlace } from "../visit-meter";
@@ -232,7 +232,7 @@ export function ReviewQueue({
         categoryId: filled.category_id,
         shownProjectId: target.project_id,
         shownCategoryId: target.category_id,
-      }, () => invalidate([...LEDGER_FOCUS_KEYS]));
+      }, () => invalidate([...LEDGER_KEYS]));
       markHandled(target.id);
     },
     onSuccess: (target) => {
