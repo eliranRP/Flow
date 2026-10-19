@@ -1,11 +1,12 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { copyFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { checkReviewerBundle } from "../scripts/check-prod-bundle.mjs";
 import { rejectEmptyHostedSupabase } from "../scripts/hosted-env.mjs";
+import { buildCsp, fillCsp } from "../scripts/security-headers.mjs";
 
 /** Module ids of the production build. Written beside dist so the host never serves it. */
 function bundleGraph(): Plugin {
@@ -36,6 +37,24 @@ function reviewerGuard(): Plugin {
       if (bad.length > 0) {
         throw new Error(`${bad.join("\n")}\nThe reviewers-only build must not contain a Flow Test 2 name, a golden id or total, or the hosted Supabase URL, anon key, or project ref.`);
       }
+    },
+  };
+}
+
+/** Decision 0192: the CSP in dist/_headers names the built index.html's inline script by hash. */
+function securityHeaders(): Plugin {
+  let dist = path.resolve(__dirname, "dist");
+  return {
+    name: "flow-security-headers",
+    apply: "build",
+    configResolved(config) {
+      dist = path.resolve(config.root, config.build.outDir);
+    },
+    writeBundle() {
+      const html = readFileSync(path.join(dist, "index.html"), "utf8");
+      const target = path.join(dist, "_headers");
+      const csp = buildCsp({ html, supabaseUrl: process.env.VITE_SUPABASE_URL });
+      writeFileSync(target, fillCsp(readFileSync(target, "utf8"), csp));
     },
   };
 }
@@ -92,6 +111,8 @@ export default defineConfig(({ mode }) => {
       alias: [
         { find: /^@supabase\/realtime-js$/, replacement: path.resolve(__dirname, "src/lib/supabase-unused.ts") },
         { find: /^@supabase\/storage-js$/, replacement: path.resolve(__dirname, "src/lib/supabase-unused.ts") },
+        // Decision 0192: zod without its new Function probe, which the CSP (no 'unsafe-eval') reports.
+        { find: /^zod$/, replacement: path.resolve(__dirname, "src/lib/zod-jitless.ts") },
       ],
     },
     envDir: path.resolve(__dirname, ".."),
@@ -107,7 +128,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(e2eBuild ? { optimize: false } : undefined),
-      ...(storybook ? [] : [bundleGraph(), reviewerGuard()]),
+      ...(storybook ? [] : [bundleGraph(), reviewerGuard(), securityHeaders()]),
       ...(storybook || e2eBuild
         ? []
         : [

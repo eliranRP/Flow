@@ -63,6 +63,18 @@ test("the key check fails on the hosted project or a JWT and passes sample data"
   ]);
 });
 
+test("the check fails on the app's Pages rules at the build's root (0192)", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "sb-rules-"));
+  writeFileSync(path.join(dir, "_headers"), "/*\n  X-Frame-Options: DENY\n");
+  writeFileSync(path.join(dir, "_redirects"), "/sign-in /app-shell 200\n");
+  assert.deepEqual(previewKeyViolations(dir).map((line) => line.split(":")[0]).sort(), ["_headers", "_redirects"]);
+});
+
+test("Storybook leaves the app's public folder out and copies only the favicon", () => {
+  assert.match(storybookMain, /config\.publicDir = false;/);
+  assert.equal(/from: "\.\.\/public"\s*[,}]/.test(storybookMain), false, "staticDirs must not copy the whole public folder");
+});
+
 test("Storybook replaces the hosted Supabase settings with sample ones", () => {
   assert.match(storybookMain, /"import\.meta\.env\.VITE_SUPABASE_URL": JSON\.stringify\("https:\/\/example\.supabase\.co"\)/);
   assert.match(storybookMain, /"import\.meta\.env\.VITE_SUPABASE_ANON_KEY": JSON\.stringify\("storybook-sample-anon-key"\)/);

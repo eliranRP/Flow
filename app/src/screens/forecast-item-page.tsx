@@ -136,10 +136,6 @@ export function ForecastItemPage({
   const whenHint = when === "moved" ? `יוצא מהצפי של ${monthLabel}` : late ? "עבר המועד הרגיל" : `בצפי של ${monthLabel}`;
   const kindText = item.kind !== "invoice" ? "קבוע" : income ? "חשבונית פתוחה" : "חשבון ספק פתוח";
 
-  useEffect(() => {
-    if (window.scrollY > 0) window.scrollTo(0, 0);
-  }, []);
-
   // Escape closes the When sheet first (the sheet's own), then the page.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {

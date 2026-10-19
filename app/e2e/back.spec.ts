@@ -42,6 +42,35 @@ test("scroll on the project is still there after the expense", async ({ page }) 
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(before);
 });
 
+test("a screen opened from a scrolled page starts at the top, its first line below the header", async ({ browser }) => {
+  // The owner's phone: iPhone Safari kept the list's scroll, so the month page opened under its compact bar.
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  try {
+    await page.goto("/e2e/project");
+    const link = page.getByRole("link", { name: "רווח חודש לדוגמה" });
+    await link.scrollIntoViewIfNeeded();
+    const before = await page.evaluate(() => window.scrollY);
+    expect(before).toBeGreaterThan(0);
+    await link.click();
+    const title = page.getByRole("heading", { name: "רווח אוקטובר" });
+    await expect(title).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+    // No compact bar over the page, and the title and the line under it are fully on screen.
+    await expect(page.locator(".ui-compact-bar:not(.ui-compact-bar-gone)")).toHaveCount(0);
+    const titleBox = await title.boundingBox();
+    expect(titleBox?.y).toBeGreaterThanOrEqual(0);
+    const subtitle = page.locator("header.ui-page > p.t-line2").first();
+    const subtitleBox = await subtitle.boundingBox();
+    expect(subtitleBox?.y).toBeGreaterThan((titleBox?.y ?? 0) + (titleBox?.height ?? 0) - 1);
+    // Back still returns to the list where it was.
+    await page.goBack();
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(before);
+  } finally {
+    await context.close();
+  }
+});
+
 test("each screen returns to where it was opened, and a fresh visit uses its parent", async ({ page }) => {
   // 20 full page loads. Since FLOW-804 each one on the dev server also fetches every screen on
   // demand, which takes this loop past the default 30 s.

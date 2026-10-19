@@ -173,6 +173,7 @@ const devLinks: Array<[string, string]> = [
   ["/install?preview=1", "התקנה לדוגמה"],
   ["/review/change?preview=1", "שינוי לדוגמה"],
   ["/e2e/split-category?save=fail", "פיצול שנכשל"],
+  ["/e2e/project-month-profit", "רווח חודש לדוגמה"],
 ];
 
 export function DevProject() {
