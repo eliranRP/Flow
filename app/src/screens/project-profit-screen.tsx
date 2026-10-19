@@ -14,12 +14,13 @@ import { useProfitMonthsQuery, useProjectQuery } from "../use-books";
 import { Amount } from "../ui/amount";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
-import { EmptyState } from "../ui/empty-state";
+import { EmptyState, FailureLine } from "../ui/empty-state";
 import { Chip } from "../ui/chip";
 import { HEBREW_MONTHS } from "../ui/date-math";
 import { BarsIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
-import { ProfitSkeleton } from "../ui/screen-skeletons";
+import { NextMonthCardSkeleton, ProfitRowsSkeleton, ProfitSkeleton } from "../ui/screen-skeletons";
+import { DelayedSkeleton } from "../ui/skeleton";
 import { ScreenState } from "../ui/screen-state";
 import { NextMonthCard } from "./project-next-month-card";
 
@@ -83,6 +84,13 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
     ? project.overhead_share_minor ?? null
     : null;
   const nextMonth = useNextMonthForecast(id, currency, sample?.next, sample == null);
+  // The figure comes with the project; the month rows and the next-month card load after it, each on its own,
+  // so each slot shows its skeleton meanwhile and loaded rows never wait for the forecast. A read paused offline
+  // stays pending, so the card's skeleton shows only while its reads are really loading.
+  const live = sample == null;
+  const monthsLoading = live && months.isLoading;
+  const monthsFailed = live && months.isError;
+  const cardLoading = live && nextMonth.pending && !nextMonth.paused && !nextMonth.failed;
   const profit = row?.profit_minor ?? 0n;
   const after = share == null ? null : profit - share;
   const newestYear = rows[0]?.month.slice(0, 4) ?? "";
@@ -166,8 +174,14 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
             />
           ) : (
             <>
-              <NextMonthCard forecast={nextMonth.forecast} currency={currency} href={`/projects/${id}/profit/next${search}`} />
-              {rows.length === 0 ? null : (
+              {cardLoading
+                ? <DelayedSkeleton><NextMonthCardSkeleton /></DelayedSkeleton>
+                : <NextMonthCard forecast={nextMonth.forecast} currency={currency} href={`/projects/${id}/profit/next${search}`} />}
+              {monthsFailed ? (
+                <FailureLine offline={!navigator.onLine} onRetry={() => { void months.refetch(); }} />
+              ) : monthsLoading ? (
+                <DelayedSkeleton><ProfitRowsSkeleton /></DelayedSkeleton>
+              ) : rows.length === 0 ? null : (
                 <List className="ui-pp-months">
                   {rows.map((month) => (
                     <MonthLine
