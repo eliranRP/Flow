@@ -5,6 +5,7 @@ import {
   INVITE_ALREADY_MEMBER,
   INVITE_CANCELLED,
   INVITE_EMAIL_INVALID,
+  INVITE_LIMIT,
   INVITE_SENT,
   INVITE_TOO_MANY,
   INVITE_UPDATED,
@@ -142,6 +143,15 @@ describe("invite sheet (mockup invite-1)", () => {
     fireEvent.change(within(dialog).getByLabelText("אימייל"), { target: { value: "noa@example.com" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "שליחת הזמנה" }));
     expect(await screen.findByText(INVITE_TOO_MANY)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).toBeNull();
+  });
+
+  it("toasts the daily invite cap without a retry (FLOW-928)", async () => {
+    refuse("invite_member", "invite_limit");
+    const dialog = await openInvite();
+    fireEvent.change(within(dialog).getByLabelText("אימייל"), { target: { value: "noa@example.com" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "שליחת הזמנה" }));
+    expect(await screen.findByText(INVITE_LIMIT)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).toBeNull();
   });
 

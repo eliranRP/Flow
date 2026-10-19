@@ -25,6 +25,7 @@ insert into pg_allowed (sig) values
     ('cash_months(integer,date)'),
     ('cash_year_months(integer,date)'),
     ('cash_years(date)'),
+    ('claim_invite_email(uuid)'),
     ('clear_loan_split(uuid)'),
     ('collapse_split(uuid,uuid)'),
     ('company_pnl_basis()'),

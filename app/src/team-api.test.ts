@@ -1,5 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { INVITE_GONE, MEMBER_GONE, OWNER_ONLY, liveTeamApi, teamFailure } from "./team-api";
+import {
+  INVITE_FAILED,
+  INVITE_GONE,
+  INVITE_LIMIT,
+  INVITE_TOO_MANY,
+  MEMBER_GONE,
+  OWNER_ONLY,
+  inviteRefusal,
+  liveTeamApi,
+  teamFailure,
+} from "./team-api";
 
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), invokeEdge: vi.fn() }));
 vi.mock("./lib/supabase", () => ({ getSupabase: () => ({ rpc: mocks.rpc }) }));
@@ -17,6 +27,22 @@ describe("teamFailure (FLOW-601)", () => {
   it("keeps its own words for anything else, and says when the role refused", () => {
     expect(failure(new Error("network"))).toBe("לא הצלחנו.");
     expect(failure(Object.assign(new Error("forbidden"), { code: "42501" }))).toEqual({ message: OWNER_ONLY, retry: false });
+  });
+});
+
+describe("inviteRefusal (FLOW-928)", () => {
+  it("toasts the daily invite cap without a retry", () => {
+    expect(inviteRefusal(Object.assign(new Error("invite_limit"), { code: "23514" }))).toEqual({
+      toast: { message: INVITE_LIMIT, retry: false },
+    });
+  });
+
+  it("keeps the open-invites refusal apart from the daily cap", () => {
+    expect(inviteRefusal(new Error("too many invites"))).toEqual({ toast: { message: INVITE_TOO_MANY, retry: false } });
+  });
+
+  it("leaves an unknown refusal to the generic failure", () => {
+    expect(inviteRefusal(new Error("invite_limit_other"))).toEqual({ toast: { message: INVITE_FAILED, retry: false } });
   });
 });
 

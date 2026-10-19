@@ -139,13 +139,13 @@ isOneToOne: false
                   ]
                 },"company_invites": {
                   Row: {
-                    "company_id": string,"created_at": string,"decided_at": string | null,"decided_by": string | null,"email": string,"expires_at": string,"id": string,"invited_by": string | null,"role": string,"seen_at": string | null,"status": string
+                    "company_id": string,"created_at": string,"decided_at": string | null,"decided_by": string | null,"email": string,"email_sends": number,"emailed_at": string | null,"expires_at": string,"id": string,"invited_by": string | null,"role": string,"seen_at": string | null,"status": string
                   }
                   Insert: {
-                    "company_id": string,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"email": string,"expires_at"?: string,"id"?: string,"invited_by"?: string | null,"role": string,"seen_at"?: string | null,"status"?: string
+                    "company_id": string,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"email": string,"email_sends"?: number,"emailed_at"?: string | null,"expires_at"?: string,"id"?: string,"invited_by"?: string | null,"role": string,"seen_at"?: string | null,"status"?: string
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"email"?: string,"expires_at"?: string,"id"?: string,"invited_by"?: string | null,"role"?: string,"seen_at"?: string | null,"status"?: string
+                    "company_id"?: string,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"email"?: string,"email_sends"?: number,"emailed_at"?: string | null,"expires_at"?: string,"id"?: string,"invited_by"?: string | null,"role"?: string,"seen_at"?: string | null,"status"?: string
                   }
                   Relationships: [
                     {
@@ -1236,6 +1236,9 @@ isOneToOne: false
 { Args: { "p_limit": number,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: {
               "company_id": string,"id": number,"provider": Database["public"]['Enums']["connector_provider"]
             }[]
+                           },
+"claim_invite_email":
+{ Args: { "p_invite_id": string }; Returns: Json
                            },
 "clear_loan_split":
 { Args: { "p_transaction_id": string }; Returns: Json

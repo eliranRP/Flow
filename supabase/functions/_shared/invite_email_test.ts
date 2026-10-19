@@ -28,9 +28,16 @@ function request(body: unknown, authorization = "Bearer user"): Request {
   });
 }
 
-function fakeFetch(canManage: boolean, sent: unknown[], resendStatus = 200): typeof fetch {
+type Claim = "ok" | "invite_email_limit" | "invite not found";
+
+function fakeFetch(canManage: boolean, sent: unknown[], resendStatus = 200, claim: Claim = "ok", claims: unknown[] = []): typeof fetch {
   return ((input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
+    if (url.endsWith("/rpc/claim_invite_email")) {
+      claims.push(JSON.parse(String(init?.body)));
+      if (claim === "ok") return Promise.resolve(Response.json({ id: INVITE, email_sends: 1 }));
+      return Promise.resolve(Response.json({ code: claim === "invite_email_limit" ? "23514" : "P0001", message: claim }, { status: 400 }));
+    }
     if (url.endsWith("/rpc/list_team")) return Promise.resolve(Response.json(team(canManage)));
     if (url.endsWith("/rpc/list_my_companies")) {
       return Promise.resolve(Response.json({ companies: [{ id: "c-1", name: "Acme" }] }));
@@ -42,11 +49,34 @@ function fakeFetch(canManage: boolean, sent: unknown[], resendStatus = 200): typ
 
 Deno.test("the owner's invite is mailed once, to the invited address", async () => {
   const sent: Array<Record<string, unknown>> = [];
-  const res = await handleInviteEmail(request({ invite_id: INVITE }), { fetch: fakeFetch(true, sent), env });
+  const claims: unknown[] = [];
+  const res = await handleInviteEmail(request({ invite_id: INVITE }), { fetch: fakeFetch(true, sent, 200, "ok", claims), env });
   assertEquals(res.status, 200);
+  assertEquals(claims, [{ p_invite_id: INVITE }]);
   assertEquals(sent.length, 1);
   assertEquals(sent[0].to, "noa@example.com");
   assertEquals(sent[0].subject, inviteSubject("Acme"));
+});
+
+Deno.test("an invite past its 3 emails is refused with email_limit and sends nothing", async () => {
+  const sent: unknown[] = [];
+  const res = await handleInviteEmail(request({ invite_id: INVITE }), {
+    fetch: fakeFetch(true, sent, 200, "invite_email_limit"),
+    env,
+  });
+  assertEquals(res.status, 429);
+  assertEquals(await res.json(), { error: "email_limit" });
+  assertEquals(sent.length, 0);
+});
+
+Deno.test("an invite the claim no longer finds (expired, cancelled) sends nothing", async () => {
+  const sent: unknown[] = [];
+  const res = await handleInviteEmail(request({ invite_id: INVITE }), {
+    fetch: fakeFetch(true, sent, 200, "invite not found"),
+    env,
+  });
+  assertEquals(res.status, 404);
+  assertEquals(sent.length, 0);
 });
 
 Deno.test("a caller who cannot manage the team sends nothing", async () => {

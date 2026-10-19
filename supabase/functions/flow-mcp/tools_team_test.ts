@@ -60,6 +60,14 @@ Deno.test("invite_member forwards the email and role, viewer by default, and che
   assertEquals(calls.length, 2);
 });
 
+Deno.test("invite_member passes the daily cap's refusal through by name (FLOW-928)", async () => {
+  const error = { code: "refused", message: "invite_limit" };
+  const { rpc } = rpcOf(() => ({ status: 200, json: { ok: false, error } }));
+  const refused = await callTool("invite_member", { idempotency_key: "inv-cap", email: "new@example.com" }, ["write"], rpc);
+  assertEquals(refused.isError, true);
+  assertEquals(refused.structuredContent, { ok: false, error });
+});
+
 Deno.test("set_member_role and remove_member take member_id (lower-cased; user_id is refused), and undo takes the team kinds", async () => {
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { user_id: MEMBER } } }));
   await callTool("set_member_role", { idempotency_key: "r-1", member_id: MEMBER.toUpperCase(), role: "editor" }, ["write"], rpc);
