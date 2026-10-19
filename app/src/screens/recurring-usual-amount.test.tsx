@@ -110,7 +110,7 @@ describe("the charge page: the usual amount", () => {
     fireEvent.change(within(sheet).getByRole("textbox", { name: "הסכום הרגיל" }), { target: { value: "99" } });
     fireEvent.click(within(sheet).getByRole("button", { name: "שמירה" }));
     expect(await screen.findByText("לא הצלחנו לעדכן את השורה.")).toBeTruthy();
-    expect((within(screen.getByRole("dialog")).getByRole("textbox", { name: "הסכום הרגיל" }) as HTMLInputElement).value).toBe("99");
+    expect(within(screen.getByRole("dialog")).getByDisplayValue("99")).toBeTruthy();
   });
 
   it("a viewer reads the amount but cannot open the sheet", () => {
