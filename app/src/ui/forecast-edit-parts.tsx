@@ -45,7 +45,9 @@ export function ForecastAmountField({
           inputMode="decimal"
           autoComplete="off"
           placeholder="0"
-          size={Math.max(value.length, 1)}
+          // Sized in digit widths (tabular figures, 1ch each), not by `size`: Safari's `size` takes an average
+          // character, narrower than the big digits, and clipped the last one.
+          style={{ inlineSize: `${String(Math.max(value.length, 1))}ch` }}
           value={value}
           onChange={(event) => { onChange(event.target.value); }}
         />

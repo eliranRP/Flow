@@ -60,6 +60,8 @@
   color: var(--color-text);
   font-size: var(--type-detail-size);
   line-height: var(--type-band-line);
+  /* Each digit is 1ch, so the input's width in ch (its own inline size) holds the typed figure. */
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 .ui-fe-amount-income {
