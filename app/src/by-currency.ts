@@ -1,4 +1,4 @@
-import { type Dashboard, type ProjectDetail, type ProjectRow } from "@flow/shared";
+import { type CashMonths, type Dashboard, type ProjectDetail, type ProjectRow } from "@flow/shared";
 
 export type ProjectCurrencyRow = {
   currency: string;
@@ -78,5 +78,15 @@ export function dashboardHasBooks(data: Dashboard): boolean {
   if (data.income_agorot !== 0n || data.expense_agorot !== 0n) return true;
   return data.by_currency.some(
     (row) => row.count > 0 || row.income_minor !== 0n || row.expense_minor !== 0n,
+  );
+}
+
+/**
+ * A cash line in Home's recent months proves the books, so Home can draw them before
+ * `get_dashboard` answers. No line says nothing: a company may have only older lines or projects.
+ */
+export function cashHasBooks(data: CashMonths): boolean {
+  return (data?.months ?? []).some((month) =>
+    month.by_currency.some((row) => row.in_minor !== 0n || row.out_minor !== 0n || row.excluded_count > 0),
   );
 }

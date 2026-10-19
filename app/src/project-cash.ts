@@ -1,5 +1,5 @@
-import type { CashCurrencyRow, CashLine, CashMonths } from "@flow/shared";
-import { useQuery } from "@tanstack/react-query";
+import type { CashCurrencyRow, CashLine, CashMonths, ProjectsCashMonth } from "@flow/shared";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cashMonthKey, cashMonthName, cashSummaryRows, cashTitle, shownCashRows } from "./cash";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
@@ -129,9 +129,18 @@ export function useProjectCashMonthLinesQuery(projectId: string, month: string, 
  */
 export function useProjectsCashMonth(month?: string, projectId?: string) {
   const preview = useHomePreview();
+  const client = useQueryClient();
+  const listKey = ["projects-cash", month, undefined] as const;
   return useQuery({
     queryKey: ["projects-cash", month, projectId],
     enabled: preview === "off",
+    // A project's row starts from the list's read of the same month, as old as that read: it reads
+    // again once the list's copy would have, and at once when a write marked the list stale.
+    initialData: () => projectRowFromList(client.getQueryData<ProjectsCashMonth>(listKey), projectId),
+    initialDataUpdatedAt: () => {
+      const list = client.getQueryState(listKey);
+      return list?.isInvalidated === true ? 0 : list?.dataUpdatedAt;
+    },
     queryFn: async () => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -145,4 +154,11 @@ export function useProjectsCashMonth(month?: string, projectId?: string) {
       return (await loadReadSchemas()).projectsCashMonthSchema.parse(data);
     },
   });
+}
+
+/** The list's answer cut to one project's row, or nothing when the list has no read or no such row. */
+function projectRowFromList(list: ProjectsCashMonth | undefined, projectId: string | undefined): ProjectsCashMonth | undefined {
+  if (list == null || projectId == null || projectId === "") return undefined;
+  const row = list.projects.find((project) => project.id === projectId);
+  return row == null ? undefined : { ...list, projects: [row] };
 }

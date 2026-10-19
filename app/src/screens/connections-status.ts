@@ -20,8 +20,6 @@ export function sumitKind(input: {
   return "disconnected";
 }
 
-export const MERCURY_REFRESH_KEYS = ["mercury", "dashboard", "unpaid", "review", "project"];
-
 /** A connector's one-word status (FLOW-512, the board's words). A read-only view can't reconnect,
     so an expired key reads "לא מחובר" there. */
 export function connectorWord(kind: SumitKind, readOnly = false): string {

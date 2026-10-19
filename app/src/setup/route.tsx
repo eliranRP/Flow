@@ -2,8 +2,9 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { usePreviewMode } from "../preview";
+import { useDashboardQuery } from "../use-books";
 import { useSetupFacts } from "./facts";
-import { decideEntry, withPatch } from "./model";
+import { decideEntry, runMayResume, withPatch } from "./model";
 import { resetSetupServerForTests } from "./server-store";
 import { useSetupStore } from "./store";
 import { markSessionEntered, sessionEntered, writeSetupStore } from "./storage";
@@ -44,8 +45,12 @@ export function SetupResume() {
   const userId = session?.user.id ?? null;
   const viewer = useSetupViewer();
   // Home is the only launch surface. A cold /review must not call get_dashboard or leave the card.
-  const facts = useSetupFacts(home && !preview && status === "authed" && viewer.ready && !viewer.viewer);
-  const { store, ready: storeReady } = useSetupStore(userId, facts.companyId);
+  const launch = home && !preview && status === "authed" && viewer.ready && !viewer.viewer;
+  const dashboard = useDashboardQuery(launch);
+  const { store, ready: storeReady } = useSetupStore(userId, launch ? dashboard.data?.company_id ?? null : null);
+  // The step reads (SUMIT, Mercury, Jev, review, loans) only while a run could resume, as
+  // SetupHomeSlot waits for a started run: a finished, skipped or resumed run never reads them.
+  const facts = useSetupFacts(launch, storeReady && runMayResume(store, userId != null && sessionEntered(userId)));
   const navigate = useNavigate();
   const acted = useRef("");
   useEffect(() => {

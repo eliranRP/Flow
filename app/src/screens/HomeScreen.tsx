@@ -1,6 +1,6 @@
 import { type CashMonths, type CashToDay } from "@flow/shared";
 import { SyncStrip } from "../ui/sync-strip";
-import { dashboardHasBooks } from "../by-currency";
+import { cashHasBooks, dashboardHasBooks } from "../by-currency";
 import { onlineManager } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -157,10 +157,14 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
 
   const cashPhase = screenPhase(preview, cash);
   const dashboardPhase = screenPhase(preview, dashboard);
-  const errorPhase = cashPhase.kind === "error" ? cashPhase : dashboardPhase.kind === "error" ? dashboardPhase : null;
-  const ready = cashPhase.kind === "ready" && dashboardPhase.kind === "ready";
-  const showBooks = ready && cash.data != null && dashboard.data != null && dashboardHasBooks(dashboard.data);
-  const loading = errorPhase == null && (cashPhase.kind === "loading" || dashboardPhase.kind === "loading" || (!previewing && status === "loading" && !showBooks));
+  // Home waits on cash_months alone when it holds a line. Only a company with no recent line
+  // waits for get_dashboard too, so the empty state never shows before Flow knows.
+  const cashBooks = cashPhase.kind === "ready" && cash.data != null && cashHasBooks(cash.data);
+  const dashboardGate = cashBooks ? null : dashboardPhase;
+  const errorPhase = cashPhase.kind === "error" ? cashPhase : dashboardGate?.kind === "error" ? dashboardGate : null;
+  const ready = cashPhase.kind === "ready" && (cashBooks || dashboardPhase.kind === "ready");
+  const showBooks = ready && cash.data != null && (cashBooks || (dashboard.data != null && dashboardHasBooks(dashboard.data)));
+  const loading = errorPhase == null && (cashPhase.kind === "loading" || dashboardGate?.kind === "loading" || (!previewing && status === "loading" && !showBooks));
   const failed = errorPhase != null || previewHidesBand(preview);
   const offline = errorPhase != null ? errorPhase.offline : preview === "error";
   useBandMark(failed, showBooks);
@@ -216,7 +220,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       previewing={previewing}
       search={search}
       attention={isCurrent ? attentionRows({
-        pending: dashboard.data.review_count,
+        pending: dashboard.data?.review_count ?? 0,
         unpaidCount: unpaidPhase.kind === "ready" ? unpaidOpenRows(unpaid.data ?? []).length : 0,
         unpaidGross,
         currency: base,
@@ -226,15 +230,17 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
         changes: chargeChangeViews(changes.data ?? [], search),
         search,
       }) : []}
-      unpaidFailed={isCurrent && unpaidPhase.kind === "error"}
-      onUnpaidRetry={() => {
-        void unpaid.refetch();
+      // A failed unpaid read, or a failed get_dashboard (the review count) once cash drew the books.
+      attentionFailed={isCurrent && (unpaidPhase.kind === "error" || dashboardPhase.kind === "error")}
+      onAttentionRetry={() => {
+        if (unpaidPhase.kind === "error") void unpaid.refetch();
+        if (dashboardPhase.kind === "error") void dashboard.refetch();
       }}
       sameDay={isCurrent ? sameDay.data ?? null : null}
       forecast={forecast != null && forecast.show ? forecast.minor : null}
       onStepMonth={navigateTo}
       checklist={isCurrent ? <SetupHomeSlot emptyHome={false} /> : null}
-      company={previewing ? undefined : <CompanySwitcher fallbackName={dashboard.data.name} />}
+      company={previewing ? undefined : <CompanySwitcher fallbackName={dashboard.data?.name} />}
     />
   );
 }
@@ -251,8 +257,8 @@ export function CashHome({
   previewing,
   search,
   attention,
-  unpaidFailed = false,
-  onUnpaidRetry,
+  attentionFailed = false,
+  onAttentionRetry,
   example,
   checklist,
   company,
@@ -273,8 +279,9 @@ export function CashHome({
   previewing: boolean;
   search: string;
   attention: BannerRow[];
-  unpaidFailed?: boolean;
-  onUnpaidRetry?: () => void;
+  /** A read behind the attention box failed (unpaid, or the review count): a retry line above it. */
+  attentionFailed?: boolean;
+  onAttentionRetry?: () => void;
   /** Storybook sample label. The live home never passes it. */
   example?: ReactNode;
   checklist?: ReactNode;
@@ -382,12 +389,12 @@ export function CashHome({
         </div>
       )}
 
-      {unpaidFailed ? (
+      {attentionFailed ? (
         <div className="ui-page-pad">
           <FailureLine
             offline={false}
             onRetry={() => {
-              onUnpaidRetry?.();
+              onAttentionRetry?.();
             }}
           />
         </div>

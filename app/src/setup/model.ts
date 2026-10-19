@@ -101,12 +101,17 @@ export type EntryDecision =
 export function decideEntry(store: SetupStore, facts: SetupFacts, sessionAlreadyEntered: boolean, at: string): EntryDecision {
   if (!facts.ready) return { kind: "wait" };
   if (facts.companyId == null) return { kind: "redirect", to: "/setup/welcome", patch: null, markSession: false };
-  if (store.flow_at == null || store.run_started_at == null) return { kind: "stay" };
-  if (store.finished_at != null || store.skipped_all_at != null) return { kind: "stay" };
-  if (store.run_resumed_at != null || sessionAlreadyEntered) return { kind: "stay" };
+  if (!runMayResume(store, sessionAlreadyEntered)) return { kind: "stay" };
   const step = firstResumable(store, facts);
   if (step == null) return { kind: "stay" };
   return { kind: "redirect", to: stepPath(step), patch: { run_resumed_at: at }, markSession: true };
+}
+
+/** A run that started and has not finished, skipped everything or resumed already: only it needs the step facts. */
+export function runMayResume(store: SetupStore, sessionAlreadyEntered: boolean): boolean {
+  if (store.flow_at == null || store.run_started_at == null) return false;
+  if (store.finished_at != null || store.skipped_all_at != null) return false;
+  return store.run_resumed_at == null && !sessionAlreadyEntered;
 }
 
 /** The index (/setup) opens where the owner left off: the first step not done, skipped ones included. */

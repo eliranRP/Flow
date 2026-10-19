@@ -1,0 +1,48 @@
+/**
+ * Every read whose answer the books decide: a bank or SUMIT sync, another device, or an agent
+ * can change it. Reads stay fresh for 30 minutes (query-client.ts), so a finished sync
+ * (use-sync-settled.ts) and a focus return (books-focus.tsx, decision 0080) refetch all of
+ * these on screen and mark the rest stale. ledger-keys.test.ts fails when a read's key is in
+ * neither this list nor its short list of account reads (companies, team, settings, setup run).
+ */
+export const LEDGER_KEYS = [
+  "dashboard",
+  "review",
+  "review-anomalies",
+  "unpaid",
+  "filed-today",
+  "categories",
+  "sumit",
+  "mercury",
+  "project",
+  "project-category",
+  "project-waiting",
+  "projects-cash",
+  "profit-months",
+  "project-forecast-edits",
+  "txn",
+  "line-meta",
+  "line-split",
+  "line-split-loan",
+  "loan-split",
+  "breakdown",
+  "breakdown-lines",
+  "month-forecast",
+  "missing-bills",
+  "expected-months",
+  "recurring-changes",
+  "recurring-schedule",
+  "payment-recurring",
+  "party-charges",
+  "party-line",
+  "loans",
+  "loan-currency",
+  "company-currency",
+  "search",
+  "receipt-match",
+  "jev-connector",
+  "jev-review",
+  "jev-review-queue",
+  "setup-suggestions",
+  "setup-review-resolved",
+] as const;

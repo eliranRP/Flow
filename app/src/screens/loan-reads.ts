@@ -9,14 +9,9 @@ export async function readLoanBalances(supabase: SupabaseClient<Database>, compa
   return new Map((balances.data ?? []).map((row) => [row.loan_id, row]));
 }
 
-/** The names of the projects these loans sit on, by project id. */
-export async function readProjectNames(supabase: SupabaseClient<Database>, loans: ReadonlyArray<{ project_id: string | null }>) {
-  const projectIds = [...new Set(loans.flatMap((loan) => (loan.project_id == null ? [] : [loan.project_id])))];
-  const projectNames = new Map<string, string>();
-  if (projectIds.length > 0) {
-    const projects = await supabase.from("projects").select("id, name").in("id", projectIds);
-    assertNoError(projects);
-    for (const project of projects.data ?? []) projectNames.set(project.id, project.name);
-  }
-  return projectNames;
+/** The company's project names, by project id: read beside the loans, not after them, for the projects they sit on. */
+export async function readProjectNames(supabase: SupabaseClient<Database>, companyId: string) {
+  const projects = await supabase.from("projects").select("id, name").eq("company_id", companyId);
+  assertNoError(projects);
+  return new Map((projects.data ?? []).map((project) => [project.id, project.name]));
 }

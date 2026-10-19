@@ -111,6 +111,9 @@ vi.mock("../lib/supabase", () => ({
   getSupabase: () => supabase,
 }));
 
+/** A run the flow started and left open: the one kind that may resume, so it reads the step facts. */
+const openRun = { ...emptySetupStore(), flow_at: "2026-10-04T00:00:00.000Z", run_started_at: "2026-10-04T00:00:00.000Z" };
+
 function Where() {
   const { pathname } = useLocation();
   return <p>{pathname}</p>;
@@ -165,7 +168,7 @@ describe("setup resume", () => {
 
 
   it("does not resume when Home is opened after a deep link", async () => {
-    writeSetupStore(userId, "company-1", { ...emptySetupStore(), run_started_at: "2026-10-04T00:00:00.000Z" });
+    writeSetupStore(userId, "company-1", openRun);
     const { router } = renderAt("/review", ["/review"]);
     await waitFor(() => {
       expect(screen.getByText("/review")).toBeInTheDocument();
@@ -182,7 +185,7 @@ describe("setup resume", () => {
   });
 
   it("does not resume when Home is opened after a full-screen deep link", async () => {
-    writeSetupStore(userId, "company-1", { ...emptySetupStore(), run_started_at: "2026-10-04T00:00:00.000Z" });
+    writeSetupStore(userId, "company-1", openRun);
     const router = createMemoryRouter(
       [{
         element: <><SetupLanding /><Outlet /></>,
@@ -234,5 +237,43 @@ describe("setup resume", () => {
       waitFor(() => { expect(router.state.location.pathname).not.toBe("/"); }, { timeout: 500 }),
     ).rejects.toThrow();
     expect(calls.rpc).not.toContain("get_dashboard");
+  });
+
+  it("resumes an open run at its first step when Home is the landing", async () => {
+    gate.setupRow = { state: openRun };
+    const { router } = renderAt("/");
+    await waitFor(() => {
+      expect(router.state.location.pathname).toMatch(/^\/setup\//);
+    });
+    expect(calls.from).toContain("review_queue");
+    expect(calls.rpc).toContain("sumit_status");
+  });
+
+  it("makes none of the step reads on Home once the run is finished", async () => {
+    const finished = { ...openRun, finished_at: "2026-10-05T00:00:00.000Z" };
+    gate.setupRow = { state: finished };
+    writeSetupStore(userId, "company-1", finished);
+    const { router } = renderAt("/");
+    await waitFor(() => {
+      expect(calls.from).toContain("setup_states");
+    });
+    await expect(
+      waitFor(() => { expect(router.state.location.pathname).not.toBe("/"); }, { timeout: 500 }),
+    ).rejects.toThrow();
+    expect(calls.rpc.filter((name) => name === "get_dashboard")).toHaveLength(1);
+    expect(calls.rpc).not.toContain("sumit_status");
+    for (const table of ["review_queue", "company_integrations", "loans", "connector_connection_status"]) expect(calls.from).not.toContain(table);
+  });
+
+  it("makes none of the step reads on Home when no run started", async () => {
+    const { router } = renderAt("/");
+    await waitFor(() => {
+      expect(calls.from).toContain("setup_states");
+    });
+    await expect(
+      waitFor(() => { expect(router.state.location.pathname).not.toBe("/"); }, { timeout: 500 }),
+    ).rejects.toThrow();
+    expect(calls.rpc).not.toContain("sumit_status");
+    expect(calls.from).not.toContain("review_queue");
   });
 });

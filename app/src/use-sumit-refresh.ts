@@ -1,10 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { invokeEdge } from "./edge";
+import { LEDGER_KEYS } from "./ledger-keys";
 import { hebrewSumitError } from "./sumit-copy";
 import { useWrite } from "./use-write";
 
 export const REFRESH_DONE = "הרענון הסתיים.";
-export const SUMIT_REFRESH_KEYS = ["sumit", "dashboard", "unpaid", "review", "project"];
 
 /**
  * One SUMIT refresh, as the connector's "רענון עכשיו" starts it: the sumit-sync edge call with
@@ -17,7 +17,7 @@ export function useSumitRefresh() {
     failure: (error) => hebrewSumitError(error.message) ?? "הרענון נכשל.",
     silent: (error) => error.message === "sync_held",
     success: REFRESH_DONE,
-    keys: SUMIT_REFRESH_KEYS,
+    keys: LEDGER_KEYS,
     run: async () => {
       const data = await invokeEdge("sumit-sync", { force: true });
       if (data != null && typeof data === "object" && "skipped" in data && data.skipped === true) {

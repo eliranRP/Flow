@@ -10,7 +10,7 @@ import { transactionQueryOptions, useCategoriesQuery, useDashboardQuery, useInva
 import { reviewFocusPath } from "../review-paths";
 import { assertNoError, useWrite } from "../use-write";
 import { approveFailure, approveShown } from "../approve-review";
-import { LEDGER_FOCUS_KEYS } from "../books-focus";
+import { LEDGER_KEYS } from "../ledger-keys";
 import { useJevReview } from "./jev-review-card";
 import { jevShown, withJev } from "./jev-review";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, COLLAPSE_SPLIT_NOTE, type ChangeChoice } from "../ui/change-sheet";
@@ -372,7 +372,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
         categoryId,
         shownProjectId: row.project_id,
         shownCategoryId: row.category_id,
-      }, () => invalidate([...LEDGER_FOCUS_KEYS]));
+      }, () => invalidate([...LEDGER_KEYS]));
     },
   });
   // Shown on the project list of an ordinary card with both fields set. Not for a viewer, a shared
