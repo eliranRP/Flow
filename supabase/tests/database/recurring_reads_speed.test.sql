@@ -5,18 +5,21 @@
 
 begin;
 
-select plan(10);
+select plan(14);
 
 do $users$
 begin
   perform tests.create_supabase_user('rs_owner', 'rs-owner@example.com');
+  perform tests.create_supabase_user('rs_outsider', 'rs-outsider@example.com');
 end
 $users$;
 
 create temp table rs (label text primary key, id uuid);
 grant all on rs to authenticated, service_role;
 
-insert into rs (label, id) values ('co', tests.fixture_company('rs_owner', 'Example Streams LLC'));
+insert into rs (label, id) values
+  ('co', tests.fixture_company('rs_owner', 'Example Streams LLC')),
+  ('other_co', tests.fixture_company('rs_outsider', 'Example Elsewhere LLC'));
 
 create or replace function pg_temp.id(p_label text)
 returns uuid
@@ -149,6 +152,12 @@ insert into public.line_splits (company_id, transaction_id, ordinal, category_id
   (pg_temp.id('co'), pg_temp.id('mixed'), 1, pg_temp.id('upkeep'), null, 6000),
   (pg_temp.id('co'), pg_temp.id('mixed'), 2, pg_temp.id('deposit'), pg_temp.id('birch'), 4000);
 
+-- A line waiting on Alder (a suggested category), and every line id, for the company checks after test 10.
+select tests.fixture_line(pg_temp.id('co'), 'rs:guess', 3000, 'expense', pg_temp.id('alder'), pg_temp.id('upkeep'),
+  p_suggested => true);
+create temp table rs_ids as select t.id from public.transactions t where t.company_id = pg_temp.id('co');
+grant select on rs_ids to authenticated, service_role;
+
 select tests.authenticate_as('rs_owner');
 
 select is(
@@ -176,6 +185,33 @@ select is(
     private.line_pnl_state(pg_temp.id('mixed'))],
   array['in', 'out', 'mixed'],
   'the reference reads a split line by its scope'
+);
+
+-- 11. The owner sees Alder's waiting line and its upkeep lines.
+select ok(
+  jsonb_array_length(public.project_waiting(pg_temp.id('alder'))) > 0
+    and jsonb_array_length(public.list_project_category(pg_temp.id('alder'), pg_temp.id('upkeep')) -> 'rows') > 0,
+  'the owner sees the project''s waiting lines and category lines'
+);
+
+-- 12-14. Another company's user reads none of them.
+select tests.authenticate_as('rs_outsider');
+
+select is(
+  (select count(*)::integer
+   from private.line_pnl_states(array(select id from pg_temp.rs_ids), pg_temp.id('alder'), pg_temp.id('upkeep'))),
+  0,
+  'line_pnl_states(ids, project, category) returns no line of another company'
+);
+select is(
+  public.project_waiting(pg_temp.id('alder')),
+  '[]'::jsonb,
+  'project_waiting shows no waiting line of another company'
+);
+select is(
+  public.list_project_category(pg_temp.id('alder'), pg_temp.id('upkeep')),
+  null::jsonb,
+  'list_project_category reads nothing of another company''s project'
 );
 
 select * from finish();
