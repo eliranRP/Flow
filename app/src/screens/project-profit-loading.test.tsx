@@ -30,10 +30,7 @@ const ready = { data: project, isPending: false, isLoading: false, isError: fals
 const forecastBase = { forecast: null, failed: false, month: "2026-11", edits: [], recurring: [], categoryMonths: null, categories: [], refetch: vi.fn() };
 
 // Each case sets what the months read and the forecast reads return.
-const state = vi.hoisted(() => ({
-  months: {} as Record<string, unknown>,
-  forecast: {} as Record<string, unknown>,
-}));
+const state = vi.hoisted((): { months: object; forecast: object } => ({ months: {}, forecast: {} }));
 
 vi.mock("../use-books", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../use-books")>()),
