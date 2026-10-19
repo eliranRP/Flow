@@ -96,6 +96,9 @@
   transition: max-height var(--motion-page) var(--ease-exit), opacity var(--motion-fade) var(--ease-exit), transform var(--motion-page) var(--ease-exit);
 }
 
+/* The small-charges group opens its rows inside the same li, so it never takes the row cap. */
+.ui-forecast-li-group { max-height: none; }
+
 .ui-forecast-leaving {
   max-height: 0;
   opacity: 0;

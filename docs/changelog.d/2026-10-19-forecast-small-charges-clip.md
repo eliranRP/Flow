@@ -1,0 +1,1 @@
+On צפי, opening "חיובים קבועים קטנים" shows every small charge again. The group opens its rows inside its own list row, which kept the 80px cap the row-leave animation uses, so only the top of the first charge showed under the button. The group row is now exempt from that cap; `app/e2e/forecast.spec.ts` checks the opened group holds all its rows.

@@ -334,7 +334,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
                   <ForecastRowButton key={item.key} item={item} today={today} onOpen={openItem} leaving={leavingKey === item.key} />
                 ))}
                 {build.small.length > 0 ? (
-                  <li className="ui-forecast-li">
+                  <li className="ui-forecast-li ui-forecast-li-group">
                     <button type="button" className="ui-forecast-row ui-forecast-small" aria-expanded={smallOpen} onClick={() => { setSmallOpen((value) => !value); }}>
                       <span className="ui-forecast-initial" aria-hidden="true">{`+${String(build.small.length)}`}</span>
                       <span className="ui-forecast-text">

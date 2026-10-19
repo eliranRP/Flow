@@ -42,3 +42,16 @@ test("קבועים on one project shows only its rows and names it (FLOW-424)", 
   await expect(page.locator(".ui-recurring li")).toHaveCount(4);
   await expect(page.getByText("Juniper Pointe HOA")).toHaveCount(0);
 });
+
+test("צפי: opening the small charges shows every one of them, not just the first", async ({ page }) => {
+  await page.goto("/e2e/forecast?preview=1&kind=board");
+  const group = page.getByRole("button", { name: /חיובים קבועים קטנים/ });
+  await group.click();
+  await expect(group).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator(".ui-forecast-small-list > li")).toHaveCount(11);
+  // The rows open inside the group's own li: it must grow to hold them, not clip them under the button.
+  const li = page.locator(".ui-forecast-li-group");
+  const { client, scroll } = await li.evaluate((el) => ({ client: el.clientHeight, scroll: el.scrollHeight }));
+  expect(scroll).toBeGreaterThan(200);
+  expect(client).toBeGreaterThanOrEqual(scroll);
+});
