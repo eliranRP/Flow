@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { useLocation, useNavigate, useNavigationType, NavigationType } from "react-router-dom";
 import { IconButton } from "./icon-button";
 import { useEdgeBack } from "./edge-back";
 import { BackIcon } from "./icons";
+import { readSheetBackground } from "../sheet-background";
 
 /** React Router stores its stack index on the browser history entry. */
 export function historyIndex(): number | null {
@@ -163,12 +164,6 @@ function scrollToSaved(y: number): void {
   scrollToWarned = true;
 }
 
-/** Prev and next on the card start each card at the top. */
-export function scrollPageToTop(): void {
-  scrollToSaved(0);
-}
-
-/** Restores the scroll of a history entry. The period and the tab live elsewhere. */
 /** The path at each browser history index this app has seen, so a labelled Back can check where it goes. */
 const pathsByIndex = new Map<number, string>();
 
@@ -190,20 +185,46 @@ export function useBackLandsOn(fallback: string): boolean {
   return previous < 0 || pathsByIndex.get(previous) === pathOf(fallback);
 }
 
+/**
+ * Each history entry keeps its own scroll. Back and forward (a pop) restore the entry's spot
+ * (decision 0069). A push or replace that draws another screen starts it at the top: the browser
+ * keeps the window scroll across a pushState, so a screen opened from a scrolled list came up
+ * scrolled to its own end, its first lines under the compact bar. A new entry on the same screen
+ * (a sheet, a period or filter in the query) keeps the scroll.
+ */
 export function ScrollMemory() {
   const location = useLocation();
+  const action = useNavigationType();
+  const drawnPath = (readSheetBackground(location.state) ?? location).pathname;
+  const shownPath = useRef(drawnPath);
+  // The scroll as last seen on this entry. Read on scroll, never at the switch: by then the next
+  // screen is in the document and the browser has clamped the scroll to its height.
+  const lastY = useRef(0);
   useEffect(() => {
     const idx = historyIndex();
     if (idx != null) pathsByIndex.set(idx, location.pathname);
   }, [location.key, location.pathname]);
   useEffect(() => {
+    const onScroll = () => { lastY.current = window.scrollY; };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { window.removeEventListener("scroll", onScroll); };
+  }, []);
+  // Before paint, so the next screen never shows a frame at the old scroll.
+  useLayoutEffect(() => {
     const key = location.key;
     const saved = scrollPositions.get(key);
-    if (saved != null) scrollToSaved(saved);
+    const newScreen = drawnPath !== shownPath.current;
+    shownPath.current = drawnPath;
+    if (action === NavigationType.Pop) {
+      if (saved != null) scrollToSaved(saved);
+    } else if (newScreen && window.scrollY !== 0) {
+      scrollToSaved(0);
+    }
+    lastY.current = window.scrollY;
     return () => {
-      scrollPositions.set(key, window.scrollY);
+      scrollPositions.set(key, lastY.current);
     };
-  }, [location.key]);
+  }, [location.key, action, drawnPath]);
   return null;
 }
 

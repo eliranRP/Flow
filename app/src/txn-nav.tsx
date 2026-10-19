@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useLocation, useNavigate } from "react-router-dom";
 import { useHomePreview } from "./preview";
 import { transactionQueryOptions } from "./use-books";
-import { scrollPageToTop, sheetStack } from "./ui/back";
+import { sheetStack } from "./ui/back";
 import { TxnStepRow } from "./ui/txn-step-row";
 import { grownIds, useTxnListMoreFor } from "./txn-list-more";
 
@@ -127,7 +127,6 @@ export function useTxnNav(transactionId: string): TxnNav | null {
       replace: true,
       state: via === "swipe" ? { txnList: walk, txnVia: via, txnEnter: direction } : { txnList: walk, txnVia: via },
     });
-    scrollPageToTop();
   }, [list, sent, next, prev, canLoad, loadMore, navigate, location.search, transactionId]);
   // The page landed while ˅ waited: go on to the first new row.
   useEffect(() => {
