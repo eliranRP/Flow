@@ -1,10 +1,13 @@
+import { formatAmountText } from "@flow/shared";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { JUNIPER_NEXT, JUNIPER_NEXT_EDITED } from "../dev/project-next-month-sample";
+import { JUNIPER_NEXT, JUNIPER_NEXT_EDITED, JUNIPER_NEXT_LOAN } from "../dev/project-next-month-sample";
 import { JUNIPER_PROFIT } from "../dev/project-profit-sample";
+import type { ForecastLoan } from "../project-next-loans";
 import type { NextMonthSample } from "../project-next-month-query";
 import { renderWithProviders } from "../test-render";
+import { loanOutlook } from "./loan-outlook";
 import { ProjectNextMonthScreen } from "./project-next-month-screen";
 import { ProjectProfitScreen, type ProjectProfitSample } from "./project-profit-screen";
 
@@ -188,5 +191,34 @@ describe("ProjectNextMonthScreen", () => {
     renderNext();
     expect(screen.getByRole("heading", { name: "צפי" })).toBeTruthy();
     expect(screen.getByText("אין עדיין מספיק נתונים לצפי")).toBeTruthy();
+  });
+});
+
+describe("the next-month page with a loan (decision 0190)", () => {
+  it("shows the loan's interest and escrow from its schedule, under לפי ההלוואה, and says so in the note", () => {
+    const { container } = renderNext(JUNIPER_NEXT_LOAN);
+    const rows = Array.from(container.querySelectorAll(".ui-pn-rows .ui-row"));
+    expect(rows.map((row) => row.querySelector(".ui-row-title")?.textContent)).toEqual([
+      "M. Ortiz",
+      "S. Kim",
+      "ריבית הלוואות",
+      "מסים וביטוח",
+      "תיקונים ותחזוקה",
+      "חשמל ומים",
+    ]);
+    expect(rows[2]?.textContent).toContain("לפי ההלוואה");
+    const next = loanOutlook(JUNIPER_NEXT_LOAN.loans?.[0] as ForecastLoan, JUNIPER_NEXT_LOAN.today)?.next;
+    expect(next?.dueDate).toBe("2026-11-01");
+    expect(rows[2]?.textContent).toContain(`−${formatAmountText(next?.interestMinor ?? 0n, "USD")}`);
+    expect(rows[3]?.textContent).toContain("לפי ההלוואה");
+    expect(rows[3]?.textContent).toContain(`−${formatAmountText(next?.escrowMinor ?? 0n, "USD")}`);
+    expect(rows[4]?.textContent).toContain("ממוצע 3 חודשים");
+    expect(screen.getByText("לפי הקבועים של הנכס, לוח ההלוואה וממוצע 6 החודשים האחרונים לכל קטגוריה. נגיעה בשורה משנה אותה או מסירה אותה.")).toBeTruthy();
+  });
+
+  it("names the loan rows in the card's basis", () => {
+    renderProfit({ ...JUNIPER_PROFIT, next: JUNIPER_NEXT_LOAN });
+    const card = screen.getByRole("link", { name: /^צפי נובמבר/ });
+    expect(within(card).getByText("2 קבועים, 2 לפי ההלוואה ו־2 ממוצעים")).toBeTruthy();
   });
 });

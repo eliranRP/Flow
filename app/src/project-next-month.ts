@@ -1,17 +1,25 @@
 import type { ExpectedParty, ProjectCategoryMonths } from "@flow/shared";
+import { type ForecastCategory, type ForecastLoan, loanParts } from "./project-next-loans";
 
 /**
- * A project's forecast for next month (the ProfitProject card and the ProfitNext page), in profit terms:
- * the project's recurring charges due that month, plus one average row for each expense category no
- * recurring charge of the project files to. Pure: the screens pass in what expected_months and
- * project_category_months read.
+ * A project's forecast for next month (the ProfitProject card, the ProfitNext page and its edit page), in
+ * profit terms: the project's recurring charges due that month, its loans' interest and escrow for that
+ * month, plus one average row for each other expense category. Pure: the screens pass in what
+ * expected_months, project_category_months, the project's loans and the company's categories read.
  *
  * - A recurring charge that pays a loan (`pays_loan`) is cash, not profit: its usual amount is the whole
- *   payment, principal included. It is left out of the recurring rows, and the loan's profit parts
- *   (interest, escrow) come in as the averages of their own categories, which count no principal.
+ *   payment, principal included. It is left out of the recurring rows.
+ * - The loan's profit parts come from the loan itself (decision 0190): for each open loan filed under the
+ *   project with a schedule (not a demand loan), in the forecast's currency, the payment due that month as
+ *   the loan page shows it (its payments left, from the balance in the books: FLOW-427, loan-outlook's
+ *   paymentsLeft) gives its interest in the loan's interest category and its escrow in its escrow category
+ *   (the loan's own, else the company's keyed one; none when kept out of the profit). So next month's rows
+ *   are the loan page's next payment. Several loans in one category sum into one row. A month before the
+ *   first payment left or after the last (the balance paid off), or a closed or paid-off loan, gives nothing. The row keeps
+ *   the key `avg:<category>`, so the user's edits of that category's row still apply.
  * - A category is left out of the averages as soon as any recurring charge of the project (a loan payment
  *   aside) files to it, even one not due next month, so a one-off cost in that category drops out of the
- *   forecast too.
+ *   forecast too; and as soon as a loan row fills it.
  * - Uncategorized expenses are one average row named אחר.
  * - An average is over the months of the window from the project's first expense in it, so a project
  *   younger than six months is not divided by six.
@@ -24,6 +32,9 @@ const AVERAGE_MONTHS = 6;
 
 /** The name of the uncategorized expenses' average row. */
 const UNCATEGORIZED = "אחר";
+
+/** Under a loan row's name: its interest or escrow comes from the loan's schedule (decision 0190). */
+export const LOAN_SOURCE = "לפי ההלוואה";
 
 type Pace = NonNullable<ExpectedParty["pace"]>;
 
@@ -50,15 +61,15 @@ export type ProjectForecastEdit = {
 /** One expected line next month: signed (income positive, an expense negative), in minor units. */
 export type NextMonthRow = {
   key: string;
-  /** A recurring charge, a category's average, or a line the user added. */
-  kind: "recurring" | "average" | "added";
+  /** A recurring charge, a loan's interest or escrow, a category's average, or a line the user added. */
+  kind: "recurring" | "loan" | "average" | "added";
   /** Money in or out: a change keeps it, whatever the amount (a zero row included). */
   direction: "income" | "expense";
   name: string;
-  /** yyyy-mm-dd, the expected day; null on an average row and an added line. */
+  /** yyyy-mm-dd, the expected day of a recurring charge; null on the other rows. */
   date: string | null;
   minor: bigint;
-  /** The category the row files to (an average's own, a charge's, an added line's); null when none. */
+  /** The category the row files to (an average's or a loan row's own, a charge's, an added line's); null when none. */
   categoryId: string | null;
   /** Flow's number before the user changed it; null when the row is Flow's. */
   wasMinor: bigint | null;
@@ -76,6 +87,7 @@ export type NextMonthForecast = {
   /** Income less expenses, before the share of general expenses. */
   netMinor: bigint;
   recurringCount: number;
+  loanCount: number;
   averageCount: number;
   /** The months the averages are over: the window from the project's first expense in it. */
   averageMonths: number;
@@ -147,16 +159,16 @@ function averageMonths(months: ProjectCategoryMonths | null | undefined): number
   return Math.max(length - first, 1);
 }
 
-/** The average rows: one per expense category of the currency with no recurring charge filing to it. */
+/** The average rows: one per expense category of the currency no recurring charge or loan row fills. */
 function averageRows(
   months: ProjectCategoryMonths | null | undefined,
   currency: string,
-  recurringCategories: ReadonlySet<string>,
+  filled: ReadonlySet<string>,
   divisor: number,
 ): NextMonthRow[] {
   const rows: NextMonthRow[] = [];
   for (const category of months?.categories ?? []) {
-    if (category.currency !== currency || (category.id != null && recurringCategories.has(category.id))) continue;
+    if (category.currency !== currency || (category.id != null && filled.has(category.id))) continue;
     const total = category.months_minor.reduce((sum, value) => sum + BigInt(value), 0n);
     const average = roundDiv(total, BigInt(divisor));
     // A category whose refunds outweigh its costs has nothing to expect.
@@ -166,7 +178,12 @@ function averageRows(
       ? { ...base, key: "avg:none", name: UNCATEGORIZED }
       : { ...base, key: `avg:${category.id}`, name: category.name ?? "" });
   }
-  return rows.sort((a, b) => (a.minor === b.minor ? a.name.localeCompare(b.name, "he") : a.minor < b.minor ? -1 : 1));
+  return rows.sort(byAmount);
+}
+
+/** The biggest cost first, then by name. */
+function byAmount(a: NextMonthRow, b: NextMonthRow): number {
+  return a.minor === b.minor ? a.name.localeCompare(b.name, "he") : a.minor < b.minor ? -1 : 1;
 }
 
 function signedAmount(party: ExpectedParty): bigint {
@@ -176,7 +193,7 @@ function signedAmount(party: ExpectedParty): bigint {
 
 /**
  * Next month's rows for one project and currency: the recurring ones by expected day (a loan payment
- * left out), the averages last.
+ * left out), then the loan rows, the averages last.
  */
 export function nextMonthForecast(input: {
   projectId: string;
@@ -184,12 +201,31 @@ export function nextMonthForecast(input: {
   today: string;
   recurring: readonly ExpectedParty[];
   categoryMonths: ProjectCategoryMonths | null | undefined;
+  /** The project's loans, and the company's categories their parts file to. */
+  loans?: readonly ForecastLoan[];
+  categories?: readonly ForecastCategory[];
 }): NextMonthForecast {
   const month = nextMonthKey(input.today);
   const thisMonth = input.today.slice(0, 7);
-  // A loan payment is not a profit line: its category is averaged like any other.
+  // A loan payment is not a profit line: the loan's own rows stand for its interest and escrow.
   const charges = input.recurring.filter((party) => party.project_id === input.projectId && party.pays_loan !== true);
-  const recurringCategories = new Set(charges.flatMap((party) => (party.category_id == null ? [] : [party.category_id])));
+  const loans = loanParts({ projectId: input.projectId, currency: input.currency, month, today: input.today, loans: input.loans ?? [], categories: input.categories ?? [] })
+    .map((part): NextMonthRow => ({
+      key: `avg:${part.categoryId}`,
+      kind: "loan",
+      direction: "expense",
+      name: part.name,
+      date: null,
+      minor: -part.minor,
+      categoryId: part.categoryId,
+      wasMinor: null,
+      pace: null,
+    }))
+    .sort(byAmount);
+  const filled = new Set([
+    ...charges.flatMap((party) => (party.category_id == null ? [] : [party.category_id])),
+    ...loans.flatMap((row) => (row.categoryId == null ? [] : [row.categoryId])),
+  ]);
   const recurring = charges
     .filter((party) => party.currency === input.currency && dueInMonth(party.next_due_month, party.pace, month, thisMonth))
     .map((party): NextMonthRow => ({
@@ -205,8 +241,8 @@ export function nextMonthForecast(input: {
     }))
     .sort((a, b) => ((a.date ?? "") === (b.date ?? "") ? a.name.localeCompare(b.name, "he") : (a.date ?? "") < (b.date ?? "") ? -1 : 1));
   const divisor = averageMonths(input.categoryMonths);
-  const averages = averageRows(input.categoryMonths, input.currency, recurringCategories, divisor);
-  return withTotals(month, [...recurring, ...averages], divisor, [], [], 0);
+  const averages = averageRows(input.categoryMonths, input.currency, filled, divisor);
+  return withTotals(month, [...recurring, ...loans, ...averages], divisor, [], [], 0);
 }
 
 function withTotals(
@@ -226,6 +262,7 @@ function withTotals(
     expenseMinor,
     netMinor: incomeMinor - expenseMinor,
     recurringCount: rows.filter((row) => row.kind === "recurring").length,
+    loanCount: rows.filter((row) => row.kind === "loan").length,
     averageCount: rows.filter((row) => row.kind === "average").length,
     averageMonths: divisor,
     removed,
@@ -302,12 +339,18 @@ export function applyForecastEdits(forecast: NextMonthForecast, edits: readonly 
   );
 }
 
-/** The card's third line: what the forecast is made of, and how many edits the user made. */
-export function basisLine(forecast: Pick<NextMonthForecast, "recurringCount" | "averageCount" | "editCount">): string {
-  const { recurringCount, averageCount, editCount } = forecast;
-  const fixed = recurringCount === 1 ? "קבוע אחד" : `${String(recurringCount)} קבועים`;
-  const average = averageCount === 1 ? "ממוצע אחד" : `${String(averageCount)} ממוצעים`;
-  const parts = averageCount === 0 ? fixed : recurringCount === 0 ? average : `${fixed} ו־${average}`;
+/**
+ * The card's third line: what the forecast is made of ("2 קבועים, שורה לפי ההלוואה ו־3 ממוצעים"), and how
+ * many edits the user made.
+ */
+export function basisLine(forecast: Pick<NextMonthForecast, "recurringCount" | "loanCount" | "averageCount" | "editCount">): string {
+  const { recurringCount, loanCount, averageCount, editCount } = forecast;
+  const kinds = [
+    recurringCount === 0 && (averageCount > 0 || loanCount > 0) ? null : recurringCount === 1 ? "קבוע אחד" : `${String(recurringCount)} קבועים`,
+    loanCount === 0 ? null : loanCount === 1 ? "שורה לפי ההלוואה" : `${String(loanCount)} לפי ההלוואה`,
+    averageCount === 0 ? null : averageCount === 1 ? "ממוצע אחד" : `${String(averageCount)} ממוצעים`,
+  ].filter((kind): kind is string => kind != null);
+  const parts = kinds.length === 1 ? kinds[0] ?? "" : `${kinds.slice(0, -1).join(", ")} ו־${kinds.at(-1) ?? ""}`;
   return editCount === 0 ? parts : `${parts} · ערכת ${String(editCount)}`;
 }
 

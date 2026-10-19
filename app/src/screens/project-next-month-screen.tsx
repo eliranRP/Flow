@@ -8,7 +8,7 @@ import { allTime } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { useProjectForecastWrites } from "../project-forecast-writes";
 import { monthWord, PACE_WORDS } from "../project-next-edit";
-import { monthlyOverheadShare, type NextMonthRow } from "../project-next-month";
+import { LOAN_SOURCE, monthlyOverheadShare, type NextMonthRow } from "../project-next-month";
 import { useNextMonthForecast } from "../project-next-month-query";
 import { screenPhase } from "../query-phase";
 import { useHoldWrites } from "../use-is-viewer";
@@ -26,9 +26,11 @@ import { SummaryRow, type ProjectProfitSample } from "./project-profit-screen";
 type ProjectNextMonthSample = ProjectProfitSample & { next: NonNullable<ProjectProfitSample["next"]> };
 
 const NOTE = "לפי הקבועים של הנכס וממוצע 6 החודשים האחרונים לכל קטגוריה. נגיעה בשורה משנה אותה או מסירה אותה.";
+const LOAN_NOTE = "לפי הקבועים של הנכס, לוח ההלוואה וממוצע 6 החודשים האחרונים לכל קטגוריה. נגיעה בשורה משנה אותה או מסירה אותה.";
 
-/** What a row is made of: its day and קבוע, its average, or the line the user added. */
+/** What a row is made of: its day and קבוע, the loan, its average, or the line the user added. */
 export function rowSource(row: NextMonthRow, months: number, month: string): string {
+  if (row.kind === "loan") return LOAN_SOURCE;
   if (row.kind === "added") return `הוספת · ${row.pace == null || row.pace === "once" ? `רק ב${monthWord(month)}` : PACE_WORDS[row.pace]}`;
   if (row.date != null) return `צפוי ${formatDayMonth(row.date)} · קבוע`;
   return months === 1 ? "ממוצע חודש אחד" : `ממוצע ${String(months)} חודשים`;
@@ -53,8 +55,8 @@ export function editPath(projectId: string, rowKey: string): string {
  * The ProfitNext frame: a project's forecast for next month, opened from the dashed card on its profit page.
  * The card's four rows are the expected income and expenses, the project's average monthly share of general
  * expenses (its share since the start over its months, as the profit page shows it) and the profit after it.
- * Then the expected rows: recurring charges by their day, the category averages last, the lines the user
- * added after them. No chips, no grouping. A tap on a row opens its edit page; under the rows, הוספת קטגוריה
+ * Then the expected rows: recurring charges by their day, the loan's interest and escrow, the category averages
+ * last, the lines the user added after them. No chips, no grouping. A tap on a row opens its edit page; under the rows, הוספת קטגוריה
  * לצפי, the rows taken out (with החזרה) and חזרה לצפי של Flow. A viewer reads the rows only.
  */
 export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSample } = {}) {
@@ -126,7 +128,7 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
               <SummaryRow strong label="רווח אחרי הוצאות כלליות" value={<Amount agorot={after} currency={currency} loss={after < 0n} />} />
             )}
           </Card>
-          <p className="ui-pp-note t-caption t-muted">{NOTE}</p>
+          <p className="ui-pp-note t-caption t-muted">{forecast.loanCount > 0 ? LOAN_NOTE : NOTE}</p>
           {forecast.rows.length === 0 ? <p className="ui-pp-note t-caption t-muted">אין תנועות צפויות בחודש הזה.</p> : (
             <List layout="flat" className="ui-pn-rows">
               {forecast.rows.map((row) => (

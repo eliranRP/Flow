@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { JUNIPER_NEXT } from "./dev/project-next-month-sample";
+import { JUNIPER_NEXT, JUNIPER_NEXT_LOAN } from "./dev/project-next-month-sample";
 import {
   addMonths,
   categoryChoices,
@@ -15,6 +15,7 @@ import {
   savedToast,
 } from "./project-next-edit";
 import { nextMonthForecast } from "./project-next-month";
+import { loanOutlook } from "./screens/loan-outlook";
 
 const base = nextMonthForecast({ projectId: "juniper-ct", currency: "USD", today: JUNIPER_NEXT.today, recurring: JUNIPER_NEXT.expected.recurring, categoryMonths: JUNIPER_NEXT.categoryMonths });
 
@@ -135,5 +136,46 @@ describe("categoryChoices", () => {
     });
     expect(result.suggested.find((choice) => choice.name === "ביטוח")?.hint).toBe("פעם אחת · $1,240 באפריל");
     expect(result.suggested.find((choice) => choice.name === "ניהול נכס")?.hint).toBe("ממוצע 6 חודשים בפרויקט: $305");
+  });
+});
+
+describe("the edit page's figures with a loan row (decision 0190)", () => {
+  const loanForecast = nextMonthForecast({
+    projectId: "juniper-ct",
+    currency: "USD",
+    today: JUNIPER_NEXT_LOAN.today,
+    recurring: JUNIPER_NEXT_LOAN.expected.recurring,
+    categoryMonths: JUNIPER_NEXT_LOAN.categoryMonths,
+    loans: JUNIPER_NEXT_LOAN.loans,
+    categories: JUNIPER_NEXT_LOAN.categories,
+  });
+
+  it("counts the loan rows' categories as in the forecast, so the category sheet leaves them out", () => {
+    const inForecast = forecastCategoryIds(loanForecast);
+    expect([...inForecast].sort()).toEqual(["loan-interest", "power", "rent", "repairs", "taxes"]);
+    const result = categoryChoices({
+      categories: JUNIPER_NEXT_LOAN.categories ?? [],
+      categoryMonths: JUNIPER_NEXT_LOAN.categoryMonths,
+      recurring: JUNIPER_NEXT_LOAN.expected.recurring,
+      projectId: "juniper-ct",
+      currency: "USD",
+      divisor: loanForecast.averageMonths,
+      inForecast,
+      query: "",
+    });
+    const names = [...result.suggested, ...result.rest].map((choice) => choice.name);
+    expect(names).not.toContain("ריבית הלוואות");
+    expect(names).not.toContain("מסים וביטוח");
+  });
+
+  it("shows the interest category's own months next to the loan row's amount", () => {
+    const bars = historyBars(JUNIPER_NEXT_LOAN.categoryMonths, "loan-interest", "USD");
+    const loan = JUNIPER_NEXT_LOAN.loans?.[0];
+    const september = BigInt(JUNIPER_NEXT_LOAN.categoryMonths?.categories.find((row) => row.id === "loan-interest")?.months_minor.at(-1) ?? 0);
+    expect(bars?.months.map((bar) => bar.minor)).toEqual([0n, 0n, 0n, 0n, september]);
+    const next = loan == null ? null : loanOutlook(loan, JUNIPER_NEXT_LOAN.today)?.next;
+    expect(next?.dueDate).toBe("2026-11-01");
+    expect(loanForecast.rows.find((row) => row.key === "avg:loan-interest")?.minor).toBe(-(next?.interestMinor ?? 0n));
+    expect(next?.interestMinor).not.toBe(september);
   });
 });

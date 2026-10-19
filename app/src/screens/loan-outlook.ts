@@ -48,16 +48,21 @@ function sumRows(key: string, rows: readonly LoanScheduleRow[]): OutlookPeriod {
  * only and its balloon; a balance below the schedule ends the loan sooner, one above it leaves more
  * for the last payment.
  */
-export type OutlookLoan = Pick<
+export type OutlookLoan = ScheduleLoan & Pick<LoanDetail, "status" | "balanceMinor">;
+
+/** The loan's fields the schedule reads. */
+export type ScheduleLoan = Pick<
   LoanDetail,
-  "status" | "kind" | "termMonths" | "paymentMinor" | "balanceMinor" | "rates" | "principalMinor" | "annualRatePpm" | "startDate" | "escrowMinor" | "interestOnlyMonths" | "amortizationMonths"
+  "kind" | "termMonths" | "paymentMinor" | "rates" | "principalMinor" | "annualRatePpm" | "startDate" | "escrowMinor" | "interestOnlyMonths" | "amortizationMonths"
 >;
 
-export function loanOutlook(loan: OutlookLoan, today: string): LoanOutlook | null {
-  if (loan.status !== "open" || loan.kind === "demand" || loan.termMonths == null || loan.paymentMinor == null) return null;
-  if (loan.balanceMinor <= 0n) return null;
-  const rates = [...loan.rates].reverse().map((rate) => ({ effectiveDate: rate.effectiveDate, annualRatePpm: rate.annualRatePpm }));
-  const terms: LoanTerms = {
+/**
+ * The terms buildLoanSchedule takes for a loan, as the loan page passes them (its rates oldest first).
+ * Null for a demand loan, or one with no term or payment: it has no schedule.
+ */
+export function loanScheduleTerms(loan: ScheduleLoan): LoanTerms | null {
+  if (loan.kind === "demand" || loan.termMonths == null || loan.paymentMinor == null) return null;
+  return {
     principalMinor: loan.principalMinor,
     annualRatePpm: loan.annualRatePpm,
     termMonths: loan.termMonths,
@@ -67,16 +72,30 @@ export function loanOutlook(loan: OutlookLoan, today: string): LoanOutlook | nul
     kind: loan.kind,
     interestOnlyMonths: loan.interestOnlyMonths,
     amortizationMonths: loan.amortizationMonths,
-    rates,
+    rates: [...loan.rates].reverse().map((rate) => ({ effectiveDate: rate.effectiveDate, annualRatePpm: rate.annualRatePpm })),
   };
-  let left: readonly LoanScheduleRow[];
+}
+
+/**
+ * The payments due today or later, from the balance in the books (FLOW-427). Null for a demand loan, one
+ * that ended, or terms the schedule refuses. The loan page's outlook and the project forecast's loan rows
+ * (decision 0190) both read it, so the two show the same payment.
+ */
+export function paymentsLeft(loan: OutlookLoan, today: string): readonly LoanScheduleRow[] | null {
+  if (loan.status !== "open" || loan.balanceMinor <= 0n) return null;
+  const terms = loanScheduleTerms(loan);
+  if (terms == null) return null;
   try {
     const first = buildLoanSchedule(terms).rows.find((row) => row.dueDate >= today);
-    if (first == null) return null;
-    left = remainingFromBalance(terms, loan.balanceMinor, first);
+    return first == null ? null : remainingFromBalance(terms, loan.balanceMinor, first);
   } catch {
     return null;
   }
+}
+
+export function loanOutlook(loan: OutlookLoan, today: string): LoanOutlook | null {
+  const left = paymentsLeft(loan, today);
+  if (left == null) return null;
   const next = left[0];
   if (next == null) return null;
   const endDate = left.at(-1)?.dueDate ?? next.dueDate;
