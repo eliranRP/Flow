@@ -5,7 +5,8 @@
 --   like the team RPCs (an editor or a viewer gets 'forbidden' 42501, a user with no company of
 --   their own gets 'no company'). p_company_id must be the request's company, as in rename_company.
 --   p_confirm, trimmed the way company names are, must equal the company's name exactly, else
---   'confirmation_mismatch' (22023) and nothing changes.
+--   'confirmation_mismatch' (22023) and nothing changes. A request whose claims carry a flow-mcp
+--   token (mcp_tid) gets 'forbidden' (42501): there is no MCP tool, and the database enforces it.
 -- - Deleting the company row cascades to every table with a foreign key to companies, and from
 --   there to the rows that hang off them (mcp_idempotency through mcp_credentials, for one).
 -- - Six tables carry a company_id with no foreign key to companies: private.mcp_writes,
@@ -31,7 +32,18 @@ declare
   cid uuid;
   current_name text;
   tokens uuid[];
+  claims jsonb;
 begin
+  -- A flow-mcp token never deletes a company (decision 0194). Same accessor as private.active_company().
+  begin
+    claims := nullif(current_setting('request.jwt.claims', true), '')::jsonb;
+  exception
+    when others then
+      claims := null;
+  end;
+  if nullif(claims->>'mcp_tid', '') is not null then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
   cid := private.team_owner_company();
   if p_company_id is null or p_company_id is distinct from cid then
     raise exception 'forbidden' using errcode = '42501';

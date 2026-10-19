@@ -11,7 +11,7 @@ import { assertNoError, useWrite, type WriteFailure } from "../use-write";
 
 export const DANGER_HEAD = "אזור מסוכן";
 export const DELETE_ROW = "מחיקת כל הנתונים";
-export const DELETE_NOTE = "מוחק את העסק לכל מי שבצוות. החשבון שלך נשאר.";
+export const DELETE_NOTE = "מוחק את העסק לכל מי שבצוות. החשבון שלכם נשאר.";
 export const DELETE_TITLE = "למחוק את כל הנתונים?";
 export const DELETE_CONSEQUENCE =
   "כל הפרויקטים, התנועות, ההלוואות, החיבורים וההגדרות של העסק יימחקו לכל מי שבצוות. אי אפשר לבטל את המחיקה.";
@@ -32,7 +32,7 @@ export function deleteConfirmMatches(typed: string, companyName: string): boolea
 
 function deleteFailure(error: Error): WriteFailure {
   const code = (error as Error & { code?: string }).code;
-  if (code === "42501" || error.message.trim() === "no company") return { message: DELETE_REFUSED, retry: false };
+  if (code === "42501") return { message: DELETE_REFUSED, retry: false };
   if (error.message.trim() === "confirmation_mismatch") return { message: DELETE_MISMATCH, retry: false };
   return DELETE_FAILED;
 }

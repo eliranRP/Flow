@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import * as supabaseModule from "../lib/supabase";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
-import { RolePreview, ViewerPreview } from "../use-is-viewer";
+import { RolePreview, VIEWER_NOTE, ViewerPreview } from "../use-is-viewer";
 import { BusinessScreen } from "./business-screen";
 import {
   AFTER_DELETE_PATH,
@@ -141,6 +141,16 @@ describe("DeleteCompanySheet (decision 0194)", () => {
     expect(await screen.findByText(DELETE_REFUSED)).toBeInTheDocument();
     expect(screen.getByText("open")).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/settings/business");
+  });
+
+  it("shows the viewer note when the server finds no company this user may write", async () => {
+    mockRpc(() => ({ error: { message: "no company", code: "P0001" } }));
+    renderSheet();
+    typeName(NAME);
+    fireEvent.click(confirmButton());
+    expect(await screen.findByText(VIEWER_NOTE)).toBeInTheDocument();
+    expect(screen.queryByText(DELETE_REFUSED)).not.toBeInTheDocument();
+    expect(screen.getByText("open")).toBeInTheDocument();
   });
 
   it("toasts a name the server does not accept", async () => {

@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(28);
+select plan(30);
 
 do $users$
 begin
@@ -191,7 +191,26 @@ select throws_ok(
   'forbidden',
   'a missing company id is refused'
 );
+-- A flow-mcp token of the owner, with the right name, is refused too.
 reset role;
+insert into dz (label, id)
+select 'token', cred.id from private.mcp_credentials cred where cred.token_hash = 'hash-dz-doomed';
+select set_config('role', 'authenticated', true);
+select set_config('request.jwt.claim.sub', pg_temp.id('owner')::text, true);
+select set_config('request.jwt.claims',
+  json_build_object('sub', pg_temp.id('owner'), 'role', 'authenticated', 'aal', 'aal1', 'mcp_tid', pg_temp.id('token'))::text, true);
+select throws_ok(
+  $$select public.delete_company(pg_temp.id('doomed'), 'Example Danger Works')$$,
+  '42501',
+  'forbidden',
+  'the owner through a flow-mcp token is refused, even with the right name'
+);
+reset role;
+select is(
+  (select count(*)::integer from public.companies where id = pg_temp.id('doomed')),
+  1,
+  'the flow-mcp refusal deleted nothing'
+);
 select is(
   (select coalesce(array_agg(b.rel order by b.rel), '{}')
    from dz_doomed_before b
