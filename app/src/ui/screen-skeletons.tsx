@@ -193,6 +193,20 @@ export function ProfitSkeleton() {
   );
 }
 
+/** The profit page's month rows while they load, under a figure that is already in (board profitLoading's rows). */
+export function ProfitRowsSkeleton() {
+  return (
+    <div className="ui-state-skel" aria-busy="true">
+      <Loading />
+      <div className="ui-skel-group">
+        {cards.map((key) => (
+          <ListRowSkeleton key={key} first="46%" second="62%" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function DetailFieldSkeleton() {
   return (
     <div className="ui-skel-detail-row">

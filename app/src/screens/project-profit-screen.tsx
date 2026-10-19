@@ -19,7 +19,8 @@ import { Chip } from "../ui/chip";
 import { HEBREW_MONTHS } from "../ui/date-math";
 import { BarsIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
-import { ProfitSkeleton } from "../ui/screen-skeletons";
+import { ProfitRowsSkeleton, ProfitSkeleton } from "../ui/screen-skeletons";
+import { DelayedSkeleton } from "../ui/skeleton";
 import { ScreenState } from "../ui/screen-state";
 import { NextMonthCard } from "./project-next-month-card";
 
@@ -83,6 +84,9 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
     ? project.overhead_share_minor ?? null
     : null;
   const nextMonth = useNextMonthForecast(id, currency, sample?.next, sample == null);
+  // The figure comes with the project; the month rows and the next-month card load after it, so their place
+  // shows a skeleton meanwhile instead of an empty page.
+  const rowsLoading = sample == null && (months.isLoading || (nextMonth.pending && nextMonth.forecast == null));
   const profit = row?.profit_minor ?? 0n;
   const after = share == null ? null : profit - share;
   const newestYear = rows[0]?.month.slice(0, 4) ?? "";
@@ -164,6 +168,8 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
               currency={currency}
               search={search}
             />
+          ) : rowsLoading ? (
+            <DelayedSkeleton><ProfitRowsSkeleton /></DelayedSkeleton>
           ) : (
             <>
               <NextMonthCard forecast={nextMonth.forecast} currency={currency} href={`/projects/${id}/profit/next${search}`} />
