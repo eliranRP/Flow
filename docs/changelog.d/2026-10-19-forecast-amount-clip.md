@@ -1,1 +1,1 @@
-The big amount field on the forecast edit page and the usual-amount sheet is now as wide as its figure in digit widths (tabular figures), so Safari no longer clips the last digit (it sized the field by an average character).
+The big amount field on the forecast edit page and the usual-amount sheet is now as wide as its figure in digit widths (ch) plus room for the caret, so Safari no longer clips the last digit (the field's `size` gave it an average character's width).
