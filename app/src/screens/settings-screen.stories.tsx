@@ -129,6 +129,22 @@ export const BusinessRenameSheet: Story = {
   },
 };
 
+/** Decision 0194: the owner's danger zone confirm, with the name typed so the delete is on. */
+export const BusinessDeleteSheet: Story = {
+  name: "Business, delete sheet",
+  render: () => (
+    <StoryRoute entry="/settings/business" tabs>
+      <ExampleBar />
+      <BusinessScreen sample={renameBusiness} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "מחיקת כל הנתונים" }));
+    const dialog = await storyBody(canvasElement).findByRole("dialog", { name: "למחוק את כל הנתונים?" });
+    await userEvent.type(within(dialog).getByLabelText("כתבו את שם העסק כדי לאשר"), renameBusiness.name);
+  },
+};
+
 export const BusinessCurrencySheet: Story = {
   name: "Business, currency sheet",
   render: () => (

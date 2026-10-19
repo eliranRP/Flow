@@ -29,6 +29,10 @@ type ConfirmSheetProps = {
   closeButton?: boolean;
   /** Opt-in classes for the panel (the project finish confirm's roomier board rhythm). */
   panelClassName?: string;
+  /** A field above the confirm button (the danger zone's typed company name). */
+  children?: ReactNode;
+  /** Keeps the confirm button off until the field above says yes. */
+  confirmDisabled?: boolean;
 };
 
 export function ConfirmSheet({
@@ -49,6 +53,8 @@ export function ConfirmSheet({
   alternative,
   closeButton = true,
   panelClassName,
+  children,
+  confirmDisabled = false,
 }: ConfirmSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={title} returnFocusRef={returnFocusRef} busy={busy} closeButton={closeButton} panelClassName={panelClassName}>
@@ -56,11 +62,13 @@ export function ConfirmSheet({
       <p className={consequenceSize === "body" ? "ui-confirm-body" : "t-caption t-muted text-text-secondary"}>{consequence}</p>
       {warning ? <p className="ui-confirm-warning">{warning}</p> : null}
       {detail ? <p className="t-caption t-muted text-text-secondary">{detail}</p> : null}
+      {children}
       <Button
         variant={destructive === false ? "primary" : "secondary"}
         className={destructive === false ? undefined : "ui-btn-signal"}
         full
         busy={busy}
+        disabled={confirmDisabled}
         icon={icon !== undefined ? icon ?? undefined : destructive === true ? <TrashIcon /> : undefined}
         onClick={() => {
           onConfirm();

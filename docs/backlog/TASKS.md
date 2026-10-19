@@ -401,6 +401,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-606"></a>[FLOW-606](tasks/FLOW-606.md) | Company name rule in create_company and the rename sheet | BACKLOG NIT |
 | <a id="flow-605"></a>[FLOW-605](tasks/FLOW-605.md) | Shared-device follow-ups (#79 review) | BACKLOG NIT |
 | <a id="flow-421"></a>[FLOW-421](tasks/FLOW-421.md) | Email the invite when the owner invites a team member | FEATURE |
+| <a id="flow-927"></a>[FLOW-927](tasks/FLOW-927.md) | Danger zone: the owner deletes the company and all of its data | Feature |
 
 ## Jev
 

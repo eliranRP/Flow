@@ -1140,3 +1140,5 @@ The owner only; the member loses access at once. Output `data`: `{ "user_id", "p
 ## Not in tools/list
 
 `collapse_expense`, `bulk_assign`, and `skip_review` wait. So do the SUMIT writers, `delete_transaction`, and `create_company`. Only `sync_bank` calls an internal Flow function; no tool calls a third party directly.
+
+`delete_company` is never a tool ([0194](../decisions/0194-delete-company-danger-zone.md), amending [0095](../decisions/0095-mcp-first.md)): deleting a company cannot be undone, so only the owner does it, in the app, by typing the company's name. The RPC refuses a flow-mcp token (`forbidden`).

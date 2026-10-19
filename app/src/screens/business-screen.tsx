@@ -7,7 +7,7 @@ import { getSupabase } from "../lib/supabase";
 import { assertNoError, useWrite } from "../use-write";
 import { useHoldOwnerSettings, useHoldWrites, useViewerNoteId, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { basisChoiceLabel, BASIS_TITLE, currencyChoiceLabel, type BasisChoice } from "../ui/company-choices";
-import { CalendarIcon, CoinIcon, BuildingIcon, SplitIcon } from "../ui/icons";
+import { CalendarIcon, CoinIcon, BuildingIcon, SplitIcon, TrashIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
@@ -18,6 +18,7 @@ import { RenameCompanySheet } from "./rename-company";
 import { useSheetHistory } from "../ui/back";
 import { CompanyCurrencySheet } from "./company-currency-sheet";
 import { CompanyBasisSheet } from "./company-basis-sheet";
+import { DANGER_HEAD, DELETE_NOTE, DELETE_ROW, DeleteCompanySheet } from "./delete-company-sheet";
 import type { SettingsSample } from "./settings-screen";
 
 const TITLE = "העסק";
@@ -31,6 +32,7 @@ const OVERHEAD_FAILED = "לא הצלחנו לשמור את התצוגה.";
 /**
  * `/settings/business` (FLOW-512): the business's name, currency and profit basis, then the
  * after-overhead switch. The owner changes them; anyone else reads the rows, with no chevron.
+ * Only the owner sees the danger zone, which deletes the company (decision 0194).
  */
 export function BusinessScreen({ sample }: { sample?: SettingsSample } = {}) {
   const preview = useHomePreview();
@@ -53,6 +55,9 @@ export function BusinessScreen({ sample }: { sample?: SettingsSample } = {}) {
   const currencyRowRef = useRef<HTMLButtonElement>(null);
   const [basisOpen, setBasisOpen] = useState(false);
   const basisRowRef = useRef<HTMLButtonElement>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const setDeleteSheet = useSheetHistory("business-delete", deleteOpen, setDeleteOpen);
+  const deleteRowRef = useRef<HTMLButtonElement>(null);
   const [overheadOn, setOverheadOn] = useState(sample?.afterOverhead === true);
   const wantedOverhead = useRef(false);
   useEffect(() => {
@@ -221,6 +226,30 @@ export function BusinessScreen({ sample }: { sample?: SettingsSample } = {}) {
         />
       </List>
       <p className="ui-settings-note">{OVERHEAD_NOTE}</p>
+      {showSheets ? (
+        <>
+          <h2 className="ui-settings-head">{DANGER_HEAD}</h2>
+          <List layout="inset">
+            <ListRow
+              variant="danger"
+              title={DELETE_ROW}
+              icon={<TrashIcon />}
+              buttonRef={deleteRowRef}
+              onClick={() => { setDeleteSheet(true); }}
+            />
+          </List>
+          <p className="ui-settings-note">{DELETE_NOTE}</p>
+          <DeleteCompanySheet
+            open={deleteOpen}
+            onOpenChange={setDeleteSheet}
+            onLeave={() => { setDeleteOpen(false); }}
+            companyId={companyId}
+            companyName={namedBusiness}
+            blocked={() => blocked(sample != null ? "empty" : undefined)}
+            returnFocusRef={deleteRowRef}
+          />
+        </>
+      ) : null}
     </div>
     </ViewerScope>
   );
