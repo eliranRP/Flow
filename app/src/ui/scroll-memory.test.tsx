@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { resetScrollToWarning, ScrollMemory } from "./back";
 
 let y = 0;
@@ -36,13 +36,13 @@ function tap(name: string) {
 }
 
 describe("ScrollMemory", () => {
-  let scrollTo: ReturnType<typeof vi.spyOn>;
+  let scrollTo: MockInstance<typeof window.scrollTo>;
 
   beforeEach(() => {
     y = 0;
     run += 1;
     Object.defineProperty(window, "scrollY", { configurable: true, get: () => y });
-    scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(((_x: number, top: number) => { y = top; }) as typeof window.scrollTo);
+    scrollTo = vi.spyOn(window, "scrollTo").mockImplementation((_x?: unknown, top?: number) => { y = top ?? 0; });
     render(
       <MemoryRouter initialEntries={[{ pathname: "/list", key: `start-${String(run)}` }]}>
         <Page />
