@@ -1,0 +1,1 @@
+{"permissions":{"allow":["mcp__flow","mcp__github","mcp__Supabase","mcp__claude-code-remote","Bash(git:*)","Bash(gh api:*)","Bash(pnpm:*)","Bash(npx:*)","Bash(npm:*)","Bash(node:*)","Bash(deno:*)","Bash(python3:*)","Bash(bash scripts/*)","Bash(curl:*)","Bash(grep:*)","Bash(sed:*)","Bash(cat:*)","Bash(ls:*)"]}}
