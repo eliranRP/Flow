@@ -30,11 +30,14 @@ function Loading() {
 
 const cards = [0, 1, 2] as const;
 
-/** One avatar row of a list skeleton: a 40px circle, two lines and a trailing figure (board linesLoading, loansLoading). */
-function ListRowSkeleton({ first, second }: { first: string; second: string }) {
+/**
+ * One row of a list skeleton: a 40px circle, two lines and a trailing figure (board linesLoading, loansLoading).
+ * `avatar` false drops the circle, for lists whose rows have none (the profit page's months).
+ */
+function ListRowSkeleton({ first, second, avatar = true }: { first: string; second: string; avatar?: boolean }) {
   return (
     <div className="ui-skel-list-row">
-      <Bar w="40px" h={40} r={20} />
+      {avatar ? <Bar w="40px" h={40} r={20} /> : null}
       <div className="ui-skel-list-lines">
         <Bar w={first} h={12} />
         <Bar w={second} h={10} />
@@ -193,16 +196,30 @@ export function ProfitSkeleton() {
   );
 }
 
-/** The profit page's month rows while they load, under a figure that is already in (board profitLoading's rows). */
+/**
+ * The profit page's month rows while they load, under a figure that is already in: three 64px rows without an
+ * avatar, each a name line over a totals line and a trailing figure, 12px under what comes before (.ui-pp-months).
+ */
 export function ProfitRowsSkeleton() {
   return (
-    <div className="ui-state-skel" aria-busy="true">
+    <div className="ui-state-skel ui-skel-pp-rows" aria-busy="true">
       <Loading />
-      <div className="ui-skel-group">
-        {cards.map((key) => (
-          <ListRowSkeleton key={key} first="46%" second="62%" />
-        ))}
-      </div>
+      {cards.map((key) => (
+        <ListRowSkeleton key={key} first="34%" second="62%" avatar={false} />
+      ))}
+    </div>
+  );
+}
+
+/** The dashed next-month card's place while its forecast loads: the card's own box (.ui-pn-card) with three lines. */
+export function NextMonthCardSkeleton() {
+  return (
+    <div className="ui-pn-card" aria-hidden="true">
+      <span className="ui-pn-card-text">
+        <Bar w="40%" h={14} />
+        <Bar w="70%" h={10} />
+        <Bar w="55%" h={10} />
+      </span>
     </div>
   );
 }

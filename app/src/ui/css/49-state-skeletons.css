@@ -43,6 +43,15 @@
   gap: var(--space-2);
 }
 
+/* The profit page's month rows (.ui-pp-months): 12px under the card above, rows 64px tall with no avatar. */
+.ui-skel-pp-rows {
+  margin-top: var(--space-3);
+}
+
+.ui-skel-pp-rows .ui-skel-list-row {
+  block-size: calc(var(--space-10) * 1.6);
+}
+
 .ui-skel-card {
   display: flex;
   flex-direction: column;

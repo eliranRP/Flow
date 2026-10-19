@@ -1,1 +1,1 @@
-The project profit page shows a loading skeleton where its month rows and next-month card go while they load, instead of an empty page under the figure.
+The project profit page shows a loading skeleton where its month rows go while they load, and a dashed-card skeleton where the next-month card goes while its forecast loads; loaded rows no longer wait for the forecast (a forecast paused offline no longer hides them), and a months read that fails shows a failure line with a retry.
