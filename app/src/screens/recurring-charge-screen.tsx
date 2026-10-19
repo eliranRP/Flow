@@ -20,6 +20,7 @@ import { ChargeBanner, ChargeCard, ChargeHead, ChargeIgnored, RecurringRow } fro
 import { RecurringAskBox, RecurringMatchBox } from "../ui/recurring-match-box";
 import { useToast } from "../ui/toast";
 import { useWrite } from "../use-write";
+import { ChargeUsualAmount } from "./recurring-usual-amount";
 import { TransactionTopBar } from "./transaction-top-bar";
 import { useBlockedPreview } from "./screen-shared";
 
@@ -42,7 +43,7 @@ type PaceChange = PaceWrite & { undo: boolean; close?: () => void; /** The toast
  * FLOW-447c: the charge page (קבועים › one party), opened from a row of the list. Its own writes are
  * the list's (ignore, restore) and the match answer, plus the pace sheet; a dev sample keeps them local.
  */
-export function RecurringChargeScreen({ sample, openSheet, now = new Date() }: { sample?: ChargeSample; openSheet?: "pace" | "all"; now?: Date } = {}) {
+export function RecurringChargeScreen({ sample, openSheet, now = new Date() }: { sample?: ChargeSample; openSheet?: "pace" | "all" | "amount"; now?: Date } = {}) {
   const params = useParams();
   const [query] = useSearchParams();
   const direction = sample == null ? params.direction : sample.row.direction;
@@ -102,7 +103,7 @@ function ChargeBody({
   data: Extract<ChargePageData, { status: "ready" }>;
   live: boolean;
   today: string;
-  openSheet?: "pace" | "all";
+  openSheet?: "pace" | "all" | "amount";
 }) {
   const { row, lineId, charges, recurring } = data;
   const search = usePreviewSearch();
@@ -227,6 +228,7 @@ function ChargeBody({
   function undoPace(done: PaceChange) {
     write.mutate({
       id: done.id,
+      projectId: done.projectId,
       next: done.before.recurring ? done.before.pace : "never",
       before: { recurring: done.next !== "never", pace },
       undo: true,
@@ -262,7 +264,7 @@ function ChargeBody({
             onStill={() => void ignore("נמשיך לצפות לו")}
             onEnded={() => {
               if (write.isPending || (live && blocked()) || (live && lineId == null)) return;
-              write.mutate({ id: lineId ?? "", next: "never", before: { recurring: isRecurring, pace }, undo: false, toast: endedText(row.party_name, data.split ? (row.project_name ?? "ללא פרויקט") : null) });
+              write.mutate({ id: lineId ?? "", projectId: row.project_id, next: "never", before: { recurring: isRecurring, pace }, undo: false, toast: endedText(row.party_name, data.split ? (row.project_name ?? "ללא פרויקט") : null) });
             }}
           />
         ) : null}
@@ -287,6 +289,14 @@ function ChargeBody({
               if (write.isPending || (live && blocked())) return;
               setPaceOpen(true);
             }}
+          />
+          <ChargeUsualAmount
+            row={row}
+            lineId={lineId}
+            live={live}
+            disabled={(lineId == null && live) || holdWrites}
+            blocked={() => blocked()}
+            openSheet={openSheet === "amount"}
           />
           {charges != null ? (
             <PartyChargesHistory
@@ -328,7 +338,7 @@ function ChargeBody({
             return;
           }
           setSaving(next);
-          write.mutate({ id: lineId ?? "", next, before: { recurring: isRecurring, pace }, undo: false, close });
+          write.mutate({ id: lineId ?? "", projectId: row.project_id, next, before: { recurring: isRecurring, pace }, undo: false, close });
         }}
       />
     </div>

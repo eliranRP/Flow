@@ -55,6 +55,11 @@ function renderPage(path: string, element = <RecurringChargeScreen now={NOW} />)
   );
 }
 
+/** The charge's project as the page's writes name it (decision 0189): none for a charge with no project. */
+function projectOf(row: ScheduleRow) {
+  return row.project_id == null ? {} : { p_project_id: row.project_id };
+}
+
 /** The RPC calls the page made, by name, with their arguments. */
 function calls() {
   return vi.mocked(state.client.rpc).mock.calls;
@@ -125,14 +130,14 @@ describe("the charge page: the pace sheet picks", () => {
     renderPage("/recurring/expense/water", <RecurringChargeScreen now={NOW} openSheet="pace" />);
     fireEvent.click(screen.getByRole("radio", { name: "כל רבעון" }));
     expect(await screen.findByText("נשמר: כל רבעון")).toBeTruthy();
-    expect(calls()).toContainEqual(["set_payment_pace", { p_id: "tx-water-10", p_pace: "quarter" }]);
+    expect(calls()).toContainEqual(["set_payment_pace", { p_id: "tx-water-10", p_pace: "quarter", p_project_id: "p-elm-row" }]);
   });
 
   it("picking לא קבוע clears the switch and goes back to the list", async () => {
     renderPage("/recurring/expense/water", <RecurringChargeScreen now={NOW} openSheet="pace" />);
     fireEvent.click(screen.getByRole("radio", { name: "לא קבוע" }));
     expect(await screen.findByText("רשימת הקבועים")).toBeTruthy();
-    expect(calls()).toContainEqual(["set_payment_recurring", { p_id: "tx-water-10", p_recurring: false }]);
+    expect(calls()).toContainEqual(["set_payment_recurring", { p_id: "tx-water-10", p_recurring: false, p_project_id: "p-elm-row" }]);
     expect(await screen.findByText("סומן כלא קבוע")).toBeTruthy();
   });
 });
@@ -211,7 +216,7 @@ describe("the charge page: the late bill (the power bill, with its suggested mat
     renderPage("/recurring/expense/power");
     fireEvent.click(within(screen.getByRole("region", { name: "עדיין קבוע?" })).getByRole("button", { name: "הסתיים" }));
     expect(await screen.findByText("Brightline Power הוסר מהקבועים ומהצפי")).toBeTruthy();
-    expect(calls()).toContainEqual(["set_payment_recurring", { p_id: RECURRING_CHARGES_FIXTURE_POWER.lineId, p_recurring: false }]);
+    expect(calls()).toContainEqual(["set_payment_recurring", { p_id: RECURRING_CHARGES_FIXTURE_POWER.lineId, p_recurring: false, ...projectOf(RECURRING_CHARGES_FIXTURE_POWER.row) }]);
   });
 
   it("הסתיים on a party split by project names the project whose charge ends", async () => {

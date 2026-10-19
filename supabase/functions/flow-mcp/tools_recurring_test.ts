@@ -196,6 +196,32 @@ Deno.test("get_recurring_this_month passes the month's arrivals through", async 
   if (!failed.structuredContent.ok) assertEquals(failed.structuredContent.error.code, "refused");
 });
 
+Deno.test("the charge writers take an optional project_id (decision 0189) and pass it on, lower-cased", async () => {
+  const PROJECT = "33333333-3333-4333-8333-333333333333";
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: TXN } } }));
+  for (
+    const [name, args] of [
+      ["set_line_recurring", { idempotency_key: "g-1", transaction_id: TXN, recurring: false, project_id: PROJECT.toUpperCase() }],
+      ["set_line_pace", { idempotency_key: "g-2", transaction_id: TXN, pace: "year", project_id: PROJECT }],
+      ["set_line_usual_amount", { idempotency_key: "g-3", transaction_id: TXN, amount: 564.39, project_id: PROJECT }],
+    ] as [string, Record<string, unknown>][]
+  ) {
+    assertEquals((await callTool(name, args, ["write"], rpc)).isError, false, name);
+  }
+  for (const name of ["set_line_recurring", "set_line_pace", "set_line_usual_amount"]) {
+    const args = { idempotency_key: "k", transaction_id: TXN, recurring: true, pace: "month", amount: 1, project_id: "nope" };
+    const keys = name === "set_line_recurring" ? ["recurring"] : name === "set_line_pace" ? ["pace"] : ["amount"];
+    const input = Object.fromEntries(Object.entries(args).filter(([key]) => ["idempotency_key", "transaction_id", "project_id", ...keys].includes(key)));
+    const result = await callTool(name, input, ["write"], rpc);
+    assertEquals(result.isError, true, name);
+  }
+  assertEquals(calls, [
+    { name: "mcp_set_line_recurring", body: { p_idempotency_key: "g-1", p_transaction_id: TXN, p_recurring: false, p_project_id: PROJECT } },
+    { name: "mcp_set_line_pace", body: { p_idempotency_key: "g-2", p_transaction_id: TXN, p_pace: "year", p_project_id: PROJECT } },
+    { name: "mcp_set_line_usual_amount", body: { p_idempotency_key: "g-3", p_transaction_id: TXN, p_amount_minor: 56439, p_project_id: PROJECT } },
+  ]);
+});
+
 Deno.test("set_line_pace calls its writer, validates the pace, and undo takes line_pace", async () => {
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: TXN, undo_kind: "line_pace" } } }));
   for (
@@ -222,6 +248,41 @@ Deno.test("set_line_pace calls its writer, validates the pace, and undo takes li
     { name: "mcp_set_line_pace", body: { p_idempotency_key: "p-1", p_transaction_id: TXN, p_pace: "quarter" } },
     { name: "mcp_set_line_pace", body: { p_idempotency_key: "p-2", p_transaction_id: TXN, p_pace: null } },
     { name: "mcp_undo", body: { p_idempotency_key: "u-2", p_kind: "line_pace", p_id: TXN } },
+  ]);
+});
+
+Deno.test("set_line_usual_amount takes major units, validates the amount, and undo takes line_amount", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: TXN, undo_kind: "line_amount" } } }));
+  for (
+    const [name, args] of [
+      ["set_line_usual_amount", { idempotency_key: "a-1", transaction_id: TXN, amount: 1700 }],
+      ["set_line_usual_amount", { idempotency_key: "a-2", transaction_id: TXN, amount: "2,500.50" }],
+      ["set_line_usual_amount", { idempotency_key: "a-3", transaction_id: TXN, amount: null }],
+      ["undo", { idempotency_key: "u-4", kind: "line_amount", id: TXN }],
+    ] as [string, Record<string, unknown>][]
+  ) {
+    assertEquals((await callTool(name, args, ["write"], rpc)).isError, false, name);
+  }
+  for (
+    const input of [
+      { idempotency_key: "k", transaction_id: TXN, amount: 0 },
+      { idempotency_key: "k", transaction_id: TXN, amount: -5 },
+      { idempotency_key: "k", transaction_id: TXN, amount: "abc" },
+      { idempotency_key: "k", transaction_id: TXN, amount: 10_000_000_000 },
+      { idempotency_key: "k", transaction_id: TXN },
+      { idempotency_key: "k", transaction_id: "not-a-uuid", amount: 10 },
+      { idempotency_key: "k", transaction_id: TXN, amount: 10, amount_minor: 1000 },
+    ]
+  ) {
+    const result = await callTool("set_line_usual_amount", input, ["write"], rpc);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+    assertEquals(result.isError, true, JSON.stringify(input));
+  }
+  assertEquals(calls, [
+    { name: "mcp_set_line_usual_amount", body: { p_idempotency_key: "a-1", p_transaction_id: TXN, p_amount_minor: 170000 } },
+    { name: "mcp_set_line_usual_amount", body: { p_idempotency_key: "a-2", p_transaction_id: TXN, p_amount_minor: 250050 } },
+    { name: "mcp_set_line_usual_amount", body: { p_idempotency_key: "a-3", p_transaction_id: TXN, p_amount_minor: null } },
+    { name: "mcp_undo", body: { p_idempotency_key: "u-4", p_kind: "line_amount", p_id: TXN } },
   ]);
 });
 

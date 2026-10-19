@@ -7,7 +7,7 @@ import { ChargeError, ChargeMissing, RecurringChargeScreen } from "./recurring-c
 /** FLOW-447c: the charge page on the board's two parties, as the page's states. Invented names only. */
 const NOW = new Date("2026-10-11T12:00:00Z");
 
-function Demo({ state }: { state: "item" | "late" | "ignored" | "pace" | "missing" | "error" }) {
+function Demo({ state }: { state: "item" | "late" | "ignored" | "pace" | "amount" | "owner" | "missing" | "error" }) {
   const entry = state === "late" || state === "ignored" ? "/recurring/expense/power" : "/recurring/expense/water";
   return (
     <StoryRoute entry={entry}>
@@ -15,6 +15,14 @@ function Demo({ state }: { state: "item" | "late" | "ignored" | "pace" | "missin
       {state === "error" ? <ChargeError /> : null}
       {state === "item" ? <RecurringChargeScreen now={NOW} sample={RECURRING_CHARGES_FIXTURE_WATER} /> : null}
       {state === "pace" ? <RecurringChargeScreen now={NOW} sample={RECURRING_CHARGES_FIXTURE_WATER} openSheet="pace" /> : null}
+      {state === "amount" ? <RecurringChargeScreen now={NOW} sample={RECURRING_CHARGES_FIXTURE_WATER} openSheet="amount" /> : null}
+      {state === "owner" ? (
+        <RecurringChargeScreen
+          now={NOW}
+          sample={{ ...RECURRING_CHARGES_FIXTURE_WATER, row: { ...RECURRING_CHARGES_FIXTURE_WATER.row, typical_amount_minor: -17000, typical_amount_source: "owner" } }}
+          openSheet="amount"
+        />
+      ) : null}
       {state === "late" ? <RecurringChargeScreen now={NOW} sample={RECURRING_CHARGES_FIXTURE_POWER} /> : null}
       {state === "ignored" ? (
         <RecurringChargeScreen now={NOW} sample={{ ...RECURRING_CHARGES_FIXTURE_POWER, bills: RECURRING_MISSING_FIXTURE.filter((bill) => bill.party_id !== "power") }} />
@@ -45,6 +53,22 @@ export const PaceSheetOpen: Story = {
   play: async ({ canvasElement }) => {
     // The sheet draws in a portal on the body, outside the story's canvas.
     await within(canvasElement.ownerDocument.body).findByRole("radio", { name: "כל חודש" });
+  },
+};
+
+/** Decision 0189: the usual amount sheet open over the item page, with Flow's own amount. */
+export const UsualAmountSheetOpen: Story = {
+  args: { state: "amount" },
+  play: async ({ canvasElement }) => {
+    await within(canvasElement.ownerDocument.body).findByRole("textbox", { name: "הסכום הרגיל" });
+  },
+};
+
+/** The usual amount the owner set: "קבעת" on the row, and "חזרה לחישוב" in its sheet. */
+export const UsualAmountOwner: Story = {
+  args: { state: "owner" },
+  play: async ({ canvasElement }) => {
+    await within(canvasElement.ownerDocument.body).findByRole("button", { name: "חזרה לחישוב" });
   },
 };
 

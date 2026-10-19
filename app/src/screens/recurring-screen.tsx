@@ -6,7 +6,7 @@ import { useMissingBillsQuery } from "../forecast";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { RECURRING_KEYS } from "../pace-write";
 import { liveRecurringWrites, type RecurringWrites } from "../recurring-actions";
-import { chargeHref, dayMonth, endedText } from "../recurring-charge";
+import { chargeHref, comparable, dayMonth, endedText } from "../recurring-charge";
 import { groupRecurring, monthInflow, monthOutflow, type RecurringLine } from "../recurring-layout";
 import { alertState, changePercentOf, daysBetween, isSplitParty, israelToday, rowId, type RecurringAlert, type ScheduleRow, scheduleLines, useRecurringScheduleQuery } from "../recurring-schedule";
 import { EmptyState, FailureLine } from "../ui/empty-state";
@@ -258,7 +258,7 @@ function hintFor(row: ScheduleRow, line: RecurringLine, today: string, dismissed
     if (days === 0) return { hint: "בדרך כלל היום" };
     if (days > 0) return { hint: `עוד לא הגיע · ${days === 1 ? "יום אחד" : `${String(days)} ימים`}` };
   }
-  if (row.state === "arrived" && line.usual > 0n && line.minor * 100n >= line.usual * 120n) {
+  if (row.state === "arrived" && comparable(row) && line.usual > 0n && line.minor * 100n >= line.usual * 120n) {
     return { hint: `▲ ${String(changePercentOf(line.minor, line.usual))}%`, alert: true };
   }
   return {};

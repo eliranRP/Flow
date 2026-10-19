@@ -112,7 +112,8 @@ select is(
 select is(
   public.payment_recurring(pg_temp.id('bimonthly_09'), '2026-10-20') - 'party' - 'transaction_id',
   jsonb_build_object('recurring', true, 'override', null, 'detected', true, 'typical_day', 8,
-    'typical_amount_minor', -30000, 'pace', '2months', 'pace_override', null, 'detected_pace', '2months',
+    'typical_amount_minor', -30000, 'typical_amount_source', 'computed', 'owner_amount_minor', null,
+    'pace', '2months', 'pace_override', null, 'detected_pace', '2months',
     'next_due_month', '2026-11'),
   'a payment names its pace and next due month'
 );
@@ -296,7 +297,7 @@ select ok(
   not has_table_privilege('authenticated', 'public.recurring_dismissals', 'select')
   and not has_function_privilege('anon', 'public.dismiss_recurring_alert(text, text)', 'execute')
   and not has_function_privilege('anon', 'public.recurring_this_month(date)', 'execute')
-  and not has_function_privilege('anon', 'public.set_payment_pace(uuid, text)', 'execute'),
+  and not has_function_privilege('anon', 'public.set_payment_pace(uuid, text, uuid)', 'execute'),
   'the dismissals are read only through the functions'
 );
 

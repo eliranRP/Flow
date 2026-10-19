@@ -15,6 +15,8 @@ export type PaceWrite = {
   id: string;
   next: PaceChoice;
   before: { recurring: boolean; pace: RecurringPace };
+  /** The charge's project when the page names one (decision 0189): a split line can feed several charges. */
+  projectId?: string | null;
 };
 
 /**
@@ -22,10 +24,11 @@ export type PaceWrite = {
  * a pace on a payment that is not recurring turns the switch on first, then sets the pace.
  */
 export async function runPaceChange(client: RpcClient, change: PaceWrite): Promise<void> {
+  const project = change.projectId == null ? {} : { p_project_id: change.projectId };
   if (change.next === "never") {
-    assertNoError(await client.rpc("set_payment_recurring", { p_id: change.id, p_recurring: false }));
+    assertNoError(await client.rpc("set_payment_recurring", { p_id: change.id, p_recurring: false, ...project }));
     return;
   }
-  if (!change.before.recurring) assertNoError(await client.rpc("set_payment_recurring", { p_id: change.id, p_recurring: true }));
-  assertNoError(await client.rpc("set_payment_pace", { p_id: change.id, p_pace: change.next }));
+  if (!change.before.recurring) assertNoError(await client.rpc("set_payment_recurring", { p_id: change.id, p_recurring: true, ...project }));
+  assertNoError(await client.rpc("set_payment_pace", { p_id: change.id, p_pace: change.next, ...project }));
 }

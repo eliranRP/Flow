@@ -1,5 +1,6 @@
 -- FLOW-441. project_recurring_changes measures a recurring party's share on one project: a line
--- counts for its amount when it is the project's, or for its parts on the project when split.
+-- counts for its amount when it is the project's, or for its parts on the project when split (since
+-- decision 0189 each part feeds its own project's charge).
 -- Invented data only. Amounts are cents. "Today" is 2026-10-20.
 
 begin;
@@ -75,12 +76,14 @@ where l.party = 'platform';
 
 select tests.authenticate_as('prc_owner');
 
--- 1. Home still measures the platform company-wide: $3,900 against $3,000.
+-- 1. Home measures each property's charge by its own parts (decision 0189): Pine's $2,000 part against its
+-- usual $1,000 is a change; Oak's $1,900 against $2,000 (5%) is not. The whole transfer is never compared.
 select is(
-  (select (e ->> 'change_percent')::integer from jsonb_array_elements(public.recurring_changes('2026-10-20')) e
+  (select jsonb_agg(jsonb_build_object('project', e ->> 'project_name', 'percent', (e ->> 'change_percent')::integer))
+   from jsonb_array_elements(public.recurring_changes('2026-10-20')) e
    where (e ->> 'party_id')::uuid = pg_temp.id('platform')),
-  30,
-  'Home keeps the company-wide change'
+  '[{"project": "Pine Street", "percent": 100}]'::jsonb,
+  'Home compares each property''s part with its own usual'
 );
 
 -- 2-6. Pine's own row: its $2,000 part against its usual $1,000, opening October's rent.

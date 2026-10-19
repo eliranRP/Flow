@@ -12,6 +12,10 @@ export type ScheduleRow = {
   currency: string;
   state: "arrived" | "late" | "soon" | "later";
   typical_amount_minor: number;
+  /** Decision 0189: owner when the owner set the usual amount; omitted on older payloads. */
+  typical_amount_source?: "owner" | "computed";
+  /** Complete months behind the usual amount; 0 in the charge's first month seen. Omitted on older payloads. */
+  months_seen?: number;
   /** This month's live lines, only once the charge has arrived. */
   amount_minor: number | null;
   typical_day: number;
