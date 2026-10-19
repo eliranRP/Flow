@@ -20,6 +20,7 @@ insert into pg_allowed (sig) values
     ('approve_split_review(uuid,uuid)'),
     ('attach_line_document(uuid,jsonb)'),
     ('cancel_invite(uuid)'),
+    ('claim_invite_email(uuid)'),
     ('cash_month_lines(date,text,text,integer,integer)'),
     ('cash_month_to_day(date,integer)'),
     ('cash_months(integer,date)'),

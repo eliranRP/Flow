@@ -1,7 +1,9 @@
 // FLOW-601 follow-up: the invite-email function. The app calls it right after invite_member saved a new
 // invite. It re-reads the team as the caller (list_team answers pending invites to the owner only), so a
 // caller can only mail an invite of their own company, then sends one email through Resend.
-// Nothing here changes the books or the invite. A failed send leaves the invite waiting in the invitee's inbox.
+// Before sending it claims the send with claim_invite_email (decision 0195): at most 3 emails per
+// pending, unexpired invite, so a caller cannot mail one address without bound. Nothing here changes
+// the books. A failed send leaves the invite waiting in the invitee's inbox.
 
 import { empty, json } from "./http.ts";
 
@@ -53,7 +55,7 @@ async function readInviteId(req: Request): Promise<string | null> {
   }
 }
 
-async function callerRpc(deps: InviteEmailDeps, req: Request, name: string): Promise<unknown> {
+async function callerFetch(deps: InviteEmailDeps, req: Request, name: string, body: unknown): Promise<Response> {
   const base = deps.env("SUPABASE_URL").replace(/\/+$/, "");
   const headers: Record<string, string> = {
     apikey: deps.env("SUPABASE_ANON_KEY"),
@@ -62,7 +64,11 @@ async function callerRpc(deps: InviteEmailDeps, req: Request, name: string): Pro
   };
   const company = req.headers.get("x-flow-company");
   if (company) headers["x-flow-company"] = company;
-  const response = await deps.fetch(`${base}/rest/v1/rpc/${name}`, { method: "POST", headers, body: "{}" });
+  return await deps.fetch(`${base}/rest/v1/rpc/${name}`, { method: "POST", headers, body: JSON.stringify(body) });
+}
+
+async function callerRpc(deps: InviteEmailDeps, req: Request, name: string): Promise<unknown> {
+  const response = await callerFetch(deps, req, name, {});
   if (!response.ok) {
     await response.body?.cancel();
     throw new Error(`invite_rpc_${name}`);
@@ -93,6 +99,19 @@ export async function loadInviteMail(deps: InviteEmailDeps, req: Request, invite
   };
 }
 
+/** Claims one send of the invite: "ok", "limit" past 3 emails of this invite, or "gone". */
+export async function claimInviteEmail(deps: InviteEmailDeps, req: Request, inviteId: string): Promise<"ok" | "limit" | "gone"> {
+  const response = await callerFetch(deps, req, "claim_invite_email", { p_invite_id: inviteId });
+  if (response.ok) {
+    await response.body?.cancel();
+    return "ok";
+  }
+  const error = record(await response.json().catch(() => null));
+  if (error?.message === "invite_email_limit") return "limit";
+  if (error?.message === "invite not found") return "gone";
+  throw new Error("invite_rpc_claim_invite_email");
+}
+
 export async function handleInviteEmail(req: Request, deps: InviteEmailDeps): Promise<Response> {
   if (req.method === "OPTIONS") return empty();
   if (req.method !== "POST") return json({ error: "method" }, 405);
@@ -110,6 +129,13 @@ export async function handleInviteEmail(req: Request, deps: InviteEmailDeps): Pr
     return json({ error: "lookup_failed" }, 502);
   }
   if (!mail) return json({ error: "not_found" }, 404);
+  try {
+    const claim = await claimInviteEmail(deps, req, inviteId);
+    if (claim === "limit") return json({ error: "email_limit" }, 429);
+    if (claim === "gone") return json({ error: "not_found" }, 404);
+  } catch {
+    return json({ error: "lookup_failed" }, 502);
+  }
   const appUrl = deps.env("APP_URL").trim() || DEFAULT_APP_URL;
   const { html, text } = inviteBody(mail, appUrl);
   try {

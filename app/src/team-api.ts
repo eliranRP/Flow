@@ -142,6 +142,7 @@ export const INVITE_EMAIL_MISSING = "כתבו אימייל.";
 export const INVITE_EMAIL_INVALID = "כתבו אימייל תקין.";
 export const INVITE_ALREADY_MEMBER = "כבר בצוות.";
 export const INVITE_TOO_MANY = "יש יותר מדי הזמנות פתוחות. בטלו אחת ונסו שוב.";
+export const INVITE_LIMIT = "שלחתם היום את מספר ההזמנות המרבי. נסו שוב מחר.";
 export const OWNER_ONLY = "רק בעל העסק יכול לשנות את הצוות.";
 export const ROLE_SAVED = "התפקיד עודכן";
 export const ROLE_FAILED = "התפקיד לא עודכן.";
@@ -174,6 +175,8 @@ export function inviteRefusal(error: Error): { field: string } | { toast: WriteF
   if (error.message === "invalid email") return { field: INVITE_EMAIL_INVALID };
   if (error.message === "already a member") return { field: INVITE_ALREADY_MEMBER };
   if (error.message === "too many invites") return { toast: { message: INVITE_TOO_MANY, retry: false } };
+  // Decision 0195: the daily invite caps (per company and per inviting user).
+  if (error.message === "invite_limit") return { toast: { message: INVITE_LIMIT, retry: false } };
   if (refusedByRole(error)) return { toast: { message: OWNER_ONLY, retry: false } };
   return { toast: { message: INVITE_FAILED, retry: isTransientWriteError(error) } };
 }
