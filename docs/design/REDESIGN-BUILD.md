@@ -2,6 +2,10 @@
 
 The approved redesign is on the [Design canvas](https://claude.ai/artifact/9grt9spjshVCxerYWrRXiD): **Ready for dev** has every screen, **Light theme · ready for dev** has the same screens in light, **Design guide** has the rules, and **Flow & motion** has the timings. The build tasks are FLOW-363 to FLOW-372, FLOW-139 to 141, FLOW-445 to 447 and FLOW-512 to 514. [DESIGN-RULES](DESIGN-RULES.md) and the [implementation guide](../../design/system/implementation-guide.md) still apply. Where they disagree with the canvas, the canvas wins, and FLOW-363 updates the rules to match.
 
+## Changes after the handoff
+
+The canvas page **What changed** lists every change approved after the first handoff, newest first: the date, each board that changed and one line on what changed. Changed boards on Ready for dev carry a "changed <date>" tag until the next handoff. Each entry names the backlog task that builds it, so work from the tasks; the 19/10 handoff is [FLOW-930](../backlog/tasks/FLOW-930.md) to [FLOW-934](../backlog/tasks/FLOW-934.md).
+
 ## Order: foundation first, screens last
 
 The full plan (component inventory with states and motion, the four FLOW-363 PRs, the Storybook and test rules, the raw-value check, clean-up, and the design review team) is in [REDESIGN-PLAN](REDESIGN-PLAN.md).

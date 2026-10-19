@@ -323,6 +323,10 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-919"></a>[FLOW-919](tasks/FLOW-919.md) | FLOW-369 follow-up: AddProject and AddSheet proofs under 3% | UI (design approved) |
 | <a id="flow-923"></a>[FLOW-923](tasks/FLOW-923.md) | In-app camera and receipt reading for the + sheet (board AddCamera, AddReading) | Feature |
 | <a id="flow-926"></a>[FLOW-926](tasks/FLOW-926.md) | A project's month lines page and its empty state (board StatesLinesEmpty) | Feature |
+| <a id="flow-930"></a>[FLOW-930](tasks/FLOW-930.md) | קבועים: ask if a missed charge is still recurring, the "לא הגיעו" box, income and expenses apart, the first days of the month | UI (design approved) |
+| <a id="flow-931"></a>[FLOW-931](tasks/FLOW-931.md) | צפי: the forecast by category, and an item opens its own page | UI (design approved) |
+| <a id="flow-932"></a>[FLOW-932](tasks/FLOW-932.md) | Profit: the company summary, next month's card and the income/expenses chart, and category rows with bars | UI (design approved) |
+| <a id="flow-933"></a>[FLOW-933](tasks/FLOW-933.md) | A project's next-month forecast, and editing it | Feature + UI (design approved) |
 
 ## Projects and reports
 
@@ -402,6 +406,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-605"></a>[FLOW-605](tasks/FLOW-605.md) | Shared-device follow-ups (#79 review) | BACKLOG NIT |
 | <a id="flow-421"></a>[FLOW-421](tasks/FLOW-421.md) | Email the invite when the owner invites a team member | FEATURE |
 | <a id="flow-927"></a>[FLOW-927](tasks/FLOW-927.md) | Danger zone: the owner deletes the company and all of its data | Feature |
+| <a id="flow-934"></a>[FLOW-934](tasks/FLOW-934.md) | The project page: next month's card and the income/expenses chart instead of "חודשים קודמים" | UI (design approved) |
 
 ## Jev
 
