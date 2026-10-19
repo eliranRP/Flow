@@ -225,6 +225,41 @@ Deno.test("set_line_pace calls its writer, validates the pace, and undo takes li
   ]);
 });
 
+Deno.test("set_line_usual_amount takes major units, validates the amount, and undo takes line_amount", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: TXN, undo_kind: "line_amount" } } }));
+  for (
+    const [name, args] of [
+      ["set_line_usual_amount", { idempotency_key: "a-1", transaction_id: TXN, amount: 1700 }],
+      ["set_line_usual_amount", { idempotency_key: "a-2", transaction_id: TXN, amount: "2,500.50" }],
+      ["set_line_usual_amount", { idempotency_key: "a-3", transaction_id: TXN, amount: null }],
+      ["undo", { idempotency_key: "u-4", kind: "line_amount", id: TXN }],
+    ] as [string, Record<string, unknown>][]
+  ) {
+    assertEquals((await callTool(name, args, ["write"], rpc)).isError, false, name);
+  }
+  for (
+    const input of [
+      { idempotency_key: "k", transaction_id: TXN, amount: 0 },
+      { idempotency_key: "k", transaction_id: TXN, amount: -5 },
+      { idempotency_key: "k", transaction_id: TXN, amount: "abc" },
+      { idempotency_key: "k", transaction_id: TXN, amount: 10_000_000_000 },
+      { idempotency_key: "k", transaction_id: TXN },
+      { idempotency_key: "k", transaction_id: "not-a-uuid", amount: 10 },
+      { idempotency_key: "k", transaction_id: TXN, amount: 10, amount_minor: 1000 },
+    ]
+  ) {
+    const result = await callTool("set_line_usual_amount", input, ["write"], rpc);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+    assertEquals(result.isError, true, JSON.stringify(input));
+  }
+  assertEquals(calls, [
+    { name: "mcp_set_line_usual_amount", body: { p_idempotency_key: "a-1", p_transaction_id: TXN, p_amount_minor: 170000 } },
+    { name: "mcp_set_line_usual_amount", body: { p_idempotency_key: "a-2", p_transaction_id: TXN, p_amount_minor: 250050 } },
+    { name: "mcp_set_line_usual_amount", body: { p_idempotency_key: "a-3", p_transaction_id: TXN, p_amount_minor: null } },
+    { name: "mcp_undo", body: { p_idempotency_key: "u-4", p_kind: "line_amount", p_id: TXN } },
+  ]);
+});
+
 Deno.test("answer_recurring_match calls its writer, validates the pair, and undo takes recurring_match", async () => {
   const OTHER = "22222222-2222-4222-8222-222222222222";
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: OTHER, undo_kind: "recurring_match" } } }));

@@ -20,6 +20,7 @@ import { ChargeBanner, ChargeCard, ChargeHead, ChargeIgnored, RecurringRow } fro
 import { RecurringAskBox, RecurringMatchBox } from "../ui/recurring-match-box";
 import { useToast } from "../ui/toast";
 import { useWrite } from "../use-write";
+import { ChargeUsualAmount } from "./recurring-usual-amount";
 import { TransactionTopBar } from "./transaction-top-bar";
 import { useBlockedPreview } from "./screen-shared";
 
@@ -42,7 +43,7 @@ type PaceChange = PaceWrite & { undo: boolean; close?: () => void; /** The toast
  * FLOW-447c: the charge page (קבועים › one party), opened from a row of the list. Its own writes are
  * the list's (ignore, restore) and the match answer, plus the pace sheet; a dev sample keeps them local.
  */
-export function RecurringChargeScreen({ sample, openSheet, now = new Date() }: { sample?: ChargeSample; openSheet?: "pace" | "all"; now?: Date } = {}) {
+export function RecurringChargeScreen({ sample, openSheet, now = new Date() }: { sample?: ChargeSample; openSheet?: "pace" | "all" | "amount"; now?: Date } = {}) {
   const params = useParams();
   const [query] = useSearchParams();
   const direction = sample == null ? params.direction : sample.row.direction;
@@ -102,7 +103,7 @@ function ChargeBody({
   data: Extract<ChargePageData, { status: "ready" }>;
   live: boolean;
   today: string;
-  openSheet?: "pace" | "all";
+  openSheet?: "pace" | "all" | "amount";
 }) {
   const { row, lineId, charges, recurring } = data;
   const search = usePreviewSearch();
@@ -287,6 +288,14 @@ function ChargeBody({
               if (write.isPending || (live && blocked())) return;
               setPaceOpen(true);
             }}
+          />
+          <ChargeUsualAmount
+            row={row}
+            lineId={lineId}
+            live={live}
+            disabled={(lineId == null && live) || holdWrites}
+            blocked={() => blocked()}
+            openSheet={openSheet === "amount"}
           />
           {charges != null ? (
             <PartyChargesHistory

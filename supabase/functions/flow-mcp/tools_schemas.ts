@@ -102,6 +102,7 @@ export const WRITE_TOOL_NAMES = [
   "set_cash_basis",
   "set_line_recurring",
   "set_line_pace",
+  "set_line_usual_amount",
   "answer_recurring_match",
   "undo_jev_prefill",
   "undo",
@@ -204,6 +205,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   set_cash_basis: new Set(["idempotency_key", "basis"]),
   set_line_recurring: new Set(["idempotency_key", "transaction_id", "recurring"]),
   set_line_pace: new Set(["idempotency_key", "transaction_id", "pace"]),
+  set_line_usual_amount: new Set(["idempotency_key", "transaction_id", "amount"]),
   answer_recurring_match: new Set(["idempotency_key", "direction", "party_id", "match_party_id", "same"]),
   undo_jev_prefill: new Set(["idempotency_key", "transaction_id"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
@@ -296,7 +298,7 @@ export const categorySchema = z.object({
 }).strict();
 export const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -683,6 +685,12 @@ export const setLinePaceSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
   pace: z.enum(["month", "2months", "quarter", "year"]).nullable(),
+}).strict();
+// Decision 0189: the owner's usual amount for a line's charge, in major units (null: back to computed).
+export const setLineUsualAmountSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  transaction_id: UUID_TEXT,
+  amount: z.union([z.number(), z.string()]).nullable(),
 }).strict();
 // FLOW-430: the user's answer to a suggested match for a late recurring bill.
 export const answerRecurringMatchSchema = z.object({

@@ -1,4 +1,4 @@
-import { ChevronIcon, ProjectsIcon, RepeatIcon, TagIcon } from "./icons";
+import { ChevronIcon, PencilIcon, ProjectsIcon, RepeatIcon, TagIcon } from "./icons";
 import { IconRow } from "./icon-row";
 import { cx } from "./cx";
 import { PACE_LABEL } from "./pace";
@@ -101,6 +101,37 @@ export function RecurringRow({
         <span className="ui-charge-rec-sub">{sub}</span>
       </span>
       <span className="ui-charge-rec-tag">{PACE_LABEL[pace]}</span>
+      <span className="ui-charge-rec-end" aria-hidden="true">
+        <ChevronIcon size={18} />
+      </span>
+    </button>
+  );
+}
+
+/** Decision 0189: the usual amount row. "קבעת" when the owner set it; it opens the amount sheet. */
+export function UsualAmountRow({
+  amount,
+  owner,
+  onOpen,
+  disabled,
+  buttonRef,
+}: {
+  amount: string;
+  owner: boolean;
+  onOpen: () => void;
+  disabled: boolean;
+  buttonRef?: React.Ref<HTMLButtonElement>;
+}) {
+  return (
+    <button ref={buttonRef} type="button" className="ui-charge-rec ui-hit m-press" onClick={onOpen} disabled={disabled}>
+      <span className="ui-charge-rec-icon" aria-hidden="true">
+        <PencilIcon />
+      </span>
+      <span className="ui-charge-rec-text">
+        <span className="ui-charge-rec-title">הסכום הרגיל</span>
+        <span className="ui-charge-rec-sub">{owner ? "קבעת" : "לפי החודשים האחרונים"}</span>
+      </span>
+      <span className="ui-charge-rec-tag" dir="ltr">{amount}</span>
       <span className="ui-charge-rec-end" aria-hidden="true">
         <ChevronIcon size={18} />
       </span>

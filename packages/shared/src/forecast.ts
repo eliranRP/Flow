@@ -130,6 +130,10 @@ export const paymentRecurringSchema = z.object({
   next_due_month: z.string().nullable().optional(),
   /** set_payment_pace's pace before the change, for ביטול. */
   prior_pace: paceSchema.nullable().optional(),
+  /** Decision 0189: owner when the usual amount is the owner's, computed otherwise; null when not recurring. */
+  typical_amount_source: z.enum(["owner", "computed"]).nullable().optional(),
+  /** The owner's usual amount on the line's charge, positive; null when none. */
+  owner_amount_minor: agorotSchema.nullable().optional(),
 });
 
 const expectedCurrencySchema = z.object({

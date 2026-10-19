@@ -7,6 +7,7 @@ import {
   fail,
   isCalendarDate,
   isFail,
+  minorFromMajor,
   ppmFromPercent,
   signedPpmFromPercent,
   type ToolDefer,
@@ -51,6 +52,7 @@ import {
   setLinePaceSchema,
   answerRecurringMatchSchema,
   setLineRecurringSchema,
+  setLineUsualAmountSchema,
   setLinesCashSchema,
   setLinePnlSchema,
   setLinesPnlSchema,
@@ -74,6 +76,9 @@ import { syncBank } from "./tools_sync.ts";
 import { resetForecastSchema, setForecastItemSchema } from "./tools_forecast_schemas.ts";
 import { attachDocumentSchema, createManualEntrySchema } from "./tools_manual_schemas.ts";
 import { PROJECT_FORECAST_WRITES, projectForecastWrite } from "./tools_project_forecast.ts";
+
+/** The largest usual amount a charge takes, in minor units (decision 0189; the database checks it too). */
+const USUAL_AMOUNT_MAX_MINOR = 999_999_999_999n;
 
 export async function callWrite(
   name: typeof WRITE_TOOL_NAMES[number],
@@ -416,6 +421,18 @@ export async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
       p_pace: parsed.data.pace,
+    };
+  } else if (name === "set_line_usual_amount") {
+    const parsed = setLineUsualAmountSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    const minor = parsed.data.amount == null ? null : minorFromMajor(parsed.data.amount);
+    if (minor != null && typeof minor !== "bigint") return minor;
+    if (minor != null && minor > USUAL_AMOUNT_MAX_MINOR) return fail("validation", "validation");
+    rpcName = "mcp_set_line_usual_amount";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_transaction_id: parsed.data.transaction_id,
+      p_amount_minor: minor == null ? null : Number(minor),
     };
   } else if (name === "answer_recurring_match") {
     const parsed = answerRecurringMatchSchema.safeParse(args);
