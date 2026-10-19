@@ -107,6 +107,10 @@ function useForecastEditsQuery(projectId: string, month: string) {
   });
 }
 
+/** Stable empties, so the memoized forecast and the screens' memos keep their inputs while a read loads. */
+const NO_LOANS: readonly ForecastLoan[] = [];
+const NO_CATEGORIES: readonly CategoryRow[] = [];
+
 /**
  * The project's forecast for next month in one currency, from its recurring charges, its loans' schedules and
  * the last six complete months by category (the month view's own read), with the user's edits on top. Null
@@ -114,10 +118,6 @@ function useForecastEditsQuery(projectId: string, month: string) {
  * (a sample screen with no forecast) reads nothing. The edit page also takes the reads themselves
  * (`recurring`, `categoryMonths`, `categories`).
  */
-/** Stable empties, so the memoized forecast and the screens' memos keep their inputs while a read loads. */
-const NO_LOANS: readonly ForecastLoan[] = [];
-const NO_CATEGORIES: readonly CategoryRow[] = [];
-
 export function useNextMonthForecast(projectId: string, currency: string, sample?: NextMonthSample, enabled = true) {
   const today = sample?.today ?? israelToday();
   const month = nextMonthKey(today);
