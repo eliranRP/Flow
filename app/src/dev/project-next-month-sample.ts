@@ -127,3 +127,48 @@ export const JUNIPER_NEXT_EDITED: NextMonthSample = {
     },
   ],
 };
+
+/**
+ * The same project once its DSCR loan started (decision 0190): 272,000 at 6.75% over 30 years from 1/9/2026,
+ * payment 2,506.09 with escrow 741.90, filed to the loan interest category (the keyed default) and to taxes
+ * and insurance. Its first costs came in July, so the averages are over July to September. November's
+ * interest is the schedule's 1,527.36 and its escrow 741.90, not September's 1,530 and 741.90 over three
+ * months; repairs (1,090 / 3) and power and water (280 / 3) are still averages.
+ */
+export const JUNIPER_NEXT_LOAN: NextMonthSample = {
+  ...JUNIPER_NEXT,
+  expected: {
+    ...JUNIPER_NEXT.expected,
+    recurring: [
+      charge("s-northgate", "Northgate Mortgage", "expense", 250_609n, 1, "loan-interest", "month", "2026-11", true),
+      charge("c-ortiz", "M. Ortiz", "income", 185_000n, 1, "rent"),
+      charge("c-kim", "S. Kim", "income", 230_000n, 3, "rent"),
+    ],
+  },
+  categoryMonths: {
+    ...(JUNIPER_NEXT.categoryMonths as ProjectCategoryMonths),
+    categories: [
+      category("loan-interest", "ריבית הלוואות", [0, 0, 0, 0, 0, 153_000]),
+      category("taxes", "מסים וביטוח", [0, 0, 0, 0, 0, 74_190]),
+      category("repairs", "תיקונים ותחזוקה", [0, 0, 0, 52_000, 31_000, 26_000]),
+      category("power", "חשמל ומים", [0, 0, 0, 9_000, 10_000, 9_000]),
+    ],
+  },
+  loans: [{
+    id: "l-dscr",
+    currency: "USD",
+    status: "open",
+    projectId: PROJECT,
+    kind: "amortizing",
+    principalMinor: 27_200_000n,
+    annualRatePpm: 67_500,
+    termMonths: 360,
+    startDate: "2026-09-01",
+    paymentMinor: 250_609n,
+    escrowMinor: 74_190n,
+    interestOnlyMonths: null,
+    amortizationMonths: null,
+    rates: [],
+    categoryIds: { interest: null, escrow: "taxes", principal: "loan-principal", fees: null },
+  }],
+};

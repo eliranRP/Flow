@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { JUNIPER_NEXT } from "../dev/project-next-month-sample";
+import { JUNIPER_NEXT, JUNIPER_NEXT_LOAN } from "../dev/project-next-month-sample";
 import { JUNIPER_PROFIT } from "../dev/project-profit-sample";
 import { renderWithProviders } from "../test-render";
 import { ProjectNextEditScreen, type ProjectNextEditSample } from "./project-next-edit-screen";
@@ -182,5 +182,15 @@ describe("ProjectNextEditScreen, a new line", () => {
     fireEvent.click(within(sheet).getByRole("button", { name: '+ יצירת קטגוריה "שמירה"' }));
     await waitFor(() => { expect(rpc).toHaveBeenCalledWith("create_category", { p_name: "שמירה", p_kind: "expense" }); });
     expect(await screen.findByRole("heading", { level: 1, name: "שמירה" })).toBeTruthy();
+  });
+});
+
+describe("ProjectNextEditScreen, a loan row (decision 0190)", () => {
+  it("shows the loan's interest for November, from its schedule, and that the loan itself stays", () => {
+    renderEdit({ next: JUNIPER_NEXT_LOAN, rowKey: "avg:loan-interest" });
+    expect(screen.getByRole("heading", { level: 1, name: "ריבית הלוואות" })).toBeTruthy();
+    expect(amountField()).toHaveValue("1,527.36");
+    expect(screen.getByText("נובמבר · הוצאה · לפי ההלוואה")).toBeTruthy();
+    expect(screen.getByText("ההלוואה עצמה לא משתנה. השינוי שלך גובר על לוח ההלוואה בצפי.")).toBeTruthy();
   });
 });

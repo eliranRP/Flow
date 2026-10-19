@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { JUNIPER_NEXT } from "../dev/project-next-month-sample";
+import { JUNIPER_NEXT, JUNIPER_NEXT_LOAN } from "../dev/project-next-month-sample";
 import { JUNIPER_PROFIT } from "../dev/project-profit-sample";
 import { ProjectNextEditScreen, type ProjectNextEditSample } from "./project-next-edit-screen";
 import { StoryRoute } from "../ui/story-route";
@@ -26,6 +26,12 @@ function page(preset: Partial<ProjectNextEditSample>, add = false) {
 export const ProjectNextEdit: Story = {
   name: "Project, next month forecast, edit a row",
   render: () => page({ rowKey: "avg:repairs", draft: "1200" }),
+};
+
+/** A loan row's edit page: the loan's interest for November, from its schedule (לפי ההלוואה). */
+export const ProjectNextEditLoan: Story = {
+  name: "Project, next month forecast, edit a loan row",
+  render: () => page({ next: JUNIPER_NEXT_LOAN, rowKey: "avg:loan-interest" }),
 };
 
 /** ProfitNextAdd: a new line of the property manager's category, at its usual $305. */

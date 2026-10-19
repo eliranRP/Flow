@@ -24,11 +24,11 @@ import {
   PACE_WORDS,
   savedToast,
 } from "../project-next-edit";
-import type { ForecastPace, NextMonthRow } from "../project-next-month";
+import { type ForecastPace, LOAN_SOURCE, type NextMonthRow } from "../project-next-month";
 import { useNextMonthForecast } from "../project-next-month-query";
 import { screenPhase } from "../query-phase";
 import { createCategoryNamed } from "../use-add-entry";
-import { useCategoriesQuery, useProjectQuery } from "../use-books";
+import { useProjectQuery } from "../use-books";
 import { useWriteGate } from "../use-is-viewer";
 import { useGoBack } from "../ui/back";
 import { Button } from "../ui/button";
@@ -54,10 +54,11 @@ export type ProjectNextEditSample = ProjectProfitSample & {
   query?: string;
 };
 
-/** "נובמבר · הוצאה · ממוצע 6 חודשים", "צפוי 01/11 · הכנסה · קבוע". */
+/** "נובמבר · הוצאה · ממוצע 6 חודשים", "נובמבר · הוצאה · לפי ההלוואה", "צפוי 01/11 · הכנסה · קבוע". */
 function metaLine(row: NextMonthRow, income: boolean, month: string, averageMonths: number): string {
   const side = income ? "הכנסה" : "הוצאה";
   if (row.kind === "recurring" && row.date != null) return `צפוי ${formatDayMonth(row.date)} · ${side} · קבוע`;
+  if (row.kind === "loan") return `${monthWord(month)} · ${side} · ${LOAN_SOURCE}`;
   if (row.kind === "added") return `${monthWord(month)} · ${side} · הוספת · ${row.pace == null || row.pace === "once" ? `רק ב${monthWord(month)}` : PACE_WORDS[row.pace]}`;
   return `${monthWord(month)} · ${side} · ${averageMonths === 1 ? "ממוצע חודש אחד" : `ממוצע ${String(averageMonths)} חודשים`}`;
 }
@@ -101,7 +102,6 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
   const figures = project == null ? null : projectRows(project, companyCurrency)[0] ?? null;
   const currency = figures?.currency ?? companyCurrency;
   const next = useNextMonthForecast(projectId, currency, sample?.next, sample == null && figures != null);
-  const companyCategories = useCategoriesQuery(sample == null);
   const writes = useProjectForecastWrites(projectId, next.month);
   const create = useCreateForecastCategory();
   const [draftText, setDraftText] = useState<string | null>(sample?.draft == null ? null : formatDraft(sample.draft));
@@ -116,7 +116,7 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
 
   const forecast = next.forecast;
   const month = next.month;
-  const categories = useMemo(() => sample?.next.categories ?? companyCategories.data ?? [], [sample?.next.categories, companyCategories.data]);
+  const categories = next.categories;
   const row = add || forecast == null ? null : forecast.rows.find((item) => item.key === rowKey) ?? forecast.removed.find((item) => item.key === rowKey) ?? null;
   const choices = useMemo(() => categoryChoices({
     categories,
@@ -159,7 +159,9 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
     ? `השורה נכנסת לצפי של ${projectName} בלבד. לא נוצרת תנועה.`
     : row?.kind === "recurring"
       ? "הקבוע עצמו לא משתנה. זה משנה רק את הצפי של הפרויקט."
-      : "Flow ממשיך ללמוד מהתנועות. השינוי שלך גובר על הממוצע.";
+      : row?.kind === "loan"
+        ? "ההלוואה עצמה לא משתנה. השינוי שלך גובר על לוח ההלוואה בצפי."
+        : "Flow ממשיך ללמוד מהתנועות. השינוי שלך גובר על הממוצע.";
 
   function save() {
     if (add && chosen == null) {
