@@ -7,7 +7,7 @@
 
 A project's next-month forecast (ProfitNext, the ProfitProject card and the edit page) is the project's recurring charges due that month and a six-month average of every other expense category, over the months since the project's first expense in the window. A recurring charge that pays a loan (`pays_loan`) is left out, since its usual amount is the whole payment with principal; the loan's interest and escrow came in as the averages of their categories.
 
-A loan younger than the window is badly diluted. One property's amortizing loan started 2026-09-01: payment 2,506.09 at 6.75%, with escrow 741.90. The owner set up the property's first costs in July, and the first payment was split into interest 1,530.00, escrow 741.90 and principal. The forecast showed interest −382.50 and taxes and insurance −185.48 ("ממוצע 4 חודשים"), that is 1,530 ÷ 4 and 741.90 ÷ 4. The owner expects the real monthly figures: about 1,527 interest and 741.90 escrow.
+A loan younger than the window is badly diluted. One property's amortizing loan with escrow started two months ago, while the property's first costs came in four months before the forecast month. Its first payment was split into interest, escrow and principal, and the forecast showed that payment's interest and escrow each divided by four ("ממוצע 4 חודשים"): about a quarter of the real figures. The owner expects the real monthly interest and escrow of the coming payment.
 
 ## Decision
 
@@ -32,7 +32,7 @@ The forecast takes a loan's profit parts from the loan's payments left, as the l
 
 **Count the loan payment's recurring charge and subtract principal.** The charge's usual amount is a median of past payments, and its split is per line. The schedule already holds each month's parts exactly.
 
-**The loan's original schedule** (`buildLoanSchedule` on its terms and rates, ignoring the balance in the books). It was the first version of this rule. The owner compared the forecast with the loan page's "התשלום הבא" (interest 812.26, escrow 564.56 on a VA loan) and expects the two to match. They differ whenever the balance in the books is not the schedule's (an extra principal payment, a flagged split), and then the original schedule forecasts interest on principal already paid. Reading the loan page's own payments left keeps one number for one payment across the app.
+**The loan's original schedule** (`buildLoanSchedule` on its terms and rates, ignoring the balance in the books). It was the first version of this rule. The owner compared the forecast with the loan page's next payment ("התשלום הבא") and expects the two to match. They differ whenever the balance in the books is not the schedule's (an extra principal payment, a flagged split), and then the original schedule forecasts interest on principal already paid. Reading the loan page's own payments left keeps one number for one payment across the app.
 
 **A new row key (`loan:<category_id>`).** It would drop the owner's existing edits of those rows and need a migration of `private.pfe_check_row_key`.
 

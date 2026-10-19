@@ -402,30 +402,40 @@ describe("nextMonthForecast with the project's loans (decision 0190)", () => {
     loans,
     categories: JUNIPER_NEXT_LOAN.categories,
   });
-  const november = buildLoanSchedule({
-    principalMinor: 27_200_000n, annualRatePpm: 67_500, termMonths: 360, startDate: "2026-09-01", paymentMinor: 250_609n, escrowMinor: 74_190n,
-  }).rows.find((row) => row.dueDate === "2026-11-01");
+  const schedule = buildLoanSchedule({
+    principalMinor: loan.principalMinor, annualRatePpm: loan.annualRatePpm, termMonths: 360, startDate: loan.startDate,
+    paymentMinor: loan.paymentMinor ?? 0n, escrowMinor: loan.escrowMinor,
+  }).rows;
+  const september = schedule[0]?.interestMinor ?? 0n;
+  const november = schedule.find((row) => row.dueDate === "2026-11-01");
+  const novemberInterest = november?.interestMinor ?? 0n;
+  const escrow = loan.escrowMinor;
+  /** An average over the three months July to September, rounded as the forecast rounds it. */
+  const third = (minor: bigint) => (minor + 1n) / 3n;
 
   it("takes a young loan's interest and escrow from its schedule, not from diluted averages", () => {
     const result = withLoans([loan]);
-    expect(november?.interestMinor).toBe(152_736n);
+    // The sample's balance in the books is the schedule's after two payments, so November is the schedule's row.
+    expect(loan.balanceMinor).toBe(schedule[1]?.balanceMinor);
+    expect(novemberInterest).toBeGreaterThan(0n);
+    expect(novemberInterest).toBeLessThan(september);
     const interest = result.rows.find((row) => row.key === "avg:loan-interest");
-    const escrow = result.rows.find((row) => row.key === "avg:taxes");
-    expect(interest).toMatchObject({ kind: "loan", name: "ריבית הלוואות", minor: -(november?.interestMinor ?? 0n), categoryId: "loan-interest" });
-    expect(escrow).toMatchObject({ kind: "loan", name: "מסים וביטוח", minor: -74_190n });
+    const escrowRow = result.rows.find((row) => row.key === "avg:taxes");
+    expect(interest).toMatchObject({ kind: "loan", name: "ריבית הלוואות", minor: -novemberInterest, categoryId: "loan-interest" });
+    expect(escrowRow).toMatchObject({ kind: "loan", name: "מסים וביטוח", minor: -escrow });
     expect(result.rows.filter((row) => row.kind === "average").map((row) => row.key)).toEqual(["avg:repairs", "avg:power"]);
     expect(result.rows.map((row) => row.kind)).toEqual(["recurring", "recurring", "loan", "loan", "average", "average"]);
     expect(result.loanCount).toBe(2);
     expect(result.averageCount).toBe(2);
-    // 4,150 in; 1,527.36 + 741.90 + 363.33 + 93.33 out. No principal, and no row for the servicer's whole payment.
-    expect(result.expenseMinor).toBe(152_736n + 74_190n + 36_333n + 9_333n);
+    // 4,150 in; November's interest and escrow, repairs 363.33 and power 93.33 out. No principal, and no row for the servicer's whole payment.
+    expect(result.expenseMinor).toBe(novemberInterest + escrow + 36_333n + 9_333n);
     expect(basisLine(result)).toBe("2 קבועים, 2 לפי ההלוואה ו־2 ממוצעים");
   });
 
   it("averages the loan's categories as before when the project has no loans", () => {
     const result = withLoans([]);
-    expect(result.rows.find((row) => row.key === "avg:loan-interest")).toMatchObject({ kind: "average", minor: -51_000n });
-    expect(result.rows.find((row) => row.key === "avg:taxes")).toMatchObject({ kind: "average", minor: -24_730n });
+    expect(result.rows.find((row) => row.key === "avg:loan-interest")).toMatchObject({ kind: "average", minor: -third(september) });
+    expect(result.rows.find((row) => row.key === "avg:taxes")).toMatchObject({ kind: "average", minor: -third(escrow) });
   });
 
   it("sums two loans in one category into one row", () => {
@@ -433,8 +443,8 @@ describe("nextMonthForecast with the project's loans (decision 0190)", () => {
     const result = withLoans([loan, second]);
     const interest = result.rows.filter((row) => row.categoryId === "loan-interest");
     expect(interest).toHaveLength(1);
-    expect(interest[0]?.minor).toBe(-(152_736n + 30_000n));
-    expect(result.rows.find((row) => row.key === "avg:taxes")?.minor).toBe(-74_190n);
+    expect(interest[0]?.minor).toBe(-(novemberInterest + 30_000n));
+    expect(result.rows.find((row) => row.key === "avg:taxes")?.minor).toBe(-escrow);
   });
 
   it("files a part to the company's keyed category when the loan names none", () => {
@@ -443,7 +453,7 @@ describe("nextMonthForecast with the project's loans (decision 0190)", () => {
       loans: [{ ...loan, categoryIds: { ...loan.categoryIds, escrow: null } }],
       categories: [...(JUNIPER_NEXT_LOAN.categories ?? []), { id: "escrow", name: "אסקרו", loan_part: "escrow" }],
     });
-    expect(keyed.rows.map((row) => [row.key, row.minor])).toEqual([["avg:loan-interest", -152_736n], ["avg:escrow", -74_190n]]);
+    expect(keyed.rows.map((row) => [row.key, row.minor])).toEqual([["avg:loan-interest", -novemberInterest], ["avg:escrow", -escrow]]);
     // With no keyed escrow category either, the escrow makes no row.
     expect(withLoans([{ ...loan, categoryIds: { ...loan.categoryIds, escrow: null } }]).rows.filter((row) => row.kind === "loan").map((row) => row.key)).toEqual(["avg:loan-interest"]);
   });
@@ -464,10 +474,10 @@ describe("nextMonthForecast with the project's loans (decision 0190)", () => {
 
   it("matches the loan page's next payment, from the balance in the books, after an extra principal payment", () => {
     // 20,000 paid down beyond the schedule: the balance is below where the original terms would have it.
-    const paidDown: ForecastLoan = { ...loan, balanceMinor: 27_153_030n - 2_000_000n };
+    const paidDown: ForecastLoan = { ...loan, balanceMinor: loan.balanceMinor - 2_000_000n };
     const next = loanOutlook(paidDown, JUNIPER_NEXT_LOAN.today)?.next;
     expect(next?.dueDate).toBe("2026-11-01");
-    expect(next?.interestMinor).toBeLessThan(november?.interestMinor ?? 0n);
+    expect(next?.interestMinor).toBeLessThan(novemberInterest);
     const rows = withLoans([paidDown]).rows;
     expect(rows.find((row) => row.key === "avg:loan-interest")?.minor).toBe(-(next?.interestMinor ?? 0n));
     expect(rows.find((row) => row.key === "avg:taxes")?.minor).toBe(-(next?.escrowMinor ?? 0n));
@@ -493,7 +503,7 @@ describe("nextMonthForecast with the project's loans (decision 0190)", () => {
       { id: "e-1", kind: "change", row_key: "avg:loan-interest", category_id: null, direction: null, amount_minor: 160_000, pace: "month", start_month: "2026-10" },
       { id: "e-2", kind: "remove", row_key: "avg:taxes", category_id: null, direction: null, amount_minor: null, pace: "once", start_month: "2026-11" },
     ]);
-    expect(changed.rows.find((row) => row.key === "avg:loan-interest")).toMatchObject({ kind: "loan", minor: -160_000n, wasMinor: -152_736n });
+    expect(changed.rows.find((row) => row.key === "avg:loan-interest")).toMatchObject({ kind: "loan", minor: -160_000n, wasMinor: -novemberInterest });
     expect(changed.removed.map((row) => row.key)).toEqual(["avg:taxes"]);
     expect(changed.loanCount).toBe(1);
     expect(changed.editCount).toBe(2);

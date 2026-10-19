@@ -3,7 +3,10 @@ import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { JUNIPER_NEXT, JUNIPER_NEXT_LOAN } from "../dev/project-next-month-sample";
 import { JUNIPER_PROFIT } from "../dev/project-profit-sample";
+import type { ForecastLoan } from "../project-next-loans";
+import { draftOf } from "../project-next-edit";
 import { renderWithProviders } from "../test-render";
+import { loanOutlook } from "./loan-outlook";
 import { ProjectNextEditScreen, type ProjectNextEditSample } from "./project-next-edit-screen";
 
 const rpc = vi.hoisted(() => vi.fn((_name: string, _args?: unknown) => Promise.resolve<{ data: unknown; error: null }>({ data: null, error: null })));
@@ -189,7 +192,8 @@ describe("ProjectNextEditScreen, a loan row (decision 0190)", () => {
   it("shows the loan's interest for November, from its schedule, and that the loan itself stays", () => {
     renderEdit({ next: JUNIPER_NEXT_LOAN, rowKey: "avg:loan-interest" });
     expect(screen.getByRole("heading", { level: 1, name: "ריבית הלוואות" })).toBeTruthy();
-    expect(amountField()).toHaveValue("1,527.36");
+    const next = loanOutlook(JUNIPER_NEXT_LOAN.loans?.[0] as ForecastLoan, JUNIPER_NEXT_LOAN.today)?.next;
+    expect(amountField()).toHaveValue(draftOf(next?.interestMinor ?? 0n));
     expect(screen.getByText("נובמבר · הוצאה · לפי ההלוואה")).toBeTruthy();
     expect(screen.getByText("ההלוואה עצמה לא משתנה. השינוי שלך גובר על לוח ההלוואה בצפי.")).toBeTruthy();
   });

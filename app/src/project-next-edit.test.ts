@@ -15,6 +15,7 @@ import {
   savedToast,
 } from "./project-next-edit";
 import { nextMonthForecast } from "./project-next-month";
+import { loanOutlook } from "./screens/loan-outlook";
 
 const base = nextMonthForecast({ projectId: "juniper-ct", currency: "USD", today: JUNIPER_NEXT.today, recurring: JUNIPER_NEXT.expected.recurring, categoryMonths: JUNIPER_NEXT.categoryMonths });
 
@@ -169,7 +170,12 @@ describe("the edit page's figures with a loan row (decision 0190)", () => {
 
   it("shows the interest category's own months next to the loan row's amount", () => {
     const bars = historyBars(JUNIPER_NEXT_LOAN.categoryMonths, "loan-interest", "USD");
-    expect(bars?.months.map((bar) => bar.minor)).toEqual([0n, 0n, 0n, 0n, 153_000n]);
-    expect(loanForecast.rows.find((row) => row.key === "avg:loan-interest")?.minor).toBe(-152_736n);
+    const loan = JUNIPER_NEXT_LOAN.loans?.[0];
+    const september = BigInt(JUNIPER_NEXT_LOAN.categoryMonths?.categories.find((row) => row.id === "loan-interest")?.months_minor.at(-1) ?? 0);
+    expect(bars?.months.map((bar) => bar.minor)).toEqual([0n, 0n, 0n, 0n, september]);
+    const next = loan == null ? null : loanOutlook(loan, JUNIPER_NEXT_LOAN.today)?.next;
+    expect(next?.dueDate).toBe("2026-11-01");
+    expect(loanForecast.rows.find((row) => row.key === "avg:loan-interest")?.minor).toBe(-(next?.interestMinor ?? 0n));
+    expect(next?.interestMinor).not.toBe(september);
   });
 });

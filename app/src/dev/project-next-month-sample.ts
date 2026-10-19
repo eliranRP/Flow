@@ -1,4 +1,4 @@
-import type { CategoryRow, ExpectedParty, ProjectCategoryMonths } from "@flow/shared";
+import { buildLoanSchedule, type CategoryRow, contractualPaymentMinor, type ExpectedParty, type ProjectCategoryMonths } from "@flow/shared";
 import type { NextMonthSample } from "../project-next-month-query";
 
 const PROJECT = "juniper-ct";
@@ -128,19 +128,29 @@ export const JUNIPER_NEXT_EDITED: NextMonthSample = {
   ],
 };
 
+/** The sample loan's terms (invented): 238,000 at 6.25% over 30 years from 1/9/2026, escrow 612.40. */
+const LOAN_PRINCIPAL = 23_800_000n;
+const LOAN_RATE_PPM = 62_500;
+const LOAN_ESCROW = 61_240n;
+/** The payment: the annuity plus escrow. */
+const LOAN_PAYMENT = contractualPaymentMinor({ principalMinor: LOAN_PRINCIPAL, annualRatePpm: LOAN_RATE_PPM, termMonths: 360 }) + LOAN_ESCROW;
+const LOAN_ROWS = buildLoanSchedule({
+  principalMinor: LOAN_PRINCIPAL, annualRatePpm: LOAN_RATE_PPM, termMonths: 360, startDate: "2026-09-01", paymentMinor: LOAN_PAYMENT, escrowMinor: LOAN_ESCROW,
+}).rows;
+
 /**
- * The same project once its DSCR loan started (decision 0190): 272,000 at 6.75% over 30 years from 1/9/2026,
- * payment 2,506.09 with escrow 741.90, filed to the loan interest category (the keyed default) and to taxes
- * and insurance, its balance in the books 271,530.30 after two payments. Its first costs came in July, so the
- * averages are over July to September. November's interest is the loan page's next payment's 1,527.36 and its escrow 741.90, not September's 1,530 and 741.90 over three
- * months; repairs (1,090 / 3) and power and water (280 / 3) are still averages.
+ * The same project once its DSCR loan started (decision 0190), on the terms above, filed to the loan interest
+ * category (the keyed default) and to taxes and insurance. Its balance in the books is the schedule's after
+ * the September and October payments. Its first costs came in July, so the averages are over July to
+ * September. November's interest and escrow are the loan page's next payment, not September's split over
+ * three months; repairs (1,090 / 3) and power and water (280 / 3) are still averages.
  */
 export const JUNIPER_NEXT_LOAN: NextMonthSample = {
   ...JUNIPER_NEXT,
   expected: {
     ...JUNIPER_NEXT.expected,
     recurring: [
-      charge("s-northgate", "Northgate Mortgage", "expense", 250_609n, 1, "loan-interest", "month", "2026-11", true),
+      charge("s-northgate", "Northgate Mortgage", "expense", LOAN_PAYMENT, 1, "loan-interest", "month", "2026-11", true),
       charge("c-ortiz", "M. Ortiz", "income", 185_000n, 1, "rent"),
       charge("c-kim", "S. Kim", "income", 230_000n, 3, "rent"),
     ],
@@ -148,8 +158,9 @@ export const JUNIPER_NEXT_LOAN: NextMonthSample = {
   categoryMonths: {
     ...(JUNIPER_NEXT.categoryMonths as ProjectCategoryMonths),
     categories: [
-      category("loan-interest", "ריבית הלוואות", [0, 0, 0, 0, 0, 153_000]),
-      category("taxes", "מסים וביטוח", [0, 0, 0, 0, 0, 74_190]),
+      // September's payment, split as the schedule has it.
+      category("loan-interest", "ריבית הלוואות", [0, 0, 0, 0, 0, Number(LOAN_ROWS[0]?.interestMinor ?? 0n)]),
+      category("taxes", "מסים וביטוח", [0, 0, 0, 0, 0, Number(LOAN_ESCROW)]),
       category("repairs", "תיקונים ותחזוקה", [0, 0, 0, 52_000, 31_000, 26_000]),
       category("power", "חשמל ומים", [0, 0, 0, 9_000, 10_000, 9_000]),
     ],
@@ -160,17 +171,17 @@ export const JUNIPER_NEXT_LOAN: NextMonthSample = {
     status: "open",
     projectId: PROJECT,
     kind: "amortizing",
-    principalMinor: 27_200_000n,
-    annualRatePpm: 67_500,
+    principalMinor: LOAN_PRINCIPAL,
+    annualRatePpm: LOAN_RATE_PPM,
     termMonths: 360,
     startDate: "2026-09-01",
-    paymentMinor: 250_609n,
-    escrowMinor: 74_190n,
+    paymentMinor: LOAN_PAYMENT,
+    escrowMinor: LOAN_ESCROW,
     interestOnlyMonths: null,
     amortizationMonths: null,
     rates: [],
     // After the September and October payments, as the schedule has it.
-    balanceMinor: 27_153_030n,
+    balanceMinor: LOAN_ROWS[1]?.balanceMinor ?? LOAN_PRINCIPAL,
     categoryIds: { interest: null, escrow: "taxes", principal: "loan-principal", fees: null },
   }],
 };

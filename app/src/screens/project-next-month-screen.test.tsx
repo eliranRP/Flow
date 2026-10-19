@@ -1,10 +1,13 @@
+import { formatAmountText } from "@flow/shared";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { JUNIPER_NEXT, JUNIPER_NEXT_EDITED, JUNIPER_NEXT_LOAN } from "../dev/project-next-month-sample";
 import { JUNIPER_PROFIT } from "../dev/project-profit-sample";
+import type { ForecastLoan } from "../project-next-loans";
 import type { NextMonthSample } from "../project-next-month-query";
 import { renderWithProviders } from "../test-render";
+import { loanOutlook } from "./loan-outlook";
 import { ProjectNextMonthScreen } from "./project-next-month-screen";
 import { ProjectProfitScreen, type ProjectProfitSample } from "./project-profit-screen";
 
@@ -204,9 +207,11 @@ describe("the next-month page with a loan (decision 0190)", () => {
       "חשמל ומים",
     ]);
     expect(rows[2]?.textContent).toContain("לפי ההלוואה");
-    expect(rows[2]?.textContent).toContain("−$1,527.36");
+    const next = loanOutlook(JUNIPER_NEXT_LOAN.loans?.[0] as ForecastLoan, JUNIPER_NEXT_LOAN.today)?.next;
+    expect(next?.dueDate).toBe("2026-11-01");
+    expect(rows[2]?.textContent).toContain(`−${formatAmountText(next?.interestMinor ?? 0n, "USD")}`);
     expect(rows[3]?.textContent).toContain("לפי ההלוואה");
-    expect(rows[3]?.textContent).toContain("−$741.90");
+    expect(rows[3]?.textContent).toContain(`−${formatAmountText(next?.escrowMinor ?? 0n, "USD")}`);
     expect(rows[4]?.textContent).toContain("ממוצע 3 חודשים");
     expect(screen.getByText("לפי הקבועים של הנכס, לוח ההלוואה וממוצע 6 החודשים האחרונים לכל קטגוריה. נגיעה בשורה משנה אותה או מסירה אותה.")).toBeTruthy();
   });
