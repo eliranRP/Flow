@@ -257,7 +257,9 @@ describe("LoanCategoryRow (FLOW-114 option B)", () => {
     const dialog = await openSheet();
     fireEvent.click(within(dialog).getByRole("button", { name: "ביטול השיוך" }));
     await screen.findByText("השיוך בוטל");
-    const keys = invalidate.mock.calls.map(([filters]) => (filters?.queryKey as string[] | undefined)?.[0]);
+    // Every other cached read goes stale too (decision 0191), with no read now.
+    expect(invalidate).toHaveBeenCalledWith({ refetchType: "none" });
+    const keys = invalidate.mock.calls.flatMap(([filters]) => (filters?.queryKey == null ? [] : [(filters.queryKey as string[])[0]]));
     for (const key of ["dashboard", "review", "search", "project", "project-category", "breakdown", "breakdown-lines", "profit-months", "txn", "loans", "loan-split", "line-split-loan"]) {
       expect(keys).toContain(key);
     }

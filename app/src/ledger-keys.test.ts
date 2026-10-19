@@ -60,7 +60,7 @@ function readKeys(): Map<string, string> {
       // The key handed to cancel/refetch/invalidate is a filter, not a read.
       const line = file.text.slice(Math.max(0, match.index - 40), match.index);
       if (/(invalidate|cancel|remove|refetch|reset)Queries\(\{\s*$/.test(line)) continue;
-      if (found.size === 0 && /^(key|readonly)\b/.test(expression)) continue;
+      if (found.size === 0 && /^(\[key\]|key\b|readonly\b)/.test(expression)) continue;
       expect(found.size, `${file.path}: queryKey: ${expression}`).toBeGreaterThan(0);
       for (const key of found) keys.set(key, file.path);
     }
