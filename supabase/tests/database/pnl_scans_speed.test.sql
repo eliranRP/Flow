@@ -1120,11 +1120,9 @@ end;
 $$;
 
 select tests.authenticate_as('ps_owner');
--- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
--- with the user's claims, and each still checks the caller's company.
+-- company_pnl is not granted to authenticated (decision 0193): read as service_role, same claims.
 set local role service_role;
 select pg_temp.read_new('');
-set local role authenticated;
 reset role;
 select * from pg_temp.check_old('', '');
 
@@ -1134,7 +1132,6 @@ update public.companies set base_currency = 'USD', cash_basis = 'invoice' where 
 select tests.authenticate_as('ps_owner');
 set local role service_role;
 select pg_temp.read_new('_usd');
-set local role authenticated;
 reset role;
 select * from pg_temp.check_old('_usd', ' (dollars, invoice basis)');
 

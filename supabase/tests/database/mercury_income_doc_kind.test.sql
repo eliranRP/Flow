@@ -149,7 +149,6 @@ select is(
   395000::bigint,
   'invoiced basis counts posted Mercury income'
 );
-set local role authenticated;
 reset role;
 
 -- A Mercury income line stored with no category (no visible income default at the time).

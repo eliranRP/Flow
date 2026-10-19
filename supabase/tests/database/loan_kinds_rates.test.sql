@@ -384,7 +384,6 @@ select throws_ok(
   format('select public.clear_loan_split_review(%L)', pg_temp.line('f106k:c1')),
   '23514', 'loan_closed', 'clearing that review runs the closed check'
 );
-set local role authenticated;
 reset role;
 update public.transactions set doc_date = '2026-01-30' where id = pg_temp.line('f106k:c1');
 select tests.authenticate_as('f106k_owner');
@@ -393,7 +392,6 @@ select lives_ok(
   format('select public.clear_loan_split_review(%L)', pg_temp.line('f106k:c1')),
   'moved back, the review clears'
 );
-set local role authenticated;
 reset role;
 update public.transactions set doc_date = '2026-02-15' where id = pg_temp.line('f106k:c2');
 update public.transactions set removed_at = null where id = pg_temp.line('f106k:c2');

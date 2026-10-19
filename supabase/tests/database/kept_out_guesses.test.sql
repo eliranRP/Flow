@@ -217,7 +217,6 @@ select lives_ok(
 -- A guessed kept-out income line counts, so the income review picks it up until it is confirmed.
 set local role service_role;
 select is(pg_temp.pnl('cash', 'unassigned_income_agorot'), 4000::bigint, 'a guessed kept-out income line counts as unassigned income');
-set local role authenticated;
 reset role;
 do $sync$
 begin

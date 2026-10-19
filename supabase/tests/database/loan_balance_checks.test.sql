@@ -154,7 +154,6 @@ select throws_ok(
   'loan_split_balance',
   'the owner cannot clear the flag while the line is still past the balance'
 );
-set local role authenticated;
 reset role;
 
 -- A line that posts within the balance is not flagged.
@@ -291,7 +290,6 @@ select lives_ok(
   $$,
   'the owner clears the flag once the split fits'
 );
-set local role authenticated;
 reset role;
 select is(pg_temp.balance(), 0::bigint, 'the cleared line counts, down to exactly zero');
 

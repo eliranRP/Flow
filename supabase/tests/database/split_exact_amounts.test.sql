@@ -220,7 +220,6 @@ select lives_ok(
   ),
   'the synced line splits in exact amounts'
 );
-set local role authenticated;
 reset role;
 
 select pg_temp.exactsplit_sync();
