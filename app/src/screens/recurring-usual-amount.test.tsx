@@ -87,7 +87,8 @@ describe("the charge page: the usual amount", () => {
   });
 
   it("an amount the owner set shows קבעת, and חזרה לחישוב clears it; ביטול writes it back", async () => {
-    state.data = { status: "ready", ...RECURRING_CHARGES_FIXTURE_WATER, row: ownerRow() };
+    const sample = { ...RECURRING_CHARGES_FIXTURE_WATER, row: ownerRow() };
+    state.data = { status: "ready", ...sample };
     renderPage();
     const row = screen.getByRole("button", { name: /הסכום הרגיל/ });
     expect(within(row).getByText("קבעת")).toBeTruthy();
