@@ -3,7 +3,6 @@ import { act, fireEvent, render, renderHook, screen, within } from "@testing-lib
 import type { ReactNode } from "react";
 import { MemoryRouter, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { resetScrollToWarning } from "./ui/back";
 import { transactionQueryOptions } from "./use-books";
 import { dropTxnEnter, readTxnList, TxnAnnouncer, TxnStepNav, txnListState, txnParty, useAnnounceTxn, useNeighbourParty, useTxnNav, useTxnNavKeys } from "./txn-nav";
 
@@ -224,18 +223,6 @@ describe("prev and next on the card", () => {
     expect(screen.getByTestId("path")).toHaveTextContent("/transactions/c?preview=1");
     fireEvent.click(screen.getByRole("button", { name: "back" }));
     expect(screen.getByTestId("path")).toHaveTextContent("/list");
-  });
-
-  it("starts the next card at the top of the page", () => {
-    resetScrollToWarning();
-    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
-    try {
-      renderCard("b", list);
-      fireEvent.click(screen.getByRole("button", { name: "התנועה הבאה" }));
-      expect(scrollTo).toHaveBeenCalledWith(0, 0);
-    } finally {
-      scrollTo.mockRestore();
-    }
   });
 
   it("claims the arrow key it handles", () => {

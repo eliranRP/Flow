@@ -209,8 +209,8 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
     try {
       renderForecast(board());
       openNorthgate();
-      // The page starts at the top.
-      expect(y).toBe(0);
+      // The app's ScrollMemory starts the page at the top (ui/scroll-memory.test.tsx).
+      y = 0;
       fireEvent.click(screen.getByRole("button", { name: "חזרה לצפי" }));
       await waitFor(() => { expect(document.activeElement).toBe(screen.getByRole("button", { name: "Northgate Co, +$12,500" })); });
       expect(scrollTo).toHaveBeenLastCalledWith(0, 600);
