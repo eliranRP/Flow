@@ -20,7 +20,10 @@ What the catalog showed, the same in a fresh local database and in production:
 
 **Invite caps, in the database.**
 
-- `invite_member` creates at most **10 new invites per company** and **20 per inviting user** (across every company they own) in any rolling 24 hours, counted from `company_invites.created_at` whatever the invite's status now, so a cancelled invite still counts and cancel-and-invite cannot loop. Over either cap it raises `invite_limit` (SQLSTATE 23514) and writes nothing. Inviting an email that already has a pending invite returns that invite, sends no email, and is not counted. The 50-pending check stays and runs first.
+- `invite_member` creates at most **10 new invites per company** and **20 per inviting user** (across every company they own, now or before) in any rolling 24 hours. Over either cap it raises `invite_limit` (SQLSTATE 23514) and writes nothing.
+- The company count reads `company_invites.created_at` whatever the invite's status now, so a cancelled invite still counts and cancel-and-invite cannot loop.
+- The user count reads `private.invite_sends`, a ledger of one row (`user_id`, `created_at`) per counted invite. It has no company key, so `delete_company` ([0194](0194-delete-company-danger-zone.md)) does not clear it: create a company, invite, delete it and create another, and the user's count carries on. A new company starts its own company count; the ledger bounds the loop. `invite_member` deletes the user's ledger rows older than 2 days as it goes. The table has RLS on, no policy and no client grant, like every `private` table ([0193](0193-client-privileges.md)), and its rows go with the auth user.
+- Both counts are exact: `invite_member` takes a per-user advisory lock and then the existing per-company one, always in that order, before it counts. Inviting an email that already has a pending invite returns that invite, sends no email, and is not counted. The 50-pending check stays and runs first.
 - The numbers: a small business adds a few people at a time; 10 a day per company covers a whole team on day one, and 20 per user leaves room for an owner setting up two companies. A spammer gets 10 addresses a day from a company, against unlimited before.
 - `claim_invite_email(p_invite_id)` is the edge function's claim on one send: the caller owns the company (`private.team_owner_company()`), the invite is pending and not expired, and it has had fewer than **3 emails** (`company_invites.email_sends`, with `emailed_at`). Otherwise it raises `invite not found`, or `invite_email_limit` (23514) past the third. The function claims before it calls Resend and answers 429 `email_limit` or 404. Three, not one, so a send that failed can be tried again. Emails a day are therefore at most three times the invite caps.
 - `company_invites (company_id, created_at)` is indexed for the company count; it also gives `company_invites_company_id_fkey` a whole index for the first time.
@@ -49,6 +52,8 @@ The pgTAP guard `foreign_key_indexes.test.sql` now asks for a valid index that l
 
 **Cap only in the edge function.** The function is one caller; flow-mcp and any client can call `invite_member` directly, and an edge counter needs storage the database already has.
 
+**Count the user cap from `company_invites.invited_by`.** Those rows cascade with the company, so deleting a company would reset its owner's count.
+
 **Calendar-day caps.** A rolling 24 hours needs no time zone and cannot be doubled at midnight.
 
 **One email per invite, ever.** A send that fails at the provider could then never be tried again; three keeps a retry and still bounds the total.
@@ -57,4 +62,4 @@ The pgTAP guard `foreign_key_indexes.test.sql` now asks for a valid index that l
 
 ## Consequences
 
-An owner who invites an eleventh person in a day sees the toast and tries the next day; nothing is saved. A test that creates many invites for one company inside a day must age them or stay under 10. The invite-email function makes one more RPC per send. A new foreign key needs a whole index (or one partial on its column being not null), or the guard fails.
+An owner who invites an eleventh person in a day sees the toast and tries the next day; nothing is saved. Deleting the company does not give the owner more invites that day. A test that creates many invites inside a day must age them (in `company_invites` and `private.invite_sends`) or stay under the caps. The invite-email function makes one more RPC per send. A new foreign key needs a whole index (or one partial on its column being not null), or the guard fails.

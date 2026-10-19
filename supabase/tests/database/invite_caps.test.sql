@@ -1,17 +1,21 @@
 -- FLOW-928 (decision 0195). invite_member creates at most 10 invites per company and 20 per
 -- inviting user in any 24 hours; over a cap it raises invite_limit (23514) and writes nothing.
+-- The user count reads private.invite_sends, so deleting a company does not reset it.
 -- claim_invite_email lets the invite-email function send at most 3 emails per invite.
 -- Invented names and @example.com emails only.
 
 begin;
 
-select plan(25);
+select plan(36);
 
 do $users$
 begin
   perform tests.create_supabase_user('ic_owner', 'ic-owner@example.com');
   perform tests.create_supabase_user('ic_rival', 'ic-rival@example.com');
   perform tests.create_supabase_user('ic_third', 'ic-third@example.com');
+  perform tests.create_supabase_user('ic_editor', 'ic-editor@example.com');
+  perform tests.create_supabase_user('ic_viewer', 'ic-viewer@example.com');
+  perform tests.create_supabase_user('ic_loop', 'ic-loop@example.com');
 end
 $users$;
 
@@ -84,11 +88,13 @@ select public.switch_company(pg_temp.id('b'));
 select is(public.invite_member('ic-b-1@example.com', 'viewer')->>'existing', 'false',
   'the same owner''s other company has its own company count');
 
--- Per user: invites this user made in a company they no longer own count toward their 20.
+-- Per user: invites this user made elsewhere today (here 9 in company D, which they no longer
+-- own, with their ledger rows) count toward their 20.
 reset role;
 insert into public.company_invites (company_id, email, role, invited_by)
 select pg_temp.id('d'), 'ic-d-' || n || '@example.com', 'viewer', pg_temp.id('owner')
 from generate_series(1, 9) n;
+insert into private.invite_sends (user_id) select pg_temp.id('owner') from generate_series(1, 9);
 select tests.authenticate_as('ic_owner');
 select public.switch_company(pg_temp.id('b'));
 select throws_ok($$select public.invite_member('ic-b-2@example.com', 'viewer')$$, '23514', 'invite_limit',
@@ -106,6 +112,8 @@ select throws_ok($$select public.invite_member('ic-third-2@example.com', 'viewer
 reset role;
 update public.company_invites set created_at = now() - interval '25 hours'
 where company_id in (pg_temp.id('a'), pg_temp.id('d'));
+update private.invite_sends set created_at = now() - interval '25 hours'
+where user_id = pg_temp.id('owner');
 select tests.authenticate_as('ic_owner');
 select public.switch_company(pg_temp.id('a'));
 select is(public.invite_member('ic-13@example.com', 'viewer')->>'existing', 'false',
@@ -155,6 +163,55 @@ select public.switch_company(pg_temp.id('a'));
 select throws_ok(format('select public.claim_invite_email(%L)', pg_temp.id('expired')), 'P0001', 'invite not found',
   'an expired invite is not mailed');
 select is(pg_temp.sends(pg_temp.id('expired')), 0, 'and is not counted');
+
+-- Only the company's owner claims: an editor or a viewer of the same company is forbidden.
+reset role;
+insert into public.company_members (company_id, user_id, role) values
+  (pg_temp.id('a'), tests.get_supabase_uid('ic_editor'), 'editor'),
+  (pg_temp.id('a'), tests.get_supabase_uid('ic_viewer'), 'viewer');
+select tests.authenticate_as('ic_editor');
+select public.switch_company(pg_temp.id('a'));
+select throws_ok(format('select public.claim_invite_email(%L)', pg_temp.id('sent')), '42501', 'forbidden',
+  'an editor of the company cannot claim an email');
+select tests.authenticate_as('ic_viewer');
+select public.switch_company(pg_temp.id('a'));
+select throws_ok(format('select public.claim_invite_email(%L)', pg_temp.id('sent')), '42501', 'forbidden',
+  'nor can a viewer');
+
+-- A cancelled invite is not mailed.
+select tests.authenticate_as('ic_owner');
+select public.switch_company(pg_temp.id('a'));
+select public.cancel_invite(pg_temp.id('sent'));
+select throws_ok(format('select public.claim_invite_email(%L)', pg_temp.id('sent')), 'P0001', 'invite not found',
+  'a cancelled invite is not mailed');
+
+-- Deleting a company does not reset the user's count: 10 invites in each of two companies, each
+-- deleted, and the first invite in a third company is refused.
+select tests.authenticate_as('ic_loop');
+insert into ic (label, id) values ('loop1', public.create_company('Example Loop One', true));
+select is(
+  (select count(*)::int from generate_series(1, 10) n
+   where (public.invite_member('ic-loop-1-' || n || '@example.com', 'viewer')->>'existing')::boolean is false),
+  10, 'the owner fills a company with 10 invites');
+select lives_ok(format('select public.delete_company(%L, %L)', pg_temp.id('loop1'), 'Example Loop One'),
+  'and deletes it');
+insert into ic (label, id) values ('loop2', public.create_company('Example Loop Two', true));
+select is(
+  (select count(*)::int from generate_series(1, 10) n
+   where (public.invite_member('ic-loop-2-' || n || '@example.com', 'viewer')->>'existing')::boolean is false),
+  10, 'a new company takes 10 more: a new company has its own company count');
+select lives_ok(format('select public.delete_company(%L, %L)', pg_temp.id('loop2'), 'Example Loop Two'),
+  'and is deleted too');
+select lives_ok($$select public.create_company('Example Loop 3', true)$$, 'and creates a third');
+select throws_ok($$select public.invite_member('ic-loop-3-1@example.com', 'viewer')$$, '23514', 'invite_limit',
+  'whose first invite is refused: the deleted companies'' invites still count for the user');
+
+-- The ledger is closed to clients.
+select ok(not has_table_privilege('authenticated', 'private.invite_sends', 'select')
+  and not has_table_privilege('anon', 'private.invite_sends', 'select'),
+  'authenticated and anon cannot read the ledger');
+select throws_ok($$select count(*) from private.invite_sends$$, '42501', null,
+  'a signed-in user''s read of the ledger is refused');
 
 -- Grants: authenticated may call both, anon neither.
 select ok(has_function_privilege('authenticated', 'public.claim_invite_email(uuid)', 'execute'),

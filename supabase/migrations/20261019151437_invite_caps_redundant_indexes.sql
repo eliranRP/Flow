@@ -1,9 +1,12 @@
 -- Invite send caps and redundant indexes (FLOW-928, decision 0195). From a Supabase advisors review.
 -- 1. invite_member caps the invites a company and a user create: 10 per company and 20 per
---    inviting user in any 24 hours, counted from company_invites.created_at whatever the invite's
---    status now (a cancelled invite still counts, so cancel and invite again cannot loop). Over a
---    cap it raises invite_limit (23514) and writes nothing. Inviting an email with a pending invite
---    again sends no email and is not counted. The 50-pending check stays and runs first.
+--    inviting user in any 24 hours. The company count reads company_invites.created_at whatever
+--    the invite's status now (a cancelled invite still counts, so cancel and invite again cannot
+--    loop). The user count reads private.invite_sends, a ledger with no company key, so deleting
+--    a company and creating another does not reset it. Over a cap it raises invite_limit (23514)
+--    and writes nothing. Inviting an email with a pending invite again sends no email and is not
+--    counted. The 50-pending check stays and runs first. A user lock, then the company lock, make
+--    both counts exact.
 -- 2. The invite-email function claims each send with claim_invite_email: the owner's pending,
 --    unexpired invite, at most 3 emails per invite (company_invites.email_sends), else
 --    invite_email_limit (23514). Emails a day are bounded by the invite caps times three.
@@ -38,6 +41,19 @@ drop index if exists public.loans_escrow_category_idx;             -- loans_comp
 drop index if exists public.loans_fees_category_idx;               -- loans_company_id_fees_category_id_fk_idx (FK (company_id, fees_category_id))
 drop index if exists public.loans_principal_category_idx;          -- loans_company_id_principal_category_id_fk_idx (FK (company_id, principal_category_id))
 
+-- 1. The per-user ledger: one row per counted invite, kept two days. No company key, so it
+-- outlives a deleted company. RLS on with no policy and no client grant: only definers touch it.
+create table private.invite_sends (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+create index invite_sends_user_created_idx on private.invite_sends (user_id, created_at);
+alter table private.invite_sends enable row level security;
+revoke all on private.invite_sends from public, anon, authenticated;
+
+comment on table private.invite_sends is
+  'FLOW-928 (decision 0195): one row per invite invite_member counted, for the per-user daily cap. Survives company deletion; rows older than 2 days are cleared by invite_member.';
+
 -- 2 and 3. The invite row counts its emails; the company count has an index.
 alter table public.company_invites
   add column email_sends smallint not null default 0 check (email_sends between 0 and 3),
@@ -68,7 +84,9 @@ begin
   then
     raise exception 'invalid email';
   end if;
-  -- One invite write at a time per company.
+  -- One invite write at a time per user, then per company (always in this order), so both
+  -- daily counts below are exact.
+  perform pg_advisory_xact_lock(hashtextextended('invite_user:' || uid::text, 0));
   perform pg_advisory_xact_lock(hashtextextended('company_invites:' || cid::text, 0));
   if exists (
     select 1 from auth.users u
@@ -96,21 +114,23 @@ begin
   if (select count(*) from public.company_invites i where i.company_id = cid and i.status = 'pending') >= 50 then
     raise exception 'too many invites';
   end if;
-  -- Decision 0195: 10 new invites per company and 20 per inviting user in any 24 hours. The
-  -- company lock above serialises the company count; two companies of one user can each pass
-  -- the user count at the same instant, at most one invite over.
+  -- Decision 0195: 10 new invites per company and 20 per inviting user in any 24 hours, exact
+  -- under the two locks above. The user count reads the ledger, which a company delete keeps.
+  delete from private.invite_sends s
+  where s.user_id = uid and s.created_at < now() - interval '2 days';
   if (
     select count(*) from public.company_invites i
     where i.company_id = cid and i.created_at > now() - interval '24 hours'
   ) >= 10 or (
-    select count(*) from public.company_invites i
-    where i.invited_by = uid and i.created_at > now() - interval '24 hours'
+    select count(*) from private.invite_sends s
+    where s.user_id = uid and s.created_at > now() - interval '24 hours'
   ) >= 20 then
     raise exception 'invite_limit' using errcode = '23514';
   end if;
   insert into public.company_invites (company_id, email, role, invited_by)
   values (cid, clean, p_role, uid)
   returning * into found_invite;
+  insert into private.invite_sends (user_id) values (uid);
   return jsonb_build_object(
     'id', found_invite.id, 'email', clean, 'role', p_role, 'status', 'pending', 'existing', false
   );
