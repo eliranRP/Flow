@@ -5,10 +5,10 @@
 -- deleted, and every failure is a company refusal that A's owner does not meet with the same call (a
 -- reach pass). B is swept three times: with B active, sending A's id as the company header, and with
 -- B's old flow-mcp token for A. A viewer pass proves a viewer changes none of A's rows. A new function
--- is swept with no edit
--- here. Every call runs in its own subtransaction that is always rolled back; A's rows are
--- fingerprinted inside it, before the rollback, so a write is named per function. Allowlists and how
--- to read a failure: CONTRIBUTING, Database privileges. Invented names and figures only.
+-- is swept with no edit here. Every call runs in its own subtransaction that is always rolled back;
+-- A's rows are fingerprinted inside it, before the rollback, so a write is named per function.
+-- Allowlists and how to read a failure: CONTRIBUTING, Database privileges. Invented names and figures
+-- only.
 
 begin;
 
@@ -50,7 +50,9 @@ begin
   select u.id::text, u.id, jsonb_build_object('sub', u.id::text, 'email', u.email, 'email_verified', true),
     'google', now(), now(), now()
   from auth.users u
-  where u.id = pg_temp.sid('invitee');
+  -- B and the viewer have a confirmed email too, so the invite functions reach the email comparison
+  -- for them rather than stopping at "no confirmed email".
+  where u.id in (pg_temp.sid('invitee'), pg_temp.sid('b_owner'), pg_temp.sid('a_viewer'));
   perform pg_temp.put('company', tests.fixture_company('sweep_a_owner', 'Victim Sample Co'));
   perform pg_temp.put('b_company', tests.fixture_company('sweep_b_owner', 'Attacker Sample Co'));
   -- The viewer owns a company of its own, so only the company header puts it in A.
@@ -248,6 +250,10 @@ begin
   values (token, owner, project, 'project', a);
   insert into private.mcp_writes (token_id, user_id, category_id, kind, company_id)
   values (token, owner, category, 'category', a);
+  -- A rename A's owner can undo, so the reach pass proves mcp_undo's lookup finds a real write.
+  insert into private.mcp_writes (token_id, user_id, category_id, kind, prior, company_id)
+  values (token, owner, category, 'category_name',
+    '{"before": "Victim Old Category", "after": "Victim Sample Category"}'::jsonb, a);
   insert into private.mcp_batches (token_id, user_id, company_id, idempotency_key)
   values (token, owner, a, 'a-batch-key-1') returning id into suggestion;
   perform pg_temp.put('batch', suggestion);
@@ -969,10 +975,15 @@ insert into sweep_reach_as (fn, why) values
   ('reopen_invite', 'reopens an invite the caller declined');
 
 -- Refusals A's owner meets too, by function and message, and why each still proves nothing leaks.
-create temp table sweep_reach_ok (fn text, pattern text, why text not null, primary key (fn, pattern));
-insert into sweep_reach_ok (fn, pattern, why) values
-  ('mcp_undo', '^envelope not_found ', 'it finds only the caller''s own writes: A''s owner has none of most kinds and none of B''s; B''s writes in A are checked by the write and copy scans'),
-  ('apply_starter_categories', '^55000 starter_locked$', 'takes no id; every company in the seed has lines');
+-- An entry never covers a call matching unless_call: there, A's owner must not be refused.
+create temp table sweep_reach_ok (
+  fn text, pattern text, unless_call text, why text not null, primary key (fn, pattern)
+);
+insert into sweep_reach_ok (fn, pattern, unless_call, why) values
+  ('mcp_undo', '^envelope not_found ',
+    format('''category_name'', %L::uuid', pg_temp.sid('category')),
+    'it finds only the caller''s own writes: A''s owner has one (a category rename, which must undo) but none of most kinds and none of B''s; B''s writes in A are checked by the write and copy scans'),
+  ('apply_starter_categories', '^55000 starter_locked$', null, 'takes no id; every company in the seed has lines');
 
 -- Positive controls: each detector fires on a case built to trip it.
 select pg_temp.sweep_call('control', pg_temp.sid('a_owner'), pg_temp.sid('company'), null, 'get_project', 'read',
@@ -1082,7 +1093,8 @@ select is(
      and pg_temp.normalized(array_to_string(o.failures, ';'), 'infinity')
        = pg_temp.normalized(array_to_string(c.failures, ';'), 'infinity')
      and not exists (select 1 from sweep_reach_ok r
-       where r.fn = c.fn and array_to_string(c.failures, ';') ~ r.pattern)),
+       where r.fn = c.fn and array_to_string(c.failures, ';') ~ r.pattern
+         and (r.unless_call is null or strpos(c.call, r.unless_call) = 0))),
   '{}'::text[],
   'A''s owner is not refused the same way for any call B''s passes were refused'
 );

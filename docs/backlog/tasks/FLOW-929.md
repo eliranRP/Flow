@@ -8,3 +8,4 @@
 - [x] Review (#739): error scan, refusal check with envelope parsing, differential check, per-function ids, per-user viewer rows, stale-token pass, company-less tables, current-date seed.
 - [x] CONTRIBUTING, Database privileges: what the sweep checks and how its allowlists work.
 - [x] Second review (#739): a reach pass as A's owner (A's invitee for the invite functions) proves each refusal in B's passes came from the company check, with the seed rows those functions need; `sweep_fail_ok` and `sweep_reach_ok` keyed by message; anchored refusal patterns; a narrower differential mask; echo stripping limited to the arguments sent.
+- [x] Third review (#739): B and the viewer have a confirmed-email identity, so the invite functions reach their email comparison for them; A's owner has an undoable rename, and the `mcp_undo` reach exception no longer covers it.
