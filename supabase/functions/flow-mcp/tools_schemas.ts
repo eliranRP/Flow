@@ -203,9 +203,9 @@ export const ALLOWED: Record<string, Set<string>> = {
   set_line_cash: new Set(["idempotency_key", "transaction_id", "in_cash"]),
   set_lines_cash: new Set(["idempotency_key", "items"]),
   set_cash_basis: new Set(["idempotency_key", "basis"]),
-  set_line_recurring: new Set(["idempotency_key", "transaction_id", "recurring"]),
-  set_line_pace: new Set(["idempotency_key", "transaction_id", "pace"]),
-  set_line_usual_amount: new Set(["idempotency_key", "transaction_id", "amount"]),
+  set_line_recurring: new Set(["idempotency_key", "transaction_id", "recurring", "project_id"]),
+  set_line_pace: new Set(["idempotency_key", "transaction_id", "pace", "project_id"]),
+  set_line_usual_amount: new Set(["idempotency_key", "transaction_id", "amount", "project_id"]),
   answer_recurring_match: new Set(["idempotency_key", "direction", "party_id", "match_party_id", "same"]),
   undo_jev_prefill: new Set(["idempotency_key", "transaction_id"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
@@ -680,17 +680,20 @@ export const setLineRecurringSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
   recurring: z.boolean().nullable(),
+  project_id: UUID_TEXT.optional(),
 }).strict();
 export const setLinePaceSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
   pace: z.enum(["month", "2months", "quarter", "year"]).nullable(),
+  project_id: UUID_TEXT.optional(),
 }).strict();
 // Decision 0189: the owner's usual amount for a line's charge, in major units (null: back to computed).
 export const setLineUsualAmountSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
   amount: z.union([z.number(), z.string()]).nullable(),
+  project_id: UUID_TEXT.optional(),
 }).strict();
 // FLOW-430: the user's answer to a suggested match for a late recurring bill.
 export const answerRecurringMatchSchema = z.object({

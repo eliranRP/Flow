@@ -1,6 +1,6 @@
 import { type MissingBill, type PartyCharges, type RecurringChange } from "@flow/shared";
 import { describe, expect, it, vi } from "vitest";
-import { amountOf, bannerText, changeFor, changeLine, chargeAlert, chargeHref, endedText, ignoredText, metaOf, monthsThrough, shiftMonth, statusOf } from "./recurring-charge";
+import { amountOf, bannerText, changeFor, changeLine, chargeAlert, comparable, chargeHref, endedText, ignoredText, metaOf, monthsThrough, shiftMonth, statusOf } from "./recurring-charge";
 import { RECURRING_CHANGES_FIXTURE, RECURRING_FIXTURE, RECURRING_MISSING_FIXTURE } from "./recurring-sample";
 import { type ScheduleRow } from "./recurring-schedule";
 import { answerRecurringMatch, dismissRecurringAlert, endRecurringCharge, restoreRecurringAlert, type RpcClient } from "./recurring-actions";
@@ -64,6 +64,8 @@ describe("the change (FLOW-447c)", () => {
   it("is the percent of an arrival against its usual amount, and null for anything else", () => {
     expect(changeFor(WATER)).toBe(38);
     expect(changeFor(POWER)).toBeNull();
+    // An owner's amount in the charge's first month seen (decision 0189).
+    expect(changeFor({ ...WATER, typical_amount_source: "owner", months_seen: 0 })).toBeNull();
   });
 
   it("reads כרגיל below 20%, and the words up or down above it, red only when it hurts", () => {
@@ -221,6 +223,14 @@ describe("endRecurringCharge: הסתיים and its undo", () => {
     expect(rpc).toHaveBeenNthCalledWith(1, "recurring_party_line", { p_direction: "expense", p_party_id: "servicer", p_currency: "USD", p_project_id: "p-birch" });
   });
 
+  it("writes the charge's project, so a charge fed only by another line's split part is the one ended (decision 0189)", async () => {
+    const { client, rpc } = endClient("tx-elm", true);
+    const undo = await endRecurringCharge(client, { ...target, projectId: "p-grove" });
+    expect(rpc).toHaveBeenNthCalledWith(2, "set_payment_recurring", { p_id: "tx-elm", p_recurring: false, p_project_id: "p-grove" });
+    await undo();
+    expect(rpc).toHaveBeenLastCalledWith("set_payment_recurring", { p_id: "tx-elm", p_recurring: true, p_project_id: "p-grove" });
+  });
+
   it("the undo writes back the owner's prior switch, true", async () => {
     const { client, rpc } = endClient("tx-9", true);
     const undo = await endRecurringCharge(client, target);
@@ -280,5 +290,14 @@ describe("a charge whose day has come but is not late yet", () => {
     expect(statusOf(soon, null, "2026-10-14").text).toBe("צפוי ב־15/10");
     expect(statusOf(soon, null, "2026-10-15").text).toBe("עוד לא הגיע");
     expect(statusOf(soon, null, "2026-10-17").text).toBe("עוד לא הגיע");
+  });
+});
+
+describe("comparable (decision 0189)", () => {
+  it("an owner's amount in the charge's first month seen is no change", () => {
+    expect(comparable({ typical_amount_source: "owner", months_seen: 0 })).toBe(false);
+    expect(comparable({ typical_amount_source: "owner", months_seen: 2 })).toBe(true);
+    expect(comparable({ typical_amount_source: "computed", months_seen: 0 })).toBe(true);
+    expect(comparable({})).toBe(true);
   });
 });

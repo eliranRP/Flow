@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(36);
+select plan(48);
 
 do $users$
 begin
@@ -217,8 +217,8 @@ select is(
 );
 select is(
   pg_temp.arrived('elm'),
-  '{"amount_minor": 16129, "typical_amount_minor": 250000, "change_percent": -94, "changed": true, "line_count": 1}'::jsonb,
-  'Elm, with no complete month, compares this month with the owner''s amount'
+  '{"amount_minor": 16129, "typical_amount_minor": 250000, "change_percent": -94, "changed": false, "line_count": 1}'::jsonb,
+  'Elm, with no complete month, compares this month with the owner''s amount but raises no change in its first month'
 );
 select is(
   (select jsonb_build_object('typical', s -> 'typical_amount_minor', 'source', s -> 'typical_amount_source',
@@ -348,7 +348,64 @@ select throws_ok(
 );
 select is(pg_temp.row('hazel') -> 'typical_amount_minor', '175740'::jsonb, 'the viewer still reads the computed amount');
 
--- 34-36. Another company is refused and writes nothing.
+-- 34-45. A charge with no line of its own (Grove, fed only by Elm's split transfer) is written through Elm's line
+-- with its project: ending, switching on and the pace reach Grove's row and leave Elm's alone.
+select tests.authenticate_as('sp_owner');
+select is(
+  public.set_payment_recurring(pg_temp.id('elm:0'), true, pg_temp.id('grove')) -> 'override_project_id',
+  to_jsonb(pg_temp.id('grove')),
+  'the switch on Elm''s line for Grove is Grove''s'
+);
+select is(
+  (select jsonb_build_object('typical', r -> 'typical_amount_minor', 'source', r -> 'typical_amount_source') from pg_temp.row('grove') r),
+  '{"typical": 60000, "source": "owner"}'::jsonb,
+  'Grove recurs, with the owner''s amount on its row'
+);
+select is(
+  (select jsonb_build_object('pace', w -> 'pace_override', 'project', w -> 'override_project_id')
+   from public.set_payment_pace(pg_temp.id('elm:0'), 'quarter', pg_temp.id('grove')) w),
+  jsonb_build_object('pace', 'quarter', 'project', pg_temp.id('grove')),
+  'the pace for Grove is written and reported for Grove''s charge'
+);
+select is(pg_temp.row('grove') ->> 'pace', 'quarter', 'Grove''s charge reads its pace');
+select is(pg_temp.row('elm') ->> 'pace', 'month', 'Elm keeps its pace');
+select is(
+  public.set_payment_recurring(pg_temp.id('elm:0'), false, pg_temp.id('grove')) -> 'prior_override',
+  'true'::jsonb,
+  'ending Grove returns Grove''s word before'
+);
+select is(pg_temp.row('grove'), null::jsonb, 'Grove has left the schedule');
+select is(pg_temp.row('elm') -> 'typical_amount_minor', '230000'::jsonb, 'Elm stays, untouched');
+reset role;
+select is(
+  (select jsonb_build_object('recurring', o.recurring, 'pace', o.pace, 'amount', o.typical_amount_minor)
+   from public.recurring_overrides o where o.project_id = pg_temp.id('elm')),
+  '{"recurring": true, "pace": null, "amount": 230000}'::jsonb,
+  'Elm''s row is as it was'
+);
+select tests.authenticate_as('sp_owner');
+select throws_ok(
+  format('select public.set_payment_recurring(%L, true, %L)', pg_temp.id('elm:0'), pg_temp.id('hazel')),
+  'P0001', 'validation',
+  'a switch for a project the line does not feed is refused'
+);
+-- The MCP: switching Grove on through Elm's line with project_id, and the undo puts Grove's word back.
+select pg_temp.as_mcp();
+select public.mcp_set_line_recurring('sp-4', pg_temp.id('elm:0'), true, pg_temp.id('grove'));
+select is(
+  public.mcp_undo('sp-undo-4', 'line_recurring', pg_temp.id('elm:0')) ->> 'ok',
+  'true',
+  'undo line_recurring for Grove'
+);
+reset role;
+select is(
+  (select jsonb_build_object('grove', (select o.recurring from public.recurring_overrides o where o.project_id = pg_temp.id('grove')),
+     'elm', (select o.recurring from public.recurring_overrides o where o.project_id = pg_temp.id('elm')))),
+  '{"grove": false, "elm": true}'::jsonb,
+  'the undo restores Grove''s word and leaves Elm''s'
+);
+
+-- 46-48. Another company is refused and writes nothing.
 select tests.authenticate_as('sp_other');
 select throws_ok(
   format('select public.set_payment_amount(%L, 100000)', pg_temp.id('hazel:0')),

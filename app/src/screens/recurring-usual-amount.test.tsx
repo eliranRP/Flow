@@ -9,7 +9,7 @@ import { RecurringChargeScreen } from "./recurring-charge-screen";
 // Decision 0189: the charge page's usual amount, its row, its sheet and its write.
 const state = vi.hoisted(() => ({
   data: null as unknown as { status: string },
-  client: { rpc: null as unknown as (name: string, args: Record<string, unknown>) => Promise<{ error: null | { message: string } }> },
+  client: { rpc: null as unknown as (name: string, args: Record<string, unknown>) => Promise<{ error: null | { message: string }; data?: unknown }> },
 }));
 
 vi.mock("../recurring-charge-data", async (original) => ({
@@ -86,9 +86,11 @@ describe("the charge page: the usual amount", () => {
     expect(calls()).toHaveLength(0);
   });
 
-  it("an amount the owner set shows קבעת, and חזרה לחישוב clears it; ביטול writes it back", async () => {
+  it("an amount the owner set shows קבעת, and חזרה לחישוב clears it; ביטול writes back the server's prior amount", async () => {
     const sample = { ...RECURRING_CHARGES_FIXTURE_WATER, row: ownerRow() };
     state.data = { status: "ready", ...sample };
+    // The server's word on the amount before wins over the page's (another tab may have changed it).
+    state.client = { rpc: vi.fn(() => Promise.resolve({ error: null, data: { prior_amount: 15000 } })) };
     renderPage();
     const row = screen.getByRole("button", { name: /הסכום הרגיל/ });
     expect(within(row).getByText("קבעת")).toBeTruthy();
@@ -100,7 +102,7 @@ describe("the charge page: the usual amount", () => {
       fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     });
     await waitFor(() => {
-      expect(calls()).toContainEqual(["set_payment_amount", { p_id: "tx-water-10", p_amount_minor: 12000, p_project_id: "p-elm-row" }]);
+      expect(calls()).toContainEqual(["set_payment_amount", { p_id: "tx-water-10", p_amount_minor: 15000, p_project_id: "p-elm-row" }]);
     });
   });
 

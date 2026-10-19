@@ -1,5 +1,5 @@
 import { formatAmountText } from "@flow/shared";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RECURRING_KEYS } from "../pace-write";
 import { liveRpcClient } from "../recurring-actions";
 import type { ScheduleRow } from "../recurring-schedule";
@@ -36,6 +36,12 @@ export function ChargeUsualAmount({
   // The amount after a write, until the reads catch up (and the only amount in a dev sample).
   const [local, setLocal] = useState<{ minor: bigint; owner: boolean } | null>(null);
   const opener = useRef<HTMLButtonElement>(null);
+  // The server's amount before the last write (prior_amount): what ביטול writes back.
+  const prior = useRef<number | null>(null);
+  // A refetched row is the server's word: it replaces the amount kept after a write.
+  useEffect(() => {
+    if (live) setLocal(null);
+  }, [row, live]);
   const usual = local ?? usualOf(row);
   const name = row.party_name;
 
@@ -45,16 +51,17 @@ export function ChargeUsualAmount({
     onSuccess: (done) => {
       setOpen(false);
       if (done.undo) return;
+      const back = prior.current;
       toast.show({
         message: usualToast(done.next, name),
         action: "ביטול",
         onAction: () => {
-          write.mutate({ ...done, next: done.before, before: done.next, undo: true });
+          write.mutate({ ...done, next: back, before: done.next, undo: true });
         },
       });
     },
     run: async (change) => {
-      if (live) await runUsualAmount(liveRpcClient(), change);
+      prior.current = live ? await runUsualAmount(liveRpcClient(), change) : change.before;
       // Cleared: the computed amount comes back with the reads; until then the page keeps the one it had.
       setLocal(change.next == null ? (live ? null : { minor: usualOf(row).minor, owner: false }) : { minor: BigInt(change.next), owner: true });
     },

@@ -297,7 +297,7 @@ select ok(
   not has_table_privilege('authenticated', 'public.recurring_dismissals', 'select')
   and not has_function_privilege('anon', 'public.dismiss_recurring_alert(text, text)', 'execute')
   and not has_function_privilege('anon', 'public.recurring_this_month(date)', 'execute')
-  and not has_function_privilege('anon', 'public.set_payment_pace(uuid, text)', 'execute'),
+  and not has_function_privilege('anon', 'public.set_payment_pace(uuid, text, uuid)', 'execute'),
   'the dismissals are read only through the functions'
 );
 

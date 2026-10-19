@@ -22,7 +22,7 @@ describe("the usual amount (decision 0189)", () => {
   it("writes through the charge's line, naming its project, and null clears", async () => {
     const rpc = vi.fn(() => Promise.resolve({ error: null }));
     const client = { rpc } as unknown as RpcClient;
-    await runUsualAmount(client, { lineId: "tx-1", projectId: "p-hazel", next: 170000 });
+    expect(await runUsualAmount(client, { lineId: "tx-1", projectId: "p-hazel", next: 170000 })).toBeNull();
     await runUsualAmount(client, { lineId: "tx-1", projectId: null, next: null });
     expect(rpc.mock.calls).toEqual([
       ["set_payment_amount", { p_id: "tx-1", p_amount_minor: 170000, p_project_id: "p-hazel" }],

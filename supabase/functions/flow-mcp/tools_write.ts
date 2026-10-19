@@ -412,6 +412,7 @@ export async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
       p_recurring: parsed.data.recurring,
+      ...(parsed.data.project_id == null ? {} : { p_project_id: parsed.data.project_id }),
     };
   } else if (name === "set_line_pace") {
     const parsed = setLinePaceSchema.safeParse(args);
@@ -421,6 +422,7 @@ export async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
       p_pace: parsed.data.pace,
+      ...(parsed.data.project_id == null ? {} : { p_project_id: parsed.data.project_id }),
     };
   } else if (name === "set_line_usual_amount") {
     const parsed = setLineUsualAmountSchema.safeParse(args);
@@ -433,6 +435,7 @@ export async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
       p_amount_minor: minor == null ? null : Number(minor),
+      ...(parsed.data.project_id == null ? {} : { p_project_id: parsed.data.project_id }),
     };
   } else if (name === "answer_recurring_match") {
     const parsed = answerRecurringMatchSchema.safeParse(args);

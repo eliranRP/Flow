@@ -228,6 +228,7 @@ function ChargeBody({
   function undoPace(done: PaceChange) {
     write.mutate({
       id: done.id,
+      projectId: done.projectId,
       next: done.before.recurring ? done.before.pace : "never",
       before: { recurring: done.next !== "never", pace },
       undo: true,
@@ -263,7 +264,7 @@ function ChargeBody({
             onStill={() => void ignore("נמשיך לצפות לו")}
             onEnded={() => {
               if (write.isPending || (live && blocked()) || (live && lineId == null)) return;
-              write.mutate({ id: lineId ?? "", next: "never", before: { recurring: isRecurring, pace }, undo: false, toast: endedText(row.party_name, data.split ? (row.project_name ?? "ללא פרויקט") : null) });
+              write.mutate({ id: lineId ?? "", projectId: row.project_id, next: "never", before: { recurring: isRecurring, pace }, undo: false, toast: endedText(row.party_name, data.split ? (row.project_name ?? "ללא פרויקט") : null) });
             }}
           />
         ) : null}
@@ -337,7 +338,7 @@ function ChargeBody({
             return;
           }
           setSaving(next);
-          write.mutate({ id: lineId ?? "", next, before: { recurring: isRecurring, pace }, undo: false, close });
+          write.mutate({ id: lineId ?? "", projectId: row.project_id, next, before: { recurring: isRecurring, pace }, undo: false, close });
         }}
       />
     </div>

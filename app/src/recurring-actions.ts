@@ -75,12 +75,14 @@ export async function endRecurringCharge(client: RpcClient, target: ChargeTarget
   assertNoError(line);
   const id = typeof line.data === "string" ? line.data : null;
   if (id == null) throw new Error("no line");
-  const set = await client.rpc("set_payment_recurring", { p_id: id, p_recurring: false });
+  // The charge's project, so a charge fed only by another property's split transfer is the one written (decision 0189).
+  const project = target.projectId == null ? {} : { p_project_id: target.projectId };
+  const set = await client.rpc("set_payment_recurring", { p_id: id, p_recurring: false, ...project });
   assertNoError(set);
   const prior = priorOverride(set.data);
   return async () => {
     // null hands the choice back to the rule; the generated type shows the parameter as boolean only.
-    assertNoError(await client.rpc("set_payment_recurring", { p_id: id, p_recurring: prior as boolean }));
+    assertNoError(await client.rpc("set_payment_recurring", { p_id: id, p_recurring: prior as boolean, ...project }));
   };
 }
 

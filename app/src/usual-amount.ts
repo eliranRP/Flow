@@ -13,7 +13,7 @@ export type UsualAmountWrite = {
   projectId: string | null;
   /** Positive minor units; null clears the owner's amount. */
   next: number | null;
-  /** The owner's amount before the write (null: none), which ביטול writes back. */
+  /** The owner's amount before the write (null: none), which ביטול writes back: the server's prior_amount once it answers. */
   before: number | null;
   name: string;
   undo: boolean;
@@ -36,14 +36,23 @@ export function usualToast(next: number | null, name: string): string {
   return next == null ? `הסכום הרגיל חזר לחישוב: ${name}` : `הסכום הרגיל עודכן: ${name}`;
 }
 
-/** The RPC of one write. A charge with a project names it, so a split line writes that project's charge. */
-export async function runUsualAmount(client: RpcClient, write: Pick<UsualAmountWrite, "lineId" | "projectId" | "next">): Promise<void> {
-  assertNoError(
-    await client.rpc("set_payment_amount", {
-      p_id: write.lineId,
-      // The RPC takes null to clear the owner's amount.
-      p_amount_minor: write.next as number,
-      ...(write.projectId == null ? {} : { p_project_id: write.projectId }),
-    }),
-  );
+/** The owner's amount before a write, as `set_payment_amount` returns it (prior_amount); null: none. */
+export function priorAmount(data: unknown): number | null {
+  if (data == null || typeof data !== "object" || !("prior_amount" in data)) return null;
+  return typeof data.prior_amount === "number" ? data.prior_amount : null;
+}
+
+/**
+ * The RPC of one write. A charge with a project names it, so a split line writes that project's charge.
+ * Returns the owner's amount before, which ביטול writes back.
+ */
+export async function runUsualAmount(client: RpcClient, write: Pick<UsualAmountWrite, "lineId" | "projectId" | "next">): Promise<number | null> {
+  const result = await client.rpc("set_payment_amount", {
+    p_id: write.lineId,
+    // The RPC takes null to clear the owner's amount.
+    p_amount_minor: write.next as number,
+    ...(write.projectId == null ? {} : { p_project_id: write.projectId }),
+  });
+  assertNoError(result);
+  return priorAmount(result.data);
 }

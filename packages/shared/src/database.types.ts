@@ -1590,16 +1590,16 @@ isOneToOne: false
 { Args: { "p_idempotency_key": string,"p_in_cash": boolean,"p_transaction_id": string }; Returns: Json
                            },
 "mcp_set_line_pace":
-{ Args: { "p_idempotency_key": string,"p_pace": string,"p_transaction_id": string }; Returns: Json
+{ Args: { "p_idempotency_key": string,"p_pace": string,"p_project_id"?: string,"p_transaction_id": string }; Returns: Json
                            },
 "mcp_set_line_pnl":
 { Args: { "p_idempotency_key": string,"p_in_pnl": boolean,"p_transaction_id": string }; Returns: Json
                            },
 "mcp_set_line_recurring":
-{ Args: { "p_idempotency_key": string,"p_recurring": boolean,"p_transaction_id": string }; Returns: Json
+{ Args: { "p_idempotency_key": string,"p_project_id"?: string,"p_recurring": boolean,"p_transaction_id": string }; Returns: Json
                            },
 "mcp_set_line_usual_amount":
-{ Args: { "p_amount_minor": number,"p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
+{ Args: { "p_amount_minor": number,"p_idempotency_key": string,"p_project_id"?: string,"p_transaction_id": string }; Returns: Json
                            },
 "mcp_set_lines_cash":
 { Args: { "p_idempotency_key": string,"p_items": Json }; Returns: Json
@@ -1878,10 +1878,10 @@ isOneToOne: false
 { Args: { "p_amount_minor": number,"p_id": string,"p_project_id"?: string }; Returns: Json
                            },
 "set_payment_pace":
-{ Args: { "p_id": string,"p_pace": string }; Returns: Json
+{ Args: { "p_id": string,"p_pace": string,"p_project_id"?: string }; Returns: Json
                            },
 "set_payment_recurring":
-{ Args: { "p_id": string,"p_recurring": boolean }; Returns: Json
+{ Args: { "p_id": string,"p_project_id"?: string,"p_recurring": boolean }; Returns: Json
                            },
 "set_project_forecast_edit":
 { Args: { "p_edit": Json,"p_month": string,"p_project_id": string }; Returns: Json

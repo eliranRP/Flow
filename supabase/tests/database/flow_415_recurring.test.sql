@@ -319,8 +319,8 @@ reset role;
 select ok(
   not has_function_privilege('anon', 'public.recurring_changes(date)', 'execute')
   and not has_function_privilege('anon', 'public.payment_recurring(uuid, date)', 'execute')
-  and not has_function_privilege('anon', 'public.set_payment_recurring(uuid, boolean)', 'execute')
-  and not has_function_privilege('anon', 'public.mcp_set_line_recurring(text, uuid, boolean)', 'execute')
+  and not has_function_privilege('anon', 'public.set_payment_recurring(uuid, boolean, uuid)', 'execute')
+  and not has_function_privilege('anon', 'public.mcp_set_line_recurring(text, uuid, boolean, uuid)', 'execute')
   and not has_function_privilege('authenticated', 'private.recurring_parties(uuid, date, boolean)', 'execute')
   and not has_function_privilege('authenticated', 'private.payment_party(uuid, uuid)', 'execute'),
   'anon calls none of them; the private parts are not callable'

@@ -18,6 +18,11 @@
 --   recurs with no complete month yet, and its arrival is compared with the owner's amount.
 -- - set_payment_amount (the app) and mcp_set_line_usual_amount (MCP set_line_usual_amount, undo kind
 --   line_amount) write it for a line's charge through private.write_recurring_override.
+-- - set_payment_recurring, set_payment_pace, set_payment_amount and their MCP writers take an optional
+--   project: the charge of another project the line feeds (private.line_charge_project). A charge fed only by
+--   another property's split transfer has no line of its own, so its page names it.
+-- - An owner's usual amount in a charge's first month seen raises no change alert (changed false, no project
+--   change row); the arrival and its percent still show.
 begin;
 set local lock_timeout = '5s';
 
@@ -445,9 +450,12 @@ $function$;
 revoke all on function private.recurring_parties(uuid, date, boolean) from public, anon, authenticated;
 
 -- The arrivals: a charge with the owner's usual amount compares this month with it even before its first
--- complete month (decision 0189). The body is 20261018111500's otherwise.
-create or replace function private.recurring_arrivals(p_company uuid, p_today date)
- RETURNS TABLE(direction txn_direction, party_id uuid, currency text, amount_minor bigint, typical_amount_minor bigint, change_percent integer, typical_day integer, transaction_id uuid, project_id uuid, category_id uuid, source text, pace text)
+-- complete month (decision 0189); first_month marks that case, which raises no change alert (a first month is
+-- often partial, as a prorated rent). The new column changes the return type, so the function is dropped and
+-- created again. The body is 20261018111500's otherwise.
+drop function private.recurring_arrivals(uuid, date);
+create function private.recurring_arrivals(p_company uuid, p_today date)
+ RETURNS TABLE(direction txn_direction, party_id uuid, currency text, amount_minor bigint, typical_amount_minor bigint, change_percent integer, typical_day integer, transaction_id uuid, project_id uuid, category_id uuid, source text, pace text, first_month boolean)
  LANGUAGE sql
  STABLE SECURITY DEFINER
  SET search_path TO ''
@@ -472,10 +480,74 @@ AS $function$
   )
   select r.direction, r.party_id, r.currency, m.amount, r.typical_amount_minor,
     round((abs(m.amount) - abs(r.typical_amount_minor)) * 100.0 / abs(r.typical_amount_minor))::integer,
-    r.typical_day, m.transaction_id, r.project_id, r.category_id, r.source, r.pace
+    r.typical_day, m.transaction_id, r.project_id, r.category_id, r.source, r.pace, r.months_seen = 0
   from r
   join this_month m on m.direction = r.direction and m.party_id = r.party_id and m.currency = r.currency
     and m.project_id is not distinct from r.project_id;
+$function$;
+
+revoke all on function private.recurring_arrivals(uuid, date) from public, anon, authenticated;
+
+-- The arrivals as JSON: changed is false in a charge's first month seen with the owner's amount (decision 0189).
+-- The body is 20261018111500's otherwise.
+create or replace function private.recurring_arrivals_json(p_company uuid, p_today date, p_changes boolean)
+ RETURNS jsonb
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  with lines as (
+    select * from private.recurring_stream_lines(p_company, p_today)
+  )
+  select coalesce(jsonb_agg(jsonb_build_object(
+      'direction', a.direction,
+      'party_id', a.party_id,
+      'party_name', coalesce(s.name, cu.name),
+      'supplier_id', s.id,
+      'supplier_name', s.name,
+      'currency', a.currency,
+      'amount_minor', a.amount_minor,
+      'typical_amount_minor', a.typical_amount_minor,
+      'change_percent', a.change_percent,
+      'changed', a.changed,
+      'typical_day', a.typical_day,
+      'transaction_id', a.transaction_id,
+      'project_id', a.project_id,
+      'project_name', p.name,
+      'category_id', a.category_id,
+      'category_name', c.name,
+      'source', a.source,
+      'pace', a.pace,
+      'alert_key', a.transaction_id::text,
+      'line_count', n.line_count
+    ) order by
+      case when p_changes then abs(a.change_percent) end desc,
+      a.direction = 'income', coalesce(s.name, cu.name), p.name, a.party_id), '[]'::jsonb)
+  from (
+    select ar.*,
+      -- An owner's usual amount in the charge's first month seen is no change (decision 0189).
+      abs(abs(ar.amount_minor) - abs(ar.typical_amount_minor)) * 5 >= abs(ar.typical_amount_minor)
+        and not ar.first_month as changed
+    from private.recurring_arrivals(p_company, p_today) ar
+  ) a
+  left join public.suppliers s on a.direction = 'expense' and s.company_id = p_company and s.id = a.party_id
+  left join public.customers cu on a.direction = 'income' and cu.company_id = p_company and cu.id = a.party_id
+  left join public.projects p on p.company_id = p_company and p.id = a.project_id
+  left join public.categories c on c.company_id = p_company and c.id = a.category_id
+  -- FLOW-913: how many of this month's lines make up the amount: the charge's own (its party and project).
+  cross join lateral (
+    select count(*)::integer as line_count
+    from lines sl
+    where sl.direction = a.direction and sl.party_id = a.party_id and sl.currency = a.currency
+      and sl.stream_project is not distinct from a.project_id
+      and sl.doc_date >= date_trunc('month', p_today)::date
+  ) n
+  where coalesce(s.id, cu.id) is not null
+    and (not p_changes or (a.changed and not exists (
+      select 1 from public.recurring_dismissals x
+      where x.user_id = auth.uid() and x.company_id = p_company and x.kind = 'change'
+        and x.alert_key = a.transaction_id::text
+    )));
 $function$;
 
 -- A project's arrivals: each charge's lines in this project, a split line's counted parts for it (the
@@ -494,7 +566,8 @@ AS $function$
   ),
   r as (
     select rp.* from private.recurring_parties(p_company, p_today) rp
-    where rp.seen_this_month and (rp.months_seen > 0 or rp.typical_amount_source = 'owner')
+    -- A first month raises no change on the project either (decision 0189), the owner's amount or not.
+    where rp.seen_this_month and rp.months_seen > 0
   ),
   -- Each charge's lines (its party and project, recurring_stream_lines) and their share in this project.
   shares as (
@@ -586,6 +659,8 @@ AS $function$
       'state', x.state,
       'typical_amount_minor', x.typical_amount_minor,
       'typical_amount_source', x.typical_amount_source,
+      -- 0 in a charge's first month seen: the app shows no change against an owner's amount then.
+      'months_seen', x.months_seen,
       'amount_minor', case when x.seen_this_month then ma.amount end,
       'typical_day', x.typical_day,
       'pace', x.pace,
@@ -778,8 +853,11 @@ $function$;
 
 -- A line's recurring state reports where its charge's usual amount comes from (typical_amount_source:
 -- owner or computed; null when not recurring) and the owner's amount on that charge (owner_amount_minor,
--- positive; null when none), decision 0189. The body is 20261019005147's otherwise.
-create or replace function private.payment_recurring_state(p_company uuid, p_transaction_id uuid, p_today date)
+-- positive; null when none), decision 0189. p_stream names another charge the line feeds (a split line's
+-- part for another project); null is the line's own charge. The body is 20261019005147's otherwise.
+drop function private.payment_recurring_state(uuid, uuid, date);
+create function private.payment_recurring_state(p_company uuid, p_transaction_id uuid, p_today date,
+  p_stream uuid default null)
 returns jsonb
 language plpgsql
 stable
@@ -824,8 +902,8 @@ begin
       'next_due_month', null
     );
   end if;
-  -- The line's own charge: its party and the project its stream goes to (recurring_stream_lines).
-  stream := private.line_stream_project(p_company, p_transaction_id, p_today);
+  -- The line's own charge (its party and the project its stream goes to), or the charge named.
+  stream := coalesce(p_stream, private.line_stream_project(p_company, p_transaction_id, p_today));
   -- The owner's word that applies to that charge (decision 0188).
   select w.recurring, w.pace into override, override_pace
   from private.recurring_override_for(p_company, party.direction, party.party_id, party.currency, stream, p_today) w;
@@ -866,6 +944,126 @@ begin
   );
 end;
 $$;
+
+revoke all on function private.payment_recurring_state(uuid, uuid, date, uuid) from public, anon, authenticated;
+
+-- The charge a write on a line is for: the line's own (line_stream_project), or p_project_id when the line
+-- feeds that project's charge too (a split line's part for another project, decision 0189). A project the
+-- line does not feed is refused.
+create or replace function private.line_charge_project(p_company uuid, p_transaction_id uuid, p_project_id uuid,
+  p_today date)
+returns uuid
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  stream uuid := private.line_stream_project(p_company, p_transaction_id, p_today);
+begin
+  if p_project_id is null or p_project_id is not distinct from stream then
+    return stream;
+  end if;
+  if not exists (
+    select 1 from private.recurring_stream_lines(p_company, p_today) sl
+    where sl.id = p_transaction_id and sl.stream_project = p_project_id
+  ) then
+    raise exception 'validation';
+  end if;
+  return p_project_id;
+end;
+$$;
+
+revoke all on function private.line_charge_project(uuid, uuid, uuid, date) from public, anon, authenticated;
+
+-- The recurring switch and the pace of a line's charge take p_project_id too (decision 0189): a charge fed only
+-- by another property's split transfer has no line of its own, so its page names it. Null is the line's own
+-- charge, as in 20261019005147. The new parameter changes the signature, so each is dropped and created again.
+drop function public.set_payment_recurring(uuid, boolean);
+create function public.set_payment_recurring(p_id uuid, p_recurring boolean, p_project_id uuid default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  cid uuid;
+  party record;
+  stream uuid;
+  prior jsonb;
+begin
+  -- An owner or an editor writes (decision 0167); a viewer member or the demo viewer is refused.
+  cid := private.current_company_id();
+  if cid is null then
+    if private.is_read_only() then
+      raise exception 'forbidden' using errcode = '42501';
+    end if;
+    raise exception 'no company';
+  end if;
+  if not exists (
+    select 1 from public.transactions t
+    where t.id = p_id and t.company_id = cid and t.removed_at is null
+  ) then
+    raise exception 'transaction not found';
+  end if;
+  select * into party from private.payment_party(cid, p_id);
+  if not found then
+    raise exception 'no supplier or customer';
+  end if;
+  stream := private.line_charge_project(cid, p_id, p_project_id, private.flow_today());
+  prior := private.write_recurring_override(cid, party.direction, party.party_id, party.currency, stream,
+    'recurring', to_jsonb(p_recurring));
+  return private.payment_recurring_state(cid, p_id, private.flow_today(), stream)
+    || jsonb_build_object('prior_override', prior, 'override_project_id', stream);
+end;
+$$;
+
+revoke all on function public.set_payment_recurring(uuid, boolean, uuid) from public, anon;
+grant execute on function public.set_payment_recurring(uuid, boolean, uuid) to authenticated, service_role;
+
+drop function public.set_payment_pace(uuid, text);
+create function public.set_payment_pace(p_id uuid, p_pace text, p_project_id uuid default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  cid uuid;
+  party record;
+  stream uuid;
+  prior jsonb;
+begin
+  cid := private.current_company_id();
+  if cid is null then
+    if private.is_read_only() then
+      raise exception 'forbidden' using errcode = '42501';
+    end if;
+    raise exception 'no company';
+  end if;
+  if p_pace is not null and private.pace_months(p_pace) is null then
+    raise exception 'validation';
+  end if;
+  if not exists (
+    select 1 from public.transactions t
+    where t.id = p_id and t.company_id = cid and t.removed_at is null
+  ) then
+    raise exception 'transaction not found';
+  end if;
+  select * into party from private.payment_party(cid, p_id);
+  if not found then
+    raise exception 'no supplier or customer';
+  end if;
+  stream := private.line_charge_project(cid, p_id, p_project_id, private.flow_today());
+  prior := private.write_recurring_override(cid, party.direction, party.party_id, party.currency, stream,
+    'pace', to_jsonb(p_pace));
+  return private.payment_recurring_state(cid, p_id, private.flow_today(), stream)
+    || jsonb_build_object('prior_pace', prior, 'override_project_id', stream);
+end;
+$$;
+
+revoke all on function public.set_payment_pace(uuid, text, uuid) from public, anon;
+grant execute on function public.set_payment_pace(uuid, text, uuid) to authenticated, service_role;
 
 -- The newest line of a charge prefers a line whose own part is that charge's (an unsplit line, or a split
 -- line's part for its own project), so the charge page writes through a line of its own (decision 0189).
@@ -955,16 +1153,7 @@ begin
   if not found then
     raise exception 'no supplier or customer';
   end if;
-  stream := private.line_stream_project(cid, p_id, today);
-  if p_project_id is not null and p_project_id is distinct from stream then
-    if not exists (
-      select 1 from private.recurring_stream_lines(cid, today) sl
-      where sl.id = p_id and sl.stream_project = p_project_id
-    ) then
-      raise exception 'validation';
-    end if;
-    stream := p_project_id;
-  end if;
+  stream := private.line_charge_project(cid, p_id, p_project_id, today);
   prior := private.write_recurring_override(cid, party.direction, party.party_id, party.currency, stream,
     'amount', to_jsonb(p_amount_minor));
   select r.typical_amount_minor, r.typical_amount_source into charge
@@ -989,9 +1178,189 @@ $$;
 revoke all on function public.set_payment_amount(uuid, bigint, uuid) from public, anon;
 grant execute on function public.set_payment_amount(uuid, bigint, uuid) to authenticated, service_role;
 
--- MCP set_line_usual_amount: the owner's usual amount for the line's charge; undo kind line_amount keeps the
--- charge's project, so it puts back the same row.
-create or replace function public.mcp_set_line_usual_amount(p_idempotency_key text, p_transaction_id uuid, p_amount_minor bigint)
+-- MCP set_line_recurring and set_line_pace take an optional project_id: the charge the line feeds, for a
+-- charge with no line of its own (decision 0189). The undo already keeps the charge's project. Dropped and
+-- created again for the new parameter; the bodies are 20261019005147's otherwise.
+drop function public.mcp_set_line_recurring(text, uuid, boolean);
+create function public.mcp_set_line_recurring(p_idempotency_key text, p_transaction_id uuid, p_recurring boolean,
+  p_project_id uuid default null)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  gate jsonb;
+  token uuid;
+  hash text;
+  prior jsonb;
+  cid uuid;
+  written jsonb;
+  response jsonb;
+  write_id uuid;
+begin
+  if p_idempotency_key is null
+    or char_length(p_idempotency_key) < 1
+    or char_length(p_idempotency_key) > 128
+    or p_transaction_id is null
+  then
+    return private.mcp_error('validation', 'validation');
+  end if;
+
+  gate := private.mcp_require_writer();
+  if gate->>'ok' is distinct from 'true' then
+    return gate;
+  end if;
+  token := (gate->>'token_id')::uuid;
+  hash := 'line_recurring|' || p_transaction_id::text || '|' || coalesce(p_recurring::text, 'null')
+    || coalesce('|' || p_project_id::text, '');
+  prior := private.mcp_idempotency_lookup(token, p_idempotency_key, hash);
+  if prior->>'state' = 'replay' then
+    return prior->'response';
+  end if;
+  if prior->>'state' = 'conflict' then
+    return private.mcp_error('conflict', 'conflict');
+  end if;
+
+  cid := private.current_company_id();
+  begin
+    if not exists (
+      select 1 from public.transactions t
+      where t.id = p_transaction_id and t.company_id = cid and t.removed_at is null
+    ) then
+      if exists (
+        select 1 from public.review_queue q
+        where q.id = p_transaction_id and q.company_id = cid
+      ) then
+        response := private.mcp_error(
+          'validation',
+          'id is not a transaction; list_review.id is the review id'
+        );
+      else
+        response := private.mcp_refused('transaction not found');
+      end if;
+    else
+      written := public.set_payment_recurring(p_transaction_id, p_recurring, p_project_id);
+      -- clock_timestamp, so two writes to one line in one transaction still undo newest first.
+      insert into private.mcp_writes (token_id, user_id, transaction_id, kind, prior, created_at)
+      values (
+        token, auth.uid(), p_transaction_id, 'line_recurring',
+        -- The charge the write was for (decision 0188), so the undo puts back the same row.
+        jsonb_build_object('project', written->'override_project_id', 'before', written->'prior_override', 'written', to_jsonb(p_recurring)),
+        clock_timestamp()
+      )
+      returning id into write_id;
+      response := jsonb_build_object(
+        'ok', true,
+        'data', (written - 'prior_override' - 'override_project_id') || jsonb_build_object(
+          'undo_kind', 'line_recurring',
+          'id', p_transaction_id,
+          'write_id', write_id
+        )
+      );
+    end if;
+  exception
+    when deadlock_detected or serialization_failure or lock_not_available then
+      return private.mcp_error('unavailable', 'retry');
+    when others then
+      response := private.mcp_refused(sqlerrm);
+  end;
+
+  perform private.mcp_idempotency_store(token, p_idempotency_key, hash, response);
+  return response;
+end;
+$function$;
+
+revoke all on function public.mcp_set_line_recurring(text, uuid, boolean, uuid) from public, anon;
+grant execute on function public.mcp_set_line_recurring(text, uuid, boolean, uuid) to authenticated, service_role;
+
+drop function public.mcp_set_line_pace(text, uuid, text);
+create function public.mcp_set_line_pace(p_idempotency_key text, p_transaction_id uuid, p_pace text,
+  p_project_id uuid default null)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  gate jsonb;
+  token uuid;
+  hash text;
+  prior jsonb;
+  cid uuid;
+  written jsonb;
+  response jsonb;
+  write_id uuid;
+begin
+  if p_idempotency_key is null
+    or char_length(p_idempotency_key) < 1
+    or char_length(p_idempotency_key) > 128
+    or p_transaction_id is null
+    or (p_pace is not null and private.pace_months(p_pace) is null)
+  then
+    return private.mcp_error('validation', 'validation');
+  end if;
+
+  gate := private.mcp_require_writer();
+  if gate->>'ok' is distinct from 'true' then
+    return gate;
+  end if;
+  token := (gate->>'token_id')::uuid;
+  hash := 'line_pace|' || p_transaction_id::text || '|' || coalesce(p_pace, 'null')
+    || coalesce('|' || p_project_id::text, '');
+  prior := private.mcp_idempotency_lookup(token, p_idempotency_key, hash);
+  if prior->>'state' = 'replay' then
+    return prior->'response';
+  end if;
+  if prior->>'state' = 'conflict' then
+    return private.mcp_error('conflict', 'conflict');
+  end if;
+
+  cid := private.current_company_id();
+  begin
+    if not exists (
+      select 1 from public.transactions t
+      where t.id = p_transaction_id and t.company_id = cid and t.removed_at is null
+    ) then
+      response := private.mcp_refused('transaction not found');
+    else
+      written := public.set_payment_pace(p_transaction_id, p_pace, p_project_id);
+      insert into private.mcp_writes (token_id, user_id, transaction_id, kind, prior, created_at)
+      values (
+        token, auth.uid(), p_transaction_id, 'line_pace',
+        -- The charge the write was for (decision 0188), so the undo puts back the same row.
+        jsonb_build_object('project', written->'override_project_id', 'before', written->'prior_pace', 'written', to_jsonb(p_pace)),
+        clock_timestamp()
+      )
+      returning id into write_id;
+      response := jsonb_build_object(
+        'ok', true,
+        'data', (written - 'prior_pace' - 'override_project_id') || jsonb_build_object(
+          'undo_kind', 'line_pace',
+          'id', p_transaction_id,
+          'write_id', write_id
+        )
+      );
+    end if;
+  exception
+    when deadlock_detected or serialization_failure or lock_not_available then
+      return private.mcp_error('unavailable', 'retry');
+    when others then
+      response := private.mcp_refused(sqlerrm);
+  end;
+
+  perform private.mcp_idempotency_store(token, p_idempotency_key, hash, response);
+  return response;
+end;
+$function$;
+
+revoke all on function public.mcp_set_line_pace(text, uuid, text, uuid) from public, anon;
+grant execute on function public.mcp_set_line_pace(text, uuid, text, uuid) to authenticated, service_role;
+
+-- MCP set_line_usual_amount: the owner's usual amount for the line's charge (or the charge of project_id it
+-- feeds); undo kind line_amount keeps the charge's project, so it puts back the same row.
+create or replace function public.mcp_set_line_usual_amount(p_idempotency_key text, p_transaction_id uuid, p_amount_minor bigint,
+  p_project_id uuid default null)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -1021,7 +1390,8 @@ begin
     return gate;
   end if;
   token := (gate->>'token_id')::uuid;
-  hash := 'line_amount|' || p_transaction_id::text || '|' || coalesce(p_amount_minor::text, 'null');
+  hash := 'line_amount|' || p_transaction_id::text || '|' || coalesce(p_amount_minor::text, 'null')
+    || coalesce('|' || p_project_id::text, '');
   prior := private.mcp_idempotency_lookup(token, p_idempotency_key, hash);
   if prior->>'state' = 'replay' then
     return prior->'response';
@@ -1038,7 +1408,7 @@ begin
     ) then
       response := private.mcp_refused('transaction not found');
     else
-      written := public.set_payment_amount(p_transaction_id, p_amount_minor);
+      written := public.set_payment_amount(p_transaction_id, p_amount_minor, p_project_id);
       -- clock_timestamp, so two writes to one line in one transaction still undo newest first.
       insert into private.mcp_writes (token_id, user_id, transaction_id, kind, prior, created_at)
       values (
@@ -1068,8 +1438,8 @@ begin
 end;
 $function$;
 
-revoke all on function public.mcp_set_line_usual_amount(text, uuid, bigint) from public, anon;
-grant execute on function public.mcp_set_line_usual_amount(text, uuid, bigint) to authenticated, service_role;
+revoke all on function public.mcp_set_line_usual_amount(text, uuid, bigint, uuid) from public, anon;
+grant execute on function public.mcp_set_line_usual_amount(text, uuid, bigint, uuid) to authenticated, service_role;
 
 create or replace function pg_temp.anchor_count(p_def text, p_anchor text)
 returns integer

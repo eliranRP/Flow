@@ -49,10 +49,18 @@ export function shiftMonth(month: string, delta: number): string {
 
 /** The charge's percent against its usual amount when it arrived this month; null otherwise. */
 export function changeFor(row: ScheduleRow): number | null {
-  if (row.state !== "arrived" || row.amount_minor == null) return null;
+  if (row.state !== "arrived" || row.amount_minor == null || !comparable(row)) return null;
   const usual = absAgorot(BigInt(row.typical_amount_minor));
   if (usual === 0n) return null;
   return changePercentOf(absAgorot(BigInt(row.amount_minor)), usual);
+}
+
+/**
+ * Decision 0189: an owner's usual amount in the charge's first month seen is no change (a first month is often
+ * partial, as a prorated rent); the server raises no alert for it either.
+ */
+export function comparable(row: Pick<ScheduleRow, "typical_amount_source" | "months_seen">): boolean {
+  return !(row.typical_amount_source === "owner" && row.months_seen === 0);
 }
 
 /** Whether the change is news: 20% or more either way. */
