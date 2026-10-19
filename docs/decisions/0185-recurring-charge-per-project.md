@@ -3,6 +3,8 @@
 **Date:** 2026-10-18
 **Status:** Accepted
 
+**Amended by [0188](0188-recurring-switch-per-charge.md):** the owner's switch and pace are the charge's, set from one of its lines. A party-wide word set before keeps the meaning below.
+
 ## Context
 
 [0172](0172-recurring-charges.md) and [0175](0175-recurring-pace-dismissals.md) read one recurring charge per supplier or customer and currency. The owner pays one loan servicer for several properties: one payment per loan, each filed to its own project. In קבועים they showed as one charge with one project. Its month summed every property's payment, so the usual amount and this month's arrival were the total of several loans. The change percent compared months with different numbers of payments in them. The owner's words: the servicer's loan should be split by project; different payments were merged.

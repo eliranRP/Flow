@@ -262,7 +262,7 @@ function ChargeBody({
             onStill={() => void ignore("נמשיך לצפות לו")}
             onEnded={() => {
               if (write.isPending || (live && blocked()) || (live && lineId == null)) return;
-              write.mutate({ id: lineId ?? "", next: "never", before: { recurring: isRecurring, pace }, undo: false, toast: endedText(row.party_name, data.split) });
+              write.mutate({ id: lineId ?? "", next: "never", before: { recurring: isRecurring, pace }, undo: false, toast: endedText(row.party_name, data.split ? (row.project_name ?? "ללא פרויקט") : null) });
             }}
           />
         ) : null}

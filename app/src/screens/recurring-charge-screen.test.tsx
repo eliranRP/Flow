@@ -214,12 +214,12 @@ describe("the charge page: the late bill (the power bill, with its suggested mat
     expect(calls()).toContainEqual(["set_payment_recurring", { p_id: RECURRING_CHARGES_FIXTURE_POWER.lineId, p_recurring: false }]);
   });
 
-  it("הסתיים on a party split by project says the party ends in every project", async () => {
+  it("הסתיים on a party split by project names the project whose charge ends", async () => {
     const bills = RECURRING_MISSING_FIXTURE.map((bill) => (bill.party_id === "power" ? { ...bill, suggestion: null } : bill));
     state.data = ready({ ...RECURRING_CHARGES_FIXTURE_POWER, bills, split: true });
     renderPage("/recurring/expense/power?project=p-birch-lane");
     fireEvent.click(within(screen.getByRole("region", { name: "עדיין קבוע?" })).getByRole("button", { name: "הסתיים" }));
-    expect(await screen.findByText("Brightline Power הוסר מהקבועים ומהצפי בכל הפרויקטים")).toBeTruthy();
+    expect(await screen.findByText("Brightline Power · Birch Lane הוסר מהקבועים ומהצפי")).toBeTruthy();
   });
 
   it("an ignored late bill shows its grey line, and no match box", () => {

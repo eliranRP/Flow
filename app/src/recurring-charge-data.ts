@@ -15,7 +15,7 @@ import { waitForAccessToken } from "./wait-for-session";
 
 /**
  * The newest counted line of a party in one currency (`recurring_party_line`), or null when there is none.
- * A party split by project names the charge's project, so the line is that project's (decision 0185).
+ * A charge with a project names it, so the line is that project's charge's (decisions 0185, 0188).
  */
 export function usePartyLineQuery(direction: "income" | "expense", partyId: string, currency: string, active = true, projectId: string | null = null) {
   const preview = useHomePreview();
@@ -68,7 +68,9 @@ export function useChargePageData(direction: "income" | "expense", partyId: stri
   const party = rows.filter((item) => item.party_id === partyId && item.direction === direction);
   const row = party.find((item) => item.project_id === projectId) ?? party[0];
   const split = party.length > 1;
-  const line = usePartyLineQuery(direction, partyId, row?.currency ?? "", row != null, split ? (row?.project_id ?? null) : null);
+  // The charge's own line, split or not: its switch is that charge's (decision 0188), so a stray bill in
+  // another project is never the line the page writes to.
+  const line = usePartyLineQuery(direction, partyId, row?.currency ?? "", row != null, row?.project_id ?? null);
   const lineId = line.data ?? null;
   const charges = usePartyChargesQuery(lineId ?? "", lineId != null);
   const recurring = usePaymentRecurringQuery(lineId ?? "", lineId != null);

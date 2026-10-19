@@ -871,13 +871,13 @@ isOneToOne: false
                   ]
                 },"recurring_overrides": {
                   Row: {
-                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"pace": string | null,"party_id": string,"recurring": boolean | null,"set_at": string,"set_by": string | null
+                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"id": string,"pace": string | null,"party_id": string,"project_id": string | null,"recurring": boolean | null,"set_at": string,"set_by": string | null
                   }
                   Insert: {
-                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"pace"?: string | null,"party_id": string,"recurring"?: boolean | null,"set_at"?: string,"set_by"?: string | null
+                    "company_id": string,"currency": string,"direction": Database["public"]['Enums']["txn_direction"],"id"?: string,"pace"?: string | null,"party_id": string,"project_id"?: string | null,"recurring"?: boolean | null,"set_at"?: string,"set_by"?: string | null
                   }
                   Update: {
-                    "company_id"?: string,"currency"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"pace"?: string | null,"party_id"?: string,"recurring"?: boolean | null,"set_at"?: string,"set_by"?: string | null
+                    "company_id"?: string,"currency"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"id"?: string,"pace"?: string | null,"party_id"?: string,"project_id"?: string | null,"recurring"?: boolean | null,"set_at"?: string,"set_by"?: string | null
                   }
                   Relationships: [
                     {
@@ -886,6 +886,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "recurring_overrides_project_fkey"
+      columns: ["company_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["company_id","id"]
     }
                   ]
                 },"review_queue": {
