@@ -1,12 +1,13 @@
 -- Cross-company sweep (FLOW-929). Calls every function in public that authenticated can execute,
--- read from the catalog, as another company's owner (B), with company A's ids as arguments, and
--- proves that nothing of A's comes back, nothing of A's changes and nothing of A's is copied into
--- B's rows. B is swept twice: with B active, and sending A's id as the company header. A third pass
--- calls everything as a viewer of A and proves a viewer changes none of A's rows. A new function is
--- swept with no edit here. Every call runs in its own subtransaction that is always rolled back, so
--- calls cannot affect each other; A's rows are fingerprinted inside it, before the rollback, so a
--- write is caught and named per function. Allowlists and how to read a failure: CONTRIBUTING,
--- Database privileges. Invented names and figures only.
+-- read from the catalog, as another company's owner (B) with company A's ids as arguments, and
+-- proves that nothing of A's comes back (in a result or an error), nothing of A's changes, nothing of
+-- A's is copied into B's rows or the outbound HTTP queue, no answer B gets changes when A's company is
+-- deleted, and every failure is a company refusal. B is swept three times: with B active, sending
+-- A's id as the company header, and with B's old flow-mcp token for A. A fourth pass calls everything
+-- as a viewer of A and proves a viewer changes none of A's rows. A new function is swept with no edit
+-- here. Every call runs in its own subtransaction that is always rolled back; A's rows are
+-- fingerprinted inside it, before the rollback, so a write is named per function. Allowlists and how
+-- to read a failure: CONTRIBUTING, Database privileges. Invented names and figures only.
 
 begin;
 
@@ -43,17 +44,21 @@ begin
   perform pg_temp.put('b_owner', tests.get_supabase_uid('sweep_b_owner'));
   perform pg_temp.put('company', tests.fixture_company('sweep_a_owner', 'Victim Sample Co'));
   perform pg_temp.put('b_company', tests.fixture_company('sweep_b_owner', 'Attacker Sample Co'));
+  -- The viewer owns a company of its own, so only the company header puts it in A.
+  perform pg_temp.put('v_company', tests.fixture_company('sweep_a_viewer', 'Viewer Own Co'));
 end
 $ids$;
 
 -- A's books: every kind of row a company holds, written as postgres the way the fixtures write.
 -- Every text of A's says "Victim", and A's amounts are distinctive, so check (b) can find them.
+-- Dates follow current_date, so date-windowed functions keep finding A's rows.
 do $seed$
 declare
   a uuid := pg_temp.sid('company');
   owner uuid := pg_temp.sid('a_owner');
   b_owner uuid := pg_temp.sid('b_owner');
   next_month text := to_char(current_date + interval '1 month', 'YYYY-MM');
+  d date := current_date - 12;
   project uuid;
   project2 uuid;
   category uuid;
@@ -88,15 +93,15 @@ begin
   perform pg_temp.put('supplier2', supplier2);
   perform pg_temp.put('customer', customer);
 
-  line := pg_temp.put('line', tests.fixture_line(a, 'Victim expense line', 7654321, 'expense', project, category));
-  line2 := pg_temp.put('line2', tests.fixture_line(a, 'Victim split line', 6543217, 'expense', project, category));
+  line := pg_temp.put('line', tests.fixture_line(a, 'Victim expense line', 7654321, 'expense', project, category, d));
+  line2 := pg_temp.put('line2', tests.fixture_line(a, 'Victim split line', 6543217, 'expense', project, category, d));
   invoice := pg_temp.put('invoice', tests.fixture_line(a, 'Victim invoice', 8765432, 'income', project,
-    income_category, '2026-06-10', 'ILS', 'posted', 'manual', 'project', 'invoice'));
+    income_category, d, 'ILS', 'posted', 'manual', 'project', 'invoice'));
   bank_in := pg_temp.put('bank_in', tests.fixture_line(a, 'Victim bank deposit', 8765432, 'income', null, null,
-    '2026-06-12', 'USD', 'posted', 'mercury', 'project', 'receipt'));
-  loan_line := pg_temp.put('loan_line', tests.fixture_line(a, 'Victim loan payment', 5432176, 'expense'));
+    d + 2, 'USD', 'posted', 'mercury', 'project', 'receipt'));
+  loan_line := pg_temp.put('loan_line', tests.fixture_line(a, 'Victim loan payment', 5432176, 'expense', null, null, d));
   suggested := pg_temp.put('suggested', tests.fixture_line(a, 'Victim suggested line', 4321765, 'expense',
-    project, category, '2026-06-14', 'ILS', 'posted', 'sumit', 'project', 'receipt', true));
+    project, category, d + 4, 'ILS', 'posted', 'sumit', 'project', 'receipt', true));
   update public.transactions set supplier_id = supplier where id in (line, line2, loan_line, suggested);
   update public.transactions set customer_id = customer where id = invoice;
 
@@ -116,7 +121,7 @@ begin
   insert into public.split_rules (company_id, supplier_id, method, label)
   values (a, supplier, 'manual', 'Victim split rule') returning id into rule;
   insert into public.split_rule_targets (company_id, rule_id, project_id, month, share_bp)
-  values (a, rule, project, '2026-06-01', 10000);
+  values (a, rule, project, date_trunc('month', current_date)::date, 10000);
 
   insert into public.loans (
     company_id, name, principal_minor, annual_rate_ppm, term_months,
@@ -224,12 +229,20 @@ begin
   insert into private.mcp_writes (token_id, user_id, category_id, kind, company_id)
   values (token, owner, category, 'category', a);
   insert into private.mcp_batches (token_id, user_id, company_id, idempotency_key)
-  values (token, owner, a, 'a-batch-key-1');
+  values (token, owner, a, 'a-batch-key-1') returning id into suggestion;
+  perform pg_temp.put('batch', suggestion);
   insert into private.mcp_sync_jobs (token_id, user_id, company_id, state, started_at)
   values (token, owner, a, 'running', now()) returning id into suggestion;
   perform pg_temp.put('job', suggestion);
   insert into private.mcp_idempotency (token_id, idempotency_key, request_hash, response)
   values (token, 'a-key-1', 'hash', '{"victim": true}'::jsonb);
+  insert into private.mcp_rate (subject_id, subject_kind, bucket, window_start, hits)
+  values (token, 'token', 'write', date_trunc('minute', now()), 1);
+  -- A's users' own rows, with no company_id: fingerprinted by user.
+  insert into public.notification_prefs (user_id, new_transaction) values (owner, true);
+  insert into public.push_subscriptions (user_id, endpoint, p256dh, auth)
+  values (owner, 'https://fcm.googleapis.com/fcm/send/victim-example', repeat('v', 87), 'victimAuthExample1');
+  insert into private.invite_sends (user_id) values (owner);
 
   -- B once edited A's books with a token of its own and has since left: its old token and writes
   -- still name A (the shape of the fixed mcp_undo leak). Nothing B calls now may reach them.
@@ -297,45 +310,66 @@ begin
 end
 $stale$;
 
--- A's fingerprint: one entry per table in public and private with a company_id (from the catalog),
--- plus A's companies row: the row count and an md5 of the ordered rows. Built once as one query.
-create temp table sweep_tables as
-select format('%I.%I', n.nspname, c.relname) as rel, 'company_id' as col
+-- What the sweep fingerprints, read from the catalog: every table in public and private with a
+-- company_id (A's rows), A's companies row, and the tables with no company_id that hold rows of A's
+-- users or of their tokens (not B's old token, which names A but is B's). $1 is A's company; $2 is a user whose own rows are left out (the viewer's, in
+-- sweep_user_rows tables only), or null.
+create temp table sweep_tables (rel text primary key, filter text not null);
+insert into sweep_tables
+select format('%I.%I', n.nspname, c.relname), 't.company_id = $1'
 from pg_attribute a
 join pg_class c on c.oid = a.attrelid
 join pg_namespace n on n.oid = c.relnamespace
 where a.attname = 'company_id' and not a.attisdropped
-  and c.relkind in ('r', 'p') and n.nspname in ('public', 'private')
-union all
-select 'public.companies', 'id';
+  and c.relkind in ('r', 'p') and n.nspname in ('public', 'private');
+insert into sweep_tables values
+  ('public.companies', 't.id = $1'),
+  ('public.notification_prefs', 't.user_id in (select s.id from pg_temp.sweep_ids s where s.kind in (''a_owner'', ''a_viewer''))'),
+  ('public.push_subscriptions', 't.user_id in (select s.id from pg_temp.sweep_ids s where s.kind in (''a_owner'', ''a_viewer''))'),
+  ('private.invite_sends', 't.user_id in (select s.id from pg_temp.sweep_ids s where s.kind in (''a_owner'', ''a_viewer''))'),
+  ('private.mcp_idempotency', 't.token_id in (select s.id from pg_temp.sweep_ids s where s.kind in (''a_token'', ''viewer_token''))'),
+  ('private.mcp_rate', 't.subject_id in (select s.id from pg_temp.sweep_ids s
+     where s.kind in (''a_token'', ''viewer_token'', ''a_owner'', ''a_viewer''))');
 
-create temp table sweep_sql (q text);
+-- A viewer's own per-user rows, which may carry A's company_id but belong to the user, not to A's
+-- books. Only the viewer pass leaves them out, and only the rows whose user_id is the viewer's: a
+-- viewer that changes the owner's row in one of these tables still fails.
+create temp table sweep_user_rows (rel text primary key, why text not null);
+insert into sweep_user_rows values
+  ('public.active_companies', 'switch_company records the viewer''s own active company'),
+  ('public.recurring_dismissals', 'a viewer hides a recurring alert for itself only'),
+  ('public.notification_prefs', 'a viewer sets its own notification preferences'),
+  ('public.push_subscriptions', 'a viewer subscribes its own device');
+
+create temp table sweep_sql (name text primary key, q text not null);
 insert into sweep_sql
-select 'select array[' || string_agg(
-  format('(select count(*) || '':'' || md5(coalesce(string_agg(t::text, '','' order by t::text), '''')) from %s t where t.%I = $1)', rel, col),
-  ', ' order by rel) || ']'
-from sweep_tables;
+select 'fingerprint', 'select array[' || string_agg(format(
+  '(select count(*) || '':'' || md5(coalesce(string_agg(t::text, '','' order by t::text), '''')) from %s t where %s%s)',
+  t.rel, t.filter,
+  case when u.rel is not null then ' and ($2::uuid is null or t.user_id is distinct from $2)' else '' end),
+  ', ' order by t.rel) || ']'
+from sweep_tables t left join sweep_user_rows u on u.rel = t.rel;
+-- All of one company's rows as text, plus the outbound HTTP queue, to find A's data copied into B.
+insert into sweep_sql
+select 'company_text', 'select concat_ws('' | '', ' || string_agg(
+  format('(select string_agg(t::text, '','') from %s t where %s)', rel, filter), ', ' order by rel)
+  || case when to_regclass('net.http_request_queue') is not null
+       then ', (select string_agg(concat_ws('' '', q.url, q.headers::text, encode(q.body, ''escape'')), '','')
+         from net.http_request_queue q)' else '' end || ')'
+from sweep_tables
+where filter = 't.company_id = $1';
 
-create or replace function pg_temp.fingerprint(p_company uuid)
+create or replace function pg_temp.fingerprint(p_company uuid, p_exclude uuid default null)
 returns text[]
 language plpgsql
 as $$
 declare
   result text[];
 begin
-  execute (select q from pg_temp.sweep_sql where q like 'select array%') into result using p_company;
+  execute (select q from pg_temp.sweep_sql where name = 'fingerprint') into result using p_company, p_exclude;
   return result;
 end;
 $$;
-
--- One assertion per table below, so the plan reads the catalog too.
-select plan(11 + (select count(*)::integer from sweep_tables));
-
--- All of one company's rows as text, to find A's data copied into B's books.
-insert into sweep_sql
-select 'select concat_ws('' | '', ' || string_agg(
-  format('(select string_agg(t::text, '','') from %s t where t.%I = $1)', rel, col), ', ' order by rel) || ')'
-from sweep_tables;
 
 create or replace function pg_temp.company_text(p_company uuid)
 returns text
@@ -344,10 +378,13 @@ as $$
 declare
   result text;
 begin
-  execute (select q from pg_temp.sweep_sql where q like 'select concat_ws%') into result using p_company;
+  execute (select q from pg_temp.sweep_sql where name = 'company_text') into result using p_company;
   return result;
 end;
 $$;
+
+-- One assertion per table below, so the plan reads the catalog too.
+select plan(18 + (select count(*)::integer from sweep_tables));
 
 create temp table sweep_baseline as
 select array_agg(rel order by rel) as rels, pg_temp.fingerprint(pg_temp.sid('company')) as fp
@@ -360,19 +397,19 @@ declare
   t record;
 begin
   for t in
-    select st.rel, st.col, a.attname
+    select st.rel, st.filter, a.attname
     from sweep_tables st
     join pg_attribute a on a.attrelid = st.rel::regclass and a.atttypid = 'uuid'::regtype
       and a.attnum > 0 and not a.attisdropped
   loop
     execute format(
-      'insert into pg_temp.sweep_a_uuids select distinct %I from %s where %I = $1 and %I is not null on conflict do nothing',
-      t.attname, t.rel, t.col, t.attname)
+      'insert into pg_temp.sweep_a_uuids select distinct t.%I from %s t where %s and t.%I is not null on conflict do nothing',
+      t.attname, t.rel, t.filter, t.attname)
     using pg_temp.sid('company');
   end loop;
   insert into pg_temp.sweep_a_uuids values (pg_temp.sid('a_owner')), (pg_temp.sid('a_viewer')) on conflict do nothing;
   delete from pg_temp.sweep_a_uuids
-  where id in (select s.id from pg_temp.sweep_ids s where s.kind like 'b\_%');
+  where id in (select s.id from pg_temp.sweep_ids s where s.kind like 'b\_%' or s.kind = 'v_company');
   delete from pg_temp.sweep_a_uuids u
   where u.id in (select c.id from private.mcp_credentials c where c.user_id = pg_temp.sid('b_owner'));
 end
@@ -389,13 +426,79 @@ as $$
     or p_text ~ '(^|[^0-9a-f-])-?(7654321|6543217|8765432|5432176|4321765|123456700)([^0-9a-f]|$)';
 $$;
 
--- An A id for a hint (an argument name, a function name or an undo kind), or null.
-create or replace function pg_temp.hint_id(p_hint text)
+-- What a call returned with its uuids and clock times masked, for the differential check.
+create or replace function pg_temp.normalized(p_text text)
+returns text
+language sql
+immutable
+as $$
+  select regexp_replace(regexp_replace(coalesce(p_text, ''),
+    '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', 'U', 'g'),
+    '\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}(:\d{2})?|Z)?', 'T', 'g');
+$$;
+
+-- The failures in what a call raised or returned: the error, a {ok:false} envelope's code and
+-- message, and each {ok:false} item of a batch's results. Empty for a clean success.
+create or replace function pg_temp.failures(p_result text, p_err text)
+returns text[]
+language plpgsql
+immutable
+as $$
+declare
+  j jsonb;
+  out text[] := '{}';
+begin
+  if p_err is not null then
+    return array[p_err];
+  end if;
+  begin
+    j := p_result::jsonb;
+  exception
+    when others then
+      return out;
+  end;
+  if jsonb_typeof(j) <> 'object' then
+    return out;
+  end if;
+  if j->>'ok' = 'false' then
+    out := out || ('envelope ' || coalesce(j->'error'->>'code', '?') || ' ' || coalesce(j->'error'->>'message', ''));
+  end if;
+  if jsonb_typeof(j->'data'->'results') = 'array' then
+    select out || coalesce(array_agg('item ' || coalesce(e->>'code', e->'error'->>'code', '?')), '{}')
+    into out
+    from jsonb_array_elements(j->'data'->'results') e
+    where e->>'ok' = 'false';
+  end if;
+  return out;
+end;
+$$;
+
+-- A failure that is the function's company check refusing: 42501, P0002, a not-found or forbidden
+-- message, or the refused / not_found / forbidden envelope codes.
+create or replace function pg_temp.is_refusal(p_failure text)
+returns boolean
+language sql
+immutable
+as $$
+  select p_failure ~ '^(42501|P0002) '
+    or p_failure ~* '(not found|forbidden|no company)'
+    or p_failure ~ '^(envelope|item) (refused|not_found|forbidden)( |$)';
+$$;
+
+-- An A id for a hint (an argument name, a function name or an undo kind), or null. A function that
+-- needs a particular line gets the one with data behind it (a loan payment, a split, an invoice).
+create or replace function pg_temp.hint_id(p_hint text, p_fn text default '')
 returns uuid
 language sql
 stable
 as $$
   select pg_temp.sid(case
+    when p_hint ~ 'transaction' and p_fn ~ 'loan' then 'loan_line'
+    when p_hint ~ '^id$' and p_fn ~ 'party_charges' then 'line'
+    when p_hint ~ 'transaction|^id$' and p_fn ~ 'invoice_paid' then 'invoice'
+    when p_hint ~ 'transaction' and p_fn ~ 'invoice' then 'bank_in'
+    when p_hint ~ 'transaction|^id$' and p_fn ~ 'split' and p_fn !~ 'assign|review' then 'line2'
+    when p_hint ~ 'transaction' and p_fn ~ 'jev' then 'suggested'
     when p_hint ~ 'invite' then 'invite'
     when p_hint ~ 'member|user' then 'a_viewer'
     when p_hint ~ 'loan_rate' then 'loan_rate'
@@ -406,10 +509,11 @@ as $$
     when p_hint ~ 'match_party' then 'supplier2'
     when p_hint ~ 'party|supplier' then 'supplier'
     when p_hint ~ 'invoice' then 'invoice'
-    when p_hint ~ 'review|anomal' then 'suggested'
+    when p_hint ~ 'review' then 'review'
+    when p_hint ~ 'anomal' then 'suggested'
     when p_hint ~ 'reassign' then 'reassign'
-    when p_hint ~ 'parent|into' then 'category2'
-    when p_hint ~ 'categor' then 'category'
+    when p_hint ~ 'parent' then 'category2'
+    when p_hint ~ 'categor|into' then 'category'
     when p_hint ~ 'project_forecast|forecast_edit' then 'edit'
     when p_hint ~ 'project' then 'project'
     when p_hint ~ 'company|cash_basis|jev_mode|index_rate|currency|forecast' then 'company'
@@ -417,9 +521,9 @@ as $$
   end);
 $$;
 
--- Arguments that need a shape the name rules below can't guess. Each row is one call; a function
--- with no row is called once. mcp_undo is called once per undo kind (read from mcp_writes' check),
--- each with the A id that kind names, so every branch reaches its company check.
+-- Arguments the name rules below can't guess, chosen so A has data behind each. Each row is one
+-- call; a function with no row is called once. mcp_undo is called once per undo kind (read from
+-- mcp_writes' check), with the A id that kind names, and once per write B left in A.
 create temp table sweep_variants (fn text, args jsonb);
 insert into sweep_variants (fn, args)
 select 'mcp_undo', jsonb_build_object(
@@ -430,32 +534,49 @@ from (
   from pg_constraint
   where conname = 'mcp_writes_kind_check'
 ) kinds;
--- And once per write B left in A, with the write's own id and with the row it names.
 insert into sweep_variants (fn, args)
 select 'mcp_undo', jsonb_build_object('p_kind', quote_literal(w.kind), 'p_id', quote_literal(x.id) || '::uuid')
 from private.mcp_writes w
 cross join lateral (values (w.id), (coalesce(w.project_id, w.category_id, w.loan_id, w.transaction_id))) x(id)
 where w.user_id = pg_temp.sid('b_owner') and w.company_id = pg_temp.sid('company') and x.id is not null;
-insert into sweep_variants (fn, args) values
-  ('move_category_lines', jsonb_build_object('p_from', quote_literal(pg_temp.sid('category2')) || '::uuid')),
-  ('mcp_move_category_lines', jsonb_build_object('p_from', quote_literal(pg_temp.sid('category2')) || '::uuid')),
-  ('delete_company', jsonb_build_object('p_confirm', quote_literal('Victim Sample Co'))),
-  ('set_cash_basis', jsonb_build_object('p_basis', quote_literal('paid'))),
-  ('mcp_set_cash_basis', jsonb_build_object('p_basis', quote_literal('paid'))),
-  ('dismiss_recurring_alert', jsonb_build_object('p_kind', quote_literal('missing'))),
-  ('undismiss_recurring_alert', jsonb_build_object('p_kind', quote_literal('missing'))),
-  ('dismiss_recurring_alert', jsonb_build_object('p_kind', quote_literal('change'),
-    'p_key', quote_literal(pg_temp.sid('line')::text))),
-  ('mcp_add_loan', jsonb_build_object('p_kind', quote_literal('amortizing'))),
-  ('mcp_undo_batch', jsonb_build_object('p_batch_key', quote_literal('a-batch-key-1'))),
-  ('mcp_create_categories', jsonb_build_object('p_items', quote_literal('[{"name": "Sweep Name", "kind": "expense"}]') || '::jsonb')),
-  ('mcp_create_projects', jsonb_build_object('p_items', quote_literal('[{"name": "Sweep Name"}]') || '::jsonb'));
--- p_patch takes a different shape per function: try both a forecast patch and a rename.
-insert into sweep_variants (fn, args)
-select distinct p.proname, jsonb_build_object('p_patch', quote_literal(v) || '::jsonb')
-from pg_proc p
-cross join (values ('{"amount_minor": 100}'), ('{"name": "Sweep Name"}')) x(v)
-where p.pronamespace = 'public'::regnamespace and 'p_patch' = any (p.proargnames);
+
+create or replace function pg_temp.lit(p_value anyelement)
+returns text
+language sql
+immutable
+as $$ select quote_literal(p_value) || '::' || pg_typeof(p_value)::text; $$;
+
+do $variants$
+declare
+  ids jsonb := (select jsonb_object_agg(kind, id) from pg_temp.sweep_ids);
+  sug date := (select t.doc_date from public.transactions t where t.id = pg_temp.sid('suggested'));
+begin
+  insert into pg_temp.sweep_variants (fn, args) values
+    ('move_category_lines', jsonb_build_object('p_from', pg_temp.lit(pg_temp.sid('category2')))),
+    ('mcp_move_category_lines', jsonb_build_object('p_from', pg_temp.lit(pg_temp.sid('category2')))),
+    ('delete_company', jsonb_build_object('p_confirm', pg_temp.lit('Victim Sample Co'::text))),
+    ('set_cash_basis', jsonb_build_object('p_basis', pg_temp.lit('paid'::text))),
+    ('mcp_set_cash_basis', jsonb_build_object('p_basis', pg_temp.lit('paid'::text))),
+    ('dismiss_recurring_alert', jsonb_build_object('p_kind', pg_temp.lit('missing'::text))),
+    ('undismiss_recurring_alert', jsonb_build_object('p_kind', pg_temp.lit('missing'::text))),
+    ('dismiss_recurring_alert', jsonb_build_object('p_kind', pg_temp.lit('change'::text),
+      'p_key', pg_temp.lit((ids->>'line')::text))),
+    ('mcp_add_loan', jsonb_build_object('p_kind', pg_temp.lit('amortizing'::text))),
+    ('mcp_undo_batch', jsonb_build_object('p_batch_key', pg_temp.lit(ids->>'batch'))),
+    ('mcp_create_categories', jsonb_build_object('p_items', pg_temp.lit('[{"name": "Sweep Name", "kind": "expense"}]'::jsonb))),
+    ('mcp_create_projects', jsonb_build_object('p_items', pg_temp.lit('[{"name": "Sweep Name"}]'::jsonb))),
+    ('mcp_set_lines_cash', jsonb_build_object('p_items', pg_temp.lit(jsonb_build_array(
+      jsonb_build_object('transaction_id', ids->'line', 'in_cash', false))))),
+    ('mcp_set_lines_pnl', jsonb_build_object('p_items', pg_temp.lit(jsonb_build_array(
+      jsonb_build_object('transaction_id', ids->'line', 'in_pnl', false))))),
+    -- A's suggested line is a posted, non-manual expense: its amount, date and payee match it.
+    ('receipt_match', jsonb_build_object('p_amount_minor', pg_temp.lit(4321765::bigint),
+      'p_doc_date', pg_temp.lit(sug), 'p_payee', pg_temp.lit('Victim suggested line'::text))),
+    ('match_lines', jsonb_build_object('p_rows', pg_temp.lit(jsonb_build_array(
+      jsonb_build_object('date', sug, 'amount_minor', -4321765, 'ref', 'Victim suggested line'),
+      jsonb_build_object('date', current_date - 12, 'amount_minor', -7654321)))));
+end
+$variants$;
 
 -- One argument's SQL literal, by its type and name, preferring A's ids.
 create or replace function pg_temp.arg_literal(p_fn text, p_arg text, p_type oid)
@@ -472,8 +593,8 @@ declare
 begin
   if t = 'uuid' then
     v := coalesce(
-      pg_temp.hint_id(n),
-      case when n = 'id' then pg_temp.hint_id(p_fn) end,
+      pg_temp.hint_id(n, p_fn),
+      case when n = 'id' then pg_temp.hint_id(p_fn, p_fn) end,
       pg_temp.sid('line'))::text;
   elsif t = 'uuid[]' then
     v := case
@@ -484,14 +605,13 @@ begin
     v := case
       when n = 'from' then '2020-01-01'
       when n = 'to' then '2030-12-31'
-      when n = 'today' then current_date::text
       when n = 'month' then next_month::text
-      else '2026-06-10'
+      else current_date::text
     end;
   elsif t in ('integer', 'smallint') then
     v := case n
-      when 'year' then '2026' when 'months' then '12' when 'limit' then '50' when 'offset' then '0'
-      when 'day' then '10' when 'window_days' then '30' when 'term_months' then '360'
+      when 'year' then extract(year from current_date)::text when 'months' then '12' when 'limit' then '50'
+      when 'offset' then '0' when 'day' then '10' when 'window_days' then '30' when 'term_months' then '360'
       when 'amortization_months' then '360' when 'interest_only_months' then '0'
       when 'annual_rate_ppm' then '50000' when 'margin_ppm' then '1000'
       else '1'
@@ -507,28 +627,33 @@ begin
   elsif t = 'connector_provider' then
     v := 'mercury';
   elsif t = 'jsonb' then
-    v := case n
-      when 'items' then jsonb_build_array(jsonb_build_object(
-        'transaction_id', ids->'line', 'id', ids->'line', 'project_id', ids->'project',
-        'category_id', ids->'category', 'in_pnl', false, 'in_cash', false, 'share_bp', 10000))::text
-      when 'shares' then jsonb_build_array(jsonb_build_object('project_id', ids->'project', 'share_bp', 10000))::text
-      when 'parts' then jsonb_build_array(jsonb_build_object(
-        'category_id', ids->'category', 'project_id', ids->'project', 'amount_minor', 100,
-        'part', 'interest', 'percent', 100))::text
-      when 'rows' then jsonb_build_array(jsonb_build_object(
-        'key', 'k1', 'amount_minor', 100, 'date', '2026-06-10', 'transaction_id', ids->'line'))::text
-      when 'edit' then jsonb_build_object(
+    v := case
+      when n = 'patch' and p_fn ~ 'forecast' then '{"amount_minor": 100}'
+      when n = 'patch' and p_fn ~ 'investment' then '{"purchase_minor": 100}'
+      when n = 'patch' then '{"name": "Sweep Name"}'
+      when n = 'items' then jsonb_build_array(jsonb_build_object(
+        'transaction_id', ids->'line', 'project_id', ids->'project', 'category_id', ids->'category'))::text
+      when n = 'shares' then jsonb_build_array(
+        jsonb_build_object('project_id', ids->'project', 'share', 50),
+        jsonb_build_object('project_id', ids->'project2', 'share', 50))::text
+      when n = 'parts' and p_fn ~ 'loan' then jsonb_build_array(
+        jsonb_build_object('part', 'interest', 'amount_minor', 5432176))::text
+      when n = 'parts' then jsonb_build_array(
+        jsonb_build_object('category_id', ids->'category', 'project_id', ids->'project', 'amount_minor', 4000000),
+        jsonb_build_object('category_id', ids->'category2', 'project_id', ids->'project2', 'rest', true))::text
+      when n = 'edit' then jsonb_build_object(
         'kind', 'add', 'category_id', ids->'category', 'direction', 'expense', 'amount_minor', 100,
         'pace', 'month')::text
-      when 'document' then jsonb_build_object(
+      when n = 'document' then jsonb_build_object(
         'name', 'sweep.pdf', 'mime', 'application/pdf', 'sha256', repeat('a', 64), 'bytes', 100)::text
-      when 'undo' then jsonb_build_object('project_id', ids->'project', 'edits', '[]'::jsonb)::text
+      when n = 'undo' then jsonb_build_object('project_id', ids->'project', 'edits', '[]'::jsonb)::text
       else '{}'
     end;
   elsif t = 'text' then
     v := case
-      when n = 'idempotency_key' then 'sweep-key-1'
-      when n = 'batch_key' then 'sweep-batch-1'
+      -- A's own keys, sent with B's tokens: they are stored per token, so they must not replay.
+      when n = 'idempotency_key' then 'a-key-1'
+      when n = 'batch_key' then ids->>'batch'
       when n = 'basis' then 'invoiced'
       when n = 'month' then to_char(next_month, 'YYYY-MM')
       when n = 'currency' then 'ILS'
@@ -568,43 +693,56 @@ begin
 end;
 $$;
 
--- One call, as p_user with p_company as the active company (the x-flow-company header) and, for a
--- flow-mcp function, p_token's claims. The call always rolls back; its outcome, what it returned,
--- which of A's tables it changed and, in B's passes, any of A's ids or text now in B's own rows (all
--- read before the rollback) are recorded in sweep_calls.
+-- One call. It runs as p_user with p_header as the x-flow-company header and, for a flow-mcp
+-- function, p_token's claims, and always rolls back. Before the rollback it reads A's fingerprint
+-- (less p_exclude's own rows) and, in B's passes, B's rows. In B's passes the same call runs again
+-- with A's company deleted, also rolled back: a result that depends on A's data (a sum, a count, a
+-- converted amount) differs. Everything is recorded in sweep_calls.
 create temp table sweep_calls (
   pass text, fn text, sig text, call text, outcome text, err text, result text,
-  leaked_ids uuid[], leaked_text boolean, changed text[], copied_ids uuid[], copied_text boolean, ms numeric
+  leaked_ids uuid[], leaked_text boolean, changed text[], copied_ids uuid[], copied_text boolean,
+  failures text[], differs boolean, ms numeric
 );
 
+create or replace function pg_temp.act_as(p_user uuid, p_header uuid, p_token uuid)
+returns void
+language plpgsql
+as $$
+begin
+  perform set_config('request.jwt.claims', jsonb_build_object(
+    'sub', p_user, 'role', 'authenticated', 'aal', 'aal1', 'mcp_tid', p_token)::text, true);
+  perform set_config('request.jwt.claim.sub', p_user::text, true);
+  perform set_config('request.headers', jsonb_build_object('x-flow-company', p_header)::text, true);
+  perform set_config('role', 'authenticated', true);
+end;
+$$;
+
 create or replace function pg_temp.sweep_call(
-  p_pass text, p_user uuid, p_company uuid, p_token uuid, p_fn text, p_sig text, p_call text
+  p_pass text, p_user uuid, p_header uuid, p_token uuid, p_fn text, p_sig text, p_call text,
+  p_exclude uuid, p_base text[], p_b boolean
 )
 returns void
 language plpgsql
 as $$
 declare
+  token uuid := case when p_fn like 'mcp\_%' then p_token end;
   res text;
-  fp text[];
-  outcome text := 'ok';
   err text;
-  started timestamptz := clock_timestamp();
-  base pg_temp.sweep_baseline%rowtype;
-  changed text[];
+  res2 text;
+  err2 text;
+  fp text[];
   copied text;
+  seen text;
+  echo text;
+  changed text[];
+  started timestamptz := clock_timestamp();
 begin
-  select * into base from pg_temp.sweep_baseline;
   begin
-    perform set_config('request.jwt.claims', jsonb_build_object(
-      'sub', p_user, 'role', 'authenticated', 'aal', 'aal1',
-      'mcp_tid', case when p_fn like 'mcp\_%' then p_token end)::text, true);
-    perform set_config('request.jwt.claim.sub', p_user::text, true);
-    perform set_config('request.headers', jsonb_build_object('x-flow-company', p_company)::text, true);
-    perform set_config('role', 'authenticated', true);
+    perform pg_temp.act_as(p_user, p_header, token);
     execute p_call into res;
     perform set_config('role', 'postgres', true);
-    fp := pg_temp.fingerprint(pg_temp.sid('company'));
-    if p_pass like 'b%' then
+    fp := pg_temp.fingerprint(pg_temp.sid('company'), p_exclude);
+    if p_b then
       copied := pg_temp.company_text(pg_temp.sid('b_company'));
     end if;
     raise exception 'sweep rollback' using errcode = 'SWP01';
@@ -612,27 +750,52 @@ begin
     when sqlstate 'SWP01' then
       null;
     when others then
-      outcome := 'error';
       err := sqlstate || ' ' || sqlerrm;
   end;
+  if p_b then
+    begin
+      delete from public.companies where id = pg_temp.sid('company');
+      perform pg_temp.act_as(p_user, p_header, token);
+      execute p_call into res2;
+      raise exception 'sweep rollback' using errcode = 'SWP01';
+    exception
+      when sqlstate 'SWP01' then
+        null;
+      when others then
+        err2 := sqlstate || ' ' || sqlerrm;
+    end;
+  end if;
   if fp is not null then
-    select array_agg(base.rels[i] order by i) into changed
-    from generate_subscripts(base.fp, 1) i
-    where base.fp[i] is distinct from fp[i];
+    select array_agg((select rels[i] from pg_temp.sweep_baseline) order by i) into changed
+    from generate_subscripts(p_base, 1) i
+    where p_base[i] is distinct from fp[i];
+  end if;
+  seen := concat_ws(' ', res, err);
+  -- An echo-allowlisted function may give back the A text and figures it was given.
+  if p_fn in (select e.fn from pg_temp.sweep_echo e) then
+    select coalesce(string_agg(m[1], '|'), '') into echo
+    from regexp_matches(p_call, '(victim[a-z ]*[a-z]|-?(7654321|6543217|8765432|5432176|4321765|123456700))', 'gi') m;
+    if echo <> '' then
+      seen := regexp_replace(seen, echo, '', 'g');
+    end if;
   end if;
   insert into pg_temp.sweep_calls
-  select p_pass, p_fn, p_sig, p_call, outcome, err, res,
-    (select array_agg(u.id order by u.id) from pg_temp.sweep_a_uuids u where strpos(res, u.id::text) > 0),
-    coalesce(pg_temp.has_a_text(res), false),
+  select p_pass, p_fn, p_sig, p_call, case when err is null then 'ok' else 'error' end, err, res,
+    (select array_agg(u.id order by u.id) from pg_temp.sweep_a_uuids u where strpos(seen, u.id::text) > 0),
+    pg_temp.has_a_text(seen),
     changed,
     (select array_agg(u.id order by u.id) from pg_temp.sweep_a_uuids u where strpos(copied, u.id::text) > 0),
     coalesce(pg_temp.has_a_text(copied), false),
+    pg_temp.failures(res, err),
+    p_b and pg_temp.normalized(concat_ws(' | ', res, err)) <> pg_temp.normalized(concat_ws(' | ', res2, err2)),
     round(extract(epoch from clock_timestamp() - started) * 1000, 1);
 end;
 $$;
 
 -- Every function in public that authenticated can execute, definer and invoker, read from the
--- catalog, less the ones skipped below.
+-- catalog, less the ones skipped below. Only public: PostgREST serves the schemas in config.toml's
+-- api.schemas (public and graphql_public), so a client can't call a function in private or tests
+-- even where a grant exists.
 create temp table sweep_skip (sig text primary key, why text not null);
 
 create temp view sweep_targets as
@@ -645,16 +808,19 @@ where n.nspname = 'public'
   and has_function_privilege('authenticated', p.oid, 'execute')
   and p.oid::regprocedure::text not in (select sig from pg_temp.sweep_skip);
 
-create or replace function pg_temp.sweep(p_pass text, p_user uuid, p_company uuid, p_token uuid, p_only text default null)
+create or replace function pg_temp.sweep(
+  p_pass text, p_user uuid, p_header uuid, p_token uuid, p_exclude uuid, p_b boolean
+)
 returns void
 language plpgsql
 as $$
 declare
+  base text[] := pg_temp.fingerprint(pg_temp.sid('company'), p_exclude);
   f record;
   v record;
   args text;
 begin
-  for f in select * from pg_temp.sweep_targets t where p_only is null or t.fn ~ p_only order by t.sig loop
+  for f in select * from pg_temp.sweep_targets t order by t.sig loop
     for v in
       select sv.args from pg_temp.sweep_variants sv where sv.fn = f.fn
       union all
@@ -665,58 +831,92 @@ begin
       from pg_proc p,
         unnest(p.proargnames[1:p.pronargs], p.proargtypes::oid[]) with ordinality as a(n, t, i)
       where p.oid = f.oid;
-      perform pg_temp.sweep_call(p_pass, p_user, p_company, p_token, f.fn, f.sig, format(f.tmpl, args));
+      perform pg_temp.sweep_call(p_pass, p_user, p_header, p_token, f.fn, f.sig, format(f.tmpl, args),
+        p_exclude, base, p_b);
     end loop;
   end loop;
 end;
 $$;
 
--- (c) The allowlists. Keep them minimal: each entry says why.
+-- (c) The allowlists. Keep them minimal: each entry says why, and a stale or missing one fails.
+-- sweep_skip: functions that can't be called generically. None today.
 --
--- Functions skipped by the sweep: none today. A function that can't be called generically goes here
--- with the reason; the coverage assertion counts it out, and the list fails when one is gone.
--- insert into sweep_skip (sig, why) values ('example(uuid)', 'why it cannot be called generically');
---
--- Functions that may return an A id the caller supplied, and only that: an id B already holds is no
--- leak. Any other A id, or any of A's text or figures, in what they return still fails check (b).
+-- sweep_echo: functions that may give back what the caller gave them (A ids, or for match_lines the
+-- rows it was asked to match), and nothing else of A's.
 create temp table sweep_echo (fn text primary key, why text not null);
 insert into sweep_echo (fn, why) values
   ('dismiss_recurring_alert', 'returns the alert key it was given, which embeds the id; the dismissal is the caller''s own row in its own company'),
   ('undismiss_recurring_alert', 'returns the alert key it was given, which embeds the id'),
   ('expected_months', 'echoes p_project_id beside an empty schedule'),
+  ('match_lines', 'echoes each bank row it was given beside its candidates, which come from the caller''s company'),
   ('mcp_assign_expenses', 'per-item envelope names the item''s transaction_id with "refused"'),
-  ('mcp_set_lines_cash', 'per-item envelope names the item''s transaction_id with an error code'),
-  ('mcp_set_lines_pnl', 'per-item envelope names the item''s transaction_id with an error code');
+  ('mcp_set_lines_cash', 'per-item envelope names the item''s transaction_id with "refused"'),
+  ('mcp_set_lines_pnl', 'per-item envelope names the item''s transaction_id with "refused"');
 
--- Rows a viewer of A may change through a function: the viewer's own per-user rows, which carry A's
--- company_id but belong to the user (user_id), not to the company's books.
-create temp table sweep_viewer_writes (fn text, rel text, why text not null, primary key (fn, rel));
-insert into sweep_viewer_writes (fn, rel, why) values
-  ('switch_company', 'public.active_companies', 'the viewer''s own active-company row (user_id = viewer)'),
-  ('dismiss_recurring_alert', 'public.recurring_dismissals', 'the viewer hides an alert for itself only (user_id = viewer)');
+-- sweep_fail_ok: failures in B's passes that are not worded as a company refusal, and why each is
+-- one anyway (or why the function takes nothing of A's).
+create temp table sweep_fail_ok (fn text primary key, why text not null);
+insert into sweep_fail_ok (fn, why) values
+  ('delete_transaction', '"only a manual entry can be deleted" is its not-found: the delete matches id, company and source together'),
+  ('reorder_loans', '"validation": the ids must be exactly the caller''s loans, and A''s are not'),
+  ('mcp_reorder_loans', '"validation": the ids must be exactly the caller''s loans, and A''s are not'),
+  ('apply_starter_categories', 'takes no id; B''s own company already has lines (starter_locked)'),
+  ('set_import_from', 'takes no id; B''s own company has no connector');
 
--- Positive controls: as A's owner, the detectors must see A's data and A's write.
-select pg_temp.sweep_call('control', pg_temp.sid('a_owner'), pg_temp.sid('company'), pg_temp.sid('a_token'),
-  'get_project', 'get_project(uuid)',
-  format('select coalesce(string_agg(x::text, %L), %L) from public.get_project(%L::uuid) as x', ' | ', '', pg_temp.sid('project')));
-select pg_temp.sweep_call('control', pg_temp.sid('a_owner'), pg_temp.sid('company'), pg_temp.sid('a_token'),
-  'rename_category', 'rename_category(uuid,text)',
-  format('select coalesce(string_agg(x::text, %L), %L) from public.rename_category(%L::uuid, %L) as x', ' | ', '', pg_temp.sid('category'), 'Sweep Name'));
+-- Positive controls: each detector fires on a case built to trip it.
+select pg_temp.sweep_call('control', pg_temp.sid('a_owner'), pg_temp.sid('company'), null, 'get_project', 'read',
+  format('select public.get_project(%L::uuid)::text', pg_temp.sid('project')), null, null, false);
+select pg_temp.sweep_call('control', pg_temp.sid('a_owner'), pg_temp.sid('company'), null, 'rename_category', 'write',
+  format('select public.rename_category(%L::uuid, %L)::text', pg_temp.sid('category'), 'Sweep Name'),
+  null, (select fp from sweep_baseline), false);
+select pg_temp.sweep_call('control', pg_temp.sid('b_owner'), pg_temp.sid('b_company'), null, 'upsert_project', 'copy',
+  'select public.upsert_project(null::uuid, ''Victim copy'', null::bigint, null::text, null::text)::text',
+  null, (select fp from sweep_baseline), true);
+select pg_temp.sweep_call('control', pg_temp.sid('b_owner'), pg_temp.sid('b_company'), null, 'cast', 'error',
+  'select (''Victim Sample Project'')::integer::text', null, null, false);
+select pg_temp.sweep_call('control', pg_temp.sid('a_viewer'), pg_temp.sid('company'), null, 'get_home', 'header_a',
+  'select public.get_home()::text', null, null, false);
+select pg_temp.sweep_call('control', pg_temp.sid('a_viewer'), pg_temp.sid('v_company'), null, 'get_home', 'header_v',
+  'select public.get_home()::text', null, null, false);
+select pg_temp.sweep_call('control', pg_temp.sid('a_owner'), pg_temp.sid('company'), null, 'get_home', 'differs',
+  'select public.get_home()::text', null, (select fp from sweep_baseline), true);
 
+create or replace function pg_temp.control(p_sig text)
+returns pg_temp.sweep_calls
+language sql
+as $$ select * from pg_temp.sweep_calls where pass = 'control' and sig = p_sig; $$;
+
+select ok((pg_temp.control('read')).leaked_text and cardinality((pg_temp.control('read')).leaked_ids) > 0,
+  'control: A''s owner reading A''s project trips the leak scan (text and ids)');
+select ok('public.categories' = any ((pg_temp.control('write')).changed),
+  'control: A''s owner renaming A''s category trips the write scan');
+select ok((pg_temp.control('copy')).copied_text,
+  'control: A''s name written into B''s rows trips the copy scan');
+select ok((pg_temp.control('error')).leaked_text
+    and not pg_temp.is_refusal((pg_temp.control('error')).failures[1]),
+  'control: A''s text in an error message trips the leak scan, and the error is not a refusal');
+select ok((pg_temp.control('header_a')).leaked_text and not (pg_temp.control('header_v')).leaked_text,
+  'control: the x-flow-company header picks the company (A''s name only with A''s id)');
+select ok((pg_temp.control('differs')).differs,
+  'control: a result built from A''s rows changes when A is deleted');
 select ok(
-  (select bool_and(leaked_text and cardinality(leaked_ids) > 0) from sweep_calls where pass = 'control' and fn = 'get_project'),
-  'control: check (b) sees A''s ids and text when A''s owner reads A''s project'
-);
-select ok(
-  (select bool_and('public.categories' = any (changed)) from sweep_calls where pass = 'control' and fn = 'rename_category'),
-  'control: check (a) sees A''s owner rename A''s category'
+  not pg_temp.is_refusal((pg_temp.failures('{"ok": false, "error": {"code": "validation"}}', null))[1])
+  and not pg_temp.is_refusal((pg_temp.failures('{"ok": true, "data": {"results": [{"ok": false, "code": "validation"}]}}', null))[1])
+  and pg_temp.is_refusal((pg_temp.failures('{"ok": false, "error": {"code": "not_found"}}', null))[1])
+  and pg_temp.is_refusal((pg_temp.failures('{"ok": true, "data": {"results": [{"ok": false, "code": "refused"}]}}', null))[1])
+  and cardinality(pg_temp.failures('{"ok": true, "data": {"results": [{"ok": true}]}}', null)) = 0,
+  'control: envelopes and batch items are parsed, and only company refusals count as refusals'
 );
 
--- The sweep. Pass b: B's owner, B active. Pass b_hint: B's owner sending A's id as the company
--- header, which a client controls. Pass viewer: A's viewer, A active, with a write-scope token for A.
-select pg_temp.sweep('b', pg_temp.sid('b_owner'), pg_temp.sid('b_company'), pg_temp.sid('b_token'));
-select pg_temp.sweep('b_hint', pg_temp.sid('b_owner'), pg_temp.sid('company'), pg_temp.sid('b_token'));
-select pg_temp.sweep('viewer', pg_temp.sid('a_viewer'), pg_temp.sid('company'), pg_temp.sid('viewer_token'));
+-- The sweep. b: B's owner, B active. b_hint: B's owner sending A's id as the company header, which
+-- a client controls. b_stale: B's owner with its old token for A as the flow-mcp claim. viewer: A's
+-- viewer, A active by the header, with a write-scope token for A; its own per-user rows are left out.
+select pg_temp.sweep('b', pg_temp.sid('b_owner'), pg_temp.sid('b_company'), pg_temp.sid('b_token'), null, true);
+select pg_temp.sweep('b_hint', pg_temp.sid('b_owner'), pg_temp.sid('company'), pg_temp.sid('b_token'), null, true);
+select pg_temp.sweep('b_stale', pg_temp.sid('b_owner'), pg_temp.sid('b_company'),
+  (select c.id from private.mcp_credentials c where c.token_hash = 'hash-sweep-b-stale'), null, true);
+select pg_temp.sweep('viewer', pg_temp.sid('a_viewer'), pg_temp.sid('company'), pg_temp.sid('viewer_token'),
+  pg_temp.sid('a_viewer'), false);
 
 select diag(format('%s: %s calls to %s functions, %s returned, %s raised, %s ms',
   pass, count(*), count(distinct sig), count(*) filter (where outcome = 'ok'),
@@ -729,13 +929,11 @@ order by pass;
 -- The seed fills every table it fingerprints, so the sweep has something to steal in each. A new
 -- table with a company_id needs a row of A's in the seed above.
 select is(
-  (select coalesce(array_agg(t.rel order by t.rel), '{}')
-   from sweep_tables t, generate_subscripts((select fp from sweep_baseline), 1) i
-   where (select rels[i] from sweep_baseline) = t.rel
-     and (select fp[i] from sweep_baseline) like '0:%'
-     and t.rel <> 'public.company_viewers'),
+  (select coalesce(array_agg(b.rels[i] order by b.rels[i]), '{}')
+   from sweep_baseline b, generate_subscripts(b.fp, 1) i
+   where b.fp[i] like '0:%' and b.rels[i] <> 'public.company_viewers'),
   '{}'::text[],
-  'A''s seed has rows in every table with a company_id (company_viewers is for demo companies only)'
+  'A''s seed has rows in every table the sweep fingerprints (company_viewers is for demo companies only)'
 );
 
 -- (d) Coverage: every function in the catalog is called in every pass, except the skipped ones.
@@ -745,27 +943,29 @@ select is(
    where pr.pronamespace = 'public'::regnamespace and pr.prokind = 'f'
      and has_function_privilege('authenticated', pr.oid, 'execute'))
   - (select count(*)::integer from sweep_skip),
-  format('pass %s calls every function authenticated can execute, less the %s skipped', p, (select count(*) from sweep_skip))
+  format('pass %s calls every function in public that authenticated can execute, less the %s skipped',
+    p, (select count(*) from sweep_skip))
 )
-from unnest(array['b', 'b_hint', 'viewer']) p;
+from unnest(array['b', 'b_hint', 'b_stale', 'viewer']) p;
 
--- A call that failed because the sweep built it wrong never reached the function's own checks.
+-- Every failure in B's passes is the function refusing another company's ids. A validation error,
+-- a wrong-shape argument or a call the sweep built wrong never reached the company check.
 select is(
-  (select coalesce(array_agg(distinct fn || ' ' || left(err, 60) order by fn || ' ' || left(err, 60)), '{}')
-   from sweep_calls where err ~ '^(42725|42883|42P18|42804|22P02|42601) '),
+  (select coalesce(array_agg(distinct c.fn || ': ' || left(f, 70) order by c.fn || ': ' || left(f, 70)), '{}')
+   from sweep_calls c, unnest(c.failures) f
+   where c.pass in ('b', 'b_hint', 'b_stale') and not pg_temp.is_refusal(f)
+     and c.fn not in (select fn from sweep_fail_ok)),
   '{}'::text[],
-  'every call resolved its function and argument types'
+  'every failure in B''s passes is a company refusal'
 );
 
 -- (a) No call changed any of A's tables: one assertion per table, naming the functions that did.
 select is(
   (select coalesce(array_agg(distinct c.pass || ':' || c.fn order by c.pass || ':' || c.fn), '{}')
    from sweep_calls c
-   where c.pass <> 'control' and t.rel = any (c.changed)
-     and not (c.pass = 'viewer' and exists (
-       select 1 from sweep_viewer_writes w where w.fn = c.fn and w.rel = t.rel))),
+   where c.pass <> 'control' and t.rel = any (c.changed)),
   '{}'::text[],
-  format('no call by B or by A''s viewer changed %s', t.rel)
+  format('no call by B or by A''s viewer changed A''s rows in %s', t.rel)
 )
 from sweep_tables t
 order by t.rel;
@@ -776,43 +976,55 @@ select is(
   'A''s tables are unchanged after the sweep'
 );
 
--- (b) Nothing B called returned A's ids, text or figures, or wrote them into B's own rows; an
--- echo-allowlisted function may return (or store) only the A ids it was given.
+-- (b) Nothing B called returned or raised A's ids, text or figures, or wrote them into B's rows; an
+-- echo-allowlisted function may give back only what it was given.
 select is(
   (select coalesce(array_agg(distinct c.pass || ':' || c.fn order by c.pass || ':' || c.fn), '{}')
    from sweep_calls c
-   where c.pass in ('b', 'b_hint')
+   where c.pass in ('b', 'b_hint', 'b_stale')
      and (c.leaked_text or c.copied_text
        or exists (select 1 from unnest(c.leaked_ids || c.copied_ids) u where strpos(c.call, u::text) = 0)
        or (cardinality(c.leaked_ids || c.copied_ids) > 0 and c.fn not in (select fn from sweep_echo)))),
   '{}'::text[],
-  'no function returned A''s data to B or copied it into B''s rows'
+  'no function returned A''s data to B, raised it in an error, or copied it into B''s rows'
 );
 
--- (c) Every allowlist entry names a function that exists and still needs its entry.
+-- Nothing B called gave a different answer with A's company deleted: no sum, count or amount B
+-- gets back is built from A's rows.
+select is(
+  (select coalesce(array_agg(distinct c.pass || ':' || c.fn order by c.pass || ':' || c.fn), '{}')
+   from sweep_calls c where c.pass in ('b', 'b_hint', 'b_stale') and c.differs),
+  '{}'::text[],
+  'no result B gets depends on A''s rows'
+);
+
+-- (c) Every allowlist entry names something that exists, and still needs its entry.
 select is(
   (select coalesce(array_agg(x order by x), '{}') from (
      select 'skip:' || s.sig as x from sweep_skip s
      where not exists (select 1 from pg_proc pr where pr.pronamespace = 'public'::regnamespace
        and pr.oid::regprocedure::text = s.sig)
      union all
-     select 'echo:' || e.fn from sweep_echo e
-     where not exists (select 1 from sweep_targets t where t.fn = e.fn)
+     select 'echo:' || e.fn from sweep_echo e where not exists (select 1 from sweep_targets t where t.fn = e.fn)
      union all
-     select 'viewer:' || w.fn from sweep_viewer_writes w
-     where not exists (select 1 from sweep_targets t where t.fn = w.fn)) missing),
+     select 'fail:' || f.fn from sweep_fail_ok f where not exists (select 1 from sweep_targets t where t.fn = f.fn)
+     union all
+     select 'user_rows:' || u.rel from sweep_user_rows u
+     where not exists (select 1 from sweep_tables t where t.rel = u.rel)
+       or not exists (select 1 from pg_attribute a where a.attrelid = u.rel::regclass and a.attname = 'user_id')) missing),
   '{}'::text[],
-  'every allowlisted or skipped function exists'
+  'every allowlisted or skipped function, and every per-user table, exists'
 );
 select is(
   (select coalesce(array_agg(x order by x), '{}') from (
      select 'echo:' || e.fn as x from sweep_echo e
      where not exists (select 1 from sweep_calls c
-       where c.pass in ('b', 'b_hint') and c.fn = e.fn and cardinality(c.leaked_ids || c.copied_ids) > 0)
+       where c.pass in ('b', 'b_hint', 'b_stale') and c.fn = e.fn
+         and (cardinality(c.leaked_ids || c.copied_ids) > 0 or pg_temp.has_a_text(c.result)))
      union all
-     select 'viewer:' || w.fn || ':' || w.rel from sweep_viewer_writes w
-     where not exists (select 1 from sweep_calls c
-       where c.pass = 'viewer' and c.fn = w.fn and w.rel = any (c.changed))) stale),
+     select 'fail:' || f.fn from sweep_fail_ok f
+     where not exists (select 1 from sweep_calls c, unnest(c.failures) x
+       where c.pass in ('b', 'b_hint', 'b_stale') and c.fn = f.fn and not pg_temp.is_refusal(x))) stale),
   '{}'::text[],
   'every allowlist entry is still needed'
 );
