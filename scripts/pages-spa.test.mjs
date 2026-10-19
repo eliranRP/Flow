@@ -206,7 +206,9 @@ test("the Pages fallback lists app routes and does not use the rejected splat", 
   assert.match(headers, /^\/settings\n {2}Content-Type: text\/html/m);
   assert.match(headers, /^\/app-shell\n {2}Content-Type: text\/html/m);
   // /* holds the security headers only: a Content-Type there would serve /assets as HTML.
-  assert.equal(parseHeaders(headers).get("/*")?.has("content-type"), false);
+  const all = parseHeaders(headers).get("/*");
+  assert.ok(all, "app/public/_headers has the /* security-header rule (0192)");
+  assert.equal(all.has("content-type"), false);
 });
 
 test("nested relative routes resolve, and a path that is not a double-quoted literal fails", () => {

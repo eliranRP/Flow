@@ -2,12 +2,17 @@ import type { StorybookConfig } from "@storybook/react-vite";
 
 const config: StorybookConfig = {
   stories: ["../src/**/*.stories.@(ts|tsx)"],
+  // Decision 0192: the app's public folder holds its Pages rules (_headers with X-Frame-Options DENY
+  // and the CSP placeholder, _redirects), which would blank every canvas in the manager's iframe.
+  // viteFinal turns publicDir off; the favicon the manager and preview heads name is copied alone.
+  staticDirs: [{ from: "../public/favicon.svg", to: "/favicon.svg" }],
   addons: ["@storybook/addon-essentials", "@storybook/addon-a11y", "@storybook/experimental-addon-test"],
   framework: {
     name: "@storybook/react-vite",
     options: {},
   },
   viteFinal(config) {
+    config.publicDir = false;
     config.server ??= {};
     config.server.strictPort = false;
     delete config.server.port;

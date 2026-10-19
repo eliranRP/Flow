@@ -57,6 +57,11 @@ test("a build with no Supabase URL connects only to itself, and a plain-http URL
   assert.deepEqual(csp.get("connect-src"), ["'self'"]);
   assert.deepEqual(csp.get("script-src"), ["'self'"]);
   assert.equal(supabaseOrigin("http://127.0.0.1:54321"), "http://127.0.0.1:54321");
+  assert.equal(supabaseOrigin("http://localhost:54321/"), "http://localhost:54321");
+  assert.equal(supabaseOrigin("http://192.168.1.20:54321"), "http://192.168.1.20:54321");
+  assert.equal(supabaseOrigin("http://[::1]:54321"), "http://[::1]:54321");
+  assert.throws(() => supabaseOrigin("http://203.0.113.5:54321"), /https/);
+  assert.throws(() => supabaseOrigin("ftp://localhost"), /https/);
   assert.throws(() => supabaseOrigin("http://abc.supabase.co"), /https/);
 });
 

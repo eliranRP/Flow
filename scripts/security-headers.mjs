@@ -29,8 +29,12 @@ export function scriptHash(source) {
   return `'sha256-${createHash("sha256").update(source, "utf8").digest("base64")}'`;
 }
 
+/** Hosts a local build may reach over plain http: loopback and private networks (a phone on the LAN). */
+const localHost = /^(localhost|127(\.\d{1,3}){3}|\[::1\]|10(\.\d{1,3}){3}|192\.168(\.\d{1,3}){2}|172\.(1[6-9]|2\d|3[01])(\.\d{1,3}){2}|[a-z0-9-]+\.local)$/i;
+
 /**
- * The https origin of the Supabase project, or null when the build has none (reviewers-only).
+ * The origin of the Supabase project, or null when the build has none (reviewers-only). It must be
+ * https, except on a loopback, private-network or .local host for a local build.
  * @param {string | undefined} url
  * @returns {string | null}
  */
@@ -38,8 +42,8 @@ export function supabaseOrigin(url) {
   const value = (url ?? "").trim();
   if (value === "") return null;
   const parsed = new URL(value);
-  if (parsed.protocol !== "https:" && parsed.hostname !== "127.0.0.1" && parsed.hostname !== "localhost") {
-    throw new Error(`VITE_SUPABASE_URL must be https: ${parsed.origin}`);
+  if (parsed.protocol !== "https:" && !(parsed.protocol === "http:" && localHost.test(parsed.hostname))) {
+    throw new Error(`VITE_SUPABASE_URL must be https outside a local host: ${parsed.origin}`);
   }
   return parsed.origin;
 }
