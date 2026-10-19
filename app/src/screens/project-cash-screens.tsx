@@ -10,12 +10,14 @@ import {
 import { withPeriodSearch } from "../project-period";
 import {
   PROJECT_CASH_MONTHS,
+  projectCashFigures,
   projectCashSummaryRows,
-  projectEarlierMonthRows,
 } from "../project-cash";
+import type { NextMonthForecast } from "../project-next-month";
 import { BackButton } from "../ui/back";
 import { Amount } from "../ui/amount";
-import { ProjectEmptyCard, ProjectMonthsCard, ProjectProfitCard } from "./project-page-cards";
+import { ProjectEmptyCard, ProjectProfitCard } from "./project-page-cards";
+import { NextMonthBlock } from "./next-month-block";
 import { FocusTitle } from "../ui/focus-title";
 import { BannerRows, type BannerRow } from "../ui/banner";
 import { List, ListRow } from "../ui/list-row";
@@ -30,10 +32,19 @@ import type { ProjectInvestment } from "./project-investment-data";
 
 type Project = NonNullable<ProjectDetail>;
 
+/** What the project page's next-month block reads: the forecast, whether it is still loading, its currency. */
+export type NextMonthCash = {
+  forecast: NextMonthForecast | null;
+  loading: boolean;
+  currency: string;
+  categories: readonly { id: string; name: string }[];
+};
+
 /**
  * FLOW-419 (owner's option A "Like Home", decision 0176). The project page is the project's cash,
  * as Home is the company's: this month's תזרים, נכנס, יצא and רווח החודש, one row for השקעה
- * והלוואות, then the earlier months. An earlier month, נכנס and יצא open the project's month page.
+ * והלוואות, then next month's forecast card and the month chart (canvas note spec-fcwide). נכנס and יצא
+ * open the project's month page.
  */
 
 /** השקעה והלוואות: הון עצמי בנכס when known, else the loans; null with neither (the row hides). */
@@ -63,6 +74,7 @@ export function ProjectCashOverview({
   fresh = false,
   budget,
   budgetAdd,
+  nextMonth = null,
   example,
   now,
 }: {
@@ -87,6 +99,8 @@ export function ProjectCashOverview({
   budget?: ReactNode;
   /** The quiet "+ הוספת תקציב" a project with no budget shows after its profit rows. */
   budgetAdd?: ReactNode;
+  /** Next month's forecast (the צפי page's) in its currency, for the card and the chart's last pair. */
+  nextMonth?: NextMonthCash | null;
   example?: ReactNode;
   /** Stories and tests pin the month names. */
   now?: Date;
@@ -94,7 +108,6 @@ export function ProjectCashOverview({
   const month = data?.months[0];
   const key = month == null ? null : cashMonthKey(month.month);
   const rows = data == null ? [] : shownCashRows(month, data.base_currency);
-  const earlier = data == null ? [] : projectEarlierMonthRows(project.id, data, search, now);
   const investment = investmentLoansRow(investmentData, project);
   // FLOW-445: the summary card shows for a property once its purchase or value is entered. A project
   // whose only entry is an open loan keeps the FLOW-419 row, which names the loan.
@@ -203,9 +216,20 @@ export function ProjectCashOverview({
             />
           </List>
         )}
-        {earlier.length > 0 ? (
-          <ProjectMonthsCard rows={earlier} />
-        ) : null}
+        {data == null || key == null || fresh || nextMonth == null ? null : (
+          <NextMonthBlock
+            forecast={nextMonth.forecast}
+            loading={nextMonth.loading}
+            current={key}
+            figures={projectCashFigures(data, nextMonth.currency)}
+            firstMonth={firstMonth}
+            currency={nextMonth.currency}
+            netLabel="תזרים צפוי"
+            cardHref={`/projects/${project.id}/profit/next${search}`}
+            categories={nextMonth.categories}
+            chartLink={{ href: `/projects/${project.id}/profit${withPeriodSearch(search, { kind: "all", from: null, to: null })}`, text: "רווח לפי חודש" }}
+          />
+        )}
       </div>
     </div>
   );

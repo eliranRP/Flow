@@ -86,9 +86,8 @@ export type NextMonthForecast = {
   expenseMinor: bigint;
   /** Income less expenses, before the share of general expenses. */
   netMinor: bigint;
-  recurringCount: number;
+  /** The loan rows: the צפי page's note names the loan's schedule when there are some. */
   loanCount: number;
-  averageCount: number;
   /** The months the averages are over: the window from the project's first expense in it. */
   averageMonths: number;
   /** Rows the user took out of the month, with the amount they would have. */
@@ -98,8 +97,6 @@ export type NextMonthForecast = {
    * charge seen this month, they are no longer expected: they leave the totals.
    */
   arrived: NextMonthRow[];
-  /** How many of the user's edits apply to the month. */
-  editCount: number;
 };
 
 /** yyyy-mm of the month after the day's month. */
@@ -242,7 +239,7 @@ export function nextMonthForecast(input: {
     .sort((a, b) => ((a.date ?? "") === (b.date ?? "") ? a.name.localeCompare(b.name, "he") : (a.date ?? "") < (b.date ?? "") ? -1 : 1));
   const divisor = averageMonths(input.categoryMonths);
   const averages = averageRows(input.categoryMonths, input.currency, filled, divisor);
-  return withTotals(month, [...recurring, ...loans, ...averages], divisor, [], [], 0);
+  return withTotals(month, [...recurring, ...loans, ...averages], divisor, [], []);
 }
 
 function withTotals(
@@ -251,7 +248,6 @@ function withTotals(
   divisor: number,
   removed: NextMonthRow[],
   arrived: NextMonthRow[],
-  editCount: number,
 ): NextMonthForecast {
   const incomeMinor = rows.reduce((sum, row) => (row.minor > 0n ? sum + row.minor : sum), 0n);
   const expenseMinor = rows.reduce((sum, row) => (row.minor < 0n ? sum - row.minor : sum), 0n);
@@ -261,13 +257,10 @@ function withTotals(
     incomeMinor,
     expenseMinor,
     netMinor: incomeMinor - expenseMinor,
-    recurringCount: rows.filter((row) => row.kind === "recurring").length,
     loanCount: rows.filter((row) => row.kind === "loan").length,
-    averageCount: rows.filter((row) => row.kind === "average").length,
     averageMonths: divisor,
     removed,
     arrived,
-    editCount,
   };
 }
 
@@ -326,32 +319,13 @@ export function applyForecastEdits(forecast: NextMonthForecast, edits: readonly 
     const amount = BigInt(change.amount_minor);
     return { ...row, minor: row.direction === "income" ? amount : -amount, wasMinor: row.minor };
   });
-  // An edit counts once it reaches a row the forecast has: an added line, or a change or removal of one.
-  const keys = new Set(rows.map((row) => row.key));
-  const counted = applying.filter((edit) => edit.kind === "add" || (edit.row_key != null && keys.has(edit.row_key))).length;
   return withTotals(
     month,
     rows.filter((row) => !removedKeys.has(row.key) && !arrivedKeys.has(row.key)),
     forecast.averageMonths,
     rows.filter((row) => removedKeys.has(row.key)),
     rows.filter((row) => !removedKeys.has(row.key) && arrivedKeys.has(row.key)),
-    counted,
   );
-}
-
-/**
- * The card's third line: what the forecast is made of ("2 קבועים, שורה לפי ההלוואה ו־3 ממוצעים"), and how
- * many edits the user made.
- */
-export function basisLine(forecast: Pick<NextMonthForecast, "recurringCount" | "loanCount" | "averageCount" | "editCount">): string {
-  const { recurringCount, loanCount, averageCount, editCount } = forecast;
-  const kinds = [
-    recurringCount === 0 && (averageCount > 0 || loanCount > 0) ? null : recurringCount === 1 ? "קבוע אחד" : `${String(recurringCount)} קבועים`,
-    loanCount === 0 ? null : loanCount === 1 ? "שורה לפי ההלוואה" : `${String(loanCount)} לפי ההלוואה`,
-    averageCount === 0 ? null : averageCount === 1 ? "ממוצע אחד" : `${String(averageCount)} ממוצעים`,
-  ].filter((kind): kind is string => kind != null);
-  const parts = kinds.length === 1 ? kinds[0] ?? "" : `${kinds.slice(0, -1).join(", ")} ו־${kinds.at(-1) ?? ""}`;
-  return editCount === 0 ? parts : `${parts} · ערכת ${String(editCount)}`;
 }
 
 /** The project's average monthly share of general expenses: its share for the period over the period's months. */

@@ -238,6 +238,7 @@ function kindStory(kind: Exclude<ProjectKind, "flip">): Story {
           sampleCash={data.cash}
           sampleInvestment={data.investment}
           sampleMenuRow={data.row}
+          sampleNext={data.next}
           sectionTo={(target) => (target === "overview" ? `/projects/${data.project.id}` : `/projects/${data.project.id}/${target}`)}
         />
       </StoryRoute>
@@ -246,3 +247,5 @@ function kindStory(kind: Exclude<ProjectKind, "flip">): Story {
 }
 
 export const ProjectRentalPage: Story = { name: "Project, rental", ...kindStory("rental") };
+/** A client job: the next-month card shows the client's payment and the subcontractor the owner added. */
+export const ProjectClientPage: Story = { name: "Project, client job", ...kindStory("client") };

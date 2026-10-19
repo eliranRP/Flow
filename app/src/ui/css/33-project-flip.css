@@ -177,21 +177,6 @@
   font-weight: var(--type-section-weight);
 }
 
-.ui-project-months-card {
-  padding-block: calc(var(--space-1) + var(--space-1) / 2);
-}
-
-/* The board's month rows: 52px, the title at 10px over 18px sides. */
-.ui-project-months-card .ui-row {
-  min-block-size: calc(var(--space-10) + var(--space-3));
-  padding-block: 0;
-}
-
-.ui-project-months-card .ui-project-card-title {
-  margin: calc(var(--space-2) + var(--space-1) / 2) calc(var(--space-4) + var(--space-1) / 2) var(--space-1);
-  font-size: var(--type-section-size);
-}
-
 /* The board draws a figure's cents at the figure's size. */
 .ui-project-figures .ui-num-cents,
 .ui-band-row-amount .ui-num-cents {

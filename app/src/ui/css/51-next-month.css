@@ -1,0 +1,228 @@
+/* Next month's forecast card and the month chart, the same on every screen (canvas note spec-fcwide;
+   the Profit and Projects boards' fc card and chartRows). */
+.ui-fc-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-inset-row);
+}
+
+/* On a profit page it sits 20px under the chips, in the page's side padding. */
+.ui-pp-chips ~ .ui-fc-block {
+  margin: var(--space-5) var(--space-5) 0;
+}
+
+.ui-fc-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  inline-size: 100%;
+  padding: calc(var(--space-3) + var(--space-half)) var(--space-4) var(--space-4);
+  border: 1.5px dashed var(--color-outline-forecast);
+  border-radius: var(--radius-card);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.ui-fc-head,
+.ui-fc-chart-head,
+.ui-fc-net {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.ui-fc-head {
+  align-items: center;
+}
+
+.ui-fc-month {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-section-weight);
+  white-space: nowrap;
+}
+
+.ui-fc-tag {
+  padding: 1px var(--space-2);
+  border: 1px solid var(--color-outline-forecast);
+  border-radius: var(--radius-tag);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  color: var(--color-accent-text);
+}
+
+.ui-fc-link,
+.ui-fc-chart-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-half);
+  color: var(--color-accent-text);
+}
+
+.ui-fc-link,
+.ui-fc-caption,
+.ui-fc-label {
+  font-size: var(--type-caption-size);
+}
+
+.ui-fc-caption,
+.ui-fc-label {
+  color: var(--color-text-muted);
+}
+
+.ui-fc-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-inset-row);
+}
+
+.ui-fc-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+/* The figure starts on the right like the labels above and below it. */
+.ui-fc-col > .ui-num {
+  align-self: flex-start;
+}
+
+/* No income expected: the $0 is grey, not green. */
+.ui-fc-col-zero > .ui-num {
+  color: var(--color-text-secondary);
+}
+
+/* The net is grey, never green: it is a forecast. */
+.ui-fc-net {
+  padding-block-start: calc(var(--space-2) + var(--space-half));
+  border-block-start: 1px solid var(--color-line);
+  font-size: var(--type-line2-size);
+  color: var(--color-text-secondary);
+}
+
+.ui-fc-net > .ui-num {
+  font-size: var(--type-body-size);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-fc-chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: calc(var(--space-3) + var(--space-half)) var(--space-4) var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+/* At 320 the sub drops under the title instead of either one breaking. */
+.ui-fc-chart-head {
+  flex-wrap: wrap;
+}
+
+.ui-fc-chart-head > span {
+  white-space: nowrap;
+}
+
+.ui-fc-chart-title {
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-fc-bars {
+  display: grid;
+  align-items: end;
+  gap: calc(var(--space-1) + var(--space-half));
+}
+
+.ui-fc-month-bars {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--space-1) + var(--space-half));
+  min-inline-size: 0;
+}
+
+/* Two bars on one 108px scale, from the bottom. */
+.ui-fc-pair {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: calc(var(--space-1) * 0.75);
+  inline-size: 100%;
+  block-size: calc(var(--space-10) * 2.7);
+}
+
+.ui-fc-bar {
+  box-sizing: border-box;
+  inline-size: 42%;
+  max-inline-size: calc(var(--space-4) + var(--space-half));
+  border-radius: var(--radius-chart-bar);
+}
+
+.ui-fc-bar-in {
+  background: var(--color-accent);
+}
+
+.ui-fc-bar-out {
+  background: var(--color-chart-expense);
+}
+
+/* Next month has not happened: both bars dashed and unfilled. */
+.ui-fc-ahead .ui-fc-bar-in {
+  border: 1.5px dashed var(--color-accent);
+  background: var(--color-tint);
+}
+
+.ui-fc-ahead .ui-fc-bar-out {
+  border: 1.5px dashed var(--color-chart-expense);
+  background: transparent;
+}
+
+.ui-fc-bar-label {
+  font-size: var(--type-cents-size);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.ui-fc-ahead .ui-fc-bar-label {
+  color: var(--color-accent-text);
+}
+
+.ui-fc-legend {
+  display: flex;
+  gap: var(--space-inset-row);
+  font-size: calc(var(--type-caption-size) - 1px);
+  color: var(--color-text-muted);
+}
+
+.ui-fc-legend > span {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-1) + var(--space-half));
+}
+
+.ui-fc-swatch {
+  flex: none;
+  box-sizing: border-box;
+  inline-size: var(--space-2);
+  block-size: var(--space-2);
+  border-radius: var(--radius-bar-hair);
+}
+
+.ui-fc-swatch-ahead {
+  border: 1.5px dashed var(--color-accent);
+}
+
+/* "רווח לפי חודש ›": the board's 36px line, with a 44px hit area. */
+.ui-fc-chart-link {
+  align-self: flex-start;
+  min-block-size: var(--touch-min);
+  margin-block: calc((var(--space-8) + var(--space-1) - var(--touch-min)) / 2);
+  font-size: var(--type-line2-size);
+  text-decoration: none;
+}

@@ -4,7 +4,8 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
 import { useCompanyCurrency } from "../company-currency";
 import { projectExpenseMinor, projectRows } from "../by-currency";
-import { allTime, monthPeriod } from "../period";
+import type { MonthFigures } from "../next-month-chart";
+import { allTime, monthPeriod, shiftMonthKey } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { useNextMonthForecast, type NextMonthSample } from "../project-next-month-query";
 import { withPeriodSearch } from "../project-period";
@@ -19,10 +20,10 @@ import { Chip } from "../ui/chip";
 import { HEBREW_MONTHS } from "../ui/date-math";
 import { BarsIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
-import { NextMonthCardSkeleton, ProfitRowsSkeleton, ProfitSkeleton } from "../ui/screen-skeletons";
+import { ProfitRowsSkeleton, ProfitSkeleton } from "../ui/screen-skeletons";
 import { DelayedSkeleton } from "../ui/skeleton";
 import { ScreenState } from "../ui/screen-state";
-import { NextMonthCard } from "./project-next-month-card";
+import { NextMonthBlock } from "./next-month-block";
 
 export type ProjectProfitSample = { project: NonNullable<ProjectDetail>; months: NonNullable<ProfitMonths>; next?: NextMonthSample };
 
@@ -174,9 +175,17 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
             />
           ) : (
             <>
-              {cardLoading
-                ? <DelayedSkeleton><NextMonthCardSkeleton /></DelayedSkeleton>
-                : <NextMonthCard forecast={nextMonth.forecast} currency={currency} href={`/projects/${id}/profit/next${search}`} />}
+              <NextMonthBlock
+                forecast={nextMonth.forecast}
+                loading={cardLoading}
+                current={monthsLoading || monthsFailed ? null : shiftMonthKey(nextMonth.month, -1)}
+                figures={profitFigures(rows, currency)}
+                firstMonth={oldest ?? null}
+                currency={currency}
+                netLabel="רווח צפוי"
+                cardHref={`/projects/${id}/profit/next${search}`}
+                categories={nextMonth.categories}
+              />
               {monthsFailed ? (
                 <FailureLine offline={!navigator.onLine} onRetry={() => { void months.refetch(); }} />
               ) : monthsLoading ? (
@@ -200,6 +209,17 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
       )}
     </ScreenState>
   );
+}
+
+/** The chart's history from the profit months: each month's income and counted expenses in the page's currency. */
+function profitFigures(rows: readonly ProfitMonth[], currency: string): Map<string, MonthFigures> {
+  const figures = new Map<string, MonthFigures>();
+  for (const month of rows) {
+    const row = month.by_currency.find((figure) => figure.currency === currency);
+    if (row == null) continue;
+    figures.set(month.month, { incomeMinor: row.income_minor, expenseMinor: row.expense_minor < 0n ? -row.expense_minor : row.expense_minor });
+  }
+  return figures;
 }
 
 export function SummaryRow({ label, value, strong = false }: { label: string; value: ReactNode; strong?: boolean }) {

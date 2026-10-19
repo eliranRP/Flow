@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { Amount } from "../ui/amount";
 import { Card } from "../ui/card";
 import { List, ListRow } from "../ui/list-row";
@@ -6,7 +5,7 @@ import type { CashRow } from "../ui/cash-rows";
 
 type Figure = { currency: string; minor: bigint };
 
-function Figures({ figures, detail = true }: { figures: Figure[]; detail?: boolean }) {
+function Figures({ figures }: { figures: Figure[] }) {
   return (
     <span className="ui-project-figures">
       {figures.map((figure) => (
@@ -14,12 +13,11 @@ function Figures({ figures, detail = true }: { figures: Figure[]; detail?: boole
           key={figure.currency}
           agorot={figure.minor}
           currency={figure.currency}
-          presentation={detail ? "detail" : "summary"}
+          presentation="detail"
           size="list"
-          // The board: a profit row signs a gain in the text colour; a month's net is green when it gained.
-          direction={detail && figure.minor > 0n ? "income" : undefined}
-          income={!detail}
-          loss={detail && figure.minor < 0n}
+          // The board: a profit row signs a gain in the text colour.
+          direction={figure.minor > 0n ? "income" : undefined}
+          loss={figure.minor < 0n}
         />
       ))}
     </span>
@@ -59,29 +57,6 @@ export function ProjectProfitCard({
           <ListRow variant="item" title={extra.label} hint={extra.hint} meta={<span className="ui-project-figures"><Amount agorot={extra.amounts[0]?.minor ?? 0n} currency={extra.amounts[0]?.currency} presentation="detail" size="list" /></span>} href={extra.href} label={extra.name} chevron />
         )}
       </List>
-    </Card>
-  );
-}
-
-/** "חודשים קודמים" as one card: a row per month, its net on the end. */
-export function ProjectMonthsCard({ rows, footer }: { rows: CashRow[]; footer?: ReactNode }) {
-  return (
-    <Card className="ui-project-card ui-project-months-card">
-      <h2 className="ui-project-card-title">חודשים קודמים</h2>
-      <List>
-        {rows.map((row) => (
-          <ListRow
-            key={row.id}
-            variant="item"
-            title={row.label}
-            meta={<Figures figures={row.amounts} detail={false} />}
-            href={row.href}
-            label={row.name}
-            chevron
-          />
-        ))}
-      </List>
-      {footer}
     </Card>
   );
 }

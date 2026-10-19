@@ -211,14 +211,14 @@ export function ProfitRowsSkeleton() {
   );
 }
 
-/** The dashed next-month card's place while its forecast loads: the card's own box (.ui-pn-card) with three lines. */
+/** The dashed next-month card's place while its forecast loads: the card's own box (.ui-fc-card), its title and two columns. */
 export function NextMonthCardSkeleton() {
   return (
-    <div className="ui-pn-card" aria-hidden="true">
-      <span className="ui-pn-card-text">
-        <Bar w="40%" h={14} />
-        <Bar w="70%" h={10} />
-        <Bar w="55%" h={10} />
+    <div className="ui-fc-card" aria-hidden="true">
+      <Bar w="30%" h={14} />
+      <span className="ui-fc-cols">
+        <span className="ui-fc-col"><Bar w="60%" h={10} /><Bar w="80%" h={24} /></span>
+        <span className="ui-fc-col"><Bar w="60%" h={10} /><Bar w="80%" h={24} /></span>
       </span>
     </div>
   );

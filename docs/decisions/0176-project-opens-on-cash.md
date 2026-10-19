@@ -2,6 +2,7 @@
 
 **Date:** 2026-10-10
 **Status:** Accepted (owner's card, option A "Like Home", 2026-10-10 09:19Z; FLOW-419)
+**Amended in part by:** [0196](0196-next-month-forecast-card-and-chart.md) (next month's card and the month chart replace the earlier months under חודשים קודמים)
 
 ## Context
 

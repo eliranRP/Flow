@@ -6,7 +6,9 @@ import { BackButton } from "../../ui/back";
 import { ProjectDetailScreen, ProjectsScreen } from "../../screens/flow-screens";
 import { ProjectInvestmentScreen } from "../../screens/project-investment-screen";
 import { useHomePreview } from "../../preview";
-import { cash as devCash, cashRow as devCashRow, investment as devInvestment, months as devMonths, project as devProject } from "../project-cash-sample";
+import { cash as devCash, cashRow as devCashRow, investment as devInvestment, months as devMonths, project as devProject, thisMonth } from "../project-cash-sample";
+import { kindNextSample } from "../project-kinds-next-sample";
+import { shiftMonthKey } from "../../period";
 import { devProjectsCash } from "../projects-sample";
 import { kindOf, kindSample } from "../project-kinds-sample";
 import { birchLaneInvestment, birchLaneNegativeInvestment, birchLaneNoArvInvestment, birchLaneRehabCategories } from "../investment-sample";
@@ -99,7 +101,7 @@ export function DevProjectDetail() {
   const menuBase = devProjectsCash.projects[0];
   const kind = kindOf(params.get("kind"));
   const kinded = kind == null ? null : kindSample(kind, menuBase);
-  const menuRow = kinded?.row ?? (menuBase == null ? undefined : { ...menuBase, id: "p1", pending_count: deletable ? 0 : 2, deletable, first_month: deletable ? "2026-10-01" : "2026-07-01" });
+  const menuRow = kinded?.row ?? (menuBase == null ? undefined : { ...menuBase, id: "p1", pending_count: deletable ? 0 : 2, deletable, first_month: `${deletable ? thisMonth : shiftMonthKey(thisMonth, -3)}-01` });
   return (
     <>
     <OpenProjectMenu sheet={params.get("sheet")} />
@@ -111,6 +113,8 @@ export function DevProjectDetail() {
       sample={kinded?.project ?? (deletable ? idleProject : { ...e2eProject, budget_agorot: params.get("budget") === "1" ? e2eProject.budget_agorot : null })}
       sampleCash={kinded?.cash ?? (deletable ? idleCash : devCash)}
       sampleInvestment={kinded?.investment ?? (deletable ? idleInvestment : devInvestment)}
+      // The month chart's last pair and the dashed card: the kind's forecast, the flip's for the default page.
+      sampleNext={kinded?.next ?? (deletable ? undefined : kindNextSample("flip", e2eProject.id))}
     />
     {params.get("add") === "1" ? <AddForm /> : null}
     </>

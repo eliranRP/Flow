@@ -13,6 +13,7 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useProjectQuery } from "../use-books";
 import { useProjectCashMonthsQuery, useProjectsCashMonth } from "../project-cash";
+import { useNextMonthForecast, type NextMonthSample } from "../project-next-month-query";
 import { assertNoError, useWrite } from "../use-write";
 import { Amount } from "../ui/amount";
 import { BudgetCard } from "../ui/budget-card";
@@ -98,6 +99,7 @@ export function ProjectDetailScreen({
   sampleCash,
   sampleRecurring,
   sampleMenuRow,
+  sampleNext,
   now,
 }: {
   sample?: NonNullable<ProjectDetail>;
@@ -107,6 +109,8 @@ export function ProjectDetailScreen({
   sampleCash?: NonNullable<CashMonths>;
   /** Stories and tests pin the month names. */
   now?: Date;
+  /** A sample project's next-month forecast reads; without it a sample project's chart has no forecast. */
+  sampleNext?: NextMonthSample;
   /** A sample project's row for the ⋯ menu (its deletable flag); the menu reads no cash in a preview. */
   sampleMenuRow?: ProjectCashRow;
   /** FLOW-404. The השקעה data of a sample project; without it a sample project shows no investment. */
@@ -139,6 +143,18 @@ export function ProjectDetailScreen({
   const monthRow = sampleMenuRow ?? monthRows.data?.projects.find((row) => row.id === projectId);
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();
+  // Next month's forecast, as the profit page and the צפי page read it: the currency of the project's
+  // lifetime figures, read once the project's own read has landed (FLOW-804).
+  const lifetimeProject = lifetime.data ?? sample ?? null;
+  const forecastCurrency = lifetimeProject == null ? companyCurrency : projectRows(lifetimeProject, companyCurrency)[0]?.currency ?? companyCurrency;
+  const forecastLive = sample == null && detail.data != null;
+  const next = useNextMonthForecast(sample?.id ?? projectId, forecastCurrency, sampleNext, forecastLive);
+  const nextMonth = {
+    forecast: next.forecast,
+    loading: forecastLive && next.pending && !next.paused && !next.failed,
+    currency: forecastCurrency,
+    categories: next.categories,
+  };
   const blocked = useBlockedPreview();
   // FLOW-804: a page showing a read (its last one, or the one saved on the phone) keeps it when a
   // refresh fails; the server is slow or away, and the figures it has are still the project's.
@@ -253,6 +269,7 @@ export function ProjectDetailScreen({
         changes: recurring.changes,
         search,
       })}
+      nextMonth={nextMonth}
       example={example}
       now={now}
     />
