@@ -2,6 +2,7 @@ import { buildLoanSchedule, type ExpectedParty, type ProjectCategoryMonths } fro
 import { describe, expect, it } from "vitest";
 import { JUNIPER_NEXT, JUNIPER_NEXT_EDITED, JUNIPER_NEXT_LOAN } from "./dev/project-next-month-sample";
 import type { ForecastLoan } from "./project-next-loans";
+import { loanOutlook } from "./screens/loan-outlook";
 import {
   applyForecastEdits,
   basisLine,
@@ -428,7 +429,7 @@ describe("nextMonthForecast with the project's loans (decision 0190)", () => {
   });
 
   it("sums two loans in one category into one row", () => {
-    const second: ForecastLoan = { ...loan, id: "l-heloc", kind: "interest_only", interestOnlyMonths: 12, principalMinor: 4_000_000n, annualRatePpm: 90_000, termMonths: 60, paymentMinor: 30_000n, escrowMinor: 0n, startDate: "2026-10-15", categoryIds: { ...loan.categoryIds, escrow: null } };
+    const second: ForecastLoan = { ...loan, id: "l-heloc", kind: "interest_only", interestOnlyMonths: 12, principalMinor: 4_000_000n, balanceMinor: 4_000_000n, annualRatePpm: 90_000, termMonths: 60, paymentMinor: 30_000n, escrowMinor: 0n, startDate: "2026-10-15", categoryIds: { ...loan.categoryIds, escrow: null } };
     const result = withLoans([loan, second]);
     const interest = result.rows.filter((row) => row.categoryId === "loan-interest");
     expect(interest).toHaveLength(1);
@@ -459,6 +460,23 @@ describe("nextMonthForecast with the project's loans (decision 0190)", () => {
       categories: (JUNIPER_NEXT_LOAN.categories ?? []).map((category) => (category.id === "loan-interest" ? { ...category, excluded_from_pnl: true } : category)),
     });
     expect(keptOut.rows.map((row) => row.key)).toEqual(["avg:taxes"]);
+  });
+
+  it("matches the loan page's next payment, from the balance in the books, after an extra principal payment", () => {
+    // 20,000 paid down beyond the schedule: the balance is below where the original terms would have it.
+    const paidDown: ForecastLoan = { ...loan, balanceMinor: 27_153_030n - 2_000_000n };
+    const next = loanOutlook(paidDown, JUNIPER_NEXT_LOAN.today)?.next;
+    expect(next?.dueDate).toBe("2026-11-01");
+    expect(next?.interestMinor).toBeLessThan(november?.interestMinor ?? 0n);
+    const rows = withLoans([paidDown]).rows;
+    expect(rows.find((row) => row.key === "avg:loan-interest")?.minor).toBe(-(next?.interestMinor ?? 0n));
+    expect(rows.find((row) => row.key === "avg:taxes")?.minor).toBe(-(next?.escrowMinor ?? 0n));
+  });
+
+  it("gives nothing once the balance in the books is paid, before its last scheduled row", () => {
+    expect(withLoans([{ ...loan, balanceMinor: 0n }]).rows.filter((row) => row.kind === "loan")).toEqual([]);
+    // A balance the October payment clears leaves nothing due in November.
+    expect(withLoans([{ ...loan, balanceMinor: 100_000n }], "2026-10-01").rows.filter((row) => row.kind === "loan")).toEqual([]);
   });
 
   it("gives nothing for a month before the loan's first row or after its last", () => {

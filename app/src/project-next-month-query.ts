@@ -62,8 +62,8 @@ function useProjectExpectedQuery(projectId: string) {
 }
 
 /**
- * The loans filed under the project, as the loan page reads a loan (its row with the rates). Under "loans",
- * so a loan write refreshes it. A forecast needs only the terms, so no balance is read.
+ * The loans filed under the project, as the loan page reads a loan (its row with the rates, and its balance in
+ * the books). Under "loans", so a loan write refreshes it.
  */
 function useProjectLoansQuery(projectId: string) {
   const preview = useHomePreview();
@@ -76,7 +76,16 @@ function useProjectLoansQuery(projectId: string) {
       await waitForAccessToken(supabase);
       const { data, error } = await supabase.from("loans").select(LOAN_DETAIL_COLUMNS).eq("project_id", projectId);
       if (error) throw error;
-      return (data as unknown as LoanDetailDbRow[]).map((row) => readLoanRow(row, null));
+      const rows = data as unknown as LoanDetailDbRow[];
+      if (rows.length === 0) return [];
+      // The balance in the books, as the loan page reads it: the payments left start from it (FLOW-427).
+      const balances = await supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts").in("loan_id", rows.map((row) => row.id));
+      if (balances.error) throw balances.error;
+      const byLoan = new Map(balances.data.map((row) => [row.loan_id, row]));
+      return rows.map((row) => {
+        const balance = byLoan.get(row.id);
+        return readLoanRow(row, balance == null ? null : { balanceMinor: BigInt(balance.balance_minor ?? 0), flaggedParts: balance.flagged_parts ?? 0 });
+      });
     },
   });
 }

@@ -76,18 +76,26 @@ export function loanScheduleTerms(loan: ScheduleLoan): LoanTerms | null {
   };
 }
 
-export function loanOutlook(loan: OutlookLoan, today: string): LoanOutlook | null {
+/**
+ * The payments due today or later, from the balance in the books (FLOW-427). Null for a demand loan, one
+ * that ended, or terms the schedule refuses. The loan page's outlook and the project forecast's loan rows
+ * (decision 0190) both read it, so the two show the same payment.
+ */
+export function paymentsLeft(loan: OutlookLoan, today: string): readonly LoanScheduleRow[] | null {
   if (loan.status !== "open" || loan.balanceMinor <= 0n) return null;
   const terms = loanScheduleTerms(loan);
   if (terms == null) return null;
-  let left: readonly LoanScheduleRow[];
   try {
     const first = buildLoanSchedule(terms).rows.find((row) => row.dueDate >= today);
-    if (first == null) return null;
-    left = remainingFromBalance(terms, loan.balanceMinor, first);
+    return first == null ? null : remainingFromBalance(terms, loan.balanceMinor, first);
   } catch {
     return null;
   }
+}
+
+export function loanOutlook(loan: OutlookLoan, today: string): LoanOutlook | null {
+  const left = paymentsLeft(loan, today);
+  if (left == null) return null;
   const next = left[0];
   if (next == null) return null;
   const endDate = left.at(-1)?.dueDate ?? next.dueDate;

@@ -10,10 +10,12 @@ import { type ForecastCategory, type ForecastLoan, loanParts } from "./project-n
  * - A recurring charge that pays a loan (`pays_loan`) is cash, not profit: its usual amount is the whole
  *   payment, principal included. It is left out of the recurring rows.
  * - The loan's profit parts come from the loan itself (decision 0190): for each open loan filed under the
- *   project with a schedule (not a demand loan), in the forecast's currency, the schedule row due that month
- *   gives its interest in the loan's interest category and its escrow in its escrow category (the loan's
- *   own, else the company's keyed one; none when kept out of the profit). Several loans in one category sum
- *   into one row. A month outside the schedule, or a closed or paid-off loan, gives nothing. The row keeps
+ *   project with a schedule (not a demand loan), in the forecast's currency, the payment due that month as
+ *   the loan page shows it (its payments left, from the balance in the books: FLOW-427, loan-outlook's
+ *   paymentsLeft) gives its interest in the loan's interest category and its escrow in its escrow category
+ *   (the loan's own, else the company's keyed one; none when kept out of the profit). So next month's rows
+ *   are the loan page's next payment. Several loans in one category sum into one row. A month before the
+ *   first payment left or after the last (the balance paid off), or a closed or paid-off loan, gives nothing. The row keeps
  *   the key `avg:<category>`, so the user's edits of that category's row still apply.
  * - A category is left out of the averages as soon as any recurring charge of the project (a loan payment
  *   aside) files to it, even one not due next month, so a one-off cost in that category drops out of the
@@ -207,7 +209,7 @@ export function nextMonthForecast(input: {
   const thisMonth = input.today.slice(0, 7);
   // A loan payment is not a profit line: the loan's own rows stand for its interest and escrow.
   const charges = input.recurring.filter((party) => party.project_id === input.projectId && party.pays_loan !== true);
-  const loans = loanParts({ projectId: input.projectId, currency: input.currency, month, loans: input.loans ?? [], categories: input.categories ?? [] })
+  const loans = loanParts({ projectId: input.projectId, currency: input.currency, month, today: input.today, loans: input.loans ?? [], categories: input.categories ?? [] })
     .map((part): NextMonthRow => ({
       key: `avg:${part.categoryId}`,
       kind: "loan",

@@ -1,15 +1,16 @@
-import { buildLoanSchedule, type CategoryRow, type LoanScheduleRow } from "@flow/shared";
+import type { CategoryRow, LoanScheduleRow } from "@flow/shared";
 import type { LoanDetail } from "./screens/loan-detail-data";
-import { loanScheduleTerms, type ScheduleLoan } from "./screens/loan-outlook";
+import { type OutlookLoan, paymentsLeft } from "./screens/loan-outlook";
 
 /**
  * The loan rows of a project's next-month forecast (decision 0190), pure: for each open loan filed under the
- * project, in the forecast's currency, its schedule's interest and escrow for the month, each in the category
+ * project, in the forecast's currency, the interest and escrow of its payment due in the month (the loan
+ * page's payments left, from the balance in the books, FLOW-427), each in the category
  * the loan's payments file that part to. Principal never counts.
  */
 
 /** A loan as the forecast reads it: its terms, where it sits, and the categories its parts file to. */
-export type ForecastLoan = ScheduleLoan & Pick<LoanDetail, "id" | "currency" | "status" | "projectId" | "categoryIds">;
+export type ForecastLoan = OutlookLoan & Pick<LoanDetail, "id" | "currency" | "projectId" | "categoryIds">;
 
 /** A company category as the forecast reads it (list_categories). */
 export type ForecastCategory = Pick<CategoryRow, "id" | "name" | "loan_part" | "excluded_from_pnl">;
@@ -17,16 +18,9 @@ export type ForecastCategory = Pick<CategoryRow, "id" | "name" | "loan_part" | "
 /** One category's expected loan cost in the month: positive, in minor units. */
 export type LoanPart = { categoryId: string; name: string; minor: bigint };
 
-/** The loan's schedule row due in `month` (yyyy-mm); null for a loan with no schedule or none due then. */
-function scheduleRow(loan: ForecastLoan, month: string): LoanScheduleRow | null {
-  const terms = loanScheduleTerms(loan);
-  if (terms == null) return null;
-  try {
-    return buildLoanSchedule(terms).rows.find((row) => row.dueDate.slice(0, 7) === month) ?? null;
-  } catch {
-    // Terms the schedule refuses give nothing, as on the loan page.
-    return null;
-  }
+/** The loan's payment due in `month` (yyyy-mm), as the loan page shows it; null when none is due then. */
+function scheduleRow(loan: ForecastLoan, month: string, today: string): LoanScheduleRow | null {
+  return paymentsLeft(loan, today)?.find((row) => row.dueDate.slice(0, 7) === month) ?? null;
 }
 
 /**
@@ -46,6 +40,8 @@ export function loanParts(input: {
   projectId: string;
   currency: string;
   month: string;
+  /** yyyy-mm-dd: the payments left start from the one due today or later. */
+  today: string;
   loans: readonly ForecastLoan[];
   categories: readonly ForecastCategory[];
 }): LoanPart[] {
@@ -57,7 +53,7 @@ export function loanParts(input: {
   };
   for (const loan of input.loans) {
     if (loan.projectId !== input.projectId || loan.status !== "open" || loan.currency !== input.currency) continue;
-    const row = scheduleRow(loan, input.month);
+    const row = scheduleRow(loan, input.month, input.today);
     if (row == null) continue;
     add(partCategory(loan, "interest", input.categories), row.interestMinor);
     add(partCategory(loan, "escrow", input.categories), row.escrowMinor);
