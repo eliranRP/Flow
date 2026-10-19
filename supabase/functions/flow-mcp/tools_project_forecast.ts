@@ -1,6 +1,7 @@
 // MCP tools: a project's next-month forecast edits (ProfitNext*). One read (the edits that apply to a
 // month) and four writes, each mirroring the app's RPC through its mcp_* function (idempotency key,
-// undo kind project_forecast). The forecast itself is get_expected_months and get_project_categories.
+// undo kind project_forecast). The forecast itself is get_expected_months, each open loan's schedule
+// (get_loan_schedule: its interest and escrow rows) and get_project_categories.
 import { z } from "zod";
 import { envelopeOf, fail, ok, READ_REFUSED, type ToolResult, type ToolRpc, UUID, WRITE_REFUSED } from "./tools_args.ts";
 

@@ -341,9 +341,8 @@ export function applyForecastEdits(forecast: NextMonthForecast, edits: readonly 
  * The card's third line: what the forecast is made of ("2 קבועים, שורה לפי ההלוואה ו־3 ממוצעים"), and how
  * many edits the user made.
  */
-export function basisLine(forecast: Pick<NextMonthForecast, "recurringCount" | "averageCount" | "editCount"> & { loanCount?: number }): string {
-  const { recurringCount, averageCount, editCount } = forecast;
-  const loanCount = forecast.loanCount ?? 0;
+export function basisLine(forecast: Pick<NextMonthForecast, "recurringCount" | "loanCount" | "averageCount" | "editCount">): string {
+  const { recurringCount, loanCount, averageCount, editCount } = forecast;
   const kinds = [
     recurringCount === 0 && (averageCount > 0 || loanCount > 0) ? null : recurringCount === 1 ? "קבוע אחד" : `${String(recurringCount)} קבועים`,
     loanCount === 0 ? null : loanCount === 1 ? "שורה לפי ההלוואה" : `${String(loanCount)} לפי ההלוואה`,

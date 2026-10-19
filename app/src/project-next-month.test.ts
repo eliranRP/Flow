@@ -241,11 +241,11 @@ describe("nextMonthForecast", () => {
 
 describe("basisLine", () => {
   it("counts the recurring rows and the averages, and the edits when there are any", () => {
-    expect(basisLine({ recurringCount: 4, averageCount: 2, editCount: 0 })).toBe("4 קבועים ו־2 ממוצעים");
-    expect(basisLine({ recurringCount: 4, averageCount: 2, editCount: 3 })).toBe("4 קבועים ו־2 ממוצעים · ערכת 3");
-    expect(basisLine({ recurringCount: 1, averageCount: 1, editCount: 0 })).toBe("קבוע אחד ו־ממוצע אחד");
-    expect(basisLine({ recurringCount: 4, averageCount: 0, editCount: 0 })).toBe("4 קבועים");
-    expect(basisLine({ recurringCount: 0, averageCount: 3, editCount: 1 })).toBe("3 ממוצעים · ערכת 1");
+    expect(basisLine({ recurringCount: 4, loanCount: 0, averageCount: 2, editCount: 0 })).toBe("4 קבועים ו־2 ממוצעים");
+    expect(basisLine({ recurringCount: 4, loanCount: 0, averageCount: 2, editCount: 3 })).toBe("4 קבועים ו־2 ממוצעים · ערכת 3");
+    expect(basisLine({ recurringCount: 1, loanCount: 0, averageCount: 1, editCount: 0 })).toBe("קבוע אחד ו־ממוצע אחד");
+    expect(basisLine({ recurringCount: 4, loanCount: 0, averageCount: 0, editCount: 0 })).toBe("4 קבועים");
+    expect(basisLine({ recurringCount: 0, loanCount: 0, averageCount: 3, editCount: 1 })).toBe("3 ממוצעים · ערכת 1");
   });
 });
 

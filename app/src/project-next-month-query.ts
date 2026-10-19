@@ -1,5 +1,6 @@
 import type { CategoryRow, ExpectedMonths, ProjectCategoryMonths } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { z } from "zod";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
@@ -104,6 +105,10 @@ function useForecastEditsQuery(projectId: string, month: string) {
  * (a sample screen with no forecast) reads nothing. The edit page also takes the reads themselves
  * (`recurring`, `categoryMonths`, `categories`).
  */
+/** Stable empties, so the memoized forecast and the screens' memos keep their inputs while a read loads. */
+const NO_LOANS: readonly ForecastLoan[] = [];
+const NO_CATEGORIES: readonly CategoryRow[] = [];
+
 export function useNextMonthForecast(projectId: string, currency: string, sample?: NextMonthSample, enabled = true) {
   const today = sample?.today ?? israelToday();
   const month = nextMonthKey(today);
@@ -116,13 +121,17 @@ export function useNextMonthForecast(projectId: string, currency: string, sample
   const recurring = sample?.expected.recurring ?? expected.data?.recurring;
   const categoryMonths = sample == null ? categories.data : sample.categoryMonths;
   const edits = sample == null ? editsRead.data : sample.edits ?? [];
-  const loans = sample == null ? loansRead.data : sample.loans ?? [];
-  const categoryList = sample == null ? companyCategories.data : sample.categories ?? [];
+  const loans = sample == null ? loansRead.data : sample.loans ?? NO_LOANS;
+  const categoryList = sample == null ? companyCategories.data : sample.categories ?? NO_CATEGORIES;
   const ready = sample != null
     || (expected.data != null && categories.data !== undefined && editsRead.data != null && loansRead.data != null && companyCategories.data != null);
-  const base: NextMonthForecast | null = ready && recurring != null
-    ? nextMonthForecast({ projectId, currency, today, recurring, categoryMonths, loans, categories: categoryList })
-    : null;
+  // Each loan's schedule is built here, so the forecast is rebuilt only when what it reads changes.
+  const base: NextMonthForecast | null = useMemo(
+    () => (ready && recurring != null
+      ? nextMonthForecast({ projectId, currency, today, recurring, categoryMonths, loans, categories: categoryList })
+      : null),
+    [ready, recurring, projectId, currency, today, categoryMonths, loans, categoryList],
+  );
   const reads = [expected, categories, editsRead, loansRead, companyCategories];
   return {
     forecast: base == null ? null : applyForecastEdits(base, edits ?? []),
@@ -130,7 +139,7 @@ export function useNextMonthForecast(projectId: string, currency: string, sample
     edits: edits ?? [],
     recurring: recurring ?? [],
     categoryMonths: categoryMonths ?? null,
-    categories: categoryList ?? [],
+    categories: categoryList ?? NO_CATEGORIES,
     pending: sample == null && reads.some((read) => read.isPending),
     failed: sample == null && reads.some((read) => read.isError),
     paused: sample == null && reads.some((read) => read.isPaused),
