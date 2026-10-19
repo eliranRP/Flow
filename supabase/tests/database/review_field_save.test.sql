@@ -435,6 +435,9 @@ select function_privs_are(
 
 select lives_ok($$select public.upsert_project(null, 'וילה', null, 'active')$$, 'owner opens a second project');
 insert into field_save (label, id) select 'villa', id from public.projects where name = 'וילה';
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select lives_ok(
   format(
     'select public.map_budget_section(77, %L::uuid, null)',
@@ -442,6 +445,7 @@ select lives_ok(
   ),
   'a SUMIT section maps to the other project'
 );
+set local role authenticated;
 
 reset role;
 

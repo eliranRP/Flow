@@ -70,6 +70,9 @@ select is(
   'the dashboard names the caller company'
 );
 
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select throws_ok(
   format(
     'select public.company_pnl(%L::uuid, null, null, ''cash'')',
@@ -79,6 +82,7 @@ select throws_ok(
   'forbidden',
   'company_pnl refuses another owner'
 );
+set local role authenticated;
 
 select tests.clear_authentication();
 

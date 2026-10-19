@@ -142,6 +142,9 @@ select is(
 select is(pg_temp.flagged('f123:paid'), 0::bigint, 'the line already counted is not flagged');
 
 select tests.authenticate_as('f123_owner');
+-- This RPC is not granted to authenticated (decision 0193): the test calls it as postgres with the
+-- user's claims, and it still checks the caller's company.
+set local role postgres;
 select throws_ok(
   $$
     select public.clear_loan_split_review((select id from public.transactions where idempotency_key = 'f123:pending'));
@@ -151,6 +154,7 @@ select throws_ok(
   'loan_split_balance',
   'the owner cannot clear the flag while the line is still past the balance'
 );
+set local role authenticated;
 reset role;
 
 -- A line that posts within the balance is not flagged.
@@ -279,6 +283,7 @@ select is(pg_temp.flagged('f123-sync'), 3::bigint, 'the line the sync posted pas
 select pg_temp.as_mcp('write');
 select public.mcp_update_loan('f123-cover', (select id from f123 where label = 'loan'), '{"principal_minor": 13000000}'::jsonb);
 select tests.authenticate_as('f123_owner');
+set local role postgres;
 select lives_ok(
   $$
     select public.clear_loan_split_review((select id from public.transactions where external_id = 'f123-sync'));
@@ -286,6 +291,7 @@ select lives_ok(
   $$,
   'the owner clears the flag once the split fits'
 );
+set local role authenticated;
 reset role;
 select is(pg_temp.balance(), 0::bigint, 'the cleared line counts, down to exactly zero');
 

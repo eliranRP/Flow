@@ -156,6 +156,9 @@ select is(
   'a viewer cannot delete a split'
 );
 
+-- This RPC is not granted to authenticated (decision 0193): the test calls it as postgres with the
+-- user's claims, and it still checks the caller's company.
+set local role postgres;
 select throws_ok(
   $$
     select public.clear_loan_split_review(id)
@@ -166,6 +169,7 @@ select throws_ok(
   'loan_split_review_denied',
   'a viewer cannot clear review'
 );
+set local role authenticated;
 
 select tests.authenticate_as('loan_other');
 
@@ -305,6 +309,7 @@ select is(
   'flagged parts are counted for review'
 );
 
+set local role postgres;
 select throws_ok(
   $$
     select public.clear_loan_split_review(id)
@@ -315,7 +320,9 @@ select throws_ok(
   'loan_split_sum',
   'clearing review while the parts do not sum is refused'
 );
+set local role authenticated;
 
+set local role postgres;
 select lives_ok(
   $$
     update public.loan_splits
@@ -330,6 +337,7 @@ select lives_ok(
   $$,
   'a matching line can clear review'
 );
+set local role authenticated;
 
 select is(
   (

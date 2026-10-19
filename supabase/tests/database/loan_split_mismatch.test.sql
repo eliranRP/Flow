@@ -58,15 +58,19 @@ as $$
     public.company_pnl((select id from lm_ref where label = 'co'), '2026-06-01', '2026-06-30', 'cash')->'by_currency') x
   where x->>'currency' = 'USD';
 $$;
-grant execute on function pg_temp.usd() to authenticated;
+grant execute on function pg_temp.usd() to authenticated, service_role;
 
 select tests.authenticate_as('lm_owner');
 
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select is(
   pg_temp.usd()->'expense_minor',
   '90000'::jsonb,
   'matching parts count by part (owner positive control)'
 );
+set local role authenticated;
 
 -- A re-sync rewrites amount_net and leaves amount_original, so the parts are not flagged.
 reset role;
@@ -80,12 +84,14 @@ select is(
   'precondition: nothing flagged the parts'
 );
 
+set local role service_role;
 select is(
   (select jsonb_build_object('expense', x->'expense_minor', 'excluded', x->'excluded_expense_minor', 'fallback', x->'loan_split_fallback_count')
    from pg_temp.usd() x),
   '{"expense": 120000, "excluded": 0, "fallback": 1}'::jsonb,
   'parts that no longer sum to the line fall back to the whole line and are counted'
 );
+set local role authenticated;
 
 select is(
   (select count(*)::int from private.pnl_lines l

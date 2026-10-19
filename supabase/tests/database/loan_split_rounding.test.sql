@@ -86,7 +86,7 @@ as $$
   from private.project_category_entries_by_currency((select id from lr_ref where label = p_label)) e
   where e.currency = 'USD';
 $$;
-grant execute on function pg_temp.parts_sum(text) to authenticated;
+grant execute on function pg_temp.parts_sum(text) to authenticated, service_role;
 
 create function pg_temp.pnl_shared(p_label text)
 returns bigint
@@ -99,7 +99,7 @@ as $$
   where (p->>'id')::uuid = (select id from lr_ref where label = p_label)
     and c->>'currency' = 'USD';
 $$;
-grant execute on function pg_temp.pnl_shared(text) to authenticated;
+grant execute on function pg_temp.pnl_shared(text) to authenticated, service_role;
 
 create function pg_temp.project_shared(p_label text)
 returns bigint
@@ -110,7 +110,7 @@ as $$
     public.get_project((select id from lr_ref where label = p_label), 'cash')->'by_currency') c
   where c->>'currency' = 'USD';
 $$;
-grant execute on function pg_temp.project_shared(text) to authenticated;
+grant execute on function pg_temp.project_shared(text) to authenticated, service_role;
 
 select is(
   array[
@@ -138,11 +138,15 @@ select cmp_ok(
   'odd line: every project within 1 minor unit of its share'
 );
 
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select is(
   array[pg_temp.pnl_shared('Site A'), pg_temp.pnl_shared('Site B'), pg_temp.pnl_shared('Site C')],
   array[30001, 30001, 30000]::bigint[],
   'company_pnl projects[]: interest and escrow shares round half to even per part'
 );
+set local role authenticated;
 
 select is(
   array[pg_temp.project_shared('Site A'), pg_temp.project_shared('Site B'), pg_temp.project_shared('Site C')],
@@ -159,11 +163,13 @@ select is(
 );
 
 -- Tie: D's escrow share is 3 * 3 / 6 = 1.5, which rounds to 2 (even), and its interest 0.5 rounds to 0.
+set local role service_role;
 select is(
   pg_temp.pnl_shared('Site D'),
   2::bigint,
   'tie: half rounds to even (0.5 -> 0, 1.5 -> 2), not away from zero (3) or down (1)'
 );
+set local role authenticated;
 
 select is(
   pg_temp.project_shared('Site D'),

@@ -210,6 +210,9 @@ select
 
 select tests.authenticate_as('pnl_owner');
 
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select is(
   (
     select jsonb_build_object(
@@ -222,7 +225,9 @@ select is(
   '{"income": 0, "excluded_income": 5000, "excluded_count": 1}'::jsonb,
   'a currency with only kept-out lines still reports them'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   (
     select jsonb_build_object(
@@ -237,7 +242,9 @@ select is(
   '{"income": 70000, "expense": 3000, "net": 67000, "excluded_income": 40000, "excluded_expense": 9000, "excluded_count": 2}'::jsonb,
   'invoiced USD by_currency leaves out excluded lines and reports them per currency'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   (
     select (x->>'net_profit_minor')::bigint + (x->>'excluded_income_minor')::bigint - (x->>'excluded_expense_minor')::bigint
@@ -249,6 +256,7 @@ select is(
   103000::bigint,
   'cash USD: in-P&L net plus excluded equals every posted line'
 );
+set local role authenticated;
 
 select is(
   (
@@ -260,52 +268,67 @@ select is(
   'get_project keeps the uncategorised entry and drops the excluded category'
 );
 
+set local role service_role;
 select is(
   (public.company_pnl((select id from pnl_ref where label = 'co'), '2026-06-01', '2026-06-30', 'cash')->>'income_agorot')::bigint,
   130000::bigint,
   'company_pnl cash ILS income counts in-P&L and uncategorised'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   (public.company_pnl((select id from pnl_ref where label = 'co'), '2026-06-01', '2026-06-30', 'cash')->>'excluded_income_agorot')::bigint,
   100000::bigint,
   'excluded income is reported separately'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   (public.company_pnl((select id from pnl_ref where label = 'co'), '2026-06-01', '2026-06-30', 'cash')->>'direct_agorot')::bigint,
   50000::bigint,
   'direct expense in P&L'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   (public.company_pnl((select id from pnl_ref where label = 'co'), '2026-06-01', '2026-06-30', 'cash')->>'excluded_expense_agorot')::bigint,
   60000::bigint,
   'excluded expense is reported separately (direct and shared)'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   (public.company_pnl((select id from pnl_ref where label = 'co'), '2026-06-01', '2026-06-30', 'cash')->>'net_profit_agorot')::bigint,
   80000::bigint,
   'net profit skips excluded lines'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   (public.company_pnl((select id from pnl_ref where label = 'co'), '2026-06-01', '2026-06-30', 'cash')->>'prev_income_agorot')::bigint,
   20000::bigint,
   'prev period respects in_pnl'
 );
+set local role authenticated;
 
+set local role service_role;
 select lives_ok(
   $$select public.company_pnl((select id from pnl_ref where label = 'co'), '2026-06-01', '2026-06-30', 'cash')$$,
   'company_pnl survives a zero-amount shared line'
 );
+set local role authenticated;
 
 select lives_ok(
   $$select public.get_project((select id from pnl_ref where label = 'proj'), 'cash')$$,
   'get_project survives a zero-amount shared line'
 );
 
+set local role service_role;
 select is(
   (
     select (x->>'shared_agorot')::bigint
@@ -317,6 +340,7 @@ select is(
   0::bigint,
   'company_pnl projects[] skip a kept-out shared allocation'
 );
+set local role authenticated;
 
 select is(
   (
@@ -328,6 +352,7 @@ select is(
   'get_project shared skips a kept-out shared allocation'
 );
 
+set local role service_role;
 select is(
   (
     select (x->>'excluded_income_minor')::bigint
@@ -339,6 +364,7 @@ select is(
   100000::bigint,
   'by_currency carries excluded_income_minor'
 );
+set local role authenticated;
 
 select is(
   (public.get_home()->>'net_profit_agorot')::bigint,

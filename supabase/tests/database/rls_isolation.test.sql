@@ -182,8 +182,7 @@ select throws_ok($$delete from public.allocations$$, '42501', NULL, 'second user
 select throws_ok($$delete from public.split_rules$$, '42501', NULL, 'second user cannot delete split rules');
 select throws_ok($$delete from public.split_rule_targets$$, '42501', NULL, 'second user cannot delete split targets');
 select throws_ok($$delete from public.review_queue$$, '42501', NULL, 'second user cannot delete the review queue');
-with u as (delete from public.companies returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot delete the company');
+select throws_ok($$delete from public.companies$$, '42501', NULL, 'second user cannot delete the company');
 
 select throws_ok(
   $$insert into public.projects (company_id, name)
@@ -552,12 +551,15 @@ select is(
   'anon has no execute on functions in public'
 );
 
+-- Deleting a company is not a REST write (decision 0193): the owner is refused, and it stays.
 select tests.authenticate_as('owner_a');
-select lives_ok(
+select throws_ok(
   $$delete from public.companies$$,
-  'owner can delete their company'
+  '42501',
+  null,
+  'owner cannot delete their company through REST'
 );
-select is((select count(*)::int from public.companies), 0, 'the company is gone after the owner deletes it');
+select is((select count(*)::int from public.companies), 1, 'the company is still there');
 
 select * from finish();
 

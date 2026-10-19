@@ -88,9 +88,13 @@ select is(
   (select array_agg(x ->> 'transaction_id') from jsonb_array_elements(public.list_review()) x),
   array[(select id::text from plh where label = 'txn_aug')],
   'לאישור lists the posted line only, even with an open row on the pending one');
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select is(
   (public.company_pnl((select id from plh where label = 'co'), null, null, 'cash') ->> 'review_count')::integer,
   1, 'the review count leaves the pending line out');
+set local role authenticated;
 select is(
   (select array_agg(x ->> 'transaction_id') from jsonb_array_elements(public.project_waiting((select id from plh where label = 'dock'))) x),
   array[(select id::text from plh where label = 'txn_aug')],

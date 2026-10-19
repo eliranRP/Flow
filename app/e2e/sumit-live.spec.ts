@@ -26,7 +26,10 @@ test.skip(!live, "Set SUMIT_LIVE=1 and the local Supabase and SUMIT env vars.");
 const storageHost = new URL(supabaseUrl.length > 0 ? supabaseUrl : "http://127.0.0.1").hostname.split(".")[0] ?? "local";
 const storageKey = `sb-${storageHost}-auth-token`;
 
-function signUserToken(userId: string, email: string): string {
+// The seed steps (a supplier's VAT exemption, a project split by share) call definer RPCs that the
+// app does not call, so they are not granted to authenticated; the test signs a service_role token
+// for the same user to reach them.
+function signUserToken(userId: string, email: string, role: "authenticated" | "service_role" = "authenticated"): string {
   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
   const now = Math.floor(Date.now() / 1000);
   const payload = Buffer.from(
@@ -36,7 +39,7 @@ function signUserToken(userId: string, email: string): string {
       iat: now,
       iss: "supabase-demo",
       sub: userId,
-      role: "authenticated",
+      role,
       email,
       app_metadata: { provider: "email", providers: ["email"] },
       user_metadata: { full_name: "בדיקה" },
@@ -47,7 +50,7 @@ function signUserToken(userId: string, email: string): string {
   return `${data}.${signature}`;
 }
 
-async function sessionForNewOwner(): Promise<Record<string, unknown>> {
+async function sessionForNewOwner(): Promise<{ session: Record<string, unknown>; seedToken: string }> {
   const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const email = `flow-live-${String(Date.now())}@example.com`;
   const created = await admin.auth.admin.createUser({
@@ -58,7 +61,7 @@ async function sessionForNewOwner(): Promise<Record<string, unknown>> {
   const user = created.data.user;
   if (user == null) throw new Error("could not create the owner");
   const accessToken = signUserToken(user.id, email);
-  return {
+  const session = {
     access_token: accessToken,
     refresh_token: accessToken,
     token_type: "bearer",
@@ -66,6 +69,7 @@ async function sessionForNewOwner(): Promise<Record<string, unknown>> {
     expires_at: Math.floor(Date.now() / 1000) + 3600,
     user,
   };
+  return { session, seedToken: signUserToken(user.id, email, "service_role") };
 }
 
 const READ_PATHS = new Set([
@@ -179,17 +183,17 @@ async function ownerRest(token: string, path: string, init?: RequestInit): Promi
   return body;
 }
 
-async function markInsuranceExempt(token: string): Promise<void> {
+async function markInsuranceExempt(token: string, seedToken: string): Promise<void> {
   const suppliers = rowsOf(await ownerRest(token, "suppliers?select=id,name&name=ilike.*ביטוח המגן*"));
   const supplier = suppliers[0];
   if (!supplier) throw new Error("insurance supplier was not imported");
-  await ownerRest(token, "rpc/set_supplier_settings", {
+  await ownerRest(seedToken, "rpc/set_supplier_settings", {
     method: "POST",
     body: JSON.stringify({ p_id: textField(supplier, "id"), p_vat_exempt: true }),
   });
 }
 
-async function enterWorkerSplit(token: string): Promise<string> {
+async function enterWorkerSplit(token: string, seedToken: string): Promise<string> {
   const shared = rowsOf(
     await ownerRest(token, "transactions?select=id,doc_date&pnl_role=eq.shared&removed_at=is.null&order=doc_date.asc"),
   );
@@ -215,7 +219,7 @@ async function enterWorkerSplit(token: string): Promise<string> {
     used += share;
     return { project_id: entry.project_id, share_bp: share };
   });
-  await ownerRest(token, "rpc/save_split", {
+  await ownerRest(seedToken, "rpc/save_split", {
     method: "POST",
     body: JSON.stringify({ p_transaction_id: textField(row, "id"), p_shares: shares }),
   });
@@ -246,7 +250,7 @@ function documentId(payload: Record<string, unknown>): number {
 
 test("live SUMIT backfill matches the golden totals and a new invoice syncs", async ({ page }) => {
   test.setTimeout(360_000);
-  const session = await sessionForNewOwner();
+  const { session, seedToken } = await sessionForNewOwner();
   const token = String(session.access_token);
   const probe = `FLOW-PROBE-${String(Date.now())}`;
   let splitId = "";
@@ -285,11 +289,11 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
   await expect(page.getByText("SUMIT מחובר. המפתח נשאר בשרת.")).toBeVisible();
 
   await sync(page);
-  await markInsuranceExempt(token);
+  await markInsuranceExempt(token, seedToken);
   await page.goto("/");
   await showInvoicedAllTime(page);
   await expect(page.getByRole("heading", { name: /37,700/ })).toBeVisible();
-  splitId = await enterWorkerSplit(token);
+  splitId = await enterWorkerSplit(token, seedToken);
   await page.goto("/projects");
   await expect(page.getByRole("heading", { name: "פרויקטים" })).toBeVisible();
   await expect(page.getByText("שיפוץ הרצל 12")).toBeVisible();

@@ -28,6 +28,9 @@ select 'materials', id from public.categories where name = 'חומרים' and ki
 insert into r4 (label, id)
 select 'income_cat', id from public.categories where name = 'הכנסה מלקוחות' and kind = 'income';
 
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select lives_ok(
   format(
     'select public.map_budget_section(42, %L::uuid, null)',
@@ -42,6 +45,7 @@ select lives_ok(
   ),
   'a second project keeps its own section'
 );
+set local role authenticated;
 
 reset role;
 do $$
@@ -432,6 +436,7 @@ select is(
   'the project flag wins over the company default'
 );
 
+set local role service_role;
 select lives_ok(
   format(
     'select public.set_supplier_settings(%L::uuid, true)',
@@ -439,6 +444,7 @@ select lives_ok(
   ),
   'the owner marks the supplier exempt'
 );
+set local role authenticated;
 select is(
   (select amount_net from public.transactions where idempotency_key = 'r4:exp'),
   -23600::bigint,
@@ -447,6 +453,7 @@ select is(
 
 select tests.authenticate_as('r4_b');
 select lives_ok($$select public.create_company('שכן', true)$$, 'the other owner has a company');
+set local role service_role;
 select throws_ok(
   format(
     'select public.save_split(%L::uuid, ''[]''::jsonb)',
@@ -456,6 +463,7 @@ select throws_ok(
   'transaction not found',
   'another owner cannot split the row'
 );
+set local role authenticated;
 select throws_ok(
   format(
     'select public.resolve_review(%L::uuid, ''skipped'', null, null)',
@@ -465,6 +473,7 @@ select throws_ok(
   'review item not found',
   'another owner cannot resolve the item'
 );
+set local role service_role;
 select throws_ok(
   format(
     'select public.set_supplier_settings(%L::uuid, false)',
@@ -483,6 +492,7 @@ select throws_ok(
   'project not found',
   'another owner cannot map the project'
 );
+set local role authenticated;
 select throws_ok(
   format(
     'select public.merge_category(%L::uuid, %L::uuid)',

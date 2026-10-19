@@ -33,6 +33,9 @@ insert into exactsplit (label, id) select 'txn', id from public.transactions whe
 
 select tests.authenticate_as('exactsplit_owner');
 
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select lives_ok(
   format(
     $sql$select public.save_split(%L::uuid, jsonb_build_array(
@@ -44,6 +47,7 @@ select lives_ok(
   ),
   'exact amounts that sum to the line save'
 );
+set local role authenticated;
 
 select is(
   (select a.amount_net from public.allocations a
@@ -72,6 +76,7 @@ select is(
   'two parts make the line shared'
 );
 
+set local role service_role;
 select throws_ok(
   format(
     $sql$select public.save_split(%L::uuid, jsonb_build_array(
@@ -120,8 +125,10 @@ select throws_ok(
   'validation',
   'the same project twice is refused'
 );
+set local role authenticated;
 
 -- A one-cent part still gets a share point; the largest part gives it up.
+set local role service_role;
 select lives_ok(
   format(
     $sql$select public.save_split(%L::uuid, jsonb_build_array(
@@ -133,6 +140,7 @@ select lives_ok(
   ),
   'a one-cent part saves'
 );
+set local role authenticated;
 select is(
   (select string_agg(a.share_bp::text || ':' || a.amount_net::text, ',' order by a.share_bp desc) from public.allocations a
    where a.transaction_id = (select id from exactsplit where label = 'txn')),
@@ -140,6 +148,7 @@ select is(
   'the one-cent part has one share point and its exact cent'
 );
 
+set local role service_role;
 select lives_ok(
   format(
     $sql$select public.save_split(%L::uuid, jsonb_build_array(
@@ -149,6 +158,7 @@ select lives_ok(
   ),
   'one exact part files the whole line to one project'
 );
+set local role authenticated;
 select is(
   (select t.pnl_role::text || '|' || (t.project_id = (select id from exactsplit where label = 'south'))::text from public.transactions t
    where t.id = (select id from exactsplit where label = 'txn')),
@@ -197,6 +207,7 @@ insert into exactsplit (label, id)
 select 'synced', id from public.transactions where external_id = 'exactsplit-synced';
 
 select tests.authenticate_as('exactsplit_owner');
+set local role service_role;
 select lives_ok(
   format(
     $sql$select public.save_split(%L::uuid, jsonb_build_array(
@@ -209,6 +220,7 @@ select lives_ok(
   ),
   'the synced line splits in exact amounts'
 );
+set local role authenticated;
 reset role;
 
 select pg_temp.exactsplit_sync();

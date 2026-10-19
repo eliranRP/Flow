@@ -217,10 +217,14 @@ select throws_ok(
   format($$insert into public.project_groups (company_id, name) values (%L, 'Sneaky')$$, pg_temp.id('co')),
   '42501', null, 'nor can it insert one there'
 );
+-- This RPC is not granted to authenticated (decision 0193): the test calls it as postgres with the
+-- user's claims, and it still checks the caller's company.
+set local role postgres;
 select throws_ok(
   format($$select public.delete_project_group(%L)$$, pg_temp.id('north')),
   'P0001', 'group not found', 'nor delete one'
 );
+set local role authenticated;
 
 -- A viewer reads and cannot write.
 reset role;
@@ -301,11 +305,13 @@ select is(public.mcp_undo('pg-undo-3', 'project_group', pg_temp.id('east'))->>'o
 
 -- Deleting a group keeps its projects and the totals.
 select tests.authenticate_as('pg_owner');
+set local role postgres;
 select is(
   public.delete_project_group(pg_temp.id('north'))->'project_ids',
   (select jsonb_agg(x order by n) from (values (pg_temp.id('alpha'), 'Site Alpha'), (pg_temp.id('beta'), 'Site Beta')) v(x, n)),
   'delete_project_group answers with the projects it held'
 );
+set local role authenticated;
 select is(
   (select public.get_dashboard(null, null, 'invoiced') - 'projects' - 'groups'),
   (select body - 'projects' - 'groups' from pg_out where label = 'before'),

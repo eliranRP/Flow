@@ -69,13 +69,18 @@ join (values
 
 select tests.authenticate_as('le_owner');
 
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select is(
   (select jsonb_build_object('direct', x->'direct_agorot', 'excluded', x->'excluded_expense_agorot')
    from public.company_pnl((select id from le_ref where label = 'co'), '2026-06-01', '2026-06-30', 'cash') x),
   '{"direct": 190000, "excluded": 10000}'::jsonb,
   'ILS totals: the June split counts 900.00 by part, the partial split counts whole'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   (select x->'loan_split_fallback_count'
    from jsonb_array_elements(
@@ -84,7 +89,9 @@ select is(
   '1'::jsonb,
   'a fallback outside the period is not counted; the partial split in it is'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   (select x->'loan_split_fallback_count'
    from jsonb_array_elements(
@@ -93,6 +100,7 @@ select is(
   '2'::jsonb,
   'all time counts both fallbacks'
 );
+set local role authenticated;
 
 select is(
   (select count(*)::int from private.pnl_lines l

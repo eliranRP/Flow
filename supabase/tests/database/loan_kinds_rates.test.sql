@@ -377,17 +377,23 @@ select is(pg_temp.flagged('f106k:c1'), false, 'a date that stays on or before cl
 update public.transactions set doc_date = '2026-02-15' where id = pg_temp.line('f106k:c1');
 select is(pg_temp.flagged('f106k:c1'), true, 'a date moved past closed_on flags the parts for review');
 select tests.authenticate_as('f106k_owner');
+-- This RPC is not granted to authenticated (decision 0193): the test calls it as postgres with the
+-- user's claims, and it still checks the caller's company.
+set local role postgres;
 select throws_ok(
   format('select public.clear_loan_split_review(%L)', pg_temp.line('f106k:c1')),
   '23514', 'loan_closed', 'clearing that review runs the closed check'
 );
+set local role authenticated;
 reset role;
 update public.transactions set doc_date = '2026-01-30' where id = pg_temp.line('f106k:c1');
 select tests.authenticate_as('f106k_owner');
+set local role postgres;
 select lives_ok(
   format('select public.clear_loan_split_review(%L)', pg_temp.line('f106k:c1')),
   'moved back, the review clears'
 );
+set local role authenticated;
 reset role;
 update public.transactions set doc_date = '2026-02-15' where id = pg_temp.line('f106k:c2');
 update public.transactions set removed_at = null where id = pg_temp.line('f106k:c2');

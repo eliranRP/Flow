@@ -141,7 +141,7 @@ language sql
 as $$
   select public.company_pnl((select id from rv_ref where label = p_co), p_from, p_to, p_basis);
 $$;
-grant execute on function pg_temp.pnl(text, date, date, text) to authenticated;
+grant execute on function pg_temp.pnl(text, date, date, text) to authenticated, service_role;
 
 create function pg_temp.cur(p_co text, p_from date, p_to date, p_basis text, p_cur text)
 returns jsonb
@@ -152,7 +152,7 @@ as $$
   from jsonb_array_elements(pg_temp.pnl(p_co, p_from, p_to, p_basis) -> 'by_currency') x
   where x->>'currency' = p_cur;
 $$;
-grant execute on function pg_temp.cur(text, date, date, text, text) to authenticated;
+grant execute on function pg_temp.cur(text, date, date, text, text) to authenticated, service_role;
 
 create function pg_temp.top(p_co text, p_from date, p_to date, p_basis text)
 returns jsonb
@@ -163,7 +163,7 @@ as $$
   )
   from (select pg_temp.pnl(p_co, p_from, p_to, p_basis) j) s;
 $$;
-grant execute on function pg_temp.top(text, date, date, text) to authenticated;
+grant execute on function pg_temp.top(text, date, date, text) to authenticated, service_role;
 
 create function pg_temp.proj(p_label text, p_basis text)
 returns jsonb
@@ -173,7 +173,7 @@ as $$
     'income', j->'income_agorot', 'direct', j->'direct_agorot', 'profit', j->'profit_agorot')
   from (select public.get_project((select id from rv_ref where label = p_label), p_basis) j) s;
 $$;
-grant execute on function pg_temp.proj(text, text) to authenticated;
+grant execute on function pg_temp.proj(text, text) to authenticated, service_role;
 
 create function pg_temp.proj_cur(p_label text, p_basis text, p_cur text)
 returns jsonb
@@ -186,7 +186,7 @@ as $$
   ) x
   where x->>'currency' = p_cur;
 $$;
-grant execute on function pg_temp.proj_cur(text, text, text) to authenticated;
+grant execute on function pg_temp.proj_cur(text, text, text) to authenticated, service_role;
 
 create function pg_temp.proj_cats(p_label text, p_key text)
 returns jsonb
@@ -198,11 +198,14 @@ as $$
   ) x
   where x->>'currency' = 'ILS';
 $$;
-grant execute on function pg_temp.proj_cats(text, text) to authenticated;
+grant execute on function pg_temp.proj_cats(text, text) to authenticated, service_role;
 
 select tests.authenticate_as('rv_owner');
 
 -- (8) Non-reversal lines keep today's numbers. Snapshot before any line is reversed.
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select is(
   pg_temp.top('A', '2026-06-01', '2026-06-30', 'cash'),
   '{"income": 107000, "expense": 38000, "net": 69000}'::jsonb,
@@ -221,6 +224,7 @@ select is(
     "unassigned_income_minor": 0, "unassigned_expense_minor": 0}'::jsonb,
   'snapshot, USD by_currency before any reversal'
 );
+set local role authenticated;
 
 -- Reverse the lines through the assign RPC, as the owner would.
 select lives_ok(
@@ -301,6 +305,7 @@ select lives_ok(
   'company I: an inflow 50.00 takes an expense category on project two'
 );
 
+set local role service_role;
 select is(
   pg_temp.top('I', '2026-06-01', '2026-06-30', 'cash'),
   '{"income": -10000, "expense": -5000, "net": -5000}'::jsonb,
@@ -323,6 +328,7 @@ select is(
   '{"Site One": {"income": -10000, "profit": -10000}, "Site Two": {"income": 0, "profit": 5000}}'::jsonb,
   'company I: project one has income -100.00 and profit -100.00, project two profit +50.00'
 );
+set local role authenticated;
 select is(
   pg_temp.proj('I:p1', 'cash'),
   '{"income": -10000, "direct": 0, "profit": -10000}'::jsonb,
@@ -346,6 +352,7 @@ select is(
 
 -- (1) to (3) Company A across periods, bases and the three reads.
 select tests.authenticate_as('rv_owner');
+set local role service_role;
 select is(
   pg_temp.top('A', '2026-06-01', '2026-06-30', 'cash'),
   '{"income": 90000, "expense": 15000, "net": 75000}'::jsonb,
@@ -380,6 +387,7 @@ select is(
   '{"income": 85000, "expense": 15000, "net": 70000}'::jsonb,
   'by_currency ILS without a period, cash'
 );
+set local role authenticated;
 select is(
   pg_temp.proj('A:p1', 'cash'),
   '{"income": 85000, "direct": 15000, "profit": 70000}'::jsonb,
@@ -395,6 +403,7 @@ select is(
   '70000'::jsonb,
   'get_home agrees with company_pnl net on the cash basis'
 );
+set local role service_role;
 select is(
   pg_temp.cur('A', null, null, 'cash', 'USD') - 'count' - 'loan_split_fallback_count',
   '{"currency": "USD", "income_minor": -20000, "direct_minor": -4000, "shared_minor": 0, "overhead_minor": 0,
@@ -403,6 +412,7 @@ select is(
     "unassigned_income_minor": 0, "unassigned_expense_minor": 0}'::jsonb,
   'company_pnl by_currency, USD: negative income and negative expense'
 );
+set local role authenticated;
 select is(
   pg_temp.proj_cur('A:p1', 'cash', 'USD'),
   '{"income": -20000, "direct": -4000, "profit": -16000}'::jsonb,
@@ -414,6 +424,7 @@ select is(
   '{"income": -20000, "expense": 4000, "count": 2}'::jsonb,
   'get_home other_currencies, USD, agrees'
 );
+set local role service_role;
 select is(
   (select jsonb_build_object('income', x->'income_minor', 'expense', x->'expense_minor', 'count', x->'count')
    from jsonb_array_elements(pg_temp.pnl('A', '2026-06-01', '2026-06-30', 'invoiced')->'other_currencies') x
@@ -421,6 +432,7 @@ select is(
   '{"income": -20000, "expense": 4000, "count": 2}'::jsonb,
   'company_pnl other_currencies, USD, invoiced basis, agrees'
 );
+set local role authenticated;
 select is(
   pg_temp.proj_cats('A:p1', 'categories_by_currency'),
   '{"Materials": 15000}'::jsonb,
@@ -428,6 +440,7 @@ select is(
 );
 
 -- (6) A kept-out reversal goes to the excluded totals, both directions.
+set local role service_role;
 select is(
   (select jsonb_build_object('income', x->'excluded_income_agorot', 'expense', x->'excluded_expense_agorot')
    from (select pg_temp.pnl('A', '2026-06-01', '2026-06-30', 'cash') x) s),
@@ -439,6 +452,7 @@ select is(
   '2'::jsonb,
   'excluded count on the invoiced basis'
 );
+set local role authenticated;
 select is(
   pg_temp.proj_cats('A:p1', 'excluded_categories_by_currency'),
   '{"Deposit holding": -2000}'::jsonb,
@@ -497,21 +511,25 @@ select lives_ok(
     (select id from rv_ref where label = 'C:c7'), (select id from rv_ref where label = 'C:rent')),
   'a shared outflow takes an income category'
 );
+set local role service_role;
 select lives_ok(
   format('select public.approve_split_review(%L::uuid)', (select id from rv_ref where label = 'rev:c7')),
   'approve_split_review: a split outflow under an income category'
 );
+set local role authenticated;
 select is(
   (select q.status::text from public.review_queue q where q.id = (select id from rv_ref where label = 'rev:c7')),
   'approved',
   'approve_split_review closed the item'
 );
+set local role service_role;
 select throws_ok(
   format('select public.approve_split_review(%L::uuid)', (select id from rv_ref where label = 'rev:c8')),
   'P0001',
   'category is required',
   'approve_split_review still refuses a line with no category'
 );
+set local role authenticated;
 
 -- (5) An income-kind category on an outflow needs a project, like income.
 select throws_ok(
@@ -573,6 +591,7 @@ select throws_ok(
   'category not found',
   'set_transaction_category refuses another company''s income category'
 );
+set local role service_role;
 select throws_ok(
   format('select public.company_pnl(%L::uuid, null, null, ''cash'')', (select id from rv_ref where label = 'C')),
   'P0001',
@@ -584,6 +603,7 @@ select is(
   '85000'::jsonb,
   'positive control: the owner reads their own company'
 );
+set local role authenticated;
 
 select * from finish();
 rollback;

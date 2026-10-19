@@ -414,7 +414,7 @@ Each is `security definer`, `search_path = ''`, and checks `auth.role()` against
 | --- | --- | --- |
 | `public.replace_connector_connection(p_company uuid, p_provider public.connector_provider, p_key_ciphertext text, p_key_nonce text, p_dek_ciphertext text, p_dek_nonce text, p_kek_version text, p_envelope_version text, p_validated boolean, p_settings jsonb)` | `void` | `service_role` |
 | `public.disconnect_connector(p_provider public.connector_provider)` | `void` | `authenticated`, `service_role` |
-| `public.request_connector_refresh(p_provider public.connector_provider)` | `timestamptz` | `authenticated`, `service_role` |
+| `public.request_connector_refresh(p_provider public.connector_provider)` | `timestamptz` | `service_role` (no client calls it, [0193](../decisions/0193-client-privileges.md)) |
 | `public.set_import_from(p_provider public.connector_provider, p_from date)` | `void` | `authenticated`, `service_role` |
 | `public.note_connector_rejection(p_company uuid, p_provider public.connector_provider, p_code text)` | `jsonb` | `service_role` |
 | `public.claim_connector_refreshes(p_limit integer)` | `table (id bigint, company_id uuid, provider public.connector_provider)` | `service_role` |
@@ -588,7 +588,7 @@ Totals sum `line_status = 'posted'` only. `pending` and `void` do not count. Exi
 
 | Function | Grant |
 | --- | --- |
-| `public.company_pnl(p_company_id uuid, p_from date, p_to date, p_basis text) returns jsonb` | `authenticated`, `service_role` |
+| `public.company_pnl(p_company_id uuid, p_from date, p_to date, p_basis text) returns jsonb` | `service_role`; clients read it through `get_dashboard` and `get_project_group` ([0193](../decisions/0193-client-privileges.md)) |
 | `public.get_dashboard(p_from date, p_to date, p_basis text) returns jsonb` | `authenticated`, `service_role` |
 | `public.get_home() returns jsonb` | `authenticated`, `service_role` |
 | `public.get_project(p_id uuid) returns jsonb` | `authenticated`, `service_role` |

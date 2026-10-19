@@ -93,10 +93,14 @@ select is(jsonb_path_query_array(public.get_profit_months('2026-07-01', '2026-07
 select is((public.get_profit_months('2026-09-01', '2026-09-30', 'cash', pg_temp.id('house'))->'months'->0->>'overhead_share_minor')::bigint,
   30000::bigint, 'a project''s month carries its dollar overhead share');
 
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select is(public.company_pnl(pg_temp.id('co'), '2026-10-01', '2026-10-31', 'cash')->'by_currency'->0->>'currency', 'USD',
   'a quiet month still leads with a dollar row');
 select is((public.company_pnl(pg_temp.id('co'), '2026-10-01', '2026-10-31', 'cash')->'by_currency'->0->>'prev_net_profit_minor')::bigint,
   360000::bigint, 'and keeps September''s dollar profit to compare with');
+set local role authenticated;
 
 select is(public.mcp_company_loan_currency(), 'USD', 'a new loan defaults to dollars');
 reset role;

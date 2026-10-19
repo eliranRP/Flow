@@ -93,6 +93,9 @@ $$;
 grant execute on function pg_temp.as_mcp(text) to authenticated, service_role;
 
 -- company_pnl figures for June 2026 on one basis.
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 create or replace function pg_temp.pnl(p_basis text, p_key text)
 returns bigint
 language sql
@@ -102,6 +105,7 @@ as $$
   )->>p_key)::bigint;
 $$;
 grant execute on function pg_temp.pnl(text, text) to authenticated, service_role;
+set local role authenticated;
 
 create or replace function pg_temp.txn(p_label text)
 returns uuid
@@ -111,9 +115,13 @@ grant execute on function pg_temp.txn(text) to authenticated, service_role;
 
 -- Baseline: rent and parts count; the held deposit is kept out by its category.
 select tests.authenticate_as('lpo_owner');
+set local role service_role;
 select is(pg_temp.pnl('cash', 'income_agorot'), 100000::bigint, 'baseline income counts the rent');
+set local role authenticated;
 -- The loan principal line is kept out by its category too.
+set local role service_role;
 select is(pg_temp.pnl('cash', 'excluded_expense_agorot'), 40000::bigint, 'baseline kept-out expense is the deposit and the principal');
+set local role authenticated;
 select is(
   (public.get_transaction(pg_temp.txn('txn_parts'))->>'in_pnl')::boolean, true,
   'get_transaction: an ordinary line is in the P&L'
@@ -136,6 +144,7 @@ select lives_ok(
   $$select public.set_transaction_pnl(pg_temp.txn('txn_deposit'), true)$$,
   'owner brings one line of a kept-out category in'
 );
+set local role service_role;
 select is(pg_temp.pnl('cash', 'income_agorot'), 0::bigint, 'cash: the rent left income');
 select is(pg_temp.pnl('cash', 'excluded_income_agorot'), 100000::bigint, 'cash: the rent moved to kept-out income');
 select is(pg_temp.pnl('invoiced', 'direct_agorot'), 50000::bigint, 'invoiced: the deposit counts as direct cost');
@@ -143,6 +152,7 @@ select is(pg_temp.pnl('cash', 'net_profit_agorot'), -50000::bigint, 'cash: net p
 select is(pg_temp.pnl('cash', 'excluded_expense_agorot'), 30000::bigint, 'cash: the override wins over the kept-out category');
 select is(pg_temp.pnl('invoiced', 'excluded_expense_agorot'), 30000::bigint, 'invoiced: the override wins over the kept-out category');
 select is(pg_temp.pnl('cash', 'direct_agorot'), 50000::bigint, 'cash: the deposit now counts as direct cost');
+set local role authenticated;
 select is(
   (public.get_transaction(pg_temp.txn('txn_rent'))->>'in_pnl')::boolean, false,
   'get_transaction: the rent reads out'
@@ -174,7 +184,9 @@ select lives_ok(
   $$select public.set_transaction_pnl(pg_temp.txn('txn_deposit'), null)$$,
   'owner clears the override'
 );
+set local role service_role;
 select is(pg_temp.pnl('cash', 'excluded_expense_agorot'), 40000::bigint, 'cleared: the deposit follows its category again');
+set local role authenticated;
 
 -- Guards.
 select throws_ok(
@@ -243,12 +255,16 @@ select is(
   public.mcp_set_line_pnl('k-loan', pg_temp.txn('txn_loan'), false)->'error'->>'message', 'loan line is fixed',
   'a loan line is refused over MCP'
 );
+set local role service_role;
 select is(pg_temp.pnl('cash', 'excluded_expense_agorot'), 80000::bigint, 'MCP: parts moved to kept-out expense');
+set local role authenticated;
 select is(
   public.mcp_undo('u-1', 'line_pnl', pg_temp.txn('txn_parts'))->>'ok', 'true',
   'undo restores the line'
 );
+set local role service_role;
 select is(pg_temp.pnl('cash', 'excluded_expense_agorot'), 40000::bigint, 'undo: parts count again');
+set local role authenticated;
 select is(
   (public.mcp_set_line_pnl('k-2', pg_temp.txn('txn_parts'), false)->>'ok'), 'true',
   'take the parts line out again'
@@ -287,13 +303,17 @@ select is(
   'refused/validation',
   'batch: the foreign row is refused and the bad row fails validation'
 );
+set local role service_role;
 select is(pg_temp.pnl('cash', 'income_agorot') + pg_temp.pnl('cash', 'excluded_expense_agorot'), 30000::bigint,
   'batch: rent out and deposit in');
+set local role authenticated;
 select is(
   (public.mcp_undo_batch('ub-1', (select body->'data'->>'batch_key' from lpo_batch))->'data'->>'ok_count')::int, 2,
   'undo_batch undoes both rows'
 );
+set local role service_role;
 select is(pg_temp.pnl('cash', 'income_agorot'), 100000::bigint, 'undo_batch: the rent counts again');
+set local role authenticated;
 
 -- An override left on a line that later becomes a loan line never moves the loan part,
 -- because the owner can no longer clear it (loan line is fixed).

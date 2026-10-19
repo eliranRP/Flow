@@ -156,7 +156,7 @@ as $$
   ) x
   where x->>'currency' = 'USD';
 $$;
-grant execute on function pg_temp.usd(boolean) to authenticated;
+grant execute on function pg_temp.usd(boolean) to authenticated, service_role;
 
 create function pg_temp.proj_cats(p_label text, p_key text)
 returns jsonb
@@ -168,11 +168,14 @@ as $$
   ) x
   where x->>'currency' = 'USD';
 $$;
-grant execute on function pg_temp.proj_cats(text, text) to authenticated;
+grant execute on function pg_temp.proj_cats(text, text) to authenticated, service_role;
 
 select tests.authenticate_as('ls_owner');
 
 -- company_pnl: the 1000.00 payment counts by part.
+-- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
+-- with the user's claims, and each still checks the caller's company.
+set local role service_role;
 select is(
   (select jsonb_build_object(
       'direct', pg_temp.usd()->'direct_minor',
@@ -180,43 +183,57 @@ select is(
   '{"direct": 150000, "excluded_expense": 20000}'::jsonb,
   'company_pnl: direct counts interest and escrow (900.00 of the payment) and the principal is kept out'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   pg_temp.usd()->'expense_minor',
   '239999'::jsonb,
   'company_pnl: expense is the whole-line fallbacks plus interest and escrow of both split lines'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   pg_temp.usd()->'net_profit_minor',
   '-239999'::jsonb,
   'company_pnl: net follows the expense'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   pg_temp.usd()->'shared_minor',
   '89999'::jsonb,
   'company_pnl: a shared split line counts interest and escrow only'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   pg_temp.usd()->'excluded_count',
   '3'::jsonb,
   'company_pnl: each principal part, including the zero one, is a kept-out row'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   pg_temp.usd()->'loan_split_fallback_count',
   '2'::jsonb,
   'company_pnl: a flagged split and a VAT line fall back and are counted once each'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   pg_temp.usd(false)->'loan_split_fallback_count',
   '2'::jsonb,
   'company_pnl: the fallback count without a period'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   (select x->'loan_split_fallback_count'
    from jsonb_array_elements(
@@ -225,6 +242,7 @@ select is(
   true,
   'company_pnl: the count is a field on the by_currency row'
 );
+set local role authenticated;
 
 -- The line's own category gets nothing, the part categories get the parts.
 select is(
@@ -337,6 +355,7 @@ select cmp_ok(
   'a shared split line: each project''s parts sum to its share within 1 minor unit'
 );
 
+set local role service_role;
 select is(
   (select count(*)::int
    from jsonb_array_elements(
@@ -349,11 +368,14 @@ select is(
   3,
   'company_pnl projects[]: each of the three sites carries a USD shared share'
 );
+set local role authenticated;
 
+set local role service_role;
 select lives_ok(
   $$select public.company_pnl((select id from ls_ref where label = 'co'), null, null, 'invoiced')$$,
   'a zero-amount shared split line does not crash company_pnl'
 );
+set local role authenticated;
 
 select lives_ok(
   $$select public.get_project((select id from ls_ref where label = 'p2'), 'cash')$$,
@@ -399,12 +421,14 @@ select is(
   'the neighbour sees their own three parts (positive control)'
 );
 
+set local role service_role;
 select throws_ok(
   $$select public.company_pnl((select id from ls_ref where label = 'co'), '2026-06-01', '2026-06-30', 'cash')$$,
   'P0001',
   'forbidden',
   'company_pnl refuses another company''s id'
 );
+set local role authenticated;
 
 select is(
   public.get_project((select id from ls_ref where label = 'p1'), 'cash'),
@@ -412,6 +436,7 @@ select is(
   'get_project returns nothing for another company''s project'
 );
 
+set local role service_role;
 select is(
   (select jsonb_build_object('direct', x->'direct_minor', 'excluded', x->'excluded_expense_minor')
    from jsonb_array_elements(
@@ -420,6 +445,7 @@ select is(
   '{"direct": 25000, "excluded": 5000}'::jsonb,
   'the neighbour''s own totals count their own split (positive control)'
 );
+set local role authenticated;
 
 select tests.authenticate_as('ls_owner');
 
@@ -453,17 +479,21 @@ select is(
   'get_project: the whole payment counts under the line''s own category again'
 );
 
+set local role service_role;
 select is(
   pg_temp.usd()->'direct_minor',
   '160000'::jsonb,
   'company_pnl: direct counts the whole line again'
 );
+set local role authenticated;
 
+set local role service_role;
 select is(
   pg_temp.usd()->'loan_split_fallback_count',
   '2'::jsonb,
   'an unsplit line is not a fallback'
 );
+set local role authenticated;
 
 select is(
   (select balance_minor from public.loan_balances
