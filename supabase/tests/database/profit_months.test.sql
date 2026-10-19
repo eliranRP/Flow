@@ -110,12 +110,15 @@ select is(
 );
 
 set local role service_role;
+create temp table pm_aug as
+select public.company_pnl((select id from pm_ref where label = 'co'), '2026-08-01', '2026-08-31', 'cash') as v;
+grant select on pm_aug to authenticated;
+set local role authenticated;
 select is(
   (public.get_profit_months('2026-07-01', '2026-09-30', 'cash') #>> '{months,1,by_currency,0,profit_minor}')::bigint,
-  (public.company_pnl((select id from pm_ref where label = 'co'), '2026-08-01', '2026-08-31', 'cash') #>> '{by_currency,0,net_profit_minor}')::bigint,
+  (select (v #>> '{by_currency,0,net_profit_minor}')::bigint from pm_aug),
   'company: one month matches company_pnl for that month'
 );
-set local role authenticated;
 
 select is(
   (public.get_profit_months('2026-07-01', '2026-09-30', 'cash') #>> '{months,2,by_currency,0,income_minor}')::bigint,
@@ -165,15 +168,13 @@ select is(
 );
 
 -- get_project for one month agrees with company_pnl's project row for that month.
-set local role service_role;
 select is(
   (public.get_project((select id from pm_ref where label = 'alpha'), 'cash', '2026-08-01', '2026-08-31') ->> 'profit_agorot')::bigint,
   (select (p->>'profit_agorot')::bigint
-   from jsonb_array_elements(public.company_pnl((select id from pm_ref where label = 'co'), '2026-08-01', '2026-08-31', 'cash') -> 'projects') p
+   from pm_aug cross join lateral jsonb_array_elements(v -> 'projects') p
    where p->>'id' = (select id::text from pm_ref where label = 'alpha')),
   'get_project for a month matches company_pnl''s project row'
 );
-set local role authenticated;
 select is(
   (public.get_project((select id from pm_ref where label = 'alpha'), 'invoiced', '2026-08-01', '2026-08-31') ->> 'income_agorot')::bigint,
   60000::bigint,

@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(31);
+select plan(32);
 
 do $users$
 begin
@@ -322,7 +322,6 @@ select throws_ok(
 );
 set local role authenticated;
 
-set local role postgres;
 select lives_ok(
   $$
     update public.loan_splits
@@ -331,6 +330,13 @@ select lives_ok(
       and transaction_id = (
         select id from public.transactions where idempotency_key = 'loan:paid'
       );
+  $$,
+  'the owner can fix a split part'
+);
+
+set local role postgres;
+select lives_ok(
+  $$
     select public.clear_loan_split_review(id)
     from public.transactions
     where idempotency_key = 'loan:paid';

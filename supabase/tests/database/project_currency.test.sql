@@ -125,9 +125,6 @@ select t.company_id, t.id, 'open', 'sample'
 from public.transactions t where t.idempotency_key = 'dock:in_review';
 
 select tests.authenticate_as('pc_owner');
--- These RPCs are not granted to authenticated (decision 0193): the test calls them as service_role
--- with the user's claims, and each still checks the caller's company.
-set local role service_role;
 insert into pc_out (label, body) values
   ('dock', public.get_project((select id from pc_ref where label = 'dock'))),
   ('pier', public.get_project((select id from pc_ref where label = 'pier'))),
@@ -136,7 +133,11 @@ insert into pc_out (label, body) values
   ('quay_inv', public.get_project((select id from pc_ref where label = 'quay'), 'invoiced')),
   ('quay_null', public.get_project((select id from pc_ref where label = 'quay'), null)),
   ('quay_other_word', public.get_project((select id from pc_ref where label = 'quay'), 'accrual')),
-  ('dock_cash', public.get_project((select id from pc_ref where label = 'dock'), 'cash')),
+  ('dock_cash', public.get_project((select id from pc_ref where label = 'dock'), 'cash'));
+-- company_pnl is not granted to authenticated (decision 0193): the test calls it as service_role
+-- with the user's claims, and it still checks the caller's company.
+set local role service_role;
+insert into pc_out (label, body) values
   ('pnl_cash', public.company_pnl((select id from pc_ref where label = 'co'), null, null, 'cash')),
   ('pnl_inv', public.company_pnl((select id from pc_ref where label = 'co'), null, null, 'invoiced'));
 set local role authenticated;
