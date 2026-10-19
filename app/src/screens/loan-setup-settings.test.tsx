@@ -81,8 +81,9 @@ vi.mock("../lib/supabase", () => ({
         }
         if (table === "projects") {
           return {
+            // The list reads the company's project names beside the loans (by company).
             select: () => ({
-              in: () => Promise.resolve({ data: db.projects, error: null }),
+              eq: () => Promise.resolve({ data: db.projects, error: null }),
             }),
           };
         }
