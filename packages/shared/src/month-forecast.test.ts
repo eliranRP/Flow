@@ -152,3 +152,60 @@ describe("buildMonthForecast: a party split by project (decision 0185)", () => {
     expect(build.items.find((item) => item.key.endsWith(":a"))?.minor).toBe(400000n);
   });
 });
+
+describe("buildMonthForecast: only the charges due this month (decision 0199)", () => {
+  // Today is 2026-10-16, so this month is October.
+  function withParties(parties: Partial<ExpectedMonths["recurring"][number]>[]): ExpectedMonths {
+    return {
+      ...expected,
+      recurring: parties.map((party, index) => ({
+        direction: "expense",
+        party_id: `p-${String(index)}`,
+        name: `Example ${String(index)}`,
+        currency: "ILS",
+        typical_amount_minor: -40000n,
+        typical_day: 12,
+        months_seen: 2,
+        seen_this_month: false,
+        ...party,
+      })),
+    } as unknown as ExpectedMonths;
+  }
+  const names = (build: ReturnType<typeof buildMonthForecast>) => build.items.map((item) => item.name).sort();
+
+  it("leaves out a yearly charge due in a later month, from the list and the totals", () => {
+    const build = buildMonthForecast({ base: "ILS", expected: withParties([{ name: "Yearly Plan", pace: "year", next_due_month: "2027-07" }]), unpaid: [], overrides: [] });
+    expect(build.items).toEqual([]);
+    expect(build.expenseTotal).toBe(0n);
+  });
+
+  it("lists a yearly charge due this month, with its yearly amount", () => {
+    const build = buildMonthForecast({ base: "ILS", expected: withParties([{ name: "Yearly Plan", pace: "year", next_due_month: "2026-10", typical_amount_minor: -44000n }]), unpaid: [], overrides: [] });
+    expect(names(build)).toEqual(["Yearly Plan"]);
+    expect(build.expenseTotal).toBe(44000n);
+  });
+
+  it("lists a late yearly charge (due in an earlier month) as due this month", () => {
+    const build = buildMonthForecast({ base: "ILS", expected: withParties([{ name: "Late Yearly", pace: "year", next_due_month: "2026-08" }]), unpaid: [], overrides: [] });
+    expect(names(build)).toEqual(["Late Yearly"]);
+  });
+
+  it("lists a quarterly charge only in its cycle's months", () => {
+    const quarterly = (today: string, due: string) =>
+      names(buildMonthForecast({ base: "ILS", expected: { ...withParties([{ name: "Quarterly", pace: "quarter", next_due_month: due }]), today }, unpaid: [], overrides: [] }));
+    expect(quarterly("2026-10-16", "2026-10")).toEqual(["Quarterly"]);
+    expect(quarterly("2026-10-16", "2026-11")).toEqual([]);
+    expect(quarterly("2026-10-16", "2027-01")).toEqual([]);
+    expect(quarterly("2027-01-05", "2027-01")).toEqual(["Quarterly"]);
+  });
+
+  it("keeps a monthly charge as before, a payload with no pace included", () => {
+    const build = buildMonthForecast({
+      base: "ILS",
+      expected: withParties([{ name: "Monthly", pace: "month", next_due_month: "2026-10" }, { name: "No Pace" }, { name: "Paid", pace: "month", next_due_month: "2026-11", seen_this_month: true }]),
+      unpaid: [],
+      overrides: [],
+    });
+    expect(names(build)).toEqual(["Monthly", "No Pace"]);
+  });
+});

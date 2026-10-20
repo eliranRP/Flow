@@ -1,6 +1,6 @@
-import type { ExpectedMonths, ProjectCategoryMonths } from "@flow/shared";
+import { type ExpectedMonths, monthIndex, type ProjectCategoryMonths } from "@flow/shared";
 import { shiftMonthKey } from "../period";
-import { monthIndex, nextMonthKey } from "../project-next-month";
+import { nextMonthKey } from "../project-next-month";
 import type { NextMonthSample } from "../project-next-month-query";
 import { israelToday } from "../ui/date-math";
 import { JUNIPER_NEXT } from "./project-next-month-sample";

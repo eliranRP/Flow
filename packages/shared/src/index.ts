@@ -127,6 +127,7 @@ export type {
   RecurringChange,
   RecurringPace,
 } from "./forecast.ts";
+export { dueInMonth, monthIndex, paceMonths } from "./recurring-due.ts";
 export {
   SMALL_CHARGE_MINOR,
   buildMonthForecast,

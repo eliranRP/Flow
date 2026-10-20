@@ -1,4 +1,4 @@
-import type { ExpectedParty, ProjectCategoryMonths } from "@flow/shared";
+import { dueInMonth, type ExpectedParty, monthIndex, paceMonths, type ProjectCategoryMonths } from "@flow/shared";
 import { type ForecastCategory, type ForecastLoan, type LoanCash, loanCashOnly, loanParts } from "./project-next-loans";
 
 /**
@@ -39,8 +39,6 @@ const UNCATEGORIZED = "אחר";
 
 /** Under a loan row's name: its interest or escrow comes from the loan's schedule (decision 0190). */
 export const LOAN_SOURCE = "לפי ההלוואה";
-
-type Pace = NonNullable<ExpectedParty["pace"]>;
 
 /** How often an edit applies: its month only, or every pace months from it. */
 export type ForecastPace = "once" | "month" | "2months" | "quarter" | "year";
@@ -115,27 +113,6 @@ export function nextMonthKey(today: string): string {
   const year = Number(today.slice(0, 4));
   const month = Number(today.slice(5, 7));
   return month === 12 ? `${String(year + 1)}-01` : `${String(year)}-${String(month + 1).padStart(2, "0")}`;
-}
-
-function paceMonths(pace: Pace | null | undefined): number {
-  if (pace === "2months") return 2;
-  if (pace === "quarter") return 3;
-  if (pace === "year") return 12;
-  return 1;
-}
-
-export function monthIndex(key: string): number {
-  return Number(key.slice(0, 4)) * 12 + Number(key.slice(5, 7)) - 1;
-}
-
-/**
- * Whether a charge comes in `month`: from its due month, every pace months. A charge that is late (its due
- * month already passed) counts from this month, as expected_months counts it, so the two never disagree.
- */
-export function dueInMonth(nextDue: string | null | undefined, pace: Pace | null | undefined, month: string, thisMonth: string): boolean {
-  const from = nextDue == null || nextDue < thisMonth ? thisMonth : nextDue.slice(0, 7);
-  const gap = monthIndex(month) - monthIndex(from);
-  return gap >= 0 && gap % paceMonths(pace) === 0;
 }
 
 /** yyyy-mm-dd: the typical day in the month, clamped to the month's length. */
@@ -288,7 +265,7 @@ export function editApplies(start: string, pace: ForecastPace, month: string): b
   const gap = monthIndex(month) - monthIndex(start);
   if (gap < 0) return false;
   if (pace === "once") return gap === 0;
-  return gap % (pace === "month" ? 1 : paceMonths(pace)) === 0;
+  return gap % paceMonths(pace) === 0;
 }
 
 /** The key of the row a line the user added makes. */

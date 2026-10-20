@@ -76,6 +76,19 @@ Deno.test("get_forecast counts a dollar company's items and cash in dollars", as
   assertEquals(data?.cash_net_minor, 120000);
 });
 
+Deno.test("get_forecast lists a yearly charge only in its due month (decision 0199)", async () => {
+  const yearly = (due: string) => ({ direction: "expense", party_id: "p-plan", name: "Plan Co", currency: "ILS", typical_amount_minor: -44000, typical_day: 12, months_seen: 2, seen_this_month: false, pace: "year", next_due_month: due });
+  const read = async (due: string) => {
+    const { rpc } = rpcOf((name) => name === "expected_months" ? { status: 200, json: { ...expected, recurring: [...expected.recurring, yearly(due)] } } : reads(name));
+    const result = await callTool("get_forecast", { month: "2026-10" }, ["read"], rpc);
+    return (result.structuredContent.ok ? result.structuredContent.data : null) as { expense_total_minor: number; small: { count: number } } | null;
+  };
+  const later = await read("2027-07");
+  assertEquals([later?.expense_total_minor, later?.small.count], [480000, 0]);
+  const due = await read("2026-10");
+  assertEquals([due?.expense_total_minor, due?.small.count], [480000 + 44000, 0]);
+});
+
 Deno.test("get_forecast defaults to this month in Israel time and refuses a bad month before any read", async () => {
   const { calls, rpc } = rpcOf(reads);
   const bad = await callTool("get_forecast", { month: "2026-13" }, ["read"], rpc);
