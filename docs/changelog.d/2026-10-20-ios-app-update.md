@@ -1,0 +1,1 @@
+FLOW-935: the Flow app on an iPhone Home Screen now moves to a new version after a deploy, without deleting and adding it again. Each time the app opens or comes back to the front it checks the live version, and when it is behind it reloads on the next move to another screen or when it goes to the background. No migration.
