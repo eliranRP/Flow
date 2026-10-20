@@ -8,9 +8,9 @@ import {
   shownCashRows,
 } from "../cash";
 import { withPeriodSearch } from "../project-period";
+import { cashMonthFigures } from "../month-figures";
 import {
   PROJECT_CASH_MONTHS,
-  projectCashFigures,
   projectCashSummaryRows,
 } from "../project-cash";
 import type { NextMonthForecast } from "../project-next-month";
@@ -224,10 +224,10 @@ export function ProjectCashOverview({
             forecast={nextMonth.forecast}
             loading={nextMonth.loading}
             current={key}
-            figures={projectCashFigures(data, nextMonth.currency)}
+            figures={cashMonthFigures(data, nextMonth.currency)}
             firstMonth={firstMonth}
             currency={nextMonth.currency}
-            netLabel="תזרים צפוי"
+            kind="cash"
             cardHref={`/projects/${project.id}/profit/next${search}`}
             categories={nextMonth.categories}
             today={nextMonth.today}

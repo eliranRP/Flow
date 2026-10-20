@@ -95,7 +95,7 @@ describe("Home's band parts (FLOW-364)", () => {
 
   it("names the forecast by the month's name", () => {
     render(<ForecastRow monthKey="2026-10" minor={-6_810_000n} currency="ILS" />);
-    expect(screen.getByText("צפי לסוף אוקטובר")).toBeInTheDocument();
+    expect(screen.getByText("תזרים צפוי לסוף אוקטובר")).toBeInTheDocument();
   });
 });
 // --- home-skeleton.test.tsx

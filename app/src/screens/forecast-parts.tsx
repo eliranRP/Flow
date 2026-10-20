@@ -2,6 +2,9 @@ import { formatAmountText, type ForecastItem } from "@flow/shared";
 import { weekEndDay } from "../forecast-month";
 import { cx } from "../ui/cx";
 
+/** The screen's name: its header, the compact bar and the item page's back link (canvas note spec-cash2). */
+export const FORECAST_TITLE = "תזרים צפוי";
+
 /** A signed amount in the base's currency: the sign, then the figure without its own minus. */
 export function signed(minor: bigint, sign: "+" | "−" | "", currency: string): string {
   const text = formatAmountText(minor < 0n ? -minor : minor, currency);

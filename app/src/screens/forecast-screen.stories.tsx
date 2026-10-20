@@ -38,6 +38,8 @@ function BoardForecast({ variant }: { variant: BoardForecastVariant }) {
   );
 }
 
+/** The MonthForecast board (preset cash2): תזרים צפוי, the month's end, the card's whole sum and the chart with October in progress. */
+export const Board: Story = { name: "Forecast · board, card and chart", render: () => <BoardForecast variant="board" /> };
 export const Changed: Story = { name: "Forecast · changed, reset line", render: () => <BoardForecast variant="changed" /> };
 export const AllArrived: Story = { name: "Forecast · all arrived", render: () => <BoardForecast variant="empty" /> };
 /** לפי קטגוריה: each category's month so far and still to come, with the rent category open (MonthForecastCategory). */

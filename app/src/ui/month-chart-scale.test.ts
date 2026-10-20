@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { barHeight, CHART_BAR_MAX, CHART_BAR_MIN, CHART_BAR_ZERO, chartBars, type ChartMonth } from "./month-chart-scale";
+import { barHeight, capHeight, CHART_BAR_MAX, CHART_BAR_MIN, CHART_BAR_ZERO, chartBars, type ChartMonth } from "./month-chart-scale";
 
 function month(key: string, income: bigint, expense: bigint): ChartMonth {
   return { key, label: key, incomeMinor: income, expenseMinor: expense };
@@ -39,5 +39,33 @@ describe("the month chart's scale (chartRows)", () => {
     const bars = chartBars([month("2026-07", 0n, 18_500_000n), month("2026-08", 0n, 2_240_000n), month("2026-09", 0n, 300_000n)], month("2026-11", 0n, 1_200_000n));
     expect(bars.map((bar) => bar.expensePx)).toEqual([108, 13, 4, 7]);
     expect(bars.every((bar) => bar.incomePx === CHART_BAR_ZERO)).toBe(true);
+  });
+
+  it("stacks the month in progress: solid so far, a dashed cap still expected, both on the one scale (MonthForecast board)", () => {
+    const history = [
+      month("2026-05", 2_310_000n, 2_740_000n),
+      month("2026-06", 3_120_000n, 2_480_000n),
+      month("2026-07", 2_860_000n, 2_610_000n),
+      month("2026-08", 2_790_000n, 2_930_000n),
+      month("2026-09", 1_420_000n, 5_240_000n),
+      { ...month("2026-10", 2_487_800n, 4_206_900n), ahead: { incomeMinor: 1_975_000n, expenseMinor: 830_000n } },
+    ];
+    const bars = chartBars(history, null);
+    // September's expenses are the largest column; October's so far plus expected stays under it.
+    expect(bars[4]?.expensePx).toBe(CHART_BAR_MAX);
+    const october = bars[5];
+    expect([october?.incomePx, october?.incomeAheadPx, october?.expensePx, october?.expenseAheadPx]).toEqual([51, 41, 87, 17]);
+    expect([october?.inProgress, october?.forecast]).toEqual([true, false]);
+    // A finished month has no cap.
+    expect([bars[0]?.incomeAheadPx, bars[0]?.expenseAheadPx, bars[0]?.inProgress]).toEqual([0, 0, false]);
+  });
+
+  it("lets so far plus still expected set the scale, and draws no cap when nothing more is expected", () => {
+    const bars = chartBars([month("2026-09", 200_000n, 0n), { ...month("2026-10", 100_000n, 0n), ahead: { incomeMinor: 300_000n, expenseMinor: 0n } }], null);
+    expect([bars[1]?.incomePx, bars[1]?.incomeAheadPx]).toEqual([27, 81]);
+    expect(bars[0]?.incomePx).toBe(54);
+    expect(bars[1]?.expenseAheadPx).toBe(0);
+    expect(capHeight(0n, 400_000n)).toBe(0);
+    expect(capHeight(-10n, 400_000n)).toBe(0);
   });
 });

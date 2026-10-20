@@ -3,7 +3,8 @@ import { projectChoices } from "./project-groups";
 import { projectsGrouped } from "./screens/project-groups-sample";
 import { groupHint, groupSections, PICK_REST_HEADING } from "./ui/change-picker";
 import { type CashCurrencyRow, type ProjectCategoryMonthRow } from "@flow/shared";
-import { projectCashFigures, projectCashSummaryRows, projectProfitMonthPath } from "./project-cash";
+import { cashMonthFigures } from "./month-figures";
+import { projectCashSummaryRows, projectProfitMonthPath } from "./project-cash";
 import { presetPeriod } from "./period";
 import { markDay, usualFor } from "./project-category-months";
 
@@ -88,10 +89,10 @@ describe("FLOW-419 project cash rows", () => {
         { month: "2026-09-01", by_currency: [row(310_000n, 500_000n, 95_000n), row(9n, 9n, 0n, "ILS")] },
       ],
     };
-    const figures = projectCashFigures(data, "USD");
+    const figures = cashMonthFigures(data, "USD");
     expect([...figures.keys()]).toEqual(["2026-10", "2026-09"]);
     expect(figures.get("2026-09")).toEqual({ incomeMinor: 310_000n, expenseMinor: 500_000n });
-    expect(projectCashFigures(data, "EUR").size).toBe(0);
+    expect(cashMonthFigures(data, "EUR").size).toBe(0);
   });
 
   it("names the profit page's path", () => {

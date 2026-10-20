@@ -38,8 +38,8 @@ export const ProjectCash: Story = {
     await expect(canvas.getByRole("link", { name: /^רווח ב/ })).toBeInTheDocument();
     await expect(canvas.getByRole("heading", { name: "השקעה והלוואות" })).toBeInTheDocument();
     // spec-fcwide: the flip's card (no income, grey $0) and its chart since the purchase replace "חודשים קודמים".
-    await expect(canvas.getByRole("link", { name: /^צפי .*: הכנסות צפויות \$0,/ })).toBeInTheDocument();
-    await expect(canvas.getByRole("img", { name: /^הכנסות והוצאות לפי חודש, מתחילת הפרויקט/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("link", { name: /^צפי .*: צפוי להיכנס \$0,/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("img", { name: /^נכנס ויצא לפי חודש, מתחילת הפרויקט/ })).toBeInTheDocument();
     await expect(canvas.getByRole("link", { name: "רווח לפי חודש" })).toBeInTheDocument();
   },
 };

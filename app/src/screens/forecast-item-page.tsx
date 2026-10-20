@@ -12,7 +12,7 @@ import { IconRow } from "../ui/icon-row";
 import { CalendarIcon, DocumentIcon, PencilIcon, ProjectsIcon, TagIcon } from "../ui/icons";
 import { List } from "../ui/list-row";
 import { itemCharge } from "./forecast-categories";
-import { dayMonth, itemLate, itemWhat } from "./forecast-parts";
+import { dayMonth, FORECAST_TITLE, itemLate, itemWhat } from "./forecast-parts";
 import { monthName } from "./home-parts";
 
 const WHEN_LAYER = "forecast-when";
@@ -161,7 +161,7 @@ export function ForecastItemPage({
   return (
     <div className="ui-forecast-page m-push-in">
       <div className="ui-forecast-page-back">
-        <BackButton fallback={backTo} text="צפי" />
+        <BackButton fallback={backTo} text={FORECAST_TITLE} />
       </div>
       <header className="ui-forecast-page-head">
         <span className={cx("ui-forecast-page-status", late && "ui-forecast-page-status-late")}>

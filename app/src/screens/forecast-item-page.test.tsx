@@ -191,7 +191,7 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
   it("Back closes the page and gives the focus back to the row", async () => {
     renderForecast(board());
     openNorthgate();
-    fireEvent.click(screen.getByRole("button", { name: "חזרה לצפי" }));
+    fireEvent.click(screen.getByRole("button", { name: "חזרה לתזרים צפוי" }));
     expect(screen.getByTestId("where").textContent).toBe("/forecast");
     await waitFor(() => { expect(document.activeElement).toBe(screen.getByRole("button", { name: "Northgate Co, +$12,500" })); });
   });
@@ -211,7 +211,7 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
       openNorthgate();
       // The app's ScrollMemory starts the page at the top (ui/scroll-memory.test.tsx).
       y = 0;
-      fireEvent.click(screen.getByRole("button", { name: "חזרה לצפי" }));
+      fireEvent.click(screen.getByRole("button", { name: "חזרה לתזרים צפוי" }));
       await waitFor(() => { expect(document.activeElement).toBe(screen.getByRole("button", { name: "Northgate Co, +$12,500" })); });
       expect(scrollTo).toHaveBeenLastCalledWith(0, 600);
       expect(y).toBe(600);

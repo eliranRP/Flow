@@ -375,7 +375,7 @@ export function CashHome({
             <HomeMonthPill monthKey={monthKey} nav={nav} />
             <HomeSwipeFigures monthKey={monthKey} figures={figures} search={search} nav={nav} animate={animate} />
             {isPast || forecast == null ? null : (
-              <Link to="/forecast" className="ui-home-forecast-link" aria-label="צפי לסוף החודש">
+              <Link to="/forecast" className="ui-home-forecast-link" aria-label="תזרים צפוי לסוף החודש">
                 <ForecastRow monthKey={monthKey} minor={forecast} currency={base} />
               </Link>
             )}

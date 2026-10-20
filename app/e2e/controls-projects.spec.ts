@@ -76,7 +76,7 @@ test("next month's card opens the next-month page, and the project page's chart 
   await page.getByRole("link", { name: /^צפי [^:]+: הכנסות צפויות/ }).click();
   await expect(page).toHaveURL(/\/projects\/[^/]+\/profit\/next\?preview=1$/);
   await page.goto("/e2e/project-detail?preview=1");
-  await expect(page.getByRole("img", { name: /^הכנסות והוצאות לפי חודש, מתחילת הפרויקט/ })).toBeVisible();
+  await expect(page.getByRole("img", { name: /^נכנס ויצא לפי חודש, מתחילת הפרויקט/ })).toBeVisible();
   await page.getByRole("link", { name: "רווח לפי חודש" }).click();
   await expect(page).toHaveURL(/\/projects\/p1\/profit\?preview=1&period=all$/);
 });

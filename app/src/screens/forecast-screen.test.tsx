@@ -1,7 +1,9 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { monthForecastBoardSample, monthForecastSample } from "../forecast-sample";
+import { shiftMonthKey } from "../period";
 import { renderWithProviders } from "../test-render";
+import { israelToday } from "../ui/date-math";
 import { ForecastScreen } from "./forecast-screen";
 
 const rpc = vi.hoisted(() => vi.fn((_name: string, _args?: unknown) => Promise.resolve({ data: null, error: null })));
@@ -87,15 +89,97 @@ describe("ForecastScreen", () => {
     }
   });
 
-  it("shows the forecast figure, the cash net today, and both sections", () => {
+  it("live, reads the chart's six cash months once, and sums today's net with the forecast's remaining in and out", async () => {
+    const month = israelToday().slice(0, 7);
+    const row = (incomeMinor: number, outMinor: number) => ({
+      currency: "USD", in_minor: incomeMinor, out_minor: outMinor, net_minor: incomeMinor - outMinor, profit_minor: 0,
+      excluded_count: 0, excluded_in_minor: 0, excluded_out_minor: 0, not_in_profit_categories: [],
+    });
+    const earlier = shiftMonthKey(month, -1);
+    const cashMonths = { basis: "paid", base_currency: "USD", months: [{ month: `${month}-01`, by_currency: [row(300_000, 500_000)] }, { month: `${earlier}-01`, by_currency: [row(400_000, 100_000)] }] };
+    const reads: Record<string, unknown> = {
+      mcp_company_loan_currency: "USD",
+      cash_months: cashMonths,
+      expected_months: {
+        today: `${month}-01`,
+        project_id: null,
+        months: [{ month, open: true, by_currency: [] }],
+        recurring: [{ direction: "expense", party_id: "p-1", name: "Example Utility", currency: "USD", typical_amount_minor: -25000, typical_day: 28, months_seen: 6, seen_this_month: false }],
+      },
+      list_unpaid: [],
+      forecast_overrides_for: [],
+    };
+    rpc.mockClear();
+    rpc.mockImplementation((name: string) => Promise.resolve({ data: (reads[name] ?? null) as null, error: null }));
+    try {
+      renderWithProviders(<ForecastScreen />, { route: "/forecast" });
+      const chart = await screen.findByRole("img", { name: /^נכנס ויצא לפי חודש, / });
+      expect(chart.getAttribute("aria-label")).toContain("עד היום: נכנס $3,000, יצא $5,000; צפוי עוד: נכנס $0, יצא $250");
+      expect(chart.querySelectorAll(".ui-fc-month-bars")).toHaveLength(2);
+      // Home's four months give today's net; the chart's six are one read of their own.
+      const calls = rpc.mock.calls.filter(([name]) => name === "cash_months").map(([, args]) => args);
+      expect(calls).toEqual(expect.arrayContaining([{ p_months: 4 }, { p_months: 6 }]));
+      expect(calls).toHaveLength(2);
+      // −$2,000 today, nothing in, $250 out: −$2,250 at the month's end.
+      expect(document.querySelector(".ui-fc-start")?.textContent).toBe("תזרים היום−$2,000");
+      expect(document.querySelector(".ui-fc-net-strong bdi")?.textContent).toBe("−$2,250");
+      expect(document.querySelector(".ui-forecast-big bdi")?.textContent).toBe("−$2,250");
+    } finally {
+      rpc.mockImplementation(() => Promise.resolve({ data: null, error: null }));
+    }
+  });
+
+  it("titles the screen תזרים צפוי, in its header and its compact bar", () => {
+    renderWithProviders(<ForecastScreen sample={monthForecastBoardSample("board")} />, { route: "/forecast" });
+    expect(screen.getByRole("heading", { level: 1, name: "תזרים צפוי" })).toBeTruthy();
+    expect(screen.getByText("סוף אוקטובר · עוד 20 ימים")).toBeTruthy();
+    expect(document.querySelector(".ui-forecast-compact-figure")?.textContent).toBe("תזרים צפוי · −$5,741");
+  });
+
+  it("shows the month's end as the big figure, and the card's whole sum under it: today, in, out, the end", () => {
     renderWithProviders(<ForecastScreen sample={monthForecastSample("positive")} />, { route: "/forecast" });
     // Net 1,200 plus income 9,000 minus charges 6,045 (the small one included): 4,155.
-    expect(screen.getAllByText("₪4,155").length).toBeGreaterThan(0);
-    const today = document.querySelector(".ui-forecast-today bdi");
-    expect(today?.textContent).toBe("₪1,200");
-    expect(today?.getAttribute("dir")).toBe("ltr");
-    expect(screen.getByText("צפוי להיכנס")).toBeTruthy();
-    expect(screen.getByText("צפוי לצאת")).toBeTruthy();
+    expect(document.querySelector(".ui-forecast-big bdi")?.textContent).toBe("₪4,155");
+    // Today's figure lives in the card, not under the big one.
+    expect(document.querySelector(".ui-forecast-today")).toBeNull();
+    const card = document.querySelector(".ui-forecast-fc .ui-fc-card");
+    expect(card?.querySelector(".ui-fc-start")?.textContent).toBe("תזרים היום₪1,200");
+    const columns = [...(card?.querySelectorAll(".ui-fc-col") ?? [])].map((column) => column.textContent);
+    expect(columns).toEqual(["צפוי להיכנס+₪9,0002 פריטים", "צפוי לצאת₪6,0453 פריטים, כולם קבועים"]);
+    // The strong last row is the big figure: start + in − out.
+    expect(card?.querySelector(".ui-fc-net-strong")?.textContent).toBe("תזרים בסוף אוקטובר₪4,155");
+    expect(card?.querySelector(".ui-fc-net-strong")?.classList.contains("ui-fc-neg")).toBe(false);
+    // Both sections keep their heads.
+    expect(screen.getByRole("heading", { level: 2, name: /^צפוי להיכנס/ })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 2, name: /^צפוי לצאת/ })).toBeTruthy();
+  });
+
+  it("counts the board's items honestly: late income, recurring charges, every item in the corner", () => {
+    renderWithProviders(<ForecastScreen sample={monthForecastBoardSample("board")} />, { route: "/forecast" });
+    const card = document.querySelector(".ui-forecast-fc .ui-fc-card");
+    expect(card?.querySelector(".ui-fc-caption")?.textContent).toBe("16 פריטים · פירוט למטה");
+    // No link: the list is right below.
+    expect(card?.tagName).toBe("DIV");
+    expect([...(card?.querySelectorAll(".ui-fc-col") ?? [])].map((column) => column.textContent)).toEqual([
+      "צפוי להיכנס+$19,7503 פריטים · 2 באיחור",
+      "צפוי לצאת$8,30013 פריטים, מהם 11 קבועים",
+    ]);
+    // −$17,191 + $19,750 − $8,300 = −$5,741, in the signal colour as the big figure.
+    expect(card?.querySelector(".ui-fc-start")?.textContent).toBe("תזרים היום−$17,191");
+    const net = card?.querySelector(".ui-fc-net-strong");
+    expect(net?.textContent).toBe("תזרים בסוף אוקטובר−$5,741");
+    expect(net?.classList.contains("ui-fc-neg")).toBe(true);
+    expect(document.querySelector(".ui-forecast-big")?.classList.contains("ui-forecast-big-neg")).toBe(true);
+  });
+
+  it("draws the chart: May to September as they ended, October so far with what is still expected on top", () => {
+    renderWithProviders(<ForecastScreen sample={monthForecastBoardSample("board")} />, { route: "/forecast" });
+    const chart = screen.getByRole("img", { name: "נכנס ויצא לפי חודש, מאי עד סוף אוקטובר. אוקטובר עד היום: נכנס $24,878, יצא $42,069; צפוי עוד: נכנס $19,750, יצא $8,300" });
+    expect(chart.querySelectorAll(".ui-fc-month-bars")).toHaveLength(6);
+    expect(chart.querySelectorAll(".ui-fc-now .ui-fc-cap")).toHaveLength(2);
+    expect(chart.querySelector(".ui-fc-now .ui-fc-bar-label")?.textContent).toBe("אוק׳ · צפי");
+    expect(screen.getByText("נכנס ויצא לפי חודש")).toBeTruthy();
+    expect(screen.getByText("מאי עד סוף אוקטובר")).toBeTruthy();
   });
 
   it("keeps each amount LTR, so a minus sits at the start of the figure", () => {
@@ -103,7 +187,7 @@ describe("ForecastScreen", () => {
     const big = document.querySelector(".ui-forecast-big bdi");
     expect(big?.getAttribute("dir")).toBe("ltr");
     expect(big?.textContent.startsWith("₪")).toBe(true);
-    const today = document.querySelector(".ui-forecast-today bdi");
+    const today = document.querySelector(".ui-fc-start bdi");
     expect(today?.getAttribute("dir")).toBe("ltr");
     expect(today?.textContent.startsWith("−₪")).toBe(true);
   });
@@ -169,7 +253,7 @@ describe("ForecastScreen", () => {
     expect(screen.getByText("אוקטובר · נכון ל־30/10")).toBeTruthy();
     expect(screen.getByText(/הצפי לנובמבר ייפתח ב־1 בחודש/)).toBeTruthy();
     expect(document.querySelector(".ui-forecast-big")).toBeNull();
-    expect(document.querySelector(".ui-forecast-today")).toBeNull();
+    expect(document.querySelector(".ui-fc-card")).toBeNull();
     expect(document.querySelector(".ui-forecast-changed")).toBeNull();
     expect(document.querySelector(".ui-forecast-foot")).toBeNull();
     expect(document.querySelector(".ui-forecast-compact")).toBeNull();
