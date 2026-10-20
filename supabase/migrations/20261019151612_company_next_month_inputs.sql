@@ -17,7 +17,7 @@
 -- 4. edits: the forecast edits of every project read here and of the overhead project that apply to
 --    next month, as project_forecast_edits_for lists them for one project, with the project's id.
 -- Security definer: the caller's readable company only; another company's caller gets its own.
--- Cost: one project_category_months call per project, about 6ms each locally (200 projects, ~1.15s).
+-- Cost: one project_category_months call per project plus the recurring stream reads, about as much as expected_months (decision 0197).
 begin;
 set local lock_timeout = '5s';
 
