@@ -169,16 +169,27 @@ describe("CompanyProfitScreen (FLOW-140c1)", () => {
     expect(link).toHaveAttribute("href", "/projects/p1/profit?from=profit");
   });
 
-  it("a project holding a shared cost keeps its name and link; the general costs are one כללי row with no link", () => {
+  it("a project holding a shared cost keeps its name and link; the general costs are one row under the overhead project's name, opening it", () => {
     renderPage();
     const list = document.querySelector(".ui-cp-list");
     if (!(list instanceof HTMLElement)) throw new Error("no project list");
     expect(within(list).getByText("וילה הברושים").closest("a")).toHaveAttribute("href", "/projects/p2/profit?from=profit");
+    const general = within(list).getByText("משרד החברה / תקורה");
+    expect(general.closest("a")).toHaveAttribute("href", "/projects/p0/profit?from=profit");
+    expect(general.closest(".ui-cp-row")?.querySelector(".ui-cp-meta")?.textContent).toBe("4 תנועות");
+    expect(within(list).queryByText("כללי")).toBeNull();
+    expect(list.querySelectorAll(".ui-cp-row")).toHaveLength(6);
+    expect(list.querySelector('a[href^="/projects/overhead"], a[href^="/projects/unassigned"]')).toBeNull();
+    expect([...list.querySelectorAll(".ui-cp-name")].every((name) => name.textContent !== "")).toBe(true);
+  });
+
+  it("with no overhead project set, the general costs are one כללי row with no link", () => {
+    renderPage({ ...COMPANY_PROFIT_SAMPLE, overhead: null });
+    const list = document.querySelector(".ui-cp-list");
+    if (!(list instanceof HTMLElement)) throw new Error("no project list");
     const general = within(list).getByText("כללי");
     expect(general.closest("a")).toBeNull();
     expect(general.closest(".ui-cp-row")?.querySelector(".ui-cp-meta")?.textContent).toBe("4 תנועות");
     expect(list.querySelectorAll(".ui-cp-row")).toHaveLength(6);
-    expect(list.querySelector('a[href^="/projects/overhead"], a[href^="/projects/unassigned"]')).toBeNull();
-    expect([...list.querySelectorAll(".ui-cp-name")].every((name) => name.textContent !== "")).toBe(true);
   });
 });

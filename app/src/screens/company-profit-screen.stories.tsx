@@ -109,12 +109,23 @@ export const Year: Story = {
   },
 };
 
-/** The year by project: the finished projects in one row, כללי last. */
+/** The year by project: the finished projects in one row, the general costs last under the overhead project's name. */
 export const YearByProject: Story = {
   name: "Period: this year by project",
   render: () => <ProfitRoute entry="/profit?period=year&list=project" />,
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByText("פרויקטים שהסתיימו · 4")).toBeInTheDocument();
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("פרויקטים שהסתיימו · 4")).toBeInTheDocument();
+    await expect(canvas.getByText("משרד החברה / תקורה").closest("a")?.getAttribute("href")).toMatch(/^\/projects\/p0\/profit\?from=profit/);
+  },
+};
+
+/** No overhead project set: the general costs are one כללי row that opens nothing. */
+export const NoOverheadProject: Story = {
+  name: "By project: no overhead project",
+  render: () => <ProfitRoute entry="/profit" sample={{ ...COMPANY_PROFIT_SAMPLE, overhead: null }} />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText("כללי").closest("a")).toBeNull();
   },
 };
 

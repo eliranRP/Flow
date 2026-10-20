@@ -5,6 +5,7 @@ import { onlineManager } from "@tanstack/react-query";
 import { lineDayTitle, lineInitials } from "../cash-lines-groups";
 import { useCompanyCurrency } from "../company-currency";
 import { homeMonthKey, homeMonthPath } from "../home-month";
+import { useOverheadProject, type OverheadProject } from "../project-cash";
 import { customRange, monthPeriod } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
@@ -32,8 +33,11 @@ import { CompanyNextMonthBlock } from "./company-next-month-block";
 import { CompanySummaryCard } from "./profit-summary";
 import { useBlockedPreview } from "./screen-shared";
 
-/** A fixture: the reads' inputs for the page, plus the day heads' today and the month it shows. */
-export type CompanyProfitSample = ProfitInputs & { today: string; monthKey: string; openFirst?: boolean; sheetOpen?: boolean; next?: CompanyNextMonthSample; years?: CompanyYearsSample };
+/**
+ * A fixture: the reads' inputs for the page, plus the day heads' today, the month it shows and the company's overhead
+ * project (none when omitted).
+ */
+export type CompanyProfitSample = ProfitInputs & { today: string; monthKey: string; overhead?: OverheadProject | null; openFirst?: boolean; sheetOpen?: boolean; next?: CompanyNextMonthSample; years?: CompanyYearsSample };
 
 /** The period switch (canvas note spec-years): the month, a year or since the start, in the URL (`?period=`). */
 type Period = "month" | "year" | "all";
@@ -102,14 +106,18 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   const monthKey = sample?.monthKey ?? homeMonthKey(location.search, today, null);
   const year = monthKey.slice(0, 4);
   const month = monthPeriod(monthKey);
+  // The overhead project (owner 20/10): the general costs' row takes its name and opens it, in both views.
+  const liveOverhead = useOverheadProject(sample == null);
+  const overhead = sample == null ? liveOverhead : sample.overhead ?? null;
   const live = useCompanyProfitRead({
     enabled: sample == null,
     month,
     ytd: customRange(`${year}-01-01`, month.to ?? today),
     currency: companyCurrency,
     linesOn: by !== "project",
+    overhead,
   });
-  const model: ProfitModel | null = sample ? buildProfitModel(sample) : live.model;
+  const model: ProfitModel | null = sample ? buildProfitModel(sample, overhead ?? null) : live.model;
   const onCurrent = monthKey === currentKey;
   const long = period !== "month";
   const years = useCompanyYears(today, long, sample?.years);
@@ -176,7 +184,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
     restFailed: next.failed,
     categories: next.categories,
     list: yearList,
-    projects: { breakdowns: yearProjects.breakdowns, statuses: yearProjects.statuses, pending: yearProjects.pending, failed: yearProjects.failed, onRetry: yearProjects.refetch },
+    projects: { breakdowns: yearProjects.breakdowns, statuses: yearProjects.statuses, overhead: overhead ?? null, pending: yearProjects.pending, failed: yearProjects.failed, onRetry: yearProjects.refetch },
     onList: (list) => { setParams({ list: list === "month" ? null : list }); },
     // This month's row opens the month view on this month; a year's row opens that year.
     onOpen: (opens) => { setParams(opens.kind === "month" ? { period: null, year: null, list: null, month: null } : { period: "year", year: opens.year === currentYear ? null : opens.year, list: null }); },

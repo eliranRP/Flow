@@ -79,7 +79,8 @@ describe("the period switch", () => {
     if (!(list instanceof HTMLElement)) throw new Error("no list");
     expect(within(list).getByText("פרויקטים שהסתיימו · 4").closest("a")).toBeNull();
     expect(within(list).getByText("דירת הרימון").closest("a")?.getAttribute("href")).toBe("/projects/p3/profit?from=profit");
-    expect(within(list).getByText("כללי").closest("a")).toBeNull();
+    expect(within(list).getByText("משרד החברה / תקורה").closest("a")?.getAttribute("href")).toBe("/projects/p0/profit?from=profit");
+    expect(within(list).queryByText("כללי")).toBeNull();
   });
 
   it("מההתחלה: since the start, the years' chart and list; a year opens a closed year", () => {
@@ -145,7 +146,7 @@ describe("the year's forecast card", () => {
       restFailed: true,
       categories: [],
       list: "month",
-      projects: { breakdowns: { income: null, expense: null }, statuses: [], pending: false, failed: false, onRetry: () => undefined },
+      projects: { breakdowns: { income: null, expense: null }, statuses: [], overhead: null, pending: false, failed: false, onRetry: () => undefined },
       onList: () => undefined,
       onOpen: () => undefined,
       projectHref: (id) => `/projects/${id}/profit`,

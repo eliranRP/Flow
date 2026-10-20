@@ -3,6 +3,7 @@ import type { Breakdown, BreakdownDirection, BreakdownLinesPage, Dashboard } fro
 type LinesRows = NonNullable<BreakdownLinesPage>["rows"];
 import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 import { projectGroupRow } from "./breakdown-project-group";
+import type { OverheadProject } from "./project-cash";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { type PeriodChoice } from "./period";
@@ -19,7 +20,8 @@ export type BasisName = "cash" | "invoiced";
 
 /**
  * One project's row: its counted income and expense, and the lines behind them. The general costs (get_breakdown's
- * `overhead` and `unassigned`) are one row, כללי, keyed "" with no `projectId`; a project opens its profit page.
+ * `overhead` and `unassigned`, and the overhead project's own lines) are one row keyed "": the overhead project's
+ * name, opening it, or כללי with no `projectId` when none is set. A project opens its profit page.
  */
 export type ProfitProjectRow = { key: string; name: string; projectId: string | null; income: bigint; expense: bigint; profit: bigint; count: number };
 
@@ -72,15 +74,18 @@ function groupsIn(breakdown: Breakdown | null, currency: string) {
   return (breakdown?.groups ?? []).filter((group) => group.currency === currency);
 }
 
-/** The page's figures from its inputs. Money is in the company currency; other currencies do not count here. */
-export function buildProfitModel(inputs: ProfitInputs, linesComplete = true): ProfitModel {
+/**
+ * The page's figures from its inputs and the company's overhead project. Money is in the company currency; other
+ * currencies do not count here.
+ */
+export function buildProfitModel(inputs: ProfitInputs, overhead: OverheadProject | null, linesComplete = true): ProfitModel {
   const { currency } = inputs;
   const income = inputs.month.income;
   const expense = inputs.month.expense;
   const byProject = new Map<string, ProfitProjectRow>();
   for (const direction of ["income", "expense"] as const) {
     for (const group of groupsIn(inputs.projects[direction], currency)) {
-      const { key, title, projectId } = projectGroupRow(group);
+      const { key, title, projectId } = projectGroupRow(group, overhead);
       const row = byProject.get(key) ?? { key, name: title, projectId, income: 0n, expense: 0n, profit: 0n, count: 0 };
       if (direction === "income") row.income += group.amount_minor;
       else row.expense += group.amount_minor;
@@ -209,13 +214,15 @@ export type CompanyProfitRead = {
   currency: string;
   /** Lines load only for the orders that list them (date, amount, category). */
   linesOn: boolean;
+  /** The company's overhead project (useOverheadProject); undefined while it loads keeps the page loading. */
+  overhead: OverheadProject | null | undefined;
 };
 
 /**
  * The page's reads, live. Preview mode reads nothing (the screen takes its sample). Query keys start
  * with "dashboard", "breakdown" or "breakdown-lines", so the basis sheet's write refreshes them.
  */
-export function useCompanyProfitRead({ enabled, month, ytd, currency, linesOn }: CompanyProfitRead) {
+export function useCompanyProfitRead({ enabled, month, ytd, currency, linesOn, overhead }: CompanyProfitRead) {
   const preview = useHomePreview();
   const live = enabled && preview === "off";
   const monthRange = `${month.from ?? ""}..${month.to ?? ""}`;
@@ -267,8 +274,8 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, linesOn }:
     : null;
   return {
     failed,
-    loading: !failed && inputs == null,
-    model: inputs == null ? null : buildProfitModel(inputs, linesComplete),
+    loading: !failed && (inputs == null || overhead === undefined),
+    model: inputs == null || overhead === undefined ? null : buildProfitModel(inputs, overhead, linesComplete),
     refetch: () => {
       void dashboard.refetch();
       void ytdDashboard.refetch();

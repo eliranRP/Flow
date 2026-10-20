@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { restExpenseNote, restIncomeNote, restMonthsCaption, type RestOfYear } from "../company-year-forecast";
+import type { OverheadProject } from "../project-cash";
 import { allTimeYearRows, yearMonthRows, yearProjectRows, yearRowMeta, type ProjectStatus, type YearRow } from "../company-year-rows";
 import { allTimeChart, allTimeSub, allTimeSummaryRows, allTimeTotals, yearChart, yearSub, yearSummaryRows, type CompanyYears, type YearFigures } from "../company-years";
 import type { Breakdown } from "@flow/shared";
@@ -41,7 +42,8 @@ export type PeriodViewInput = {
   restFailed: boolean;
   categories: readonly RentCategory[];
   list: YearList;
-  projects: { breakdowns: { income: Breakdown | null; expense: Breakdown | null }; statuses: readonly ProjectStatus[]; pending: boolean; failed: boolean; onRetry: () => void };
+  /** The year's projects; `overhead` is the company's overhead project (its row takes the general costs). */
+  projects: { breakdowns: { income: Breakdown | null; expense: Breakdown | null }; statuses: readonly ProjectStatus[]; overhead: OverheadProject | null; pending: boolean; failed: boolean; onRetry: () => void };
   onList: (list: YearList) => void;
   /** A row's tap: the month view, or a year. */
   onOpen: (opens: Exclude<YearRow["opens"], null | { kind: "project" }>) => void;
@@ -134,7 +136,7 @@ function yearView(input: PeriodViewInput, year: YearFigures): PeriodView {
   );
   let body: ReactNode;
   if (input.list === "project") {
-    const projectRows = yearProjectRows(input.projects.breakdowns, input.currency, input.projects.statuses);
+    const projectRows = yearProjectRows(input.projects.breakdowns, input.currency, input.projects.statuses, input.projects.overhead);
     if (input.projects.pending) body = <DelayedSkeleton><ProfitRowsSkeleton /></DelayedSkeleton>;
     else if (input.projects.failed) {
       body = (

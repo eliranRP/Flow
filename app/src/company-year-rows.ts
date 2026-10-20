@@ -1,5 +1,6 @@
 import { formatAmountText, type Breakdown } from "@flow/shared";
 import { projectGroupRow } from "./breakdown-project-group";
+import type { OverheadProject } from "./project-cash";
 import type { CompanyYears, YearFigures } from "./company-years";
 import { HEBREW_MONTHS } from "./ui/date-math";
 
@@ -17,7 +18,7 @@ export type YearRow = {
   profitMinor: bigint;
   /**
    * What a tap opens: the month view (this month's row), a year (since the start's rows), a project's profit
-   * page; none for a closed month, the finished projects' row or כללי.
+   * page (the overhead project's row among them); none for a closed month, the finished projects' row or כללי.
    */
   opens: { kind: "month" } | { kind: "year"; year: string } | { kind: "project"; projectId: string } | null;
 };
@@ -62,20 +63,22 @@ export type ProjectStatus = { id: string; status: string };
 /**
  * A year's projects from the year's two project breakdowns (income and expense, in the currency): a row per
  * project, opening its profit page; the finished ones summed into one row, "פרויקטים שהסתיימו · 4"; the general
- * costs as כללי. The biggest profit first.
+ * costs in one row, under the overhead project's name and opening it, or כללי when none is set (projectGroupRow).
+ * The overhead project is never folded into the finished row. The biggest profit first.
  */
 export function yearProjectRows(
   breakdowns: { income: Breakdown | null; expense: Breakdown | null },
   currency: string,
   statuses: readonly ProjectStatus[],
+  overhead: OverheadProject | null,
 ): YearRow[] {
-  const finishedIds = new Set(statuses.filter((project) => project.status === "finished").map((project) => project.id));
+  const finishedIds = new Set(statuses.filter((project) => project.status === "finished" && project.id !== overhead?.id).map((project) => project.id));
   const rows = new Map<string, YearRow>();
   const finished = { income: 0n, expense: 0n, ids: new Set<string>() };
   for (const direction of ["income", "expense"] as const) {
     for (const group of breakdowns[direction]?.groups ?? []) {
       if (group.currency !== currency) continue;
-      const { key, title, projectId } = projectGroupRow(group);
+      const { key, title, projectId } = projectGroupRow(group, overhead);
       if (projectId != null && finishedIds.has(projectId)) {
         finished[direction] += group.amount_minor;
         finished.ids.add(projectId);

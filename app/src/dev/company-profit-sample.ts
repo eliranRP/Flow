@@ -7,7 +7,8 @@ import type { CompanyProfitSample } from "../screens/company-profit-screen";
  * FLOW-140c1 fixture: the board's Profit frame's structure and figures with invented names (USD, amounts
  * in cents). October so far: income 24,877, counted expenses 28,311 (the board's cents rounded per line, so
  * the project rows' whole figures add up to the head), so the month is a loss;
- * five projects and the general line כללי, the same five lines' categories. Lines are signed (income +).
+ * five projects and the general costs' row, under the overhead project's name (p0, invented), the same five
+ * lines' categories. Lines are signed (income +).
  * The project breakdowns are in get_breakdown's shape: the general costs under `overhead` (overhead-role costs)
  * and `unassigned` (no project), with no name; `shared` on a project that holds a share of a shared cost.
  */
@@ -153,6 +154,7 @@ export const COMPANY_PROFIT_SAMPLE: CompanyProfitSample = {
   })),
   today: "2026-10-11",
   monthKey: "2026-10",
+  overhead: { id: "p0", name: "משרד החברה / תקורה" },
   next: { ...COMPANY_NEXT_READS, months: MONTHS },
   years: COMPANY_YEARS_SAMPLE,
 };

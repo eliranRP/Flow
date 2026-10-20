@@ -139,7 +139,7 @@ function ProjectsBody({
         {overhead ? (
           <ListRow
             variant="project"
-            title="הוצאות כלליות"
+            title={overhead.name}
             hint="תקורה · לא פרויקט"
             icon={<span className="ui-row-initials ui-row-dashed" aria-hidden="true"><HomeIcon size={18} /></span>}
             agorot={BigInt(netIn(overhead.cash, base))}

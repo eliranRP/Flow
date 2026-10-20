@@ -112,13 +112,13 @@ export function useProjectCashMonthLinesQuery(projectId: string, month: string, 
  * list reads it with no project; the project page reads its own row. `month` is `YYYY-MM`, or the
  * current month when omitted.
  */
-export function useProjectsCashMonth(month?: string, projectId?: string) {
+export function useProjectsCashMonth(month?: string, projectId?: string, enabled = true) {
   const preview = useHomePreview();
   const client = useQueryClient();
   const listKey = ["projects-cash", month, undefined] as const;
   return useQuery({
     queryKey: ["projects-cash", month, projectId],
-    enabled: preview === "off",
+    enabled: enabled && preview === "off",
     // A project's row starts from the list's read of the same month, as old as that read: it reads
     // again once the list's copy would have, and at once when a write marked the list stale.
     initialData: () => projectRowFromList(client.getQueryData<ProjectsCashMonth>(listKey), projectId),
@@ -146,4 +146,22 @@ function projectRowFromList(list: ProjectsCashMonth | undefined, projectId: stri
   if (list == null || projectId == null || projectId === "") return undefined;
   const row = list.projects.find((project) => project.id === projectId);
   return row == null ? undefined : { ...list, projects: [row] };
+}
+
+/** The company's overhead project as the owner set and named it (set_overhead_project). */
+export type OverheadProject = { id: string; name: string };
+
+/**
+ * The overhead project from the Projects list's read (its `is_overhead` row follows `companies.overhead_project_id`,
+ * the same cache as the Projects tab): undefined while it loads, null when none is set or the read failed. Preview
+ * and `enabled` false read nothing and give null.
+ */
+export function useOverheadProject(enabled: boolean): OverheadProject | null | undefined {
+  const preview = useHomePreview();
+  const live = enabled && preview === "off";
+  const read = useProjectsCashMonth(undefined, undefined, live);
+  if (!live || read.isError) return null;
+  if (read.data === undefined) return undefined;
+  const row = read.data?.projects.find((project) => project.is_overhead);
+  return row == null ? null : { id: row.id, name: row.name };
 }
