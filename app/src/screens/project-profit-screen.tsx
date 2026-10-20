@@ -1,10 +1,9 @@
 import { formatAmountText, type ProfitMonth, type ProfitMonths, type ProjectDetail } from "@flow/shared";
-import type { ReactNode } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
 import { useCompanyCurrency } from "../company-currency";
 import { projectExpenseMinor, projectRows } from "../by-currency";
-import type { MonthFigures } from "../month-figures";
+import { profitMonthFigures } from "../next-month-chart";
 import { allTime, monthPeriod, shiftMonthKey } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { useNextMonthForecast, type NextMonthSample } from "../project-next-month-query";
@@ -24,6 +23,7 @@ import { ProfitRowsSkeleton, ProfitSkeleton } from "../ui/screen-skeletons";
 import { DelayedSkeleton } from "../ui/skeleton";
 import { ScreenState } from "../ui/screen-state";
 import { NextMonthBlock } from "./next-month-block";
+import { SummaryRow } from "./profit-summary";
 
 export type ProjectProfitSample = { project: NonNullable<ProjectDetail>; months: NonNullable<ProfitMonths>; next?: NextMonthSample };
 
@@ -180,7 +180,7 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
                 // The card waits for the months too, so its expense caption never shows the count first.
                 loading={cardLoading || monthsLoading}
                 current={monthsLoading || monthsFailed ? null : shiftMonthKey(nextMonth.month, -1)}
-                figures={profitFigures(rows, currency)}
+                figures={profitMonthFigures(rows, currency)}
                 firstMonth={oldest ?? null}
                 currency={currency}
                 netLabel="רווח צפוי"
@@ -210,26 +210,6 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
         </div>
       )}
     </ScreenState>
-  );
-}
-
-/** The chart's history from the profit months: each month's income and counted expenses in the page's currency. */
-function profitFigures(rows: readonly ProfitMonth[], currency: string): Map<string, MonthFigures> {
-  const figures = new Map<string, MonthFigures>();
-  for (const month of rows) {
-    const row = month.by_currency.find((figure) => figure.currency === currency);
-    if (row == null) continue;
-    figures.set(month.month, { incomeMinor: row.income_minor, expenseMinor: row.expense_minor < 0n ? -row.expense_minor : row.expense_minor });
-  }
-  return figures;
-}
-
-export function SummaryRow({ label, value, strong = false }: { label: string; value: ReactNode; strong?: boolean }) {
-  return (
-    <div className={strong ? "ui-pp-row ui-pp-row-strong" : "ui-pp-row"}>
-      <span className="ui-pp-label">{label}</span>
-      <span>{value}</span>
-    </div>
   );
 }
 

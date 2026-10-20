@@ -46,10 +46,19 @@ function rowAmount(row: Element): bigint {
   return minorOf(top.lastElementChild?.textContent);
 }
 
-/** The two bars' amounts on the card: הכנסות first, then הוצאות שנספרות ברווח. */
+/** The summary card's rows: label and figure, in order. */
+function summaryRows(): { label: string; minor: bigint; strong: boolean }[] {
+  return [...document.querySelectorAll(".ui-cp-card .ui-pp-row")].map((row) => ({
+    label: row.querySelector(".ui-pp-label")?.textContent ?? "",
+    minor: minorOf(row.lastElementChild?.textContent),
+    strong: row.classList.contains("ui-pp-row-strong"),
+  }));
+}
+
+/** The card's הכנסות and הוצאות שנספרות ברווח rows. */
 function cardFigures(): { income: bigint; expense: bigint } {
-  const rows = [...document.querySelectorAll(".ui-cp-card .ui-cp-bar-top")];
-  return { income: minorOf(rows[0]?.lastElementChild?.textContent), expense: minorOf(rows[1]?.lastElementChild?.textContent) };
+  const rows = summaryRows();
+  return { income: rows[0]?.minor ?? 0n, expense: rows[1]?.minor ?? 0n };
 }
 
 describe("CompanyProfitScreen (FLOW-140c1)", () => {

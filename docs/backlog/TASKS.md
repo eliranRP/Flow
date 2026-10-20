@@ -206,6 +206,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-140"></a>[FLOW-140](tasks/FLOW-140.md) | Redesign: company profit, project profit, project month, and the basis sheet | UI (design approved) |
 | <a id="flow-141"></a>[FLOW-141](tasks/FLOW-141.md) | Redesign: the month-end forecast (צפי), which the user can correct | UI (design approved) |
 | <a id="flow-142"></a>[FLOW-142](tasks/FLOW-142.md) | Loans summary page, and the loan page's paid card first | UI (design approved) |
+| <a id="flow-143"></a>[FLOW-143](tasks/FLOW-143.md) | Company profit: summary rows, next month's card and the month chart (PR B) | UI (design approved) |
 | <a id="flow-920"></a>[FLOW-920](tasks/FLOW-920.md) | Project profit: the month's share and after-overhead rows from the server, and the old profit-month section goes | UI + server (follow-up to FLOW-140) |
 
 ## MCP
@@ -227,6 +228,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-213"></a>[FLOW-213](tasks/FLOW-213.md) | match_lines: reconcile an outside ledger export in one read | MCP |
 | <a id="flow-214"></a>[FLOW-214](tasks/FLOW-214.md) | search_expenses takes amounts in minor units too | SMALL CYCLE |
 | <a id="flow-215"></a>[FLOW-215](tasks/FLOW-215.md) | get_cash_lines names a missing side, and documents its page cap | SMALL CYCLE |
+| <a id="flow-216"></a>[FLOW-216](tasks/FLOW-216.md) | MCP get_company_next_month_inputs: the company forecast's inputs | MCP |
 | <a id="flow-515"></a>[FLOW-515](tasks/FLOW-515.md) | MCP: the AI connection page shows the assistant's name, its request count and the code's expiry from the server | MCP |
 
 ## Transactions and app UX

@@ -46,6 +46,7 @@ describe("the chart's history", () => {
     const history = chartHistory("2026-10", SIX, null);
     expect(chartLabel(history, ahead, "USD")).toBe("הכנסות והוצאות לפי חודש, מאי עד אוקטובר, וצפי נובמבר: הכנסות $4,150, הוצאות $1,865");
     expect(chartLabel(history, null, "USD")).toBe("הכנסות והוצאות לפי חודש, מאי עד אוקטובר");
+    expect(chartLabel(history, null, "USD", "הכנסות והוצאות של החברה")).toBe("הכנסות והוצאות של החברה, מאי עד אוקטובר");
   });
 });
 

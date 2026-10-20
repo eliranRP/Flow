@@ -17,7 +17,7 @@ import { List } from "../ui/list-row";
 import { ProfitSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
 import { MonthCategories, MonthLineRow } from "./project-month-categories";
-import { SummaryRow } from "./project-profit-screen";
+import { SummaryRow } from "./profit-summary";
 
 export type ProjectMonthProfitSample = { project: NonNullable<ProjectDetail>; month: string; lines: CashLine[] };
 

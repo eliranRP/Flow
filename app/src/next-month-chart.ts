@@ -1,4 +1,4 @@
-import { formatAmountText } from "@flow/shared";
+import { formatAmountText, type ProfitMonth } from "@flow/shared";
 import { CHART_MONTHS, type MonthFigures } from "./month-figures";
 import { shortMonth } from "./party-charges";
 import { shiftMonthKey } from "./period";
@@ -20,6 +20,17 @@ export type ChartHistory = {
 };
 
 const EMPTY: MonthFigures = { incomeMinor: 0n, expenseMinor: 0n };
+
+/** A profit page's history from get_profit_months: each month's income and counted expenses in one currency. */
+export function profitMonthFigures(months: readonly ProfitMonth[], currency: string): Map<string, MonthFigures> {
+  const figures = new Map<string, MonthFigures>();
+  for (const month of months) {
+    const row = month.by_currency.find((figure) => figure.currency === currency);
+    if (row == null) continue;
+    figures.set(month.month, { incomeMinor: row.income_minor, expenseMinor: row.expense_minor < 0n ? -row.expense_minor : row.expense_minor });
+  }
+  return figures;
+}
 
 /**
  * The six months to `current` (yyyy-mm), oldest first, each with its figures (none read is zero). A month
@@ -59,9 +70,12 @@ export function chartSub(history: ChartHistory, withForecast: boolean): string {
   return withForecast ? `${rangeWords(history)} וצפי` : rangeWords(history);
 }
 
-/** The one label a screen reader hears for the chart, with next month's numbers. */
-export function chartLabel(history: ChartHistory, forecast: ChartMonth | null, currency: string): string {
-  const head = `הכנסות והוצאות לפי חודש, ${rangeWords(history)}`;
+/**
+ * The one label a screen reader hears for the chart, with next month's numbers. `subject` names whose figures
+ * they are ("הכנסות והוצאות של החברה" on the company page).
+ */
+export function chartLabel(history: ChartHistory, forecast: ChartMonth | null, currency: string, subject = "הכנסות והוצאות לפי חודש"): string {
+  const head = `${subject}, ${rangeWords(history)}`;
   if (forecast == null) return head;
   return `${head}, וצפי ${monthWord(forecast.key)}: הכנסות ${formatAmountText(forecast.incomeMinor, currency)}, הוצאות ${formatAmountText(forecast.expenseMinor, currency)}`;
 }
@@ -70,7 +84,7 @@ export function chartLabel(history: ChartHistory, forecast: ChartMonth | null, c
 export type RentCategory = { id: string; name: string; parent_id?: string | null };
 
 /** A rent category: the starter set's שכירות, one the user named after it, or a sub-category of one. */
-function isRent(categoryId: string | null, categories: readonly RentCategory[]): boolean {
+export function isRent(categoryId: string | null, categories: readonly RentCategory[]): boolean {
   if (categoryId == null) return false;
   const category = categories.find((row) => row.id === categoryId);
   if (category == null) return false;

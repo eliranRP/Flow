@@ -1,4 +1,5 @@
-import type { Breakdown, BreakdownDirection } from "@flow/shared";
+import type { Breakdown, BreakdownDirection, ProfitMonth } from "@flow/shared";
+import { COMPANY_NEXT_READS } from "./company-next-month-sample";
 import type { CompanyProfitSample } from "../screens/company-profit-screen";
 
 /**
@@ -113,6 +114,27 @@ const categoryNames = [...new Set(LINES.map((line) => line[3]))];
 const income = LINES.filter((line) => line[4] > 0).reduce((sum, line) => sum + line[4], 0);
 const expense = -LINES.filter((line) => line[4] < 0).reduce((sum, line) => sum + line[4], 0);
 
+/** The company's months for the chart, May to October (October to date is the page's own month), in dollars. */
+function profitMonth(month: string, income: number, expense: number, open = false): ProfitMonth {
+  const last = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0)).getUTCDate();
+  return {
+    month,
+    from: `${month}-01`,
+    to: `${month}-${String(last)}`,
+    open,
+    by_currency: [{ currency: "USD", income_minor: BigInt(income), expense_minor: BigInt(-expense), profit_minor: BigInt(income - expense) }],
+  };
+}
+
+const MONTHS: ProfitMonth[] = [
+  profitMonth("2026-10", income, expense, true),
+  profitMonth("2026-09", 1_290_000, 3_762_000),
+  profitMonth("2026-08", 2_630_000, 1_971_800),
+  profitMonth("2026-07", 2_780_000, 1_880_400),
+  profitMonth("2026-06", 3_015_000, 1_784_000),
+  profitMonth("2026-05", 2_140_000, 2_300_000),
+];
+
 export const COMPANY_PROFIT_SAMPLE: CompanyProfitSample = {
   currency: "USD",
   basis: "cash",
@@ -126,4 +148,5 @@ export const COMPANY_PROFIT_SAMPLE: CompanyProfitSample = {
   })),
   today: "2026-10-11",
   monthKey: "2026-10",
+  next: { ...COMPANY_NEXT_READS, months: MONTHS },
 };

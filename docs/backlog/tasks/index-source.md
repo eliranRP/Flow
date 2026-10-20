@@ -202,6 +202,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-140
 - FLOW-141
 - FLOW-142
+- FLOW-143
 - FLOW-920
 
 ## MCP
@@ -221,6 +222,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-213
 - FLOW-214
 - FLOW-215
+- FLOW-216
 - FLOW-515
 
 ## Transactions and app UX

@@ -1249,6 +1249,9 @@ isOneToOne: false
 "collapse_split":
 { Args: { "p_id": string,"p_project_id": string }; Returns: string
                            },
+"company_next_month_inputs":
+{ Args: { "p_today"?: string }; Returns: Json
+                           },
 "company_pnl":
 { Args: { "p_basis": string,"p_company_id": string,"p_from": string,"p_to": string }; Returns: Json
                            },
