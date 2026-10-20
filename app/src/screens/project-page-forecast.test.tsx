@@ -1,12 +1,17 @@
+import { formatAmountText } from "@flow/shared";
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { cashMonthName } from "../cash";
+import { JUNIPER_NEXT_LOAN } from "../dev/project-next-month-sample";
 import { cash as flipCash, investment as flipInvestment, project as flipProject, thisMonth } from "../dev/project-cash-sample";
 import { kindNextSample } from "../dev/project-kinds-next-sample";
 import { kindSample } from "../dev/project-kinds-sample";
 import { devProjectsCash } from "../dev/projects-sample";
 import { shiftMonthKey } from "../period";
 import { monthWord } from "../project-next-edit";
+import type { ForecastLoan } from "../project-next-loans";
+import { applyForecastEdits, nextMonthForecast, nextMonthKey } from "../project-next-month";
+import { paymentsLeft } from "./loan-outlook";
 import { renderWithProviders } from "../test-render";
 import { ProjectDetailScreen } from "./flow-screens";
 
@@ -16,10 +21,11 @@ import { ProjectDetailScreen } from "./flow-screens";
 const next = cashMonthName(shiftMonthKey(thisMonth, 1));
 const previous = monthWord(shiftMonthKey(thisMonth, -1));
 
-function renderKind(kind: "rental" | "client") {
+function renderKind(kind: "rental" | "client", loans?: ForecastLoan[]) {
   const data = kindSample(kind, devProjectsCash.projects[0]);
+  const sampleNext = data.next == null || loans == null ? data.next : { ...data.next, loans };
   return renderWithProviders(
-    <ProjectDetailScreen sample={data.project} sampleCash={data.cash} sampleInvestment={data.investment} sampleMenuRow={data.row} sampleNext={data.next} />,
+    <ProjectDetailScreen sample={data.project} sampleCash={data.cash} sampleInvestment={data.investment} sampleMenuRow={data.row} sampleNext={sampleNext} />,
   );
 }
 
@@ -51,6 +57,29 @@ describe("the project page's next month (spec-fcwide)", () => {
     expect(screen.getByRole("link", { name: "רווח לפי חודש" }).getAttribute("href")).toBe("/projects/p-rental/profit?period=all");
     // The chart comes after the investment card, where "חודשים קודמים" was.
     expect(screen.getByRole("heading", { name: "השקעה והלוואות" }).compareDocumentPosition(chart)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it("a rental with an amortizing loan: the card and the chart add next month's principal to the צפי page's expenses", () => {
+    // The profit sample's loan, moved to start the month before this one, after two payments.
+    const base = JUNIPER_NEXT_LOAN.loans?.[0] as ForecastLoan;
+    const data = kindSample("rental", devProjectsCash.projects[0]);
+    const today = data.next?.today ?? "";
+    const loan: ForecastLoan = { ...base, projectId: data.project.id, startDate: `${shiftMonthKey(thisMonth, -1)}-01` };
+    const due = paymentsLeft(loan, today)?.find((row) => row.dueDate.startsWith(nextMonthKey(today)));
+    const principal = due?.principalMinor ?? 0n;
+    expect(principal).toBeGreaterThan(0n);
+    // What the צפי page shows for the same reads.
+    const profit = applyForecastEdits(nextMonthForecast({
+      projectId: data.project.id, currency: "USD", today, recurring: data.next?.expected.recurring ?? [], categoryMonths: data.next?.categoryMonths, loans: [loan], categories: data.next?.categories,
+    }), data.next?.edits ?? []);
+    const expenses = formatAmountText(profit.expenseMinor + principal, "USD");
+    renderKind("rental", [loan]);
+    const card = screen.getByRole("link", { name: new RegExp(`^צפי ${next}:`) });
+    expect(card.getAttribute("aria-label")).toContain(`הוצאות צפויות ${expenses}, תזרים צפוי `);
+    expect(card.getAttribute("aria-label")).toContain(formatAmountText(profit.incomeMinor - profit.expenseMinor - principal, "USD", { plus: true, direction: "income" }));
+    // The caption stays against last month's cash.
+    expect(within(card).getByText(`מול $1,740 ב${previous}`)).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /^הכנסות והוצאות לפי חודש, / }).getAttribute("aria-label")).toContain(`הוצאות ${expenses}`);
   });
 
   it("a flip: since the purchase, which sets the scale; no income, so the $0 is grey", () => {

@@ -73,5 +73,7 @@ describe("the card's captions", () => {
     const young = chartHistory("2026-10", figures([["2026-10", 0, 50_000]]), "2026-10");
     expect(expenseNote({ month: "2026-11", rows: [row("average", -50_000n, null, "א"), row("added", -9_000n, null, "ב")], expenseMinor: 59_000n }, young, "USD")).toBe("2 הוצאות צפויות");
     expect(expenseNote({ month: "2026-11", rows: [row("added", -9_000n)], expenseMinor: 9_000n }, young, "USD")).toBe("הוצאה צפויה אחת");
+    // In cash terms (decision 0196) a loan's principal is an expense no row holds: one more.
+    expect(expenseNote({ month: "2026-11", rows: [row("added", -9_000n)], expenseMinor: 51_000n }, young, "USD")).toBe("2 הוצאות צפויות");
   });
 });

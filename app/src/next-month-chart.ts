@@ -106,7 +106,10 @@ export function expenseNote(
   const previous = shiftMonthKey(forecast.month, -2);
   const month = history.months.find((row) => row.key === previous);
   if (month == null) {
-    const count = forecast.rows.filter((row) => row.minor < 0n).length;
+    const costs = forecast.rows.filter((row) => row.minor < 0n);
+    // In cash terms the loans' principal is an expense no row holds (cashForecast): it counts as one more.
+    const inRows = costs.reduce((sum, row) => sum - row.minor, 0n);
+    const count = costs.length + (forecast.expenseMinor > inRows ? 1 : 0);
     return count === 1 ? "הוצאה צפויה אחת" : `${String(count)} הוצאות צפויות`;
   }
   return `מול ${formatAmountText(month.expenseMinor, currency)} ב${monthWord(previous)}`;
