@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { z } from "zod";
 import { companyNextMonthForecast, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
-import { CHART_MONTHS } from "./next-month-chart";
+import { CHART_MONTHS } from "./month-figures";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { shiftMonthKey } from "./period";
