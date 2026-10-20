@@ -29,6 +29,7 @@ export const readRpcs = new Set([
   "forecast_overrides_for",
   "list_categories",
   "list_my_companies",
+  "list_my_push_devices",
   "list_project_category",
   "list_project_groups",
   "list_review",

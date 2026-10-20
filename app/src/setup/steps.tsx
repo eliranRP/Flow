@@ -19,7 +19,8 @@ import { Toggle } from "../ui/toggle";
 import { useMercuryConnect } from "../use-mercury-connect";
 import { useSumitConnect } from "../use-sumit-connect";
 import { assertNoError } from "../use-write";
-import { pushSupport, subscribeThisDevice } from "../push";
+import { pushSupport, subscribeThisDevice, type SubscribeOutcome } from "../push";
+import { subscribeDiagnostic, subscribeFailure } from "../screens/push-copy";
 import { type ConnectKind, openConnection } from "./connect-entry";
 import {
   BASIS_LABEL,
@@ -568,7 +569,11 @@ export function StepReview({
   );
 }
 
-/** Step 7 · מסך הבית. The switch subscribes this device when the browser can push; otherwise nothing is saved. */
+/**
+ * Step 7 · מסך הבית. The switch subscribes this device when the browser can push; otherwise nothing
+ * is saved. FLOW-516: a turn-on that fails stays on the step and says why (with the step it reached);
+ * סיום then finishes without asking again.
+ */
 export function StepInstall({
   onDone,
   onSkipStep,
@@ -578,6 +583,7 @@ export function StepInstall({
 }: StepProps & { initialMode?: InstallMode }) {
   const [notify, setNotify] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [pushFailed, setPushFailed] = useState<SubscribeOutcome | null>(null);
   const mode = initialMode ?? detectInstallMode();
   return (
     <OnboardingFrame
@@ -592,11 +598,18 @@ export function StepInstall({
           full
           busy={saving}
           onClick={() => {
-            setSaving(true);
-            void (async () => {
-              if (notify && pushSupport() === "ok") await subscribeThisDevice();
+            if (saving) return;
+            if (!notify || pushFailed != null || pushSupport() !== "ok") {
               onDone({ installed_at: nowIso() });
-            })().finally(() => { setSaving(false); });
+              return;
+            }
+            // The permission request runs in this tap, before any state change.
+            const pending = subscribeThisDevice();
+            setSaving(true);
+            void pending.then((outcome) => {
+              if (outcome.result === "ok") onDone({ installed_at: nowIso() });
+              else setPushFailed(outcome);
+            }).finally(() => { setSaving(false); });
           }}
         >
           {INSTALL_FINISH}
@@ -607,6 +620,12 @@ export function StepInstall({
       <div className="ui-onb-card ui-onb-switch">
         <Toggle label={NOTIFY_LABEL} hint={NOTIFY_HINT} checked={notify} onChange={setNotify} />
       </div>
+      {pushFailed != null && pushFailed.result !== "ok" ? (
+        <div role="status" className="ui-onb-note">
+          <p className="t-caption">{subscribeFailure(pushFailed.result).message}</p>
+          <p className="t-caption t-muted" data-push-diagnostic="">{subscribeDiagnostic(pushFailed)}</p>
+        </div>
+      ) : null}
       {isStandalone() ? null : <InstallSteps mode={mode} className="ui-onb-install" />}
     </OnboardingFrame>
   );

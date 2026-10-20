@@ -3,6 +3,8 @@
 // flow-push-new every 5 minutes (new bank and SUMIT lines since the last push), and
 // flow-push-weekly on Sunday at 08:00 (the week's new lines and what waits for review).
 // Every count in a message comes from SQL (decision 0084), and no message names an amount.
+// FLOW-516: kind "test" is the app's own call, with the user's JWT and no cron secret: it sends
+// one test push to the caller's own devices, at most 5 an hour (claim_push_test, decision 0201).
 // Nothing here changes the books.
 
 import { empty, json } from "./http.ts";
@@ -27,7 +29,7 @@ export interface CountTarget extends PushTarget {
   waiting: number;
 }
 
-export type PushKind = "evening" | "new" | "weekly";
+export type PushKind = "evening" | "new" | "weekly" | "test";
 
 export interface PushReport {
   users: number;
@@ -54,6 +56,11 @@ export function weeklyMessage(fresh: number, waiting: number): { title: string; 
   const lines = fresh === 0 ? "לא נכנסו תנועות השבוע" : fresh === 1 ? "תנועה אחת נכנסה השבוע" : `${fresh} תנועות נכנסו השבוע`;
   const review = waiting === 0 ? "הכול מאושר" : waiting === 1 ? "אחת מחכה לאישור" : `${waiting} מחכות לאישור`;
   return { title: "סיכום שבועי", body: `${lines} · ${review}`, url: waiting > 0 ? "/review" : "/", tag: "weekly-summary" };
+}
+
+/** FLOW-516: the test push. It opens Settings → התראות. */
+export function testMessage(): { title: string; body: string; url: string; tag: string } {
+  return { title: "התראת בדיקה", body: "כך ייראו ההתראות מ־Flow", url: "/settings/notifications", tag: "test-push" };
 }
 
 export function readVapid(env: (name: string) => string): VapidKeys | null {
@@ -116,7 +123,7 @@ async function readKind(req: Request): Promise<PushKind | null> {
     const body = JSON.parse(text) as unknown;
     const kind = body && typeof body === "object" ? (body as Record<string, unknown>).kind : undefined;
     if (kind === undefined) return "evening";
-    return kind === "evening" || kind === "new" || kind === "weekly" ? kind : null;
+    return kind === "evening" || kind === "new" || kind === "weekly" || kind === "test" ? kind : null;
   } catch {
     return null;
   }
@@ -169,16 +176,91 @@ async function rpc(deps: PushSendDeps, url: string, key: string, name: string, a
   });
   if (!response.ok) {
     await response.body?.cancel();
-    throw new Error(`push_rpc_${name}`);
+    throw new Error(`push_rpc_${name}_${String(response.status)}`);
   }
   const text = await response.text();
   return text === "" ? null : JSON.parse(text);
+}
+
+/** The caller's claim on one test push, made with their own JWT, so the database names the user. */
+export async function claimTestPush(
+  deps: PushSendDeps,
+  url: string,
+  anonKey: string,
+  authorization: string,
+): Promise<{ userId: string; devices: number } | "unauthorized" | "limit"> {
+  const response = await deps.fetch(`${url.replace(/\/+$/, "")}/rest/v1/rpc/claim_push_test`, {
+    method: "POST",
+    headers: { apikey: anonKey, authorization, "content-type": "application/json" },
+    body: "{}",
+  });
+  if (response.status === 401 || response.status === 403) {
+    await response.body?.cancel();
+    return "unauthorized";
+  }
+  const body = await response.json().catch(() => null) as Record<string, unknown> | null;
+  if (!response.ok) {
+    if (body?.message === "push_test_limit") return "limit";
+    throw new Error(`push_rpc_claim_push_test_${String(response.status)}`);
+  }
+  const userId = body?.user_id;
+  const devices = body?.devices;
+  if (typeof userId !== "string" || typeof devices !== "number" || !Number.isInteger(devices) || devices < 0) {
+    throw new Error("push_rpc_claim_push_test_shape");
+  }
+  return { userId, devices };
+}
+
+function parseTestTargets(data: unknown, userId: string): (PushTarget & { user_id: string })[] {
+  if (!Array.isArray(data)) throw new Error("push_targets");
+  return data.flatMap((row) => {
+    if (!row || typeof row !== "object") return [];
+    const item = row as Record<string, unknown>;
+    // Only the claimed user's devices, whatever the read returns.
+    if (item.user_id !== userId || typeof item.endpoint !== "string" || typeof item.p256dh !== "string" || typeof item.auth !== "string") return [];
+    return [{ user_id: userId, endpoint: item.endpoint, p256dh: item.p256dh, auth: item.auth }];
+  });
+}
+
+/** FLOW-516: one test push to the caller's own devices. The user's JWT is the only way in. */
+async function handleTestPush(req: Request, deps: PushSendDeps, serviceKey: string): Promise<Response> {
+  const authorization = req.headers.get("authorization") ?? "";
+  const bearer = authorization.replace(/^Bearer\s+/i, "").trim();
+  // A user's own call: the cron secret or the service key never sends a test push.
+  if (bearer === "" || bearer === serviceKey.trim() || (req.headers.get("x-flow-cron") ?? "") !== "") {
+    return json({ error: "unauthorized" }, 401);
+  }
+  const supabaseUrl = deps.env("SUPABASE_URL");
+  const anonKey = deps.env("SUPABASE_ANON_KEY");
+  if (supabaseUrl.trim() === "" || serviceKey.trim() === "" || anonKey.trim() === "") return json({ error: "missing_key" }, 500);
+  const vapid = readVapid(deps.env);
+  if (!vapid) return json({ error: "missing_vapid" }, 500);
+  const now = deps.now ?? (() => new Date());
+  try {
+    const claim = await claimTestPush(deps, supabaseUrl, anonKey, `Bearer ${bearer}`);
+    if (claim === "unauthorized") return json({ error: "unauthorized" }, 401);
+    if (claim === "limit") return json({ error: "push_test_limit" }, 429);
+    if (claim.devices === 0) return json({ devices: 0, sent: 0, gone: 0, failed: 0 });
+    const targets = parseTestTargets(await rpc(deps, supabaseUrl, serviceKey, "push_test_targets", { p_user: claim.userId }), claim.userId);
+    const { report, gone } = await remindEvening(
+      targets,
+      (target) => sendPush(deps.fetch, target, testMessage(), vapid, now(), 10 * 60),
+    );
+    if (gone.length > 0) await rpc(deps, supabaseUrl, serviceKey, "note_push_results", { p_reminded: [], p_gone: gone });
+    console.info(`push-send test devices=${String(targets.length)} sent=${String(report.sent)} gone=${String(report.gone)} failed=${String(report.failed)}`);
+    return json({ devices: targets.length, sent: report.sent, gone: report.gone, failed: report.failed });
+  } catch (error) {
+    console.error(`push-send test error=${error instanceof Error ? error.message : "unknown"}`);
+    return json({ error: "push_failed" }, 500);
+  }
 }
 
 export async function handlePushSend(req: Request, deps: PushSendDeps): Promise<Response> {
   if (req.method === "OPTIONS") return empty();
   if (req.method !== "POST") return json({ error: "method" }, 405);
   const serviceKey = serviceRoleKey(deps.env);
+  const kind = await readKind(req);
+  if (kind === "test") return await handleTestPush(req, deps, serviceKey);
   const caller = tagCallerKind({
     cronHeader: req.headers.get("x-flow-cron") ?? "",
     cronSecret: deps.env("CRON_SECRET"),
@@ -186,7 +268,6 @@ export async function handlePushSend(req: Request, deps: PushSendDeps): Promise<
     serviceKey,
   });
   if (caller === null) return json({ error: "unauthorized" }, 401);
-  const kind = await readKind(req);
   if (kind === null) return json({ error: "kind" }, 400);
   const supabaseUrl = deps.env("SUPABASE_URL");
   if (supabaseUrl.trim() === "" || serviceKey.trim() === "") return json({ error: "missing_key" }, 500);
@@ -217,7 +298,9 @@ export async function handlePushSend(req: Request, deps: PushSendDeps): Promise<
     }
     console.info(`push-send ${kind} users=${report.users} sent=${report.sent} gone=${report.gone} failed=${report.failed}`);
     return json(report);
-  } catch {
+  } catch (error) {
+    // The error names the step and the HTTP status (push_rpc_<name>_<status>), never a key or endpoint.
+    console.error(`push-send ${kind} error=${error instanceof Error ? error.message : "unknown"}`);
     return json({ error: "push_failed" }, 500);
   }
 }

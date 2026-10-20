@@ -1240,6 +1240,9 @@ isOneToOne: false
 "claim_invite_email":
 { Args: { "p_invite_id": string }; Returns: Json
                            },
+"claim_push_test":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "clear_loan_split":
 { Args: { "p_transaction_id": string }; Returns: Json
                            },
@@ -1414,6 +1417,9 @@ isOneToOne: false
             }[]
                            },
 "list_my_companies":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"list_my_push_devices":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
 "list_project_category":
@@ -1742,6 +1748,11 @@ isOneToOne: false
                            },
 "push_subscribe":
 { Args: { "p_auth": string,"p_endpoint": string,"p_p256dh": string,"p_user_agent"?: string }; Returns: undefined
+                           },
+"push_test_targets":
+{ Args: { "p_user": string }; Returns: {
+              "auth": string,"endpoint": string,"p256dh": string,"user_id": string
+            }[]
                            },
 "push_unsubscribe":
 { Args: { "p_endpoint": string }; Returns: undefined
