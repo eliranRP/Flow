@@ -114,6 +114,90 @@ describe("the live device row", () => {
     expect(subscribe).not.toHaveBeenCalled();
   });
 
+  // FLOW-936: a shared switch flips at once and saves in the background.
+  function holdSaves() {
+    const pending: Array<{ args: Record<string, unknown>; finish: (ok: boolean) => void }> = [];
+    rpc.mockImplementation((name: string, args: Record<string, unknown>) => {
+      if (name !== "set_notification_prefs") {
+        return Promise.resolve({ data: name === "list_my_push_devices" ? { devices } : prefs, error: null });
+      }
+      return new Promise((resolve) => {
+        pending.push({ args, finish: (ok) => { resolve(ok ? { data: prefs, error: null } : { data: null, error: { message: "boom" } }); } });
+      });
+    });
+    return pending;
+  }
+
+  it("a shared switch flips before its save returns, and the other switches stay free", async () => {
+    const pending = holdSaves();
+    await deviceSwitch();
+    const added = screen.getByRole("switch", { name: "תנועה חדשה" });
+    const weekly = screen.getByRole("switch", { name: "סיכום שבועי" });
+    fireEvent.click(added);
+    expect(added).toBeChecked();
+    expect(added).not.toHaveAttribute("aria-busy");
+    expect(weekly).toBeEnabled();
+    fireEvent.click(weekly);
+    expect(weekly).toBeChecked();
+    await waitFor(() => { expect(pending).toHaveLength(2); });
+    expect(pending.map((call) => call.args)).toEqual([
+      expect.objectContaining({ p_new_transaction: true }),
+      expect.objectContaining({ p_weekly_summary: true }),
+    ]);
+    await act(async () => { pending[0]?.finish(true); await Promise.resolve(); });
+    // The first answer does not draw the second switch back while its save is on its way.
+    expect(weekly).toBeChecked();
+    await act(async () => { pending[1]?.finish(true); await Promise.resolve(); });
+    expect(added).toBeChecked();
+    expect(weekly).toBeChecked();
+  });
+
+  it("a save that fails puts that switch back and says so", async () => {
+    const pending = holdSaves();
+    await deviceSwitch();
+    const added = screen.getByRole("switch", { name: "תנועה חדשה" });
+    fireEvent.click(added);
+    expect(added).toBeChecked();
+    await waitFor(() => { expect(pending).toHaveLength(1); });
+    await act(async () => { pending[0]?.finish(false); await Promise.resolve(); });
+    await waitFor(() => { expect(added).not.toBeChecked(); });
+    expect(await screen.findByText("לא הצלחנו לשמור.")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "תזכורת ערב" })).toBeChecked();
+  });
+
+  it("quick taps on one switch end where the last tap left it", async () => {
+    const pending = holdSaves();
+    await deviceSwitch();
+    const added = screen.getByRole("switch", { name: "תנועה חדשה" });
+    fireEvent.click(added);
+    fireEvent.click(added);
+    fireEvent.click(added);
+    fireEvent.click(added);
+    expect(added).not.toBeChecked();
+    // One save at a time: the first is on its way, the taps after it wait for it.
+    await waitFor(() => { expect(pending).toHaveLength(1); });
+    await act(async () => { pending[0]?.finish(true); await Promise.resolve(); });
+    // Then only the latest value is sent.
+    await waitFor(() => { expect(pending).toHaveLength(2); });
+    expect(pending[1]?.args).toEqual(expect.objectContaining({ p_new_transaction: false }));
+    await act(async () => { pending[1]?.finish(true); await Promise.resolve(); });
+    expect(added).not.toBeChecked();
+    expect(pending).toHaveLength(2);
+  });
+
+  it("ביטול on the toast turns the switch back", async () => {
+    const pending = holdSaves();
+    await deviceSwitch();
+    const added = screen.getByRole("switch", { name: "תנועה חדשה" });
+    fireEvent.click(added);
+    expect(await screen.findByText("תנועה חדשה פועלת")).toBeInTheDocument();
+    await act(async () => { pending[0]?.finish(true); await Promise.resolve(); });
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    expect(added).not.toBeChecked();
+    await waitFor(() => { expect(pending).toHaveLength(2); });
+    expect(pending[1]?.args).toEqual(expect.objectContaining({ p_new_transaction: false }));
+  });
+
   it("the test push says what happened", async () => {
     device = { state: "subscribed", tag: null };
     devices = [{ id: "d1", user_agent: null, created_at: "2026-10-20T08:00:00.000Z", tag: "bbbbbbbbbbbbbbbb" }];

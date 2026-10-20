@@ -1,0 +1,1 @@
+FLOW-936: in Settings → התראות the three switches now flip at once and save in the background; a failed save puts the switch back and says so, and no switch waits for another. The row for this device is read again when the app comes back to the front or its worker takes control, so it no longer needs the app closed and opened to be right. No migration.

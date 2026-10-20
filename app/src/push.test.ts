@@ -1,3 +1,6 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // FLOW-516: this device's push state and every way a turn-on can stop, with the browser mocked.
@@ -10,7 +13,7 @@ vi.mock("./lib/supabase", () => ({
   }),
 }));
 
-const { errorDetail, forgetThisDevice, readDevicePush, subscribeThisDevice } = await import("./push");
+const { errorDetail, forgetThisDevice, readDevicePush, subscribeThisDevice, useDevicePushQuery } = await import("./push");
 const { pushOwner, notePushOwner } = await import("./push-owner");
 
 /** A 65-byte key of 4s, base64url, as the build carries it. */
@@ -100,6 +103,43 @@ describe("readDevicePush", () => {
     vi.stubEnv("VITE_VAPID_PUBLIC_KEY", "");
     browser();
     expect(await readDevicePush()).toEqual({ state: "not-configured", tag: null });
+  });
+});
+
+describe("useDevicePushQuery", () => {
+  // FLOW-936: a state read before the worker took control, or before a change in the iOS Settings
+  // app, stayed on screen until the app was opened again.
+  function watch() {
+    let current: unknown = null;
+    browser({ getSubscription: () => Promise.resolve(current) });
+    const events = new EventTarget();
+    Object.assign(navigator.serviceWorker, {
+      addEventListener: events.addEventListener.bind(events),
+      removeEventListener: events.removeEventListener.bind(events),
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = ({ children }: { children: ReactNode }) => createElement(QueryClientProvider, { client }, children);
+    const view = renderHook(() => useDevicePushQuery(true), { wrapper });
+    return { view, events, subscribe: () => { current = subscription(); } };
+  }
+
+  it("reads this device again when the service worker takes control", async () => {
+    const { view, events, subscribe } = watch();
+    await waitFor(() => { expect(view.result.current.data?.state).toBe("not-subscribed"); });
+    subscribe();
+    act(() => { events.dispatchEvent(new Event("controllerchange")); });
+    await waitFor(() => { expect(view.result.current.data?.state).toBe("subscribed"); });
+  });
+
+  it("reads this device again when the app comes back to the front, and stops listening when it unmounts", async () => {
+    const { view, subscribe } = watch();
+    await waitFor(() => { expect(view.result.current.data?.state).toBe("not-subscribed"); });
+    subscribe();
+    act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+    await waitFor(() => { expect(view.result.current.data?.state).toBe("subscribed"); });
+    const remove = vi.spyOn(document, "removeEventListener");
+    view.unmount();
+    expect(remove).toHaveBeenCalledWith("visibilitychange", expect.any(Function));
   });
 });
 

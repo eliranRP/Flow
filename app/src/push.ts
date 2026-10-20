@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { getSupabase } from "./lib/supabase";
 import { notePushOwner } from "./push-owner";
 import { detectInstallMode, isStandalone } from "./ui/install-prompt";
@@ -191,7 +192,26 @@ export async function readDevicePush(ms = 3000): Promise<DeviceInfo> {
   }
 }
 
+/**
+ * This device's state, read again when it can have changed outside the page (FLOW-936): when the
+ * service worker takes control (a first open, while the worker still installs, reads "no-worker",
+ * and that stayed while the screen was open), and each time the app comes back to the front
+ * (permission changed in the iOS Settings app, or the subscription dropped).
+ */
 export function useDevicePushQuery(enabled: boolean) {
+  const client = useQueryClient();
+  useEffect(() => {
+    if (!enabled || typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+    const container = navigator.serviceWorker;
+    const reread = () => { void client.invalidateQueries({ queryKey: DEVICE_PUSH_KEY }); };
+    const onVisible = () => { if (document.visibilityState === "visible") reread(); };
+    container.addEventListener("controllerchange", reread);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      container.removeEventListener("controllerchange", reread);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [client, enabled]);
   return useQuery({ queryKey: DEVICE_PUSH_KEY, enabled, retry: false, staleTime: 0, queryFn: () => readDevicePush() });
 }
 

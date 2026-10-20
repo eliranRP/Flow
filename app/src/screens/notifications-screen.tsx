@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useId, useState, type ReactNode } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import {
@@ -119,7 +119,9 @@ export function NotificationsScreen({
   const toast = useToast();
   const [local, setLocal] = useState<NotificationPrefs>(sample ?? NO_PREFS);
   const [sampleHere, setSampleHere] = useState<DevicePush>(() => device ?? (can === "ok" ? "not-subscribed" : can === "not-configured" ? "unsupported" : can));
-  const [busy, setBusy] = useState<NotificationPrefKey | null>(null);
+  // Each switch's save in the background: the value on screen, the last one the server stored, and
+  // whether a save is running. A tap during a save waits for it, then only the latest value is sent.
+  const saves = useRef(new Map<NotificationPrefKey, { want: boolean; stored: boolean; running: boolean }>());
   const [deviceBusy, setDeviceBusy] = useState(false);
   const [testBusy, setTestBusy] = useState(false);
   const [failure, setFailure] = useState<SubscribeOutcome | null>(null);
@@ -221,28 +223,60 @@ export function NotificationsScreen({
     toast.show({
       message: `${label} ${on ? "פועלת" : "כבויה"}`,
       action: "ביטול",
-      onAction: () => { void change(key, !on); },
+      onAction: () => { change(key, !on); },
     });
   }
 
-  /** The switches only say what to receive; they never subscribe or drop a device. */
-  async function change(key: NotificationPrefKey, on: boolean) {
-    if (busy != null) return;
+  /** Puts one switch on screen as `on`, keeping the server's other fields and every other switch. */
+  function show(key: NotificationPrefKey, on: boolean) {
+    client.setQueryData<NotificationPrefs>(PUSH_PREFS_KEY, (current) => ({ ...(current ?? NO_PREFS), [key]: on }));
+  }
+
+  /** Sends a switch's latest value until the server holds it; a failure puts the switch back. */
+  async function save(key: NotificationPrefKey) {
+    const entry = saves.current.get(key);
+    if (entry == null || entry.running) return;
+    entry.running = true;
+    try {
+      while (entry.want !== entry.stored) {
+        const want = entry.want;
+        try {
+          const saved = await saveNotificationPrefs({ [key]: want });
+          entry.stored = want;
+          // The server's answer, with every switch still on its way kept as the user left it.
+          const merged = { ...saved, [key]: entry.want };
+          for (const [other, pending] of saves.current) if (other !== key && pending.running) merged[other] = pending.want;
+          client.setQueryData(PUSH_PREFS_KEY, merged);
+        } catch {
+          entry.want = entry.stored;
+          show(key, entry.stored);
+          toast.show({ message: SAVE_FAILED, tone: "bad" });
+        }
+      }
+    } finally {
+      entry.running = false;
+    }
+  }
+
+  /**
+   * The switches only say what to receive; they never subscribe or drop a device. A tap flips the
+   * switch at once and saves in the background, so no switch waits for another (FLOW-936).
+   */
+  function change(key: NotificationPrefKey, on: boolean) {
     if (!live) {
       setLocal((current) => ({ ...current, [key]: on }));
       said(key, on);
       return;
     }
-    setBusy(key);
-    try {
-      const saved = await saveNotificationPrefs({ [key]: on });
-      client.setQueryData(PUSH_PREFS_KEY, saved);
-      said(key, on);
-    } catch {
-      toast.show({ message: SAVE_FAILED, tone: "bad" });
-    } finally {
-      setBusy(null);
-    }
+    const current = client.getQueryData<NotificationPrefs>(PUSH_PREFS_KEY) ?? NO_PREFS;
+    const entry = saves.current.get(key);
+    if (entry?.running === true) entry.want = on;
+    else saves.current.set(key, { want: on, stored: current[key], running: false });
+    // A read on its way would draw the old value over the tap.
+    void client.cancelQueries({ queryKey: PUSH_PREFS_KEY });
+    show(key, on);
+    said(key, on);
+    void save(key);
   }
 
   return (
@@ -280,10 +314,7 @@ export function NotificationsScreen({
             hint={item.hint}
             icon={item.icon}
             checked={prefs[item.key]}
-            busy={busy === item.key}
-            // While one switch saves, the others wait.
-            disabled={busy != null && busy !== item.key}
-            onChange={(checked) => { void change(item.key, checked); }}
+            onChange={(checked) => { change(item.key, checked); }}
           />
         ))}
       </List>
