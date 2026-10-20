@@ -34,9 +34,14 @@ test("the chips sort the page, a category opens in place, and a project opens it
   await expect(categories.nth(1)).toHaveAttribute("aria-expanded", "false");
   await chips.getByRole("button", { name: "לפי פרויקט" }).click();
   await expect(page).toHaveURL(/\/e2e\/company-profit\?preview=1$/);
-  // The general costs (get_breakdown's overhead and unassigned) are one כללי row that opens nothing (FLOW-147).
+  // The general costs (get_breakdown's overhead and unassigned, and the overhead project's own lines) are one row
+  // under the overhead project's name, opening that project (owner 20/10); no כללי row and no key in a link.
   const list = page.locator(".ui-cp-list");
-  await expect(list.locator(".ui-cp-row", { hasText: "כללי" }).locator("a")).toHaveCount(0);
+  const overheadRow = list.locator(".ui-cp-row", { hasText: "משרד החברה / תקורה" });
+  await expect(overheadRow.locator("a")).toHaveAttribute("href", /^\/projects\/p0\/profit\?from=profit&preview=1$/);
+  // Its own income line, the three overhead-role costs and the unassigned one.
+  await expect(overheadRow).toContainText("5 תנועות");
+  await expect(list.locator(".ui-cp-row", { hasText: "כללי" })).toHaveCount(0);
   await expect(list.locator('a[href^="/projects/overhead"], a[href^="/projects/unassigned"]')).toHaveCount(0);
   await page.locator('a[href^="/projects/"]').first().click();
   await expect(page).toHaveURL(/\/projects\/p\d\/profit\?from=profit&preview=1$/);
@@ -129,6 +134,7 @@ test("the period switch: this year, its projects, since the start and a closed y
 
 test("by project, a project of the year opens its profit page (FLOW-145)", async ({ page }) => {
   await page.goto("/e2e/company-profit?preview=1&period=year&list=project");
+  await expect(page.locator(".ui-cp-period-list .ui-cp-row", { hasText: "משרד החברה / תקורה" }).locator("a")).toHaveAttribute("href", /^\/projects\/p0\/profit\?from=profit&preview=1$/);
   await page.locator('.ui-cp-period-list a[href^="/projects/"]').first().click();
   await expect(page).toHaveURL(/\/projects\/p\d\/profit\?from=profit&preview=1$/);
 });
