@@ -1,6 +1,6 @@
-import { type CategoryRow, type ExpectedParty, formatAmountText, type ProjectCategoryMonths } from "@flow/shared";
+import { type CategoryRow, type ExpectedParty, formatAmountText, monthIndex, type ProjectCategoryMonths } from "@flow/shared";
 import { shortMonth } from "./party-charges";
-import { type ForecastPace, monthIndex, type NextMonthForecast } from "./project-next-month";
+import type { ForecastPace, NextMonthForecast } from "./project-next-month";
 import { HEBREW_MONTHS } from "./ui/date-math";
 
 /**
