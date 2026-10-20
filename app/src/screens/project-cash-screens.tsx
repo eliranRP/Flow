@@ -1,5 +1,5 @@
 import { formatAmountText, type CashMonths, type ProjectDetail } from "@flow/shared";
-import { useRef, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
   cashMonthName,
@@ -121,7 +121,7 @@ export function ProjectCashOverview({
     : null;
   const summary = summaryFigures != null;
   // FLOW-445: once the figure scrolls under the band, the compact bar slides down: Back, "−$X • name", ⋯.
-  const titleEnd = useRef<HTMLSpanElement>(null);
+  const [titleEnd, setTitleEnd] = useState<HTMLSpanElement | null>(null);
   // A page too short to scroll the mark under the bar shows it at its bottom. A taller page passes the
   // mark before its bottom, so the mark alone decides there.
   const markPast = useScrolledPast(titleEnd, true);
@@ -178,7 +178,7 @@ export function ProjectCashOverview({
                 ))}
               </div>
             )}
-            <span ref={titleEnd} className="ui-compact-mark" aria-hidden="true" />
+            <span ref={setTitleEnd} className="ui-compact-mark" aria-hidden="true" />
           </>
         }
       />

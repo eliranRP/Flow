@@ -48,7 +48,7 @@ const activeMonth = cashMonth(
     cashRow({ id: "juniper", name: "Juniper Ct", type: "flip", net: -8_000_00, spent: 12_000_00, budget: 10_000_00 }),
     cashRow({ id: "tidewater", name: "Tidewater", type: "השכרה", net: 3_000_00 }),
     cashRow({ id: "quarry", name: "Quarry Rd", type: "השכרה", net: 0 }),
-    cashRow({ id: "office", name: "הוצאות כלליות", overhead: true, net: -5_000_00 }),
+    cashRow({ id: "office", name: "משרד החברה / תקורה", overhead: true, net: -5_000_00 }),
   ],
   { count: 2, net: -1_500_00 },
 );

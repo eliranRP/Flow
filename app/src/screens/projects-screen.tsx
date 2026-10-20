@@ -112,7 +112,7 @@ function ProjectsBody({
   onNew?: () => void;
 }) {
   const base = month.base_currency;
-  const titleEnd = useRef<HTMLSpanElement>(null);
+  const [titleEnd, setTitleEnd] = useState<HTMLSpanElement | null>(null);
   const past = useScrolledPast(titleEnd, true);
   const active = orderActiveProjects(month.projects, base);
   const overhead = overheadRow(month);
@@ -120,7 +120,7 @@ function ProjectsBody({
   const unassignedNet = netIn(month.unassigned.cash, base);
   return (
     <>
-      <span ref={titleEnd} className="ui-compact-mark" aria-hidden="true" />
+      <span ref={setTitleEnd} className="ui-compact-mark" aria-hidden="true" />
       {month.unassigned.count > 0 ? (
         <div className="ui-page-pad ui-projects-unassigned">
           <Button variant="link" to={`/review${search}`} chevron>
@@ -139,7 +139,7 @@ function ProjectsBody({
         {overhead ? (
           <ListRow
             variant="project"
-            title="הוצאות כלליות"
+            title={overhead.name}
             hint="תקורה · לא פרויקט"
             icon={<span className="ui-row-initials ui-row-dashed" aria-hidden="true"><HomeIcon size={18} /></span>}
             agorot={BigInt(netIn(overhead.cash, base))}

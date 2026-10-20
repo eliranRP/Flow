@@ -110,15 +110,16 @@ export function useProjectCashMonthLinesQuery(projectId: string, month: string, 
 /**
  * FLOW-445: one month's cash for every project and the unassigned bucket (projects_cash_month). The
  * list reads it with no project; the project page reads its own row. `month` is `YYYY-MM`, or the
- * current month when omitted.
+ * current month when omitted. `enabled` false reads nothing (useOverheadProject, in overhead-project.ts, turns it off for a
+ * sample page); preview never reads.
  */
-export function useProjectsCashMonth(month?: string, projectId?: string) {
+export function useProjectsCashMonth(month?: string, projectId?: string, enabled = true) {
   const preview = useHomePreview();
   const client = useQueryClient();
   const listKey = ["projects-cash", month, undefined] as const;
   return useQuery({
     queryKey: ["projects-cash", month, projectId],
-    enabled: preview === "off",
+    enabled: enabled && preview === "off",
     // A project's row starts from the list's read of the same month, as old as that read: it reads
     // again once the list's copy would have, and at once when a write marked the list stale.
     initialData: () => projectRowFromList(client.getQueryData<ProjectsCashMonth>(listKey), projectId),

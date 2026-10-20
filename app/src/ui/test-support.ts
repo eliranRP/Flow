@@ -1,4 +1,5 @@
-import { expect } from "vitest";
+import { act } from "@testing-library/react";
+import { expect, vi } from "vitest";
 
 function pixels(raw: string): number {
   if (raw.startsWith("var(")) {
@@ -117,4 +118,50 @@ export function expectThemePaint(el: HTMLElement, prop = "color") {
 export function expectRtl() {
   expect(document.documentElement.dir).toBe("rtl");
   expect(document.documentElement.lang).toBe("he");
+}
+
+type Watch = { callback: IntersectionObserverCallback; targets: Set<Element>; self: IntersectionObserver };
+
+/**
+ * An IntersectionObserver that answers as the browser does for the compact bar's mark: a node reports at
+ * once when observed, at the top of the page unless `page.scrolled` says otherwise, and `settle()` reports
+ * every observed node again. A node no longer in the page reads as a zero rect, as WebKit and Chromium
+ * report it, which is above the bar. Undo it with `vi.unstubAllGlobals()`.
+ */
+export function stubPageObserver(): { page: { scrolled: boolean }; settle: () => void } {
+  const watches = new Set<Watch>();
+  const page = { scrolled: false };
+  const entry = (target: Element) => {
+    const attached = target.isConnected;
+    const top = attached ? (page.scrolled ? -20 : 120) : 0;
+    return { target, isIntersecting: attached && !page.scrolled, boundingClientRect: { top } } as unknown as IntersectionObserverEntry;
+  };
+  vi.stubGlobal("IntersectionObserver", class {
+    private readonly watch: Watch;
+    constructor(callback: IntersectionObserverCallback) {
+      this.watch = { callback, targets: new Set(), self: this as unknown as IntersectionObserver };
+      watches.add(this.watch);
+    }
+    observe(target: Element) {
+      this.watch.targets.add(target);
+      this.watch.callback([entry(target)], this.watch.self);
+    }
+    unobserve(target: Element) {
+      this.watch.targets.delete(target);
+    }
+    disconnect() {
+      watches.delete(this.watch);
+    }
+    takeRecords() {
+      return [];
+    }
+  });
+  return {
+    page,
+    settle: () => {
+      act(() => {
+        for (const watch of [...watches]) for (const target of watch.targets) watch.callback([entry(target)], watch.self);
+      });
+    },
+  };
 }

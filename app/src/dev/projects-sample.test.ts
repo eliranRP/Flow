@@ -31,6 +31,6 @@ describe("projects list sample", () => {
       "תיקון גג · חשבונית פתוחה",
       "מטבח · עבודת לקוח",
     ]);
-    expect(overheadRow(devProjectsCash)?.name).toBe("הוצאות כלליות");
+    expect(overheadRow(devProjectsCash)?.name).toBe("משרד החברה / תקורה");
   });
 });

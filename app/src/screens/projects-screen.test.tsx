@@ -6,11 +6,20 @@ import { sampleDashboard } from "../ui/screen-stories-support";
 import { ProjectsScreen } from "./projects-screen";
 
 describe("ProjectsScreen (FLOW-445b)", () => {
-  it("lists the active projects and the general-expenses row, with no group rows", () => {
+  it("lists the active projects and the overhead project's row under its own name, with no group rows", () => {
     renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} />);
     expect(screen.getByRole("link", { name: /^Lark Hill/ })).toHaveAttribute("href", "/projects/p2");
-    expect(screen.getByRole("link", { name: /^הוצאות כלליות/ })).toBeInTheDocument();
+    const overhead = screen.getByRole("link", { name: /^משרד החברה \/ תקורה/ });
+    expect(overhead).toHaveAttribute("href", "/projects/p0");
+    expect(overhead).toHaveTextContent("תקורה · לא פרויקט");
     expect(document.querySelector('a[href*="/projects/groups/"]')).toBeNull();
+  });
+
+  it("a renamed overhead project shows its new name (owner 20/10)", () => {
+    const renamed = { ...devProjectsCash, projects: devProjectsCash.projects.map((row) => (row.is_overhead ? { ...row, name: "הנהלה ומשרד" } : row)) };
+    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={renamed} />);
+    expect(screen.getByRole("link", { name: /^הנהלה ומשרד/ })).toHaveAttribute("href", "/projects/p0");
+    expect(screen.queryByText("משרד החברה / תקורה")).toBeNull();
   });
 
   it("names a project over its budget on its own row, and keeps the finished ones closed until opened", () => {

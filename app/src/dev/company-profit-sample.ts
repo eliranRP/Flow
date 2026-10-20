@@ -7,14 +7,16 @@ import type { CompanyProfitSample } from "../screens/company-profit-screen";
  * FLOW-140c1 fixture: the board's Profit frame's structure and figures with invented names (USD, amounts
  * in cents). October so far: income 24,877, counted expenses 28,311 (the board's cents rounded per line, so
  * the project rows' whole figures add up to the head), so the month is a loss;
- * five projects and the general line כללי, the same five lines' categories. Lines are signed (income +).
+ * five projects and the general costs' row, under the overhead project's name (p0, invented): the overhead project's
+ * own income (an insurance refund filed under it) with the overhead-role and unassigned costs. Lines are signed
+ * (income +).
  * The project breakdowns are in get_breakdown's shape: the general costs under `overhead` (overhead-role costs)
  * and `unassigned` (no project), with no name; `shared` on a project that holds a share of a shared cost.
  */
 type Role = "overhead" | "shared";
 type Line = [date: string, payee: string, project: string | null, category: string, signed: number, role?: Role];
 
-const PROJECTS: Record<string, string> = { p1: "בית הדקל", p2: "וילה הברושים", p3: "דירת הרימון", p4: "בית השקד", p5: "הבית ברחוב הזית" };
+const PROJECTS: Record<string, string> = { p0: "משרד החברה / תקורה", p1: "בית הדקל", p2: "וילה הברושים", p3: "דירת הרימון", p4: "בית השקד", p5: "הבית ברחוב הזית" };
 
 const CATEGORY_IDS: Record<string, string> = {
   "עבודות לקוח": "c-client-work",
@@ -36,7 +38,7 @@ const LINES: Line[] = [
   ["2026-10-07", "לקוח עבודות", "p1", "עבודות לקוח", 1_500_000],
   ["2026-10-01", "שוכרת א׳", "p3", "שכירות", 185_000],
   ["2026-10-03", "שוכר ב׳", "p3", "שכירות", 230_000],
-  ["2026-10-08", "ביטוח מטריה", "p3", "החזר ביטוח", 215_200],
+  ["2026-10-08", "ביטוח מטריה", "p0", "החזר ביטוח", 215_200],
   ["2026-10-02", "שוכרת ג׳", "p4", "שכירות", 185_000],
   ["2026-10-09", "שוכר ד׳", "p4", "שכירות", 172_500],
   ["2026-10-01", "בנק הלוואות", "p2", "ריבית הלוואות", -183_800],
@@ -153,6 +155,7 @@ export const COMPANY_PROFIT_SAMPLE: CompanyProfitSample = {
   })),
   today: "2026-10-11",
   monthKey: "2026-10",
+  overhead: { id: "p0", name: "משרד החברה / תקורה" },
   next: { ...COMPANY_NEXT_READS, months: MONTHS },
   years: COMPANY_YEARS_SAMPLE,
 };
