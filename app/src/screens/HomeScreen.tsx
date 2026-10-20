@@ -110,7 +110,7 @@ export function CashEmptyHome({
         <ul className="ui-home-empty-list">
           <li>כמה נכנס וכמה יצא החודש, מול החודש הקודם</li>
           <li>שורות שמחכות לאישור שלכם</li>
-          <li>צפי לסוף החודש לפי הקבועים והחשבוניות</li>
+          <li>תזרים צפוי לסוף החודש לפי הקבועים והחשבוניות</li>
         </ul>
       </section>
       <SetupHomeSlot emptyHome />
@@ -375,7 +375,7 @@ export function CashHome({
             <HomeMonthPill monthKey={monthKey} nav={nav} />
             <HomeSwipeFigures monthKey={monthKey} figures={figures} search={search} nav={nav} animate={animate} />
             {isPast || forecast == null ? null : (
-              <Link to="/forecast" className="ui-home-forecast-link" aria-label="צפי לסוף החודש">
+              <Link to="/forecast" className="ui-home-forecast-link" aria-label="תזרים צפוי לסוף החודש">
                 <ForecastRow monthKey={monthKey} minor={forecast} currency={base} />
               </Link>
             )}

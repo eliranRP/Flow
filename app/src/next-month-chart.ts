@@ -4,6 +4,7 @@ import { shortMonth } from "./party-charges";
 import { shiftMonthKey } from "./period";
 import { monthWord } from "./project-next-edit";
 import type { NextMonthForecast } from "./project-next-month";
+import { forecastWords, type ForecastKind } from "./ui/forecast-words";
 import type { ChartMonth } from "./ui/month-chart-scale";
 
 /**
@@ -71,13 +72,15 @@ export function chartSub(history: ChartHistory, withForecast: boolean): string {
 }
 
 /**
- * The one label a screen reader hears for the chart, with next month's numbers. `subject` names whose figures
- * they are ("הכנסות והוצאות של החברה" on the company page).
+ * The one label a screen reader hears for the chart, with next month's numbers, in the page's words (a cash
+ * view's נכנס and יצא, a profit view's הכנסות and הוצאות). `subject` names whose figures they are ("הכנסות
+ * והוצאות של החברה" on the company page); by default it is the chart's title.
  */
-export function chartLabel(history: ChartHistory, forecast: ChartMonth | null, currency: string, subject = "הכנסות והוצאות לפי חודש"): string {
-  const head = `${subject}, ${rangeWords(history)}`;
+export function chartLabel(history: ChartHistory, forecast: ChartMonth | null, currency: string, kind: ForecastKind = "profit", subject?: string): string {
+  const words = forecastWords(kind);
+  const head = `${subject ?? words.chart}, ${rangeWords(history)}`;
   if (forecast == null) return head;
-  return `${head}, וצפי ${monthWord(forecast.key)}: הכנסות ${formatAmountText(forecast.incomeMinor, currency)}, הוצאות ${formatAmountText(forecast.expenseMinor, currency)}`;
+  return `${head}, וצפי ${monthWord(forecast.key)}: ${words.incomeShort} ${formatAmountText(forecast.incomeMinor, currency)}, ${words.expenseShort} ${formatAmountText(forecast.expenseMinor, currency)}`;
 }
 
 /** A company category as the income caption reads it: its name, and its parent's id when it has one. */

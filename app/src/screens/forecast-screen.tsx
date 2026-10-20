@@ -3,32 +3,38 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cashMonthKey, cashRows } from "../cash";
 import { daysLeftInMonth, type ForecastPatch, type MonthForecast, nextMonth, priorPatch, useMonthForecastQuery, useResetForecastMonth, useRestoreForecast, useSetForecastItem } from "../forecast-month";
+import { expenseCountNote, incomeCountNote, itemsCaption, monthEndChart } from "../forecast-chart";
+import { CHART_MONTHS, cashMonthFigures, type MonthFigures } from "../month-figures";
 import { useCategoriesQuery, useDashboardQuery } from "../use-books";
 import { useCashMonthsQuery } from "../use-cash";
 import { useGoBack } from "../ui/back";
 import { israelToday } from "../ui/date-math";
 import { ScreenHeader } from "../ui/screen-header";
+import { NextMonthCardSkeleton } from "../ui/screen-skeletons";
 import { DelayedSkeleton, ListSkeleton } from "../ui/skeleton";
 import { EmptyState } from "../ui/empty-state";
 import { CalendarCheckIcon } from "../ui/icons";
 import { useToast } from "../ui/toast";
-import { ChangedLine, dayMonth, ForecastFootnote, itemWhat, itemWhen, MovedRow, signed } from "./forecast-parts";
+import { ChangedLine, dayMonth, FORECAST_TITLE, ForecastFootnote, itemWhat, itemWhen, MovedRow, signed } from "./forecast-parts";
 import { forecastCategories, type ForecastSoFar, useForecastSoFarQuery } from "./forecast-categories";
 import { ForecastCategoryView, type ForecastView, ForecastViewSwitch } from "./forecast-category-view";
 import { ForecastItemPage } from "./forecast-item-page";
 import { monthName } from "./home-parts";
 import { Amount } from "../ui/amount";
+import { ForecastCard, MonthChart } from "../ui/month-forecast";
 import { NO_CATEGORY } from "../recurring-layout";
 import { cx } from "../ui/cx";
 
 /**
  * A story's data: the builder's output (in `data.base`, the currency it counted) and the cash net today, in its minor units.
- * `soFar` is the month by category for לפי קטגוריה; `view` and `openCategories` are where a frame opens.
+ * `months` is the chart's cash months by yyyy-mm (the current one to date); `soFar` is the month by category for
+ * לפי קטגוריה; `view` and `openCategories` are where a frame opens.
  */
 export type ForecastSample = {
   data: MonthForecast;
   net: bigint;
   today: string;
+  months?: ReadonlyMap<string, MonthFigures>;
   soFar?: ForecastSoFar;
   view?: ForecastView;
   openCategories?: readonly string[];
@@ -116,6 +122,8 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
   const month = today.slice(0, 7);
   const query = useMonthForecastQuery(month, live);
   const cash = useCashMonthsQuery();
+  // The chart's six months: Home's read holds four, so the chart has its own (one read, under "dashboard").
+  const chartCash = useCashMonthsQuery(live, CHART_MONTHS);
   const write = useSetForecastItem(month);
   const reset = useResetForecastMonth(month);
   const restore = useRestoreForecast(month);
@@ -129,9 +137,13 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
   const base = data?.base ?? "ILS";
   const currentRow = cash.data?.months.find((row) => cashMonthKey(row.month) === month);
   const net = sample?.net ?? cashRows(currentRow, base).find((row) => row.currency === base)?.net_minor ?? 0n;
+  // Today's cash is the sum's start: with no read of this month (loading, offline, a failed read), no figure is shown.
+  const startKnown = sample != null || currentRow != null;
   const build: ForecastBuild | null = data?.build ?? null;
   const total = build == null ? 0n : net + build.incomeTotal - build.expenseTotal;
   const days = daysLeftInMonth(today, month);
+  const chartFigures = sample != null ? sample.months ?? null : chartCash.data == null ? null : cashMonthFigures(chartCash.data, base);
+  const chart = build == null || chartFigures == null ? null : monthEndChart(month, chartFigures, { incomeMinor: build.incomeTotal, expenseMinor: build.expenseTotal }, base);
   const byCategory = view === "categories";
   const { pathname, search } = useLocation();
   const navigate = useNavigate();
@@ -247,7 +259,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
   if (build != null && income.length + expense.length + build.small.length === 0 && moved.length === 0) {
     return (
       <div className="ui-forecast-screen">
-        <ScreenHeader className="ui-tab-root-head" title="צפי" backTo="/" backText="בית" subtitle={`${monthName(month)} · נכון ל־${today.slice(8, 10)}/${today.slice(5, 7)}`} />
+        <ScreenHeader className="ui-tab-root-head" title={FORECAST_TITLE} backTo="/" backText="בית" subtitle={`${monthName(month)} · נכון ל־${today.slice(8, 10)}/${today.slice(5, 7)}`} />
         <div className="ui-forecast-empty">
           <EmptyState
             icon={<CalendarCheckIcon />}
@@ -275,9 +287,9 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
     <div className={cx("ui-forecast-screen", open != null && "ui-forecast-screen-paged")}>
       <div className={cx("ui-forecast-compact", compact && "ui-forecast-compact-on")} aria-hidden={!compact}>
         <span>בית</span>
-        <span className="ui-forecast-compact-figure">צפי · <bdi dir="ltr">{forecastBigText(total, base)}</bdi></span>
+        <span className="ui-forecast-compact-figure">{startKnown ? <>{`${FORECAST_TITLE} · `}<bdi dir="ltr">{forecastBigText(total, base)}</bdi></> : FORECAST_TITLE}</span>
       </div>
-      <ScreenHeader title="צפי" backTo="/" backText="בית" subtitle={`סוף ${monthName(month)} · עוד ${String(days)} ימים`} />
+      <ScreenHeader title={FORECAST_TITLE} backTo="/" backText="בית" subtitle={`סוף ${monthName(month)} · עוד ${String(days)} ימים`} />
       {data == null && live && query.isError ? (
         <p className="ui-forecast-error t-caption t-muted" role="alert">לא הצלחנו לטעון את הצפי.</p>
       ) : null}
@@ -288,10 +300,37 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
       ) : null}
       {build == null ? null : (
         <>
-          <p className={cx("ui-forecast-big", total < 0n && "ui-forecast-big-neg")} aria-label="הצפי לסוף החודש">
+          {!startKnown ? (
+            // A read that failed, or came back without this month (no company, a month the server has not opened), says so.
+            cash.isError || cash.isSuccess ? (
+              <p className="ui-forecast-error t-caption t-muted" role="alert">לא הצלחנו לטעון את התזרים של היום.</p>
+            ) : (
+              <DelayedSkeleton><NextMonthCardSkeleton /></DelayedSkeleton>
+            )
+          ) : (
+          <>
+          <p className={cx("ui-forecast-big", total < 0n && "ui-forecast-big-neg")} aria-label="תזרים צפוי לסוף החודש">
             <Amount agorot={total} size="display" currency={base} />
           </p>
-          <p className="ui-forecast-today">היום <bdi dir="ltr">{forecastBigText(net, base)}</bdi></p>
+          {/* The whole sum: today's cash, what is still expected in and out, and the month's end (the big figure). */}
+          <div className="ui-fc-block ui-forecast-fc">
+            <ForecastCard
+              title={`עד סוף ${monthName(month)}`}
+              kind="cash"
+              currency={base}
+              start={{ label: "תזרים היום", minor: net }}
+              incomeMinor={build.incomeTotal}
+              expenseMinor={build.expenseTotal}
+              incomeNote={incomeCountNote(build, today)}
+              expenseNote={expenseCountNote(build)}
+              netLabel={`תזרים בסוף ${monthName(month)}`}
+              strong
+              caption={itemsCaption(build)}
+            />
+            {chart == null ? null : <MonthChart kind="cash" history={chart.months} forecast={null} sub={chart.sub} label={chart.label} />}
+          </div>
+          </>
+          )}
           <ChangedLine changed={changed} onReset={resetAll} />
           <ForecastViewSwitch view={view} onPick={setView} />
           {byCategory ? (

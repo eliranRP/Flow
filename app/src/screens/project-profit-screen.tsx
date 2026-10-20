@@ -183,7 +183,7 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
                 figures={profitMonthFigures(rows, currency)}
                 firstMonth={oldest ?? null}
                 currency={currency}
-                netLabel="רווח צפוי"
+                kind="profit"
                 cardHref={`/projects/${id}/profit/next${search}`}
                 categories={nextMonth.categories}
                 today={nextMonth.today}

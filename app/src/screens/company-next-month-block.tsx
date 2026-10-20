@@ -47,22 +47,23 @@ export function CompanyNextMonthBlock({
         <DelayedSkeleton><NextMonthCardSkeleton /></DelayedSkeleton>
       ) : forecast == null || forecast.rows.length === 0 ? null : (
         <ForecastCard
-          monthName={cashMonthName(forecast.month, new Date(`${today}T12:00:00Z`))}
+          title={cashMonthName(forecast.month, new Date(`${today}T12:00:00Z`))}
+          kind="profit"
           currency={currency}
           incomeMinor={forecast.incomeMinor}
           expenseMinor={forecast.expenseMinor}
           incomeNote={companyIncomeNote(forecast, categories)}
           expenseNote={companyExpenseNote(forecast, current, thisMonthExpense, currency)}
-          netLabel="רווח צפוי"
           caption={companyForecastCaption(forecast)}
         />
       )}
       {history == null ? null : (
         <MonthChart
+          kind="profit"
           history={history.months}
           forecast={loading ? null : ahead}
           sub={chartSub(history, !loading && ahead != null)}
-          label={chartLabel(history, loading ? null : ahead, currency, "הכנסות והוצאות של החברה")}
+          label={chartLabel(history, loading ? null : ahead, currency, "profit", "הכנסות והוצאות של החברה")}
         />
       )}
     </div>

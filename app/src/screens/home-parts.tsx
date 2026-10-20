@@ -183,7 +183,7 @@ export function ForecastRow({ monthKey, minor, currency }: { monthKey: string; m
   return (
     <div className="ui-home-forecast ui-band-fade">
       <div className="ui-home-forecast-text">
-        <p className="ui-home-forecast-title">{`צפי לסוף ${monthName(monthKey)}`}</p>
+        <p className="ui-home-forecast-title">{`תזרים צפוי לסוף ${monthName(monthKey)}`}</p>
         <p className="ui-home-forecast-sub">הערכה · לפי קבועים וחשבוניות פתוחות</p>
       </div>
       <span className="ui-home-forecast-value">

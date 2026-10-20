@@ -1,5 +1,5 @@
-/* Next month's forecast card and the month chart, the same on every screen (canvas note spec-fcwide;
-   the Profit and Projects boards' fc card and chartRows). */
+/* The forecast card and the month chart, the same on every screen (canvas notes spec-fcwide and spec-cash2;
+   the Profit, Projects and MonthForecast boards' fc card and chartRows). */
 .ui-fc-block {
   display: flex;
   flex-direction: column;
@@ -33,8 +33,14 @@
   gap: var(--space-2);
 }
 
+/* At 320 a long caption ("16 פריטים · פירוט למטה") drops under the title instead of breaking. */
 .ui-fc-head {
+  flex-wrap: wrap;
   align-items: center;
+}
+
+.ui-fc-caption {
+  white-space: nowrap;
 }
 
 .ui-fc-month {
@@ -113,6 +119,34 @@
   font-weight: var(--type-section-weight);
 }
 
+/* תזרים צפוי: the sum starts from today's cash, with a divider under it. */
+.ui-fc-start {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-block-end: calc(var(--space-2) + var(--space-half));
+  border-block-end: 1px solid var(--color-line);
+  font-size: var(--type-line2-size);
+  color: var(--color-text-secondary);
+}
+
+.ui-fc-start > .ui-num {
+  color: var(--color-text);
+}
+
+/* ...and ends on the screen's figure: 17/500, the same figure and colour as the big one. */
+.ui-fc-net-strong {
+  font-size: var(--type-body-size);
+  font-weight: var(--type-section-weight);
+  color: var(--color-text);
+}
+
+.ui-fc-start.ui-fc-neg > .ui-num,
+.ui-fc-net-strong.ui-fc-neg > .ui-num {
+  color: var(--color-bad);
+}
+
 .ui-fc-chart {
   display: flex;
   flex-direction: column;
@@ -187,6 +221,35 @@
   background: transparent;
 }
 
+/* The month in progress: the solid bar so far, under a dashed cap of what is still expected. */
+.ui-fc-stack {
+  display: flex;
+  flex-direction: column;
+  inline-size: 42%;
+  max-inline-size: calc(var(--space-4) + var(--space-half));
+}
+
+.ui-fc-stack > .ui-fc-bar {
+  inline-size: 100%;
+  max-inline-size: none;
+}
+
+.ui-fc-stack-capped > .ui-fc-bar {
+  border-start-start-radius: 0;
+  border-start-end-radius: 0;
+}
+
+.ui-fc-cap {
+  box-sizing: border-box;
+  border: 1.5px dashed var(--color-accent);
+  border-block-end: 0;
+  border-radius: var(--radius-chart-bar) var(--radius-chart-bar) 0 0;
+}
+
+.ui-fc-cap-out {
+  border-color: var(--color-chart-expense);
+}
+
 .ui-fc-bar-label {
   font-size: var(--type-cents-size);
   color: var(--color-text-muted);
@@ -194,7 +257,8 @@
 }
 
 /* At 320 with seven months, "נוב׳ · צפי" is wider than its column: it wraps under itself instead of running into October. */
-.ui-fc-ahead .ui-fc-bar-label {
+.ui-fc-ahead .ui-fc-bar-label,
+.ui-fc-now .ui-fc-bar-label {
   color: var(--color-accent-text);
   text-align: center;
   white-space: normal;

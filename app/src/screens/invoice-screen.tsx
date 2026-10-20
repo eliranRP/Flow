@@ -109,7 +109,7 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp }: { s
             </div>
             <div className="ui-inv-fact">
               <span className="ui-inv-fact-label">בתזרים</span>
-              <span className="ui-inv-fact-note text-text-secondary">לא נספרת עד שהתשלום מגיע. נכללת בצפי לסוף החודש.</span>
+              <span className="ui-inv-fact-note text-text-secondary">לא נספרת עד שהתשלום מגיע. נכללת בתזרים הצפוי לסוף החודש.</span>
             </div>
           </section>
 

@@ -1,4 +1,5 @@
 import { buildMonthForecast, expectedMonthsSchema, type ForecastOverrideRow, type MissingBill, type RecurringChange, unpaidRowSchema } from "@flow/shared";
+import type { MonthFigures } from "./month-figures";
 import type { ForecastSoFar } from "./screens/forecast-categories";
 import type { ForecastSample as MonthForecastSampleShape } from "./screens/forecast-screen";
 
@@ -158,6 +159,11 @@ export const SAMPLE_MISSING_USD: MissingBill = {
   category_id: null,
 };
 
+/** A chart's cash months in whole units, oldest first: [yyyy-mm, נכנס, יצא]. */
+function cashMonths(rows: ReadonlyArray<readonly [string, number, number]>): Map<string, MonthFigures> {
+  return new Map(rows.map(([key, income, expense]) => [key, { incomeMinor: BigInt(income) * 100n, expenseMinor: BigInt(expense) * 100n }]));
+}
+
 /**
  * FLOW-141: invented month-end forecast data for stories. Payees are placeholders and amounts are
  * round. `kind` picks the state: a positive month, a negative one, or one item moved to next month.
@@ -191,10 +197,13 @@ export function monthForecastSample(kind: ForecastSampleKind): MonthForecastSamp
     unpaid: unpaidRowSchema.array().parse(unpaid),
     overrides,
   });
+  // October so far adds up to today's net: in minus out.
+  const october: readonly [string, number, number] = kind === "negative" ? ["2026-10", 21_800, 23_300] : ["2026-10", 24_500, 23_300];
   return {
     today,
     net: kind === "negative" ? -150000n : 120000n,
     data: { month: "2026-10", base: "ILS", build, overrides },
+    months: cashMonths([["2026-05", 26_000, 22_400], ["2026-06", 27_500, 25_100], ["2026-07", 25_800, 26_900], ["2026-08", 28_200, 24_600], ["2026-09", 26_400, 25_700], october]),
   };
 }
 
@@ -281,6 +290,8 @@ export function monthForecastBoardSample(variant: BoardForecastVariant = "board"
   return {
     today,
     net: -1719100n,
+    // May to September as they ended, and October so far (+$24,878 in, $42,069 out: today's −$17,191), as the board's.
+    months: cashMonths([["2026-05", 23_100, 27_400], ["2026-06", 31_200, 24_800], ["2026-07", 28_600, 26_100], ["2026-08", 27_900, 29_300], ["2026-09", 14_200, 52_400], ["2026-10", 24_878, 42_069]]),
     data: { month: "2026-10", base: "USD", build, overrides },
     soFar,
     view: category ? "categories" : "items",

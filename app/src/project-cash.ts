@@ -1,9 +1,9 @@
 import type { CashCurrencyRow, CashLine, CashMonths, ProjectsCashMonth } from "@flow/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { cashMonthKey, cashSummaryRows } from "./cash";
+import { cashSummaryRows } from "./cash";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
-import { CHART_MONTHS, type MonthFigures } from "./month-figures";
+import { CHART_MONTHS } from "./month-figures";
 import { monthPeriod } from "./period";
 import { useHomePreview } from "./preview";
 import { israelToday } from "./ui/date-math";
@@ -48,16 +48,6 @@ export function projectCashSummaryRows(
     if (row.id === "kept") return { ...row, href: projectKeptSearchPath(projectId, monthSearch) };
     return { ...row, href: projectProfitMonthPath(projectId, key, monthSearch) };
   });
-}
-
-/** The month chart's history from the cash months: each month's נכנס and יצא in the currency. */
-export function projectCashFigures(data: NonNullable<CashMonths>, currency: string): Map<string, MonthFigures> {
-  const figures = new Map<string, MonthFigures>();
-  for (const month of data.months) {
-    const row = month.by_currency.find((figure) => figure.currency === currency);
-    if (row != null) figures.set(cashMonthKey(month.month), { incomeMinor: row.in_minor, expenseMinor: row.out_minor });
-  }
-  return figures;
 }
 
 /** Keys start with "dashboard" and "breakdown-lines", so every write that refreshes Home's cash refreshes the project's. */

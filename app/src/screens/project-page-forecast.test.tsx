@@ -41,7 +41,7 @@ function bar(chart: HTMLElement, month: number, side: "in" | "out"): string {
   return (chart.children[month]?.querySelector(`.ui-fc-bar-${side}`) as HTMLElement | null)?.style.blockSize ?? "";
 }
 
-describe("the project page's next month (spec-fcwide)", () => {
+describe("the project page's next month (spec-fcwide), in cash words (spec-cash2)", () => {
   it("a rental: the card says תזרים צפוי and opens the צפי page; six months and the forecast; the link opens the profit page", () => {
     const { container } = renderKind("rental");
     expect(screen.queryByRole("heading", { name: "חודשים קודמים" })).not.toBeInTheDocument();
@@ -50,9 +50,15 @@ describe("the project page's next month (spec-fcwide)", () => {
     expect(within(card).getByText("2 שכירויות קבועות")).toBeInTheDocument();
     expect(within(card).getByText(`מול $1,740 ב${previous}`)).toBeInTheDocument();
     expect(container.querySelector(".ui-fc-net")?.textContent).toBe("תזרים צפוי+$2,285");
-    const chart = screen.getByRole("img", { name: /^הכנסות והוצאות לפי חודש, / });
+    // Cash words: צפוי להיכנס and צפוי לצאת on the card, נכנס and יצא on the chart.
+    expect(within(card).getByText("צפוי להיכנס")).toBeInTheDocument();
+    expect(within(card).getByText("צפוי לצאת")).toBeInTheDocument();
+    expect(within(card).queryByText("הכנסות צפויות")).not.toBeInTheDocument();
+    const chart = screen.getByRole("img", { name: /^נכנס ויצא לפי חודש, / });
     expect(chart.children).toHaveLength(7);
-    expect(chart.getAttribute("aria-label")).toContain("הכנסות $4,150, הוצאות $1,865");
+    expect(chart.getAttribute("aria-label")).toContain("נכנס $4,150, יצא $1,865");
+    expect(screen.getByText("נכנס ויצא לפי חודש")).toBeInTheDocument();
+    expect(container.querySelector(".ui-fc-legend")?.textContent).toBe("נכנסיצאצפי");
     expect(screen.getByText(`${monthWord(shiftMonthKey(thisMonth, -5))} עד ${monthWord(thisMonth)} וצפי`)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "רווח לפי חודש" }).getAttribute("href")).toBe("/projects/p-rental/profit?period=all");
     // The chart comes after the investment card, where "חודשים קודמים" was.
@@ -75,16 +81,16 @@ describe("the project page's next month (spec-fcwide)", () => {
     const expenses = formatAmountText(profit.expenseMinor + principal, "USD");
     renderKind("rental", [loan]);
     const card = screen.getByRole("link", { name: new RegExp(`^צפי ${next}:`) });
-    expect(card.getAttribute("aria-label")).toContain(`הוצאות צפויות ${expenses}, תזרים צפוי `);
+    expect(card.getAttribute("aria-label")).toContain(`צפוי לצאת ${expenses}, תזרים צפוי `);
     expect(card.getAttribute("aria-label")).toContain(formatAmountText(profit.incomeMinor - profit.expenseMinor - principal, "USD", { plus: true, direction: "income" }));
     // The caption stays against last month's cash.
     expect(within(card).getByText(`מול $1,740 ב${previous}`)).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /^הכנסות והוצאות לפי חודש, / }).getAttribute("aria-label")).toContain(`הוצאות ${expenses}`);
+    expect(screen.getByRole("img", { name: /^נכנס ויצא לפי חודש, / }).getAttribute("aria-label")).toContain(`יצא ${expenses}`);
   });
 
   it("a flip: since the purchase, which sets the scale; no income, so the $0 is grey", () => {
     const { container } = renderFlip();
-    const chart = screen.getByRole("img", { name: /^הכנסות והוצאות לפי חודש, מתחילת הפרויקט, / });
+    const chart = screen.getByRole("img", { name: /^נכנס ויצא לפי חודש, מתחילת הפרויקט, / });
     expect(chart.children).toHaveLength(5);
     expect(screen.getByText("מתחילת הפרויקט וצפי")).toBeInTheDocument();
     expect(bar(chart, 0, "out")).toBe("108px");
@@ -93,7 +99,7 @@ describe("the project page's next month (spec-fcwide)", () => {
     // November's renovation average, $12,000 against the $185,000 purchase: the 4px floor.
     expect(bar(chart, 4, "out")).toBe("7px");
     const zero = container.querySelector(".ui-fc-col-zero");
-    expect(zero?.textContent).toBe("הכנסות צפויות$0אין הכנסה צפויה");
+    expect(zero?.textContent).toBe("צפוי להיכנס$0אין הכנסה צפויה");
     expect(container.querySelector(".ui-fc-net")?.textContent).toBe("תזרים צפוי−$12,000");
     expect(screen.getByText(`מול $38,120 ב${previous}`)).toBeInTheDocument();
   });
@@ -105,13 +111,13 @@ describe("the project page's next month (spec-fcwide)", () => {
     expect(within(card).getByText(`מול $21,600 ב${previous}`)).toBeInTheDocument();
     expect(container.querySelector(".ui-fc-net")?.textContent).toBe("תזרים צפוי+$8,300");
     expect(screen.getByText("מתחילת הפרויקט וצפי")).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /^הכנסות והוצאות לפי חודש/ }).children).toHaveLength(4);
+    expect(screen.getByRole("img", { name: /^נכנס ויצא לפי חודש/ }).children).toHaveLength(4);
   });
 
   it("a project with nothing filed yet shows neither", () => {
     const data = kindSample("new", devProjectsCash.projects[0]);
     renderWithProviders(<ProjectDetailScreen sample={data.project} sampleCash={data.cash} sampleInvestment={data.investment} sampleMenuRow={data.row} />);
-    expect(screen.queryByRole("img", { name: /^הכנסות והוצאות לפי חודש/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: /^נכנס ויצא לפי חודש/ })).not.toBeInTheDocument();
     expect(document.querySelector(".ui-fc-card")).toBeNull();
   });
 });

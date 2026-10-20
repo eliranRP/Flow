@@ -13,16 +13,17 @@ import { waitForAccessToken } from "./wait-for-session";
  * breakdown lines refetches the cash view too.
  */
 
-export function useCashMonthsQuery(active = true) {
+/** The company's last `months` cash months: Home's four, or a month chart's six (תזרים צפוי). */
+export function useCashMonthsQuery(active = true, months = CASH_MONTHS) {
   const preview = useHomePreview();
   return useQuery({
-    queryKey: ["dashboard", "cash-months", preview, CASH_MONTHS],
+    queryKey: ["dashboard", "cash-months", preview, months],
     enabled: active && preview === "off",
     queryFn: async (): Promise<CashMonths> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       await waitForAccessToken(supabase);
-      const { data, error } = await supabase.rpc("cash_months", { p_months: CASH_MONTHS });
+      const { data, error } = await supabase.rpc("cash_months", { p_months: months });
       if (error) throw error;
       return (await loadReadSchemas()).cashMonthsSchema.parse(data);
     },

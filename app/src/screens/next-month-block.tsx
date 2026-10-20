@@ -2,6 +2,7 @@ import { chartHistory, chartLabel, chartSub, expenseNote, forecastChartMonth, in
 import { cashMonthName } from "../cash";
 import type { MonthFigures } from "../month-figures";
 import type { NextMonthForecast } from "../project-next-month";
+import type { ForecastKind } from "../ui/forecast-words";
 import { ForecastCard, MonthChart } from "../ui/month-forecast";
 import { NextMonthCardSkeleton } from "../ui/screen-skeletons";
 import { DelayedSkeleton } from "../ui/skeleton";
@@ -21,7 +22,7 @@ export function NextMonthBlock({
   figures,
   firstMonth,
   currency,
-  netLabel,
+  kind,
   cardHref,
   categories,
   chartLink,
@@ -36,7 +37,8 @@ export function NextMonthBlock({
   /** yyyy-mm, the project's first month when known. */
   firstMonth: string | null;
   currency: string;
-  netLabel: string;
+  /** "profit" on the profit page (רווח צפוי), "cash" on the project page (צפוי להיכנס, צפוי לצאת, תזרים צפוי). */
+  kind: ForecastKind;
   cardHref: string;
   /** The company's categories, to name recurring rent in the income caption. */
   categories: readonly RentCategory[];
@@ -52,22 +54,23 @@ export function NextMonthBlock({
         <DelayedSkeleton><NextMonthCardSkeleton /></DelayedSkeleton>
       ) : forecast == null || (forecast.rows.length === 0 && forecast.expenseMinor === 0n) ? null : (
         <ForecastCard
-          monthName={cashMonthName(forecast.month, new Date(`${today}T12:00:00Z`))}
+          title={cashMonthName(forecast.month, new Date(`${today}T12:00:00Z`))}
+          kind={kind}
           currency={currency}
           incomeMinor={forecast.incomeMinor}
           expenseMinor={forecast.expenseMinor}
           incomeNote={incomeNote(forecast, categories)}
           expenseNote={expenseNote(forecast, history ?? { months: [], fromStart: false }, currency)}
-          netLabel={netLabel}
           href={cardHref}
         />
       )}
       {loading || history == null ? null : (
         <MonthChart
+          kind={kind}
           history={history.months}
           forecast={ahead}
           sub={chartSub(history, ahead != null)}
-          label={chartLabel(history, ahead, currency)}
+          label={chartLabel(history, ahead, currency, kind)}
           link={chartLink}
         />
       )}

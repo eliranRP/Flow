@@ -55,3 +55,27 @@ test("צפי: opening the small charges shows every one of them, not just the fi
   expect(scroll).toBeGreaterThan(200);
   expect(client).toBeGreaterThanOrEqual(scroll);
 });
+
+test("תזרים צפוי: the title, the month's end, the card's whole sum and the chart in progress (spec-cash2)", async ({ page }) => {
+  await page.goto("/e2e/forecast?preview=1&kind=board");
+  await expect(page.getByRole("heading", { level: 1, name: "תזרים צפוי" })).toBeVisible();
+  await expect(page.locator(".ui-forecast-big")).toHaveText("−$5,741");
+  // Today's figure lives in the card: the sum from today to the month's end, top to bottom.
+  await expect(page.locator(".ui-forecast-today")).toHaveCount(0);
+  const card = page.locator(".ui-forecast-fc .ui-fc-card");
+  await expect(card.locator(".ui-fc-start")).toHaveText("תזרים היום−$17,191");
+  await expect(card.locator(".ui-fc-col").first()).toContainText("+$19,750");
+  await expect(card.locator(".ui-fc-col").nth(1)).toContainText("$8,300");
+  await expect(card.locator(".ui-fc-net-strong")).toHaveText("תזרים בסוף אוקטובר−$5,741");
+  const chart = page.getByRole("img", { name: /^נכנס ויצא לפי חודש, מאי עד סוף אוקטובר\. אוקטובר עד היום/ });
+  await expect(chart).toBeVisible();
+  await expect(chart.locator(".ui-fc-now .ui-fc-cap")).toHaveCount(2);
+  // The card is not a control: the list is right below it.
+  await expect(card.locator("a, button")).toHaveCount(0);
+  // A row's page goes back to תזרים צפוי.
+  await page.getByRole("button", { name: /^Northgate Co,/ }).click();
+  const back = page.getByRole("button", { name: "חזרה לתזרים צפוי" });
+  await expect(back).toBeVisible();
+  await back.click();
+  await expect(page).toHaveURL(/\/e2e\/forecast\?preview=1&kind=board$/);
+});
