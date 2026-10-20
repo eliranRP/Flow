@@ -24,6 +24,7 @@ const FAILURE: Record<Exclude<SubscribeResult, "ok" | "denied">, string> = {
   "lookup-timeout": `המכשיר לא ענה. ${REOPEN}`,
   "lookup-threw": `המכשיר לא ענה. ${REOPEN}`,
   "unsubscribe-timeout": `ההרשמה הישנה לא הוסרה. ${REOPEN}`,
+  "unsubscribe-threw": `ההרשמה הישנה לא הוסרה. ${REOPEN}`,
   "subscribe-timeout": "ההרשמה להתראות לא הסתיימה. אפשר לנסות שוב.",
   "subscribe-threw": "המכשיר לא אישר את ההרשמה להתראות. אפשר לנסות שוב.",
   "save-timeout": "השמירה בשרת לא הסתיימה. אפשר לנסות שוב.",

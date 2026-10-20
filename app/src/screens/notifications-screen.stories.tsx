@@ -14,7 +14,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const evening: NotificationPrefs = { ...NO_PREFS, evening_reminder: true, prompt_answered: true, has_subscription: true };
+const evening: NotificationPrefs = { ...NO_PREFS, evening_reminder: true, prompt_answered: true };
 
 function Page({ prefs, support, device, devices = [] }: { prefs: NotificationPrefs; support: PushSupport; device?: DevicePush; devices?: PushDevice[] }) {
   return (

@@ -16,7 +16,7 @@ function renderAt(ui: ReactNode, path = "/settings/notifications") {
   return renderWithProviders(ui, { route: path });
 }
 
-const evening: NotificationPrefs = { ...NO_PREFS, evening_reminder: true, prompt_answered: true, has_subscription: true };
+const evening: NotificationPrefs = { ...NO_PREFS, evening_reminder: true, prompt_answered: true };
 
 describe("push prefs", () => {
   it("reads only true as on, and refuses a missing row", () => {

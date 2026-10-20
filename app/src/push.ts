@@ -15,7 +15,6 @@ export type NotificationPrefs = {
   /** The review screen's "תזכורת בערב" card was answered, so it is asked once. */
   prompt_answered: boolean;
   /** At least one of this user's devices is subscribed (any device, not only this one). */
-  has_subscription: boolean;
 };
 
 export type NotificationPrefKey = "new_transaction" | "evening_reminder" | "weekly_summary";
@@ -25,7 +24,6 @@ export const NO_PREFS: NotificationPrefs = {
   evening_reminder: false,
   weekly_summary: false,
   prompt_answered: false,
-  has_subscription: false,
 };
 
 /**
@@ -81,7 +79,6 @@ export function prefsFromData(data: unknown): NotificationPrefs {
     evening_reminder: flag("evening_reminder"),
     weekly_summary: flag("weekly_summary"),
     prompt_answered: flag("prompt_answered"),
-    has_subscription: flag("has_subscription"),
   };
 }
 
@@ -212,6 +209,7 @@ export type SubscribeResult =
   | "lookup-timeout"
   | "lookup-threw"
   | "unsubscribe-timeout"
+  | "unsubscribe-threw"
   | "subscribe-timeout"
   | "subscribe-threw"
   | "save-timeout"
@@ -259,7 +257,7 @@ async function controlled(ms: number): Promise<boolean> {
  * Every step after the prompt has its own timeout and reason, and an outer limit backs them, so it
  * always settles and a busy control always clears (FLOW-516).
  */
-export function subscribeThisDevice(timeouts: PushTimeouts = PUSH_TIMEOUTS, limitMs = 200_000): Promise<SubscribeOutcome> {
+export function subscribeThisDevice(timeouts: PushTimeouts = PUSH_TIMEOUTS, limitMs = 240_000): Promise<SubscribeOutcome> {
   // subscribeSteps runs at once, in this same task: requestPermission is its first call.
   const pending = subscribeSteps(timeouts).catch((error: unknown): SubscribeOutcome => ({ result: "subscribe-threw", step: "subscribe", detail: errorDetail(error) }));
   return within(pending, limitMs).then((outcome) => outcome === TIMED_OUT
@@ -348,7 +346,7 @@ async function subscribeSteps(timeouts: PushTimeouts): Promise<SubscribeOutcome>
     // The step a throw came from (TypeScript narrows `step` to its last plain assignment here).
     const at = step as SubscribeStep;
     const result: SubscribeResult = at === "subscribe" ? (isControlled ? "subscribe-threw" : "not-controlled")
-      : at === "unsubscribe" ? "unsubscribe-timeout"
+      : at === "unsubscribe" ? "unsubscribe-threw"
         : at === "lookup" ? "lookup-threw"
           : at === "save" ? "save-failed"
             : "worker-timeout";
@@ -373,17 +371,25 @@ async function noteOwner(): Promise<void> {
  */
 export async function forgetThisDevice({ server = false }: { server?: boolean } = {}): Promise<void> {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+  // The owner is forgotten only once this browser holds no subscription, so a drop that timed out
+  // or was refused is tried again on the next sign-in by another user (a shared phone).
+  let gone = false;
   try {
     const registration = await within(navigator.serviceWorker.getRegistration(), 3000);
-    const subscription = registration === TIMED_OUT || registration == null ? null : await within(registration.pushManager.getSubscription(), 3000);
-    if (subscription != null && subscription !== TIMED_OUT) {
+    if (registration === TIMED_OUT) return;
+    const subscription = registration == null ? null : await within(registration.pushManager.getSubscription(), 3000);
+    if (subscription === TIMED_OUT) return;
+    if (subscription == null) {
+      gone = true;
+    } else {
       if (server) {
         await within(result(db().rpc("push_unsubscribe", { p_endpoint: subscription.endpoint })), 5000).catch(() => undefined);
       }
-      await within(subscription.unsubscribe(), 3000);
+      gone = (await within(subscription.unsubscribe(), 3000)) === true;
     }
   } catch {
-    // Nothing to drop, or the browser refused: the server still drops a dead endpoint.
+    // The browser refused: the owner stays, so the next user's sign-in tries again.
+  } finally {
+    if (gone) notePushOwner(null);
   }
-  notePushOwner(null);
 }

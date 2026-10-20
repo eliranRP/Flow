@@ -1,7 +1,7 @@
 # Clients reach the database through granted definer RPCs, and nothing is granted by default
 
 **Date:** 2026-10-19
-**Status:** Accepted
+**Status:** Accepted. Amended by [0201](0201-push-device-row-and-test-push.md): `push_unsubscribe(text)` is granted to `authenticated` again (sign-out and the device row call it).
 
 ## Context
 

@@ -62,7 +62,7 @@ function fillRenameDraft(text: string) {
 export function DevNotifications() {
   return (
     <NotificationsScreen
-      sample={{ new_transaction: true, evening_reminder: false, weekly_summary: true, prompt_answered: true, has_subscription: true }}
+      sample={{ new_transaction: true, evening_reminder: false, weekly_summary: true, prompt_answered: true }}
       support="ok"
       device="subscribed"
       devices={SAMPLE_DEVICES}
@@ -164,7 +164,7 @@ export function useDevSettingsSample(): NonNullable<Parameters<typeof SettingsSc
         afterOverhead: board ? true : undefined,
         renameSaving: params.get("saving") === "1" ? true : undefined,
         notifications: board
-          ? { new_transaction: true, evening_reminder: false, weekly_summary: true, prompt_answered: true, has_subscription: true }
+          ? { new_transaction: true, evening_reminder: false, weekly_summary: true, prompt_answered: true }
           : undefined,
         assistant: noCompany
           ? { state: "no-company" }

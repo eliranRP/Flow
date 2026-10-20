@@ -6,7 +6,7 @@ import { renderWithProviders } from "../test-render";
 // FLOW-516: the live page with the browser steps mocked: the device row's on and off, every failure
 // reason shown with its step, the busy state always clearing, and the test push.
 
-const prefs: NotificationPrefs = { new_transaction: false, evening_reminder: true, weekly_summary: false, prompt_answered: true, has_subscription: true };
+const prefs: NotificationPrefs = { new_transaction: false, evening_reminder: true, weekly_summary: false, prompt_answered: true };
 const rpc = vi.fn();
 vi.mock("../lib/supabase", () => ({ getSupabase: () => ({ rpc: (...args: unknown[]) => rpc(...args) as unknown }) }));
 

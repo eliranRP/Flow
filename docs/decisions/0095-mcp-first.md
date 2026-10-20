@@ -1,7 +1,7 @@
 # 0095 MCP-first features
 
 - Date: 2026-10-06
-- Status: Accepted (owner)
+- Status: Accepted (owner). Amended by [0201](0201-push-device-row-and-test-push.md): no tool for an action bound to the browser the person holds (subscribe, unsubscribe, test push).
 
 ## Decision
 Flow is MCP-first. Every new feature or user action ships with `flow-mcp` support in the same pull request, before or together with the UI:
