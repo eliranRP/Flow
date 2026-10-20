@@ -1,7 +1,7 @@
 import type { ProfitMonths } from "@flow/shared";
 import { cashMonthName } from "../cash";
 import { companyExpenseNote, companyForecastCaption, companyIncomeNote, type CompanyNextMonth } from "../company-next-month";
-import { CHART_MONTHS, chartHistory, chartLabel, chartSub, forecastChartMonth, profitMonthFigures } from "../next-month-chart";
+import { CHART_MONTHS, chartHistory, chartLabel, chartSub, forecastChartMonth, profitMonthFigures, type RentCategory } from "../next-month-chart";
 import { shiftMonthKey } from "../period";
 import { ForecastCard, MonthChart } from "../ui/month-forecast";
 import { NextMonthCardSkeleton } from "../ui/screen-skeletons";
@@ -21,6 +21,7 @@ export function CompanyNextMonthBlock({
   thisMonthExpense,
   currency,
   categories,
+  today,
 }: {
   forecast: CompanyNextMonth | null;
   /** The forecast's reads are still out: the card's skeleton holds its place. */
@@ -32,7 +33,9 @@ export function CompanyNextMonthBlock({
   /** This month's counted expenses so far: the expense caption compares with it. */
   thisMonthExpense: bigint;
   currency: string;
-  categories: readonly { id: string; name: string }[];
+  categories: readonly RentCategory[];
+  /** yyyy-mm-dd: the month's name carries a year only when it is not today's. */
+  today: string;
 }) {
   // Always the six months: the company has no first month to start the window from.
   const history = months == null ? null : chartHistory(current, profitMonthFigures(months, currency), shiftMonthKey(current, 1 - CHART_MONTHS));
@@ -43,7 +46,7 @@ export function CompanyNextMonthBlock({
         <DelayedSkeleton><NextMonthCardSkeleton /></DelayedSkeleton>
       ) : forecast == null || forecast.rows.length === 0 ? null : (
         <ForecastCard
-          monthName={cashMonthName(forecast.month)}
+          monthName={cashMonthName(forecast.month, new Date(`${today}T12:00:00Z`))}
           currency={currency}
           incomeMinor={forecast.incomeMinor}
           expenseMinor={forecast.expenseMinor}
@@ -58,7 +61,7 @@ export function CompanyNextMonthBlock({
           history={history.months}
           forecast={loading ? null : ahead}
           sub={chartSub(history, !loading && ahead != null)}
-          label={chartLabel(history, loading ? null : ahead, currency)}
+          label={chartLabel(history, loading ? null : ahead, currency, "הכנסות והוצאות של החברה")}
         />
       )}
     </div>

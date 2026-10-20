@@ -1,5 +1,5 @@
 import { formatAmountText, type CategoryRow, type ExpectedParty, type ProjectCategoryMonths } from "@flow/shared";
-import { incomeNote, isRent } from "./next-month-chart";
+import { incomeNote, isRent, type RentCategory } from "./next-month-chart";
 import { monthWord } from "./project-next-edit";
 import type { ForecastLoan } from "./project-next-loans";
 import { applyForecastEdits, nextMonthForecast, nextMonthKey, type NextMonthForecast, type NextMonthRow, type ProjectForecastEdit } from "./project-next-month";
@@ -22,8 +22,14 @@ export type CompanyForecastEdit = ProjectForecastEdit & { project_id: string };
 export type CompanyNextMonthInputs = {
   /** yyyy-mm, next month. */
   month: string;
+  /** The company's overhead project: its charges, loans and edits are general costs, never a project of its own. */
+  overhead_project_id: string | null;
+  /** The active projects but the overhead one (a finished project projects nothing). */
   projects: { project_id: string; categories: CategoryMonthsRow[] }[];
-  /** The months of the expense lines with no project, or overhead. */
+  /**
+   * The months of the expense lines with no project, or overhead, less the lines of a recurring charge that a
+   * project's part counts (its party's closest project), so no stream is both a charge and an average.
+   */
   general: CategoryMonthsRow[];
   edits: CompanyForecastEdit[];
 };
@@ -70,9 +76,9 @@ function asCategoryMonths(projectId: string, rows: readonly CategoryMonthsRow[])
 }
 
 /**
- * Next month for the whole company: each project's forecast (its recurring charges, loans and averages, the
- * project's edits on top) and the general costs', summed. A project with nothing expected adds nothing; the
- * edits that belong to no listed project still build that project's forecast (an added line).
+ * Next month for the whole company: each active project's forecast (its recurring charges, loans and averages,
+ * the project's edits on top) and the general costs' (with the overhead project's), summed. A project with
+ * nothing expected adds nothing.
  */
 export function companyNextMonthForecast(input: {
   currency: string;
@@ -85,12 +91,7 @@ export function companyNextMonthForecast(input: {
   inputs: CompanyNextMonthInputs;
 }): CompanyNextMonth {
   const month = nextMonthKey(input.today);
-  const ids = new Set<string>();
-  for (const project of input.inputs.projects) ids.add(project.project_id);
-  for (const party of input.recurring) if (party.project_id != null) ids.add(party.project_id);
-  for (const loan of input.loans) if (loan.projectId != null) ids.add(loan.projectId);
-  for (const edit of input.inputs.edits) ids.add(edit.project_id);
-  const months = new Map(input.inputs.projects.map((project) => [project.project_id, project.categories]));
+  const overhead = input.inputs.overhead_project_id;
   const build = (projectId: string, rows: readonly CategoryMonthsRow[], recurring: readonly ExpectedParty[], loans: readonly ForecastLoan[]) => nextMonthForecast({
     projectId,
     currency: input.currency,
@@ -100,17 +101,31 @@ export function companyNextMonthForecast(input: {
     loans,
     categories: input.categories,
   });
-  const parts: CompanyForecastPart[] = [...ids].sort().map((projectId) => ({
-    projectId,
+  // Only the projects the read lists: a finished project's charges, loans and edits add nothing.
+  const parts: CompanyForecastPart[] = input.inputs.projects
+    .filter((project) => project.project_id !== overhead)
+    .map((project) => project.project_id)
+    .sort()
+    .map((projectId) => ({
+      projectId,
+      forecast: applyForecastEdits(
+        build(projectId, input.inputs.projects.find((project) => project.project_id === projectId)?.categories ?? [], input.recurring, input.loans),
+        input.inputs.edits.filter((edit) => edit.project_id === projectId),
+      ),
+    }));
+  // The general costs: what carries no project and what the overhead project carries (its lines are already in
+  // the general months), built as one part under the builder's own project key, so a category one of their
+  // charges or loans fills is never also averaged.
+  const general = (projectId: string | null | undefined) => projectId == null || projectId === overhead;
+  const generalRecurring = input.recurring.filter((party) => general(party.project_id)).map((party) => ({ ...party, project_id: GENERAL }));
+  const generalLoans = input.loans.filter((loan) => general(loan.projectId)).map((loan) => ({ ...loan, projectId: GENERAL }));
+  parts.push({
+    projectId: null,
     forecast: applyForecastEdits(
-      build(projectId, months.get(projectId) ?? [], input.recurring, input.loans),
-      input.inputs.edits.filter((edit) => edit.project_id === projectId),
+      build(GENERAL, input.inputs.general, generalRecurring, generalLoans),
+      input.inputs.edits.filter((edit) => overhead != null && edit.project_id === overhead),
     ),
-  }));
-  // The general costs: what carries no project, under the builder's own project key.
-  const generalRecurring = input.recurring.filter((party) => party.project_id == null).map((party) => ({ ...party, project_id: GENERAL }));
-  const generalLoans = input.loans.filter((loan) => loan.projectId == null).map((loan) => ({ ...loan, projectId: GENERAL }));
-  parts.push({ projectId: null, forecast: build(GENERAL, input.inputs.general, generalRecurring, generalLoans) });
+  });
   const kept = parts.filter((part) => part.forecast.rows.length > 0);
   const incomeMinor = kept.reduce((sum, part) => sum + part.forecast.incomeMinor, 0n);
   const expenseMinor = kept.reduce((sum, part) => sum + part.forecast.expenseMinor, 0n);
@@ -137,7 +152,7 @@ export function companyForecastCaption(forecast: Pick<CompanyNextMonth, "parts">
  * Under הכנסות צפויות: rent and other income named apart, "6 שכירויות ו־2 הכנסות", when both are expected;
  * otherwise the project card's caption (incomeNote: "6 שכירויות קבועות", "2 הכנסות קבועות", a name, a count).
  */
-export function companyIncomeNote(forecast: Pick<CompanyNextMonth, "rows">, categories: readonly { id: string; name: string }[]): string {
+export function companyIncomeNote(forecast: Pick<CompanyNextMonth, "rows">, categories: readonly RentCategory[]): string {
   const income = forecast.rows.filter((row) => row.minor > 0n);
   const rent = income.filter((row) => row.kind === "recurring" && isRent(row.categoryId, categories)).length;
   const other = income.length - rent;

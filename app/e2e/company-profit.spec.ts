@@ -47,7 +47,7 @@ test("the head: the summary rows, next month's card with no link, and the chart 
   await expect(card).toContainText("5 פרויקטים וכללי");
   await expect(card).toContainText("רווח צפוי");
   await expect(card.locator("a")).toHaveCount(0);
-  await expect(page.getByRole("img", { name: /^הכנסות והוצאות לפי חודש, מאי עד אוקטובר, וצפי נובמבר/ })).toBeVisible();
+  await expect(page.getByRole("img", { name: /^הכנסות והוצאות של החברה, מאי עד אוקטובר, וצפי נובמבר/ })).toBeVisible();
   await expect(page.locator(".ui-cp-head .ui-fc-chart a")).toHaveCount(0);
 });
 

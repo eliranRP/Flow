@@ -41,6 +41,26 @@ export const NextMonth: Story = {
   },
 };
 
+/** Six-figure sums (+$131,600 / $122,754): both card figures step down together and stay whole at 320. */
+const SIX_FIGURES: CompanyProfitSample = (() => {
+  const next = COMPANY_PROFIT_SAMPLE.next;
+  if (next == null) return COMPANY_PROFIT_SAMPLE;
+  const add = (id: string, categoryId: string, direction: "income" | "expense") => ({
+    id, project_id: "p1", kind: "add" as const, row_key: null, category_id: categoryId, category_name: null, direction, amount_minor: 10_000_000, pace: "once" as const, start_month: "2026-11",
+  });
+  return { ...COMPANY_PROFIT_SAMPLE, next: { ...next, inputs: { ...next.inputs, edits: [...next.inputs.edits, add("e-big-in", "c-other-income", "income"), add("e-big-out", "c-materials", "expense")] } } };
+})();
+
+export const NextMonthSixFigures: Story = {
+  name: "Next month, six-figure sums",
+  render: () => <ProfitRoute entry="/profit" sample={SIX_FIGURES} />,
+  play: async ({ canvasElement }) => {
+    const card = canvasElement.ownerDocument.querySelector(".ui-cp-head .ui-fc-card");
+    await expect(card?.textContent).toContain("$131,600");
+    await expect(card?.textContent).toContain("$122,754");
+  },
+};
+
 /** An earlier month (Home's ?month=): its own figures only, no next month or chart. */
 export const ClosedMonth: Story = {
   name: "Closed month",

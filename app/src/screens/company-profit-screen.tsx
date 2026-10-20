@@ -132,6 +132,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
       thisMonthExpense={model.expense}
       currency={currency}
       categories={next.categories}
+      today={today}
     />
   );
   const lineRow = (line: ProfitLine, hint: string) => (

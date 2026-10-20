@@ -73,6 +73,7 @@ const RECURRING: ExpectedParty[] = [
 
 const INPUTS: CompanyNextMonthInputs = {
   month: "2026-11",
+  overhead_project_id: null,
   projects: [
     { project_id: "p1", categories: [] },
     // The flip started in June: its averages are over four months.

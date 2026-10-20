@@ -38,6 +38,7 @@ const monthsRowSchema = z.object({
 
 const inputsSchema = z.object({
   month: z.string(),
+  overhead_project_id: z.string().nullable(),
   projects: z.array(z.object({ project_id: z.string(), categories: z.array(monthsRowSchema) })),
   general: z.array(monthsRowSchema),
   edits: z.array(editSchema.extend({ project_id: z.string() })),

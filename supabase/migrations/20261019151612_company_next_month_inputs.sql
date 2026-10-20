@@ -1,16 +1,23 @@
--- The company's next-month forecast inputs (FLOW-143, decision 0196 point 5): one read with what the
--- app's forecast builder needs beyond expected_months and the loans, for every project at once, so the
+-- The company's next-month forecast inputs (FLOW-143, decision 0197): one read with what the app's
+-- forecast builder needs beyond expected_months and the loans, for every project at once, so the
 -- company profit page sums each project's forecast and the general costs without a read per project.
--- 1. projects: each of the company's projects with its category months, as project_category_months
---    gives them for the project's own page (the same call, so the averages agree with each צפי page).
--- 2. general: the same months for the expense lines no project's months hold: lines with no project
+-- 1. projects: each active project but the overhead project, with its category months, as
+--    project_category_months gives them for the project's own page (the same call, so the averages
+--    agree with each צפי page). A finished project is left out: a sold project projects nothing.
+-- 2. overhead_project_id: the company's overhead project. Its lines are overhead (in the general
+--    months below), so the app builds its charges, loans and edits with the general costs, under one
+--    set of filled categories, and never as a project of its own.
+-- 3. general: the same months for the expense lines no project's months hold: lines with no project
 --    (unassigned, as the breakdown counts them) and overhead lines. Lines shared by allocation are in
---    their projects' months already. The filters are project_category_months': not a suggested
---    category, not in the open review queue, counted in profit, by document date, the six complete
---    months before this one.
--- 3. edits: every project's forecast edits that apply to next month, as project_forecast_edits_for
---    lists them for one project, with the project's id.
+--    their projects' months already. A line in a recurring charge's stream that the charge's project
+--    (its party's closest project, recurring_stream_lines) holds is left out: that project's charge
+--    counts it, so its category is never also averaged here. The filters are project_category_months':
+--    not a suggested category, not in the open review queue, counted in profit, by document date, the
+--    six complete months before this one.
+-- 4. edits: the forecast edits of every project read here and of the overhead project that apply to
+--    next month, as project_forecast_edits_for lists them for one project, with the project's id.
 -- Security definer: the caller's readable company only; another company's caller gets its own.
+-- Cost: one project_category_months call per project, about 6ms each locally (200 projects, ~1.15s).
 begin;
 set local lock_timeout = '5s';
 
@@ -27,6 +34,7 @@ declare
   this_month date;
   first_month date;
   next_month text;
+  overhead uuid;
   projects jsonb;
   general jsonb;
   edits jsonb;
@@ -38,6 +46,7 @@ begin
   this_month := date_trunc('month', today)::date;
   first_month := (this_month - interval '6 months')::date;
   next_month := to_char(this_month + interval '1 month', 'YYYY-MM');
+  select c.overhead_project_id into overhead from public.companies c where c.id = cid;
 
   select coalesce(jsonb_agg(jsonb_build_object(
       'project_id', p.id,
@@ -45,9 +54,22 @@ begin
     ) order by p.id), '[]'::jsonb)
   into projects
   from public.projects p
-  where p.company_id = cid;
+  where p.company_id = cid
+    and p.status = 'active'
+    and p.id is distinct from overhead;
 
-  with entries as (
+  with streams as (
+    -- The lines of each recurring charge of an active project but the overhead one: that project counts them.
+    select sl.id
+    from private.recurring_stream_lines(cid, today) sl
+    join private.recurring_parties(cid, today) rp
+      on rp.direction = sl.direction and rp.party_id = sl.party_id and rp.currency = sl.currency
+      and rp.project_id = sl.stream_project
+    join public.projects sp on sp.id = sl.stream_project and sp.status = 'active'
+    where sl.stream_project is not null
+      and sl.stream_project is distinct from overhead
+  ),
+  entries as (
     select l.category_id, l.currency, date_trunc('month', l.doc_date)::date as month, -l.amount_net as amount
     from private.pnl_lines l
     join public.transactions lt on lt.id = l.transaction_id
@@ -62,6 +84,7 @@ begin
       )
       and l.doc_date >= first_month
       and l.doc_date < this_month
+      and not exists (select 1 from streams st where st.id = lt.id)
       and private.line_in_pnl(
         case when not exists (select 1 from public.loan_splits ls where ls.transaction_id = lt.id)
           then lt.in_pnl_override end,
@@ -100,12 +123,15 @@ begin
   from public.project_forecast_edits e
   left join public.categories c on c.id = e.category_id
   left join public.forecast_line_matches m on m.edit_id = e.id and m.month = next_month and m.company_id = e.company_id
+  join public.projects p on p.id = e.project_id
   where e.company_id = cid
+    and (p.status = 'active' or p.id = overhead)
     and private.pfe_hits(e.start_month, e.pace, next_month);
 
   return jsonb_build_object(
     'today', today,
     'month', next_month,
+    'overhead_project_id', overhead,
     'projects', projects,
     'general', general,
     'edits', edits

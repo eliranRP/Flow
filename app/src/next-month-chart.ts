@@ -75,9 +75,12 @@ export function chartSub(history: ChartHistory, withForecast: boolean): string {
   return withForecast ? `${rangeWords(history)} וצפי` : rangeWords(history);
 }
 
-/** The one label a screen reader hears for the chart, with next month's numbers. */
-export function chartLabel(history: ChartHistory, forecast: ChartMonth | null, currency: string): string {
-  const head = `הכנסות והוצאות לפי חודש, ${rangeWords(history)}`;
+/**
+ * The one label a screen reader hears for the chart, with next month's numbers. `subject` names whose figures
+ * they are ("הכנסות והוצאות של החברה" on the company page).
+ */
+export function chartLabel(history: ChartHistory, forecast: ChartMonth | null, currency: string, subject = "הכנסות והוצאות לפי חודש"): string {
+  const head = `${subject}, ${rangeWords(history)}`;
   if (forecast == null) return head;
   return `${head}, וצפי ${monthWord(forecast.key)}: הכנסות ${formatAmountText(forecast.incomeMinor, currency)}, הוצאות ${formatAmountText(forecast.expenseMinor, currency)}`;
 }

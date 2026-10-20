@@ -99,7 +99,7 @@ describe("the company's next month (spec-fcwide, item 2)", () => {
 
   it("the chart is the company's six months and the forecast, with no link under it", () => {
     renderPage();
-    const chart = screen.getByRole("img", { name: /^הכנסות והוצאות לפי חודש, מאי עד אוקטובר, וצפי נובמבר: הכנסות \$31,600, הוצאות \$22,754$/ });
+    const chart = screen.getByRole("img", { name: /^הכנסות והוצאות של החברה, מאי עד אוקטובר, וצפי נובמבר: הכנסות \$31,600, הוצאות \$22,754$/ });
     expect(chart.querySelectorAll(".ui-fc-month-bars")).toHaveLength(7);
     expect(chart.querySelectorAll(".ui-fc-ahead")).toHaveLength(1);
     const section = chart.closest(".ui-fc-chart");
@@ -116,6 +116,6 @@ describe("the company's next month (spec-fcwide, item 2)", () => {
   it("with nothing expected, the card hides and the chart keeps its months", () => {
     renderPage({ ...COMPANY_PROFIT_SAMPLE, next: { ...NEXT, recurring: [], inputs: { ...NEXT.inputs, projects: [], general: [], edits: [] } } });
     expect(document.querySelector(".ui-fc-card")).toBeNull();
-    expect(screen.getByRole("img", { name: /^הכנסות והוצאות לפי חודש, מאי עד אוקטובר/ })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /^הכנסות והוצאות של החברה, מאי עד אוקטובר/ })).toBeInTheDocument();
   });
 });

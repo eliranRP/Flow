@@ -38,6 +38,7 @@ const accounting: CategoryMonthsRow = { id: "c-4", name: "הנהלת חשבונ�
 const junEdits = (JUNIPER_NEXT_EDITED.edits ?? []).map((edit): CompanyForecastEdit => ({ ...edit, project_id: JUNIPER }));
 const INPUTS: CompanyNextMonthInputs = {
   month: "2026-11",
+  overhead_project_id: null,
   projects: [
     { project_id: JUNIPER, categories: rowsOf(JUNIPER_NEXT_LOAN.categoryMonths) },
     { project_id: BIRCH, categories: rowsOf(JUNIPER_NEXT.categoryMonths) },
@@ -92,7 +93,7 @@ describe("companyNextMonthForecast", () => {
 
   it("adds the figures in invented round numbers", () => {
     const small = company(
-      { month: "2026-11", projects: [{ project_id: BIRCH, categories: [] }], general: [accounting], edits: [{ id: "e-1", project_id: BIRCH, kind: "add", row_key: null, category_id: "rent", category_name: "שכירות", direction: "income", amount_minor: 200_000, pace: "once", start_month: "2026-11" }] },
+      { month: "2026-11", overhead_project_id: null, projects: [{ project_id: BIRCH, categories: [] }], general: [accounting], edits: [{ id: "e-1", project_id: BIRCH, kind: "add", row_key: null, category_id: "rent", category_name: "שכירות", direction: "income", amount_minor: 200_000, pace: "once", start_month: "2026-11" }] },
       [payroll],
       [],
     );
@@ -102,9 +103,44 @@ describe("companyNextMonthForecast", () => {
     expect(small.rows.map((row) => row.projectId)).toEqual([BIRCH, null, null]);
   });
 
-  it("counts a project known only by its edit, and leaves out a project with nothing expected", () => {
-    const result = company({ ...INPUTS, projects: [...INPUTS.projects, { project_id: "empty", categories: [] }], edits: [...junEdits, { id: "e-new", project_id: "new", kind: "add", row_key: null, category_id: "rent", category_name: "שכירות", direction: "income", amount_minor: 100_000, pace: "once", start_month: "2026-11" }] });
-    expect(result.parts.map((part) => part.projectId)).toEqual([BIRCH, JUNIPER, "new", null]);
+  it("leaves out a project the read does not list (a finished one), with its charges, loans and edits", () => {
+    const sold = "sold-ct";
+    const soldRent: ExpectedParty = { ...(birchRecurring[4] as ExpectedParty), party_id: "s-sold", project_id: sold };
+    const result = company(
+      { ...INPUTS, projects: [...INPUTS.projects, { project_id: "empty", categories: [] }], edits: [...junEdits, { id: "e-sold", project_id: sold, kind: "add", row_key: null, category_id: "rent", category_name: "שכירות", direction: "income", amount_minor: 100_000, pace: "once", start_month: "2026-11" }] },
+      [...RECURRING, soldRent],
+      [...LOANS, { ...LOAN, id: "l-sold", projectId: sold }],
+    );
+    expect(result.parts.map((part) => part.projectId)).toEqual([BIRCH, JUNIPER, null]);
+    expect(result.incomeMinor).toBe(company().incomeMinor);
+    expect(result.expenseMinor).toBe(company().expenseMinor);
+  });
+
+  it("builds the overhead project with the general costs, never twice: a rent of 1,000 a month is 1,000", () => {
+    const hq = "hq";
+    // The office rent is filed to the overhead project, so its lines are overhead: in the general months.
+    const officeRent: ExpectedParty = { ...payroll, party_id: "s-office", name: "שכירות משרד", typical_amount_minor: -100_000n, project_id: hq, category_id: "c-5" };
+    const officeMonths: CategoryMonthsRow = { id: "c-5", name: "שכירות משרד", currency: "USD", months_minor: [100_000, 100_000, 100_000, 100_000, 100_000, 100_000] };
+    const result = company({ month: "2026-11", overhead_project_id: hq, projects: [{ project_id: hq, categories: [] }], general: [officeMonths], edits: [] }, [officeRent], []);
+    expect(result.expenseMinor).toBe(100_000n);
+    expect(result.parts.map((part) => part.projectId)).toEqual([null]);
+    expect(companyForecastCaption(result)).toBe("כללי");
+    // A loan filed under the overhead project: its interest fills the category, whose months are general too.
+    const interestMonths: CategoryMonthsRow = { id: "loan-interest", name: "ריבית הלוואות", currency: "USD", months_minor: [0, 0, 0, 0, 0, 120_000] };
+    const loanOnly = company({ month: "2026-11", overhead_project_id: hq, projects: [], general: [interestMonths], edits: [] }, [], [{ ...LOAN, projectId: hq }]);
+    const onItsOwn = company({ month: "2026-11", overhead_project_id: null, projects: [], general: [], edits: [] }, [], [{ ...LOAN, projectId: null }]);
+    expect(loanOnly.expenseMinor).toBe(onItsOwn.expenseMinor);
+    expect(loanOnly.rows.some((row) => row.kind === "average")).toBe(false);
+    // The overhead project's edits apply to the general costs.
+    const edited = company({ month: "2026-11", overhead_project_id: hq, projects: [], general: [officeMonths], edits: [{ id: "e-hq", project_id: hq, kind: "change", row_key: "rec:expense:s-office", category_id: null, direction: null, amount_minor: 90_000, pace: "once", start_month: "2026-11" }] }, [officeRent], []);
+    expect(edited.expenseMinor).toBe(90_000n);
+  });
+
+  it("a charge with no project whose category also has general months counts once, as the charge", () => {
+    const officeMonths: CategoryMonthsRow = { ...accounting, id: "c-7", name: "שכר" };
+    const result = company({ month: "2026-11", overhead_project_id: null, projects: [], general: [officeMonths], edits: [] }, [payroll], []);
+    expect(result.expenseMinor).toBe(645_000n);
+    expect(result.rows.map((row) => row.kind)).toEqual(["recurring"]);
   });
 
   it("is in the company's currency only", () => {
