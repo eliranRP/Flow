@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { Route, Routes, useNavigate } from "react-router-dom";
-import { AiConnectionPage } from "./assistant-settings";
 import { BusinessScreen } from "./business-screen";
 import { ConnectionDetailPage } from "./connection-pages";
 import { ConnectionsScreen, SettingsScreen } from "./flow-screens";
@@ -28,26 +27,6 @@ const business = {
 function bodyOf(canvasElement: HTMLElement) {
   return within(canvasElement.ownerDocument.body);
 }
-
-/** Escape on the AI page's confirm sheet returns to the ניתוק button that opened it (FLOW-512). */
-export const ConfirmFocus: Story = {
-  name: "AI disconnect, Escape returns focus",
-  render: () => (
-    <StoryRoute entry="/settings/connections/ai">
-      <AiConnectionPage sample={{ state: "connected", scope: "read_write", id: "mcp-1" }} />
-    </StoryRoute>
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = bodyOf(canvasElement);
-    const disconnect = canvas.getByRole("button", { name: "ניתוק" });
-    await userEvent.click(disconnect);
-    const confirm = await body.findByRole("dialog", { name: "לנתק את העוזר?" });
-    await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(confirm).not.toBeInTheDocument());
-    await waitFor(() => expect(disconnect).toHaveFocus());
-  },
-};
 
 /** The SUMIT page's ניתוק confirm: closing it puts focus back on the button. */
 export const SumitDisconnectFocus: Story = {

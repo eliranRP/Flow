@@ -1,4 +1,4 @@
-// flow-mcp. Stateless MCP 2025-06-18, plus mint, revoke, and status. The session id only
+// flow-mcp. Stateless MCP 2025-06-18, plus mint, revoke, restore, and status (the owner's keys, FLOW-939). The session id only
 // stamps the tool list a session saw, so a stale session hears list_changed (decision 0119).
 // Decision 0080. Reads through cycle 5, single-expense writes, cycle 4–6 writes, category P&L toggle. verify_jwt is false.
 // The signed pass uses the credential row. The signing key has no user identity.
@@ -40,12 +40,12 @@ const defaultDeps: Deps = {
 // finish step after a long pull) signs a fresh one.
 const RESIGN_AFTER_MS = 30_000;
 
-type Route = "mcp" | "mint" | "revoke" | "status";
+type Route = "mcp" | "mint" | "revoke" | "restore" | "status";
 
 function routeOf(url: URL): Route {
   const parts = url.pathname.split("/").filter((part) => part.length > 0);
   const last = parts[parts.length - 1] ?? "";
-  if (last === "mint" || last === "revoke" || last === "status") return last;
+  if (last === "mint" || last === "revoke" || last === "restore" || last === "status") return last;
   return "mcp";
 }
 
@@ -402,11 +402,32 @@ async function readBody(req: Request): Promise<Record<string, unknown> | null | 
   }
 }
 
+const KEY_CLIENTS = new Set(["claude-code", "claude-ai", "chatgpt", "other"]);
+const KEY_NAME_MAX = 60;
+
+/** The key's name (FLOW-939): trimmed, at most 60 characters. Missing or blank is null; anything else is invalid. */
+function keyName(value: unknown): string | null | undefined {
+  if (value == null) return null;
+  if (typeof value !== "string") return undefined;
+  const clean = value.trim();
+  if (clean === "") return null;
+  return [...clean].length > KEY_NAME_MAX ? undefined : clean;
+}
+
+/** The assistant the key is for, or null. An unknown value is invalid. */
+function keyClient(value: unknown): string | null | undefined {
+  if (value == null) return null;
+  return typeof value === "string" && KEY_CLIENTS.has(value) ? value : undefined;
+}
+
 async function handleMint(req: Request, deps: Deps, userId: string): Promise<Response> {
   const body = await readBody(req);
   if (body === "too_large" || body == null) return jsonResponse(req, { error: "validation" }, 400);
   const scope = scopeList(body.scope);
   if (!scope) return jsonResponse(req, { error: "validation" }, 400);
+  const name = keyName(body.name);
+  const client = keyClient(body.client);
+  if (name === undefined || client === undefined) return jsonResponse(req, { error: "validation" }, 400);
   const peppers = peppersOf(deps.env("FLOW_MCP_PEPPER"));
   const pepper = peppers?.[0];
   if (!pepper) return jsonResponse(req, { error: "server is missing a secret" }, 500);
@@ -422,31 +443,39 @@ async function handleMint(req: Request, deps: Deps, userId: string): Promise<Res
     p_pepper_kid: pepper.kid,
     p_expires_at: expires,
     ...(hint ? { p_hint: hint } : {}),
+    ...(name != null ? { p_name: name } : {}),
+    ...(client != null ? { p_client: client } : {}),
   });
   if (stored.status >= 400) {
     const message = (stored.json as { message?: unknown } | null)?.message;
     if (message === "no company") return jsonResponse(req, { error: "no company" }, 400);
+    if (message === "too many keys") return jsonResponse(req, { error: "too_many" }, 409);
     return jsonResponse(req, { error: "could not store the credential" }, 500);
   }
-  return jsonResponse(req, { id: stored.json, secret, scope, expires_at: expires }, 200);
+  return jsonResponse(req, { id: stored.json, secret, scope, expires_at: expires, name, client }, 200);
 }
 
-async function handleRevoke(req: Request, deps: Deps, userId: string): Promise<Response> {
+/** Revoke one key, or (restore) undo that revoke within the server's window. Other keys are untouched. */
+async function handleKeyChange(req: Request, deps: Deps, userId: string, route: "revoke" | "restore"): Promise<Response> {
   const body = await readBody(req);
   if (body === "too_large") return jsonResponse(req, { error: "validation" }, 400);
   const id = body && typeof body.id === "string" ? body.id : "";
   if (!/^[0-9a-f-]{36}$/i.test(id)) return jsonResponse(req, { error: "validation" }, 400);
-  const result = await rpc(deps, "revoke_mcp_credential", { p_user: userId, p_id: id });
+  const name = route === "revoke" ? "revoke_mcp_credential" : "restore_mcp_credential";
+  const result = await rpc(deps, name, { p_user: userId, p_id: id });
   const payload = result.json as { ok?: unknown; error?: unknown } | null;
+  if (payload?.error === "too_many") return jsonResponse(req, { error: "too_many" }, 409);
   if (payload?.error === "not_found" || payload?.ok === false) {
     return jsonResponse(req, { error: "not_found" }, 404);
   }
-  if (result.status >= 400) return jsonResponse(req, { error: "could not revoke the credential" }, 500);
+  if (result.status >= 400) return jsonResponse(req, { error: `could not ${route} the credential` }, 500);
   return jsonResponse(req, { ok: true }, 200);
 }
 
 async function handleStatus(deps: Deps, req: Request, userId: string): Promise<Response> {
-  const result = await rpc(deps, "mcp_credential_status", { p_user: userId });
+  // FLOW-939: the keys for the company the app shows, the same company a new key is made for.
+  const hint = companyHint(req);
+  const result = await rpc(deps, "mcp_credential_status", { p_user: userId, ...(hint ? { p_hint: hint } : {}) });
   if (result.status >= 400) return jsonResponse(req, { error: "could not read the credential" }, 500);
   return jsonResponse(req, result.json, 200);
 }
@@ -655,8 +684,8 @@ export async function handle(req: Request, deps: Deps = defaultDeps): Promise<Re
     const response = await handleMint(req, deps, userId);
     return finish(route, withCors(response, origin));
   }
-  if (route === "revoke") {
-    const response = await handleRevoke(req, deps, userId);
+  if (route === "revoke" || route === "restore") {
+    const response = await handleKeyChange(req, deps, userId, route);
     return withCors(response, origin);
   }
   const response = await handleStatus(deps, req, userId);

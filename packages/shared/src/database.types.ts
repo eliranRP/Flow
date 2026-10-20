@@ -1494,7 +1494,7 @@ isOneToOne: false
 { Args: { "p_idempotency_key": string,"p_items": Json }; Returns: Json
                            },
 "mcp_credential_status":
-{ Args: { "p_user": string }; Returns: Json
+{ Args: { "p_hint"?: string,"p_user": string }; Returns: Json
                            },
 "mcp_delete_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string }; Returns: Json
@@ -1825,6 +1825,9 @@ isOneToOne: false
 "restore_loan":
 { Args: { "p_loan_id": string }; Returns: Json
                            },
+"restore_mcp_credential":
+{ Args: { "p_id": string,"p_user": string }; Returns: Json
+                           },
 "restore_project_forecast_row":
 { Args: { "p_month": string,"p_project_id": string,"p_row_key": string }; Returns: Json
                            },
@@ -1931,7 +1934,7 @@ isOneToOne: false
 { Args: { "p_company": string }; Returns: undefined
                            },
 "store_mcp_credential":
-{ Args: { "p_expires_at": string,"p_hint"?: string,"p_pepper_kid": string,"p_scope": (string)[],"p_token_hash": string,"p_user": string }; Returns: string
+{ Args: { "p_client"?: string,"p_expires_at": string,"p_hint"?: string,"p_name"?: string,"p_pepper_kid": string,"p_scope": (string)[],"p_token_hash": string,"p_user": string }; Returns: string
                            },
 "sumit_status":
 { Args: Record<PropertyKey, never>; Returns: Json

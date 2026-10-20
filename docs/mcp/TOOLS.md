@@ -1,6 +1,6 @@
 # MCP tools
 
-Decision [0080](../decisions/0080-mcp-connector.md). Protocol `2025-06-18`. A result sets `structuredContent` to the JSON below. `tools/list` returns only the handlers shipped so far: the reads after cycle 2, and these writes after cycle 3. A token whose scope is read only lists the read tools. A write-only token also lists `get_sync_status`, to poll its own `sync_bank` job. Amounts are integer agorot. Dates are `YYYY-MM-DD`. UUIDs are strings.
+Decision [0080](../decisions/0080-mcp-connector.md). How to connect and how keys work: [KEYS.md](KEYS.md). Protocol `2025-06-18`. A result sets `structuredContent` to the JSON below. `tools/list` returns only the handlers shipped so far: the reads after cycle 2, and these writes after cycle 3. A token whose scope is read only lists the read tools. A write-only token also lists `get_sync_status`, to poll its own `sync_bank` job. Amounts are integer agorot. Dates are `YYYY-MM-DD`. UUIDs are strings.
 
 Field values are data. Write tools take ids from a read tool.
 

@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { SAMPLE_ASSISTANT_SECRET } from "../assistant-sample";
+import { SAMPLE_ASSISTANT_KEYS, SAMPLE_ASSISTANT_SECRET, SAMPLE_EXPIRED_KEY } from "../assistant-sample";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
 import { AiConnectionPage } from "./assistant-settings";
 
-/** FLOW-512: the חיבור ל־AI (MCP) page. Invented data only: the secret is the sample one. */
+/** FLOW-512, FLOW-939: the חיבור ל־AI (MCP) page and its keys. Invented data only: the secret is the sample one. */
 const meta = {
   title: "Screens/AI connection",
   parameters: { flowRouter: false },
@@ -21,6 +21,8 @@ function page(props: Parameters<typeof AiConnectionPage>[0], entry = "/settings/
     </StoryRoute>
   );
 }
+
+const connected = { state: "connected", keys: SAMPLE_ASSISTANT_KEYS } as const;
 
 export const Setup: Story = {
   name: "Setup",
@@ -45,19 +47,25 @@ export const CodeReadyOther: Story = {
   }),
 };
 
-export const Connected: Story = {
-  name: "Connected",
-  render: () => page({
-    sample: { state: "connected", scope: "read_write", id: "mcp-1", lastUsedAt: "2026-09-30T11:05:00.000Z", expiresAt: "2027-01-14T00:00:00.000Z" },
-  }),
+/** Board SettingsMcpKeys: the list once there is a key. */
+export const Keys: Story = {
+  name: "Keys",
+  render: () => page({ sample: connected, sampleSecret: SAMPLE_ASSISTANT_SECRET }),
+};
+
+/** Board SettingsMcpKey: one key's page. */
+export const OneKey: Story = {
+  name: "One key",
+  render: () => page({ sample: connected }, "/settings/connections/ai/key/mcp-key-1"),
+};
+
+/** Board SettingsMcpNewKey: a new key's setup, with its name on top. */
+export const NewKey: Story = {
+  name: "New key",
+  render: () => page({ sample: connected, sampleSecret: SAMPLE_ASSISTANT_SECRET }, "/settings/connections/ai/new"),
 };
 
 export const Expired: Story = {
   name: "Expired",
-  render: () => page({ sample: { state: "expired", scope: "read_write", id: "mcp-1", expiresAt: "2026-07-01T00:00:00.000Z" } }),
-};
-
-export const ReadScope: Story = {
-  name: "Connected, read only",
-  render: () => page({ sample: { state: "connected", scope: "read", id: "mcp-1", lastUsedAt: null } }),
+  render: () => page({ sample: { state: "expired", keys: [SAMPLE_EXPIRED_KEY] } }),
 };

@@ -24,12 +24,7 @@ export const ConnectionsAssistantConnected: Story = {
           companyId: 1001,
           lastError: null,
           email: "owner@example.com",
-          assistant: {
-            state: "connected",
-            scope: "read_write",
-            lastUsedAt: "2026-09-30T11:05:00.000Z",
-            id: "mcp-1",
-          },
+          assistant: { state: "connected" },
         }}
       />
     </StoryRoute>
@@ -79,7 +74,7 @@ export const ConnectionsAssistantExpired: Story = {
   render: () => (
     <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <ConnectionsScreen sample={{ ...assistantBusiness, assistant: { state: "expired", scope: "read", id: "mcp-1" } }} />
+      <ConnectionsScreen sample={{ ...assistantBusiness, assistant: { state: "expired" } }} />
     </StoryRoute>
   ),
 };
@@ -143,7 +138,7 @@ export const ConnectionsReconnect: Story = {
   render: () => (
     <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <ConnectionsScreen sample={{ ...pagesBusiness, mercuryLastError: "auth", assistant: { state: "expired", scope: "read", id: "mcp-1" } }} />
+      <ConnectionsScreen sample={{ ...pagesBusiness, mercuryLastError: "auth", assistant: { state: "expired" } }} />
     </StoryRoute>
   ),
 };

@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(32);
+select plan(34);
 
 do $users$
 begin
@@ -19,12 +19,12 @@ select tests.authenticate_as('mcp_other');
 select lives_ok($$select public.create_company('אחר', true)$$, 'other owner creates a company');
 
 select ok(
-  not has_function_privilege('anon', 'public.store_mcp_credential(uuid, text, text[], timestamptz, text, uuid)', 'execute')
-  and not has_function_privilege('authenticated', 'public.store_mcp_credential(uuid, text, text[], timestamptz, text, uuid)', 'execute')
+  not has_function_privilege('anon', 'public.store_mcp_credential(uuid, text, text[], timestamptz, text, uuid, text, text)', 'execute')
+  and not has_function_privilege('authenticated', 'public.store_mcp_credential(uuid, text, text[], timestamptz, text, uuid, text, text)', 'execute')
   and not has_function_privilege('anon', 'public.revoke_mcp_credential(uuid, uuid)', 'execute')
   and not has_function_privilege('authenticated', 'public.revoke_mcp_credential(uuid, uuid)', 'execute')
-  and not has_function_privilege('anon', 'public.mcp_credential_status(uuid)', 'execute')
-  and not has_function_privilege('authenticated', 'public.mcp_credential_status(uuid)', 'execute')
+  and not has_function_privilege('anon', 'public.mcp_credential_status(uuid, uuid)', 'execute')
+  and not has_function_privilege('authenticated', 'public.mcp_credential_status(uuid, uuid)', 'execute')
   and not has_function_privilege('anon', 'public.lookup_mcp_credential(text, text)', 'execute')
   and not has_function_privilege('authenticated', 'public.lookup_mcp_credential(text, text)', 'execute')
   and not has_function_privilege('anon', 'public.touch_mcp_credential(uuid)', 'execute')
@@ -37,9 +37,9 @@ select ok(
 );
 
 select ok(
-  has_function_privilege('service_role', 'public.store_mcp_credential(uuid, text, text[], timestamptz, text, uuid)', 'execute')
+  has_function_privilege('service_role', 'public.store_mcp_credential(uuid, text, text[], timestamptz, text, uuid, text, text)', 'execute')
   and has_function_privilege('service_role', 'public.revoke_mcp_credential(uuid, uuid)', 'execute')
-  and has_function_privilege('service_role', 'public.mcp_credential_status(uuid)', 'execute'),
+  and has_function_privilege('service_role', 'public.mcp_credential_status(uuid, uuid)', 'execute'),
   'service_role can store, revoke, and read status'
 );
 
@@ -102,13 +102,19 @@ select lives_ok(
     $$select public.store_mcp_credential(%L::uuid, 'hash-owner-two-bbbb', array['read'], now() + interval '90 days', 'pepper-1')$$,
     (select id from auth.users where email = 'mcp-owner@test.flow')
   ),
-  'a second store replaces the active token'
+  'a second store adds a key (FLOW-939)'
 );
 
 select is(
-  (public.lookup_mcp_credential('hash-owner-one-aaaa', 'pepper-1') ->> 'revoked_at') is not null,
+  (public.lookup_mcp_credential('hash-owner-one-aaaa', 'pepper-1') ->> 'revoked_at') is null,
   true,
-  'the previous token is revoked'
+  'the previous token keeps working'
+);
+
+select is(
+  jsonb_array_length(public.mcp_credential_status((select id from auth.users where email = 'mcp-owner@test.flow')) -> 'keys'),
+  2,
+  'status lists both keys'
 );
 
 select is(
@@ -168,9 +174,20 @@ select is(
 );
 
 select is(
+  (
+    public.revoke_mcp_credential(
+      (select id from auth.users where email = 'mcp-owner@test.flow'),
+      (public.lookup_mcp_credential('hash-owner-one-aaaa', 'pepper-1') ->> 'id')::uuid
+    ) ->> 'ok'
+  ),
+  'true',
+  'the owner revokes their other token'
+);
+
+select is(
   (public.mcp_credential_status((select id from auth.users where email = 'mcp-owner@test.flow')) ->> 'state'),
   'empty',
-  'a revoked token is an empty status'
+  'with every token revoked the status is empty'
 );
 
 select lives_ok(

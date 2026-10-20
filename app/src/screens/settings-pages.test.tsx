@@ -94,7 +94,7 @@ describe("Settings rows", () => {
   });
 
   it("counts two broken connectors", () => {
-    renderAt(<SettingsScreen sample={{ ...business, lastError: "sumit_auth", assistant: { state: "expired", scope: "read", id: "mcp-1" } }} />);
+    renderAt(<SettingsScreen sample={{ ...business, lastError: "sumit_auth", assistant: { state: "expired" } }} />);
     expect(valueOf(screen.getByRole("link", { name: /^חיבורים/ }))).toContain("2 צריכים חיבור");
   });
 
