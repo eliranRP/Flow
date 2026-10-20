@@ -120,12 +120,14 @@ export const YearByProject: Story = {
   },
 };
 
-/** No overhead project set: the general costs are one כללי row that opens nothing. */
+/** No overhead project set: the general costs are one כללי row that opens nothing; p0 is a project like any other. */
 export const NoOverheadProject: Story = {
   name: "By project: no overhead project",
   render: () => <ProfitRoute entry="/profit" sample={{ ...COMPANY_PROFIT_SAMPLE, overhead: null }} />,
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByText("כללי").closest("a")).toBeNull();
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("כללי").closest("a")).toBeNull();
+    await expect(canvas.getByText("משרד החברה / תקורה").closest("a")).not.toBeNull();
   },
 };
 

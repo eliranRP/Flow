@@ -37,7 +37,10 @@ test("the chips sort the page, a category opens in place, and a project opens it
   // The general costs (get_breakdown's overhead and unassigned, and the overhead project's own lines) are one row
   // under the overhead project's name, opening that project (owner 20/10); no כללי row and no key in a link.
   const list = page.locator(".ui-cp-list");
-  await expect(list.locator(".ui-cp-row", { hasText: "משרד החברה / תקורה" }).locator("a")).toHaveAttribute("href", /^\/projects\/p0\/profit\?from=profit&preview=1$/);
+  const overheadRow = list.locator(".ui-cp-row", { hasText: "משרד החברה / תקורה" });
+  await expect(overheadRow.locator("a")).toHaveAttribute("href", /^\/projects\/p0\/profit\?from=profit&preview=1$/);
+  // Its own income line, the three overhead-role costs and the unassigned one.
+  await expect(overheadRow).toContainText("5 תנועות");
   await expect(list.locator(".ui-cp-row", { hasText: "כללי" })).toHaveCount(0);
   await expect(list.locator('a[href^="/projects/overhead"], a[href^="/projects/unassigned"]')).toHaveCount(0);
   await page.locator('a[href^="/projects/"]').first().click();

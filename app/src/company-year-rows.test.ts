@@ -27,18 +27,19 @@ describe("the year's rows", () => {
     expect(rows.every((row) => row.opens == null)).toBe(true);
   });
 
-  it("projects: each its own row, the finished ones in one, כללי, the biggest profit first, adding up to the year", () => {
+  it("projects: each its own row, the finished ones in one, the overhead project's row, the biggest profit first, adding up to the year", () => {
     const given = COMPANY_YEARS_SAMPLE.projects["2026"];
     if (given == null) throw new Error("no projects");
-    const rows = yearProjectRows(given, "USD", COMPANY_YEARS_SAMPLE.statuses, null);
+    const rows = yearProjectRows(given, "USD", COMPANY_YEARS_SAMPLE.statuses, { id: "p0", name: "משרד החברה / תקורה" });
     expect(rows.map((row) => [row.title, row.profitMinor, row.opens])).toEqual([
       ["דירת הרימון", 2_796_000n, { kind: "project", projectId: "p3" }],
       ["פרויקטים שהסתיימו · 4", 1_892_700n, null],
       ["בית הדקל", 1_820_000n, { kind: "project", projectId: "p1" }],
       ["וילה הברושים", 985_000n, { kind: "project", projectId: "p2" }],
-      ["בית השקד", 214_000n, { kind: "project", projectId: "p4" }],
+      ["בית השקד", 54_000n, { kind: "project", projectId: "p4" }],
       ["הבית ברחוב הזית", -851_000n, { kind: "project", projectId: "p5" }],
-      ["כללי", -3_229_300n, null],
+      // Its own income ($1,600) and the overhead costs ($32,293) in one row.
+      ["משרד החברה / תקורה", -3_069_300n, { kind: "project", projectId: "p0" }],
     ]);
     const year = data.years.at(-1);
     expect(rows.reduce((sum, row) => sum + row.incomeMinor, 0n)).toBe(year?.incomeMinor);

@@ -35,9 +35,9 @@ import { useBlockedPreview } from "./screen-shared";
 
 /**
  * A fixture: the reads' inputs for the page, plus the day heads' today, the month it shows and the company's overhead
- * project (none when omitted).
+ * project (null for none).
  */
-export type CompanyProfitSample = ProfitInputs & { today: string; monthKey: string; overhead?: OverheadProject | null; openFirst?: boolean; sheetOpen?: boolean; next?: CompanyNextMonthSample; years?: CompanyYearsSample };
+export type CompanyProfitSample = ProfitInputs & { today: string; monthKey: string; overhead: OverheadProject | null; openFirst?: boolean; sheetOpen?: boolean; next?: CompanyNextMonthSample; years?: CompanyYearsSample };
 
 /** The period switch (canvas note spec-years): the month, a year or since the start, in the URL (`?period=`). */
 type Period = "month" | "year" | "all";
@@ -107,17 +107,21 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   const year = monthKey.slice(0, 4);
   const month = monthPeriod(monthKey);
   // The overhead project (owner 20/10): the general costs' row takes its name and opens it, in both views.
-  const liveOverhead = useOverheadProject(sample == null);
-  const overhead = sample == null ? liveOverhead : sample.overhead ?? null;
+  // A failed read is the page's failure, with its retry: falling back to כללי would split the row again.
+  const overheadRead = useOverheadProject(sample == null);
+  const overhead = sample == null ? overheadRead.project : sample.overhead;
+  // Only a לפי פרויקט list waits for (or fails on) that read; the other lists and orders never show the row.
+  const monthByProject = period === "month" && by === "project";
+  const yearByProject = period === "year" && yearList === "project";
   const live = useCompanyProfitRead({
     enabled: sample == null,
     month,
     ytd: customRange(`${year}-01-01`, month.to ?? today),
     currency: companyCurrency,
     linesOn: by !== "project",
-    overhead,
+    overhead: monthByProject ? overhead : overhead ?? null,
   });
-  const model: ProfitModel | null = sample ? buildProfitModel(sample, overhead ?? null) : live.model;
+  const model: ProfitModel | null = sample ? buildProfitModel(sample, sample.overhead) : live.model;
   const onCurrent = monthKey === currentKey;
   const long = period !== "month";
   const years = useCompanyYears(today, long, sample?.years);
@@ -131,8 +135,8 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   const wantsForecast = period === "month" ? onCurrent : period === "all" || forecastYear === currentYear;
   const next = useCompanyNextMonth(sample?.currency ?? companyCurrency, today, wantsForecast, sample?.next);
   const chartMonths = useCompanyProfitMonths(today, onCurrent && !long, sample?.next);
-  const yearProjects = useCompanyYearProjects(viewYear, today, period === "year" && yearList === "project", sample?.years);
-  const failed = live.failed || (long && years.failed);
+  const yearProjects = useCompanyYearProjects(viewYear, today, yearByProject, sample?.years);
+  const failed = live.failed || (monthByProject && overheadRead.failed) || (long && years.failed);
   const waiting = model == null;
   const phase: ScreenPhase = sample != null ? { kind: "ready" } : preview !== "off" ? screenPhase(preview) : failed ? { kind: "error", offline: !onlineManager.isOnline() } : waiting ? { kind: "loading" } : { kind: "ready" };
   const [sheetState, setSheetOpen] = useState<boolean | undefined>(undefined);
@@ -141,7 +145,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   if (phase.kind !== "ready" || model == null) {
     // The board's loading frame names the month in the title: the stacked header's own bar, Back labelled בית.
     const loadingTitle = period === "month" ? `רווח ${HEBREW_MONTHS[Number(monthKey.slice(5, 7)) - 1] ?? monthKey}` : "רווח";
-    return <ScreenState stacked headerClassName="ui-state-header" title={phase.kind === "loading" ? loadingTitle : "רווח"} kicker="בית" backTo={back} phase={phase} onRetry={() => { live.refetch(); years.refetch(); }} loading={<ProfitSkeleton />} />;
+    return <ScreenState stacked headerClassName="ui-state-header" title={phase.kind === "loading" ? loadingTitle : "רווח"} kicker="בית" backTo={back} phase={phase} onRetry={() => { live.refetch(); overheadRead.refetch(); years.refetch(); }} loading={<ProfitSkeleton />} />;
   }
   const currency = model.currency;
   const sheetOpen = sheetState ?? sample?.sheetOpen === true;
@@ -184,7 +188,14 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
     restFailed: next.failed,
     categories: next.categories,
     list: yearList,
-    projects: { breakdowns: yearProjects.breakdowns, statuses: yearProjects.statuses, overhead: overhead ?? null, pending: yearProjects.pending, failed: yearProjects.failed, onRetry: yearProjects.refetch },
+    projects: {
+      breakdowns: yearProjects.breakdowns,
+      statuses: yearProjects.statuses,
+      overhead: overhead ?? null,
+      pending: yearProjects.pending || (overhead === undefined && !overheadRead.failed),
+      failed: yearProjects.failed || overheadRead.failed,
+      onRetry: () => { yearProjects.refetch(); overheadRead.refetch(); },
+    },
     onList: (list) => { setParams({ list: list === "month" ? null : list }); },
     // This month's row opens the month view on this month; a year's row opens that year.
     onOpen: (opens) => { setParams(opens.kind === "month" ? { period: null, year: null, list: null, month: null } : { period: "year", year: opens.year === currentYear ? null : opens.year, list: null }); },

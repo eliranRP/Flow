@@ -176,20 +176,23 @@ describe("CompanyProfitScreen (FLOW-140c1)", () => {
     expect(within(list).getByText("וילה הברושים").closest("a")).toHaveAttribute("href", "/projects/p2/profit?from=profit");
     const general = within(list).getByText("משרד החברה / תקורה");
     expect(general.closest("a")).toHaveAttribute("href", "/projects/p0/profit?from=profit");
-    expect(general.closest(".ui-cp-row")?.querySelector(".ui-cp-meta")?.textContent).toBe("4 תנועות");
+    // The overhead project's own income line, the three overhead-role costs and the unassigned one.
+    expect(general.closest(".ui-cp-row")?.querySelector(".ui-cp-meta")?.textContent).toBe("5 תנועות");
+    expect(general.closest(".ui-cp-row")?.textContent).toContain("5,859");
     expect(within(list).queryByText("כללי")).toBeNull();
     expect(list.querySelectorAll(".ui-cp-row")).toHaveLength(6);
     expect(list.querySelector('a[href^="/projects/overhead"], a[href^="/projects/unassigned"]')).toBeNull();
     expect([...list.querySelectorAll(".ui-cp-name")].every((name) => name.textContent !== "")).toBe(true);
   });
 
-  it("with no overhead project set, the general costs are one כללי row with no link", () => {
+  it("with no overhead project set, the general costs are one כללי row with no link, and p0 is a project like any other", () => {
     renderPage({ ...COMPANY_PROFIT_SAMPLE, overhead: null });
     const list = document.querySelector(".ui-cp-list");
     if (!(list instanceof HTMLElement)) throw new Error("no project list");
     const general = within(list).getByText("כללי");
     expect(general.closest("a")).toBeNull();
     expect(general.closest(".ui-cp-row")?.querySelector(".ui-cp-meta")?.textContent).toBe("4 תנועות");
-    expect(list.querySelectorAll(".ui-cp-row")).toHaveLength(6);
+    expect(within(list).getByText("משרד החברה / תקורה").closest("a")).toHaveAttribute("href", "/projects/p0/profit?from=profit");
+    expect(list.querySelectorAll(".ui-cp-row")).toHaveLength(7);
   });
 });

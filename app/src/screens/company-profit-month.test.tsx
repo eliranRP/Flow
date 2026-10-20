@@ -4,9 +4,14 @@ import { COMPANY_PROFIT_SAMPLE } from "../dev/company-profit-sample";
 import { renderWithProviders } from "../test-render";
 import { CompanyProfitScreen } from "./company-profit-screen";
 
-const read = vi.hoisted(() => ({ calls: [] as { month: { from: string | null; to: string | null }; ytd: { from: string | null; to: string | null } }[] }));
+const read = vi.hoisted(() => ({ calls: [] as { month: { from: string | null; to: string | null }; ytd: { from: string | null; to: string | null }; overhead?: unknown }[] }));
 
 vi.mock("../ui/date-math", async (importOriginal) => ({ ...(await importOriginal<typeof import("../ui/date-math")>()), israelToday: () => "2026-10-18" }));
+// The overhead project's read still loading (owner 20/10).
+vi.mock("../project-cash", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../project-cash")>()),
+  useOverheadProject: () => ({ project: undefined, failed: false, refetch: () => undefined }),
+}));
 vi.mock("../use-company-profit", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../use-company-profit")>()),
   useCompanyProfitRead: (args: (typeof read.calls)[number]) => {
@@ -41,5 +46,17 @@ describe("CompanyProfitScreen month", () => {
   it("the current month reads to today", () => {
     renderWithProviders(<CompanyProfitScreen sample={COMPANY_PROFIT_SAMPLE} />, { route: "/profit" });
     expect(screen.getByText("אוקטובר 2026 · עד היום")).toBeTruthy();
+  });
+
+  it("only the לפי פרויקט list waits for the overhead project's read; the other orders never do", () => {
+    read.calls.length = 0;
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit" });
+    expect(read.calls.at(-1)?.overhead).toBeUndefined();
+    read.calls.length = 0;
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?by=category" });
+    expect(read.calls.at(-1)?.overhead).toBeNull();
+    read.calls.length = 0;
+    renderWithProviders(<CompanyProfitScreen />, { route: "/profit?by=date" });
+    expect(read.calls.at(-1)?.overhead).toBeNull();
   });
 });
