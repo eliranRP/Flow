@@ -60,15 +60,17 @@ export const CaptionNoLink: Story = {
 };
 
 /**
- * Six figures in both columns: each figure steps down from card size until it fits its column, so at 320
- * the two never meet.
+ * Six figures in both columns: the two figures step down together from card size until both fit their
+ * columns, so at 320 they never meet.
  */
 export const SixFigures: Story = {
   render: () => (
     <ForecastCard monthName="נובמבר" currency="USD" incomeMinor={12_850_000n} expenseMinor={9_420_075n} incomeNote="תשלום מהלקוח" expenseNote="מול $88,310 באוקטובר" netLabel="תזרים צפוי" href="/projects/p/profit/next" />
   ),
   play: async ({ canvasElement }) => {
-    // Each figure stays inside its own column.
+    // The two figures share one size, and each stays inside its own column.
+    const sizes = [...canvasElement.querySelectorAll<HTMLElement>(".ui-fc-col > .ui-num")].map((figure) => getComputedStyle(figure).fontSize);
+    await expect(new Set(sizes).size).toBe(1);
     for (const column of canvasElement.querySelectorAll<HTMLElement>(".ui-fc-col")) {
       const figure = column.querySelector(".ui-num");
       if (figure == null) throw new Error("figure missing");

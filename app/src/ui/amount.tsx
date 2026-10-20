@@ -51,6 +51,12 @@ type AmountProps = {
   cents?: "always";
   /** FLOW-366b: with cents="always", a whole amount keeps its ".00" (the month lines rows, as the board draws them). */
   zeroCents?: boolean;
+  /**
+   * A fitted size only: figures that sit side by side share one size. `onFit` hears the step this figure
+   * needs to fit, and `minStep` (the largest step of the row) draws it at least that small.
+   */
+  onFit?: (step: number) => void;
+  minStep?: number;
 };
 
 /** True when the formatted figure starts with a minus sign. */
@@ -77,7 +83,7 @@ const sizeClass = {
 } as const;
 
 const heroSteps = ["t-band", "t-detail", "t-total", "t-name", "t-btn"] as const;
-const columnSteps = ["t-card", "t-name", "t-btn"] as const;
+const columnSteps = ["t-card", "t-name", "t-sheet", "t-btn"] as const;
 
 /**
  * The step list of a fitted size and where it starts. Hero and display step down until the figure fits, a
@@ -107,6 +113,8 @@ export function Amount({
   signless = false,
   cents,
   zeroCents = false,
+  onFit,
+  minStep = 0,
 }: AmountProps) {
   const ref = useRef<HTMLElement>(null);
   const [step, setStep] = useState(0);
@@ -177,6 +185,7 @@ export function Amount({
         host.remove();
       }
       setStep(next - first);
+      onFit?.(next - first);
     };
     measure();
     const observer = new ResizeObserver(measure);
@@ -193,7 +202,7 @@ export function Amount({
       cancelled = true;
       observer.disconnect();
     };
-  }, [size, text]);
+  }, [size, text, onFit]);
   // Zero is not money in, and a figure with a minus is never green.
   // A figure that rounds to "₪0" (40 agorot in a summary) is zero too.
   const green = income && !loss && agorot !== 0n && !/^\D*0$/.test(text) && !showsMinus(text);
@@ -202,7 +211,7 @@ export function Amount({
     <bdi
       ref={ref}
       dir="ltr"
-      className={["ui-num", heroStepClass(size, step), loss ? "ui-loss" : "", green ? "ui-income" : ""].filter(Boolean).join(" ")}
+      className={["ui-num", heroStepClass(size, Math.max(step, minStep)), loss ? "ui-loss" : "", green ? "ui-income" : ""].filter(Boolean).join(" ")}
     >
       {tail == null ? text : (
         <>

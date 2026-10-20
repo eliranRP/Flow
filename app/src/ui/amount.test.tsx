@@ -25,6 +25,7 @@ describe("Amount", () => {
     expect(heroStepClass("list", 3)).toBe("t-body");
     expect(heroStepClass("column", 0)).toBe("t-card");
     expect(heroStepClass("column", 1)).toBe("t-name");
+    expect(heroStepClass("column", 2)).toBe("t-sheet");
     expect(heroStepClass("column", 9)).toBe("t-btn");
     const rect = Object.getOwnPropertyDescriptor(Element.prototype, "getBoundingClientRect");
     if (!rect) throw new Error("getBoundingClientRect is missing");
