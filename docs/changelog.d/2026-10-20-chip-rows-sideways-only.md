@@ -1,0 +1,1 @@
+The organize chips on company profit, month lines and the compact panel, and the active filters on Search, scroll only sideways: a drag up or down over a chip row no longer nudges the chips inside it. `overflow-x: auto` alone made each row a vertical scroller too; the rows now set `overflow-y: hidden` and contain the sideways scroll. `app/e2e/company-profit.spec.ts` checks it.
