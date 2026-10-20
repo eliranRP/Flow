@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cashMonthKey, cashSummaryRows } from "./cash";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
-import { CHART_MONTHS, type MonthFigures } from "./next-month-chart";
+import { CHART_MONTHS, type MonthFigures } from "./month-figures";
 import { monthPeriod } from "./period";
 import { useHomePreview } from "./preview";
 import { israelToday } from "./ui/date-math";

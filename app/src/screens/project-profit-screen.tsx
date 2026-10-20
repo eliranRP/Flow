@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
 import { useCompanyCurrency } from "../company-currency";
 import { projectExpenseMinor, projectRows } from "../by-currency";
-import type { MonthFigures } from "../next-month-chart";
+import type { MonthFigures } from "../month-figures";
 import { allTime, monthPeriod, shiftMonthKey } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { useNextMonthForecast, type NextMonthSample } from "../project-next-month-query";

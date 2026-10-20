@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { chartHistory, chartLabel, chartSub, expenseNote, forecastChartMonth, incomeNote, type MonthFigures } from "./next-month-chart";
+import { chartHistory, chartLabel, chartSub, expenseNote, forecastChartMonth, incomeNote } from "./next-month-chart";
+import type { MonthFigures } from "./month-figures";
 import type { NextMonthRow } from "./project-next-month";
 
 function figures(entries: [string, number, number][]): Map<string, MonthFigures> {
