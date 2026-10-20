@@ -2,6 +2,7 @@ import type { Breakdown, BreakdownDirection, BreakdownLinesPage, Dashboard } fro
 
 type LinesRows = NonNullable<BreakdownLinesPage>["rows"];
 import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
+import { projectGroupRow } from "./breakdown-project-group";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { type PeriodChoice } from "./period";
@@ -16,8 +17,11 @@ import { waitForAccessToken } from "./wait-for-session";
 
 export type BasisName = "cash" | "invoiced";
 
-/** One project's row: its counted income and expense, and the lines behind them. `shared` is כללי. */
-export type ProfitProjectRow = { key: string; name: string; shared: boolean; income: bigint; expense: bigint; profit: bigint; count: number };
+/**
+ * One project's row: its counted income and expense, and the lines behind them. The general costs (get_breakdown's
+ * `overhead` and `unassigned`) are one row, כללי, keyed "" with no `projectId`; a project opens its profit page.
+ */
+export type ProfitProjectRow = { key: string; name: string; projectId: string | null; income: bigint; expense: bigint; profit: bigint; count: number };
 
 /** A category's row for one direction; `amount` is signed (income +, expense −). */
 export type ProfitCategoryRow = { key: string; name: string; direction: BreakdownDirection; amount: bigint; count: number; projects: number };
@@ -76,12 +80,13 @@ export function buildProfitModel(inputs: ProfitInputs, linesComplete = true): Pr
   const byProject = new Map<string, ProfitProjectRow>();
   for (const direction of ["income", "expense"] as const) {
     for (const group of groupsIn(inputs.projects[direction], currency)) {
-      const row = byProject.get(group.key) ?? { key: group.key, name: group.shared ? "כללי" : group.name ?? "", shared: group.shared, income: 0n, expense: 0n, profit: 0n, count: 0 };
+      const { key, title, projectId } = projectGroupRow(group);
+      const row = byProject.get(key) ?? { key, name: title, projectId, income: 0n, expense: 0n, profit: 0n, count: 0 };
       if (direction === "income") row.income += group.amount_minor;
       else row.expense += group.amount_minor;
       row.count += group.count;
       row.profit = row.income - row.expense;
-      byProject.set(group.key, row);
+      byProject.set(key, row);
     }
   }
   const projects = [...byProject.values()].sort(byMagnitude((row) => row.profit, (a, b) => a.name.localeCompare(b.name)));
