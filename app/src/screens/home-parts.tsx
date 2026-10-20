@@ -1,6 +1,5 @@
 import type { CashCurrencyRow } from "@flow/shared";
 import { formatAmountText } from "@flow/shared";
-import { useEffect, useState } from "react";
 import { addTriggerRef } from "../add-trigger";
 import { Link } from "react-router-dom";
 import { cashLinesPath, notInProfitHint } from "../cash";
@@ -20,7 +19,6 @@ import { ChevronDownIcon, ChevronIcon, OutwardChevron, PersonIcon, PlusIcon, Sea
 import { MonthStepper } from "../ui/month-stepper";
 import { PartsBar } from "../ui/parts-bar";
 import { PeriodSwipe } from "../ui/period-swipe";
-import { bandFade } from "../ui/top-band";
 
 /**
  * FLOW-364: Home's band, figures, split card, forecast, attention box and compact bar. The pure
@@ -256,30 +254,6 @@ export function AttentionBox({ rows }: { rows: readonly BannerRow[] }) {
       <BannerRows rows={rows} />
     </section>
   );
-}
-
-/**
- * Whether the page is scrolled past the band's figures (scrollY 220 and more, the same bandFade the
- * band uses). The compact bar shows then.
- */
-export function useCompactShown(): boolean {
-  const [shown, setShown] = useState(() => bandFade(window.scrollY) === 0);
-  useEffect(() => {
-    let pending = false;
-    const onScroll = () => {
-      if (pending) return;
-      pending = true;
-      requestAnimationFrame(() => {
-        pending = false;
-        setShown(bandFade(window.scrollY) === 0);
-      });
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-    };
-  }, []);
-  return shown;
 }
 
 /** Home's compact bar: the arrows step the month and keep the scroll; the centre opens the drawer. */

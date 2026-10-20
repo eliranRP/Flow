@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode, type Ref, type RefObject } from "react";
+import { useEffect, useRef, useState, type ReactNode, type Ref, type RefObject } from "react";
 import { ChevronDownIcon } from "./icons";
 import { Wordmark } from "./wordmark";
 
@@ -25,9 +25,14 @@ type TopBandProps = {
 const FADE_FROM = 60;
 const FADE_TO = 220;
 
-/** Opacity of the band's figures at `scrollY`, linear between the two, rounded to 0.05. */
-export function bandFade(scrollY: number): number {
-  const linear = (FADE_TO - scrollY) / (FADE_TO - FADE_FROM);
+/**
+ * Opacity of the band's figures at `scrollY`, linear between the two, rounded to 0.05. A page that
+ * cannot scroll to FADE_TO ends the fade at its bottom (less a pixel for subpixel scroll), so the
+ * figures are gone and the compact bar shows there, never a half-faded band with no bar.
+ */
+export function bandFade(scrollY: number, maxScroll = Number.POSITIVE_INFINITY): number {
+  const end = maxScroll - 1 > FADE_FROM ? Math.min(FADE_TO, maxScroll - 1) : FADE_TO;
+  const linear = (end - scrollY) / (end - FADE_FROM);
   const clamped = Math.min(1, Math.max(0, linear));
   return Math.round(clamped * 20) / 20;
 }
@@ -43,7 +48,7 @@ function useBandFade(band: RefObject<HTMLElement | null>): void {
     let pending = false;
     let frame = 0;
     const write = () => {
-      element.style.setProperty("--band-fade", String(bandFade(window.scrollY)));
+      element.style.setProperty("--band-fade", String(bandFade(window.scrollY, pageMaxScroll())));
     };
     const onScroll = () => {
       if (pending) return;
@@ -60,6 +65,32 @@ function useBandFade(band: RefObject<HTMLElement | null>): void {
       if (pending) cancelAnimationFrame(frame);
     };
   }, [band]);
+}
+
+/** How far the page can scroll. */
+export function pageMaxScroll(): number {
+  return document.documentElement.scrollHeight - window.innerHeight;
+}
+
+/** Whether the band's figures are gone (bandFade 0): the compact bar shows from there. */
+export function useBandGone(): boolean {
+  const [gone, setGone] = useState(() => bandFade(window.scrollY, pageMaxScroll()) === 0);
+  useEffect(() => {
+    let pending = false;
+    const onScroll = () => {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(() => {
+        pending = false;
+        setGone(bandFade(window.scrollY, pageMaxScroll()) === 0);
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
+  return gone;
 }
 
 /** Violet band. Home and the Project header only. */

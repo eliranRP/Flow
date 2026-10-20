@@ -25,7 +25,7 @@ import { InvestmentSummary } from "../ui/investment-card";
 import { useScrolledPast } from "../ui/screen-header";
 import { CompactBar } from "../ui/compact-bar";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
-import { TopBand } from "../ui/top-band";
+import { TopBand, useBandGone } from "../ui/top-band";
 import { israelToday } from "../ui/date-math";
 import { loansFigure } from "./project-overview";
 import type { RentCategory } from "../next-month-chart";
@@ -122,7 +122,10 @@ export function ProjectCashOverview({
   const summary = summaryFigures != null;
   // FLOW-445: once the figure scrolls under the band, the compact bar slides down: Back, "−$X • name", ⋯.
   const titleEnd = useRef<HTMLSpanElement>(null);
-  const past = useScrolledPast(titleEnd, true);
+  // A page too short to scroll the mark under the bar shows it once the band's figures are gone.
+  const markPast = useScrolledPast(titleEnd, true);
+  const bandGone = useBandGone();
+  const past = markPast || bandGone;
   const first = rows[0];
   // FLOW-445: נכנס and יצא sit in the band on one line; the month's profit and the rest stay in the list.
   const summaryRows = key == null ? [] : projectCashSummaryRows(project.id, key, rows, search, now);

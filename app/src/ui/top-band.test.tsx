@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BandCompany, TopBand } from "./top-band";
+import { BandCompany, TopBand, bandFade } from "./top-band";
 import { expectRtl } from "./test-support";
 
 describe("TopBand", () => {
@@ -62,6 +62,18 @@ describe("TopBand", () => {
       expect(fadeOf()).toBe("0");
       scrollTo(400);
       expect(fadeOf()).toBe("0");
+    });
+
+    it("ends the fade at the bottom of a page too short to scroll 220px, so the compact bar can show", () => {
+      // A page that scrolls 141px: gone at its bottom (less a pixel), half way at 100px.
+      expect(bandFade(60, 141)).toBe(1);
+      expect(bandFade(100, 141)).toBe(0.5);
+      expect(bandFade(140, 141)).toBe(0);
+      expect(bandFade(141, 141)).toBe(0);
+      // A tall page keeps 60 to 220; a page that cannot reach 60 never fades.
+      expect(bandFade(140, 2000)).toBe(0.5);
+      expect(bandFade(220, 2000)).toBe(0);
+      expect(bandFade(40, 50)).toBe(1);
     });
 
     it("throttles the scroll to one update per frame", () => {
