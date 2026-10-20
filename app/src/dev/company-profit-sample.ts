@@ -159,3 +159,13 @@ export const COMPANY_PROFIT_SAMPLE: CompanyProfitSample = {
   next: { ...COMPANY_NEXT_READS, months: MONTHS },
   years: COMPANY_YEARS_SAMPLE,
 };
+
+/**
+ * A closed month (July, opened from Home's ?month=) whose overhead project the owner renamed כללי (owner 21/10): its
+ * own income group and the general costs are still one row, under that name, opening the project.
+ */
+export const COMPANY_PROFIT_PAST_SAMPLE: CompanyProfitSample = {
+  ...COMPANY_PROFIT_SAMPLE,
+  monthKey: "2026-07",
+  overhead: { id: "p0", name: "כללי" },
+};
