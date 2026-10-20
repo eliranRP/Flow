@@ -129,6 +129,37 @@ describe("ForecastScreen", () => {
     }
   });
 
+  it("live, shows no start, end or compact figure when today's cash cannot be read, and says so", async () => {
+    const month = israelToday().slice(0, 7);
+    const reads: Record<string, unknown> = {
+      mcp_company_loan_currency: "USD",
+      expected_months: {
+        today: `${month}-01`,
+        project_id: null,
+        months: [{ month, open: true, by_currency: [] }],
+        recurring: [{ direction: "expense", party_id: "p-1", name: "Example Utility", currency: "USD", typical_amount_minor: -25000, typical_day: 28, months_seen: 6, seen_this_month: false }],
+      },
+      list_unpaid: [],
+      forecast_overrides_for: [],
+    };
+    rpc.mockImplementation((name: string) =>
+      name === "cash_months"
+        ? Promise.resolve({ data: null, error: { message: "offline" } as unknown as null })
+        : Promise.resolve({ data: (reads[name] ?? null) as null, error: null }),
+    );
+    try {
+      renderWithProviders(<ForecastScreen />, { route: "/forecast" });
+      expect(await screen.findByText("לא הצלחנו לטעון את התזרים של היום.")).toBeTruthy();
+      // The list still works; only the sum, which starts from today's cash, waits.
+      expect(screen.getByRole("button", { name: /^Example Utility,/ })).toBeTruthy();
+      expect(document.querySelector(".ui-fc-start")).toBeNull();
+      expect(document.querySelector(".ui-forecast-big")).toBeNull();
+      expect(document.querySelector(".ui-forecast-compact-figure")?.textContent).toBe("תזרים צפוי");
+    } finally {
+      rpc.mockImplementation(() => Promise.resolve({ data: null, error: null }));
+    }
+  });
+
   it("titles the screen תזרים צפוי, in its header and its compact bar", () => {
     renderWithProviders(<ForecastScreen sample={monthForecastBoardSample("board")} />, { route: "/forecast" });
     expect(screen.getByRole("heading", { level: 1, name: "תזרים צפוי" })).toBeTruthy();

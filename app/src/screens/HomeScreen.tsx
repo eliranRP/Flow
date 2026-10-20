@@ -110,7 +110,7 @@ export function CashEmptyHome({
         <ul className="ui-home-empty-list">
           <li>כמה נכנס וכמה יצא החודש, מול החודש הקודם</li>
           <li>שורות שמחכות לאישור שלכם</li>
-          <li>צפי לסוף החודש לפי הקבועים והחשבוניות</li>
+          <li>תזרים צפוי לסוף החודש לפי הקבועים והחשבוניות</li>
         </ul>
       </section>
       <SetupHomeSlot emptyHome />

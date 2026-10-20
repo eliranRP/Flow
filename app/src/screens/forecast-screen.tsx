@@ -10,6 +10,7 @@ import { useCashMonthsQuery } from "../use-cash";
 import { useGoBack } from "../ui/back";
 import { israelToday } from "../ui/date-math";
 import { ScreenHeader } from "../ui/screen-header";
+import { NextMonthCardSkeleton } from "../ui/screen-skeletons";
 import { DelayedSkeleton, ListSkeleton } from "../ui/skeleton";
 import { EmptyState } from "../ui/empty-state";
 import { CalendarCheckIcon } from "../ui/icons";
@@ -136,6 +137,8 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
   const base = data?.base ?? "ILS";
   const currentRow = cash.data?.months.find((row) => cashMonthKey(row.month) === month);
   const net = sample?.net ?? cashRows(currentRow, base).find((row) => row.currency === base)?.net_minor ?? 0n;
+  // Today's cash is the sum's start: with no read of this month (loading, offline, a failed read), no figure is shown.
+  const startKnown = sample != null || currentRow != null;
   const build: ForecastBuild | null = data?.build ?? null;
   const total = build == null ? 0n : net + build.incomeTotal - build.expenseTotal;
   const days = daysLeftInMonth(today, month);
@@ -284,7 +287,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
     <div className={cx("ui-forecast-screen", open != null && "ui-forecast-screen-paged")}>
       <div className={cx("ui-forecast-compact", compact && "ui-forecast-compact-on")} aria-hidden={!compact}>
         <span>בית</span>
-        <span className="ui-forecast-compact-figure">{`${FORECAST_TITLE} · `}<bdi dir="ltr">{forecastBigText(total, base)}</bdi></span>
+        <span className="ui-forecast-compact-figure">{startKnown ? <>{`${FORECAST_TITLE} · `}<bdi dir="ltr">{forecastBigText(total, base)}</bdi></> : FORECAST_TITLE}</span>
       </div>
       <ScreenHeader title={FORECAST_TITLE} backTo="/" backText="בית" subtitle={`סוף ${monthName(month)} · עוד ${String(days)} ימים`} />
       {data == null && live && query.isError ? (
@@ -297,6 +300,15 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
       ) : null}
       {build == null ? null : (
         <>
+          {!startKnown ? (
+            // A read that failed, or came back without this month (no company, a month the server has not opened), says so.
+            cash.isError || cash.isSuccess ? (
+              <p className="ui-forecast-error t-caption t-muted" role="alert">לא הצלחנו לטעון את התזרים של היום.</p>
+            ) : (
+              <DelayedSkeleton><NextMonthCardSkeleton /></DelayedSkeleton>
+            )
+          ) : (
+          <>
           <p className={cx("ui-forecast-big", total < 0n && "ui-forecast-big-neg")} aria-label="תזרים צפוי לסוף החודש">
             <Amount agorot={total} size="display" currency={base} />
           </p>
@@ -317,6 +329,8 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
             />
             {chart == null ? null : <MonthChart kind="cash" history={chart.months} forecast={null} sub={chart.sub} label={chart.label} />}
           </div>
+          </>
+          )}
           <ChangedLine changed={changed} onReset={resetAll} />
           <ForecastViewSwitch view={view} onPick={setView} />
           {byCategory ? (
