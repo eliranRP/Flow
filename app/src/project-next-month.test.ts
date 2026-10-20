@@ -508,7 +508,7 @@ describe("cashForecast: the project page's cash variant (decision 0196)", () => 
   it("adds an amortizing loan's November principal to the צפי page's expenses, and takes it from the net", () => {
     const base = profit([loan]);
     expect(principal).toBeGreaterThan(0n);
-    expect(base.principalMinor).toBe(principal);
+    expect(base.cashOnlyMinor).toBe(principal);
     const cash = cashForecast(base);
     expect(cash.expenseMinor).toBe(base.expenseMinor + principal);
     expect(cash.netMinor).toBe(base.incomeMinor - base.expenseMinor - principal);
@@ -517,32 +517,56 @@ describe("cashForecast: the project page's cash variant (decision 0196)", () => 
     expect(cash.rows).toBe(base.rows);
   });
 
-  it("keeps the principal through the user's edits, which change rows only", () => {
-    const edited = applyForecastEdits(profit([loan]), [
-      { id: "e-1", kind: "remove", row_key: "avg:loan-interest", category_id: null, direction: null, amount_minor: null, pace: "once", start_month: "2026-11" },
-    ]);
-    expect(edited.principalMinor).toBe(principal);
+  const remove = (key: string, id: string): ProjectForecastEdit => (
+    { id, kind: "remove", row_key: key, category_id: null, direction: null, amount_minor: null, pace: "once", start_month: "2026-11" }
+  );
+
+  it("keeps the principal while the loan has a row left, and drops it once the user takes out every row of the loan", () => {
+    // The interest row out, the escrow row kept: the payment still happens.
+    const edited = applyForecastEdits(profit([loan]), [remove("avg:loan-interest", "e-1")]);
+    expect(edited.cashOnlyMinor).toBe(principal);
     expect(cashForecast(edited).expenseMinor).toBe(edited.expenseMinor + principal);
+    // Both rows out: the owner says the payment will not happen, so none of it is cash out.
+    const gone = applyForecastEdits(profit([loan]), [remove("avg:loan-interest", "e-1"), remove("avg:taxes", "e-2")]);
+    expect(gone.loanCash.map((row) => row.loanId)).toEqual([loan.id]);
+    expect(gone.cashOnlyMinor).toBe(0n);
+    expect(cashForecast(gone).expenseMinor).toBe(gone.expenseMinor);
   });
 
   it("sums the principal of two loans with a payment in the month, in the forecast's currency only", () => {
     const second: ForecastLoan = { ...loan, id: "l-second" };
-    expect(profit([loan, second]).principalMinor).toBe(principal * 2n);
-    expect(profit([loan, { ...second, currency: "ILS" }]).principalMinor).toBe(principal);
+    expect(profit([loan, second]).cashOnlyMinor).toBe(principal * 2n);
+    expect(profit([loan, { ...second, currency: "ILS" }]).cashOnlyMinor).toBe(principal);
   });
 
   it("is the צפי page's forecast for a project with no loan", () => {
     const base = profit([]);
-    expect(base.principalMinor).toBe(0n);
+    expect(base.cashOnlyMinor).toBe(0n);
     expect(cashForecast(base)).toBe(base);
     const plain = forecast([party({})]);
     expect(cashForecast(plain)).toEqual(plain);
   });
 
+  it("adds the interest and escrow a loan files out of the profit (decision 0166), so the card holds the whole payment", () => {
+    const interestId = loan.categoryIds.interest ?? JUNIPER_NEXT_LOAN.categories?.find((category) => category.loan_part === "interest")?.id;
+    const kept = (JUNIPER_NEXT_LOAN.categories ?? []).map((category) => (category.id === interestId ? { ...category, excluded_from_pnl: true } : category));
+    const base = nextMonthForecast({
+      projectId: "juniper-ct", currency: "USD", today: JUNIPER_NEXT_LOAN.today, recurring: JUNIPER_NEXT_LOAN.expected.recurring,
+      categoryMonths: JUNIPER_NEXT_LOAN.categoryMonths, loans: [{ ...loan, kind: "interest_only", interestOnlyMonths: 12 }], categories: kept,
+    });
+    expect(base.rows.some((row) => row.kind === "loan" && row.categoryId === interestId)).toBe(false);
+    // Interest only: no principal, so the cash-only part is the interest no row holds.
+    const due = loanOutlook({ ...loan, kind: "interest_only", interestOnlyMonths: 12 }, JUNIPER_NEXT_LOAN.today)?.next;
+    expect(due?.principalMinor).toBe(0n);
+    expect(base.cashOnlyMinor).toBe(due?.interestMinor);
+    expect(base.cashOnlyMinor).toBeGreaterThan(0n);
+    expect(cashForecast(base).expenseMinor).toBe(base.expenseMinor + (due?.interestMinor ?? 0n));
+  });
+
   it("adds nothing for a loan with no payment next month, closed, paid off or interest only", () => {
     const nothing = (candidate: ForecastLoan) => {
       const base = profit([candidate]);
-      expect(base.principalMinor).toBe(0n);
+      expect(base.cashOnlyMinor).toBe(0n);
       expect(cashForecast(base).expenseMinor).toBe(base.expenseMinor);
     };
     nothing({ ...loan, startDate: "2026-12-01" });

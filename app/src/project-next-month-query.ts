@@ -145,6 +145,8 @@ export function useNextMonthForecast(projectId: string, currency: string, sample
   return {
     forecast: base == null ? null : applyForecastEdits(base, edits ?? []),
     month,
+    /** yyyy-mm-dd: the day the forecast is from (the sample's, else Israel's today). */
+    today,
     edits: edits ?? [],
     recurring: recurring ?? [],
     categoryMonths: categoryMonths ?? null,

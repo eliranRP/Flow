@@ -6,8 +6,8 @@ import { type OutlookLoan, paymentsLeft } from "./screens/loan-outlook";
  * The loan rows of a project's next-month forecast (decision 0190), pure: for each open loan filed under the
  * project, in the forecast's currency, the interest and escrow of its payment due in the month (the loan
  * page's payments left, from the balance in the books, FLOW-427), each in the category
- * the loan's payments file that part to. Principal is not a profit line: loanPrincipal gives it apart, for the
- * project page's cash variant of the forecast (decision 0196).
+ * the loan's payments file that part to. Principal is not a profit line: loanCashOnly gives it apart, with any
+ * part kept out of the profit, for the project page's cash variant of the forecast (decision 0196).
  */
 
 /** A loan as the forecast reads it: its terms, where it sits, and the categories its parts file to. */
@@ -73,7 +73,30 @@ export function loanParts(input: LoanMonth & { categories: readonly ForecastCate
   return [...parts.values()];
 }
 
-/** The principal of the same payments, summed: cash out that the profit leaves out. Positive, in minor units. */
-export function loanPrincipal(input: LoanMonth): bigint {
-  return dueRows(input).reduce((sum, { row }) => sum + (row.principalMinor > 0n ? row.principalMinor : 0n), 0n);
+/** One loan's cash in the month that no loan row holds, and the categories of the loan rows it has. */
+export type LoanCash = {
+  loanId: string;
+  /** The categories its interest and escrow rows file to (`avg:<id>`); empty when it has none. */
+  rowCategoryIds: string[];
+  /** Positive, in minor units. */
+  minor: bigint;
+};
+
+/**
+ * The cash of the same payments that no loan row holds, loan by loan: the principal, and the interest or
+ * escrow whose category is kept out of the profit (decision 0166, a flip's hard-money interest) or missing.
+ * With the loan rows, the whole payment. A loan with nothing of the kind is left out.
+ */
+export function loanCashOnly(input: LoanMonth & { categories: readonly ForecastCategory[] }): LoanCash[] {
+  const positive = (minor: bigint) => (minor > 0n ? minor : 0n);
+  return dueRows(input).flatMap(({ loan, row }) => {
+    const rowCategoryIds: string[] = [];
+    let minor = positive(row.principalMinor);
+    for (const [part, amount] of [["interest", row.interestMinor], ["escrow", row.escrowMinor]] as const) {
+      const category = partCategory(loan, part, input.categories);
+      if (category == null) minor += positive(amount);
+      else if (amount > 0n) rowCategoryIds.push(category.id);
+    }
+    return minor === 0n ? [] : [{ loanId: loan.id, rowCategoryIds, minor }];
+  });
 }

@@ -2,8 +2,12 @@ import { formatAmountText } from "@flow/shared";
 import { useLayoutEffect, useRef, useState } from "react";
 
 export type AmountPresentation = "summary" | "detail";
-/** Roles from the Design guide: band 52/500, detail 40/400, total 34/400, card 28/400, list 17/400. */
-export type AmountSize = "hero" | "display" | "total" | "card" | "list";
+/**
+ * Roles from the Design guide: band 52/500, detail 40/400, total 34/400, card 28/400, list 17/400. "column"
+ * is a card figure that shares a row with another (the next-month card): 28/400, stepping down until it fits
+ * its `.ui-amount-fit` column.
+ */
+export type AmountSize = "hero" | "display" | "total" | "card" | "column" | "list";
 
 /**
  * Summaries are whole shekels. Detail shows agorot only when they are not zero.
@@ -68,22 +72,28 @@ const sizeClass = {
   display: "t-detail",
   total: "t-total",
   card: "t-card",
+  column: "t-card",
   list: "t-body",
 } as const;
 
 const heroSteps = ["t-band", "t-detail", "t-total", "t-name", "t-btn"] as const;
+const columnSteps = ["t-card", "t-name", "t-btn"] as const;
 
-/** Where a fitted size starts on the step list. Hero and display step down until the figure fits; list never does. */
-function firstStep(size: AmountSize | undefined): number | null {
-  if (size === "hero") return 0;
-  if (size === "display") return 1;
+/**
+ * The step list of a fitted size and where it starts. Hero and display step down until the figure fits, a
+ * column figure from card size; the other sizes never do.
+ */
+function fitSteps(size: AmountSize | undefined): { steps: readonly string[]; first: number } | null {
+  if (size === "hero") return { steps: heroSteps, first: 0 };
+  if (size === "display") return { steps: heroSteps, first: 1 };
+  if (size === "column") return { steps: columnSteps, first: 0 };
   return null;
 }
 
 export function heroStepClass(size: AmountSize | undefined, step: number): string {
-  const first = firstStep(size);
-  if (first == null) return size ? sizeClass[size] : "";
-  return heroSteps[Math.min(first + Math.max(step, 0), heroSteps.length - 1)] ?? "t-btn";
+  const fit = fitSteps(size);
+  if (fit == null) return size ? sizeClass[size] : "";
+  return fit.steps[Math.min(fit.first + Math.max(step, 0), fit.steps.length - 1)] ?? "t-btn";
 }
 
 export function Amount({
@@ -104,15 +114,16 @@ export function Amount({
   // Money in gets a plus (decision 0181). Only a non-zero figure with no loss: zero has no sign.
   const text = formatAmount(agorot, shown, currency, direction ?? (income && !signless && !loss && agorot > 0n ? "income" : undefined), zeroCents);
   useLayoutEffect(() => {
-    const first = firstStep(size);
-    if (first == null) return;
+    const fit = fitSteps(size);
+    if (fit == null) return;
+    const { steps, first } = fit;
     const node = ref.current;
     if (!node) return;
-    // A flex item shrinks to the figure, so measure against the padded block that holds it.
-    const column = node.closest(".ui-band-hero, .ui-page-pad") ?? node.parentElement;
+    // A flex item shrinks to the figure, so measure against the padded block (or the column) that holds it.
+    const column = node.closest(".ui-amount-fit, .ui-band-hero, .ui-page-pad") ?? node.parentElement;
     if (!(column instanceof HTMLElement)) return;
     const probe = document.createElement("bdi");
-    probe.className = `ui-num ${heroSteps[first] ?? "t-band"}`;
+    probe.className = `ui-num ${steps[first] ?? "t-band"}`;
     probe.textContent = text;
     probe.setAttribute("aria-hidden", "true");
     probe.style.whiteSpace = "nowrap";
@@ -153,10 +164,10 @@ export function Amount({
       };
       // The probe is in the page only while it is measured, so a text search never finds a second figure.
       document.body.appendChild(host);
-      let next = heroSteps.length - 1;
+      let next = steps.length - 1;
       try {
-        for (let index = first; index < heroSteps.length; index += 1) {
-          const typeClass = heroSteps[index];
+        for (let index = first; index < steps.length; index += 1) {
+          const typeClass = steps[index];
           if (typeClass != null && widthOf(typeClass) <= content) {
             next = index;
             break;

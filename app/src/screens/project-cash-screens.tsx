@@ -28,6 +28,7 @@ import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { TopBand } from "../ui/top-band";
 import { israelToday } from "../ui/date-math";
 import { loansFigure } from "./project-overview";
+import type { RentCategory } from "../next-month-chart";
 import type { ProjectInvestment } from "./project-investment-data";
 
 type Project = NonNullable<ProjectDetail>;
@@ -37,7 +38,9 @@ export type NextMonthCash = {
   forecast: NextMonthForecast | null;
   loading: boolean;
   currency: string;
-  categories: readonly { id: string; name: string }[];
+  categories: readonly RentCategory[];
+  /** yyyy-mm-dd, the forecast's today. */
+  today: string;
 };
 
 /**
@@ -227,6 +230,7 @@ export function ProjectCashOverview({
             netLabel="תזרים צפוי"
             cardHref={`/projects/${project.id}/profit/next${search}`}
             categories={nextMonth.categories}
+            today={nextMonth.today}
             chartLink={{ href: `/projects/${project.id}/profit${withPeriodSearch(search, { kind: "all", from: null, to: null })}`, text: "רווח לפי חודש" }}
           />
         )}

@@ -71,17 +71,24 @@ export function chartLabel(history: ChartHistory, forecast: ChartMonth | null, c
   return `${head}, וצפי ${monthWord(forecast.key)}: הכנסות ${formatAmountText(forecast.incomeMinor, currency)}, הוצאות ${formatAmountText(forecast.expenseMinor, currency)}`;
 }
 
-/** A rent category: the starter set's שכירות, or one the user named after it. */
-function isRent(categoryId: string | null, categories: readonly { id: string; name: string }[]): boolean {
+/** A company category as the income caption reads it: its name, and its parent's id when it has one. */
+export type RentCategory = { id: string; name: string; parent_id?: string | null };
+
+/** A rent category: the starter set's שכירות, one the user named after it, or a sub-category of one. */
+function isRent(categoryId: string | null, categories: readonly RentCategory[]): boolean {
   if (categoryId == null) return false;
-  return categories.find((category) => category.id === categoryId)?.name.startsWith("שכירות") === true;
+  const category = categories.find((row) => row.id === categoryId);
+  if (category == null) return false;
+  if (category.name.startsWith("שכירות")) return true;
+  const parent = category.parent_id == null ? null : categories.find((row) => row.id === category.parent_id);
+  return parent?.name.startsWith("שכירות") === true;
 }
 
 /**
  * Under הכנסות צפויות, what the expected income is made of: "2 שכירויות קבועות" for recurring rent, "2
  * הכנסות קבועות" for other recurring income, a single other line by its name, else the count.
  */
-export function incomeNote(forecast: Pick<NextMonthForecast, "rows">, categories: readonly { id: string; name: string }[]): string {
+export function incomeNote(forecast: Pick<NextMonthForecast, "rows">, categories: readonly RentCategory[]): string {
   const rows = forecast.rows.filter((row) => row.minor > 0n);
   const count = rows.length;
   if (count === 0) return "אין הכנסה צפויה";

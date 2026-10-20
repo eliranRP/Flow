@@ -1,4 +1,4 @@
-import { chartHistory, chartLabel, chartSub, expenseNote, forecastChartMonth, incomeNote, type MonthFigures } from "../next-month-chart";
+import { chartHistory, chartLabel, chartSub, expenseNote, forecastChartMonth, incomeNote, type MonthFigures, type RentCategory } from "../next-month-chart";
 import { cashMonthName } from "../cash";
 import type { NextMonthForecast } from "../project-next-month";
 import { ForecastCard, MonthChart } from "../ui/month-forecast";
@@ -24,6 +24,7 @@ export function NextMonthBlock({
   cardHref,
   categories,
   chartLink,
+  today,
 }: {
   forecast: NextMonthForecast | null;
   /** The forecast's reads are still out: the card's skeleton holds its place, and the chart waits. */
@@ -37,8 +38,10 @@ export function NextMonthBlock({
   netLabel: string;
   cardHref: string;
   /** The company's categories, to name recurring rent in the income caption. */
-  categories: readonly { id: string; name: string }[];
+  categories: readonly RentCategory[];
   chartLink?: { href: string; text: string };
+  /** yyyy-mm-dd, the forecast's today: the month's name carries a year only when it is not today's. */
+  today: string;
 }) {
   const history = current == null ? null : chartHistory(current, figures, firstMonth);
   const ahead = forecast == null ? null : forecastChartMonth(forecast);
@@ -48,7 +51,7 @@ export function NextMonthBlock({
         <DelayedSkeleton><NextMonthCardSkeleton /></DelayedSkeleton>
       ) : forecast == null || (forecast.rows.length === 0 && forecast.expenseMinor === 0n) ? null : (
         <ForecastCard
-          monthName={cashMonthName(forecast.month)}
+          monthName={cashMonthName(forecast.month, new Date(`${today}T12:00:00Z`))}
           currency={currency}
           incomeMinor={forecast.incomeMinor}
           expenseMinor={forecast.expenseMinor}

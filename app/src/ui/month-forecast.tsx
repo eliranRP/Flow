@@ -64,14 +64,14 @@ export function ForecastCard({
         )}
       </span>
       <span className="ui-fc-cols">
-        <span className={incomeMinor > 0n ? "ui-fc-col" : "ui-fc-col ui-fc-col-zero"}>
+        <span className={incomeMinor > 0n ? "ui-fc-col ui-amount-fit" : "ui-fc-col ui-amount-fit ui-fc-col-zero"}>
           <span className="ui-fc-label">הכנסות צפויות</span>
-          <Amount agorot={incomeMinor} currency={currency} size="card" income />
+          <Amount agorot={incomeMinor} currency={currency} size="column" income />
           <span className="ui-fc-label">{incomeNote}</span>
         </span>
-        <span className="ui-fc-col">
+        <span className="ui-fc-col ui-amount-fit">
           <span className="ui-fc-label">הוצאות צפויות</span>
-          <Amount agorot={expenseMinor} currency={currency} size="card" />
+          <Amount agorot={expenseMinor} currency={currency} size="column" />
           <span className="ui-fc-label">{expenseNote}</span>
         </span>
       </span>
