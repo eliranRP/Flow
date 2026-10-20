@@ -149,7 +149,7 @@ export function ProjectDetailScreen({
   const lifetimeProject = lifetime.data ?? sample ?? null;
   const forecastCurrency = lifetimeProject == null ? companyCurrency : projectRows(lifetimeProject, companyCurrency)[0]?.currency ?? companyCurrency;
   // The forecast waits for the lifetime read too, so it is never built first in the company's currency.
-  const currencyPending = sample == null && detail.data != null && lifetime.data == null && lifetime.isPending;
+  const currencyPending = sample == null && detail.data != null && lifetime.data == null && lifetime.isPending && !lifetime.isPaused;
   const forecastLive = sample == null && detail.data != null && lifetime.data != null;
   const next = useNextMonthForecast(sample?.id ?? projectId, forecastCurrency, sampleNext, forecastLive);
   // Decision 0196: the page is about cash, so its card and chart take the forecast in cash terms (the loans'

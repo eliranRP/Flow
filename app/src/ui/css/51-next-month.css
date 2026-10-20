@@ -90,6 +90,9 @@
 /* The figure starts on the right like the labels above and below it. */
 .ui-fc-col > .ui-num {
   align-self: flex-start;
+  /* The board's 28/400 at every fitted step: a smaller figure is not a heavier one. The fit measures at the
+     steps' own weight, which is wider, so a figure that fits there fits here. */
+  font-weight: var(--type-card-weight);
 }
 
 /* No income expected: the $0 is grey, not green. */
