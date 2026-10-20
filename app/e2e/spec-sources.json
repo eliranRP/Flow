@@ -93,6 +93,13 @@
       "ui/install-screen.tsx",
       "ui/tab-bar.tsx"
     ],
+    "notifications.spec.ts": [
+      "screens/notifications-screen.tsx",
+      "screens/push-copy.ts",
+      "push.ts",
+      "push-devices.ts",
+      "push-test.ts"
+    ],
     "controls-settings.spec.ts": [
       "screens/",
       "setup/",
