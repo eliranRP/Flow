@@ -2,6 +2,7 @@
 
 **Date:** 2026-10-10
 **Status:** Accepted (FLOW-415 server PR 2; the owner's additions of 2026-10-10 08:40–08:43Z. Builds on [0172](0172-recurring-charges.md). The app screens are UI lane 2's PR)
+**Amended by:** [0199](0199-recurring-cycle-usual-amount.md) point 1. A pace other than monthly takes its usual day and amount from the months on its cycle only, not from all 24 months.
 
 ## Context
 

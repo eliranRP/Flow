@@ -5,3 +5,4 @@
 - [x] The month forecast (app and MCP `get_forecast`, one builder) lists a recurring charge only when it is due this month: from its next due month, every pace months; a late one still counts. `dueInMonth` moves to `@flow/shared` so next month's project and company forecasts use the same copy.
 - [x] `private.recurring_parties`: a charge every 2 months, quarter or year takes its usual amount and day from the months on its cycle, counted back from its last complete month, not from every month in 24. Monthly charges and the owner's amount are unchanged. `project_recurring_arrivals` (a project's changes) takes the same months.
 - [x] Decision 0199 (amends 0175 point 1); unit tests in shared, an MCP test, a pgTAP file.
+- [x] Review (#747): a yearly charge steps by its last gap of 11 to 13 months (a bill a month early or late), in both functions; the usual category from the cycle's months; 0175 names 0199 as amending it.

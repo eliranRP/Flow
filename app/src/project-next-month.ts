@@ -265,7 +265,7 @@ export function editApplies(start: string, pace: ForecastPace, month: string): b
   const gap = monthIndex(month) - monthIndex(start);
   if (gap < 0) return false;
   if (pace === "once") return gap === 0;
-  return gap % (pace === "month" ? 1 : paceMonths(pace)) === 0;
+  return gap % paceMonths(pace) === 0;
 }
 
 /** The key of the row a line the user added makes. */

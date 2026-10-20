@@ -7,14 +7,18 @@
 -- charge's usual amount was a monthly bill's.
 -- - private.recurring_parties: for a pace other than month, the usual amount and day are the median (by size,
 --   the direction's sign, as before) of the months on the charge's cycle, counted back from its last complete
---   month: last, last - pace, last - 2 x pace, ... within the 24-month window. A monthly charge is unchanged
+--   month: last, last - pace, last - 2 x pace, ... within the 24-month window. A yearly charge steps by its
+--   last gap when that is 11 to 13 months (the drift the yearly rule allows), so a bill a month early or late
+--   still lands on last year's and not on an old monthly bill. Its usual category comes from the same months
+--   (and this month), so the old monthly bills' category no longer names it. A monthly charge is unchanged
 --   (the last 6 months, else 24), the owner's amount still wins (typical_amount_source 'owner'), and a charge
 --   the owner marked recurring with no complete month is unchanged. months_seen stays the months in 24.
 --   The body is 20261019063254's otherwise; the return type is the same, so it is replaced in place.
 --   Its readers follow: the arrivals and changes (recurring_this_month, recurring_changes), missing_bills,
 --   payment_recurring, expected_months, the schedule, a line's charges, company_next_month_inputs.
 -- - private.project_recurring_arrivals (the project's changes) computes its own median of the project's
---   share "as recurring_parties", so it takes the same cycle months. The body is 20261019063254's otherwise.
+--   share "as recurring_parties", so it takes the same cycle months, a yearly charge stepping by its last gap
+--   of 11 to 13 months as above. The body is 20261019063254's otherwise.
 begin;
 set local lock_timeout = '5s';
 
@@ -119,7 +123,7 @@ AS $function$
     select d.direction, d.party_id, d.currency, d.stream_project, d.auto_pace,
       coalesce(w.pace, d.auto_pace, 'month') as pace,
       w.recurring, w.pace as pace_override, w.amount as owner_amount,
-      d.months6, d.day6, d.amount6, d.months24, d.day24, d.amount24, d.last_month
+      d.months6, d.day6, d.amount6, d.months24, d.day24, d.amount24, d.last_month, d.gap_last
     from detected d
     left join words w on w.direction = d.direction and w.party_id = d.party_id and w.currency = d.currency
       and w.stream_project is not distinct from d.stream_project
@@ -133,17 +137,23 @@ AS $function$
   -- from the months on its cycle, counted back from its last complete month (last, last - pace, last - 2 x
   -- pace, ... within the 24 months the lines cover). The months before a switch to yearly billing (the old
   -- monthly bills) and an off-cycle extra no longer pull the median down. The same median rule: by size,
-  -- the direction's sign added in chosen.
-  cycle as (
-    select p.direction, p.party_id, p.currency, p.stream_project,
-      percentile_disc(0.5) within group (order by g.first_day) as day_cycle,
-      percentile_disc(0.5) within group (order by abs(g.amount)) as amount_cycle
+  -- the direction's sign added in chosen. A yearly charge steps by its last gap when that is 11 to 13 months,
+  -- the drift the yearly rule allows (0175), so a bill a month early or late still finds last year's.
+  cycle_months as (
+    select p.direction, p.party_id, p.currency, p.stream_project, g.month, g.first_day, g.amount
     from parties p
     join gapped g on g.direction = p.direction and g.party_id = p.party_id and g.currency = p.currency
       and g.stream_project is not distinct from p.stream_project
     where p.pace <> 'month'
-      and private.month_diff(p.last_month, g.month) % private.pace_months(p.pace) = 0
-    group by p.direction, p.party_id, p.currency, p.stream_project
+      and private.month_diff(p.last_month, g.month)
+        % case when p.pace = 'year' and p.gap_last between 11 and 13 then p.gap_last else private.pace_months(p.pace) end = 0
+  ),
+  cycle as (
+    select cm.direction, cm.party_id, cm.currency, cm.stream_project,
+      percentile_disc(0.5) within group (order by cm.first_day) as day_cycle,
+      percentile_disc(0.5) within group (order by abs(cm.amount)) as amount_cycle
+    from cycle_months cm
+    group by cm.direction, cm.party_id, cm.currency, cm.stream_project
   ),
   -- A charge the owner marked recurring with no complete posted month yet: its latest month, this one
   -- included, is its usual day and amount (the owner's amount, when set).
@@ -177,6 +187,8 @@ AS $function$
       case when p.pace = 'month' and p.months6 > 0 then p.months6 else p.months24 end as months_seen,
       case
         when p.pace = 'month' and p.months6 > 0 then p.day6
+        -- The last month is always on its own cycle, so every known pace has cycle months; the fallback
+        -- to the 24 months is only for a pace pace_months does not know.
         when p.pace <> 'month' then coalesce(c.day_cycle, p.day24)
         else p.day24
       end::integer as typical_day,
@@ -215,7 +227,21 @@ AS $function$
      where l.direction = p.direction and l.party_id = p.party_id and l.currency = p.currency
        and l.stream_project is not distinct from p.stream_project
        and l.category_id is not null
-       and (p.pace <> 'month' or l.doc_date >= b.window6)
+       -- A monthly charge's category is from its last 6 months; any other pace's from its cycle's months
+       -- and this month (decision 0199), so the old monthly bills before a switch don't name it. A charge
+       -- with no cycle months (marked recurring before a complete month) reads all its lines.
+       and case
+         when p.pace = 'month' then l.doc_date >= b.window6
+         else l.month >= b.this_month
+           or exists (
+             select 1 from cycle_months cm
+             where cm.direction = p.direction and cm.party_id = p.party_id and cm.currency = p.currency
+               and cm.stream_project is not distinct from p.stream_project and cm.month = l.month)
+           or not exists (
+             select 1 from cycle_months cm
+             where cm.direction = p.direction and cm.party_id = p.party_id and cm.currency = p.currency
+               and cm.stream_project is not distinct from p.stream_project)
+       end
      group by l.category_id order by count(*) desc, max(l.doc_date) desc limit 1),
     last_bill.amount,
     p.source,
@@ -273,12 +299,19 @@ AS $function$
       on sl.direction = r.direction and sl.party_id = r.party_id and sl.currency = r.currency
       and sl.stream_project is not distinct from r.project_id
   ),
-  -- Each charge's last complete month (any project's share), the anchor of a non-monthly cycle.
+  -- Each charge's last complete month (any project's share), the anchor of a non-monthly cycle, and its step:
+  -- the pace's months, or for a yearly charge its last gap when that is 11 to 13 (as recurring_parties).
   last_months as (
-    select s.direction, s.party_id, s.currency, s.stream_project, max(s.month) as last_month
-    from shares s, bounds b
-    where s.posted and s.month < b.this_month
-    group by s.direction, s.party_id, s.currency, s.stream_project
+    select m.direction, m.party_id, m.currency, m.stream_project, m.months[1] as last_month,
+      case when m.pace = 'year' and private.month_diff(m.months[1], m.months[2]) between 11 and 13
+        then private.month_diff(m.months[1], m.months[2]) else private.pace_months(m.pace) end as step
+    from (
+      select s.direction, s.party_id, s.currency, s.stream_project, s.pace,
+        array_agg(distinct s.month order by s.month desc) as months
+      from shares s, bounds b
+      where s.posted and s.month < b.this_month
+      group by s.direction, s.party_id, s.currency, s.stream_project, s.pace
+    ) m
   ),
   usual as (
     -- As recurring_parties: complete posted months, the last 6 for a monthly party; for any other pace the
@@ -294,7 +327,7 @@ AS $function$
       where s.posted and s.month < b.this_month
         and case
           when s.pace = 'month' then s.month >= b.window6
-          else s.month >= b.window24 and private.month_diff(lm.last_month, s.month) % private.pace_months(s.pace) = 0
+          else s.month >= b.window24 and private.month_diff(lm.last_month, s.month) % lm.step = 0
         end
       group by s.direction, s.party_id, s.currency, s.stream_project, s.month
       having sum(s.share) <> 0

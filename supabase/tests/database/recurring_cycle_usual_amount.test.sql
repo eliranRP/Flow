@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(11);
+select plan(14);
 
 do $users$
 begin
@@ -28,7 +28,7 @@ insert into cy (label, id) values ('site', tests.fixture_project(pg_temp.id('co'
 
 insert into public.suppliers (company_id, name)
 select pg_temp.id('co'), n
-from unnest(array['Example Switch', 'Example Steady', 'Example Annual']) n;
+from unnest(array['Example Switch', 'Example Steady', 'Example Annual', 'Example Drift', 'Example Shift']) n;
 insert into cy (label, id)
 select lower(replace(s.name, 'Example ', '')), s.id from public.suppliers s where s.company_id = pg_temp.id('co');
 
@@ -43,6 +43,11 @@ insert into cy_lines values
   ('switch_2507a', 'switch', null, '2025-07-09', 4000),
   ('switch_2507b', 'switch', null, '2025-07-09', 40000),
   ('switch_2607', 'switch', null, '2026-07-12', 45000);
+-- Drift: the same switch, but this year's yearly bill came a month early (June 2026, a gap of 11).
+insert into cy_lines
+select replace(l.label, 'switch', 'drift'), 'drift', null, l.doc_date, l.amount
+from cy_lines l where l.party = 'switch' and l.doc_date < '2026-01-01';
+insert into cy_lines values ('drift_2606', 'drift', null, '2026-06-28', 45000);
 -- Steady: monthly, 100.00 for the last six months, and one large bill a year before.
 insert into cy_lines
 select 'steady_' || to_char(d, 'YYMM'), 'steady', null, d::date + 4, 10000
@@ -57,6 +62,14 @@ insert into cy_lines values
 insert into cy_lines
 select 'annual_' || to_char(d, 'YYMM'), 'annual', 'site', d::date + 2, 3000
 from generate_series('2024-11-01'::date, '2025-06-01'::date, interval '1 month') d;
+-- Shift, on the project: 30.00 in October and November 2024, then yearly bills of 600.00 in December 2024
+-- and November 2025 (a gap of 11), and this October's bill of 660.00, a month early again.
+insert into cy_lines values
+  ('shift_2410', 'shift', 'site', '2024-10-04', 3000),
+  ('shift_2411', 'shift', 'site', '2024-11-04', 3000),
+  ('shift_2412', 'shift', 'site', '2024-12-04', 60000),
+  ('shift_2511', 'shift', 'site', '2025-11-04', 60000),
+  ('shift_2610', 'shift', 'site', '2026-10-04', 66000);
 
 insert into cy (label, id)
 select l.label, tests.fixture_line(
@@ -68,6 +81,15 @@ update public.transactions t
 set supplier_id = pg_temp.id(l.party)
 from cy_lines l
 where t.id = pg_temp.id(l.label);
+
+-- Switch's old monthly bills file to one category, its yearly bills to another.
+insert into cy (label, id) values
+  ('cat_monthly', tests.fixture_category(pg_temp.id('co'), 'Example Monthly Plan')),
+  ('cat_yearly', tests.fixture_category(pg_temp.id('co'), 'Example Yearly Plan'));
+update public.transactions t
+set category_id = case when l.label in ('switch_2507b', 'switch_2607') then pg_temp.id('cat_yearly') else pg_temp.id('cat_monthly') end
+from cy_lines l
+where l.party = 'switch' and t.id = pg_temp.id(l.label);
 
 insert into public.recurring_overrides (company_id, direction, party_id, currency, project_id, recurring, pace)
 values (pg_temp.id('co'), 'expense', pg_temp.id('annual'), 'ILS', pg_temp.id('site'), true, 'year');
@@ -103,6 +125,19 @@ select is(
   'its usual day comes from the same months'
 );
 
+select is(
+  jsonb_build_array(pg_temp.charge('drift') ->> 'pace', (pg_temp.charge('drift') ->> 'typical_amount_minor')::bigint),
+  '["year", -44000]'::jsonb,
+  'a yearly bill a month early still steps back to last year''s (July 2025), not to the old June bill'
+);
+
+select is(
+  (select rp.category_id from private.recurring_parties(pg_temp.id('co'), '2026-10-20') rp
+   where rp.party_id = pg_temp.id('switch')),
+  pg_temp.id('cat_yearly'),
+  'its usual category comes from the yearly months, not from the more numerous old monthly bills'
+);
+
 -- 5. A reader follows: the line page's recurring state.
 select tests.authenticate_as('cy_owner');
 select is(
@@ -133,6 +168,14 @@ select is(
   'the project''s arrival compares this October with the yearly months, so it is 10% more'
 );
 
+select is(
+  (select jsonb_build_object('usual', a.typical_amount_minor, 'percent', a.change_percent)
+   from private.project_recurring_arrivals(pg_temp.id('co'), pg_temp.id('site'), '2026-10-20') a
+   where a.party_id = pg_temp.id('shift')),
+  jsonb_build_object('usual', -60000, 'percent', 10),
+  'a yearly bill that drifted a month (a gap of 11) steps back to last year''s on the project too, not to an old small bill'
+);
+
 -- 9-10. The owner's amount still wins.
 update public.recurring_overrides set typical_amount_minor = 50000
 where company_id = pg_temp.id('co') and party_id = pg_temp.id('annual');
@@ -155,8 +198,8 @@ select is(
   (select jsonb_agg(jsonb_build_array(m ->> 'month', m -> 'by_currency' -> 0 -> 'expense_minor') order by m ->> 'month')
    from jsonb_array_elements(public.expected_months(12, null, '2026-10-20') -> 'months') m
    where m ->> 'month' in ('2027-06', '2027-07')),
-  '[["2027-06", -10000], ["2027-07", -54000]]'::jsonb,
-  'July 2027 expects the yearly bill (440.00) beside the monthly one (100.00)'
+  '[["2027-06", -54000], ["2027-07", -54000]]'::jsonb,
+  'July 2027 expects the yearly bill (440.00) beside the monthly one (100.00), June 2027 the drifted one'
 );
 reset role;
 

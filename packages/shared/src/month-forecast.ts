@@ -8,9 +8,10 @@ import { dueInMonth } from "./recurring-due.ts";
  * reads (expected_months, list_unpaid, forecast_overrides_for); nothing here reads the network.
  *
  * Items: the recurring parties due this month and not yet seen (income and expense), and the open
- * customer invoices (income). A charge every 2 months, quarter or year is due only in its cycle's months
- * (dueInMonth, the rule the expected_months cells follow; decision 0199); a late one still counts. A row's own number is never changed; an override only changes the
- * forecast (its amount, its day, or "not this month", which moves it out of the totals).
+ * customer invoices (income). A charge every 2 months, quarter or year is due only in its cycle's
+ * months (dueInMonth, the rule the expected_months cells follow; decision 0199); a late one still
+ * counts. A row's own number is never changed; an override only changes the forecast (its amount,
+ * its day, or "not this month", which moves it out of the totals).
  */
 
 /** One override as the server sends it (amounts are JSON numbers, whole agorot). */
