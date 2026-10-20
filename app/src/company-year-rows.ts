@@ -1,6 +1,6 @@
 import { formatAmountText, type Breakdown } from "@flow/shared";
 import { projectGroupRow } from "./breakdown-project-group";
-import type { OverheadProject } from "./project-cash";
+import type { OverheadProject } from "./overhead-project";
 import type { CompanyYears, YearFigures } from "./company-years";
 import { HEBREW_MONTHS } from "./ui/date-math";
 

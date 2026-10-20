@@ -3,7 +3,7 @@ import type { Breakdown, BreakdownDirection, BreakdownLinesPage, Dashboard } fro
 type LinesRows = NonNullable<BreakdownLinesPage>["rows"];
 import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 import { projectGroupRow } from "./breakdown-project-group";
-import type { OverheadProject } from "./project-cash";
+import type { OverheadProject } from "./overhead-project";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { type PeriodChoice } from "./period";

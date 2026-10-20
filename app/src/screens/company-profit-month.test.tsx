@@ -8,8 +8,8 @@ const read = vi.hoisted(() => ({ calls: [] as { month: { from: string | null; to
 
 vi.mock("../ui/date-math", async (importOriginal) => ({ ...(await importOriginal<typeof import("../ui/date-math")>()), israelToday: () => "2026-10-18" }));
 // The overhead project's read still loading (owner 20/10).
-vi.mock("../project-cash", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../project-cash")>()),
+vi.mock("../overhead-project", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../overhead-project")>()),
   useOverheadProject: () => ({ project: undefined, failed: false, refetch: () => undefined }),
 }));
 vi.mock("../use-company-profit", async (importOriginal) => ({

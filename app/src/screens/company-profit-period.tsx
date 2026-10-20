@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { restExpenseNote, restIncomeNote, restMonthsCaption, type RestOfYear } from "../company-year-forecast";
-import type { OverheadProject } from "../project-cash";
+import type { OverheadProject } from "../overhead-project";
 import { allTimeYearRows, yearMonthRows, yearProjectRows, yearRowMeta, type ProjectStatus, type YearRow } from "../company-year-rows";
 import { allTimeChart, allTimeSub, allTimeSummaryRows, allTimeTotals, yearChart, yearSub, yearSummaryRows, type CompanyYears, type YearFigures } from "../company-years";
 import type { Breakdown } from "@flow/shared";

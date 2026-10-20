@@ -1,4 +1,4 @@
-import type { OverheadProject } from "./project-cash";
+import type { OverheadProject } from "./overhead-project";
 
 /**
  * get_breakdown by project keys the general costs `overhead` (overhead-role costs, the overhead project's among

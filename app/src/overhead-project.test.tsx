@@ -3,7 +3,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useOverheadProject } from "./project-cash";
+import { useOverheadProject } from "./overhead-project";
 
 const rpc = vi.hoisted(() => ({ answer: (): Promise<{ data: unknown; error: unknown }> => Promise.resolve({ data: null, error: null }) }));
 
