@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ScrollMemory } from "./back";
 import { ScreenHeader } from "./screen-header";
-import { expectRtl, expectTarget } from "./test-support";
+import { expectRtl, expectTarget, stubPageObserver } from "./test-support";
 import { type ReactElement } from "react";
 import { ScreenState } from "./screen-state";
 import { SKELETON_DELAY_MS, SKELETON_FADE_MS } from "./skeleton";
@@ -224,6 +224,35 @@ describe("ScreenHeader", () => {
       scrolled(true);
       expect(container.querySelector(".ui-compact-bar")).toBeNull();
       expect(container.querySelector(".ui-compact-mark")).toBeNull();
+    });
+
+    it("follows the mark when it moves to a new node, so the bar stays up at the top", () => {
+      const observer = stubPageObserver();
+      const header = (panel: boolean) => (
+        <MemoryRouter>
+          <ScreenHeader title="רווח" backTo="/" below={<span>תקופה</span>} panel={panel ? <span>לפי חודש</span> : undefined} />
+        </MemoryRouter>
+      );
+      const { container, rerender } = render(header(true));
+      const bar = container.querySelector(".ui-compact-bar") as HTMLElement;
+      const first = container.querySelector(".ui-compact-mark");
+      expect(bar).toHaveAttribute("aria-hidden", "true");
+      // A skeleton with no panel puts the mark after the title: React draws a new node there.
+      rerender(header(false));
+      expect(container.querySelector(".ui-compact-mark")).not.toBe(first);
+      observer.settle();
+      expect(bar).toHaveAttribute("aria-hidden", "true");
+      expect(document.documentElement).not.toHaveAttribute("data-compact-bar");
+      rerender(header(true));
+      observer.settle();
+      expect(bar).toHaveAttribute("aria-hidden", "true");
+      // A tall page still brings the bar down once the new mark scrolls off, and up again at the top.
+      observer.page.scrolled = true;
+      observer.settle();
+      expect(bar).toHaveAttribute("aria-hidden", "false");
+      observer.page.scrolled = false;
+      observer.settle();
+      expect(bar).toHaveAttribute("aria-hidden", "true");
     });
   });
 });

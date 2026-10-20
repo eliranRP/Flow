@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { BackButton } from "./back";
 import { CompactBar } from "./compact-bar";
 import { FocusTitle } from "./focus-title";
@@ -81,7 +81,9 @@ export function ScreenHeader(props: ScreenHeaderProps) {
   const kickerLine = kicker && (!labelledBack || backText != null) ? <p className="t-caption t-muted">{kicker}</p> : null;
   // FLOW-334 H1: a long stacked page keeps Back in a compact bar once the large title scrolls off.
   const compact = stacked && leading == null && backTo != null && title != null;
-  const titleEnd = useRef<HTMLSpanElement>(null);
+  // State, not a ref: the mark moves when the panel comes or goes (a skeleton, a period with no chips), and
+  // the observer must follow the new node.
+  const [titleEnd, setTitleEnd] = useState<HTMLSpanElement | null>(null);
   const past = useScrolledPast(titleEnd, compact);
   return (
     <header className={[stacked ? "ui-page ui-page-stacked" : props.layout === "inline" && start != null ? "ui-page ui-page-inline" : "ui-page", className].filter(Boolean).join(" ")}>
@@ -105,10 +107,10 @@ export function ScreenHeader(props: ScreenHeaderProps) {
           <FocusTitle className="t-title">{title}</FocusTitle>
         )
       ) : null}
-      {compact && panel == null ? <span ref={titleEnd} className="ui-compact-mark" aria-hidden="true" /> : null}
+      {compact && panel == null ? <span ref={setTitleEnd} className="ui-compact-mark" aria-hidden="true" /> : null}
       {subtitle ? <p className={subtitleClass(subtitleClassName, stacked)}>{subtitle}</p> : null}
       {below != null ? <div className="ui-page-below">{below}</div> : null}
-      {compact && panel != null ? <span ref={titleEnd} className="ui-compact-mark" aria-hidden="true" /> : null}
+      {compact && panel != null ? <span ref={setTitleEnd} className="ui-compact-mark" aria-hidden="true" /> : null}
       {compact ? (
         <CompactBar
           title={title}
@@ -136,17 +138,21 @@ function safeTop(): number {
   return Number.isFinite(value) ? value : 0;
 }
 
-/** True once the mark has scrolled up under the compact bar. */
-export function useScrolledPast(mark: RefObject<HTMLElement | null>, enabled: boolean): boolean {
+/**
+ * True once the mark has scrolled up under the compact bar. The mark is the node itself (a callback ref's
+ * state), so a mark React swaps for a new node is observed again: a removed node reads as a zero rect,
+ * above the bar, and kept the bar down at the top of the page.
+ */
+export function useScrolledPast(mark: HTMLElement | null, enabled: boolean): boolean {
   const [past, setPast] = useState(false);
   useEffect(() => {
-    const node = enabled ? mark.current : null;
+    const node = enabled ? mark : null;
     if (node == null || typeof IntersectionObserver === "undefined") return;
     const top = COMPACT_BAR + safeTop();
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[entries.length - 1];
-        if (entry) setPast(!entry.isIntersecting && entry.boundingClientRect.top < top);
+        if (entry && node.isConnected) setPast(!entry.isIntersecting && entry.boundingClientRect.top < top);
       },
       { rootMargin: `-${String(top)}px 0px 0px 0px` },
     );
@@ -155,5 +161,5 @@ export function useScrolledPast(mark: RefObject<HTMLElement | null>, enabled: bo
       observer.disconnect();
     };
   }, [mark, enabled]);
-  return past;
+  return enabled && mark != null && past;
 }

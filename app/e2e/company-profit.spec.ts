@@ -138,3 +138,29 @@ test("by project, a project of the year opens its profit page (FLOW-145)", async
   await page.locator('.ui-cp-period-list a[href^="/projects/"]').first().click();
   await expect(page).toHaveURL(/\/projects\/p\d\/profit\?from=profit&preview=1$/);
 });
+
+test("at the top, the compact bar stays up after the period switch and Back from a project", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/e2e/company-profit?preview=1");
+  const period = page.getByRole("radiogroup", { name: "תקופה" });
+  const bar = page.locator(".ui-cp-screen .ui-compact-bar");
+  // A click scrolls its target into view, so each check starts from the top of the page.
+  const expectUp = async () => {
+    await page.evaluate(() => { window.scrollTo(0, 0); });
+    await expect(bar).toHaveAttribute("aria-hidden", "true");
+    await expect(page.locator("html")).not.toHaveAttribute("data-compact-bar");
+  };
+  // The mark under the header moves when since the start (no chips) comes and goes.
+  for (const name of ["2026", "מההתחלה", "2026"]) {
+    await period.getByRole("radio", { name }).click();
+    await expect(period.getByRole("radio", { name })).toHaveAttribute("aria-checked", "true");
+    await expectUp();
+  }
+  await page.getByRole("group", { name: "סידור" }).first().getByRole("button", { name: "לפי פרויקט" }).click();
+  await expect(page).toHaveURL(/period=year&list=project$/);
+  await page.locator('.ui-cp-period-list a[href^="/projects/"]').first().click();
+  await expect(page).toHaveURL(/\/projects\/p\d\/profit\?from=profit&preview=1$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/period=year&list=project$/);
+  await expectUp();
+});
