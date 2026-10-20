@@ -284,7 +284,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
           );
           return (
             <li key={row.key} className="ui-cp-row">
-              {row.shared || row.key === "" ? <div className="ui-cp-link">{content}</div> : <Link className="ui-cp-link" to={projectProfitPath(row.key, search)}>{content}</Link>}
+              {row.projectId == null ? <div className="ui-cp-link">{content}</div> : <Link className="ui-cp-link" to={projectProfitPath(row.projectId, search)}>{content}</Link>}
             </li>
           );
         })}

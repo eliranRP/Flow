@@ -34,6 +34,10 @@ test("the chips sort the page, a category opens in place, and a project opens it
   await expect(categories.nth(1)).toHaveAttribute("aria-expanded", "false");
   await chips.getByRole("button", { name: "לפי פרויקט" }).click();
   await expect(page).toHaveURL(/\/e2e\/company-profit\?preview=1$/);
+  // The general costs (get_breakdown's overhead and unassigned) are one כללי row that opens nothing (FLOW-147).
+  const list = page.locator(".ui-cp-list");
+  await expect(list.locator(".ui-cp-row", { hasText: "כללי" }).locator("a")).toHaveCount(0);
+  await expect(list.locator('a[href^="/projects/overhead"], a[href^="/projects/unassigned"]')).toHaveCount(0);
   await page.locator('a[href^="/projects/"]').first().click();
   await expect(page).toHaveURL(/\/projects\/p\d\/profit\?from=profit&preview=1$/);
 });

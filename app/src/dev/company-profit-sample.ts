@@ -8,11 +8,13 @@ import type { CompanyProfitSample } from "../screens/company-profit-screen";
  * in cents). October so far: income 24,877, counted expenses 28,311 (the board's cents rounded per line, so
  * the project rows' whole figures add up to the head), so the month is a loss;
  * five projects and the general line כללי, the same five lines' categories. Lines are signed (income +).
+ * The project breakdowns are in get_breakdown's shape: the general costs under `overhead` (overhead-role costs)
+ * and `unassigned` (no project), with no name; `shared` on a project that holds a share of a shared cost.
  */
-type Line = [date: string, payee: string, project: string | null, category: string, signed: number];
+type Role = "overhead" | "shared";
+type Line = [date: string, payee: string, project: string | null, category: string, signed: number, role?: Role];
 
 const PROJECTS: Record<string, string> = { p1: "בית הדקל", p2: "וילה הברושים", p3: "דירת הרימון", p4: "בית השקד", p5: "הבית ברחוב הזית" };
-const SHARED = "shared";
 
 const CATEGORY_IDS: Record<string, string> = {
   "עבודות לקוח": "c-client-work",
@@ -39,7 +41,7 @@ const LINES: Line[] = [
   ["2026-10-09", "שוכר ד׳", "p4", "שכירות", 172_500],
   ["2026-10-01", "בנק הלוואות", "p2", "ריבית הלוואות", -183_800],
   ["2026-10-05", "ספק חומרים", "p2", "חומרים", -894_000],
-  ["2026-10-08", "צוות בניה", "p2", "עבודה", -347_600],
+  ["2026-10-08", "צוות בניה", "p2", "עבודה", -347_600, "shared"],
   ["2026-10-04", "בנק הלוואות", "p3", "ריבית הלוואות", -118_000],
   ["2026-10-04", "נאמנות מסים", "p3", "מסים וביטוח", -28_000],
   ["2026-10-10", "חנות כלים", "p3", "תיקונים ותחזוקה", -52_440],
@@ -50,20 +52,22 @@ const LINES: Line[] = [
   ["2026-10-10", "שירותי תחזוקה", "p4", "תיקונים ותחזוקה", -147_500],
   ["2026-10-06", "חברת חשמל", "p5", "חשמל ומים", -41_200],
   ["2026-10-09", "חברת מים", "p5", "חשמל ומים", -22_800],
-  ["2026-10-02", "משכורות", null, "שכר", -645_000],
-  ["2026-10-03", "ביטוח משרד", null, "ביטוח עסק", -61_200],
+  ["2026-10-02", "משכורות", null, "שכר", -645_000, "overhead"],
+  ["2026-10-03", "ביטוח משרד", null, "ביטוח עסק", -61_200, "overhead"],
   ["2026-10-06", "תקשורת", null, "תקשורת", -8_400],
-  ["2026-10-09", "משרד רואי חשבון", null, "הנהלת חשבונות", -86_500],
+  ["2026-10-09", "משרד רואי חשבון", null, "הנהלת חשבונות", -86_500, "overhead"],
 ];
 
 function groupBreakdown(direction: BreakdownDirection, groupBy: "project" | "category"): Breakdown {
   const sign = direction === "income" ? 1 : -1;
   const groups = new Map<string, { key: string; name: string | null; shared: boolean; amount: number; count: number; projects: Set<string> }>();
-  for (const [, , project, category, signed] of LINES) {
+  for (const [, , project, category, signed, role] of LINES) {
     if (Math.sign(signed) !== sign) continue;
-    const key = groupBy === "project" ? (project ?? SHARED) : CATEGORY_IDS[category] ?? category;
-    const name = groupBy === "project" ? (project == null ? null : PROJECTS[project] ?? null) : category;
-    const group = groups.get(key) ?? { key, name, shared: groupBy === "project" && project == null, amount: 0, count: 0, projects: new Set<string>() };
+    const projectKey = role === "overhead" ? "overhead" : project ?? "unassigned";
+    const key = groupBy === "project" ? projectKey : CATEGORY_IDS[category] ?? category;
+    const name = groupBy === "project" ? (project != null && projectKey === project ? PROJECTS[project] ?? null : null) : category;
+    const group = groups.get(key) ?? { key, name, shared: false, amount: 0, count: 0, projects: new Set<string>() };
+    if (groupBy === "project" && role === "shared") group.shared = true;
     group.amount += Math.abs(signed);
     group.count += 1;
     if (project != null) group.projects.add(project);
@@ -105,7 +109,7 @@ function linesOf(direction: BreakdownDirection, categoryName: string) {
       doc_date: line[0],
       currency: "USD",
       amount_minor: BigInt(Math.abs(line[4])),
-      shared: line[2] == null,
+      shared: line[5] === "shared",
       source: undefined,
     }));
 }
