@@ -3,7 +3,7 @@ import { projectChoices } from "./project-groups";
 import { projectsGrouped } from "./screens/project-groups-sample";
 import { groupHint, groupSections, PICK_REST_HEADING } from "./ui/change-picker";
 import { type CashCurrencyRow, type ProjectCategoryMonthRow } from "@flow/shared";
-import { projectCashSummaryRows, projectEarlierMonthRows, projectProfitMonthPath } from "./project-cash";
+import { projectCashFigures, projectCashSummaryRows, projectProfitMonthPath } from "./project-cash";
 import { presetPeriod } from "./period";
 import { markDay, usualFor } from "./project-category-months";
 
@@ -79,20 +79,19 @@ describe("FLOW-419 project cash rows", () => {
     expect(rows[2]?.href).toMatch(/^\/projects\/p1\/profit\/2026-10\?preview=1&period=month&at=2026-10/);
   });
 
-  it("lists the earlier months, each opening its own page", () => {
+  it("gives the month chart each month's in and out in the currency", () => {
     const data = {
       basis: "paid" as const,
       base_currency: "USD",
       months: [
         { month: "2026-10-01", by_currency: [row(1n, 0n, 0n)] },
-        { month: "2026-09-01", by_currency: [row(310_000n, 500_000n, 95_000n)] },
+        { month: "2026-09-01", by_currency: [row(310_000n, 500_000n, 95_000n), row(9n, 9n, 0n, "ILS")] },
       ],
     };
-    const rows = projectEarlierMonthRows("p1", data, "", NOW);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.label).toBe("ספטמבר");
-    expect(rows[0]?.amounts).toEqual([{ currency: "USD", minor: -190_000n }]);
-    expect(rows[0]?.href).toBe("/projects/p1/profit/2026-09?period=month&at=2026-09");
+    const figures = projectCashFigures(data, "USD");
+    expect([...figures.keys()]).toEqual(["2026-10", "2026-09"]);
+    expect(figures.get("2026-09")).toEqual({ incomeMinor: 310_000n, expenseMinor: 500_000n });
+    expect(projectCashFigures(data, "EUR").size).toBe(0);
   });
 
   it("names the profit page's path", () => {

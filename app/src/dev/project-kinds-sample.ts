@@ -1,11 +1,13 @@
 import type { ProjectCashRow, ProjectDetail } from "@flow/shared";
 import type { InvestmentFigures } from "../ui/investment-card";
 import type { ProjectInvestment } from "../screens/project-investment-data";
-import { cash as flipCash, cashRow, months, project as flipProject } from "./project-cash-sample";
+import { shiftMonthKey } from "../period";
+import { cash as flipCash, cashRow, months, project as flipProject, thisMonth } from "./project-cash-sample";
+import { kindNextSample } from "./project-kinds-next-sample";
 
 /**
  * The project page's other kinds, for the proof build and stories (`/e2e/project-detail?kind=`): a rental,
- * a client job and a brand-new project, in dollars, with invented names and round figures in the shape of
+ * a client job and a brand-new project, in dollars, each with its next-month forecast, with invented names and round figures in the shape of
  * the board's frames.
  */
 
@@ -40,11 +42,14 @@ const rentalFigures: InvestmentFigures = {
   forcedEquityMinor: null,
   currentEquityMinor: 8_660_000n,
 };
+// The board's Cedar St months, newest first: October to date, then September back to May.
 const rentalCash = months([
   [cashRow(630_200n, 250_640n, 379_560n)],
-  [cashRow(630_200n, 190_000n, 440_200n)],
-  [cashRow(630_200n, 310_000n, 320_200n)],
-  [cashRow(600_000n, 150_000n, 450_000n)],
+  [cashRow(415_000n, 174_000n, 241_000n)],
+  [cashRow(415_000n, 176_000n, 239_000n)],
+  [cashRow(415_000n, 170_000n, 245_000n)],
+  [cashRow(415_000n, 187_000n, 228_000n)],
+  [cashRow(415_000n, 180_000n, 235_000n)],
 ]);
 
 const clientProject: Project = {
@@ -85,7 +90,8 @@ type Kind = { project: Project; cash: typeof flipCash; investment: ProjectInvest
 
 const kinds: Record<Exclude<ProjectKind, "flip">, Kind> = {
   rental: { project: rentalProject, cash: rentalCash, investment: { isOverhead: false, figures: rentalFigures, categories: [], loans: [] }, first: "2025-03-01" },
-  client: { project: clientProject, cash: clientCash, investment: noInvestment, first: "2026-08-01" },
+  // The client job began with its oldest cash month, two before this one.
+  client: { project: clientProject, cash: clientCash, investment: noInvestment, first: `${shiftMonthKey(thisMonth, -2)}-01` },
   new: { project: newProject, cash: newCash, investment: noInvestment, first: null },
 };
 
@@ -97,5 +103,6 @@ export function kindOf(value: string | null): Exclude<ProjectKind, "flip"> | nul
 export function kindSample(kind: Exclude<ProjectKind, "flip">, base: ProjectCashRow | undefined) {
   const sample = kinds[kind];
   const row = base == null ? undefined : { ...base, id: sample.project.id, first_month: sample.first, pending_count: sample.project.pending_count ?? 0, deletable: false };
-  return { ...sample, row };
+  const next = kind === "new" ? undefined : kindNextSample(kind, sample.project.id);
+  return { ...sample, row, next };
 }

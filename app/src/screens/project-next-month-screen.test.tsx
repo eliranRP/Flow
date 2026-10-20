@@ -50,49 +50,65 @@ function renderNext(next: NextMonthSample = JUNIPER_NEXT) {
   );
 }
 
-describe("the next-month card on the project's profit page", () => {
-  it("shows November's net, its totals and basis, and links to the next-month page", () => {
-    renderProfit(JUNIPER_PROFIT);
+describe("the next-month card and chart on the project's profit page (spec-fcwide)", () => {
+  it("shows November's two figures with their captions and the net in grey, and opens the next-month page", () => {
+    const { container } = renderProfit(JUNIPER_PROFIT);
     const card = screen.getByRole("link", { name: /^צפי נובמבר/ });
     expect(card.getAttribute("href")).toBe("/projects/juniper-ct/profit/next");
-    expect(card.textContent).toContain("+$2,285");
-    expect(within(card).getByText("הכנסות $4,150 · הוצאות $1,865")).toBeTruthy();
-    expect(within(card).getByText("2 קבועים ו־4 ממוצעים")).toBeTruthy();
+    expect(card.getAttribute("aria-label")).toBe("צפי נובמבר: הכנסות צפויות $4,150, הוצאות צפויות $1,865, רווח צפוי +$2,285 – פירוט ועריכה");
     expect(within(card).getByText("צפי")).toBeTruthy();
+    expect(within(card).getByText("פירוט ועריכה")).toBeTruthy();
+    expect(within(card).getByText("2 שכירויות קבועות")).toBeTruthy();
+    expect(within(card).getByText("מול $1,740 בספטמבר")).toBeTruthy();
+    const net = container.querySelector(".ui-fc-net");
+    expect(net?.textContent).toBe("רווח צפוי+$2,285");
+    expect(net?.querySelector(".ui-income")).toBeNull();
+    expect(container.querySelector(".ui-fc-col .ui-income")?.textContent).toBe("+$4,150");
   });
 
-  it("says a loss once, with the amount after the word", () => {
+  it("draws income as a grey $0 when none is expected, and a loss with its minus", () => {
     const loss = { ...JUNIPER_NEXT, expected: { ...JUNIPER_NEXT.expected, recurring: JUNIPER_NEXT.expected.recurring.filter((party) => party.direction === "expense") } };
-    renderProfit({ ...JUNIPER_PROFIT, next: loss });
-    expect(screen.getByRole("link", { name: "צפי נובמבר, הפסד $1,865" })).toBeTruthy();
+    const { container } = renderProfit({ ...JUNIPER_PROFIT, next: loss });
+    const zero = container.querySelector(".ui-fc-col-zero");
+    expect(zero?.textContent).toBe("הכנסות צפויות$0אין הכנסה צפויה");
+    expect(zero?.querySelector(".ui-income")).toBeNull();
+    expect(container.querySelector(".ui-fc-net")?.textContent).toBe("רווח צפוי−$1,865");
   });
 
-  it("counts the user's edits in its basis and its figures", () => {
-    renderProfit({ ...JUNIPER_PROFIT, next: JUNIPER_NEXT_EDITED });
-    const card = screen.getByRole("link", { name: /^צפי נובמבר/ });
-    expect(card.textContent).toContain("+$1,185");
-    expect(within(card).getByText("2 קבועים ו־3 ממוצעים · ערכת 3")).toBeTruthy();
+  it("counts the user's edits in its figures", () => {
+    const { container } = renderProfit({ ...JUNIPER_PROFIT, next: JUNIPER_NEXT_EDITED });
+    expect(container.querySelector(".ui-fc-net")?.textContent).toBe("רווח צפוי+$1,185");
   });
 
-  it("sits above the month rows", () => {
+  it("charts May to October with November's forecast last, under the card and above the month rows", () => {
     const { container } = renderProfit(JUNIPER_PROFIT);
-    const card = container.querySelector(".ui-pn-card");
+    const chart = screen.getByRole("img", { name: "הכנסות והוצאות לפי חודש, מאי עד אוקטובר, וצפי נובמבר: הכנסות $4,150, הוצאות $1,865" });
+    const labels = Array.from(chart.querySelectorAll(".ui-fc-bar-label")).map((label) => label.textContent);
+    expect(labels).toEqual(["מאי", "יוני", "יולי", "אוג׳", "ספט׳", "אוק׳", "נוב׳ · צפי"]);
+    expect(chart.querySelectorAll(".ui-fc-ahead")).toHaveLength(1);
+    expect(screen.getByText("מאי עד אוקטובר וצפי")).toBeTruthy();
+    // October to date (+$6,302) is the tallest bar; November's expenses ($1,865) on the same scale.
+    const october = chart.children[5] as HTMLElement;
+    expect((october.querySelector(".ui-fc-bar-in") as HTMLElement).style.blockSize).toBe("108px");
+    expect((chart.children[6]?.querySelector(".ui-fc-bar-out") as HTMLElement).style.blockSize).toBe("32px");
+    const card = container.querySelector(".ui-fc-card");
     const months = container.querySelector(".ui-pp-months");
-    expect(card).not.toBeNull();
-    expect(months).not.toBeNull();
-    expect(card?.compareDocumentPosition(months as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(card?.compareDocumentPosition(chart)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(chart.compareDocumentPosition(months as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
-  it("is hidden when the project expects nothing next month", () => {
+  it("hides the card when the project expects nothing next month, and keeps the chart", () => {
     const empty = { ...JUNIPER_NEXT, expected: { ...JUNIPER_NEXT.expected, recurring: [] }, categoryMonths: null };
     const { container } = renderProfit({ ...JUNIPER_PROFIT, next: empty });
-    expect(container.querySelector(".ui-pn-card")).toBeNull();
+    expect(container.querySelector(".ui-fc-card")).toBeNull();
+    expect(screen.getByRole("img", { name: /^הכנסות והוצאות לפי חודש/ })).toBeTruthy();
     expect(container.querySelector(".ui-pp-months")).not.toBeNull();
   });
 
   it("is hidden in the by-category order", () => {
     const { container } = renderProfit(JUNIPER_PROFIT, "/projects/juniper-ct/profit?by=category");
-    expect(container.querySelector(".ui-pn-card")).toBeNull();
+    expect(container.querySelector(".ui-fc-card")).toBeNull();
+    expect(screen.queryByRole("img", { name: /^הכנסות והוצאות לפי חודש/ })).toBeNull();
   });
 });
 
@@ -216,9 +232,13 @@ describe("the next-month page with a loan (decision 0190)", () => {
     expect(screen.getByText("לפי הקבועים של הנכס, לוח ההלוואה וממוצע 6 החודשים האחרונים לכל קטגוריה. נגיעה בשורה משנה אותה או מסירה אותה.")).toBeTruthy();
   });
 
-  it("names the loan rows in the card's basis", () => {
+  it("shows the same figures on the profit page's card as on the next-month page", () => {
+    const { unmount } = renderNext(JUNIPER_NEXT_LOAN);
+    const rows = Array.from(document.querySelectorAll(".ui-pp-row")).map((row) => row.textContent);
+    unmount();
     renderProfit({ ...JUNIPER_PROFIT, next: JUNIPER_NEXT_LOAN });
     const card = screen.getByRole("link", { name: /^צפי נובמבר/ });
-    expect(within(card).getByText("2 קבועים, 2 לפי ההלוואה ו־2 ממוצעים")).toBeTruthy();
+    const figures = Array.from(card.querySelectorAll(".ui-fc-col > .ui-num")).map((figure) => figure.textContent);
+    expect([`הכנסות צפויות${figures[0] ?? ""}`, `הוצאות צפויות${figures[1] ?? ""}`]).toEqual(rows.slice(0, 2));
   });
 });

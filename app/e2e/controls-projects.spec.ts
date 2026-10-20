@@ -71,6 +71,16 @@ test("a project's profit page opens a month, and Back steps back one screen at a
   await expect(page).toHaveURL(/\/e2e\/project-profit\?preview=1$/);
 });
 
+test("next month's card opens the next-month page, and the project page's chart link opens its profit page", async ({ page }) => {
+  await page.goto("/e2e/project-profit?preview=1");
+  await page.getByRole("link", { name: /^צפי [^:]+: הכנסות צפויות/ }).click();
+  await expect(page).toHaveURL(/\/projects\/[^/]+\/profit\/next\?preview=1$/);
+  await page.goto("/e2e/project-detail?preview=1");
+  await expect(page.getByRole("img", { name: /^הכנסות והוצאות לפי חודש, מתחילת הפרויקט/ })).toBeVisible();
+  await page.getByRole("link", { name: "רווח לפי חודש" }).click();
+  await expect(page).toHaveURL(/\/projects\/p1\/profit\?preview=1&period=all$/);
+});
+
 test("the profit page's category row opens that category, and the project page's waiting line opens the project's queue", async ({ page }) => {
   await page.goto("/e2e/project-profit?preview=1");
   await page.getByRole("button", { name: "לפי קטגוריה" }).click();

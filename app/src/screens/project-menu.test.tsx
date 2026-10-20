@@ -10,6 +10,9 @@ import { type ProjectInvestment } from "./project-investment-data";
 import { kindSample, type ProjectKind } from "../dev/project-kinds-sample";
 import { devProjectsCash } from "../dev/projects-sample";
 import { renderWithProviders } from "../test-render";
+import { cashMonthName } from "../cash";
+import { thisMonth } from "../dev/project-cash-sample";
+import { shiftMonthKey } from "../period";
 
 // --- project-menu.test.tsx
 
@@ -141,9 +144,8 @@ describe("the project page by kind (FLOW-445b)", () => {
     renderKind("client");
     expect(screen.getByRole("heading", { name: "תקציב" })).toBeInTheDocument();
     expect(screen.getByText("+$15,000")).toBeInTheDocument();
-    expect(screen.getByText("מאז אוגוסט 2026")).toBeInTheDocument();
+    expect(screen.getByText(`מאז ${cashMonthName(shiftMonthKey(thisMonth, -2), new Date(0))}`)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "השקעה והלוואות" })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "חודשים קודמים" })).toBeInTheDocument();
   });
 
   it("a project with nothing filed yet: the budget, then the empty card, and no profit rows", () => {

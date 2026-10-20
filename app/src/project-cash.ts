@@ -1,24 +1,25 @@
 import type { CashCurrencyRow, CashLine, CashMonths, ProjectsCashMonth } from "@flow/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { cashMonthKey, cashMonthName, cashSummaryRows, cashTitle, shownCashRows } from "./cash";
+import { cashMonthKey, cashSummaryRows } from "./cash";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
+import { CHART_MONTHS, type MonthFigures } from "./next-month-chart";
 import { monthPeriod } from "./period";
 import { useHomePreview } from "./preview";
 import { israelToday } from "./ui/date-math";
 import { withPeriodSearch } from "./project-period";
-import { cashAmountsText, type CashRow } from "./ui/cash-rows";
+import type { CashRow } from "./ui/cash-rows";
 import { waitForAccessToken } from "./wait-for-session";
 
 /**
  * FLOW-419 (owner's option A "Like Home", decision 0176). A project opens on its cash: this
- * month's תזרים, נכנס and יצא, רווח החודש (the profit page), and the earlier months. A shared bill
+ * month's תזרים, נכנס and יצא, רווח החודש (the profit page), and the month chart. A shared bill
  * counts the project's share. The words and rows are Home's (cash.ts); only the paths and the
  * reads are the project's.
  */
 
-/** The project page reads this many months: the current one and three under "חודשים קודמים". */
-export const PROJECT_CASH_MONTHS = 4;
+/** The project page reads this many months: the current one and the five before it, for its month chart. */
+export const PROJECT_CASH_MONTHS = CHART_MONTHS;
 
 /** A month's profit page (FLOW-140): the project's profit page for one month, named in the path. */
 export function projectProfitMonthPath(projectId: string, key: string, search: string): string {
@@ -49,20 +50,14 @@ export function projectCashSummaryRows(
   });
 }
 
-/** The project's earlier months under "חודשים קודמים": each month's net, opening its own page. */
-export function projectEarlierMonthRows(projectId: string, data: NonNullable<CashMonths>, search: string, now = new Date()): CashRow[] {
-  return data.months.slice(1).map((month) => {
-    const key = cashMonthKey(month.month);
-    const net = shownCashRows(month, data.base_currency).map((row) => ({ currency: row.currency, minor: row.net_minor }));
-    return {
-      id: key,
-      label: cashMonthName(key, now),
-      tone: "net",
-      amounts: net,
-      href: projectProfitMonthPath(projectId, key, withPeriodSearch(search, monthPeriod(key))),
-      name: `${cashTitle(key, now)} ${cashAmountsText(net)}`,
-    };
-  });
+/** The month chart's history from the cash months: each month's נכנס and יצא in the currency. */
+export function projectCashFigures(data: NonNullable<CashMonths>, currency: string): Map<string, MonthFigures> {
+  const figures = new Map<string, MonthFigures>();
+  for (const month of data.months) {
+    const row = month.by_currency.find((figure) => figure.currency === currency);
+    if (row != null) figures.set(cashMonthKey(month.month), { incomeMinor: row.in_minor, expenseMinor: row.out_minor });
+  }
+  return figures;
 }
 
 /** Keys start with "dashboard" and "breakdown-lines", so every write that refreshes Home's cash refreshes the project's. */

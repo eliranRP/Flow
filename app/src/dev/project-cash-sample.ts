@@ -35,11 +35,13 @@ export function months(rows: ReturnType<typeof cashRow>[][], base = "USD"): NonN
   };
 }
 
+// The flip's months since its purchase, newest first: this month's renovation, then two months of it, and
+// the purchase month, which sets the month chart's scale; no income before the sale.
 export const cash = months([
   [cashRow(0n, 1_425_342n, -1_425_342n)],
-  [cashRow(0n, 19_000n, -19_000n)],
-  [cashRow(115_000n, 0n, 115_000n)],
-  [cashRow(98_000n, 0n, 98_000n)],
+  [cashRow(0n, 3_812_000n, -3_812_000n)],
+  [cashRow(0n, 2_240_000n, -2_240_000n)],
+  [cashRow(0n, 18_500_000n, -2_100_000n)],
 ]);
 // This month's net less its profit (לא נספר ברווח, FLOW-418): the owner's money put into the project.
 const currentRow = cash.months[0]?.by_currency[0];

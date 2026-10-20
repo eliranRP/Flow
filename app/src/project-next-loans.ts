@@ -6,7 +6,8 @@ import { type OutlookLoan, paymentsLeft } from "./screens/loan-outlook";
  * The loan rows of a project's next-month forecast (decision 0190), pure: for each open loan filed under the
  * project, in the forecast's currency, the interest and escrow of its payment due in the month (the loan
  * page's payments left, from the balance in the books, FLOW-427), each in the category
- * the loan's payments file that part to. Principal never counts.
+ * the loan's payments file that part to. Principal is not a profit line: loanCashOnly gives it apart, with any
+ * part kept out of the profit, for the project page's cash variant of the forecast (decision 0196).
  */
 
 /** A loan as the forecast reads it: its terms, where it sits, and the categories its parts file to. */
@@ -35,28 +36,67 @@ function partCategory(loan: ForecastLoan, part: "interest" | "escrow", categorie
   return category == null || category.excluded_from_pnl === true ? null : category;
 }
 
-/** The month's loan costs by category: several loans in one category sum; a zero part makes no row. */
-export function loanParts(input: {
+/** Which loans and month the forecast reads: the project's, in the forecast's currency. */
+type LoanMonth = {
   projectId: string;
   currency: string;
   month: string;
   /** yyyy-mm-dd: the payments left start from the one due today or later. */
   today: string;
   loans: readonly ForecastLoan[];
-  categories: readonly ForecastCategory[];
-}): LoanPart[] {
+};
+
+/**
+ * The payment due in the month of each open loan filed under the project, in the forecast's currency. A
+ * closed or paid-off loan, a demand loan, or a month with no payment left gives none.
+ */
+function dueRows(input: LoanMonth): { loan: ForecastLoan; row: LoanScheduleRow }[] {
+  return input.loans.flatMap((loan) => {
+    if (loan.projectId !== input.projectId || loan.status !== "open" || loan.currency !== input.currency) return [];
+    const row = scheduleRow(loan, input.month, input.today);
+    return row == null ? [] : [{ loan, row }];
+  });
+}
+
+/** The month's loan costs by category: several loans in one category sum; a zero part makes no row. */
+export function loanParts(input: LoanMonth & { categories: readonly ForecastCategory[] }): LoanPart[] {
   const parts = new Map<string, LoanPart>();
   const add = (category: ForecastCategory | null, minor: bigint) => {
     if (category == null || minor <= 0n) return;
     const held = parts.get(category.id);
     parts.set(category.id, { categoryId: category.id, name: category.name, minor: (held?.minor ?? 0n) + minor });
   };
-  for (const loan of input.loans) {
-    if (loan.projectId !== input.projectId || loan.status !== "open" || loan.currency !== input.currency) continue;
-    const row = scheduleRow(loan, input.month, input.today);
-    if (row == null) continue;
+  for (const { loan, row } of dueRows(input)) {
     add(partCategory(loan, "interest", input.categories), row.interestMinor);
     add(partCategory(loan, "escrow", input.categories), row.escrowMinor);
   }
   return [...parts.values()];
+}
+
+/** One loan's cash in the month that no loan row holds, and the categories of the loan rows it has. */
+export type LoanCash = {
+  loanId: string;
+  /** The categories its interest and escrow rows file to (`avg:<id>`); empty when it has none. */
+  rowCategoryIds: string[];
+  /** Positive, in minor units. */
+  minor: bigint;
+};
+
+/**
+ * The cash of the same payments that no loan row holds, loan by loan: the principal, and the interest or
+ * escrow whose category is kept out of the profit (decision 0166, a flip's hard-money interest) or missing.
+ * With the loan rows, the whole payment. A loan with nothing of the kind is left out.
+ */
+export function loanCashOnly(input: LoanMonth & { categories: readonly ForecastCategory[] }): LoanCash[] {
+  const positive = (minor: bigint) => (minor > 0n ? minor : 0n);
+  return dueRows(input).flatMap(({ loan, row }) => {
+    const rowCategoryIds: string[] = [];
+    let minor = positive(row.principalMinor);
+    for (const [part, amount] of [["interest", row.interestMinor], ["escrow", row.escrowMinor]] as const) {
+      const category = partCategory(loan, part, input.categories);
+      if (category == null) minor += positive(amount);
+      else if (amount > 0n) rowCategoryIds.push(category.id);
+    }
+    return minor === 0n ? [] : [{ loanId: loan.id, rowCategoryIds, minor }];
+  });
 }
