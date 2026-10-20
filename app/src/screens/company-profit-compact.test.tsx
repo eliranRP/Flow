@@ -47,9 +47,10 @@ describe("the company profit page's compact bar at the top", () => {
     expectBarUp();
   });
 
-  it("stays up through 2026, since the start, 2026 again and back to the month", () => {
+  it("stays up from since the start to 2026, and on through the switch to the month", () => {
     const observer = stubPageObserver();
-    renderWithProviders(<CompanyProfitScreen sample={COMPANY_PROFIT_SAMPLE} />, { route: "/profit" });
+    // Since the start has no chips: its mark sits under the title, in view, and 2026 moves it under the chips.
+    renderWithProviders(<CompanyProfitScreen sample={COMPANY_PROFIT_SAMPLE} />, { route: "/profit?period=all" });
     for (const name of ["2026", "מההתחלה", "2026", "אוקטובר"]) {
       fireEvent.click(switchRadio(name));
       expect(switchRadio(name)).toHaveAttribute("aria-checked", "true");
