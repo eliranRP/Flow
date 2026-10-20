@@ -91,6 +91,7 @@ verify_jwt = false
 verify_jwt = false
 
 # FLOW-502: the evening push cron uses the same header. The function also takes the service key.
+# FLOW-516: kind "test" takes the user's JWT instead, checked by the database (claim_push_test).
 [functions.push-send]
 verify_jwt = false
 

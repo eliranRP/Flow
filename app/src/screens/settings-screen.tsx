@@ -25,7 +25,7 @@ import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { Button } from "../ui/button";
 import { Skeleton } from "../ui/skeleton";
-import { NO_PREFS, pushConfigured, useNotificationPrefsQuery, type NotificationPrefs } from "../push";
+import { forgetThisDevice, NO_PREFS, pushConfigured, useNotificationPrefsQuery, type NotificationPrefs } from "../push";
 import { notificationsHint } from "./notifications-screen";
 import { themeChoiceLabel, THEME_TITLE } from "../ui/theme-choices";
 import { readThemeChoice, writeThemeChoice, type ThemeChoice } from "../theme-store";
@@ -207,6 +207,9 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
     run: async () => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
+      // FLOW-516: an explicit sign-out drops this device's push, here and on the server, while the
+      // session still works. It never blocks the sign-out (each step has a timeout).
+      await forgetThisDevice({ server: true });
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       clearJevConnectorFlag(session?.user.id ?? null);

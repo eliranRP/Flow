@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getSupabase } from "./lib/supabase";
+import { notePushOwner } from "./push-owner";
 import { detectInstallMode, isStandalone } from "./ui/install-prompt";
 
 /**
@@ -13,7 +14,7 @@ export type NotificationPrefs = {
   weekly_summary: boolean;
   /** The review screen's "תזכורת בערב" card was answered, so it is asked once. */
   prompt_answered: boolean;
-  /** At least one of this user's devices is subscribed. */
+  /** At least one of this user's devices is subscribed (any device, not only this one). */
   has_subscription: boolean;
 };
 
@@ -44,12 +45,17 @@ export function pushConfigured(): boolean {
   return vapidKey() !== "";
 }
 
+/** An iPhone or iPad: permission is changed in the iOS Settings app, not in a browser menu. */
+export function isIosDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const mode = detectInstallMode();
+  return mode === "iphone" || mode === "iphone-other" || mode === "ipad";
+}
+
 export function pushSupport(): PushSupport {
   if (!pushConfigured()) return "not-configured";
   if (typeof window === "undefined" || typeof navigator === "undefined") return "unsupported";
-  const mode = detectInstallMode();
-  const ios = mode === "iphone" || mode === "iphone-other" || mode === "ipad";
-  if (ios && !isStandalone()) return "ios-home-screen";
+  if (isIosDevice() && !isStandalone()) return "ios-home-screen";
   if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return "unsupported";
   return "ok";
 }
@@ -109,69 +115,275 @@ function keyBytes(base64url: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
-/**
- * The registered worker, or null when none becomes ready (dev, or blocked). A first visit on a slow
- * phone is still precaching the app shell, so this waits well past a normal install.
- */
-async function readyWorker(): Promise<ServiceWorkerRegistration | null> {
-  const timeout = new Promise<null>((resolve) => { window.setTimeout(() => { resolve(null); }, 15000); });
-  return Promise.race([navigator.serviceWorker.ready, timeout]);
-}
-
-export type SubscribeResult = "ok" | "denied" | "failed";
-
-/**
- * Asks for permission and subscribes this device. Call it straight from a tap: Safari and Chrome
- * refuse a permission request that does not come from a user gesture.
- */
-export async function subscribeThisDevice(): Promise<SubscribeResult> {
-  if (pushSupport() !== "ok") return "failed";
-  let permission: NotificationPermission;
-  try {
-    permission = await Notification.requestPermission();
-  } catch {
-    return "failed";
-  }
-  if (permission !== "granted") return "denied";
-  try {
-    const registration = await readyWorker();
-    if (!registration) return "failed";
-    const key = keyBytes(vapidKey());
-    let subscription = await registration.pushManager.getSubscription();
-    // A subscription made with an older key can no longer be sent to: replace it.
-    if (subscription != null && !sameKey(subscription.options.applicationServerKey, key)) {
-      await subscription.unsubscribe();
-      subscription = null;
-    }
-    subscription ??= await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
-    const json = subscription.toJSON();
-    const p256dh = json.keys?.p256dh;
-    const auth = json.keys?.auth;
-    if (json.endpoint == null || p256dh == null || auth == null) return "failed";
-    await result(db().rpc("push_subscribe", { p_endpoint: json.endpoint, p_p256dh: p256dh, p_auth: auth, p_user_agent: navigator.userAgent }));
-    return "ok";
-  } catch {
-    return "failed";
-  }
-}
-
 function sameKey(current: ArrayBuffer | null, wanted: Uint8Array): boolean {
   if (current == null) return true;
   const bytes = new Uint8Array(current);
   return bytes.length === wanted.length && bytes.every((byte, index) => byte === wanted[index]);
 }
 
+const TIMED_OUT = Symbol("timed-out");
+
+/** The promise's value, or TIMED_OUT after `ms`. A browser call that never settles cannot hold a screen busy. */
+export async function within<T>(promise: PromiseLike<T>, ms: number): Promise<T | typeof TIMED_OUT> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<typeof TIMED_OUT>((resolve) => { timer = setTimeout(() => { resolve(TIMED_OUT); }, ms); });
+  try {
+    return await Promise.race([Promise.resolve(promise), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
- * Drops this browser's subscription when its user signs out or another signs in, so the previous
- * user's reminders stop on a shared phone. The server deletes the endpoint on its next send (410).
+ * FLOW-516: how long each step after the permission prompt may take. A first visit on a slow phone
+ * is still precaching the app shell; iOS can take a few seconds to subscribe. The permission prompt
+ * waits on the person, so it gets the longest.
  */
-export async function forgetThisDevice(): Promise<void> {
+export const PUSH_TIMEOUTS = {
+  permission: 120_000,
+  worker: 10_000,
+  controller: 3_000,
+  lookup: 10_000,
+  unsubscribe: 10_000,
+  subscribe: 20_000,
+  retryPause: 500,
+  save: 10_000,
+} as const;
+
+export type PushTimeouts = { [K in keyof typeof PUSH_TIMEOUTS]: number };
+
+/** This device's push state, for Settings → התראות and the review card. */
+export type DevicePush = "subscribed" | "not-subscribed" | "denied" | "no-worker" | Exclude<PushSupport, "ok">;
+
+/** This device's state, and its endpoint's tag (to find it in the connected devices list). */
+export type DeviceInfo = { state: DevicePush; tag: string | null };
+
+export const DEVICE_PUSH_KEY = ["push-device"] as const;
+
+/** The first 16 hex digits of the endpoint's SHA-256, as list_my_push_devices returns them. Never the endpoint. */
+export async function endpointTag(endpoint: string): Promise<string | null> {
+  try {
+    const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(endpoint)));
+    return Array.from(digest.slice(0, 8), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Reads this device's state without asking anything: the permission, then the worker's push
+ * subscription made with this build's key. Never waits more than `ms` on a browser call.
+ */
+export async function readDevicePush(ms = 3000): Promise<DeviceInfo> {
+  const support = pushSupport();
+  if (support !== "ok") return { state: support, tag: null };
+  if (Notification.permission === "denied") return { state: "denied", tag: null };
+  try {
+    const registration = await within(navigator.serviceWorker.ready, ms);
+    if (registration === TIMED_OUT) return { state: "no-worker", tag: null };
+    const subscription = await within(registration.pushManager.getSubscription(), ms);
+    if (subscription === TIMED_OUT || subscription == null) return { state: "not-subscribed", tag: null };
+    const tag = await endpointTag(subscription.endpoint);
+    // Permission taken back, or a subscription made with an older key: nothing can be sent to it.
+    if (Notification.permission !== "granted" || !sameKey(subscription.options.applicationServerKey, keyBytes(vapidKey()))) {
+      return { state: "not-subscribed", tag };
+    }
+    return { state: "subscribed", tag };
+  } catch {
+    return { state: "not-subscribed", tag: null };
+  }
+}
+
+export function useDevicePushQuery(enabled: boolean) {
+  return useQuery({ queryKey: DEVICE_PUSH_KEY, enabled, retry: false, staleTime: 0, queryFn: () => readDevicePush() });
+}
+
+/** The step a subscribe reached. Shown, with the reason and the browser's error name, when it fails. */
+export type SubscribeStep = "permission" | "worker" | "controller" | "lookup" | "unsubscribe" | "subscribe" | "save" | "done";
+
+export type SubscribeResult =
+  | "ok"
+  | "unsupported"
+  | "denied"
+  | "dismissed"
+  | "permission-timeout"
+  | "worker-timeout"
+  | "not-controlled"
+  | "lookup-timeout"
+  | "lookup-threw"
+  | "unsubscribe-timeout"
+  | "subscribe-timeout"
+  | "subscribe-threw"
+  | "save-timeout"
+  | "save-failed";
+
+export type SubscribeOutcome = {
+  result: SubscribeResult;
+  step: SubscribeStep;
+  /** The browser's error name and a short message ("InvalidStateError: …"). No endpoint, no key. */
+  detail?: string;
+};
+
+/** "AbortError: message", at most 100 characters, with any URL taken out. */
+export function errorDetail(error: unknown): string {
+  const record = typeof error === "object" && error != null ? error as { name?: unknown; message?: unknown } : null;
+  const name = typeof record?.name === "string" && record.name !== "" ? record.name : "Error";
+  const message = record == null ? (typeof error === "string" ? error : "") : typeof record.message === "string" ? record.message : "";
+  const clean = message.replace(/https?:\/\/\S+/g, "<url>").replace(/\s+/g, " ").trim();
+  return (clean === "" ? name : `${name}: ${clean}`).slice(0, 100);
+}
+
+function pause(ms: number): Promise<void> {
+  return new Promise((resolve) => { setTimeout(resolve, ms); });
+}
+
+/** Waits briefly for the worker to control this page (a first open after an update is not yet). */
+async function controlled(ms: number): Promise<boolean> {
+  const container = navigator.serviceWorker;
+  if (container.controller != null) return true;
+  let listener: (() => void) | undefined;
+  const change = new Promise<boolean>((resolve) => {
+    listener = () => { resolve(true); };
+    container.addEventListener("controllerchange", listener);
+  });
+  try {
+    return (await within(change, ms)) === true;
+  } finally {
+    if (listener) container.removeEventListener("controllerchange", listener);
+  }
+}
+
+/**
+ * Asks for permission and subscribes this device. Call it straight from a tap, with no await
+ * before it: Safari and Chrome refuse a permission request that does not come from a user gesture.
+ * Every step after the prompt has its own timeout and reason, and an outer limit backs them, so it
+ * always settles and a busy control always clears (FLOW-516).
+ */
+export function subscribeThisDevice(timeouts: PushTimeouts = PUSH_TIMEOUTS, limitMs = 200_000): Promise<SubscribeOutcome> {
+  // subscribeSteps runs at once, in this same task: requestPermission is its first call.
+  const pending = subscribeSteps(timeouts).catch((error: unknown): SubscribeOutcome => ({ result: "subscribe-threw", step: "subscribe", detail: errorDetail(error) }));
+  return within(pending, limitMs).then((outcome) => outcome === TIMED_OUT
+    ? { result: "subscribe-timeout", step: "subscribe", detail: "no answer" }
+    : outcome);
+}
+
+async function subscribeSteps(timeouts: PushTimeouts): Promise<SubscribeOutcome> {
+  if (pushSupport() !== "ok") return { result: "unsupported", step: "permission" };
+  let permission: NotificationPermission | typeof TIMED_OUT;
+  try {
+    // The request runs in this same task as the tap.
+    permission = await within(Notification.requestPermission(), timeouts.permission);
+  } catch (error) {
+    return { result: "denied", step: "permission", detail: errorDetail(error) };
+  }
+  if (permission === TIMED_OUT) return { result: "permission-timeout", step: "permission" };
+  if (permission === "denied") return { result: "denied", step: "permission" };
+  if (permission !== "granted") return { result: "dismissed", step: "permission" };
+
+  let step: SubscribeStep = "worker";
+  let isControlled = true;
+  try {
+    const registration = await within(navigator.serviceWorker.ready, timeouts.worker);
+    if (registration === TIMED_OUT) return { result: "worker-timeout", step };
+    step = "controller";
+    isControlled = await controlled(timeouts.controller);
+    const key = keyBytes(vapidKey());
+
+    step = "lookup";
+    let existing: PushSubscription | null | typeof TIMED_OUT;
+    try {
+      existing = await within(registration.pushManager.getSubscription(), timeouts.lookup);
+    } catch (error) {
+      return { result: "lookup-threw", step, detail: errorDetail(error) };
+    }
+    if (existing === TIMED_OUT) return { result: "lookup-timeout", step };
+
+    let subscription: PushSubscription | null = existing;
+    // A subscription made with an older key can no longer be sent to. Subscribe fresh first; only
+    // when the browser refuses because of the old one, drop it, pause and try once more.
+    if (subscription != null && !sameKey(subscription.options.applicationServerKey, key)) subscription = null;
+    if (subscription == null) {
+      const options = { userVisibleOnly: true, applicationServerKey: key };
+      step = "subscribe";
+      let made: PushSubscription | typeof TIMED_OUT;
+      try {
+        made = await within(registration.pushManager.subscribe(options), timeouts.subscribe);
+      } catch (error) {
+        const name = (error as { name?: unknown } | null)?.name;
+        if (name !== "InvalidStateError" && name !== "AbortError") {
+          return { result: isControlled ? "subscribe-threw" : "not-controlled", step, detail: errorDetail(error) };
+        }
+        step = "unsubscribe";
+        const old = existing ?? await within(registration.pushManager.getSubscription(), timeouts.lookup);
+        if (old !== TIMED_OUT && old != null) {
+          const dropped = await within(old.unsubscribe(), timeouts.unsubscribe);
+          if (dropped === TIMED_OUT) return { result: "unsubscribe-timeout", step, detail: errorDetail(error) };
+        }
+        await pause(timeouts.retryPause);
+        step = "subscribe";
+        made = await within(registration.pushManager.subscribe(options), timeouts.subscribe);
+      }
+      if (made === TIMED_OUT) return { result: isControlled ? "subscribe-timeout" : "not-controlled", step };
+      subscription = made;
+    }
+
+    step = "save";
+    const json = subscription.toJSON();
+    const p256dh = json.keys?.p256dh;
+    const auth = json.keys?.auth;
+    if (json.endpoint == null || p256dh == null || auth == null) return { result: "subscribe-threw", step: "subscribe", detail: "no keys" };
+    let saved: unknown;
+    try {
+      saved = await within(
+        result(db().rpc("push_subscribe", { p_endpoint: json.endpoint, p_p256dh: p256dh, p_auth: auth, p_user_agent: navigator.userAgent })),
+        timeouts.save,
+      );
+    } catch (error) {
+      return { result: "save-failed", step, detail: errorDetail(error) };
+    }
+    if (saved === TIMED_OUT) return { result: "save-timeout", step };
+    void noteOwner();
+    return { result: "ok", step: "done" };
+  } catch (error) {
+    // The step a throw came from (TypeScript narrows `step` to its last plain assignment here).
+    const at = step as SubscribeStep;
+    const result: SubscribeResult = at === "subscribe" ? (isControlled ? "subscribe-threw" : "not-controlled")
+      : at === "unsubscribe" ? "unsubscribe-timeout"
+        : at === "lookup" ? "lookup-threw"
+          : at === "save" ? "save-failed"
+            : "worker-timeout";
+    return { result, step: at, detail: errorDetail(error) };
+  }
+}
+
+/** Remembers which user this browser's subscription belongs to, so a later user drops it. */
+async function noteOwner(): Promise<void> {
+  try {
+    const session = await within(db().auth.getSession(), 3000);
+    if (session !== TIMED_OUT) notePushOwner(session.data.session?.user.id ?? null);
+  } catch {
+    // Unknown: the next user's sign-in keeps the subscription, as before FLOW-516.
+  }
+}
+
+/**
+ * Drops this browser's subscription. `server` (an explicit sign-out, while the session still
+ * works) also deletes its row, so nothing is sent to it again. A user switch drops it locally;
+ * the server deletes that endpoint on its next send (410). An expired session keeps it.
+ */
+export async function forgetThisDevice({ server = false }: { server?: boolean } = {}): Promise<void> {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.getRegistration();
-    const subscription = await registration?.pushManager.getSubscription();
-    await subscription?.unsubscribe();
+    const registration = await within(navigator.serviceWorker.getRegistration(), 3000);
+    const subscription = registration === TIMED_OUT || registration == null ? null : await within(registration.pushManager.getSubscription(), 3000);
+    if (subscription != null && subscription !== TIMED_OUT) {
+      if (server) {
+        await within(result(db().rpc("push_unsubscribe", { p_endpoint: subscription.endpoint })), 5000).catch(() => undefined);
+      }
+      await within(subscription.unsubscribe(), 3000);
+    }
   } catch {
     // Nothing to drop, or the browser refused: the server still drops a dead endpoint.
   }
+  notePushOwner(null);
 }

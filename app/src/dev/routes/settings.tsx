@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { ReactNode } from "react";
 import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "../../assistant-sample";
+import { SAMPLE_DEVICES, SAMPLE_THIS_TAG } from "../../push-devices-sample";
 import { AiConnectionPage } from "../../screens/assistant-settings";
 import { BusinessScreen } from "../../screens/business-screen";
 import { MercuryConnectionRoute, SumitConnectionRoute } from "../../screens/connection-pages";
@@ -57,12 +58,15 @@ function fillRenameDraft(text: string) {
   }, 100);
 }
 
-/** The notifications page on the board's preset: one switch on, one off, one on (no push support needed to draw it). */
+/** The notifications page on the board's preset: this device on, two connected devices, one switch on, one off, one on (no push support needed to draw it). */
 export function DevNotifications() {
   return (
     <NotificationsScreen
       sample={{ new_transaction: true, evening_reminder: false, weekly_summary: true, prompt_answered: true, has_subscription: true }}
       support="ok"
+      device="subscribed"
+      devices={SAMPLE_DEVICES}
+      thisTag={SAMPLE_THIS_TAG}
     />
   );
 }

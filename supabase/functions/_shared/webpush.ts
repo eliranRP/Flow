@@ -123,6 +123,22 @@ export async function encryptPush(
   return concat(salt, recordSize, new Uint8Array([senderRaw.length]), senderRaw, sealed);
 }
 
+/**
+ * FLOW-516: one log line for a send that failed: the push service's host (never the endpoint's
+ * path, which addresses the device), the HTTP status or the error's name, and the first 120
+ * characters of the answer on one line. The services answer with a reason such as BadJwtToken.
+ */
+export function failureLine(endpoint: string, status: number | string, body = ""): string {
+  let host = "unknown";
+  try {
+    host = new URL(endpoint).host;
+  } catch {
+    // Not a URL: the host stays unknown.
+  }
+  const short = body.replace(/https?:\/\/\S+/g, "<url>").replace(/\s+/g, " ").trim().slice(0, 120);
+  return `push failed host=${host} status=${String(status)}${short === "" ? "" : ` body=${short}`}`;
+}
+
 /** Posts one notification. 404 and 410 mean the browser dropped the subscription. */
 export async function sendPush(
   fetchImpl: typeof fetch,
@@ -157,10 +173,19 @@ export async function sendPush(
       },
       body,
     });
-  } catch {
+  } catch (error) {
+    console.warn(failureLine(target.endpoint, error instanceof Error ? error.name : "error"));
     return "failed";
   }
-  await response.body?.cancel();
-  if (response.status === 404 || response.status === 410) return "gone";
-  return response.ok ? "sent" : "failed";
+  if (response.status === 404 || response.status === 410) {
+    await response.body?.cancel();
+    return "gone";
+  }
+  if (response.ok) {
+    await response.body?.cancel();
+    return "sent";
+  }
+  const answer = await response.text().catch(() => "");
+  console.warn(failureLine(target.endpoint, response.status, answer));
+  return "failed";
 }
