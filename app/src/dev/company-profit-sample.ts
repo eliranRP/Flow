@@ -1,5 +1,6 @@
 import type { Breakdown, BreakdownDirection, ProfitMonth } from "@flow/shared";
 import { COMPANY_NEXT_READS } from "./company-next-month-sample";
+import { COMPANY_YEARS_SAMPLE } from "./company-years-sample";
 import type { CompanyProfitSample } from "../screens/company-profit-screen";
 
 /**
@@ -149,4 +150,5 @@ export const COMPANY_PROFIT_SAMPLE: CompanyProfitSample = {
   today: "2026-10-11",
   monthKey: "2026-10",
   next: { ...COMPANY_NEXT_READS, months: MONTHS },
+  years: COMPANY_YEARS_SAMPLE,
 };

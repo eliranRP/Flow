@@ -21,6 +21,10 @@ import { BASIS_PROFIT_COPY, basisChoiceLabel } from "../ui/company-choices";
 import { buildProfitModel, useCompanyProfitRead, type ProfitInputs, type ProfitLine, type ProfitModel } from "../use-company-profit";
 import { byDateThenSize, bySizeOnly, companyCategoryGroups, companySummaryRows } from "../company-profit-rows";
 import { useCompanyNextMonth, useCompanyProfitMonths, type CompanyNextMonthSample } from "../company-next-month-query";
+import { companyYears } from "../company-years";
+import { useCompanyYearProjects, useCompanyYears, type CompanyYearsSample } from "../company-years-query";
+import { SegmentedControl } from "../ui/segmented-control";
+import { periodView, type PeriodView, type YearList } from "./company-profit-period";
 import { CompanyBasisSheet } from "./company-basis-sheet";
 import { countWord, ProfitCategories } from "./profit-categories";
 import { CompanyNextMonthBlock } from "./company-next-month-block";
@@ -28,7 +32,19 @@ import { CompanySummaryCard } from "./profit-summary";
 import { useBlockedPreview } from "./screen-shared";
 
 /** A fixture: the reads' inputs for the page, plus the day heads' today and the month it shows. */
-export type CompanyProfitSample = ProfitInputs & { today: string; monthKey: string; openFirst?: boolean; sheetOpen?: boolean; next?: CompanyNextMonthSample };
+export type CompanyProfitSample = ProfitInputs & { today: string; monthKey: string; openFirst?: boolean; sheetOpen?: boolean; next?: CompanyNextMonthSample; years?: CompanyYearsSample };
+
+/** The period switch (canvas note spec-years): the month, a year or since the start, in the URL (`?period=`). */
+type Period = "month" | "year" | "all";
+
+function periodOf(value: string | null): Period {
+  return value === "year" || value === "all" ? value : "month";
+}
+
+/** The year the year view shows (`?year=`, this year when absent or later). */
+function yearOf(value: string | null, currentYear: string): string {
+  return value != null && /^\d{4}$/.test(value) && value < currentYear ? value : currentYear;
+}
 
 const ORDERS = [
   { value: "project", label: "לפי פרויקט" },
@@ -62,7 +78,9 @@ function projectProfitPath(projectId: string, search: string): string {
 /**
  * The company's profit page (FLOW-140c1, board Profit and ProfitBasis): the month's profit with income
  * and counted expenses, the year to date, then the rows in the order `?by=` picks (project, category,
- * date or amount), and the basis sheet. `sample` is the dev fixture; otherwise the page reads the books.
+ * date or amount), and the basis sheet. The period switch under the title (FLOW-145) turns the page to this
+ * year or a past one (`?period=year&year=`, its list by month or `&list=project`) or since the start
+ * (`?period=all`). `sample` is the dev fixture; otherwise the page reads the books.
  */
 export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample } = {}) {
   const preview = useHomePreview();
@@ -75,6 +93,10 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   const by = orderOf(params.get("by"));
   const today = sample?.today ?? israelToday();
   const currentKey = today.slice(0, 7);
+  const currentYear = today.slice(0, 4);
+  const period = periodOf(params.get("period"));
+  const viewYear = yearOf(params.get("year"), currentYear);
+  const yearList: YearList = params.get("list") === "project" ? "project" : "month";
   // Home's ?month= picks an earlier month; its year to date then ends with that month.
   const monthKey = sample?.monthKey ?? homeMonthKey(location.search, today, null);
   const year = monthKey.slice(0, 4);
@@ -88,25 +110,69 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   });
   const model: ProfitModel | null = sample ? buildProfitModel(sample) : live.model;
   const onCurrent = monthKey === currentKey;
-  const next = useCompanyNextMonth(sample?.currency ?? companyCurrency, today, onCurrent, sample?.next);
-  const chartMonths = useCompanyProfitMonths(today, onCurrent, sample?.next);
-  const phase: ScreenPhase = sample != null ? { kind: "ready" } : preview !== "off" ? screenPhase(preview) : live.failed ? { kind: "error", offline: !onlineManager.isOnline() } : model == null ? { kind: "loading" } : { kind: "ready" };
+  const long = period !== "month";
+  // Next month, and the rest of the year for the year view, from the same reads.
+  const next = useCompanyNextMonth(sample?.currency ?? companyCurrency, today, onCurrent || long, sample?.next);
+  const chartMonths = useCompanyProfitMonths(today, onCurrent && !long, sample?.next);
+  const years = useCompanyYears(today, long, sample?.years);
+  const yearProjects = useCompanyYearProjects(viewYear, today, period === "year" && yearList === "project", sample?.years);
+  const failed = live.failed || (long && years.failed);
+  const waiting = model == null || (long && years.months == null);
+  const phase: ScreenPhase = sample != null ? { kind: "ready" } : preview !== "off" ? screenPhase(preview) : failed ? { kind: "error", offline: !onlineManager.isOnline() } : waiting ? { kind: "loading" } : { kind: "ready" };
   const [sheetState, setSheetOpen] = useState<boolean | undefined>(undefined);
   const basisRef = useRef<HTMLButtonElement>(null);
   const back = homeMonthPath(monthKey, search, currentKey);
   if (phase.kind !== "ready" || model == null) {
     // The board's loading frame names the month in the title: the stacked header's own bar, Back labelled בית.
-    return <ScreenState stacked headerClassName="ui-state-header" title={phase.kind === "loading" ? `רווח ${HEBREW_MONTHS[Number(monthKey.slice(5, 7)) - 1] ?? monthKey}` : "רווח"} kicker="בית" backTo={back} phase={phase} onRetry={live.refetch} loading={<ProfitSkeleton />} />;
+    const loadingTitle = period === "month" ? `רווח ${HEBREW_MONTHS[Number(monthKey.slice(5, 7)) - 1] ?? monthKey}` : "רווח";
+    return <ScreenState stacked headerClassName="ui-state-header" title={phase.kind === "loading" ? loadingTitle : "רווח"} kicker="בית" backTo={back} phase={phase} onRetry={() => { live.refetch(); years.refetch(); }} loading={<ProfitSkeleton />} />;
   }
   const currency = model.currency;
   const sheetOpen = sheetState ?? sample?.sheetOpen === true;
-  const setBy = (next: Order) => {
+  /** Sets (or, with null, drops) query parameters in place: the page keeps its choices in the URL. */
+  const setParams = (changes: Record<string, string | null>) => {
     const nextParams = new URLSearchParams(location.search);
-    if (next === "project") nextParams.delete("by");
-    else nextParams.set("by", next);
+    for (const [key, value] of Object.entries(changes)) {
+      if (value == null) nextParams.delete(key);
+      else nextParams.set(key, value);
+    }
     const text = nextParams.toString();
     void navigate({ pathname: location.pathname, search: text === "" ? "" : `?${text}` }, { replace: true });
   };
+  const setBy = (next: Order) => { setParams({ by: next === "project" ? null : next }); };
+  const pickPeriod = (next: Period) => {
+    if (next === period) return;
+    setParams({ period: next === "month" ? null : next, year: null, list: null });
+  };
+  const monthName = HEBREW_MONTHS[Number(monthKey.slice(5, 7)) - 1] ?? monthKey;
+  const periodSwitch = (
+    <div className="ui-cp-period ui-period-switch">
+      <SegmentedControl<Period>
+        label="תקופה"
+        showLabel={false}
+        radius="input"
+        value={period}
+        onChange={pickPeriod}
+        options={[{ value: "month", label: monthName }, { value: "year", label: period === "year" ? viewYear : currentYear, numeric: true }, { value: "all", label: "מההתחלה" }]}
+      />
+    </div>
+  );
+  const longView: PeriodView | null = !long || years.months == null ? null : periodView({
+    period: period === "all" ? "all" : "year",
+    data: companyYears(years.months, currency, today),
+    year: viewYear,
+    today,
+    currency,
+    rest: next.rest,
+    restLoading: next.pending,
+    categories: next.categories,
+    list: yearList,
+    projects: { breakdowns: yearProjects.breakdowns, statuses: yearProjects.statuses, pending: yearProjects.pending },
+    onList: (list) => { setParams({ list: list === "month" ? null : list }); },
+    // This month's row opens the month view on this month; a year's row opens that year.
+    onOpen: (opens) => { setParams(opens.kind === "month" ? { period: null, year: null, list: null, month: null } : { period: "year", year: opens.year === currentYear ? null : opens.year, list: null }); },
+    projectHref: (projectId) => projectProfitPath(projectId, search),
+  });
   const chips = (
     <div className="ui-cp-chips" role="group" aria-label="סידור">
       {ORDERS.map((option) => (
@@ -114,8 +180,42 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
       ))}
     </div>
   );
+  const basisFooter = (
+    <>
+      <p className="ui-cp-foot t-caption t-muted">לא נספר ברווח: קנייה ושיפוץ של נכס, קרן של הלוואות, הון בעלים והעברות בין חשבונות.</p>
+      <button type="button" ref={basisRef} className="ui-cp-basis" onClick={() => { setSheetOpen(true); }}>
+        נספר לפי {basisChoiceLabel(model.basis)} · <span className="ui-cp-change">שינוי</span>
+      </button>
+      <CompanyBasisSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        basis={model.basis}
+        blocked={() => blocked(sample != null ? "empty" : undefined)}
+        returnFocusRef={basisRef}
+        copy={BASIS_PROFIT_COPY}
+      />
+    </>
+  );
+  if (longView != null) {
+    return (
+      <div className="ui-cp-screen">
+        <ScreenHeader
+          layout="stacked"
+          title="רווח"
+          backTo={back}
+          backText="בית"
+          subtitle={longView.subtitle}
+          compactFigure={signedText(longView.profit, currency)}
+          panel={longView.chips ?? undefined}
+          below={<div className="ui-cp-head">{periodSwitch}{longView.head}{longView.chips}</div>}
+        />
+        {longView.body}
+        {basisFooter}
+      </div>
+    );
+  }
   const profit = model.profit;
-  const subtitle = `${HEBREW_MONTHS[Number(monthKey.slice(5, 7)) - 1] ?? monthKey} ${year} · ${onCurrent ? "עד היום" : "חודש סגור"}`;
+  const subtitle = `${monthName} ${year} · ${onCurrent ? "עד היום" : "חודש סגור"}`;
   const figure = (
     <p className="ui-cp-figure">
       <Amount agorot={profit} currency={currency} size="display" loss={profit < 0n} direction={profit > 0n ? "income" : undefined} />
@@ -221,21 +321,10 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
         subtitle={subtitle}
         compactFigure={signedText(profit, currency)}
         panel={chips}
-        below={<div className="ui-cp-head">{figure}{summary}{nextBlock}{chips}</div>}
+        below={<div className="ui-cp-head">{periodSwitch}{figure}{summary}{nextBlock}{chips}</div>}
       />
       {body}
-      <p className="ui-cp-foot t-caption t-muted">לא נספר ברווח: קנייה ושיפוץ של נכס, קרן של הלוואות, הון בעלים והעברות בין חשבונות.</p>
-      <button type="button" ref={basisRef} className="ui-cp-basis" onClick={() => { setSheetOpen(true); }}>
-        נספר לפי {basisChoiceLabel(model.basis)} · <span className="ui-cp-change">שינוי</span>
-      </button>
-      <CompanyBasisSheet
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        basis={model.basis}
-        blocked={() => blocked(sample != null ? "empty" : undefined)}
-        returnFocusRef={basisRef}
-        copy={BASIS_PROFIT_COPY}
-      />
+      {basisFooter}
     </div>
   );
 }

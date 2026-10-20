@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { z } from "zod";
 import { companyNextMonthForecast, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
+import { companyRestOfYear, type RestOfYear } from "./company-year-forecast";
 import { CHART_MONTHS } from "./month-figures";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
@@ -55,7 +56,8 @@ const NO_LOANS: readonly ForecastLoan[] = [];
 
 /**
  * The company's forecast for next month in its currency: every project's (as its צפי page builds it, the edits
- * on top) and the general costs', summed. Null until the reads are in; `enabled` false reads nothing.
+ * on top) and the general costs', summed; and the same for each month left in the year (`rest`, null in
+ * December). Null until the reads are in; `enabled` false reads nothing.
  */
 export function useCompanyNextMonth(currency: string, today: string, enabled: boolean, sample?: CompanyNextMonthSample) {
   const preview = useHomePreview();
@@ -92,9 +94,17 @@ export function useCompanyNextMonth(currency: string, today: string, enabled: bo
       : null),
     [recurring, loanList, categoryList, inputData, currency, today],
   );
+  // The year view's rest of the year (decision 0200): the same reads, built again for each month left.
+  const rest: RestOfYear | null = useMemo(
+    () => (recurring != null && loanList != null && categoryList != null && inputData != null
+      ? companyRestOfYear({ currency, today, recurring, loans: loanList, categories: categoryList, inputs: inputData })
+      : null),
+    [recurring, loanList, categoryList, inputData, currency, today],
+  );
   const reads = [expected, loans, inputs, categories];
   return {
     forecast,
+    rest,
     categories: categoryList ?? [],
     pending: live && reads.some((read) => read.isPending) && !reads.some((read) => read.isPaused),
     failed: live && reads.some((read) => read.isError),

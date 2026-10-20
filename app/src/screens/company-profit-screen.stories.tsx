@@ -93,6 +93,55 @@ export const Scrolled: Story = {
   },
 };
 
+/**
+ * FLOW-145, board Profit · 2026 (canvas note spec-years): the switch on 2026, the year to date, the "סוף 2026"
+ * card in the תזרים צפוי form, January to October with November and December dashed, the months newest first.
+ */
+export const Year: Story = {
+  name: "Period: this year",
+  render: () => <ProfitRoute entry="/profit?period=year" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("radio", { name: "2026" })).toHaveAttribute("aria-checked", "true");
+    await expect(canvas.getByText("רווח 2025 כולה")).toBeInTheDocument();
+    await expect(canvas.getByText("סוף 2026")).toBeInTheDocument();
+    await expect(canvas.getByRole("img", { name: /וצפי לנובמבר ודצמבר$/ })).toBeInTheDocument();
+  },
+};
+
+/** The year by project: the finished projects in one row, כללי last. */
+export const YearByProject: Story = {
+  name: "Period: this year by project",
+  render: () => <ProfitRoute entry="/profit?period=year&list=project" />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText("פרויקטים שהסתיימו · 4")).toBeInTheDocument();
+  },
+};
+
+/** A past year, opened from מההתחלה: "2025 · שנה סגורה", no card, twelve solid months, compared with 2024. */
+export const PastYear: Story = {
+  name: "Period: a past year",
+  render: () => <ProfitRoute entry="/profit?period=year&year=2025" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("2025 · שנה סגורה")).toBeInTheDocument();
+    await expect(canvas.getByText("רווח 2024 כולה")).toBeInTheDocument();
+    await expect(canvasElement.ownerDocument.querySelector(".ui-cp-head .ui-fc-card")).toBeNull();
+  },
+};
+
+/** Board Profit · מההתחלה: since January 2024, a pair per year (2026 capped with the rest of the year), a row per year. */
+export const AllTime: Story = {
+  name: "Period: since the start",
+  render: () => <ProfitRoute entry="/profit?period=all" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("מאז ינואר 2024 · 3 שנים")).toBeInTheDocument();
+    await expect(canvas.getByText("השנה הרווחית ביותר · 2025")).toBeInTheDocument();
+    await expect(canvas.getByRole("region", { name: "לפי שנה" })).toBeInTheDocument();
+  },
+};
+
 /** The basis sheet over the page: the two choices with their notes. */
 export const BasisSheet: Story = {
   name: "Basis sheet",
