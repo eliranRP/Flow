@@ -6,7 +6,7 @@
 }
 
 .ui-cp-screen .ui-page-stacked {
-  padding-top: var(--space-3);
+  padding-top: calc(var(--safe-top) + var(--space-3));
 }
 
 .ui-cp-screen .ui-page-stacked > p {

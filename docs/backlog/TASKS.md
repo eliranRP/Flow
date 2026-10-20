@@ -214,6 +214,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-920"></a>[FLOW-920](tasks/FLOW-920.md) | Project profit: the month's share and after-overhead rows from the server, and the old profit-month section goes | UI + server (follow-up to FLOW-140) |
 | <a id="flow-930"></a>[FLOW-930](tasks/FLOW-930.md) | A yearly charge shows in this month's forecast at a monthly amount | BUG |
 | <a id="flow-935"></a>[FLOW-935](tasks/FLOW-935.md) | The iPhone Home Screen app moves to a new deploy without a reinstall | BUG |
+| <a id="flow-937"></a>[FLOW-937](tasks/FLOW-937.md) | Under an iPhone notch, a page's title is never hidden under the compact bar | BUG |
 
 ## MCP
 

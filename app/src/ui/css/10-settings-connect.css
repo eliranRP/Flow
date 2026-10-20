@@ -4,7 +4,7 @@
    the back row at 12, the blocks 14 apart, 15/1.5 text in the tint box, steps and AI rows. */
 .ui-connection-page > .ui-page-stacked {
   margin-inline: calc(var(--space-4) * -1);
-  padding-block: 0;
+  padding-block: var(--safe-top) 0;
 }
 
 .ui-connection-page .ui-focus-title {

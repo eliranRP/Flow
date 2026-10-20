@@ -588,7 +588,7 @@
 /* The settings list page (settings-screen.tsx root .ui-settings-page): cards inset 16 with a 16px radius,
    14px between them, 56px rows with hairlines, as on the board. */
 .ui-settings-page > .ui-page-stacked {
-  padding-top: var(--space-3);
+  padding-top: calc(var(--safe-top) + var(--space-3));
   padding-bottom: calc(var(--space-3) - 1px);
 }
 
