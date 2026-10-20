@@ -241,12 +241,11 @@ export function NotificationsScreen({
       while (entry.want !== entry.stored) {
         const want = entry.want;
         try {
-          const saved = await saveNotificationPrefs({ [key]: want });
+          await saveNotificationPrefs({ [key]: want });
           entry.stored = want;
-          // The server's answer, with every switch still on its way kept as the user left it.
-          const merged = { ...saved, [key]: entry.want };
-          for (const [other, pending] of saves.current) if (other !== key && pending.running) merged[other] = pending.want;
-          client.setQueryData(PUSH_PREFS_KEY, merged);
+          // Only this switch: the answer's other fields are a snapshot from when it committed, and
+          // answers can land out of order, so it could draw an older value over a newer one.
+          show(key, entry.want);
         } catch {
           entry.want = entry.stored;
           show(key, entry.stored);

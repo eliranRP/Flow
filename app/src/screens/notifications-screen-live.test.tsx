@@ -115,17 +115,40 @@ describe("the live device row", () => {
   });
 
   // FLOW-936: a shared switch flips at once and saves in the background.
+  // The server keeps a row: each save commits when it arrives, and its answer (the row as it stood
+  // then) is held until the test finishes it, so answers can come back in any order.
   function holdSaves() {
     const pending: Array<{ args: Record<string, unknown>; finish: (ok: boolean) => void }> = [];
+    let row: NotificationPrefs = { ...prefs };
     rpc.mockImplementation((name: string, args: Record<string, unknown>) => {
       if (name !== "set_notification_prefs") {
-        return Promise.resolve({ data: name === "list_my_push_devices" ? { devices } : prefs, error: null });
+        return Promise.resolve({ data: name === "list_my_push_devices" ? { devices } : row, error: null });
       }
+      const before = row;
+      row = {
+        ...row,
+        ...(args.p_new_transaction == null ? {} : { new_transaction: args.p_new_transaction as boolean }),
+        ...(args.p_evening_reminder == null ? {} : { evening_reminder: args.p_evening_reminder as boolean }),
+        ...(args.p_weekly_summary == null ? {} : { weekly_summary: args.p_weekly_summary as boolean }),
+      };
+      const committed = row;
       return new Promise((resolve) => {
-        pending.push({ args, finish: (ok) => { resolve(ok ? { data: prefs, error: null } : { data: null, error: { message: "boom" } }); } });
+        pending.push({
+          args,
+          finish: (ok) => {
+            if (!ok) row = before;
+            resolve(ok ? { data: committed, error: null } : { data: null, error: { message: "boom" } });
+          },
+        });
       });
     });
     return pending;
+  }
+
+  /** Lets a save's answer reach the cache and the screen. */
+  async function settle() {
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
   it("a shared switch flips before its save returns, and the other switches stay free", async () => {
@@ -144,10 +167,25 @@ describe("the live device row", () => {
       expect.objectContaining({ p_new_transaction: true }),
       expect.objectContaining({ p_weekly_summary: true }),
     ]);
-    await act(async () => { pending[0]?.finish(true); await Promise.resolve(); });
+    await act(async () => { pending[0]?.finish(true); await settle(); });
     // The first answer does not draw the second switch back while its save is on its way.
     expect(weekly).toBeChecked();
-    await act(async () => { pending[1]?.finish(true); await Promise.resolve(); });
+    await act(async () => { pending[1]?.finish(true); await settle(); });
+    expect(added).toBeChecked();
+    expect(weekly).toBeChecked();
+  });
+
+  it("answers that come back out of order never draw an older value over a newer one", async () => {
+    const pending = holdSaves();
+    await deviceSwitch();
+    const added = screen.getByRole("switch", { name: "תנועה חדשה" });
+    const weekly = screen.getByRole("switch", { name: "סיכום שבועי" });
+    fireEvent.click(added);
+    fireEvent.click(weekly);
+    await waitFor(() => { expect(pending).toHaveLength(2); });
+    // The second save's answer lands first; the first one's, taken before the second committed, after it.
+    await act(async () => { pending[1]?.finish(true); await settle(); });
+    await act(async () => { pending[0]?.finish(true); await settle(); });
     expect(added).toBeChecked();
     expect(weekly).toBeChecked();
   });
@@ -159,7 +197,7 @@ describe("the live device row", () => {
     fireEvent.click(added);
     expect(added).toBeChecked();
     await waitFor(() => { expect(pending).toHaveLength(1); });
-    await act(async () => { pending[0]?.finish(false); await Promise.resolve(); });
+    await act(async () => { pending[0]?.finish(false); await settle(); });
     await waitFor(() => { expect(added).not.toBeChecked(); });
     expect(await screen.findByText("לא הצלחנו לשמור.")).toBeInTheDocument();
     expect(screen.getByRole("switch", { name: "תזכורת ערב" })).toBeChecked();
@@ -176,11 +214,11 @@ describe("the live device row", () => {
     expect(added).not.toBeChecked();
     // One save at a time: the first is on its way, the taps after it wait for it.
     await waitFor(() => { expect(pending).toHaveLength(1); });
-    await act(async () => { pending[0]?.finish(true); await Promise.resolve(); });
+    await act(async () => { pending[0]?.finish(true); await settle(); });
     // Then only the latest value is sent.
     await waitFor(() => { expect(pending).toHaveLength(2); });
     expect(pending[1]?.args).toEqual(expect.objectContaining({ p_new_transaction: false }));
-    await act(async () => { pending[1]?.finish(true); await Promise.resolve(); });
+    await act(async () => { pending[1]?.finish(true); await settle(); });
     expect(added).not.toBeChecked();
     expect(pending).toHaveLength(2);
   });
@@ -191,7 +229,7 @@ describe("the live device row", () => {
     const added = screen.getByRole("switch", { name: "תנועה חדשה" });
     fireEvent.click(added);
     expect(await screen.findByText("תנועה חדשה פועלת")).toBeInTheDocument();
-    await act(async () => { pending[0]?.finish(true); await Promise.resolve(); });
+    await act(async () => { pending[0]?.finish(true); await settle(); });
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     expect(added).not.toBeChecked();
     await waitFor(() => { expect(pending).toHaveLength(2); });
