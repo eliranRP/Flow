@@ -31,7 +31,7 @@ export type NextMonthSample = {
 /** The query key the edits read sits under; every forecast write refreshes it. */
 export const FORECAST_EDITS_KEY = "project-forecast-edits";
 
-const editSchema = z.object({
+export const editSchema = z.object({
   id: z.string(),
   kind: z.enum(["change", "remove", "add"]),
   row_key: z.string().nullable(),
@@ -62,31 +62,34 @@ function useProjectExpectedQuery(projectId: string) {
 }
 
 /**
- * The loans filed under the project, as the loan page reads a loan (its row with the rates, and its balance in
- * the books). Under "loans", so a loan write refreshes it.
+ * The loans filed under the project (or, with null, every loan of the company), as the loan page reads a loan:
+ * its row with the rates, and its balance in the books (the payments left start from it, FLOW-427).
  */
+export async function readForecastLoans(projectId: string | null): Promise<ForecastLoan[]> {
+  const supabase = getSupabase();
+  if (!supabase) throw new Error("supabase");
+  await waitForAccessToken(supabase);
+  const query = supabase.from("loans").select(LOAN_DETAIL_COLUMNS);
+  const { data, error } = await (projectId == null ? query : query.eq("project_id", projectId));
+  if (error) throw error;
+  const rows = data as unknown as LoanDetailDbRow[];
+  if (rows.length === 0) return [];
+  const balances = await supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts").in("loan_id", rows.map((row) => row.id));
+  if (balances.error) throw balances.error;
+  const byLoan = new Map(balances.data.map((row) => [row.loan_id, row]));
+  return rows.map((row) => {
+    const balance = byLoan.get(row.id);
+    return readLoanRow(row, balance == null ? null : { balanceMinor: BigInt(balance.balance_minor ?? 0), flaggedParts: balance.flagged_parts ?? 0 });
+  });
+}
+
+/** The project's loans for its forecast. Under "loans", so a loan write refreshes it. */
 function useProjectLoansQuery(projectId: string) {
   const preview = useHomePreview();
   return useQuery({
     queryKey: ["loans", "project", preview, projectId],
     enabled: preview === "off" && projectId !== "",
-    queryFn: async (): Promise<ForecastLoan[]> => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      await waitForAccessToken(supabase);
-      const { data, error } = await supabase.from("loans").select(LOAN_DETAIL_COLUMNS).eq("project_id", projectId);
-      if (error) throw error;
-      const rows = data as unknown as LoanDetailDbRow[];
-      if (rows.length === 0) return [];
-      // The balance in the books, as the loan page reads it: the payments left start from it (FLOW-427).
-      const balances = await supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts").in("loan_id", rows.map((row) => row.id));
-      if (balances.error) throw balances.error;
-      const byLoan = new Map(balances.data.map((row) => [row.loan_id, row]));
-      return rows.map((row) => {
-        const balance = byLoan.get(row.id);
-        return readLoanRow(row, balance == null ? null : { balanceMinor: BigInt(balance.balance_minor ?? 0), flaggedParts: balance.flagged_parts ?? 0 });
-      });
-    },
+    queryFn: () => readForecastLoans(projectId),
   });
 }
 

@@ -1,4 +1,4 @@
-import { formatAmountText } from "@flow/shared";
+import { formatAmountText, type ProfitMonth } from "@flow/shared";
 import { shortMonth } from "./party-charges";
 import { shiftMonthKey } from "./period";
 import { monthWord } from "./project-next-edit";
@@ -25,6 +25,17 @@ export type ChartHistory = {
 };
 
 const EMPTY: MonthFigures = { incomeMinor: 0n, expenseMinor: 0n };
+
+/** A profit page's history from get_profit_months: each month's income and counted expenses in one currency. */
+export function profitMonthFigures(months: readonly ProfitMonth[], currency: string): Map<string, MonthFigures> {
+  const figures = new Map<string, MonthFigures>();
+  for (const month of months) {
+    const row = month.by_currency.find((figure) => figure.currency === currency);
+    if (row == null) continue;
+    figures.set(month.month, { incomeMinor: row.income_minor, expenseMinor: row.expense_minor < 0n ? -row.expense_minor : row.expense_minor });
+  }
+  return figures;
+}
 
 /**
  * The six months to `current` (yyyy-mm), oldest first, each with its figures (none read is zero). A month
@@ -72,7 +83,7 @@ export function chartLabel(history: ChartHistory, forecast: ChartMonth | null, c
 }
 
 /** A rent category: the starter set's שכירות, or one the user named after it. */
-function isRent(categoryId: string | null, categories: readonly { id: string; name: string }[]): boolean {
+export function isRent(categoryId: string | null, categories: readonly { id: string; name: string }[]): boolean {
   if (categoryId == null) return false;
   return categories.find((category) => category.id === categoryId)?.name.startsWith("שכירות") === true;
 }

@@ -34,65 +34,18 @@
   line-height: calc(var(--type-total-size) * 1.2);
 }
 
-.ui-cp-ytd {
-  margin: calc(var(--space-1) * -0.675) 0 0;
-  font-size: var(--type-line2-size);
+/* The summary card (.ui-pp-card's rows with dividers), 16px under the figure, in the head's own width. */
+.ui-cp-card {
+  margin: var(--space-4) 0 0;
 }
 
-.ui-cp-card {
-  box-sizing: border-box;
-  width: auto;
-  margin: var(--space-3) 0 0;
-  padding: calc(var(--space-1) * 4.5);
-  border-radius: var(--radius-card);
-  display: flex;
-  flex-direction: column;
-  gap: calc(var(--space-1) * 2.5);
+/* Next month's card and chart sit 14px under the summary, before the chips. */
+.ui-cp-head .ui-fc-block {
+  margin-top: var(--space-inset-row);
 }
 
 .ui-cp-chips > * {
   flex: none;
-}
-
-.ui-cp-bar-row {
-  display: flex;
-  flex-direction: column;
-  gap: calc(var(--space-1) * 1.5);
-}
-
-.ui-cp-bar-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-  font-size: var(--type-line2-size);
-  line-height: calc(var(--space-1) * 4.5);
-  font-weight: var(--type-body-weight);
-}
-
-.ui-cp-bar-top .ui-num {
-  font-weight: var(--type-body-weight);
-  line-height: calc(var(--space-1) * 4.5);
-}
-
-/* The bar: 6px, rounded, its fills clipped to the rounded ends. */
-.ui-cp-card .ui-pp-bar {
-  height: 6px;
-  margin-top: 0;
-  border-radius: var(--radius-chip);
-  overflow: hidden;
-}
-
-.ui-cp-bar-income {
-  display: block;
-  height: 100%;
-  background: var(--color-accent);
-}
-
-.ui-cp-bar-expense {
-  display: block;
-  height: 100%;
-  background: var(--color-band-past);
 }
 
 .ui-cp-chips {

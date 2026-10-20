@@ -28,6 +28,7 @@ insert into pg_allowed (sig) values
     ('claim_invite_email(uuid)'),
     ('clear_loan_split(uuid)'),
     ('collapse_split(uuid,uuid)'),
+    ('company_next_month_inputs(date)'),
     ('company_pnl_basis()'),
     ('create_category(text,text,uuid)'),
     ('create_category(text,text)'),

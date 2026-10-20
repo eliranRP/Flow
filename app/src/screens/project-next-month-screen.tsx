@@ -21,7 +21,8 @@ import { PlusIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ProfitSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
-import { SummaryRow, type ProjectProfitSample } from "./project-profit-screen";
+import type { ProjectProfitSample } from "./project-profit-screen";
+import { SummaryRow } from "./profit-summary";
 
 type ProjectNextMonthSample = ProjectProfitSample & { next: NonNullable<ProjectProfitSample["next"]> };
 

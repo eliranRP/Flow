@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, waitFor } from "@storybook/test";
+import { expect, waitFor, within } from "@storybook/test";
 import { COMPANY_PROFIT_SAMPLE } from "../dev/company-profit-sample";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
@@ -24,6 +24,28 @@ function ProfitRoute({ entry, sample = COMPANY_PROFIT_SAMPLE }: { entry: string;
 }
 
 export const ByProject: Story = { name: "By project", render: () => <ProfitRoute entry="/profit" /> };
+
+/**
+ * The head (canvas note spec-fcwide, items 0 and 2): the summary rows with dividers, November's card (no link:
+ * "5 פרויקטים וכללי") and the company's six months with the forecast. The dark pass draws it in dark too.
+ */
+export const NextMonth: Story = {
+  name: "Summary, next month and chart",
+  render: () => <ProfitRoute entry="/profit" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("רווח מתחילת השנה")).toBeInTheDocument();
+    await expect(canvas.getByText("5 פרויקטים וכללי")).toBeInTheDocument();
+    await expect(canvas.queryByRole("link", { name: /^צפי / })).toBeNull();
+    await expect(canvas.getByRole("img", { name: /וצפי נובמבר/ })).toBeInTheDocument();
+  },
+};
+
+/** An earlier month (Home's ?month=): its own figures only, no next month or chart. */
+export const ClosedMonth: Story = {
+  name: "Closed month",
+  render: () => <ProfitRoute entry="/profit?month=2026-09" sample={{ ...COMPANY_PROFIT_SAMPLE, monthKey: "2026-09" }} />,
+};
 
 /** By category (board frame ProfitByCategory): income then expenses, the first category open to its lines. */
 export const ByCategory: Story = {

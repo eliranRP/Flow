@@ -10,7 +10,6 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { HEBREW_MONTHS, israelToday } from "../ui/date-math";
 import { Amount } from "../ui/amount";
-import { Card } from "../ui/card";
 import { Chip } from "../ui/chip";
 import { List, ListRow } from "../ui/list-row";
 import type { ScreenPhase } from "../ui/screen-phase";
@@ -20,12 +19,16 @@ import { ScreenState } from "../ui/screen-state";
 import { rowSource } from "../ui/line-marks";
 import { BASIS_PROFIT_COPY, basisChoiceLabel } from "../ui/company-choices";
 import { buildProfitModel, useCompanyProfitRead, type ProfitInputs, type ProfitLine, type ProfitModel } from "../use-company-profit";
+import { byDateThenSize, bySizeOnly, companyCategoryGroups, companySummaryRows } from "../company-profit-rows";
+import { useCompanyNextMonth, useCompanyProfitMonths, type CompanyNextMonthSample } from "../company-next-month-query";
 import { CompanyBasisSheet } from "./company-basis-sheet";
-import { countWord, ProfitCategories, profitCategoryGroups, type ProfitCategoryGroup } from "./profit-categories";
+import { countWord, ProfitCategories } from "./profit-categories";
+import { CompanyNextMonthBlock } from "./company-next-month-block";
+import { CompanySummaryCard } from "./profit-summary";
 import { useBlockedPreview } from "./screen-shared";
 
 /** A fixture: the reads' inputs for the page, plus the day heads' today and the month it shows. */
-export type CompanyProfitSample = ProfitInputs & { today: string; monthKey: string; openFirst?: boolean; sheetOpen?: boolean };
+export type CompanyProfitSample = ProfitInputs & { today: string; monthKey: string; openFirst?: boolean; sheetOpen?: boolean; next?: CompanyNextMonthSample };
 
 const ORDERS = [
   { value: "project", label: "לפי פרויקט" },
@@ -56,34 +59,6 @@ function projectProfitPath(projectId: string, search: string): string {
   return `/projects/${projectId}/profit?from=profit${search === "" ? "" : `&${search.slice(1)}`}`;
 }
 
-/** The biggest amount first, by its size (a refund counts by its size too). */
-function bySizeOnly(a: ProfitLine, b: ProfitLine): number {
-  const abs = (n: bigint) => (n < 0n ? -n : n);
-  const diff = abs(b.amount) - abs(a.amount);
-  return diff > 0n ? 1 : diff < 0n ? -1 : 0;
-}
-
-/** Lines newest first, then the biggest first within a day. */
-function byDateThenSize(a: ProfitLine, b: ProfitLine): number {
-  if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-  return bySizeOnly(a, b);
-}
-
-/** The month's categories as the board's two groups; a category's lines come newest first. */
-function companyCategoryGroups(model: ProfitModel): ProfitCategoryGroup<ProfitLine>[] {
-  const inputs = (direction: "income" | "expense") => model.categories
-    .filter((row) => row.direction === direction)
-    .map((row) => ({
-      key: row.key,
-      name: row.name,
-      total: direction === "income" ? row.amount : -row.amount,
-      count: row.count,
-      projects: row.projects,
-      lines: model.lines.filter((line) => line.direction === direction && line.categoryKey === row.key).sort(byDateThenSize),
-    }));
-  return profitCategoryGroups(inputs("income"), inputs("expense"));
-}
-
 /**
  * The company's profit page (FLOW-140c1, board Profit and ProfitBasis): the month's profit with income
  * and counted expenses, the year to date, then the rows in the order `?by=` picks (project, category,
@@ -112,6 +87,9 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
     linesOn: by !== "project",
   });
   const model: ProfitModel | null = sample ? buildProfitModel(sample) : live.model;
+  const onCurrent = monthKey === currentKey;
+  const next = useCompanyNextMonth(sample?.currency ?? companyCurrency, today, onCurrent, sample?.next);
+  const chartMonths = useCompanyProfitMonths(today, onCurrent, sample?.next);
   const phase: ScreenPhase = sample != null ? { kind: "ready" } : preview !== "off" ? screenPhase(preview) : live.failed ? { kind: "error", offline: !onlineManager.isOnline() } : model == null ? { kind: "loading" } : { kind: "ready" };
   const [sheetState, setSheetOpen] = useState<boolean | undefined>(undefined);
   const basisRef = useRef<HTMLButtonElement>(null);
@@ -137,31 +115,24 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
     </div>
   );
   const profit = model.profit;
-  // The bars scale to the larger of the two figures.
-  const largest = model.income > model.expense ? model.income : model.expense;
-  const widthOf = (value: bigint) => (largest <= 0n ? 0 : Number((value * 1000n) / largest) / 10);
-  const incomeWidth = widthOf(model.income);
-  const expenseWidth = widthOf(model.expense);
-  const subtitle = `${HEBREW_MONTHS[Number(monthKey.slice(5, 7)) - 1] ?? monthKey} ${year} · ${monthKey === currentKey ? "עד היום" : "חודש סגור"}`;
+  const subtitle = `${HEBREW_MONTHS[Number(monthKey.slice(5, 7)) - 1] ?? monthKey} ${year} · ${onCurrent ? "עד היום" : "חודש סגור"}`;
   const figure = (
     <p className="ui-cp-figure">
       <Amount agorot={profit} currency={currency} size="display" loss={profit < 0n} direction={profit > 0n ? "income" : undefined} />
     </p>
   );
-  const ytdLine = model.ytdProfit == null ? null : (
-    <p className="ui-cp-ytd t-caption t-muted">מתחילת השנה <bdi dir="ltr">{signedText(model.ytdProfit, currency)}</bdi></p>
-  );
-  const summary = (
-    <Card className="ui-cp-card">
-      <div className="ui-cp-bar-row">
-        <div className="ui-cp-bar-top"><span className="ui-pp-label">הכנסות</span><Amount agorot={model.income} currency={currency} income /></div>
-        <span className="ui-pp-bar"><span className="ui-cp-bar-income" style={{ width: `${String(incomeWidth)}%` }} /></span>
-      </div>
-      <div className="ui-cp-bar-row">
-        <div className="ui-cp-bar-top"><span className="ui-pp-label">הוצאות שנספרות ברווח</span><Amount agorot={model.expense} currency={currency} /></div>
-        <span className="ui-pp-bar"><span className="ui-cp-bar-expense" style={{ width: `${String(expenseWidth)}%` }} /></span>
-      </div>
-    </Card>
+  const summary = <CompanySummaryCard rows={companySummaryRows(model, monthKey)} currency={currency} />;
+  // Next month and the chart belong to the current month: an earlier month's page shows its own figures only.
+  const nextBlock = !onCurrent ? null : (
+    <CompanyNextMonthBlock
+      forecast={next.forecast}
+      loading={next.pending}
+      months={chartMonths.months}
+      current={currentKey}
+      thisMonthExpense={model.expense}
+      currency={currency}
+      categories={next.categories}
+    />
   );
   const lineRow = (line: ProfitLine, hint: string) => (
     <ListRow
@@ -249,7 +220,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
         subtitle={subtitle}
         compactFigure={signedText(profit, currency)}
         panel={chips}
-        below={<div className="ui-cp-head">{figure}{ytdLine}{summary}{chips}</div>}
+        below={<div className="ui-cp-head">{figure}{summary}{nextBlock}{chips}</div>}
       />
       {body}
       <p className="ui-cp-foot t-caption t-muted">לא נספר ברווח: קנייה ושיפוץ של נכס, קרן של הלוואות, הון בעלים והעברות בין חשבונות.</p>
