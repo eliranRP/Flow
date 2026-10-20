@@ -47,6 +47,16 @@ test("the chips sort the page, a category opens in place, and a project opens it
   await expect(page).toHaveURL(/\/projects\/p\d\/profit\?from=profit&preview=1$/);
 });
 
+test("a closed month whose overhead project is named כללי: one כללי row, opening that project (owner 21/10)", async ({ page }) => {
+  await page.goto("/e2e/company-profit?preview=1&month=2026-07");
+  await expect(page.getByText("יולי 2026 · חודש סגור")).toBeVisible();
+  const list = page.locator(".ui-cp-list");
+  const general = list.locator(".ui-cp-row", { hasText: "כללי" });
+  await expect(general).toHaveCount(1);
+  await expect(general.locator("a")).toHaveAttribute("href", /^\/projects\/p0\/profit\?from=profit&preview=1/);
+  await expect(general).toContainText("5 תנועות");
+});
+
 test("the head: the summary rows, next month's card with no link, and the chart (FLOW-143)", async ({ page }) => {
   await page.goto("/e2e/company-profit?preview=1");
   const summary = page.locator(".ui-cp-card .ui-pp-label");

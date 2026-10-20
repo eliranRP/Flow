@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, waitFor, within } from "@storybook/test";
-import { COMPANY_PROFIT_SAMPLE } from "../dev/company-profit-sample";
+import { COMPANY_PROFIT_PAST_SAMPLE, COMPANY_PROFIT_SAMPLE } from "../dev/company-profit-sample";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
 import { CompanyProfitScreen, type CompanyProfitSample } from "./company-profit-screen";
@@ -65,6 +65,17 @@ export const NextMonthSixFigures: Story = {
 export const ClosedMonth: Story = {
   name: "Closed month",
   render: () => <ProfitRoute entry="/profit?month=2026-09" sample={{ ...COMPANY_PROFIT_SAMPLE, monthKey: "2026-09" }} />,
+};
+
+/** A closed month by project, its overhead project named כללי: one כללי row, and it opens the overhead project. */
+export const ClosedMonthOverhead: Story = {
+  name: "Closed month: overhead project named כללי",
+  render: () => <ProfitRoute entry="/profit?month=2026-07" sample={COMPANY_PROFIT_PAST_SAMPLE} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getAllByText("כללי")).toHaveLength(1);
+    await expect(canvas.getByText("כללי").closest("a")?.getAttribute("href")).toMatch(/^\/projects\/p0\/profit\?from=profit/);
+  },
 };
 
 /** By category (board frame ProfitByCategory): income then expenses, the first category open to its lines. */

@@ -1,7 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import { ProjectProfitScreen } from "../../screens/project-profit-screen";
 import { CompanyProfitScreen } from "../../screens/company-profit-screen";
-import { COMPANY_PROFIT_SAMPLE } from "../company-profit-sample";
+import { COMPANY_PROFIT_PAST_SAMPLE, COMPANY_PROFIT_SAMPLE } from "../company-profit-sample";
 import { JUNIPER_PROFIT, NEW_PROJECT_PROFIT } from "../project-profit-sample";
 import { ProjectMonthProfitScreen } from "../../screens/project-month-profit-screen";
 import { JUNIPER_MONTH_PROFIT } from "../profit-month-sample";
@@ -49,12 +49,16 @@ export function DevProjectNextAdd() {
   return <ProjectNextEditScreen add sample={{ ...JUNIPER_PROFIT, next: JUNIPER_NEXT, ...preset }} />;
 }
 
-/** FLOW-140c1: the company profit page; `?open=1` opens the first income category, `?sheet=basis` the basis sheet. */
+/**
+ * FLOW-140c1: the company profit page; `?open=1` opens the first income category, `?sheet=basis` the basis sheet,
+ * `?month=2026-07` the closed July whose overhead project is named כללי (owner 21/10).
+ */
 export function DevCompanyProfit() {
   const [params] = useSearchParams();
+  const base = params.get("month") === COMPANY_PROFIT_PAST_SAMPLE.monthKey ? COMPANY_PROFIT_PAST_SAMPLE : COMPANY_PROFIT_SAMPLE;
   return (
     <CompanyProfitScreen
-      sample={{ ...COMPANY_PROFIT_SAMPLE, openFirst: params.get("open") === "1", sheetOpen: params.get("sheet") === "basis" }}
+      sample={{ ...base, openFirst: params.get("open") === "1", sheetOpen: params.get("sheet") === "basis" }}
     />
   );
 }
