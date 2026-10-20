@@ -1,4 +1,5 @@
 import { formatAmountText } from "@flow/shared";
+import { CHART_MONTHS, type MonthFigures } from "./month-figures";
 import { shortMonth } from "./party-charges";
 import { shiftMonthKey } from "./period";
 import { monthWord } from "./project-next-edit";
@@ -10,12 +11,6 @@ import type { ChartMonth } from "./ui/month-chart-scale";
  * from a page's own history (the profit page's profit months, the project page's cash months), its sub and
  * spoken label, and the card's two captions from the forecast the צפי page shows.
  */
-
-/** The chart's history: the current month, to date, and the five before it. */
-export const CHART_MONTHS = 6;
-
-/** A month's two figures, positive, in minor units. */
-export type MonthFigures = { incomeMinor: bigint; expenseMinor: bigint };
 
 export type ChartHistory = {
   /** Oldest first. */

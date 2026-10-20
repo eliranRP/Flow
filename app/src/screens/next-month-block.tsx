@@ -1,5 +1,6 @@
-import { chartHistory, chartLabel, chartSub, expenseNote, forecastChartMonth, incomeNote, type MonthFigures, type RentCategory } from "../next-month-chart";
+import { chartHistory, chartLabel, chartSub, expenseNote, forecastChartMonth, incomeNote, type RentCategory } from "../next-month-chart";
 import { cashMonthName } from "../cash";
+import type { MonthFigures } from "../month-figures";
 import type { NextMonthForecast } from "../project-next-month";
 import { ForecastCard, MonthChart } from "../ui/month-forecast";
 import { NextMonthCardSkeleton } from "../ui/screen-skeletons";
