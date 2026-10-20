@@ -1,12 +1,14 @@
 -- FLOW-143 (decision 0196 point 5). company_next_month_inputs: every project's category months as
 -- project_category_months gives them, the general costs' months (no project, or overhead; lines shared
 -- by allocation stay in their projects), and every project's forecast edits for next month. A viewer
--- reads the same; another company reads its own. Invented data only. "Today" is 2026-09-20, so the
+-- reads the same; another company reads its own. FLOW-145 (decision 0200): `rest_edits`, every edit that
+-- applies to any month left in the year (October to December), an added one with its matches by month.
+-- Invented data only. "Today" is 2026-09-20, so the
 -- complete months are March to August 2026 and next month is October.
 
 begin;
 
-select plan(16);
+select plan(22);
 
 do $users$
 begin
@@ -87,6 +89,19 @@ values
   (pg_temp.id('co'), pg_temp.id('sold'), 'change', 'avg:s', 5000, 'once', '2026-10'),
   (pg_temp.id('other_co'), pg_temp.id('other_house'), 'change', 'avg:z', 35000, 'once', '2026-10');
 
+-- FLOW-145: a 2-month change started in September (September and November, not October), a yearly one from
+-- December 2025 (December 2026), and an added monthly line from November with its November line matched; none
+-- of them applies to October.
+insert into public.project_forecast_edits (company_id, project_id, kind, row_key, amount_minor, pace, start_month)
+values
+  (pg_temp.id('co'), pg_temp.id('house'), 'change', 'avg:w', 7000, '2months', '2026-09'),
+  (pg_temp.id('co'), pg_temp.id('shop'), 'change', 'avg:v', 9000, 'year', '2025-12');
+insert into public.project_forecast_edits (company_id, project_id, kind, category_id, direction, amount_minor, pace, start_month)
+values (pg_temp.id('co'), pg_temp.id('house'), 'add', pg_temp.id('office'), 'income', 4000, 'month', '2026-11');
+insert into cni (label, id) select 'add_edit', e.id from public.project_forecast_edits e where e.company_id = pg_temp.id('co') and e.kind = 'add';
+insert into public.forecast_line_matches (company_id, edit_id, month, transaction_id, expected_minor)
+values (pg_temp.id('co'), pg_temp.id('add_edit'), '2026-11', pg_temp.id('gq'), 4000);
+
 create function pg_temp.inputs() returns jsonb language sql stable as $$
   select public.company_next_month_inputs('2026-09-20');
 $$;
@@ -117,6 +132,18 @@ select is(pg_temp.inputs()->'general'->0->'months_minor', '[0, 0, 0, 0, 3000, 80
 select is(jsonb_array_length(pg_temp.inputs()->'edits'), 2, 'the edits that apply to next month, the overhead project''s too, not a sold project''s');
 select is((select array_agg((x->>'project_id')::uuid order by x->>'row_key') from jsonb_array_elements(pg_temp.inputs()->'edits') x),
   array[pg_temp.id('hq'), pg_temp.id('house')], 'each with its project');
+select is((select array_agg(x->>'row_key' order by x->>'row_key') from jsonb_array_elements(pg_temp.inputs()->'rest_edits') x),
+  array['avg:h', 'avg:v', 'avg:w', 'avg:x', 'avg:y', null],
+  'rest_edits: every edit that applies to a month left in the year (October to December), not a sold project''s');
+select ok(not exists (select 1 from jsonb_array_elements(pg_temp.inputs()->'edits') x where x->>'row_key' in ('avg:w', 'avg:v', 'avg:y')),
+  'edits stay next month''s: the 2-month, yearly and December edits are only in rest_edits');
+select is((select x->>'pace' from jsonb_array_elements(pg_temp.inputs()->'rest_edits') x where x->>'row_key' = 'avg:w'), '2months',
+  'a rest-of-year edit keeps its pace and start, so the app applies it to the months it lands in');
+select is((select x->'matches' from jsonb_array_elements(pg_temp.inputs()->'rest_edits') x where x->>'kind' = 'add'),
+  jsonb_build_object('2026-11', pg_temp.id('gq')::text),
+  'an added line carries its matched line by month');
+select ok((select not (x ? 'matches') from jsonb_array_elements(pg_temp.inputs()->'rest_edits') x where x->>'row_key' = 'avg:x'),
+  'a change carries no matches');
 select is(
   (select x->'categories'->0->'months_minor' from jsonb_array_elements(pg_temp.inputs()->'projects') x where (x->>'project_id')::uuid = pg_temp.id('yard')),
   '[7000, 7000, 7000, 7000, 7000, 7000]'::jsonb,
@@ -128,6 +155,7 @@ select is(pg_temp.inputs()->'general'->0->'months_minor', '[0, 0, 0, 0, 3000, 80
 select tests.authenticate_as('cni_other');
 select is(pg_temp.inputs()->'general'->0->'months_minor', '[0, 0, 0, 0, 0, 44000]'::jsonb, 'another company reads its own');
 select is(pg_temp.inputs()->'edits'->0->>'project_id', pg_temp.id('other_house')::text, 'and its own edits');
+select is(jsonb_array_length(pg_temp.inputs()->'rest_edits'), 1, 'and its own rest-of-year edits');
 
 select * from finish();
 rollback;

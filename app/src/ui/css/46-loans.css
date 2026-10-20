@@ -482,15 +482,6 @@
   margin-top: var(--space-4);
 }
 
-/* The switch sits on the page, so its track is the card tone (the board's), with 9px segments. */
-.ui-loans-sum-period .ui-seg {
-  background: var(--color-surface);
-}
-
-.ui-loans-sum-period .ui-seg-btn {
-  border-radius: var(--radius-seg-btn-page);
-}
-
 .ui-card.ui-loans-sum-debt {
   margin-top: var(--space-4);
 }

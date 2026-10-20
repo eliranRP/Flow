@@ -28,6 +28,20 @@
   text-align: right;
 }
 
+/* FLOW-145: the period switch, 14px under the sub; the figure follows 8px under it. */
+.ui-cp-period {
+  margin-top: var(--space-inset-row);
+}
+
+.ui-cp-period + .ui-cp-figure {
+  margin-top: var(--space-2);
+}
+
+/* The year's months or projects start 12px under the chips. */
+.ui-cp-period-list {
+  padding-top: var(--space-3);
+}
+
 /* The board's total is 34px (the total step), not the display step. */
 .ui-cp-figure .ui-num {
   font-size: var(--type-total-size);
@@ -151,4 +165,10 @@
 /* The category view (ProfitByCategory): the first group head sits 2px under the header's chips, not 12px. */
 .ui-cp-screen .ui-pcat-group:first-of-type {
   margin-top: calc(var(--space-1) / 2 - var(--space-3));
+}
+
+/* FLOW-145: the year's forecast could not be read: one quiet line where the card would be. */
+.ui-cp-fc-failed {
+  margin: 0;
+  padding: var(--space-2) var(--space-1);
 }

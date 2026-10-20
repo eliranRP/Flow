@@ -43,6 +43,7 @@ export function ForecastCard({
   netLabel,
   start,
   strong = false,
+  signed = false,
   href,
   caption,
 }: {
@@ -61,6 +62,8 @@ export function ForecastCard({
   start?: { label: string; minor: bigint };
   /** The net is the screen's figure: 17/500, in the text colour or the signal colour when negative. */
   strong?: boolean;
+  /** The start and the strong net are profits (the company's year, FLOW-145): a positive one carries its +. */
+  signed?: boolean;
   href?: string;
   caption?: string;
 }) {
@@ -88,7 +91,7 @@ export function ForecastCard({
       {start == null ? null : (
         <span className={cx("ui-fc-start", start.minor < 0n && "ui-fc-neg")}>
           <span>{start.label}</span>
-          <Amount agorot={start.minor} currency={currency} />
+          <Amount agorot={start.minor} currency={currency} direction={signed && start.minor > 0n ? "income" : undefined} />
         </span>
       )}
       <span className="ui-fc-cols">
@@ -106,7 +109,7 @@ export function ForecastCard({
       {strong ? (
         <span className={cx("ui-fc-net ui-fc-net-strong", net < 0n && "ui-fc-neg")}>
           <span>{netWords}</span>
-          <Amount agorot={net} currency={currency} />
+          <Amount agorot={net} currency={currency} direction={signed && net > 0n ? "income" : undefined} />
         </span>
       ) : (
         <span className="ui-fc-net">
@@ -140,6 +143,9 @@ function Bar({ side, px, aheadPx, inProgress }: { side: "in" | "out"; px: number
   );
 }
 
+/** Past this many pairs (a year's twelve months) the columns close up, so the month labels keep apart at 320. */
+const DENSE_BARS = 8;
+
 function barClass(bar: ChartBar): string {
   return cx("ui-fc-month-bars", bar.forecast && "ui-fc-ahead", bar.inProgress && "ui-fc-now");
 }
@@ -157,25 +163,29 @@ export function MonthChart({
   sub,
   label,
   link,
+  title,
 }: {
   kind: ForecastKind;
   /** Oldest first; the current month is to date, or in progress with what is still expected. */
   history: readonly ChartMonth[];
-  forecast: ChartMonth | null;
+  /** Next month; or a year's months left (the company's year view), each dashed. */
+  forecast: ChartMonth | readonly ChartMonth[] | null;
   sub: string;
   label: string;
   link?: { href: string; text: string };
+  /** The title when the pairs are not months ("הכנסות והוצאות לפי שנה"); else the kind's. */
+  title?: string;
 }) {
   const words = forecastWords(kind);
   const bars = chartBars(history, forecast);
-  const expected = forecast != null || bars.some((bar) => bar.inProgress);
+  const expected = bars.some((bar) => bar.forecast || bar.inProgress);
   return (
     <section className="ui-fc-chart">
       <span className="ui-fc-chart-head">
-        <span className="ui-fc-chart-title">{words.chart}</span>
+        <span className="ui-fc-chart-title">{title ?? words.chart}</span>
         <span className="ui-fc-label">{sub}</span>
       </span>
-      <div role="img" aria-label={label} className="ui-fc-bars" style={{ gridTemplateColumns: `repeat(${String(bars.length)}, minmax(0, 1fr))` }}>
+      <div role="img" aria-label={label} className={cx("ui-fc-bars", bars.length > DENSE_BARS && "ui-fc-bars-dense")} style={{ gridTemplateColumns: `repeat(${String(bars.length)}, minmax(0, 1fr))` }}>
         {bars.map((bar) => (
           <div key={bar.key} className={barClass(bar)}>
             <span className="ui-fc-pair">

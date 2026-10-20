@@ -3,7 +3,8 @@ import { expect, test } from "@playwright/test";
 // FLOW-140c1 (board Profit and ProfitBasis): Home's רווח row opens the company profit page; its head
 // has the summary rows, next month's card and the chart (FLOW-143); its category rows open in place,
 // its chips set ?by=, its project row opens the project's profit, and the basis line opens the basis
-// sheet. Invented data only, in preview.
+// sheet. The period switch (FLOW-145) turns the page to this year, a closed year or since the start.
+// Invented data only, in preview.
 test.use({ viewport: { width: 390, height: 844 } });
 
 test("Home's profit row opens the company profit page, and Back returns Home", async ({ page }) => {
@@ -75,4 +76,55 @@ test("the chip row scrolls only sideways: a drag up or down never moves it", asy
   // The row holds the chips' 44px hit area, so nothing in it is cut off at the top or bottom.
   const { client, scroll } = await chips.evaluate((el) => ({ client: el.clientHeight, scroll: el.scrollHeight }));
   expect(client).toBeGreaterThanOrEqual(scroll);
+});
+
+test("the period switch: this year, its projects, since the start and a closed year (FLOW-145)", async ({ page }) => {
+  await page.goto("/e2e/company-profit?preview=1");
+  const period = page.getByRole("radiogroup", { name: "תקופה" });
+  await expect(period.getByRole("radio")).toHaveText(["אוקטובר", "2026", "מההתחלה"]);
+  await expect(period.getByRole("radio", { name: "אוקטובר" })).toHaveAttribute("aria-checked", "true");
+
+  await period.getByRole("radio", { name: "2026" }).click();
+  await expect(page).toHaveURL(/\/e2e\/company-profit\?preview=1&period=year$/);
+  await expect(page.getByText("2026 · עד היום, 11/10")).toBeVisible();
+  await expect(page.locator(".ui-cp-card .ui-pp-label")).toHaveText(["הכנסות", "הוצאות שנספרות ברווח", "רווח 2026 עד היום", "רווח 2025 כולה"]);
+  const card = page.locator(".ui-cp-head .ui-fc-card");
+  await expect(card).toContainText("סוף 2026");
+  await expect(card).toContainText("רווח עד היום");
+  await expect(card).toContainText("רווח צפוי ל־2026");
+  await expect(page.getByRole("img", { name: "הכנסות והוצאות לפי חודש ב־2026, וצפי לנובמבר ודצמבר" })).toBeVisible();
+  // November and December are dashed.
+  await expect(page.locator(".ui-cp-head .ui-fc-ahead")).toHaveCount(2);
+
+  // By project: a project opens its profit page.
+  await page.getByRole("group", { name: "סידור" }).first().getByRole("button", { name: "לפי פרויקט" }).click();
+  await expect(page).toHaveURL(/period=year&list=project$/);
+  await expect(page.getByText("פרויקטים שהסתיימו · 4")).toBeVisible();
+  await page.getByRole("button", { name: "לפי חודש" }).first().click();
+  await expect(page).toHaveURL(/\?preview=1&period=year$/);
+
+  // This month's row opens the month view.
+  await page.getByRole("button", { name: /^אוקטובר · עד היום/ }).click();
+  await expect(page).toHaveURL(/\/e2e\/company-profit\?preview=1$/);
+  await expect(period.getByRole("radio", { name: "אוקטובר" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.locator(".ui-cp-card .ui-pp-label")).toHaveText(["הכנסות", "הוצאות שנספרות ברווח", "רווח אוקטובר", "רווח מתחילת השנה"]);
+
+  // Since the start: the years' chart and list; a year opens it, closed.
+  await period.getByRole("radio", { name: "מההתחלה" }).click();
+  await expect(page).toHaveURL(/\?preview=1&period=all$/);
+  await expect(page.getByText("מאז ינואר 2024 · 3 שנים")).toBeVisible();
+  await expect(page.getByText("השנה הרווחית ביותר · 2025")).toBeVisible();
+  await expect(page.getByRole("img", { name: /^הכנסות לפי שנה: 2024/ })).toBeVisible();
+  await page.getByRole("region", { name: "לפי שנה" }).getByRole("button", { name: /^2025/ }).click();
+  await expect(page).toHaveURL(/\?preview=1&period=year&year=2025$/);
+  await expect(period.getByRole("radio", { name: "2025" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByText("2025 · שנה סגורה")).toBeVisible();
+  await expect(card).toHaveCount(0);
+  await expect(page.locator(".ui-cp-head .ui-fc-ahead")).toHaveCount(0);
+});
+
+test("by project, a project of the year opens its profit page (FLOW-145)", async ({ page }) => {
+  await page.goto("/e2e/company-profit?preview=1&period=year&list=project");
+  await page.locator('.ui-cp-period-list a[href^="/projects/"]').first().click();
+  await expect(page).toHaveURL(/\/projects\/p\d\/profit\?from=profit&preview=1$/);
 });

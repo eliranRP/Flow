@@ -191,7 +191,7 @@ function LoansSummaryBody({ read, period: initialPeriod, back, loanHref, today }
           />
         ) : (
           <>
-            <div className="ui-loans-sum-period">
+            <div className="ui-loans-sum-period ui-period-switch">
               <SegmentedControl<PaidPeriod>
                 label="תקופה"
                 showLabel={false}

@@ -66,9 +66,13 @@ function columnTop(month: ChartMonth): bigint {
   return income > expense ? income : expense;
 }
 
-/** The months' bars, oldest first, with the forecast month (when there is one) last. */
-export function chartBars(history: readonly ChartMonth[], forecast: ChartMonth | null): ChartBar[] {
-  const months = forecast == null ? [...history] : [...history, forecast];
+/**
+ * The months' bars, oldest first, with the forecast month (when there is one) last; or, for a year's chart, the
+ * months left in the year (decision 0200), each dashed.
+ */
+export function chartBars(history: readonly ChartMonth[], forecast: ChartMonth | readonly ChartMonth[] | null): ChartBar[] {
+  const ahead: readonly ChartMonth[] = forecast == null ? [] : "key" in forecast ? [forecast] : forecast;
+  const months = [...history, ...ahead];
   const largest = months.reduce((most, month) => {
     const top = columnTop(month);
     return top > most ? top : most;
@@ -79,7 +83,7 @@ export function chartBars(history: readonly ChartMonth[], forecast: ChartMonth |
     expensePx: barHeight(month.expenseMinor, largest),
     incomeAheadPx: capHeight(month.ahead?.incomeMinor ?? 0n, largest),
     expenseAheadPx: capHeight(month.ahead?.expenseMinor ?? 0n, largest),
-    forecast: forecast != null && index === months.length - 1,
+    forecast: index >= history.length,
     inProgress: month.ahead != null,
   }));
 }

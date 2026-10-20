@@ -32,7 +32,16 @@ export type CompanyNextMonthInputs = {
    */
   general: CategoryMonthsRow[];
   edits: CompanyForecastEdit[];
+  /**
+   * The rest of the year's edits (decision 0200): every edit that applies to any month left in the year after
+   * this one, an added one with its matched line by month. Older payloads and fixtures omit it: next month's
+   * `edits` stand in.
+   */
+  rest_edits?: RestOfYearEdit[];
 };
+
+/** A rest-of-year edit: `matches` is its matched bank line by month (yyyy-mm), for an added line. */
+export type RestOfYearEdit = Omit<CompanyForecastEdit, "matched_transaction_id"> & { matches?: Record<string, string> };
 
 /** One part of the sum: a project's forecast, or the general costs' (`projectId` null). */
 export type CompanyForecastPart = { projectId: string | null; forecast: NextMonthForecast };
@@ -89,8 +98,10 @@ export function companyNextMonthForecast(input: {
   loans: readonly ForecastLoan[];
   categories: readonly Pick<CategoryRow, "id" | "name" | "loan_part" | "excluded_from_pnl">[];
   inputs: CompanyNextMonthInputs;
+  /** yyyy-mm, a later month (the rest of the year, decision 0200); default next month. */
+  month?: string;
 }): CompanyNextMonth {
-  const month = nextMonthKey(input.today);
+  const month = input.month ?? nextMonthKey(input.today);
   const overhead = input.inputs.overhead_project_id;
   const build = (projectId: string, rows: readonly CategoryMonthsRow[], recurring: readonly ExpectedParty[], loans: readonly ForecastLoan[]) => nextMonthForecast({
     projectId,
@@ -100,6 +111,7 @@ export function companyNextMonthForecast(input: {
     categoryMonths: asCategoryMonths(projectId, rows),
     loans,
     categories: input.categories,
+    month,
   });
   // Only the projects the read lists: a finished project's charges, loans and edits add nothing.
   const parts: CompanyForecastPart[] = input.inputs.projects

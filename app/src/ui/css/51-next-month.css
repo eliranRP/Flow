@@ -297,3 +297,15 @@
   font-size: var(--type-line2-size);
   text-decoration: none;
 }
+
+/* A year's twelve months (FLOW-145): the columns close up to 4px. */
+.ui-fc-bars-dense {
+  gap: var(--space-1);
+}
+
+/* Under 360px twelve labels touch: every other month keeps its label (January, March, …), as charts do. */
+@media (max-width: 359px) {
+  .ui-fc-bars-dense > .ui-fc-month-bars:nth-child(even) > .ui-fc-bar-label {
+    visibility: hidden;
+  }
+}
