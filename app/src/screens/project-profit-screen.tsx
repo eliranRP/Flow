@@ -177,7 +177,8 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
             <>
               <NextMonthBlock
                 forecast={nextMonth.forecast}
-                loading={cardLoading}
+                // The card waits for the months too, so its expense caption never shows the count first.
+                loading={cardLoading || monthsLoading}
                 current={monthsLoading || monthsFailed ? null : shiftMonthKey(nextMonth.month, -1)}
                 figures={profitMonthFigures(rows, currency)}
                 firstMonth={oldest ?? null}
@@ -185,6 +186,7 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
                 netLabel="רווח צפוי"
                 cardHref={`/projects/${id}/profit/next${search}`}
                 categories={nextMonth.categories}
+                today={nextMonth.today}
               />
               {monthsFailed ? (
                 <FailureLine offline={!navigator.onLine} onRetry={() => { void months.refetch(); }} />

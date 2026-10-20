@@ -133,9 +133,10 @@
   font-weight: var(--type-section-weight);
 }
 
+/* The pairs are a fixed 108px, so the months line up from the top and a label that wraps grows downward. */
 .ui-fc-bars {
   display: grid;
-  align-items: end;
+  align-items: start;
   gap: calc(var(--space-1) + var(--space-half));
 }
 
@@ -189,8 +190,11 @@
   white-space: nowrap;
 }
 
+/* At 320 with seven months, "נוב׳ · צפי" is wider than its column: it wraps under itself instead of running into October. */
 .ui-fc-ahead .ui-fc-bar-label {
   color: var(--color-accent-text);
+  text-align: center;
+  white-space: normal;
 }
 
 .ui-fc-legend {

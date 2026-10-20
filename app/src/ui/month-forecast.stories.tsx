@@ -59,6 +59,29 @@ export const CaptionNoLink: Story = {
   ),
 };
 
+/**
+ * Six figures in both columns: the two figures step down together from card size until both fit their
+ * columns, so at 320 they never meet.
+ */
+export const SixFigures: Story = {
+  render: () => (
+    <ForecastCard monthName="נובמבר" currency="USD" incomeMinor={12_850_000n} expenseMinor={9_420_075n} incomeNote="תשלום מהלקוח" expenseNote="מול $88,310 באוקטובר" netLabel="תזרים צפוי" href="/projects/p/profit/next" />
+  ),
+  play: async ({ canvasElement }) => {
+    // The two figures share one size, and each stays inside its own column.
+    const sizes = [...canvasElement.querySelectorAll<HTMLElement>(".ui-fc-col > .ui-num")].map((figure) => getComputedStyle(figure).fontSize);
+    await expect(new Set(sizes).size).toBe(1);
+    for (const column of canvasElement.querySelectorAll<HTMLElement>(".ui-fc-col")) {
+      const figure = column.querySelector(".ui-num");
+      if (figure == null) throw new Error("figure missing");
+      const box = column.getBoundingClientRect();
+      const inner = figure.getBoundingClientRect();
+      await expect(inner.left).toBeGreaterThanOrEqual(box.left - 0.5);
+      await expect(inner.right).toBeLessThanOrEqual(box.right + 0.5);
+    }
+  },
+};
+
 /** The forecast could not be read: the chart keeps the months, with no forecast pair or swatch. */
 export const ChartWithoutForecast: Story = {
   render: () => <MonthChart history={RENTAL} forecast={null} sub="מאי עד אוקטובר" label="הכנסות והוצאות לפי חודש, מאי עד אוקטובר" />,

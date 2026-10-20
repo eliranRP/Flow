@@ -1,5 +1,5 @@
 import { formatAmountText } from "@flow/shared";
-import type { ReactNode } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { Link } from "react-router-dom";
 import { Amount } from "./amount";
 import { ChevronIcon } from "./icons";
@@ -50,6 +50,11 @@ export function ForecastCard({
   caption?: string;
 }) {
   const net = incomeMinor - expenseMinor;
+  // The two figures share one size: the smaller one either needs to fit its column.
+  const [fits, setFits] = useState<[number, number]>([0, 0]);
+  const shared = Math.max(fits[0], fits[1]);
+  const fitIncome = useCallback((step: number) => { setFits((held) => (held[0] === step ? held : [step, held[1]])); }, []);
+  const fitExpense = useCallback((step: number) => { setFits((held) => (held[1] === step ? held : [held[0], step])); }, []);
   const body: ReactNode = (
     <>
       <span className="ui-fc-head">
@@ -64,14 +69,14 @@ export function ForecastCard({
         )}
       </span>
       <span className="ui-fc-cols">
-        <span className={incomeMinor > 0n ? "ui-fc-col" : "ui-fc-col ui-fc-col-zero"}>
+        <span className={incomeMinor > 0n ? "ui-fc-col ui-amount-fit" : "ui-fc-col ui-amount-fit ui-fc-col-zero"}>
           <span className="ui-fc-label">הכנסות צפויות</span>
-          <Amount agorot={incomeMinor} currency={currency} size="card" income />
+          <Amount agorot={incomeMinor} currency={currency} size="column" income onFit={fitIncome} minStep={shared} />
           <span className="ui-fc-label">{incomeNote}</span>
         </span>
-        <span className="ui-fc-col">
+        <span className="ui-fc-col ui-amount-fit">
           <span className="ui-fc-label">הוצאות צפויות</span>
-          <Amount agorot={expenseMinor} currency={currency} size="card" />
+          <Amount agorot={expenseMinor} currency={currency} size="column" onFit={fitExpense} minStep={shared} />
           <span className="ui-fc-label">{expenseNote}</span>
         </span>
       </span>

@@ -56,6 +56,9 @@ describe("the card's captions", () => {
     expect(incomeNote({ rows: [row("recurring", 9_000n, null)] }, CATEGORIES)).toBe("הכנסה קבועה אחת");
     expect(incomeNote({ rows: [row("added", 1_250_000n, "other", "תשלום מהלקוח")] }, CATEGORIES)).toBe("תשלום מהלקוח");
     expect(incomeNote({ rows: [row("added", 1_250_000n, "other", "א"), row("recurring", 9_000n, "rent", "ב")] }, CATEGORIES)).toBe("2 הכנסות צפויות");
+    // A sub-category of שכירות is rent too, whatever its own name.
+    const units = [...CATEGORIES, { id: "unit-a", name: "דירה א", parent_id: "rent" }];
+    expect(incomeNote({ rows: [row("recurring", 185_000n, "unit-a", "א"), row("recurring", 230_000n, "rent", "ב")] }, units)).toBe("2 שכירויות קבועות");
   });
 
   it("says when no income is expected (a flip before its sale)", () => {
@@ -73,5 +76,7 @@ describe("the card's captions", () => {
     const young = chartHistory("2026-10", figures([["2026-10", 0, 50_000]]), "2026-10");
     expect(expenseNote({ month: "2026-11", rows: [row("average", -50_000n, null, "א"), row("added", -9_000n, null, "ב")], expenseMinor: 59_000n }, young, "USD")).toBe("2 הוצאות צפויות");
     expect(expenseNote({ month: "2026-11", rows: [row("added", -9_000n)], expenseMinor: 9_000n }, young, "USD")).toBe("הוצאה צפויה אחת");
+    // In cash terms (decision 0196) a loan's principal is an expense no row holds: one more.
+    expect(expenseNote({ month: "2026-11", rows: [row("added", -9_000n)], expenseMinor: 51_000n }, young, "USD")).toBe("2 הוצאות צפויות");
   });
 });

@@ -1,5 +1,5 @@
 import type { ExpectedParty, ProjectCategoryMonths } from "@flow/shared";
-import { type ForecastCategory, type ForecastLoan, loanParts } from "./project-next-loans";
+import { type ForecastCategory, type ForecastLoan, type LoanCash, loanCashOnly, loanParts } from "./project-next-loans";
 
 /**
  * A project's forecast for next month (the ProfitProject card, the ProfitNext page and its edit page), in
@@ -25,6 +25,10 @@ import { type ForecastCategory, type ForecastLoan, loanParts } from "./project-n
  *   younger than six months is not divided by six.
  * - The user's edits (project_forecast_edits) go on top: applyForecastEdits changes a row's amount, takes
  *   a row out, or adds a line of a category, for the edits that apply to the month.
+ * - The rest of the same payments, which the profit leaves out (the principal, and an interest or escrow part
+ *   kept out of the profit or with no category), is kept apart (`cashOnlyMinor`), never a row or in the
+ *   totals. cashForecast adds it for the project page, whose net is תזרים צפוי (decision 0196). A loan whose
+ *   every row the user took out adds none: the owner says that payment will not happen.
  */
 
 /** The months an average row looks back over: the last six complete months. */
@@ -90,6 +94,13 @@ export type NextMonthForecast = {
   loanCount: number;
   /** The months the averages are over: the window from the project's first expense in it. */
   averageMonths: number;
+  /** Each loan's rest of its payment due in the month, which the profit leaves out (loanCashOnly). */
+  loanCash: LoanCash[];
+  /**
+   * The rest of the loans' payments that the profit leaves out, less the loans whose every row was taken
+   * out: cash, not profit, so in no row and no total here. cashForecast adds it.
+   */
+  cashOnlyMinor: bigint;
   /** Rows the user took out of the month, with the amount they would have. */
   removed: NextMonthRow[];
   /**
@@ -206,7 +217,8 @@ export function nextMonthForecast(input: {
   const thisMonth = input.today.slice(0, 7);
   // A loan payment is not a profit line: the loan's own rows stand for its interest and escrow.
   const charges = input.recurring.filter((party) => party.project_id === input.projectId && party.pays_loan !== true);
-  const loans = loanParts({ projectId: input.projectId, currency: input.currency, month, today: input.today, loans: input.loans ?? [], categories: input.categories ?? [] })
+  const loanMonth = { projectId: input.projectId, currency: input.currency, month, today: input.today, loans: input.loans ?? [] };
+  const loans = loanParts({ ...loanMonth, categories: input.categories ?? [] })
     .map((part): NextMonthRow => ({
       key: `avg:${part.categoryId}`,
       kind: "loan",
@@ -239,18 +251,23 @@ export function nextMonthForecast(input: {
     .sort((a, b) => ((a.date ?? "") === (b.date ?? "") ? a.name.localeCompare(b.name, "he") : (a.date ?? "") < (b.date ?? "") ? -1 : 1));
   const divisor = averageMonths(input.categoryMonths);
   const averages = averageRows(input.categoryMonths, input.currency, filled, divisor);
-  return withTotals(month, [...recurring, ...loans, ...averages], divisor, [], []);
+  return withTotals(month, [...recurring, ...loans, ...averages], divisor, loanCashOnly({ ...loanMonth, categories: input.categories ?? [] }), [], []);
 }
 
 function withTotals(
   month: string,
   rows: NextMonthRow[],
   divisor: number,
+  loanCash: LoanCash[],
   removed: NextMonthRow[],
   arrived: NextMonthRow[],
 ): NextMonthForecast {
   const incomeMinor = rows.reduce((sum, row) => (row.minor > 0n ? sum + row.minor : sum), 0n);
   const expenseMinor = rows.reduce((sum, row) => (row.minor < 0n ? sum - row.minor : sum), 0n);
+  const removedKeys = new Set(removed.map((row) => row.key));
+  const cashOnlyMinor = loanCash
+    .filter((loan) => loan.rowCategoryIds.length === 0 || !loan.rowCategoryIds.every((id) => removedKeys.has(`avg:${id}`)))
+    .reduce((sum, loan) => sum + loan.minor, 0n);
   return {
     month,
     rows,
@@ -259,6 +276,8 @@ function withTotals(
     netMinor: incomeMinor - expenseMinor,
     loanCount: rows.filter((row) => row.kind === "loan").length,
     averageMonths: divisor,
+    loanCash,
+    cashOnlyMinor,
     removed,
     arrived,
   };
@@ -323,9 +342,24 @@ export function applyForecastEdits(forecast: NextMonthForecast, edits: readonly 
     month,
     rows.filter((row) => !removedKeys.has(row.key) && !arrivedKeys.has(row.key)),
     forecast.averageMonths,
+    forecast.loanCash,
     rows.filter((row) => removedKeys.has(row.key)),
     rows.filter((row) => !removedKeys.has(row.key) && arrivedKeys.has(row.key)),
   );
+}
+
+/**
+ * The forecast in cash terms, for the project page (decision 0196: the owner's real cash): its expenses
+ * with the rest of the loans' payments due in the month that the profit leaves out (`cashOnlyMinor`), and
+ * the net less it. The rows stay the profit forecast's, so the צפי page it opens differs by that alone.
+ */
+export function cashForecast(forecast: NextMonthForecast): NextMonthForecast {
+  if (forecast.cashOnlyMinor === 0n) return forecast;
+  return {
+    ...forecast,
+    expenseMinor: forecast.expenseMinor + forecast.cashOnlyMinor,
+    netMinor: forecast.netMinor - forecast.cashOnlyMinor,
+  };
 }
 
 /** The project's average monthly share of general expenses: its share for the period over the period's months. */
