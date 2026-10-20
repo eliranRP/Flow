@@ -1,14 +1,30 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { busy, LOOP_MS, RELOADED_KEY, watchServiceWorker } from "./sw-reload";
+import { BEHIND_KEY, busy, LOOP_MS, pageBuild, RELOADED_KEY, watchServiceWorker } from "./sw-reload";
 
-function fakeWindow({ controller = true } = {}) {
-  const sw = new EventTarget() as EventTarget & { controller: object | null; getRegistration: () => Promise<{ update: () => Promise<void> } | undefined> };
+const OLD = "a".repeat(40);
+const NEW = "b".repeat(40);
+
+type Registration = { update: () => Promise<void>; installing: object | null; waiting: object | null };
+
+function fakeWindow({ controller = true, live = null as string | null, liveStatus = 200 } = {}) {
+  const sw = new EventTarget() as EventTarget & { controller: object | null; getRegistration: () => Promise<Registration | undefined> };
   sw.controller = controller ? {} : null;
   const update = vi.fn(() => Promise.resolve());
-  sw.getRegistration = () => Promise.resolve({ update });
+  const registration: Registration = { update, installing: null, waiting: null };
+  sw.getRegistration = () => Promise.resolve(registration);
+  const fetch = vi.fn((_url: string, _init?: RequestInit) => Promise.resolve(new Response(live ?? "", { status: liveStatus })));
   const reload = vi.fn();
   let visibility: DocumentVisibilityState = "visible";
-  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => visibility });
+  // Each tab hears its own visibility events: a watch left from an earlier test must not reload.
+  const visibilityEvents = new EventTarget();
+  const doc = new Proxy(document, {
+    get(target, key) {
+      if (key === "visibilityState") return visibility;
+      if (key === "addEventListener") return visibilityEvents.addEventListener.bind(visibilityEvents);
+      const value: unknown = Reflect.get(target, key, target);
+      return typeof value === "function" ? (value as (...args: unknown[]) => unknown).bind(target) : value;
+    },
+  });
   const target = new EventTarget();
   const pushed: unknown[] = [];
   const location = { reload, pathname: "/" };
@@ -23,10 +39,12 @@ function fakeWindow({ controller = true } = {}) {
   };
   const win = {
     navigator: { serviceWorker: sw },
-    document,
+    document: doc,
     location,
     sessionStorage: window.sessionStorage,
+    localStorage: window.localStorage,
     history,
+    fetch,
     addEventListener: target.addEventListener.bind(target),
   } as unknown as Window;
   const clock = 100_000;
@@ -36,6 +54,8 @@ function fakeWindow({ controller = true } = {}) {
     now,
     reload,
     update,
+    fetch,
+    registration,
     pushed,
     takeControl: () => sw.dispatchEvent(new Event("controllerchange")),
     navigate: (url: string) => {
@@ -47,14 +67,26 @@ function fakeWindow({ controller = true } = {}) {
     },
     setVisibility: (state: DocumentVisibilityState) => {
       visibility = state;
-      document.dispatchEvent(new Event("visibilitychange"));
+      visibilityEvents.dispatchEvent(new Event("visibilitychange"));
     },
   };
 }
 
+/** Lets the watch's update and build checks settle. */
+async function settle() {
+  for (let i = 0; i < 10; i++) await Promise.resolve();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+function stampPage(sha: string) {
+  document.head.innerHTML = `<meta name="flow-build" content="${sha}" />`;
+}
+
 afterEach(() => {
+  document.head.innerHTML = "";
   document.body.innerHTML = "";
   window.sessionStorage.clear();
+  window.localStorage.clear();
 });
 
 describe("FLOW-910, FLOW-426: a new service worker reloads the open tab once, never under the user", () => {
@@ -146,14 +178,15 @@ describe("FLOW-910, FLOW-426: a new service worker reloads the open tab once, ne
     expect(tab.reload).toHaveBeenCalledTimes(1);
   });
 
-  it("asks for an update when the app comes back to the front", async () => {
+  it("asks for an update when it starts and each time the app comes back to the front", async () => {
     const tab = fakeWindow();
     watchServiceWorker(tab.win, tab.now);
+    await settle();
+    expect(tab.update).toHaveBeenCalledTimes(1);
     tab.setVisibility("hidden");
     tab.setVisibility("visible");
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(tab.update).toHaveBeenCalledTimes(1);
+    await settle();
+    expect(tab.update).toHaveBeenCalledTimes(2);
     expect(tab.reload).not.toHaveBeenCalled();
   });
 
@@ -161,6 +194,85 @@ describe("FLOW-910, FLOW-426: a new service worker reloads the open tab once, ne
     const reload = vi.fn();
     watchServiceWorker({ navigator: {}, document, location: { reload } } as unknown as Window);
     expect(reload).not.toHaveBeenCalled();
+  });
+});
+
+describe("iPhone app: a page behind the live build reloads even when it missed the worker's takeover", () => {
+  it("reloads on the next move when the live build is newer and no worker is on its way", async () => {
+    stampPage(OLD);
+    const tab = fakeWindow({ live: `${NEW}\n` });
+    watchServiceWorker(tab.win, tab.now);
+    await settle();
+    expect(tab.fetch).toHaveBeenCalledWith("/build.txt", { cache: "no-store" });
+    expect(tab.reload).not.toHaveBeenCalled();
+    tab.navigate("/projects");
+    expect(tab.reload).toHaveBeenCalledTimes(1);
+    expect(window.localStorage.getItem(BEHIND_KEY)).toBe(NEW);
+  });
+
+  it("checks again when the app comes back to the front, and reloads when it goes to the background", async () => {
+    stampPage(OLD);
+    const tab = fakeWindow({ live: OLD });
+    watchServiceWorker(tab.win, tab.now);
+    await settle();
+    tab.setVisibility("hidden");
+    expect(tab.reload).not.toHaveBeenCalled();
+    // A deploy lands while the app sleeps; iOS resumes the page instead of loading it again.
+    tab.fetch.mockImplementation(() => Promise.resolve(new Response(NEW)));
+    tab.setVisibility("visible");
+    await settle();
+    expect(tab.reload).not.toHaveBeenCalled();
+    tab.setVisibility("hidden");
+    expect(tab.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("waits for a worker still installing: its takeover marks the reload", async () => {
+    stampPage(OLD);
+    const tab = fakeWindow({ live: NEW });
+    tab.registration.installing = {};
+    watchServiceWorker(tab.win, tab.now);
+    await settle();
+    expect(tab.fetch).not.toHaveBeenCalled();
+    tab.navigate("/projects");
+    expect(tab.reload).not.toHaveBeenCalled();
+    tab.takeControl();
+    tab.navigate("/settings");
+    expect(tab.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("reloads once per live build, so a deploy with no app change can't reload it again", async () => {
+    stampPage(OLD);
+    window.localStorage.setItem(BEHIND_KEY, NEW);
+    const tab = fakeWindow({ live: NEW });
+    watchServiceWorker(tab.win, tab.now);
+    await settle();
+    tab.navigate("/projects");
+    expect(tab.reload).not.toHaveBeenCalled();
+  });
+
+  it("keeps the page when it runs the live build, or there is none to compare", async () => {
+    for (const [page, live, liveStatus] of [[NEW, NEW, 200], [OLD, null, 404], [OLD, "<!doctype html>", 200]] as const) {
+      stampPage(page);
+      const tab = fakeWindow({ live, liveStatus });
+      watchServiceWorker(tab.win, tab.now);
+      await settle();
+      tab.navigate(`/projects/${page}`);
+      expect(tab.reload).not.toHaveBeenCalled();
+    }
+    // A local build has no stamp.
+    document.head.innerHTML = "";
+    const tab = fakeWindow({ live: NEW });
+    watchServiceWorker(tab.win, tab.now);
+    await settle();
+    expect(tab.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("pageBuild", () => {
+  it("reads the stamped build, or null without one", () => {
+    expect(pageBuild(document)).toBeNull();
+    stampPage(NEW);
+    expect(pageBuild(document)).toBe(NEW);
   });
 });
 

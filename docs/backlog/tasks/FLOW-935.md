@@ -1,0 +1,6 @@
+<a id="flow-935"></a>
+# FLOW-935 · The iPhone Home Screen app moves to a new deploy without a reinstall
+- **Type:** BUG · **Status:** in-progress (lane, 2026-10-20, fix/ios-app-update) · **Depends on:** [FLOW-910](FLOW-910.md), [FLOW-426](FLOW-426.md). **Source:** Owner report 2026-10-20: the app on the iPhone Home Screen keeps the old version after a deploy, and updates only after deleting and adding it again.
+- **Files:** `app/src/sw-reload.ts`, `app/src/sw-reload.test.ts`.
+- [x] FLOW-910's watch starts after Home is up, so a new worker that took control before then fired no `controllerchange` it could hear, and iOS resumes the app instead of loading it, so the page kept the old bundle. On start and on each return to the front, the watch now also compares the page's `flow-build` stamp with the live `/build.txt`. When the page is behind and no worker is installing or waiting, it marks the reload, which runs at FLOW-426's moments: the next move to another screen, or the app going to the background, never under an open sheet or a focused field.
+- [x] A deploy that changes no app code keeps the same worker and bundle, so the page's stamp stays behind: the watch reloads once per live build (localStorage), never in a loop. A build with no stamp or no `build.txt` (local, reviewer) is not compared.
