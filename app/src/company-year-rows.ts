@@ -55,6 +55,13 @@ export function allTimeYearRows(data: CompanyYears): YearRow[] {
   }));
 }
 
+/**
+ * get_breakdown by project keys the general costs `overhead` (overhead-role costs) and `unassigned` (no project);
+ * every other key is a project id. Its `shared` flag marks a project holding a share of a shared cost, so it never
+ * means כללי.
+ */
+const GENERAL_KEYS: ReadonlySet<string> = new Set(["overhead", "unassigned"]);
+
 /** A project's status as the dashboard lists it. */
 export type ProjectStatus = { id: string; status: string };
 
@@ -74,19 +81,20 @@ export function yearProjectRows(
   for (const direction of ["income", "expense"] as const) {
     for (const group of breakdowns[direction]?.groups ?? []) {
       if (group.currency !== currency) continue;
-      if (!group.shared && finishedIds.has(group.key)) {
+      const general = GENERAL_KEYS.has(group.key);
+      if (!general && finishedIds.has(group.key)) {
         finished[direction] += group.amount_minor;
         finished.ids.add(group.key);
         continue;
       }
-      const key = group.shared ? "" : group.key;
+      const key = general ? "" : group.key;
       const row = rows.get(key) ?? {
         key,
-        title: group.shared ? "כללי" : group.name ?? "",
+        title: general ? "כללי" : group.name ?? "",
         incomeMinor: 0n,
         expenseMinor: 0n,
         profitMinor: 0n,
-        opens: group.shared || key === "" ? null : { kind: "project" as const, projectId: key },
+        opens: general ? null : { kind: "project" as const, projectId: key },
       };
       if (direction === "income") row.incomeMinor += group.amount_minor;
       else row.expenseMinor += group.amount_minor;

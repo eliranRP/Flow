@@ -52,7 +52,9 @@ function breakdown(direction: "income" | "expense", year: string, rows: readonly
   const groups = rows
     .map(([key, name, dollarsIn, dollarsOut]) => ({ key, name, amount: (direction === "income" ? dollarsIn : dollarsOut) * 100 }))
     .filter((row) => row.amount > 0)
-    .map((row) => ({ currency: "USD", key: row.key, name: row.name, shared: row.key === "", amount_minor: BigInt(row.amount), count: 1, projects: row.key === "" ? 0 : 1 }));
+    // As get_breakdown: the general costs are `overhead` with no name; `shared` marks a project holding a share of
+    // a shared cost (the first project's expenses here).
+    .map((row) => ({ currency: "USD", key: row.key, name: row.name, shared: direction === "expense" && row.key === "p1", amount_minor: BigInt(row.amount), count: 1, projects: row.key === "overhead" ? 0 : 1 }));
   const total = groups.reduce((sum, group) => sum + group.amount_minor, 0n);
   return {
     direction,
@@ -78,7 +80,7 @@ const PROJECTS_2026: ProjectYear[] = [
   ["f2", "דירת הגפן", 20_000, 15_000],
   ["f3", "בית הערבה", 15_927, 11_000],
   ["f4", "חנות האלון", 15_000, 11_000],
-  ["", null, 0, 32_293],
+  ["overhead", null, 0, 32_293],
 ];
 
 // 2025: 291,400 in and 247,850 out.
@@ -86,7 +88,7 @@ const PROJECTS_2025: ProjectYear[] = [
   ["p1", "בית הדקל", 150_000, 120_000],
   ["p3", "דירת הרימון", 80_000, 60_000],
   ["f1", "מחסן התאנה", 61_400, 40_000],
-  ["", null, 0, 27_850],
+  ["overhead", null, 0, 27_850],
 ];
 
 export const COMPANY_YEARS_SAMPLE: CompanyYearsSample = {

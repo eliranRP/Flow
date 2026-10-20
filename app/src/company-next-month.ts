@@ -32,7 +32,16 @@ export type CompanyNextMonthInputs = {
    */
   general: CategoryMonthsRow[];
   edits: CompanyForecastEdit[];
+  /**
+   * The rest of the year's edits (decision 0200): every edit that applies to any month left in the year after
+   * this one, an added one with its matched line by month. Older payloads and fixtures omit it: next month's
+   * `edits` stand in.
+   */
+  rest_edits?: RestOfYearEdit[];
 };
+
+/** A rest-of-year edit: `matches` is its matched bank line by month (yyyy-mm), for an added line. */
+export type RestOfYearEdit = Omit<CompanyForecastEdit, "matched_transaction_id"> & { matches?: Record<string, string> };
 
 /** One part of the sum: a project's forecast, or the general costs' (`projectId` null). */
 export type CompanyForecastPart = { projectId: string | null; forecast: NextMonthForecast };

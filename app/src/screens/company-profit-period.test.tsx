@@ -4,6 +4,9 @@ import { describe, expect, it } from "vitest";
 import { COMPANY_PROFIT_SAMPLE } from "../dev/company-profit-sample";
 import { renderWithProviders } from "../test-render";
 import { CompanyProfitScreen } from "./company-profit-screen";
+import { companyYears } from "../company-years";
+import { COMPANY_YEARS_SAMPLE } from "../dev/company-years-sample";
+import { periodView } from "./company-profit-period";
 
 /**
  * FLOW-145 (canvas note spec-years): the company profit page's period switch, אוקטובר | 2026 | מההתחלה, turns
@@ -103,6 +106,15 @@ describe("the period switch", () => {
     expect(document.querySelectorAll(".ui-cp-head .ui-fc-ahead")).toHaveLength(0);
   });
 
+  it("a year with no data, or not a year, shows this year and the switch says so", () => {
+    for (const asked of ["1999", "2010", "abcd"]) {
+      const view = renderPage(`/profit?period=year&year=${asked}`);
+      expect(switchRadio("2026")).toHaveAttribute("aria-checked", "true");
+      expect(screen.getByText("2026 · עד היום, 11/10")).toBeInTheDocument();
+      view.unmount();
+    }
+  });
+
   it("the year's forecast adds the months left to the profit to date", () => {
     renderPage("/profit?period=year");
     const card = document.querySelector(".ui-cp-head .ui-fc-card");
@@ -117,5 +129,29 @@ describe("the period switch", () => {
     const [start, income, expense, net] = amounts.map(minor);
     expect(start).toBe(36_274n);
     expect(net).toBe((start ?? 0n) + (income ?? 0n) - (expense ?? 0n));
+  });
+});
+
+describe("the year's forecast card", () => {
+  it("when the forecast's reads failed, a quiet line stands in its place", () => {
+    const view = periodView({
+      period: "year",
+      data: companyYears(COMPANY_YEARS_SAMPLE.months, "USD", "2026-10-11"),
+      year: "2026",
+      today: "2026-10-11",
+      currency: "USD",
+      rest: null,
+      restLoading: false,
+      restFailed: true,
+      categories: [],
+      list: "month",
+      projects: { breakdowns: { income: null, expense: null }, statuses: [], pending: false, failed: false, onRetry: () => undefined },
+      onList: () => undefined,
+      onOpen: () => undefined,
+      projectHref: (id) => `/projects/${id}/profit`,
+    });
+    renderWithProviders(<>{view.head}</>);
+    expect(screen.getByText("לא הצלחנו לטעון את הצפי לסוף השנה.")).toHaveAttribute("role", "status");
+    expect(document.querySelector(".ui-fc-card")).toBeNull();
   });
 });

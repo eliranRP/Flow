@@ -75,12 +75,13 @@ export function useCompanyYearProjects(year: string, today: string, enabled: boo
   const dashboard = useDashboardQuery(live);
   if (sample != null) {
     const given = sample.projects[year];
-    return { breakdowns: { income: given?.income ?? null, expense: given?.expense ?? null }, statuses: sample.statuses, pending: false, failed: false };
+    return { breakdowns: { income: given?.income ?? null, expense: given?.expense ?? null }, statuses: sample.statuses, pending: false, failed: false, refetch: () => undefined };
   }
   return {
     breakdowns: { income: income.data ?? null, expense: expense.data ?? null },
     statuses: dashboard.data?.projects ?? [],
-    pending: live && (income.isPending || expense.isPending),
+    pending: live && (income.isPending || expense.isPending || dashboard.isPending),
     failed: live && (income.isError || expense.isError),
+    refetch: () => { void income.refetch(); void expense.refetch(); },
   };
 }

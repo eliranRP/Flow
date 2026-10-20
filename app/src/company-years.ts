@@ -118,7 +118,7 @@ export function yearSummaryRows(data: CompanyYears, year: YearFigures): SummaryL
 
 /**
  * Since the start's summary: הכנסות, הוצאות שנספרות ברווח, bold רווח מתחילת הדרך and the most profitable closed
- * year (this year, still to date, does not compete).
+ * year (this year, still to date, does not compete; none when every closed year lost money).
  */
 export function allTimeSummaryRows(data: CompanyYears): SummaryLine[] {
   const totals = allTimeTotals(data);
@@ -130,7 +130,8 @@ export function allTimeSummaryRows(data: CompanyYears): SummaryLine[] {
   const best = data.years
     .filter((year) => !year.current)
     .reduce<YearFigures | null>((most, year) => (most == null || year.profitMinor > most.profitMinor ? year : most), null);
-  if (best != null) rows.push({ id: "compare", label: `השנה הרווחית ביותר · ${best.year}`, minor: best.profitMinor, strong: false });
+  // When every closed year lost money there is no profitable year to name.
+  if (best != null && best.profitMinor > 0n) rows.push({ id: "compare", label: `השנה הרווחית ביותר · ${best.year}`, minor: best.profitMinor, strong: false });
   return rows;
 }
 

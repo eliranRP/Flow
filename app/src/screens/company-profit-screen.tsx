@@ -14,7 +14,8 @@ import { Chip } from "../ui/chip";
 import { List, ListRow } from "../ui/list-row";
 import type { ScreenPhase } from "../ui/screen-phase";
 import { ScreenHeader } from "../ui/screen-header";
-import { ProfitSkeleton } from "../ui/screen-skeletons";
+import { ProfitRowsSkeleton, ProfitSkeleton } from "../ui/screen-skeletons";
+import { DelayedSkeleton } from "../ui/skeleton";
 import { ScreenState } from "../ui/screen-state";
 import { rowSource } from "../ui/line-marks";
 import { BASIS_PROFIT_COPY, basisChoiceLabel } from "../ui/company-choices";
@@ -95,7 +96,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   const currentKey = today.slice(0, 7);
   const currentYear = today.slice(0, 4);
   const period = periodOf(params.get("period"));
-  const viewYear = yearOf(params.get("year"), currentYear);
+  const askedYear = yearOf(params.get("year"), currentYear);
   const yearList: YearList = params.get("list") === "project" ? "project" : "month";
   // Home's ?month= picks an earlier month; its year to date then ends with that month.
   const monthKey = sample?.monthKey ?? homeMonthKey(location.search, today, null);
@@ -111,13 +112,20 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   const model: ProfitModel | null = sample ? buildProfitModel(sample) : live.model;
   const onCurrent = monthKey === currentKey;
   const long = period !== "month";
-  // Next month, and the rest of the year for the year view, from the same reads.
-  const next = useCompanyNextMonth(sample?.currency ?? companyCurrency, today, onCurrent || long, sample?.next);
-  const chartMonths = useCompanyProfitMonths(today, onCurrent && !long, sample?.next);
   const years = useCompanyYears(today, long, sample?.years);
+  const yearsData = years.months == null ? null : companyYears(years.months, sample?.currency ?? companyCurrency, today);
+  // A year with no data (before the first counted line, past the read's twenty years, or not a year at all) shows
+  // this year, and the switch says so.
+  const viewYear = yearsData?.years.some((row) => row.year === askedYear) === true ? askedYear : currentYear;
+  // Next month (the current month's card), and the rest of the year for this year's view and since the start, from
+  // the same reads; a past year or an earlier month reads none of them.
+  const forecastYear = yearsData == null ? askedYear : viewYear;
+  const wantsForecast = period === "month" ? onCurrent : period === "all" || forecastYear === currentYear;
+  const next = useCompanyNextMonth(sample?.currency ?? companyCurrency, today, wantsForecast, sample?.next);
+  const chartMonths = useCompanyProfitMonths(today, onCurrent && !long, sample?.next);
   const yearProjects = useCompanyYearProjects(viewYear, today, period === "year" && yearList === "project", sample?.years);
   const failed = live.failed || (long && years.failed);
-  const waiting = model == null || (long && years.months == null);
+  const waiting = model == null;
   const phase: ScreenPhase = sample != null ? { kind: "ready" } : preview !== "off" ? screenPhase(preview) : failed ? { kind: "error", offline: !onlineManager.isOnline() } : waiting ? { kind: "loading" } : { kind: "ready" };
   const [sheetState, setSheetOpen] = useState<boolean | undefined>(undefined);
   const basisRef = useRef<HTMLButtonElement>(null);
@@ -157,17 +165,18 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
       />
     </div>
   );
-  const longView: PeriodView | null = !long || years.months == null ? null : periodView({
+  const longView: PeriodView | null = !long || yearsData == null ? null : periodView({
     period: period === "all" ? "all" : "year",
-    data: companyYears(years.months, currency, today),
+    data: yearsData,
     year: viewYear,
     today,
     currency,
     rest: next.rest,
     restLoading: next.pending,
+    restFailed: next.failed,
     categories: next.categories,
     list: yearList,
-    projects: { breakdowns: yearProjects.breakdowns, statuses: yearProjects.statuses, pending: yearProjects.pending },
+    projects: { breakdowns: yearProjects.breakdowns, statuses: yearProjects.statuses, pending: yearProjects.pending, failed: yearProjects.failed, onRetry: yearProjects.refetch },
     onList: (list) => { setParams({ list: list === "month" ? null : list }); },
     // This month's row opens the month view on this month; a year's row opens that year.
     onOpen: (opens) => { setParams(opens.kind === "month" ? { period: null, year: null, list: null, month: null } : { period: "year", year: opens.year === currentYear ? null : opens.year, list: null }); },
@@ -196,6 +205,15 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
       />
     </>
   );
+  if (long && longView == null) {
+    // The years' read is out: the switch stays, a skeleton holds the content's place.
+    return (
+      <div className="ui-cp-screen">
+        <ScreenHeader layout="stacked" title="רווח" backTo={back} backText="בית" below={<div className="ui-cp-head">{periodSwitch}</div>} />
+        <DelayedSkeleton><ProfitRowsSkeleton /></DelayedSkeleton>
+      </div>
+    );
+  }
   if (longView != null) {
     return (
       <div className="ui-cp-screen">

@@ -43,6 +43,7 @@ const inputsSchema = z.object({
   projects: z.array(z.object({ project_id: z.string(), categories: z.array(monthsRowSchema) })),
   general: z.array(monthsRowSchema),
   edits: z.array(editSchema.extend({ project_id: z.string() })),
+  rest_edits: z.array(editSchema.omit({ matched_transaction_id: true }).extend({ project_id: z.string(), matches: z.record(z.string(), z.string()).optional() })).optional(),
 });
 
 async function readyClient() {

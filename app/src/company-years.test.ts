@@ -94,6 +94,9 @@ describe("the heads", () => {
       ["רווח מתחילת הדרך", 9_652_400n],
       ["השנה הרווחית ביותר · 2025", 4_355_000n],
     ]);
+    // When every closed year lost money there is no profitable year to name.
+    const losses = companyYears([month("2025-03", 100_000, 300_000), month("2024-05", 50_000, 80_000), month("2026-02", 900_000, 0)], "USD", TODAY);
+    expect(allTimeSummaryRows(losses).map((row) => row.id)).toEqual(["income", "expense", "profit"]);
     // A company in its first year has no closed year to name.
     expect(allTimeSummaryRows(companyYears([month("2026-02", 100, 0)], "USD", TODAY)).map((row) => row.id)).toEqual(["income", "expense", "profit"]);
   });

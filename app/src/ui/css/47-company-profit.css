@@ -166,3 +166,9 @@
 .ui-cp-screen .ui-pcat-group:first-of-type {
   margin-top: calc(var(--space-1) / 2 - var(--space-3));
 }
+
+/* FLOW-145: the year's forecast could not be read: one quiet line where the card would be. */
+.ui-cp-fc-failed {
+  margin: 0;
+  padding: var(--space-2) var(--space-1);
+}

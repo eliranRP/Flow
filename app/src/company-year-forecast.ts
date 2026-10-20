@@ -1,4 +1,4 @@
-import { companyIncomeNote, companyNextMonthForecast, type CompanyNextMonth } from "./company-next-month";
+import { companyIncomeNote, companyNextMonthForecast, type CompanyForecastEdit, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
 import type { RentCategory } from "./next-month-chart";
 import { nextMonthKey } from "./project-next-month";
 import { HEBREW_MONTHS } from "./ui/date-math";
@@ -7,7 +7,8 @@ import { HEBREW_MONTHS } from "./ui/date-math";
  * The company's forecast for the rest of the year (canvas note spec-years, decision 0200), pure: next month's
  * company forecast (every project's צפי page and the general costs, decision 0197) built again for each month
  * left in this year, from the same reads. Recurring charges come by the shared due rule (`dueInMonth`), the
- * loans by their schedules, the averages stay the six-month ones, and the owner's edits apply by their pace.
+ * loans by their schedules, the averages stay the six-month ones, and each month gets the owner's edits that
+ * apply to it (company_next_month_inputs' `rest_edits`).
  */
 
 type CompanyForecastInput = Omit<Parameters<typeof companyNextMonthForecast>[0], "month">;
@@ -37,18 +38,27 @@ export function restOfYearMonths(today: string): string[] {
 }
 
 /**
- * The rest of the year for the whole company, or null in December (nothing is left). The read's edits are next
- * month's (company_next_month_inputs): an edit applies to a later month when its pace lands there too. A line
- * that already came against an added edit (`matched_transaction_id`) came in next month, so in a later month the
- * edit is expected again.
+ * Each month's edits: the read's rest-of-year edits (every edit that applies to a month left, so a 2-month edit
+ * started in October reaches December), each added one matched by its own month's line. The builder keeps the
+ * edits that apply to the month. Without them (an older payload), next month's edits, matched in next month only.
+ */
+function monthEdits(inputs: CompanyNextMonthInputs, month: string): CompanyForecastEdit[] {
+  if (inputs.rest_edits == null) {
+    return month === inputs.month ? inputs.edits : inputs.edits.map((edit) => ({ ...edit, matched_transaction_id: null }));
+  }
+  return inputs.rest_edits.map(({ matches, ...edit }) => ({ ...edit, matched_transaction_id: matches?.[month] ?? null }));
+}
+
+/**
+ * The rest of the year for the whole company, or null in December (nothing is left). A line that already came
+ * against an added edit leaves that month only; in another month the edit is expected again.
  */
 export function companyRestOfYear(input: CompanyForecastInput): RestOfYear | null {
   const months = restOfYearMonths(input.today);
   if (months.length === 0) return null;
-  const later = input.inputs.edits.map((edit) => ({ ...edit, matched_transaction_id: null }));
   const forecasts = months.map((month) => companyNextMonthForecast({
     ...input,
-    inputs: month === input.inputs.month ? input.inputs : { ...input.inputs, edits: later },
+    inputs: { ...input.inputs, edits: monthEdits(input.inputs, month) },
     month,
   }));
   const incomeMinor = forecasts.reduce((sum, forecast) => sum + forecast.incomeMinor, 0n);

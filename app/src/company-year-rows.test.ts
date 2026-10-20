@@ -42,6 +42,20 @@ describe("the year's rows", () => {
     expect(rows.reduce((sum, row) => sum + row.expenseMinor, 0n)).toBe(year?.expenseMinor);
   });
 
+  it("get_breakdown's keys: a project holding a shared cost stays its own row; overhead and unassigned are כללי", () => {
+    const group = (key: string, name: string | null, minor: bigint, shared: boolean) => ({ currency: "USD", key, name, shared, amount_minor: minor, count: 1 });
+    const read = (groups: ReturnType<typeof group>[]) => ({ direction: "expense" as const, basis: "cash" as const, group_by: "project" as const, from: null, to: null, totals: [], groups, excluded: [], review_count: 0 });
+    const rows = yearProjectRows(
+      { income: { ...read([group("p1", "בית הדקל", 500_000n, false)]), direction: "income" }, expense: read([group("p1", "בית הדקל", 200_000n, true), group("overhead", null, 50_000n, false), group("unassigned", null, 30_000n, false)]) },
+      "USD",
+      [{ id: "p1", status: "active" }],
+    );
+    expect(rows.map((row) => [row.title, row.incomeMinor, row.expenseMinor, row.opens])).toEqual([
+      ["בית הדקל", 500_000n, 200_000n, { kind: "project", projectId: "p1" }],
+      ["כללי", 0n, 80_000n, null],
+    ]);
+  });
+
   it("a row's line: both figures, or the expenses alone when nothing came in", () => {
     expect(yearRowMeta({ incomeMinor: 9_600_000n, expenseMinor: 7_780_000n }, "USD")).toBe("הכנסות $96,000 · הוצאות $77,800");
     expect(yearRowMeta({ incomeMinor: 0n, expenseMinor: 851_000n }, "USD")).toBe("הוצאות $8,510");

@@ -6,6 +6,7 @@ import { allTimeChart, allTimeSub, allTimeSummaryRows, allTimeTotals, yearChart,
 import type { Breakdown } from "@flow/shared";
 import type { RentCategory } from "../next-month-chart";
 import { Amount } from "../ui/amount";
+import { Button } from "../ui/button";
 import { Chip } from "../ui/chip";
 import { List } from "../ui/list-row";
 import { ForecastCard, MonthChart } from "../ui/month-forecast";
@@ -36,9 +37,11 @@ export type PeriodViewInput = {
   /** The rest of this year; null in December or while it is unread. */
   rest: RestOfYear | null;
   restLoading: boolean;
+  /** The forecast's reads failed: a quiet line stands where the card would be. */
+  restFailed: boolean;
   categories: readonly RentCategory[];
   list: YearList;
-  projects: { breakdowns: { income: Breakdown | null; expense: Breakdown | null }; statuses: readonly ProjectStatus[]; pending: boolean };
+  projects: { breakdowns: { income: Breakdown | null; expense: Breakdown | null }; statuses: readonly ProjectStatus[]; pending: boolean; failed: boolean; onRetry: () => void };
   onList: (list: YearList) => void;
   /** A row's tap: the month view, or a year. */
   onOpen: (opens: Exclude<YearRow["opens"], null | { kind: "project" }>) => void;
@@ -98,6 +101,7 @@ function rowsList(rows: readonly YearRow[], input: PeriodViewInput, className: s
 /** The year's card, "סוף 2026", in the תזרים צפוי form: from the profit to date, the months left, the year's end. */
 function YearForecast({ year, input }: { year: YearFigures; input: PeriodViewInput }) {
   if (input.restLoading) return <DelayedSkeleton><NextMonthCardSkeleton /></DelayedSkeleton>;
+  if (input.restFailed) return <p className="ui-cp-fc-failed t-caption t-muted" role="status">לא הצלחנו לטעון את הצפי לסוף השנה.</p>;
   const rest = input.rest;
   if (rest == null || rest.forecasts.every((forecast) => forecast.rows.length === 0)) return null;
   return (
@@ -130,9 +134,17 @@ function yearView(input: PeriodViewInput, year: YearFigures): PeriodView {
   );
   let body: ReactNode;
   if (input.list === "project") {
-    body = input.projects.pending
-      ? <DelayedSkeleton><ProfitRowsSkeleton /></DelayedSkeleton>
-      : rowsList(yearProjectRows(input.projects.breakdowns, input.currency, input.projects.statuses), input, "ui-cp-list ui-cp-period-list");
+    const projectRows = yearProjectRows(input.projects.breakdowns, input.currency, input.projects.statuses);
+    if (input.projects.pending) body = <DelayedSkeleton><ProfitRowsSkeleton /></DelayedSkeleton>;
+    else if (input.projects.failed) {
+      body = (
+        <div className="ui-cp-period-list">
+          <p className="ui-cp-foot t-caption t-muted" role="status">לא הצלחנו לטעון את הפרויקטים.</p>
+          <Button variant="link" aria-label="ניסיון חוזר: הפרויקטים של השנה" onClick={input.projects.onRetry}>ניסיון חוזר</Button>
+        </div>
+      );
+    } else if (projectRows.length === 0) body = <p className="ui-cp-foot ui-cp-period-list t-caption t-muted">אין הכנסות או הוצאות בשנה הזו</p>;
+    else body = rowsList(projectRows, input, "ui-cp-list ui-cp-period-list");
   } else {
     body = rowsList(yearMonthRows(year), input, "ui-cp-list ui-cp-period-list");
   }

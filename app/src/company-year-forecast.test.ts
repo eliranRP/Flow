@@ -1,6 +1,6 @@
 import type { ExpectedParty } from "@flow/shared";
 import { describe, expect, it } from "vitest";
-import { companyNextMonthForecast, type CompanyNextMonthInputs } from "./company-next-month";
+import { companyNextMonthForecast, type CompanyNextMonthInputs, type RestOfYearEdit } from "./company-next-month";
 import { companyRestOfYear, restExpenseNote, restIncomeNote, restMonthsCaption, restOfYearMonths } from "./company-year-forecast";
 
 /**
@@ -69,6 +69,7 @@ describe("restOfYearMonths", () => {
   });
 });
 
+// INPUTS has no rest_edits (an older payload): next month's edits apply by their pace, matched in next month only.
 describe("companyRestOfYear", () => {
   const rest = companyRestOfYear(input);
   if (rest == null) throw new Error("two months are left");
@@ -103,5 +104,35 @@ describe("companyRestOfYear", () => {
 
   it("nothing is left in December", () => {
     expect(companyRestOfYear({ ...input, today: "2026-12-02", inputs: { ...INPUTS, month: "2027-01" } })).toBeNull();
+  });
+});
+
+describe("the rest of the year's own edits (rest_edits)", () => {
+  // The read's rest of the year: the two edits above, and a 2-month expense of $70 started in October, which lands
+  // in October and December, not November, so next month's edits do not hold it. The added income line came in
+  // November only.
+  const twoMonths: RestOfYearEdit = { id: "e-two", project_id: "p1", kind: "add", row_key: null, category_id: "c-repairs", category_name: "תיקונים", direction: "expense", amount_minor: 7_000, pace: "2months", start_month: "2026-10" };
+  const withRest: CompanyNextMonthInputs = {
+    ...INPUTS,
+    rest_edits: [
+      ...INPUTS.edits.map(({ matched_transaction_id: matched, ...edit }): RestOfYearEdit => ({ ...edit, matches: matched == null ? {} : { "2026-11": matched } })),
+      twoMonths,
+    ],
+  };
+  const rest = companyRestOfYear({ ...input, inputs: withRest });
+  if (rest == null) throw new Error("two months are left");
+
+  it("a 2-month edit started in October shows in December's forecast, not November's", () => {
+    expect(rest.months[0]).toEqual({ month: "2026-11", incomeMinor: 100_000n, expenseMinor: 40_000n + 200_000n + 10_000n });
+    expect(rest.months[1]).toEqual({ month: "2026-12", incomeMinor: 100_000n + 5_000n, expenseMinor: 60_000n + 30_000n + 200_000n + 10_000n + 7_000n });
+  });
+
+  it("an added line matched in a month leaves that month only", () => {
+    const matchedDecember: CompanyNextMonthInputs = {
+      ...withRest,
+      rest_edits: (withRest.rest_edits ?? []).map((edit) => (edit.id === "e-extra" ? { ...edit, matches: { "2026-12": "t-extra-12" } } : edit)),
+    };
+    const result = companyRestOfYear({ ...input, inputs: matchedDecember });
+    expect(result?.months.map((month) => month.incomeMinor)).toEqual([105_000n, 100_000n]);
   });
 });
