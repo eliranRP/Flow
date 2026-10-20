@@ -61,8 +61,8 @@ describe("the project page's next month (spec-fcwide), in cash words (spec-cash2
     expect(container.querySelector(".ui-fc-legend")?.textContent).toBe("נכנסיצאצפי");
     expect(screen.getByText(`${monthWord(shiftMonthKey(thisMonth, -5))} עד ${monthWord(thisMonth)} וצפי`)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "רווח לפי חודש" }).getAttribute("href")).toBe("/projects/p-rental/profit?period=all");
-    // The chart comes after the investment card, where "חודשים קודמים" was.
-    expect(screen.getByRole("heading", { name: "השקעה והלוואות" }).compareDocumentPosition(chart)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    // The investment card comes last, after the chart (the owner's ask, 20/10).
+    expect(chart.compareDocumentPosition(screen.getByRole("heading", { name: "השקעה והלוואות" }))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
   it("a rental with an amortizing loan: the card and the chart add next month's principal to the צפי page's expenses", () => {

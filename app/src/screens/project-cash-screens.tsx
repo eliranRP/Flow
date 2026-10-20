@@ -206,19 +206,6 @@ export function ProjectCashOverview({
         )}
         {summary ? null : budgetAdd}
         {fresh ? <ProjectEmptyCard /> : null}
-        {summaryFigures == null ? null : <InvestmentSummary figures={summaryFigures} href={investmentHref} />}
-        {investment == null || summary ? null : (
-          <List className="ui-project-cash-more">
-            <ListRow
-              variant="item"
-              title="השקעה והלוואות"
-              hint={investment.hint}
-              meta={investment.figure == null ? undefined : <bdi className="ui-num ui-project-row-figure" dir="ltr">{investment.figure}</bdi>}
-              href={investmentHref}
-              chevron
-            />
-          </List>
-        )}
         {data == null || key == null || fresh || nextMonth == null ? null : (
           <NextMonthBlock
             forecast={nextMonth.forecast}
@@ -233,6 +220,20 @@ export function ProjectCashOverview({
             today={nextMonth.today}
             chartLink={{ href: `/projects/${project.id}/profit${withPeriodSearch(search, { kind: "all", from: null, to: null })}`, text: "רווח לפי חודש" }}
           />
+        )}
+        {/* The owner's ask (20/10): the investment and loans card comes last, under the forecast and the chart. */}
+        {summaryFigures == null ? null : <InvestmentSummary figures={summaryFigures} href={investmentHref} />}
+        {investment == null || summary ? null : (
+          <List className="ui-project-cash-more">
+            <ListRow
+              variant="item"
+              title="השקעה והלוואות"
+              hint={investment.hint}
+              meta={investment.figure == null ? undefined : <bdi className="ui-num ui-project-row-figure" dir="ltr">{investment.figure}</bdi>}
+              href={investmentHref}
+              chevron
+            />
+          </List>
         )}
       </div>
     </div>
