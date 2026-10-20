@@ -7,10 +7,22 @@ test.use({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true
 
 const NOTCH = ":root { --safe-top: 59px; }";
 
-for (const route of ["settings", "notifications", "categories", "team", "business", "connections/ai", "forecast/months"]) {
+// Before the app's scripts run: the compact bar reads the safe area once, when its observer starts.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript((css) => {
+    document.addEventListener("DOMContentLoaded", () => {
+      const style = document.createElement("style");
+      style.textContent = css;
+      document.head.append(style);
+    });
+  }, NOTCH);
+});
+
+const ROUTES = ["settings", "notifications", "categories", "team", "business", "connections/ai", "forecast/months", "company-profit"];
+
+for (const route of ROUTES) {
   test(`${route}: under a notch the large title shows and the compact bar stays hidden at the top`, async ({ page }) => {
     await page.goto(`/e2e/${route}`);
-    await page.addStyleTag({ content: NOTCH });
     const header = page.locator("header.ui-page-stacked").first();
     await expect(header).toBeVisible();
     await expect(page.locator(".ui-compact-bar").first()).toHaveClass(/ui-compact-bar-gone/);
