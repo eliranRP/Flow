@@ -1,0 +1,1 @@
+The deploy smoke lets the company profit forecast read (`company_next_month_inputs`, #742) through: it is in `readRpcs` in `app/e2e/smoke-allow.ts`, which `scripts/smoke-allow-rpcs.test.mjs` requires for every stable read the app calls. Main was red on that test after #742.
