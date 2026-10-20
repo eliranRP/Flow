@@ -208,6 +208,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-142"></a>[FLOW-142](tasks/FLOW-142.md) | Loans summary page, and the loan page's paid card first | UI (design approved) |
 | <a id="flow-143"></a>[FLOW-143](tasks/FLOW-143.md) | Company profit: summary rows, next month's card and the month chart (PR B) | UI (design approved) |
 | <a id="flow-144"></a>[FLOW-144](tasks/FLOW-144.md) | תזרים צפוי: cash words on the forecast card and chart, the month-end sum and its chart | UI (design approved) |
+| <a id="flow-145"></a>[FLOW-145](tasks/FLOW-145.md) | Company profit: the period switch, the year and since the start | UI (design approved) |
 | <a id="flow-920"></a>[FLOW-920](tasks/FLOW-920.md) | Project profit: the month's share and after-overhead rows from the server, and the old profit-month section goes | UI + server (follow-up to FLOW-140) |
 | <a id="flow-930"></a>[FLOW-930](tasks/FLOW-930.md) | A yearly charge shows in this month's forecast at a monthly amount | BUG |
 
