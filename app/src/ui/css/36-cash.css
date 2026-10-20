@@ -85,8 +85,10 @@
   overflow-y: hidden;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
-  margin-block: 0;
+  /* Room for the 44px hit area and the focus ring around the chips, without moving them. */
+  margin-block: calc(var(--space-1) * -1);
   margin-inline: calc(var(--space-4) * -1);
+  padding-block: var(--space-1);
   padding-inline: var(--space-side);
 }
 

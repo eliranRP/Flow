@@ -72,4 +72,7 @@ test("the chip row scrolls only sideways: a drag up or down never moves it", asy
   await page.mouse.move((box?.x ?? 0) + 40, (box?.y ?? 0) + (box?.height ?? 0) / 2);
   await page.mouse.wheel(0, 120);
   expect(await chips.evaluate((el) => el.scrollTop)).toBe(0);
+  // The row holds the chips' 44px hit area, so nothing in it is cut off at the top or bottom.
+  const { client, scroll } = await chips.evaluate((el) => ({ client: el.clientHeight, scroll: el.scrollHeight }));
+  expect(client).toBeGreaterThanOrEqual(scroll);
 });
