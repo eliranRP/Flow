@@ -126,7 +126,7 @@
    A 320x693 phone keeps the short-height spacing (its worst-case card has to end above the bar). */
 @media (min-height: 721px) {
   .ui-review-queue .ui-page-stacked {
-    padding-top: var(--space-3);
+    padding-top: calc(var(--safe-top) + var(--space-3));
   }
 
   .ui-review-queue .ui-focus-title {

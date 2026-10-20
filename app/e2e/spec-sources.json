@@ -93,6 +93,12 @@
       "ui/install-screen.tsx",
       "ui/tab-bar.tsx"
     ],
+    "notch-header.spec.ts": [
+      "ui/screen-header.tsx",
+      "ui/compact-bar.tsx",
+      "screens/settings-screen.tsx",
+      "screens/notifications-screen.tsx"
+    ],
     "notifications.spec.ts": [
       "screens/notifications-screen.tsx",
       "screens/push-copy.ts",

@@ -80,7 +80,7 @@
 /* The board's owner-only page (States, teamEmpty): its Back row starts 16px down with a 16/500 label, and the
    empty block (64px icon, 24px title, 15px/1.5 line, button) is stacked on a 10px rhythm 51px under the owner row. */
 .ui-settings-page.ui-team-alone > .ui-page-stacked {
-  padding-top: var(--space-4);
+  padding-top: calc(var(--safe-top) + var(--space-4));
   padding-bottom: calc(var(--space-1) * 1.75);
 }
 
