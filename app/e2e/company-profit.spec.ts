@@ -61,3 +61,18 @@ test("the basis line opens the basis sheet; a pick in preview toasts and writes 
   // The pick does not save here: the sheet stays open.
   await expect(sheet).toBeVisible();
 });
+
+test("the chip row scrolls only sideways: a drag up or down never moves it", async ({ page }) => {
+  await page.goto("/e2e/company-profit?preview=1");
+  const chips = page.locator(".ui-cp-chips").first();
+  await expect(chips).toBeVisible();
+  // overflow-x: auto alone makes the row a vertical scroller too, so a drag over it nudged the chips up.
+  expect(await chips.evaluate((el) => getComputedStyle(el).overflowY)).toBe("hidden");
+  const box = await chips.boundingBox();
+  await page.mouse.move((box?.x ?? 0) + 40, (box?.y ?? 0) + (box?.height ?? 0) / 2);
+  await page.mouse.wheel(0, 120);
+  expect(await chips.evaluate((el) => el.scrollTop)).toBe(0);
+  // The row holds the chips' 44px hit area, so nothing in it is cut off at the top or bottom.
+  const { client, scroll } = await chips.evaluate((el) => ({ client: el.clientHeight, scroll: el.scrollHeight }));
+  expect(client).toBeGreaterThanOrEqual(scroll);
+});
