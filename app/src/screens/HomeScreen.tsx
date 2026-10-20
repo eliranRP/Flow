@@ -15,14 +15,14 @@ import { pageEnterStyle } from "../ui/motion";
 import { israelToday } from "../ui/date-math";
 import { monthPeriod, shiftMonthKey } from "../period";
 import { homeMonthKey, homeMonthPath, forecastMinor } from "../home-month";
-import { HomeBandActions, HomeCompactBar, HomeMonthPill, HomeSwipeFigures, SplitCard, AttentionBox, ForecastRow, homeMonthLabel, monthName, useCompactShown, type HomeFigureRows, type HomeMonthNav } from "./home-parts";
+import { HomeBandActions, HomeCompactBar, HomeMonthPill, HomeSwipeFigures, SplitCard, AttentionBox, ForecastRow, homeMonthLabel, monthName, type HomeFigureRows, type HomeMonthNav } from "./home-parts";
 import { MonthDrawer } from "./month-drawer";
 import type { BannerRow } from "../ui/banner";
 import { Button } from "../ui/button";
 import { FailureLine } from "../ui/empty-state";
 import { BankIcon } from "../ui/icons";
 import { CashHomeSkeleton } from "./home-skeleton";
-import { TopBand } from "../ui/top-band";
+import { TopBand, useBandGone } from "../ui/top-band";
 import { previewHidesBand, useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useHoldOwnerSettings } from "../use-is-viewer";
@@ -350,7 +350,7 @@ export function CashHome({
       setDrawer(true);
     },
   };
-  const compactShown = useCompactShown();
+  const compactShown = useBandGone();
   const animate = useMonthDirection(monthKey);
   const books = useOptionalBooks();
   const navigate = useNavigate();

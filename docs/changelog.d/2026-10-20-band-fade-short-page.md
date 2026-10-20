@@ -1,0 +1,1 @@
+Home's band no longer ends half-faded with no compact bar on a page too short to scroll 220px: the fade ends at the page's bottom and the compact bar shows there. The project page shows its compact bar at the bottom of a page too short to scroll its title under it.

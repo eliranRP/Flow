@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode, type Ref, type RefObject } from "react";
+import { useEffect, useRef, useState, type ReactNode, type Ref, type RefObject } from "react";
 import { ChevronDownIcon } from "./icons";
 import { Wordmark } from "./wordmark";
 
@@ -25,9 +25,14 @@ type TopBandProps = {
 const FADE_FROM = 60;
 const FADE_TO = 220;
 
-/** Opacity of the band's figures at `scrollY`, linear between the two, rounded to 0.05. */
-export function bandFade(scrollY: number): number {
-  const linear = (FADE_TO - scrollY) / (FADE_TO - FADE_FROM);
+/**
+ * Opacity of the band's figures at `scrollY`, linear between the two, rounded to 0.05. A page that
+ * cannot scroll to FADE_TO ends the fade at its bottom (less a pixel for subpixel scroll), so the
+ * figures are gone and the compact bar shows there, never a half-faded band with no bar.
+ */
+export function bandFade(scrollY: number, maxScroll = Number.POSITIVE_INFINITY): number {
+  const end = maxScroll - 1 > FADE_FROM ? Math.min(FADE_TO, maxScroll - 1) : FADE_TO;
+  const linear = (end - scrollY) / (end - FADE_FROM);
   const clamped = Math.min(1, Math.max(0, linear));
   return Math.round(clamped * 20) / 20;
 }
@@ -43,7 +48,7 @@ function useBandFade(band: RefObject<HTMLElement | null>): void {
     let pending = false;
     let frame = 0;
     const write = () => {
-      element.style.setProperty("--band-fade", String(bandFade(window.scrollY)));
+      element.style.setProperty("--band-fade", String(bandFade(window.scrollY, pageMaxScroll())));
     };
     const onScroll = () => {
       if (pending) return;
@@ -55,11 +60,69 @@ function useBandFade(band: RefObject<HTMLElement | null>): void {
     };
     write();
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
     return () => {
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
       if (pending) cancelAnimationFrame(frame);
     };
   }, [band]);
+}
+
+/** How far the page can scroll. */
+function pageMaxScroll(): number {
+  return document.documentElement.scrollHeight - window.innerHeight;
+}
+
+/** Whether a page that scrolls more than FADE_FROM is at its bottom (less a pixel for subpixel scroll). */
+export function pageAtEnd(scrollY: number, maxScroll: number): boolean {
+  return maxScroll - 1 > FADE_FROM && scrollY >= maxScroll - 1;
+}
+
+function bandGone(scrollY: number, maxScroll: number): boolean {
+  return bandFade(scrollY, maxScroll) === 0;
+}
+
+/**
+ * `read(scrollY, maxScroll)`, read once on mount, then once per frame on scroll and on resize (the
+ * page's height or the viewport changing moves the bottom without a scroll).
+ */
+function usePageScroll(read: (scrollY: number, maxScroll: number) => boolean): boolean {
+  const [value, setValue] = useState(false);
+  useEffect(() => {
+    let pending = false;
+    let frame = 0;
+    const update = () => {
+      setValue(read(window.scrollY, pageMaxScroll()));
+    };
+    const onScroll = () => {
+      if (pending) return;
+      pending = true;
+      frame = requestAnimationFrame(() => {
+        pending = false;
+        update();
+      });
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (pending) cancelAnimationFrame(frame);
+    };
+  }, [read]);
+  return value;
+}
+
+/** Whether the band's figures are gone (bandFade 0): Home's compact bar shows from there. */
+export function useBandGone(): boolean {
+  return usePageScroll(bandGone);
+}
+
+/** Whether the page is scrolled to its bottom: a page too short to scroll its mark under the bar shows the bar there. */
+export function usePageAtEnd(): boolean {
+  return usePageScroll(pageAtEnd);
 }
 
 /** Violet band. Home and the Project header only. */
