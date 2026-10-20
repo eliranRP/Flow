@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useOverheadProject } from "./overhead-project";
 
 type Answer = { data: unknown; error: unknown };
-const read = vi.hoisted(() => ({ answer: (): Promise<Answer> => Promise.resolve({ data: null, error: null }), tables: [] as string[], rpcs: [] as string[] }));
+const read = vi.hoisted(() => ({ answer: (): Promise<Answer> => Promise.resolve({ data: null, error: null }), tables: [] as string[], selects: [] as string[], rpcs: [] as string[] }));
 
 // Invented projects only.
 const company = (id: string | null, name?: string) => ({ overhead_project_id: id, overhead: id == null ? null : { id, name } });
@@ -14,7 +14,7 @@ const company = (id: string | null, name?: string) => ({ overhead_project_id: id
 vi.mock("./lib/supabase", () => ({
   getSupabase: () => ({
     rpc: (name: string) => { read.rpcs.push(name); return Promise.resolve({ data: null, error: new Error("unexpected") }); },
-    from: (table: string) => ({ select: () => ({ maybeSingle: () => { read.tables.push(table); return read.answer(); } }) }),
+    from: (table: string) => ({ select: (columns: string) => { read.selects.push(columns); return { maybeSingle: () => { read.tables.push(table); return read.answer(); } }; } }),
   }),
 }));
 vi.mock("./wait-for-session", () => ({ waitForAccessToken: () => Promise.resolve() }));
@@ -23,6 +23,7 @@ let client: QueryClient;
 beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   read.tables.length = 0;
+  read.selects.length = 0;
   read.rpcs.length = 0;
 });
 const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}><MemoryRouter>{children}</MemoryRouter></QueryClientProvider>;
@@ -35,6 +36,8 @@ describe("useOverheadProject (owner 21/10)", () => {
     await waitFor(() => { expect(result.current.project).toEqual({ id: "p9", name: "הנהלה ומשרד" }); });
     expect(result.current.failed).toBe(false);
     expect(read.tables).toEqual(["companies"]);
+    // The hint names the one foreign key to embed: companies and projects are joined by two.
+    expect(read.selects).toEqual(["overhead_project_id, overhead:projects!companies_overhead_project_fk(id, name)"]);
     expect(read.rpcs).toEqual([]);
   });
 

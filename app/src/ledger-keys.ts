@@ -38,6 +38,7 @@ export const LEDGER_KEYS = [
   "loans",
   "loan-currency",
   "company-currency",
+  "company-overhead",
   "search",
   "receipt-match",
   "jev-connector",

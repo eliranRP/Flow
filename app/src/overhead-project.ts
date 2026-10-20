@@ -34,10 +34,11 @@ function overheadFromRow(row: OverheadRow | null): OverheadProject | null {
 }
 
 /**
- * The company's overhead project (owner 21/10): `companies.overhead_project_id` and that project's name, in one small
+ * The company's overhead project (owner 20/10): `companies.overhead_project_id` and that project's name, in one small
  * read of two rows, never the Projects list's heavy `projects_cash_month`. `project` is undefined while the first read
  * loads, null when none is set; a failed refetch keeps the last answer. A write marks it stale with every other read
- * (query-client.ts), so a rename or a new overhead project shows on the next visit. Preview and `enabled` false read
+ * (query-client.ts), and it is a ledger key, so a bank sync or the app's return to focus reads it again: a rename or a new
+ * overhead project, from the app or the MCP, shows on the next visit. Preview and `enabled` false read
  * nothing and give null.
  */
 export function useOverheadProject(enabled: boolean): OverheadRead {
