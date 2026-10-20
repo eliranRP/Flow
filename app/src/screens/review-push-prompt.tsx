@@ -5,11 +5,15 @@ import {
   answerPushPrompt,
   PUSH_PREFS_KEY,
   pushSupport,
+  DEVICE_PUSH_KEY,
   subscribeThisDevice,
+  useDevicePushQuery,
   useNotificationPrefsQuery,
+  type DevicePush,
   type NotificationPrefs,
   type PushSupport,
 } from "../push";
+import { PUSH_ON, subscribeFailure } from "./push-copy";
 import { PromptCard } from "../ui/prompt-card";
 import { Button } from "../ui/button";
 import { useToast } from "../ui/toast";
@@ -32,9 +36,6 @@ export function IosHomeNote() {
   );
 }
 
-export const PUSH_ON = "נשלח התראה על כל תנועה חדשה ותזכורת בערב.";
-export const PUSH_BLOCKED = "ההתראות חסומות בדפדפן. אפשר לאשר אותן בהגדרות הדפדפן.";
-export const PUSH_FAILED = "לא הצלחנו להפעיל תזכורות.";
 
 function focusInCard(): boolean {
   return document.activeElement?.closest(".ui-prompt-card") != null;
@@ -49,11 +50,14 @@ function focusInCard(): boolean {
 export function ReviewPushPrompt({
   sample,
   support,
+  device,
   focusAfter = focusReviewEmptyAction,
   iphoneTab = "note",
 }: {
   sample?: NotificationPrefs;
   support?: PushSupport;
+  /** This device's push state in a sample; live, it is read from the browser. */
+  device?: DevicePush;
   /** Where focus goes when the card closes with focus in it. */
   focusAfter?: () => void;
   /** "hide": the page already teaches the Home Screen (setup step 5), so an iPhone tab is not asked. */
@@ -63,6 +67,7 @@ export function ReviewPushPrompt({
   const preview = useHomePreview();
   const live = sample == null && preview === "off" && can !== "not-configured";
   const prefs = useNotificationPrefsQuery(live);
+  const deviceQuery = useDevicePushQuery(live && can === "ok");
   const client = useQueryClient();
   const toast = useToast();
   const [answered, setAnswered] = useState(false);
@@ -83,9 +88,12 @@ export function ReviewPushPrompt({
   }, [answered, focusAfter]);
 
   const data = sample ?? prefs.data;
+  // FLOW-516: "already on" means this device gets the reminder, not some other device of the user.
+  const here = device ?? (live ? deviceQuery.data?.state : undefined);
   if (answered || can === "unsupported" || can === "not-configured" || data == null) return null;
   if (can === "ios-home-screen" && iphoneTab === "hide") return null;
-  if (data.prompt_answered || (data.evening_reminder && data.has_subscription)) return null;
+  if (live && can === "ok" && here == null) return null;
+  if (data.prompt_answered || (data.evening_reminder && here === "subscribed")) return null;
 
   function hide() {
     refocus.current = focusInCard();
@@ -110,24 +118,24 @@ export function ReviewPushPrompt({
       hide();
       return;
     }
+    // Called before any state change or await: the permission request needs this tap.
+    const pending = subscribeThisDevice();
     setBusy(true);
-    const result = await subscribeThisDevice();
-    setBusy(false);
-    if (result === "failed") {
-      toast.show({ message: PUSH_FAILED, tone: "bad" });
-      return;
-    }
-    hide();
-    if (result === "denied") {
+    const { result } = await pending.finally(() => { setBusy(false); });
+    if (result !== "ok") {
+      toast.show(subscribeFailure(result));
+      if (result !== "denied" && result !== "dismissed") return;
+      hide();
       record(false);
-      toast.show({ message: PUSH_BLOCKED, tone: "info" });
       return;
     }
+    void client.invalidateQueries({ queryKey: DEVICE_PUSH_KEY });
+    hide();
     try {
       client.setQueryData(PUSH_PREFS_KEY, await answerPushPrompt(true));
       toast.show({ message: PUSH_ON });
     } catch {
-      toast.show({ message: PUSH_FAILED, tone: "bad" });
+      toast.show(subscribeFailure("save-failed"));
     }
   }
 

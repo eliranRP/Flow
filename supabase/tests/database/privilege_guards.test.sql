@@ -26,6 +26,7 @@ insert into pg_allowed (sig) values
     ('cash_year_months(integer,date)'),
     ('cash_years(date)'),
     ('claim_invite_email(uuid)'),
+    ('claim_push_test()'),
     ('clear_loan_split(uuid)'),
     ('collapse_split(uuid,uuid)'),
     ('company_next_month_inputs(date)'),
@@ -59,6 +60,7 @@ insert into pg_allowed (sig) values
     ('jev_suggestions(uuid[])'),
     ('link_invoice_payment(uuid,uuid)'),
     ('list_my_companies()'),
+    ('list_my_push_devices()'),
     ('list_team()'),
     ('mark_invite_seen(uuid)'),
     ('match_lines(jsonb,integer,text,text)'),
@@ -144,6 +146,7 @@ insert into pg_allowed (sig) values
     ('project_recurring_changes(uuid,date)'),
     ('projects_cash_month(date,date,uuid)'),
     ('push_subscribe(text,text,text,text)'),
+    ('push_unsubscribe(text)'),
     ('reassign_transaction(uuid,uuid,uuid)'),
     ('receipt_match(bigint,date,text)'),
     ('recurring_changes(date)'),
@@ -279,7 +282,6 @@ select is(
      ('public.map_budget_section(bigint, uuid, text)'),
      ('public.project_cash_years(uuid, date)'),
      ('public.project_cash_year_months(uuid, integer, date)'),
-     ('public.push_unsubscribe(text)'),
      ('public.request_connector_refresh(public.connector_provider)'),
      ('public.save_split(uuid, jsonb)'),
      ('public.set_supplier_settings(uuid, boolean)')
@@ -287,7 +289,7 @@ select is(
    where has_function_privilege('authenticated', f.sig::regprocedure, 'execute')
       or has_function_privilege('anon', f.sig::regprocedure, 'execute')),
   '{}'::text[],
-  'the 11 RPCs the clients do not call are not executable by authenticated or anon'
+  'the 10 RPCs the clients do not call are not executable by authenticated or anon'
 );
 select ok(
   has_function_privilege('authenticated', 'public.approve_split_review(uuid, uuid)', 'execute')

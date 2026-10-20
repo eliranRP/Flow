@@ -3,23 +3,31 @@ import { useId, useState, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import {
+  DEVICE_PUSH_KEY,
+  forgetThisDevice,
   NO_PREFS,
   PUSH_PREFS_KEY,
   pushSupport,
   saveNotificationPrefs,
   subscribeThisDevice,
+  useDevicePushQuery,
   useNotificationPrefsQuery,
+  type DevicePush,
   type NotificationPrefKey,
   type NotificationPrefs,
   type PushSupport,
+  type SubscribeOutcome,
 } from "../push";
+import { addedLabel, deviceName, PUSH_DEVICES_KEY, usePushDevicesQuery, type PushDevice } from "../push-devices";
+import { sendTestPush, TEST_PUSH_COPY } from "../push-test";
 import { List, ListRow } from "../ui/list-row";
 import { CalendarIcon, BellIcon, DocumentIcon } from "../ui/icons";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { Toggle } from "../ui/toggle";
 import { useToast } from "../ui/toast";
-import { IOS_HOME_NOTE, IosHomeNote, PUSH_BLOCKED, PUSH_FAILED } from "./review-push-prompt";
+import { PUSH_ACTIVE_HERE, pushBlockedMessage, subscribeDiagnostic, subscribeFailure } from "./push-copy";
+import { IOS_HOME_NOTE, IosHomeNote } from "./review-push-prompt";
 
 const SWITCHES: Array<{ key: NotificationPrefKey; label: string; hint: string; icon: ReactNode }> = [
   { key: "new_transaction", label: "תנועה חדשה", hint: "כשנכנסת תנועה מהבנק", icon: <BellIcon size={22} /> },
@@ -29,6 +37,16 @@ const SWITCHES: Array<{ key: NotificationPrefKey; label: string; hint: string; i
 
 const UNSUPPORTED_NOTE = "הדפדפן הזה לא שולח התראות.";
 const SAVE_FAILED = "לא הצלחנו לשמור.";
+const DEVICE_LABEL = "המכשיר הזה מקבל התראות";
+const DEVICE_OFF_HINT = "ההתראות לא מגיעות למכשיר הזה";
+const DEVICE_OFF_TOAST = "ההתראות כבויות במכשיר הזה";
+const TEST_PUSH = "שליחת התראת בדיקה";
+const SWITCHES_HEAD = "מה לקבל · לכל המכשירים";
+const DEVICES_HEAD = "מכשירים מחוברים";
+const NO_DEVICE_LINE = "ההתראות לא נשלחות לאף מכשיר. אפשר לחבר את המכשיר הזה למעלה.";
+const NO_DEVICES = "אין מכשיר מחובר.";
+const DEVICES_FAILED = "לא הצלחנו לטעון את המכשירים.";
+const THIS_DEVICE = "המכשיר הזה";
 
 /** The התראות row's value: how many switches are on, or כבויות when none is. */
 export function notificationsHint(prefs: NotificationPrefs): string {
@@ -36,22 +54,75 @@ export function notificationsHint(prefs: NotificationPrefs): string {
   return on === 0 ? "כבויות" : `${String(on)} פעילות`;
 }
 
+function deviceHint(state: DevicePush | undefined): ReactNode {
+  if (state === "subscribed") return PUSH_ACTIVE_HERE;
+  if (state === "denied") return pushBlockedMessage();
+  if (state === "not-subscribed" || state === "no-worker") return DEVICE_OFF_HINT;
+  return undefined;
+}
+
+function DeviceList({ list, failed, hereTag }: { list: PushDevice[] | undefined; failed: boolean; hereTag: string | null }) {
+  if (failed) return <p className="ui-settings-note">{DEVICES_FAILED}</p>;
+  if (list == null) {
+    return (
+      <List layout="inset">
+        <ListRow variant="skeleton" />
+      </List>
+    );
+  }
+  if (list.length === 0) return <p className="ui-settings-note">{NO_DEVICES}</p>;
+  return (
+    <List layout="inset">
+      {list.map((row) => (
+        <ListRow
+          key={row.id}
+          variant="static"
+          title={deviceName(row.userAgent)}
+          hint={addedLabel(row.createdAt)}
+          value={hereTag != null && row.tag === hereTag ? THIS_DEVICE : undefined}
+        />
+      ))}
+    </List>
+  );
+}
+
 /**
- * `/settings/notifications` (FLOW-502 option A): three switches, per user, all off by default.
- * Turning one on from a device that is not subscribed asks the browser first (from the tap);
- * turning one off only saves. A viewer sets their own switches too.
+ * `/settings/notifications` (FLOW-502, reshaped by FLOW-516, decision 0201). This device has its own
+ * row: on asks for permission and subscribes it (from the tap), off unsubscribes it here and on the
+ * server, and no other device changes. The three switches are what to receive, shared by every
+ * device of the account. The connected devices list shows where pushes go.
  */
-export function NotificationsScreen({ sample, support }: { sample?: NotificationPrefs; support?: PushSupport } = {}) {
+export function NotificationsScreen({
+  sample,
+  support,
+  device,
+  devices,
+  thisTag,
+}: {
+  sample?: NotificationPrefs;
+  support?: PushSupport;
+  /** This device's state in a sample. Live, it is read from the browser. */
+  device?: DevicePush;
+  /** The connected devices in a sample. */
+  devices?: PushDevice[];
+  /** Which of the sample's devices is this one. */
+  thisTag?: string;
+} = {}) {
   const preview = useHomePreview();
   const search = usePreviewSearch();
   const [can] = useState<PushSupport>(() => support ?? pushSupport());
   const live = sample == null && preview === "off" && can !== "not-configured";
   const query = useNotificationPrefsQuery(live);
+  const deviceQuery = useDevicePushQuery(live && can === "ok");
+  const devicesQuery = usePushDevicesQuery(live);
   const client = useQueryClient();
   const toast = useToast();
   const [local, setLocal] = useState<NotificationPrefs>(sample ?? NO_PREFS);
+  const [sampleHere, setSampleHere] = useState<DevicePush>(() => device ?? (can === "ok" ? "not-subscribed" : can === "not-configured" ? "unsupported" : can));
   const [busy, setBusy] = useState<NotificationPrefKey | null>(null);
-  const [subscribedHere, setSubscribedHere] = useState(false);
+  const [deviceBusy, setDeviceBusy] = useState(false);
+  const [testBusy, setTestBusy] = useState(false);
+  const [failure, setFailure] = useState<SubscribeOutcome | null>(null);
   const backTo = `/settings${search}`;
   const noteId = useId();
 
@@ -77,9 +148,72 @@ export function NotificationsScreen({ sample, support }: { sample?: Notification
     );
   }
   const prefs = live ? (query.data ?? NO_PREFS) : local;
+  const here: DevicePush | undefined = !live ? sampleHere : can === "ok" ? deviceQuery.data?.state : can;
+  const hereTag = live ? (deviceQuery.data?.tag ?? null) : (thisTag ?? null);
+  const list = live ? devicesQuery.data : (devices ?? []);
   const note = can === "ios-home-screen" ? IOS_HOME_NOTE : can === "unsupported" ? UNSUPPORTED_NOTE : null;
   // On an iPhone tab, "למסך הבית" leads to the install steps instead of ending the sentence.
   const noteBody = can === "ios-home-screen" ? <IosHomeNote /> : note;
+  const anyOn = SWITCHES.some((item) => prefs[item.key]);
+  const deviceUsable = here === "subscribed" || here === "not-subscribed" || here === "no-worker";
+
+  function refresh() {
+    void client.invalidateQueries({ queryKey: DEVICE_PUSH_KEY });
+    void client.invalidateQueries({ queryKey: PUSH_DEVICES_KEY });
+    void client.invalidateQueries({ queryKey: PUSH_PREFS_KEY });
+  }
+
+  function deviceChange(on: boolean) {
+    if (deviceBusy) return;
+    if (!live) {
+      setSampleHere(on ? "subscribed" : "not-subscribed");
+      toast.show({ message: on ? PUSH_ACTIVE_HERE : DEVICE_OFF_TOAST });
+      return;
+    }
+    if (on) {
+      // First, with no await before it: iOS asks for permission only from this tap.
+      const pending = subscribeThisDevice();
+      setDeviceBusy(true);
+      setFailure(null);
+      void pending
+        .then((outcome) => {
+          if (outcome.result === "ok") {
+            toast.show({ message: PUSH_ACTIVE_HERE });
+            return;
+          }
+          setFailure(outcome);
+          toast.show(subscribeFailure(outcome.result));
+        })
+        .finally(() => {
+          setDeviceBusy(false);
+          refresh();
+        });
+      return;
+    }
+    setDeviceBusy(true);
+    setFailure(null);
+    void forgetThisDevice({ server: true })
+      .then(() => { toast.show({ message: DEVICE_OFF_TOAST }); })
+      .finally(() => {
+        setDeviceBusy(false);
+        refresh();
+      });
+  }
+
+  function testPush() {
+    if (testBusy) return;
+    if (!live) {
+      toast.show({ message: TEST_PUSH_COPY.sent });
+      return;
+    }
+    setTestBusy(true);
+    void sendTestPush()
+      .then((result) => {
+        toast.show({ message: TEST_PUSH_COPY[result], tone: result === "sent" ? "ok" : result === "limit" ? "info" : "bad" });
+        if (result === "no-device") refresh();
+      })
+      .finally(() => { setTestBusy(false); });
+  }
 
   /** A saved switch says what it did, and ביטול turns it back (FLOW-512). */
   function said(key: NotificationPrefKey, on: boolean) {
@@ -91,9 +225,9 @@ export function NotificationsScreen({ sample, support }: { sample?: Notification
     });
   }
 
+  /** The switches only say what to receive; they never subscribe or drop a device. */
   async function change(key: NotificationPrefKey, on: boolean) {
     if (busy != null) return;
-    if (on && can !== "ok") return;
     if (!live) {
       setLocal((current) => ({ ...current, [key]: on }));
       said(key, on);
@@ -101,14 +235,6 @@ export function NotificationsScreen({ sample, support }: { sample?: Notification
     }
     setBusy(key);
     try {
-      if (on && !subscribedHere) {
-        const result = await subscribeThisDevice();
-        if (result !== "ok") {
-          toast.show({ message: result === "denied" ? PUSH_BLOCKED : PUSH_FAILED, tone: result === "denied" ? "info" : "bad" });
-          return;
-        }
-        setSubscribedHere(true);
-      }
       const saved = await saveNotificationPrefs({ [key]: on });
       client.setQueryData(PUSH_PREFS_KEY, saved);
       said(key, on);
@@ -120,7 +246,7 @@ export function NotificationsScreen({ sample, support }: { sample?: Notification
   }
 
   return (
-    <div className="ui-settings-page">
+    <div className="ui-settings-page ui-notify-page">
       <ScreenHeader
         title="התראות"
         kicker="הגדרות"
@@ -128,6 +254,24 @@ export function NotificationsScreen({ sample, support }: { sample?: Notification
         backTo={backTo}
         below={note != null ? <p className="t-caption t-muted" id={noteId} data-push-note="">{noteBody}</p> : undefined}
       />
+      <List layout="inset">
+        <Toggle
+          label={DEVICE_LABEL}
+          hint={deviceHint(here)}
+          icon={<BellIcon size={22} />}
+          checked={here === "subscribed"}
+          busy={deviceBusy || (live && can === "ok" && here == null)}
+          disabled={!deviceUsable}
+          disabledNoteId={note != null ? noteId : undefined}
+          onChange={deviceChange}
+        />
+        {list != null && list.length > 0 ? (
+          <ListRow variant="button" title={TEST_PUSH} icon={<BellIcon size={22} />} busy={testBusy} onClick={testPush} />
+        ) : null}
+      </List>
+      {failure != null ? <p className="ui-settings-note" data-push-diagnostic="">{subscribeDiagnostic(failure)}</p> : null}
+      {anyOn && list != null && list.length === 0 ? <p className="ui-settings-note" role="status" data-push-nudge="">{NO_DEVICE_LINE}</p> : null}
+      <h2 className="ui-settings-head">{SWITCHES_HEAD}</h2>
       <List layout="inset">
         {SWITCHES.map((item) => (
           <Toggle
@@ -137,14 +281,14 @@ export function NotificationsScreen({ sample, support }: { sample?: Notification
             icon={item.icon}
             checked={prefs[item.key]}
             busy={busy === item.key}
-            // Off stays reachable on any device; on needs a browser that can subscribe. While one
-            // switch saves, the others wait.
-            disabled={(can !== "ok" && !prefs[item.key]) || (busy != null && busy !== item.key)}
-            disabledNoteId={note != null && can !== "ok" && !prefs[item.key] ? noteId : undefined}
+            // While one switch saves, the others wait.
+            disabled={busy != null && busy !== item.key}
             onChange={(checked) => { void change(item.key, checked); }}
           />
         ))}
       </List>
+      <h2 className="ui-settings-head">{DEVICES_HEAD}</h2>
+      <DeviceList list={list} failed={live && devicesQuery.isError} hereTag={hereTag} />
     </div>
   );
 }
