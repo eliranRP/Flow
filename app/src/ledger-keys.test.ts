@@ -13,6 +13,8 @@ const ACCOUNT_KEYS = [
   "my-invites",
   "team",
   "notification-prefs",
+  "push-devices",
+  "push-device",
   "mcp-status",
   "jev-key-status",
   "jev-integration",
