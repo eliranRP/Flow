@@ -189,8 +189,13 @@ export function nextMonthForecast(input: {
   /** The project's loans, and the company's categories their parts file to. */
   loans?: readonly ForecastLoan[];
   categories?: readonly ForecastCategory[];
+  /**
+   * yyyy-mm, a later month than next month (the company's rest of the year, decision 0200): the same rules
+   * for that month. Default: next month.
+   */
+  month?: string;
 }): NextMonthForecast {
-  const month = nextMonthKey(input.today);
+  const month = input.month ?? nextMonthKey(input.today);
   const thisMonth = input.today.slice(0, 7);
   // A loan payment is not a profit line: the loan's own rows stand for its interest and escrow.
   const charges = input.recurring.filter((party) => party.project_id === input.projectId && party.pays_loan !== true);

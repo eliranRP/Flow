@@ -8,7 +8,8 @@ import type { ProfitLine, ProfitModel } from "./use-company-profit";
  */
 
 /** One summary row: income and expenses positive, the profits signed. */
-export type SummaryLine = { id: "income" | "expense" | "profit" | "ytd"; label: string; minor: bigint; strong: boolean };
+/** `compare` is the year view's year before, or since the start's most profitable year: signed, as a profit. */
+export type SummaryLine = { id: "income" | "expense" | "profit" | "ytd" | "compare"; label: string; minor: bigint; strong: boolean };
 
 /**
  * הכנסות, הוצאות שנספרות ברווח, רווח <month> (the row that matters, bold) and רווח מתחילת השנה, once the

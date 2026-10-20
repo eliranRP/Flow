@@ -68,4 +68,10 @@ describe("the month chart's scale (chartRows)", () => {
     expect(capHeight(0n, 400_000n)).toBe(0);
     expect(capHeight(-10n, 400_000n)).toBe(0);
   });
+
+  it("a year's chart: every month left is dashed, after the months so far, on the one scale (FLOW-145)", () => {
+    const bars = chartBars([month("2026-09", 100_000n, 50_000n), month("2026-10", 200_000n, 80_000n)], [month("2026-11", 400_000n, 100_000n), month("2026-12", 300_000n, 120_000n)]);
+    expect(bars.map((bar) => [bar.key, bar.forecast])).toEqual([["2026-09", false], ["2026-10", false], ["2026-11", true], ["2026-12", true]]);
+    expect(bars.map((bar) => bar.incomePx)).toEqual([27, 54, 108, 81]);
+  });
 });

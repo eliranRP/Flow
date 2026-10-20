@@ -89,8 +89,10 @@ export function companyNextMonthForecast(input: {
   loans: readonly ForecastLoan[];
   categories: readonly Pick<CategoryRow, "id" | "name" | "loan_part" | "excluded_from_pnl">[];
   inputs: CompanyNextMonthInputs;
+  /** yyyy-mm, a later month (the rest of the year, decision 0200); default next month. */
+  month?: string;
 }): CompanyNextMonth {
-  const month = nextMonthKey(input.today);
+  const month = input.month ?? nextMonthKey(input.today);
   const overhead = input.inputs.overhead_project_id;
   const build = (projectId: string, rows: readonly CategoryMonthsRow[], recurring: readonly ExpectedParty[], loans: readonly ForecastLoan[]) => nextMonthForecast({
     projectId,
@@ -100,6 +102,7 @@ export function companyNextMonthForecast(input: {
     categoryMonths: asCategoryMonths(projectId, rows),
     loans,
     categories: input.categories,
+    month,
   });
   // Only the projects the read lists: a finished project's charges, loans and edits add nothing.
   const parts: CompanyForecastPart[] = input.inputs.projects
