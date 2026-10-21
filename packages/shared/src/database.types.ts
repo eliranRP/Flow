@@ -1295,6 +1295,9 @@ isOneToOne: false
 "company_pnl_basis":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"count_transfer_matches":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
 "create_category":
 { Args: { "p_kind": string,"p_name": string }; Returns: string
                            } |
@@ -1469,7 +1472,7 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
 "list_transfer_matches":
-{ Args: Record<PropertyKey, never>; Returns: Json
+{ Args: { "p_all"?: boolean }; Returns: Json
                            },
 "list_unpaid":
 { Args: Record<PropertyKey, never>; Returns: Json

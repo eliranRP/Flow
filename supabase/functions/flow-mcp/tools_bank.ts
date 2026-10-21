@@ -5,7 +5,7 @@
 // app's RPC, so its rules stay in one place; the owner only, with the idempotency key and undo kind
 // bank_accounts (id: the connection).
 // FLOW-941 (decision 0205): the transfers between two connections Flow suggests, what Home's העברות לבדיקה
-// screen does: list_transfer_matches, and confirm_transfer_match / dismiss_transfer_match through
+// screen does: list_transfer_matches (every pair, however old: the app shows the last 90 days), and confirm_transfer_match / dismiss_transfer_match through
 // mcp_answer_transfer_match (owner or editor, the idempotency key, undo kind transfer_match, id: the
 // money-out line).
 import { z } from "zod";
@@ -50,7 +50,10 @@ export const BANK_WRITES = ["set_bank_accounts", "answer_bank_account", "confirm
 /** The two reads: list_bank_connections (mcp_bank_connections) and list_transfer_matches. */
 export async function bankRead(name: "list_bank_connections" | "list_transfer_matches", rpc: ToolRpc): Promise<ToolResult> {
   const list = name === "list_bank_connections" ? "connections" : "matches";
-  const result = await rpc(name === "list_bank_connections" ? "mcp_bank_connections" : "list_transfer_matches", {});
+  // The MCP lists every pair (p_all), so an agent can work through the backlog the app's 90 days leave out.
+  const result = name === "list_bank_connections"
+    ? await rpc("mcp_bank_connections", {})
+    : await rpc("list_transfer_matches", { p_all: true });
   const body = result.json;
   if (result.status >= 400 || body == null || typeof body !== "object" || Array.isArray(body)) return fail("refused", READ_REFUSED);
   if (!Array.isArray((body as Record<string, unknown>)[list])) return fail("refused", READ_REFUSED);

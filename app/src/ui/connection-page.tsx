@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { ScreenHeader } from "./screen-header";
+// The connection pages' and the Mercury account picker's styles load with them, not with Home.
+import "./css/53-mercury-connections.css";
 
 /**
  * The shared shape of a connection page (FLOW-512, implementation-guide §7.14): the title with one

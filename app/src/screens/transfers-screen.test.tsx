@@ -1,3 +1,4 @@
+import { formatAmountText } from "@flow/shared";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -81,6 +82,18 @@ describe("TransfersScreen", () => {
     expect(within(first).getByText("יום אחד בין השורות")).toBeTruthy();
     expect(within(first).getByText("השם תואם")).toBeTruthy();
     expect(within(cards[1] as HTMLElement).getByText("באותו יום")).toBeTruthy();
+  });
+
+  it("names the card with the amount as shown, cents and all", async () => {
+    db.hold = false;
+    const [first] = transfersSample();
+    if (!first) throw new Error("sample");
+    const cents = { ...first, out: { ...first.out, amount_minor: 123_456n }, in: { ...first.in, amount_minor: 123_456n } };
+    renderScreen([cents]);
+    const card = await screen.findByRole("region", { name: /העברה אפשרית/ });
+    const shown = formatAmountText(123_456n, "USD", { detail: true });
+    expect(shown).toContain(".56");
+    expect(card.getAttribute("aria-label")).toBe(`העברה אפשרית: ${shown}`);
   });
 
   it("an empty list says so", () => {

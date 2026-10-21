@@ -14,6 +14,10 @@ import { HintParts } from "../ui/hint-parts";
 import { CheckIcon } from "../ui/icons";
 import { ScreenState } from "../ui/screen-state";
 import { useToast } from "../ui/toast";
+// The card is the recurring match box (48, 49) with its own rows (54); none of it is in Home's first load.
+import "../ui/css/48-recurring-charge.css";
+import "../ui/css/49-recurring-answers.css";
+import "../ui/css/54-transfer-matches.css";
 
 const FAILED = "לא הצלחנו לעדכן את השורות.";
 
@@ -48,7 +52,7 @@ function TransferLeg({ side, income }: { side: TransferSide; income: boolean }) 
 /** One suggestion: the question, the money out and the money in, and the two answers (none for a viewer). */
 export function TransferMatchCard({ match, readOnly, onAnswer }: { match: TransferMatch; readOnly: boolean; onAnswer: (same: boolean) => void }) {
   return (
-    <section className="ui-recurring-match ui-xfer-card" aria-label={`העברה אפשרית: ${formatAmountText(match.out.amount_minor, match.out.currency)}`}>
+    <section className="ui-recurring-match ui-xfer-card" aria-label={`העברה אפשרית: ${formatAmountText(match.out.amount_minor, match.out.currency, { detail: true })}`}>
       <p className="ui-recurring-match-title">זו העברה בין החשבונות שלכם?</p>
       <ul className="ui-xfer-legs">
         <TransferLeg side={match.out} income={false} />

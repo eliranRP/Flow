@@ -1,7 +1,7 @@
 import { formatAmountText } from "@flow/shared";
 import { missingBillsTitle, type ChargeChangeView } from "../forecast";
 import type { BannerRow } from "../ui/banner";
-import { CalendarIcon, InvoiceIcon, TransferIcon, TrendDownIcon, TrendUpIcon } from "../ui/icons";
+import { BankIcon, CalendarIcon, InvoiceIcon, TrendDownIcon, TrendUpIcon } from "../ui/icons";
 
 // Home's attention rows, in their own file so the project page (FLOW-435) shows them without
 // loading Home. HomeScreen.tsx re-exports attentionRows for its older importers.
@@ -57,7 +57,8 @@ export function attentionRows({
     rows.push({
       id: "transfers",
       to: `/transfers${search}`,
-      icon: <TransferIcon size={24} stroke={1.9} />,
+      // The bank icon Home already loads (between two bank accounts), not one more icon in its first load.
+      icon: <BankIcon size={24} stroke={1.9} />,
       title: transfers === 1 ? "העברה אחת לבדיקה" : <><bdi dir="ltr">{String(transfers)}</bdi> העברות לבדיקה</>,
       hint: "בין חשבונות Mercury",
     });

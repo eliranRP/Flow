@@ -32,6 +32,7 @@ export const LEDGER_KEYS = [
   "expected-months",
   "recurring-changes",
   "transfer-matches",
+  "transfer-match-count",
   "recurring-schedule",
   "payment-recurring",
   "party-charges",

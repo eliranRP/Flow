@@ -15,18 +15,24 @@
 --    part or kept out), neither split, a loan payment, an invoice's linked deposit or in a confirmed
 --    pair, and the pair not rejected. Each line is in one suggestion at most: the closest dates
 --    first, then a name hint (one side's payee names the other organisation), then the newest.
--- 3. public.list_transfer_matches(): the suggestions, with both lines (date, amount, payee, account,
---    organisation). Any member reads them.
--- 4. public.answer_transfer_match(out, in, same), owner or editor. True: both lines become a transfer,
---    as a transfer to an own account the sync does not skip is filed: the category העברות of the
---    line's kind (when the company has one), kept out of the P&L (in_pnl_override false) and out of
---    the cash view (in_cash_override false); an open review of either line is set aside (skipped, so
+-- 3. public.list_transfer_matches(p_all): the suggestions, with both lines (date, amount, payee,
+--    account, organisation). Any member reads them. The app's list (and its count) has the pairs whose
+--    two lines are dated within the last 90 days; p_all true (the MCP tool) has every pair.
+-- 4. public.answer_transfer_match(out, in, same), owner or editor. True (only for a pair the list could
+--    give: both lines pass transfer_match_lines, then two connections, same amount and currency,
+--    3 days): both lines become a transfer, as a transfer to an own account the sync does not skip
+--    is filed: the category העברות of the line's kind (created as the default one when the company has
+--    none), kept out of the P&L (in_pnl_override false) and out of the cash view (in_cash_override
+--    false); an open review of either line is set aside (skipped, so
 --    the sync does not queue it again). False: the pair is not suggested again; nothing else changes.
 --    Null takes the answer back: a confirmed pair's lines get back what they had, field by field where
 --    nothing changed them since, and their reviews reopen. Returns prior_same for ביטול.
 -- 5. public.mcp_answer_transfer_match: the MCP's confirm_transfer_match and dismiss_transfer_match, with
 --    the idempotency key, the write gate and undo kind transfer_match (id: the money-out line).
 --    mcp_writes and mcp_undo are patched from their current definitions with counted anchors.
+-- 6. public.count_transfer_matches(): how many suggestions (the last 90 days), for Home's row.
+-- 7. sync_review_queue (patched with a counted anchor) does not queue a line in a confirmed pair, so
+--    a confirmed transfer stays out of לאישור when Mercury later edits either line.
 -- CLI 2.118.0 runs each statement on its own. This file is one transaction.
 
 begin;
@@ -112,8 +118,10 @@ as $$
 $$;
 
 -- The lines that may be one side of a transfer: posted Mercury lines on a synced account that still
--- count in the P&L, not split, not a loan payment, not an invoice's deposit, not in a confirmed pair.
-create function private.transfer_match_lines(p_company uuid)
+-- count in the P&L, not a credit note, not split, not a loan payment, not an invoice's deposit, not in a
+-- confirmed pair. The list, the count and the confirmation all ask this one function (p_ids: only
+-- these lines, for the confirmation; null: every line).
+create function private.transfer_match_lines(p_company uuid, p_ids uuid[] default null)
 returns table (
   id uuid, direction public.txn_direction, doc_date date, currency text, amount bigint,
   slot smallint, org_label text, party text
@@ -130,6 +138,7 @@ as $$
   left join public.suppliers s on s.id = t.supplier_id and s.company_id = t.company_id
   left join public.customers cu on cu.id = t.customer_id and cu.company_id = t.company_id
   where t.company_id = p_company
+    and (p_ids is null or t.id = any (p_ids))
     and t.source = 'mercury'
     and t.removed_at is null
     and t.line_status = 'posted'
@@ -151,8 +160,9 @@ as $$
 $$;
 
 -- The suggestions: each line in one pair at most, the closest dates first, then a name hint, then the
--- newest. Nothing for a company with fewer than two chosen Mercury connections.
-create function private.transfer_match_pairs(p_company uuid)
+-- newest. Nothing for a company with fewer than two chosen Mercury connections. p_since: only lines
+-- dated on or after it (the app's 90 days); null: every line (the MCP's backlog).
+create function private.transfer_match_pairs(p_company uuid, p_since date default null)
 returns table (out_id uuid, in_id uuid, day_diff integer, name_hint boolean)
 language plpgsql
 stable
@@ -170,7 +180,9 @@ begin
     return;
   end if;
   for r in
-    with lines as materialized (select * from private.transfer_match_lines(p_company))
+    with lines as materialized (
+      select * from private.transfer_match_lines(p_company) l where p_since is null or l.doc_date >= p_since
+    )
     select o.id as o_id, i.id as i_id, abs(o.doc_date - i.doc_date) as dd,
       (private.transfer_name_hint(o.party, i.org_label) or private.transfer_name_hint(i.party, o.org_label)) as hint,
       greatest(o.doc_date, i.doc_date) as newest
@@ -229,12 +241,13 @@ $$;
 
 revoke all on function private.mercury_synced_accounts(uuid) from public, anon, authenticated;
 revoke all on function private.transfer_name_hint(text, text) from public, anon, authenticated;
-revoke all on function private.transfer_match_lines(uuid) from public, anon, authenticated;
-revoke all on function private.transfer_match_pairs(uuid) from public, anon, authenticated;
+revoke all on function private.transfer_match_lines(uuid, uuid[]) from public, anon, authenticated;
+revoke all on function private.transfer_match_pairs(uuid, date) from public, anon, authenticated;
 revoke all on function private.transfer_match_line_json(uuid, uuid) from public, anon, authenticated;
 
--- 3. The list (any member).
-create function public.list_transfer_matches()
+-- 3. The list (any member). The app reads the last 90 days (both lines dated within them); the MCP
+-- passes p_all for every pair, however old, so an agent can work through the backlog.
+create function public.list_transfer_matches(p_all boolean default false)
 returns jsonb
 language plpgsql
 stable
@@ -255,17 +268,41 @@ begin
         'day_diff', p.day_diff,
         'name_hint', p.name_hint
       ) order by p.ord)
-    from (
-      select x.*, row_number() over () as ord from private.transfer_match_pairs(cid) x
-    ) p
+    from private.transfer_match_pairs(cid, case when coalesce(p_all, false) then null else private.flow_today() - 90 end)
+      with ordinality p(out_id, in_id, day_diff, name_hint, ord)
   ), '[]'::jsonb));
 end;
 $$;
 
-revoke all on function public.list_transfer_matches() from public, anon;
-grant execute on function public.list_transfer_matches() to authenticated, service_role;
-comment on function public.list_transfer_matches() is
-  'FLOW-941 (decision 0205): the suggested transfers between two Mercury connections, both lines of each.';
+revoke all on function public.list_transfer_matches(boolean) from public, anon;
+grant execute on function public.list_transfer_matches(boolean) to authenticated, service_role;
+comment on function public.list_transfer_matches(boolean) is
+  'FLOW-941 (decision 0205): the suggested transfers between two Mercury connections, both lines of each. The last 90 days; p_all (the MCP) every pair.';
+
+-- How many there are, for Home's row (any member): the app's pairs (the last 90 days), without building
+-- both lines of each.
+create function public.count_transfer_matches()
+returns integer
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  cid uuid;
+begin
+  cid := private.readable_company_id();
+  if cid is null then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
+  return (select count(*)::integer from private.transfer_match_pairs(cid, private.flow_today() - 90));
+end;
+$$;
+
+revoke all on function public.count_transfer_matches() from public, anon;
+grant execute on function public.count_transfer_matches() to authenticated, service_role;
+comment on function public.count_transfer_matches() is
+  'FLOW-941 (decision 0205): how many transfers between two Mercury connections are suggested (list_transfer_matches, counted; 100 at most).';
 
 -- 4. Confirming: one line filed as a transfer. Returns what it had and what was written.
 create function private.transfer_mark_line(p_company uuid, p_id uuid)
@@ -279,6 +316,8 @@ declare
   reviews uuid[];
 begin
   select * into line from public.transactions t where t.id = p_id and t.company_id = p_company;
+  -- The category העברות of the line's kind, found by name as the connector hints find it; a company
+  -- that deleted or renamed it gets it back as the default seeds it (out of the P&L and the cash view).
   select c.id into cat
   from public.categories c
   where c.company_id = p_company
@@ -287,6 +326,15 @@ begin
     and c.loan_part is null
   order by c.hidden, c.sort_order, c.id
   limit 1;
+  if cat is null then
+    insert into public.categories (company_id, name, kind, sort_order, is_default, excluded_from_pnl, in_cash)
+    select p_company, 'העברות', line.direction::text::public.category_kind,
+      coalesce((select max(c.sort_order) + 1 from public.categories c
+                where c.company_id = p_company and c.kind::text = line.direction::text), 1),
+      true, true, false
+    on conflict (company_id, kind, name) do nothing
+    returning id into cat;
+  end if;
   select coalesce(array_agg(q.id order by q.created_at), '{}') into reviews
   from public.review_queue q
   where q.company_id = p_company and q.transaction_id = p_id and q.status = 'open';
@@ -384,8 +432,8 @@ declare
   i public.transactions%rowtype;
   cur public.transfer_matches%rowtype;
   prior_same boolean;
-  out_slot smallint;
-  in_slot smallint;
+  lo record;
+  li record;
   written jsonb := '{}'::jsonb;
 begin
   cid := private.current_company_id();
@@ -429,16 +477,6 @@ begin
     end if;
 
     if p_same then
-      select a.slot into out_slot from private.mercury_synced_accounts(cid) a where a.account_id = o.provider_meta->>'account_id';
-      select a.slot into in_slot from private.mercury_synced_accounts(cid) a where a.account_id = i.provider_meta->>'account_id';
-      if o.removed_at is not null or i.removed_at is not null
-        or o.line_status <> 'posted' or i.line_status <> 'posted'
-        or o.currency <> i.currency or o.amount_original <> i.amount_original
-        or abs(o.doc_date - i.doc_date) > 3
-        or out_slot is null or in_slot is null or out_slot = in_slot
-      then
-        raise exception 'not a transfer pair';
-      end if;
       if exists (
         select 1 from public.transfer_matches m
         where m.company_id = cid and m.same
@@ -452,6 +490,18 @@ begin
       end if;
       if exists (select 1 from public.line_splits x where x.company_id = cid and x.transaction_id in (o.id, i.id)) then
         raise exception 'line has a split by category';
+      end if;
+      -- The list's own rule (transfer_match_lines: posted, synced, still in the P&L, not a credit note,
+      -- not an invoice's deposit, …) for both lines, then the pair's: two connections, the same amount
+      -- and currency, 3 days apart at most.
+      select l.* into lo from private.transfer_match_lines(cid, array[o.id]) l where l.direction = 'expense';
+      select l.* into li from private.transfer_match_lines(cid, array[i.id]) l where l.direction = 'income';
+      if lo.id is null or li.id is null
+        or lo.currency <> li.currency or lo.amount <> li.amount
+        or lo.slot = li.slot
+        or abs(lo.doc_date - li.doc_date) > 3
+      then
+        raise exception 'not a transfer pair';
       end if;
       written := jsonb_build_object(
         'out', private.transfer_mark_line(cid, o.id),
@@ -652,6 +702,33 @@ $n$ || anchor);
   execute def;
 end;
 $undo$;
+
+-- sync_review_queue: a line in a confirmed pair is a transfer the user filed, so it is not queued
+-- again, even after Mercury changes its description, amount or date (the skip's fingerprint then no
+-- longer holds). Both inserts (money out and money in) take the check.
+do $sync$
+declare
+  def text;
+  anchor text;
+begin
+  def := pg_get_functiondef('public.sync_review_queue(uuid)'::regprocedure);
+  anchor := $a$    and not exists (
+      select 1 from public.review_queue q
+      where q.transaction_id = t.id and q.status = 'open'
+    )
+$a$;
+  if pg_temp.anchor_count(def, anchor) <> 2 then
+    raise exception 'sync_review_queue is not the expected definition';
+  end if;
+  execute replace(def, anchor, anchor || $n$    -- FLOW-941: a line in a confirmed transfer pair is not queued.
+    and not exists (
+      select 1 from public.transfer_matches m
+      where m.company_id = t.company_id and m.same
+        and t.id in (m.out_transaction_id, m.in_transaction_id)
+    )
+$n$);
+end
+$sync$;
 
 drop function pg_temp.anchor_count(text, text);
 

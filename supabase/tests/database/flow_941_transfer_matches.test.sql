@@ -6,7 +6,7 @@
 
 begin;
 
-select plan(33);
+select plan(45);
 
 do $users$
 begin
@@ -41,7 +41,10 @@ insert into public.connector_connections (
    '[{"id":"acct-q1","label":"Main","last4":"9034","kind":"checking"}]',
    'Quarry Sample Inc', '2026-01-02T00:00:00Z', null, '{}');
 
--- label, direction, account, date, amount
+-- label, direction, account, date, amount. The dates are as of 2026-10-25 and move with today, so the
+-- app's 90 days hold the same lines whenever the test runs (pg_temp.day).
+create function pg_temp.day(p date) returns date language sql stable as $$ select p + ((now() at time zone 'Asia/Jerusalem')::date - date '2026-10-25'); $$;
+grant execute on function pg_temp.day(date) to authenticated, service_role;
 create temp table xm_lines (label text, direction text, account text, doc_date date, amount bigint);
 insert into xm_lines values
   ('out1', 'expense', 'acct-h1', '2026-10-10', 500000),
@@ -56,14 +59,31 @@ insert into xm_lines values
   ('out5', 'expense', 'acct-h1', '2026-10-05', 33000),
   ('in5', 'income', 'acct-q1', '2026-10-05', 33000),
   ('out6', 'expense', 'acct-h1', '2026-10-15', 44000),
-  ('in6', 'income', 'acct-q1', '2026-10-15', 44000);
+  ('in6', 'income', 'acct-q1', '2026-10-15', 44000),
+  -- Each in-line below is one the list leaves out: an invoice's linked deposit, a credit note, a line
+  -- kept out of the P&L. Confirm refuses them too.
+  ('out7', 'expense', 'acct-h1', '2026-10-20', 61000),
+  ('in7', 'income', 'acct-q1', '2026-10-20', 61000),
+  ('out8', 'expense', 'acct-h1', '2026-10-21', 62000),
+  ('in8', 'income', 'acct-q1', '2026-10-21', 62000),
+  ('out9', 'expense', 'acct-h1', '2026-10-22', 63000),
+  ('in9', 'income', 'acct-q1', '2026-10-22', 63000),
+  -- Older than the app's 90 days: only the MCP's list (p_all) has it.
+  ('outold', 'expense', 'acct-h1', '2026-06-20', 81000),
+  ('inold', 'income', 'acct-q1', '2026-06-20', 81000);
 insert into xm (label, id)
 select l.label, tests.fixture_line(
-  pg_temp.xid('co'), 'xm:' || l.label, l.amount, l.direction, null, null, l.doc_date,
+  pg_temp.xid('co'), 'xm:' || l.label, l.amount, l.direction, null, null, pg_temp.day(l.doc_date),
   p_currency => 'USD', p_source => 'mercury', p_pnl_role => null,
-  p_doc_kind => case when l.direction = 'expense' then 'expense' else 'invoice_receipt' end
+  p_doc_kind => case when l.label = 'in8' then 'credit' when l.direction = 'expense' then 'expense' else 'invoice_receipt' end
 )
 from xm_lines l;
+insert into xm (label, id) values ('inv7', tests.fixture_line(
+  pg_temp.xid('co'), 'xm:inv7', 61000, 'income', null, null, pg_temp.day('2026-10-18'),
+  p_currency => 'USD', p_source => 'manual', p_pnl_role => null, p_doc_kind => 'invoice'));
+insert into public.invoice_payment_links (company_id, transaction_id, bank_transaction_id, linked_by)
+values (pg_temp.xid('co'), pg_temp.xid('inv7'), pg_temp.xid('in7'), pg_temp.xid('owner'));
+update public.transactions set in_pnl_override = false where id = pg_temp.xid('in9');
 update public.transactions t
 set provider_meta = jsonb_build_object('method', 'ach', 'account_id', l.account),
     user_assigned = false, category_assigned = false
@@ -104,17 +124,17 @@ end;
 $$;
 grant execute on function pg_temp.as_mcp(text, text) to authenticated, service_role;
 
--- The pairs the list gives, as "out/in" labels.
-create or replace function pg_temp.pairs()
+-- The pairs the list gives, as "out/in" labels (p_all: the MCP's list, every pair however old).
+create or replace function pg_temp.pairs(p_all boolean default false)
 returns text
 language sql
 as $$
   select coalesce(string_agg(
     (select x.label from pg_temp.xm x where x.id = (m->'out'->>'transaction_id')::uuid) || '/' ||
     (select x.label from pg_temp.xm x where x.id = (m->'in'->>'transaction_id')::uuid), ' ' order by o), '')
-  from jsonb_array_elements(public.list_transfer_matches()->'matches') with ordinality e(m, o);
+  from jsonb_array_elements(public.list_transfer_matches(p_all)->'matches') with ordinality e(m, o);
 $$;
-grant execute on function pg_temp.pairs() to authenticated, service_role;
+grant execute on function pg_temp.pairs(boolean) to authenticated, service_role;
 
 -- A line's transfer state: its category (העברות, or - for any other: a null category takes a suggested
 -- one), in_pnl_override, in_cash_override.
@@ -145,7 +165,7 @@ select is(pg_temp.pairs(), 'out6/in6 out1/in1',
   'the same day first; a gap over 3 days, the same connection, an unsynced account and a line already a transfer are not suggested, and each line is in one pair');
 select is(
   (public.list_transfer_matches()->'matches'->1->'out') - 'transaction_id'::text,
-  '{"doc_date":"2026-10-10","amount_minor":500000,"currency":"USD","description":"xm:out1","party":"Quarry Sample Inc","slot":1,"org_label":"Harbor Sample LLC","account_name":"Operations","account_last4":"4821"}'::jsonb,
+  jsonb_build_object('doc_date', pg_temp.day('2026-10-10')) || '{"amount_minor":500000,"currency":"USD","description":"xm:out1","party":"Quarry Sample Inc","slot":1,"org_label":"Harbor Sample LLC","account_name":"Operations","account_last4":"4821"}'::jsonb,
   'a side has its date, amount, payee, connection, organisation and account');
 select is(
   (public.list_transfer_matches()->'matches'->1->>'name_hint')::boolean and (public.list_transfer_matches()->'matches'->1->>'day_diff')::int = 1,
@@ -250,7 +270,74 @@ select is(
   public.mcp_answer_transfer_match('xm-bad-2', pg_temp.xid('out2'), pg_temp.xid('in2'), true)->'error',
   '{"code":"refused","message":"not a transfer pair"}'::jsonb, 'a pair that does not fit is refused');
 
--- 33. A company with one chosen connection gets no suggestion.
+-- 33-35. Confirm takes only a pair the list could give (the list's rule for both lines).
+select tests.authenticate_as('xm_owner');
+select throws_ok(
+  format('select public.answer_transfer_match(%L, %L, true)', pg_temp.xid('out7'), pg_temp.xid('in7')),
+  'not a transfer pair', 'an invoice''s linked deposit is refused');
+select throws_ok(
+  format('select public.answer_transfer_match(%L, %L, true)', pg_temp.xid('out8'), pg_temp.xid('in8')),
+  'not a transfer pair', 'a money-in credit note is refused');
+select throws_ok(
+  format('select public.answer_transfer_match(%L, %L, true)', pg_temp.xid('out9'), pg_temp.xid('in9')),
+  'not a transfer pair', 'a line kept out of the P&L is refused');
+
+-- 36-37. A confirmed pair stays out of לאישור, also after Mercury edits a line.
+select public.answer_transfer_match(pg_temp.xid('out6'), pg_temp.xid('in6'), true);
+reset role;
+update public.transactions set description = 'xm:out6 edited', doc_date = doc_date + 1
+where id = pg_temp.xid('out6');
+create or replace function pg_temp.sync()
+returns void
+language plpgsql
+as $$
+begin
+  perform set_config('request.jwt.claim.role', 'service_role', true);
+  perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  perform public.sync_review_queue(pg_temp.xid('co'));
+end;
+$$;
+select pg_temp.sync();
+select is(coalesce(pg_temp.reviews('out6'), 'none') || ' ' || coalesce(pg_temp.reviews('in6'), 'none'), 'none none',
+  'the sync queues no line of a confirmed pair, even after Mercury edits it');
+select is(pg_temp.reviews('out1'), 'open', 'a line in no confirmed pair is still queued as before');
+
+-- 38-39. The count is the list's length.
+select tests.authenticate_as('xm_owner');
+select is(public.count_transfer_matches(), jsonb_array_length(public.list_transfer_matches()->'matches'),
+  'count_transfer_matches counts the pairs the list gives');
+select tests.authenticate_as('xm_outsider');
+select is(public.count_transfer_matches(), 0, 'another company counts none of these');
+
+-- 40-44. The app's 90 days, the MCP's every pair; confirming an older pair, under a new העברות.
+select tests.authenticate_as('xm_owner');
+select is(pg_temp.pairs() || ' | ' || pg_temp.pairs(true) || ' | ' || public.count_transfer_matches()::text,
+  'out1/in1b | outold/inold out1/in1b | 1',
+  'the app''s list and count have the last 90 days; p_all has every pair, however old');
+reset role;
+update public.categories set name = 'העברות ישנות'
+where company_id = pg_temp.xid('co') and kind = 'income' and name = 'העברות';
+update public.transactions set category_id = (
+  select c.id from public.categories c where c.company_id = pg_temp.xid('co') and c.kind = 'income' and c.name = 'הכנסה אחרת'
+) where id = pg_temp.xid('inold');
+select tests.authenticate_as('xm_editor');
+select is(public.answer_transfer_match(pg_temp.xid('outold'), pg_temp.xid('inold'), true)->>'same', 'true',
+  'a pair older than 90 days can be confirmed');
+select is(pg_temp.state('outold') || ' ' || pg_temp.state('inold'), 'העברות:false:false העברות:false:false',
+  'both lines are filed under העברות, created for the money in when the company had none');
+select is(
+  (select row(c.kind::text, c.excluded_from_pnl, c.in_cash, c.is_default)::text
+   from public.transactions t join public.categories c on c.id = t.category_id where t.id = pg_temp.xid('inold')),
+  '(income,t,f,t)',
+  'the new העברות is the default one: income, out of the P&L and out of the cash view');
+select public.answer_transfer_match(pg_temp.xid('outold'), pg_temp.xid('inold'), null);
+select is(
+  (select coalesce(c.name, '-') from public.transactions t left join public.categories c on c.id = t.category_id where t.id = pg_temp.xid('inold'))
+    || ' ' || pg_temp.state('outold'),
+  'הכנסה אחרת -:null:null',
+  'taking it back restores each line''s category from before');
+
+-- 45. A company with one chosen connection gets no suggestion.
 reset role;
 update public.connector_connections set accounts_chosen_at = null where company_id = pg_temp.xid('co') and slot = 2;
 select tests.authenticate_as('xm_owner');

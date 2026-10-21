@@ -35,6 +35,7 @@ export const readRpcs = new Set([
   "list_review",
   "list_team",
   "list_transfer_matches",
+  "count_transfer_matches",
   "list_unpaid",
   "mcp_company_loan_currency",
   "mcp_loan_payments",

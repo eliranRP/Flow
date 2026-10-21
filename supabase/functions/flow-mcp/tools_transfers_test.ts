@@ -31,12 +31,12 @@ function codeOf(result: Awaited<ReturnType<typeof callTool>>): string | null {
   return result.structuredContent.ok ? null : result.structuredContent.error.code;
 }
 
-Deno.test("list_transfer_matches passes the suggestions through", async () => {
+Deno.test("list_transfer_matches passes every suggestion through, however old (p_all)", async () => {
   const { calls, rpc } = rpcOf((name) => name === "list_transfer_matches" ? { status: 200, json: LISTED } : { status: 500, json: null });
   const result = await callTool("list_transfer_matches", {}, ["read"], rpc);
   assertEquals(result.isError, false);
   if (result.structuredContent.ok) assertEquals(result.structuredContent.data, LISTED);
-  assertEquals(calls, [{ name: "list_transfer_matches", body: {} }]);
+  assertEquals(calls, [{ name: "list_transfer_matches", body: { p_all: true } }]);
 });
 
 Deno.test("list_transfer_matches takes no arguments, needs read scope, and refuses a bad read", async () => {

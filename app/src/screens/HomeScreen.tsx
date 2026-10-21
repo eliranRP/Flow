@@ -31,7 +31,7 @@ import { useDashboardQuery, useOptionalBooks, useUnpaidQuery } from "../use-book
 import { SetupHomeSlot } from "../setup/home";
 import { chargeChangeViews, lateCounts, openMonthDue, useCompanyExpectedQuery, useMissingBillsQuery, useRecurringChangesQuery } from "../forecast";
 import { attentionRows } from "./attention-rows";
-import { useTransferMatchesQuery } from "../transfer-matches";
+import { useTransferMatchCountQuery } from "../transfer-match-count";
 
 export { attentionRows };
 
@@ -144,7 +144,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   // FLOW-415: recurring charges 20% or more off their usual amount. A failed read hides the rows.
   const changes = useRecurringChangesQuery();
   // FLOW-941: suggested transfers between two Mercury connections, a count. A failed read hides the row.
-  const transfers = useTransferMatchesQuery();
+  const transfers = useTransferMatchCountQuery();
 
   const today = israelToday();
   const currentKey = today.slice(0, 7);
@@ -224,7 +224,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       search={search}
       attention={isCurrent ? attentionRows({
         pending: dashboard.data?.review_count ?? 0,
-        transfers: transfers.data?.length ?? 0,
+        transfers: transfers.data ?? 0,
         unpaidCount: unpaidPhase.kind === "ready" ? unpaidOpenRows(unpaid.data ?? []).length : 0,
         unpaidGross,
         currency: base,

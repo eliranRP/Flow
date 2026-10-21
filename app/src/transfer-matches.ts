@@ -18,7 +18,7 @@ export type TransferSide = TransferMatch["out"];
 
 export const TRANSFER_MATCHES_KEY = "transfer-matches";
 
-/** The suggestions. Home counts them; the screen lists them. A failed read just hides Home's row. */
+/** The suggestions the screen lists (the last 90 days). Home counts them with useTransferMatchCountQuery. */
 export function useTransferMatchesQuery(active = true) {
   const preview = useHomePreview();
   return useQuery({
