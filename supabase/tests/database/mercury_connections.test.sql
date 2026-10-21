@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(37);
+select plan(40);
 
 do $users$
 begin
@@ -156,6 +156,23 @@ select is(
   (select string_agg(slot::text || ':' || sync_cursor, ',' order by slot) from public.connector_connections where company_id = pg_temp.mc_id('a') and provider = 'mercury'),
   '1:c1,2:c2-next',
   'and moves only slot 2''s cursor');
+
+-- Each connection's skip records: a complete run replaces only its own, not another connection's.
+select lives_ok(
+  format($$select public.upsert_connector_lines(%L, 'mercury',
+    '{"lines": [], "complete": true, "skips": [{"external_id": "tx-slot1", "reason": "unsynced_account"}]}'::jsonb,
+    'c1', 'c1', 1::smallint)$$, pg_temp.mc_id('a')),
+  'a complete run on slot 1 records its skips');
+select lives_ok(
+  format($$select public.upsert_connector_lines(%L, 'mercury',
+    '{"lines": [], "complete": true, "skips": [{"external_id": "tx-slot2", "reason": "unsynced_account"}]}'::jsonb,
+    'c2-next', 'c2-next', 2::smallint)$$, pg_temp.mc_id('a')),
+  'and one on slot 2 records its own');
+select is(
+  (select string_agg(slot::text || ':' || external_id, ',' order by slot)
+   from public.connector_skips where company_id = pg_temp.mc_id('a') and provider = 'mercury'),
+  '1:tx-slot1,2:tx-slot2',
+  'slot 2''s complete run keeps slot 1''s skip records');
 
 select lives_ok(format($$select public.note_connector_failure(%L, 'mercury', 'auth', 1::smallint)$$, pg_temp.mc_id('a')),
   'a failure is noted on one slot');

@@ -16,13 +16,18 @@
 -- 3. A slot argument (default null: every row, as before) on upsert_connector_lines, stamp_connector_sync,
 --    note_connector_failure, replace_connector_connection and disconnect_connector, so mercury-sync,
 --    mercury-connect and the app address one connection. The functions are patched in place and their
---    grants restated.
+--    grants restated. connector_skips gets the slot too: a complete run replaces only its own
+--    connection's skip records, not every Mercury connection's.
 -- 4. replace_sumit_connection targets the new key; the daily refresh queues a company once however many
 --    connections it has (the open-request index allows one per company and provider).
 -- 5. connector_connection_status shows the new columns.
 -- 6. The MCP tools (decision 0095): mcp_bank_connections (list_bank_connections), mcp_set_bank_accounts
 --    (set_bank_accounts) and mcp_answer_bank_account (answer_bank_account), the writes through
---    set_mercury_accounts with the idempotency key, the owner check and undo kind bank_accounts.
+--    set_mercury_accounts with the idempotency key, the owner check and undo kind bank_accounts. Undo
+--    clears the cursor when what it puts back reads further back (private.mercury_accounts_reread,
+--    the same rule set_mercury_accounts applies), so a restored account is not left with a gap.
+-- The edge functions deploy before this file is pushed; until then they keep the single-connection
+-- behaviour on the old schema (supabase/functions/_shared/connectors/mercury/legacy.ts).
 -- CLI 2.118.0 runs each statement on its own. This file is one transaction.
 
 begin;
@@ -42,6 +47,9 @@ alter table public.connector_connections
     coalesce(cardinality(sync_account_ids), 0) <= 200 and cardinality(skip_account_ids) <= 200
   ),
   add constraint connector_connections_account_from check (jsonb_typeof(account_from) = 'object');
+
+alter table public.connector_skips
+  add column slot smallint not null default 1;
 
 alter table public.connector_connections drop constraint connector_connections_pkey;
 alter table public.connector_connections add primary key (company_id, provider, slot);
@@ -75,6 +83,7 @@ select
     from public.connector_skips s
     where s.company_id = connector_connections.company_id
       and s.provider = connector_connections.provider
+      and s.slot = connector_connections.slot
   ) as skip_count,
   (
     sync_claimed_at is not null
@@ -124,6 +133,28 @@ begin
   for update;$n$);
   def := replace(def, slot_head, slot_head || $n$
       and (p_slot is null or slot = p_slot)$n$);
+  -- The skip records belong to one connection: a complete run replaces only its own.
+  anchor := $a$      delete from public.connector_skips s
+      where s.company_id = p_company
+        and s.provider = p_provider;$a$;
+  if pg_temp.anchor_count(def, anchor) <> 1
+     or pg_temp.anchor_count(def, $a$    insert into public.connector_skips (company_id, provider, external_id, reason)
+    select distinct p_company, p_provider, x.external_id, x.reason$a$) <> 1
+     or pg_temp.anchor_count(def, $a$          and s.reason = x.reason
+      );$a$) <> 1 then
+    raise exception 'upsert_connector_lines skips are not the expected definition';
+  end if;
+  def := replace(def, anchor, $n$      delete from public.connector_skips s
+      where s.company_id = p_company
+        and s.provider = p_provider
+        and (p_slot is null or s.slot = p_slot);$n$);
+  def := replace(def, $a$    insert into public.connector_skips (company_id, provider, external_id, reason)
+    select distinct p_company, p_provider, x.external_id, x.reason$a$, $n$    insert into public.connector_skips (company_id, provider, external_id, reason, slot)
+    select distinct p_company, p_provider, x.external_id, x.reason, coalesce(p_slot, 1::smallint)$n$);
+  def := replace(def, $a$          and s.reason = x.reason
+      );$a$, $n$          and s.reason = x.reason
+          and s.slot = coalesce(p_slot, 1::smallint)
+      );$n$);
   drop function public.upsert_connector_lines(uuid, public.connector_provider, jsonb, text, text);
   execute def;
 
@@ -226,6 +257,70 @@ grant execute on function public.replace_connector_connection(uuid, public.conne
 revoke all on function public.disconnect_connector(public.connector_provider, smallint) from public, anon;
 grant execute on function public.disconnect_connector(public.connector_provider, smallint) to authenticated, service_role;
 
+-- Whether a Mercury connection's accounts after a change read further back than before, so its cursor
+-- must go and the next sync reads back to them. The states are private.mcp_bank_accounts_state's
+-- (below). An account synced before reads back further only from an earlier start; an account not
+-- synced before from a start before today (today's lines are in the window every run re-reads), or
+-- from the start. Shared by set_mercury_accounts and the undo of bank_accounts, so a restored
+-- account is not left with a gap.
+create or replace function private.mercury_accounts_reread(p_labels jsonb, p_before jsonb, p_after jsonb)
+returns boolean
+language plpgsql
+stable
+set search_path = ''
+as $$
+declare
+  today date := (pg_catalog.now() at time zone 'Asia/Jerusalem')::date;
+  listed text[];
+  before_ids text[];
+  after_ids text[];
+  id text;
+  old_start date;
+  new_start date;
+begin
+  if p_after->>'chosen' is distinct from 'true' then
+    return false;
+  end if;
+  listed := array(
+    select distinct e.value->>'id'
+    from jsonb_array_elements(case when jsonb_typeof(p_labels) = 'array' then p_labels else '[]'::jsonb end) e
+    where jsonb_typeof(e.value) = 'object' and length(coalesce(e.value->>'id', '')) between 1 and 128
+  );
+  before_ids := case
+    when p_before->>'chosen' is distinct from 'true' then '{}'::text[]
+    when jsonb_typeof(p_before->'sync_account_ids') = 'array'
+      then array(select jsonb_array_elements_text(p_before->'sync_account_ids'))
+    else listed
+  end;
+  after_ids := case
+    when jsonb_typeof(p_after->'sync_account_ids') = 'array'
+      then array(select jsonb_array_elements_text(p_after->'sync_account_ids'))
+    else listed
+  end;
+  foreach id in array after_ids loop
+    -- An account's start: its own (account_from), else the connection's; null is the start.
+    new_start := coalesce(
+      case when p_after->'account_from'->>id ~ '^\d{4}-\d{2}-\d{2}$' then (p_after->'account_from'->>id)::date end,
+      (p_after->>'import_from')::date
+    );
+    if id = any (before_ids) then
+      old_start := coalesce(
+        case when p_before->'account_from'->>id ~ '^\d{4}-\d{2}-\d{2}$' then (p_before->'account_from'->>id)::date end,
+        (p_before->>'import_from')::date
+      );
+      if (new_start is null and old_start is not null) or new_start < old_start then
+        return true;
+      end if;
+    elsif new_start is null or new_start < today then
+      return true;
+    end if;
+  end loop;
+  return false;
+end;
+$$;
+
+revoke all on function private.mercury_accounts_reread(jsonb, jsonb, jsonb) from public, anon, authenticated;
+
 -- The owner saves which accounts a Mercury connection syncs (p_accounts, at least one, each listed by
 -- the connection) and where an account added now starts: p_from is 'start' (all Mercury keeps),
 -- 'YYYY-MM-DD' (not after today), or null (the connection's first choice starts at the start; an
@@ -249,7 +344,7 @@ declare
   starts jsonb := '{}'::jsonb;
   earliest date;
   from_start boolean := false;
-  reread boolean := false;
+  reread boolean;
   added integer := 0;
   id text;
   acct_start date;
@@ -314,10 +409,6 @@ begin
     else
       acct_start := pick;
       added := added + 1;
-      -- Reading back before today needs the whole window again.
-      if not first_choice and (pick is null or pick < today) then
-        reread := true;
-      end if;
     end if;
     if acct_start is null then
       from_start := true;
@@ -333,6 +424,12 @@ begin
   select coalesce(jsonb_object_agg(s.key, s.value), '{}'::jsonb) into kept
   from jsonb_each_text(starts) s
   where earliest is null or s.value::date > earliest;
+  -- Reading back before what was read needs the whole window again.
+  reread := private.mercury_accounts_reread(
+    conn.account_labels,
+    private.mcp_bank_accounts_state(conn),
+    jsonb_build_object('chosen', true, 'sync_account_ids', to_jsonb(wanted), 'account_from', kept, 'import_from', to_jsonb(earliest))
+  );
 
   update public.connector_connections c
   set sync_account_ids = wanted,
@@ -374,7 +471,8 @@ $schedule$;
 --    through set_mercury_accounts, so the rules stay in one place. Each write takes the idempotency key
 --    and the write gate, is the owner's only (as the RPC is), and records undo kind bank_accounts with the
 --    connection's id: undo puts the accounts, the skipped list and the starts back, a conflict once they
---    changed again. Lines already imported stay, as they do when an account is unchecked in the app.
+--    changed again, and the cursor cleared when what comes back reads further back. Lines already
+--    imported stay, as they do when an account is unchecked in the app.
 
 -- What a write changes on a connection, compared by undo.
 create or replace function private.mcp_bank_accounts_state(p_row public.connector_connections)
@@ -800,6 +898,7 @@ $a$;
       declare
         conn public.connector_connections%rowtype;
         b jsonb := rec.prior->'before';
+        reread boolean;
       begin
         if private.owner_company_id() is distinct from cid then
           response := private.mcp_error('forbidden', 'owner only');
@@ -813,6 +912,9 @@ $a$;
           elsif private.mcp_bank_accounts_state(conn) is distinct from rec.prior->'after' then
             response := private.mcp_error('conflict', 'conflict');
           else
+            -- What comes back may read further back than what was read since (an account restored
+            -- after its lines left the re-read window): the cursor goes, as set_mercury_accounts does.
+            reread := private.mercury_accounts_reread(conn.account_labels, private.mcp_bank_accounts_state(conn), b);
             update public.connector_connections c
             set sync_account_ids = case when jsonb_typeof(b->'sync_account_ids') = 'array'
                   then array(select jsonb_array_elements_text(b->'sync_account_ids')) end,
@@ -820,7 +922,8 @@ $a$;
                   then array(select jsonb_array_elements_text(b->'skip_account_ids')) else '{}'::text[] end,
                 account_from = case when jsonb_typeof(b->'account_from') = 'object' then b->'account_from' else '{}'::jsonb end,
                 import_from = (b->>'import_from')::date,
-                accounts_chosen_at = (rec.prior->>'before_chosen_at')::timestamptz
+                accounts_chosen_at = (rec.prior->>'before_chosen_at')::timestamptz,
+                sync_cursor = case when reread then null else c.sync_cursor end
             where c.id = p_id and c.company_id = cid;
             update private.mcp_writes
             set undone_at = clock_timestamp()

@@ -234,13 +234,13 @@ isOneToOne: false
                   ]
                 },"connector_skips": {
                   Row: {
-                    "company_id": string,"external_id": string | null,"id": number,"provider": Database["public"]['Enums']["connector_provider"],"reason": string,"skipped_at": string
+                    "company_id": string,"external_id": string | null,"id": number,"provider": Database["public"]['Enums']["connector_provider"],"reason": string,"skipped_at": string,"slot": number
                   }
                   Insert: {
-                    "company_id": string,"external_id"?: string | null,"id"?: never,"provider": Database["public"]['Enums']["connector_provider"],"reason": string,"skipped_at"?: string
+                    "company_id": string,"external_id"?: string | null,"id"?: never,"provider": Database["public"]['Enums']["connector_provider"],"reason": string,"skipped_at"?: string,"slot"?: number
                   }
                   Update: {
-                    "company_id"?: string,"external_id"?: string | null,"id"?: never,"provider"?: Database["public"]['Enums']["connector_provider"],"reason"?: string,"skipped_at"?: string
+                    "company_id"?: string,"external_id"?: string | null,"id"?: never,"provider"?: Database["public"]['Enums']["connector_provider"],"reason"?: string,"skipped_at"?: string,"slot"?: number
                   }
                   Relationships: [
                     {

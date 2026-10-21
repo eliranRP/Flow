@@ -31,6 +31,16 @@ export const MERCURY_SKIP_REASONS = [
 export type MercurySkipReason = (typeof MERCURY_SKIP_REASONS)[number];
 
 /**
+ * Transfers between two synced accounts (FLOW-938). One leg imported earlier as money out, while the
+ * other account was not synced, is voided when a later run skips it for one of these reasons.
+ */
+export const MERCURY_TRANSFER_SKIPS: readonly MercurySkipReason[] = [
+  "own_account_transfer",
+  "internal_transfer",
+  "treasury_transfer",
+];
+
+/**
  * Days a later sync re-reads before the previous sync.
  * postedAt lags createdAt (13 of 45 lines on the day the contract was
  * written, and 22 of the 70 imported lines in the 2026-10-04 fixtures).

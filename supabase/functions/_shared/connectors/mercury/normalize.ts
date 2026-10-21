@@ -131,6 +131,8 @@ function paymentMeta(kind: string, raw: Record<string, unknown>, accountId: stri
  *    gate as card autopay. That set includes treasury account ids from
  *    GET /treasury. The kind alone does not skip the line.
  * 2. Any other counterparty id in ownAccountIds is an own-account transfer.
+ *    These three reasons are MERCURY_TRANSFER_SKIPS: when an earlier run imported the same line as
+ *    money out (its other account was not synced then), the sync voids that stored copy (FLOW-938).
  * 3. A line on an account the owner chose not to sync (unsyncedAccountIds, FLOW-938) is
  *    unsynced_account, a card account's too.
  * 4. Card spend whose accountId is outside a non-empty ownAccountIds throws

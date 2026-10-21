@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(27);
+select plan(30);
 
 do $users$
 begin
@@ -153,11 +153,19 @@ select is(
   public.mcp_set_bank_accounts('mba-set', 1::smallint, array['acct-chk'], '2026-04-01') -> 'error' ->> 'code',
   'conflict',
   'the same key with other accounts is a conflict');
+-- A sync ran since the write and moved the cursor.
+reset role;
+update public.connector_connections set sync_cursor = '2026-10-15T00:00:00Z' where id = pg_temp.mba_id('conn1');
+select pg_temp.as_mcp('owner', 'tok-owner');
 select is(
   public.mcp_undo('mba-undo', 'bank_accounts', pg_temp.mba_id('conn1')) ->> 'ok',
   'true',
   'undo bank_accounts');
 reset role;
+select is(
+  (select sync_cursor from public.connector_connections where id = pg_temp.mba_id('conn1')),
+  '2026-10-15T00:00:00Z',
+  'undo that only takes an account away keeps the cursor');
 select is(
   (select array_to_string(sync_account_ids, ',') || ' / ' || array_to_string(skip_account_ids, ',') || ' / ' || account_from::text || ' / ' || import_from::text
    from public.connector_connections where id = pg_temp.mba_id('conn1')),
@@ -200,6 +208,25 @@ select is(
   (select count(*)::integer from private.mcp_writes where kind = 'bank_accounts' and prior->>'connection_id' = pg_temp.mba_id('conn1')::text),
   3,
   'each write is in the undo log with its connection');
+
+-- 29-30. Undo that brings back an account no longer synced clears the cursor: its lines since it was
+-- left out may be older than the window a sync re-reads.
+update public.connector_connections set sync_account_ids = array['acct-chk', 'acct-sav'] where id = pg_temp.mba_id('conn1');
+select pg_temp.as_mcp('owner', 'tok-owner');
+select is(
+  public.mcp_set_bank_accounts('mba-drop', 1::smallint, array['acct-chk'], null) -> 'data' -> 'account_ids',
+  '["acct-chk"]'::jsonb,
+  'the savings account is left out');
+reset role;
+update public.connector_connections set sync_cursor = '2026-10-20T00:00:00Z' where id = pg_temp.mba_id('conn1');
+select pg_temp.as_mcp('owner', 'tok-owner');
+select public.mcp_undo('mba-undo-drop', 'bank_accounts', pg_temp.mba_id('conn1'));
+reset role;
+select is(
+  (select array_to_string(sync_account_ids, ',') || ' / ' || coalesce(sync_cursor, 'no cursor')
+   from public.connector_connections where id = pg_temp.mba_id('conn1')),
+  'acct-chk,acct-sav / no cursor',
+  'undo brings the savings account back and clears the cursor, so the next sync reads back to its start');
 
 select * from finish();
 rollback;

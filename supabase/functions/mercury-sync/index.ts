@@ -1,7 +1,11 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "../../../packages/shared/src/database.types.ts";
 import { planConnectorSync } from "../_shared/connectors/engine.ts";
-import { MERCURY_KEK_REF, MERCURY_POSTED_LOOKBACK_DAYS } from "../_shared/connectors/mercury/capabilities.ts";
+import {
+  MERCURY_KEK_REF,
+  MERCURY_POSTED_LOOKBACK_DAYS,
+  MERCURY_TRANSFER_SKIPS,
+} from "../_shared/connectors/mercury/capabilities.ts";
 import { mercuryAdapter } from "../_shared/connectors/mercury/adapter.ts";
 import {
   MercuryRequestError,
@@ -13,6 +17,7 @@ import {
 import { addCalendarDays, jerusalemDate } from "../_shared/connectors/mercury/dates.ts";
 import { redactMercury } from "../_shared/connectors/mercury/redact.ts";
 import { treasuryVoidIds } from "../_shared/connectors/mercury/normalize.ts";
+import { isLegacyRow, legacyPatch, rpcWithSlot } from "../_shared/connectors/mercury/legacy.ts";
 import {
   readConnectionScope,
   runScope,
@@ -25,7 +30,7 @@ import { bytesPrefix, decodeKek, openApiKey, type Envelope } from "../_shared/en
 import { empty, json } from "../_shared/http.ts";
 import { companyHint, ownedCompany, resolveOwnerCompany } from "../_shared/owner.ts";
 import { runWithClaim } from "../_shared/cron_claim.ts";
-import { confirmStored, loadStored } from "./stored.ts";
+import { confirmStored, loadStored, storedExternalIds } from "./stored.ts";
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -54,6 +59,9 @@ class SyncHold extends Error {
  * FLOW-938: a company may hold several Mercury connections. A run claims all of them, then syncs each
  * connection whose accounts are chosen, one after another, each with its own key, cursor, failure and
  * stamp, scoped to the accounts the owner chose. The counts add up across connections.
+ *
+ * Until the FLOW-938 migration is pushed (CI deploys the functions first), the schema has no slot,
+ * no chosen accounts and no p_slot: then the one connection syncs every account as before (legacy.ts).
  */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return empty();
@@ -160,10 +168,7 @@ type SyncResult = {
   newest_date?: string | null;
 };
 
-const CONNECTION_COLUMNS = "slot, key_ciphertext, key_nonce, dek_ciphertext, dek_nonce, kek_version, envelope_version, " +
-  "sync_cursor, import_from, last_sync_at, last_error, next_attempt_at, sync_claimed_at, settings, account_labels, " +
-  "accounts_chosen_at, sync_account_ids, account_from";
-
+// Every column, so the schema before FLOW-938 reads too: a row without slot is that schema (legacy.ts).
 type ConnectionRow = {
   slot: number;
   key_ciphertext: unknown;
@@ -195,16 +200,18 @@ async function syncCompany(
 ): Promise<SyncResult> {
   const read = await admin
     .from("connector_connections")
-    .select(CONNECTION_COLUMNS)
+    .select("*")
     .eq("company_id", companyId)
-    .eq("provider", "mercury")
-    .order("slot", { ascending: true });
-  const rows = (read.data ?? []) as unknown as ConnectionRow[];
-  if (read.error || rows.length === 0) throw new Error("Mercury is not connected");
-  const scopes = rows.map((row) => readConnectionScope(row));
+    .eq("provider", "mercury");
+  if (read.error || (read.data ?? []).length === 0) throw new Error("Mercury is not connected");
+  const legacy = (read.data ?? []).some((row) => isLegacyRow(row));
+  const scopes = (read.data ?? []).map((row) => readConnectionScope(row as Record<string, unknown>));
+  const rows = (read.data ?? [])
+    .map((row, index) => ({ ...(row as unknown as ConnectionRow), slot: scopes[index]!.slot }))
+    .sort((left, right) => left.slot - right.slot);
   // A connection waits for its accounts (set_mercury_accounts) before anything syncs. Asked by hand
   // (the app, sync_bank) that is not connected yet; the drain just passes.
-  const chosen = rows.filter((row) => typeof row.accounts_chosen_at === "string");
+  const chosen = rows.filter((row) => scopes.find((scope) => scope.slot === row.slot)?.chosen === true);
   if (chosen.length === 0) {
     if (alreadyClaimed) return { ok: true, lines: 0, skipped: true };
     throw new Error("Mercury is not connected");
@@ -259,7 +266,7 @@ async function syncCompany(
     let firstError: unknown = null;
     for (const row of due) {
       try {
-        results.push(await syncConnection(admin, companyId, kek, row, scopes, row.slot === firstSlot));
+        results.push(await syncConnection(admin, companyId, kek, row, scopes, row.slot === firstSlot, legacy));
       } catch (error) {
         firstError ??= error;
       }
@@ -314,6 +321,7 @@ async function syncConnection(
   row: ConnectionRow,
   scopes: readonly MercuryConnectionScope[],
   withoutAccount: boolean,
+  legacy: boolean,
 ): Promise<SyncResult> {
   const slot = row.slot;
   const scope = scopes.find((candidate) => candidate.slot === slot) ?? readConnectionScope(row);
@@ -321,10 +329,13 @@ async function syncConnection(
   let noted = false;
   const noteOnce = async (code: string) => {
     noted = true;
-    await noteFailure(admin, companyId, slot, code);
+    await noteFailure(admin, companyId, slot, code, legacy);
   };
-  const updateRow = (patch: Database["public"]["Tables"]["connector_connections"]["Update"]) =>
-    admin.from("connector_connections").update(patch).eq("company_id", companyId).eq("provider", "mercury").eq("slot", slot);
+  const updateRow = (patch: Database["public"]["Tables"]["connector_connections"]["Update"]) => {
+    const query = admin.from("connector_connections").update(legacyPatch(patch, legacy))
+      .eq("company_id", companyId).eq("provider", "mercury");
+    return legacy ? query : query.eq("slot", slot);
+  };
 
   const envelope: Envelope = {
     keyCiphertext: bytesPrefix(row.key_ciphertext as string),
@@ -343,7 +354,14 @@ async function syncConnection(
     const session = mercuryAdapter.open(apiKey);
     const now = new Date();
     const windowStart = addCalendarDays(jerusalemDate(now.toISOString()), -MERCURY_POSTED_LOOKBACK_DAYS);
-    const loaded = await loadStored(admin, companyId, missing, windowStart, { accountIds: scope.accountIds, withoutAccount });
+    // The old schema has one connection: every stored line is its, as before.
+    const loaded = await loadStored(
+      admin,
+      companyId,
+      missing,
+      windowStart,
+      legacy ? null : { accountIds: scope.accountIds, withoutAccount },
+    );
     const plan = await planConnectorSync({
       port: mercuryAdapter,
       session,
@@ -352,8 +370,9 @@ async function syncConnection(
       lookbackDays: MERCURY_POSTED_LOOKBACK_DAYS,
       // A transfer to an account no one syncs is money out, hinted to transfers like an own account
       // that is not connected (decision 0086).
-      ownCounterpartyIds: [...new Set([...ownCounterpartyIds, ...accounts.outside])],
-      accountScope: { synced: accounts.synced, own: accounts.own },
+      ownCounterpartyIds: legacy ? ownCounterpartyIds : [...new Set([...ownCounterpartyIds, ...accounts.outside])],
+      // The old schema chose no accounts: every account the key lists syncs, as before.
+      accountScope: legacy ? undefined : { synced: accounts.synced, own: accounts.own },
       vatRateBp: 0,
       exemptSupplierNames: [],
       exemptSupplierIds: [],
@@ -362,6 +381,12 @@ async function syncConnection(
       confirmLine: (line) => confirmStored(session, line, now),
       resolveRemovedIds: (rawLines) =>
         treasuryVoidIds(rawLines, loaded.treasury, mercuryTreasuryAccountCount(session)),
+      // An account newly synced (the answer yes, the edit list, set_bank_accounts) turns a transfer
+      // imported earlier as money out into a skipped one; its stored copy is voided.
+      voidStoredSkips: {
+        reasons: MERCURY_TRANSFER_SKIPS,
+        storedIds: (ids) => storedExternalIds(admin, companyId, ids),
+      },
     });
     if (!plan.ok) {
       await noteOnce(plan.code);
@@ -369,21 +394,25 @@ async function syncConnection(
     }
     const lines = withinAccountStart(plan.lines, scope.accountFrom);
     // The skip records and recheck stamps commit with the lines (FLOW-509).
-    const saved = await admin.rpc("upsert_connector_lines", {
-      p_company: companyId,
-      p_provider: "mercury",
-      p_lines: {
-        lines,
-        removed_ids: plan.removedIds,
-        complete: plan.complete,
-        skips: plan.skips.map((skip) => ({ external_id: skip.externalId, reason: skip.reason })),
-        checked: plan.rechecked.map((item) => ({ external_id: item.externalId, checked_at: item.checkedAt })),
-      } as unknown as Json,
-      // The generated arg types drop null; both cursors are nullable text.
-      p_next_cursor: plan.nextCursor as string,
-      p_expected_prev_cursor: row.sync_cursor as string,
-      p_slot: slot,
-    });
+    const { result: saved } = await rpcWithSlot(
+      (args) => admin.rpc("upsert_connector_lines", args as Database["public"]["Functions"]["upsert_connector_lines"]["Args"]),
+      {
+        p_company: companyId,
+        p_provider: "mercury",
+        p_lines: {
+          lines,
+          removed_ids: plan.removedIds,
+          complete: plan.complete,
+          skips: plan.skips.map((skip) => ({ external_id: skip.externalId, reason: skip.reason })),
+          checked: plan.rechecked.map((item) => ({ external_id: item.externalId, checked_at: item.checkedAt })),
+        } as unknown as Json,
+        // Both cursors are nullable text.
+        p_next_cursor: plan.nextCursor,
+        p_expected_prev_cursor: row.sync_cursor,
+      },
+      slot,
+      legacy,
+    );
     if (saved.error) {
       if ((saved.error.message ?? "").includes("sync_cursor_conflict")) {
         await updateRow({ last_error: "sync_cursor_conflict" });
@@ -407,7 +436,12 @@ async function syncConnection(
       throw new Error("rejected");
     }
     if (plan.complete) {
-      const stamped = await admin.rpc("stamp_connector_sync", { p_company: companyId, p_provider: "mercury", p_slot: slot });
+      const { result: stamped } = await rpcWithSlot(
+        (args) => admin.rpc("stamp_connector_sync", args as Database["public"]["Functions"]["stamp_connector_sync"]["Args"]),
+        { p_company: companyId, p_provider: "mercury" },
+        slot,
+        legacy,
+      );
       if (stamped.error) {
         await noteOnce("rejected");
         throw new Error("rejected");
@@ -436,29 +470,29 @@ async function syncConnection(
       specific === "rate_limited" || specific === "transient" || specific === "sync_page_cap";
     if (kept) {
       if (!noted && error instanceof MercuryRequestError && error.message !== specific) {
-        await noteFailure(admin, companyId, slot, specific);
+        await noteFailure(admin, companyId, slot, specific, legacy);
       }
       throw new Error(specific);
     }
     if (noted) throw error instanceof Error ? error : new Error("sync failed");
-    await noteFailure(admin, companyId, slot, "transient");
+    await noteFailure(admin, companyId, slot, "transient", legacy);
     throw new Error("transient");
   }
 }
 
-async function noteFailure(admin: Admin, companyId: string, slot: number, code: string): Promise<void> {
-  const noted = await admin.rpc("note_connector_failure", {
-    p_company: companyId,
-    p_provider: "mercury",
-    p_code: code,
-    p_slot: slot,
-  });
+async function noteFailure(admin: Admin, companyId: string, slot: number, code: string, legacy: boolean): Promise<void> {
+  const { result: noted } = await rpcWithSlot(
+    (args) => admin.rpc("note_connector_failure", args as Database["public"]["Functions"]["note_connector_failure"]["Args"]),
+    { p_company: companyId, p_provider: "mercury", p_code: code },
+    slot,
+    legacy,
+  );
   if (noted.error) {
-    await admin
+    const query = admin
       .from("connector_connections")
       .update({ last_error: code })
       .eq("company_id", companyId)
-      .eq("provider", "mercury")
-      .eq("slot", slot);
+      .eq("provider", "mercury");
+    await (legacy ? query : query.eq("slot", slot));
   }
 }

@@ -86,12 +86,13 @@ type StoredFilter = ReturnType<typeof baseStored>;
 async function readPages(
   admin: Admin,
   companyId: string,
-  group: string,
+  group: string | null,
   apply: (query: StoredFilter) => StoredFilter,
 ): Promise<StoredRow[]> {
   const rows: StoredRow[] = [];
   for (let from = 0; from < STORED_PAGE * 20; from += STORED_PAGE) {
-    const page = await apply(baseStored(admin, companyId).or(group))
+    const base = baseStored(admin, companyId);
+    const page = await apply(group == null ? base : base.or(group))
       .order("external_id", { ascending: true })
       .range(from, from + STORED_PAGE - 1);
     if (page.error) throw new Error("could not read stored lines");
@@ -107,12 +108,13 @@ export async function loadStored(
   companyId: string,
   missing: Record<string, string>,
   windowStart: string,
-  scope: StoredScope,
+  // Null: every stored Mercury line (the schema before FLOW-938 has one connection).
+  scope: StoredScope | null,
 ): Promise<{ stored: StoredLine[]; treasury: TreasuryStoredLine[] }> {
-  const group = storedLinesFilter(scope.accountIds, scope.withoutAccount);
-  if (group == null) return { stored: [], treasury: [] };
+  const group = scope == null ? null : storedLinesFilter(scope.accountIds, scope.withoutAccount);
+  if (scope != null && group == null) return { stored: [], treasury: [] };
   // One or-group per request: the treasury kinds and the scope are both or-groups, so they nest in one and().
-  const oldLines = `and(or(${NOT_TREASURY}),or(${group}))`;
+  const oldLines = group == null ? NOT_TREASURY : `and(or(${NOT_TREASURY}),or(${group}))`;
   const pending = await readPages(admin, companyId, group, (query) => query.eq("line_status", "pending"));
   const unchecked = await admin
     .from("transactions")
@@ -145,8 +147,8 @@ export async function loadStored(
     oldRows.push(...(checked.data ?? []) as StoredRow[]);
   }
   // Bounded by date and count, so a long history neither throws nor is read in full (FLOW-509).
-  const treasuryRead = await baseStored(admin, companyId)
-    .or(group)
+  const treasuryBase = baseStored(admin, companyId);
+  const treasuryRead = await (group == null ? treasuryBase : treasuryBase.or(group))
     .eq("line_status", "posted")
     .in("provider_meta->>kind", TREASURY_CANCELLABLE)
     .gte("doc_date", addCalendarDays(windowStart, -TREASURY_STORED_DAYS))
@@ -186,6 +188,31 @@ export async function loadStored(
     });
   }
   return { stored, treasury: yields };
+}
+
+const STORED_ID_CHUNK = 100;
+
+/**
+ * Which of these external ids are stored Mercury lines not voided yet (FLOW-938): a transfer skipped
+ * now between two synced accounts voids the copy an earlier run imported as money out.
+ */
+export async function storedExternalIds(admin: Admin, companyId: string, ids: readonly string[]): Promise<string[]> {
+  const found: string[] = [];
+  for (let from = 0; from < ids.length; from += STORED_ID_CHUNK) {
+    const chunk = ids.slice(from, from + STORED_ID_CHUNK);
+    const read = await admin
+      .from("transactions")
+      .select("external_id")
+      .eq("company_id", companyId)
+      .eq("source", "mercury")
+      .is("removed_at", null)
+      .in("external_id", chunk);
+    if (read.error) throw new Error("could not read stored lines");
+    for (const row of (read.data ?? []) as Array<{ external_id: unknown }>) {
+      if (typeof row.external_id === "string") found.push(row.external_id);
+    }
+  }
+  return found;
 }
 
 export async function confirmStored(session: ConnectorSession, line: StoredLine, now: Date): Promise<ConfirmResult> {

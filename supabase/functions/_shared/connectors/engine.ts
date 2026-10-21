@@ -66,6 +66,16 @@ export interface PlanSyncInput {
    * Ids are voided with the upsert. They are not fetched again.
    */
   resolveRemovedIds?: (rawLines: readonly unknown[]) => readonly string[];
+  /**
+   * Skip reasons that void a stored copy of the same line (FLOW-938). A transfer an earlier run
+   * imported as money out, while its other account was not synced, is skipped once that account
+   * syncs; its stored copy must go too, or only one side of the transfer stays. `storedIds` returns
+   * which of the skipped ids are stored and not voided yet; those are voided with the upsert.
+   */
+  voidStoredSkips?: {
+    reasons: readonly string[];
+    storedIds: (ids: readonly string[]) => Promise<readonly string[]>;
+  };
 }
 
 export interface PlannedSkip {
@@ -256,6 +266,25 @@ export async function planConnectorSync(input: PlanSyncInput): Promise<PlannedSy
     for (const stored of candidates.slice(index)) {
       if (stored.lineStatus === "pending" && stored.missingSince) {
         pendingMissing.push({ externalId: stored.externalId, missingSince: stored.missingSince });
+      }
+    }
+  }
+
+  if (input.voidStoredSkips) {
+    const reasons = new Set(input.voidStoredSkips.reasons);
+    const skipped = new Set<string>();
+    for (const skip of skips) {
+      if (skip.externalId != null && reasons.has(skip.reason) && !removed.has(skip.externalId)) skipped.add(skip.externalId);
+    }
+    if (skipped.size > 0) {
+      let stored: readonly string[];
+      try {
+        stored = await input.voidStoredSkips.storedIds([...skipped].sort());
+      } catch (error) {
+        return failure(input.port, error);
+      }
+      for (const id of stored) {
+        if (skipped.has(id)) removed.add(id);
       }
     }
   }
