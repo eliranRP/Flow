@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ScrollMemory } from "./back";
 import { ScreenHeader } from "./screen-header";
 import { expectRtl, expectTarget, stubPageObserver } from "./test-support";
-import { type ReactElement } from "react";
+import { type ReactElement, useState } from "react";
 import { ScreenState } from "./screen-state";
 import { SKELETON_DELAY_MS, SKELETON_FADE_MS } from "./skeleton";
 
@@ -63,11 +63,12 @@ describe("ScreenHeader", () => {
     expect(back).toHaveTextContent("הגדרות");
     expect(bar).not.toContainElement(title);
     expect(header?.querySelector("p.t-caption.t-muted")).toBeNull();
-    // The compact bar is mounted at the end, hidden; the page's own order is what is checked.
+    // The compact bar is mounted at the end, hidden; the page's own order is what is checked. FLOW-942: the
+    // compact bar's mark (the empty node) ends the header, after the subtitle.
     const order = Array.from(header?.children ?? [])
       .filter((node) => !node.classList.contains("ui-compact-bar"))
       .map((node) => node.textContent);
-    expect(order).toEqual(["הגדרות", "קטגוריות", "", "שורה"]);
+    expect(order).toEqual(["הגדרות", "קטגוריות", "שורה", ""]);
   });
 
   it("labels Back only when Back goes to the kicker's screen", () => {
@@ -226,20 +227,42 @@ describe("ScreenHeader", () => {
       expect(container.querySelector(".ui-compact-mark")).toBeNull();
     });
 
-    it("follows the mark when it moves to a new node, so the bar stays up at the top", () => {
+    it("waits for the page's head end when the head goes on past the header (FLOW-942)", () => {
+      const observed: Element[] = [];
+      vi.stubGlobal("IntersectionObserver", class {
+        observe(target: Element) { observed.push(target); }
+        disconnect() {}
+      });
+      function Page() {
+        const [figure, setFigure] = useState<HTMLElement | null>(null);
+        return (
+          <MemoryRouter>
+            <ScreenHeader title="רווח" subtitle="Juniper Ct" backTo="/" headEnd={figure} />
+            <p ref={setFigure}>+$21,480</p>
+          </MemoryRouter>
+        );
+      }
+      render(<Page />);
+      expect(observed.at(-1)).toHaveTextContent("+$21,480");
+    });
+
+    it("ends the header with the mark, after the subtitle and the below row, with or without a panel (FLOW-942)", () => {
       const observer = stubPageObserver();
       const header = (panel: boolean) => (
         <MemoryRouter>
-          <ScreenHeader title="רווח" backTo="/" below={<span>תקופה</span>} panel={panel ? <span>לפי חודש</span> : undefined} />
+          <ScreenHeader title="רווח" subtitle="מאז אוגוסט" backTo="/" below={<span>תקופה</span>} panel={panel ? <span>לפי חודש</span> : undefined} />
         </MemoryRouter>
       );
       const { container, rerender } = render(header(true));
       const bar = container.querySelector(".ui-compact-bar") as HTMLElement;
       const first = container.querySelector(".ui-compact-mark");
+      expect(first?.previousElementSibling).toHaveClass("ui-page-below");
       expect(bar).toHaveAttribute("aria-hidden", "true");
-      // A skeleton with no panel puts the mark after the title: React draws a new node there.
+      // A skeleton with no panel keeps the same mark at the end: the bar waits for the subtitle and the below row too.
       rerender(header(false));
-      expect(container.querySelector(".ui-compact-mark")).not.toBe(first);
+      expect(container.querySelector(".ui-compact-mark")).toBe(first);
+      expect(first?.previousElementSibling).toHaveClass("ui-page-below");
+      expect(first?.nextElementSibling).toHaveClass("ui-compact-bar");
       observer.settle();
       expect(bar).toHaveAttribute("aria-hidden", "true");
       expect(document.documentElement).not.toHaveAttribute("data-compact-bar");

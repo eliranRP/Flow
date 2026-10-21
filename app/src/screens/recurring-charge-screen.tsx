@@ -73,7 +73,7 @@ export function ChargeError() {
   const client = useQueryClient();
   return (
     <div className="ui-charge-page">
-      <TransactionTopBar fallback="/recurring" backLabel="קבועים" title="קבועים" end={null} />
+      <TransactionTopBar fallback="/recurring" backLabel="קבועים" title="קבועים" end={null} head={null} />
       <div className="ui-charge-body">
         <FailureLine offline={!navigator.onLine} onRetry={() => void client.invalidateQueries({ queryKey: ["recurring-schedule"] })} />
       </div>
@@ -86,7 +86,7 @@ export function ChargeMissing() {
   const search = usePreviewSearch();
   return (
     <div className="ui-charge-page">
-      <TransactionTopBar fallback="/recurring" backLabel="קבועים" title="קבועים" end={null} />
+      <TransactionTopBar fallback="/recurring" backLabel="קבועים" title="קבועים" end={null} head={null} />
       <div className="ui-charge-body">
         <EmptyState title="החיוב לא נמצא" body="אולי סימנתם אותו כלא קבוע, או שהקישור ישן." action={<Button full to={`/recurring${search}`}>לקבועים</Button>} />
       </div>
@@ -117,6 +117,7 @@ function ChargeBody({
   const currency = row.currency;
   const thisMonth = today.slice(0, 7);
   // Local answers: an ignore, a match answer and a pace change show at once; a failure takes them back.
+  const [head, setHead] = useState<HTMLElement | null>(null);
   const [ignoredLocal, setIgnoredLocal] = useState<boolean | null>(null);
   const [matchLocal, setMatchLocal] = useState<"same" | "never" | null>(null);
   const [paceLocal, setPaceLocal] = useState<{ recurring: boolean; pace: RecurringPace } | null>(null);
@@ -240,9 +241,10 @@ function ChargeBody({
 
   return (
     <div className="ui-charge-page">
-      <TransactionTopBar fallback="/recurring" backLabel="קבועים" title={row.party_name} end={null} />
+      <TransactionTopBar fallback="/recurring" backLabel="קבועים" title={row.party_name} end={null} head={head} />
       <div className="ui-charge-body">
         <ChargeHead
+          headRef={setHead}
           status={status.text}
           statusBad={status.tone === "bad"}
           name={row.party_name}

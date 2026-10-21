@@ -231,6 +231,7 @@ function LoanDetailReady({
   const toast = useToast();
   const client = useQueryClient();
   const navigate = useNavigate();
+  const [head, setHead] = useState<HTMLElement | null>(null);
   const [sheet, setSheetState] = useState<SheetName | null>(null);
   const [part, setPart] = useState<LoanSplitPart | null>(null);
   const [rate, setRate] = useState<LoanRateRow | null>(null);
@@ -334,18 +335,18 @@ function LoanDetailReady({
     { key: "status", label: "סטטוס", value: statusPill(loan), onOpen: holdWrites ? null : () => { open("status"); }, buttonRef: statusRef },
   ];
   const topBar = view === "payments"
-    ? <TransactionTopBar fallback={`${loanPath}${search}`} backLabel={loan.name} title={`כל התשלומים · ${wholeMoney(paidTotal, loan.currency)}`} end={null} />
-    : <TransactionTopBar fallback={back} backLabel="הלוואות" title={`${loan.name} · ${wholeMoney(loan.balanceMinor, loan.currency)}`} end={null} />;
+    ? <TransactionTopBar fallback={`${loanPath}${search}`} backLabel={loan.name} title={`כל התשלומים · ${wholeMoney(paidTotal, loan.currency)}`} end={null} head={head} />
+    : <TransactionTopBar fallback={back} backLabel="הלוואות" title={`${loan.name} · ${wholeMoney(loan.balanceMinor, loan.currency)}`} end={null} head={head} />;
 
   return (
     <ViewerScope>
       {topBar}
       {view === "payments" ? (
-          <LoanPaymentsView loan={loan} payments={payments} projectName={projectName} search={search} />
+          <LoanPaymentsView loan={loan} payments={payments} projectName={projectName} search={search} headRef={setHead} />
         ) : (
           <div className="ui-loan-page">
             <ViewerNote />
-            <header className="ui-loan-title">
+            <header ref={setHead} className="ui-loan-title">
               <h1 className="ui-loan-name">{loan.name}</h1>
               <p className="ui-loan-sub">{loanSubtitle(loan, projectName)}</p>
             </header>

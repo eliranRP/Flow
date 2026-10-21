@@ -9,7 +9,7 @@
 
 /* The invoice screens' bar: the board's back row sits 12px from the top (the shared page is 16px), and its title 12px under it. */
 .ui-inv-screen.ui-page {
-  padding-top: calc(env(safe-area-inset-top, 0px) + var(--space-3));
+  padding-top: calc(var(--safe-top) + var(--space-3));
 }
 
 .ui-inv-screen .ui-focus-title {

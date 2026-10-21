@@ -155,18 +155,19 @@ export function LoansSummaryScreen({
 function LoansSummaryBody({ read, period: initialPeriod, back, loanHref, today }: { read: SummaryRead; period: PaidPeriod; back: string; loanHref: (id: string) => string; today: string }) {
   const navigate = useNavigate();
   const [period, setPeriod] = useState<PaidPeriod>(initialPeriod);
+  const [head, setHead] = useState<HTMLElement | null>(null);
   const year = today.slice(0, 4);
   const summary = read.phase === "ready" ? loansPaid(read.entries, read.currency, period, today) : null;
   const money = (minor: bigint) => (read.phase === "ready" ? wholeMoney(minor, read.currency) : "");
   const paid = (minor: bigint) => (read.phase === "ready" ? paidMoney(minor, read.currency) : "");
   const shown = summary == null ? [] : PAID_PARTS.filter(({ part }) => summary.totals[part] > 0n);
   return (
-    // The top bar names the page after 60px of scroll here (the board's), not the detail pages' 110.
-    <div className="ui-loans-sum-scope">
-      <TransactionTopBar fallback={back} backLabel="הלוואות" title={summary == null ? "סיכום הלוואות" : `סיכום · ${money(summary.leftMinor)}`} end={null} />
+    <div>
+      <TransactionTopBar fallback={back} backLabel="הלוואות" title={summary == null ? "סיכום הלוואות" : `סיכום · ${money(summary.leftMinor)}`} end={null} head={head} />
       <div className="ui-loans-sum">
-        <h1 className="ui-loans-title">סיכום הלוואות</h1>
-        {summary == null ? null : <p className="ui-loans-count">{summary.sub}</p>}
+        {/* The head's last line: the top bar takes its line once it is under it. */}
+        <h1 ref={summary == null ? setHead : undefined} className="ui-loans-title">סיכום הלוואות</h1>
+        {summary == null ? null : <p ref={setHead} className="ui-loans-count">{summary.sub}</p>}
         {read.phase === "loading" ? (
           <DelayedSkeleton>
             <LoansSkeleton />

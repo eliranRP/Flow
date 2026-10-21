@@ -569,10 +569,6 @@
   font-size: var(--type-caption-size);
 }
 
-.ui-loans-sum-scope {
-  --txn-bar-scroll: calc(var(--space-10) + var(--space-5));
-}
-
 /* The paid card's rows sit 12px under the bar and the note 12px under the last row's text (the board's),
    though each legend row keeps the 30px pitch. */
 .ui-loans-sum-paid .ui-parts {

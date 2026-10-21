@@ -26,6 +26,7 @@ export function ScreenState({
   syncing,
   barOnly = false,
   headerClassName,
+  headEnd,
 }: {
   title: string;
   subtitle?: string;
@@ -53,6 +54,8 @@ export function ScreenState({
   barOnly?: boolean;
   /** The header's own class (the invoice pages scope their bar's spacing with it). */
   headerClassName?: string;
+  /** Where the page's head ends past the header (ScreenHeader `headEnd`). */
+  headEnd?: HTMLElement | null;
 }) {
   const preview = useHomePreview();
   const navigate = useNavigate();
@@ -73,9 +76,9 @@ export function ScreenState({
       {barOnly ? (
         <ScreenHeader barOnly backTo={backTo} kicker={kicker} className={headerClassName} />
       ) : stacked ? (
-        <ScreenHeader layout="stacked" title={title} subtitle={phase.kind === "ready" ? subtitle : stateSubtitle} backTo={backTo} leading={leading} trailing={trailing ?? action} kicker={kicker} below={below} className={headerClassName} />
+        <ScreenHeader layout="stacked" title={title} subtitle={phase.kind === "ready" ? subtitle : stateSubtitle} backTo={backTo} leading={leading} trailing={trailing ?? action} kicker={kicker} below={below} className={headerClassName} headEnd={headEnd} />
       ) : (
-        <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : stateSubtitle} backTo={backTo} action={action} trailing={trailing} kicker={kicker} className={headerClassName} />
+        <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : stateSubtitle} backTo={backTo} action={action} trailing={trailing} kicker={kicker} className={headerClassName} headEnd={headEnd} />
       )}
       {/* The body is the overlay's frame: a skeleton fades out over it while the content fades in (FLOW-371). */}
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">

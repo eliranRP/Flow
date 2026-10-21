@@ -1,7 +1,7 @@
 /* FLOW-446 (board Invest). The project's investment page: the equity card, the property's figures and
    the loans, three 20px cards on a 16px gutter, then the edit and rehab sheets. */
 .ui-pinv-head {
-  padding-top: var(--space-3);
+  padding-top: calc(var(--safe-top) + var(--space-3));
 }
 
 .ui-pinv-head > p {

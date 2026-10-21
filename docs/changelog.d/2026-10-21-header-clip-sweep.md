@@ -1,0 +1,1 @@
+FLOW-942: on an iPhone with a notch, no page cuts a header line in half under the small top bar any more: the bar comes down once the title and the lines under it have scrolled away, and the project profit, investment and split pages no longer start under the notch. No migration.

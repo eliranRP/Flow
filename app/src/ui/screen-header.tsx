@@ -27,6 +27,11 @@ type HeaderChrome = {
   compactFigure?: ReactNode;
   /** A row under the compact bar, e.g. the organize chips (FLOW-363 3c). The bar then shows once it scrolls off. */
   panel?: ReactNode;
+  /**
+   * FLOW-942: the end of the page's head when it goes on past the header (a profit page's figure). The compact
+   * bar then waits for it too, so it never comes down over half the figure.
+   */
+  headEnd?: HTMLElement | null;
   /** Compact is the t-btn used on a transaction. */
   size?: "default" | "compact";
   subtitleClassName?: string;
@@ -66,6 +71,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
     titleAside,
     compactFigure,
     panel,
+    headEnd,
     size = "default",
     subtitleClassName,
     className,
@@ -79,12 +85,11 @@ export function ScreenHeader(props: ScreenHeaderProps) {
   const stacked = props.layout === "stacked"
     || (props.layout == null && !barOnly && start != null && size !== "compact");
   const kickerLine = kicker && (!labelledBack || backText != null) ? <p className="t-caption t-muted">{kicker}</p> : null;
-  // FLOW-334 H1: a long stacked page keeps Back in a compact bar once the large title scrolls off.
+  // FLOW-334 H1: a long stacked page keeps Back in a compact bar once the large title and the lines under it scroll off.
   const compact = stacked && leading == null && backTo != null && title != null;
-  // State, not a ref: the mark moves when the panel comes or goes (a skeleton, a period with no chips), and
-  // the observer must follow the new node.
+  // State, not a ref: the mark comes and goes with the bar, and the observer must follow the new node.
   const [titleEnd, setTitleEnd] = useState<HTMLSpanElement | null>(null);
-  const past = useScrolledPast(titleEnd, compact);
+  const past = useScrolledPast(headEnd ?? titleEnd, compact);
   return (
     <header className={[stacked ? "ui-page ui-page-stacked" : props.layout === "inline" && start != null ? "ui-page ui-page-inline" : "ui-page", className].filter(Boolean).join(" ")}>
       {stacked ? null : kickerLine}
@@ -107,10 +112,10 @@ export function ScreenHeader(props: ScreenHeaderProps) {
           <FocusTitle className="t-title">{title}</FocusTitle>
         )
       ) : null}
-      {compact && panel == null ? <span ref={setTitleEnd} className="ui-compact-mark" aria-hidden="true" /> : null}
       {subtitle ? <p className={subtitleClass(subtitleClassName, stacked)}>{subtitle}</p> : null}
       {below != null ? <div className="ui-page-below">{below}</div> : null}
-      {compact && panel != null ? <span ref={setTitleEnd} className="ui-compact-mark" aria-hidden="true" /> : null}
+      {/* FLOW-942: the mark ends the header, so the bar comes down once every header line has gone under it. */}
+      {compact ? <span ref={setTitleEnd} className="ui-compact-mark" aria-hidden="true" /> : null}
       {compact ? (
         <CompactBar
           title={title}
@@ -127,6 +132,8 @@ export function ScreenHeader(props: ScreenHeaderProps) {
 
 /** The compact bar's height under the safe area: one touch target. */
 const COMPACT_BAR = 44;
+/** The detail pages' top bar (--compact-bar-detail): the transaction-style bar. */
+export const DETAIL_BAR = 56;
 
 /** The safe area on top (installed app under a notch), in px. --safe-top is an env(), so a probe resolves it. */
 function safeTop(): number {
@@ -139,16 +146,16 @@ function safeTop(): number {
 }
 
 /**
- * True once the mark has scrolled up under the compact bar. The mark is the node itself (a callback ref's
+ * True once the mark has scrolled up under the compact bar (`bar` px tall, under the safe area). The mark is the node itself (a callback ref's
  * state), so a mark React swaps for a new node is observed again: a removed node reads as a zero rect,
  * above the bar, and kept the bar down at the top of the page.
  */
-export function useScrolledPast(mark: HTMLElement | null, enabled: boolean): boolean {
+export function useScrolledPast(mark: HTMLElement | null, enabled: boolean, bar = COMPACT_BAR): boolean {
   const [past, setPast] = useState(false);
   useEffect(() => {
     const node = enabled ? mark : null;
     if (node == null || typeof IntersectionObserver === "undefined") return;
-    const top = COMPACT_BAR + safeTop();
+    const top = bar + safeTop();
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[entries.length - 1];
@@ -160,6 +167,6 @@ export function useScrolledPast(mark: HTMLElement | null, enabled: boolean): boo
     return () => {
       observer.disconnect();
     };
-  }, [mark, enabled]);
+  }, [mark, enabled, bar]);
   return enabled && mark != null && past;
 }

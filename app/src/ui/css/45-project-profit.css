@@ -16,7 +16,7 @@
 
 /* The header on the project's profit pages: the back row at 12px, the subtitle at its own line height. */
 .ui-pp-head {
-  padding-top: var(--space-3);
+  padding-top: calc(var(--safe-top) + var(--space-3));
 }
 
 .ui-pp-head > p {

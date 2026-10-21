@@ -10,11 +10,13 @@ import type { LoanDetail, LoanPayment } from "./loan-detail-data";
  * with the total paid, the split of the total, then one section per year, newest first; each
  * section's year head sticks under the top bar until the next year's head pushes it out.
  */
-export function LoanPaymentsView({ loan, payments, projectName, search }: {
+export function LoanPaymentsView({ loan, payments, projectName, search, headRef }: {
   loan: LoanDetail;
   payments: readonly LoanPayment[];
   projectName: string | null;
   search: string;
+  /** The page's top bar takes its line once this head is under it (TransactionTopBar). */
+  headRef?: (node: HTMLElement | null) => void;
 }) {
   const totals = paymentTotals(payments);
   const years = loanPaymentYears(payments);
@@ -34,7 +36,7 @@ export function LoanPaymentsView({ loan, payments, projectName, search }: {
   const sub = [`${String(payments.length)} תשלומים מאז ${monthYear(loan.startDate)}`, projectName].filter((item) => item != null).join(" · ");
   return (
     <div className="ui-loan-payments">
-      <header className="ui-loan-payments-head">
+      <header ref={headRef} className="ui-loan-payments-head">
         <span className="ui-loan-chip">כל התשלומים</span>
         <h1 className="ui-loan-name">{loan.name}</h1>
         <p className="ui-loan-payments-total"><bdi dir="ltr">{wholeMoney(totals.total, loan.currency)}</bdi></p>
