@@ -4,6 +4,7 @@ import { screenLoaders } from "../screen-loaders";
 
 const UnpaidScreen = lazy(() => screenLoaders.unpaid().then((m) => ({ default: m.UnpaidScreen })));
 const InvoiceScreen = lazy(() => screenLoaders.invoice().then((m) => ({ default: m.InvoiceScreen })));
+const TransfersScreen = lazy(() => screenLoaders.transfers().then((m) => ({ default: m.TransfersScreen })));
 
 /** Open invoices: the bills that are not paid yet. */
 export function UnpaidRoute() {
@@ -13,4 +14,9 @@ export function UnpaidRoute() {
 /** FLOW-367: one open invoice, pushed from the list. */
 export function UnpaidInvoiceRoute() {
   return <Route path="unpaid/:invoiceId" element={<InvoiceScreen />} />;
+}
+
+/** FLOW-941: the transfers between two Mercury connections Flow suggests, opened from Home's דורש טיפול. */
+export function TransfersRoute() {
+  return <Route path="transfers" element={<TransfersScreen />} />;
 }

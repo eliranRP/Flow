@@ -204,6 +204,17 @@ begin
     company_id, provider, key_ciphertext, key_nonce, dek_ciphertext, dek_nonce, kek_ref, kek_version, envelope_version
   )
   values (a, 'mercury', '\x01'::bytea, '\x0201'::bytea, '\x03'::bytea, '\x0401'::bytea, 'MERCURY_KEK', '1', '1');
+  -- FLOW-941: two chosen Mercury connections and a transfer between them (out on one, in on the other).
+  update public.connector_connections set account_labels = '[{"id": "victim-acct-1"}]', org_label = 'Victim Harbor LLC',
+    accounts_chosen_at = now(), sync_account_ids = array['victim-acct-1'] where company_id = a and provider = 'mercury';
+  insert into public.connector_connections (company_id, provider, slot, key_ciphertext, key_nonce, dek_ciphertext, dek_nonce,
+    kek_ref, kek_version, envelope_version, account_labels, accounts_chosen_at)
+  values (a, 'mercury', 2, '\x01', '\x0201', '\x03', '\x0401', 'MERCURY_KEK', '1', '1', '[{"id": "victim-acct-2"}]', now());
+  perform pg_temp.put('xfer_out', tests.fixture_line(a, 'Victim transfer out', 2345671, 'expense', null, null, d + 5, 'USD', 'posted', 'mercury', null, 'expense'));
+  perform pg_temp.put('xfer_in', tests.fixture_line(a, 'Victim transfer in', 2345671, 'income', null, null, d + 6, 'USD', 'posted', 'mercury', null, 'invoice_receipt'));
+  update public.transactions set provider_meta = jsonb_build_object('account_id', case when id = pg_temp.sid('xfer_out') then 'victim-acct-1' else 'victim-acct-2' end)
+  where id in (pg_temp.sid('xfer_out'), pg_temp.sid('xfer_in'));
+  insert into public.transfer_matches (company_id, out_transaction_id, in_transaction_id, same, set_by) values (a, pg_temp.sid('xfer_out'), pg_temp.sid('line'), false, owner);
   insert into public.connector_refresh_requests (company_id, provider) values (a, 'mercury');
   insert into public.connector_skips (company_id, provider, external_id, reason)
   values (a, 'mercury', 'victim-skip-1', 'Victim skip reason');
@@ -638,6 +649,8 @@ begin
     ('reopen_invite', jsonb_build_object('p_invite_id', pg_temp.lit(pg_temp.sid('invite_declined')))),
     ('mcp_move_category_lines', jsonb_build_object('p_from', pg_temp.lit(pg_temp.sid('category2')))),
     ('mcp_set_bank_accounts', jsonb_build_object('p_account_ids', pg_temp.lit(array['victim-acct-1']::text[]), 'p_from', 'null::text')),
+    ('answer_transfer_match', jsonb_build_object('p_out_transaction_id', pg_temp.lit(pg_temp.sid('xfer_out')), 'p_in_transaction_id', pg_temp.lit(pg_temp.sid('xfer_in')))),
+    ('mcp_answer_transfer_match', jsonb_build_object('p_out_transaction_id', pg_temp.lit(pg_temp.sid('xfer_out')), 'p_in_transaction_id', pg_temp.lit(pg_temp.sid('xfer_in')))),
     ('delete_company', jsonb_build_object('p_confirm', pg_temp.lit('Victim Sample Co'::text))),
     ('set_cash_basis', jsonb_build_object('p_basis', pg_temp.lit('paid'::text))),
     ('mcp_set_cash_basis', jsonb_build_object('p_basis', pg_temp.lit('paid'::text))),

@@ -307,6 +307,13 @@
       "screens/invite-actions.ts",
       "screens/company-sheet.tsx",
       "dev/team-sample.ts"
+    ],
+    "transfers.spec.ts": [
+      "screens/transfers-screen.tsx",
+      "screens/attention-rows.tsx",
+      "screens/HomeScreen.tsx",
+      "transfer-matches.ts",
+      "dev/transfers-sample.ts"
     ]
   },
   "sweeps": {

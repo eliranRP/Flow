@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `create_manual_entry`, `attach_document`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `create_manual_entry`, `attach_document`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -88,6 +88,8 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "jev_mode"` | `id` | the company id `set_jev_mode` returned |
 | `set_bank_accounts`, `answer_bank_account` | `slot`, `account_ids` / `account_id` | `list_bank_connections` `connections[].slot` and `connections[].accounts[].id` |
 | `undo` `kind: "bank_accounts"` | `id` | the connection id `set_bank_accounts` or `answer_bank_account` returned (`list_bank_connections` `connections[].id`) |
+| `confirm_transfer_match`, `dismiss_transfer_match` | `out_transaction_id`, `in_transaction_id` | `list_transfer_matches` `matches[].out.transaction_id` and `matches[].in.transaction_id` |
+| `undo` `kind: "transfer_match"` | `id` | the money-out line's id the write returned (`out_transaction_id`) |
 | `set_member_role`, `remove_member` | `member_id` | `list_team` `members[].user_id` |
 | `undo` `kind: "invite"` | `id` | the invite id `invite_member` returned |
 | `undo` `kind: "member_role"`, `kind: "member_remove"` | `id` | the member's user id |
@@ -599,6 +601,31 @@ Output `data`: `id` (the connection), `slot`, `account_ids` and `skipped_account
 ```
 
 Answers the app's question on a new account ("כן, לסנכרן" / "לא"). Write tool, owner only, `mcp_answer_bank_account`, through the same `set_mercury_accounts`. `account_id` is an account with `new` true in `list_bank_connections`. `sync` true syncs it from the connection's own start (as the app's yes does: a new account has little history); false leaves it out, and it is not asked again. An account that is not new is `refused` / `account is not waiting for an answer`; one the connection does not list is `validation` / `account is not on this connection`. Output and undo as `set_bank_accounts`.
+
+### list_transfer_matches
+
+`list_transfer_matches`, no arguments ([FLOW-941](../backlog/tasks/FLOW-941.md), [0205](../decisions/0205-transfer-match-suggestions.md)). Read tool; any member reads it. What Home's "העברות לבדיקה" screen lists. Between two Mercury organisations (two connections) Mercury may name a recipient instead of the other account, so one transfer comes in as two lines: money out on one connection and money in on the other. Flow suggests the pair; the user decides whether it is a transfer or a coincidence. `data.matches[]` (up to 100), each:
+
+- `out` and `in`: `transaction_id`, `doc_date`, `amount_minor` (unsigned minor units), `currency`, `description`, `party` (the supplier or customer, or null), `slot` and `org_label` (the connection and its organisation), `account_name`, `account_last4`.
+- `day_diff`: the days between the two lines; `name_hint`: one side's payee names the other organisation.
+
+A pair is a posted Mercury money-out line (not a refund) and a posted Mercury money-in line on synced accounts of two different connections, the same amount and currency, dated within 3 days, both still counted in the profit (not already a transfer, a loan part or kept out), neither split, a loan payment or an invoice's linked deposit, neither in a confirmed pair, and the pair not rejected. Each line is in one suggestion at most: the closest dates first, then a name hint, then the newest. A company with fewer than two chosen connections gets none.
+
+### confirm_transfer_match
+
+```json
+{ "idempotency_key": "xfer-1", "out_transaction_id": "<money-out line>", "in_transaction_id": "<money-in line>" }
+```
+
+"זו העברה בין החשבונות שלכם?" — yes. Write tool, owner or editor, `mcp_answer_transfer_match` (`p_same` true), which saves through the app's `answer_transfer_match`. Both lines become a transfer, filed as Flow files a transfer to an own account it does not skip: the category העברות of each line's kind when the company has one, out of the profit (`in_pnl` false) and out of the cash view (`in_cash` false). An open review of either line is set aside (skipped, so the sync does not queue it again). Output `data`: `out_transaction_id`, `in_transaction_id`, `same: true`, `undo_kind: "transfer_match"` and `id` (the money-out line). Undo gives both lines back their category and switches where nothing changed them since, and reopens their reviews; it is `conflict` once the pair was answered again. Errors: `refused` / `not a transfer pair` (not posted Mercury lines, money out then money in, on synced accounts of two different connections, of the same amount and currency, within 3 days), `refused` / `already matched` (a line is in another confirmed pair), `refused` / `transaction not found`, `refused` / `line has a split by category` or `loan line is fixed`; `validation` for the same id twice or a malformed id; `forbidden` for a viewer's or a read token.
+
+### dismiss_transfer_match
+
+```json
+{ "idempotency_key": "xfer-2", "out_transaction_id": "<money-out line>", "in_transaction_id": "<money-in line>" }
+```
+
+"לא, צירוף מקרים". Write tool, owner or editor, `mcp_answer_transfer_match` (`p_same` false). The pair is never suggested again and both lines stay as they are; each may still pair with another line. A confirmed pair is taken back first. Output as `confirm_transfer_match` with `same: false`; undo (kind `transfer_match`, the money-out line) suggests the pair again.
 
 ### get_sync_status
 

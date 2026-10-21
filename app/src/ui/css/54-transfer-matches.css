@@ -1,0 +1,55 @@
+/* FLOW-941: העברות לבדיקה. Each card is the recurring match box (tint, question, the two answers) with the
+   money out and the money in as two rows: the account and organisation at the start, the amount at the end. */
+.ui-xfer-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-block: var(--space-2) var(--space-4);
+}
+
+.ui-xfer-lead {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-note-line);
+}
+
+.ui-xfer-legs {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-xfer-leg {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.ui-xfer-leg-text {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-half);
+}
+
+.ui-xfer-leg-title {
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+  font-size: var(--type-line2-size);
+  line-height: calc(var(--type-line2-size) * 1.2);
+}
+
+.ui-xfer-leg-amount {
+  flex: none;
+  color: var(--color-text);
+  font-size: var(--type-line2-size);
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-xfer-leg-amount[data-income="true"] {
+  color: var(--color-income);
+}

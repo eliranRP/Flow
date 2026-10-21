@@ -34,7 +34,7 @@ import { ProjectRoutes } from "./routes/projects";
 import { SearchRoute } from "./routes/search";
 import { SetupRoutes } from "./routes/setup";
 import { SettingsRoutes } from "./routes/settings";
-import { UnpaidInvoiceRoute, UnpaidRoute } from "./routes/unpaid";
+import { TransfersRoute, UnpaidInvoiceRoute, UnpaidRoute } from "./routes/unpaid";
 
 const CompanyProfitScreen = lazy(() => screenLoaders.companyProfit().then((m) => ({ default: m.CompanyProfitScreen })));
 const ReviewScreen = lazy(() => screenLoaders.review().then((m) => ({ default: m.ReviewScreen })));
@@ -193,6 +193,7 @@ function AppRoutes() {
                 </Route>
                 <Route path="review/filed" element={<FiledTodayScreen />} />
                 {UnpaidRoute()}
+                {TransfersRoute()}
                 <Route path="missing-bills" element={<RecurringRedirect />} />
                 <Route path="recurring" element={<RecurringScreen />} />
                 <Route path="recurring/:direction/:partyId" element={<RecurringChargeScreen />} />

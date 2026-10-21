@@ -92,6 +92,8 @@ export function DevCash() {
       search="?preview=1"
       attention={params.get("box") === "none" ? [] : attentionRows({
         pending: 7,
+        // FLOW-941: `?transfers=1` adds the suggested transfers row.
+        transfers: params.get("transfers") === "1" ? 2 : 0,
         unpaidCount: 3,
         // The usd-loss board frame's invoices and its charge are in dollars (the board's $21,300 and $1,240).
         unpaidGross: usdLoss ? 2_130_000n : 460_000n,

@@ -1,7 +1,7 @@
 import { formatAmountText } from "@flow/shared";
 import { missingBillsTitle, type ChargeChangeView } from "../forecast";
 import type { BannerRow } from "../ui/banner";
-import { CalendarIcon, InvoiceIcon, TrendDownIcon, TrendUpIcon } from "../ui/icons";
+import { CalendarIcon, InvoiceIcon, TransferIcon, TrendDownIcon, TrendUpIcon } from "../ui/icons";
 
 // Home's attention rows, in their own file so the project page (FLOW-435) shows them without
 // loading Home. HomeScreen.tsx re-exports attentionRows for its older importers.
@@ -12,10 +12,12 @@ import { CalendarIcon, InvoiceIcon, TrendDownIcon, TrendUpIcon } from "../ui/ico
  * third row, the late recurring bills, as a count only. FLOW-415 (b-2): late income gets its own
  * count row, and a recurring payment 20% or more off its usual amount gets a row with an up or down
  * arrow that opens it; two or more share one row, "N חיובים קבועים השתנו". The count rows open the
- * קבועים screen at their section.
+ * קבועים screen at their section. FLOW-941: the transfers between two Mercury connections Flow suggests get a
+ * count row under the review row, opening העברות לבדיקה.
  */
 export function attentionRows({
   pending,
+  transfers = 0,
   unpaidCount,
   unpaidGross,
   currency = "ILS",
@@ -27,6 +29,8 @@ export function attentionRows({
   search,
 }: {
   pending: number;
+  /** FLOW-941: suggested transfers between two Mercury connections. */
+  transfers?: number;
   unpaidCount: number;
   unpaidGross: bigint;
   /** The company's base currency for the open invoices' total (ILS when not given). */
@@ -47,6 +51,15 @@ export function attentionRows({
       id: "review",
       to: `/review${search}`,
       title: pending === 1 ? "פריט אחד ממתין לאישור" : <><bdi dir="ltr">{String(pending)}</bdi> פריטים ממתינים לאישור</>,
+    });
+  }
+  if (transfers > 0) {
+    rows.push({
+      id: "transfers",
+      to: `/transfers${search}`,
+      icon: <TransferIcon size={24} stroke={1.9} />,
+      title: transfers === 1 ? "העברה אחת לבדיקה" : <><bdi dir="ltr">{String(transfers)}</bdi> העברות לבדיקה</>,
+      hint: "בין חשבונות Mercury",
     });
   }
   if (unpaidCount > 0) {

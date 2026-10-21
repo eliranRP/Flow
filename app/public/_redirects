@@ -43,6 +43,8 @@
 /unpaid/ /unpaid 301
 /unpaid/:invoiceId /app-shell 200
 /unpaid/:invoiceId/ /unpaid/:invoiceId 301
+/transfers /app-shell 200
+/transfers/ /transfers 301
 /missing-bills /app-shell 200
 /missing-bills/ /missing-bills 301
 /recurring /app-shell 200
