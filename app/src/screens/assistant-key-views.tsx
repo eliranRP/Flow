@@ -48,7 +48,7 @@ export function KeyList({
   return (
     <>
       <ConnectionHead>{`מפתחות פעילים · ${String(activeKeys(keys).length)}`}</ConnectionHead>
-      <List>
+      <List className="ui-ai-keys">
         {keys.map((key) => (
           <ListRow
             key={key.id}
