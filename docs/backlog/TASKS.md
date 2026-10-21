@@ -238,6 +238,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-215"></a>[FLOW-215](tasks/FLOW-215.md) | get_cash_lines names a missing side, and documents its page cap | SMALL CYCLE |
 | <a id="flow-216"></a>[FLOW-216](tasks/FLOW-216.md) | MCP get_company_next_month_inputs: the company forecast's inputs | MCP |
 | <a id="flow-515"></a>[FLOW-515](tasks/FLOW-515.md) | MCP: the AI connection page shows the assistant's name, its request count and the code's expiry from the server | MCP |
+| <a id="flow-939"></a>[FLOW-939](tasks/FLOW-939.md) | Several AI (MCP) keys: the key list, one key, a new named key | UI (design approved) |
 
 ## Transactions and app UX
 

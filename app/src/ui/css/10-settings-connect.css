@@ -176,3 +176,16 @@
 .ui-ai-connected-card .ui-ai-status-name {
   font-weight: var(--type-line2-weight);
 }
+
+/* FLOW-939: "‹ כל המפתחות" over a key's page and a new key's setup. Board: 15px accent text with a 16px back chevron, 44 tall, at the start edge. */
+.ui-connection-page .ui-ai-all-keys {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: var(--space-1);
+  min-block-size: var(--touch-min);
+  padding-inline: var(--space-1);
+  color: var(--color-accent-text);
+  font-size: var(--type-line2-size);
+  text-decoration: none;
+}

@@ -239,8 +239,9 @@ test("the assistant settings stories stay inside 320, 360, and 390", async ({ pa
     "screens-ai-connection--setup",
     "screens-ai-connection--code-ready-claude-code",
     "screens-ai-connection--code-ready-other",
-    "screens-ai-connection--connected",
-    "screens-ai-connection--read-scope",
+    "screens-ai-connection--keys",
+    "screens-ai-connection--one-key",
+    "screens-ai-connection--new-key",
     "screens-ai-connection--expired",
   ];
   const failures: string[] = [];

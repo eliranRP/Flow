@@ -20,22 +20,21 @@ test("the AI page selects a scope, and a preview does not mint", async ({ page }
   await expect(page.getByRole("textbox", { name: "פקודת חיבור" })).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
+  // FLOW-939: once there is a key the page is the key list; a key's page has the facts and ביטול המפתח.
   await page.goto("/e2e/connections/ai?assistant=connected&preview=1");
-  await expect(page.locator(".ui-ai-status")).toContainText("מחובר");
+  await expect(page.getByRole("heading", { name: "מפתחות פעילים · 2" })).toBeVisible();
+  await page.getByRole("link", { name: /^Claude Code · מחשב עבודה/ }).click();
+  await expect(page.locator(".ui-ai-status")).toContainText("Claude Code · מחשב עבודה");
   await expect(page.locator(".ui-ai-status")).toContainText("קריאה וכתיבה");
   const stamp = page.getByText("שימוש אחרון", { exact: true });
   await expect(stamp).toBeVisible();
   const stampLines = await stamp.evaluate((node) => node.parentElement?.getClientRects().length ?? 0);
   expect(stampLines).toBe(1);
-  await page.getByRole("button", { name: "ניתוק", exact: true }).click();
-  const confirm = page.getByRole("dialog", { name: "לנתק את העוזר?" });
-  await expect(confirm).toBeVisible();
-  await confirm.getByRole("button", { name: "ניתוק" }).click();
-  await expect(confirm).toBeHidden();
+  await page.getByRole("button", { name: "ביטול המפתח", exact: true }).click();
   await toast(page, previewToast);
 
   await page.goto("/e2e/connections/ai?assistant=loading&preview=1");
-  await expect(page.getByText("מחובר", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/מפתחות פעילים/)).toHaveCount(0);
 
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/e2e/connections/ai?preview=1");

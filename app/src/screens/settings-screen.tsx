@@ -12,7 +12,7 @@ import { screenPhase } from "../query-phase";
 import { isStandalone } from "../ui/install-prompt";
 import { useCategoriesQuery, useDashboardQuery, useMercuryStatusQuery, useSumitStatusQuery } from "../use-books";
 import { useWrite } from "../use-write";
-import { useAssistantStatusQuery, type AssistantSample } from "./assistant-settings";
+import { useAssistantStatusQuery, type AssistantSample } from "./assistant-keys";
 import { CompanySheet } from "./company-sheet";
 import { bindJevConnectorScope, clearJevConnectorFlag } from "./jev-review";
 import { JEV_DEFAULT, jevLocked, jevSwitchOn, useJevIntegrationQuery, useJevKeyStatusQuery, type JevCardState } from "./jev-settings";

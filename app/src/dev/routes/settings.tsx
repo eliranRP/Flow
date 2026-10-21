@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { ReactNode } from "react";
-import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "../../assistant-sample";
+import { SAMPLE_ASSISTANT_KEYS, SAMPLE_ASSISTANT_SECRET as assistantSampleSecret, SAMPLE_EXPIRED_KEY } from "../../assistant-sample";
 import { SAMPLE_DEVICES, SAMPLE_THIS_TAG } from "../../push-devices-sample";
 import { AiConnectionPage } from "../../screens/assistant-settings";
 import { BusinessScreen } from "../../screens/business-screen";
@@ -124,13 +124,17 @@ export function DevBusiness() {
   );
 }
 
-/** The AI connection page on the dev settings fixture (`?assistant=…`), so a mint shows its code without the server. `?mint=1` opens the code step. */
+/**
+ * The AI connection page on the dev settings fixture (`?assistant=…`), so a mint shows its code without the server.
+ * `?mint=1` opens the code step. FLOW-939: `?assistant=connected` lists the board's two keys, under
+ * /e2e/connections/ai (the list), /new (a new key) and /key/<id> (one key).
+ */
 export function DevAiConnection() {
   const [params] = useSearchParams();
   const initialSecret = params.get("mint") === "1" && devAssistantSecret != null
     ? { id: "mcp-sample", secret: devAssistantSecret, scope: ["read", "write"] }
     : undefined;
-  return <AiConnectionPage sample={useDevSettingsSample()?.assistant} sampleSecret={devAssistantSecret} initialSecret={initialSecret} />;
+  return <AiConnectionPage sample={useDevSettingsSample()?.assistant} sampleSecret={devAssistantSecret} initialSecret={initialSecret} basePath="/e2e/connections/ai" />;
 }
 
 /** The dev Settings fixture. `?connected=1|auth`, `?assistant=…`, `?nocompany=1`, `?email=none|long`, `?loans=none`. */
@@ -169,9 +173,9 @@ export function useDevSettingsSample(): NonNullable<Parameters<typeof SettingsSc
         assistant: noCompany
           ? { state: "no-company" }
           : assistant === "connected"
-          ? { state: "connected", scope: "read_write", lastUsedAt: "2026-09-30T11:05:00.000Z", expiresAt: "2027-01-09T00:00:00.000Z", id: "mcp-1" }
+          ? { state: "connected", keys: SAMPLE_ASSISTANT_KEYS }
           : assistant === "expired"
-            ? { state: "expired", scope: "read", id: "mcp-1" }
+            ? { state: "expired", keys: [SAMPLE_EXPIRED_KEY] }
             : assistant === "loading"
               ? { state: "loading" }
               : assistant === "error"
@@ -216,7 +220,7 @@ export function DevCategories() {
 export const settingsRoutes: DevRoute[] = [
   { path: "settings", element: <DevSettings /> },
   { path: "connections", element: <DevConnections /> },
-  { path: "connections/ai", element: <DevAiConnection /> },
+  { path: "connections/ai/*", element: <DevAiConnection /> },
   { path: "business", element: <DevBusiness /> },
   { path: "connections/sumit", element: <DevSumitConnection /> },
   { path: "connections/mercury", element: <DevMercuryConnection /> },
