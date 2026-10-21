@@ -135,6 +135,16 @@
   line-height: var(--type-btn-2-line);
 }
 
+/* The hint is one line: whole when it fits, cut with an ellipsis only when it does not (owner,
+   2026-10-21). Plain inline text, so Safari measures the real width instead of the two-line box. */
+.ui-home-attention .ui-banner-row .ui-row-hint {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  -webkit-line-clamp: unset;
+}
+
 .ui-home-attention-title {
   margin: 0 var(--space-5) var(--space-1);
   font-size: var(--type-section-size);

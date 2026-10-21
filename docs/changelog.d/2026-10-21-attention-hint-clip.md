@@ -1,0 +1,1 @@
+The second line of a row in Home's דורש טיפול box ("$19 במקום $44 · חיוב קבוע") is no longer cut off with an ellipsis on iPhone; it stays on one line and is cut with "…" only when it really does not fit. No migration.
