@@ -22,8 +22,9 @@
     margin-inline-start: calc(var(--space-4) * -1);
   }
 
+  /* Under a notch (FLOW-940, 06-review-card.css) the title and the segments sit 6px and 4px closer. */
   .ui-review-queue .ui-page-stacked .t-title {
-    margin-top: calc(var(--space-1) * 1.5);
+    margin-top: calc(var(--space-1) * 1.5 - var(--review-notch) * 6);
   }
 
   .ui-review-queue .ui-review-counts,
@@ -39,7 +40,7 @@
   }
 
   .ui-review-queue .ui-review-segments {
-    margin-top: var(--space-2);
+    margin-top: calc(var(--space-2) - var(--review-notch) * 4);
   }
 
   .ui-review-queue .ui-review-seg {

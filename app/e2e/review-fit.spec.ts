@@ -51,6 +51,31 @@ test("at 320x693 the worst-case card ends above the bar, and אישור, שינ�
   }
 });
 
+// FLOW-940: an installed iPhone app pads the header with --safe-top (tests run with 0). On a tall
+// notched phone the worst-case card still ends above the bar. Injected before the app's scripts run.
+for (const phone of [
+  { width: 393, height: 852, notch: 59 },
+  { width: 390, height: 844, notch: 47 },
+]) {
+  test(`at ${String(phone.width)}x${String(phone.height)} under a ${String(phone.notch)}px notch the worst-case card ends above the bar`, async ({ page }) => {
+    await page.addInitScript((css) => {
+      document.addEventListener("DOMContentLoaded", () => {
+        const style = document.createElement("style");
+        style.textContent = css;
+        document.head.append(style);
+      });
+    }, `:root { --safe-top: ${String(phone.notch)}px; }`);
+    await page.setViewportSize({ width: phone.width, height: phone.height });
+    await page.goto(fit);
+    await expect(page.locator(".ui-review-reason")).toBeVisible();
+    const header = await box(page.locator(".ui-review-queue .ui-page-stacked > *").first(), "the back row");
+    expect(header.y, "the header starts below the notch").toBeGreaterThanOrEqual(phone.notch);
+    const bar = await box(page.locator(".ui-review-queue .ui-action-bar"), "the action bar");
+    const card = await box(page.locator(".ui-review"), "the card");
+    expect(card.y + card.height).toBeLessThanOrEqual(bar.y);
+  });
+}
+
 test("the counter reserves no blank digit under 10, and stays put from 9 to 10 of 12", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 693 });
   await page.goto("/review?preview=1&e2e=list");

@@ -216,6 +216,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-935"></a>[FLOW-935](tasks/FLOW-935.md) | The iPhone Home Screen app moves to a new deploy without a reinstall | BUG |
 | <a id="flow-936"></a>[FLOW-936](tasks/FLOW-936.md) | The notification switches answer at once, and this device's row catches up without a relaunch | BUG |
 | <a id="flow-937"></a>[FLOW-937](tasks/FLOW-937.md) | Under an iPhone notch, a page's title is never hidden under the compact bar | BUG |
+| <a id="flow-940"></a>[FLOW-940](tasks/FLOW-940.md) | Under a notch on a tall phone, the review queue's worst-case card ends above the bar | BUG |
 
 ## MCP
 

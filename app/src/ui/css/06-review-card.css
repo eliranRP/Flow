@@ -123,26 +123,26 @@
 }
 
 /* The board's header rhythm on the review queue (FLOW-365b): back row, title, counter, segments, card.
-   A 320x693 phone keeps the short-height spacing (its worst-case card has to end above the bar). */
+   A 320x693 phone keeps the short-height spacing (its worst-case card has to end above the bar).
+   FLOW-940: under a notch the safe area is the header's top air, and the gaps below it close by 20px
+   (here and in 06-review-board.css), so the worst-case card still ends above the bar at 393x852 and
+   390x844. --review-notch is 1px under a notch and 0 without one, so a phone with no notch keeps the
+   board's spacing. The title and segment gaps are set in 06-review-board.css. */
 @media (min-height: 721px) {
-  .ui-review-queue .ui-page-stacked {
-    padding-top: calc(var(--safe-top) + var(--space-3));
+  .ui-review-queue {
+    --review-notch: min(1px, var(--safe-top));
   }
 
-  .ui-review-queue .ui-focus-title {
-    margin-top: calc(var(--space-1) * 1.5);
+  .ui-review-queue .ui-page-stacked {
+    padding-top: max(var(--safe-top), var(--space-3));
   }
 
   .ui-review-queue .ui-review-counts {
-    margin-top: calc(var(--space-1) * 2.5);
-  }
-
-  .ui-review-queue .ui-review-segments {
-    margin-top: calc(var(--space-1) * 1.5);
+    margin-top: calc(var(--space-1) * 2.5 - var(--review-notch) * 6);
   }
 
   .ui-review-queue .ui-review {
-    margin-top: calc(var(--space-3) - 1px);
+    margin-top: calc(var(--space-3) - 1px - var(--review-notch) * 4);
   }
 }
 
