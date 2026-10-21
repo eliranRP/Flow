@@ -2,7 +2,7 @@ import { useState, type SubmitEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatMoney } from "@flow/shared";
 import { getSupabase } from "../lib/supabase";
-import { JEV_DEFAULT, saveJevIntegration } from "../screens/jev-settings";
+import { JEV_NEW_COMPANY, saveJevIntegration } from "../screens/jev-settings";
 import { useCompanyForm } from "../screens/company-form";
 import { companyNameError } from "../screens/rename-company";
 import { Button } from "../ui/button";
@@ -519,7 +519,7 @@ export function StepJev({ onDone, onSkipStep, onSkipAll, onBack }: StepProps) {
   function save() {
     setSaving(true);
     setFailed(false);
-    saveJevIntegration({ enabled: on, mode: on ? JEV_DEFAULT.mode : "off", threshold: JEV_DEFAULT.threshold })
+    saveJevIntegration(on ? JEV_NEW_COMPANY : { ...JEV_NEW_COMPANY, enabled: false, mode: "off" })
       .then(() => { onDone({ jev_on: on }); })
       .catch(() => { setFailed(true); })
       .finally(() => { setSaving(false); });
