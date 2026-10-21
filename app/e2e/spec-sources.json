@@ -21,6 +21,10 @@
     "sumit-live.spec.ts"
   ],
   "specs": {
+    "ai-keys.spec.ts": [
+      "screens/connections-screen.tsx",
+      "screens/assistant-settings.tsx"
+    ],
     "back.spec.ts": [
       "screens/",
       "ui/back.tsx",
@@ -243,10 +247,6 @@
       "screens/HomeScreen.tsx",
       "screens/projects-screen.tsx",
       "screens/project-detail-screen.tsx"
-    ],
-    "sheet-stack.spec.ts": [
-      "screens/connections-screen.tsx",
-      "screens/assistant-settings.tsx"
     ],
     "smoke.spec.ts": [
       "screens/",

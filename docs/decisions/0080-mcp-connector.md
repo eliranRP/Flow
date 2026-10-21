@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-30
 **Status:** Accepted
-**Amended by:** [0191](0191-client-read-freshness.md). Reads stay fresh for 30 minutes (the owner's choice) and go stale after any write; the focus refetch covers every ledger read, at most once every 5 minutes, and marks them stale in between; the sync status refetches on every focus.
+**Amended by:** [0202](0202-several-mcp-keys.md). Several keys per owner and company, one per assistant and device; minting no longer revokes the others; the status route lists them; a revoke has a 10-minute undo. [0191](0191-client-read-freshness.md). Reads stay fresh for 30 minutes (the owner's choice) and go stale after any write; the focus refetch covers every ledger read, at most once every 5 minutes, and marks them stale in between; the sync status refetches on every focus.
 
 Accepted for the first release below. The deferred section is an outline, not a commitment. [0006](0006-confirm-not-type.md), [0011](0011-auto-approve-high-confidence.md), and [0069](0069-back-and-one-tap-review.md) keep their own rules. Each points here, and this record extends them.
 

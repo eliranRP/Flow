@@ -12,7 +12,7 @@ const drainUrl = new URL("../supabase/migrations/20261003160000_sumit_drain_url.
 const engine = new URL("../supabase/migrations/20261003210000_connector_engine.sql", import.meta.url);
 const totals = new URL("../supabase/migrations/20261004130000_mercury_ils_totals.sql", import.meta.url);
 const mercuryUrl = new URL("../supabase/migrations/20261013050000_mercury_sync_atomic.sql", import.meta.url);
-const mercuryConnections = new URL("../supabase/migrations/20261021001500_mercury_connections.sql", import.meta.url);
+const mercuryConnections = new URL("../supabase/migrations/20261021060558_mercury_connections.sql", import.meta.url);
 const pgtap = new URL("../supabase/tests/database/sumit_daily_schedule.test.sql", import.meta.url);
 const checkSql = new URL("./check-sumit-cron.sql", import.meta.url);
 

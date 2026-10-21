@@ -14,6 +14,7 @@ import {
   DownloadIcon,
   HomeIcon,
   KeptOutIcon,
+  KeyIcon,
   LoanIcon,
   LockIcon,
   LogoutIcon,
@@ -36,7 +37,7 @@ import { padded } from "./story-support";
 
 type Entry = [string, ComponentType<{ size?: number }>];
 
-/** The 24-grid line icons, stroke 1.9. FLOW-501 adds PlugIcon (חיבורים) and LoanIcon (הלוואות); FLOW-601 PeopleIcon (צוות) and MailIcon (an invite); FLOW-415 RepeatIcon (חיוב קבוע) and TrendUpIcon and TrendDownIcon (a charge above or below usual); */
+/** The 24-grid line icons, stroke 1.9. FLOW-501 adds PlugIcon (חיבורים) and LoanIcon (הלוואות); FLOW-601 PeopleIcon (צוות) and MailIcon (an invite); FLOW-415 RepeatIcon (חיוב קבוע) and TrendUpIcon and TrendDownIcon (a charge above or below usual); FLOW-939 KeyIcon (an AI key); */
 const ICONS: Entry[] = [
   ["PlugIcon", PlugIcon],
   ["LoanIcon", LoanIcon],
@@ -56,6 +57,7 @@ const ICONS: Entry[] = [
   ["CheckIcon", CheckIcon],
   ["DownloadIcon", DownloadIcon],
   ["KeptOutIcon", KeptOutIcon],
+  ["KeyIcon", KeyIcon],
   ["LockIcon", LockIcon],
   ["LogoutIcon", LogoutIcon],
   ["RefreshIcon", RefreshIcon],

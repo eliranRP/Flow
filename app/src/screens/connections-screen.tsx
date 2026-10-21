@@ -4,7 +4,7 @@ import { useHoldOwnerSettings, useHoldWrites, ViewerNote, ViewerScope } from "..
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useDashboardQuery, useMercuryStatusQuery, useSumitStatusQuery } from "../use-books";
-import { useAssistantStatusQuery } from "./assistant-settings";
+import { useAssistantStatusQuery } from "./assistant-keys";
 import { bindJevConnectorScope } from "./jev-review";
 import { JEV_DEFAULT, JevSettings } from "./jev-settings";
 import { useBlockedPreview } from "./screen-shared";

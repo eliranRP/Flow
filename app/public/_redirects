@@ -63,6 +63,10 @@
 /settings/business/ /settings/business 301
 /settings/connections/ai /app-shell 200
 /settings/connections/ai/ /settings/connections/ai 301
+/settings/connections/ai/new /app-shell 200
+/settings/connections/ai/new/ /settings/connections/ai/new 301
+/settings/connections/ai/key/:keyId /app-shell 200
+/settings/connections/ai/key/:keyId/ /settings/connections/ai/key/:keyId 301
 /settings/connections/mercury /app-shell 200
 /settings/connections/mercury/ /settings/connections/mercury 301
 /settings/connections/sumit /app-shell 200

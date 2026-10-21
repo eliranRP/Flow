@@ -26,6 +26,8 @@ export function SettingsRoutes() {
       <Route path="settings/connections/sumit" element={<SumitConnectionRoute />} />
       <Route path="settings/connections/mercury" element={<MercuryConnectionRoute />} />
       <Route path="settings/connections/ai" element={<AiConnectionPage />} />
+      <Route path="settings/connections/ai/new" element={<AiConnectionPage />} />
+      <Route path="settings/connections/ai/key/:keyId" element={<AiConnectionPage />} />
       <Route path="settings/notifications" element={<NotificationsScreen />} />
       <Route path="settings/team" element={<TeamScreen />} />
     </>

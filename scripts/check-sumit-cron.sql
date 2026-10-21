@@ -1,7 +1,7 @@
 -- Read-only status for scripts/check-sumit-cron.sh.
 -- One line: ok, bad-daily, or bad-drain.
 -- The daily command is the connector refresh insert, copied exactly (one per company and provider since
--- FLOW-938, 20261021001500_mercury_connections.sql).
+-- FLOW-938, 20261021060558_mercury_connections.sql).
 -- The drain command reads Vault flow_sync_url and Vault cron_secret. Mercury rows use Vault
 -- flow_mercury_sync_url when it is set (FLOW-509, 20261013050000_mercury_sync_atomic.sql).
 -- It does not fall back to Kong and it does not embed a literal header.
