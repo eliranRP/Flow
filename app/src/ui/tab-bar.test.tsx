@@ -5,7 +5,8 @@ import { TabBar, tabSection } from "./tab-bar";
 import { expectRtl, expectTarget } from "./test-support";
 
 function WhereAmI() {
-  return <span data-testid="where">{useLocation().pathname}</span>;
+  const location = useLocation();
+  return <span data-testid="where">{`${location.pathname}${location.search}`}</span>;
 }
 
 function accentRule(): string {
@@ -94,6 +95,37 @@ describe("TabBar", () => {
       </MemoryRouter>,
     );
     fireEvent.click(screen.getByRole("link", { name: "פרויקטים" }));
+    expect(scroll).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+  });
+
+  it("takes Home on an older month back to this month and the top; on this month it only scrolls", () => {
+    const scroll = vi.fn();
+    window.scrollTo = scroll;
+    for (const [from, to] of [["/?month=2026-03&preview=1", "/?preview=1"], ["/?month=2026-03", "/"]] as const) {
+      const { unmount } = render(
+        <MemoryRouter initialEntries={[from]}>
+          <TabBar />
+          <Routes>
+            <Route path="*" element={<WhereAmI />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+      fireEvent.click(screen.getByRole("link", { name: "בית" }));
+      expect(screen.getByTestId("where").textContent).toBe(to);
+      expect(scroll).toHaveBeenLastCalledWith({ top: 0, behavior: "smooth" });
+      unmount();
+    }
+    scroll.mockClear();
+    render(
+      <MemoryRouter initialEntries={["/?preview=1"]}>
+        <TabBar />
+        <Routes>
+          <Route path="*" element={<WhereAmI />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("link", { name: "בית" }));
+    expect(screen.getByTestId("where").textContent).toBe("/?preview=1");
     expect(scroll).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
   });
 
