@@ -223,7 +223,10 @@ export function AiConnectionPage({
             setPolling(true);
             setHolding(true);
           }}
-          onLeave={() => { setHolding(false); }}
+          onLeave={() => {
+            setPolling(false);
+            setHolding(false);
+          }}
           onAdded={onAdded}
         />
       ) : (
