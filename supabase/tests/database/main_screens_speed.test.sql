@@ -5,14 +5,19 @@
 -- last bill and this month, recurring_changes, recurring_this_month, expected_months' pays_loan,
 -- missing_bills). Every expected value below was read from the functions as they were before the
 -- migration. Invented data only; amounts are agorot; every recurring read is given its own today.
+-- A second company pins a charge with several lines this month, five of them on one date and entry time:
+-- Home and the project page add them up the same and name the same latest line, the higher id. Last, the
+-- guard that makes the helpers' empty configuration safe: every caller sets an empty search_path, and no
+-- client role can create objects in a schema.
 
 begin;
 
-select plan(12);
+select plan(18);
 
 do $users$
 begin
   perform tests.create_supabase_user('mss_owner', 'mss-owner@example.com');
+  perform tests.create_supabase_user('mss_gas', 'mss-gas@example.com');
 end
 $users$;
 
@@ -20,6 +25,7 @@ create temp table mss (label text primary key, id uuid);
 grant all on mss to authenticated, service_role;
 
 insert into mss (label, id) values ('co', tests.fixture_company('mss_owner', 'Example Pin LLC'));
+insert into mss (label, id) values ('gas_co', tests.fixture_company('mss_gas', 'Example Gas LLC'));
 
 create or replace function pg_temp.id(p_label text)
 returns uuid
@@ -114,6 +120,38 @@ begin
   values (co, ln, pa, 5000, -5000), (co, ln, pb, 5000, -5001);
 end
 $fixture$;
+
+-- The second company: gas on one project, 10,000 a month from January to June on the 2nd. In July one
+-- line on the 2nd and five on the 8th, all entered in this one transaction, so the five share a date and
+-- an entry time. Their ids rise in the order they are entered: the last one entered is the latest.
+do $gas$
+declare
+  co uuid := pg_temp.id('gas_co');
+  pg uuid; cg uuid; s_gas uuid; m int; d date;
+begin
+  pg := tests.fixture_project(co, 'Gas house');
+  cg := tests.fixture_category(co, 'Gas cost');
+  insert into public.suppliers (company_id, name) values (co, 'Gas supplier') returning id into s_gas;
+  insert into pg_temp.mss (label, id) values ('gas_project', pg);
+  for m in 0..6 loop
+    d := (date '2026-01-02' + make_interval(months => m))::date;
+    insert into public.transactions (company_id, direction, doc_kind, pnl_role, line_status, currency,
+      amount_gross, amount_net, amount_original, vat_amount, vat_status, doc_date, cash_date, source,
+      idempotency_key, project_id, supplier_id, category_id, description, user_assigned, category_assigned)
+    values (co, 'expense', 'receipt', 'project', 'posted', 'ILS', case when m = 6 then -2000 else -10000 end,
+      case when m = 6 then -2000 else -10000 end, case when m = 6 then 2000 else 10000 end, 0, 'source', d, d,
+      'manual', 'mss:gas:' || m, pg, s_gas, cg, 'mss gas', true, true);
+  end loop;
+  for m in 1..5 loop
+    insert into public.transactions (id, company_id, direction, doc_kind, pnl_role, line_status, currency,
+      amount_gross, amount_net, amount_original, vat_amount, vat_status, doc_date, cash_date, source,
+      idempotency_key, project_id, supplier_id, category_id, description, user_assigned, category_assigned)
+    values (('00000000-0000-4000-8000-00000000094' || m)::uuid, co, 'expense', 'receipt', 'project', 'posted', 'ILS',
+      -1000, -1000, 1000, 0, 'source', date '2026-07-08', date '2026-07-08', 'manual', 'mss:gas-tie:' || m,
+      pg, s_gas, cg, 'mss gas tie', true, true);
+  end loop;
+end
+$gas$;
 
 select tests.authenticate_as('mss_owner');
 
@@ -216,6 +254,43 @@ select is(
   'missing_bills: every monthly charge is late on the 25th of the next month'
 );
 
+
+-- The second company's gas charge: six lines this month (2,000 + 5 x 1,000), 30% under its usual 10,000.
+-- Home and the project page agree on the sum, the count and the latest line: of the five on the 8th, entered
+-- together, the one with the higher id.
+select tests.authenticate_as('mss_gas');
+
+select is(
+  (select string_agg(format('%s/%s/%s/%s', x->>'party_name', x->>'amount_minor', x->>'line_count', x->>'changed'), ' ' order by ord)
+   from jsonb_array_elements(public.recurring_this_month(date '2026-07-20')) with ordinality e(x, ord)),
+  'Gas supplier/-7000/6/true',
+  'recurring_this_month: a charge with several lines this month, their sum and count'
+);
+
+select is(
+  (select string_agg(format('%s/%s/%s/%s', x->>'party_name', x->>'amount_minor', x->>'line_count', t.idempotency_key), ' ' order by ord)
+   from jsonb_array_elements(public.recurring_changes(date '2026-07-20')) with ordinality e(x, ord)
+   join public.transactions t on t.id = (x->>'transaction_id')::uuid),
+  'Gas supplier/-7000/6/mss:gas-tie:5',
+  'recurring_changes: the latest of five lines with one date and entry time is the higher id'
+);
+
+select is(
+  (select string_agg(format('%s/%s/%s', x->>'amount_minor', x->>'line_count', t.idempotency_key), ' ' order by ord)
+   from jsonb_array_elements(public.project_recurring_changes(pg_temp.id('gas_project'), date '2026-07-20')) with ordinality e(x, ord)
+   join public.transactions t on t.id = (x->>'transaction_id')::uuid),
+  '-7000/6/mss:gas-tie:5',
+  'project_recurring_changes: the same sum, count and latest line as Home'
+);
+
+select is(
+  (select (h->>'alert_key') = (p->>'alert_key')
+   from jsonb_array_elements(public.recurring_changes(date '2026-07-20')) h,
+     jsonb_array_elements(public.project_recurring_changes(pg_temp.id('gas_project'), date '2026-07-20')) p),
+  true,
+  'Home and the project page key the change alert, and its dismissal, on the same line'
+);
+
 reset role;
 
 -- The per-line helpers stay inlinable: no configuration, so the planner can fold them into the query.
@@ -236,6 +311,30 @@ select is(
      and p.proconfig is null and not p.prosecdef and p.provolatile = 'i'),
   11,
   'the per-line helpers set no configuration, so they inline'
+);
+
+-- Why no configuration is safe: every function that calls a helper sets an empty search_path (so a body
+-- inlined into it is read with pg_catalog alone), and no client role can create an operator or function in
+-- a schema a caller might search.
+select is(
+  (select case when count(*) = 0 then 'no callers found'
+     else coalesce(string_agg(p.oid::regprocedure::text, ', ' order by p.oid::regprocedure::text)
+       filter (where not coalesce(p.proconfig, array[]::text[]) @> array['search_path=""']), 'every caller') end
+   from pg_proc p
+   join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname in ('public', 'private')
+     and p.prosrc ~ 'private\.(line_in_pnl|line_category_out|line_unpaid|pnl_in_range|category_in_rehab|div_half_even|month_diff|month_end|pace_months|round_agorot_shekel_hundreds|category_flag)\('),
+  'every caller',
+  'every function calling the inlined helpers sets an empty search_path'
+);
+
+select is(
+  (select string_agg(r || ' on ' || s, ', ' order by r, s)
+   from unnest(array['authenticated', 'anon', 'service_role']) r,
+     unnest(array['public', 'private', 'extensions', 'graphql_public']) s
+   where has_schema_privilege(r, s, 'CREATE')),
+  null,
+  'no client role can create objects in public, private, extensions or graphql_public'
 );
 
 select * from finish();

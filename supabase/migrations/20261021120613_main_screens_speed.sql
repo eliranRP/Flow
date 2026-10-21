@@ -11,6 +11,8 @@
 --   expected_months twice. recurring_parties now returns the facts its readers went back for (this
 --   month's amount, latest line and line count; whether the charge pays a loan), and its last bill
 --   comes from one grouped pass instead of a subquery per charge. Each reads the lines once.
+-- - When two of a charge's lines this month share a date and entry time, the higher id is the latest, on
+--   Home (recurring_arrivals) and on the project page (project_recurring_arrivals) alike.
 -- Bodies are the latest live ones otherwise; supabase/tests/database/main_screens_speed.test.sql pins
 -- their outputs on invented books.
 begin;
@@ -687,6 +689,100 @@ AS $function$
 $function$;
 
 revoke all on function private.recurring_arrivals_json(uuid, date, boolean) from public, anon, authenticated;
+
+-- A project's arrivals pick the latest line this month the way recurring_parties does: by date, then entry,
+-- then the higher id. Home's recurring_changes and the project page's project_recurring_changes key a change
+-- alert, and its dismissal, on that line, so two lines with the same date and entry time (one bank sync) now
+-- give both screens the same key (FLOW-943). The body is 20261020102512's otherwise.
+create or replace function private.project_recurring_arrivals(p_company uuid, p_project uuid, p_today date)
+ RETURNS TABLE(direction txn_direction, party_id uuid, currency text, amount_minor bigint, typical_amount_minor bigint, change_percent integer, typical_day integer, transaction_id uuid, line_count integer, category_id uuid, source text, pace text)
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  with bounds as (
+    select date_trunc('month', p_today)::date as this_month,
+      (date_trunc('month', p_today) - interval '6 months')::date as window6,
+      (date_trunc('month', p_today) - interval '24 months')::date as window24
+  ),
+  r as (
+    select rp.* from private.recurring_parties(p_company, p_today) rp
+    -- A first month raises no change on the project either (decision 0189), the owner's amount or not.
+    where rp.seen_this_month and rp.months_seen > 0
+  ),
+  -- Each charge's lines (its party and project, recurring_stream_lines) and their share in this project.
+  shares as (
+    select r.direction, r.party_id, r.currency, r.project_id as stream_project, r.pace, sl.id, sl.doc_date, sl.created_at,
+      date_trunc('month', sl.doc_date)::date as month, true as posted,
+      case when sl.project_id = p_project then sl.amount_net else 0 end as share
+    from r
+    join private.recurring_stream_lines(p_company, p_today) sl
+      on sl.direction = r.direction and sl.party_id = r.party_id and sl.currency = r.currency
+      and sl.stream_project is not distinct from r.project_id
+  ),
+  -- Each charge's last complete month (any project's share), the anchor of a non-monthly cycle, and its step:
+  -- the pace's months, or for a yearly charge its last gap when that is 11 to 13 (as recurring_parties).
+  last_months as (
+    select m.direction, m.party_id, m.currency, m.stream_project, m.months[1] as last_month,
+      case when m.pace = 'year' and private.month_diff(m.months[1], m.months[2]) between 11 and 13
+        then private.month_diff(m.months[1], m.months[2]) else private.pace_months(m.pace) end as step
+    from (
+      select s.direction, s.party_id, s.currency, s.stream_project, s.pace,
+        array_agg(distinct s.month order by s.month desc) as months
+      from shares s, bounds b
+      where s.posted and s.month < b.this_month
+      group by s.direction, s.party_id, s.currency, s.stream_project, s.pace
+    ) m
+  ),
+  usual as (
+    -- As recurring_parties: complete posted months, the last 6 for a monthly party; for any other pace the
+    -- months on its cycle counted back from its last complete month, within 24 (decision 0199).
+    select m.direction, m.party_id, m.currency, m.stream_project,
+      percentile_disc(0.5) within group (order by abs(m.amount)) as amount
+    from (
+      select s.direction, s.party_id, s.currency, s.stream_project, s.month, sum(s.share) as amount
+      from shares s
+      cross join bounds b
+      join last_months lm on lm.direction = s.direction and lm.party_id = s.party_id and lm.currency = s.currency
+        and lm.stream_project is not distinct from s.stream_project
+      where s.posted and s.month < b.this_month
+        and case
+          when s.pace = 'month' then s.month >= b.window6
+          else s.month >= b.window24 and private.month_diff(lm.last_month, s.month) % lm.step = 0
+        end
+      group by s.direction, s.party_id, s.currency, s.stream_project, s.month
+      having sum(s.share) <> 0
+    ) m
+    group by m.direction, m.party_id, m.currency, m.stream_project
+  ),
+  this_month as (
+    select s.direction, s.party_id, s.currency, s.stream_project, sum(s.share)::bigint as amount, count(*)::integer as line_count,
+      (array_agg(s.id order by s.doc_date desc, s.created_at desc, s.id desc))[1] as transaction_id
+    from shares s, bounds b
+    where s.share <> 0 and s.doc_date >= b.this_month
+    group by s.direction, s.party_id, s.currency, s.stream_project
+  ),
+  -- The usual amount: the owner's (the charge's own, decision 0189), else the median of this project's share.
+  usual_amount as (
+    select r.direction, r.party_id, r.currency, r.project_id,
+      case when r.typical_amount_source = 'owner' then abs(r.typical_amount_minor) else u.amount end as amount
+    from r
+    left join usual u on u.direction = r.direction and u.party_id = r.party_id and u.currency = r.currency
+      and u.stream_project is not distinct from r.project_id
+  )
+  select r.direction, r.party_id, r.currency, m.amount,
+    ((case when r.direction = 'expense' then -1 else 1 end) * u.amount)::bigint,
+    round((abs(m.amount) - u.amount) * 100.0 / u.amount)::integer,
+    r.typical_day, m.transaction_id, m.line_count, r.category_id, r.source, r.pace
+  from r
+  join this_month m on m.direction = r.direction and m.party_id = r.party_id and m.currency = r.currency
+    and m.stream_project is not distinct from r.project_id
+  join usual_amount u on u.direction = r.direction and u.party_id = r.party_id and u.currency = r.currency
+    and u.project_id is not distinct from r.project_id
+  where m.amount <> 0 and u.amount <> 0;
+$function$;
+
+revoke all on function private.project_recurring_arrivals(uuid, uuid, date) from public, anon, authenticated;
 
 -- expected_months reads pays_loan from recurring_parties instead of reading the stream lines again
 -- (FLOW-943). The body is 20261018164154's otherwise.
