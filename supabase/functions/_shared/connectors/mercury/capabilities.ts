@@ -18,6 +18,7 @@ export const MERCURY_SKIP_REASONS = [
   "internal_transfer",
   "treasury_transfer",
   "not_own_account",
+  "unsynced_account",
   "void_status",
   "unknown_status",
   "not_a_line",
@@ -28,6 +29,16 @@ export const MERCURY_SKIP_REASONS = [
   "treasury_cancel",
 ] as const;
 export type MercurySkipReason = (typeof MERCURY_SKIP_REASONS)[number];
+
+/**
+ * Transfers between two synced accounts (FLOW-938). One leg imported earlier as money out, while the
+ * other account was not synced, is voided when a later run skips it for one of these reasons.
+ */
+export const MERCURY_TRANSFER_SKIPS: readonly MercurySkipReason[] = [
+  "own_account_transfer",
+  "internal_transfer",
+  "treasury_transfer",
+];
 
 /**
  * Days a later sync re-reads before the previous sync.

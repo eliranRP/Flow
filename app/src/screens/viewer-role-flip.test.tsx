@@ -9,6 +9,7 @@ import { StepBusiness } from "../setup/steps";
 import { AddForm, CategoriesScreen, ConnectionsScreen, ProjectsScreen } from "./flow-screens";
 import { BusinessScreen } from "./business-screen";
 import { ConnectionDetailPage } from "./connection-pages";
+import { MercuryConnectionRoute } from "./mercury-connection-screen";
 import type { SettingsSample } from "./settings-screen";
 
 // FLOW-507 and FLOW-506. The outer gate hides or disables a write control for a viewer (viewer-writes.test.tsx).
@@ -277,10 +278,10 @@ describe("inner write gates after the role changes", () => {
       expect(invoke).not.toHaveBeenCalled();
     });
   });
-  describe("Mercury connect form (FLOW-512 page)", () => {
+  describe("Mercury connect form (FLOW-938 page)", () => {
     function openAndFill() {
       invoke.mockResolvedValue({ data: { ok: true }, error: null });
-      renderAt(<ConnectionDetailPage provider="mercury" sample={{ state: "new" }} />, "/settings/connections/mercury");
+      renderAt(<MercuryConnectionRoute sample={{ connections: [] }} />, "/settings/connections/mercury");
       fireEvent.change(screen.getByLabelText("מפתח API"), { target: { value: "sample-key" } });
       return screen.getByRole("button", { name: "חיבור" });
     }

@@ -1,6 +1,7 @@
 import { assertEquals } from "jsr:@std/assert@1";
 import { CONNECTOR_RECHECK_LIMIT, planConnectorSync, type ConfirmResult, type StoredLine } from "./engine.ts";
-import { treasuryVoidIds } from "./mercury/normalize.ts";
+import { MERCURY_TRANSFER_SKIPS } from "./mercury/capabilities.ts";
+import { normalizeMercury, treasuryVoidIds } from "./mercury/normalize.ts";
 import type {
   AccountLabel,
   CanonicalLine,
@@ -112,6 +113,39 @@ Deno.test("every validated account id is the own set, including one that was not
   if (!plan.ok) return;
   assertEquals(seen, ["checking", "credit", "treasury"]);
   assertEquals(plan.ownAccountIds, ["checking", "credit", "treasury"]);
+});
+
+Deno.test("FLOW-938: a scoped run owns the chosen accounts and every connection's; the rest are unsynced", async () => {
+  const contexts: NormalizeContext[] = [];
+  const built = port({
+    accounts,
+    fetched: { lines: [{ id: "move" }], removedIds: [], nextCursor: NOW.toISOString(), complete: true, windowStart: null },
+    onNormalize(ctx) {
+      contexts.push(ctx);
+    },
+  });
+  const plan = await planConnectorSync({
+    port: built.port,
+    session: session(),
+    cursor: null,
+    importFrom: null,
+    lookbackDays: 30,
+    ownCounterpartyIds: [],
+    // "gone" is no longer listed; "other-ops" is another connection's synced account.
+    accountScope: { synced: ["checking", "gone"], own: ["checking", "other-ops"] },
+    vatRateBp: 0,
+    exemptSupplierNames: [],
+    exemptSupplierIds: [],
+    stored: [],
+    now: () => NOW,
+  });
+  assertEquals(plan.ok, true);
+  if (!plan.ok) return;
+  assertEquals(contexts[0]?.ownAccountIds, ["checking", "other-ops"]);
+  assertEquals(contexts[0]?.unsyncedAccountIds, ["credit", "treasury"]);
+  assertEquals(plan.ownAccountIds, ["checking", "other-ops"]);
+  assertEquals(plan.accounts.map((account) => account.id), ["checking", "credit", "treasury"]);
+  assertEquals(plan.org, null);
 });
 
 Deno.test("each sync validates again", async () => {
@@ -574,4 +608,115 @@ Deno.test("pending lines past the recheck cap keep their missing clock", async (
   const last = plan.pendingMissing.find((item) => item.externalId === `pending-${CONNECTOR_RECHECK_LIMIT + 1}`);
   assertEquals(last?.missingSince, "2026-10-01T00:00:00.000Z");
   assertEquals(plan.rateLimited, null);
+});
+
+Deno.test("a transfer imported as money out to a new account is voided once that account syncs (FLOW-938)", async () => {
+  // Mercury opens "acct-new"; the owner funds it from the synced "acct-chk" before answering.
+  const fund = {
+    id: "tx-fund",
+    status: "sent",
+    kind: "internalTransfer",
+    accountId: "acct-chk",
+    counterpartyId: "acct-new",
+    counterpartyName: "Mercury Checking ••0002",
+    amount: -500,
+    createdAt: "2026-10-02T10:00:00Z",
+    postedAt: "2026-10-02T10:00:00Z",
+  };
+  const arrive = { ...fund, id: "tx-arrive", accountId: "acct-new", counterpartyId: "acct-chk", amount: 500 };
+  const mercuryPort = (lines: unknown[]): ConnectorPort => ({
+    ...port({ accounts: [], fetched: { lines: [], removedIds: [], nextCursor: null, complete: true } }).port,
+    validate: () => Promise.resolve({ ok: true, accounts: [{ id: "acct-chk", label: "Checking" }, { id: "acct-new", label: "New" }] }),
+    fetchSince: () => Promise.resolve({ lines, removedIds: [], nextCursor: "c", complete: true }),
+    normalize: normalizeMercury,
+  });
+  const stored = new Set<string>();
+  const base = {
+    session: session(),
+    cursor: null,
+    importFrom: null,
+    lookbackDays: 30,
+    vatRateBp: 0,
+    exemptSupplierNames: [],
+    exemptSupplierIds: [],
+    stored: [],
+    now: () => NOW,
+    voidStoredSkips: {
+      reasons: MERCURY_TRANSFER_SKIPS,
+      storedIds: (ids: readonly string[]) => Promise.resolve(ids.filter((id) => stored.has(id))),
+    },
+  };
+
+  // Before the answer "acct-new" is not synced: the funding is money out, hinted to transfers.
+  const before = await planConnectorSync({
+    ...base,
+    port: mercuryPort([fund, arrive]),
+    ownCounterpartyIds: ["acct-new"],
+    accountScope: { synced: ["acct-chk"], own: ["acct-chk"] },
+  });
+  assertEquals(before.ok, true);
+  if (!before.ok) return;
+  assertEquals(before.lines.map((item) => [item.external_id, item.category_hint]), [["tx-fund", "העברות"]]);
+  assertEquals(before.removedIds, []);
+  for (const item of before.lines) stored.add(item.external_id);
+
+  // The owner answers yes: both legs are a transfer between synced accounts, and the stored leg goes.
+  const after = await planConnectorSync({
+    ...base,
+    port: mercuryPort([fund, arrive]),
+    ownCounterpartyIds: [],
+    accountScope: { synced: ["acct-chk", "acct-new"], own: ["acct-chk", "acct-new"] },
+  });
+  assertEquals(after.ok, true);
+  if (!after.ok) return;
+  assertEquals(after.lines, []);
+  assertEquals(after.skips.map((item) => [item.externalId, item.reason]), [
+    ["tx-fund", "internal_transfer"],
+    ["tx-arrive", "internal_transfer"],
+  ]);
+  assertEquals(after.removedIds, ["tx-fund"]);
+});
+
+Deno.test("a skipped transfer that was never stored voids nothing, and a failed lookup fails the run", async () => {
+  const fund = {
+    id: "tx-own",
+    status: "sent",
+    kind: "internalTransfer",
+    accountId: "acct-chk",
+    counterpartyId: "acct-sav",
+    amount: -10,
+    createdAt: "2026-10-02T10:00:00Z",
+    postedAt: "2026-10-02T10:00:00Z",
+  };
+  const adapter: ConnectorPort = {
+    ...port({ accounts: [], fetched: { lines: [], removedIds: [], nextCursor: null, complete: true } }).port,
+    validate: () => Promise.resolve({ ok: true, accounts: [{ id: "acct-chk", label: "C" }, { id: "acct-sav", label: "S" }] }),
+    fetchSince: () => Promise.resolve({ lines: [fund], removedIds: [], nextCursor: "c", complete: true }),
+    normalize: normalizeMercury,
+  };
+  const input = {
+    port: adapter,
+    session: session(),
+    cursor: null,
+    importFrom: null,
+    lookbackDays: 30,
+    ownCounterpartyIds: [],
+    vatRateBp: 0,
+    exemptSupplierNames: [],
+    exemptSupplierIds: [],
+    stored: [],
+    now: () => NOW,
+  };
+  const asked: string[][] = [];
+  const none = await planConnectorSync({
+    ...input,
+    voidStoredSkips: { reasons: MERCURY_TRANSFER_SKIPS, storedIds: (ids) => { asked.push([...ids]); return Promise.resolve([]); } },
+  });
+  assertEquals(none.ok && none.removedIds, []);
+  assertEquals(asked, [["tx-own"]]);
+  const failed = await planConnectorSync({
+    ...input,
+    voidStoredSkips: { reasons: MERCURY_TRANSFER_SKIPS, storedIds: () => Promise.reject(new Error("could not read stored lines")) },
+  });
+  assertEquals(failed.ok, false);
 });

@@ -69,6 +69,7 @@ import {
 import { SampleCard } from "./sample-card";
 import { NewLoanSheet, openNewLoan } from "./loan-entry";
 import { OnboardingFrame } from "./shell";
+import { MercuryAccountsSheet } from "./mercury-accounts-sheet";
 import { useSetupSuggestions } from "./suggestions";
 import type { SetupLender, SetupStore } from "./storage";
 
@@ -234,14 +235,15 @@ export function StepConnect({
   const [mercuryOpen, setMercuryOpen] = useState(false);
   const setMercurySheet = useSheetHistory("mercury-connect", mercuryOpen, setMercuryOpen);
   const [mercuryKey, setMercuryKey] = useState("");
-  const [mercuryImport, setMercuryImport] = useState<{ touched: boolean; value: string | null }>({ touched: false, value: null });
+  // FLOW-938: after the key, which accounts and from which date (the key form no longer asks the date).
+  const [accountsSlot, setAccountsSlot] = useState<number | null>(null);
   const mercury = useMercuryConnect({
     apiKey: mercuryKey,
     setApiKey: setMercuryKey,
-    importFrom: mercuryImport.touched ? mercuryImport.value : undefined,
-    onSuccess: () => {
+    onSuccess: (connected) => {
       setMercurySheet(false);
       setPending(null);
+      if (connected.chooseAccounts) setAccountsSlot(connected.slot);
     },
   });
 
@@ -318,11 +320,14 @@ export function StepConnect({
         title="חיבור Mercury"
         apiKey={mercuryKey}
         setApiKey={setMercuryKey}
-        importFrom={mercuryImport.value}
-        setImportFrom={(value) => { setMercuryImport({ touched: true, value }); }}
         submitLabel="חיבור"
         busy={mercury.isPending}
         onSubmit={() => { mercury.mutate(); }}
+      />
+      <MercuryAccountsSheet
+        slot={accountsSlot}
+        onClose={() => { setAccountsSlot(null); }}
+        onBack={() => { setPending("mercury"); setMercurySheet(true); }}
       />
     </OnboardingFrame>
   );

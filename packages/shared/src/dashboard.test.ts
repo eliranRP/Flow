@@ -276,6 +276,11 @@ describe("mercuryStatusSchema", () => {
       provider: null,
       skip_count: null,
       syncing: null,
+      slot: null,
+      org_label: null,
+      accounts_chosen: null,
+      sync_account_ids: null,
+      skip_account_ids: null,
     };
     expect(Object.keys(mercuryStatusSchema.shape).sort()).toEqual(Object.keys(row).sort());
   });

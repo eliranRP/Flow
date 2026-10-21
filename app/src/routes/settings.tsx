@@ -9,7 +9,7 @@ const CategoriesScreen = lazy(() => screenLoaders.categories().then((m) => ({ de
 const TeamScreen = lazy(() => screenLoaders.team().then((m) => ({ default: m.TeamScreen })));
 const BusinessScreen = lazy(() => screenLoaders.business().then((m) => ({ default: m.BusinessScreen })));
 const SumitConnectionRoute = lazy(() => screenLoaders.connectionPages().then((m) => ({ default: m.SumitConnectionRoute })));
-const MercuryConnectionRoute = lazy(() => screenLoaders.connectionPages().then((m) => ({ default: m.MercuryConnectionRoute })));
+const MercuryConnectionRoute = lazy(() => screenLoaders.mercuryConnection().then((m) => ({ default: m.MercuryConnectionRoute })));
 const AiConnectionPage = lazy(() => screenLoaders.assistant().then((m) => ({ default: m.AiConnectionPage })));
 
 /** The settings tab: its menu, business, categories, connections (with the SUMIT, Mercury and AI pages), notifications and team. The loans pages are in ./loans. */

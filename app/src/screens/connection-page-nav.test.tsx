@@ -5,6 +5,7 @@ import { renderWithProviders } from "../test-render";
 import { backend, DASHBOARD, resetBackend, serve } from "./connection-page-test-backend";
 import { ConnectionsScreen } from "./connections-screen";
 import { ConnectionDetailPage } from "./connection-pages";
+import { MercuryConnectionRoute } from "./mercury-connection-screen";
 import { SettingsScreen } from "./settings-screen";
 
 vi.mock("../lib/supabase", async () => (await import("./connection-page-test-backend")).supabaseModule());
@@ -24,7 +25,7 @@ function renderRoutes(route: string) {
         <Route path="/settings" element={<SettingsScreen />} />
         <Route path="/settings/connections" element={<ConnectionsScreen />} />
         <Route path="/settings/connections/sumit" element={<ConnectionDetailPage provider="sumit" />} />
-        <Route path="/settings/connections/mercury" element={<ConnectionDetailPage provider="mercury" />} />
+        <Route path="/settings/connections/mercury" element={<MercuryConnectionRoute />} />
         <Route path="/settings/connections/ai" element={<h1>AI page</h1>} />
         <Route path="/setup/1" element={<h1>צעד העסק</h1>} />
         <Route path="/" element={<h1>בית</h1>} />

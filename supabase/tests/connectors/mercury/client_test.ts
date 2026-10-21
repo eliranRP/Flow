@@ -20,7 +20,6 @@ import {
   getMercuryTransaction,
   listMercuryCardLabels,
   cardLabelsUpdate,
-  mercuryAccountsChanged,
   mercuryFailureCode,
   mercuryStartDate,
   openMercury,
@@ -837,16 +836,6 @@ Deno.test("a rate limit backs off until Retry-After, else 15 minutes, and at mos
   assertEquals(backoffUntil("2026-10-09T08:00:00.000Z", NOW), "2026-10-05T08:00:00.000Z");
 });
 
-Deno.test("a reconnect to other accounts is a change; the same accounts in another order are not", () => {
-  const next = [{ id: "acct-a", label: "Checking" }, { id: "acct-b", label: "Credit" }];
-  assertEquals(mercuryAccountsChanged([{ id: "acct-b", label: "x" }, { id: "acct-a", label: "y" }], next), false);
-  assertEquals(mercuryAccountsChanged([{ id: "acct-a", label: "Checking" }], next), true);
-  assertEquals(mercuryAccountsChanged([{ id: "acct-a" }, { id: "acct-c" }], next), true);
-  assertEquals(mercuryAccountsChanged([{ id: "acct-a" }, { id: "acct-b" }, { id: "acct-c" }], next), true);
-  assertEquals(mercuryAccountsChanged(null, next), true);
-  assertEquals(mercuryAccountsChanged([], []), false);
-});
-
 Deno.test("FLOW-707: card nicknames by last 4, only named cards, and an unreadable list is null", async () => {
   assertMercuryGet("GET", "/cards");
   const { fetchImpl, calls } = transport((url) => {
@@ -905,4 +894,25 @@ Deno.test("FLOW-707: an account's nickname is its label; without one the bank's 
   assertEquals(result.accounts.find((account) => account.id === first.id)?.label, "Example Street");
   assertEquals(result.accounts.find((account) => account.id === first.id)?.last4, "0000");
   assertEquals(result.accounts.find((account) => account.id === second.id)?.label.startsWith("Mercury Savings"), true);
+});
+
+Deno.test("FLOW-938: each account carries its kind and balance in cents, and the organisation's name comes along", async () => {
+  const [first, second] = accountsFile.accounts;
+  const { fetchImpl } = transport((url) => {
+    if (url.pathname.endsWith("/credit")) return jsonResponse(creditFile);
+    if (url.pathname.endsWith("/treasury")) return jsonResponse(treasuryFile);
+    if (url.pathname.endsWith("/accounts")) {
+      return jsonResponse({ accounts: [{ ...first, currentBalance: 48210.55 }, { ...second, kind: "not a kind!" }], page: {} });
+    }
+    return jsonResponse({ transactions: [], page: {} });
+  });
+  const result = await validateMercury(openMercury(`test-${crypto.randomUUID()}`, { fetch: fetchImpl, now: () => NOW }));
+  assertEquals(result.ok, true);
+  if (!result.ok) return;
+  const byId = (id: string) => result.accounts.find((account) => account.id === id);
+  assertEquals([byId(first.id)?.kind, byId(first.id)?.balance_cents], ["checking", 4821055]);
+  assertEquals(byId(second.id)?.kind, undefined);
+  assertEquals([byId(creditFile.accounts[0].id)?.kind, byId(creditFile.accounts[0].id)?.balance_cents], ["credit", -34000]);
+  assertEquals(byId(treasuryFile.accounts[0].id)?.kind, "treasury");
+  assertEquals(result.org, first.legalBusinessName);
 });

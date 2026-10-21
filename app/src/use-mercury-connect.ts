@@ -1,46 +1,57 @@
 import { hebrewMercuryError } from "./mercury-copy";
-import { invokeEdge } from "./edge";
-import { IMPORT_FROM_FAILED, importFromAfterConnect } from "./import-from";
+import { invokeEdge, isRecord } from "./edge";
 import { useRef } from "react";
 import { useToast } from "./ui/toast";
 import { useWrite } from "./use-write";
 
+/** What a successful connect says (FLOW-938): the connection's slot, and whether its accounts are to be chosen. */
+export type MercuryConnected = { slot: number; chooseAccounts: boolean };
+
+function connectedOf(response: unknown): MercuryConnected {
+  const slot = isRecord(response) && typeof response.slot === "number" ? response.slot : 1;
+  // An older server sends no flag: its connection syncs every account as before.
+  const choose = isRecord(response) && response.choose_accounts === true;
+  return { slot, chooseAccounts: choose };
+}
+
+/**
+ * Sends a Mercury key (FLOW-938). `slot` is the connection a replaced key is for; without it the server
+ * puts the key on the connection whose accounts it lists, or on a new connection. A new connection,
+ * or a key for other accounts, goes on to the accounts step, so it says nothing yet.
+ */
 export function useMercuryConnect({
   apiKey,
   setApiKey,
+  slot,
   onSuccess,
-  importFrom,
 }: {
   apiKey: string;
   setApiKey: (value: string) => void;
-  onSuccess?: () => void;
-  /** "ייבוא מ" (FLOW-505), sent with the connect call. Undefined leaves it as it is. */
-  importFrom?: string | null;
+  slot?: number;
+  onSuccess?: (connected: MercuryConnected) => void;
 }) {
   const toast = useToast();
-  // The connection stands even when only the date fails, so the write still succeeds.
-  const dateFailed = useRef(false);
+  const result = useRef<MercuryConnected>({ slot: 1, chooseAccounts: false });
   return useWrite({
     failure: (error) => {
       if (error.message === "auth") return "החיבור נכשל. בדקו את המפתח.";
-      if (error.message === "rejected") return hebrewMercuryError("rejected") ?? "לא הצלחנו להתחבר. נסו שוב.";
       if (error.message === "transient" || error.message === "rate_limited") return "לא הצלחנו להתחבר. נסו שוב.";
       return hebrewMercuryError(error.message) ?? "לא הצלחנו להתחבר. נסו שוב.";
     },
     keys: ["mercury", "dashboard"],
     onSuccess: () => {
-      toast.show(dateFailed.current ? { message: IMPORT_FROM_FAILED("Mercury"), tone: "info" } : { message: "Mercury מחובר. המפתח נשאר בשרת." });
+      if (!result.current.chooseAccounts) toast.show({ message: "Mercury מחובר. המפתח נשאר בשרת." });
       setApiKey("");
-      onSuccess?.();
+      onSuccess?.(result.current);
     },
     run: async () => {
       let response: unknown;
       try {
-        response = await invokeEdge("mercury-connect", { apiKey: apiKey.trim(), importFrom });
+        response = await invokeEdge("mercury-connect", { apiKey: apiKey.trim(), ...(slot == null ? {} : { slot }) });
       } finally {
         setApiKey("");
       }
-      dateFailed.current = !(await importFromAfterConnect("mercury", importFrom, response));
+      result.current = connectedOf(response);
     },
   });
 }

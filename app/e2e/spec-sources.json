@@ -97,6 +97,10 @@
       "ui/install-screen.tsx",
       "ui/tab-bar.tsx"
     ],
+    "mercury-connections.spec.ts": [
+      "screens/mercury-connection-screen.tsx",
+      "screens/connections-screen.tsx"
+    ],
     "notch-header.spec.ts": [
       "ui/screen-header.tsx",
       "ui/compact-bar.tsx",

@@ -196,13 +196,13 @@ isOneToOne: false
                   ]
                 },"connector_connections": {
                   Row: {
-                    "account_labels": NonNullable<Json>,"card_labels": NonNullable<Json>,"company_id": string,"created_at": string,"dek_ciphertext": string,"dek_nonce": string,"envelope_version": string,"id": string,"import_from": string | null,"kek_ref": string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error": string | null,"last_sync_at": string | null,"next_attempt_at": string | null,"provider": Database["public"]['Enums']["connector_provider"],"reject_attempts": number,"settings": NonNullable<Json>,"sync_claimed_at": string | null,"sync_cursor": string | null,"updated_at": string
+                    "account_from": NonNullable<Json>,"account_labels": NonNullable<Json>,"accounts_chosen_at": string | null,"card_labels": NonNullable<Json>,"company_id": string,"created_at": string,"dek_ciphertext": string,"dek_nonce": string,"envelope_version": string,"id": string,"import_from": string | null,"kek_ref": string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error": string | null,"last_sync_at": string | null,"next_attempt_at": string | null,"org_label": string | null,"provider": Database["public"]['Enums']["connector_provider"],"reject_attempts": number,"settings": NonNullable<Json>,"skip_account_ids": (string)[],"slot": number,"sync_account_ids": (string)[] | null,"sync_claimed_at": string | null,"sync_cursor": string | null,"updated_at": string
                   }
                   Insert: {
-                    "account_labels"?: NonNullable<Json>,"card_labels"?: NonNullable<Json>,"company_id": string,"created_at"?: string,"dek_ciphertext": string,"dek_nonce": string,"envelope_version": string,"id"?: string,"import_from"?: string | null,"kek_ref": string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"provider": Database["public"]['Enums']["connector_provider"],"reject_attempts"?: number,"settings"?: NonNullable<Json>,"sync_claimed_at"?: string | null,"sync_cursor"?: string | null,"updated_at"?: string
+                    "account_from"?: NonNullable<Json>,"account_labels"?: NonNullable<Json>,"accounts_chosen_at"?: string | null,"card_labels"?: NonNullable<Json>,"company_id": string,"created_at"?: string,"dek_ciphertext": string,"dek_nonce": string,"envelope_version": string,"id"?: string,"import_from"?: string | null,"kek_ref": string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"org_label"?: string | null,"provider": Database["public"]['Enums']["connector_provider"],"reject_attempts"?: number,"settings"?: NonNullable<Json>,"skip_account_ids"?: (string)[],"slot"?: number,"sync_account_ids"?: (string)[] | null,"sync_claimed_at"?: string | null,"sync_cursor"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "account_labels"?: NonNullable<Json>,"card_labels"?: NonNullable<Json>,"company_id"?: string,"created_at"?: string,"dek_ciphertext"?: string,"dek_nonce"?: string,"envelope_version"?: string,"id"?: string,"import_from"?: string | null,"kek_ref"?: string,"kek_version"?: string,"key_ciphertext"?: string,"key_nonce"?: string,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"provider"?: Database["public"]['Enums']["connector_provider"],"reject_attempts"?: number,"settings"?: NonNullable<Json>,"sync_claimed_at"?: string | null,"sync_cursor"?: string | null,"updated_at"?: string
+                    "account_from"?: NonNullable<Json>,"account_labels"?: NonNullable<Json>,"accounts_chosen_at"?: string | null,"card_labels"?: NonNullable<Json>,"company_id"?: string,"created_at"?: string,"dek_ciphertext"?: string,"dek_nonce"?: string,"envelope_version"?: string,"id"?: string,"import_from"?: string | null,"kek_ref"?: string,"kek_version"?: string,"key_ciphertext"?: string,"key_nonce"?: string,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"org_label"?: string | null,"provider"?: Database["public"]['Enums']["connector_provider"],"reject_attempts"?: number,"settings"?: NonNullable<Json>,"skip_account_ids"?: (string)[],"slot"?: number,"sync_account_ids"?: (string)[] | null,"sync_claimed_at"?: string | null,"sync_cursor"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -234,13 +234,13 @@ isOneToOne: false
                   ]
                 },"connector_skips": {
                   Row: {
-                    "company_id": string,"external_id": string | null,"id": number,"provider": Database["public"]['Enums']["connector_provider"],"reason": string,"skipped_at": string
+                    "company_id": string,"external_id": string | null,"id": number,"provider": Database["public"]['Enums']["connector_provider"],"reason": string,"skipped_at": string,"slot": number
                   }
                   Insert: {
-                    "company_id": string,"external_id"?: string | null,"id"?: never,"provider": Database["public"]['Enums']["connector_provider"],"reason": string,"skipped_at"?: string
+                    "company_id": string,"external_id"?: string | null,"id"?: never,"provider": Database["public"]['Enums']["connector_provider"],"reason": string,"skipped_at"?: string,"slot"?: number
                   }
                   Update: {
-                    "company_id"?: string,"external_id"?: string | null,"id"?: never,"provider"?: Database["public"]['Enums']["connector_provider"],"reason"?: string,"skipped_at"?: string
+                    "company_id"?: string,"external_id"?: string | null,"id"?: never,"provider"?: Database["public"]['Enums']["connector_provider"],"reason"?: string,"skipped_at"?: string,"slot"?: number
                   }
                   Relationships: [
                     {
@@ -1104,13 +1104,13 @@ isOneToOne: false
           Views: {
             "connector_connection_status": {
                   Row: {
-                    "account_labels": Json | null,"company_id": string | null,"connected": boolean | null,"import_from": string | null,"last_error": string | null,"last_sync_at": string | null,"next_attempt_at": string | null,"provider": Database["public"]['Enums']["connector_provider"] | null,"skip_count": number | null,"syncing": boolean | null
+                    "account_labels": Json | null,"accounts_chosen": boolean | null,"company_id": string | null,"connected": boolean | null,"import_from": string | null,"last_error": string | null,"last_sync_at": string | null,"next_attempt_at": string | null,"org_label": string | null,"provider": Database["public"]['Enums']["connector_provider"] | null,"skip_account_ids": (string)[] | null,"skip_count": number | null,"slot": number | null,"sync_account_ids": (string)[] | null,"syncing": boolean | null
                   }
                   Insert: {
-                           "account_labels"?: Json | null,"company_id"?: string | null,"connected"?: never,"import_from"?: string | null,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"provider"?: Database["public"]['Enums']["connector_provider"] | null,"skip_count"?: never,"syncing"?: never
+                           "account_labels"?: Json | null,"accounts_chosen"?: never,"company_id"?: string | null,"connected"?: never,"import_from"?: string | null,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"org_label"?: string | null,"provider"?: Database["public"]['Enums']["connector_provider"] | null,"skip_account_ids"?: (string)[] | null,"skip_count"?: never,"slot"?: number | null,"sync_account_ids"?: (string)[] | null,"syncing"?: never
                          }
                         Update: {
-                           "account_labels"?: Json | null,"company_id"?: string | null,"connected"?: never,"import_from"?: string | null,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"provider"?: Database["public"]['Enums']["connector_provider"] | null,"skip_count"?: never,"syncing"?: never
+                           "account_labels"?: Json | null,"accounts_chosen"?: never,"company_id"?: string | null,"connected"?: never,"import_from"?: string | null,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"org_label"?: string | null,"provider"?: Database["public"]['Enums']["connector_provider"] | null,"skip_account_ids"?: (string)[] | null,"skip_count"?: never,"slot"?: number | null,"sync_account_ids"?: (string)[] | null,"syncing"?: never
                          }
                         Relationships: [
                     {
@@ -1300,7 +1300,7 @@ isOneToOne: false
 { Args: { "p_sha256": string,"p_transaction_id": string }; Returns: undefined
                            },
 "disconnect_connector":
-{ Args: { "p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: undefined
+{ Args: { "p_provider": Database["public"]['Enums']["connector_provider"],"p_slot"?: number }; Returns: undefined
                            },
 "disconnect_sumit":
 { Args: Record<PropertyKey, never>; Returns: undefined
@@ -1452,6 +1452,9 @@ isOneToOne: false
 "mcp_add_loan":
 { Args: { "p_amortization_months"?: number,"p_annual_rate_ppm": number,"p_currency": string,"p_escrow_minor": number,"p_idempotency_key": string,"p_interest_only_months"?: number,"p_kind"?: string,"p_name": string,"p_payment_minor": number,"p_principal_minor": number,"p_project_id"?: string,"p_start_date": string,"p_term_months": number }; Returns: Json
                            },
+"mcp_answer_bank_account":
+{ Args: { "p_account_id": string,"p_idempotency_key": string,"p_slot": number,"p_sync": boolean }; Returns: Json
+                           },
 "mcp_answer_recurring_match":
 { Args: { "p_direction": string,"p_idempotency_key": string,"p_match_party_id": string,"p_party_id": string,"p_same": boolean }; Returns: Json
                            },
@@ -1469,6 +1472,9 @@ isOneToOne: false
                            },
 "mcp_attach_loan_payment":
 { Args: { "p_idempotency_key": string,"p_loan_id": string,"p_parts": Json,"p_transaction_id": string }; Returns: Json
+                           },
+"mcp_bank_connections":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "mcp_company_loan_currency":
 { Args: Record<PropertyKey, never>; Returns: string
@@ -1564,6 +1570,9 @@ isOneToOne: false
                            },
 "mcp_review_anomalies":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"mcp_set_bank_accounts":
+{ Args: { "p_account_ids": (string)[],"p_from"?: string,"p_idempotency_key": string,"p_slot": number }; Returns: Json
                            },
 "mcp_set_cash_basis":
 { Args: { "p_basis": string,"p_idempotency_key": string }; Returns: Json
@@ -1686,7 +1695,7 @@ isOneToOne: false
 { Args: { "p_address": string }; Returns: Json
                            },
 "note_connector_failure":
-{ Args: { "p_code": string,"p_company": string,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: string
+{ Args: { "p_code": string,"p_company": string,"p_provider": Database["public"]['Enums']["connector_provider"],"p_slot"?: number }; Returns: string
                            },
 "note_connector_rejection":
 { Args: { "p_code": string,"p_company": string,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: Json
@@ -1802,7 +1811,7 @@ isOneToOne: false
 { Args: { "p_loan_ids": (string)[] }; Returns: Json
                            },
 "replace_connector_connection":
-{ Args: { "p_company": string,"p_dek_ciphertext": string,"p_dek_nonce": string,"p_envelope_version": string,"p_kek_version": string,"p_key_ciphertext": string,"p_key_nonce": string,"p_provider": Database["public"]['Enums']["connector_provider"],"p_settings": Json,"p_validated": boolean }; Returns: undefined
+{ Args: { "p_company": string,"p_dek_ciphertext": string,"p_dek_nonce": string,"p_envelope_version": string,"p_kek_version": string,"p_key_ciphertext": string,"p_key_nonce": string,"p_provider": Database["public"]['Enums']["connector_provider"],"p_settings": Json,"p_slot"?: number,"p_validated": boolean }; Returns: undefined
                            },
 "replace_sumit_connection":
 { Args: { "p_company": string,"p_dek_ciphertext": string,"p_dek_nonce": string,"p_envelope_version": string,"p_kek_version": string,"p_key_ciphertext": string,"p_key_nonce": string,"p_sumit_company_id": number,"p_validated": boolean }; Returns: undefined
@@ -1891,6 +1900,9 @@ isOneToOne: false
 "set_member_role":
 { Args: { "p_role": string,"p_user_id": string }; Returns: Json
                            },
+"set_mercury_accounts":
+{ Args: { "p_accounts": (string)[],"p_from": string,"p_slot": number }; Returns: Json
+                           },
 "set_notification_prefs":
 { Args: { "p_evening_reminder"?: boolean,"p_new_transaction"?: boolean,"p_weekly_summary"?: boolean }; Returns: Json
                            },
@@ -1928,7 +1940,7 @@ isOneToOne: false
 { Args: { "p_id": string,"p_in_pnl": boolean }; Returns: Json
                            },
 "stamp_connector_sync":
-{ Args: { "p_company": string,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: undefined
+{ Args: { "p_company": string,"p_provider": Database["public"]['Enums']["connector_provider"],"p_slot"?: number }; Returns: undefined
                            },
 "stamp_sumit_sync":
 { Args: { "p_company": string }; Returns: undefined
@@ -1967,7 +1979,7 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
 "upsert_connector_lines":
-{ Args: { "p_company": string,"p_expected_prev_cursor": string,"p_lines": Json,"p_next_cursor": string,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: Database["public"]['CompositeTypes']["connector_upsert_result"]
+{ Args: { "p_company": string,"p_expected_prev_cursor": string,"p_lines": Json,"p_next_cursor": string,"p_provider": Database["public"]['Enums']["connector_provider"],"p_slot"?: number }; Returns: Database["public"]['CompositeTypes']["connector_upsert_result"]
                           SetofOptions: {
         from: "*"
         to: "connector_upsert_result"

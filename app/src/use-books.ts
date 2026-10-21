@@ -8,7 +8,6 @@ import type {
   ProfitMonths,
   ReviewRow,
   SumitStatus,
-  MercuryStatus,
   TransactionDetail,
   UnpaidRow,
 } from "@flow/shared";
@@ -21,6 +20,7 @@ import { waitForAccessToken } from "./wait-for-session";
 import { defaultPeriod, type PeriodChoice } from "./period";
 import { useHomePreview, type HomePreview } from "./preview";
 import { type TxnMeta } from "./txn-meta";
+import { mercuryState, type MercuryState } from "./mercury-state";
 import {
   JEV_CONNECTOR_STALE_MS,
   beginJevScopeLookup,
@@ -299,40 +299,31 @@ export function useSumitStatusQuery(active = true) {
   });
 }
 
-const mercuryDisconnected: MercuryStatus = {
-  company_id: null,
-  provider: "mercury",
-  connected: false,
-  last_sync_at: null,
-  last_error: null,
-  next_attempt_at: null,
-  import_from: null,
-  account_labels: null,
-  skip_count: null,
-};
-
+/**
+ * Every Mercury connection of the company (FLOW-938): one status row per connection, by slot, read as
+ * a MercuryState (mercury-connections.ts) the screens share.
+ */
 export function useMercuryStatusQuery(active = true) {
   const preview = useHomePreview();
   return useQuery({
     queryKey: ["mercury", preview],
     enabled: active && preview === "off",
-    queryFn: async (): Promise<MercuryStatus> => {
+    queryFn: async (): Promise<MercuryState> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       await waitForAccessToken(supabase);
       const { data, error } = await supabase
         .from("connector_connection_status")
-        .select("company_id, provider, connected, last_sync_at, last_error, next_attempt_at, import_from, account_labels, skip_count, syncing")
+        .select("company_id, provider, connected, last_sync_at, last_error, next_attempt_at, import_from, account_labels, skip_count, syncing, slot, org_label, accounts_chosen, sync_account_ids, skip_account_ids")
         .eq("provider", "mercury")
-        .maybeSingle();
+        .order("slot", { ascending: true });
       if (error) throw error;
-      if (data == null) return mercuryDisconnected;
-      const parsed = (await loadReadSchemas()).mercuryStatusSchema.parse({
-        ...data,
-        connected: data.connected === true,
-        syncing: data.syncing === true,
-      });
-      return parsed;
+      const schema = (await loadReadSchemas()).mercuryStatusSchema;
+      return mercuryState(data.map((row) => schema.parse({
+        ...row,
+        connected: row.connected === true,
+        syncing: row.syncing === true,
+      })));
     },
     refetchInterval: syncPollInterval,
     // Another tab may have started a run: re-read the claim every time this tab is shown again,

@@ -5,7 +5,9 @@ import { SAMPLE_ASSISTANT_KEYS, SAMPLE_ASSISTANT_SECRET as assistantSampleSecret
 import { SAMPLE_DEVICES, SAMPLE_THIS_TAG } from "../../push-devices-sample";
 import { AiConnectionPage } from "../../screens/assistant-settings";
 import { BusinessScreen } from "../../screens/business-screen";
-import { MercuryConnectionRoute, SumitConnectionRoute } from "../../screens/connection-pages";
+import { SumitConnectionRoute } from "../../screens/connection-pages";
+import { MercuryConnectionRoute, type MercurySample } from "../../screens/mercury-connection-screen";
+import { SAMPLE_EDIT_SELECTION, SAMPLE_NEW_ACCOUNT, SAMPLE_PICK, SAMPLE_SECOND, sampleConnection } from "../mercury-sample";
 import { CategoriesScreen, ConnectionsScreen, SettingsScreen } from "../../screens/flow-screens";
 import { NotificationsScreen } from "../../screens/notifications-screen";
 import { TeamApiProvider } from "../../team-api";
@@ -107,11 +109,25 @@ export function DevSumitConnection() {
   return <SumitConnectionRoute sample={state === "problem" ? { state: "problem", companyId: "1234567890" } : { state: "connected", companyId: "1234567890", lastSync: "היום, 06:05", imported: "312 מסמכים" }} />;
 }
 
-/** The Mercury page on the dev fixture: connected, or `?state=new` for a page with no key yet. */
+/**
+ * The Mercury page on the dev fixture (FLOW-938): connected (three of five accounts), `?state=new` with no key
+ * yet, `?state=pick` for step 3 (`&sheet=from` with the date sheet up), `?state=newaccount` with an account
+ * no one answered, `?state=multi` for two connections (`&slot=2` opens one), `?edit=1` for the synced
+ * accounts list as the board draws it.
+ */
 export function DevMercuryConnection() {
   const [params] = useSearchParams();
-  if (params.get("state") === "new") return <MercuryConnectionRoute sample={{ state: "new" }} />;
-  return <MercuryConnectionRoute sample={{ state: "connected", accounts: "Checking ••4821 · Savings ••1093", cards: "IO Credit ••7710", lastSync: "לפני 5 דקות", imported: "1,284 תנועות" }} />;
+  const state = params.get("state");
+  const sample: MercurySample = state === "new"
+    ? { connections: [] }
+    : state === "pick"
+      ? { connections: [SAMPLE_PICK] }
+      : state === "newaccount"
+        ? { connections: [SAMPLE_NEW_ACCOUNT], lastSync: "לפני 5 דקות", imported: "1,284 תנועות" }
+        : state === "multi"
+          ? { connections: [sampleConnection(), SAMPLE_SECOND], lastSync: "לפני 5 דקות", imported: "1,284 תנועות" }
+          : { connections: [sampleConnection()], lastSync: "לפני 5 דקות", imported: "1,284 תנועות", editSelection: SAMPLE_EDIT_SELECTION };
+  return <MercuryConnectionRoute key={state ?? "connected"} sample={sample} />;
 }
 
 /** The business page on the dev settings fixture: its name is the fixture's, and its rename sheet opens from it. */
@@ -137,7 +153,7 @@ export function DevAiConnection() {
   return <AiConnectionPage sample={useDevSettingsSample()?.assistant} sampleSecret={devAssistantSecret} initialSecret={initialSecret} basePath="/e2e/connections/ai" />;
 }
 
-/** The dev Settings fixture. `?connected=1|auth`, `?assistant=…`, `?nocompany=1`, `?email=none|long`, `?loans=none`. */
+/** The dev Settings fixture. `?connected=1|auth`, `?assistant=…`, `?nocompany=1`, `?email=none|long`, `?loans=none`, `?mercury=N`. */
 export function useDevSettingsSample(): NonNullable<Parameters<typeof SettingsScreen>[0]>["sample"] {
   const [params] = useSearchParams();
   const mode = params.get("connected");
@@ -154,11 +170,15 @@ export function useDevSettingsSample(): NonNullable<Parameters<typeof SettingsSc
       : "owner@example.com";
   // FLOW-512 proof: ?board=1 gives the Settings board's own numbers (an invented business name).
   const board = params.get("board") === "1" && !noCompany;
+  // FLOW-938: ?mercury=2 connects Mercury twice (the חיבורים row says 2 חיבורים).
+  const mercuryCount = Number(params.get("mercury") ?? Number.NaN);
   return {
         name: noCompany ? null : board ? "Cedar Lane Homes" : "בדיקה",
         connected: noCompany ? false : connected,
         companyId: connected ? 1001 : null,
         lastError: board ? "sumit_auth" : mode === "auth" ? "sumit_auth" : null,
+        mercuryConnected: Number.isInteger(mercuryCount) && mercuryCount > 0 ? true : undefined,
+        mercuryConnections: Number.isInteger(mercuryCount) && mercuryCount > 0 ? mercuryCount : undefined,
         email,
         noCompany,
         teamCount: board ? 2 : teamParam == null || noCompany ? undefined : Number(teamParam),

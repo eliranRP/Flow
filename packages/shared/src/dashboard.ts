@@ -316,6 +316,16 @@ export const mercuryStatusSchema = z.object({
   account_labels: z.unknown().nullable(),
   skip_count: z.number().nullable(),
   syncing: z.boolean().optional(),
+  /** FLOW-938: the connection's slot (a company may hold several Mercury connections). */
+  slot: z.number().int().nullable(),
+  /** The organisation's name as Mercury lists it on its accounts. */
+  org_label: z.string().nullable(),
+  /** False until the owner picks the accounts; nothing syncs before that. */
+  accounts_chosen: z.boolean().nullable(),
+  /** The accounts that sync; null is every listed account (a connection from before FLOW-938). */
+  sync_account_ids: z.array(z.string()).nullable(),
+  /** The accounts the owner left out, so they are not offered again as new. */
+  skip_account_ids: z.array(z.string()).nullable(),
 });
 
 /** FLOW-404 (decision 0143). In the project's investment currency; other currencies are listed apart. */

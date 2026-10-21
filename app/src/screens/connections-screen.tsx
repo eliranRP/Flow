@@ -106,6 +106,11 @@ export function ConnectionsScreen({ sample }: { sample?: SettingsSample; sampleS
   };
   const sumitLoading = sumitState === "loading";
   const mercuryLoading = mercuryState === "loading";
+  // FLOW-938: more than one Mercury connection says how many, unless one needs its key again.
+  const mercuryCount = sample ? (sample.mercuryConnections ?? 1) : (mercuryStatus.data?.connections.length ?? 0);
+  const mercuryWord = mercuryState === "connected" && mercuryCount > 1
+    ? `${String(mercuryCount)} חיבורים`
+    : connectorWord(mercuryState, viewerOnly);
 
   return (
     <ViewerScope>
@@ -119,7 +124,7 @@ export function ConnectionsScreen({ sample }: { sample?: SettingsSample; sampleS
           href={`/settings/connections/mercury${search}`}
           title="Mercury"
           icon={<BankIcon size={24} />}
-          value={noCompany ? "אין עסק עדיין" : providerValue(mercuryState, connectorWord(mercuryState, viewerOnly), mercuryLoading)}
+          value={noCompany ? "אין עסק עדיין" : providerValue(mercuryState, mercuryWord, mercuryLoading)}
           chevron
         />
         <ListRow

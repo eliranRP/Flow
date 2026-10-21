@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `create_manual_entry`, `attach_document`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `create_manual_entry`, `attach_document`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -86,6 +86,8 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `set_category_group` | `category_id` | `list_categories` `categories[].id` |
 | `undo` `kind: "category_group"` | `id` | the category id `set_category_group` used |
 | `undo` `kind: "jev_mode"` | `id` | the company id `set_jev_mode` returned |
+| `set_bank_accounts`, `answer_bank_account` | `slot`, `account_ids` / `account_id` | `list_bank_connections` `connections[].slot` and `connections[].accounts[].id` |
+| `undo` `kind: "bank_accounts"` | `id` | the connection id `set_bank_accounts` or `answer_bank_account` returned (`list_bank_connections` `connections[].id`) |
 | `set_member_role`, `remove_member` | `member_id` | `list_team` `members[].user_id` |
 | `undo` `kind: "invite"` | `id` | the invite id `invite_member` returned |
 | `undo` `kind: "member_role"`, `kind: "member_remove"` | `id` | the member's user id |
@@ -558,9 +560,45 @@ There is no date range. Mercury sync is cursor-based (`sync_cursor`, `import_fro
 
 `sync_bank` answers at once with `data`: `{ "job_id", "state": "running" }` and the pull keeps running after the response ([0102](../decisions/0102-sync-bank-jobs.md)). The same `idempotency_key` returns the same job (its current state, without a second pull). To retry a failed job, send a new key.
 
-`not_found` / `bank is not connected` means there is no Mercury row in `connector_connections`; no job is started.
+`not_found` / `bank is not connected` means there is no Mercury row in `connector_connections`; no job is started. A company may hold several Mercury connections ([0203](../decisions/0203-mercury-connections-and-synced-accounts.md)): one job syncs every connection whose accounts are chosen, and the counts add up. A connection whose accounts are not chosen yet syncs nothing; with none chosen the job fails with `not_found` / `bank is not connected`.
 
 Errors from `sync_bank` itself: `validation` for a missing or malformed `idempotency_key`; `forbidden` for a read token or a revoked or expired one, as on every write tool; `conflict` for a key already used with another tool; `not_found` / `bank is not connected`; and `refused` / `The write was refused.` when the job could not be started. A pull that fails after the job starts is not an error here: it is the job's `error` in `get_sync_status`.
+
+### list_bank_connections
+
+`mcp_bank_connections`, no arguments ([FLOW-938](../backlog/tasks/FLOW-938.md), [0203](../decisions/0203-mercury-connections-and-synced-accounts.md)). Read tool; any member reads it. What Settings › חיבורים › Mercury shows: `data.connections[]`, by slot, one per organisation's key (slots 1 to 9):
+
+- `id` (the connection; the `undo` id of the two writes below), `slot`, `provider` (`mercury`), `org_label` (the organisation's name in Mercury, null until a sync reads it).
+- `connected`: false once the key stopped working (`last_error` `auth`); the owner reconnects in the app.
+- `accounts_chosen`: false until the owner picks the accounts (the app's step 3); nothing of that connection syncs before.
+- `import_from`: `start` (all Mercury keeps) or the day the connection imports from; null before the choice.
+- `last_sync_at`, `last_error`, `syncing` (a run holds the connection, claimed in the last 10 minutes).
+- `accounts[]`, in Mercury's order: `id`, `name` (the owner's nickname in Mercury, else Mercury's name), `last4`, `kind` (`checking`, `savings`, `credit`, `treasury` or `other`), `balance_minor` (cents, null when Mercury sent none), `synced`, `skipped` (left out by the owner), `new` (Mercury reported it after the choice, neither synced nor left out: the app's "ב־Mercury נפתח חשבון חדש… לסנכרן אותו ל־Flow?"), and `import_from` (`start` or the day a synced account imports from; null when it does not sync).
+- `new_account_ids`: the accounts with `new` true.
+
+Connecting a key, replacing it and disconnecting stay in the app: a key is a secret the assistant never handles.
+
+### set_bank_accounts
+
+```json
+{ "idempotency_key": "bank-1", "slot": 1, "account_ids": ["<account id>", "<account id>"], "from": "2026-04-01" }
+```
+
+Chooses which accounts of one connection sync, as the app's step 3 (after the key) and its synced accounts list (חשבונות מסונכרנים) do. Write tool, owner only, `mcp_set_bank_accounts`, which saves through the app's `set_mercury_accounts`, so the rules are the app's:
+
+- `account_ids`: the accounts that sync, 1 to 200, each listed on that connection. Every other listed account is left out (`skipped`) and is not asked about again.
+- `from`: where an account added now starts: `start` (all Mercury keeps) or a day (`YYYY-MM-DD`, not after today in Israel). Left out or null: the first choice starts at the start, an account added later starts today. Accounts already synced keep their start.
+- An account taken out keeps the lines already imported; its new lines stop coming in. An account added with a start before today makes the next sync read back to it; lines already in are updated, never doubled.
+
+Output `data`: `id` (the connection), `slot`, `account_ids` and `skipped_account_ids` (sorted), `added` (accounts newly synced), `import_from` (the connection's earliest start, or `start`), `reread` (true when the next sync reads back; `sync_bank` brings the lines in now, else the daily sync does) and `undo_kind: "bank_accounts"`. Undo, with the connection id, puts the synced accounts, the skipped list and the starts from before back (a first choice undone leaves the connection unchosen again); it is `conflict` once they were changed again, and lines already imported stay. Errors: `forbidden` / `owner only` for an editor's or a viewer's key (`forbidden` / `forbidden` for a read token); `validation` / `account is not on this connection`, `import date is invalid`, `import date is after today`, or `validation` for a slot outside 1 to 9, no account, or a `from` that is neither `start` nor a real day; `not_found` / `bank connection not found` for a slot with no connection.
+
+### answer_bank_account
+
+```json
+{ "idempotency_key": "bank-new-1", "slot": 1, "account_id": "<account id>", "sync": true }
+```
+
+Answers the app's question on a new account ("כן, לסנכרן" / "לא"). Write tool, owner only, `mcp_answer_bank_account`, through the same `set_mercury_accounts`. `account_id` is an account with `new` true in `list_bank_connections`. `sync` true syncs it from the connection's own start (as the app's yes does: a new account has little history); false leaves it out, and it is not asked again. An account that is not new is `refused` / `account is not waiting for an answer`; one the connection does not list is `validation` / `account is not on this connection`. Output and undo as `set_bank_accounts`.
 
 ### get_sync_status
 

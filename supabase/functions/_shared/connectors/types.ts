@@ -102,6 +102,13 @@ export interface AccountLabel {
   label: string;
   /** The account's last 4 digits (FLOW-707), shown after the label as ••1234. */
   last4?: string;
+  /**
+   * What the account is (FLOW-938): the bank's kind ("checking", "savings"), or "credit" for a card
+   * account and "treasury" for an investment account. The accounts step defaults and words come from it.
+   */
+  kind?: string;
+  /** The current balance in cents, shown beside the account in the accounts step (FLOW-938). */
+  balance_cents?: number;
 }
 
 /** A card's last 4 digits and the nickname the owner gave it in the bank (FLOW-707). Nothing else of the card. */
@@ -119,7 +126,8 @@ export interface ClassifiedError {
 }
 
 export type ValidateResult =
-  | { ok: true; accounts: AccountLabel[] }
+  /** org: the organisation's name as the bank lists it on its accounts (FLOW-938), when it sends one. */
+  | { ok: true; accounts: AccountLabel[]; org?: string | null }
   | ({ ok: false } & ClassifiedError);
 
 declare const sessionBrand: unique symbol;
@@ -173,6 +181,12 @@ export interface LinkedDocument {
 export interface NormalizeContext {
   /** Ids from the company's connected accounts, including card and treasury accounts. */
   ownAccountIds: readonly string[];
+  /**
+   * Accounts the key can see that the owner chose not to sync (FLOW-938). Their lines are skipped as
+   * unsynced_account, a card account's too, instead of failing the run. A transfer from a synced account
+   * to one of them still counts as money out.
+   */
+  unsyncedAccountIds?: readonly string[];
   /**
    * Owner-set counterparty ids that are the owner's own external accounts.
    * Not account numbers. A transfer with one of these ids is imported, not skipped.

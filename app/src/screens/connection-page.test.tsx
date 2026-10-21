@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
 import { RolePreview } from "../use-is-viewer";
 import { ConnectionDetailPage } from "./connection-pages";
+import { MercuryConnectionRoute } from "./mercury-connection-screen";
 
 vi.mock("../lib/supabase", () => ({
   getSupabase: () => ({
@@ -67,9 +68,10 @@ describe("SUMIT connection page (FLOW-512)", () => {
   });
 });
 
-describe("Mercury connection page (FLOW-512)", () => {
-  it("asks only for the key, with no company number", () => {
-    renderWithProviders(<ConnectionDetailPage provider="mercury" sample={{ state: "new" }} />, { route: "/settings/connections/mercury" });
+describe("Mercury connection page (FLOW-512, FLOW-938)", () => {
+  it("asks only for the key: no company number, and no import date (that comes after the key)", () => {
+    renderWithProviders(<MercuryConnectionRoute sample={{ connections: [] }} />, { route: "/settings/connections/mercury" });
+    expect(screen.queryByRole("radio", { name: "מההתחלה" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("מספר חברה")).not.toBeInTheDocument();
     expect(screen.getByLabelText("מפתח API")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("מפתח API"), { target: { value: "mercury-key-123" } });
