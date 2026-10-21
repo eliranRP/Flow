@@ -1,0 +1,1 @@
+Tapping a bottom-bar tab from a page inside it (a project, a loan, a recurring charge, Settings under בית) now goes to that tab's main screen. On the main screen itself the tap still scrolls to the top. No migration.

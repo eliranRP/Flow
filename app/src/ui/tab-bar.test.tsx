@@ -1,8 +1,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TabBar, tabSection } from "./tab-bar";
 import { expectRtl, expectTarget } from "./test-support";
+
+function WhereAmI() {
+  return <span data-testid="where">{useLocation().pathname}</span>;
+}
 
 function accentRule(): string {
   for (const sheet of document.styleSheets) {
@@ -91,6 +95,25 @@ describe("TabBar", () => {
     );
     fireEvent.click(screen.getByRole("link", { name: "פרויקטים" }));
     expect(scroll).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+  });
+
+  it("goes to the tab's main screen when its tab is tapped from a page inside it", () => {
+    const scroll = vi.fn();
+    window.scrollTo = scroll;
+    for (const [from, name, to] of [["/projects/p-1", "פרויקטים", "/projects"], ["/settings", "בית", "/"], ["/loans/loan-1", "הלוואות", "/loans"], ["/recurring/expense/party-1", "קבועים", "/recurring"]] as const) {
+      const { unmount } = render(
+        <MemoryRouter initialEntries={[from]}>
+          <TabBar />
+          <Routes>
+            <Route path="*" element={<WhereAmI />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+      fireEvent.click(screen.getByRole("link", { name }));
+      expect(screen.getByTestId("where")).toHaveTextContent(to);
+      unmount();
+    }
+    expect(scroll).not.toHaveBeenCalled();
   });
 
   it("lights the tab a dev fixture names, where the path names none (FLOW-334)", () => {
