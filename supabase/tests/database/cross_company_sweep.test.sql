@@ -637,6 +637,7 @@ begin
     ('reopen_review', jsonb_build_object('p_id', pg_temp.lit(pg_temp.sid('review_done')))),
     ('reopen_invite', jsonb_build_object('p_invite_id', pg_temp.lit(pg_temp.sid('invite_declined')))),
     ('mcp_move_category_lines', jsonb_build_object('p_from', pg_temp.lit(pg_temp.sid('category2')))),
+    ('mcp_set_bank_accounts', jsonb_build_object('p_account_ids', pg_temp.lit(array['victim-acct-1']::text[]), 'p_from', 'null::text')),
     ('delete_company', jsonb_build_object('p_confirm', pg_temp.lit('Victim Sample Co'::text))),
     ('set_cash_basis', jsonb_build_object('p_basis', pg_temp.lit('paid'::text))),
     ('mcp_set_cash_basis', jsonb_build_object('p_basis', pg_temp.lit('paid'::text))),

@@ -247,7 +247,7 @@ from unnest(array[
   'category_delete', 'category_move', 'company_currency', 'category_group', 'category_parent',
   'project_group', 'project_group_member', 'category_name', 'jev_mode', 'loan_index',
   'index_rate', 'project_update', 'project_delete', 'project_forecast', 'invoice_link',
-  'invoice_dismiss', 'manual_entry', 'document_attach'
+  'invoice_dismiss', 'manual_entry', 'document_attach', 'bank_accounts'
 ]) k;
 update muc_sweep set p_id = write_id where p_id is null;
 
@@ -262,7 +262,7 @@ select s.write_id, pg_temp.id('tok_b'), tests.get_supabase_uid('muc_user'),
     'company_id', t.id, 'invite_id', t.id, 'user_id', t.id, 'rate_id', t.id, 'group_id', t.id,
     'party_id', t.id, 'match_party_id', t.id, 'project_id', t.id, 'deletion_id', t.id,
     'move_id', t.id, 'effective_date', '2026-01-01', 'written_at', null, 'parts', '[]'::jsonb,
-    'undo', '[]'::jsonb, 'row', '{}'::jsonb, 'direction', 'expense'
+    'undo', '[]'::jsonb, 'row', '{}'::jsonb, 'direction', 'expense', 'connection_id', t.id
   )
 from muc_sweep s cross join (select pg_temp.id('target') as id) t;
 
@@ -284,7 +284,7 @@ select is(
 );
 select is(
   (select count(*)::int from muc_sweep),
-  48,
+  49,
   'the sweep covers every undo kind but the two forecast ones'
 );
 
@@ -292,7 +292,7 @@ select is(
 select is(
   (select count(*)::int from private.mcp_writes w join muc_sweep s on s.write_id = w.id
    where w.company_id = pg_temp.id('b')),
-  48,
+  49,
   'the swept writes keep the company they were stored with'
 );
 select is(

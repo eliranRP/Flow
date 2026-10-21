@@ -76,6 +76,7 @@ import { syncBank } from "./tools_sync.ts";
 import { resetForecastSchema, setForecastItemSchema } from "./tools_forecast_schemas.ts";
 import { attachDocumentSchema, createManualEntrySchema } from "./tools_manual_schemas.ts";
 import { PROJECT_FORECAST_WRITES, projectForecastWrite } from "./tools_project_forecast.ts";
+import { BANK_WRITES, bankWrite } from "./tools_bank.ts";
 
 /** The largest usual amount a charge takes, in minor units (decision 0189; the database checks it too). */
 const USUAL_AMOUNT_MAX_MINOR = 999_999_999_999n;
@@ -94,6 +95,7 @@ export async function callWrite(
   if ((PROJECT_FORECAST_WRITES as readonly string[]).includes(name)) {
     return projectForecastWrite(name as typeof PROJECT_FORECAST_WRITES[number], args, rpc);
   }
+  if ((BANK_WRITES as readonly string[]).includes(name)) return bankWrite(name as typeof BANK_WRITES[number], args, rpc);
   if (name === "sync_bank") {
     const parsed = syncBankSchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");

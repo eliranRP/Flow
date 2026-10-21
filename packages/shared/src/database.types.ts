@@ -1452,6 +1452,9 @@ isOneToOne: false
 "mcp_add_loan":
 { Args: { "p_amortization_months"?: number,"p_annual_rate_ppm": number,"p_currency": string,"p_escrow_minor": number,"p_idempotency_key": string,"p_interest_only_months"?: number,"p_kind"?: string,"p_name": string,"p_payment_minor": number,"p_principal_minor": number,"p_project_id"?: string,"p_start_date": string,"p_term_months": number }; Returns: Json
                            },
+"mcp_answer_bank_account":
+{ Args: { "p_account_id": string,"p_idempotency_key": string,"p_slot": number,"p_sync": boolean }; Returns: Json
+                           },
 "mcp_answer_recurring_match":
 { Args: { "p_direction": string,"p_idempotency_key": string,"p_match_party_id": string,"p_party_id": string,"p_same": boolean }; Returns: Json
                            },
@@ -1469,6 +1472,9 @@ isOneToOne: false
                            },
 "mcp_attach_loan_payment":
 { Args: { "p_idempotency_key": string,"p_loan_id": string,"p_parts": Json,"p_transaction_id": string }; Returns: Json
+                           },
+"mcp_bank_connections":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "mcp_company_loan_currency":
 { Args: Record<PropertyKey, never>; Returns: string
@@ -1564,6 +1570,9 @@ isOneToOne: false
                            },
 "mcp_review_anomalies":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"mcp_set_bank_accounts":
+{ Args: { "p_account_ids": (string)[],"p_from"?: string,"p_idempotency_key": string,"p_slot": number }; Returns: Json
                            },
 "mcp_set_cash_basis":
 { Args: { "p_basis": string,"p_idempotency_key": string }; Returns: Json
