@@ -126,15 +126,16 @@ function paymentMeta(kind: string, raw: Record<string, unknown>, accountId: stri
  * Pure Mercury line. No clock, no network, no database.
  *
  * Skip order:
- * 1. A treasuryTransfer or internalTransfer is skipped only when its
+ * 1. A line on an account the owner chose not to sync (unsyncedAccountIds, FLOW-938) is
+ *    unsynced_account, a card account's too. It comes first, so a stored leg from an account the
+ *    owner unchecked is kept, not voided as a transfer (decision 0203).
+ * 2. A treasuryTransfer or internalTransfer is skipped only when its
  *    counterparty id is one of the connected Mercury account ids, the same
  *    gate as card autopay. That set includes treasury account ids from
  *    GET /treasury. The kind alone does not skip the line.
- * 2. Any other counterparty id in ownAccountIds is an own-account transfer.
+ * 3. Any other counterparty id in ownAccountIds is an own-account transfer.
  *    These three reasons are MERCURY_TRANSFER_SKIPS: when an earlier run imported the same line as
  *    money out (its other account was not synced then), the sync voids that stored copy (FLOW-938).
- * 3. A line on an account the owner chose not to sync (unsyncedAccountIds, FLOW-938) is
- *    unsynced_account, a card account's too.
  * 4. Card spend whose accountId is outside a non-empty ownAccountIds throws
  *    mercury_card_account_missing. It is not a silent not_own_account skip.
  * 5. Any other accountId outside ownAccountIds is not one of the connected accounts.
