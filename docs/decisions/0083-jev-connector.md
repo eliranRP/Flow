@@ -9,7 +9,7 @@ Jev, TypeSafe's decision model, can suggest a project, a category, whether a lin
 
 ## Decision
 
-The connector is off unless a member of that company turns it on. A company with no `company_integrations` row is off. The stored default is `enabled` false, `mode` `shadow`, and `threshold` 0.90. Until the tagging job ships, `mode` is only `off` or `shadow`, and `threshold` is from 0.50 to 1.00. `auto` is refused.
+~~The connector is off unless a member of that company turns it on.~~ Amended by [0204](0204-jev-on-for-new-companies.md): `create_company` stores a new company's row on, `auto`, 0.90; companies made before keep their row or stay off. A company with no `company_integrations` row is off. The stored default is `enabled` false, `mode` `shadow`, and `threshold` 0.90. Until the tagging job ships, `mode` is only `off` or `shadow`, and `threshold` is from 0.50 to 1.00. `auto` is refused.
 
 `mode` `shadow` means a later job may store a suggestion and must leave the line in לאישור. This record does not apply a suggestion and does not approve a line.
 

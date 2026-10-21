@@ -22,6 +22,8 @@ export function buildDoneRows(input: {
   const row = (label: string, done: boolean, value: string, index: number): DoneRow => ({ label, value, done, delay: index * 60 });
   // Mercury and SUMIT share step 2: each row says what it found, or that the step was skipped.
   const connection = (isConnected: boolean) => (isConnected ? "מחובר" : skipped("2") ? "דילגתם" : "לא מחובר");
+  // The step's own save wins; otherwise the stored row, which create_company writes on (decision 0204).
+  const jevOn = store.jev_on ?? facts.jevOn;
   const projects = facts.projectCount;
   const loans = facts.loanCount + pendingLenders;
   return [
@@ -35,7 +37,7 @@ export function buildDoneRows(input: {
       pendingLenders > 0 ? `${String(pendingLenders)} להשלמה` : loans > 0 ? String(loans) : skipped("4") ? "דילגתם" : "אין",
       4,
     ),
-    row("תיוג חכם", facts.jevSaved && store.jev_on === true, store.jev_on === true ? "פעיל" : skipped("5") ? "דילגתם" : "כבוי", 5),
+    row("תיוג חכם", facts.jevSaved && jevOn, jevOn ? "פעיל" : skipped("5") ? "דילגתם" : "כבוי", 5),
     row("מסך הבית", store.installed_at != null || facts.standalone, store.installed_at != null || facts.standalone ? "מוכן" : skipped("7") ? "דילגתם" : "לא עכשיו", 6),
   ];
 }

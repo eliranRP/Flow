@@ -10,6 +10,13 @@ select lives_ok($$select public.create_company('עסק אוטו', true)$$, 'owne
 
 reset role;
 
+-- create_company now writes a new company's Jev row on, auto, 0.90 (FLOW-940, decision 0204).
+-- This file starts from companies with no Jev row, like one made before that, so it drops them.
+delete from public.company_integrations i
+using public.companies c
+join auth.users u on u.id = c.owner_id
+where c.id = i.company_id and u.raw_user_meta_data ->> 'test_identifier' in ('jev_auto_owner');
+
 select lives_ok(
   $$insert into public.company_integrations (company_id, provider, mode)
     select c.id, 'jev', 'auto'

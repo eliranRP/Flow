@@ -6,12 +6,16 @@ import { isStandalone } from "../ui/install-prompt";
 import { useDashboardQuery, useMercuryStatusQuery, useSumitStatusQuery } from "../use-books";
 import { emptyFacts, type SetupFacts } from "./model";
 
-async function jevRowExists(): Promise<boolean> {
+type JevRow = { saved: boolean; on: boolean };
+
+async function jevRow(): Promise<JevRow> {
   const supabase = getSupabase();
-  if (!supabase || typeof supabase.from !== "function") return false;
-  const { data, error } = await supabase.from("company_integrations").select("provider").eq("provider", "jev").maybeSingle();
+  if (!supabase || typeof supabase.from !== "function") return { saved: false, on: false };
+  const { data, error } = await supabase.from("company_integrations").select("enabled,mode").eq("provider", "jev").maybeSingle();
   if (error) throw new Error(error.message);
-  return data != null;
+  if (data == null) return { saved: false, on: false };
+  const row = data as { enabled?: unknown; mode?: unknown };
+  return { saved: true, on: row.enabled === true && row.mode !== "off" };
 }
 
 async function resolvedReviewExists(): Promise<boolean> {
@@ -52,7 +56,7 @@ export function useSetupFacts(active = true, details = true): SetupFacts {
   const jev = useQuery({
     queryKey: ["setup-jev", companyId],
     enabled: steps,
-    queryFn: jevRowExists,
+    queryFn: jevRow,
   });
   const review = useQuery({
     queryKey: ["setup-review-resolved", companyId],
@@ -74,7 +78,8 @@ export function useSetupFacts(active = true, details = true): SetupFacts {
     companyId,
     sumitConnected: sumit.data?.connected === true,
     mercuryConnected: mercury.data?.connected === true,
-    jevSaved: jev.data === true,
+    jevSaved: jev.data?.saved === true,
+    jevOn: jev.data?.on === true,
     hasResolvedReview: review.data === true,
     standalone,
     projectCount: dashboard.data.projects.length,

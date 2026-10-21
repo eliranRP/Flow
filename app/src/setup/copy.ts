@@ -83,9 +83,9 @@ export function loanPrimary(count: number): string {
 }
 
 // 5 · תיוג חכם
-export const JEV_LEAD = "במקום לשייך כל שורה ביד, Flow מציע ואתם מאשרים.";
+export const JEV_LEAD = "במקום לשייך כל שורה ביד, Flow ממלא ואתם מאשרים.";
 export const JEV_LABEL = "תיוג חכם";
-export const JEV_HINT = "מציע פרויקט וקטגוריה לכל שורה חדשה. אתם מאשרים.";
+export const JEV_HINT = "ממלא פרויקט וקטגוריה כשהוא בטוח. השורה מחכה לאישור, ואפשר לבטל.";
 
 // 6 · אישור ראשון
 export const REVIEW_LEAD = "שורות חדשות מחכות לכם בבית, תחת \"דורש טיפול\". ככה זה נראה. אשרו:";

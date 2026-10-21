@@ -19,6 +19,13 @@ select tests.authenticate_as('jas_other');
 select lives_ok($$select public.create_company('עסק ב', true)$$, 'other owner creates a company');
 reset role;
 
+-- create_company now writes a new company's Jev row on, auto, 0.90 (FLOW-940, decision 0204).
+-- This file starts from companies with no Jev row, like one made before that, so it drops them.
+delete from public.company_integrations i
+using public.companies c
+join auth.users u on u.id = c.owner_id
+where c.id = i.company_id and u.raw_user_meta_data ->> 'test_identifier' in ('jas_owner', 'jas_other');
+
 create temp table jas_ref (label text primary key, id uuid);
 grant all on jas_ref to anon, authenticated, service_role;
 

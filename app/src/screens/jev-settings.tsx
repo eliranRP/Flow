@@ -42,6 +42,12 @@ type StoredJev = {
   threshold: number;
 };
 
+/**
+ * FLOW-940 (decision 0204): what create_company stores for a new company, and what the setup's
+ * Jev step saves when the switch stays on. A company with no row is still off (JEV_DEFAULT).
+ */
+export const JEV_NEW_COMPANY: StoredJev = { enabled: true, mode: "auto", threshold: 0.9 };
+
 const TITLE = "תיוג חכם (Jev)";
 const SHADOW_HINT = "ההצעות נשמרות לבדיקה ולא ממולאות אוטומטית.";
 export const AUTO_HINT = "Jev ממלא פרויקט וקטגוריה כשהביטחון מגיע לסף. השורה עדיין ממתינה לאישור, ואפשר לבטל בכרטיס.";

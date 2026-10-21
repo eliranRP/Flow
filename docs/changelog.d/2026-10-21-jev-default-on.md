@@ -1,0 +1,3 @@
+A new company starts with smart tagging on (FLOW-940, decision 0204): Settings › עוזרים › תיוג חכם (Jev) is on, in מילוי אוטומטי, at 90%, from the moment the company is created, so its bank lines arrive in לאישור already filled where Jev is sure. Every line still waits for approval and a fill can be undone; the owner can switch Jev off or to הצעות בלבד at any time. The setup's Jev step keeps that when its switch stays on (it used to save הצעות בלבד), and its done card says פעיל when the step was skipped. Existing companies do not change.
+
+There is a migration, `20261021072919_jev_default_on.sql`: `create_company` writes the new company's `company_integrations` row (enabled, `auto`, 0.90) in the same transaction. No existing row is inserted or changed.

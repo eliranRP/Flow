@@ -15,6 +15,8 @@ export type SetupFacts = {
   mercuryConnected: boolean;
   /** A Jev row exists, on or off. */
   jevSaved: boolean;
+  /** The Jev row is on (enabled and not mode off). create_company stores it on (decision 0204). */
+  jevOn: boolean;
   hasResolvedReview: boolean;
   standalone: boolean;
   /** Projects and loans the company already has in the books (step 3 and 4 done rules). */
@@ -29,6 +31,7 @@ export function emptyFacts(ready = false): SetupFacts {
     sumitConnected: false,
     mercuryConnected: false,
     jevSaved: false,
+    jevOn: false,
     hasResolvedReview: false,
     standalone: false,
     projectCount: 0,
