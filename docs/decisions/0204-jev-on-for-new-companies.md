@@ -27,5 +27,5 @@ The owner can still turn Jev off or to הצעות בלבד at any time (Settings
 ## Consequences
 
 - A new company's open lines are tagged and, at 90% or more, pre-filled from its first bank sync, newest first, within the daily cap. There is no "since" date: the first sync's older open lines are labelled too, as they would be for an owner who turns Jev on later. Each fill still waits in לאישור and can be undone.
-- With no Jev key on the server the job does not run, and the Settings row locks off with "צריך מפתח Jev" (FLOW-704), as before.
+- With no Jev key on the server Jev is never called (the cron still wakes the tagging function, which stops at the missing key), and the Settings row locks off with "צריך מפתח Jev" (FLOW-704), as before.
 - The table comment on `company_integrations` says so.
