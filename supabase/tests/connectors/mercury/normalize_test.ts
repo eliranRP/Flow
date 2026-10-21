@@ -763,6 +763,17 @@ Deno.test("FLOW-938: an account the owner left out is skipped, its card too; a t
   assertEquals([toCard.line.direction, toCard.line.category_hint], ["expense", "העברות"]);
 });
 
+Deno.test("FLOW-938: a transfer from an account the owner unchecked to a synced one stays an unsynced line, so its stored leg is kept", () => {
+  const payment = postedLines.find((row) => row.kind === "outgoingPayment" && row.status === "sent");
+  assertEquals(Boolean(payment), true);
+  if (!payment) return;
+  const [unchecked, kept] = ownAccountIds();
+  assertEquals(Boolean(unchecked && kept), true);
+  const scoped = ctx({ ownAccountIds: [kept], unsyncedAccountIds: [unchecked], ownCounterpartyIds: [unchecked] });
+  const leg = { ...payment, kind: "internalTransfer", accountId: unchecked, counterpartyId: kept };
+  assertEquals(normalizeMercury(leg, scoped), { ok: false, skip: "unsynced_account" });
+});
+
 Deno.test("a fee rebate and a fee reversal stay expense credits", () => {
   const base = postedLines.find((row) => row.kind === "creditCardCredit" && row.status === "sent");
   assertEquals(Boolean(base), true);

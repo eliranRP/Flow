@@ -63,9 +63,17 @@ Deno.test("a known old schema calls the RPC without p_slot", async () => {
 
 Deno.test("an unknown schema that has no p_slot gets the call again without it", async () => {
   const rpc = oldSchemaRpc();
-  const { result, legacy } = await rpcWithSlot(rpc.call, { p_company: "company-1" }, 1, false);
+  const { result, legacy } = await rpcWithSlot(rpc.call, { p_company: "company-1" }, 1, null);
   assertEquals([result.error, legacy], [null, true]);
   assertEquals(rpc.calls, [{ p_company: "company-1", p_slot: 1 }, { p_company: "company-1" }]);
+});
+
+Deno.test("a known new schema never calls again without p_slot, even on a missing-function answer", async () => {
+  const rpc = oldSchemaRpc();
+  const { result, legacy } = await rpcWithSlot(rpc.call, { p_company: "company-1" }, 2, false);
+  assertEquals(legacy, false);
+  assertEquals(result.error != null, true);
+  assertEquals(rpc.calls, [{ p_company: "company-1", p_slot: 2 }]);
 });
 
 Deno.test("on the new schema p_slot is sent once, and any other error is not retried without it", async () => {

@@ -168,12 +168,14 @@ export function normalizeMercury(raw: unknown, ctx: NormalizeContext): Normalize
   const accountId = bounded(stringField(raw.accountId));
   if (stringField(raw.counterpartyId) && !counterpartyId) return skip("not_a_line");
   if (stringField(raw.accountId) && !accountId) return skip("not_a_line");
+  // An unsynced account's line first: a transfer skip would void its stored leg, and lines already
+  // imported from an account the owner unchecked stay (decision 0203).
+  if (accountId && ctx.unsyncedAccountIds?.includes(accountId)) return skip("unsynced_account");
   if (counterpartyId && ctx.ownAccountIds.includes(counterpartyId)) {
     if (kind === "treasuryTransfer") return skip("treasury_transfer");
     if (kind === "internalTransfer") return skip("internal_transfer");
     return skip("own_account_transfer");
   }
-  if (accountId && ctx.unsyncedAccountIds?.includes(accountId)) return skip("unsynced_account");
   if (
     isCardAccountKind(kind) &&
     ctx.ownAccountIds.length > 0 &&

@@ -46,19 +46,20 @@ export function legacyPatch<T extends Record<string, unknown>>(patch: T, legacy:
 }
 
 /**
- * An RPC that takes p_slot since FLOW-938. On the old schema it is called without p_slot, as before.
- * When the schema was not known (no row to read it from), a "no such function" answer to the call
- * with p_slot means the old schema, and the call is made again without it. Only that answer: on the
- * new schema a call without p_slot would address every connection of the provider.
+ * An RPC that takes p_slot since FLOW-938. `legacy` is what the rows showed: true, the old schema,
+ * called without p_slot as before; false, the new schema, called with it; null, not known (no row to
+ * read it from). Only then does a "no such function" answer to the call with p_slot mean the old
+ * schema and the call is made again without it: on the new schema a call without p_slot would address
+ * every connection of the provider, so a known new schema never retries.
  */
 export async function rpcWithSlot<R extends { error: SchemaError | null }>(
   call: (args: Record<string, unknown>) => PromiseLike<R>,
   args: Record<string, unknown>,
   slot: number,
-  legacy: boolean,
+  legacy: boolean | null,
 ): Promise<{ result: R; legacy: boolean }> {
-  if (legacy) return { result: await call(args), legacy: true };
+  if (legacy === true) return { result: await call(args), legacy: true };
   const first = await call({ ...args, p_slot: slot });
-  if (!isMissingFunction(first.error)) return { result: first, legacy: false };
+  if (legacy === false || !isMissingFunction(first.error)) return { result: first, legacy: false };
   return { result: await call(args), legacy: true };
 }

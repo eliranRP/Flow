@@ -119,7 +119,8 @@ Deno.serve(async (req) => {
         p_settings: {},
       },
       slot,
-      legacy,
+      // No row yet: the schema is not known, so a missing p_slot means the old one.
+      rows.length === 0 ? null : legacy,
     );
     legacy = replaced.legacy;
     if (replaced.result.error) return json({ error: "could not store the connection" }, 500);
