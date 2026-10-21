@@ -334,6 +334,11 @@ begin
       true, true, false
     on conflict (company_id, kind, name) do nothing
     returning id into cat;
+    -- A confirm running at the same time made it first: take that one.
+    if cat is null then
+      select c.id into cat from public.categories c
+      where c.company_id = p_company and c.kind::text = line.direction::text and c.name = 'העברות';
+    end if;
   end if;
   select coalesce(array_agg(q.id order by q.created_at), '{}') into reviews
   from public.review_queue q
