@@ -1,1 +1,51 @@
-{"permissions":{"allow":["mcp__flow","mcp__github","mcp__Supabase","mcp__claude-code-remote","Bash(git:*)","Bash(gh api:*)","Bash(pnpm:*)","Bash(npx:*)","Bash(npm:*)","Bash(node:*)","Bash(deno:*)","Bash(python3:*)","Bash(bash scripts/*)","Bash(curl:*)","Bash(grep:*)","Bash(sed:*)","Bash(cat:*)","Bash(ls:*)"]}}
+{
+  "permissions": {
+    "allow": [
+      "mcp__flow",
+      "mcp__github",
+      "mcp__Supabase",
+      "mcp__claude-code-remote",
+      "Bash(git:*)",
+      "Bash(gh api:*)",
+      "Bash(pnpm:*)",
+      "Bash(npx:*)",
+      "Bash(npm:*)",
+      "Bash(node:*)",
+      "Bash(deno:*)",
+      "Bash(python3:*)",
+      "Bash(bash scripts/*)",
+      "Bash(curl:*)",
+      "Bash(grep:*)",
+      "Bash(sed:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(cd:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(awk:*)",
+      "Bash(sort:*)",
+      "Bash(wc:*)",
+      "Bash(echo:*)",
+      "Bash(sleep:*)",
+      "Bash(sha256sum:*)",
+      "Bash(cut:*)",
+      "Bash(diff:*)",
+      "Bash(cmp:*)",
+      "Bash(jq:*)",
+      "mcp__Supabase__*",
+      "mcp__Supabase__execute_sql",
+      "mcp__Supabase__query_logs",
+      "mcp__Supabase__get_advisors",
+      "Bash(supabase status:*)",
+      "Bash(supabase migration list:*)",
+      "Bash(supabase test db:*)"
+    ],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(rm -rf /:*)",
+      "Bash(supabase db push:*)",
+      "Bash(supabase db reset --linked:*)"
+    ]
+  }
+}
