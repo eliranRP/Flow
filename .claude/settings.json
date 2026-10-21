@@ -20,30 +20,32 @@
       "Bash(cat:*)",
       "Bash(ls:*)",
       "Bash(cd:*)",
-      "Bash(supabase:*)",
       "Bash(head:*)",
       "Bash(tail:*)",
       "Bash(awk:*)",
-      "Bash(find:*)",
       "Bash(sort:*)",
       "Bash(wc:*)",
       "Bash(echo:*)",
       "Bash(sleep:*)",
-      "Bash(timeout:*)",
-      "Bash(for:*)",
       "Bash(sha256sum:*)",
       "Bash(cut:*)",
       "Bash(diff:*)",
       "Bash(cmp:*)",
       "Bash(jq:*)",
-      "Bash(bash /tmp/claude-0/*)",
       "mcp__Supabase__*",
       "mcp__Supabase__execute_sql",
       "mcp__Supabase__query_logs",
       "mcp__Supabase__get_advisors",
-      "mcp__github__*",
-      "mcp__flow__*",
-      "mcp__claude-code-remote__*"
+      "Bash(supabase status:*)",
+      "Bash(supabase migration list:*)",
+      "Bash(supabase test db:*)"
+    ],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(rm -rf /:*)",
+      "Bash(supabase db push:*)",
+      "Bash(supabase db reset --linked:*)"
     ]
   }
 }
