@@ -54,6 +54,8 @@ export type SettingsSample = {
   mercuryConnected?: boolean;
   mercuryLastError?: string | null;
   mercuryLastSyncAt?: string | null;
+  /** FLOW-938: how many Mercury connections the company has (a sample; live reads the status). */
+  mercuryConnections?: number;
   assistant?: AssistantSample;
   jev?: JevCardState;
   /** Preview only. Live settings read the company's lines. */

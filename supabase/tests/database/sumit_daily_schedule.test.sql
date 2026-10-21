@@ -1,4 +1,4 @@
--- flow-connector-daily is 03:00 UTC and queues one unclaimed refresh per connection.
+-- flow-connector-daily is 03:00 UTC and queues one unclaimed refresh per company and provider.
 -- The command is the connector insert. Re-running the schedule leaves one job.
 
 begin;
@@ -12,7 +12,7 @@ insert into sumit_daily_expected (schedule, command) values (
   '0 3 * * *',
   $cron$
         insert into public.connector_refresh_requests (company_id, provider)
-        select c.company_id, c.provider
+        select distinct c.company_id, c.provider
         from public.connector_connections c
         where not exists (
           select 1 from public.connector_refresh_requests r
@@ -37,7 +37,7 @@ select is(
 select results_eq(
   $$select schedule, command from cron.job where jobname = 'flow-connector-daily' order by jobid$$,
   $$select schedule, command from sumit_daily_expected$$,
-  'flow-connector-daily is 03:00 UTC and queues one unclaimed refresh per connection'
+  'flow-connector-daily is 03:00 UTC and queues one unclaimed refresh per company and provider'
 );
 
 select ok(

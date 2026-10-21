@@ -748,6 +748,21 @@ Deno.test("card spend throws when its account is missing from the connected set"
   assertEquals(classifyMercuryError(error), { class: "rejected", retry_after: null });
 });
 
+Deno.test("FLOW-938: an account the owner left out is skipped, its card too; a transfer to it is money out", () => {
+  const card = postedLines.find((row) => row.kind === "creditCardTransaction");
+  const payment = postedLines.find((row) => row.kind === "outgoingPayment" && row.status === "sent");
+  assertEquals(Boolean(card && payment), true);
+  if (!card || !payment) return;
+  const cardId = creditFile.accounts[0].id;
+  const synced = ownAccountIds().filter((id) => id !== cardId);
+  const scoped = ctx({ ownAccountIds: synced, unsyncedAccountIds: [cardId], ownCounterpartyIds: [cardId] });
+  assertEquals(normalizeMercury(card, scoped), { ok: false, skip: "unsynced_account" });
+  const toCard = normalizeMercury({ ...payment, kind: "internalTransfer", counterpartyId: cardId }, scoped);
+  assertEquals(toCard.ok, true);
+  if (!toCard.ok) return;
+  assertEquals([toCard.line.direction, toCard.line.category_hint], ["expense", "העברות"]);
+});
+
 Deno.test("a fee rebate and a fee reversal stay expense credits", () => {
   const base = postedLines.find((row) => row.kind === "creditCardCredit" && row.status === "sent");
   assertEquals(Boolean(base), true);

@@ -17,6 +17,14 @@ const MERCURY_ERRORS: Record<string, string> = {
   connect_failed: "לא הצלחנו להתחבר. נסו שוב.",
   transient: "הרענון נכשל. נסו שוב.",
   method: "החיבור נכשל.",
+  // FLOW-938: several connections, and the accounts each one syncs.
+  already_connected: "החשבונות של המפתח הזה כבר מחוברים ב־Flow, בחיבור אחר.",
+  too_many_connections: "אפשר עד 9 חיבורי Mercury לעסק.",
+  not_found: "החיבור הזה כבר לא קיים. רעננו את הדף.",
+  "connector is not connected": "החיבור הזה כבר לא קיים. רעננו את הדף.",
+  "choose at least one account": "בחרו לפחות חשבון אחד.",
+  "account is not on this connection": "אחד החשבונות כבר לא ב־Mercury. רעננו את הדף.",
+  "import date is after today": "התאריך עוד לא הגיע. בחרו תאריך אחר.",
 };
 
 /** Hebrew for a known Mercury code. An unknown code becomes the generic sentence. */

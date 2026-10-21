@@ -3,8 +3,9 @@
  * session, passes stored lines, and writes the plan.
  *
  * Every plan calls validate again and builds ownAccountIds from every
- * account the provider returns. A subset would import a transfer to an
- * unconnected org account as income or expense.
+ * account the provider returns, unless the caller scopes it to the accounts
+ * the owner chose (accountScope, FLOW-938): then a transfer to an account
+ * left out is money out, and that account's own lines are skipped.
  */
 import type {
   AccountLabel,
@@ -40,6 +41,12 @@ export interface PlanSyncInput {
   importFrom: string | null;
   lookbackDays: number;
   ownCounterpartyIds: readonly string[];
+  /**
+   * The accounts the owner chose (FLOW-938). `synced` are this connection's accounts that sync; `own`
+   * adds the synced accounts of the company's other connections, so a transfer between any two of
+   * them is skipped. Every other account the provider lists is unsynced. Omitted: every account syncs.
+   */
+  accountScope?: { synced: readonly string[]; own: readonly string[] };
   vatRateBp: number;
   exemptSupplierNames: readonly string[];
   exemptSupplierIds: readonly string[];
@@ -69,6 +76,8 @@ export interface PlannedSkip {
 export interface PlannedSync {
   ok: true;
   accounts: AccountLabel[];
+  /** The organisation's name from this validation, when the provider sent one. */
+  org: string | null;
   ownAccountIds: string[];
   lines: CanonicalLine[];
   skips: PlannedSkip[];
@@ -118,6 +127,7 @@ function failure(port: ConnectorPort, error: unknown): PlannedFailure {
  */
 export async function planConnectorSync(input: PlanSyncInput): Promise<PlannedSync | PlannedFailure> {
   let accounts: AccountLabel[];
+  let org: string | null = null;
   try {
     const validated = await input.port.validate(input.session);
     if (!validated.ok) {
@@ -129,13 +139,20 @@ export async function planConnectorSync(input: PlanSyncInput): Promise<PlannedSy
       return { ok: false, error: classified, code: validated.code ?? validated.class };
     }
     accounts = validated.accounts;
+    org = validated.org ?? null;
   } catch (error) {
     return failure(input.port, error);
   }
 
-  const ownAccountIds = accounts.map((account) => account.id);
+  const scope = input.accountScope;
+  const listed = accounts.map((account) => account.id);
+  const ownAccountIds = scope
+    ? [...new Set([...scope.synced.filter((id) => listed.includes(id)), ...scope.own])]
+    : listed;
+  const unsyncedAccountIds = scope ? listed.filter((id) => !ownAccountIds.includes(id)) : [];
   const ctx = {
     ownAccountIds,
+    unsyncedAccountIds,
     ownCounterpartyIds: input.ownCounterpartyIds,
     vatRateBp: input.vatRateBp,
     exemptSupplierNames: input.exemptSupplierNames,
@@ -246,6 +263,7 @@ export async function planConnectorSync(input: PlanSyncInput): Promise<PlannedSy
   return {
     ok: true,
     accounts,
+    org,
     ownAccountIds,
     lines,
     skips,

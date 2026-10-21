@@ -6,6 +6,7 @@ import {
 } from "./capabilities.ts";
 import { addCalendarDays, jerusalemDate } from "./dates.ts";
 import { redactMercury } from "./redact.ts";
+import { dollarsToCents } from "./money.ts";
 import { isVoidMercuryStatus } from "./rules.ts";
 import type {
   AccountLabel,
@@ -157,23 +158,6 @@ export function backoffUntil(retryAfter: string | null, now: Date): string {
   return new Date(until).toISOString();
 }
 
-/**
- * True when a reconnect returns a different set of account ids than the stored
- * labels. The stored cursor belongs to the old accounts, so the caller clears it
- * and the next sync reads from import_from again. No stored labels is a change.
- */
-export function mercuryAccountsChanged(previous: unknown, next: readonly AccountLabel[]): boolean {
-  if (!Array.isArray(previous)) return true;
-  const before = new Set<string>();
-  for (const row of previous) {
-    if (isRecord(row) && typeof row.id === "string") before.add(row.id);
-  }
-  const after = new Set(next.map((account) => account.id));
-  if (before.size !== after.size) return true;
-  for (const id of after) if (!before.has(id)) return true;
-  return false;
-}
-
 function classForStatus(status: number): { errorClass: ConnectorErrorClass; code: ConnectorErrorClass } {
   if (status === 401 || status === 403) return { errorClass: "auth", code: "auth" };
   if (status === 429) return { errorClass: "rate_limited", code: "rate_limited" };
@@ -272,7 +256,7 @@ async function listCollection(
   throw new MercuryPageCapError(rows, startAfter ?? null);
 }
 
-function accountLabel(row: unknown, fallback: string): AccountLabel | null {
+function accountLabel(row: unknown, fallback: string, kind?: string): AccountLabel | null {
   if (!isRecord(row) || typeof row.id !== "string") return null;
   const id = row.id.trim();
   if (id.length === 0 || id.length > 128 || id.includes("/")) return null;
@@ -283,7 +267,25 @@ function accountLabel(row: unknown, fallback: string): AccountLabel | null {
   const label: AccountLabel = { id, label: String(redactMercury(name)).slice(0, 300) };
   const last4 = accountLast4(row);
   if (last4) label.last4 = last4;
+  // What it is and its balance, for the accounts step (FLOW-938). /accounts sends checking or savings.
+  const accountKind = kind ?? (typeof row.kind === "string" && /^[a-z]{1,24}$/i.test(row.kind.trim()) ? row.kind.trim().toLowerCase() : null);
+  if (accountKind) label.kind = accountKind;
+  const balance = typeof row.currentBalance === "number" ? dollarsToCents(row.currentBalance) : null;
+  if (balance != null) label.balance_cents = balance;
   return label;
+}
+
+/**
+ * The organisation's name (FLOW-938): the legal business name Mercury puts on each account. The first
+ * account that has one gives it; it is redacted like any label.
+ */
+function organisationName(rows: readonly unknown[]): string | null {
+  for (const row of rows) {
+    if (!isRecord(row) || typeof row.legalBusinessName !== "string") continue;
+    const name = String(redactMercury(row.legalBusinessName.trim())).trim().slice(0, 300);
+    if (name !== "") return name;
+  }
+  return null;
 }
 
 /**
@@ -302,7 +304,7 @@ function accountLast4(row: Record<string, unknown>): string | null {
 /** A treasury row with no usable id is a rejected validation, not a silent drop. The log has no payload. */
 function requireTreasuryLabel(row: unknown): AccountLabel {
   const named = isRecord(row) && typeof row.name !== "string" ? { ...row, name: "Mercury Treasury" } : row;
-  const label = accountLabel(named, "Mercury Treasury");
+  const label = accountLabel(named, "Mercury Treasury", "treasury");
   if (!label) {
     console.error("mercury_treasury_account_id");
     throw new MercuryRequestError("rejected", "mercury_treasury_account_id", null, null, "rejected");
@@ -374,13 +376,17 @@ export async function validateMercury(session: ConnectorSession): Promise<Valida
     const treasuryLabels = treasury.map((account) => requireTreasuryLabel(account));
     const labels: AccountLabel[] = [];
     const seen = new Set<string>();
-    for (const row of [...accounts, ...creditBody.accounts.map((account) => {
+    const cards = creditBody.accounts.map((account) => {
       if (isRecord(account) && typeof account.name !== "string") {
         return { ...account, name: "Mercury Credit" };
       }
       return account;
-    })]) {
-      const label = accountLabel(row, "Mercury");
+    });
+    for (const [row, kind] of [
+      ...accounts.map((row) => [row, undefined] as const),
+      ...cards.map((row) => [row, "credit"] as const),
+    ]) {
+      const label = accountLabel(row, "Mercury", kind);
       if (!label || seen.has(label.id)) continue;
       seen.add(label.id);
       labels.push(label);
@@ -390,7 +396,7 @@ export async function validateMercury(session: ConnectorSession): Promise<Valida
       seen.add(label.id);
       labels.push(label);
     }
-    return { ok: true, accounts: labels };
+    return { ok: true, accounts: labels, org: organisationName(accounts) };
   } catch (error) {
     return { ok: false, ...classifyMercuryError(error) };
   }

@@ -962,7 +962,8 @@ insert into sweep_fail_ok (fn, pattern, why) values
   ('reorder_loans', '^P0001 validation$', 'the ids must be exactly the caller''s loans, and A''s are not'),
   ('mcp_reorder_loans', '^envelope validation ', 'the ids must be exactly the caller''s loans, and A''s are not'),
   ('apply_starter_categories', '^55000 starter_locked$', 'takes no id; B''s own company already has lines'),
-  ('set_import_from', '^P0001 connector is not connected$', 'takes no id; B''s own company has no connector');
+  ('set_import_from', '^P0001 connector is not connected$', 'takes no id; B''s own company has no connector'),
+  ('set_mercury_accounts', '^P0001 connector is not connected$', 'takes only a slot of the caller''s own company; B''s has no Mercury connection');
 
 -- The reach pass makes every call again as A's owner (A's token for flow-mcp), so a refusal in B's
 -- passes proves the company check ran: A's owner must not be refused the same way. The invite

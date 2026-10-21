@@ -18,6 +18,7 @@ export const MERCURY_SKIP_REASONS = [
   "internal_transfer",
   "treasury_transfer",
   "not_own_account",
+  "unsynced_account",
   "void_status",
   "unknown_status",
   "not_a_line",

@@ -558,7 +558,7 @@ There is no date range. Mercury sync is cursor-based (`sync_cursor`, `import_fro
 
 `sync_bank` answers at once with `data`: `{ "job_id", "state": "running" }` and the pull keeps running after the response ([0102](../decisions/0102-sync-bank-jobs.md)). The same `idempotency_key` returns the same job (its current state, without a second pull). To retry a failed job, send a new key.
 
-`not_found` / `bank is not connected` means there is no Mercury row in `connector_connections`; no job is started.
+`not_found` / `bank is not connected` means there is no Mercury row in `connector_connections`; no job is started. A company may hold several Mercury connections ([0202](../decisions/0202-mercury-connections-and-synced-accounts.md)): one job syncs every connection whose accounts are chosen, and the counts add up. A connection whose accounts are not chosen yet syncs nothing; with none chosen the job fails with `not_found` / `bank is not connected`.
 
 Errors from `sync_bank` itself: `validation` for a missing or malformed `idempotency_key`; `forbidden` for a read token or a revoked or expired one, as on every write tool; `conflict` for a key already used with another tool; `not_found` / `bank is not connected`; and `refused` / `The write was refused.` when the job could not be started. A pull that fails after the job starts is not an error here: it is the job's `error` in `get_sync_status`.
 

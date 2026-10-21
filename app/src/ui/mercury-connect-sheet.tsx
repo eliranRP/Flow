@@ -1,7 +1,6 @@
 import { useRef, useState, type RefObject } from "react";
 import { flushSync } from "react-dom";
 import { ConnectSheet } from "./connect-sheet";
-import { ImportFromField } from "./import-from-field";
 import { TextField } from "./text-field";
 
 export function MercuryConnectSheet({
@@ -19,8 +18,6 @@ export function MercuryConnectSheet({
   onSubmit,
   onDisconnect,
   disconnectRef,
-  importFrom = null,
-  setImportFrom,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -36,9 +33,6 @@ export function MercuryConnectSheet({
   onSubmit: () => void;
   onDisconnect?: () => void;
   disconnectRef?: RefObject<HTMLButtonElement | null>;
-  /** "ייבוא מ" (FLOW-505): null is מההתחלה. Shown only with `setImportFrom`. */
-  importFrom?: string | null;
-  setImportFrom?: (value: string | null) => void;
 }) {
   // An empty key is caught here, on a reserved message line, before it reaches the server.
   const [missing, setMissing] = useState(false);
@@ -72,7 +66,6 @@ export function MercuryConnectSheet({
             reserveMessage
             onChange={(event) => { setMissing(false); setApiKey(event.target.value); }}
           />
-          {setImportFrom == null ? null : <ImportFromField value={importFrom} onChange={setImportFrom} disabled={busy} />}
         </>
       )}
       submitLabel={submitLabel}

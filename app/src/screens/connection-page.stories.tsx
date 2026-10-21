@@ -4,7 +4,7 @@ import { ViewerPreview } from "../use-is-viewer";
 import { ExampleBar } from "../ui/screen-stories-support";
 import { ConnectionDetailPage } from "./connection-pages";
 
-/** FLOW-512: the SUMIT and Mercury pages. Invented company numbers and account labels only. */
+/** FLOW-512: the SUMIT page (Mercury's is in mercury-connection-screen.stories.tsx). Invented company numbers only. */
 const meta = {
   title: "Screens/Connection pages",
   parameters: { flowRouter: false },
@@ -18,15 +18,6 @@ function sumit(sample: Parameters<typeof ConnectionDetailPage>[0]["sample"]) {
     <StoryRoute entry="/settings/connections/sumit" tabs>
       <ExampleBar />
       <ConnectionDetailPage provider="sumit" sample={sample} />
-    </StoryRoute>
-  );
-}
-
-function mercury(sample: Parameters<typeof ConnectionDetailPage>[0]["sample"]) {
-  return (
-    <StoryRoute entry="/settings/connections/mercury" tabs>
-      <ExampleBar />
-      <ConnectionDetailPage provider="mercury" sample={sample} />
     </StoryRoute>
   );
 }
@@ -53,9 +44,4 @@ export const SumitViewer: Story = {
       </ViewerPreview>
     </StoryRoute>
   ),
-};
-
-export const MercuryConnected: Story = {
-  name: "Mercury, connected",
-  render: () => mercury({ state: "connected", accounts: "עסק ראשי · 0042", lastSync: "היום, 06:10" }),
 };

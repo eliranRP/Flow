@@ -22,6 +22,7 @@ export const screenLoaders = {
   connections: () => import("./screens/connections-screen"),
   business: () => import("./screens/business-screen"),
   connectionPages: () => import("./screens/connection-pages"),
+  mercuryConnection: () => import("./screens/mercury-connection-screen"),
   assistant: () => import("./screens/assistant-settings"),
   notifications: () => import("./screens/notifications-screen"),
   categories: () => import("./screens/categories-screen"),

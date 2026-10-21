@@ -1,0 +1,28 @@
+<a id="flow-938"></a>
+# FLOW-938 · Mercury: several connections, the accounts each one syncs, and the date it imports from
+- **Type:** UI (design approved) · **Status:** in-progress (lane, 2026-10-21, feat/mercury-connections) · **Depends on:** [FLOW-512](FLOW-512.md) (the connection pages), [FLOW-918](FLOW-918.md) (the page tests). **Source:** the board's canvas note spec-merc ("MERCURY: CHOOSE WHICH ACCOUNTS SYNC, AND FROM WHICH DATE · approved"), the Settings and SettingsLight boards (presets `mercury`, `mercurypick`, `mercuryfrom`, `mercuryaccts`, `mercurynewacct`, `mercurymulti`, the חיבורים row), frames SettingsMercury, SettingsMercuryPick, SettingsMercuryFrom, SettingsMercuryAccounts, SettingsMercuryNewAccount and SettingsMercuryMulti, 2026-10-21; decision [0202](../../decisions/0202-mercury-connections-and-synced-accounts.md).
+- **Files:** `supabase/migrations/20261021001500_mercury_connections.sql`, `supabase/tests/database/mercury_connections.test.sql` (new) and the updated `privilege_guards`, `cross_company_sweep`, `sumit_daily_schedule`, `mercury_sync_atomic` tests; `supabase/functions/mercury-connect/index.ts`, `supabase/functions/mercury-sync/index.ts`, `supabase/functions/mercury-sync/stored.ts` (new, the stored-line reads moved out and scoped), `supabase/functions/_shared/connectors/mercury/scope.ts` (new), `.../mercury/client.ts`, `.../mercury/normalize.ts`, `.../mercury/capabilities.ts`, `.../connectors/engine.ts`, `.../connectors/types.ts`, the connector tests (`scope_test.ts` new, `client_test.ts`, `normalize_test.ts`, `engine_test.ts`); `packages/shared/src/dashboard.ts`, `database.types.ts`; `app/src/mercury-connections.ts` (new), `app/src/use-mercury-accounts.ts` (new), `app/src/use-mercury-connect.ts`, `app/src/use-books.ts`, `app/src/mercury-copy.ts`, `app/src/screens/mercury-connection-screen.tsx`, `mercury-connected-view.tsx`, `mercury-accounts-step.tsx`, `mercury-from-sheet.tsx` (new), `app/src/screens/connection-pages.tsx` (SUMIT only now), `connections-screen.tsx`, `settings-screen.tsx`, `app/src/setup/steps.tsx`, `app/src/setup/mercury-accounts-sheet.tsx` (new), `app/src/ui/mercury-connect-sheet.tsx`, `app/src/ui/css/53-mercury-connections.css` (new), `app/src/dev/mercury-sample.ts` (new), `app/src/dev/routes/settings.tsx`, the stories and unit tests, `app/e2e/mercury-connections.spec.ts` (new), `app/e2e/spec-sources.json`, `design/proof/settings-map.json`, `docs/tech/connector-contract.md`, `docs/mcp/TOOLS.md`.
+
+**Settings › חיבורים**
+- [x] The Mercury row says "2 חיבורים" when there are two connections (a broken key still says "צריך חיבור").
+
+**After the key (step 3)**
+- [x] "חיבור" with a valid key does not jump to מחובר: it shows "3 · אילו חשבונות לסנכרן, ומאיזה תאריך" and "Flow מצא N חשבונות ב־Mercury. סמנו את אלה של העסק."
+- [x] One card, a row per account: a 24px checkbox, the name and last 4, one grey line with the type, the balance on the end side (grey when off). Checking, savings and card accounts start checked; Treasury starts unchecked with "כסף מושקע, לא תזרים של העסק. בדרך כלל לא מסנכרנים."
+- [x] "בחירת כולם" / "ניקוי הבחירה".
+- [x] The date row "מאיזה תאריך לייבא" opens the radio sheet (מההתחלה, מתחילת השנה, מתחילת החודש, מתאריך with a day and אישור) with "אפשר להקדים את התאריך גם אחר כך; מה שכבר נכנס לא נכפל." The key form no longer asks the date for Mercury (SUMIT keeps it).
+- [x] The line on what checking means; "סנכרון 4 חשבונות" (disabled "בחרו לפחות חשבון אחד"), "חזרה למפתח"; then the connected page and "Mercury מחובר · 4 חשבונות · 214 תנועות נכנסו".
+- [x] Onboarding's Mercury sheet asks only for the key and then shows the same step in a sheet.
+
+**The connected page**
+- [x] The facts lose "חשבונות" and "כרטיס" and gain "ארגון ב־Mercury"; the synced accounts row (names in grey, "3 מתוך 5" in accent) opens the same list titled "חשבונות מסונכרנים" with שמירה and ביטול.
+- [x] Unchecking a synced account says "מה שכבר נכנס נשאר. תנועות חדשות לא ייכנסו." in the signal colour; checking a new one says "נכנס מהיום, ואם תרצו גם 24 חודשים אחורה." in accent and brings back "מאיזה תאריך לייבא לחשבון החדש".
+- [x] A new account Mercury reports shows the tinted card "ב־Mercury נפתח חשבון חדש: Checking ••6610. לסנכרן אותו ל־Flow?" with "כן, לסנכרן" / "לא"; nothing of it syncs before yes.
+
+**Several connections**
+- [x] One connection: "+ חיבור Mercury נוסף" under the buttons. Two or more: the page opens on "חיבורים ל־Mercury · 2", a row per connection ("3 מתוך 5 חשבונות · עודכן …"), "+ חיבור Mercury נוסף" and the line on what each connection keeps; a row opens that connection with "כל חיבורי Mercury" and "ניתוק החיבור הזה". Adding goes through the key, accounts and date steps, then back to the list.
+
+**Server**
+- [x] `connector_connections.slot` and the per-connection columns; existing rows keep syncing every account they list. `set_mercury_accounts` saves the accounts and starts; `mercury-connect` puts a key on its connection's slot or a new one; `mercury-sync` syncs each chosen connection with its own cursor, failure and stamp, skips unsynced accounts, counts a transfer to one as money out, keeps each account's own start, and rechecks stored lines only with the key that sees them.
+
+**Acceptance:** pgTAP for the slots, the accounts RPC and the per-slot sync RPCs; connector tests for the slot choice, the run scope, the per-account start, the unsynced skip and the account kinds; unit tests for the connections model and the connect hook; screen tests for every state; stories for the six frames; the `mercury-connections` e2e. Open: an MCP tool for the accounts choice (0095), see 0202.

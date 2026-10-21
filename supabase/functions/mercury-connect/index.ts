@@ -1,11 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { MERCURY_KEK_REF } from "../_shared/connectors/mercury/capabilities.ts";
 import { mercuryAdapter } from "../_shared/connectors/mercury/adapter.ts";
-import { mercuryAccountsChanged } from "../_shared/connectors/mercury/client.ts";
 import { redactMercury } from "../_shared/connectors/mercury/redact.ts";
+import { chooseSlot, readConnectionScope, storedLabels } from "../_shared/connectors/mercury/scope.ts";
 import { decodeKek, sealApiKey } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
-import { parseImportFrom, saveImportFrom } from "../_shared/import-from.ts";
 import { companyHint, ownedCompany } from "../_shared/owner.ts";
 
 declare const Deno: {
@@ -16,6 +15,11 @@ declare const Deno: {
 /**
  * Paste a Read Only Mercury token. The seal is envelope format 3 and binds
  * company|mercury. SUMIT connect is unchanged and still seals format 2.
+ *
+ * FLOW-938: a company may hold several Mercury connections (slots). A key that lists an account of a
+ * connection replaces that connection's key; `slot` names the connection a replacement is for; any
+ * other key is a new connection. A new connection, or a key that lists other accounts, waits for the
+ * owner to choose its accounts and date (set_mercury_accounts) and syncs nothing until then.
  */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return empty();
@@ -36,11 +40,10 @@ Deno.serve(async (req) => {
     const user = await userClient.auth.getUser();
     if (user.error || !user.data.user) return json({ error: "unauthorized" }, 401);
 
-    const body = (await req.json()) as { apiKey?: unknown; importFrom?: unknown };
+    const body = (await req.json()) as { apiKey?: unknown; slot?: unknown };
     apiKey = typeof body.apiKey === "string" ? body.apiKey.trim() : "";
     if (apiKey.length < 8) return json({ error: "api key is required" }, 400);
-    const importFrom = parseImportFrom(body.importFrom);
-    if (importFrom === false) return json({ error: "import date is invalid" }, 400);
+    const requested = typeof body.slot === "number" && Number.isInteger(body.slot) ? body.slot : null;
 
     const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
     const companyId = await ownedCompany(admin, user.data.user.id, companyHint(req));
@@ -55,22 +58,26 @@ Deno.serve(async (req) => {
 
     const previous = await admin
       .from("connector_connections")
-      .select("account_labels")
+      .select("slot, account_labels, accounts_chosen_at, sync_account_ids, import_from, account_from")
       .eq("company_id", companyId)
-      .eq("provider", "mercury")
-      .maybeSingle();
+      .eq("provider", "mercury");
     if (previous.error) return json({ error: "could not store the connection" }, 500);
-    // A token for other accounts must not resume the old accounts' cursor.
-    const accountsChanged = previous.data != null &&
-      mercuryAccountsChanged(previous.data.account_labels, validated.accounts);
+    const existing = (previous.data ?? []).map((row) => readConnectionScope(row));
+    const choice = chooseSlot(existing, validated.accounts.map((account) => account.id), requested);
+    if (choice.kind === "refused") {
+      return json({ error: choice.code }, choice.code === "not_found" ? 404 : 409);
+    }
+    const slot = choice.slot;
 
-    if (accountsChanged) {
-      // Clear before the new key is stored, so no sync can pair it with the old cursor.
+    if (choice.kind === "replace" && choice.accountsChanged) {
+      // A token for other accounts must not resume the old accounts' cursor, and its accounts are
+      // chosen again. Cleared before the new key is stored, so no sync can pair it with the old cursor.
       const cleared = await admin
         .from("connector_connections")
-        .update({ sync_cursor: null })
+        .update({ sync_cursor: null, accounts_chosen_at: null, sync_account_ids: null, skip_account_ids: [], account_from: {} })
         .eq("company_id", companyId)
-        .eq("provider", "mercury");
+        .eq("provider", "mercury")
+        .eq("slot", slot);
       if (cleared.error) return json({ error: "could not store the connection" }, 500);
     }
 
@@ -87,18 +94,19 @@ Deno.serve(async (req) => {
       p_envelope_version: sealed.envelopeVersion ?? "3",
       p_validated: true,
       p_settings: {},
+      p_slot: slot,
     });
     if (saved.error) return json({ error: "could not store the connection" }, 500);
 
     const labeled = await admin
       .from("connector_connections")
-      .update({ account_labels: validated.accounts })
+      .update({ account_labels: storedLabels(validated.accounts), org_label: validated.org ?? null })
       .eq("company_id", companyId)
-      .eq("provider", "mercury");
+      .eq("provider", "mercury")
+      .eq("slot", slot);
     if (labeled.error) return json({ error: "could not store the connection" }, 500);
-    // Before the first sync tick reads it. The connection stands even if only the date fails.
-    const importSaved = await saveImportFrom(userClient, "mercury", importFrom);
-    return json({ connected: true, accounts: validated.accounts.length, import_from_saved: importSaved });
+    const chosen = choice.kind === "replace" && !choice.accountsChanged && existing.some((row) => row.slot === slot && row.chosen);
+    return json({ connected: true, slot, accounts: validated.accounts.length, choose_accounts: !chosen });
   } catch (error) {
     const message = error instanceof Error ? error.message : "connect failed";
     const scrubbed = apiKey ? message.replaceAll(apiKey, "[redacted]") : message;

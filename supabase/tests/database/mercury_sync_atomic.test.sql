@@ -140,8 +140,8 @@ select is(
 );
 
 select ok(
-  not has_function_privilege('authenticated', 'public.upsert_connector_lines(uuid,public.connector_provider,jsonb,text,text)', 'execute')
-    and has_function_privilege('service_role', 'public.upsert_connector_lines(uuid,public.connector_provider,jsonb,text,text)', 'execute'),
+  not has_function_privilege('authenticated', 'public.upsert_connector_lines(uuid,public.connector_provider,jsonb,text,text,smallint)', 'execute')
+    and has_function_privilege('service_role', 'public.upsert_connector_lines(uuid,public.connector_provider,jsonb,text,text,smallint)', 'execute'),
   'the patched upsert keeps its grants'
 );
 

@@ -114,6 +114,39 @@ Deno.test("every validated account id is the own set, including one that was not
   assertEquals(plan.ownAccountIds, ["checking", "credit", "treasury"]);
 });
 
+Deno.test("FLOW-938: a scoped run owns the chosen accounts and every connection's; the rest are unsynced", async () => {
+  const contexts: NormalizeContext[] = [];
+  const built = port({
+    accounts,
+    fetched: { lines: [{ id: "move" }], removedIds: [], nextCursor: NOW.toISOString(), complete: true, windowStart: null },
+    onNormalize(ctx) {
+      contexts.push(ctx);
+    },
+  });
+  const plan = await planConnectorSync({
+    port: built.port,
+    session: session(),
+    cursor: null,
+    importFrom: null,
+    lookbackDays: 30,
+    ownCounterpartyIds: [],
+    // "gone" is no longer listed; "other-ops" is another connection's synced account.
+    accountScope: { synced: ["checking", "gone"], own: ["checking", "other-ops"] },
+    vatRateBp: 0,
+    exemptSupplierNames: [],
+    exemptSupplierIds: [],
+    stored: [],
+    now: () => NOW,
+  });
+  assertEquals(plan.ok, true);
+  if (!plan.ok) return;
+  assertEquals(contexts[0]?.ownAccountIds, ["checking", "other-ops"]);
+  assertEquals(contexts[0]?.unsyncedAccountIds, ["credit", "treasury"]);
+  assertEquals(plan.ownAccountIds, ["checking", "other-ops"]);
+  assertEquals(plan.accounts.map((account) => account.id), ["checking", "credit", "treasury"]);
+  assertEquals(plan.org, null);
+});
+
 Deno.test("each sync validates again", async () => {
   const built = port({
     accounts,

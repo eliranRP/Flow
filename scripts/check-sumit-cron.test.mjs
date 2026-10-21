@@ -12,6 +12,7 @@ const drainUrl = new URL("../supabase/migrations/20261003160000_sumit_drain_url.
 const engine = new URL("../supabase/migrations/20261003210000_connector_engine.sql", import.meta.url);
 const totals = new URL("../supabase/migrations/20261004130000_mercury_ils_totals.sql", import.meta.url);
 const mercuryUrl = new URL("../supabase/migrations/20261013050000_mercury_sync_atomic.sql", import.meta.url);
+const mercuryConnections = new URL("../supabase/migrations/20261021001500_mercury_connections.sql", import.meta.url);
 const pgtap = new URL("../supabase/tests/database/sumit_daily_schedule.test.sql", import.meta.url);
 const checkSql = new URL("./check-sumit-cron.sql", import.meta.url);
 
@@ -52,7 +53,14 @@ test("the connector daily and drain commands match across the migration, pgTAP, 
   const migration = readFileSync(engine, "utf8");
   const tap = readFileSync(pgtap, "utf8");
   const check = readFileSync(checkSql, "utf8");
-  const daily = dollarBlocks(migration)[0];
+  // FLOW-938 patches the daily insert in place to queue a company once (select distinct).
+  const connections = readFileSync(mercuryConnections, "utf8");
+  const dailyAnchor = dollarBlocks(connections, "$a$").find((block) => block.includes("select c.company_id, c.provider"));
+  const dailyReplacement = dollarBlocks(connections, "$n$").find((block) => block.includes("select distinct c.company_id, c.provider"));
+  assert.ok(dailyAnchor && dailyReplacement);
+  const dailyOriginal = dollarBlocks(migration)[0];
+  assert.equal(dailyOriginal.split(dailyAnchor).length, 2);
+  const daily = dailyOriginal.replace(dailyAnchor, dailyReplacement);
   // FLOW-509 patches the Mercury URL line in place: anchor ($a$) to replacement ($n$), second pair.
   const patch = readFileSync(mercuryUrl, "utf8");
   const anchor = dollarBlocks(patch, "$a$")[1];

@@ -1,0 +1,194 @@
+/* FLOW-938: Mercury's accounts step, the synced accounts row, the new-account card and the date row
+   (the board's SettingsMercuryPick, SettingsMercuryAccounts, SettingsMercuryNewAccount frames). */
+
+.ui-merc-step-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* The step's title is a section header, 20/500 in the text colour (the board's), not the grey numbered head. */
+.ui-merc-step-title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--type-section-size);
+  font-weight: var(--type-section-weight);
+  line-height: var(--type-section-line);
+}
+
+.ui-merc-step-lead {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  line-height: calc(var(--type-line2-line) + 0.1);
+}
+
+/* One card, a checkbox row per account, a hairline between rows. */
+.ui-merc-accounts {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-card-tight);
+}
+
+.ui-merc-account {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: calc(var(--touch-min) + var(--space-6));
+  padding: var(--space-3) var(--space-inset-row);
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ui-merc-account + .ui-merc-account {
+  border-top: 1px solid var(--color-line);
+}
+
+.ui-merc-account:disabled {
+  cursor: progress;
+}
+
+.ui-merc-check {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
+  box-sizing: border-box;
+  border: 2px solid var(--color-control-border);
+  border-radius: var(--radius-thumb);
+  color: var(--color-on-accent);
+  transition: background-color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard);
+}
+
+.ui-merc-check[data-on="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+.ui-merc-account-text,
+.ui-merc-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: calc(var(--space-1) * 0.75);
+  min-inline-size: 0;
+}
+
+.ui-merc-account-name {
+  font-size: var(--type-body-size);
+  text-align: right;
+}
+
+.ui-merc-account-note,
+.ui-merc-account-hint {
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: calc(var(--type-caption-line) + 0.1);
+}
+
+.ui-merc-hint-dropped {
+  color: var(--color-signal);
+}
+
+.ui-merc-hint-added {
+  color: var(--color-accent-text);
+}
+
+.ui-merc-balance {
+  flex: none;
+  font-size: var(--type-line2-size);
+}
+
+.ui-merc-balance[data-on="false"] {
+  color: var(--color-text-muted);
+}
+
+/* A row like the recurring row: icon, title over one grey line, the value in accent, chevron. */
+.ui-merc-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: calc(var(--touch-min) + var(--space-5));
+  padding: var(--space-3) var(--space-inset-row);
+  border: 0;
+  border-radius: var(--radius-card-tight);
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+}
+
+button.ui-merc-row {
+  cursor: pointer;
+}
+
+.ui-merc-row > svg {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.ui-merc-row-title {
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-2-weight);
+}
+
+.ui-merc-row-sub {
+  color: var(--color-text-muted);
+  font-size: calc(var(--type-cents-size) + 1px);
+}
+
+.ui-merc-row-names {
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-merc-row-value {
+  flex: none;
+  padding: var(--space-1) calc(var(--space-2) + var(--space-half));
+  color: var(--color-accent-text);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-btn-2-weight);
+}
+
+/* Link buttons in the page's column sit at the start, as the board's do. */
+.ui-connection-page > .ui-btn-link,
+.ui-merc-sheet > .ui-btn-link {
+  align-self: flex-start;
+  padding-inline: var(--space-1);
+}
+
+/* Mercury lists an account no one answered yet: the tint box, two buttons under the question. */
+.ui-merc-new {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-2) + var(--space-half));
+  padding: var(--space-inset-row) var(--space-4);
+  border-radius: var(--radius-card-tight);
+  background: var(--color-tint);
+  font-size: var(--type-line2-size);
+  line-height: calc(var(--type-line2-line) + 0.1);
+}
+
+.ui-merc-new p {
+  margin: 0;
+}
+
+.ui-merc-new-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* Onboarding's sheet holds the same step as the page, in the page's column rhythm. */
+.ui-merc-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-inset-row);
+  padding-block-end: var(--space-4);
+}

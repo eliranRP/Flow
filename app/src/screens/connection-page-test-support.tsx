@@ -3,11 +3,12 @@ import { useMemo, type ReactNode } from "react";
 import { renderWithProviders } from "../test-render";
 import { ToastProvider } from "../ui/toast";
 import { BooksProvider } from "../use-books";
-import { ConnectionDetailPage, type Provider } from "./connection-pages";
+import { ConnectionDetailPage } from "./connection-pages";
+import { MercuryConnectionRoute } from "./mercury-connection-screen";
 
 /** Renders the live connection page with the app's providers; `wrap` puts something beside it. */
-export function renderPage(provider: Provider, options: { wrap?: (page: ReactNode) => ReactNode; route?: string; client?: QueryClient } = {}) {
-  const page = <ConnectionDetailPage provider={provider} />;
+export function renderPage(provider: "sumit" | "mercury", options: { wrap?: (page: ReactNode) => ReactNode; route?: string; client?: QueryClient } = {}) {
+  const page = provider === "sumit" ? <ConnectionDetailPage provider="sumit" /> : <MercuryConnectionRoute />;
   return renderWithProviders(options.wrap ? options.wrap(page) : page, { route: options.route ?? `/settings/connections/${provider}`, client: options.client });
 }
 

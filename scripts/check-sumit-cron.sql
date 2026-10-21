@@ -1,13 +1,14 @@
 -- Read-only status for scripts/check-sumit-cron.sh.
 -- One line: ok, bad-daily, or bad-drain.
--- The daily command is the connector refresh insert, copied exactly.
+-- The daily command is the connector refresh insert, copied exactly (one per company and provider since
+-- FLOW-938, 20261021001500_mercury_connections.sql).
 -- The drain command reads Vault flow_sync_url and Vault cron_secret. Mercury rows use Vault
 -- flow_mercury_sync_url when it is set (FLOW-509, 20261013050000_mercury_sync_atomic.sql).
 -- It does not fall back to Kong and it does not embed a literal header.
 with expected as (
   select $cron$
         insert into public.connector_refresh_requests (company_id, provider)
-        select c.company_id, c.provider
+        select distinct c.company_id, c.provider
         from public.connector_connections c
         where not exists (
           select 1 from public.connector_refresh_requests r
