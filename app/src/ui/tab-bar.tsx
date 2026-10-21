@@ -51,9 +51,10 @@ export function TabBar({ label = "ניווט ראשי", section: pinned }: TabBa
   const search = usePreviewSearch();
   const location = useLocation();
   const current = pinned === undefined ? tabSection(location.pathname) : pinned;
-  // FLOW-364: tapping the active tab scrolls the page to the top, and does not move.
-  const onActive = (section: TabSection) => (event: MouseEvent<HTMLAnchorElement>) => {
-    if (section !== current) return;
+  // FLOW-364: tapping the active tab on its own main screen scrolls that screen to the top. From a page
+  // inside the tab (a project, a loan, Settings under Home) the tap goes to the tab's main screen.
+  const onActive = (section: TabSection, path: string) => (event: MouseEvent<HTMLAnchorElement>) => {
+    if (section !== current || location.pathname !== path) return;
     event.preventDefault();
     window.scrollTo({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" });
   };
@@ -66,7 +67,7 @@ export function TabBar({ label = "ניווט ראשי", section: pinned }: TabBa
             to={`${tab.path}${search}`}
             className={slot}
             aria-current={current === tab.section ? "page" : undefined}
-            onClick={onActive(tab.section)}
+            onClick={onActive(tab.section, tab.path)}
           >
             <TabFace icon={tab.icon} label={tab.label} />
           </Link>
