@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { accountName, connectionName, newAccounts, syncedSummary, type MercuryAccount, type MercuryConnection } from "../mercury-connections";
+import { accountName, connectionName, newAccounts, syncedSummary } from "../mercury-connections";
+import type { MercuryAccount, MercuryConnection } from "../mercury-state";
 import { Button } from "../ui/button";
 import { ConnectionFacts } from "../ui/connection-page";
 import { BankIcon, ChevronIcon } from "../ui/icons";
@@ -71,9 +72,9 @@ export function MercuryConnectedView({
         <ConnectionFacts rows={facts} />
       </div>
       {fresh != null ? (
-        <div className="ui-merc-new" role="status">
+        <div className="ui-merc-offer" role="status">
           <p>ב־Mercury נפתח חשבון חדש: <bdi dir="ltr">{accountName(fresh)}</bdi>. לסנכרן אותו ל־Flow?</p>
-          <div className="ui-merc-new-actions">
+          <div className="ui-merc-offer-actions">
             <Button busy={answering} onClick={() => { onAnswer(fresh, true); }}>כן, לסנכרן</Button>
             <Button variant="secondary" disabled={answering} onClick={() => { onAnswer(fresh, false); }}>לא</Button>
           </div>

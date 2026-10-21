@@ -1,4 +1,4 @@
-import type { MercuryAccount, MercuryConnection } from "../mercury-connections";
+import type { MercuryAccount, MercuryConnection } from "../mercury-state";
 
 /**
  * Mercury connections for the dev routes and the stories (FLOW-938), the board's frames with invented

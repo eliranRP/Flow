@@ -165,7 +165,7 @@ button.ui-merc-row {
 }
 
 /* Mercury lists an account no one answered yet: the tint box, two buttons under the question. */
-.ui-merc-new {
+.ui-merc-offer {
   display: flex;
   flex-direction: column;
   gap: calc(var(--space-2) + var(--space-half));
@@ -176,11 +176,11 @@ button.ui-merc-row {
   line-height: calc(var(--type-line2-line) + 0.1);
 }
 
-.ui-merc-new p {
+.ui-merc-offer p {
   margin: 0;
 }
 
-.ui-merc-new-actions {
+.ui-merc-offer-actions {
   display: flex;
   gap: var(--space-2);
 }

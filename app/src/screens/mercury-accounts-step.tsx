@@ -11,8 +11,8 @@ import {
   fromValue,
   syncButtonLabel,
   type FromChoice,
-  type MercuryConnection,
 } from "../mercury-connections";
+import type { MercuryConnection } from "../mercury-state";
 import { Button } from "../ui/button";
 import { cx } from "../ui/cx";
 import { importFromDefault } from "../ui/import-from-field";

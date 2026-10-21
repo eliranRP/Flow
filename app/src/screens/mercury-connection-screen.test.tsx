@@ -184,7 +184,7 @@ describe("Mercury page: the synced accounts, a new account, several connections 
   it("asks about an account Mercury lists that no one answered, and syncs it only on yes", async () => {
     serveWith({ ...CONNECTED, account_labels: [...LABELS, { id: "acct-new", label: "Checking", last4: "6610", kind: "checking" }], import_from: "2026-01-01" });
     renderPage("mercury");
-    const card = (await screen.findByText(/ב־Mercury נפתח חשבון חדש/)).closest(".ui-merc-new") as HTMLElement;
+    const card = (await screen.findByText(/ב־Mercury נפתח חשבון חדש/)).closest(".ui-merc-offer") as HTMLElement;
     expect(card).toHaveTextContent("Checking ••6610");
     fireEvent.click(within(card).getByRole("button", { name: "כן, לסנכרן" }));
     await waitFor(() => {

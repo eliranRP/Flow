@@ -20,7 +20,7 @@ import { waitForAccessToken } from "./wait-for-session";
 import { defaultPeriod, type PeriodChoice } from "./period";
 import { useHomePreview, type HomePreview } from "./preview";
 import { type TxnMeta } from "./txn-meta";
-import { mercuryState, type MercuryState } from "./mercury-connections";
+import { mercuryState, type MercuryState } from "./mercury-state";
 import {
   JEV_CONNECTOR_STALE_MS,
   beginJevScopeLookup,

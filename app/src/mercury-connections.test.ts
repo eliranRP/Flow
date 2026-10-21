@@ -1,7 +1,7 @@
 import type { MercuryStatus } from "@flow/shared";
 import { describe, expect, it } from "vitest";
+import { MERCURY_NONE, mercuryAccounts, mercuryState } from "./mercury-state";
 import {
-  MERCURY_NONE,
   accountName,
   balanceText,
   connectionName,
@@ -9,8 +9,6 @@ import {
   fromOptions,
   fromRow,
   fromValue,
-  mercuryAccounts,
-  mercuryState,
   newAccounts,
   syncButtonLabel,
   syncedSummary,
