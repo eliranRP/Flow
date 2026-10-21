@@ -189,3 +189,9 @@
   font-size: var(--type-line2-size);
   text-decoration: none;
 }
+
+/* A key's name wraps: at 320px "Claude Code · מחשב עבודה" beside its access does not fit on one line. */
+.ui-ai-keys .ui-row-title {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
