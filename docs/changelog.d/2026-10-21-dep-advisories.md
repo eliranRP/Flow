@@ -1,0 +1,3 @@
+Security: bumped dev/build dependencies that carried GitHub advisories to their fixed versions, clearing `pnpm audit` of all critical and high findings (and the related moderate/low ones). No runtime app dependency changed and there is no behaviour change. No migration.
+
+Storybook and every `@storybook/*` package go 8.6.18 -> 8.6.19 (critical: missing origin validation). `vite` floor moves to `^7.3.7` and `vitest` (app and `@flow/shared`), `@vitest/browser` and `@vitest/browser-playwright` to 4.1.12, pulling `@vitest/mocker` >=4.1.12. Root `pnpm.overrides` pin the transitive `sharp` >=0.35.5 (librsvg), `source-map-js` >=1.2.2 (event-loop DoS) and `uuid` >=11.1.1 (buffer bounds check).
