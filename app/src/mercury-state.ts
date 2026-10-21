@@ -1,7 +1,7 @@
 import type { MercuryStatus } from "@flow/shared";
 
 /**
- * Mercury connections as the status read gives them (FLOW-938, decision 0202): a company may hold several,
+ * Mercury connections as the status read gives them (FLOW-938, decision 0203): a company may hold several,
  * each with its own key, the accounts it syncs and where each account imports from. Only what the status
  * query needs lives here, because Home's first load reads it; the words for the Mercury page are in
  * mercury-connections.ts, which loads with that page.

@@ -1,4 +1,4 @@
--- FLOW-938 (decision 0202): several Mercury connections per company, the accounts each one syncs and
+-- FLOW-938 (decision 0203): several Mercury connections per company, the accounts each one syncs and
 -- where each account imports from. Invented names, ids and @example.com emails only.
 
 begin;

@@ -2,7 +2,7 @@ import type { MercuryAccount, MercuryConnection } from "./mercury-state";
 import { formatDisplay, israelToday } from "./ui/date-math";
 
 /**
- * The Mercury page's words and choices (FLOW-938, decision 0202): account names and types, the default
+ * The Mercury page's words and choices (FLOW-938, decision 0203): account names and types, the default
  * selection, new accounts, the synced summary and the date choices. Pure. The connections themselves are
  * read in mercury-state.ts.
  */

@@ -1,5 +1,5 @@
 /**
- * Several Mercury connections per company, and the accounts each one syncs (FLOW-938, decision 0202).
+ * Several Mercury connections per company, and the accounts each one syncs (FLOW-938, decision 0203).
  * Pure: no network, no database. mercury-connect picks the slot a key goes to; mercury-sync scopes each
  * connection's run to the accounts the owner chose and to each account's import start.
  */

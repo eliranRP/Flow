@@ -54,7 +54,7 @@ export type MercurySample = {
 };
 
 /**
- * `/settings/connections/mercury` (FLOW-938, decision 0202). One page for every Mercury connection:
+ * `/settings/connections/mercury` (FLOW-938, decision 0203). One page for every Mercury connection:
  * the key, then step 3 (which accounts, from which date), then the connected page; with two or more
  * connections it opens on their list. `?slot=N` opens a connection, `?add=1` adds one, `?edit=1` opens
  * the synced accounts list. A sample draws the same page and keeps its changes in memory.

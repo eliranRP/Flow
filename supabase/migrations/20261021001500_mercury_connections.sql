@@ -1,4 +1,4 @@
--- FLOW-938 (decision 0202): several Mercury connections per company, the accounts each one syncs,
+-- FLOW-938 (decision 0203): several Mercury connections per company, the accounts each one syncs,
 -- and the date each account imports from.
 --
 -- 1. connector_connections gets a slot (1-9; SUMIT stays on 1) and its key becomes
@@ -356,7 +356,7 @@ revoke all on function public.set_mercury_accounts(smallint, text[], text) from 
 grant execute on function public.set_mercury_accounts(smallint, text[], text) to authenticated, service_role;
 
 comment on function public.set_mercury_accounts(smallint, text[], text) is
-  'FLOW-938 (decision 0202): the owner saves which accounts one Mercury connection syncs and where an account added now starts.';
+  'FLOW-938 (decision 0203): the owner saves which accounts one Mercury connection syncs and where an account added now starts.';
 
 -- Reschedule the daily job with the new command.
 do $schedule$
