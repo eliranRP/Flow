@@ -137,12 +137,18 @@
 
 /* The hint is one line: whole when it fits, cut with an ellipsis only when it does not (owner,
    2026-10-21). Plain inline text, so Safari measures the real width instead of the two-line box. */
-.ui-home-attention .ui-banner-row .ui-row-hint {
+/* One row is a Banner, two or more are BannerRows: both carry the two-line clamp this replaces. */
+.ui-home-attention :is(.ui-banner, .ui-banner-row) .ui-row-hint {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   -webkit-line-clamp: unset;
+}
+
+/* A cut never falls inside an amount, so a clipped hint never shows a shorter, believable number. */
+.ui-home-attention :is(.ui-banner, .ui-banner-row) .ui-row-hint bdi {
+  display: inline-block;
 }
 
 .ui-home-attention-title {
