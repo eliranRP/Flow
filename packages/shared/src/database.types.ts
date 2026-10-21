@@ -1099,6 +1099,37 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
+                },"transfer_matches": {
+                  Row: {
+                    "company_id": string,"in_transaction_id": string,"out_transaction_id": string,"prior": NonNullable<Json>,"same": boolean,"set_at": string,"set_by": string | null
+                  }
+                  Insert: {
+                    "company_id": string,"in_transaction_id": string,"out_transaction_id": string,"prior"?: NonNullable<Json>,"same": boolean,"set_at"?: string,"set_by"?: string | null
+                  }
+                  Update: {
+                    "company_id"?: string,"in_transaction_id"?: string,"out_transaction_id"?: string,"prior"?: NonNullable<Json>,"same"?: boolean,"set_at"?: string,"set_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "transfer_matches_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "transfer_matches_company_id_in_transaction_id_fkey"
+      columns: ["company_id","in_transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "transfer_matches_company_id_out_transaction_id_fkey"
+      columns: ["company_id","out_transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
                 }
           }
           Views: {
@@ -1191,6 +1222,9 @@ isOneToOne: false
 "answer_recurring_match":
 { Args: { "p_direction": Database["public"]['Enums']["txn_direction"],"p_match_party_id": string,"p_party_id": string,"p_same": boolean }; Returns: Json
                            },
+"answer_transfer_match":
+{ Args: { "p_in_transaction_id": string,"p_out_transaction_id": string,"p_same": boolean }; Returns: Json
+                           },
 "apply_starter_categories":
 { Args: { "p_set": string }; Returns: Json
                            },
@@ -1260,6 +1294,9 @@ isOneToOne: false
                            },
 "company_pnl_basis":
 { Args: Record<PropertyKey, never>; Returns: string
+                           },
+"count_transfer_matches":
+{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "create_category":
 { Args: { "p_kind": string,"p_name": string }; Returns: string
@@ -1434,6 +1471,9 @@ isOneToOne: false
 "list_team":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"list_transfer_matches":
+{ Args: { "p_all"?: boolean }; Returns: Json
+                           },
 "list_unpaid":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -1457,6 +1497,9 @@ isOneToOne: false
                            },
 "mcp_answer_recurring_match":
 { Args: { "p_direction": string,"p_idempotency_key": string,"p_match_party_id": string,"p_party_id": string,"p_same": boolean }; Returns: Json
+                           },
+"mcp_answer_transfer_match":
+{ Args: { "p_idempotency_key": string,"p_in_transaction_id": string,"p_out_transaction_id": string,"p_same": boolean }; Returns: Json
                            },
 "mcp_assign_expense":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_project_id": string,"p_remember"?: boolean,"p_transaction_id": string }; Returns: Json

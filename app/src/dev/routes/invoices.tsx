@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { invoicesSample, invoicesSummary } from "../invoices-sample";
 import { InvoiceScreen, UnpaidScreen } from "../../screens/flow-screens";
+import { TransfersScreen } from "../../screens/transfers-screen";
+import { transfersSample } from "../transfers-sample";
 import type { DevRoute } from "./types";
 
 /**
@@ -18,4 +20,14 @@ export function DevInvoices() {
   return <UnpaidScreen sample={rows} summary={summary} />;
 }
 
-export const invoicesRoutes: DevRoute[] = [{ path: "invoices", element: <DevInvoices /> }];
+/** FLOW-941 proof route: two suggested transfers between two Mercury connections (`?state=empty` has none). */
+export function DevTransfers() {
+  const [params] = useSearchParams();
+  const rows = useMemo(() => (params.get("state") === "empty" ? [] : transfersSample()), [params]);
+  return <TransfersScreen sample={rows} />;
+}
+
+export const invoicesRoutes: DevRoute[] = [
+  { path: "invoices", element: <DevInvoices /> },
+  { path: "transfers", element: <DevTransfers /> },
+];

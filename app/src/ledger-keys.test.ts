@@ -73,7 +73,7 @@ function readKeys(): Map<string, string> {
 describe("every read is refreshed by a finished sync or is an account read", () => {
   it("finds the reads it audits", () => {
     const keys = readKeys();
-    for (const key of ["dashboard", "projects-cash", "loans", "recurring-schedule", "my-companies", "line-meta", "jev-connector"]) {
+    for (const key of ["dashboard", "projects-cash", "loans", "recurring-schedule", "my-companies", "line-meta", "jev-connector", "transfer-match-count"]) {
       expect(keys.has(key), key).toBe(true);
     }
   });

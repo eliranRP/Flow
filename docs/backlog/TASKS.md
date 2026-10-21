@@ -405,6 +405,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-924"></a>[FLOW-924](tasks/FLOW-924.md) | The category "נספרת ב" sheet: profit, cash flow and rehab switches (board SettingsCategory, SettingsCategoryCount) | Feature |
 | <a id="flow-925"></a>[FLOW-925](tasks/FLOW-925.md) | First-sync progress page after connecting the bank (board StatesFirstSync) | Feature |
 | <a id="flow-938"></a>[FLOW-938](tasks/FLOW-938.md) | Mercury: several connections, the accounts each one syncs, and the date it imports from | UI (design approved) |
+| <a id="flow-941"></a>[FLOW-941](tasks/FLOW-941.md) | Mercury: suggest a transfer between two connections, and let the user decide | FEATURE |
 
 ## Multi-company and team
 
