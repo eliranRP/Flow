@@ -1,5 +1,5 @@
 import type { MouseEvent, ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { usePreviewSearch } from "../preview";
 import { reducedMotion } from "./period-swipe";
 import { BankColumnsIcon, HomeIcon, ProjectsIcon, RepeatIcon } from "./icons";
@@ -50,12 +50,15 @@ const tabs: { section: TabSection; label: string; path: string; icon: ReactNode 
 export function TabBar({ label = "ניווט ראשי", section: pinned }: TabBarProps) {
   const search = usePreviewSearch();
   const location = useLocation();
+  const navigate = useNavigate();
   const current = pinned === undefined ? tabSection(location.pathname) : pinned;
   // FLOW-364: tapping the active tab on its own main screen scrolls that screen to the top. From a page
   // inside the tab (a project, a loan, Settings under Home) the tap goes to the tab's main screen.
+  // Home on an older month (`?month=`) goes back to this month too, as "חזרה ל…" does.
   const onActive = (section: TabSection, path: string) => (event: MouseEvent<HTMLAnchorElement>) => {
     if (section !== current || location.pathname !== path) return;
     event.preventDefault();
+    if (section === "home" && new URLSearchParams(location.search).has("month")) void navigate(`/${search}`, { replace: true });
     window.scrollTo({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" });
   };
   return (
