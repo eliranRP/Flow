@@ -1,7 +1,6 @@
 import { formatAmountText } from "@flow/shared";
 import { missingBillsTitle, type ChargeChangeView } from "../forecast";
 import type { BannerRow } from "../ui/banner";
-import { HintParts } from "../ui/hint-parts";
 import { CalendarIcon, InvoiceIcon, TrendDownIcon, TrendUpIcon } from "../ui/icons";
 
 // Home's attention rows, in their own file so the project page (FLOW-435) shows them without
@@ -89,8 +88,8 @@ export function attentionRows({
       to: only.href,
       icon: only.down ? <TrendDownIcon size={24} stroke={1.9} /> : <TrendUpIcon size={24} stroke={1.9} />,
       title: only.title,
-      // Each half wraps whole, and no "·" is left at the break.
-      hint: <HintParts parts={[<span key="was"><bdi dir="ltr">{only.now}</bdi> במקום <bdi dir="ltr">{only.usual}</bdi></span>, "חיוב קבוע"]} />,
+      // One line, cut at its end only when it does not fit (43-home.css).
+      hint: <><bdi dir="ltr">{only.now}</bdi> במקום <bdi dir="ltr">{only.usual}</bdi> · חיוב קבוע</>,
     });
   } else if (changes.length > 1) {
     rows.push({
