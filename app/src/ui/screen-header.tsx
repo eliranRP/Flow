@@ -27,6 +27,11 @@ type HeaderChrome = {
   compactFigure?: ReactNode;
   /** A row under the compact bar, e.g. the organize chips (FLOW-363 3c). The bar then shows once it scrolls off. */
   panel?: ReactNode;
+  /**
+   * FLOW-942: the end of the page's head when it goes on past the header (a profit page's figure). The compact
+   * bar then waits for it too, so it never comes down over half the figure.
+   */
+  headEnd?: HTMLElement | null;
   /** Compact is the t-btn used on a transaction. */
   size?: "default" | "compact";
   subtitleClassName?: string;
@@ -66,6 +71,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
     titleAside,
     compactFigure,
     panel,
+    headEnd,
     size = "default",
     subtitleClassName,
     className,
@@ -79,12 +85,11 @@ export function ScreenHeader(props: ScreenHeaderProps) {
   const stacked = props.layout === "stacked"
     || (props.layout == null && !barOnly && start != null && size !== "compact");
   const kickerLine = kicker && (!labelledBack || backText != null) ? <p className="t-caption t-muted">{kicker}</p> : null;
-  // FLOW-334 H1: a long stacked page keeps Back in a compact bar once the large title scrolls off.
+  // FLOW-334 H1: a long stacked page keeps Back in a compact bar once the large title and the lines under it scroll off.
   const compact = stacked && leading == null && backTo != null && title != null;
-  // State, not a ref: the mark moves when the panel comes or goes (a skeleton, a period with no chips), and
-  // the observer must follow the new node.
+  // State, not a ref: the mark comes and goes with the bar, and the observer must follow the new node.
   const [titleEnd, setTitleEnd] = useState<HTMLSpanElement | null>(null);
-  const past = useScrolledPast(titleEnd, compact);
+  const past = useScrolledPast(headEnd ?? titleEnd, compact);
   return (
     <header className={[stacked ? "ui-page ui-page-stacked" : props.layout === "inline" && start != null ? "ui-page ui-page-inline" : "ui-page", className].filter(Boolean).join(" ")}>
       {stacked ? null : kickerLine}
@@ -107,10 +112,10 @@ export function ScreenHeader(props: ScreenHeaderProps) {
           <FocusTitle className="t-title">{title}</FocusTitle>
         )
       ) : null}
-      {compact && panel == null ? <span ref={setTitleEnd} className="ui-compact-mark" aria-hidden="true" /> : null}
       {subtitle ? <p className={subtitleClass(subtitleClassName, stacked)}>{subtitle}</p> : null}
       {below != null ? <div className="ui-page-below">{below}</div> : null}
-      {compact && panel != null ? <span ref={setTitleEnd} className="ui-compact-mark" aria-hidden="true" /> : null}
+      {/* FLOW-942: the mark ends the header, so the bar comes down once every header line has gone under it. */}
+      {compact ? <span ref={setTitleEnd} className="ui-compact-mark" aria-hidden="true" /> : null}
       {compact ? (
         <CompactBar
           title={title}

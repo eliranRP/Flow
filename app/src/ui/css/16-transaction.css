@@ -112,15 +112,7 @@ html:not(:has(.ui-tabbar)) .ui-txn-step {
 }
 
 /* FLOW-366: the transaction page's own top bar (Lines.dc 87–100). It is in the page's flow and
-   sticks to the top; at rest it takes the page colour, and past 110px the surface and a hairline. */
-.ui-txn-sentinel {
-  position: absolute;
-  inset-block-start: var(--txn-bar-scroll);
-  inline-size: 1px;
-  block-size: 1px;
-  pointer-events: none;
-}
-
+   sticks to the top; at rest it takes the page colour, and once the page's head is under it the surface and a hairline. */
 .ui-txn-top {
   position: sticky;
   inset-block-start: 0;

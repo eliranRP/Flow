@@ -13,6 +13,7 @@ import "./css/49-recurring-answers.css";
 
 /** The header: the status line, the name, the amount and its line. */
 export function ChargeHead({
+  headRef,
   status,
   statusBad,
   name,
@@ -21,6 +22,8 @@ export function ChargeHead({
   income,
   meta,
 }: {
+  /** The page's top bar takes its line once this head is under it (TransactionTopBar). */
+  headRef?: (node: HTMLElement | null) => void;
   status: string;
   statusBad: boolean;
   name: string;
@@ -32,7 +35,7 @@ export function ChargeHead({
   meta: string;
 }) {
   return (
-    <header className="ui-charge-head">
+    <header ref={headRef} className="ui-charge-head">
       <p className={cx("ui-charge-status", statusBad && "ui-charge-status-bad")}>{status}</p>
       <h1 className="ui-charge-name">{name}</h1>
       <p className={cx("ui-charge-amount", muted && "ui-charge-amount-muted", income && "ui-charge-amount-income")} dir="ltr">

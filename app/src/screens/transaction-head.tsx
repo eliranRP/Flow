@@ -38,12 +38,15 @@ export function jevNote(reviewStatus: string | null | undefined): string {
 
 /** The header block: the status, the supplier, the amount and the meta lines (date, direction, source). */
 export function TxnHead({
+  headRef,
   txn,
   party,
   moneyIn,
   meta,
   unsigned = false,
 }: {
+  /** The page's top bar takes its line once this head is under it (TransactionTopBar). */
+  headRef?: (node: HTMLElement | null) => void;
   txn: NonNullable<TransactionDetail>;
   party: string;
   moneyIn: boolean;
@@ -56,7 +59,7 @@ export function TxnHead({
   const bankMatched = meta?.account != null;
   const vatShown = (txn.currency ?? "ILS") === "ILS";
   return (
-    <div className="ui-txn-head">
+    <div ref={headRef} className="ui-txn-head">
       {status == null ? null : (
         <div className="ui-txn-status">
           <StatusDot tone={status.open ? "accent" : undefined}>{status.text}</StatusDot>

@@ -105,7 +105,15 @@
       "ui/screen-header.tsx",
       "ui/compact-bar.tsx",
       "screens/settings-screen.tsx",
-      "screens/notifications-screen.tsx"
+      "screens/notifications-screen.tsx",
+      "screens/project-profit-screen.tsx",
+      "screens/project-month-profit-screen.tsx",
+      "screens/project-next-month-screen.tsx",
+      "screens/company-profit-screen.tsx",
+      "screens/transaction-top-bar.tsx",
+      "screens/recurring-charge-screen.tsx",
+      "screens/loans-summary-screen.tsx",
+      "screens/loan-detail-screen.tsx"
     ],
     "notifications.spec.ts": [
       "screens/notifications-screen.tsx",

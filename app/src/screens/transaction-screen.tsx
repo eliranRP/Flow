@@ -179,6 +179,7 @@ export function TransactionScreen({
   const holdWrites = useHoldWrites();
   const invalidate = useInvalidateBooks();
   const [confirm, setConfirm] = useState(false);
+  const [head, setHead] = useState<HTMLElement | null>(null);
   const [menu, setMenu] = useState(false);
   const moreRef = useRef<HTMLButtonElement | HTMLAnchorElement | null>(null);
   const [changeOpen, setChangeOpen] = useState(false);
@@ -573,11 +574,12 @@ export function TransactionScreen({
         backLabel={nav ? cashLinesBackLabel(nav.list.from) : sampleFrom != null ? cashLinesBackLabel(sampleFrom) : null}
         title={`${heading} · ${amountText}`}
         end={menuButton}
+        head={head}
       />
       <CardSwipe key={txn.id} canNext={nav?.next != null} canPrev={nav?.prev != null} enter={nav?.enter} peekNext={peekNext} peekPrev={peekPrev} onStep={(step) => { nav?.move(step, "swipe"); }}>
         <div className="ui-txn-body">
           <div className="ui-txn-intro">
-          <TxnHead txn={txn} party={heading} moneyIn={moneyIn} meta={meta ?? undefined} unsigned={sampleUnsigned} />
+          <TxnHead headRef={setHead} txn={txn} party={heading} moneyIn={moneyIn} meta={meta ?? undefined} unsigned={sampleUnsigned} />
           {pending ? (
             <Link className="ui-txn-banner" to={txn.review_id ? `/review?item=${encodeURIComponent(txn.review_id)}&from=all` : "/review?from=all"}>
               <span className="ui-txn-banner-text">השורה מחכה לאישור שלך</span>

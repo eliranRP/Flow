@@ -1,4 +1,5 @@
 import { formatAmountText } from "@flow/shared";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { projectRows } from "../by-currency";
 import { cashMonthName } from "../cash";
@@ -66,6 +67,8 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
   const search = usePreviewSearch();
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();
+  // The figure ends the page's head: the compact bar waits for it (FLOW-942).
+  const [figure, setFigure] = useState<HTMLElement | null>(null);
   const whole = allTime();
   const detail = useProjectQuery(sample ? "" : projectId, whole);
   const months = useProfitMonthsQuery(sample ? "" : projectId, whole);
@@ -104,6 +107,7 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
       subtitle={sub}
       backTo={`/projects/${projectId}/profit${search}`}
       headerClassName="ui-pp-head"
+      headEnd={figure}
       phase={phase}
       onRetry={() => {
         void detail.refetch();
@@ -118,7 +122,7 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
         </div>
       ) : (
         <div className="ui-pm-month">
-          <p className="ui-pp-figure ui-page-pad">
+          <p ref={setFigure} className="ui-pp-figure ui-page-pad">
             <Amount agorot={net} currency={currency} size="display" loss={net < 0n} direction={net > 0n ? "income" : undefined} />
           </p>
           <Card className="ui-pp-card">
