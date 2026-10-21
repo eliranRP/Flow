@@ -7,6 +7,9 @@ import { corsHeadersFor } from "../_shared/http.ts";
 import { companyHint } from "../_shared/owner.ts";
 import { callTool, isWriteTool, READ_TOOL_NAMES, scopeAllows, type ToolDefer, toolsFor } from "./tools.ts";
 import { signUserJwt, type SigningKey } from "./sign.ts";
+import { chargePreAuth, preAuthOverLimit, resetPreAuthGate } from "./preauth.ts";
+
+export { resetPreAuthGate };
 
 const PRODUCTION_ORIGIN = "https://flow-app-dx5.pages.dev";
 const PROTOCOL = "2025-06-18";
@@ -19,6 +22,8 @@ export type Deps = {
   fetch: FetchLike;
   /** Background work after the response (sync_bank). Without it the work runs before the response. */
   waitUntil?: ToolDefer;
+  /** The clock the pre-auth gate reads. Injected in tests; defaults to Date.now. */
+  now?: () => number;
 };
 
 type EdgeRuntimeLike = { waitUntil?: (work: Promise<unknown>) => void };
@@ -34,6 +39,7 @@ const defaultDeps: Deps = {
   env: (name) => Deno.env.get(name),
   fetch: (input, init) => fetch(input, init),
   waitUntil: edgeWaitUntil(),
+  now: () => Date.now(),
 };
 
 // The user JWT lives 60 seconds. A call made later than this (the sync_bank
@@ -59,6 +65,10 @@ function clientIp(req: Request): string | null {
   const value = req.headers.get("cf-connecting-ip");
   if (value == null || value.trim() === "") return null;
   return value.trim();
+}
+
+function nowMs(deps: Deps): number {
+  return (deps.now ?? Date.now)();
 }
 
 function methodNotAllowed(req: Request, route: Route): Response {
@@ -481,8 +491,16 @@ async function handleStatus(deps: Deps, req: Request, userId: string): Promise<R
 }
 
 async function handleMcp(req: Request, deps: Deps): Promise<Response> {
+  // Cheap in-memory flood gate before any DB call. Over the window's limit for
+  // this IP (or the no-IP bucket) returns the throttled 429 without touching
+  // lookup_mcp_credential or note_auth_failure.
+  const gate = preAuthOverLimit(clientIp(req), nowMs(deps));
+  if (gate.over) return unauthorized(req, { throttled: true, retry: gate.retry });
   const token = bearer(req);
-  if (!token.startsWith("flow_mcp_")) return unauthorized(req, await noteFailure(deps, req));
+  if (!token.startsWith("flow_mcp_")) {
+    chargePreAuth(clientIp(req), nowMs(deps));
+    return unauthorized(req, await noteFailure(deps, req));
+  }
   const peppers = peppersOf(deps.env("FLOW_MCP_PEPPER"));
   if (!peppers) return jsonResponse(req, { error: "server is missing a secret" }, 500);
   let row: {
@@ -517,6 +535,7 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
   }
   const expired = typeof row?.expires_at === "string" && Date.parse(row.expires_at) <= Date.now();
   if (row?.found !== true || row.revoked_at != null || expired || typeof row.id !== "string") {
+    chargePreAuth(clientIp(req), nowMs(deps));
     return unauthorized(req, await noteFailure(deps, req));
   }
   // The size cap is the header and the capped read. An over-cap request is

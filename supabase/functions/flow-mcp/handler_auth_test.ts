@@ -1,6 +1,6 @@
 // Flow MCP handler tests: routes, origins, mint, revoke and status, secrets, pepper, throttling and rate limits.
 import { corsAllowHeaders } from "../_shared/http.ts";
-import { handle, hmacSecret } from "./handler.ts";
+import { handle, hmacSecret, resetPreAuthGate } from "./handler.ts";
 import { criterion4 } from "../../../scripts/mcp-signing-spike.mjs";
 import { assert, assertEquals, type Call, deps, env, pepperSecret, previousSecret } from "./handler_test_support.ts";
 
@@ -547,4 +547,106 @@ Deno.test("an over-cap body is refused before the rate limit", async () => {
   assertEquals(payload.error, "validation", "validation");
   assertEquals(calls.some((call) => call.url.endsWith("bump_mcp_rate")), false, "rate limit not called");
   assertEquals(calls.some((call) => call.url.endsWith("lookup_mcp_credential") && call.body?.p_token_hash === hash), true, "the token was still checked");
+});
+
+// FLOW-945: the in-memory pre-auth flood gate in front of note_auth_failure.
+
+Deno.test("an unauthenticated burst from one IP trips the in-memory gate before note_auth_failure", async () => {
+  resetPreAuthGate();
+  const calls: Call[] = [];
+  const d = deps(calls, { note_auth_failure: { throttled: false, retry_after_seconds: 0 } });
+  const send = () =>
+    handle(
+      new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
+        method: "POST",
+        headers: { authorization: "Bearer nope", "content-type": "application/json", "cf-connecting-ip": "198.51.100.1" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "ping" }),
+      }),
+      d,
+    );
+  // 60 attempts pass the gate (each charges one DB failure); the 61st is capped in memory.
+  let last = await send();
+  for (let i = 0; i < 60; i++) last = await send();
+  assertEquals(last.status, 429, "the gate trips");
+  assertEquals(last.headers.get("retry-after") != null, true, "retry-after is set");
+  const noted = calls.filter((call) => call.url.endsWith("/note_auth_failure")).length;
+  assertEquals(noted, 60, "the DB failure counter stops at the gate limit");
+  resetPreAuthGate();
+});
+
+Deno.test("a headerless unauthenticated flood is bounded by the global bucket", async () => {
+  resetPreAuthGate();
+  const calls: Call[] = [];
+  const d = deps(calls, {});
+  const send = () =>
+    handle(
+      new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
+        method: "POST",
+        headers: { authorization: "Bearer nope", "content-type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "ping" }),
+      }),
+      d,
+    );
+  let last = await send();
+  for (let i = 0; i < 240; i++) last = await send();
+  assertEquals(last.status, 429, "the no-IP bucket caps the flood");
+  // No cf-connecting-ip means no per-IP DB counter; the in-memory bucket is the only cap.
+  assertEquals(calls.some((call) => call.url.endsWith("/note_auth_failure")), false, "no DB counter without an IP");
+  resetPreAuthGate();
+});
+
+Deno.test("authenticated requests are not charged against the pre-auth gate", async () => {
+  resetPreAuthGate();
+  const calls: Call[] = [];
+  const d = deps(calls, {
+    lookup_mcp_credential: {
+      found: true,
+      id: "88888888-8888-4000-8000-000000000008",
+      user_id: "user-1",
+      expires_at: "2099-01-01T00:00:00.000Z",
+      revoked_at: null,
+    },
+    bump_mcp_rate: { allowed: true, retry_after_seconds: 0 },
+    touch_mcp_credential: null,
+  });
+  const token = `flow_mcp_${"y".repeat(43)}`;
+  // Past the per-IP limit: a real client is never counted, so every call still succeeds.
+  let allOk = true;
+  for (let i = 0; i < 65; i++) {
+    const response = await handle(
+      new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json", "cf-connecting-ip": "198.51.100.9" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "ping" }),
+      }),
+      d,
+    );
+    if (response.status !== 200) allOk = false;
+  }
+  assertEquals(allOk, true, "authenticated traffic past the limit still succeeds");
+  assertEquals(calls.every((call) => !call.url.endsWith("/note_auth_failure")), true, "no failure is charged");
+  resetPreAuthGate();
+});
+
+Deno.test("the pre-auth window resets after it elapses", async () => {
+  resetPreAuthGate();
+  let clock = 1_000_000;
+  const calls: Call[] = [];
+  const d = { ...deps(calls, { note_auth_failure: { throttled: false, retry_after_seconds: 0 } }), now: () => clock };
+  const send = () =>
+    handle(
+      new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
+        method: "POST",
+        headers: { authorization: "Bearer nope", "content-type": "application/json", "cf-connecting-ip": "198.51.100.20" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "ping" }),
+      }),
+      d,
+    );
+  for (let i = 0; i < 60; i++) await send();
+  const blocked = await send();
+  assertEquals(blocked.status, 429, "blocked at the limit");
+  clock += 10_000; // step past the window
+  const after = await send();
+  assertEquals(after.status, 401, "a fresh window allows a new attempt");
+  resetPreAuthGate();
 });
