@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { useState } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { type TransactionDetail } from "@flow/shared";
 import { type TxnMeta } from "../txn-meta";
 import { jevNote, TxnFooter, txnSourceLabel, txnStatus } from "./transaction-head";
@@ -9,6 +9,10 @@ import { TransactionTopBar } from "./transaction-top-bar";
 import { stubPageObserver } from "../ui/test-support";
 
 // --- transaction-head.test.tsx
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 const base = {
   id: "t1",
@@ -94,6 +98,5 @@ describe("TransactionTopBar (FLOW-366)", () => {
     observer.page.scrolled = false;
     observer.settle();
     expect(bar).not.toHaveClass("ui-txn-top-past");
-    vi.unstubAllGlobals();
   });
 });

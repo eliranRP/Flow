@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { BackButton } from "../ui/back";
 import { cx } from "../ui/cx";
-import { useScrolledPast } from "../ui/screen-header";
+import { DETAIL_BAR, useScrolledPast } from "../ui/screen-header";
 
 /**
  * FLOW-366 (Lines.dc 87–100): the transaction page's own top bar, in place of the compact header.
@@ -27,7 +27,7 @@ export function TransactionTopBar({
   /** The page's head (its name, figure and lines). Null while there is none: the bar stays at rest. */
   head: HTMLElement | null;
 }) {
-  const past = useScrolledPast(head, true);
+  const past = useScrolledPast(head, true, DETAIL_BAR);
   return (
     <header className={cx("ui-txn-top", past && "ui-txn-top-past")}>
       <div className="ui-txn-top-start">

@@ -132,6 +132,8 @@ export function ScreenHeader(props: ScreenHeaderProps) {
 
 /** The compact bar's height under the safe area: one touch target. */
 const COMPACT_BAR = 44;
+/** The detail pages' top bar (--compact-bar-detail): the transaction-style bar. */
+export const DETAIL_BAR = 56;
 
 /** The safe area on top (installed app under a notch), in px. --safe-top is an env(), so a probe resolves it. */
 function safeTop(): number {
@@ -144,16 +146,16 @@ function safeTop(): number {
 }
 
 /**
- * True once the mark has scrolled up under the compact bar. The mark is the node itself (a callback ref's
+ * True once the mark has scrolled up under the compact bar (`bar` px tall, under the safe area). The mark is the node itself (a callback ref's
  * state), so a mark React swaps for a new node is observed again: a removed node reads as a zero rect,
  * above the bar, and kept the bar down at the top of the page.
  */
-export function useScrolledPast(mark: HTMLElement | null, enabled: boolean): boolean {
+export function useScrolledPast(mark: HTMLElement | null, enabled: boolean, bar = COMPACT_BAR): boolean {
   const [past, setPast] = useState(false);
   useEffect(() => {
     const node = enabled ? mark : null;
     if (node == null || typeof IntersectionObserver === "undefined") return;
-    const top = COMPACT_BAR + safeTop();
+    const top = bar + safeTop();
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[entries.length - 1];
@@ -165,6 +167,6 @@ export function useScrolledPast(mark: HTMLElement | null, enabled: boolean): boo
     return () => {
       observer.disconnect();
     };
-  }, [mark, enabled]);
+  }, [mark, enabled, bar]);
   return enabled && mark != null && past;
 }
