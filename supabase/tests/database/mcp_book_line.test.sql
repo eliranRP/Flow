@@ -1,10 +1,11 @@
 -- FLOW-948 (decision 0208). public.mcp_book_line: a balanced set of legs writes the equivalent
 -- legacy rows so the unchanged pnl_lines reflects it, and the derived legs project back to the
 -- request. Unbalanced legs are refused; a leg on another company's account is refused; the write
--- is idempotent and undoable. Invented data only. USD amounts are cents.
+-- is idempotent and undoable. FLOW-953: a kept-out category leg books, kept out of the P&L; a VAT leg is
+-- refused. Invented data only. USD amounts are cents.
 
 begin;
-select plan(25);
+select plan(26);
 
 do $u$ begin
   perform tests.create_supabase_user('bl_owner', 'bl-owner@example.com');
@@ -37,6 +38,7 @@ insert into bl select 'a_closing', id from public.accounts where company_id=(sel
 insert into bl select 'a_rent', id from public.accounts where company_id=(select id from bl where label='co') and name='Rent';
 insert into bl select 'a_draw', id from public.accounts where company_id=(select id from bl where label='co') and name='Draw';
 insert into bl select 'a_bank', id from public.accounts where company_id=(select id from bl where label='co') and name='Bank/Clearing';
+insert into bl select 'a_vat', id from public.accounts where company_id=(select id from bl where label='co') and name='VAT control';
 insert into bl select 'a_other_bank', id from public.accounts where company_id=(select id from bl where label='other_co') and name='Bank/Clearing';
 
 insert into private.mcp_credentials (user_id, company_id, token_hash, pepper_kid, scope, expires_at)
@@ -91,12 +93,12 @@ select is(
    join public.transactions t on t.id=s.transaction_id where t.description='A split bill')::bigint,
   2::bigint, 'the split booking created two line_splits');
 
--- 6. Its projection matches the request (Repairs -5000, Closing -3000). The projection is not
--- granted to authenticated, so read it as the owner.
+-- 6. Its income/expense legs project to the request (Repairs -5000, Closing -3000), read as the owner.
 reset role;
 select is(
-  (select sum(amount_net) from private.legs_pnl_projection((select id from bl where label='co')) p
-   where p.transaction_id=(select id from public.transactions where description='A split bill'))::bigint,
+  (select sum(-l.amount_minor) from public.legs l join public.accounts a on a.id = l.account_id
+   where a.type in ('income', 'expense')
+     and l.transaction_id=(select id from public.transactions where description='A split bill'))::bigint,
   -8000::bigint, 'the split booking projects to -8000 total');
 set local role authenticated;
 
@@ -163,12 +165,16 @@ select is(public.mcp_book_line('k5', '2026-06-10', 'expense', 'USD', 'No bank',
     jsonb_build_object('account_id', (select id from bl where label='a_closing'), 'amount_minor', -5000)
   ))->>'ok', 'false', 'a booking with no bank leg is refused');
 
--- 10. Booking a kept-out (excluded) category leg is refused in phase-1 (no invented behavior).
+-- 10. FLOW-953: a kept-out (excluded) category leg books, as a whole line kept out of the P&L.
 select is(public.mcp_book_line('k6', '2026-06-10', 'expense', 'USD', 'Kept out',
   jsonb_build_array(
     jsonb_build_object('account_id', (select id from bl where label='a_bank'), 'amount_minor', -5000),
     jsonb_build_object('account_id', (select id from bl where label='a_draw'), 'amount_minor', 5000)
-  ))->>'ok', 'false', 'an excluded-category booking is refused in phase-1');
+  ))->>'ok', 'true', 'a kept-out category leg books');
+select is(
+  (select l.in_pnl::text || '/' || l.amount_net from private.pnl_lines l
+   join public.transactions t on t.id = l.transaction_id where t.description = 'Kept out' and t.source = 'manual'),
+  'false/-5000', 'the kept-out booking stays out of the P&L');
 
 -- 10b. The specific refusal reasons surface so an AI caller can self-correct (FLOW-948); a
 -- cross-company account stays generic so it does not leak whether that account exists.
@@ -182,11 +188,12 @@ select is(public.mcp_book_line('m2', '2026-06-10', 'expense', 'USD', 'NoBank2',
     jsonb_build_object('account_id', (select id from bl where label='a_repairs'), 'amount_minor', 5000),
     jsonb_build_object('account_id', (select id from bl where label='a_closing'), 'amount_minor', -5000)
   ))->'error'->>'message', 'exactly one bank leg is required', 'the bank-leg reason surfaces');
-select is(public.mcp_book_line('m3', '2026-06-10', 'expense', 'USD', 'KeptOut2',
+select is(public.mcp_book_line('m3', '2026-06-10', 'expense', 'USD', 'Vat2',
   jsonb_build_array(
     jsonb_build_object('account_id', (select id from bl where label='a_bank'), 'amount_minor', -5000),
-    jsonb_build_object('account_id', (select id from bl where label='a_draw'), 'amount_minor', 5000)
-  ))->'error'->>'message', 'book_line: unsupported account for a phase-1 booking', 'the phase-1 reason surfaces');
+    jsonb_build_object('account_id', (select id from bl where label='a_repairs'), 'amount_minor', 4000),
+    jsonb_build_object('account_id', (select id from bl where label='a_vat'), 'amount_minor', 1000)
+  ))->'error'->>'message', 'book_line: a VAT leg is a later phase', 'the VAT reason surfaces');
 select is(public.mcp_book_line('m4', '2026-06-10', 'expense', 'USD', 'Xco2',
   jsonb_build_array(
     jsonb_build_object('account_id', (select id from bl where label='a_other_bank'), 'amount_minor', -5000),

@@ -161,6 +161,15 @@ do $$ declare rid uuid; begin
     ((select id from lr where label='co'), rid, (select id from lr where label='south'), 5000, -4500);
 end $$;
 
+create function pg_temp.legs_pnl_projection(p_company uuid)
+returns table (transaction_id uuid, category_id uuid, project_id uuid, kind text, amount_net bigint)
+language sql stable as $$
+  select l.transaction_id, a.category_id, l.project_id, a.type, sum(-l.amount_minor)::bigint
+  from public.legs l join public.accounts a on a.id = l.account_id
+  where l.company_id = p_company and a.type in ('income', 'expense')
+  group by l.transaction_id, a.category_id, l.project_id, a.type
+$$;
+
 -- ---- The reconciliation assertions. ----
 
 -- Every transaction's legs balance to 0 with exactly one bank leg.
@@ -180,7 +189,7 @@ select is(
 select is(
   (select coalesce(count(*), 0) from (
      select 1
-     from private.legs_pnl_projection((select id from lr where label = 'co')) p
+     from pg_temp.legs_pnl_projection((select id from lr where label = 'co')) p
      full outer join (
        select transaction_id, category_id, project_id, kind, sum(amount_net)::bigint amount_net
        from private.pnl_lines
@@ -200,7 +209,7 @@ select is(
 
 -- The projection's grand total equals pnl_lines' in-P&L total (income positive, expense negative).
 select is(
-  (select coalesce(sum(amount_net), 0) from private.legs_pnl_projection((select id from lr where label = 'co')))::bigint,
+  (select coalesce(sum(amount_net), 0) from pg_temp.legs_pnl_projection((select id from lr where label = 'co')))::bigint,
   (select coalesce(sum(amount_net), 0) from private.pnl_lines
    where company_id = (select id from lr where label = 'co') and in_pnl and kind in ('income','expense'))::bigint,
   'projection grand total equals the live P&L total'
@@ -209,45 +218,45 @@ select is(
 -- Spot checks of the trickiest cases (the whole point of the model).
 -- gross-up normal: Proceeds income +10000, Repairs expense -3000.
 select is(
-  (select amount_net from private.legs_pnl_projection((select id from lr where label='co')) p
+  (select amount_net from pg_temp.legs_pnl_projection((select id from lr where label='co')) p
    where p.transaction_id = (select id from public.transactions where idempotency_key='gu_normal')
      and p.category_id = (select id from lr where label='proceeds')),
   10000::bigint, 'gross-up normal: gross proceeds project as +10000 income'
 );
 select is(
-  (select amount_net from private.legs_pnl_projection((select id from lr where label='co')) p
+  (select amount_net from pg_temp.legs_pnl_projection((select id from lr where label='co')) p
    where p.transaction_id = (select id from public.transactions where idempotency_key='gu_normal')
      and p.category_id = (select id from lr where label='repairs')),
   -3000::bigint, 'gross-up normal: the closing cost projects as -3000 expense'
 );
 -- gross-up contra: PropTax nets to -6000 across its two parts (10000 debit - 4000 credit).
 select is(
-  (select sum(amount_net)::bigint from private.legs_pnl_projection((select id from lr where label='co')) p
+  (select sum(amount_net)::bigint from pg_temp.legs_pnl_projection((select id from lr where label='co')) p
    where p.transaction_id = (select id from public.transactions where idempotency_key='gu_contra')
      and p.category_id = (select id from lr where label='proptax')),
   -6000::bigint, 'gross-up contra: PropTax nets to -6000 (the escrow credit reduces its own category)'
 );
 -- gross-up contra, same category and project: one projection row, PropTax on north nets to -6000.
 select is(
-  (select array_agg(amount_net)::bigint[] from private.legs_pnl_projection((select id from lr where label='co')) p
+  (select array_agg(amount_net)::bigint[] from pg_temp.legs_pnl_projection((select id from lr where label='co')) p
    where p.transaction_id = (select id from public.transactions where idempotency_key='gu_contra_same')),
   array[-6000]::bigint[], 'gross-up contra on the same category and project nets to one -6000 row'
 );
 -- loan split: principal (1000) is kept out of the projection; interest + escrow in.
 select is(
-  (select coalesce(sum(amount_net),0)::bigint from private.legs_pnl_projection((select id from lr where label='co')) p
+  (select coalesce(sum(amount_net),0)::bigint from pg_temp.legs_pnl_projection((select id from lr where label='co')) p
    where p.transaction_id = (select id from public.transactions where idempotency_key='loan')),
   -9000::bigint, 'loan split: interest+escrow in P&L (-9000), principal kept out'
 );
 -- kept-out proceeds contribute nothing to the projection.
 select is(
-  (select count(*) from private.legs_pnl_projection((select id from lr where label='co')) p
+  (select count(*) from pg_temp.legs_pnl_projection((select id from lr where label='co')) p
    where p.transaction_id = (select id from public.transactions where idempotency_key='kept_inc'))::bigint,
   0::bigint, 'kept-out proceeds produce no P&L projection row'
 );
 -- the no-category income line projects under a null category.
 select is(
-  (select amount_net from private.legs_pnl_projection((select id from lr where label='co')) p
+  (select amount_net from pg_temp.legs_pnl_projection((select id from lr where label='co')) p
    where p.transaction_id = (select id from public.transactions where idempotency_key='nocat')
      and p.category_id is null),
   2000::bigint, 'a no-category income line projects as +2000 under a null category'
@@ -477,7 +486,7 @@ select is(
      having sum(l.amount_minor) <> 0 or count(*) filter (where a.is_bank) <> 1) bad)::bigint,
   0::bigint, 'after the matrix every line balances with one bank leg');
 select is(
-  (select coalesce(sum(amount_net), 0) from private.legs_pnl_projection(pg_temp.lid('co')))::bigint,
+  (select coalesce(sum(amount_net), 0) from pg_temp.legs_pnl_projection(pg_temp.lid('co')))::bigint,
   (select coalesce(sum(amount_net), 0) from private.pnl_lines where company_id = pg_temp.lid('co') and in_pnl)::bigint,
   'after the matrix the projection total equals the live P&L total');
 

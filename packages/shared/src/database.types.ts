@@ -101,13 +101,13 @@ isOneToOne: false
                   ]
                 },"categories": {
                   Row: {
-                    "company_id": string,"created_at": string,"excluded_from_pnl": boolean,"group_name": string | null,"hidden": boolean,"id": string,"in_cash": boolean,"is_default": boolean,"kind": Database["public"]['Enums']["category_kind"],"loan_part": Database["public"]['Enums']["loan_split_part"] | null,"name": string,"parent_id": string | null,"rehab": boolean | null,"sort_order": number,"updated_at": string
+                    "company_id": string,"created_at": string,"excluded_from_pnl": boolean,"group_name": string | null,"hidden": boolean,"id": string,"in_cash": boolean,"is_default": boolean,"kind": Database["public"]['Enums']["category_kind"],"ledger_account_id": string | null,"loan_part": Database["public"]['Enums']["loan_split_part"] | null,"name": string,"parent_id": string | null,"rehab": boolean | null,"sort_order": number,"updated_at": string
                   }
                   Insert: {
-                    "company_id": string,"created_at"?: string,"excluded_from_pnl"?: boolean,"group_name"?: string | null,"hidden"?: boolean,"id"?: string,"in_cash"?: boolean,"is_default"?: boolean,"kind": Database["public"]['Enums']["category_kind"],"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name": string,"parent_id"?: string | null,"rehab"?: boolean | null,"sort_order": number,"updated_at"?: string
+                    "company_id": string,"created_at"?: string,"excluded_from_pnl"?: boolean,"group_name"?: string | null,"hidden"?: boolean,"id"?: string,"in_cash"?: boolean,"is_default"?: boolean,"kind": Database["public"]['Enums']["category_kind"],"ledger_account_id"?: string | null,"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name": string,"parent_id"?: string | null,"rehab"?: boolean | null,"sort_order": number,"updated_at"?: string
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"excluded_from_pnl"?: boolean,"group_name"?: string | null,"hidden"?: boolean,"id"?: string,"in_cash"?: boolean,"is_default"?: boolean,"kind"?: Database["public"]['Enums']["category_kind"],"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name"?: string,"parent_id"?: string | null,"rehab"?: boolean | null,"sort_order"?: number,"updated_at"?: string
+                    "company_id"?: string,"created_at"?: string,"excluded_from_pnl"?: boolean,"group_name"?: string | null,"hidden"?: boolean,"id"?: string,"in_cash"?: boolean,"is_default"?: boolean,"kind"?: Database["public"]['Enums']["category_kind"],"ledger_account_id"?: string | null,"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name"?: string,"parent_id"?: string | null,"rehab"?: boolean | null,"sort_order"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -116,6 +116,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "categories_company_id_ledger_account_id_fkey"
+      columns: ["company_id","ledger_account_id"]
+isOneToOne: false
+      referencedRelation: "accounts"
+      referencedColumns: ["company_id","id"]
     },{
       foreignKeyName: "categories_parent_fkey"
       columns: ["company_id","parent_id"]

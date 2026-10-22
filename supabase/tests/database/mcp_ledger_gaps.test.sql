@@ -42,6 +42,7 @@ values (pg_temp.id('other_co'), 'Foreign', 'expense', 90, false);
 -- Each category's bridge account is a_<label>; the bank is a_bank.
 insert into lg select 'a_' || c.label, a.id from public.accounts a join lg c on c.id = a.category_id;
 insert into lg select 'a_bank', id from public.accounts where company_id = pg_temp.id('co') and name = 'Bank/Clearing';
+insert into lg select 'a_vat', id from public.accounts where company_id = pg_temp.id('co') and name = 'VAT control';
 
 -- Posted lines filed to Build on Beta. pay is the property-tax wire (2000 + 249.48 - 850.77 = 1398.71).
 create function pg_temp.line(p_key text, p_company text, p_gross bigint, p_vat bigint default 0,
@@ -144,7 +145,7 @@ select is((select x->>'is_bank' || '/' || (x->>'system') || '/' || (x->>'bookabl
   'true/true/true', 'the bank is a bookable system account');
 select is((select x->>'type' || '/' || (x->>'excluded_from_pnl') || '/' || (x->>'bookable') || '/' || (x->>'category_id')
   from acct x where x->>'name' = 'Kept'),
-  'expense/true/false/' || pg_temp.id('kept'), 'a kept-out category account is not bookable');
+  'expense/true/true/' || pg_temp.id('kept'), 'a kept-out category account is bookable (FLOW-953: it posts to its balance-sheet account)');
 select is((select x->>'type' || '/' || (x->>'system') || '/' || (x->>'bookable') from acct x where x->>'name' = 'OtherInc'),
   'income/false/true', 'an in-P&L income category account is bookable');
 
@@ -263,8 +264,8 @@ select is(public.mcp_book_line('lg-c9', '2026-06-10', 'expense', null, null, jso
   pg_temp.leg('bank', -40000), pg_temp.leg('build', 20000, 'beta'), pg_temp.leg('taxes', 20000, 'alpha')), null, pg_temp.id('txn_pay3'))->'error'->>'code',
   'validation', 'doc_date with transaction_id is a validation error (the line keeps its own)');
 select is(pg_temp.book('lg-c10', 'txn_pay3', jsonb_build_array(
-  pg_temp.leg('bank', -40000), pg_temp.leg('build', 30000, 'beta'), pg_temp.leg('kept', 10000, 'alpha')))->'error'->>'message',
-  'book_line: unsupported account for a phase-1 booking', 'a kept-out category leg is refused');
+  pg_temp.leg('bank', -40000), pg_temp.leg('build', 30000, 'beta'), pg_temp.leg('vat', 10000)))->'error'->>'message',
+  'book_line: a VAT leg is a later phase', 'a VAT leg is refused');
 select is(pg_temp.parts_of('txn_pay3'), null, 'none of the refusals wrote a part');
 
 -- ---------------------------------------------------------------------------
@@ -276,13 +277,14 @@ select is((select x->>'name' from jsonb_array_elements(public.mcp_accounts()->'a
   'Levy Renamed', 'list_accounts shows the new name');
 
 -- The legs follow every in_pnl change: after each step the company's whole projection equals pnl_lines
--- (owned by and run as the test's superuser: the projection is not granted to authenticated).
+-- (owned by and run as the test's superuser, a definer, so it reads every leg of the company).
 reset role;
 create function pg_temp.reconciled() returns boolean language sql security definer set search_path = '' as $$
   select (select coalesce(jsonb_agg(jsonb_build_object('t', transaction_id, 'c', category_id, 'p', project_id, 'n', n)
       order by transaction_id, category_id, project_id), '[]') from (
-      select transaction_id, category_id, project_id, sum(amount_net)::bigint n
-      from private.legs_pnl_projection(pg_temp.id('co')) group by 1, 2, 3) x)
+      select l.transaction_id, a.category_id, l.project_id, sum(-l.amount_minor)::bigint n
+      from public.legs l join public.accounts a on a.id = l.account_id
+      where l.company_id = pg_temp.id('co') and a.type in ('income', 'expense') group by 1, 2, 3) x)
     = (select coalesce(jsonb_agg(jsonb_build_object('t', transaction_id, 'c', category_id, 'p', project_id, 'n', n)
       order by transaction_id, category_id, project_id), '[]') from (
       select transaction_id, category_id, project_id, sum(amount_net)::bigint n
@@ -302,8 +304,8 @@ select is((select sum(amount_minor)::bigint from public.legs where transaction_i
   'that line''s re-derived legs still balance');
 select ok(pg_temp.reconciled(), 'kept out by set_category_pnl: the projection still equals pnl_lines');
 select is(pg_temp.book('lg-e1', 'txn_pay3', jsonb_build_array(
-  pg_temp.leg('bank', -40000), pg_temp.leg('build', 30000, 'beta'), pg_temp.leg('levy', 10000, 'alpha')))->'error'->>'message',
-  'book_line: unsupported account for a phase-1 booking', 'book_line reads the live category: a kept-out one is refused');
+  pg_temp.leg('bank', -40000), pg_temp.leg('build', 30000, 'beta'), pg_temp.leg('levy', 10000, 'alpha')))->>'ok',
+  'true', 'book_line reads the live category: a kept-out one books on its balance-sheet account (FLOW-953)');
 
 select is(public.mcp_undo('lg-undo-out', 'category_pnl', pg_temp.id('levy'))->>'ok', 'true', 'undo puts Levy back in the P&L');
 select is((select sum(amount_minor)::bigint from public.legs where account_id = pg_temp.id('a_levy') and transaction_id = pg_temp.id('txn_pay')),

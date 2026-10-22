@@ -137,6 +137,8 @@ export async function callWrite(
     // balance, hit one bank leg, and land on the caller's own accounts; it writes the equivalent legacy
     // rows (a line, or a split through save_line_split) so the unchanged P&L reflects it. FLOW-950:
     // transaction_id books the caller's existing line instead (undo kind line_split).
+    // FLOW-953 (decision 0210): legs may sit on asset and liability accounts; the database files each
+    // as a kept-out category part, so the schema is unchanged.
     const parsed = bookLineSchema.safeParse(args);
     if (!parsed.success) return invalidDetail(parsed.error);
     rpcName = "mcp_book_line";

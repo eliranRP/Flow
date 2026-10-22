@@ -1,7 +1,8 @@
 // Flow MCP tools test: FLOW-948 (decision 0208). book_line sends a balanced set of legs to
 // mcp_book_line, and refuses — before the RPC — legs that do not balance, too few legs, a bad
 // currency or direction, or an extra field. FLOW-950: transaction_id books an existing line, and a
-// refusal of the arguments names the field in detail.
+// refusal of the arguments names the field in detail. FLOW-953: asset and liability legs pass through
+// unchanged (the database files them as kept-out parts).
 import { assertEquals } from "jsr:@std/assert@1";
 import { callTool } from "./tools.ts";
 import { PROJECT, rpcOf, TXN } from "./tools_test_support.ts";
@@ -142,4 +143,28 @@ Deno.test("book_line names the field that failed in detail (FLOW-950)", async ()
     "legs: legs must balance to 0");
   assertEquals((await refusal({ ...base, transaction_id: TXN, legs: [WIRE_LEGS[0], { account_id: "bad", amount_minor: 139871 }] }))?.detail?.startsWith("legs.1.account_id: "), true);
   assertEquals((await refusal({ ...base, transaction_id: "not-a-uuid" }))?.detail?.startsWith("transaction_id: "), true);
+});
+
+const PROPERTY = "a0000000-0000-4000-8000-0000000000d1";
+const LOAN = "a0000000-0000-4000-8000-0000000000d2";
+
+Deno.test("book_line passes a closing wire's asset and liability legs through unchanged (FLOW-953)", async () => {
+  const legs = [
+    { account_id: BANK, amount_minor: -6490000 },
+    { account_id: PROPERTY, amount_minor: 30000000, project_id: PROJECT },
+    { account_id: CLOSING, amount_minor: 450000, project_id: PROJECT },
+    { account_id: REPAIRS, amount_minor: 120000, project_id: PROJECT },
+    { account_id: REPAIRS, amount_minor: -80000, project_id: PROJECT },
+    { account_id: LOAN, amount_minor: -24000000, project_id: PROJECT },
+  ];
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: TXN, undo_kind: "line_split" } } }));
+  const result = await callTool("book_line", { idempotency_key: "book-6", transaction_id: TXN, direction: "expense", legs }, ["write"], rpc);
+  assertEquals(result.isError, false);
+  assertEquals(calls.length, 1);
+  assertEquals(calls[0].body.p_legs, legs);
+  // A leg with a currency of its own is refused before the RPC: a booking is in the line's one currency.
+  assertEquals((await refusal({
+    idempotency_key: "book-7", transaction_id: TXN, direction: "expense",
+    legs: [legs[0], { ...legs[1], amount_minor: 6490000, currency: "ILS" }],
+  }))?.code, "validation");
 });
