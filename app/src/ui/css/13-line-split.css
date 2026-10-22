@@ -128,7 +128,9 @@
 
 /* A credit part's amount field: the static currency sign where a normal part has its unit switch. */
 .ui-lsplit-board .ui-lsplit-unit {
+  display: flex;
   flex: none;
+  align-items: center;
   padding-inline: var(--space-1);
   color: var(--color-text-secondary);
   font-size: var(--type-line2-size);
