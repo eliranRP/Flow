@@ -127,14 +127,16 @@
   align-self: flex-start;
   min-inline-size: 0;
   max-inline-size: 100%;
+  gap: var(--space-1);
   font-size: var(--type-btn-2-size);
   line-height: var(--type-btn-2-line);
-  white-space: pre;
+  white-space: nowrap;
 }
 
 .ui-journal-name-cut {
   min-inline-size: 0;
   overflow: hidden;
+  white-space: nowrap;
   text-overflow: ellipsis;
 }
 
@@ -142,18 +144,19 @@
   flex: none;
 }
 
+/* The meta wraps at a narrow width; "[eye-off] לא נספר ברווח" stays one piece. */
 .ui-journal-meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
   color: var(--color-text-muted);
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
-  white-space: nowrap;
 }
 
-.ui-journal-meta svg {
-  flex: none;
+.ui-journal-kept {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 
 .ui-journal-amount {

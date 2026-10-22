@@ -81,10 +81,12 @@ export const BigAmounts: Story = { ...big, name: "Big amounts: ₪9,999,999.99" 
 // credit part carries the filled chip and the outline, says what the category nets to, and the header
 // checks the signed sum against the line.
 const creditParts: PartDraft[] = [
-  { key: "a", categoryId: "c-ins", projectId: "p-herz", unit: "amount", value: "249.48" },
-  { key: "b", categoryId: "c-ins", projectId: "p-herz", unit: "amount", value: "850.77", grossUp: true },
+  { key: "a", categoryId: "c-ins", projectId: "p-office", unit: "amount", value: "249.48" },
+  { key: "b", categoryId: "c-ins", projectId: "p-office", unit: "amount", value: "850.77", grossUp: true },
 ];
-const credit = storyOf(() => <Editor line={{ ...SAMPLE_EXPENSE_LINE, amountNet: -7_974_585n, currency: "USD" }} parts={creditParts} />);
+const credit = storyOf(() => (
+  <Editor line={{ ...SAMPLE_EXPENSE_LINE, amountNet: -7_974_585n, currency: "USD", projectId: "p-office", projectName: "משרד" }} parts={creditParts} />
+));
 export const CreditPart: Story = { ...credit, name: "Credit part: ✓ זיכוי, its net and the signed check" };
 
 const empty = storyOf(() => <Editor />);

@@ -28,8 +28,8 @@ function AccountName({ name }: { name: string }) {
   const match = /^(.*?)\s*(••\d{4})$/u.exec(name);
   return (
     <span className="ui-journal-name" dir="auto" data-clip-ok="">
-      <span className="ui-journal-name-cut">{match ? match[1] : name}</span>
-      {match ? <span className="ui-journal-name-last4">{` ${match[2] ?? ""}`}</span> : null}
+      <span className="ui-journal-name-cut" data-clip-ok="">{match ? match[1] : name}</span>
+      {match ? <span className="ui-journal-name-last4">{match[2]}</span> : null}
     </span>
   );
 }
@@ -46,7 +46,7 @@ function Side({ title, rows, currency }: { title: "חובה" | "זכות"; rows:
               <AccountName name={row.name} />
               <span className="ui-journal-meta">
                 {[row.type, row.project].filter(Boolean).join(" · ")}
-                {row.keptOut ? <>{" · "}<EyeOffIcon size={14} />{KEPT_OUT}</> : null}
+                {row.keptOut ? <>{" · "}<span className="ui-journal-kept"><EyeOffIcon size={14} />{KEPT_OUT}</span></> : null}
               </span>
             </span>
             <bdi className="ui-num ui-journal-amount" dir="ltr">{money(row.amount, currency)}</bdi>

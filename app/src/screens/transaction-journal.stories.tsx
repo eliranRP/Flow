@@ -34,7 +34,7 @@ const bankLine = (txn: Txn): TxnMeta => ({
 
 const plainTxn: Txn = {
   id: "t-journal",
-  description: "Example Plumbing",
+  description: "Plumbing Co",
   direction: "expense",
   doc_date: "2026-10-09",
   amount_gross: -240_000n,
@@ -46,7 +46,7 @@ const plainTxn: Txn = {
   project_name: "פרויקט הרצליה",
   category_id: "c1",
   category_name: "קבלני משנה",
-  supplier_name: "Example Plumbing",
+  supplier_name: "Plumbing Co",
   customer_name: null,
   currency: "USD",
   paid: true,
@@ -81,8 +81,8 @@ const plainJournal: LineJournal = {
 const loanTxn: Txn = {
   ...plainTxn,
   id: "t-journal-loan",
-  description: "Example Loan Servicing",
-  supplier_name: "Example Loan Servicing",
+  description: "Loan Co",
+  supplier_name: "Loan Co",
   doc_date: "2026-10-04",
   amount_gross: -235_000n,
   amount_net: -235_000n,
