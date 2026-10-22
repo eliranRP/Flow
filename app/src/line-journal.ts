@@ -59,8 +59,8 @@ export function legTypeLabel(leg: Pick<JournalLeg, "account_type" | "is_bank">):
 const SYSTEM_NAMES: Record<string, string> = {
   "Loan principal": "קרן הלוואה",
   Escrow: "אסקרו",
-  Property: "נדל״ן",
-  "Transfers in transit": "העברות בדרך",
+  Property: "נכסים",
+  "Transfers in transit": "העברות בין חשבונות",
   "Owner capital": "השקעת בעלים",
   "Security deposit held": "פיקדון שהתקבל",
   Suspense: "חשבון מעבר",
