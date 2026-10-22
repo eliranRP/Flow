@@ -15,6 +15,7 @@ export const readRpcs = new Set([
   "get_breakdown_lines",
   "get_dashboard",
   "get_home",
+  "get_line_journal",
   "get_line_meta",
   "get_line_split",
   "get_loan_split",

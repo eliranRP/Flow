@@ -143,11 +143,6 @@
   gap: calc(var(--space-1) * 1.5);
 }
 
-/* The sum may wrap between its terms; an amount itself has no space, so it never breaks. */
-.ui-lsplit-check .ui-num {
-  white-space: normal;
-}
-
 .ui-lsplit-check > svg {
   flex: none;
   margin-block-start: var(--space-half);
