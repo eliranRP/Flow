@@ -123,7 +123,7 @@ export function legsFromEntry(legs: readonly EntryLeg[]): ComposerLeg[] {
 /** The line's own journal legs (not the bank) → the composer's lines, to edit what is booked now. */
 export function legsFromJournal(legs: readonly JournalLeg[]): ComposerLeg[] {
   return legsFromEntry(legs.filter((leg) => !leg.is_bank).map((leg) => ({
-    account_id: leg.account_id,
+    account_id: leg.book_account_id ?? leg.account_id,
     project_id: leg.project_id ?? null,
     amount_minor: leg.amount_minor,
   })));
@@ -280,17 +280,17 @@ export function parseCopies(data: unknown): JournalCopies | null {
   return copiesSchema.parse(data);
 }
 
-/** A past line's side, compactly: "בנק $145,500 · עלויות סגירה $4,500". */
-export function copySideText(
+/** A past line's side, as "name $amount" pairs: ["בנק $145,500", "עלויות סגירה $4,500"]. */
+export function copySidePairs(
   copy: JournalCopy,
   side: ComposerSide,
   format: (minor: bigint) => string,
-): string {
+): string[] {
   const legs = (copy.legs ?? []).filter((leg) => (side === "debit" ? leg.amount_minor > 0n : leg.amount_minor < 0n));
   return legs.map((leg) => {
     const name = leg.is_bank ? "בנק" : legName(leg, null);
     return `${name} ${format(leg.amount_minor < 0n ? -leg.amount_minor : leg.amount_minor)}`;
-  }).join(" · ");
+  });
 }
 
 /** dd/mm of an ISO date, as the board writes the copy sheet's dates. */

@@ -33,6 +33,15 @@ export const PaymentBooked: Story = {
   ),
 };
 
+/** A line Jev made itself (book_line): ביטול deletes it, and the hint says so. */
+export const LineMadeByJev: Story = {
+  render: () => (
+    <StoryRoute entry="/review" tabs>
+      <JevBookingReview bookings={SAMPLE_JEV_BOOKINGS.map((booking) => ({ ...booking, kind: "book_line" as const, source: "manual" }))} queued={0} next={null} search="" api={SAMPLE_JEV_BOOKING_API} sample />
+    </StoryRoute>
+  ),
+};
+
 /** A viewer reads the card, without עריכה or the action bar. */
 export const Viewer: Story = {
   render: () => (

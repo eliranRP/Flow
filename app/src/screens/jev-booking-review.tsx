@@ -1,5 +1,7 @@
 import { formatMoney } from "@flow/shared";
-import { jevBookingFailure, jevBookingsKey, JEV_BOOKING_APPROVED, JEV_BOOKING_UNDONE, liveJevBookingApi, type JevBooking, type JevBookingApi } from "../jev-bookings";
+import { useRef } from "react";
+import { dayMonth } from "../line-composer";
+import { jevBookingFailure, jevBookingsKey, JEV_BOOKING_APPROVED, JEV_BOOKING_DELETED, JEV_BOOKING_UNDONE, liveJevBookingApi, type JevBooking, type JevBookingApi } from "../jev-bookings";
 import { useHomePreview } from "../preview";
 import { reviewListPath } from "./review-shared";
 import { useLineMetaQuery } from "../use-books";
@@ -11,11 +13,12 @@ import { Button } from "../ui/button";
 import { CheckIcon } from "../ui/icons";
 import { ReviewCount, ReviewSegments, reviewCountDigits } from "../ui/review-count";
 import { ScreenHeader } from "../ui/screen-header";
-import { invoiceDate } from "./screen-shared";
 import { journalRows } from "./transaction-journal";
 
 /** The bar's hint under אישור and ביטול (board LedgerReviewCard). */
 export const JEV_BOOKING_HINT = "ביטול מסיר את הפקודה של Jev, והתנועה חוזרת לשיוך רגיל";
+/** The hint when Jev made the line itself (book_line): ביטול deletes it. */
+export const JEV_BOOKING_DELETE_HINT = "ביטול מוחק את התנועה ש־Jev יצר.";
 
 type Next = { name: string; minor: bigint; currency: string } | null;
 
@@ -45,6 +48,8 @@ export function JevBookingReview({
   const preview = useHomePreview();
   const holdWrites = useHoldWrites();
   const booking = bookings[0];
+  /** The kind of the booking ביטול is taking back, for its toast. */
+  const undoKind = useRef<JevBooking["kind"]>("line_split");
   const meta = useLineMetaQuery(booking?.transaction_id ?? null, !sample && booking != null);
   const drop = (transactionId: string) => [{
     key: jevBookingsKey(preview),
@@ -62,7 +67,7 @@ export function JevBookingReview({
   const undo = useWrite<string>({
     place: "bar",
     keys,
-    success: JEV_BOOKING_UNDONE,
+    success: () => (undoKind.current === "book_line" ? JEV_BOOKING_DELETED : JEV_BOOKING_UNDONE),
     failure: jevBookingFailure,
     optimistic: drop,
     run: (transactionId) => api.undo(transactionId),
@@ -96,7 +101,7 @@ export function JevBookingReview({
         <div className="ui-review-motion" key={booking.write_id}>
           <BookingReviewCard
             party={booking.party}
-            sourceLine={`${invoiceDate(booking.doc_date)} · ${moneyIn ? "נכנס" : "יצא"} · ${booking.source === "mercury" ? "שורת בנק" : "תנועה ידנית"}`}
+            sourceLine={`${dayMonth(booking.doc_date)} · ${moneyIn ? "נכנס" : "יצא"} · ${booking.source === "mercury" ? "שורת בנק" : "תנועה ידנית"}`}
             amount={moneyIn ? booking.amount_gross : -booking.amount_gross}
             currency={booking.currency}
             moneyIn={moneyIn}
@@ -104,7 +109,8 @@ export function JevBookingReview({
             debit={debit}
             credit={credit}
             balanced={booking.journal.balanced}
-            editTo={holdWrites ? undefined : `/transactions/${booking.transaction_id}/journal${search}`}
+            // from=review: the composer's ✕ and its save come back to לאישור.
+            editTo={holdWrites ? undefined : `/transactions/${booking.transaction_id}/journal${search}${search === "" ? "?" : "&"}from=review`}
           />
         </div>
         {!holdWrites && following != null ? (
@@ -115,15 +121,15 @@ export function JevBookingReview({
         ) : null}
         {holdWrites ? <ViewerNote className="t-caption t-muted ui-viewer-note" /> : (
           <ActionBar>
-            <div className="ui-action-bar-row ui-review-actions">
+            <div className="ui-action-bar-row ui-review-actions ui-review-actions-two">
               <div className="ui-review-approve">
                 <Button full icon={<CheckIcon />} disabled={busy} busy={approve.isPending} onClick={() => { approve.mutate(booking.transaction_id); }}>
                   אישור
                 </Button>
               </div>
-              <Button variant="secondary" disabled={busy} busy={undo.isPending} onClick={() => { undo.mutate(booking.transaction_id); }}>ביטול</Button>
+              <Button variant="secondary" disabled={busy} busy={undo.isPending} onClick={() => { undoKind.current = booking.kind; undo.mutate(booking.transaction_id); }}>ביטול</Button>
             </div>
-            <p className="t-caption t-muted ui-review-bar-hint">{JEV_BOOKING_HINT}</p>
+            <p className="t-caption t-muted ui-review-bar-hint">{booking.kind === "book_line" ? JEV_BOOKING_DELETE_HINT : JEV_BOOKING_HINT}</p>
           </ActionBar>
         )}
       </div>

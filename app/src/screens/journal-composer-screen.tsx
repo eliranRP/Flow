@@ -1,7 +1,7 @@
 import { formatAmountText } from "@flow/shared";
 import { useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
-import { dayMonth, copySideText, composerHold, legNote, legsFromEntry, legsFromJournal, bookingPayload, composerRefusal, nextLeg, type ComposerAccount, type ComposerLeg, type JournalCopies, type JournalSuggestion, type SavedBooking } from "../line-composer";
+import { useParams, useSearchParams } from "react-router-dom";
+import { dayMonth, copySidePairs, composerHold, legNote, legsFromEntry, legsFromJournal, bookingPayload, composerRefusal, nextLeg, type ComposerAccount, type ComposerLeg, type JournalCopies, type JournalSuggestion, type SavedBooking } from "../line-composer";
 import { COMPOSER_KEYS, liveComposerApi, useComposerAccountsQuery, useJournalCopiesQuery, useJournalSuggestionQuery, type ComposerApi } from "../line-composer-api";
 import { useLineJournalQuery, type LineJournal } from "../line-journal";
 import { usePreviewSearch, useHomePreview } from "../preview";
@@ -120,8 +120,8 @@ export function JournalComposer({
     title: `${copies?.party_name ?? line.party} · ${dayMonth(copy.doc_date)}`,
     amount: formatAmountText(copy.amount_gross < 0n ? -copy.amount_gross : copy.amount_gross, line.currency, { detail: true, direction: line.direction, plus: line.direction === "income" }),
     income: line.income,
-    debit: copySideText(copy, "debit", money),
-    credit: copySideText(copy, "credit", money),
+    debit: copySidePairs(copy, "debit", money),
+    credit: copySidePairs(copy, "credit", money),
   }));
   const targetLeg = target == null ? null : state.legs.find((leg) => leg.key === target.key) ?? null;
   const targetNo = targetLeg == null ? 0 : state.legs.indexOf(targetLeg) + 2;
@@ -279,7 +279,9 @@ export function JournalComposerScreen({ sample }: { sample?: JournalComposerSamp
   const search = usePreviewSearch();
   const preview = useHomePreview();
   const live = sample == null;
-  const backTo = `/transactions/${transactionId}${search}`;
+  const [params] = useSearchParams();
+  // Opened from Jev's booking in לאישור: ✕ and the save go back to the queue.
+  const backTo = params.get("from") === "review" ? `/review${search}` : `/transactions/${transactionId}${search}`;
   const writeGate = useWriteGate(`/transactions/${transactionId}`);
   const txn = useTransactionQuery(live ? transactionId : "");
   const journal = useLineJournalQuery(transactionId, live);

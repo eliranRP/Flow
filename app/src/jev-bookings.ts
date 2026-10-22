@@ -29,6 +29,8 @@ const bookingSchema = z.object({
 export type JevBooking = z.infer<typeof bookingSchema>;
 
 export function parseJevBookings(data: unknown): JevBooking[] {
+  // No answer (an older server, a stubbed read) is no booking waiting.
+  if (data == null) return [];
   return z.array(bookingSchema).parse(data);
 }
 
@@ -42,7 +44,8 @@ export function useJevBookingsQuery(enabled = true) {
   return useQuery({
     queryKey: jevBookingsKey(preview),
     enabled: enabled && preview === "off",
-    retry: 1,
+    // לאישור waits for this read before its first draw, so a failure ends the wait at once.
+    retry: false,
     queryFn: async (): Promise<JevBooking[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -56,6 +59,8 @@ export function useJevBookingsQuery(enabled = true) {
 
 export const JEV_BOOKING_APPROVED = "הפקודה של Jev אושרה";
 export const JEV_BOOKING_UNDONE = "הפקודה של Jev בוטלה. התנועה חזרה לשיוך רגיל.";
+/** A booking that made the line itself (book_line): ביטול deletes the line. */
+export const JEV_BOOKING_DELETED = "הפקודה של Jev בוטלה והתנועה נמחקה.";
 
 /** A refusal is final (the booking moved on); a dropped connection retries. */
 export function jevBookingFailure(error: Error): WriteFailure {

@@ -185,6 +185,7 @@ export function ComposerLegCard({
           hideLabel
           label={`סכום, ${account ?? label}`}
           prefix=""
+          placeholder="0"
           value={amount}
           disabled={disabled}
           describedBy={noteId}
@@ -308,9 +309,24 @@ export type CopyOption = {
   amount: string;
   /** The line counts as income: its amount is green. */
   income: boolean;
-  debit: string;
-  credit: string;
+  /** "name $amount" pairs, each kept on one line. */
+  debit: readonly string[];
+  credit: readonly string[];
 };
+
+function Pairs({ title, pairs }: { title: string; pairs: readonly string[] }) {
+  return (
+    <span className="ui-jc-label">
+      {`${title}: `}
+      {pairs.map((pair, index) => (
+        <span key={pair}>
+          {index > 0 ? " · " : null}
+          <span className="ui-jc-pair">{pair}</span>
+        </span>
+      ))}
+    </span>
+  );
+}
 
 /** כמו תנועה קודמת: the party's booked lines, each with its חובה and זכות; a pick copies it, scaled. */
 export function CopySheet({
@@ -355,8 +371,8 @@ export function CopySheet({
                 <span className="ui-jc-copy-title" data-clip-ok="">{option.title}</span>
                 <bdi className={option.income ? "ui-num ui-income" : "ui-num"} dir="ltr">{option.amount}</bdi>
               </span>
-              <span className="ui-jc-label">{`חובה: ${option.debit}`}</span>
-              <span className="ui-jc-label">{`זכות: ${option.credit}`}</span>
+              <Pairs title="חובה" pairs={option.debit} />
+              <Pairs title="זכות" pairs={option.credit} />
             </span>
             <span className="ui-radio" data-on={option.id === selectedId ? "true" : "false"} aria-hidden="true">
               {option.id === selectedId ? "✓" : ""}

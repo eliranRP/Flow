@@ -15,6 +15,7 @@ import type { ComposerApi } from "../line-composer-api";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { initialComposer, JournalComposerScreen, type ComposerState } from "./journal-composer-screen";
+import { journalEditable } from "./transaction-journal";
 
 /** FLOW-955. The composer: save waits for a balanced entry, books it, and keeps a refused entry. Invented data. */
 function renderComposer(initial: ComposerState, api: ComposerApi) {
@@ -116,6 +117,22 @@ describe("the journal entry composer", () => {
     if (first == null) throw new Error("side");
     fireEvent.click(first.querySelectorAll("button")[1] as HTMLButtonElement);
     expect(balance()).toBe("חסרים $12,000 בחובה");
+  });
+});
+
+describe("which lines get עריכה", () => {
+  const plain = { vat_amount: 0n, loan_split: null, in_pnl_override: null, review_status: "approved" as const, review_reason: null };
+  it("a plain posted line, and one whose split no longer matches the bank", () => {
+    expect(journalEditable(plain)).toBe(true);
+    expect(journalEditable({ ...plain, review_status: "open", review_reason: "split_mismatch" })).toBe(true);
+  });
+
+  it("not a line book_line always refuses: VAT, a loan split, a manual P&L switch, an open review", () => {
+    expect(journalEditable({ ...plain, vat_amount: 1_700n })).toBe(false);
+    expect(journalEditable({ ...plain, loan_split: { loan_id: "l1", loan_name: null, needs_review: false, by_parts: true, parts: [] } })).toBe(false);
+    expect(journalEditable({ ...plain, in_pnl_override: false })).toBe(false);
+    expect(journalEditable({ ...plain, in_pnl_override: true })).toBe(false);
+    expect(journalEditable({ ...plain, review_status: "open", review_reason: "missing_project" })).toBe(false);
   });
 });
 

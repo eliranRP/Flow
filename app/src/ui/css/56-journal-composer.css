@@ -195,7 +195,8 @@
 
 .ui-jc-picks {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* The account takes its own full row, so a mixed Hebrew and English name is not cut at 320 or 390. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
 }
 
@@ -240,7 +241,13 @@
   padding-inline-end: var(--space-1);
 }
 
+.ui-jc-amount .ui-money-field input::placeholder {
+  color: var(--color-text-muted);
+}
+
 .ui-jc-side {
+  /* The money field is LTR; חובה reads first, on the right, as on the board. */
+  direction: rtl;
   display: flex;
   flex: none;
   gap: var(--space-half);
@@ -250,6 +257,7 @@
 }
 
 .ui-jc-side button {
+  position: relative;
   min-block-size: calc(var(--touch-min) - var(--space-2));
   padding: 0 calc(var(--space-2) + var(--space-half));
   border: 0;
@@ -260,6 +268,13 @@
   font-size: var(--type-caption-size);
   font-weight: var(--type-btn-weight);
   cursor: pointer;
+}
+
+/* Drawn 36px, hit 44px: the hit grows into the field's own padding. */
+.ui-jc-side button::after {
+  content: "";
+  position: absolute;
+  inset: calc(var(--space-1) * -1) 0;
 }
 
 .ui-jc-side button[aria-checked="true"] {
@@ -375,4 +390,9 @@
 
 .ui-jc-copy-head .ui-num {
   flex: none;
+}
+
+/* A "name $amount" pair never breaks inside; the pairs wrap between them. */
+.ui-jc-pair {
+  white-space: nowrap;
 }

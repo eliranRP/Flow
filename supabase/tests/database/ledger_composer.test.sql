@@ -6,7 +6,7 @@
 -- what an MCP write booked. Company scoped throughout. Invented books only; USD cents.
 
 begin;
-select plan(53);
+select plan(56);
 
 do $u$ begin
   perform tests.create_supabase_user('lc_owner', 'lc-owner@example.com');
@@ -174,6 +174,20 @@ select throws_ok($$ select public.save_line_journal(pg_temp.id('txn_new'), jsonb
   'book_line: the bank leg must equal the line amount', 'the bank leg is the line''s amount');
 select throws_ok($$ select public.save_line_journal(pg_temp.id('txn_new'), '{}'::jsonb) $$,
   'validation', 'legs must be an array');
+-- The composer edits a booked line on book_line's accounts: a kept-out leg (Proceeds posts to Suspense)
+-- comes back on its category's own account, so the entry saves again as it is.
+select is((select e->>'book_account_id' from jsonb_array_elements(public.get_line_journal(pg_temp.id('txn_h1'))->'legs') e
+  where (e->>'amount_minor')::bigint = -15450000), pg_temp.id('a_proceeds')::text, 'a kept-out leg is edited on its category''s account');
+select is(jsonb_array_length(public.save_line_journal(pg_temp.id('txn_h1'), (
+  select jsonb_agg(jsonb_strip_nulls(jsonb_build_object('account_id', e->>'book_account_id',
+    'amount_minor', (e->>'amount_minor')::bigint, 'project_id', e->>'project_id')))
+  from jsonb_array_elements(public.get_line_journal(pg_temp.id('txn_h1'))->'legs') e))->'parts'), 2,
+  'the booked entry saves again unchanged');
+select tests.authenticate_as('lc_viewer');
+select throws_ok($$ select public.save_line_journal(pg_temp.id('txn_new'), jsonb_build_array(
+  pg_temp.leg('a_bank', 20000001), pg_temp.leg('a_closing', 600000), pg_temp.leg('a_proceeds', -20600001))) $$,
+  '42501', 'forbidden', 'a viewer cannot book');
+select tests.authenticate_as('lc_owner');
 select throws_ok($$ select public.save_line_journal(pg_temp.id('txn_foreign'), jsonb_build_array(
   pg_temp.leg('a_other_bank', 20000000), pg_temp.leg('a_closing', 100), pg_temp.leg('a_proceeds', -20000100))) $$,
   'transaction not found', 'another company''s line is not found');

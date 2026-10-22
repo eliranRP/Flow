@@ -491,12 +491,17 @@ as $$
           'category_name', lc.name,
           'project_id', l.project_id,
           'project_name', p.name,
-          'amount_minor', l.amount_minor
+          'amount_minor', l.amount_minor,
+          -- The account book_line takes for this leg (the composer edits on it): a kept-out leg on its
+          -- category's own account, a leg of a hidden ledger category on the system account it posts to.
+          'book_account_id', case when a.is_bank or coalesce(lc.hidden, false) then l.account_id
+                                  else coalesce(b.id, l.account_id) end
         ) order by l.ordinal)
       from public.legs l
       join public.accounts a on a.id = l.account_id and a.company_id = l.company_id
       left join public.categories c on c.id = a.category_id and c.company_id = a.company_id
       left join public.categories lc on lc.id = coalesce(l.category_id, a.category_id) and lc.company_id = l.company_id
+      left join public.accounts b on b.company_id = l.company_id and b.category_id = l.category_id
       left join public.projects p on p.id = l.project_id and p.company_id = l.company_id
       where l.company_id = p_company and l.transaction_id = t.id
     ), '[]'::jsonb),
@@ -540,7 +545,8 @@ $$;
 -- ---------------------------------------------------------------------------
 -- The non-bank legs of one line, in ledger order: a leg with a category is booked on that category's
 -- own account (a kept-out category's account posts to its balance-sheet account, as the leg did);
--- any other leg on its own account. Signed: a debit is positive.
+-- a hidden ledger category's leg and any other leg on its own account (the picker never lists a hidden
+-- category). Signed: a debit is positive.
 create or replace function private.journal_entry_legs(p_company uuid, p_transaction_id uuid)
 returns jsonb
 language sql
@@ -549,13 +555,14 @@ security definer
 set search_path = ''
 as $$
   select coalesce(jsonb_agg(jsonb_build_object(
-      'account_id', coalesce(b.id, l.account_id),
+      'account_id', case when coalesce(c.hidden, false) then l.account_id else coalesce(b.id, l.account_id) end,
       'project_id', l.project_id,
       'amount_minor', l.amount_minor
     ) order by l.ordinal), '[]'::jsonb)
   from public.legs l
   join public.accounts a on a.id = l.account_id and a.company_id = l.company_id
   left join public.accounts b on b.company_id = l.company_id and b.category_id = l.category_id
+  left join public.categories c on c.company_id = l.company_id and c.id = l.category_id
   where l.company_id = p_company and l.transaction_id = p_transaction_id and not a.is_bank;
 $$;
 
@@ -617,8 +624,9 @@ as $$
     where x.id = p_line and x.company_id = p_company and x.removed_at is null
       and (x.supplier_id is not null or x.customer_id is not null) and x.amount_gross <> 0
   ),
-  h as (
-    select x.id, x.doc_date, x.amount_gross, private.journal_entry_legs(p_company, x.id) as legs
+  -- The party's newest 200 lines (on its (company_id, supplier_id) index) before any legs are read.
+  cand as (
+    select x.id, x.doc_date, x.amount_gross
     from public.transactions x, t
     where x.company_id = p_company and x.id <> t.id and x.removed_at is null
       and x.line_status = 'posted' and x.direction = t.direction
@@ -627,6 +635,11 @@ as $$
       and case when t.supplier_id is not null then x.supplier_id = t.supplier_id
                else x.supplier_id is null and x.customer_id = t.customer_id end
     order by x.doc_date desc, x.id
+    limit 200
+  ),
+  h as (
+    select c.id, c.doc_date, c.amount_gross, private.journal_entry_legs(p_company, c.id) as legs
+    from cand c
   ),
   booked as (
     select h.*,
@@ -774,6 +787,11 @@ grant execute on function public.get_line_journal_copies(uuid) to authenticated;
 alter table private.mcp_writes
   add column reviewed_at timestamptz,
   add column reviewed_by uuid;
+
+-- The bookings waiting for review, per company and line, newest first (list_jev_bookings,
+-- private.jev_booking_waiting).
+create index mcp_writes_jev_waiting_idx on private.mcp_writes (company_id, transaction_id, created_at desc)
+  where kind in ('book_line', 'line_split') and undone_at is null and reviewed_at is null;
 
 comment on column private.mcp_writes.reviewed_at is
   'FLOW-955: an owner or editor approved (or undid) this book_line / line_split write in לאישור.';

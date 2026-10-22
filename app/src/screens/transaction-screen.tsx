@@ -39,7 +39,7 @@ import { ReservedMenuSlot, saveNewProject, useBlockedPreview, withChoice } from 
 import { TransactionTopBar } from "./transaction-top-bar";
 import { TxnFooter, TxnHead } from "./transaction-head";
 import { TxnRecurring } from "./transaction-recurring";
-import { TxnJournal, journalOpens, journalShown } from "./transaction-journal";
+import { TxnJournal, journalEditable, journalOpens, journalShown } from "./transaction-journal";
 import { useLineJournalQuery, type LineJournal } from "../line-journal";
 import { projectChoices } from "../project-groups";
 
@@ -577,8 +577,9 @@ export function TransactionScreen({
   const journal = sample ? (sampleJournal ?? null) : (journalQuery.data ?? null);
   const openJournal = journalShown(journal) && journalOpens(journal) ? journal : null;
   const quietJournal = journalShown(journal) && openJournal == null ? journal : null;
-  // FLOW-955: עריכה opens the composer; a viewer reads the entry only.
-  const journalEdit = holdWrites ? undefined : `/transactions/${txn.id}/journal${search}`;
+  // FLOW-955: עריכה opens the composer; a viewer reads the entry only, and a line book_line always
+  // refuses (VAT, a loan split, an open review, a manual P&L switch) shows no link.
+  const journalEdit = holdWrites || !journalEditable(txn) ? undefined : `/transactions/${txn.id}/journal${search}`;
   return frame(
     <>
       <TransactionTopBar

@@ -7,9 +7,10 @@ import {
   composerBalance,
   composerHold,
   composerRefusal,
-  copySideText,
+  copySidePairs,
   legNote,
   legsFromEntry,
+  legsFromJournal,
   nextLeg,
   undoParts,
   type ComposerLeg,
@@ -110,6 +111,19 @@ describe("the save and its undo", () => {
     ]);
   });
 
+  it("the line's own entry opens on book_line's accounts: a kept-out leg on its category's account, not the bank", () => {
+    const base = { account_type: "asset", system: true, in_pnl: false, category_name: null, project_name: null } as const;
+    const lines = legsFromJournal([
+      { ...base, ordinal: 1, account_id: "suspense", book_account_id: "proceeds", account_name: "Suspense", is_bank: false, project_id: "p1", amount_minor: -15_450_000n },
+      { ...base, ordinal: 2, account_id: "bank", book_account_id: "bank", account_name: "Bank", is_bank: true, amount_minor: 15_000_000n },
+      { ...base, ordinal: 3, account_id: "close", account_name: "Closing", account_type: "expense", system: false, in_pnl: true, is_bank: false, project_id: "p1", amount_minor: 450_000n },
+    ]);
+    expect(lines.map(({ accountId, side }) => ({ accountId, side }))).toEqual([
+      { accountId: "proceeds", side: "credit" },
+      { accountId: "close", side: "debit" },
+    ]);
+  });
+
   it("each refusal reads in the composer's words", () => {
     expect(composerRefusal("legs do not balance")).toBe("הפקודה לא מאוזנת. בדקו את הסכומים.");
     expect(composerRefusal("book_line: one category leg on an existing line — use assign_expense")).toMatch(/שיוך רגיל/);
@@ -119,11 +133,11 @@ describe("the save and its undo", () => {
 });
 
 describe("the copy sheet", () => {
-  it("writes a past line's sides compactly, the bank as בנק", () => {
+  it("writes a past line's sides as name and amount pairs, the bank as בנק", () => {
     const copy = SAMPLE_COPIES.lines[0];
     if (copy == null) throw new Error("sample");
     const money = (minor: bigint) => formatAmountText(minor, "USD", { detail: true });
-    expect(copySideText(copy, "debit", money)).toBe("בנק $150,000 · עלויות סגירה $4,500");
-    expect(copySideText(copy, "credit", money)).toBe("הלוואה · Example $154,500");
+    expect(copySidePairs(copy, "debit", money)).toEqual(["בנק $150,000", "עלויות סגירה $4,500"]);
+    expect(copySidePairs(copy, "credit", money)).toEqual(["הלוואה · Example $154,500"]);
   });
 });

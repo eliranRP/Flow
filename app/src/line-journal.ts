@@ -21,6 +21,8 @@ const legSchema = z.object({
   category_name: z.string().nullable(),
   /** FLOW-955: the composer starts from the line's own legs, on their projects. */
   project_id: z.string().nullable().optional(),
+  /** FLOW-955: the account book_line takes for this leg (a kept-out leg's category account), for the composer. */
+  book_account_id: z.string().optional(),
   project_name: z.string().nullable(),
   /** Signed: a debit is positive, a credit negative. */
   amount_minor: z.union([z.number(), z.string()]).transform((value) => BigInt(value)),

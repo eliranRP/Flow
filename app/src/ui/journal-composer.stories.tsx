@@ -68,8 +68,8 @@ export const CopyPicker: Story = {
       selectedId="t-1"
       onPick={noop}
       options={[
-        { id: "t-1", title: "Example Lending · 02/08", amount: "+$150,000", income: false, debit: "בנק $150,000 · עלויות סגירה $4,500", credit: "הלוואה · Example $154,500" },
-        { id: "t-2", title: "Example Lending · 11/05", amount: "+$180,000", income: false, debit: "בנק $180,000 · עלויות סגירה $5,400", credit: "הלוואה · Example $185,400" },
+        { id: "t-1", title: "Example Lending · 02/08", amount: "+$150,000", income: false, debit: ["בנק $150,000", "עלויות סגירה $4,500"], credit: ["הלוואה · Example $154,500"] },
+        { id: "t-2", title: "Example Lending · 11/05", amount: "+$180,000", income: false, debit: ["בנק $180,000", "עלויות סגירה $5,400"], credit: ["הלוואה · Example $185,400"] },
       ]}
     />
   ),

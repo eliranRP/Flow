@@ -3,20 +3,21 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { SAMPLE_JEV_BOOKINGS } from "../dev/journal-composer-sample";
-import { jevBookingFailure, parseJevBookings, type JevBookingApi } from "../jev-bookings";
+import { jevBookingFailure, parseJevBookings, type JevBooking, type JevBookingApi } from "../jev-bookings";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
-import { JEV_BOOKING_HINT, JevBookingReview } from "./jev-booking-review";
+import { JEV_BOOKING_DELETE_HINT, JEV_BOOKING_HINT, JevBookingReview } from "./jev-booking-review";
+import { ReviewAllList } from "./review-screen";
 
 /** FLOW-955 (board LedgerReviewCard). Jev's bookings in לאישור: אישור, ביטול, and what a refusal says. Invented data. */
-function renderReview(api: JevBookingApi) {
+function renderReview(api: JevBookingApi, bookings: readonly JevBooking[] = SAMPLE_JEV_BOOKINGS) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <ToastProvider>
         <BooksProvider>
           <MemoryRouter initialEntries={["/review"]}>
-            <JevBookingReview bookings={SAMPLE_JEV_BOOKINGS} queued={2} next={null} search="" api={api} sample />
+            <JevBookingReview bookings={bookings} queued={2} next={null} search="" api={api} sample />
           </MemoryRouter>
         </BooksProvider>
       </ToastProvider>
@@ -32,7 +33,7 @@ describe("Jev's booking in לאישור", () => {
     expect(screen.getByText(/פריט/).textContent).toBe("פריט 1 מתוך 4");
     expect(screen.getByText(/הבא בתור: Example Mortgage/)).toBeInTheDocument();
     expect(screen.getByText(JEV_BOOKING_HINT)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "עריכה" })).toHaveAttribute("href", "/transactions/t-loan/journal");
+    expect(screen.getByRole("link", { name: "עריכה" })).toHaveAttribute("href", "/transactions/t-loan/journal?from=review");
   });
 
   it("אישור keeps the booking", async () => {
@@ -49,6 +50,34 @@ describe("Jev's booking in לאישור", () => {
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     await waitFor(() => { expect(undo).toHaveBeenCalledWith("t-loan"); });
     expect(await screen.findByText("הפקודה של Jev בוטלה. התנועה חזרה לשיוך רגיל.")).toBeInTheDocument();
+  });
+
+  it("a booking that made the line says ביטול deletes it, and its toast says so", async () => {
+    const created = SAMPLE_JEV_BOOKINGS.map((booking): JevBooking => ({ ...booking, kind: "book_line" }));
+    const undo = vi.fn(() => Promise.resolve());
+    renderReview({ approve: vi.fn(), undo }, created);
+    expect(screen.getByText(JEV_BOOKING_DELETE_HINT)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    expect(await screen.findByText("הפקודה של Jev בוטלה והתנועה נמחקה.")).toBeInTheDocument();
+  });
+
+  it("the date reads dd/mm, as on the board", () => {
+    renderReview({ approve: vi.fn(), undo: vi.fn() });
+    expect(screen.getByText("16/10 · נכנס · שורת בנק")).toBeInTheDocument();
+  });
+
+  it("הצגת הכול lists Jev's bookings first, in the count", () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={["/review/all"]}>
+          <ReviewAllList rows={[]} bookings={SAMPLE_JEV_BOOKINGS} search="" backTo="/review" />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByText(/2 פריטים מחכים/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Example Lending/ })).toHaveAttribute("href", "/review");
+    expect(screen.getAllByText(/פקודת יומן של Jev/)).toHaveLength(2);
   });
 
   it("a line changed since, or a booking already handled, is final; a dropped connection retries", () => {

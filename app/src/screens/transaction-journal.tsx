@@ -1,3 +1,4 @@
+import type { TransactionDetail } from "@flow/shared";
 import { journalSides, legKeptOut, legName, legTypeLabel, type JournalLeg, type LineJournal } from "../line-journal";
 import { JournalCard, type JournalRow } from "../ui/journal-card";
 
@@ -18,6 +19,18 @@ export function journalRows(journal: LineJournal, bankName: string | null): { de
     keptOut: legKeptOut(leg),
   });
   return { debit: debit.map(row), credit: credit.map(row) };
+}
+
+/**
+ * FLOW-955: the composer can book this line. `save_line_journal` (book_line's rules) always refuses a
+ * line with VAT, a loan split, an open review (other than a split that no longer matches), or a manual
+ * switch in or out of the P&L, so such a line gets no עריכה.
+ */
+export function journalEditable(txn: Pick<NonNullable<TransactionDetail>, "vat_amount" | "loan_split" | "in_pnl_override" | "review_status" | "review_reason">): boolean {
+  if (txn.vat_amount !== 0n) return false;
+  if (txn.loan_split != null) return false;
+  if (txn.in_pnl_override != null) return false;
+  return !(txn.review_status === "open" && txn.review_reason !== "split_mismatch");
 }
 
 /** A line with a leg outside the P&L shows its journal open (owner, 2026-10-22). */
