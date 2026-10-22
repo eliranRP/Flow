@@ -219,6 +219,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-940"></a>[FLOW-940](tasks/FLOW-940.md) | A new company starts with Jev on, in auto, at 90% | SMALL CYCLE |
 | <a id="flow-942"></a>[FLOW-942](tasks/FLOW-942.md) | Under an iPhone notch, no header line is ever cut in half by the top bar | BUG |
 | <a id="flow-948"></a>[FLOW-948](tasks/FLOW-948.md) | Ledger foundation: balanced signed legs, reconciled in parallel to the P&L | BIG CYCLE |
+| <a id="flow-950"></a>[FLOW-950](tasks/FLOW-950.md) | MCP can use the ledger: list accounts, read legs, book an existing line, gross-up/contra legs | BIG CYCLE |
 
 ## MCP
 

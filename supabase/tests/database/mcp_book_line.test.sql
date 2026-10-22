@@ -4,7 +4,7 @@
 -- is idempotent and undoable. Invented data only. USD amounts are cents.
 
 begin;
-select plan(21);
+select plan(25);
 
 do $u$ begin
   perform tests.create_supabase_user('bl_owner', 'bl-owner@example.com');
@@ -115,6 +115,32 @@ select is(
    join public.accounts a on a.id=l.account_id
    where t.description='Top project bill' and a.category_id=(select id from public.categories where company_id=(select id from bl where label='co') and name='Repairs') limit 1),
   (select id from bl where label='south'), 'the category leg carries the top-level project');
+
+-- 6c. FLOW-950: a new line with gross-up legs. A Repairs cost and its contra credit on North, and a
+-- Rent credit on a payment (an income item netting the payment): credits share the bank leg's sign, so
+-- they are gross-up parts; the debit is a normal part.
+select ok((public.mcp_book_line('k8', '2026-06-12', 'expense', 'USD', 'Gross-up bill',
+  jsonb_build_array(
+    jsonb_build_object('account_id', (select id from bl where label='a_bank'), 'amount_minor', -6000),
+    jsonb_build_object('account_id', (select id from bl where label='a_repairs'), 'project_id', (select id from bl where label='north'), 'amount_minor', 9000),
+    jsonb_build_object('account_id', (select id from bl where label='a_repairs'), 'project_id', (select id from bl where label='north'), 'amount_minor', -2000),
+    jsonb_build_object('account_id', (select id from bl where label='a_rent'), 'project_id', (select id from bl where label='south'), 'amount_minor', -1000)
+  )))->>'ok' = 'true', 'a new line with a contra credit and an income credit is booked');
+select is(
+  (select string_agg(c.name || ':' || s.amount_minor || ':' || s.gross_up, ' ' order by s.ordinal)
+   from public.line_splits s join public.categories c on c.id = s.category_id
+   join public.transactions t on t.id = s.transaction_id where t.description = 'Gross-up bill'),
+  'Repairs:9000:false Repairs:2000:true Rent:1000:true', 'the credits are gross-up parts, the debit a normal part');
+select is(
+  (select string_agg(c.name || ':' || l.amount_net, ' ' order by c.name)
+   from private.pnl_lines l join public.categories c on c.id = l.category_id
+   join public.transactions t on t.id = l.transaction_id where t.description = 'Gross-up bill'),
+  'Rent:1000 Repairs:-9000 Repairs:2000', 'the P&L nets Repairs to -7000 and counts Rent +1000');
+select is(public.mcp_book_line('k9', '2026-06-12', 'expense', 'USD', 'Wrong kind',
+  jsonb_build_array(
+    jsonb_build_object('account_id', (select id from bl where label='a_bank'), 'amount_minor', -1000),
+    jsonb_build_object('account_id', (select id from bl where label='a_rent'), 'project_id', (select id from bl where label='south'), 'amount_minor', 1000)
+  ))->'error'->>'message', 'category kind must match the direction', 'one category leg of the other kind is refused');
 
 -- 7. Unbalanced legs are refused.
 select is(public.mcp_book_line('k3', '2026-06-10', 'expense', 'USD', 'Unbalanced',

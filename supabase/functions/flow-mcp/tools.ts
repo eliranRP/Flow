@@ -37,20 +37,12 @@ import {
   withLineMeta,
 } from "./tools_args.ts";
 import { ALLOWED, READ_TOOL_NAMES, SYNC_STATUS_TOOL, WRITE_TOOL_NAMES } from "./tools_schemas.ts";
-import {
-  countedPayments,
-  demandPaymentsOf,
-  demandTermsOf,
-  listedLoan,
-  loadLoanPayments,
-  loadLoans,
-  loanKindOf,
-  loansPaidRead,
-  storedLoanSchedule,
-} from "./tools_loans.ts";
+import { countedPayments, demandPaymentsOf, demandTermsOf, listedLoan, loadLoanPayments, loadLoans } from "./tools_loans.ts";
+import { loanKindOf, loansPaidRead, storedLoanSchedule } from "./tools_loans.ts";
 import { scopeAllows } from "./tools_specs.ts";
 import { projectForecastRead } from "./tools_project_forecast.ts";
 import { bankRead } from "./tools_bank.ts";
+import { LEDGER_READS, ledgerRead } from "./tools_ledger.ts";
 import { dashboard, filterReviews, forecastReport, israelMonthKey, projectRow, type Review, totalsOf, unpaidReport } from "./tools_reports.ts";
 import { syncStatus } from "./tools_sync.ts";
 import { callWrite } from "./tools_write.ts";
@@ -706,6 +698,7 @@ export async function callTool(
   if (name === "get_loans_paid") return loansPaidRead(args, rpc);
   if (name === "get_project_forecast_edits") return projectForecastRead(args, rpc);
   if (name === "list_bank_connections" || name === "list_transfer_matches") return bankRead(name, rpc);
+  if ((LEDGER_READS as readonly string[]).includes(name)) return ledgerRead(name as typeof LEDGER_READS[number], args, rpc);
 
   if (name === "get_loan_schedule") {
     const loanId = args.loan_id;

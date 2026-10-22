@@ -7,6 +7,7 @@ import { DATE, fail, isCalendarDate, shownKey, type ToolResult, UUID } from "./t
 import { FORECAST_ALLOWED } from "./tools_forecast_schemas.ts";
 import { PROJECT_FORECAST_ALLOWED } from "./tools_project_forecast.ts";
 import { BANK_ALLOWED } from "./tools_bank.ts";
+import { LEDGER_ALLOWED } from "./tools_ledger.ts";
 import { linePartSchema, linePartsProblem } from "./tools_split_schemas.ts";
 
 export const READ_TOOL_NAMES = [
@@ -46,6 +47,7 @@ export const READ_TOOL_NAMES = [
   "get_cash_years",
   "get_cash_lines",
   "match_lines", "get_forecast", "get_project_forecast_edits", "list_bank_connections", "list_transfer_matches",
+  "list_accounts", "get_line_legs",
 ] as const;
 
 /** Read tool that a write-only token may also call: it polls that token's own sync job. */
@@ -149,12 +151,12 @@ export const ALLOWED: Record<string, Set<string>> = {
   get_cash_years: new Set(),
   get_cash_lines: new Set(["month", "side", "currency", "limit", "offset"]),
   match_lines: new Set(["rows", "window_days", "direction", "currency"]),
-  ...FORECAST_ALLOWED, ...PROJECT_FORECAST_ALLOWED, ...BANK_ALLOWED,
+  ...FORECAST_ALLOWED, ...PROJECT_FORECAST_ALLOWED, ...BANK_ALLOWED, ...LEDGER_ALLOWED,
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
   set_expense_category: new Set(["idempotency_key", "transaction_id", "category_id"]),
-  create_manual_entry: new Set(["idempotency_key", "direction", "amount_minor", "doc_date", "payee", "project_id", "category_id", "method", "cheque_number"]), book_line: new Set(["idempotency_key", "doc_date", "direction", "currency", "description", "legs", "project_id"]),
+  create_manual_entry: new Set(["idempotency_key", "direction", "amount_minor", "doc_date", "payee", "project_id", "category_id", "method", "cheque_number"]), book_line: new Set(["idempotency_key", "transaction_id", "doc_date", "direction", "currency", "description", "legs", "project_id"]),
   attach_document: new Set(["idempotency_key", "transaction_id", "document"]),
   create_project: new Set(["idempotency_key", "name", "status", "type", "budget_minor"]),
   update_project: new Set(["idempotency_key", "id", "name", "type", "budget_minor", "status"]),
