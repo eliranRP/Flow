@@ -516,13 +516,13 @@ isOneToOne: false
                   ]
                 },"legs": {
                   Row: {
-                    "account_id": string,"amount_minor": number,"company_id": string,"created_at": string,"id": string,"ordinal": number,"project_id": string | null,"transaction_id": string
+                    "account_id": string,"amount_minor": number,"category_id": string | null,"company_id": string,"created_at": string,"gross_up": boolean,"id": string,"leg_kind": string,"loan_split_fallback": boolean,"ordinal": number,"part": Database["public"]['Enums']["loan_split_part"] | null,"project_explicit": boolean,"project_id": string | null,"transaction_id": string
                   }
                   Insert: {
-                    "account_id": string,"amount_minor": number,"company_id": string,"created_at"?: string,"id"?: string,"ordinal": number,"project_id"?: string | null,"transaction_id": string
+                    "account_id": string,"amount_minor": number,"category_id"?: string | null,"company_id": string,"created_at"?: string,"gross_up"?: boolean,"id"?: string,"leg_kind": string,"loan_split_fallback"?: boolean,"ordinal": number,"part"?: Database["public"]['Enums']["loan_split_part"] | null,"project_explicit"?: boolean,"project_id"?: string | null,"transaction_id": string
                   }
                   Update: {
-                    "account_id"?: string,"amount_minor"?: number,"company_id"?: string,"created_at"?: string,"id"?: string,"ordinal"?: number,"project_id"?: string | null,"transaction_id"?: string
+                    "account_id"?: string,"amount_minor"?: number,"category_id"?: string | null,"company_id"?: string,"created_at"?: string,"gross_up"?: boolean,"id"?: string,"leg_kind"?: string,"loan_split_fallback"?: boolean,"ordinal"?: number,"part"?: Database["public"]['Enums']["loan_split_part"] | null,"project_explicit"?: boolean,"project_id"?: string | null,"transaction_id"?: string
                   }
                   Relationships: [
                     {
@@ -530,6 +530,12 @@ isOneToOne: false
       columns: ["company_id","account_id"]
 isOneToOne: false
       referencedRelation: "accounts"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "legs_company_id_category_id_fkey"
+      columns: ["company_id","category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
       referencedColumns: ["company_id","id"]
     },{
       foreignKeyName: "legs_company_id_fkey"
