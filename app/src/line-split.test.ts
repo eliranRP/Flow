@@ -342,6 +342,31 @@ describe("gross-up split parts (FLOW-946, decision 0206)", () => {
     expect(contra.restMinor).toBe(0n);
   });
 
+  it("lets a normal and a gross-up part share a category and project, not two of one kind (FLOW-949)", () => {
+    // A payment of 1398.71: Build 2000, a Taxes cost of 249.48 and an 850.77 Taxes contra credit, one project.
+    const payCtx: LineContext = { lineMinor: 139_871n, lineCategoryId: "c-build", lineProjectId: null, isReversal: () => false };
+    const build: PartDraft = { key: "a", categoryId: "c-build", projectId: "p-a", unit: "amount", value: "2000" };
+    const cost: PartDraft = { key: "b", categoryId: "c-taxes", projectId: "p-a", unit: "amount", value: "249.48" };
+    const credit: PartDraft = { key: "c", categoryId: "c-taxes", projectId: "p-a", unit: "amount", value: "850.77", grossUp: true };
+    const ok = checkParts([build, cost, credit], { categoryId: null, projectId: null }, payCtx);
+    expect(ok.form).toBeNull();
+    expect(ok.parts).toEqual({});
+    expect(ok.restMinor).toBe(0n);
+    const normals = checkParts([build, cost, { ...credit, grossUp: false }], { categoryId: null, projectId: null }, payCtx);
+    expect(normals.parts.c).toBe("same category and project twice");
+    const grossUps = checkParts([build, { ...cost, grossUp: true }, credit], { categoryId: null, projectId: null }, payCtx);
+    expect(grossUps.parts.c).toBe("same category and project twice");
+    // The sample preview agrees with the server.
+    const payload = [
+      { category_id: "c-build", project_id: "p-a", amount_minor: 200_000 },
+      { category_id: "c-taxes", project_id: "p-a", amount_minor: 24_948 },
+      { category_id: "c-taxes", project_id: "p-a", amount_minor: 85_077, gross_up: true as const },
+    ];
+    expect(samplePreview(139_871n, "c-build", payload).map((r) => r.grossUp)).toEqual([false, false, true]);
+    const twoNormals = payload.map(({ category_id, project_id, amount_minor }) => ({ category_id, project_id, amount_minor }));
+    expect(() => samplePreview(139_871n, "c-build", twoNormals)).toThrow("same category and project twice");
+  });
+
   it("a split that overshoots even after a gross-up part is flagged over the line", () => {
     // proceeds 1100.00 added, cost 30.00 subtracted => 1070.00 used against a 970.00 line.
     const check = checkParts([

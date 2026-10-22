@@ -22,6 +22,8 @@ The two readings differ only by the category kind relative to the line, so the e
 
 The derived effect is reported by `get_line_split` (hence `get_expense`) per gross-up part. No value is stored, so `mcp_undo` restore, `line_split_parts` and `line_split_valid` are untouched; a split round-trips through undo unchanged.
 
+5. **D5 — one normal and one gross-up part per category and project** (amended 2026-10-22, FLOW-949). The per-line key that allows a category and project pair once now includes `gross_up`: a line may hold one normal and one gross-up part on the same category and project, so a cost and its contra credit can share them (this record's own example: Property taxes / a project, a 249.48 cost and an 850.77 contra credit, netting to a 601.29 credit). Two normal parts, or two gross-up parts, on one pair are still refused (`same category and project twice`). The key is the same in `split_line`'s schema, `save_line_split`, the `line_splits` unique constraint (`transaction_id, category_id, project_id, gross_up`, nulls not distinct), the editor's check and the category merge. The two parts are never summed: they stay separate rows, and their P&L amounts always carry opposite signs. No stored row changes.
+
 ## Alternatives rejected
 
 **Store the effect in a column.** The effect is a pure function of the category kind and the line direction, both already stored, so a column would be redundant state that could drift and would need a data migration. Deriving it at read time is smaller and cannot disagree with the P&L.
@@ -35,3 +37,4 @@ The derived effect is reported by `get_line_split` (hence `get_expense`) per gro
 - A category can end as a credit (a negative expense) or a reduced income through a single bank line, with the bank still showing one net amount.
 - A normal (opposite-kind) gross-up part and every legacy split, reversal and loan split are byte-identical; the output-pinning pgTAP (`main_screens_speed`, `pnl_scans_speed`) stays green.
 - `category_kind_mismatch` no longer fires for a gross-up part; the only new refusal path (an explicit `effect` that disagrees with the derived value) reuses `validation`.
+- (D5) A category merge moves a normal and a gross-up part of one pair side by side; it is still refused when two parts with the same flag would share a pair. A shared line's project cash settles its rounding per part, so two parts of one category (a cost and its contra credit) no longer mix their shares.

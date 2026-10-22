@@ -7,6 +7,7 @@ import { DATE, fail, isCalendarDate, shownKey, type ToolResult, UUID } from "./t
 import { FORECAST_ALLOWED } from "./tools_forecast_schemas.ts";
 import { PROJECT_FORECAST_ALLOWED } from "./tools_project_forecast.ts";
 import { BANK_ALLOWED } from "./tools_bank.ts";
+import { linePartSchema, linePartsProblem } from "./tools_split_schemas.ts";
 
 export const READ_TOOL_NAMES = [
   "list_projects",
@@ -255,41 +256,6 @@ export const assignExpenseSplitSchema = z.object({
   if (!sharesAreValid(body.shares)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom });
   }
-});
-// Each part gives exactly one of amount_minor (cents), percent (up to 4 decimals) or rest: true.
-// gross_up (FLOW-946, 0206) marks an opposite-sign part that nets against the line; exact amount
-// only. effect ('contra'|'normal', FLOW-947, 0207) is an optional gross-up-only marker (derived).
-const linePartSchema = z.object({
-  category_id: UUID_TEXT.optional(),
-  project_id: UUID_TEXT.nullable().optional(),
-  amount_minor: z.number().int().min(1).max(999_999_999_999_999).optional(),
-  percent: z.number().gt(0).max(100).refine((n) => Math.round(n * 10000) / 10000 === n).optional(),
-  rest: z.literal(true).optional(),
-  gross_up: z.boolean().optional(), effect: z.enum(["contra", "normal"]).optional(),
-}).strict().refine((part) =>
-  [part.amount_minor, part.percent, part.rest].filter((v) => v !== undefined).length === 1 &&
-  (part.rest === true || part.category_id !== undefined) &&
-  (part.gross_up !== true || part.amount_minor !== undefined) && (part.effect === undefined || part.gross_up === true)
-);
-// Two to 50 parts (or none, to clear), at most one rest, and a category and project pair once.
-function linePartsAreValid(parts: z.infer<typeof linePartSchema>[]): boolean {
-  if (parts.length === 1 || parts.length > 50) return false;
-  if (parts.filter((part) => part.rest).length > 1) return false;
-  const seen = new Set<string>();
-  for (const part of parts) {
-    if (part.category_id === undefined) continue;
-    const pair = `${part.category_id.toLowerCase()}|${(part.project_id ?? "").toLowerCase()}`;
-    if (seen.has(pair)) return false;
-    seen.add(pair);
-  }
-  return true;
-}
-export const splitLineSchema = z.object({
-  idempotency_key: IDEMPOTENCY_KEY,
-  transaction_id: UUID_TEXT,
-  parts: z.array(linePartSchema),
-}).strict().superRefine((body, ctx) => {
-  if (!linePartsAreValid(body.parts)) ctx.addIssue({ code: z.ZodIssueCode.custom });
 });
 export const categorySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -587,11 +553,13 @@ const batchItemSchema = z.object({
   if (item.parts != null) {
     // A split_line row takes only transaction_id and parts[] (FLOW-312).
     if (
-      item.shares != null || item.project_id != null || item.category_id != null ||
-      item.remember != null || !linePartsAreValid(item.parts)
+      item.shares != null || item.project_id != null || item.category_id != null || item.remember != null
     ) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "a parts row takes only transaction_id and parts" });
+      return;
     }
+    const problem = linePartsProblem(item.parts);
+    if (problem != null) ctx.addIssue({ code: z.ZodIssueCode.custom, message: problem, path: ["parts"] });
     return;
   }
   if (item.shares != null) {

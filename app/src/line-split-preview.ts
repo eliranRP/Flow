@@ -26,7 +26,8 @@ export function samplePreview(
     if (categoryId == null) throw new Error("line has no category for the rest");
     const projectId = part.project_id ?? null;
     const grossUp = "gross_up" in part && part.gross_up === true;
-    const pair = `${categoryId}|${projectId ?? ""}`;
+    // FLOW-949: one normal and one gross-up part may share a category and project.
+    const pair = `${categoryId}|${projectId ?? ""}${grossUp ? "|gross-up" : ""}`;
     if (seen.has(pair)) throw new Error("same category and project twice");
     seen.add(pair);
     if (grossUp) {

@@ -62,7 +62,6 @@ import {
   setOverheadProjectSchema,
   setProjectGroupSchema,
   setProjectInvestmentSchema,
-  splitLineSchema,
   syncBankSchema,
   undoBatchSchema,
   undoJevPrefillSchema,
@@ -71,6 +70,7 @@ import {
   WRITE_TOOL_NAMES,
 } from "./tools_schemas.ts";
 import { inviteMemberSchema, removeMemberSchema, setMemberRoleSchema } from "./tools_team_schemas.ts";
+import { invalidDetail, splitLineSchema } from "./tools_split_schemas.ts";
 import { addLoanWrite, attachLoanWrite, updateLoanWrite } from "./tools_loans.ts";
 import { syncBank } from "./tools_sync.ts";
 import { resetForecastSchema, setForecastItemSchema } from "./tools_forecast_schemas.ts";
@@ -350,7 +350,7 @@ export async function callWrite(
     };
   } else if (name === "split_line") {
     const parsed = splitLineSchema.safeParse(args);
-    if (!parsed.success) return fail("validation", "validation");
+    if (!parsed.success) return invalidDetail(parsed.error);
     rpcName = "mcp_split_line";
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
@@ -611,7 +611,7 @@ export async function callWrite(
     };
   } else if (name === "assign_expenses") {
     const parsed = assignExpensesSchema.safeParse(args);
-    if (!parsed.success) return fail("validation", "validation");
+    if (!parsed.success) return invalidDetail(parsed.error);
     rpcName = "mcp_assign_expenses";
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
