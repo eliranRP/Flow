@@ -105,6 +105,8 @@
 /profit/ /profit 301
 /cash/:month/:side/:currency /app-shell 200
 /cash/:month/:side/:currency/ /cash/:month/:side/:currency 301
+/transactions/:transactionId/journal /app-shell 200
+/transactions/:transactionId/journal/ /transactions/:transactionId/journal 301
 /transactions/:transactionId/split-category /app-shell 200
 /transactions/:transactionId/split-category/ /transactions/:transactionId/split-category 301
 /transactions/:transactionId /app-shell 200
