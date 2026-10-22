@@ -643,7 +643,7 @@ export const breakdownSchema = z
     excluded: z.array(breakdownSumSchema),
     /**
      * FLOW-954. By category: the kept-out categories (לא נספר ברווח), each with its loan part (principal,
-     * escrow or none). Older payloads omit it.
+     * escrow or none) and the account its lines post to. Older payloads omit it.
      */
     excluded_groups: z
       .array(
@@ -652,6 +652,9 @@ export const breakdownSchema = z
           name: z.string().nullable(),
           projects: z.number().int().nonnegative(),
           loan_part: z.string().nullable(),
+          /** The balance-sheet account its lines post to (FLOW-953 binding): asset or liability, and its name. */
+          account_type: z.string().nullish(),
+          account_name: z.string().nullish(),
         }),
       )
       .optional()

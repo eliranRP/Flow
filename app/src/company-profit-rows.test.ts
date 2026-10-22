@@ -80,6 +80,9 @@ describe("the kept-out group (FLOW-954)", () => {
     expect(keptOutTypeLabel("expense", "escrow")).toBe("נכס");
     expect(keptOutTypeLabel("expense", null)).toBe("נכס");
     expect(keptOutTypeLabel("income", null)).toBe("התחייבות");
+    // The bound account wins (FLOW-953): owner money out to Owner capital is a liability, a deposit held an asset.
+    expect(keptOutTypeLabel("expense", null, "liability")).toBe("התחייבות");
+    expect(keptOutTypeLabel("income", null, "asset")).toBe("נכס");
   });
 
   it("a row per kept-out category: its type, money in marked, its count with the project or how many, its lines", () => {
@@ -88,9 +91,9 @@ describe("the kept-out group (FLOW-954)", () => {
     });
     const rows = companyKeptOutCategories({
       keptOut: [
-        { key: "c-loan", name: "קבלת הלוואה", direction: "income", total: 20_650_000n, count: 1, projects: 1, loanPart: null },
-        { key: "c-principal", name: "קרן הלוואה", direction: "expense", total: 430_700n, count: 2, projects: 2, loanPart: "principal" },
-        { key: "c-buy", name: "רכישת נכס", direction: "expense", total: 100n, count: 1, projects: 1, loanPart: null },
+        { key: "c-loan", name: "קבלת הלוואה", direction: "income", total: 20_650_000n, count: 1, projects: 1, loanPart: null, accountType: null },
+        { key: "c-principal", name: "קרן הלוואה", direction: "expense", total: 430_700n, count: 2, projects: 2, loanPart: "principal", accountType: null },
+        { key: "c-buy", name: "רכישת נכס", direction: "expense", total: 100n, count: 1, projects: 1, loanPart: null, accountType: null },
       ],
       keptOutLines: [line("t1", "c-principal", "Alpha"), line("t2", "c-principal", "Beta"), line("t3", "c-buy", "Gamma")],
     });

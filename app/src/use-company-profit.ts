@@ -47,7 +47,17 @@ export type ProfitLine = {
 };
 
 /** FLOW-954. A kept-out category for one direction: its total positive on its side, and its loan part. */
-export type ProfitKeptOutRow = { key: string; name: string; direction: BreakdownDirection; total: bigint; count: number; projects: number; loanPart: string | null };
+export type ProfitKeptOutRow = {
+  key: string;
+  name: string;
+  direction: BreakdownDirection;
+  total: bigint;
+  count: number;
+  projects: number;
+  loanPart: string | null;
+  /** The ledger account its lines post to: asset or liability (null on an older payload). */
+  accountType: string | null;
+};
 
 /**
  * The lines of one category group, as the read returned them (unsigned, on the group's direction). `keptOut`: every
@@ -120,7 +130,7 @@ export function buildProfitModel(inputs: ProfitInputs, overhead: OverheadProject
   for (const direction of ["income", "expense"] as const) {
     for (const group of inputs.categories[direction]?.excluded_groups ?? []) {
       if (group.currency !== currency) continue;
-      keptOut.push({ key: group.key, name: group.name ?? "", direction, total: group.amount_minor, count: group.count, projects: group.projects, loanPart: group.loan_part });
+      keptOut.push({ key: group.key, name: group.name ?? "", direction, total: group.amount_minor, count: group.count, projects: group.projects, loanPart: group.loan_part, accountType: group.account_type ?? null });
     }
   }
   keptOut.sort(byMagnitude((row) => row.total, (a, b) => a.name.localeCompare(b.name)));

@@ -39,7 +39,9 @@ describe("the line's journal (FLOW-954)", () => {
     expect(legName(bank, "Example Checking ••1234")).toBe("Example Checking ••1234");
     expect(legName(bank, null)).toBe("בנק");
     expect(legName(escrow, null)).toBe("אסקרו");
-    expect(legName({ account_name: "Loan principal", is_bank: false, system: true }, null)).toBe("קרן הלוואה");
+    expect(legName({ account_name: "Loan principal", is_bank: false, system: true, category_name: null }, null)).toBe("קרן הלוואה");
+    // A kept-out leg on a system account names the category that posted there (FLOW-953 binding).
+    expect(legName({ account_name: "Property", is_bank: false, system: true, category_name: "רכישת נכס" }, null)).toBe("נדל״ן · רכישת נכס");
     expect(legName(interest, null)).toBe("ריבית");
     expect([interest, escrow, bank].map(legTypeLabel)).toEqual(["הוצאה", "נכס", "בנק"]);
     expect(legTypeLabel({ account_type: "liability", is_bank: false })).toBe("התחייבות");

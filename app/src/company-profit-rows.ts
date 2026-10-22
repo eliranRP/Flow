@@ -58,12 +58,14 @@ export function companyCategoryGroups(model: Pick<ProfitModel, "categories" | "l
 }
 
 /**
- * FLOW-954. The ledger account type a kept-out category's lines land on, in the drill-down's words: a loan's
- * principal is a liability (התחייבות) and escrow an asset (נכס), as the ledger books them (decision 0208);
- * any other kept-out category is money in that is owed (a loan received, owner money: התחייבות) or money out
- * that is held (a purchase: נכס).
+ * FLOW-954. The ledger account type a kept-out category's lines land on, in the drill-down's words: the account
+ * the category is bound to (FLOW-953: Property, Owner capital, Transfers in transit, …) when the read names it;
+ * otherwise, on an older payload, a loan's principal is a liability (התחייבות) and escrow an asset (נכס), and any
+ * other kept-out category is money in that is owed (התחייבות) or money out that is held (נכס).
  */
-export function keptOutTypeLabel(direction: "income" | "expense", loanPart: string | null): string {
+export function keptOutTypeLabel(direction: "income" | "expense", loanPart: string | null, accountType: string | null = null): string {
+  if (accountType === "liability") return "התחייבות";
+  if (accountType === "asset") return "נכס";
   if (loanPart === "principal") return "התחייבות";
   if (loanPart === "escrow") return "נכס";
   return direction === "income" ? "התחייבות" : "נכס";
@@ -80,7 +82,7 @@ export function companyKeptOutCategories(model: Pick<ProfitModel, "keptOut" | "k
     return {
       key: `kept:${row.direction}:${row.key}`,
       name: row.name,
-      type: keptOutTypeLabel(row.direction, row.loanPart),
+      type: keptOutTypeLabel(row.direction, row.loanPart, row.accountType),
       total: row.total,
       moneyIn: row.direction === "income",
       meta: [countWord(row.count), project].filter(Boolean).join(" · "),

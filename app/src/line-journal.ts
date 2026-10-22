@@ -17,6 +17,8 @@ const legSchema = z.object({
   system: z.boolean(),
   is_bank: z.boolean(),
   in_pnl: z.boolean(),
+  /** The leg's own category, live (a kept-out leg on a system account names it too). */
+  category_name: z.string().nullable(),
   project_name: z.string().nullable(),
   /** Signed: a debit is positive, a credit negative. */
   amount_minor: z.union([z.number(), z.string()]).transform((value) => BigInt(value)),
@@ -57,6 +59,8 @@ export function legTypeLabel(leg: Pick<JournalLeg, "account_type" | "is_bank">):
 const SYSTEM_NAMES: Record<string, string> = {
   "Loan principal": "קרן הלוואה",
   Escrow: "אסקרו",
+  Property: "נדל״ן",
+  "Transfers in transit": "העברות בדרך",
   "Owner capital": "השקעת בעלים",
   "Security deposit held": "פיקדון שהתקבל",
   Suspense: "חשבון מעבר",
@@ -65,11 +69,15 @@ const SYSTEM_NAMES: Record<string, string> = {
   "Uncategorized expense": "הוצאה בלי קטגוריה",
 };
 
-/** A leg's name: the bank account the line moved through, a system account in Hebrew, or the category. */
-export function legName(leg: Pick<JournalLeg, "account_name" | "is_bank" | "system">, bankName: string | null): string {
+/**
+ * A leg's name: the bank account the line moved through; a system account in Hebrew, with the category that
+ * posted there ("אסקרו · מסים וביטוח"); or the category.
+ */
+export function legName(leg: Pick<JournalLeg, "account_name" | "is_bank" | "system" | "category_name">, bankName: string | null): string {
   if (leg.is_bank) return bankName ?? "בנק";
-  if (leg.system) return SYSTEM_NAMES[leg.account_name] ?? leg.account_name;
-  return leg.account_name;
+  if (!leg.system) return leg.account_name;
+  const account = SYSTEM_NAMES[leg.account_name] ?? leg.account_name;
+  return leg.category_name != null && leg.category_name !== account ? `${account} · ${leg.category_name}` : account;
 }
 
 /** A leg kept out of profit: neither the bank nor an income or expense account. */

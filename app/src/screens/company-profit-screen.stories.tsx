@@ -86,8 +86,8 @@ export const ByCategory: Story = {
 
 /** FLOW-954: invented kept-out categories and their lines (a purchase, a loan received, principal and escrow). */
 const KEPT_OUT_SAMPLE: CompanyProfitSample = (() => {
-  const group = (key: string, name: string, amount: bigint, count: number, projects: number, loanPart: string | null) => ({
-    currency: "USD", key, name, amount_minor: amount, count, projects, loan_part: loanPart,
+  const group = (key: string, name: string, amount: bigint, count: number, projects: number, loanPart: string | null, account: [string, string]) => ({
+    currency: "USD", key, name, amount_minor: amount, count, projects, loan_part: loanPart, account_type: account[0], account_name: account[1],
   });
   const row = (id: string, supplier: string, project: string, categoryId: string, amount: bigint, date: string) => ({
     transaction_id: id, part: null, description: supplier, supplier_name: supplier, project_name: project, category_name: null,
@@ -97,13 +97,13 @@ const KEPT_OUT_SAMPLE: CompanyProfitSample = (() => {
   return {
     ...COMPANY_PROFIT_SAMPLE,
     categories: {
-      income: income == null ? null : { ...income, excluded_groups: [group("k-loan-in", "קבלת הלוואה", 20_650_000n, 1, 1, null)] },
+      income: income == null ? null : { ...income, excluded_groups: [group("k-loan-in", "קבלת הלוואה", 20_650_000n, 1, 1, null, ["liability", "Loan principal"])] },
       expense: expense == null ? null : {
         ...expense,
         excluded_groups: [
-          group("k-buy", "רכישת נכס", 8_034_700n, 1, 1, null),
-          group("k-principal", "קרן הלוואה", 430_700n, 2, 2, "principal"),
-          group("k-escrow", "אסקרו", 96_300n, 2, 2, "escrow"),
+          group("k-buy", "רכישת נכס", 8_034_700n, 1, 1, null, ["asset", "Property"]),
+          group("k-principal", "קרן הלוואה", 430_700n, 2, 2, "principal", ["liability", "Loan principal"]),
+          group("k-escrow", "אסקרו", 96_300n, 2, 2, "escrow", ["asset", "Escrow"]),
         ],
       },
     },

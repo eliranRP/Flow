@@ -63,6 +63,7 @@ const leg = (ordinal: number, name: string, type: "income" | "expense" | "asset"
   system: false,
   is_bank: false,
   in_pnl: type === "income" || type === "expense",
+  category_name: type === "income" || type === "expense" ? name : null,
   project_name: null,
   amount_minor: amount,
   ...extra,
@@ -96,8 +97,8 @@ const loanJournal: LineJournal = {
   booked_by_ai: true,
   legs: [
     leg(1, "ריבית משכנתא", "expense", 140_000n, { project_name: "פרויקט רעננה" }),
-    leg(2, "Escrow", "asset", 60_000n, { system: true, project_name: "פרויקט רעננה" }),
-    leg(3, "Loan principal", "liability", 35_000n, { system: true, project_name: "פרויקט רעננה" }),
+    leg(2, "Escrow", "asset", 60_000n, { system: true, project_name: "פרויקט רעננה", category_name: "אסקרו" }),
+    leg(3, "Loan principal", "liability", 35_000n, { system: true, project_name: "פרויקט רעננה", category_name: "תשלומי הלוואה" }),
     leg(4, "Bank/Clearing", "asset", -235_000n, { system: true, is_bank: true }),
   ],
 };

@@ -5,7 +5,7 @@
 -- excluded are pinned before and after. Invented books only; USD cents.
 
 begin;
-select plan(30);
+select plan(35);
 
 do $u$ begin
   perform tests.create_supabase_user('lj_owner', 'lj-owner@example.com');
@@ -96,6 +96,7 @@ select is(public.get_line_journal(pg_temp.id('txn_pay')) ->> 'booked_by_ai', 'fa
 select is(pg_temp.leg('txn_buy', 'Suspense') ->> 'account_type', 'asset', 'a kept-out purchase is an asset leg');
 select is(pg_temp.leg('txn_buy', 'Suspense') ->> 'in_pnl', 'false', 'the kept-out leg is not in profit');
 select is(pg_temp.leg('txn_buy', 'Suspense') ->> 'system', 'true', 'the kept-out leg is a system account');
+select is(pg_temp.leg('txn_buy', 'Suspense') ->> 'category_name', 'Purchase', 'the kept-out leg names its own category');
 select is(pg_temp.leg('txn_princ', 'Loan principal') ->> 'account_type', 'liability', 'principal is a liability leg');
 
 -- Renaming the category renames the leg (the live name).
@@ -125,6 +126,10 @@ select is((select (g ->> 'amount_minor')::bigint from xg where g ->> 'key' = pg_
   8034714::bigint, 'the purchase is a kept-out group with its sum');
 select is((select g ->> 'loan_part' from xg where g ->> 'key' = pg_temp.id('principal')::text),
   'principal', 'the principal group carries its loan part');
+select is((select g ->> 'account_type' from xg where g ->> 'key' = pg_temp.id('principal')::text),
+  'liability', 'principal posts to a liability account');
+select is((select g ->> 'account_name' from xg where g ->> 'key' = pg_temp.id('purchase')::text),
+  'Suspense', 'an unbound kept-out category posts to Suspense');
 select is((select sum((g ->> 'amount_minor')::bigint) from xg),
   (select sum((e ->> 'amount_minor')::bigint) from jsonb_array_elements(
     public.get_breakdown('expense', '2026-06-01', '2026-06-30', 'category') -> 'excluded') e),
@@ -145,6 +150,17 @@ select is(
      jsonb_array_elements(b -> 'groups') g
    where g ->> 'key' = pg_temp.id('build')::text),
   '260000/3|260000|8069714', 'groups, totals and excluded keep their figures');
+
+-- A category bound to a balance-sheet account (FLOW-953): its legs and its group name that account.
+reset role;
+update public.categories set ledger_account_id = (
+  select a.id from public.accounts a where a.company_id = pg_temp.id('co') and a.name = 'Property' and a.category_id is null)
+where id = pg_temp.id('purchase');
+select tests.authenticate_as('lj_owner');
+select is(pg_temp.leg('txn_buy', 'Property') ->> 'account_type', 'asset', 'a bound category''s leg is on its account');
+select is((select g ->> 'account_name' from jsonb_array_elements(
+    public.get_breakdown('expense', '2026-06-01', '2026-06-30', 'category') -> 'excluded_groups') g
+  where g ->> 'key' = pg_temp.id('purchase')::text), 'Property', 'its kept-out group names the bound account');
 
 select * from finish();
 rollback;

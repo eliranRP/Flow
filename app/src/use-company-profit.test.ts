@@ -87,7 +87,7 @@ describe("gross-up drill-down lines (FLOW-947)", () => {
 describe("kept-out categories and lines (FLOW-954)", () => {
   it("reads the kept-out groups in the company currency, and keeps their lines out of the counted list", () => {
     const expense: Breakdown = {
-      ...read("expense", []),
+      ...(read("expense", []) as NonNullable<Breakdown>),
       group_by: "category",
       excluded_groups: [
         { currency: "USD", key: "c-principal", name: "קרן הלוואה", amount_minor: 35_000n, count: 1, projects: 1, loan_part: "principal" },
