@@ -8,7 +8,7 @@ import { IDEMPOTENCY_KEY, UUID_TEXT, visibleName } from "./tools_schemas.ts";
 // negative), not a P&L amount; the server routes it by its account's type.
 const legSchema = z.object({
   account_id: UUID_TEXT,
-  amount_minor: z.number().int().min(-999999999999).max(999999999999),
+  amount_minor: z.number().int().min(-999999999999999).max(999999999999999),
   project_id: UUID_TEXT.nullable().optional(),
 }).strict();
 

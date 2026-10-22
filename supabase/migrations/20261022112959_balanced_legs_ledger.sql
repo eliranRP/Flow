@@ -328,8 +328,11 @@ as $$
   group by l.transaction_id, a.category_id, l.project_id, a.type;
 $$;
 
+-- No authenticated grant: only definers (mcp_book_line) and the test harness (as owner) call this,
+-- and it trusts its p_company arg. Keeping it off authenticated stops a future public wrapper from
+-- forwarding an attacker's company id.
 revoke all on function private.legs_pnl_projection(uuid) from public, anon, authenticated;
-grant execute on function private.legs_pnl_projection(uuid) to authenticated, service_role;
+grant execute on function private.legs_pnl_projection(uuid) to service_role;
 
 -- ---------------------------------------------------------------------------
 -- 7. Maintenance triggers: keep the legs in sync when the legacy tables are written by the
@@ -640,7 +643,7 @@ begin
       cid, p_direction::public.txn_direction, 'receipt', 'project', 'posted', p_currency,
       bank_amt, bank_amt, abs(bank_amt), 0, 'source', p_doc_date, p_doc_date,
       'manual', 'book:' || gen_random_uuid()::text,
-      case when content = 1 then line_proj else p_project_id end,
+      case when content = 1 then coalesce(line_proj, p_project_id) else p_project_id end,
       case when content = 1 then line_cat else null end,
       btrim(p_description), true
     )
@@ -658,9 +661,15 @@ begin
 
     -- Self-check: the legs the maintenance trigger derived must project exactly to the requested
     -- income/expense legs (per category/project). Otherwise refuse — never mis-book.
+    -- A content leg with no project of its own takes the line's top-level project (as the booked
+    -- legacy row does: the whole-line keeps the line project, and a split part with no project
+    -- inherits it), so the request and the derived projection agree on the effective project.
     want := coalesce((
-      select jsonb_agg(jsonb_build_object('c', a.category_id, 'p', nullif(e.value->>'project_id',''), 'n', -(e.value->>'amount_minor')::bigint)
-        order by a.category_id::text, coalesce(e.value->>'project_id',''))
+      select jsonb_agg(jsonb_build_object(
+          'c', a.category_id,
+          'p', coalesce(nullif(e.value->>'project_id', '')::uuid, p_project_id)::text,
+          'n', -(e.value->>'amount_minor')::bigint)
+        order by a.category_id::text, coalesce(nullif(e.value->>'project_id', '')::uuid, p_project_id)::text)
       from jsonb_array_elements(p_legs) e
       join public.accounts a on a.id = (e.value->>'account_id')::uuid and a.company_id = cid
       where not a.is_bank
@@ -698,6 +707,32 @@ $$;
 
 revoke all on function public.mcp_book_line(text, date, text, text, text, jsonb, uuid) from public, anon, authenticated, service_role;
 grant execute on function public.mcp_book_line(text, date, text, text, text, jsonb, uuid) to authenticated;
+
+-- book_line's refusal reasons are safe to surface so an AI caller can self-correct; add them to
+-- private.mcp_refused's allowlist with a counted anchor. 'account not found' stays generic on
+-- purpose (it must not leak whether another company's account exists).
+do $r$
+declare
+  def text;
+  anchor constant text := $a$        'a gross-up part needs a project',$a$;
+begin
+  def := pg_get_functiondef('private.mcp_refused(text)'::regprocedure);
+  if def is null or position('book_line' in def) > 0
+    or (length(def) - length(replace(def, anchor, ''))) / length(anchor) <> 1
+  then
+    raise exception 'mcp_refused is not the expected definition';
+  end if;
+  def := replace(def, anchor, anchor || $a$
+        -- FLOW-948 (decision 0208): book_line self-correction hints (no existence leak).
+        'legs do not balance',
+        'exactly one bank leg is required',
+        'at least one category leg is required',
+        'the bank leg sign must match the direction',
+        'book_line: unsupported account for a phase-1 booking',
+        'book_line: could not represent the legs in the ledger',$a$);
+  execute def;
+end
+$r$;
 
 -- ---------------------------------------------------------------------------
 -- 9. The 'book_line' undo kind, patched into public.mcp_undo with counted anchors (so a future

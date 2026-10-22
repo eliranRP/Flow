@@ -4,7 +4,7 @@
 -- is idempotent and undoable. Invented data only. USD amounts are cents.
 
 begin;
-select plan(14);
+select plan(21);
 
 do $u$ begin
   perform tests.create_supabase_user('bl_owner', 'bl-owner@example.com');
@@ -91,11 +91,30 @@ select is(
    join public.transactions t on t.id=s.transaction_id where t.description='A split bill')::bigint,
   2::bigint, 'the split booking created two line_splits');
 
--- 6. Its projection matches the request (Repairs -5000, Closing -3000).
+-- 6. Its projection matches the request (Repairs -5000, Closing -3000). The projection is not
+-- granted to authenticated, so read it as the owner.
+reset role;
 select is(
   (select sum(amount_net) from private.legs_pnl_projection((select id from bl where label='co')) p
    where p.transaction_id=(select id from public.transactions where description='A split bill'))::bigint,
   -8000::bigint, 'the split booking projects to -8000 total');
+set local role authenticated;
+
+-- 6b. A single category leg with NO project of its own + a top-level project_id: the booked line
+-- lands in that project (not overhead), and reconciles. (The RPC's 7th arg is p_project_id.)
+select ok((public.mcp_book_line('k7', '2026-06-10', 'expense', 'USD', 'Top project bill',
+  jsonb_build_array(
+    jsonb_build_object('account_id', (select id from bl where label='a_bank'), 'amount_minor', -2000),
+    jsonb_build_object('account_id', (select id from bl where label='a_repairs'), 'amount_minor', 2000)
+  ), (select id from bl where label='south')))->>'ok' = 'true', 'a single-category booking honors the top-level project_id');
+select is(
+  (select t.project_id from public.transactions t where t.description='Top project bill' and t.source='manual' limit 1),
+  (select id from bl where label='south'), 'the booked line lands in the top-level project, not overhead');
+select is(
+  (select l.project_id from public.legs l join public.transactions t on t.id=l.transaction_id
+   join public.accounts a on a.id=l.account_id
+   where t.description='Top project bill' and a.category_id=(select id from public.categories where company_id=(select id from bl where label='co') and name='Repairs') limit 1),
+  (select id from bl where label='south'), 'the category leg carries the top-level project');
 
 -- 7. Unbalanced legs are refused.
 select is(public.mcp_book_line('k3', '2026-06-10', 'expense', 'USD', 'Unbalanced',
@@ -124,6 +143,29 @@ select is(public.mcp_book_line('k6', '2026-06-10', 'expense', 'USD', 'Kept out',
     jsonb_build_object('account_id', (select id from bl where label='a_bank'), 'amount_minor', -5000),
     jsonb_build_object('account_id', (select id from bl where label='a_draw'), 'amount_minor', 5000)
   ))->>'ok', 'false', 'an excluded-category booking is refused in phase-1');
+
+-- 10b. The specific refusal reasons surface so an AI caller can self-correct (FLOW-948); a
+-- cross-company account stays generic so it does not leak whether that account exists.
+select is(public.mcp_book_line('m1', '2026-06-10', 'expense', 'USD', 'Unbalanced2',
+  jsonb_build_array(
+    jsonb_build_object('account_id', (select id from bl where label='a_bank'), 'amount_minor', -5000),
+    jsonb_build_object('account_id', (select id from bl where label='a_repairs'), 'amount_minor', 4000)
+  ))->'error'->>'message', 'legs do not balance', 'the balance reason surfaces');
+select is(public.mcp_book_line('m2', '2026-06-10', 'expense', 'USD', 'NoBank2',
+  jsonb_build_array(
+    jsonb_build_object('account_id', (select id from bl where label='a_repairs'), 'amount_minor', 5000),
+    jsonb_build_object('account_id', (select id from bl where label='a_closing'), 'amount_minor', -5000)
+  ))->'error'->>'message', 'exactly one bank leg is required', 'the bank-leg reason surfaces');
+select is(public.mcp_book_line('m3', '2026-06-10', 'expense', 'USD', 'KeptOut2',
+  jsonb_build_array(
+    jsonb_build_object('account_id', (select id from bl where label='a_bank'), 'amount_minor', -5000),
+    jsonb_build_object('account_id', (select id from bl where label='a_draw'), 'amount_minor', 5000)
+  ))->'error'->>'message', 'book_line: unsupported account for a phase-1 booking', 'the phase-1 reason surfaces');
+select is(public.mcp_book_line('m4', '2026-06-10', 'expense', 'USD', 'Xco2',
+  jsonb_build_array(
+    jsonb_build_object('account_id', (select id from bl where label='a_other_bank'), 'amount_minor', -5000),
+    jsonb_build_object('account_id', (select id from bl where label='a_repairs'), 'amount_minor', 5000)
+  ))->'error'->>'message', 'The write was refused.', 'a cross-company account stays generic (no existence leak)');
 
 -- 11. Idempotency: the same key replays the first result, no second line.
 select is(public.mcp_book_line('k1', '2026-06-10', 'expense', 'USD', 'A repair bill',
