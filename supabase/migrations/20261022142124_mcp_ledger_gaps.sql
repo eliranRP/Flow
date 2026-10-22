@@ -338,6 +338,9 @@ begin
       ) then
         raise exception 'line has an open review';
       end if;
+      if line.in_pnl_override is false then
+        raise exception 'book_line: the line is kept out of the P&L';
+      end if;
     end if;
     if p_project_id is not null
       and not exists (select 1 from public.projects p where p.id = p_project_id and p.company_id = cid)
@@ -420,7 +423,10 @@ begin
     into parts, part_count
     from (
       select a.category_id,
-        coalesce(nullif(e.value->>'project_id', '')::uuid, p_project_id) as project_id,
+        -- A normal part with no project stays on the line's project (and role); a gross-up part must
+        -- name one, so it falls back to the line's project.
+        coalesce(nullif(e.value->>'project_id', '')::uuid, p_project_id,
+          case when sign((e.value->>'amount_minor')::bigint) = sign(bank_amt) then default_project end) as project_id,
         sign((e.value->>'amount_minor')::bigint) = sign(bank_amt) as gross_up,
         sum(abs((e.value->>'amount_minor')::bigint)) as amount_minor,
         min(e.ord) as first_at
@@ -563,7 +569,8 @@ begin
         'book_line: direction does not match the line',
         'book_line: the bank leg must equal the line amount',
         'book_line: a line with VAT is a later phase',
-        'book_line: one category leg on an existing line — use assign_expense',$a$);
+        'book_line: one category leg on an existing line — use assign_expense',
+        'book_line: the line is kept out of the P&L',$a$);
   execute def;
 end
 $r$;

@@ -6,7 +6,7 @@
 -- cents.
 
 begin;
-select plan(60);
+select plan(62);
 
 do $u$ begin
   perform tests.create_supabase_user('lg_owner', 'lg-owner@example.com');
@@ -65,6 +65,9 @@ select pg_temp.line('vat', 'co', -11700, -1700);
 select pg_temp.line('rev', 'co', -20000);
 select pg_temp.line('loan', 'co', -30000);
 select pg_temp.line('pend', 'co', -10000, 0, 'pending');
+select pg_temp.line('keptline', 'co', -20000);
+select pg_temp.line('pay4', 'co', -40000);
+update public.transactions set in_pnl_override = false where id = pg_temp.id('txn_keptline');
 select pg_temp.line('foreign', 'other_co', -139871);
 
 insert into public.review_queue (company_id, transaction_id, status, reason)
@@ -219,10 +222,12 @@ select is(pg_temp.pnl('txn_pay2', 'build', 'beta'), -60000::bigint, 'Build is -6
 select is(pg_temp.book('lg-b2', 'txn_pay3', jsonb_build_array(
   pg_temp.leg('bank', -40000), pg_temp.leg('build', 30000, 'beta'), pg_temp.leg('otherinc', 10000)))->'error'->>'message',
   'a reversal part needs a project', 'an income debit with no project is refused by the split rules');
--- A gross-up part names its own project (the line's does not count), as split_line says.
-select is(pg_temp.book('lg-b3', 'txn_pay3', jsonb_build_array(
-  pg_temp.leg('bank', -40000), pg_temp.leg('build', 50000), pg_temp.leg('taxes', -10000)))->'error'->>'message',
-  'a gross-up part needs a project', 'a contra credit with no project is refused by the split rules');
+-- A gross-up leg with no project takes the line's project (a normal one stays on the line, unnamed).
+select is(pg_temp.book('lg-b3', 'txn_pay4', jsonb_build_array(
+  pg_temp.leg('bank', -40000), pg_temp.leg('build', 50000), pg_temp.leg('taxes', -10000)))->>'ok',
+  'true', 'a contra credit with no project books on the line''s project');
+select is(pg_temp.parts_of('txn_pay4'), 'build/-/50000/false taxes/beta/10000/true',
+  'the normal part stays unnamed, the gross-up part takes the line''s project');
 
 -- ---------------------------------------------------------------------------
 -- (c) Refusals.
@@ -248,6 +253,9 @@ select is(pg_temp.book('lg-c6', 'txn_foreign', jsonb_build_array(
 select is(pg_temp.book('lg-c7', 'txn_pay3', jsonb_build_array(
   pg_temp.leg('bank', -40000), pg_temp.leg('taxes', 40000, 'alpha')))->'error'->>'message',
   'book_line: one category leg on an existing line — use assign_expense', 'one content leg on an existing line points to assign_expense');
+select is(pg_temp.book('lg-c11', 'txn_keptline', jsonb_build_array(
+  pg_temp.leg('bank', -20000), pg_temp.leg('build', 10000, 'beta'), pg_temp.leg('taxes', 10000, 'alpha')))->'error'->>'message',
+  'book_line: the line is kept out of the P&L', 'a line kept out of the P&L is refused plainly');
 select is(pg_temp.book('lg-c8', 'txn_pend', jsonb_build_array(
   pg_temp.leg('bank', -10000), pg_temp.leg('build', 5000, 'beta'), pg_temp.leg('taxes', 5000, 'alpha')))->'error'->>'message',
   'book_line: the line is not posted', 'a pending line is refused');
