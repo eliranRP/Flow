@@ -6,7 +6,7 @@
 
 begin;
 
-select plan(38);
+select plan(43);
 
 do $users$
 begin
@@ -310,6 +310,48 @@ select is(pg_temp.cash('alpha') + pg_temp.cash('beta'), -289871::bigint,
   'the projects'' cash sums to the three bank lines');
 select is(pg_temp.cash('alpha') - 60129 - 40000, -50000::bigint,
   'Alpha holds half the shared line: its Rent parts cancel instead of absorbing each other''s shares');
+
+-- ===========================================================================
+-- Regression (the shape in use today): a shared line with two NORMAL parts of one category on
+-- different projects. Each part names its project, so it is a project part, not a shared one: each
+-- project gets its own part and the projects' cash sums to the line. July, so no other line counts.
+-- ===========================================================================
+reset role;
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, line_status, currency,
+  amount_gross, amount_net, amount_original, vat_amount, vat_status,
+  doc_date, cash_date, source, idempotency_key, project_id, category_id, description, user_assigned
+)
+values ((select id from gsc where label = 'co'), 'expense', 'expense', 'shared', 'posted', 'USD',
+  -317000, -317000, 317000, 0, 'source', '2026-07-10', '2026-07-10', 'manual', 'gsc:july', null,
+  (select id from gsc where label = 'levy'), 'gsc:july', true);
+insert into gsc (label, id) select 'txn_july', id from public.transactions where idempotency_key = 'gsc:july';
+insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
+select (select id from gsc where label = 'co'), (select id from gsc where label = 'txn_july'),
+  (select id from gsc where label = v.project), 5000, -158500
+from (values ('alpha'), ('beta')) as v(project);
+select tests.authenticate_as('gsc_owner');
+select lives_ok(
+  $$select public.save_line_split((select id from gsc where label = 'txn_july'), jsonb_build_array(
+    pg_temp.part('levy', 25000, 'alpha'),
+    pg_temp.part('levy', 292000, 'beta')))$$,
+  'a shared line takes two normal Levy parts on different projects');
+select is(
+  (select string_agg(l.pnl_role::text, ' ' order by l.amount_net) from private.pnl_lines l
+   where l.transaction_id = (select id from gsc where label = 'txn_july')),
+  'project project', 'both parts count as project parts, not shared ones');
+create function pg_temp.july(p_project text) returns bigint
+language sql
+as $$
+  select (c ->> 'net_minor')::bigint
+  from jsonb_array_elements(public.projects_cash_month('2026-07-01') -> 'projects') p
+  cross join jsonb_array_elements(p -> 'cash') c
+  where p ->> 'id' = (select id::text from gsc where label = p_project) and c ->> 'currency' = 'USD'
+$$;
+grant execute on function pg_temp.july(text) to authenticated;
+select is(pg_temp.july('alpha'), -25000::bigint, 'Alpha''s July cash is its 250.00 part');
+select is(pg_temp.july('beta'), -292000::bigint, 'Beta''s July cash is its 2920.00 part');
+select is(pg_temp.july('alpha') + pg_temp.july('beta'), -317000::bigint, 'the projects'' July cash sums to the line');
 
 select * from finish();
 rollback;

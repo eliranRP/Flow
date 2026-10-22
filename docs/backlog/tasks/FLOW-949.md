@@ -7,7 +7,7 @@
 - [x] `public.line_splits`: the unique key `(transaction_id, category_id, project_id)` becomes `(transaction_id, category_id, project_id, gross_up)`, nulls not distinct.
 - [x] `save_line_split`: the duplicate pair key includes `gross_up`; a real duplicate is still `same category and project twice`.
 - [x] `private.category_move` (merge and move): a line with a part in each category on one project is refused only when the two parts have the same `gross_up`.
-- [x] `projects_cash_month`: a shared line's parts are grouped, and their cents settled, per part (category, project and signed amount), so two parts of one category no longer absorb each other's shares.
+- [x] `projects_cash_month`: a shared line's parts are grouped, and their cents settled, per part (category, project and signed amount), so two parts of one category that follow the line's allocations (income-category parts on a shared payment) no longer absorb each other's shares. Expense parts that name a project are project parts and read as before (regression in the pgTAP).
 
 **MCP**
 - [x] `split_line` (and `assign_expenses` parts rows) take one normal and one gross-up part per category and project; a refusal keeps `code`/`message` `validation` and adds `detail`, the rule that failed.
