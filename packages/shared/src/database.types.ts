@@ -1302,6 +1302,9 @@ isOneToOne: false
 "apply_starter_categories":
 { Args: { "p_set": string }; Returns: Json
                            },
+"approve_jev_booking":
+{ Args: { "p_transaction_id": string }; Returns: Json
+                           },
 "approve_review_item":
 { Args: { "p_category_id": string,"p_check_shown"?: boolean,"p_id": string,"p_project_id": string,"p_remember"?: boolean,"p_shown_category_id"?: string,"p_shown_project_id"?: string }; Returns: Json
                            },
@@ -1443,6 +1446,12 @@ isOneToOne: false
 "get_line_journal":
 { Args: { "p_transaction_id": string }; Returns: Json
                            },
+"get_line_journal_copies":
+{ Args: { "p_transaction_id": string }; Returns: Json
+                           },
+"get_line_journal_suggestion":
+{ Args: { "p_transaction_id": string }; Returns: Json
+                           },
 "get_line_meta":
 { Args: { "p_ids": (string)[] }; Returns: Json
                            },
@@ -1529,6 +1538,9 @@ isOneToOne: false
 { Args: { "p_limit": number }; Returns: {
               "company_id": string,"id": number
             }[]
+                           },
+"list_jev_bookings":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "list_my_companies":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -1975,6 +1987,9 @@ isOneToOne: false
 "revoke_mcp_credential":
 { Args: { "p_id": string,"p_user": string }; Returns: Json
                            },
+"save_line_journal":
+{ Args: { "p_legs": Json,"p_transaction_id": string }; Returns: Json
+                           },
 "save_line_split":
 { Args: { "p_parts": Json,"p_preview"?: boolean,"p_transaction_id": string }; Returns: Json
                            },
@@ -2094,6 +2109,9 @@ isOneToOne: false
                            },
 "undo_category_move":
 { Args: { "p_move_id": string }; Returns: undefined
+                           },
+"undo_jev_booking":
+{ Args: { "p_transaction_id": string }; Returns: Json
                            },
 "undo_jev_prefill":
 { Args: { "p_transaction_id": string }; Returns: Json

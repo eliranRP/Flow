@@ -55,3 +55,13 @@ export const BookedByJevOpen: Story = {
 export const Unbalanced: Story = {
   render: () => <JournalCard debit={plainDebit} credit={[bank(230_000n)]} currency="USD" balanced={false} initialOpen />,
 };
+
+/** FLOW-955: an owner or editor gets "עריכה ›" at the footer's end, to the composer. */
+export const WithEdit: Story = {
+  render: () => <JournalCard debit={loanDebit} credit={[bank(235_000n)]} currency="USD" balanced editTo="/transactions/t1/journal" />,
+};
+
+/** FLOW-955: the review card's compact entry, "הפקודה שהוצעה", with עריכה in its head. */
+export const Proposed: Story = {
+  render: () => <JournalCard debit={loanDebit} credit={[bank(235_000n)]} currency="USD" balanced proposed editTo="/transactions/t1/journal" />,
+};

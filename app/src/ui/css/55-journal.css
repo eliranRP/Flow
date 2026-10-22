@@ -190,3 +190,60 @@
 .ui-journal-foot-note {
   color: var(--color-text-muted);
 }
+
+/* FLOW-955: עריכה, to the composer, at the footer's end (in the head on the review card's entry). */
+.ui-journal-edit {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-half);
+  min-block-size: var(--touch-min);
+  margin-inline-start: auto;
+  color: var(--color-accent-text);
+  font-size: var(--type-line2-size);
+  text-decoration: none;
+}
+
+/* FLOW-955: the review card's badge sits at the start of its text column, as on the board. */
+.ui-booking-badge {
+  align-self: flex-start;
+}
+
+/* The review card's proposed entry (board LedgerReviewCard): the raised tone, a 44px head, 12px side
+   titles, 48px rows with 15px names, and a 40px footer. */
+.ui-journal[data-proposed] {
+  background: var(--color-raised);
+}
+
+.ui-journal[data-proposed] .ui-journal-head {
+  min-block-size: var(--touch-min);
+  padding-block: 0;
+}
+
+.ui-journal[data-proposed] .ui-journal-title {
+  font-size: var(--type-line2-size);
+}
+
+.ui-journal[data-proposed] .ui-journal-side-title {
+  padding-block-start: calc(var(--space-1) * 1.5);
+  font-size: calc(var(--type-caption-size) - 1px);
+}
+
+.ui-journal[data-proposed] .ui-journal-row {
+  min-block-size: var(--field-height);
+  padding-block: var(--space-1);
+  gap: calc(var(--space-2) + var(--space-half));
+}
+
+.ui-journal[data-proposed] :is(.ui-journal-name, .ui-journal-amount) {
+  font-size: var(--type-line2-size);
+}
+
+.ui-journal[data-proposed] .ui-journal-meta {
+  font-size: calc(var(--type-caption-size) - 1px);
+}
+
+.ui-journal[data-proposed] .ui-journal-foot {
+  min-block-size: calc(var(--touch-min) - var(--space-1));
+  font-size: var(--type-caption-size);
+}

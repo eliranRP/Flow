@@ -19,6 +19,8 @@ const legSchema = z.object({
   in_pnl: z.boolean(),
   /** The leg's own category, live (a kept-out leg on a system account names it too). */
   category_name: z.string().nullable(),
+  /** FLOW-955: the composer starts from the line's own legs, on their projects. */
+  project_id: z.string().nullable().optional(),
   project_name: z.string().nullable(),
   /** Signed: a debit is positive, a credit negative. */
   amount_minor: z.union([z.number(), z.string()]).transform((value) => BigInt(value)),
@@ -56,7 +58,7 @@ export function legTypeLabel(leg: Pick<JournalLeg, "account_type" | "is_bank">):
 }
 
 /** Hebrew for the ledger's system accounts (decision 0208); a category account keeps its own name. */
-const SYSTEM_NAMES: Record<string, string> = {
+export const SYSTEM_NAMES: Record<string, string> = {
   "Loan principal": "קרן הלוואה",
   Escrow: "אסקרו",
   Property: "נכסים",

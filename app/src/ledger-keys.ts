@@ -48,4 +48,7 @@ export const LEDGER_KEYS = [
   "jev-review-queue",
   "setup-suggestions",
   "setup-review-resolved",
+  // FLOW-955: Jev's bookings waiting in לאישור, and the accounts the composer can book on.
+  "jev-bookings",
+  "composer-accounts",
 ] as const;

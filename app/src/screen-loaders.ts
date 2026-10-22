@@ -36,6 +36,7 @@ export const screenLoaders = {
   search: () => import("./screens/search"),
   forecast: () => import("./screens/forecast-screen"),
   lineSplit: () => import("./screens/line-split"),
+  journalComposer: () => import("./screens/journal-composer-screen"),
   loans: () => import("./screens/loans-screen"),
   loanDetail: () => import("./screens/loan-detail-screen"),
   loansSummary: () => import("./screens/loans-summary-screen"),

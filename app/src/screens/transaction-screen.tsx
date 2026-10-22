@@ -577,6 +577,8 @@ export function TransactionScreen({
   const journal = sample ? (sampleJournal ?? null) : (journalQuery.data ?? null);
   const openJournal = journalShown(journal) && journalOpens(journal) ? journal : null;
   const quietJournal = journalShown(journal) && openJournal == null ? journal : null;
+  // FLOW-955: עריכה opens the composer; a viewer reads the entry only.
+  const journalEdit = holdWrites ? undefined : `/transactions/${txn.id}/journal${search}`;
   return frame(
     <>
       <TransactionTopBar
@@ -672,12 +674,12 @@ export function TransactionScreen({
             }} />
           )}
         </List>
-        {openJournal ? <TxnJournal journal={openJournal} bankName={meta?.account ?? null} /> : null}
+        {openJournal ? <TxnJournal journal={openJournal} bankName={meta?.account ?? null} editTo={journalEdit} /> : null}
         {lineMeta.isError && lineMeta.data == null ? (
           <LoanReadError label="פרטי הבנק" busy={lineMeta.isFetching} onRetry={() => { void lineMeta.refetch(); }} />
         ) : null}
         {sampleNoFooter ? null : <TxnFooter txn={txn} meta={meta ?? undefined} />}
-        {quietJournal ? <TxnJournal key={txn.id} journal={quietJournal} bankName={meta?.account ?? null} collapsible /> : null}
+        {quietJournal ? <TxnJournal key={txn.id} journal={quietJournal} bankName={meta?.account ?? null} collapsible editTo={journalEdit} /> : null}
         </div>
       </CardSwipe>
       {countedLocked ? null : (

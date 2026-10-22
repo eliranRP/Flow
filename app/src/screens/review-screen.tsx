@@ -20,6 +20,8 @@ import { ScreenState } from "../ui/screen-state";
 import { EMPTY_REVIEW, listFocusId, listPlace, queueAfterFocus, reviewE2e, ReviewEmpty, reviewLineFocus, reviewListPath, rotateReview, useE2eReviewRows } from "./review-shared";
 import { E2E_DONE_COUNTS } from "../dev/review-e2e-fixture";
 import { type ReviewPreviewWrite, ReviewQueue } from "./review-queue";
+import { useJevBookingsQuery } from "../jev-bookings";
+import { JevBookingReview } from "./jev-booking-review";
 import type { ReviewCase } from "../dev/review-e2e-fixture";
 
 /** FLOW-365: the dev `case` param names a board state for the proofs; anything else is the default queue. */
@@ -53,6 +55,7 @@ export function ReviewScreen() {
   const listing = location.pathname === "/review/all";
   const projectFilter = params.get("project");
   const review = useReviewQuery();
+  const bookings = useJevBookingsQuery(!listing && projectFilter == null);
   const waiting = useProjectWaitingQuery(projectFilter ?? "");
   const focusedOrder = useRef<ReviewRow[] | null>(null);
   const e2eList = reviewE2e != null && params.get("preview") != null && params.get("e2e") === "list";
@@ -141,6 +144,19 @@ export function ReviewScreen() {
   }
   const rows = source;
   const fromList = listFocusId(params) != null;
+  // FLOW-955: Jev's bookings wait at the head of the queue, before its own cards (not in a dev proof).
+  const waitingBookings = e2eList || listing || fromList ? [] : (bookings.data ?? []);
+  if (waitingBookings.length > 0) {
+    const head = phase.kind === "ready" ? rows[0] : undefined;
+    return (
+      <JevBookingReview
+        bookings={waitingBookings}
+        queued={phase.kind === "ready" ? rows.length : 0}
+        next={head != null ? { name: head.supplier_name ?? head.description, minor: head.amount_net, currency: head.currency ?? "ILS" } : null}
+        search={search}
+      />
+    );
+  }
   if (!listing && !holdWrites && params.get("setup") === "1" && (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0))) {
     const fromCard = params.get("from") === "card";
     return (
