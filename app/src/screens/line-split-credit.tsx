@@ -1,5 +1,5 @@
 import { formatAmountText } from "@flow/shared";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { amountOf, percentMinorOf, percentOf, type PartDraft } from "../line-split";
 import { CheckIcon } from "../ui/icons";
 
@@ -77,13 +77,22 @@ export function creditNote(net: bigint | null, categoryName: string, currency: s
 export function SignedCheck({ terms, rest, lineMinor, currency }: { terms: ReadonlyArray<{ minor: bigint; credit: boolean }>; rest: bigint; lineMinor: bigint; currency: string }) {
   const money = (minor: bigint) => formatAmountText(minor, currency, { detail: true });
   const all = rest > 0n ? [...terms, { minor: rest, credit: false }] : terms;
-  const sum = all.map((term, index) => (index === 0 ? (term.credit ? `−${money(term.minor)}` : money(term.minor)) : `${term.credit ? "−" : "+"} ${money(term.minor)}`)).join(" ");
+  // Each amount is its own unbreakable number; the sum wraps only between its terms.
   return (
     <span className="ui-lsplit-check">
       <CheckIcon size={16} />
       <span>
         {"תואם לשורה · "}
-        <bdi className="ui-num" dir="ltr">{`${sum} = ${money(lineMinor)}`}</bdi>
+        <bdi dir="ltr">
+          {all.map((term, index) => (
+            <Fragment key={index}>
+              {index === 0 ? (term.credit ? "−" : "") : ` ${term.credit ? "−" : "+"} `}
+              <span className="ui-num">{money(term.minor)}</span>
+            </Fragment>
+          ))}
+          {" = "}
+          <span className="ui-num">{money(lineMinor)}</span>
+        </bdi>
       </span>
     </span>
   );
