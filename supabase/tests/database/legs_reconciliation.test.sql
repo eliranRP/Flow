@@ -8,7 +8,7 @@
 
 begin;
 
-select plan(9);
+select plan(10);
 
 do $u$ begin perform tests.create_supabase_user('lr_owner', 'lr-owner@example.com'); end $u$;
 
@@ -121,6 +121,17 @@ do $$ declare rid uuid; begin
   select (select id from lr where label='co'), rid, 2, (select id from lr where label='proptax'), (select id from lr where label='south'), 4000, false, true;
 end $$;
 
+-- 9b. gross-up CONTRA on the SAME category AND project (FLOW-949): PropTax cost 10000 + PropTax
+-- credit 4000 (gross_up), both on north, net -6000.
+do $$ declare rid uuid; begin
+  rid := pg_temp.line('gu_contra_same', 'expense', -6000, 0, 'proptax', null);
+  update public.transactions set category_id = null where id = rid;
+  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
+  select (select id from lr where label='co'), rid, 1, (select id from lr where label='proptax'), (select id from lr where label='north'), 10000, false, false;
+  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
+  select (select id from lr where label='co'), rid, 2, (select id from lr where label='proptax'), (select id from lr where label='north'), 4000, false, true;
+end $$;
+
 -- 10. loan split: expense -10000 = interest 7000 (in) + escrow 2000 (in) + principal 1000 (kept out), USD, vat 0
 do $$ declare rid uuid; begin
   rid := pg_temp.line('loan', 'expense', -10000, 0, 'rent', 'north', 'USD');
@@ -212,6 +223,12 @@ select is(
    where p.transaction_id = (select id from public.transactions where idempotency_key='gu_contra')
      and p.category_id = (select id from lr where label='proptax')),
   -6000::bigint, 'gross-up contra: PropTax nets to -6000 (the escrow credit reduces its own category)'
+);
+-- gross-up contra, same category and project: one projection row, PropTax on north nets to -6000.
+select is(
+  (select array_agg(amount_net)::bigint[] from private.legs_pnl_projection((select id from lr where label='co')) p
+   where p.transaction_id = (select id from public.transactions where idempotency_key='gu_contra_same')),
+  array[-6000]::bigint[], 'gross-up contra on the same category and project nets to one -6000 row'
 );
 -- loan split: principal (1000) is kept out of the projection; interest + escrow in.
 select is(
