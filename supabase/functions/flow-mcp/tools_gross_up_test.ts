@@ -3,18 +3,21 @@ import { assertEquals } from "jsr:@std/assert@1";
 import { callTool } from "./tools.ts";
 import { CATEGORY, INCOME_CATEGORY, PROJECT, TXN } from "./tools_test_support.ts";
 
-Deno.test("get_expense returns a gross_up split part", async () => {
-  // A gross-up deposit: gross proceeds (+income) and a real closing cost (expense), gross_up marked.
+Deno.test("get_expense returns a gross_up split part with its derived effect", async () => {
+  // A gross-up deposit: gross proceeds (+income) and a real closing cost (expense, NORMAL), plus a
+  // contra credit on an income category (effect 'contra'). get_line_split reports the effect; the
+  // MCP passes it straight through (FLOW-947, 0207).
   const parts = [
     { category_id: INCOME_CATEGORY, project_id: null, amount_minor: 100000, gross_up: false },
-    { category_id: CATEGORY, project_id: PROJECT, amount_minor: 3000, gross_up: true },
+    { category_id: CATEGORY, project_id: PROJECT, amount_minor: 3000, gross_up: true, effect: "normal" },
+    { category_id: INCOME_CATEGORY, project_id: PROJECT, amount_minor: 2000, gross_up: true, effect: "contra" },
   ];
   const rpc = (name: string) =>
     Promise.resolve(
       name === "get_transaction"
-        ? { status: 200, json: { id: TXN, amount_net: 97000 } }
+        ? { status: 200, json: { id: TXN, amount_net: 95000 } }
         : name === "get_line_split"
-        ? { status: 200, json: { transaction_id: TXN, currency: "USD", line_minor: 97000, parts, parts_match: true } }
+        ? { status: 200, json: { transaction_id: TXN, currency: "USD", line_minor: 95000, parts, parts_match: true } }
         : name === "get_loan_split"
         ? { status: 200, json: null }
         : name === "get_line_meta"
@@ -26,7 +29,9 @@ Deno.test("get_expense returns a gross_up split part", async () => {
   if (res.structuredContent.ok) {
     const line = res.structuredContent.data as { line_split: { parts_match: boolean; parts: typeof parts } };
     assertEquals(line.line_split.parts_match, true);
-    assertEquals(line.line_split.parts[1].gross_up, true);
     assertEquals(line.line_split.parts[0].gross_up, false);
+    assertEquals(line.line_split.parts[1].gross_up, true);
+    assertEquals(line.line_split.parts[1].effect, "normal");
+    assertEquals(line.line_split.parts[2].effect, "contra");
   }
 });

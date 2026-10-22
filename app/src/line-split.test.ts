@@ -266,17 +266,21 @@ describe("gross-up split parts (FLOW-946, decision 0206)", () => {
     expect(added.form).toBe("parts exceed the line");
   });
 
-  it("flags a gross-up part with no project and one on the wrong side", () => {
+  it("still needs a project but now allows either kind (contra, FLOW-947)", () => {
     const noProject = checkParts([
       { key: "a", categoryId: "c-proceeds", projectId: null, unit: "amount", value: "1000" },
       { key: "b", categoryId: "c-cost", projectId: null, unit: "amount", value: "30", grossUp: true },
     ], { categoryId: null, projectId: null }, depCtx);
     expect(noProject.parts.b).toBe("a gross-up part needs a project");
-    const wrongSide = checkParts([
-      { key: "a", categoryId: "c-rent", projectId: "p-a", unit: "amount", value: "300", grossUp: true },
-      { key: "b", categoryId: "c-proceeds", projectId: null, unit: "amount", value: "670" },
+    // A same-kind gross-up part (contra: an income category on an income line) is accepted now;
+    // the old "gross-up wrong side" issue is gone, and the signed sum still nets to the line.
+    const contra = checkParts([
+      { key: "a", categoryId: "c-proceeds", projectId: null, unit: "amount", value: "1000" },
+      { key: "b", categoryId: "c-rent", projectId: "p-b", unit: "amount", value: "30", grossUp: true },
     ], { categoryId: null, projectId: null }, depCtx);
-    expect(wrongSide.parts.a).toBe("gross-up wrong side");
+    expect(contra.parts.b).toBeUndefined();
+    expect(contra.form).toBeNull();
+    expect(contra.restMinor).toBe(0n);
   });
 
   it("reopens a saved gross-up part in the editor", () => {
@@ -321,17 +325,21 @@ describe("gross-up split parts (FLOW-946, decision 0206)", () => {
     expect(check.restMinor).toBe(0n);
     expect(check.overMinor).toBe(0n);
     expect(check.form).toBeNull();
-    // The wrong-side and no-project issues fire symmetrically on the payment side.
+    // The no-project issue fires on the payment side too.
     const noProject = checkParts([
       { key: "a", categoryId: "c-labor", projectId: "p-b", unit: "amount", value: "60" },
       { key: "b", categoryId: "c-credit", projectId: null, unit: "amount", value: "10", grossUp: true },
     ], { categoryId: null, projectId: null }, payCtx);
     expect(noProject.parts.b).toBe("a gross-up part needs a project");
-    const wrongSide = checkParts([
-      { key: "a", categoryId: "c-labor", projectId: "p-b", unit: "amount", value: "40", grossUp: true },
-      { key: "b", categoryId: "c-credit", projectId: "p-b", unit: "amount", value: "90" },
+    // A same-kind gross-up part (contra-expense: an expense category on an expense line) is now
+    // accepted; the signed sum still nets (6000 - 1000 = 5000) and there is no wrong-side issue.
+    const contra = checkParts([
+      { key: "a", categoryId: "c-labor", projectId: "p-b", unit: "amount", value: "60" },
+      { key: "b", categoryId: "c-build", projectId: "p-c", unit: "amount", value: "10", grossUp: true },
     ], { categoryId: null, projectId: null }, payCtx);
-    expect(wrongSide.parts.a).toBe("gross-up wrong side");
+    expect(contra.parts.b).toBeUndefined();
+    expect(contra.form).toBeNull();
+    expect(contra.restMinor).toBe(0n);
   });
 
   it("a split that overshoots even after a gross-up part is flagged over the line", () => {
@@ -345,7 +353,7 @@ describe("gross-up split parts (FLOW-946, decision 0206)", () => {
     expect(check.restMinor).toBe(-10_000n);
   });
 
-  it("the sample preview nets a gross-up part and refuses the wrong side", () => {
+  it("the sample preview nets a gross-up part on either kind (FLOW-947)", () => {
     const preview = samplePreview(97_000n, "c-rent", [
       { category_id: "c-proceeds", project_id: null, amount_minor: 100_000 },
       { category_id: "c-cost", project_id: "p-a", amount_minor: 3_000, gross_up: true },
@@ -354,11 +362,40 @@ describe("gross-up split parts (FLOW-946, decision 0206)", () => {
       ["c-proceeds", 100_000n, false],
       ["c-cost", 3_000n, true],
     ]);
+    // A same-kind gross-up part (contra) is accepted; the preview nets it the same way.
+    const contra = samplePreview(97_000n, "c-rent", [
+      { category_id: "c-proceeds", project_id: null, amount_minor: 100_000 },
+      { category_id: "c-rent", project_id: "p-a", amount_minor: 3_000, gross_up: true },
+    ], (id) => id === "c-cost");
+    expect(contra.map((r) => [r.category_id, r.amount_minor, r.grossUp])).toEqual([
+      ["c-proceeds", 100_000n, false],
+      ["c-rent", 3_000n, true],
+    ]);
+    // Only the project is still required on a gross-up part.
     expect(() =>
       samplePreview(97_000n, "c-rent", [
-        { category_id: "c-cost", project_id: "p-a", amount_minor: 3_000, gross_up: true },
-        { category_id: "c-rent", project_id: "p-a", amount_minor: 100_000, gross_up: true },
+        { category_id: "c-proceeds", project_id: null, amount_minor: 100_000 },
+        { category_id: "c-rent", project_id: null, amount_minor: 3_000, gross_up: true },
       ], (id) => id === "c-cost")
-    ).toThrow("category kind must match the part sign");
+    ).toThrow("a gross-up part needs a project");
+  });
+
+  it("buildPayload emits gross_up and an explicit effect when the draft carries it (FLOW-947)", () => {
+    const payload = buildPayload([
+      { key: "a", categoryId: "c-proceeds", projectId: null, unit: "amount", value: "1000" },
+      { key: "b", categoryId: "c-rent", projectId: "p-a", unit: "amount", value: "30", grossUp: true, effect: "contra" },
+    ], { categoryId: null, projectId: null });
+    expect(payload).toEqual([
+      { category_id: "c-proceeds", project_id: null, amount_minor: 100_000 },
+      { category_id: "c-rent", project_id: "p-a", amount_minor: 3_000, gross_up: true, effect: "contra" },
+      { rest: true },
+    ]);
+    // effect rides only on a gross-up amount part: a plain part never carries it.
+    const plain = buildPayload([
+      { key: "a", categoryId: "c-proceeds", projectId: null, unit: "amount", value: "1000", effect: "normal" },
+      { key: "b", categoryId: "c-rent", projectId: "p-a", unit: "amount", value: "30", grossUp: true },
+    ], { categoryId: null, projectId: null });
+    expect(plain?.[0]).toEqual({ category_id: "c-proceeds", project_id: null, amount_minor: 100_000 });
+    expect(plain?.[1]).toEqual({ category_id: "c-rent", project_id: "p-a", amount_minor: 3_000, gross_up: true });
   });
 });

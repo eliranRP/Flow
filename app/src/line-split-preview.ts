@@ -30,10 +30,7 @@ export function samplePreview(
     if (seen.has(pair)) throw new Error("same category and project twice");
     seen.add(pair);
     if (grossUp) {
-      // FLOW-946: a gross-up part is the opposite kind to the line and names its own project.
-      if (categoryId === lineCategoryId || !isReversal(categoryId)) {
-        throw new Error("category kind must match the part sign");
-      }
+      // FLOW-946/FLOW-947: a gross-up part may carry either kind (0207) and names its own project.
       if (projectId == null) throw new Error("a gross-up part needs a project");
     } else if (projectId == null && categoryId !== lineCategoryId && isReversal(categoryId) && !keptOut(categoryId)) {
       throw new Error("a reversal part needs a project");

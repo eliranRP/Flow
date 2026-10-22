@@ -322,8 +322,9 @@ export function LineSplitEditor({
       setRest((value) => ({ ...value, categoryId: id === line.categoryId ? null : id }));
       return;
     }
-    // A gross-up part needs an opposite-kind category; switching to a same-kind one clears it.
-    if (target?.kind === "part") update(target.key, partIsReversal(id) ? { categoryId: id } : { categoryId: id, grossUp: false });
+    // FLOW-947 (0207): a gross-up part may carry either kind, so picking any category keeps the
+    // gross-up mark; the server derives the contra/normal effect from the category vs the line.
+    if (target?.kind === "part") update(target.key, { categoryId: id });
   }
 
   /** FLOW-333 C3a: a part's picker hands focus to its value field, so the next tap types. */
@@ -477,7 +478,8 @@ export function LineSplitEditor({
           {parts.map((part, index) => {
             const name = categoryName(part.categoryId) ?? "בחירת קטגוריה";
             const reversal = part.categoryId !== "" && partIsReversal(part.categoryId);
-            const grossUp = reversal && part.grossUp === true;
+            // FLOW-947 (0207): a gross-up part may be on either kind, so the mark is independent of reversal.
+            const grossUp = part.grossUp === true;
             const issue = check.parts[part.key];
             const needsProject = issue === "a reversal part needs a project" || issue === "a gross-up part needs a project";
             const project = part.projectId == null ? (reversal && reversalNeedsProject(part.categoryId, ctx) ? "פרויקט · חובה בהחזר" : partProjectLabel(null, line.projectName)) : (projectName(part.projectId) ?? "פרויקט");
@@ -507,7 +509,7 @@ export function LineSplitEditor({
                 <div className="ui-lsplit-part" data-invalid={flagged ? "" : undefined}>
                   <div className="ui-lsplit-part-head">
                     <span className="ui-lsplit-part-no">{`חלק ${String(index + 1)}`}</span>
-                    {reversal ? (
+                    {part.categoryId !== "" ? (
                       <button
                         type="button"
                         className="ui-lsplit-grossup ui-hit"

@@ -57,3 +57,29 @@ describe("the month's project rows", () => {
     expect(model.projects.map((row) => [row.name, row.projectId, row.profit])).toEqual([["הנהלה ומשרד", "p9", 1_000n]]);
   });
 });
+
+describe("gross-up drill-down lines (FLOW-947)", () => {
+  it("a contra gross-up part keeps grossUp and shows as a credit under its own category", () => {
+    const model = buildProfitModel({
+      currency: "USD",
+      basis: "cash",
+      month: { income: 0n, expense: 0n },
+      ytdProfit: null,
+      projects: { income: null, expense: null },
+      categories: { income: null, expense: null },
+      lines: [{
+        direction: "expense",
+        categoryKey: "c-tax",
+        categoryName: "Property taxes",
+        rows: [
+          // A contra gross-up part comes back as a negative expense magnitude (a credit); signed +.
+          { transaction_id: "t1", part: null, description: "Escrow refund", supplier_name: null, project_name: "Alpha", category_name: "Property taxes", doc_date: "2026-10-10", currency: "USD", amount_minor: -85_077n, shared: false, gross_up: true },
+          { transaction_id: "t2", part: null, description: "Tax bill", supplier_name: null, project_name: "Alpha", category_name: "Property taxes", doc_date: "2026-10-09", currency: "USD", amount_minor: 24_948n, shared: false, gross_up: false },
+        ],
+      }],
+    }, null);
+    const tax = model.lines.filter((line) => line.categoryKey === "c-tax");
+    expect(tax.find((line) => line.transactionId === "t1")).toMatchObject({ grossUp: true, amount: 85_077n });
+    expect(tax.find((line) => line.transactionId === "t2")).toMatchObject({ grossUp: false, amount: -24_948n });
+  });
+});
