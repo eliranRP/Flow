@@ -1,5 +1,6 @@
 import { formatAmountText } from "@flow/shared";
 import { useId, useState } from "react";
+import { HintParts } from "./hint-parts";
 import { AlertIcon, CheckIcon, ChevronDownIcon, EyeOffIcon, JournalIcon } from "./icons";
 import "./css/55-journal.css";
 
@@ -45,8 +46,14 @@ function Side({ title, rows, currency }: { title: "חובה" | "זכות"; rows:
             <span className="ui-journal-text">
               <AccountName name={row.name} />
               <span className="ui-journal-meta">
-                {[row.type, row.project].filter(Boolean).join(" · ")}
-                {row.keptOut ? <>{" · "}<span className="ui-journal-kept"><EyeOffIcon size={14} />{KEPT_OUT}</span></> : null}
+                {/* Whole parts wrap and no "·" starts or ends a line (HintParts); the kept-out mark stays one piece. */}
+                <HintParts
+                  parts={[
+                    row.type,
+                    ...(row.project != null ? [row.project] : []),
+                    ...(row.keptOut ? [<span key="kept" className="ui-journal-kept"><EyeOffIcon size={14} />{KEPT_OUT}</span>] : []),
+                  ]}
+                />
               </span>
             </span>
             <bdi className="ui-num ui-journal-amount" dir="ltr">{money(row.amount, currency)}</bdi>

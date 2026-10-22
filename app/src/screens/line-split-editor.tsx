@@ -54,6 +54,7 @@ import {
   type LineSplitApi,
   money,
   partProjectLabel,
+  shareText,
 } from "./line-split-parts";
 import { CreditToggle, SignedCheck, categoryNet, creditNote, partMinor } from "./line-split-credit";
 import { useSaveOnBack } from "./split-back";
@@ -513,7 +514,7 @@ export function LineSplitEditor({
             const share: ReactNode = part.unit === "percent"
               // The server's cents once previewed; until then, or while the split can't be previewed, the local share.
               ? (cents != null ? <>{"= "}<Amount minor={cents} currency={currency} /></> : percent != null ? <>{"= "}<Amount minor={percentMinorOf(percent, lineMinor)} currency={currency} /></> : null)
-              : (amount != null ? <><bdi dir="ltr">{`${Math.round(shareOfLine(amount, lineMinor)).toLocaleString("en-US")}%`}</bdi>{" מהסכום"}</> : null);
+              : (amount != null ? <><bdi dir="ltr">{`${shareText(shareOfLine(amount, lineMinor))}%`}</bdi>{" מהסכום"}</> : null);
             const note: ReactNode = grossUp ? creditNote(categoryNet(parts, part.categoryId, minorOf), name, currency) : paired && share != null ? <>{"עלות · "}{share}</> : share;
             return (
               <SwipeRow key={part.key} disabled={busy || blocked} onRemove={() => { removePart(part.key); }}>
@@ -605,7 +606,7 @@ export function LineSplitEditor({
                         }}
                       />
                     )}
-                    {grossUp ? null : <SplitUnitToggle
+                    {grossUp ? <span className="ui-lsplit-unit" aria-hidden="true">{currency === "USD" ? "$" : "₪"}</span> : <SplitUnitToggle
                       name={name}
                       unit={part.unit}
                       amountLabel={currency === "USD" ? "$" : "₪"}

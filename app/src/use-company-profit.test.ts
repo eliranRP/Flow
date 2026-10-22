@@ -115,4 +115,27 @@ describe("kept-out categories and lines (FLOW-954)", () => {
     expect(model.lines).toEqual([]);
     expect(model.keptOutLines).toEqual([expect.objectContaining({ transactionId: "t1", categoryKey: "c-principal", amount: -35_000n, keptOut: true })]);
   });
+
+  it("a kept-out line with no category sits under the server's 'none' group, named בלי קטגוריה", () => {
+    const expense: Breakdown = {
+      ...(read("expense", []) as NonNullable<Breakdown>),
+      group_by: "category",
+      excluded_groups: [{ currency: "USD", key: "none", name: null, amount_minor: 5_000n, count: 1, projects: 0, loan_part: null }],
+    };
+    const model = buildProfitModel({
+      ...inputs([], []),
+      categories: { income: null, expense },
+      lines: [{
+        direction: "expense",
+        categoryKey: "",
+        categoryName: "",
+        keptOut: true,
+        rows: [
+          { transaction_id: "t9", part: null, description: "Example", supplier_name: null, project_name: null, category_name: null, doc_date: "2026-10-07", currency: "USD", amount_minor: 5_000n, shared: false, category_id: null },
+        ],
+      }],
+    }, null);
+    expect(model.keptOut.map((row) => [row.key, row.name])).toEqual([["none", "בלי קטגוריה"]]);
+    expect(model.keptOutLines.map((line) => line.categoryKey)).toEqual(["none"]);
+  });
 });

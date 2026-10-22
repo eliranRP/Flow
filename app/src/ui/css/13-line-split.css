@@ -121,6 +121,18 @@
 /* The header's signed check once a split with a credit part adds up. */
 .ui-lsplit-board .ui-lsplit-status-check {
   color: var(--color-text-secondary);
+  /* board: the signed check is 14px. */
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+}
+
+/* A credit part's amount field: the static currency sign where a normal part has its unit switch. */
+.ui-lsplit-board .ui-lsplit-unit {
+  flex: none;
+  padding-inline: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-btn-2-weight);
 }
 
 .ui-lsplit-check {

@@ -89,6 +89,8 @@ const loanTxn: Txn = {
   amount_net: -235_000n,
   project_name: "פרויקט רעננה",
   category_name: "ריבית משכנתא",
+  // Booked by Jev: the footer says it was filed automatically, not approved by hand.
+  review_status: null,
 };
 
 const loanJournal: LineJournal = {
@@ -139,7 +141,7 @@ export const KeptOutLegsBookedByJev: Story = {
 
 /** A plain line Jev booked: the badge shows once the entry is opened. */
 export const PlainLineBookedByJev: Story = {
-  render: () => <JournalStory txn={plainTxn} journal={{ ...plainJournal, booked_by_ai: true }} />,
+  render: () => <JournalStory txn={{ ...plainTxn, review_status: null }} journal={{ ...plainJournal, booked_by_ai: true }} />,
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole("button", { name: /^פקודת יומן/ }));
     await within(canvasElement).findByText(/נרשם ע״י Jev/);

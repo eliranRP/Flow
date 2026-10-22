@@ -2,12 +2,22 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { PartDraft } from "../line-split";
 import { SignedCheck, categoryNet, creditNote, partMinor } from "./line-split-credit";
+import { shareText } from "./line-split-parts";
 
 /** FLOW-954 (board LedgerSplitContra): a credit part's net and the header's signed check. Invented figures. */
 const cost: PartDraft = { key: "a", categoryId: "c-tax", projectId: "p1", unit: "amount", value: "249.48" };
 const credit: PartDraft = { key: "b", categoryId: "c-tax", projectId: "p1", unit: "amount", value: "850.77", grossUp: true };
 const other: PartDraft = { key: "c", categoryId: "c-build", projectId: "p1", unit: "percent", value: "10" };
 const minorOf = (part: PartDraft) => partMinor(part, 100_000n, undefined);
+
+describe("a part's share of the line", () => {
+  it("is whole percents, with one decimal below 1%", () => {
+    expect(shareText(0.31)).toBe("0.3");
+    expect(shareText(0)).toBe("0");
+    expect(shareText(30.4)).toBe("30");
+    expect(shareText(1234.6)).toBe("1,235");
+  });
+});
 
 describe("a credit part (זיכוי)", () => {
   it("a part's money: its amount, or its percent's cents", () => {

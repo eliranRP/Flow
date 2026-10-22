@@ -125,8 +125,11 @@ export type ListRowProps =
   | (Common & {
     variant: "transaction";
     agorot: bigint;
-    /** "cost": money out in a list already titled as a cost, so no minus (DESIGN-RULES §3.7, FLOW-339). */
-    sign: "in" | "out" | "cost";
+    /**
+     * "cost": money out in a list already titled as a cost, so no minus (DESIGN-RULES §3.7, FLOW-339).
+     * "moved-in": money in that is not income (a loan received, kept out of profit, FLOW-954): "+" in the text colour.
+     */
+    sign: "in" | "out" | "cost" | "moved-in";
     source: "invoice" | "bank";
     currency?: string;
     /** Hidden word before money in. Default הכנסה; a refund line says זיכוי. */
@@ -546,9 +549,17 @@ function withAction(props: { actionBelow?: boolean; action?: ReactNode }, row: R
   );
 }
 
-function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "out" | "cost"; inWord?: string; wholeCents?: boolean }) {
+function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "out" | "cost" | "moved-in"; inWord?: string; wholeCents?: boolean }) {
   const abs = props.agorot < 0n ? -props.agorot : props.agorot;
   const cost = props.sign === "cost";
+  if (props.sign === "moved-in") {
+    // Money in that is not income: the "+" without the income colour (owner, 2026-10-22).
+    return (
+      <span className="t-body">
+        <Amount agorot={abs} currency={props.currency} direction={props.agorot >= 0n ? "income" : "expense"} cents="always" zeroCents={props.wholeCents === true} />
+      </span>
+    );
+  }
   // The amount's sign wins over the direction: a negative income (an income credit) shows its
   // minus in the main text colour and is never green (decision 0120).
   const income = props.sign === "in" && props.agorot >= 0n;

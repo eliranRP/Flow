@@ -281,7 +281,8 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
       hint={line.grossUp ? <>{hint}{" · "}<span className="ui-cp-grossup">שולם מהפקדה</span></> : hint}
       agorot={line.amount < 0n ? -line.amount : line.amount}
       currency={currency}
-      sign={line.direction === "income" ? "in" : "cost"}
+      // A kept-out line is money moved, not income or a cost (FLOW-954): "+" in the text colour, or "−" on money out.
+      sign={line.keptOut === true ? (line.direction === "income" ? "moved-in" : "out") : line.direction === "income" ? "in" : "cost"}
       setAside={line.keptOut === true}
       source={rowSource(line.source)}
       initials={lineInitials(line.title)}

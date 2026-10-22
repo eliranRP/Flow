@@ -15,7 +15,8 @@
 --      (account_type, account_name), for the P&L drill-down's "לא נספר ברווח" group.
 --      `groups`, `totals` and `excluded` are unchanged (counted anchors on the live body).
 --   3. public.get_breakdown_lines rows gain `category_id`, so the kept-out lines (p_excluded) can be
---      shown under their own category. Every other key is unchanged (counted anchors).
+--      shown under their own category; in excluded mode two kept-out parts of one line on two
+--      categories stay two rows. Counted rows and every other key are unchanged (counted anchors).
 --
 -- CLI 2.118.0 runs each statement on its own. This file is one transaction.
 
@@ -154,20 +155,30 @@ grant execute on function public.get_breakdown(text, date, date, text, text) to 
 -- 3. get_breakdown_lines: each row names its category id.
 -- ---------------------------------------------------------------------------
 -- The kept-out lines (p_excluded) come back for every kept-out category at once; category_id lets
--- the drill-down put each under its own group. Null when a merged row spans two categories, as
--- category_name already is. Patched on the live body with counted anchors.
+-- the drill-down put each under its own group. In excluded mode the rows also group by the row's
+-- group key, so two kept-out parts of one line on two categories stay two rows (each under its own
+-- group) instead of merging into one row with no category. Counted rows (p_excluded false) keep
+-- their grouping: there every row already has the one group key asked for. Null category_id only
+-- when a merged row spans two categories of one group (by parent), as category_name already is.
+-- Patched on the live body with counted anchors.
 do $bl$
 declare
   def text;
+  a_group constant text := E'    group by r.transaction_id, r.part, r.shared\n';
+  a_order constant text := E'order by m.doc_date desc, m.transaction_id, m.part, m.shared)';
   a_page constant text := E'      m.gross_up,\n      row_number()';
   a_row constant text := E'        ''gross_up'', pg.gross_up\n';
 begin
   def := pg_get_functiondef('public.get_breakdown_lines(text,text,text,text,date,date,text,boolean,integer,integer)'::regprocedure);
-  if (length(def) - length(replace(def, a_page, ''))) / length(a_page) <> 1
+  if (length(def) - length(replace(def, a_group, ''))) / length(a_group) <> 1
+    or (length(def) - length(replace(def, a_order, ''))) / length(a_order) <> 1
+    or (length(def) - length(replace(def, a_page, ''))) / length(a_page) <> 1
     or (length(def) - length(replace(def, a_row, ''))) / length(a_row) <> 1
     or position('pg.category_id' in def) > 0 then
     raise exception 'get_breakdown_lines is not the expected definition';
   end if;
+  def := replace(def, a_group, E'    group by r.transaction_id, r.part, r.shared, case when coalesce(p_excluded, false) then r.group_key end\n');
+  def := replace(def, a_order, E'order by m.doc_date desc, m.transaction_id, m.part, m.shared, m.category_id nulls first)');
   def := replace(def, a_page, E'      m.gross_up,\n      m.category_id,\n      row_number()');
   def := replace(def, a_row, E'        ''gross_up'', pg.gross_up,\n        ''category_id'', pg.category_id\n');
   execute def;

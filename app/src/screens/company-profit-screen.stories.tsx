@@ -136,6 +136,25 @@ export const ByCategoryKeptOut: Story = {
   },
 };
 
+/** FLOW-954: a loan received opened: its line reads "+" in the text colour, never the income green. */
+export const ByCategoryKeptOutIncome: Story = {
+  name: "By category, a loan received opened",
+  render: () => <ProfitRoute entry="/profit?by=category" sample={KEPT_OUT_SAMPLE} />,
+  play: async ({ canvasElement }) => {
+    const kept = await within(canvasElement).findByRole("region", { name: "לא נספר ברווח" });
+    within(kept).getByText("קבלת הלוואה").closest("button")?.click();
+    const line = await waitFor(() => {
+      const row = within(kept).getByText("Example Lending").closest("a");
+      if (row == null) throw new Error("no line");
+      return row;
+    });
+    const amount = line.querySelector(".ui-num");
+    await expect(amount?.textContent).toMatch(/^\+\$206,500/);
+    await expect(amount?.classList.contains("ui-income")).toBe(false);
+    await expect(kept.querySelector(".ui-income")).toBeNull();
+  },
+};
+
 export const ByDate: Story = { name: "By date", render: () => <ProfitRoute entry="/profit?by=date" /> };
 
 export const ByAmount: Story = { name: "By amount", render: () => <ProfitRoute entry="/profit?by=amount" /> };

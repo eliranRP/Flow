@@ -356,7 +356,7 @@ One word per idea, in plain Hebrew that an accountant would also accept. Owner p
 | Customer invoices not paid yet | חשבוניות פתוחות · לגבייה | לא שולמו, טרם נגבה | Sent to a customer, no money in yet. |
 | Refund from a supplier | החזר מספק | הוצאה שהוחזרה | Lowers expenses. |
 | Refund to a customer or tenant | החזר ללקוח | הכנסה שהוחזרה | Lowers income. |
-| Loan parts | קרן · ריבית · מסים וביטוח | | Principal is not an expense. Interest and escrow are. |
+| Loan parts | קרן · ריבית · מסים וביטוח | | Principal and escrow are not expenses: principal is a liability (התחייבות) and escrow an asset (נכס, אסקרו), both kept out of profit. Interest is an expense. Owner pick, 2026-10-22 (FLOW-954). |
 | Default income category | הכנסה מלקוחות | תקבול מלקוח | A receipt (תקבול) is any money in, a loan too. Income is what counts in profit. |
 | Loan received / owner money | קבלת הלוואה · השקעת בעלים · משיכות בעלים | תקבולי הלוואות, הון בעלים | None of these is income or an expense. |
 

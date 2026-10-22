@@ -9,3 +9,5 @@
 - [x] P&L by category: a "לא נספר ברווח" group after the counted ones, rows "<category> · <type>" faded with no share bar, opening to their lines. No P&L figure moves.
 
 **Acceptance:** pgTAP (`line_journal_read`, `privilege_guards`, `cross_company_sweep`, the breakdown and P&L files unchanged and green), `pnpm typecheck`, `pnpm lint`, the app unit tests, `pnpm build-storybook && pnpm clip-check`, the Storybook tests, `pnpm db:types:check`, shots at 320, 390, 480 and 375x667 in both themes.
+
+**Follow-up (review of #781, nit 11):** when `get_line_journal` fails, the line page shows no journal and no error; give it a quiet retry line like the bank details' (`LoanReadError`). A new task once this merges.

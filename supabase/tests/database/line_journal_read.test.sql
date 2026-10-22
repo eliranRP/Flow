@@ -5,7 +5,7 @@
 -- excluded are pinned before and after. Invented books only; USD cents.
 
 begin;
-select plan(35);
+select plan(38);
 
 do $u$ begin
   perform tests.create_supabase_user('lj_owner', 'lj-owner@example.com');
@@ -56,6 +56,14 @@ select pg_temp.line('princ', 'co', -35000, 'principal');
 select pg_temp.line('booked', 'co', -10000, 'build');
 select pg_temp.line('undone', 'co', -10000, 'build');
 select pg_temp.line('pend', 'co', -10000, 'build', 'pending');
+-- In July: a line split into two kept-out parts (purchase 200.00, principal 100.00), and a counted line.
+select pg_temp.line('two', 'co', -30000, 'purchase');
+select pg_temp.line('julbuild', 'co', -5000, 'build');
+update public.transactions set doc_date = '2026-07-10', cash_date = '2026-07-10'
+where id in (pg_temp.id('txn_two'), pg_temp.id('txn_julbuild'));
+insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, percent, is_rest)
+values (pg_temp.id('co'), pg_temp.id('txn_two'), 1, pg_temp.id('purchase'), pg_temp.id('alpha'), 20000, null, false),
+  (pg_temp.id('co'), pg_temp.id('txn_two'), 2, pg_temp.id('principal'), pg_temp.id('alpha'), 10000, null, true);
 select pg_temp.line('foreign', 'other_co', -240000, null);
 
 -- An MCP write on 'booked' (live) and on 'undone' (undone since).
@@ -150,6 +158,19 @@ select is(
      jsonb_array_elements(b -> 'groups') g
    where g ->> 'key' = pg_temp.id('build')::text),
   '260000/3|260000|8069714', 'groups, totals and excluded keep their figures');
+
+-- Two kept-out parts of one line stay two rows, each under its own category (they used to merge
+-- into one row with no category and vanish from both groups); counted rows are as before.
+select is((select string_agg(format('%s/%s', r ->> 'category_id', r ->> 'amount_minor'), ',' order by r ->> 'amount_minor')
+    from jsonb_array_elements(public.get_breakdown_lines('expense', 'category', '', 'USD', '2026-07-01', '2026-07-31', 'cash', true) -> 'rows') r),
+  format('%s/10000,%s/20000', pg_temp.id('principal'), pg_temp.id('purchase')),
+  'two kept-out parts of one line are two rows, each with its category');
+select is((select string_agg(format('%s/%s/%s', r ->> 'category_id', r ->> 'amount_minor', r ->> 'part'), ',')
+    from jsonb_array_elements(public.get_breakdown_lines('expense', 'category', pg_temp.id('build')::text, 'USD', '2026-07-01', '2026-07-31', 'cash', false) -> 'rows') r),
+  format('%s/5000/', pg_temp.id('build')), 'a counted group''s rows are unchanged');
+select is((select sum((g ->> 'amount_minor')::bigint)::text from jsonb_array_elements(
+    public.get_breakdown('expense', '2026-07-01', '2026-07-31', 'category') -> 'excluded_groups') g),
+  '30000', 'the July kept-out groups hold both parts');
 
 -- A category bound to a balance-sheet account (FLOW-953): its legs and its group name that account.
 reset role;

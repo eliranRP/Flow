@@ -130,7 +130,7 @@ export function buildProfitModel(inputs: ProfitInputs, overhead: OverheadProject
   for (const direction of ["income", "expense"] as const) {
     for (const group of inputs.categories[direction]?.excluded_groups ?? []) {
       if (group.currency !== currency) continue;
-      keptOut.push({ key: group.key, name: group.name ?? "", direction, total: group.amount_minor, count: group.count, projects: group.projects, loanPart: group.loan_part, accountType: group.account_type ?? null });
+      keptOut.push({ key: group.key, name: group.name ?? "בלי קטגוריה", direction, total: group.amount_minor, count: group.count, projects: group.projects, loanPart: group.loan_part, accountType: group.account_type ?? null });
     }
   }
   keptOut.sort(byMagnitude((row) => row.total, (a, b) => a.name.localeCompare(b.name)));
@@ -148,7 +148,7 @@ export function buildProfitModel(inputs: ProfitInputs, overhead: OverheadProject
         date: row.doc_date,
         project: row.project_name,
         category: row.category_name ?? input.categoryName,
-        categoryKey: kept ? (row.category_id ?? "") : input.categoryKey,
+        categoryKey: kept ? (row.category_id ?? "none") : input.categoryKey,
         direction: input.direction,
         amount: signed,
         grossUp: row.gross_up === true,
