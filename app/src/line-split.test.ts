@@ -296,6 +296,55 @@ describe("gross-up split parts (FLOW-946, decision 0206)", () => {
     ]);
   });
 
+  // Payment-side symmetry: an expense line with a positive income credit part.
+  const payCtx: LineContext = {
+    lineMinor: 5_000n,
+    lineCategoryId: "c-build",
+    lineProjectId: "p-b",
+    isReversal: (id) => id === "c-credit",
+  };
+
+  it("handles the payment side: an income credit nets against an expense line", () => {
+    // The real cost is on a non-line expense category (c-labor), so the implicit rest on the
+    // line's own category does not collide with it, and the two parts sum to the line exactly.
+    const parts: PartDraft[] = [
+      { key: "a", categoryId: "c-labor", projectId: "p-b", unit: "amount", value: "60" },
+      { key: "b", categoryId: "c-credit", projectId: "p-b", unit: "amount", value: "10", grossUp: true },
+    ];
+    expect(buildPayload(parts, { categoryId: null, projectId: null })).toEqual([
+      { category_id: "c-labor", project_id: "p-b", amount_minor: 6_000 },
+      { category_id: "c-credit", project_id: "p-b", amount_minor: 1_000, gross_up: true },
+      { rest: true },
+    ]);
+    // 5000 - (6000 - 1000) = 0.
+    const check = checkParts(parts, { categoryId: null, projectId: null }, payCtx);
+    expect(check.restMinor).toBe(0n);
+    expect(check.overMinor).toBe(0n);
+    expect(check.form).toBeNull();
+    // The wrong-side and no-project issues fire symmetrically on the payment side.
+    const noProject = checkParts([
+      { key: "a", categoryId: "c-labor", projectId: "p-b", unit: "amount", value: "60" },
+      { key: "b", categoryId: "c-credit", projectId: null, unit: "amount", value: "10", grossUp: true },
+    ], { categoryId: null, projectId: null }, payCtx);
+    expect(noProject.parts.b).toBe("a gross-up part needs a project");
+    const wrongSide = checkParts([
+      { key: "a", categoryId: "c-labor", projectId: "p-b", unit: "amount", value: "40", grossUp: true },
+      { key: "b", categoryId: "c-credit", projectId: "p-b", unit: "amount", value: "90" },
+    ], { categoryId: null, projectId: null }, payCtx);
+    expect(wrongSide.parts.a).toBe("gross-up wrong side");
+  });
+
+  it("a split that overshoots even after a gross-up part is flagged over the line", () => {
+    // proceeds 1100.00 added, cost 30.00 subtracted => 1070.00 used against a 970.00 line.
+    const check = checkParts([
+      { key: "a", categoryId: "c-proceeds", projectId: null, unit: "amount", value: "1100" },
+      { key: "b", categoryId: "c-cost", projectId: "p-a", unit: "amount", value: "30", grossUp: true },
+    ], { categoryId: null, projectId: null }, depCtx);
+    expect(check.overMinor).toBe(10_000n);
+    expect(check.form).toBe("parts exceed the line");
+    expect(check.restMinor).toBe(-10_000n);
+  });
+
   it("the sample preview nets a gross-up part and refuses the wrong side", () => {
     const preview = samplePreview(97_000n, "c-rent", [
       { category_id: "c-proceeds", project_id: null, amount_minor: 100_000 },

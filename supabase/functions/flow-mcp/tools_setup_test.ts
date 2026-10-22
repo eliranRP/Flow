@@ -119,7 +119,43 @@ Deno.test("split_line forwards a gross_up part and rejects gross_up with percent
   }, ["write"], rpc);
   assertEquals(bad.isError, true);
   if (!bad.structuredContent.ok) assertEquals(bad.structuredContent.error.code, "validation");
+  // A gross_up part with rest is a schema error too (v1: exact amount only).
+  const badRest = await callTool("split_line", {
+    idempotency_key: "gu-3",
+    transaction_id: TXN,
+    parts: [
+      { category_id: INCOME_CATEGORY, amount_minor: 100000 },
+      { category_id: CATEGORY, project_id: PROJECT, rest: true, gross_up: true },
+    ],
+  }, ["write"], rpc);
+  assertEquals(badRest.isError, true);
+  if (!badRest.structuredContent.ok) assertEquals(badRest.structuredContent.error.code, "validation");
   assertEquals(calls.length, 1);
+});
+
+Deno.test("assign_expenses carries a gross_up part through the batch split row", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { batch_key: "k", ok_count: 1, error_count: 0, results: [] } },
+  }));
+  const batch = await callTool("assign_expenses", {
+    idempotency_key: "gu-batch",
+    items: [{
+      transaction_id: TXN,
+      parts: [
+        { category_id: INCOME_CATEGORY, amount_minor: 100000 },
+        { category_id: CATEGORY, project_id: PROJECT, amount_minor: 3000, gross_up: true },
+      ],
+    }],
+  }, ["write"], rpc);
+  assertEquals(batch.isError, false);
+  assertEquals(calls[0]?.body.p_items, [{
+    transaction_id: TXN,
+    parts: [
+      { category_id: INCOME_CATEGORY, amount_minor: 100000 },
+      { category_id: CATEGORY, project_id: PROJECT, amount_minor: 3000, gross_up: true },
+    ],
+  }]);
 });
 
 Deno.test("assign_expense forwards project and category for an income review line", async () => {

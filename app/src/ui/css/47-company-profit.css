@@ -172,3 +172,14 @@
   margin: 0;
   padding: var(--space-2) var(--space-1);
 }
+
+/* FLOW-946: the "paid from deposit" tag on a gross-up part in the drill-down, as a small pill
+   like the suggestion tag (ui-suggest-tag). */
+.ui-cp-grossup {
+  display: inline-block;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-chip);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-weight: var(--type-btn-weight);
+}
