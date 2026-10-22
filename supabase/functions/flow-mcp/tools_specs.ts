@@ -280,6 +280,27 @@ function writeTools() {
       transaction_id: { type: "string" },
       category_id: { type: "string" },
     }, true),
+    toolSpec("book_line", "Book one new P&L line from a balanced set of ledger legs (decision 0208; owner or editor). This is the general ledger booking primitive: each leg carries a SIGNED amount_minor (debit positive, credit negative), and the legs must sum to 0 — exactly one of them hits a bank account (the statement movement = the signed line total), the rest land on the caller's own P&L category (account) of the line's direction. legs is [{ account_id, amount_minor, project_id? }]; account ids come from the accounts table; direction is income or expense and must match the bank leg's sign (a deposit is income, a payment expense); doc_date is YYYY-MM-DD; currency is a 3-letter code; description (1 to 120 characters) names the line; project_id is the line's project when there is one category leg with none of its own. The server writes the equivalent legacy rows (a line, or line_splits when there is more than one category leg) so the P&L reflects it, and refuses rather than mis-books if the legs cannot be represented. Phase 1 books in-P&L categorized lines and splits; asset/liability (escrow, loan principal, owner draw) and VAT legs are a later phase and are refused. Returns id, direction and undo_kind (book_line: undo removes the booked line while it is still the one booked).", {
+      idempotency_key: { type: "string" },
+      doc_date: { type: "string" },
+      direction: { type: "string", enum: ["income", "expense"] },
+      currency: { type: "string" },
+      description: { type: "string" },
+      legs: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            account_id: { type: "string" },
+            amount_minor: { type: "integer" },
+            project_id: { type: ["string", "null"] },
+          },
+          required: ["account_id", "amount_minor"],
+          additionalProperties: false,
+        },
+      },
+      project_id: { type: ["string", "null"] },
+    }, true),
     toolSpec("create_manual_entry", "Add a cash or cheque line with no bank document (FLOW-369; owner or editor). direction is income or expense; amount_minor is whole minor units above zero; doc_date is YYYY-MM-DD; payee (2 to 120 characters) is who the money went to or came from; category_id is required, of the same direction; project_id is optional (null files the line as overhead); method is cash or cheque, and a cheque needs cheque_number (1 to 20 letters, digits or hyphens). Returns id, direction, amount_minor, doc_date and undo_kind (manual_entry: undo deletes the line while it still has this project, category, amount and date).", {
       idempotency_key: { type: "string" },
       direction: { type: "string", enum: ["income", "expense"] },

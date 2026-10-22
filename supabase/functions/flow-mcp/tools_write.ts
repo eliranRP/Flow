@@ -75,6 +75,7 @@ import { addLoanWrite, attachLoanWrite, updateLoanWrite } from "./tools_loans.ts
 import { syncBank } from "./tools_sync.ts";
 import { resetForecastSchema, setForecastItemSchema } from "./tools_forecast_schemas.ts";
 import { attachDocumentSchema, createManualEntrySchema } from "./tools_manual_schemas.ts";
+import { bookLineSchema } from "./tools_ledger_schemas.ts";
 import { PROJECT_FORECAST_WRITES, projectForecastWrite } from "./tools_project_forecast.ts";
 import { BANK_WRITES, bankWrite } from "./tools_bank.ts";
 
@@ -130,6 +131,26 @@ export async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
       p_category_id: parsed.data.category_id,
+    };
+  } else if (name === "book_line") {
+    // FLOW-948 (decision 0208): book a new P&L line from balanced legs. The database validates
+    // the legs balance, hit one bank leg, and land on the caller's own accounts; it writes the
+    // equivalent legacy rows so the unchanged P&L reflects it.
+    const parsed = bookLineSchema.safeParse(args);
+    if (!parsed.success) return invalid(parsed.error);
+    rpcName = "mcp_book_line";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_doc_date: parsed.data.doc_date,
+      p_direction: parsed.data.direction,
+      p_currency: parsed.data.currency,
+      p_description: parsed.data.description,
+      p_legs: parsed.data.legs.map((leg) => ({
+        account_id: leg.account_id,
+        amount_minor: leg.amount_minor,
+        ...(leg.project_id == null ? {} : { project_id: leg.project_id }),
+      })),
+      p_project_id: parsed.data.project_id ?? null,
     };
   } else if (name === "create_manual_entry") {
     // FLOW-369: the cash or cheque line. The database refuses another company's project or category.

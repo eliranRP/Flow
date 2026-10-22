@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `create_manual_entry`, `attach_document`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_manual_entry`, `attach_document`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -322,6 +322,18 @@ Output `data` when a review closed: `{ "undo_kind": "review", "id": "11111111-11
 ```json
 { "idempotency_key": "undo-30", "kind": "review", "id": "11111111-1111-4000-8000-000000000010" }
 ```
+
+## Ledger booking · FLOW-948
+
+### book_line
+
+```json
+{ "idempotency_key": "book-1", "doc_date": "2026-10-11", "direction": "expense", "currency": "USD", "description": "A repair bill", "legs": [ { "account_id": "<bank account id>", "amount_minor": -8000 }, { "account_id": "<repairs account id>", "amount_minor": 5000, "project_id": "<project id>" }, { "account_id": "<closing account id>", "amount_minor": 3000 } ] }
+```
+
+Book one new P&L line from a balanced set of ledger legs (decision [0208](../decisions/0208-balanced-legs-ledger.md); owner or editor). This is the general ledger booking primitive. Each leg's `amount_minor` is a **signed ledger value** — debit positive, credit negative, **not** a P&L-display amount — and the legs must sum to **0**. Exactly one leg hits a **bank** account (the statement movement, which equals the line's signed total: a deposit is a positive bank leg = income, a payment a negative bank leg = expense); the other legs land on the caller's own P&L **category** accounts (the `accounts` table bridges each category) of the line's own `direction`. `account_id`s come from the `accounts` table (read with the `accounts` select). `currency` is a 3-letter code; `description` (1 to 120 characters) names the line; `project_id` is the line's project when there is a single category leg carrying none of its own. The server writes the equivalent **legacy** rows — a whole line, or `line_splits` when there is more than one category leg — so the unchanged P&L (`pnl_lines` and every consumer) reflects it; the ledger legs are kept in step automatically. It **refuses rather than mis-books**: if the legs cannot be represented as legacy rows that project back to the request, it is `refused`. Phase 1 books in-P&L categorized lines and splits; asset/liability legs (escrow, loan principal, owner draw) and VAT are a later phase and are refused. A leg on another company's account, legs that do not balance, no bank leg, or an excluded-category leg are all `refused`. Output `data`: `{ "id", "direction", "undo_kind": "book_line" }`.
+
+Undo `kind: "book_line"` takes the line id and removes the booked line (and its splits, so its legs go with it) while it is still the one booked — the same amount, date and derived legs. A line edited since (a changed category or split) is `conflict`; a second undo is `not_found`.
 
 ## Lines from the add sheet · FLOW-369
 

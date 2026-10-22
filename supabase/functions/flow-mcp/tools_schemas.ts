@@ -52,7 +52,7 @@ export const READ_TOOL_NAMES = [
 export const SYNC_STATUS_TOOL = "get_sync_status";
 
 export const WRITE_TOOL_NAMES = [
-  "create_manual_entry",
+  "create_manual_entry", "book_line",
   "attach_document",
   "assign_expense",
   "assign_expense_split",
@@ -154,7 +154,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
   set_expense_category: new Set(["idempotency_key", "transaction_id", "category_id"]),
-  create_manual_entry: new Set(["idempotency_key", "direction", "amount_minor", "doc_date", "payee", "project_id", "category_id", "method", "cheque_number"]),
+  create_manual_entry: new Set(["idempotency_key", "direction", "amount_minor", "doc_date", "payee", "project_id", "category_id", "method", "cheque_number"]), book_line: new Set(["idempotency_key", "doc_date", "direction", "currency", "description", "legs", "project_id"]),
   attach_document: new Set(["idempotency_key", "transaction_id", "document"]),
   create_project: new Set(["idempotency_key", "name", "status", "type", "budget_minor"]),
   update_project: new Set(["idempotency_key", "id", "name", "type", "budget_minor", "status"]),
@@ -264,7 +264,7 @@ export const categorySchema = z.object({
 }).strict();
 export const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
