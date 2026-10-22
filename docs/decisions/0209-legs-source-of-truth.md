@@ -26,16 +26,16 @@
    - `category_id`: the category the person sees. It is kept on a kept-out leg too. It is a composite FK to `categories`, deferrable and initially deferred, so `delete_category` and `merge_category` move the lines first and the check runs at commit.
    - `part`, `gross_up`, `loan_split_fallback` and `project_explicit`.
 
-   A leg inserted without a kind takes it from its account. There is no aggregation, so the multiset of rows matches by construction.
+   There is no aggregation, so the multiset of rows matches by construction.
 
 4. **Kept-out routing in one place.** `private.kept_out_account(company, category, loan_part)` routes a kept-out row by loan part: principal to Loan principal, escrow to Escrow, anything else to Suspense. FLOW-953 widens it with a category's own ledger account.
 
-5. **Set-based posting.** `private.rebuild_legs_many(company, uuid[])` makes one delete and one insert for many lines. `rebuild_legs` calls it for one line. The ordinal rule is 0208's, so `book_line`'s undo fingerprint of an existing line does not move.
+5. **Set-based posting.** `private.rebuild_legs_many(company, uuid[])` makes one delete and one insert for many lines. Every trigger posts through it, and 0208's one-line `rebuild_legs` is dropped. The ordinal rule is 0208's, so `book_line`'s undo fingerprint of an existing line does not move.
 
-6. **Post only what changed.** Statement triggers stay immediate: a deferred posting would leave `pnl_lines` stale inside the same transaction, which breaks `book_line`'s self-check.
-   - **Transactions update.** Old and new transition tables. A line is re-posted only when a posting column changed: `amount_net`, `amount_gross`, `vat_amount`, `direction`, `category_id`, `category_suggested`, `project_id`, `in_pnl_override`, `line_status`, `removed_at`.
+6. **Post only what changed.** Posting stays immediate: the statement-level triggers on the legacy tables and the row-level categories trigger all post inside the writing statement. A deferred posting would leave the legs stale inside the same transaction, which breaks `book_line`'s self-check.
+   - **Transactions update.** Old and new transition tables. A line is re-posted only when a posting column changed: `amount_net`, `amount_gross`, `vat_amount`, `direction`, `category_id`, `category_suggested`, `project_id`, `in_pnl_override`, `line_status`, `removed_at`, `company_id`.
    - **Inserts and split tables.** An insert, and a change to `line_splits` or `loan_splits`, posts once per company per statement.
-   - **Categories.** 0208's categories trigger (item 9) posts all of a category's lines in one call.
+   - **Categories.** 0208's row-level categories trigger (item 9) posts all of a category's lines in one call.
    - **Allocations.** The allocation triggers are dropped: allocations decide only `unassigned`, which the shadow view reads at view time.
    - **Deletes.** The transactions delete trigger is dropped: the legs' FK already cascades.
 

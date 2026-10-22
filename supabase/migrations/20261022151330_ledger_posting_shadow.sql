@@ -10,8 +10,8 @@
 --      gross_up, loan_split_fallback, project_explicit. One item leg per legacy row, no aggregation.
 --   3. private.kept_out_account(company, category, loan_part): today's kept-out routing (principal ->
 --      Loan principal, escrow -> Escrow, else Suspense), in one place PR 3 can widen.
---   4. private.rebuild_legs_many(company, uuid[]): set-based posting (one delete, one insert);
---      private.rebuild_legs(company, txn) calls it.
+--   4. private.rebuild_legs_many(company, uuid[]): set-based posting (one delete, one insert). It
+--      replaces private.rebuild_legs(company, txn), which is dropped.
 --   5. Trigger hygiene: the transactions update trigger recompiles only the lines whose posting
 --      columns changed (old/new transition tables); inserts and child-table changes post set-based;
 --      the categories trigger (FLOW-950's legs_category_sync) posts set-based; the allocation
@@ -359,18 +359,9 @@ $$;
 revoke all on function private.rebuild_legs_many(uuid, uuid[]) from public, anon, authenticated;
 grant execute on function private.rebuild_legs_many(uuid, uuid[]) to service_role;
 
--- One line: the same posting.
-create or replace function private.rebuild_legs(p_company uuid, p_txn uuid)
-returns void
-language sql
-security definer
-set search_path = ''
-as $$
-  select private.rebuild_legs_many(p_company, array[p_txn]);
-$$;
-
-revoke all on function private.rebuild_legs(uuid, uuid) from public, anon, authenticated;
-grant execute on function private.rebuild_legs(uuid, uuid) to service_role;
+-- The one-line posting goes: every caller (the triggers below, the categories trigger) now posts
+-- through rebuild_legs_many.
+drop function private.rebuild_legs(uuid, uuid);
 
 -- ---------------------------------------------------------------------------
 -- 5. Triggers: post set-based, and only what changed.
@@ -392,7 +383,8 @@ end;
 $$;
 
 -- Updated lines: only those whose posting columns changed. Everything else the shadow view reads from
--- the header at read time (doc kind, dates, currency, pnl_role, unpaid, cash override, description).
+-- the header at read time (doc kind, dates, currency, line net, pnl_role, unpaid). Columns neither
+-- view reads (description, in_cash_override, ...) never re-post.
 create or replace function private.legs_sync_txn_upd()
 returns trigger
 language plpgsql
@@ -526,35 +518,10 @@ alter table public.legs
     leg_kind = 'item' or (category_id is null and part is null and not gross_up
                           and not loan_split_fallback and not project_explicit));
 
--- A leg written without a kind (a direct insert, not the posting) takes it from its account: the bank
--- account is 'bank', VAT control 'vat', anything else 'item'. Posting always sets it, so the WHEN
--- clause keeps this off the posting path.
-create or replace function private.legs_fill_kind_tg()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  select case when a.is_bank then 'bank' when a.category_id is null and a.name = 'VAT control' then 'vat' else 'item' end
-  into new.leg_kind
-  from public.accounts a
-  where a.company_id = new.company_id and a.id = new.account_id;
-  return new;
-end;
-$$;
-
-revoke all on function private.legs_fill_kind_tg() from public, anon, authenticated;
-
-create trigger legs_fill_kind
-  before insert on public.legs
-  for each row when (new.leg_kind is null) execute function private.legs_fill_kind_tg();
-
--- Indexes: the FK (decision 0195), the shadow view's item legs by line, and project prefilters.
+-- The category FK's index (decision 0195). The shadow view reads item legs by line through
+-- legs_txn_idx; FLOW-952 adds a project index only if its EXPLAIN asks for one.
 create index legs_company_id_category_id_fk_idx
   on public.legs (company_id, category_id) where category_id is not null;
-create index legs_item_txn_idx on public.legs (company_id, transaction_id) where leg_kind = 'item';
-create index legs_item_project_idx on public.legs (company_id, project_id) where leg_kind = 'item';
 
 -- ---------------------------------------------------------------------------
 -- 7. private.pnl_lines_ledger — the shadow P&L: pnl_lines' 19 columns, in order, from the legs.

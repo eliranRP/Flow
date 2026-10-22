@@ -39,40 +39,40 @@ values ((select id from bi where label='co'), 'expense', 'receipt', 'project', '
 insert into bi select 'txn2', id from public.transactions where idempotency_key = 'bi2';
 
 select lives_ok($$
-  insert into public.legs (company_id, transaction_id, account_id, project_id, amount_minor, ordinal)
+  insert into public.legs (company_id, transaction_id, account_id, project_id, amount_minor, ordinal, leg_kind)
   values
-    ((select id from bi where label='co'), (select id from bi where label='txn2'), (select id from bi where label='uexp'), null, 1000, 1),
-    ((select id from bi where label='co'), (select id from bi where label='txn2'), (select id from bi where label='bank'), null, -1000, 2);
+    ((select id from bi where label='co'), (select id from bi where label='txn2'), (select id from bi where label='uexp'), null, 1000, 1, 'item'),
+    ((select id from bi where label='co'), (select id from bi where label='txn2'), (select id from bi where label='bank'), null, -1000, 2, 'bank');
   set constraints all immediate;
 $$, 'a balanced set with one bank leg is accepted');
 
 -- An unbalanced set (sum <> 0) is refused.
 select throws_ok($$
   delete from public.legs where transaction_id = (select id from bi where label='txn2');
-  insert into public.legs (company_id, transaction_id, account_id, project_id, amount_minor, ordinal)
+  insert into public.legs (company_id, transaction_id, account_id, project_id, amount_minor, ordinal, leg_kind)
   values
-    ((select id from bi where label='co'), (select id from bi where label='txn2'), (select id from bi where label='uexp'), null, 1000, 3),
-    ((select id from bi where label='co'), (select id from bi where label='txn2'), (select id from bi where label='bank'), null, -900, 4);
+    ((select id from bi where label='co'), (select id from bi where label='txn2'), (select id from bi where label='uexp'), null, 1000, 3, 'item'),
+    ((select id from bi where label='co'), (select id from bi where label='txn2'), (select id from bi where label='bank'), null, -900, 4, 'bank');
   set constraints all immediate;
 $$, 'P0001', null, 'an unbalanced leg set (sum <> 0) is refused');
 
 -- No bank leg is refused.
 select throws_ok($$
   delete from public.legs where transaction_id = (select id from bi where label='txn2');
-  insert into public.legs (company_id, transaction_id, account_id, project_id, amount_minor, ordinal)
+  insert into public.legs (company_id, transaction_id, account_id, project_id, amount_minor, ordinal, leg_kind)
   values
-    ((select id from bi where label='co'), (select id from bi where label='txn2'), (select id from bi where label='uexp'), null, 1000, 5),
-    ((select id from bi where label='co'), (select id from bi where label='txn2'), (select id from bi where label='susp'), null, -1000, 6);
+    ((select id from bi where label='co'), (select id from bi where label='txn2'), (select id from bi where label='uexp'), null, 1000, 5, 'item'),
+    ((select id from bi where label='co'), (select id from bi where label='txn2'), (select id from bi where label='susp'), null, -1000, 6, 'item');
   set constraints all immediate;
 $$, 'P0001', null, 'a set with no bank leg is refused');
 
 -- Two bank legs is refused.
 select throws_ok($$
   delete from public.legs where transaction_id = (select id from bi where label='txn2');
-  insert into public.legs (company_id, transaction_id, account_id, project_id, amount_minor, ordinal)
+  insert into public.legs (company_id, transaction_id, account_id, project_id, amount_minor, ordinal, leg_kind)
   values
-    ((select id from bi where label='co'), (select id from bi where label='txn2'), (select id from bi where label='bank'), null, 1000, 7),
-    ((select id from bi where label='co'), (select id from bi where label='txn2'), (select id from bi where label='bank'), null, -1000, 8);
+    ((select id from bi where label='co'), (select id from bi where label='txn2'), (select id from bi where label='bank'), null, 1000, 7, 'bank'),
+    ((select id from bi where label='co'), (select id from bi where label='txn2'), (select id from bi where label='bank'), null, -1000, 8, 'bank');
   set constraints all immediate;
 $$, 'P0001', null, 'a set with two bank legs is refused');
 

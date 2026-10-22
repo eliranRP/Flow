@@ -3,8 +3,8 @@
 -- reads the header at view time); one insert statement posts all its lines; allocation edits post
 -- nothing (allocations are read at view time); a deleted line loses its legs through the key; a
 -- category rename leaves the legs alone and a keep-out re-posts them. Also: pnl_lines and the
--- posting rules give the same rows, the diff finds a corrupted leg both ways, rebuild_legs and
--- rebuild_legs_many post the same legs, kept-out routing, leg kinds, and that no client can read
+-- posting rules give the same rows, the diff finds a corrupted leg both ways, re-posting a set of
+-- lines gives the legs the triggers gave, kept-out routing, leg kinds, and that no client can read
 -- the posting rules or the shadow. Invented data only; amounts are agorot.
 
 begin;
@@ -151,10 +151,10 @@ where transaction_id = pg_temp.id('split') and leg_kind = 'item' and category_id
 select is(
   (select string_agg(side, ',' order by side) from private.ledger_pnl_diff(pg_temp.id('co'))),
   'ledger_only,legacy_only', 'a corrupted leg shows on both sides of the diff');
-select private.rebuild_legs(pg_temp.id('co'), pg_temp.id('split'));
-select is(pg_temp.diff_rows(), 0::bigint, 'rebuild_legs repairs it');
+select private.rebuild_legs_many(pg_temp.id('co'), array[pg_temp.id('split')]);
+select is(pg_temp.diff_rows(), 0::bigint, 'rebuild_legs_many repairs it');
 
--- 10. rebuild_legs_many posts exactly what one-by-one posting does.
+-- 10. rebuild_legs_many over every line posts exactly what the triggers posted.
 create temp table lpt_one as
 select transaction_id, account_id, project_id, amount_minor, ordinal, leg_kind, category_id, part, gross_up,
   loan_split_fallback, project_explicit
