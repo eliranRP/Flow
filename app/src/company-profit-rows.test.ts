@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { companyCategoryGroups, companySummaryRows } from "./company-profit-rows";
+import { companyCategoryGroups, companyKeptOutCategories, companySummaryRows, keptOutTypeLabel } from "./company-profit-rows";
 import type { ProfitCategoryRow, ProfitLine } from "./use-company-profit";
 
 /** FLOW-143: the company profit page's summary rows and its category groups (board `co.sum`, `catGroups(L, true)`). Invented figures. */
@@ -71,5 +71,33 @@ describe("companyCategoryGroups", () => {
 
   it("leaves out an empty group", () => {
     expect(companyCategoryGroups({ categories: categories.filter((row) => row.direction === "expense"), lines: [] }).map((group) => group.key)).toEqual(["out"]);
+  });
+});
+
+describe("the kept-out group (FLOW-954)", () => {
+  it("names each account type as the ledger books it: principal a liability, escrow an asset, else by side", () => {
+    expect(keptOutTypeLabel("expense", "principal")).toBe("התחייבות");
+    expect(keptOutTypeLabel("expense", "escrow")).toBe("נכס");
+    expect(keptOutTypeLabel("expense", null)).toBe("נכס");
+    expect(keptOutTypeLabel("income", null)).toBe("התחייבות");
+  });
+
+  it("a row per kept-out category: its type, money in marked, its count with the project or how many, its lines", () => {
+    const line = (id: string, key: string, project: string): ProfitLine => ({
+      id, transactionId: id, title: "Example", source: undefined, date: "2026-10-07", project, category: "", categoryKey: key, direction: "expense", amount: -100n, keptOut: true,
+    });
+    const rows = companyKeptOutCategories({
+      keptOut: [
+        { key: "c-loan", name: "קבלת הלוואה", direction: "income", total: 20_650_000n, count: 1, projects: 1, loanPart: null },
+        { key: "c-principal", name: "קרן הלוואה", direction: "expense", total: 430_700n, count: 2, projects: 2, loanPart: "principal" },
+        { key: "c-buy", name: "רכישת נכס", direction: "expense", total: 100n, count: 1, projects: 1, loanPart: null },
+      ],
+      keptOutLines: [line("t1", "c-principal", "Alpha"), line("t2", "c-principal", "Beta"), line("t3", "c-buy", "Gamma")],
+    });
+    expect(rows.map((row) => [row.key, row.type, row.moneyIn, row.meta, row.lines.length])).toEqual([
+      ["kept:income:c-loan", "התחייבות", true, "1 תנועה", 0],
+      ["kept:expense:c-principal", "התחייבות", false, "2 תנועות · 2 פרויקטים", 2],
+      ["kept:expense:c-buy", "נכס", false, "1 תנועה · Gamma", 1],
+    ]);
   });
 });

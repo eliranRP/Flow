@@ -12,7 +12,9 @@ import {
   CoinIcon,
   DocumentIcon,
   DownloadIcon,
+  EyeOffIcon,
   HomeIcon,
+  JournalIcon,
   KeptOutIcon,
   KeyIcon,
   LoanIcon,
@@ -37,7 +39,7 @@ import { padded } from "./story-support";
 
 type Entry = [string, ComponentType<{ size?: number }>];
 
-/** The 24-grid line icons, stroke 1.9. FLOW-501 adds PlugIcon (חיבורים) and LoanIcon (הלוואות); FLOW-601 PeopleIcon (צוות) and MailIcon (an invite); FLOW-415 RepeatIcon (חיוב קבוע) and TrendUpIcon and TrendDownIcon (a charge above or below usual); FLOW-939 KeyIcon (an AI key); */
+/** The 24-grid line icons, stroke 1.9. FLOW-501 adds PlugIcon (חיבורים) and LoanIcon (הלוואות); FLOW-601 PeopleIcon (צוות) and MailIcon (an invite); FLOW-415 RepeatIcon (חיוב קבוע) and TrendUpIcon and TrendDownIcon (a charge above or below usual); FLOW-939 KeyIcon (an AI key); FLOW-954 JournalIcon (פקודת יומן) and EyeOffIcon (a leg kept out of profit); */
 const ICONS: Entry[] = [
   ["PlugIcon", PlugIcon],
   ["LoanIcon", LoanIcon],
@@ -70,6 +72,8 @@ const ICONS: Entry[] = [
   ["RepeatIcon", RepeatIcon],
   ["TrendUpIcon", TrendUpIcon],
   ["TrendDownIcon", TrendDownIcon],
+  ["JournalIcon", JournalIcon],
+  ["EyeOffIcon", EyeOffIcon],
 ];
 
 function IconGrid() {

@@ -42,7 +42,7 @@ import { HoldLine } from "../ui/hold-line";
 import { IconButton } from "../ui/icon-button";
 import { AlertIcon, CloseIcon, PlusIcon } from "../ui/icons";
 import { MoneyField, PercentField } from "../ui/money-field";
-import { GrossUpTag, ReversalTag } from "../ui/suggest-tag";
+import { ReversalTag } from "../ui/suggest-tag";
 import { SwipeRow } from "../ui/swipe-row";
 import { useToast } from "../ui/toast";
 import {
@@ -55,6 +55,7 @@ import {
   money,
   partProjectLabel,
 } from "./line-split-parts";
+import { CreditToggle, SignedCheck, categoryNet, creditNote, partMinor } from "./line-split-credit";
 import { useSaveOnBack } from "./split-back";
 
 type PickTarget = { kind: "part"; key: string } | { kind: "rest" };
@@ -417,7 +418,14 @@ export function LineSplitEditor({
     setLastEdited(null);
   }
 
-  const statusNode: ReactNode = check.overMinor > 0n
+  // FLOW-954: a split with a credit part says how it adds up to the line, signed, once it does.
+  const minorOf = (part: PartDraft) => partMinor(part, lineMinor, resolved?.parts[part.key]);
+  const creditTerms = parts.map((part) => ({ minor: minorOf(part), credit: part.grossUp === true }));
+  const signedOk = parts.some((part) => part.grossUp === true) && check.overMinor === 0n && formIssue == null && reason == null
+    && restShown != null && creditTerms.every((term) => term.minor != null);
+  const statusNode: ReactNode = signedOk
+    ? <SignedCheck terms={creditTerms.map((term) => ({ minor: term.minor ?? 0n, credit: term.credit }))} rest={restShown} lineMinor={lineMinor} currency={currency} />
+    : check.overMinor > 0n
     ? <>{"חולק יותר מהסכום ב־"}<Amount minor={check.overMinor} currency={currency} /></>
     : parts.length === 0
       ? "הוסיפו חלק כדי לפצל. מה שלא פוצל נשאר בשורה."
@@ -457,9 +465,9 @@ export function LineSplitEditor({
             </p>
           </div>
           <div className="ui-lsplit-bar" aria-hidden="true">
-            <span className={check.overMinor > 0n ? "ui-lsplit-fill ui-lsplit-fill-over" : "ui-lsplit-fill"} style={{ inlineSize: `${String(fillPercent)}%` }} />
+            <span className={check.overMinor > 0n ? "ui-lsplit-fill ui-lsplit-fill-over" : "ui-lsplit-fill"} style={{ inlineSize: `${String(signedOk ? 100 : fillPercent)}%` }} />
           </div>
-          <p className={check.overMinor > 0n ? "ui-lsplit-status ui-lsplit-status-over" : "ui-lsplit-status"} aria-live="polite">{statusNode}</p>
+          <p className={check.overMinor > 0n ? "ui-lsplit-status ui-lsplit-status-over" : signedOk ? "ui-lsplit-status ui-lsplit-status-check" : "ui-lsplit-status"} aria-live="polite">{statusNode}</p>
         </header>
         {bannerReason ? (
           <div className="ui-lsplit-banner">
@@ -500,24 +508,24 @@ export function LineSplitEditor({
             const messageId = `lsplit-msg-${part.key}`;
             const flagged = problem != null || fieldError != null;
             const fieldFlagged = over || missingAmount || fieldError != null;
-            const note: ReactNode = part.unit === "percent"
+            // FLOW-954: a category with a normal and a credit part says what it nets to, on the credit part.
+            const paired = !grossUp && line.direction === "expense" && categoryNet(parts, part.categoryId, minorOf) != null;
+            const share: ReactNode = part.unit === "percent"
               // The server's cents once previewed; until then, or while the split can't be previewed, the local share.
               ? (cents != null ? <>{"= "}<Amount minor={cents} currency={currency} /></> : percent != null ? <>{"= "}<Amount minor={percentMinorOf(percent, lineMinor)} currency={currency} /></> : null)
               : (amount != null ? <><bdi dir="ltr">{`${Math.round(shareOfLine(amount, lineMinor)).toLocaleString("en-US")}%`}</bdi>{" מהסכום"}</> : null);
+            const note: ReactNode = grossUp ? creditNote(categoryNet(parts, part.categoryId, minorOf), name, currency) : paired && share != null ? <>{"עלות · "}{share}</> : share;
             return (
               <SwipeRow key={part.key} disabled={busy || blocked} onRemove={() => { removePart(part.key); }}>
-                <div className="ui-lsplit-part" data-invalid={flagged ? "" : undefined}>
+                <div className="ui-lsplit-part" data-invalid={flagged ? "" : undefined} data-credit={grossUp ? "" : undefined}>
                   <div className="ui-lsplit-part-head">
                     <span className="ui-lsplit-part-no">{`חלק ${String(index + 1)}`}</span>
                     {part.categoryId !== "" ? (
-                      <button
-                        type="button"
-                        className="ui-lsplit-grossup ui-hit"
-                        role="switch"
-                        aria-checked={grossUp}
-                        aria-label={`גרוס-אפ, ${name}`}
-                        onClick={() => {
-                          // A gross-up part is an exact amount; a percent part becomes its cents.
+                      <CreditToggle
+                        on={grossUp}
+                        name={name}
+                        onToggle={() => {
+                          // A credit part is an exact amount; a percent part becomes its cents.
                           update(part.key, grossUp
                             ? { grossUp: false }
                             : {
@@ -528,9 +536,7 @@ export function LineSplitEditor({
                                 : cents != null ? amountText(cents) : percent != null ? amountText(percentMinorOf(percent, lineMinor)) : "",
                             });
                         }}
-                      >
-                        {grossUp ? "גרוס-אפ ✓" : "סמנו כגרוס-אפ"}
-                      </button>
+                      />
                     ) : null}
                     <button
                       type="button"
@@ -555,14 +561,15 @@ export function LineSplitEditor({
                     <button
                       type="button"
                       className="ui-lsplit-pick ui-hit"
-                      aria-label={`${name}${grossUp ? ", גרוס-אפ" : reversal ? ", החזר" : ""}, קטגוריה, שינוי`}
+                      aria-label={`${name}${grossUp ? ", זיכוי" : reversal ? ", החזר" : ""}, קטגוריה, שינוי`}
                       aria-describedby={problem != null ? messageId : undefined}
                       onClick={(event) => { openPicker({ kind: "part", key: part.key }, "category", event.currentTarget); }}
                     >
                       <span className="ui-lsplit-title">
                         {/* The full name is in the button's label. */}
                         <span className="ui-lsplit-name" data-clip-ok="">{name}</span>
-                        {grossUp ? <GrossUpTag /> : reversal ? <ReversalTag /> : null}
+                        {/* A credit part's mark is the ✓ זיכוי chip in its head (board LedgerSplitContra). */}
+                        {!grossUp && reversal ? <ReversalTag /> : null}
                       </span>
                       <ChevronDown />
                     </button>
@@ -662,7 +669,11 @@ export function LineSplitEditor({
             <Button variant="link" disabled={busy} onClick={() => { setConfirmClear(true); }} className="ui-lsplit-clear-link">הסרת הפיצול</Button>
           ) : null}
         </div>
-        <p className="ui-lsplit-footnote">כל חלק נספר ברווח של הפרויקט שלו ובקטגוריה שלו. אפשר אותו פרויקט עם כמה קטגוריות. בבנק נשארת תנועה אחת.</p>
+        <p className="ui-lsplit-footnote">
+          {parts.some((part) => part.grossUp === true)
+            ? "כל חלק נספר ברווח של הפרויקט שלו ובקטגוריה שלו. חלק זיכוי יורד מהסכום ומקטין את ההוצאה בקטגוריה שלו. בבנק נשארת תנועה אחת."
+            : "כל חלק נספר ברווח של הפרויקט שלו ובקטגוריה שלו. אפשר אותו פרויקט עם כמה קטגוריות. בבנק נשארת תנועה אחת."}
+        </p>
         <div className="ui-lsplit-foot" aria-busy={busy || undefined}>
           {showHold ? (
             <HoldLine onDiscard={discard}>

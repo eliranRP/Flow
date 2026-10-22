@@ -84,6 +84,58 @@ export const ByCategory: Story = {
   render: () => <ProfitRoute entry="/profit?by=category" sample={{ ...COMPANY_PROFIT_SAMPLE, openFirst: true }} />,
 };
 
+/** FLOW-954: invented kept-out categories and their lines (a purchase, a loan received, principal and escrow). */
+const KEPT_OUT_SAMPLE: CompanyProfitSample = (() => {
+  const group = (key: string, name: string, amount: bigint, count: number, projects: number, loanPart: string | null) => ({
+    currency: "USD", key, name, amount_minor: amount, count, projects, loan_part: loanPart,
+  });
+  const row = (id: string, supplier: string, project: string, categoryId: string, amount: bigint, date: string) => ({
+    transaction_id: id, part: null, description: supplier, supplier_name: supplier, project_name: project, category_name: null,
+    doc_date: date, currency: "USD", amount_minor: amount, shared: false, source: "mercury", category_id: categoryId,
+  });
+  const { income, expense } = COMPANY_PROFIT_SAMPLE.categories;
+  return {
+    ...COMPANY_PROFIT_SAMPLE,
+    categories: {
+      income: income == null ? null : { ...income, excluded_groups: [group("k-loan-in", "קבלת הלוואה", 20_650_000n, 1, 1, null)] },
+      expense: expense == null ? null : {
+        ...expense,
+        excluded_groups: [
+          group("k-buy", "רכישת נכס", 8_034_700n, 1, 1, null),
+          group("k-principal", "קרן הלוואה", 430_700n, 2, 2, "principal"),
+          group("k-escrow", "אסקרו", 96_300n, 2, 2, "escrow"),
+        ],
+      },
+    },
+    lines: [
+      ...COMPANY_PROFIT_SAMPLE.lines,
+      { direction: "income", categoryKey: "", categoryName: "", keptOut: true, rows: [row("t-k1", "Example Lending", "בית הדקל", "k-loan-in", 20_650_000n, "2026-10-08")] },
+      {
+        direction: "expense", categoryKey: "", categoryName: "", keptOut: true, rows: [
+          row("t-k2", "Example Title Co", "וילה הברושים", "k-buy", 8_034_700n, "2026-10-06"),
+          row("t-k3", "Example Mortgage", "בית השקד", "k-principal", 395_700n, "2026-10-07"),
+          row("t-k4", "Example Loan Servicing", "דירת הרימון", "k-principal", 35_000n, "2026-10-04"),
+          row("t-k5", "Example Mortgage", "בית השקד", "k-escrow", 60_000n, "2026-10-07"),
+          row("t-k6", "Example Loan Servicing", "דירת הרימון", "k-escrow", 36_300n, "2026-10-04"),
+        ],
+      },
+    ],
+  };
+})();
+
+/** FLOW-954 (board LedgerBreakdownKeptOut): after the counted groups, לא נספר ברווח, one row open to its lines. */
+export const ByCategoryKeptOut: Story = {
+  name: "By category, kept out of profit",
+  render: () => <ProfitRoute entry="/profit?by=category" sample={KEPT_OUT_SAMPLE} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const kept = await canvas.findByRole("region", { name: "לא נספר ברווח" });
+    await expect(within(kept).getByText("+$206,500")).toBeInTheDocument();
+    within(kept).getByText("קרן הלוואה").closest("button")?.click();
+    await waitFor(() => expect(within(kept).getByText("Example Loan Servicing")).toBeInTheDocument());
+  },
+};
+
 export const ByDate: Story = { name: "By date", render: () => <ProfitRoute entry="/profit?by=date" /> };
 
 export const ByAmount: Story = { name: "By amount", render: () => <ProfitRoute entry="/profit?by=amount" /> };

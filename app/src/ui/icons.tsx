@@ -608,3 +608,24 @@ export function KeyIcon(props: IconProps) {
     </Svg>
   );
 }
+
+/** FLOW-954. A book: the line's journal entry (פקודת יומן), as on the board's Ledger frames. */
+export function JournalIcon(props: IconProps) {
+  return (
+    <Svg stroke={1.8} {...props}>
+      <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z" />
+      <path d="M5 17a3 3 0 0 1 3-3h11" />
+    </Svg>
+  );
+}
+
+/** FLOW-954. An eye with a slash: a journal leg kept out of profit (the board's Ledger frames). */
+export function EyeOffIcon(props: IconProps) {
+  return (
+    <Svg stroke={2} {...props}>
+      <path d="M3 3l18 18" />
+      <path d="M10.6 6.1A9.8 9.8 0 0 1 12 6c5 0 9 6 9 6a17 17 0 0 1-3.1 3.7M6.6 7.6C4.4 9.1 3 12 3 12s4 6 9 6a9 9 0 0 0 4.4-1.2" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+    </Svg>
+  );
+}

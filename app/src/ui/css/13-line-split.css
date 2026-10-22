@@ -81,12 +81,14 @@
   margin-inline-end: auto;
 }
 
-/* FLOW-946: mark a reversal part as a gross-up (opposite-sign) part. */
-.ui-lsplit-grossup {
-  min-block-size: 32px;
-  padding: 0 var(--space-2);
-  border: 1px solid var(--color-control-border);
-  border-radius: var(--radius-chip);
+/* FLOW-954 (board LedgerSplitContra): mark a part as a credit (זיכוי). Off, quiet words; on, the
+   filled "✓ זיכוי" chip, and the part's card takes the selected outline. */
+.ui-lsplit-credit {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--touch-min);
+  padding: 0 var(--space-1);
+  border: 0;
   background: transparent;
   color: var(--color-text-muted);
   font: inherit;
@@ -94,9 +96,47 @@
   cursor: pointer;
 }
 
-.ui-lsplit-grossup[aria-checked="true"] {
-  border-color: var(--color-accent);
+.ui-lsplit-credit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-block-size: calc(var(--space-6) + var(--space-1));
+  padding: 0 calc(var(--space-2) + var(--space-half));
+  border-radius: var(--radius-chip);
+  background: var(--color-tint-strong);
   color: var(--color-text);
+  font-size: var(--type-chip-size);
+  font-weight: var(--type-chip-weight);
+  line-height: var(--type-chip-line);
+}
+
+.ui-lsplit-board .ui-lsplit-part[data-credit]:not([data-invalid]) {
+  border-color: var(--color-tint-strong);
+}
+
+.ui-lsplit-net {
+  color: var(--color-text);
+}
+
+/* The header's signed check once a split with a credit part adds up. */
+.ui-lsplit-board .ui-lsplit-status-check {
+  color: var(--color-text-secondary);
+}
+
+.ui-lsplit-check {
+  display: flex;
+  align-items: flex-start;
+  gap: calc(var(--space-1) * 1.5);
+}
+
+/* The sum may wrap between its terms; an amount itself has no space, so it never breaks. */
+.ui-lsplit-check .ui-num {
+  white-space: normal;
+}
+
+.ui-lsplit-check > svg {
+  flex: none;
+  margin-block-start: var(--space-half);
 }
 
 .ui-lsplit-pickers {

@@ -21,7 +21,7 @@ import { ScreenState } from "../ui/screen-state";
 import { rowSource } from "../ui/line-marks";
 import { BASIS_PROFIT_COPY, basisChoiceLabel } from "../ui/company-choices";
 import { buildProfitModel, useCompanyProfitRead, type ProfitInputs, type ProfitLine, type ProfitModel } from "../use-company-profit";
-import { byDateThenSize, bySizeOnly, companyCategoryGroups, companySummaryRows } from "../company-profit-rows";
+import { byDateThenSize, bySizeOnly, companyCategoryGroups, companyKeptOutCategories, companySummaryRows } from "../company-profit-rows";
 import { useCompanyNextMonth, useCompanyProfitMonths, type CompanyNextMonthSample } from "../company-next-month-query";
 import { companyYears } from "../company-years";
 import { useCompanyYearProjects, useCompanyYears, type CompanyYearsSample } from "../company-years-query";
@@ -210,7 +210,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   );
   const basisFooter = (
     <>
-      <p className="ui-cp-foot t-caption t-muted">לא נספר ברווח: קנייה ושיפוץ של נכס, קרן של הלוואות, הון בעלים והעברות בין חשבונות.</p>
+      <p className="ui-cp-foot t-caption t-muted">לא נספר ברווח: נכסים והתחייבויות, כמו קנייה של נכס, הלוואה, קרן ואסקרו. הם נשארים בספר ובתזרים, לא ברווח.</p>
       <button type="button" ref={basisRef} className="ui-cp-basis" onClick={() => { setSheetOpen(true); }}>
         נספר לפי {basisChoiceLabel(model.basis)} · <span className="ui-cp-change">שינוי</span>
       </button>
@@ -282,6 +282,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
       agorot={line.amount < 0n ? -line.amount : line.amount}
       currency={currency}
       sign={line.direction === "income" ? "in" : "cost"}
+      setAside={line.keptOut === true}
       source={rowSource(line.source)}
       initials={lineInitials(line.title)}
       href={`/transactions/${line.transactionId}${search}`}
@@ -315,6 +316,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
     body = (
       <ProfitCategories
         groups={groups}
+        keptOut={companyKeptOutCategories(model)}
         currency={currency}
         initialOpen={firstOpen}
         renderLine={(line) => lineRow(line, `${dayMonth(line.date)} · ${line.project ?? "בלי פרויקט"}`)}

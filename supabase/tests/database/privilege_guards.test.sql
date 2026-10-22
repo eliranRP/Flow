@@ -54,6 +54,7 @@ insert into pg_allowed (sig) values
     ('get_breakdown_lines(text,text,text,text,date,date,text,boolean,integer,integer)'),
     ('get_breakdown(text,date,date,text,text)'),
     ('get_dashboard(date,date,text)'),
+    ('get_line_journal(uuid)'),
     ('get_notification_prefs()'),
     ('get_project_group(uuid,text,date,date)'),
     ('get_setup_suggestions(date)'),

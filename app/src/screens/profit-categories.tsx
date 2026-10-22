@@ -25,6 +25,20 @@ export type ProfitCategory<L> = ProfitCategoryInput<L> & {
 
 export type ProfitCategoryGroup<L> = { key: "in" | "out"; title: "הכנסות" | "הוצאות"; total: bigint; categories: ProfitCategory<L>[] };
 
+/** FLOW-954. A kept-out category (לא נספר ברווח): its name, its account type, its total and meta line, and its lines. */
+export type KeptOutCategory<L> = {
+  key: string;
+  name: string;
+  /** נכס or התחייבות. */
+  type: string;
+  /** Positive on its side. */
+  total: bigint;
+  /** Money in that is not income: "+" in the text colour, never green. */
+  moneyIn: boolean;
+  meta: string;
+  lines: readonly L[];
+};
+
 function percent(part: bigint, whole: bigint): number {
   return whole <= 0n || part <= 0n ? 0 : Math.round((Number(part) * 100) / Number(whole));
 }
@@ -63,13 +77,43 @@ export function countWord(count: number): string {
  * group with its total, a row per category with its share, count (and projects when above one), total and a
  * bar. A row opens in place to its lines, drawn by the caller; one category is open at a time.
  */
-export function ProfitCategories<L>({ groups, currency, renderLine, initialOpen = null }: {
+export function ProfitCategories<L>({ groups, keptOut = [], currency, renderLine, initialOpen = null }: {
   groups: readonly ProfitCategoryGroup<L>[];
+  /** FLOW-954 (board LedgerBreakdownKeptOut): the kept-out categories, a group of their own after the counted ones. */
+  keptOut?: readonly KeptOutCategory<L>[];
   currency: string;
   renderLine: (line: L) => ReactNode;
   initialOpen?: string | null;
 }) {
   const [openKey, setOpenKey] = useState<string | null>(initialOpen);
+  const keptOutGroup = keptOut.length === 0 ? null : (
+    <section className="ui-lines-group ui-pcat-group" aria-label="לא נספר ברווח">
+      <div className="ui-lines-group-head">
+        <h2 className="t-section ui-lines-group-title">לא נספר ברווח</h2>
+        <span className="t-line2 t-muted">{keptOut.length === 1 ? "קטגוריה אחת" : `${String(keptOut.length)} קטגוריות`}</span>
+      </div>
+      <div className="ui-pcat-list">
+        {keptOut.map((category) => {
+          const open = openKey === category.key;
+          return (
+            <div key={category.key} className="ui-pcat ui-pcat-kept">
+              <button type="button" className="ui-pcat-button" aria-expanded={open} onClick={() => { setOpenKey(open ? null : category.key); }}>
+                <span className="ui-pcat-top">
+                  <span className="ui-pcat-name">
+                    <span className="ui-pcat-kept-name">{category.name}</span>
+                    <span className="ui-pcat-kept-type">{` · ${category.type}`}</span>
+                  </span>
+                  <Amount agorot={category.total} currency={currency} direction={category.moneyIn ? "income" : undefined} />
+                </span>
+                <span className="ui-pcat-meta">{category.meta}</span>
+              </button>
+              {open ? <List layout="flat">{category.lines.map(renderLine)}</List> : null}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
   return (
     <>
       {groups.map((group) => {
@@ -104,6 +148,7 @@ export function ProfitCategories<L>({ groups, currency, renderLine, initialOpen 
           </section>
         );
       })}
+      {keptOutGroup}
     </>
   );
 }

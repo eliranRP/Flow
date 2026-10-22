@@ -83,3 +83,36 @@ describe("gross-up drill-down lines (FLOW-947)", () => {
     expect(tax.find((line) => line.transactionId === "t2")).toMatchObject({ grossUp: false, amount: -24_948n });
   });
 });
+
+describe("kept-out categories and lines (FLOW-954)", () => {
+  it("reads the kept-out groups in the company currency, and keeps their lines out of the counted list", () => {
+    const expense: Breakdown = {
+      ...read("expense", []),
+      group_by: "category",
+      excluded_groups: [
+        { currency: "USD", key: "c-principal", name: "קרן הלוואה", amount_minor: 35_000n, count: 1, projects: 1, loan_part: "principal" },
+        { currency: "USD", key: "c-buy", name: "רכישת נכס", amount_minor: 8_000_000n, count: 1, projects: 1, loan_part: null },
+        { currency: "ILS", key: "c-other", name: "אחר", amount_minor: 100n, count: 1, projects: 1, loan_part: null },
+      ],
+    };
+    const model = buildProfitModel({
+      ...inputs([], []),
+      categories: { income: null, expense },
+      lines: [{
+        direction: "expense",
+        categoryKey: "",
+        categoryName: "",
+        keptOut: true,
+        rows: [
+          { transaction_id: "t1", part: null, description: "Example Mortgage", supplier_name: null, project_name: "Alpha", category_name: null, doc_date: "2026-10-07", currency: "USD", amount_minor: 35_000n, shared: false, category_id: "c-principal" },
+        ],
+      }],
+    }, null);
+    expect(model.keptOut.map((row) => [row.key, row.direction, row.total, row.loanPart])).toEqual([
+      ["c-buy", "expense", 8_000_000n, null],
+      ["c-principal", "expense", 35_000n, "principal"],
+    ]);
+    expect(model.lines).toEqual([]);
+    expect(model.keptOutLines).toEqual([expect.objectContaining({ transactionId: "t1", categoryKey: "c-principal", amount: -35_000n, keptOut: true })]);
+  });
+});
