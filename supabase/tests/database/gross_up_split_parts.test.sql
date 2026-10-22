@@ -8,7 +8,7 @@
 
 begin;
 
-select plan(38);
+select plan(37);
 
 do $users$
 begin
@@ -152,14 +152,9 @@ grant execute on function pg_temp.as_mcp(text) to authenticated, service_role;
 select tests.authenticate_as('gru_owner');
 
 -- ---------------------------------------------------------------------------
--- Refusals (D3 and v1 scope).
+-- Refusals (v1 scope). The same-kind rejection is gone: a same-kind gross-up part is now a
+-- CONTRA entry (FLOW-947, 0207), covered in gross_up_contra.test.sql.
 -- ---------------------------------------------------------------------------
--- A gross_up part of the same kind as the line carries the wrong sign.
-select throws_ok(
-  $$select public.save_line_split((select id from gru where label = 'txn_dep'),
-    jsonb_build_array(pg_temp.part('proceeds', 94000), pg_temp.part('rent', 3000, 'alpha', true)))$$,
-  'category kind must match the part sign',
-  'a gross-up income part on an income line is refused');
 -- A gross_up part with no project.
 select throws_ok(
   $$select public.save_line_split((select id from gru where label = 'txn_dep'),

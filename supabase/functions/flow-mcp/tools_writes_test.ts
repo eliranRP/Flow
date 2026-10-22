@@ -312,6 +312,11 @@ Deno.test("split_line forwards percent and rest parts", async () => {
     [{ percent: 10 }, { rest: true }],
     [{ category_id: CATEGORY, percent: 10 }, { rest: false }],
     [{ category_id: CATEGORY, percent: 10 }, { rest: true }, { category_id: INCOME_CATEGORY, rest: true }],
+    // FLOW-947: gross_up still needs an exact amount (no percent or rest), and effect is gross-up only.
+    [{ category_id: CATEGORY, project_id: PROJECT, percent: 10, gross_up: true }, { rest: true }],
+    [{ category_id: CATEGORY, gross_up: true, rest: true }, { category_id: INCOME_CATEGORY, amount_minor: 5 }],
+    [{ category_id: CATEGORY, project_id: PROJECT, amount_minor: 5, effect: "contra" }, { category_id: INCOME_CATEGORY, amount_minor: 5 }],
+    [{ category_id: CATEGORY, project_id: PROJECT, amount_minor: 5, gross_up: true, effect: "both" }, { category_id: INCOME_CATEGORY, amount_minor: 5 }],
   ];
   for (const parts of bad) {
     const result = await callTool("split_line", { idempotency_key: "k", transaction_id: TXN, parts }, ["write"], rpc);
@@ -319,6 +324,26 @@ Deno.test("split_line forwards percent and rest parts", async () => {
     if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
   }
   assertEquals(calls.length, 1);
+});
+
+Deno.test("split_line forwards gross_up with an explicit effect (FLOW-947)", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { transaction_id: TXN, parts: [], undo_kind: "line_split", id: TXN } },
+  }));
+  const res = await callTool("split_line", {
+    idempotency_key: "line-contra",
+    transaction_id: TXN,
+    parts: [
+      { category_id: CATEGORY, project_id: PROJECT, amount_minor: 24948 },
+      { category_id: CATEGORY, project_id: PROJECT_B, amount_minor: 85077, gross_up: true, effect: "contra" },
+    ],
+  }, ["write"], rpc);
+  assertEquals(res.isError, false);
+  assertEquals(calls[0]?.body.p_parts, [
+    { category_id: CATEGORY, project_id: PROJECT, amount_minor: 24948 },
+    { category_id: CATEGORY, project_id: PROJECT_B, amount_minor: 85077, gross_up: true, effect: "contra" },
+  ]);
 });
 
 Deno.test("split_line validates parts and refuses read tokens", async () => {
@@ -1019,6 +1044,17 @@ Deno.test("assign_expenses forwards a parts[] row like split_line and validates 
       p_items: [{ transaction_id: TXN, parts }, { transaction_id: TXN_B, parts: [] }],
     },
   });
+  // FLOW-947: a gross-up part with an explicit effect forwards verbatim inside a parts[] row.
+  const contraParts = [
+    { category_id: CATEGORY, project_id: PROJECT, amount_minor: 24948 },
+    { category_id: CATEGORY, project_id: PROJECT_B, amount_minor: 85077, gross_up: true, effect: "contra" },
+  ];
+  const contra = await callTool("assign_expenses", {
+    idempotency_key: "batch-contra",
+    items: [{ transaction_id: TXN, parts: contraParts }],
+  }, ["write"], rpc);
+  assertEquals(contra.isError, false);
+  assertEquals(calls[1]?.body.p_items, [{ transaction_id: TXN, parts: contraParts }]);
   const before = calls.length;
   const bad = [
     [{ category_id: CATEGORY, amount_minor: 4000 }],

@@ -19,18 +19,23 @@ export type PartDraft = {
   unit: PartUnit;
   value: string;
   /**
-   * FLOW-946 (decision 0206): a gross-up part, a real item of its category's kind that nets
-   * against the line (gross loan proceeds minus a closing cost, a credit on a payment). Its
-   * amount is subtracted from what is left to allocate. Opposite-kind, exact amount, own project.
+   * FLOW-946 (decision 0206): a gross-up part, a real item that nets against the line (gross loan
+   * proceeds minus a closing cost, a credit on a payment). Its amount is subtracted from what is
+   * left to allocate. Exact amount, own project; FLOW-947 (0207): either category kind.
    */
   grossUp?: boolean;
+  /**
+   * FLOW-947 (decision 0207): the gross-up effect, derived server-side from the category kind vs
+   * the line. Optional, for explicitness; the editor leaves it unset and lets the server derive.
+   */
+  effect?: "contra" | "normal";
 };
 
 /** The rest row. null keeps the line's own category or project. */
 export type RestDraft = { categoryId: string | null; projectId: string | null };
 
 export type PayloadPart =
-  | { category_id: string; project_id: string | null; amount_minor: number; gross_up?: true }
+  | { category_id: string; project_id: string | null; amount_minor: number; gross_up?: true; effect?: "contra" | "normal" }
   | { category_id: string; project_id: string | null; percent: number }
   | { rest: true; category_id?: string; project_id?: string | null };
 
@@ -44,8 +49,10 @@ export type ServerPart = {
   /** null for an amount, the rest, or a part restored by undo. */
   percent: number | null;
   rest: boolean;
-  /** FLOW-946: a gross-up part (opposite sign, a real item of its category's kind). Older samples omit it. */
+  /** FLOW-946: a gross-up part (a real item that nets against the line). Older samples omit it. */
   grossUp?: boolean;
+  /** FLOW-947 (0207): the server's derived effect on a gross-up part; null otherwise. */
+  effect?: "contra" | "normal" | null;
 };
 
 export type LineSplitRead = {
@@ -69,6 +76,8 @@ const serverPartSchema = z.object({
   percent: z.union([z.number(), z.string()]).nullable().optional().transform((value) => (value == null ? null : Number(value))),
   rest: z.boolean().nullable().optional().transform((value) => value === true),
   gross_up: z.boolean().nullable().optional().transform((value) => value === true),
+  // FLOW-947 (0207): the server's derived effect on a gross-up part, for readers that surface it.
+  effect: z.enum(["contra", "normal"]).nullable().optional().transform((value) => value ?? null),
 }).transform((part) => ({ ...part, grossUp: part.gross_up }));
 
 const readSchema = z.object({
@@ -176,6 +185,7 @@ export function buildPayload(parts: readonly PartDraft[], rest: RestDraft): Payl
         project_id: part.projectId,
         amount_minor: Number(minor),
         ...(part.grossUp ? { gross_up: true as const } : {}),
+        ...(part.grossUp && part.effect ? { effect: part.effect } : {}),
       });
     }
   }
@@ -193,7 +203,6 @@ export type LocalIssue =
   | "too few parts"
   | "a reversal part needs a project"
   | "a gross-up part needs a project"
-  | "gross-up wrong side"
   | "same category and project twice"
   | "parts exceed the line";
 
@@ -239,10 +248,8 @@ export function checkParts(parts: readonly PartDraft[], rest: RestDraft, ctx: Li
         issues[earlier] ??= "same category and project twice";
       } else seen.set(pair, part.key);
       if (part.grossUp) {
-        // A gross-up part is a real item of the opposite kind to the line, with its own project.
-        if (!ctx.isReversal(part.categoryId) || part.categoryId === ctx.lineCategoryId) {
-          note(part.key, "gross-up wrong side");
-        }
+        // FLOW-947 (0207): a gross-up part may carry either kind (contra on the line's own side,
+        // normal on the other); it just needs its own project.
         if (part.projectId == null) note(part.key, "a gross-up part needs a project");
       } else if (part.projectId == null && reversalNeedsProject(part.categoryId, ctx)) {
         note(part.key, "a reversal part needs a project");

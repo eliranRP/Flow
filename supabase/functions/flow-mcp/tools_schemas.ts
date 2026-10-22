@@ -256,20 +256,20 @@ export const assignExpenseSplitSchema = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom });
   }
 });
-// Each part gives exactly one of amount_minor (cents), percent (of the whole line, up to 4
-// decimals) or rest: true (what the other parts leave). Only a rest part may omit category_id.
-// gross_up (FLOW-946, 0206) marks an opposite-sign part that nets against the line; exact amount only.
+// Each part gives exactly one of amount_minor (cents), percent (up to 4 decimals) or rest: true.
+// gross_up (FLOW-946, 0206) marks an opposite-sign part that nets against the line; exact amount
+// only. effect ('contra'|'normal', FLOW-947, 0207) is an optional gross-up-only marker (derived).
 const linePartSchema = z.object({
   category_id: UUID_TEXT.optional(),
   project_id: UUID_TEXT.nullable().optional(),
   amount_minor: z.number().int().min(1).max(999_999_999_999_999).optional(),
   percent: z.number().gt(0).max(100).refine((n) => Math.round(n * 10000) / 10000 === n).optional(),
   rest: z.literal(true).optional(),
-  gross_up: z.boolean().optional(),
+  gross_up: z.boolean().optional(), effect: z.enum(["contra", "normal"]).optional(),
 }).strict().refine((part) =>
   [part.amount_minor, part.percent, part.rest].filter((v) => v !== undefined).length === 1 &&
   (part.rest === true || part.category_id !== undefined) &&
-  (part.gross_up !== true || part.amount_minor !== undefined)
+  (part.gross_up !== true || part.amount_minor !== undefined) && (part.effect === undefined || part.gross_up === true)
 );
 // Two to 50 parts (or none, to clear), at most one rest, and a category and project pair once.
 function linePartsAreValid(parts: z.infer<typeof linePartSchema>[]): boolean {
