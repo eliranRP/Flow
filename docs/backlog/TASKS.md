@@ -224,6 +224,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-952"></a>[FLOW-952](tasks/FLOW-952.md) | The P&L reads the legs: flip private.pnl_lines to the shadow body | BIG CYCLE |
 | <a id="flow-953"></a>[FLOW-953](tasks/FLOW-953.md) | Balance-sheet accounts through book_line (transfers in transit, loan principal, escrow, owner capital, deposits) | BIG CYCLE |
 | <a id="flow-954"></a>[FLOW-954](tasks/FLOW-954.md) | Ledger UI A: the line's journal entry, credit (זיכוי) wording in the split, kept-out group in the P&L drill-down | UI |
+| <a id="flow-955"></a>[FLOW-955](tasks/FLOW-955.md) | Ledger UI B: the journal entry composer (פקודת יומן · עריכה) and the review of Jev's bookings | UI |
 
 ## MCP
 

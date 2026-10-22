@@ -259,8 +259,8 @@ begin
   perform pg_temp.put('a_token', token);
   insert into private.mcp_writes (token_id, user_id, project_id, kind, company_id)
   values (token, owner, project, 'project', a);
-  insert into private.mcp_writes (token_id, user_id, category_id, kind, company_id)
-  values (token, owner, category, 'category', a);
+  insert into private.mcp_writes (token_id, user_id, category_id, kind, company_id, transaction_id, prior) -- FLOW-955: and three of Jev's bookings of A's suggested line (the jev name rule) waiting in לאישור, so A's reach calls approve_jev_booking and undo_jev_booking.
+  values (token, owner, category, 'category', a, null, null), (token, owner, null, 'line_split', a, suggested, '{"before": [], "written": [], "user_assigned": false, "category_suggested": false}'), (token, owner, null, 'line_split', a, suggested, '{"before": [], "written": [], "user_assigned": false, "category_suggested": false}'), (token, owner, null, 'line_split', a, suggested, '{"before": [], "written": [], "user_assigned": false, "category_suggested": false}');
   -- A rename A's owner can undo, so the reach pass proves mcp_undo's lookup finds a real write.
   insert into private.mcp_writes (token_id, user_id, category_id, kind, prior, company_id)
   values (token, owner, category, 'category_name',

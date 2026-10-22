@@ -32,6 +32,7 @@ import { SetupHomeSlot } from "../setup/home";
 import { chargeChangeViews, lateCounts, openMonthDue, useCompanyExpectedQuery, useMissingBillsQuery, useRecurringChangesQuery } from "../forecast";
 import { attentionRows } from "./attention-rows";
 import { useTransferMatchCountQuery } from "../transfer-match-count";
+import { reviewWaiting, useJevBookingCountQuery } from "../jev-booking-count";
 
 export { attentionRows };
 
@@ -145,6 +146,8 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const changes = useRecurringChangesQuery();
   // FLOW-941: suggested transfers between two Mercury connections, a count. A failed read hides the row.
   const transfers = useTransferMatchCountQuery();
+  // FLOW-955 (owner): Jev's bookings waiting for review count in לאישור too.
+  const jevBookings = useJevBookingCountQuery();
 
   const today = israelToday();
   const currentKey = today.slice(0, 7);
@@ -223,7 +226,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       previewing={previewing}
       search={search}
       attention={isCurrent ? attentionRows({
-        pending: dashboard.data?.review_count ?? 0,
+        pending: reviewWaiting(dashboard.data?.review_count ?? 0, jevBookings.data),
         transfers: transfers.data ?? 0,
         unpaidCount: unpaidPhase.kind === "ready" ? unpaidOpenRows(unpaid.data ?? []).length : 0,
         unpaidGross,

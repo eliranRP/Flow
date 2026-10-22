@@ -27,6 +27,8 @@ type MoneyFieldProps = {
   trailing?: ReactNode;
   /** Under the field, in the message line, while there is no error (FLOW-139d). */
   hint?: ReactNode;
+  /** Shown in an empty field (the composer's "0", board LedgerComposer). */
+  placeholder?: string;
 };
 
 function describedByIds(...ids: Array<string | undefined>): string | undefined {
@@ -75,6 +77,7 @@ export function MoneyField({
   onKeyDown,
   trailing,
   hint,
+  placeholder,
 }: MoneyFieldProps) {
   const generated = useId();
   const fieldId = flowControlName("flow-amount", generated, id);
@@ -109,6 +112,7 @@ export function MoneyField({
           type="text"
           value={shown}
           disabled={disabled}
+          placeholder={placeholder}
           enterKeyHint={enterKeyHint}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedByIds(error ? errorId : undefined, describedBy)}

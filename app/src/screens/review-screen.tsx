@@ -20,6 +20,8 @@ import { ScreenState } from "../ui/screen-state";
 import { EMPTY_REVIEW, listFocusId, listPlace, queueAfterFocus, reviewE2e, ReviewEmpty, reviewLineFocus, reviewListPath, rotateReview, useE2eReviewRows } from "./review-shared";
 import { E2E_DONE_COUNTS } from "../dev/review-e2e-fixture";
 import { type ReviewPreviewWrite, ReviewQueue } from "./review-queue";
+import { useJevBookingsQuery, type JevBooking } from "../jev-bookings";
+import { JevBookingReview } from "./jev-booking-review";
 import type { ReviewCase } from "../dev/review-e2e-fixture";
 
 /** FLOW-365: the dev `case` param names a board state for the proofs; anything else is the default queue. */
@@ -53,6 +55,7 @@ export function ReviewScreen() {
   const listing = location.pathname === "/review/all";
   const projectFilter = params.get("project");
   const review = useReviewQuery();
+  const bookings = useJevBookingsQuery(projectFilter == null);
   const waiting = useProjectWaitingQuery(projectFilter ?? "");
   const focusedOrder = useRef<ReviewRow[] | null>(null);
   const e2eList = reviewE2e != null && params.get("preview") != null && params.get("e2e") === "list";
@@ -141,6 +144,26 @@ export function ReviewScreen() {
   }
   const rows = source;
   const fromList = listFocusId(params) != null;
+  // FLOW-955: Jev's bookings wait at the head of the queue, before its own cards (not in a dev proof).
+  // The first draw waits for their read, so the queue never jumps from a card to a booking; a failed
+  // read leaves the queue as it is.
+  const bookingsLive = !e2eList && preview === "off";
+  if (bookingsLive && bookings.isPending) {
+    return <ScreenState title="לאישור" phase={{ kind: "loading" }} onRetry={() => { void bookings.refetch(); }} backTo={listing ? `/review${search}` : undefined} />;
+  }
+  const listedBookings = bookingsLive ? (bookings.data ?? []) : [];
+  const waitingBookings = listing || fromList ? [] : listedBookings;
+  if (waitingBookings.length > 0) {
+    const head = phase.kind === "ready" ? rows[0] : undefined;
+    return (
+      <JevBookingReview
+        bookings={waitingBookings}
+        queued={phase.kind === "ready" ? rows.length : 0}
+        next={head != null ? { name: head.supplier_name ?? head.description, minor: head.amount_net, currency: head.currency ?? "ILS" } : null}
+        search={search}
+      />
+    );
+  }
   if (!listing && !holdWrites && params.get("setup") === "1" && (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0))) {
     const fromCard = params.get("from") === "card";
     return (
@@ -152,7 +175,7 @@ export function ReviewScreen() {
     );
   }
   if (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0)) {
-    if (listing) return <ReviewAllList rows={EMPTY_REVIEW} search={search} backTo={`/review${search}`} />;
+    if (listing) return <ReviewAllList rows={EMPTY_REVIEW} bookings={listedBookings} search={search} backTo={`/review${search}`} />;
     return (
       <ReviewEmpty
         search={search}
@@ -165,7 +188,7 @@ export function ReviewScreen() {
   if (phase.kind !== "ready") {
     return <ScreenState title="לאישור" phase={phase} onRetry={() => { void review.refetch(); }} backTo={listing ? `/review${search}` : undefined} />;
   }
-  if (listing) return <ReviewAllList rows={rows} search={search} backTo={`/review${search}`} />;
+  if (listing) return <ReviewAllList rows={rows} bookings={listedBookings} search={search} backTo={`/review${search}`} />;
   const ordered = rowsForFocus(rows);
   const setupRun = params.get("setup") === "1";
   const setupFromCard = params.get("from") === "card";
@@ -186,10 +209,13 @@ export function ReviewScreen() {
 
 export function ReviewAllList({
   rows,
+  bookings = [],
   search,
   backTo,
 }: {
   rows: ReviewRow[];
+  /** FLOW-955: Jev's bookings waiting for review, listed first (they come first in the queue). */
+  bookings?: readonly JevBooking[];
   search: string;
   backTo: string;
 }) {
@@ -205,17 +231,22 @@ export function ReviewAllList({
     return () => { window.clearTimeout(timer); };
   }, [search, rows]);
   const ordered = useHeldOrder(rows, (row) => row.id);
-  if (rows.length === 0) return <ReviewEmpty search={search} backTo={backTo} />;
+  if (rows.length === 0 && bookings.length === 0) return <ReviewEmpty search={search} backTo={backTo} />;
   return (
     <div className="ui-review-all-page">
       {/* FLOW-365: the flat list's title, its count line, and one row per item (no date groups, no avatars). */}
       <ScreenHeader
         title="כל הפריטים לאישור"
-        subtitle={`${String(rows.length)} פריטים מחכים · הקישו על פריט כדי לפתוח אותו`}
+        subtitle={`${String(rows.length + bookings.length)} פריטים מחכים · הקישו על פריט כדי לפתוח אותו`}
         backTo={backTo}
         backText="בית"
       />
       <ul className="ui-review-all">
+        {bookings.map((booking) => (
+          <li key={booking.transaction_id}>
+            <ReviewAllBookingRow booking={booking} href={`/review${search}`} />
+          </li>
+        ))}
         {ordered.map((row) => (
           <li key={row.id}>
             <ReviewAllRow row={row} href={reviewFocusPath(search, row.id)} />
@@ -223,6 +254,23 @@ export function ReviewAllList({
         ))}
       </ul>
     </div>
+  );
+}
+
+/** FLOW-955: Jev's booking as a list row: the party, "<date> · ✦ פקודת יומן של Jev", the amount; it opens the queue's head. */
+function ReviewAllBookingRow({ booking, href }: { booking: JevBooking; href: string }) {
+  const income = booking.amount_gross > 0n;
+  const shown = income ? booking.amount_gross : -booking.amount_gross;
+  const amount = formatAmountText(shown, booking.currency, income ? { detail: true, direction: "income", plus: true } : { detail: true });
+  return (
+    <Link className="ui-review-all-row ui-hit" to={href}>
+      <span className="ui-review-all-text">
+        <span className="ui-review-all-title">{booking.party}</span>
+        <span className="ui-review-all-meta">{`${invoiceDate(booking.doc_date)} · ✦ פקודת יומן של Jev`}</span>
+      </span>
+      <bdi className="ui-review-all-amount ui-num" dir="ltr">{amount}</bdi>
+      <ChevronIcon size={16} />
+    </Link>
   );
 }
 

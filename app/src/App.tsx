@@ -46,6 +46,7 @@ const ForecastScreen = lazy(() => screenLoaders.forecast().then((m) => ({ defaul
 const RecurringScreen = lazy(() => screenLoaders.recurring().then((m) => ({ default: m.RecurringScreen })));
 const RecurringChargeScreen = lazy(() => screenLoaders.recurringCharge().then((m) => ({ default: m.RecurringChargeScreen })));
 const LineSplitScreen = lazy(() => screenLoaders.lineSplit().then((m) => ({ default: m.LineSplitScreen })));
+const JournalComposerScreen = lazy(() => screenLoaders.journalComposer().then((m) => ({ default: m.JournalComposerScreen })));
 const HelpScreen = lazy(() => screenLoaders.help().then((m) => ({ default: m.HelpScreen })));
 const LegalScreen = lazy(() => screenLoaders.legal().then((m) => ({ default: m.LegalScreen })));
 const InstallScreen = lazy(() => screenLoaders.install().then((m) => ({ default: m.InstallScreen })));
@@ -175,6 +176,7 @@ function AppRoutes() {
                 <Route path="invites" element={<InvitesScreen />} />
                 {SearchRoute()}
                 <Route path="transactions/:transactionId/split-category" element={<LineSplitScreen />} />
+                <Route path="transactions/:transactionId/journal" element={<JournalComposerScreen />} />
                 <Route path="install" element={<InstallRoute />} />
               </Route>
               <Route element={<Shell />}>
