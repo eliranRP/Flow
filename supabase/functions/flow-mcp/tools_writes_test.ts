@@ -152,6 +152,8 @@ Deno.test("write tools are listed only for a write scope", () => {
     "list_team",
     "list_bank_connections",
     "list_transfer_matches",
+    "list_accounts",
+    "get_line_legs",
     "assign_expense",
     "assign_expense_split",
     "assign_expenses",

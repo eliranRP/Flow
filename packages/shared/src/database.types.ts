@@ -1551,6 +1551,9 @@ isOneToOne: false
 "match_lines":
 { Args: { "p_currency"?: string,"p_direction"?: string,"p_rows": Json,"p_window_days"?: number }; Returns: Json
                            },
+"mcp_accounts":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "mcp_add_loan":
 { Args: { "p_amortization_months"?: number,"p_annual_rate_ppm": number,"p_currency": string,"p_escrow_minor": number,"p_idempotency_key": string,"p_interest_only_months"?: number,"p_kind"?: string,"p_name": string,"p_payment_minor": number,"p_principal_minor": number,"p_project_id"?: string,"p_start_date": string,"p_term_months": number }; Returns: Json
                            },
@@ -1582,7 +1585,7 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
 "mcp_book_line":
-{ Args: { "p_currency": string,"p_description": string,"p_direction": string,"p_doc_date": string,"p_idempotency_key": string,"p_legs": Json,"p_project_id"?: string }; Returns: Json
+{ Args: { "p_currency": string,"p_description": string,"p_direction": string,"p_doc_date": string,"p_idempotency_key": string,"p_legs": Json,"p_project_id"?: string,"p_transaction_id"?: string }; Returns: Json
                            },
 "mcp_company_loan_currency":
 { Args: Record<PropertyKey, never>; Returns: string
@@ -1639,6 +1642,9 @@ isOneToOne: false
                            },
 "mcp_jev_suggestions":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"mcp_line_legs":
+{ Args: { "p_transaction_id": string }; Returns: Json
                            },
 "mcp_link_invoice_payment":
 { Args: { "p_idempotency_key": string,"p_invoice_id": string,"p_transaction_id": string }; Returns: Json

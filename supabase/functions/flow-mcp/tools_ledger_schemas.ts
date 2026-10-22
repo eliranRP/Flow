@@ -12,17 +12,31 @@ const legSchema = z.object({
   project_id: UUID_TEXT.nullable().optional(),
 }).strict();
 
-// book_line: a new P&L line booked from a balanced set of legs. The legs must sum to 0 (one of
-// them is the bank movement); the server also checks exactly one bank leg and company ownership.
+// book_line: a P&L line booked from a balanced set of legs. The legs must sum to 0 (one of them is the
+// bank movement); the server also checks exactly one bank leg and company ownership. Without
+// transaction_id it books a NEW line (doc_date, currency and description required); with it, the
+// caller's EXISTING posted line (FLOW-950), which keeps its own date, currency and description, so
+// those three are refused there rather than silently ignored.
+const LINE_FIELDS = ["doc_date", "currency", "description"] as const;
 export const bookLineSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  doc_date: z.string().refine((v) => isCalendarDate(v)),
+  transaction_id: UUID_TEXT.nullable().optional(),
+  doc_date: z.string().refine((v) => isCalendarDate(v), "doc_date must be a calendar date (YYYY-MM-DD)").optional(),
   direction: z.enum(["income", "expense"]),
-  currency: z.string().regex(/^[A-Z]{3}$/),
-  description: visibleName(1, 120),
+  currency: z.string().regex(/^[A-Z]{3}$/, "currency must be a 3-letter code").optional(),
+  description: visibleName(1, 120).optional(),
   legs: z.array(legSchema).min(2).max(50),
   project_id: UUID_TEXT.nullable().optional(),
-}).strict().refine(
-  (body) => body.legs.reduce((sum, leg) => sum + leg.amount_minor, 0) === 0,
-  { message: "legs must balance to 0", path: ["legs"] },
-);
+}).strict().superRefine((body, ctx) => {
+  if (body.legs.reduce((sum, leg) => sum + leg.amount_minor, 0) !== 0) {
+    ctx.addIssue({ code: "custom", message: "legs must balance to 0", path: ["legs"] });
+  }
+  const existing = body.transaction_id != null;
+  for (const key of LINE_FIELDS) {
+    if (!existing && body[key] == null) {
+      ctx.addIssue({ code: "custom", message: "required for a new line", path: [key] });
+    } else if (existing && body[key] != null) {
+      ctx.addIssue({ code: "custom", message: "not taken with transaction_id (the line keeps its own)", path: [key] });
+    }
+  }
+});

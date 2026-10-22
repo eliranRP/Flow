@@ -133,24 +133,26 @@ export async function callWrite(
       p_category_id: parsed.data.category_id,
     };
   } else if (name === "book_line") {
-    // FLOW-948 (decision 0208): book a new P&L line from balanced legs. The database validates
-    // the legs balance, hit one bank leg, and land on the caller's own accounts; it writes the
-    // equivalent legacy rows so the unchanged P&L reflects it.
+    // FLOW-948 (decision 0208): book a P&L line from balanced legs. The database validates the legs
+    // balance, hit one bank leg, and land on the caller's own accounts; it writes the equivalent legacy
+    // rows (a line, or a split through save_line_split) so the unchanged P&L reflects it. FLOW-950:
+    // transaction_id books the caller's existing line instead (undo kind line_split).
     const parsed = bookLineSchema.safeParse(args);
-    if (!parsed.success) return invalid(parsed.error);
+    if (!parsed.success) return invalidDetail(parsed.error);
     rpcName = "mcp_book_line";
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
-      p_doc_date: parsed.data.doc_date,
+      p_doc_date: parsed.data.doc_date ?? null,
       p_direction: parsed.data.direction,
-      p_currency: parsed.data.currency,
-      p_description: parsed.data.description,
+      p_currency: parsed.data.currency ?? null,
+      p_description: parsed.data.description ?? null,
       p_legs: parsed.data.legs.map((leg) => ({
         account_id: leg.account_id,
         amount_minor: leg.amount_minor,
         ...(leg.project_id == null ? {} : { project_id: leg.project_id }),
       })),
       p_project_id: parsed.data.project_id ?? null,
+      p_transaction_id: parsed.data.transaction_id ?? null,
     };
   } else if (name === "create_manual_entry") {
     // FLOW-369: the cash or cheque line. The database refuses another company's project or category.

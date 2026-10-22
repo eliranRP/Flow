@@ -1,6 +1,7 @@
 // Flow MCP tools test: FLOW-948 (decision 0208). book_line sends a balanced set of legs to
 // mcp_book_line, and refuses — before the RPC — legs that do not balance, too few legs, a bad
-// currency or direction, or an extra field.
+// currency or direction, or an extra field. FLOW-950: transaction_id books an existing line, and a
+// refusal of the arguments names the field in detail.
 import { assertEquals } from "jsr:@std/assert@1";
 import { callTool } from "./tools.ts";
 import { PROJECT, rpcOf, TXN } from "./tools_test_support.ts";
@@ -38,6 +39,7 @@ Deno.test("book_line sends a balanced split payment to mcp_book_line, dropping a
         { account_id: CLOSING, amount_minor: 3000 },
       ],
       p_project_id: null,
+      p_transaction_id: null,
     },
   }]);
 });
@@ -87,4 +89,57 @@ Deno.test("book_line refuses too few legs, a bad currency or direction, a bad da
     assertEquals(result.isError, true, JSON.stringify(input));
   }
   assertEquals(calls.length, 0);
+});
+
+// The refusal's error object: code, message and detail.
+async function refusal(input: Record<string, unknown>) {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
+  const result = await callTool("book_line", input, ["write"], rpc);
+  assertEquals(result.isError, true, JSON.stringify(input));
+  assertEquals(calls.length, 0);
+  return result.structuredContent.ok ? null : result.structuredContent.error;
+}
+
+const WIRE_LEGS = [
+  { account_id: BANK, amount_minor: -139871 },
+  { account_id: REPAIRS, amount_minor: 200000, project_id: PROJECT },
+  { account_id: CLOSING, amount_minor: 24948, project_id: PROJECT },
+  { account_id: CLOSING, amount_minor: -85077, project_id: PROJECT },
+];
+
+Deno.test("book_line with transaction_id books an existing line: no date, currency or description, contra legs pass through", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: TXN, undo_kind: "line_split" } } }));
+  const result = await callTool("book_line", {
+    idempotency_key: "book-4",
+    transaction_id: TXN,
+    direction: "expense",
+    legs: WIRE_LEGS,
+  }, ["write"], rpc);
+  assertEquals(result.isError, false);
+  assertEquals(calls, [{
+    name: "mcp_book_line",
+    body: {
+      p_idempotency_key: "book-4",
+      p_doc_date: null,
+      p_direction: "expense",
+      p_currency: null,
+      p_description: null,
+      p_legs: WIRE_LEGS,
+      p_project_id: null,
+      p_transaction_id: TXN,
+    },
+  }]);
+});
+
+Deno.test("book_line names the field that failed in detail (FLOW-950)", async () => {
+  const base = { idempotency_key: "book-5", direction: "expense", legs: WIRE_LEGS };
+  assertEquals(await refusal({ ...base, transaction_id: TXN, doc_date: "2026-10-11" }), {
+    code: "validation", message: "validation", detail: "doc_date: not taken with transaction_id (the line keeps its own)",
+  });
+  assertEquals((await refusal({ ...base, doc_date: "2026-10-11", currency: "USD" }))?.detail,
+    "description: required for a new line");
+  assertEquals((await refusal({ ...base, transaction_id: TXN, legs: [WIRE_LEGS[0], { account_id: REPAIRS, amount_minor: 1 }] }))?.detail,
+    "legs: legs must balance to 0");
+  assertEquals((await refusal({ ...base, transaction_id: TXN, legs: [WIRE_LEGS[0], { account_id: "bad", amount_minor: 139871 }] }))?.detail?.startsWith("legs.1.account_id: "), true);
+  assertEquals((await refusal({ ...base, transaction_id: "not-a-uuid" }))?.detail?.startsWith("transaction_id: "), true);
 });

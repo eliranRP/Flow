@@ -150,6 +150,8 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "list_team",
     "list_bank_connections",
     "list_transfer_matches",
+    "list_accounts",
+    "get_line_legs",
     "assign_expense",
     "assign_expense_split",
     "assign_expenses",

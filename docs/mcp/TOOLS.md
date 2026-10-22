@@ -90,6 +90,9 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "bank_accounts"` | `id` | the connection id `set_bank_accounts` or `answer_bank_account` returned (`list_bank_connections` `connections[].id`) |
 | `confirm_transfer_match`, `dismiss_transfer_match` | `out_transaction_id`, `in_transaction_id` | `list_transfer_matches` `matches[].out.transaction_id` and `matches[].in.transaction_id` |
 | `undo` `kind: "transfer_match"` | `id` | the money-out line's id the write returned (`out_transaction_id`) |
+| `book_line` | `legs[].account_id` | `list_accounts` `accounts[].id` (`bookable` true) |
+| `book_line`, `get_line_legs` | `transaction_id` | `list_review.transaction_id`, `get_cash_lines` `rows[].transaction_id`, `search_expenses` rows, or `get_expense.id` |
+| `undo` `kind: "book_line"` / `kind: "line_split"` | `id` | the line id `book_line` returned (`data.id`) |
 | `set_member_role`, `remove_member` | `member_id` | `list_team` `members[].user_id` |
 | `undo` `kind: "invite"` | `id` | the invite id `invite_member` returned |
 | `undo` `kind: "member_role"`, `kind: "member_remove"` | `id` | the member's user id |
@@ -323,7 +326,25 @@ Output `data` when a review closed: `{ "undo_kind": "review", "id": "11111111-11
 { "idempotency_key": "undo-30", "kind": "review", "id": "11111111-1111-4000-8000-000000000010" }
 ```
 
-## Ledger booking · FLOW-948
+## Ledger booking · FLOW-948, FLOW-950
+
+The ledger (decision [0208](../decisions/0208-balanced-legs-ledger.md)) resolves every posted line into signed **legs** on **accounts** that sum to 0, one of them on the bank. An assistant uses it in three steps: `list_accounts` for the account ids, `book_line` to book, `get_line_legs` to read the booking back.
+
+### list_accounts
+
+```json
+{}
+```
+
+The company's chart of accounts (any member, `mcp_accounts`). `accounts[]`: `id` (the `account_id` `book_line` takes), `name`, `type` (`income`, `expense`, `asset` or `liability`), `category_id` (null for a system account), `system`, `is_bank` (the one bank account every booking hits), `excluded_from_pnl`, `loan_part`, `hidden` and `bookable` (what `book_line` takes today: the bank and every in-P&L category account). A category's account reads the category's **live** name, kind and P&L flag, and its stored copy follows every rename and keep-out. System accounts come first: Bank/Clearing, Loan principal, Escrow, Owner capital, Security deposit held, Suspense, VAT control, Uncategorized income and Uncategorized expense.
+
+### get_line_legs
+
+```json
+{ "transaction_id": "<line id>" }
+```
+
+One line's legs (any member, `mcp_line_legs`): `transaction_id`, `direction`, `line_status`, `currency`, `amount_gross`, `vat_amount`, `legs[]` (`ordinal`, `account_id`, `account_name`, `account_type`, `category_id`, `is_bank`, `project_id`, `amount_minor`) and `balanced` (the legs sum to 0). `amount_minor` is signed: debit positive, credit negative; an income or expense leg counts as `-amount_minor` in the P&L. A pending line has no legs. Another company's line, a removed one and an unknown id are `not_found`.
 
 ### book_line
 
@@ -331,9 +352,34 @@ Output `data` when a review closed: `{ "undo_kind": "review", "id": "11111111-11
 { "idempotency_key": "book-1", "doc_date": "2026-10-11", "direction": "expense", "currency": "USD", "description": "A repair bill", "legs": [ { "account_id": "<bank account id>", "amount_minor": -8000 }, { "account_id": "<repairs account id>", "amount_minor": 5000, "project_id": "<project id>" }, { "account_id": "<closing account id>", "amount_minor": 3000 } ] }
 ```
 
-Book one new P&L line from a balanced set of ledger legs (decision [0208](../decisions/0208-balanced-legs-ledger.md); owner or editor). This is the general ledger booking primitive. Each leg's `amount_minor` is a **signed ledger value** — debit positive, credit negative, **not** a P&L-display amount — and the legs must sum to **0**. Exactly one leg hits a **bank** account (the statement movement, which equals the line's signed total: a deposit is a positive bank leg = income, a payment a negative bank leg = expense); the other legs land on the caller's own P&L **category** accounts (the `accounts` table bridges each category) of the line's own `direction`. `account_id`s come from the `accounts` table (read with the `accounts` select). `currency` is a 3-letter code; `description` (1 to 120 characters) names the line; `project_id` is the line's project when there is a single category leg carrying none of its own. The server writes the equivalent **legacy** rows — a whole line, or `line_splits` when there is more than one category leg — so the unchanged P&L (`pnl_lines` and every consumer) reflects it; the ledger legs are kept in step automatically. It **refuses rather than mis-books**: if the legs cannot be represented as legacy rows that project back to the request, it is `refused`. Phase 1 books in-P&L categorized lines and splits; asset/liability legs (escrow, loan principal, owner draw) and VAT are a later phase and are refused. A leg on another company's account, legs that do not balance, no bank leg, or an excluded-category leg are all `refused`. Output `data`: `{ "id", "direction", "undo_kind": "book_line" }`.
+Book a P&L line from a balanced set of ledger legs (owner or editor). This is the general ledger booking primitive. Each leg's `amount_minor` is a **signed ledger value** — debit positive, credit negative, **not** a P&L-display amount — and the legs must sum to **0**. Exactly one leg hits the **bank** account (the statement movement, which equals the line's signed total: a deposit is a positive bank leg = income, a payment a negative bank leg = expense); `direction` must match its sign. The other legs land on the caller's own in-P&L **category** accounts, of either kind (`list_accounts` with `bookable` true).
 
-Undo `kind: "book_line"` takes the line id and removes the booked line (and its splits, so its legs go with it) while it is still the one booked — the same amount, date and derived legs. A line edited since (a changed category or split) is `conflict`; a second undo is `not_found`.
+**Legs to split parts (FLOW-950).** Each category leg becomes a part by its sign against the bank leg:
+
+| Leg sign against the bank leg | Part | On a payment (bank leg negative) | On a deposit (bank leg positive) |
+| --- | --- | --- | --- |
+| opposite | normal (`gross_up` false): counts toward the line | an expense debit is a cost; an income debit an income reversal, which needs a project | an income credit is income; an expense credit a cost reversal, which needs a project |
+| same | `gross_up` true: nets against the line, needs a project | an expense credit is a **contra** entry that reduces that category; an income credit an income item | an income debit is a contra entry; an expense debit a cost (a closing cost on loan proceeds) |
+
+`amount_minor` of the part is the leg's absolute value. Legs on one account and project with the same sign are added together first; a normal and a gross-up part may share a category and project ([0207](../decisions/0207-gross-up-contra-effect.md) D5). The split is written by `save_line_split`, so every `split_line` rule applies with `split_line`'s messages.
+
+**A new line** (no `transaction_id`): `doc_date` (YYYY-MM-DD), `currency` (3 letters) and `description` (1 to 120 characters) are required. One category leg makes a whole line, which must be of the line's own kind (`category kind must match the direction`); more make a split. `project_id` is the project of a category leg that names none. Output `data`: `{ "id", "direction", "undo_kind": "book_line" }`. Undo `kind: "book_line"` takes the line id and removes the booked line (and its splits, so its legs go with it) while it is still the one booked — the same amount, date and derived legs. A line edited since (a changed category or split) is `conflict`; a second undo is `not_found`.
+
+**An existing line** (`transaction_id`): bank lines arrive by sync, and booking a new line for one would count it twice, so `book_line` books the caller's existing posted line instead. Leave `doc_date`, `currency` and `description` out: the line keeps its own (sending one is `validation`). The bank leg must equal the line's `amount_gross` exactly. A category leg with no project takes `project_id`, else the line's project. It needs at least two parts and writes the split exactly as `split_line` would; output `data`: `{ "id", "transaction_id", "direction", "parts", "write_id", "undo_kind": "line_split" }`, and undo `kind: "line_split"` with the line id restores the parts before. Refused: another company's or an unknown line (`transaction not found`), a pending line (`book_line: the line is not posted`), another direction (`book_line: direction does not match the line`), a bank leg other than the line (`book_line: the bank leg must equal the line amount`), a line with VAT (`book_line: a line with VAT is a later phase`), a loan split (`line has a loan split`), an open review other than `split_mismatch` (`line has an open review`), and one category part (`book_line: one category leg on an existing line — use assign_expense`).
+
+**Worked example: a property-tax wire.** A payment of 1,398.71 covers a 2,000.00 build cost on project Beta and the tax bill on project Alpha: a 249.48 property-tax charge and an 850.77 property-tax credit. After a sync the wire is one bank line of `-139871`.
+
+```json
+{ "idempotency_key": "wire-1", "transaction_id": "<wire line id>", "direction": "expense", "legs": [
+  { "account_id": "<bank account id>", "amount_minor": -139871 },
+  { "account_id": "<build account id>", "amount_minor": 200000, "project_id": "<beta id>" },
+  { "account_id": "<property taxes account id>", "amount_minor": 24948, "project_id": "<alpha id>" },
+  { "account_id": "<property taxes account id>", "amount_minor": -85077, "project_id": "<alpha id>" } ] }
+```
+
+The legs sum to 0 (`-139871 + 200000 + 24948 - 85077`). The two debits are normal parts (Build 200000 on Beta, Property taxes 24948 on Alpha); the property-tax credit has the bank leg's sign, so it is a gross-up part of 85077, a contra entry. The P&L shows Build `-2,000.00` on Beta and Property taxes `+601.29` on Alpha (`-249.48 + 850.77`), and `get_line_legs` reads back four legs with `balanced` true.
+
+Either way the server checks that the legs it derived project back to the request, per category and project, and **refuses rather than mis-books** (`book_line: could not represent the legs in the ledger`). A refusal of the arguments is `validation` with `detail`, the field that failed: `legs: legs must balance to 0`, `legs.1.account_id: ...`, `doc_date: not taken with transaction_id (the line keeps its own)`. Other refusals: `legs do not balance`, `exactly one bank leg is required`, `at least one category leg is required`, `the bank leg sign must match the direction`, and `book_line: unsupported account for a phase-1 booking` for a kept-out category, a system account or a VAT leg (asset/liability legs such as escrow, loan principal and owner draw, and VAT, are a later phase). A leg on another company's account is `The write was refused.`, which does not say whether that account exists.
 
 ## Lines from the add sheet · FLOW-369
 
