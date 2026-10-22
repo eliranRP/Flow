@@ -5,7 +5,32 @@ export type Database = {
   
   "public": {
           Tables: {
-            "active_companies": {
+            "accounts": {
+                  Row: {
+                    "category_id": string | null,"company_id": string,"created_at": string,"excluded_from_pnl": boolean,"id": string,"is_bank": boolean,"loan_part": Database["public"]['Enums']["loan_split_part"] | null,"name": string,"type": string
+                  }
+                  Insert: {
+                    "category_id"?: string | null,"company_id": string,"created_at"?: string,"excluded_from_pnl"?: boolean,"id"?: string,"is_bank"?: boolean,"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name": string,"type": string
+                  }
+                  Update: {
+                    "category_id"?: string | null,"company_id"?: string,"created_at"?: string,"excluded_from_pnl"?: boolean,"id"?: string,"is_bank"?: boolean,"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name"?: string,"type"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "accounts_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "accounts_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"active_companies": {
                   Row: {
                     "company_id": string,"updated_at": string,"user_id": string
                   }
@@ -486,6 +511,43 @@ isOneToOne: false
       columns: ["company_id"]
 isOneToOne: false
       referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"legs": {
+                  Row: {
+                    "account_id": string,"amount_minor": number,"company_id": string,"created_at": string,"id": string,"ordinal": number,"project_id": string | null,"transaction_id": string
+                  }
+                  Insert: {
+                    "account_id": string,"amount_minor": number,"company_id": string,"created_at"?: string,"id"?: string,"ordinal": number,"project_id"?: string | null,"transaction_id": string
+                  }
+                  Update: {
+                    "account_id"?: string,"amount_minor"?: number,"company_id"?: string,"created_at"?: string,"id"?: string,"ordinal"?: number,"project_id"?: string | null,"transaction_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "legs_company_id_account_id_fkey"
+      columns: ["company_id","account_id"]
+isOneToOne: false
+      referencedRelation: "accounts"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "legs_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "legs_company_id_transaction_id_fkey"
+      columns: ["company_id","transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "legs_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
       referencedColumns: ["id"]
     }
                   ]
@@ -1518,6 +1580,9 @@ isOneToOne: false
                            },
 "mcp_bank_connections":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"mcp_book_line":
+{ Args: { "p_currency": string,"p_description": string,"p_direction": string,"p_doc_date": string,"p_idempotency_key": string,"p_legs": Json,"p_project_id"?: string }; Returns: Json
                            },
 "mcp_company_loan_currency":
 { Args: Record<PropertyKey, never>; Returns: string

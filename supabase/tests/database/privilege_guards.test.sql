@@ -80,6 +80,7 @@ insert into pg_allowed (sig) values
     ('mcp_create_categories(text,jsonb)'),
     ('mcp_create_category(text,text,text,uuid)'),
     ('mcp_create_category(text,text,text)'),
+    ('mcp_book_line(text,date,text,text,text,jsonb,uuid)'),
     ('mcp_create_manual_entry(text,text,bigint,date,text,uuid,uuid,text,text)'),
     ('mcp_create_project_group(text,text)'),
     ('mcp_create_project(text,text,text,text,bigint)'),

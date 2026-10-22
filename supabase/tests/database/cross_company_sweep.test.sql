@@ -675,6 +675,9 @@ begin
 end
 $variants$;
 
+-- FLOW-948: mcp_book_line gets a balanced set of legs on the victim's own bank and category accounts, so A's call is a real cross-company refusal (not an argument-shape error) and B's owner's call is a legitimate booking.
+insert into pg_temp.sweep_variants (fn, args) values ('mcp_book_line', jsonb_build_object('p_direction', pg_temp.lit('expense'::text), 'p_doc_date', pg_temp.lit(current_date), 'p_currency', pg_temp.lit('USD'::text), 'p_description', pg_temp.lit('Sweep booking'::text), 'p_legs', pg_temp.lit(jsonb_build_array(jsonb_build_object('account_id', (select id from public.accounts where company_id = pg_temp.sid('company') and category_id is null and name = 'Bank/Clearing'), 'amount_minor', -1000), jsonb_build_object('account_id', (select id from public.accounts where company_id = pg_temp.sid('company') and category_id is not null and type = 'expense' and not excluded_from_pnl order by name limit 1), 'amount_minor', 1000)))));
+
 -- One argument's SQL literal, by its type and name, preferring A's ids.
 create or replace function pg_temp.arg_literal(p_fn text, p_arg text, p_type oid)
 returns text
