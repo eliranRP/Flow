@@ -6,7 +6,7 @@
 -- list_accounts, undo and the refusals. Invented books only; USD cents.
 
 begin;
-select plan(61);
+select plan(64);
 
 do $u$ begin
   perform tests.create_supabase_user('ba_owner', 'ba-owner@example.com');
@@ -45,7 +45,12 @@ insert into ba select 'c_interest', id from public.categories where company_id =
 insert into ba select 'c_escrow_loan', id from public.categories where company_id = pg_temp.id('co') and loan_part = 'escrow';
 insert into ba select 'c_loan_money', id from public.categories where company_id = pg_temp.id('co') and name = 'כסף שהתקבל מהלוואות';
 insert into ba select 'c_transfer_out', id from public.categories where company_id = pg_temp.id('co') and name = 'העברות' and kind = 'expense';
-insert into ba select 'c_transfer_in', id from public.categories where company_id = pg_temp.id('co') and name = 'העברות' and kind = 'income';
+-- The company deleted its incoming transfer category: book_line makes it again for Transfers in transit.
+delete from public.categories where company_id = pg_temp.id('co') and name = 'העברות' and kind = 'income';
+-- A category in the P&L that holds the name book_line would give a hidden Owner capital debit category.
+insert into public.categories (company_id, name, kind, sort_order, is_default)
+values (pg_temp.id('co'), 'Owner capital · ledger', 'expense', 92, false);
+insert into ba select 'c_owner_ledger', id from public.categories where company_id = pg_temp.id('co') and name = 'Owner capital · ledger';
 
 -- Accounts: a category's is a_<category label without c_>; the system ones by name.
 insert into ba select 'a_' || substr(c.label, 3), a.id from public.accounts a join ba c on c.id = a.category_id where c.label like 'c\_%';
@@ -141,8 +146,8 @@ grant execute on function pg_temp.diff_rows() to authenticated;
 select is((select string_agg(b.label || '>' || a.name, ' ' order by b.label)
   from public.categories c join ba b on b.id = c.id join public.accounts a on a.id = c.ledger_account_id
   where c.company_id = pg_temp.id('co')),
-  'c_loan_money>Loan principal c_owner_contributions>Owner capital c_property_purchase_price>Property c_transfer_in>Transfers in transit c_transfer_out>Transfers in transit',
-  'built-in kept-out names bind to their balance-sheet account; loan parts and P&L categories stay unbound');
+  'c_loan_money>Loan principal c_owner_contributions>Owner capital c_owner_ledger>Owner capital c_property_purchase_price>Property c_transfer_out>Transfers in transit',
+  'built-in kept-out names (and the ledger names) bind to their balance-sheet account; loan parts and other categories stay unbound');
 select is((select name from public.accounts where id = private.kept_out_account(pg_temp.id('co'), pg_temp.id('c_principal'), null)),
   'Loan principal', 'the principal category still routes by its loan part');
 select is((select name from public.accounts where id = private.kept_out_account(pg_temp.id('co'), pg_temp.id('c_rent'), null)),
@@ -225,10 +230,10 @@ create temp table refi as select public.mcp_book_line('ba-refi', '2026-07-05', '
 select is((select r->>'ok' || '/' || (r->'data'->>'undo_kind') from refi), 'true/book_line', 'the refinance deposit books as a new line');
 insert into ba select 'txn_refi', (r->'data'->>'id')::uuid from refi;
 insert into ba select 'c_escrow_hidden', id from public.categories
-where company_id = pg_temp.id('co') and name = 'Escrow' and kind = 'expense';
+where company_id = pg_temp.id('co') and name = 'Escrow · ledger' and kind = 'expense';
 select is((select hidden::text || '/' || excluded_from_pnl::text || '/' || (ledger_account_id = pg_temp.id('s_escrow'))::text
   from public.categories where id = pg_temp.id('c_escrow_hidden')),
-  'true/true/true', 'a hidden kept-out Escrow category, bound to Escrow, is made for the escrow leg');
+  'true/true/true', 'a hidden kept-out "Escrow · ledger" category, bound to Escrow, is made for the escrow leg');
 select is((select string_agg(b.label || ':' || s.amount_minor || ':' || s.gross_up, ' ' order by s.ordinal)
   from public.line_splits s join ba b on b.id = s.category_id where s.transaction_id = pg_temp.id('txn_refi')),
   'c_loan_money:50000000:false c_principal:42000000:true c_closing_costs:600000:true c_escrow_hidden:300000:true',
@@ -288,9 +293,12 @@ select public.mcp_book_line('ba-tr-out', '2026-07-07', 'expense', 'USD', 'To sav
 union all
 select public.mcp_book_line('ba-tr-in', '2026-07-08', 'income', 'USD', 'From checking', jsonb_build_array(
   pg_temp.leg('s_bank', 200000), pg_temp.leg('s_transit', -200000)));
-select is((select string_agg(b.label, ' ' order by b.label) from transfers x
-  join public.transactions t on t.id = (x.r->'data'->>'id')::uuid join ba b on b.id = t.category_id),
-  'c_transfer_in c_transfer_out', 'each side of the transfer is filed to its own transfer category');
+select is((select string_agg(c.name || '/' || c.kind, ' ' order by c.kind) from transfers x
+  join public.transactions t on t.id = (x.r->'data'->>'id')::uuid join public.categories c on c.id = t.category_id),
+  'העברות/expense העברות/income', 'each side of the transfer is filed to the transfer category of its side');
+select is((select c.excluded_from_pnl::text || '/' || c.in_cash::text || '/' || c.hidden::text || '/' || (c.ledger_account_id = pg_temp.id('s_transit'))::text
+  from public.categories c where c.company_id = pg_temp.id('co') and c.name = 'העברות' and c.kind = 'income'),
+  'true/false/false/true', 'the missing incoming העברות is made as transfer_mark_line makes it: out of profit and cash, bound to Transfers in transit');
 select is((select sum(l.amount_minor)::bigint from public.legs l join transfers x on l.transaction_id = (x.r->'data'->>'id')::uuid
   where l.account_id = pg_temp.id('s_transit')), 0::bigint, 'the two Transfers in transit legs net to 0');
 select is((select count(*)::int from private.pnl_lines l join transfers x on l.transaction_id = (x.r->'data'->>'id')::uuid where l.in_pnl),
@@ -300,7 +308,7 @@ create temp table deposit as select public.mcp_book_line('ba-deposit', '2026-07-
   pg_temp.leg('s_bank', 150000), pg_temp.leg('s_deposit', -150000, 'oak'))) as r;
 select is((select c.name || '/' || c.kind || '/' || c.hidden::text from public.transactions t join deposit d on t.id = (d.r->'data'->>'id')::uuid
   join public.categories c on c.id = t.category_id),
-  'Security deposit held/income/true', 'no category posts to Security deposit held, so a hidden income one is made');
+  'Security deposit held · ledger/income/true', 'no category posts to Security deposit held, so a hidden income one is made');
 select is((select pg_temp.legs_of((r->'data'->>'id')::uuid) from deposit), 's_bank:150000 s_deposit:-150000', 'the deposit credits Security deposit held');
 select is(pg_temp.diff_rows(), 0::bigint, 'after every booking the shadow P&L still equals the posting rules');
 
@@ -349,7 +357,18 @@ select is((pg_temp.book_new('ba-r9', jsonb_build_array(pg_temp.leg('s_bank', -10
 select is((select count(*)::int from public.transactions where company_id = pg_temp.id('co') and description = 'Refused' and doc_date = '2026-07-10'),
   1, 'only the accepted booking wrote a line');
 select is((select count(*)::int from public.categories where company_id = pg_temp.id('co') and hidden), 2,
-  'refusals made no hidden category (only Escrow and Security deposit held exist)');
+  'refusals made no hidden category (only the Escrow and Security deposit held ones exist)');
+-- An owner draw needs an expense category on Owner capital. The name book_line would use is taken by a
+-- category counted in the P&L (the path a concurrent booking takes too: insert on conflict, then re-read),
+-- so it refuses plainly instead of failing on the unique key.
+select is(pg_temp.book_new('ba-r10', jsonb_build_array(pg_temp.leg('s_bank', -1000), pg_temp.leg('s_owner', 1000)))->'error'->>'message',
+  'book_line: no kept-out category posts to this account', 'a taken name in the P&L is refused plainly');
+reset role;
+update public.categories set excluded_from_pnl = true where id = pg_temp.id('c_owner_ledger');
+select pg_temp.as_mcp();
+create temp table draw as select pg_temp.book_new('ba-r11', jsonb_build_array(pg_temp.leg('s_bank', -1000), pg_temp.leg('s_owner', 1000))) as r;
+select is((select t.category_id::text from draw d join public.transactions t on t.id = (d.r->'data'->>'id')::uuid),
+  pg_temp.id('c_owner_ledger')::text, 'kept out, the same category takes the owner draw');
 
 -- ---------------------------------------------------------------------------
 -- 8. Isolation: the other company sees none of it.

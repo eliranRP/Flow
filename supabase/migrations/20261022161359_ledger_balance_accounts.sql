@@ -24,8 +24,9 @@
 --        - a leg on a kept-out category's own account: that category;
 --        - a leg on a balance-sheet system account: the kept-out category that posts there and whose
 --          kind matches the leg's side (a debit an expense category, a credit an income category);
---          none: a hidden kept-out category named like the account, bound to it; more than one:
---          refused (book the leg on the category's own account).
+--          none: one is made and bound to it (העברות for Transfers in transit, out of the cash view
+--          too; else a hidden kept-out '<account> · ledger'); more than one: refused (book the leg on
+--          the category's own account).
 --      The self-check now compares accounts: the posted item legs, grouped by account, project and
 --      sign, must equal the requested legs mapped to the account they post to. Refused as before:
 --      a VAT leg, more than one bank leg (the legs carry no currency, so a booking is in one
@@ -33,6 +34,7 @@
 --      existing line switched into the P&L by set_line_pnl takes no kept-out leg.
 --   6. The new reasons join private.mcp_refused's allowlist (counted anchor), replacing the phase-1
 --      reason no longer raised. 'account not found' and 'transaction not found' stay as they are.
+--   7. private.legs_pnl_projection (0208's per-category reconciliation) has no caller left and goes.
 --
 -- CLI 2.118.0 runs each statement on its own. This file is one transaction.
 
@@ -115,6 +117,12 @@ as $$
       (null, 'transfers in transit', 'Transfers in transit'),
       (null, 'property', 'Property'),
       (null, 'העברות', 'Transfers in transit'),
+      -- The hidden categories book_line makes (bound explicitly too; the name re-binds a restored copy).
+      (null, 'loan principal · ledger', 'Loan principal'),
+      (null, 'escrow · ledger', 'Escrow'),
+      (null, 'owner capital · ledger', 'Owner capital'),
+      (null, 'security deposit held · ledger', 'Security deposit held'),
+      (null, 'property · ledger', 'Property'),
       ('income', 'loan proceeds', 'Loan principal'),
       ('income', 'כסף שהתקבל מהלוואות', 'Loan principal'),
       ('income', 'owner contributions', 'Owner capital'),
@@ -341,9 +349,12 @@ $$;
 -- 5. book_line: asset and liability legs.
 -- ---------------------------------------------------------------------------
 -- The kept-out category a leg on a balance-sheet system account is mirrored to: the one kept-out
--- category of the leg's side (a debit expense, a credit income) that posts to the account; none: a
--- hidden kept-out category named like the account (bound to it by name when it is created); more than
--- one: refused. Called only by mcp_book_line, inside its write.
+-- category of the leg's side (a debit expense, a credit income) that posts to the account; more than one:
+-- refused. None: one is made, bound to the account. For Transfers in transit it is העברות of that side,
+-- as private.transfer_mark_line makes it (out of the P&L and the cash view); otherwise a hidden kept-out
+-- category named '<account> · ledger', so it never reads like the system account in list_accounts. A
+-- booking running at the same time may make it first (on conflict): that row is taken if it posts to the
+-- account. Called only by mcp_book_line, inside its write.
 create or replace function private.ledger_mirror_category(p_company uuid, p_account uuid, p_debit boolean)
 returns uuid
 language plpgsql
@@ -355,6 +366,8 @@ declare
   found_count integer;
   pick uuid;
   acct_name text;
+  cat_name text;
+  transfers boolean;
 begin
   select count(*), (array_agg(c.id))[1] into found_count, pick
   from public.categories c
@@ -369,15 +382,23 @@ begin
 
   select a.name into acct_name from public.accounts a
   where a.id = p_account and a.company_id = p_company and a.category_id is null;
-  if exists (select 1 from public.categories c where c.company_id = p_company and c.kind = side and c.name = acct_name) then
-    raise exception 'book_line: no kept-out category posts to this account';
-  end if;
-  insert into public.categories (company_id, name, kind, sort_order, is_default, hidden, excluded_from_pnl)
-  values (p_company, acct_name, side,
+  transfers := acct_name = 'Transfers in transit';
+  cat_name := case when transfers then 'העברות' else acct_name || ' · ledger' end;
+  insert into public.categories (company_id, name, kind, sort_order, is_default, hidden, excluded_from_pnl,
+    in_cash, ledger_account_id)
+  values (p_company, cat_name, side,
     coalesce((select max(c.sort_order) + 1 from public.categories c where c.company_id = p_company and c.kind = side), 1),
-    false, true, true)
+    transfers, not transfers, true, not transfers, p_account)
+  on conflict (company_id, kind, name) do nothing
   returning id into pick;
-  if private.kept_out_account(p_company, pick, null) is distinct from p_account then
+  if pick is null then
+    select c.id into pick from public.categories c
+    where c.company_id = p_company and c.kind = side and c.name = cat_name;
+  end if;
+  if pick is null
+    or not (select c.excluded_from_pnl from public.categories c where c.id = pick)
+    or private.kept_out_account(p_company, pick, null) is distinct from p_account
+  then
     raise exception 'book_line: no kept-out category posts to this account';
   end if;
   return pick;
@@ -724,6 +745,10 @@ begin
   return response;
 end;
 $$;
+
+-- The 0208 reconciliation projection has no caller left: book_line's self-check compares the legs
+-- per account, and FLOW-951's ledger_pnl_diff compares every column.
+drop function private.legs_pnl_projection(uuid);
 
 -- ---------------------------------------------------------------------------
 -- 6. The refusal reasons: the phase-1 reason is no longer raised; the new ones take its place.

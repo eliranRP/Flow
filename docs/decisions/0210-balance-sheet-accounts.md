@@ -37,7 +37,8 @@ Until FLOW-952 flips the P&L to the legs, the P&L still reads the legacy rows, s
 3. **`book_line` takes asset and liability legs, mirrored as kept-out category parts.**
    - A leg on a kept-out category's own account uses that category and lands on its account (`posts_to` in `list_accounts`).
    - A leg on a balance-sheet system account (any except Suspense and VAT control) uses the kept-out category of the leg's side that posts there: a debit an expense category, a credit an income category. That is how the built-in kept-out categories already pair up: loan proceeds and loan principal, owner contributions and distributions, deposits received and returned, transfers in and out.
-     - With none, `book_line` makes a **hidden** kept-out category named like the account. Its name binds it, so a restored copy binds again. It is kept on undo and reused by the next booking.
+     - With none, `book_line` makes one, bound to the account explicitly. For Transfers in transit it is `העברות` of that side, made exactly as `private.transfer_mark_line` makes it: out of the P&L and the cash view, not hidden. Otherwise it is a **hidden** kept-out category named `<account> · ledger`, so it never reads like the system account in `list_accounts`; the name is in the binding list too, so a restored copy binds again. It is kept on undo and reused by the next booking.
+     - Two first bookings at the same time insert with `on conflict do nothing` and re-read the row, as `transfer_mark_line` does, so the loser takes the winner's category instead of failing on the unique name. A row of that name that is counted in the P&L, or bound elsewhere, is refused plainly.
      - With more than one, `book_line` refuses and asks for the category's own account. It never guesses.
    - The part's sign follows 0208 item 9: opposite to the bank leg it counts toward the line; with the bank leg's sign it is a gross-up part, which needs a project. The sign rules of `pnl_lines` place a kept-out part correctly in either kind, and `save_line_split` writes it with every split rule.
    - The P&L of a `book_line` booking is therefore, by construction, the P&L of the equivalent `split_line` booking with the same categories.
@@ -74,7 +75,8 @@ Until FLOW-952 flips the P&L to the legs, the P&L still reads the legacy rows, s
 
 - An assistant can book a closing wire, a refinance deposit and a mortgage payment with `book_line`, on a synced line or as a new one. The P&L is what the equivalent split booking gives, and `get_line_legs` shows the price on Property and the loans on Loan principal.
 - No P&L figure moves. The migration only re-routes kept-out legs, and its gate checks that.
-- A company may gain hidden kept-out categories named like a balance-sheet account (Escrow, Security deposit held, …) the first time `book_line` needs one.
+- A company may gain hidden kept-out categories named `<account> · ledger` (Escrow, Security deposit held, …), or get its `העברות` back, the first time `book_line` needs one.
+- `private.legs_pnl_projection` (0208 item 7) is dropped: the self-check no longer calls it, and FLOW-951's `ledger_pnl_diff` compares every column. `legs_reconciliation` keeps the same check with a test-local copy.
 - Deferred:
   - routing a transfer kept out by `confirm_transfer_match` (an override) to Transfers in transit when its category posts elsewhere;
   - VAT-control legs;

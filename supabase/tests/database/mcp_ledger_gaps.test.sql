@@ -277,13 +277,14 @@ select is((select x->>'name' from jsonb_array_elements(public.mcp_accounts()->'a
   'Levy Renamed', 'list_accounts shows the new name');
 
 -- The legs follow every in_pnl change: after each step the company's whole projection equals pnl_lines
--- (owned by and run as the test's superuser: the projection is not granted to authenticated).
+-- (owned by and run as the test's superuser, a definer, so it reads every leg of the company).
 reset role;
 create function pg_temp.reconciled() returns boolean language sql security definer set search_path = '' as $$
   select (select coalesce(jsonb_agg(jsonb_build_object('t', transaction_id, 'c', category_id, 'p', project_id, 'n', n)
       order by transaction_id, category_id, project_id), '[]') from (
-      select transaction_id, category_id, project_id, sum(amount_net)::bigint n
-      from private.legs_pnl_projection(pg_temp.id('co')) group by 1, 2, 3) x)
+      select l.transaction_id, a.category_id, l.project_id, sum(-l.amount_minor)::bigint n
+      from public.legs l join public.accounts a on a.id = l.account_id
+      where l.company_id = pg_temp.id('co') and a.type in ('income', 'expense') group by 1, 2, 3) x)
     = (select coalesce(jsonb_agg(jsonb_build_object('t', transaction_id, 'c', category_id, 'p', project_id, 'n', n)
       order by transaction_id, category_id, project_id), '[]') from (
       select transaction_id, category_id, project_id, sum(amount_net)::bigint n

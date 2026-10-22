@@ -93,12 +93,12 @@ select is(
    join public.transactions t on t.id=s.transaction_id where t.description='A split bill')::bigint,
   2::bigint, 'the split booking created two line_splits');
 
--- 6. Its projection matches the request (Repairs -5000, Closing -3000). The projection is not
--- granted to authenticated, so read it as the owner.
+-- 6. Its income/expense legs project to the request (Repairs -5000, Closing -3000), read as the owner.
 reset role;
 select is(
-  (select sum(amount_net) from private.legs_pnl_projection((select id from bl where label='co')) p
-   where p.transaction_id=(select id from public.transactions where description='A split bill'))::bigint,
+  (select sum(-l.amount_minor) from public.legs l join public.accounts a on a.id = l.account_id
+   where a.type in ('income', 'expense')
+     and l.transaction_id=(select id from public.transactions where description='A split bill'))::bigint,
   -8000::bigint, 'the split booking projects to -8000 total');
 set local role authenticated;
 
