@@ -89,9 +89,9 @@ language sql
 as $$
   select jsonb_build_array(
     jsonb_build_object('category_id', (select id from msl where label = 'repairs'),
-      'project_id', (select id from msl where label = 'east'), 'amount_minor', p_east),
+      'project_id', (select id from msl where label = 'east'), 'amount_minor', p_east, 'gross_up', false),
     jsonb_build_object('category_id', (select id from msl where label = 'supplies'),
-      'project_id', (select id from msl where label = 'west'), 'amount_minor', p_west)
+      'project_id', (select id from msl where label = 'west'), 'amount_minor', p_west, 'gross_up', false)
   )
 $$;
 grant execute on function pg_temp.parts(bigint, bigint) to authenticated, service_role;

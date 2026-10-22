@@ -491,13 +491,13 @@ isOneToOne: false
                   ]
                 },"line_splits": {
                   Row: {
-                    "amount_minor": number,"category_id": string,"company_id": string,"created_at": string,"id": string,"is_rest": boolean,"ordinal": number,"percent": number | null,"project_id": string | null,"transaction_id": string
+                    "amount_minor": number,"category_id": string,"company_id": string,"created_at": string,"gross_up": boolean,"id": string,"is_rest": boolean,"ordinal": number,"percent": number | null,"project_id": string | null,"transaction_id": string
                   }
                   Insert: {
-                    "amount_minor": number,"category_id": string,"company_id": string,"created_at"?: string,"id"?: string,"is_rest"?: boolean,"ordinal": number,"percent"?: number | null,"project_id"?: string | null,"transaction_id": string
+                    "amount_minor": number,"category_id": string,"company_id": string,"created_at"?: string,"gross_up"?: boolean,"id"?: string,"is_rest"?: boolean,"ordinal": number,"percent"?: number | null,"project_id"?: string | null,"transaction_id": string
                   }
                   Update: {
-                    "amount_minor"?: number,"category_id"?: string,"company_id"?: string,"created_at"?: string,"id"?: string,"is_rest"?: boolean,"ordinal"?: number,"percent"?: number | null,"project_id"?: string | null,"transaction_id"?: string
+                    "amount_minor"?: number,"category_id"?: string,"company_id"?: string,"created_at"?: string,"gross_up"?: boolean,"id"?: string,"is_rest"?: boolean,"ordinal"?: number,"percent"?: number | null,"project_id"?: string | null,"transaction_id"?: string
                   }
                   Relationships: [
                     {

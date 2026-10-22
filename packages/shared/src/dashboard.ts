@@ -661,6 +661,8 @@ export const breakdownLinesSchema = z
         shared: z.boolean(),
         /** Where the line came from; "mercury" shows the bank icon (FLOW-125). Older payloads omit it. */
         source: z.string().optional().catch(undefined),
+        /** FLOW-946: a gross-up part (paid from a deposit / netted against the line). Older payloads omit it. */
+        gross_up: z.boolean().optional().catch(undefined),
       }),
     ),
     has_more: z.boolean(),

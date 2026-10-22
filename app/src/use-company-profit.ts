@@ -40,6 +40,8 @@ export type ProfitLine = {
   categoryKey: string;
   direction: BreakdownDirection;
   amount: bigint;
+  /** FLOW-946: a gross-up part — a real item netted against a deposit or payment ("paid from deposit"). */
+  grossUp?: boolean;
 };
 
 /** The lines of one category group, as the read returned them (unsigned, on the group's direction). */
@@ -118,6 +120,7 @@ export function buildProfitModel(inputs: ProfitInputs, overhead: OverheadProject
         categoryKey: input.categoryKey,
         direction: input.direction,
         amount: signed,
+        grossUp: row.gross_up === true,
       });
     }
   }

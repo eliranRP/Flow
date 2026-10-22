@@ -18,13 +18,19 @@ export type PartDraft = {
   projectId: string | null;
   unit: PartUnit;
   value: string;
+  /**
+   * FLOW-946 (decision 0206): a gross-up part, a real item of its category's kind that nets
+   * against the line (gross loan proceeds minus a closing cost, a credit on a payment). Its
+   * amount is subtracted from what is left to allocate. Opposite-kind, exact amount, own project.
+   */
+  grossUp?: boolean;
 };
 
 /** The rest row. null keeps the line's own category or project. */
 export type RestDraft = { categoryId: string | null; projectId: string | null };
 
 export type PayloadPart =
-  | { category_id: string; project_id: string | null; amount_minor: number }
+  | { category_id: string; project_id: string | null; amount_minor: number; gross_up?: true }
   | { category_id: string; project_id: string | null; percent: number }
   | { rest: true; category_id?: string; project_id?: string | null };
 
@@ -38,6 +44,8 @@ export type ServerPart = {
   /** null for an amount, the rest, or a part restored by undo. */
   percent: number | null;
   rest: boolean;
+  /** FLOW-946: a gross-up part (opposite sign, a real item of its category's kind). Older samples omit it. */
+  grossUp?: boolean;
 };
 
 export type LineSplitRead = {
@@ -60,7 +68,8 @@ const serverPartSchema = z.object({
   // A part restored by undo carries neither marker.
   percent: z.union([z.number(), z.string()]).nullable().optional().transform((value) => (value == null ? null : Number(value))),
   rest: z.boolean().nullable().optional().transform((value) => value === true),
-});
+  gross_up: z.boolean().nullable().optional().transform((value) => value === true),
+}).transform((part) => ({ ...part, grossUp: part.gross_up }));
 
 const readSchema = z.object({
   transaction_id: z.string(),
@@ -162,7 +171,12 @@ export function buildPayload(parts: readonly PartDraft[], rest: RestDraft): Payl
     } else {
       const minor = amountOf(part.value);
       if (minor == null) return null;
-      out.push({ category_id: part.categoryId, project_id: part.projectId, amount_minor: Number(minor) });
+      out.push({
+        category_id: part.categoryId,
+        project_id: part.projectId,
+        amount_minor: Number(minor),
+        ...(part.grossUp ? { gross_up: true as const } : {}),
+      });
     }
   }
   const restPart: PayloadPart = { rest: true };
@@ -178,6 +192,8 @@ export type LocalIssue =
   | "percent over"
   | "too few parts"
   | "a reversal part needs a project"
+  | "a gross-up part needs a project"
+  | "gross-up wrong side"
   | "same category and project twice"
   | "parts exceed the line";
 
@@ -222,7 +238,13 @@ export function checkParts(parts: readonly PartDraft[], rest: RestDraft, ctx: Li
         note(part.key, "same category and project twice");
         issues[earlier] ??= "same category and project twice";
       } else seen.set(pair, part.key);
-      if (part.projectId == null && reversalNeedsProject(part.categoryId, ctx)) {
+      if (part.grossUp) {
+        // A gross-up part is a real item of the opposite kind to the line, with its own project.
+        if (!ctx.isReversal(part.categoryId) || part.categoryId === ctx.lineCategoryId) {
+          note(part.key, "gross-up wrong side");
+        }
+        if (part.projectId == null) note(part.key, "a gross-up part needs a project");
+      } else if (part.projectId == null && reversalNeedsProject(part.categoryId, ctx)) {
         note(part.key, "a reversal part needs a project");
       }
     }
@@ -236,7 +258,8 @@ export function checkParts(parts: readonly PartDraft[], rest: RestDraft, ctx: Li
     } else {
       const minor = amountOf(part.value);
       if (minor == null) note(part.key, "incomplete");
-      else amountTotal += minor;
+      // A gross-up amount nets against the line, so it is subtracted from what is allocated.
+      else amountTotal += part.grossUp ? -minor : minor;
     }
     if (part.categoryId === "") note(part.key, "incomplete");
   }
@@ -318,6 +341,7 @@ export function draftFromRead(
       projectId: part.project_id,
       unit: byPercent ? "percent" : "amount",
       value: byPercent && part.percent != null ? percentText(part.percent) : amountText(part.amount_minor),
+      grossUp: part.grossUp,
     }];
   });
   return { parts, rest };
@@ -330,6 +354,7 @@ export function amountsPayload(read: LineSplitRead | null | undefined): PayloadP
     category_id: part.category_id,
     project_id: part.project_id,
     amount_minor: Number(part.amount_minor),
+    ...(part.grossUp ? { gross_up: true as const } : {}),
   }));
 }
 
@@ -372,6 +397,7 @@ export function readLineDraft(id: string): { parts: PartDraft[]; rest: RestDraft
         projectId: z.string().nullable(),
         unit: z.enum(["percent", "amount"]),
         value: z.string(),
+        grossUp: z.boolean().optional(),
       })),
       rest: z.object({ categoryId: z.string().nullable(), projectId: z.string().nullable() }),
     }).safeParse(JSON.parse(raw));

@@ -71,11 +71,11 @@ select is(
   public.save_line_split((select id from lpv where label = 'txn_bill'), pg_temp.parts(), true),
   jsonb_build_array(
     jsonb_build_object('category_id', (select id from lpv where label = 'repairs'),
-      'project_id', (select id from lpv where label = 'south'), 'amount_minor', 3333, 'percent', 33.33, 'rest', false),
+      'project_id', (select id from lpv where label = 'south'), 'amount_minor', 3333, 'percent', 33.33, 'rest', false, 'gross_up', false),
     jsonb_build_object('category_id', (select id from lpv where label = 'insurance'),
-      'project_id', (select id from lpv where label = 'north'), 'amount_minor', 1000, 'percent', null, 'rest', false),
+      'project_id', (select id from lpv where label = 'north'), 'amount_minor', 1000, 'percent', null, 'rest', false, 'gross_up', false),
     jsonb_build_object('category_id', (select id from lpv where label = 'repairs'),
-      'project_id', null, 'amount_minor', 5668, 'percent', null, 'rest', true)),
+      'project_id', null, 'amount_minor', 5668, 'percent', null, 'rest', true, 'gross_up', false)),
   'a preview returns the parts in cents with percent and rest');
 select is((select count(*)::integer from public.line_splits), 0, 'a preview stores no parts');
 select ok(

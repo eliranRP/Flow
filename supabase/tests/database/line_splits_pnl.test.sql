@@ -81,7 +81,8 @@ as $$
   select jsonb_build_object(
     'category_id', (select id from lsp where label = p_category),
     'project_id', (select id from lsp where label = p_project),
-    'amount_minor', p_amount
+    'amount_minor', p_amount,
+    'gross_up', false
   )
 $$;
 grant execute on function pg_temp.part(text, bigint, text) to authenticated;
