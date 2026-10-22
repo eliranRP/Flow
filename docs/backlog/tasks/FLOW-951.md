@@ -1,0 +1,13 @@
+<a id="flow-951"></a>
+# FLOW-951 · Ledger posting from rules + a shadow P&L over the legs (the live P&L does not change)
+- **Type:** BIG CYCLE · **Status:** claimed (dev lane, 2026-10-22, feat/ledger-posting-shadow) · **Source:** Switch plan, step 1 of 3: make the legs able to reproduce `private.pnl_lines` row for row, and prove it; decision [0209](../../decisions/0209-legs-source-of-truth.md)
+- **Files:** `supabase/migrations/20261022151330_ledger_posting_shadow.sql` (new), `supabase/migrations.lock`, `supabase/tests/database/legs_reconciliation.test.sql`, `supabase/tests/database/legs_posting_triggers.test.sql` (new), `supabase/tests/database/legs_balance_invariant.test.sql` (direct inserts name `leg_kind`), `packages/shared/src/database.types.ts`, `docs/decisions/0209-legs-source-of-truth.md` (new), `docs/decisions/README.md`, `docs/changelog.d/2026-10-22-flow-951.md` (new), `docs/backlog/tasks/FLOW-951.md`, `FLOW-952.md`, `FLOW-953.md` (new), `docs/backlog/tasks/index-source.md`, `docs/backlog/TASKS.md`.
+- [x] `private.pnl_lines_legacy`: today's `pnl_lines` body plus `project_explicit`, `service_role` only. `private.pnl_lines` is untouched.
+- [x] New leg columns `leg_kind`, `category_id` (deferrable composite FK, kept on kept-out legs), `part`, `gross_up`, `loan_split_fallback`, `project_explicit`.
+- [x] `private.kept_out_account(company, category, loan_part)`; `private.rebuild_legs_many(company, uuid[])` (one delete, one insert); the one-line `rebuild_legs` is dropped.
+- [x] Triggers: the transactions update re-posts only lines whose posting columns changed (old/new transition tables); inserts and split tables post once per company per statement; the categories trigger posts set-based; the allocation triggers and the transactions delete trigger are dropped.
+- [x] `private.pnl_lines_ledger` (pnl_lines' 19 columns from item legs + header + category + company + allocations) and `private.ledger_pnl_diff` (both ways, all columns), `service_role` only.
+- [x] Set-based backfill of every posted line, then a gate that aborts the migration on any company's non-empty diff. One new index: the category FK's.
+- [x] The mutation matrix in `legs_reconciliation` (diff empty after every legacy writer) and `legs_posting_triggers` (trigger behaviour, grants, kept-out routing, `rebuild_legs_many`).
+
+**Acceptance:** the migration's gate passes; the full pgTAP suite passes with every existing file unchanged; the flow-mcp Deno tests; `pnpm typecheck`; `pnpm db:types:check`; migration order and one-transaction checks; file size. Before and after EXPLAIN ANALYZE numbers for `company_pnl` (through `get_dashboard`), `get_project`, `projects_cash_month`, `cash_months` and bulk writes on a 5,000-line fixture are in the PR body.
