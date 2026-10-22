@@ -77,6 +77,18 @@ const bigParts: PartDraft[] = [
 const big = storyOf(() => <Editor line={{ ...SAMPLE_EXPENSE_LINE, amountNet: -2_000_000_000n }} parts={bigParts} />);
 export const BigAmounts: Story = { ...big, name: "Big amounts: ₪9,999,999.99" };
 
+// FLOW-954 (board LedgerSplitContra): a cost and its credit (זיכוי) on one category and project; the
+// credit part carries the filled chip and the outline, says what the category nets to, and the header
+// checks the signed sum against the line.
+const creditParts: PartDraft[] = [
+  { key: "a", categoryId: "c-ins", projectId: "p-office", unit: "amount", value: "249.48" },
+  { key: "b", categoryId: "c-ins", projectId: "p-office", unit: "amount", value: "850.77", grossUp: true },
+];
+const credit = storyOf(() => (
+  <Editor line={{ ...SAMPLE_EXPENSE_LINE, amountNet: -7_974_585n, currency: "USD", projectId: "p-office", projectName: "משרד" }} parts={creditParts} />
+));
+export const CreditPart: Story = { ...credit, name: "Credit part: ✓ זיכוי, its net and the signed check" };
+
 const empty = storyOf(() => <Editor />);
 export const Empty: Story = { ...empty, name: "Empty" };
 

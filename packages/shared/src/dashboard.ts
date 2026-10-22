@@ -641,6 +641,24 @@ export const breakdownSchema = z
       }),
     ),
     excluded: z.array(breakdownSumSchema),
+    /**
+     * FLOW-954. By category: the kept-out categories (לא נספר ברווח), each with its loan part (principal,
+     * escrow or none) and the account its lines post to. Older payloads omit it.
+     */
+    excluded_groups: z
+      .array(
+        breakdownSumSchema.extend({
+          key: z.string(),
+          name: z.string().nullable(),
+          projects: z.number().int().nonnegative(),
+          loan_part: z.string().nullable(),
+          /** The balance-sheet account its lines post to (FLOW-953 binding): asset or liability, and its name. */
+          account_type: z.string().nullish(),
+          account_name: z.string().nullish(),
+        }),
+      )
+      .optional()
+      .catch(undefined),
     review_count: z.number().int().nonnegative(),
   })
   .nullable();
@@ -663,6 +681,8 @@ export const breakdownLinesSchema = z
         source: z.string().optional().catch(undefined),
         /** FLOW-946: a gross-up part (paid from a deposit / netted against the line). Older payloads omit it. */
         gross_up: z.boolean().optional().catch(undefined),
+        /** FLOW-954: the row's category, so a kept-out line sits under its own group. Older payloads omit it. */
+        category_id: z.string().nullable().optional().catch(undefined),
       }),
     ),
     has_more: z.boolean(),

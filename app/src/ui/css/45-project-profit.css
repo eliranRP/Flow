@@ -346,3 +346,14 @@
   border-radius: var(--radius-bar-hair);
   background: var(--color-band-past);
 }
+
+/* FLOW-954 (board LedgerBreakdownKeptOut): the "לא נספר ברווח" group. A category row is its name faded and
+   its account type in muted, the amount faded, no share bar; its lines fade as a kept-out line does. */
+.ui-pcat-kept .ui-pcat-name > .ui-pcat-kept-name,
+.ui-pcat-kept .ui-pcat-top > .ui-num {
+  opacity: 0.6;
+}
+
+.ui-pcat-kept-type {
+  color: var(--color-text-muted);
+}

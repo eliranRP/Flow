@@ -90,7 +90,7 @@ export function lineSplitCopy(
     case "a reversal part needs a project":
       return "חלק החזר צריך פרויקט.";
     case "a gross-up part needs a project":
-      return "חלק גרוס-אפ צריך פרויקט.";
+      return "חלק זיכוי צריך פרויקט.";
     case "parts must sum to the line":
       return ctx.lineMinor != null && ctx.missingMinor != null
         ? `החלקים צריכים להסתכם ב־${money(ctx.lineMinor, currency)}. חסרים ${money(ctx.missingMinor, currency)}.`
@@ -125,7 +125,7 @@ export function localIssueCopy(issue: LocalIssue, ctx: { currency?: string; over
     case "a reversal part needs a project":
       return "בחרו פרויקט לחלק ההחזר.";
     case "a gross-up part needs a project":
-      return "בחרו פרויקט לחלק הגרוס-אפ.";
+      return "בחרו פרויקט לחלק הזיכוי.";
     case "same category and project twice":
     case "parts exceed the line":
       return lineSplitCopy(issue, ctx);

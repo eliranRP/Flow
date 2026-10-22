@@ -1,4 +1,4 @@
-import { profitCategoryGroups, type ProfitCategoryGroup } from "./screens/profit-categories";
+import { countWord, profitCategoryGroups, type KeptOutCategory, type ProfitCategoryGroup } from "./screens/profit-categories";
 import { HEBREW_MONTHS } from "./ui/date-math";
 import type { ProfitLine, ProfitModel } from "./use-company-profit";
 
@@ -55,4 +55,38 @@ export function companyCategoryGroups(model: Pick<ProfitModel, "categories" | "l
       lines: model.lines.filter((line) => line.direction === direction && line.categoryKey === row.key).sort(byDateThenSize),
     }));
   return profitCategoryGroups(inputs("income"), inputs("expense"));
+}
+
+/**
+ * FLOW-954. The ledger account type a kept-out category's lines land on, in the drill-down's words: the account
+ * the category is bound to (FLOW-953: Property, Owner capital, Transfers in transit, …) when the read names it;
+ * otherwise, on an older payload, a loan's principal is a liability (התחייבות) and escrow an asset (נכס), and any
+ * other kept-out category is money in that is owed (התחייבות) or money out that is held (נכס).
+ */
+export function keptOutTypeLabel(direction: "income" | "expense", loanPart: string | null, accountType: string | null = null): string {
+  if (accountType === "liability") return "התחייבות";
+  if (accountType === "asset") return "נכס";
+  if (loanPart === "principal") return "התחייבות";
+  if (loanPart === "escrow") return "נכס";
+  return direction === "income" ? "התחייבות" : "נכס";
+}
+
+/**
+ * FLOW-954 (board LedgerBreakdownKeptOut). The category view's לא נספר ברווח group: each kept-out category,
+ * largest first, named with its account type, its count and its project (or how many), and its lines.
+ */
+export function companyKeptOutCategories(model: Pick<ProfitModel, "keptOut" | "keptOutLines">): KeptOutCategory<ProfitLine>[] {
+  return model.keptOut.map((row) => {
+    const lines = model.keptOutLines.filter((line) => line.direction === row.direction && line.categoryKey === row.key).sort(byDateThenSize);
+    const project = row.projects > 1 ? `${String(row.projects)} פרויקטים` : (lines.find((line) => line.project != null)?.project ?? null);
+    return {
+      key: `kept:${row.direction}:${row.key}`,
+      name: row.name,
+      type: keptOutTypeLabel(row.direction, row.loanPart, row.accountType),
+      total: row.total,
+      moneyIn: row.direction === "income",
+      meta: [countWord(row.count), project].filter(Boolean).join(" · "),
+      lines,
+    };
+  });
 }

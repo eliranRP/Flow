@@ -1,0 +1,192 @@
+/* FLOW-954: the line's journal entry, read only (board LedgerLinePlain and LedgerLineAdvanced).
+   Imported by journal-card.tsx (the line screen), so none of it is in Home's first load. */
+
+/* The quiet link at the bottom of a plain line: the book, the words and a chevron that turns. */
+.ui-journal-toggle {
+  display: flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: calc(var(--space-1) * 1.5);
+  min-block-size: var(--touch-min);
+  padding: 0 var(--space-1);
+  border: 0;
+  background: none;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-line2-weight);
+  cursor: pointer;
+}
+
+.ui-journal-chevron {
+  display: inline-flex;
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+
+.ui-journal-chevron[data-open] {
+  transform: rotate(180deg);
+}
+
+/* The card: 16px round on the surface, a hairline between its blocks. */
+.ui-journal {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-card-tight);
+  background: var(--color-surface);
+}
+
+.ui-journal-head {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-2) + var(--space-half));
+  min-block-size: calc(var(--touch-min) + var(--space-3));
+  padding: calc(var(--space-2) + var(--space-half)) var(--space-inset-row);
+  box-sizing: border-box;
+}
+
+.ui-journal-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.ui-journal-heading {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-half);
+  min-inline-size: 0;
+}
+
+.ui-journal-title {
+  font-size: var(--type-btn-2-size);
+  font-weight: var(--type-btn-2-weight);
+  line-height: var(--type-btn-2-line);
+}
+
+/* board: the sub line and the badge are 12px (no 12px token). */
+.ui-journal-sub {
+  color: var(--color-text-muted);
+  font-size: calc(var(--type-caption-size) - 1px);
+  line-height: var(--type-caption-line);
+}
+
+.ui-journal-badge {
+  flex: none;
+  padding: calc(var(--space-1) * 0.75) calc(var(--space-2) + var(--space-half));
+  border: 1px solid var(--color-tint-strong);
+  border-radius: var(--radius-field-btn);
+  color: var(--color-accent-text);
+  font-size: calc(var(--type-caption-size) - 1px);
+  font-weight: var(--type-btn-weight);
+  line-height: var(--type-caption-line);
+  white-space: nowrap;
+}
+
+.ui-journal-side {
+  border-top: 1px solid var(--color-line);
+}
+
+.ui-journal-side-title {
+  margin: 0;
+  padding: calc(var(--space-2) + var(--space-half)) var(--space-inset-row) 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-journal-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A leg: 52px, the account over its type and project, the amount at the end. */
+.ui-journal-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: calc(var(--touch-min) + var(--space-2));
+  padding: calc(var(--space-1) * 1.5) var(--space-inset-row);
+  box-sizing: border-box;
+}
+
+.ui-journal-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-half);
+  min-inline-size: 0;
+}
+
+/* The name keeps its own direction (an English bank account reads left to right); a bank account's
+   last 4 never truncate, the rest of the name takes the ellipsis. */
+.ui-journal-name {
+  display: flex;
+  align-self: flex-start;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  gap: var(--space-1);
+  font-size: var(--type-btn-2-size);
+  line-height: var(--type-btn-2-line);
+  white-space: nowrap;
+}
+
+.ui-journal-name-cut {
+  min-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ui-journal-name-last4 {
+  flex: none;
+}
+
+/* The meta wraps at a narrow width; "[eye-off] לא נספר ברווח" stays one piece. */
+.ui-journal-meta {
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-journal-kept {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.ui-journal-amount {
+  flex: none;
+  font-size: var(--type-btn-2-size);
+  line-height: var(--type-btn-2-line);
+}
+
+/* A leg kept out of profit fades its name and amount; its muted meta keeps full strength (AA). */
+.ui-journal-row[data-kept-out] :is(.ui-journal-name, .ui-journal-amount) {
+  opacity: 0.6;
+}
+
+.ui-journal-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: calc(var(--touch-min) + var(--space-1));
+  margin: 0;
+  padding: 0 var(--space-inset-row);
+  border-top: 1px solid var(--color-line);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+.ui-journal-foot > svg {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.ui-journal-foot-note {
+  color: var(--color-text-muted);
+}

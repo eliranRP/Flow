@@ -39,6 +39,8 @@ import { ReservedMenuSlot, saveNewProject, useBlockedPreview, withChoice } from 
 import { TransactionTopBar } from "./transaction-top-bar";
 import { TxnFooter, TxnHead } from "./transaction-head";
 import { TxnRecurring } from "./transaction-recurring";
+import { TxnJournal, journalOpens, journalShown } from "./transaction-journal";
+import { useLineJournalQuery, type LineJournal } from "../line-journal";
 import { projectChoices } from "../project-groups";
 
 function splitProjectLabel(
@@ -146,6 +148,7 @@ export function TransactionScreen({
   sampleFrom,
   sampleNoFooter = false,
   sampleUnsigned = false,
+  sampleJournal,
   onOpenSplit,
 }: {
   sample?: NonNullable<TransactionDetail>;
@@ -167,6 +170,8 @@ export function TransactionScreen({
   sampleNoFooter?: boolean;
   /** The board's frame draws the header figure without a minus (an expense line's figure is unsigned there). */
   sampleUnsigned?: boolean;
+  /** FLOW-954: a story's journal entry, in place of the get_line_journal read. */
+  sampleJournal?: LineJournal | null;
   /** Reviewer preview stays on its own split instead of the ledger route. */
   onOpenSplit?: () => void;
 } = {}) {
@@ -199,6 +204,7 @@ export function TransactionScreen({
   const dashboard = useDashboardQuery(sample == null);
   const categories = useCategoriesQuery(sample == null);
   const lineSplitQuery = useLineSplitQuery(sample ? "" : transactionId, sample == null);
+  const journalQuery = useLineJournalQuery(sample ? "" : transactionId, sample == null);
   const loanSplitFlag = useLoanSplitFlag(sample?.id ?? transactionId);
   const loanSplitView = useLoanSplitView((sample ?? detail.data)?.loan_split);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
@@ -567,6 +573,10 @@ export function TransactionScreen({
   const heading = loanLine && loanSplitView == null && !loanSplitFlag ? `${party} · קרן` : party;
   const pending = txn.review_status === "open";
   const amountText = formatAmountText(absAgorot(txn.amount_net), txn.currency ?? "ILS", { detail: true });
+  // FLOW-954: the journal opens in place from a quiet link, or shows open when a leg is outside the P&L.
+  const journal = sample ? (sampleJournal ?? null) : (journalQuery.data ?? null);
+  const openJournal = journalShown(journal) && journalOpens(journal) ? journal : null;
+  const quietJournal = journalShown(journal) && openJournal == null ? journal : null;
   return frame(
     <>
       <TransactionTopBar
@@ -662,10 +672,12 @@ export function TransactionScreen({
             }} />
           )}
         </List>
+        {openJournal ? <TxnJournal journal={openJournal} bankName={meta?.account ?? null} /> : null}
         {lineMeta.isError && lineMeta.data == null ? (
           <LoanReadError label="פרטי הבנק" busy={lineMeta.isFetching} onRetry={() => { void lineMeta.refetch(); }} />
         ) : null}
         {sampleNoFooter ? null : <TxnFooter txn={txn} meta={meta ?? undefined} />}
+        {quietJournal ? <TxnJournal key={txn.id} journal={quietJournal} bankName={meta?.account ?? null} collapsible /> : null}
         </div>
       </CardSwipe>
       {countedLocked ? null : (

@@ -22,7 +22,7 @@ type RowArgs = {
   tag?: boolean;
   agorot?: string;
   loss?: boolean;
-  sign?: "in" | "out" | "cost";
+  sign?: "in" | "out" | "cost" | "moved-in";
   source?: "invoice" | "bank";
   currency?: string;
   /** The radio control: the chosen row, its live description, the start-side marker, the reason it cannot be chosen. */
@@ -161,6 +161,10 @@ export const WithIcon: Story = {
 };
 export const WithTag: Story = {
   args: { variant: "transaction", title: "Sample supplier", hint: "10/05", agorot: "170000", sign: "cost", source: "bank", tag: true, setAside: true },
+};
+/** FLOW-954: money in that is not income (a loan received, kept out of profit): "+" in the text colour, faded. */
+export const MovedIn: Story = {
+  args: { variant: "transaction", title: "Example Lending", hint: "08/10 · בית הדקל", agorot: "20650000", sign: "moved-in", source: "bank", setAside: true },
 };
 export const Muted: Story = {
   args: { variant: "item", title: "קטגוריה מוסתרת", hint: "מוסתרת", muted: true },

@@ -22,12 +22,3 @@ export function JevTag() {
 export function ReversalTag() {
   return <span className="ui-suggest-tag">החזר</span>;
 }
-
-/**
- * FLOW-946 (decision 0206). The גרוס-אפ mark on an opposite-sign split part: a real item of its
- * category's kind that nets against the line (gross loan proceeds minus a closing cost, a credit
- * on a payment). It replaces החזר on a part the owner marked gross-up. Same look as הצעה.
- */
-export function GrossUpTag() {
-  return <span className="ui-suggest-tag">גרוס-אפ</span>;
-}

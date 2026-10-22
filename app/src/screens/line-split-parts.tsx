@@ -39,6 +39,12 @@ export type LineSplitApi = {
   save: (parts: PayloadPart[]) => Promise<void>;
 };
 
+/** A part's share of the line as text: whole percents, one decimal below 1% so a small part never reads 0%. */
+export function shareText(share: number): string {
+  if (share > 0 && share < 1) return share.toFixed(1);
+  return Math.round(share).toLocaleString("en-US");
+}
+
 export function money(minor: bigint, currency: string): string {
   return formatAmountText(minor, currency, { detail: true });
 }

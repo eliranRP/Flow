@@ -42,10 +42,28 @@ export type ProfitLine = {
   amount: bigint;
   /** FLOW-946: a gross-up part — a real item netted against a deposit or payment ("paid from deposit"). */
   grossUp?: boolean;
+  /** FLOW-954: a line of a kept-out category (לא נספר ברווח), drawn faded. */
+  keptOut?: boolean;
 };
 
-/** The lines of one category group, as the read returned them (unsigned, on the group's direction). */
-export type ProfitLinesInput = { direction: BreakdownDirection; categoryKey: string; categoryName: string; rows: LinesRows };
+/** FLOW-954. A kept-out category for one direction: its total positive on its side, and its loan part. */
+export type ProfitKeptOutRow = {
+  key: string;
+  name: string;
+  direction: BreakdownDirection;
+  total: bigint;
+  count: number;
+  projects: number;
+  loanPart: string | null;
+  /** The ledger account its lines post to: asset or liability (null on an older payload). */
+  accountType: string | null;
+};
+
+/**
+ * The lines of one category group, as the read returned them (unsigned, on the group's direction). `keptOut`: every
+ * kept-out line of the direction, each under its own category (`category_id`).
+ */
+export type ProfitLinesInput = { direction: BreakdownDirection; categoryKey: string; categoryName: string; rows: LinesRows; keptOut?: boolean };
 
 /** Every read the page needs, before it is shaped. The sample builds the same shape. */
 export type ProfitInputs = {
@@ -70,6 +88,9 @@ export type ProfitModel = {
   lines: ProfitLine[];
   /** Every counted line is loaded (the date and amount lists need all of them). */
   linesComplete: boolean;
+  /** FLOW-954: the kept-out categories and their lines, for the category view's לא נספר ברווח group. */
+  keptOut: ProfitKeptOutRow[];
+  keptOutLines: ProfitLine[];
 };
 
 function groupsIn(breakdown: Breakdown | null, currency: string) {
@@ -105,11 +126,21 @@ export function buildProfitModel(inputs: ProfitInputs, overhead: OverheadProject
     }
   }
   categories.sort(byMagnitude((row) => row.amount, (a, b) => a.name.localeCompare(b.name)));
+  const keptOut: ProfitKeptOutRow[] = [];
+  for (const direction of ["income", "expense"] as const) {
+    for (const group of inputs.categories[direction]?.excluded_groups ?? []) {
+      if (group.currency !== currency) continue;
+      keptOut.push({ key: group.key, name: group.name ?? "בלי קטגוריה", direction, total: group.amount_minor, count: group.count, projects: group.projects, loanPart: group.loan_part, accountType: group.account_type ?? null });
+    }
+  }
+  keptOut.sort(byMagnitude((row) => row.total, (a, b) => a.name.localeCompare(b.name)));
   const lines: ProfitLine[] = [];
+  const keptOutLines: ProfitLine[] = [];
   for (const input of inputs.lines) {
+    const kept = input.keptOut === true;
     for (const row of input.rows) {
       const signed = input.direction === "income" ? row.amount_minor : -row.amount_minor;
-      lines.push({
+      (kept ? keptOutLines : lines).push({
         id: `${row.transaction_id}:${row.part ?? ""}`,
         transactionId: row.transaction_id,
         source: row.source,
@@ -117,10 +148,11 @@ export function buildProfitModel(inputs: ProfitInputs, overhead: OverheadProject
         date: row.doc_date,
         project: row.project_name,
         category: row.category_name ?? input.categoryName,
-        categoryKey: input.categoryKey,
+        categoryKey: kept ? (row.category_id ?? "none") : input.categoryKey,
         direction: input.direction,
         amount: signed,
         grossUp: row.gross_up === true,
+        ...(kept ? { keptOut: true } : {}),
       });
     }
   }
@@ -135,6 +167,8 @@ export function buildProfitModel(inputs: ProfitInputs, overhead: OverheadProject
     categories,
     lines,
     linesComplete,
+    keptOut,
+    keptOutLines,
   };
 }
 
@@ -186,7 +220,7 @@ async function fetchBreakdown(period: PeriodChoice, direction: BreakdownDirectio
 }
 
 /** Every page of one category group's counted lines, in the company currency. */
-async function fetchAllLines(period: PeriodChoice, direction: BreakdownDirection, key: string, currency: string): Promise<LinesRows> {
+async function fetchAllLines(period: PeriodChoice, direction: BreakdownDirection, key: string, currency: string, excluded = false): Promise<LinesRows> {
   const rows: LinesRows = [];
   const supabase = await readyClient();
   for (let offset = 0; ; offset += LINES_PAGE) {
@@ -196,7 +230,7 @@ async function fetchAllLines(period: PeriodChoice, direction: BreakdownDirection
       p_group_by: "category",
       p_group_key: key,
       p_currency: currency,
-      p_excluded: false,
+      p_excluded: excluded,
       p_limit: LINES_PAGE,
       p_offset: offset,
     });
@@ -258,6 +292,16 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, linesOn, o
     })),
   });
   const linesComplete = categoryGroups.length === 0 || lineQueries.every((query) => query.isSuccess);
+  // FLOW-954: every kept-out line of a direction in one read (p_excluded), when it has a kept-out category.
+  const keptOutDirections = (["income", "expense"] as const).filter((direction) =>
+    ((direction === "income" ? categoryIncome.data : categoryExpense.data)?.excluded_groups ?? []).some((group) => group.currency === currency));
+  const keptOutQueries = useQueries({
+    queries: keptOutDirections.map((direction) => ({
+      queryKey: ["breakdown-lines", "company-profit", preview, monthRange, direction, "kept-out", currency],
+      enabled: live && linesOn,
+      queryFn: () => fetchAllLines(month, direction, "", currency, true),
+    })),
+  });
   const failed = dashboard.isError || projectIncome.isError || projectExpense.isError || categoryIncome.isError || categoryExpense.isError;
   const ytdTotals = ytdDashboard.data == null ? null : monthTotals(ytdDashboard.data, currency);
   const ready = dashboard.data != null && projectIncome.data !== undefined && projectExpense.data !== undefined && categoryIncome.data !== undefined && categoryExpense.data !== undefined;
@@ -272,7 +316,10 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, linesOn, o
         lines: categoryGroups.flatMap(({ direction, group }, index) => {
           const result = lineQueries[index]?.data;
           return result == null ? [] : [{ direction, categoryKey: group.key, categoryName: group.name ?? "", rows: result }];
-        }),
+        }).concat(keptOutDirections.flatMap((direction, index) => {
+          const result = keptOutQueries[index]?.data;
+          return result == null ? [] : [{ direction, categoryKey: "", categoryName: "", rows: result, keptOut: true }];
+        })),
       }
     : null;
   return {
