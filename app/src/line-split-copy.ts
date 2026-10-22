@@ -17,6 +17,8 @@ export const LINE_SPLIT_REFUSALS = [
   "same category and project twice",
   "category not found",
   "a reversal part needs a project",
+  "category kind must match the part sign",
+  "a gross-up part needs a project",
   "project not found",
   "parts exceed the line",
   "a part rounds to zero",
@@ -40,6 +42,8 @@ export const LINE_SPLIT_PLACE: Record<LineSplitRefusal, RefusalPlace> = {
   "same category and project twice": "part",
   "category not found": "banner",
   "a reversal part needs a project": "part",
+  "category kind must match the part sign": "part",
+  "a gross-up part needs a project": "part",
   "project not found": "banner",
   "parts exceed the line": "footer",
   "a part rounds to zero": "part",
@@ -87,6 +91,10 @@ export function lineSplitCopy(
       return "לשורה אין קטגוריה. בחרו קטגוריה לשאר.";
     case "a reversal part needs a project":
       return "חלק החזר צריך פרויקט.";
+    case "a gross-up part needs a project":
+      return "חלק גרוס-אפ צריך פרויקט.";
+    case "category kind must match the part sign":
+      return "חלק גרוס-אפ צריך קטגוריה מהצד הנגדי לשורה.";
     case "parts must sum to the line":
       return ctx.lineMinor != null && ctx.missingMinor != null
         ? `החלקים צריכים להסתכם ב־${money(ctx.lineMinor, currency)}. חסרים ${money(ctx.missingMinor, currency)}.`
@@ -120,6 +128,10 @@ export function localIssueCopy(issue: LocalIssue, ctx: { currency?: string; over
       return "פיצול צריך לפחות שני חלקים.";
     case "a reversal part needs a project":
       return "בחרו פרויקט לחלק ההחזר.";
+    case "a gross-up part needs a project":
+      return "בחרו פרויקט לחלק הגרוס-אפ.";
+    case "gross-up wrong side":
+      return "חלק גרוס-אפ צריך קטגוריה מהצד הנגדי לשורה.";
     case "same category and project twice":
     case "parts exceed the line":
       return lineSplitCopy(issue, ctx);

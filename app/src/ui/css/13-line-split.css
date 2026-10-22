@@ -72,11 +72,31 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-2);
   margin-bottom: var(--space-2);
 }
 
 .ui-lsplit-part-no {
   color: var(--color-text-muted);
+  margin-inline-end: auto;
+}
+
+/* FLOW-946: mark a reversal part as a gross-up (opposite-sign) part. */
+.ui-lsplit-grossup {
+  min-block-size: 32px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-chip);
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--type-caption-size);
+  cursor: pointer;
+}
+
+.ui-lsplit-grossup[aria-checked="true"] {
+  border-color: var(--color-accent);
+  color: var(--color-text);
 }
 
 .ui-lsplit-pickers {

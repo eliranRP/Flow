@@ -25,10 +25,17 @@ export function samplePreview(
     const categoryId = part.category_id ?? lineCategoryId;
     if (categoryId == null) throw new Error("line has no category for the rest");
     const projectId = part.project_id ?? null;
+    const grossUp = "gross_up" in part && part.gross_up === true;
     const pair = `${categoryId}|${projectId ?? ""}`;
     if (seen.has(pair)) throw new Error("same category and project twice");
     seen.add(pair);
-    if (projectId == null && categoryId !== lineCategoryId && isReversal(categoryId) && !keptOut(categoryId)) {
+    if (grossUp) {
+      // FLOW-946: a gross-up part is the opposite kind to the line and names its own project.
+      if (categoryId === lineCategoryId || !isReversal(categoryId)) {
+        throw new Error("category kind must match the part sign");
+      }
+      if (projectId == null) throw new Error("a gross-up part needs a project");
+    } else if (projectId == null && categoryId !== lineCategoryId && isReversal(categoryId) && !keptOut(categoryId)) {
       throw new Error("a reversal part needs a project");
     }
     return {
@@ -37,11 +44,16 @@ export function samplePreview(
       amount_minor: "amount_minor" in part ? BigInt(part.amount_minor) : 0n,
       percent: "percent" in part ? part.percent : null,
       rest,
+      grossUp,
     };
   });
   const hundredths = rows.reduce((sum, row) => sum + (row.percent == null ? 0n : BigInt(Math.round(row.percent * 100))), 0n);
   if (hundredths > 10_000n) throw new Error("parts exceed the line");
-  const fixed = rows.reduce((sum, row) => sum + (row.percent == null && !row.rest ? row.amount_minor : 0n), 0n);
+  // Signed: a gross-up part's amount nets against the line's primary side.
+  const fixed = rows.reduce(
+    (sum, row) => sum + (row.percent == null && !row.rest ? (row.grossUp ? -row.amount_minor : row.amount_minor) : 0n),
+    0n,
+  );
   let percentMinor = 0n;
   if (hundredths > 0n) {
     percentMinor = hundredths === 10_000n ? lineMinor : (lineMinor * hundredths * 2n + 10_000n) / 20_000n;

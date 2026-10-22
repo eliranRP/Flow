@@ -278,7 +278,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
       layout="flat"
       variant="transaction"
       title={line.title}
-      hint={hint}
+      hint={line.grossUp ? <>{hint}{" · "}<span className="ui-cp-grossup">שולם מהפקדה</span></> : hint}
       agorot={line.amount < 0n ? -line.amount : line.amount}
       currency={currency}
       sign={line.direction === "income" ? "in" : "cost"}

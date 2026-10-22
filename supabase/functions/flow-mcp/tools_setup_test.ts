@@ -89,6 +89,39 @@ Deno.test("split_line forwards parts in order with null projects", async () => {
   assertEquals(calls[2], { name: "mcp_undo", body: { p_idempotency_key: "u-1", p_kind: "line_split", p_id: TXN } });
 });
 
+Deno.test("split_line forwards a gross_up part and rejects gross_up with percent", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { transaction_id: TXN, parts: [], undo_kind: "line_split", id: TXN } },
+  }));
+  // A gross-up deposit: gross proceeds (+income) minus a closing cost (expense), gross_up marked.
+  const split = await callTool("split_line", {
+    idempotency_key: "gu-1",
+    transaction_id: TXN,
+    parts: [
+      { category_id: INCOME_CATEGORY, amount_minor: 100000 },
+      { category_id: CATEGORY, project_id: PROJECT, amount_minor: 3000, gross_up: true },
+    ],
+  }, ["write"], rpc);
+  assertEquals(split.isError, false);
+  assertEquals(calls[0]?.body.p_parts, [
+    { category_id: INCOME_CATEGORY, project_id: null, amount_minor: 100000 },
+    { category_id: CATEGORY, project_id: PROJECT, amount_minor: 3000, gross_up: true },
+  ]);
+  // v1: a gross_up part is an exact amount only, so a percent gross_up part is a schema error.
+  const bad = await callTool("split_line", {
+    idempotency_key: "gu-2",
+    transaction_id: TXN,
+    parts: [
+      { category_id: INCOME_CATEGORY, amount_minor: 100000 },
+      { category_id: CATEGORY, project_id: PROJECT, percent: 3, gross_up: true },
+    ],
+  }, ["write"], rpc);
+  assertEquals(bad.isError, true);
+  if (!bad.structuredContent.ok) assertEquals(bad.structuredContent.error.code, "validation");
+  assertEquals(calls.length, 1);
+});
+
 Deno.test("assign_expense forwards project and category for an income review line", async () => {
   const { calls, rpc } = rpcOf(() => ({
     status: 200,

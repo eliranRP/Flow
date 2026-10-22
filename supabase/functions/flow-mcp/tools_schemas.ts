@@ -257,20 +257,20 @@ export const assignExpenseSplitSchema = z.object({
   }
 });
 // Each part gives exactly one of amount_minor (cents), percent (of the whole line, up to 4
-// decimals) or rest: true (what the other parts leave). Only a rest part may omit
-// category_id: it then keeps the line's own category.
+// decimals) or rest: true (what the other parts leave). Only a rest part may omit category_id.
+// gross_up (FLOW-946, 0206) marks an opposite-sign part that nets against the line; exact amount only.
 const linePartSchema = z.object({
   category_id: UUID_TEXT.optional(),
   project_id: UUID_TEXT.nullable().optional(),
   amount_minor: z.number().int().min(1).max(999_999_999_999_999).optional(),
   percent: z.number().gt(0).max(100).refine((n) => Math.round(n * 10000) / 10000 === n).optional(),
   rest: z.literal(true).optional(),
+  gross_up: z.boolean().optional(),
 }).strict().refine((part) =>
   [part.amount_minor, part.percent, part.rest].filter((v) => v !== undefined).length === 1 &&
-  (part.rest === true || part.category_id !== undefined)
+  (part.rest === true || part.category_id !== undefined) &&
+  (part.gross_up !== true || part.amount_minor !== undefined)
 );
-// Two to 50 parts, or none to clear the split. A category and project pair appears once, and
-// at most one part is the rest. The database rounds percents and checks the sum.
 // Two to 50 parts (or none, to clear), at most one rest, and a category and project pair once.
 function linePartsAreValid(parts: z.infer<typeof linePartSchema>[]): boolean {
   if (parts.length === 1 || parts.length > 50) return false;

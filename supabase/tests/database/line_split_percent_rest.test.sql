@@ -250,9 +250,9 @@ select is(
     pg_temp.part('repairs', 'south', 'percent', 25), pg_temp.part(null, null, 'rest'))) -> 'data' -> 'parts',
   jsonb_build_array(
     jsonb_build_object('category_id', (select id from lpr where label = 'repairs'),
-      'project_id', (select id from lpr where label = 'south'), 'amount_minor', 2500),
+      'project_id', (select id from lpr where label = 'south'), 'amount_minor', 2500, 'gross_up', false),
     jsonb_build_object('category_id', (select id from lpr where label = 'repairs'),
-      'project_id', null, 'amount_minor', 7501)),
+      'project_id', null, 'amount_minor', 7501, 'gross_up', false)),
   'MCP returns the parts in cents');
 select is(
   public.mcp_split_line('k-over', (select id from lpr where label = 'txn_bill'), jsonb_build_array(

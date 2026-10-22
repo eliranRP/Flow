@@ -1,0 +1,18 @@
+<a id="flow-946"></a>
+# FLOW-946 · Gross-up split parts: an opposite-sign part that nets against the line
+- **Type:** FEATURE · **Status:** in-progress (feat/gross-up-split-parts, 2026-10-22, feat/gross-up-split-parts) · **Source:** the owner-approved design; decision [0206](../../decisions/0206-gross-up-split-parts.md). Extends `split_line` ([0104](../../decisions/0104-line-splits.md), [0123](../../decisions/0123-line-split-percent-rest.md), [0138](../../decisions/0138-line-split-review-followups.md)); distinct from the reversal/refund part.
+- **Files:** `supabase/migrations/20261022063554_gross_up_split_parts.sql` (new), `supabase/migrations.lock`, `supabase/tests/database/gross_up_split_parts.test.sql` (new), `line_splits_pnl.test.sql`, `line_split_percent_rest.test.sql`, `line_split_preview.test.sql`, `mcp_split_line.test.sql` (extended for the new part field); `packages/shared/src/database.types.ts`, `packages/shared/src/dashboard.ts`; `supabase/functions/flow-mcp/tools_schemas.ts`, `tools_write.ts`, `tools_specs.ts`, `tools_setup_test.ts`, `tools_reads_test.ts`; `app/src/line-split.ts`, `line-split-preview.ts`, `line-split-copy.ts`, `line-split.test.ts`, `use-company-profit.ts`, `app/src/screens/line-split-editor.tsx`, `app/src/screens/company-profit-screen.tsx`, `app/src/ui/suggest-tag.tsx`, `app/src/ui/css/13-line-split.css`; `docs/decisions/0206-gross-up-split-parts.md` (new), `docs/decisions/README.md`, `docs/mcp/TOOLS.md`, `docs/changelog.d/2026-10-22-gross-up-split-parts.md` (new).
+
+**Server (one migration)**
+- [x] `line_splits.gross_up boolean not null default false` (D2). `amount_minor` stays positive; legacy rows read byte-identically.
+- [x] `save_line_split`: a `gross_up` part per part; its category kind is the opposite of the line's own (D3); the sum rule is signed (a gross-up part negated) and equals the line; a gross-up part names its own project; `gross_up` with `percent` or `rest` is refused (v1); new refusals in `mcp_refused`.
+- [x] `private.pnl_lines` line-split branch: a gross-up part is a real item of its category's kind (expense negative, income positive), the opposite of a refund; the non-gross-up path is byte-identical; the validity gate is the signed sum. `private.cash_parts` and `private.breakdown_rows` read from `pnl_lines`, so the one change carries through; `pnl_lines`, `breakdown_rows` and `get_breakdown_lines` also carry a `gross_up` column for the drill-down.
+- [x] `get_line_split` (+signed `parts_match`, emit `gross_up`), `private.line_split_parts` / `line_split_parts_full` (carry `gross_up`), `line_split_valid`, `line_split_review_sync` (signed), and the `mcp_undo` line_split restore round-trip `gross_up`.
+
+**MCP (0095)**
+- [x] `split_line` takes `gross_up` per part (schema, write mapping, spec); `assign_expenses` split rows pass it through; `get_expense` returns it.
+
+**App**
+- [x] The parts editor marks a reversal part as gross-up (a -/+ row on the opposite side); the "remaining to allocate" is signed and must reach 0; the P&L drill-down shows a "paid from deposit" tag.
+
+**Acceptance:** pgTAP `gross_up_split_parts` (signed sum, off-by-one; a legacy same-sign split and a reversal row byte-identical; deposit + gross-up expense raises the expense total, contrasted with a reversal that reduces it; category-kind-vs-sign; per-part kept-out to the excluded totals; each part's own project; CASH and INVOICED, ILS and USD; undo; unknown/missing project; company isolation; payment-side symmetry); the existing line_split/mcp_split pgTAP stay green; Deno (schema accepts `gross_up`, write maps it, `get_expense` returns it); app vitest (buildPayload emits `gross_up`, signed remaining, editor toggle, drill-down tag).

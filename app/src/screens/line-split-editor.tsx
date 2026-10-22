@@ -42,7 +42,7 @@ import { HoldLine } from "../ui/hold-line";
 import { IconButton } from "../ui/icon-button";
 import { AlertIcon, CloseIcon, PlusIcon } from "../ui/icons";
 import { MoneyField, PercentField } from "../ui/money-field";
-import { ReversalTag } from "../ui/suggest-tag";
+import { GrossUpTag, ReversalTag } from "../ui/suggest-tag";
 import { SwipeRow } from "../ui/swipe-row";
 import { useToast } from "../ui/toast";
 import {
@@ -322,7 +322,8 @@ export function LineSplitEditor({
       setRest((value) => ({ ...value, categoryId: id === line.categoryId ? null : id }));
       return;
     }
-    if (target?.kind === "part") update(target.key, { categoryId: id });
+    // A gross-up part needs an opposite-kind category; switching to a same-kind one clears it.
+    if (target?.kind === "part") update(target.key, partIsReversal(id) ? { categoryId: id } : { categoryId: id, grossUp: false });
   }
 
   /** FLOW-333 C3a: a part's picker hands focus to its value field, so the next tap types. */
@@ -476,8 +477,9 @@ export function LineSplitEditor({
           {parts.map((part, index) => {
             const name = categoryName(part.categoryId) ?? "בחירת קטגוריה";
             const reversal = part.categoryId !== "" && partIsReversal(part.categoryId);
+            const grossUp = reversal && part.grossUp === true;
             const issue = check.parts[part.key];
-            const needsProject = issue === "a reversal part needs a project";
+            const needsProject = issue === "a reversal part needs a project" || issue === "a gross-up part needs a project";
             const project = part.projectId == null ? (reversal && reversalNeedsProject(part.categoryId, ctx) ? "פרויקט · חובה בהחזר" : partProjectLabel(null, line.projectName)) : (projectName(part.projectId) ?? "פרויקט");
             const percent = part.unit === "percent" ? percentOf(part.value) : null;
             const amount = part.unit === "amount" ? amountOf(part.value) : null;
@@ -490,7 +492,7 @@ export function LineSplitEditor({
             // One problem per part, in this order; it replaces the share line (FLOW-922, the board).
             const problem: ReactNode = twice ? PART_TWICE
               : over ? <>{"יותר מהסכום ב־"}<Amount minor={check.overMinor} currency={currency} /></>
-                : issue === "a reversal part needs a project" ? PART_PICK_PROJECT
+                : (issue === "a reversal part needs a project" || issue === "a gross-up part needs a project") ? PART_PICK_PROJECT
                   : missingAmount ? PART_FILL_AMOUNT
                     : null;
             const messageId = `lsplit-msg-${part.key}`;
@@ -505,6 +507,29 @@ export function LineSplitEditor({
                 <div className="ui-lsplit-part" data-invalid={flagged ? "" : undefined}>
                   <div className="ui-lsplit-part-head">
                     <span className="ui-lsplit-part-no">{`חלק ${String(index + 1)}`}</span>
+                    {reversal ? (
+                      <button
+                        type="button"
+                        className="ui-lsplit-grossup ui-hit"
+                        role="switch"
+                        aria-checked={grossUp}
+                        aria-label={`גרוס-אפ, ${name}`}
+                        onClick={() => {
+                          // A gross-up part is an exact amount; a percent part becomes its cents.
+                          update(part.key, grossUp
+                            ? { grossUp: false }
+                            : {
+                              grossUp: true,
+                              unit: "amount",
+                              value: part.unit === "amount"
+                                ? part.value
+                                : cents != null ? amountText(cents) : percent != null ? amountText(percentMinorOf(percent, lineMinor)) : "",
+                            });
+                        }}
+                      >
+                        {grossUp ? "גרוס-אפ ✓" : "סמנו כגרוס-אפ"}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className="ui-lsplit-part-remove ui-hit"
@@ -528,14 +553,14 @@ export function LineSplitEditor({
                     <button
                       type="button"
                       className="ui-lsplit-pick ui-hit"
-                      aria-label={`${name}${reversal ? ", החזר" : ""}, קטגוריה, שינוי`}
+                      aria-label={`${name}${grossUp ? ", גרוס-אפ" : reversal ? ", החזר" : ""}, קטגוריה, שינוי`}
                       aria-describedby={problem != null ? messageId : undefined}
                       onClick={(event) => { openPicker({ kind: "part", key: part.key }, "category", event.currentTarget); }}
                     >
                       <span className="ui-lsplit-title">
                         {/* The full name is in the button's label. */}
                         <span className="ui-lsplit-name" data-clip-ok="">{name}</span>
-                        {reversal ? <ReversalTag /> : null}
+                        {grossUp ? <GrossUpTag /> : reversal ? <ReversalTag /> : null}
                       </span>
                       <ChevronDown />
                     </button>
@@ -571,7 +596,7 @@ export function LineSplitEditor({
                         }}
                       />
                     )}
-                    <SplitUnitToggle
+                    {grossUp ? null : <SplitUnitToggle
                       name={name}
                       unit={part.unit}
                       amountLabel={currency === "USD" ? "$" : "₪"}
@@ -585,7 +610,7 @@ export function LineSplitEditor({
                           : (amount != null ? percentText(shareOfLine(amount, lineMinor)) : "");
                         update(part.key, { unit, value });
                       }}
-                    />
+                    />}
                   </div>
                   <p
                     id={messageId}

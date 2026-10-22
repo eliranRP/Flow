@@ -224,3 +224,92 @@ describe("line split refusal copy (FLOW-325)", () => {
     expect(lineSplitRefusal(new Error("Failed to fetch"))).toBeNull();
   });
 });
+describe("gross-up split parts (FLOW-946, decision 0206)", () => {
+  // A deposit: gross proceeds (+income) minus a real closing cost paid at closing. The signed
+  // sum of the parts (a gross-up part negated) is the net that hit the bank, 970.00.
+  const depCtx: LineContext = {
+    lineMinor: 97_000n,
+    lineCategoryId: "c-rent",
+    lineProjectId: "p-a",
+    isReversal: (id) => id === "c-cost",
+  };
+
+  it("buildPayload emits gross_up on the amount part", () => {
+    const payload = buildPayload([
+      { key: "a", categoryId: "c-proceeds", projectId: null, unit: "amount", value: "1000" },
+      { key: "b", categoryId: "c-cost", projectId: "p-a", unit: "amount", value: "30", grossUp: true },
+    ], { categoryId: null, projectId: null });
+    expect(payload).toEqual([
+      { category_id: "c-proceeds", project_id: null, amount_minor: 100_000 },
+      { category_id: "c-cost", project_id: "p-a", amount_minor: 3_000, gross_up: true },
+      { rest: true },
+    ]);
+  });
+
+  it("the remaining to allocate reaches 0 only with signed math", () => {
+    const parts: PartDraft[] = [
+      { key: "a", categoryId: "c-proceeds", projectId: null, unit: "amount", value: "1000" },
+      { key: "b", categoryId: "c-cost", projectId: "p-a", unit: "amount", value: "30", grossUp: true },
+    ];
+    const check = checkParts(parts, { categoryId: null, projectId: null }, depCtx);
+    // 97000 - (100000 - 3000) = 0. If the gross-up were added, used would be 103000 and over.
+    expect(check.restMinor).toBe(0n);
+    expect(check.overMinor).toBe(0n);
+    expect(check.form).toBeNull();
+    // The same amounts with the cost as a plain (added) part overshoot the line.
+    const added = checkParts(
+      parts.map((p) => (p.key === "b" ? { ...p, grossUp: false } : p)),
+      { categoryId: null, projectId: null },
+      depCtx,
+    );
+    expect(added.restMinor).toBe(-6_000n);
+    expect(added.form).toBe("parts exceed the line");
+  });
+
+  it("flags a gross-up part with no project and one on the wrong side", () => {
+    const noProject = checkParts([
+      { key: "a", categoryId: "c-proceeds", projectId: null, unit: "amount", value: "1000" },
+      { key: "b", categoryId: "c-cost", projectId: null, unit: "amount", value: "30", grossUp: true },
+    ], { categoryId: null, projectId: null }, depCtx);
+    expect(noProject.parts.b).toBe("a gross-up part needs a project");
+    const wrongSide = checkParts([
+      { key: "a", categoryId: "c-rent", projectId: "p-a", unit: "amount", value: "300", grossUp: true },
+      { key: "b", categoryId: "c-proceeds", projectId: null, unit: "amount", value: "670" },
+    ], { categoryId: null, projectId: null }, depCtx);
+    expect(wrongSide.parts.a).toBe("gross-up wrong side");
+  });
+
+  it("reopens a saved gross-up part in the editor", () => {
+    const read = parseLineSplit({
+      transaction_id: "t", currency: "USD", line_minor: 97_000,
+      parts: [
+        { category_id: "c-proceeds", project_id: null, amount_minor: 100_000, gross_up: false },
+        { category_id: "c-cost", project_id: "p-a", amount_minor: 3_000, gross_up: true },
+      ],
+      parts_match: true,
+    });
+    const draft = draftFromRead(read, "c-rent");
+    expect(draft.parts.find((p) => p.categoryId === "c-cost")?.grossUp).toBe(true);
+    expect(amountsPayload(read)).toEqual([
+      { category_id: "c-proceeds", project_id: null, amount_minor: 100_000 },
+      { category_id: "c-cost", project_id: "p-a", amount_minor: 3_000, gross_up: true },
+    ]);
+  });
+
+  it("the sample preview nets a gross-up part and refuses the wrong side", () => {
+    const preview = samplePreview(97_000n, "c-rent", [
+      { category_id: "c-proceeds", project_id: null, amount_minor: 100_000 },
+      { category_id: "c-cost", project_id: "p-a", amount_minor: 3_000, gross_up: true },
+    ], (id) => id === "c-cost");
+    expect(preview.map((r) => [r.category_id, r.amount_minor, r.grossUp])).toEqual([
+      ["c-proceeds", 100_000n, false],
+      ["c-cost", 3_000n, true],
+    ]);
+    expect(() =>
+      samplePreview(97_000n, "c-rent", [
+        { category_id: "c-cost", project_id: "p-a", amount_minor: 3_000, gross_up: true },
+        { category_id: "c-rent", project_id: "p-a", amount_minor: 100_000, gross_up: true },
+      ], (id) => id === "c-cost")
+    ).toThrow("category kind must match the part sign");
+  });
+});

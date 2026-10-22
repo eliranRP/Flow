@@ -361,6 +361,7 @@ export async function callWrite(
         ...(part.amount_minor === undefined ? {} : { amount_minor: part.amount_minor }),
         ...(part.percent === undefined ? {} : { percent: part.percent }),
         ...(part.rest === undefined ? {} : { rest: true }),
+        ...(part.gross_up ? { gross_up: true } : {}),
       })),
     };
   } else if (name === "set_line_pnl") {
