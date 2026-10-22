@@ -338,6 +338,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-926"></a>[FLOW-926](tasks/FLOW-926.md) | A project's month lines page and its empty state (board StatesLinesEmpty) | Feature |
 | <a id="flow-946"></a>[FLOW-946](tasks/FLOW-946.md) | Gross-up split parts: an opposite-sign part that nets against the line | FEATURE |
 | <a id="flow-947"></a>[FLOW-947](tasks/FLOW-947.md) | Gross-up contra effect: a gross-up part on either kind, nets its own category | FEATURE |
+| <a id="flow-949"></a>[FLOW-949](tasks/FLOW-949.md) | A normal cost and its gross-up contra credit on the same category and project | BUG |
 
 ## Projects and reports
 

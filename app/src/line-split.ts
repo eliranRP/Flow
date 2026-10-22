@@ -223,9 +223,10 @@ export type LocalCheck = {
   restMinor: bigint | null;
 };
 
-export function pairKey(categoryId: string, projectId: string | null, ctx: LineContext): string {
-  // A part with no project keeps the line's project, so both name the same pair.
-  return `${categoryId}|${projectId ?? ctx.lineProjectId ?? ""}`;
+export function pairKey(categoryId: string, projectId: string | null, ctx: LineContext, grossUp = false): string {
+  // A part with no project keeps the line's project, so both name the same pair. One normal and
+  // one gross-up part may share a pair (FLOW-949, 0207: a cost and its contra credit).
+  return `${categoryId}|${projectId ?? ctx.lineProjectId ?? ""}${grossUp ? "|gross-up" : ""}`;
 }
 
 export function checkParts(parts: readonly PartDraft[], rest: RestDraft, ctx: LineContext): LocalCheck {
@@ -241,7 +242,7 @@ export function checkParts(parts: readonly PartDraft[], rest: RestDraft, ctx: Li
   if (parts.length === 0) form = "too few parts";
   for (const part of parts) {
     if (part.categoryId !== "") {
-      const pair = pairKey(part.categoryId, part.projectId, ctx);
+      const pair = pairKey(part.categoryId, part.projectId, ctx, part.grossUp);
       const earlier = seen.get(pair);
       if (earlier != null) {
         note(part.key, "same category and project twice");

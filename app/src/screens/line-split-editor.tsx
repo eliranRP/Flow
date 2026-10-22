@@ -293,9 +293,9 @@ export function LineSplitEditor({
 
   // FLOW-922: a split part's picker says which pairs other parts already use, and what the line keeps.
   const partNo = targetPart != null ? parts.findIndex((part) => part.key === targetPart.key) + 1 : 0;
-  const otherPairs = targetPart != null ? new Set(parts.filter((part) => part.key !== targetPart.key).map((part) => pairKey(part.categoryId, part.projectId, ctx))) : null;
-  const takenProject = (projectId: string) => targetPart != null && otherPairs != null && otherPairs.has(pairKey(targetPart.categoryId, projectId === "" ? null : projectId, ctx));
-  const takenCategory = (categoryId: string) => targetPart != null && otherPairs != null && otherPairs.has(pairKey(categoryId, targetPart.projectId, ctx));
+  const otherPairs = targetPart != null ? new Set(parts.filter((part) => part.key !== targetPart.key).map((part) => pairKey(part.categoryId, part.projectId, ctx, part.grossUp))) : null;
+  const takenProject = (projectId: string) => targetPart != null && otherPairs != null && otherPairs.has(pairKey(targetPart.categoryId, projectId === "" ? null : projectId, ctx, targetPart.grossUp));
+  const takenCategory = (categoryId: string) => targetPart != null && otherPairs != null && otherPairs.has(pairKey(categoryId, targetPart.projectId, ctx, targetPart.grossUp));
   const pickerNotes = targetPart == null ? undefined : {
     project: Object.fromEntries<string>([
       ...(lineRow && line.projectId != null ? [[line.projectId, PART_LINE_PROJECT_NOTE] as [string, string]] : []),
@@ -489,7 +489,7 @@ export function LineSplitEditor({
             const fieldError = issue === "percent over" ? localIssueCopy("percent over") : undefined;
             const over = check.overMinor > 0n && !holdIsOver && (lastEdited === part.key || (lastEdited == null && index === parts.length - 1));
             // The same category and project as an earlier part: only the later one says so (FLOW-922).
-            const twice = part.categoryId !== "" && parts.findIndex((other) => other.categoryId !== "" && pairKey(other.categoryId, other.projectId, ctx) === pairKey(part.categoryId, part.projectId, ctx)) < index;
+            const twice = part.categoryId !== "" && parts.findIndex((other) => other.categoryId !== "" && pairKey(other.categoryId, other.projectId, ctx, other.grossUp) === pairKey(part.categoryId, part.projectId, ctx, part.grossUp)) < index;
             const missingAmount = issue === "incomplete" && part.categoryId !== "" && part.value.trim() === "";
             // One problem per part, in this order; it replaces the share line (FLOW-922, the board).
             const problem: ReactNode = twice ? PART_TWICE

@@ -18,11 +18,12 @@ export type ToolDefer = (work: Promise<unknown>) => void;
 
 export type ToolResult = {
   isError: boolean;
-  structuredContent: { ok: true; data: unknown } | { ok: false; error: { code: string; message: string } };
+  structuredContent: { ok: true; data: unknown } | { ok: false; error: { code: string; message: string; detail?: string } };
 };
 
-export function fail(code: string, message: string): ToolResult {
-  return { isError: true, structuredContent: { ok: false, error: { code, message } } };
+/** A refusal. `detail`, when given, names the rule that failed (FLOW-949); most refusals have none. */
+export function fail(code: string, message: string, detail?: string): ToolResult {
+  return { isError: true, structuredContent: { ok: false, error: detail === undefined ? { code, message } : { code, message, detail } } };
 }
 
 export function ok(data: unknown): ToolResult {
