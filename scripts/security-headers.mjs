@@ -14,7 +14,7 @@ export const CSP_PLACEHOLDER = "__FLOW_CSP__";
  */
 export function inlineScripts(html) {
   const found = [];
-  for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
+  for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script[^>]*>/gi)) {
     if (/\bsrc\s*=/i.test(match[1])) continue;
     found.push(match[2]);
   }

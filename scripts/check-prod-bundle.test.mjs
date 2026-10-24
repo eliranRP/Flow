@@ -142,8 +142,7 @@ test("the hosted client check fails closed", () => {
 
   const real = hostedClientMarkers();
   assert.deepEqual(real.problems, []);
-  assert.ok(real.markers.includes("https://sxqpnetmtufkzowutduq.supabase.co"));
-  assert.ok(real.markers.includes("sxqpnetmtufkzowutduq"));
+  assert.deepEqual(real.markers.slice(0, 2), ["https://sxqpnetmtufkzowutduq.supabase.co", "sxqpnetmtufkzowutduq"]);
   assert.equal(real.markers.length, 3);
 });
 

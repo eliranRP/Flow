@@ -23,7 +23,7 @@ test("the ignored specs are the ones playwright.config.ts leaves out", () => {
   const config = fs.readFileSync(path.join(root, "app/playwright.config.ts"), "utf8");
   const ignore = /testIgnore:\s*\[([^\]]*)\]/.exec(config);
   assert.ok(ignore, "testIgnore moved: update scripts/e2e-specs.test.mjs");
-  const patterns = [...ignore[1].matchAll(/\/((?:\\.|[^/])+)\//g)].map((match) => new RegExp(match[1]));
+  const patterns = [...ignore[1].matchAll(/\/((?:\\.|[^/\\])+)\//g)].map((match) => new RegExp(match[1]));
   for (const spec of map.ignored) assert.ok(patterns.some((pattern) => pattern.test(spec)), spec);
   for (const spec of Object.keys(map.specs)) assert.ok(!patterns.some((pattern) => pattern.test(spec)), spec);
 });

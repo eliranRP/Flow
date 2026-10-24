@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { importers, lintScope, reachesApp, sweepRoutes } from "./gate-scope.mjs";
+import { escapeRegExp } from "./regexp.mjs";
 import { scrubGitEnv } from "./test-git-env.mjs";
 
 // git ls-files must read the tree a test names, never a hook's GIT_DIR (see test-git-env.mjs).
@@ -191,7 +192,7 @@ test("the sweep opens the routes whose files a change reaches, and every route f
 test("the real sweep map: every route draws files that exist, and a screen reaches only its routes", () => {
   const map = JSON.parse(fs.readFileSync(path.join(root, "app/e2e/spec-sources.json"), "utf8"));
   for (const [spec, urls] of Object.entries(map.sweeps.routes)) {
-    assert.match(fs.readFileSync(path.join(root, "app/e2e", spec), "utf8"), new RegExp(`sweepControls\\("${spec.replace(/\./g, "\\.")}"\\)`));
+    assert.match(fs.readFileSync(path.join(root, "app/e2e", spec), "utf8"), new RegExp(`sweepControls\\("${escapeRegExp(spec)}"\\)`));
     for (const [url, entries] of Object.entries(urls)) {
       for (const entry of entries) {
         const [file, name] = entry.split("#");

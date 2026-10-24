@@ -11,6 +11,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { escapeRegExp } from "./regexp.mjs";
 
 // The lint rules are type-aware, so a file's result depends on its own text and on the types of
 // everything it imports, all the way down. These change what every file sees: the eslint config,
@@ -176,7 +177,7 @@ function declarationsUsing(exists, file, text, target, only) {
   const stack = [...locals];
   while (stack.length > 0) {
     const name = stack.pop();
-    const word = new RegExp(`(^|[^\\w$.])${name.replace(/\$/g, "\\$")}([^\\w$]|$)`);
+    const word = new RegExp(`(^|[^\\w$.])${escapeRegExp(name)}([^\\w$]|$)`);
     for (const [declared, body] of bodies) {
       if (using.has(declared) || declared === name || !word.test(body)) continue;
       using.add(declared);

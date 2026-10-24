@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import indexHtml from "../index.html?raw";
 import { applyThemeChoice, readThemeChoice, type ThemeChoice, writeThemeChoice } from "./theme-store";
 
-const inlineScript = /<script>([\s\S]*?)<\/script>/.exec(indexHtml)?.[1] ?? "";
+const inlineScript = /<script>([\s\S]*?)<\/script\s*>/i.exec(indexHtml)?.[1] ?? "";
 
 /** Runs index.html's inline script in the test's global scope, as the browser does before the app. */
 function runPrePaint(): void {

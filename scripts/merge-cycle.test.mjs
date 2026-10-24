@@ -99,7 +99,7 @@ test("fetchRows keeps merged PRs since the cutoff, reads each one's counts and l
       [4, "push", 2],
     ],
   );
-  assert.ok(calls.includes("https://api.github.com/repos/o/r/commits/sha3"));
+  assert.ok(calls.some((url) => url === "https://api.github.com/repos/o/r/commits/sha3"));
   assert.ok(!calls.includes("pr/9"), "an unmerged PR is not fetched");
   assert.ok(
     !calls.includes("pr/1"),

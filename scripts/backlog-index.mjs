@@ -32,7 +32,7 @@ export function parseTask(id, text) {
   return { id, title: heading[2].trim(), type: fields[1].trim(), status: fields[2].trim() };
 }
 
-const cell = (text) => text.replace(/\|/g, "\\|");
+const cell = (text) => text.replace(/[\\|]/g, "\\$&");
 const anchor = (id) => `<a id="${id.toLowerCase()}"></a>`;
 const fileLink = (id) => `[${id}](tasks/${id}.md)`;
 

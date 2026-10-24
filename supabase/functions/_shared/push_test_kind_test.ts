@@ -127,7 +127,7 @@ Deno.test("a failed send logs the host, the status and a short answer, never the
   );
   assertEquals(failureLine("not a url", "TimeoutError"), "push failed host=unknown status=TimeoutError");
   const long = failureLine(OWN, 500, `see https://example.com/x ${"a".repeat(300)}`);
-  assertEquals([long.includes("example.com"), long.length < 200], [false, true]);
+  assertEquals([long.split(" body=")[1].startsWith("see <url> aaa"), long.length < 200], [true, true]);
 
   const keys = await vapidKeys();
   const device = await browserKeys();

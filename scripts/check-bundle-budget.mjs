@@ -27,7 +27,7 @@ export function gzipBytes(data) {
  */
 export function entryFiles(html) {
   const files = new Set();
-  const tags = html.match(/<(script|link)\b[^>]*>/g) ?? [];
+  const tags = html.match(/<(script|link)\b[^>]*>/gi) ?? [];
   for (const tag of tags) {
     const isScript = tag.startsWith("<script");
     const rel = /\brel="([^"]+)"/.exec(tag)?.[1] ?? "";
