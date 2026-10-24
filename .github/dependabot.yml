@@ -1,0 +1,39 @@
+# Dependabot version updates: https://docs.github.com/code-security/dependabot/working-with-dependabot/dependabot-options-reference
+# Minor and patch bumps come grouped in one PR per ecosystem, so the agent lanes see one PR a week, not dozens.
+# Major bumps still open one PR each, since they can break the build. Security updates are not grouped.
+# The Deno edge functions (supabase/functions) are not covered: Dependabot has no Deno ecosystem.
+
+version: 2
+updates:
+  # pnpm workspace: the root, app/ and packages/* all share the root pnpm-lock.yaml.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      timezone: "Asia/Jerusalem"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      npm-minor-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Workflow actions are pinned by commit SHA; Dependabot bumps the SHA and its version comment.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      timezone: "Asia/Jerusalem"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    groups:
+      actions:
+        applies-to: version-updates
+        patterns:
+          - "*"
