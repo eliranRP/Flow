@@ -19,7 +19,7 @@ import "../ui/css/58-transaction-thread.css";
 
 /** The row's words: what the line holds, or the way in when it holds nothing. */
 export function reviewThreadLabel(notes: number, files: number): string {
-  if (notes === 0 && files === 0) return "הוספת הערה או קובץ לפני אישור";
+  if (notes === 0 && files === 0) return "הוספת הערה או קובץ";
   const parts = [
     notes === 1 ? "הערה" : notes > 1 ? `${String(notes)} הערות` : null,
     files === 1 ? "קובץ" : files > 1 ? `${String(files)} קבצים` : null,

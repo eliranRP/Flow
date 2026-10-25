@@ -104,7 +104,7 @@ describe("the thread's words", () => {
   });
 
   it("labels the approval card's row", () => {
-    expect(reviewThreadLabel(0, 0)).toBe("הוספת הערה או קובץ לפני אישור");
+    expect(reviewThreadLabel(0, 0)).toBe("הוספת הערה או קובץ");
     expect(reviewThreadLabel(1, 1)).toBe("הערות וקבצים · הערה · קובץ");
     expect(reviewThreadLabel(2, 0)).toBe("הערות וקבצים · 2 הערות");
     expect(reviewThreadLabel(0, 3)).toBe("הערות וקבצים · 3 קבצים");

@@ -6,7 +6,7 @@
 - [ ] The transaction page shows "הערות וקבצים": Mercury's note (with its files), the owner's notes with their files, oldest first, and a composer at the bottom: a paperclip (camera or file) and a text field.
 - [ ] Mercury's note comes in whole with every sync (not the 200-character memo) and can be edited in Flow. The edit stays in Flow: nothing is written to Mercury (owner, 2026-10-25), and later syncs keep it.
 - [ ] Mercury's attachments are copied into Flow's storage on sync, so their links never expire.
-- [ ] The approval card shows a badge with the count of notes and files. Tapping it, or "הוספה לפני אישור", opens the "לפני שמאשרים" sheet: Mercury's note, camera / file / note, and "לשמור ולאשר".
+- [ ] The approval card shows a badge with the count of notes and files. Tapping it, or "הוספת הערה או קובץ", opens the "לפני שמאשרים" sheet: Mercury's note, camera / file / note, and "לשמור ולאשר".
 - [ ] Every action has a flow-mcp tool (decision 0095): list the thread, add, edit and delete a note, with idempotency and undo.
 
 - **Acceptance:** stories of the thread (empty, Mercury only, mixed) and the sheet at 320 and 393; pgTAP for the tables, the RPCs, the bucket policies and the MCP writes; Deno tests for the Mercury note and attachments.
