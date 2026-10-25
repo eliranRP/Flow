@@ -84,3 +84,22 @@ export function profitChange(summary: Pick<WeeklySummary, "lines" | "profit_mino
   const minor = summary.profit_minor - summary.prev_profit_minor;
   return { minor, tone: minor >= 0n ? "helps" : "hurts" };
 }
+
+/** The address with `?week=<Sunday>`, keeping every other parameter: the sheet's own link (the push's). */
+export function searchWithWeek(search: string, weekStart: string): string {
+  const params = new URLSearchParams(search);
+  params.set("week", weekStart);
+  return `?${params.toString()}`;
+}
+
+/**
+ * The card's status beside the profit. What waits is the whole open queue, as the sheet's button
+ * and the push count it.
+ */
+export function cardStatus(summary: Pick<WeeklySummary, "lines" | "waiting">): { text: string; tone: "waiting" | "done" | "empty" } {
+  if (summary.waiting > 0) {
+    return { text: summary.waiting === 1 ? "אחת מחכה לאישור" : `${String(summary.waiting)} מחכות לאישור`, tone: "waiting" };
+  }
+  if (summary.lines === 0) return { text: "לא נכנסו תנועות", tone: "empty" };
+  return { text: "הכול מאושר", tone: "done" };
+}
