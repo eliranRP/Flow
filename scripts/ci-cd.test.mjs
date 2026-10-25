@@ -14,11 +14,11 @@ const preflight = readFileSync(new URL("./cd-preflight.sh", import.meta.url), "u
 const USES_PIN = /^\s*(?:-\s*)?uses: ([A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+)@([0-9a-f]{40}) # v\d+\.\d+\.\d+$/;
 const ACTION_SHA = {
   "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
-  "actions/setup-node": "820762786026740c76f36085b0efc47a31fe5020",
+  "actions/setup-node": "949feb2413d6458794dcd2491c4babbbce0c15c1",
   "actions/cache": "55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
   "actions/cache/restore": "55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
-  "actions/upload-artifact": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
-  "actions/download-artifact": "37930b1c2abaa49bbe596cd826c3c89aef350131",
+  "actions/upload-artifact": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+  "actions/download-artifact": "9000827ccba6bdab643e8b6fd33ac0654aef8333",
   "pnpm/action-setup": "ea17c68df8912ef543352723c149a84f56e3d413",
   "supabase/setup-cli": "45a513f8c64c0bc8e0e3dfe572b5c95be85f6359",
   "denoland/setup-deno": "22d081ff2d3a40755e97629de92e3bcbfa7cf2ed",
@@ -152,7 +152,7 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   // The stories shards wait for the one Storybook build, and download it.
   assert.match(job("check-stories"), /\n {4}needs: \[plan, build-storybook\]\n {4}if: needs\.plan\.outputs\.run == 'true'\n/);
   assert.equal(job("check-stories").includes("pnpm build-storybook"), false);
-  assert.match(job("check-stories"), /uses: actions\/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7\.0\.0\n {8}with:\n {10}name: storybook-static\n {10}path: app\/storybook-static\n/);
+  assert.match(job("check-stories"), /uses: actions\/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8\.0\.2\n {8}with:\n {10}name: storybook-static\n {10}path: app\/storybook-static\n/);
   assert.match(job("build-storybook"), /run: pnpm build-storybook\n/);
   assert.match(job("build-storybook"), /name: storybook-static\n {10}path: app\/storybook-static\n/);
   // check and e2e are the required checks. They are gates that run always and pass only on success.
@@ -257,7 +257,7 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(deploy, /actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7\.0\.1/);
   assert.match(deploy, /persist-credentials: false/);
   assert.match(deploy, /pnpm\/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6\.1\.0/);
-  assert.match(deploy, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\.0\.0/);
+  assert.match(deploy, /actions\/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7\.1\.0/);
   assert.match(deploy, /supabase\/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3\.0\.1/);
   assert.match(deploy, /SUPABASE_DB_URL/);
   assert.match(deploy, /CLOUDFLARE_API_TOKEN/);
@@ -273,7 +273,7 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(deploy, /functions deploy push-send --project-ref sxqpnetmtufkzowutduq/);
   assert.match(job("check-core"), /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
   const coreDist = job("check-core");
-  const upload = coreDist.indexOf("uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1");
+  const upload = coreDist.indexOf("uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2");
   assert.ok(upload > coreDist.indexOf("pnpm check:bundle\n") && upload < coreDist.indexOf("rm -rf app/dist"));
   // The module graph sits beside dist; deploy's check:bundle reads it, so it rides in the same artifact.
   assert.match(coreDist, /name: hosted-dist\n {10}path: \|\n {12}app\/dist\n {12}app\/bundle-graph\.json\n {10}retention-days: 1\n/);
@@ -295,7 +295,7 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   // deploy reuses check (core)'s hosted dist: no build, no stamp, and the bundle is checked again before the migration.
   assert.equal(deploy.includes("pnpm build"), false);
   assert.equal(deploy.includes("stamp-build.mjs"), false);
-  const download = deploy.indexOf("uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0");
+  const download = deploy.indexOf("uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2");
   // Stored relative to app/, so it lands as app/dist and app/bundle-graph.json.
   assert.match(deploy, /name: hosted-dist\n {10}path: app\n/);
   const build = download;
@@ -449,7 +449,7 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.equal(ci.includes("env.ImageVersion"), false);
   assert.match(ci, /timeout-minutes: 8\n\s+run: bash scripts\/ci-apt-cache\.sh install\n/);
   assert.match(ci, /timeout-minutes: 5\n\s+run: pnpm --filter @flow\/app exec playwright install chromium\n/);
-  assert.match(ci, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\.0\.0/);
+  assert.match(ci, /actions\/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7\.1\.0/);
   assert.match(ci, /actions\/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0/);
   // check (core) keeps the hosted dist for deploy. Only that upload exists until the next artifact is added.
   assert.equal((ci.match(/uses: actions\/upload-artifact@/g) ?? []).length, 2);
@@ -986,7 +986,7 @@ test("pr.yml checks every push to a PR before its merge: pinned actions, no secr
   for (const name of ["static", "types", "db"]) {
     const body = jobIn(pr, name);
     assert.match(body, /uses: pnpm\/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6\.1\.0\n {8}with:\n {10}version: 10\.33\.3\n/, name);
-    assert.match(body, /uses: actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\.0\.0\n {8}with:\n {10}node-version: 22\n/, name);
+    assert.match(body, /uses: actions\/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7\.1\.0\n {8}with:\n {10}node-version: 22\n/, name);
     assert.ok(body.includes("run: echo \"path=$(pnpm store path --silent)\" >> \"$GITHUB_OUTPUT\"\n"), name);
     assert.match(body, /uses: actions\/cache\/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0\n {8}with:\n {10}path: \$\{\{ steps\.pnpm-store\.outputs\.path \}\}\n {10}key: node-cache-Linux-x64-pnpm-\$\{\{ hashFiles\('\*\*\/pnpm-lock\.yaml'\) \}\}\n {10}restore-keys: node-cache-Linux-x64-pnpm-\n/, name);
     assert.ok(body.indexOf("actions/setup-node") < body.indexOf("pnpm store path"), name);
