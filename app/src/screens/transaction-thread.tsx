@@ -14,7 +14,9 @@ import {
   threadFileProblem,
   threadFileUrl,
   threadItems,
-  uploadThreadFile,
+  putThreadFile,
+  readPickedFile,
+  recordThreadFile,
   useThreadQuery,
   type ThreadFile,
   type ThreadNote,
@@ -224,8 +226,11 @@ export type ThreadDraft = { text: string; files: File[] };
 /** Saves a draft: the note (when there is text) and each file on it. */
 export async function saveThreadDraft(companyId: string, transactionId: string, draft: ThreadDraft): Promise<void> {
   const text = draft.text.trim();
+  // The files go up first: a failed upload saves nothing, so trying again adds no second note.
+  const paths: string[] = [];
+  for (const file of draft.files) paths.push(await putThreadFile(companyId, transactionId, file));
   const noteId = text === "" ? null : await addThreadNote(transactionId, text);
-  for (const file of draft.files) await uploadThreadFile(companyId, transactionId, noteId, file);
+  for (const [index, file] of draft.files.entries()) await recordThreadFile(transactionId, noteId, paths[index] ?? "", file);
 }
 
 /** The picked files, each with a ✕, under a composer. */
@@ -256,7 +261,12 @@ export function usePickFiles(setFiles: (update: (files: File[]) => File[]) => vo
     const picked = [...(list ?? [])];
     const problems = picked.map((file) => threadFileProblem(file)).filter((problem): problem is string => problem != null);
     if (problems[0]) toast.show({ tone: "bad", message: problems[0] });
-    setFiles((files) => [...files, ...picked.filter((file) => threadFileProblem(file) == null)].slice(0, 10));
+    // Read now, while the input still holds the files (see readPickedFile).
+    void Promise.allSettled(picked.filter((file) => threadFileProblem(file) == null).map(readPickedFile)).then((reads) => {
+      const kept = reads.flatMap((read) => (read.status === "fulfilled" ? [read.value] : []));
+      if (kept.length < reads.length) toast.show({ tone: "bad", message: "הקובץ לא נקרא. אפשר לבחור אותו שוב" });
+      if (kept.length > 0) setFiles((files) => [...files, ...kept].slice(0, 10));
+    });
   };
 }
 

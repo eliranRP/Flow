@@ -165,18 +165,26 @@ export async function removeThreadFile(fileId: string): Promise<void> {
   assertNoError(await client().rpc("remove_transaction_file", { p_file_id: fileId }));
 }
 
-/** Uploads one file under the line's folder and records it, on a note when one is given. */
-export async function uploadThreadFile(
-  companyId: string,
-  transactionId: string,
-  noteId: string | null,
-  file: File,
-): Promise<void> {
+/**
+ * A picked file copied into memory. iOS Safari can lose a camera photo's file once its input is
+ * cleared, and the upload then fails before any request is sent; a copy made at pick time stays.
+ */
+export async function readPickedFile(file: File): Promise<File> {
+  return new File([await file.arrayBuffer()], file.name, { type: file.type, lastModified: file.lastModified });
+}
+
+/** Puts one file in the bucket under the line's folder and returns its path. Nothing is recorded yet. */
+export async function putThreadFile(companyId: string, transactionId: string, file: File): Promise<string> {
   const problem = threadFileProblem(file);
   if (problem) throw new Error(problem);
   const path = `${companyId}/${transactionId}/${threadObjectName(file.name)}`;
   const uploaded = await client().storage.from(THREAD_BUCKET).upload(path, file, { contentType: file.type, upsert: false });
   if (uploaded.error) throw new Error(uploaded.error.message);
+  return path;
+}
+
+/** Records a file already in the bucket on the line, on a note when one is given. */
+export async function recordThreadFile(transactionId: string, noteId: string | null, path: string, file: File): Promise<void> {
   // The generated types type a nullable uuid argument as required (repo precedent: null as unknown as string).
   assertNoError(await client().rpc("add_transaction_file", {
     p_transaction_id: transactionId,

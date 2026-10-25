@@ -6,11 +6,12 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { mercuryNoteStatus, saveThreadDraft, TransactionThread } from "./transaction-thread";
+import { readPickedFile } from "../transaction-thread";
 import { reviewThreadLabel } from "./review-thread";
 
 // FLOW-957: the thread on the transaction page. Invented names only.
 
-const calls = vi.hoisted(() => ({ rpc: [] as Array<{ name: string; args: unknown }>, uploads: [] as string[] }));
+const calls = vi.hoisted(() => ({ rpc: [] as Array<{ name: string; args: unknown }>, uploads: [] as string[], uploadFails: false }));
 
 const mercuryNote = { id: "m1", source: "mercury" as const, body: "Lumber for back deck, invoice #4471", mine: false, created_at: "2026-10-21T10:00:00Z", updated_at: "2026-10-21T10:00:00Z", edited: false, edited_in_flow: false };
 
@@ -32,6 +33,7 @@ vi.mock("../lib/supabase", () => ({
       from: () => ({
         upload: (path: string) => {
           calls.uploads.push(path);
+          if (calls.uploadFails) return Promise.resolve({ data: null, error: { message: "Load failed" } });
           return Promise.resolve({ data: { path }, error: null });
         },
       }),
@@ -63,6 +65,7 @@ function wrap(children: ReactNode) {
 beforeEach(() => {
   calls.rpc.length = 0;
   calls.uploads.length = 0;
+  calls.uploadFails = false;
 });
 
 describe("TransactionThread", () => {
@@ -118,6 +121,29 @@ describe("saveThreadDraft", () => {
       p_file_name: "image.jpg",
       p_mime: "image/jpeg",
     });
+  });
+
+  it("puts the files up before the note, so a failed upload saves no note", async () => {
+    calls.uploadFails = true;
+    const photo = new File([new Uint8Array(10)], "image.jpg", { type: "image/jpeg" });
+    await expect(saveThreadDraft("c1", "t1", { text: "Paid in two parts", files: [photo] })).rejects.toThrow("Load failed");
+    expect(calls.rpc.map((call) => call.name)).toEqual([]);
+  });
+
+  it("records the files on the note once every upload is in", async () => {
+    const photo = new File([new Uint8Array(10)], "image.jpg", { type: "image/jpeg" });
+    await saveThreadDraft("c1", "t1", { text: "Paid in two parts", files: [photo] });
+    expect(calls.rpc.map((call) => call.name)).toEqual(["add_transaction_note", "add_transaction_file"]);
+    expect(calls.rpc[1]?.args).toMatchObject({ p_note_id: "n2", p_path: calls.uploads[0] });
+  });
+});
+
+describe("readPickedFile", () => {
+  it("copies a picked file into memory with its name and type", async () => {
+    const picked = new File([new Uint8Array([1, 2, 3])], "image.jpg", { type: "image/jpeg" });
+    const copy = await readPickedFile(picked);
+    expect(copy).not.toBe(picked);
+    expect([copy.name, copy.type, copy.size]).toEqual(["image.jpg", "image/jpeg", 3]);
   });
 });
 

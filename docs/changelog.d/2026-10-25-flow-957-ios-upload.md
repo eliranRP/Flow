@@ -1,0 +1,1 @@
+A photo taken in the approval sheet or the transaction page uploads on iPhone (FLOW-957). The picked file is copied into memory right away, because iOS Safari could lose it before the upload. The files now go up before the note is saved, so a failed upload no longer leaves an extra note behind.
