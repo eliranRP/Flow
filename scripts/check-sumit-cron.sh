@@ -46,7 +46,7 @@ case "$status" in
     exit 0
     ;;
   bad-daily)
-    echo "check-sumit-cron: flow-connector-daily is missing or its schedule or command is wrong." >&2
+    echo "check-sumit-cron: flow-connector-daily or flow-mercury-refresh is missing or its schedule or command is wrong." >&2
     exit 2
     ;;
   bad-drain)
