@@ -246,6 +246,8 @@ export const JevFilled: Story = {
   play: async ({ canvasElement }) => {
     const undo = canvasElement.querySelector<HTMLElement>(".ui-review-filled-undo");
     await expect(undo).not.toBeNull();
+    // elementFromPoint only sees the visible frame, which the Storybook 10 manager can make shorter than the card.
+    (undo as HTMLElement).scrollIntoView({ block: "center" });
     const box = (undo as HTMLElement).getBoundingClientRect();
     const x = box.left + box.width / 2;
     for (const dy of [1, 4, 8, 13]) {
