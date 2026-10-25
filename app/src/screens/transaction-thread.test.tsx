@@ -58,8 +58,8 @@ function wrap(children: ReactNode) {
 }
 
 // The Storage REST API (the build has no supabase-js storage client): uploads are recorded by path.
-const storageFetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
-  const url = String(input);
+const storageFetch = vi.fn((input: string, init?: RequestInit) => {
+  const url = input;
   if (url === "https://flow.example.com/storage/v1/object/sign/transaction-files/c1/t1/m.pdf") {
     return Promise.resolve(Response.json({ signedURL: "/object/sign/transaction-files/c1/t1/m.pdf?token=t" }));
   }
