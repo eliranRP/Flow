@@ -150,6 +150,8 @@ export type {
   CashToDay,
   CashYears,
 } from "./cash.ts";
+export { weeklySummarySchema } from "./weekly-summary.ts";
+export type { WeeklySummary } from "./weekly-summary.ts";
 export { projectsCashMonthSchema } from "./projects-cash.ts";
 export type { ProjectCashCurrencyRow, ProjectCashRow, ProjectsCashMonth } from "./projects-cash.ts";
 export { partyChargesSchema } from "./party-charges.ts";

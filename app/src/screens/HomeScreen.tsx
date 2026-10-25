@@ -2,7 +2,7 @@ import { type CashMonths, type CashToDay } from "@flow/shared";
 import { SyncStrip } from "../ui/sync-strip";
 import { cashHasBooks, dashboardHasBooks } from "../by-currency";
 import { onlineManager } from "@tanstack/react-query";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { unpaidOpenGross, unpaidOpenRows, unpaidTotals } from "../unpaid";
 import { useAuth } from "../auth";
@@ -33,6 +33,9 @@ import { chargeChangeViews, lateCounts, openMonthDue, useCompanyExpectedQuery, u
 import { attentionRows } from "./attention-rows";
 import { useTransferMatchCountQuery } from "../transfer-match-count";
 import { reviewWaiting, useJevBookingCountQuery } from "../jev-booking-count";
+
+// FLOW-517: the weekly summary sheet loads only when the push's `?week=` link opens Home.
+const WeeklySummaryRoute = /* @__PURE__ */ lazy(() => import("./weekly-summary-sheet").then((m) => ({ default: m.WeeklySummaryRoute })));
 
 export { attentionRows };
 
@@ -185,7 +188,18 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
     void unpaid.refetch();
   }
 
-  if (loading) return <CashHomeSkeleton preview={previewing} example={example} />;
+  // FLOW-517: the push's link (`?week=<Sunday>`) opens the week's summary over Home. The sheet's own
+  // chunk checks the week and drops the parameter on close, so Home's first load carries only this.
+  const withWeekly = (page: ReactNode) => previewing || !new URLSearchParams(location.search).has("week") ? page : (
+    <>
+      {page}
+      <Suspense fallback={null}>
+        <WeeklySummaryRoute />
+      </Suspense>
+    </>
+  );
+
+  if (loading) return withWeekly(<CashHomeSkeleton preview={previewing} example={example} />);
 
   if (failed) {
     return <FailureLine offline={offline || !onlineManager.isOnline()} onRetry={retry} />;
@@ -193,19 +207,19 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
 
   if (!showBooks || cash.data == null) {
     // FLOW-601: connecting a bank or SUMIT is the owner's.
-    return (
+    return withWeekly(
       <CashEmptyHome
         leading={previewing ? undefined : <CompanySwitcher fallbackName={dashboard.data?.name} />}
         search={search}
         example={example}
         holdWrites={holdWrites}
-      />
+      />,
     );
   }
 
   // The selected month's figures: Home's recent months, or an older month's year (its own read).
   const data = isCurrent ? cash.data : older.query.data;
-  if (data == null) return <CashHomeSkeleton preview={previewing} example={example} />;
+  if (data == null) return withWeekly(<CashHomeSkeleton preview={previewing} example={example} />);
 
   const unpaidPhase = screenPhase(preview, unpaid);
   const unpaidGross = unpaidPhase.kind === "ready" ? unpaidOpenGross(unpaid.data ?? [], base) : 0n;
@@ -217,7 +231,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
     void navigate(homeMonthPath(key, location.search, currentKey), { replace: true });
   };
 
-  return (
+  return withWeekly(
     <CashHome
       data={data}
       monthKey={monthKey}
@@ -248,7 +262,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       onStepMonth={navigateTo}
       checklist={isCurrent ? <SetupHomeSlot emptyHome={false} /> : null}
       company={previewing ? undefined : <CompanySwitcher fallbackName={dashboard.data?.name} />}
-    />
+    />,
   );
 }
 

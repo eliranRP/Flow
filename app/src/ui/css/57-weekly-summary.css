@@ -1,0 +1,190 @@
+/* FLOW-517: the weekly summary sheet over Home (board "Weekly summary", page "Ready for dev").
+   Imported by weekly-summary-sheet.tsx, so it stays out of Home's first load. */
+.ui-weekly {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-block-end: var(--space-2);
+}
+
+/* The blocks rise 8px and fade in, 40ms apart from 120ms; the tokens go to 0 under reduced motion. */
+.ui-weekly-block {
+  animation: m-page-enter var(--motion-page) var(--ease-enter) both;
+  animation-delay: calc((3 + min(var(--i, 0), 4)) * var(--motion-stagger));
+}
+
+.ui-weekly-profit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-weekly-label {
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  color: var(--color-text-secondary);
+}
+
+.ui-weekly-figure-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.ui-weekly-figure[data-tone="zero"] {
+  color: var(--color-text-muted);
+}
+
+.ui-weekly-pill {
+  border-radius: var(--radius-chip);
+  background: var(--color-raised);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  font-weight: var(--type-chip-weight);
+  color: var(--color-text-secondary);
+}
+
+.ui-weekly-pill[data-tone="hurts"] {
+  color: var(--color-signal);
+}
+
+.ui-weekly-note,
+.ui-weekly-counts {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-text-muted);
+}
+
+.ui-weekly-counts {
+  text-align: center;
+}
+
+/* The inner box: נכנס, יצא and לא נספר ברווח, 48px rows with hairlines between them. */
+.ui-weekly-totals {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-card-tight);
+  background: var(--color-raised);
+}
+
+.ui-weekly-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--touch-min);
+  padding: var(--space-1) var(--space-inset-row);
+  font-size: var(--type-btn-2-size);
+  line-height: var(--type-btn-2-line);
+}
+
+.ui-weekly-row + .ui-weekly-row {
+  border-block-start: 1px solid var(--color-line);
+}
+
+.ui-weekly-row-label {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-half);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-weekly-row-sub {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-text-muted);
+}
+
+/* The one project alert: on the tint with a 6px signal dot. */
+.ui-weekly-alert {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--touch-min);
+  border-radius: var(--radius-card-tight);
+  background: var(--color-tint);
+  padding: var(--space-3) var(--space-inset-row);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.ui-weekly-dot {
+  flex: none;
+  inline-size: var(--dot);
+  block-size: var(--dot);
+  border-radius: var(--radius-chip);
+  background: var(--color-signal);
+}
+
+.ui-weekly-alert-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-half);
+  min-inline-size: 0;
+}
+
+.ui-weekly-alert-title {
+  font-size: var(--type-btn-2-size);
+  line-height: var(--type-btn-2-line);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-weekly-alert-sub,
+.ui-weekly-alert-more {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-text-secondary);
+}
+
+.ui-weekly-alert-more,
+.ui-weekly-chevron {
+  color: var(--color-accent-text);
+}
+
+.ui-weekly-chevron {
+  display: flex;
+  flex: none;
+}
+
+/* Nothing waits: a bordered "✓ הכול מאושר" in place of the button. */
+.ui-weekly-done {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-block-size: var(--control-height);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card-tight);
+  font-size: var(--type-btn-2-size);
+  line-height: var(--type-btn-2-line);
+  color: var(--color-text-secondary);
+}
+
+.ui-weekly-done-icon {
+  display: flex;
+  color: var(--color-income);
+}
+
+.ui-weekly-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ui-weekly-skeleton-box {
+  block-size: calc(3 * var(--control-height));
+  border-radius: var(--radius-card-tight);
+}
+
+.ui-weekly-skeleton-alert {
+  block-size: calc(var(--control-height) + var(--space-3));
+  border-radius: var(--radius-card-tight);
+}
+
+.ui-weekly-skeleton-button {
+  block-size: var(--control-height);
+  border-radius: var(--radius-button);
+}

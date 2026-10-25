@@ -9,9 +9,9 @@
 **Sheet (opened over Home, which shows the current month under it)**
 - [ ] Title "סיכום שבועי", the week under it ("ראשון 4 עד שבת 10 באוקטובר"), ✕. A tap on the scrim, a drag down or ✕ closes it and leaves `?week=` off the address; Home stays.
 - [ ] "רווח השבוע" over the 40px figure: the signal colour when negative, muted at $0, the text colour above zero. Beside it the change pill "▲|▼ $X מול השבוע הקודם": secondary text when profit got better, the signal colour when worse. No pill when there were no lines.
-- [ ] When lines wait: a 13px muted line "לפי N תנועות מאושרות · M עוד לא נספרו" (only approved lines count, [0006](../../decisions/0006-confirm-not-type.md)); singular forms "לפי תנועה מאושרת אחת", "אחת עוד לא נספרה".
+- [ ] When some of the week's lines wait: a 13px muted line "כולל N שעוד מחכות לאישור" ("כולל אחת שעוד מחכה לאישור"). They count in the sums already, as on Home (`pnl_lines` has no review filter); the board's "לפי N תנועות מאושרות · M עוד לא נספרו" would say otherwise, so it changed ([0211](../../decisions/0211-weekly-summary-sheet.md)).
 - [ ] An inner box on the raised tone: נכנס (green, with +), יצא, and "לא נספר ברווח" with "שיפוץ והשבחה, הון בעלים ועוד" only when not zero. In every state נכנס − יצא = רווח + לא נספר.
-- [ ] At most one project alert, on the tint with a 6px signal dot: "<project> עבר את תקציב השיפוץ", "$spent מתוך $budget · N%", and "ועוד N פרויקטים מעל התקציב" when more qualify; it opens the project. No alert that week: the block is left out.
+- [ ] At most one project alert, on the tint with a 6px signal dot: "<project> עבר את התקציב" (the budget is the whole project's, not only the renovation's), "$spent מתוך $budget · N%", and "ועוד N פרויקטים מעל התקציב" when more qualify; it opens the project. No alert that week: the block is left out.
 - [ ] A centred 13px muted count: "N תנועות נכנסו השבוע · M אושרו אוטומטית" ("תנועה אחת נכנסה השבוע · אושרה אוטומטית").
 - [ ] Lines waiting: the 52px primary "לאישור N פריטים · כ־X דקות" ("לאישור פריט אחד · פחות מדקה") to the review queue. Nothing waiting: a bordered "✓ הכול מאושר" and no button.
 - [ ] No lines: profit $0 muted, the empty state (64px tint circle, calendar icon, "לא נכנסו תנועות השבוע" 24/600, one 15px line), and the outline "בדיקת החיבור לבנק" to the connections page.
