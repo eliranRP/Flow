@@ -13,6 +13,7 @@ const engine = new URL("../supabase/migrations/20261003210000_connector_engine.s
 const totals = new URL("../supabase/migrations/20261004130000_mercury_ils_totals.sql", import.meta.url);
 const mercuryUrl = new URL("../supabase/migrations/20261013050000_mercury_sync_atomic.sql", import.meta.url);
 const mercuryConnections = new URL("../supabase/migrations/20261021060558_mercury_connections.sql", import.meta.url);
+const mercuryThrice = new URL("../supabase/migrations/20261025120000_mercury_refresh_three_times.sql", import.meta.url);
 const pgtap = new URL("../supabase/tests/database/sumit_daily_schedule.test.sql", import.meta.url);
 const checkSql = new URL("./check-sumit-cron.sql", import.meta.url);
 
@@ -60,7 +61,17 @@ test("the connector daily and drain commands match across the migration, pgTAP, 
   assert.ok(dailyAnchor && dailyReplacement);
   const dailyOriginal = dollarBlocks(migration)[0];
   assert.equal(dailyOriginal.split(dailyAnchor).length, 2);
-  const daily = dailyOriginal.replace(dailyAnchor, dailyReplacement);
+  const distinct = dailyOriginal.replace(dailyAnchor, dailyReplacement);
+  // Mercury refreshes three times a day: the daily insert leaves Mercury out (anchor to replacement, the
+  // second pair), and flow-mercury-refresh queues Mercury alone (the one $cron$ block of that file).
+  const thrice = readFileSync(mercuryThrice, "utf8");
+  const thriceAnchor = dollarBlocks(thrice, "$a$")[1];
+  const thriceReplacement = dollarBlocks(thrice, "$n$")[1];
+  assert.equal(distinct.split(thriceAnchor).length, 2);
+  const daily = distinct.replace(thriceAnchor, thriceReplacement);
+  const mercury = dollarCron(thrice);
+  assert.match(daily, /where c\.provider <> 'mercury'/);
+  assert.match(mercury, /where c\.provider = 'mercury'/);
   // FLOW-509 patches the Mercury URL line in place: anchor ($a$) to replacement ($n$), second pair.
   const patch = readFileSync(mercuryUrl, "utf8");
   const anchor = dollarBlocks(patch, "$a$")[1];
@@ -72,6 +83,10 @@ test("the connector daily and drain commands match across the migration, pgTAP, 
   assert.equal(dollarCron(tap), daily);
   assert.equal(dollarBlocks(check)[0], daily);
   assert.equal(dollarBlocks(check)[1], drain);
+  assert.equal(dollarBlocks(check)[2], mercury);
+  assert.equal(dollarBlocks(tap)[1], mercury);
+  assert.match(check, /'0 3,11,19 \* \* \*'/);
+  assert.match(check, /flow-mercury-refresh/);
   assert.match(check, /'0 3 \* \* \*'/);
   assert.match(check, /'\*\/5 \* \* \* \*'/);
   assert.match(check, /flow-connector-daily/);
