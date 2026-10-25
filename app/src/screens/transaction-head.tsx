@@ -103,7 +103,7 @@ export function TxnFooter({ txn, meta }: { txn: NonNullable<TransactionDetail>; 
           <bdi dir="ltr">{splitAccountLast4(account).name}{last4 == null ? "" : ` ••${last4}`}</bdi> · <bdi dir="ltr">{formatDisplay(txn.doc_date)}</bdi>
         </p>
       )}
-      {raw == null || raw === "" ? null : <p className="ui-txn-raw" dir="ltr">{raw}</p>}
+      {raw == null || raw === "" ? null : <p className="ui-txn-raw"><bdi dir="ltr">{raw}</bdi></p>}
     </footer>
   );
 }

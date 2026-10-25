@@ -157,9 +157,10 @@ export function ProjectCashOverview({
               <Skeleton tone="band" className="ui-skel-project-num" />
             ) : (
               <div className="ui-project-profits t-detail">
-                {rows.map((row) => (
+                {rows.map((row, index) => (
                   <p key={row.currency}>
-                    <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} presentation="detail" zeroCents />
+                    {/* As on Home: the band's figure is whole and steps down until it fits. */}
+                    <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} size={index > 0 ? "display" : "hero"} />
                   </p>
                 ))}
               </div>

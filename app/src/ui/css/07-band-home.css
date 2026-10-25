@@ -253,6 +253,12 @@ html[data-kb="open"] .ui-sheet-body {
   white-space: nowrap;
 }
 
+/* BandCompany: a name that does not fit at the sheet size. */
+.ui-band-company-name-small {
+  font-size: var(--type-btn-size);
+  line-height: var(--type-btn-line);
+}
+
 .ui-band-company > svg {
   flex: none;
   stroke-width: 2.5;
