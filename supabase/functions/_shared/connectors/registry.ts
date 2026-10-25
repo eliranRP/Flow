@@ -3,6 +3,7 @@ import { MERCURY_CAPABILITIES, MERCURY_KEK_REF } from "./mercury/capabilities.ts
 import { SUMIT_CAPABILITIES, SUMIT_KEK_REF } from "./sumit/capabilities.ts";
 import {
   CONNECTOR_SCHEDULE,
+  MERCURY_SCHEDULE,
   type ConnectorCapabilities,
   type ConnectorFactory,
   type ConnectorPort,
@@ -50,6 +51,6 @@ export const CONNECTOR_MODULES: Readonly<Record<ProviderId, ConnectorModule>> = 
   mercury: {
     kek_ref: MERCURY_KEK_REF,
     capabilities: MERCURY_CAPABILITIES,
-    schedule: CONNECTOR_SCHEDULE,
+    schedule: MERCURY_SCHEDULE,
   },
 };

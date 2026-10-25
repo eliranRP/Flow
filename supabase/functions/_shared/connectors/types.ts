@@ -87,12 +87,19 @@ export interface ConnectorCapabilities {
 }
 
 export interface ConnectorSchedule {
-  daily: "0 3 * * *";
+  /** When the refresh is queued (UTC cron): flow-connector-daily, or flow-mercury-refresh for Mercury. */
+  daily: "0 3 * * *" | "0 3,11,19 * * *";
   drain: "*/5 * * * *";
 }
 
 export const CONNECTOR_SCHEDULE: ConnectorSchedule = {
   daily: "0 3 * * *",
+  drain: "*/5 * * * *",
+};
+
+/** Mercury refreshes three times a day (owner, 2026-10-25). */
+export const MERCURY_SCHEDULE: ConnectorSchedule = {
+  daily: "0 3,11,19 * * *",
   drain: "*/5 * * * *",
 };
 

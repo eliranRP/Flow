@@ -181,7 +181,7 @@ The cursor write sits in the same transaction as the line upsert. A failed upser
 
 ## Registry
 
-`CONNECTOR_MODULES` in `registry.ts` is a `Record` of `sumit` and `mercury`. Each value is `{ kek_ref, capabilities, schedule }`. `kek_ref` is the column name and the TypeScript name. The values are `SUMIT_KEK` and `MERCURY_KEK` (the env name, never the secret). `schedule.daily` is `0 3 * * *`. `schedule.drain` is `*/5 * * * *`.
+`CONNECTOR_MODULES` in `registry.ts` is a `Record` of `sumit` and `mercury`. Each value is `{ kek_ref, capabilities, schedule }`. `kek_ref` is the column name and the TypeScript name. The values are `SUMIT_KEK` and `MERCURY_KEK` (the env name, never the secret). `schedule.daily` is `0 3 * * *` for SUMIT and `0 3,11,19 * * *` for Mercury (three times a day, owner 2026-10-25). `schedule.drain` is `*/5 * * * *`.
 
 L2 adds `open(secret)` on `ConnectorRegistration`. That function returns a session for one company. The module map is not a live client.
 
@@ -442,7 +442,7 @@ Also service role only, same revoke and `auth.role()` check:
 | `public.stamp_connector_sync(p_company uuid, p_provider public.connector_provider)` | `void` |
 | `private.schedule_connector_jobs()` | `void` |
 
-`private.schedule_connector_jobs` is revoked from `public`, `anon`, and `authenticated`, and granted to `service_role`. It unschedules `flow-sumit-daily` and `flow-sumit-drain`, then schedules `flow-connector-daily` (`0 3 * * *`) and `flow-connector-drain` (`*/5 * * * *`). The drain reads Vault `flow_sync_url` and does not fall back to Kong. The secret value is not written into the command. A SUMIT row is posted to that URL. A Mercury row is posted to Vault `flow_mercury_sync_url` when it is set (FLOW-509, `20261013050000_mercury_sync_atomic.sql`); until then it goes to the same URL with `/sumit-sync` replaced by `/mercury-sync`. `MERCURY_KEK` is an Edge Function env var, the same pattern as `SUMIT_KEK`. It is not a Vault secret. Vault holds `cron_secret`, `flow_sync_url` and the optional `flow_mercury_sync_url` for the drain only.
+`private.schedule_connector_jobs` is revoked from `public`, `anon`, and `authenticated`, and granted to `service_role`. It unschedules `flow-sumit-daily` and `flow-sumit-drain`, then schedules `flow-connector-daily` (`0 3 * * *`, every provider but Mercury), `flow-mercury-refresh` (`0 3,11,19 * * *`, Mercury only, `20261025120000_mercury_refresh_three_times.sql`) and `flow-connector-drain` (`*/5 * * * *`). The drain reads Vault `flow_sync_url` and does not fall back to Kong. The secret value is not written into the command. A SUMIT row is posted to that URL. A Mercury row is posted to Vault `flow_mercury_sync_url` when it is set (FLOW-509, `20261013050000_mercury_sync_atomic.sql`); until then it goes to the same URL with `/sumit-sync` replaced by `/mercury-sync`. `MERCURY_KEK` is an Edge Function env var, the same pattern as `SUMIT_KEK`. It is not a Vault secret. Vault holds `cron_secret`, `flow_sync_url` and the optional `flow_mercury_sync_url` for the drain only.
 
 The daily command text, pinned, including the leading spaces:
 

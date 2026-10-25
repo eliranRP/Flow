@@ -1,9 +1,10 @@
--- flow-connector-daily is 03:00 UTC and queues one unclaimed refresh per company and provider.
--- The command is the connector insert. Re-running the schedule leaves one job.
+-- flow-connector-daily is 03:00 UTC and queues one unclaimed refresh per company and provider, Mercury
+-- aside; flow-mercury-refresh queues Mercury at 03:00, 11:00 and 19:00 UTC. Re-running the schedule
+-- leaves one of each.
 
 begin;
 
-select plan(14);
+select plan(18);
 
 select set_config('request.jwt.claim.role', 'service_role', true);
 
@@ -14,7 +15,25 @@ insert into sumit_daily_expected (schedule, command) values (
         insert into public.connector_refresh_requests (company_id, provider)
         select distinct c.company_id, c.provider
         from public.connector_connections c
-        where not exists (
+        where c.provider <> 'mercury'
+          and not exists (
+          select 1 from public.connector_refresh_requests r
+          where r.company_id = c.company_id
+            and r.provider = c.provider
+            and r.claimed_at is null
+        );
+      $cron$
+);
+
+create temp table mercury_refresh_expected (schedule text, command text);
+insert into mercury_refresh_expected (schedule, command) values (
+  '0 3,11,19 * * *',
+  $cron$
+        insert into public.connector_refresh_requests (company_id, provider)
+        select distinct c.company_id, c.provider
+        from public.connector_connections c
+        where c.provider = 'mercury'
+          and not exists (
           select 1 from public.connector_refresh_requests r
           where r.company_id = c.company_id
             and r.provider = c.provider
@@ -37,7 +56,19 @@ select is(
 select results_eq(
   $$select schedule, command from cron.job where jobname = 'flow-connector-daily' order by jobid$$,
   $$select schedule, command from sumit_daily_expected$$,
-  'flow-connector-daily is 03:00 UTC and queues one unclaimed refresh per company and provider'
+  'flow-connector-daily is 03:00 UTC and queues one unclaimed refresh per company and provider, Mercury aside'
+);
+
+select is(
+  (select count(*)::int from cron.job where jobname = 'flow-mercury-refresh'),
+  1,
+  'flow-mercury-refresh exists once'
+);
+
+select results_eq(
+  $$select schedule, command from cron.job where jobname = 'flow-mercury-refresh' order by jobid$$,
+  $$select schedule, command from mercury_refresh_expected$$,
+  'flow-mercury-refresh is 03:00, 11:00 and 19:00 UTC and queues Mercury only'
 );
 
 select ok(
@@ -105,6 +136,18 @@ select results_eq(
   $$select schedule, command from cron.job where jobname = 'flow-connector-daily' order by jobid$$,
   $$select schedule, command from sumit_daily_expected$$,
   'a second schedule keeps 03:00 UTC and the refresh command'
+);
+
+select is(
+  (select count(*)::int from cron.job where jobname = 'flow-mercury-refresh'),
+  1,
+  'a second schedule leaves one flow-mercury-refresh job'
+);
+
+select results_eq(
+  $$select schedule, command from cron.job where jobname = 'flow-mercury-refresh' order by jobid$$,
+  $$select schedule, command from mercury_refresh_expected$$,
+  'a second schedule keeps the Mercury times and command'
 );
 
 select * from finish();
