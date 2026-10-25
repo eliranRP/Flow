@@ -69,6 +69,8 @@ interface SessionState {
   now: () => Date;
   /** Treasury account ids this session listed, or null before the ledger read. */
   treasuryIds: string[] | null;
+  /** FLOW-957: each fetched transaction's raw note and attachments, by Mercury id (thread.ts reads them). */
+  threads: Map<string, { note: unknown; attachments: unknown }>;
 }
 
 const SESSIONS = new WeakMap<object, SessionState>();
@@ -89,8 +91,23 @@ export function openMercury(secret: string, deps: MercuryDeps = {}): ConnectorSe
     fetch: deps.fetch ?? fetch,
     now: deps.now ?? (() => new Date()),
     treasuryIds: null,
+    threads: new Map(),
   });
   return session;
+}
+
+/** FLOW-957: the session's key, fetch and raw threads, for thread.ts. Throws on a session not opened here. */
+export function mercuryTransport(session: ConnectorSession): Pick<SessionState, "secret" | "fetch" | "threads"> {
+  const state = stateOf(session);
+  return { secret: state.secret, fetch: state.fetch, threads: state.threads };
+}
+
+function rememberThreads(state: SessionState, rows: unknown[]): void {
+  for (const row of rows) {
+    if (isRecord(row) && typeof row.id === "string") {
+      state.threads.set(row.id, { note: row.note, attachments: row.attachments });
+    }
+  }
 }
 
 /** How many treasury accounts this session's sync listed, or null when it has not listed them. */
@@ -664,6 +681,7 @@ async function fetchMercuryPages(
         start: start ?? undefined,
         start_after: decoded.page ?? undefined,
       });
+      rememberThreads(state, windowRows);
     } catch (error) {
       return takePageCap(error, [], at, start, "window");
     }
@@ -676,6 +694,7 @@ async function fetchMercuryPages(
         status: "pending",
         start_after: decoded.phase === "pending" ? decoded.page ?? undefined : undefined,
       });
+      rememberThreads(state, pendingRows);
     } catch (error) {
       return takePageCap(error, windowRows, at, start, "pending");
     }

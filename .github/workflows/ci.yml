@@ -693,6 +693,7 @@ jobs:
           bash scripts/cd-sumit-reseal.sh
           supabase functions deploy mercury-connect --project-ref sxqpnetmtufkzowutduq
           supabase functions deploy mercury-sync --project-ref sxqpnetmtufkzowutduq
+          supabase functions deploy mercury-note --project-ref sxqpnetmtufkzowutduq
 
       - name: Read-only preflight and migration push
         env:

@@ -18,3 +18,10 @@ export const MERCURY_GET_ALLOWLIST = [
   "/transactions",
   "/transaction/{transactionId}",
 ] as const;
+
+/**
+ * FLOW-957: the one write. PATCH /transaction/{transactionId} with `{ note }` sends a note edited in
+ * Flow back to Mercury. It needs a key with Mercury's updateTransactions scope; a read-only key is
+ * answered 403, which keeps the edit in Flow and never marks the connection.
+ */
+export const MERCURY_PATCH_ALLOWLIST = ["/transaction/{transactionId}"] as const;

@@ -31,6 +31,7 @@ import { empty, json } from "../_shared/http.ts";
 import { companyHint, ownedCompany, resolveOwnerCompany } from "../_shared/owner.ts";
 import { runWithClaim } from "../_shared/cron_claim.ts";
 import { confirmStored, loadStored, storedExternalIds } from "./stored.ts";
+import { syncMercuryThreadsFor } from "./threads.ts";
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -421,6 +422,10 @@ async function syncConnection(
       await noteOnce("rejected");
       throw new Error("rejected");
     }
+    // FLOW-957: Mercury's notes and attachments into the threads, then the edits made in Flow sent back.
+    await syncMercuryThreadsFor(admin, companyId, session, legacy
+      ? { accountIds: null, withoutAccount: true }
+      : { accountIds: scope.accountIds, withoutAccount });
     const pendingMissing: Record<string, string> = {};
     for (const item of plan.pendingMissing) pendingMissing[item.externalId] = item.missingSince;
     // The card nicknames are extra (FLOW-707): when Mercury doesn't list them, the stored ones stay.
