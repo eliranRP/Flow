@@ -3,6 +3,7 @@ import { base64UrlDecode, base64UrlEncode, encryptPush, sendPush, vapidAuthoriza
 import {
   eveningMessage,
   handlePushSend,
+  lastWeekStart,
   newLinesMessage,
   readVapid,
   remindEvening,
@@ -289,10 +290,19 @@ Deno.test("no send starts after the budget, and sends run side by side", async (
 Deno.test("the new-lines and weekly lines name their counts and no amount", () => {
   assertEquals(newLinesMessage(1, 0), { title: "תנועה חדשה", body: "נכנסה תנועה חדשה", url: "/", tag: "new-lines" });
   assertEquals(newLinesMessage(4, 2), { title: "תנועות חדשות", body: "נכנסו 4 תנועות חדשות", url: "/review", tag: "new-lines" });
-  assertEquals(weeklyMessage(12, 3), { title: "סיכום שבועי", body: "12 תנועות נכנסו השבוע · 3 מחכות לאישור", url: "/review", tag: "weekly-summary" });
-  assertEquals(weeklyMessage(1, 1).body, "תנועה אחת נכנסה השבוע · אחת מחכה לאישור");
-  assertEquals(weeklyMessage(0, 0).body, "לא נכנסו תנועות השבוע · הכול מאושר");
-  assertEquals(weeklyMessage(5, 0).url, "/");
+  assertEquals(weeklyMessage(12, 3, "2026-10-04"), { title: "סיכום שבועי", body: "12 תנועות נכנסו השבוע · 3 מחכות לאישור", url: "/?week=2026-10-04", tag: "weekly-summary" });
+  assertEquals(weeklyMessage(1, 1, "2026-10-04").body, "תנועה אחת נכנסה השבוע · אחת מחכה לאישור");
+  assertEquals(weeklyMessage(0, 0, "2026-10-04").body, "לא נכנסו תנועות השבוע · הכול מאושר");
+  assertEquals(weeklyMessage(5, 0, "2026-10-04").url, "/?week=2026-10-04");
+});
+
+Deno.test("FLOW-517: the weekly push opens the week that just ended, by Israel time", () => {
+  // Sunday 08:00 in Israel (05:00Z in summer): the week before, Sunday the 4th.
+  assertEquals(lastWeekStart(new Date("2026-10-11T05:00:00Z")), "2026-10-04");
+  // Saturday 23:30 in Israel is still the 10th there: its week started on the 4th, so the one before on 27/9.
+  assertEquals(lastWeekStart(new Date("2026-10-10T20:30:00Z")), "2026-09-27");
+  // 21:10Z on the 10th is already Sunday the 11th in Israel.
+  assertEquals(lastWeekStart(new Date("2026-10-10T21:10:00Z")), "2026-10-04");
 });
 
 async function runKind(body: string, rows: unknown[]) {

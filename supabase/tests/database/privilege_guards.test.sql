@@ -220,7 +220,8 @@ insert into pg_allowed (sig) values
     ('undo_project_forecast(uuid,jsonb)'),
     ('undo_reassign(uuid)'),
     ('upsert_project_group(uuid,text)'),
-    ('upsert_project(uuid,text,bigint,text,text)');
+    ('upsert_project(uuid,text,bigint,text,text)'),
+    ('weekly_summary(date)');
 
 create temp view pg_client_definers as
 select p.oid::regprocedure::text as sig
