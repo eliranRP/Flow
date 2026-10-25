@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_manual_entry`, `attach_document`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_manual_entry`, `attach_document`, `add_transaction_note`, `edit_transaction_note`, `remove_transaction_note`, `remove_transaction_file`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -431,6 +431,48 @@ Undo `kind: "manual_entry"` takes the line id and deletes the line while it stil
 Attaches one document to a line that exists, bank lines included. No line is made, so the count of lines does not change. `document.mime` is `image/jpeg`, `image/png`, `image/webp`, `image/heic` or `application/pdf`; `bytes` is 1 to 26214400; `sha256` is 64 hex characters (stored in lower case). The file is not stored and not read (receipt reading waits for FLOW-306): only this metadata is kept, in the line's `attachments`. The same `sha256` twice is `refused` with `document already attached`; more than 10 documents on a line is `too many documents`; a line of another company is `refused` with `transaction not found`. Output `data`: `{ "id", "documents", "undo_kind": "document_attach" }`, `documents` being the count on the line.
 
 Undo `kind: "document_attach"` takes the line id and puts the document list back, while the list is still the one the write made; otherwise `conflict`.
+
+## Notes and files on a line · FLOW-957
+
+What the transaction page's הערות וקבצים and the approval card's לפני שמאשרים show and do. Files are uploaded in the app only (the assistant has no file bytes to send): MCP reads them and removes its own.
+
+### get_transaction_thread
+
+`get_transaction_thread(p_transaction_id)`. Input: `{ "transaction_id": "<line id>" }`.
+
+Output `data`: `transaction_id`, `company_id`, `notes[]` and `files[]`, oldest first. A note: `id`, `source` (`flow`: written in Flow; `mercury`: the line's note in Mercury, at most one, whole, brought in by each Mercury sync), `body` (up to 5000 characters), `mine`, `created_at`, `updated_at`, `edited`, `mercury_push` (null: in step with Mercury; `pending`: edited in Flow, waiting to be sent; `denied`: the Mercury key may not write, so the edit stays in Flow). A file: `id`, `note_id` (the note it came with, or null), `source` (`flow`, or `mercury`: an attachment copied from Mercury, whose own links expire), `file_name`, `mime` (a picture or `application/pdf`), `bytes`, `path` (in Flow's private `transaction-files` storage), `mine`, `created_at`. Removed notes and files are left out. A line of another company is `not_found`.
+
+### add_transaction_note
+
+```json
+{ "idempotency_key": "note-1", "transaction_id": "<line id>", "body": "Paid in two parts" }
+```
+
+Owner or editor. `body` is 1 to 5000 characters, trimmed. Output `data`: `{ "id", "transaction_id", "undo_kind": "note_add" }`. Undo `kind: "note_add"` takes the note id and removes the note while it still has this text; otherwise `conflict`.
+
+### edit_transaction_note
+
+```json
+{ "idempotency_key": "note-2", "note_id": "<note id>", "body": "Lumber for back deck, phase 2" }
+```
+
+Owner or editor: a note this user wrote, or the line's Mercury note. Mercury's note then waits to be sent (`mercury_push` `pending`): the app sends it at once (`mercury-note`), else the next Mercury sync does, with `PATCH /transaction/{id}`; a key without Mercury's write scope keeps the edit in Flow (`denied`). A sync never overwrites an edit that waits. Output `data`: `{ "id", "source", "mercury", "undo_kind": "note_edit" }`. Undo `kind: "note_edit"` takes the note id and puts the text back while it is still this write's; Mercury's note then waits to be sent again.
+
+### remove_transaction_note
+
+```json
+{ "idempotency_key": "note-3", "note_id": "<note id>" }
+```
+
+A note this user wrote. Mercury's note is edited, not removed. Files attached with it stay on the line. Output `data`: `{ "id", "transaction_id", "undo_kind": "note_remove" }`. Undo `kind: "note_remove"` takes the note id and brings it back.
+
+### remove_transaction_file
+
+```json
+{ "idempotency_key": "file-1", "file_id": "<file id>" }
+```
+
+A file this user uploaded. Mercury's attachments stay. The stored file is kept so undo can bring it back. Output `data`: `{ "id", "transaction_id", "undo_kind": "file_remove" }`. Undo `kind: "file_remove"` takes the file id.
 
 ## Writes · cycle 4
 

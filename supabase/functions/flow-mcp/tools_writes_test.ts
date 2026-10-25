@@ -103,6 +103,10 @@ Deno.test("write tools are listed only for a write scope", () => {
     "undo_jev_prefill",
     "undo",
     "undo_batch",
+    "add_transaction_note",
+    "edit_transaction_note",
+    "remove_transaction_note",
+    "remove_transaction_file",
     "get_sync_status",
   ]);
   for (const tool of toolsFor(["write"])) {
@@ -155,6 +159,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "list_transfer_matches",
     "list_accounts",
     "get_line_legs",
+    "get_transaction_thread",
     "assign_expense",
     "assign_expense_split",
     "assign_expenses",
@@ -223,6 +228,10 @@ Deno.test("write tools are listed only for a write scope", () => {
     "undo_jev_prefill",
     "undo",
     "undo_batch",
+    "add_transaction_note",
+    "edit_transaction_note",
+    "remove_transaction_note",
+    "remove_transaction_file",
   ]);
   assertEquals(toolsFor([]), []);
 });

@@ -147,6 +147,7 @@ begin
   end if;
   return jsonb_build_object(
     'transaction_id', p_transaction_id,
+    'company_id', cid,
     'notes', coalesce((
       select jsonb_agg(private.thread_note_json(n) order by n.source desc, n.created_at, n.id)
       from public.transaction_notes n
