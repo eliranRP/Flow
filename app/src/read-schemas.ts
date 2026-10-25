@@ -30,6 +30,7 @@ export {
   sumitStatusSchema,
   transactionDetailSchema,
   unpaidRowSchema,
+  weeklySummarySchema,
 } from "@flow/shared";
 export { parseTxnMetaList } from "./txn-meta-parse";
 export { transferMatchesSchema } from "./transfer-match-schema";

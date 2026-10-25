@@ -1,0 +1,24 @@
+<a id="flow-517"></a>
+# FLOW-517 · Weekly summary: the Sunday push opens a summary sheet over Home
+- **Type:** UI (design approved) · **Status:** in-progress (#800) · **Depends on:** [FLOW-502](FLOW-502.md) (web push, the `flow-push-weekly` cron) · **Related:** [FLOW-364](FLOW-364.md) (Home) · **Source:** the owner's request (2026-10-25): tapping the weekly summary push should show the summary in the app. Three concepts were drawn; the owner picked "sheet over Home" and approved the design on 2026-10-25. Design: [Design canvas](https://claude.ai/artifact/9grt9spjshVCxerYWrRXiD), page "Ready for dev", section "Weekly summary (סיכום שבועי)" (boards: prototype from the push, 23 lines with 7 waiting, 0 lines, 1 line auto-approved, 3 lines with 1 waiting and no alert, 50 lines with 12 waiting, loading, failed to load; the light versions on "Light theme · ready for dev"); rules on "Design guide", motion in the section's spec note.
+- **Files:** `supabase/migrations/<stamp>_weekly_summary.sql`, `supabase/tests/database/weekly_summary.test.sql`, `supabase/functions/_shared/push_send.ts`, `supabase/functions/_shared/webpush_test.ts`, `supabase/functions/flow-mcp/` (the `get_weekly_summary` tool and its test), `docs/mcp/TOOLS.md`, `packages/shared/src/database.types.ts`, `app/src/weekly-summary.ts`, `app/src/screens/weekly-summary-sheet.tsx`, `app/src/screens/HomeScreen.tsx` (opens the sheet from `?week=`), `app/src/ui/css/` (a new weekly summary file), their stories and tests, `docs/runbooks/push.md`, `docs/decisions/` (the next number), `docs/design/log/`, `docs/changelog.d/`.
+
+**Push**
+- [ ] The weekly push opens `/?week=<the week's Sunday, YYYY-MM-DD>`, so an old push still opens the week it was about. The text stays as it is (counts only, never an amount: the owner's pick in FLOW-502, 2026-10-09).
+
+**Sheet (opened over Home, which shows the current month under it)**
+- [ ] Title "סיכום שבועי", the week under it ("ראשון 4 עד שבת 10 באוקטובר"), ✕. A tap on the scrim, a drag down or ✕ closes it and leaves `?week=` off the address; Home stays.
+- [ ] "רווח השבוע" over the 40px figure: the signal colour when negative, muted at $0, the text colour above zero. Beside it the change pill "▲|▼ $X מול השבוע הקודם": secondary text when profit got better, the signal colour when worse. No pill when there were no lines.
+- [ ] When some of the week's lines wait: a 13px muted line "כולל N שעוד מחכות לאישור" ("כולל אחת שעוד מחכה לאישור"). They count in the sums already, as on Home (`pnl_lines` has no review filter); the board's "לפי N תנועות מאושרות · M עוד לא נספרו" would say otherwise, so it changed ([0211](../../decisions/0211-weekly-summary-sheet.md)).
+- [ ] An inner box on the raised tone: נכנס (green, with +), יצא, and "לא נספר ברווח" with "שיפוץ והשבחה, הון בעלים ועוד" only when not zero. In every state נכנס − יצא = רווח + לא נספר.
+- [ ] At most one project alert, on the tint with a 6px signal dot: "<project> עבר את התקציב" (the budget is the whole project's, not only the renovation's), "$spent מתוך $budget · N%", and "ועוד N פרויקטים מעל התקציב" when more qualify; it opens the project. No alert that week: the block is left out.
+- [ ] A centred 13px muted count: "N תנועות נכנסו השבוע · M אושרו אוטומטית" ("תנועה אחת נכנסה השבוע · אושרה אוטומטית").
+- [ ] Lines waiting: the 52px primary "לאישור N פריטים · כ־X דקות" ("לאישור פריט אחד · פחות מדקה") to the review queue. Nothing waiting: a bordered "✓ הכול מאושר" and no button.
+- [ ] No lines: profit $0 muted, the empty state (64px tint circle, calendar icon, "לא נכנסו תנועות השבוע" 24/600, one 15px line), and the outline "בדיקת החיבור לבנק" to the connections page.
+- [ ] Loading: skeleton blocks after 300ms. Failed: one line "לא הצלחנו לטעון את הסיכום" with "נסו שוב".
+- [ ] Motion: the sheet in 280ms ease-enter with the scrim; its blocks rise 8px and fade, staggered 40ms from 120ms; out 220ms ease-exit. Nothing moves under reduced motion.
+
+**Server and MCP**
+- [ ] One RPC for the week's figures for a company and a week (counts, the four sums in the base currency, the alert), every count and sum from SQL; a `get_weekly_summary` read tool in flow-mcp over it, listed in TOOLS.md.
+
+- **Acceptance:** stories of every board state at 320 and 393, dark and light, invented figures only; a unit test of the copy's singular and plural forms and of the pill's colour both ways; a test that the sheet opens from `?week=` and closing drops it; pgTAP for the RPC (a week window in Israel time, approved vs waiting, the sums adding up, another company's rows never counted); the push url test; design review against the boards. Open: which project wins the alert when several qualify ([open question](../../open-questions.md#which-project-alert-is-the-weekly-one)); until it is decided, the largest overrun in percent.

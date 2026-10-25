@@ -1065,6 +1065,14 @@ With `year` instead of `months` (FLOW-417), `cash_year_months(p_year)` returns t
 
 FLOW-364: `to_day` (1 to 31; not with `year`, otherwise a validation error) adds `previous_to_day`: the month before the current month, up to the same day of it (`cash_month_to_day(p_month, p_day)`; a day past the month's end counts to its last day). It has `month` (`YYYY-MM-DD`, the first day), `day` and `by_currency[]` (`currency`, `in_minor`, `out_minor`; one row per currency with money in or out, in no set order; a missing base currency reads as 0). Input: `{ "to_day": 11 }`.
 
+### get_weekly_summary
+
+`weekly_summary(p_week_start)`. One week, what the weekly summary sheet shows when the Sunday push is tapped (FLOW-517, decision 0211). A week runs Sunday to Saturday, Israel time. `week_start` is its Sunday (`YYYY-MM-DD`); left out, the week that just ended. A non-Sunday or a future week is a validation error.
+
+Input: `{ "week_start": "2026-10-04" }`.
+
+Output `data`: `week_start`, `currency` (the base currency), `lines` (bank and SUMIT lines that came in during the week, by when they arrived), `auto_approved` (of those, how many never needed a review), `week_waiting` (of those, how many still wait), `waiting` (the whole open review queue now, as Home and the push count it), `in_minor` and `out_minor` (the week's money in and out, as `get_cash_months` counts a month), `profit_minor` (the week's net profit on the company's basis, as `get_cash_months`' `profit_minor`), `kept_out_minor` (in less out less profit), `prev_profit_minor` (the week before's profit; null before the books start), `alert` (the active, non-overhead project most over budget by percent, spent as `list_projects` counts it: `project_id`, `name`, `spent_minor`, `budget_minor`; null when none is over) and `more_over_budget` (how many other active projects are over budget). Lines waiting for review count in the sums, as on Home.
+
 ### get_cash_years
 
 `cash_years()`. The cash view's whole history (FLOW-417, decision 0174), on the company's cash basis, through the end of this month. No input.

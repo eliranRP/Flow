@@ -2,7 +2,7 @@
 // flow-push-evening at 20:00 Israel time (owners with open review lines, once a day),
 // flow-push-new every 5 minutes (new bank and SUMIT lines since the last push), and
 // flow-push-weekly on Sunday at 08:00 (the week's new lines and what waits for review).
-// Every count in a message comes from SQL (decision 0084), and no message names an amount.
+// Every count in a message comes from SQL, and no message names an amount (the owner's pick, FLOW-502).
 // FLOW-516: kind "test" is the app's own call, with the user's JWT and no cron secret: it sends
 // one test push to the caller's own devices, at most 5 an hour (claim_push_test, decision 0201).
 // Nothing here changes the books.
@@ -51,11 +51,23 @@ export function newLinesMessage(fresh: number, waiting: number): { title: string
     : { title: "תנועות חדשות", body: `נכנסו ${fresh} תנועות חדשות`, url: waiting > 0 ? "/review" : "/", tag: "new-lines" };
 }
 
-/** The סיכום שבועי push: the week's new lines and what waits for review. */
-export function weeklyMessage(fresh: number, waiting: number): { title: string; body: string; url: string; tag: string } {
+/** The Sunday (YYYY-MM-DD, Israel time) of the week that ended before `now`'s week began. */
+export function lastWeekStart(now: Date): string {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  const day = new Date(`${today}T00:00:00Z`);
+  day.setUTCDate(day.getUTCDate() - day.getUTCDay() - 7);
+  return day.toISOString().slice(0, 10);
+}
+
+/**
+ * The סיכום שבועי push: the week's new lines and what waits for review. FLOW-517: it opens Home
+ * with the summary sheet of the week that just ended (`/?week=<its Sunday>`), so an old push still
+ * opens the week it was about.
+ */
+export function weeklyMessage(fresh: number, waiting: number, weekStart: string): { title: string; body: string; url: string; tag: string } {
   const lines = fresh === 0 ? "לא נכנסו תנועות השבוע" : fresh === 1 ? "תנועה אחת נכנסה השבוע" : `${fresh} תנועות נכנסו השבוע`;
   const review = waiting === 0 ? "הכול מאושר" : waiting === 1 ? "אחת מחכה לאישור" : `${waiting} מחכות לאישור`;
-  return { title: "סיכום שבועי", body: `${lines} · ${review}`, url: waiting > 0 ? "/review" : "/", tag: "weekly-summary" };
+  return { title: "סיכום שבועי", body: `${lines} · ${review}`, url: `/?week=${weekStart}`, tag: "weekly-summary" };
 }
 
 /** FLOW-516: the test push. It opens Settings → התראות. */
@@ -285,10 +297,12 @@ export async function handlePushSend(req: Request, deps: PushSendDeps): Promise<
     } else {
       // The claim moves each user's mark first, so a failed push is not sent again.
       const targets = parseCountTargets(await rpc(deps, supabaseUrl, serviceKey, "push_claim_targets", { p_kind: kind }));
-      const message = kind === "new" ? newLinesMessage : weeklyMessage;
+      const weekStart = lastWeekStart(now());
+      const message = (target: CountTarget) =>
+        kind === "new" ? newLinesMessage(target.fresh, target.waiting) : weeklyMessage(target.fresh, target.waiting, weekStart);
       result = await remindEvening(
         targets,
-        (target) => sendPush(deps.fetch, target, message(target.fresh, target.waiting), vapid, now()),
+        (target) => sendPush(deps.fetch, target, message(target), vapid, now()),
       );
       result.reminded = [];
     }

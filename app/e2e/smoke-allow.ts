@@ -64,6 +64,7 @@ export const readRpcs = new Set([
   "review_anomalies",
   "search_transactions",
   "sumit_status",
+  "weekly_summary",
 ]);
 
 export function rpcName(url: string): string | null {

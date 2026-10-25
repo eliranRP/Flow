@@ -47,7 +47,7 @@ export const READ_TOOL_NAMES = [
   "get_cash_years",
   "get_cash_lines",
   "match_lines", "get_forecast", "get_project_forecast_edits", "list_bank_connections", "list_transfer_matches",
-  "list_accounts", "get_line_legs",
+  "list_accounts", "get_line_legs", "get_weekly_summary",
 ] as const;
 
 /** Read tool that a write-only token may also call: it polls that token's own sync job. */
@@ -148,6 +148,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   list_team: new Set(),
   get_setup_suggestions: new Set(),
   get_cash_months: new Set(["months", "year", "to_day"]),
+  get_weekly_summary: new Set(["week_start"]),
   get_cash_years: new Set(),
   get_cash_lines: new Set(["month", "side", "currency", "limit", "offset"]),
   match_lines: new Set(["rows", "window_days", "direction", "currency"]),
