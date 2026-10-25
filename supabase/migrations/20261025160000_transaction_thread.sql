@@ -43,7 +43,9 @@ create table public.transaction_notes (
 
 create unique index transaction_notes_one_mercury on public.transaction_notes (transaction_id)
   where source = 'mercury';
-create index transaction_notes_line on public.transaction_notes (company_id, transaction_id);
+create index transaction_notes_company on public.transaction_notes (company_id, transaction_id);
+create index transaction_notes_line on public.transaction_notes (transaction_id);
+create index transaction_notes_author on public.transaction_notes (author_id);
 create index transaction_notes_pending on public.transaction_notes (company_id)
   where mercury_push = 'pending';
 
@@ -72,7 +74,10 @@ create table public.transaction_files (
 
 create unique index transaction_files_one_mercury on public.transaction_files (transaction_id, mercury_key)
   where mercury_key is not null;
-create index transaction_files_line on public.transaction_files (company_id, transaction_id);
+create index transaction_files_company on public.transaction_files (company_id, transaction_id);
+create index transaction_files_line on public.transaction_files (transaction_id);
+create index transaction_files_note on public.transaction_files (note_id);
+create index transaction_files_uploader on public.transaction_files (uploaded_by);
 
 alter table public.transaction_files enable row level security;
 revoke all on public.transaction_files from public, anon, authenticated;

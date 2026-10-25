@@ -222,8 +222,8 @@
   flex: 1;
   min-block-size: 44px;
   max-block-size: 160px;
-  border-radius: 22px;
-  padding-block: 10px;
+  border-radius: var(--radius-button);
+  padding-block: var(--space-2);
   padding-inline: var(--space-4);
   resize: none;
   field-sizing: content;
