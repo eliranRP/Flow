@@ -221,7 +221,19 @@ insert into pg_allowed (sig) values
     ('undo_reassign(uuid)'),
     ('upsert_project_group(uuid,text)'),
     ('upsert_project(uuid,text,bigint,text,text)'),
-    ('weekly_summary(date)');
+    ('weekly_summary(date)'),
+    -- FLOW-957: notes and files on a line.
+    ('add_transaction_file(uuid,uuid,text,text,text,bigint)'),
+    ('add_transaction_note(uuid,text)'),
+    ('edit_transaction_note(uuid,text)'),
+    ('get_transaction_thread(uuid)'),
+    ('mcp_add_transaction_note(text,uuid,text)'),
+    ('mcp_edit_transaction_note(text,uuid,text)'),
+    ('mcp_remove_transaction_file(text,uuid)'),
+    ('mcp_remove_transaction_note(text,uuid)'),
+    ('remove_transaction_file(uuid)'),
+    ('remove_transaction_note(uuid)'),
+    ('transaction_thread_counts(uuid[])');
 
 create temp view pg_client_definers as
 select p.oid::regprocedure::text as sig

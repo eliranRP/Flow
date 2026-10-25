@@ -153,6 +153,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "list_transfer_matches",
     "list_accounts",
     "get_line_legs",
+    "get_transaction_thread",
     "assign_expense",
     "assign_expense_split",
     "assign_expenses",
@@ -221,6 +222,10 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "undo_jev_prefill",
     "undo",
     "undo_batch",
+    "add_transaction_note",
+    "edit_transaction_note",
+    "remove_transaction_note",
+    "remove_transaction_file",
   ], "read and write tools");
   const lookup = calls.find((call) => call.url.endsWith("/lookup_mcp_credential"));
   assertEquals(lookup?.body?.p_token_hash, hash, "lookup hash");

@@ -2,6 +2,7 @@
 // Split out of tools.ts (FLOW-807). Decision 0080.
 
 import { READ_TOOL_NAMES, SYNC_STATUS_TOOL, WRITE_TOOL_NAMES } from "./tools_schemas.ts";
+import { THREAD_READ_SPECS, THREAD_UNDO_KINDS, THREAD_WRITE_SPECS } from "./tools_thread.ts";
 
 function toolSpec(
   name: string,
@@ -200,6 +201,7 @@ function readTools() {
     toolSpec("get_line_legs", "One line's ledger legs (decision 0208), to verify a book_line booking or read how any line resolves: transaction_id, direction, line_status, currency, amount_gross, vat_amount, legs[] (ordinal, account_id, account_name, account_type, category_id and category_name (the category the person sees, also on a kept-out leg that sits on a balance-sheet account), is_bank, project_id, amount_minor: SIGNED, debit positive, credit negative; an income or expense leg counts as -amount_minor in the P&L) and balanced (the legs sum to 0). A pending line has no legs. Another company's or an unknown line is not_found. Any member reads it.", {
       transaction_id: { type: "string" },
     }),
+    ...THREAD_READ_SPECS,
   ];
 }
 
@@ -729,13 +731,14 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", ...THREAD_UNDO_KINDS] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, set_lines_cash, create_projects or create_categories batch.", {
       idempotency_key: { type: "string" },
       batch_key: { type: "string" },
     }, true),
+    ...THREAD_WRITE_SPECS,
   ];
 }
 

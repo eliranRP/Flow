@@ -1,3 +1,4 @@
 # Files allowed over the CONTRIBUTING size limit (code 800 lines, tests 1,200), checked by
 # scripts/check-file-size.mjs. Each line: <lines> <path> # why. The count is a cap: the file may
 # shrink but not grow. Remove the line once the file is under its limit.
+1206 supabase/tests/database/cross_company_sweep.test.sql # one sweep over every RPC and table (FLOW-929); each new table adds its seed rows here, and splitting it would split the one catalog pass

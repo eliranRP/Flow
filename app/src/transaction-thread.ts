@@ -1,0 +1,196 @@
+// FLOW-957: a line's notes and files, and Mercury's note and attachments in the same thread. The app's
+// own RPCs (not MCP): the session has no MCP token. The MCP tools write the same rows.
+import { useQuery } from "@tanstack/react-query";
+import { z } from "zod";
+import { getSupabase } from "./lib/supabase";
+import { useHomePreview } from "./preview";
+import { assertNoError } from "./use-write";
+import { waitForAccessToken } from "./wait-for-session";
+
+/** The bucket the files live in, at <company>/<line>/<name> (the FLOW-957 migration). */
+export const THREAD_BUCKET = "transaction-files";
+/** The bucket's own cap. */
+export const THREAD_FILE_MAX_BYTES = 20 * 1024 * 1024;
+/** What the bucket takes. The file picker offers the same. */
+export const THREAD_FILE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "image/gif", "application/pdf"] as const;
+export const THREAD_NOTE_MAX = 5000;
+export const THREAD_KEY = "txn-thread";
+export const THREAD_COUNTS_KEY = "txn-thread-counts";
+
+const noteSchema = z.object({
+  id: z.string(),
+  source: z.enum(["flow", "mercury"]),
+  body: z.string(),
+  mine: z.boolean(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  edited: z.boolean(),
+  edited_in_flow: z.boolean(),
+});
+
+const fileSchema = z.object({
+  id: z.string(),
+  note_id: z.string().nullable(),
+  source: z.enum(["flow", "mercury"]),
+  file_name: z.string(),
+  mime: z.string(),
+  bytes: z.number(),
+  path: z.string(),
+  mine: z.boolean(),
+  created_at: z.string(),
+});
+
+export const threadSchema = z.object({
+  transaction_id: z.string(),
+  company_id: z.string(),
+  notes: z.array(noteSchema),
+  files: z.array(fileSchema),
+});
+
+export type ThreadNote = z.infer<typeof noteSchema>;
+export type ThreadFile = z.infer<typeof fileSchema>;
+export type Thread = z.infer<typeof threadSchema>;
+
+const countsSchema = z.record(z.string(), z.object({ notes: z.number(), files: z.number() }));
+export type ThreadCounts = z.infer<typeof countsSchema>;
+
+/** Mercury's note with its files, then the owner's notes with theirs, then files on no note, oldest first. */
+export type ThreadItem =
+  | { kind: "mercury"; note: ThreadNote | null; files: ThreadFile[] }
+  | { kind: "note"; note: ThreadNote; files: ThreadFile[] }
+  | { kind: "file"; file: ThreadFile };
+
+export function threadItems(thread: Thread): ThreadItem[] {
+  const mercuryNote = thread.notes.find((note) => note.source === "mercury") ?? null;
+  const mercuryFiles = thread.files.filter((file) => file.source === "mercury");
+  const items: ThreadItem[] = [];
+  if (mercuryNote != null || mercuryFiles.length > 0) items.push({ kind: "mercury", note: mercuryNote, files: mercuryFiles });
+  const own = thread.notes.filter((note) => note.source === "flow");
+  const ownIds = new Set(own.map((note) => note.id));
+  const rest: Array<{ at: string; item: ThreadItem }> = [];
+  for (const note of own) {
+    rest.push({ at: note.created_at, item: { kind: "note", note, files: thread.files.filter((file) => file.note_id === note.id) } });
+  }
+  for (const file of thread.files) {
+    if (file.source === "flow" && (file.note_id == null || !ownIds.has(file.note_id))) {
+      rest.push({ at: file.created_at, item: { kind: "file", file } });
+    }
+  }
+  rest.sort((a, b) => a.at.localeCompare(b.at));
+  return [...items, ...rest.map((entry) => entry.item)];
+}
+
+export function threadCount(counts: ThreadCounts | undefined, transactionId: string): { notes: number; files: number } {
+  return counts?.[transactionId] ?? { notes: 0, files: 0 };
+}
+
+/** Why a file cannot be attached, in the sheet's words, or null when it can. */
+export function threadFileProblem(file: { type: string; size: number }): string | null {
+  if (!(THREAD_FILE_TYPES as readonly string[]).includes(file.type)) return "אפשר לצרף תמונה או PDF";
+  if (file.size <= 0) return "הקובץ ריק";
+  if (file.size > THREAD_FILE_MAX_BYTES) return "קובץ עד 20MB";
+  return null;
+}
+
+/** A storage name for an upload: a fresh id and the file's own extension, nothing else of its name. */
+export function threadObjectName(fileName: string, id: string = crypto.randomUUID()): string {
+  const extension = /\.([A-Za-z0-9]{1,8})$/.exec(fileName)?.[1]?.toLowerCase();
+  return extension ? `${id}.${extension}` : id;
+}
+
+/** "1.2MB" / "320KB": the size under a file's name. */
+export function fileSizeLabel(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1).replace(/\.0$/, "")}MB`;
+  return `${String(Math.max(1, Math.round(bytes / 1024)))}KB`;
+}
+
+function client() {
+  const supabase = getSupabase();
+  if (!supabase) throw new Error("supabase");
+  return supabase;
+}
+
+export function useThreadQuery(transactionId: string, enabled = true) {
+  const preview = useHomePreview();
+  return useQuery({
+    queryKey: [THREAD_KEY, preview, transactionId],
+    enabled: enabled && preview === "off" && transactionId !== "",
+    staleTime: 30_000,
+    queryFn: async (): Promise<Thread | null> => {
+      await waitForAccessToken(client());
+      const result = await client().rpc("get_transaction_thread", { p_transaction_id: transactionId });
+      assertNoError(result);
+      return result.data == null ? null : threadSchema.parse(result.data);
+    },
+  });
+}
+
+/** How many notes and files each card has, for the approval queue's badge. A failed read shows none. */
+export function useThreadCounts(transactionIds: readonly string[]) {
+  const preview = useHomePreview();
+  const ids = [...new Set(transactionIds)].sort();
+  return useQuery({
+    queryKey: [THREAD_COUNTS_KEY, preview, ids.join(",")],
+    enabled: preview === "off" && ids.length > 0,
+    staleTime: 60_000,
+    retry: 1,
+    queryFn: async (): Promise<ThreadCounts> => {
+      await waitForAccessToken(client());
+      const result = await client().rpc("transaction_thread_counts", { p_ids: ids });
+      assertNoError(result);
+      return countsSchema.parse(result.data ?? {});
+    },
+  });
+}
+
+export async function addThreadNote(transactionId: string, body: string): Promise<string> {
+  const result = await client().rpc("add_transaction_note", { p_transaction_id: transactionId, p_body: body });
+  assertNoError(result);
+  if (typeof result.data !== "string") throw new Error("supabase");
+  return result.data;
+}
+
+export async function editThreadNote(noteId: string, body: string): Promise<{ source: string }> {
+  const result = await client().rpc("edit_transaction_note", { p_note_id: noteId, p_body: body });
+  assertNoError(result);
+  const source = (result.data as { source?: unknown } | null)?.source;
+  return { source: typeof source === "string" ? source : "flow" };
+}
+
+export async function removeThreadNote(noteId: string): Promise<void> {
+  assertNoError(await client().rpc("remove_transaction_note", { p_note_id: noteId }));
+}
+
+export async function removeThreadFile(fileId: string): Promise<void> {
+  assertNoError(await client().rpc("remove_transaction_file", { p_file_id: fileId }));
+}
+
+/** Uploads one file under the line's folder and records it, on a note when one is given. */
+export async function uploadThreadFile(
+  companyId: string,
+  transactionId: string,
+  noteId: string | null,
+  file: File,
+): Promise<void> {
+  const problem = threadFileProblem(file);
+  if (problem) throw new Error(problem);
+  const path = `${companyId}/${transactionId}/${threadObjectName(file.name)}`;
+  const uploaded = await client().storage.from(THREAD_BUCKET).upload(path, file, { contentType: file.type, upsert: false });
+  if (uploaded.error) throw new Error(uploaded.error.message);
+  // The generated types type a nullable uuid argument as required (repo precedent: null as unknown as string).
+  assertNoError(await client().rpc("add_transaction_file", {
+    p_transaction_id: transactionId,
+    p_note_id: noteId as unknown as string,
+    p_path: path,
+    p_file_name: file.name.slice(0, 200) || "file",
+    p_mime: file.type,
+    p_bytes: file.size,
+  }));
+}
+
+/** A link to open a file, good for ten minutes. */
+export async function threadFileUrl(path: string): Promise<string> {
+  const signed = await client().storage.from(THREAD_BUCKET).createSignedUrl(path, 600);
+  if (signed.error) throw new Error(signed.error.message);
+  return signed.data.signedUrl;
+}

@@ -95,6 +95,8 @@ vi.mock("../lib/supabase", () => ({
         return Promise.resolve({ data: db.reasons, error: null });
       }
       if (name === "review_anomalies") return Promise.resolve({ data: db.flags, error: null });
+      // FLOW-957. The card's notes and files count is a read too.
+      if (name === "transaction_thread_counts") return Promise.resolve({ data: {}, error: null });
       db.writes.push({ name, args });
       if (name === "undo_jev_prefill" && db.undoError != null) return Promise.resolve({ data: null, error: { message: db.undoError } });
       if (name === "reopen_review" && db.failReopen) return Promise.resolve({ data: null, error: { message: "down" } });
