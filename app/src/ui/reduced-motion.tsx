@@ -9,7 +9,9 @@ function reducedMotionList(query: string): MediaQueryList {
     addEventListener: () => undefined,
     removeEventListener: () => undefined,
     dispatchEvent: () => false,
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- MediaQueryList still declares it
     addListener: () => undefined,
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- MediaQueryList still declares it
     removeListener: () => undefined,
   };
 }

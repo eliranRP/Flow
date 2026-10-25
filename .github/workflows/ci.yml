@@ -230,15 +230,15 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-1.63.0
+          key: ${{ runner.os }}-playwright-1.64.1
       # The Ubuntu mirror can stall on the font packages, so their .deb files come from this cache.
       - name: Cache Playwright system packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/flow-apt
           # A new entry each run, so a package the mirror updated is cached on the next run.
-          key: ${{ runner.os }}-playwright-apt-1.63.0-${{ github.run_id }}
-          restore-keys: ${{ runner.os }}-playwright-apt-1.63.0
+          key: ${{ runner.os }}-playwright-apt-1.64.1-${{ github.run_id }}
+          restore-keys: ${{ runner.os }}-playwright-apt-1.64.1
       - name: Restore Playwright system packages
         run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
@@ -281,15 +281,15 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-1.63.0
+          key: ${{ runner.os }}-playwright-1.64.1
       # The Ubuntu mirror can stall on the font packages, so their .deb files come from this cache.
       # Read only: check (storybook light) saves the packages for the next run.
       - name: Restore the Playwright apt cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/flow-apt
-          key: ${{ runner.os }}-playwright-apt-1.63.0-none
-          restore-keys: ${{ runner.os }}-playwright-apt-1.63.0
+          key: ${{ runner.os }}-playwright-apt-1.64.1-none
+          restore-keys: ${{ runner.os }}-playwright-apt-1.64.1
       - name: Restore Playwright system packages
         run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
@@ -331,15 +331,15 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-1.63.0
+          key: ${{ runner.os }}-playwright-1.64.1
       # The Ubuntu mirror can stall on the font packages, so their .deb files come from this cache.
       # Read only: check (storybook) saves the packages for the next run.
       - name: Restore the Playwright apt cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/flow-apt
-          key: ${{ runner.os }}-playwright-apt-1.63.0-none
-          restore-keys: ${{ runner.os }}-playwright-apt-1.63.0
+          key: ${{ runner.os }}-playwright-apt-1.64.1-none
+          restore-keys: ${{ runner.os }}-playwright-apt-1.64.1
       - name: Restore Playwright system packages
         run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
@@ -424,15 +424,15 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-1.63.0
+          key: ${{ runner.os }}-playwright-1.64.1
       # The Ubuntu mirror can stall on the font packages, so their .deb files come from this cache.
       # Read only: check (storybook) saves the packages for the next run.
       - name: Restore the Playwright apt cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/flow-apt
-          key: ${{ runner.os }}-playwright-apt-1.63.0-none
-          restore-keys: ${{ runner.os }}-playwright-apt-1.63.0
+          key: ${{ runner.os }}-playwright-apt-1.64.1-none
+          restore-keys: ${{ runner.os }}-playwright-apt-1.64.1
       - name: Restore Playwright system packages
         run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
@@ -537,15 +537,15 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-1.63.0
+          key: ${{ runner.os }}-playwright-1.64.1
       # The Ubuntu mirror can stall on the font packages, so their .deb files come from this cache.
       # Read only: check (storybook) saves the packages for the next run.
       - name: Restore the Playwright apt cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/flow-apt
-          key: ${{ runner.os }}-playwright-apt-1.63.0-none
-          restore-keys: ${{ runner.os }}-playwright-apt-1.63.0
+          key: ${{ runner.os }}-playwright-apt-1.64.1-none
+          restore-keys: ${{ runner.os }}-playwright-apt-1.64.1
       - name: Restore Playwright system packages
         run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
