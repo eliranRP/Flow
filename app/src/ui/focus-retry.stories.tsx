@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { flushSync } from "react-dom";
 import { useRef, useState, type MouseEvent } from "react";
 import { useFocusRowAfterRetry } from "./focus-retry";

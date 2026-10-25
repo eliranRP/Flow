@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, waitFor } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, waitFor } from "storybook/test";
 import { attentionRows, CashHome, HomeScreen } from "./HomeScreen";
 import { sampleCashMonths, sampleQuietCashMonths } from "../dev/cash-sample";
 import { shiftMonthKey } from "../period";

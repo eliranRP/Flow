@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { LoanSummaryCard } from "./loan-summary-card";
 import { LOAN_SUMMARY_SAMPLE as SUMMARY } from "../dev/loan-summary-sample";
 

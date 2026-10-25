@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import type { Decorator } from "@storybook/react";
+import type { Decorator } from "@storybook/react-vite";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TxnMeta } from "../txn-meta";
 import { lineMetaQueryKey } from "../use-books";

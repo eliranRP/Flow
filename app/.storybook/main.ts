@@ -6,7 +6,7 @@ const config: StorybookConfig = {
   // and the CSP placeholder, _redirects), which would blank every canvas in the manager's iframe.
   // viteFinal turns publicDir off; the favicon the manager and preview heads name is copied alone.
   staticDirs: [{ from: "../public/favicon.svg", to: "/favicon.svg" }],
-  addons: ["@storybook/addon-essentials", "@storybook/addon-a11y", "@storybook/experimental-addon-test"],
+  addons: ["@storybook/addon-docs", "@storybook/addon-a11y", "@storybook/addon-vitest"],
   framework: {
     name: "@storybook/react-vite",
     options: {},

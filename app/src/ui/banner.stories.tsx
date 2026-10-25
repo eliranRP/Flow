@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Banner, BannerRows, Notice, type BannerRow } from "./banner";
 import { CalendarIcon, DocumentIcon, ReviewIcon, TrendUpIcon } from "./icons";
 import { HintParts } from "./hint-parts";

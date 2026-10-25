@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import type { ChartMonth } from "./month-chart-scale";
 import { ForecastCard, MonthChart } from "./month-forecast";
 import { padded } from "./story-support";

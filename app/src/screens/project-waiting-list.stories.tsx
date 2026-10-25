@@ -1,5 +1,5 @@
 import type { ProjectWaitingRow } from "@flow/shared";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StoryRoute } from "../ui/story-route";
 import { ProjectWaitingList } from "./review-screen";
 

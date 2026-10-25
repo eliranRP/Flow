@@ -1,6 +1,6 @@
 // Shared fixtures for the Screens/Routes stories, split out of screens.stories.tsx (FLOW-807).
 import type { Dashboard, ProfitMonths, ReviewRow } from "@flow/shared";
-import { within } from "@storybook/test";
+import { within } from "storybook/test";
 
 export const sampleDashboard: Dashboard = {
   company_id: "story",

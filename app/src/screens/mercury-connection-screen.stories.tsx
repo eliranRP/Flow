@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
 import { SAMPLE_EDIT_SELECTION, SAMPLE_NEW_ACCOUNT, SAMPLE_PICK, SAMPLE_SECOND, sampleConnection } from "../dev/mercury-sample";

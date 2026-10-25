@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ActionBar, ActionBarRow } from "./action-bar";
 import { Button } from "./button";
 import { CheckIcon } from "./icons";

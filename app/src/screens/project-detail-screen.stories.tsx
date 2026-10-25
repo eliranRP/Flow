@@ -1,6 +1,6 @@
 import type { ProjectDetail as ProjectDetailData } from "@flow/shared";
-import type { Meta, StoryObj } from "@storybook/react";
-import { userEvent, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { ProjectDetailScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { FILLED } from "../ui/investment-card.stories-support";

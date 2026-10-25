@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { BookingReviewCard } from "./booking-review-card";
 import type { JournalRow } from "./journal-card";
 import { padded } from "./story-support";

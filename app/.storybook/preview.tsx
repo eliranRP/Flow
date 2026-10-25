@@ -1,4 +1,4 @@
-import type { Decorator, Preview } from "@storybook/react";
+import type { Decorator, Preview } from "@storybook/react-vite";
 import { MemoryRouter } from "react-router-dom";
 import "../src/styles/app.css";
 import { primeSheetDrawer } from "../src/ui/sheet";
@@ -47,7 +47,7 @@ const preview: Preview = {
   parameters: {
     layout: "fullscreen",
     viewport: {
-      viewports: {
+      options: {
         flow390: {
           name: "Flow 390",
           styles: { width: "390px", height: "844px" },
@@ -79,7 +79,6 @@ const preview: Preview = {
           type: "mobile",
         },
       },
-      defaultViewport: "flow390",
     },
     a11y: {
       test: "error",

@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Button, type ButtonVariant } from "./button";
 import { longHebrew, padded } from "./story-support";
 

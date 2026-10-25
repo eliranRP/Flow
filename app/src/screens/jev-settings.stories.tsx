@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { JEV_DEFAULT, JevSettingsCard, type JevCardState } from "./jev-settings";
 
 const off: JevCardState = { ...JEV_DEFAULT, enabled: false, status: "ready" };

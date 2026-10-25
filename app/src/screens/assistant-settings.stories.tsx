@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { SAMPLE_ASSISTANT_KEYS, SAMPLE_ASSISTANT_SECRET, SAMPLE_EXPIRED_KEY } from "../assistant-sample";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";

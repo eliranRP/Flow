@@ -1,6 +1,6 @@
 import type { CategoryRow } from "@flow/shared";
-import type { Meta, StoryObj } from "@storybook/react";
-import { userEvent, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { CategoriesScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar, storyBody } from "../ui/screen-stories-support";

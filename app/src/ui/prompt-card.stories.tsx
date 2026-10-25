@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { PromptCard } from "./prompt-card";
 import { padded } from "./story-support";
 

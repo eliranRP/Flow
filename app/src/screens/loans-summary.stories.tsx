@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import { Route, Routes } from "react-router-dom";
 import { sampleLoanStore, sampleLoans } from "../dev/loan-detail-sample";
 import { StoryRoute } from "../ui/story-route";

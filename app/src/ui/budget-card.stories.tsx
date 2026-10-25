@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { BudgetCard } from "./budget-card";
 import { forceReducedMotion } from "./reduced-motion";
 import { padded } from "./story-support";
