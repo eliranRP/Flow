@@ -2,7 +2,6 @@
 // own RPCs (not MCP): the session has no MCP token. The MCP tools write the same rows.
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { invokeEdge } from "./edge";
 import { getSupabase } from "./lib/supabase";
 import { useHomePreview } from "./preview";
 import { assertNoError } from "./use-write";
@@ -26,7 +25,7 @@ const noteSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   edited: z.boolean(),
-  mercury_push: z.enum(["pending", "denied"]).nullable(),
+  edited_in_flow: z.boolean(),
 });
 
 const fileSchema = z.object({
@@ -194,15 +193,4 @@ export async function threadFileUrl(path: string): Promise<string> {
   const signed = await client().storage.from(THREAD_BUCKET).createSignedUrl(path, 600);
   if (signed.error) throw new Error(signed.error.message);
   return signed.data.signedUrl;
-}
-
-/** Sends an edited Mercury note to Mercury now. "waiting": the next sync sends it. */
-export async function sendMercuryNote(noteId: string): Promise<"sent" | "denied" | "waiting" | "nothing"> {
-  try {
-    const data = await invokeEdge("mercury-note", { note_id: noteId });
-    const state = (data as { state?: unknown } | null)?.state;
-    return state === "sent" || state === "denied" || state === "nothing" ? state : "waiting";
-  } catch {
-    return "waiting";
-  }
 }

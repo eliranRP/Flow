@@ -1,11 +1,11 @@
 -- FLOW-957: notes and files on a transaction. The app's RPCs (thread, counts, add, edit, remove, a
 -- file uploaded to the bucket), the refusals across companies, Mercury's note and attachments from
--- the sync (a note that waits to be sent is kept), the sends, and the MCP writes with undo.
+-- the sync (a note edited in Flow is kept, nothing is sent to Mercury), and the MCP writes with undo.
 -- Invented names only.
 
 begin;
 
-select plan(45);
+select plan(44);
 
 select tests.create_supabase_user('th_owner', 'th-owner@example.com');
 select tests.create_supabase_user('th_other', 'th-other@example.com');
@@ -168,32 +168,34 @@ select throws_ok(
     pg_temp.id('co'), pg_temp.id('line'), pg_temp.id('other')::text || '/x.pdf'),
   'path is invalid', 'a copied file goes under its own company and line');
 
--- 28-33. An edit of Mercury's note in Flow waits to be sent, and the sync keeps it.
+-- 28-33. Mercury's note follows Mercury until it is edited in Flow; the edit stays in Flow only
+-- (nothing is sent to Mercury), and a sync no longer replaces or removes it.
 reset role;
 insert into th (label, id) select 'mn', id from public.transaction_notes
   where transaction_id = pg_temp.id('line') and source = 'mercury';
-select tests.authenticate_as('th_owner');
-select public.edit_transaction_note(pg_temp.id('mn'), 'Lumber for back deck, invoice #4471, phase 2');
-select is(public.get_transaction_thread(pg_temp.id('line'))->'notes'->0->>'mercury_push', 'pending',
-  'an edit of Mercury''s note waits to be sent');
-select is(public.mercury_note_push_target(pg_temp.id('mn'))->>'external_id', 'merc-1', 'the app finds what to send');
 select pg_temp.as_service();
 select public.sync_mercury_threads(pg_temp.id('co'), jsonb_build_array(
-  jsonb_build_object('external_id', 'merc-1', 'note', 'Lumber for back deck, invoice #4471', 'files', '[]'::jsonb)));
-select is((select body from public.transaction_notes where id = pg_temp.id('mn')),
-  'Lumber for back deck, invoice #4471, phase 2', 'a sync does not overwrite an edit that waits');
-select is(jsonb_array_length(public.mercury_note_pushes(pg_temp.id('co'))), 1, 'the sync finds the edit to send');
-select is(public.mercury_note_pushed(pg_temp.id('mn'), '2000-01-01', 'sent'), false,
-  'a send of an older text does not mark a newer one');
-select is(public.mercury_note_pushed(pg_temp.id('mn'),
-  (select updated_at from public.transaction_notes where id = pg_temp.id('mn')), 'sent'), true,
-  'the sent text is back in step with Mercury');
-
--- 34. A note cleared in Mercury, in step, is removed.
+  jsonb_build_object('external_id', 'merc-1', 'note', 'Lumber for back deck, invoice #4471 (paid)', 'files', '[]'::jsonb)));
+select tests.authenticate_as('th_owner');
+select is(public.get_transaction_thread(pg_temp.id('line'))->'notes'->0->>'body', 'Lumber for back deck, invoice #4471 (paid)',
+  'a note not edited in Flow follows Mercury');
+select public.edit_transaction_note(pg_temp.id('mn'), 'Lumber for back deck, invoice #4471, phase 2');
+select is((public.get_transaction_thread(pg_temp.id('line'))->'notes'->0->>'edited_in_flow')::boolean, true,
+  'an edit of Mercury''s note is marked as made in Flow');
+select is(to_regprocedure('public.mercury_note_push_target(uuid)'), null, 'nothing sends a note to Mercury');
+select pg_temp.as_service();
 select public.sync_mercury_threads(pg_temp.id('co'), jsonb_build_array(
-  jsonb_build_object('external_id', 'merc-1', 'note', null, 'files', '[]'::jsonb)));
-select is((select count(*)::int from public.transaction_notes where id = pg_temp.id('mn')), 0,
-  'a note cleared in Mercury goes');
+  jsonb_build_object('external_id', 'merc-1', 'note', 'Lumber for back deck, invoice #4471', 'files', '[]'::jsonb),
+  jsonb_build_object('external_id', 'merc-2', 'note', 'Quiet note', 'files', '[]'::jsonb)));
+select is((select body from public.transaction_notes where id = pg_temp.id('mn')),
+  'Lumber for back deck, invoice #4471, phase 2', 'a sync does not overwrite an edit made in Flow');
+select public.sync_mercury_threads(pg_temp.id('co'), jsonb_build_array(
+  jsonb_build_object('external_id', 'merc-1', 'note', null, 'files', '[]'::jsonb),
+  jsonb_build_object('external_id', 'merc-2', 'note', null, 'files', '[]'::jsonb)));
+select is((select count(*)::int from public.transaction_notes where id = pg_temp.id('mn')), 1,
+  'a note cleared in Mercury stays when it was edited in Flow');
+select is((select count(*)::int from public.transaction_notes where transaction_id = pg_temp.id('quiet')), 0,
+  'a note cleared in Mercury goes when it was not');
 
 -- 35-44. MCP: add, edit, remove a note and remove a file, each undone.
 select pg_temp.as_mcp('write');

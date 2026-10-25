@@ -23,13 +23,3 @@ export function assertMercuryGet(method: string, path: string): void {
     throw new Error("mercury_path");
   }
 }
-
-/** FLOW-957: refuse anything except PATCH on one transaction (the note). thread.ts calls this first. */
-export function assertMercuryNotePatch(method: string, path: string): void {
-  if (method !== "PATCH") {
-    throw new Error("mercury_method");
-  }
-  if (path.includes("..") || path.includes("?") || !TRANSACTION.test(path)) {
-    throw new Error("mercury_path");
-  }
-}

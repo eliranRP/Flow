@@ -231,7 +231,6 @@ insert into pg_allowed (sig) values
     ('mcp_edit_transaction_note(text,uuid,text)'),
     ('mcp_remove_transaction_file(text,uuid)'),
     ('mcp_remove_transaction_note(text,uuid)'),
-    ('mercury_note_push_target(uuid)'),
     ('remove_transaction_file(uuid)'),
     ('remove_transaction_note(uuid)'),
     ('transaction_thread_counts(uuid[])');

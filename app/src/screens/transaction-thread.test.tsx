@@ -5,21 +5,21 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
-import { mercuryNoteStatus, mercurySendToast, TransactionThread } from "./transaction-thread";
+import { mercuryNoteStatus, TransactionThread } from "./transaction-thread";
 import { reviewThreadLabel } from "./review-thread";
 
 // FLOW-957: the thread on the transaction page. Invented names only.
 
-const calls = vi.hoisted(() => ({ rpc: [] as Array<{ name: string; args: unknown }>, invoke: [] as string[] }));
+const calls = vi.hoisted(() => ({ rpc: [] as Array<{ name: string; args: unknown }> }));
 
-const mercuryNote = { id: "m1", source: "mercury" as const, body: "Lumber for back deck, invoice #4471", mine: false, created_at: "2026-10-21T10:00:00Z", updated_at: "2026-10-21T10:00:00Z", edited: false, mercury_push: null };
+const mercuryNote = { id: "m1", source: "mercury" as const, body: "Lumber for back deck, invoice #4471", mine: false, created_at: "2026-10-21T10:00:00Z", updated_at: "2026-10-21T10:00:00Z", edited: false, edited_in_flow: false };
 
 const thread = {
   transaction_id: "t1",
   company_id: "c1",
   notes: [
     mercuryNote,
-    { id: "n1", source: "flow", body: "Check against the quote", mine: true, created_at: "2026-10-22T07:40:00Z", updated_at: "2026-10-22T07:40:00Z", edited: false, mercury_push: null },
+    { id: "n1", source: "flow", body: "Check against the quote", mine: true, created_at: "2026-10-22T07:40:00Z", updated_at: "2026-10-22T07:40:00Z", edited: false, edited_in_flow: false },
   ],
   files: [
     { id: "f1", note_id: null, source: "mercury", file_name: "receipt-4471.pdf", mime: "application/pdf", bytes: 52000, path: "c1/t1/m.pdf", mine: false, created_at: "2026-10-21T10:00:00Z" },
@@ -35,12 +35,6 @@ vi.mock("../lib/supabase", () => ({
       if (name === "add_transaction_note") return Promise.resolve({ data: "n2", error: null });
       if (name === "edit_transaction_note") return Promise.resolve({ data: { source: "mercury" }, error: null });
       return Promise.resolve({ data: null, error: null });
-    },
-    functions: {
-      invoke: (name: string) => {
-        calls.invoke.push(name);
-        return Promise.resolve({ data: { state: "denied" }, error: null });
-      },
     },
   }),
 }));
@@ -60,7 +54,6 @@ function wrap(children: ReactNode) {
 
 beforeEach(() => {
   calls.rpc.length = 0;
-  calls.invoke.length = 0;
 });
 
 describe("TransactionThread", () => {
@@ -82,14 +75,16 @@ describe("TransactionThread", () => {
     });
   });
 
-  it("edits Mercury's note and sends it to Mercury", async () => {
+  it("edits Mercury's note in Flow only", async () => {
     render(wrap(<TransactionThread transactionId="t1" holdWrites={false} />));
     fireEvent.click(await screen.findByRole("button", { name: "עריכה" }));
+    expect(screen.getByText("נשמר ב־Flow בלבד. ב־Mercury ההערה לא משתנה")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("הערה מ־Mercury"), { target: { value: "Lumber, phase 2" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
-    await waitFor(() => { expect(calls.invoke).toEqual(["mercury-note"]); });
-    expect(calls.rpc.find((call) => call.name === "edit_transaction_note")?.args).toEqual({ p_note_id: "m1", p_body: "Lumber, phase 2" });
-    expect(await screen.findByText("נשמר ב־Flow. למפתח של Mercury אין הרשאת כתיבה")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(calls.rpc.find((call) => call.name === "edit_transaction_note")?.args).toEqual({ p_note_id: "m1", p_body: "Lumber, phase 2" });
+    });
+    expect(await screen.findByText("נשמר ב־Flow")).toBeInTheDocument();
   });
 
   it("gives a viewer no composer and no edit", async () => {
@@ -102,12 +97,10 @@ describe("TransactionThread", () => {
 });
 
 describe("the thread's words", () => {
-  it("says where Mercury's note stands", () => {
-    expect(mercuryNoteStatus(null)).toBe("מ־Mercury");
-    expect(mercuryNoteStatus({ ...mercuryNote, mercury_push: "pending" as const })).toBe("נשמר ב־Flow · יישלח ל־Mercury");
-    expect(mercuryNoteStatus({ ...mercuryNote, mercury_push: "denied" as const })).toBe("נשמר ב־Flow בלבד: למפתח של Mercury אין הרשאת כתיבה");
-    expect(mercurySendToast("sent")).toBe("נשמר גם ב־Mercury");
-    expect(mercurySendToast("waiting")).toBe("נשמר. יישלח ל־Mercury בסנכרון הבא");
+  it("says when Mercury's note was edited in Flow", () => {
+    expect(mercuryNoteStatus(null)).toBeNull();
+    expect(mercuryNoteStatus(mercuryNote)).toBeNull();
+    expect(mercuryNoteStatus({ ...mercuryNote, edited_in_flow: true })).toMatch(/^נערך ב־Flow .* · ב־Mercury ההערה לא השתנתה$/);
   });
 
   it("labels the approval card's row", () => {

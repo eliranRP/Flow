@@ -11,7 +11,7 @@ const FILE = "c0ffee00-9570-4000-8000-000000000003";
 const THREAD = {
   transaction_id: LINE,
   company_id: "c0ffee00-9570-4000-8000-0000000000c0",
-  notes: [{ id: NOTE, source: "mercury", body: "Lumber for back deck", mine: false, created_at: "2026-10-10T10:00:00Z", updated_at: "2026-10-10T10:00:00Z", edited: false, mercury_push: null }],
+  notes: [{ id: NOTE, source: "mercury", body: "Lumber for back deck", mine: false, created_at: "2026-10-10T10:00:00Z", updated_at: "2026-10-10T10:00:00Z", edited: false, edited_in_flow: false }],
   files: [],
 };
 

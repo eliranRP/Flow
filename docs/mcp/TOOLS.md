@@ -440,7 +440,7 @@ What the transaction page's הערות וקבצים and the approval card's לפ
 
 `get_transaction_thread(p_transaction_id)`. Input: `{ "transaction_id": "<line id>" }`.
 
-Output `data`: `transaction_id`, `company_id`, `notes[]` and `files[]`, oldest first. A note: `id`, `source` (`flow`: written in Flow; `mercury`: the line's note in Mercury, at most one, whole, brought in by each Mercury sync), `body` (up to 5000 characters), `mine`, `created_at`, `updated_at`, `edited`, `mercury_push` (null: in step with Mercury; `pending`: edited in Flow, waiting to be sent; `denied`: the Mercury key may not write, so the edit stays in Flow). A file: `id`, `note_id` (the note it came with, or null), `source` (`flow`, or `mercury`: an attachment copied from Mercury, whose own links expire), `file_name`, `mime` (a picture or `application/pdf`), `bytes`, `path` (in Flow's private `transaction-files` storage), `mine`, `created_at`. Removed notes and files are left out. A line of another company is `not_found`.
+Output `data`: `transaction_id`, `company_id`, `notes[]` and `files[]`, oldest first. A note: `id`, `source` (`flow`: written in Flow; `mercury`: the line's note in Mercury, at most one, whole, brought in by each Mercury sync), `body` (up to 5000 characters), `mine`, `created_at`, `updated_at`, `edited`, `edited_in_flow` (Mercury's note was edited in Flow: the edit stays in Flow, Mercury keeps its own text, and syncs no longer replace it). A file: `id`, `note_id` (the note it came with, or null), `source` (`flow`, or `mercury`: an attachment copied from Mercury, whose own links expire), `file_name`, `mime` (a picture or `application/pdf`), `bytes`, `path` (in Flow's private `transaction-files` storage), `mine`, `created_at`. Removed notes and files are left out. A line of another company is `not_found`.
 
 ### add_transaction_note
 
@@ -456,7 +456,7 @@ Owner or editor. `body` is 1 to 5000 characters, trimmed. Output `data`: `{ "id"
 { "idempotency_key": "note-2", "note_id": "<note id>", "body": "Lumber for back deck, phase 2" }
 ```
 
-Owner or editor: a note this user wrote, or the line's Mercury note. Mercury's note then waits to be sent (`mercury_push` `pending`): the app sends it at once (`mercury-note`), else the next Mercury sync does, with `PATCH /transaction/{id}`; a key without Mercury's write scope keeps the edit in Flow (`denied`). A sync never overwrites an edit that waits. Output `data`: `{ "id", "source", "mercury", "undo_kind": "note_edit" }`. Undo `kind: "note_edit"` takes the note id and puts the text back while it is still this write's; Mercury's note then waits to be sent again.
+Owner or editor: a note this user wrote, or the line's Mercury note. An edit of Mercury's note stays in Flow (owner, 2026-10-25): nothing is sent to Mercury, and from then on a sync no longer replaces or removes it (`edited_in_flow`). Output `data`: `{ "id", "source", "undo_kind": "note_edit" }`. Undo `kind: "note_edit"` takes the note id and puts the text back while it is still this write's.
 
 ### remove_transaction_note
 

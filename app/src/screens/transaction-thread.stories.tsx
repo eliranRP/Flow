@@ -27,7 +27,7 @@ const mercury = {
   created_at: "2026-10-10T10:00:00Z",
   updated_at: "2026-10-10T10:00:00Z",
   edited: false,
-  mercury_push: null,
+  edited_in_flow: false,
 };
 
 const mercuryReceipt = { id: "f1", note_id: null, source: "mercury" as const, file_name: "receipt-4471.pdf", mime: "application/pdf", bytes: 52_000, path: "c1/t1/m-receipt.pdf", mine: false, created_at: "2026-10-10T10:00:00Z" };
@@ -37,7 +37,7 @@ const mixed: Thread = {
   company_id: "c1",
   notes: [
     mercury,
-    { id: "n1", source: "flow", body: "לבדוק מול הצעת המחיר של הקבלן לפני שמשייכים לשלב ב׳.", mine: true, created_at: "2026-10-22T06:40:00Z", updated_at: "2026-10-22T06:40:00Z", edited: false, mercury_push: null },
+    { id: "n1", source: "flow", body: "לבדוק מול הצעת המחיר של הקבלן לפני שמשייכים לשלב ב׳.", mine: true, created_at: "2026-10-22T06:40:00Z", updated_at: "2026-10-22T06:40:00Z", edited: false, edited_in_flow: false },
   ],
   files: [
     mercuryReceipt,
@@ -45,7 +45,7 @@ const mixed: Thread = {
   ],
 };
 
-const mercuryOnly: Thread = { ...mixed, notes: [{ ...mercury, mercury_push: "denied", edited: true, updated_at: "2026-10-23T09:00:00Z" }], files: [mercuryReceipt] };
+const mercuryOnly: Thread = { ...mixed, notes: [{ ...mercury, edited_in_flow: true, edited: true, updated_at: "2026-10-23T09:00:00Z" }], files: [mercuryReceipt] };
 const empty: Thread = { ...mixed, notes: [], files: [] };
 
 function Seed({ thread }: { thread: Thread }) {
@@ -79,11 +79,11 @@ export const Mixed: Story = {
   },
 };
 
-/** Mercury's note edited in Flow with a key that may not write: it stays in Flow and says so. */
+/** Mercury's note edited in Flow: the edit stays in Flow, and the card says Mercury kept its own text. */
 export const MercuryOnly: Story = {
   render: () => <ThreadStory thread={mercuryOnly} />,
   play: async ({ canvasElement }) => {
-    await expect(await within(canvasElement).findByText("נשמר ב־Flow בלבד: למפתח של Mercury אין הרשאת כתיבה")).toBeVisible();
+    await expect(await within(canvasElement).findByText(/ב־Mercury ההערה לא השתנתה$/)).toBeVisible();
   },
 };
 

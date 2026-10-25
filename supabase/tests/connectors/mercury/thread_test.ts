@@ -1,5 +1,5 @@
 import { assertEquals, assertThrows } from "jsr:@std/assert@1";
-import { assertMercuryNotePatch } from "../../../functions/_shared/connectors/mercury/guard.ts";
+import { assertMercuryGet } from "../../../functions/_shared/connectors/mercury/guard.ts";
 import { fetchMercurySince, openMercury } from "../../../functions/_shared/connectors/mercury/client.ts";
 import {
   MERCURY_NOTE_LIMIT,
@@ -9,7 +9,6 @@ import {
   mercuryAttachments,
   mercuryNote,
   mercuryThreads,
-  sendMercuryNote,
 } from "../../../functions/_shared/connectors/mercury/thread.ts";
 
 // FLOW-957: Mercury's note and attachments for the thread on a line. Invented rows only.
@@ -114,20 +113,7 @@ Deno.test("a download over 20 MB is not copied", async () => {
   assertEquals(await downloadMercuryAttachment(session, { fileName: "big.pdf", url: "https://example-bucket.s3.amazonaws.com/big" }), null);
 });
 
-Deno.test("a note is sent with PATCH to one transaction, and Mercury's answer decides the outcome", async () => {
-  for (const [status, outcome] of [[200, "sent"], [403, "denied"], [401, "denied"], [404, "missing"], [503, "retry"]] as const) {
-    const { fetchImpl, calls } = transport(() => jsonResponse({}, status));
-    const session = openMercury("secret-key-example", { fetch: fetchImpl, now: () => NOW });
-    assertEquals(await sendMercuryNote(session, "txn-example-1", "phase 2"), outcome);
-    assertEquals(calls[0]!.init.method, "PATCH");
-    assertEquals(calls[0]!.url.href, "https://api.mercury.com/api/v1/transaction/txn-example-1");
-    assertEquals(JSON.parse(String(calls[0]!.init.body)), { note: "phase 2" });
-  }
-});
-
-Deno.test("only PATCH on one transaction is allowed", () => {
-  assertMercuryNotePatch("PATCH", "/transaction/txn-example-1");
-  assertThrows(() => assertMercuryNotePatch("POST", "/transaction/txn-example-1"), Error, "mercury_method");
-  assertThrows(() => assertMercuryNotePatch("PATCH", "/transactions"), Error, "mercury_path");
-  assertThrows(() => assertMercuryNotePatch("PATCH", "/transaction/a/b"), Error, "mercury_path");
+Deno.test("nothing is written to Mercury: the guard still refuses every method but GET", () => {
+  assertThrows(() => assertMercuryGet("PATCH", "/transaction/txn-example-1"), Error, "mercury_method");
+  assertThrows(() => assertMercuryGet("POST", "/transaction/txn-example-1/attachments"), Error, "mercury_method");
 });

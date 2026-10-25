@@ -422,10 +422,8 @@ async function syncConnection(
       await noteOnce("rejected");
       throw new Error("rejected");
     }
-    // FLOW-957: Mercury's notes and attachments into the threads, then the edits made in Flow sent back.
-    await syncMercuryThreadsFor(admin, companyId, session, legacy
-      ? { accountIds: null, withoutAccount: true }
-      : { accountIds: scope.accountIds, withoutAccount });
+    // FLOW-957: Mercury's notes and attachments into the threads (read only: nothing goes to Mercury).
+    await syncMercuryThreadsFor(admin, companyId, session);
     const pendingMissing: Record<string, string> = {};
     for (const item of plan.pendingMissing) pendingMissing[item.externalId] = item.missingSince;
     // The card nicknames are extra (FLOW-707): when Mercury doesn't list them, the stored ones stay.

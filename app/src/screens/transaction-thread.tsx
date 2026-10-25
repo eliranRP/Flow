@@ -11,7 +11,6 @@ import {
   fileSizeLabel,
   removeThreadFile,
   removeThreadNote,
-  sendMercuryNote,
   threadFileProblem,
   threadFileUrl,
   threadItems,
@@ -34,18 +33,9 @@ export function threadTime(iso: string): string {
   return Number.isNaN(at.getTime()) ? "" : TIME.format(at).replace(",", "");
 }
 
-/** The status under Mercury's note: in step, waiting to be sent, or kept in Flow only. */
-export function mercuryNoteStatus(note: ThreadNote | null): string {
-  if (note?.mercury_push === "pending") return "נשמר ב־Flow · יישלח ל־Mercury";
-  if (note?.mercury_push === "denied") return "נשמר ב־Flow בלבד: למפתח של Mercury אין הרשאת כתיבה";
-  return note?.edited ? `מ־Mercury · עודכן ${threadTime(note.updated_at)}` : "מ־Mercury";
-}
-
-/** The toast after Mercury's note is saved, by what the send came to. */
-export function mercurySendToast(state: "sent" | "denied" | "waiting" | "nothing"): string {
-  if (state === "sent") return "נשמר גם ב־Mercury";
-  if (state === "denied") return "נשמר ב־Flow. למפתח של Mercury אין הרשאת כתיבה";
-  return "נשמר. יישלח ל־Mercury בסנכרון הבא";
+/** The line under Mercury's note once it was edited in Flow (Mercury keeps its own text). */
+export function mercuryNoteStatus(note: ThreadNote | null): string | null {
+  return note?.edited_in_flow ? `נערך ב־Flow ${threadTime(note.updated_at)} · ב־Mercury ההערה לא השתנתה` : null;
 }
 
 /** Opens a file from the private bucket in a new tab, through a ten-minute link. */
@@ -86,7 +76,7 @@ export function ThreadFileChip({ file, onRemove }: { file: ThreadFile; onRemove?
   );
 }
 
-/** Mercury's note (and its files), editable in place. Saving sends it to Mercury. */
+/** Mercury's note (and its files), editable in place. The edit stays in Flow: nothing goes to Mercury. */
 export function MercuryNoteCard({
   note,
   files,
@@ -98,17 +88,13 @@ export function MercuryNoteCard({
   holdWrites: boolean;
   compact?: boolean;
 }) {
-  const toast = useToast();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const fieldId = useId();
   const save = useWrite<{ id: string; body: string }>({
     keys: THREAD_KEYS,
-    run: async ({ id, body }) => {
-      await editThreadNote(id, body);
-      const state = await sendMercuryNote(id);
-      toast.show({ tone: state === "denied" ? "info" : undefined, message: mercurySendToast(state) });
-    },
+    run: async ({ id, body }) => { await editThreadNote(id, body); },
+    success: "נשמר ב־Flow",
     failure: "ההערה לא נשמרה",
     onSuccess: () => { setEditing(false); },
   });
@@ -137,7 +123,7 @@ export function MercuryNoteCard({
               onChange={(event) => { setDraft(event.target.value); }}
             />
             <div className="ui-thread-edit-actions">
-              <span className="t-caption t-muted">השמירה מעדכנת גם את Mercury</span>
+              <span className="t-caption t-muted">נשמר ב־Flow בלבד. ב־Mercury ההערה לא משתנה</span>
               <Button variant="link" quiet disabled={save.isPending} onClick={() => { setEditing(false); }}>ביטול</Button>
               <Button
                 busy={save.isPending}
@@ -154,7 +140,7 @@ export function MercuryNoteCard({
         {files.length > 0 ? (
           <div className="ui-thread-files">{files.map((file) => <ThreadFileChip key={file.id} file={file} />)}</div>
         ) : null}
-        {note?.mercury_push != null || note?.edited === true ? <span className="ui-thread-meta">{mercuryNoteStatus(note)}</span> : null}
+        {mercuryNoteStatus(note) == null ? null : <span className="ui-thread-meta">{mercuryNoteStatus(note)}</span>}
       </div>
     </article>
   );

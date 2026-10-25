@@ -1,16 +1,15 @@
 -- FLOW-957: notes and files on a transaction, with Mercury's note and attachments.
 -- - public.transaction_notes: the owner's notes on a line (source flow) and Mercury's note (source
---   mercury, at most one a line). A Mercury note edited in Flow waits to be sent (mercury_push
---   'pending') until mercury-note or the next Mercury sync sends it; a key that may not write keeps it
---   in Flow ('denied'). A sync never overwrites a note that waits. Removed notes are kept (removed_at)
+--   mercury, at most one a line). Mercury's note can be edited in Flow only (owner, 2026-10-25):
+--   nothing is sent to Mercury, and once edited here (edited_in_flow) a sync no longer overwrites or
+--   removes it. Removed notes are kept (removed_at)
 --   so undo can bring them back.
 -- - public.transaction_files: files on a line, in the private bucket transaction-files at
 --   <company>/<transaction>/<name>. The owner's (source flow) are uploaded by the app; Mercury's
 --   attachments are copied by mercury-sync (their links expire). Removed files are kept (removed_at).
 -- - The app's RPCs: get_transaction_thread, transaction_thread_counts, add_transaction_note,
 --   edit_transaction_note, remove_transaction_note, add_transaction_file, remove_transaction_file.
--- - The sync's (service role): sync_mercury_threads, record_mercury_file, mercury_note_pushes,
---   mercury_note_pushed; the app's push target: mercury_note_push_target.
+-- - The sync's (service role): sync_mercury_threads, record_mercury_file.
 -- - MCP (decision 0095): mcp_add_transaction_note (undo kind note_add), mcp_edit_transaction_note
 --   (note_edit), mcp_remove_transaction_note (note_remove), mcp_remove_transaction_file (file_remove).
 --   A file is uploaded from the app only: MCP has no file bytes to send.
@@ -34,11 +33,11 @@ create table public.transaction_notes (
   source text not null check (source in ('flow', 'mercury')),
   author_id uuid references auth.users (id) on delete set null,
   body text not null check (char_length(btrim(body)) between 1 and 5000),
-  mercury_push text check (mercury_push in ('pending', 'denied')),
+  edited_in_flow boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   removed_at timestamptz,
-  constraint transaction_notes_push_mercury check (mercury_push is null or source = 'mercury')
+  constraint transaction_notes_edited_mercury check (not edited_in_flow or source = 'mercury')
 );
 
 create unique index transaction_notes_one_mercury on public.transaction_notes (transaction_id)
@@ -46,14 +45,12 @@ create unique index transaction_notes_one_mercury on public.transaction_notes (t
 create index transaction_notes_company on public.transaction_notes (company_id, transaction_id);
 create index transaction_notes_line on public.transaction_notes (transaction_id);
 create index transaction_notes_author on public.transaction_notes (author_id);
-create index transaction_notes_pending on public.transaction_notes (company_id)
-  where mercury_push = 'pending';
 
 alter table public.transaction_notes enable row level security;
 revoke all on public.transaction_notes from public, anon, authenticated;
 
 comment on table public.transaction_notes is
-  'FLOW-957: notes on a line. source flow: the owner''s; source mercury: Mercury''s note (one a line), pending while an edit made in Flow waits to be sent to Mercury, denied when the key may not write. Read and written through the RPCs only.';
+  'FLOW-957: notes on a line. source flow: the owner''s; source mercury: Mercury''s note (one a line), kept as Flow edited it once edited_in_flow (nothing is sent to Mercury). Read and written through the RPCs only.';
 
 create table public.transaction_files (
   id uuid primary key default gen_random_uuid(),
@@ -128,7 +125,7 @@ as $$
     'created_at', n.created_at,
     'updated_at', n.updated_at,
     'edited', n.updated_at > n.created_at + interval '1 second',
-    'mercury_push', n.mercury_push
+    'edited_in_flow', n.edited_in_flow
   );
 $$;
 
@@ -262,7 +259,7 @@ $$;
 revoke all on function public.add_transaction_note(uuid, text) from public, anon, service_role;
 grant execute on function public.add_transaction_note(uuid, text) to authenticated;
 
--- A note's new text: the author's own note, or Mercury's note (then it waits to be sent to Mercury).
+-- A note's new text: the author's own note, or Mercury's note (in Flow only: nothing goes to Mercury).
 -- Returns the line and the text before and after, for undo.
 create function public.edit_transaction_note(p_note_id uuid, p_body text)
 returns jsonb
@@ -287,7 +284,7 @@ begin
   update public.transaction_notes n
   set body = v_body,
       updated_at = clock_timestamp(),
-      mercury_push = case when n.source = 'mercury' and v_body is distinct from rec.body then 'pending' else n.mercury_push end
+      edited_in_flow = n.edited_in_flow or (n.source = 'mercury' and v_body is distinct from rec.body)
   where n.id = rec.id;
   return jsonb_build_object('transaction_id', rec.transaction_id, 'before', rec.body, 'after', v_body,
     'source', rec.source);
@@ -416,8 +413,8 @@ revoke all on function public.remove_transaction_file(uuid) from public, anon, s
 grant execute on function public.remove_transaction_file(uuid) to authenticated;
 
 -- Mercury sync: each line's note and attachments as Mercury lists them,
--- [{external_id, note, files: [file name, ...]}]. A note that waits to be sent, or that the key may
--- not write, is kept; any other follows Mercury (a cleared note is removed). Returns the attachments
+-- [{external_id, note, files: [file name, ...]}]. A note edited in Flow is kept; any other follows
+-- Mercury (a cleared note is removed). Returns the attachments
 -- not copied yet: [{transaction_id, external_id, file_name}].
 create function public.sync_mercury_threads(p_company uuid, p_items jsonb)
 returns jsonb
@@ -448,13 +445,13 @@ begin
     remote := nullif(btrim(left(coalesce(item->>'note', ''), 5000)), '');
     if remote is null then
       delete from public.transaction_notes n
-      where n.transaction_id = txn and n.source = 'mercury' and n.mercury_push is null;
+      where n.transaction_id = txn and n.source = 'mercury' and not n.edited_in_flow;
     else
       insert into public.transaction_notes (company_id, transaction_id, source, body)
       values (p_company, txn, 'mercury', remote)
       on conflict (transaction_id) where source = 'mercury' do update
       set body = excluded.body, updated_at = now(), removed_at = null
-      where transaction_notes.mercury_push is null and transaction_notes.body is distinct from excluded.body;
+      where not transaction_notes.edited_in_flow and transaction_notes.body is distinct from excluded.body;
     end if;
 
     for v_file in
@@ -515,91 +512,6 @@ $$;
 
 revoke all on function public.record_mercury_file(uuid, uuid, text, text, text, bigint) from public, anon, authenticated;
 grant execute on function public.record_mercury_file(uuid, uuid, text, text, text, bigint) to service_role;
-
--- The Mercury notes that wait to be sent: [{note_id, external_id, account_id, body, updated_at}].
-create function public.mercury_note_pushes(p_company uuid)
-returns jsonb
-language plpgsql
-stable
-security definer
-set search_path = ''
-as $$
-begin
-  if coalesce(auth.role(), '') is distinct from 'service_role' then
-    raise exception 'forbidden';
-  end if;
-  return coalesce((
-    select jsonb_agg(jsonb_build_object(
-      'note_id', n.id,
-      'external_id', t.external_id,
-      'account_id', t.provider_meta->>'account_id',
-      'body', n.body,
-      'updated_at', n.updated_at
-    ) order by n.updated_at)
-    from public.transaction_notes n
-    join public.transactions t on t.id = n.transaction_id
-    where n.company_id = p_company and n.source = 'mercury' and n.mercury_push = 'pending'
-      and n.removed_at is null and t.external_id is not null
-  ), '[]'::jsonb);
-end;
-$$;
-
-revoke all on function public.mercury_note_pushes(uuid) from public, anon, authenticated;
-grant execute on function public.mercury_note_pushes(uuid) to service_role;
-
--- A send's outcome: sent (back in step with Mercury) or denied (the key may not write). Only the
--- text that was sent is marked, so an edit made meanwhile still waits.
-create function public.mercury_note_pushed(p_note_id uuid, p_updated_at timestamptz, p_state text)
-returns boolean
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  if coalesce(auth.role(), '') is distinct from 'service_role' then
-    raise exception 'forbidden';
-  end if;
-  if p_state is null or p_state not in ('sent', 'denied') then
-    raise exception 'state is invalid';
-  end if;
-  update public.transaction_notes n
-  set mercury_push = case when p_state = 'sent' then null else 'denied' end
-  where n.id = p_note_id and n.source = 'mercury' and n.mercury_push = 'pending'
-    and n.updated_at = p_updated_at;
-  return found;
-end;
-$$;
-
-revoke all on function public.mercury_note_pushed(uuid, timestamptz, text) from public, anon, authenticated;
-grant execute on function public.mercury_note_pushed(uuid, timestamptz, text) to service_role;
-
--- The app's send right after an edit: the caller's own company's Mercury note that waits, with the
--- line's company, Mercury id and account, for mercury-note. Null when there is nothing to send.
-create function public.mercury_note_push_target(p_note_id uuid)
-returns jsonb
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  select jsonb_build_object(
-    'note_id', n.id,
-    'company_id', n.company_id,
-    'external_id', t.external_id,
-    'account_id', t.provider_meta->>'account_id',
-    'body', n.body,
-    'updated_at', n.updated_at
-  )
-  from public.transaction_notes n
-  join public.transactions t on t.id = n.transaction_id
-  where n.id = p_note_id
-    and n.company_id = private.current_company_id()
-    and n.source = 'mercury' and n.mercury_push = 'pending' and n.removed_at is null
-    and t.external_id is not null;
-$$;
-
-revoke all on function public.mercury_note_push_target(uuid) from public, anon, service_role;
-grant execute on function public.mercury_note_push_target(uuid) to authenticated;
 
 -- MCP: the same writes, idempotent and undoable (decision 0080).
 create function public.mcp_add_transaction_note(p_idempotency_key text, p_transaction_id uuid, p_body text)
@@ -696,7 +608,6 @@ begin
       jsonb_build_object('note_id', p_note_id, 'before', step->'before', 'after', step->'after'));
     response := jsonb_build_object('ok', true, 'data', jsonb_build_object(
       'id', p_note_id, 'source', step->>'source',
-      'mercury', case when step->>'source' = 'mercury' then 'waits to be sent' end,
       'undo_kind', 'note_edit'));
   exception
     when deadlock_detected or serialization_failure or lock_not_available then
@@ -870,8 +781,8 @@ begin
       )$n$);
   def := replace(def, a_branch, $n$    elsif p_kind in ('note_add', 'note_edit', 'note_remove') then
       -- FLOW-957. note_add removes the note while it still has the text the write gave it; note_edit
-      -- puts the text back while it is still the text the write left (a Mercury note then waits to be
-      -- sent again); note_remove brings the note back while it is still removed.
+      -- puts the text back while it is still the text the write left (a Mercury note stays edited in
+      -- Flow); note_remove brings the note back while it is still removed.
       perform 1 from public.transaction_notes n
       where n.id = p_id and n.company_id = cid
       for update;
@@ -900,7 +811,7 @@ begin
           update public.transaction_notes n
           set body = rec.prior->>'before',
               updated_at = clock_timestamp(),
-              mercury_push = case when n.source = 'mercury' then 'pending' else n.mercury_push end
+              edited_in_flow = n.edited_in_flow or n.source = 'mercury'
           where n.id = p_id and n.company_id = cid;
         else
           update public.transaction_notes n set removed_at = null

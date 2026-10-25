@@ -3,7 +3,7 @@ import { fileSizeLabel, threadCount, threadFileProblem, threadItems, threadObjec
 
 // FLOW-957: the thread's order, the file checks and the labels. Invented names only.
 
-const base = { mine: true, edited: false, mercury_push: null } as const;
+const base = { mine: true, edited: false, edited_in_flow: false } as const;
 
 const thread: Thread = {
   transaction_id: "t1",

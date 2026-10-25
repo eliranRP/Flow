@@ -1,15 +1,12 @@
-import { assertMercuryNotePatch } from "./guard.ts";
 import { mercuryTransport } from "./client.ts";
-import { redactMercury } from "./redact.ts";
 import type { ConnectorSession } from "../types.ts";
 
 /**
  * FLOW-957: Mercury's note and attachments on a transaction, for the thread on the line.
- * The sync reads them from the rows it fetched (client.ts remembers them), copies each attachment
- * into Flow's storage (Mercury's links expire), and sends back a note edited in Flow.
+ * The sync reads them from the rows it fetched (client.ts remembers them) and copies each attachment
+ * into Flow's storage (Mercury's links expire). Read only: an edit of the note stays in Flow
+ * (owner, 2026-10-25), so nothing is ever written to Mercury.
  */
-
-const API_BASE = "https://api.mercury.com/api/v1";
 /** Mercury caps a note at 5,000 characters; the thread keeps the same. */
 export const MERCURY_NOTE_LIMIT = 5000;
 /** The bucket's own cap (transaction-files): 20 MB a file. */
@@ -136,38 +133,4 @@ export async function downloadMercuryAttachment(
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (bytes.byteLength === 0 || bytes.byteLength > MERCURY_ATTACHMENT_MAX_BYTES) return null;
   return { bytes, mime };
-}
-
-/** What a send of a note came to. denied: the key may not write (Mercury answered 401 or 403). */
-export type NoteSend = "sent" | "denied" | "missing" | "retry";
-
-/** Sends a note edited in Flow to Mercury: PATCH /transaction/{id} with `{ note }`. */
-export async function sendMercuryNote(session: ConnectorSession, externalId: string, note: string): Promise<NoteSend> {
-  const path = `/transaction/${externalId}`;
-  assertMercuryNotePatch("PATCH", path);
-  const body = mercuryNote(note);
-  if (!body) return "missing";
-  const { secret, fetch } = mercuryTransport(session);
-  if (secret.trim() === "") return "denied";
-  let response: Response;
-  try {
-    response = await fetch(new URL(`${API_BASE}${path}`), {
-      method: "PATCH",
-      redirect: "error",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${secret}`,
-      },
-      body: JSON.stringify({ note: body }),
-    });
-  } catch (error) {
-    console.error("mercury note send", String(redactMercury(error instanceof Error ? error.message : "network", secret)).slice(0, 200));
-    return "retry";
-  }
-  await response.body?.cancel();
-  if (response.ok) return "sent";
-  if (response.status === 401 || response.status === 403) return "denied";
-  if (response.status === 404) return "missing";
-  return "retry";
 }
