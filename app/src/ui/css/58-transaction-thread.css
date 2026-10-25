@@ -1,0 +1,295 @@
+/* FLOW-957: the thread of notes and files on a transaction (board "A · Thread — transaction page") and
+   the "before approving" sheet (board "C · Sheet — approval card"). Imported by transaction-thread.tsx. */
+.ui-thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-block-start: var(--space-5);
+}
+
+.ui-thread-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-inline: var(--space-2);
+}
+
+.ui-thread-count,
+.ui-thread-meta,
+.ui-thread-who {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--color-text-muted);
+}
+
+.ui-thread-who {
+  color: var(--color-text-secondary);
+}
+
+.ui-thread-empty {
+  padding-inline: var(--space-2);
+}
+
+.ui-thread-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ui-thread-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.ui-thread-avatar {
+  flex: none;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--color-avatar);
+  color: var(--color-text);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-thread-avatar-own {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.ui-thread-bubble {
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-card-inner);
+  background: var(--color-surface);
+}
+
+.ui-thread-mercury .ui-thread-bubble {
+  border: 1px solid var(--color-line);
+}
+
+.ui-thread-mercury[data-compact="true"] .ui-thread-avatar {
+  inline-size: 24px;
+  block-size: 24px;
+}
+
+.ui-thread-bubble-plain {
+  background: none;
+  padding-block: var(--space-1);
+  padding-inline: 0;
+}
+
+.ui-thread-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-block-size: 24px;
+}
+
+.ui-thread-tools {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.ui-thread-tool {
+  inline-size: 32px;
+  block-size: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-text-secondary);
+}
+
+.ui-thread-body {
+  margin: 0;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ui-thread-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ui-thread-file {
+  display: inline-flex;
+  align-items: center;
+  max-inline-size: 100%;
+  border-radius: var(--radius-chip);
+  background: var(--color-tint);
+}
+
+.ui-thread-file-open {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  min-block-size: 36px;
+  padding-inline: var(--space-3);
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--type-caption-size);
+}
+
+.ui-thread-file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-thread-file-size {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.ui-thread-file-remove {
+  inline-size: 32px;
+  block-size: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  color: var(--color-text-secondary);
+}
+
+.ui-thread-edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-thread-edit-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ui-thread-edit-actions > .t-caption {
+  margin-inline-end: auto;
+}
+
+.ui-thread-field {
+  inline-size: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  padding: var(--space-3);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-input);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+}
+
+.ui-thread-field:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.ui-thread-composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--color-line);
+}
+
+.ui-thread-composer-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.ui-thread-composer-field {
+  flex: 1;
+  min-block-size: 44px;
+  max-block-size: 160px;
+  border-radius: 22px;
+  padding-block: 10px;
+  padding-inline: var(--space-4);
+  resize: none;
+  field-sizing: content;
+}
+
+.ui-thread-round {
+  flex: none;
+  inline-size: 44px;
+  block-size: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.ui-thread-send {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.ui-thread-send:disabled {
+  background: var(--color-disabled-bg);
+  color: var(--color-disabled-text);
+}
+
+/* The approval card's row: the counts, or the way in when there is nothing yet. */
+.ui-review-thread {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 44px;
+  margin-block-start: var(--space-2);
+  padding-inline: var(--space-3);
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: var(--color-tint);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--type-caption-size);
+}
+
+.ui-before-approve {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ui-before-approve-picks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.ui-before-approve-pick {
+  min-block-size: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card-inner);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--type-caption-size);
+}

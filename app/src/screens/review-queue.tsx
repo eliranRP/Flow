@@ -33,6 +33,7 @@ import { ScreenHeader } from "../ui/screen-header";
 import { useToast } from "../ui/toast";
 import { isReversal } from "../reversal";
 import { useLineSplitQuery } from "./line-split";
+import { ReviewThreadEntry } from "./review-thread";
 import { invoiceDate, useBlockedPreview } from "./screen-shared";
 import { assignmentPath, listFocusId, ReviewEmpty, reviewE2e, reviewHasParty, reviewIsSplit, reviewLineFocus, reviewListPath, reviewSuggestion } from "./review-shared";
 
@@ -569,6 +570,7 @@ export function ReviewQueue({
           missingBoth={missingBoth}
           jevFilled={jevFilled}
         />
+        <ReviewThreadEntry transactionId={card.transaction_id} holdWrites={holdWrites} approveDisabled={!settled || nextPick != null || !approvable} onApprove={runApprove} />
       </div>
       {pickProject ? (
         <ProjectPickSheet

@@ -150,6 +150,25 @@ export function CameraIcon(props: IconProps) {
   );
 }
 
+/** FLOW-957: attach a file to a note. */
+export function PaperclipIcon(props: IconProps) {
+  return (
+    <Svg size={20} stroke={2} {...props}>
+      <path d="M21.4 11.1l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5" />
+    </Svg>
+  );
+}
+
+/** FLOW-957: send a note. Points left, the way the line reads in Hebrew. */
+export function SendIcon(props: IconProps) {
+  return (
+    <Svg size={20} stroke={2} {...props}>
+      <path d="M19 12H5" />
+      <path d="M11 6l-6 6 6 6" />
+    </Svg>
+  );
+}
+
 export function InfoIcon({ size = 20 }: { size?: number }) {
   return (
     <Svg size={size} stroke={2}>

@@ -38,6 +38,7 @@ import { lineSplitRowHint, useLineSplitQuery, useLoanSplitFlag } from "./line-sp
 import { ReservedMenuSlot, saveNewProject, useBlockedPreview, withChoice } from "./screen-shared";
 import { TransactionTopBar } from "./transaction-top-bar";
 import { TxnFooter, TxnHead } from "./transaction-head";
+import { TransactionThread } from "./transaction-thread";
 import { TxnRecurring } from "./transaction-recurring";
 import { TxnJournal, journalEditable, journalOpens, journalShown } from "./transaction-journal";
 import { useLineJournalQuery, type LineJournal } from "../line-journal";
@@ -679,6 +680,7 @@ export function TransactionScreen({
         {lineMeta.isError && lineMeta.data == null ? (
           <LoanReadError label="פרטי הבנק" busy={lineMeta.isFetching} onRetry={() => { void lineMeta.refetch(); }} />
         ) : null}
+        {sample ? null : <TransactionThread transactionId={txn.id} holdWrites={holdWrites} />}
         {sampleNoFooter ? null : <TxnFooter txn={txn} meta={meta ?? undefined} />}
         {quietJournal ? <TxnJournal key={txn.id} journal={quietJournal} bankName={meta?.account ?? null} collapsible editTo={journalEdit} /> : null}
         </div>
