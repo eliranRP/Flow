@@ -2,6 +2,8 @@
 import { describe, expect, it } from "vitest";
 import {
   budgetPercent,
+  cardStatus,
+  searchWithWeek,
   countedNote,
   countsText,
   linesText,
@@ -89,5 +91,23 @@ describe("the figures", () => {
   it("shows no change with no lines or no week before", () => {
     expect(profitChange({ lines: 0, profit_minor: 0n, prev_profit_minor: -205_000n })).toBeNull();
     expect(profitChange({ lines: 4, profit_minor: 100n, prev_profit_minor: null })).toBeNull();
+  });
+});
+
+describe("searchWithWeek", () => {
+  it("adds the week and keeps the rest", () => {
+    expect(searchWithWeek("", "2026-10-04")).toBe("?week=2026-10-04");
+    expect(searchWithWeek("?month=2026-10", "2026-10-04")).toBe("?month=2026-10&week=2026-10-04");
+    expect(searchWithWeek("?week=2026-09-27", "2026-10-04")).toBe("?week=2026-10-04");
+  });
+});
+
+describe("cardStatus", () => {
+  it("counts the open queue, then says all approved or no lines", () => {
+    expect(cardStatus({ lines: 23, waiting: 7 })).toEqual({ text: "7 מחכות לאישור", tone: "waiting" });
+    expect(cardStatus({ lines: 3, waiting: 1 })).toEqual({ text: "אחת מחכה לאישור", tone: "waiting" });
+    expect(cardStatus({ lines: 1, waiting: 0 })).toEqual({ text: "הכול מאושר", tone: "done" });
+    expect(cardStatus({ lines: 0, waiting: 0 })).toEqual({ text: "לא נכנסו תנועות", tone: "empty" });
+    expect(cardStatus({ lines: 0, waiting: 2 })).toEqual({ text: "2 מחכות לאישור", tone: "waiting" });
   });
 });

@@ -33,9 +33,12 @@ import { chargeChangeViews, lateCounts, openMonthDue, useCompanyExpectedQuery, u
 import { attentionRows } from "./attention-rows";
 import { useTransferMatchCountQuery } from "../transfer-match-count";
 import { reviewWaiting, useJevBookingCountQuery } from "../jev-booking-count";
+import { cardWeek, weeklyCardHidden } from "../weekly-card";
 
 // FLOW-517: the weekly summary sheet loads only when the push's `?week=` link opens Home.
 const WeeklySummaryRoute = /* @__PURE__ */ lazy(() => import("./weekly-summary-sheet").then((m) => ({ default: m.WeeklySummaryRoute })));
+// FLOW-956: last week's card, Sunday to Tuesday; it and its read load in their own chunk too.
+const WeeklySummaryCardSlot = /* @__PURE__ */ lazy(() => import("./weekly-summary-card").then((m) => ({ default: m.WeeklySummaryCardSlot })));
 
 export { attentionRows };
 
@@ -230,6 +233,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const navigateTo = (key: string) => {
     void navigate(homeMonthPath(key, location.search, currentKey), { replace: true });
   };
+  const weekly = previewing || !isCurrent ? null : cardWeek(today);
 
   return withWeekly(
     <CashHome
@@ -261,6 +265,11 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       forecast={forecast != null && forecast.show ? forecast.minor : null}
       onStepMonth={navigateTo}
       checklist={isCurrent ? <SetupHomeSlot emptyHome={false} /> : null}
+      weekly={weekly == null || weeklyCardHidden(weekly) ? null : (
+        <Suspense fallback={null}>
+          <WeeklySummaryCardSlot weekStart={weekly} />
+        </Suspense>
+      )}
       company={previewing ? undefined : <CompanySwitcher fallbackName={dashboard.data?.name} />}
     />,
   );
@@ -282,6 +291,7 @@ export function CashHome({
   onAttentionRetry,
   example,
   checklist,
+  weekly,
   company,
   sameDay = null,
   forecast = null,
@@ -306,6 +316,8 @@ export function CashHome({
   /** Storybook sample label. The live home never passes it. */
   example?: ReactNode;
   checklist?: ReactNode;
+  /** FLOW-956: last week's summary card, under the band (Sunday to Tuesday, the current month). */
+  weekly?: ReactNode;
   /** FLOW-601: the company's name, which opens the חברה sheet, on the band's row 1. */
   company?: ReactNode;
   /** FLOW-364: the previous month's figures up to today's day, from cash_month_to_day (the current month only). */
@@ -403,6 +415,8 @@ export function CashHome({
           </div>
         </TopBand>
       </div>
+
+      {weekly}
 
       {baseRow == null ? null : (
         <div className="m-page-enter" style={pageEnterStyle(1)}>
