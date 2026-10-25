@@ -1,0 +1,1 @@
+Photos and files on a transaction upload and open again (FLOW-957). Flow's build leaves out supabase-js's storage client to keep the first load small, so every upload failed in the app before a request was sent. The thread now calls the Storage REST API directly.
