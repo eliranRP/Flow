@@ -1130,6 +1130,62 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
+                },"transaction_files": {
+                  Row: {
+                    "bytes": number,"company_id": string,"created_at": string,"file_name": string,"id": string,"mercury_key": string | null,"mime": string,"note_id": string | null,"removed_at": string | null,"source": string,"storage_path": string,"transaction_id": string,"uploaded_by": string | null
+                  }
+                  Insert: {
+                    "bytes": number,"company_id": string,"created_at"?: string,"file_name": string,"id"?: string,"mercury_key"?: string | null,"mime": string,"note_id"?: string | null,"removed_at"?: string | null,"source": string,"storage_path": string,"transaction_id": string,"uploaded_by"?: string | null
+                  }
+                  Update: {
+                    "bytes"?: number,"company_id"?: string,"created_at"?: string,"file_name"?: string,"id"?: string,"mercury_key"?: string | null,"mime"?: string,"note_id"?: string | null,"removed_at"?: string | null,"source"?: string,"storage_path"?: string,"transaction_id"?: string,"uploaded_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "transaction_files_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "transaction_files_note_id_fkey"
+      columns: ["note_id"]
+isOneToOne: false
+      referencedRelation: "transaction_notes"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "transaction_files_transaction_id_fkey"
+      columns: ["transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"transaction_notes": {
+                  Row: {
+                    "author_id": string | null,"body": string,"company_id": string,"created_at": string,"id": string,"mercury_push": string | null,"removed_at": string | null,"source": string,"transaction_id": string,"updated_at": string
+                  }
+                  Insert: {
+                    "author_id"?: string | null,"body": string,"company_id": string,"created_at"?: string,"id"?: string,"mercury_push"?: string | null,"removed_at"?: string | null,"source": string,"transaction_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "author_id"?: string | null,"body"?: string,"company_id"?: string,"created_at"?: string,"id"?: string,"mercury_push"?: string | null,"removed_at"?: string | null,"source"?: string,"transaction_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "transaction_notes_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "transaction_notes_transaction_id_fkey"
+      columns: ["transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"transactions": {
                   Row: {
                     "amount_gross": number,"amount_net": number,"amount_original": number,"attachments": NonNullable<Json>,"cash_date": string | null,"category_assigned": boolean,"category_id": string | null,"category_suggested": boolean,"company_id": string,"created_at": string,"currency": string,"customer_id": string | null,"description": string,"direction": Database["public"]['Enums']["txn_direction"],"doc_date": string,"doc_kind": Database["public"]['Enums']["doc_kind"],"external_id": string | null,"fx_rate": number | null,"fx_rate_date": string | null,"id": string,"idempotency_key": string,"in_cash_override": boolean | null,"in_pnl_override": boolean | null,"line_status": Database["public"]['Enums']["line_status"],"linked_external_id": string | null,"pnl_role": Database["public"]['Enums']["pnl_role"] | null,"project_assigned": boolean,"project_id": string | null,"provider_meta": NonNullable<Json>,"removed_at": string | null,"source": Database["public"]['Enums']["txn_source"],"supplier_id": string | null,"updated_at": string,"user_assigned": boolean,"vat_amount": number,"vat_status": Database["public"]['Enums']["vat_status"]
@@ -1290,6 +1346,12 @@ isOneToOne: false
             "accept_invite":
 { Args: { "p_invite_id": string }; Returns: Json
                            },
+"add_transaction_file":
+{ Args: { "p_bytes": number,"p_file_name": string,"p_mime": string,"p_note_id": string,"p_path": string,"p_transaction_id": string }; Returns: string
+                           },
+"add_transaction_note":
+{ Args: { "p_body": string,"p_transaction_id": string }; Returns: string
+                           },
 "answer_push_prompt":
 { Args: { "p_yes": boolean }; Returns: Json
                            },
@@ -1425,6 +1487,9 @@ isOneToOne: false
 "dismiss_recurring_alert":
 { Args: { "p_key": string,"p_kind": string }; Returns: Json
                            },
+"edit_transaction_note":
+{ Args: { "p_body": string,"p_note_id": string }; Returns: Json
+                           },
 "expected_months":
 { Args: { "p_months"?: number,"p_project_id"?: string,"p_today"?: string }; Returns: Json
                            },
@@ -1480,6 +1545,9 @@ isOneToOne: false
                            },
 "get_transaction":
 { Args: { "p_id": string }; Returns: Json
+                           },
+"get_transaction_thread":
+{ Args: { "p_transaction_id": string }; Returns: Json
                            },
 "invite_member":
 { Args: { "p_email": string,"p_role"?: string }; Returns: Json
@@ -1584,6 +1652,9 @@ isOneToOne: false
 "mcp_add_loan":
 { Args: { "p_amortization_months"?: number,"p_annual_rate_ppm": number,"p_currency": string,"p_escrow_minor": number,"p_idempotency_key": string,"p_interest_only_months"?: number,"p_kind"?: string,"p_name": string,"p_payment_minor": number,"p_principal_minor": number,"p_project_id"?: string,"p_start_date": string,"p_term_months": number }; Returns: Json
                            },
+"mcp_add_transaction_note":
+{ Args: { "p_body": string,"p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
+                           },
 "mcp_answer_bank_account":
 { Args: { "p_account_id": string,"p_idempotency_key": string,"p_slot": number,"p_sync": boolean }; Returns: Json
                            },
@@ -1655,6 +1726,9 @@ isOneToOne: false
 "mcp_dismiss_invoice_match":
 { Args: { "p_idempotency_key": string,"p_invoice_id": string,"p_transaction_id": string }; Returns: Json
                            },
+"mcp_edit_transaction_note":
+{ Args: { "p_body": string,"p_idempotency_key": string,"p_note_id": string }; Returns: Json
+                           },
 "mcp_hide_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string }; Returns: Json
                            },
@@ -1690,6 +1764,12 @@ isOneToOne: false
                            },
 "mcp_remove_project_forecast_row":
 { Args: { "p_idempotency_key": string,"p_month": string,"p_project_id": string,"p_row_key": string }; Returns: Json
+                           },
+"mcp_remove_transaction_file":
+{ Args: { "p_file_id": string,"p_idempotency_key": string }; Returns: Json
+                           },
+"mcp_remove_transaction_note":
+{ Args: { "p_idempotency_key": string,"p_note_id": string }; Returns: Json
                            },
 "mcp_rename_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_name": string }; Returns: Json
@@ -1820,6 +1900,15 @@ isOneToOne: false
 "mcp_update_project":
 { Args: { "p_id": string,"p_idempotency_key": string,"p_patch": Json }; Returns: Json
                            },
+"mercury_note_push_target":
+{ Args: { "p_note_id": string }; Returns: Json
+                           },
+"mercury_note_pushed":
+{ Args: { "p_note_id": string,"p_state": string,"p_updated_at": string }; Returns: boolean
+                           },
+"mercury_note_pushes":
+{ Args: { "p_company": string }; Returns: Json
+                           },
 "merge_category":
 { Args: { "p_from": string,"p_into": string }; Returns: undefined
                            },
@@ -1918,6 +2007,9 @@ isOneToOne: false
               "amount_minor": number,"description": string,"doc_date": string,"id": string,"source": string
             }[]
                            },
+"record_mercury_file":
+{ Args: { "p_bytes": number,"p_company": string,"p_file_name": string,"p_mime": string,"p_path": string,"p_transaction_id": string }; Returns: string
+                           },
 "recurring_changes":
 { Args: { "p_today"?: string }; Returns: Json
                            },
@@ -1935,6 +2027,12 @@ isOneToOne: false
                            },
 "remove_project_forecast_row":
 { Args: { "p_month": string,"p_project_id": string,"p_row_key": string }; Returns: Json
+                           },
+"remove_transaction_file":
+{ Args: { "p_file_id": string }; Returns: string
+                           },
+"remove_transaction_note":
+{ Args: { "p_note_id": string }; Returns: string
                            },
 "rename_category":
 { Args: { "p_category_id": string,"p_name": string }; Returns: Json
@@ -2098,11 +2196,17 @@ isOneToOne: false
 "switch_company":
 { Args: { "p_company_id": string }; Returns: Json
                            },
+"sync_mercury_threads":
+{ Args: { "p_company": string,"p_items": Json }; Returns: Json
+                           },
 "sync_review_queue":
 { Args: { "p_company_id": string }; Returns: number
                            },
 "touch_mcp_credential":
 { Args: { "p_id": string }; Returns: undefined
+                           },
+"transaction_thread_counts":
+{ Args: { "p_ids": (string)[] }; Returns: Json
                            },
 "undismiss_recurring_alert":
 { Args: { "p_key": string,"p_kind": string }; Returns: Json
