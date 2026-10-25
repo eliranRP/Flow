@@ -19,12 +19,14 @@ export function formatAmount(
   currency = "ILS",
   direction?: "income" | "expense",
   keepZeroCents = false,
+  compact = false,
 ): string {
   return formatAmountText(agorot, currency, {
     detail: presentation === "detail",
     direction,
     plus: direction === "income",
     keepZeroCents,
+    compact,
   });
 }
 
@@ -51,6 +53,8 @@ type AmountProps = {
   cents?: "always";
   /** FLOW-366b: with cents="always", a whole amount keeps its ".00" (the month lines rows, as the board draws them). */
   zeroCents?: boolean;
+  /** The band's figures: a whole amount of 100,000 or more reads in K or M ($142K, $1.23M). */
+  compact?: boolean;
   /**
    * A fitted size only: figures that sit side by side share one size. `onFit` hears the step this figure
    * needs to fit, and `minStep` (the largest step of the row) draws it at least that small.
@@ -113,6 +117,7 @@ export function Amount({
   signless = false,
   cents,
   zeroCents = false,
+  compact = false,
   onFit,
   minStep = 0,
 }: AmountProps) {
@@ -120,7 +125,7 @@ export function Amount({
   const [step, setStep] = useState(0);
   const shown = cents === "always" ? "detail" : presentation;
   // Money in gets a plus (decision 0181). Only a non-zero figure with no loss: zero has no sign.
-  const text = formatAmount(agorot, shown, currency, direction ?? (income && !signless && !loss && agorot > 0n ? "income" : undefined), zeroCents);
+  const text = formatAmount(agorot, shown, currency, direction ?? (income && !signless && !loss && agorot > 0n ? "income" : undefined), zeroCents, compact);
   useLayoutEffect(() => {
     const fit = fitSteps(size);
     if (fit == null) return;

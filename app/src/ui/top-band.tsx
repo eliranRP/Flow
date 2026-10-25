@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode, type Ref, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type Ref, type RefObject } from "react";
 import { ChevronDownIcon } from "./icons";
 import { Wordmark } from "./wordmark";
 
@@ -159,6 +159,32 @@ export function BandCompany({
   onOpen: () => void;
   buttonRef?: Ref<HTMLButtonElement>;
 }) {
+  const nameRef = useRef<HTMLSpanElement>(null);
+  // A name too long for the row steps down one size before it ellipsizes.
+  useLayoutEffect(() => {
+    const node = nameRef.current;
+    const row = node?.closest(".ui-band-row") ?? node?.parentElement;
+    if (node == null || row == null) return;
+    const measure = () => {
+      node.classList.remove("ui-band-company-name-small");
+      node.classList.toggle("ui-band-company-name-small", node.scrollWidth > node.clientWidth);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(row);
+    let cancelled = false;
+    // jsdom has no FontFaceSet. The assertion is the runtime check.
+    const fonts = document.fonts as FontFaceSet | undefined;
+    if (fonts != null) {
+      void fonts.ready.then(() => {
+        if (!cancelled) measure();
+      });
+    }
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+    };
+  }, [name]);
   return (
     <button
       ref={buttonRef}
@@ -168,7 +194,7 @@ export function BandCompany({
       aria-label={`חברה: ${name}`}
       onClick={onOpen}
     >
-      <span className="ui-band-company-name" data-clip-ok="">{name}</span>
+      <span ref={nameRef} className="ui-band-company-name" dir="auto" data-clip-ok="">{name}</span>
       <ChevronDownIcon size={14} />
     </button>
   );

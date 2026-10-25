@@ -133,7 +133,7 @@ export function HomeFigures({ monthKey, figures, search, animate }: { monthKey: 
       <div className="ui-band-net">
         {figures.rows.map((row, index) => (
           <span key={row.currency} className="ui-band-net-line">
-            <Amount agorot={row.net_minor} currency={row.currency} size={multi || index > 0 ? "display" : "hero"} />
+            <Amount agorot={row.net_minor} currency={row.currency} size={multi || index > 0 ? "display" : "hero"} compact />
           </span>
         ))}
       </div>

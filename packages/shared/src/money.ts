@@ -97,7 +97,25 @@ function currencyPrefix(currency: string): string {
   return `${currency} `;
 }
 
-function formatUnsignedMinor(abs: bigint, currency: string, detail: boolean, keepZeroCents = false): string {
+/** From this many whole units a compact figure reads in K, M or B (owner, 2026-10-25). */
+const COMPACT_FROM = 100_000;
+
+/** A whole amount of at least COMPACT_FROM in three significant digits: 142K, 1.23M, 12.3M. */
+function compactMajor(major: number): string {
+  const units: [number, string][] = [[1e9, "B"], [1e6, "M"], [1e3, "K"]];
+  for (const [index, [size, suffix]] of units.entries()) {
+    if (major < size) continue;
+    const value = major / size;
+    const rounded = Number(value.toFixed(value >= 100 ? 0 : value >= 10 ? 1 : 2));
+    // 999,600 rounds to 1000K: it reads as the next unit up, 1M.
+    const up = units[index - 1];
+    if (rounded >= 1000 && up != null) return `1${up[1]}`;
+    return `${String(rounded)}${suffix}`;
+  }
+  return String(major);
+}
+
+function formatUnsignedMinor(abs: bigint, currency: string, detail: boolean, keepZeroCents = false, compact = false): string {
   const prefix = currencyPrefix(currency);
   if (detail && (keepZeroCents || abs % 100n !== 0n)) {
     const whole = (abs / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -106,6 +124,7 @@ function formatUnsignedMinor(abs: bigint, currency: string, detail: boolean, kee
   }
   const major = wholeShekels(abs);
   if (major === 0) return `${prefix}0`;
+  if (compact && major >= COMPACT_FROM) return `${prefix}${compactMajor(major)}`;
   const digits = major.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   return `${prefix}${digits}`;
 }
@@ -122,6 +141,8 @@ type FormatAmountOptions = {
   plus?: boolean;
   /** FLOW-366b: a detail figure keeps ".00" on a whole amount (the month lines rows). Off by default. */
   keepZeroCents?: boolean;
+  /** A whole figure of 100,000 or more in K, M or B (the band's figures). Ignored with `detail`. */
+  compact?: boolean;
 };
 
 /**
@@ -133,7 +154,7 @@ export function formatAmountText(minor: bigint, currency = "ILS", options?: Form
   const detail = options?.detail === true;
   const direction = options?.direction;
   const abs = minor < 0n ? -minor : minor;
-  const body = formatUnsignedMinor(abs, currency, detail, options?.keepZeroCents === true);
+  const body = formatUnsignedMinor(abs, currency, detail, options?.keepZeroCents === true, options?.compact === true);
   if (shownAsZero(abs, detail)) return body;
   if (direction === "expense") return `−${body}`;
   if (direction === "income") return options?.plus === true ? `+${body}` : body;
