@@ -93,6 +93,21 @@ describe("formatAmountText", () => {
     expect(formatAmountText(10_000n, "EUR")).toBe("EUR 100");
   });
 
+  it("writes a whole figure of 100,000 or more in K, M or B when compact", () => {
+    const compact = (major: number, currency = "USD") => formatAmountText(BigInt(major) * 100n, currency, { compact: true });
+    expect(compact(99_999)).toBe("$99,999");
+    expect(compact(100_000)).toBe("$100K");
+    expect(compact(142_418)).toBe("$142K");
+    expect(compact(999_400)).toBe("$999K");
+    expect(compact(999_600)).toBe("$1M");
+    expect(compact(1_234_567)).toBe("$1.23M");
+    expect(compact(1_500_000, "ILS")).toBe("₪1.5M");
+    expect(compact(12_345_678)).toBe("$12.3M");
+    expect(compact(2_000_000_000)).toBe("$2B");
+    expect(formatAmountText(-14_241_800n, "USD", { compact: true })).toBe("−$142K");
+    expect(formatAmountText(14_241_850n, "USD", { compact: true, detail: true })).toBe("$142,418.50");
+  });
+
   it("never signs a figure that rounds to zero", () => {
     expect(formatAmountText(-30n, "ILS", { direction: "expense" })).toBe("₪0");
     expect(formatAmountText(50n, "USD", { direction: "expense" })).toBe("$0");

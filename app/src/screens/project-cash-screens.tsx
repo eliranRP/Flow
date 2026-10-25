@@ -159,8 +159,8 @@ export function ProjectCashOverview({
               <div className="ui-project-profits t-detail">
                 {rows.map((row, index) => (
                   <p key={row.currency}>
-                    {/* As on Home: the band's figure is whole and steps down until it fits. */}
-                    <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} size={index > 0 ? "display" : "hero"} />
+                    {/* As on Home: the band's figure is whole, short from 100K, and steps down until it fits. */}
+                    <Amount agorot={row.net_minor} currency={row.currency} loss={row.net_minor < 0n} size={index > 0 ? "display" : "hero"} compact />
                   </p>
                 ))}
               </div>
