@@ -1,5 +1,5 @@
 import type { WeeklySummary } from "@flow/shared";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { WeeklySummarySheet, type WeeklySummaryState } from "./weekly-summary-sheet";
 
 // FLOW-517: one story per board state (board "Weekly summary", page "Ready for dev"). Invented
