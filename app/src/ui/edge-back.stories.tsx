@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { EdgeBackMark } from "./edge-back";
 import { List, ListRow } from "./list-row";
 import { ScreenHeader } from "./screen-header";

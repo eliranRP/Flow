@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Avatar } from "./avatar";
 
 // The board's neutral circle: 36px, the avatar fill and secondary text in both themes (FLOW-445).

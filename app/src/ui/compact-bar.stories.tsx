@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Amount } from "./amount";
 import { CompactBar } from "./compact-bar";
 import { IconButton } from "./icon-button";

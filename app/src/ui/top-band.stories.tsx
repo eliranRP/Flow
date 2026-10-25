@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, waitFor } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, waitFor } from "storybook/test";
 import type { ReactNode } from "react";
 import { Amount } from "./amount";
 import { longHebrew, largeAgorot } from "./story-support";

@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { userEvent, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { SettingsScreen } from "./flow-screens";
 import { BusinessScreen } from "./business-screen";
 import { StoryRoute } from "../ui/story-route";

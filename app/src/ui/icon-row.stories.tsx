@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { IconRow } from "./icon-row";
 import { ChartIcon, ProjectsIcon, TagIcon } from "./icons";
 import { forceReducedMotion } from "./reduced-motion";

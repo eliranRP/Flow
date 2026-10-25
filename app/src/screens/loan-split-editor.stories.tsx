@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fireEvent, waitFor, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, fireEvent, waitFor, within } from "storybook/test";
 import { useState } from "react";
 import type { LoanCategory } from "./loan-detail-data";
 import type { LoanChoice } from "./loan-match-api";

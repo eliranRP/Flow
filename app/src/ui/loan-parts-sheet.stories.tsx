@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { LoanPartsSheet, type LoanPartField, type LoanPartKey } from "./loan-parts-sheet";
 
@@ -71,7 +71,12 @@ export const NeedsReview: Story = { args: { note: "סכום השורה עלה ב
 /** A dollar loan. Largest amounts still fit at 320. */
 export const DollarsLarge: Story = {
   args: { prefix: "$", total: "$9,999,999.99", fields: [{ part: "principal", value: "9999999.99" }, { part: "interest", value: "0" }, { part: "escrow", value: "0" }] },
-  parameters: { viewport: { defaultViewport: "flow320" } },
+  globals: {
+    viewport: {
+      value: "flow320",
+      isRotated: false
+    }
+  },
 };
 /** The stored parts failed to load: the line says so and ניסיון חוזר reads them again. */
 export const ReadFailed: Story = { args: { problem: "לא הצלחנו לטעון את הפיצול.", retry: true } };
@@ -95,4 +100,9 @@ const SHOWN: LoanPartField[] = [
   { part: "escrow", value: "₪380" },
   { part: "fees", value: "₪40" },
 ];
-export const EditButton: Story = { args: { edit: true, fields: SHOWN }, parameters: { viewport: { defaultViewport: "flow390" } } };
+export const EditButton: Story = { args: { edit: true, fields: SHOWN }, globals: {
+  viewport: {
+    value: "flow390",
+    isRotated: false
+  }
+} };

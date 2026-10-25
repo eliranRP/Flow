@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { TransactionDetail } from "@flow/shared";
 import { TransactionScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";

@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { JevTag, ReversalTag, SuggestTag } from "./suggest-tag";
 import { padded } from "./story-support";
 

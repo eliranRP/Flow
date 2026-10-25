@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import { ChangeForm } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar } from "../ui/screen-stories-support";
@@ -86,8 +86,13 @@ function ChangeStory({
 
 export const ChangeSheet: Story = {
   name: "Summary (suggested)",
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <ChangeStory />,
+  globals: {
+    viewport: {
+      value: "flow390-short",
+      isRotated: false
+    }
+  },
 };
 
 /** FLOW-704: Jev's fill says הצעת Jev on שינוי שיוך, as on the card. */
@@ -98,8 +103,13 @@ export const ChangeJevSummary: Story = {
 
 export const ChangeProjectPicker: Story = {
   name: "Project picker",
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <ChangeStory entry="/review/change?item=r1&pick=project" />,
+  globals: {
+    viewport: {
+      value: "flow390-short",
+      isRotated: false
+    }
+  },
 };
 
 /** FLOW-831: a row tap only moves the check, so שמירה is enabled once the check differs from the saved project. */
@@ -138,14 +148,24 @@ export const ChangeCategoryChoicePending: Story = {
 
 export const ChangeProjectLoading: Story = {
   name: "Project picker loading",
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <ChangeStory entry="/review/change?item=r1&pick=project" loading />,
+  globals: {
+    viewport: {
+      value: "flow390-short",
+      isRotated: false
+    }
+  },
 };
 
 export const ChangeCategoryPicker: Story = {
   name: "Category picker",
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <ChangeStory entry="/review/change?item=r1&pick=category" />,
+  globals: {
+    viewport: {
+      value: "flow390-short",
+      isRotated: false
+    }
+  },
 };
 
 const reversalCategories = [
@@ -156,14 +176,24 @@ const reversalCategories = [
 
 export const ChangeReversalPicker: Story = {
   name: "Category picker with reversals",
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <ChangeStory entry="/review/change?item=r1&pick=category" categories={reversalCategories} />,
+  globals: {
+    viewport: {
+      value: "flow390-short",
+      isRotated: false
+    }
+  },
 };
 
 export const ChangeSaveError: Story = {
   name: "Save error",
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <ChangeStory saveError />,
+  globals: {
+    viewport: {
+      value: "flow390-short",
+      isRotated: false
+    }
+  },
 };
 
 export const ChangeLongHebrew: Story = {
@@ -203,6 +233,11 @@ const groupedChangeProjects = [
 
 export const ChangeProjectPickerGrouped: Story = {
   name: "Project picker, grouped",
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <ChangeStory entry="/review/change?item=r1&pick=project" projects={groupedChangeProjects} />,
+  globals: {
+    viewport: {
+      value: "flow390-short",
+      isRotated: false
+    }
+  },
 };

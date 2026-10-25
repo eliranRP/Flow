@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { List, ListRow } from "./list-row";
 import { SplitPartsHint } from "./split-parts-hint";
 import { StoryRoute } from "./story-route";

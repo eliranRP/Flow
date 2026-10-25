@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { userEvent, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import type { TransactionDetail } from "@flow/shared";
 import type { LineJournal } from "../line-journal";
 import type { TxnMeta } from "../txn-meta";

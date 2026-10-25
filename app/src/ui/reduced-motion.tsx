@@ -1,4 +1,4 @@
-import type { Decorator } from "@storybook/react";
+import type { Decorator } from "@storybook/react-vite";
 import { useLayoutEffect, type ReactNode } from "react";
 
 function reducedMotionList(query: string): MediaQueryList {

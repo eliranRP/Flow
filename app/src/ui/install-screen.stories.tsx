@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { InstallScreen } from "./install-screen";
 
 /** FLOW-502 follow-up: Chrome and Firefox on iPhone show their own share steps, not Safari's •••. */

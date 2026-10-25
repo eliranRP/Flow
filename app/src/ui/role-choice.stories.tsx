@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { RoleChoice, type RoleChoiceValue } from "./role-choice";
 import { padded } from "./story-support";

@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { JUNIPER_MONTH_PROFIT } from "../dev/profit-month-sample";
 import { ProjectMonthProfitScreen } from "./project-month-profit-screen";
 import { StoryRoute } from "../ui/story-route";

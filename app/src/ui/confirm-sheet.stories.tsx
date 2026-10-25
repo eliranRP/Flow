@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Button } from "./button";
 import { ConfirmSheet } from "./confirm-sheet";
 import { longHebrew, padded } from "./story-support";

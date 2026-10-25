@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { allTime, presetPeriod, windowLabel, type PeriodChoice } from "../period";
 import { Amount } from "./amount";
 import { PeriodSwipe } from "./period-swipe";

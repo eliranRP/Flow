@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { useState } from "react";
 import type { TransactionLoanSplit } from "@flow/shared";
 import { LoanMatchSampleProvider, type LoanMatchApi } from "./loan-match-api";
@@ -133,12 +133,17 @@ export const TransactionLoanMatched: Story = {
  */
 export const TransactionLoanEditing: Story = {
   name: "Loan payment, split sheet",
-  parameters: { viewport: { defaultViewport: "flow375-se" } },
   render: () => <LoanMatchStory />,
   play: async ({ canvasElement }) => {
     await userEvent.click(await within(canvasElement).findByRole("button", { name: LOAN_ROW }));
     const dialog = await storyBody(canvasElement).findByRole("dialog", { name: "משכנתא לדוגמה" });
     await waitFor(() => expect(within(dialog).getByRole("button", { name: "עריכת הפיצול" })).toBeEnabled());
+  },
+  globals: {
+    viewport: {
+      value: "flow375-se",
+      isRotated: false
+    }
   },
 };
 
@@ -164,13 +169,17 @@ export const TransactionLoanEditSplit: Story = {
 export const TransactionLoanEditSplitSe: Story = {
   ...TransactionLoanEditSplit,
   name: "Loan payment, edit the split, 375x667",
-  parameters: { viewport: { defaultViewport: "flow375-se" } },
+  globals: {
+    viewport: {
+      value: "flow375-se",
+      isRotated: false
+    }
+  },
 };
 
 /** The server's balance check refuses the save: an error toast, and the sheet keeps the values. */
 export const TransactionLoanSaveError: Story = {
   name: "Loan payment, save refused by the balance check",
-  parameters: { viewport: { defaultViewport: "flow375-se" } },
   render: () => <LoanMatchStory saveFails />,
   play: async ({ canvasElement }) => {
     await userEvent.click(await within(canvasElement).findByRole("button", { name: LOAN_ROW }));
@@ -188,6 +197,12 @@ export const TransactionLoanSaveError: Story = {
     await userEvent.type(within(dialog).getByLabelText("סכום, ריבית"), "1680");
     await userEvent.click(save);
     await body.findByText("התשלום גבוה מיתרת ההלוואה.");
+  },
+  globals: {
+    viewport: {
+      value: "flow375-se",
+      isRotated: false
+    }
   },
 };
 
@@ -208,22 +223,32 @@ export const TransactionLoanUnmatched: Story = {
 /** A viewer opens the parts read-only: no fields, no שמירה, no ביטול השיוך. */
 export const TransactionLoanViewerSheet: Story = {
   name: "Loan payment, viewer reads the parts",
-  parameters: { viewport: { defaultViewport: "flow375-se" } },
   render: () => <LoanMatchStory viewer />,
   play: async ({ canvasElement }) => {
     await userEvent.click(await within(canvasElement).findByRole("button", { name: LOAN_ROW }));
     const dialog = await storyBody(canvasElement).findByRole("dialog", { name: "משכנתא לדוגמה" });
     await expect(within(dialog).queryByRole("button", { name: "שמירה" })).toBeNull();
   },
+  globals: {
+    viewport: {
+      value: "flow375-se",
+      isRotated: false
+    }
+  },
 };
 
 /** A dollar loan on a dollar line: the sheet shows $. */
 export const TransactionLoanUsd: Story = {
   name: "Loan payment in dollars, split sheet",
-  parameters: { viewport: { defaultViewport: "flow375-se" } },
   render: () => <LoanMatchStory currency="USD" />,
   play: async ({ canvasElement }) => {
     await userEvent.click(await within(canvasElement).findByRole("button", { name: LOAN_ROW }));
     await storyBody(canvasElement).findByRole("dialog", { name: "משכנתא לדוגמה" });
+  },
+  globals: {
+    viewport: {
+      value: "flow375-se",
+      isRotated: false
+    }
   },
 };

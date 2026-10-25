@@ -1,4 +1,4 @@
-import type { Decorator, Meta, StoryObj } from "@storybook/react";
+import type { Decorator, Meta, StoryObj } from "@storybook/react-vite";
 import { Amount, type AmountPresentation, type AmountSize } from "./amount";
 import { padded } from "./story-support";
 

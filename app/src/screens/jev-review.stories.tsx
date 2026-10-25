@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { JEV_REVIEW_SAMPLE, JevReviewCard, JevReviewLayout } from "./jev-review-card";
 
 const meta = {

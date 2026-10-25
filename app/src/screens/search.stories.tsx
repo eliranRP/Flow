@@ -1,5 +1,5 @@
 import type { SearchRow } from "@flow/shared";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StoryRoute } from "../ui/story-route";
 import { SearchScreen, type SearchSample } from "./search";
 

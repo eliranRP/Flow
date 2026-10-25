@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { cash, investment, project, thisMonth } from "../dev/project-cash-sample";
 import { kindNextSample } from "../dev/project-kinds-next-sample";
 import { devProjectsCash } from "../dev/projects-sample";

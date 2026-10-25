@@ -1,6 +1,6 @@
 import type { CashLine } from "@flow/shared";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { cashMonthKey } from "../cash";
 import { sampleCashLines, sampleCashLinesFlagged, sampleCashMonths } from "../dev/cash-sample";
 import { LINES_ORDERS, type LinesOrder } from "../cash-lines-groups";

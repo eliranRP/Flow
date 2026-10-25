@@ -1,5 +1,5 @@
 import type { PartyCharges } from "@flow/shared";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { PartyChargesBody } from "./related-charges";
 import { cheaperCharges, mailboxCharges, rentCharges, steadyCharges } from "./related-charges.sample";
 import { inSheet } from "./story-support";

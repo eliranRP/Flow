@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { InvoiceScreen } from "./invoice-screen";
 import { UnpaidScreen } from "./unpaid-screen";
 import { StoryRoute } from "../ui/story-route";
