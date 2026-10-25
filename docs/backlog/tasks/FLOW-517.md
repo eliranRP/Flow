@@ -4,7 +4,7 @@
 - **Files:** `supabase/migrations/<stamp>_weekly_summary.sql`, `supabase/tests/database/weekly_summary.test.sql`, `supabase/functions/_shared/push_send.ts`, `supabase/functions/_shared/webpush_test.ts`, `supabase/functions/flow-mcp/` (the `get_weekly_summary` tool and its test), `docs/mcp/TOOLS.md`, `packages/shared/src/database.types.ts`, `app/src/weekly-summary.ts`, `app/src/screens/weekly-summary-sheet.tsx`, `app/src/screens/HomeScreen.tsx` (opens the sheet from `?week=`), `app/src/ui/css/` (a new weekly summary file), their stories and tests, `docs/runbooks/push.md`, `docs/decisions/` (the next number), `docs/design/log/`, `docs/changelog.d/`.
 
 **Push**
-- [ ] The weekly push opens `/?week=<the week's Sunday, YYYY-MM-DD>`, so an old push still opens the week it was about. The text stays as it is (counts only, never an amount, [0084](../../decisions/0084-sql-counts.md)).
+- [ ] The weekly push opens `/?week=<the week's Sunday, YYYY-MM-DD>`, so an old push still opens the week it was about. The text stays as it is (counts only, never an amount: the owner's pick in FLOW-502, 2026-10-09).
 
 **Sheet (opened over Home, which shows the current month under it)**
 - [ ] Title "סיכום שבועי", the week under it ("ראשון 4 עד שבת 10 באוקטובר"), ✕. A tap on the scrim, a drag down or ✕ closes it and leaves `?week=` off the address; Home stays.
@@ -19,6 +19,6 @@
 - [ ] Motion: the sheet in 280ms ease-enter with the scrim; its blocks rise 8px and fade, staggered 40ms from 120ms; out 220ms ease-exit. Nothing moves under reduced motion.
 
 **Server and MCP**
-- [ ] One RPC for the week's figures for a company and a week (counts, the four sums in the base currency, the alert), the counts from SQL ([0084](../../decisions/0084-sql-counts.md)); a `get_weekly_summary` read tool in flow-mcp over it, listed in TOOLS.md.
+- [ ] One RPC for the week's figures for a company and a week (counts, the four sums in the base currency, the alert), every count and sum from SQL; a `get_weekly_summary` read tool in flow-mcp over it, listed in TOOLS.md.
 
 - **Acceptance:** stories of every board state at 320 and 393, dark and light, invented figures only; a unit test of the copy's singular and plural forms and of the pill's colour both ways; a test that the sheet opens from `?week=` and closing drops it; pgTAP for the RPC (a week window in Israel time, approved vs waiting, the sums adding up, another company's rows never counted); the push url test; design review against the boards. Open: which project wins the alert when several qualify ([open question](../../open-questions.md#which-project-alert-is-the-weekly-one)); until it is decided, the largest overrun in percent.
