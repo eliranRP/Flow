@@ -1163,13 +1163,13 @@ isOneToOne: false
                   ]
                 },"transaction_notes": {
                   Row: {
-                    "author_id": string | null,"body": string,"company_id": string,"created_at": string,"id": string,"mercury_push": string | null,"removed_at": string | null,"source": string,"transaction_id": string,"updated_at": string
+                    "author_id": string | null,"body": string,"company_id": string,"created_at": string,"edited_in_flow": boolean,"id": string,"removed_at": string | null,"source": string,"transaction_id": string,"updated_at": string
                   }
                   Insert: {
-                    "author_id"?: string | null,"body": string,"company_id": string,"created_at"?: string,"id"?: string,"mercury_push"?: string | null,"removed_at"?: string | null,"source": string,"transaction_id": string,"updated_at"?: string
+                    "author_id"?: string | null,"body": string,"company_id": string,"created_at"?: string,"edited_in_flow"?: boolean,"id"?: string,"removed_at"?: string | null,"source": string,"transaction_id": string,"updated_at"?: string
                   }
                   Update: {
-                    "author_id"?: string | null,"body"?: string,"company_id"?: string,"created_at"?: string,"id"?: string,"mercury_push"?: string | null,"removed_at"?: string | null,"source"?: string,"transaction_id"?: string,"updated_at"?: string
+                    "author_id"?: string | null,"body"?: string,"company_id"?: string,"created_at"?: string,"edited_in_flow"?: boolean,"id"?: string,"removed_at"?: string | null,"source"?: string,"transaction_id"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -1899,15 +1899,6 @@ isOneToOne: false
                            },
 "mcp_update_project":
 { Args: { "p_id": string,"p_idempotency_key": string,"p_patch": Json }; Returns: Json
-                           },
-"mercury_note_push_target":
-{ Args: { "p_note_id": string }; Returns: Json
-                           },
-"mercury_note_pushed":
-{ Args: { "p_note_id": string,"p_state": string,"p_updated_at": string }; Returns: boolean
-                           },
-"mercury_note_pushes":
-{ Args: { "p_company": string }; Returns: Json
                            },
 "merge_category":
 { Args: { "p_from": string,"p_into": string }; Returns: undefined
