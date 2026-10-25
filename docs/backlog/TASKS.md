@@ -410,6 +410,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-516"></a>[FLOW-516](tasks/FLOW-516.md) | Notifications: this device's own row, shared switches, connected devices and a test push | BUG |
 | <a id="flow-517"></a>[FLOW-517](tasks/FLOW-517.md) | Weekly summary: the Sunday push opens a summary sheet over Home | UI (design approved) |
 | <a id="flow-956"></a>[FLOW-956](tasks/FLOW-956.md) | Weekly summary card on Home, Sunday to Tuesday | UI (design approved) |
+| <a id="flow-957"></a>[FLOW-957](tasks/FLOW-957.md) | Notes and files on a transaction, with Mercury's note and attachments | UI (design approved) |
 
 | Id | Title | Type |
 | --- | --- | --- |
