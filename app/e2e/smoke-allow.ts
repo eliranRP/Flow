@@ -65,6 +65,8 @@ export const readRpcs = new Set([
   "search_transactions",
   "sumit_status",
   "weekly_summary",
+  "get_transaction_thread",
+  "transaction_thread_counts",
 ]);
 
 export function rpcName(url: string): string | null {
