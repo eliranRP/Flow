@@ -23,7 +23,9 @@ function setReducedMotion(reduce: boolean) {
     onchange: null,
     addEventListener: () => undefined,
     removeEventListener: () => undefined,
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- MediaQueryList still declares it
     addListener: () => undefined,
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- MediaQueryList still declares it
     removeListener: () => undefined,
     dispatchEvent: () => false,
   }));
