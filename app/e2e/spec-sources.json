@@ -266,6 +266,10 @@
       "dev/line-split-e2e.tsx",
       "screens/line-split.tsx"
     ],
+    "thread-upload.spec.ts": [
+      "screens/review-thread.tsx",
+      "transaction-thread.ts"
+    ],
     "toast.spec.ts": [
       "reviewer-preview.tsx",
       "ui/toast.tsx"
