@@ -257,7 +257,8 @@
   align-items: center;
   gap: var(--space-2);
   min-block-size: 44px;
-  margin-block-start: var(--space-2);
+  /* In line with the card and the "הבא בתור" peek: the page's side gutter. */
+  margin: var(--space-2) var(--space-side) 0;
   padding-inline: var(--space-3);
   border: 0;
   border-radius: var(--radius-chip);

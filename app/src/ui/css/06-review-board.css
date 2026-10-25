@@ -28,7 +28,8 @@
 
   .ui-review-queue .ui-review-counts,
   .ui-review-queue .ui-review-segments,
-  .ui-review-queue .ui-review-next {
+  .ui-review-queue .ui-review-next,
+  .ui-review-queue .ui-review-thread {
     margin-inline: var(--space-4);
   }
 
