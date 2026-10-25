@@ -1,7 +1,9 @@
 -- Read-only status for scripts/check-sumit-cron.sh.
 -- One line: ok, bad-daily, or bad-drain.
 -- The daily command is the connector refresh insert, copied exactly (one per company and provider since
--- FLOW-938, 20261021060558_mercury_connections.sql).
+-- FLOW-938, 20261021060558_mercury_connections.sql), for every provider but Mercury; Mercury's is
+-- flow-mercury-refresh, three times a day (20261025120000_mercury_refresh_three_times.sql). Either one
+-- wrong is bad-daily.
 -- The drain command reads Vault flow_sync_url and Vault cron_secret. Mercury rows use Vault
 -- flow_mercury_sync_url when it is set (FLOW-509, 20261013050000_mercury_sync_atomic.sql).
 -- It does not fall back to Kong and it does not embed a literal header.
@@ -10,7 +12,8 @@ with expected as (
         insert into public.connector_refresh_requests (company_id, provider)
         select distinct c.company_id, c.provider
         from public.connector_connections c
-        where not exists (
+        where c.provider <> 'mercury'
+          and not exists (
           select 1 from public.connector_refresh_requests r
           where r.company_id = c.company_id
             and r.provider = c.provider
@@ -62,6 +65,20 @@ drain_expected as (
       ) p;
     $cron$ as command
 ),
+mercury_expected as (
+  select $cron$
+        insert into public.connector_refresh_requests (company_id, provider)
+        select distinct c.company_id, c.provider
+        from public.connector_connections c
+        where c.provider = 'mercury'
+          and not exists (
+          select 1 from public.connector_refresh_requests r
+          where r.company_id = c.company_id
+            and r.provider = c.provider
+            and r.claimed_at is null
+        );
+      $cron$ as command
+),
 flags as (
   select
     exists (select 1 from pg_extension where extname = 'pg_net') as has_net,
@@ -94,6 +111,16 @@ select case
   when (
     select command from cron.job where jobname = 'flow-connector-daily'
   ) is distinct from (select command from expected)
+    then 'bad-daily'
+  when (select count(*) from cron.job where jobname = 'flow-mercury-refresh') <> 1
+    then 'bad-daily'
+  when (
+    select schedule from cron.job where jobname = 'flow-mercury-refresh'
+  ) is distinct from '0 3,11,19 * * *'
+    then 'bad-daily'
+  when (
+    select command from cron.job where jobname = 'flow-mercury-refresh'
+  ) is distinct from (select command from mercury_expected)
     then 'bad-daily'
   when has_secret and has_net and not has_url
     then 'bad-drain'
