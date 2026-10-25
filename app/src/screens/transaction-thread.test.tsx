@@ -5,12 +5,12 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
-import { mercuryNoteStatus, TransactionThread } from "./transaction-thread";
+import { mercuryNoteStatus, saveThreadDraft, TransactionThread } from "./transaction-thread";
 import { reviewThreadLabel } from "./review-thread";
 
 // FLOW-957: the thread on the transaction page. Invented names only.
 
-const calls = vi.hoisted(() => ({ rpc: [] as Array<{ name: string; args: unknown }> }));
+const calls = vi.hoisted(() => ({ rpc: [] as Array<{ name: string; args: unknown }>, uploads: [] as string[] }));
 
 const mercuryNote = { id: "m1", source: "mercury" as const, body: "Lumber for back deck, invoice #4471", mine: false, created_at: "2026-10-21T10:00:00Z", updated_at: "2026-10-21T10:00:00Z", edited: false, edited_in_flow: false };
 
@@ -28,6 +28,14 @@ const thread = {
 
 vi.mock("../lib/supabase", () => ({
   getSupabase: () => ({
+    storage: {
+      from: () => ({
+        upload: (path: string) => {
+          calls.uploads.push(path);
+          return Promise.resolve({ data: { path }, error: null });
+        },
+      }),
+    },
     auth: { onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => undefined } } }) },
     rpc: (name: string, args: unknown) => {
       calls.rpc.push({ name, args });
@@ -54,6 +62,7 @@ function wrap(children: ReactNode) {
 
 beforeEach(() => {
   calls.rpc.length = 0;
+  calls.uploads.length = 0;
 });
 
 describe("TransactionThread", () => {
@@ -93,6 +102,22 @@ describe("TransactionThread", () => {
     expect(screen.queryByRole("button", { name: "צירוף קובץ" })).toBeNull();
     expect(screen.queryByRole("button", { name: "עריכה" })).toBeNull();
     expect(screen.queryByRole("button", { name: "מחיקת ההערה" })).toBeNull();
+  });
+});
+
+describe("saveThreadDraft", () => {
+  it("saves a file without a note", async () => {
+    const photo = new File([new Uint8Array(10)], "image.jpg", { type: "image/jpeg" });
+    await saveThreadDraft("c1", "t1", { text: "  ", files: [photo] });
+    expect(calls.rpc.some((call) => call.name === "add_transaction_note")).toBe(false);
+    expect(calls.uploads).toHaveLength(1);
+    expect(calls.uploads[0]).toMatch(/^c1\/t1\/[0-9a-f-]{36}\.jpg$/);
+    expect(calls.rpc.find((call) => call.name === "add_transaction_file")?.args).toMatchObject({
+      p_transaction_id: "t1",
+      p_note_id: null,
+      p_file_name: "image.jpg",
+      p_mime: "image/jpeg",
+    });
   });
 });
 
