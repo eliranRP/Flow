@@ -2,7 +2,7 @@
 // own RPCs (not MCP): the session has no MCP token. The MCP tools write the same rows.
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { getSupabase } from "./lib/supabase";
+import { getSupabase, supabaseApi } from "./lib/supabase";
 import { useHomePreview } from "./preview";
 import { assertNoError } from "./use-write";
 import { waitForAccessToken } from "./wait-for-session";
@@ -178,8 +178,11 @@ export async function putThreadFile(companyId: string, transactionId: string, fi
   const problem = threadFileProblem(file);
   if (problem) throw new Error(problem);
   const path = `${companyId}/${transactionId}/${threadObjectName(file.name)}`;
-  const uploaded = await client().storage.from(THREAD_BUCKET).upload(path, file, { contentType: file.type, upsert: false });
-  if (uploaded.error) throw new Error(uploaded.error.message);
+  await storageCall(`object/${THREAD_BUCKET}/${objectPath(path)}`, {
+    method: "POST",
+    headers: { "content-type": file.type, "cache-control": "max-age=3600", "x-upsert": "false" },
+    body: file,
+  });
   return path;
 }
 
@@ -198,7 +201,35 @@ export async function recordThreadFile(transactionId: string, noteId: string | n
 
 /** A link to open a file, good for ten minutes. */
 export async function threadFileUrl(path: string): Promise<string> {
-  const signed = await client().storage.from(THREAD_BUCKET).createSignedUrl(path, 600);
-  if (signed.error) throw new Error(signed.error.message);
-  return signed.data.signedUrl;
+  const signed = await storageCall(`object/sign/${THREAD_BUCKET}/${objectPath(path)}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ expiresIn: 600 }),
+  });
+  const link = ((await signed.json()) as { signedURL?: unknown }).signedURL;
+  if (typeof link !== "string") throw new Error("storage");
+  return `${supabaseApi.url}/storage/v1${link}`;
+}
+
+/** Each folder and the name, URL-encoded. */
+function objectPath(path: string): string {
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+
+/**
+ * One Storage REST call as the signed-in user. Flow's build leaves supabase-js's storage client out
+ * (FLOW-804: it stands in a stub that throws), so the two calls the thread needs go straight to the API.
+ */
+async function storageCall(route: string, init: RequestInit): Promise<Response> {
+  const token = (await client().auth.getSession()).data.session?.access_token;
+  if (!token) throw new Error("session");
+  const headers = new Headers(init.headers);
+  headers.set("authorization", `Bearer ${token}`);
+  headers.set("apikey", supabaseApi.anonKey);
+  const response = await fetch(`${supabaseApi.url}/storage/v1/${route}`, { ...init, headers });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { message?: unknown } | null;
+    throw new Error(typeof body?.message === "string" ? body.message : `storage ${String(response.status)}`);
+  }
+  return response;
 }

@@ -1,7 +1,8 @@
 /**
- * FLOW-804: Flow uses no Supabase realtime or storage, yet supabase-js builds both clients in its
- * constructor, which puts about 80 KB of unused code on Home's first load. vite.config points
- * `@supabase/realtime-js` and `@supabase/storage-js` here. Using either one throws, so a feature
+ * FLOW-804: Flow uses neither supabase-js's realtime client nor its storage client (the transaction
+ * thread's files call the Storage REST API directly, transaction-thread.ts), yet supabase-js builds
+ * both clients in its constructor, which puts about 80 KB of unused code on Home's first load.
+ * vite.config points `@supabase/realtime-js` and `@supabase/storage-js` here. Using either one throws, so a feature
  * that needs them fails loudly and drops the alias. supabase-unused.test.ts checks this file
  * covers every call supabase-js makes on them.
  */

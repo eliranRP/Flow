@@ -27,6 +27,9 @@ const env = readSupabaseEnv({
 const url = env?.url ?? "";
 const anonKey = env?.anonKey ?? "";
 
+/** The project URL and public key, for the Storage REST calls (supabase-js's storage client is not in the build). */
+export const supabaseApi = { url, anonKey };
+
 export const supabase: SupabaseClient<Database> | null =
   url.length > 0 && anonKey.length > 0
     ? createClient<Database>(url, anonKey, {
