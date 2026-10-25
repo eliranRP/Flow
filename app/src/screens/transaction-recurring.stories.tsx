@@ -1,6 +1,6 @@
 import type { PartyCharges, PaymentRecurring, TransactionDetail } from "@flow/shared";
-import type { Meta, StoryObj } from "@storybook/react";
-import { userEvent, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { TxnRecurring } from "./transaction-recurring";
 import { cheaperCharges, mailboxCharges, steadyCharges } from "../ui/related-charges.sample";
 import { StoryRoute } from "../ui/story-route";

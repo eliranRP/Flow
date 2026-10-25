@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { paceSheetCopy } from "./pace";
 import { ChoiceSheet } from "./choice-sheet";
 import { BASIS_COPY, CURRENCY_COPY } from "./company-choices";

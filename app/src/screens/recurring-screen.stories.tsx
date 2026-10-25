@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { RecurringList } from "../ui/recurring-list";
 import { RECURRING_FIXTURE } from "../recurring-sample";
 import { recurringView } from "./recurring-screen";

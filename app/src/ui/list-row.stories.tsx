@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { BankIcon } from "./icons";
 import { KeptOutTag, lineTagText } from "./line-marks";
 import { List, ListRow, type ListLayout } from "./list-row";
@@ -80,7 +80,8 @@ function RowView(args: RowArgs) {
 
 const meta = {
   title: "Components/ListRow",
-  component: ListRow,
+  // Storybook 10 types `component` against the meta's args, and every story renders RowView.
+  component: RowView,
   tags: ["autodocs"],
   decorators: [padded],
   args: { variant: "item", layout: "none", title: "ביטוח המגן", hint: "ספק · פטור ממע״מ" },

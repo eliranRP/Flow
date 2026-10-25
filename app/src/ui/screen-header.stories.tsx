@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, waitFor } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, waitFor } from "storybook/test";
 import { BackButton } from "./back";
 import { CloseIcon } from "./icons";
 import { ScreenHeader } from "./screen-header";

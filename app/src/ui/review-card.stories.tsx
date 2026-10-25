@@ -1,7 +1,7 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ReviewCard, type ReviewSplitSummary } from "./review-card";
 import { jevReasonText, reviewFlagView, reviewPaidView, type JevReasonKind, type ReviewFlag } from "../review-copy";
-import { expect } from "@storybook/test";
+import { expect } from "storybook/test";
 import type { TxnMeta } from "../txn-meta";
 import { padded, storyMeta } from "./story-support";
 

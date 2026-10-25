@@ -1,5 +1,5 @@
 import type { FiledTodayRow } from "@flow/shared";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { FiledTodayScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar, filedTodayCount } from "../ui/screen-stories-support";

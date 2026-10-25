@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { CardSwipe, type CardStep } from "./card-swipe";
 import { List, ListRow } from "./list-row";
 

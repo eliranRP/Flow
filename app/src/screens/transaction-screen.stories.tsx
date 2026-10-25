@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { userEvent, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import type { TransactionDetail } from "@flow/shared";
 import { TransactionScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
@@ -60,22 +60,32 @@ export const Transaction: Story = {
 /** FLOW-320: the project row opens the change sheet straight on the project picker. */
 export const TransactionProjectPicker: Story = {
   name: "Project row opens the project picker",
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <TransactionStory />,
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole("button", { name: /בניין מגורים חולון/ }));
     await storyBody(canvasElement).findByRole("dialog", { name: "בחירת פרויקט" });
+  },
+  globals: {
+    viewport: {
+      value: "flow390-short",
+      isRotated: false
+    }
   },
 };
 
 /** FLOW-320: the category row opens the change sheet straight on the category picker. */
 export const TransactionCategoryPicker: Story = {
   name: "Category row opens the category picker",
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <TransactionStory />,
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole("button", { name: /חומרים/ }));
     await storyBody(canvasElement).findByRole("dialog", { name: "בחירת קטגוריה" });
+  },
+  globals: {
+    viewport: {
+      value: "flow390-short",
+      isRotated: false
+    }
   },
 };
 

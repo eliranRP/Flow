@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { PartyChargesHistory } from "./related-charges";
 import { cheaperCharges, mailboxCharges, rentCharges, steadyCharges } from "./related-charges.sample";
 

@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { LinesSkeleton, LoansSkeleton, NextMonthCardSkeleton, ProfitRowsSkeleton, ProfitSkeleton, ProjectsSkeleton, RecurringSkeleton } from "./screen-skeletons";
 import { padded } from "./story-support";
 

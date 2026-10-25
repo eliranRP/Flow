@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { within } from "storybook/test";
 import { RECURRING_CHARGES_FIXTURE_POWER, RECURRING_CHARGES_FIXTURE_WATER, RECURRING_MISSING_FIXTURE } from "../recurring-sample";
 import { StoryRoute } from "../ui/story-route";
 import { ChargeError, ChargeMissing, RecurringChargeScreen } from "./recurring-charge-screen";

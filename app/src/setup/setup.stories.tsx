@@ -1,5 +1,5 @@
 
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StoryRoute } from "../ui/story-route";
 import { SetupDone } from "./done";
 import { SkipSheet } from "./skip-sheet";

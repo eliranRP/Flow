@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { SAMPLE_JEV_BOOKINGS, SAMPLE_JEV_BOOKING_API } from "../dev/journal-composer-sample";
 import { StoryRoute } from "../ui/story-route";
 import { JevBookingReview } from "./jev-booking-review";

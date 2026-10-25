@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { birchLaneInvestment, birchLaneNegativeInvestment, birchLaneNoArvInvestment, birchLaneRehabCategories } from "../dev/investment-sample";
 import { project as sampleProject } from "../dev/project-cash-sample";
 import { StoryRoute } from "../ui/story-route";

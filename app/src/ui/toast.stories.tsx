@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ActionBar, ActionBarRow } from "./action-bar";
 import { Button } from "./button";
 import { SegmentedControl } from "./segmented-control";
@@ -130,14 +130,24 @@ function FormToastStory() {
 
 export const ShortSheet: Story = {
   args: { children: "במצב תצוגה זה לא נשמר." },
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <ShortSheetToast />,
+  globals: {
+    viewport: {
+      value: "flow390-short",
+      isRotated: false
+    }
+  },
 };
 
 export const FormToast: Story = {
   args: { children: "במצב תצוגה זה לא נשמר." },
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <FormToastStory />,
+  globals: {
+    viewport: {
+      value: "flow390-short",
+      isRotated: false
+    }
+  },
 };
 
 /** Decision 0137: on לאישור the toast sits just above the pinned bar, never over it. */

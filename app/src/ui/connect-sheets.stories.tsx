@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { MercuryConnectSheet } from "./mercury-connect-sheet";
 import { SumitConnectSheet } from "./sumit-connect-sheet";
 import { padded } from "./story-support";
@@ -79,12 +79,17 @@ export const SumitMissingFields: Story = {
 /** מההתחלה hides the day; מתאריך brings it back. */
 export const SumitImportFromToggle: Story = {
   render: () => <SumitDemo />,
-  parameters: { viewport: { defaultViewport: "flow320" } },
   play: async ({ canvasElement }) => {
     const dialog = await openSheet(canvasElement, "חיבור SUMIT");
     await expect(within(dialog).queryByRole("button", { name: /תאריך ייבוא/ })).toBeNull();
     await userEvent.click(within(dialog).getByRole("radio", { name: "מתאריך" }));
     await expect(within(dialog).getByRole("button", { name: /^תאריך ייבוא: 01\/01\/\d{4}$/ })).toBeInTheDocument();
+  },
+  globals: {
+    viewport: {
+      value: "flow320",
+      isRotated: false
+    }
   },
 };
 
@@ -99,6 +104,11 @@ const pinnedPlay: Story["play"] = async ({ canvasElement }) => {
 
 export const SumitImportFromDateSe: Story = {
   render: () => <SumitDemo initialFrom="2026-01-01" />,
-  parameters: { viewport: { defaultViewport: "flow375-se" } },
   play: pinnedPlay,
+  globals: {
+    viewport: {
+      value: "flow375-se",
+      isRotated: false
+    }
+  },
 };

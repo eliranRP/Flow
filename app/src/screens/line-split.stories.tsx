@@ -1,5 +1,5 @@
 import type { TransactionDetail } from "@flow/shared";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactElement } from "react";
 import {
   SAMPLE_EXPENSE_LINE,

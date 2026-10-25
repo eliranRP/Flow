@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { inSheet } from "../ui/story-support";
 import { LoanProjectPicker, LoanSetupForm, type LoanProjectChoice } from "./loan-setup";

@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { JUNIPER_NEXT, JUNIPER_NEXT_EDITED, JUNIPER_NEXT_LOAN } from "../dev/project-next-month-sample";
 import { JUNIPER_PROFIT } from "../dev/project-profit-sample";
 import { ProjectNextMonthScreen } from "./project-next-month-screen";

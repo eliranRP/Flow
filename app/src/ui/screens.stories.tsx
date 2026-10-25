@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { HelpScreen } from "../screens/HelpScreen";
 import { AddForm } from "../screens/flow-screens";
 import { SignInScreen } from "../screens/SignInScreen";
@@ -39,13 +39,18 @@ export const Help: Story = {
 };
 
 export const AddSheet: Story = {
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => (
     <StoryRoute entry="/add">
       <ExampleBar />
       <AddForm />
     </StoryRoute>
   ),
+  globals: {
+    viewport: {
+      value: "flow390-short",
+      isRotated: false
+    }
+  },
 };
 
 export const InstallAndroid: Story = {

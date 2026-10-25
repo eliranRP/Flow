@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { SelectField } from "./select-field";
 import { longHebrew, padded } from "./story-support";
 

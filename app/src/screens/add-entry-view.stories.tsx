@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { emptyDraft, type BankMatch, type EntryDraft } from "../add-entry";
 import { formatAmount } from "../ui/amount";
 import { AddEntryView, type AddEntryViewProps } from "./add-entry-view";

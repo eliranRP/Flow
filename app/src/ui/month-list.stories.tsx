@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ListRow } from "./list-row";
 import { MonthList } from "./month-list";
 import { largeAgorot } from "./story-support";

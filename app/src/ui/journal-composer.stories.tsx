@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { SAMPLE_COMPOSER_ACCOUNTS } from "../dev/journal-composer-sample";
 import { AccountPickSheet, ComposerAddLeg, ComposerBankLeg, ComposerLegCard, ComposerStart, ComposerStatus, CopySheet } from "./journal-composer";
 import { padded } from "./story-support";

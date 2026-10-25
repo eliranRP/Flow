@@ -1,5 +1,5 @@
 import type { ReviewRow } from "@flow/shared";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ReviewAllList, ReviewQueue, ReviewScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { SeedLineMeta, storyMeta } from "../ui/story-support";

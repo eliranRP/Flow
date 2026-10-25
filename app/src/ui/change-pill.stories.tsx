@@ -1,4 +1,4 @@
-import type { Decorator, Meta, StoryObj } from "@storybook/react";
+import type { Decorator, Meta, StoryObj } from "@storybook/react-vite";
 import { ChangePill } from "./change-pill";
 import { padded } from "./story-support";
 

@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { COUNTED_REASON_LOAN, COUNTED_REASON_OTHER, CountedInRow, CountedInSheet } from "./counted-in";
 import { padded } from "./story-support";
