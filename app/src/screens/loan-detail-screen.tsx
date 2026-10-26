@@ -33,7 +33,6 @@ import {
   type LoanRefusalPlace,
 } from "./loan-copy";
 import {
-  closeDateDefault,
   kindValue,
   lastPaymentDate,
   partCategoryValue,
@@ -78,7 +77,7 @@ export const LOAN_MISSING_TITLE = "ההלוואה לא נמצאה";
 
 type SheetName = "kind" | "rate" | "close" | "link" | "part" | "project" | "delete";
 
-/** FLOW-962: the loan page's toasts hang under its bar, and an undo stays 5s (decision 0212, as on לאישור). */
+/** FLOW-962: the loan page's toasts hang under its bar, and an undo stays 5s (decision 0214, extending 0212). */
 const LOAN_TOAST = { place: "top", durationMs: 5000 } as const;
 
 export type LoanView = "summary" | "payments";
@@ -250,6 +249,7 @@ function LoanDetailReady({
   const [projectSaving, setProjectSaving] = useState<{ id: string | null } | undefined>(undefined);
   const [deleting, setDeleting] = useState(false);
   const [reopening, setReopening] = useState(false);
+  const [linkSaving, setLinkSaving] = useState(false);
   const busyClose = useRef(false);
   const returnRef = useRef<HTMLElement | null>(null);
   // A close swaps סגירת ההלוואה for החזרה לפעילות, so focus goes back to whichever is mounted now.
@@ -381,7 +381,8 @@ function LoanDetailReady({
                 status={loan.status}
                 closedOn={loan.closedOn}
                 link={linked == null ? null : { name: linked.name, to: `${loanPath.slice(0, loanPath.lastIndexOf("/"))}/${linked.id}${search}` }}
-                onLink={loan.status === "closed" && !holdWrites ? () => { open("link"); } : null}
+                // A link whose loan is still loading draws neither row.
+                onLink={loan.status === "closed" && !holdWrites && loan.refinancedIntoId == null ? () => { open("link"); } : null}
               />
             )}
             {flagged.length > 0 ? (
@@ -462,22 +463,36 @@ function LoanDetailReady({
               onOpenChange={setSheet}
               returnFocusRef={statusRef}
               lastPayment={lastPaid}
-              defaultDate={closeDateDefault(lastPaid, today)}
+              defaultDate={today}
               today={today}
               nextDue={outlook?.next.dueDate ?? null}
               linkChoices={loanChoices}
               onSave={(next) => patchSave(next, loanClosedToast(loan.name, next.status, loan.balanceMinor, loan.currency), "status", "ההלוואה חזרה לפעילות")}
             />
-            <Sheet open={sheet === "link"} onOpenChange={setSheet} title="ההלוואה החדשה" hint={loan.name} returnFocusRef={returnRef} panelClassName="ui-sheet-fit">
+            <Sheet
+              open={sheet === "link"}
+              onOpenChange={(next) => {
+                if (!next && linkSaving) return;
+                setSheet(next);
+              }}
+              title="ההלוואה החדשה"
+              hint={loan.name}
+              returnFocusRef={returnRef}
+              panelClassName="ui-sheet-fit"
+            >
               <LoanLinkPicker
                 choices={loanChoices}
-                selectedId={loan.refinancedIntoId ?? null}
+                selectedId={loan.refinancedIntoId}
+                disabled={linkSaving}
                 onSelect={(id) => {
-                  if (id === (loan.refinancedIntoId ?? null)) {
+                  if (linkSaving) return;
+                  if (id === loan.refinancedIntoId) {
                     setSheet(false);
                     return;
                   }
+                  setLinkSaving(true);
                   void patchSave({ refinancedIntoId: id }, id == null ? "הקישור להלוואה החדשה הוסר" : "ההלוואה החדשה קושרה").then((failed) => {
+                    setLinkSaving(false);
                     if (failed == null) setSheet(false);
                   });
                 }}

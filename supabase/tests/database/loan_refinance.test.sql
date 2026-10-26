@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(15);
+select plan(33);
 
 do $users$
 begin
@@ -140,13 +140,48 @@ select public.store_mcp_credential(
 );
 insert into f962 (label, id) select 'other_write', id from private.mcp_credentials where token_hash = 'hash-f962-other-1';
 
+create or replace function pg_temp.as_owner(p_sql text)
+returns jsonb
+language plpgsql
+set search_path = ''
+as $$
+declare
+  result jsonb;
+begin
+  perform pg_temp.as_mcp();
+  execute p_sql into result;
+  reset role;
+  return result;
+exception
+  when others then
+    reset role;
+    return jsonb_build_object('raised', sqlerrm);
+end;
+$$;
+grant execute on function pg_temp.as_owner(text) to authenticated, service_role;
+
+create or replace function pg_temp.close_loan(p_loan text)
+returns void
+language sql
+set search_path = ''
+as $$
+  update public.loans set status = 'closed', closed_on = '2026-06-30' where id = pg_temp.id(p_loan);
+$$;
+grant execute on function pg_temp.close_loan(text) to authenticated, service_role;
+
 insert into f962 (label, id) values
   ('old', pg_temp.add_demand('f962-old')),
   ('new', pg_temp.add_demand('f962-new')),
   ('newer', pg_temp.add_demand('f962-newer')),
+  ('a', pg_temp.add_demand('f962-a')),
+  ('b', pg_temp.add_demand('f962-b')),
+  ('c', pg_temp.add_demand('f962-c')),
+  ('d', pg_temp.add_demand('f962-d')),
   ('foreign', pg_temp.add_demand('f962-foreign', 'f962_other', 'other_write'));
 
 -- Validation and refusals.
+select is(pg_temp.refi('f962-open', pg_temp.id('old'), pg_temp.id('new'))->'error'->>'code', 'validation', 'an open loan names no new loan');
+select pg_temp.close_loan('old');
 select is(pg_temp.refi('f962-self', pg_temp.id('old'), pg_temp.id('old'))->'error'->>'code', 'validation', 'a loan cannot name itself');
 select is(pg_temp.refi('f962-foreign', pg_temp.id('old'), pg_temp.id('foreign'))->'error'->>'message', 'loan not found', 'another company''s loan is not found');
 select is(pg_temp.refi('f962-missing', gen_random_uuid(), pg_temp.id('new'))->'error'->>'message', 'loan not found', 'a missing loan is not found');
@@ -164,11 +199,51 @@ select is(
 select is(pg_temp.undo('f962-undo-link', pg_temp.id('old'))->>'ok', 'true', 'undo loan_refinance');
 select is(pg_temp.link_of('old'), null, 'undo clears the link it made');
 
+-- Two loans never name each other.
+select ok((pg_temp.refi('f962-link-n', pg_temp.id('old'), pg_temp.id('new'))->>'ok')::boolean, 'old names new');
+select pg_temp.close_loan('new');
+select is(pg_temp.refi('f962-cycle', pg_temp.id('new'), pg_temp.id('old'))->'error'->>'code', 'validation', 'new cannot name old back');
+
 -- A change since the write is a conflict.
 select ok((pg_temp.refi('f962-link-2', pg_temp.id('old'), pg_temp.id('newer'))->>'ok')::boolean, 'link again');
 update public.loans set refinanced_into_id = pg_temp.id('new') where id = pg_temp.id('old');
 select is(pg_temp.undo('f962-undo-stale', pg_temp.id('old'))->'error'->>'code', 'conflict', 'undo is a conflict once the link changed since');
 update public.loans set refinanced_into_id = pg_temp.id('newer') where id = pg_temp.id('old');
+
+-- The loan the undo would put back is gone: a conflict, and the link stays.
+select ok((pg_temp.as_owner(format('select public.delete_loan(%L)', pg_temp.id('new')))->>'loan_id') is not null, 'the earlier new loan is deleted');
+select is(pg_temp.undo('f962-undo-gone', pg_temp.id('old'))->'error'->>'code', 'conflict', 'undo is a conflict when the loan before is gone');
+select is(pg_temp.link_of('old'), pg_temp.id('newer'), 'and the link stays');
+
+-- Reopening with update_loan clears the link; its undo puts it back.
+select pg_temp.close_loan('a');
+update public.loans set refinanced_into_id = pg_temp.id('b') where id = pg_temp.id('a');
+select is(
+  pg_temp.as_owner(format('select public.mcp_update_loan(%L, %L, %L::jsonb)', 'f962-reopen', pg_temp.id('a'), '{"status": "open"}'))->>'ok',
+  'true',
+  'update_loan reopens the loan'
+);
+select is(pg_temp.link_of('a'), null, 'and clears its link');
+select is(
+  pg_temp.as_owner(format('select public.mcp_undo(%L, %L, %L)', 'f962-reopen-undo', 'loan_update', pg_temp.id('a')))->>'ok',
+  'true',
+  'undo loan_update'
+);
+select is(pg_temp.link_of('a'), pg_temp.id('b'), 'puts the link back with the status');
+
+-- Restore: a new loan deleted since leaves no link.
+select ok((pg_temp.as_owner(format('select public.delete_loan(%L)', pg_temp.id('a')))->>'loan_id') is not null, 'a is deleted');
+select ok((pg_temp.as_owner(format('select public.delete_loan(%L)', pg_temp.id('b')))->>'loan_id') is not null, 'then b');
+select is(pg_temp.as_owner(format('select public.restore_loan(%L)', pg_temp.id('a')))->>'raised', null, 'a comes back');
+select is(pg_temp.link_of('a'), null, 'with no link, b being gone');
+
+-- Restore: the loans that named the deleted one get it back while still unlinked.
+select pg_temp.close_loan('c');
+update public.loans set refinanced_into_id = pg_temp.id('d') where id = pg_temp.id('c');
+select ok((pg_temp.as_owner(format('select public.delete_loan(%L)', pg_temp.id('d')))->>'loan_id') is not null, 'd is deleted');
+select is(pg_temp.link_of('c'), null, 'which clears c''s link');
+select is(pg_temp.as_owner(format('select public.restore_loan(%L)', pg_temp.id('d')))->>'raised', null, 'd comes back');
+select is(pg_temp.link_of('c'), pg_temp.id('d'), 'and c names it again');
 
 -- The table holds the rules for the app's writes too.
 select throws_ok(

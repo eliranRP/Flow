@@ -5,9 +5,15 @@
 --    table's own: the column is read and written with the row.
 -- 2. MCP set_loan_refinance names or clears the link (undo kind loan_refinance puts back what it was
 --    while the link still reads as written).
+--    It refuses (validation) a loan that is still open, the loan itself, and a two-loan cycle.
 -- 3. mcp_list_loans returns refinanced_into_id.
--- mcp_undo, mcp_list_loans and the mcp_writes constraints are patched in place with counted anchors,
--- as in 20261025160000_transaction_thread.sql.
+-- 4. Reopening clears the link, in mcp_update_loan as in the app; its undo (loan_update) puts the link
+--    back while the loan it named still exists and the link is still empty.
+-- 5. delete_loan keeps, in its snapshot, the loans that named the deleted one ('referrers'), and
+--    loan_restore relinks them while they are still unlinked; a restored loan whose new loan was
+--    deleted since comes back with no link, as on delete set null would have left it.
+-- mcp_undo, mcp_list_loans, mcp_update_loan, delete_loan, loan_restore and the mcp_writes
+-- constraints are patched in place with counted anchors, as in 20261025160000_transaction_thread.sql.
 -- CLI 2.118.0 runs each statement on its own. This file is one transaction.
 
 begin;
@@ -50,6 +56,7 @@ declare
   cid uuid;
   response jsonb;
   cur uuid;
+  cur_status public.loan_status;
 begin
   if p_idempotency_key is null
     or char_length(p_idempotency_key) < 1
@@ -76,7 +83,7 @@ begin
   cid := private.current_company_id();
   response := private.mcp_error('refused', 'The write was refused.');
   begin
-    select l.refinanced_into_id into cur
+    select l.refinanced_into_id, l.status into cur, cur_status
     from public.loans l
     where l.id = p_loan_id and l.company_id = cid
     for no key update;
@@ -87,8 +94,15 @@ begin
       select 1 from public.loans n where n.id = p_new_loan_id and n.company_id = cid
     ) then
       response := private.mcp_refused('loan not found');
-    elsif p_new_loan_id = p_loan_id then
-      -- After the lookups, so another company's loan reads as not found before the shape check.
+    elsif p_new_loan_id = p_loan_id
+      -- After the lookups, so another company's loan reads as not found before the shape checks.
+      -- Only a closed loan names a new one, and two loans never name each other.
+      or (p_new_loan_id is not null and cur_status = 'open'::public.loan_status)
+      or exists (
+        select 1 from public.loans n
+        where n.id = p_new_loan_id and n.company_id = cid and n.refinanced_into_id = p_loan_id
+      )
+    then
       response := private.mcp_error('validation', 'validation');
     else
       update public.loans l
@@ -227,6 +241,117 @@ begin
   execute def;
 end
 $list$;
+
+-- mcp_update_loan: reopening clears the link, and the write keeps the link it had for the undo.
+do $update$
+declare
+  def text;
+  a_before constant text := $a$      before := jsonb_build_object(
+        'name', cur.name,$a$;
+  a_set constant text := $a$        closed_on = new_closed,$a$;
+begin
+  def := pg_get_functiondef('public.mcp_update_loan(text,uuid,jsonb)'::regprocedure);
+  if pg_temp.anchor_count(def, a_before) <> 1 or pg_temp.anchor_count(def, a_set) <> 1 then
+    raise exception 'mcp_update_loan is not the expected definition';
+  end if;
+  def := replace(def, a_before, $n$      before := jsonb_build_object(
+        'refinanced_into_id', (select rf.refinanced_into_id from public.loans rf where rf.id = p_loan_id and rf.company_id = cid),
+        'name', cur.name,$n$);
+  def := replace(def, a_set, a_set || $n$
+        refinanced_into_id = case when new_status = 'open'::public.loan_status then null else l.refinanced_into_id end,$n$);
+  execute def;
+end
+$update$;
+
+-- mcp_undo (loan_update): a reopen's undo puts the link back while the loan it named still exists
+-- and the link is still empty.
+do $undo_update$
+declare
+  def text;
+  anchor constant text := $a$          closed_on = case when before ? 'status'
+            then (before->>'closed_on')::date else l.closed_on end,$a$;
+begin
+  def := pg_get_functiondef('public.mcp_undo(text,text,uuid)'::regprocedure);
+  if pg_temp.anchor_count(def, anchor) <> 1 then
+    raise exception 'mcp_undo loan_update is not the expected definition';
+  end if;
+  def := replace(def, anchor, anchor || $n$
+          refinanced_into_id = case
+            when l.refinanced_into_id is null and exists (
+              select 1 from public.loans rf
+              where rf.id = (before->>'refinanced_into_id')::uuid and rf.company_id = cid and rf.id <> l.id
+            )
+            then (before->>'refinanced_into_id')::uuid
+            else l.refinanced_into_id
+          end,$n$);
+  execute def;
+end
+$undo_update$;
+
+-- delete_loan: the loans that named the deleted one, kept before on delete set null clears them.
+do $delete$
+declare
+  def text;
+  a_declare constant text := $a$  deletion uuid;
+begin$a$;
+  a_delete constant text := $a$  -- The parts and rates go with the loan (on delete cascade).$a$;
+  a_snapshot constant text := $a$jsonb_build_object('loan', to_jsonb(loan_row), 'rates', rates, 'parts', parts))$a$;
+begin
+  def := pg_get_functiondef('public.delete_loan(uuid)'::regprocedure);
+  if pg_temp.anchor_count(def, a_declare) <> 1 or pg_temp.anchor_count(def, a_delete) <> 1
+    or pg_temp.anchor_count(def, a_snapshot) <> 1 then
+    raise exception 'delete_loan is not the expected definition';
+  end if;
+  def := replace(def, a_declare, $n$  deletion uuid;
+  referrers jsonb;
+begin$n$);
+  def := replace(def, a_delete, $n$  -- FLOW-962: the loans that name this one as their refinance, for the restore to relink.
+  select coalesce(jsonb_agg(r.id order by r.id), '[]'::jsonb)
+  into referrers
+  from public.loans r
+  where r.company_id = cid and r.refinanced_into_id = p_loan_id;
+
+$n$ || a_delete);
+  def := replace(def, a_snapshot,
+    $n$jsonb_build_object('loan', to_jsonb(loan_row), 'rates', rates, 'parts', parts, 'referrers', referrers))$n$);
+  execute def;
+end
+$delete$;
+
+-- loan_restore: no link to a loan deleted since; relink the loans that named this one.
+do $restore$
+declare
+  def text;
+  a_fees constant text := $a$    loan_row.fees_category_id := null;
+  end if;$a$;
+  a_checks constant text := $a$  foreach line in array lines loop
+    perform private.loan_splits_check(line);
+  end loop;$a$;
+begin
+  def := pg_get_functiondef('private.loan_restore(uuid,jsonb)'::regprocedure);
+  if pg_temp.anchor_count(def, a_fees) <> 1 or pg_temp.anchor_count(def, a_checks) <> 1 then
+    raise exception 'loan_restore is not the expected definition';
+  end if;
+  def := replace(def, a_fees, a_fees || $n$
+  -- FLOW-962: a new loan deleted since leaves no link, as its on delete set null would have.
+  if loan_row.refinanced_into_id is not null and not exists (
+    select 1 from public.loans l where l.id = loan_row.refinanced_into_id and l.company_id = p_company_id
+  ) then
+    loan_row.refinanced_into_id := null;
+  end if;$n$);
+  def := replace(def, a_checks, a_checks || $n$
+  -- FLOW-962: the loans that named this one before the delete, while they are still unlinked.
+  update public.loans l
+  set refinanced_into_id = loan_row.id
+  where l.company_id = p_company_id
+    and l.refinanced_into_id is null
+    and l.id <> loan_row.id
+    and l.id in (
+      select e.value::uuid from jsonb_array_elements_text(coalesce(p_snapshot->'referrers', '[]'::jsonb)) e
+    );$n$);
+  execute def;
+end
+$restore$;
 
 drop function pg_temp.anchor_count(text, text);
 

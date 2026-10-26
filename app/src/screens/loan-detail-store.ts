@@ -90,7 +90,7 @@ export function inversePatch(loan: LoanDetail, patch: LoanPatch): LoanPatch {
   const back: LoanPatch = {};
   if (patch.status !== undefined) back.status = loan.status;
   if (patch.closedOn !== undefined) back.closedOn = loan.closedOn;
-  if (patch.refinancedIntoId !== undefined) back.refinancedIntoId = loan.refinancedIntoId ?? null;
+  if (patch.refinancedIntoId !== undefined) back.refinancedIntoId = loan.refinancedIntoId;
   if (patch.projectId !== undefined) back.projectId = loan.projectId;
   if (patch.categoryIds) {
     back.categoryIds = {};

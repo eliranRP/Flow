@@ -32,7 +32,7 @@ export type LoanDetail = {
   status: LoanStatus;
   closedOn: string | null;
   /** FLOW-962: the loan that replaced this one in a refinance. */
-  refinancedIntoId?: string | null;
+  refinancedIntoId: string | null;
   projectId: string | null;
   categoryIds: Record<LoanSplitPart, string | null>;
   /** Newest first. */
@@ -251,11 +251,6 @@ export function lastPaymentDate(payments: readonly LoanPayment[]): string | null
   let last: string | null = null;
   for (const payment of payments) if (last == null || payment.docDate > last) last = payment.docDate;
   return last;
-}
-
-/** FLOW-962: a close starts on today, or on the last attached payment when that is later (no close before it). */
-export function closeDateDefault(lastPayment: string | null, today: string): string {
-  return lastPayment != null && lastPayment > today ? lastPayment : today;
 }
 
 /** One kind choice in the סוג sheet: its one-line description. */

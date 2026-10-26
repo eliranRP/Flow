@@ -187,6 +187,15 @@ describe("loan page: states and the viewer", () => {
     await waitFor(() => { expect(store.read("loan-bridge")).toMatchObject({ bundle: { loan: { status: "open", refinancedIntoId: null } } }); });
   });
 
+  it("draws neither the link nor its way in while the linked loan is not in the list yet (FLOW-962)", async () => {
+    const store = sampleLoanStore();
+    await store.update("loan-closed", { refinancedIntoId: "loan-not-listed" });
+    renderLoan(store, "loan-closed");
+    const head = screen.getByRole("region", { name: "ההלוואה נסגרה" });
+    expect(within(head).queryByRole("link")).not.toBeInTheDocument();
+    expect(within(head).queryByRole("button", { name: "קישור להלוואה החדשה" })).not.toBeInTheDocument();
+  });
+
   it("keeps a close refused for a later payment inside the close sheet, under its date", async () => {
     const store = sampleLoanStore();
     vi.spyOn(store, "update").mockRejectedValueOnce(new Error("loan_payments_after_close"));

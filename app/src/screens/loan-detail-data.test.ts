@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { LoanKind } from "@flow/shared";
 import { SAMPLE_AMORTIZING, SAMPLE_DEMAND, SAMPLE_INTEREST_ONLY, SAMPLE_LOAN_CATEGORIES, sampleLoanStore } from "../dev/loan-detail-sample";
 import {
-  closeDateDefault,
   formatRatePpm,
   kindPatch,
   kindValue,
@@ -148,12 +147,9 @@ describe("status", () => {
     expect(readLoanPayments([{ doc_date: "2026-01-01" }, "x"])).toEqual([]);
   });
 
-  it("opens a close on today, or on the last payment when that is later (FLOW-962)", () => {
+  it("finds the last attached payment, the close date's floor", () => {
     expect(lastPaymentDate(payments)).toBe("2026-10-01");
     expect(lastPaymentDate([])).toBeNull();
-    expect(closeDateDefault("2026-10-01", "2026-10-09")).toBe("2026-10-09");
-    expect(closeDateDefault(null, "2026-10-09")).toBe("2026-10-09");
-    expect(closeDateDefault("2026-10-12", "2026-10-09")).toBe("2026-10-12");
   });
 
   it("names how a closed loan ended, and what is left when a paid-off loan still has a balance", () => {

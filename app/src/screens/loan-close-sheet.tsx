@@ -129,7 +129,8 @@ export function LoanCloseSheet({
         <LoanDateField
           label="תאריך הסגירה"
           value={date}
-          min={lastPayment}
+          // Never after today. A payment dated after today leaves no floor here; the save says why.
+          min={lastPayment != null && lastPayment <= today ? lastPayment : null}
           max={today}
           disabled={saving}
           error={error ?? undefined}
