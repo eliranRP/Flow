@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { samplePreview } from "./line-split-preview";
-import { amountOf, amountsPayload, amountText, buildPayload, checkParts, draftFromRead, type LineContext, newPartKey, parseLineSplit, parsePreview, type PartDraft, percentMinorOf, percentOf, readLineDraft, resolvePreview, reversalNeedsProject, shareOfLine, writeLineDraft } from "./line-split";
+import { amountOf, amountsPayload, amountText, buildPayload, checkParts, draftFromRead, type LineContext, newPartKey, parseLineSplit, parsePreview, type PartDraft, percentMinorOf, percentOf, readLineDraft, resolvePreview, reversalNeedsProject, shareOfLine, writeLineDraft, splitHeldByReview } from "./line-split";
 import { LINE_SPLIT_PLACE, LINE_SPLIT_REFUSALS, lineSplitCopy, lineSplitRefusal, localIssueCopy } from "./line-split-copy";
 
 // --- line-split.test.ts
@@ -422,5 +422,15 @@ describe("gross-up split parts (FLOW-946, decision 0206)", () => {
     ], { categoryId: null, projectId: null });
     expect(plain?.[0]).toEqual({ category_id: "c-proceeds", project_id: null, amount_minor: 100_000 });
     expect(plain?.[1]).toEqual({ category_id: "c-rent", project_id: "p-a", amount_minor: 3_000, gross_up: true });
+  });
+});
+
+describe("splitHeldByReview", () => {
+  it("holds the split for an open review, except a split mismatch and a shared expense", () => {
+    expect(splitHeldByReview("open", "missing_category")).toBe(true);
+    expect(splitHeldByReview("open", "split_mismatch")).toBe(false);
+    expect(splitHeldByReview("open", "unallocated_shared")).toBe(false);
+    expect(splitHeldByReview("approved", "missing_category")).toBe(false);
+    expect(splitHeldByReview(null, null)).toBe(false);
   });
 });

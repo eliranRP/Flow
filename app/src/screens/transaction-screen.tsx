@@ -33,7 +33,7 @@ import { Sheet } from "../ui/sheet";
 import { useToast } from "../ui/toast";
 import { isReversal, reversalChoices } from "../reversal";
 import { ReversalTag } from "../ui/suggest-tag";
-import type { LineSplitRead } from "../line-split";
+import { splitHeldByReview, type LineSplitRead } from "../line-split";
 import { lineSplitRowHint, useLineSplitQuery, useLoanSplitFlag } from "./line-split";
 import { ReservedMenuSlot, saveNewProject, useBlockedPreview, withChoice } from "./screen-shared";
 import { TransactionTopBar } from "./transaction-top-bar";
@@ -550,8 +550,8 @@ export function TransactionScreen({
   const menuButton = canDelete
     ? <IconButton ref={moreRef} label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>
     : <ReservedMenuSlot />;
-  // A split's row is set only while no review is open on the line, and not in the reviewer's preview.
-  const reviewBlocked = txn.review_status === "open" && txn.review_reason !== "split_mismatch";
+  // A split's row is set only while no review holds the line, and not in the reviewer's preview.
+  const reviewBlocked = splitHeldByReview(txn.review_status, txn.review_reason);
   splitOpen.current = !(onOpenSplit || holdWrites || reviewBlocked);
   const splitTo = `/transactions/${txn.id}/split-category${search}`;
   // The reason a line is out of the P&L, as the counted-in row names it (FLOW-366, guide §7.10).

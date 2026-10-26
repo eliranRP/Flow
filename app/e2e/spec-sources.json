@@ -262,6 +262,11 @@
       "auth.tsx",
       "ui/install-screen.tsx"
     ],
+    "shared-split.spec.ts": [
+      "screens/review-queue.tsx",
+      "screens/line-split.tsx",
+      "line-split.ts"
+    ],
     "split-category.spec.ts": [
       "dev/line-split-e2e.tsx",
       "screens/line-split.tsx"
