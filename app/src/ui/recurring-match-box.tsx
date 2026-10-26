@@ -39,7 +39,7 @@ export function RecurringMatchBox({
           {income ? "כן, אותו לקוח" : "כן, אותו ספק"}
         </button>
         <button type="button" className="ui-recurring-match-no ui-hit" onClick={onNo}>
-          לא
+          לא, זה משהו אחר
         </button>
       </div>
     </section>

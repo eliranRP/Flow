@@ -76,11 +76,13 @@ export function changeLine(row: ScheduleRow, currency: string, alertActive: bool
   const usualMinor = absAgorot(BigInt(row.typical_amount_minor));
   const usual = formatAmountText(usualMinor, currency);
   const percent = changeFor(row);
+  const income = row.direction === "income";
   if (!isBigChange(percent) || percent == null) {
-    return { percent: null, arrow: null, hurts: false, usual, change: "כרגיל", words: `כרגיל, ${usual}` };
+    // A late charge has no figure this month yet: the takeaway says so instead of "as usual".
+    const takeaway = row.state === "late" ? `החודש עוד לא ${income ? "התקבל" : "שולם"}` : "כמו בכל חודש";
+    return { percent: null, arrow: null, hurts: false, usual, change: "כרגיל", words: `כרגיל, ${usual}`, takeaway };
   }
   const up = percent > 0;
-  const income = row.direction === "income";
   const size = `${String(Math.abs(percent))}%`;
   return {
     percent: size,
@@ -89,6 +91,7 @@ export function changeLine(row: ScheduleRow, currency: string, alertActive: bool
     usual,
     change: `${up ? "עלה" : "ירד"} ב־${size}`,
     words: `${up ? "עלייה" : "ירידה"} של ${size} לעומת הרגיל, ${usual}`,
+    takeaway: `${up ? "גבוה" : "נמוך"} ב־${size} מהרגיל`,
   };
 }
 

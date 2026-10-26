@@ -45,8 +45,7 @@ import { TransactionTopBar } from "./transaction-top-bar";
 import { LoanPartSheet } from "./loan-detail-sheets";
 import { LoanRateSheet } from "./loan-rate-sheet";
 import { LoanCloseSheet, LoanLinkPicker, type LoanLinkChoice } from "./loan-close-sheet";
-import { LoanLoadFailed, LoanOfflineLine } from "./loan-states";
-import { useOnline } from "../ui/band-states";
+import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { LoanKindSheet } from "./loan-kind-sheet";
 import {
   inversePatch,
@@ -150,7 +149,7 @@ export function LoanDetailScreen({
       <div>
         <ScreenHeader title="הלוואה" kicker="הלוואות" backTo={listBack} />
         <div className="ui-page-pad">
-          <LoanLoadFailed title={LOAN_ERROR_TITLE} offline={givenOffline != null || !online} retrying={read.retrying} onRetry={read.retry} />
+          <PageLoadFailed title={LOAN_ERROR_TITLE} offline={givenOffline != null || !online} onRetry={read.retry} />
         </div>
       </div>
     );
@@ -376,7 +375,7 @@ function LoanDetailReady({
               <h1 className="ui-loan-name">{loan.name}</h1>
               <p className="ui-loan-sub">{loanSubtitle(loan, projectName)}</p>
             </header>
-            {offlineSince == null ? null : <LoanOfflineLine since={offlineSince} />}
+            {offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />}
             {loan.status === "open" ? null : (
               <LoanClosedCard
                 status={loan.status}

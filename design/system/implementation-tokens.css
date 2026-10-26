@@ -204,6 +204,7 @@
   --color-avatar: #F3F0F8;       /* FLOW-366: a row's initials circle (board; dark is #2A2540) */
   --color-track-strong: #DAD3E6;   /* FLOW-445: budget track, loan part of the equity bar */
   --color-track-outline: #8F879F;  /* FLOW-961: the outline of a bar's empty part (budget left, the loan), 3.4:1 on white */
+  --color-control-edge: #7A6E92;   /* FLOW-963: an outlined answer's edge, 3.9:1 on the tint, 4.7:1 on white */
   --color-bar-ahead: #CDBDF3;   /* the forecast's "still expected" part of a bar (לפי קטגוריה) */
   --shadow-pill: 0 6px 18px rgba(40, 20, 90, 0.12); /* sync pill, States board (FLOW-371) */
   --shadow-toast: 0 8px 24px rgba(40, 20, 90, 0.12); /* toast, LinesLight and StatesLight board (FLOW-363 3c) */
@@ -287,6 +288,7 @@
     --color-avatar: #2A2540;
     --color-track-strong: #3A3350;   /* FLOW-445: budget track, loan part of the equity bar */
     --color-track-outline: #6F6787;  /* FLOW-961: a bar's empty part as an outline, 3.2:1 on the card */
+    --color-control-edge: #8F879F;   /* FLOW-963: an outlined answer's edge, 4.4:1 on the tint */
     --color-bar-ahead: #5A4A82;
     --color-control-off: #736A8C;
     --color-control-border: #736A8C;
@@ -364,6 +366,7 @@
   --color-avatar: #2A2540;
   --color-track-strong: #3A3350;   /* FLOW-445: budget track, loan part of the equity bar */
   --color-track-outline: #6F6787;  /* FLOW-961: a bar's empty part as an outline, 3.2:1 on the card */
+  --color-control-edge: #8F879F;   /* FLOW-963: an outlined answer's edge, 4.4:1 on the tint */
   --color-bar-ahead: #5A4A82;
   --color-control-off: #736A8C;
   --color-control-border: #736A8C;

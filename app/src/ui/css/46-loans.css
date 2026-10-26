@@ -39,7 +39,7 @@
 }
 
 .ui-loans-summary-wrap,
-.ui-loans-screen .ui-loan-offline {
+.ui-loans-screen .ui-page-offline {
   margin-top: var(--space-4);
 }
 

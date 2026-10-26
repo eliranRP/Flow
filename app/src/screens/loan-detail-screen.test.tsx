@@ -159,7 +159,7 @@ describe("loan page: states and the viewer", () => {
       </Routes>,
       { route: "/loans/loan-mortgage" },
     );
-    expect(screen.getByText(/אין חיבור · מוצג המצב מ־/)).toHaveTextContent("09:41");
+    expect(screen.getAllByRole("status", { hidden: true }).find((node) => node.classList.contains("ui-page-offline"))).toHaveTextContent("אין חיבור · מוצג המצב מ־09:41");
   });
 
   it("shows not found with a way back to the list", () => {

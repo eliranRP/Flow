@@ -21,9 +21,9 @@
 .ui-charge-status {
   margin: 0;
   color: var(--color-accent-text);
-  /* board: 12px, its own line height, and 5px more than the column gap before the name. */
+  /* board: 13px, its own line height, and 5px more than the column gap before the name. */
   margin-block-end: calc(var(--space-1) + 1px);
-  font-size: calc(var(--type-cents-size) + 1px);
+  font-size: var(--type-caption-size);
   line-height: calc(var(--type-title-line) - 0.015);
   font-weight: var(--type-chip-weight);
   text-align: start;
@@ -36,7 +36,7 @@
 .ui-charge-name {
   margin: 0;
   color: var(--color-text);
-  font-size: var(--type-name-size);
+  font-size: var(--type-section-size);
   line-height: calc(var(--type-title-line) - 0.015);
   font-weight: var(--type-name-weight);
   overflow-wrap: anywhere;
@@ -45,9 +45,10 @@
 .ui-charge-amount {
   margin: 0;
   color: var(--color-text);
-  font-size: var(--type-detail-size);
+  font-size: var(--type-title-size);
   line-height: var(--type-detail-line);
   font-weight: var(--type-detail-weight);
+  font-variant-numeric: tabular-nums;
   text-align: end;
 }
 
@@ -62,7 +63,7 @@
 .ui-charge-meta {
   margin: 0;
   color: var(--color-text-secondary);
-  font-size: var(--type-meta-size);
+  font-size: var(--type-line2-size);
   line-height: calc(var(--type-title-line) - 0.015);
 }
 
@@ -114,8 +115,9 @@
   line-height: var(--type-caption-line);
 }
 
+/* FLOW-963: החזרה is a 44px target (tables § 21). */
 .ui-charge-ignored-action {
-  min-block-size: calc(var(--touch-min) - var(--space-2));
+  min-block-size: var(--touch-min);
 }
 
 /* The project and category rows: read-only, so no tap target and no chevron. */
@@ -136,7 +138,7 @@
 }
 
 .ui-charge-card .ui-icon-row-label {
-  font-size: calc(var(--type-caption-size) - 1px);
+  font-size: var(--type-caption-size);
   line-height: calc(var(--type-title-line) - 0.015);
 }
 
@@ -164,16 +166,6 @@
   padding: 0;
   overflow: hidden;
   border-radius: var(--radius-card-tight);
-}
-
-/* The history block on this page: the board's own line heights, 12px between title and line. */
-.ui-charge-recurring .ui-charges-title {
-  margin: 0;
-  line-height: calc(var(--type-title-line) - 0.015);
-}
-
-.ui-charge-recurring .ui-charges-line {
-  line-height: calc(var(--type-title-line) - 0.015);
 }
 
 .ui-charge-rec {
@@ -211,7 +203,7 @@
 
 .ui-charge-rec-sub {
   color: var(--color-text-muted);
-  font-size: calc(var(--type-cents-size) + 1px);
+  font-size: var(--type-caption-size);
 }
 
 .ui-charge-rec-tag {
@@ -240,11 +232,12 @@
 .ui-recurring-match-detail {
   margin: 0;
   color: var(--color-text-secondary);
-  font-size: var(--type-meta-size);
-  line-height: calc(var(--type-meta-size) * 1.2);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  font-variant-numeric: tabular-nums;
 }
 
-/* The charge page's "עדיין קבוע?" box: the match box's tint, a 17px question, a 14px line and a grey hint. */
+/* The charge page's "עדיין קבוע?" box: the match box's tint, a 17px question, a 15px line and a grey hint. */
 .ui-recurring-askbox-title {
   margin: 0;
   font-size: var(--type-body-size);
@@ -254,7 +247,7 @@
 
 .ui-recurring-askbox-text {
   margin: 0;
-  font-size: var(--type-meta-size);
+  font-size: var(--type-line2-size);
   line-height: var(--type-note-line);
   color: var(--color-text-secondary);
 }

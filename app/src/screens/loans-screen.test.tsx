@@ -139,7 +139,7 @@ describe("Loans tab", () => {
 
   it("says which moment the list is from when offline (FLOW-962)", () => {
     renderAt(<LoansScreen sample={{ ...business, loans: twoLoans, offlineSince: Date.UTC(2026, 9, 9, 6, 41) }} />);
-    expect(screen.getByText(/אין חיבור · מוצג המצב מ־/)).toHaveTextContent("09:41");
+    expect(screen.getAllByRole("status", { hidden: true }).find((node) => node.classList.contains("ui-page-offline"))).toHaveTextContent("אין חיבור · מוצג המצב מ־09:41");
   });
 
   it("goes back to Settings with no company", async () => {

@@ -103,3 +103,34 @@ export const liveRecurringWrites: RecurringWrites = {
 export function liveRpcClient(): RpcClient {
   return supabaseClient();
 }
+
+/** FLOW-963: a charge's project or category pick, for every payment of the charge, the earlier ones too. */
+export type ChargePick = ChargeTarget & { project?: string; category?: string };
+
+/**
+ * What a charge pick changed: the payments moved, the ones it left (shared, split, already so), whether the
+ * server found the party split by project (the page's address names the charge's project then), and the undo ids.
+ */
+export type ChargePickResult = { changed: number; skipped: number; split: boolean; undoIds: string[] };
+
+/** Moves every payment of the charge to the picked project or category. */
+export async function reassignRecurringCharge(client: RpcClient, pick: ChargePick): Promise<ChargePickResult> {
+  const result = await client.rpc("reassign_recurring_charge", {
+    p_direction: pick.direction,
+    p_party_id: pick.partyId,
+    p_currency: pick.currency,
+    // The row's project; the server decides whether the party is split. The generated types show uuid only.
+    p_charge_project_id: pick.projectId as string,
+    p_project_id: (pick.project ?? null) as string,
+    p_category_id: (pick.category ?? null) as string,
+  });
+  assertNoError(result);
+  const data = result.data as { changed?: unknown; skipped?: unknown; split?: unknown; undo_ids?: unknown } | null;
+  const undoIds = Array.isArray(data?.undo_ids) ? data.undo_ids.filter((id): id is string => typeof id === "string") : [];
+  return { changed: Number(data?.changed ?? 0), skipped: Number(data?.skipped ?? 0), split: data?.split === true, undoIds };
+}
+
+/** The undo of a charge pick: every payment back as it was. */
+export async function undoRecurringChargePick(client: RpcClient, undoIds: readonly string[]): Promise<void> {
+  assertNoError(await client.rpc("undo_reassign_recurring_charge", { p_undo_ids: [...undoIds] }));
+}

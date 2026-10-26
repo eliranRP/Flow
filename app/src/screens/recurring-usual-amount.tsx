@@ -8,6 +8,7 @@ import { UsualAmountRow } from "../ui/recurring-charge-parts";
 import { useToast } from "../ui/toast";
 import { UsualAmountSheet } from "../ui/usual-amount-sheet";
 import { useWrite } from "../use-write";
+import { recurringToast } from "../recurring-toast";
 
 /**
  * Decision 0189: the charge page's usual amount, its row and its sheet. Save writes the owner's amount for the
@@ -48,17 +49,18 @@ export function ChargeUsualAmount({
   const write = useWrite<UsualAmountWrite>({
     failure: (error) => (error.message.includes("forbidden") ? "אין הרשאה לעדכן את השורה." : "לא הצלחנו לעדכן את השורה."),
     keys: RECURRING_KEYS,
+    place: "top",
     onSuccess: (done) => {
       setOpen(false);
       if (done.undo) return;
       const back = prior.current;
-      toast.show({
+      toast.show(recurringToast({
         message: usualToast(done.next, name),
         action: "ביטול",
         onAction: () => {
           write.mutate({ ...done, next: back, before: done.next, undo: true });
         },
-      });
+      }));
     },
     run: async (change) => {
       prior.current = live ? await runUsualAmount(liveRpcClient(), change) : change.before;

@@ -51,6 +51,7 @@ import {
   setLineCashSchema,
   setLinePaceSchema,
   answerRecurringMatchSchema,
+  reassignRecurringChargeSchema,
   setLineRecurringSchema,
   setLineUsualAmountSchema,
   setLinesCashSchema,
@@ -488,6 +489,19 @@ export async function callWrite(
       p_party_id: parsed.data.party_id,
       p_match_party_id: parsed.data.match_party_id,
       p_same: parsed.data.same,
+    };
+  } else if (name === "reassign_recurring_charge") {
+    const parsed = reassignRecurringChargeSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_reassign_recurring_charge";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_direction: parsed.data.direction,
+      p_party_id: parsed.data.party_id,
+      p_currency: parsed.data.currency,
+      p_charge_project_id: parsed.data.charge_project_id ?? null,
+      p_project_id: parsed.data.project_id ?? null,
+      p_category_id: parsed.data.category_id ?? null,
     };
   } else if (name === "set_invoice_paid") {
     const parsed = setInvoicePaidSchema.safeParse(args);

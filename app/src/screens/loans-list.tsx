@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { ChevronIcon, PlusIcon, PercentIcon } from "../ui/icons";
-import { LoanLoadFailed, LoanOfflineLine } from "./loan-states";
+import { BandOfflineLine, PageLoadFailed } from "../ui/band-states";
 import { CompactBar } from "../ui/compact-bar";
 import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
@@ -108,10 +108,10 @@ export function LoansList({ ctx, closedOpen = false }: { ctx: LoansHostCtx; clos
         </DelayedSkeleton>
       ) : ctx.failed ? (
         // FLOW-962: Home v2's failure (what happened, נסו שוב, צריך עזרה?), as a card.
-        <LoanLoadFailed title={LOANS_ERROR_TITLE} offline={ctx.offline} retrying={ctx.retrying} onRetry={ctx.retry} />
+        <PageLoadFailed title={LOANS_ERROR_TITLE} offline={ctx.offline} onRetry={ctx.retry} />
       ) : (
         <>
-          {ctx.offlineSince == null ? null : <LoanOfflineLine since={ctx.offlineSince} />}
+          {ctx.offlineSince == null ? null : <BandOfflineLine since={ctx.offlineSince} onPage />}
           {ctx.empty ? (
             <EmptyState
               icon={<PercentIcon />}

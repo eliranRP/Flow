@@ -322,6 +322,51 @@ Deno.test("answer_recurring_match calls its writer, validates the pair, and undo
   ]);
 });
 
+Deno.test("reassign_recurring_charge calls its writer with a project or a category, and undo_batch takes it back", async () => {
+  const PROJECT = "33333333-3333-4333-8333-333333333333";
+  const BATCH = "44444444-4444-4444-8444-444444444444";
+  const CATEGORY = "55555555-5555-4555-8555-555555555555";
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { batch_key: BATCH, changed: 3, skipped: 0, split: false, results: [] } } }));
+  for (
+    const [name, args] of [
+      ["reassign_recurring_charge", { idempotency_key: "c-1", direction: "expense", party_id: TXN, currency: "USD", project_id: PROJECT }],
+      ["reassign_recurring_charge", { idempotency_key: "c-2", direction: "income", party_id: TXN, currency: "ILS", charge_project_id: PROJECT, category_id: CATEGORY }],
+      ["undo_batch", { idempotency_key: "u-c", batch_key: BATCH }],
+    ] as [string, Record<string, unknown>][]
+  ) {
+    assertEquals((await callTool(name, args, ["write"], rpc)).isError, false, name);
+  }
+  for (
+    const input of [
+      { idempotency_key: "k", direction: "expense", party_id: TXN, currency: "USD" },
+      { idempotency_key: "k", direction: "transfer", party_id: TXN, currency: "USD", project_id: PROJECT },
+      { idempotency_key: "k", direction: "expense", party_id: TXN, currency: "usd", project_id: PROJECT },
+      { idempotency_key: "k", direction: "expense", party_id: "water", currency: "USD", project_id: PROJECT },
+    ]
+  ) {
+    const result = await callTool("reassign_recurring_charge", input, ["write"], rpc);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+    assertEquals(result.isError, true);
+  }
+  assertEquals(calls, [
+    {
+      name: "mcp_reassign_recurring_charge",
+      body: {
+        p_idempotency_key: "c-1", p_direction: "expense", p_party_id: TXN, p_currency: "USD",
+        p_charge_project_id: null, p_project_id: PROJECT, p_category_id: null,
+      },
+    },
+    {
+      name: "mcp_reassign_recurring_charge",
+      body: {
+        p_idempotency_key: "c-2", p_direction: "income", p_party_id: TXN, p_currency: "ILS",
+        p_charge_project_id: PROJECT, p_project_id: null, p_category_id: CATEGORY,
+      },
+    },
+    { name: "mcp_undo_batch", body: { p_idempotency_key: "u-c", p_batch_key: BATCH } },
+  ]);
+});
+
 Deno.test("get_recurring_schedule takes no arguments and passes the SQL rows through", async () => {
   const calls: Array<[string, unknown]> = [];
   const rpc = (name: string, body: unknown) => {

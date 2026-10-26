@@ -64,8 +64,10 @@ describe("the recurring list's ignore (FLOW-447b)", () => {
 
   it("shows the error state with a retry when the schedule read fails", () => {
     renderScreen({ failed: true });
-    expect(screen.getByText("לא הצלחנו לטעון.")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "קבועים" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "הקבועים לא נטענו" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "נסו שוב" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "צריך עזרה?" })).toHaveAttribute("href", "/help");
   });
 });
 
