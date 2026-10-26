@@ -19,16 +19,19 @@ test("projects list, finished projects, and the new-project sheet", async ({ pag
   const dialog = page.getByRole("dialog", { name: "פרויקט חדש" });
   await expect(dialog).toBeVisible();
   const create = dialog.getByRole("button", { name: "יצירת פרויקט" });
-  await expect(create).toBeDisabled();
-  await dialog.getByRole("textbox", { name: "שם הפרויקט" }).fill("גג חדש");
+  // FLOW-961: never a dead button: with no name the tap says why under the field.
   await expect(create).toBeEnabled();
+  await create.click();
+  await expect(dialog.getByText("צריך שם כדי ליצור את הפרויקט")).toBeVisible();
+  await dialog.getByRole("textbox", { name: "שם הפרויקט" }).fill("גג חדש");
+  await expect(dialog.getByText("צריך שם כדי ליצור את הפרויקט")).toHaveCount(0);
   await create.click();
   await toast(page, previewToast);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "פרויקט חדש" })).toHaveCount(0);
 });
 
-test("a project opens its menu, finish confirm, and overhead switch", async ({ page }) => {
+test("a project opens its menu, finishes with no confirm, and keeps the overhead switch", async ({ page }) => {
   await page.goto("/projects/herzl?preview=loading");
   await page.getByRole("button", { name: "עוד" }).click();
   await expect(page.getByRole("dialog", { name: "עוד" })).toBeVisible();
@@ -39,13 +42,9 @@ test("a project opens its menu, finish confirm, and overhead switch", async ({ p
   await expect(page).toHaveURL(/\/projects/);
   await page.goto("/e2e/project-detail?preview=1");
   await page.getByRole("button", { name: "עוד" }).click();
+  // FLOW-961 (decision 0213): finishing can be undone, so the row finishes at once; preview writes nothing.
   await page.getByRole("button", { name: /^סיום הפרויקט/ }).click();
-  // FLOW-334: either way can be undone, so the confirm repeats the action and is not red.
-  const finish = page.getByRole("dialog", { name: /^לסיים את/ });
-  await expect(finish).toBeVisible();
-  await finish.getByRole("button", { name: "סיום הפרויקט" }).click();
   await toast(page, previewToast);
-  await page.getByRole("button", { name: "ביטול" }).click();
   await expect(page.getByRole("dialog", { name: /^לסיים את/ })).toHaveCount(0);
   // The menu is the board's three rows; the overhead switch lives in the edit sheet it opens.
   await page.getByRole("button", { name: "עוד" }).click();
@@ -87,7 +86,8 @@ test("the profit page's category row opens that category, and the project page's
   await page.getByRole("link", { name: /^תיקונים ותחזוקה/ }).click();
   await expect(page).toHaveURL(/\/projects\/[^/]+\/categories\/repairs/);
   await page.goto("/e2e/project-detail?preview=1");
-  await page.getByRole("link", { name: /ממתינים לאישור/ }).click();
+  // FLOW-961: the waiting items are Home v2's filled review button.
+  await page.getByRole("link", { name: /^לאישור 2 פריטים/ }).click();
   await expect(page).toHaveURL(/project=p1/);
   await expect(page.getByRole("heading", { name: "לאישור" })).toBeVisible();
 });

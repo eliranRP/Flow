@@ -161,8 +161,8 @@ export function ProjectMenu({
             icon={<FlagIcon />}
             disabled={setStatus.isPending}
             onClick={() => {
-              if (blocked()) return;
               setMenu(false);
+              if (blocked()) return;
               setStatus.mutate(finished ? "active" : "finished");
             }}
           />
