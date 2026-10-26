@@ -55,8 +55,17 @@ export function LoanBalanceCard({ loan, outlook }: { loan: LoanDetail; outlook: 
   );
 }
 
-/** FLOW-962 (board Loan closed early): how a closed loan ended, and that it left the forecast and the debt. */
-export function LoanClosedCard({ status, closedOn }: { status: LoanCloseReason; closedOn: string | null }) {
+/**
+ * FLOW-962 (board Loan closed early): how a closed loan ended, and that it left the forecast and the
+ * debt. A refinance names the new loan, which opens; an owner without a link yet can add it.
+ */
+export function LoanClosedCard({ status, closedOn, link, onLink }: {
+  status: LoanCloseReason;
+  closedOn: string | null;
+  link: { name: string; to: string } | null;
+  /** Null for a viewer, or a loan paid off in full. */
+  onLink: (() => void) | null;
+}) {
   return (
     <Card as="section" className="ui-loan-card ui-loan-closed" aria-label="ההלוואה נסגרה">
       <p className="ui-loan-closed-line">
@@ -64,6 +73,20 @@ export function LoanClosedCard({ status, closedOn }: { status: LoanCloseReason; 
         {loanClosedLine(status, closedOn)}
       </p>
       <p className="ui-loan-card-text">{LOAN_CLOSED_NOTE[status]}</p>
+      {link != null ? (
+        <Link className="ui-loan-closed-link" to={link.to}>
+          <span className="ui-loan-link-text">
+            <span className="ui-loan-card-note">מומנה מחדש ב־</span>
+            <span>{link.name}</span>
+          </span>
+          <ChevronIcon size={18} />
+        </Link>
+      ) : onLink != null ? (
+        <button type="button" className="ui-loan-closed-link" onClick={onLink}>
+          <span>קישור להלוואה החדשה</span>
+          <ChevronIcon size={18} />
+        </button>
+      ) : null}
     </Card>
   );
 }

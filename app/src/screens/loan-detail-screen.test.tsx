@@ -169,6 +169,24 @@ describe("loan page: states and the viewer", () => {
     expect(screen.getByText("רשימת ההלוואות")).toBeInTheDocument();
   });
 
+  it("links a refinance to the new loan, which the closed head names and opens (FLOW-962)", async () => {
+    const store = sampleLoanStore();
+    renderLoan(store, "loan-bridge");
+    fireEvent.click(screen.getByRole("button", { name: "סגירת ההלוואה" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: /^סגירת הלוואת גישור/ })).getByRole("radio", { name: /מימון מחדש/ }));
+    fireEvent.click(screen.getByRole("button", { name: /ההלוואה החדשה · לא חובה/ }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "ההלוואה החדשה" })).getByRole("radio", { name: "משכנתא דוגמה" }));
+    const sheet = screen.getByRole("dialog", { name: /^סגירת הלוואת גישור/ });
+    expect(within(sheet).getByRole("button", { name: /ההלוואה החדשה · לא חובה/ })).toHaveTextContent("משכנתא דוגמה");
+    fireEvent.click(within(sheet).getByRole("button", { name: "סגירת ההלוואה" }));
+    await waitFor(() => { expect(store.read("loan-bridge")).toMatchObject({ bundle: { loan: { status: "closed", refinancedIntoId: "loan-mortgage" } } }); });
+    const link = within(screen.getByRole("region", { name: "ההלוואה נסגרה" })).getByRole("link", { name: /משכנתא דוגמה/ });
+    expect(link).toHaveAttribute("href", "/loans/loan-mortgage");
+    // Reopening clears the link with the status.
+    fireEvent.click(screen.getByRole("button", { name: "החזרה לפעילות" }));
+    await waitFor(() => { expect(store.read("loan-bridge")).toMatchObject({ bundle: { loan: { status: "open", refinancedIntoId: null } } }); });
+  });
+
   it("keeps a close refused for a later payment inside the close sheet, under its date", async () => {
     const store = sampleLoanStore();
     vi.spyOn(store, "update").mockRejectedValueOnce(new Error("loan_payments_after_close"));

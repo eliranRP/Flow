@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { Route, Routes } from "react-router-dom";
-import { oneLoanStore } from "../dev/loan-detail-sample";
+import { oneLoanStore, sampleLoanStore } from "../dev/loan-detail-sample";
 import { StoryRoute } from "../ui/story-route";
 import { LoanDetailScreen } from "./loan-detail-screen";
 import type { MemoryLoanStore } from "./loan-detail-store";
@@ -95,6 +95,21 @@ export const CloseSheet: Story = {
     const sheet = await bodyOf(canvasElement).findByRole("dialog", { name: /^סגירת הלוואת גישור/ });
     await userEvent.click(within(sheet).getByRole("radio", { name: /מימון מחדש/ }));
     await expect(within(sheet).getByRole("radio", { name: /מימון מחדש/ })).toHaveAttribute("aria-checked", "true");
+  },
+};
+
+/** FLOW-962: a refinance names the new loan, and the closed head opens it. */
+export const ClosedRefinanceLinked: Story = {
+  name: "Closed for a refinance, linked",
+  args: { loanId: "loan-bridge", store: () => sampleLoanStore() },
+  play: async ({ canvasElement }) => {
+    const body = bodyOf(canvasElement);
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "סגירת ההלוואה" }));
+    await userEvent.click(within(await body.findByRole("dialog", { name: /^סגירת הלוואת גישור/ })).getByRole("radio", { name: /מימון מחדש/ }));
+    await userEvent.click(body.getByRole("button", { name: /ההלוואה החדשה · לא חובה/ }));
+    await userEvent.click(within(await body.findByRole("dialog", { name: "ההלוואה החדשה" })).getByRole("radio", { name: "משכנתא דוגמה" }));
+    await userEvent.click(within(await body.findByRole("dialog", { name: /^סגירת הלוואת גישור/ })).getByRole("button", { name: "סגירת ההלוואה" }));
+    await expect(await within(canvasElement).findByRole("link", { name: /משכנתא דוגמה/ })).toBeInTheDocument();
   },
 };
 

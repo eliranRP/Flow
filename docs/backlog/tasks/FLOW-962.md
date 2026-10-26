@@ -20,8 +20,7 @@
 - [x] The active tab has the Home v2 pill (already in the app since FLOW-958).
 - [x] The payments page tag is a plain label.
 - [x] סגירת ההלוואה: why (נפרעה במלואה / מימון מחדש), the date; then a 5s ביטול; a closed loan offers החזרה לפעילות.
-- [ ] For a refinance, an optional link to the new loan. Needs a column (`loans.refinanced_into_id`), an MCP tool with undo, and `list_loans` to return it: for the owner (decisions needed, PR #824).
-- [ ] The loan closes by itself when its balance reaches 0: the app does not do this today (a trigger, or a read rule). For the owner.
-- [x] "מתי השינוי חל?" on a change of rate: today or a date (a past date allowed); the line under it says how many payments were attached since then.
-- [ ] Working those payments' parts out again with the new rate goes against decision 0132 (attached payments keep their parts) and moves the P&L of months already read. For the owner.
+- [x] For a refinance, an optional link to the new loan (owner, 2026-10-26: build it): `loans.refinanced_into_id`, MCP `set_loan_refinance` with undo `loan_refinance`, `list_loans` returns it; the closed head names and opens it.
+- [x] The loan closes by itself when its balance reaches 0: filed as FLOW-964 (owner, 2026-10-26: its own task).
+- [x] "מתי השינוי חל?" on a change of rate: today or a date (a past date allowed); the day sets only from when the schedule and the forecast use the new rate, and the line says how many payments were attached since then, which keep their parts (owner, 2026-10-26: decision 0132 stands).
 - **Acceptance:** stories of the loan page (close sheet, closed early, edit from a past date, failed, offline) at 320 and 393; tests for each new path; CONTROLS.md rows; design log entry.

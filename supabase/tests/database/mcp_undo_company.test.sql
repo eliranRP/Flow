@@ -245,7 +245,7 @@ from unnest(array[
   'overhead_project', 'company', 'line_split', 'line_pnl', 'loan_rate', 'invoice_paid',
   'loan_detach', 'loan_delete', 'loan_order', 'project_investment', 'category_rehab',
   'category_delete', 'category_move', 'company_currency', 'category_group', 'category_parent',
-  'project_group', 'project_group_member', 'category_name', 'jev_mode', 'loan_index',
+  'project_group', 'project_group_member', 'category_name', 'jev_mode', 'loan_index', 'loan_refinance',
   'index_rate', 'project_update', 'project_delete', 'project_forecast', 'invoice_link',
   'invoice_dismiss', 'manual_entry', 'document_attach', 'bank_accounts', 'transfer_match',
   'book_line', 'note_add', 'note_edit', 'note_remove', 'file_remove'
@@ -286,7 +286,7 @@ select is(
 );
 select is(
   (select count(*)::int from muc_sweep),
-  55,
+  56,
   'the sweep covers every undo kind but the two forecast ones'
 );
 
@@ -294,7 +294,7 @@ select is(
 select is(
   (select count(*)::int from private.mcp_writes w join muc_sweep s on s.write_id = w.id
    where w.company_id = pg_temp.id('b')),
-  55,
+  56,
   'the swept writes keep the company they were stored with'
 );
 select is(

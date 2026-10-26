@@ -31,6 +31,8 @@ export type LoanDetail = {
   amortizationMonths: number | null;
   status: LoanStatus;
   closedOn: string | null;
+  /** FLOW-962: the loan that replaced this one in a refinance. */
+  refinancedIntoId?: string | null;
   projectId: string | null;
   categoryIds: Record<LoanSplitPart, string | null>;
   /** Newest first. */
@@ -63,7 +65,7 @@ export type LoanCategory = {
 
 /** The loan's columns the page reads, with the rate rows embedded. */
 export const LOAN_DETAIL_COLUMNS =
-  "id, company_id, name, currency, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, kind, interest_only_months, amortization_months, status, closed_on, project_id, interest_category_id, escrow_category_id, principal_category_id, fees_category_id, loan_rates(id, effective_date, annual_rate_ppm)";
+  "id, company_id, name, currency, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, kind, interest_only_months, amortization_months, status, closed_on, refinanced_into_id, project_id, interest_category_id, escrow_category_id, principal_category_id, fees_category_id, loan_rates(id, effective_date, annual_rate_ppm)";
 
 export type LoanDetailDbRow = {
   id: string;
@@ -81,6 +83,7 @@ export type LoanDetailDbRow = {
   amortization_months: number | null;
   status: LoanStatus;
   closed_on: string | null;
+  refinanced_into_id?: string | null;
   project_id: string | null;
   interest_category_id: string | null;
   escrow_category_id: string | null;
@@ -113,6 +116,7 @@ export function readLoanRow(row: LoanDetailDbRow, balance: { balanceMinor: bigin
     amortizationMonths: row.amortization_months,
     status: row.status,
     closedOn: row.closed_on,
+    refinancedIntoId: row.refinanced_into_id ?? null,
     projectId: row.project_id,
     categoryIds: {
       interest: row.interest_category_id,

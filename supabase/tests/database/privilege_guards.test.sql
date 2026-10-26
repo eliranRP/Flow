@@ -135,6 +135,7 @@ insert into pg_allowed (sig) values
     ('mcp_set_lines_pnl(text,jsonb)'),
     ('mcp_set_loan_index(text,uuid,text,integer)'),
     ('mcp_set_loan_rate(text,uuid,date,integer)'),
+    ('mcp_set_loan_refinance(text,uuid,uuid)'),
     ('mcp_set_member_role(text,uuid,text)'),
     ('mcp_set_overhead_project(text,uuid)'),
     ('mcp_set_project_forecast_edit(text,uuid,text,jsonb)'),

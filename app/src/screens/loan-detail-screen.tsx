@@ -45,7 +45,7 @@ import { loanSubtitle, paymentTotals, wholeMoney } from "./loan-detail-view-data
 import { TransactionTopBar } from "./transaction-top-bar";
 import { LoanPartSheet } from "./loan-detail-sheets";
 import { LoanRateSheet } from "./loan-rate-sheet";
-import { LoanCloseSheet } from "./loan-close-sheet";
+import { LoanCloseSheet, LoanLinkPicker, type LoanLinkChoice } from "./loan-close-sheet";
 import { LoanLoadFailed, LoanOfflineLine, useLoanOnline } from "./loan-states";
 import { LoanKindSheet } from "./loan-kind-sheet";
 import {
@@ -59,7 +59,7 @@ import {
   type LoanWrites,
   type MemoryLoanStore,
 } from "./loan-detail-store";
-import { showsLoanBalance } from "./loan-list";
+import { showsLoanBalance, useLoanList } from "./loan-list";
 import { LOAN_WRITE_KEYS } from "./loan-match-api";
 import { LoanProjectPicker, NO_PROJECT, type LoanProjectSource } from "./loan-project-picker";
 import { loanOutlook } from "./loan-outlook";
@@ -76,7 +76,7 @@ import { loanOutlook } from "./loan-outlook";
 export const LOAN_ERROR_TITLE = "ההלוואה לא נטענה";
 export const LOAN_MISSING_TITLE = "ההלוואה לא נמצאה";
 
-type SheetName = "kind" | "rate" | "close" | "part" | "project" | "delete";
+type SheetName = "kind" | "rate" | "close" | "link" | "part" | "project" | "delete";
 
 /** FLOW-962: the loan page's toasts hang under its bar, and an undo stays 5s (decision 0212, as on לאישור). */
 const LOAN_TOAST = { place: "top", durationMs: 5000 } as const;
@@ -141,6 +141,9 @@ export function LoanDetailScreen({
       retrying: dashboard.isFetching,
       onRetry: () => { void dashboard.refetch(); },
     };
+  // FLOW-962: the company's other loans, for a refinance's link and its name on a closed page.
+  const liveList = useLoanList(isLive && read.phase === "ready" ? read.bundle.loan.companyId : null);
+  const loanChoices: LoanLinkChoice[] = (store ? store.rows() : (liveList.data ?? [])).map((row) => ({ id: row.id, name: row.name }));
   if (read.phase === "loading") return <LoanDetailLoading back={back} />;
   if (read.phase === "error") {
     return (
@@ -179,6 +182,7 @@ export function LoanDetailScreen({
       today={givenToday ?? israelToday()}
       search={search}
       offlineSince={givenOffline ?? (!online && read.readAt != null && read.readAt > 0 ? read.readAt : null)}
+      loanChoices={loanChoices.filter((choice) => choice.id !== read.bundle.loan.id)}
     />
   );
 
@@ -219,8 +223,10 @@ function LoanDetailReady({
   today,
   search,
   offlineSince,
+  loanChoices,
 }: {
   offlineSince: number | null;
+  loanChoices: readonly LoanLinkChoice[];
   bundle: LoanBundle;
   writes: LoanWrites;
   liveKeys: boolean;
@@ -333,7 +339,7 @@ function LoanDetailReady({
   async function reopen() {
     if (reopening) return;
     setReopening(true);
-    await patchSave({ status: "open", closedOn: null }, "ההלוואה חזרה לפעילות", undefined, "ההלוואה נסגרה שוב");
+    await patchSave({ status: "open", closedOn: null, refinancedIntoId: null }, "ההלוואה חזרה לפעילות", undefined, "ההלוואה נסגרה שוב");
     setReopening(false);
   }
 
@@ -342,6 +348,7 @@ function LoanDetailReady({
   // FLOW-138 "Hide" (FLOW-356): a paid-off loan with nothing left shows no balance card, as on the list.
   const ended = !showsLoanBalance(loan);
   const closed = loan.status !== "open";
+  const linked = loan.refinancedIntoId == null ? null : (loanChoices.find((choice) => choice.id === loan.refinancedIntoId) ?? null);
   const outlook = loanOutlook(loan, today);
   const paidTotal = paymentTotals(payments).total;
   const lastPaid = lastPaymentDate(payments);
@@ -369,7 +376,14 @@ function LoanDetailReady({
               <p className="ui-loan-sub">{loanSubtitle(loan, projectName)}</p>
             </header>
             {offlineSince == null ? null : <LoanOfflineLine since={offlineSince} />}
-            {loan.status === "open" ? null : <LoanClosedCard status={loan.status} closedOn={loan.closedOn} />}
+            {loan.status === "open" ? null : (
+              <LoanClosedCard
+                status={loan.status}
+                closedOn={loan.closedOn}
+                link={linked == null ? null : { name: linked.name, to: `${loanPath.slice(0, loanPath.lastIndexOf("/"))}/${linked.id}${search}` }}
+                onLink={loan.status === "closed" && !holdWrites ? () => { open("link"); } : null}
+              />
+            )}
             {flagged.length > 0 ? (
               <Banner
                 icon={<AlertIcon size={20} />}
@@ -451,8 +465,24 @@ function LoanDetailReady({
               defaultDate={closeDateDefault(lastPaid, today)}
               today={today}
               nextDue={outlook?.next.dueDate ?? null}
+              linkChoices={loanChoices}
               onSave={(next) => patchSave(next, loanClosedToast(loan.name, next.status, loan.balanceMinor, loan.currency), "status", "ההלוואה חזרה לפעילות")}
             />
+            <Sheet open={sheet === "link"} onOpenChange={setSheet} title="ההלוואה החדשה" hint={loan.name} returnFocusRef={returnRef} panelClassName="ui-sheet-fit">
+              <LoanLinkPicker
+                choices={loanChoices}
+                selectedId={loan.refinancedIntoId ?? null}
+                onSelect={(id) => {
+                  if (id === (loan.refinancedIntoId ?? null)) {
+                    setSheet(false);
+                    return;
+                  }
+                  void patchSave({ refinancedIntoId: id }, id == null ? "הקישור להלוואה החדשה הוסר" : "ההלוואה החדשה קושרה").then((failed) => {
+                    if (failed == null) setSheet(false);
+                  });
+                }}
+              />
+            </Sheet>
             <LoanPartSheet
               part={part}
               loan={loan}

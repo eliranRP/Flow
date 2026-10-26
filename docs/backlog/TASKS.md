@@ -226,6 +226,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-954"></a>[FLOW-954](tasks/FLOW-954.md) | Ledger UI A: the line's journal entry, credit (זיכוי) wording in the split, kept-out group in the P&L drill-down | UI |
 | <a id="flow-955"></a>[FLOW-955](tasks/FLOW-955.md) | Ledger UI B: the journal entry composer (פקודת יומן · עריכה) and the review of Jev's bookings | UI |
 | <a id="flow-962"></a>[FLOW-962](tasks/FLOW-962.md) | Loans v2: the UX/UI rules review of הלוואות | UI (design approved) |
+| <a id="flow-964"></a>[FLOW-964](tasks/FLOW-964.md) | A loan closes by itself when its balance reaches 0 | feature (owner call) |
 
 ## MCP
 

@@ -3,16 +3,45 @@ import type { LoanStatus } from "@flow/shared";
 import { Button } from "../ui/button";
 import { formatDisplay } from "../ui/date-math";
 import { DateSheet } from "../ui/date-sheet";
-import { CalendarIcon } from "../ui/icons";
+import { CalendarIcon, ChevronIcon } from "../ui/icons";
 import { ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { LOAN_CLOSE_REASON, LOAN_CLOSE_REASON_HINT, loanCloseLine, type LoanCloseReason } from "./loan-copy";
 import type { SheetSave } from "./loan-detail-sheets";
 
+/** Another loan of the company, as the link picker lists it. */
+export type LoanLinkChoice = { id: string; name: string };
+
+/** ההלוואה החדשה: בלי קישור first, then the company's other loans. A tap picks. */
+export function LoanLinkPicker({ choices, selectedId, disabled = false, onSelect }: {
+  choices: readonly LoanLinkChoice[];
+  selectedId: string | null;
+  disabled?: boolean;
+  onSelect: (id: string | null) => void;
+}) {
+  return (
+    <div role="radiogroup" aria-label="ההלוואה החדשה">
+      <ListRow control="radio" layout="picker" title="בלי קישור" selected={selectedId == null} disabled={disabled} onSelect={() => { onSelect(null); }} />
+      {choices.map((choice) => (
+        <ListRow control="radio"
+          key={choice.id}
+          layout="picker"
+          title={choice.name}
+          selected={selectedId === choice.id}
+          disabled={disabled}
+          onSelect={() => { onSelect(choice.id); }}
+        />
+      ))}
+      {choices.length === 0 ? <p className="ui-loan-sheet-line">אין עוד הלוואות. אפשר להוסיף את החדשה ברשימת ההלוואות ולקשר אותה מכאן אחר כך.</p> : null}
+    </div>
+  );
+}
+
 /**
  * FLOW-962 (board Loan close): סגירת ההלוואה, for a loan that ends before its term. Why it closed
- * (נפרעה במלואה is paid_off, מימון מחדש is closed), the day (from the last attached payment on), and
- * one line on what follows. The loan still closes by itself when its balance reaches 0.
+ * (נפרעה במלואה is paid_off, מימון מחדש is closed), the day (from the last attached payment on), for a
+ * refinance the new loan if it is in Flow (the picker takes the sheet's place, one sheet at a time),
+ * and one line on what follows.
  */
 export function LoanCloseSheet({
   loanName,
@@ -22,6 +51,7 @@ export function LoanCloseSheet({
   defaultDate,
   today,
   nextDue,
+  linkChoices,
   onSave,
   returnFocusRef,
 }: {
@@ -34,28 +64,42 @@ export function LoanCloseSheet({
   today: string;
   /** The next scheduled payment, which leaves the forecast. Null when none is due. */
   nextDue: string | null;
-  onSave: SheetSave<{ status: Exclude<LoanStatus, "open">; closedOn: string }>;
+  /** The company's other loans, for a refinance's link. */
+  linkChoices: readonly LoanLinkChoice[];
+  onSave: SheetSave<{ status: Exclude<LoanStatus, "open">; closedOn: string; refinancedIntoId: string | null }>;
   returnFocusRef?: { current: HTMLElement | null };
 }) {
   const [reason, setReason] = useState<LoanCloseReason>("paid_off");
   const [date, setDate] = useState(defaultDate);
+  const [link, setLink] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (!open) return;
     setReason("paid_off");
     setDate(defaultDate);
+    setLink(null);
+    setPicking(false);
     setError(null);
   }, [open, defaultDate]);
   const reasons: LoanCloseReason[] = ["paid_off", "closed"];
+  const linkName = link == null ? null : (linkChoices.find((choice) => choice.id === link)?.name ?? null);
   async function save() {
     if (saving) return;
     setSaving(true);
     setError(null);
-    const failed = await onSave({ status: reason, closedOn: date });
+    const failed = await onSave({ status: reason, closedOn: date, refinancedIntoId: reason === "closed" ? link : null });
     setSaving(false);
     if (failed == null) onOpenChange(false);
     else if (failed !== "") setError(failed);
+  }
+  if (picking) {
+    return (
+      <Sheet open={open} onOpenChange={(next) => { if (!next) setPicking(false); }} title="ההלוואה החדשה" returnFocusRef={returnFocusRef} panelClassName="ui-sheet-fit">
+        <LoanLinkPicker choices={linkChoices} selectedId={link} onSelect={(id) => { setLink(id); setPicking(false); }} />
+      </Sheet>
+    );
   }
   return (
     <Sheet
@@ -99,6 +143,15 @@ export function LoanCloseSheet({
             setError(null);
           }}
         />
+        {reason === "closed" ? (
+          <button type="button" className="ui-field-control ui-loan-link-field" disabled={saving} onClick={() => { setPicking(true); }}>
+            <span className="ui-loan-link-text">
+              <span className="ui-field-label">ההלוואה החדשה · לא חובה</span>
+              <span>{linkName ?? "בלי קישור"}</span>
+            </span>
+            <ChevronIcon size={18} />
+          </button>
+        ) : null}
         <p className="ui-loan-sheet-line">{loanCloseLine(reason, nextDue)}</p>
         <Button full busy={saving} onClick={() => { void save(); }}>סגירת ההלוואה</Button>
       </div>

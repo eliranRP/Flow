@@ -280,7 +280,7 @@ export function rateChangeLine(day: string, today: string, since: number, nextDu
   if (day > today) return `מ־${formatDisplay(day)} החישוב לפי הריבית החדשה. ${kept}`;
   if (day < today && since > 0) {
     const count = since === 1 ? "תשלום אחד שויך" : `${String(since)} תשלומים שויכו`;
-    return `${count} מאז ${formatDisplay(day)}, והם נשארים כפי שהם. התשלומים הבאים יחושבו לפי הריבית החדשה.`;
+    return `${count} מאז ${formatDisplay(day)}, והם נשארים כפי שהם. התאריך קובע רק ממתי הלוח והצפי לפי הריבית החדשה.`;
   }
   if (nextDue == null) return `מ־${formatDisplay(day)} החישוב לפי הריבית החדשה. ${kept}`;
   return `התשלום הבא, ${nextDue.slice(8, 10)}/${nextDue.slice(5, 7)}, יחושב לפי הריבית החדשה. ${kept}`;
