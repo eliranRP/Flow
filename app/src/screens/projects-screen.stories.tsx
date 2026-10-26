@@ -102,7 +102,7 @@ export const ProjectsFinished: Story = {
   },
 };
 
-/** FLOW-445: the new-project sheet; its save stays disabled until a name is typed. */
+/** FLOW-445: the new-project sheet, from the header's filled +. FLOW-961: יצירת פרויקט is never disabled. */
 export const ProjectsNewSheet: Story = {
   name: "Projects, new project sheet",
   render: () => (
@@ -113,9 +113,9 @@ export const ProjectsNewSheet: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: "+ פרויקט חדש" }));
+    await userEvent.click(await canvas.findByRole("button", { name: "פרויקט חדש" }));
     const dialog = await within(document.body).findByRole("dialog");
-    await expect(within(dialog).getByRole("button", { name: "יצירת פרויקט" })).toBeDisabled();
+    await expect(within(dialog).getByRole("button", { name: "יצירת פרויקט" })).toBeEnabled();
   },
 };
 
