@@ -77,6 +77,14 @@ export const Missing: Story = {
   },
 };
 
+/** FLOW-966: offline, a save writes nothing; the form stays open and says why. */
+export const Offline: Story = {
+  args: {
+    error: "אין חיבור. הטופס נשאר פתוח: נסו שוב כשהחיבור יחזור.",
+    start: { amount: "120", payee: "Ajax Hardware", categoryId: "c1" },
+  },
+};
+
 /** FLOW-966: income by cheque, every field set: the save names what it saves. */
 export const IncomeCheque: Story = {
   args: { start: { direction: "in", method: "cheque", cheque: "1048", amount: "2,400.00", payee: "Dana R.", categoryId: "c4" } },

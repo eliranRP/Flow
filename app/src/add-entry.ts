@@ -129,9 +129,9 @@ export const ENTRY_FIELDS: readonly EntryField[] = ["amount", "payee", "date", "
 export function entryProblems(draft: EntryDraft): Partial<Record<EntryField, string>> {
   const problems: Partial<Record<EntryField, string>> = {};
   if (parseAmountMinor(draft.amount) == null) problems.amount = "חסר סכום";
-  if (payeeProblem(draft.payee) != null) {
-    problems.payee = draft.direction === "in" ? "ממי הכסף? למשל שם הדייר" : "למי שילמתם? למשל שם הספק";
-  }
+  const payee = payeeProblem(draft.payee);
+  if (payee === "hidden") problems.payee = "בשם יש תו נסתר. מחקו אותו והקלידו שוב";
+  else if (payee != null) problems.payee = draft.direction === "in" ? "ממי הכסף? למשל שם הדייר" : "למי שילמתם? למשל שם הספק";
   if (parseDisplayDate(draft.date) == null) problems.date = "התאריך צריך להיות dd/mm/yyyy";
   if (draft.method === "cheque" && chequeProblem(draft.cheque)) problems.cheque = "מספר הצ׳ק: עד 20 ספרות, אותיות או מקף";
   if (draft.projectId == null) problems.project = "בחרו פרויקט, או \"בלי פרויקט\"";

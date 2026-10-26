@@ -11,9 +11,11 @@ type ChipProps = {
   children: ReactNode;
   onClick?: () => void;
   className?: string;
+  /** A radio keeps its group to one tab stop: 0 on the checked chip (or the first), -1 on the rest. */
+  tabIndex?: number;
 };
 
-export function Chip({ kind = "choice", pressed = false, radio = false, children, onClick, className }: ChipProps) {
+export function Chip({ kind = "choice", pressed = false, radio = false, children, onClick, className, tabIndex }: ChipProps) {
   const label = typeof children === "string" ? children : undefined;
   return (
     <button
@@ -24,6 +26,7 @@ export function Chip({ kind = "choice", pressed = false, radio = false, children
       aria-pressed={radio ? undefined : pressed}
       aria-label={label}
       disabled={kind === "disabled"}
+      tabIndex={tabIndex}
       onClick={onClick}
     >
       {kind === "suggested" ? (

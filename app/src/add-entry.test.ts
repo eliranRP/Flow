@@ -65,6 +65,7 @@ describe("entryProblems", () => {
     expect(entryProblems(READY)).toEqual({});
     expect(entryProblems({ ...READY, amount: "" })).toEqual({ amount: "חסר סכום" });
     expect(entryProblems({ ...READY, payee: " A " })).toEqual({ payee: "למי שילמתם? למשל שם הספק" });
+    expect(entryProblems({ ...READY, payee: "Ajax\u200bHardware" }).payee).toBe("בשם יש תו נסתר. מחקו אותו והקלידו שוב");
     expect(entryProblems({ ...READY, direction: "in", payee: "" }).payee).toBe("ממי הכסף? למשל שם הדייר");
     expect(entryProblems({ ...READY, projectId: null })).toEqual({ project: "בחרו פרויקט, או \"בלי פרויקט\"" });
     expect(entryProblems({ ...READY, categoryId: null })).toEqual({ category: "בחרו קטגוריה" });

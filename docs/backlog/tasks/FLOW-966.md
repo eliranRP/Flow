@@ -5,12 +5,13 @@
 
 - [x] Save is never disabled: each missing field shows its own error (aria-invalid, aria-describedby).
 - [x] Field, chip and dashed "+ חדש" edges reach 3:1; placeholders 4.5:1.
-- [ ] Camera access refused: "אין גישה למצלמה" with בחירת קובץ. Not built: the phone's camera opens through a file input, which can't tell a refusal from a cancel (needs an in-app camera).
-- [ ] A receipt that couldn't be read: צילום שוב / מילוי ידני. Not built: the app does not read receipts (FLOW-306).
+- [x] ~~Camera access refused: "אין גישה למצלמה" with בחירת קובץ.~~ Dropped by the owner (card, 2026-10-26): the phone's camera opens through a file input, which can't tell a refusal from a cancel; revisit with an in-app camera.
+- [x] ~~A receipt that couldn't be read: צילום שוב / מילוי ידני.~~ Dropped by the owner (card, 2026-10-26): the app does not read receipts (FLOW-306); revisit if receipt reading is built.
 - [x] Chips and segmented controls are 44px; single-choice chips are a radiogroup.
 - [x] The date has היום / אתמול presets.
 - [x] The save button names what it saves (שמירת ההוצאה, שמירת ההכנסה).
-- [ ] Offline, a save is kept on the device ("שמירה במכשיר") and sent when back online. Waits on an owner call: there is no write queue, and `create_manual_line` has no idempotency key. Meanwhile offline says so and keeps the form open.
+- [x] Offline, a save writes nothing, keeps the form open and says so. The device queue ("שמירה במכשיר") is its own task, [FLOW-967](FLOW-967.md) (owner card, 2026-10-26).
 - [x] Toasts sit under the header; an undo stays 5s.
-- [x] "צירוף צילום" opens the camera; the payee field is dir="auto"; type scale only.
-- **Acceptance:** stories of each state (missing, camera refused, could not read, offline, saved); tests for the errors, the presets, the offline save and the toast place; decision record; design log entry.
+- [x] "צירוף צילום" opens the picker (camera, gallery or a PDF); the payee field is dir="auto"; type scale only.
+- [x] The project and category radiogroups have one tab stop and arrow keys that move and check; the "+ … חדש" buttons sit after the group.
+- **Acceptance:** stories of each state (missing, offline, income cheque); tests for the errors, the presets, the offline save and the toast place; decision record; design log entry.

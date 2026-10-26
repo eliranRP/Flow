@@ -17,8 +17,21 @@ const mocks = vi.hoisted(() => ({
   undoManualLine: vi.fn(() => Promise.resolve()),
   createProjectNamed: vi.fn(() => Promise.resolve("p3")),
   createCategoryNamed: vi.fn(() => Promise.resolve("c4")),
+  toastShow: vi.fn(),
   match: null as BankMatch | null,
 }));
+
+// Decision 0217: every show() is recorded, so the tests can read each toast's place and time.
+vi.mock("../ui/toast", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../ui/toast")>();
+  return {
+    ...actual,
+    useToast: () => {
+      const toast = actual.useToast();
+      return { ...toast, show: (input: Parameters<typeof toast.show>[0]) => { mocks.toastShow(input); return toast.show(input); } };
+    },
+  };
+});
 
 vi.mock("../use-add-entry", () => ({
   saveManualLine: mocks.saveManualLine,
@@ -90,6 +103,7 @@ describe("AddEntrySheet inline new project", () => {
     expect(await screen.findByText("נוצר פרויקט Willow Dr")).toBeInTheDocument();
     expect(mocks.createProjectNamed).toHaveBeenCalledWith("Willow Dr");
     expect(screen.getByRole("radio", { name: "Willow Dr" })).toHaveAttribute("aria-checked", "true");
+    expect(mocks.toastShow).toHaveBeenCalledWith(expect.objectContaining({ message: "נוצר פרויקט Willow Dr", place: "top", durationMs: 4000 }));
   });
 });
 
@@ -102,6 +116,7 @@ describe("AddEntrySheet toasts and offline (FLOW-966)", () => {
     await waitFor(() => { expect(onDone).toHaveBeenCalled(); });
     const toast = await screen.findByText("ההוצאה נשמרה · Oak Ridge");
     expect(toast.closest("[data-place]")).toHaveAttribute("data-place", "top");
+    expect(mocks.toastShow).toHaveBeenCalledWith(expect.objectContaining({ message: "ההוצאה נשמרה · Oak Ridge", place: "top", durationMs: 5000, action: "ביטול" }));
   });
 
   it("offline, keeps the form open and says why instead of failing", () => {

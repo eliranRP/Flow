@@ -147,8 +147,7 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
       <input
         ref={picker}
         type="file"
-        accept="image/*"
-        capture="environment"
+        accept="image/*,application/pdf"
         hidden
         aria-hidden="true"
         tabIndex={-1}

@@ -5,6 +5,7 @@
 import { useId, useState, type ReactNode } from "react";
 import { Sheet } from "../ui/sheet";
 import { Chip } from "../ui/chip";
+import { onRadioArrow } from "../ui/segmented-control";
 import { AlertIcon } from "../ui/icons";
 import {
   datePresets,
@@ -73,13 +74,14 @@ function Segment<T extends string>({ label, value, options, onPick, cols }: {
   return (
     <div className="ui-add-field">
       <span className="ui-add-label" id={id}>{label}</span>
-      <div role="radiogroup" aria-labelledby={id} className="ui-add-seg" style={{ gridTemplateColumns: `repeat(${String(cols)}, minmax(0, 1fr))` }}>
-        {options.map(([key, text]) => (
+      <div role="radiogroup" aria-labelledby={id} className="ui-add-seg" style={{ gridTemplateColumns: `repeat(${String(cols)}, minmax(0, 1fr))` }} onKeyDown={onRadioArrow}>
+        {options.map(([key, text], index) => (
           <button
             key={key}
             type="button"
             role="radio"
             aria-checked={value === key}
+            tabIndex={tabStop(value === key, index === 0, options.some(([k]) => k === value))}
             className="ui-add-seg-btn"
             onClick={() => { onPick(key); }}
           >
@@ -97,18 +99,31 @@ function FieldError({ id, text }: { id: string; text: string | undefined }) {
   return <span id={id} className="ui-add-err"><AlertIcon size={16} />{text}</span>;
 }
 
-/** The single-choice chips of a field: one radiogroup, named by the field's label. */
-function ChipGroup({ id, labelId, errorId, invalid, children }: { id: string; labelId: string; errorId: string; invalid: boolean; children: ReactNode }) {
+/** A radiogroup's one tab stop: the checked radio, or the first when none is checked. */
+function tabStop(checked: boolean, first: boolean, anyChecked: boolean): number {
+  return checked || (!anyChecked && first) ? 0 : -1;
+}
+
+/**
+ * The single-choice chips of a field: one radiogroup, named by the field's label, with one tab stop and
+ * arrow keys that move and check. Its "+ … חדש" button sits after the group, in the same row, since a
+ * radiogroup holds radios only.
+ */
+function ChipGroup({ id, labelId, errorId, invalid, children, after }: { id: string; labelId: string; errorId: string; invalid: boolean; children: ReactNode; after?: ReactNode }) {
   return (
-    <div
-      id={id}
-      role="radiogroup"
-      aria-labelledby={labelId}
-      aria-invalid={invalid || undefined}
-      aria-describedby={invalid ? errorId : undefined}
-      className="ui-add-chips"
-    >
-      {children}
+    <div className="ui-add-chips">
+      <div
+        id={id}
+        role="radiogroup"
+        aria-labelledby={labelId}
+        aria-invalid={invalid || undefined}
+        aria-describedby={invalid ? errorId : undefined}
+        className="ui-add-chip-group"
+        onKeyDown={onRadioArrow}
+      >
+        {children}
+      </div>
+      {after}
     </div>
   );
 }
@@ -129,6 +144,8 @@ export function AddEntryView(props: AddEntryViewProps) {
   const categoryList = [...props.categories, ...addedCategories.filter((a) => !props.categories.some((c) => c.id === a.id))].filter((c) => c.kind === kindWanted);
   const categoryNames = orderChips(categoryList.map((c) => c.name), [LAST_CATEGORY]);
   const projectNames = projectList.map((p) => p.name);
+  const projectChecked = draft.projectId === NO_PROJECT || projectNames.some((name) => (projectList.find((p) => p.name === name)?.id ?? name) === draft.projectId);
+  const categoryChecked = categoryNames.some((name) => (categoryList.find((c) => c.name === name)?.id ?? name) === draft.categoryId);
   const [tried, setTried] = useState(false);
   const uid = useId();
   const problems = entryProblems(draft);
@@ -298,22 +315,27 @@ export function AddEntryView(props: AddEntryViewProps) {
 
         <div className="ui-add-field">
           <span className="ui-add-label" id={labelId("project")}>פרויקט</span>
-          <ChipGroup id={fieldId("project")} labelId={labelId("project")} errorId={errId("project")} invalid={invalid("project")}>
-            {projectNames.map((name) => {
+          <ChipGroup
+            id={fieldId("project")}
+            labelId={labelId("project")}
+            errorId={errId("project")}
+            invalid={invalid("project")}
+            after={adding !== "project" && props.fromProject == null ? (
+              <button type="button" className="ui-add-chip-new" onClick={() => { setAdding("project"); }}>+ פרויקט חדש</button>
+            ) : null}
+          >
+            {projectNames.map((name, index) => {
               const project = projectList.find((p) => p.name === name);
               const id = project?.id ?? name;
               return (
-                <Chip key={id} radio pressed={draft.projectId === id} onClick={() => { patch({ projectId: id }); }}>
+                <Chip key={id} radio pressed={draft.projectId === id} tabIndex={tabStop(draft.projectId === id, index === 0, projectChecked)} onClick={() => { patch({ projectId: id }); }}>
                   {name}
                 </Chip>
               );
             })}
-            <Chip radio pressed={draft.projectId === NO_PROJECT} onClick={() => { patch({ projectId: NO_PROJECT }); }}>
+            <Chip radio pressed={draft.projectId === NO_PROJECT} tabIndex={tabStop(draft.projectId === NO_PROJECT, projectNames.length === 0, projectChecked)} onClick={() => { patch({ projectId: NO_PROJECT }); }}>
               בלי פרויקט
             </Chip>
-            {adding !== "project" && props.fromProject == null ? (
-              <button type="button" className="ui-add-chip-new" onClick={() => { setAdding("project"); }}>+ פרויקט חדש</button>
-            ) : null}
           </ChipGroup>
           <FieldError id={errId("project")} text={shown.project} />
           {adding === "project" ? (
@@ -333,19 +355,24 @@ export function AddEntryView(props: AddEntryViewProps) {
 
         <div className="ui-add-field">
           <span className="ui-add-label" id={labelId("category")}>קטגוריה</span>
-          <ChipGroup id={fieldId("category")} labelId={labelId("category")} errorId={errId("category")} invalid={invalid("category")}>
-            {categoryNames.map((name) => {
+          <ChipGroup
+            id={fieldId("category")}
+            labelId={labelId("category")}
+            errorId={errId("category")}
+            invalid={invalid("category")}
+            after={adding !== "category" ? (
+              <button type="button" className="ui-add-chip-new" onClick={() => { setAdding("category"); }}>+ קטגוריה חדשה</button>
+            ) : null}
+          >
+            {categoryNames.map((name, index) => {
               const category = categoryList.find((c) => c.name === name);
               const id = category?.id ?? name;
               return (
-                <Chip key={id} radio pressed={draft.categoryId === id} onClick={() => { patch({ categoryId: id }); }}>
+                <Chip key={id} radio pressed={draft.categoryId === id} tabIndex={tabStop(draft.categoryId === id, index === 0, categoryChecked)} onClick={() => { patch({ categoryId: id }); }}>
                   {name}
                 </Chip>
               );
             })}
-            {adding !== "category" ? (
-              <button type="button" className="ui-add-chip-new" onClick={() => { setAdding("category"); }}>+ קטגוריה חדשה</button>
-            ) : null}
           </ChipGroup>
           <FieldError id={errId("category")} text={shown.category} />
           {adding === "category" ? (

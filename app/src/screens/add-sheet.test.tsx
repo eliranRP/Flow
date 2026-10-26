@@ -1,10 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { BrowserRouter, MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { AddForm } from "./add-sheet";
-import { type BankMatch, datePresets, emptyDraft, type EntryDraft } from "../add-entry";
+import { type BankMatch, datePresets, emptyDraft, type EntryDraft, NO_PROJECT } from "../add-entry";
 import { AddEntryView, type AddEntryViewProps } from "./add-entry-view";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -158,6 +158,29 @@ describe("AddEntryView save rule (FLOW-966: never disabled)", () => {
     setup({}, complete);
     expect(screen.getByRole("radio", { name: "Fernbrook Ln" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("radio", { name: "בלי פרויקט" })).toHaveAttribute("aria-checked", "false");
+  });
+
+  it("gives each radiogroup one tab stop, and an arrow key moves and checks", () => {
+    const { props } = setup({}, complete);
+    const project = screen.getByRole("radiogroup", { name: "פרויקט" });
+    const radios = within(project).getAllByRole("radio");
+    expect(radios.map((radio) => radio.tabIndex)).toEqual([0, -1]);
+    // The "+ פרויקט חדש" button is not a radio, so it sits outside the group.
+    expect(within(project).queryByRole("button", { name: "+ פרויקט חדש" })).toBeNull();
+    radios[0]?.focus();
+    fireEvent.keyDown(radios[0] as HTMLElement, { key: "ArrowDown" });
+    expect(radios[1]).toHaveFocus();
+    expect(props.onDraftChange).toHaveBeenLastCalledWith(expect.objectContaining({ projectId: NO_PROJECT }));
+    fireEvent.keyDown(radios[1] as HTMLElement, { key: "ArrowLeft" });
+    expect(document.activeElement).toBe(radios[0]);
+  });
+
+  it("with nothing chosen, the first chip holds the tab stop", () => {
+    setup({}, { ...complete, categoryId: null });
+    const category = screen.getByRole("radiogroup", { name: "קטגוריה" });
+    const stops = within(category).getAllByRole("radio").map((radio) => radio.tabIndex);
+    expect(stops[0]).toBe(0);
+    expect(stops.slice(1).every((stop) => stop === -1)).toBe(true);
   });
 });
 

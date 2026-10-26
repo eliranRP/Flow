@@ -291,10 +291,17 @@
   color: var(--color-text);
 }
 
-.ui-add-chips {
+.ui-add-chips,
+.ui-add-chip-group {
   display: flex;
   flex-wrap: wrap;
   gap: calc(var(--space-1) * 1.5);
+}
+
+/* The radiogroup holds the chips; the "+ … חדש" button follows it in the same row (a radiogroup holds radios only). */
+.ui-add-chip-group {
+  flex: 0 1 auto;
+  min-inline-size: 0;
 }
 
 /* The form's chips: 44px tall, and an unchosen chip's edge is the control edge, not the faint tint. */
