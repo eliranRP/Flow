@@ -33,6 +33,32 @@ type SegmentedControlProps<T extends string> = {
   tone?: "page" | "band";
 };
 
+/** The step an arrow key takes through a radiogroup: it follows the reading direction, so it reverses under dir=rtl. 0 for any other key. */
+export function arrowDelta(event: KeyboardEvent<HTMLElement>): number {
+  const rtl = getComputedStyle(event.currentTarget).direction === "rtl";
+  if (event.key === "ArrowDown") return 1;
+  if (event.key === "ArrowUp") return -1;
+  if (event.key === "ArrowRight") return rtl ? -1 : 1;
+  if (event.key === "ArrowLeft") return rtl ? 1 : -1;
+  return 0;
+}
+
+/**
+ * A radiogroup of plain buttons (FLOW-966): an arrow key moves focus to the next radio in the group and
+ * checks it, as a click would. Each radio's tabIndex keeps the group to one tab stop.
+ */
+export function onRadioArrow(event: KeyboardEvent<HTMLElement>) {
+  const delta = arrowDelta(event);
+  if (delta === 0) return;
+  const radios = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]:not(:disabled)')];
+  const at = radios.findIndex((radio) => radio === document.activeElement);
+  if (at < 0) return;
+  event.preventDefault();
+  const next = radios[(at + delta + radios.length) % radios.length];
+  next?.focus();
+  next?.click();
+}
+
 /** Roving tabindex. Arrow keys follow the reading direction, so they reverse under dir=rtl. */
 export function SegmentedControl<T extends string>({
   label,
@@ -60,13 +86,8 @@ export function SegmentedControl<T extends string>({
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const rtl = getComputedStyle(event.currentTarget).direction === "rtl";
-    let delta = 0;
-    if (event.key === "ArrowDown") delta = 1;
-    else if (event.key === "ArrowUp") delta = -1;
-    else if (event.key === "ArrowRight") delta = rtl ? -1 : 1;
-    else if (event.key === "ArrowLeft") delta = rtl ? 1 : -1;
-    else return;
+    const delta = arrowDelta(event);
+    if (delta === 0) return;
     event.preventDefault();
     move(delta);
   }

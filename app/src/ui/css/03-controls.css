@@ -114,7 +114,7 @@
   color: var(--color-text);
 }
 
-.ui-chip[aria-pressed="true"] {
+.ui-chip:is([aria-pressed="true"], [aria-checked="true"]) {
   background: var(--color-tint-strong);
   border-color: var(--color-accent);
   color: var(--color-text);

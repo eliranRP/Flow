@@ -1,17 +1,24 @@
 // FLOW-369: the add form's container. It reads the projects and categories, makes the write (a manual
 // line, or a document on a matched bank line), and shows the toast with ביטול. The form is
 // AddEntryView (add-entry-view.tsx).
+// FLOW-966 (Add v2, decision 0217): every toast of the form hangs under the header; an undo stays 5s,
+// a note 4s. Offline, a save says so and keeps the form open.
 import { useRef, useState } from "react";
 import { planSave, emptyDraft, documentProblem, type AttachedDocument, type EntryDraft, type EntryKind, NO_PROJECT, todayDisplayDate } from "../add-entry";
 import { documentOf } from "../add-entry-doc";
 import { useHomePreview } from "../preview";
 import { useToast } from "../ui/toast";
+import { useOnline } from "../ui/band-states";
 import { formatAmount } from "../ui/amount";
 import { useCategoriesQuery, useDashboardQuery, useInvalidateBooks } from "../use-books";
 import { attachDocument, createCategoryNamed, createProjectNamed, saveManualLine, undoAttach, undoManualLine, useReceiptMatch } from "../use-add-entry";
 import { useCompanyCurrency } from "../company-currency";
 import { SAMPLE_CATEGORIES, SAMPLE_CURRENCY, SAMPLE_PROJECTS, type SampleEntryFill } from "../add-entry-sample";
 import { AddEntryView } from "./add-entry-view";
+
+/** Decision 0217: the form's toasts sit under the header; an undo stays 5s, a note 4s. */
+const UNDO_TOAST = { place: "top", durationMs: 5000 } as const;
+const NOTE_TOAST = { place: "top", durationMs: 4000 } as const;
 
 export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = null, fill = null, onDone, onClose }: {
   kind: EntryKind;
@@ -23,6 +30,7 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
   onClose: () => void;
 }) {
   const toast = useToast();
+  const online = useOnline();
   const invalidate = useInvalidateBooks();
   const preview = useHomePreview();
   const dashboard = useDashboardQuery();
@@ -65,6 +73,10 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
 
   async function save(next: EntryDraft) {
     if (busy) return;
+    if (!online && preview === "off") {
+      setError("אין חיבור. הטופס נשאר פתוח: נסו שוב כשהחיבור יחזור.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -75,6 +87,7 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
           await invalidate();
           const supplier = match?.description ?? "";
           toast.show({
+            ...UNDO_TOAST,
             message: `הקבלה צורפה לתנועה של ${supplier}`,
             action: "ביטול",
             onAction: () => { void undoAttach(plan.transactionId, document.sha256).then(() => invalidate()); },
@@ -85,6 +98,7 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
           await invalidate();
           const word = next.direction === "in" ? "ההכנסה" : "ההוצאה";
           toast.show({
+            ...UNDO_TOAST,
             message: `${word} נשמרה · ${projectName(next.projectId)}`,
             action: "ביטול",
             onAction: () => { void undoManualLine(id).then(() => invalidate()); },
@@ -119,13 +133,13 @@ export function AddEntrySheet({ kind, initialDocument = null, fromProjectId = nu
         onAddProject={async (name) => {
           const id = await createProjectNamed(name);
           await invalidate(["dashboard"]);
-          toast.show({ message: `נוצר פרויקט ${name}` });
+          toast.show({ ...NOTE_TOAST, message: `נוצר פרויקט ${name}` });
           return id;
         }}
         onAddCategory={async (name, catKind) => {
           const id = await createCategoryNamed(name, catKind);
           await invalidate(["categories"]);
-          toast.show({ message: `נוצרה קטגוריה ${name}` });
+          toast.show({ ...NOTE_TOAST, message: `נוצרה קטגוריה ${name}` });
           return id;
         }}
         onAttach={kind === "cash" ? () => { picker.current?.click(); } : undefined}

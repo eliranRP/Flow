@@ -1,10 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { BrowserRouter, MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { AddForm } from "./add-sheet";
-import { type BankMatch, emptyDraft, type EntryDraft } from "../add-entry";
+import { type BankMatch, datePresets, emptyDraft, type EntryDraft, NO_PROJECT } from "../add-entry";
 import { AddEntryView, type AddEntryViewProps } from "./add-entry-view";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -116,19 +116,71 @@ function setup(overrides: Partial<AddEntryViewProps> = {}, draft: Partial<EntryD
 
 const complete = { amount: "12.50", payee: "Ajax Hardware", projectId: "p1", categoryId: "c1" };
 
-describe("AddEntryView save rule", () => {
-  it("stays off until the amount, the payee, the project and the category are set", () => {
-    const { unmount } = setup({}, { ...complete, payee: "" });
-    expect(screen.getByRole("button", { name: "שמירה" })).toBeDisabled();
-    unmount();
-    setup({}, complete);
-    expect(screen.getByRole("button", { name: "שמירה" })).toBeEnabled();
+describe("AddEntryView save rule (FLOW-966: never disabled)", () => {
+  it("is never disabled: a tap with something missing marks each field, says what it needs and focuses the first", () => {
+    const { props } = setup({}, { ...complete, amount: "", projectId: null, categoryId: null });
+    const save = screen.getByRole("button", { name: "שמירת ההוצאה" });
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    expect(props.onSave).not.toHaveBeenCalled();
+    const amount = screen.getByRole("textbox", { name: "סכום" });
+    expect(amount).toHaveAttribute("aria-invalid", "true");
+    expect(amount).toHaveAccessibleDescription("חסר סכום");
+    expect(amount).toHaveFocus();
+    expect(screen.getByRole("radiogroup", { name: "פרויקט" })).toHaveAccessibleDescription("בחרו פרויקט, או \"בלי פרויקט\"");
+    expect(screen.getByRole("radiogroup", { name: "קטגוריה" })).toHaveAccessibleDescription("בחרו קטגוריה");
+    expect(screen.getByRole("textbox", { name: "למי" })).toHaveAttribute("aria-invalid", "false");
+  });
+
+  it("shows no error before the first tap, and names what it saves", () => {
+    setup({}, { ...complete, direction: "in", categoryId: null });
+    expect(screen.queryByText("בחרו קטגוריה")).toBeNull();
+    expect(screen.getByRole("button", { name: "שמירת ההכנסה" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "ממי" })).toHaveAttribute("dir", "auto");
   });
 
   it("calls onSave with the draft once everything is set", () => {
     const { props } = setup({}, complete);
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ההוצאה" }));
     expect(props.onSave).toHaveBeenCalledWith(expect.objectContaining({ amount: "12.50", projectId: "p1" }));
+  });
+
+  it("offers today and yesterday as quick date picks", () => {
+    const { props } = setup({}, complete);
+    const today = screen.getByRole("button", { name: "היום" });
+    expect(today).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(screen.getByRole("button", { name: "אתמול" }));
+    const yesterday = datePresets()[1]?.[0];
+    expect(props.onDraftChange).toHaveBeenCalledWith(expect.objectContaining({ date: yesterday }));
+  });
+
+  it("puts the project and category chips in radiogroups", () => {
+    setup({}, complete);
+    expect(screen.getByRole("radio", { name: "Fernbrook Ln" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "בלי פרויקט" })).toHaveAttribute("aria-checked", "false");
+  });
+
+  it("gives each radiogroup one tab stop, and an arrow key moves and checks", () => {
+    const { props } = setup({}, complete);
+    const project = screen.getByRole("radiogroup", { name: "פרויקט" });
+    const radios = within(project).getAllByRole("radio");
+    expect(radios.map((radio) => radio.tabIndex)).toEqual([0, -1]);
+    // The "+ פרויקט חדש" button is not a radio, so it sits outside the group.
+    expect(within(project).queryByRole("button", { name: "+ פרויקט חדש" })).toBeNull();
+    radios[0]?.focus();
+    fireEvent.keyDown(radios[0] as HTMLElement, { key: "ArrowDown" });
+    expect(radios[1]).toHaveFocus();
+    expect(props.onDraftChange).toHaveBeenLastCalledWith(expect.objectContaining({ projectId: NO_PROJECT }));
+    fireEvent.keyDown(radios[1] as HTMLElement, { key: "ArrowLeft" });
+    expect(document.activeElement).toBe(radios[0]);
+  });
+
+  it("with nothing chosen, the first chip holds the tab stop", () => {
+    setup({}, { ...complete, categoryId: null });
+    const category = screen.getByRole("radiogroup", { name: "קטגוריה" });
+    const stops = within(category).getAllByRole("radio").map((radio) => radio.tabIndex);
+    expect(stops[0]).toBe(0);
+    expect(stops.slice(1).every((stop) => stop === -1)).toBe(true);
   });
 });
 
