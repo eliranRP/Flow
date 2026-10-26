@@ -57,7 +57,7 @@ export function JevBookingReview({
   }];
   const keys = ["jev-bookings", "txn", "review", "dashboard", "project", "project-category", "home", "breakdown", "breakdown-lines", "line-split"];
   const approve = useWrite<string>({
-    place: "bar",
+    place: "top",
     keys,
     success: JEV_BOOKING_APPROVED,
     failure: jevBookingFailure,
@@ -65,7 +65,7 @@ export function JevBookingReview({
     run: (transactionId) => api.approve(transactionId),
   });
   const undo = useWrite<string>({
-    place: "bar",
+    place: "top",
     keys,
     success: () => (undoKind.current === "book_line" ? JEV_BOOKING_DELETED : JEV_BOOKING_UNDONE),
     failure: jevBookingFailure,

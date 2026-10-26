@@ -434,10 +434,6 @@
   visibility: hidden;
 }
 
-.ui-review-field-missing {
-  color: var(--color-accent-text);
-}
-
 .ui-review-ai {
   display: flex;
   flex-direction: column;

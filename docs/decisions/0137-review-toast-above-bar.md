@@ -1,7 +1,7 @@
 # Review toasts sit above the action bar
 
 **Date:** 2026-10-08
-**Status:** Accepted (owner, 2026-10-08: the skip-undo toast above the bar)
+**Status:** Accepted (owner, 2026-10-08: the skip-undo toast above the bar). §2 to §4 superseded for לאישור by [0212](0212-review-toast-under-header.md) (2026-10-26)
 
 ## Context
 

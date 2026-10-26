@@ -334,7 +334,8 @@ describe("review queue list", () => {
     });
     expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "פרויקט: הרצל" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    // FLOW-960: אישור is never a dead button; with the category still missing it opens that picker.
+    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
     expect(screen.queryByText("בחרו פרויקט וקטגוריה.")).not.toBeInTheDocument();
   });
 
@@ -1002,9 +1003,10 @@ describe("the pinned review bar (FLOW-327)", () => {
     };
     renderWithLine("/review");
     const pick = await screen.findByRole("button", { name: "אישור" });
-    expect(pick).toBeDisabled();
+    expect(pick).toBeEnabled();
     const hint = screen.getByText("בחרו פרויקט וקטגוריה");
-    expect(pick).toHaveAttribute("aria-describedby", hint.id);
+    // FLOW-960: it also points at the line under the bar.
+    expect(pick.getAttribute("aria-describedby")?.split(" ")).toEqual([hint.id, "review-bar-hint"]);
     expect(hint.closest(".ui-review")).not.toBeNull();
   });
 
@@ -1015,7 +1017,8 @@ describe("the pinned review bar (FLOW-327)", () => {
     };
     renderWithLine("/review");
     const pick = await screen.findByRole("button", { name: "אישור" });
-    expect(pick).not.toHaveAttribute("aria-describedby");
+    // FLOW-960: only the line under the bar, not the both-missing sentence.
+    expect(pick).toHaveAttribute("aria-describedby", "review-bar-hint");
     expect(screen.queryByText("בחרו פרויקט וקטגוריה")).toBeNull();
   });
 
@@ -1081,13 +1084,40 @@ describe("the pinned review bar (FLOW-327)", () => {
 });
 
 describe("the review queue acceptance (FLOW-365)", () => {
-  it("אישור stays disabled without a project, and the category alone does not enable it", async () => {
+  it("keeps the thread sheet's לאשר alive without a project, and it opens the picker (FLOW-960)", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", null)], error: null });
+      if (name === "get_transaction_thread") return Promise.resolve({ data: { transaction_id: "t1", company_id: "c1", notes: [], files: [] }, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    await screen.findByRole("button", { name: "אישור" });
+    const entry = await waitFor(() => {
+      const found = document.querySelector<HTMLButtonElement>(".ui-review-thread");
+      if (found == null) throw new Error("no thread entry");
+      return found;
+    });
+    fireEvent.click(entry);
+    const approve = await screen.findByRole("button", { name: "לאשר" });
+    // Enabled once the thread is read; the missing project no longer holds it.
+    await waitFor(() => { expect(approve).toBeEnabled(); });
+    fireEvent.click(approve);
+    expect(await screen.findByRole("dialog", { name: "בחירת פרויקט" })).toBeInTheDocument();
+    expect(rpc.calls.some((call) => call.name === "approve_review_item")).toBe(false);
+  });
+
+  it("אישור without a project opens the picker, says why, and approves nothing (FLOW-960)", async () => {
     rpc.impl = (name) => {
       if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", null)], error: null });
       return Promise.resolve({ data: null, error: null });
     };
     renderWithLine("/review");
-    expect(await screen.findByRole("button", { name: "אישור" })).toBeDisabled();
+    const approve = await screen.findByRole("button", { name: "אישור" });
+    expect(approve).toBeEnabled();
+    expect(screen.getByText("חסר פרויקט · אישור יפתח את הבחירה")).toHaveClass("ui-review-bar-hint-missing");
+    fireEvent.click(approve);
+    expect(await screen.findByRole("dialog", { name: "בחירת פרויקט" })).toBeInTheDocument();
+    expect(screen.getByText("בוחרים פרויקט, ואז אפשר לאשר")).toBeInTheDocument();
     expect(rpc.calls.some((call) => call.name === "approve_review_item")).toBe(false);
   });
 

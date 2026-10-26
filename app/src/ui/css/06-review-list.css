@@ -43,6 +43,15 @@
   color: var(--color-text-secondary);
 }
 
+/* FLOW-960: a row with no project, the one that blocks אישור, is marked by an icon and the warning tone. */
+.ui-review-all-missing {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-warning);
+  vertical-align: bottom;
+}
+
 .ui-review-all-amount {
   flex: none;
   font-size: var(--type-btn-2-size);

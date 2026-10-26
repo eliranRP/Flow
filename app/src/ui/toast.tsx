@@ -12,6 +12,8 @@ type ToastContextValue = {
   show: (input: ToastInput) => number;
   /** Clears the toast. An id clears that toast only, and leaves a newer one on screen. */
   dismiss: (id?: number) => void;
+  /** FLOW-960: ends a toast that stays until acted on, when the screen it belongs to is left. */
+  dismissPersist: () => void;
 };
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -99,6 +101,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     clearTimer();
     started.current = Date.now();
     remaining.current = ms;
+    // FLOW-960: a toast that stays until it is acted on has no timer; a tap, a swipe or its action ends it.
+    if (!Number.isFinite(ms)) return;
     timer.current = window.setTimeout(() => {
       leave();
     }, ms);
@@ -113,14 +117,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       seq.current += 1;
       clearTimer();
       clearOutTimer();
-      const confirmation = (input.tone == null || input.tone === "ok") && input.place !== "bar";
+      const confirmation = (input.tone == null || input.tone === "ok") && input.place !== "bar" && input.place !== "top";
       const next = confirmation ? { ...input, place: "page" as const } : input;
       remaining.current = toastMs(next);
       const current = phaseRef.current;
       revealNow.current = current === "pad" || current === "fade" || current === "in";
       if (!revealNow.current) setPhase("measure");
       if (host.current) {
-        if (next.place === "page" || next.place === "bar") host.current.dataset.place = next.place;
+        if (next.place === "page" || next.place === "bar" || next.place === "top") host.current.dataset.place = next.place;
         else delete host.current.dataset.place;
       }
       const id = seq.current;
@@ -132,6 +136,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const dismiss = useCallback((id?: number) => {
     if (id != null && toastRef.current?.id !== id) return;
+    acting.current = false;
+    leave();
+  }, [leave]);
+
+  const dismissPersist = useCallback(() => {
+    if (toastRef.current?.persist !== true) return;
     acting.current = false;
     leave();
   }, [leave]);
@@ -193,7 +203,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }
     padToken.current += 1;
     const layer = node;
-    if (toast.place === "page" || toast.place === "bar") layer.dataset.place = toast.place;
+    if (toast.place === "page" || toast.place === "bar" || toast.place === "top") layer.dataset.place = toast.place;
     else delete layer.dataset.place;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let generation = 0;
@@ -459,7 +469,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [toast]);
 
   return (
-    <ToastContext.Provider value={{ show, dismiss }}>
+    <ToastContext.Provider value={{ show, dismiss, dismissPersist }}>
       {children}
       <div
         className="ui-toast-host"

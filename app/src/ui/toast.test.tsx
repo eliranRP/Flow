@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { placeToast, safeTopPx, ToastProvider, useToast } from "./toast";
+import { toastMs } from "./toast-layout";
 
 function Probe({ tone, message = "הפריט אושר", place }: { tone?: "ok" | "bad" | "info"; message?: string; place?: "page" | "bar" }) {
   const toast = useToast();
@@ -20,6 +21,28 @@ function Probe({ tone, message = "הפריט אושר", place }: { tone?: "ok" |
 describe("Toast", () => {
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("keeps a persist toast until it is acted on: no timer ends it (FLOW-960)", () => {
+    vi.useFakeTimers();
+    function Persist() {
+      const toast = useToast();
+      return (
+        <button type="button" onClick={() => { toast.show({ message: "לא נשמר", tone: "bad", persist: true, action: "ניסיון חוזר", onAction: () => undefined }); }}>
+          הצגה
+        </button>
+      );
+    }
+    render(
+      <ToastProvider>
+        <Persist />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(screen.getByText("לא נשמר")).toBeInTheDocument();
   });
 
   it("pauses the timer on hover and resumes it afterwards", () => {
@@ -400,6 +423,13 @@ describe("Toast leaving (FLOW-363 3c)", () => {
   });
 });
 
+describe("toastMs (FLOW-960)", () => {
+  it("gives a persist toast no end, and a set duration its own", () => {
+    expect(toastMs({ message: "x", persist: true, tone: "bad" })).toBe(Number.POSITIVE_INFINITY);
+    expect(toastMs({ message: "x", action: "ביטול", durationMs: 5000 })).toBe(5000);
+  });
+});
+
 describe("placeToast", () => {
   const innerHeight = window.innerHeight;
 
@@ -421,6 +451,26 @@ describe("placeToast", () => {
       toJSON: () => ({}),
     };
   }
+
+  it("hangs a top toast under the screen's ceiling, with the card's sides (decision 0212)", () => {
+    const ceiling = document.createElement("div");
+    ceiling.dataset.toastCeiling = "";
+    const host = document.createElement("div");
+    host.dataset.place = "top";
+    const toast = document.createElement("div");
+    toast.className = "ui-toast";
+    host.appendChild(toast);
+    document.body.append(ceiling, host);
+    document.documentElement.style.setProperty("--space-2", "8px");
+    ceiling.getBoundingClientRect = () => box(160, 4);
+    toast.getBoundingClientRect = () => box(48, 48);
+    placeToast(host);
+    expect(host.style.top).toBe("168px");
+    expect(host.style.paddingInline).toBe("var(--space-card-inset)");
+    ceiling.remove();
+    host.remove();
+    document.documentElement.style.removeProperty("--space-2");
+  });
 
   it("sits a confirmation above the tab bar, with the screen sides", () => {
     const bar = document.createElement("nav");

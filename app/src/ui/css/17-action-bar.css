@@ -66,8 +66,9 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
   }
 }
 
-/* The review toasts line up with the card (decision 0137). */
-.ui-toast-host[data-place="bar"] {
+/* The review toasts line up with the card (decisions 0137 and 0212). */
+.ui-toast-host[data-place="bar"],
+.ui-toast-host[data-place="top"] {
   padding-inline: var(--space-card-inset);
 }
 

@@ -74,7 +74,7 @@ export function DevReview() {
             toast.show({
               message: "הפריט אושר",
               action: "ביטול",
-              place: "bar",
+              place: "top",
               onAction: () => {
                 setItems((list) => [...list.slice(0, at), item, ...list.slice(at)]);
               },

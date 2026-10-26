@@ -460,7 +460,7 @@ describe("Jev review one tap", () => {
     db.reasons = [{ transaction_id: "t1", project_id: null, category_id: "c1", no_project: true, reason: "model_only", party_filings: 0, matching_filings: 0 }];
     renderQueue();
     expect(await screen.findByRole("button", { name: "פרויקט: תקורה · ללא פרויקט, הצעת Jev" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled(); // FLOW-960: never a dead button; a tap opens the picker
   });
 
   it("shows the no-project answer from the real #177 shape, choice none, with the reasons read failing", async () => {
@@ -470,7 +470,7 @@ describe("Jev review one tap", () => {
     renderQueue();
     expect(await screen.findByRole("button", { name: "פרויקט: תקורה · ללא פרויקט, הצעת Jev" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled(); // FLOW-960: never a dead button; a tap opens the picker
   });
 
   it("shows the no-project answer alone, when Jev named no category", async () => {
@@ -557,7 +557,7 @@ describe("Jev review one tap", () => {
     await waitFor(() => {
       expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
     });
-    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled(); // FLOW-960: never a dead button; a tap opens the picker
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
     expect(screen.queryByText("הצעת Jev")).not.toBeInTheDocument();
     expect(db.writes).toEqual([]);
@@ -628,7 +628,7 @@ describe("Jev review one tap", () => {
     expect(document.querySelector(".ui-review-note")).toBeNull();
     expect(document.querySelector(".ui-review-note-slot")).toBeNull();
     expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled(); // FLOW-960: never a dead button; a tap opens the picker
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
   });
 
@@ -747,7 +747,7 @@ describe("Jev review one tap", () => {
     await waitFor(() => {
       expect(client.getQueryState(jevConnectorQueryKey(scope))?.status).toBe("error");
     }, { timeout: 2500 });
-    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled(); // FLOW-960: never a dead button; a tap opens the picker
     // The stall wrote nothing: no answer came back.
     expect(localStorage.getItem(jevConnectorStorageKey(scope))).toBeNull();
     first.unmount();
@@ -931,7 +931,7 @@ describe("Jev review one tap", () => {
     });
     expect(screen.queryByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).not.toBeInTheDocument();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled(); // FLOW-960: never a dead button; a tap opens the picker
   });
 
   it("fails a Jev read without a toast and leaves the stored row", async () => {
@@ -941,7 +941,7 @@ describe("Jev review one tap", () => {
     await waitFor(() => {
       expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
     });
-    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled(); // FLOW-960: never a dead button; a tap opens the picker
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
     expect(db.writes).toEqual([]);
   });

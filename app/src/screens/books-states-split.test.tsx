@@ -228,10 +228,12 @@ describe("rejected writes", () => {
     renderAt("/review");
     expect(screen.queryByText("חסר קטגוריה, הקישו לבחירה")).not.toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "קטגוריה: לא נבחר" }, { timeout: 2500 })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    // FLOW-960: אישור is never a dead button; the line under it says what a tap opens.
+    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
+    expect(screen.getByText("חסר קטגוריה · אישור יפתח את הבחירה")).toBeInTheDocument();
   });
 
-  it("disables approve when the card has no suggestion", async () => {
+  it("keeps approve enabled when the card has no suggestion, and a tap asks for the project (FLOW-960)", async () => {
     rpc.impl = (name) => {
       if (name === "list_review") {
         return Promise.resolve({
@@ -259,8 +261,9 @@ describe("rejected writes", () => {
     renderAt("/review");
     expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
     const approve = await screen.findByRole("button", { name: "אישור" }, { timeout: 2500 });
-    expect(approve).toBeDisabled();
+    expect(approve).toBeEnabled();
     fireEvent.click(approve);
+    expect(await screen.findByRole("dialog", { name: "בחירת פרויקט" })).toBeInTheDocument();
     expect(screen.queryByText(/אי אפשר לאשר/)).not.toBeInTheDocument();
   });
 
@@ -506,6 +509,8 @@ describe("rejected writes", () => {
     expect(calls).not.toContain("set_transaction_category");
     expect(args.find((entry) => isRecord(entry) && "p_id" in entry)).toEqual({ p_id: "r-split", p_category_id: "c1" });
     expect(await screen.findByText("הפריט אושר")).toBeInTheDocument();
+    // Decision 0212: on לאישור the toast hangs under the header.
+    expect(document.querySelector(".ui-toast-host")).toHaveAttribute("data-place", "top");
   });
 
   it("approves a project-role card with more than one share through the split", async () => {
