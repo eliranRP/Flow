@@ -44,10 +44,21 @@ describe("the project sheet (FLOW-445)", () => {
     rpc.impl = () => Promise.resolve({ data: "p9", error: null });
   });
 
-  it("opens as a new project with only the name required", () => {
+  it("opens as a new project with only the name required, and says so on a tap with no name (FLOW-961)", () => {
     renderSheet();
     expect(screen.getByRole("dialog", { name: "פרויקט חדש" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "יצירת פרויקט" })).toBeDisabled();
+    const create = screen.getByRole("button", { name: "יצירת פרויקט" });
+    expect(create).toBeEnabled();
+    fireEvent.click(create);
+    const name = screen.getByRole("textbox", { name: "שם הפרויקט" });
+    expect(name).toHaveAttribute("aria-invalid", "true");
+    expect(name).toHaveAccessibleDescription("צריך שם כדי ליצור את הפרויקט");
+    expect(upsertCalls()).toHaveLength(0);
+    fireEvent.change(name, { target: { value: "L" } });
+    expect(name).not.toHaveAttribute("aria-invalid");
+    fireEvent.click(create);
+    expect(name).toHaveAccessibleDescription("השם צריך לפחות שתי אותיות");
+    expect(upsertCalls()).toHaveLength(0);
   });
 
   it("creates a project with the trimmed name, an active status and the budget in agorot", async () => {

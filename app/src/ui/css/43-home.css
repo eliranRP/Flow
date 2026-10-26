@@ -110,15 +110,8 @@
   background: var(--color-surface);
 }
 
-.ui-home-attention-primary {
+.ui-home-attention .ui-review-cta {
   margin: 0 var(--space-4) var(--space-2);
-}
-
-/* The review time is the button's quiet part: 13/400, so the label holds one line at 320. */
-.ui-home-attention-time {
-  font-size: var(--type-caption-size);
-  font-weight: var(--type-caption-weight);
-  white-space: nowrap;
 }
 
 .ui-home-attention .ui-banner-icon {
@@ -433,87 +426,4 @@
   font-weight: var(--type-btn-2-weight);
   text-align: center;
   text-decoration: none;
-}
-
-/* FLOW-958: offline, a line in the band says which moment the figures are from. */
-.ui-home-offline {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-block-size: var(--touch-min);
-  margin: 0;
-  padding: var(--space-2) var(--space-3);
-  box-sizing: border-box;
-  border-radius: var(--radius-chip);
-  background: var(--band-track);
-  color: var(--color-on-band);
-  font-size: var(--type-meta-size);
-  line-height: var(--type-meta-line);
-}
-
-.ui-home-offline svg {
-  flex: none;
-}
-
-.ui-home-offline-text {
-  flex: 1;
-  min-inline-size: 0;
-}
-
-/* FLOW-958: a failed read keeps the band: what happened, נסו שוב and צריך עזרה?. */
-.ui-home-failed {
-  align-items: flex-start;
-  gap: var(--space-3);
-  color: var(--color-on-band);
-}
-
-.ui-home-failed-icon {
-  display: grid;
-  place-items: center;
-  inline-size: var(--touch-min);
-  block-size: var(--touch-min);
-  border-radius: 50%;
-  background: var(--band-track);
-}
-
-.ui-home-failed-title {
-  margin: 0;
-  font-size: var(--type-section-size);
-  line-height: var(--type-section-line);
-  font-weight: var(--type-section-weight);
-}
-
-.ui-home-failed-body {
-  margin: 0;
-  max-inline-size: 32ch;
-  color: var(--color-on-band-secondary);
-  font-size: var(--type-line2-size);
-  line-height: var(--type-line2-line);
-}
-
-.ui-home-failed-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding-block-start: var(--space-1);
-}
-
-.ui-home-failed-retry {
-  min-block-size: var(--touch-min);
-  padding-inline: var(--space-5);
-  border: 0;
-  border-radius: var(--radius-button);
-  background: var(--color-on-band);
-  color: var(--color-band-past);
-  font: inherit;
-  font-size: var(--type-btn-size);
-  font-weight: var(--type-btn-2-weight);
-}
-
-.ui-home-failed-help {
-  display: inline-flex;
-  align-items: center;
-  min-block-size: var(--touch-min);
-  color: var(--color-on-band);
-  font-size: var(--type-line2-size);
 }

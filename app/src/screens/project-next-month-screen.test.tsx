@@ -82,7 +82,7 @@ describe("the next-month card and chart on the project's profit page (spec-fcwid
 
   it("charts May to October with November's forecast last, under the card and above the month rows", () => {
     const { container } = renderProfit(JUNIPER_PROFIT);
-    const chart = screen.getByRole("img", { name: "הכנסות והוצאות לפי חודש, מאי עד אוקטובר, וצפי נובמבר: הכנסות $4,150, הוצאות $1,865" });
+    const chart = screen.getByRole("img", { name: /^הכנסות והוצאות לפי חודש, מאי עד אוקטובר\. מאי: .*\. צפי נובמבר: הכנסות \$4,150, הוצאות \$1,865$/ });
     const labels = Array.from(chart.querySelectorAll(".ui-fc-bar-label")).map((label) => label.textContent);
     expect(labels).toEqual(["מאי", "יוני", "יולי", "אוג׳", "ספט׳", "אוק׳", "נוב׳ · צפי"]);
     expect(chart.querySelectorAll(".ui-fc-ahead")).toHaveLength(1);

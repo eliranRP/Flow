@@ -37,7 +37,7 @@ export const NextMonth: Story = {
     await expect(canvas.getByText("רווח מתחילת השנה")).toBeInTheDocument();
     await expect(canvas.getByText("5 פרויקטים וכללי")).toBeInTheDocument();
     await expect(canvas.queryByRole("link", { name: /^צפי / })).toBeNull();
-    await expect(canvas.getByRole("img", { name: /וצפי נובמבר/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("img", { name: /\. צפי נובמבר: / })).toBeInTheDocument();
   },
 };
 

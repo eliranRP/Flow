@@ -397,3 +397,10 @@ a:is(.ui-btn-link, .ui-btn-danger-link)[aria-disabled="true"]:not([aria-busy="tr
 .ui-row-title-muted {
   color: var(--color-text-muted);
 }
+
+/* FLOW-961: a screen's main action as an icon: a filled 44px circle (the Projects tab's +). */
+.ui-icon-btn.ui-icon-btn-filled {
+  border-radius: 50%;
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+}

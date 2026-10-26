@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chartHistory, chartLabel, chartSub, expenseNote, forecastChartMonth, incomeNote } from "./next-month-chart";
+import { cashTakeaway, chartHistory, chartLabel, chartSub, expenseNote, forecastChartMonth, incomeNote } from "./next-month-chart";
 import type { MonthFigures } from "./month-figures";
 import type { NextMonthRow } from "./project-next-month";
 
@@ -40,15 +40,25 @@ describe("the chart's history", () => {
     expect(chartHistory("2027-02", new Map(), "2020-01").months.map((month) => month.key)).toEqual(["2026-09", "2026-10", "2026-11", "2026-12", "2027-01", "2027-02"]);
   });
 
-  it("speaks next month's numbers once", () => {
+  it("speaks every month's two figures, then next month's as the forecast (FLOW-961)", () => {
     const ahead = forecastChartMonth({ month: "2026-11", incomeMinor: 415_000n, expenseMinor: 186_500n });
     expect(ahead.label).toBe("נוב׳ · צפי");
     const history = chartHistory("2026-10", SIX, null);
-    expect(chartLabel(history, ahead, "USD")).toBe("הכנסות והוצאות לפי חודש, מאי עד אוקטובר, וצפי נובמבר: הכנסות $4,150, הוצאות $1,865");
-    expect(chartLabel(history, null, "USD")).toBe("הכנסות והוצאות לפי חודש, מאי עד אוקטובר");
-    expect(chartLabel(history, null, "USD", "profit", "הכנסות והוצאות של החברה")).toBe("הכנסות והוצאות של החברה, מאי עד אוקטובר");
+    const months = "מאי: הכנסות $4,150, הוצאות $1,800. יוני: הכנסות $4,150, הוצאות $1,870. יולי: הכנסות $4,150, הוצאות $1,700. אוגוסט: הכנסות $4,150, הוצאות $1,760. ספטמבר: הכנסות $4,150, הוצאות $1,740. אוקטובר: הכנסות $6,302, הוצאות $2,506";
+    expect(chartLabel(history, ahead, "USD")).toBe(`הכנסות והוצאות לפי חודש, מאי עד אוקטובר. ${months}. צפי נובמבר: הכנסות $4,150, הוצאות $1,865`);
+    expect(chartLabel(history, null, "USD")).toBe(`הכנסות והוצאות לפי חודש, מאי עד אוקטובר. ${months}`);
+    expect(chartLabel(history, null, "USD", "profit", "הכנסות והוצאות של החברה")).toMatch(/^הכנסות והוצאות של החברה, מאי עד אוקטובר\. מאי: /);
     // A cash view (the project page) says נכנס and יצא.
-    expect(chartLabel(history, ahead, "USD", "cash")).toBe("נכנס ויצא לפי חודש, מאי עד אוקטובר, וצפי נובמבר: נכנס $4,150, יצא $1,865");
+    expect(chartLabel(history, ahead, "USD", "cash")).toMatch(/^נכנס ויצא לפי חודש, מאי עד אוקטובר\. מאי: נכנס \$4,150, יצא \$1,800\. .* צפי נובמבר: נכנס \$4,150, יצא \$1,865$/);
+  });
+
+  it("titles the project chart with the month's takeaway (FLOW-961)", () => {
+    const one = (incomeMinor: number, expenseMinor: number) => chartHistory("2026-10", figures([["2026-10", incomeMinor, expenseMinor]]), "2026-10");
+    expect(cashTakeaway(one(0, 1_425_342), "USD")).toBe("אוקטובר: יצא $14,253 יותר משנכנס");
+    expect(cashTakeaway(one(1_500_000, 0), "USD")).toBe("אוקטובר: נכנס $15,000 יותר משיצא");
+    expect(cashTakeaway(one(0, 0), "USD")).toBe("אוקטובר: לא נכנס ולא יצא כסף");
+    expect(cashTakeaway(one(10_000, 10_000), "USD")).toBe("אוקטובר: נכנס בדיוק מה שיצא");
+    expect(cashTakeaway({ months: [], fromStart: false }, "USD")).toBeNull();
   });
 });
 

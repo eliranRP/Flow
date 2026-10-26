@@ -75,6 +75,8 @@ export function useWrite<T = void>(options: {
   persistFailure?: boolean;
   /** The queries the write changes and each one's value after it. The tap shows it at once; a failure restores it. */
   optimistic?: (payload: T) => Array<{ key: QueryKey; update: (old: unknown) => unknown }>;
+  /** Writes in one scope run one after another, in the order tapped (a finish, then its ביטול). */
+  scope?: string;
 }) {
   const toast = useToast();
   const client = useQueryClient();
@@ -87,6 +89,7 @@ export function useWrite<T = void>(options: {
     return () => { mounted.current = false; };
   }, []);
   const mutationOptions: MutationOptions<void, Error, T, Snapshot[]> = {
+    ...(options.scope == null ? {} : { scope: { id: options.scope } }),
     mutationFn: (payload: T) => options.run(payload),
     onMutate: async (payload) => {
       const id = retryToast.current;

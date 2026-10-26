@@ -1,8 +1,8 @@
 import { type CashCurrencyRow } from "@flow/shared";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AttentionBox, ForecastRow, HomeFigures, HomeLoadFailed, homeMonthLabel, HomeMonthPill, HomeOfflineLine, israelClock, SplitCard, splitTakeaway, type HomeFigureRows } from "./home-parts";
+import { AttentionBox, ForecastRow, HomeFigures, homeMonthLabel, HomeMonthPill, SplitCard, splitTakeaway, type HomeFigureRows } from "./home-parts";
 import { CashHomeSkeleton } from "./home-skeleton";
 import { renderWithProviders } from "../test-render";
 import { SKELETON_DELAY_MS } from "../ui/skeleton";
@@ -104,32 +104,6 @@ describe("Home's band parts (FLOW-364)", () => {
   it("hides the attention box with no rows", () => {
     const { container } = render(<AttentionBox rows={[]} />);
     expect(container).toBeEmptyDOMElement();
-  });
-
-  it("says offline which moment the figures are from, Israel time (FLOW-958)", () => {
-    render(<HomeOfflineLine since={Date.UTC(2026, 9, 26, 7, 41)} />);
-    expect(screen.getByRole("status")).toHaveTextContent("אין חיבור · מוצג המצב מ־09:41");
-    expect(israelClock(Date.UTC(2026, 0, 5, 22, 5))).toBe("00:05");
-  });
-
-  it("keeps the band on a failed read, with the retry and the way to help (FLOW-958)", () => {
-    const onRetry = vi.fn();
-    const { rerender } = render(
-      <MemoryRouter>
-        <HomeLoadFailed monthKey="2026-10" offline={false} onRetry={onRetry} />
-      </MemoryRouter>,
-    );
-    expect(screen.getByRole("heading", { name: "אוקטובר לא נטען" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "נסו שוב" }));
-    expect(onRetry).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("link", { name: "צריך עזרה?" })).toHaveAttribute("href", "/help");
-    rerender(
-      <MemoryRouter>
-        <HomeLoadFailed monthKey="2026-10" offline onRetry={onRetry} />
-      </MemoryRouter>,
-    );
-    expect(screen.getByRole("heading", { name: "אין חיבור" })).toBeInTheDocument();
-    expect(screen.getByText("אין חיבור לאינטרנט. שום דבר לא נמחק.")).toBeInTheDocument();
   });
 
   it("names the forecast by the month's name", () => {

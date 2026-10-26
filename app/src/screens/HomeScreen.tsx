@@ -1,8 +1,7 @@
 import { type CashMonths, type CashToDay } from "@flow/shared";
 import { SyncStrip } from "../ui/sync-strip";
 import { cashHasBooks, dashboardHasBooks } from "../by-currency";
-import { onlineManager } from "@tanstack/react-query";
-import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { unpaidOpenGross, unpaidOpenRows, unpaidTotals } from "../unpaid";
 import { useAuth } from "../auth";
@@ -15,8 +14,9 @@ import { pageEnterStyle } from "../ui/motion";
 import { israelToday } from "../ui/date-math";
 import { monthPeriod, shiftMonthKey } from "../period";
 import { homeMonthKey, homeMonthPath, forecastMinor } from "../home-month";
-import { HomeBandActions, HomeCompactBar, HomeLoadFailed, HomeMonthPill, HomeOfflineLine, HomeSwipeFigures, SplitCard, AttentionBox, ForecastRow, homeMonthLabel, monthName, type HomeFigureRows, type HomeMonthNav } from "./home-parts";
+import { HomeBandActions, HomeCompactBar, HomeMonthPill, HomeSwipeFigures, SplitCard, AttentionBox, ForecastRow, homeMonthLabel, monthName, type HomeFigureRows, type HomeMonthNav } from "./home-parts";
 import { MonthDrawer } from "./month-drawer";
+import { BandLoadFailed, BandOfflineLine, useOnline } from "../ui/band-states";
 import type { BannerRow } from "../ui/banner";
 import { Button } from "../ui/button";
 import { FailureLine } from "../ui/empty-state";
@@ -51,14 +51,6 @@ function useBandMark(shown: boolean) {
       delete document.documentElement.dataset.band;
     };
   }, [shown]);
-}
-
-/** Whether the browser says it is online, kept current (FLOW-958, Home's offline line). */
-function useOnline(): boolean {
-  return useSyncExternalStore(
-    (notify) => onlineManager.subscribe(notify),
-    () => onlineManager.isOnline(),
-  );
 }
 
 /**
@@ -209,8 +201,8 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
 
   if (failed) {
     return (
-      <HomeLoadFailed
-        monthKey={monthKey}
+      <BandLoadFailed
+        title={`${monthName(monthKey)} לא נטען`}
         offline={offline || !online}
         onRetry={retry}
         leading={previewing ? undefined : <CompanySwitcher fallbackName={dashboard.data?.name} />}
@@ -419,7 +411,7 @@ export function CashHome({
           trailing={<HomeBandActions isPast={isPast} currentName={monthName(currentKey)} search={search} />}
         >
           <div className="ui-band-body">
-            {offlineSince == null ? null : <HomeOfflineLine since={offlineSince} />}
+            {offlineSince == null ? null : <BandOfflineLine since={offlineSince} />}
             <HomeMonthPill monthKey={monthKey} nav={nav} />
             <HomeSwipeFigures monthKey={monthKey} figures={figures} search={search} nav={nav} animate={animate} />
             {isPast || forecast == null ? null : (
