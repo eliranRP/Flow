@@ -19,7 +19,7 @@ import {
   type LoanInsert,
 } from "./loan-form";
 import { groupLoans, useLoanList, type LoanListRow } from "./loan-list";
-import { useLoanOnline } from "./loan-states";
+import { useOnline } from "../ui/band-states";
 import { useLoanSummary } from "./loan-summary-entries";
 import type { LoanListSummary } from "./loan-list-summary";
 import { LoanProjectPicker, projectNameOf, type LoanProjectSource } from "./loan-project-picker";
@@ -153,7 +153,7 @@ export function LoansHost({
   }, adoptNew);
   const balances = useLoanList(sample == null ? companyId : null);
   const holdWrites = useHoldWrites();
-  const online = useLoanOnline();
+  const online = useOnline();
   const emptyButton = useRef<HTMLButtonElement>(null);
   const query = useQuery({
     queryKey: ["loan-currency", companyId],

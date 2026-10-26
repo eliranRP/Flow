@@ -45,7 +45,8 @@ import { TransactionTopBar } from "./transaction-top-bar";
 import { LoanPartSheet } from "./loan-detail-sheets";
 import { LoanRateSheet } from "./loan-rate-sheet";
 import { LoanCloseSheet, LoanLinkPicker, type LoanLinkChoice } from "./loan-close-sheet";
-import { LoanLoadFailed, LoanOfflineLine, useLoanOnline } from "./loan-states";
+import { LoanLoadFailed, LoanOfflineLine } from "./loan-states";
+import { useOnline } from "../ui/band-states";
 import { LoanKindSheet } from "./loan-kind-sheet";
 import {
   inversePatch,
@@ -120,7 +121,7 @@ export function LoanDetailScreen({
   useMemoryLoanStore(store);
   const isLive = givenStore == null && !wantsPreview;
   const live = useLiveLoan(loanId, isLive);
-  const online = useLoanOnline();
+  const online = useOnline();
   const dashboard = useDashboardQuery(isLive);
   // The all-payments page sits under the loan's own path, so Back steps up to the loan page.
   const loanPath = loanId === "" ? location.pathname : location.pathname.slice(0, location.pathname.lastIndexOf(loanId) + loanId.length);

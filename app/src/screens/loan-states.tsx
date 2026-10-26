@@ -1,24 +1,11 @@
 // FLOW-962 (boards Loans failed, Loans offline): the loans list's and the loan page's failed read and
-// offline line, in Home v2's words (FLOW-958), as a card: these pages have no band.
-import { onlineManager } from "@tanstack/react-query";
-import { useSyncExternalStore } from "react";
+// offline line, in Home v2's words (FLOW-958), as a card: these pages have no band. The online state
+// and the clock are band-states' (FLOW-961).
 import { Link } from "react-router-dom";
+import { israelHourMinute } from "../ui/band-states";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { AlertIcon } from "../ui/icons";
-
-/** Whether the browser says it is online, kept current. */
-export function useLoanOnline(): boolean {
-  return useSyncExternalStore(
-    (notify) => onlineManager.subscribe(notify),
-    () => onlineManager.isOnline(),
-  );
-}
-
-/** "09:41": a moment's hour and minute, Israel time. */
-function hourMinute(at: number): string {
-  return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Jerusalem" }).format(new Date(at));
-}
 
 /** Offline, the page keeps its last figures and says which moment they are from. */
 export function LoanOfflineLine({ since }: { since: number }) {
@@ -26,7 +13,7 @@ export function LoanOfflineLine({ since }: { since: number }) {
     <p className="ui-loan-offline" role="status">
       <AlertIcon size={20} />
       <span className="ui-loan-offline-text">
-        אין חיבור · מוצג המצב מ־<bdi dir="ltr">{hourMinute(since)}</bdi>
+        אין חיבור · מוצג המצב מ־<bdi dir="ltr">{israelHourMinute(since)}</bdi>
       </span>
     </p>
   );
