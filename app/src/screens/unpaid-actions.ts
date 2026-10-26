@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { getSupabase } from "../lib/supabase";
 import { useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
@@ -37,6 +38,8 @@ type LocalState = { marked: string | null; gone: boolean; match: boolean };
 
 export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSummary) {
   const preview = useHomePreview();
+  const navigate = useNavigate();
+  const location = useLocation();
   const unpaid = useUnpaidQuery(sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, unpaid);
   const blocked = useBlockedPreview();
@@ -222,7 +225,16 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
     lastSyncAt: summary?.last_sync_at ?? sumitStatus.data?.last_sync_at ?? null,
     /** When the list on screen was read (the offline line), unless it is a fixture. */
     readAt: sample == null ? unpaid.dataUpdatedAt || undefined : undefined,
-    retry: () => { void unpaid.refetch(); },
+    retry: () => {
+      // A preview of the failure retries into the plain preview, as ScreenState's retry does.
+      if (preview === "error" || preview === "error-server") {
+        const params = new URLSearchParams(location.search);
+        params.set("preview", "1");
+        void navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true, state: location.state as unknown });
+        return;
+      }
+      void unpaid.refetch();
+    },
     setPaid,
     linkMatch,
     dismissMatch,
