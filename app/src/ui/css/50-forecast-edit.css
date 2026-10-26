@@ -30,7 +30,7 @@
 .ui-fe-title {
   margin: 0;
   color: var(--color-text);
-  font-size: var(--type-name-size);
+  font-size: var(--type-section-size);
   font-weight: var(--type-name-weight);
   line-height: var(--type-section-line);
   overflow-wrap: anywhere;
@@ -92,7 +92,7 @@
 
 .ui-fe-meta {
   color: var(--color-text-secondary);
-  font-size: var(--type-meta-size);
+  font-size: var(--type-line2-size);
   line-height: var(--type-meta-line);
 }
 
@@ -137,7 +137,7 @@
   margin: 0;
   line-height: var(--type-title-line);
   color: var(--color-text);
-  font-size: var(--type-btn-2-size);
+  font-size: var(--type-line2-size);
   font-weight: var(--type-btn-weight);
 }
 
@@ -145,7 +145,7 @@
   margin: 0;
   line-height: var(--type-title-line);
   color: var(--color-text-secondary);
-  font-size: var(--type-meta-size);
+  font-size: var(--type-line2-size);
 }
 
 .ui-fe-history-line bdi {
@@ -166,7 +166,7 @@
   line-height: var(--type-title-line);
   padding: calc(var(--space-3) + var(--space-1) / 2);
   color: var(--color-text-muted);
-  font-size: var(--type-meta-size);
+  font-size: var(--type-line2-size);
 }
 
 .ui-fe-bars {

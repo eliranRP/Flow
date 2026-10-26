@@ -11,6 +11,10 @@ import { useToast } from "./ui/toast";
  * sends back through undo_project_forecast, as the month forecast does.
  */
 
+/** Decision 0219: a forecast change's toast hangs under the header; its ביטול stays 5s, a plain note 4s. */
+export const FORECAST_UNDO_MS = 5000;
+const FORECAST_NOTE_MS = 4000;
+
 /** What a write hands back for its undo: the edits it made go, the ones it replaced or deleted come back. */
 export type ForecastUndo = { drop: string[]; put: Json[] };
 
@@ -29,7 +33,11 @@ function undoOf(data: unknown): ForecastUndo | null {
 export function useProjectForecastWrites(projectId: string, month: string) {
   const toast = useToast();
   const lastUndo = useRef<ForecastUndo | null>(null);
+  // FLOW-969: a write and its ביטול run one after the other, so a quick ביטול never races the write.
+  const scope = `project-forecast-${projectId}`;
   const undo = useWrite<ForecastUndo>({
+    place: "top",
+    scope,
     run: async (body) => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -39,6 +47,8 @@ export function useProjectForecastWrites(projectId: string, month: string) {
     failure: "לא הצלחנו לבטל את השינוי בצפי",
   });
   const write = useWrite<Call>({
+    place: "top",
+    scope,
     run: async (call) => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -58,7 +68,13 @@ export function useProjectForecastWrites(projectId: string, month: string) {
     failure: "לא הצלחנו לעדכן את הצפי",
     onSuccess: (call) => {
       const back = lastUndo.current;
-      toast.show({ message: call.message, ...(back == null ? {} : { action: "ביטול", onAction: () => { undo.mutate(back); } }) });
+      // Decision 0219: under the header, the ביטול 5s and a note 4s.
+      toast.show({
+        message: call.message,
+        place: "top",
+        durationMs: back == null ? FORECAST_NOTE_MS : FORECAST_UNDO_MS,
+        ...(back == null ? {} : { action: "ביטול", onAction: () => { undo.mutate(back); } }),
+      });
     },
   });
   return { mutate: write.mutate, pending: write.isPending };

@@ -1,7 +1,6 @@
 import { formatAmountText } from "@flow/shared";
 import { useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { onlineManager } from "@tanstack/react-query";
 import { lineDayTitle, lineInitials } from "../cash-lines-groups";
 import { useCompanyCurrency } from "../company-currency";
 import { homeMonthKey, homeMonthPath } from "../home-month";
@@ -11,6 +10,7 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { HEBREW_MONTHS, israelToday } from "../ui/date-math";
 import { Amount } from "../ui/amount";
+import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { OrderChips } from "../ui/order-chips";
 import { List, ListRow } from "../ui/list-row";
 import type { ScreenPhase } from "../ui/screen-phase";
@@ -37,7 +37,7 @@ import { useBlockedPreview } from "./screen-shared";
  * A fixture: the reads' inputs for the page, plus the day heads' today, the month it shows and the company's overhead
  * project (null for none).
  */
-export type CompanyProfitSample = ProfitInputs & { today: string; monthKey: string; overhead: OverheadProject | null; openFirst?: boolean; sheetOpen?: boolean; next?: CompanyNextMonthSample; years?: CompanyYearsSample };
+export type CompanyProfitSample = ProfitInputs & { today: string; monthKey: string; overhead: OverheadProject | null; openFirst?: boolean; sheetOpen?: boolean; next?: CompanyNextMonthSample; years?: CompanyYearsSample; offlineSince?: number };
 
 /** The period switch (canvas note spec-years): the month, a year or since the start, in the URL (`?period=`). */
 type Period = "month" | "year" | "all";
@@ -95,6 +95,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   const [params] = useSearchParams();
   const blocked = useBlockedPreview();
   const companyCurrency = useCompanyCurrency();
+  const online = useOnline();
   const by = orderOf(params.get("by"));
   const today = sample?.today ?? israelToday();
   const currentKey = today.slice(0, 7);
@@ -138,16 +139,32 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   const yearProjects = useCompanyYearProjects(viewYear, today, yearByProject, sample?.years);
   const failed = live.failed || (monthByProject && overheadRead.failed) || (long && years.failed);
   const waiting = model == null;
-  const phase: ScreenPhase = sample != null ? { kind: "ready" } : preview !== "off" ? screenPhase(preview) : failed ? { kind: "error", offline: !onlineManager.isOnline() } : waiting ? { kind: "loading" } : { kind: "ready" };
+  const phase: ScreenPhase = sample != null ? { kind: "ready" } : preview !== "off" ? screenPhase(preview) : failed ? { kind: "error", offline: !online } : waiting ? { kind: "loading" } : { kind: "ready" };
   const [sheetState, setSheetOpen] = useState<boolean | undefined>(undefined);
   const basisRef = useRef<HTMLButtonElement>(null);
   const back = homeMonthPath(monthKey, search, currentKey);
   if (phase.kind !== "ready" || model == null) {
     // The board's loading frame names the month in the title: the stacked header's own bar, Back labelled בית.
     const loadingTitle = period === "month" ? `רווח ${HEBREW_MONTHS[Number(monthKey.slice(5, 7)) - 1] ?? monthKey}` : "רווח";
-    return <ScreenState stacked headerClassName="ui-state-header" title={phase.kind === "loading" ? loadingTitle : "רווח"} kicker="בית" backTo={back} phase={phase} onRetry={() => { live.refetch(); overheadRead.refetch(); years.refetch(); }} loading={<ProfitSkeleton />} />;
+    return (
+      <ScreenState
+        stacked
+        headerClassName="ui-state-header"
+        title={phase.kind === "loading" ? loadingTitle : "רווח"}
+        kicker="בית"
+        backTo={back}
+        phase={phase}
+        onRetry={() => { live.refetch(); overheadRead.refetch(); years.refetch(); }}
+        loading={<ProfitSkeleton />}
+        // FLOW-969: a failed read hides the figures and says what happened, with נסו שוב and צריך עזרה?.
+        failed={(retry, offline) => <PageLoadFailed title={`${loadingTitle} לא נטען`} offline={offline} onRetry={retry} />}
+      />
+    );
   }
   const currency = model.currency;
+  // FLOW-969: offline, the page keeps its last read and says which moment it is from.
+  const offlineSince = sample != null ? (sample.offlineSince ?? null) : !online && preview === "off" ? (live.readAt || null) : null;
+  const offlineLine = offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />;
   const sheetOpen = sheetState ?? sample?.sheetOpen === true;
   /** Sets (or, with null, drops) query parameters in place: the page keeps its choices in the URL. */
   const setParams = (changes: Record<string, string | null>) => {
@@ -238,7 +255,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
           subtitle={longView.subtitle}
           compactFigure={signedText(longView.profit, currency)}
           panel={longView.chips ?? undefined}
-          below={<div className="ui-cp-head">{periodSwitch}{longView.head}{longView.chips}</div>}
+          below={<div className="ui-cp-head">{periodSwitch}{longView.head}{offlineLine}{longView.chips}</div>}
         />
         {longView.body}
         {basisFooter}
@@ -355,7 +372,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
         subtitle={subtitle}
         compactFigure={signedText(profit, currency)}
         panel={chips}
-        below={<div className="ui-cp-head">{periodSwitch}{figure}{summary}{nextBlock}{chips}</div>}
+        below={<div className="ui-cp-head">{periodSwitch}{figure}{offlineLine}{summary}{nextBlock}{chips}</div>}
       />
       {body}
       {basisFooter}

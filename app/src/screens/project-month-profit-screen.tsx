@@ -12,6 +12,7 @@ import { useProjectCashMonthLinesQuery } from "../project-cash";
 import { useProjectQuery } from "../use-books";
 import { Amount } from "../ui/amount";
 import { Card } from "../ui/card";
+import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { OrderChips } from "../ui/order-chips";
 import { formatDayMonth, israelToday } from "../ui/date-math";
 import { List } from "../ui/list-row";
@@ -20,7 +21,7 @@ import { ScreenState } from "../ui/screen-state";
 import { MonthCategories, MonthLineRow } from "./project-month-categories";
 import { SummaryRow } from "./profit-summary";
 
-export type ProjectMonthProfitSample = { project: NonNullable<ProjectDetail>; month: string; lines: CashLine[] };
+export type ProjectMonthProfitSample = { project: NonNullable<ProjectDetail>; month: string; lines: CashLine[]; offlineSince?: number };
 
 const ORDERS: readonly { value: LinesOrder; label: string }[] = [
   { value: "date", label: "לפי תאריך" },
@@ -45,6 +46,7 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
   const [figure, setFigure] = useState<HTMLElement | null>(null);
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();
+  const online = useOnline();
   const period = monthPeriod(month);
   const detail = useProjectQuery(sample ? "" : projectId, period);
   const project = sample?.project ?? detail.data ?? null;
@@ -65,6 +67,8 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
   const groups = order === "category" ? [] : groupLines(counted, order, "kept", today);
   const id = sample ? sample.project.id : projectId;
   const backTo = `/projects/${id}/profit${search}`;
+  // FLOW-969: offline, the page keeps its last read and says which moment it is from.
+  const offlineSince = sample != null ? (sample.offlineSince ?? null) : !online && preview === "off" ? (detail.dataUpdatedAt || null) : null;
   const sub = project == null
     ? undefined
     : `${project.name} · ${open ? `עד היום, ${formatDayMonth(today)}` : "חודש סגור"} · ${String(counted.length)} תנועות`;
@@ -87,12 +91,15 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
       phase={phase}
       onRetry={() => { void detail.refetch(); }}
       loading={<ProfitSkeleton />}
+      // FLOW-969: a failed read hides the figures and says what happened, with נסו שוב and צריך עזרה?.
+      failed={(retry, offline) => <PageLoadFailed title={`רווח ${cashMonthName(month)} לא נטען`} offline={offline} onRetry={retry} />}
     >
       {figures == null ? null : (
         <div className="ui-pm-month">
           <p ref={setFigure} className="ui-pp-figure ui-page-pad">
             <Amount agorot={figures.profit_minor} currency={currency} size="display" loss={figures.profit_minor < 0n} direction={figures.profit_minor > 0n ? "income" : undefined} />
           </p>
+          {offlineSince == null ? null : <div className="ui-page-pad"><BandOfflineLine since={offlineSince} onPage /></div>}
           <Card className="ui-pp-card">
             <SummaryRow label="הכנסות" value={<Amount agorot={figures.income_minor} currency={currency} income />} />
             <SummaryRow label="הוצאות שנספרות ברווח" value={<Amount agorot={projectExpenseMinor(figures)} currency={currency} />} />

@@ -13,6 +13,7 @@ import { screenPhase } from "../query-phase";
 import { EMPTY_FILTERS, searchFiltersQuery } from "../search";
 import { useProfitMonthsQuery, useProjectQuery } from "../use-books";
 import { Amount } from "../ui/amount";
+import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { EmptyState, FailureLine } from "../ui/empty-state";
@@ -26,7 +27,7 @@ import { ScreenState } from "../ui/screen-state";
 import { NextMonthBlock } from "./next-month-block";
 import { SummaryRow } from "./profit-summary";
 
-export type ProjectProfitSample = { project: NonNullable<ProjectDetail>; months: NonNullable<ProfitMonths>; next?: NextMonthSample };
+export type ProjectProfitSample = { project: NonNullable<ProjectDetail>; months: NonNullable<ProfitMonths>; next?: NextMonthSample; offlineSince?: number };
 
 const PROJECT_ORDERS = [
   { value: "month", label: "לפי חודש" },
@@ -76,6 +77,7 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
   const search = usePreviewSearch();
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();
+  const online = useOnline();
   // The figure ends the page's head: the compact bar waits for it (FLOW-942).
   const [figure, setFigure] = useState<HTMLElement | null>(null);
   const whole = allTime();
@@ -110,6 +112,8 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
       ? project.name
       : `${project.name} · מאז ${monthName(oldest, "")} · ${countWord(rows.length)}`;
   const fromProfit = new URLSearchParams(location.search).get("from") === "profit";
+  // FLOW-969: offline, the page keeps its last read and says which moment it is from.
+  const offlineSince = sample != null ? (sample.offlineSince ?? null) : !online && preview === "off" ? (detail.dataUpdatedAt || null) : null;
   const backTo = fromProfit ? `/profit${search}` : `/projects/${id}${search}`;
   // The chips live in the URL (`by=category`), so Back from a category row restores the order.
   const by = new URLSearchParams(location.search).get("by") === "category" ? "category" : "month";
@@ -156,12 +160,15 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
       phase={phase}
       onRetry={() => { void detail.refetch(); }}
       loading={<ProfitSkeleton />}
+      // FLOW-969: a failed read hides the figures and says what happened, with נסו שוב and צריך עזרה?.
+      failed={(retry, offline) => <PageLoadFailed title={project == null ? "הרווח לא נטען" : `הרווח של ${project.name} לא נטען`} offline={offline} onRetry={retry} />}
     >
       {row == null ? null : (
         <div>
           <p ref={setFigure} className="ui-pp-figure ui-page-pad">
             <Amount agorot={profit} currency={currency} size="display" loss={profit < 0n} direction={profit > 0n ? "income" : undefined} />
           </p>
+          {offlineSince == null ? null : <div className="ui-page-pad"><BandOfflineLine since={offlineSince} onPage /></div>}
           <Card className="ui-pp-card">
             <SummaryRow label="הכנסות" value={<Amount agorot={row.income_minor} currency={currency} income />} />
             <SummaryRow label="הוצאות שנספרות ברווח" value={<Amount agorot={projectExpenseMinor(row)} currency={currency} />} />
