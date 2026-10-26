@@ -1,11 +1,11 @@
 import { formatAmountText, type CashCurrencyRow } from "@flow/shared";
-import { useRef, type KeyboardEvent } from "react";
+import type { KeyboardEvent } from "react";
 import { type CashListSide, notInProfitMinor, notInProfitRest } from "../cash";
 import { Amount } from "../ui/amount";
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 import { DocumentIcon } from "../ui/icons";
-import { SegmentedControl } from "../ui/segmented-control";
+import { onRadioArrow, SegmentedControl } from "../ui/segmented-control";
 import { Skeleton } from "../ui/skeleton";
 
 /**
@@ -138,26 +138,24 @@ export function LinesCount({
  * chosen chip is a tab stop (the segmented control's pattern).
  */
 export function LinesOrderChips<T extends string>({ value, options, onChange }: { value: T; options: ReadonlyArray<{ value: T; label: string }>; onChange: (next: T) => void }) {
-  const buttons = useRef<Array<HTMLButtonElement | null>>([]);
+  // The arrows are the shared radiogroup's (FLOW-966); Home and End jump to the first and the last order.
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const rtl = getComputedStyle(event.currentTarget).direction === "rtl";
-    const step = event.key === "ArrowLeft" ? (rtl ? 1 : -1) : event.key === "ArrowRight" ? (rtl ? -1 : 1) : 0;
-    const edge = event.key === "Home" ? 0 : event.key === "End" ? options.length - 1 : -1;
-    if ((step === 0 && edge < 0) || options.length === 0) return;
+    if (event.key !== "Home" && event.key !== "End") {
+      onRadioArrow(event);
+      return;
+    }
+    const radios = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')];
+    const target = event.key === "Home" ? radios[0] : radios.at(-1);
+    if (!target) return;
     event.preventDefault();
-    const at = Math.max(0, options.findIndex((option) => option.value === value));
-    const next = edge >= 0 ? edge : (at + step + options.length) % options.length;
-    const option = options[next];
-    if (!option) return;
-    onChange(option.value);
-    buttons.current[next]?.focus();
+    target.focus();
+    target.click();
   }
   return (
     <div className="ui-lines-chips" role="radiogroup" aria-label="סדר" onKeyDown={onKeyDown}>
-      {options.map((option, index) => (
+      {options.map((option) => (
         <button
           key={option.value}
-          ref={(node) => { buttons.current[index] = node; }}
           type="button"
           className="ui-chip ui-chip-choice"
           role="radio"

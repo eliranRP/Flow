@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { emptyDraft, type BankMatch, type EntryDraft } from "../add-entry";
 import { formatAmount } from "../ui/amount";
 import { AddEntryView, type AddEntryViewProps } from "./add-entry-view";
@@ -13,6 +14,7 @@ const categories = [
   { id: "c1", name: "ציוד", kind: "expense" as const },
   { id: "c2", name: "הובלה", kind: "expense" as const },
   { id: "c3", name: "אחר", kind: "expense" as const },
+  { id: "c4", name: "שכירות", kind: "income" as const },
 ];
 const match: BankMatch = { id: "t1", description: "Ajax Hardware", doc_date: "2026-10-10", amount_minor: 40901, source: "SUMIT" };
 
@@ -30,7 +32,7 @@ function Demo(props: Partial<AddEntryViewProps> & { start?: Partial<EntryDraft> 
       onClose={() => undefined}
       onSave={() => undefined}
       onAddProject={() => Promise.resolve("p3")}
-      onAddCategory={() => Promise.resolve("c4")}
+      onAddCategory={() => Promise.resolve("c9")}
       onAttach={() => undefined}
       {...rest}
     />
@@ -47,7 +49,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Cash from a project: the title names it, the save waits for the amount, the payee and a category. */
+/** Cash from a project: the title names it; save is never disabled. */
 export const CashFromProject: Story = {
   args: { fromProject: "Oak Ridge", start: { payee: "", categoryId: null } },
 };
@@ -60,4 +62,30 @@ export const ReceiptMatched: Story = {
     document: { name: "ajax-receipt.jpg", mime: "image/jpeg", bytes: 183000, sha256: "a".repeat(64) },
     start: { payee: "Ajax Hardware", amount: "409.01", categoryId: "c1" },
   },
+};
+
+/** FLOW-966: save tapped with fields missing: each says what it needs, and the amount takes the focus. */
+export const Missing: Story = {
+  args: { start: { projectId: null, categoryId: null } },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = body.getByRole("dialog");
+    await waitFor(async () => { await expect(getComputedStyle(dialog).pointerEvents).not.toBe("none"); });
+    await userEvent.click(body.getByRole("button", { name: "שמירת ההוצאה" }));
+    await expect(body.getByText("חסר סכום")).toBeVisible();
+    await expect(body.getByText("בחרו קטגוריה")).toBeVisible();
+  },
+};
+
+/** FLOW-966: offline, a save writes nothing; the form stays open and says why. */
+export const Offline: Story = {
+  args: {
+    error: "אין חיבור. הטופס נשאר פתוח: נסו שוב כשהחיבור יחזור.",
+    start: { amount: "120", payee: "Ajax Hardware", categoryId: "c1" },
+  },
+};
+
+/** FLOW-966: income by cheque, every field set: the save names what it saves. */
+export const IncomeCheque: Story = {
+  args: { start: { direction: "in", method: "cheque", cheque: "1048", amount: "2,400.00", payee: "Dana R.", categoryId: "c4" } },
 };

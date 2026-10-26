@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   chequeProblem,
+  datePresets,
   entryRpcArgs,
-  isEntryReady,
+  entryProblems,
   matchLine,
   newNameProblem,
   NO_PROJECT,
@@ -54,20 +55,26 @@ describe("dates", () => {
   it("gives today", () => {
     expect(todayDisplayDate(new Date(2026, 9, 5, 12))).toBe("05/10/2026");
   });
+  it("offers today and yesterday as quick picks, across a month", () => {
+    expect(datePresets(new Date(2026, 10, 1, 9))).toEqual([["01/11/2026", "היום"], ["31/10/2026", "אתמול"]]);
+  });
 });
 
-describe("isEntryReady", () => {
-  it("is true only when the amount, payee, project and category are set", () => {
-    expect(isEntryReady(READY)).toBe(true);
-    expect(isEntryReady({ ...READY, amount: "" })).toBe(false);
-    expect(isEntryReady({ ...READY, payee: " A " })).toBe(false);
-    expect(isEntryReady({ ...READY, projectId: null })).toBe(false);
-    expect(isEntryReady({ ...READY, categoryId: null })).toBe(false);
+describe("entryProblems", () => {
+  it("is empty only when the amount, payee, project and category are set", () => {
+    expect(entryProblems(READY)).toEqual({});
+    expect(entryProblems({ ...READY, amount: "" })).toEqual({ amount: "חסר סכום" });
+    expect(entryProblems({ ...READY, payee: " A " })).toEqual({ payee: "למי שילמתם? למשל שם הספק" });
+    expect(entryProblems({ ...READY, payee: "Ajax\u200bHardware" }).payee).toBe("בשם יש תו נסתר. מחקו אותו והקלידו שוב");
+    expect(entryProblems({ ...READY, direction: "in", payee: "" }).payee).toBe("ממי הכסף? למשל שם הדייר");
+    expect(entryProblems({ ...READY, projectId: null })).toEqual({ project: "בחרו פרויקט, או \"בלי פרויקט\"" });
+    expect(entryProblems({ ...READY, categoryId: null })).toEqual({ category: "בחרו קטגוריה" });
+    expect(entryProblems({ ...READY, date: "31/02/2026" }).date).toBe("התאריך צריך להיות dd/mm/yyyy");
   });
   it("counts בלי פרויקט as a project and needs a cheque number for a cheque", () => {
-    expect(isEntryReady({ ...READY, projectId: NO_PROJECT })).toBe(true);
-    expect(isEntryReady({ ...READY, method: "cheque", cheque: "" })).toBe(false);
-    expect(isEntryReady({ ...READY, method: "cheque", cheque: "1048" })).toBe(true);
+    expect(entryProblems({ ...READY, projectId: NO_PROJECT })).toEqual({});
+    expect(Object.keys(entryProblems({ ...READY, method: "cheque", cheque: "" }))).toEqual(["cheque"]);
+    expect(entryProblems({ ...READY, method: "cheque", cheque: "1048" })).toEqual({});
     expect(chequeProblem("10 48")).toBe(true);
   });
 });

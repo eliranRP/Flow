@@ -2,6 +2,8 @@
   FLOW-369: the add (+) sheet. The three tiles and the card of rows on the sheet, and the tall add
   form (fields in the new-loan form's style, the chips, the matched bank line box, the footer with
   שמירה). Colours, type and spacing come from tokens.
+  FLOW-966 (Add v2): field, chip and dashed edges are the control edge (3:1 and more), placeholders
+  the muted text (4.5:1), every chip and segment 44px, and an error line under each field.
 */
 .ui-add-tiles {
   display: grid;
@@ -157,7 +159,7 @@
 .ui-add-input {
   block-size: 48px;
   padding-inline: var(--space-3);
-  border: 1.5px solid var(--color-tint-strong);
+  border: 1.5px solid var(--color-control-edge);
   border-radius: var(--radius-input);
   background: var(--color-raised);
   color: var(--color-text);
@@ -168,6 +170,41 @@
 
 .ui-add-input[dir="ltr"] {
   text-align: end;
+}
+
+.ui-add-input::placeholder,
+.ui-add-amount-input::placeholder,
+.ui-add-create-input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+.ui-add-input[aria-invalid="true"],
+.ui-add-amount[data-invalid],
+.ui-add-amount[data-invalid]:focus-within {
+  border-color: var(--color-bad);
+}
+
+/* The error under a field: an alert icon and what the field needs (board: 13px, the bad colour). */
+.ui-add-err {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-1) * 1.5);
+  color: var(--color-bad);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-add-err svg {
+  flex: none;
+}
+
+/* The date's quick picks, היום and אתמול, under the date row. */
+.ui-add-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space-1) * 1.5);
+  margin-block-start: calc(var(--space-inset-row) * -1 + var(--space-1));
 }
 
 .ui-add-input:focus-visible {
@@ -183,13 +220,23 @@
   gap: var(--space-1);
   block-size: 50px;
   padding-inline: var(--space-3);
-  border: 1.5px solid var(--color-tint-strong);
+  border: 1.5px solid var(--color-control-edge);
   border-radius: var(--radius-input);
   background: var(--color-raised);
 }
 
 .ui-add-amount:focus-within {
   border-color: var(--color-accent);
+}
+
+/* The amount's ring is the field's, as on the other inputs; the value inside draws none. */
+.ui-add-amount:has(:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 0;
+}
+
+.ui-add-amount .ui-add-amount-input:is(:focus, :focus-visible) {
+  outline: none;
 }
 
 .ui-add-amount-input {
@@ -228,7 +275,7 @@
 }
 
 .ui-add-seg-btn {
-  block-size: 40px;
+  block-size: var(--touch-min);
   border: 0;
   border-radius: var(--radius-seg-btn);
   background: transparent;
@@ -244,17 +291,34 @@
   color: var(--color-text);
 }
 
-.ui-add-chips {
+.ui-add-chips,
+.ui-add-chip-group {
   display: flex;
   flex-wrap: wrap;
   gap: calc(var(--space-1) * 1.5);
 }
 
+/* The radiogroup holds the chips; the "+ … חדש" button follows it in the same row (a radiogroup holds radios only). */
+.ui-add-chip-group {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+}
+
+/* The form's chips: 44px tall, and an unchosen chip's edge is the control edge, not the faint tint. */
+.ui-add-entry .ui-chip {
+  block-size: var(--touch-min);
+  min-block-size: var(--touch-min);
+}
+
+.ui-add-entry .ui-chip-choice:not([aria-pressed="true"], [aria-checked="true"]) {
+  border-color: var(--color-control-edge);
+}
+
 .ui-add-chip-new {
-  block-size: var(--size-chip);
-  min-block-size: var(--size-chip);
+  block-size: var(--touch-min);
+  min-block-size: var(--touch-min);
   padding-inline: var(--space-3);
-  border: 1px dashed var(--color-accent-text);
+  border: 1px dashed var(--color-control-edge);
   border-radius: var(--radius-chip);
   background: transparent;
   color: var(--color-accent-text);
@@ -334,7 +398,7 @@
 
 .ui-add-attach {
   min-block-size: 52px;
-  border: 1.5px dashed var(--color-line);
+  border: 1.5px dashed var(--color-control-edge);
   border-radius: var(--radius-input);
   background: transparent;
   color: var(--color-accent-text);
@@ -365,12 +429,6 @@
   font-size: var(--type-body-size);
   font-weight: var(--type-line2-weight);
   cursor: pointer;
-}
-
-.ui-add-save:disabled {
-  background: var(--color-tint-strong);
-  color: var(--color-disabled-text);
-  cursor: default;
 }
 
 /* The form is a 790px board sheet, 54px below the top of the screen (the panel is 100dvh - 54). The
@@ -437,7 +495,7 @@
 }
 
 .ui-add-menu .ui-add-tile-sub {
-  font-size: calc(var(--type-caption-size) - 1px);
+  font-size: var(--type-caption-size);
   font-weight: var(--type-caption-weight);
 }
 

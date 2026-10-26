@@ -110,8 +110,9 @@
 
 .ui-chip-choice {
   background: transparent;
-  /* FLOW-965: an unselected chip's edge meets 3:1 on the page (the tint was 1.4:1). */
-  border-color: var(--color-control-border);
+  /* FLOW-965: an unselected chip's edge meets 3:1 on the page (the tint was 1.4:1). The outlined controls'
+     edge (FLOW-963, the + form's chips in FLOW-966): 4.7:1 on white, 5.4:1 on the dark page. */
+  border-color: var(--color-control-edge);
   color: var(--color-text);
 }
 

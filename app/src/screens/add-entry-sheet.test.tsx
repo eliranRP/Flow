@@ -1,6 +1,6 @@
 // FLOW-369: the add form's container. A matched receipt attaches to its bank line and adds no line;
 // a new project is added, picked and says so in a toast.
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AttachedDocument, BankMatch } from "../add-entry";
@@ -17,8 +17,21 @@ const mocks = vi.hoisted(() => ({
   undoManualLine: vi.fn(() => Promise.resolve()),
   createProjectNamed: vi.fn(() => Promise.resolve("p3")),
   createCategoryNamed: vi.fn(() => Promise.resolve("c4")),
+  toastShow: vi.fn(),
   match: null as BankMatch | null,
 }));
+
+// Decision 0217: every show() is recorded, so the tests can read each toast's place and time.
+vi.mock("../ui/toast", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../ui/toast")>();
+  return {
+    ...actual,
+    useToast: () => {
+      const toast = actual.useToast();
+      return { ...toast, show: (input: Parameters<typeof toast.show>[0]) => { mocks.toastShow(input); return toast.show(input); } };
+    },
+  };
+});
 
 vi.mock("../use-add-entry", () => ({
   saveManualLine: mocks.saveManualLine,
@@ -59,8 +72,8 @@ function renderSheet(props: Partial<Parameters<typeof AddEntrySheet>[0]> = {}) {
 function fillCash() {
   fireEvent.change(screen.getByRole("textbox", { name: "למי" }), { target: { value: "Ajax Hardware" } });
   fireEvent.change(screen.getByLabelText(/סכום/), { target: { value: "409.01" } });
-  fireEvent.click(screen.getByRole("button", { name: "Oak Ridge" }));
-  fireEvent.click(screen.getByRole("button", { name: "ציוד" }));
+  fireEvent.click(screen.getByRole("radio", { name: "Oak Ridge" }));
+  fireEvent.click(screen.getByRole("radio", { name: "ציוד" }));
 }
 
 beforeEach(() => {
@@ -89,6 +102,32 @@ describe("AddEntrySheet inline new project", () => {
     fireEvent.click(screen.getByRole("button", { name: "הוספה" }));
     expect(await screen.findByText("נוצר פרויקט Willow Dr")).toBeInTheDocument();
     expect(mocks.createProjectNamed).toHaveBeenCalledWith("Willow Dr");
-    expect(screen.getByRole("button", { name: "Willow Dr" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("radio", { name: "Willow Dr" })).toHaveAttribute("aria-checked", "true");
+    expect(mocks.toastShow).toHaveBeenCalledWith(expect.objectContaining({ message: "נוצר פרויקט Willow Dr", place: "top", durationMs: 4000 }));
+  });
+});
+
+describe("AddEntrySheet toasts and offline (FLOW-966)", () => {
+  it("saves a cash line and its undo toast hangs under the header for 5s", async () => {
+    const { onDone } = renderSheet();
+    fillCash();
+    fireEvent.change(screen.getByRole("textbox", { name: "סכום" }), { target: { value: "120" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ההוצאה" }));
+    await waitFor(() => { expect(onDone).toHaveBeenCalled(); });
+    const toast = await screen.findByText("ההוצאה נשמרה · Oak Ridge");
+    expect(toast.closest("[data-place]")).toHaveAttribute("data-place", "top");
+    expect(mocks.toastShow).toHaveBeenCalledWith(expect.objectContaining({ message: "ההוצאה נשמרה · Oak Ridge", place: "top", durationMs: 5000, action: "ביטול" }));
+  });
+
+  it("offline, keeps the form open and says why instead of failing", () => {
+    onlineManager.setOnline(false);
+    const { onDone } = renderSheet();
+    fillCash();
+    fireEvent.change(screen.getByRole("textbox", { name: "סכום" }), { target: { value: "120" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ההוצאה" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("אין חיבור. הטופס נשאר פתוח");
+    expect(mocks.saveManualLine).not.toHaveBeenCalled();
+    expect(onDone).not.toHaveBeenCalled();
+    onlineManager.setOnline(true);
   });
 });
