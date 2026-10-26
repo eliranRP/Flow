@@ -556,6 +556,11 @@ function writeTools() {
       rate_index: { type: ["string", "null"], enum: ["il_prime", null] },
       margin_percent: { type: ["number", "string", "null"] },
     }, true),
+    toolSpec("set_loan_refinance", "Name the loan that replaced this one in a refinance (FLOW-962, decision 0214): new_loan_id is another loan of the company (list_loans), null clears the link. It does not close the loan: update_loan with status closed and closed_on does. Deleting the new loan clears the link. Refused when either loan is not found (loan not found); the loan itself, a loan still open (close it first with update_loan) and a loan that already names this one are validation. update_loan with status open clears the link. Returns loan_id, refinanced_into_id, previous (the link before) and undo_kind; undo is kind loan_refinance with the loan id, a conflict once the link changed again. list_loans shows refinanced_into_id.", {
+      idempotency_key: { type: "string" },
+      loan_id: { type: "string" },
+      new_loan_id: { type: ["string", "null"] },
+    }, true),
     toolSpec("set_index_rate", "Record a new index rate from effective_date (YYYY-MM-DD) on, for example when the Bank of Israel moves prime: every loan linked to rate_index (set_loan_index) gets a rate row on that date at annual_rate_percent (0 to 100, up to 4 decimals) plus its margin, kept between 0% and 100%, as set_loan_rate would write it (a row already on that date is replaced). A loan that starts after the date, or was paid off or closed before it, is skipped and listed in skipped. Refused when no loan is linked (no loan linked to this index) or every linked loan is skipped (no linked loan is open on this date). Returns id (the write), loans (loan_id, name, rate_id, annual_rate_ppm, previous_rate_ppm), skipped and undo_kind; undo is kind index_rate with that id and puts every row back as it was, all or nothing: a conflict when any of them changed since.", {
       idempotency_key: { type: "string" },
       rate_index: { type: "string", enum: ["il_prime"] },

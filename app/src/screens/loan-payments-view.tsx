@@ -37,7 +37,7 @@ export function LoanPaymentsView({ loan, payments, projectName, search, headRef 
   return (
     <div className="ui-loan-payments">
       <header ref={headRef} className="ui-loan-payments-head">
-        <span className="ui-loan-chip">כל התשלומים</span>
+        <p className="ui-loan-payments-label">כל התשלומים</p>
         <h1 className="ui-loan-name">{loan.name}</h1>
         <p className="ui-loan-payments-total"><bdi dir="ltr">{wholeMoney(totals.total, loan.currency)}</bdi></p>
         <p className="ui-loan-payments-sub">{sub}</p>

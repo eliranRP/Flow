@@ -135,6 +135,7 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
     "attach_loan_payment",
     "set_loan_rate",
     "set_loan_index",
+    "set_loan_refinance",
     "set_index_rate",
     "split_line",
     "set_line_pnl",

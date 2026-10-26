@@ -633,6 +633,25 @@ Deno.test("set_loan_rate forwards the rate in ppm, null removes it, and undo tak
   }
 });
 
+Deno.test("set_loan_refinance names the new loan or clears it, never the loan itself (FLOW-962)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "loan_refinance" } } }));
+  assertEquals((await callTool("set_loan_refinance", { idempotency_key: "f-1", loan_id: LOAN, new_loan_id: CATEGORY }, ["write"], rpc)).isError, false);
+  assertEquals(calls.at(-1), {
+    name: "mcp_set_loan_refinance",
+    body: { p_idempotency_key: "f-1", p_loan_id: LOAN, p_new_loan_id: CATEGORY },
+  });
+  await callTool("set_loan_refinance", { idempotency_key: "f-2", loan_id: LOAN, new_loan_id: null }, ["write"], rpc);
+  assertEquals(calls.at(-1)?.body.p_new_loan_id, null);
+  await callTool("undo", { idempotency_key: "f-3", kind: "loan_refinance", id: LOAN }, ["write"], rpc);
+  assertEquals(calls.at(-1), { name: "mcp_undo", body: { p_idempotency_key: "f-3", p_kind: "loan_refinance", p_id: LOAN } });
+  const before = calls.length;
+  for (const bad of [{ new_loan_id: LOAN }, { new_loan_id: "not-a-uuid" }, {}]) {
+    const refused = await callTool("set_loan_refinance", { idempotency_key: "f-bad", loan_id: LOAN, ...bad }, ["write"], rpc);
+    assertEquals(refused.structuredContent, { ok: false, error: { code: "validation", message: "validation" } }, JSON.stringify(bad));
+  }
+  assertEquals(calls.length, before);
+});
+
 Deno.test("set_loan_index takes a signed margin and null unlinks; set_index_rate forwards the index rate in ppm (FLOW-137)", async () => {
   const { calls, rpc } = rpcOf((name) => ({ status: 200, json: { ok: true, data: { undo_kind: name === "mcp_set_index_rate" ? "index_rate" : "loan_index" } } }));
   assertEquals((await callTool("set_loan_index", { idempotency_key: "i-1", loan_id: LOAN, rate_index: "il_prime", margin_percent: "0.75" }, ["write"], rpc)).isError, false);

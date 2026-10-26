@@ -20,9 +20,12 @@ const pagesLoans = [
  */
 type LoansData = "pages" | "rows" | "empty" | "loading" | "error";
 
-function Tab({ data, closedOpen = false, viewer = false }: { data: LoansData; closedOpen?: boolean; viewer?: boolean }) {
+/** FLOW-962: the offline stories' read, 09:41 Israel time. */
+const OFFLINE_SINCE = Date.UTC(2026, 9, 9, 6, 41);
+
+function Tab({ data, closedOpen = false, viewer = false, offline = false }: { data: LoansData; closedOpen?: boolean; viewer?: boolean; offline?: boolean }) {
   const loans: LoansSample["loans"] = data === "pages" ? pagesLoans : data === "rows" ? ROWS : data === "empty" ? [] : data;
-  const screen = <LoansScreen sample={{ ...pagesBusiness, loans }} closedOpen={closedOpen} />;
+  const screen = <LoansScreen sample={{ ...pagesBusiness, loans, ...(offline ? { offlineSince: OFFLINE_SINCE } : {}) }} closedOpen={closedOpen} />;
   return (
     <StoryRoute entry="/loans" tabs>
       <ExampleBar />
@@ -44,6 +47,12 @@ type Story = StoryObj<typeof meta>;
 export const List: Story = {
   name: "Loans",
   args: { data: "rows" },
+};
+
+/** FLOW-962: offline, the list keeps its figures and says which moment they are from. */
+export const ListOffline: Story = {
+  name: "Offline",
+  args: { data: "rows", offline: true },
 };
 
 /** FLOW-138: a paid-off loan shows only how and when it ended; the closed group is open. */

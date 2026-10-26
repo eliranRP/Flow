@@ -33,6 +33,7 @@ export type LoanBundle = {
 export type LoanPatch = {
   status?: LoanStatus;
   closedOn?: string | null;
+  refinancedIntoId?: string | null;
   projectId?: string | null;
   categoryIds?: Partial<Record<LoanSplitPart, string | null>>;
   kind?: LoanKind;
@@ -70,6 +71,7 @@ export function patchColumns(patch: LoanPatch): LoanUpdate {
   const columns: LoanUpdate = {};
   if (patch.status !== undefined) columns.status = patch.status;
   if (patch.closedOn !== undefined) columns.closed_on = patch.closedOn;
+  if (patch.refinancedIntoId !== undefined) columns.refinanced_into_id = patch.refinancedIntoId;
   if (patch.projectId !== undefined) columns.project_id = patch.projectId;
   for (const [part, id] of Object.entries(patch.categoryIds ?? {}) as Array<[LoanSplitPart, string | null]>) {
     columns[PART_COLUMN[part]] = id;
@@ -88,6 +90,7 @@ export function inversePatch(loan: LoanDetail, patch: LoanPatch): LoanPatch {
   const back: LoanPatch = {};
   if (patch.status !== undefined) back.status = loan.status;
   if (patch.closedOn !== undefined) back.closedOn = loan.closedOn;
+  if (patch.refinancedIntoId !== undefined) back.refinancedIntoId = loan.refinancedIntoId;
   if (patch.projectId !== undefined) back.projectId = loan.projectId;
   if (patch.categoryIds) {
     back.categoryIds = {};
@@ -107,6 +110,7 @@ export function applyPatch(loan: LoanDetail, patch: LoanPatch): LoanDetail {
     ...loan,
     ...(patch.status !== undefined ? { status: patch.status } : {}),
     ...(patch.closedOn !== undefined ? { closedOn: patch.closedOn } : {}),
+    ...(patch.refinancedIntoId !== undefined ? { refinancedIntoId: patch.refinancedIntoId } : {}),
     ...(patch.projectId !== undefined ? { projectId: patch.projectId } : {}),
     ...(patch.categoryIds ? { categoryIds: { ...loan.categoryIds, ...patch.categoryIds } } : {}),
     ...(patch.kind !== undefined ? { kind: patch.kind } : {}),
@@ -184,7 +188,7 @@ export type LoanRead =
   | { phase: "loading" }
   | { phase: "error"; retry: () => void; retrying: boolean }
   | { phase: "missing" }
-  | { phase: "ready"; bundle: LoanBundle };
+  | { phase: "ready"; bundle: LoanBundle; /** When the live read landed (the offline line, FLOW-962). */ readAt?: number };
 
 /** The live read of one loan's page: the loan with its rates and balance, its payments, and the categories. */
 export function useLiveLoan(loanId: string, active: boolean): LoanRead {
@@ -251,7 +255,7 @@ export function useLiveLoan(loanId: string, active: boolean): LoanRead {
     };
   }
   if (loan.data == null) return { phase: "missing" };
-  return { phase: "ready", bundle: { loan: loan.data, payments: payments.data ?? [], categories: categories.data ?? [] } };
+  return { phase: "ready", bundle: { loan: loan.data, payments: payments.data ?? [], categories: categories.data ?? [] }, readAt: loan.dataUpdatedAt };
 }
 
 /** A sample loan page: what a memory store holds for one loan. */

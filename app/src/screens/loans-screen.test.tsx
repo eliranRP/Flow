@@ -78,6 +78,10 @@ describe("Loans tab", () => {
     expect(closed).toHaveTextContent("וילה אלון · בלון · נפרעה 11/2025");
     expect(closed.querySelector(".ui-loans-amount")).toHaveTextContent("$0");
     expect(closed).toHaveAccessibleName(/^הלוואת גשר, \$0, /);
+    // FLOW-962: a closed row carries its tag and a chevron, at full contrast.
+    expect(closed.querySelector(".ui-loans-tag")).toHaveTextContent("נסגרה");
+    expect(closed.querySelector(".ui-loans-chevron")).not.toBeNull();
+    expect(closed).not.toHaveClass("ui-loans-row-closed");
   });
 
   it("opens the closed group from the URL (the dev fixture's ?closed=1)", () => {
@@ -125,11 +129,17 @@ describe("Loans tab", () => {
     expect(screen.getByRole("button", { name: /^הלוואות שנסגרו/ })).toBeInTheDocument();
   });
 
-  it("shows the error layout with ניסיון חוזר and no live primary action", () => {
+  it("shows the failure with נסו שוב and צריך עזרה? (FLOW-962)", () => {
     renderAt(<LoansScreen sample={{ ...business, loans: "error" }} />);
-    expect(screen.getByText("לא הצלחנו לטעון את ההלוואות")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "ההלוואות לא נטענו" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "צריך עזרה?" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "+ הלוואה חדשה" })).toBeInTheDocument();
+  });
+
+  it("says which moment the list is from when offline (FLOW-962)", () => {
+    renderAt(<LoansScreen sample={{ ...business, loans: twoLoans, offlineSince: Date.UTC(2026, 9, 9, 6, 41) }} />);
+    expect(screen.getAllByRole("status", { hidden: true }).find((node) => node.classList.contains("ui-page-offline"))).toHaveTextContent("אין חיבור · מוצג המצב מ־09:41");
   });
 
   it("goes back to Settings with no company", async () => {

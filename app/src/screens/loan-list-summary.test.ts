@@ -146,10 +146,10 @@ describe("loan refusal copy (FLOW-106 §5)", () => {
     expect(loanFailure(new Error("Failed to fetch"))).toEqual({ message: "השינוי לא נשמר", retry: true });
   });
 
-  it("counts the payments a delete sends back", () => {
-    expect(loanDeleteConsequence(0)).toBe("אין תשלומים משויכים. שינויי הריבית יימחקו איתה.");
-    expect(loanDeleteConsequence(1)).toBe("תשלום אחד יחזור לקטגוריה שלו.");
-    expect(loanDeleteConsequence(3)).toBe("3 תשלומים יחזרו לקטגוריה שלהם.");
+  it("says what a delete takes, and counts the payments it sends back (FLOW-962)", () => {
+    expect(loanDeleteConsequence(0)).toBe("לוח התשלומים, הצפי ושינויי הריבית שלה יימחקו. אין לה תשלומים משויכים.");
+    expect(loanDeleteConsequence(1)).toBe("לוח התשלומים, הצפי ושינויי הריבית שלה יימחקו. התשלום שכבר שויך יישאר בתנועות ויחזור לקטגוריה שלו.");
+    expect(loanDeleteConsequence(3)).toBe("לוח התשלומים, הצפי ושינויי הריבית שלה יימחקו. 3 התשלומים שכבר שויכו יישארו בתנועות ויחזרו לקטגוריה שלהם.");
   });
 });
 // --- loan-split-draft.test.ts

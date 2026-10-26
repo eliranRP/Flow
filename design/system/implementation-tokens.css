@@ -221,6 +221,7 @@
   --color-text: #1D1728;
   --color-text-secondary: #5B536E;
   --color-text-muted: #746C88;
+  --color-loan-interest: #3D3550; /* FLOW-962: a loan bar's interest part, ink, 11.5:1 on white; dark #D9D2E9 */
   --color-accent: #6C2ED6;
   --color-accent-text: #6C2ED6;
   --color-on-accent: #F6F4FA;
@@ -295,6 +296,7 @@
     --color-text: #F1EDF8;
     --color-text-secondary: #B1A8C4;
     --color-text-muted: #978EAB;
+    --color-loan-interest: #D9D2E9;
     --color-accent: #B894FF;
     --color-accent-text: #C3A5FF;
     --color-on-accent: #15111E;
@@ -372,6 +374,7 @@
   --color-text: #F1EDF8;
   --color-text-secondary: #B1A8C4;
   --color-text-muted: #978EAB;
+  --color-loan-interest: #D9D2E9;
   --color-accent: #B894FF;
   --color-accent-text: #C3A5FF;
   --color-on-accent: #15111E;

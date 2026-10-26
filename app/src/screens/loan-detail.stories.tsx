@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { Route, Routes } from "react-router-dom";
-import { oneLoanStore } from "../dev/loan-detail-sample";
+import { oneLoanStore, sampleLoanStore } from "../dev/loan-detail-sample";
 import { StoryRoute } from "../ui/story-route";
 import { LoanDetailScreen } from "./loan-detail-screen";
 import type { MemoryLoanStore } from "./loan-detail-store";
@@ -10,12 +10,12 @@ import type { MemoryLoanStore } from "./loan-detail-store";
 const TODAY = "2026-10-09";
 
 /** FLOW-139c: `path` opens the all-payments page ("payments"). */
-function Page({ loanId, store, viewer = false, path = "" }: { loanId: string; store: () => MemoryLoanStore; viewer?: boolean; path?: string }) {
+function Page({ loanId, store, viewer = false, path = "", offline = false }: { loanId: string; store: () => MemoryLoanStore; viewer?: boolean; path?: string; offline?: boolean }) {
   const memory = store();
   return (
     <StoryRoute entry={`/loans/${loanId}${path === "" ? "" : `/${path}`}`} viewer={viewer}>
       <Routes>
-        <Route path="/loans/:loanId" element={<LoanDetailScreen store={memory} today={TODAY} />} />
+        <Route path="/loans/:loanId" element={<LoanDetailScreen store={memory} today={TODAY} offlineSince={offline ? Date.UTC(2026, 9, 9, 6, 41) : undefined} />} />
         <Route path="/loans/:loanId/payments" element={<LoanDetailScreen store={memory} today={TODAY} view="payments" />} />
       </Routes>
     </StoryRoute>
@@ -55,6 +55,8 @@ export const PaidOffWithBalance: Story = { name: "Paid off with a balance left",
 export const Viewer: Story = { name: "Viewer", args: { loanId: "loan-bridge", store: () => oneLoanStore("loan-bridge"), viewer: true } };
 export const Loading: Story = { name: "Loading", ...loan("loan-mortgage", { phase: "loading" }) };
 export const LoadError: Story = { name: "Error", ...loan("loan-mortgage", { phase: "error" }) };
+/** FLOW-962: offline, the page keeps its figures and says which moment they are from. */
+export const Offline: Story = { name: "Offline", args: { loanId: "loan-mortgage", store: () => oneLoanStore("loan-mortgage"), offline: true } };
 
 /** FLOW-139c: every payment, by year, newest first. */
 export const Payments: Story = { name: "All payments", ...loan("loan-mortgage", {}, "payments") };
@@ -78,6 +80,48 @@ export const DeleteConfirm: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole("button", { name: "מחיקת ההלוואה" }));
     await expect(await bodyOf(canvasElement).findByRole("dialog", { name: "למחוק את ההלוואה?" })).toBeInTheDocument();
+  },
+};
+
+/** FLOW-962: a loan closed for a refinance leads with how it ended; no payments yet says what will appear. */
+export const ClosedRefinance: Story = { name: "Closed for a refinance, no payments", ...loan("loan-closed") };
+
+/** FLOW-962: סגירת ההלוואה asks why and the day, and says what follows. */
+export const CloseSheet: Story = {
+  name: "Close sheet",
+  ...loan("loan-bridge"),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "סגירת ההלוואה" }));
+    const sheet = await bodyOf(canvasElement).findByRole("dialog", { name: /^סגירת הלוואת גישור/ });
+    await userEvent.click(within(sheet).getByRole("radio", { name: /מימון מחדש/ }));
+    await expect(within(sheet).getByRole("radio", { name: /מימון מחדש/ })).toHaveAttribute("aria-checked", "true");
+  },
+};
+
+/** FLOW-962: a refinance names the new loan, and the closed head opens it. */
+export const ClosedRefinanceLinked: Story = {
+  name: "Closed for a refinance, linked",
+  args: { loanId: "loan-bridge", store: () => sampleLoanStore() },
+  play: async ({ canvasElement }) => {
+    const body = bodyOf(canvasElement);
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "סגירת ההלוואה" }));
+    await userEvent.click(within(await body.findByRole("dialog", { name: /^סגירת הלוואת גישור/ })).getByRole("radio", { name: /מימון מחדש/ }));
+    await userEvent.click(body.getByRole("button", { name: /ההלוואה החדשה · לא חובה/ }));
+    await userEvent.click(within(await body.findByRole("dialog", { name: "ההלוואה החדשה" })).getByRole("radio", { name: "משכנתא דוגמה" }));
+    await userEvent.click(within(await body.findByRole("dialog", { name: /^סגירת הלוואת גישור/ })).getByRole("button", { name: "סגירת ההלוואה" }));
+    await expect(await within(canvasElement).findByRole("link", { name: /משכנתא דוגמה/ })).toBeInTheDocument();
+  },
+};
+
+/** FLOW-962: "מתי השינוי חל?" first; מתאריך… shows the day field (a past day allowed). */
+export const RateFromDay: Story = {
+  name: "Rate sheet, from a day",
+  ...loan("loan-bridge"),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: /^ריבית \d/ }));
+    const sheet = await bodyOf(canvasElement).findByRole("dialog", { name: "קביעת ריבית" });
+    await userEvent.click(within(sheet).getByRole("radio", { name: /מתאריך…/ }));
+    await expect(within(sheet).getByRole("button", { name: /^מתאריך/ })).toBeInTheDocument();
   },
 };
 
