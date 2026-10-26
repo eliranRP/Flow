@@ -109,8 +109,10 @@ describe("Lines v2 states (FLOW-965)", () => {
     wrap(`/cash/${earlier}/out/ILS`);
     expect(await screen.findByText("ספק a")).toBeInTheDocument();
     act(() => { onlineManager.setOnline(false); });
-    const status = await screen.findByText(/אין חיבור · מוצג המצב מ־/);
-    expect(status.textContent).toMatch(/\d{2}:\d{2}/);
+    await waitFor(() => {
+      const line = screen.getAllByRole("status").find((node) => node.textContent.includes("אין חיבור"));
+      expect(line?.textContent).toMatch(/אין חיבור · מוצג המצב מ־\d{2}:\d{2}/);
+    });
     expect(israelHourMinute(Date.now())).toMatch(/^\d{2}:\d{2}$/);
     expect(screen.getByText("ספק a")).toBeInTheDocument();
   });
