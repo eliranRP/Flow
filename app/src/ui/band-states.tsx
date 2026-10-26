@@ -59,6 +59,37 @@ export function BandLoadFailed({ title, offline, onRetry, leading, trailing }: {
   );
 }
 
+/** FLOW-965: a page without the band (a month's lines) says the same offline, on a card under its head. */
+export function PageOfflineLine({ since }: { since: number }) {
+  return (
+    <p className="ui-page-offline" role="status">
+      <AlertIcon size={20} />
+      <span className="ui-band-offline-text">
+        אין חיבור · מוצג המצב מ־<bdi dir="ltr">{israelHourMinute(since)}</bdi>
+      </span>
+    </p>
+  );
+}
+
+/** FLOW-965: a page without the band, read failed: the same words and ways out, on a card where its figures were. */
+export function PageLoadFailed({ title, offline, onRetry }: { title: string; offline: boolean; onRetry: () => void }) {
+  return (
+    <div className="ui-page-failed" role="alert">
+      <span className="ui-page-failed-icon" aria-hidden="true">
+        <AlertIcon size={24} />
+      </span>
+      <h2 className="ui-band-failed-title">{offline ? "אין חיבור" : title}</h2>
+      <p className="ui-page-failed-body">{offline ? "אין חיבור לאינטרנט. שום דבר לא נמחק." : "משהו נשבר אצלנו, לא אצלכם. הנתונים שמורים, ושום דבר לא נמחק."}</p>
+      <div className="ui-band-failed-actions">
+        <Button onClick={onRetry}>נסו שוב</Button>
+        <Link to="/help" className="ui-page-failed-help m-press">
+          צריך עזרה?
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 /** The review row as the page's one filled button: "לאישור 7 פריטים · כ־2 דקות". Null for a row without a button. */
 export function ReviewButton({ row }: { row: BannerRow | undefined }) {
   if (row?.button == null) return null;

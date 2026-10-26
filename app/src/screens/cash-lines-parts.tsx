@@ -1,6 +1,8 @@
 import { formatAmountText, type CashCurrencyRow } from "@flow/shared";
+import { useRef, type KeyboardEvent } from "react";
 import { type CashListSide, notInProfitMinor, notInProfitRest } from "../cash";
 import { Amount } from "../ui/amount";
+import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 import { DocumentIcon } from "../ui/icons";
 import { SegmentedControl } from "../ui/segmented-control";
@@ -71,14 +73,24 @@ export function CashCurrencySwitch({
   );
 }
 
-/** A lines page with no line: what is missing for this side. */
-export function CashLinesEmpty({ side, rest }: { side: CashListSide; rest: bigint }) {
+/**
+ * A lines page with no line: what is missing for this side. FLOW-965: on נכנס and יצא it says so for the
+ * month ("עוד לא נכנס כסף באוקטובר" while the month runs) with one way on, the other side's lines.
+ */
+export function CashLinesEmpty({ side, rest, month, current, onOther }: { side: CashListSide; rest: bigint; month: string; current: boolean; onOther: () => void }) {
+  if (side === "kept") {
+    return <EmptyState icon={<DocumentIcon />} title={rest === 0n ? "הכול נספר ברווח החודש" : "אין תנועות שמחוץ לרווח"} body="תנועות שנכנסות לתזרים יופיעו כאן." />;
+  }
+  const moved = side === "in" ? "נכנס" : "יצא";
   return (
-    <EmptyState
-      icon={<DocumentIcon />}
-      title={side === "in" ? "לא נכנס כסף בחודש הזה" : side === "out" ? "לא יצא כסף בחודש הזה" : rest === 0n ? "הכול נספר ברווח החודש" : "אין תנועות שמחוץ לרווח"}
-      body="תנועות שנכנסות לתזרים יופיעו כאן."
-    />
+    <div className="ui-page-failed ui-lines-empty">
+      <span className="ui-page-failed-icon" aria-hidden="true">
+        <DocumentIcon size={24} />
+      </span>
+      <h2 className="ui-band-failed-title">{`${current ? "עוד לא " : "לא "}${moved} כסף ב${month}`}</h2>
+      <p className="ui-page-failed-body">{current ? "שורות חדשות מגיעות מהבנק כמה פעמים ביום." : "תנועות שנכנסות לתזרים יופיעו כאן."}</p>
+      <Button onClick={onOther}>{`מה ${side === "in" ? "יצא" : "נכנס"} ב${month}`}</Button>
+    </div>
   );
 }
 
@@ -103,16 +115,56 @@ export function LinesTotal({ side, currency, total }: { side: CashListSide; curr
   );
 }
 
-/** FLOW-366: "N תנועות · N ממתינות לאישור · $X לא נספרים ברווח"; the pending and out-of-profit parts show only when they apply. */
+/**
+ * FLOW-366: "N תנועות · $X לא נספרים ברווח"; the out-of-profit part shows only when it applies. FLOW-965: the
+ * lines waiting for approval are the review button under it, not a part of this line.
+ */
 export function LinesCount({
   summary,
   currency,
 }: {
-  summary: { count: number; pending: number; notInProfit: bigint };
+  summary: { count: number; notInProfit: bigint };
   currency: string;
 }) {
   const parts = [summary.count === 1 ? "תנועה אחת" : `${String(summary.count)} תנועות`];
-  if (summary.pending > 0) parts.push(`${String(summary.pending)} ממתינות לאישור`);
   if (summary.notInProfit > 0n) parts.push(`${formatAmountText(summary.notInProfit, currency)} לא נספרים ברווח`);
   return <p className="t-line2 ui-lines-count">{parts.join(" • ")}</p>;
+}
+
+/**
+ * FLOW-965: the order chips are one choice, a radio group: arrow keys move the choice and the focus, and only the
+ * chosen chip is a tab stop (the segmented control's pattern).
+ */
+export function LinesOrderChips<T extends string>({ value, options, onChange }: { value: T; options: ReadonlyArray<{ value: T; label: string }>; onChange: (next: T) => void }) {
+  const buttons = useRef<Array<HTMLButtonElement | null>>([]);
+  function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const rtl = getComputedStyle(event.currentTarget).direction === "rtl";
+    const step = event.key === "ArrowLeft" ? (rtl ? 1 : -1) : event.key === "ArrowRight" ? (rtl ? -1 : 1) : 0;
+    if (step === 0 || options.length === 0) return;
+    event.preventDefault();
+    const at = Math.max(0, options.findIndex((option) => option.value === value));
+    const next = (at + step + options.length) % options.length;
+    const option = options[next];
+    if (!option) return;
+    onChange(option.value);
+    buttons.current[next]?.focus();
+  }
+  return (
+    <div className="ui-lines-chips" role="radiogroup" aria-label="סדר" onKeyDown={onKeyDown}>
+      {options.map((option, index) => (
+        <button
+          key={option.value}
+          ref={(node) => { buttons.current[index] = node; }}
+          type="button"
+          className="ui-chip ui-chip-choice"
+          role="radio"
+          aria-checked={option.value === value}
+          tabIndex={option.value === value ? 0 : -1}
+          onClick={() => { onChange(option.value); }}
+        >
+          <span className="ui-chip-label" data-clip-ok="">{option.label}</span>
+        </button>
+      ))}
+    </div>
+  );
 }

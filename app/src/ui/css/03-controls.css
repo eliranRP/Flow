@@ -46,7 +46,7 @@
   opacity: .72;
 }
 
-.ui-seg-btn[aria-checked="true"] {
+.ui-seg-btn:is([aria-checked="true"], [aria-selected="true"]) {
   background: var(--color-tint-strong);
   color: var(--color-text);
 }
@@ -110,11 +110,12 @@
 
 .ui-chip-choice {
   background: transparent;
-  border-color: var(--color-tint-strong);
+  /* FLOW-965: an unselected chip's edge meets 3:1 on the page (the tint was 1.4:1). */
+  border-color: var(--color-control-border);
   color: var(--color-text);
 }
 
-.ui-chip[aria-pressed="true"] {
+.ui-chip:is([aria-pressed="true"], [aria-checked="true"]) {
   background: var(--color-tint-strong);
   border-color: var(--color-accent);
   color: var(--color-text);

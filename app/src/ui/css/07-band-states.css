@@ -89,3 +89,62 @@
   color: var(--color-on-band);
   font-size: var(--type-line2-size);
 }
+
+/* FLOW-965: a page without the band (a month's lines). Offline, a line on a card under the head. */
+.ui-page-offline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--touch-min);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  box-sizing: border-box;
+  border-radius: var(--radius-chip);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+.ui-page-offline svg {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+/* FLOW-965: its failed read, a card where the figures were: what happened, נסו שוב and צריך עזרה?. */
+.ui-page-failed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: var(--space-4) var(--space-side) 0;
+  padding: var(--space-5) var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ui-page-failed-icon {
+  display: grid;
+  place-items: center;
+  inline-size: var(--touch-min);
+  block-size: var(--touch-min);
+  border-radius: 50%;
+  background: var(--color-raised);
+  color: var(--color-accent-text);
+}
+
+.ui-page-failed-body {
+  margin: 0;
+  max-inline-size: 32ch;
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+.ui-page-failed-help {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--touch-min);
+  color: var(--color-accent-text);
+  font-size: var(--type-line2-size);
+}

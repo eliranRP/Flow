@@ -28,7 +28,7 @@ import { useHeldOrder } from "../list-hold";
 import { usePreviewSearch, useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useCashLinesQuery, useCashMonthData } from "../use-cash";
-import { Chip } from "../ui/chip";
+import { PageLoadFailed, PageOfflineLine, ReviewButton, useOnline } from "../ui/band-states";
 import { formatDayMonth, israelToday } from "../ui/date-math";
 import { lineTagText, rowSource } from "../ui/line-marks";
 import { List, ListRow } from "../ui/list-row";
@@ -38,7 +38,8 @@ import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
 import { SplitPartsHint } from "../ui/split-parts-hint";
 import { txnListState } from "../txn-nav";
-import { CashCurrencySwitch, CashLinesEmpty, CashLinesHead, LinesCount, LinesTotal, cashLinesFigures } from "./cash-lines-parts";
+import { reviewItems, reviewMinutes } from "../weekly-summary";
+import { CashCurrencySwitch, CashLinesEmpty, CashLinesHead, LinesCount, LinesOrderChips, LinesTotal, cashLinesFigures } from "./cash-lines-parts";
 
 /**
  * FLOW-366. The lines behind one month's נכנס or יצא (or FLOW-418 the cash profit leaves out), in
@@ -82,6 +83,8 @@ export function monthOf(data: CashMonths | undefined, key: string) {
   return data?.months.find((month) => cashMonthKey(month.month) === key);
 }
 
+const ORDER_OPTIONS = LINES_ORDERS.map((value) => ({ value, label: LINES_ORDER_LABEL[value] }));
+
 const SIDE_OPTIONS: Array<{ value: "out" | "in"; label: string }> = [
   { value: "out", label: "יצא" },
   { value: "in", label: "נכנס" },
@@ -102,6 +105,7 @@ function CashLinesBody({
 }) {
   const preview = useHomePreview();
   const navigate = useNavigate();
+  const online = useOnline();
   const monthData = useCashMonthData(monthKey, sample == null);
   const months = monthData.query;
   const lines = useCashLinesQuery(monthKey, side, currency, sample == null);
@@ -129,7 +133,21 @@ function CashLinesBody({
   const subtitle = `${monthTitle}${isThisMonth ? " • עד היום" : ""}`;
 
   if (phase.kind !== "ready") {
-    return <ScreenState stacked title={title} backTo={back} kicker={isThisMonth ? "בית" : kicker} stateSubtitle={monthTitle} headerClassName="ui-state-header" phase={phase} onRetry={() => { void lines.refetch(); }} loading={<LinesSkeleton />} />;
+    // FLOW-965: a failed read hides the figures and says what happened, with נסו שוב and צריך עזרה?.
+    return (
+      <ScreenState
+        stacked
+        title={title}
+        backTo={back}
+        kicker={isThisMonth ? "בית" : kicker}
+        stateSubtitle={monthTitle}
+        headerClassName="ui-state-header"
+        phase={phase}
+        onRetry={() => { void lines.refetch(); }}
+        loading={<LinesSkeleton />}
+        failed={(retry, offline) => <PageLoadFailed title={`${title} של ${monthName} לא נטען`} offline={offline} onRetry={retry} />}
+      />
+    );
   }
 
   const month = data == null ? undefined : monthOf(data, monthKey);
@@ -146,6 +164,7 @@ function CashLinesBody({
     <SegmentedControl<"out" | "in">
       label="כיוון"
       showLabel={false}
+      role="tab"
       value={side === "in" ? "in" : "out"}
       options={SIDE_OPTIONS}
       onChange={(next) => {
@@ -154,19 +173,13 @@ function CashLinesBody({
     />
   );
   const chips = (
-    <div className="ui-lines-chips" role="group" aria-label="סדר">
-      {LINES_ORDERS.map((value) => (
-        <Chip
-          key={value}
-          pressed={order === value}
-          onClick={() => {
-            void navigate(cashLinesPath(monthKey, side, currency, searchWith(search, value)), { replace: true });
-          }}
-        >
-          {LINES_ORDER_LABEL[value]}
-        </Chip>
-      ))}
-    </div>
+    <LinesOrderChips
+      value={order}
+      options={ORDER_OPTIONS}
+      onChange={(value) => {
+        void navigate(cashLinesPath(monthKey, side, currency, searchWith(search, value)), { replace: true });
+      }}
+    />
   );
   const currencies = (
     <CashCurrencySwitch
@@ -184,8 +197,14 @@ function CashLinesBody({
     <>
       <LinesTotal side={side} currency={currency} total={total} />
       {allLoaded ? <LinesCount summary={summary} currency={currency} /> : null}
+      {/* FLOW-965: the lines waiting for approval are the page's one filled button (Home v2's). */}
+      {allLoaded && summary.pending > 0 ? (
+        <ReviewButton row={{ id: "review", to: `/review${search}`, title: "", button: { label: reviewItems(summary.pending), hint: reviewMinutes(summary.pending) } }} />
+      ) : null}
     </>
   );
+  // FLOW-965: offline, the page keeps the lines it read and says from when.
+  const offlineSince = sample == null && !online ? (lines.dataUpdatedAt || null) : null;
   return (
     <div>
       <ScreenHeader
@@ -201,13 +220,22 @@ function CashLinesBody({
         below={
           <div className="ui-lines-head">
             {headBlock}
+            {offlineSince == null ? null : <PageOfflineLine since={offlineSince} />}
             {currencies}
             {chips}
           </div>
         }
       />
       {rows.length === 0 && allLoaded ? (
-        <CashLinesEmpty side={side} rest={rest} />
+        <CashLinesEmpty
+          side={side}
+          rest={rest}
+          month={monthName}
+          current={isThisMonth}
+          onOther={() => {
+            void navigate(cashLinesPath(monthKey, side === "in" ? "out" : "in", currency, searchWith(search, order)), { replace: true });
+          }}
+        />
       ) : (
         groups.map((group) => (
           <section key={group.key} className="ui-lines-group" aria-label={group.title}>

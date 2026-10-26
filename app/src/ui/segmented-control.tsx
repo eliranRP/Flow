@@ -31,6 +31,8 @@ type SegmentedControlProps<T extends string> = {
   busy?: boolean;
   /** The period bar sits on the violet band: a translucent track and white text (decision 0141). */
   tone?: "page" | "band";
+  /** FLOW-965: a switch between views (a month's נכנס and יצא) is a tab list; a choice stays a radio group. */
+  role?: "radio" | "tab";
 };
 
 /** Roving tabindex. Arrow keys follow the reading direction, so they reverse under dir=rtl. */
@@ -45,6 +47,7 @@ export function SegmentedControl<T extends string>({
   disabled = false,
   busy = false,
   tone = "page",
+  role = "radio",
 }: SegmentedControlProps<T>) {
   const buttons = useRef<Array<HTMLButtonElement | null>>([]);
   const found = options.findIndex((option) => option.value === value);
@@ -76,7 +79,7 @@ export function SegmentedControl<T extends string>({
       {showLabel ? <span className="ui-field-label">{label}</span> : null}
       <div
         className={cx("ui-seg", radius === "input" && "ui-seg-input", tone === "band" && "ui-seg-band")}
-        role="radiogroup"
+        role={role === "tab" ? "tablist" : "radiogroup"}
         aria-label={label}
         aria-describedby={describedBy}
         aria-disabled={disabled || undefined}
@@ -93,8 +96,9 @@ export function SegmentedControl<T extends string>({
             }}
             type="button"
             className="ui-seg-btn"
-            role="radio"
-            aria-checked={selected}
+            role={role}
+            aria-checked={role === "radio" ? selected : undefined}
+            aria-selected={role === "tab" ? selected : undefined}
             // With no option selected (a custom period), the first one keeps the group's tab stop.
             tabIndex={selected || (found < 0 && optionIndex === 0) ? 0 : -1}
             aria-label={option.name ?? option.label}

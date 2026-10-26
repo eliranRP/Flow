@@ -21,6 +21,7 @@ import { transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
 import { IconRow } from "../ui/icon-row";
 import { DocumentCard } from "../ui/document-card";
+import { PhotoDocumentCard } from "../ui/document-viewer";
 import { unpaidDocumentUrl } from "../unpaid";
 import { ChevronIcon, MoreIcon, ProjectsIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { List } from "../ui/list-row";
@@ -40,6 +41,7 @@ import { TransactionTopBar } from "./transaction-top-bar";
 import { TxnFooter, TxnHead } from "./transaction-head";
 import { TransactionThread } from "./transaction-thread";
 import { TxnRecurring } from "./transaction-recurring";
+import { LINE_UNDO_MS, RuleOfferCard, useRuleOffer, type RuleOfferNames } from "./transaction-rule-offer";
 import { TxnJournal, journalEditable, journalOpens, journalShown } from "./transaction-journal";
 import { useLineJournalQuery, type LineJournal } from "../line-journal";
 import { projectChoices } from "../project-groups";
@@ -181,7 +183,10 @@ export function TransactionScreen({
   const search = usePreviewSearch();
   const navigate = useNavigate();
   const toast = useToast();
-  const blocked = useBlockedPreview();
+  // FLOW-965 (decision 0216): this page's toasts hang under its header, and ביטול stays 5s.
+  const blocked = useBlockedPreview("top");
+  const ruleOffer = useRuleOffer(sample?.id ?? transactionId, sample != null);
+  const offerNext = useRef<RuleOfferNames | null>(null);
   const holdWrites = useHoldWrites();
   const invalidate = useInvalidateBooks();
   const [confirm, setConfirm] = useState(false);
@@ -247,10 +252,13 @@ export function TransactionScreen({
     onSplit: () => {
       void navigate(`/transactions/${transactionId}/split-category${search}`);
     },
+    place: "top",
     keys: ["txn", "dashboard", "project", "project-category", "home", "breakdown", "breakdown-lines"],
     onSuccess: (done) => {
       toast.show({
         message: done.out ? "הוצא מהרווח" : "נספר ברווח",
+        place: "top",
+        durationMs: LINE_UNDO_MS,
         ...(done.undo ? {} : {
           action: "ביטול",
           onAction: () => {
@@ -275,6 +283,7 @@ export function TransactionScreen({
   const countedRef = useRef<HTMLButtonElement>(null);
   const cashLine = useWrite<CashChange>({
     failure: (error) => (error.message.includes("forbidden") ? "אין הרשאה לעדכן את השורה." : "לא הצלחנו לעדכן את השורה."),
+    place: "top",
     keys: CASH_KEYS,
     // A switch flips at once and the server's answer only corrects it (decision 0180).
     optimistic: (change) => (sample || detail.data == null ? [] : [{
@@ -284,6 +293,8 @@ export function TransactionScreen({
     onSuccess: (done) => {
       toast.show({
         message: done.on ? "נספר בתזרים" : "הוצא מהתזרים",
+        place: "top",
+        durationMs: LINE_UNDO_MS,
         ...(done.undo ? {} : {
           action: "ביטול",
           onAction: () => {
@@ -361,12 +372,14 @@ export function TransactionScreen({
   };
   const undo = useWrite({
     failure: "לא הצלחנו לבטל את השיוך.",
+    place: "top",
     keys: ASSIGN_KEYS,
     success: "השיוך הקודם חזר",
     onSuccess: () => {
       committed.current = { projectId: "", categoryId: "" };
       setProjectName("");
       setCategoryName("");
+      ruleOffer.close();
     },
     run: async () => {
       const supabase = getSupabase();
@@ -380,8 +393,13 @@ export function TransactionScreen({
     const id = undoId.current;
     toast.show({
       message: "השיוך נשמר",
+      place: "top",
+      durationMs: LINE_UNDO_MS,
       ...(!sample && id ? { action: "ביטול", onAction: () => { undo.mutate(); } } : {}),
     });
+    // FLOW-965: a new category on a supplier's line offers the supplier's next lines.
+    if (offerNext.current) ruleOffer.open(offerNext.current);
+    offerNext.current = null;
   };
   // The pick is the check, the summary and the row at once; a failure goes back to the pick before (decision 0075).
   const restorePick = (payload: PickBack | undefined) => {
@@ -394,6 +412,7 @@ export function TransactionScreen({
   };
   const reassign = useWrite<PickBack>({
     failure: changeSaveFailure,
+    place: "top",
     onError: (_error, payload) => { restorePick(payload); },
     optimistic: (payload) => pickCache(payload, true),
     onSplit: () => {
@@ -421,6 +440,7 @@ export function TransactionScreen({
   });
   const setCategory = useWrite<PickBack>({
     failure: changeSaveFailure,
+    place: "top",
     onError: (_error, payload) => { restorePick(payload); },
     optimistic: (payload) => pickCache(payload, false),
     onSplit: () => {
@@ -489,9 +509,13 @@ export function TransactionScreen({
       return "hold" as const;
     }
     setHold("");
+    ruleOffer.close();
+    const pickedCategory = namesRef.current.categories.find((category) => category.id === next.categoryId)?.name;
+    offerNext.current = kind === "category" && !splitRow && detailRow.direction === "expense" && detailRow.supplier_name && pickedCategory
+      ? { supplier: detailRow.supplier_name, category: pickedCategory }
+      : null;
     if (sample) {
-      applyRef.current();
-      toast.show({ message: "השיוך נשמר" });
+      assignSaved();
       return undefined;
     }
     if (blocked()) throw new Error("preview");
@@ -589,6 +613,7 @@ export function TransactionScreen({
         title={`${heading} · ${amountText}`}
         end={menuButton}
         head={head}
+        toastCeiling
       />
       <CardSwipe key={txn.id} canNext={nav?.next != null} canPrev={nav?.prev != null} enter={nav?.enter} peekNext={peekNext} peekPrev={peekPrev} onStep={(step) => { nav?.move(step, "swipe"); }}>
         <div className="ui-txn-body">
@@ -627,6 +652,7 @@ export function TransactionScreen({
             )}
           </LoanCategoryRow>
         </List>
+        {ruleOffer.offer == null || holdWrites ? null : <RuleOfferCard names={ruleOffer.offer} onAccept={ruleOffer.accept} onDismiss={ruleOffer.close} />}
         <LoanTransactionSplit
           transactionId={txn.id}
           docDate={txn.doc_date}
@@ -645,12 +671,11 @@ export function TransactionScreen({
           openSheet={sample ? sampleSheet : undefined}
           context={`${shownProject} · ${shownCategory}`}
         />
-        {documentUrl == null ? null : (
-          <DocumentCard
-            href={documentUrl}
-            title="חשבונית"
-            note={txn.doc_kind === "photo" ? `צולמה ${txn.doc_date.slice(8, 10)}/${txn.doc_date.slice(5, 7)} · הקישו להגדלה` : "PDF · הקישו לפתיחה"}
-          />
+        {/* FLOW-965: a photo opens full screen on the page; a PDF in its own tab. */}
+        {documentUrl == null ? null : txn.doc_kind === "photo" ? (
+          <PhotoDocumentCard href={documentUrl} title="חשבונית" note={`צולמה ${txn.doc_date.slice(8, 10)}/${txn.doc_date.slice(5, 7)} · הקישו להגדלה`} />
+        ) : (
+          <DocumentCard href={documentUrl} title="חשבונית" note="PDF · הקישו לפתיחה" />
         )}
         <List layout="inset">
           <CountedInRow

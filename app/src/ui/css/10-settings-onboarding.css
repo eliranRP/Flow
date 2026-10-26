@@ -92,6 +92,11 @@
   background: var(--color-accent);
 }
 
+/* FLOW-965: off, the track's edge meets 3:1 on the card (its fill alone was 1.4:1). */
+.ui-switch-row input:not(:checked) + .ui-switch {
+  box-shadow: inset 0 0 0 var(--stroke-strong) var(--color-control-off);
+}
+
 /* The on knob takes the on-accent colour (board: the knob is #15111E / #F6F4FA on the accent track). */
 .ui-switch-row input:checked + .ui-switch i {
   background: var(--color-on-accent);
