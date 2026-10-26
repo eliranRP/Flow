@@ -73,6 +73,19 @@ export const TransactionProjectPicker: Story = {
   },
 };
 
+/** FLOW-965 (decision 0216): after a category change, the offer to file the supplier's next lines the same way. */
+export const TransactionRuleOffer: Story = {
+  name: "Category change offers the supplier's next lines",
+  render: () => <TransactionStory />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: /חומרים/ }));
+    const body = storyBody(canvasElement);
+    await userEvent.click(await body.findByRole("radio", { name: "ציוד והשכרה" }));
+    await userEvent.click(body.getByRole("button", { name: "שמירה" }));
+    await within(canvasElement).findByRole("button", { name: "כן, מעכשיו" });
+  },
+};
+
 /** FLOW-320: the category row opens the change sheet straight on the category picker. */
 export const TransactionCategoryPicker: Story = {
   name: "Category row opens the category picker",

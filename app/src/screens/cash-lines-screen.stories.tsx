@@ -47,13 +47,44 @@ type Story = StoryObj<typeof meta>;
 
 export const ByDate: Story = { args: { side: "out", order: "date" } };
 
-/** The count line with its pending and out-of-profit parts, and the tag lines on the rows. */
+/** FLOW-965: lines waiting for approval are the filled review button; the count line keeps the out-of-profit part. */
 export const Pending: Story = {
   args: { side: "out", order: "date", lines: "flagged" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText(/ממתינות לאישור/)).toBeInTheDocument();
+    await expect(canvas.getByRole("link", { name: /^לאישור/ })).toBeInTheDocument();
+    await expect(canvas.queryByText(/ממתינות לאישור/)).toBeNull();
     await expect(canvas.getByText(/לא נספרים ברווח/)).toBeInTheDocument();
+  },
+};
+
+/** FLOW-965: offline, the lines stay and a line under the total says from when. */
+export const Offline: Story = {
+  render: () => {
+    const data = sampleCashMonths();
+    const key = cashMonthKey(data.months[0]?.month ?? "");
+    return (
+      <StoryRoute entry={`/cash/${key}/out/ILS`} tabs>
+        <CashLinesScreen sample={{ months: data, lines: sampleCashLines("out"), offlineSince: Date.UTC(2026, 9, 26, 6, 41) }} at={{ month: key, side: "out", currency: "ILS" }} />
+      </StoryRoute>
+    );
+  },
+};
+
+/** FLOW-965: the read failed: the figures are hidden, and the card says what did not load, with נסו שוב and צריך עזרה?. */
+export const Failed: Story = {
+  render: () => {
+    const key = cashMonthKey(sampleCashMonths().months[0]?.month ?? "");
+    return (
+      <StoryRoute entry={`/cash/${key}/in/ILS?preview=error-server`} tabs>
+        <CashLinesScreen at={{ month: key, side: "in", currency: "ILS" }} />
+      </StoryRoute>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    await expect(canvas.getByRole("link", { name: "צריך עזרה?" })).toBeInTheDocument();
   },
 };
 
@@ -66,7 +97,13 @@ export const Scrolled: Story = {
   },
 };
 
-export const Empty: Story = { args: { side: "out", order: "date", lines: "none" } };
+/** FLOW-965: no line on the side: the month says so, with one way on, the other side. */
+export const Empty: Story = {
+  args: { side: "in", order: "date", lines: "none" },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole("button", { name: /^מה יצא ב/ })).toBeInTheDocument();
+  },
+};
 
 /** Cash-view stories from the move (FLOW-418): the month's יצא and לא נספר ברווח lines. */
 export const CashLinesOut: Story = {

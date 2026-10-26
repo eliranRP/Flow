@@ -21,7 +21,6 @@ import { transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
 import { IconRow } from "../ui/icon-row";
 import { DocumentCard } from "../ui/document-card";
-import { PhotoDocumentCard } from "../ui/document-viewer";
 import { unpaidDocumentUrl } from "../unpaid";
 import { ChevronIcon, MoreIcon, ProjectsIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { List } from "../ui/list-row";
@@ -671,11 +670,12 @@ export function TransactionScreen({
           openSheet={sample ? sampleSheet : undefined}
           context={`${shownProject} · ${shownCategory}`}
         />
-        {/* FLOW-965: a photo opens full screen on the page; a PDF in its own tab. */}
-        {documentUrl == null ? null : txn.doc_kind === "photo" ? (
-          <PhotoDocumentCard href={documentUrl} title="חשבונית" note={`צולמה ${txn.doc_date.slice(8, 10)}/${txn.doc_date.slice(5, 7)} · הקישו להגדלה`} />
-        ) : (
-          <DocumentCard href={documentUrl} title="חשבונית" note="PDF · הקישו לפתיחה" />
+        {documentUrl == null ? null : (
+          <DocumentCard
+            href={documentUrl}
+            title="חשבונית"
+            note={txn.doc_kind === "photo" ? `צולמה ${txn.doc_date.slice(8, 10)}/${txn.doc_date.slice(5, 7)} · הקישו להגדלה` : "PDF · הקישו לפתיחה"}
+          />
         )}
         <List layout="inset">
           <CountedInRow

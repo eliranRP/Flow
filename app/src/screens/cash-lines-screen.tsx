@@ -54,8 +54,11 @@ function lineSign(side: CashListSide, row: CashLine): "in" | "out" | "cost" {
   return (row.side === "in") !== back ? "in" : "out";
 }
 
-/** `today` pins the day heads ("היום") for a sample whose lines are dated around a fixed day. */
-type LinesSample = { months: NonNullable<CashMonths>; lines: CashLine[]; today?: string };
+/**
+ * `today` pins the day heads ("היום") for a sample whose lines are dated around a fixed day; `offlineSince`
+ * draws the offline line from that moment (FLOW-965).
+ */
+type LinesSample = { months: NonNullable<CashMonths>; lines: CashLine[]; today?: string; offlineSince?: number };
 
 export function CashLinesScreen({ sample, at }: { sample?: LinesSample; at?: { month: string; side: CashListSide; currency: string } } = {}) {
   const params = useParams();
@@ -204,7 +207,7 @@ function CashLinesBody({
     </>
   );
   // FLOW-965: offline, the page keeps the lines it read and says from when.
-  const offlineSince = sample == null && !online ? (lines.dataUpdatedAt || null) : null;
+  const offlineSince = sample != null ? (sample.offlineSince ?? null) : !online ? (lines.dataUpdatedAt || null) : null;
   return (
     <div>
       <ScreenHeader
