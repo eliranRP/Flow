@@ -52,6 +52,8 @@ export type BannerRow = {
   title: ReactNode;
   hint?: ReactNode;
   icon?: ReactNode;
+  /** FLOW-958: a box that draws this row as its filled button reads this label; a list ignores it. */
+  button?: { label: string; hint: string };
 };
 
 /**

@@ -51,10 +51,10 @@ export function attentionRows({
     rows.push({
       id: "review",
       to: `/review${search}`,
-      // FLOW-958: the label of Home's one filled button, as the weekly sheet words it; the time is
-      // the hint, drawn smaller so the label stays on one line at 320.
-      title: reviewItems(pending),
-      hint: reviewMinutes(pending),
+      title: pending === 1 ? "פריט אחד ממתין לאישור" : <><bdi dir="ltr">{String(pending)}</bdi> פריטים ממתינים לאישור</>,
+      // FLOW-958: Home draws this row as its one filled button, worded as the weekly sheet's; the
+      // time is drawn smaller so the label stays on one line at 320. The project page keeps the row.
+      button: { label: reviewItems(pending), hint: reviewMinutes(pending) },
     });
   }
   if (transfers > 0) {

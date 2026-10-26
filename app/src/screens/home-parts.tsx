@@ -266,7 +266,7 @@ export function splitTakeaway(lead: "out" | "in" | null, netMinor: bigint, profi
 export function AttentionBox({ rows }: { rows: readonly BannerRow[] }) {
   if (rows.length === 0) return null;
   const [first, ...others] = rows;
-  const review = first?.id === "review" ? first : null;
+  const review = first?.button == null ? null : first;
   const lines = review == null ? rows : others;
   return (
     <section className="ui-home-attention" aria-labelledby="home-attention-title">
@@ -274,8 +274,9 @@ export function AttentionBox({ rows }: { rows: readonly BannerRow[] }) {
       {review == null ? null : (
         <div className="ui-home-attention-primary">
           <Button full to={review.to} chevron>
-            {review.title}
-            {review.hint == null ? null : <>{" "}<span className="ui-home-attention-time">· {review.hint}</span></>}
+            {review.button?.label}
+            {" "}
+            <span className="ui-home-attention-time">· {review.button?.hint}</span>
           </Button>
         </div>
       )}
