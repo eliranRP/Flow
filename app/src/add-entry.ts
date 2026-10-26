@@ -88,6 +88,12 @@ export function todayDisplayDate(now: Date = new Date()): string {
   return `${dd}/${mm}/${String(now.getFullYear())}`;
 }
 
+/** FLOW-966: the date field's two quick picks, today and yesterday, as dd/mm/yyyy. */
+export function datePresets(now: Date = new Date()): ReadonlyArray<readonly [string, string]> {
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 12);
+  return [[todayDisplayDate(now), "היום"], [todayDisplayDate(yesterday), "אתמול"]];
+}
+
 /** A payee the server accepts: 2 to 120 characters, no hidden character. */
 export function payeeProblem(payee: string): "short" | "hidden" | null {
   const name = payee.trim();
@@ -110,17 +116,27 @@ export function chequeProblem(cheque: string): boolean {
   return !CHEQUE.test(cheque.trim());
 }
 
+/** The form's save rule: the amount, the payee, the project and the category are set (the date and a cheque's number too). */
+export type EntryField = "amount" | "payee" | "date" | "cheque" | "project" | "category";
+
+/** The fields in the form's order, so the first missing one takes the focus. */
+export const ENTRY_FIELDS: readonly EntryField[] = ["amount", "payee", "date", "cheque", "project", "category"];
+
 /**
- * The form's save rule: the amount, the payee, the project and the category are set (the date and a
- * cheque's number too). Save is disabled until this is true.
+ * FLOW-966: what each field still needs, in the board's words. Empty when the line can be saved. Save
+ * is never disabled: a tap with something missing shows these under their fields.
  */
-export function isEntryReady(draft: EntryDraft): boolean {
-  if (parseAmountMinor(draft.amount) == null) return false;
-  if (payeeProblem(draft.payee) != null) return false;
-  if (draft.projectId == null || draft.categoryId == null) return false;
-  if (parseDisplayDate(draft.date) == null) return false;
-  if (draft.method === "cheque" && chequeProblem(draft.cheque)) return false;
-  return true;
+export function entryProblems(draft: EntryDraft): Partial<Record<EntryField, string>> {
+  const problems: Partial<Record<EntryField, string>> = {};
+  if (parseAmountMinor(draft.amount) == null) problems.amount = "חסר סכום";
+  if (payeeProblem(draft.payee) != null) {
+    problems.payee = draft.direction === "in" ? "ממי הכסף? למשל שם הדייר" : "למי שילמתם? למשל שם הספק";
+  }
+  if (parseDisplayDate(draft.date) == null) problems.date = "התאריך צריך להיות dd/mm/yyyy";
+  if (draft.method === "cheque" && chequeProblem(draft.cheque)) problems.cheque = "מספר הצ׳ק: עד 20 ספרות, אותיות או מקף";
+  if (draft.projectId == null) problems.project = "בחרו פרויקט, או \"בלי פרויקט\"";
+  if (draft.categoryId == null) problems.category = "בחרו קטגוריה";
+  return problems;
 }
 
 /**

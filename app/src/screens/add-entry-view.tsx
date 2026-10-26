@@ -1,18 +1,22 @@
 // FLOW-369: the add form (the tall sheet from the board, "Add (+)"). Presentational: the container
 // (add-entry-sheet.tsx) owns the lists, the writes and the toasts. Rules are in ../add-entry.ts.
-import { useState, type ReactNode } from "react";
+// FLOW-966 (Add v2): save is never disabled; a tap with something missing marks each field and says
+// what it needs, and the first one takes the focus.
+import { useId, useState, type ReactNode } from "react";
 import { Sheet } from "../ui/sheet";
 import { Chip } from "../ui/chip";
+import { AlertIcon } from "../ui/icons";
 import {
-  chequeProblem,
-  isEntryReady,
+  datePresets,
+  ENTRY_FIELDS,
+  entryProblems,
   matchLine,
   NO_PROJECT,
   orderChips,
-  parseDisplayDate,
   type AttachedDocument,
   type BankMatch,
   type EntryDraft,
+  type EntryField,
   type EntryKind,
 } from "../add-entry";
 import { AddNewEditor } from "./add-entry-new";
@@ -42,7 +46,7 @@ export interface AddEntryViewProps {
   onSave: (draft: EntryDraft) => void;
   onAddProject: (name: string) => Promise<string>;
   onAddCategory: (name: string, kind: "expense" | "income") => Promise<string>;
-  /** Cash only: the optional photo button. */
+  /** Cash only: the optional photo button, which opens the camera. */
   onAttach?: () => void;
   /** The company's currency code; the amount field shows its symbol. */
   currency?: string;
@@ -65,10 +69,11 @@ function Segment<T extends string>({ label, value, options, onPick, cols }: {
   onPick: (next: T) => void;
   cols: number;
 }) {
+  const id = useId();
   return (
     <div className="ui-add-field">
-      <span className="ui-add-label" id={`seg-${label}`}>{label}</span>
-      <div role="radiogroup" aria-labelledby={`seg-${label}`} className="ui-add-seg" style={{ gridTemplateColumns: `repeat(${String(cols)}, minmax(0, 1fr))` }}>
+      <span className="ui-add-label" id={id}>{label}</span>
+      <div role="radiogroup" aria-labelledby={id} className="ui-add-seg" style={{ gridTemplateColumns: `repeat(${String(cols)}, minmax(0, 1fr))` }}>
         {options.map(([key, text]) => (
           <button
             key={key}
@@ -86,8 +91,26 @@ function Segment<T extends string>({ label, value, options, onPick, cols }: {
   );
 }
 
-function ChipRow({ children }: { children: ReactNode }) {
-  return <div className="ui-add-chips">{children}</div>;
+/** A field's error line under it, linked by its id (aria-describedby). */
+function FieldError({ id, text }: { id: string; text: string | undefined }) {
+  if (text == null) return null;
+  return <span id={id} className="ui-add-err"><AlertIcon size={16} />{text}</span>;
+}
+
+/** The single-choice chips of a field: one radiogroup, named by the field's label. */
+function ChipGroup({ id, labelId, errorId, invalid, children }: { id: string; labelId: string; errorId: string; invalid: boolean; children: ReactNode }) {
+  return (
+    <div
+      id={id}
+      role="radiogroup"
+      aria-labelledby={labelId}
+      aria-invalid={invalid || undefined}
+      aria-describedby={invalid ? errorId : undefined}
+      className="ui-add-chips"
+    >
+      {children}
+    </div>
+  );
 }
 
 export function AddEntryView(props: AddEntryViewProps) {
@@ -106,11 +129,32 @@ export function AddEntryView(props: AddEntryViewProps) {
   const categoryList = [...props.categories, ...addedCategories.filter((a) => !props.categories.some((c) => c.id === a.id))].filter((c) => c.kind === kindWanted);
   const categoryNames = orderChips(categoryList.map((c) => c.name), [LAST_CATEGORY]);
   const projectNames = projectList.map((p) => p.name);
-  const ready = isEntryReady(draft);
+  const [tried, setTried] = useState(false);
+  const uid = useId();
+  const problems = entryProblems(draft);
+  // The date says it at once when typed wrong; the other fields wait for the first tap on save.
+  const shown: Partial<Record<EntryField, string>> = tried ? problems : (draft.date.length > 0 && problems.date != null ? { date: problems.date } : {});
+  const errId = (field: EntryField) => `${uid}-err-${field}`;
+  const fieldId = (field: EntryField) => `${uid}-${field}`;
+  const invalid = (field: EntryField) => shown[field] != null;
+  const described = (field: EntryField) => (invalid(field) ? errId(field) : undefined);
   const hasMatch = props.kind === "receipt" && props.match != null;
   const amountColor = isIncome ? "var(--color-income)" : "var(--color-text)";
-  const dateOk = parseDisplayDate(draft.date) != null;
-  const chequeBad = draft.method === "cheque" && chequeProblem(draft.cheque);
+  const saveLabel = hasMatch ? "שמירה וצירוף לתנועה" : isIncome ? "שמירת ההכנסה" : "שמירת ההוצאה";
+
+  function trySave() {
+    if (props.busy === true) return;
+    const first = ENTRY_FIELDS.find((field) => problems[field] != null);
+    if (first == null) {
+      props.onSave(draft);
+      return;
+    }
+    setTried(true);
+    // The first missing field takes the focus: its input, or the first chip of its group.
+    const target = document.getElementById(fieldId(first));
+    const focusable = target?.getAttribute("role") === "radiogroup" ? target.querySelector<HTMLElement>("[role=\"radio\"]") : target;
+    focusable?.focus();
+  }
   const headerSub = props.kind === "receipt"
     ? (props.document?.name ?? "קבלה")
     : `${props.fromProject != null ? `ל־${props.fromProject} · ` : ""}תנועה בלי מסמך מהבנק`;
@@ -134,11 +178,10 @@ export function AddEntryView(props: AddEntryViewProps) {
           <button
             type="button"
             className="ui-add-save"
-            disabled={!ready || props.busy === true}
-            aria-disabled={!ready || props.busy === true}
-            onClick={() => { if (ready && props.busy !== true) props.onSave(draft); }}
+            aria-busy={props.busy === true || undefined}
+            onClick={trySave}
           >
-            {hasMatch ? "שמירה וצירוף לתנועה" : "שמירה"}
+            {saveLabel}
           </button>
         </div>
       )}
@@ -164,39 +207,50 @@ export function AddEntryView(props: AddEntryViewProps) {
 
         <label className="ui-add-field">
           <span className="ui-add-label">סכום</span>
-          <span className="ui-add-amount">
+          <span className="ui-add-amount" data-invalid={invalid("amount") || undefined}>
             <input
+              id={fieldId("amount")}
               className="ui-add-amount-input"
               dir="ltr"
               inputMode="decimal"
               placeholder="0.00"
+              aria-invalid={invalid("amount")}
+              aria-describedby={described("amount")}
               value={draft.amount}
               style={{ color: amountColor }}
               onChange={(e) => { const value = e.target.value; patch({ amount: value }); }}
             />
             <span className="ui-add-currency" aria-hidden="true">{currencySymbol(props.currency ?? "ILS")}</span>
           </span>
+          <FieldError id={errId("amount")} text={shown.amount} />
         </label>
 
         <label className="ui-add-field">
           <span className="ui-add-label">{isIncome ? "ממי" : "למי"}</span>
           <input
+            id={fieldId("payee")}
             className="ui-add-input"
+            dir="auto"
             value={draft.payee}
             placeholder={isIncome ? "שם הלקוח או הדייר" : "שם הספק או בעל המקצוע"}
+            aria-invalid={invalid("payee")}
+            aria-describedby={described("payee")}
             onChange={(e) => { const value = e.target.value; patch({ payee: value }); }}
           />
+          <FieldError id={errId("payee")} text={shown.payee} />
         </label>
 
         <div className="ui-add-row2">
           <label className="ui-add-field">
             <span className="ui-add-label">תאריך</span>
             <input
+              id={fieldId("date")}
               className="ui-add-input"
               dir="ltr"
               inputMode="numeric"
               placeholder="dd/mm/yyyy"
-              aria-invalid={!dateOk}
+              aria-invalid={invalid("date")}
+              aria-describedby={described("date")}
               value={draft.date}
               onChange={(e) => { const value = e.target.value; patch({ date: value }); }}
             />
@@ -212,39 +266,50 @@ export function AddEntryView(props: AddEntryViewProps) {
           ) : null}
         </div>
 
+        <div className="ui-add-presets" role="group" aria-label="תאריך מהיר">
+          {datePresets().map(([value, label]) => (
+            <Chip key={label} pressed={draft.date === value} onClick={() => { patch({ date: value }); }}>{label}</Chip>
+          ))}
+        </div>
+        <FieldError id={errId("date")} text={shown.date} />
+
         {props.kind === "cash" && draft.method === "cheque" ? (
           <label className="ui-add-field">
             <span className="ui-add-label">מספר צ׳ק</span>
             <input
+              id={fieldId("cheque")}
               className="ui-add-input"
               dir="ltr"
               inputMode="numeric"
-              aria-invalid={chequeBad}
+              aria-invalid={invalid("cheque")}
+              aria-describedby={described("cheque")}
               value={draft.cheque}
               onChange={(e) => { const value = e.target.value; patch({ cheque: value }); }}
             />
+            <FieldError id={errId("cheque")} text={shown.cheque} />
           </label>
         ) : null}
 
         <div className="ui-add-field">
-          <span className="ui-add-label" id="add-entry-project">פרויקט</span>
-          <ChipRow>
+          <span className="ui-add-label" id={`${uid}-project-label`}>פרויקט</span>
+          <ChipGroup id={fieldId("project")} labelId={`${uid}-project-label`} errorId={errId("project")} invalid={invalid("project")}>
             {projectNames.map((name) => {
               const project = projectList.find((p) => p.name === name);
               const id = project?.id ?? name;
               return (
-                <Chip key={id} pressed={draft.projectId === id} onClick={() => { patch({ projectId: id }); }}>
+                <Chip key={id} radio pressed={draft.projectId === id} onClick={() => { patch({ projectId: id }); }}>
                   {name}
                 </Chip>
               );
             })}
-            <Chip pressed={draft.projectId === NO_PROJECT} onClick={() => { patch({ projectId: NO_PROJECT }); }}>
+            <Chip radio pressed={draft.projectId === NO_PROJECT} onClick={() => { patch({ projectId: NO_PROJECT }); }}>
               בלי פרויקט
             </Chip>
             {adding !== "project" && props.fromProject == null ? (
               <button type="button" className="ui-add-chip-new" onClick={() => { setAdding("project"); }}>+ פרויקט חדש</button>
             ) : null}
-          </ChipRow>
+          </ChipGroup>
+          <FieldError id={errId("project")} text={shown.project} />
           {adding === "project" ? (
             <AddNewEditor
               kind="project"
@@ -261,13 +326,13 @@ export function AddEntryView(props: AddEntryViewProps) {
         </div>
 
         <div className="ui-add-field">
-          <span className="ui-add-label" id="add-entry-category">קטגוריה</span>
-          <ChipRow>
+          <span className="ui-add-label" id={`${uid}-category-label`}>קטגוריה</span>
+          <ChipGroup id={fieldId("category")} labelId={`${uid}-category-label`} errorId={errId("category")} invalid={invalid("category")}>
             {categoryNames.map((name) => {
               const category = categoryList.find((c) => c.name === name);
               const id = category?.id ?? name;
               return (
-                <Chip key={id} pressed={draft.categoryId === id} onClick={() => { patch({ categoryId: id }); }}>
+                <Chip key={id} radio pressed={draft.categoryId === id} onClick={() => { patch({ categoryId: id }); }}>
                   {name}
                 </Chip>
               );
@@ -275,7 +340,8 @@ export function AddEntryView(props: AddEntryViewProps) {
             {adding !== "category" ? (
               <button type="button" className="ui-add-chip-new" onClick={() => { setAdding("category"); }}>+ קטגוריה חדשה</button>
             ) : null}
-          </ChipRow>
+          </ChipGroup>
+          <FieldError id={errId("category")} text={shown.category} />
           {adding === "category" ? (
             <AddNewEditor
               kind="category"
@@ -304,7 +370,6 @@ export function AddEntryView(props: AddEntryViewProps) {
           <button type="button" className="ui-add-attach" onClick={props.onAttach}>צירוף צילום (לא חובה)</button>
         ) : null}
 
-        {draft.date.length > 0 && !dateOk ? <p className="ui-add-hint ui-add-hint-bad">התאריך צריך להיות dd/mm/yyyy</p> : null}
       </div>
     </Sheet>
   );
