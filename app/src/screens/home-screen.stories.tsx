@@ -61,7 +61,7 @@ export const HomeAttentionSingular: Story = {
 };
 
 /** FLOW-364: Home's band with the month, its figures, the split card and the attention box. Invented figures. */
-function CashHomeStory({ monthBack = 0, attention = true, initialDrawerOpen = false, quiet = false }: { monthBack?: number; attention?: boolean; initialDrawerOpen?: boolean; quiet?: boolean }) {
+function CashHomeStory({ monthBack = 0, attention = true, initialDrawerOpen = false, quiet = false, offlineSince = null }: { monthBack?: number; attention?: boolean; initialDrawerOpen?: boolean; quiet?: boolean; offlineSince?: number | null }) {
   const data = quiet ? sampleQuietCashMonths() : sampleCashMonths();
   const currentKey = israelToday().slice(0, 7);
   return (
@@ -76,6 +76,7 @@ function CashHomeStory({ monthBack = 0, attention = true, initialDrawerOpen = fa
         example={exampleOnBand}
         onStepMonth={() => undefined}
         initialDrawerOpen={initialDrawerOpen}
+        offlineSince={offlineSince}
       />
     </StoryRoute>
   );
@@ -83,6 +84,27 @@ function CashHomeStory({ monthBack = 0, attention = true, initialDrawerOpen = fa
 
 /** The current month, with the attention box and the split card. */
 export const HomeCurrent: Story = { render: () => <CashHomeStory /> };
+
+/** FLOW-958: offline, the last figures stay, and a line in the band says when they were read. */
+export const HomeOffline: Story = { render: () => <CashHomeStory offlineSince={Date.UTC(2026, 9, 26, 7, 41)} /> };
+
+/** FLOW-958: the read failed on the server: the band says so, with נסו שוב and צריך עזרה?. */
+export const HomeFailed: Story = {
+  render: () => (
+    <StoryRoute entry="/?preview=error-server" tabs>
+      <HomeScreen />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-958: the read failed with no network: the band says so in the network's words. */
+export const HomeFailedOffline: Story = {
+  render: () => (
+    <StoryRoute entry="/?preview=error" tabs>
+      <HomeScreen />
+    </StoryRoute>
+  ),
+};
 
 /** A past month: the darker band, "חזרה ל…" and no forecast or box. */
 export const HomePast: Story = { render: () => <CashHomeStory monthBack={1} attention={false} /> };

@@ -1,8 +1,8 @@
 import { type CashCurrencyRow } from "@flow/shared";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AttentionBox, ForecastRow, type HomeFigureRows, HomeFigures, homeMonthLabel, HomeMonthPill, SplitCard } from "./home-parts";
+import { AttentionBox, ForecastRow, HomeFigures, HomeLoadFailed, homeMonthLabel, HomeMonthPill, HomeOfflineLine, israelClock, SplitCard, splitTakeaway, type HomeFigureRows } from "./home-parts";
 import { CashHomeSkeleton } from "./home-skeleton";
 import { renderWithProviders } from "../test-render";
 import { SKELETON_DELAY_MS } from "../ui/skeleton";
@@ -63,20 +63,33 @@ describe("Home's band parts (FLOW-364)", () => {
     expect(screen.getByRole("button", { name: "חודש קודם" })).not.toHaveAttribute("aria-disabled");
   });
 
-  it("titles the split card by the sign of the net", () => {
+  it("titles the split card with its takeaway, the metric's name above it (FLOW-958)", () => {
     const { rerender } = render(
       <MemoryRouter>
         <SplitCard monthKey="2026-10" row={row(-94_600, 12_000)} search="" onOpenProfit={vi.fn()} />
       </MemoryRouter>,
     );
-    expect(screen.getByRole("heading", { name: "ממה מורכב המינוס" })).toBeInTheDocument();
-    expect(screen.getByText("רוב הכסף שיצא הלך לנכסים. הפעילות השוטפת הרוויחה ₪120.")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "רוב המינוס הלך לנכסים" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "רוב המינוס הלך לנכסים" })).toBeInTheDocument();
+    expect(screen.getByText("ממה מורכב המינוס")).toBeInTheDocument();
+    // The note under the rows said the title again; it is gone.
+    expect(screen.queryByText(/הפעילות השוטפת הרוויחה/)).toBeNull();
     rerender(
       <MemoryRouter>
         <SplitCard monthKey="2026-10" row={row(50_000, 80_000)} search="" onOpenProfit={vi.fn()} />
       </MemoryRouter>,
     );
-    expect(screen.getByRole("heading", { name: "ממה מורכב התזרים" })).toBeInTheDocument();
+    expect(screen.getByText("ממה מורכב התזרים")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "רוב התזרים הוא רווח" })).toBeInTheDocument();
+  });
+
+  it("words the takeaway by the part that leads", () => {
+    expect(splitTakeaway("out", -1n, 1n)).toBe("רוב המינוס הלך לנכסים");
+    expect(splitTakeaway("out", 1n, 1n)).toBe("רוב מה שיצא הלך לנכסים");
+    expect(splitTakeaway("in", 1n, 1n)).toBe("רוב מה שנכנס הוא הון");
+    expect(splitTakeaway(null, -1n, -1n)).toBe("רוב המינוס הוא הפסד שוטף");
+    expect(splitTakeaway(null, 1n, -1n)).toBe("הפעילות השוטפת הפסידה");
+    expect(splitTakeaway(null, 1n, 1n)).toBe("רוב התזרים הוא רווח");
   });
 
   it("hides the split card when both parts are 0", () => {
@@ -91,6 +104,32 @@ describe("Home's band parts (FLOW-364)", () => {
   it("hides the attention box with no rows", () => {
     const { container } = render(<AttentionBox rows={[]} />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("says offline which moment the figures are from, Israel time (FLOW-958)", () => {
+    render(<HomeOfflineLine since={Date.UTC(2026, 9, 26, 7, 41)} />);
+    expect(screen.getByRole("status")).toHaveTextContent("אין חיבור · מוצג המצב מ־09:41");
+    expect(israelClock(Date.UTC(2026, 0, 5, 22, 5))).toBe("00:05");
+  });
+
+  it("keeps the band on a failed read, with the retry and the way to help (FLOW-958)", () => {
+    const onRetry = vi.fn();
+    const { rerender } = render(
+      <MemoryRouter>
+        <HomeLoadFailed monthKey="2026-10" offline={false} onRetry={onRetry} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("heading", { name: "אוקטובר לא נטען" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "נסו שוב" }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("link", { name: "צריך עזרה?" })).toHaveAttribute("href", "/help");
+    rerender(
+      <MemoryRouter>
+        <HomeLoadFailed monthKey="2026-10" offline onRetry={onRetry} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("heading", { name: "אין חיבור" })).toBeInTheDocument();
+    expect(screen.getByText("אין חיבור לאינטרנט. שום דבר לא נמחק.")).toBeInTheDocument();
   });
 
   it("names the forecast by the month's name", () => {

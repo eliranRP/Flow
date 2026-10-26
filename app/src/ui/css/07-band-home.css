@@ -346,9 +346,11 @@ html[data-kb="open"] .ui-sheet-body {
   min-inline-size: 0;
 }
 
+/* FLOW-958: tabular figures, and the hero never wraps. */
 .ui-band-net .t-band {
-  font-variant-numeric: normal;
+  font-variant-numeric: tabular-nums lining-nums;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .ui-band-net {
@@ -372,7 +374,8 @@ html[data-kb="open"] .ui-sheet-body {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  min-block-size: 36px;
+  /* FLOW-958: a 44px row, the touch minimum (was 36px). */
+  min-block-size: var(--touch-min);
   color: var(--color-on-band);
   font-size: var(--type-body-size);
   text-decoration: none;

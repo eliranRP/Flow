@@ -50,11 +50,12 @@ export function MonthDrawer({
     <Sheet open={open} onOpenChange={onOpenChange} title="בחירת חודש" returnFocusRef={returnFocusRef} panelClassName="ui-sheet-wide ui-sheet-g16 ui-sheet-pad28 ui-sheet-compact">
       <div className="ui-month-drawer">
         <div className="ui-month-drawer-years">
-          <YearStep label="שנה קודמת" side="start" disabled={!canEarlier} onClick={() => { setYear((value) => value - 1); }} />
+          {/* FLOW-958: with one year of books the arrows would only ever be off, so they are not drawn. */}
+          {canEarlier || canLater ? <YearStep label="שנה קודמת" side="start" disabled={!canEarlier} onClick={() => { setYear((value) => value - 1); }} /> : null}
           <p className="ui-month-drawer-year">
             <bdi>{String(year)}</bdi>
           </p>
-          <YearStep label="שנה הבאה" side="end" disabled={!canLater} onClick={() => { setYear((value) => value + 1); }} />
+          {canEarlier || canLater ? <YearStep label="שנה הבאה" side="end" disabled={!canLater} onClick={() => { setYear((value) => value + 1); }} /> : null}
         </div>
         <div className="ui-month-drawer-grid">
           {cells.map((cell) => (

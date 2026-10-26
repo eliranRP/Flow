@@ -331,6 +331,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-375"></a>[FLOW-375](tasks/FLOW-375.md) | Home's loading skeleton looks squeezed | BUG (high priority) |
 | <a id="flow-364"></a>[FLOW-364](tasks/FLOW-364.md) | Redesign: Home, the month drawer, a past month, and the 4-tab bar | UI (design approved) |
 | <a id="flow-958"></a>[FLOW-958](tasks/FLOW-958.md) | Home v2: the UX/UI rules review | UI (design approved) |
+| <a id="flow-959"></a>[FLOW-959](tasks/FLOW-959.md) | Two type weights, 400 and 600, app-wide | PLAN FIRST |
 | <a id="flow-365"></a>[FLOW-365](tasks/FLOW-365.md) | Redesign: the review queue (לאישור) without a tab | UI (design approved) |
 | <a id="flow-921"></a>[FLOW-921](tasks/FLOW-921.md) | Review queue: a server transfer flag, approve as a transfer, and the document thumbnail | Server + UI |
 | <a id="flow-366"></a>[FLOW-366](tasks/FLOW-366.md) | Redesign: month lines (נכנס / יצא) and the transaction page | UI (design approved) |

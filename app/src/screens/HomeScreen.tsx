@@ -2,7 +2,7 @@ import { type CashMonths, type CashToDay } from "@flow/shared";
 import { SyncStrip } from "../ui/sync-strip";
 import { cashHasBooks, dashboardHasBooks } from "../by-currency";
 import { onlineManager } from "@tanstack/react-query";
-import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { unpaidOpenGross, unpaidOpenRows, unpaidTotals } from "../unpaid";
 import { useAuth } from "../auth";
@@ -15,7 +15,7 @@ import { pageEnterStyle } from "../ui/motion";
 import { israelToday } from "../ui/date-math";
 import { monthPeriod, shiftMonthKey } from "../period";
 import { homeMonthKey, homeMonthPath, forecastMinor } from "../home-month";
-import { HomeBandActions, HomeCompactBar, HomeMonthPill, HomeSwipeFigures, SplitCard, AttentionBox, ForecastRow, homeMonthLabel, monthName, type HomeFigureRows, type HomeMonthNav } from "./home-parts";
+import { HomeBandActions, HomeCompactBar, HomeLoadFailed, HomeMonthPill, HomeOfflineLine, HomeSwipeFigures, SplitCard, AttentionBox, ForecastRow, homeMonthLabel, monthName, type HomeFigureRows, type HomeMonthNav } from "./home-parts";
 import { MonthDrawer } from "./month-drawer";
 import type { BannerRow } from "../ui/banner";
 import { Button } from "../ui/button";
@@ -23,7 +23,7 @@ import { FailureLine } from "../ui/empty-state";
 import { BankIcon } from "../ui/icons";
 import { CashHomeSkeleton } from "./home-skeleton";
 import { TopBand, useBandGone } from "../ui/top-band";
-import { previewHidesBand, useHomePreview, usePreviewSearch } from "../preview";
+import { previewFails, useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useHoldOwnerSettings } from "../use-is-viewer";
 import { CompanySwitcher } from "./company-switcher";
@@ -42,21 +42,23 @@ const WeeklySummaryCardSlot = /* @__PURE__ */ lazy(() => import("./weekly-summar
 
 export { attentionRows };
 
-/** Marks the page while a band shows (the status bar follows it), and while a failure hides it. */
-function useBandMark(failed: boolean, showBooks: boolean) {
+/** Marks the page while a band shows (the status bar follows it). FLOW-958: a failure keeps the band. */
+function useBandMark(shown: boolean) {
   useEffect(() => {
-    if (!failed && showBooks) {
-      document.documentElement.dataset.band = "on";
-      return () => {
-        delete document.documentElement.dataset.band;
-      };
-    }
-    if (!failed) return;
-    document.documentElement.dataset.band = "off";
+    if (!shown) return;
+    document.documentElement.dataset.band = "on";
     return () => {
       delete document.documentElement.dataset.band;
     };
-  }, [failed, showBooks]);
+  }, [shown]);
+}
+
+/** Whether the browser says it is online, kept current (FLOW-958, Home's offline line). */
+function useOnline(): boolean {
+  return useSyncExternalStore(
+    (notify) => onlineManager.subscribe(notify),
+    () => onlineManager.isOnline(),
+  );
 }
 
 /**
@@ -177,9 +179,10 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const ready = cashPhase.kind === "ready" && (cashBooks || dashboardPhase.kind === "ready");
   const showBooks = ready && cash.data != null && (cashBooks || (dashboard.data != null && dashboardHasBooks(dashboard.data)));
   const loading = errorPhase == null && (cashPhase.kind === "loading" || dashboardGate?.kind === "loading" || (!previewing && status === "loading" && !showBooks));
-  const failed = errorPhase != null || previewHidesBand(preview);
+  const failed = errorPhase != null || previewFails(preview);
   const offline = errorPhase != null ? errorPhase.offline : preview === "error";
-  useBandMark(failed, showBooks);
+  useBandMark(failed || showBooks);
+  const online = useOnline();
 
   function retry() {
     if (previewing) {
@@ -205,7 +208,14 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   if (loading) return withWeekly(<CashHomeSkeleton preview={previewing} example={example} />);
 
   if (failed) {
-    return <FailureLine offline={offline || !onlineManager.isOnline()} onRetry={retry} />;
+    return (
+      <HomeLoadFailed
+        monthKey={monthKey}
+        offline={offline || !online}
+        onRetry={retry}
+        leading={previewing ? undefined : <CompanySwitcher fallbackName={dashboard.data?.name} />}
+      />
+    );
   }
 
   if (!showBooks || cash.data == null) {
@@ -264,6 +274,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       sameDay={isCurrent ? sameDay.data ?? null : null}
       forecast={forecast != null && forecast.show ? forecast.minor : null}
       onStepMonth={navigateTo}
+      offlineSince={previewing || online ? null : cash.dataUpdatedAt}
       checklist={isCurrent ? <SetupHomeSlot emptyHome={false} /> : null}
       weekly={weekly == null || weeklyCardHidden(weekly) ? null : (
         <Suspense fallback={null}>
@@ -299,6 +310,7 @@ export function CashHome({
   initialDrawerOpen = false,
   drawerYearMonths,
   syncing = null,
+  offlineSince = null,
 }: {
   data: NonNullable<CashMonths>;
   /** The month shown (YYYY-MM). */
@@ -332,6 +344,8 @@ export function CashHome({
   drawerYearMonths?: NonNullable<CashMonths>;
   /** A background refresh runs: the strip over the band says what it syncs (the board's syncing frame). A fixture only for now: the live Home reads no sync status. */
   syncing?: string | null;
+  /** FLOW-958: offline, when the figures shown were read (ms); null while online. */
+  offlineSince?: number | null;
 }) {
   const isPast = monthKey < currentKey;
   const base = data.base_currency;
@@ -405,6 +419,7 @@ export function CashHome({
           trailing={<HomeBandActions isPast={isPast} currentName={monthName(currentKey)} search={search} />}
         >
           <div className="ui-band-body">
+            {offlineSince == null ? null : <HomeOfflineLine since={offlineSince} />}
             <HomeMonthPill monthKey={monthKey} nav={nav} />
             <HomeSwipeFigures monthKey={monthKey} figures={figures} search={search} nav={nav} animate={animate} />
             {isPast || forecast == null ? null : (
@@ -418,12 +433,6 @@ export function CashHome({
 
       {weekly}
 
-      {baseRow == null ? null : (
-        <div className="m-page-enter" style={pageEnterStyle(1)}>
-          <SplitCard monthKey={monthKey} row={baseRow} search={search} onOpenProfit={openProfit} />
-        </div>
-      )}
-
       {attentionFailed ? (
         <div className="ui-page-pad">
           <FailureLine
@@ -434,11 +443,18 @@ export function CashHome({
           />
         </div>
       ) : null}
-      {/* Design lead: Home shows money that needs a hand whatever its main figure; an empty box hides. */}
-      <div className="m-page-enter" style={pageEnterStyle(2)}>
+      {/* Design lead: Home shows money that needs a hand whatever its main figure; an empty box hides.
+          FLOW-958: it comes right after the band, so its button is above the fold. */}
+      <div className="m-page-enter" style={pageEnterStyle(1)}>
         {isPast ? null : <AttentionBox rows={attention} />}
         {checklist}
       </div>
+
+      {baseRow == null ? null : (
+        <div className="m-page-enter" style={pageEnterStyle(2)}>
+          <SplitCard monthKey={monthKey} row={baseRow} search={search} onOpenProfit={openProfit} />
+        </div>
+      )}
 
       <HomeCompactBar monthKey={monthKey} net={baseRow?.net_minor ?? 0n} currency={base} isPast={isPast} nav={nav} shown={compactShown} />
       <MonthDrawer

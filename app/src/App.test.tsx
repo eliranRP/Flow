@@ -49,19 +49,21 @@ describe("App", () => {
     expect(tabs).toEqual(["בית", "פרויקטים", "הלוואות", "קבועים"]);
   });
 
-  it("shows the offline error from preview=error, without the ui-band", async () => {
+  it("shows the offline error from preview=error in the band (FLOW-958)", async () => {
     await renderAt("/?preview=error");
+    expect(screen.getByRole("heading", { name: "אין חיבור" })).toBeInTheDocument();
     expect(screen.getByText("אין חיבור לאינטרנט. שום דבר לא נמחק.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "נסו שוב" })).toHaveClass("ui-btn-link");
-    expect(document.querySelector(".ui-band")).toBeNull();
+    expect(screen.getByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    expect(document.querySelector(".ui-band")).not.toBeNull();
     expect(screen.queryByText("₪0")).not.toBeInTheDocument();
   });
 
-  it("shows the server load error from preview=error-server", async () => {
+  it("shows the server load error from preview=error-server in the band, with help (FLOW-958)", async () => {
     await renderAt("/?preview=error-server");
-    expect(screen.getByText("לא הצלחנו לטעון.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "נסו שוב" })).toHaveClass("ui-btn-link");
-    expect(document.querySelector(".ui-band")).toBeNull();
+    expect(screen.getByRole("heading", { name: /לא נטען$/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "צריך עזרה?" })).toHaveAttribute("href", "/help");
+    expect(document.querySelector(".ui-band")).not.toBeNull();
   });
 
   it("sizes the project loading band to the loaded project lines", async () => {

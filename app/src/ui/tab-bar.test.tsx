@@ -86,6 +86,24 @@ describe("TabBar", () => {
     expect(screen.getByRole("link", { name: "הלוואות" })).toHaveAttribute("aria-current", "page");
   });
 
+  it("draws a pill behind the active tab's icon, not only another colour (FLOW-958)", () => {
+    let background = "";
+    for (const sheet of document.styleSheets) {
+      let rules: CSSRuleList;
+      try {
+        rules = sheet.cssRules;
+      } catch {
+        continue;
+      }
+      for (const rule of rules) {
+        if (rule instanceof CSSStyleRule && rule.selectorText === '.ui-tab-slot[aria-current="page"] .ui-tab-icon') {
+          background = rule.style.getPropertyValue("background").trim();
+        }
+      }
+    }
+    expect(background).toBe("var(--color-tint-strong)");
+  });
+
   it("scrolls to the top when the active tab is tapped", () => {
     const scroll = vi.fn();
     window.scrollTo = scroll;
