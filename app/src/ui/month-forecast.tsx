@@ -190,10 +190,10 @@ export function MonthChart({
           <span className="ui-fc-label">{sub}</span>
         </span>
       ) : (
-        <span className="ui-fc-chart-head ui-fc-chart-head-takeaway">
+        <div className="ui-fc-chart-head ui-fc-chart-head-takeaway">
           <span className="ui-fc-label">{`${title ?? words.chart} · ${sub}`}</span>
           <h2 className="ui-fc-takeaway">{takeaway}</h2>
-        </span>
+        </div>
       )}
       <div role="img" aria-label={label} className={cx("ui-fc-bars", bars.length > DENSE_BARS && "ui-fc-bars-dense")} style={{ gridTemplateColumns: `repeat(${String(bars.length)}, minmax(0, 1fr))` }}>
         {bars.map((bar) => (

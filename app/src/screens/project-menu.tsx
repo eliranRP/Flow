@@ -1,6 +1,7 @@
 // The project's ⋯ menu (board Projects.dc.html, "פעולות על הפרויקט"): edit, the investment page, finish
-// (at once, with ביטול) or החזרה לפעילים, and delete when the project has no lines (the one that asks). The sheet is titled with the project's name. The overhead
-// switch and the group live in the edit sheet; adding a line is the + sheet's job.
+// (at once, with ביטול) or החזרה לפעילים, and delete when the project has no lines (the one that asks).
+// The sheet is titled with the project's name. The overhead switch and the group live in the edit sheet;
+// adding a line is the + sheet's job.
 import { useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { getSupabase } from "../lib/supabase";
