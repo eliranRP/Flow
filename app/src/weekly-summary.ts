@@ -60,10 +60,14 @@ export function reviewMinutes(waiting: number): string {
   return `כ־${String(minutes)} דקות`;
 }
 
+/** The review button's first part: "לאישור פריט אחד", "לאישור 7 פריטים". */
+export function reviewItems(waiting: number): string {
+  return `לאישור ${waiting === 1 ? "פריט אחד" : `${String(waiting)} פריטים`}`;
+}
+
 /** The review button: "לאישור פריט אחד · פחות מדקה", "לאישור 7 פריטים · כ־2 דקות". */
 export function reviewLabel(waiting: number): string {
-  const items = waiting === 1 ? "פריט אחד" : `${String(waiting)} פריטים`;
-  return `לאישור ${items} · ${reviewMinutes(waiting)}`;
+  return `${reviewItems(waiting)} · ${reviewMinutes(waiting)}`;
 }
 
 /** "ועוד 2 פרויקטים מעל התקציב", "ועוד פרויקט אחד מעל התקציב". */

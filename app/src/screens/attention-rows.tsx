@@ -1,7 +1,7 @@
 import { formatAmountText } from "@flow/shared";
 import { missingBillsTitle, type ChargeChangeView } from "../forecast";
 import type { BannerRow } from "../ui/banner";
-import { reviewLabel } from "../weekly-summary";
+import { reviewItems, reviewMinutes } from "../weekly-summary";
 import { BankIcon, CalendarIcon, InvoiceIcon, TrendDownIcon, TrendUpIcon } from "../ui/icons";
 
 // Home's attention rows, in their own file so the project page (FLOW-435) shows them without
@@ -51,8 +51,10 @@ export function attentionRows({
     rows.push({
       id: "review",
       to: `/review${search}`,
-      // FLOW-958: the label of Home's one filled button, as the weekly sheet words it.
-      title: reviewLabel(pending),
+      // FLOW-958: the label of Home's one filled button, as the weekly sheet words it; the time is
+      // the hint, drawn smaller so the label stays on one line at 320.
+      title: reviewItems(pending),
+      hint: reviewMinutes(pending),
     });
   }
   if (transfers > 0) {

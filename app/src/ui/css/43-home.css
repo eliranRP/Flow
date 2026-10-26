@@ -114,12 +114,22 @@
   margin: 0 var(--space-4) var(--space-2);
 }
 
-.ui-home-attention .ui-banner,
+/* The review time is the button's quiet part: 13/400, so the label holds one line at 320. */
+.ui-home-attention-time {
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  white-space: nowrap;
+}
+
 .ui-home-attention .ui-banner-icon {
   color: var(--color-text-secondary);
 }
 
+/* One row left under the button draws a Banner: it sits as the list's rows do, not as a card of its own. */
 .ui-home-attention .ui-banner {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: 0;
   background: transparent;
 }
 

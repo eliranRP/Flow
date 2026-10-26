@@ -273,7 +273,10 @@ export function AttentionBox({ rows }: { rows: readonly BannerRow[] }) {
       <h2 id="home-attention-title" className="ui-home-attention-title">דורש טיפול</h2>
       {review == null ? null : (
         <div className="ui-home-attention-primary">
-          <Button full to={review.to} chevron>{review.title}</Button>
+          <Button full to={review.to} chevron>
+            {review.title}
+            {review.hint == null ? null : <>{" "}<span className="ui-home-attention-time">· {review.hint}</span></>}
+          </Button>
         </div>
       )}
       <BannerRows rows={lines} />
