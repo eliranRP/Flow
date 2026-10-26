@@ -40,7 +40,7 @@ import { TransactionTopBar } from "./transaction-top-bar";
 import { TxnFooter, TxnHead } from "./transaction-head";
 import { TransactionThread } from "./transaction-thread";
 import { TxnRecurring } from "./transaction-recurring";
-import { LINE_UNDO_MS, RuleOfferCard, useRuleOffer, type RuleOfferNames } from "./transaction-rule-offer";
+import { LINE_UNDO_MS, offersRule, RuleOfferCard, useRuleOffer, type RuleOffer } from "./transaction-rule-offer";
 import { TxnJournal, journalEditable, journalOpens, journalShown } from "./transaction-journal";
 import { useLineJournalQuery, type LineJournal } from "../line-journal";
 import { projectChoices } from "../project-groups";
@@ -155,7 +155,7 @@ export function TransactionScreen({
 }: {
   sample?: NonNullable<TransactionDetail>;
   sampleProjects?: Array<{ id: string; name: string; code?: string }>;
-  sampleCategories?: Array<{ id: string; name: string; kind?: "income" | "expense" }>;
+  sampleCategories?: Array<{ id: string; name: string; kind?: "income" | "expense"; loan_part?: string | null }>;
   /** FLOW-325: a story's split by category, in place of the get_line_split read. */
   sampleLineSplit?: LineSplitRead | null;
   /** FLOW-415: a story's recurring switch, in place of the payment_recurring read. */
@@ -185,7 +185,7 @@ export function TransactionScreen({
   // FLOW-965 (decision 0216): this page's toasts hang under its header, and ביטול stays 5s.
   const blocked = useBlockedPreview("top");
   const ruleOffer = useRuleOffer(sample?.id ?? transactionId, sample != null);
-  const offerNext = useRef<RuleOfferNames | null>(null);
+  const offerNext = useRef<RuleOffer | null>(null);
   const holdWrites = useHoldWrites();
   const invalidate = useInvalidateBooks();
   const [confirm, setConfirm] = useState(false);
@@ -322,7 +322,7 @@ export function TransactionScreen({
   const committed = useRef({ projectId: "", categoryId: "" });
   const namesRef = useRef({
     projects: [] as Array<{ id: string; name: string }>,
-    categories: [] as Array<{ id: string; name: string }>,
+    categories: [] as Array<{ id: string; name: string; kind?: "income" | "expense"; loan_part?: string | null }>,
   });
   namesRef.current = {
     projects: sample
@@ -394,7 +394,7 @@ export function TransactionScreen({
       message: "השיוך נשמר",
       place: "top",
       durationMs: LINE_UNDO_MS,
-      ...(!sample && id ? { action: "ביטול", onAction: () => { undo.mutate(); } } : {}),
+      ...(!sample && id ? { action: "ביטול", onAction: () => { ruleOffer.close(); undo.mutate(); } } : {}),
     });
     // FLOW-965: a new category on a supplier's line offers the supplier's next lines.
     if (offerNext.current) ruleOffer.open(offerNext.current);
@@ -509,9 +509,9 @@ export function TransactionScreen({
     }
     setHold("");
     ruleOffer.close();
-    const pickedCategory = namesRef.current.categories.find((category) => category.id === next.categoryId)?.name;
-    offerNext.current = kind === "category" && !splitRow && detailRow.direction === "expense" && detailRow.supplier_name && pickedCategory
-      ? { supplier: detailRow.supplier_name, category: pickedCategory }
+    const picked = namesRef.current.categories.find((category) => category.id === next.categoryId);
+    offerNext.current = kind === "category" && !splitRow && detailRow.direction === "expense" && detailRow.supplier_name && picked && offersRule(picked)
+      ? { supplier: detailRow.supplier_name, category: picked.name, categoryId: picked.id }
       : null;
     if (sample) {
       assignSaved();
@@ -651,7 +651,7 @@ export function TransactionScreen({
             )}
           </LoanCategoryRow>
         </List>
-        {ruleOffer.offer == null || holdWrites ? null : <RuleOfferCard names={ruleOffer.offer} onAccept={ruleOffer.accept} onDismiss={ruleOffer.close} />}
+        <RuleOfferCard names={holdWrites ? null : ruleOffer.offer} onAccept={ruleOffer.accept} onDismiss={ruleOffer.close} />
         <LoanTransactionSplit
           transactionId={txn.id}
           docDate={txn.doc_date}

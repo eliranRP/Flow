@@ -15,6 +15,14 @@ export const LINE_UNDO_MS = 5000;
 /** The payee and the category the offer names. */
 export type RuleOfferNames = { supplier: string; category: string };
 
+/** The offer: its names and the category the line held when it opened (the server checks it still does). */
+export type RuleOffer = RuleOfferNames & { categoryId: string };
+
+/** Only an expense category that is not a loan part is remembered, so only one is offered (0216 §4). */
+export function offersRule(category: { kind?: "income" | "expense"; loan_part?: string | null } | undefined): boolean {
+  return category != null && (category.kind ?? "expense") === "expense" && category.loan_part == null;
+}
+
 type Remembered = { supplier_id: string; category_id: string; prior_category_id: string | null };
 
 /** "להכניס גם את השורות הבאות מ־The Home Depot לקטגוריה ציוד והשכרה? שורות קודמות לא משתנות." */
@@ -30,12 +38,14 @@ export function ruleSavedText({ supplier, category }: RuleOfferNames): string {
 /** The offer's state and its two writes. `sample` keeps them local (a story's card). */
 export function useRuleOffer(lineId: string, sample: boolean) {
   const toast = useToast();
-  const [offer, setOffer] = useState<RuleOfferNames | null>(null);
+  const [offer, setOffer] = useState<RuleOffer | null>(null);
   const saved = useRef<{ names: RuleOfferNames; remembered: Remembered } | null>(null);
+  // No screen reads a supplier's remembered category (a sync uses it for new lines), so neither write
+  // refreshes a query.
   const forget = useWrite<Remembered>({
     failure: "לא הצלחנו לבטל.",
     place: "top",
-    keys: ["review"],
+    keys: [],
     success: "השורות הבאות לא ייכנסו לקטגוריה",
     run: async (remembered) => {
       const supabase = getSupabase();
@@ -48,10 +58,10 @@ export function useRuleOffer(lineId: string, sample: boolean) {
       }));
     },
   });
-  const remember = useWrite<RuleOfferNames>({
+  const remember = useWrite<RuleOffer>({
     failure: "לא הצלחנו לשמור לספק.",
     place: "top",
-    keys: ["review"],
+    keys: [],
     scope: `supplier-rule-${lineId}`,
     onSuccess: (names) => {
       const done = saved.current;
@@ -67,7 +77,9 @@ export function useRuleOffer(lineId: string, sample: boolean) {
       if (sample) return;
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
-      const result = await supabase.rpc("remember_line_category", { p_id: lineId });
+      // The line's category when the offer opened: the server refuses (conflict) once the line holds
+      // another one, as when ביטול on the pick is still saving.
+      const result = await supabase.rpc("remember_line_category", { p_id: lineId, p_category_id: names.categoryId });
       assertNoError(result);
       const data = result.data as Remembered | null;
       if (data != null) saved.current = { names, remembered: data };
@@ -76,7 +88,7 @@ export function useRuleOffer(lineId: string, sample: boolean) {
   return {
     offer,
     /** After a category change on a line with a supplier: offer the supplier's next lines. */
-    open: (names: RuleOfferNames) => { setOffer(names); },
+    open: (next: RuleOffer) => { setOffer(next); },
     close: () => { setOffer(null); },
     accept: () => {
       if (offer == null || remember.isPending) return;
@@ -86,15 +98,23 @@ export function useRuleOffer(lineId: string, sample: boolean) {
   };
 }
 
-/** The offer card under the project and category rows. */
-export function RuleOfferCard({ names, onAccept, onDismiss }: { names: RuleOfferNames; onAccept: () => void; onDismiss: () => void }) {
+/**
+ * The offer card under the project and category rows. Its slot is a polite live region that is always
+ * there, so a screen reader hears the offer when the card is added (a region that mounts with its text
+ * is not announced).
+ */
+export function RuleOfferCard({ names, onAccept, onDismiss }: { names: RuleOfferNames | null; onAccept: () => void; onDismiss: () => void }) {
   return (
-    <div className="ui-rule-offer" role="region" aria-label="החלה על הספק">
-      <p className="ui-rule-offer-text">{ruleOfferText(names)}</p>
-      <div className="ui-rule-offer-actions">
-        <button type="button" className="ui-rule-offer-btn m-press" onClick={onAccept}>כן, מעכשיו</button>
-        <button type="button" className="ui-rule-offer-btn m-press" onClick={onDismiss}>רק השורה הזו</button>
-      </div>
+    <div aria-live="polite">
+      {names == null ? null : (
+        <div className="ui-rule-offer" role="region" aria-label="החלה על הספק">
+          <p className="ui-rule-offer-text">{ruleOfferText(names)}</p>
+          <div className="ui-rule-offer-actions">
+            <button type="button" className="ui-rule-offer-btn m-press" onClick={onAccept}>כן, מעכשיו</button>
+            <button type="button" className="ui-rule-offer-btn m-press" onClick={onDismiss}>רק השורה הזו</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

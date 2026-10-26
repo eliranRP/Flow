@@ -4,16 +4,16 @@ import { cheaperCharges, mailboxCharges, rentCharges, steadyCharges } from "./ui
 
 describe("partyChangeView (FLOW-431)", () => {
   it("an expense up is bad news, with the usual amount", () => {
-    expect(partyChangeView(mailboxCharges)).toMatchObject({ percent: "92%", arrow: "▲", hurts: true, usual: "$11.99", change: "עלה ב־92%" });
+    expect(partyChangeView(mailboxCharges)).toMatchObject({ percent: "92%", hurts: true, usual: "$11.99", takeaway: "גבוה ב־92% מהרגיל" });
   });
   it("an expense down is good news", () => {
-    expect(partyChangeView(cheaperCharges)).toMatchObject({ arrow: "▼", hurts: false, percent: "42%", change: "ירד ב־42%" });
+    expect(partyChangeView(cheaperCharges)).toMatchObject({ hurts: false, percent: "42%", takeaway: "נמוך ב־42% מהרגיל" });
   });
   it("income down is bad news", () => {
-    expect(partyChangeView(rentCharges)).toMatchObject({ arrow: "▼", hurts: true, words: "ירידה של 20% לעומת הרגיל, ₪5,000" });
+    expect(partyChangeView(rentCharges)).toMatchObject({ hurts: true, percent: "20%", usual: "₪5,000", takeaway: "נמוך ב־20% מהרגיל" });
   });
   it("the usual amount reads as such", () => {
-    expect(partyChangeView(steadyCharges)).toMatchObject({ percent: null, arrow: null, hurts: false, change: "כרגיל" });
+    expect(partyChangeView(steadyCharges)).toMatchObject({ percent: null, hurts: false, takeaway: "כמו בכל חודש" });
   });
   it("no usual amount, no change line", () => {
     expect(partyChangeView({ ...mailboxCharges, typical_amount_minor: null, change_percent: null })).toBeNull();

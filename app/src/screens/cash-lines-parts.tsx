@@ -142,10 +142,11 @@ export function LinesOrderChips<T extends string>({ value, options, onChange }: 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     const rtl = getComputedStyle(event.currentTarget).direction === "rtl";
     const step = event.key === "ArrowLeft" ? (rtl ? 1 : -1) : event.key === "ArrowRight" ? (rtl ? -1 : 1) : 0;
-    if (step === 0 || options.length === 0) return;
+    const edge = event.key === "Home" ? 0 : event.key === "End" ? options.length - 1 : -1;
+    if ((step === 0 && edge < 0) || options.length === 0) return;
     event.preventDefault();
     const at = Math.max(0, options.findIndex((option) => option.value === value));
-    const next = (at + step + options.length) % options.length;
+    const next = edge >= 0 ? edge : (at + step + options.length) % options.length;
     const option = options[next];
     if (!option) return;
     onChange(option.value);

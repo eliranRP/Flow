@@ -73,7 +73,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `set_category_rehab` | `category_id` | `list_categories` `categories[].id` |
 | `undo` `kind: "project_investment"` | `id` | the project id `set_project_investment` used |
 | `undo` `kind: "category_rehab"` | `id` | the category id `set_category_rehab` used |
-| `remember_supplier_category` | `transaction_id` | `get_expense.id` or `search_expenses` rows |
+| `remember_supplier_category` | `transaction_id`, `category_id` | `get_expense.id` / `get_expense.category_id`, or `search_expenses` rows |
 | `undo` `kind: "supplier_category"` | `id` | the transaction id `remember_supplier_category` used |
 | `delete_category` | `category_id` | `list_categories` `categories[].id` |
 | `move_category_lines` | `from_category_id`, `into_category_id` | `list_categories` `categories[].id` (the target not hidden) |
@@ -605,10 +605,10 @@ Sets a project's investment figures: `currency` (an ISO code such as `USD` or `I
 ### remember_supplier_category
 
 ```json
-{ "idempotency_key": "rule-1", "transaction_id": "22222222-2222-4000-8000-000000000020" }
+{ "idempotency_key": "rule-1", "transaction_id": "22222222-2222-4000-8000-000000000020", "category_id": "c0ffee00-1111-4000-8000-0000000000a1" }
 ```
 
-Files the supplier's next lines in this line's category, as the transaction page's "כן, מעכשיו" does after a category change. That is the supplier's remembered category: a sync gives it to each new expense line from that supplier. Earlier lines do not change. `transaction_id` is an expense line with a supplier and a category of its own: not a split line, a shared line or a loan category. Output `data`: `supplier_id`, `supplier_name`, `category_id`, `category_name`, `prior_category_id` (what the supplier had, or null), `undo_kind: "supplier_category"` and `id` (the transaction id). Refused: `the line has no supplier` (also an income line), `the line has no category`, `a split line is not remembered`, `a loan category is not remembered`, `transaction not found` (another company's line too). Undo, with the transaction id, puts back the prior category; it is `conflict` once the supplier remembers something else, and a prior category that was deleted since comes back as none ([0216](../decisions/0216-lines-toasts-and-supplier-rule.md)).
+Files the supplier's next lines in this line's category, as the transaction page's "כן, מעכשיו" does after a category change. That is the supplier's remembered category: a sync gives it to each new expense line from that supplier. Earlier lines do not change. `transaction_id` is an expense line with a supplier and a category of its own: not a split line, a shared line or a loan category. `category_id` is the category the line holds now (`get_expense.category_id`): the call is `conflict` when the line holds another one by then, so a rule never files the supplier under a category the owner already changed back. Output `data`: `supplier_id`, `supplier_name`, `category_id`, `category_name`, `prior_category_id` (what the supplier had, or null), `undo_kind: "supplier_category"` and `id` (the transaction id). Refused: `the line has no supplier` (also an income line), `the line has no category`, `a split line is not remembered`, `a loan category is not remembered`, `transaction not found` (another company's line too). Undo, with the transaction id, puts back the prior category; it is `conflict` once the supplier remembers something else, and a prior category that was deleted since comes back as none ([0216](../decisions/0216-lines-toasts-and-supplier-rule.md)).
 
 ### delete_category
 

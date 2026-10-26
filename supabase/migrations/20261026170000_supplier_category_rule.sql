@@ -2,9 +2,11 @@
 -- the supplier's next lines the same way. That is the supplier's remembered category, which a sync
 -- already gives a new expense line from that supplier (0063, 0064); until now only an approval in
 -- לאישור could set it.
--- 1. public.remember_line_category(p_id) remembers the line's current category for its supplier.
+-- 1. public.remember_line_category(p_id, p_category_id) remembers the line's category for its supplier.
 --    An expense line with a supplier and a category of its own only: not a split, a shared line or a
---    loan category. It returns the prior remembered category, so ביטול can put it back.
+--    loan category. p_category_id is the category the caller saw on the line; 'conflict' when the line
+--    holds another one by now (an undo of the pick still saving, another tab, an MCP edit). It returns
+--    the prior remembered category, so ביטול can put it back.
 -- 2. public.forget_line_category(p_supplier_id, p_category_id, p_prior_category_id) is that ביטול:
 --    the prior category comes back while the supplier still remembers what the write left.
 -- 3. MCP remember_supplier_category does the same (undo kind supplier_category).
@@ -24,7 +26,7 @@ immutable
 as $$ select (length(p_def) - length(replace(p_def, p_anchor, ''))) / length(p_anchor); $$;
 
 -- The write both callers share. Raises with the refusal's words; the callers turn them into errors.
-create function private.remember_line_category(p_company uuid, p_id uuid)
+create function private.remember_line_category(p_company uuid, p_id uuid, p_category_id uuid)
 returns jsonb
 language plpgsql
 security definer
@@ -47,6 +49,9 @@ begin
   end if;
   if line.category_id is null then
     raise exception 'the line has no category';
+  end if;
+  if line.category_id is distinct from p_category_id then
+    raise exception 'conflict';
   end if;
   if line.pnl_role = 'shared'
     or exists (select 1 from public.line_splits s where s.transaction_id = p_id)
@@ -84,7 +89,8 @@ end;
 $$;
 
 -- Puts the prior category back while the supplier still remembers p_category_id; 'conflict' once it
--- changed since. A prior category that is gone (deleted, or not an expense category) puts back null.
+-- changed since. A prior category that is gone (deleted, not an expense category, or a loan category)
+-- puts back null.
 create function private.forget_line_category(p_company uuid, p_supplier_id uuid, p_category_id uuid, p_prior_category_id uuid)
 returns jsonb
 language plpgsql
@@ -107,7 +113,8 @@ begin
   end if;
   select c.id into restored
   from public.categories c
-  where c.id = p_prior_category_id and c.company_id = p_company and c.kind::text = 'expense';
+  where c.id = p_prior_category_id and c.company_id = p_company and c.kind::text = 'expense'
+    and c.loan_part is null;
   update public.suppliers s
   set remembered_category_id = restored
   where s.id = p_supplier_id and s.company_id = p_company;
@@ -115,10 +122,10 @@ begin
 end;
 $$;
 
-revoke all on function private.remember_line_category(uuid, uuid) from public, anon, authenticated, service_role;
+revoke all on function private.remember_line_category(uuid, uuid, uuid) from public, anon, authenticated, service_role;
 revoke all on function private.forget_line_category(uuid, uuid, uuid, uuid) from public, anon, authenticated, service_role;
 
-create function public.remember_line_category(p_id uuid)
+create function public.remember_line_category(p_id uuid, p_category_id uuid)
 returns jsonb
 language plpgsql
 security definer
@@ -134,7 +141,10 @@ begin
     end if;
     raise exception 'no company';
   end if;
-  return private.remember_line_category(cid, p_id);
+  if p_id is null or p_category_id is null then
+    raise exception 'validation';
+  end if;
+  return private.remember_line_category(cid, p_id, p_category_id);
 end;
 $$;
 
@@ -158,16 +168,16 @@ begin
 end;
 $$;
 
-revoke all on function public.remember_line_category(uuid) from public, anon, authenticated, service_role;
+revoke all on function public.remember_line_category(uuid, uuid) from public, anon, authenticated, service_role;
 revoke all on function public.forget_line_category(uuid, uuid, uuid) from public, anon, authenticated, service_role;
-grant execute on function public.remember_line_category(uuid) to authenticated;
+grant execute on function public.remember_line_category(uuid, uuid) to authenticated;
 grant execute on function public.forget_line_category(uuid, uuid, uuid) to authenticated;
-comment on function public.remember_line_category(uuid) is
+comment on function public.remember_line_category(uuid, uuid) is
   'FLOW-965: remember the line''s category for its supplier, so the supplier''s next lines get it. Decision 0216.';
 comment on function public.forget_line_category(uuid, uuid, uuid) is
   'FLOW-965: undo remember_line_category while the supplier still remembers what it wrote. Decision 0216.';
 
-create function public.mcp_remember_supplier_category(p_idempotency_key text, p_transaction_id uuid)
+create function public.mcp_remember_supplier_category(p_idempotency_key text, p_transaction_id uuid, p_category_id uuid)
 returns jsonb
 language plpgsql
 security definer
@@ -186,6 +196,7 @@ begin
     or char_length(p_idempotency_key) < 1
     or char_length(p_idempotency_key) > 128
     or p_transaction_id is null
+    or p_category_id is null
   then
     return private.mcp_error('validation', 'validation');
   end if;
@@ -195,7 +206,7 @@ begin
     return gate;
   end if;
   token := (gate->>'token_id')::uuid;
-  hash := 'supplier_category|' || p_transaction_id::text;
+  hash := 'supplier_category|' || p_transaction_id::text || '|' || p_category_id::text;
   prior := private.mcp_idempotency_lookup(token, p_idempotency_key, hash);
   if prior->>'state' = 'replay' then
     return prior->'response';
@@ -206,7 +217,7 @@ begin
 
   cid := private.current_company_id();
   begin
-    done := private.remember_line_category(cid, p_transaction_id);
+    done := private.remember_line_category(cid, p_transaction_id, p_category_id);
     insert into private.mcp_writes (token_id, user_id, kind, transaction_id, prior, created_at)
     values (token, auth.uid(), 'supplier_category', p_transaction_id,
       jsonb_build_object(
@@ -223,6 +234,7 @@ begin
       return private.mcp_error('unavailable', 'retry');
     when others then
       response := case
+        when sqlerrm = 'conflict' then private.mcp_error('conflict', 'conflict')
         when sqlerrm in ('the line has no supplier', 'the line has no category', 'a split line is not remembered', 'a loan category is not remembered')
           then private.mcp_error('refused', sqlerrm)
         else private.mcp_refused(sqlerrm)
@@ -234,10 +246,10 @@ begin
 end;
 $$;
 
-revoke all on function public.mcp_remember_supplier_category(text, uuid)
+revoke all on function public.mcp_remember_supplier_category(text, uuid, uuid)
   from public, anon, authenticated, service_role;
-grant execute on function public.mcp_remember_supplier_category(text, uuid) to authenticated;
-comment on function public.mcp_remember_supplier_category(text, uuid) is
+grant execute on function public.mcp_remember_supplier_category(text, uuid, uuid) to authenticated;
+comment on function public.mcp_remember_supplier_category(text, uuid, uuid) is
   'MCP remember_supplier_category: file the supplier''s next lines in this line''s category (undo kind supplier_category). Decision 0216.';
 
 -- private.mcp_writes: the supplier_category kind, and what its undo reads.

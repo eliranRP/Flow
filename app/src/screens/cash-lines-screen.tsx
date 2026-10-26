@@ -206,7 +206,7 @@ function CashLinesBody({
       {allLoaded ? <LinesCount summary={summary} currency={currency} /> : null}
       {/* FLOW-965: the lines waiting for approval are the page's one filled button (Home v2's). */}
       {allLoaded && summary.pending > 0 ? (
-        <ReviewButton row={{ id: "review", to: `/review${search}`, title: "", button: { label: reviewItems(summary.pending), hint: reviewMinutes(summary.pending) } }} />
+        <ReviewButton row={{ id: "review", to: `/review${search}`, title: reviewItems(summary.pending), button: { label: reviewItems(summary.pending), hint: reviewMinutes(summary.pending) } }} />
       ) : null}
     </>
   );
@@ -233,6 +233,8 @@ function CashLinesBody({
           </div>
         }
       />
+      {/* The נכנס / יצא tabs' panel: what the list below shows. */}
+      <div role={side === "kept" ? undefined : "tabpanel"} aria-label={side === "kept" ? undefined : side === "in" ? "נכנס" : "יצא"}>
       {rows.length === 0 && allLoaded ? (
         <CashLinesEmpty
           side={side}
@@ -281,6 +283,7 @@ function CashLinesBody({
           </section>
         ))
       )}
+      </div>
     </div>
   );
 }

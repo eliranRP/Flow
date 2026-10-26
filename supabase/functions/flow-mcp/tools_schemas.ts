@@ -200,7 +200,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   reorder_loans: new Set(["idempotency_key", "loan_ids"]),
   set_project_investment: new Set(["idempotency_key", "project_id", "currency", "purchase_minor", "arv_minor", "value_minor", "value_date"]),
   set_category_rehab: new Set(["idempotency_key", "category_id", "rehab"]),
-  remember_supplier_category: new Set(["idempotency_key", "transaction_id"]),
+  remember_supplier_category: new Set(["idempotency_key", "transaction_id", "category_id"]),
   delete_category: new Set(["idempotency_key", "category_id"]),
   move_category_lines: new Set(["idempotency_key", "from_category_id", "into_category_id"]),
   set_company_currency: new Set(["idempotency_key", "currency"]),
@@ -747,6 +747,7 @@ export const setCategoryRehabSchema = z.object({
 export const rememberSupplierCategorySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
+  category_id: UUID_TEXT,
 }).strict();
 export const deleteCategorySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,

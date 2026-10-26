@@ -594,6 +594,7 @@ export async function callWrite(
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
+      p_category_id: parsed.data.category_id,
     };
   } else if (name === "delete_category") {
     const parsed = deleteCategorySchema.safeParse(args);

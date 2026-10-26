@@ -64,6 +64,7 @@ function mount(extra: Record<string, unknown> = {}) {
         data: [
           { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: false },
           { id: "c2", name: "ציוד והשכרה", kind: "expense", hidden: false, is_default: false },
+          { id: "c3", name: "קרן הלוואה", kind: "expense", hidden: false, is_default: false, loan_part: "principal" },
         ],
         error: null,
       });
@@ -106,7 +107,7 @@ describe("the supplier rule offer (FLOW-965)", () => {
     expect(toastPlace("השיוך נשמר")).toBe("top");
     fireEvent.click(screen.getByRole("button", { name: "כן, מעכשיו" }));
     expect(await screen.findByText(ruleSavedText(names))).toBeInTheDocument();
-    expect(rpc.calls.find((call) => call.name === "remember_line_category")?.args).toEqual({ p_id: "tx" });
+    expect(rpc.calls.find((call) => call.name === "remember_line_category")?.args).toEqual({ p_id: "tx", p_category_id: "c2" });
     expect(toastPlace(ruleSavedText(names))).toBe("top");
     expect(screen.queryByText(ruleOfferText(names))).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
@@ -117,6 +118,33 @@ describe("the supplier rule offer (FLOW-965)", () => {
         p_prior_category_id: null,
       });
     });
+  });
+
+  it("the offer is read out: it opens inside a polite live region", async () => {
+    mount();
+    await pickCategory("ציוד והשכרה");
+    const text = await screen.findByText(ruleOfferText(names));
+    expect(text.closest('[aria-live="polite"]')).not.toBeNull();
+  });
+
+  it("ביטול on the pick closes the offer before the undo writes, so the rule cannot follow it", async () => {
+    mount();
+    await pickCategory("ציוד והשכרה");
+    await screen.findByText(ruleOfferText(names));
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    expect(screen.queryByText(ruleOfferText(names))).toBeNull();
+    expect(screen.queryByRole("button", { name: "כן, מעכשיו" })).toBeNull();
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "undo_reassign")).toBe(true);
+    });
+    expect(rpc.calls.some((call) => call.name === "remember_line_category")).toBe(false);
+  });
+
+  it("a loan category has no offer (the server never remembers one)", async () => {
+    mount();
+    await pickCategory("קרן הלוואה");
+    await screen.findByText("השיוך נשמר");
+    expect(screen.queryByRole("button", { name: "כן, מעכשיו" })).toBeNull();
   });
 
   it("רק השורה הזו closes the offer and writes nothing", async () => {

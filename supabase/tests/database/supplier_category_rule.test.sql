@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(27);
+select plan(35);
 
 do $users$
 begin
@@ -38,8 +38,17 @@ insert into scr (label, id)
 select 'no_category', tests.fixture_line(id, 'scr:no-category', 30000, 'expense', (select id from scr where label = 'proj'), null, '2026-10-08') from scr where label = 'co';
 insert into scr (label, id)
 select 'loan_line', tests.fixture_line(id, 'scr:loan', 70000, 'expense', (select id from scr where label = 'proj'), (select id from scr where label = 'principal'), '2026-10-09') from scr where label = 'co';
+insert into scr (label, id)
+select 'split_line', tests.fixture_line(id, 'scr:split', 60000, 'expense', (select id from scr where label = 'proj'), (select id from scr where label = 'tools'), '2026-10-10') from scr where label = 'co';
+insert into scr (label, id)
+select 'shared_line', tests.fixture_line(id, 'scr:shared', 40000, 'expense', (select id from scr where label = 'proj'), (select id from scr where label = 'tools'), '2026-10-11') from scr where label = 'co';
 update public.transactions set supplier_id = (select id from scr where label = 'depot')
-where id in (select id from scr where label in ('line', 'no_category', 'loan_line'));
+where id in (select id from scr where label in ('line', 'no_category', 'loan_line', 'split_line', 'shared_line'));
+insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
+values
+  ((select id from scr where label = 'co'), (select id from scr where label = 'split_line'), 1, (select id from scr where label = 'tools'), null, 40000),
+  ((select id from scr where label = 'co'), (select id from scr where label = 'split_line'), 2, (select id from scr where label = 'rent'), null, 20000);
+update public.transactions set pnl_role = 'shared' where id = (select id from scr where label = 'shared_line');
 
 insert into public.company_members (company_id, user_id, role)
 select id, tests.get_supabase_uid('scr_viewer'), 'viewer' from scr where label = 'co';
@@ -89,32 +98,45 @@ grant execute on function pg_temp.id_of(text) to authenticated, service_role;
 -- The app's write.
 select tests.authenticate_as('scr_owner');
 select is(
-  public.remember_line_category(pg_temp.id_of('line')) ->> 'prior_category_id',
+  public.remember_line_category(pg_temp.id_of('line'), pg_temp.id_of('tools')) ->> 'prior_category_id',
   pg_temp.id_of('rent')::text,
   'remember returns the category the supplier had'
 );
 select is(pg_temp.remembered(), pg_temp.id_of('tools'), 'the supplier now remembers the line''s category');
 select is(
-  public.remember_line_category(pg_temp.id_of('line')) ->> 'supplier_name',
+  public.remember_line_category(pg_temp.id_of('line'), pg_temp.id_of('tools')) ->> 'supplier_name',
   'Example Depot',
   'and names the supplier'
 );
 select throws_ok(
-  format('select public.remember_line_category(%L)', pg_temp.id_of('no_supplier')),
+  format('select public.remember_line_category(%L, %L)', pg_temp.id_of('no_supplier'), pg_temp.id_of('tools')),
   'P0001', 'the line has no supplier', 'a line with no supplier is refused'
 );
 select throws_ok(
-  format('select public.remember_line_category(%L)', pg_temp.id_of('income')),
+  format('select public.remember_line_category(%L, %L)', pg_temp.id_of('income'), pg_temp.id_of('fees')),
   'P0001', 'the line has no supplier', 'an income line is refused'
 );
 select throws_ok(
-  format('select public.remember_line_category(%L)', pg_temp.id_of('no_category')),
+  format('select public.remember_line_category(%L, %L)', pg_temp.id_of('no_category'), pg_temp.id_of('tools')),
   'P0001', 'the line has no category', 'a line with no category is refused'
 );
 select throws_ok(
-  format('select public.remember_line_category(%L)', pg_temp.id_of('loan_line')),
+  format('select public.remember_line_category(%L, %L)', pg_temp.id_of('loan_line'), pg_temp.id_of('principal')),
   'P0001', 'a loan category is not remembered', 'a loan category is refused'
 );
+select throws_ok(
+  format('select public.remember_line_category(%L, %L)', pg_temp.id_of('split_line'), pg_temp.id_of('tools')),
+  'P0001', 'a split line is not remembered', 'a line split into parts is refused'
+);
+select throws_ok(
+  format('select public.remember_line_category(%L, %L)', pg_temp.id_of('shared_line'), pg_temp.id_of('tools')),
+  'P0001', 'a split line is not remembered', 'a shared line is refused'
+);
+select throws_ok(
+  format('select public.remember_line_category(%L, %L)', pg_temp.id_of('line'), pg_temp.id_of('rent')),
+  'P0001', 'conflict', 'a category the line no longer holds is a conflict'
+);
+select is(pg_temp.remembered(), pg_temp.id_of('tools'), 'the conflict left the supplier as it was');
 
 -- Undo: back to the prior, and a conflict once it changed since.
 select is(
@@ -133,8 +155,16 @@ select is(
   'a prior that is not an expense category comes back as none'
 );
 select is(pg_temp.remembered(), null::uuid, 'the supplier remembers no category');
+reset role;
+update public.suppliers set remembered_category_id = pg_temp.id_of('tools') where id = pg_temp.id_of('depot');
+select tests.authenticate_as('scr_owner');
+select is(
+  public.forget_line_category(pg_temp.id_of('depot'), pg_temp.id_of('tools'), pg_temp.id_of('principal')) ->> 'remembered_category_id',
+  null,
+  'a loan category as the prior comes back as none'
+);
 select lives_ok(
-  format('select public.remember_line_category(%L)', pg_temp.id_of('line')),
+  format('select public.remember_line_category(%L, %L)', pg_temp.id_of('line'), pg_temp.id_of('tools')),
   'remember again from none'
 );
 select is(
@@ -146,7 +176,7 @@ select is(
 -- Another company and a viewer.
 select tests.authenticate_as('scr_other');
 select throws_ok(
-  format('select public.remember_line_category(%L)', pg_temp.id_of('line')),
+  format('select public.remember_line_category(%L, %L)', pg_temp.id_of('line'), pg_temp.id_of('tools')),
   'P0001', 'transaction not found', 'another company''s line is not found'
 );
 select throws_ok(
@@ -155,8 +185,12 @@ select throws_ok(
 );
 select tests.authenticate_as('scr_viewer');
 select throws_ok(
-  format('select public.remember_line_category(%L)', pg_temp.id_of('line')),
+  format('select public.remember_line_category(%L, %L)', pg_temp.id_of('line'), pg_temp.id_of('tools')),
   '42501', 'forbidden', 'a viewer cannot remember'
+);
+select throws_ok(
+  format('select public.forget_line_category(%L, %L, %L)', pg_temp.id_of('depot'), pg_temp.id_of('tools'), pg_temp.id_of('rent')),
+  '42501', 'forbidden', 'a viewer cannot forget'
 );
 reset role;
 select is(pg_temp.remembered(), null::uuid, 'neither changed the supplier');
@@ -164,12 +198,12 @@ select is(pg_temp.remembered(), null::uuid, 'neither changed the supplier');
 -- MCP: the write, its replay, its undo and the undo's conflict.
 select pg_temp.as_mcp('scr_owner');
 select is(
-  public.mcp_remember_supplier_category('scr-1', pg_temp.id_of('line')) -> 'data' ->> 'undo_kind',
+  public.mcp_remember_supplier_category('scr-1', pg_temp.id_of('line'), pg_temp.id_of('tools')) -> 'data' ->> 'undo_kind',
   'supplier_category',
   'MCP remembers with undo kind supplier_category'
 );
 select is(
-  public.mcp_remember_supplier_category('scr-1', pg_temp.id_of('line')) -> 'data' ->> 'category_id',
+  public.mcp_remember_supplier_category('scr-1', pg_temp.id_of('line'), pg_temp.id_of('tools')) -> 'data' ->> 'category_id',
   pg_temp.id_of('tools')::text,
   'a repeated key replays the stored response'
 );
@@ -177,10 +211,22 @@ reset role;
 select is(pg_temp.remembered(), pg_temp.id_of('tools'), 'MCP wrote the remembered category');
 select pg_temp.as_mcp('scr_owner');
 select is(
-  public.mcp_remember_supplier_category('scr-2', pg_temp.id_of('no_supplier')) -> 'error' ->> 'message',
+  public.mcp_remember_supplier_category('scr-2', pg_temp.id_of('no_supplier'), pg_temp.id_of('tools')) -> 'error' ->> 'message',
   'the line has no supplier',
   'MCP says why a line cannot be remembered'
 );
+select is(
+  public.mcp_remember_supplier_category('scr-2c', pg_temp.id_of('line'), pg_temp.id_of('rent')) -> 'error' ->> 'code',
+  'conflict',
+  'MCP is a conflict when the line holds another category'
+);
+reset role;
+select is(
+  (select count(*)::int from private.mcp_writes w where w.kind = 'supplier_category'),
+  1,
+  'a refused MCP write records nothing to undo'
+);
+select pg_temp.as_mcp('scr_owner');
 select is(
   public.mcp_undo('scr-undo-1', 'supplier_category', pg_temp.id_of('line')) ->> 'ok',
   'true',
@@ -190,7 +236,7 @@ reset role;
 select is(pg_temp.remembered(), null::uuid, 'the supplier remembers none again');
 select pg_temp.as_mcp('scr_owner');
 select is(
-  public.mcp_remember_supplier_category('scr-3', pg_temp.id_of('line')) ->> 'ok',
+  public.mcp_remember_supplier_category('scr-3', pg_temp.id_of('line'), pg_temp.id_of('tools')) ->> 'ok',
   'true',
   'MCP remembers again'
 );
