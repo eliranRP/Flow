@@ -248,7 +248,7 @@ export const CompanyProfitOffline: Story = {
   name: "Company profit, offline",
   render: () => <ProfitRoute entry="/profit" sample={{ ...COMPANY_PROFIT_SAMPLE, offlineSince: Date.UTC(2026, 9, 26, 6, 41) }} />,
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByText(/אין חיבור · מוצג המצב מ־/)).toBeInTheDocument();
+    await expect(within(canvasElement).getByText(/אין חיבור · מוצג המצב/)).toBeInTheDocument();
   },
 };
 

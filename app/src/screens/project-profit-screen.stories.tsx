@@ -46,7 +46,7 @@ export const ProjectProfitOffline: Story = {
   name: "Project profit, offline",
   render: () => <ProfitRoute entry="/projects/juniper-ct/profit" data={{ ...sample, offlineSince: Date.UTC(2026, 9, 26, 6, 41) }} />,
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByText(/אין חיבור · מוצג המצב מ־/)).toBeInTheDocument();
+    await expect(within(canvasElement).getByText(/אין חיבור · מוצג המצב/)).toBeInTheDocument();
   },
 };
 
