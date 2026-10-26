@@ -206,6 +206,46 @@ export function ReviewCard({
   // too (text hidden), so a fill that lands keeps the card's height.
   // A shared cost takes no project from Jev, so its card holds nothing either.
   const jevSlot = pending && !mismatch && !shared && lines.some((line) => line.value === "לא נבחר" || line.suggested);
+  // FLOW-960: Jev's reason heads the project and category box, so the why is read before the choice.
+  // A split or a split mismatch has no box: there the reason stays under the parts.
+  const jevReason = (
+    <>
+      {filled ? (
+        <p className="t-caption t-muted ui-review-reason ui-review-filled">
+          <span className="ui-review-reason-mark" aria-hidden="true">✦</span>
+          <span className="ui-review-reason-text">
+            {JEV_FILLED}
+          </span>
+          {filled.onUndo ? (
+            <Button
+              variant="link"
+              busy={filled.busy === true}
+              aria-label={`${JEV_FILLED_UNDO} המילוי של Jev`}
+              onClick={filled.onUndo}
+              className="ui-review-filled-undo ui-btn-link-hint"
+            >
+              {JEV_FILLED_UNDO}
+            </Button>
+          ) : null}
+        </p>
+      ) : null}
+      {why && !filled ? (
+        <p className="t-caption t-muted ui-review-reason">
+          <span className="ui-review-reason-mark" aria-hidden="true">✦</span>
+          <span className="ui-review-reason-text"><CopyLine parts={why} /></span>
+        </p>
+      ) : null}
+      {jevSlot ? (
+        <p className="t-caption t-muted ui-review-reason ui-review-reason-slot" aria-hidden="true">
+          <span className="ui-review-reason-mark">✦</span>
+          {/* Held, not shown: the words Jev's fill will carry, so the waiting card keeps its height. */}
+          <span className="ui-review-reason-text ui-review-reason-held">{`${JEV_FILLED} ${JEV_FILLED_UNDO}`}</span>
+        </p>
+      ) : null}
+    </>
+  );
+  const reasonInPanel = !mismatch && splitSummary == null && lines.length > 0;
+  const panelMissing = !pending && lines.some((line) => line.value === "לא נבחר" || line.value === REVIEW_NO_SUGGESTION);
   return (
     <article className="ui-review" aria-busy={pending || undefined} data-jev-pending={pending ? "" : undefined}>
       <div className="ui-review-doc">
@@ -298,7 +338,8 @@ export function ReviewCard({
             ))}
           </div>
         ) : lines.length > 0 ? (
-          <div className="ui-review-panel">
+          <div className={panelMissing ? "ui-review-panel ui-review-panel-missing" : "ui-review-panel"}>
+            {reasonInPanel ? jevReason : null}
             {lines.map((line) => pending && (line.value === "לא נבחר" || line.suggested) ? (
               <div className="ui-review-field" aria-hidden="true" key={line.key}>
                 <span className="ui-review-field-main">
@@ -322,38 +363,7 @@ export function ReviewCard({
             {REVIEW_SPLIT_LINK}
           </button>
         ) : null}
-        {filled ? (
-          <p className="t-caption t-muted ui-review-reason ui-review-filled">
-            <span className="ui-review-reason-mark" aria-hidden="true">✦</span>
-            <span className="ui-review-reason-text">
-              {JEV_FILLED}
-            </span>
-            {filled.onUndo ? (
-              <Button
-                variant="link"
-                busy={filled.busy === true}
-                aria-label={`${JEV_FILLED_UNDO} המילוי של Jev`}
-                onClick={filled.onUndo}
-                className="ui-review-filled-undo ui-btn-link-hint"
-              >
-                {JEV_FILLED_UNDO}
-              </Button>
-            ) : null}
-          </p>
-        ) : null}
-        {why && !filled ? (
-          <p className="t-caption t-muted ui-review-reason">
-            <span className="ui-review-reason-mark" aria-hidden="true">✦</span>
-            <span className="ui-review-reason-text"><CopyLine parts={why} /></span>
-          </p>
-        ) : null}
-        {jevSlot ? (
-          <p className="t-caption t-muted ui-review-reason ui-review-reason-slot" aria-hidden="true">
-            <span className="ui-review-reason-mark">✦</span>
-            {/* Held, not shown: the words Jev's fill will carry, so the waiting card keeps its height. */}
-            <span className="ui-review-reason-text ui-review-reason-held">{`${JEV_FILLED} ${JEV_FILLED_UNDO}`}</span>
-          </p>
-        ) : null}
+        {reasonInPanel ? null : jevReason}
         {note == null ? null : pending ? (
           <p className="t-line2 ui-review-note-slot" aria-hidden="true" />
         ) : (
@@ -438,7 +448,8 @@ function ReviewFlagBlock({ flag }: { flag: ReviewFlagView }) {
 
 /**
  * FLOW-365: one field row of the card's panel. The label sits over the value; a suggestion reads as a
- * grey "הצעה" (or "החזר") beside the chevron, with no pill. A missing value reads in the accent.
+ * grey "הצעה" (or "החזר") beside the chevron, with no pill. A missing value reads in the warning tone,
+ * with an alert icon and "חסר" beside the chevron (FLOW-960).
  */
 function ReviewPanelLine({
   line,
@@ -457,7 +468,10 @@ function ReviewPanelLine({
         <span className="ui-review-field-label">{line.label}</span>
         <span className={missing ? "ui-review-field-value ui-review-field-missing" : "ui-review-field-value"}>{line.value}</span>
       </span>
-      {line.jev ? <span className="ui-review-field-hint"><JevTag /></span> : hint ? <span className="ui-review-field-hint">{hint}</span> : null}
+      {missing ? (
+        // FLOW-960: a missing value is marked by an icon and a word, not only by its colour.
+        <span className="ui-review-field-hint ui-review-field-hint-missing"><AlertIcon size={16} />חסר</span>
+      ) : line.jev ? <span className="ui-review-field-hint"><JevTag /></span> : hint ? <span className="ui-review-field-hint">{hint}</span> : null}
       {line.onOpen ? <span className="ui-review-field-chevron" aria-hidden="true"><ChevronIcon size={18} /></span> : null}
     </>
   );

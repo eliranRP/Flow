@@ -57,6 +57,8 @@ export const ReviewAll: Story = {
             doc_date: "2026-09-29",
             amount_net: -100_000n,
             supplier_name: "עגורני החוף בע״מ",
+            // FLOW-960: no project, so the row shows the warning mark.
+            project_id: null,
             project_name: null,
             category_name: "שינוע",
             source: "mercury",

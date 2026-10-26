@@ -204,3 +204,16 @@ const unpin: NonNullable<Story["loaders"]> = [() => {
 export const ReviewCounter10At: Story = { loaders: unpin, render: () => <ReviewCounterStory />, play: skipToTen };
 
 
+
+/** FLOW-960: a queue of 40. Above 12 items the meter is one bar, not 40 hairline segments. */
+const longRows: ReviewRow[] = Array.from({ length: 40 }, (_, n) => ({
+  ...plainRow, id: `r${String(n + 1)}`, transaction_id: `t${String(n + 1)}`, supplier_name: `ספק לדוגמה ${String(n + 1)}`,
+}));
+export const ReviewLongQueue: Story = {
+  loaders: unpin,
+  render: () => (
+    <StoryRoute entry="/review" tabs>
+      <ReviewQueue rows={longRows} search="" sample />
+    </StoryRoute>
+  ),
+};

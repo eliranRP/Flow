@@ -69,8 +69,10 @@ export function useWrite<T = void>(options: {
   retryFocus?: () => void;
   /** An error that needs no toast, because the screen already shows the state. */
   silent?: (error: Error) => boolean;
-  /** Where this write's toasts sit. לאישור keeps them above its action bar (decision 0137). */
-  place?: "page" | "bar";
+  /** Where this write's toasts sit. לאישור keeps them under its header (decision 0212). */
+  place?: "page" | "bar" | "top";
+  /** A failure's toast stays until it is acted on or dismissed (לאישור's approve, decision 0212). */
+  persistFailure?: boolean;
   /** The queries the write changes and each one's value after it. The tap shows it at once; a failure restores it. */
   optimistic?: (payload: T) => Array<{ key: QueryKey; update: (old: unknown) => unknown }>;
 }) {
@@ -133,6 +135,7 @@ export function useWrite<T = void>(options: {
       const split = typeof reported !== "string" && reported.action != null && options.onSplit != null;
       const id = toast.show({
         ...(options.place ? { place: options.place } : {}),
+        ...(options.persistFailure === true ? { persist: true } : {}),
         tone,
         message: failureMessage(reported),
         ...(split

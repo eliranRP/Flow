@@ -478,3 +478,40 @@ describe("ReviewCard paid line (FLOW-309, decision 0165)", () => {
     expect(reviewPaidView({ receipts: [receipt("2025-12-30")], paid: true, paid_on: "2025-12-30" }, now)?.line).toEqual(["שולם · קבלה ", { num: "30/12/25" }]);
   });
 });
+
+describe("ReviewCard v2 (FLOW-960)", () => {
+  it("marks a missing project with an icon and חסר, and outlines the box", () => {
+    const { container } = render(
+      <ReviewCard
+        supplier="ספק לדוגמה"
+        sourceLine="הוצאה · 06/10/2026"
+        netAgorot={-41_218n}
+        suggestion={{ category: "חומרים", categorySuggested: true }}
+        onProject={() => undefined}
+        onCategory={() => undefined}
+      />,
+    );
+    const mark = container.querySelector(".ui-review-field-hint-missing");
+    expect(mark?.textContent).toBe("חסר");
+    expect(mark?.querySelector("svg")).not.toBeNull();
+    expect(container.querySelector(".ui-review-panel")).toHaveClass("ui-review-panel-missing");
+  });
+
+  it("puts Jev's reason at the head of the box, before the rows it explains", () => {
+    const { container } = render(
+      <ReviewCard
+        supplier="ספק לדוגמה"
+        sourceLine="הוצאה · 06/10/2026"
+        netAgorot={-100_000n}
+        suggestion={{ project: "וילה רעננה", category: "חומרים", projectSuggested: true, categorySuggested: true, projectJev: true }}
+        jevWhy={["ספק חוזר"]}
+        onProject={() => undefined}
+        onCategory={() => undefined}
+      />,
+    );
+    const panel = container.querySelector(".ui-review-panel");
+    expect(panel?.firstElementChild).toHaveClass("ui-review-reason");
+    expect(panel?.firstElementChild?.textContent).toContain("ספק חוזר");
+    expect(panel?.classList.contains("ui-review-panel-missing")).toBe(false);
+  });
+});

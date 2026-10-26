@@ -15,7 +15,7 @@ import { ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
 import { ScreenHeader } from "../ui/screen-header";
 import { KEPT_OUT, invoiceDate } from "./screen-shared";
-import { ChevronIcon } from "../ui/icons";
+import { AlertIcon, ChevronIcon } from "../ui/icons";
 import { ScreenState } from "../ui/screen-state";
 import { EMPTY_REVIEW, listFocusId, listPlace, queueAfterFocus, reviewE2e, ReviewEmpty, reviewLineFocus, reviewListPath, rotateReview, useE2eReviewRows } from "./review-shared";
 import { E2E_DONE_COUNTS } from "../dev/review-e2e-fixture";
@@ -274,23 +274,29 @@ function ReviewAllBookingRow({ booking, href }: { booking: JevBooking; href: str
   );
 }
 
-/** FLOW-365: a list row. The payee, then "<date> · חשבונית|בנק" (and "חסר פרויקט"), the amount and a chevron. */
+/** FLOW-365: a list row. The payee, then "<date> · חשבונית|בנק" (and "חסר פרויקט" with its icon, FLOW-960), the amount and a chevron. */
 function ReviewAllRow({ row, href }: { row: ReviewRow; href: string }) {
   const income = row.direction === "income";
   const shown = row.amount_net < 0n ? -row.amount_net : row.amount_net;
   const amount = formatAmountText(shown, row.currency ?? "ILS", income
     ? { detail: true, direction: "income", plus: true }
     : { detail: true });
-  const meta = [
-    invoiceDate(row.doc_date),
-    row.source === "mercury" ? "בנק" : "חשבונית",
-    row.project_id == null ? "חסר פרויקט" : null,
-  ].filter((part): part is string => part != null).join(" · ");
+  const meta = `${invoiceDate(row.doc_date)} · ${row.source === "mercury" ? "בנק" : "חשבונית"}`;
+  // FLOW-960: a row that blocks אישור says so with an icon and the warning tone, not as plain meta.
+  const missing = row.project_id == null;
   return (
     <Link className="ui-review-all-row ui-hit" to={href}>
       <span className="ui-review-all-text">
         <span className="ui-review-all-title">{row.supplier_name ?? row.description}</span>
-        <span className="ui-review-all-meta">{meta}</span>
+        <span className="ui-review-all-meta">
+          {meta}
+          {missing ? (
+            <>
+              {" · "}
+              <span className="ui-review-all-missing"><AlertIcon size={16} />חסר פרויקט</span>
+            </>
+          ) : null}
+        </span>
       </span>
       <bdi className={income ? "ui-review-all-amount ui-review-all-in ui-num" : "ui-review-all-amount ui-num"} dir="ltr">{amount}</bdi>
       <ChevronIcon size={16} />
