@@ -333,6 +333,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-958"></a>[FLOW-958](tasks/FLOW-958.md) | Home v2: the UX/UI rules review | UI (design approved) |
 | <a id="flow-959"></a>[FLOW-959](tasks/FLOW-959.md) | Two type weights, 400 and 600, app-wide | PLAN FIRST |
 | <a id="flow-960"></a>[FLOW-960](tasks/FLOW-960.md) | Review v2: the UX/UI rules review of לאישור | UI (design approved) |
+| <a id="flow-961"></a>[FLOW-961](tasks/FLOW-961.md) | Project v2: the UX/UI rules review of פרויקטים and the project page | UI (design approved) |
 | <a id="flow-365"></a>[FLOW-365](tasks/FLOW-365.md) | Redesign: the review queue (לאישור) without a tab | UI (design approved) |
 | <a id="flow-921"></a>[FLOW-921](tasks/FLOW-921.md) | Review queue: a server transfer flag, approve as a transfer, and the document thumbnail | Server + UI |
 | <a id="flow-366"></a>[FLOW-366](tasks/FLOW-366.md) | Redesign: month lines (נכנס / יצא) and the transaction page | UI (design approved) |
