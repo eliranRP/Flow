@@ -27,7 +27,7 @@ export function PageOfflineLine({ since }: { since: number }) {
     <p className="ui-page-offline" role="status">
       <AlertIcon size={20} />
       <span className="ui-page-offline-text">
-        אין חיבור · מוצג המצב מ־<bdi dir="ltr">{israelTime(since)}</bdi>
+        אין חיבור · מוצג המצב <span className="ui-page-offline-time">מ־<bdi dir="ltr">{israelTime(since)}</bdi></span>
       </span>
       <span className="ui-page-offline-retry">מתחבר מחדש…</span>
     </p>

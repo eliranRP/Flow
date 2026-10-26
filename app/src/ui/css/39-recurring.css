@@ -273,10 +273,10 @@
   text-align: start;
 }
 
+/* FLOW-963: a long name or place wraps to a second line rather than losing its end (at 320 the late
+   box's rows are 116px wide). */
 .ui-recurring-name > span {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .ui-recurring-title {

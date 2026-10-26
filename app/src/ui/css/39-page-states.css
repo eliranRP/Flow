@@ -24,6 +24,11 @@
   min-inline-size: 0;
 }
 
+/* The moment keeps its "מ־" on its line. */
+.ui-page-offline-time {
+  white-space: nowrap;
+}
+
 .ui-page-offline-retry {
   flex: none;
   color: var(--color-text-muted);
