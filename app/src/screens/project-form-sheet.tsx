@@ -100,10 +100,11 @@ function ProjectForm({ project, extras, focusBudget, onClose }: { project?: Proj
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
-    if (holdWrites || blocked()) return;
+    if (holdWrites) return;
+    // The name is checked on the phone, so the preview says it too; only the save is the preview's to block.
     const error = projectNameError(trimmed, project != null);
     setNameError(error);
-    if (error != null) return;
+    if (error != null || blocked()) return;
     save.mutate();
   }
 
