@@ -1499,6 +1499,9 @@ isOneToOne: false
 "forecast_overrides_for":
 { Args: { "p_month": string }; Returns: Json
                            },
+"forget_line_category":
+{ Args: { "p_category_id": string,"p_prior_category_id": string,"p_supplier_id": string }; Returns: Json
+                           },
 "get_breakdown":
 { Args: { "p_basis"?: string,"p_direction": string,"p_from"?: string,"p_group_by"?: string,"p_to"?: string }; Returns: Json
                            },
@@ -1762,6 +1765,9 @@ isOneToOne: false
 "mcp_move_category_lines":
 { Args: { "p_from": string,"p_idempotency_key": string,"p_into": string }; Returns: Json
                            },
+"mcp_remember_supplier_category":
+{ Args: { "p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
+                           },
 "mcp_remove_member":
 { Args: { "p_idempotency_key": string,"p_user_id": string }; Returns: Json
                            },
@@ -2015,6 +2021,9 @@ isOneToOne: false
                            },
 "recurring_this_month":
 { Args: { "p_today"?: string }; Returns: Json
+                           },
+"remember_line_category":
+{ Args: { "p_id": string }; Returns: Json
                            },
 "remove_member":
 { Args: { "p_user_id": string }; Returns: Json

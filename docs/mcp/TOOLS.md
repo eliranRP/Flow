@@ -69,6 +69,8 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `set_category_rehab` | `category_id` | `list_categories` `categories[].id` |
 | `undo` `kind: "project_investment"` | `id` | the project id `set_project_investment` used |
 | `undo` `kind: "category_rehab"` | `id` | the category id `set_category_rehab` used |
+| `remember_supplier_category` | `transaction_id` | `get_expense.id` or `search_expenses` rows |
+| `undo` `kind: "supplier_category"` | `id` | the transaction id `remember_supplier_category` used |
 | `delete_category` | `category_id` | `list_categories` `categories[].id` |
 | `move_category_lines` | `from_category_id`, `into_category_id` | `list_categories` `categories[].id` (the target not hidden) |
 | `undo` `kind: "category_delete"` | `id` | the category id `delete_category` used |
@@ -595,6 +597,14 @@ Sets a project's investment figures: `currency` (an ISO code such as `USD` or `I
 ```
 
 `rehab` is required: `true` counts the category as rehab on projects, `false` leaves it out, `null` follows the default. By default every category counts except those kept out of the P&L (`excluded_from_pnl`) and the loan parts (`loan_part` set), so the purchase and the loan payments stay out. A loan payment's fees part stays out too, even in a category that counts, unless that category is switched on (`true`). Switching on the principal category counts principal repayments as rehab, while the loan they repay is already in `current_equity_minor`. Output `data`: `category_id`, `rehab`, `in_rehab` (what the category comes to), `undo_kind: "category_rehab"` and `id`. Undo puts back the setting before, and is `conflict` when it changed since. Another company's category is `refused` / `category not found` ([0143](../decisions/0143-project-investment.md)).
+
+### remember_supplier_category
+
+```json
+{ "idempotency_key": "rule-1", "transaction_id": "22222222-2222-4000-8000-000000000020" }
+```
+
+Files the supplier's next lines in this line's category, as the transaction page's "כן, מעכשיו" does after a category change. That is the supplier's remembered category: a sync gives it to each new expense line from that supplier. Earlier lines do not change. `transaction_id` is an expense line with a supplier and a category of its own: not a split line, a shared line or a loan category. Output `data`: `supplier_id`, `supplier_name`, `category_id`, `category_name`, `prior_category_id` (what the supplier had, or null), `undo_kind: "supplier_category"` and `id` (the transaction id). Refused: `the line has no supplier` (also an income line), `the line has no category`, `a split line is not remembered`, `a loan category is not remembered`, `transaction not found` (another company's line too). Undo, with the transaction id, puts back the prior category; it is `conflict` once the supplier remembers something else, and a prior category that was deleted since comes back as none ([0216](../decisions/0216-lines-toasts-and-supplier-rule.md)).
 
 ### delete_category
 
