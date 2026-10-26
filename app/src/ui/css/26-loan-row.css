@@ -151,24 +151,6 @@
   font-size: var(--type-line2-size);
 }
 
-/* FLOW-139: the card's escrow part is the board's lavender tint in light (#DAD3E6, the outline token) and the strong track tone in dark (#3A3350). */
-.ui-loan-summary .ui-parts-part[data-tone="muted"],
-.ui-loan-summary .ui-parts-dot[data-tone="muted"] {
-  background: var(--color-track-strong);
-}
-
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) .ui-loan-summary .ui-parts-part[data-tone="muted"],
-  :root:not([data-theme="dark"]) .ui-loan-summary .ui-parts-dot[data-tone="muted"] {
-    background: var(--color-outline-secondary);
-  }
-}
-
-:root[data-theme="light"] .ui-loan-summary .ui-parts-part[data-tone="muted"],
-:root[data-theme="light"] .ui-loan-summary .ui-parts-dot[data-tone="muted"] {
-  background: var(--color-outline-secondary);
-}
-
 /* The card's last row: the link to the summary page (what was paid and what is left), a hairline above it. */
 .ui-loan-summary-link {
   display: flex;

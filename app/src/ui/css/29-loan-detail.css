@@ -270,32 +270,20 @@ button.ui-loan-paid-part {
   height: var(--space-2);
 }
 
-/* The escrow part is the outline tint in light; in dark the split's is the track tone and the paid card's the
-   strong track tone, as in the summary card (#3A3350). */
-.ui-loan-split .ui-parts-part[data-tone="muted"],
-.ui-loan-split .ui-parts-dot[data-tone="muted"] {
-  background: var(--color-track);
+/* FLOW-962: every part of a loan bar reads at 3:1 or more. Principal stays the one accent, interest is
+   ink, escrow the outline grey (it was the track tone, 1.44:1). */
+:is(.ui-loan-split, .ui-loan-paid, .ui-loan-summary) :is(.ui-parts-part, .ui-parts-dot)[data-tone="accent-dim"] {
+  background: var(--color-loan-interest);
 }
 
-.ui-loan-paid .ui-parts-part[data-tone="muted"],
-.ui-loan-paid .ui-parts-dot[data-tone="muted"] {
-  background: var(--color-track-strong);
+:is(.ui-loan-split, .ui-loan-paid, .ui-loan-summary) :is(.ui-parts-part, .ui-parts-dot)[data-tone="muted"] {
+  background: var(--color-track-outline);
 }
 
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) .ui-loan-paid .ui-parts-part[data-tone="muted"],
-  :root:not([data-theme="dark"]) .ui-loan-paid .ui-parts-dot[data-tone="muted"],
-  :root:not([data-theme="dark"]) .ui-loan-split .ui-parts-part[data-tone="muted"],
-  :root:not([data-theme="dark"]) .ui-loan-split .ui-parts-dot[data-tone="muted"] {
-    background: var(--color-outline-secondary);
-  }
-}
-
-:root[data-theme="light"] .ui-loan-paid .ui-parts-part[data-tone="muted"],
-:root[data-theme="light"] .ui-loan-paid .ui-parts-dot[data-tone="muted"],
-:root[data-theme="light"] .ui-loan-split .ui-parts-part[data-tone="muted"],
-:root[data-theme="light"] .ui-loan-split .ui-parts-dot[data-tone="muted"] {
-  background: var(--color-outline-secondary);
+/* The balance card's empty track is an outline, not a fill (1.21:1 before). */
+.ui-loan-balance .ui-parts-bar[data-track="true"] {
+  background: transparent;
+  box-shadow: inset 0 0 0 var(--stroke-hairline) var(--color-track-outline);
 }
 
 /* A row with a label over its value (the terms card), or a button row with a chevron. */
