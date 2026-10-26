@@ -55,7 +55,6 @@ begin
     or char_length(p_idempotency_key) < 1
     or char_length(p_idempotency_key) > 128
     or p_loan_id is null
-    or p_new_loan_id = p_loan_id
   then
     return private.mcp_error('validation', 'validation');
   end if;
@@ -88,6 +87,9 @@ begin
       select 1 from public.loans n where n.id = p_new_loan_id and n.company_id = cid
     ) then
       response := private.mcp_refused('loan not found');
+    elsif p_new_loan_id = p_loan_id then
+      -- After the lookups, so another company's loan reads as not found before the shape check.
+      response := private.mcp_error('validation', 'validation');
     else
       update public.loans l
       set refinanced_into_id = p_new_loan_id
