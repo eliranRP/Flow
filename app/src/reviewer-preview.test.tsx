@@ -73,13 +73,17 @@ describe("reviewer sample saves", () => {
     expect(screen.getByText("לא נשמר – אין חיבור")).toBeInTheDocument();
   });
 
-  it("keeps אישור off when the category is missing", async () => {
+  it("opens the category picker from אישור when the category is missing (FLOW-960)", async () => {
     const bolts = reviewerQueue[1];
     if (!bolts) throw new Error("missing sample row");
     renderQueue(bolts, "ok");
     expect(screen.queryByText("חסר קטגוריה, הקישו לבחירה")).not.toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "קטגוריה: לא נבחר" }, { timeout: 2500 })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    const approve = screen.getByRole("button", { name: "אישור" });
+    expect(approve).toBeEnabled();
+    fireEvent.click(approve);
+    const where = new URL((await screen.findByTestId("where")).textContent, "https://flow.test");
+    expect(where.pathname).toMatch(/\/change$/);
   });
 
   it("opens the category picker from the category row (FLOW-309)", async () => {
