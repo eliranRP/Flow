@@ -62,7 +62,7 @@ const PICK_CATEGORY = /^(בחירת קטגוריה|קטגוריה לחלק \d+)$
 const PICK_PROJECT = /^(בחירת פרויקט|פרויקט לחלק \d+)$/;
 
 /** A fresh owner with one shared expense waiting in לאישור as unallocated_shared, signed in on the page. */
-async function seedShared(page: Page, status: NonNullable<ReturnType<typeof localStatus>>) {
+async function seedShared(page: Page, status: NonNullable<ReturnType<typeof localStatus>>, onProject = false) {
   const stamp = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   const supplier = `ספק משותף ${stamp}`;
   const admin = createClient(status.url, status.service, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -78,9 +78,11 @@ async function seedShared(page: Page, status: NonNullable<ReturnType<typeof loca
   const company = await anon.rpc("create_company", { p_name: `משותף ${stamp}`, p_vat_registered: true });
   expect(company.error, company.error?.message).toBeNull();
   const companyId = company.data as string;
+  const projectIds: string[] = [];
   for (const name of ["הרצל", "צפון"]) {
     const project = await anon.rpc("upsert_project", { p_name: name, p_status: "active" });
     expect(project.error, project.error?.message).toBeNull();
+    projectIds.push(project.data as string);
   }
   const categories = await anon.rpc("list_categories");
   const rows = Array.isArray(categories.data) ? categories.data as Array<{ id: string; name: string; kind: string }> : [];
@@ -101,6 +103,8 @@ async function seedShared(page: Page, status: NonNullable<ReturnType<typeof loca
     source: "sumit",
     idempotency_key: `shared-e2e:${stamp}`,
     category_id: materials?.id,
+    // A shared line can carry a project already, as the owner's did: the rest of the split shows it.
+    project_id: onProject ? projectIds[0] : null,
     description: supplier,
     user_assigned: false,
   }).select("id").single();
@@ -118,7 +122,7 @@ async function seedShared(page: Page, status: NonNullable<ReturnType<typeof loca
     window.localStorage.setItem(key, JSON.stringify(value));
   }, { key: `sb-${host}-auth-token`, value: stored });
 
-  return { admin, supplier, companyId, transactionId };
+  return { admin, supplier, companyId, transactionId, projectId: projectIds[0] ?? "" };
 }
 
 test("a shared expense's אישור opens the split, the split saves, and the review closes for good", async ({ page }) => {
@@ -159,4 +163,28 @@ test("a shared expense's אישור opens the split, the split saves, and the re
   expect(open.data).toEqual([]);
   await page.goto("/review");
   await expect(page.getByRole("heading", { name: supplier })).toHaveCount(0);
+});
+
+test("a shared expense on a project, with no part, is approved whole from the split (owner, 2026-10-26)", async ({ page }) => {
+  const status = localStatus();
+  test.skip(!status, "local Supabase is required for the real approve");
+  if (!status) return;
+  const { admin, supplier, companyId, transactionId, projectId } = await seedShared(page, status, true);
+
+  await page.goto("/review");
+  await expect(page.getByRole("heading", { name: supplier })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "אישור", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "פיצול", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "לאשר בלי פיצול" }).click();
+  await expect(page.getByText("אושר בלי פיצול")).toBeVisible();
+
+  const line = await admin.from("transactions").select("pnl_role, project_id").eq("id", transactionId).single();
+  expect(line.data).toEqual({ pnl_role: "project", project_id: projectId });
+  const closed = await admin.from("review_queue").select("status, reason").eq("transaction_id", transactionId);
+  expect(closed.data).toEqual([{ status: "changed", reason: "unallocated_shared" }]);
+  const synced = await admin.rpc("sync_review_queue", { p_company_id: companyId });
+  expect(synced.error, synced.error?.message).toBeNull();
+  const open = await admin.from("review_queue").select("id").eq("transaction_id", transactionId).eq("status", "open");
+  expect(open.data).toEqual([]);
 });

@@ -439,3 +439,26 @@ describe("split by category editor (FLOW-325)", () => {
   });
 });
 
+describe("a shared expense from לאישור", () => {
+  it("with no part, approves the whole line on the rest's project", async () => {
+    const approved: string[] = [];
+    const line = { ...SAMPLE_EXPENSE_LINE, projectId: "p-herz", projectName: "פרויקט הרצליה", sharedReview: true };
+    const api: LineSplitApi = { ...sampleSplitApi(line), approveWhole: (projectId) => { approved.push(projectId); return Promise.resolve(); } };
+    showEditor({ line, api, parts: [] });
+    expect(screen.queryByRole("button", { name: "שמירה" })).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "לאשר בלי פיצול" }));
+    await waitFor(() => { expect(approved).toEqual(["p-herz"]); });
+    expect(await screen.findByText("פרטי התנועה")).toBeInTheDocument();
+  });
+
+  it("asks for a project when the line has none, and a part brings back the split's save", async () => {
+    const line = { ...SAMPLE_EXPENSE_LINE, projectId: null, projectName: null, sharedReview: true };
+    const api: LineSplitApi = { ...sampleSplitApi(line), approveWhole: () => Promise.resolve() };
+    showEditor({ line, api, parts: [] });
+    expect(await screen.findByRole("button", { name: "לאשר בלי פיצול" })).toBeDisabled();
+    expect(screen.getByText("בחרו פרויקט לשאר, או הוסיפו חלק.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "חלק נוסף" }));
+    expect(await screen.findByRole("button", { name: /^שמירה|^שמירת הפיצול/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "לאשר בלי פיצול" })).toBeNull();
+  });
+});

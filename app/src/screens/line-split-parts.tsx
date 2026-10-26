@@ -27,6 +27,8 @@ export type LineInfo = {
   reviewBlocked: boolean;
   /** That open review's id, when known: לתור opens its card. */
   reviewId?: string | null;
+  /** A shared expense waiting in לאישור (unallocated_shared): with no part yet, it can be approved whole. */
+  sharedReview?: boolean;
   /** A loan split refuses a split by category (0104). */
   loanSplit: boolean;
   /** `in_pnl_override` true: the line's kept-out parts count, so a reversal part needs a project (0138). */
@@ -37,6 +39,8 @@ export type LineInfo = {
 export type LineSplitApi = {
   preview: (parts: PayloadPart[]) => Promise<ServerPart[]>;
   save: (parts: PayloadPart[]) => Promise<void>;
+  /** A shared expense approved with no split: the whole line on one project, which closes its review. */
+  approveWhole?: (projectId: string) => Promise<void>;
 };
 
 /** A part's share of the line as text: whole percents, one decimal below 1% so a small part never reads 0%. */
