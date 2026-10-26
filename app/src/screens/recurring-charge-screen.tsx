@@ -14,7 +14,7 @@ import { chargeKey, israelToday, type ScheduleRow } from "../recurring-schedule"
 import { Button } from "../ui/button";
 import { ChoiceSheet } from "../ui/choice-sheet";
 import { EmptyState } from "../ui/empty-state";
-import { PageLoadFailed, PageOfflineLine, useOnline } from "../ui/page-states";
+import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { DelayedSkeleton, ListSkeleton } from "../ui/skeleton";
 import { paceSheetCopy, paceToast, type PaceChoice } from "../ui/pace";
 import { PartyChargesHistory, PartyChargesSheet } from "../ui/related-charges";
@@ -161,7 +161,7 @@ function ChargeBody({
   const overridden = recurring?.override != null;
   const choice: PaceChoice = isRecurring ? pace : "never";
   const money = (minor: bigint) => formatAmountText(minor, currency);
-  const pick = useChargePick({ row, split: data.split, live, sample: data.picks });
+  const pick = useChargePick({ row, live, sample: data.picks });
   const project = pick.projectName ?? row.project_name ?? (row.category_name == null ? "ללא פרויקט" : `ללא פרויקט · ${row.category_name}`);
   const category = pick.categoryName ?? row.category_name ?? "ללא קטגוריה";
 
@@ -266,7 +266,7 @@ function ChargeBody({
           income={income && row.state === "arrived"}
           meta={metaOf(row, arrivedOn)}
         />
-        {offlineSince == null ? null : <PageOfflineLine since={offlineSince} />}
+        {offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />}
         {alert != null && alertText != null && !ignored ? (
           <ChargeBanner text={alertText} onIgnore={() => void ignore()} disabled={alert.key == null} />
         ) : null}

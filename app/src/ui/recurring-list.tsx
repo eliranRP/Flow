@@ -5,7 +5,7 @@ import { Avatar } from "./avatar";
 import { ClockIcon } from "./icons";
 import { cx } from "./cx";
 import { SectionHead } from "./layout";
-import { PageOfflineLine } from "./page-states";
+import { BandOfflineLine } from "./band-states";
 import { SwipeRow } from "./swipe-row";
 import "./css/39-recurring.css";
 import "./css/49-recurring-answers.css";
@@ -95,7 +95,7 @@ export function RecurringList({ project, subtitle, currency, outflow, inflow, la
         {project != null && <p className="t-sheet">{project}</p>}
         <p className="t-line2">{subtitle}</p>
       </header>
-      {offlineSince == null ? null : <PageOfflineLine since={offlineSince} />}
+      {offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />}
       <section className="ui-card ui-recurring-sums" aria-label="החודש">
         <MonthTakeaway outflow={outflow} inflow={inflow} money={money} />
         <MonthSum label="נכנס החודש" total={`+${money(inflow.total)}`} income done={inflow.got} whole={inflow.total} doneText={`התקבל ${money(inflow.got)}`} leftText={`עוד ${money(inflow.toCome)}`} />

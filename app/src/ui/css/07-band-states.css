@@ -1,4 +1,4 @@
-/* A band page's offline line, its failed read, and the review row's filled button (band-states.tsx). */
+/* A page's offline line, its failed read, and the review row's filled button (band-states.tsx). */
 
 /* The review time is the button's quiet part: 13/400, so the label holds one line at 320. */
 .ui-review-cta-time {
@@ -88,4 +88,57 @@
   min-block-size: var(--touch-min);
   color: var(--color-on-band);
   font-size: var(--type-line2-size);
+}
+
+/* The moment keeps its "מ־" on its line. */
+.ui-band-offline-time {
+  white-space: nowrap;
+}
+
+/* FLOW-963: on a page with no band (קבועים) the offline line is a card line, and the failure a card. */
+.ui-page-offline {
+  margin-top: var(--space-3);
+  border-radius: var(--radius-input);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+.ui-page-offline svg {
+  color: var(--color-text-secondary);
+}
+
+.ui-page-offline-retry {
+  flex: none;
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+}
+
+.ui-page-failed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding: var(--space-5) var(--space-4);
+  border-radius: var(--radius-card);
+}
+
+.ui-page-failed .ui-band-failed-icon {
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+}
+
+.ui-page-failed .ui-band-failed-body {
+  color: var(--color-text-secondary);
+}
+
+.ui-page-failed .ui-band-failed-retry {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.ui-page-failed .ui-band-failed-help {
+  color: var(--color-accent-text);
 }

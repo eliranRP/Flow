@@ -73,7 +73,8 @@ export function useChargePageData(direction: "income" | "expense", partyId: stri
   // The charge: the party's row in the project the link names, else its first (a link from before the split).
   const party = rows.filter((item) => item.party_id === partyId && item.direction === direction);
   const row = party.find((item) => item.project_id === projectId) ?? party[0];
-  const split = party.length > 1;
+  // Split by project in the charge's own currency: a party paid in two currencies is two charges, not a split.
+  const split = party.filter((item) => item.currency === row?.currency).length > 1;
   // The charge's own line, split or not: its switch is that charge's (decision 0188), so a stray bill in
   // another project is never the line the page writes to.
   const line = usePartyLineQuery(direction, partyId, row?.currency ?? "", row != null, row?.project_id ?? null);

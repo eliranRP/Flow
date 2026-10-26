@@ -11,7 +11,7 @@ import { chargeHref, comparable, dayMonth, endedText } from "../recurring-charge
 import { groupRecurring, monthInflow, monthOutflow, type RecurringLine } from "../recurring-layout";
 import { alertState, changePercentOf, daysBetween, isSplitParty, israelToday, rowId, type RecurringAlert, type ScheduleRow, scheduleLines, useRecurringScheduleQuery } from "../recurring-schedule";
 import { EmptyState } from "../ui/empty-state";
-import { PageLoadFailed, useOnline } from "../ui/page-states";
+import { PageLoadFailed, useOnline } from "../ui/band-states";
 import { type RecurringListGroup, type RecurringListRow, RecurringList } from "../ui/recurring-list";
 import { RecurringSkeleton } from "../ui/screen-skeletons";
 import { useToast } from "../ui/toast";

@@ -1,7 +1,7 @@
 // FLOW-963 (owner, 2026-10-26): the charge page's פרויקט and קטגוריה rows open a picker. A pick moves every
 // payment of the charge, the earlier ones too (reassign_recurring_charge), and the toast's ביטול puts them back.
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { RECURRING_KEYS } from "../pace-write";
 import { usePreviewSearch } from "../preview";
@@ -58,6 +58,16 @@ export function useChargePick({
   const search = usePreviewSearch();
   const [open, setOpen] = useState<ChargePickKind | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
+  // Where a split charge moved: the page follows once its sheet has closed, so the sheet's own history
+  // step is not left on top of the new address (as the pace sheet's not-recurring pick does).
+  const moveTo = useRef<string | null>(null);
+  useEffect(() => {
+    if (open == null && moveTo.current != null) {
+      const href = moveTo.current;
+      moveTo.current = null;
+      void navigate(href, { replace: true });
+    }
+  }, [open, navigate]);
   // A sample keeps the pick on screen; the app reads it back from the schedule.
   const [local, setLocal] = useState<{ project?: ChargePickChoice; category?: ChargePickChoice }>({});
   const dashboard = useDashboardQuery(live);
@@ -106,16 +116,16 @@ export function useChargePick({
         ? await reassignRecurringCharge(liveRpcClient(), { ...target, ...(pick.kind === "project" ? { project: pick.id } : { category: pick.id }) })
         : { changed: 1, skipped: 0, split: false, undoIds: [] };
       if (!live) setLocal((old) => ({ ...old, [pick.kind]: { id: pick.id, name: pick.name } }));
+      // A split charge's address names its project (decision 0185): the moved charge is the new project's.
+      if (live && result.split && pick.kind === "project" && result.changed > 0) {
+        moveTo.current = chargeHref(row.direction, row.party_id, search, pick.id);
+      }
       setSaving(null);
       pick.close();
       toast.show(recurringToast({
         message: chargePickToast(row.party_name, pick.name, result),
         ...(result.changed === 0 ? {} : { action: "ביטול", onAction: undoAction(pick, result) }),
       }));
-      // A split charge's address names its project (decision 0185): the moved charge is the new project's.
-      if (live && result.split && pick.kind === "project" && result.changed > 0) {
-        void navigate(chargeHref(row.direction, row.party_id, search, pick.id), { replace: true });
-      }
     },
   });
 

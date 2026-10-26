@@ -1,9 +1,9 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
 import { RECURRING_CHARGES_FIXTURE_WATER } from "../recurring-sample";
-import { chargePickToast } from "./recurring-charge-pick";
+import { chargePickToast, chargeUndoFailure } from "./recurring-charge-pick";
 import { RecurringChargeScreen } from "./recurring-charge-screen";
 
 // The page's reads and RPCs: the water bill, the company's projects and categories, and a fake client.
@@ -45,13 +45,26 @@ vi.mock("../use-books", async (original) => ({
 
 const NOW = new Date("2026-10-11T12:00:00Z");
 
+/** The address the page is on, shown under it so a test can read where a pick moved it. */
+function Where() {
+  const location = useLocation();
+  return <p data-testid="where">{location.pathname + location.search}</p>;
+}
+
 function renderPage() {
   return renderWithProviders(
     <Routes>
-      <Route path="/recurring/:direction/:partyId" element={<RecurringChargeScreen now={NOW} />} />
+      <Route path="/recurring/:direction/:partyId" element={<><RecurringChargeScreen now={NOW} /><Where /></>} />
     </Routes>,
     { route: "/recurring/expense/water" },
   );
+}
+
+/** The fake client's answer to a pick, and to its undo. */
+function answers(pick: Record<string, unknown>, undo: { data: null; error: unknown } = { data: null, error: null }) {
+  return vi.fn((name: string) => Promise.resolve(
+    name === "reassign_recurring_charge" ? { data: pick, error: null } : name === "undo_reassign_recurring_charge" ? undo : { data: null, error: null },
+  ));
 }
 
 function calls() {
@@ -59,11 +72,7 @@ function calls() {
 }
 
 beforeEach(() => {
-  state.client = {
-    rpc: vi.fn((name: string) => Promise.resolve(
-      name === "reassign_recurring_charge" ? { data: { changed: 3, skipped: 1, undo_ids: ["u1", "u2", "u3"] }, error: null } : { data: null, error: null },
-    )),
-  };
+  state.client = { rpc: answers({ changed: 3, skipped: 1, split: false, undo_ids: ["u1", "u2", "u3"] }) };
   state.data = { status: "ready", ...RECURRING_CHARGES_FIXTURE_WATER };
 });
 
@@ -89,15 +98,21 @@ describe("the charge page's pickers (FLOW-963)", () => {
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("radio", { name: "Cedar St" }));
     expect(await screen.findByText("Bayside Water Utility עבר לCedar St · תשלום אחד לא שונה")).toBeTruthy();
     expect(calls()).toContainEqual(["reassign_recurring_charge", {
-      p_direction: "expense", p_party_id: "water", p_currency: "USD", p_charge_project_id: null, p_project_id: "p-cedar", p_category_id: null,
+      p_direction: "expense", p_party_id: "water", p_currency: "USD", p_charge_project_id: "p-elm-row", p_project_id: "p-cedar", p_category_id: null,
     }]);
     expect(document.querySelector(".ui-toast-host")).toHaveAttribute("data-place", "top");
+    // One charge: the address stays.
+    expect(screen.getByTestId("where").textContent).toBe("/recurring/expense/water");
+    const undo = screen.getByRole("button", { name: "ביטול" });
     act(() => {
-      fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+      // A second tap while the undo runs sends nothing.
+      fireEvent.click(undo);
+      fireEvent.click(undo);
     });
     await waitFor(() => {
       expect(calls()).toContainEqual(["undo_reassign_recurring_charge", { p_undo_ids: ["u1", "u2", "u3"] }]);
     });
+    expect(calls().filter(([name]) => name === "undo_reassign_recurring_charge")).toHaveLength(1);
   });
 
   it("a category pick names the category and keeps the project", async () => {
@@ -106,19 +121,41 @@ describe("the charge page's pickers (FLOW-963)", () => {
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("radio", { name: "אחזקה" }));
     await waitFor(() => {
       expect(calls()).toContainEqual(["reassign_recurring_charge", {
-        p_direction: "expense", p_party_id: "water", p_currency: "USD", p_charge_project_id: null, p_project_id: null, p_category_id: "c-repair",
+        p_direction: "expense", p_party_id: "water", p_currency: "USD", p_charge_project_id: "p-elm-row", p_project_id: null, p_category_id: "c-repair",
       }]);
     });
   });
 
-  it("a party split by project names this charge's project", async () => {
-    state.data = { status: "ready", ...RECURRING_CHARGES_FIXTURE_WATER, split: true };
+  it("a project pick on a split charge moves the page to the charge's new address, and ביטול still works there", async () => {
+    state.client = { rpc: answers({ changed: 2, skipped: 0, split: true, undo_ids: ["u1", "u2"] }) };
     renderPage();
     fireEvent.click(screen.getByRole("button", { name: "פרויקט Elm Row" }));
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("radio", { name: "Cedar St" }));
+    expect(await screen.findByText("Bayside Water Utility עבר לCedar St")).toBeTruthy();
     await waitFor(() => {
-      expect(calls()).toContainEqual(["reassign_recurring_charge", expect.objectContaining({ p_charge_project_id: "p-elm-row", p_project_id: "p-cedar" })]);
+      expect(screen.getByTestId("where").textContent).toBe("/recurring/expense/water?project=p-cedar");
     });
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    });
+    await waitFor(() => {
+      expect(calls()).toContainEqual(["undo_reassign_recurring_charge", { p_undo_ids: ["u1", "u2"] }]);
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("where").textContent).toBe("/recurring/expense/water?project=p-elm-row");
+    });
+  });
+
+  it("an undo refused because a payment changed since says so", async () => {
+    state.client = { rpc: answers({ changed: 3, skipped: 0, split: false, undo_ids: ["u1"] }, { data: null, error: { message: "conflict" } }) };
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "פרויקט Elm Row" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("radio", { name: "Cedar St" }));
+    const undo = await screen.findByRole("button", { name: "ביטול" });
+    act(() => {
+      fireEvent.click(undo);
+    });
+    expect(await screen.findByText("תשלום השתנה מאז, אז הביטול לא בוצע.")).toBeTruthy();
   });
 
   it("a refused pick says so and changes nothing on the page", async () => {
@@ -137,5 +174,10 @@ describe("chargePickToast", () => {
     expect(chargePickToast("Water", "Cedar St", { changed: 3, skipped: 0 })).toBe("Water עבר לCedar St");
     expect(chargePickToast("Water", "Cedar St", { changed: 3, skipped: 2 })).toBe("Water עבר לCedar St · 2 תשלומים לא שונו");
     expect(chargePickToast("Water", "Cedar St", { changed: 0, skipped: 2 })).toBe("לא היה מה לשנות");
+  });
+
+  it("tells a conflict from another failure", () => {
+    expect(chargeUndoFailure({ message: "conflict" })).toBe("תשלום השתנה מאז, אז הביטול לא בוצע.");
+    expect(chargeUndoFailure(new Error("network"))).toBe("לא הצלחנו לבטל.");
   });
 });
