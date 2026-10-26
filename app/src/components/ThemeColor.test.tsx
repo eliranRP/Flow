@@ -17,6 +17,7 @@ beforeEach(() => {
 afterEach(() => {
   meta.remove();
   document.documentElement.removeAttribute("data-theme");
+  delete document.documentElement.dataset.band;
 });
 
 describe("ThemeColor", () => {
@@ -42,5 +43,31 @@ describe("ThemeColor", () => {
       expect(meta.content).toBe("#F6F4FA");
     });
     expect(meta.content).not.toBe("");
+  });
+
+  it("keeps the band colour on Home's failed load, where Home marks its band on (FLOW-958)", async () => {
+    document.documentElement.dataset.theme = "light";
+    document.documentElement.dataset.band = "on";
+    render(
+      <MemoryRouter initialEntries={["/?preview=error-server"]}>
+        <ThemeColor />
+      </MemoryRouter>,
+    );
+    await waitFor(() => {
+      expect(meta.content).toBe(getComputedStyle(document.documentElement).getPropertyValue("--color-band").trim());
+    });
+    expect(meta.content).not.toBe("#F6F4FA");
+  });
+
+  it("uses the page background for a failing preview where no band is marked on", async () => {
+    document.documentElement.dataset.theme = "light";
+    render(
+      <MemoryRouter initialEntries={["/projects/a?preview=error"]}>
+        <ThemeColor />
+      </MemoryRouter>,
+    );
+    await waitFor(() => {
+      expect(meta.content).toBe("#F6F4FA");
+    });
   });
 });

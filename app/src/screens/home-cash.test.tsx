@@ -1,4 +1,5 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { onlineManager } from "@tanstack/react-query";
 import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { shiftMonthKey } from "../period";
@@ -131,6 +132,26 @@ describe("Home's cash (FLOW-364: the redesigned Home)", () => {
     expect(screen.queryByRole("heading", { name: "חודשים קודמים" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "לכל החודשים" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "לכל הקבועים" })).not.toBeInTheDocument();
+  });
+
+  it("says in the band which moment the figures are from when the network drops (FLOW-958)", async () => {
+    wrap();
+    await screen.findByText("תזרים · עד היום");
+    expect(document.querySelector(".ui-home-offline")).toBeNull();
+    try {
+      act(() => {
+        onlineManager.setOnline(false);
+      });
+      expect(await screen.findByText(/אין חיבור · מוצג המצב מ־/)).toBeInTheDocument();
+      expect(within(bandOf()).getByText("₪3,200")).toBeInTheDocument();
+    } finally {
+      act(() => {
+        onlineManager.setOnline(true);
+      });
+    }
+    await waitFor(() => {
+      expect(document.querySelector(".ui-home-offline")).toBeNull();
+    });
   });
 
   it("reads a past month in the darker band, with a way back to the current month", async () => {

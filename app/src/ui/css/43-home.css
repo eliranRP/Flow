@@ -176,9 +176,11 @@
   -webkit-line-clamp: unset;
 }
 
-/* A cut never falls inside an amount, so a clipped hint never shows a shorter, believable number. */
+/* A cut never falls inside an amount, so a clipped hint never shows a shorter, believable number.
+   FLOW-958: the amount is tabular, as every amount on Home is. */
 .ui-home-attention :is(.ui-banner, .ui-banner-row) .ui-row-hint bdi {
   display: inline-block;
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 .ui-home-attention-title {
