@@ -1,5 +1,5 @@
 import { type CashCurrencyRow } from "@flow/shared";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AttentionBox, ForecastRow, HomeFigures, homeMonthLabel, HomeMonthPill, SplitCard, splitTakeaway, type HomeFigureRows } from "./home-parts";

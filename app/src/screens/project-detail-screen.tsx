@@ -24,7 +24,6 @@ import { BandLoadFailed, useOnline } from "../ui/band-states";
 import { IconButton } from "../ui/icon-button";
 import { DocumentIcon, MoreIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
-import { Button } from "../ui/button";
 import { FocusTitle } from "../ui/focus-title";
 import { ScreenHeader } from "../ui/screen-header";
 import { Sheet } from "../ui/sheet";

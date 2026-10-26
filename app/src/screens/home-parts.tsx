@@ -1,6 +1,5 @@
 import type { CashCurrencyRow } from "@flow/shared";
 import { formatAmountText } from "@flow/shared";
-import type { ReactNode } from "react";
 import { addTriggerRef } from "../add-trigger";
 import { Link } from "react-router-dom";
 import { cashLinesPath, notInProfitHint } from "../cash";
@@ -11,18 +10,16 @@ import { useAllowAdd } from "../use-allow-add";
 import { Amount } from "../ui/amount";
 import { BannerRows, type BannerRow } from "../ui/banner";
 import { ReviewButton } from "../ui/band-states";
-import { Button } from "../ui/button";
 import { ChangePill } from "../ui/change-pill";
 import { CompactBar } from "../ui/compact-bar";
 import { cx } from "../ui/cx";
 import { HEBREW_MONTHS } from "../ui/date-math";
 import { IconButton } from "../ui/icon-button";
 import { SEARCH_FOCUS_STATE } from "../ui/search-entry";
-import { AlertIcon, ChevronDownIcon, ChevronIcon, OutwardChevron, PersonIcon, PlusIcon, SearchIcon } from "../ui/icons";
+import { ChevronDownIcon, ChevronIcon, OutwardChevron, PersonIcon, PlusIcon, SearchIcon } from "../ui/icons";
 import { MonthStepper } from "../ui/month-stepper";
 import { PartsBar } from "../ui/parts-bar";
 import { PeriodSwipe } from "../ui/period-swipe";
-import { TopBand } from "../ui/top-band";
 
 /**
  * FLOW-364: Home's band, figures, split card, forecast, attention box and compact bar. The pure
