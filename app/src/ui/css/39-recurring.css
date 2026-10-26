@@ -78,6 +78,13 @@
   color: var(--color-income);
 }
 
+/* On a 320 phone two 32px totals side by side do not fit ("+$5,600"): the card's 28px. */
+@media (max-width: 359px) {
+  .ui-recurring-sum-total {
+    font-size: var(--type-card-size);
+  }
+}
+
 .ui-recurring-sum-note {
   display: flex;
   flex-direction: column;

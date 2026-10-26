@@ -168,16 +168,6 @@
   border-radius: var(--radius-card-tight);
 }
 
-/* The history block on this page: the board's own line heights, 12px between title and line. */
-.ui-charge-recurring .ui-charges-title {
-  margin: 0;
-  line-height: calc(var(--type-title-line) - 0.015);
-}
-
-.ui-charge-recurring .ui-charges-line {
-  line-height: calc(var(--type-title-line) - 0.015);
-}
-
 .ui-charge-rec {
   display: flex;
   width: 100%;
