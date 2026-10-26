@@ -1,11 +1,10 @@
 import { formatAmountText, type CashCurrencyRow } from "@flow/shared";
-import type { KeyboardEvent } from "react";
 import { type CashListSide, notInProfitMinor, notInProfitRest } from "../cash";
 import { Amount } from "../ui/amount";
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 import { DocumentIcon } from "../ui/icons";
-import { onRadioArrow, SegmentedControl } from "../ui/segmented-control";
+import { SegmentedControl } from "../ui/segmented-control";
 import { Skeleton } from "../ui/skeleton";
 
 /**
@@ -131,41 +130,4 @@ export function LinesCount({
   const parts = [summary.count === 1 ? "תנועה אחת" : `${String(summary.count)} תנועות`];
   if (summary.notInProfit > 0n) parts.push(`${formatAmountText(summary.notInProfit, currency)} לא נספרים ברווח`);
   return <p className="t-line2 ui-lines-count">{parts.join(" • ")}</p>;
-}
-
-/**
- * FLOW-965: the order chips are one choice, a radio group: arrow keys move the choice and the focus, and only the
- * chosen chip is a tab stop (the segmented control's pattern).
- */
-export function LinesOrderChips<T extends string>({ value, options, onChange }: { value: T; options: ReadonlyArray<{ value: T; label: string }>; onChange: (next: T) => void }) {
-  // The arrows are the shared radiogroup's (FLOW-966); Home and End jump to the first and the last order.
-  function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key !== "Home" && event.key !== "End") {
-      onRadioArrow(event);
-      return;
-    }
-    const radios = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')];
-    const target = event.key === "Home" ? radios[0] : radios.at(-1);
-    if (!target) return;
-    event.preventDefault();
-    target.focus();
-    target.click();
-  }
-  return (
-    <div className="ui-lines-chips" role="radiogroup" aria-label="סדר" onKeyDown={onKeyDown}>
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          className="ui-chip ui-chip-choice"
-          role="radio"
-          aria-checked={option.value === value}
-          tabIndex={option.value === value ? 0 : -1}
-          onClick={() => { onChange(option.value); }}
-        >
-          <span className="ui-chip-label" data-clip-ok="">{option.label}</span>
-        </button>
-      ))}
-    </div>
-  );
 }

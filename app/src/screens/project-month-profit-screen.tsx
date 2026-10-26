@@ -12,7 +12,7 @@ import { useProjectCashMonthLinesQuery } from "../project-cash";
 import { useProjectQuery } from "../use-books";
 import { Amount } from "../ui/amount";
 import { Card } from "../ui/card";
-import { Chip } from "../ui/chip";
+import { OrderChips } from "../ui/order-chips";
 import { formatDayMonth, israelToday } from "../ui/date-math";
 import { List } from "../ui/list-row";
 import { ProfitSkeleton } from "../ui/screen-skeletons";
@@ -22,10 +22,10 @@ import { SummaryRow } from "./profit-summary";
 
 export type ProjectMonthProfitSample = { project: NonNullable<ProjectDetail>; month: string; lines: CashLine[] };
 
-const ORDERS: readonly { key: LinesOrder; label: string }[] = [
-  { key: "date", label: "לפי תאריך" },
-  { key: "amount", label: "לפי סכום" },
-  { key: "category", label: "לפי קטגוריה" },
+const ORDERS: readonly { value: LinesOrder; label: string }[] = [
+  { value: "date", label: "לפי תאריך" },
+  { value: "amount", label: "לפי סכום" },
+  { value: "category", label: "לפי קטגוריה" },
 ];
 
 /**
@@ -101,11 +101,7 @@ export function ProjectMonthProfitScreen({ sample }: { sample?: ProjectMonthProf
               <SummaryRow strong label="רווח אחרי הוצאות כלליות" value={<Amount agorot={after} currency={currency} loss={after < 0n} />} />
             )}
           </Card>
-          <div role="group" aria-label="סידור" className="ui-pp-chips">
-            {ORDERS.map((option) => (
-              <Chip key={option.key} pressed={order === option.key} onClick={() => { setOrder(option.key); }}>{option.label}</Chip>
-            ))}
-          </div>
+          <OrderChips className="ui-pp-chips" label="סידור" value={order} options={ORDERS} onChange={setOrder} />
           {counted.length === 0 ? <p className="ui-pp-note t-caption t-muted">אין תנועות בחודש הזה.</p> : null}
           {order === "category" ? <MonthCategories lines={counted} currency={currency} search={search} /> : groups.map((group) => (
             <section key={group.key} className="ui-lines-group" aria-label={group.title}>

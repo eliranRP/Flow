@@ -100,6 +100,28 @@ export function cashTakeaway(history: ChartHistory, currency: string): string | 
     : `${name}: נכנס ${formatAmountText(diff, currency)} יותר משיצא`;
 }
 
+/**
+ * FLOW-969 (owner card, 2026-10-26): a profit chart's title says what its bars show, across the pairs drawn
+ * (the forecast is left out): the one pair where more went out than came in ("ספטמבר היה החודש היחיד שבו יצא
+ * יותר משנכנס"), how many there were ("2 חודשים יצא יותר משנכנס"), or none ("בכל חודש נכנס יותר משיצא").
+ * `unit` names the pairs: months on the month and year charts, years since the start. Null with no pairs.
+ */
+export function profitTakeaway(pairs: readonly ChartMonth[], unit: "month" | "year" = "month"): string | null {
+  // Nothing in or out yet: no bars to sum up, so the kind's title stays.
+  if (pairs.every((pair) => pair.incomeMinor === 0n && pair.expenseMinor === 0n)) return null;
+  const losses = pairs.filter((pair) => pair.expenseMinor > pair.incomeMinor);
+  const name = (pair: ChartMonth) => (unit === "month" ? monthWord(pair.key) : pair.key);
+  const [only] = losses;
+  if (losses.length === 1 && only != null) {
+    return unit === "month" ? `${name(only)} היה החודש היחיד שבו יצא יותר משנכנס` : `${name(only)} הייתה השנה היחידה שבה יצא יותר משנכנס`;
+  }
+  if (losses.length > 1) {
+    if (losses.length === pairs.length) return unit === "month" ? "בכל חודש יצא יותר משנכנס" : "בכל שנה יצא יותר משנכנס";
+    return unit === "month" ? `${String(losses.length)} חודשים יצא יותר משנכנס` : `${String(losses.length)} שנים יצא יותר משנכנס`;
+  }
+  return unit === "month" ? "בכל חודש נכנס יותר משיצא" : "בכל שנה נכנס יותר משיצא";
+}
+
 /** A company category as the income caption reads it: its name, and its parent's id when it has one. */
 export type RentCategory = { id: string; name: string; parent_id?: string | null };
 

@@ -5,11 +5,11 @@ import type { OverheadProject } from "../overhead-project";
 import { allTimeYearRows, yearMonthRows, yearProjectRows, yearRowMeta, type ProjectStatus, type YearRow } from "../company-year-rows";
 import { allTimeChart, allTimeSub, allTimeSummaryRows, allTimeTotals, yearChart, yearSub, yearSummaryRows, type CompanyYears, type YearFigures } from "../company-years";
 import type { Breakdown } from "@flow/shared";
-import type { RentCategory } from "../next-month-chart";
+import { profitTakeaway, type RentCategory } from "../next-month-chart";
 import { Amount } from "../ui/amount";
 import { Button } from "../ui/button";
-import { Chip } from "../ui/chip";
 import { List } from "../ui/list-row";
+import { OrderChips } from "../ui/order-chips";
 import { ForecastCard, MonthChart } from "../ui/month-forecast";
 import { NextMonthCardSkeleton, ProfitRowsSkeleton } from "../ui/screen-skeletons";
 import { DelayedSkeleton } from "../ui/skeleton";
@@ -127,13 +127,7 @@ function YearForecast({ year, input }: { year: YearFigures; input: PeriodViewInp
 function yearView(input: PeriodViewInput, year: YearFigures): PeriodView {
   const rest = year.current && !input.restLoading ? input.rest : null;
   const chart = yearChart(year, rest, rest == null ? "" : restMonthsCaption(rest));
-  const chips = (
-    <div className="ui-cp-chips" role="group" aria-label="סידור">
-      {YEAR_LISTS.map((option) => (
-        <Chip key={option.value} pressed={input.list === option.value} onClick={() => { input.onList(option.value); }}>{option.label}</Chip>
-      ))}
-    </div>
-  );
+  const chips = <OrderChips className="ui-cp-chips" label="סידור" value={input.list} options={YEAR_LISTS} onChange={input.onList} />;
   let body: ReactNode;
   if (input.list === "project") {
     const projectRows = yearProjectRows(input.projects.breakdowns, input.currency, input.projects.statuses, input.projects.overhead);
@@ -159,7 +153,7 @@ function yearView(input: PeriodViewInput, year: YearFigures): PeriodView {
         <CompanySummaryCard rows={yearSummaryRows(input.data, year)} currency={input.currency} />
         <div className="ui-fc-block">
           {year.current ? <YearForecast year={year} input={input} /> : null}
-          <MonthChart kind="profit" history={chart.history} forecast={chart.forecast} sub={chart.sub} label={chart.label} />
+          <MonthChart kind="profit" history={chart.history} forecast={chart.forecast} sub={chart.sub} label={chart.label} takeaway={profitTakeaway(chart.history)} />
         </div>
       </>
     ),
@@ -181,7 +175,7 @@ function allTimeView(input: PeriodViewInput): PeriodView {
         <Figure minor={totals.profitMinor} currency={input.currency} />
         <CompanySummaryCard rows={allTimeSummaryRows(input.data)} currency={input.currency} />
         <div className="ui-fc-block">
-          <MonthChart kind="profit" title="הכנסות והוצאות לפי שנה" history={chart.months} forecast={null} sub={chart.sub} label={chart.label} />
+          <MonthChart kind="profit" title="הכנסות והוצאות לפי שנה" history={chart.months} forecast={null} sub={chart.sub} label={chart.label} takeaway={profitTakeaway(chart.months, "year")} />
         </div>
       </>
     ),

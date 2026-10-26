@@ -2,7 +2,7 @@ import type { ProfitMonths } from "@flow/shared";
 import { cashMonthName } from "../cash";
 import { companyExpenseNote, companyForecastCaption, companyIncomeNote, type CompanyNextMonth } from "../company-next-month";
 import { CHART_MONTHS } from "../month-figures";
-import { chartHistory, chartLabel, chartSub, forecastChartMonth, profitMonthFigures, type RentCategory } from "../next-month-chart";
+import { chartHistory, chartLabel, chartSub, forecastChartMonth, profitMonthFigures, profitTakeaway, type RentCategory } from "../next-month-chart";
 import { shiftMonthKey } from "../period";
 import { ForecastCard, MonthChart } from "../ui/month-forecast";
 import { NextMonthCardSkeleton } from "../ui/screen-skeletons";
@@ -64,6 +64,7 @@ export function CompanyNextMonthBlock({
           forecast={loading ? null : ahead}
           sub={chartSub(history, !loading && ahead != null)}
           label={chartLabel(history, loading ? null : ahead, currency, "profit", "הכנסות והוצאות של החברה")}
+          takeaway={profitTakeaway(history.months)}
         />
       )}
     </div>

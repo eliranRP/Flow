@@ -39,7 +39,8 @@ import { SegmentedControl } from "../ui/segmented-control";
 import { SplitPartsHint } from "../ui/split-parts-hint";
 import { txnListState } from "../txn-nav";
 import { reviewItems, reviewMinutes } from "../weekly-summary";
-import { CashCurrencySwitch, CashLinesEmpty, CashLinesHead, LinesCount, LinesOrderChips, LinesTotal, cashLinesFigures } from "./cash-lines-parts";
+import { OrderChips } from "../ui/order-chips";
+import { CashCurrencySwitch, CashLinesEmpty, CashLinesHead, LinesCount, LinesTotal, cashLinesFigures } from "./cash-lines-parts";
 
 /**
  * FLOW-366. The lines behind one month's נכנס or יצא (or FLOW-418 the cash profit leaves out), in
@@ -180,7 +181,8 @@ function CashLinesBody({
     />
   );
   const chips = (
-    <LinesOrderChips
+    <OrderChips
+      className="ui-lines-chips"
       value={order}
       options={ORDER_OPTIONS}
       onChange={(value) => {

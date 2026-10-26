@@ -16,7 +16,7 @@ import { Amount } from "../ui/amount";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { EmptyState, FailureLine } from "../ui/empty-state";
-import { Chip } from "../ui/chip";
+import { OrderChips } from "../ui/order-chips";
 import { HEBREW_MONTHS } from "../ui/date-math";
 import { BarsIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
@@ -27,6 +27,11 @@ import { NextMonthBlock } from "./next-month-block";
 import { SummaryRow } from "./profit-summary";
 
 export type ProjectProfitSample = { project: NonNullable<ProjectDetail>; months: NonNullable<ProfitMonths>; next?: NextMonthSample };
+
+const PROJECT_ORDERS = [
+  { value: "month", label: "לפי חודש" },
+  { value: "category", label: "לפי קטגוריה" },
+] as const;
 
 const NOTE = "ההוצאות הכלליות מתחלקות בין הפרויקטים לפי ההכנסות שלהם. ככה רואים אם הנכס באמת מרוויח.";
 
@@ -166,10 +171,7 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
             )}
           </Card>
           {after == null ? null : <p className="ui-pp-note t-caption t-muted">{NOTE}</p>}
-          <div role="group" aria-label="סידור" className="ui-pp-chips">
-            <Chip pressed={by === "month"} onClick={() => { setBy("month"); }}>לפי חודש</Chip>
-            <Chip pressed={by === "category"} onClick={() => { setBy("category"); }}>לפי קטגוריה</Chip>
-          </div>
+          <OrderChips className="ui-pp-chips" label="סידור" value={by} options={PROJECT_ORDERS} onChange={setBy} />
           {by === "category" ? (
             <CategoryBars
               rows={categories}
@@ -188,6 +190,7 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
                 firstMonth={oldest ?? null}
                 currency={currency}
                 kind="profit"
+                takeaway
                 cardHref={`/projects/${id}/profit/next${search}`}
                 categories={nextMonth.categories}
                 today={nextMonth.today}

@@ -11,7 +11,7 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { HEBREW_MONTHS, israelToday } from "../ui/date-math";
 import { Amount } from "../ui/amount";
-import { Chip } from "../ui/chip";
+import { OrderChips } from "../ui/order-chips";
 import { List, ListRow } from "../ui/list-row";
 import type { ScreenPhase } from "../ui/screen-phase";
 import { ScreenHeader } from "../ui/screen-header";
@@ -201,13 +201,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
     onOpen: (opens) => { setParams(opens.kind === "month" ? { period: null, year: null, list: null, month: null } : { period: "year", year: opens.year === currentYear ? null : opens.year, list: null }); },
     projectHref: (projectId) => projectProfitPath(projectId, search),
   });
-  const chips = (
-    <div className="ui-cp-chips" role="group" aria-label="סידור">
-      {ORDERS.map((option) => (
-        <Chip key={option.value} pressed={by === option.value} onClick={() => { setBy(option.value); }}>{option.label}</Chip>
-      ))}
-    </div>
-  );
+  const chips = <OrderChips className="ui-cp-chips" label="סידור" value={by} options={ORDERS} onChange={setBy} />;
   const basisFooter = (
     <>
       <p className="ui-cp-foot t-caption t-muted">לא נספר ברווח: נכסים והתחייבויות, כמו קנייה של נכס, הלוואה, קרן ואסקרו. הם נשארים בספר ובתזרים, לא ברווח.</p>
