@@ -434,13 +434,13 @@ Undo `kind: "document_attach"` takes the line id and puts the document list back
 
 ## Notes and files on a line · FLOW-957
 
-What the transaction page's הערות וקבצים and the approval card's לפני שמאשרים show and do. Files are uploaded in the app only (the assistant has no file bytes to send): MCP reads them and removes its own.
+What the transaction page's הערה וקבצים and the approval card's לפני שמאשרים show and do. A line holds one note (owner, 2026-10-26): Mercury's note when the line has one, else the note written in Flow; files are many. Files are uploaded in the app only (the assistant has no file bytes to send): MCP reads them and removes its own.
 
 ### get_transaction_thread
 
 `get_transaction_thread(p_transaction_id)`. Input: `{ "transaction_id": "<line id>" }`.
 
-Output `data`: `transaction_id`, `company_id`, `notes[]` and `files[]`, oldest first. A note: `id`, `source` (`flow`: written in Flow; `mercury`: the line's note in Mercury, at most one, whole, brought in by each Mercury sync), `body` (up to 5000 characters), `mine`, `created_at`, `updated_at`, `edited`, `edited_in_flow` (Mercury's note was edited in Flow: the edit stays in Flow, Mercury keeps its own text, and syncs no longer replace it). A file: `id`, `note_id` (the note it came with, or null), `source` (`flow`, or `mercury`: an attachment copied from Mercury, whose own links expire), `file_name`, `mime` (a picture or `application/pdf`), `bytes`, `path` (in Flow's private `transaction-files` storage), `mine`, `created_at`. Removed notes and files are left out. A line of another company is `not_found`.
+Output `data`: `transaction_id`, `company_id`, `notes[]` (at most one) and `files[]`, oldest first. A note: `id`, `source` (`flow`: written in Flow; `mercury`: the line's note in Mercury, whole, brought in by a Mercury sync while the line has no note written in Flow), `body` (up to 5000 characters), `mine`, `created_at`, `updated_at`, `edited`, `edited_in_flow` (Mercury's note was edited in Flow: the edit stays in Flow, Mercury keeps its own text, and syncs no longer replace it). A file: `id`, `note_id` (the note it came with, or null), `source` (`flow`, or `mercury`: an attachment copied from Mercury, whose own links expire), `file_name`, `mime` (a picture or `application/pdf`), `bytes`, `path` (in Flow's private `transaction-files` storage), `mine`, `created_at`. Removed notes and files are left out. A line of another company is `not_found`.
 
 ### add_transaction_note
 
@@ -448,7 +448,7 @@ Output `data`: `transaction_id`, `company_id`, `notes[]` and `files[]`, oldest f
 { "idempotency_key": "note-1", "transaction_id": "<line id>", "body": "Paid in two parts" }
 ```
 
-Owner or editor. `body` is 1 to 5000 characters, trimmed. Output `data`: `{ "id", "transaction_id", "undo_kind": "note_add" }`. Undo `kind: "note_add"` takes the note id and removes the note while it still has this text; otherwise `conflict`.
+Owner or editor, on a line with no note yet: a line that has one is `refused` with `line has a note` (use `edit_transaction_note`). `body` is 1 to 5000 characters, trimmed. Output `data`: `{ "id", "transaction_id", "undo_kind": "note_add" }`. Undo `kind: "note_add"` takes the note id and removes the note while it still has this text; otherwise `conflict`.
 
 ### edit_transaction_note
 
@@ -456,7 +456,7 @@ Owner or editor. `body` is 1 to 5000 characters, trimmed. Output `data`: `{ "id"
 { "idempotency_key": "note-2", "note_id": "<note id>", "body": "Lumber for back deck, phase 2" }
 ```
 
-Owner or editor: a note this user wrote, or the line's Mercury note. An edit of Mercury's note stays in Flow (owner, 2026-10-25): nothing is sent to Mercury, and from then on a sync no longer replaces or removes it (`edited_in_flow`). Output `data`: `{ "id", "source", "undo_kind": "note_edit" }`. Undo `kind: "note_edit"` takes the note id and puts the text back while it is still this write's.
+Owner or editor: the line's note, whoever wrote it, or Mercury's. An edit of Mercury's note stays in Flow (owner, 2026-10-25): nothing is sent to Mercury, and from then on a sync no longer replaces or removes it (`edited_in_flow`). Output `data`: `{ "id", "source", "undo_kind": "note_edit" }`. Undo `kind: "note_edit"` takes the note id and puts the text back while it is still this write's.
 
 ### remove_transaction_note
 
@@ -464,7 +464,7 @@ Owner or editor: a note this user wrote, or the line's Mercury note. An edit of 
 { "idempotency_key": "note-3", "note_id": "<note id>" }
 ```
 
-A note this user wrote. Mercury's note is edited, not removed. Files attached with it stay on the line. Output `data`: `{ "id", "transaction_id", "undo_kind": "note_remove" }`. Undo `kind: "note_remove"` takes the note id and brings it back.
+Owner or editor: the line's note written in Flow. Mercury's note is edited, not removed. Files attached with it stay on the line. Output `data`: `{ "id", "transaction_id", "undo_kind": "note_remove" }`. Undo `kind: "note_remove"` takes the note id and brings it back.
 
 ### remove_transaction_file
 

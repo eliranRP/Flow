@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(44);
+select plan(46);
 
 select tests.create_supabase_user('th_owner', 'th-owner@example.com');
 select tests.create_supabase_user('th_other', 'th-other@example.com');
@@ -34,10 +34,13 @@ insert into th (label, id) values
     p_currency => 'USD', p_source => 'mercury')),
   ('quiet', tests.fixture_line(pg_temp.id('co'), 'th:quiet', 5000, 'expense', null, null, '2026-10-12',
     p_currency => 'USD', p_source => 'mercury')),
+  ('mline', tests.fixture_line(pg_temp.id('co'), 'th:mline', 7000, 'expense', null, null, '2026-10-12',
+    p_currency => 'USD', p_source => 'mercury')),
   ('other_line', tests.fixture_line(pg_temp.id('other'), 'th:other', 900, 'expense', null, null, '2026-10-12',
     p_currency => 'USD', p_source => 'mercury'));
 update public.transactions set external_id = 'merc-1' where id = pg_temp.id('line');
 update public.transactions set external_id = 'merc-2' where id = pg_temp.id('quiet');
+update public.transactions set external_id = 'merc-3' where id = pg_temp.id('mline');
 update public.transactions set external_id = 'merc-1' where id = pg_temp.id('other_line');
 
 -- MCP write tokens for each owner.
@@ -80,7 +83,7 @@ select ok(not has_table_privilege('authenticated', 'public.transaction_files', '
   'files are read through the RPCs only');
 select is((select public from storage.buckets where id = 'transaction-files'), false, 'the bucket is private');
 
--- 4-9. The app: a note, its thread, and an edit.
+-- 4-10. The app: a note, its thread, and an edit.
 select tests.authenticate_as('th_owner');
 insert into th (label, id) values ('n1', public.add_transaction_note(pg_temp.id('line'), '  Check against the quote  '));
 select is(jsonb_array_length(public.get_transaction_thread(pg_temp.id('line'))->'notes'), 1, 'the thread holds the note');
@@ -91,17 +94,19 @@ select throws_ok($$ select public.add_transaction_note(pg_temp.id('line'), '   '
   'an empty note is refused');
 select throws_ok($$ select public.add_transaction_note(pg_temp.id('other_line'), 'Not mine') $$, 'line not found',
   'a note on another company''s line is refused');
+select throws_ok($$ select public.add_transaction_note(pg_temp.id('line'), 'A second note') $$, 'line has a note',
+  'a line holds one note: a second is refused');
 select is(public.edit_transaction_note(pg_temp.id('n1'), 'Check against the second quote')->>'before',
   'Check against the quote', 'an edit returns the text before');
 
--- 10-12. Another company sees nothing and changes nothing.
+-- 11-13. Another company sees nothing and changes nothing.
 select tests.authenticate_as('th_other');
 select is(public.get_transaction_thread(pg_temp.id('line')), null, 'another company reads no thread');
 select throws_ok($$ select public.edit_transaction_note(pg_temp.id('n1'), 'Taken over') $$, 'note not found',
   'another company cannot edit the note');
 select is(public.transaction_thread_counts(array[pg_temp.id('line')]), '{}'::jsonb, 'another company counts nothing');
 
--- 13-18. A file: uploaded to <company>/<line>/..., then recorded. The bucket's rules: the company's
+-- 14-19. A file: uploaded to <company>/<line>/..., then recorded. The bucket's rules: the company's
 -- own folder and one of its lines only.
 reset role;
 insert into storage.objects (bucket_id, name, owner)
@@ -133,28 +138,31 @@ select throws_ok(
     pg_temp.id('other')::text || '/' || pg_temp.id('other_line')::text || '/photo-3.jpg'),
   '42501', null, 'a writer cannot upload under another company');
 
--- 19-20. Counts for the approval card.
+-- 20-21. Counts for the approval card.
 select is(public.transaction_thread_counts(array[pg_temp.id('line'), pg_temp.id('quiet')]),
   jsonb_build_object(pg_temp.id('line')::text, jsonb_build_object('notes', 1, 'files', 1)),
   'the line with a note and a file is counted; the quiet line is left out');
 select is((select count(*)::int from storage.objects where bucket_id = 'transaction-files'
   and name like pg_temp.id('other')::text || '/%'), 0, 'the writer reads none of another company''s files');
 
--- 21-27. Mercury: the sync brings the note and lists the attachments not copied yet.
+-- 22-30. Mercury: the sync brings the note and lists the attachments not copied yet.
 select tests.authenticate_as('th_owner');
 select throws_ok($$ select public.sync_mercury_threads(pg_temp.id('co'), '[]'::jsonb) $$, '42501', null,
   'only the sync writes Mercury''s threads');
 select pg_temp.as_service();
 insert into th_out (label, body) values ('sync1', public.sync_mercury_threads(pg_temp.id('co'), jsonb_build_array(
-  jsonb_build_object('external_id', 'merc-1', 'note', 'Lumber for back deck, invoice #4471', 'files', jsonb_build_array('receipt-4471.pdf')),
+  jsonb_build_object('external_id', 'merc-1', 'note', 'Paid by card', 'files', jsonb_build_array('receipt-4471.pdf')),
+  jsonb_build_object('external_id', 'merc-3', 'note', 'Lumber for back deck, invoice #4471', 'files', '[]'::jsonb),
   jsonb_build_object('external_id', 'merc-2', 'note', null, 'files', '[]'::jsonb),
   jsonb_build_object('external_id', 'unknown', 'note', 'Nobody''s', 'files', jsonb_build_array('x.pdf'))
 )));
 select is(jsonb_array_length(pg_temp.out_of('sync1')), 1, 'one attachment waits to be copied');
 select is(pg_temp.out_of('sync1')->0->>'transaction_id', pg_temp.id('line')::text,
   'it is the owner''s line, not the other company''s line with the same Mercury id');
-select is((select body from public.transaction_notes where transaction_id = pg_temp.id('line') and source = 'mercury'),
+select is((select body from public.transaction_notes where transaction_id = pg_temp.id('mline') and source = 'mercury'),
   'Lumber for back deck, invoice #4471', 'Mercury''s note comes in whole');
+select is((select count(*)::int from public.transaction_notes where transaction_id = pg_temp.id('line') and source = 'mercury'), 0,
+  'a line that has a Flow note keeps it as its one note');
 select is((select count(*)::int from public.transaction_notes where transaction_id = pg_temp.id('other_line')), 0,
   'the other company''s line gets nothing');
 select isnt(public.record_mercury_file(pg_temp.id('co'), pg_temp.id('line'),
@@ -168,48 +176,48 @@ select throws_ok(
     pg_temp.id('co'), pg_temp.id('line'), pg_temp.id('other')::text || '/x.pdf'),
   'path is invalid', 'a copied file goes under its own company and line');
 
--- 28-33. Mercury's note follows Mercury until it is edited in Flow; the edit stays in Flow only
+-- 31-36. Mercury's note follows Mercury until it is edited in Flow; the edit stays in Flow only
 -- (nothing is sent to Mercury), and a sync no longer replaces or removes it.
 reset role;
 insert into th (label, id) select 'mn', id from public.transaction_notes
-  where transaction_id = pg_temp.id('line') and source = 'mercury';
+  where transaction_id = pg_temp.id('mline') and source = 'mercury';
 select pg_temp.as_service();
 select public.sync_mercury_threads(pg_temp.id('co'), jsonb_build_array(
-  jsonb_build_object('external_id', 'merc-1', 'note', 'Lumber for back deck, invoice #4471 (paid)', 'files', '[]'::jsonb)));
+  jsonb_build_object('external_id', 'merc-3', 'note', 'Lumber for back deck, invoice #4471 (paid)', 'files', '[]'::jsonb)));
 select tests.authenticate_as('th_owner');
-select is(public.get_transaction_thread(pg_temp.id('line'))->'notes'->0->>'body', 'Lumber for back deck, invoice #4471 (paid)',
+select is(public.get_transaction_thread(pg_temp.id('mline'))->'notes'->0->>'body', 'Lumber for back deck, invoice #4471 (paid)',
   'a note not edited in Flow follows Mercury');
 select public.edit_transaction_note(pg_temp.id('mn'), 'Lumber for back deck, invoice #4471, phase 2');
-select is((public.get_transaction_thread(pg_temp.id('line'))->'notes'->0->>'edited_in_flow')::boolean, true,
+select is((public.get_transaction_thread(pg_temp.id('mline'))->'notes'->0->>'edited_in_flow')::boolean, true,
   'an edit of Mercury''s note is marked as made in Flow');
 select is(to_regprocedure('public.mercury_note_push_target(uuid)'), null, 'nothing sends a note to Mercury');
 select pg_temp.as_service();
 select public.sync_mercury_threads(pg_temp.id('co'), jsonb_build_array(
-  jsonb_build_object('external_id', 'merc-1', 'note', 'Lumber for back deck, invoice #4471', 'files', '[]'::jsonb),
+  jsonb_build_object('external_id', 'merc-3', 'note', 'Lumber for back deck, invoice #4471', 'files', '[]'::jsonb),
   jsonb_build_object('external_id', 'merc-2', 'note', 'Quiet note', 'files', '[]'::jsonb)));
 select is((select body from public.transaction_notes where id = pg_temp.id('mn')),
   'Lumber for back deck, invoice #4471, phase 2', 'a sync does not overwrite an edit made in Flow');
 select public.sync_mercury_threads(pg_temp.id('co'), jsonb_build_array(
-  jsonb_build_object('external_id', 'merc-1', 'note', null, 'files', '[]'::jsonb),
+  jsonb_build_object('external_id', 'merc-3', 'note', null, 'files', '[]'::jsonb),
   jsonb_build_object('external_id', 'merc-2', 'note', null, 'files', '[]'::jsonb)));
 select is((select count(*)::int from public.transaction_notes where id = pg_temp.id('mn')), 1,
   'a note cleared in Mercury stays when it was edited in Flow');
 select is((select count(*)::int from public.transaction_notes where transaction_id = pg_temp.id('quiet')), 0,
   'a note cleared in Mercury goes when it was not');
 
--- 35-44. MCP: add, edit, remove a note and remove a file, each undone.
+-- 37-46. MCP: add, edit, remove a note and remove a file, each undone.
 select pg_temp.as_mcp('write');
-insert into th_out (label, body) values ('m_add', public.mcp_add_transaction_note('th-a-1', pg_temp.id('line'), 'From the assistant'));
+insert into th_out (label, body) values ('m_add', public.mcp_add_transaction_note('th-a-1', pg_temp.id('quiet'), 'From the assistant'));
 select is((pg_temp.out_of('m_add')->>'ok')::boolean, true, 'mcp adds a note');
-select is(public.mcp_add_transaction_note('th-a-1', pg_temp.id('line'), 'From the assistant'), pg_temp.out_of('m_add'),
+select is(public.mcp_add_transaction_note('th-a-1', pg_temp.id('quiet'), 'From the assistant'), pg_temp.out_of('m_add'),
   'the same key replays the same answer');
-select is(public.mcp_add_transaction_note('th-a-1', pg_temp.id('line'), 'Something else')->'error'->>'code', 'conflict',
+select is(public.mcp_add_transaction_note('th-a-1', pg_temp.id('quiet'), 'Something else')->'error'->>'code', 'conflict',
   'the same key with other text is a conflict');
 insert into th_out (label, body) values ('m_edit', public.mcp_edit_transaction_note('th-e-1',
   (pg_temp.out_of('m_add')->'data'->>'id')::uuid, 'From the assistant, edited'));
 select is((public.mcp_undo('th-u-1', 'note_edit', (pg_temp.out_of('m_add')->'data'->>'id')::uuid)->>'ok')::boolean, true,
   'undo puts the text back');
-select is((select n->>'body' from jsonb_array_elements(public.get_transaction_thread(pg_temp.id('line'))->'notes') n
+select is((select n->>'body' from jsonb_array_elements(public.get_transaction_thread(pg_temp.id('quiet'))->'notes') n
   where n->>'id' = pg_temp.out_of('m_add')->'data'->>'id'), 'From the assistant', 'the note has its text before the edit');
 select is((public.mcp_undo('th-u-2', 'note_add', (pg_temp.out_of('m_add')->'data'->>'id')::uuid)->>'ok')::boolean, true,
   'undo removes the added note');

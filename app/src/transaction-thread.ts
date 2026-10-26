@@ -54,30 +54,9 @@ export type Thread = z.infer<typeof threadSchema>;
 const countsSchema = z.record(z.string(), z.object({ notes: z.number(), files: z.number() }));
 export type ThreadCounts = z.infer<typeof countsSchema>;
 
-/** Mercury's note with its files, then the owner's notes with theirs, then files on no note, oldest first. */
-export type ThreadItem =
-  | { kind: "mercury"; note: ThreadNote | null; files: ThreadFile[] }
-  | { kind: "note"; note: ThreadNote; files: ThreadFile[] }
-  | { kind: "file"; file: ThreadFile };
-
-export function threadItems(thread: Thread): ThreadItem[] {
-  const mercuryNote = thread.notes.find((note) => note.source === "mercury") ?? null;
-  const mercuryFiles = thread.files.filter((file) => file.source === "mercury");
-  const items: ThreadItem[] = [];
-  if (mercuryNote != null || mercuryFiles.length > 0) items.push({ kind: "mercury", note: mercuryNote, files: mercuryFiles });
-  const own = thread.notes.filter((note) => note.source === "flow");
-  const ownIds = new Set(own.map((note) => note.id));
-  const rest: Array<{ at: string; item: ThreadItem }> = [];
-  for (const note of own) {
-    rest.push({ at: note.created_at, item: { kind: "note", note, files: thread.files.filter((file) => file.note_id === note.id) } });
-  }
-  for (const file of thread.files) {
-    if (file.source === "flow" && (file.note_id == null || !ownIds.has(file.note_id))) {
-      rest.push({ at: file.created_at, item: { kind: "file", file } });
-    }
-  }
-  rest.sort((a, b) => a.at.localeCompare(b.at));
-  return [...items, ...rest.map((entry) => entry.item)];
+/** The line's one note: Mercury's when it has one, else the owner's (the server keeps one, Mercury's first). */
+export function threadNote(thread: Thread): ThreadNote | null {
+  return thread.notes.find((note) => note.source === "mercury") ?? thread.notes[0] ?? null;
 }
 
 export function threadCount(counts: ThreadCounts | undefined, transactionId: string): { notes: number; files: number } {
@@ -186,12 +165,12 @@ export async function putThreadFile(companyId: string, transactionId: string, fi
   return path;
 }
 
-/** Records a file already in the bucket on the line, on a note when one is given. */
-export async function recordThreadFile(transactionId: string, noteId: string | null, path: string, file: File): Promise<void> {
+/** Records a file already in the bucket on the line. */
+export async function recordThreadFile(transactionId: string, path: string, file: File): Promise<void> {
   // The generated types type a nullable uuid argument as required (repo precedent: null as unknown as string).
   assertNoError(await client().rpc("add_transaction_file", {
     p_transaction_id: transactionId,
-    p_note_id: noteId as unknown as string,
+    p_note_id: null as unknown as string,
     p_path: path,
     p_file_name: file.name.slice(0, 200) || "file",
     p_mime: file.type,

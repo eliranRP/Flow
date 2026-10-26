@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { fileSizeLabel, threadCount, threadFileProblem, threadItems, threadObjectName, type Thread } from "./transaction-thread";
+import { fileSizeLabel, threadCount, threadFileProblem, threadNote, threadObjectName, type Thread } from "./transaction-thread";
 
-// FLOW-957: the thread's order, the file checks and the labels. Invented names only.
+// FLOW-957: the line's one note, the file checks and the labels. Invented names only.
 
 const base = { mine: true, edited: false, edited_in_flow: false } as const;
 
@@ -20,24 +20,11 @@ const thread: Thread = {
   ],
 };
 
-describe("threadItems", () => {
-  it("puts Mercury's note and files first, then the owner's notes and loose files oldest first", () => {
-    const items = threadItems(thread);
-    expect(items.map((item) => (item.kind === "file" ? `file:${item.file.id}` : `${item.kind}:${item.note?.id ?? ""}`))).toEqual([
-      "mercury:m1",
-      "note:n1",
-      "file:f2",
-      "note:n2",
-    ]);
-    expect(items[0]?.kind === "mercury" ? items[0].files.map((file) => file.id) : []).toEqual(["f3"]);
-    expect(items[1]?.kind === "note" ? items[1].files.map((file) => file.id) : []).toEqual(["f1"]);
-  });
-
-  it("shows Mercury's files with no note under a Mercury card, and an empty thread as nothing", () => {
-    const mercuryFiles = thread.files.filter((file) => file.source === "mercury");
-    const filesOnly: Thread = { ...thread, notes: [], files: mercuryFiles };
-    expect(threadItems(filesOnly)).toEqual([{ kind: "mercury", note: null, files: mercuryFiles }]);
-    expect(threadItems({ ...thread, notes: [], files: [] })).toEqual([]);
+describe("threadNote", () => {
+  it("is Mercury's note when the line has one, else the owner's, else none", () => {
+    expect(threadNote(thread)?.id).toBe("m1");
+    expect(threadNote({ ...thread, notes: thread.notes.filter((note) => note.source === "flow") })?.id).toBe("n2");
+    expect(threadNote({ ...thread, notes: [] })).toBeNull();
   });
 });
 
