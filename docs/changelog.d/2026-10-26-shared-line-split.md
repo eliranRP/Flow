@@ -1,0 +1,1 @@
+A shared expense can be split from לאישור again. Its אישור opens the split by categories and projects, which had refused the line ("אשרו את התנועה בתור לאישור, ואז פצלו") because the line's own shared review was open. The split now takes the line, saving it closes that review, and the next sync leaves the line closed. Any other open review still sends the line to the queue first.
