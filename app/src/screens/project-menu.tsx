@@ -1,5 +1,5 @@
-// The project's ⋯ menu (board Projects.dc.html, "פעולות על הפרויקט"): edit, the investment page, finish,
-// and delete when the project has no lines. The sheet is titled with the project's name. The overhead
+// The project's ⋯ menu (board Projects.dc.html, "פעולות על הפרויקט"): edit, the investment page, finish
+// (at once, with ביטול) or החזרה לפעילים, and delete when the project has no lines (the one that asks). The sheet is titled with the project's name. The overhead
 // switch and the group live in the edit sheet; adding a line is the + sheet's job.
 import { useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
@@ -8,6 +8,7 @@ import { useBlockedPreview } from "./screen-shared";
 import { useProjectsCashMonth } from "../project-cash";
 import type { ProjectCashRow } from "@flow/shared";
 import { assertNoError, useWrite } from "../use-write";
+import { useToast } from "../ui/toast";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { IconButton } from "../ui/icon-button";
 import { BinIcon, FlagIcon, InvestIcon, MoreIcon, PencilIcon } from "../ui/icons";
@@ -15,6 +16,9 @@ import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { ProjectFormSheet } from "./project-form-sheet";
 import { NO_GROUP, ProjectGroupSheets, type ProjectGroups } from "./project-group-sheets";
+
+/** How long a finish offers ביטול (FLOW-961, decision 0213). */
+export const FINISH_UNDO_MS = 5000;
 
 export function ProjectMenu({
   projectId,
@@ -47,7 +51,6 @@ export function ProjectMenu({
   const blocked = useBlockedPreview();
   const navigate = useNavigate();
   const [menu, setMenu] = useState(false);
-  const [confirm, setConfirm] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [editing, setEditing] = useState(false);
   const [groupView, setGroupView] = useState<"pick" | "new" | null>(null);
@@ -57,17 +60,29 @@ export function ProjectMenu({
   const row = sampleRow ?? cash.data?.projects.find((project) => project.id === projectId);
   const pending = row?.pending_count ?? 0;
   const deletable = row?.deletable === true;
-  const action = finished ? "החזרה לפעיל" : "סיום הפרויקט";
-  const save = useWrite({
+  const action = finished ? "החזרה לפעילים" : "סיום הפרויקט";
+  const toast = useToast();
+  // FLOW-961 (decision 0213): finishing can be undone, so it happens at once. The list opens with
+  // הסתיימו, and a toast under the header offers ביטול for 5s. החזרה לפעילים needs no undo: it is one.
+  const setStatus = useWrite<"active" | "finished">({
     failure: "לא הצלחנו לעדכן את הפרויקט.",
-    success: finished ? "הפרויקט חזר לפעיל" : `${name} סומן כהסתיים`,
+    place: "top",
     keys: ["dashboard", "project", "projects-cash"],
-    onSuccess: () => {
-      setConfirm(false);
-      // A finish lands on the list with הסתיימו open (FLOW-445).
-      if (!finished) void navigate("/projects", { state: { finishedOpen: true } });
+    onSuccess: (status) => {
+      if (status === "finished") {
+        void navigate("/projects", { state: { finishedOpen: true } });
+        toast.show({
+          message: `${name} עבר ל״הסתיימו״`,
+          action: "ביטול",
+          onAction: () => { setStatus.mutate("active"); },
+          durationMs: FINISH_UNDO_MS,
+          place: "top",
+        });
+        return;
+      }
+      toast.show({ message: `${name} חזר לפעילים`, place: "top" });
     },
-    run: async () => {
+    run: async (status) => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       // No p_type: upsert_project keeps the stored type when none is sent.
@@ -75,7 +90,7 @@ export function ProjectMenu({
         p_id: projectId,
         p_name: name,
         ...(budget == null ? {} : { p_budget_agorot: Number(budget) }),
-        p_status: finished ? "active" : "finished",
+        p_status: status,
       }));
     },
   });
@@ -93,9 +108,14 @@ export function ProjectMenu({
       assertNoError(await supabase.rpc("delete_project", { p_id: projectId }));
     },
   });
-  const pendingWarning = pending === 1
-    ? "יש בו פריט אחד ממתין לאישור. כדאי לאשר אותו לפני הסיום."
-    : `יש בו ${String(pending)} פריטים ממתינים לאישור. כדאי לאשר אותם לפני הסיום.`;
+  // What finishing leaves: the items still waiting wait on (they are named here, as the confirm used to).
+  const finishHint = finished
+    ? "יחזור לרשימה ולבחירת הפרויקטים בשיוך"
+    : pending === 1
+      ? "יש בו פריט אחד לאישור. הוא יחכה גם אחרי הסיום"
+      : pending > 1
+        ? `יש בו ${String(pending)} פריטים לאישור. הם יחכו גם אחרי הסיום`
+        : "יעבור ל״הסתיימו״. אפשר לבטל מיד, ושום דבר לא נמחק";
   return (
     <>
       <IconButton
@@ -137,11 +157,13 @@ export function ProjectMenu({
           <ListRow
             variant="button"
             title={action}
-            hint={finished ? "יחזור לרשימת הפעילים" : "יעבור ל״הסתיימו״. שום דבר לא נמחק"}
+            hint={finishHint}
             icon={<FlagIcon />}
+            disabled={setStatus.isPending}
             onClick={() => {
+              if (blocked()) return;
               setMenu(false);
-              setConfirm(true);
+              setStatus.mutate(finished ? "active" : "finished");
             }}
           />
           {deletable ? (
@@ -202,33 +224,13 @@ export function ProjectMenu({
           sample={sample}
         />
       )}
-      {/* Either way can be undone, so the confirm is neutral: no red and no bin (FLOW-341 rule). */}
-      <ConfirmSheet
-        open={confirm}
-        onOpenChange={setConfirm}
-        title={finished ? "להחזיר את הפרויקט לפעיל?" : `לסיים את ${name}?`}
-        consequenceSize="body"
-        consequence={finished
-          ? "הפרויקט יחזור לרשימת הפעילים, ואפשר לסיים אותו שוב בכל רגע."
-          : "הפרויקט יעבור ל״הסתיימו״ ויצא מבחירת הפרויקטים בשיוך. התנועות, הרווח והמסמכים נשמרים, ואפשר להחזיר אותו לפעיל בכל רגע."}
-        warning={!finished && pending > 0 ? pendingWarning : undefined}
-        confirmLabel={action}
-        returnFocusRef={opener}
-        closeButton={false}
-        panelClassName="ui-sheet-g14 ui-confirm-roomy"
-        busy={save.isPending}
-        onConfirm={() => {
-          if (blocked()) return;
-          save.mutate();
-        }}
-      />
       <ConfirmSheet
         open={removing}
         onOpenChange={setRemoving}
         title={`למחוק את ${name}?`}
         consequenceSize="body"
         consequence="אין בפרויקט תנועות, חשבוניות או מסמכים, אז שום מספר לא משתנה. אי אפשר לשחזר אחרי המחיקה."
-        confirmLabel="מחיקה"
+        confirmLabel="מחיקת הפרויקט"
         destructive="outline"
         returnFocusRef={opener}
         closeButton={false}

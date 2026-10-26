@@ -170,6 +170,25 @@
   font-weight: var(--type-section-weight);
 }
 
+/* FLOW-961: the takeaway heads the chart; the metric and its months are the 13px label above it. */
+.ui-fc-chart-head-takeaway {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.ui-fc-chart-head-takeaway > span {
+  white-space: normal;
+}
+
+.ui-fc-takeaway {
+  margin: 0;
+  font-size: var(--type-section-size);
+  line-height: var(--type-section-line);
+  font-weight: var(--type-section-weight);
+  text-wrap: balance;
+}
+
 /* The pairs are a fixed 108px, so the months line up from the top and a label that wraps grows downward. */
 .ui-fc-bars {
   display: grid;
@@ -250,8 +269,9 @@
   border-color: var(--color-chart-expense);
 }
 
+/* FLOW-961: month names at 13px (11px was under the type scale's floor); twelve months stay at 11 below. */
 .ui-fc-bar-label {
-  font-size: var(--type-cents-size);
+  font-size: var(--type-caption-size);
   color: var(--color-text-muted);
   white-space: nowrap;
 }
@@ -301,6 +321,10 @@
 /* A year's twelve months (FLOW-145): the columns close up to 4px. */
 .ui-fc-bars-dense {
   gap: var(--space-1);
+}
+
+.ui-fc-bars-dense .ui-fc-bar-label {
+  font-size: var(--type-cents-size);
 }
 
 /* Under 360px twelve labels touch: every other month keeps its label (January, March, …), as charts do. */

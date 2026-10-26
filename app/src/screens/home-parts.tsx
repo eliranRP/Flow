@@ -10,6 +10,7 @@ import { anchorOf, monthPeriod } from "../period";
 import { useAllowAdd } from "../use-allow-add";
 import { Amount } from "../ui/amount";
 import { BannerRows, type BannerRow } from "../ui/banner";
+import { ReviewButton } from "../ui/band-states";
 import { Button } from "../ui/button";
 import { ChangePill } from "../ui/change-pill";
 import { CompactBar } from "../ui/compact-bar";
@@ -266,20 +267,11 @@ export function splitTakeaway(lead: "out" | "in" | null, netMinor: bigint, profi
 export function AttentionBox({ rows }: { rows: readonly BannerRow[] }) {
   if (rows.length === 0) return null;
   const [first, ...others] = rows;
-  const review = first?.button == null ? null : first;
-  const lines = review == null ? rows : others;
+  const lines = first?.button == null ? rows : others;
   return (
     <section className="ui-home-attention" aria-labelledby="home-attention-title">
       <h2 id="home-attention-title" className="ui-home-attention-title">דורש טיפול</h2>
-      {review == null ? null : (
-        <div className="ui-home-attention-primary">
-          <Button full to={review.to} chevron>
-            {review.button?.label}
-            {" "}
-            <span className="ui-home-attention-time">· {review.button?.hint}</span>
-          </Button>
-        </div>
-      )}
+      <ReviewButton row={first} />
       <BannerRows rows={lines} />
     </section>
   );
@@ -328,49 +320,5 @@ export function HomeCompactBar({ monthKey, net, currency, isPast, nav, shown }: 
         </IconButton>
       }
     />
-  );
-}
-
-
-/** "09:41": a moment's hour and minute, Israel time (FLOW-958, the offline line). */
-export function israelClock(at: number): string {
-  return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Jerusalem" }).format(new Date(at));
-}
-
-/** FLOW-958: offline, Home keeps the last figures and says, in the band, which moment they are from. */
-export function HomeOfflineLine({ since }: { since: number }) {
-  return (
-    <p className="ui-home-offline" role="status">
-      <AlertIcon size={20} />
-      <span className="ui-home-offline-text">
-        אין חיבור · מוצג המצב מ־<bdi dir="ltr">{israelClock(since)}</bdi>
-      </span>
-    </p>
-  );
-}
-
-/**
- * FLOW-958: Home's read failed. The band stays and says what happened, with the retry and the way to
- * help (an error never ends on a dead line). Offline reads the network's words.
- */
-export function HomeLoadFailed({ monthKey, offline, onRetry, leading }: { monthKey: string; offline: boolean; onRetry: () => void; leading?: ReactNode }) {
-  return (
-    <TopBand wordmark={false} leading={leading}>
-      <div className="ui-band-body ui-home-failed" role="alert">
-        <span className="ui-home-failed-icon" aria-hidden="true">
-          <AlertIcon size={24} />
-        </span>
-        <h2 className="ui-home-failed-title">{offline ? "אין חיבור" : `${monthName(monthKey)} לא נטען`}</h2>
-        <p className="ui-home-failed-body">{offline ? "אין חיבור לאינטרנט. שום דבר לא נמחק." : "משהו נשבר אצלנו, לא אצלכם. הנתונים שמורים, ושום דבר לא נמחק."}</p>
-        <div className="ui-home-failed-actions">
-          <button type="button" className="ui-home-failed-retry m-press" onClick={onRetry}>
-            נסו שוב
-          </button>
-          <Link to="/help" className="ui-home-failed-help m-press">
-            צריך עזרה?
-          </Link>
-        </div>
-      </div>
-    </TopBand>
   );
 }
