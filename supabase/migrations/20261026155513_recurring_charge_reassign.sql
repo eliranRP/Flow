@@ -297,6 +297,12 @@ begin
   end if;
   for undo_id in select u from unnest(p_undo_ids) with ordinality x(u, pos) order by pos desc
   loop
+    -- Lock the line first, so no write lands between the check and the undo.
+    perform 1
+    from public.reassign_undo u
+    join public.transactions t on t.id = u.transaction_id and t.company_id = u.company_id
+    where u.id = undo_id and u.company_id = cid
+    for update of t;
     if exists (
       select 1
       from public.reassign_undo u
