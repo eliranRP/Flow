@@ -8,7 +8,7 @@ import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { formatDisplay, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
-import { AlertIcon, InfoIcon, LoanIcon, RefreshIcon } from "../ui/icons";
+import { AlertIcon, LoanIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
@@ -46,6 +46,7 @@ import { TransactionTopBar } from "./transaction-top-bar";
 import { LoanPartSheet } from "./loan-detail-sheets";
 import { LoanRateSheet } from "./loan-rate-sheet";
 import { LoanCloseSheet } from "./loan-close-sheet";
+import { LoanLoadFailed, LoanOfflineLine, useLoanOnline } from "./loan-states";
 import { LoanKindSheet } from "./loan-kind-sheet";
 import {
   inversePatch,
@@ -72,7 +73,7 @@ import { loanOutlook } from "./loan-outlook";
  * owner deletes the loan at the bottom (decision 0142); a viewer reads static rows.
  */
 
-export const LOAN_ERROR_TITLE = "לא הצלחנו לטעון את ההלוואה";
+export const LOAN_ERROR_TITLE = "ההלוואה לא נטענה";
 export const LOAN_MISSING_TITLE = "ההלוואה לא נמצאה";
 
 type SheetName = "kind" | "rate" | "close" | "part" | "project" | "delete";
@@ -87,7 +88,10 @@ export function LoanDetailScreen({
   listPath,
   today: givenToday,
   view = "summary",
+  offlineSince: givenOffline,
 }: {
+  /** FLOW-962 stories: draw the page offline, its figures from this moment. */
+  offlineSince?: number;
   /** The page, or its all-payments page (FLOW-139c). */
   view?: LoanView;
   /** Stories, tests and the dev route pass a memory store. Live omits it. */
@@ -117,6 +121,7 @@ export function LoanDetailScreen({
   useMemoryLoanStore(store);
   const isLive = givenStore == null && !wantsPreview;
   const live = useLiveLoan(loanId, isLive);
+  const online = useLoanOnline();
   const dashboard = useDashboardQuery(isLive);
   // The all-payments page sits under the loan's own path, so Back steps up to the loan page.
   const loanPath = loanId === "" ? location.pathname : location.pathname.slice(0, location.pathname.lastIndexOf(loanId) + loanId.length);
@@ -141,16 +146,9 @@ export function LoanDetailScreen({
     return (
       <div>
         <ScreenHeader title="הלוואה" kicker="הלוואות" backTo={listBack} />
-        <EmptyState
-          icon={<InfoIcon size={36} />}
-          title={LOAN_ERROR_TITLE}
-          body="נסו שוב בעוד רגע"
-          action={(
-            <Button variant="secondary" icon={<RefreshIcon />} busy={read.retrying} onClick={read.retry}>
-              ניסיון חוזר
-            </Button>
-          )}
-        />
+        <div className="ui-page-pad">
+          <LoanLoadFailed title={LOAN_ERROR_TITLE} offline={givenOffline != null || !online} retrying={read.retrying} onRetry={read.retry} />
+        </div>
       </div>
     );
   }
@@ -180,6 +178,7 @@ export function LoanDetailScreen({
       view={view}
       today={givenToday ?? israelToday()}
       search={search}
+      offlineSince={givenOffline ?? (!online && read.readAt != null && read.readAt > 0 ? read.readAt : null)}
     />
   );
 
@@ -219,7 +218,9 @@ function LoanDetailReady({
   view,
   today,
   search,
+  offlineSince,
 }: {
+  offlineSince: number | null;
   bundle: LoanBundle;
   writes: LoanWrites;
   liveKeys: boolean;
@@ -367,6 +368,7 @@ function LoanDetailReady({
               <h1 className="ui-loan-name">{loan.name}</h1>
               <p className="ui-loan-sub">{loanSubtitle(loan, projectName)}</p>
             </header>
+            {offlineSince == null ? null : <LoanOfflineLine since={offlineSince} />}
             {loan.status === "open" ? null : <LoanClosedCard status={loan.status} closedOn={loan.closedOn} />}
             {flagged.length > 0 ? (
               <Banner

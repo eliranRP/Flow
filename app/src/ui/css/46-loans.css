@@ -38,7 +38,8 @@
   line-height: calc(var(--type-line2-size) * 1.2);
 }
 
-.ui-loans-summary-wrap {
+.ui-loans-summary-wrap,
+.ui-loans-screen .ui-loan-offline {
   margin-top: var(--space-4);
 }
 

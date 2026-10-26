@@ -611,6 +611,80 @@ button.ui-loan-paid-part {
   color: var(--color-text-secondary);
 }
 
+/* FLOW-962 (boards Loans failed, Loans offline): Home v2's failure and offline line, on a card. */
+.ui-card.ui-loan-failed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-block-start: var(--space-4);
+  padding: var(--space-5) var(--space-card-inset);
+  border-radius: var(--radius-card);
+}
+
+.ui-loan-failed-icon {
+  display: grid;
+  place-items: center;
+  inline-size: var(--touch-min);
+  block-size: var(--touch-min);
+  border-radius: 50%;
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+}
+
+.ui-loan-failed-title {
+  margin: 0;
+  font-size: var(--type-section-size);
+  line-height: var(--type-section-line);
+  font-weight: var(--type-sheet-weight);
+}
+
+.ui-loan-failed-body {
+  margin: 0;
+  max-inline-size: 32ch;
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+.ui-loan-failed-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding-block-start: var(--space-1);
+}
+
+.ui-loan-failed-help {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--touch-min);
+  color: var(--color-accent-text);
+  font-size: var(--type-line2-size);
+}
+
+.ui-loan-offline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--touch-min);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  box-sizing: border-box;
+  border-radius: var(--radius-chip);
+  background: var(--color-surface);
+  font-size: var(--type-line2-size);
+}
+
+.ui-loan-offline svg {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.ui-loan-offline-text {
+  flex: 1;
+  min-inline-size: 0;
+}
+
 /* A loan with no payments yet: what will appear, and the way to the bank (a 44px link). */
 .ui-loan-recent-empty {
   display: flex;

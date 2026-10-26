@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
-import { ChevronIcon, PlusIcon, InfoIcon, PercentIcon, RefreshIcon } from "../ui/icons";
+import { ChevronIcon, PlusIcon, PercentIcon } from "../ui/icons";
+import { LoanLoadFailed, LoanOfflineLine } from "./loan-states";
 import { CompactBar } from "../ui/compact-bar";
 import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
@@ -106,19 +107,11 @@ export function LoansList({ ctx, closedOpen = false }: { ctx: LoansHostCtx; clos
           <LoansSkeleton />
         </DelayedSkeleton>
       ) : ctx.failed ? (
-        <EmptyState
-          icon={<InfoIcon size={36} />}
-          title={LOANS_ERROR_TITLE}
-          body="נסו שוב בעוד רגע"
-          action={(
-            // The tint action every empty and error state uses (DESIGN-RULES §2.8, FLOW-334), not a fill.
-            <Button variant="secondary" icon={<RefreshIcon />} busy={ctx.retrying} onClick={ctx.retry}>
-              ניסיון חוזר
-            </Button>
-          )}
-        />
+        // FLOW-962: Home v2's failure (what happened, נסו שוב, צריך עזרה?), as a card.
+        <LoanLoadFailed title={LOANS_ERROR_TITLE} offline={ctx.offline} retrying={ctx.retrying} onRetry={ctx.retry} />
       ) : (
         <>
+          {ctx.offlineSince == null ? null : <LoanOfflineLine since={ctx.offlineSince} />}
           {ctx.empty ? (
             <EmptyState
               icon={<PercentIcon />}

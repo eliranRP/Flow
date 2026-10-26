@@ -144,11 +144,22 @@ describe("loan page: states and the viewer", () => {
     await waitFor(() => { expect(store.read("loan-bridge")).toMatchObject({ bundle: { loan: { status: "open", closedOn: null } } }); });
   });
 
-  it("offers the outline ניסיון חוזר on a failed read, not the filled one (FLOW-334)", () => {
+  it("says what happened on a failed read, with נסו שוב and צריך עזרה? (FLOW-962)", () => {
     renderLoan(oneLoanStore("loan-mortgage", { phase: "error" }), "loan-mortgage");
-    const retry = screen.getByRole("button", { name: "ניסיון חוזר" });
-    expect(retry).toHaveClass("ui-btn-secondary");
-    expect(retry).not.toHaveClass("ui-btn-retry");
+    const failed = screen.getByRole("alert");
+    expect(within(failed).getByRole("heading", { name: "ההלוואה לא נטענה" })).toBeInTheDocument();
+    expect(within(failed).getByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    expect(within(failed).getByRole("link", { name: "צריך עזרה?" })).toHaveAttribute("href", "/help");
+  });
+
+  it("says which moment the figures are from when offline (FLOW-962)", () => {
+    renderWithProviders(
+      <Routes>
+        <Route path="/loans/:loanId" element={<LoanDetailScreen store={sampleLoanStore()} today="2026-10-09" offlineSince={Date.UTC(2026, 9, 9, 6, 41)} />} />
+      </Routes>,
+      { route: "/loans/loan-mortgage" },
+    );
+    expect(screen.getByText(/אין חיבור · מוצג המצב מ־/)).toHaveTextContent("09:41");
   });
 
   it("shows not found with a way back to the list", () => {

@@ -184,7 +184,7 @@ export type LoanRead =
   | { phase: "loading" }
   | { phase: "error"; retry: () => void; retrying: boolean }
   | { phase: "missing" }
-  | { phase: "ready"; bundle: LoanBundle };
+  | { phase: "ready"; bundle: LoanBundle; /** When the live read landed (the offline line, FLOW-962). */ readAt?: number };
 
 /** The live read of one loan's page: the loan with its rates and balance, its payments, and the categories. */
 export function useLiveLoan(loanId: string, active: boolean): LoanRead {
@@ -251,7 +251,7 @@ export function useLiveLoan(loanId: string, active: boolean): LoanRead {
     };
   }
   if (loan.data == null) return { phase: "missing" };
-  return { phase: "ready", bundle: { loan: loan.data, payments: payments.data ?? [], categories: categories.data ?? [] } };
+  return { phase: "ready", bundle: { loan: loan.data, payments: payments.data ?? [], categories: categories.data ?? [] }, readAt: loan.dataUpdatedAt };
 }
 
 /** A sample loan page: what a memory store holds for one loan. */

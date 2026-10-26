@@ -10,12 +10,12 @@ import type { MemoryLoanStore } from "./loan-detail-store";
 const TODAY = "2026-10-09";
 
 /** FLOW-139c: `path` opens the all-payments page ("payments"). */
-function Page({ loanId, store, viewer = false, path = "" }: { loanId: string; store: () => MemoryLoanStore; viewer?: boolean; path?: string }) {
+function Page({ loanId, store, viewer = false, path = "", offline = false }: { loanId: string; store: () => MemoryLoanStore; viewer?: boolean; path?: string; offline?: boolean }) {
   const memory = store();
   return (
     <StoryRoute entry={`/loans/${loanId}${path === "" ? "" : `/${path}`}`} viewer={viewer}>
       <Routes>
-        <Route path="/loans/:loanId" element={<LoanDetailScreen store={memory} today={TODAY} />} />
+        <Route path="/loans/:loanId" element={<LoanDetailScreen store={memory} today={TODAY} offlineSince={offline ? Date.UTC(2026, 9, 9, 6, 41) : undefined} />} />
         <Route path="/loans/:loanId/payments" element={<LoanDetailScreen store={memory} today={TODAY} view="payments" />} />
       </Routes>
     </StoryRoute>
@@ -55,6 +55,8 @@ export const PaidOffWithBalance: Story = { name: "Paid off with a balance left",
 export const Viewer: Story = { name: "Viewer", args: { loanId: "loan-bridge", store: () => oneLoanStore("loan-bridge"), viewer: true } };
 export const Loading: Story = { name: "Loading", ...loan("loan-mortgage", { phase: "loading" }) };
 export const LoadError: Story = { name: "Error", ...loan("loan-mortgage", { phase: "error" }) };
+/** FLOW-962: offline, the page keeps its figures and says which moment they are from. */
+export const Offline: Story = { name: "Offline", args: { loanId: "loan-mortgage", store: () => oneLoanStore("loan-mortgage"), offline: true } };
 
 /** FLOW-139c: every payment, by year, newest first. */
 export const Payments: Story = { name: "All payments", ...loan("loan-mortgage", {}, "payments") };

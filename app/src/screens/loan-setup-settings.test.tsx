@@ -238,13 +238,13 @@ describe("the Loans tab list and sheet", () => {
   it("shows a retry when the balances read fails", async () => {
     db.balanceError = { message: "offline" };
     renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
-    expect(await screen.findByText("לא הצלחנו לטעון את ההלוואות")).toBeInTheDocument();
+    expect(await screen.findByText("ההלוואות לא נטענו")).toBeInTheDocument();
     // An error is not an empty state with a live primary action (CHECKLIST).
     expect(screen.queryByRole("button", { name: "הלוואה חדשה" })).not.toBeInTheDocument();
-    const retry = screen.getByRole("button", { name: "ניסיון חוזר" });
+    const retry = screen.getByRole("button", { name: "נסו שוב" });
     db.balanceError = null;
     fireEvent.click(retry);
-    await waitFor(() => { expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.queryByRole("button", { name: "נסו שוב" })).not.toBeInTheDocument(); });
     expect(screen.getByText("אין הלוואות עדיין")).toBeInTheDocument();
   });
 

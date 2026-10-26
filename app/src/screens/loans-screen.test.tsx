@@ -129,11 +129,17 @@ describe("Loans tab", () => {
     expect(screen.getByRole("button", { name: /^הלוואות שנסגרו/ })).toBeInTheDocument();
   });
 
-  it("shows the error layout with ניסיון חוזר and no live primary action", () => {
+  it("shows the failure with נסו שוב and צריך עזרה? (FLOW-962)", () => {
     renderAt(<LoansScreen sample={{ ...business, loans: "error" }} />);
-    expect(screen.getByText("לא הצלחנו לטעון את ההלוואות")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "ההלוואות לא נטענו" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "צריך עזרה?" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "+ הלוואה חדשה" })).toBeInTheDocument();
+  });
+
+  it("says which moment the list is from when offline (FLOW-962)", () => {
+    renderAt(<LoansScreen sample={{ ...business, loans: twoLoans, offlineSince: Date.UTC(2026, 9, 9, 6, 41) }} />);
+    expect(screen.getByText(/אין חיבור · מוצג המצב מ־/)).toHaveTextContent("09:41");
   });
 
   it("goes back to Settings with no company", async () => {

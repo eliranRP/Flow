@@ -31,6 +31,8 @@ export type LoansSample = {
   /** Dev proof only: the new-loan sheet opens, with these values typed in. */
   openSheet?: "new";
   newLoan?: LoanSetupInitial;
+  /** FLOW-962 stories: draw the list offline, its figures from this moment. */
+  offlineSince?: number;
 };
 
 /**
@@ -81,6 +83,7 @@ export function LoansScreen({ sample, closedOpen = false }: { sample?: LoansSamp
         summary={sample?.summary}
         openNew={sample?.openSheet === "new"}
         newLoan={sample?.newLoan}
+        offlineSince={sample?.offlineSince}
         projects={sampled
           ? { rows: sample?.loanProjects ?? [] }
           : {
