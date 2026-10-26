@@ -167,9 +167,31 @@ describe("Cash lines", () => {
     const chips = () => screen.getAllByRole("radiogroup", { name: "סדר" })[0] as HTMLElement;
     const group = chips();
     group.style.direction = "rtl";
-    fireEvent.keyDown(within(group).getByRole("radio", { name: "לפי תאריך" }), { key: "ArrowLeft" });
+    const byDate = within(group).getByRole("radio", { name: "לפי תאריך" });
+    // A key acts on the focused chip, as a keyboard does.
+    byDate.focus();
+    fireEvent.keyDown(byDate, { key: "ArrowLeft" });
     await waitFor(() => {
       expect(within(chips()).getByRole("radio", { name: "לפי סכום" })).toHaveAttribute("aria-checked", "true");
+    });
+  });
+
+  it("Home and End jump to the first and the last order", async () => {
+    wrap(`/cash/${earlier}/out/ILS`);
+    await screen.findByText("בנק לדוגמה");
+    const chips = () => screen.getAllByRole("radiogroup", { name: "סדר" })[0] as HTMLElement;
+    const radios = () => within(chips()).getAllByRole("radio");
+    const first = radios()[0] as HTMLElement;
+    first.focus();
+    fireEvent.keyDown(first, { key: "End" });
+    await waitFor(() => {
+      expect(radios().at(-1)).toHaveAttribute("aria-checked", "true");
+    });
+    const last = radios().at(-1) as HTMLElement;
+    last.focus();
+    fireEvent.keyDown(last, { key: "Home" });
+    await waitFor(() => {
+      expect(radios()[0]).toHaveAttribute("aria-checked", "true");
     });
   });
 });
