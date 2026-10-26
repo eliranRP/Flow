@@ -80,6 +80,12 @@
   min-width: 0;
 }
 
+/* Beside the tag at 320px, a closed loan's name takes a second line rather than an ellipsis. */
+.ui-loans-name-line:has(.ui-loans-tag) .ui-loans-name {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .ui-loans-tag {
   flex: none;
   padding: var(--space-half) var(--space-2);
@@ -97,12 +103,13 @@
   color: var(--color-text-muted);
 }
 
+/* The chevron points down while the group is shut, and up once it is open. */
 .ui-loans-closed-toggle[aria-expanded="true"] .ui-loans-closed-chevron {
-  transform: rotate(-90deg);
+  transform: rotate(90deg);
 }
 
 .ui-loans-closed-toggle[aria-expanded="false"] .ui-loans-closed-chevron {
-  transform: rotate(90deg);
+  transform: rotate(-90deg);
 }
 
 .ui-loans-initial {

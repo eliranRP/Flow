@@ -302,11 +302,14 @@ button.ui-loan-paid-part {
   cursor: pointer;
 }
 
+/* A static row (a viewer's, or the status, FLOW-962) lines its words up with the button rows'. */
 .ui-loan-term-static {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-4);
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--space-half);
+  padding: var(--space-2) calc(var(--space-4) + var(--space-1) / 2);
 }
 
 .ui-loan-term-text {
