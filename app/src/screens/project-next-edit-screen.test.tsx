@@ -70,6 +70,8 @@ describe("ProjectNextEditScreen, a row's edit page", () => {
     });
     expect(await screen.findByText("the forecast page")).toBeTruthy();
     expect(screen.getByText("עודכן לנובמבר: תיקונים ותחזוקה")).toBeTruthy();
+    // FLOW-969 (decision 0219): the toast hangs under the header.
+    expect(screen.getByText("עודכן לנובמבר: תיקונים ותחזוקה").closest<HTMLElement>("[data-place]")?.dataset.place).toBe("top");
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     await waitFor(() => { expect(rpc).toHaveBeenCalledWith("undo_project_forecast", { p_project_id: "juniper-ct", p_undo: UNDO }); });
   });
@@ -112,7 +114,10 @@ describe("ProjectNextEditScreen, a row's edit page", () => {
       expect(rpc).toHaveBeenCalledWith("remove_project_forecast_row", { p_project_id: "juniper-ct", p_month: "2026-11", p_row_key: "avg:power" });
     });
     expect(await screen.findByText("הוסר מהצפי: חשמל ומים")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "ביטול" })).toBeTruthy();
+    // FLOW-969: the removal can be taken back, from under the header, and its ביטול sends the undo.
+    expect(screen.getByText("הוסר מהצפי: חשמל ומים").closest<HTMLElement>("[data-place]")?.dataset.place).toBe("top");
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    await waitFor(() => { expect(rpc).toHaveBeenCalledWith("undo_project_forecast", { p_project_id: "juniper-ct", p_undo: UNDO }); });
   });
 
   it("says so when the row is no longer in the forecast", () => {

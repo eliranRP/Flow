@@ -42,7 +42,7 @@ describe("the company profit page's compact bar at the top", () => {
     observer.settle();
     expectBarUp();
     view.rerender(<CompanyProfitScreen sample={COMPANY_PROFIT_SAMPLE} />);
-    expect(screen.getAllByRole("button", { name: "לפי פרויקט" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("radio", { name: "לפי פרויקט" }).length).toBeGreaterThan(0);
     observer.settle();
     expectBarUp();
   });

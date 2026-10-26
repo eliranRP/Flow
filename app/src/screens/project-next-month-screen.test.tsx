@@ -86,7 +86,7 @@ describe("the next-month card and chart on the project's profit page (spec-fcwid
     const labels = Array.from(chart.querySelectorAll(".ui-fc-bar-label")).map((label) => label.textContent);
     expect(labels).toEqual(["מאי", "יוני", "יולי", "אוג׳", "ספט׳", "אוק׳", "נוב׳ · צפי"]);
     expect(chart.querySelectorAll(".ui-fc-ahead")).toHaveLength(1);
-    expect(screen.getByText("מאי עד אוקטובר וצפי")).toBeTruthy();
+    expect(screen.getByText("הכנסות והוצאות לפי חודש · מאי עד אוקטובר וצפי")).toBeTruthy();
     // October to date (+$6,302) is the tallest bar; November's expenses ($1,865) on the same scale.
     const october = chart.children[5] as HTMLElement;
     expect((october.querySelector(".ui-fc-bar-in") as HTMLElement).style.blockSize).toBe("108px");
@@ -153,7 +153,7 @@ describe("ProjectNextMonthScreen", () => {
     expect(rows[4]?.textContent).toContain("−$280");
     expect(rows[5]?.textContent).toContain("−$95");
     expect(screen.queryByText("Northgate Mortgage")).toBeNull();
-    expect(screen.queryByRole("group", { name: "סידור" })).toBeNull();
+    expect(screen.queryByRole("radiogroup", { name: "סידור" })).toBeNull();
     // A tap on a row opens its edit page, the row's key in the path.
     expect(rows.every((row) => row.tagName === "A")).toBe(true);
     expect(rows[3]?.getAttribute("href")).toBe("/projects/juniper-ct/profit/next/edit/avg%3Arepairs");
