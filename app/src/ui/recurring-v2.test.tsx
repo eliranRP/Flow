@@ -75,7 +75,7 @@ describe("Recurring v2: the answers (FLOW-963)", () => {
   });
 });
 
-describe("Recurring v2: the toasts (decision 0213)", () => {
+describe("Recurring v2: the toasts (decision 0215)", () => {
   it("hang under the header; an undo stays 5s, a note 4s", () => {
     expect(recurringToast({ message: "x", action: "ביטול", onAction: () => undefined })).toMatchObject({ place: "top", durationMs: 5000 });
     expect(recurringToast({ message: "x" })).toMatchObject({ place: "top", durationMs: 4000 });
