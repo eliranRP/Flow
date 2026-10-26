@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(33);
+select plan(36);
 
 do $users$
 begin
@@ -230,6 +230,20 @@ select is(
   'undo loan_update'
 );
 select is(pg_temp.link_of('a'), pg_temp.id('b'), 'puts the link back with the status');
+
+-- Undoing an edit that left the loan closed never brings back a link cleared since.
+select is(
+  pg_temp.as_owner(format('select public.mcp_update_loan(%L, %L, %L::jsonb)', 'f962-rename', pg_temp.id('a'), '{"name": "f962 a renamed"}'))->>'ok',
+  'true',
+  'update_loan renames the closed loan'
+);
+update public.loans set refinanced_into_id = null where id = pg_temp.id('a');
+select is(
+  pg_temp.as_owner(format('select public.mcp_undo(%L, %L, %L)', 'f962-rename-undo', 'loan_update', pg_temp.id('a')))->>'ok',
+  'true',
+  'undo the rename'
+);
+select is(pg_temp.link_of('a'), null, 'the link stays cleared');
 
 -- Restore: a new loan deleted since leaves no link.
 select ok((pg_temp.as_owner(format('select public.delete_loan(%L)', pg_temp.id('a')))->>'loan_id') is not null, 'a is deleted');

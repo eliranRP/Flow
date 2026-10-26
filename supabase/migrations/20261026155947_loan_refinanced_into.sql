@@ -277,7 +277,10 @@ begin
   end if;
   def := replace(def, anchor, anchor || $n$
           refinanced_into_id = case
-            when l.refinanced_into_id is null and exists (
+            when l.refinanced_into_id is null
+              -- Only the undo of a reopen: the write that cleared the link left the loan open.
+              and written ? 'status' and written->>'status' = 'open'
+              and exists (
               select 1 from public.loans rf
               where rf.id = (before->>'refinanced_into_id')::uuid and rf.company_id = cid and rf.id <> l.id
             )
