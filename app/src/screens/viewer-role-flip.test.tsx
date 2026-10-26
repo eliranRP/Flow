@@ -121,6 +121,8 @@ describe("inner write gates after the role changes", () => {
       const dialog = await openAndType();
       fireEvent.submit(formIn(dialog));
       await vi.waitFor(() => { expect(rpc).toHaveBeenCalledWith("upsert_project", expect.objectContaining({ p_name: "פרויקט לדוגמה" })); });
+      // The save ends here (the sheet closes), so its close and navigation never land in the next test.
+      await vi.waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
     });
 
     it.each(["viewer", "unknown"] as const)("writes nothing once the role is %s", async (next) => {

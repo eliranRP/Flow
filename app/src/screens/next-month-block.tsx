@@ -1,4 +1,4 @@
-import { chartHistory, chartLabel, chartSub, expenseNote, forecastChartMonth, incomeNote, type RentCategory } from "../next-month-chart";
+import { cashTakeaway, chartHistory, chartLabel, chartSub, expenseNote, forecastChartMonth, incomeNote, type RentCategory } from "../next-month-chart";
 import { cashMonthName } from "../cash";
 import type { MonthFigures } from "../month-figures";
 import type { NextMonthForecast } from "../project-next-month";
@@ -27,6 +27,7 @@ export function NextMonthBlock({
   categories,
   chartLink,
   today,
+  takeaway = false,
 }: {
   forecast: NextMonthForecast | null;
   /** The forecast's reads are still out: the card's skeleton holds its place, and the chart waits. */
@@ -45,6 +46,8 @@ export function NextMonthBlock({
   chartLink?: { href: string; text: string };
   /** yyyy-mm-dd, the forecast's today: the month's name carries a year only when it is not today's. */
   today: string;
+  /** FLOW-961: the project page titles its chart with the month's takeaway. */
+  takeaway?: boolean;
 }) {
   const history = current == null ? null : chartHistory(current, figures, firstMonth);
   const ahead = forecast == null ? null : forecastChartMonth(forecast);
@@ -72,6 +75,7 @@ export function NextMonthBlock({
           sub={chartSub(history, ahead != null)}
           label={chartLabel(history, ahead, currency, kind)}
           link={chartLink}
+          takeaway={takeaway ? cashTakeaway(history, currency) : null}
         />
       )}
     </div>

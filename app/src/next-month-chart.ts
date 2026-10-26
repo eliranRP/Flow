@@ -72,15 +72,32 @@ export function chartSub(history: ChartHistory, withForecast: boolean): string {
 }
 
 /**
- * The one label a screen reader hears for the chart, with next month's numbers, in the page's words (a cash
- * view's נכנס and יצא, a profit view's הכנסות and הוצאות). `subject` names whose figures they are ("הכנסות
- * והוצאות של החברה" on the company page); by default it is the chart's title.
+ * The one label a screen reader hears for the chart, in the page's words (a cash view's נכנס and יצא, a
+ * profit view's הכנסות and הוצאות). `subject` names whose figures they are ("הכנסות והוצאות של החברה" on the
+ * company page); by default it is the chart's title. FLOW-961: it reads every month's two figures, as the
+ * bars show them, and next month's as the forecast.
  */
 export function chartLabel(history: ChartHistory, forecast: ChartMonth | null, currency: string, kind: ForecastKind = "profit", subject?: string): string {
   const words = forecastWords(kind);
-  const head = `${subject ?? words.chart}, ${rangeWords(history)}`;
-  if (forecast == null) return head;
-  return `${head}, וצפי ${monthWord(forecast.key)}: ${words.incomeShort} ${formatAmountText(forecast.incomeMinor, currency)}, ${words.expenseShort} ${formatAmountText(forecast.expenseMinor, currency)}`;
+  const pair = (month: ChartMonth) => `${words.incomeShort} ${formatAmountText(month.incomeMinor, currency)}, ${words.expenseShort} ${formatAmountText(month.expenseMinor, currency)}`;
+  const months = history.months.map((month) => `${monthWord(month.key)}: ${pair(month)}`);
+  const ahead = forecast == null ? [] : [`צפי ${monthWord(forecast.key)}: ${pair(forecast)}`];
+  return [`${subject ?? words.chart}, ${rangeWords(history)}`, ...months, ...ahead].join(". ");
+}
+
+/**
+ * FLOW-961: the project chart's title says what it shows: the month to date, "אוקטובר: יצא $14,253 יותר
+ * משנכנס". Null with no month.
+ */
+export function cashTakeaway(history: ChartHistory, currency: string): string | null {
+  const month = history.months.at(-1);
+  if (month == null) return null;
+  const name = monthWord(month.key);
+  const diff = month.incomeMinor - month.expenseMinor;
+  if (diff === 0n) return month.incomeMinor === 0n ? `${name}: לא נכנס ולא יצא כסף` : `${name}: נכנס בדיוק מה שיצא`;
+  return diff < 0n
+    ? `${name}: יצא ${formatAmountText(-diff, currency)} יותר משנכנס`
+    : `${name}: נכנס ${formatAmountText(diff, currency)} יותר משיצא`;
 }
 
 /** A company category as the income caption reads it: its name, and its parent's id when it has one. */

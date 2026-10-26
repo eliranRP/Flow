@@ -17,16 +17,15 @@ import { useNextMonthForecast, type NextMonthSample } from "../project-next-mont
 import { cashForecast } from "../project-next-month";
 import { assertNoError, useWrite } from "../use-write";
 import { Amount } from "../ui/amount";
-import { BudgetCard } from "../ui/budget-card";
+import { BudgetCard, BudgetEmptyCard } from "../ui/budget-card";
 import { EmptyState } from "../ui/empty-state";
 import { BackButton } from "../ui/back";
+import { BandLoadFailed, useOnline } from "../ui/band-states";
 import { IconButton } from "../ui/icon-button";
 import { DocumentIcon, MoreIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
-import { Button } from "../ui/button";
 import { FocusTitle } from "../ui/focus-title";
 import { ScreenHeader } from "../ui/screen-header";
-import { ScreenState } from "../ui/screen-state";
 import { Sheet } from "../ui/sheet";
 import { Toggle } from "../ui/toggle";
 import { TopBand } from "../ui/top-band";
@@ -101,6 +100,7 @@ export function ProjectDetailScreen({
   sampleRecurring,
   sampleMenuRow,
   sampleNext,
+  sampleOfflineSince,
   now,
 }: {
   sample?: NonNullable<ProjectDetail>;
@@ -110,6 +110,8 @@ export function ProjectDetailScreen({
   sampleCash?: NonNullable<CashMonths>;
   /** Stories and tests pin the month names. */
   now?: Date;
+  /** FLOW-961: a sample page drawn offline, its figures from this moment (stories). */
+  sampleOfflineSince?: number;
   /** A sample project's next-month forecast reads; without it a sample project's chart has no forecast. */
   sampleNext?: NextMonthSample;
   /** A sample project's row for the ⋯ menu (its deletable flag); the menu reads no cash in a preview. */
@@ -187,15 +189,18 @@ export function ProjectDetailScreen({
     },
   });
   const holdWrites = useHoldWrites();
+  const online = useOnline();
   if (phase.kind === "loading") {
     return <ProjectLoading search={search} example={example} />;
   }
   if (phase.kind === "error") {
+    // FLOW-961: the band stays, as on Home: the project's name, what happened, נסו שוב and צריך עזרה?.
+    const name = detail.data?.name ?? monthRow?.name;
     return (
-      <ScreenState
-        title="פרויקט"
-        backTo={`/projects${search}`}
-        phase={phase}
+      <BandLoadFailed
+        title={name == null ? "הפרויקט לא נטען" : `${name} לא נטען`}
+        offline={phase.offline || !online}
+        leading={<BackButton fallback={`/projects${search}`} text="פרויקטים" onBand />}
         onRetry={() => {
           void detail.refetch();
           void cash.refetch();
@@ -263,8 +268,7 @@ export function ProjectDetailScreen({
       investmentHref={sectionHref("investment")}
       stateLine={stateLine}
       menu={menu}
-      budget={<ProjectBudget project={project} spentAgorot={absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot)} part="card" />}
-      budgetAdd={<ProjectBudget project={project} spentAgorot={0n} part="add" />}
+      budget={<ProjectBudget project={project} spentAgorot={absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot)} />}
       firstMonth={monthRow?.first_month?.slice(0, 7) ?? null}
       fresh={monthRow != null && monthRow.first_month == null}
       sinceProfit={(lifetime.data ?? (sample ? project : null)) == null ? null : projectRows(lifetime.data ?? project, companyCurrency).map((row) => ({ currency: row.currency, minor: row.profit_minor }))}
@@ -276,6 +280,8 @@ export function ProjectDetailScreen({
         search,
       })}
       nextMonth={nextMonth}
+      // FLOW-961: offline, the page keeps its last read and says, in the band, which moment it is from.
+      offlineSince={sample ? sampleOfflineSince ?? null : offlineSinceOf(online || preview !== "off", cash.dataUpdatedAt, detail.dataUpdatedAt)}
       example={example}
       now={now}
     />
@@ -307,6 +313,15 @@ function sampleCashOf(project: NonNullable<ProjectDetail>, now = new Date()): No
       })),
     }],
   };
+}
+
+/**
+ * FLOW-961: when the page's figures are from, for the band's offline line: null online, in a preview,
+ * or with no read time (0, nothing read yet).
+ */
+export function offlineSinceOf(onlineOrPreview: boolean, cashAt: number, detailAt: number): number | null {
+  if (onlineOrPreview) return null;
+  return cashAt || detailAt || null;
 }
 
 /** The line under the project's name: only a state other than active ("הסתיים"), else nothing. */
@@ -341,23 +356,24 @@ function LegacyEmptyProject() {
   );
 }
 
-/** FLOW-445: the budget card when a budget is set; with none, a quiet "+ הוספת תקציב" at the end of the page. */
-function ProjectBudget({ project, spentAgorot, part = "both" }: { project: NonNullable<ProjectDetail>; spentAgorot: bigint; part?: "card" | "add" | "both" }) {
+/**
+ * FLOW-445: the budget card when a budget is set. FLOW-961: with none, a dashed card in its place whose
+ * הוספת תקציב opens the edit sheet at the budget.
+ */
+function ProjectBudget({ project, spentAgorot }: { project: NonNullable<ProjectDetail>; spentAgorot: bigint }) {
   const [editing, setEditing] = useState(false);
   // The owner's type text is on the month's row (the same cached read the menu uses).
   const type = useProjectsCashMonth(undefined, project.id).data?.projects.find((row) => row.id === project.id)?.type ?? null;
   const budget = project.budget_agorot ?? null;
   const currency = useCompanyCurrency();
-  // The overview draws the card first and the add link after the profit rows, as two parts of the one budget.
-  if ((budget == null && part === "card") || (budget != null && part === "add")) return null;
   return (
     <>
       {budget == null ? (
-        <Button variant="link" quiet onClick={() => { setEditing(true); }}>+ הוספת תקציב</Button>
+        <BudgetEmptyCard onAdd={() => { setEditing(true); }} />
       ) : (
         <BudgetCard spentMinor={spentAgorot} budgetMinor={budget} currency={currency} onEdit={() => { setEditing(true); }} />
       )}
-      <ProjectFormSheet open={editing} onOpenChange={setEditing} project={{ id: project.id, name: project.name, type, budget, status: project.status }} />
+      <ProjectFormSheet open={editing} onOpenChange={setEditing} focusBudget={budget == null} project={{ id: project.id, name: project.name, type, budget, status: project.status }} />
     </>
   );
 }

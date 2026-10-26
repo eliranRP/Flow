@@ -244,8 +244,7 @@
   font-size: var(--type-btn-2-size);
 }
 
-.ui-confirm-roomy .ui-confirm-body,
-.ui-confirm-roomy .ui-confirm-warning {
+.ui-confirm-roomy .ui-confirm-body {
   line-height: calc(var(--type-body-line) * 1.035);
 }
 

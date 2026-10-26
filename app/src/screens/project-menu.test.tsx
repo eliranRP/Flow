@@ -112,12 +112,25 @@ describe("the project's ⋯ menu matches the board", () => {
     expect(within(edit).getByRole("button", { name: /קבוצה/ })).toHaveTextContent("בניין לדוגמה");
   });
 
-  it("the finish confirm has no ✕ either", () => {
+  it("finishes from the row itself, with no confirm, and says what finishing leaves (FLOW-961)", () => {
     const menu = openMenu();
+    expect(within(menu).getByRole("button", { name: /^סיום הפרויקט/ })).toHaveTextContent("אפשר לבטל מיד, ושום דבר לא נמחק");
     fireEvent.click(within(menu).getByRole("button", { name: /^סיום הפרויקט/ }));
-    const confirm = screen.getByRole("dialog", { name: /^לסיים את/ });
+    expect(screen.queryByRole("dialog", { name: /^לסיים את/ })).not.toBeInTheDocument();
+  });
+
+  it("names the items still waiting on the finish row", () => {
+    render(wrap(<ProjectDetailScreen sample={project} sampleMenuRow={{ id: "p1", pending_count: 2, deletable: false } as never} />));
+    fireEvent.click(screen.getByRole("button", { name: "עוד" }));
+    expect(screen.getByRole("button", { name: /^סיום הפרויקט/ })).toHaveTextContent("יש בו 2 פריטים לאישור. הם יחכו גם אחרי הסיום");
+  });
+
+  it("asks before a delete, on a button that names it", () => {
+    const menu = openMenu();
+    fireEvent.click(within(menu).getByRole("button", { name: /^מחיקת הפרויקט/ }));
+    const confirm = screen.getByRole("dialog", { name: /^למחוק את/ });
     expect(within(confirm).queryByRole("button", { name: "סגירה" })).not.toBeInTheDocument();
-    expect(within(confirm).getByRole("button", { name: "ביטול" })).toBeInTheDocument();
+    expect(within(confirm).getByRole("button", { name: "מחיקת הפרויקט" })).toBeInTheDocument();
   });
 });
 // --- project-detail-kinds.test.tsx
@@ -137,7 +150,7 @@ describe("the project page by kind (FLOW-445b)", () => {
     expect(screen.getByText("מאז מרץ 2025")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "השקעה והלוואות" })).toBeInTheDocument();
     expect(screen.getByText("$160K")).toBeInTheDocument();
-    expect(screen.queryByText("+ הוספת תקציב")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "הוספת תקציב" })).not.toBeInTheDocument();
   });
 
   it("a client job: the budget card and the profit rows, with no investment card", () => {

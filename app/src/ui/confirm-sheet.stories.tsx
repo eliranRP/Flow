@@ -118,16 +118,3 @@ export const DeleteWithAlternative: Story = {
     onConfirm: () => undefined,
   },
 };
-export const Warning: Story = {
-  args: {
-    open: true,
-    onOpenChange: () => undefined,
-    title: "לסיים את הפרויקט?",
-    item: "Tidewater",
-    consequence: "אחרי הסיום הפרויקט עובר לרשימת הסיומים.",
-    confirmLabel: "סיום",
-    consequenceSize: "body",
-    warning: "יש הוצאה אחת שעוד לא שולמה.",
-    onConfirm: () => undefined,
-  },
-};

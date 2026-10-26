@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { BudgetCard } from "./budget-card";
+import { BudgetCard, BudgetEmptyCard } from "./budget-card";
 import { forceReducedMotion } from "./reduced-motion";
 import { padded } from "./story-support";
 
@@ -19,6 +19,8 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
-/** Spend past the budget: the bar turns signal and the note names the overspend. */
+/** Spend past the budget: the bar runs past a tick in the error colour, and the note names the overspend (FLOW-961). */
 export const Over: Story = { args: { spent: 6_480_000, budget: 6_000_000 } };
+/** FLOW-961: no budget yet, the dashed card in its place. */
+export const Empty: Story = { render: () => <BudgetEmptyCard onAdd={() => undefined} /> };
 export const ReducedMotion: Story = { decorators: [forceReducedMotion] };

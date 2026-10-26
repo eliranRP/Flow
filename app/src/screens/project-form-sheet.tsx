@@ -1,5 +1,5 @@
 import { shekelsToAgorot } from "@flow/shared";
-import { useRef, useState, type ReactNode, type SubmitEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { getSupabase } from "../lib/supabase";
 import { useCompanyCurrency } from "../company-currency";
@@ -24,16 +24,19 @@ export function ProjectFormSheet({
   onOpenChange,
   project,
   extras,
+  focusBudget = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   project?: ProjectFormValues;
   /** The edit sheet's own controls after the fields: the overhead switch and the group. */
   extras?: ReactNode;
+  /** FLOW-961: opened from הוספת תקציב, the sheet puts the cursor in the budget. */
+  focusBudget?: boolean;
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={project ? "עריכת פרויקט" : "פרויקט חדש"} panelClassName="ui-sheet-wide ui-sheet-g14 ui-sheet-pad28 ui-project-new">
-      <ProjectForm key={project == null ? "new" : `${project.id}:${project.name}:${project.type ?? ""}:${String(project.budget)}`} project={project} extras={extras} onClose={() => { onOpenChange(false); }} />
+      <ProjectForm key={project == null ? "new" : `${project.id}:${project.name}:${project.type ?? ""}:${String(project.budget)}`} project={project} extras={extras} focusBudget={focusBudget} onClose={() => { onOpenChange(false); }} />
     </Sheet>
   );
 }
@@ -42,7 +45,14 @@ function shekelsText(agorot: bigint | null): string {
   return agorot == null ? "" : String(Number(agorot) / 100);
 }
 
-function ProjectForm({ project, extras, onClose }: { project?: ProjectFormValues; extras?: ReactNode; onClose: () => void }) {
+/** FLOW-961: why the save waits, under the name, in place of a disabled button. */
+export function projectNameError(trimmed: string, editing: boolean): string | undefined {
+  if (trimmed === "") return editing ? "צריך שם כדי לשמור את הפרויקט" : "צריך שם כדי ליצור את הפרויקט";
+  if (trimmed.length < 2) return "השם צריך לפחות שתי אותיות";
+  return undefined;
+}
+
+function ProjectForm({ project, extras, focusBudget, onClose }: { project?: ProjectFormValues; extras?: ReactNode; focusBudget: boolean; onClose: () => void }) {
   const blocked = useBlockedPreview();
   const companyCurrency = useCompanyCurrency();
   // The budget is in the company currency, so its field shows that currency's mark.
@@ -54,6 +64,15 @@ function ProjectForm({ project, extras, onClose }: { project?: ProjectFormValues
   const [budget, setBudget] = useState(shekelsText(project?.budget ?? null));
   const createdId = useRef<string | null>(null);
   const trimmed = name.trim();
+  // Shown after a tap on the button, cleared as the name changes.
+  const [nameError, setNameError] = useState<string | undefined>(undefined);
+  const form = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (!focusBudget) return;
+    // After the sheet's own focus on its title (its open runs first), the budget takes the cursor.
+    const timer = window.setTimeout(() => { form.current?.querySelector<HTMLInputElement>(".ui-money-field input")?.focus(); }, 0);
+    return () => { window.clearTimeout(timer); };
+  }, [focusBudget]);
   const save = useWrite({
     failure: "לא הצלחנו לשמור את הפרויקט.",
     success: project ? "הפרטים נשמרו" : "הפרויקט נוצר",
@@ -81,18 +100,25 @@ function ProjectForm({ project, extras, onClose }: { project?: ProjectFormValues
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
-    if (holdWrites || blocked() || trimmed.length < 2) return;
+    if (holdWrites) return;
+    // The name is checked on the phone, so the preview says it too; only the save is the preview's to block.
+    const error = projectNameError(trimmed, project != null);
+    setNameError(error);
+    if (error != null || blocked()) return;
     save.mutate();
   }
 
   return (
-    <form className="ui-stack" onSubmit={submit}>
+    <form ref={form} className="ui-stack" onSubmit={submit}>
       <TextField
         label="שם הפרויקט"
         value={name}
-        onChange={(event) => { setName(event.target.value); }}
+        onChange={(event) => {
+          setName(event.target.value);
+          setNameError(undefined);
+        }}
         placeholder={project ? undefined : "למשל: Ashby Rd"}
-        required
+        error={nameError}
       />
       <TextField
         label="סוג (אופציונלי)"
@@ -105,7 +131,8 @@ function ProjectForm({ project, extras, onClose }: { project?: ProjectFormValues
       <p className="ui-muted">נראה כמה נוצל, ונסמן כשעוברים אותו.</p>
       <p className="ui-muted">רק השם חובה. פרויקטים מ־SUMIT נוספים לבד.</p>
       {extras}
-      <Button type="submit" busy={save.isPending} disabled={holdWrites || trimmed.length < 2}>
+      {/* FLOW-961: never a dead button; without a name the tap says why, under the field. */}
+      <Button type="submit" busy={save.isPending} disabled={holdWrites}>
         {project ? "שמירה" : "יצירת פרויקט"}
       </Button>
     </form>
