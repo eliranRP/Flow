@@ -52,8 +52,8 @@ export function attentionRows({
       id: "review",
       to: `/review${search}`,
       title: pending === 1 ? "פריט אחד ממתין לאישור" : <><bdi dir="ltr">{String(pending)}</bdi> פריטים ממתינים לאישור</>,
-      // FLOW-958: Home draws this row as its one filled button, worded as the weekly sheet's; the
-      // time is drawn smaller so the label stays on one line at 320. The project page keeps the row.
+      // FLOW-958, FLOW-961: Home and the project page draw this row as their one filled button
+      // (ReviewButton), worded as the weekly sheet's; the time is drawn smaller so the label holds one line at 320.
       button: { label: reviewItems(pending), hint: reviewMinutes(pending) },
     });
   }

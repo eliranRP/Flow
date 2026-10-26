@@ -21,6 +21,7 @@ export function ScreenState({
   stacked = false,
   leading,
   trailing,
+  titleAside,
   below,
   stateSubtitle,
   syncing,
@@ -40,8 +41,10 @@ export function ScreenState({
   children?: ReactNode;
   /** The title sits under the bar, like the ready screen it stands in for. */
   stacked?: boolean;
-  /** A stacked bar's start control in place of Back (the Projects tab's "+ פרויקט חדש"). */
+  /** A stacked bar's start control in place of Back. */
   leading?: ReactNode;
+  /** A stacked title's own controls, on the title's line (the Projects tab's search and +, FLOW-961). */
+  titleAside?: ReactNode;
   /** Known chrome that stays real while the data loads, e.g. a period pill. */
   trailing?: ReactNode;
   /** A control under the title that stays real while the data loads (ScreenHeader `below`). */
@@ -76,7 +79,7 @@ export function ScreenState({
       {barOnly ? (
         <ScreenHeader barOnly backTo={backTo} kicker={kicker} className={headerClassName} />
       ) : stacked ? (
-        <ScreenHeader layout="stacked" title={title} subtitle={phase.kind === "ready" ? subtitle : stateSubtitle} backTo={backTo} leading={leading} trailing={trailing ?? action} kicker={kicker} below={below} className={headerClassName} headEnd={headEnd} />
+        <ScreenHeader layout="stacked" title={title} subtitle={phase.kind === "ready" ? subtitle : stateSubtitle} backTo={backTo} leading={leading} trailing={trailing ?? action} titleAside={titleAside} kicker={kicker} below={below} className={headerClassName} headEnd={headEnd} />
       ) : (
         <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : stateSubtitle} backTo={backTo} action={action} trailing={trailing} kicker={kicker} className={headerClassName} headEnd={headEnd} />
       )}

@@ -144,7 +144,7 @@ test("the Home attention card rows stay inside 320 and 390, light and dark (FLOW
         await expect(rows).toHaveCount(rowCount);
         const problems = await layoutProblems(page);
         // FLOW-958: a lone row in Home's box is a Banner, and the review is a button; both must fit too.
-        const clipped = await page.locator(".ui-banner-row .ui-row-title, .ui-home-attention .ui-banner .ui-row-title, .ui-home-attention-primary .ui-btn-label").evaluateAll((nodes) =>
+        const clipped = await page.locator(".ui-banner-row .ui-row-title, .ui-home-attention .ui-banner .ui-row-title, .ui-review-cta .ui-btn-label").evaluateAll((nodes) =>
           nodes.filter((node) => node.scrollHeight > node.clientHeight + 1).map((node) => node.textContent));
         // The long-Hebrew story clamps on purpose; real Home titles must fit.
         if (id.startsWith("screens-routes")) problems.push(...clipped.map((title) => `row title clipped: ${title}`));
@@ -215,7 +215,9 @@ test("the project list stories, finished and many active, stay inside 320 and 39
         if (id.endsWith("finished")) {
           // FLOW-445b: the finished projects show under their own הסתיימו heading, drawn as finished rows (the board's ProjectsFinished).
           await expect(page.getByRole("heading", { name: /^הסתיימו/ })).toBeVisible();
-          await expect(page.getByRole("link", { name: /^Ashby Rd/ })).toHaveClass(/\bui-proj-finished\b/);
+          // FLOW-961: at full contrast, with its total profit named.
+          await expect(page.getByRole("link", { name: /^Ashby Rd/ }).locator(".ui-row-done")).toBeVisible();
+          await expect(page.getByRole("link", { name: /^Ashby Rd/ })).toContainText("רווח כולל");
           await expect(page.getByRole("link", { name: /^Juniper Ct/ })).toBeVisible();
         } else {
           await expect(page.getByRole("link", { name: /^Juniper Ct/ })).toBeVisible();

@@ -137,7 +137,7 @@ describe("Home's cash (FLOW-364: the redesigned Home)", () => {
   it("says in the band which moment the figures are from when the network drops (FLOW-958)", async () => {
     wrap();
     await screen.findByText("תזרים · עד היום");
-    expect(document.querySelector(".ui-home-offline")).toBeNull();
+    expect(document.querySelector(".ui-band-offline")).toBeNull();
     try {
       act(() => {
         onlineManager.setOnline(false);
@@ -150,7 +150,7 @@ describe("Home's cash (FLOW-364: the redesigned Home)", () => {
       });
     }
     await waitFor(() => {
-      expect(document.querySelector(".ui-home-offline")).toBeNull();
+      expect(document.querySelector(".ui-band-offline")).toBeNull();
     });
   });
 

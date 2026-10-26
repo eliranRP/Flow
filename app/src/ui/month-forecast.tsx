@@ -164,6 +164,7 @@ export function MonthChart({
   label,
   link,
   title,
+  takeaway,
 }: {
   kind: ForecastKind;
   /** Oldest first; the current month is to date, or in progress with what is still expected. */
@@ -175,16 +176,25 @@ export function MonthChart({
   link?: { href: string; text: string };
   /** The title when the pairs are not months ("הכנסות והוצאות לפי שנה"); else the kind's. */
   title?: string;
+  /** FLOW-961: a heading that says what the bars show; the kind's title and the sub then sit above it as one label. */
+  takeaway?: string | null;
 }) {
   const words = forecastWords(kind);
   const bars = chartBars(history, forecast);
   const expected = bars.some((bar) => bar.forecast || bar.inProgress);
   return (
     <section className="ui-fc-chart">
-      <span className="ui-fc-chart-head">
-        <span className="ui-fc-chart-title">{title ?? words.chart}</span>
-        <span className="ui-fc-label">{sub}</span>
-      </span>
+      {takeaway == null ? (
+        <span className="ui-fc-chart-head">
+          <span className="ui-fc-chart-title">{title ?? words.chart}</span>
+          <span className="ui-fc-label">{sub}</span>
+        </span>
+      ) : (
+        <div className="ui-fc-chart-head ui-fc-chart-head-takeaway">
+          <span className="ui-fc-label">{`${title ?? words.chart} · ${sub}`}</span>
+          <h2 className="ui-fc-takeaway">{takeaway}</h2>
+        </div>
+      )}
       <div role="img" aria-label={label} className={cx("ui-fc-bars", bars.length > DENSE_BARS && "ui-fc-bars-dense")} style={{ gridTemplateColumns: `repeat(${String(bars.length)}, minmax(0, 1fr))` }}>
         {bars.map((bar) => (
           <div key={bar.key} className={barClass(bar)}>

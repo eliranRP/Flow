@@ -1,0 +1,91 @@
+/* A band page's offline line, its failed read, and the review row's filled button (band-states.tsx). */
+
+/* The review time is the button's quiet part: 13/400, so the label holds one line at 320. */
+.ui-review-cta-time {
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  white-space: nowrap;
+}
+
+/* FLOW-958 (Home), FLOW-961 (the project page): offline, a line in the band says which moment the figures are from. */
+.ui-band-offline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--touch-min);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  box-sizing: border-box;
+  border-radius: var(--radius-chip);
+  background: var(--band-track);
+  color: var(--color-on-band);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+}
+
+.ui-band-offline svg {
+  flex: none;
+}
+
+.ui-band-offline-text {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+/* FLOW-958, FLOW-961: a failed read keeps the band: what happened, נסו שוב and צריך עזרה?. */
+.ui-band-failed {
+  align-items: flex-start;
+  gap: var(--space-3);
+  color: var(--color-on-band);
+}
+
+.ui-band-failed-icon {
+  display: grid;
+  place-items: center;
+  inline-size: var(--touch-min);
+  block-size: var(--touch-min);
+  border-radius: 50%;
+  background: var(--band-track);
+}
+
+.ui-band-failed-title {
+  margin: 0;
+  font-size: var(--type-section-size);
+  line-height: var(--type-section-line);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-band-failed-body {
+  margin: 0;
+  max-inline-size: 32ch;
+  color: var(--color-on-band-secondary);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+.ui-band-failed-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding-block-start: var(--space-1);
+}
+
+.ui-band-failed-retry {
+  min-block-size: var(--touch-min);
+  padding-inline: var(--space-5);
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--color-on-band);
+  color: var(--color-band-past);
+  font: inherit;
+  font-size: var(--type-btn-size);
+  font-weight: var(--type-btn-2-weight);
+}
+
+.ui-band-failed-help {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--touch-min);
+  color: var(--color-on-band);
+  font-size: var(--type-line2-size);
+}

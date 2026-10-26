@@ -13,8 +13,6 @@ type ConfirmSheetProps = {
   detail?: string;
   /** body (17/1.5) for a confirm that explains what stays and what goes (FLOW-445). Default hint. */
   consequenceSize?: "hint" | "body";
-  /** A warning line in the signal-soft colour, under the consequence (FLOW-445: pending lines before a finish). */
-  warning?: string;
   confirmLabel: string;
   /** true: the red tint with a bin. "outline": the signal outline with no bin (FLOW-445 delete). */
   destructive?: boolean | "outline";
@@ -27,7 +25,7 @@ type ConfirmSheetProps = {
   alternative?: { label: string; onClick: () => void };
   /** false where the board draws no ✕ (swipe, the scrim and Escape still close). */
   closeButton?: boolean;
-  /** Opt-in classes for the panel (the project finish confirm's roomier board rhythm). */
+  /** Opt-in classes for the panel (the project delete confirm's roomier board rhythm). */
   panelClassName?: string;
   /** A field above the confirm button (the danger zone's typed company name). */
   children?: ReactNode;
@@ -43,7 +41,6 @@ export function ConfirmSheet({
   consequence,
   detail,
   consequenceSize = "hint",
-  warning,
   confirmLabel,
   destructive = false,
   icon,
@@ -60,7 +57,6 @@ export function ConfirmSheet({
     <Sheet open={open} onOpenChange={onOpenChange} title={title} returnFocusRef={returnFocusRef} busy={busy} closeButton={closeButton} panelClassName={panelClassName}>
       {item ? <p className="t-line2 text-text-secondary">{item}</p> : null}
       <p className={consequenceSize === "body" ? "ui-confirm-body" : "t-caption t-muted text-text-secondary"}>{consequence}</p>
-      {warning ? <p className="ui-confirm-warning">{warning}</p> : null}
       {detail ? <p className="t-caption t-muted text-text-secondary">{detail}</p> : null}
       {children}
       <Button

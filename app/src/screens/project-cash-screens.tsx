@@ -20,6 +20,7 @@ import { ProjectEmptyCard, ProjectProfitCard } from "./project-page-cards";
 import { NextMonthBlock } from "./next-month-block";
 import { FocusTitle } from "../ui/focus-title";
 import { BannerRows, type BannerRow } from "../ui/banner";
+import { BandOfflineLine, ReviewButton } from "../ui/band-states";
 import { List, ListRow } from "../ui/list-row";
 import { InvestmentSummary } from "../ui/investment-card";
 import { useScrolledPast } from "../ui/screen-header";
@@ -76,8 +77,8 @@ export function ProjectCashOverview({
   firstMonth = null,
   fresh = false,
   budget,
-  budgetAdd,
   nextMonth = null,
+  offlineSince = null,
   example,
   now,
 }: {
@@ -98,12 +99,12 @@ export function ProjectCashOverview({
   firstMonth?: string | null;
   /** A project with no line, invoice or month yet: the profit rows give way to the empty card. */
   fresh?: boolean;
-  /** FLOW-445: the budget card, when the project has a budget (the edit sheet lives with the page). */
+  /** FLOW-445: the budget card, or (FLOW-961) the dashed card that adds one (the edit sheet lives with the page). */
   budget?: ReactNode;
-  /** The quiet "+ הוספת תקציב" a project with no budget shows after its profit rows. */
-  budgetAdd?: ReactNode;
   /** Next month's forecast (the צפי page's) in its currency, for the card and the chart's last pair. */
   nextMonth?: NextMonthCash | null;
+  /** FLOW-961: offline, the moment the figures on screen are from; null online. */
+  offlineSince?: number | null;
   example?: ReactNode;
   /** Stories and tests pin the month names. */
   now?: Date;
@@ -152,6 +153,7 @@ export function ProjectCashOverview({
           <>
             <FocusTitle className="t-title">{project.name}</FocusTitle>
             {stateLine == null ? null : <p className="t-line2">{stateLine}</p>}
+            {offlineSince == null ? null : <BandOfflineLine since={offlineSince} />}
             <p className="ui-band-label t-line2">{key == null ? "תזרים" : `${cashTitle(key, now)}${key === israelToday(now).slice(0, 7) ? " · עד היום" : ""}`}</p>
             {data == null ? (
               <Skeleton tone="band" className="ui-skel-project-num" />
@@ -194,9 +196,13 @@ export function ProjectCashOverview({
       />
       {data == null ? <ListSkeleton /> : null}
       <div className="ui-project-stack">
-        {/* The board puts the rows that need a hand first: its pending approvals, late bills and changed charges. */}
-        <BannerRows rows={attention} />
-        {budget}
+        {/* The board puts the rows that need a hand first: its pending approvals, late bills and changed charges.
+            FLOW-961: the review row is the page's one filled button, as on Home. */}
+        <ReviewButton row={attention[0]} />
+        <BannerRows rows={attention[0]?.button == null ? attention : attention.slice(1)} />
+        {/* A project with a budget always shows it. With none, the dashed card shows for a project that runs
+            on one: not a new one, not a finished one, and not a property whose investment card is on the page. */}
+        {project.budget_agorot != null || (!fresh && project.status !== "finished" && !summary) ? budget : null}
         {profitRow == null || fresh ? null : (
           <ProjectProfitCard
             monthName={cashMonthName(key ?? "", now)}
@@ -209,7 +215,6 @@ export function ProjectCashOverview({
             extra={keptRow}
           />
         )}
-        {summary ? null : budgetAdd}
         {fresh ? <ProjectEmptyCard /> : null}
         {data == null || key == null || fresh || nextMonth == null ? null : (
           <NextMonthBlock
@@ -224,6 +229,7 @@ export function ProjectCashOverview({
             categories={nextMonth.categories}
             today={nextMonth.today}
             chartLink={{ href: `/projects/${project.id}/profit${withPeriodSearch(search, { kind: "all", from: null, to: null })}`, text: "רווח לפי חודש" }}
+            takeaway
           />
         )}
         {/* The owner's ask (20/10): the investment and loans card comes last, under the forecast and the chart. */}

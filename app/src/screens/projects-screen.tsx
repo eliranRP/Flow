@@ -69,13 +69,20 @@ export function ProjectsScreen({ sample, cashSample, finishedOpen: openFinished 
     <>
       <ScreenState
         stacked
-        headerClassName="ui-tab-root-head"
+        headerClassName="ui-tab-root-head ui-projects-root-head"
         title="פרויקטים"
-        leading={holdWrites || phase.kind !== "ready" ? undefined : <Button variant="link" onClick={() => { setOpen(true); }}>+ פרויקט חדש</Button>}
-        trailing={phase.kind !== "ready" ? <span className="ui-header-slot" aria-hidden="true" /> : (
-          <IconButton to={`/search${search}`} label="חיפוש">
-            <SearchIcon />
-          </IconButton>
+        // FLOW-961: one row, the title with search and the filled + (the screen's main action).
+        titleAside={phase.kind !== "ready" ? <span className="ui-header-slot" aria-hidden="true" /> : (
+          <span className="ui-projects-head-actions">
+            <IconButton to={`/search${search}`} label="חיפוש">
+              <SearchIcon />
+            </IconButton>
+            {holdWrites ? null : (
+              <IconButton label="פרויקט חדש" className="ui-icon-btn-filled" onClick={() => { setOpen(true); }}>
+                <PlusIcon />
+              </IconButton>
+            )}
+          </span>
         )}
         subtitle={month ? `${String(activeCount)} פעילים · תזרים ${cashMonthName(month.month.slice(0, 7))} עד היום` : undefined}
         phase={phase}
@@ -170,14 +177,14 @@ function ProjectsBody({
         shown={past}
         actions={(
           <>
+            <IconButton to={`/search${search}`} label="חיפוש">
+              <SearchIcon />
+            </IconButton>
             {onNew ? (
               <IconButton label="פרויקט חדש" onClick={onNew}>
                 <PlusIcon />
               </IconButton>
             ) : null}
-            <IconButton to={`/search${search}`} label="חיפוש">
-              <SearchIcon />
-            </IconButton>
           </>
         )}
       />
@@ -192,7 +199,8 @@ function ProjectCashRowItem({ row, currency, search, finished = false }: { row: 
   const lines = finished ? [] : row.cash.map((line) => ({ minor: BigInt(line.net_minor), currency: line.currency }));
   const elsewhere = lines.length > 1 || lines.some((line) => line.currency !== currency);
   const over = !finished && isOverBudget(row);
-  // The board's finished row: a tick, the owner's own words ("flip · נמכר ביוני 2026"), and the final result in whole dollars.
+  // The board's finished row: a tick, the owner's own words ("flip · נמכר ביוני 2026"), and the final result in whole
+  // dollars, named רווח כולל. FLOW-961: at full contrast, not dimmed.
   const hint = finished ? (row.type ?? "הסתיים") : projectMeta(row);
   if (finished) {
     return (
@@ -204,8 +212,8 @@ function ProjectCashRowItem({ row, currency, search, finished = false }: { row: 
         agorot={BigInt(row.profit_all_minor)}
         currency={currency}
         amountDirection={row.profit_all_minor > 0 ? "income" : undefined}
+        endSub="רווח כולל"
         href={`/projects/${row.id}${search}`}
-        className="ui-proj-finished"
       />
     );
   }
@@ -213,7 +221,8 @@ function ProjectCashRowItem({ row, currency, search, finished = false }: { row: 
     <ListRow
       variant="project"
       title={row.name}
-      hint={<span className="ui-proj-hint-line">{hint}{over ? <span className="ui-proj-over"> · מעל התקציב</span> : null}</span>}
+      // FLOW-961: the flag leads the line, so a long type never cuts it off.
+      hint={<span className="ui-proj-hint-line">{over ? <span className="ui-proj-over">מעל התקציב · </span> : null}{hint}</span>}
       icon={<Avatar name={row.name} fallback="person" />}
       agorot={BigInt(net)}
       currency={currency}

@@ -197,7 +197,7 @@ export const ProjectGroupPicker: Story = {
   },
 };
 
-/** A finished project offers "החזרה לפעיל" in the same place. */
+/** A finished project offers "החזרה לפעילים" in the same place. */
 export const ProjectMenuFinished: Story = {
   name: "Project, ⋯ menu, finished",
   render: () => (
@@ -213,17 +213,44 @@ export const ProjectMenuFinished: Story = {
   play: ProjectMenu.play,
 };
 
-/** The neutral confirm: the button repeats the action, with no red and no bin. */
-export const ProjectFinishConfirm: Story = {
-  name: "Project, finish confirm",
-  render: ProjectOverview.render,
-  play: async (context) => {
-    await ProjectMenu.play?.(context);
-    const body = storyBody(context.canvasElement);
-    // FLOW-445: the row carries its hint, and the confirm names the project.
-    await userEvent.click(await body.findByRole("button", { name: /^סיום הפרויקט/ }));
-    await body.findByRole("dialog", { name: /^לסיים את/ });
-  },
+/** FLOW-961: past the budget, the bar runs on beyond a tick in the error colour, and the note names the overrun. */
+export const ProjectOverBudget: Story = {
+  name: "Project, over budget",
+  render: () => (
+    <StoryRoute entry="/projects/p-a" tabs>
+      <ProjectDetailScreen example={exampleOnBand} sample={{ ...periodProject, budget_agorot: 20_000_000n }} sectionTo={sectionTo} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-961: no budget yet: the dashed card in the budget's place opens the edit sheet at the budget. */
+export const ProjectNoBudget: Story = {
+  name: "Project, no budget",
+  render: () => (
+    <StoryRoute entry="/projects/p-a" tabs>
+      <ProjectDetailScreen example={exampleOnBand} sample={{ ...periodProject, budget_agorot: null, pending_count: 2 }} sectionTo={sectionTo} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-961: offline, the page keeps its figures and says in the band which moment they are from. */
+export const ProjectOffline: Story = {
+  name: "Project, offline",
+  render: () => (
+    <StoryRoute entry="/projects/p-a" tabs>
+      <ProjectDetailScreen example={exampleOnBand} sample={periodProject} sectionTo={sectionTo} sampleOfflineSince={Date.UTC(2026, 9, 26, 7, 41)} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-961: a failed read keeps the band, with נסו שוב and צריך עזרה? (Home v2's failed band). */
+export const ProjectDetailFailed: Story = {
+  render: () => (
+    <StoryRoute entry="/projects/a?preview=error-server" tabs>
+      <ExampleBar />
+      <ProjectDetailScreen />
+    </StoryRoute>
+  ),
 };
 
 /** The board's three other kinds of project page: a rental, a client job, and a project with nothing filed yet. */

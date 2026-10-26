@@ -57,9 +57,10 @@ describe("the project page's next month (spec-fcwide), in cash words (spec-cash2
     const chart = screen.getByRole("img", { name: /^נכנס ויצא לפי חודש, / });
     expect(chart.children).toHaveLength(7);
     expect(chart.getAttribute("aria-label")).toContain("נכנס $4,150, יצא $1,865");
-    expect(screen.getByText("נכנס ויצא לפי חודש")).toBeInTheDocument();
     expect(container.querySelector(".ui-fc-legend")?.textContent).toBe("נכנסיצאצפי");
-    expect(screen.getByText(`${monthWord(shiftMonthKey(thisMonth, -5))} עד ${monthWord(thisMonth)} וצפי`)).toBeInTheDocument();
+    // FLOW-961: the metric and its months are the label; the heading is the month's takeaway.
+    expect(screen.getByText(`נכנס ויצא לפי חודש · ${monthWord(shiftMonthKey(thisMonth, -5))} עד ${monthWord(thisMonth)} וצפי`)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: new RegExp(`^${monthWord(thisMonth)}: נכנס \\$[\\d,.]+ יותר משיצא$`) })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "רווח לפי חודש" }).getAttribute("href")).toBe("/projects/p-rental/profit?period=all");
     // The investment card comes last, after the chart (the owner's ask, 20/10).
     expect(chart.compareDocumentPosition(screen.getByRole("heading", { name: "השקעה והלוואות" }))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
@@ -90,9 +91,9 @@ describe("the project page's next month (spec-fcwide), in cash words (spec-cash2
 
   it("a flip: since the purchase, which sets the scale; no income, so the $0 is grey", () => {
     const { container } = renderFlip();
-    const chart = screen.getByRole("img", { name: /^נכנס ויצא לפי חודש, מתחילת הפרויקט, / });
+    const chart = screen.getByRole("img", { name: /^נכנס ויצא לפי חודש, מתחילת הפרויקט\. / });
     expect(chart.children).toHaveLength(5);
-    expect(screen.getByText("מתחילת הפרויקט וצפי")).toBeInTheDocument();
+    expect(screen.getByText("נכנס ויצא לפי חודש · מתחילת הפרויקט וצפי")).toBeInTheDocument();
     expect(bar(chart, 0, "out")).toBe("108px");
     expect(bar(chart, 0, "in")).toBe("2px");
     expect(bar(chart, 4, "in")).toBe("2px");
@@ -110,7 +111,7 @@ describe("the project page's next month (spec-fcwide), in cash words (spec-cash2
     expect(within(card).getByText("תשלום מהלקוח")).toBeInTheDocument();
     expect(within(card).getByText(`מול $21,600 ב${previous}`)).toBeInTheDocument();
     expect(container.querySelector(".ui-fc-net")?.textContent).toBe("תזרים צפוי+$8,300");
-    expect(screen.getByText("מתחילת הפרויקט וצפי")).toBeInTheDocument();
+    expect(screen.getByText("נכנס ויצא לפי חודש · מתחילת הפרויקט וצפי")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /^נכנס ויצא לפי חודש/ }).children).toHaveLength(4);
   });
 

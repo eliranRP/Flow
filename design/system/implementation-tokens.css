@@ -203,6 +203,7 @@
   --color-track: #E7E2F0;        /* job bar track, States board (light line); dark is #2E2740 */
   --color-avatar: #F3F0F8;       /* FLOW-366: a row's initials circle (board; dark is #2A2540) */
   --color-track-strong: #DAD3E6;   /* FLOW-445: budget track, loan part of the equity bar */
+  --color-track-outline: #8F879F;  /* FLOW-961: the outline of a bar's empty part (budget left, the loan), 3.4:1 on white */
   --color-bar-ahead: #CDBDF3;   /* the forecast's "still expected" part of a bar (לפי קטגוריה) */
   --shadow-pill: 0 6px 18px rgba(40, 20, 90, 0.12); /* sync pill, States board (FLOW-371) */
   --shadow-toast: 0 8px 24px rgba(40, 20, 90, 0.12); /* toast, LinesLight and StatesLight board (FLOW-363 3c) */
@@ -212,7 +213,7 @@
   --color-accent-dim: #7E66B8;   /* bar fill only, never text (interest part of the loan bar, FLOW-139); dark is #7E66B8 */
   --color-outline-secondary: #DAD3E6; /* secondary button border (board); dark aliases tint-strong */
   --color-outline-forecast: #CDBFEA; /* the dashed next-month card and its צפי tag (ProfitProject board); dark #4A3F66 */
-  --color-chart-expense: #A69EB8; /* the month chart's expense bars and swatch (Profit and Projects boards); dark #564E66 */
+  --color-chart-expense: #3D3550; /* the month chart's expense bars and swatch: ink, 11.5:1 on white (FLOW-961; was #A69EB8 at 2.6:1); dark #D9D2E9 */
   --color-control-off: #8F86A3;
   --color-control-border: #8F86A3;
   --color-switch-off: #DAD3E6;  /* switch track, off (board: Settings switch off; FLOW-512) */
@@ -284,6 +285,7 @@
     --color-accent-dim: #7E66B8;
     --color-avatar: #2A2540;
     --color-track-strong: #3A3350;   /* FLOW-445: budget track, loan part of the equity bar */
+    --color-track-outline: #6F6787;  /* FLOW-961: a bar's empty part as an outline, 3.2:1 on the card */
     --color-bar-ahead: #5A4A82;
     --color-control-off: #736A8C;
     --color-control-border: #736A8C;
@@ -340,7 +342,7 @@
     --color-pill-hurts: #C3302B;
     --color-outline-secondary: var(--color-tint-strong);
     --color-outline-forecast: #4A3F66;
-    --color-chart-expense: #564E66;
+    --color-chart-expense: #D9D2E9;
     --shadow-pill: 0 6px 18px rgba(0, 0, 0, 0.4);
     --shadow-toast: 0 8px 24px rgba(0, 0, 0, 0.4); /* toast, Lines board (FLOW-363 3c) */
   }
@@ -359,6 +361,7 @@
   --color-accent-dim: #7E66B8;
   --color-avatar: #2A2540;
   --color-track-strong: #3A3350;   /* FLOW-445: budget track, loan part of the equity bar */
+  --color-track-outline: #6F6787;  /* FLOW-961: a bar's empty part as an outline, 3.2:1 on the card */
   --color-bar-ahead: #5A4A82;
   --color-control-off: #736A8C;
   --color-control-border: #736A8C;
@@ -414,7 +417,7 @@
   --color-pill-hurts: #C3302B;
   --color-outline-secondary: var(--color-tint-strong);
   --color-outline-forecast: #4A3F66;
-  --color-chart-expense: #564E66;
+  --color-chart-expense: #D9D2E9;
   --shadow-pill: 0 6px 18px rgba(0, 0, 0, 0.4);
   --shadow-toast: 0 8px 24px rgba(0, 0, 0, 0.4); /* toast, Lines board (FLOW-363 3c) */
 }
