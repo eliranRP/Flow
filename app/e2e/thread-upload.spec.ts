@@ -128,7 +128,7 @@ test("a photo saved from the approval sheet, with no note, reaches storage and t
   });
   await expect(page.getByText("IMG_6895.jpeg")).toBeVisible();
   await page.getByRole("button", { name: "רק לשמור" }).click();
-  await expect(page.getByRole("button", { name: "קובץ", exact: true })).toBeVisible();
+  await expect(page.locator(".ui-review-thread")).toHaveText("קובץ");
   await expect(page.getByText("ההערה לא נשמרה")).toHaveCount(0);
 
   expect(uploads).toEqual([200]);
