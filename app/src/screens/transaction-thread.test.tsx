@@ -7,7 +7,7 @@ import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { mercuryNoteStatus, saveThreadDraft, TransactionThread } from "./transaction-thread";
 import { readPickedFile, threadFileUrl } from "../transaction-thread";
-import { reviewThreadLabel } from "./review-thread";
+import { BeforeApproveSheet, reviewThreadLabel } from "./review-thread";
 
 // FLOW-957: the line's one note and its files on the transaction page. Invented names only.
 
@@ -161,6 +161,32 @@ describe("saveThreadDraft", () => {
     calls.rpc.length = 0;
     await saveThreadDraft("c1", "t1", { text: "Check against the quote", files: [] }, ownNote);
     expect(calls.rpc).toEqual([]);
+  });
+});
+
+describe("BeforeApproveSheet", () => {
+  it("closes and approves at the tap, and the upload finishes behind it", async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    storageFetch.mockImplementationOnce(async (input: string) => {
+      await gate;
+      calls.uploads.push(input);
+      return Response.json({ Key: input });
+    });
+    const onOpenChange = vi.fn();
+    const onApprove = vi.fn();
+    render(wrap(<BeforeApproveSheet open onOpenChange={onOpenChange} transactionId="t1" approveDisabled={false} onApprove={onApprove} />));
+    expect(await screen.findByLabelText("הערה מ־Mercury")).toHaveValue("Lumber for back deck, invoice #4471");
+    const input = document.querySelector<HTMLInputElement>("input[type=file][multiple]");
+    if (!input) throw new Error("no file input");
+    fireEvent.change(input, { target: { files: [new File([new Uint8Array(10)], "image.jpg", { type: "image/jpeg" })] } });
+    fireEvent.click(await screen.findByRole("button", { name: "לשמור ולאשר" }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onApprove).toHaveBeenCalledTimes(1);
+    expect(calls.rpc.some((call) => call.name === "add_transaction_file")).toBe(false);
+    release();
+    await waitFor(() => { expect(calls.rpc.some((call) => call.name === "add_transaction_file")).toBe(true); });
+    expect(calls.rpc.some((call) => call.name === "edit_transaction_note" || call.name === "add_transaction_note")).toBe(false);
   });
 });
 

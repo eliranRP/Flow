@@ -11,6 +11,7 @@ import {
   threadNote,
   useThreadCounts,
   useThreadQuery,
+  type ThreadNote,
 } from "../transaction-thread";
 import { Button } from "../ui/button";
 import { CameraIcon, CheckIcon, DocumentIcon, NoteIcon, PaperclipIcon } from "../ui/icons";
@@ -55,28 +56,33 @@ export function BeforeApproveSheet({
   const shown = text ?? note?.body ?? "";
   const changed = text != null && text.trim() !== "" && text.trim() !== note?.body;
   const empty = !changed && files.length === 0;
-  const save = useWrite<ThreadDraft & { approve: boolean }>({
+  // The save runs behind the closed sheet (owner, 2026-10-26): the tap closes it, approves at once, and
+  // the toast says when the upload is in. Its words follow what the tap saved, kept here past the reset.
+  const saving = useRef<"file" | "note">("note");
+  const save = useWrite<ThreadDraft & { companyId: string; note: ThreadNote | null }>({
     keys: [THREAD_KEY, THREAD_COUNTS_KEY],
-    run: async (draft) => {
-      const companyId = thread.data?.company_id;
-      if (!companyId) throw new Error("thread");
-      await saveThreadDraft(companyId, transactionId, draft, note);
-    },
-    failure: files.length > 0 && !changed ? "הקובץ לא נשמר" : "ההערה לא נשמרה",
-    onSuccess: ({ approve }) => {
-      setText(null);
-      setFiles([]);
-      onOpenChange(false);
-      if (approve) onApprove();
-    },
+    run: ({ companyId, note: current, ...draft }) => saveThreadDraft(companyId, transactionId, draft, current),
+    success: () => (saving.current === "file" ? "הקובץ נשמר" : "ההערה נשמרה"),
+    failure: () => (saving.current === "file" ? "הקובץ לא נשמר" : "ההערה לא נשמרה"),
   });
+  /** Starts the save, then closes the sheet (and approves) without waiting for it. */
+  const saveAndClose = (approve: boolean) => {
+    const companyId = thread.data?.company_id;
+    if (companyId == null) return;
+    saving.current = files.length > 0 && !changed ? "file" : "note";
+    save.mutate({ ...draft, companyId, note });
+    setText(null);
+    setFiles([]);
+    onOpenChange(false);
+    if (approve) onApprove();
+  };
   const onPicked = (event: React.ChangeEvent<HTMLInputElement>) => {
     pick(event.target.files);
     event.target.value = "";
   };
   const draft = { text: changed ? text : "", files };
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title="לפני שמאשרים" busy={save.isPending}>
+    <Sheet open={open} onOpenChange={onOpenChange} title="לפני שמאשרים">
       <div className="ui-before-approve">
         <label htmlFor={fieldId} className="ui-thread-who">{mercury ? "הערה מ־Mercury" : "הערה"}</label>
         <textarea
@@ -115,7 +121,6 @@ export function BeforeApproveSheet({
         <Button
           full
           icon={<CheckIcon />}
-          busy={save.isPending}
           disabled={approveDisabled || thread.data == null}
           onClick={() => {
             if (empty) {
@@ -123,14 +128,14 @@ export function BeforeApproveSheet({
               onApprove();
               return;
             }
-            save.mutate({ ...draft, approve: true });
+            saveAndClose(true);
           }}
         >
           {empty ? "לאשר" : "לשמור ולאשר"}
         </Button>
         {empty ? null : (
-          <Button variant="link" quiet full disabled={save.isPending || thread.data == null} icon={<PaperclipIcon size={16} />}
-            onClick={() => { save.mutate({ ...draft, approve: false }); }}>
+          <Button variant="link" quiet full disabled={thread.data == null} icon={<PaperclipIcon size={16} />}
+            onClick={() => { saveAndClose(false); }}>
             רק לשמור
           </Button>
         )}
