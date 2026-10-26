@@ -6,10 +6,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../ui/toast";
 import { FINISH_UNDO_MS, ProjectMenu } from "./project-menu";
 
+type RpcAnswer = { data: unknown; error: { message: string } | null };
+
 const rpc = vi.hoisted(() => ({
   calls: [] as { name: string; args: unknown }[],
   /** The next upsert's answer; a test holds it to see what the tap draws before the server answers. */
-  answer: () => Promise.resolve({ data: null, error: null as { message: string } | null }),
+  answer: (): Promise<RpcAnswer> => Promise.resolve({ data: null, error: null }),
 }));
 
 vi.mock("../lib/supabase", () => ({
@@ -68,7 +70,7 @@ describe("finishing a project (FLOW-961, decision 0213)", () => {
   });
 
   it("opens the list with הסתיימו and offers ביטול before the server answers, then ביטול brings it back", async () => {
-    let answer: (value: { data: unknown; error: null }) => void = () => undefined;
+    let answer: (value: RpcAnswer) => void = () => undefined;
     rpc.answer = () => new Promise((resolve) => { answer = resolve; });
     const { client, menu } = renderMenu(false);
     fireEvent.click(within(menu).getByRole("button", { name: /^סיום הפרויקט/ }));
