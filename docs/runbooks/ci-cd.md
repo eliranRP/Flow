@@ -125,7 +125,7 @@ Required approving reviews on `main` stay at 0. `.github/CODEOWNERS` notifies `@
 | `SUPABASE_DB_URL` | Session pooler URL for project `sxqpnetmtufkzowutduq`. Shape: `postgresql://postgres.sxqpnetmtufkzowutduq:<password>@aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require`. Percent-encode the password. Port 5432 is the session pooler. |
 | `CLOUDFLARE_API_TOKEN` | API token with Pages Edit on Cloudflare Pages project `flow-app`. |
 | `CLOUDFLARE_ACCOUNT_ID` | The Cloudflare account that owns `flow-app`. |
-| `SUPABASE_ACCESS_TOKEN` | A scoped personal access token for project `sxqpnetmtufkzowutduq` only. Permissions: Edge Functions Read-write, and Edge Function Secrets Read-write. Expiry: 30 days. An empty token fails the deploy. A shape mismatch is a warning and does not fail the deploy. The functions list probe is the check. The expiry date is recorded under [Access token expiry](#access-token-expiry). Renew about 5 days before that date: create another token with the same project and the same two permissions, replace this secret, revoke the old token, and write the new date in that section. |
+| `SUPABASE_ACCESS_TOKEN` | A scoped personal access token for project `sxqpnetmtufkzowutduq` only. Permissions: Edge Functions Read-write, and Edge Function Secrets Read-write. Expiry: 90 days. An empty token fails the deploy. A shape mismatch is a warning and does not fail the deploy. The functions list probe is the check. The expiry date is recorded under [Access token expiry](#access-token-expiry). Renew about 5 days before that date: create another token with the same project and the same two permissions, replace this secret, revoke the old token, and write the new date in that section. |
 | `FLOW_MCP_PEPPER` | HMAC pepper for the MCP secret. JSON object with `kid` and `secret`. Both use only `A-Za-z0-9_-`. `secret` is at least 32 bytes. Optional `previous` is an array of the same objects. When the pepper changes, move the old object into `previous` so existing tokens keep working. |
 | `SMOKE_EMAIL` | Email of the read-only smoke user. Optional. A missing value writes a job-summary warning, skips the live Playwright check, and does not fail the deploy. |
 | `SMOKE_PASSWORD` | Password of that user. Optional, same skip. Do not write it here. |
@@ -139,7 +139,7 @@ node --input-type=module -e 'const bytes = new Uint8Array(32); crypto.getRandomV
 Create the access token at <https://supabase.com/dashboard/account/tokens>:
 
 1. Generate a new token and choose a scoped token, not a classic token.
-2. Set the expiry to 30 days.
+2. Set the expiry to 90 days.
 3. Limit the resource to the selected project `sxqpnetmtufkzowutduq`. Do not select every organization or any other project.
 4. Grant only Edge Functions with Read-write, and Edge Function Secrets with Read-write.
 5. Copy the value into the GitHub environment `production` as `SUPABASE_ACCESS_TOKEN`. Do not write the token, or any prefix of it, into this runbook.
@@ -158,13 +158,13 @@ Create the access token at <https://supabase.com/dashboard/account/tokens>:
 
 ## Access token expiry
 
-The scoped token lasts 30 days. This runbook is where the date is kept. When you create or renew the token, fill in the row. A renewal reminder is scheduled by the owner's assistant about 5 days before the expiry date.
+The scoped token lasts 90 days. This runbook is where the date is kept. When you create or renew the token, fill in the row. A renewal reminder is scheduled by the owner's assistant about 5 days before the expiry date.
 
 | Expires | Renew by |
 | --- | --- |
-| 2026-10-30 | 2026-10-26 |
+| 2027-01-24 | 2027-01-19 |
 
-The reminder for 2026-10-26 is already scheduled by the owner's assistant.
+The reminder for 2027-01-19 is already scheduled by the owner's assistant.
 
 ## Signing key
 
