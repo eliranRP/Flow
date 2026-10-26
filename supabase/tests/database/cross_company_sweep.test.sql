@@ -217,7 +217,7 @@ begin
   insert into public.transfer_matches (company_id, out_transaction_id, in_transaction_id, same, set_by) values (a, pg_temp.sid('xfer_out'), pg_temp.sid('line'), false, owner);
   insert into public.connector_refresh_requests (company_id, provider) values (a, 'mercury');
   -- FLOW-957: a note and a file of A's owner on A's line, and Mercury's note on it.
-  insert into public.transaction_notes (company_id, transaction_id, source, author_id, body) values (a, pg_temp.sid('line'), 'flow', owner, 'Victim sample note'), (a, pg_temp.sid('line'), 'mercury', null, 'Victim mercury note');
+  insert into public.transaction_notes (company_id, transaction_id, source, author_id, body) values (a, pg_temp.sid('line'), 'flow', owner, 'Victim sample note'), (a, pg_temp.sid('xfer_out'), 'mercury', null, 'Victim mercury note');
   perform pg_temp.put('note', (select n.id from public.transaction_notes n where n.company_id = a and n.source = 'flow'));
   insert into public.transaction_files (company_id, transaction_id, note_id, source, storage_path, file_name, mime, bytes, uploaded_by) values (a, pg_temp.sid('line'), pg_temp.sid('note'), 'flow', a::text || '/' || pg_temp.sid('line')::text || '/victim.pdf', 'victim-receipt.pdf', 'application/pdf', 4321, owner);
   perform pg_temp.put('file', (select f.id from public.transaction_files f where f.company_id = a));
@@ -585,7 +585,7 @@ language sql
 stable
 as $$
   select pg_temp.sid(case
-    when p_hint ~ '(^|_)note(_|$)' then 'note' when p_hint ~ '(^|_)file_(id|remove)$' then 'file'
+    when p_hint ~ '(^|_)note(_|$)' then 'note' when p_hint ~ '(^|_)file_(id|remove)$' then 'file' when p_hint ~ 'transaction' and p_fn ~ 'add_transaction_note' then 'line2'
     when p_hint ~ 'transaction' and p_fn ~ 'loan' then 'loan_line'
     when p_hint ~ '^id$' and p_fn ~ '_transaction' then 'line'
     when p_hint ~ '^id$' and p_fn ~ 'party_charges' then 'line'
@@ -711,7 +711,7 @@ begin
     v := case
       when n = 'from' then '2020-01-01'
       when n = 'to' then '2030-12-31'
-      when n = 'month' then next_month::text
+      when n = 'month' then next_month::text when n ~ 'week_start' then (current_date - extract(dow from current_date)::int)::text -- a Sunday
       else current_date::text
     end;
   elsif t in ('integer', 'smallint') then

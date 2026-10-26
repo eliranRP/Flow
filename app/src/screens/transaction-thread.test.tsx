@@ -7,21 +7,18 @@ import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { mercuryNoteStatus, saveThreadDraft, TransactionThread } from "./transaction-thread";
 import { readPickedFile, threadFileUrl } from "../transaction-thread";
-import { reviewThreadLabel } from "./review-thread";
+import { BeforeApproveSheet, reviewThreadLabel } from "./review-thread";
 
-// FLOW-957: the thread on the transaction page. Invented names only.
+// FLOW-957: the line's one note and its files on the transaction page. Invented names only.
 
-const calls = vi.hoisted(() => ({ rpc: [] as Array<{ name: string; args: unknown }>, uploads: [] as string[], uploadFails: false }));
+const calls = vi.hoisted(() => ({ rpc: [] as Array<{ name: string; args: unknown }>, uploads: [] as string[], uploadFails: false, noNote: false }));
 
 const mercuryNote = { id: "m1", source: "mercury" as const, body: "Lumber for back deck, invoice #4471", mine: false, created_at: "2026-10-21T10:00:00Z", updated_at: "2026-10-21T10:00:00Z", edited: false, edited_in_flow: false };
 
 const thread = {
   transaction_id: "t1",
   company_id: "c1",
-  notes: [
-    mercuryNote,
-    { id: "n1", source: "flow", body: "Check against the quote", mine: true, created_at: "2026-10-22T07:40:00Z", updated_at: "2026-10-22T07:40:00Z", edited: false, edited_in_flow: false },
-  ],
+  notes: [mercuryNote],
   files: [
     { id: "f1", note_id: null, source: "mercury", file_name: "receipt-4471.pdf", mime: "application/pdf", bytes: 52000, path: "c1/t1/m.pdf", mine: false, created_at: "2026-10-21T10:00:00Z" },
   ],
@@ -36,7 +33,7 @@ vi.mock("../lib/supabase", () => ({
     },
     rpc: (name: string, args: unknown) => {
       calls.rpc.push({ name, args });
-      if (name === "get_transaction_thread") return Promise.resolve({ data: thread, error: null });
+      if (name === "get_transaction_thread") return Promise.resolve({ data: calls.noNote ? { ...thread, notes: [] } : thread, error: null });
       if (name === "add_transaction_note") return Promise.resolve({ data: "n2", error: null });
       if (name === "edit_transaction_note") return Promise.resolve({ data: { source: "mercury" }, error: null });
       return Promise.resolve({ data: null, error: null });
@@ -80,22 +77,27 @@ beforeEach(() => {
   calls.rpc.length = 0;
   calls.uploads.length = 0;
   calls.uploadFails = false;
+  calls.noNote = false;
 });
 
+const ownNote = { ...mercuryNote, id: "n1", source: "flow" as const, body: "Check against the quote", mine: true };
+
 describe("TransactionThread", () => {
-  it("shows Mercury's note with its file, then the owner's note", async () => {
+  it("shows the line's one note, Mercury's, with the line's files and the paperclip", async () => {
     render(wrap(<TransactionThread transactionId="t1" holdWrites={false} />));
-    expect(await screen.findByRole("heading", { name: "הערות וקבצים" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "הערה וקבצים" })).toBeInTheDocument();
+    expect(screen.getByText("הערה מ־Mercury")).toBeInTheDocument();
     expect(screen.getByText("Lumber for back deck, invoice #4471")).toBeInTheDocument();
     expect(screen.getByText("receipt-4471.pdf")).toBeInTheDocument();
-    expect(screen.getByText("Check against the quote")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "צירוף קובץ" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "מחיקת ההערה" })).toBeNull();
   });
 
-  it("adds a note from the composer", async () => {
+  it("adds the note when the line has none", async () => {
+    calls.noNote = true;
     render(wrap(<TransactionThread transactionId="t1" holdWrites={false} />));
-    fireEvent.change(await screen.findByLabelText("הוספת הערה"), { target: { value: "Paid in two parts" } });
-    fireEvent.click(screen.getByRole("button", { name: "שליחה" }));
+    fireEvent.change(await screen.findByLabelText("הערה"), { target: { value: "Paid in two parts" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(calls.rpc.find((call) => call.name === "add_transaction_note")?.args).toEqual({ p_transaction_id: "t1", p_body: "Paid in two parts" });
     });
@@ -103,7 +105,7 @@ describe("TransactionThread", () => {
 
   it("edits Mercury's note in Flow only", async () => {
     render(wrap(<TransactionThread transactionId="t1" holdWrites={false} />));
-    fireEvent.click(await screen.findByRole("button", { name: "עריכה" }));
+    fireEvent.click(await screen.findByRole("button", { name: "עריכת ההערה" }));
     expect(screen.getByText("נשמר ב־Flow בלבד. ב־Mercury ההערה לא משתנה")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("הערה מ־Mercury"), { target: { value: "Lumber, phase 2" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
@@ -113,19 +115,18 @@ describe("TransactionThread", () => {
     expect(await screen.findByText("נשמר ב־Flow")).toBeInTheDocument();
   });
 
-  it("gives a viewer no composer and no edit", async () => {
+  it("gives a viewer the note and files, with no edit and no paperclip", async () => {
     render(wrap(<TransactionThread transactionId="t1" holdWrites />));
-    expect(await screen.findByText("Check against the quote")).toBeInTheDocument();
+    expect(await screen.findByText("Lumber for back deck, invoice #4471")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "צירוף קובץ" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "עריכה" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "מחיקת ההערה" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "עריכת ההערה" })).toBeNull();
   });
 });
 
 describe("saveThreadDraft", () => {
   it("saves a file without a note", async () => {
     const photo = new File([new Uint8Array(10)], "image.jpg", { type: "image/jpeg" });
-    await saveThreadDraft("c1", "t1", { text: "  ", files: [photo] });
+    await saveThreadDraft("c1", "t1", { text: "  ", files: [photo] }, null);
     expect(calls.rpc.some((call) => call.name === "add_transaction_note")).toBe(false);
     expect(calls.uploads).toHaveLength(1);
     expect(calls.uploads[0]).toMatch(/^c1\/t1\/[0-9a-f-]{36}\.jpg$/);
@@ -140,18 +141,52 @@ describe("saveThreadDraft", () => {
     });
   });
 
-  it("puts the files up before the note, so a failed upload saves no note", async () => {
+  it("puts the files up before the note, so a failed upload saves nothing", async () => {
     calls.uploadFails = true;
     const photo = new File([new Uint8Array(10)], "image.jpg", { type: "image/jpeg" });
-    await expect(saveThreadDraft("c1", "t1", { text: "Paid in two parts", files: [photo] })).rejects.toThrow("Load failed");
+    await expect(saveThreadDraft("c1", "t1", { text: "Paid in two parts", files: [photo] }, null)).rejects.toThrow("Load failed");
     expect(calls.rpc.map((call) => call.name)).toEqual([]);
   });
 
-  it("records the files on the note once every upload is in", async () => {
+  it("adds the note when the line has none, then records the files on the line", async () => {
     const photo = new File([new Uint8Array(10)], "image.jpg", { type: "image/jpeg" });
-    await saveThreadDraft("c1", "t1", { text: "Paid in two parts", files: [photo] });
+    await saveThreadDraft("c1", "t1", { text: "Paid in two parts", files: [photo] }, null);
     expect(calls.rpc.map((call) => call.name)).toEqual(["add_transaction_note", "add_transaction_file"]);
-    expect(calls.rpc[1]?.args).toMatchObject({ p_note_id: "n2", p_path: calls.uploads[0] });
+    expect(calls.rpc[1]?.args).toMatchObject({ p_note_id: null, p_path: calls.uploads[0] });
+  });
+
+  it("edits the line's note instead of adding a second one, and leaves it alone when the text is the same", async () => {
+    await saveThreadDraft("c1", "t1", { text: "Checked twice", files: [] }, ownNote);
+    expect(calls.rpc).toEqual([{ name: "edit_transaction_note", args: { p_note_id: "n1", p_body: "Checked twice" } }]);
+    calls.rpc.length = 0;
+    await saveThreadDraft("c1", "t1", { text: "Check against the quote", files: [] }, ownNote);
+    expect(calls.rpc).toEqual([]);
+  });
+});
+
+describe("BeforeApproveSheet", () => {
+  it("closes and approves at the tap, and the upload finishes behind it", async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    storageFetch.mockImplementationOnce(async (input: string) => {
+      await gate;
+      calls.uploads.push(input);
+      return Response.json({ Key: input });
+    });
+    const onOpenChange = vi.fn();
+    const onApprove = vi.fn();
+    render(wrap(<BeforeApproveSheet open onOpenChange={onOpenChange} transactionId="t1" approveDisabled={false} onApprove={onApprove} />));
+    expect(await screen.findByLabelText("הערה מ־Mercury")).toHaveValue("Lumber for back deck, invoice #4471");
+    const input = document.querySelector<HTMLInputElement>("input[type=file][multiple]");
+    if (!input) throw new Error("no file input");
+    fireEvent.change(input, { target: { files: [new File([new Uint8Array(10)], "image.jpg", { type: "image/jpeg" })] } });
+    fireEvent.click(await screen.findByRole("button", { name: "לשמור ולאשר" }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onApprove).toHaveBeenCalledTimes(1);
+    expect(calls.rpc.some((call) => call.name === "add_transaction_file")).toBe(false);
+    release();
+    await waitFor(() => { expect(calls.rpc.some((call) => call.name === "add_transaction_file")).toBe(true); });
+    expect(calls.rpc.some((call) => call.name === "edit_transaction_note" || call.name === "add_transaction_note")).toBe(false);
   });
 });
 
@@ -180,8 +215,8 @@ describe("the thread's words", () => {
 
   it("labels the approval card's row", () => {
     expect(reviewThreadLabel(0, 0)).toBe("הוספת הערה או קובץ");
-    expect(reviewThreadLabel(1, 1)).toBe("הערות וקבצים · הערה · קובץ");
-    expect(reviewThreadLabel(2, 0)).toBe("הערות וקבצים · 2 הערות");
-    expect(reviewThreadLabel(0, 3)).toBe("הערות וקבצים · 3 קבצים");
+    expect(reviewThreadLabel(1, 1)).toBe("הערה · קובץ");
+    expect(reviewThreadLabel(1, 0)).toBe("הערה");
+    expect(reviewThreadLabel(0, 3)).toBe("3 קבצים");
   });
 });

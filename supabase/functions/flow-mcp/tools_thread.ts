@@ -41,23 +41,23 @@ function spec(name: string, description: string, properties: Record<string, unkn
 }
 
 export const THREAD_READ_SPECS = [
-  spec("get_transaction_thread", "One line's notes and files (FLOW-957), as the transaction page's הערות וקבצים shows them. transaction_id is the ledger id. Returns transaction_id, company_id, notes[] and files[], oldest first. A note: id, source (flow: written in Flow; mercury: the note on the line in Mercury, at most one, kept whole, brought in by each Mercury sync), body (up to 5000 characters), mine (written by this user), created_at, updated_at, edited, edited_in_flow (Mercury's note was edited in Flow: the edit stays in Flow, Mercury keeps its own text, and syncs no longer replace it). A file: id, note_id (the note it was attached with, or null), source (flow: uploaded in the app; mercury: an attachment copied from Mercury), file_name, mime (a picture or application/pdf), bytes, path (its place in Flow's private storage; the app opens it), mine and created_at. Removed notes and files are left out. A line of another company is not_found. Any member reads it.", {
+  spec("get_transaction_thread", "One line's note and files (FLOW-957), as the transaction page's הערה וקבצים shows them. A line holds one note: Mercury's when it has one, else the note written in Flow. transaction_id is the ledger id. Returns transaction_id, company_id, notes[] (at most one) and files[], oldest first. A note: id, source (flow: written in Flow; mercury: the note on the line in Mercury, kept whole, brought in by a Mercury sync while the line has no note written in Flow), body (up to 5000 characters), mine (written by this user), created_at, updated_at, edited, edited_in_flow (Mercury's note was edited in Flow: the edit stays in Flow, Mercury keeps its own text, and syncs no longer replace it). A file: id, note_id (the note it was attached with, or null), source (flow: uploaded in the app; mercury: an attachment copied from Mercury), file_name, mime (a picture or application/pdf), bytes, path (its place in Flow's private storage; the app opens it), mine and created_at. Removed notes and files are left out. A line of another company is not_found. Any member reads it.", {
     transaction_id: { type: "string" },
   }, false),
 ];
 
 export const THREAD_WRITE_SPECS = [
-  spec("add_transaction_note", "Add a note to a line (FLOW-957; owner or editor), as the transaction page's composer does. transaction_id is the ledger id; body is 1 to 5000 characters (trimmed). Files are attached in the app only. Returns id (the note), transaction_id and undo_kind (note_add: undo with the note id removes it while it still has this text).", {
+  spec("add_transaction_note", "Add the line's note (FLOW-957; owner or editor) when it has none: a line holds one note, and one that has it is refused (line has a note; use edit_transaction_note). transaction_id is the ledger id; body is 1 to 5000 characters (trimmed). Files are attached in the app only. Returns id (the note), transaction_id and undo_kind (note_add: undo with the note id removes it while it still has this text).", {
     idempotency_key: { type: "string" },
     transaction_id: { type: "string" },
     body: { type: "string" },
   }, true),
-  spec("edit_transaction_note", "Change a note's text (FLOW-957; owner or editor): a note this user wrote (source flow), or the line's Mercury note (source mercury). An edit of Mercury's note stays in Flow: nothing is sent to Mercury, and syncs no longer replace it (edited_in_flow). note_id from get_transaction_thread; body is 1 to 5000 characters. Returns id, source and undo_kind (note_edit: undo with the note id puts the text back while it is still this write's).", {
+  spec("edit_transaction_note", "Change the line's note (FLOW-957; owner or editor): the note written in Flow (source flow), whoever wrote it, or the line's Mercury note (source mercury). An edit of Mercury's note stays in Flow: nothing is sent to Mercury, and syncs no longer replace it (edited_in_flow). note_id from get_transaction_thread; body is 1 to 5000 characters. Returns id, source and undo_kind (note_edit: undo with the note id puts the text back while it is still this write's).", {
     idempotency_key: { type: "string" },
     note_id: { type: "string" },
     body: { type: "string" },
   }, true),
-  spec("remove_transaction_note", "Remove a note this user wrote (FLOW-957; owner or editor). Mercury's note is edited, not removed. Files attached with it stay on the line. note_id from get_transaction_thread. Returns id, transaction_id and undo_kind (note_remove: undo with the note id brings it back).", {
+  spec("remove_transaction_note", "Remove the line's note written in Flow (FLOW-957; owner or editor). Mercury's note is edited, not removed. Files attached with it stay on the line. note_id from get_transaction_thread. Returns id, transaction_id and undo_kind (note_remove: undo with the note id brings it back).", {
     idempotency_key: { type: "string" },
     note_id: { type: "string" },
   }, true),

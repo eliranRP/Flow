@@ -1,4 +1,4 @@
-/* FLOW-957: the thread of notes and files on a transaction (board "A · Thread — transaction page") and
+/* FLOW-957: the line's one note and its files on a transaction (board "A · Thread — transaction page") and
    the "before approving" sheet (board "C · Sheet — approval card"). Imported by transaction-thread.tsx. */
 .ui-thread {
   display: flex;
@@ -14,7 +14,6 @@
   padding-inline: var(--space-2);
 }
 
-.ui-thread-count,
 .ui-thread-meta,
 .ui-thread-who {
   font-size: var(--type-caption-size);
@@ -24,16 +23,6 @@
 
 .ui-thread-who {
   color: var(--color-text-secondary);
-}
-
-.ui-thread-empty {
-  padding-inline: var(--space-2);
-}
-
-.ui-thread-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
 }
 
 .ui-thread-item {
@@ -75,17 +64,6 @@
   border: 1px solid var(--color-line);
 }
 
-.ui-thread-mercury[data-compact="true"] .ui-thread-avatar {
-  inline-size: 24px;
-  block-size: 24px;
-}
-
-.ui-thread-bubble-plain {
-  background: none;
-  padding-block: var(--space-1);
-  padding-inline: 0;
-}
-
 .ui-thread-head {
   display: flex;
   align-items: center;
@@ -121,6 +99,7 @@
 .ui-thread-files {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
 }
 
@@ -204,31 +183,6 @@
   outline-offset: 1px;
 }
 
-.ui-thread-composer {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding-block-start: var(--space-2);
-  border-block-start: 1px solid var(--color-line);
-}
-
-.ui-thread-composer-row {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--space-2);
-}
-
-.ui-thread-composer-field {
-  flex: 1;
-  min-block-size: 44px;
-  max-block-size: 160px;
-  border-radius: var(--radius-button);
-  padding-block: var(--space-2);
-  padding-inline: var(--space-4);
-  resize: none;
-  field-sizing: content;
-}
-
 .ui-thread-round {
   flex: none;
   inline-size: 44px;
@@ -239,16 +193,6 @@
   border-radius: 50%;
   background: var(--color-surface);
   color: var(--color-text);
-}
-
-.ui-thread-send {
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-}
-
-.ui-thread-send:disabled {
-  background: var(--color-disabled-bg);
-  color: var(--color-disabled-text);
 }
 
 /* The approval card's row: the counts, or the way in when there is nothing yet. */
