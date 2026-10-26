@@ -5,6 +5,7 @@ import { absAgorot } from "../agorot";
 import { israelToday, formatDayMonth } from "../ui/date-math";
 import { Amount } from "../ui/amount";
 import { Avatar } from "../ui/avatar";
+import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { EmptyState } from "../ui/empty-state";
@@ -36,10 +37,16 @@ function unpaidMatchText(invoice: UnpaidInvoice): string | null {
   return `✦ נמצא תשלום תואם בבנק · ${amount} · ${formatDayMonth(match.date)}`;
 }
 
-export function UnpaidScreen({ sample, summary }: { sample?: UnpaidInvoice[]; summary?: UnpaidSummary } = {}) {
+export function UnpaidScreen({ sample, summary, offlineSince }: { sample?: UnpaidInvoice[]; summary?: UnpaidSummary; offlineSince?: number } = {}) {
   const search = usePreviewSearch();
   const actions = useUnpaidActions(sample, summary);
-  const { rows, open, all, holdWrites, syncing, phase } = actions;
+  const { rows, open, all, holdWrites, syncing } = actions;
+  const online = useOnline();
+  // FLOW-968: a failed read keeps the title and says what happened, with the retry and the way to help.
+  const failed = actions.phase.kind === "error";
+  const phase = failed ? ({ kind: "ready" } as const) : actions.phase;
+  // Offline with invoices on screen: they are from the last read.
+  const since = offlineSince ?? (online ? undefined : actions.readAt);
   const today = israelToday();
   // The totals of the currencies that are owed; the bar and the over-30 line speak of the first one.
   const totals = unpaidTotals(all).filter((total) => total.minor !== 0n);
@@ -57,7 +64,13 @@ export function UnpaidScreen({ sample, summary }: { sample?: UnpaidInvoice[]; su
       onRetry={actions.retry}
       headerClassName="ui-inv-screen"
     >
+      {failed ? (
+        <div className="ui-page-pad ui-inv-page">
+          <PageLoadFailed title="החשבוניות לא נטענו" offline={!online || (actions.phase.kind === "error" && actions.phase.offline)} onRetry={actions.retry} />
+        </div>
+      ) : (
       <div className={`ui-page-pad ui-inv-page${all.length === 0 && phase.kind === "ready" ? " ui-inv-page-done" : ""}`}>
+        {since != null && all.length > 0 ? <BandOfflineLine since={since} onPage /> : null}
         {open.length > 0 ? (
           <Card as="section" className="ui-inv-summary" aria-label="לגבייה מלקוחות">
             <p className="t-line2 text-text-secondary">לגבייה מלקוחות</p>
@@ -139,7 +152,6 @@ export function UnpaidScreen({ sample, summary }: { sample?: UnpaidInvoice[]; su
                   title={name}
                   hint={row.project_name ?? undefined}
                   href={detailTo}
-                  className={marked ? "ui-inv-marked" : undefined}
                   icon={<Avatar name={name} fallback="invoice" />}
                   agorot={absAgorot(row.open_gross_agorot)}
                   currency={row.currency ?? "ILS"}
@@ -172,6 +184,7 @@ export function UnpaidScreen({ sample, summary }: { sample?: UnpaidInvoice[]; su
           })}
         </ul>
       </div>
+      )}
     </ScreenState>
   );
 }

@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(50);
+select plan(56);
 
 do $users$
 begin
@@ -307,6 +307,52 @@ select tests.authenticate_as('ibm_other');
 select is((public.unpaid_overview()->>'billed_minor')::bigint, 12000::bigint, 'billed nets the credit note and counts the paid invoice');
 select is((public.unpaid_overview()->>'open_minor')::bigint, 7000::bigint, 'open is the invoice less its credit note');
 select is((public.unpaid_overview()->>'paid_minor')::bigint, 5000::bigint, 'paid is the receipt, not the credit note');
+
+-- 6. FLOW-968: the app's ביטול after "לא זה" takes back only that dismissal, at the time it wrote.
+select tests.clear_authentication();
+reset role;
+select tests.authenticate_as('ibm_owner');
+select public.dismiss_invoice_match(pg_temp.txn('t_inv_b'), pg_temp.txn('t_dep_5'));
+select throws_ok(
+  format('select public.undismiss_invoice_match(%L::uuid, %L::uuid, %L::timestamptz)', pg_temp.txn('t_inv_b'), pg_temp.txn('t_dep_5'), '2000-01-01T00:00:00Z'),
+  'P0001', 'conflict', 'a ביטול with another time changes nothing'
+);
+select tests.clear_authentication();
+reset role;
+update public.companies set is_demo = true where id = (select id from ibm where label = 'co');
+select tests.authenticate_as('ibm_viewer');
+select throws_ok(
+  format('select public.undismiss_invoice_match(%L::uuid, %L::uuid, %L::timestamptz)', pg_temp.txn('t_inv_b'), pg_temp.txn('t_dep_5'),
+    (select dismissed_at from public.invoice_match_dismissals where transaction_id = pg_temp.txn('t_inv_b'))),
+  '42501', 'forbidden', 'a viewer cannot take a dismissal back'
+);
+select tests.clear_authentication();
+reset role;
+update public.companies set is_demo = false where id = (select id from ibm where label = 'co');
+select tests.authenticate_as('ibm_other');
+select throws_ok(
+  format('select public.undismiss_invoice_match(%L::uuid, %L::uuid, %L::timestamptz)', pg_temp.txn('t_inv_b'), pg_temp.txn('t_dep_5'),
+    (select dismissed_at from public.invoice_match_dismissals where transaction_id = pg_temp.txn('t_inv_b'))),
+  'P0001', 'invoice not found', 'another company cannot take back a dismissal of this one'
+);
+select tests.clear_authentication();
+reset role;
+select tests.authenticate_as('ibm_owner');
+select is(
+  (public.undismiss_invoice_match(pg_temp.txn('t_inv_b'), pg_temp.txn('t_dep_5'),
+    (select dismissed_at from public.invoice_match_dismissals where transaction_id = pg_temp.txn('t_inv_b')))->>'dismissed')::boolean,
+  false, 'undismiss_invoice_match takes the dismissal back'
+);
+select is(
+  (select count(*)::integer from public.invoice_match_dismissals where transaction_id = pg_temp.txn('t_inv_b')), 0,
+  'the dismissal row is gone'
+);
+select throws_ok(
+  format('select public.undismiss_invoice_match(%L::uuid, %L::uuid, %L::timestamptz)', pg_temp.txn('t_inv_b'), pg_temp.txn('t_dep_5'), now()),
+  'P0001', 'conflict', 'taking it back twice is a conflict'
+);
+select tests.clear_authentication();
+reset role;
 
 select * from finish();
 rollback;

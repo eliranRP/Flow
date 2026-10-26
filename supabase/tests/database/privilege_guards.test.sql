@@ -216,6 +216,7 @@ insert into pg_allowed (sig) values
     ('set_transaction_pnl(uuid,boolean)'),
     ('sumit_status()'),
     ('switch_company(uuid)'),
+    ('undismiss_invoice_match(uuid,uuid,timestamptz)'),
     ('undismiss_recurring_alert(text,text)'),
     ('undo_category_move(uuid)'),
     ('undo_jev_booking(uuid)'),

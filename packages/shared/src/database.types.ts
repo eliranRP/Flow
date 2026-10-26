@@ -2223,6 +2223,9 @@ isOneToOne: false
 "transaction_thread_counts":
 { Args: { "p_ids": (string)[] }; Returns: Json
                            },
+"undismiss_invoice_match":
+{ Args: { "p_dismissed_at": string,"p_invoice": string,"p_transaction": string }; Returns: Json
+                           },
 "undismiss_recurring_alert":
 { Args: { "p_key": string,"p_kind": string }; Returns: Json
                            },

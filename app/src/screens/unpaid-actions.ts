@@ -9,6 +9,7 @@ import { useHoldWrites } from "../use-is-viewer";
 import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
 import { unpaidIsMarked, unpaidOpenRows, type UnpaidInvoice, type UnpaidSummary } from "../unpaid";
 import { useToast } from "../ui/toast";
+import type { ToastInput } from "../ui/toast-layout";
 import { useBlockedPreview } from "./screen-shared";
 import { useHeldOrder } from "../list-hold";
 
@@ -20,6 +21,17 @@ const UNPAID_LINKED = "החשבונית חוברה לתשלום ויצאה מה�
 const UNPAID_DISMISSED = "נסמן ידנית, או נחכה לתשלום אחר";
 const UNPAID_LINK_FAILED = "לא הצלחנו לחבר את התשלום.";
 const UNPAID_DISMISS_FAILED = "לא הצלחנו לשמור את ההחלטה.";
+const UNPAID_UNDISMISSED = "התשלום מוצע שוב";
+const UNPAID_UNDISMISS_FAILED = "לא הצלחנו לבטל. ייתכן שהחשבונית השתנתה בינתיים.";
+
+/** Decision 0218: on the invoice pages an undo stays 5s and a plain note 4s. */
+export const UNPAID_UNDO_MS = 5000;
+const UNPAID_NOTE_MS = 4000;
+
+/** An invoice toast: under the header (decision 0218), the undo 5s and a note 4s. */
+export function unpaidToast(input: ToastInput): ToastInput {
+  return { durationMs: input.action == null ? UNPAID_NOTE_MS : UNPAID_UNDO_MS, ...input, place: "top" };
+}
 
 type LocalState = { marked: string | null; gone: boolean; match: boolean };
 
@@ -41,7 +53,8 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
     });
   const rows = useHeldOrder(all, (row) => row.id);
 
-  const mark = useWrite<{ id: string; paid: boolean }>({
+  const mark = useWrite<{ id: string; paid: boolean; undoable: boolean }>({
+    place: "top",
     keys: ["unpaid"],
     failure: (error) => (isTransientWriteError(error) ? { message: "לא הצלחנו לעדכן את הסימון.", retry: true } : "לא הצלחנו לעדכן את הסימון."),
     // The row takes its mark at once; the server's time replaces this one on the refresh (decision 0180).
@@ -51,7 +64,7 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
         ? (old as UnpaidInvoice[]).map((row) => (row.id === id ? { ...row, marked_paid_at: paid ? new Date().toISOString() : null } : row))
         : old),
     }],
-    onSuccess: ({ id, paid }) => { showDone(id, paid); },
+    onSuccess: ({ id, paid, undoable }) => { showDone(id, paid, undoable); },
     run: async ({ id, paid }) => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -72,35 +85,40 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
     success: REFRESH_DONE,
   });
 
-  /** A mark's toast offers ביטול, which clears the mark again with the latest render's setPaid (the toast outlives the render). */
-  function showDone(id: string, paid: boolean) {
-    toast.show(paid
-      ? { message: UNPAID_MARK_DONE, action: "ביטול", onAction: () => { setPaidRef.current(id, false); } }
-      : { message: UNPAID_CLEAR_DONE });
+  /**
+   * A mark's toast offers ביטול, and so does clearing one (FLOW-968): each puts the other state back with the
+   * latest render's setPaid (the toast outlives the render). The ביטול's own toast offers no further undo.
+   */
+  function showDone(id: string, paid: boolean, undoable = true) {
+    const message = paid ? UNPAID_MARK_DONE : UNPAID_CLEAR_DONE;
+    toast.show(unpaidToast(undoable
+      ? { message, action: "ביטול", onAction: () => { setPaidRef.current(id, !paid, false); } }
+      : { message }));
   }
 
-  function setPaid(id: string, paid: boolean) {
+  function setPaid(id: string, paid: boolean, undoable = true) {
     if (holdWrites) return;
     if (sample) {
       setLocal((current) => ({ ...current, [id]: { gone: false, match: current[id]?.match ?? false, marked: paid ? new Date().toISOString() : null } }));
-      showDone(id, paid);
+      showDone(id, paid, undoable);
       return;
     }
     if (blocked()) return;
-    mark.mutate({ id, paid });
+    mark.mutate({ id, paid, undoable });
   }
   const setPaidRef = useRef(setPaid);
   setPaidRef.current = setPaid;
 
   // FLOW-367: "זה התשלום" links the invoice to the deposit (the row leaves the list); "לא זה" dismisses that one pairing.
   const link = useWrite<{ id: string; transaction: string }>({
+    place: "top",
     keys: ["unpaid"],
     failure: (error) => (isTransientWriteError(error) ? { message: UNPAID_LINK_FAILED, retry: true } : UNPAID_LINK_FAILED),
     optimistic: ({ id }) => [{
       key: ["unpaid", preview],
       update: (old: unknown) => (Array.isArray(old) ? (old as UnpaidInvoice[]).filter((row) => row.id !== id) : old),
     }],
-    onSuccess: () => { toast.show({ message: UNPAID_LINKED }); },
+    onSuccess: () => { toast.show(unpaidToast({ message: UNPAID_LINKED })); },
     run: async ({ id, transaction }) => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -108,7 +126,10 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
     },
   });
 
+  // The time each dismissal was written, for its ביטול (the write returns it; useWrite's run returns nothing).
+  const dismissedAt = useRef(new Map<string, string>());
   const dismiss = useWrite<{ id: string; transaction: string }>({
+    place: "top",
     keys: ["unpaid"],
     failure: (error) => (isTransientWriteError(error) ? { message: UNPAID_DISMISS_FAILED, retry: true } : UNPAID_DISMISS_FAILED),
     optimistic: ({ id }) => [{
@@ -117,20 +138,43 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
         ? (old as UnpaidInvoice[]).map((row) => (row.id === id ? { ...row, match: null } : row))
         : old),
     }],
-    onSuccess: () => { toast.show({ message: UNPAID_DISMISSED }); },
+    // FLOW-968: "לא זה" can be taken back for 5s; the ביטול takes back only the dismissal this tap wrote.
+    onSuccess: ({ id, transaction }) => {
+      const at = dismissedAt.current.get(`${id}:${transaction}`);
+      toast.show(unpaidToast(at == null
+        ? { message: UNPAID_DISMISSED }
+        : { message: UNPAID_DISMISSED, action: "ביטול", onAction: () => { undismissRef.current({ id, transaction, at }); } }));
+    },
     run: async ({ id, transaction }) => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
-      assertNoError(await supabase.rpc("dismiss_invoice_match", { p_invoice: id, p_transaction: transaction }));
+      const result = await supabase.rpc("dismiss_invoice_match", { p_invoice: id, p_transaction: transaction });
+      assertNoError(result);
+      const at = (result.data as { dismissed_at?: unknown } | null)?.dismissed_at;
+      if (typeof at === "string") dismissedAt.current.set(`${id}:${transaction}`, at);
     },
   });
+
+  const undismiss = useWrite<{ id: string; transaction: string; at: string }>({
+    place: "top",
+    keys: ["unpaid"],
+    failure: UNPAID_UNDISMISS_FAILED,
+    onSuccess: () => { toast.show(unpaidToast({ message: UNPAID_UNDISMISSED })); },
+    run: async ({ id, transaction, at }) => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      assertNoError(await supabase.rpc("undismiss_invoice_match", { p_invoice: id, p_transaction: transaction, p_dismissed_at: at }));
+    },
+  });
+  const undismissRef = useRef(undismiss.mutate);
+  undismissRef.current = undismiss.mutate;
 
   function linkMatch(id: string) {
     const transaction = all.find((row) => row.id === id)?.match?.transaction_id;
     if (holdWrites || transaction == null) return;
     if (sample) {
       setLocal((current) => ({ ...current, [id]: { marked: null, gone: true, match: false } }));
-      toast.show({ message: UNPAID_LINKED });
+      toast.show(unpaidToast({ message: UNPAID_LINKED }));
       return;
     }
     if (blocked()) return;
@@ -142,7 +186,14 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
     if (holdWrites || transaction == null) return;
     if (sample) {
       setLocal((current) => ({ ...current, [id]: { marked: current[id]?.marked ?? null, gone: false, match: true } }));
-      toast.show({ message: UNPAID_DISMISSED });
+      toast.show(unpaidToast({
+        message: UNPAID_DISMISSED,
+        action: "ביטול",
+        onAction: () => {
+          setLocal((current) => ({ ...current, [id]: { marked: current[id]?.marked ?? null, gone: false, match: false } }));
+          toast.show(unpaidToast({ message: UNPAID_UNDISMISSED }));
+        },
+      }));
       return;
     }
     if (blocked()) return;
@@ -152,7 +203,7 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
   function startSync() {
     if (holdWrites || syncing) return;
     if (sample) {
-      toast.show({ message: REFRESH_DONE });
+      toast.show(unpaidToast({ message: REFRESH_DONE }));
       return;
     }
     if (blocked()) return;
@@ -169,6 +220,8 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
     anyMarked,
     syncing,
     lastSyncAt: summary?.last_sync_at ?? sumitStatus.data?.last_sync_at ?? null,
+    /** When the list on screen was read (the offline line), unless it is a fixture. */
+    readAt: sample == null ? unpaid.dataUpdatedAt || undefined : undefined,
     retry: () => { void unpaid.refetch(); },
     setPaid,
     linkMatch,

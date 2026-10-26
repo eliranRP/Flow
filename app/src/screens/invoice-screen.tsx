@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
 import { usePreviewSearch } from "../preview";
 import { Amount } from "../ui/amount";
+import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { Button } from "../ui/button";
 import { DocumentCard } from "../ui/document-card";
 import { EmptyState } from "../ui/empty-state";
@@ -25,13 +26,18 @@ function daysBetween(from: string, to: string): number {
  * The invoice page (FLOW-367), pushed from the list: its status, customer and amount, the bank deposit
  * it matches (with "זה התשלום" and "לא זה"), the facts, the SUMIT document, and the mark when nothing matches.
  */
-export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp }: { sample?: UnpaidInvoice[]; summary?: UnpaidSummary; invoiceId?: string } = {}) {
+export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp, offlineSince }: { sample?: UnpaidInvoice[]; summary?: UnpaidSummary; invoiceId?: string; offlineSince?: number } = {}) {
   const params = useParams();
   const invoiceId = invoiceIdProp ?? params.invoiceId ?? "";
   const search = usePreviewSearch();
   const navigate = useNavigate();
   const actions = useUnpaidActions(sample, summary);
-  const { all, holdWrites, phase } = actions;
+  const { all, holdWrites } = actions;
+  const online = useOnline();
+  // FLOW-968: a failed read keeps the bar and says what happened, with the retry and the way to help.
+  const failed = actions.phase.kind === "error";
+  const phase = failed ? ({ kind: "ready" } as const) : actions.phase;
+  const since = offlineSince ?? (online ? undefined : actions.readAt);
   const row = all.find((item) => item.id === invoiceId) ?? null;
   const today = israelToday();
   const marked = row != null && unpaidIsMarked(row);
@@ -42,12 +48,17 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp }: { s
   const customer = row == null ? "" : row.customer_name ?? row.description;
   return (
     <ScreenState title="חשבונית" kicker="חשבוניות פתוחות" barOnly backTo={`/unpaid${search}`} phase={phase} onRetry={actions.retry} headerClassName="ui-inv-screen">
-      {row == null && phase.kind === "ready" ? (
+      {failed ? (
+        <div className="ui-page-pad">
+          <PageLoadFailed title="החשבונית לא נטענה" offline={!online || (actions.phase.kind === "error" && actions.phase.offline)} onRetry={actions.retry} />
+        </div>
+      ) : row == null && phase.kind === "ready" ? (
         <div className="ui-page-pad">
           <EmptyState title="החשבונית כבר לא פתוחה" body="היא סומנה או חוברה לתשלום, ולכן לא נשארה ברשימה." action={<Button full to={`/unpaid${search}`}>חשבוניות פתוחות</Button>} />
         </div>
       ) : row == null ? null : (
         <div className="ui-page-pad ui-inv-detail m-push-in">
+          {since != null ? <BandOfflineLine since={since} onPage /> : null}
           <div className="ui-inv-head">
             <p className="ui-inv-chip" data-over={over && !marked ? "true" : undefined} data-marked={marked ? "true" : undefined}>
               {marked ? UNPAID_MARKED : `פתוחה ${String(days)} ימים`}
@@ -117,7 +128,7 @@ export function InvoiceScreen({ sample, summary, invoiceId: invoiceIdProp }: { s
             <DocumentCard
               href={documentUrl}
               title={row.doc_number ? `חשבונית #${row.doc_number}` : "החשבונית"}
-              note="PDF מ־SUMIT · הקישו לפתיחה"
+              note="PDF מ־SUMIT · נפתח בחלון חדש"
             />
           ) : null}
 

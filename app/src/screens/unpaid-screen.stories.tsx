@@ -26,7 +26,7 @@ export const UnpaidList: Story = {
   ),
 };
 
-/** A marked row waits for the sync: dimmed, with its ביטול line; the other rows keep their mark line. */
+/** A marked row waits for the sync: full contrast, its line says the state, with its ביטול (FLOW-968). */
 export const UnpaidMarked: Story = {
   name: "Unpaid, a marked row waits for the sync",
   render: () => (
@@ -76,6 +76,38 @@ export const UnpaidError: Story = {
     <StoryRoute entry="/unpaid?preview=error" tabs>
       <ExampleBar />
       <UnpaidScreen />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-968: offline with invoices on screen, a line says which moment they are from. */
+export const UnpaidOffline: Story = {
+  render: () => (
+    <StoryRoute entry="/unpaid" tabs>
+      <ExampleBar />
+      <UnpaidScreen sample={rows} summary={summary} offlineSince={Date.parse("2026-10-26T06:41:00Z")} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-968: the invoice page offline keeps the invoice and says which moment it is from. */
+export const InvoiceOffline: Story = {
+  name: "Invoice page, offline",
+  render: () => (
+    <StoryRoute entry="/unpaid/inv-1043" tabs>
+      <ExampleBar />
+      <InvoiceScreen sample={rows} summary={summary} invoiceId="inv-1043" offlineSince={Date.parse("2026-10-26T06:41:00Z")} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-968: the invoice page's failed read keeps the bar and says what happened. */
+export const InvoiceError: Story = {
+  name: "Invoice page, failed",
+  render: () => (
+    <StoryRoute entry="/unpaid/inv-1043?preview=error" tabs>
+      <ExampleBar />
+      <InvoiceScreen invoiceId="inv-1043" />
     </StoryRoute>
   ),
 };
