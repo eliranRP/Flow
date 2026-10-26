@@ -57,9 +57,9 @@ test("home connects and opens a project", async ({ page }) => {
   await page.getByRole("link", { name: "חיבור Mercury" }).click();
   await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
 
-  // Home's pending row, then the company profit page's project row, then the Projects tab (the profit page has no link to the list).
+  // Home's review button (FLOW-958), then the company profit page's project row, then the Projects tab (the profit page has no link to the list).
   await page.goto("/e2e/cash?preview=1");
-  await page.getByRole("link", { name: /פריטים ממתינים/ }).click();
+  await page.getByRole("link", { name: /^לאישור \d+ פריטים/ }).click();
   await expect(page).toHaveURL(/\/review\?preview=1$/);
   await page.goto("/e2e/company-profit?preview=1");
   await page.getByRole("link", { name: /^בית הדקל/ }).click();

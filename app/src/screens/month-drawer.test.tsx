@@ -73,17 +73,19 @@ describe("MonthDrawer (FLOW-364)", () => {
     }
   });
 
-  it("disables the later year on the current year, and a month picked closes nothing itself", async () => {
+  it("draws no year arrows when the books hold one year, and a month picked closes nothing itself (FLOW-958)", async () => {
     const { onPick } = renderDrawer();
     await screen.findByRole("dialog", { name: "בחירת חודש" });
-    expect(screen.getByRole("button", { name: "שנה הבאה" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.queryByRole("button", { name: "שנה הבאה" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "שנה קודמת" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /מרץ, נטו/ }));
     expect(onPick).toHaveBeenCalledWith(`${String(year)}-03`);
   });
 
-  it("disables the earlier year at the books' first year", async () => {
-    renderDrawer();
+  it("disables the later year on the current year when the books start a year before", async () => {
+    renderDrawer({ firstKey: `${String(year - 1)}-06` });
     await screen.findByRole("dialog", { name: "בחירת חודש" });
-    expect(screen.getByRole("button", { name: "שנה קודמת" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", { name: "שנה הבאה" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", { name: "שנה קודמת" })).not.toHaveAttribute("aria-disabled");
   });
 });

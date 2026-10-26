@@ -23,7 +23,9 @@ test("preview error and loading states are reachable", async ({ page }) => {
   await expect(page.locator("header.band")).toHaveCount(0);
   await expect(page.getByText("מצב תצוגה")).toHaveCount(0);
   await page.goto("/?preview=error-server");
-  await expect(page.getByText("לא הצלחנו לטעון.")).toBeVisible();
+  // FLOW-958: the failure keeps Home's band and names the month.
+  await expect(page.getByRole("heading", { name: /לא נטען$/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "צריך עזרה?" })).toBeVisible();
   await page.goto("/?preview=loading");
   await expect(page.locator("[aria-busy=true]")).toBeVisible();
   // The loading band stands in for Home's band (FLOW-364).

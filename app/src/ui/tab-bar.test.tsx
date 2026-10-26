@@ -86,6 +86,40 @@ describe("TabBar", () => {
     expect(screen.getByRole("link", { name: "הלוואות" })).toHaveAttribute("aria-current", "page");
   });
 
+  it("draws a pill behind the active tab's icon, not only another colour (FLOW-958)", () => {
+    let background = "";
+    for (const sheet of document.styleSheets) {
+      let rules: CSSRuleList;
+      try {
+        rules = sheet.cssRules;
+      } catch {
+        continue;
+      }
+      for (const rule of rules) {
+        if (rule instanceof CSSStyleRule && rule.selectorText === '.ui-tab-slot[aria-current="page"] .ui-tab-icon') {
+          background = rule.style.getPropertyValue("background-color").trim();
+        }
+      }
+    }
+    expect(background).toBe("var(--color-tint-strong)");
+    let weight = "";
+    for (const sheet of document.styleSheets) {
+      let rules: CSSRuleList;
+      try {
+        rules = sheet.cssRules;
+      } catch {
+        continue;
+      }
+      for (const rule of rules) {
+        if (rule instanceof CSSStyleRule && rule.selectorText === '.ui-tab-slot[aria-current="page"]') {
+          weight = rule.style.getPropertyValue("font-weight").trim() || weight;
+        }
+      }
+    }
+    // The label is bold too: a second cue beside the pill and the colour.
+    expect(weight).toBe("var(--type-name-weight)");
+  });
+
   it("scrolls to the top when the active tab is tapped", () => {
     const scroll = vi.fn();
     window.scrollTo = scroll;

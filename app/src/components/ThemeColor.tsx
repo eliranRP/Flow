@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { previewHidesBand, useHomePreview } from "../preview";
+import { previewFails, useHomePreview } from "../preview";
 
 function isBandRoute(pathname: string): boolean {
   if (pathname === "/") return true;
@@ -19,7 +19,9 @@ export function ThemeColor() {
     const apply = () => {
       const meta = document.querySelector('meta[name="theme-color"]');
       if (!meta) return;
-      const bandOff = previewHidesBand(preview) || document.documentElement.dataset.band === "off";
+      // A failing preview draws no band, except where the screen marks it on (Home keeps its band, FLOW-958).
+      const mark = document.documentElement.dataset.band;
+      const bandOff = mark === "off" || (previewFails(preview) && mark !== "on");
       const value = isBandRoute(pathname) && !bandOff ? readToken("--color-band") : readToken("--color-bg");
       if (value) meta.setAttribute("content", value);
     };

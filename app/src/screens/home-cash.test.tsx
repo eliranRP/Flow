@@ -1,4 +1,5 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { onlineManager } from "@tanstack/react-query";
 import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { shiftMonthKey } from "../period";
@@ -119,7 +120,7 @@ describe("Home's cash (FLOW-364: the redesigned Home)", () => {
     expect(incoming).toHaveAttribute("href", `/cash/${current}/in/ILS`);
     expect(screen.getByRole("link", { name: /^יצא/ })).toHaveAttribute("href", `/cash/${current}/out/ILS`);
     // FLOW-418: the split card, the cash profit leaves out first, then the month's profit.
-    expect(screen.getByRole("heading", { name: "ממה מורכב התזרים" })).toBeInTheDocument();
+    expect(screen.getByText("ממה מורכב התזרים")).toBeInTheDocument();
     const kept = screen.getByRole("link", { name: /^השקעה, לא נספר ברווח/ });
     expect(kept).toHaveAttribute("href", `/cash/${current}/kept/ILS`);
     expect(within(kept).getByText("שיפוץ והשבחה, השקעת בעלים · 30%")).toBeInTheDocument();
@@ -131,6 +132,26 @@ describe("Home's cash (FLOW-364: the redesigned Home)", () => {
     expect(screen.queryByRole("heading", { name: "חודשים קודמים" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "לכל החודשים" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "לכל הקבועים" })).not.toBeInTheDocument();
+  });
+
+  it("says in the band which moment the figures are from when the network drops (FLOW-958)", async () => {
+    wrap();
+    await screen.findByText("תזרים · עד היום");
+    expect(document.querySelector(".ui-home-offline")).toBeNull();
+    try {
+      act(() => {
+        onlineManager.setOnline(false);
+      });
+      expect(await screen.findByText(/אין חיבור · מוצג המצב מ־/)).toBeInTheDocument();
+      expect(within(bandOf()).getByText("₪3,200")).toBeInTheDocument();
+    } finally {
+      act(() => {
+        onlineManager.setOnline(true);
+      });
+    }
+    await waitFor(() => {
+      expect(document.querySelector(".ui-home-offline")).toBeNull();
+    });
   });
 
   it("reads a past month in the darker band, with a way back to the current month", async () => {
@@ -146,12 +167,12 @@ describe("Home's cash (FLOW-364: the redesigned Home)", () => {
 
   it("keeps the attention box when something waits, and hides it when nothing does (design lead)", async () => {
     const first = wrap(7);
-    expect(await screen.findByRole("link", { name: /7 פריטים ממתינים לאישור/ })).toHaveAttribute("href", "/review");
+    expect(await screen.findByRole("link", { name: /^לאישור 7 פריטים/ })).toHaveAttribute("href", "/review");
     expect(screen.getByRole("region", { name: "דורש טיפול" })).toBeInTheDocument();
     first.unmount();
     wrap(0);
     await screen.findByText("תזרים · עד היום");
-    expect(screen.queryByText(/ממתינים לאישור/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^לאישור/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "דורש טיפול" })).not.toBeInTheDocument();
   });
 
@@ -195,9 +216,9 @@ describe("Home's first paint waits on cash_months alone", () => {
     const answer = held(cash);
     await screen.findByText("תזרים · עד היום");
     expect(within(bandOf()).getByText("₪3,200")).toBeInTheDocument();
-    expect(screen.queryByText(/ממתינים לאישור/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^לאישור/ })).not.toBeInTheDocument();
     answer(dashboard(3));
-    expect(await screen.findByRole("link", { name: /3 פריטים ממתינים לאישור/ })).toHaveAttribute("href", "/review");
+    expect(await screen.findByRole("link", { name: /^לאישור 3 פריטים/ })).toHaveAttribute("href", "/review");
   });
 
   it("keeps the skeleton, not the empty state, while a company with no recent cash line waits for get_dashboard to decide", async () => {
@@ -225,7 +246,7 @@ describe("Home's first paint waits on cash_months alone", () => {
     expect(await screen.findByText("לא הצלחנו לטעון.")).toBeInTheDocument();
     fail = false;
     fireEvent.click(screen.getByRole("button", { name: "נסו שוב" }));
-    expect(await screen.findByRole("link", { name: /4 פריטים ממתינים לאישור/ })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /^לאישור 4 פריטים/ })).toBeInTheDocument();
     expect(screen.queryByText("לא הצלחנו לטעון.")).not.toBeInTheDocument();
   });
 });

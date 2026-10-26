@@ -1,6 +1,7 @@
 import { formatAmountText } from "@flow/shared";
 import { missingBillsTitle, type ChargeChangeView } from "../forecast";
 import type { BannerRow } from "../ui/banner";
+import { reviewItems, reviewMinutes } from "../weekly-summary";
 import { BankIcon, CalendarIcon, InvoiceIcon, TrendDownIcon, TrendUpIcon } from "../ui/icons";
 
 // Home's attention rows, in their own file so the project page (FLOW-435) shows them without
@@ -51,6 +52,9 @@ export function attentionRows({
       id: "review",
       to: `/review${search}`,
       title: pending === 1 ? "פריט אחד ממתין לאישור" : <><bdi dir="ltr">{String(pending)}</bdi> פריטים ממתינים לאישור</>,
+      // FLOW-958: Home draws this row as its one filled button, worded as the weekly sheet's; the
+      // time is drawn smaller so the label stays on one line at 320. The project page keeps the row.
+      button: { label: reviewItems(pending), hint: reviewMinutes(pending) },
     });
   }
   if (transfers > 0) {

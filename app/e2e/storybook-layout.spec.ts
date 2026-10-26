@@ -124,9 +124,10 @@ async function layoutProblems(page: Page): Promise<string[]> {
 test("the Home attention card rows stay inside 320 and 390, light and dark (FLOW-321)", async ({ page }) => {
   test.setTimeout(120_000);
   const cases = [
-    ["screens-routes--home-attention-both", ["7 פריטים ממתינים לאישור", "3 חשבוניות פתוחות"], 2],
-    ["screens-routes--home-attention-singular", ["פריט אחד ממתין לאישור", "חשבונית פתוחה אחת"], 2],
-    ["screens-routes--home-attention-review-only", ["7 פריטים ממתינים לאישור"], 0],
+    // FLOW-958: the review is the box's filled button, so one other row draws a single banner, not a list.
+    ["screens-routes--home-attention-both", ["לאישור 7 פריטים", "3 חשבוניות פתוחות"], 0],
+    ["screens-routes--home-attention-singular", ["לאישור פריט אחד", "חשבונית פתוחה אחת"], 0],
+    ["screens-routes--home-attention-review-only", ["לאישור 7 פריטים"], 0],
     ["screens-routes--home-attention-unpaid-only", ["3 חשבוניות פתוחות"], 0],
     ["components-banner--rows-long-hebrew", [], 2],
   ] as const;
@@ -142,7 +143,8 @@ test("the Home attention card rows stay inside 320 and 390, light and dark (FLOW
         const rows = page.locator(".ui-banner-rows a");
         await expect(rows).toHaveCount(rowCount);
         const problems = await layoutProblems(page);
-        const clipped = await page.locator(".ui-banner-row .ui-row-title").evaluateAll((nodes) =>
+        // FLOW-958: a lone row in Home's box is a Banner, and the review is a button; both must fit too.
+        const clipped = await page.locator(".ui-banner-row .ui-row-title, .ui-home-attention .ui-banner .ui-row-title, .ui-home-attention-primary .ui-btn-label").evaluateAll((nodes) =>
           nodes.filter((node) => node.scrollHeight > node.clientHeight + 1).map((node) => node.textContent));
         // The long-Hebrew story clamps on purpose; real Home titles must fit.
         if (id.startsWith("screens-routes")) problems.push(...clipped.map((title) => `row title clipped: ${title}`));

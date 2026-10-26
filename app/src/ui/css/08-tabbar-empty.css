@@ -40,6 +40,19 @@
 
 .ui-tab-slot[aria-current="page"] {
   color: var(--color-accent-text);
+  font-weight: var(--type-name-weight);
+}
+
+/* FLOW-958: the active tab is not told by its colour alone: a pill sits behind its icon. */
+.ui-tab-slot .ui-tab-icon {
+  inline-size: 56px;
+  block-size: 32px;
+  border-radius: var(--radius-chip);
+  transition: background-color var(--motion-press) var(--ease-standard);
+}
+
+.ui-tab-slot[aria-current="page"] .ui-tab-icon {
+  background-color: var(--color-tint-strong);
 }
 
 /* FLOW-363 (3c): a press dims the tab, with no tint behind it. */

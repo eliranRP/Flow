@@ -1,5 +1,6 @@
 import type { CashCurrencyRow } from "@flow/shared";
 import { formatAmountText } from "@flow/shared";
+import type { ReactNode } from "react";
 import { addTriggerRef } from "../add-trigger";
 import { Link } from "react-router-dom";
 import { cashLinesPath, notInProfitHint } from "../cash";
@@ -9,16 +10,18 @@ import { anchorOf, monthPeriod } from "../period";
 import { useAllowAdd } from "../use-allow-add";
 import { Amount } from "../ui/amount";
 import { BannerRows, type BannerRow } from "../ui/banner";
+import { Button } from "../ui/button";
 import { ChangePill } from "../ui/change-pill";
 import { CompactBar } from "../ui/compact-bar";
 import { cx } from "../ui/cx";
 import { HEBREW_MONTHS } from "../ui/date-math";
 import { IconButton } from "../ui/icon-button";
 import { SEARCH_FOCUS_STATE } from "../ui/search-entry";
-import { ChevronDownIcon, ChevronIcon, OutwardChevron, PersonIcon, PlusIcon, SearchIcon } from "../ui/icons";
+import { AlertIcon, ChevronDownIcon, ChevronIcon, OutwardChevron, PersonIcon, PlusIcon, SearchIcon } from "../ui/icons";
 import { MonthStepper } from "../ui/month-stepper";
 import { PartsBar } from "../ui/parts-bar";
 import { PeriodSwipe } from "../ui/period-swipe";
+import { TopBand } from "../ui/top-band";
 
 /**
  * FLOW-364: Home's band, figures, split card, forecast, attention box and compact bar. The pure
@@ -176,7 +179,7 @@ export function HomeSwipeFigures({ monthKey, figures, search, nav, animate }: { 
   );
 }
 
-/** FLOW-364: the forecast row at the band's foot. Static until FLOW-141 adds its route. */
+/** FLOW-364: the forecast row at the band's foot. CashHome wraps it in the link to the forecast (FLOW-141). */
 export function ForecastRow({ monthKey, minor, currency }: { monthKey: string; minor: bigint; currency: string }) {
   return (
     <div className="ui-home-forecast ui-band-fade">
@@ -202,11 +205,15 @@ export function SplitCard({ monthKey, row, search, onOpenProfit }: { monthKey: s
   const keptLabel = parts.notCounted < 0n ? "השקעה, לא נספר ברווח" : "הון שנכנס, לא נספר ברווח";
   const absKept = parts.notCounted < 0n ? -parts.notCounted : parts.notCounted;
   const absProfit = parts.profit < 0n ? -parts.profit : parts.profit;
+  const metric = row.net_minor < 0n ? "ממה מורכב המינוס" : "ממה מורכב התזרים";
   return (
-    <section className="ui-home-split" aria-label="ממה מורכב">
-      <h2 className="ui-home-split-title">{row.net_minor < 0n ? "ממה מורכב המינוס" : "ממה מורכב התזרים"}</h2>
+    <section className="ui-home-split" aria-labelledby="home-split-title">
+      <div className="ui-home-split-head">
+        <p className="ui-home-split-metric">{metric}</p>
+        <h2 id="home-split-title" className="ui-home-split-title">{splitTakeaway(parts.lead, row.net_minor, row.profit_minor)}</h2>
+      </div>
       <PartsBar
-        label={row.net_minor < 0n ? "ממה מורכב המינוס" : "ממה מורכב התזרים"}
+        label={metric}
         height={8}
         gap={2}
         radius="block"
@@ -237,21 +244,43 @@ export function SplitCard({ monthKey, row, search, onOpenProfit }: { monthKey: s
         </span>
         <ChevronIcon size={18} />
       </button>
-      <p className="ui-home-split-note">
-        {parts.lead === "out" ? "רוב הכסף שיצא הלך לנכסים. " : parts.lead === "in" ? "רוב הכסף שנכנס הוא הון, לא הכנסה. " : ""}
-        {row.profit_minor < 0n ? `הפעילות השוטפת הפסידה ${formatAmountText(absProfit, row.currency)}.` : `הפעילות השוטפת הרוויחה ${formatAmountText(absProfit, row.currency)}.`}
-      </p>
     </section>
   );
 }
 
-/** The דורש טיפול box: review, open invoices, late bills and changed charges. Hidden with no rows. */
+/**
+ * FLOW-958: the split card's title says what the bar shows, not the metric's name. The larger part
+ * leads: money that went to assets, owner's capital that came in, or the month's own profit or loss.
+ */
+export function splitTakeaway(lead: "out" | "in" | null, netMinor: bigint, profitMinor: bigint): string {
+  if (lead === "out") return netMinor < 0n ? "רוב המינוס הלך לנכסים" : "רוב מה שיצא הלך לנכסים";
+  if (lead === "in") return "רוב מה שנכנס הוא הון";
+  if (profitMinor < 0n) return netMinor < 0n ? "רוב המינוס הוא הפסד שוטף" : "הפעילות השוטפת הפסידה";
+  return "רוב התזרים הוא רווח";
+}
+
+/**
+ * The דורש טיפול box: review, open invoices, late bills and changed charges. Hidden with no rows.
+ * FLOW-958: the review row is Home's one filled button; the other rows follow it as lines.
+ */
 export function AttentionBox({ rows }: { rows: readonly BannerRow[] }) {
   if (rows.length === 0) return null;
+  const [first, ...others] = rows;
+  const review = first?.button == null ? null : first;
+  const lines = review == null ? rows : others;
   return (
-    <section className="ui-home-attention" aria-label="דורש טיפול">
-      <h2 className="ui-home-attention-title">דורש טיפול</h2>
-      <BannerRows rows={rows} />
+    <section className="ui-home-attention" aria-labelledby="home-attention-title">
+      <h2 id="home-attention-title" className="ui-home-attention-title">דורש טיפול</h2>
+      {review == null ? null : (
+        <div className="ui-home-attention-primary">
+          <Button full to={review.to} chevron>
+            {review.button?.label}
+            {" "}
+            <span className="ui-home-attention-time">· {review.button?.hint}</span>
+          </Button>
+        </div>
+      )}
+      <BannerRows rows={lines} />
     </section>
   );
 }
@@ -302,3 +331,46 @@ export function HomeCompactBar({ monthKey, net, currency, isPast, nav, shown }: 
   );
 }
 
+
+/** "09:41": a moment's hour and minute, Israel time (FLOW-958, the offline line). */
+export function israelClock(at: number): string {
+  return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Jerusalem" }).format(new Date(at));
+}
+
+/** FLOW-958: offline, Home keeps the last figures and says, in the band, which moment they are from. */
+export function HomeOfflineLine({ since }: { since: number }) {
+  return (
+    <p className="ui-home-offline" role="status">
+      <AlertIcon size={20} />
+      <span className="ui-home-offline-text">
+        אין חיבור · מוצג המצב מ־<bdi dir="ltr">{israelClock(since)}</bdi>
+      </span>
+    </p>
+  );
+}
+
+/**
+ * FLOW-958: Home's read failed. The band stays and says what happened, with the retry and the way to
+ * help (an error never ends on a dead line). Offline reads the network's words.
+ */
+export function HomeLoadFailed({ monthKey, offline, onRetry, leading }: { monthKey: string; offline: boolean; onRetry: () => void; leading?: ReactNode }) {
+  return (
+    <TopBand wordmark={false} leading={leading}>
+      <div className="ui-band-body ui-home-failed" role="alert">
+        <span className="ui-home-failed-icon" aria-hidden="true">
+          <AlertIcon size={24} />
+        </span>
+        <h2 className="ui-home-failed-title">{offline ? "אין חיבור" : `${monthName(monthKey)} לא נטען`}</h2>
+        <p className="ui-home-failed-body">{offline ? "אין חיבור לאינטרנט. שום דבר לא נמחק." : "משהו נשבר אצלנו, לא אצלכם. הנתונים שמורים, ושום דבר לא נמחק."}</p>
+        <div className="ui-home-failed-actions">
+          <button type="button" className="ui-home-failed-retry m-press" onClick={onRetry}>
+            נסו שוב
+          </button>
+          <Link to="/help" className="ui-home-failed-help m-press">
+            צריך עזרה?
+          </Link>
+        </div>
+      </div>
+    </TopBand>
+  );
+}

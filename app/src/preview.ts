@@ -21,8 +21,8 @@ export function usePreviewMode(): boolean {
   return useHomePreview() !== "off";
 }
 
-/** Offline and server load previews draw no band. Home and the status bar share this. */
-export function previewHidesBand(preview: HomePreview): boolean {
+/** The offline and server load previews: the screen's read fails. FLOW-958: Home keeps its band then. */
+export function previewFails(preview: HomePreview): boolean {
   return preview === "error" || preview === "error-server";
 }
 
