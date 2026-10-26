@@ -77,7 +77,6 @@ Raw = mismatch, masked = text-masked mismatch (percent). Pass = masked under 3% 
 | projects | ProjectNewSheet | /e2e/projects?new=project | 3.1 | 0.7 | 3.2 | 0.7 | yes | FLOW-445b |
 | projects | ProjectMenu | /e2e/project-detail?preview=1&budget=1&sheet=menu | 4.6 | 0.1 | 4.8 | 0.2 | yes | FLOW-445b |
 | projects | ProjectMenuDeletable | /e2e/project-detail?preview=1&budget=1&sheet=menu&deletable=1 | 3.4 | 0.1 | 3.5 | 0.1 | yes | FLOW-445b (decision 1 commit) |
-| projects | ProjectFinishConfirm | /e2e/project-detail?preview=1&budget=1&sheet=finish | 3.9 | 0.3 | 4.1 | 0.3 | yes | FLOW-445b |
 | projects | ProjectsFinished | /e2e/projects?finished=1 | 5 | 0.3 | 4.9 | 0.3 | yes | FLOW-445b |
 | projects | ProjectRental | /e2e/project-detail?preview=1&kind=rental | 6.5 | 2.2 | 5.7 | 1.4 | yes | FLOW-445b |
 | projects | ProjectClient | /e2e/project-detail?preview=1&kind=client | 5.8 | 1.4 | 4.9 | 0.6 | yes | FLOW-445b |

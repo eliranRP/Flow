@@ -55,26 +55,16 @@ export function DevProjects() {
   return <ProjectsScreen sample={devDashboard} cashSample={devProjectsCash} finishedOpen={params.get("finished") === "1"} />;
 }
 
-/**
- * Proof: `?sheet=menu` taps the page's ⋯ button once it has drawn; `?sheet=finish` then taps the menu's
- * finish row, so the confirm sheet draws (the real triggers, not a state flag).
- */
+/** Proof: `?sheet=menu` taps the page's ⋯ button once it has drawn (the real trigger, not a state flag). */
 function OpenProjectMenu({ sheet }: { sheet: string | null }) {
   useEffect(() => {
-    if (sheet !== "menu" && sheet !== "finish") return;
+    if (sheet !== "menu") return;
     const started = Date.now();
-    let step: "more" | "finish" = "more";
     const timer = window.setInterval(() => {
-      const target = step === "more"
-        ? document.querySelector<HTMLButtonElement>('button[aria-label="עוד"]')
-        : [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find((button) => button.textContent.startsWith("סיום הפרויקט"));
+      const target = document.querySelector<HTMLButtonElement>('button[aria-label="עוד"]');
       if (target) {
         target.click();
-        if (sheet === "menu" || step === "finish") {
-          window.clearInterval(timer);
-          return;
-        }
-        step = "finish";
+        window.clearInterval(timer);
       } else if (Date.now() - started > 4000) {
         window.clearInterval(timer);
       }
