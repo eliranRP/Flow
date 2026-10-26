@@ -3,7 +3,7 @@ import { type TransactionDetail } from "@flow/shared";
 import { useMemo, useSyncExternalStore } from "react";
 import { useParams } from "react-router-dom";
 import { getSupabase } from "../lib/supabase";
-import { draftFromRead, parseLineSplit, parsePreview, readLineDraft, type LineSplitRead, type PartDraft, type RestDraft } from "../line-split";
+import { draftFromRead, parseLineSplit, parsePreview, readLineDraft, splitHeldByReview, type LineSplitRead, type PartDraft, type RestDraft } from "../line-split";
 import { lineSplitPartsLabel, type LineSplitRefusal } from "../line-split-copy";
 import { usePreviewSearch, useHomePreview } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
@@ -55,7 +55,7 @@ export function lineInfo(txn: NonNullable<TransactionDetail>, loanSplit = false)
     projectName: txn.project_name,
     supplier: txn.supplier_name ?? txn.customer_name ?? txn.description,
     docDate: txn.doc_date,
-    reviewBlocked: txn.review_status === "open" && txn.review_reason !== "split_mismatch",
+    reviewBlocked: splitHeldByReview(txn.review_status, txn.review_reason),
     reviewId: txn.review_status === "open" ? txn.review_id ?? null : null,
     loanSplit,
     inPnl: txn.in_pnl_override === true,

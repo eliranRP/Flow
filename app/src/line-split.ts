@@ -89,6 +89,15 @@ const readSchema = z.object({
 });
 
 /** `get_line_split`. null when the line is not readable (removed, another company). */
+/**
+ * An open review on the line holds the split, except the two the split itself answers: a split that
+ * no longer adds up (split_mismatch) and a shared expense, whose אישור in לאישור opens the split
+ * (unallocated_shared; save_line_split takes it and closes it, 20261026110000_shared_line_split.sql).
+ */
+export function splitHeldByReview(status: string | null | undefined, reason: string | null | undefined): boolean {
+  return status === "open" && reason !== "split_mismatch" && reason !== "unallocated_shared";
+}
+
 export function parseLineSplit(data: unknown): LineSplitRead | null {
   if (data == null) return null;
   const parsed = readSchema.parse(data);
