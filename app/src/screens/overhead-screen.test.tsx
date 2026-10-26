@@ -218,7 +218,7 @@ describe("project overhead hero", () => {
 });
 
 describe("the project's finish row (FLOW-334)", () => {
-  it("finishes the project from a row in the ⋯ menu, with a neutral confirm", async () => {
+  it("finishes the project from a row in the ⋯ menu, at once (FLOW-961, decision 0213)", async () => {
     const calls: Array<{ name: string; args: unknown }> = [];
     rpc.impl = (name, args) => {
       calls.push({ name, args });
@@ -229,28 +229,11 @@ describe("the project's finish row (FLOW-334)", () => {
     const row = await screen.findByRole("button", { name: /^סיום הפרויקט/ });
     expect(row).toHaveClass("ui-row");
     fireEvent.click(row);
-    // The menu closes as the confirm opens.
     await waitFor(() => { expect(screen.queryByRole("dialog", { name: "וילה רעננה" })).not.toBeInTheDocument(); });
-    const confirm = await screen.findByRole("dialog", { name: /^לסיים את/ });
-    const button = within(confirm).getByRole("button", { name: "סיום הפרויקט" });
-    expect(button.querySelector("svg")).toBeNull();
-    expect(button.className).not.toMatch(/danger/);
-    fireEvent.click(button);
     await waitFor(() => {
       expect(calls.find((call) => call.name === "upsert_project")?.args).toMatchObject({ p_id: "a", p_status: "finished" });
     });
-    // FLOW-445: a finish lands on the list with הסתיימו open, so the page is gone and focus does not return to עוד.
-    await waitFor(() => { expect(screen.queryByRole("dialog", { name: /^לסיים את/ })).not.toBeInTheDocument(); });
-  });
-
-  it("returns focus to עוד when the confirm is cancelled", async () => {
-    renderProject({ ...projectBase });
-    fireEvent.click(screen.getByRole("button", { name: "עוד" }));
-    fireEvent.click(await screen.findByRole("button", { name: /^סיום הפרויקט/ }));
-    const confirm = await screen.findByRole("dialog", { name: /^לסיים את/ });
-    fireEvent.click(within(confirm).getByRole("button", { name: "ביטול" }));
-    await waitFor(() => { expect(screen.queryByRole("dialog", { name: /^לסיים את/ })).not.toBeInTheDocument(); });
-    await waitFor(() => { expect(screen.getByRole("button", { name: "עוד" })).toHaveFocus(); });
+    expect(screen.queryByRole("dialog", { name: /^לסיים את/ })).not.toBeInTheDocument();
   });
 
   it("offers החזרה לפעיל on a finished project", async () => {
