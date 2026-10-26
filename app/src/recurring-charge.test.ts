@@ -68,14 +68,14 @@ describe("the change (FLOW-447c)", () => {
     expect(changeFor({ ...WATER, typical_amount_source: "owner", months_seen: 0 })).toBeNull();
   });
 
-  it("reads כרגיל below 20%, and the words up or down above it, red only when it hurts", () => {
-    expect(changeLine({ ...WATER, amount_minor: 10400 }, "USD", true).change).toBe("כרגיל");
+  it("reads as usual below 20%, and higher or lower above it, red only when it hurts", () => {
+    expect(changeLine({ ...WATER, amount_minor: 10400 }, "USD", true).takeaway).toBe("כמו בכל חודש");
     const up = changeLine(WATER, "USD", true);
-    expect(up.change).toBe("עלה ב־38%");
+    expect(up.takeaway).toBe("גבוה ב־38% מהרגיל");
     expect(up.hurts).toBe(true);
     expect(changeLine(WATER, "USD", false).hurts).toBe(false);
     const incomeDown = changeLine({ ...row("rent-birch"), amount_minor: 168000 }, "ILS", true);
-    expect(incomeDown.change).toBe("ירד ב־20%");
+    expect(incomeDown.takeaway).toBe("נמוך ב־20% מהרגיל");
     expect(incomeDown.hurts).toBe(true);
   });
 });

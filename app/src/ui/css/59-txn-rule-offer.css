@@ -1,0 +1,41 @@
+/* FLOW-965 (decision 0216): the transaction page's offer to file the supplier's next lines the same way,
+   under the project and category rows: the tint card, its line, and two outlined 44px answers of equal weight. */
+.ui-rule-offer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+  padding: var(--space-3) var(--space-inset-row);
+  border-radius: var(--radius-card-tight);
+  background: var(--color-tint);
+}
+
+.ui-rule-offer-text {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+.ui-rule-offer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ui-rule-offer-btn {
+  min-block-size: var(--touch-min);
+  padding-inline: var(--space-4);
+  /* The edge meets 3:1 on the tint: 4.9:1 dark, 4.1:1 light (the control border is 2.8:1 there). */
+  border: var(--stroke-strong) solid var(--color-text-muted);
+  border-radius: var(--radius-chip);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--type-line2-size);
+}
+
+.ui-rule-offer-btn:is(:focus-visible, [data-focus-ring]:focus) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}

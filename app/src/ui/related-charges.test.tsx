@@ -85,7 +85,7 @@ describe("PartyChargesHistory on the charge page (plain, FLOW-447c)", () => {
   });
 });
 
-describe("PartyChargesHistory on the transaction page (default, unchanged)", () => {
+describe("PartyChargesHistory on the transaction page (default)", () => {
   it("lists the three earlier charges, not this line", () => {
     const { container } = render(
       <MemoryRouter>
@@ -96,6 +96,27 @@ describe("PartyChargesHistory on the transaction page (default, unchanged)", () 
     expect(container.querySelector(".ui-charges-list .ui-charges-row-now")).toBeNull();
     expect(container.querySelector(".ui-charges-list a[href='/transactions/tx-10']")).toBeNull();
     expect(screen.getByText("לכל החיובים")).toBeTruthy();
+  });
+
+  it("heads with the takeaway and labels its bars with every month, as the charge page (FLOW-965)", () => {
+    render(
+      <MemoryRouter>
+        <PartyChargesHistory data={charges(5)} onShowAll={() => undefined} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("heading", { name: "חיובים קודמים" })).toHaveClass("ui-charges-metric");
+    expect(screen.getByText("גבוה ב־38% מהרגיל")).toHaveClass("ui-charges-takeaway-bad");
+    expect(screen.getByText("$103").closest(".ui-charges-usual-line")).toBeTruthy();
+    expect(screen.getByRole("img").getAttribute("aria-label")).toMatch(/^חיובים ב־6 החודשים האחרונים: מאי \$98, /);
+  });
+
+  it("says as usual when the charge is near the usual amount", () => {
+    render(
+      <MemoryRouter>
+        <PartyChargesHistory data={{ ...charges(5), change_percent: 1 }} onShowAll={() => undefined} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("כמו בכל חודש")).toBeTruthy();
   });
 });
 

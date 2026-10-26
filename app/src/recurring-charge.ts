@@ -69,8 +69,8 @@ export function isBigChange(percent: number | null): boolean {
 }
 
 /**
- * The history's change line, as the page writes it: "עלה ב־38%" or "ירד ב־20%" for a big change,
- * "כרגיל" otherwise. The words are red only when the change hurts and the alert still stands.
+ * The history's takeaway, as the page writes it: "גבוה ב־38% מהרגיל" or "נמוך ב־20% מהרגיל" for a big
+ * change, "כמו בכל חודש" otherwise. It is red only when the change hurts and the alert still stands.
  */
 export function changeLine(row: ScheduleRow, currency: string, alertActive: boolean): PartyChangeView {
   const usualMinor = absAgorot(BigInt(row.typical_amount_minor));
@@ -80,17 +80,14 @@ export function changeLine(row: ScheduleRow, currency: string, alertActive: bool
   if (!isBigChange(percent) || percent == null) {
     // A late charge has no figure this month yet: the takeaway says so instead of "as usual".
     const takeaway = row.state === "late" ? `החודש עוד לא ${income ? "התקבל" : "שולם"}` : "כמו בכל חודש";
-    return { percent: null, arrow: null, hurts: false, usual, change: "כרגיל", words: `כרגיל, ${usual}`, takeaway };
+    return { percent: null, hurts: false, usual, takeaway };
   }
   const up = percent > 0;
   const size = `${String(Math.abs(percent))}%`;
   return {
     percent: size,
-    arrow: up ? "▲" : "▼",
     hurts: alertActive && (income ? !up : up),
     usual,
-    change: `${up ? "עלה" : "ירד"} ב־${size}`,
-    words: `${up ? "עלייה" : "ירידה"} של ${size} לעומת הרגיל, ${usual}`,
     takeaway: `${up ? "גבוה" : "נמוך"} ב־${size} מהרגיל`,
   };
 }

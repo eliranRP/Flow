@@ -664,7 +664,7 @@ begin
     ('undismiss_recurring_alert', jsonb_build_object('p_kind', pg_temp.lit('missing'::text))),
     ('dismiss_recurring_alert', jsonb_build_object('p_kind', pg_temp.lit('change'::text),
       'p_key', pg_temp.lit((ids->>'line')::text))),
-    ('mcp_add_loan', jsonb_build_object('p_kind', pg_temp.lit('amortizing'::text))),
+    ('mcp_add_loan', jsonb_build_object('p_kind', pg_temp.lit('amortizing'::text))), ('remember_line_category', jsonb_build_object('p_id', pg_temp.lit((ids->>'line')::uuid))),
     ('mcp_undo_batch', jsonb_build_object('p_batch_key', pg_temp.lit(ids->>'batch'))), ('undo_reassign_recurring_charge', jsonb_build_object('p_undo_ids', pg_temp.lit(array[pg_temp.sid('reassign')]::uuid[]))), -- FLOW-963: A's own reassign undo
     ('mcp_create_categories', jsonb_build_object('p_items', pg_temp.lit('[{"name": "Sweep Name", "kind": "expense"}]'::jsonb))),
     ('mcp_create_projects', jsonb_build_object('p_items', pg_temp.lit('[{"name": "Sweep Name"}]'::jsonb))),

@@ -337,6 +337,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-960"></a>[FLOW-960](tasks/FLOW-960.md) | Review v2: the UX/UI rules review of לאישור | UI (design approved) |
 | <a id="flow-961"></a>[FLOW-961](tasks/FLOW-961.md) | Project v2: the UX/UI rules review of פרויקטים and the project page | UI (design approved) |
 | <a id="flow-963"></a>[FLOW-963](tasks/FLOW-963.md) | Recurring v2: the UX/UI rules review of קבועים | UI (design approved) |
+| <a id="flow-965"></a>[FLOW-965](tasks/FLOW-965.md) | Lines v2: the UX/UI rules review of a month's lines and the transaction page | UI (design approved) |
 | <a id="flow-966"></a>[FLOW-966](tasks/FLOW-966.md) | Add v2: the UX/UI rules review of the + sheet | UI (design approved) |
 | <a id="flow-967"></a>[FLOW-967](tasks/FLOW-967.md) | Add: an offline save kept on the device and sent when back online | feature (owner call) |
 | <a id="flow-365"></a>[FLOW-365](tasks/FLOW-365.md) | Redesign: the review queue (לאישור) without a tab | UI (design approved) |

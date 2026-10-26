@@ -80,19 +80,8 @@ function ChargeRows({
   );
 }
 
-/** "בדרך כלל $11.99 · עלה ב־92%": the signal colour only when the change hurts. */
-function ChangeLine({ view }: { view: PartyChangeView }) {
-  return (
-    <p className="ui-charges-line">
-      <span className="ui-charges-usual">בדרך כלל <bdi dir="ltr">{view.usual}</bdi></span>
-      {" · "}
-      <span className={cx("ui-charges-change", view.hurts && view.percent != null && "ui-charges-change-bad")}>{view.change}</span>
-    </p>
-  );
-}
-
 /**
- * FLOW-963: the charge page's head says what the bars show. The metric is a small label, then the
+ * FLOW-963 (the charge page), FLOW-965 (the transaction page): the history's head says what the bars show. The metric is a small label, then the
  * takeaway ("גבוה ב־38% מהרגיל", "כמו בכל חודש"), in the signal colour only when the change hurts, then
  * the usual amount (data-viz § 9).
  */
@@ -156,15 +145,9 @@ export function PartyChargesHistory({
   const shown = months ?? data.months;
   return (
     <section className="ui-charges-history">
-      {plain ? (
-        <PlainHead title={chargesTitle(data)} view={view} />
-      ) : (
-        <>
-          <h2 className="ui-charges-title">{chargesTitle(data)}</h2>
-          {view == null ? null : <ChangeLine view={view} />}
-        </>
-      )}
-      <ChargeMonthBars months={shown} plain={plain} label={plain ? barsLabel(data, shown) : undefined} />
+      {/* FLOW-965: the transaction page heads its history as the charge page does: the metric, the takeaway, the usual amount. */}
+      <PlainHead title={chargesTitle(data)} view={view} />
+      <ChargeMonthBars months={shown} plain={plain} label={barsLabel(data, shown)} />
       <ChargeRows data={data} charges={list.slice(0, 3)} search={search} plain={plain} />
       {list.length > 3 ? (
         <button ref={showAllRef} type="button" className="ui-charges-all ui-hit" aria-haspopup="dialog" onClick={onShowAll}>

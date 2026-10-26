@@ -40,6 +40,7 @@ import { TransactionTopBar } from "./transaction-top-bar";
 import { TxnFooter, TxnHead } from "./transaction-head";
 import { TransactionThread } from "./transaction-thread";
 import { TxnRecurring } from "./transaction-recurring";
+import { LINE_UNDO_MS, offersRule, RuleOfferCard, useRuleOffer, type RuleOffer } from "./transaction-rule-offer";
 import { TxnJournal, journalEditable, journalOpens, journalShown } from "./transaction-journal";
 import { useLineJournalQuery, type LineJournal } from "../line-journal";
 import { projectChoices } from "../project-groups";
@@ -154,7 +155,7 @@ export function TransactionScreen({
 }: {
   sample?: NonNullable<TransactionDetail>;
   sampleProjects?: Array<{ id: string; name: string; code?: string }>;
-  sampleCategories?: Array<{ id: string; name: string; kind?: "income" | "expense" }>;
+  sampleCategories?: Array<{ id: string; name: string; kind?: "income" | "expense"; loan_part?: string | null }>;
   /** FLOW-325: a story's split by category, in place of the get_line_split read. */
   sampleLineSplit?: LineSplitRead | null;
   /** FLOW-415: a story's recurring switch, in place of the payment_recurring read. */
@@ -181,7 +182,10 @@ export function TransactionScreen({
   const search = usePreviewSearch();
   const navigate = useNavigate();
   const toast = useToast();
-  const blocked = useBlockedPreview();
+  // FLOW-965 (decision 0216): this page's toasts hang under its header, and ביטול stays 5s.
+  const blocked = useBlockedPreview("top");
+  const ruleOffer = useRuleOffer(sample?.id ?? transactionId, sample != null);
+  const offerNext = useRef<RuleOffer | null>(null);
   const holdWrites = useHoldWrites();
   const invalidate = useInvalidateBooks();
   const [confirm, setConfirm] = useState(false);
@@ -247,10 +251,13 @@ export function TransactionScreen({
     onSplit: () => {
       void navigate(`/transactions/${transactionId}/split-category${search}`);
     },
+    place: "top",
     keys: ["txn", "dashboard", "project", "project-category", "home", "breakdown", "breakdown-lines"],
     onSuccess: (done) => {
       toast.show({
         message: done.out ? "הוצא מהרווח" : "נספר ברווח",
+        place: "top",
+        durationMs: LINE_UNDO_MS,
         ...(done.undo ? {} : {
           action: "ביטול",
           onAction: () => {
@@ -275,6 +282,7 @@ export function TransactionScreen({
   const countedRef = useRef<HTMLButtonElement>(null);
   const cashLine = useWrite<CashChange>({
     failure: (error) => (error.message.includes("forbidden") ? "אין הרשאה לעדכן את השורה." : "לא הצלחנו לעדכן את השורה."),
+    place: "top",
     keys: CASH_KEYS,
     // A switch flips at once and the server's answer only corrects it (decision 0180).
     optimistic: (change) => (sample || detail.data == null ? [] : [{
@@ -284,6 +292,8 @@ export function TransactionScreen({
     onSuccess: (done) => {
       toast.show({
         message: done.on ? "נספר בתזרים" : "הוצא מהתזרים",
+        place: "top",
+        durationMs: LINE_UNDO_MS,
         ...(done.undo ? {} : {
           action: "ביטול",
           onAction: () => {
@@ -312,7 +322,7 @@ export function TransactionScreen({
   const committed = useRef({ projectId: "", categoryId: "" });
   const namesRef = useRef({
     projects: [] as Array<{ id: string; name: string }>,
-    categories: [] as Array<{ id: string; name: string }>,
+    categories: [] as Array<{ id: string; name: string; kind?: "income" | "expense"; loan_part?: string | null }>,
   });
   namesRef.current = {
     projects: sample
@@ -361,12 +371,14 @@ export function TransactionScreen({
   };
   const undo = useWrite({
     failure: "לא הצלחנו לבטל את השיוך.",
+    place: "top",
     keys: ASSIGN_KEYS,
     success: "השיוך הקודם חזר",
     onSuccess: () => {
       committed.current = { projectId: "", categoryId: "" };
       setProjectName("");
       setCategoryName("");
+      ruleOffer.close();
     },
     run: async () => {
       const supabase = getSupabase();
@@ -380,8 +392,13 @@ export function TransactionScreen({
     const id = undoId.current;
     toast.show({
       message: "השיוך נשמר",
-      ...(!sample && id ? { action: "ביטול", onAction: () => { undo.mutate(); } } : {}),
+      place: "top",
+      durationMs: LINE_UNDO_MS,
+      ...(!sample && id ? { action: "ביטול", onAction: () => { ruleOffer.close(); undo.mutate(); } } : {}),
     });
+    // FLOW-965: a new category on a supplier's line offers the supplier's next lines.
+    if (offerNext.current) ruleOffer.open(offerNext.current);
+    offerNext.current = null;
   };
   // The pick is the check, the summary and the row at once; a failure goes back to the pick before (decision 0075).
   const restorePick = (payload: PickBack | undefined) => {
@@ -394,6 +411,7 @@ export function TransactionScreen({
   };
   const reassign = useWrite<PickBack>({
     failure: changeSaveFailure,
+    place: "top",
     onError: (_error, payload) => { restorePick(payload); },
     optimistic: (payload) => pickCache(payload, true),
     onSplit: () => {
@@ -421,6 +439,7 @@ export function TransactionScreen({
   });
   const setCategory = useWrite<PickBack>({
     failure: changeSaveFailure,
+    place: "top",
     onError: (_error, payload) => { restorePick(payload); },
     optimistic: (payload) => pickCache(payload, false),
     onSplit: () => {
@@ -489,9 +508,13 @@ export function TransactionScreen({
       return "hold" as const;
     }
     setHold("");
+    ruleOffer.close();
+    const picked = namesRef.current.categories.find((category) => category.id === next.categoryId);
+    offerNext.current = kind === "category" && !splitRow && detailRow.direction === "expense" && detailRow.supplier_name && picked && offersRule(picked)
+      ? { supplier: detailRow.supplier_name, category: picked.name, categoryId: picked.id }
+      : null;
     if (sample) {
-      applyRef.current();
-      toast.show({ message: "השיוך נשמר" });
+      assignSaved();
       return undefined;
     }
     if (blocked()) throw new Error("preview");
@@ -589,6 +612,7 @@ export function TransactionScreen({
         title={`${heading} · ${amountText}`}
         end={menuButton}
         head={head}
+        toastCeiling
       />
       <CardSwipe key={txn.id} canNext={nav?.next != null} canPrev={nav?.prev != null} enter={nav?.enter} peekNext={peekNext} peekPrev={peekPrev} onStep={(step) => { nav?.move(step, "swipe"); }}>
         <div className="ui-txn-body">
@@ -627,6 +651,7 @@ export function TransactionScreen({
             )}
           </LoanCategoryRow>
         </List>
+        <RuleOfferCard names={holdWrites ? null : ruleOffer.offer} onAccept={ruleOffer.accept} onDismiss={ruleOffer.close} />
         <LoanTransactionSplit
           transactionId={txn.id}
           docDate={txn.doc_date}

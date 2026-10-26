@@ -94,6 +94,7 @@ export const WRITE_TOOL_NAMES = [
   "reorder_loans",
   "set_project_investment",
   "set_category_rehab",
+  "remember_supplier_category",
   "delete_category",
   "move_category_lines",
   "set_company_currency",
@@ -199,6 +200,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   reorder_loans: new Set(["idempotency_key", "loan_ids"]),
   set_project_investment: new Set(["idempotency_key", "project_id", "currency", "purchase_minor", "arv_minor", "value_minor", "value_date"]),
   set_category_rehab: new Set(["idempotency_key", "category_id", "rehab"]),
+  remember_supplier_category: new Set(["idempotency_key", "transaction_id", "category_id"]),
   delete_category: new Set(["idempotency_key", "category_id"]),
   move_category_lines: new Set(["idempotency_key", "from_category_id", "into_category_id"]),
   set_company_currency: new Set(["idempotency_key", "currency"]),
@@ -273,7 +275,7 @@ export const categorySchema = z.object({
 }).strict();
 export const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "loan_refinance", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", ...THREAD_UNDO_KINDS]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "supplier_category", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "loan_refinance", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", ...THREAD_UNDO_KINDS]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -740,6 +742,12 @@ export const setCategoryRehabSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   category_id: UUID_TEXT,
   rehab: z.boolean().nullable(),
+}).strict();
+// FLOW-965 (decision 0216): file the supplier's next lines in this line's category.
+export const rememberSupplierCategorySchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  transaction_id: UUID_TEXT,
+  category_id: UUID_TEXT,
 }).strict();
 export const deleteCategorySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,

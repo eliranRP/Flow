@@ -28,6 +28,7 @@ export function ScreenState({
   barOnly = false,
   headerClassName,
   headEnd,
+  failed,
 }: {
   title: string;
   subtitle?: string;
@@ -59,6 +60,8 @@ export function ScreenState({
   headerClassName?: string;
   /** Where the page's head ends past the header (ScreenHeader `headEnd`). */
   headEnd?: HTMLElement | null;
+  /** FLOW-965: the page's own failed card in place of the failure line, given the retry and whether it is offline. */
+  failed?: (retry: () => void, offline: boolean) => ReactNode;
 }) {
   const preview = useHomePreview();
   const navigate = useNavigate();
@@ -86,7 +89,7 @@ export function ScreenState({
       {/* The body is the overlay's frame: a skeleton fades out over it while the content fades in (FLOW-371). */}
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         <SkeletonSwap loading={phase.kind === "loading"}>{loading ?? <ListSkeleton />}</SkeletonSwap>
-        {phase.kind === "error" ? <FailureLine offline={phase.offline} onRetry={retry} /> : null}
+        {phase.kind === "error" ? (failed ? failed(retry, phase.offline) : <FailureLine offline={phase.offline} onRetry={retry} />) : null}
         {phase.kind === "empty" ? empty : null}
         {phase.kind === "ready" ? <div className="ui-phase-in flex min-h-0 min-w-0 flex-1 flex-col">{children}</div> : null}
       </div>

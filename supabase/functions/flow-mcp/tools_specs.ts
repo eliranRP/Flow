@@ -633,6 +633,11 @@ function writeTools() {
       category_id: { type: "string" },
       rehab: { type: ["boolean", "null"] },
     }, true),
+    toolSpec("remember_supplier_category", "File the supplier's next lines in this line's category: the supplier's remembered category, which a sync gives each new expense line from that supplier. Earlier lines do not change. transaction_id is an expense line with a supplier and a category of its own (not a split, a shared line or a loan category); category_id is the category the line holds now (get_expense.category_id), and the call is a conflict when the line holds another one by then. Returns supplier_id, supplier_name, category_id, category_name and prior_category_id (what the supplier had, or null). Refused: the line has no supplier, the line has no category, a split line is not remembered, a loan category is not remembered, transaction not found. Undo is kind supplier_category with the transaction id: it puts back the prior category, and is a conflict once the supplier remembers something else.", {
+      idempotency_key: { type: "string" },
+      transaction_id: { type: "string" },
+      category_id: { type: "string" },
+    }, true),
     toolSpec("delete_category", "Delete a category, even one with lines. Its lines lose the category and go back to review (לאישור) with none; a line split by category loses its whole split; suppliers forget it as their remembered category. Refused for a loan part category (loan category is fixed) and while a loan or a loan payment part uses it (a loan uses this category). Returns name and lines (how many lines on the books went back to review). Undo is kind category_delete with the category id: it puts the category back with its lines, splits and remembered suppliers, and is a conflict once one of those lines has a category or a split again, or the name is taken again.", {
       idempotency_key: { type: "string" },
       category_id: { type: "string" },
@@ -745,7 +750,7 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", ...THREAD_UNDO_KINDS] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "supplier_category", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", ...THREAD_UNDO_KINDS] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, set_lines_cash, create_projects, create_categories or reassign_recurring_charge batch.", {
