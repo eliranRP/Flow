@@ -1762,6 +1762,9 @@ isOneToOne: false
 "mcp_move_category_lines":
 { Args: { "p_from": string,"p_idempotency_key": string,"p_into": string }; Returns: Json
                            },
+"mcp_reassign_recurring_charge":
+{ Args: { "p_category_id": string,"p_charge_project_id": string,"p_currency": string,"p_direction": string,"p_idempotency_key": string,"p_party_id": string,"p_project_id": string }; Returns: Json
+                           },
 "mcp_remove_member":
 { Args: { "p_idempotency_key": string,"p_user_id": string }; Returns: Json
                            },
@@ -1993,6 +1996,9 @@ isOneToOne: false
 "read_jev_api_key":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"reassign_recurring_charge":
+{ Args: { "p_category_id": string,"p_charge_project_id": string,"p_currency": string,"p_direction": string,"p_party_id": string,"p_project_id": string }; Returns: Json
+                           },
 "reassign_transaction":
 { Args: { "p_category_id": string,"p_id": string,"p_project_id": string }; Returns: string
                            },
@@ -2219,6 +2225,9 @@ isOneToOne: false
                            },
 "undo_reassign":
 { Args: { "p_id": string }; Returns: undefined
+                           },
+"undo_reassign_recurring_charge":
+{ Args: { "p_undo_ids": (string)[] }; Returns: undefined
                            },
 "unpaid_overview":
 { Args: Record<PropertyKey, never>; Returns: Json

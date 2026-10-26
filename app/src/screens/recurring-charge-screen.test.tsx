@@ -80,8 +80,8 @@ describe("the charge page: the item (the water bill, arrived 38% over)", () => {
     expect(screen.getByRole("button", { name: "התעלמות" })).toBeTruthy();
   });
 
-  it("names its project and category as read-only rows, with no control", () => {
-    renderPage("/recurring/expense/water");
+  it("shows a viewer its project and category as read-only rows, with no control", () => {
+    renderPage("/recurring/expense/water", <ViewerPreview><RecurringChargeScreen now={NOW} /></ViewerPreview>);
     const card = screen.getByRole("region", { name: "פרויקט וקטגוריה" });
     expect(within(card).queryAllByRole("button")).toHaveLength(0);
     expect(within(card).getByText("Elm Row")).toBeTruthy();

@@ -57,6 +57,8 @@ export type ChargePageData =
       updatedAt?: number;
       /** A dev sample's offline moment, in place of the live online state. */
       offlineSince?: number;
+      /** A dev sample's picker choices (FLOW-963). */
+      picks?: { projects: { id: string; name: string }[]; categories: { id: string; name: string }[] };
     };
 
 /**

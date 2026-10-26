@@ -22,6 +22,7 @@ import { ChargeBanner, ChargeCard, ChargeHead, ChargeIgnored, RecurringRow } fro
 import { RecurringAskBox, RecurringMatchBox } from "../ui/recurring-match-box";
 import { useToast } from "../ui/toast";
 import { useWrite } from "../use-write";
+import { useChargePick, type ChargePickChoice } from "./recurring-charge-pick";
 import { ChargeUsualAmount } from "./recurring-usual-amount";
 import { TransactionTopBar } from "./transaction-top-bar";
 import { useBlockedPreview } from "./screen-shared";
@@ -38,6 +39,8 @@ export type ChargeSample = {
   recurring: PaymentRecurring | null;
   /** Offline: the moment the page's figures are from. */
   offlineSince?: number;
+  /** The pickers' choices (FLOW-963), in place of the company's projects and categories. */
+  picks?: { projects: ChargePickChoice[]; categories: ChargePickChoice[] };
 };
 
 /** What a pace pick changes here: the choice, and the state before it. The undo writes it back. */
@@ -158,8 +161,9 @@ function ChargeBody({
   const overridden = recurring?.override != null;
   const choice: PaceChoice = isRecurring ? pace : "never";
   const money = (minor: bigint) => formatAmountText(minor, currency);
-  const project = row.project_name ?? (row.category_name == null ? "ללא פרויקט" : `ללא פרויקט · ${row.category_name}`);
-  const category = row.category_name ?? "ללא קטגוריה";
+  const pick = useChargePick({ row, split: data.split, live, sample: data.picks });
+  const project = pick.projectName ?? row.project_name ?? (row.category_name == null ? "ללא פרויקט" : `ללא פרויקט · ${row.category_name}`);
+  const category = pick.categoryName ?? row.category_name ?? "ללא קטגוריה";
 
   const refresh = () => {
     for (const key of RECURRING_KEYS) void client.invalidateQueries({ queryKey: [key] });
@@ -290,7 +294,15 @@ function ChargeBody({
             onNo={() => void answer(false)}
           />
         ) : null}
-        <ChargeCard project={project} category={category} />
+        <ChargeCard
+          project={project}
+          category={category}
+          busy={pick.busy}
+          {...(holdWrites ? {} : {
+            onProject: () => { if (!(live && blocked())) pick.open("project"); },
+            onCategory: () => { if (!(live && blocked())) pick.open("category"); },
+          })}
+        />
         <section className="ui-card ui-charge-recurring">
           <RecurringRow
             title={income ? "הכנסה קבועה" : "תשלום קבוע"}
@@ -335,6 +347,7 @@ function ChargeBody({
           returnFocusRef={allRef}
         />
       ) : null}
+      {holdWrites ? null : pick.sheet}
       <ChoiceSheet
         copy={paceSheetCopy(recurring?.detected_pace ?? null, row.party_name)}
         open={paceOpen}
