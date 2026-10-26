@@ -103,10 +103,42 @@
 }
 
 .ui-loan-summary-caption {
-  margin: calc(var(--space-2) * -1.25) 0 0;
+  margin: calc(var(--space-2) * -1) 0 0;
   font-size: var(--type-caption-size);
   line-height: calc(var(--type-caption-size) * 1.2);
   color: var(--color-text-muted);
+}
+
+/* FLOW-962: the bar's takeaway in words, over the bar. */
+.ui-loan-summary-takeaway {
+  margin: 0;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-sheet-weight);
+  line-height: var(--type-body-line);
+}
+
+/* FLOW-962: the next payment is its own row: the label and "<lender> · dd/mm", then its figure. */
+.ui-loan-summary-next {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: var(--touch-min);
+  padding-block-start: var(--space-3);
+  border-block-start: var(--stroke-hairline) solid var(--color-line);
+  font-size: var(--type-body-size);
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-loan-summary-next-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-half);
+  min-inline-size: 0;
+}
+
+.ui-loan-summary-next-line {
+  overflow-wrap: anywhere;
 }
 
 /* FLOW-139: the card's legend rows sit 30px apart, with no gap of their own. */
@@ -119,24 +151,6 @@
   font-size: var(--type-line2-size);
 }
 
-/* FLOW-139: the card's escrow part is the board's lavender tint in light (#DAD3E6, the outline token) and the strong track tone in dark (#3A3350). */
-.ui-loan-summary .ui-parts-part[data-tone="muted"],
-.ui-loan-summary .ui-parts-dot[data-tone="muted"] {
-  background: var(--color-track-strong);
-}
-
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) .ui-loan-summary .ui-parts-part[data-tone="muted"],
-  :root:not([data-theme="dark"]) .ui-loan-summary .ui-parts-dot[data-tone="muted"] {
-    background: var(--color-outline-secondary);
-  }
-}
-
-:root[data-theme="light"] .ui-loan-summary .ui-parts-part[data-tone="muted"],
-:root[data-theme="light"] .ui-loan-summary .ui-parts-dot[data-tone="muted"] {
-  background: var(--color-outline-secondary);
-}
-
 /* The card's last row: the link to the summary page (what was paid and what is left), a hairline above it. */
 .ui-loan-summary-link {
   display: flex;
@@ -147,7 +161,8 @@
   margin: var(--space-half) calc(var(--space-1) * -1) calc(var(--space-1) * -1.5);
   padding: var(--space-2) var(--space-1) 0;
   border-block-start: var(--stroke-hairline) solid var(--color-line);
-  color: var(--color-accent-text);
+  /* FLOW-962: ink, not the accent: the card keeps the accent for its bar (one accent per card). */
+  color: var(--color-text);
   font-size: var(--type-line2-size);
   line-height: calc(var(--type-line2-size) * 1.2);
   text-decoration: none;

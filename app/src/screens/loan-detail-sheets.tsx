@@ -1,26 +1,17 @@
-import { useEffect, useId, useState } from "react";
-import type { LoanSplitPart, LoanStatus } from "@flow/shared";
-import { Button } from "../ui/button";
-import { formatDisplay, israelToday } from "../ui/date-math";
-import { DateSheet } from "../ui/date-sheet";
-import { CalendarIcon } from "../ui/icons";
-import { PercentField } from "../ui/money-field";
+import { useEffect, useState } from "react";
+import type { LoanSplitPart } from "@flow/shared";
 import { ListRow } from "../ui/list-row";
 import { SearchField } from "../ui/search-field";
 import { Sheet } from "../ui/sheet";
-import { LOAN_PART_LABEL, LOAN_STATUS_LABEL } from "./loan-copy";
+import { LOAN_PART_LABEL } from "./loan-copy";
 import {
   FEES_NONE_DESC,
   keyedCategory,
   partCategoryOptions,
   partDefaultLabel,
-  rateInput,
-  ratePpmOfInput,
   type LoanCategory,
   type LoanDetail,
-  type LoanRateRow,
 } from "./loan-detail-data";
-import type { LoanRateWrite } from "./loan-detail-store";
 
 /**
  * A sheet's save: null when it saved, else the Hebrew to show inside the sheet. An empty string
@@ -31,117 +22,6 @@ export type SheetSave<T> = (value: T) => Promise<string | null>;
 
 /** More rows than this get a search field (guide §7.13). */
 const SEARCH_FROM = 8;
-
-/**
- * סטטוס: פעילה saves on tap; נפרעה and נסגרה open the date sheet, whose floor is the last attached
- * payment (plan §3.2). A refusal (loan_payments_after_close) stays in the date sheet.
- */
-export function LoanStatusSheet({
-  loan,
-  open,
-  onOpenChange,
-  lastPayment,
-  defaultDate,
-  onSave,
-  returnFocusRef,
-}: {
-  loan: Pick<LoanDetail, "name" | "status" | "closedOn">;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  /** The last attached payment's date: no close date before it. */
-  lastPayment: string | null;
-  defaultDate: string;
-  onSave: SheetSave<{ status: LoanStatus; closedOn: string | null }>;
-  returnFocusRef?: { current: HTMLElement | null };
-}) {
-  const [saving, setSaving] = useState<LoanStatus | null>(null);
-  const [dateFor, setDateFor] = useState<Exclude<LoanStatus, "open"> | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    if (open) setError(null);
-  }, [open]);
-  const statuses: LoanStatus[] = ["open", "paid_off", "closed"];
-  return (
-    <>
-      <Sheet
-        open={open}
-        onOpenChange={(next) => {
-          if (!next && saving != null) return;
-          onOpenChange(next);
-        }}
-        title="מצב"
-        hint={loan.name}
-        returnFocusRef={returnFocusRef}
-        panelClassName="ui-sheet-fit"
-      >
-        <div role="radiogroup" aria-label="מצב">
-          {statuses.map((status) => (
-            <ListRow control="radio"
-              key={status}
-              layout="picker"
-              title={LOAN_STATUS_LABEL[status]}
-              selected={loan.status === status}
-              busy={saving === status}
-              disabled={saving != null && saving !== status}
-              onSelect={() => {
-                if (saving != null) return;
-                if (status === "open") {
-                  if (loan.status === "open") {
-                    onOpenChange(false);
-                    return;
-                  }
-                  setSaving("open");
-                  void onSave({ status: "open", closedOn: null }).then((failed) => {
-                    setSaving(null);
-                    if (failed == null) onOpenChange(false);
-                  });
-                  return;
-                }
-                setError(null);
-                setDateFor(status);
-              }}
-            />
-          ))}
-        </div>
-      </Sheet>
-      <DateSheet
-        open={open && dateFor != null}
-        onOpenChange={(next) => {
-          if (next) return;
-          setDateFor(null);
-          setError(null);
-        }}
-        title={dateFor === "closed" ? "תאריך סגירה" : "תאריך פירעון"}
-        value={loan.status === dateFor && loan.closedOn != null ? loan.closedOn : defaultDate}
-        min={lastPayment}
-        shortcuts={false}
-        applyLabel="החלה"
-        busy={saving != null}
-        error={error}
-        reason={lastPayment == null ? undefined : (
-          <>
-            התשלום האחרון שויך ב־<bdi className="ui-num" dir="ltr">{formatDisplay(lastPayment)}</bdi>. אי אפשר לבחור יום לפניו.
-          </>
-        )}
-        onApply={() => undefined}
-        onApplyResult={async (iso) => {
-          if (dateFor == null) return true;
-          setSaving(dateFor);
-          setError(null);
-          const failed = await onSave({ status: dateFor, closedOn: iso });
-          setSaving(null);
-          if (failed != null) {
-            setError(failed === "" ? null : failed);
-            return false;
-          }
-          // Closing the status sheet pops the date sheet above it too (useSheetHistory).
-          onOpenChange(false);
-          return false;
-        }}
-      />
-    </>
-  );
-}
 
 /**
  * One part's category (plan §3.2): the keyed default (fees: no fixed category) first, then the
@@ -237,148 +117,6 @@ export function LoanPartSheet({
         {searchable && needle !== "" && shown.length === 0 ? <p className="t-caption t-muted">לא נמצאה קטגוריה בשם הזה</p> : null}
         {error ? <p className="ui-field-message ui-loan-sheet-error" role="alert">{error}</p> : null}
       </div>
-    </Sheet>
-  );
-}
-
-/**
- * קביעת ריבית / שינוי ריבית (plan §3.2): a date from the loan's start and a percent with up to
- * 4 decimals (0 allowed). An existing row adds "הסרת השינוי".
- */
-export function LoanRateSheet({
-  loan,
-  rate,
-  open,
-  onOpenChange,
-  onSave,
-  onRemove,
-  returnFocusRef,
-}: {
-  loan: Pick<LoanDetail, "name" | "startDate" | "annualRatePpm" | "currency">;
-  /** The row being changed; null adds one. */
-  rate: LoanRateRow | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSave: SheetSave<LoanRateWrite>;
-  onRemove: SheetSave<LoanRateRow>;
-  returnFocusRef?: { current: HTMLElement | null };
-}) {
-  const dateLabelId = useId();
-  const dateValueId = useId();
-  const today = israelToday();
-  const start = loan.startDate;
-  const initialDate = rate?.effectiveDate ?? (today < start ? start : today);
-  const [date, setDate] = useState(initialDate);
-  const [percent, setPercent] = useState(rate ? rateInput(rate.annualRatePpm) : "");
-  const [dateOpen, setDateOpen] = useState(false);
-  const [busy, setBusy] = useState<"save" | "remove" | null>(null);
-  const [error, setError] = useState<{ field: "date" | "rate" | "form"; text: string } | null>(null);
-  const [checked, setChecked] = useState(false);
-  useEffect(() => {
-    if (!open) return;
-    setDate(rate?.effectiveDate ?? (today < start ? start : today));
-    setPercent(rate ? rateInput(rate.annualRatePpm) : "");
-    setError(null);
-    setChecked(false);
-  }, [open, rate, start, today]);
-  const ppm = ratePpmOfInput(percent);
-  const dateBefore = date < start;
-  const rateError = checked && ppm == null ? (percent.trim().startsWith("-") ? "הריבית שלילית." : percent.trim() === "" ? "חסרה ריבית." : "הריבית היא עד 100%.") : undefined;
-  const dateError = dateBefore ? `התאריך לפני תחילת ההלוואה (${formatDisplay(start)}).` : error?.field === "date" ? error.text : undefined;
-  async function save() {
-    setChecked(true);
-    if (busy != null || ppm == null || dateBefore) return;
-    setBusy("save");
-    setError(null);
-    const failed = await onSave({ ...(rate ? { id: rate.id } : {}), effectiveDate: date, annualRatePpm: ppm });
-    setBusy(null);
-    if (failed == null) onOpenChange(false);
-    else if (failed !== "") setError({ field: failed.includes("תחילת ההלוואה") ? "date" : "form", text: failed });
-  }
-  return (
-    <Sheet
-      open={open}
-      onOpenChange={(next) => {
-        if (!next && busy != null) return;
-        onOpenChange(next);
-      }}
-      title={rate ? "שינוי ריבית" : "קביעת ריבית"}
-      hint={loan.name}
-      returnFocusRef={returnFocusRef}
-    >
-      <form
-        className="ui-stack"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void save();
-        }}
-      >
-        <div className={dateError ? "ui-field ui-field-error" : "ui-field"}>
-          <span id={dateLabelId} className="ui-field-label">מתאריך</span>
-          <button
-            type="button"
-            className="ui-field-control ui-date-field"
-            aria-labelledby={`${dateLabelId} ${dateValueId}`}
-            aria-haspopup="dialog"
-            disabled={busy != null}
-            onClick={() => { setDateOpen(true); }}
-          >
-            <bdi id={dateValueId} className="ui-num" dir="ltr">{formatDisplay(date)}</bdi>
-            <CalendarIcon size={20} />
-          </button>
-          <span className="ui-field-message ui-field-message-slot" role={dateError ? "alert" : undefined}>{dateError ?? ""}</span>
-        </div>
-        <PercentField
-          label="ריבית שנתית"
-          value={percent}
-          decimals={4}
-          keepMinus
-          reserveMessage
-          enterKeyHint="done"
-          disabled={busy != null}
-          error={rateError}
-          onValueChange={setPercent}
-        />
-        <p className="t-caption t-muted">מהתאריך הזה החישוב לפי הריבית החדשה. תשלומים שכבר שויכו לא משתנים.</p>
-        {error?.field === "form" ? <p className="ui-field-message ui-loan-sheet-error" role="alert">{error.text}</p> : null}
-        <Button type="submit" full busy={busy === "save"} disabled={busy === "remove"}>שמירה</Button>
-        {rate ? (
-          <div className="ui-loan-sheet-quiet">
-            <Button
-              variant="link"
-              quiet
-              busy={busy === "remove"}
-              disabled={busy === "save"}
-              onClick={() => {
-                if (busy != null) return;
-                setBusy("remove");
-                setError(null);
-                void onRemove(rate).then((failed) => {
-                  setBusy(null);
-                  if (failed == null) onOpenChange(false);
-                  else if (failed !== "") setError({ field: "form", text: failed });
-                });
-              }}
-              className="ui-btn-link-bad"
-            >
-              הסרת השינוי
-            </Button>
-          </div>
-        ) : null}
-      </form>
-      <DateSheet
-        open={dateOpen}
-        onOpenChange={setDateOpen}
-        title="מתאריך"
-        value={date}
-        min={start}
-        allowFuture
-        shortcuts={false}
-        onApply={(iso) => {
-          setDate(iso);
-          setError(null);
-        }}
-      />
     </Sheet>
   );
 }

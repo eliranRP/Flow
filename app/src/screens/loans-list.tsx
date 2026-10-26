@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
-import { PlusIcon, InfoIcon, PercentIcon, RefreshIcon } from "../ui/icons";
+import { ChevronIcon, PlusIcon, PercentIcon } from "../ui/icons";
+import { BandOfflineLine, PageLoadFailed } from "../ui/band-states";
 import { CompactBar } from "../ui/compact-bar";
 import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
@@ -39,22 +40,27 @@ function closedWhen(row: LoanListRow): string {
   return `${label} ${row.closedOn.slice(5, 7)}/${row.closedOn.slice(0, 4)}`;
 }
 
-function LoanRow({ row, muted, onOpen }: { row: LoanListRow; muted: boolean; onOpen: (id: string) => void }) {
+/** FLOW-962: a closed loan reads at full contrast, with a נסגרה tag and a chevron to its page. */
+function LoanRow({ row, closed, onOpen }: { row: LoanListRow; closed: boolean; onOpen: (id: string) => void }) {
   const meta = loanRowMeta(row);
   return (
     <li className="ui-loans-li">
       <button
         type="button"
-        className={cx("ui-loans-row", muted && "ui-loans-row-closed")}
+        className="ui-loans-row"
         onClick={() => { onOpen(row.id); }}
         aria-label={[row.name, formatLoanMoney(row.balanceMinor, row.currency === "USD" ? "USD" : "ILS"), meta].join(", ")}
       >
         <span className="ui-loans-initial" aria-hidden="true">{row.name.trim().slice(0, 1)}</span>
         <span className="ui-loans-text">
-          <span className="ui-loans-name">{row.name}</span>
-          <span className={cx("ui-loans-meta", row.flaggedParts > 0 && !muted && "ui-loans-meta-warn")}>{meta}</span>
+          <span className="ui-loans-name-line">
+            <span className="ui-loans-name">{row.name}</span>
+            {closed ? <span className="ui-loans-tag" aria-hidden="true">{LOAN_STATUS_LABEL.closed}</span> : null}
+          </span>
+          <span className={cx("ui-loans-meta", row.flaggedParts > 0 && !closed && "ui-loans-meta-warn")}>{meta}</span>
         </span>
         <LoanBalance className="ui-loans-amount" minor={row.balanceMinor} currency={row.currency} />
+        {closed ? <span className="ui-loans-chevron" aria-hidden="true"><ChevronIcon size={18} /></span> : null}
       </button>
     </li>
   );
@@ -101,19 +107,11 @@ export function LoansList({ ctx, closedOpen = false }: { ctx: LoansHostCtx; clos
           <LoansSkeleton />
         </DelayedSkeleton>
       ) : ctx.failed ? (
-        <EmptyState
-          icon={<InfoIcon size={36} />}
-          title={LOANS_ERROR_TITLE}
-          body="נסו שוב בעוד רגע"
-          action={(
-            // The tint action every empty and error state uses (DESIGN-RULES §2.8, FLOW-334), not a fill.
-            <Button variant="secondary" icon={<RefreshIcon />} busy={ctx.retrying} onClick={ctx.retry}>
-              ניסיון חוזר
-            </Button>
-          )}
-        />
+        // FLOW-962: Home v2's failure (what happened, נסו שוב, צריך עזרה?), as a card.
+        <PageLoadFailed title={LOANS_ERROR_TITLE} offline={ctx.offline} onRetry={ctx.retry} />
       ) : (
         <>
+          {ctx.offlineSince == null ? null : <BandOfflineLine since={ctx.offlineSince} onPage />}
           {ctx.empty ? (
             <EmptyState
               icon={<PercentIcon />}
@@ -134,7 +132,7 @@ export function LoansList({ ctx, closedOpen = false }: { ctx: LoansHostCtx; clos
           {open.length > 0 ? <h2 className="ui-loans-section-head">פעילות</h2> : null}
           {open.length > 0 ? (
             <ul className="ui-loans-list">
-              {open.map((row) => <LoanRow key={row.id} row={row} muted={false} onOpen={ctx.openLoan} />)}
+              {open.map((row) => <LoanRow key={row.id} row={row} closed={false} onOpen={ctx.openLoan} />)}
             </ul>
           ) : null}
           {closed.length > 0 ? (
@@ -147,11 +145,14 @@ export function LoansList({ ctx, closedOpen = false }: { ctx: LoansHostCtx; clos
                 onClick={() => { setClosedShown((value) => !value); }}
               >
                 <span className="ui-loans-closed-title">{open.length === 0 ? LOANS_CLOSED_UNDER_EMPTY : `נסגרו · ${String(closed.length)}`}</span>
-                <span className="ui-loans-closed-action">{closedShown ? "הסתר" : "הצג"}</span>
+                <span className="ui-loans-closed-action">
+                  {closedShown ? "הסתר" : "הצג"}
+                  <span className="ui-loans-closed-chevron" aria-hidden="true"><ChevronIcon size={18} /></span>
+                </span>
               </button>
               {closedShown ? (
                 <ul className="ui-loans-list ui-loans-closed-list" id={closedId}>
-                  {closed.map((row) => <LoanRow key={row.id} row={row} muted onOpen={ctx.openLoan} />)}
+                  {closed.map((row) => <LoanRow key={row.id} row={row} closed onOpen={ctx.openLoan} />)}
                 </ul>
               ) : null}
             </>

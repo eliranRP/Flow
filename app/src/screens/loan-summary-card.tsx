@@ -24,6 +24,7 @@ export function LoanSummaryCard({ summary, currency, summaryHref }: { summary: L
     value: money(part.value),
   }));
   const next = summary.next;
+  const takeaway = monthlyTakeaway(shown);
   return (
     <Card className="ui-loan-summary">
       <p className="ui-loan-summary-label">סך החוב היום</p>
@@ -32,13 +33,26 @@ export function LoanSummaryCard({ summary, currency, summaryHref }: { summary: L
         <span className="ui-loan-summary-label">תשלומים בחודש</span>
         {money(summary.monthlyMinor)}
       </div>
-      <PartsBar parts={bars} label="תשלומים בחודש" height={8} gap={2} radius="block" legend={legend} />
+      {takeaway == null ? null : <p className="ui-loan-summary-takeaway">{takeaway}</p>}
+      <PartsBar
+        parts={bars}
+        label={`תשלומים בחודש: ${shown.map((part) => `${part.label} ${formatLoanMoney(part.value, currency)}`).join(", ")}`}
+        height={8}
+        gap={2}
+        radius="block"
+        legend={legend}
+      />
       {next == null ? null : (
-        <p className="ui-loan-summary-caption">
-          הבא: {money(next.amountMinor)} ל־{next.lenderName} ב־{dayMonth(next.dueDate)}
-          {" · 12 החודשים הבאים "}
-          {money(summary.twelveMonthsMinor)}
-        </p>
+        <>
+          <div className="ui-loan-summary-next">
+            <span className="ui-loan-summary-next-text">
+              <span className="ui-loan-summary-label">התשלום הבא</span>
+              <span className="ui-loan-summary-next-line">{next.lenderName} · <bdi dir="ltr">{dayMonth(next.dueDate)}</bdi></span>
+            </span>
+            {money(next.amountMinor)}
+          </div>
+          <p className="ui-loan-summary-caption">ב־12 החודשים הבאים {money(summary.twelveMonthsMinor)}</p>
+        </>
       )}
       <Link className="ui-loan-summary-link" to={summaryHref}>
         <span>מה שולם עד היום, וכמה נשאר מהחוב</span>
@@ -46,6 +60,21 @@ export function LoanSummaryCard({ summary, currency, summaryHref }: { summary: L
       </Link>
     </Card>
   );
+}
+
+const TAKEAWAY_PART: Record<string, string> = { principal: "לקרן", interest: "לריבית", escrow: "לנאמנות" };
+
+/** FLOW-962: what the bar says, in words: the part that takes most of the month's payments (רוב only past half). */
+export function monthlyTakeaway(parts: readonly { key: string; value: bigint }[]): string | null {
+  let top: { key: string; value: bigint } | null = null;
+  let total = 0n;
+  for (const part of parts) {
+    total += part.value;
+    if (top == null || part.value > top.value) top = part;
+  }
+  if (top == null || parts.length < 2) return null;
+  const where = TAKEAWAY_PART[top.key] ?? "";
+  return top.value * 2n > total ? `רוב התשלום החודשי הולך ${where}` : `החלק הגדול בתשלום החודשי הולך ${where}`;
 }
 
 /** dd/mm from an ISO date, as the list shows it. */

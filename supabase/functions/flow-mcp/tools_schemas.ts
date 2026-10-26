@@ -81,6 +81,7 @@ export const WRITE_TOOL_NAMES = [
   "attach_loan_payment",
   "set_loan_rate",
   "set_loan_index",
+  "set_loan_refinance",
   "set_index_rate",
   "split_line",
   "set_line_pnl",
@@ -185,6 +186,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   attach_loan_payment: new Set(["idempotency_key", "transaction_id", "loan_id", "installments", "fees", "parts", "fees_category_id"]),
   set_loan_rate: new Set(["idempotency_key", "loan_id", "effective_date", "annual_rate_percent"]),
   set_loan_index: new Set(["idempotency_key", "loan_id", "rate_index", "margin_percent"]),
+  set_loan_refinance: new Set(["idempotency_key", "loan_id", "new_loan_id"]),
   set_index_rate: new Set(["idempotency_key", "rate_index", "effective_date", "annual_rate_percent"]),
   split_line: new Set(["idempotency_key", "transaction_id", "parts"]),
   set_line_pnl: new Set(["idempotency_key", "transaction_id", "in_pnl"]),
@@ -271,7 +273,7 @@ export const categorySchema = z.object({
 }).strict();
 export const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", ...THREAD_UNDO_KINDS]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "loan_refinance", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", ...THREAD_UNDO_KINDS]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -435,6 +437,12 @@ export const setLoanIndexSchema = z.object({
   // null with a null margin unlinks the loan.
   rate_index: z.enum(RATE_INDEXES).nullable(),
   margin_percent: z.union([z.number(), z.string()]).nullable(),
+}).strict();
+export const setLoanRefinanceSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  loan_id: UUID_TEXT,
+  // null clears the link.
+  new_loan_id: UUID_TEXT.nullable(),
 }).strict();
 export const setIndexRateSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,

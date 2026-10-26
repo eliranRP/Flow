@@ -60,31 +60,32 @@ test("a missing loan shows the not-found state with a way back to the list", asy
   await expect(page).toHaveURL(/\/e2e\/loans$/);
 });
 
-test("marking a loan paid off takes a date from the last payment on, then undo reopens it", async ({ page }) => {
+test("סגירת ההלוואה takes why and a day from the last payment on, then undo reopens it (FLOW-962)", async ({ page }) => {
   await page.goto(`/e2e/loans/loan-bridge?reset=1&today=${TODAY}`);
-  await page.getByRole("button", { name: /^סטטוס/ }).click();
-  const statusSheet = page.getByRole("dialog", { name: "מצב" });
-  await statusSheet.getByRole("radio", { name: "נפרעה" }).click();
-  const dateSheet = page.getByRole("dialog", { name: "תאריך פירעון" });
+  await page.getByRole("button", { name: "סגירת ההלוואה" }).click();
+  const closeSheet = page.getByRole("dialog", { name: /^סגירת הלוואת גישור/ });
+  await expect(closeSheet.getByRole("radio", { name: /נפרעה במלואה/ })).toHaveAttribute("aria-checked", "true");
+  await closeSheet.getByRole("button", { name: /תאריך הסגירה/ }).click();
+  const dateSheet = page.getByRole("dialog", { name: "תאריך הסגירה" });
   await expect(dateSheet.getByText("התשלום האחרון שויך ב־01/10/2026. אי אפשר לבחור יום לפניו.")).toBeVisible();
   await expect(dateSheet.getByRole("button", { name: "חודש קודם" })).toBeDisabled();
-  await dateSheet.getByRole("button", { name: "החלה" }).click();
-  await expect(toast(page, "סומנה כנפרעה · נשארה יתרה $210,000 בספרים")).toBeVisible();
+  await dateSheet.getByRole("button", { name: "בחירה" }).click();
+  await closeSheet.getByRole("button", { name: "סגירת ההלוואה" }).click();
+  await expect(toast(page, "הלוואת גישור נסגרה · נפרעה במלואה · נשארה יתרה $210,000 בספרים")).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  // The paid-off loan leads with נפרעה and its date alone; the status row keeps the date.
-  await expect(page.locator(".ui-loan-status").getByText(/^נפרעה · 01\/10\/2026$/)).toBeVisible();
-  await expect(page.getByText("יתרה היום")).toHaveCount(0);
+  // The closed loan leads with how it ended; the status row only reads.
+  await expect(page.getByRole("region", { name: "ההלוואה נסגרה" })).toContainText("נסגרה · נפרעה במלואה · 17/10/2026");
 
-  await toast(page, "סומנה כנפרעה").getByRole("button", { name: "ביטול" }).click();
-  await expect(toast(page, "השינוי בוטל")).toBeVisible();
-  await expect(page.getByRole("button", { name: /^סטטוס פעילה/ })).toBeVisible();
+  await toast(page, "הלוואת גישור נסגרה").getByRole("button", { name: "ביטול" }).click();
+  await expect(toast(page, "ההלוואה חזרה לפעילות")).toBeVisible();
   await expect(page.getByText("יתרה היום")).toBeVisible();
+  await expect(page.getByRole("button", { name: "סגירת ההלוואה" })).toBeVisible();
 
-  // Closed again, the loan moves under נסגרו on the list.
-  await page.getByRole("button", { name: /^סטטוס/ }).click();
-  await page.getByRole("dialog", { name: "מצב" }).getByRole("radio", { name: "נסגרה" }).click();
-  await page.getByRole("dialog", { name: "תאריך סגירה" }).getByRole("button", { name: "החלה" }).click();
-  await expect(toast(page, "סומנה כנסגרה")).toBeVisible();
+  // Closed for a refinance, the loan moves under נסגרו on the list.
+  await page.getByRole("button", { name: "סגירת ההלוואה" }).click();
+  await page.getByRole("dialog", { name: /^סגירת הלוואת גישור/ }).getByRole("radio", { name: /מימון מחדש/ }).click();
+  await page.getByRole("dialog", { name: /^סגירת הלוואת גישור/ }).getByRole("button", { name: "סגירת ההלוואה" }).click();
+  await expect(toast(page, "הלוואת גישור נסגרה · מימון מחדש")).toBeVisible();
   await page.getByRole("button", { name: /^חזרה/ }).first().click();
   await expect(page).toHaveURL(/\/e2e\/loans$/);
   await expect(page.getByRole("button", { name: /^הלוואת גישור, / })).toHaveCount(0);
@@ -115,8 +116,9 @@ test("a rate change saves, and undo takes it back", async ({ page }) => {
   await page.goto(`/e2e/loans/loan-bridge?reset=1&today=${TODAY}`);
   await page.getByRole("button", { name: /^ריבית 10\.5%/ }).click();
   const sheet = page.getByRole("dialog", { name: "קביעת ריבית" });
+  await expect(sheet.getByRole("radio", { name: /מהיום/ })).toHaveAttribute("aria-checked", "true");
   await sheet.getByLabel("ריבית שנתית").fill("12");
-  await sheet.getByRole("button", { name: "שמירה" }).click();
+  await sheet.getByRole("button", { name: "שמירת הריבית" }).click();
   await expect(toast(page, "הריבית עודכנה")).toBeVisible();
   await expect(page.getByRole("heading", { name: "שינויי ריבית" })).toBeVisible();
   await expect(page.getByRole("button", { name: /^מ־.* 12%$/ })).toBeVisible();
@@ -129,8 +131,8 @@ test("delete names the payments that go back, then ביטול restores the loan"
   await page.goto(`/e2e/loans/loan-mortgage?reset=1&today=${TODAY}`);
   await page.getByRole("button", { name: "מחיקת ההלוואה" }).click();
   const confirm = page.getByRole("dialog", { name: "למחוק את ההלוואה?" });
-  await expect(confirm.getByText("22 תשלומים יחזרו לקטגוריה שלהם.")).toBeVisible();
-  await confirm.getByRole("button", { name: "מחיקה" }).click();
+  await expect(confirm.getByText("לוח התשלומים, הצפי ושינויי הריבית שלה יימחקו. 22 התשלומים שכבר שויכו יישארו בתנועות ויחזרו לקטגוריה שלהם.")).toBeVisible();
+  await confirm.getByRole("button", { name: "מחיקת ההלוואה" }).click();
   await expect(page).toHaveURL(/\/e2e\/loans$/);
   await expect(toast(page, "משכנתא דוגמה נמחקה")).toBeVisible();
   await expect(page.getByRole("button", { name: /^משכנתא דוגמה, / })).toHaveCount(0);

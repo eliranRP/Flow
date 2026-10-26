@@ -21,6 +21,7 @@ const regular: LoanDetail = {
   amortizationMonths: null,
   status: "open",
   closedOn: null,
+  refinancedIntoId: null,
   projectId: null,
   categoryIds: { interest: null, escrow: null, principal: null, fees: null },
   rates: [],

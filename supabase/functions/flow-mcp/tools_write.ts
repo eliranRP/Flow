@@ -59,6 +59,7 @@ import {
   setLinesPnlSchema,
   setIndexRateSchema,
   setLoanIndexSchema,
+  setLoanRefinanceSchema,
   setLoanRateSchema,
   setOverheadProjectSchema,
   setProjectGroupSchema,
@@ -345,6 +346,15 @@ export async function callWrite(
       p_loan_id: parsed.data.loan_id,
       p_effective_date: parsed.data.effective_date,
       p_annual_rate_ppm: ratePpm,
+    };
+  } else if (name === "set_loan_refinance") {
+    const parsed = setLoanRefinanceSchema.safeParse(args);
+    if (!parsed.success || parsed.data.new_loan_id === parsed.data.loan_id) return fail("validation", "validation");
+    rpcName = "mcp_set_loan_refinance";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_loan_id: parsed.data.loan_id,
+      p_new_loan_id: parsed.data.new_loan_id,
     };
   } else if (name === "set_loan_index") {
     const parsed = setLoanIndexSchema.safeParse(args);

@@ -19,6 +19,7 @@ import {
   type LoanInsert,
 } from "./loan-form";
 import { groupLoans, useLoanList, type LoanListRow } from "./loan-list";
+import { useOnline } from "../ui/band-states";
 import { useLoanSummary } from "./loan-summary-entries";
 import type { LoanListSummary } from "./loan-list-summary";
 import { LoanProjectPicker, projectNameOf, type LoanProjectSource } from "./loan-project-picker";
@@ -40,7 +41,7 @@ export type LoanRowsSample = readonly LoanListRow[] | "loading" | "error";
 export const LOANS_EMPTY_TITLE = "אין הלוואות עדיין";
 export const LOANS_EMPTY_OWNER = "הוסיפו הלוואה כדי לפצל כל תשלום לריבית, מסים וביטוח וקרן.";
 export const LOANS_EMPTY_VIEWER = "כשיתווספו הלוואות הן יופיעו כאן.";
-export const LOANS_ERROR_TITLE = "לא הצלחנו לטעון את ההלוואות";
+export const LOANS_ERROR_TITLE = "ההלוואות לא נטענו";
 
 /** What the Loans tab's list draws (LoansList in loans-list.tsx), with the host's reads and actions. */
 export type LoansHostCtx = {
@@ -63,6 +64,10 @@ export type LoansHostCtx = {
   openLoan: (id: string) => void;
   /** The summary page: what was paid and what is left (/loans/summary). */
   summaryHref: string;
+  /** FLOW-962: the browser is offline. */
+  offline: boolean;
+  /** Offline with figures on screen: the moment they were read. */
+  offlineSince: number | null;
 };
 
 /**
@@ -79,6 +84,7 @@ export function LoansHost({
   summary: sampleSummary,
   openNew = false,
   newLoan,
+  offlineSince: sampleOffline,
   children,
 }: {
   companyId: string | null;
@@ -93,6 +99,8 @@ export function LoansHost({
   /** The dev fixture's proof: the new-loan sheet opens once it has drawn, with `newLoan` typed in. */
   openNew?: boolean;
   newLoan?: LoanSetupInitial;
+  /** Stories: offline, with the list's figures from this moment. Live reads the browser and the read's time. */
+  offlineSince?: number;
   children: (ctx: LoansHostCtx) => ReactNode;
 }) {
   const source: LoanProjectSource = projects ?? { rows: [] };
@@ -145,6 +153,7 @@ export function LoansHost({
   }, adoptNew);
   const balances = useLoanList(sample == null ? companyId : null);
   const holdWrites = useHoldWrites();
+  const online = useOnline();
   const emptyButton = useRef<HTMLButtonElement>(null);
   const query = useQuery({
     queryKey: ["loan-currency", companyId],
@@ -240,6 +249,8 @@ export function LoansHost({
   // Only closed loans: the empty state shows, with "הלוואות שנסגרו (N)" under it (§3.1).
   const empty = !loading && !failed && groupLoans(rows).open.length === 0;
   const newLoanReturn = empty ? emptyButton : newButton;
+  const offline = sampleOffline != null || !online;
+  const offlineSince = sampleOffline ?? (!online && balances.dataUpdatedAt > 0 ? balances.dataUpdatedAt : null);
 
   return (
     <>
@@ -258,6 +269,8 @@ export function LoansHost({
         emptyRef: emptyButton,
         openLoan: (id) => { void navigate(loanHref(id)); },
         summaryHref: `${base}/summary${search}`,
+        offline,
+        offlineSince: failed ? null : offlineSince,
       })}
       <Sheet
         open={holdWrites ? false : open}

@@ -190,6 +190,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "attach_loan_payment",
     "set_loan_rate",
     "set_loan_index",
+    "set_loan_refinance",
     "set_index_rate",
     "split_line",
     "set_line_pnl",

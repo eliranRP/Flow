@@ -250,11 +250,66 @@ export function loanFailure(error: Error, ctx: LoanCopyContext = {}): WriteFailu
   return { message: LOAN_WRITE_FAILED, retry: reason == null || isTransientWriteError(error) };
 }
 
-/** The confirm line for a delete: how many matched payments count whole again (decision 0142). */
+/** The confirm line for a delete: what goes, and how many matched payments count whole again (decision 0142). */
 export function loanDeleteConsequence(payments: number): string {
-  if (payments <= 0) return "אין תשלומים משויכים. שינויי הריבית יימחקו איתה.";
-  if (payments === 1) return "תשלום אחד יחזור לקטגוריה שלו.";
-  return `${String(payments)} תשלומים יחזרו לקטגוריה שלהם.`;
+  const lost = "לוח התשלומים, הצפי ושינויי הריבית שלה יימחקו.";
+  if (payments <= 0) return `${lost} אין לה תשלומים משויכים.`;
+  if (payments === 1) return `${lost} התשלום שכבר שויך יישאר בתנועות ויחזור לקטגוריה שלו.`;
+  return `${lost} ${String(payments)} התשלומים שכבר שויכו יישארו בתנועות ויחזרו לקטגוריה שלהם.`;
+}
+
+/** FLOW-962: why a loan closed before its term. paid_off is נפרעה במלואה, closed is מימון מחדש. */
+export type LoanCloseReason = Exclude<LoanStatus, "open">;
+
+export const LOAN_CLOSE_REASON: Record<LoanCloseReason, string> = {
+  paid_off: "נפרעה במלואה",
+  closed: "מימון מחדש",
+};
+
+export const LOAN_CLOSE_REASON_HINT: Record<LoanCloseReason, string> = {
+  paid_off: "שילמתם את כל היתרה לפני סוף התקופה",
+  closed: "הלוואה חדשה החליפה את זו",
+};
+
+/**
+ * FLOW-962: the line under "מתי השינוי חל?". Payments already attached keep their parts (decision
+ * 0132), so a past day says how many there are since then and that they stay as they are.
+ */
+export function rateChangeLine(day: string, today: string, since: number, nextDue: string | null): string {
+  const kept = "תשלומים קודמים לא משתנים.";
+  if (day > today) return `מ־${formatDisplay(day)} החישוב לפי הריבית החדשה. ${kept}`;
+  if (day < today && since > 0) {
+    const count = since === 1 ? "תשלום אחד שויך" : `${String(since)} תשלומים שויכו`;
+    return `${count} מאז ${formatDisplay(day)}, והם נשארים כפי שהם. התאריך קובע רק ממתי הלוח והצפי לפי הריבית החדשה.`;
+  }
+  if (nextDue == null) return `מ־${formatDisplay(day)} החישוב לפי הריבית החדשה. ${kept}`;
+  return `התשלום הבא, ${nextDue.slice(8, 10)}/${nextDue.slice(5, 7)}, יחושב לפי הריבית החדשה. ${kept}`;
+}
+
+/** The line under a closed loan's head. */
+export const LOAN_CLOSED_NOTE: Record<LoanCloseReason, string> = {
+  paid_off: "שולמה במלואה. היא לא בצפי ולא בסך החוב.",
+  closed: "מומנה מחדש בהלוואה אחרת. היא לא בצפי ולא בסך החוב.",
+};
+
+/** The line above סגירת ההלוואה: where the loan goes and what leaves the forecast. */
+export function loanCloseLine(reason: LoanCloseReason, nextDue: string | null): string {
+  const forecast = nextDue == null ? "" : ` התשלומים מ־${nextDue.slice(8, 10)}/${nextDue.slice(5, 7)} יורדו מהצפי.`;
+  if (reason === "closed") return `תעבור לנסגרו.${forecast} את ההלוואה החדשה מוסיפים כהלוואה משלה.`;
+  return `תעבור לנסגרו.${forecast} תשלום הפירעון יישאר בתנועות.`;
+}
+
+/** "נסגרה · מימון מחדש · 26/10/2026": the head of a closed loan's page. */
+export function loanClosedLine(status: LoanCloseReason, closedOn: string | null): string {
+  return ["נסגרה", LOAN_CLOSE_REASON[status], closedOn == null ? null : formatDisplay(closedOn)]
+    .filter((part): part is string => part != null)
+    .join(" · ");
+}
+
+/** The toast after a close. A paid-off loan with a balance left says so (0122 allows it). */
+export function loanClosedToast(name: string, status: LoanCloseReason, balanceMinor: bigint, currency: LoanCurrency): string {
+  const left = status === "paid_off" && balanceMinor > 0n ? ` · נשארה יתרה ${formatLoanMoney(balanceMinor, currency)} בספרים` : "";
+  return `${name} נסגרה · ${LOAN_CLOSE_REASON[status]}${left}`;
 }
 
 /** The toast after a delete. */

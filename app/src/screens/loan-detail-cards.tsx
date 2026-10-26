@@ -3,7 +3,8 @@ import { useState, type ReactNode, type Ref } from "react";
 import { Link } from "react-router-dom";
 import { Card } from "../ui/card";
 import { formatDisplay } from "../ui/date-math";
-import { ChevronIcon } from "../ui/icons";
+import { CheckIcon, ChevronIcon } from "../ui/icons";
+import { LOAN_CLOSED_NOTE, loanClosedLine, type LoanCloseReason } from "./loan-copy";
 import { PartsBar } from "../ui/parts-bar";
 import { SegmentedControl } from "../ui/segmented-control";
 import type { LoanCategory, LoanDetail, LoanPayment, LoanRateRow } from "./loan-detail-data";
@@ -50,6 +51,42 @@ export function LoanBalanceCard({ loan, outlook }: { loan: LoanDetail; outlook: 
           <p className="ui-loan-card-text">{balanceProgressText(loan, outlook)}</p>
         </>
       )}
+    </Card>
+  );
+}
+
+/**
+ * FLOW-962 (board Loan closed early): how a closed loan ended, and that it left the forecast and the
+ * debt. A refinance names the new loan, which opens; an owner without a link yet can add it.
+ */
+export function LoanClosedCard({ status, closedOn, link, onLink }: {
+  status: LoanCloseReason;
+  closedOn: string | null;
+  link: { name: string; to: string } | null;
+  /** Null for a viewer, or a loan paid off in full. */
+  onLink: (() => void) | null;
+}) {
+  return (
+    <Card as="section" className="ui-loan-card ui-loan-closed" aria-label="ההלוואה נסגרה">
+      <p className="ui-loan-closed-line">
+        <CheckIcon size={20} />
+        {loanClosedLine(status, closedOn)}
+      </p>
+      <p className="ui-loan-card-text">{LOAN_CLOSED_NOTE[status]}</p>
+      {link != null ? (
+        <Link className="ui-loan-closed-link" to={link.to}>
+          <span className="ui-loan-link-text">
+            <span className="ui-loan-card-note">מומנה מחדש ב־</span>
+            <span>{link.name}</span>
+          </span>
+          <ChevronIcon size={18} />
+        </Link>
+      ) : onLink != null ? (
+        <button type="button" className="ui-loan-closed-link" onClick={onLink}>
+          <span>קישור להלוואה החדשה</span>
+          <ChevronIcon size={18} />
+        </button>
+      ) : null}
     </Card>
   );
 }
@@ -247,7 +284,11 @@ export function LoanRecentCard({ loan, payments, search, loanPath, year }: {
     <Card className="ui-loan-card ui-loan-recent">
       <h2 className="ui-loan-card-title ui-loan-card-pad">{payments.length >= 3 ? "3 התשלומים האחרונים" : "התשלומים"}</h2>
       {payments.length === 0 ? (
-        <p className="ui-loan-card-note ui-loan-card-pad">אין עדיין תשלומים משויכים.</p>
+        // FLOW-962 (board Loan new): what will appear here, and the way to the bank.
+        <div className="ui-loan-card-pad ui-loan-recent-empty">
+          <p className="ui-loan-card-text">עוד אין תשלומים. כשתשלום מהבנק ישויך ל־{loan.name}, הוא יופיע כאן והחוב יתעדכן.</p>
+          <Link className="ui-loan-recent-bank" to={`/settings/connections${search}`}>איך מחברים את חשבון הבנק</Link>
+        </div>
       ) : (
         <>
           {rows.map((payment) => (

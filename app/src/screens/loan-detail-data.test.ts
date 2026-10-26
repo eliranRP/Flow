@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { LoanKind } from "@flow/shared";
 import { SAMPLE_AMORTIZING, SAMPLE_DEMAND, SAMPLE_INTEREST_ONLY, SAMPLE_LOAN_CATEGORIES, sampleLoanStore } from "../dev/loan-detail-sample";
 import {
-  closeDateDefault,
   formatRatePpm,
   kindPatch,
   kindValue,
@@ -14,10 +13,9 @@ import {
   ratePpmOfInput,
   readLoanPayments,
   readLoanRow,
-  statusPill,
-  statusToast,
   type LoanDetailDbRow,
 } from "./loan-detail-data";
+import { loanClosedLine, loanClosedToast, rateChangeLine } from "./loan-copy";
 import { applyPatch, inversePatch, patchColumns } from "./loan-detail-store";
 import { groupLoans, showsLoanBalance, sortLoans, type LoanListRow } from "./loan-list";
 
@@ -149,21 +147,24 @@ describe("status", () => {
     expect(readLoanPayments([{ doc_date: "2026-01-01" }, "x"])).toEqual([]);
   });
 
-  it("floors the close date at the last payment and opens on it", () => {
+  it("finds the last attached payment, the close date's floor", () => {
     expect(lastPaymentDate(payments)).toBe("2026-10-01");
     expect(lastPaymentDate([])).toBeNull();
-    expect(closeDateDefault({ closedOn: null }, payments, "2026-10-09")).toBe("2026-10-01");
-    expect(closeDateDefault({ closedOn: null }, [], "2026-10-09")).toBe("2026-10-09");
-    expect(closeDateDefault({ closedOn: "2026-06-15" }, payments, "2026-10-09")).toBe("2026-06-15");
   });
 
-  it("says what is left when a paid-off loan still has a balance", () => {
-    expect(statusToast("paid_off", 24_000_000n, "USD")).toBe("סומנה כנפרעה · נשארה יתרה $240,000 בספרים");
-    expect(statusToast("paid_off", 0n, "USD")).toBe("סומנה כנפרעה");
-    expect(statusToast("closed", 5n, "USD")).toBe("סומנה כנסגרה");
-    expect(statusToast("open", 0n, "USD")).toBe("ההלוואה נפתחה מחדש");
-    expect(statusPill({ status: "paid_off", closedOn: "2026-06-15" })).toBe("נפרעה · 15/06/2026");
-    expect(statusPill({ status: "open", closedOn: null })).toBe("פעילה");
+  it("names how a closed loan ended, and what is left when a paid-off loan still has a balance", () => {
+    expect(loanClosedToast("משכנתא", "paid_off", 24_000_000n, "USD")).toBe("משכנתא נסגרה · נפרעה במלואה · נשארה יתרה $240,000 בספרים");
+    expect(loanClosedToast("משכנתא", "paid_off", 0n, "USD")).toBe("משכנתא נסגרה · נפרעה במלואה");
+    expect(loanClosedToast("משכנתא", "closed", 5n, "USD")).toBe("משכנתא נסגרה · מימון מחדש");
+    expect(loanClosedLine("closed", "2026-10-26")).toBe("נסגרה · מימון מחדש · 26/10/2026");
+    expect(loanClosedLine("paid_off", null)).toBe("נסגרה · נפרעה במלואה");
+  });
+
+  it("says what a rate change does to the payments since its day (FLOW-962, decision 0132)", () => {
+    expect(rateChangeLine("2026-10-26", "2026-10-26", 0, "2026-11-01")).toBe("התשלום הבא, 01/11, יחושב לפי הריבית החדשה. תשלומים קודמים לא משתנים.");
+    expect(rateChangeLine("2026-08-01", "2026-10-26", 3, "2026-11-01")).toBe("3 תשלומים שויכו מאז 01/08/2026, והם נשארים כפי שהם. התאריך קובע רק ממתי הלוח והצפי לפי הריבית החדשה.");
+    expect(rateChangeLine("2026-08-01", "2026-10-26", 1, null)).toMatch(/^תשלום אחד שויך מאז 01\/08\/2026/);
+    expect(rateChangeLine("2026-12-01", "2026-10-26", 0, "2026-11-01")).toBe("מ־01/12/2026 החישוב לפי הריבית החדשה. תשלומים קודמים לא משתנים.");
   });
 });
 
