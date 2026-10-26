@@ -7,9 +7,11 @@ export type ToastInput = {
   tone?: "ok" | "bad" | "info";
   action?: string;
   onAction?: () => void;
-  /** `page` is every confirmation: it sits above the floor, sheet or not (decision 0182). */
-  /** `bar` sits just above the screen's pinned action bar (decision 0137). A confirmation stays there too. */
-  /** `top` sits under the screen's header, below its `[data-toast-ceiling]` when it marks one (לאישור, decision 0212). */
+  /**
+   * `page` is every confirmation: it sits above the floor, sheet or not (decision 0182). `bar` sits just
+   * above the screen's pinned action bar (decision 0137); a confirmation stays there too. `top` sits
+   * under the screen's header, below its `[data-toast-ceiling]` when it marks one (לאישור, decision 0212).
+   */
   place?: "page" | "bar" | "top";
   /** FLOW-960: the toast stays until it is acted on or dismissed; no timer ends it. */
   persist?: boolean;

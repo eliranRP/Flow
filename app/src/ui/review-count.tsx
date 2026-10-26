@@ -26,13 +26,13 @@ export function reviewCountDigits(total: number): number {
   return String(total).length;
 }
 
+/** FLOW-960: the most items the meter draws as segments. */
+const REVIEW_SEGMENTS_MAX = 12;
+
 /**
  * The queue's segmented progress (FLOW-365): one segment per card. Read from the start side, the
  * cards already handled fill with the accent, the card on screen is dim, and the rest stay on the track.
  */
-/** FLOW-960: the most items the meter draws as segments. */
-const REVIEW_SEGMENTS_MAX = 12;
-
 export function ReviewSegments({ index, total }: { index: number; total: number }) {
   // FLOW-960: past a dozen items the segments turn to hairlines; one bar reads the same progress.
   if (total > REVIEW_SEGMENTS_MAX) {

@@ -89,6 +89,11 @@ export function ReviewQueue({
   const [queueParams] = useSearchParams();
   const fromList = listFocusId(queueParams) != null;
   const toast = useToast();
+  // FLOW-960: a failed approve's toast stays until it is acted on (0212), but only while לאישור is on
+  // screen: leaving the queue ends it, so its ניסיון חוזר never acts on a card the owner left.
+  const endPersist = useRef(toast.dismissPersist);
+  endPersist.current = toast.dismissPersist;
+  useEffect(() => () => { endPersist.current(); }, []);
   const blocked = useBlockedPreview("top");
   const holdWrites = useHoldWrites();
   const invalidate = useInvalidateBooks();
@@ -578,7 +583,7 @@ export function ReviewQueue({
           missingBoth={missingBoth}
           jevFilled={jevFilled}
         />
-        <ReviewThreadEntry transactionId={card.transaction_id} holdWrites={holdWrites} approveDisabled={!settled || nextPick != null || !approvable} onApprove={runApprove} />
+        <ReviewThreadEntry transactionId={card.transaction_id} holdWrites={holdWrites} approveDisabled={!settled} onApprove={runApprove} />
       </div>
       {pickProject ? (
         <ProjectPickSheet
@@ -645,7 +650,7 @@ export function ReviewQueue({
                   full
                   disabled={!settled}
                   icon={<CheckIcon />}
-                  aria-describedby={missingBoth ? REVIEW_MISSING_ID : undefined}
+                  aria-describedby={missingBoth ? `${REVIEW_MISSING_ID} ${REVIEW_BAR_HINT_ID}` : REVIEW_BAR_HINT_ID}
                   onClick={runApprove}
                 >
                   {approveLabel}
@@ -654,7 +659,7 @@ export function ReviewQueue({
               <Button variant="secondary" to={change}>שינוי</Button>
               {skipButton}
             </div>
-            <p className={cx("t-caption ui-review-bar-hint", nextPick == null ? "t-muted" : "ui-review-bar-hint-missing")}>{barHint}</p>
+            <p id={REVIEW_BAR_HINT_ID} className={cx("t-caption ui-review-bar-hint", nextPick == null ? "t-muted" : "ui-review-bar-hint-missing")}>{barHint}</p>
           </>
         )}
       </ActionBar>
@@ -730,6 +735,9 @@ async function reopenReview(
     });
   }
 }
+
+/** FLOW-960: the line under the bar, which אישור points at. */
+const REVIEW_BAR_HINT_ID = "review-bar-hint";
 
 /** Decision 0212: the approve undo stays 5s on לאישור (3s elsewhere, 0182). */
 const REVIEW_UNDO_MS = 5000;

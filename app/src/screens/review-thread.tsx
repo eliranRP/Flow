@@ -60,6 +60,8 @@ export function BeforeApproveSheet({
   // the toast says when the upload is in. Its words follow what the tap saved, kept here past the reset.
   const saving = useRef<"file" | "note">("note");
   const save = useWrite<ThreadDraft & { companyId: string; note: ThreadNote | null }>({
+    // Decision 0212: this sheet opens only on לאישור, where every toast hangs under the header.
+    place: "top",
     keys: [THREAD_KEY, THREAD_COUNTS_KEY],
     run: ({ companyId, note: current, ...draft }) => saveThreadDraft(companyId, transactionId, draft, current),
     success: () => (saving.current === "file" ? "הקובץ נשמר" : "ההערה נשמרה"),

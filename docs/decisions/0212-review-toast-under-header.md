@@ -9,9 +9,9 @@ FLOW-960 reviewed לאישור against a UX/UI rule set. On a phone the toast ab
 
 ## Decision
 
-1. On לאישור every toast takes `place: "top"`: the approve undo, the setup handoff, the reopen results, Jev's booking approvals and the errors. One screen keeps one toast place.
+1. On לאישור every toast takes `place: "top"`: the approve undo, the setup handoff, the reopen results, Jev's booking approvals, the Jev-fill undo, the note and file saves of the before-approving sheet, and the errors. One screen keeps one toast place.
 2. A `top` toast sits `--space-2` under the screen's `[data-toast-ceiling]`: the visit meter, or the counter row when no meter is drawn, else the page header. Its inline padding is `--space-card-inset`, so it lines up with the card. It never covers the card's actions or the bar.
-3. The approve undo ("הפריט אושר" with ביטול) stays 5s. A failed approve ("לא הצלחנו לשמור" with ניסיון חוזר) has no timer: it stays until its action, a tap or a swipe. Hover, focus and a press still pause a timed toast.
+3. The approve undo ("הפריט אושר" with ביטול) stays 5s. A failed approve that offers ניסיון חוזר has no timer: it stays until its action, a tap or a swipe, and leaving לאישור ends it, so the retry never acts on a card the owner left. A failure with nothing to retry (the item was already handled) keeps its usual time. Hover, focus and a press still pause a timed toast.
 4. Every other screen keeps 0182's place above the floor and its times.
 
 ## Alternatives rejected

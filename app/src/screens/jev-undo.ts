@@ -28,7 +28,7 @@ type JevUndoTarget = { transactionId: string; fill: JevAutoFill | null };
 export function useJevUndo() {
   const [undone, setUndone] = useState<ReadonlyMap<string, JevAutoFill | null>>(() => new Map());
   const write = useWrite<JevUndoTarget>({
-    place: "bar",
+    place: "top",
     keys: ["review", "jev-review-queue", "dashboard", "project", "project-category", "project-waiting", "txn"],
     success: JEV_UNDO_DONE,
     failure: jevUndoFailure,

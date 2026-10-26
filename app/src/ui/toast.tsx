@@ -12,6 +12,8 @@ type ToastContextValue = {
   show: (input: ToastInput) => number;
   /** Clears the toast. An id clears that toast only, and leaves a newer one on screen. */
   dismiss: (id?: number) => void;
+  /** FLOW-960: ends a toast that stays until acted on, when the screen it belongs to is left. */
+  dismissPersist: () => void;
 };
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -134,6 +136,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const dismiss = useCallback((id?: number) => {
     if (id != null && toastRef.current?.id !== id) return;
+    acting.current = false;
+    leave();
+  }, [leave]);
+
+  const dismissPersist = useCallback(() => {
+    if (toastRef.current?.persist !== true) return;
     acting.current = false;
     leave();
   }, [leave]);
@@ -461,7 +469,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [toast]);
 
   return (
-    <ToastContext.Provider value={{ show, dismiss }}>
+    <ToastContext.Provider value={{ show, dismiss, dismissPersist }}>
       {children}
       <div
         className="ui-toast-host"
