@@ -5,6 +5,7 @@ import { Avatar } from "./avatar";
 import { ClockIcon } from "./icons";
 import { cx } from "./cx";
 import { SectionHead } from "./layout";
+import { BandOfflineLine } from "./band-states";
 import { SwipeRow } from "./swipe-row";
 import "./css/39-recurring.css";
 import "./css/49-recurring-answers.css";
@@ -71,6 +72,8 @@ export type RecurringListProps = {
   onEnded?: (row: RecurringListRow) => void;
   /** The row that opens over its action at first (the dev route's swiped row). */
   openId?: string;
+  /** FLOW-963: offline, the moment the rows on screen are from; undefined when online. */
+  offlineSince?: number;
 };
 
 /**
@@ -79,7 +82,7 @@ export type RecurringListProps = {
  * קבועות" and the expense groups under "הוצאות קבועות", one group per category. The amounts are
  * formatted here; the rows only say what they are.
  */
-export function RecurringList({ project, subtitle, currency, outflow, inflow, late, groups, onIgnore, onStill, onEnded, openId }: RecurringListProps) {
+export function RecurringList({ project, subtitle, currency, outflow, inflow, late, groups, onIgnore, onStill, onEnded, openId, offlineSince }: RecurringListProps) {
   const money = (minor: bigint) => formatAmountText(minor, currency);
   const lateHead = useId();
   const rowView = (row: RecurringListRow) => (
@@ -92,7 +95,9 @@ export function RecurringList({ project, subtitle, currency, outflow, inflow, la
         {project != null && <p className="t-sheet">{project}</p>}
         <p className="t-line2">{subtitle}</p>
       </header>
+      {offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />}
       <section className="ui-card ui-recurring-sums" aria-label="החודש">
+        <MonthTakeaway outflow={outflow} inflow={inflow} money={money} />
         <MonthSum label="נכנס החודש" total={`+${money(inflow.total)}`} income done={inflow.got} whole={inflow.total} doneText={`התקבל ${money(inflow.got)}`} leftText={`עוד ${money(inflow.toCome)}`} />
         <MonthSum label="יוצא החודש" total={money(outflow.total)} done={outflow.paid} whole={outflow.total} doneText={`שולם ${money(outflow.paid)}`} leftText={`עוד ${money(outflow.toCome)}`} />
       </section>
@@ -126,6 +131,29 @@ export function RecurringList({ project, subtitle, currency, outflow, inflow, la
         </section>
       ))}
     </div>
+  );
+}
+
+/**
+ * FLOW-963: the month card leads with what is still to come, "עד סוף החודש: לשלם עוד $962, לקבל עוד
+ * $1,650" (data-viz § 9). A side with nothing recurring this month is left out; with neither, no line.
+ */
+function MonthTakeaway({ outflow, inflow, money }: Pick<RecurringListProps, "outflow" | "inflow"> & { money: (minor: bigint) => string }) {
+  const parts = [
+    outflow.total > 0n ? { key: "out", words: "לשלם עוד", minor: outflow.toCome } : null,
+    inflow.total > 0n ? { key: "in", words: "לקבל עוד", minor: inflow.toCome } : null,
+  ].filter((part) => part != null);
+  if (parts.length === 0) return null;
+  return (
+    <p className="ui-recurring-takeaway">
+      עד סוף החודש:{" "}
+      {parts.map((part, index) => (
+        <span key={part.key}>
+          {index > 0 ? ", " : null}
+          {part.words} <bdi dir="ltr">{money(part.minor)}</bdi>
+        </span>
+      ))}
+    </p>
   );
 }
 

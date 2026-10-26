@@ -70,12 +70,29 @@ export function ChargeIgnored({ text, onRestore, disabled }: { text: string; onR
   );
 }
 
-/** The project and category rows. They are read-only in this release: the pickers come per line later. */
-export function ChargeCard({ project, category }: { project: string; category: string }) {
+/**
+ * The project and category rows. FLOW-963: each opens its picker, which moves every payment of the charge;
+ * with no handler (a viewer) they are read-only facts.
+ */
+export function ChargeCard({ project, category, onProject, onCategory, busy = false }: {
+  project: string;
+  category: string;
+  onProject?: () => void;
+  onCategory?: () => void;
+  busy?: boolean;
+}) {
   return (
     <section className="ui-card ui-charge-card" aria-label="פרויקט וקטגוריה">
-      <IconRow icon={<ProjectsIcon />} label="פרויקט" value={project} className="ui-charge-row" />
-      <IconRow icon={<TagIcon />} label="קטגוריה" value={category} className="ui-charge-row" />
+      {onProject == null ? (
+        <IconRow icon={<ProjectsIcon />} label="פרויקט" value={project} className="ui-charge-row" />
+      ) : (
+        <IconRow icon={<ProjectsIcon />} label="פרויקט" value={project} className="ui-charge-row" busy={busy} onClick={onProject} />
+      )}
+      {onCategory == null ? (
+        <IconRow icon={<TagIcon />} label="קטגוריה" value={category} className="ui-charge-row" />
+      ) : (
+        <IconRow icon={<TagIcon />} label="קטגוריה" value={category} className="ui-charge-row" busy={busy} onClick={onCategory} />
+      )}
     </section>
   );
 }

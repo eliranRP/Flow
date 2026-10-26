@@ -725,6 +725,15 @@ function writeTools() {
       match_party_id: { type: "string" },
       same: { type: ["boolean", "null"] },
     }, true),
+    toolSpec("reassign_recurring_charge", "Move every payment of a recurring charge (get_recurring_schedule: a supplier or customer in one direction and currency; with charge_project_id, the charge of a party split by project) to project_id, to category_id, or both, the earlier payments too. A project keeps each payment's category; a category keeps each payment's project; the category's kind is the charge's direction. A shared cost and a line split into parts keep their parts, and a payment already so is left: each is counted in skipped. Never move a charge without the user's word. The server decides which payments: a party whose lines reach two projects or more is split, and charge_project_id must be the charge's project (the schedule row's project_id); otherwise every line of the party counts, at any date. Refused: validation (no pick, or a charge_project_id that is not the charge's; more than 5000 payments), project not found, category not found. Returns batch_key, changed, skipped, split and results (transaction_id, ok, undo_kind reassign per changed payment); undo_batch with batch_key puts every one back.", {
+      idempotency_key: { type: "string" },
+      direction: { type: "string", enum: ["expense", "income"] },
+      party_id: { type: "string" },
+      currency: { type: "string" },
+      charge_project_id: { type: "string" },
+      project_id: { type: "string" },
+      category_id: { type: "string" },
+    }, true),
     toolSpec("undo_jev_prefill", "Undo Jev's auto fill on one open review line (auto mode): put back the project, its allocation and the category the line had before Jev filled it. Only while the line is still open and still holds Jev's values: a line the owner has changed since is a conflict (line changed since), a line with no fill to undo is not_found (nothing to undo), and a filed line is already_closed. Lines Jev filled show prefilled true in get_jev_suggestions. The line stays in review; it is not approved.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
@@ -734,7 +743,7 @@ function writeTools() {
       kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", ...THREAD_UNDO_KINDS] },
       id: { type: "string" },
     }, true),
-    toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, set_lines_cash, create_projects or create_categories batch.", {
+    toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, set_lines_cash, create_projects, create_categories or reassign_recurring_charge batch.", {
       idempotency_key: { type: "string" },
       batch_key: { type: "string" },
     }, true),

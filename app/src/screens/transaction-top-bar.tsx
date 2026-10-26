@@ -16,6 +16,7 @@ export function TransactionTopBar({
   title,
   end,
   head,
+  toastCeiling = false,
 }: {
   fallback: string;
   /** Back's words when the list is a month's lines; otherwise BackButton's own label. */
@@ -26,10 +27,12 @@ export function TransactionTopBar({
   end: ReactNode;
   /** The page's head (its name, figure and lines). Null while there is none: the bar stays at rest. */
   head: HTMLElement | null;
+  /** FLOW-963: a page whose toasts hang under this bar (קבועים, decision 0215) marks it as their ceiling. */
+  toastCeiling?: boolean;
 }) {
   const past = useScrolledPast(head, true, DETAIL_BAR);
   return (
-    <header className={cx("ui-txn-top", past && "ui-txn-top-past")}>
+    <header className={cx("ui-txn-top", past && "ui-txn-top-past")} data-toast-ceiling={toastCeiling ? "" : undefined}>
       <div className="ui-txn-top-start">
         <BackButton fallback={fallback} text={backLabel ?? undefined} />
       </div>
