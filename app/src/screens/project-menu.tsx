@@ -7,7 +7,8 @@ import { useNavigate } from "react-router-dom";
 import { getSupabase } from "../lib/supabase";
 import { useBlockedPreview } from "./screen-shared";
 import { useProjectsCashMonth } from "../project-cash";
-import type { ProjectCashRow } from "@flow/shared";
+import type { ProjectCashRow, ProjectsCashMonth } from "@flow/shared";
+import { useQueryClient } from "@tanstack/react-query";
 import { assertNoError, useWrite } from "../use-write";
 import { useToast } from "../ui/toast";
 import { ConfirmSheet } from "../ui/confirm-sheet";
@@ -20,6 +21,12 @@ import { NO_GROUP, ProjectGroupSheets, type ProjectGroups } from "./project-grou
 
 /** How long a finish offers ביטול (FLOW-961, decision 0213). */
 export const FINISH_UNDO_MS = 5000;
+
+/** A month's list with one project's status changed, as the finish (or its ביטול) draws it at once. */
+export function withStatus(month: ProjectsCashMonth | undefined, projectId: string, status: "active" | "finished"): ProjectsCashMonth | undefined {
+  if (month == null) return month;
+  return { ...month, projects: month.projects.map((row) => (row.id === projectId ? { ...row, status } : row)) };
+}
 
 export function ProjectMenu({
   projectId,
@@ -56,32 +63,28 @@ export function ProjectMenu({
   const [editing, setEditing] = useState(false);
   const [groupView, setGroupView] = useState<"pick" | "new" | null>(null);
   const opener = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
-  // FLOW-445: the month's row for this project: the pending lines (the finish warning) and whether it can be deleted.
+  // FLOW-445: the month's row for this project: the pending lines (named on the finish row) and whether it can be deleted.
   const cash = useProjectsCashMonth(undefined, projectId);
   const row = sampleRow ?? cash.data?.projects.find((project) => project.id === projectId);
   const pending = row?.pending_count ?? 0;
   const deletable = row?.deletable === true;
   const action = finished ? "החזרה לפעילים" : "סיום הפרויקט";
   const toast = useToast();
-  // FLOW-961 (decision 0213): finishing can be undone, so it happens at once. The list opens with
-  // הסתיימו, and a toast under the header offers ביטול for 5s. החזרה לפעילים needs no undo: it is one.
+  const client = useQueryClient();
+  // FLOW-961 (decision 0213): finishing can be undone, so it happens at once: the tap opens the list
+  // with הסתיימו and the toast under the header offers ביטול for 5s, while the write runs behind them.
+  // A failure puts the row back and offers ניסיון חוזר. החזרה לפעילים needs no undo: it is one.
   const setStatus = useWrite<"active" | "finished">({
     failure: "לא הצלחנו לעדכן את הפרויקט.",
     place: "top",
     keys: ["dashboard", "project", "projects-cash"],
+    scope: `project-status-${projectId}`,
+    optimistic: (status) => client.getQueriesData<ProjectsCashMonth>({ queryKey: ["projects-cash"] }).map(([key]) => ({
+      key,
+      update: (old) => withStatus(old as ProjectsCashMonth | undefined, projectId, status),
+    })),
     onSuccess: (status) => {
-      if (status === "finished") {
-        void navigate("/projects", { state: { finishedOpen: true } });
-        toast.show({
-          message: `${name} עבר ל״הסתיימו״`,
-          action: "ביטול",
-          onAction: () => { setStatus.mutate("active"); },
-          durationMs: FINISH_UNDO_MS,
-          place: "top",
-        });
-        return;
-      }
-      toast.show({ message: `${name} חזר לפעילים`, place: "top" });
+      if (status === "active") toast.show({ message: `${name} חזר לפעילים`, place: "top" });
     },
     run: async (status) => {
       const supabase = getSupabase();
@@ -95,6 +98,17 @@ export function ProjectMenu({
       }));
     },
   });
+  function finish() {
+    setStatus.mutate("finished");
+    void navigate("/projects", { state: { finishedOpen: true } });
+    toast.show({
+      message: `${name} עבר ל״הסתיימו״`,
+      action: "ביטול",
+      onAction: () => { setStatus.mutate("active"); },
+      durationMs: FINISH_UNDO_MS,
+      place: "top",
+    });
+  }
   const remove = useWrite({
     failure: (error) => (error.message.includes("in use") ? "יש בפרויקט תנועות, אז אי אפשר למחוק אותו." : "לא הצלחנו למחוק את הפרויקט."),
     success: `${name} נמחק`,
@@ -164,7 +178,8 @@ export function ProjectMenu({
             onClick={() => {
               setMenu(false);
               if (blocked()) return;
-              setStatus.mutate(finished ? "active" : "finished");
+              if (finished) setStatus.mutate("active");
+              else finish();
             }}
           />
           {deletable ? (

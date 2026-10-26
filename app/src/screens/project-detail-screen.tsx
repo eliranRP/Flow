@@ -281,7 +281,7 @@ export function ProjectDetailScreen({
       })}
       nextMonth={nextMonth}
       // FLOW-961: offline, the page keeps its last read and says, in the band, which moment it is from.
-      offlineSince={sample ? sampleOfflineSince ?? null : online || preview !== "off" ? null : cash.dataUpdatedAt || detail.dataUpdatedAt}
+      offlineSince={sample ? sampleOfflineSince ?? null : offlineSinceOf(online || preview !== "off", cash.dataUpdatedAt, detail.dataUpdatedAt)}
       example={example}
       now={now}
     />
@@ -313,6 +313,15 @@ function sampleCashOf(project: NonNullable<ProjectDetail>, now = new Date()): No
       })),
     }],
   };
+}
+
+/**
+ * FLOW-961: when the page's figures are from, for the band's offline line: null online, in a preview,
+ * or with no read time (0, nothing read yet).
+ */
+export function offlineSinceOf(onlineOrPreview: boolean, cashAt: number, detailAt: number): number | null {
+  if (onlineOrPreview) return null;
+  return cashAt || detailAt || null;
 }
 
 /** The line under the project's name: only a state other than active ("הסתיים"), else nothing. */

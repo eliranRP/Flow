@@ -71,7 +71,7 @@ Dates on rows are `dd/mm` when the year is the current year, and `dd/mm/yyyy` ot
 - **Refund / credit note.** A linked refund with an expense category reduces `הוצאות` and that category's bar. The recent row shows a green inflow.
 - **Split.** Only the line assigned to this project appears. Its amount is the line, not the parent.
 - **Move after approval.** Saving the change sheet removes the line from this project and adds it to the other on the next paint. Profit updates. A finished project's line can be moved away. Search can also move a line onto a finished project.
-- **Finish.** `סיים פרויקט` sets status `finished`. Transactions stay. The project leaves the default picker and stays in reports. Confirm with `לסיים את הפרויקט?`. `החזר לפעיל` reverses it.
+- **Finish.** `סיום הפרויקט` sets status `finished` at once, with no confirm: the list opens with הסתיימו and a toast under the header offers ביטול for 5s (decision 0213). Transactions stay. The project leaves the default picker and stays in reports. `החזרה לפעילים` reverses it, also at once.
 - **Delete.** Offered only with zero transactions and zero documents. Confirm `למחוק את הפרויקט?`. Overhead cannot be deleted or finished.
 - **Category merge.** Rows that were on the merged-away category show the surviving category the next time this screen opens. Totals are unchanged except for the label.
 - **Duplicate invoice.** Does not add a second recent row.

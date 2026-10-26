@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { formatAmount } from "./amount";
 import { Card } from "./card";
 import { Button } from "./button";
@@ -61,9 +62,10 @@ export function BudgetCard({ spentMinor, budgetMinor, currency = "ILS", onEdit }
  * budget gives and opens the edit sheet at the budget field.
  */
 export function BudgetEmptyCard({ onAdd }: { onAdd: () => void }) {
+  const titleId = useId();
   return (
-    <section className="ui-budget-empty" aria-labelledby="budget-empty-title">
-      <h2 id="budget-empty-title" className="ui-budget-empty-title">אין תקציב לפרויקט</h2>
+    <section className="ui-budget-empty" aria-labelledby={titleId}>
+      <h2 id={titleId} className="ui-budget-empty-title">אין תקציב לפרויקט</h2>
       <p className="ui-budget-empty-body">עם תקציב נראה כמה נוצל, ונסמן כשעוברים אותו.</p>
       <Button variant="secondary" onClick={onAdd}>הוספת תקציב</Button>
     </section>
