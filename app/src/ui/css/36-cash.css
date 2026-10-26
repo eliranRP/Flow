@@ -149,10 +149,16 @@
   font-weight: var(--type-name-weight);
 }
 
-/* FLOW-965: the page's states sit with the head: the review button, the offline line and the empty card. */
+/* FLOW-965: the page's states: the review button and the offline line sit in the head, the failed and empty
+   cards under it at the page's sides (band-states' page cards). */
 .ui-lines-head .ui-review-cta,
 .ui-lines-head .ui-page-offline {
   inline-size: 100%;
+  margin-block-start: 0;
+}
+
+.ui-lines-state {
+  padding-inline: var(--space-side);
 }
 
 .ui-lines-empty {

@@ -28,7 +28,8 @@
   font-weight: var(--type-section-weight);
 }
 
-/* The month card: income and expenses side by side, each a 28px total, a 6px bar and two grey lines. */
+/* The month card: the takeaway across it (FLOW-963), then income and expenses side by side, each a 32px
+   total, a 6px bar and two grey lines. */
 .ui-recurring-sums {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -36,6 +37,18 @@
   margin-top: var(--space-4);
   padding: calc(var(--space-4) + var(--space-1) / 2);
   border-radius: var(--radius-card);
+}
+
+.ui-recurring-takeaway {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-section-weight);
+  line-height: var(--type-line2-line);
+}
+
+.ui-recurring-takeaway bdi {
+  font-variant-numeric: tabular-nums;
 }
 
 .ui-recurring-sum {
@@ -53,7 +66,8 @@
 }
 
 .ui-recurring-sum-total {
-  font-size: var(--type-card-size);
+  font-size: var(--type-title-size);
+  font-variant-numeric: tabular-nums;
   font-weight: var(--type-card-weight);
   line-height: var(--type-total-line);
   text-align: start;
@@ -62,6 +76,13 @@
 
 .ui-recurring-sum-total.ui-recurring-income {
   color: var(--color-income);
+}
+
+/* On a 320 phone two 32px totals side by side do not fit ("+$5,600"): the card's 28px. */
+@media (max-width: 359px) {
+  .ui-recurring-sum-total {
+    font-size: var(--type-card-size);
+  }
 }
 
 .ui-recurring-sum-note {
@@ -74,10 +95,11 @@
   color: var(--color-text-muted);
 }
 
+/* FLOW-963: the bar's empty part is an outline at 3:1, not a 1.4:1 fill (visual § 7). */
 .ui-recurring-bar {
   height: var(--bar-thin);
   border-radius: var(--radius-chip);
-  background: var(--color-track-strong);
+  box-shadow: inset 0 0 0 1px var(--color-track-outline);
   overflow: hidden;
 }
 
@@ -177,6 +199,7 @@
 
 .ui-recurring-side-note > bdi {
   font-size: var(--type-line2-size);
+  font-variant-numeric: tabular-nums;
   color: var(--color-text);
 }
 
@@ -250,10 +273,10 @@
   text-align: start;
 }
 
+/* FLOW-963: a long name or place wraps to a second line rather than losing its end (at 320 the late
+   box's rows are 116px wide). */
 .ui-recurring-name > span {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .ui-recurring-title {
@@ -271,6 +294,7 @@
   gap: calc(var(--space-1) / 2);
   font-size: var(--type-body-size);
   line-height: var(--type-title-line);
+  font-variant-numeric: tabular-nums;
 }
 
 .ui-recurring-amount > span:first-child {
@@ -303,8 +327,8 @@
 .ui-recurring .ui-swipe-row-under {
   border-radius: 0;
   padding-inline: var(--space-2);
-  font-size: var(--type-meta-size);
-  line-height: var(--type-meta-line);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
 }
 
 .ui-recurring-ignore {
@@ -322,7 +346,7 @@
   background: var(--color-tint);
   color: var(--color-accent-text);
   font: inherit;
-  font-size: var(--type-meta-size);
+  font-size: var(--type-line2-size);
 }
 
 .ui-recurring-ignore:focus-visible {

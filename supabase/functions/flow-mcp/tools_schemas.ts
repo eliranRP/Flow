@@ -111,6 +111,7 @@ export const WRITE_TOOL_NAMES = [
   "set_line_pace",
   "set_line_usual_amount",
   "answer_recurring_match",
+  "reassign_recurring_charge",
   "undo_jev_prefill",
   "undo",
   "undo_batch",
@@ -215,6 +216,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   set_line_pace: new Set(["idempotency_key", "transaction_id", "pace", "project_id"]),
   set_line_usual_amount: new Set(["idempotency_key", "transaction_id", "amount", "project_id"]),
   answer_recurring_match: new Set(["idempotency_key", "direction", "party_id", "match_party_id", "same"]),
+  reassign_recurring_charge: new Set(["idempotency_key", "direction", "party_id", "currency", "charge_project_id", "project_id", "category_id"]),
   undo_jev_prefill: new Set(["idempotency_key", "transaction_id"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
@@ -678,6 +680,15 @@ export const answerRecurringMatchSchema = z.object({
   match_party_id: UUID_TEXT,
   same: z.boolean().nullable(),
 }).strict();
+export const reassignRecurringChargeSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  direction: z.enum(["expense", "income"]),
+  party_id: UUID_TEXT,
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  charge_project_id: UUID_TEXT.optional(),
+  project_id: UUID_TEXT.optional(),
+  category_id: UUID_TEXT.optional(),
+}).strict().refine((value) => value.project_id != null || value.category_id != null);
 export const setCashBasisSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   basis: z.enum(["paid", "invoice"]),

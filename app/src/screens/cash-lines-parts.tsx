@@ -83,13 +83,15 @@ export function CashLinesEmpty({ side, rest, month, current, onOther }: { side: 
   }
   const moved = side === "in" ? "נכנס" : "יצא";
   return (
-    <div className="ui-page-failed ui-lines-empty">
-      <span className="ui-page-failed-icon" aria-hidden="true">
-        <DocumentIcon size={24} />
-      </span>
-      <h2 className="ui-band-failed-title">{`${current ? "עוד לא " : "לא "}${moved} כסף ב${month}`}</h2>
-      <p className="ui-page-failed-body">{current ? "שורות חדשות מגיעות מהבנק כמה פעמים ביום." : "תנועות שנכנסות לתזרים יופיעו כאן."}</p>
-      <Button onClick={onOther}>{`מה ${side === "in" ? "יצא" : "נכנס"} ב${month}`}</Button>
+    <div className="ui-lines-state">
+      <section className="ui-card ui-page-failed ui-lines-empty">
+        <span className="ui-band-failed-icon" aria-hidden="true">
+          <DocumentIcon size={24} />
+        </span>
+        <h2 className="ui-band-failed-title">{`${current ? "עוד לא " : "לא "}${moved} כסף ב${month}`}</h2>
+        <p className="ui-band-failed-body">{current ? "שורות חדשות מגיעות מהבנק כמה פעמים ביום." : "תנועות שנכנסות לתזרים יופיעו כאן."}</p>
+        <Button onClick={onOther}>{`מה ${side === "in" ? "יצא" : "נכנס"} ב${month}`}</Button>
+      </section>
     </div>
   );
 }

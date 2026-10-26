@@ -27,7 +27,7 @@ export function TransactionTopBar({
   end: ReactNode;
   /** The page's head (its name, figure and lines). Null while there is none: the bar stays at rest. */
   head: HTMLElement | null;
-  /** FLOW-962: the page's toasts hang under this bar (place "top", decision 0214). */
+  /** FLOW-963: a page whose toasts hang under this bar (קבועים, decision 0215) marks it as their ceiling. */
   toastCeiling?: boolean;
 }) {
   const past = useScrolledPast(head, true, DETAIL_BAR);

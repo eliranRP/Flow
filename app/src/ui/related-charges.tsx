@@ -80,15 +80,37 @@ function ChargeRows({
   );
 }
 
-/** "בדרך כלל $11.99 · עלה ב־92%": the signal colour only when the change hurts. */
-function ChangeLine({ view }: { view: PartyChangeView }) {
+/**
+ * FLOW-963 (the charge page), FLOW-965 (the transaction page): the history's head says what the bars show. The metric is a small label, then the
+ * takeaway ("גבוה ב־38% מהרגיל", "כמו בכל חודש"), in the signal colour only when the change hurts, then
+ * the usual amount (data-viz § 9).
+ */
+function PlainHead({ title, view }: { title: string; view: PartyChangeView | null }) {
   return (
-    <p className="ui-charges-line">
-      <span className="ui-charges-usual">בדרך כלל <bdi dir="ltr">{view.usual}</bdi></span>
-      {" · "}
-      <span className={cx("ui-charges-change", view.hurts && view.percent != null && "ui-charges-change-bad")}>{view.change}</span>
-    </p>
+    <div className="ui-charges-head">
+      <h2 className="ui-charges-metric">{title}</h2>
+      {view?.takeaway == null ? null : (
+        <p className={cx("ui-charges-takeaway", view.hurts && view.percent != null && "ui-charges-takeaway-bad")}>{view.takeaway}</p>
+      )}
+      {view == null ? null : (
+        <p className="ui-charges-usual-line">
+          בדרך כלל <bdi dir="ltr">{view.usual}</bdi>
+        </p>
+      )}
+    </div>
   );
+}
+
+/** "חיובים ב־6 החודשים האחרונים: מאי $98, יוני $104, יולי אין, …": every month, for screen readers. */
+function barsLabel(data: PartyCharges, months: PartyCharges["months"]): string {
+  const currency = data.party?.currency ?? "ILS";
+  const what = data.party?.direction === "income" ? "תקבולים" : "חיובים";
+  const name = new Intl.DateTimeFormat("he-IL", { month: "long", timeZone: "UTC" });
+  const each = months.map((month) => {
+    const size = absAgorot(month.amount_minor);
+    return `${name.format(new Date(`${month.month}-15T12:00:00Z`))} ${size === 0n ? "אין" : formatAmountText(size, currency)}`;
+  });
+  return `${what} ב־${String(months.length)} החודשים האחרונים: ${each.join(", ")}`;
 }
 
 /**
@@ -120,11 +142,12 @@ export function PartyChargesHistory({
   const list = plain ? data.charges : earlierCharges(data);
   if (data.party == null || list.length < 2) return null;
   const view = plain ? change : partyChangeView(data);
+  const shown = months ?? data.months;
   return (
     <section className="ui-charges-history">
-      <h2 className="ui-charges-title">{chargesTitle(data)}</h2>
-      {view == null ? null : <ChangeLine view={view} />}
-      <ChargeMonthBars months={months ?? data.months} plain={plain} />
+      {/* FLOW-965: the transaction page heads its history as the charge page does: the metric, the takeaway, the usual amount. */}
+      <PlainHead title={chargesTitle(data)} view={view} />
+      <ChargeMonthBars months={shown} plain={plain} label={barsLabel(data, shown)} />
       <ChargeRows data={data} charges={list.slice(0, 3)} search={search} plain={plain} />
       {list.length > 3 ? (
         <button ref={showAllRef} type="button" className="ui-charges-all ui-hit" aria-haspopup="dialog" onClick={onShowAll}>
@@ -139,18 +162,22 @@ export function PartyChargesHistory({
 /**
  * Six month bars in px: the oldest on the right, this month accent, the rest tint. No axis, no figures.
  * A month with no charge is a 3px line (the empty bar); the page's bars carry the month number, the
- * transaction page's the month's name.
+ * transaction page's the month's name. FLOW-963: the charge page's bars (`plain`) are grey at 3:1, the
+ * empty month a 2px line, and the chart is one image whose label names every month.
  */
-export function ChargeMonthBars({ months, plain = false }: { months: PartyCharges["months"]; plain?: boolean }) {
+export function ChargeMonthBars({ months, plain = false, label }: { months: PartyCharges["months"]; plain?: boolean; label?: string }) {
   const sizes = months.map((month) => absAgorot(month.amount_minor));
   const top = sizes.reduce((max, size) => (size > max ? size : max), 0n);
   return (
-    <div className="ui-charge-bars" aria-hidden="true">
+    <div
+      className={cx("ui-charge-bars", plain && "ui-charge-bars-plain")}
+      {...(label == null ? { "aria-hidden": true } : { role: "img", "aria-label": label })}
+    >
       {months.map((month, index) => {
         const size = sizes[index] ?? 0n;
         // 10px for the smallest charge, 56px for the biggest: the board's 10 + 46 · v / max.
         const empty = size === 0n;
-        const height = empty ? 3 : 10 + Math.round((46 * Number(size)) / Number(top));
+        const height = empty ? (plain ? 2 : 3) : 10 + Math.round((46 * Number(size)) / Number(top));
         const current = index === months.length - 1;
         return (
           <div key={month.month} className="ui-charge-bar-col">

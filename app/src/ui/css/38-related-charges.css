@@ -9,32 +9,6 @@
   border-top: 1px solid var(--color-line);
 }
 
-.ui-charges-title {
-  /* board: the usual line sits about 8px under the title, not the column gap of 12px. */
-  margin: 0 0 calc(var(--space-1) * -1);
-  color: var(--color-text);
-  font-size: var(--type-line2-size);
-  line-height: var(--type-line2-line);
-  font-weight: var(--type-btn-weight);
-}
-
-.ui-charges-line {
-  margin: 0;
-  color: var(--color-text-secondary);
-  font-size: var(--type-meta-size);
-  line-height: var(--type-meta-line);
-}
-
-.ui-charges-usual,
-.ui-charges-change {
-  white-space: nowrap;
-}
-
-/* The signal colour only when the change hurts (decision 0181). */
-.ui-charges-change-bad {
-  color: var(--color-bad);
-}
-
 /* Six months, 6 columns, 76px high, the bars bottom-aligned. The oldest month sits on the right. */
 .ui-charge-bars {
   display: grid;
@@ -58,19 +32,21 @@
   align-items: flex-end;
 }
 
+/* FLOW-963 (the charge page), FLOW-965 (the transaction page): past months are grey at 3:1 on the card and
+   this month the one accent (visual § 7, data-viz § 10). */
 .ui-charge-bar {
   inline-size: 100%;
   border-radius: var(--radius-block);
-  background: var(--color-tint-strong);
+  background: var(--color-track-outline);
 }
 
 .ui-charge-bar-now {
   background: var(--color-accent);
 }
 
-/* A month with no charge: a 3px line, not a bar (FLOW-447c). */
+/* A month with no charge: a short line in the same grey, not a bar (FLOW-447c). */
 .ui-charge-bar-empty {
-  background: var(--color-line);
+  background: var(--color-track-outline);
 }
 
 .ui-charge-bar-label {
@@ -84,6 +60,68 @@
 
 .ui-charge-bar-label-now {
   color: var(--color-text);
+}
+
+/* FLOW-963, the charge page: the metric as a small label, the takeaway, then the usual amount. */
+.ui-charges-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ui-charges-metric {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-caption-line);
+}
+
+.ui-charges-takeaway {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-section-weight);
+  line-height: var(--type-line2-line);
+}
+
+.ui-charges-takeaway-bad {
+  color: var(--color-signal-soft);
+}
+
+.ui-charges-usual-line {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+.ui-charges-usual-line > bdi {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The charge page's bars are 80px high, an empty month a 2px line; month numbers are 13px. */
+.ui-charge-bars-plain {
+  block-size: 80px;
+}
+
+.ui-charge-bars-plain .ui-charge-bar-label {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-charge-bars-plain .ui-charge-bar-label-now {
+  font-weight: var(--type-name-weight);
+}
+
+.ui-charge-recurring .ui-charges-row {
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+.ui-charge-recurring .ui-charges-amount {
+  font-variant-numeric: tabular-nums;
 }
 
 /* The three earlier rows: 8px padding, a hairline above each, 14px type, the date then the amount. */

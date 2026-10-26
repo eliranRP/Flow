@@ -28,7 +28,7 @@ import { useHeldOrder } from "../list-hold";
 import { usePreviewSearch, useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useCashLinesQuery, useCashMonthData } from "../use-cash";
-import { PageLoadFailed, PageOfflineLine, ReviewButton, useOnline } from "../ui/band-states";
+import { BandOfflineLine, PageLoadFailed, ReviewButton, useOnline } from "../ui/band-states";
 import { formatDayMonth, israelToday } from "../ui/date-math";
 import { lineTagText, rowSource } from "../ui/line-marks";
 import { List, ListRow } from "../ui/list-row";
@@ -148,7 +148,11 @@ function CashLinesBody({
         phase={phase}
         onRetry={() => { void lines.refetch(); }}
         loading={<LinesSkeleton />}
-        failed={(retry, offline) => <PageLoadFailed title={`${title} של ${monthName} לא נטען`} offline={offline} onRetry={retry} />}
+        failed={(retry, offline) => (
+          <div className="ui-lines-state">
+            <PageLoadFailed title={`${title} של ${monthName} לא נטען`} offline={offline} onRetry={retry} />
+          </div>
+        )}
       />
     );
   }
@@ -223,7 +227,7 @@ function CashLinesBody({
         below={
           <div className="ui-lines-head">
             {headBlock}
-            {offlineSince == null ? null : <PageOfflineLine since={offlineSince} />}
+            {offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />}
             {currencies}
             {chips}
           </div>

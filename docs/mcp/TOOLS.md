@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_manual_entry`, `attach_document`, `add_transaction_note`, `edit_transaction_note`, `remove_transaction_note`, `remove_transaction_file`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_manual_entry`, `attach_document`, `add_transaction_note`, `edit_transaction_note`, `remove_transaction_note`, `remove_transaction_file`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `reassign_recurring_charge`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -52,6 +52,8 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "line_amount"` | `id` | the transaction id `set_line_usual_amount` used |
 | `answer_recurring_match` | `party_id`, `match_party_id` | `get_missing_bills` `missing[].party_id` and `missing[].suggestion.party_id` |
 | `undo` `kind: "recurring_match"` | `id` | the `match_party_id` `answer_recurring_match` used |
+| `reassign_recurring_charge` | `party_id`, `charge_project_id`, `project_id`, `category_id` | `get_recurring_schedule` rows (`party_id`, `project_id` of a split party), `list_projects`, `list_categories` |
+| `undo_batch` after `reassign_recurring_charge` | `batch_key` | the `batch_key` it returned |
 | `set_invoice_paid` | `transaction_id` | `list_unpaid` `invoices[].id` |
 | `undo` `kind: "invoice_paid"` | `id` | the transaction id `set_invoice_paid` used |
 | `link_invoice_payment` | `invoice_id`, `transaction_id` | `list_unpaid` `invoices[].id`, `invoices[].match.transaction_id` |
@@ -1219,6 +1221,21 @@ Sets the usual amount of the line's recurring charge (its supplier or customer i
 
 Answers a late bill's `suggestion` ([FLOW-430](../backlog/TASKS.md#flow-430), [0179](../decisions/0179-recurring-match.md)). `same: true`: `match_party_id` is the recurring `party_id` under another name, and its lines count as the recurring party's in the late bills, הגיעו החודש, the changes, expected months and `get_line_recurring`. `false`: not the same, and the pair is not suggested again. `null` takes the answer back. Only on the user's word: a different name is never merged by itself. Output `data`: `direction`, `party_id`, `match_party_id`, `same`, `"undo_kind": "recurring_match"`, `id` (the `match_party_id`) and `write_id`. Refused: `party not found`, `already matched` (the suggested party is already the same as another one, or a party in the pair is itself a match). Undo `kind: "recurring_match"` with `match_party_id` puts back the answer from before; `conflict` once it changed since.
 
+### reassign_recurring_charge
+
+```json
+{ "idempotency_key": "charge-1", "direction": "expense", "party_id": "22222222-2222-4000-8000-000000000020", "currency": "USD", "charge_project_id": "22222222-2222-4000-8000-000000000040", "project_id": "22222222-2222-4000-8000-000000000041" }
+```
+
+Moves every payment of a recurring charge to `project_id`, to `category_id`, or both, the earlier payments too ([FLOW-963](../backlog/TASKS.md#flow-963)); the app's charge page does the same from its פרויקט and קטגוריה rows. Only on the user's word.
+
+- The charge is a supplier or customer (`party_id`, as `get_recurring_schedule` names it; a party answered "the same" with `answer_recurring_match` counts) in one `direction` and `currency`, for one project ([0185](../decisions/0185-recurring-charge-per-project.md)). The server decides which payments: when the party's stream lines reach two projects or more it is split, and `charge_project_id` must be one of them (the schedule row's `project_id`); the charge is then its project's lines, filed there at any date, plus the unfiled lines that join it. The stream reads the last 24 months, so a split party's unfiled payments older than that stay put. Otherwise the charge is every posted line of the party in that direction and currency, at any date, and `charge_project_id` is that row's project or left out.
+- A project keeps each payment's category; a category keeps each payment's project. The category's kind is the charge's direction.
+- Skipped and counted in `skipped`: a shared cost (split across projects, or waiting for its split), a line split into parts (`split_line`), a payment already so, and, for a project alone, a payment with no category.
+- Refused: `project not found` and `category not found` (another company's, or a category of the other kind), `validation` (no project and no category, a direction other than expense or income, a `charge_project_id` that is not the charge's), and `validation` with "too many payments: at most 5000 in one pick".
+
+Output `data`: `{ "batch_key", "changed", "skipped", "split", "results" }`. `split` says whether the party is split by project; each result is `{ "transaction_id", "ok": true, "undo_kind": "reassign" }` for a payment that changed. `undo_batch` with `batch_key` puts every one back; a payment changed since is `conflict` for that row only. Replay returns the stored response.
+
 ## Unpaid · FLOW-330
 
 SUMIT invoices still open, and a mark the owner sets when one was paid before SUMIT has the receipt. Decision [0133](../decisions/0133-invoice-paid-marks.md).
@@ -1312,7 +1329,7 @@ Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each res
 { "idempotency_key": "undo-batch-1", "batch_key": "33333333-3333-4000-8000-000000000003" }
 ```
 
-Undoes every successful row from an `assign_expenses`, `set_lines_pnl`, `set_lines_cash`, `create_projects` or `create_categories` batch through `mcp_undo`, newest first. Each result names its row by `transaction_id`, or by `id` and `name` (and `kind` for a category) for a created project or category. A split row goes back to its shares, category and open review from before the split. A `parts[]` row goes back to the parts from before, or to none. A `parts[]` or `set_lines_pnl` row undoes only the batch's own write: when a later `split_line` (or `set_line_pnl`) on that line is still live, the row is `conflict` and the later write stays; undo that one first. A row whose own write was already undone is `not_found`. Batches stored before [FLOW-133](../backlog/TASKS.md#flow-133) still undo the newest write on the line. Another company or a missing batch is `not_found`. A row changed since assign is `conflict` for that row only. Replay returns the stored response.
+Undoes every successful row from an `assign_expenses`, `set_lines_pnl`, `set_lines_cash`, `create_projects`, `create_categories` or `reassign_recurring_charge` batch through `mcp_undo`, newest first. Each result names its row by `transaction_id`, or by `id` and `name` (and `kind` for a category) for a created project or category. A split row goes back to its shares, category and open review from before the split. A `parts[]` row goes back to the parts from before, or to none. A `parts[]` or `set_lines_pnl` row undoes only the batch's own write: when a later `split_line` (or `set_line_pnl`) on that line is still live, the row is `conflict` and the later write stays; undo that one first. A row whose own write was already undone is `not_found`. Batches stored before [FLOW-133](../backlog/TASKS.md#flow-133) still undo the newest write on the line. Another company or a missing batch is `not_found`. A row changed since assign is `conflict` for that row only. Replay returns the stored response.
 
 ## Team · FLOW-601
 

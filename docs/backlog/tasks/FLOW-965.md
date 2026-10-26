@@ -10,7 +10,7 @@
 - [x] Items waiting for approval show Home v2's filled "לאישור N פריטים" button.
 - [x] The transaction page's toasts sit under its bar with a 5s ביטול (decision 0216, extending 0212).
 - [x] The order chips are a radio group; the direction switch is a tab list.
-- [ ] The transaction page's history chart: takeaway title, every month in its label, past bars at 3:1. In FLOW-963's files (#825); follows its merge.
-- [ ] "לא קבוע" last in the frequency sheet: FLOW-963 (#825) moves it.
+- [x] The transaction page's history chart heads as the charge page does (the metric, the takeaway "גבוה ב־27% מהרגיל", the usual amount), its label reads every month, and its past bars are grey at 3:1 (FLOW-963's pieces).
+- [x] "לא קבוע" last in the frequency sheet: done by FLOW-963 (#825).
 - Already so in the app, no change: the invoice card opens its document (a SUMIT page, not an image); the bank description is 13px and not monospace; the tab bar's pill (FLOW-958).
 - **Acceptance:** stories of the lines (failed, offline, empty, waiting) and the transaction page (the rule offer); tests for the offer, its undo, the toasts' place, the states and the chips' roles; decision 0216; MCP tool with undo; design log entry.

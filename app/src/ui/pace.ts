@@ -23,8 +23,8 @@ const PACE_CHOICES: readonly RecurringPace[] = ["month", "2months", "quarter", "
 export type PaceChoice = RecurringPace | "never";
 
 /**
- * The "כל כמה זמן" sheet (FLOW-415 D, decision 0175; FLOW-366 adds לא קבוע). The note under לא קבוע
- * says what it does; the note under the pace the server detected says where it came from.
+ * The "כל כמה זמן" sheet (FLOW-415 D, decision 0175; FLOW-366 adds לא קבוע, last since FLOW-963).
+ * The note under לא קבוע says what it does; the note under the pace the server detected says where it came from.
  */
 export function paceSheetCopy(detected: RecurringPace | null, party?: string): ChoiceSheetCopy<PaceChoice> {
   return {
@@ -32,13 +32,14 @@ export function paceSheetCopy(detected: RecurringPace | null, party?: string): C
     title: PACE_TITLE,
     // The board's subtitle: the rule covers every payment of this party.
     subtitle: party ? `חל על כל התשלומים של ${party}` : undefined,
+    // FLOW-963: לא קבוע takes the line out of every forecast, so it comes last (forms § 21, danger last).
     choices: [
-      { value: "never", label: "לא קבוע", description: "לא יופיע בקבועים" },
       ...PACE_CHOICES.map((pace) => ({
         value: pace,
         label: PACE_LABEL[pace],
         ...(pace === detected ? { description: "זוהה לבד מהתשלומים הקודמים" } : {}),
       })),
+      { value: "never", label: "לא קבוע", description: "לא יופיע בקבועים, בהתראות ובתחזית" },
     ],
   };
 }

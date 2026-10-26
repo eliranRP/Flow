@@ -8,11 +8,13 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { useHoldWrites } from "../use-is-viewer";
 import { dismissRecurringAlert, answerRecurringMatch, liveRpcClient, restoreRecurringAlert, type AlertKind } from "../recurring-actions";
 import { type ChargePageData, useChargePageData } from "../recurring-charge-data";
+import { recurringToast } from "../recurring-toast";
 import { amountOf, askText, bannerText, changeLine, chargeAlert, dayMonth, endedText, ignoredText, metaOf, monthsThrough, statusOf } from "../recurring-charge";
 import { chargeKey, israelToday, type ScheduleRow } from "../recurring-schedule";
 import { Button } from "../ui/button";
 import { ChoiceSheet } from "../ui/choice-sheet";
-import { EmptyState, FailureLine } from "../ui/empty-state";
+import { EmptyState } from "../ui/empty-state";
+import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { DelayedSkeleton, ListSkeleton } from "../ui/skeleton";
 import { paceSheetCopy, paceToast, type PaceChoice } from "../ui/pace";
 import { PartyChargesHistory, PartyChargesSheet } from "../ui/related-charges";
@@ -20,6 +22,7 @@ import { ChargeBanner, ChargeCard, ChargeHead, ChargeIgnored, RecurringRow } fro
 import { RecurringAskBox, RecurringMatchBox } from "../ui/recurring-match-box";
 import { useToast } from "../ui/toast";
 import { useWrite } from "../use-write";
+import { useChargePick, type ChargePickChoice } from "./recurring-charge-pick";
 import { ChargeUsualAmount } from "./recurring-usual-amount";
 import { TransactionTopBar } from "./transaction-top-bar";
 import { useBlockedPreview } from "./screen-shared";
@@ -34,6 +37,10 @@ export type ChargeSample = {
   lineId: string | null;
   charges: PartyCharges | null;
   recurring: PaymentRecurring | null;
+  /** Offline: the moment the page's figures are from. */
+  offlineSince?: number;
+  /** The pickers' choices (FLOW-963), in place of the company's projects and categories. */
+  picks?: { projects: ChargePickChoice[]; categories: ChargePickChoice[] };
 };
 
 /** What a pace pick changes here: the choice, and the state before it. The undo writes it back. */
@@ -68,14 +75,15 @@ export function RecurringChargeScreen({ sample, openSheet, now = new Date() }: {
   return <ChargeBody key={chargeKey(data.row)} data={data} live={sample == null} today={today} openSheet={openSheet} />;
 }
 
-/** The schedule did not load: one line and the retry. */
+/** The schedule did not load: what happened, the retry and the way to help (FLOW-963). */
 export function ChargeError() {
   const client = useQueryClient();
+  const online = useOnline();
   return (
     <div className="ui-charge-page">
-      <TransactionTopBar fallback="/recurring" backLabel="קבועים" title="קבועים" end={null} head={null} />
+      <TransactionTopBar fallback="/recurring" backLabel="קבועים" title="קבועים" end={null} head={null} toastCeiling />
       <div className="ui-charge-body">
-        <FailureLine offline={!navigator.onLine} onRetry={() => void client.invalidateQueries({ queryKey: ["recurring-schedule"] })} />
+        <PageLoadFailed title="הקבועים לא נטענו" offline={!online} onRetry={() => void client.invalidateQueries({ queryKey: ["recurring-schedule"] })} />
       </div>
     </div>
   );
@@ -86,7 +94,7 @@ export function ChargeMissing() {
   const search = usePreviewSearch();
   return (
     <div className="ui-charge-page">
-      <TransactionTopBar fallback="/recurring" backLabel="קבועים" title="קבועים" end={null} head={null} />
+      <TransactionTopBar fallback="/recurring" backLabel="קבועים" title="קבועים" end={null} head={null} toastCeiling />
       <div className="ui-charge-body">
         <EmptyState title="החיוב לא נמצא" body="אולי סימנתם אותו כלא קבוע, או שהקישור ישן." action={<Button full to={`/recurring${search}`}>לקבועים</Button>} />
       </div>
@@ -113,6 +121,9 @@ function ChargeBody({
   const blocked = useBlockedPreview();
   // A viewer (or a role still unknown) reads the page: no match answer and no pace sheet; ignore stays, as the server allows it.
   const holdWrites = useHoldWrites();
+  const online = useOnline();
+  // Offline, the figures on screen are from the last read (FLOW-963).
+  const offlineSince = live ? (online ? undefined : data.updatedAt || undefined) : data.offlineSince;
   const income = row.direction === "income";
   const currency = row.currency;
   const thisMonth = today.slice(0, 7);
@@ -150,8 +161,9 @@ function ChargeBody({
   const overridden = recurring?.override != null;
   const choice: PaceChoice = isRecurring ? pace : "never";
   const money = (minor: bigint) => formatAmountText(minor, currency);
-  const project = row.project_name ?? (row.category_name == null ? "ללא פרויקט" : `ללא פרויקט · ${row.category_name}`);
-  const category = row.category_name ?? "ללא קטגוריה";
+  const pick = useChargePick({ row, live, sample: data.picks });
+  const project = pick.projectName ?? row.project_name ?? (row.category_name == null ? "ללא פרויקט" : `ללא פרויקט · ${row.category_name}`);
+  const category = pick.categoryName ?? row.category_name ?? "ללא קטגוריה";
 
   const refresh = () => {
     for (const key of RECURRING_KEYS) void client.invalidateQueries({ queryKey: [key] });
@@ -165,11 +177,11 @@ function ChargeBody({
       if (live) await dismissRecurringAlert(liveRpcClient(), key, kind);
     } catch {
       setIgnoredLocal(null);
-      toast.show({ message: "לא הצלחנו לעדכן את השורה." });
+      toast.show(recurringToast({ message: "לא הצלחנו לעדכן את השורה." }));
       return;
     }
     if (live) refresh();
-    toast.show({ message, action: "ביטול", onAction: () => void restore(key, kind) });
+    toast.show(recurringToast({ message, action: "ביטול", onAction: () => void restore(key, kind) }));
   }
 
   async function restore(key: string, kind: AlertKind) {
@@ -178,11 +190,11 @@ function ChargeBody({
       if (live) await restoreRecurringAlert(liveRpcClient(), key, kind);
     } catch {
       setIgnoredLocal(true);
-      toast.show({ message: "לא הצלחנו לעדכן את השורה." });
+      toast.show(recurringToast({ message: "לא הצלחנו לעדכן את השורה." }));
       return;
     }
     if (live) refresh();
-    toast.show({ message: "ההתראה חזרה" });
+    toast.show(recurringToast({ message: "ההתראה חזרה" }));
   }
 
   async function answer(same: boolean | null) {
@@ -192,27 +204,28 @@ function ChargeBody({
       if (live) await answerRecurringMatch(liveRpcClient(), { direction: row.direction, partyId: row.party_id, matchPartyId: suggestion.party_id, same });
     } catch {
       setMatchLocal(null);
-      toast.show({ message: "לא הצלחנו לעדכן את השורה." });
+      toast.show(recurringToast({ message: "לא הצלחנו לעדכן את השורה." }));
       return;
     }
     if (live) refresh();
     if (same === null) return;
     const message = same ? (income ? "סומן כאותו לקוח" : "סומן כאותו ספק") : "לא נציע שוב";
-    toast.show({ message, action: "ביטול", onAction: () => void answer(null) });
+    toast.show(recurringToast({ message, action: "ביטול", onAction: () => void answer(null) }));
   }
 
   const write = useWrite<PaceChange>({
     failure: (error) => (error.message.includes("forbidden") ? "אין הרשאה לעדכן את השורה." : "לא הצלחנו לעדכן את השורה."),
     keys: RECURRING_KEYS,
+    place: "top",
     onSuccess: (done) => {
       setSaving(null);
       if (done.next === "never" && !done.undo) leaving.current = true;
       done.close?.();
       if (done.undo) return;
       const message = done.toast ?? (done.next === "never" ? "סומן כלא קבוע" : paceToast(done.next));
-      toast.show({ message, action: "ביטול", onAction: () => {
+      toast.show(recurringToast({ message, action: "ביטול", onAction: () => {
         undoPace(done);
-      } });
+      } }));
     },
     onError: () => {
       setSaving(null);
@@ -241,7 +254,7 @@ function ChargeBody({
 
   return (
     <div className="ui-charge-page">
-      <TransactionTopBar fallback="/recurring" backLabel="קבועים" title={row.party_name} end={null} head={head} />
+      <TransactionTopBar fallback="/recurring" backLabel="קבועים" title={row.party_name} end={null} head={head} toastCeiling />
       <div className="ui-charge-body">
         <ChargeHead
           headRef={setHead}
@@ -253,6 +266,7 @@ function ChargeBody({
           income={income && row.state === "arrived"}
           meta={metaOf(row, arrivedOn)}
         />
+        {offlineSince == null ? null : <BandOfflineLine since={offlineSince} onPage />}
         {alert != null && alertText != null && !ignored ? (
           <ChargeBanner text={alertText} onIgnore={() => void ignore()} disabled={alert.key == null} />
         ) : null}
@@ -280,7 +294,15 @@ function ChargeBody({
             onNo={() => void answer(false)}
           />
         ) : null}
-        <ChargeCard project={project} category={category} />
+        <ChargeCard
+          project={project}
+          category={category}
+          busy={pick.busy}
+          {...(holdWrites ? {} : {
+            onProject: () => { if (!(live && blocked())) pick.open("project"); },
+            onCategory: () => { if (!(live && blocked())) pick.open("category"); },
+          })}
+        />
         <section className="ui-card ui-charge-recurring">
           <RecurringRow
             title={income ? "הכנסה קבועה" : "תשלום קבוע"}
@@ -325,6 +347,7 @@ function ChargeBody({
           returnFocusRef={allRef}
         />
       ) : null}
+      {holdWrites ? null : pick.sheet}
       <ChoiceSheet
         copy={paceSheetCopy(recurring?.detected_pace ?? null, row.party_name)}
         open={paceOpen}

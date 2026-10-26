@@ -30,6 +30,8 @@ export type PartyChangeView = {
   change: string;
   /** For screen readers: "עלייה של 92% לעומת הרגיל, $11.99". */
   words: string;
+  /** FLOW-963: the charge page's takeaway, "גבוה ב־92% מהרגיל" or "כמו בכל חודש". */
+  takeaway?: string;
 };
 
 /** The section's change line; null when the party has no usual amount yet (too few earlier charges). */
@@ -38,7 +40,7 @@ export function partyChangeView(data: PartyCharges | null | undefined): PartyCha
   const usual = formatAmountText(absAgorot(data.typical_amount_minor), data.party.currency, { detail: true });
   const pct = data.change_percent;
   if (Math.abs(pct) < FLAT_BELOW_PERCENT) {
-    return { percent: null, arrow: null, hurts: false, usual, change: "כרגיל", words: `כרגיל, ${usual}` };
+    return { percent: null, arrow: null, hurts: false, usual, change: "כרגיל", words: `כרגיל, ${usual}`, takeaway: "כמו בכל חודש" };
   }
   const up = pct > 0;
   const income = data.party.direction === "income";
@@ -51,6 +53,8 @@ export function partyChangeView(data: PartyCharges | null | undefined): PartyCha
     usual,
     change: `${up ? "עלה" : "ירד"} ב־${percent}`,
     words: `${up ? "עלייה" : "ירידה"} של ${percent} לעומת הרגיל, ${usual}`,
+    // FLOW-965: the transaction page's history says it as the charge page does (FLOW-963).
+    takeaway: `${up ? "גבוה" : "נמוך"} ב־${percent} מהרגיל`,
   };
 }
 

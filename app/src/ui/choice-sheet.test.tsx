@@ -104,11 +104,11 @@ describe("ChoiceSheet", () => {
     expect(screen.getByText(BASIS_SHEET_SUBTITLE)).toBeInTheDocument();
   });
 
-  it("lists the paces shortest first, with the stored one checked", () => {
+  it("lists the paces shortest first and לא קבוע last (FLOW-963), with the stored one checked", () => {
     renderSheet(paceSheetCopy(null), "2months");
     expect(screen.getByRole("radiogroup", { name: "כל כמה זמן" })).toBeInTheDocument();
     const radios = screen.getAllByRole("radio");
-    expect(radios.map((radio) => radio.getAttribute("data-value"))).toEqual(["never", "month", "2months", "quarter", "year"]);
+    expect(radios.map((radio) => radio.getAttribute("data-value"))).toEqual(["month", "2months", "quarter", "year", "never"]);
     expect(screen.getByRole("radio", { name: "כל חודשיים" })).toBeChecked();
   });
 
