@@ -725,6 +725,12 @@ isOneToOne: false
       foreignKeyName: "loans_refinanced_into_fkey"
       columns: ["company_id","refinanced_into_id"]
 isOneToOne: false
+      referencedRelation: "loan_balances"
+      referencedColumns: ["company_id","loan_id"]
+    },{
+      foreignKeyName: "loans_refinanced_into_fkey"
+      columns: ["company_id","refinanced_into_id"]
+isOneToOne: false
       referencedRelation: "loans"
       referencedColumns: ["company_id","id"]
     }
