@@ -6,9 +6,8 @@ import {
   type LoanSplitPart,
   type LoanStatus,
 } from "@flow/shared";
-import { formatDisplay } from "../ui/date-math";
-import { LOAN_KIND_LABEL, LOAN_STATUS_LABEL } from "./loan-copy";
-import { formatLoanMoney, type LoanCurrency } from "./loan-form";
+import { LOAN_KIND_LABEL } from "./loan-copy";
+import type { LoanCurrency } from "./loan-form";
 
 /** FLOW-106 B and FLOW-110: one loan's page, as the app reads it. Pure mappers, no reads. */
 
@@ -250,23 +249,9 @@ export function lastPaymentDate(payments: readonly LoanPayment[]): string | null
   return last;
 }
 
-/** The date sheet opens on the last payment's date, else today (plan §3.2). */
-export function closeDateDefault(loan: Pick<LoanDetail, "closedOn">, payments: readonly LoanPayment[], today: string): string {
-  if (loan.closedOn != null) return loan.closedOn;
-  return lastPaymentDate(payments) ?? today;
-}
-
-/** The pill under the balance. */
-export function statusPill(loan: Pick<LoanDetail, "status" | "closedOn">): string {
-  if (loan.status === "open" || loan.closedOn == null) return LOAN_STATUS_LABEL[loan.status];
-  return `${LOAN_STATUS_LABEL[loan.status]} · ${formatDisplay(loan.closedOn)}`;
-}
-
-/** The toast after a status change. A paid-off loan with a balance left says so (0122 allows it). */
-export function statusToast(status: LoanStatus, balanceMinor: bigint, currency: LoanCurrency): string {
-  if (status === "open") return "ההלוואה נפתחה מחדש";
-  if (status === "paid_off" && balanceMinor > 0n) return `סומנה כנפרעה · נשארה יתרה ${formatLoanMoney(balanceMinor, currency)} בספרים`;
-  return status === "paid_off" ? "סומנה כנפרעה" : "סומנה כנסגרה";
+/** FLOW-962: a close starts on today, or on the last attached payment when that is later (no close before it). */
+export function closeDateDefault(lastPayment: string | null, today: string): string {
+  return lastPayment != null && lastPayment > today ? lastPayment : today;
 }
 
 /** One kind choice in the סוג sheet: its one-line description. */

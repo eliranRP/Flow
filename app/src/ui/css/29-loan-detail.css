@@ -33,13 +33,6 @@
   color: var(--color-text-secondary);
 }
 
-.ui-loan-status {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding-inline: var(--space-1);
-}
-
 .ui-card.ui-loan-card {
   display: flex;
   flex-direction: column;
@@ -92,9 +85,10 @@
   inline-size: auto;
 }
 
+/* FLOW-962: the period switch's choices are 44px targets. */
 .ui-loan-paid-head .ui-seg {
-  --size-seg: calc(var(--space-8) + var(--space-1));
-  --size-seg-track: var(--space-10);
+  --size-seg: var(--touch-min);
+  --size-seg-track: calc(var(--touch-min) + var(--space-1));
   gap: var(--space-half);
   padding: var(--space-half);
   border-radius: var(--radius-field-btn);
@@ -455,15 +449,12 @@ button.ui-loan-paid-part {
   margin-bottom: calc(var(--space-1) * -0.75);
 }
 
-.ui-loan-chip {
-  align-self: flex-start;
-  padding: var(--pill-pad-block) var(--space-3);
-  border-radius: var(--radius-chip);
-  background: var(--color-tint);
-  color: var(--color-accent-text);
-  font-size: var(--type-caption-size);
-  line-height: var(--type-card-line);
-  font-weight: var(--type-line2-weight);
+/* FLOW-962: a plain label over the name, not a tag (the top bar already says כל התשלומים). */
+.ui-loan-payments-label {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
 }
 
 .ui-loan-payments-total {
@@ -596,5 +587,77 @@ button.ui-loan-paid-part {
 .ui-year[aria-pressed="true"] b {
   background: var(--color-accent);
   color: var(--color-on-accent);
+}
+
+/* FLOW-962 (board Loan closed early): how a closed loan ended, at the head of its page. */
+.ui-loan-closed-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-sheet-weight);
+  line-height: var(--type-body-line);
+}
+
+.ui-loan-closed-line svg {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.ui-loan-closed .ui-loan-card-text {
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  color: var(--color-text-secondary);
+}
+
+/* A loan with no payments yet: what will appear, and the way to the bank (a 44px link). */
+.ui-loan-recent-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding-block-end: var(--space-3);
+}
+
+.ui-loan-recent-empty .ui-loan-card-text {
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  color: var(--color-text-secondary);
+}
+
+.ui-loan-recent-bank {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--touch-min);
+  color: var(--color-accent-text);
+  font-size: var(--type-line2-size);
+  text-decoration: none;
+}
+
+/* סגירת ההלוואה with its one line, above the delete link. */
+.ui-loan-close-entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-loan-close-entry .ui-loan-card-note {
+  padding-inline: var(--space-1);
+}
+
+/* A sheet's question over its choices (למה נסגרת?, מתי השינוי חל?), and the line on what follows. */
+.ui-loan-sheet-head {
+  margin: 0;
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-sheet-weight);
+  color: var(--color-text-secondary);
+}
+
+.ui-loan-sheet-line {
+  margin: 0;
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  color: var(--color-text-secondary);
 }
 

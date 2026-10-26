@@ -153,7 +153,7 @@ async function expectReopenedBlank(inserts: number) {
   expect(screen.getByLabelText("מלווה")).toHaveValue("");
   expect(screen.getByLabelText("סכום מקורי")).toHaveValue("");
   expect(screen.getByLabelText("ריבית שנתית")).toHaveValue("");
-  const save = screen.getByRole("button", { name: "שמירה" });
+  const save = screen.getByRole("button", { name: "שמירת ההלוואה" });
   expect(save).toBeEnabled();
   fireEvent.click(save);
   expect(screen.getByText("כתבו את שם המלווה.")).toBeInTheDocument();
@@ -253,8 +253,8 @@ describe("the Loans tab list and sheet", () => {
     openLoan();
     fillSavable();
     expect(screen.getByLabelText("ריבית שנתית")).toHaveValue("11.2042");
-    // FLOW-347: שמירה is pinned in the sheet's foot, outside the scrolling form, and still submits it.
-    const save = screen.getByRole("button", { name: "שמירה" });
+    // FLOW-347: שמירת ההלוואה is pinned in the sheet's foot, outside the scrolling form, and still submits it.
+    const save = screen.getByRole("button", { name: "שמירת ההלוואה" });
     expect(save.closest(".ui-sheet-foot")).not.toBeNull();
     expect(save.closest("form")).toBeNull();
     fireEvent.click(save);
@@ -293,7 +293,7 @@ describe("the Loans tab list and sheet", () => {
     expect(screen.queryByLabelText("תקופה בחודשים")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("מסים וביטוח לחודש (escrow)")).not.toBeInTheDocument();
     expect(screen.getByText("לפי דרישה: בלי לוח תשלומים קבוע")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ההלוואה" }));
     await waitFor(() => { expect(db.inserts).toHaveLength(1); });
     expect(db.inserts[0]).toMatchObject({
       kind: "demand",
@@ -315,7 +315,7 @@ describe("the Loans tab list and sheet", () => {
     expect(months).toHaveValue("12");
     fireEvent.change(months, { target: { value: "24" } });
     expect(screen.getByText(/תשלום אחרי חודשי הריבית/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ההלוואה" }));
     await waitFor(() => { expect(db.inserts).toHaveLength(1); });
     const payment = regularPaymentMinor({
       principalMinor: 10_000_000n,
@@ -340,7 +340,7 @@ describe("the Loans tab list and sheet", () => {
     renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
     openLoan();
     fillSavable();
-    const save = screen.getByRole("button", { name: "שמירה" });
+    const save = screen.getByRole("button", { name: "שמירת ההלוואה" });
     fireEvent.click(save);
     fireEvent.click(save);
     await waitFor(() => { expect(db.inserts).toHaveLength(1); });
@@ -353,12 +353,12 @@ describe("the Loans tab list and sheet", () => {
     renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
     openLoan();
     fillSavable();
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ההלוואה" }));
     await waitFor(() => {
       expect(screen.getByRole("status", { hidden: true })).toHaveTextContent("אין הרשאה לשמור הלוואה.");
     });
     expect(screen.getByRole("heading", { name: "הלוואה חדשה" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "שמירה" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "שמירת ההלוואה" })).toHaveFocus();
   });
 
   it("keeps the sheet open on a generic failure and returns focus to save", async () => {
@@ -367,9 +367,9 @@ describe("the Loans tab list and sheet", () => {
     renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
     openLoan();
     fillSavable();
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ההלוואה" }));
     await waitFor(() => { expect(screen.getByLabelText("סכום מקורי")).toBeDisabled(); });
-    expect(screen.getByRole("button", { name: "שמירה" })).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("button", { name: "שמירת ההלוואה" })).toHaveAttribute("aria-busy", "true");
     expect(screen.getByRole("radio", { name: "₪" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "תאריך תשלום ראשון" })).toBeDisabled();
     expect(screen.getByLabelText("מלווה")).toBeDisabled();
@@ -379,7 +379,7 @@ describe("the Loans tab list and sheet", () => {
       expect(screen.getByRole("status", { hidden: true })).toHaveTextContent("לא הצלחנו לשמור את ההלוואה.");
     });
     expect(screen.getByRole("heading", { name: "הלוואה חדשה" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "שמירה" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "שמירת ההלוואה" })).toHaveFocus();
     expect(screen.getByLabelText("סכום מקורי")).toBeEnabled();
   });
 
@@ -389,7 +389,7 @@ describe("the Loans tab list and sheet", () => {
     renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
     openLoan();
     fillSavable();
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ההלוואה" }));
     await waitFor(() => { expect(screen.getByLabelText("סכום מקורי")).toBeDisabled(); });
     fireEvent.click(within(screen.getByRole("dialog", { name: "הלוואה חדשה" })).getByRole("button", { name: "סגירה" }));
     fireEvent.keyDown(document, { key: "Escape" });
@@ -402,7 +402,7 @@ describe("the Loans tab list and sheet", () => {
     renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
     openLoan();
     fillSavable();
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ההלוואה" }));
     await waitFor(() => { expect(screen.getByRole("status")).toHaveTextContent("ההלוואה נשמרה"); });
     await expectReopenedBlank(1);
   });
@@ -452,7 +452,7 @@ describe("the Loans tab list and sheet", () => {
     renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" blocked={() => true} />);
     openLoan();
     fillSavable();
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ההלוואה" }));
     await act(async () => {
       await new Promise((resolve) => { setTimeout(resolve, 40); });
     });
@@ -502,7 +502,7 @@ describe("FLOW-119 loan project", () => {
     expect(screen.getByRole("heading", { name: "הלוואה חדשה" })).toBeInTheDocument();
     expect(screen.getByLabelText("מלווה")).toHaveValue("הלוואת דוגמה");
     expect(screen.getByRole("button", { name: "פרויקט פרויקט א" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ההלוואה" }));
     await waitFor(() => { expect(db.inserts).toHaveLength(1); });
     expect(db.inserts[0]?.project_id).toBe("p-a");
   });
@@ -628,7 +628,7 @@ describe("FLOW-119 loan project", () => {
     const invalidate = vi.spyOn(view.client, "invalidateQueries");
     openLoan();
     fillSavable();
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ההלוואה" }));
     await waitFor(() => { expect(db.inserts).toHaveLength(1); });
     await waitFor(() => { expect(invalidate).toHaveBeenCalledWith({ queryKey: ["project"] }); });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["loans"] });
@@ -641,7 +641,7 @@ describe("FLOW-119 loan project", () => {
     fillSavable();
     fireEvent.click(screen.getByRole("button", { name: "פרויקט ללא פרויקט" }));
     fireEvent.click(screen.getByRole("radio", { name: "פרויקט א" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ההלוואה" }));
     await waitFor(() => {
       expect(screen.getByRole("status", { hidden: true })).toHaveTextContent("הפרויקט לא נמצא.");
     });

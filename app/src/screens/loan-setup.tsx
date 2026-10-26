@@ -468,5 +468,6 @@ export function LoanSetupForm({
  * It submits the form by id, so Enter and the form's own checks work as before.
  */
 export function LoanSaveButton({ formId, busy = false, buttonRef }: { formId: string; busy?: boolean; buttonRef?: Ref<HTMLButtonElement> }) {
-  return <Button type="submit" form={formId} full buttonRef={buttonRef} busy={busy}>שמירה</Button>;
+  // FLOW-962: the button names what it saves.
+  return <Button type="submit" form={formId} full buttonRef={buttonRef} busy={busy}>שמירת ההלוואה</Button>;
 }

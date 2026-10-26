@@ -5,7 +5,6 @@ import type { LoanSplitPart } from "@flow/shared";
 import { useSheetHistory } from "../ui/back";
 import { Banner } from "../ui/banner";
 import { Button } from "../ui/button";
-import { StatusDot } from "../ui/status-dot";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { formatDisplay, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
@@ -22,6 +21,9 @@ import { useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";
 import {
   LOAN_KIND_LIST_LABEL,
   LOAN_PART_LABEL,
+  LOAN_STATUS_LABEL,
+  loanClosedLine,
+  loanClosedToast,
   loanDeleteConsequence,
   loanDeletedToast,
   loanFailure,
@@ -35,15 +37,15 @@ import {
   kindValue,
   lastPaymentDate,
   partCategoryValue,
-  statusPill,
-  statusToast,
   type LoanRateRow,
 } from "./loan-detail-data";
-import { LoanBalanceCard, LoanNextCard, LoanRateChangesCard, LoanPaidCard, LoanRecentCard, LoanRowsCard, RateValue, type LoanTermRow } from "./loan-detail-cards";
+import { LoanBalanceCard, LoanClosedCard, LoanNextCard, LoanRateChangesCard, LoanPaidCard, LoanRecentCard, LoanRowsCard, RateValue, type LoanTermRow } from "./loan-detail-cards";
 import { LoanPaymentsView } from "./loan-payments-view";
 import { loanSubtitle, paymentTotals, wholeMoney } from "./loan-detail-view-data";
 import { TransactionTopBar } from "./transaction-top-bar";
-import { LoanPartSheet, LoanRateSheet, LoanStatusSheet } from "./loan-detail-sheets";
+import { LoanPartSheet } from "./loan-detail-sheets";
+import { LoanRateSheet } from "./loan-rate-sheet";
+import { LoanCloseSheet } from "./loan-close-sheet";
 import { LoanKindSheet } from "./loan-kind-sheet";
 import {
   inversePatch,
@@ -73,7 +75,10 @@ import { loanOutlook } from "./loan-outlook";
 export const LOAN_ERROR_TITLE = "לא הצלחנו לטעון את ההלוואה";
 export const LOAN_MISSING_TITLE = "ההלוואה לא נמצאה";
 
-type SheetName = "kind" | "rate" | "status" | "part" | "project" | "delete";
+type SheetName = "kind" | "rate" | "close" | "part" | "project" | "delete";
+
+/** FLOW-962: the loan page's toasts hang under its bar, and an undo stays 5s (decision 0212, as on לאישור). */
+const LOAN_TOAST = { place: "top", durationMs: 5000 } as const;
 
 export type LoanView = "summary" | "payments";
 
@@ -237,10 +242,10 @@ function LoanDetailReady({
   const [rate, setRate] = useState<LoanRateRow | null>(null);
   const [projectSaving, setProjectSaving] = useState<{ id: string | null } | undefined>(undefined);
   const [deleting, setDeleting] = useState(false);
+  const [reopening, setReopening] = useState(false);
   const busyClose = useRef(false);
   const returnRef = useRef<HTMLElement | null>(null);
-  // The status opener is the מצב row, or "שינוי" beside the pill once the loan ended (FLOW-356). A
-  // status change swaps one for the other, so the sheet returns focus to whichever is mounted now.
+  // A close swaps סגירת ההלוואה for החזרה לפעילות, so focus goes back to whichever is mounted now.
   const statusRef = useRef<HTMLButtonElement | null>(null);
   const setSheet = useSheetHistory("loan-detail", sheet != null, (next) => {
     if (!next) setSheetState(null);
@@ -283,6 +288,7 @@ function LoanDetailReady({
       toast.show({
         tone: "bad",
         message,
+        place: LOAN_TOAST.place,
         ...(retry ? { action: "ניסיון חוזר", onAction: () => { void save(run, options); } } : {}),
       });
       return "";
@@ -293,6 +299,7 @@ function LoanDetailReady({
     const undo = options.undo;
     toast.show({
       message: options.success,
+      ...LOAN_TOAST,
       ...(undo ? {
         action: "ביטול",
         onAction: () => {
@@ -300,10 +307,10 @@ function LoanDetailReady({
             try {
               await undo();
               await refresh();
-              toast.show({ message: options.undone ?? "השינוי בוטל" });
+              toast.show({ message: options.undone ?? "השינוי בוטל", place: LOAN_TOAST.place });
             } catch (raw) {
               const failure = loanFailure(raw instanceof Error ? raw : new Error("failed"), ctx);
-              toast.show({ tone: "bad", message: typeof failure === "string" ? failure : failure.message });
+              toast.show({ tone: "bad", message: typeof failure === "string" ? failure : failure.message, place: LOAN_TOAST.place });
             }
           })();
         },
@@ -312,19 +319,28 @@ function LoanDetailReady({
     return null;
   }
 
-  function patchSave(patch: LoanPatch, success: string, place?: LoanRefusalPlace) {
+  function patchSave(patch: LoanPatch, success: string, place?: LoanRefusalPlace, undone?: string) {
     const back = inversePatch(loan, patch);
     return save(() => writes.update(loan.id, patch), {
       success,
       place,
+      undone,
       undo: () => writes.update(loan.id, back),
     });
   }
 
+  async function reopen() {
+    if (reopening) return;
+    setReopening(true);
+    await patchSave({ status: "open", closedOn: null }, "ההלוואה חזרה לפעילות", undefined, "ההלוואה נסגרה שוב");
+    setReopening(false);
+  }
+
   const projectName = loan.projectId == null ? null : (projects.rows.find((row) => row.id === loan.projectId)?.name ?? null);
   const flagged = payments.filter((item) => item.needsReview);
-  // FLOW-138 "Hide" (FLOW-356): a paid-off loan leads with "נפרעה · date" alone, as on the list.
+  // FLOW-138 "Hide" (FLOW-356): a paid-off loan with nothing left shows no balance card, as on the list.
   const ended = !showsLoanBalance(loan);
+  const closed = loan.status !== "open";
   const outlook = loanOutlook(loan, today);
   const paidTotal = paymentTotals(payments).total;
   const lastPaid = lastPaymentDate(payments);
@@ -332,11 +348,12 @@ function LoanDetailReady({
     { key: "kind", label: "סוג", value: LOAN_KIND_LIST_LABEL[loan.kind], onOpen: holdWrites ? null : () => { open("kind"); } },
     { key: "rate", label: "ריבית", value: <RateValue loan={loan} today={today} />, onOpen: holdWrites ? null : () => { setRate(null); open("rate"); } },
     { key: "project", label: "פרויקט", value: projectName ?? NO_PROJECT, onOpen: holdWrites ? null : () => { open("project"); } },
-    { key: "status", label: "סטטוס", value: statusPill(loan), onOpen: holdWrites ? null : () => { open("status"); }, buttonRef: statusRef },
+    // FLOW-962: the status only reads. סגירת ההלוואה and החזרה לפעילות below change it.
+    { key: "status", label: "סטטוס", value: loan.status === "open" ? LOAN_STATUS_LABEL.open : loanClosedLine(loan.status, loan.closedOn), onOpen: null },
   ];
   const topBar = view === "payments"
-    ? <TransactionTopBar fallback={`${loanPath}${search}`} backLabel={loan.name} title={`כל התשלומים · ${wholeMoney(paidTotal, loan.currency)}`} end={null} head={head} />
-    : <TransactionTopBar fallback={back} backLabel="הלוואות" title={`${loan.name} · ${wholeMoney(loan.balanceMinor, loan.currency)}`} end={null} head={head} />;
+    ? <TransactionTopBar fallback={`${loanPath}${search}`} backLabel={loan.name} title={`כל התשלומים · ${wholeMoney(paidTotal, loan.currency)}`} end={null} head={head} toastCeiling />
+    : <TransactionTopBar fallback={back} backLabel="הלוואות" title={`${loan.name} · ${wholeMoney(loan.balanceMinor, loan.currency)}`} end={null} head={head} toastCeiling />;
 
   return (
     <ViewerScope>
@@ -350,13 +367,7 @@ function LoanDetailReady({
               <h1 className="ui-loan-name">{loan.name}</h1>
               <p className="ui-loan-sub">{loanSubtitle(loan, projectName)}</p>
             </header>
-            {ended ? (
-              <div className="ui-loan-status">
-                <StatusDot>{statusPill(loan)}</StatusDot>
-                {/* The סטטוס row below goes on the page too; this reopens the same sheet beside the pill. */}
-                {holdWrites ? null : <Button variant="link" quiet aria-label="שינוי מצב" onClick={() => { open("status"); }}>שינוי</Button>}
-              </div>
-            ) : null}
+            {loan.status === "open" ? null : <LoanClosedCard status={loan.status} closedOn={loan.closedOn} />}
             {flagged.length > 0 ? (
               <Banner
                 icon={<AlertIcon size={20} />}
@@ -367,12 +378,20 @@ function LoanDetailReady({
             ) : null}
             {ended ? null : <LoanBalanceCard loan={loan} outlook={outlook} />}
             <LoanPaidCard loan={loan} payments={payments} categories={categories} today={today} onOpenPart={holdWrites ? null : (item) => { setPart(item); open("part"); }} />
-            {outlook == null || ended ? null : <LoanNextCard loan={loan} outlook={outlook} />}
+            {outlook == null || closed ? null : <LoanNextCard loan={loan} outlook={outlook} />}
             <LoanRowsCard className="ui-loan-terms" rows={termRows} />
             {loan.rates.length > 0 ? (
               <LoanRateChangesCard rates={loan.rates} onOpen={holdWrites ? null : (rate) => { setRate(rate); open("rate"); }} />
             ) : null}
             <LoanRecentCard loan={loan} payments={payments} search={search} loanPath={loanPath} year={today.slice(0, 4)} />
+            {holdWrites ? null : closed ? (
+              <Button variant="secondary" full buttonRef={statusRef} busy={reopening} onClick={() => { void reopen(); }}>החזרה לפעילות</Button>
+            ) : (
+              <div className="ui-loan-close-entry">
+                <Button variant="secondary" full buttonRef={statusRef} onClick={() => { open("close"); }}>סגירת ההלוואה</Button>
+                <p className="ui-loan-card-note">לפירעון מוקדם או למימון מחדש.</p>
+              </div>
+            )}
             {holdWrites ? null : (
               <button type="button" className="ui-loan-delete" onClick={() => { open("delete"); }}>מחיקת ההלוואה</button>
             )}
@@ -391,6 +410,9 @@ function LoanDetailReady({
               loan={loan}
               rate={rate}
               open={sheet === "rate"}
+              today={today}
+              paymentDates={payments.map((payment) => payment.docDate)}
+              nextDue={outlook?.next.dueDate ?? null}
               onOpenChange={setSheet}
               returnFocusRef={returnRef}
               onSave={(next) => {
@@ -418,14 +440,16 @@ function LoanDetailReady({
                 undo: async () => { await writes.saveRate(loan, { effectiveDate: removed.effectiveDate, annualRatePpm: removed.annualRatePpm }); },
               })}
             />
-            <LoanStatusSheet
-              loan={loan}
-              open={sheet === "status"}
+            <LoanCloseSheet
+              loanName={loan.name}
+              open={sheet === "close"}
               onOpenChange={setSheet}
               returnFocusRef={statusRef}
               lastPayment={lastPaid}
-              defaultDate={closeDateDefault(loan, payments, today)}
-              onSave={(next) => patchSave(next, statusToast(next.status, loan.balanceMinor, loan.currency), "status")}
+              defaultDate={closeDateDefault(lastPaid, today)}
+              today={today}
+              nextDue={outlook?.next.dueDate ?? null}
+              onSave={(next) => patchSave(next, loanClosedToast(loan.name, next.status, loan.balanceMinor, loan.currency), "status", "ההלוואה חזרה לפעילות")}
             />
             <LoanPartSheet
               part={part}
@@ -478,7 +502,7 @@ function LoanDetailReady({
               title="למחוק את ההלוואה?"
               item={loan.name}
               consequence={loanDeleteConsequence(payments.length)}
-              confirmLabel="מחיקה"
+              confirmLabel="מחיקת ההלוואה"
               destructive
               busy={deleting}
               returnFocusRef={returnRef}
@@ -502,7 +526,7 @@ function LoanDetailReady({
     } catch (raw) {
       setDeleting(false);
       const failure = loanFailure(raw instanceof Error ? raw : new Error("failed"), ctx);
-      toast.show({ tone: "bad", message: typeof failure === "string" ? failure : failure.message });
+      toast.show({ tone: "bad", message: typeof failure === "string" ? failure : failure.message, place: LOAN_TOAST.place });
       return;
     }
     // The payments count whole again under their own categories: every P&L read changes.
@@ -511,16 +535,17 @@ function LoanDetailReady({
     void navigate(listBack, { replace: true });
     toast.show({
       message: loanDeletedToast(name),
+      ...LOAN_TOAST,
       action: "ביטול",
       onAction: () => {
         void (async () => {
           try {
             await writes.restoreLoan(loanId);
             await refresh(LOAN_WRITE_KEYS);
-            toast.show({ message: "ההלוואה חזרה" });
+            toast.show({ message: "ההלוואה חזרה", place: LOAN_TOAST.place });
           } catch (raw) {
             const failure = loanFailure(raw instanceof Error ? raw : new Error("failed"), ctx);
-            toast.show({ tone: "bad", message: typeof failure === "string" ? failure : failure.message });
+            toast.show({ tone: "bad", message: typeof failure === "string" ? failure : failure.message, place: LOAN_TOAST.place });
           }
         })();
       },

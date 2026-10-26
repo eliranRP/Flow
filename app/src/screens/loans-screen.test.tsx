@@ -78,6 +78,10 @@ describe("Loans tab", () => {
     expect(closed).toHaveTextContent("וילה אלון · בלון · נפרעה 11/2025");
     expect(closed.querySelector(".ui-loans-amount")).toHaveTextContent("$0");
     expect(closed).toHaveAccessibleName(/^הלוואת גשר, \$0, /);
+    // FLOW-962: a closed row carries its tag and a chevron, at full contrast.
+    expect(closed.querySelector(".ui-loans-tag")).toHaveTextContent("נסגרה");
+    expect(closed.querySelector(".ui-loans-chevron")).not.toBeNull();
+    expect(closed).not.toHaveClass("ui-loans-row-closed");
   });
 
   it("opens the closed group from the URL (the dev fixture's ?closed=1)", () => {

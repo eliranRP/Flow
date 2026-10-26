@@ -126,7 +126,7 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
   await sheet.getByLabel("ריבית שנתית").fill("6");
   await sheet.getByRole("button", { name: "פרויקט ללא פרויקט" }).click();
   await pickProject(page, "פרויקט א");
-  await sheet.getByRole("button", { name: "שמירה" }).click();
+  await sheet.getByRole("button", { name: "שמירת ההלוואה" }).click();
   await expect(page.getByRole("status").filter({ hasText: "ההלוואה נשמרה" })).toBeVisible();
   await expect.poll(storedProject).toBe(projectA);
   // FLOW-106 B: the row opens the loan's page, where the project sheet now lives.

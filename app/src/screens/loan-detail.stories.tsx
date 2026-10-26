@@ -81,6 +81,33 @@ export const DeleteConfirm: Story = {
   },
 };
 
+/** FLOW-962: a loan closed for a refinance leads with how it ended; no payments yet says what will appear. */
+export const ClosedRefinance: Story = { name: "Closed for a refinance, no payments", ...loan("loan-closed") };
+
+/** FLOW-962: סגירת ההלוואה asks why and the day, and says what follows. */
+export const CloseSheet: Story = {
+  name: "Close sheet",
+  ...loan("loan-bridge"),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "סגירת ההלוואה" }));
+    const sheet = await bodyOf(canvasElement).findByRole("dialog", { name: /^סגירת הלוואת גישור/ });
+    await userEvent.click(within(sheet).getByRole("radio", { name: /מימון מחדש/ }));
+    await expect(within(sheet).getByRole("radio", { name: /מימון מחדש/ })).toHaveAttribute("aria-checked", "true");
+  },
+};
+
+/** FLOW-962: "מתי השינוי חל?" first; מתאריך… shows the day field (a past day allowed). */
+export const RateFromDay: Story = {
+  name: "Rate sheet, from a day",
+  ...loan("loan-bridge"),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: /^ריבית \d/ }));
+    const sheet = await bodyOf(canvasElement).findByRole("dialog", { name: "קביעת ריבית" });
+    await userEvent.click(within(sheet).getByRole("radio", { name: /מתאריך…/ }));
+    await expect(within(sheet).getByRole("button", { name: /^מתאריך/ })).toBeInTheDocument();
+  },
+};
+
 /** FLOW-142: the page's cards in order: the balance, what was paid, the next payment, then the last payments. */
 export const CardsInOrder: Story = {
   name: "Cards in order",

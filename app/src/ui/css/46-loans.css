@@ -71,12 +71,37 @@
   cursor: pointer;
 }
 
-.ui-loans-row-closed {
-  opacity: 0.7;
+/* FLOW-962: a closed loan's name with its נסגרה tag; the row stays at full contrast. */
+.ui-loans-name-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
 }
 
-.ui-loans-row-closed .ui-loans-amount {
+.ui-loans-tag {
+  flex: none;
+  padding: var(--space-half) var(--space-2);
+  border: var(--stroke-hairline) solid var(--color-text-muted);
+  border-radius: var(--radius-chip);
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-loans-chevron,
+.ui-loans-closed-chevron {
+  display: inline-flex;
+  flex: none;
   color: var(--color-text-muted);
+}
+
+.ui-loans-closed-toggle[aria-expanded="true"] .ui-loans-closed-chevron {
+  transform: rotate(-90deg);
+}
+
+.ui-loans-closed-toggle[aria-expanded="false"] .ui-loans-closed-chevron {
+  transform: rotate(90deg);
 }
 
 .ui-loans-initial {
@@ -125,6 +150,7 @@
 .ui-loans-amount {
   flex: none;
   font-size: var(--type-body-size);
+  font-variant-numeric: tabular-nums;
 }
 
 .ui-loans-closed-toggle {
@@ -148,7 +174,10 @@
 }
 
 .ui-loans-closed-action {
-  color: var(--color-accent-text);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-secondary);
   font-size: var(--type-line2-size);
 }
 
@@ -261,7 +290,7 @@
 
 /* The $ / ₪ switch sits inside the amount field, at its start side (the field is LTR). */
 .ui-money-field:has(> .ui-loan-currency) input {
-  padding-inline-start: calc(var(--touch-min) * 2 + var(--space-1));
+  padding-inline-start: calc(var(--touch-min) * 2 + var(--space-4));
 }
 
 .ui-loan-currency {
@@ -277,10 +306,11 @@
   translate: 0 -50%;
 }
 
+/* FLOW-962: each mark is a full 44px target inside the 52px field. */
 .ui-loan-currency-btn {
   display: grid;
-  inline-size: calc(var(--touch-min) - var(--space-2));
-  block-size: calc(var(--touch-min) - var(--space-2));
+  inline-size: var(--touch-min);
+  block-size: var(--touch-min);
   place-items: center;
   padding: 0;
   border: 0;

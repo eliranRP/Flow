@@ -110,16 +110,38 @@ describe("loan page: states and the viewer", () => {
     expect(screen.queryByRole("button", { name: "מחיקת ההלוואה" })).not.toBeInTheDocument();
   });
 
-  it("leads a paid-off loan with נפרעה and its date only, and changes its status from there (FLOW-138, FLOW-356)", async () => {
+  it("leads a paid-off loan with how it ended, and החזרה לפעילות brings it back with ביטול (FLOW-138, FLOW-962)", async () => {
     renderLoan(sampleLoanStore(), "loan-old", undefined, "");
-    expect(screen.getAllByText(/^נפרעה · \d\d\/\d\d\/\d{4}$/)[0]).toBeInTheDocument();
+    const head = screen.getByRole("region", { name: "ההלוואה נסגרה" });
+    expect(head).toHaveTextContent(/נסגרה · נפרעה במלואה · \d\d\/\d\d\/\d{4}/);
     expect(screen.queryByText("יתרה היום")).not.toBeInTheDocument();
     expect(screen.queryByText(/^התשלום הבא/)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "שינוי מצב" }));
-    await waitFor(() => { expect(screen.getByRole("radio", { name: "נפרעה" })).toHaveAttribute("aria-checked", "true"); });
-    // Reopening brings the balance back.
-    fireEvent.click(screen.getByRole("radio", { name: "פעילה" }));
+    // The status only reads now.
+    expect(screen.queryByRole("button", { name: /^סטטוס/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "החזרה לפעילות" }));
     await waitFor(() => { expect(screen.getByText("יתרה היום")).toBeInTheDocument(); });
+    expect(toast("ההלוואה חזרה לפעילות")).toBeDefined();
+    expect(screen.getByRole("button", { name: "סגירת ההלוואה" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    await waitFor(() => { expect(screen.getByRole("region", { name: "ההלוואה נסגרה" })).toBeInTheDocument(); });
+  });
+
+  it("closes a loan for a refinance on today, under the header with a 5s ביטול (FLOW-962)", async () => {
+    const store = sampleLoanStore();
+    renderLoan(store, "loan-bridge");
+    fireEvent.click(screen.getByRole("button", { name: "סגירת ההלוואה" }));
+    const sheet = screen.getByRole("dialog", { name: /^סגירת הלוואת גישור/ });
+    expect(within(sheet).getByRole("radio", { name: /נפרעה במלואה/ })).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(within(sheet).getByRole("radio", { name: /מימון מחדש/ }));
+    expect(within(sheet).getByRole("button", { name: /תאריך הסגירה/ })).toHaveTextContent("09/10/2026");
+    expect(sheet).toHaveTextContent("תעבור לנסגרו.");
+    fireEvent.click(within(sheet).getByRole("button", { name: "סגירת ההלוואה" }));
+    await waitFor(() => { expect(screen.getByRole("region", { name: "ההלוואה נסגרה" })).toHaveTextContent("נסגרה · מימון מחדש · 09/10/2026"); });
+    const done = toast("הלוואת גישור נסגרה · מימון מחדש");
+    expect(done).toBeDefined();
+    expect(store.read("loan-bridge")).toMatchObject({ bundle: { loan: { status: "closed", closedOn: "2026-10-09" } } });
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    await waitFor(() => { expect(store.read("loan-bridge")).toMatchObject({ bundle: { loan: { status: "open", closedOn: null } } }); });
   });
 
   it("offers the outline ניסיון חוזר on a failed read, not the filled one (FLOW-334)", () => {
@@ -136,17 +158,18 @@ describe("loan page: states and the viewer", () => {
     expect(screen.getByText("רשימת ההלוואות")).toBeInTheDocument();
   });
 
-  it("keeps a close date before the last payment inside the date sheet", async () => {
+  it("keeps a close refused for a later payment inside the close sheet, under its date", async () => {
     const store = sampleLoanStore();
     vi.spyOn(store, "update").mockRejectedValueOnce(new Error("loan_payments_after_close"));
     renderLoan(store, "loan-bridge");
-    fireEvent.click(screen.getByRole("button", { name: /^סטטוס/ }));
-    fireEvent.click(screen.getByRole("radio", { name: "נפרעה" }));
-    const dateSheet = screen.getByRole("dialog", { name: "תאריך פירעון" });
-    expect(dateSheet).toHaveTextContent("התשלום האחרון שויך ב־01/10/2026. אי אפשר לבחור יום לפניו.");
-    fireEvent.click(within(dateSheet).getByRole("button", { name: "החלה" }));
+    fireEvent.click(screen.getByRole("button", { name: "סגירת ההלוואה" }));
+    const sheet = screen.getByRole("dialog", { name: /^סגירת הלוואת גישור/ });
+    fireEvent.click(within(sheet).getByRole("button", { name: /תאריך הסגירה/ }));
+    expect(screen.getByRole("dialog", { name: "תאריך הסגירה" })).toHaveTextContent("התשלום האחרון שויך ב־01/10/2026. אי אפשר לבחור יום לפניו.");
+    fireEvent.click(within(screen.getByRole("dialog", { name: "תאריך הסגירה" })).getByRole("button", { name: "בחירה" }));
+    fireEvent.click(within(sheet).getByRole("button", { name: "סגירת ההלוואה" }));
     await waitFor(() => {
-      expect(screen.getByRole("dialog", { name: "תאריך פירעון" })).toHaveTextContent("יש תשלום משויך אחרי התאריך הזה. בחרו תאריך מאוחר יותר.");
+      expect(screen.getByRole("dialog", { name: /^סגירת הלוואת גישור/ })).toHaveTextContent("יש תשלום משויך אחרי התאריך הזה. בחרו תאריך מאוחר יותר.");
     });
   });
 
@@ -208,7 +231,25 @@ describe("loan page: what it leads with (FLOW-139c)", () => {
     renderLoan(store, "loan-bridge", undefined, "");
     expect(screen.getByRole("heading", { name: "שינויי ריבית" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^מ־01\/09\/2026/ }));
-    expect(await screen.findByRole("dialog", { name: "שינוי ריבית" })).toBeInTheDocument();
+    const sheet = await screen.findByRole("dialog", { name: "שינוי ריבית" });
+    // A change opens on its own day, which is past: the line counts the payments since and keeps them.
+    expect(within(sheet).getByRole("radio", { name: /מתאריך…/ })).toHaveAttribute("aria-checked", "true");
+    expect(within(sheet).getByRole("button", { name: /^מתאריך/ })).toHaveTextContent("01/09/2026");
+    expect(sheet).toHaveTextContent("2 תשלומים שויכו מאז 01/09/2026, והם נשארים כפי שהם.");
+  });
+
+  it("asks מתי השינוי חל on a new rate, from today by default, and saves on that day (FLOW-962)", async () => {
+    const store = sampleLoanStore();
+    renderLoan(store, "loan-mortgage");
+    fireEvent.click(screen.getByRole("button", { name: /^ריבית \d/ }));
+    const sheet = await screen.findByRole("dialog", { name: "קביעת ריבית" });
+    expect(within(sheet).getByRole("radio", { name: /מהיום/ })).toHaveAttribute("aria-checked", "true");
+    expect(within(sheet).queryByRole("button", { name: /^מתאריך/ })).not.toBeInTheDocument();
+    expect(sheet).toHaveTextContent(/התשלום הבא, \d\d\/\d\d, יחושב לפי הריבית החדשה\./);
+    fireEvent.change(within(sheet).getByLabelText("ריבית שנתית"), { target: { value: "7" } });
+    fireEvent.click(within(sheet).getByRole("button", { name: "שמירת הריבית" }));
+    await waitFor(() => { expect(toast("הריבית עודכנה")).toBeDefined(); });
+    expect(store.read("loan-mortgage")).toMatchObject({ bundle: { loan: { rates: [{ effectiveDate: "2026-10-09", annualRatePpm: 70_000 }] } } });
   });
 
   it("leaves out a part at $0, and leads the bridge loan with its interest (design r1)", () => {
