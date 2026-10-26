@@ -76,7 +76,7 @@ describe("the charge page: the item (the water bill, arrived 38% over)", () => {
     expect(screen.getByText("שולם 05/10")).toBeTruthy();
     expect(within(document.querySelector(".ui-charge-head") as HTMLElement).getByText("$142")).toBeTruthy();
     expect(screen.getByText("05/10/2026 · הוצאה")).toBeTruthy();
-    expect(screen.getByText("גבוה ב־38% מהרגיל")).toBeTruthy();
+    expect(within(document.querySelector(".ui-charge-banner") as HTMLElement).getByText("גבוה ב־38% מהרגיל")).toBeTruthy();
     expect(screen.getByRole("button", { name: "התעלמות" })).toBeTruthy();
   });
 
@@ -87,12 +87,15 @@ describe("the charge page: the item (the water bill, arrived 38% over)", () => {
     expect(within(card).getByText("Elm Row")).toBeTruthy();
   });
 
-  it("shows the history: the usual amount, the change and the three newest charges, this one included", () => {
+  it("shows the history: the metric, its takeaway, the usual amount and the three newest charges, this one included", () => {
     renderPage("/recurring/expense/water");
-    expect(screen.getByText("חיובים קודמים")).toBeTruthy();
-    expect(screen.getByText("עלה ב־38%")).toBeTruthy();
     expect(screen.getByText("לכל החיובים")).toBeTruthy();
     const history = screen.getByText("חיובים קודמים").closest("section") as HTMLElement;
+    // FLOW-963: the takeaway is the title, in the signal colour while the change alerts.
+    const takeaway = within(history).getByText("גבוה ב־38% מהרגיל");
+    expect(takeaway).toHaveClass("ui-charges-takeaway-bad");
+    expect(within(history).getByText(/בדרך כלל/)).toBeTruthy();
+    expect(within(history).getByRole("img").getAttribute("aria-label")).toMatch(/^חיובים ב־6 החודשים האחרונים: /);
     expect(within(history).getAllByRole("link")).toHaveLength(3);
   });
 
@@ -101,14 +104,16 @@ describe("the charge page: the item (the water bill, arrived 38% over)", () => {
     fireEvent.click(screen.getByRole("button", { name: "התעלמות" }));
     expect(await screen.findByText("התעלמת מההתראה. היא תחזור בשינוי הבא.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "החזרה" })).toBeTruthy();
-    expect(screen.queryByText("גבוה ב־38% מהרגיל")).toBeNull();
+    expect(document.querySelector(".ui-charge-banner")).toBeNull();
+    // The takeaway stays, no longer in the signal colour.
+    expect(document.querySelector(".ui-charges-takeaway-bad")).toBeNull();
     expect(calls()).toContainEqual(["dismiss_recurring_alert", { p_kind: "change", p_key: "tx-water-10" }]);
     expect(await screen.findByText("התעלמת מההתראה")).toBeTruthy();
     act(() => {
       fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     });
     await waitFor(() => {
-      expect(screen.getByText("גבוה ב־38% מהרגיל")).toBeTruthy();
+      expect(document.querySelector(".ui-charge-banner")).toBeTruthy();
     });
     expect(calls()).toContainEqual(["undismiss_recurring_alert", { p_kind: "change", p_key: "tx-water-10" }]);
   });
@@ -121,7 +126,7 @@ describe("the charge page: the item (the water bill, arrived 38% over)", () => {
       expect(within(sheet).getByText(label)).toBeTruthy();
     }
     expect(within(sheet).getByText("זוהה לבד מהתשלומים הקודמים")).toBeTruthy();
-    expect(within(sheet).getByText("לא יופיע בקבועים")).toBeTruthy();
+    expect(within(sheet).getByText("לא יופיע בקבועים, בהתראות ובתחזית")).toBeTruthy();
   });
 });
 
@@ -181,7 +186,7 @@ describe("the charge page: the late bill (the power bill, with its suggested mat
 
   it("לא answers it as not the same, and toasts that it will not be offered again", async () => {
     renderPage("/recurring/expense/power");
-    fireEvent.click(screen.getByRole("button", { name: "לא" }));
+    fireEvent.click(screen.getByRole("button", { name: "לא, זה משהו אחר" }));
     expect(await screen.findByText("לא נציע שוב")).toBeTruthy();
     expect(calls()).toContainEqual(["answer_recurring_match", { p_direction: "expense", p_party_id: "power", p_match_party_id: "power-alt", p_same: false }]);
   });
@@ -197,7 +202,7 @@ describe("the charge page: the late bill (the power bill, with its suggested mat
   it("asks עדיין קבוע? once the match is answered as not this one", async () => {
     renderPage("/recurring/expense/power");
     expect(screen.queryByRole("region", { name: "עדיין קבוע?" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "לא" }));
+    fireEvent.click(screen.getByRole("button", { name: "לא, זה משהו אחר" }));
     const ask = await screen.findByRole("region", { name: "עדיין קבוע?" });
     expect(within(ask).getByText("לא שולם ב־03/10, 8 ימים אחרי המועד הרגיל. אם הסתיים, נפסיק לצפות לו בתחזית ובהתראות.")).toBeTruthy();
     expect(within(ask).getByText("אמרת שהשורה שהצענו היא לא זה.")).toBeTruthy();
@@ -258,8 +263,9 @@ describe("the charge page: the states", () => {
   it("a failed schedule read shows the error with a retry", () => {
     state.data = { status: "error" };
     renderPage("/recurring/expense/water");
-    expect(screen.getByText("לא הצלחנו לטעון.")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "הקבועים לא נטענו" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "נסו שוב" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "צריך עזרה?" })).toHaveAttribute("href", "/help");
   });
 
   it("while the schedule loads, the page shows its skeleton", () => {

@@ -6,10 +6,12 @@ import { useMissingBillsQuery } from "../forecast";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { RECURRING_KEYS } from "../pace-write";
 import { liveRecurringWrites, type RecurringWrites } from "../recurring-actions";
+import { recurringToast } from "../recurring-toast";
 import { chargeHref, comparable, dayMonth, endedText } from "../recurring-charge";
 import { groupRecurring, monthInflow, monthOutflow, type RecurringLine } from "../recurring-layout";
 import { alertState, changePercentOf, daysBetween, isSplitParty, israelToday, rowId, type RecurringAlert, type ScheduleRow, scheduleLines, useRecurringScheduleQuery } from "../recurring-schedule";
-import { EmptyState, FailureLine } from "../ui/empty-state";
+import { EmptyState } from "../ui/empty-state";
+import { PageLoadFailed, useOnline } from "../ui/page-states";
 import { type RecurringListGroup, type RecurringListRow, RecurringList } from "../ui/recurring-list";
 import { RecurringSkeleton } from "../ui/screen-skeletons";
 import { useToast } from "../ui/toast";
@@ -57,6 +59,7 @@ export function RecurringScreen({
   failed = false,
   writes,
   openId,
+  offlineSince,
 }: {
   now?: Date;
   sample?: readonly ScheduleRow[];
@@ -67,6 +70,8 @@ export function RecurringScreen({
   writes?: RecurringWrites;
   /** The dev fixture's row that opens over its action at first. */
   openId?: string;
+  /** The dev fixture's offline moment: the rows on screen are from then. */
+  offlineSince?: number;
 } = {}) {
   const [params] = useSearchParams();
   const project = params.get("project");
@@ -87,15 +92,17 @@ export function RecurringScreen({
   const view = useMemo(() => (rows == null ? null : recurringView(rows, today, project, alerts, search)), [rows, today, project, alerts, search]);
   // The row whose "הסתיים" is still writing: a second tap on it sends nothing.
   const ending = useRef<string | null>(null);
+  const online = useOnline();
 
   const failedNow = live ? query.isError && query.data == null : failed;
   if (failedNow) {
+    // FLOW-963: the failure keeps the title and says what happened, with the retry and the way to help.
     return (
       <div className="ui-recurring">
         <header className="ui-recurring-head">
           <h1 className="t-title">קבועים</h1>
         </header>
-        <FailureLine offline={!navigator.onLine} onRetry={() => void (live ? query.refetch() : undefined)} />
+        <PageLoadFailed title="הקבועים לא נטענו" offline={!online} onRetry={() => void (live ? query.refetch() : undefined)} />
       </div>
     );
   }
@@ -110,7 +117,7 @@ export function RecurringScreen({
   const refresh = () => {
     for (const key of RECURRING_KEYS) void client.invalidateQueries({ queryKey: [key] });
   };
-  const failure = () => toast.show({ message: "לא הצלחנו לעדכן את השורה." });
+  const failure = () => toast.show(recurringToast({ message: "לא הצלחנו לעדכן את השורה." }));
 
   /** An ignore, or the ask's "כן, עדיין קבוע": the late alert is set aside until the next late bill. */
   async function ignore(alertKey: string, message = "התעלמת מההתראה") {
@@ -124,7 +131,7 @@ export function RecurringScreen({
       return;
     }
     refresh();
-    toast.show({ message, action: "ביטול", onAction: () => void restore(alertKey, removed) });
+    toast.show(recurringToast({ message, action: "ביטול", onAction: () => void restore(alertKey, removed) }));
   }
 
   /** The ask's "הסתיים": the charge leaves the list and the forecast; the undo brings it back. */
@@ -145,14 +152,14 @@ export function RecurringScreen({
       ending.current = null;
     }
     refresh();
-    toast.show({
+    toast.show(recurringToast({
       // The switch is the charge's: ending a split party's charge ends that project's alone.
       message: endedText(charge.party_name, split ? (charge.project_name ?? "ללא פרויקט") : null),
       action: "ביטול",
       onAction: () => {
         void undo().then(refresh, failure);
       },
-    });
+    }));
   }
 
   async function restore(alertKey: string, removed: readonly MissingBill[]) {
@@ -167,10 +174,13 @@ export function RecurringScreen({
     refresh();
   }
 
+  // Offline with rows on screen: they are from the last read (FLOW-963).
+  const since = live ? (online ? undefined : query.dataUpdatedAt || undefined) : offlineSince;
   return (
     <RecurringList
       {...view}
       openId={openId}
+      offlineSince={since}
       onIgnore={(row) => {
         if (row.alertKey != null) void ignore(row.alertKey);
       }}

@@ -86,6 +86,78 @@
   color: var(--color-text);
 }
 
+/* FLOW-963, the charge page: the metric as a small label, the takeaway, then the usual amount. */
+.ui-charges-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ui-charges-metric {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-caption-line);
+}
+
+.ui-charges-takeaway {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-section-weight);
+  line-height: var(--type-line2-line);
+}
+
+.ui-charges-takeaway-bad {
+  color: var(--color-signal-soft);
+}
+
+.ui-charges-usual-line {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+.ui-charges-usual-line > bdi {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The page's bars are grey at 3:1 on the card and this month the one accent; an empty month is a
+   2px line in the same grey (visual § 7, data-viz § 10). Month numbers are 13px. */
+.ui-charge-bars-plain {
+  block-size: 80px;
+}
+
+.ui-charge-bars-plain .ui-charge-bar,
+.ui-charge-bars-plain .ui-charge-bar-empty {
+  background: var(--color-track-outline);
+}
+
+.ui-charge-bars-plain .ui-charge-bar-now:not(.ui-charge-bar-empty) {
+  background: var(--color-accent);
+}
+
+.ui-charge-bars-plain .ui-charge-bar-label {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-charge-bars-plain .ui-charge-bar-label-now {
+  font-weight: var(--type-name-weight);
+}
+
+.ui-charge-recurring .ui-charges-row {
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+.ui-charge-recurring .ui-charges-amount {
+  font-variant-numeric: tabular-nums;
+}
+
 /* The three earlier rows: 8px padding, a hairline above each, 14px type, the date then the amount. */
 .ui-charges-list {
   margin: 0;

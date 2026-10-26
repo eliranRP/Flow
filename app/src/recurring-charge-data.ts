@@ -53,6 +53,10 @@ export type ChargePageData =
       lineId: string | null;
       charges: PartyCharges | null;
       recurring: PaymentRecurring | null;
+      /** FLOW-963: when the schedule on screen was read, for the offline line. */
+      updatedAt?: number;
+      /** A dev sample's offline moment, in place of the live online state. */
+      offlineSince?: number;
     };
 
 /**
@@ -88,5 +92,6 @@ export function useChargePageData(direction: "income" | "expense", partyId: stri
     lineId,
     charges: charges.data ?? null,
     recurring: recurring.data ?? null,
+    updatedAt: schedule.dataUpdatedAt,
   };
 }

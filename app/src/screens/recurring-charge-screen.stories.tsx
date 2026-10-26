@@ -7,13 +7,14 @@ import { ChargeError, ChargeMissing, RecurringChargeScreen } from "./recurring-c
 /** FLOW-447c: the charge page on the board's two parties, as the page's states. Invented names only. */
 const NOW = new Date("2026-10-11T12:00:00Z");
 
-function Demo({ state }: { state: "item" | "late" | "ignored" | "pace" | "amount" | "owner" | "missing" | "error" }) {
+function Demo({ state }: { state: "item" | "late" | "ignored" | "pace" | "amount" | "owner" | "missing" | "error" | "offline" }) {
   const entry = state === "late" || state === "ignored" ? "/recurring/expense/power" : "/recurring/expense/water";
   return (
     <StoryRoute entry={entry}>
       {state === "missing" ? <ChargeMissing /> : null}
       {state === "error" ? <ChargeError /> : null}
       {state === "item" ? <RecurringChargeScreen now={NOW} sample={RECURRING_CHARGES_FIXTURE_WATER} /> : null}
+      {state === "offline" ? <RecurringChargeScreen now={NOW} sample={{ ...RECURRING_CHARGES_FIXTURE_WATER, offlineSince: Date.parse("2026-10-11T06:41:00Z") }} /> : null}
       {state === "pace" ? <RecurringChargeScreen now={NOW} sample={RECURRING_CHARGES_FIXTURE_WATER} openSheet="pace" /> : null}
       {state === "amount" ? <RecurringChargeScreen now={NOW} sample={RECURRING_CHARGES_FIXTURE_WATER} openSheet="amount" /> : null}
       {state === "owner" ? (
@@ -74,3 +75,9 @@ export const UsualAmountOwner: Story = {
 
 /** A party with no recurring row: the not-found view. */
 export const Missing: Story = { args: { state: "missing" } };
+
+/** FLOW-963: the schedule read failed: what happened, נסו שוב and צריך עזרה?. */
+export const Failed: Story = { args: { state: "error" } };
+
+/** FLOW-963: offline, the line under the head says which moment the figures are from. */
+export const Offline: Story = { args: { state: "offline" } };

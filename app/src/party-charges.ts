@@ -30,6 +30,8 @@ export type PartyChangeView = {
   change: string;
   /** For screen readers: "עלייה של 92% לעומת הרגיל, $11.99". */
   words: string;
+  /** FLOW-963: the charge page's takeaway, "גבוה ב־92% מהרגיל" or "כמו בכל חודש". */
+  takeaway?: string;
 };
 
 /** The section's change line; null when the party has no usual amount yet (too few earlier charges). */

@@ -1,0 +1,81 @@
+/* FLOW-963: a page's offline line and failed read, for the pages without a band (Home v2's own are in its band). */
+.ui-page-offline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  min-block-size: var(--touch-min);
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-input);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+.ui-page-offline svg {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.ui-page-offline-text {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.ui-page-offline-retry {
+  flex: none;
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+}
+
+.ui-page-failed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding: var(--space-5) var(--space-4);
+  border-radius: var(--radius-card);
+}
+
+.ui-page-failed-icon {
+  display: grid;
+  place-items: center;
+  inline-size: var(--touch-min);
+  block-size: var(--touch-min);
+  border-radius: 50%;
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+}
+
+.ui-page-failed-title {
+  margin: 0;
+  font-size: var(--type-section-size);
+  line-height: var(--type-section-line);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-page-failed-body {
+  margin: 0;
+  max-inline-size: 32ch;
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+}
+
+.ui-page-failed-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding-block-start: var(--space-1);
+}
+
+.ui-page-failed-help {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--touch-min);
+  color: var(--color-accent-text);
+  font-size: var(--type-line2-size);
+}
