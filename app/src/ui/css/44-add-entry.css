@@ -180,7 +180,8 @@
 }
 
 .ui-add-input[aria-invalid="true"],
-.ui-add-amount[data-invalid] {
+.ui-add-amount[data-invalid],
+.ui-add-amount[data-invalid]:focus-within {
   border-color: var(--color-bad);
 }
 
@@ -226,6 +227,16 @@
 
 .ui-add-amount:focus-within {
   border-color: var(--color-accent);
+}
+
+/* The amount's ring is the field's, as on the other inputs; the value inside draws none. */
+.ui-add-amount:has(:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 0;
+}
+
+.ui-add-amount .ui-add-amount-input:is(:focus, :focus-visible) {
+  outline: none;
 }
 
 .ui-add-amount-input {
