@@ -4,6 +4,8 @@
 -- a Flow note; Mercury's note is edited, never removed. The sync brings Mercury's note only to a line
 -- with no note yet.
 
+begin;
+
 -- Lines that already hold several notes keep one: Mercury's, else the newest. The rest are removed
 -- (removed_at, as the app removes), not deleted.
 update public.transaction_notes n
@@ -167,3 +169,5 @@ begin
   return missing;
 end;
 $$;
+
+commit;
