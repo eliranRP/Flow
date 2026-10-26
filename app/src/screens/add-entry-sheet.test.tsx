@@ -1,6 +1,6 @@
 // FLOW-369: the add form's container. A matched receipt attaches to its bank line and adds no line;
 // a new project is added, picked and says so in a toast.
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AttachedDocument, BankMatch } from "../add-entry";
@@ -59,8 +59,8 @@ function renderSheet(props: Partial<Parameters<typeof AddEntrySheet>[0]> = {}) {
 function fillCash() {
   fireEvent.change(screen.getByRole("textbox", { name: "למי" }), { target: { value: "Ajax Hardware" } });
   fireEvent.change(screen.getByLabelText(/סכום/), { target: { value: "409.01" } });
-  fireEvent.click(screen.getByRole("button", { name: "Oak Ridge" }));
-  fireEvent.click(screen.getByRole("button", { name: "ציוד" }));
+  fireEvent.click(screen.getByRole("radio", { name: "Oak Ridge" }));
+  fireEvent.click(screen.getByRole("radio", { name: "ציוד" }));
 }
 
 beforeEach(() => {
@@ -89,6 +89,30 @@ describe("AddEntrySheet inline new project", () => {
     fireEvent.click(screen.getByRole("button", { name: "הוספה" }));
     expect(await screen.findByText("נוצר פרויקט Willow Dr")).toBeInTheDocument();
     expect(mocks.createProjectNamed).toHaveBeenCalledWith("Willow Dr");
-    expect(screen.getByRole("button", { name: "Willow Dr" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("radio", { name: "Willow Dr" })).toHaveAttribute("aria-checked", "true");
+  });
+});
+
+describe("AddEntrySheet toasts and offline (FLOW-966)", () => {
+  it("saves a cash line and its undo toast hangs under the header for 5s", async () => {
+    const { onDone } = renderSheet();
+    fillCash();
+    fireEvent.change(screen.getByRole("textbox", { name: "סכום" }), { target: { value: "120" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ההוצאה" }));
+    await waitFor(() => { expect(onDone).toHaveBeenCalled(); });
+    const toast = await screen.findByText("ההוצאה נשמרה · Oak Ridge");
+    expect(toast.closest("[data-place]")).toHaveAttribute("data-place", "top");
+  });
+
+  it("offline, keeps the form open and says why instead of failing", () => {
+    onlineManager.setOnline(false);
+    const { onDone } = renderSheet();
+    fillCash();
+    fireEvent.change(screen.getByRole("textbox", { name: "סכום" }), { target: { value: "120" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ההוצאה" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("אין חיבור. הטופס נשאר פתוח");
+    expect(mocks.saveManualLine).not.toHaveBeenCalled();
+    expect(onDone).not.toHaveBeenCalled();
+    onlineManager.setOnline(true);
   });
 });

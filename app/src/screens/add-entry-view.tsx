@@ -136,6 +136,8 @@ export function AddEntryView(props: AddEntryViewProps) {
   const shown: Partial<Record<EntryField, string>> = tried ? problems : (draft.date.length > 0 && problems.date != null ? { date: problems.date } : {});
   const errId = (field: EntryField) => `${uid}-err-${field}`;
   const fieldId = (field: EntryField) => `${uid}-${field}`;
+  // An input is named by its label alone, so the error under it is its description, not its name.
+  const labelId = (field: EntryField) => `${uid}-${field}-label`;
   const invalid = (field: EntryField) => shown[field] != null;
   const described = (field: EntryField) => (invalid(field) ? errId(field) : undefined);
   const hasMatch = props.kind === "receipt" && props.match != null;
@@ -206,10 +208,11 @@ export function AddEntryView(props: AddEntryViewProps) {
         />
 
         <label className="ui-add-field">
-          <span className="ui-add-label">סכום</span>
+          <span className="ui-add-label" id={labelId("amount")}>סכום</span>
           <span className="ui-add-amount" data-invalid={invalid("amount") || undefined}>
             <input
               id={fieldId("amount")}
+              aria-labelledby={labelId("amount")}
               className="ui-add-amount-input"
               dir="ltr"
               inputMode="decimal"
@@ -226,9 +229,10 @@ export function AddEntryView(props: AddEntryViewProps) {
         </label>
 
         <label className="ui-add-field">
-          <span className="ui-add-label">{isIncome ? "ממי" : "למי"}</span>
+          <span className="ui-add-label" id={labelId("payee")}>{isIncome ? "ממי" : "למי"}</span>
           <input
             id={fieldId("payee")}
+            aria-labelledby={labelId("payee")}
             className="ui-add-input"
             dir="auto"
             value={draft.payee}
@@ -242,9 +246,10 @@ export function AddEntryView(props: AddEntryViewProps) {
 
         <div className="ui-add-row2">
           <label className="ui-add-field">
-            <span className="ui-add-label">תאריך</span>
+            <span className="ui-add-label" id={labelId("date")}>תאריך</span>
             <input
               id={fieldId("date")}
+              aria-labelledby={labelId("date")}
               className="ui-add-input"
               dir="ltr"
               inputMode="numeric"
@@ -275,9 +280,10 @@ export function AddEntryView(props: AddEntryViewProps) {
 
         {props.kind === "cash" && draft.method === "cheque" ? (
           <label className="ui-add-field">
-            <span className="ui-add-label">מספר צ׳ק</span>
+            <span className="ui-add-label" id={labelId("cheque")}>מספר צ׳ק</span>
             <input
               id={fieldId("cheque")}
+              aria-labelledby={labelId("cheque")}
               className="ui-add-input"
               dir="ltr"
               inputMode="numeric"
@@ -291,8 +297,8 @@ export function AddEntryView(props: AddEntryViewProps) {
         ) : null}
 
         <div className="ui-add-field">
-          <span className="ui-add-label" id={`${uid}-project-label`}>פרויקט</span>
-          <ChipGroup id={fieldId("project")} labelId={`${uid}-project-label`} errorId={errId("project")} invalid={invalid("project")}>
+          <span className="ui-add-label" id={labelId("project")}>פרויקט</span>
+          <ChipGroup id={fieldId("project")} labelId={labelId("project")} errorId={errId("project")} invalid={invalid("project")}>
             {projectNames.map((name) => {
               const project = projectList.find((p) => p.name === name);
               const id = project?.id ?? name;
@@ -326,8 +332,8 @@ export function AddEntryView(props: AddEntryViewProps) {
         </div>
 
         <div className="ui-add-field">
-          <span className="ui-add-label" id={`${uid}-category-label`}>קטגוריה</span>
-          <ChipGroup id={fieldId("category")} labelId={`${uid}-category-label`} errorId={errId("category")} invalid={invalid("category")}>
+          <span className="ui-add-label" id={labelId("category")}>קטגוריה</span>
+          <ChipGroup id={fieldId("category")} labelId={labelId("category")} errorId={errId("category")} invalid={invalid("category")}>
             {categoryNames.map((name) => {
               const category = categoryList.find((c) => c.name === name);
               const id = category?.id ?? name;
