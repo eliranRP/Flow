@@ -97,7 +97,7 @@ describe("TabBar", () => {
       }
       for (const rule of rules) {
         if (rule instanceof CSSStyleRule && rule.selectorText === '.ui-tab-slot[aria-current="page"] .ui-tab-icon') {
-          background = rule.style.getPropertyValue("background").trim();
+          background = rule.style.getPropertyValue("background-color").trim();
         }
       }
     }

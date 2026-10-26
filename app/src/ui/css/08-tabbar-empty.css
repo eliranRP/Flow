@@ -52,7 +52,7 @@
 }
 
 .ui-tab-slot[aria-current="page"] .ui-tab-icon {
-  background: var(--color-tint-strong);
+  background-color: var(--color-tint-strong);
 }
 
 /* FLOW-363 (3c): a press dims the tab, with no tint behind it. */
