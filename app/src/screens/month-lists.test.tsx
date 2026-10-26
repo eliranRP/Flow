@@ -48,6 +48,18 @@ describe("review list rows (FLOW-365 flat list)", () => {
     expect(amountsOf(container)).toEqual(["+$100", "₪250", "₪50"]);
   });
 
+  it("marks a row with no project with an icon and the warning tone (FLOW-960)", () => {
+    const { container } = wrap(<ReviewAllList
+      rows={[review("a", "2026-08-03", -10_000n, "expense"), { ...review("b", "2026-08-04", -10_000n, "expense"), project_id: "p1" }]}
+      search=""
+      backTo="/review"
+    />);
+    const marks = container.querySelectorAll(".ui-review-all-missing");
+    expect(marks).toHaveLength(1);
+    expect(marks[0]?.textContent).toBe("חסר פרויקט");
+    expect(marks[0]?.querySelector("svg")).not.toBeNull();
+  });
+
   it("shows exact cents on each row", () => {
     const { container } = wrap(<ReviewAllList
       rows={[

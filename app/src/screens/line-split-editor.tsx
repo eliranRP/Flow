@@ -253,6 +253,24 @@ export function LineSplitEditor({
     return true;
   }
 
+  async function approveWhole() {
+    if (busy || wholeProject == null || api.approveWhole == null) return;
+    setSaving(true);
+    try {
+      await api.approveWhole(wholeProject);
+    } catch {
+      setSaving(false);
+      toast.show({ tone: "bad", message: "האישור לא נשמר", action: "ניסיון חוזר", onAction: () => { void approveWhole(); } });
+      return;
+    }
+    setSaving(false);
+    clearLineDraft(draftId);
+    await invalidate(LINE_SPLIT_KEYS);
+    toast.show({ message: "אושר בלי פיצול" });
+    leaving.current = true;
+    goBack(fallback);
+  }
+
   async function leave() {
     if (busy) return;
     if (!dirty) {
@@ -385,6 +403,9 @@ export function LineSplitEditor({
   const restShown: bigint | null = restMinor == null ? null : restMinor < 0n ? 0n : restMinor;
   const splitShown: bigint | null = check.overMinor > 0n ? lineMinor + check.overMinor : splitMinor;
   const fillPercent = check.overMinor > 0n ? 100 : splitShown != null && lineMinor > 0n ? Math.min(100, Number((splitShown * 10_000n) / lineMinor) / 100) : 0;
+  // A shared expense in לאישור with no part yet is approved whole, on the rest's project (owner, 2026-10-26).
+  const wholeProject = rest.projectId ?? line.projectId;
+  const offerWhole = line.sharedReview === true && parts.length === 0 && api.approveWhole != null;
   // The board counts the rest as a part only once a part exists; an empty split reads "שמירה".
   const saveCount = parts.length === 0 ? 0 : parts.length + (restShown != null && restShown > 0n ? 1 : 0);
 
@@ -682,9 +703,18 @@ export function LineSplitEditor({
               {holdShownOnPart ? <span className="sr-only">{holdText}</span> : holdText}
             </HoldLine>
           ) : null}
-          <Button type="submit" variant="primary" full busy={busy} disabled={busy || invalid || parts.length === 0}>
-            {saveCount > 0 ? `שמירת הפיצול · ${String(saveCount)} חלקים` : "שמירה"}
-          </Button>
+          {offerWhole ? (
+            <>
+              {wholeProject == null ? <p className="ui-lsplit-msg" role="status">בחרו פרויקט לשאר, או הוסיפו חלק.</p> : null}
+              <Button type="button" variant="primary" full busy={busy} disabled={busy || wholeProject == null} onClick={() => { void approveWhole(); }}>
+                לאשר בלי פיצול
+              </Button>
+            </>
+          ) : (
+            <Button type="submit" variant="primary" full busy={busy} disabled={busy || invalid || parts.length === 0}>
+              {saveCount > 0 ? `שמירת הפיצול · ${String(saveCount)} חלקים` : "שמירה"}
+            </Button>
+          )}
         </div>
       </form>
       <ChangeAssignment

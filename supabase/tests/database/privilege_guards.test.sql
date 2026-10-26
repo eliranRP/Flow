@@ -225,6 +225,7 @@ insert into pg_allowed (sig) values
     -- FLOW-957: notes and files on a line.
     ('add_transaction_file(uuid,uuid,text,text,text,bigint)'),
     ('add_transaction_note(uuid,text)'),
+    ('approve_shared_whole(uuid,uuid)'),
     ('edit_transaction_note(uuid,text)'),
     ('get_transaction_thread(uuid)'),
     ('mcp_add_transaction_note(text,uuid,text)'),

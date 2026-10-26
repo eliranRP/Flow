@@ -7,9 +7,14 @@ export type ToastInput = {
   tone?: "ok" | "bad" | "info";
   action?: string;
   onAction?: () => void;
-  /** `page` is every confirmation: it sits above the floor, sheet or not (decision 0182). */
-  /** `bar` sits just above the screen's pinned action bar (decision 0137). A confirmation stays there too. */
-  place?: "page" | "bar";
+  /**
+   * `page` is every confirmation: it sits above the floor, sheet or not (decision 0182). `bar` sits just
+   * above the screen's pinned action bar (decision 0137); a confirmation stays there too. `top` sits
+   * under the screen's header, below its `[data-toast-ceiling]` when it marks one (לאישור, decision 0212).
+   */
+  place?: "page" | "bar" | "top";
+  /** FLOW-960: the toast stays until it is acted on or dismissed; no timer ends it. */
+  persist?: boolean;
 };
 
 /** A confirmation, with or without an undo (ביטול), stays 3s. An error or info notice stays 4s, and 5s with an action (ניסיון חוזר, 0180). Hover, focus, and a press pause it. Decisions 0074 and 0182. */
@@ -19,6 +24,7 @@ const BAD_MS = 4000;
 export const SWIPE_PX = 48;
 
 export function toastMs(input: ToastInput): number {
+  if (input.persist === true) return Number.POSITIVE_INFINITY;
   if (input.durationMs) return input.durationMs;
   if (input.tone === "bad" || input.tone === "info") return input.action && input.onAction ? ACTION_MS : BAD_MS;
   return OK_MS;
@@ -67,7 +73,7 @@ function safeAreaPx(name: string): number {
 
 /** The open sheet, if any. A page or bar toast sits on the page, not on a sheet. */
 export function toastAnchor(layer?: HTMLElement | null): { sheet: Element | null } {
-  const onPage = layer?.dataset.place === "page" || layer?.dataset.place === "bar";
+  const onPage = layer?.dataset.place === "page" || layer?.dataset.place === "bar" || layer?.dataset.place === "top";
   return { sheet: onPage ? null : document.querySelector("[data-vaul-drawer][data-state='open']") };
 }
 
@@ -239,6 +245,16 @@ function padSheetUnderToast(sheet: HTMLElement, top: number, height: number, gap
 export function placeToast(layer: HTMLElement): void {
   const toast = layer.querySelector(".ui-toast");
   const height = toast instanceof HTMLElement ? toast.getBoundingClientRect().height : 0;
+  if (layer.dataset.place === "top") {
+    // Decision 0212: under the header (its counter and meter included, when the screen marks them), so
+    // it never covers the card's actions or the bar.
+    const gap = cssPx("--space-2");
+    layer.style.paddingInline = "var(--space-card-inset)";
+    const ceiling = document.querySelector("[data-toast-ceiling]") ?? document.querySelector("header.ui-page");
+    const below = ceiling instanceof Element ? ceiling.getBoundingClientRect().bottom + gap : 0;
+    layer.style.top = `${String(Math.max(safeTopPx() + gap, below))}px`;
+    return;
+  }
   if (layer.dataset.place === "bar") {
     // Decision 0137: just above the bar, near the thumb. It may cover the bottom of the
     // scrolling card, never the bar.

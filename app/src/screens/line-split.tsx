@@ -57,6 +57,7 @@ export function lineInfo(txn: NonNullable<TransactionDetail>, loanSplit = false)
     docDate: txn.doc_date,
     reviewBlocked: splitHeldByReview(txn.review_status, txn.review_reason),
     reviewId: txn.review_status === "open" ? txn.review_id ?? null : null,
+    sharedReview: txn.review_status === "open" && txn.review_reason === "unallocated_shared",
     loanSplit,
     inPnl: txn.in_pnl_override === true,
   };
@@ -76,6 +77,12 @@ export function liveLineSplitApi(transactionId: string): LineSplitApi {
       if (!supabase) throw new Error("supabase");
       // A real save returns parts without percent or rest; the screen re-reads get_line_split.
       assertNoError(await supabase.rpc("save_line_split", { p_transaction_id: transactionId, p_parts: parts }));
+    },
+    // The whole line on one project: it becomes that project's own cost and its shared review closes.
+    approveWhole: async (projectId) => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      assertNoError(await supabase.rpc("approve_shared_whole", { p_transaction_id: transactionId, p_project_id: projectId }));
     },
   };
 }

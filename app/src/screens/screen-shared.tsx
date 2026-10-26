@@ -11,8 +11,8 @@ function blockedPreview(preview: HomePreview, tell: (message: string) => void): 
   return true;
 }
 
-/** `place: "bar"` puts the toast above a screen's pinned action bar (decision 0137). */
-export function useBlockedPreview(place?: "bar"): (mode?: HomePreview) => boolean {
+/** `place: "top"` puts the toast under a screen's header (לאישור, decision 0212). */
+export function useBlockedPreview(place?: "top"): (mode?: HomePreview) => boolean {
   const preview = useHomePreview();
   const toast = useToast();
   return (mode?: HomePreview) => blockedPreview(mode ?? preview, (message) => {

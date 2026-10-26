@@ -26,13 +26,25 @@ export function reviewCountDigits(total: number): number {
   return String(total).length;
 }
 
+/** FLOW-960: the most items the meter draws as segments. */
+const REVIEW_SEGMENTS_MAX = 12;
+
 /**
  * The queue's segmented progress (FLOW-365): one segment per card. Read from the start side, the
  * cards already handled fill with the accent, the card on screen is dim, and the rest stay on the track.
  */
 export function ReviewSegments({ index, total }: { index: number; total: number }) {
+  // FLOW-960: past a dozen items the segments turn to hairlines; one bar reads the same progress.
+  if (total > REVIEW_SEGMENTS_MAX) {
+    const done = Math.max(0, Math.min(total, index - 1));
+    return (
+      <div className="ui-review-segments ui-review-segments-bar" role="meter" aria-label="התקדמות התור" aria-valuemin={0} aria-valuemax={total} aria-valuenow={index} data-toast-ceiling="">
+        <span className="ui-review-bar-fill" style={{ inlineSize: `${String((done / total) * 100)}%` }} />
+      </div>
+    );
+  }
   return (
-    <div className="ui-review-segments" role="meter" aria-label="התקדמות התור" aria-valuemin={0} aria-valuemax={total} aria-valuenow={index}>
+    <div className="ui-review-segments" role="meter" aria-label="התקדמות התור" aria-valuemin={0} aria-valuemax={total} aria-valuenow={index} data-toast-ceiling="">
       {Array.from({ length: total }, (_, slot) => (
         <span
           key={slot}

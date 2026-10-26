@@ -4,12 +4,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
 import { useHomePreview } from "../preview";
-import { useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useLineMetaPageQuery, useLineMetaQuery } from "../use-books";
-import { projectChoices } from "../project-groups";
-import { Picker } from "../ui/change-picker";
+import { useCategoriesQuery, useInvalidateBooks, useLineMetaPageQuery, useLineMetaQuery } from "../use-books";
 import type { ChangeChoice } from "../ui/change-sheet-copy";
-import { Sheet } from "../ui/sheet";
-import { Toggle } from "../ui/toggle";
 import { approveFailure, approveShown } from "../approve-review";
 import { LEDGER_KEYS } from "../ledger-keys";
 import { useHeldOrder } from "../list-hold";
@@ -30,11 +26,13 @@ import { REVIEW_MISMATCH_ID, REVIEW_MISSING_ID, ReviewCard, SPLIT_MISMATCH_ACTIO
 import { ActionBar, ActionBarRow } from "../ui/action-bar";
 import { reviewFlagView, reviewPaidView, reviewWhy } from "../review-copy";
 import { ScreenHeader } from "../ui/screen-header";
+import { cx } from "../ui/cx";
 import { useToast } from "../ui/toast";
 import { isReversal } from "../reversal";
 import { useLineSplitQuery } from "./line-split";
 import { ReviewThreadEntry } from "./review-thread";
 import { invoiceDate, useBlockedPreview } from "./screen-shared";
+import { ProjectPickSheet } from "./review-pick-sheet";
 import { assignmentPath, listFocusId, ReviewEmpty, reviewE2e, reviewHasParty, reviewIsSplit, reviewLineFocus, reviewListPath, reviewSuggestion } from "./review-shared";
 
 export type ReviewPreviewWrite = {
@@ -91,7 +89,12 @@ export function ReviewQueue({
   const [queueParams] = useSearchParams();
   const fromList = listFocusId(queueParams) != null;
   const toast = useToast();
-  const blocked = useBlockedPreview("bar");
+  // FLOW-960: a failed approve's toast stays until it is acted on (0212), but only while לאישור is on
+  // screen: leaving the queue ends it, so its ניסיון חוזר never acts on a card the owner left.
+  const endPersist = useRef(toast.dismissPersist);
+  endPersist.current = toast.dismissPersist;
+  useEffect(() => () => { endPersist.current(); }, []);
+  const blocked = useBlockedPreview("top");
   const holdWrites = useHoldWrites();
   const invalidate = useInvalidateBooks();
   const kindRows = useCategoriesQuery(!sample && preview === "off" && previewWrite == null).data;
@@ -197,7 +200,9 @@ export function ReviewQueue({
   // The card leaves the queue at once; a failure puts it back (decision 0180).
   const approve = useWrite<ReviewRow>({
     failure: (error) => (previewWrite ? changeSaveFailure(error) : approveFailure(error)),
-    place: "bar",
+    // Decision 0212: under the header; a failed approve stays until ניסיון חוזר or a dismiss.
+    place: "top",
+    persistFailure: true,
     keys: ["review", "dashboard", "unpaid", "project", "project-category", "project-waiting", "filed-today", "txn"],
     optimistic: (target) => (previewWrite ? [] : [{
       key: ["review", preview],
@@ -246,7 +251,8 @@ export function ReviewQueue({
         toast.show({
           message: "הפריט אושר",
           action: "ביטול",
-          place: "bar",
+          durationMs: REVIEW_UNDO_MS,
+          place: "top",
           onAction: () => {
             keepToastFocus();
             pinReviewLine(line, { hold: true });
@@ -260,7 +266,7 @@ export function ReviewQueue({
         toast.show({
           message: SAMPLE_TOAST,
           action: "המשך",
-          place: "bar",
+          place: "top",
           onAction: () => {
             void navigate(setupHandoff.fromCard ? "/" : "/setup/5");
           },
@@ -270,7 +276,8 @@ export function ReviewQueue({
       toast.show({
         message: "הפריט אושר",
         action: "ביטול",
-        place: "bar",
+        durationMs: REVIEW_UNDO_MS,
+        place: "top",
         onAction: () => {
           keepToastFocus();
           pinReviewLine(line, { hold: true });
@@ -293,10 +300,13 @@ export function ReviewQueue({
   }
   // FLOW-365: the project picker (a sheet over the card) saves that one field and returns to the card.
   const [pickProject, setPickProject] = useState(openPicker);
+  // FLOW-960: אישור opened the picker because the card has no project; the sheet says so.
+  const [pickMissing, setPickMissing] = useState(false);
   const [pickQuery, setPickQuery] = useState("");
   const [rememberPick, setRememberPick] = useState(true);
   async function savePickedProject(choice: ChangeChoice) {
     setPickProject(false);
+    setPickMissing(false);
     setPickQuery("");
     const target = shown;
     if (target == null || previewWrite != null) return;
@@ -312,7 +322,7 @@ export function ReviewQueue({
       }));
       await invalidate(["review", "dashboard", "project", "project-waiting", "txn"]);
     } catch {
-      toast.show({ message: "לא הצלחנו לשמור.", tone: "bad", place: "bar" });
+      toast.show({ message: "לא הצלחנו לשמור.", tone: "bad", place: "top" });
     }
   }
   // FLOW-333 C8: the part count, read for a split_mismatch card only.
@@ -424,12 +434,13 @@ export function ReviewQueue({
   const nextPick = settled ? (needProject ? "project" : needCategory ? "category" : null) : null;
   const approvable = settled && nextPick == null && (view.reason === "unallocated_shared"
     || (splitCard ? view.category_id != null : view.project_id != null && view.category_id != null));
-  // FLOW-365: אישור always reads אישור; a card with no project is disabled, and its line says why.
+  // FLOW-365: אישור always reads אישור. FLOW-960: it is never a dead button; with a field missing a tap
+  // opens that field's picker, and the line under the bar says so.
   const approveLabel = "אישור";
   const barHint = nextPick === "project" && !splitCard
-    ? "בחרו פרויקט כדי לאשר"
+    ? "חסר פרויקט · אישור יפתח את הבחירה"
     : nextPick === "category"
-      ? "בחרו קטגוריה כדי לאשר"
+      ? "חסר קטגוריה · אישור יפתח את הבחירה"
       : splitCard
         ? "אישור שומר את הפיצול: כל חלק נספר בפרויקט ובקטגוריה שלו"
         : "שינוי של פרויקט או קטגוריה נשמר כחוק לספק";
@@ -454,6 +465,7 @@ export function ReviewQueue({
   function runApprove() {
     if (approving.current === current.id || !settled) return;
     if (nextPick === "project") {
+      setPickMissing(true);
       openProject();
       return;
     }
@@ -519,7 +531,8 @@ export function ReviewQueue({
         <>
           {/* FLOW-507: a viewer doesn't work through the queue, so no visit meter. */}
           {/* FLOW-365: the counter line ("פריט i מתוך n" and the auto count) sits above the visit bar. */}
-          <div className="ui-review-counts">
+          {/* Decision 0212: with no meter under it, the counter row is where the toast hangs. */}
+          <div className="ui-review-counts" data-toast-ceiling={listPlace == null && !holdWrites ? undefined : ""}>
             {holdWrites ? (
               <span className="t-caption t-muted ui-review-counter">
                 <ReviewCount value={total} digits={reviewCountDigits(total)} side="total" />
@@ -570,7 +583,7 @@ export function ReviewQueue({
           missingBoth={missingBoth}
           jevFilled={jevFilled}
         />
-        <ReviewThreadEntry transactionId={card.transaction_id} holdWrites={holdWrites} approveDisabled={!settled || nextPick != null || !approvable} onApprove={runApprove} />
+        <ReviewThreadEntry transactionId={card.transaction_id} holdWrites={holdWrites} approveDisabled={!settled} onApprove={runApprove} />
       </div>
       {pickProject ? (
         <ProjectPickSheet
@@ -581,8 +594,10 @@ export function ReviewQueue({
           supplier={current.supplier_name ?? current.description}
           remember={rememberPick}
           onRemember={setRememberPick}
+          missing={pickMissing}
           onClose={() => {
             setPickProject(false);
+            setPickMissing(false);
             setPickQuery("");
           }}
           onPick={(choice) => { void savePickedProject(choice); }}
@@ -633,9 +648,9 @@ export function ReviewQueue({
               <div className="ui-review-approve" ref={approveSlot}>
                 <Button
                   full
-                  disabled={!settled || nextPick != null || !approvable}
+                  disabled={!settled}
                   icon={<CheckIcon />}
-                  aria-describedby={missingBoth ? REVIEW_MISSING_ID : undefined}
+                  aria-describedby={missingBoth ? `${REVIEW_MISSING_ID} ${REVIEW_BAR_HINT_ID}` : REVIEW_BAR_HINT_ID}
                   onClick={runApprove}
                 >
                   {approveLabel}
@@ -644,7 +659,7 @@ export function ReviewQueue({
               <Button variant="secondary" to={change}>שינוי</Button>
               {skipButton}
             </div>
-            <p className="t-caption t-muted ui-review-bar-hint">{barHint}</p>
+            <p id={REVIEW_BAR_HINT_ID} className={cx("t-caption ui-review-bar-hint", nextPick == null ? "t-muted" : "ui-review-bar-hint-missing")}>{barHint}</p>
           </>
         )}
       </ActionBar>
@@ -694,7 +709,7 @@ const META_AHEAD = 50;
 async function reopenReview(
   id: string,
   invalidate: (keys: string[]) => Promise<void>,
-  toast: { show: (input: { message: string; tone?: "ok" | "bad"; action?: string; onAction?: () => void; place?: "bar" }) => void },
+  toast: { show: (input: { message: string; tone?: "ok" | "bad"; action?: string; onAction?: () => void; place?: "top" }) => void },
   done = "הפריט חזר לתור, והשיוך הקודם שוחזר.",
   /** ביטול's held line (review-pin.ts): a failed reopen drops the hold, ניסיון חוזר sets it again. */
   undo?: { line: string | null; failed: (line: string | null) => void; settled?: (line: string | null) => void },
@@ -705,11 +720,11 @@ async function reopenReview(
     assertNoError(await supabase.rpc("reopen_review", { p_id: id }));
     await invalidate(["review", "dashboard", "project", "project-category", "project-waiting", "filed-today", "txn"]);
     undo?.settled?.(undo.line);
-    toast.show({ message: done, place: "bar" });
+    toast.show({ message: done, place: "top" });
   } catch {
     undo?.failed(undo.line);
     toast.show({
-      place: "bar",
+      place: "top",
       tone: "bad",
       message: "לא הצלחנו לבטל.",
       action: "ניסיון חוזר",
@@ -721,60 +736,8 @@ async function reopenReview(
   }
 }
 
-/**
- * FLOW-365: the project picker sheet over the card. It reads the books only while it is open. A pick
- * saves that one field (the caller) and the sheet closes; "לזכור לספק" is on by default.
- */
-function ProjectPickSheet({
-  query,
-  onQuery,
-  selectedId,
-  suggestionId,
-  supplier,
-  remember,
-  onRemember,
-  onClose,
-  onPick,
-  onCreate,
-}: {
-  query: string;
-  onQuery: (value: string) => void;
-  selectedId: string;
-  suggestionId: string;
-  supplier: string;
-  remember: boolean;
-  onRemember: (value: boolean) => void;
-  onClose: () => void;
-  onPick: (choice: ChangeChoice) => void;
-  onCreate: () => void;
-}) {
-  const dashboard = useDashboardQuery(true);
-  const samplePreview = useHomePreview() !== "off" && reviewE2e != null;
-  const projectOptions = useMemo(
-    () => (samplePreview && reviewE2e != null ? reviewE2e.e2eProjectChoices : projectChoices(dashboard.data)),
-    [dashboard.data, samplePreview],
-  );
-  return (
-    <Sheet open onOpenChange={(open) => { if (!open) onClose(); }} title="בחירת פרויקט" panelClassName="ui-review-pick">
-      <Picker
-        kind="project"
-        heading="פרויקטים פעילים"
-        searchable
-        query={query}
-        onQuery={onQuery}
-        loading={!samplePreview && dashboard.isPending}
-        listed={projectOptions}
-        selectedId={selectedId}
-        suggestionId={suggestionId}
-        savingId={null}
-        onSelect={(id) => {
-          const choice = projectOptions.find((option) => option.id === id);
-          if (choice) onPick(choice);
-        }}
-        onCreate={onCreate}
-        splitLink={false}
-      />
-      <Toggle label={`לזכור לספק ${supplier}`} checked={remember} onChange={onRemember} />
-    </Sheet>
-  );
-}
+/** FLOW-960: the line under the bar, which אישור points at. */
+const REVIEW_BAR_HINT_ID = "review-bar-hint";
+
+/** Decision 0212: the approve undo stays 5s on לאישור (3s elsewhere, 0182). */
+const REVIEW_UNDO_MS = 5000;

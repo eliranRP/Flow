@@ -121,9 +121,10 @@ test("the queue opens a shared split, blocks a missing category, and approves th
   await page.getByRole("button", { name: "דלג" }).click();
   // The skipped card leaves with its exit motion; wait for the missing-category card before acting on it.
   await expect(page.getByRole("heading", { name: "ברגי העמק בע״מ" })).toBeVisible();
-  // 0091: a missing category is a muted "לא נבחר" row, and אישור stays held disabled until one is picked.
+  // 0091: a missing category is a "לא נבחר" row. FLOW-960: אישור stays enabled and says a tap opens the picker.
   await expect(page.getByRole("button", { name: "קטגוריה: לא נבחר" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "אישור" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "אישור" })).toBeEnabled();
+  await expect(page.getByText("חסר קטגוריה · אישור יפתח את הבחירה")).toBeVisible();
   const held = page.getByRole("button", { name: "קטגוריה: לא נבחר" });
   await expect(held).toBeEnabled();
   await page.getByRole("link", { name: "שינוי" }).click();
@@ -466,8 +467,8 @@ test("a saved split category is not a suggestion and אישור is enabled", asy
   await expect(page.getByRole("heading", { name: "ברגי העמק בע״מ" })).toBeVisible();
   await expect(page.getByText("מפוצל · 2 פרויקטים")).toBeVisible();
   await expect(page.getByText("הצעה")).toHaveCount(0);
-  // 0091: no category yet, so אישור is held disabled; the category row is an enabled button.
-  await expect(page.getByRole("button", { name: "אישור" })).toBeDisabled();
+  // 0091: no category yet. FLOW-960: אישור stays enabled (a tap opens the picker); the category row is a button too.
+  await expect(page.getByRole("button", { name: "אישור" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "קטגוריה: לא נבחר" })).toBeEnabled();
   await page.getByRole("link", { name: "שינוי" }).click();
   await expect(page).toHaveURL(/item=q-bolts/);

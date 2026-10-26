@@ -1370,6 +1370,9 @@ isOneToOne: false
 "approve_review_item":
 { Args: { "p_category_id": string,"p_check_shown"?: boolean,"p_id": string,"p_project_id": string,"p_remember"?: boolean,"p_shown_category_id"?: string,"p_shown_project_id"?: string }; Returns: Json
                            },
+"approve_shared_whole":
+{ Args: { "p_project_id": string,"p_transaction_id": string }; Returns: undefined
+                           },
 "approve_split_review":
 { Args: { "p_id": string }; Returns: undefined
                            } |

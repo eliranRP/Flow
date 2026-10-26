@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(7);
+select plan(12);
 
 select tests.create_supabase_user('ssl_owner', 'ssl-owner@example.com');
 
@@ -67,7 +67,25 @@ select pg_temp.as_service();
 select public.sync_review_queue(pg_temp.id('co'));
 select is(pg_temp.open_reason('shared'), null, 'the sync leaves a split shared line closed');
 
--- 7. Any other open review still blocks the split.
+-- 7-11. With no split, a shared line in review is approved whole on one project.
+select pg_temp.as_service();
+insert into ssl (label, id) values
+  ('whole', tests.fixture_line(pg_temp.id('co'), 'ssl:whole', 3000, 'expense', null,
+    pg_temp.id('repairs'), '2026-09-28', p_source => 'sumit', p_pnl_role => 'shared'));
+select public.sync_review_queue(pg_temp.id('co'));
+select tests.authenticate_as('ssl_owner');
+select throws_ok($$ select public.approve_shared_whole(pg_temp.id('missing'), pg_temp.id('north')) $$,
+  'line is not a shared expense in review', 'only a shared expense in review is approved whole');
+select throws_ok($$ select public.approve_shared_whole(pg_temp.id('whole'), gen_random_uuid()) $$,
+  'project not found', 'the project is one of the company''s');
+select lives_ok($$ select public.approve_shared_whole(pg_temp.id('whole'), pg_temp.id('north')) $$,
+  'the shared line is approved whole on North');
+select is((select row(t.pnl_role::text, t.project_id) from public.transactions t where t.id = pg_temp.id('whole')),
+  row('project'::text, pg_temp.id('north')), 'it is North''s own cost');
+select is((select q.status::text || '/' || q.prior_pnl_role::text from public.review_queue q where q.transaction_id = pg_temp.id('whole')),
+  'changed/shared', 'its review closes as changed and keeps the line''s role before');
+
+-- 12. Any other open review still blocks the split.
 select tests.authenticate_as('ssl_owner');
 select throws_ok(
   $$ select public.save_line_split(pg_temp.id('missing'), jsonb_build_array(
