@@ -145,7 +145,7 @@ export function NoteCard({ note, transactionId, holdWrites }: { note: ThreadNote
               </Button>
             </div>
           </div>
-        ) : note == null ? null : (
+        ) : (
           <p className="ui-thread-body"><bdi dir="auto">{note.body}</bdi></p>
         )}
         {mercuryNoteStatus(note) == null ? null : <span className="ui-thread-meta">{mercuryNoteStatus(note)}</span>}

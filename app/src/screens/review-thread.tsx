@@ -74,7 +74,7 @@ export function BeforeApproveSheet({
     pick(event.target.files);
     event.target.value = "";
   };
-  const draft = { text: changed ? (text ?? "") : "", files };
+  const draft = { text: changed ? text : "", files };
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title="לפני שמאשרים" busy={save.isPending}>
       <div className="ui-before-approve">
