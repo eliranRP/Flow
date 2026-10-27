@@ -121,8 +121,8 @@ insert into lpt_seen values ('shared', pg_temp.leg_ids('shared'));
 delete from public.allocations where transaction_id = pg_temp.id('shared');
 select is(pg_temp.leg_ids('shared'), (select v from lpt_seen where label = 'shared'), 'removing allocations leaves the legs alone');
 select is(
-  (select bool_and(unassigned) from private.pnl_lines_ledger where transaction_id = pg_temp.id('shared')), true,
-  'the shadow shows the shared line unassigned at once');
+  (select bool_and(unassigned) from private.pnl_lines where transaction_id = pg_temp.id('shared')), true,
+  'the P&L over the legs shows the shared line unassigned at once');
 select is(pg_temp.diff_rows(), 0::bigint, 'after an allocation edit the shadow equals the rules');
 
 -- 7. A category rename leaves the legs alone (the bridge account takes the name); a keep-out re-posts.
@@ -183,15 +183,16 @@ select is(
   array['Loan principal', 'Escrow', 'Suspense', 'Loan principal'],
   'kept_out_account routes by loan part (given, or read from the category), else Suspense');
 
--- 12. No client reads the posting rules or the shadow, or runs the diff and posting.
+-- 12. No client reads the posting rules, or runs the diff and posting. Since FLOW-952 the P&L itself
+-- (private.pnl_lines) reads the legs; a member reads it as before, and anon does not.
 select ok(
   not has_table_privilege('authenticated', 'private.pnl_lines_legacy', 'select')
-  and not has_table_privilege('authenticated', 'private.pnl_lines_ledger', 'select')
+  and has_table_privilege('authenticated', 'private.pnl_lines', 'select')
   and not has_function_privilege('authenticated', 'private.ledger_pnl_diff(uuid)', 'execute')
   and not has_function_privilege('authenticated', 'private.rebuild_legs_many(uuid,uuid[])', 'execute')
   and not has_function_privilege('authenticated', 'private.kept_out_account(uuid,uuid,public.loan_split_part)', 'execute')
-  and not has_table_privilege('anon', 'private.pnl_lines_ledger', 'select'),
-  'the posting rules, the shadow, the diff and posting are closed to clients');
+  and not has_table_privilege('anon', 'private.pnl_lines', 'select'),
+  'the posting rules, the diff and posting are closed to clients; the P&L over the legs is read as before');
 
 select finish();
 rollback;

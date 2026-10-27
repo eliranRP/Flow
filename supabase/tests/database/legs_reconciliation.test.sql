@@ -6,7 +6,7 @@
 -- migration's triggers (we never call rebuild_legs here), so this also proves the maintenance
 -- path. Invented data only. USD amounts are cents, ILS amounts are agorot.
 -- FLOW-951 (decision 0209) adds the mutation matrix at the end: after each legacy writer, the shadow
--- P&L over the legs (private.pnl_lines_ledger) equals the posting rules (private.pnl_lines_legacy)
+-- P&L over the legs (private.pnl_lines since FLOW-952) equals the posting rules (private.pnl_lines_legacy)
 -- on all 19 pnl_lines columns, kept-out rows included (private.ledger_pnl_diff, both ways).
 
 begin;
@@ -287,8 +287,8 @@ create temp table lr_seen (label text primary key, v text);
 
 select is(pg_temp.diff_rows(), 0::bigint, 'M0 the fixture: the shadow equals the posting rules on all 19 columns');
 select cmp_ok(
-  (select count(*) from private.pnl_lines_ledger where company_id = pg_temp.lid('co') and not in_pnl), '>=', 3::bigint,
-  'M0 kept-out rows are in the shadow too (owner draw, owner funds, principal)');
+  (select count(*) from private.pnl_lines where company_id = pg_temp.lid('co') and not in_pnl), '>=', 3::bigint,
+  'M0 kept-out rows are in the P&L over the legs too (owner draw, owner funds, principal)');
 
 -- M1 category P&L toggle, then the toggle back (what undo of set_category_pnl writes).
 select tests.authenticate_as('lr_owner');
