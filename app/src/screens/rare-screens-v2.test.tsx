@@ -1,17 +1,14 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { LEGAL_DRAFT_LINE, PRIVACY, TERMS, type LegalText } from "../legal-copy";
-
-/** scripts/legal-docs.mjs puts this mark at the top of each lawyer's copy. */
-const DOC_MARK = "טיוטה לעורך דין — לא לפרסום כטקסט סופי";
+import { PRIVACY, TERMS } from "../legal-copy";
 import type { NotificationPrefs, SubscribeOutcome } from "../push";
 import { renderWithProviders } from "../test-render";
 
 // FLOW-977 (decision 0225): the rare screens' review. חזרה from help and the legal pages, help's
-// sign-in tips, the legal draft (and its copy for the lawyer), and the push question's toast place.
+// sign-in tips, the legal pages (which never show the lawyer's draft), and the push note's place.
 
 let status: "anon" | "authed" = "anon";
 vi.mock("../auth", () => ({ useAuth: () => ({ status, session: null }) }));
@@ -73,17 +70,10 @@ describe("help", () => {
 });
 
 describe("terms and privacy", () => {
-  it.each([["terms", TERMS], ["privacy", PRIVACY]] as const)("%s: the title, the draft line first, then every section", (kind, text) => {
+  it.each([["terms", TERMS], ["privacy", PRIVACY]] as const)("%s: the page title, then the live line in the reading style", (kind, text) => {
     openFresh(`/${kind}`, <LegalScreen kind={kind} />);
     expect(screen.getByRole("heading", { level: 1, name: text.title })).toBeInTheDocument();
-    const note = screen.getByRole("note");
-    expect(note).toHaveTextContent(LEGAL_DRAFT_LINE);
-    const headings = screen.getAllByRole("heading", { level: 2 }).map((node) => node.textContent);
-    expect(headings).toEqual(text.sections.map((section) => section.heading));
-    // The draft line opens the page, before the first section.
-    const [first] = screen.getAllByRole("heading", { level: 2 });
-    expect(first).toBeDefined();
-    if (first != null) expect(note.compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    for (const line of text.paragraphs) expect(screen.getByText(line)).toHaveClass("t-body");
   });
 
   it("חזרה goes to sign-in signed out, and Home signed in", () => {
@@ -91,31 +81,45 @@ describe("terms and privacy", () => {
     fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
     expect(screen.getByText("sign-in page")).toBeInTheDocument();
   });
-
-  it("never names a company detail it does not know: those stay as [ ] for the owner and the lawyer", () => {
-    const all = [...TERMS.sections, ...PRIVACY.sections].flatMap((section) => section.paragraphs).join("\n");
-    expect(all).toContain("[שם החברה]");
-    expect(all).toContain("[דוא״ל ליצירת קשר]");
-    expect(all).not.toMatch(/@\w/);
-  });
 });
 
-describe("the lawyer's copy in docs/legal", () => {
-  function doc(name: string): string {
-    // Vitest runs from app/; a jsdom test's import.meta.url is a served path, not a file.
-    return readFileSync(path.resolve(process.cwd(), "../docs/legal", name), "utf8");
-  }
+describe("the lawyer's draft stays out of the app", () => {
+  // Vitest runs from app/; a jsdom test's import.meta.url is a served path, not a file.
+  const repo = path.resolve(process.cwd(), "..");
+  const drafts = ["terms-draft.md", "privacy-draft.md"].map((name) => readFileSync(path.join(repo, "docs/legal", name), "utf8"));
+  const draftHeadings = drafts.flatMap((body) => body.split("\n").filter((line) => line.startsWith("## ")).map((line) => line.slice(3)));
+  const draftLines = drafts.flatMap((body) => body.split("\n").filter((line) => line.length > 40 && !line.startsWith("#") && !line.startsWith(">") && !line.startsWith("**")));
 
-  it.each([["terms-draft.md", TERMS], ["privacy-draft.md", PRIVACY]] as const)("%s holds the app's text word for word, marked as a draft", (name, text: LegalText) => {
-    const body = doc(name);
-    expect(body).toContain(DOC_MARK);
-    expect(body).toContain(`# ${text.title}`);
-    for (const section of text.sections) {
-      expect(body).toContain(`## ${section.heading}`);
-      for (const line of section.paragraphs) expect(body).toContain(line);
+  it("the drafts exist for the lawyer, marked as drafts with [ ] placeholders", () => {
+    for (const body of drafts) {
+      expect(body).toContain("טיוטה לעורך דין — לא לפרסום כטקסט סופי");
+      expect(body).toContain("[שם החברה]");
     }
-    const docHeadings = body.split("\n").filter((line) => line.startsWith("## ")).map((line) => line.slice(3));
-    expect(docHeadings).toEqual(text.sections.map((section) => section.heading));
+    expect(draftHeadings.length).toBeGreaterThan(10);
+  });
+
+  it.each(["terms", "privacy"] as const)("/%s renders none of the draft", (kind) => {
+    openFresh(`/${kind}`, <LegalScreen kind={kind} />);
+    const page = document.body.textContent ?? "";
+    expect(page).not.toContain("[");
+    expect(page).not.toContain("טיוטה");
+    for (const heading of draftHeadings) expect(screen.queryByRole("heading", { name: heading })).not.toBeInTheDocument();
+  });
+
+  it("no app source file holds the draft's text, so no route or build can render it", () => {
+    function files(dir: string): string[] {
+      return readdirSync(dir).flatMap((name) => {
+        const full = path.join(dir, name);
+        return statSync(full).isDirectory() ? files(full) : /\.(tsx?|css|html|json)$/.test(name) ? [full] : [];
+      });
+    }
+    const self = path.join(repo, "app/src/screens/rare-screens-v2.test.tsx");
+    for (const file of files(path.join(repo, "app/src")).filter((name) => name !== self)) {
+      const source = readFileSync(file, "utf8");
+      expect(source, file).not.toContain("טיוטה לעורך דין");
+      expect(source, file).not.toContain("[שם החברה]");
+      for (const line of draftLines) expect(source.includes(line), `${file} holds a draft line`).toBe(false);
+    }
   });
 });
 

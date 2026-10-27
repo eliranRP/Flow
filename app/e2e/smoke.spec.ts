@@ -81,14 +81,15 @@ test("add is a sheet over Home and transaction detail keeps the tab bar (the boa
   await expect(page.getByRole("navigation", { name: "ניווט ראשי" })).toHaveCount(1);
 });
 
-// FLOW-977 (decision 0225): the legal pages are the lawyer's draft; the draft line comes first, and
-// the body reads at 17px on 1.5. Signed out, חזרה goes to sign-in.
-test("terms and privacy show the draft line first and a readable body", async ({ page }) => {
+// FLOW-977 (decision 0225): the legal pages read at 17px on 1.5 under their own title, and never show
+// the lawyer's draft (it lives only in docs/legal). Signed out, חזרה goes to sign-in.
+test("terms and privacy have a readable body and no draft text", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   for (const [route, title] of [["/terms", "תנאי השימוש"], ["/privacy", "מדיניות הפרטיות"]] as const) {
     await page.goto(route);
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
-    await expect(page.getByRole("note")).toContainText("טיוטה לבדיקה משפטית");
+    await expect(page.locator("main")).not.toContainText("טיוטה");
+    await expect(page.locator("main")).not.toContainText("[");
     const body = page.locator(".ui-legal .t-body").first();
     expect(await body.evaluate((el) => getComputedStyle(el).fontSize)).toBe("17px");
     expect(await body.evaluate((el) => parseFloat(getComputedStyle(el).lineHeight) / parseFloat(getComputedStyle(el).fontSize))).toBeCloseTo(1.5, 2);
