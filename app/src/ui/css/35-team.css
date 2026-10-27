@@ -85,7 +85,8 @@
 }
 
 .ui-team-alone .ui-back-text {
-  font-size: var(--type-btn-2-size);
+  /* FLOW-972: 17px, the type scale's step. */
+  font-size: var(--type-btn-size);
   font-weight: var(--type-btn-2-weight);
 }
 

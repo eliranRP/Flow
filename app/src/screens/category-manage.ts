@@ -11,7 +11,7 @@ import {
   undoMoveFailureText,
 } from "../category-copy";
 import { getSupabase } from "../lib/supabase";
-import { useToast } from "../ui/toast";
+import { useTopToast } from "../ui/top-toast";
 import { assertNoError, useWrite } from "../use-write";
 
 /** FLOW-405 (decision 0144): delete a category with lines and move all its lines, each with a ביטול toast. */
@@ -23,9 +23,10 @@ export type CategoryTarget = { id: string; name: string };
 
 /** delete_category, then a toast with the count and ביטול through restore_category. */
 export function useDeleteCategory(options: { onDeleted?: (target: CategoryTarget) => void } = {}) {
-  const toast = useToast();
+  const toast = useTopToast();
   const deleted = useRef<{ id: string; name: string; lines: number } | null>(null);
   const restore = useWrite<CategoryTarget>({
+    place: "top",
     failure: restoreFailureText,
     success: "הקטגוריה חזרה",
     keys: CATEGORY_WRITE_KEYS,
@@ -36,6 +37,7 @@ export function useDeleteCategory(options: { onDeleted?: (target: CategoryTarget
     },
   });
   const remove = useWrite<CategoryTarget>({
+    place: "top",
     failure: deleteFailureText,
     keys: CATEGORY_WRITE_KEYS,
     onSuccess: (target) => {
@@ -61,9 +63,10 @@ export function useDeleteCategory(options: { onDeleted?: (target: CategoryTarget
 
 /** move_category_lines, then a toast with the count and ביטול through undo_category_move. */
 export function useMoveCategoryLines(options: { onMoved?: () => void } = {}) {
-  const toast = useToast();
+  const toast = useTopToast();
   const moved = useRef<{ moveId: string; lines: number } | null>(null);
   const undo = useWrite<string>({
+    place: "top",
     failure: undoMoveFailureText,
     success: "התנועות חזרו",
     keys: CATEGORY_WRITE_KEYS,
@@ -74,6 +77,7 @@ export function useMoveCategoryLines(options: { onMoved?: () => void } = {}) {
     },
   });
   const move = useWrite<{ from: CategoryTarget; into: CategoryTarget }>({
+    place: "top",
     failure: moveFailureText,
     keys: CATEGORY_WRITE_KEYS,
     onSuccess: ({ from, into }) => {
@@ -99,8 +103,9 @@ export function useMoveCategoryLines(options: { onMoved?: () => void } = {}) {
 
 /** FLOW-404: set_category_rehab, with a ביטול toast that puts back the old setting (null is the default). */
 export function useCategoryRehab() {
-  const toast = useToast();
+  const toast = useTopToast();
   const write = useWrite<{ target: CategoryTarget; rehab: boolean | null; before: boolean | null; undo: boolean; counts: boolean }>({
+    place: "top",
     failure: "לא הצלחנו לעדכן את הקטגוריה.",
     keys: ["categories", "project"],
     onSuccess: (done) => {
@@ -135,8 +140,9 @@ async function renameCategory(id: string, name: string): Promise<void> {
 
 /** rename_category, then a "השם נשמר" toast whose ביטול writes the old name back. */
 export function useRenameCategory(options: { onRenamed?: () => void } = {}) {
-  const toast = useToast();
+  const toast = useTopToast();
   const undo = useWrite<Rename>({
+    place: "top",
     failure: renameCategoryFailureText,
     success: RENAME_CATEGORY_UNDONE,
     keys: CATEGORY_WRITE_KEYS,
@@ -144,6 +150,7 @@ export function useRenameCategory(options: { onRenamed?: () => void } = {}) {
   });
   const saved = useRef<Rename | null>(null);
   const rename = useWrite<Rename>({
+    place: "top",
     failure: renameCategoryFailureText,
     keys: CATEGORY_WRITE_KEYS,
     // Also runs after a retry from the failure toast, so it reads the last payload.

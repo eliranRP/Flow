@@ -150,8 +150,8 @@ export const FormToast: Story = {
   },
 };
 
-/** Decision 0137: on לאישור the toast sits just above the pinned bar, never over it. */
-function AboveBar({ children }: { children: string }) {
+/** Decision 0212: on לאישור the toast sits under the header, clear of the pinned bar. */
+function UnderHeader({ children }: { children: string }) {
   const host = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const node = host.current;
@@ -173,7 +173,7 @@ function AboveBar({ children }: { children: string }) {
           <Button variant="link">דלג</Button>
         </ActionBarRow>
       </ActionBar>
-      <div className="ui-toast-host" data-place="bar" ref={host}>
+      <div className="ui-toast-host" data-place="top" ref={host}>
         <Toast action="ביטול" onAction={() => undefined}>{children}</Toast>
       </div>
       <TabBar />
@@ -181,13 +181,8 @@ function AboveBar({ children }: { children: string }) {
   );
 }
 
-export const PlaceBar: Story = {
-  args: { children: "דילגנו על הפריט", action: "ביטול" },
-  render: () => <AboveBar>דילגנו על הפריט</AboveBar>,
-};
-
 /** FLOW-426: a message in parts wraps only at its "·", never inside a part (the viewer note at 320). */
 export const ViewerNote: Story = {
   args: { children: "צפייה בלבד · שינויים נעשים על ידי בעל העסק", tone: "info" },
-  render: () => <AboveBar>צפייה בלבד · שינויים נעשים על ידי בעל העסק</AboveBar>,
+  render: () => <UnderHeader>צפייה בלבד · שינויים נעשים על ידי בעל העסק</UnderHeader>,
 };

@@ -27,11 +27,11 @@ import { List, ListRow } from "../ui/list-row";
 import { RoleChoice } from "../ui/role-choice";
 import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
-import { useToast } from "../ui/toast";
+import { useTopToast } from "../ui/top-toast";
 import { useWrite } from "../use-write";
 
-/** The team page's toasts sit above its pinned הזמנה bar (decision 0137). */
-const PLACE = "bar" as const;
+/** The team page's toasts sit under its header, like every settings page (decision 0222). */
+const PLACE = "top" as const;
 const KEYS = [TEAM_KEY];
 
 type Invite = { email: string; role: MemberRole };
@@ -85,7 +85,7 @@ export function InviteSheet({
   returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const api = useTeamApi();
-  const toast = useToast();
+  const toast = useTopToast();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<MemberRole>("viewer");
   const [error, setError] = useState<string | undefined>(undefined);
@@ -209,7 +209,7 @@ export function MemberSheet({
   returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const api = useTeamApi();
-  const toast = useToast();
+  const toast = useTopToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const removeRef = useRef<HTMLButtonElement>(null);
   // Keeps the name on screen while the sheet animates out.
@@ -321,7 +321,7 @@ export function PendingInviteSheet({
   returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const api = useTeamApi();
-  const toast = useToast();
+  const toast = useTopToast();
   const shown = useRef<TeamInvite | null>(invite);
   if (invite != null) shown.current = invite;
   const current = shown.current;

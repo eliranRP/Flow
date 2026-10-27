@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { NotificationsScreen, ReviewEmpty } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
-import { ExampleBar } from "../ui/screen-stories-support";
+import { ExampleBar, OfflineStory } from "../ui/screen-stories-support";
 import { NO_PREFS, type DevicePush, type NotificationPrefs, type PushSupport } from "../push";
 import type { PushDevice } from "../push-devices";
 import { SAMPLE_DEVICES, SAMPLE_THIS_TAG } from "../push-devices-sample";
@@ -27,6 +27,14 @@ function Page({ prefs, support, device, devices = [] }: { prefs: NotificationPre
 
 /** FLOW-516: this device on, the test push next to it, the shared switches and two connected devices. */
 export const Settings: Story = { render: () => <Page prefs={evening} support="ok" device="subscribed" devices={SAMPLE_DEVICES} /> };
+/** FLOW-972: offline, the page says its switches wait for the connection; a tap only says so again. */
+export const SettingsOffline: Story = {
+  render: () => (
+    <OfflineStory>
+      <Page prefs={evening} support="ok" device="subscribed" devices={SAMPLE_DEVICES} />
+    </OfflineStory>
+  ),
+};
 /** A switch on and no device connected: the line asks to connect this device. */
 export const SettingsNoDevice: Story = { render: () => <Page prefs={evening} support="ok" device="not-subscribed" /> };
 /** Blocked on an iPhone: the device row points to the iOS Settings app. */

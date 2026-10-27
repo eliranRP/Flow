@@ -7,7 +7,7 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useCategoriesQuery, useDashboardQuery } from "../use-books";
 import { assertNoError, useWrite } from "../use-write";
-import { mergeFailureText, pnlFailureText } from "../category-copy";
+import { CATEGORY_NAME_MAX, categoryNameError, mergeFailureText, pnlFailureText } from "../category-copy";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { EmptyState } from "../ui/empty-state";
@@ -19,10 +19,11 @@ import { ScreenState } from "../ui/screen-state";
 import { SegmentedControl } from "../ui/segmented-control";
 import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
-import { useToast } from "../ui/toast";
+import { useTopToast } from "../ui/top-toast";
 import { CategoryMenuSheet, countsAsRehab } from "./category-sheet";
 import { loanUseLine, useCategoryLoanUses, type LoanCategoryColumns, type LoanLine } from "./category-loan-use";
 import { KEPT_OUT, useBlockedPreview } from "./screen-shared";
+import { SettingsOfflineLine } from "./settings-offline";
 
 /** The three loan categories the server keeps fixed, by `loan_part`, and whether each counts in the P&L (decision 0099). */
 const LOAN_CATEGORY_LINES: Record<string, string> = {
@@ -62,6 +63,22 @@ function categoryMeta(category: ListedCategory, lines: number | undefined, subCo
   if (category.excluded_from_pnl === true) parts.push("לא נספרת ברווח");
   else if (category.kind === "expense" && countsAsRehab(category)) parts.push("נספרת בשיפוץ");
   return parts.length === 0 ? undefined : parts.join(" · ");
+}
+
+export const NEW_CATEGORY_NOTE = "נספרת ברווח. אפשר לשנות אחרי השמירה.";
+export const NEW_CATEGORY_EMPTY = "כתבו שם לקטגוריה";
+export const NEW_CATEGORY_TAKEN = "כבר יש קטגוריה בשם הזה";
+
+/**
+ * FLOW-972: what is wrong with a new category's name, or nothing. A name taken in the same kind says so
+ * as it is typed; an empty or too short name (create_category's 2 characters) says so on the tap
+ * (`tried`), so the button never greys out.
+ */
+export function newCategoryProblem(name: string, rows: readonly CategoryRow[], kind: CategoryRow["kind"], tried: boolean): string | undefined {
+  const clean = name.trim();
+  if (clean === "") return tried ? NEW_CATEGORY_EMPTY : undefined;
+  if (rows.some((row) => row.kind === kind && row.name.trim() === clean)) return NEW_CATEGORY_TAKEN;
+  return tried ? categoryNameError(clean) : undefined;
 }
 
 /**
@@ -181,7 +198,9 @@ export function CategoriesScreen({
   const [hideTarget, setHideTarget] = useState<CategoryRow | null>(null);
   const [mergeOpen, setMergeOpen] = useState(false);
   const [categoryName, setCategoryName] = useState("");
-  const toast = useToast();
+  const [createTried, setCreateTried] = useState(false);
+  const createFieldRef = useRef<HTMLInputElement>(null);
+  const toast = useTopToast();
   // FLOW-322: the category sheet's "הצג תנועות" row opens that category's lines, every period, in search.
   const linesHref = (category: CategoryRow) =>
     `/search${searchFiltersQuery({ ...EMPTY_FILTERS, category: category.id, direction: category.kind }, new URLSearchParams(search))}`;
@@ -189,6 +208,7 @@ export function CategoriesScreen({
   // FLOW-310: ✕ and Escape on the new-category sheet return focus to its link.
   const createOpener = useRef<HTMLButtonElement>(null);
   const pnl = useWrite<PnlChange>({
+    place: "top",
     failure: pnlFailureText,
     keys: ["categories", "dashboard", "project", "project-category"],
     onSuccess: (done) => {
@@ -208,12 +228,14 @@ export function CategoriesScreen({
     },
   });
   const createCategory = useWrite({
+    place: "top",
     failure: (error) => (error.message.includes("already") ? "יש כבר קטגוריה בשם הזה." : "לא הצלחנו ליצור את הקטגוריה."),
     success: "הקטגוריה נשמרה",
     keys: ["categories"],
     onSuccess: () => {
       setCreateOpen(false);
       setCategoryName("");
+      setCreateTried(false);
     },
     run: async () => {
       const supabase = getSupabase();
@@ -225,6 +247,7 @@ export function CategoriesScreen({
   });
   // The row moves to or from the hidden list at once; a failure puts it back (decision 0180).
   const hide = useWrite<CategoryRow>({
+    place: "top",
     failure: "לא הצלחנו לעדכן את הקטגוריה.",
     keys: ["categories"],
     optimistic: (target) => [{
@@ -240,6 +263,7 @@ export function CategoriesScreen({
     },
   });
   const merge = useWrite({
+    place: "top",
     failure: mergeFailureText,
     success: "הקטגוריות מוזגו",
     keys: ["categories", "dashboard"],
@@ -298,6 +322,7 @@ export function CategoriesScreen({
   return (
     <div className="ui-settings-page">
       <ScreenHeader title={title} kicker={kicker} backTo={backTo} subtitle={parent == null ? "איך התנועות מתחלקות ומה נספר ברווח" : lines == null ? undefined : countLine(lines)} />
+      <SettingsOfflineLine />
       {parent != null ? null : (
       <div className="ui-page-pad ui-cat-seg">
         <SegmentedControl
@@ -324,6 +349,7 @@ export function CategoriesScreen({
           buttonRef={createOpener}
           icon={<PlusIcon size={16} stroke={2.2} />}
           onClick={() => {
+            setCreateTried(false);
             setCreateOpen(true);
           }}
           className="ui-btn-link-wrap"
@@ -419,15 +445,30 @@ export function CategoriesScreen({
             full
             busy={createCategory.isPending}
             onClick={() => {
+              // The button stays enabled; a tap with a problem names it under the field (decision 0222).
+              setCreateTried(true);
+              if (newCategoryProblem(categoryName, rows, kind, true) != null) {
+                createFieldRef.current?.focus();
+                return;
+              }
               if (writeBlocked()) return;
               createCategory.mutate();
             }}
           >
-            שמירה
+            יצירת הקטגוריה
           </Button>
         }
       >
-        <TextField label="שם" value={categoryName} hint="נספרת ברווח. אפשר לשנות אחרי השמירה." onChange={(event) => { setCategoryName(event.target.value); }} />
+        <TextField
+          ref={createFieldRef}
+          label="שם"
+          value={categoryName}
+          hint={NEW_CATEGORY_NOTE}
+          error={newCategoryProblem(categoryName, rows, kind, createTried)}
+          maxLength={CATEGORY_NAME_MAX}
+          liveMessage
+          onChange={(event) => { setCategoryName(event.target.value); }}
+        />
       </Sheet>
       <ConfirmSheet
         open={hideTarget != null}

@@ -201,9 +201,18 @@
   padding-block: var(--space-1);
 }
 
+/* FLOW-972: the count line is the 13px caption (the type scale). */
 .ui-cat-list .ui-row-hint {
-  font-size: var(--type-meta-size);
-  line-height: var(--type-meta-line);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+/* FLOW-972: the הוצאות / הכנסות switch: 44px segments (the board's) at 15px, the type scale's step. */
+.ui-cat-seg .ui-seg-btn {
+  block-size: var(--touch-min);
+  min-block-size: var(--touch-min);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
 }
 
 .ui-cat-foot:empty {

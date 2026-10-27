@@ -4,7 +4,7 @@ import { SettingsScreen } from "./flow-screens";
 import { BusinessScreen } from "./business-screen";
 import { StoryRoute } from "../ui/story-route";
 import { ViewerPreview } from "../use-is-viewer";
-import { ExampleBar, pagesBusiness, storyBody } from "../ui/screen-stories-support";
+import { ExampleBar, OfflineStory, pagesBusiness, storyBody } from "../ui/screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -21,6 +21,19 @@ export const SettingsMain: Story = {
     <StoryRoute entry="/settings" tabs>
       <ExampleBar />
       <SettingsScreen sample={{ ...pagesBusiness, teamCount: 3, companyCount: 2, categoryCount: 12, setupLeft: 2 }} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-972: offline, the line under the head says that changes wait for the connection. */
+export const SettingsOffline: Story = {
+  name: "Settings, offline",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <OfflineStory>
+        <SettingsScreen sample={{ ...pagesBusiness, teamCount: 3, companyCount: 2, categoryCount: 12 }} />
+      </OfflineStory>
     </StoryRoute>
   ),
 };

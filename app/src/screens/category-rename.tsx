@@ -69,7 +69,7 @@ export function CategoryRenameSheet({
       returnFocusRef={returnFocusRef}
       action={
         <Button busy={rename.isPending} onClick={submit}>
-          שמירה
+          שמירת השם
         </Button>
       }
     >

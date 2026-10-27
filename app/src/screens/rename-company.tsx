@@ -3,7 +3,7 @@ import { getSupabase } from "../lib/supabase";
 import { Button } from "../ui/button";
 import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
-import { useToast } from "../ui/toast";
+import { useTopToast } from "../ui/top-toast";
 import { assertNoError, useWrite, type WriteFailure } from "../use-write";
 
 /** Same bounds as `private.company_name_problem` (FLOW-602, FLOW-604). */
@@ -83,7 +83,7 @@ export function RenameCompanySheet({
   /** A fixture: draws the sheet as it is while the write runs. */
   sampleSaving?: boolean;
 }) {
-  const toast = useToast();
+  const toast = useTopToast();
   const [name, setName] = useState(currentName);
   const [error, setError] = useState<string | undefined>(undefined);
   const wasOpen = useRef(false);
@@ -98,6 +98,7 @@ export function RenameCompanySheet({
   }, [open, currentName]);
 
   const undo = useWrite<Rename>({
+    place: "top",
     failure: renameFailure,
     success: RENAME_UNDONE,
     keys: ["dashboard"],
@@ -108,6 +109,7 @@ export function RenameCompanySheet({
 
   const saved = useRef<Rename | null>(null);
   const save = useWrite<Rename>({
+    place: "top",
     failure: renameFailure,
     keys: ["dashboard"],
     // Also runs after a retry from the failure toast, so it reads the last payload.
@@ -163,7 +165,7 @@ export function RenameCompanySheet({
       returnFocusRef={returnFocusRef}
       action={
         <Button full busy={saving} disabled={name.trim() === "" || name.trim() === currentName.trim()} onClick={submit}>
-          שמירה
+          שמירת השם
         </Button>
       }
     >

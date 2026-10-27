@@ -56,9 +56,9 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   await page.goto("/e2e/business?preview=1");
   await page.getByRole("button", { name: "שם העסק: בדיקה" }).click();
   const rename = page.getByRole("dialog", { name: "שם העסק" });
-  await expect(rename.getByLabel("שם")).toHaveValue("בדיקה");
-  await rename.getByLabel("שם").fill("בדיקה חדשה");
-  await rename.getByRole("button", { name: "שמירה" }).click();
+  await expect(rename.getByRole("textbox", { name: "השם כפי שיופיע" })).toHaveValue("בדיקה");
+  await rename.getByRole("textbox", { name: "השם כפי שיופיע" }).fill("בדיקה חדשה");
+  await rename.getByRole("button", { name: "שמירת השם" }).click();
   await toast(page, previewToast);
   await rename.getByRole("button", { name: "סגירה" }).click();
   await expect(page.getByRole("button", { name: "שם העסק: בדיקה" })).toBeFocused();
@@ -154,7 +154,8 @@ test("categories filter, hide, merge, and create", async ({ page }) => {
   await expect(page.getByRole("switch", { name: "להסתיר את חומרים" })).toBeVisible();
   await page.getByRole("button", { name: "סגירה" }).click();
   await page.getByRole("button", { name: "קטגוריה חדשה" }).click();
-  await page.getByRole("button", { name: "שמירה" }).click();
+  await page.getByRole("textbox", { name: "שם" }).fill("ציוד");
+  await page.getByRole("button", { name: "יצירת הקטגוריה" }).click();
   await toast(page, previewToast);
 });
 
@@ -170,17 +171,31 @@ test("a category save with no client reports the failure without a retry", async
   });
   await page.goto("/e2e/categories");
   await page.getByRole("button", { name: "קטגוריה חדשה" }).click();
-  await page.getByRole("button", { name: "שמירה" }).click();
+  await page.getByRole("textbox", { name: "שם" }).fill("ציוד");
+  await page.getByRole("button", { name: "יצירת הקטגוריה" }).click();
   const note = page.locator(".ui-toast");
   await expect(note.getByText("לא הצלחנו ליצור את הקטגוריה.")).toBeVisible();
   await expect(note.locator("button", { hasText: "ניסיון חוזר" })).toHaveCount(0);
 });
 
-test("a preview toast stays clear of שמירה in the new-category sheet", async ({ page }) => {
+// FLOW-972: the button never greys out; with no name a tap says so under the field and writes nothing.
+test("an empty new category names the problem under the field", async ({ page }) => {
+  await page.goto("/e2e/categories?preview=1");
+  await page.getByRole("button", { name: "קטגוריה חדשה" }).click();
+  const save = page.getByRole("button", { name: "יצירת הקטגוריה" });
+  await expect(save).toBeEnabled();
+  await save.click();
+  await expect(page.getByText("כתבו שם לקטגוריה")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "שם" })).toBeFocused();
+  await expect(page.locator(".ui-toast")).toHaveCount(0);
+});
+
+test("a preview toast stays clear of יצירת הקטגוריה in the new-category sheet", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 700 });
   await page.goto("/e2e/categories?preview=1");
   await page.getByRole("button", { name: "קטגוריה חדשה" }).click();
-  const save = page.getByRole("button", { name: "שמירה" });
+  await page.getByRole("textbox", { name: "שם" }).fill("ציוד");
+  const save = page.getByRole("button", { name: "יצירת הקטגוריה" });
   await expect(save).toBeVisible();
   await save.click();
   const note = page.locator(".ui-toast");
