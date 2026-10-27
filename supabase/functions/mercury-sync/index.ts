@@ -31,7 +31,8 @@ import { empty, json } from "../_shared/http.ts";
 import { companyHint, ownedCompany, resolveOwnerCompany } from "../_shared/owner.ts";
 import { runWithClaim } from "../_shared/cron_claim.ts";
 import { confirmStored, loadStored, storedExternalIds } from "./stored.ts";
-import { syncMercuryThreadsFor } from "./threads.ts";
+import { THREAD_BUCKET, syncMercuryThreadsFor } from "./threads.ts";
+import { purgeThreadFiles } from "../_shared/thread_purge.ts";
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -53,7 +54,8 @@ class SyncHold extends Error {
 }
 
 /**
- * Mercury sync. The cron header drains Mercury refresh requests only.
+ * Mercury sync. The cron header drains Mercury refresh requests, or with {"kind":"purge-files"}
+ * removes the thread files nothing points at any more (FLOW-978).
  * The connector drain posts this function for Mercury and sumit-sync for SUMIT.
  * sumit-sync is not called from here and is not changed.
  *
@@ -78,6 +80,9 @@ Deno.serve(async (req) => {
     const cron = req.headers.get("x-flow-cron");
     const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
     if (cron && cronSecret && constantTimeEqual(cron, cronSecret)) {
+      // FLOW-978: the hourly flow-thread-files-purge job, not a refresh drain.
+      const job = (await req.json().catch(() => ({}))) as { kind?: string };
+      if (job.kind === "purge-files") return json({ ok: true, ...(await purgeThreadFiles(admin, THREAD_BUCKET)) });
       const due = await admin.rpc("claim_connector_refreshes", { p_limit: 20, p_provider: "mercury" });
       if (due.error) return json({ error: "could not read the refresh queue" }, 500);
       const results = [];

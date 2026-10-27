@@ -2226,6 +2226,9 @@ isOneToOne: false
 "sync_review_queue":
 { Args: { "p_company_id": string }; Returns: number
                            },
+"thread_files_to_purge":
+{ Args: { "p_limit": number }; Returns: Json
+                           },
 "touch_mcp_credential":
 { Args: { "p_id": string }; Returns: undefined
                            },

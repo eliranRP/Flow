@@ -37,3 +37,5 @@ What a company holds, checked in the catalog of a fresh database:
 ## Consequences
 
 A company is deleted only by its owner, in the app. A new table that holds company data needs a foreign key to `companies` with `on delete cascade`, or a line in `delete_company`; the pgTAP test `delete_company.test.sql` sweeps every table in `public` and `private` with a `company_id` and fails when one keeps a row of the deleted company. The flow-mcp tool list does not change, and a token that calls the RPC directly is refused. The delete runs in one statement under `authenticated`'s 8-second statement timeout; a very large company (roughly 80,000 to 100,000 lines) could reach it. That is acceptable at today's sizes, and a follow-up task moves the work out of the request if it happens.
+
+**Amended by [0226](0226-thread-files-retention.md) (2026-10-27, FLOW-978):** the company's files in the `transaction-files` bucket, which came after this decision, are removed through the Storage API within the hour of the delete.
