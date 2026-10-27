@@ -58,13 +58,19 @@ export function MercuryAccountsStep({
   const [choice, setChoice] = useState<FromChoice>(editing ? "today" : initialFrom);
   const [date, setDate] = useState(() => importFromDefault());
   const [sheetOpen, setSheetOpen] = useState(initialFromOpen);
+  // A tap with nothing checked is said aloud too: the button's label says it, but a label change is not announced.
+  const [emptyTap, setEmptyTap] = useState(false);
   const on = (id: string) => selected.includes(id);
-  const toggle = (id: string) => { setSelected((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id])); };
+  const toggle = (id: string) => {
+    setEmptyTap(false);
+    setSelected((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  };
   const all = selected.length === accounts.length;
   const added = editing ? selected.filter((id) => !connection.synced.includes(id)) : selected;
   const showFrom = !editing || added.length > 0;
   const row = fromRow(choice, date);
   const save = () => {
+    if (selected.length === 0) setEmptyTap(true);
     if (busy || selected.length === 0) return;
     onSave({ accounts: selected, from: showFrom ? fromValue(choice, date) : null });
   };
@@ -118,9 +124,11 @@ export function MercuryAccountsStep({
         </button>
       ) : null}
       <ConnectionNote>{ACCOUNTS_NOTE}</ConnectionNote>
-      <Button busy={busy} disabled={selected.length === 0} onClick={save}>
+      {/* Never greyed out (decision 0223): with nothing checked the label says what is missing and a tap does nothing. */}
+      <Button busy={busy} onClick={save}>
         {busy ? "שומר…" : syncButtonLabel(selected.length, editing)}
       </Button>
+      <span className="sr-only" role="status">{emptyTap && selected.length === 0 ? "בחרו לפחות חשבון אחד" : ""}</span>
       <Button variant="link" onClick={onBack}>{editing ? "ביטול" : "חזרה למפתח"}</Button>
       <MercuryFromSheet
         open={sheetOpen}

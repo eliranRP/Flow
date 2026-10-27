@@ -16,7 +16,11 @@ test("step 3: checking, savings and the card start checked, treasury does not; t
   await expect(page.getByRole("button", { name: "סנכרון 3 חשבונות" })).toBeEnabled();
   await page.getByRole("button", { name: "בחירת כולם" }).click();
   await page.getByRole("button", { name: "ניקוי הבחירה" }).click();
-  await expect(page.getByRole("button", { name: "בחרו לפחות חשבון אחד" })).toBeDisabled();
+  // FLOW-975: never greyed out (decision 0223); with nothing checked the label says what is missing and a tap stays here.
+  const none = page.getByRole("button", { name: "בחרו לפחות חשבון אחד" });
+  await expect(none).toBeEnabled();
+  await none.click();
+  await expect(page.getByRole("checkbox", { name: /Payroll/ })).toBeVisible();
 });
 
 test("step 3 then the connected page: the synced accounts row says 4 מתוך 5", async ({ page }) => {
@@ -64,6 +68,26 @@ test("two connections open on their list; a row opens one with its way back", as
   await expect(page.getByRole("button", { name: "ניתוק החיבור הזה" })).toBeVisible();
   await page.getByRole("button", { name: "כל חיבורי Mercury" }).click();
   await expect(page.getByText("חיבורים ל־Mercury · 2")).toBeVisible();
+});
+
+test("ניתוק happens at once with ביטול, and ביטול brings the connection back (FLOW-975)", async ({ page }) => {
+  await page.goto("/e2e/connections/mercury?state=multi");
+  await page.getByRole("link", { name: /Cedar Lane Holdings LLC/ }).click();
+  await page.getByRole("button", { name: "ניתוק החיבור הזה" }).click();
+  // No confirm (decision 0223): the page goes back to the one connection left, and the toast offers ביטול.
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByText("Mercury נותק. מה שכבר נכנס נשמר")).toBeVisible();
+  await expect(page.getByText("חיבורים ל־Mercury · 2")).toHaveCount(0);
+  await page.locator(".ui-toast").getByRole("button", { name: "ביטול" }).click();
+  await expect(page.getByText("חיבורים ל־Mercury · 2")).toBeVisible();
+});
+
+test("the key's הצגה toggle is a 44px target, and a tap on חיבור with no key says what is missing (FLOW-975)", async ({ page }) => {
+  await page.goto("/e2e/connections/mercury?state=new");
+  const toggle = page.getByRole("button", { name: "הצגה" });
+  expect((await toggle.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+  await page.getByRole("button", { name: "חיבור", exact: true }).click();
+  await expect(page.getByText("צריך את המפתח המלא, לפחות 8 תווים")).toBeVisible();
 });
 
 test("חיבורים says 2 חיבורים on the Mercury row with two connections", async ({ page }) => {
