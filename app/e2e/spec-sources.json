@@ -199,6 +199,10 @@
       "use-company-profit.ts",
       "screens/cash-lines-screen.tsx"
     ],
+    "unshare-line.spec.ts": [
+      "screens/company-profit-screen.tsx",
+      "use-company-profit.ts"
+    ],
     "loan-part-category.spec.ts": [
       "screens/company-profit-screen.tsx",
       "screens/profit-categories.tsx",
