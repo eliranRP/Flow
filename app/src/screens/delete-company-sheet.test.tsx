@@ -130,7 +130,9 @@ describe("DeleteCompanySheet (decision 0194)", () => {
     expect(calls).toEqual([{ name: "delete_company", args: { p_company_id: "company-1", p_confirm: NAME } }]);
     expect(client.getQueryData(["dashboard"])).toBeUndefined();
     expect(await screen.findByText(DELETE_DONE)).toBeInTheDocument();
-    expect(screen.getByText("welcome")).toBeInTheDocument();
+    // The data router renders a navigation in a transition: router.state moves at once, the page
+    // after it, and the toast can show first under load (FLOW-981).
+    expect(await screen.findByText("welcome")).toBeInTheDocument();
   });
 
   it("toasts a refusal for a user who is not the owner and stays open", async () => {
