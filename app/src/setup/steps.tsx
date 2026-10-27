@@ -1,4 +1,4 @@
-import { useId, useState, type SubmitEvent } from "react";
+import { useEffect, useRef, useState, type SubmitEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatMoney } from "@flow/shared";
 import { getSupabase } from "../lib/supabase";
@@ -19,7 +19,7 @@ import { Toggle } from "../ui/toggle";
 import { useMercuryConnect } from "../use-mercury-connect";
 import { useSumitConnect } from "../use-sumit-connect";
 import { assertNoError } from "../use-write";
-import { answerPushPrompt, PUSH_PREFS_KEY, pushSupport, subscribeThisDevice, type NotificationPrefs, type SubscribeOutcome } from "../push";
+import { pushSupport, subscribeThisDevice, useRecordPushAnswer, type SubscribeOutcome } from "../push";
 import { subscribeDiagnostic, subscribeFailure } from "../screens/push-copy";
 import { type ConnectKind, openConnection } from "./connect-entry";
 import {
@@ -351,7 +351,6 @@ export function StepProjects({
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
   const [nameNote, setNameNote] = useState<string | null>(null);
-  const noteId = useId();
   const suggestions = useSetupSuggestions(companyId, bankConnected);
   const taken = (name: string) => chips.includes(name) || existingNames.includes(name);
   const trimmed = draft.trim();
@@ -396,8 +395,10 @@ export function StepProjects({
         onSubmit={(event) => {
           event.preventDefault();
           const problem = projectNameProblem(trimmed, taken);
-          setNameNote(problem);
+          // Cleared first, so the same note on a second tap is announced again.
+          setNameNote(null);
           if (problem == null) add(trimmed);
+          else requestAnimationFrame(() => { setNameNote(problem); });
         }}
       >
         <div className="ui-onb-add-field">
@@ -405,14 +406,13 @@ export function StepProjects({
             label={PROJECT_PLACEHOLDER}
             placeholder={PROJECT_PLACEHOLDER}
             value={draft}
-            aria-invalid={nameNote == null ? undefined : true}
-            aria-describedby={nameNote == null ? undefined : noteId}
+            error={nameNote ?? undefined}
+            liveMessage
             onChange={(event) => { setDraft(event.target.value); setNameNote(null); }}
           />
         </div>
         <Button type="submit" variant="secondary">{PROJECT_ADD}</Button>
       </form>
-      {nameNote == null ? null : <p id={noteId} className="ui-setup-error" role="alert">{nameNote}</p>}
       {chips.length > 0 ? (
         <div className="ui-onb-chips">
           {chips.map((name) => (
@@ -568,7 +568,7 @@ function focusSampleApprove() {
   const approve = document.querySelector<HTMLButtonElement>(".ui-sample .ui-btn");
   if (!approve) return;
   approve.focus({ preventScroll: true });
-  if (typeof approve.scrollIntoView === "function") approve.scrollIntoView({ block: "center", behavior: "smooth" });
+  if (typeof approve.scrollIntoView === "function") approve.scrollIntoView({ block: "center" });
 }
 
 /** Step 6 · אישור ראשון. The sample writes nothing: approving only stamps sample_review_at in the setup store. */
@@ -581,6 +581,11 @@ export function StepReview({
   onBack,
 }: StepProps & { approved: boolean }) {
   const [done, setDone] = useState(approved);
+  const bottom = useRef<HTMLButtonElement>(null);
+  const [justApproved, setJustApproved] = useState(false);
+  useEffect(() => {
+    if (justApproved) bottom.current?.focus();
+  }, [justApproved]);
   return (
     <OnboardingFrame
       step={6}
@@ -589,11 +594,15 @@ export function StepReview({
       onBack={onBack}
       onSkipAll={onSkipAll}
       primary={
-        done ? (
-          <Button type="button" full onClick={() => { onDone(); }}>{NEXT}</Button>
-        ) : (
-          <Button type="button" variant="secondary" full onClick={focusSampleApprove}>{REVIEW_BEFORE}</Button>
-        )
+        <Button
+          type="button"
+          full
+          buttonRef={bottom}
+          variant={done ? "primary" : "secondary"}
+          onClick={() => { if (done) onDone(); else focusSampleApprove(); }}
+        >
+          {done ? NEXT : REVIEW_BEFORE}
+        </Button>
       }
       secondary={<Button type="button" variant="link" full onClick={onSkipStep}>{SKIP_STEP}</Button>}
     >
@@ -601,26 +610,13 @@ export function StepReview({
         approved={done}
         onApprove={() => {
           setDone(true);
+          setJustApproved(true);
           onStamp({ sample_review_at: nowIso() });
         }}
       />
       <p className="t-caption t-muted ui-onb-note">{REVIEW_SAMPLE_NOTE}</p>
     </OnboardingFrame>
   );
-}
-
-/**
- * One push question (FLOW-976): the step's answer is the review card's asked-once answer, so the card
- * does not ask again. A failed subscribe is not an answer, except a refusal (denied, dismissed).
- */
-function useRecordPushAnswer(): (yes: boolean) => void {
-  const client = useQueryClient();
-  return (yes) => {
-    client.setQueryData<NotificationPrefs>(PUSH_PREFS_KEY, (current) => current && { ...current, prompt_answered: true });
-    void answerPushPrompt(yes)
-      .then((saved) => { client.setQueryData(PUSH_PREFS_KEY, saved); })
-      .catch(() => undefined);
-  };
 }
 
 /**
@@ -638,6 +634,8 @@ export function StepInstall({
   const [notify, setNotify] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pushFailed, setPushFailed] = useState<SubscribeOutcome | null>(null);
+  // One push question (FLOW-976): the step's answer is the review card's asked-once answer. A failed
+  // subscribe is not an answer, except a refusal (denied, dismissed).
   const recordAnswer = useRecordPushAnswer();
   const mode = initialMode ?? detectInstallMode();
   return (

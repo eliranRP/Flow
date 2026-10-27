@@ -7,12 +7,12 @@ import { INSTALL_FINISH } from "./copy";
 // FLOW-516: step 7's notifications switch says what happened when the turn-on stops.
 
 const subscribe = vi.fn<() => Promise<SubscribeOutcome>>();
-const answer = vi.fn<(yes: boolean) => Promise<never>>();
+const answer = vi.fn<(yes: boolean) => void>();
 vi.mock("../push", async (original) => ({
   ...await original<typeof import("../push")>(),
   pushSupport: () => "ok",
   subscribeThisDevice: () => subscribe(),
-  answerPushPrompt: (yes: boolean) => answer(yes),
+  useRecordPushAnswer: () => answer,
 }));
 
 const { StepInstall } = await import("./steps");
@@ -29,7 +29,6 @@ beforeEach(() => {
   subscribe.mockReset();
   onDone.mockReset();
   answer.mockReset();
-  answer.mockRejectedValue(new Error("offline in the test"));
 });
 
 describe("setup step 7 · notifications", () => {

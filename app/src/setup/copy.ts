@@ -102,7 +102,8 @@ export const REVIEW_META = "10/10 · Mercury ••1234 · שורת דוגמה";
 // 7 · מסך הבית
 export const INSTALL_LEAD = "נפתח בהקשה אחת, כמו אפליקציה. מומלץ להציץ פעם ביום על התזרים.";
 export const NOTIFY_LABEL = "התראות";
-export const NOTIFY_HINT = "כשיש מה לאשר, וסיכום ביום ראשון";
+/** FLOW-976: what a yes turns on, as the review card says it (the weekly summary is a separate switch). */
+export const NOTIFY_HINT = "התראה על תנועה חדשה ותזכורת בערב";
 export const INSTALL_FINISH = "סיום";
 export const INSTALL_LATER = "לא עכשיו";
 

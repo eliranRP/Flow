@@ -66,7 +66,8 @@ export const Step3ProjectsNoName: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: PROJECT_ADD }));
-    await expect(await canvas.findByRole("alert")).toHaveTextContent(PROJECT_NAME_EMPTY);
+    await expect(await canvas.findByText(PROJECT_NAME_EMPTY)).toBeVisible();
+    await expect(canvas.getByRole("textbox")).toHaveAttribute("aria-invalid", "true");
   },
 };
 

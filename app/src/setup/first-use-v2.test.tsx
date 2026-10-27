@@ -1,9 +1,9 @@
 import { onlineManager } from "@tanstack/react-query";
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SIGN_IN_OFFLINE, SIGN_IN_RETRY, SignInScreen } from "../screens/SignInScreen";
 import { renderWithProviders } from "../test-render";
-import { PROJECT_ADD, PROJECT_NAME_EMPTY, PROJECT_NAME_SHORT, PROJECT_NAME_TAKEN, REVIEW_APPROVE, REVIEW_BEFORE } from "./copy";
+import { NEXT, PROJECT_ADD, PROJECT_NAME_EMPTY, PROJECT_NAME_SHORT, PROJECT_NAME_TAKEN, REVIEW_APPROVE, REVIEW_BEFORE } from "./copy";
 import { projectNameProblem, StepProjects, StepReview } from "./steps";
 
 // FLOW-976: First use v2. Sign-in says it is offline before the tap and keeps its help in the error;
@@ -37,6 +37,17 @@ describe("sign-in v2", () => {
     expect(screen.getByRole("heading", { name: "כניסה או הרשמה" })).toHaveClass("t-title");
   });
 
+  it("says it is offline when the page opens with no connection", () => {
+    // React Query starts out online; the browser's flag is what knows.
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    renderWithProviders(<SignInScreen />, { route: "/sign-in" });
+    expect(screen.getByText(`אין חיבור · ${SIGN_IN_OFFLINE}`)).toBeInTheDocument();
+    expect(screen.queryByText("מתחבר מחדש…")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "המשך עם Google" }));
+    expect(screen.getByText("לא הצלחנו להתחבר")).toBeInTheDocument();
+    onLine.mockRestore();
+  });
+
   it("offline, a tap stays on the page and shows the failure with the retry", () => {
     onlineManager.setOnline(false);
     renderWithProviders(<SignInScreen />, { route: "/sign-in" });
@@ -55,22 +66,28 @@ describe("setup v2", () => {
     expect(projectNameProblem("Cedar St", taken)).toBeNull();
   });
 
-  it("keeps הוספה enabled and puts the note under the field", () => {
+  it("keeps הוספה enabled and puts the note in the field's own error line", async () => {
     renderWithProviders(<StepProjects {...step} companyId={null} bankConnected={false} existingNames={["Oak Ridge"]} />, { route: "/setup/3" });
     const add = screen.getByRole("button", { name: PROJECT_ADD });
     expect(add).toBeEnabled();
     fireEvent.click(add);
-    expect(screen.getByRole("alert")).toHaveTextContent(PROJECT_NAME_EMPTY);
+    const note = await screen.findByText(PROJECT_NAME_EMPTY);
+    expect(note).toHaveAttribute("aria-live", "polite");
     const field = screen.getByRole("textbox");
     expect(field).toHaveAttribute("aria-invalid", "true");
-    fireEvent.change(field, { target: { value: "Oak Ridge" } });
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(field).toHaveAttribute("aria-describedby", note.id);
+    // A second tap clears the note and sets it again, so it is announced again.
     fireEvent.click(add);
-    expect(screen.getByRole("alert")).toHaveTextContent(PROJECT_NAME_TAKEN);
+    expect(screen.queryByText(PROJECT_NAME_EMPTY)).toBeNull();
+    expect(await screen.findByText(PROJECT_NAME_EMPTY)).toBeInTheDocument();
+    fireEvent.change(field, { target: { value: "Oak Ridge" } });
+    expect(screen.queryByText(PROJECT_NAME_EMPTY)).toBeNull();
+    fireEvent.click(add);
+    expect(await screen.findByText(PROJECT_NAME_TAKEN)).toBeInTheDocument();
     fireEvent.change(field, { target: { value: "Cedar St" } });
     fireEvent.click(add);
-    expect(screen.queryByRole("alert")).toBeNull();
-    expect(screen.getByText("Cedar St")).toBeInTheDocument();
+    await waitFor(() => { expect(screen.getByText("Cedar St")).toBeInTheDocument(); });
+    expect(field).not.toHaveAttribute("aria-invalid");
   });
 
   it("step 6's bottom button is never greyed out and takes focus to אישור", () => {
@@ -78,6 +95,10 @@ describe("setup v2", () => {
     const before = screen.getByRole("button", { name: REVIEW_BEFORE });
     expect(before).toBeEnabled();
     fireEvent.click(before);
-    expect(screen.getByRole("button", { name: REVIEW_APPROVE })).toHaveFocus();
+    const approve = screen.getByRole("button", { name: REVIEW_APPROVE });
+    expect(approve).toHaveFocus();
+    // The sample's אישור goes away on the tap; focus moves to the bottom המשך, not the page.
+    fireEvent.click(approve);
+    expect(screen.getByRole("button", { name: NEXT })).toHaveFocus();
   });
 });

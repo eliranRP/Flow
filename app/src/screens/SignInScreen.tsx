@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import { Notice } from "../ui/banner";
@@ -17,6 +17,24 @@ export const SIGN_IN_OFFLINE = "הכניסה תעבוד כשהחיבור יחז�
 /** After a failed sign-in the button names the retry. */
 export const SIGN_IN_RETRY = "ניסיון חוזר עם Google";
 
+/**
+ * The browser's own online flag, kept current. React Query's starts out online, so a page opened while
+ * already offline would show nothing; sign-in reads both.
+ */
+function useBrowserOnline(): boolean {
+  return useSyncExternalStore(
+    (notify) => {
+      window.addEventListener("online", notify);
+      window.addEventListener("offline", notify);
+      return () => {
+        window.removeEventListener("online", notify);
+        window.removeEventListener("offline", notify);
+      };
+    },
+    () => navigator.onLine,
+  );
+}
+
 function noticeFromQuery(params: URLSearchParams): Notice {
   const error = params.get("error");
   if (!error) return null;
@@ -31,7 +49,9 @@ export function SignInScreen() {
   const [localNotice, setLocalNotice] = useState<Notice>(null);
   const notice = localNotice ?? noticeFromQuery(params);
   const ready = getSupabase() != null;
-  const online = useOnline();
+  const queryOnline = useOnline();
+  const browserOnline = useBrowserOnline();
+  const online = queryOnline && browserOnline;
 
   useEffect(() => {
     function onPageShow(event: PageTransitionEvent) {
@@ -80,7 +100,7 @@ export function SignInScreen() {
       </SignInBrand>
 
       <SignInPanel>
-        {online ? null : <BandOfflineLine onPage words={SIGN_IN_OFFLINE} />}
+        {online ? null : <BandOfflineLine onPage retrying={false} words={SIGN_IN_OFFLINE} />}
         {ready ? null : (
           <Notice title="הגדרת השרת אינה תקינה" body="הכתובת או המפתח הציבורי אינם תקינים, ולכן אי אפשר להתחבר." tone="bad" />
         )}

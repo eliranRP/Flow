@@ -5,9 +5,9 @@
 
 - [x] Step 6's button is never greyed out: before the sample is approved it is a neutral button that says "אשרו את השורה למעלה" and takes focus to אישור.
 - [x] "+ פרויקט" is never greyed out; a tap with no name, a short one or a taken one says why under the field.
-- [x] A skipped row's "—" on the done screen reaches 4.5:1.
+- [x] A skipped row's "—" on the done screen reaches 4.5:1 on the card.
 - [x] "הקודם" and "דילוג על הכל" are 44px.
-- [x] Field placeholders reach 4.5:1 (the field edges are 3:1 since FLOW-972).
+- [x] Field placeholders reach 4.5:1 on the field's own raised fill and on the surface, light and dark (`--color-placeholder`); the field edges are 3:1 since FLOW-972.
 - [x] Sign-in: the help link sits inside the error, and the button then reads "ניסיון חוזר עם Google".
 - [x] Sign-in: offline says so before the tap ("אין חיבור · הכניסה תעבוד כשהחיבור יחזור", the shared offline line).
 - [x] Sign-in: the heading is 32px; the legal links keep their 44px targets.

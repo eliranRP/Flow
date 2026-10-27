@@ -56,6 +56,8 @@ test("sign-in says it is offline before the tap, and keeps its help in the error
   await context.setOffline(true);
   const offline = page.getByText("אין חיבור · הכניסה תעבוד כשהחיבור יחזור");
   await expect(offline).toBeVisible();
+  // Nothing on sign-in retries by itself, so the line does not say it is reconnecting.
+  await expect(page.getByText("מתחבר מחדש…")).toHaveCount(0);
   await context.setOffline(false);
   await expect(offline).toHaveCount(0);
 });
@@ -74,5 +76,6 @@ test("setup's buttons are never greyed out and say why a tap did nothing", async
   const add = page.getByRole("button", { name: "הוספה", exact: true });
   await expect(add).toBeEnabled();
   await add.click();
-  await expect(page.getByRole("alert")).toHaveText("כתבו שם לפרויקט");
+  await expect(page.getByText("כתבו שם לפרויקט")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: /שם הפרויקט/ })).toHaveAttribute("aria-invalid", "true");
 });

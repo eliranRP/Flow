@@ -221,6 +221,7 @@
   --color-text: #1D1728;
   --color-text-secondary: #5B536E;
   --color-text-muted: #746C88;
+  --color-placeholder: #6E6682; /* FLOW-976: a field's prompt, 4.71:1 on the raised fill, 5.4:1 on white; lighter than secondary text */
   --color-loan-interest: #3D3550; /* FLOW-962: a loan bar's interest part, ink, 11.5:1 on white; dark #D9D2E9 */
   --color-accent: #6C2ED6;
   --color-accent-text: #6C2ED6;
@@ -296,6 +297,7 @@
     --color-text: #F1EDF8;
     --color-text-secondary: #B1A8C4;
     --color-text-muted: #978EAB;
+    --color-placeholder: #978EAB; /* FLOW-976: 5.12:1 on the raised fill, 5.99:1 on the surface */
     --color-loan-interest: #D9D2E9;
     --color-accent: #B894FF;
     --color-accent-text: #C3A5FF;
@@ -374,6 +376,7 @@
   --color-text: #F1EDF8;
   --color-text-secondary: #B1A8C4;
   --color-text-muted: #978EAB;
+  --color-placeholder: #978EAB; /* FLOW-976: 5.12:1 on the raised fill, 5.99:1 on the surface */
   --color-loan-interest: #D9D2E9;
   --color-accent: #B894FF;
   --color-accent-text: #C3A5FF;
