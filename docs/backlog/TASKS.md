@@ -344,6 +344,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-969"></a>[FLOW-969](tasks/FLOW-969.md) | Profit v2: the UX/UI rules review of the profit pages | UI (design approved) |
 | <a id="flow-970"></a>[FLOW-970](tasks/FLOW-970.md) | Forecast v2: the UX/UI rules review of תזרים צפוי | UI (design approved) |
 | <a id="flow-971"></a>[FLOW-971](tasks/FLOW-971.md) | Search v2 and Review lists v2: the UX/UI rules review | UI (design approved) |
+| <a id="flow-975"></a>[FLOW-975](tasks/FLOW-975.md) | Connections v2: the UX/UI rules review of Mercury, SUMIT and AI | UI (design approved) |
 | <a id="flow-365"></a>[FLOW-365](tasks/FLOW-365.md) | Redesign: the review queue (לאישור) without a tab | UI (design approved) |
 | <a id="flow-921"></a>[FLOW-921](tasks/FLOW-921.md) | Review queue: a server transfer flag, approve as a transfer, and the document thumbnail | Server + UI |
 | <a id="flow-366"></a>[FLOW-366](tasks/FLOW-366.md) | Redesign: month lines (נכנס / יצא) and the transaction page | UI (design approved) |
