@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { monthForecastBoardSample, monthForecastSample } from "../forecast-sample";
+import { forecastToast } from "../forecast-toast";
 import { shiftMonthKey } from "../period";
 import { renderWithProviders } from "../test-render";
 import { israelToday } from "../ui/date-math";
@@ -43,6 +44,7 @@ describe("ForecastScreen", () => {
     expect(items).toHaveAttribute("tabindex", "0");
     expect(categories).toHaveAttribute("tabindex", "-1");
     // Under dir=rtl the next chip is to the left (with two chips, either arrow reaches the other one).
+    items.focus();
     fireEvent.keyDown(items, { key: "ArrowLeft" });
     expect(categories).toHaveAttribute("aria-checked", "true");
     expect(categories).toHaveAttribute("tabindex", "0");
@@ -149,7 +151,8 @@ describe("ForecastScreen", () => {
     );
     try {
       renderWithProviders(<ForecastScreen />, { route: "/forecast" });
-      expect(await screen.findByText("לא הצלחנו לטעון את התזרים של היום.")).toBeTruthy();
+      expect(await screen.findByRole("heading", { name: "התזרים של היום לא נטען" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "נסו שוב" })).toBeTruthy();
       // The list still works; only the sum, which starts from today's cash, waits.
       expect(screen.getByRole("button", { name: /^Example Utility,/ })).toBeTruthy();
       expect(document.querySelector(".ui-fc-start")).toBeNull();
@@ -209,8 +212,6 @@ describe("ForecastScreen", () => {
     expect(chart.querySelectorAll(".ui-fc-month-bars")).toHaveLength(6);
     expect(chart.querySelectorAll(".ui-fc-now .ui-fc-cap")).toHaveLength(2);
     expect(chart.querySelector(".ui-fc-now .ui-fc-bar-label")?.textContent).toBe("אוק׳ · צפי");
-    expect(screen.getByText("נכנס ויצא לפי חודש")).toBeTruthy();
-    expect(screen.getByText("מאי עד סוף אוקטובר")).toBeTruthy();
   });
 
   it("keeps each amount LTR, so a minus sits at the start of the figure", () => {
@@ -276,6 +277,34 @@ describe("ForecastScreen", () => {
       });
     });
     expect(rpc.mock.calls.filter(([name]) => name === "set_forecast_item")).toHaveLength(1);
+  });
+
+  it("keeps its toasts under the header: an undo 5s, a note 4s", () => {
+    expect(forecastToast({ message: "x", action: "ביטול", onAction: () => undefined })).toMatchObject({ place: "top", durationMs: 5000 });
+    expect(forecastToast({ message: "x" })).toMatchObject({ place: "top", durationMs: 4000 });
+  });
+
+  it("titles the chart with where the month ends, the big figure's amount", () => {
+    renderWithProviders(<ForecastScreen sample={monthForecastBoardSample("board")} />, { route: "/forecast" });
+    const big = document.querySelector(".ui-forecast-big")?.textContent ?? "";
+    const takeaway = screen.getByRole("heading", { name: /^אוקטובר צפוי להיסגר ב־/ });
+    expect(takeaway.textContent.replace(/[\u2066\u2069]/g, "")).toBe(`אוקטובר צפוי להיסגר ב־${big}`);
+    expect(screen.getByText("נכנס ויצא לפי חודש · מאי עד סוף אוקטובר")).toBeTruthy();
+  });
+
+  it("says a failed read on a card, with the retry and the way to help, and no figures", () => {
+    renderWithProviders(<ForecastScreen sample={monthForecastBoardSample("failed")} />, { route: "/forecast" });
+    expect(screen.getByRole("heading", { name: "הצפי לא נטען" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "נסו שוב" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "צריך עזרה?" })).toHaveAttribute("href", "/help");
+    expect(document.querySelector(".ui-forecast-big")).toBeNull();
+    expect(screen.queryByRole("radiogroup", { name: "תצוגה" })).toBeNull();
+  });
+
+  it("offline, keeps the figures and says which moment they are from", () => {
+    renderWithProviders(<ForecastScreen sample={monthForecastBoardSample("offline")} />, { route: "/forecast" });
+    expect(document.querySelector(".ui-page-offline")).toHaveTextContent("אין חיבור · מוצג המצב מ־09:41");
+    expect(document.querySelector(".ui-forecast-big")).not.toBeNull();
   });
 
   it("says everything arrived in the board's copy, with no figures, sections or footnote", () => {

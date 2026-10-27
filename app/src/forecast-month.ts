@@ -4,6 +4,7 @@ import { readStoredCurrency } from "./company-currency";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview } from "./preview";
+import { forecastScope } from "./forecast-toast";
 import { assertNoError, useWrite } from "./use-write";
 import { waitForAccessToken } from "./wait-for-session";
 
@@ -103,8 +104,10 @@ export function useSetForecastItem(month: string) {
       assertNoError(result);
     },
     keys: ["month-forecast"],
-    success: "הצפי עודכן",
+    // No success toast: the screen's own one carries ביטול, and a later toast would replace it (0182).
     failure: "לא הצלחנו לעדכן את הצפי",
+    place: "top",
+    scope: forecastScope(month),
   });
 }
 
@@ -123,6 +126,8 @@ export function useResetForecastMonth(month: string) {
     },
     keys: ["month-forecast"],
     failure: "לא הצלחנו לאפס את הצפי",
+    place: "top",
+    scope: forecastScope(month),
   });
 }
 
@@ -139,5 +144,7 @@ export function useRestoreForecast(month: string) {
     },
     keys: ["month-forecast"],
     failure: "לא הצלחנו להחזיר את הצפי",
+    place: "top",
+    scope: forecastScope(month),
   });
 }

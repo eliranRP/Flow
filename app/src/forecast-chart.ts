@@ -63,3 +63,15 @@ export function monthEndChart(month: string, figures: ReadonlyMap<string, MonthF
   const label = `נכנס ויצא לפי חודש, ${sub}. ${monthWord(month)} עד היום: נכנס ${money(now?.incomeMinor ?? 0n)}, יצא ${money(now?.expenseMinor ?? 0n)}; צפוי עוד: נכנס ${money(ahead.incomeMinor)}, יצא ${money(ahead.expenseMinor)}`;
   return { months, sub, label };
 }
+
+/**
+ * FLOW-970: the chart's heading says where the month ends, "אוקטובר צפוי להיסגר ב־−$5,741": `end` is the page's
+ * big figure (today's cash, plus what is still expected in, minus what is still expected out), so the two agree.
+ * The amount is isolated left to right (U+2066…U+2069), so its minus stays before the currency in the Hebrew line.
+ */
+export function monthEndTakeaway(month: string, end: bigint, currency: string): string {
+  const name = monthWord(month);
+  if (end === 0n) return `${name} צפוי להיסגר באיזון`;
+  const amount = end < 0n ? `−${formatAmountText(-end, currency)}` : formatAmountText(end, currency);
+  return `${name} צפוי להיסגר ב־\u2066${amount}\u2069`;
+}

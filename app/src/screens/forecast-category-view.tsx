@@ -1,9 +1,9 @@
 import { formatAmountText, type ForecastItem } from "@flow/shared";
-import { type KeyboardEvent, useRef } from "react";
 import { Link } from "react-router-dom";
 import { chargeHref } from "../recurring-charge";
 import { cx } from "../ui/cx";
 import { ChevronDownIcon } from "../ui/icons";
+import { onRadioArrow } from "../ui/segmented-control";
 import { type ForecastCategoryRow, type ForecastCategorySide, itemCharge } from "./forecast-categories";
 import { itemLate, itemWhen, signed } from "./forecast-parts";
 
@@ -20,33 +20,11 @@ const VIEWS: readonly (readonly [ForecastView, string])[] = [
  * the reading direction, so they reverse under dir=rtl); the look stays the board's chips.
  */
 export function ForecastViewSwitch({ view, onPick }: { view: ForecastView; onPick: (view: ForecastView) => void }) {
-  const buttons = useRef<Array<HTMLButtonElement | null>>([]);
-  const index = Math.max(0, VIEWS.findIndex(([value]) => value === view));
-
-  function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const rtl = getComputedStyle(event.currentTarget).direction === "rtl";
-    let delta = 0;
-    if (event.key === "ArrowDown") delta = 1;
-    else if (event.key === "ArrowUp") delta = -1;
-    else if (event.key === "ArrowRight") delta = rtl ? -1 : 1;
-    else if (event.key === "ArrowLeft") delta = rtl ? 1 : -1;
-    else return;
-    event.preventDefault();
-    const next = (index + delta + VIEWS.length) % VIEWS.length;
-    const option = VIEWS[next];
-    if (option == null) return;
-    onPick(option[0]);
-    buttons.current[next]?.focus();
-  }
-
   return (
-    <div className="ui-forecast-views" role="radiogroup" aria-label="תצוגה" onKeyDown={onKeyDown}>
-      {VIEWS.map(([value, label], optionIndex) => (
+    <div className="ui-forecast-views" role="radiogroup" aria-label="תצוגה" onKeyDown={onRadioArrow}>
+      {VIEWS.map(([value, label]) => (
         <button
           key={value}
-          ref={(node) => {
-            buttons.current[optionIndex] = node;
-          }}
           type="button"
           role="radio"
           aria-checked={view === value}
