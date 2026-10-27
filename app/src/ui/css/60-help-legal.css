@@ -1,0 +1,33 @@
+/* FLOW-977 (decision 0225): help's sign-in tips and the legal pages. Loaded with those lazy screens only. */
+.ui-help-tips {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+  list-style: none;
+  color: var(--color-text-secondary);
+}
+
+.ui-legal {
+  padding-block-end: var(--space-section);
+}
+
+.ui-legal .t-body {
+  margin: var(--space-2) 0 0;
+  line-height: 1.5;
+}
+
+.ui-legal-draft {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-control-edge);
+  border-radius: var(--radius-input);
+  color: var(--color-text-secondary);
+}
+
+.ui-legal-section {
+  margin-block-start: var(--space-6);
+}
+
+.ui-legal-section .t-section {
+  margin: 0;
+}

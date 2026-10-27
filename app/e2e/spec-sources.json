@@ -40,7 +40,7 @@
       "screens/change-form.tsx",
       "screens/SignInScreen.tsx",
       "screens/HelpScreen.tsx",
-      "screens/PlaceholderScreen.tsx",
+      "screens/LegalScreen.tsx",
       "screens/add-sheet.tsx",
       "ui/install-screen.tsx",
       "ui/tab-bar.tsx"
@@ -372,10 +372,10 @@
           "screens/HelpScreen.tsx"
         ],
         "/terms": [
-          "screens/PlaceholderScreen.tsx"
+          "screens/LegalScreen.tsx"
         ],
         "/privacy": [
-          "screens/PlaceholderScreen.tsx"
+          "screens/LegalScreen.tsx"
         ],
         "/install?preview=1": [
           "screens/SignInScreen.tsx",

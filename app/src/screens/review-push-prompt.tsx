@@ -17,7 +17,7 @@ import {
 import { PUSH_ON, subscribeFailure } from "./push-copy";
 import { PromptCard } from "../ui/prompt-card";
 import { Button } from "../ui/button";
-import { useToast } from "../ui/toast";
+import { useTopToast } from "../ui/top-toast";
 import { focusReviewEmptyAction } from "./review-focus";
 
 export const PUSH_QUESTION = "התראה על תנועה חדשה ותזכורת בערב?";
@@ -71,7 +71,8 @@ export function ReviewPushPrompt({
   const deviceQuery = useDevicePushQuery(live && can === "ok");
   const client = useQueryClient();
   const recordAnswer = useRecordPushAnswer();
-  const toast = useToast();
+  // FLOW-977 (decision 0212): its refusal and failure notes sit under the header, as every toast.
+  const toast = useTopToast();
   const [answered, setAnswered] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState(false);
