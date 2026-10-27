@@ -58,7 +58,9 @@ export function ForecastCategorySheet({
   );
   return (
     <Sheet open={open} onOpenChange={setOpen} title="קטגוריה" subtitle={detail} returnFocusRef={returnFocusRef} panelClassName="ui-sheet-g14" busy={creating}>
-      <SearchField label="חיפוש קטגוריה" placeholder="חיפוש קטגוריה" value={query} onChange={onQuery} />
+      <div className="ui-fe-search">
+        <SearchField label="חיפוש קטגוריה" placeholder="חיפוש קטגוריה" value={query} onChange={onQuery} />
+      </div>
       <div role="radiogroup" aria-label="קטגוריה" className="ui-fe-choices">
         {choices.suggested.length === 0 ? null : (
           <>

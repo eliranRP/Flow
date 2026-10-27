@@ -103,7 +103,7 @@ describe("the company's next month (spec-fcwide, item 2)", () => {
     expect(chart.querySelectorAll(".ui-fc-month-bars")).toHaveLength(7);
     expect(chart.querySelectorAll(".ui-fc-ahead")).toHaveLength(1);
     const section = chart.closest(".ui-fc-chart");
-    expect(within(section as HTMLElement).getByText("מאי עד אוקטובר וצפי")).toBeInTheDocument();
+    expect(within(section as HTMLElement).getByText("הכנסות והוצאות לפי חודש · מאי עד אוקטובר וצפי")).toBeInTheDocument();
     expect(section?.querySelector("a")).toBeNull();
   });
 

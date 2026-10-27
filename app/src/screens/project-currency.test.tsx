@@ -60,7 +60,7 @@ describe("ProjectDetailScreen currency", () => {
 
   it("links a USD category to its drill-down in dollars", () => {
     renderProfit(usdProject());
-    fireEvent.click(screen.getByRole("button", { name: "לפי קטגוריה" }));
+    fireEvent.click(screen.getByRole("radio", { name: "לפי קטגוריה" }));
     const row = screen.getByText("Utilities").closest("a");
     // The currency travels with the link, so the drill-down reads in dollars.
     expect(row?.getAttribute("href")).toBe("/projects/p-usd/categories/cat-1?currency=USD");

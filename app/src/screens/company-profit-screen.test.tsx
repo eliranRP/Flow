@@ -135,7 +135,7 @@ describe("CompanyProfitScreen (FLOW-140c1)", () => {
   it("the chips set ?by= and reorder the rows; the project order is the default", () => {
     renderPage();
     const search = () => screen.getByTestId("search").textContent;
-    const group = screen.getAllByRole("group", { name: "סידור" })[0] as HTMLElement;
+    const group = screen.getAllByRole("radiogroup", { name: "סידור" })[0] as HTMLElement;
     // The default: projects, the largest amount (in or out) first.
     const sizes = [...document.querySelectorAll(".ui-cp-list .ui-cp-row")].map((row) => {
       const amount = rowAmount(row);
@@ -143,16 +143,16 @@ describe("CompanyProfitScreen (FLOW-140c1)", () => {
     });
     expect(sizes.every((size, index) => index === 0 || (sizes[index - 1] ?? 0n) >= size)).toBe(true);
     expect(search()).toBe("");
-    fireEvent.click(within(group).getByRole("button", { name: "לפי קטגוריה" }));
+    fireEvent.click(within(group).getByRole("radio", { name: "לפי קטגוריה" }));
     expect(search()).toBe("?by=category");
-    expect(within(group).getByRole("button", { name: "לפי קטגוריה" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(group).getByRole("radio", { name: "לפי קטגוריה" })).toHaveAttribute("aria-checked", "true");
     expect(document.querySelector(".ui-pcat-button")).not.toBeNull();
-    fireEvent.click(within(group).getByRole("button", { name: "לפי סכום" }));
+    fireEvent.click(within(group).getByRole("radio", { name: "לפי סכום" }));
     expect(search()).toBe("?by=amount");
     expect(screen.getByRole("heading", { name: "מהגדול לקטן" })).toBeInTheDocument();
-    fireEvent.click(within(group).getByRole("button", { name: "לפי פרויקט" }));
+    fireEvent.click(within(group).getByRole("radio", { name: "לפי פרויקט" }));
     expect(search()).toBe("");
-    expect(within(group).getByRole("button", { name: "לפי פרויקט" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(group).getByRole("radio", { name: "לפי פרויקט" })).toHaveAttribute("aria-checked", "true");
     expect(document.querySelector(".ui-cp-list .ui-cp-row a")).not.toBeNull();
   });
 

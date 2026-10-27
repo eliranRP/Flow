@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cashTakeaway, chartHistory, chartLabel, chartSub, expenseNote, forecastChartMonth, incomeNote } from "./next-month-chart";
+import { cashTakeaway, chartHistory, chartLabel, chartSub, expenseNote, forecastChartMonth, incomeNote, profitTakeaway } from "./next-month-chart";
 import type { MonthFigures } from "./month-figures";
 import type { NextMonthRow } from "./project-next-month";
 
@@ -59,6 +59,29 @@ describe("the chart's history", () => {
     expect(cashTakeaway(one(0, 0), "USD")).toBe("אוקטובר: לא נכנס ולא יצא כסף");
     expect(cashTakeaway(one(10_000, 10_000), "USD")).toBe("אוקטובר: נכנס בדיוק מה שיצא");
     expect(cashTakeaway({ months: [], fromStart: false }, "USD")).toBeNull();
+  });
+
+  it("titles a profit chart with what its pairs show (FLOW-969, owner card)", () => {
+    const pair = (key: string, incomeMinor: number, expenseMinor: number) => ({ key, label: key, incomeMinor: BigInt(incomeMinor), expenseMinor: BigInt(expenseMinor) });
+    expect(profitTakeaway([pair("2026-08", 500, 200), pair("2026-09", 100, 400), pair("2026-10", 600, 100)])).toBe("ספטמבר היה החודש היחיד שבו יצא יותר משנכנס");
+    expect(profitTakeaway([pair("2026-08", 100, 200), pair("2026-09", 100, 400), pair("2026-10", 600, 100)])).toBe("2 חודשים יצא יותר משנכנס");
+    expect(profitTakeaway([pair("2026-09", 100, 400), pair("2026-10", 100, 200)])).toBe("בכל חודש יצא יותר משנכנס");
+    expect(profitTakeaway([pair("2026-09", 500, 400), pair("2026-10", 600, 100)])).toBe("בכל חודש נכנס יותר משיצא");
+    // A month that broke even, or had nothing, is not a gain.
+    expect(profitTakeaway([pair("2026-09", 500, 400), pair("2026-10", 100, 100)])).toBe("אף חודש לא יצא יותר משנכנס");
+    expect(profitTakeaway([pair("2026-08", 0, 0), pair("2026-09", 500, 400)])).toBe("אף חודש לא יצא יותר משנכנס");
+    expect(profitTakeaway([pair("2025", 500, 500), pair("2026", 900, 100)], "year")).toBe("אף שנה לא יצא יותר משנכנס");
+    // Mixed: a loss, a gain and a month that broke even.
+    expect(profitTakeaway([pair("2026-08", 100, 400), pair("2026-09", 500, 400), pair("2026-10", 200, 200)])).toBe("אוגוסט היה החודש היחיד שבו יצא יותר משנכנס");
+    // The month still running is drawn but not counted: a slow first week is not named a loss.
+    expect(profitTakeaway([pair("2026-09", 500, 400), pair("2026-10", 10, 900)], "month", "2026-10")).toBe("בכל חודש נכנס יותר משיצא");
+    expect(profitTakeaway([pair("2026-10", 10, 900)], "month", "2026-10")).toBeNull();
+    expect(profitTakeaway([pair("2025", 500, 400), pair("2026", 10, 900)], "year", "2026")).toBe("בכל שנה נכנס יותר משיצא");
+    expect(profitTakeaway([pair("2025", 500, 600), pair("2026", 900, 100)], "year")).toBe("2025 הייתה השנה היחידה שבה יצא יותר משנכנס");
+    expect(profitTakeaway([pair("2025", 500, 400)], "year")).toBe("בכל שנה נכנס יותר משיצא");
+    // Nothing in or out yet, or no pairs: the kind's title stays.
+    expect(profitTakeaway([pair("2026-10", 0, 0)])).toBeNull();
+    expect(profitTakeaway([])).toBeNull();
   });
 });
 

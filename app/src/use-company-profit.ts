@@ -324,6 +324,8 @@ export function useCompanyProfitRead({ enabled, month, ytd, currency, linesOn, o
     : null;
   return {
     failed,
+    /** FLOW-969: when the month's figures were read, for the offline line (0 before any read). */
+    readAt: dashboard.dataUpdatedAt,
     loading: !failed && (inputs == null || overhead === undefined),
     model: inputs == null || overhead === undefined ? null : buildProfitModel(inputs, overhead, linesComplete),
     refetch: () => {
