@@ -172,7 +172,6 @@
     ],
     "lazy-css.spec.ts": [
       "ui/lazy.css",
-      "ui/css-lazy/",
       "screen-loaders.ts"
     ],
     "loan-detail.spec.ts": [
