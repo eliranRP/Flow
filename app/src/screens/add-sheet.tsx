@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { addTriggerRef } from "../add-trigger";

@@ -1,3 +1,4 @@
+import "./lazy.css";
 import type { ReactNode } from "react";
 import { FocusTitle } from "./focus-title";
 import { AppIcon, CloseIcon, DownloadIcon, HomeIcon } from "./icons";

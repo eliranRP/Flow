@@ -4,7 +4,3 @@
   border-radius: var(--radius-card);
   background: var(--color-surface);
 }
-
-.ui-card-tint {
-  background: var(--color-tint);
-}

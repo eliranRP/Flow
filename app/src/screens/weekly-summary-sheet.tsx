@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { formatAmountText, type WeeklySummary } from "@flow/shared";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";

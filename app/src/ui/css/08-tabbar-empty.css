@@ -173,29 +173,6 @@
   outline: none;
 }
 
-/* Opt-in panel classes: a sheet whose board block differs from the default (12 between blocks, 16 at the sides,
-   24 below) sets one or more of these. Later rules win, so a choice sheet's 10 can be raised by its caller. */
-.ui-sheet-choice {
-  --sheet-gap-y: 10px;
-  --sheet-pad-bottom: 28px;
-}
-
-.ui-sheet-g8 {
-  --sheet-gap-y: 8px;
-}
-
-.ui-sheet-g10 {
-  --sheet-gap-y: 10px;
-}
-
-.ui-sheet-g12 {
-  --sheet-gap-y: 12px;
-}
-
-.ui-sheet-g14 {
-  --sheet-gap-y: 14px;
-}
-
 .ui-sheet-g16 {
   --sheet-gap-y: 16px;
 }
@@ -463,11 +440,6 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   }
 }
 
-/* A screen's content fades in over 200ms, linear, as the skeleton leaves (board States homeReveal). */
-.ui-phase-in {
-  animation: ui-phase-in var(--motion-fade) var(--ease-linear) both;
-}
-
 @keyframes ui-phase-in {
   from {
     opacity: 0;
@@ -475,18 +447,6 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   to {
     opacity: 1;
   }
-}
-
-/* A long known job (first sync, import): the 8px bar, its count, and the steps (FLOW-371). */
-.ui-job {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.ui-job-bar {
-  height: var(--bar-job);
-  background: var(--color-track);
 }
 
 /* A busy button keeps its size: the spinner sits in the end padding and takes no width (FLOW-371). */
@@ -499,43 +459,4 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   inset-inline-end: var(--space-5);
   top: 50%;
   margin-top: calc(var(--spinner) / -2);
-}
-
-.ui-job-steps {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.ui-job-step {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-block-size: var(--touch-min);
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line);
-  font-weight: var(--type-body-weight);
-}
-
-.ui-job-step[data-state="todo"] {
-  color: var(--color-text-muted);
-}
-
-.ui-job-mark {
-  display: grid;
-  flex: none;
-  inline-size: var(--spinner);
-  block-size: var(--spinner);
-  place-items: center;
-  color: var(--color-accent-text);
-}
-
-.ui-job-ring {
-  inline-size: var(--spinner);
-  block-size: var(--spinner);
-  border-radius: 50%;
-  border: 2px solid var(--color-control-border);
-  box-sizing: border-box;
 }

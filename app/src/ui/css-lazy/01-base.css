@@ -1,0 +1,41 @@
+/* On-demand screens only (FLOW-974): the rules of src/ui/css/01-base.css that can match only inside a
+   screen Home's first load does not draw. Same order as there; app/src/ui/lazy.css loads them. */
+/* A destructive confirm: the outline button in the signal colour, so the red stays on the one action. */
+.ui-btn.ui-btn-secondary.ui-btn-signal {
+  border-color: var(--color-signal-soft);
+  color: var(--color-signal-soft);
+  font-size: var(--type-btn-size);
+}
+
+.ui-field-control:disabled,
+.ui-field-control:has(input:disabled),
+.ui-money-field:has(input:disabled) {
+  background: var(--color-disabled-bg);
+  color: var(--color-disabled-text);
+  border-color: transparent;
+}
+
+.ui-money-field:has(input:disabled) .ui-money-prefix {
+  color: var(--color-disabled-text);
+}
+
+.ui-chip,
+.ui-seg-btn {
+  --hit-block: var(--touch-min);
+}
+
+.ui-chip::after,
+.ui-seg-btn::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block: calc((var(--hit-block) - 100%) / -2);
+}
+
+/* FLOW-961: a screen's main action as an icon: a filled 44px circle (the Projects tab's +). */
+.ui-icon-btn.ui-icon-btn-filled {
+  border-radius: 50%;
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+

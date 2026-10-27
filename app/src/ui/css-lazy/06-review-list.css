@@ -1,0 +1,191 @@
+/* On-demand screens only (FLOW-974): all of the former src/ui/css/06-review-list.css: it matches only inside a
+   screen Home's first load does not draw. Same order as there; app/src/ui/lazy.css loads them. */
+/* The review queue's list and done frames, split from 06-review-card.css (file size). */
+
+/* FLOW-971 (Review lists v2): the lists of lines to review (כל הפריטים לאישור, a project's לאישור). The page
+   pads its sides; under the title come the offline line or the failed card, the total, the filled button,
+   then the groups with their heads. */
+.ui-review-list-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-side) var(--space-6);
+}
+
+.ui-review-list-body > .ui-page-offline,
+.ui-review-list-body > .ui-page-failed,
+.ui-review-list-body > .ui-review-list-empty {
+  margin-top: 0;
+}
+
+.ui-review-list-body > .ui-review-cta {
+  inline-size: 100%;
+}
+
+/* A project's total waiting: the page's figure, signed and tabular. */
+.ui-review-list-take {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-3);
+  margin: 0;
+  align-self: flex-start;
+  font-size: var(--type-title-size);
+  font-weight: var(--type-name-weight);
+  line-height: var(--type-title-line);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-review-group {
+  display: flex;
+  flex-direction: column;
+}
+
+/* A group's name on the start side, its count and total on the end side, tabular (board M6). */
+.ui-review-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) 0 var(--space-1);
+}
+
+.ui-review-group-title {
+  margin: 0;
+  font-size: var(--type-section-size);
+  font-weight: var(--type-name-weight);
+  line-height: var(--type-section-line);
+}
+
+.ui-review-group-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0 var(--space-2);
+  margin: 0;
+  flex: none;
+  font-size: var(--type-line2-size);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-review-all {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A row: the initials, the payee over "project · category", the signed amount. 64px, as the board. */
+.ui-review-all-row {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-3) + var(--space-1) / 2);
+  min-block-size: calc(var(--space-4) * 4);
+  padding-block: var(--space-2);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.ui-review-all-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: calc(var(--space-1) / 2);
+  min-inline-size: 0;
+}
+
+/* A long payee wraps to a second line rather than losing its end (as the other rows' names do). */
+.ui-review-all-title {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: var(--type-body-size);
+  line-height: var(--type-cents-line);
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.ui-review-all-meta {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-1) * 1.5);
+  overflow: hidden;
+  font-size: var(--type-line2-size);
+  line-height: var(--type-cents-line);
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-review-all-meta > svg {
+  flex: none;
+}
+
+/* The ellipsis sits on the text itself: a flex box does not draw one. */
+.ui-review-all-meta-text {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* FLOW-960: a row with no project, the one that blocks אישור, is marked by an icon and the warning tone. */
+.ui-review-all-missing {
+  color: var(--color-warning);
+}
+
+.ui-review-all-amount {
+  flex: none;
+  font-size: var(--type-body-size);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-review-all-in {
+  color: var(--color-income);
+}
+
+/* The board's list header: the Back label, the title at 32, the count line at 15 under it (M10). */
+.ui-review-all-page .ui-page-stacked,
+.ui-review-waiting-page .ui-page-stacked {
+  padding-block-start: calc(var(--safe-top) + var(--space-3));
+}
+
+.ui-review-all-page .ui-page-stacked .t-title ~ p,
+.ui-review-waiting-page .ui-page-stacked .t-title ~ p {
+  font-size: var(--type-line2-size);
+  line-height: var(--type-cents-line);
+  color: var(--color-text-muted);
+}
+
+/* FLOW-365b: the done frame. A check in an 88px tint circle, the title, the two count lines, one action. */
+.ui-review-done .ui-empty-icon {
+  inline-size: 88px;
+  block-size: 88px;
+  margin-bottom: var(--space-5);
+  border-radius: 50%;
+}
+
+/* The board's done frame: the stacked header, then a top-anchored block with a full-width button. */
+.ui-review-done .ui-empty-state {
+  justify-content: flex-start;
+  padding: calc(var(--space-10) + var(--space-3)) var(--space-6) 0;
+}
+
+.ui-review-done .ui-empty-line {
+  margin-top: calc(var(--label-gap) + var(--space-2));
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  white-space: pre-line;
+}
+
+.ui-review-done .ui-empty-action {
+  align-self: stretch;
+  margin-top: var(--space-6);
+}
+
+/* FLOW-971: a group head's count and totals line up as tabular figures (board M6). */
+.ui-group-head .ui-month-totals {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+

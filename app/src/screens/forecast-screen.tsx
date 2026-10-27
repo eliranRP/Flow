@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { formatAmountText, type ForecastBuild, type ForecastItem, type ForecastOverrideRow } from "@flow/shared";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";

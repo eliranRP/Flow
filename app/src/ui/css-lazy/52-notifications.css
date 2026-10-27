@@ -1,0 +1,12 @@
+/* On-demand screens only (FLOW-974): all of the former src/ui/css/52-notifications.css: it matches only inside a
+   screen Home's first load does not draw. Same order as there; app/src/ui/lazy.css loads them. */
+/* FLOW-516: Settings → התראות. The group heads (מה לקבל, מכשירים מחוברים) line up with the inset lists. */
+.ui-notify-page > .ui-settings-head {
+  margin-inline: var(--space-4);
+  padding-block-start: var(--space-3);
+}
+
+.ui-notify-page > .ui-settings-note {
+  margin-block-start: var(--space-2);
+}
+

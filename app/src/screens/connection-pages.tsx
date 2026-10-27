@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { useRef, useState } from "react";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { useCompanyRole, useHoldOwnerSettings, ViewerNote, ViewerScope } from "../use-is-viewer";

@@ -1,0 +1,10 @@
+/* On-demand screens only (FLOW-974): the rules of src/ui/css/41-rows.css that can match only inside a
+   screen Home's first load does not draw. Same order as there; app/src/ui/lazy.css loads them. */
+.ui-tag-pending {
+  color: var(--color-text-secondary);
+}
+
+.ui-tag-aside {
+  color: var(--color-accent-text);
+}
+

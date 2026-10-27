@@ -1,0 +1,615 @@
+/* On-demand screens only (FLOW-974): the rules of src/setup/setup.css that can match only inside a
+   screen Home's first load does not draw. Same order as there; app/src/ui/lazy.css loads them. */
+/* -- The page: OnboardingFrame (shell.tsx) ----------------------------------------------------- */
+/* The onboarding tile is the board's #7B3FE4, the band token in both themes. Measures are the board's
+ * (Onboarding.dc.html); 10px, 14px, 6px and 2px are token steps in calc(). */
+.ui-onb {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  padding-block-start: var(--safe-top);
+  padding-block-end: var(--safe-bottom);
+  background: var(--color-bg);
+  color: var(--color-text);
+  box-sizing: border-box;
+}
+
+.ui-onb-top {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+  padding: var(--space-3) var(--space-4) var(--space-1);
+}
+
+.ui-onb-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ui-onb-link {
+  /* FLOW-976: 44px (the segment height was 40). */
+  min-height: var(--touch-min);
+  padding-inline: var(--space-1);
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  font-weight: var(--type-line2-weight);
+}
+
+.ui-onb-link-hidden {
+  visibility: hidden;
+}
+
+.ui-onb-counter {
+  color: var(--color-text-muted);
+}
+
+.ui-onb-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4) var(--space-side);
+  overflow-y: auto;
+}
+
+/* Welcome and done start 72px down, like the board. */
+.ui-onb-body-full {
+  padding-block-start: calc(var(--space-8) + var(--space-10));
+}
+
+.ui-onb-enter {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-3) + var(--space-1) / 2);
+  animation: ui-onb-rise var(--motion-page) var(--ease-enter) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-onb-enter,
+  .ui-onb-logo {
+    animation: none;
+  }
+}
+
+.ui-onb-copy {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-2) - var(--space-1) / 2);
+}
+
+.ui-onb-title {
+  margin: 0;
+  color: var(--color-text);
+  line-height: var(--type-name-line);
+}
+
+.ui-onb-lead {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: var(--onb-line-read);
+}
+
+.ui-onb-foot {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-side) calc(var(--space-6) + var(--space-1));
+}
+
+/* The welcome tile: 56px, 16px corners, a white 26/600 F, on the reading start edge. */
+.ui-onb-logo {
+  align-self: flex-start;
+  inline-size: calc(var(--size-seg) + var(--space-4));
+  block-size: calc(var(--size-seg) + var(--space-4));
+  border-radius: var(--radius-card-tight);
+  background: var(--color-band);
+  color: var(--color-on-band);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--space-6) + var(--space-1) / 2 + var(--space-1) / 2);
+  font-weight: var(--type-title-weight);
+  animation: ui-onb-pop var(--motion-page) var(--ease-enter) both;
+}
+
+.ui-onb-form {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-3) + var(--space-1) / 2);
+}
+
+.ui-onb-field {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-2) - var(--space-1) / 2);
+}
+
+/* Business step: the board's 48px field, 1.5px border, 6px label gap; 44px track with 2px padding. */
+.ui-onb-form .ui-field {
+  gap: calc(var(--space-2) - var(--space-1) / 2);
+}
+
+.ui-onb-form .ui-field-label {
+  line-height: var(--onb-line-natural);
+}
+
+.ui-onb-form .ui-field-control {
+  block-size: calc(var(--size-seg) + var(--space-2));
+  min-block-size: calc(var(--size-seg) + var(--space-2));
+  padding-inline: var(--space-inset-row);
+  font-size: var(--type-body-size);
+}
+
+.ui-onb-form .ui-seg {
+  gap: calc(var(--space-1) / 2);
+  padding: calc(var(--space-1) / 2);
+  border-radius: var(--radius-input);
+  background: var(--color-surface);
+}
+
+.ui-onb-form .ui-seg-btn[aria-checked="true"] {
+  background: var(--color-tint-strong);
+  color: var(--color-text);
+}
+
+.ui-onb-note,
+.ui-onb-pending {
+  margin: 0;
+  font-size: var(--type-caption-size);
+  line-height: var(--onb-line-read);
+  color: var(--color-text-muted);
+  /* The board wraps its notes greedily; .t-muted's balanced wrap moves the last word down. */
+  text-wrap: wrap;
+}
+
+/* The basis note under the segments is 12px on the board. */
+.ui-onb-field .ui-onb-note {
+  font-size: calc(var(--type-caption-size) - var(--space-1) / 4);
+  line-height: var(--onb-line-natural);
+}
+
+.ui-onb-error {
+  margin: 0;
+  color: var(--color-bad);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-onb-good {
+  color: var(--color-good);
+}
+
+.ui-onb-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-card-tight);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.ui-onb-chips,
+.ui-onb-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* The board's chips wrap 6px apart. */
+.ui-onb-chips {
+  gap: calc(var(--space-1) + var(--space-half));
+}
+
+.ui-onb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--control-height-sm);
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  font-size: var(--type-chip-size);
+  line-height: var(--type-chip-line);
+  font-weight: var(--type-chip-weight);
+  color: var(--color-text);
+}
+
+.ui-onb-chip-suggest {
+  border: var(--stroke-strong) dashed var(--sheet-grab);
+  background: transparent;
+  color: var(--color-accent-text);
+}
+
+.ui-onb-chip-added {
+  gap: calc(var(--space-1) + var(--space-half));
+  block-size: var(--control-height-sm);
+  padding-inline: var(--space-2) calc(var(--space-3) + var(--space-half));
+  background: var(--color-tint);
+  font-weight: var(--type-body-weight);
+}
+
+/* A 24px ✕ as drawn; its 44px tap area is an invisible ring around it. */
+.ui-onb-chip-added .ui-onb-chip-x {
+  position: relative;
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
+  min-inline-size: var(--space-6);
+  min-block-size: var(--space-6);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-text);
+}
+
+.ui-onb-chip-added .ui-onb-chip-x::before {
+  content: "";
+  position: absolute;
+  inset: calc((var(--touch-min) - var(--space-6)) / -2);
+}
+
+.ui-onb-chip-x svg {
+  inline-size: 14px;
+  block-size: 14px;
+}
+
+.ui-onb-add,
+.ui-onb-add-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* FLOW-976: a note under the name field leaves הוספה beside the field; both are 48px, so their tops line up. */
+.ui-onb-add {
+  align-items: flex-start;
+}
+
+/* The name field takes the row; הוספה is as wide as its word (16px sides, 15/500). */
+.ui-onb-add-field,
+.ui-onb-add-field > * {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.ui-onb-add > .ui-btn {
+  flex: none;
+  min-inline-size: 0;
+  padding-inline: var(--space-4);
+  font-size: var(--type-line2-size);
+}
+
+/* The board draws the name field with its prompt inside and no label above; the label stays for screen readers. */
+.ui-onb-add-field .ui-field-label {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.ui-onb-add-field .ui-field-control,
+.ui-onb-add .ui-btn {
+  min-block-size: calc(var(--touch-min) + var(--space-1));
+  block-size: calc(var(--touch-min) + var(--space-1));
+}
+
+.ui-onb-add-loan {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height);
+  border: var(--stroke-strong) dashed var(--color-switch-off);
+  border-radius: var(--radius-card-row);
+  background: transparent;
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  font-weight: var(--type-btn-weight);
+  color: var(--color-accent-text);
+}
+
+/* Connect rows: 80px as drawn (the board says min 64, its rows measure 80), padding 8/14, gap 12, a hairline between; name 17, sub 13, 36px pill. */
+.ui-onb-conn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: calc(var(--space-10) * 2);
+  padding: var(--space-2) var(--space-inset-row);
+  box-sizing: border-box;
+}
+
+.ui-onb-conn + .ui-onb-conn {
+  border-block-start: 1px solid var(--color-line);
+}
+
+.ui-onb-conn-text {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-1) / 2);
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: start;
+}
+
+.ui-onb-conn .t-name {
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-onb-conn .t-name,
+.ui-onb-conn .t-muted {
+  line-height: var(--onb-line-natural);
+}
+
+/* The board's connect pills are solid accent with on-accent text, 14/500, padding 0 16. */
+.ui-onb-conn .ui-btn.ui-btn-primary {
+  --hit-block: var(--touch-min);
+  height: var(--size-chip);
+  min-height: var(--size-chip);
+  padding-inline: var(--space-4);
+  font-size: var(--type-chip-size);
+  line-height: var(--type-chip-line);
+  white-space: nowrap;
+}
+
+.ui-onb-conn .ui-btn.ui-btn-primary::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block: calc((var(--hit-block) - 100%) / -2);
+}
+
+.ui-onb-conn-done {
+  padding-inline: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--type-chip-size);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-onb-done {
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--space-1) + var(--space-half)) var(--space-4);
+  margin: 0;
+  list-style: none;
+}
+
+.ui-onb-done-row {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-2) + var(--space-half));
+  min-height: calc(var(--touch-min) + var(--space-1) + 1px);
+  border-top: 1px solid var(--color-line);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-line2-line);
+  font-weight: var(--type-body-weight);
+  animation: ui-onb-rise var(--motion-fade) var(--ease-enter) both;
+}
+
+.ui-onb-done-row:first-child {
+  min-height: calc(var(--touch-min) + var(--space-1));
+  border-top: 0;
+}
+
+.ui-onb-done-label {
+  flex: 1 1 auto;
+  color: var(--color-text);
+}
+
+.ui-onb-mark {
+  inline-size: calc(var(--space-5) + var(--space-half));
+  text-align: center;
+  /* FLOW-976: a skipped row's "—" reads at 4.5:1 (the disabled-button grey was 3.22:1). */
+  color: var(--color-text-muted);
+}
+
+.ui-onb-mark-good {
+  color: var(--color-good);
+}
+
+.ui-onb-done-value {
+  color: var(--color-text-muted);
+}
+
+.ui-onb-done .ui-onb-install {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ui-onb-loan {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: calc(var(--touch-min) + var(--space-8));
+  padding: var(--space-2) var(--space-inset-row);
+  border-top: 1px solid var(--color-line);
+}
+
+.ui-onb-loan:first-child {
+  border-top: 0;
+}
+
+.ui-onb-loan .t-name {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-onb-loan .ui-onb-pending {
+  color: var(--color-accent-text);
+}
+
+/* The board's switch card: a 64px row, 16/12 text, and a white knob that sits at the start when on. */
+.ui-onb-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: calc(var(--touch-min) + var(--space-5));
+  padding: var(--space-2) var(--space-inset-row);
+  border-radius: var(--radius-card-row);
+}
+
+.ui-onb-switch .ui-switch-row {
+  flex: 1;
+  padding-block: 0;
+}
+
+.ui-onb-switch .ui-switch-copy {
+  gap: calc(var(--space-1) - var(--space-half) / 2);
+}
+
+.ui-onb-switch .ui-switch-label {
+  font-size: var(--type-btn-2-size);
+  line-height: var(--type-btn-2-line);
+}
+
+.ui-onb-switch .ui-switch-copy .t-muted {
+  font-size: calc(var(--type-caption-size) - var(--space-1) / 4);
+  line-height: var(--onb-line-natural);
+}
+
+.ui-onb-switch .ui-switch i {
+  background: var(--color-knob);
+}
+
+.ui-onb-switch .ui-switch-row:dir(rtl) .ui-switch i {
+  transform: translateX(calc(-1 * (var(--size-switch) - var(--switch-knob) - 2 * var(--switch-inset))));
+}
+
+.ui-onb-switch .ui-switch-row:dir(rtl) input:checked + .ui-switch i {
+  background: var(--color-knob);
+  transform: none;
+}
+
+/* -- The steps bar (ProgressBar variant "steps") ------------------------------------------------ */
+.ui-steps-bar {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: var(--space-1);
+}
+
+.ui-steps-seg {
+  display: block;
+  block-size: var(--space-1);
+  border-radius: var(--radius-chip);
+  background: var(--color-track);
+}
+
+.ui-steps-seg[data-state="done"] {
+  background: var(--color-accent);
+}
+
+.ui-steps-seg[data-state="current"] {
+  background: var(--color-band);
+}
+
+.ui-steps-seg[data-state="next"] {
+  background: var(--color-track);
+}
+
+/* -- Sample card (SampleCard, step 6, compact) -------------------------------------------------- */
+.ui-sample {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-card-inset);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  text-align: start;
+}
+
+.ui-sample-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.ui-sample-name {
+  color: var(--color-text);
+  font-size: var(--type-body-size);
+  line-height: var(--onb-line-natural);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-sample-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: calc(var(--control-height-sm) - var(--space-1));
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-chip);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-size: var(--type-chip-size);
+  line-height: var(--type-chip-line);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-sample-meta {
+  font-size: var(--type-caption-size);
+  line-height: var(--onb-line-natural);
+  color: var(--color-text-muted);
+}
+
+.ui-sample .ui-btn {
+  block-size: calc(var(--touch-min) + var(--space-1));
+  min-block-size: calc(var(--touch-min) + var(--space-1));
+}
+
+.ui-sample-amount {
+  font-size: var(--type-sheet-size);
+  line-height: var(--onb-line-natural);
+  font-weight: var(--type-body-weight);
+  color: var(--color-text);
+}
+
+.ui-sample-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ui-sample-done {
+  color: var(--color-good);
+}
+
+.ui-sample-approved {
+  border: 1px solid var(--color-good);
+}
+
+/* -- Skip sheet body and errors ---------------------------------------------------------------- */
+/* The board's skip sheet: 20px sides, the title at its natural line height. */
+.ui-skip-sheet.ui-sheet-panel {
+  padding-bottom: calc(var(--space-6) + var(--space-1));
+}
+
+.ui-skip-sheet .ui-sheet-surface {
+  padding-inline: var(--space-1);
+}
+
+.ui-skip-sheet .ui-sheet-title {
+  line-height: var(--onb-line-natural);
+}
+
+.ui-skip-body {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  line-height: var(--onb-line-read);
+}
+
+.ui-setup-error {
+  margin: 0;
+  color: var(--color-bad);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+

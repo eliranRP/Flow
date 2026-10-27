@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { type CashMonths, type ProjectCashRow, type ProjectDetail } from "@flow/shared";
 import { useCompanyCurrency } from "../company-currency";
 import { projectExpenseMinor, projectRows } from "../by-currency";

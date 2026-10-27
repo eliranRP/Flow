@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { formatAmountText } from "@flow/shared";
 import { useMemo } from "react";
 import { Link } from "react-router-dom";

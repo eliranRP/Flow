@@ -21,15 +21,6 @@
 }
 
 /*
-  FLOW-335: the project band is shorter (mockup 02 is about 313px at 375). Under the Back bar the
-  hero starts --space-2 down, the bar and the figures sit closer, and the stepper is inset
-  --space-2 more than Back, so the "earlier" chevron does not line up under Back's.
-*/
-.ui-band-hero-project {
-  padding-top: var(--space-2);
-}
-
-/*
   FLOW-336 (decision 0150): the band figure steps the period with a sideways swipe. pan-y keeps
   the page's vertical scroll with the browser; the figure follows the finger and settles back.
 */
@@ -51,10 +42,5 @@
   .ui-pswipe {
     transition: none;
   }
-}
-
-/* FLOW-335: "ניתוק" in its own group after a section gap, away from "רענון עכשיו". */
-.ui-sheet-danger-group {
-  margin-block-start: var(--space-section);
 }
 

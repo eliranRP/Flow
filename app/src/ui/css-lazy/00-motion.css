@@ -1,0 +1,21 @@
+/* On-demand screens only (FLOW-974): the rules of src/ui/css/00-motion.css that can match only inside a
+   screen Home's first load does not draw. Same order as there; app/src/ui/lazy.css loads them. */
+.m-push-in {
+  animation: m-push-in var(--motion-page) var(--ease-enter);
+}
+
+.m-row-leave {
+  display: grid;
+  animation: m-row-leave var(--motion-sheet-out) var(--ease-exit) forwards;
+}
+
+.m-row-leave > * {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.m-bar-grow {
+  transform-origin: right;
+  animation: m-bar-grow var(--motion-bar-grow) var(--ease-enter) both;
+}
+

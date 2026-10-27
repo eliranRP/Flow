@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { useCallback, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useHomePreview } from "../preview";

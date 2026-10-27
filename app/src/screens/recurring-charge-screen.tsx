@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import type { MissingBill, PaymentRecurring, PartyCharges, RecurringChange, RecurringPace } from "@flow/shared";
 import { formatAmountText } from "@flow/shared";
 import { useQueryClient } from "@tanstack/react-query";

@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { useEffect, useRef, useState } from "react";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";

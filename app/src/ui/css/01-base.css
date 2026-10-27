@@ -95,13 +95,6 @@
   transition: opacity var(--motion-press) var(--ease-standard), transform var(--motion-press) var(--ease-standard);
 }
 
-/* A destructive confirm: the outline button in the signal colour, so the red stays on the one action. */
-.ui-btn.ui-btn-secondary.ui-btn-signal {
-  border-color: var(--color-signal-soft);
-  color: var(--color-signal-soft);
-  font-size: var(--type-btn-size);
-}
-
 /* Text only: no fill, no padding, the 44px hit area. The chevron (if any) sits after the label. */
 .ui-btn-link,
 .ui-btn-danger-link {
@@ -195,18 +188,6 @@ a:is(.ui-btn-primary, .ui-btn-secondary)[aria-disabled="true"]:not([aria-busy="t
   border-color: transparent;
 }
 
-.ui-field-control:disabled,
-.ui-field-control:has(input:disabled),
-.ui-money-field:has(input:disabled) {
-  background: var(--color-disabled-bg);
-  color: var(--color-disabled-text);
-  border-color: transparent;
-}
-
-.ui-money-field:has(input:disabled) .ui-money-prefix {
-  color: var(--color-disabled-text);
-}
-
 .ui-btn-link:disabled,
 .ui-btn-danger-link:disabled,
 a:is(.ui-btn-link, .ui-btn-danger-link)[aria-disabled="true"]:not([aria-busy="true"]),
@@ -229,19 +210,6 @@ a:is(.ui-btn-link, .ui-btn-danger-link)[aria-disabled="true"]:not([aria-busy="tr
 
 .ui-btn-full {
   width: 100%;
-}
-
-.ui-chip,
-.ui-seg-btn {
-  --hit-block: var(--touch-min);
-}
-
-.ui-chip::after,
-.ui-seg-btn::after {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  inset-block: calc((var(--hit-block) - 100%) / -2);
 }
 
 .ui-icon-btn {
@@ -404,11 +372,4 @@ a:is(.ui-btn-link, .ui-btn-danger-link)[aria-disabled="true"]:not([aria-busy="tr
 
 .ui-row-title-muted {
   color: var(--color-text-muted);
-}
-
-/* FLOW-961: a screen's main action as an icon: a filled 44px circle (the Projects tab's +). */
-.ui-icon-btn.ui-icon-btn-filled {
-  border-radius: 50%;
-  background-color: var(--color-accent);
-  color: var(--color-on-accent);
 }

@@ -1,0 +1,186 @@
+/* On-demand screens only (FLOW-974): all of the former src/ui/css/47-company-profit.css: it matches only inside a
+   screen Home's first load does not draw. Same order as there; app/src/ui/lazy.css loads them. */
+/* FLOW-140c1: the company profit page (CompanyProfitScreen, board Profit and ProfitBasis). Every colour is a token. */
+
+.ui-cp-screen {
+  min-width: 0;
+  padding-bottom: var(--space-6);
+}
+
+.ui-cp-screen .ui-page-stacked {
+  padding-top: calc(var(--safe-top) + var(--space-3));
+}
+
+.ui-cp-screen .ui-page-stacked > p {
+  margin-top: calc(var(--space-1) * -0.35);
+}
+
+.ui-cp-head {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+
+.ui-cp-figure {
+  margin: calc(var(--space-1) * -0.5) 0 0;
+  padding-top: 0;
+  line-height: var(--type-total-line);
+  direction: ltr;
+  text-align: right;
+}
+
+/* FLOW-145: the period switch, 14px under the sub; the figure follows 8px under it. */
+.ui-cp-period {
+  margin-top: var(--space-inset-row);
+  /* FLOW-969: 44px segments (were 40px), as the loan page's switch (FLOW-962). */
+  --size-seg: var(--touch-min);
+  --size-seg-track: calc(var(--touch-min) + var(--space-2));
+}
+
+.ui-cp-period + .ui-cp-figure {
+  margin-top: var(--space-2);
+}
+
+/* The year's months or projects start 12px under the chips. */
+.ui-cp-period-list {
+  padding-top: var(--space-3);
+}
+
+/* The board's total is 34px (the total step), not the display step. */
+.ui-cp-figure .ui-num {
+  font-size: var(--type-total-size);
+  line-height: calc(var(--type-total-size) * 1.2);
+}
+
+/* The summary card (.ui-pp-card's rows with dividers), 16px under the figure, in the head's own width. */
+.ui-cp-card {
+  margin: var(--space-4) 0 0;
+}
+
+/* Next month's card and chart sit 14px under the summary, before the chips. */
+.ui-cp-head .ui-fc-block {
+  margin-top: var(--space-inset-row);
+}
+
+.ui-cp-chips > * {
+  flex: none;
+}
+
+.ui-cp-chips {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  /* FLOW-969: the chips are 44px (`.ui-order-chips`); the padding keeps room for the focus ring. */
+  margin-top: var(--space-2);
+  margin-bottom: calc(var(--space-1) * -1);
+  padding: var(--space-1) 0;
+}
+
+.ui-cp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--space-5);
+}
+
+.ui-cp-link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: 0;
+  padding: calc(var(--space-1) * 2.75) 0;
+  box-sizing: border-box;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+}
+
+.ui-cp-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.ui-cp-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: calc(var(--space-1) * 5);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ui-cp-top .ui-num {
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: calc(var(--space-1) * 5);
+}
+
+.ui-cp-meta {
+  font-size: var(--type-line2-size);
+  line-height: calc(var(--space-1) * 4.5);
+}
+
+.ui-cp-foot {
+  margin: var(--space-4) var(--space-5) 0;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+/* Prefixed to beat the .t-muted line on the footer. */
+.ui-cp-screen .ui-cp-foot {
+  margin-top: calc(var(--space-1) * 4.25);
+  line-height: calc(var(--type-caption-size) * 17.25 / 13);
+}
+
+.ui-cp-basis {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  margin: calc(var(--space-1) * 3 / 8) var(--space-5) 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-cp-change {
+  color: var(--color-accent);
+  margin-inline-start: var(--space-1);
+}
+
+/* The category view (ProfitByCategory): the first group head sits 2px under the header's chips, not 12px. */
+.ui-cp-screen .ui-pcat-group:first-of-type {
+  margin-top: calc(var(--space-1) / 2 - var(--space-3));
+}
+
+/* FLOW-145: the year's forecast could not be read: one quiet line where the card would be. */
+.ui-cp-fc-failed {
+  margin: 0;
+  padding: var(--space-2) var(--space-1);
+}
+
+/* FLOW-946: the "paid from deposit" tag on a gross-up part in the drill-down, as a small pill
+   like the suggestion tag (ui-suggest-tag). */
+.ui-cp-grossup {
+  display: inline-block;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-chip);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-weight: var(--type-btn-weight);
+}
+

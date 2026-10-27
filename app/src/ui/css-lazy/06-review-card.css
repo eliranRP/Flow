@@ -1,0 +1,681 @@
+/* On-demand screens only (FLOW-974): the rules of src/ui/css/06-review-card.css that can match only inside a
+   screen Home's first load does not draw. Same order as there; app/src/ui/lazy.css loads them. */
+.ui-review-doc {
+  display: flex;
+  align-items: center;
+}
+
+.ui-review-show-all {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  min-block-size: var(--touch-min);
+}
+
+.ui-review-queue .ui-review {
+  margin-top: var(--space-4);
+}
+
+/* FLOW-327 1.2: the card stands clear of the filed-today banner. */
+.ui-review-queue .ui-banner + .ui-review-motion > .ui-review {
+  margin-top: var(--space-4);
+}
+
+/* Waiting reserves the settled note line: the label's height, with no pill and no words. */
+.ui-review-note-slot {
+  min-block-size: calc(var(--type-line2-size) * var(--type-line2-line));
+}
+
+/* FLOW-327 1.4: "1 מתוך 3" with no padding between a digit and "מתוך". FLOW-309: tabular digits, and
+   each number reserves the total's digits in a hidden ::before, so the index going 9→10 or 99→100
+   changes no box and nothing beside the counter moves. The spare room sits on the outer side. */
+.ui-review-counter {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-review-counter {
+  flex: none;
+}
+
+.ui-review-ai .ui-row {
+  padding-block: 0;
+  min-height: var(--touch-min);
+}
+
+.ui-review-ai .ui-row-text {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+/* FLOW-327 1.3 (mockup 03): one label column wide enough for "קטגוריה", so every value starts at one x. */
+.ui-review-ai .ui-row-hint {
+  flex: none;
+  inline-size: var(--review-label-w);
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-line2-weight);
+}
+
+.ui-review-ai .ui-row-title {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+/* Every pill ends at the chevron column, so two הצעת Jev pills line up on both edges. */
+.ui-review-ai .ui-row-title-with-tag {
+  display: flex;
+  align-items: center;
+  /* A full value still keeps a gap before the pill, LTR names included. */
+  gap: var(--space-2);
+}
+
+.ui-review-ai .ui-row-title-text {
+  flex: 1 1 0;
+  min-inline-size: 0;
+}
+
+.ui-review-ai .ui-row-title-with-tag > .ui-suggest-tag {
+  margin-inline-start: auto;
+}
+
+/* The board's header rhythm on the review queue (FLOW-365b): back row, title, counter, segments, card.
+   A 320x693 phone keeps the short-height spacing (its worst-case card has to end above the bar). */
+@media (min-height: 721px) {
+  .ui-review-queue .ui-page-stacked {
+    padding-top: calc(var(--safe-top) + var(--space-3));
+  }
+
+  .ui-review-queue .ui-review-counts {
+    margin-top: calc(var(--space-1) * 2.5);
+  }
+
+  .ui-review-queue .ui-review {
+    margin-top: calc(var(--space-3) - 1px);
+  }
+}
+
+.ui-review {
+  container: review / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  margin: var(--space-2) var(--space-card-inset) 0;
+  padding: var(--space-5);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sheet);
+  background: var(--color-surface);
+  box-sizing: border-box;
+}
+
+.ui-review-motion[data-motion="in"] {
+  animation: ui-review-in var(--motion-fade) var(--ease-standard);
+}
+
+.ui-review-motion[data-motion="out"] {
+  animation: ui-review-out var(--motion-fade) var(--ease-exit) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-review-motion[data-motion="in"],
+  .ui-review-motion[data-motion="out"] {
+    animation: none;
+  }
+}
+
+.ui-review-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  flex: 1;
+}
+
+.ui-review-supplier,
+.ui-party {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+/* Long supplier names: a name wraps up to three lines on the card, then ends in an ellipsis. */
+.ui-review-supplier {
+  font-size: var(--type-name-size);
+  line-height: var(--type-name-line);
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.ui-review-doc {
+  gap: var(--review-gap);
+  align-items: flex-start;
+}
+
+.ui-review-doc .t-muted {
+  color: var(--color-text-secondary);
+}
+
+/* FLOW-304. The payment method under the source line: icon and a few words, one line. */
+.ui-review-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  white-space: nowrap;
+}
+
+/* FLOW-439: the card or account name after the last 4; the name ellipsizes, the last 4 never does. */
+.ui-review-meta-name {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ui-method-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+/* The memo: one line with an ellipsis; a button only when clipped. */
+.ui-review-memo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  text-align: start;
+}
+
+.ui-review-memo-icon,
+.ui-review-memo-chevron {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.ui-review-memo-text {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 44px hit area; the negative block margin keeps the line its hint height. */
+.ui-review-memo-button {
+  min-block-size: var(--touch-min);
+  margin-block: calc((var(--type-caption-size) * var(--type-caption-line) - var(--touch-min)) / 2);
+}
+
+.ui-review-memo-button[data-open] {
+  align-items: flex-start;
+  margin-block: 0;
+}
+
+.ui-review-memo-button[data-open] .ui-review-memo-text {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.ui-review-memo-button[data-open] .ui-review-memo-chevron {
+  transform: rotate(180deg);
+}
+
+/* FLOW-365: the document thumbnail, a receipt drawn in two tones: paper with its lines and a total. */
+.ui-review-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-2);
+  inline-size: var(--review-tile-w);
+  block-size: var(--review-tile-h);
+  flex: none;
+  box-sizing: border-box;
+  border-radius: var(--radius-review);
+  background: var(--color-text);
+}
+
+.ui-review-paper-line,
+.ui-review-paper-total {
+  display: block;
+  block-size: var(--space-1);
+  border-radius: var(--radius-block);
+  background: var(--color-surface);
+  opacity: 0.55;
+}
+
+.ui-review-paper-line[data-w="long"] {
+  inline-size: 100%;
+}
+
+.ui-review-paper-line[data-w="short"] {
+  inline-size: 60%;
+}
+
+.ui-review-paper-total {
+  align-self: flex-end;
+  inline-size: 40%;
+  margin-block-start: auto;
+  opacity: 0.85;
+}
+
+/* FLOW-365: the card's field rows sit in one tinted panel; each row is a label over its value. */
+.ui-review-panel {
+  display: flex;
+  flex-direction: column;
+  margin-block-start: 0;
+  border-radius: var(--radius-card-tight);
+  background: var(--color-raised);
+  overflow: hidden;
+}
+
+.ui-review-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  inline-size: 100%;
+  min-block-size: 56px;
+  padding: var(--space-3) var(--space-4);
+  box-sizing: border-box;
+  border: 0;
+  background: none;
+  color: var(--color-text-secondary);
+  font: inherit;
+  text-align: start;
+}
+
+.ui-review-field + .ui-review-field {
+  border-block-start: 1px solid var(--color-line);
+}
+
+.ui-review-field-button {
+  cursor: pointer;
+}
+
+.ui-review-field-chevron {
+  display: inline-flex;
+  flex: none;
+}
+
+.ui-review-field-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  min-inline-size: 0;
+  text-align: start;
+}
+
+.ui-review-field-label {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-title-line);
+  color: var(--color-text-secondary);
+}
+
+/* FLOW-352 1: a value wraps to two lines, then ends in an ellipsis. */
+.ui-review-field-value {
+  display: -webkit-box;
+  min-inline-size: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-line);
+  color: var(--color-text);
+}
+
+.ui-review-field-hint {
+  flex: none;
+  font-size: var(--type-caption-size);
+  color: var(--color-text-secondary);
+}
+
+/* The board's suggestion beside a value is plain "הצעה" text, not a pill with the ✦ mark. */
+.ui-review-field-hint .ui-suggest-tag {
+  padding: 0;
+  margin: 0;
+  background: none;
+  color: var(--color-text-secondary);
+  font-weight: var(--type-meta-weight);
+}
+
+.ui-review-field-hint .ui-suggest-tag-jev > [aria-hidden] {
+  display: none;
+}
+
+.ui-review-field-hint .ui-suggest-tag-jev .ui-suggest-tag-words {
+  position: static;
+  inline-size: auto;
+  block-size: auto;
+  margin: 0;
+  clip: auto;
+  overflow: visible;
+}
+
+.ui-review-reason-held {
+  visibility: hidden;
+}
+
+.ui-review-ai {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 0;
+}
+
+/* The board's 16px between the rows, the split link and the reason line (a 320x693 phone keeps 0). */
+@media (min-height: 721px) {
+  .ui-review-ai {
+    gap: var(--space-4);
+  }
+}
+
+/* 2026-10-09 (option A): an amount spike puts "↑ N%" right after the amount, in the status pill
+   shape with warning text on its own light tint. When the row is short the pill drops under the
+   amount; the amount is never cut. "בדרך כלל ₪X" under it is a plain hint, like the VAT line. */
+.ui-review-amount {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.ui-review-amount > .t-detail {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* A long amount in a narrow card (−₪1,234,567 at 320) steps its size down so it stays whole: about
+   0.64em a character, so a figure of N characters fits the card's width (100cqi) at 100cqi / (N × 0.64).
+   A figure that fits keeps the display size. */
+.ui-review-figure {
+  font-size: min(var(--type-detail-size), calc(100cqi / (var(--figure-chars, 1) * 0.64)));
+  white-space: nowrap;
+}
+
+.ui-review-spike {
+  flex: none;
+  background: color-mix(in srgb, var(--color-warning) 16%, var(--color-surface));
+  color: var(--color-warning);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-btn-weight);
+  white-space: nowrap;
+}
+
+/* Short phones (320×693): keep the primary action above the tab bar. */
+@media (max-height: 720px) {
+  .ui-review {
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
+  }
+
+  /* A 320x693 phone keeps the card above the bar: a long name ends after two lines here. */
+  .ui-review-supplier {
+    -webkit-line-clamp: 2;
+  }
+
+  .ui-review-field {
+    min-block-size: var(--touch-min);
+    padding-block: 0;
+  }
+
+  .ui-review-panel {
+    margin-block-start: var(--space-2);
+  }
+
+  .ui-review-queue .ui-banner + .ui-review-motion > .ui-review {
+    margin-top: var(--space-2);
+  }
+
+  /* FLOW-333 C13: a Jev card (the filled line and a quiet flag) under the slim banner fits above the
+     pinned bar at 375x667. A square tile is as tall as the supplier and source lines, and the rows sit
+     closer to their hairline. 24px back; the rows keep 44px. */
+  .ui-review {
+    --review-tile-h: var(--review-tile-w);
+  }
+
+  .ui-review-ai {
+    margin-top: 0;
+    padding-top: var(--space-1);
+  }
+
+  /* FLOW-333 C14: under the filed-today banner, a loud flag is one 44px line: the title, 8px, then
+     the hint in warning, cut at its end when it doesn't fit. The row's own air stands in for the card's
+     bottom padding. Readers still hear both. Without the banner the card fits with two lines. */
+  .ui-review-queue:has(> .ui-banner) .ui-review:has(> .ui-review-flag.ui-row:last-child) {
+    padding-block-end: 0;
+  }
+
+  .ui-review-queue:has(> .ui-banner) .ui-review-flag.ui-row .ui-row-main {
+    gap: var(--space-2);
+  }
+
+  .ui-review-queue:has(> .ui-banner) .ui-review-flag.ui-row .ui-row-text {
+    flex: 1 1 auto;
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+
+  .ui-review-queue:has(> .ui-banner) .ui-review-flag.ui-row :is(.ui-row-title, .ui-row-hint) {
+    overflow: hidden;
+    min-inline-size: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* The title stays whole and the hint gives way; a title too long for the line leaves the hint
+     about four letters and its ellipsis. */
+  .ui-review-queue:has(> .ui-banner) .ui-review-flag.ui-row .ui-row-title {
+    flex: none;
+    max-inline-size: calc(100% - 4em - var(--space-2));
+  }
+
+  .ui-review-queue:has(> .ui-banner) .ui-review-flag.ui-row .ui-row-hint {
+    flex: 0 1 auto;
+  }
+}
+
+.ui-menu-slot {
+  display: block;
+  flex: none;
+  inline-size: var(--touch-min);
+  block-size: var(--touch-min);
+}
+
+.ui-review-approve {
+  display: contents;
+}
+
+/* FLOW-309 (decision 0165, option A): "✓ שולם · קבלה dd/mm" under the amount, muted like the VAT line.
+   The ✓ centres on the first line; the words wrap rather than clip at 320. */
+.ui-review-paid {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.ui-review-paid-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  block-size: calc(var(--type-caption-size) * var(--type-caption-line));
+}
+
+.ui-review-paid-text {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The counter row: "פריט i מתוך n" on the start side, "<n> אושרו אוטומטית היום" on the end side. */
+.ui-review-counts {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0 var(--space-side);
+}
+
+/* FLOW-309: the plural auto count stays on one line at 320, beside the counter. FLOW-365b: the board
+   sets it as plain secondary text, so it keeps the text height, not the 44px link hit area. */
+.ui-review-auto {
+  min-block-size: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The dashed peek of the next card, under the card (the board's "הבא בתור"). */
+.ui-review-next {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-3) var(--space-side) 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+/* The source pill at the top of the card's text column (חשבונית מצולמת, שורת בנק). */
+.ui-review-source {
+  align-self: flex-start;
+  padding: calc(var(--space-1) / 2) var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-chip);
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-title-line);
+}
+
+/* The split link under the rows: a text link with the split icon, 44px tall. */
+.ui-review-split-link {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-end;
+  gap: var(--space-2);
+  min-block-size: var(--touch-min);
+  color: var(--color-accent-text);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-line2-weight);
+  text-decoration: none;
+}
+
+/* The bar's three actions: אישור takes two parts, שינוי and דלג one each. */
+.ui-action-bar-row.ui-review-actions {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+
+/* FLOW-955: Jev's booking has two answers, אישור and ביטול, 2:1 across the bar (board LedgerReviewCard). */
+.ui-action-bar-row.ui-review-actions.ui-review-actions-two {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+
+/* The board's two big rows: the label over the value, the tag beside the value. */
+.ui-review .ui-row-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-inline-size: 0;
+}
+
+/* The one line under the bar says what the button does. */
+.ui-review-bar-hint {
+  margin: 0;
+  text-align: center;
+}
+
+/* FLOW-365: a saved split on the card, in place of the two rows (the board's card after the split). */
+.ui-review-split-sum {
+  display: flex;
+  flex-direction: column;
+  border: 0;
+  border-radius: var(--radius-card-tight);
+  background: var(--color-raised);
+  overflow: hidden;
+}
+
+.ui-review-split-head,
+.ui-review-split-part {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.ui-review-split-head {
+  padding-block: var(--space-1);
+  background: none;
+  color: var(--color-accent-text);
+}
+
+.ui-review-split-title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  color: var(--color-text);
+  font-weight: var(--type-title-weight);
+}
+
+.ui-review-split-title > .t-muted {
+  color: var(--color-text-secondary);
+  line-height: var(--type-title-line);
+}
+
+.ui-review-split-edit {
+  min-block-size: var(--touch-min);
+  color: var(--color-accent-text);
+  font-size: var(--type-line2-size);
+}
+
+/* The board's row: the amount on the start side, the name and its category on the end side. */
+.ui-review-split-part {
+  flex-direction: row-reverse;
+  border-top: 1px solid var(--color-line);
+}
+
+.ui-review-split-name {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-inline-size: 0;
+}
+
+.ui-review-split-name .t-muted {
+  line-height: var(--type-title-line);
+}
+
+/* FLOW-704: a pending line holds the value line a settled line's text has, so the waiting card keeps its height. */
+.ui-review-skel-value {
+  display: block;
+  min-block-size: calc(var(--type-body-size) * var(--type-body-line));
+}
+

@@ -1,0 +1,200 @@
+/* On-demand screens only (FLOW-974): all of the former src/ui/css/10-settings-connect.css: it matches only inside a
+   screen Home's first load does not draw. Same order as there; app/src/ui/lazy.css loads them. */
+/* The connection pages (SUMIT, Mercury, the AI page) at the board's rhythm, split from 10-settings-onboarding.css (file size). */
+
+/* d4: connection pages (SUMIT, Mercury, AI) match the board's rhythm: the header sits at the 20 page gutter with
+   the back row at 12, the blocks 14 apart, 15/1.5 text in the tint box, steps and AI rows. */
+.ui-connection-page > .ui-page-stacked {
+  margin-inline: calc(var(--space-4) * -1);
+  padding-block: var(--safe-top) 0;
+}
+
+.ui-connection-page .ui-focus-title {
+  margin-top: var(--space-1);
+}
+
+.ui-connection-page > .ui-page-stacked .ui-focus-title ~ .t-line2 {
+  margin-top: var(--space-1);
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-connection-page .ui-settings-head {
+  padding-top: calc(var(--space-1) * 1.5);
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-connection-problem,
+.ui-step-text,
+.ui-settings-head + .ui-settings-note {
+  line-height: calc(var(--type-line2-line) + 0.1);
+}
+
+.ui-step-list {
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+}
+
+.ui-step-item .ui-install-num {
+  inline-size: 22px;
+  block-size: 22px;
+  margin-top: 1px;
+  font-size: var(--type-caption-size);
+}
+
+.ui-connection-page .ui-field-label {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-connection-page .ui-field-message-slot:empty {
+  display: none;
+}
+
+.ui-connection-page .ui-secret-wrap .ui-field-control {
+  min-block-size: 50px;
+  padding-inline: calc(var(--space-10) + var(--space-3)) var(--space-inset-row);
+  font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", monospace;
+  font-size: var(--type-line2-size);
+  text-align: right;
+}
+
+/* The import-from control: no label above it, a 44px track on the surface colour. */
+.ui-connection-page .ui-field > .ui-field-label:has(+ .ui-seg) {
+  display: none;
+}
+
+.ui-connection-page .ui-seg {
+  padding: calc(var(--space-1) / 2);
+  gap: calc(var(--space-1) / 2);
+  border-radius: var(--radius-input);
+  background: var(--color-surface);
+}
+
+.ui-connection-page > .ui-settings-head + .ui-settings-note {
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+}
+
+.ui-connection-page .ui-settings-note {
+  line-height: calc(var(--type-caption-line) + 0.1);
+}
+
+.ui-connection-page > .ui-settings-head + .ui-settings-note {
+  line-height: calc(var(--type-line2-line) + 0.1);
+}
+
+.ui-ai-questions {
+  gap: calc(var(--space-2) + var(--space-1) / 2);
+}
+
+.ui-ai-questions-head,
+.ui-ai-question {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+/* The scope rows: the choice-sheet card row, 60px, the chosen row tinted, the disc on the end side. */
+.ui-ai-scope .ui-radio-row {
+  min-block-size: 60px;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-inset-row);
+  border-radius: var(--radius-toast);
+}
+
+.ui-ai-scope .ui-radio-row::before {
+  display: none;
+}
+
+.ui-ai-scope .ui-radio-row[aria-checked="true"] {
+  background: var(--color-tint);
+}
+
+.ui-ai-scope .ui-row-text {
+  gap: calc(var(--space-1) * 0.75);
+}
+
+.ui-ai-scope .ui-row-title {
+  font-size: var(--type-btn-2-size);
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-ai-scope .ui-radio-desc {
+  font-size: calc(var(--type-cents-size) + 1px);
+  line-height: var(--type-meta-line);
+}
+
+.ui-ai-scope .ui-radio {
+  inline-size: 22px;
+  block-size: 22px;
+  border-width: 2px;
+}
+
+.ui-ai-scope .ui-radio[data-on="true"] {
+  border: 0;
+}
+
+.ui-ai-code-note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: calc(var(--type-caption-line) + 0.1);
+}
+
+/* Connected page: the buttons and links take the page's block gap and width, as the board's direct children do. */
+.ui-connection-page .ui-connection-actions {
+  display: contents;
+}
+
+.ui-connection-page .ui-connection-actions > .ui-btn-link,
+.ui-connection-page .ui-connection-actions > .ui-btn-danger-link {
+  align-self: flex-start;
+  padding-inline: var(--space-1);
+}
+
+.ui-connection-page .ui-connection-actions > .ui-btn-secondary {
+  align-self: stretch;
+}
+
+.ui-connection-page .ui-connection-fact dd {
+  font-weight: var(--type-line2-weight);
+}
+
+/* The AI page's connected card: status, two facts and the footnote in one 16-inset card. */
+.ui-ai-connected-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+/* Four assistants in one row at 13: the tab text fits without clipping. */
+.ui-connection-page .ui-seg-btn {
+  padding-inline: calc(var(--space-1) / 2);
+  font-size: var(--type-caption-size);
+}
+
+.ui-ai-connected-card .ui-connection-fact {
+  min-block-size: calc(var(--touch-min) - var(--space-1));
+  padding-block: 0;
+}
+
+.ui-ai-connected-card .ui-ai-status-name {
+  font-weight: var(--type-line2-weight);
+}
+
+/* FLOW-939: "‹ כל המפתחות" over a key's page and a new key's setup. Board: 15px accent text with a 16px back chevron, 44 tall, at the start edge. */
+.ui-connection-page .ui-ai-all-keys {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: var(--space-1);
+  min-block-size: var(--touch-min);
+  padding-inline: var(--space-1);
+  color: var(--color-accent-text);
+  font-size: var(--type-line2-size);
+  text-decoration: none;
+}
+
+/* A key's name wraps: at 320px "Claude Code · מחשב עבודה" beside its access does not fit on one line. */
+.ui-ai-keys .ui-row-title {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
