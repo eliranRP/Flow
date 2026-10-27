@@ -9,7 +9,7 @@
 - [x] "הקודם" and "דילוג על הכל" are 44px.
 - [x] Field placeholders reach 4.5:1 (the field edges are 3:1 since FLOW-972).
 - [x] Sign-in: the help link sits inside the error, and the button then reads "ניסיון חוזר עם Google".
-- [x] Sign-in: offline says so before the tap ("אין חיבור לאינטרנט. הכניסה תעבוד כשהחיבור יחזור.").
+- [x] Sign-in: offline says so before the tap ("אין חיבור · הכניסה תעבוד כשהחיבור יחזור", the shared offline line).
 - [x] Sign-in: the heading is 32px; the legal links keep their 44px targets.
 - [x] One push question: step 7's notifications answer is the same asked-once answer as the review card's, so a user who answered in setup is not asked again.
 - **Acceptance:** stories of sign-in offline and failed, step 6 before approval, and the project field's note; tests for each of the above; decision record; design log entry.
