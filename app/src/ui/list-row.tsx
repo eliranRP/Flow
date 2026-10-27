@@ -28,6 +28,8 @@ type Common = {
   hintParts?: readonly ReactNode[];
   /** Hint uses t-caption t-muted, and the control points at it with aria-describedby. */
   describeHint?: boolean;
+  /** FLOW-971: an element outside the row that describes it (the change sheet's field error). */
+  describedBy?: string;
   href?: string;
   /** The href is an outside page: it opens in a new tab, and the name says so. */
   external?: boolean;
@@ -408,7 +410,7 @@ export function ListRow(props: ListRowProps) {
         aria-busy={props.busy === true}
         aria-expanded={props.expanded}
         aria-label={described ? rowName(props) : props.label}
-        aria-describedby={described}
+        aria-describedby={described ?? props.describedBy}
         onClick={() => {
           // A busy row stays focusable but ignores taps, so one run cannot start twice.
           if (props.disabled === true || props.ariaDisabled === true || props.busy === true) return;

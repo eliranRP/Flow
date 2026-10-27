@@ -2,7 +2,7 @@ import type { ProjectWaitingRow } from "@flow/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { ProjectWaitingList } from "./review-screen";
+import { ProjectWaitingList } from "./review-lists";
 import { KEPT_OUT } from "./screen-shared";
 import { readTxnList } from "../txn-nav";
 

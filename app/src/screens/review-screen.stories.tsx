@@ -69,6 +69,33 @@ export const ReviewAll: Story = {
   ),
 };
 
+/** FLOW-971: the full list keeps its page on a failed read, with נסו שוב and צריך עזרה?. */
+export const ReviewAllFailed: Story = {
+  render: () => (
+    <StoryRoute entry="/review/all" tabs>
+      <ReviewAllList backTo="/review" search="" rows={[]} state={{ failed: { offline: false, onRetry: () => undefined } }} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-971: offline, the list says which moment it shows. */
+export const ReviewAllOffline: Story = {
+  render: () => (
+    <StoryRoute entry="/review/all" tabs>
+      <ReviewAllList backTo="/review" search="" rows={[sampleReview]} state={{ offlineSince: Date.UTC(2026, 9, 11, 6, 41) }} />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-971: nothing waits; the card has one way on. */
+export const ReviewAllEmpty: Story = {
+  render: () => (
+    <StoryRoute entry="/review/all" tabs>
+      <ReviewAllList backTo="/review" search="" rows={[]} />
+    </StoryRoute>
+  ),
+};
+
 export const ReviewBanner: Story = {
   render: () => (
     <StoryRoute entry="/review" tabs>

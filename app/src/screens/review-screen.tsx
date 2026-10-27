@@ -1,26 +1,19 @@
-import { formatAmountText, type ProjectWaitingRow, type ReviewRow } from "@flow/shared";
+import type { ReviewRow } from "@flow/shared";
 import { useEffect, useMemo, useRef } from "react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useHoldWrites } from "../use-is-viewer";
 import { useFlowSearch, useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
-import { useProjectWaitingQuery, useReviewQuery } from "../use-books";
-import { useHeldOrder } from "../list-hold";
-import { txnListState } from "../txn-nav";
+import { useDashboardQuery, useProjectWaitingQuery, useReviewQuery } from "../use-books";
 import { reviewFocusPath } from "../review-paths";
 import { SetupSampleReview } from "../setup/sample-review";
-import { formatDayMonth } from "../ui/date-math";
-import { KeptOutTag, rowSource } from "../ui/line-marks";
-import { ListRow } from "../ui/list-row";
-import { MonthList } from "../ui/month-list";
-import { ScreenHeader } from "../ui/screen-header";
-import { KEPT_OUT, invoiceDate } from "./screen-shared";
-import { AlertIcon, ChevronIcon } from "../ui/icons";
-import { ScreenState } from "../ui/screen-state";
+import { useOnline } from "../ui/band-states";
+import { ScreenState, usePreviewRetry } from "../ui/screen-state";
+import { ProjectWaitingList, ReviewAllList, reviewListReturn, type ReviewListState } from "./review-lists";
 import { EMPTY_REVIEW, listFocusId, listPlace, queueAfterFocus, reviewE2e, ReviewEmpty, reviewLineFocus, reviewListPath, rotateReview, useE2eReviewRows } from "./review-shared";
 import { E2E_DONE_COUNTS } from "../dev/review-e2e-fixture";
 import { type ReviewPreviewWrite, ReviewQueue } from "./review-queue";
-import { useJevBookingsQuery, type JevBooking } from "../jev-bookings";
+import { useJevBookingsQuery } from "../jev-bookings";
 import { JevBookingReview } from "./jev-booking-review";
 import type { ReviewCase } from "../dev/review-e2e-fixture";
 
@@ -36,11 +29,8 @@ function reviewRowsParam(value: string | null): number | undefined {
   return Number.isInteger(size) && size >= 0 ? size : undefined;
 }
 
-/** The row opened from the list. A later URL replace must not move this. */
-let reviewReturnId: string | null = null;
-
 export function resetReviewListFocus(): void {
-  reviewReturnId = null;
+  reviewListReturn.current = null;
   reviewLineFocus.project.current = null;
   reviewLineFocus.category.current = null;
 }
@@ -57,6 +47,12 @@ export function ReviewScreen() {
   const review = useReviewQuery();
   const bookings = useJevBookingsQuery(projectFilter == null);
   const waiting = useProjectWaitingQuery(projectFilter ?? "");
+  // FLOW-971: the waiting list's Back and subtitle name the project.
+  const dashboard = useDashboardQuery(projectFilter != null && preview === "off");
+  const projectName = dashboard.data?.projects.find((project) => project.id === projectFilter)?.name;
+  const online = useOnline();
+  const retryReview = usePreviewRetry(() => { void review.refetch(); });
+  const retryWaiting = usePreviewRetry(() => { void waiting.refetch(); });
   const focusedOrder = useRef<ReviewRow[] | null>(null);
   const e2eList = reviewE2e != null && params.get("preview") != null && params.get("e2e") === "list";
   // FLOW-365b: `&board=` opens one board state for the proofs: sheet (the project picker open),
@@ -89,7 +85,7 @@ export function ReviewScreen() {
       focusedOrder.current = null;
       return;
     }
-    if (reviewReturnId == null) reviewReturnId = urlId;
+    reviewListReturn.current ??= urlId;
     if (phase.kind !== "ready") return;
     if (activeRows.length === 0) {
       if (projectFilter == null) void navigate(`/review${search}`, { replace: true });
@@ -114,8 +110,11 @@ export function ReviewScreen() {
   if (projectFilter != null && preview === "off") {
     const back = `/projects/${projectFilter}`;
     const waitingPhase = screenPhase(preview, waiting);
-    if (waitingPhase.kind === "loading" || waitingPhase.kind === "error") {
+    if (waitingPhase.kind === "loading") {
       return <ScreenState title="לאישור" backTo={back} phase={waitingPhase} onRetry={() => { void waiting.refetch(); }} />;
+    }
+    if (waitingPhase.kind === "error") {
+      return <ProjectWaitingList rows={[]} search={search} backTo={back} backText={projectName} state={{ failed: { offline: waitingPhase.offline, onRetry: retryWaiting } }} />;
     }
     const held = waiting.data ?? [];
     if (held.length === 0) return <ReviewEmpty search={search} filtered backTo={back} homeTo={back} homeLabel="חזרה לפרויקט" />;
@@ -140,7 +139,16 @@ export function ReviewScreen() {
         />
       );
     }
-    return <ProjectWaitingList rows={held} search={search} backTo={back} />;
+    return (
+      <ProjectWaitingList
+        rows={held}
+        search={search}
+        backTo={back}
+        backText={projectName}
+        projectName={projectName}
+        state={{ offlineSince: !online && waiting.dataUpdatedAt > 0 ? waiting.dataUpdatedAt : null }}
+      />
+    );
   }
   const rows = source;
   const fromList = listFocusId(params) != null;
@@ -174,8 +182,13 @@ export function ReviewScreen() {
       />
     );
   }
+  // FLOW-971: the full list keeps its page on a failed read and offline, and says so under its title.
+  const listState: ReviewListState = phase.kind === "error"
+    ? { failed: { offline: phase.offline, onRetry: retryReview } }
+    : { offlineSince: !online && review.dataUpdatedAt > 0 ? review.dataUpdatedAt : null };
+  if (listing && phase.kind === "error") return <ReviewAllList rows={EMPTY_REVIEW} search={search} backTo={`/review${search}`} state={listState} />;
   if (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0)) {
-    if (listing) return <ReviewAllList rows={EMPTY_REVIEW} bookings={listedBookings} search={search} backTo={`/review${search}`} />;
+    if (listing) return <ReviewAllList rows={EMPTY_REVIEW} bookings={listedBookings} search={search} backTo={`/review${search}`} state={listState} />;
     return (
       <ReviewEmpty
         search={search}
@@ -188,7 +201,7 @@ export function ReviewScreen() {
   if (phase.kind !== "ready") {
     return <ScreenState title="לאישור" phase={phase} onRetry={() => { void review.refetch(); }} backTo={listing ? `/review${search}` : undefined} />;
   }
-  if (listing) return <ReviewAllList rows={rows} bookings={listedBookings} search={search} backTo={`/review${search}`} />;
+  if (listing) return <ReviewAllList rows={rows} bookings={listedBookings} search={search} backTo={`/review${search}`} state={listState} />;
   const ordered = rowsForFocus(rows);
   const setupRun = params.get("setup") === "1";
   const setupFromCard = params.get("from") === "card";
@@ -204,149 +217,5 @@ export function ReviewScreen() {
       openPicker={e2eBoard === "sheet"}
       handledBefore={e2eBoard === "nosuggestion" ? 3 : undefined}
     />
-  );
-}
-
-export function ReviewAllList({
-  rows,
-  bookings = [],
-  search,
-  backTo,
-}: {
-  rows: ReviewRow[];
-  /** FLOW-955: Jev's bookings waiting for review, listed first (they come first in the queue). */
-  bookings?: readonly JevBooking[];
-  search: string;
-  backTo: string;
-}) {
-  useEffect(() => {
-    const id = reviewReturnId;
-    if (id == null) return;
-    const href = reviewFocusPath(search, id);
-    const link = [...document.querySelectorAll("a[href]")].find((node) => node.getAttribute("href") === href);
-    if (link instanceof HTMLElement) link.focus();
-    const timer = window.setTimeout(() => {
-      if (reviewReturnId === id) reviewReturnId = null;
-    }, 0);
-    return () => { window.clearTimeout(timer); };
-  }, [search, rows]);
-  const ordered = useHeldOrder(rows, (row) => row.id);
-  if (rows.length === 0 && bookings.length === 0) return <ReviewEmpty search={search} backTo={backTo} />;
-  return (
-    <div className="ui-review-all-page">
-      {/* FLOW-365: the flat list's title, its count line, and one row per item (no date groups, no avatars). */}
-      <ScreenHeader
-        title="כל הפריטים לאישור"
-        subtitle={`${String(rows.length + bookings.length)} פריטים מחכים · הקישו על פריט כדי לפתוח אותו`}
-        backTo={backTo}
-        backText="בית"
-      />
-      <ul className="ui-review-all">
-        {bookings.map((booking) => (
-          <li key={booking.transaction_id}>
-            <ReviewAllBookingRow booking={booking} href={`/review${search}`} />
-          </li>
-        ))}
-        {ordered.map((row) => (
-          <li key={row.id}>
-            <ReviewAllRow row={row} href={reviewFocusPath(search, row.id)} />
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-/** FLOW-955: Jev's booking as a list row: the party, "<date> · ✦ פקודת יומן של Jev", the amount; it opens the queue's head. */
-function ReviewAllBookingRow({ booking, href }: { booking: JevBooking; href: string }) {
-  const income = booking.amount_gross > 0n;
-  const shown = income ? booking.amount_gross : -booking.amount_gross;
-  const amount = formatAmountText(shown, booking.currency, income ? { detail: true, direction: "income", plus: true } : { detail: true });
-  return (
-    <Link className="ui-review-all-row ui-hit" to={href}>
-      <span className="ui-review-all-text">
-        <span className="ui-review-all-title">{booking.party}</span>
-        <span className="ui-review-all-meta">{`${invoiceDate(booking.doc_date)} · ✦ פקודת יומן של Jev`}</span>
-      </span>
-      <bdi className="ui-review-all-amount ui-num" dir="ltr">{amount}</bdi>
-      <ChevronIcon size={16} />
-    </Link>
-  );
-}
-
-/** FLOW-365: a list row. The payee, then "<date> · חשבונית|בנק" (and "חסר פרויקט" with its icon, FLOW-960), the amount and a chevron. */
-function ReviewAllRow({ row, href }: { row: ReviewRow; href: string }) {
-  const income = row.direction === "income";
-  const shown = row.amount_net < 0n ? -row.amount_net : row.amount_net;
-  const amount = formatAmountText(shown, row.currency ?? "ILS", income
-    ? { detail: true, direction: "income", plus: true }
-    : { detail: true });
-  const meta = `${invoiceDate(row.doc_date)} · ${row.source === "mercury" ? "בנק" : "חשבונית"}`;
-  // FLOW-960: a row that blocks אישור says so with an icon and the warning tone, not as plain meta.
-  const missing = row.project_id == null;
-  return (
-    <Link className="ui-review-all-row ui-hit" to={href}>
-      <span className="ui-review-all-text">
-        <span className="ui-review-all-title">{row.supplier_name ?? row.description}</span>
-        <span className="ui-review-all-meta">
-          {meta}
-          {missing ? (
-            <>
-              {" · "}
-              <span className="ui-review-all-missing"><AlertIcon size={16} />חסר פרויקט</span>
-            </>
-          ) : null}
-        </span>
-      </span>
-      <bdi className={income ? "ui-review-all-amount ui-review-all-in ui-num" : "ui-review-all-amount ui-num"} dir="ltr">{amount}</bdi>
-      <ChevronIcon size={16} />
-    </Link>
-  );
-}
-
-export function ProjectWaitingList({
-  rows,
-  search,
-  backTo,
-  hrefFor,
-}: {
-  rows: ProjectWaitingRow[];
-  search: string;
-  backTo?: string;
-  hrefFor?: (row: ProjectWaitingRow) => string;
-}) {
-  const ordered = useHeldOrder(rows, (row) => row.transaction_id);
-  // FLOW-314: a card opened here walks the list's card rows; a row with a change to review opens its own screen.
-  const location = useLocation();
-  const listFrom = `${location.pathname}${location.search}`;
-  const cardIds = ordered.filter((row) => row.review_id == null).map((row) => row.transaction_id);
-  return (
-    <div>
-      <ScreenHeader title="לאישור" subtitle="הוצאות שמחכות לאישור בפרויקט הזה" backTo={backTo} layout="inline" />
-      <MonthList
-        rows={ordered}
-        keyOf={(row) => row.transaction_id}
-        dateOf={(row) => row.doc_date}
-        amountOf={(row) => ({ minor: row.amount_net, currency: row.currency ?? "ILS", direction: "expense" })}
-        renderRow={(row) => (
-          <ListRow
-            variant="transaction"
-            title={row.description}
-            hint={formatDayMonth(row.doc_date)}
-            agorot={row.amount_net}
-            currency={row.currency}
-            sign="out"
-            source={rowSource(row.source)}
-            tag={row.kept_out === true ? <KeptOutTag label={KEPT_OUT} /> : undefined}
-            href={hrefFor
-              ? hrefFor(row)
-              : row.review_id == null
-                ? `/transactions/${row.transaction_id}${search}`
-                : `/review/change${search}${search ? "&" : "?"}item=${row.review_id}`}
-            state={hrefFor == null && row.review_id == null ? txnListState(cardIds, row.transaction_id, listFrom) : undefined}
-          />
-        )}
-      />
-    </div>
   );
 }

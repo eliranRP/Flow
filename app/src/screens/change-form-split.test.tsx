@@ -4,6 +4,7 @@ import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
 import { ViewerPreview } from "../use-is-viewer";
+import { reviewHold, reviewPin, pinReviewLine } from "../review-pin";
 import { ChangeForm } from "./flow-screens";
 
 // FLOW-325 §10 (option A): פיצול לפי קטגוריות on the change sheet's project list approves the
@@ -17,7 +18,10 @@ const state = vi.hoisted((): {
   /** A resolve_review answer the test holds back (a pick on an open line). */
   resolve: null | (() => ApproveReply);
   calls: Array<{ name: string; args: unknown }>;
-} => ({ row: {}, approve: null, resolve: null, calls: [] }));
+  /** The line is gone from list_review (closed elsewhere); `others` are listed instead. */
+  listEmpty: boolean;
+  others: Array<Record<string, unknown>>;
+} => ({ row: {}, approve: null, resolve: null, calls: [], listEmpty: false, others: [] }));
 
 vi.mock("./jev-review-card", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./jev-review-card")>();
@@ -51,13 +55,14 @@ const dashboard = {
 const supabase = {
   rpc: (name: string, args: unknown) => {
     state.calls.push({ name, args });
-    if (name === "list_review") return Promise.resolve({ data: [state.row], error: null });
+    if (name === "list_review") return Promise.resolve({ data: state.listEmpty ? state.others : [state.row], error: null });
     if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
     if (name === "list_categories") {
       return Promise.resolve({ data: [{ id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: false }], error: null });
     }
     if (name === "approve_review_item") return state.approve ? state.approve() : Promise.resolve({ data: { ok: true }, error: null });
     if (name === "resolve_review" && state.resolve) return state.resolve();
+    if (name === "reassign_transaction") return Promise.resolve({ data: "undo-reassign-1", error: null });
     return Promise.resolve({ data: null, error: null });
   },
 };
@@ -195,7 +200,6 @@ describe("פיצול לפי קטגוריות on the change sheet (FLOW-325 §10)
     state.resolve = () => new Promise((resolve) => { answer = resolve; });
     renderSheet();
     fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה", hidden: true }));
     // The picker closes and the summary shows the tapped project, with no busy row (decision 0180).
     expect(await screen.findByRole("button", { name: /וילה/, hidden: true })).toBeInTheDocument();
     expect(screen.queryByRole("radio", { name: /וילה/, hidden: true })).not.toBeInTheDocument();
@@ -217,28 +221,18 @@ function resolveCalls() {
   return state.calls.filter((call) => call.name === "resolve_review");
 }
 
-describe("the picker keeps the choice until שמירה (FLOW-831)", () => {
+describe("a pick saves at once, with ביטול for 5s (decision 0221)", () => {
   afterEach(() => {
     state.resolve = null;
   });
 
-  it("שמירה is disabled while the checked project is the saved one, once it is owned", async () => {
-    state.row = row({ project_suggested: false });
-    renderSheet();
-    expect(await screen.findByRole("button", { name: "שמירה", hidden: true })).toBeDisabled();
-    fireEvent.click(screen.getByRole("radio", { name: /וילה/, hidden: true }));
-    expect(screen.getByRole("button", { name: "שמירה", hidden: true })).toBeEnabled();
-  });
-
-  it("a row tap writes nothing; שמירה sends one resolve_review and shows the project while it is pending", async () => {
+  it("has no pinned שמירה: a row tap sends one resolve_review and shows the project while it is pending", async () => {
     state.row = row();
     let answer: (result: { data: unknown; error: { message: string } | null }) => void = () => undefined;
     state.resolve = () => new Promise((resolve) => { answer = resolve; });
     renderSheet();
     fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
-    expect(resolveCalls()).toHaveLength(0);
-    expect(screen.getByRole("heading", { name: "בחירת פרויקט", hidden: true })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "שמירה", hidden: true }));
+    expect(screen.queryByRole("button", { name: "שמירה", hidden: true })).not.toBeInTheDocument();
     expect(await screen.findByRole("button", { name: /וילה/, hidden: true })).toBeInTheDocument();
     await waitFor(() => {
       expect(resolveCalls()).toHaveLength(1);
@@ -253,14 +247,123 @@ describe("the picker keeps the choice until שמירה (FLOW-831)", () => {
     expect(resolveCalls()).toHaveLength(1);
   });
 
-  it("✕ without שמירה sends nothing", async () => {
+  it("a second pick waits for the first write; it reassigns the closed line, never in parallel", async () => {
+    state.row = row();
+    let answer: (result: { data: unknown; error: { message: string } | null }) => void = () => undefined;
+    state.resolve = () => new Promise((resolve) => { answer = resolve; });
+    renderSheet();
+    fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
+    await waitFor(() => {
+      expect(resolveCalls()).toHaveLength(1);
+    });
+    fireEvent.click(await screen.findByRole("button", { name: /^פרויקט:/, hidden: true }));
+    fireEvent.click(await screen.findByRole("radio", { name: /הרצל/, hidden: true }));
+    // The reassign waits in the sheet's scope until resolve_review answers.
+    await act(async () => { await Promise.resolve(); });
+    expect(state.calls.some((call) => call.name === "reassign_transaction")).toBe(false);
+    await act(async () => {
+      answer({ data: null, error: null });
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(state.calls.some((call) => call.name === "reassign_transaction")).toBe(true);
+    });
+    const order = state.calls.map((call) => call.name).filter((name) => name === "resolve_review" || name === "reassign_transaction");
+    expect(order).toEqual(["resolve_review", "reassign_transaction"]);
+    expect(state.calls.find((call) => call.name === "reassign_transaction")?.args).toMatchObject({ p_project_id: "p1" });
+  });
+
+  it("ביטול on a second pick undoes only that pick, and the sheet shows the first pick again", async () => {
     state.row = row();
     renderSheet();
     fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
-    fireEvent.click(screen.getByRole("button", { name: "סגירה", hidden: true }));
     await waitFor(() => {
-      expect(screen.queryByRole("heading", { name: "בחירת פרויקט", hidden: true })).not.toBeInTheDocument();
+      expect(resolveCalls()).toHaveLength(1);
     });
-    expect(resolveCalls()).toHaveLength(0);
+    fireEvent.click(await screen.findByRole("button", { name: /^פרויקט:/, hidden: true }));
+    fireEvent.click(await screen.findByRole("radio", { name: /הרצל/, hidden: true }));
+    expect(await screen.findByText(/^השיוך נשמר · הרצל/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "ביטול", hidden: true }));
+    await waitFor(() => {
+      expect(state.calls.some((call) => call.name === "undo_reassign" && (call.args as { p_id?: string }).p_id === "undo-reassign-1")).toBe(true);
+    });
+    expect(await screen.findByRole("button", { name: /^פרויקט: וילה/, hidden: true })).toBeInTheDocument();
+  });
+
+  it("after a failed first resolve, a line closed elsewhere is reassigned, not resolved", async () => {
+    state.row = row();
+    let answer: (result: { data: unknown; error: { message: string } | null }) => void = () => undefined;
+    state.resolve = () => new Promise((resolve) => { answer = resolve; });
+    const { client } = renderSheet();
+    fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
+    await waitFor(() => {
+      expect(resolveCalls()).toHaveLength(1);
+    });
+    await act(async () => {
+      answer({ data: null, error: { message: "Failed to fetch" } });
+      await Promise.resolve();
+    });
+    expect(await screen.findByRole("button", { name: "ניסיון חוזר", hidden: true })).toBeInTheDocument();
+    // Someone else closes the line: the queue's next read no longer has it.
+    state.resolve = null;
+    state.listEmpty = true;
+    await act(async () => { await client.invalidateQueries({ queryKey: ["review"] }); });
+    fireEvent.click(await screen.findByRole("button", { name: /^פרויקט:/, hidden: true }));
+    fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
+    await waitFor(() => {
+      expect(state.calls.some((call) => call.name === "reassign_transaction")).toBe(true);
+    });
+    expect(resolveCalls()).toHaveLength(1);
+    state.listEmpty = false;
+  });
+
+  it("when the undone line does not come back, the hold drops and the queue's head takes the pin", async () => {
+    pinReviewLine(null);
+    state.row = row();
+    renderSheet();
+    fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
+    fireEvent.click(await screen.findByRole("button", { name: "ביטול", hidden: true }));
+    expect(reviewHold()).toBe("t1");
+    // The reopen lands, but the line was approved elsewhere: the queue's next read shows another line.
+    state.listEmpty = true;
+    state.others = [row({ id: "r2", transaction_id: "t2" })];
+    expect(await screen.findByText("השיוך הקודם חזר, והפריט חזר לתור.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(reviewHold()).toBeNull();
+    }, { timeout: 3000 });
+    expect(reviewPin()).toBe("t2");
+    state.listEmpty = false;
+    state.others = [];
+    pinReviewLine(null);
+  });
+
+  it("ביטול pins the line as the queue's head, and the next pick resolves the item again", async () => {
+    pinReviewLine(null);
+    state.row = row();
+    renderSheet();
+    fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
+    fireEvent.click(await screen.findByRole("button", { name: "ביטול", hidden: true }));
+    expect(reviewPin()).toBe("t1");
+    expect(reviewHold()).toBe("t1");
+    expect(await screen.findByText("השיוך הקודם חזר, והפריט חזר לתור.")).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: /^פרויקט:/, hidden: true }));
+    fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
+    await waitFor(() => {
+      expect(resolveCalls()).toHaveLength(2);
+    });
+    expect(state.calls.some((call) => call.name === "reassign_transaction")).toBe(false);
+    pinReviewLine(null);
+  });
+
+  it("names what was saved, and ביטול puts the item back in the queue", async () => {
+    state.row = row();
+    renderSheet();
+    fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
+    const undo = await screen.findByRole("button", { name: "ביטול", hidden: true });
+    expect(screen.getByText(/^השיוך נשמר · וילה/)).toBeInTheDocument();
+    fireEvent.click(undo);
+    await waitFor(() => {
+      expect(state.calls.some((call) => call.name === "reopen_review" && (call.args as { p_id?: string }).p_id === "r1")).toBe(true);
+    });
   });
 });

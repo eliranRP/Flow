@@ -169,7 +169,6 @@ describe("rejected writes", () => {
     fireEvent.click(category);
     // A suggestion stays confirmable: שמירה on the suggested row saves it and clears הצעה (FLOW-831).
     fireEvent.click(await screen.findByRole("radio", { name: /חומרים/ }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     const cleared = await screen.findByRole("button", { name: "קטגוריה: חומרים, שינוי" });
     expect(within(cleared).queryByText("הצעה")).not.toBeInTheDocument();
     expect(within(screen.getByRole("button", { name: "פרויקט: הרצל, שינוי" })).getByText("הצעה")).toBeInTheDocument();
@@ -624,7 +623,6 @@ describe("rejected writes", () => {
     fireEvent.click(await screen.findByRole("button", { name: /פרויקט:/ }));
     expect(await screen.findByText("הפיצול ירד, והסכום כולו יעבור לפרויקט הזה.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "הרצל" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(calls).toContain("collapse_split");
     });
@@ -696,7 +694,6 @@ describe("rejected writes", () => {
     renderAt("/review/change?item=r1");
     fireEvent.click(await screen.findByRole("button", { name: /קטגוריה:/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(calls).toContain("resolve_review");
     });
@@ -704,7 +701,6 @@ describe("rejected writes", () => {
     expect(screen.queryByText("אין פריט לשינוי")).not.toBeInTheDocument();
     fireEvent.click(await screen.findByRole("button", { name: /פרויקט:/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "וילה" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(calls).toContain("reassign_transaction");
     });
@@ -762,7 +758,6 @@ describe("rejected writes", () => {
     expect(screen.queryByRole("switch", { name: "לזכור לספק הזה" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /קטגוריה:/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "חומרים" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(calls).toContain("set_transaction_category");
     });
@@ -771,7 +766,6 @@ describe("rejected writes", () => {
     fireEvent.click(await screen.findByRole("button", { name: /פרויקט:/ }));
     expect(await screen.findByText("הפיצול ירד, והסכום כולו יעבור לפרויקט הזה.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "הרצל" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(calls).toContain("collapse_split");
     });
@@ -853,19 +847,16 @@ describe("rejected writes", () => {
     await roleShows("dialog", "שינוי שיוך");
     fireEvent.click(await screen.findByRole("button", { name: /פרויקט:/ }, { timeout: 2500 }));
     fireEvent.click(await screen.findByRole("radio", { name: "אתר א" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /פרויקט: אתר א/ })).toBeInTheDocument();
     });
     fireEvent.click(screen.getByRole("button", { name: /קטגוריה:/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "הכנסה מלקוחות" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /קטגוריה: הכנסה מלקוחות/ })).toBeInTheDocument();
     });
     fireEvent.click(screen.getByRole("button", { name: /קטגוריה:/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "הכנסה אחרת" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(projectArg).toBe("p1");
     });

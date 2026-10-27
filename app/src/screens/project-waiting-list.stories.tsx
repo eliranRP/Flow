@@ -1,7 +1,7 @@
 import type { ProjectWaitingRow } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StoryRoute } from "../ui/story-route";
-import { ProjectWaitingList } from "./review-screen";
+import { ProjectWaitingList } from "./review-lists";
 
 /** A project's לאישור list (FLOW-124, FLOW-125): a bank line gets the bank icon, a line out of the P&L the ⊘. Invented data. */
 const meta = {
@@ -38,6 +38,24 @@ export const LineMarks: Story = {
   render: () => (
     <StoryRoute entry="/review?project=a" tabs>
       <ProjectWaitingList rows={rows} search="" />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-971: the project named in Back and under the title, its total waiting, and the filled button. */
+export const NamedProject: Story = {
+  render: () => (
+    <StoryRoute entry="/review?project=a" tabs>
+      <ProjectWaitingList rows={rows} search="" backTo="/projects/a" backText="וילה רעננה" projectName="וילה רעננה" />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-971: a failed read keeps the page, with נסו שוב. */
+export const Failed: Story = {
+  render: () => (
+    <StoryRoute entry="/review?project=a" tabs>
+      <ProjectWaitingList rows={[]} search="" backTo="/projects/a" backText="וילה רעננה" state={{ failed: { offline: false, onRetry: () => undefined } }} />
     </StoryRoute>
   ),
 };

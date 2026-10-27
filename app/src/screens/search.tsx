@@ -1,4 +1,3 @@
-import { onlineManager } from "@tanstack/react-query";
 import type { SearchRow } from "@flow/shared";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -22,6 +21,7 @@ import {
   searchTotalText,
   useDebounced,
   uniqueSearchRows,
+  useLoadedSearchRows,
   useSearchQuery,
   type SearchFilters,
 } from "../search";
@@ -29,11 +29,12 @@ import { txnListState } from "../txn-nav";
 import { useCategoriesQuery, useDashboardQuery } from "../use-books";
 import { useSheetHistory } from "../ui/back";
 import { Button } from "../ui/button";
-import { FailureLine } from "../ui/empty-state";
+import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { BackIcon, CloseIcon } from "../ui/icons";
 import { IconButton } from "../ui/icon-button";
 import { ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
+import { usePreviewRetry } from "../ui/screen-state";
 import { wantsSearchFocus } from "../ui/search-entry";
 import { SearchField } from "../ui/search-field";
 import { TabBar } from "../ui/tab-bar";
@@ -55,6 +56,8 @@ export type SearchSample = {
   phase?: ScreenPhase;
   /** More lines than shown (the live screen's paging). */
   total?: number;
+  /** Offline: the screen searches only these rows, as the live screen does with what it read before. */
+  offline?: boolean;
 };
 
 /** Dev-only fixture. A production build folds this to null and drops the module. */
@@ -133,10 +136,15 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
   const query = useSearchQuery(active, live && filtered);
   const dashboard = useDashboardQuery(live);
   const categoryQuery = useCategoriesQuery(live);
+  // Offline (the board's offline state), a search runs on every line an earlier read brought in.
+  const online = useOnline();
+  const offline = local ? sample?.offline === true : !online;
+  const loaded = useLoadedSearchRows(live && offline && filtered);
   const phase: ScreenPhase = local
     ? sample?.phase ?? { kind: "ready" }
-    : screenPhase(preview, query);
-  const localRows = useMemo(() => (local ? filterSearchRows(local.rows, active) : null), [local, active]);
+    : loaded != null ? { kind: "ready" } : screenPhase(preview, query);
+  const kept = local?.rows ?? loaded;
+  const localRows = useMemo(() => (kept ? filterSearchRows(kept, active) : null), [kept, active]);
   const rows = localRows ?? uniqueSearchRows(query.data?.pages ?? []);
   const total = localRows ? Math.max(sample?.total ?? 0, localRows.length) : query.data?.pages[0]?.total ?? 0;
   // Live: done when the server has no next page (a repeated line, dropped above, still ends it).
@@ -148,7 +156,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
     () => searchTotalText(monthTotals ? [...monthTotals.values()].flat() : searchRowTotals(rows)),
     [monthTotals, rows],
   );
-  const refreshing = live && query.isPlaceholderData;
+  const refreshing = live && loaded == null && query.isPlaceholderData;
   const projects: SearchProject[] = local?.projects ?? dashboard.data?.projects ?? [];
   const categoryList: SearchCategory[] = local?.categories ?? categoryQuery.data ?? [];
   const categories = categoryList.filter((category) => category.hidden !== true);
@@ -284,6 +292,10 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
     ? projects.find((project) => project.name.toLowerCase().includes(typed.toLowerCase())) ?? null
     : null;
 
+  const retry = usePreviewRetry(() => {
+    void query.refetch();
+  });
+
   // The first read with text, before any line is in hand: the searching view, with no tab bar.
   const searching = filtered && (phase.kind === "loading" || (rows.length === 0 && refreshing));
   let body;
@@ -293,12 +305,9 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
     body = <SearchingRows allTime={active.period.kind === "all"} />;
   } else if (phase.kind === "error") {
     body = (
-      <FailureLine
-        offline={phase.offline || !onlineManager.isOnline()}
-        onRetry={() => {
-          void query.refetch();
-        }}
-      />
+      <div className="ui-search-failed">
+        <PageLoadFailed title="החיפוש לא הצליח" offline={phase.offline} onRetry={retry} />
+      </div>
     );
   } else if (rows.length === 0) {
     body = <SearchEmptyState text={typed} withChips={hasChipFilters(active)} onClearChips={clearChips} />;
@@ -411,6 +420,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
             </button>
           )}
         </div>
+        {offline && phase.kind !== "error" ? <BandOfflineLine words="מחפש רק במה שכבר נטען" onPage /> : null}
         {chips.length > 0 ? (
           <div className="ui-search-active" role="list" aria-label="הסינון שנבחר">
             {chips.map((chip) => (

@@ -78,9 +78,8 @@ for (const width of [390, 320]) {
         "pick הובלה",
         async () => {
           await page.getByRole("radio", { name: "הובלה" }).tap();
-          await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).tap();
         },
-        page.locator(".ui-toast").getByText("השיוך נשמר"),
+        async () => { await expect(page.locator(".ui-toast")).toContainText("השיוך נשמר · שיפוץ הרצל 12 · הובלה"); },
       );
       await expect(page.getByRole("button", { name: /קטגוריה: הובלה/ })).toBeVisible();
     });
