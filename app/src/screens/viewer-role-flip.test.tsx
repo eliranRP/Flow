@@ -9,6 +9,8 @@ import { StepBusiness } from "../setup/steps";
 import { AddForm, CategoriesScreen, ConnectionsScreen, ProjectsScreen } from "./flow-screens";
 import { BusinessScreen } from "./business-screen";
 import { ConnectionDetailPage } from "./connection-pages";
+import { DASHBOARD, sumitStatus } from "./connection-page-test-backend";
+import { resetDisconnectsForTests } from "../connection-undo";
 import { MercuryConnectionRoute } from "./mercury-connection-screen";
 import type { SettingsSample } from "./settings-screen";
 
@@ -101,6 +103,7 @@ function formIn(dialog: HTMLElement): HTMLFormElement {
 }
 
 afterEach(() => {
+  resetDisconnectsForTests();
   role.set("owner");
   invoke.mockReset();
   rpc.mockReset();
@@ -184,15 +187,40 @@ describe("inner write gates after the role changes", () => {
       expect(writes()).toBe(0);
     });
 
-    it("disconnects for an owner once ביטול runs out (decision 0223)", async () => {
-      openStatus();
-      fireEvent.click(screen.getByRole("button", { name: "ניתוק" }));
-      expect(writes()).toBe(0);
-      // Leaving the app ends the 5s wait at once.
+    /** The live page (a sample never disconnects), on a connected status. */
+    async function openLive() {
+      rpc.mockImplementation((name: string) => Promise.resolve({
+        data: name === "get_dashboard" ? DASHBOARD : name === "sumit_status" ? sumitStatus({ connected: true, sumit_company_id: 1001 }) : null,
+        error: null,
+      }));
+      renderAt(<ConnectionDetailPage provider="sumit" />, "/settings/connections/sumit");
+      return screen.findByRole("button", { name: "ניתוק" });
+    }
+
+    function disconnects() {
+      return rpc.mock.calls.filter(([name]) => name === "disconnect_sumit").length;
+    }
+
+    /** Leaving the app ends ביטול's wait at once. */
+    function hide() {
       Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
       document.dispatchEvent(new Event("visibilitychange"));
       Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
-      await vi.waitFor(() => { expect(writes()).toBeGreaterThan(0); });
+    }
+
+    it("disconnects for an owner once ביטול's wait ends (decision 0223)", async () => {
+      fireEvent.click(await openLive());
+      expect(disconnects()).toBe(0);
+      hide();
+      await vi.waitFor(() => { expect(disconnects()).toBe(1); });
+    });
+
+    it("sends nothing when the role turns viewer while ביטול is on screen (decision 0223)", async () => {
+      fireEvent.click(await openLive());
+      flip("viewer");
+      hide();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(disconnects()).toBe(0);
     });
   });
   describe("category menu and new category", () => {

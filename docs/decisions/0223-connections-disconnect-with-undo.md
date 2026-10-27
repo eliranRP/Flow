@@ -9,18 +9,24 @@ FLOW-975 reviewed the connection pages against the same UX/UI rule set as the ot
 
 ## Decision
 
-1. Disconnecting Mercury (one connection, by its slot) or SUMIT has no confirm. The page shows the result at once (the key form, or the list of the connections left) and a toast under the header says "Mercury נותק. מה שכבר נכנס נשמר" or "SUMIT נותק. מה שכבר נכנס נשמר" with ביטול for 5s.
-   - The write (`disconnect_connector`, `disconnect_sumit`) waits on that ביטול (`holdForUndo()` in `connection-undo.ts`) and is sent only once the 5s end. Until then the key stays on the server, so ביטול puts the connection back by sending nothing.
-   - Leaving the app (the page turns hidden) ends the wait at once: nobody can tap ביטול any more, and the disconnect should not be lost with the page. A reload or a crash inside the 5s loses it; the connection then still shows as connected, which is true.
+1. Disconnecting Mercury (one connection, by its slot) or SUMIT has no confirm. The page shows the result at once (the key form, or the connections left) and a toast under the header says "Mercury נותק. מה שכבר נכנס נשמר" or "SUMIT נותק. מה שכבר נכנס נשמר" with ביטול for 5s.
+   - The disconnect waits in a store outside the page (`connection-undo.ts`), keyed by provider and slot, and is sent when ביטול's toast closes (the toast's `onClose`). There is no second timer, so the wait lasts exactly as long as ביטול is on screen: a hover, focus or press that pauses the toast keeps the key. A toast that replaces it closes it, so a second Mercury disconnect sends the first. Until it is sent the key stays on the server, and ביטול sends nothing; a ביטול that comes too late says "החיבור כבר נותק".
+   - Any visit to the page during the wait draws the connection as leaving, whatever a read says.
+   - Leaving the app (the page turns hidden) sends every wait at once and takes its toast away: nobody can tap ביטול any more.
+   - A new key waits for the provider's pending disconnects to go out first, so an old disconnect never deletes the new key.
+   - Each wait is also saved on the device (provider, slot, company, time). A reload or a closed app sends what is left on the next visit to the connection pages, when it is under 2 minutes old and for the same company; older ones are dropped. Storage that is off only loses this replay.
+   - A role that turns read-only during the wait drops it: nothing is sent.
    - A failed disconnect puts the connection back and says "לא הצלחנו לנתק." with ניסיון חוזר.
    - The tapped ניתוק goes away with the connection, and ביטול goes away with its toast, so focus moves to the page title both times (`focusConnectionTitle()`), never to nothing.
-2. A key the provider refuses (`auth`, `sumit_auth`) says so under the key field, with no toast: "Mercury לא קיבל את המפתח. בדקו שהוא Read Only ושהעתקתם אותו כולו." or "SUMIT לא קיבל את המפתח. בדקו את מספר החברה ואת המפתח.", and the button reads "חיבור מחדש". Typing clears it. The key is still cleared from the field after every attempt, as before.
-3. "חיבור" is never greyed out. A tap with something missing says what under the key and sends nothing: "צריך את המפתח המלא, לפחות 8 תווים" (Mercury), "צריך מספר חברה (6 ספרות לפחות) ומפתח מלא" (SUMIT). The account picker's save is never greyed out either: with nothing checked it reads "בחרו לפחות חשבון אחד" and a tap sends nothing.
+   - A sample (stories, dev routes) sends nothing: it drops the connection in memory.
+2. A key the provider refuses (`auth`, `sumit_auth`) says so under the key field, with no toast: "Mercury לא קיבל את המפתח. בדקו שהוא Read Only ושהעתקתם אותו כולו." or "SUMIT לא קיבל את המפתח. בדקו את מספר החברה ואת המפתח.", and the button reads "חיבור מחדש". The note is announced (`liveMessage`) and focus moves to the key. Typing clears it. The key is still cleared from the field after every attempt, as before.
+3. "חיבור" is never greyed out. A tap with something missing says what on the first field that lacks it (SUMIT's company number, else the key), focuses that field and sends nothing: "צריך את המפתח המלא, לפחות 8 תווים" (Mercury), "צריך מספר חברה (6 ספרות לפחות) ומפתח מלא" (SUMIT). The account picker's save is never greyed out either: with nothing checked it reads "בחרו לפחות חשבון אחד", and a tap sends nothing and says so to a screen reader.
 4. Every toast on the connection pages hangs under the header through `useTopToast()`, `topToast()` and `useWrite({ place: "top" })`: an undo 5s, a note 4s (0222 §2). That covers connect, refresh, the accounts' saves and the AI keys (a new key, revoke and its ביטול, הועתק). Setup's connect sheets keep their toasts and their place: the shared connect hooks take the top place only from the connection pages.
 5. The key toggle (הצגה / הסתרה) is 44px tall. The key, company and date fields' edges are the 3:1 control edge, app-wide since FLOW-972 (0222 §5).
 
 ## Alternatives rejected
 
 - Keeping "לנתק את …?": undo beats a question (the owner's call), and a disconnect is easy to take back while the key is still on the server.
-- Deleting the key at once and keeping it in an undo record: the key is a Vault secret; holding the write for 5s needs no new server path and no copy of the secret.
+- Deleting the key at once and keeping it in an undo record: the key is a Vault secret; holding the write while ביטול shows needs no new server path and no copy of the secret.
+- A timer of the hold's own: it ran out while a paused toast still offered ביטול.
 - A toast for a refused key: it leaves before the owner has looked at the field, and says nothing the field cannot.

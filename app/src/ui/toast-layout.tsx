@@ -15,6 +15,12 @@ export type ToastInput = {
   place?: "page" | "top";
   /** FLOW-960: the toast stays until it is acted on or dismissed; no timer ends it. */
   persist?: boolean;
+  /**
+   * Runs once when the toast leaves without its action: its time runs out (a hover, focus or press
+   * pauses that), it is tapped or swiped away or dismissed, or a new toast replaces it. A ביטול that
+   * holds a write ends the hold here, so the write waits exactly as long as ביטול is on screen (0223).
+   */
+  onClose?: () => void;
 };
 
 /** A confirmation, with or without an undo (ביטול), stays 3s. An error or info notice stays 4s, and 5s with an action (ניסיון חוזר, 0180). Hover, focus, and a press pause it. Decisions 0074 and 0182. */

@@ -236,6 +236,35 @@ describe("Mercury page: the synced accounts, a new account, several connections 
     await waitFor(() => { expect(rpcArgs("disconnect_connector")).toEqual([{ p_provider: "mercury", p_slot: 2 }]); });
   });
 
+  it("sends the waiting disconnect before a new key, so the new connection is not deleted (decision 0223)", async () => {
+    serveWith(CONNECTED);
+    let before: unknown[] = [];
+    invokeEdge.mockImplementation((name: string) => {
+      if (name === "mercury-connect") before = rpcArgs("disconnect_connector");
+      return Promise.resolve({ slot: 1, choose_accounts: false });
+    });
+    renderPage("mercury");
+    fireEvent.click(await screen.findByRole("button", { name: "ניתוק" }));
+    fireEvent.change(screen.getByLabelText("מפתח API"), { target: { value: "mercury-key-123" } });
+    fireEvent.click(screen.getByRole("button", { name: "חיבור" }));
+    await waitFor(() => { expect(invokeEdge).toHaveBeenCalledWith("mercury-connect", expect.anything() as unknown); });
+    expect(before).toEqual([{ p_provider: "mercury", p_slot: 1 }]);
+  });
+
+  it("sends the first of two disconnects when the second one's toast takes its place (decision 0223)", async () => {
+    const second = mercuryStatus({ connected: true, slot: 2, org_label: "Cedar Lane Holdings LLC", account_labels: [{ id: "acct-hold", label: "Ops", kind: "checking" }], sync_account_ids: ["acct-hold"] });
+    serveWith([CONNECTED, second]);
+    renderPage("mercury", { route: "/settings/connections/mercury?slot=2" });
+    fireEvent.click(await screen.findByRole("button", { name: "ניתוק החיבור הזה" }));
+    // One connection left: its page, with its own ניתוק.
+    fireEvent.click(await screen.findByRole("button", { name: "ניתוק" }));
+    await waitFor(() => { expect(rpcArgs("disconnect_connector")).toEqual([{ p_provider: "mercury", p_slot: 2 }]); });
+    // The second still waits on its own ביטול.
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(rpcArgs("disconnect_connector")).toEqual([{ p_provider: "mercury", p_slot: 2 }]);
+  });
+
   it("puts a disconnected connection back on ביטול, and never deletes its key", async () => {
     serveWith(CONNECTED);
     renderPage("mercury");

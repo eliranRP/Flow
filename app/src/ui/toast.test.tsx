@@ -45,6 +45,62 @@ describe("Toast", () => {
     expect(screen.getByText("לא נשמר")).toBeInTheDocument();
   });
 
+  it("runs onClose when the time runs out, not while a hover pauses it, and not when the action runs (decision 0223)", () => {
+    vi.useFakeTimers();
+    const closed = vi.fn();
+    const acted = vi.fn();
+    function Undo({ label }: { label: string }) {
+      const toast = useToast();
+      return (
+        <button type="button" onClick={() => { toast.show({ message: "נותק", action: "ביטול", onAction: acted, onClose: closed, durationMs: 5000 }); }}>
+          {label}
+        </button>
+      );
+    }
+    render(
+      <ToastProvider>
+        <Undo label="הצגה" />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
+    fireEvent.mouseEnter(screen.getByRole("status"));
+    act(() => { vi.advanceTimersByTime(60_000); });
+    expect(closed).not.toHaveBeenCalled();
+    fireEvent.mouseLeave(screen.getByRole("status"));
+    act(() => { vi.advanceTimersByTime(5_000); });
+    expect(closed).toHaveBeenCalledTimes(1);
+
+    // The action instead: onClose does not run.
+    fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
+    act(() => { vi.advanceTimersByTime(400); });
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    act(() => { vi.advanceTimersByTime(10_000); });
+    expect(acted).toHaveBeenCalledTimes(1);
+    expect(closed).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs onClose when a new toast replaces the one on screen (decision 0223)", () => {
+    const closed = vi.fn();
+    function Two() {
+      const toast = useToast();
+      return (
+        <>
+          <button type="button" onClick={() => { toast.show({ message: "נותק", action: "ביטול", onAction: () => undefined, onClose: closed }); }}>ראשון</button>
+          <button type="button" onClick={() => { toast.show({ message: "עוד אחד" }); }}>שני</button>
+        </>
+      );
+    }
+    render(
+      <ToastProvider>
+        <Two />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "ראשון" }));
+    expect(closed).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "שני" }));
+    expect(closed).toHaveBeenCalledTimes(1);
+  });
+
   it("pauses the timer on hover and resumes it afterwards", () => {
     vi.useFakeTimers();
     render(

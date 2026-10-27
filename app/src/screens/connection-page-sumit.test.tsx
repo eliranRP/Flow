@@ -134,6 +134,58 @@ describe("SUMIT page: ניתוק at once, with ביטול (decision 0223)", () =
   });
 });
 
+describe("SUMIT page: during ביטול's wait (decision 0223)", () => {
+  it("sends the waiting disconnect before a new key, so the new key is not deleted", async () => {
+    serve({ sumit: CONNECTED });
+    let before: string[] = [];
+    invokeEdge.mockImplementation(() => { before = [...backend.calls]; return Promise.resolve({ ok: true }); });
+    renderPage("sumit");
+    fireEvent.click(await screen.findByRole("button", { name: "ניתוק" }));
+    fireEvent.change(screen.getByLabelText("מספר חברה"), { target: { value: "1234567" } });
+    fireEvent.change(screen.getByLabelText("מפתח API"), { target: { value: "sumit-key-123" } });
+    fireEvent.click(screen.getByRole("button", { name: "חיבור" }));
+    await waitFor(() => { expect(invokeEdge).toHaveBeenCalledWith("sumit-connect", expect.anything() as unknown); });
+    expect(before).toContain("disconnect_sumit");
+  });
+
+  it("still shows SUMIT leaving on a second visit while ביטול waits", async () => {
+    serve({ sumit: CONNECTED });
+    const { unmount } = renderPage("sumit");
+    fireEvent.click(await screen.findByRole("button", { name: "ניתוק" }));
+    unmount();
+    renderPage("sumit");
+    expect(await screen.findByLabelText("מפתח API")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "רענון עכשיו" })).not.toBeInTheDocument();
+    expect(backend.calls).not.toContain("disconnect_sumit");
+  });
+});
+
+describe("SUMIT page: what is missing is said and focused (decision 0223)", () => {
+  it("names the company number when it is the short one, announces it and focuses that field", async () => {
+    serve({ sumit: sumitStatus({ connected: false }) });
+    renderPage("sumit");
+    fireEvent.change(await screen.findByLabelText("מפתח API"), { target: { value: "sumit-key-123" } });
+    fireEvent.click(screen.getByRole("button", { name: "חיבור" }));
+    const company = screen.getByLabelText("מספר חברה");
+    expect(company).toHaveFocus();
+    const note = screen.getByText("צריך מספר חברה (6 ספרות לפחות) ומפתח מלא");
+    expect(note).toHaveAttribute("aria-live", "polite");
+    expect(company.getAttribute("aria-describedby")).toContain(note.id);
+  });
+
+  it("focuses the key, and announces it, when SUMIT refuses it", async () => {
+    serve({ sumit: sumitStatus({ connected: false }) });
+    invokeEdge.mockRejectedValueOnce(new Error("sumit_auth"));
+    renderPage("sumit");
+    fireEvent.change(await screen.findByLabelText("מספר חברה"), { target: { value: "1234567" } });
+    fireEvent.change(screen.getByLabelText("מפתח API"), { target: { value: "sumit-key-123" } });
+    fireEvent.click(screen.getByRole("button", { name: "חיבור" }));
+    const note = await screen.findByText("SUMIT לא קיבל את המפתח. בדקו את מספר החברה ואת המפתח.");
+    expect(note).toHaveAttribute("aria-live", "polite");
+    expect(screen.getByLabelText("מפתח API")).toHaveFocus();
+  });
+});
+
 describe("SUMIT page: reconnect and cached states (FLOW-918)", () => {
   it("opens a reconnect on the stored import date", async () => {
     serve({ sumit: sumitStatus({ connected: true, sumit_company_id: 1001, last_error: "sumit_auth", import_from: "2026-03-01" }) });

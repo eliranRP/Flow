@@ -4,29 +4,28 @@ import { useLocation, useSearchParams } from "react-router-dom";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { useHoldOwnerSettings, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { useDashboardQuery, useMercuryStatusQuery } from "../use-books";
-import { getSupabase } from "../lib/supabase";
 import { invokeEdge } from "../edge";
 import { LEDGER_KEYS } from "../ledger-keys";
 import { hebrewMercuryError, mercuryRefreshDone } from "../mercury-copy";
 import { accountName, connectionName } from "../mercury-connections";
-import { MERCURY_NONE, type MercuryAccount, type MercuryConnection, type MercuryState } from "../mercury-state";
+import { MERCURY_NONE, type MercuryAccount, type MercuryConnection } from "../mercury-state";
 import { israelSyncPhrase } from "../sumit-copy";
 import { useRefreshingNow } from "../israel-clock";
-import { assertNoError, useWrite } from "../use-write";
+import { useWrite } from "../use-write";
 import { useMercuryConnect } from "../use-mercury-connect";
 import { useMercuryAccounts, type MercuryAccountsSave } from "../use-mercury-accounts";
 import { REFRESH_DONE } from "../use-sumit-refresh";
 import { useSyncSettled } from "../use-sync-settled";
 import { screenPhase } from "../query-phase";
 import { Button } from "../ui/button";
-import { ConnectionHead, ConnectionNote, ConnectionPage, focusConnectionTitle, StepList } from "../ui/connection-page";
+import { ConnectionHead, ConnectionNote, ConnectionPage, StepList } from "../ui/connection-page";
 import { BankIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenState } from "../ui/screen-state";
 import { TextField } from "../ui/text-field";
 import { useBlockedPreview } from "./screen-shared";
-import { holdForUndo, UNDONE, type UndoHold } from "../connection-undo";
-import { topToast, useTopToast } from "../ui/top-toast";
+import { useConnectorDisconnect } from "../use-connector-disconnect";
+import { topToast } from "../ui/top-toast";
 import { MercuryAccountsStep, type MercuryAccountsPick } from "./mercury-accounts-step";
 import { MercuryConnectedView } from "./mercury-connected-view";
 
@@ -43,7 +42,6 @@ const LIST_NOTE = "לכל חיבור מפתח משלו, חשבונות משלו 
 const MIN_KEY = 8;
 const SHORT = "צריך את המפתח המלא, לפחות 8 תווים";
 const REJECTED = "Mercury לא קיבל את המפתח. בדקו שהוא Read Only ושהעתקתם אותו כולו.";
-const GONE = "Mercury נותק. מה שכבר נכנס נשמר";
 
 /** The Mercury page's sample (stories, the dev routes): its connections, or a loading or failed read. */
 export type MercurySample = {
@@ -102,26 +100,19 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
   // "short": a tap with the key missing; "rejected": Mercury refused it (decision 0223).
   const [keyError, setKeyError] = useState<"short" | "rejected" | null>(sample?.keyError ?? null);
   const [replacing, setReplacing] = useState(false);
-  // Every toast on the connection pages sits under the header (decisions 0222, 0223).
-  const toast = useTopToast();
+  const keyField = useRef<HTMLInputElement>(null);
 
-  const disconnect = useWrite<{ slot: number; hold: UndoHold }>({
-    failure: "לא הצלחנו לנתק.",
-    keys: ["mercury"],
-    place: "top",
-    silent: (error) => error.message === UNDONE,
-    // Decision 0223: the connection leaves the page at once; its key is deleted only once ביטול runs out.
-    optimistic: ({ slot }) => [{ key: ["mercury", preview], update: (old) => (old == null ? old : withoutSlot(old as MercuryState, slot)) }],
-    run: async ({ slot, hold }) => {
-      await hold.done;
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      assertNoError(await supabase.rpc("disconnect_connector", { p_provider: "mercury", p_slot: slot }));
-    },
+  // Decision 0223: a connection leaves the page at once; its key is deleted only once ביטול's toast closes.
+  // A sample drops it from memory instead.
+  const disconnect = useConnectorDisconnect({
+    provider: "mercury",
+    companyId: companyId ?? null,
+    live,
+    readOnly: holdOwner,
+    sampleSend: (slot) => { setLocal((current) => current.filter((item) => item.slot !== slot)); },
   });
-  // A disconnect waiting on its ביטול already shows the page without it, even if a read lands meanwhile.
-  const leaving = disconnect.isPending ? disconnect.variables.slot : undefined;
-  const connections = shownConnections.filter((connection) => connection.slot !== leaving);
+  // Every connection waiting on its ביטול is already off the page, on any visit and whatever a read says.
+  const connections = shownConnections.filter((connection) => !disconnect.leaving.has(connection.slot));
 
   const multi = connections.length > 1;
   // A slot that is gone (disconnected elsewhere) falls back to the list, or to the one connection.
@@ -137,7 +128,10 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
       setReplacing(false);
       go({ slot: connected.slot }, true);
     },
-    onRejected: () => { setKeyError("rejected"); },
+    onRejected: () => {
+      setKeyError("rejected");
+      keyField.current?.focus();
+    },
   });
   const accounts = useMercuryAccounts({
     place: "top",
@@ -234,24 +228,17 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
     if (busyKey || blocked() || viewerOnly) return;
     if (!keyOk) {
       setKeyError("short");
+      keyField.current?.focus();
       return;
     }
     setKeyError(null);
-    connect.mutate();
+    // A disconnect still waiting on its ביטול would delete the new key (a new connection can take its slot).
+    void disconnect.beforeConnect().then(() => { connect.mutate(); });
   };
   const disconnectNow = (connection: MercuryConnection) => {
     if (holdOwner || blocked()) return;
-    const hold = holdForUndo();
-    if (sample != null) {
-      const before = local;
-      setLocal((current) => current.filter((item) => item.slot !== connection.slot));
-      void hold.done.then(() => undefined, () => { setLocal(before); });
-    } else {
-      disconnect.mutate({ slot: connection.slot, hold });
-    }
     go({}, true);
-    focusConnectionTitle();
-    toast.show({ message: GONE, action: "ביטול", onAction: () => { hold.cancel(); focusConnectionTitle(); } });
+    disconnect.disconnect(connection.slot);
   };
 
   const keyForm = (reconnect: boolean, onCancel?: () => void) => (
@@ -270,7 +257,9 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
           placeholder="מדביקים כאן"
           autoComplete="off"
           reserveMessage
+          ref={keyField}
           error={keyError === "rejected" ? REJECTED : keyError === "short" && !keyOk ? SHORT : undefined}
+          liveMessage
           readOnly={busyKey}
           onChange={(event) => { setKeyError(null); setKey(event.target.value); }}
         />
@@ -356,12 +345,6 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
       </ConnectionPage>
     </ViewerScope>
   );
-}
-
-/** The status without one connection: what the page shows while that connection's disconnect waits on its ביטול. */
-function withoutSlot(state: MercuryState, slot: number): MercuryState {
-  const connections = state.connections.filter((connection) => connection.slot !== slot);
-  return { ...state, connections, connected: connections.some((connection) => connection.chosen && connection.keyWorks), syncing: false };
 }
 
 /** The page's query with `slot` set, keeping its other flags (the preview, a dev fixture's state). */

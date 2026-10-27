@@ -50,6 +50,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const acting = useRef(false);
   const toastRef = useRef<ToastItem | null>(null);
   toastRef.current = toast;
+  /** The shown toast's onClose, until it leaves; cleared when its action runs instead. */
+  const closing = useRef<{ id: number; run: () => void } | null>(null);
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
 
@@ -80,6 +82,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   /** The one way out: a timer, a tap, a swipe or an action. Phase "out" plays the sink, then the toast clears. A zero token clears at once. */
   const leave = useCallback(() => {
     if (phaseRef.current === "out") return;
+    const close = closing.current;
+    if (close != null && close.id === toastRef.current?.id) {
+      closing.current = null;
+      close.run();
+    }
     if (timer.current != null) window.clearTimeout(timer.current);
     timer.current = null;
     clearOutTimer();
@@ -128,6 +135,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         else delete host.current.dataset.place;
       }
       const id = seq.current;
+      // A toast this one replaces leaves now: its onClose runs, as if its time had run out.
+      const replaced = closing.current;
+      closing.current = input.onClose == null ? null : { id, run: input.onClose };
+      replaced?.run();
       setToast({ ...next, id });
       return id;
     },
@@ -150,6 +161,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     if (!toast?.onAction || acting.current) return;
     acting.current = true;
     const action = toast.onAction;
+    closing.current = null;
     leave();
     action();
   }
