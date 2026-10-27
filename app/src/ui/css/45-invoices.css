@@ -55,10 +55,10 @@
   justify-content: space-between;
 }
 
-/* The board draws the open part in the strong track tone, dimmer than the muted text grey. */
+/* FLOW-968: the open part and its dot reach 3:1 on the card (the outline tone, not the 1.4:1 track). */
 .ui-inv-bar-block .ui-parts-part[data-tone="muted"],
 .ui-inv-bar-block .ui-parts-dot[data-tone="muted"] {
-  background: var(--color-track-strong);
+  background: var(--color-track-outline);
 }
 
 .ui-inv-bar-block .t-caption:where(:not(.t-muted)) {
@@ -103,14 +103,14 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  min-height: 36px;
+  min-height: var(--touch-min);
 }
 
 .ui-inv-refresh {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 36px;
+  min-height: var(--touch-min);
   padding: 0;
   border: 0;
   background: none;
@@ -154,16 +154,12 @@
   color: var(--color-signal-soft);
 }
 
-.ui-inv-marked {
-  opacity: 0.6;
-}
-
 .ui-inv-action-line {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-2);
-  min-height: 36px;
+  min-height: var(--touch-min);
   margin-inline-start: calc(var(--space-10) + var(--space-3));
 }
 
@@ -171,7 +167,7 @@
 .ui-inv-match-link {
   display: inline-flex;
   align-items: center;
-  min-height: 36px;
+  min-height: var(--touch-min);
   padding: 0;
   border: 0;
   background: none;
@@ -199,7 +195,7 @@
   margin: 0;
 }
 
-/* Status is plain text, no pill: 12px, no vertical padding so the glyphs sit where the board puts them, 10px sides. */
+/* Status is plain text, no pill: 13px, no vertical padding so the glyphs sit where the board puts them, 10px sides. */
 .ui-inv-chip {
   padding: 0 var(--space-3);
   border-radius: var(--radius-field-btn);
@@ -314,7 +310,7 @@
 .ui-inv-match-no {
   flex: 1;
   min-height: 48px;
-  border: 1.5px solid var(--color-tint-strong);
+  border: 1.5px solid var(--color-control-edge);
   border-radius: var(--radius-sheet);
   background: transparent;
   color: var(--color-text);
