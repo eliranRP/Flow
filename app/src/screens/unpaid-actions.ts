@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
 import { getSupabase } from "../lib/supabase";
 import { useHomePreview } from "../preview";
 import { screenPhase } from "../query-phase";
@@ -9,6 +8,7 @@ import { useSyncSettled } from "../use-sync-settled";
 import { useHoldWrites } from "../use-is-viewer";
 import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
 import { unpaidIsMarked, unpaidOpenRows, type UnpaidInvoice, type UnpaidSummary } from "../unpaid";
+import { usePreviewRetry } from "../ui/screen-state";
 import { useToast } from "../ui/toast";
 import type { ToastInput } from "../ui/toast-layout";
 import { useBlockedPreview } from "./screen-shared";
@@ -38,8 +38,6 @@ type LocalState = { marked: string | null; gone: boolean; match: boolean };
 
 export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSummary) {
   const preview = useHomePreview();
-  const navigate = useNavigate();
-  const location = useLocation();
   const unpaid = useUnpaidQuery(sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, unpaid);
   const blocked = useBlockedPreview();
@@ -55,6 +53,8 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
       return { ...row, marked_paid_at: state.marked ?? row.marked_paid_at ?? null, match: state.match ? null : row.match };
     });
   const rows = useHeldOrder(all, (row) => row.id);
+  // A preview of the failure retries into the plain preview, as ScreenState's does.
+  const retry = usePreviewRetry(() => { void unpaid.refetch(); });
 
   const mark = useWrite<{ id: string; paid: boolean; undoable: boolean }>({
     place: "top",
@@ -77,7 +77,7 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
 
   // FLOW-335: after a mark the page offers the SUMIT sync that takes the marked rows out.
   const anyMarked = all.some(unpaidIsMarked);
-  const sync = useSumitRefresh();
+  const sync = useSumitRefresh(unpaidToast);
   const sumitStatus = useSumitStatusQuery(sample == null && anyMarked);
   const syncing = sync.isPending || sumitStatus.data?.syncing === true;
   useSyncSettled({
@@ -86,6 +86,7 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
     lastSyncAt: sumitStatus.data?.last_sync_at,
     lastError: sumitStatus.data?.last_error,
     success: REFRESH_DONE,
+    shape: unpaidToast,
   });
 
   /**
@@ -143,7 +144,9 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
     }],
     // FLOW-968: "לא זה" can be taken back for 5s; the ביטול takes back only the dismissal this tap wrote.
     onSuccess: ({ id, transaction }) => {
-      const at = dismissedAt.current.get(`${id}:${transaction}`);
+      const key = `${id}:${transaction}`;
+      const at = dismissedAt.current.get(key);
+      dismissedAt.current.delete(key);
       toast.show(unpaidToast(at == null
         ? { message: UNPAID_DISMISSED }
         : { message: UNPAID_DISMISSED, action: "ביטול", onAction: () => { undismissRef.current({ id, transaction, at }); } }));
@@ -153,8 +156,9 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
       if (!supabase) throw new Error("supabase");
       const result = await supabase.rpc("dismiss_invoice_match", { p_invoice: id, p_transaction: transaction });
       assertNoError(result);
-      const at = (result.data as { dismissed_at?: unknown } | null)?.dismissed_at;
-      if (typeof at === "string") dismissedAt.current.set(`${id}:${transaction}`, at);
+      // Only a dismissal this call wrote can be taken back: one already there (another tab, the assistant) is not ours.
+      const data = result.data as { dismissed_at?: unknown; created?: unknown } | null;
+      if (data?.created === true && typeof data.dismissed_at === "string") dismissedAt.current.set(`${id}:${transaction}`, data.dismissed_at);
     },
   });
 
@@ -225,16 +229,7 @@ export function useUnpaidActions(sample?: UnpaidInvoice[], summary?: UnpaidSumma
     lastSyncAt: summary?.last_sync_at ?? sumitStatus.data?.last_sync_at ?? null,
     /** When the list on screen was read (the offline line), unless it is a fixture. */
     readAt: sample == null ? unpaid.dataUpdatedAt || undefined : undefined,
-    retry: () => {
-      // A preview of the failure retries into the plain preview, as ScreenState's retry does.
-      if (preview === "error" || preview === "error-server") {
-        const params = new URLSearchParams(location.search);
-        params.set("preview", "1");
-        void navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true, state: location.state as unknown });
-        return;
-      }
-      void unpaid.refetch();
-    },
+    retry,
     setPaid,
     linkMatch,
     dismissMatch,

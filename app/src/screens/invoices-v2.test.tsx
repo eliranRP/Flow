@@ -13,6 +13,8 @@ const db = vi.hoisted(() => ({
   rows: [] as UnpaidRow[],
   rpcs: [] as Array<{ name: string; args: unknown }>,
   fail: false,
+  created: true,
+  undismissFails: false,
 }));
 
 vi.mock("../use-books", async (importOriginal) => ({
@@ -30,7 +32,10 @@ vi.mock("../lib/supabase", () => ({
       db.rpcs.push({ name, args });
       if (name === "dismiss_invoice_match") {
         db.rows = db.rows.map((row) => (row.id === args.p_invoice ? { ...row, match: null } : row));
-        return Promise.resolve({ data: { dismissed: true, dismissed_at: "2026-10-26T10:00:00.123456+00:00" }, error: null });
+        return Promise.resolve({ data: { dismissed: true, dismissed_at: "2026-10-26T10:00:00.123456+00:00", created: db.created }, error: null });
+      }
+      if (name === "undismiss_invoice_match" && db.undismissFails) {
+        return Promise.resolve({ data: null, error: { message: "conflict", code: "P0001" } });
       }
       if (name === "set_invoice_paid") {
         db.rows = db.rows.map((row) => (row.id === args.p_id ? { ...row, marked_paid_at: args.p_paid === true ? "2026-10-26T10:00:00Z" : null } : row));
@@ -67,6 +72,8 @@ function renderPage(node: React.ReactNode) {
 afterEach(() => {
   onlineManager.setOnline(true);
   db.fail = false;
+  db.created = true;
+  db.undismissFails = false;
 });
 
 describe("Invoice toasts (FLOW-968, decision 0218)", () => {
@@ -90,6 +97,28 @@ describe("Invoice toasts (FLOW-968, decision 0218)", () => {
     });
   });
 
+  it("a dismissal already there (another tab, the assistant) offers no ביטול", async () => {
+    db.rows = [matched];
+    db.rpcs = [];
+    db.created = false;
+    renderPage(<InvoiceScreen invoiceId="a" />);
+    fireEvent.click(await screen.findByRole("button", { name: "לא זה" }));
+    const toast = await screen.findByRole("status");
+    expect(within(toast).getByText("נסמן ידנית, או נחכה לתשלום אחר")).toBeInTheDocument();
+    expect(within(toast).queryByRole("button", { name: "ביטול" })).toBeNull();
+  });
+
+  it("a ביטול of לא זה that conflicts says so under the header", async () => {
+    db.rows = [matched];
+    db.rpcs = [];
+    db.undismissFails = true;
+    renderPage(<InvoiceScreen invoiceId="a" />);
+    fireEvent.click(await screen.findByRole("button", { name: "לא זה" }));
+    fireEvent.click(within(await screen.findByRole("status")).getByRole("button", { name: "ביטול" }));
+    const failed = await screen.findByText("לא הצלחנו לבטל. ייתכן שהחשבונית השתנתה בינתיים.");
+    expect(failed.closest("[data-place]")).toHaveAttribute("data-place", "top");
+  });
+
   it("clearing a mark offers ביטול, which marks it again", async () => {
     db.rows = [invoice("a", "לקוח א", { marked_paid_at: "2026-10-26T09:00:00Z" })];
     db.rpcs = [];
@@ -98,6 +127,7 @@ describe("Invoice toasts (FLOW-968, decision 0218)", () => {
     fireEvent.click(within(row).getByRole("button", { name: "ביטול" }));
     const toast = await screen.findByRole("status");
     expect(within(toast).getByText("הסימון בוטל.")).toBeInTheDocument();
+    expect(toast.closest("[data-place]")).toHaveAttribute("data-place", "top");
     fireEvent.click(within(toast).getByRole("button", { name: "ביטול" }));
     await waitFor(() => { expect(db.rpcs).toHaveLength(2); });
     expect(db.rpcs[1]).toEqual({ name: "set_invoice_paid", args: { p_id: "a", p_paid: true } });

@@ -26,6 +26,17 @@ export const UnpaidList: Story = {
   ),
 };
 
+/** An invoice open past UNPAID_OVERDUE_DAYS (34 days): its age line says it is late. */
+export const UnpaidOverdue: Story = {
+  name: "Unpaid, an invoice open over 30 days",
+  render: () => (
+    <StoryRoute entry="/unpaid" tabs>
+      <ExampleBar />
+      <UnpaidScreen sample={rows.filter((row) => row.id === "inv-1043")} summary={summary} />
+    </StoryRoute>
+  ),
+};
+
 /** A marked row waits for the sync: full contrast, its line says the state, with its ביטול (FLOW-968). */
 export const UnpaidMarked: Story = {
   name: "Unpaid, a marked row waits for the sync",

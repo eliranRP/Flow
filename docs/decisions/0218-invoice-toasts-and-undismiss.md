@@ -9,10 +9,10 @@ FLOW-968 reviewed the unpaid invoices list and the invoice page against the UX/U
 
 ## Decision
 
-1. Every toast of the two pages takes `place: "top"`: a mark and its ביטול, clearing a mark, a link to a deposit, "לא זה", the SUMIT refresh's sample note, and the writes' failures.
+1. Every toast of the two pages takes `place: "top"`: a mark and its ביטול, clearing a mark, a link to a deposit, "לא זה", the SUMIT refresh ("הרענון הסתיים.", live and in the sample, and its failure), and the writes' failures.
 2. An undo (ביטול) stays 5s; a note stays 4s.
 3. Clearing a mark offers ביטול, which marks the invoice again. The ביטול's own toast offers no further undo.
-4. "לא זה" offers ביטול. It calls `undismiss_invoice_match(invoice, deposit, dismissed_at)` with the time `dismiss_invoice_match` returned, and takes back only that row, only while it still carries that time, and only the caller's own. Anything else is a conflict and changes nothing; the toast says the undo failed.
+4. "לא זה" offers ביטול only when this tap wrote the dismissal: `dismiss_invoice_match` returns `created: true` then, and `created: false` when the pair was already dismissed (another tab, or the assistant as the same user), in which case the toast has no ביטול. The ביטול calls `undismiss_invoice_match(invoice, deposit, dismissed_at)` with the time `dismiss_invoice_match` returned, and takes back only that row, only while it still carries that time, and only the caller's own. Anything else is a conflict and changes nothing; the toast says the undo failed.
 5. The MCP side already undoes a dismissal (`mcp_undo`, kind `invoice_dismiss`), so no MCP tool is added.
 6. Every other screen keeps 0182's place and its times, as 0212 §4 says.
 

@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(56);
+select plan(59);
 
 do $users$
 begin
@@ -201,6 +201,10 @@ select is(
   (select dismissed_at from public.invoice_match_dismissals where transaction_id = pg_temp.txn('t_inv_c')),
   'dismissing again keeps the first time'
 );
+select is(
+  (public.dismiss_invoice_match(pg_temp.txn('t_inv_c'), pg_temp.txn('t_dep_4'))->>'created')::boolean, false,
+  'dismissing again says this call wrote nothing, so the app offers no ביטול'
+);
 
 select public.set_invoice_paid(pg_temp.txn('t_inv_c'), true);
 select throws_ok(
@@ -312,7 +316,14 @@ select is((public.unpaid_overview()->>'paid_minor')::bigint, 5000::bigint, 'paid
 select tests.clear_authentication();
 reset role;
 select tests.authenticate_as('ibm_owner');
-select public.dismiss_invoice_match(pg_temp.txn('t_inv_c'), pg_temp.txn('t_dep_1'));
+select is(
+  (public.dismiss_invoice_match(pg_temp.txn('t_inv_c'), pg_temp.txn('t_dep_1'))->>'created')::boolean, true,
+  'a new dismissal says this call wrote it'
+);
+select throws_ok(
+  format('select public.undismiss_invoice_match(%L::uuid, %L::uuid, null)', pg_temp.txn('t_inv_c'), pg_temp.txn('t_dep_1')),
+  'P0001', 'validation', 'a ביטול with no time is refused as invalid'
+);
 select throws_ok(
   format('select public.undismiss_invoice_match(%L::uuid, %L::uuid, %L::timestamptz)', pg_temp.txn('t_inv_c'), pg_temp.txn('t_dep_1'), '2000-01-01T00:00:00Z'),
   'P0001', 'conflict', 'a ביטול with another time changes nothing'
