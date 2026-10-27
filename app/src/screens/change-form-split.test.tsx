@@ -59,6 +59,7 @@ const supabase = {
     }
     if (name === "approve_review_item") return state.approve ? state.approve() : Promise.resolve({ data: { ok: true }, error: null });
     if (name === "resolve_review" && state.resolve) return state.resolve();
+    if (name === "reassign_transaction") return Promise.resolve({ data: "undo-reassign-1", error: null });
     return Promise.resolve({ data: null, error: null });
   },
 };
@@ -267,6 +268,23 @@ describe("a pick saves at once, with ביטול for 5s (decision 0221)", () => {
     const order = state.calls.map((call) => call.name).filter((name) => name === "resolve_review" || name === "reassign_transaction");
     expect(order).toEqual(["resolve_review", "reassign_transaction"]);
     expect(state.calls.find((call) => call.name === "reassign_transaction")?.args).toMatchObject({ p_project_id: "p1" });
+  });
+
+  it("ביטול on a second pick undoes only that pick, and the sheet shows the first pick again", async () => {
+    state.row = row();
+    renderSheet();
+    fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
+    await waitFor(() => {
+      expect(resolveCalls()).toHaveLength(1);
+    });
+    fireEvent.click(await screen.findByRole("button", { name: /^פרויקט:/, hidden: true }));
+    fireEvent.click(await screen.findByRole("radio", { name: /הרצל/, hidden: true }));
+    expect(await screen.findByText(/^השיוך נשמר · הרצל/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "ביטול", hidden: true }));
+    await waitFor(() => {
+      expect(state.calls.some((call) => call.name === "undo_reassign" && (call.args as { p_id?: string }).p_id === "undo-reassign-1")).toBe(true);
+    });
+    expect(await screen.findByRole("button", { name: /^פרויקט: וילה/, hidden: true })).toBeInTheDocument();
   });
 
   it("ביטול pins the line as the queue's head, and the next pick resolves the item again", async () => {

@@ -79,7 +79,7 @@ for (const width of [390, 320]) {
         async () => {
           await page.getByRole("radio", { name: "הובלה" }).tap();
         },
-        page.locator(".ui-toast").getByText("השיוך נשמר", { exact: true }),
+        async () => { await expect(page.locator(".ui-toast")).toContainText("השיוך נשמר · שיפוץ הרצל 12 · הובלה"); },
       );
       await expect(page.getByRole("button", { name: /קטגוריה: הובלה/ })).toBeVisible();
     });

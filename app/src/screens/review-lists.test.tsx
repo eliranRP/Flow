@@ -1,6 +1,7 @@
 import type { ProjectWaitingRow, ReviewRow } from "@flow/shared";
 import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { SAMPLE_JEV_BOOKINGS } from "../dev/journal-composer-sample";
 import { renderWithProviders } from "../test-render";
 import { FiledTodayScreen } from "./filed-today-screen";
 import { ProjectWaitingList, ReviewAllList, reviewAllSubtitle } from "./review-lists";
@@ -105,6 +106,21 @@ describe("Review lists v2 (FLOW-971)", () => {
     const take = document.querySelector(".ui-review-list-take");
     expect([...(take?.querySelectorAll("bdi") ?? [])].map((node) => node.textContent)).toEqual(["+₪300", "−$500"]);
     expect(take).toHaveTextContent(/^סה״כ/);
+  });
+
+  it("puts a booking under its own day, between the days before and after it (rows come oldest first)", () => {
+    const [sample] = SAMPLE_JEV_BOOKINGS;
+    if (sample == null) throw new Error("sample");
+    renderWithProviders(
+      <ReviewAllList
+        rows={[row("a", { doc_date: "2026-10-01" }), row("b", { doc_date: "2026-10-05" }), row("c", { doc_date: "2026-10-10" })]}
+        bookings={[{ ...sample, doc_date: "2026-10-07" }]}
+        search=""
+        backTo="/review"
+        now={new Date("2026-10-20T09:00:00Z")}
+      />,
+    );
+    expect(screen.getAllByRole("heading", { level: 2 }).map((head) => head.textContent)).toEqual(["01/10", "05/10", "07/10", "10/10"]);
   });
 
   it("a day of another year carries its year", () => {

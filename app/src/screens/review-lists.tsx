@@ -178,7 +178,8 @@ export function ReviewAllList({
     const entry: AllEntry = { kind: "booking", key: `b:${booking.transaction_id}`, date: booking.doc_date, booking };
     const day = booking.doc_date.slice(0, 10);
     const sameDay = entries.findIndex((other) => other.date.slice(0, 10) === day);
-    const later = entries.findIndex((other) => other.date.slice(0, 10) < day);
+    // The queue sends rows oldest first: a booking goes before the first later day.
+    const later = entries.findIndex((other) => other.date.slice(0, 10) > day);
     const at = sameDay >= 0 ? sameDay : later;
     if (at < 0) entries.push(entry);
     else entries.splice(at, 0, entry);
