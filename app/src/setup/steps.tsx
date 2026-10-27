@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { useEffect, useRef, useState, type SubmitEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatMoney } from "@flow/shared";

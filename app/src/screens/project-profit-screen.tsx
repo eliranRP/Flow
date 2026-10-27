@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { formatAmountText, type ProfitMonth, type ProfitMonths, type ProjectDetail } from "@flow/shared";
 import { useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";

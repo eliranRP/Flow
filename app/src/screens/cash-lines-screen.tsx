@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { type CashLine, type CashMonths, formatAmountText } from "@flow/shared";
 import { useEffect } from "react";
 import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";

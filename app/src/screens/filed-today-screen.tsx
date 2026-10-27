@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { type FiledTodayRow } from "@flow/shared";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { loanRowProps, useLoanMarks } from "./loan-marks";
