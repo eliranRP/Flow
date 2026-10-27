@@ -149,9 +149,9 @@
 
 .ui-forecast-meta {
   color: var(--color-text-muted);
-  font-size: var(--type-line2-size);
+  font-size: var(--type-caption-size);
   font-weight: var(--type-body-weight);
-  line-height: var(--type-line2-line);
+  line-height: var(--type-caption-line);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;

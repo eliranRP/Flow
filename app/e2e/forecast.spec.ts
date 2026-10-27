@@ -70,6 +70,11 @@ test("תזרים צפוי: the title, the month's end, the card's whole sum and 
   const chart = page.getByRole("img", { name: /^נכנס ויצא לפי חודש, מאי עד סוף אוקטובר\. אוקטובר עד היום/ });
   await expect(chart).toBeVisible();
   await expect(chart.locator(".ui-fc-now .ui-fc-cap")).toHaveCount(2);
+  // FLOW-970: the chart's heading is where the month ends, and the view chips are 44px.
+  await expect(page.getByRole("heading", { level: 2, name: /^אוקטובר צפוי להיסגר ב־/ })).toContainText("−$5,741");
+  for (const name of ["לפי פריט", "לפי קטגוריה"]) {
+    expect((await page.getByRole("radio", { name }).boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+  }
   // The card is not a control: the list is right below it.
   await expect(card.locator("a, button")).toHaveCount(0);
   // A row's page goes back to תזרים צפוי.
