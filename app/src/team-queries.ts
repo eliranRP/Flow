@@ -106,9 +106,14 @@ export function useOpenCompany(): (companyId: string, options?: { opened?: boole
   return async (companyId, options) => {
     if (userId == null) throw new Error("no user");
     // Decision 0223: a disconnect still waiting on its ביטול is this company's; it goes out before the header names another.
-    // Loaded on demand: Home does not carry the connection pages' code, and with no page opened there is nothing waiting.
-    const { flushDisconnects } = await import("./connection-undo");
-    await flushDisconnects();
+    // Loaded on demand: Home does not carry the connection pages' code. If it cannot load (offline before
+    // it is cached, a stale chunk after a deploy), it never ran, so nothing is waiting and the switch goes on.
+    try {
+      const { flushDisconnects } = await import("./connection-undo");
+      await flushDisconnects();
+    } catch {
+      // Nothing to send.
+    }
     const before = shownCompanyFor(userId);
     if (!sample) setShownCompany(userId, companyId);
     if (options?.opened !== true) {

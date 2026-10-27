@@ -116,6 +116,17 @@ describe("a wait and the company it belongs to (decision 0223)", () => {
     expect(ended).toHaveBeenCalledTimes(1);
   });
 
+  it("sends nothing when the header is dropped for a new company (+ עסק חדש) before the wait ends", async () => {
+    setShownCompany("user-1", COMPANY_A);
+    const onRefused = vi.fn();
+    const one = job({ onRefused });
+    const hold = startDisconnect(one);
+    setShownCompany("user-1", null);
+    await hold.end();
+    expect(one.send).not.toHaveBeenCalled();
+    expect(onRefused).toHaveBeenCalledTimes(1);
+  });
+
   it("sends when the app still shows the company of the tap", async () => {
     setShownCompany("user-1", COMPANY_A);
     const one = job();
