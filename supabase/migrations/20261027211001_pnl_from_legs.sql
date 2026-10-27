@@ -12,7 +12,11 @@
 --    the company's lines when the planner had no statistics (search_month_totals_speed). For the same
 --    reason the lines come first and each line's legs are read by the legs index (a lateral, fenced
 --    with OFFSET 0), as the legacy body read the lines first: with or without statistics, the plan is
---    the lines, then an index probe per line.
+--    the lines, then an index probe per line. legs_txn_idx is rebuilt to lead with transaction_id:
+--    led by company_id, it costed the same as legs_account_idx (company_id, account_id) when the
+--    table's statistics were few, and the planner could probe by the company alone and scan a
+--    company's every leg per line (search_month_totals_speed, 4 s). The probe keeps the company too:
+--    without it the probe's estimate rose and project_cash_months rescanned the lines per line.
 -- 3. private.ledger_pnl_diff compares the posting rules with the live view, and the shadow view is
 --    dropped. private.pnl_lines_legacy, the posting triggers and the legacy tables stay: the writes
 --    are unchanged, and the legs are posted from them as before.
@@ -40,6 +44,9 @@ end
 $gate$;
 
 -- 2. The flip.
+drop index public.legs_txn_idx;
+create index legs_txn_idx on public.legs (transaction_id, company_id);
+
 create or replace view private.pnl_lines
 with (security_invoker = true)
 as
@@ -81,7 +88,7 @@ as
     private.line_unpaid(t.direction, t.doc_kind, t.cash_date) AS unpaid,
     l.gross_up
    FROM transactions t
-     -- Each line's item legs by the legs index, the line first: OFFSET 0 keeps the planner from
+     -- Each line's item legs by legs_txn_idx, the line first: OFFSET 0 keeps the planner from
      -- turning it into a join it may run legs-first with no statistics.
      CROSS JOIN LATERAL ( SELECT x.account_id, x.project_id, x.project_explicit, x.category_id, x.part,
             x.amount_minor, x.loan_split_fallback, x.gross_up
