@@ -22,7 +22,7 @@ import { reversalChoices } from "../reversal";
 import { collapseSplit, combinePhase, saveNewProject, useBlockedPreview, withChoice } from "./screen-shared";
 import { reviewE2e, reviewIsSplit, reviewLineFocus, reviewSplitTitle } from "./review-shared";
 import { projectChoices } from "../project-groups";
-import { pinReviewLine, releaseReviewHold } from "../review-pin";
+import { pinReviewLine, releaseReviewHold, reviewHold } from "../review-pin";
 
 /** Decision 0221: the change sheet's pick saves at once; its ביטול stays 5s, as on לאישור (0212). */
 const CHANGE_UNDO_MS = 5000;
@@ -214,10 +214,14 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
         setProjectId(from.projectId);
         setCategoryId(from.categoryId);
       }
-      // As the queue's undo: a line that is still not back a moment after the reopen drops its hold.
+      // As the queue's undo: a line that is still not back a moment after the reopen drops its hold,
+      // and the queue's head takes the pin (the queue is not on screen under this sheet).
       window.setTimeout(() => {
-        const rows = queryClient.getQueryData<ReviewRow[]>(["review", preview]);
-        if (!(rows ?? []).some((entry) => entry.id === item)) releaseReviewHold(payload.line);
+        if (payload.line == null || reviewHold() !== payload.line) return;
+        const rows = queryClient.getQueryData<ReviewRow[]>(["review", preview]) ?? [];
+        if (rows.some((entry) => entry.id === item)) return;
+        releaseReviewHold(payload.line);
+        if (rows[0] != null) pinReviewLine(rows[0].transaction_id);
       }, UNDO_SETTLE_MS);
     },
     run: async (payload) => {
@@ -245,7 +249,11 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
         update: (old: unknown) => (Array.isArray(old) ? (old as ReviewRow[]).filter((entry) => entry.id !== item) : old),
       }];
     },
-    onError: (_error, payload) => { restorePick(payload); },
+    onError: (_error, payload) => {
+      // The line is back in the cached queue: a later close from elsewhere is someone else's again.
+      dropped.current = false;
+      restorePick(payload);
+    },
     onSplit: () => {
       if (!row?.transaction_id) return;
       void navigate(`/transactions/${row.transaction_id}/split-category${search}`, { replace: true });

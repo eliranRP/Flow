@@ -180,7 +180,9 @@ export function ReviewAllList({
     const sameDay = entries.findIndex((other) => other.date.slice(0, 10) === day);
     // The queue sends rows oldest first: a booking goes before the first later day.
     const later = entries.findIndex((other) => other.date.slice(0, 10) > day);
-    const at = sameDay >= 0 ? sameDay : later;
+    // Under one day, after the day's bookings already placed, so bookings keep their order.
+    let at = sameDay >= 0 ? sameDay : later;
+    while (at >= 0 && at < entries.length && entries[at]?.kind === "booking" && entries[at]?.date.slice(0, 10) === day) at += 1;
     if (at < 0) entries.push(entry);
     else entries.splice(at, 0, entry);
   }

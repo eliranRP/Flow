@@ -123,6 +123,21 @@ describe("Review lists v2 (FLOW-971)", () => {
     expect(screen.getAllByRole("heading", { level: 2 }).map((head) => head.textContent)).toEqual(["01/10", "05/10", "07/10", "10/10"]);
   });
 
+  it("two bookings on one day keep their order, ahead of that day's rows", () => {
+    const [sample] = SAMPLE_JEV_BOOKINGS;
+    if (sample == null) throw new Error("sample");
+    const { container } = renderWithProviders(
+      <ReviewAllList
+        rows={[row("a", { doc_date: "2026-10-07" })]}
+        bookings={[{ ...sample, transaction_id: "b1", party: "ראשון", doc_date: "2026-10-07" }, { ...sample, transaction_id: "b2", party: "שני", doc_date: "2026-10-07" }]}
+        search=""
+        backTo="/review"
+        now={new Date("2026-10-20T09:00:00Z")}
+      />,
+    );
+    expect([...container.querySelectorAll(".ui-review-all-title")].map((node) => node.textContent)).toEqual(["ראשון", "שני", "ספק a"]);
+  });
+
   it("a day of another year carries its year", () => {
     renderWithProviders(<ReviewAllList rows={[row("old", { doc_date: "2025-12-30" })]} search="" backTo="/review" now={new Date("2026-10-11T09:00:00Z")} />);
     expect(screen.getByRole("heading", { level: 2, name: "30/12/2025" })).toBeInTheDocument();

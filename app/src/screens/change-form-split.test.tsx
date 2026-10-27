@@ -18,7 +18,10 @@ const state = vi.hoisted((): {
   /** A resolve_review answer the test holds back (a pick on an open line). */
   resolve: null | (() => ApproveReply);
   calls: Array<{ name: string; args: unknown }>;
-} => ({ row: {}, approve: null, resolve: null, calls: [] }));
+  /** The line is gone from list_review (closed elsewhere); `others` are listed instead. */
+  listEmpty: boolean;
+  others: Array<Record<string, unknown>>;
+} => ({ row: {}, approve: null, resolve: null, calls: [], listEmpty: false, others: [] }));
 
 vi.mock("./jev-review-card", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./jev-review-card")>();
@@ -52,7 +55,7 @@ const dashboard = {
 const supabase = {
   rpc: (name: string, args: unknown) => {
     state.calls.push({ name, args });
-    if (name === "list_review") return Promise.resolve({ data: [state.row], error: null });
+    if (name === "list_review") return Promise.resolve({ data: state.listEmpty ? state.others : [state.row], error: null });
     if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
     if (name === "list_categories") {
       return Promise.resolve({ data: [{ id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: false }], error: null });
@@ -285,6 +288,53 @@ describe("a pick saves at once, with ביטול for 5s (decision 0221)", () => {
       expect(state.calls.some((call) => call.name === "undo_reassign" && (call.args as { p_id?: string }).p_id === "undo-reassign-1")).toBe(true);
     });
     expect(await screen.findByRole("button", { name: /^פרויקט: וילה/, hidden: true })).toBeInTheDocument();
+  });
+
+  it("after a failed first resolve, a line closed elsewhere is reassigned, not resolved", async () => {
+    state.row = row();
+    let answer: (result: { data: unknown; error: { message: string } | null }) => void = () => undefined;
+    state.resolve = () => new Promise((resolve) => { answer = resolve; });
+    const { client } = renderSheet();
+    fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
+    await waitFor(() => {
+      expect(resolveCalls()).toHaveLength(1);
+    });
+    await act(async () => {
+      answer({ data: null, error: { message: "Failed to fetch" } });
+      await Promise.resolve();
+    });
+    expect(await screen.findByRole("button", { name: "ניסיון חוזר", hidden: true })).toBeInTheDocument();
+    // Someone else closes the line: the queue's next read no longer has it.
+    state.resolve = null;
+    state.listEmpty = true;
+    await act(async () => { await client.invalidateQueries({ queryKey: ["review"] }); });
+    fireEvent.click(await screen.findByRole("button", { name: /^פרויקט:/, hidden: true }));
+    fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
+    await waitFor(() => {
+      expect(state.calls.some((call) => call.name === "reassign_transaction")).toBe(true);
+    });
+    expect(resolveCalls()).toHaveLength(1);
+    state.listEmpty = false;
+  });
+
+  it("when the undone line does not come back, the hold drops and the queue's head takes the pin", async () => {
+    pinReviewLine(null);
+    state.row = row();
+    renderSheet();
+    fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
+    fireEvent.click(await screen.findByRole("button", { name: "ביטול", hidden: true }));
+    expect(reviewHold()).toBe("t1");
+    // The reopen lands, but the line was approved elsewhere: the queue's next read shows another line.
+    state.listEmpty = true;
+    state.others = [row({ id: "r2", transaction_id: "t2" })];
+    expect(await screen.findByText("השיוך הקודם חזר, והפריט חזר לתור.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(reviewHold()).toBeNull();
+    }, { timeout: 3000 });
+    expect(reviewPin()).toBe("t2");
+    state.listEmpty = false;
+    state.others = [];
+    pinReviewLine(null);
   });
 
   it("ביטול pins the line as the queue's head, and the next pick resolves the item again", async () => {
