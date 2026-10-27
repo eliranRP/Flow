@@ -9,7 +9,7 @@ import { invokeEdge } from "../edge";
 import { LEDGER_KEYS } from "../ledger-keys";
 import { hebrewMercuryError, mercuryRefreshDone } from "../mercury-copy";
 import { accountName, connectionName } from "../mercury-connections";
-import { MERCURY_NONE, type MercuryAccount, type MercuryConnection } from "../mercury-state";
+import { MERCURY_NONE, type MercuryAccount, type MercuryConnection, type MercuryState } from "../mercury-state";
 import { israelSyncPhrase } from "../sumit-copy";
 import { useRefreshingNow } from "../israel-clock";
 import { assertNoError, useWrite } from "../use-write";
@@ -19,13 +19,14 @@ import { REFRESH_DONE } from "../use-sumit-refresh";
 import { useSyncSettled } from "../use-sync-settled";
 import { screenPhase } from "../query-phase";
 import { Button } from "../ui/button";
-import { ConfirmSheet } from "../ui/confirm-sheet";
 import { ConnectionHead, ConnectionNote, ConnectionPage, StepList } from "../ui/connection-page";
 import { BankIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenState } from "../ui/screen-state";
 import { TextField } from "../ui/text-field";
 import { useBlockedPreview } from "./screen-shared";
+import { connectionToast, holdForUndo, UNDONE, type UndoHold } from "../connection-toast";
+import { useToast } from "../ui/toast";
 import { MercuryAccountsStep, type MercuryAccountsPick } from "./mercury-accounts-step";
 import { MercuryConnectedView } from "./mercury-connected-view";
 
@@ -40,6 +41,9 @@ const FOOT_NOTE = "מפתח Read Only: Flow רואה תנועות ויתרות, 
 const PROBLEM = "Mercury הפסיק לקבל את המפתח, כנראה נמחק או פג. מה שכבר נכנס נשמר. הדביקו מפתח חדש וכל התנועות שחסרות ייכנסו.";
 const LIST_NOTE = "לכל חיבור מפתח משלו, חשבונות משלו ותאריך משלו. כל החשבונות המסונכרנים נכנסים לאותו עסק ב־Flow; העברה בין חשבונות מסונכרנים, גם בחיבורים שונים, לא נספרת.";
 const MIN_KEY = 8;
+const SHORT = "צריך את המפתח המלא, לפחות 8 תווים";
+const REJECTED = "Mercury לא קיבל את המפתח. בדקו שהוא Read Only ושהעתקתם אותו כולו.";
+const GONE = "Mercury נותק. מה שכבר נכנס נשמר";
 
 /** The Mercury page's sample (stories, the dev routes): its connections, or a loading or failed read. */
 export type MercurySample = {
@@ -77,7 +81,7 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
   // A sample keeps its changes here, so its frames can be clicked through.
   const [local, setLocal] = useState<MercuryConnection[]>(() => sample?.connections ?? []);
   const state = live ? (status.data ?? MERCURY_NONE) : MERCURY_NONE;
-  const connections = sample != null ? local : state.connections;
+  const shownConnections = sample != null ? local : state.connections;
 
   const slotParam = Number(params.get("slot") ?? Number.NaN);
   const adding = params.get("add") === "1";
@@ -93,10 +97,28 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
 
   const [key, setKey] = useState("");
   const [showKey, setShowKey] = useState(false);
-  const [keyError, setKeyError] = useState(false);
+  // "short": a tap with the key missing; "rejected": Mercury refused it (decision 0223).
+  const [keyError, setKeyError] = useState<"short" | "rejected" | null>(null);
   const [replacing, setReplacing] = useState(false);
-  const [disconnectOpen, setDisconnectOpen] = useState(false);
-  const disconnectFocus = useRef<HTMLElement | null>(null);
+  const toast = useToast();
+
+  const disconnect = useWrite<{ slot: number; hold: UndoHold }>({
+    failure: "לא הצלחנו לנתק.",
+    keys: ["mercury"],
+    place: "top",
+    silent: (error) => error.message === UNDONE,
+    // Decision 0223: the connection leaves the page at once; its key is deleted only once ביטול runs out.
+    optimistic: ({ slot }) => [{ key: ["mercury", preview], update: (old) => (old == null ? old : withoutSlot(old as MercuryState, slot)) }],
+    run: async ({ slot, hold }) => {
+      await hold.done;
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      assertNoError(await supabase.rpc("disconnect_connector", { p_provider: "mercury", p_slot: slot }));
+    },
+  });
+  // A disconnect waiting on its ביטול already shows the page without it, even if a read lands meanwhile.
+  const leaving = disconnect.isPending ? disconnect.variables?.slot : undefined;
+  const connections = shownConnections.filter((connection) => connection.slot !== leaving);
 
   const multi = connections.length > 1;
   // A slot that is gone (disconnected elsewhere) falls back to the list, or to the one connection.
@@ -112,6 +134,7 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
       setReplacing(false);
       go({ slot: connected.slot }, true);
     },
+    onRejected: () => { setKeyError("rejected"); },
   });
   const accounts = useMercuryAccounts({
     onSuccess: (save) => {
@@ -119,23 +142,10 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
       else if (save.kind === "edit") go({ slot: multi ? save.slot : undefined }, true);
     },
   });
-  const disconnect = useWrite<number>({
-    failure: "לא הצלחנו לנתק.",
-    keys: ["mercury"],
-    success: "Mercury נותק. מה שכבר נכנס נשמר",
-    onSuccess: () => {
-      setDisconnectOpen(false);
-      go({}, true);
-    },
-    run: async (slot) => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      assertNoError(await supabase.rpc("disconnect_connector", { p_provider: "mercury", p_slot: slot }));
-    },
-  });
   const refreshResult = useRef<unknown>(null);
   const refresh = useWrite({
     failure: (error) => hebrewMercuryError(error.message) ?? "הרענון נכשל.",
+    place: "top",
     silent: (error) => error.message === "sync_held",
     success: () => mercuryRefreshDone(refreshResult.current),
     keys: LEDGER_KEYS,
@@ -218,10 +228,24 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
   const sendKey = () => {
     if (busyKey || blocked() || viewerOnly) return;
     if (!keyOk) {
-      setKeyError(true);
+      setKeyError("short");
       return;
     }
+    setKeyError(null);
     connect.mutate();
+  };
+  const disconnectNow = (connection: MercuryConnection) => {
+    if (holdOwner || blocked()) return;
+    const hold = holdForUndo();
+    if (sample != null) {
+      const before = local;
+      setLocal((current) => current.filter((item) => item.slot !== connection.slot));
+      void hold.done.then(() => undefined, () => { setLocal(before); });
+    } else {
+      disconnect.mutate({ slot: connection.slot, hold });
+    }
+    go({}, true);
+    toast.show(connectionToast({ message: GONE, action: "ביטול", onAction: () => { hold.cancel(); } }));
   };
 
   const keyForm = (reconnect: boolean, onCancel?: () => void) => (
@@ -240,16 +264,16 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
           placeholder="מדביקים כאן"
           autoComplete="off"
           reserveMessage
-          error={keyError && !keyOk ? "חסר מפתח." : undefined}
+          error={keyError === "rejected" ? REJECTED : keyError === "short" && !keyOk ? SHORT : undefined}
           readOnly={busyKey}
-          onChange={(event) => { setKeyError(false); setKey(event.target.value); }}
+          onChange={(event) => { setKeyError(null); setKey(event.target.value); }}
         />
         <button type="button" className="ui-secret-toggle m-press" onClick={() => { setShowKey((value) => !value); }}>
           {showKey ? "הסתרה" : "הצגה"}
         </button>
       </div>
-      <Button busy={busyKey} disabled={!keyOk} onClick={sendKey}>
-        {busyKey ? "מתחבר…" : reconnect ? "חיבור מחדש" : "חיבור"}
+      <Button busy={busyKey} onClick={sendKey}>
+        {busyKey ? "מתחבר…" : reconnect || keyError === "rejected" ? "חיבור מחדש" : "חיבור"}
       </Button>
       <ConnectionNote>{FOOT_NOTE}</ConnectionNote>
       {onCancel ? <Button variant="link" onClick={() => { setKey(""); setShowKey(false); onCancel(); }}>ביטול</Button> : null}
@@ -311,7 +335,7 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
           onRefresh={() => { if (!blocked() && sample == null) refresh.mutate(); }}
           onReplaceKey={() => { setReplacing(true); }}
           onAdd={() => { go({ add: true }); }}
-          onDisconnect={(event) => { disconnectFocus.current = event.currentTarget; setDisconnectOpen(true); }}
+          onDisconnect={() => { disconnectNow(target); }}
         />
         {viewerOnly ? <ConnectionNote>רק בעל העסק יכול לשנות חיבורים.</ConnectionNote> : null}
       </>
@@ -323,29 +347,15 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
       <ConnectionPage title={TITLE} subtitle={SUBTITLE} backTo={backTo} problem={problem}>
         <ViewerNote />
         {body}
-        <ConfirmSheet
-          open={disconnectOpen}
-          onOpenChange={setDisconnectOpen}
-          title={multi && target ? `לנתק את ${connectionName(target)}?` : "לנתק את Mercury?"}
-          consequence="המפתח נמחק. הספרים שכבר ירדו נשארים."
-          confirmLabel="ניתוק"
-          destructive
-          busy={disconnect.isPending}
-          returnFocusRef={disconnectFocus}
-          onConfirm={() => {
-            if (holdOwner || blocked() || target == null) return;
-            if (sample != null) {
-              setLocal((current) => current.filter((connection) => connection.slot !== target.slot));
-              setDisconnectOpen(false);
-              go({}, true);
-              return;
-            }
-            disconnect.mutate(target.slot);
-          }}
-        />
       </ConnectionPage>
     </ViewerScope>
   );
+}
+
+/** The status without one connection: what the page shows while that connection's disconnect waits on its ביטול. */
+function withoutSlot(state: MercuryState, slot: number): MercuryState {
+  const connections = state.connections.filter((connection) => connection.slot !== slot);
+  return { ...state, connections, connected: connections.some((connection) => connection.chosen && connection.keyWorks), syncing: false };
 }
 
 /** The page's query with `slot` set, keeping its other flags (the preview, a dev fixture's state). */

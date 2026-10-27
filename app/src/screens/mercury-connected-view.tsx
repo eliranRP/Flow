@@ -43,7 +43,7 @@ export function MercuryConnectedView({
   onRefresh: () => void;
   onReplaceKey: () => void;
   onAdd: () => void;
-  onDisconnect: (event: { currentTarget: HTMLElement }) => void;
+  onDisconnect: () => void;
 }) {
   const summary = syncedSummary(connection);
   const fresh = readOnly ? undefined : newAccounts(connection)[0];

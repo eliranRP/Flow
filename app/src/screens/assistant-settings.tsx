@@ -24,6 +24,7 @@ import {
 } from "./assistant-keys";
 import { KeyList, KeyPage } from "./assistant-key-views";
 import { AssistantSetup } from "./assistant-setup";
+import { connectionToast } from "../connection-toast";
 
 const TITLE = "חיבור ל־AI";
 const SUBTITLE = "MCP · העוזר שלכם עובד עם הספרים של Flow";
@@ -126,7 +127,7 @@ export function AiConnectionPage({
       const listed = client.getQueryData<{ keys?: AssistantKey[] }>(["mcp-status"])?.keys ?? [];
       active = activeKeys(listed).length + (listed.some((key) => key.id === added.id) ? 0 : 1);
     }
-    toast.show({ tone: "info", message: addedToast(active) });
+    toast.show(connectionToast({ tone: "info", message: addedToast(active) }));
     void navigate(listTo);
   }, [sample, sampleKeys, client, toast, navigate, listTo]);
 
@@ -168,7 +169,7 @@ export function AiConnectionPage({
       const before = keys;
       setSampleKeys(keys.filter((item) => item.id !== key.id));
       void navigate(listTo);
-      toast.show({ tone: "info", message, action: "ביטול", onAction: () => { setSampleKeys(before); } });
+      toast.show(connectionToast({ tone: "info", message, action: "ביטול", onAction: () => { setSampleKeys(before); } }));
       return;
     }
     setRevoking(true);
@@ -176,7 +177,7 @@ export function AiConnectionPage({
       await revokeKey(key.id);
       await client.invalidateQueries({ queryKey: ["mcp-status"] });
       void navigate(listTo);
-      toast.show({
+      toast.show(connectionToast({
         tone: "info",
         message,
         action: "ביטול",
@@ -185,9 +186,9 @@ export function AiConnectionPage({
             .catch(() => { toast.show({ tone: "bad", message: RESTORE_FAILED }); })
             .finally(() => client.invalidateQueries({ queryKey: ["mcp-status"] }));
         },
-      });
+      }));
     } catch {
-      toast.show({ tone: "bad", message: REVOKE_FAILED });
+      toast.show(connectionToast({ tone: "bad", message: REVOKE_FAILED }));
     } finally {
       setRevoking(false);
     }

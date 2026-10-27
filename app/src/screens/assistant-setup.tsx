@@ -23,6 +23,7 @@ import {
   type Minted,
 } from "./assistant-keys";
 import { AllKeysLink } from "./assistant-key-views";
+import { connectionToast } from "../connection-toast";
 
 /** The three questions the board shows under "מה אפשר לשאול" (the project and supplier are invented). */
 export const EXAMPLE_QUESTIONS = [
@@ -150,7 +151,7 @@ export function AssistantSetup({
     try {
       await navigator.clipboard.writeText(value);
       setManualField(null);
-      toast.show({ tone: "info", message: "הועתק" });
+      toast.show(connectionToast({ tone: "info", message: "הועתק" }));
     } catch {
       if (node) {
         node.focus();

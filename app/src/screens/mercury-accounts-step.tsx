@@ -118,7 +118,8 @@ export function MercuryAccountsStep({
         </button>
       ) : null}
       <ConnectionNote>{ACCOUNTS_NOTE}</ConnectionNote>
-      <Button busy={busy} disabled={selected.length === 0} onClick={save}>
+      {/* Never greyed out (decision 0223): with nothing checked the label says what is missing and a tap does nothing. */}
+      <Button busy={busy} onClick={save}>
         {busy ? "שומר…" : syncButtonLabel(selected.length, editing)}
       </Button>
       <Button variant="link" onClick={onBack}>{editing ? "ביטול" : "חזרה למפתח"}</Button>

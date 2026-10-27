@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { useHoldOwnerSettings, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { useDashboardQuery, useSumitStatusQuery } from "../use-books";
@@ -9,7 +9,6 @@ import { assertNoError, useWrite } from "../use-write";
 import { useSumitConnect } from "../use-sumit-connect";
 import { REFRESH_DONE, useSumitRefresh } from "../use-sumit-refresh";
 import { useSyncSettled } from "../use-sync-settled";
-import { ConfirmSheet } from "../ui/confirm-sheet";
 import { Button } from "../ui/button";
 import { ImportFromField } from "../ui/import-from-field";
 import { ConnectionFacts, ConnectionHead, ConnectionNote, ConnectionPage, StepList } from "../ui/connection-page";
@@ -19,6 +18,8 @@ import { TextField } from "../ui/text-field";
 import { useToast } from "../ui/toast";
 import { useBlockedPreview } from "./screen-shared";
 import { screenPhase } from "../query-phase";
+import { connectionToast, holdForUndo, UNDONE, type UndoHold } from "../connection-toast";
+import type { SumitStatus } from "@flow/shared";
 
 /** FLOW-938: Mercury has its own page (mercury-connection-screen.tsx); this one is SUMIT's. */
 export type Provider = "sumit";
@@ -36,9 +37,11 @@ export type ConnectionSample = {
   busy?: boolean;
 };
 
-/** The key and the company number are checked before the connect button is enabled. */
+/** A tap on חיבור checks the key and the company number first, and says what is missing (decision 0223). */
 const MIN_KEY = 8;
 const MIN_COMPANY_DIGITS = 6;
+const SHORT = "צריך מספר חברה (6 ספרות לפחות) ומפתח מלא";
+const REJECTED = "SUMIT לא קיבל את המפתח. בדקו את מספר החברה ואת המפתח.";
 
 const COPY: Record<Provider, {
   title: string;
@@ -83,7 +86,6 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
   const status = sumit;
   const copy = COPY[provider];
   const backTo = `/settings/connections${search}`;
-  const disconnectFocus = useRef<HTMLElement | null>(null);
   const [now] = useRefreshingNow();
 
   const [typedCompany, setTypedCompany] = useState<string | null>(null);
@@ -92,8 +94,8 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
   const [replacing, setReplacing] = useState(false);
   const [importTouched, setImportTouched] = useState(false);
   const [importValue, setImportValue] = useState<string | null>(null);
-  const [disconnectOpen, setDisconnectOpen] = useState(false);
-  const [keyError, setKeyError] = useState(false);
+  // "short": a tap with something missing; "rejected": SUMIT refused the key (decision 0223).
+  const [keyError, setKeyError] = useState<"short" | "rejected" | null>(null);
   const refreshSumit = useSumitRefresh();
   const storedCompany = live && sumit.data?.sumit_company_id != null ? String(sumit.data.sumit_company_id) : (sample?.companyId ?? "");
   // A reconnect starts with the company number on file; a typed one replaces it.
@@ -104,15 +106,17 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
     setApiKey: (key) => { setForm((current) => ({ ...current, key })); },
     importFrom: importTouched ? importValue : undefined,
     onSuccess: () => { setReplacing(false); },
+    onRejected: () => { setKeyError("rejected"); },
   });
-  const disconnect = useWrite({
+  // Decision 0223: the page shows SUMIT disconnected at once; the key is deleted only once ביטול runs out.
+  const disconnect = useWrite<UndoHold>({
     failure: "לא הצלחנו לנתק.",
     keys: [provider],
-    onSuccess: () => {
-      setDisconnectOpen(false);
-      toast.show({ message: "SUMIT נותק. מה שכבר נכנס נשמר" });
-    },
-    run: async () => {
+    place: "top",
+    silent: (error) => error.message === UNDONE,
+    optimistic: () => [{ key: ["sumit", preview], update: (old) => (old == null ? old : { ...(old as SumitStatus), connected: false, last_error: null, syncing: false }) }],
+    run: async (hold) => {
+      await hold.done;
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       assertNoError(await supabase.rpc("disconnect_sumit"));
@@ -138,7 +142,10 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
     return <ScreenState title={copy.title} kicker="חיבורים" backTo={backTo} phase={screenPhase(preview, dashboard)} onRetry={() => { void dashboard.refetch(); }} />;
   }
 
-  const view: ConnectionSample = sample ?? liveView(provider, live, status.data, now);
+  const [sampleGone, setSampleGone] = useState(false);
+  const shown = sample ?? liveView(provider, live, status.data, now);
+  // A disconnect waiting on its ביטול already shows the page as SUMIT will be after it.
+  const view: ConnectionSample = (disconnect.isPending || sampleGone) && shown.state === "connected" ? { state: "new" } : shown;
   const noCompany = live && companyId == null && dashboard.isSuccess;
   const problem = view.state === "problem";
   const connected = view.state === "connected";
@@ -149,6 +156,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
   const companyOk = new RegExp(`^\\d{${String(MIN_COMPANY_DIGITS)},}$`).test(companyValue.trim());
   const keyOk = form.key.trim().length >= MIN_KEY;
   const canConnect = keyOk && companyOk;
+  const keyMessage = keyError === "rejected" ? REJECTED : keyError === "short" && !canConnect ? SHORT : undefined;
   // A preview passes busy to show the connect in flight; the live page reads its own mutation.
   const busy = view.busy === true || sumitConnect.isPending;
   const showForm = !loading && !viewerOnly && (!connected || replacing);
@@ -156,10 +164,22 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
   const connect = () => {
     if (busy || blocked() || viewerOnly) return;
     if (!canConnect) {
-      if (!keyOk) setKeyError(true);
+      setKeyError("short");
       return;
     }
+    setKeyError(null);
     sumitConnect.mutate();
+  };
+  const disconnectNow = () => {
+    if (holdOwner || blocked()) return;
+    const hold = holdForUndo();
+    if (sample != null) {
+      setSampleGone(true);
+      void hold.done.then(() => undefined, () => { setSampleGone(false); });
+    } else {
+      disconnect.mutate(hold);
+    }
+    toast.show(connectionToast({ message: "SUMIT נותק. מה שכבר נכנס נשמר", action: "ביטול", onAction: () => { hold.cancel(); } }));
   };
 
   const syncLine = view.lastSync ?? israelSyncPhrase(live ? sumit.data?.last_sync_at : null, now);
@@ -210,7 +230,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
                 רענון עכשיו
               </Button>
               <Button variant="link" onClick={() => { setReplacing(true); }}>החלפת מפתח API</Button>
-              <Button variant="danger-link" onClick={(event) => { disconnectFocus.current = event.currentTarget; setDisconnectOpen(true); }}>ניתוק</Button>
+              <Button variant="danger-link" onClick={disconnectNow}>ניתוק</Button>
             </div>
           )}
         </>
@@ -230,7 +250,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
             inputMode="numeric"
             placeholder="למשל 1234567890"
             reserveMessage
-            onChange={(event) => { setTypedCompany(event.target.value); }}
+            onChange={(event) => { setKeyError(null); setTypedCompany(event.target.value); }}
             readOnly={busy}
           />
           <div className="ui-secret-wrap">
@@ -242,9 +262,9 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
               placeholder={copy.keyPlaceholder}
               autoComplete="off"
               reserveMessage
-              error={keyError && !keyOk ? "חסר מפתח." : undefined}
+              error={keyMessage}
               readOnly={busy}
-              onChange={(event) => { setKeyError(false); setForm((current) => ({ ...current, key: event.target.value })); }}
+              onChange={(event) => { setKeyError(null); setForm((current) => ({ ...current, key: event.target.value })); }}
             />
             <button type="button" className="ui-secret-toggle m-press" onClick={() => { setShowKey((value) => !value); }}>
               {showKey ? "הסתרה" : "הצגה"}
@@ -257,12 +277,8 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
             onChange={(next) => { setImportTouched(true); setImportValue(next); }}
           />
           <ConnectionNote>{importFrom == null ? copy.importNote.start : copy.importNote.date}</ConnectionNote>
-          <Button
-            busy={busy}
-            disabled={!canConnect}
-            onClick={connect}
-          >
-            {busy ? "מתחבר…" : problem || replacing ? "חיבור מחדש" : "חיבור"}
+          <Button busy={busy} onClick={connect}>
+            {busy ? "מתחבר…" : problem || replacing || keyError === "rejected" ? "חיבור מחדש" : "חיבור"}
           </Button>
           <ConnectionNote>{copy.footNote}</ConnectionNote>
         </>
@@ -272,20 +288,6 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
       {connected && replacing ? (
         <Button variant="link" onClick={() => { setForm({ key: "" }); setShowKey(false); setReplacing(false); }}>ביטול</Button>
       ) : null}
-      <ConfirmSheet
-        open={disconnectOpen}
-        onOpenChange={setDisconnectOpen}
-        title={`לנתק את ${copy.title}?`}
-        consequence="המפתח נמחק. הספרים שכבר ירדו נשארים."
-        confirmLabel="ניתוק"
-        destructive
-        busy={disconnect.isPending}
-        returnFocusRef={disconnectFocus}
-        onConfirm={() => {
-          if (holdOwner || blocked()) return;
-          disconnect.mutate();
-        }}
-      />
     </ConnectionPage>
     </ViewerScope>
   );
