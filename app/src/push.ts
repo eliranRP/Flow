@@ -105,6 +105,20 @@ export async function answerPushPrompt(yes: boolean): Promise<NotificationPrefs>
   return prefsFromData(await result(db().rpc("answer_push_prompt", { p_yes: yes })));
 }
 
+/**
+ * Records the asked-once answer without waiting (FLOW-976: one push question, asked on the review card
+ * or in setup's step 7). Cached at once, so a quick visit Home and back does not ask again first.
+ */
+export function useRecordPushAnswer(): (yes: boolean) => void {
+  const client = useQueryClient();
+  return (yes) => {
+    client.setQueryData<NotificationPrefs>(PUSH_PREFS_KEY, (current) => current && { ...current, prompt_answered: true });
+    void answerPushPrompt(yes)
+      .then((saved) => { client.setQueryData(PUSH_PREFS_KEY, saved); })
+      .catch(() => undefined);
+  };
+}
+
 function keyBytes(base64url: string): Uint8Array<ArrayBuffer> {
   const padded = `${base64url}${"=".repeat((4 - (base64url.length % 4)) % 4)}`.replace(/-/g, "+").replace(/_/g, "/");
   const raw = atob(padded);

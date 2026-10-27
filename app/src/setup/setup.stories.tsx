@@ -1,6 +1,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { StoryRoute } from "../ui/story-route";
+import { PROJECT_ADD, PROJECT_NAME_EMPTY, REVIEW_APPROVE, REVIEW_BEFORE } from "./copy";
 import { SetupDone } from "./done";
 import { SkipSheet } from "./skip-sheet";
 import { StepBusiness, StepConnect, StepInstall, StepJev, StepProjects, StepReview, type StepProps } from "./steps";
@@ -52,6 +54,28 @@ export const Step3Projects: Story = {
   ),
 };
 
+/** FLOW-976: הוספה is never greyed out; a tap with no name says what is missing. */
+export const Step3ProjectsNoName: Story = {
+  name: "Step 3 · projects, הוספה with no name",
+  parameters: { flowRouter: false },
+  render: () => (
+    <StoryRoute entry="/setup/3">
+      <StepProjects {...noop} companyId="company-story" bankConnected={false} existingNames={["Birch Lane"]} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: PROJECT_ADD }));
+    // The note is there at once; the step's fade-in can still hold it at opacity 0 under load.
+    await expect(canvas.getByText(PROJECT_NAME_EMPTY)).toBeInTheDocument();
+    await waitFor(() => expect(canvas.getByText(PROJECT_NAME_EMPTY)).toBeVisible());
+    await expect(canvas.getByRole("textbox")).toHaveAttribute("aria-invalid", "true");
+    // A second tap keeps the note on screen.
+    await userEvent.click(canvas.getByRole("button", { name: PROJECT_ADD }));
+    await expect(canvas.getByText(PROJECT_NAME_EMPTY)).toBeVisible();
+  },
+};
+
 export const Step5Jev: Story = {
   name: "Step 5 · smart tagging",
   parameters: { flowRouter: false },
@@ -70,6 +94,14 @@ export const Step6Review: Story = {
       <StepReview {...noop} approved={false} />
     </StoryRoute>
   ),
+  // FLOW-976: before the approval the bottom button is neutral, enabled, and takes focus to אישור.
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const before = canvas.getByRole("button", { name: REVIEW_BEFORE });
+    await expect(before).toBeEnabled();
+    await userEvent.click(before);
+    await expect(canvas.getByRole("button", { name: REVIEW_APPROVE })).toHaveFocus();
+  },
 };
 
 export const Step7Install: Story = {

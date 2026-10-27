@@ -70,6 +70,28 @@ describe("light text and accent on the light background and surface (WCAG AA 4.5
   }
 });
 
+// FLOW-976: a field draws on --color-raised, so its text and its prompt are checked on that fill too,
+// in light and dark. The prompt stays lighter than secondary text, so it does not read as a value.
+describe("a field's text and prompt on the raised fill and the surface (WCAG AA 4.5:1)", () => {
+  const backgrounds = ["--color-raised", "--color-surface"];
+  const foregrounds = ["--color-text", "--color-text-secondary", "--color-placeholder"];
+
+  for (const [theme, map] of [["light", light], ["dark", dark]] as const) {
+    for (const fg of foregrounds) {
+      for (const bg of backgrounds) {
+        it(`${theme}: ${fg} on ${bg} reaches 4.5:1`, () => {
+          const ratio = contrast(hexOf(map, fg), hexOf(map, bg));
+          expect(ratio, `${fg} on ${bg} is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+        });
+      }
+    }
+    it(`${theme}: the prompt is lighter than secondary text on the raised fill`, () => {
+      const raised = hexOf(map, "--color-raised");
+      expect(contrast(hexOf(map, "--color-placeholder"), raised)).toBeLessThan(contrast(hexOf(map, "--color-text-secondary"), raised));
+    });
+  }
+});
+
 describe("light values from the Design guide's Light theme table", () => {
   const board: Record<string, string> = {
     "--color-bg": "#F6F4FA",

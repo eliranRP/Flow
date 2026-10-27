@@ -1,4 +1,4 @@
-import { useState, type SubmitEvent } from "react";
+import { useEffect, useRef, useState, type SubmitEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatMoney } from "@flow/shared";
 import { getSupabase } from "../lib/supabase";
@@ -19,7 +19,7 @@ import { Toggle } from "../ui/toggle";
 import { useMercuryConnect } from "../use-mercury-connect";
 import { useSumitConnect } from "../use-sumit-connect";
 import { assertNoError } from "../use-write";
-import { pushSupport, subscribeThisDevice, type SubscribeOutcome } from "../push";
+import { pushSupport, subscribeThisDevice, useRecordPushAnswer, type SubscribeOutcome } from "../push";
 import { subscribeDiagnostic, subscribeFailure } from "../screens/push-copy";
 import { type ConnectKind, openConnection } from "./connect-entry";
 import {
@@ -54,6 +54,9 @@ import {
   NOTIFY_HINT,
   NOTIFY_LABEL,
   PROJECT_ADD,
+  PROJECT_NAME_EMPTY,
+  PROJECT_NAME_SHORT,
+  PROJECT_NAME_TAKEN,
   PROJECT_PLACEHOLDER,
   PROJECTS_LEAD,
   REVIEW_BEFORE,
@@ -347,10 +350,11 @@ export function StepProjects({
   const [chips, setChips] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [nameNote, setNameNote] = useState<string | null>(null);
+  const [noteTap, setNoteTap] = useState(0);
   const suggestions = useSetupSuggestions(companyId, bankConnected);
   const taken = (name: string) => chips.includes(name) || existingNames.includes(name);
   const trimmed = draft.trim();
-  const addable = trimmed.length >= 2 && !taken(trimmed);
   const shown = suggestions.projects.filter((name) => !taken(name));
 
   function add(name: string) {
@@ -391,13 +395,27 @@ export function StepProjects({
         className="ui-onb-add"
         onSubmit={(event) => {
           event.preventDefault();
-          if (addable) add(trimmed);
+          const problem = projectNameProblem(trimmed, taken);
+          // A new note fills the line that is already there and is announced. The same note on a
+          // repeated tap redraws the line, so it is announced again.
+          if (problem != null && problem === nameNote) setNoteTap((tap) => tap + 1);
+          setNameNote(problem);
+          if (problem == null) add(trimmed);
         }}
       >
         <div className="ui-onb-add-field">
-          <TextField label={PROJECT_PLACEHOLDER} placeholder={PROJECT_PLACEHOLDER} value={draft} onChange={(event) => { setDraft(event.target.value); }} />
+          <TextField
+            label={PROJECT_PLACEHOLDER}
+            placeholder={PROJECT_PLACEHOLDER}
+            value={draft}
+            error={nameNote ?? undefined}
+            liveMessage
+            reserveMessage
+            messageKey={noteTap}
+            onChange={(event) => { setDraft(event.target.value); setNameNote(null); }}
+          />
         </div>
-        <Button type="submit" variant="secondary" disabled={!addable}>{PROJECT_ADD}</Button>
+        <Button type="submit" variant="secondary">{PROJECT_ADD}</Button>
       </form>
       {chips.length > 0 ? (
         <div className="ui-onb-chips">
@@ -542,6 +560,21 @@ export function StepJev({ onDone, onSkipStep, onSkipAll, onBack }: StepProps) {
   );
 }
 
+/** "הוספה" with nothing to add: what is missing, or null when the name can be added (FLOW-976). */
+export function projectNameProblem(name: string, taken: (name: string) => boolean): string | null {
+  if (name.length === 0) return PROJECT_NAME_EMPTY;
+  if (name.length < 2) return PROJECT_NAME_SHORT;
+  return taken(name) ? PROJECT_NAME_TAKEN : null;
+}
+
+/** Step 6 before the approval: the bottom button takes the owner to the sample's own אישור. */
+function focusSampleApprove() {
+  const approve = document.querySelector<HTMLButtonElement>(".ui-sample .ui-btn");
+  if (!approve) return;
+  approve.focus({ preventScroll: true });
+  if (typeof approve.scrollIntoView === "function") approve.scrollIntoView({ block: "center" });
+}
+
 /** Step 6 · אישור ראשון. The sample writes nothing: approving only stamps sample_review_at in the setup store. */
 export function StepReview({
   approved,
@@ -552,6 +585,11 @@ export function StepReview({
   onBack,
 }: StepProps & { approved: boolean }) {
   const [done, setDone] = useState(approved);
+  const bottom = useRef<HTMLButtonElement>(null);
+  const [justApproved, setJustApproved] = useState(false);
+  useEffect(() => {
+    if (justApproved) bottom.current?.focus();
+  }, [justApproved]);
   return (
     <OnboardingFrame
       step={6}
@@ -559,13 +597,24 @@ export function StepReview({
       lead={REVIEW_LEAD}
       onBack={onBack}
       onSkipAll={onSkipAll}
-      primary={<Button type="button" full disabled={!done} onClick={() => { onDone(); }}>{done ? NEXT : REVIEW_BEFORE}</Button>}
+      primary={
+        <Button
+          type="button"
+          full
+          buttonRef={bottom}
+          variant={done ? "primary" : "secondary"}
+          onClick={() => { if (done) onDone(); else focusSampleApprove(); }}
+        >
+          {done ? NEXT : REVIEW_BEFORE}
+        </Button>
+      }
       secondary={<Button type="button" variant="link" full onClick={onSkipStep}>{SKIP_STEP}</Button>}
     >
       <SampleCard
         approved={done}
         onApprove={() => {
           setDone(true);
+          setJustApproved(true);
           onStamp({ sample_review_at: nowIso() });
         }}
       />
@@ -589,6 +638,9 @@ export function StepInstall({
   const [notify, setNotify] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pushFailed, setPushFailed] = useState<SubscribeOutcome | null>(null);
+  // One push question (FLOW-976): the step's answer is the review card's asked-once answer. A failed
+  // subscribe is not an answer, except a refusal (denied, dismissed).
+  const recordAnswer = useRecordPushAnswer();
   const mode = initialMode ?? detectInstallMode();
   return (
     <OnboardingFrame
@@ -605,6 +657,8 @@ export function StepInstall({
           onClick={() => {
             if (saving) return;
             if (!notify || pushFailed != null || pushSupport() !== "ok") {
+              // Turned off here is the answer "no"; a device that cannot push was not asked.
+              if (!notify && pushSupport() === "ok") recordAnswer(false);
               onDone({ installed_at: nowIso() });
               return;
             }
@@ -612,8 +666,13 @@ export function StepInstall({
             const pending = subscribeThisDevice();
             setSaving(true);
             void pending.then((outcome) => {
-              if (outcome.result === "ok") onDone({ installed_at: nowIso() });
-              else setPushFailed(outcome);
+              if (outcome.result === "ok") {
+                recordAnswer(true);
+                onDone({ installed_at: nowIso() });
+                return;
+              }
+              if (outcome.result === "denied" || outcome.result === "dismissed") recordAnswer(false);
+              setPushFailed(outcome);
             }).finally(() => { setSaving(false); });
           }}
         >

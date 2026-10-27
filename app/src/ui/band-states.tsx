@@ -27,7 +27,11 @@ export function israelHourMinute(at: number): string {
  * Offline, the page keeps its last figures and says, in the band, which moment they are from. `onPage`
  * (FLOW-963, a page with no band) draws it as a card line and adds that the app is trying again.
  */
-export function BandOfflineLine({ since, onPage = false, words }: { onPage?: boolean } & ({ since: number; words?: undefined } | { since?: undefined; words: string })) {
+export function BandOfflineLine({ since, onPage = false, retrying = true, words }: {
+  onPage?: boolean;
+  /** "מתחבר מחדש…" on a page line; false where nothing retries by itself (FLOW-976, sign-in). */
+  retrying?: boolean;
+} & ({ since: number; words?: undefined } | { since?: undefined; words: string })) {
   return (
     <p className={cx("ui-band-offline", onPage && "ui-page-offline")} role="status">
       <AlertIcon size={20} />
@@ -42,7 +46,7 @@ export function BandOfflineLine({ since, onPage = false, words }: { onPage?: boo
           <>אין חיבור · מוצג המצב מ־<bdi dir="ltr">{israelHourMinute(since)}</bdi></>
         )}
       </span>
-      {onPage ? <span className="ui-page-offline-retry">מתחבר מחדש…</span> : null}
+      {onPage && retrying ? <span className="ui-page-offline-retry">מתחבר מחדש…</span> : null}
     </p>
   );
 }

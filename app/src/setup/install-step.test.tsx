@@ -7,10 +7,12 @@ import { INSTALL_FINISH } from "./copy";
 // FLOW-516: step 7's notifications switch says what happened when the turn-on stops.
 
 const subscribe = vi.fn<() => Promise<SubscribeOutcome>>();
+const answer = vi.fn<(yes: boolean) => void>();
 vi.mock("../push", async (original) => ({
   ...await original<typeof import("../push")>(),
   pushSupport: () => "ok",
   subscribeThisDevice: () => subscribe(),
+  useRecordPushAnswer: () => answer,
 }));
 
 const { StepInstall } = await import("./steps");
@@ -26,6 +28,7 @@ function renderStep() {
 beforeEach(() => {
   subscribe.mockReset();
   onDone.mockReset();
+  answer.mockReset();
 });
 
 describe("setup step 7 · notifications", () => {
@@ -35,6 +38,25 @@ describe("setup step 7 · notifications", () => {
     fireEvent.click(screen.getByRole("button", { name: INSTALL_FINISH }));
     expect(subscribe).toHaveBeenCalledTimes(1);
     await waitFor(() => { expect(onDone).toHaveBeenCalledTimes(1); });
+    // FLOW-976: one push question. The step's yes is the review card's asked-once answer.
+    expect(answer).toHaveBeenCalledWith(true);
+  });
+
+  it("records no when the switch is off, so the review card does not ask again", () => {
+    renderStep();
+    fireEvent.click(screen.getByRole("switch", { name: /התראות/ }));
+    fireEvent.click(screen.getByRole("button", { name: INSTALL_FINISH }));
+    expect(subscribe).not.toHaveBeenCalled();
+    expect(answer).toHaveBeenCalledWith(false);
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it("records no when the browser refuses", async () => {
+    subscribe.mockResolvedValue({ result: "denied", step: "permission" });
+    renderStep();
+    fireEvent.click(screen.getByRole("button", { name: INSTALL_FINISH }));
+    await waitFor(() => { expect(answer).toHaveBeenCalledWith(false); });
+    expect(onDone).not.toHaveBeenCalled();
   });
 
   it("stays and says why when the turn-on stops, then finishes on the next tap without asking again", async () => {
@@ -47,5 +69,6 @@ describe("setup step 7 · notifications", () => {
     fireEvent.click(screen.getByRole("button", { name: INSTALL_FINISH }));
     expect(onDone).toHaveBeenCalledTimes(1);
     expect(subscribe).toHaveBeenCalledTimes(1);
+    expect(answer).not.toHaveBeenCalled();
   });
 });

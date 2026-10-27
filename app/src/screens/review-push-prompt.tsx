@@ -9,6 +9,7 @@ import {
   subscribeThisDevice,
   useDevicePushQuery,
   useNotificationPrefsQuery,
+  useRecordPushAnswer,
   type DevicePush,
   type NotificationPrefs,
   type PushSupport,
@@ -69,6 +70,7 @@ export function ReviewPushPrompt({
   const prefs = useNotificationPrefsQuery(live);
   const deviceQuery = useDevicePushQuery(live && can === "ok");
   const client = useQueryClient();
+  const recordAnswer = useRecordPushAnswer();
   const toast = useToast();
   const [answered, setAnswered] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -101,12 +103,7 @@ export function ReviewPushPrompt({
   }
 
   function record(yes: boolean) {
-    if (!live) return;
-    // Cached at once, so a quick visit Home and back does not ask again before the save returns.
-    client.setQueryData<NotificationPrefs>(PUSH_PREFS_KEY, (current) => current && { ...current, prompt_answered: true });
-    void answerPushPrompt(yes)
-      .then((saved) => { client.setQueryData(PUSH_PREFS_KEY, saved); })
-      .catch(() => undefined);
+    if (live) recordAnswer(yes);
   }
 
   async function yes() {
