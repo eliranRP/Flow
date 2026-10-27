@@ -32,6 +32,16 @@ for (const route of ROUTES) {
   });
 }
 
+// The search screen's head is its own bar, not a stacked header: its field sat under the status bar.
+test("search: under a notch the search field sits below the status bar", async ({ page }) => {
+  await page.goto("/e2e/cash?preview=1");
+  await page.getByRole("link", { name: "חיפוש", exact: true }).click();
+  const field = page.getByRole("searchbox", { name: "חיפוש תנועות" });
+  await expect(field).toBeVisible();
+  const top = await page.locator(".ui-search").first().evaluate((node) => node.getBoundingClientRect().top);
+  expect(top).toBeGreaterThanOrEqual(59);
+});
+
 // The loans tab has no stacked header: its "+ הלוואה חדשה" link is the top line, and it sat under the
 // iPhone status bar because the screen's own top pad left out --safe-top.
 test("loans: under a notch the new-loan link sits below the status bar", async ({ page }) => {
