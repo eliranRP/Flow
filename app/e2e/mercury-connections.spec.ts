@@ -86,7 +86,7 @@ test("the key's הצגה toggle is a 44px target, and a tap on חיבור with n
   await page.goto("/e2e/connections/mercury?state=new");
   const toggle = page.getByRole("button", { name: "הצגה" });
   expect((await toggle.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
-  await page.getByRole("button", { name: "חיבור" }).click();
+  await page.getByRole("button", { name: "חיבור", exact: true }).click();
   await expect(page.getByText("צריך את המפתח המלא, לפחות 8 תווים")).toBeVisible();
 });
 
