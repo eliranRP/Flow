@@ -82,12 +82,11 @@ export function DeleteCompanySheet({
     keys: [],
     onSuccess: () => {
       // The header named the deleted company; the next reads follow the server's choice.
+      onLeave();
       leave();
       pinReviewLine(null);
       client.clear();
-      // The sheet closes once the welcome is the current entry. Closed first, its history step could
-      // replace the entry with this page after the move to the welcome (FLOW-976).
-      void Promise.resolve(navigate(AFTER_DELETE_PATH, { replace: true })).then(onLeave);
+      void navigate(AFTER_DELETE_PATH, { replace: true });
       toast.show({ message: DELETE_DONE });
     },
     run: async ({ companyId: id, confirm }) => {
