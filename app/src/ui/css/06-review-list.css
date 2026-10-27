@@ -82,12 +82,16 @@
   min-inline-size: 0;
 }
 
+/* A long payee wraps to a second line rather than losing its end (as the other rows' names do). */
 .ui-review-all-title {
+  display: -webkit-box;
   overflow: hidden;
   font-size: var(--type-body-size);
   line-height: var(--type-cents-line);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .ui-review-all-meta {
