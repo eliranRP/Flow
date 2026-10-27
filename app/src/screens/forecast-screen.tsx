@@ -52,6 +52,9 @@ const COMPACT_AFTER = 150;
 /** The moved row folds away this long before its write, then the list is refreshed. */
 const FOLD_MS = 280;
 
+/** A move to next month that waits for its fold: ביטול before it is sent cancels it, after it sends the undo. */
+type PendingMove = { sent: boolean; cancelled: boolean; timer: number | null };
+
 /** `<list path>/item/<key>`: a row's page is open over the list (MonthForecastEdit). */
 const ITEM_PATH = /^(.*?)\/item\/([^/]+)\/?$/;
 
@@ -222,10 +225,13 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
   const smallUntil = build?.small.reduce<string | null>((latest, item) => { const day = item.due_on ?? item.expected_on; return day != null && (latest == null || day > latest) ? day : latest; }, null) ?? null;
 
   /** The row folds away, then the move is written; the page has closed first, so the list shows the fold. */
-  function leave(item: ForecastItem, patch: ForecastPatch, prior: ForecastOverrideRow | null) {
+  function leave(item: ForecastItem, patch: ForecastPatch, prior: ForecastOverrideRow | null, move: PendingMove) {
+    if (move.cancelled) return;
     setLeavingKey(item.key);
-    window.setTimeout(() => {
+    move.timer = window.setTimeout(() => {
+      move.timer = null;
       setLeavingKey(null);
+      move.sent = true;
       write.mutate({ key: item.key, patch, undo: false, prior });
     }, FOLD_MS);
   }
@@ -233,12 +239,24 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
   function save(item: ForecastItem, patch: ForecastPatch) {
     const prior = data?.overrides.find((row) => row.item_key === item.key) ?? null;
     if (patch.moved_out) {
-      if (openKey == null) leave(item, patch, prior);
-      else pendingLeave.current = () => { leave(item, patch, prior); };
+      const move: PendingMove = { sent: false, cancelled: false, timer: null };
+      const fold = () => { leave(item, patch, prior, move); };
+      if (openKey == null) fold();
+      else pendingLeave.current = fold;
       toast.show(forecastToast({
         message: `${item.name} הועבר לחודש הבא`,
         action: "ביטול",
-        onAction: () => { write.mutate({ key: item.key, patch: priorPatch(prior), undo: true, prior }); },
+        onAction: () => {
+          if (move.sent) {
+            write.mutate({ key: item.key, patch: priorPatch(prior), undo: true, prior });
+            return;
+          }
+          // A ביטול inside the fold, or before the page has closed: the move was never sent, so nothing is.
+          move.cancelled = true;
+          if (move.timer != null) window.clearTimeout(move.timer);
+          if (pendingLeave.current === fold) pendingLeave.current = null;
+          setLeavingKey((key) => (key === item.key ? null : key));
+        },
       }));
       return;
     }
@@ -299,6 +317,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
         <span className="ui-forecast-compact-figure">{startKnown ? <>{`${FORECAST_TITLE} · `}<bdi dir="ltr">{forecastBigText(total, base)}</bdi></> : FORECAST_TITLE}</span>
       </div>
       <ScreenHeader title={FORECAST_TITLE} backTo="/" backText="בית" subtitle={`סוף ${monthName(month)} · עוד ${String(days)} ימים`} />
+      {/* A sample has no read to retry: its failure is fixed, so נסו שוב does nothing there. */}
       {failed ? <PageLoadFailed title="הצפי לא נטען" offline={!online} onRetry={() => { if (live) void query.refetch(); }} /> : null}
       {offlineSince == null || failed ? null : <BandOfflineLine since={offlineSince} onPage />}
       {data == null && !failed ? (

@@ -191,6 +191,23 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
     });
   });
 
+  it("a ביטול before the fold ends sends nothing: the move is cancelled, not written then undone", async () => {
+    rpc.mockClear();
+    renderForecast(board());
+    openNorthgate();
+    fireEvent.click(screen.getByRole("button", { name: "מתי צפוי: השבוע" }));
+    fireEvent.click(await screen.findByRole("radio", { name: /^לא החודש/ }));
+    await sheetGone();
+    fireEvent.click(screen.getByRole("button", { name: "שמירת השינוי בצפי" }));
+    await screen.findByText("Northgate Co הועבר לחודש הבא");
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    // Past the fold (280ms) and its two frames: still no write, and the row stays in the list.
+    await new Promise((resolve) => { setTimeout(resolve, 500); });
+    expect(rpc.mock.calls.filter(([name]) => name === "set_forecast_item")).toHaveLength(0);
+    const li = screen.getByRole("button", { name: "Northgate Co, +$12,500" }).closest("li");
+    expect(li).not.toHaveClass("ui-forecast-leaving");
+  });
+
   it("Back closes the page and gives the focus back to the row", async () => {
     renderForecast(board());
     openNorthgate();

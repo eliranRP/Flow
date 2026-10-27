@@ -1,6 +1,7 @@
 import type { Json } from "@flow/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
+import { forecastToast } from "./forecast-toast";
 import { getSupabase } from "./lib/supabase";
 import type { ProjectForecastEdit } from "./project-next-month";
 import { FORECAST_EDITS_KEY } from "./project-next-month-query";
@@ -12,10 +13,6 @@ import { useToast } from "./ui/toast";
  * restore_project_forecast_row, reset_project_forecast). Each returns its undo, which the toast's ביטול
  * sends back through undo_project_forecast, as the month forecast does.
  */
-
-/** Decision 0219: a forecast change's toast hangs under the header; its ביטול stays 5s, a plain note 4s. */
-export const FORECAST_UNDO_MS = 5000;
-const FORECAST_NOTE_MS = 4000;
 
 /** What a write hands back for its undo: the edits it made go, the ones it replaced or deleted come back. */
 export type ForecastUndo = { drop: string[]; put: Json[] };
@@ -84,12 +81,10 @@ export function useProjectForecastWrites(projectId: string, month: string) {
     onSuccess: (call) => {
       const back = lastUndo.current;
       // Decision 0219: under the header, the ביטול 5s and a note 4s.
-      toast.show({
+      toast.show(forecastToast({
         message: call.message,
-        place: "top",
-        durationMs: back == null ? FORECAST_NOTE_MS : FORECAST_UNDO_MS,
         ...(back == null ? {} : { action: "ביטול", onAction: () => { undo.mutate(back); } }),
-      });
+      }));
     },
   });
   return { mutate: write.mutate, pending: write.isPending };
