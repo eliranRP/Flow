@@ -166,7 +166,7 @@ select pg_temp.as_mcp();
 create temp table acct as select x from jsonb_array_elements(public.mcp_accounts()->'accounts') x;
 select is((select string_agg(x->>'name' || ':' || (x->>'type') || ':' || (x->>'bookable'), ' ' order by x->>'name')
   from acct x where (x->>'system')::boolean and not (x->>'is_bank')::boolean),
-  'Escrow:asset:true Loan principal:liability:true Owner capital:liability:true Property:asset:true Security deposit held:liability:true Suspense:asset:false Transfers in transit:asset:true Uncategorized expense:expense:false Uncategorized income:income:false VAT control:liability:false',
+  'Accumulated depreciation:asset:true Escrow:asset:true Loan principal:liability:true Owner capital:liability:true Property:asset:true Security deposit held:liability:true Suspense:asset:false Transfers in transit:asset:true Uncategorized expense:expense:false Uncategorized income:income:false VAT control:liability:false',
   'balance-sheet system accounts are bookable, except Suspense; VAT control and Uncategorized are not');
 select is((select (x->>'bookable') || '/' || (x->>'posts_to') from acct x where (x->>'id')::uuid = pg_temp.id('a_property_purchase_price')),
   'true/' || pg_temp.id('s_property'), 'a kept-out category account is bookable and says it posts to Property');

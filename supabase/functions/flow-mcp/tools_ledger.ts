@@ -1,14 +1,16 @@
 // MCP tools: the ledger reads (FLOW-950, decision 0208 item 9), so an assistant can use book_line end to
 // end: list_accounts gives the account ids book_line needs (mcp_accounts), and get_line_legs reads one
-// line's legs back to verify a booking (mcp_line_legs). Any member reads both.
-import { fail, ok, READ_REFUSED, type ToolResult, type ToolRpc, UUID } from "./tools_args.ts";
+// line's legs back to verify a booking (mcp_line_legs). get_account_balances (FLOW-149, decision 0228)
+// sums the balance-sheet legs per project (mcp_account_balances). Any member reads them.
+import { DATE, fail, isCalendarDate, ok, READ_REFUSED, type ToolResult, type ToolRpc, UUID } from "./tools_args.ts";
 
-export const LEDGER_READS = ["list_accounts", "get_line_legs"] as const;
+export const LEDGER_READS = ["list_accounts", "get_line_legs", "get_account_balances"] as const;
 
 /** The reads' argument allow-list, merged into ALLOWED in tools_schemas.ts. */
 export const LEDGER_ALLOWED: Record<string, Set<string>> = {
   list_accounts: new Set(),
   get_line_legs: new Set(["transaction_id"]),
+  get_account_balances: new Set(["as_of"]),
 };
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -24,6 +26,18 @@ export async function ledgerRead(
     const result = await rpc("mcp_accounts", {});
     const body = result.json;
     if (result.status >= 400 || !isObject(body) || !Array.isArray(body.accounts)) return fail("refused", READ_REFUSED);
+    return ok(body);
+  }
+  if (name === "get_account_balances") {
+    const asOf = args.as_of;
+    if (asOf !== undefined && asOf !== null && (typeof asOf !== "string" || !DATE.test(asOf) || !isCalendarDate(asOf))) {
+      return fail("validation", "as_of: a date, YYYY-MM-DD");
+    }
+    const result = await rpc("mcp_account_balances", { p_as_of: asOf ?? null });
+    const body = result.json;
+    if (result.status >= 400 || !isObject(body) || !Array.isArray(body.balances) || !Array.isArray(body.book_value)) {
+      return fail("refused", READ_REFUSED);
+    }
     return ok(body);
   }
   const id = args.transaction_id;
