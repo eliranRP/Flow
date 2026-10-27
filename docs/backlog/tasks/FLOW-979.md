@@ -1,5 +1,5 @@
-<a id="flow-977"></a>
-# FLOW-977 · Rare screens v2: help, terms and privacy, the push question, the reviewer view
+<a id="flow-979"></a>
+# FLOW-979 · Rare screens v2: help, terms and privacy, the push question, the reviewer view
 - **Type:** UI (design approved) · **Status:** in-progress (#840) · **Depends on:** — · **Source:** a light UX/UI rules review of the rare screens (help, terms, privacy, the review card's push question, the reviewer view). The owner approved it on 2026-10-26, with two owner calls: terms and privacy get a draft text for the owner's lawyer (kept out of the live app; decision 0225); the push question is one question naming both alerts. No v2 boards: the findings are in the note "RARE SCREENS" on the [Design canvas](https://claude.ai/artifact/9grt9spjshVCxerYWrRXiD), page "Ready for dev".
 - **Files:** `app/src/screens/HelpScreen.tsx`, `app/src/screens/PlaceholderScreen.tsx` (the legal screen), `app/src/legal-copy.ts` (new: the live lines), `app/src/App.tsx` (the two legal routes), `app/src/ui/layout.tsx` (the help parts), `app/src/screens/review-push-prompt.tsx`, a legal CSS file, `docs/legal/terms-draft.md` and `docs/legal/privacy-draft.md` (new), their stories and tests, a decision record, a design log entry.
 

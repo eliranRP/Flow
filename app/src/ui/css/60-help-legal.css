@@ -1,4 +1,4 @@
-/* FLOW-977 (decision 0225): help's sign-in tips and the legal pages. Loaded with those lazy screens only. */
+/* FLOW-979 (decision 0225): help's sign-in tips and the legal pages. Loaded with those lazy screens only. */
 .ui-help-tips {
   display: grid;
   gap: var(--space-2);

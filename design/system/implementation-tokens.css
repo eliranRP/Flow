@@ -52,7 +52,7 @@
   --type-body-size: 17px;
   --type-body-line: 1.45;
   --type-body-weight: 400;
-  /* FLOW-977: long reading text (terms, privacy) at 17px on 1.5. */
+  /* FLOW-979: long reading text (terms, privacy) at 17px on 1.5. */
   --type-reading-line: 1.5;
   --type-btn-size: 17px;
   --type-btn-line: 1.3;

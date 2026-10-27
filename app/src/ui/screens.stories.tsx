@@ -51,7 +51,7 @@ export const Help: Story = {
   ),
 };
 
-/** FLOW-977 (decision 0225): the live legal pages in the reading style; the lawyer's draft is never shown. */
+/** FLOW-979 (decision 0225): the live legal pages in the reading style; the lawyer's draft is never shown. */
 export const Terms: Story = {
   render: () => (
     <StoryRoute entry="/terms">

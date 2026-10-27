@@ -5,7 +5,7 @@ import { ScreenHeader } from "../ui/screen-header";
 import { usePublicBackTarget } from "./public-back";
 import "../ui/css/60-help-legal.css";
 
-/** FLOW-977 (decision 0225): the two sign-in problems people write about, above the address. */
+/** FLOW-979 (decision 0225): the two sign-in problems people write about, above the address. */
 export const SIGN_IN_TIPS = [
   "חלון Google נסגר לפני שסיימתם? חוזרים לכניסה ומנסים שוב.",
   "נכנסתם עם חשבון אחר? בחלון של Google בוחרים את החשבון שאיתו נרשמתם.",

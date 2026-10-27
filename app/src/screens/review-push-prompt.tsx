@@ -71,7 +71,7 @@ export function ReviewPushPrompt({
   const deviceQuery = useDevicePushQuery(live && can === "ok");
   const client = useQueryClient();
   const recordAnswer = useRecordPushAnswer();
-  // FLOW-977 (decision 0212): its refusal and failure notes sit under the header, as every toast.
+  // FLOW-979 (decision 0212): its refusal and failure notes sit under the header, as every toast.
   const toast = useTopToast();
   const [answered, setAnswered] = useState(false);
   const [busy, setBusy] = useState(false);

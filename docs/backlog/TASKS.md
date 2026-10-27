@@ -348,7 +348,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-973"></a>[FLOW-973](tasks/FLOW-973.md) | One under-the-header toast helper | cleanup |
 | <a id="flow-975"></a>[FLOW-975](tasks/FLOW-975.md) | Connections v2: the UX/UI rules review of Mercury, SUMIT and AI | UI (design approved) |
 | <a id="flow-976"></a>[FLOW-976](tasks/FLOW-976.md) | First use v2: the UX/UI rules review of sign-in and setup | UI (design approved) |
-| <a id="flow-977"></a>[FLOW-977](tasks/FLOW-977.md) | Rare screens v2: help, terms and privacy, the push question, the reviewer view | UI (design approved) |
+| <a id="flow-979"></a>[FLOW-979](tasks/FLOW-979.md) | Rare screens v2: help, terms and privacy, the push question, the reviewer view | UI (design approved) |
 | <a id="flow-365"></a>[FLOW-365](tasks/FLOW-365.md) | Redesign: the review queue (לאישור) without a tab | UI (design approved) |
 | <a id="flow-921"></a>[FLOW-921](tasks/FLOW-921.md) | Review queue: a server transfer flag, approve as a transfer, and the document thumbnail | Server + UI |
 | <a id="flow-366"></a>[FLOW-366](tasks/FLOW-366.md) | Redesign: month lines (נכנס / יצא) and the transaction page | UI (design approved) |

@@ -1,11 +1,11 @@
 # Rare screens: help goes back where it came from; the terms and privacy draft is for the lawyer only
 
 **Date:** 2026-10-27
-**Status:** Accepted (owner, 2026-10-26, FLOW-977)
+**Status:** Accepted (owner, 2026-10-26, FLOW-979)
 
 ## Context
 
-FLOW-977 reviewed the rarely used screens (help, terms, privacy, the review card's push question, the reviewer view) against the same UX/UI rule set as the other v2 screens. There were no high findings, so no v2 boards were drawn; the findings note "RARE SCREENS" on the design canvas lists them. Help's חזרה always went to sign-in, even for a signed-in owner who opened help from a failed load, and help gave only an email address. Terms and privacy were one placeholder line each, drawn in the header's subtitle style. The push question's refusal note showed at the bottom, unlike every other toast since 0212.
+FLOW-979 reviewed the rarely used screens (help, terms, privacy, the review card's push question, the reviewer view) against the same UX/UI rule set as the other v2 screens. There were no high findings, so no v2 boards were drawn; the findings note "RARE SCREENS" on the design canvas lists them. Help's חזרה always went to sign-in, even for a signed-in owner who opened help from a failed load, and help gave only an email address. Terms and privacy were one placeholder line each, drawn in the header's subtitle style. The push question's refusal note showed at the bottom, unlike every other toast since 0212.
 
 The owner decided two calls on 2026-10-26: terms and privacy get a draft text for the owner's lawyer (the board drew it marked "draft for legal review"; on review it stays out of the live app, point 3); and the push question stays one question naming both alerts (new transactions and the evening reminder).
 

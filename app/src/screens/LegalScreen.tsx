@@ -4,7 +4,7 @@ import { usePublicBackTarget } from "./public-back";
 import "../ui/css/60-help-legal.css";
 
 /**
- * FLOW-977 (decision 0225): terms and privacy. The title is the page's own title; the body reads at
+ * FLOW-979 (decision 0225): terms and privacy. The title is the page's own title; the body reads at
  * 17px on 1.5. The copy loads with this lazy screen, not with the app's entry.
  */
 export function LegalScreen({ kind }: { kind: "terms" | "privacy" }) {

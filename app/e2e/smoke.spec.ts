@@ -81,7 +81,7 @@ test("add is a sheet over Home and transaction detail keeps the tab bar (the boa
   await expect(page.getByRole("navigation", { name: "ניווט ראשי" })).toHaveCount(1);
 });
 
-// FLOW-977 (decision 0225): the legal pages read at 17px on 1.5 under their own title, and never show
+// FLOW-979 (decision 0225): the legal pages read at 17px on 1.5 under their own title, and never show
 // the lawyer's draft (it lives only in docs/legal). Signed out, חזרה goes to sign-in.
 test("terms and privacy have a readable body and no draft text", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });

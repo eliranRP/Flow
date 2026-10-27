@@ -1,5 +1,5 @@
 /**
- * FLOW-977 (decision 0225): what the live terms and privacy pages say until the lawyer signs off.
+ * FLOW-979 (decision 0225): what the live terms and privacy pages say until the lawyer signs off.
  * The draft for the lawyer lives only in docs/legal/ and is never shown in the app (a public page
  * with unreviewed terms is a legal risk); the final text replaces these lines when it is approved.
  */

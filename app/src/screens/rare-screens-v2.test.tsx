@@ -7,7 +7,7 @@ import { PRIVACY, TERMS } from "../legal-copy";
 import type { NotificationPrefs, SubscribeOutcome } from "../push";
 import { renderWithProviders } from "../test-render";
 
-// FLOW-977 (decision 0225): the rare screens' review. חזרה from help and the legal pages, help's
+// FLOW-979 (decision 0225): the rare screens' review. חזרה from help and the legal pages, help's
 // sign-in tips, the legal pages (which never show the lawyer's draft), and the push note's place.
 
 let status: "anon" | "authed" | "loading" = "anon";
