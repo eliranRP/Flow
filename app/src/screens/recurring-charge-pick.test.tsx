@@ -103,7 +103,8 @@ describe("the charge page's pickers (FLOW-963)", () => {
     expect(document.querySelector(".ui-toast-host")).toHaveAttribute("data-place", "top");
     // One charge: the address stays.
     expect(screen.getByTestId("where").textContent).toBe("/recurring/expense/water");
-    const undo = screen.getByRole("button", { name: "ביטול" });
+    // The sheet closes on its own frame; until then the toast sits behind it (aria-hidden).
+    const undo = await screen.findByRole("button", { name: "ביטול" });
     act(() => {
       // A second tap while the undo runs sends nothing.
       fireEvent.click(undo);
