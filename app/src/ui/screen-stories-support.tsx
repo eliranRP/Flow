@@ -1,5 +1,7 @@
 // Shared fixtures for the Screens/Routes stories, split out of screens.stories.tsx (FLOW-807).
 import type { Dashboard, ProfitMonths, ReviewRow } from "@flow/shared";
+import { onlineManager } from "@tanstack/react-query";
+import { useLayoutEffect, type ReactNode } from "react";
 import { within } from "storybook/test";
 
 export const sampleDashboard: Dashboard = {
@@ -67,6 +69,15 @@ export const bareReview: ReviewRow = {
   category_name: null,
   confidence: null,
 };
+
+/** FLOW-972: draws its children as the app is offline, and puts the network back when the story leaves. */
+export function OfflineStory({ children }: { children: ReactNode }) {
+  useLayoutEffect(() => {
+    onlineManager.setOnline(false);
+    return () => { onlineManager.setOnline(true); };
+  }, []);
+  return children;
+}
 
 export function storyBody(canvasElement: HTMLElement) {
   return within(canvasElement.ownerDocument.body);

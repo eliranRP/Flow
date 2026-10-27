@@ -111,7 +111,7 @@ describe("rename company sheet", () => {
     wrap(<Harness />);
     expect(field()).toHaveValue("אלפא");
     fireEvent.change(field(), { target: { value: "  בטא בע״מ  " } });
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת השם" }));
     await screen.findByText("closed");
     expect(calls).toEqual([{ name: "rename_company", args: { p_company_id: "company-1", p_name: "בטא בע״מ" } }]);
     expect(await screen.findByText(RENAME_SAVED)).toBeInTheDocument();
@@ -128,7 +128,7 @@ describe("rename company sheet", () => {
     wrap(<FocusHarness />);
     fireEvent.click(screen.getByRole("button", { name: "row" }));
     fireEvent.change(field(), { target: { value: "בטא" } });
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת השם" }));
     await screen.findByText(RENAME_SAVED);
     await waitFor(() => { expect(screen.getByRole("button", { name: "row", hidden: true })).toHaveFocus(); });
   });
@@ -143,7 +143,7 @@ describe("rename company sheet", () => {
     expect(screen.getByText(RENAME_TOO_SHORT)).toBeInTheDocument();
     fireEvent.change(field(), { target: { value: "א" } });
     expect(field()).not.toHaveAttribute("aria-invalid");
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת השם" }));
     expect(screen.getByText(RENAME_TOO_SHORT)).toBeInTheDocument();
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
     expect(screen.getByText("open")).toBeInTheDocument();
@@ -154,7 +154,7 @@ describe("rename company sheet", () => {
     const calls = mockRpc(() => ({ error: null }));
     wrap(<Harness />);
     fireEvent.change(field(), { target: { value: "בטא\tבע״מ" } });
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת השם" }));
     expect(field()).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByText(RENAME_CONTROL_CHAR)).toBeInTheDocument();
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
@@ -163,11 +163,11 @@ describe("rename company sheet", () => {
     expect(calls).toHaveLength(0);
   });
 
-  it("keeps שמירה off when the name did not change, so nothing is written", async () => {
+  it("keeps שמירת השם off when the name did not change, so nothing is written", async () => {
     const calls = mockRpc(() => ({ error: null }));
     wrap(<Harness />);
     fireEvent.change(field(), { target: { value: " אלפא " } });
-    expect(screen.getByRole("button", { name: "שמירה" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "שמירת השם" })).toBeDisabled();
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
     expect(calls).toHaveLength(0);
     expect(screen.getByText("open")).toBeInTheDocument();
@@ -177,7 +177,7 @@ describe("rename company sheet", () => {
     mockRpc(() => ({ error: { message: "boom" } }));
     wrap(<Harness />);
     fireEvent.change(field(), { target: { value: "בטא" } });
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת השם" }));
     expect(await screen.findByText(RENAME_FAILED)).toBeInTheDocument();
     expect(screen.getByText("open")).toBeInTheDocument();
     expect(field()).toHaveValue("בטא");
@@ -188,7 +188,7 @@ describe("rename company sheet", () => {
     mockRpc(() => ({ error: { message: "not allowed", code: "42501" } }));
     wrap(<Harness />);
     fireEvent.change(field(), { target: { value: "בטא" } });
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת השם" }));
     expect(await screen.findByText(RENAME_REFUSED)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ניסיון חוזר", hidden: true })).not.toBeInTheDocument();
   });
@@ -198,7 +198,7 @@ describe("rename company sheet", () => {
     const blocked = vi.fn(() => true);
     wrap(<Harness blocked={blocked} />);
     fireEvent.change(field(), { target: { value: "בטא" } });
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת השם" }));
     expect(blocked).toHaveBeenCalled();
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
     expect(calls).toHaveLength(0);
@@ -223,7 +223,7 @@ describe("business page name row (FLOW-512)", () => {
     fireEvent.click(screen.getByRole("button", { name: "שם העסק: אלפא" }));
     fireEvent.change(field(), { target: { value: "בטא" } });
     act(() => {
-      fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+      fireEvent.click(screen.getByRole("button", { name: "שמירת השם" }));
     });
     expect(await screen.findByText("במצב תצוגה זה לא נשמר.")).toBeInTheDocument();
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
@@ -312,7 +312,7 @@ describe("rename company sheet, busy, reopen and retry", () => {
     mockPending(() => new Promise<Answer>((r) => { resolve = r; }));
     wrapReopen();
     fireEvent.change(field(), { target: { value: "בטא" } });
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת השם" }));
     await waitFor(() => { expect(field()).toBeDisabled(); });
     fireEvent.keyDown(field(), { key: "Escape" });
     await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
@@ -336,7 +336,7 @@ describe("rename company sheet, busy, reopen and retry", () => {
     const calls = mockPending(() => Promise.resolve(answers.shift() ?? { error: null }));
     wrapReopen();
     fireEvent.change(field(), { target: { value: "בטא" } });
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת השם" }));
     fireEvent.click(await screen.findByRole("button", { name: "ניסיון חוזר", hidden: true }));
     await screen.findByText("closed");
     expect(await screen.findByText(RENAME_SAVED)).toBeInTheDocument();
