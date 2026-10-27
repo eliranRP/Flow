@@ -32,6 +32,16 @@ for (const route of ROUTES) {
   });
 }
 
+// The loans tab has no stacked header: its "+ הלוואה חדשה" link is the top line, and it sat under the
+// iPhone status bar because the screen's own top pad left out --safe-top.
+test("loans: under a notch the new-loan link sits below the status bar", async ({ page }) => {
+  await page.goto("/e2e/loans");
+  const add = page.getByRole("button", { name: "+ הלוואה חדשה" });
+  await expect(add).toBeVisible();
+  const top = await add.evaluate((node) => node.getBoundingClientRect().top);
+  expect(top).toBeGreaterThanOrEqual(59);
+});
+
 // FLOW-942: the compact bar (and a transaction-style top bar once it takes its line) came down while a header
 // line was still on screen, so for a band of scroll positions that line sat half under the bar's edge; iOS
 // momentum often rests there. At every 4px step through the header zone, no header line may straddle a shown

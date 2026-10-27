@@ -176,6 +176,14 @@ a.ui-row,
 }
 
 /*
+  An empty dir="auto" field has no text to take a direction from, so the browser reads it as left to right
+  and its Hebrew placeholder sits on the left. Until something is typed it follows the page instead.
+*/
+:is(input, textarea)[dir="auto"]:placeholder-shown {
+  direction: inherit;
+}
+
+/*
   A disabled button in a form (board: a --color-line fill with its own label colour). A disabled route link
   (`<Button to disabled>`) is an <a aria-disabled>; busy keeps its own look below.
 */

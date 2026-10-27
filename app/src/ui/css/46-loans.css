@@ -1,8 +1,9 @@
 /* FLOW-139b. The הלוואות tab (/loans): a top-level list, the board's Loans frame. Flat rows (no card,
    no hairline), the open loans, then the closed group collapsed under a quiet toggle. */
 
+/* The page runs under the status bar, so its top pad starts below it (--safe-top), as .ui-page does. */
 .ui-loans-screen {
-  padding: var(--space-4) var(--space-side) calc(var(--tabbar-height) + var(--space-section));
+  padding: calc(var(--safe-top) + var(--space-4)) var(--space-side) calc(var(--tabbar-height) + var(--space-section));
   color: var(--color-text);
 }
 

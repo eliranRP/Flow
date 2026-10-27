@@ -1,0 +1,1 @@
+On an iPhone, the הלוואות tab starts below the status bar again: its "+ הלוואה חדשה" link sat under the clock and battery, because the screen's top padding left out the notch (`--safe-top`). The notch sweep now checks the loans list too.
