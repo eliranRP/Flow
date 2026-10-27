@@ -1,0 +1,53 @@
+name: dependabot-auto-merge
+
+# Squash-merges Dependabot patch and minor updates once the `pr` check passes. Major updates wait for a human.
+# The main ruleset has no required status checks, so `gh pr merge --auto` alone would merge at once.
+# This job therefore waits for the `pr` check (the gate dev PRs wait for) and merges only when it succeeded.
+# No secrets are used. The ruleset needs 0 approving reviews, so the workflow does not approve.
+on:
+  pull_request_target:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: dependabot-auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  auto-merge:
+    if: github.actor == 'dependabot[bot]' && github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Wait for the pr check, then merge
+        if: steps.meta.outputs.update-type == 'version-update:semver-patch' || steps.meta.outputs.update-type == 'version-update:semver-minor'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          for i in $(seq 1 110); do
+            # Every check run on the head commit except this job; all must finish, and `pr` must succeed.
+            runs=$(gh api "repos/$GH_REPO/commits/$HEAD_SHA/check-runs?per_page=100" \
+              --jq '[.check_runs[] | select(.name != "auto-merge")]')
+            pending=$(jq '[.[] | select(.status != "completed")] | length' <<<"$runs")
+            pr_ok=$(jq '[.[] | select(.name == "pr" and .conclusion == "success")] | length' <<<"$runs")
+            failed=$(jq '[.[] | select(.status == "completed" and (.conclusion | IN("success","skipped","neutral") | not))] | length' <<<"$runs")
+            if [ "$failed" -gt 0 ]; then echo "A check failed; leaving the PR for a human."; exit 0; fi
+            if [ "$pending" -eq 0 ] && [ "$pr_ok" -gt 0 ]; then
+              gh pr merge "$PR" --auto --squash --match-head-commit "$HEAD_SHA"
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "Checks did not finish in time; leaving the PR for a human."

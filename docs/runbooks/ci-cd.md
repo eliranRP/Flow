@@ -114,6 +114,10 @@ The reviewers-only build is not deployed. The deploy does not run the live SUMIT
 
 Deploy order and the flow-mcp jobs: migrations (step 5) land before the function deploy (step 7), so for a short window the new database runs with the old `flow-mcp`. When a migration changes the `sync_bank` job functions, a pull that finishes in that window can be lost (its job reads `retry` after 5 minutes) or `sync_bank` can be refused until `flow-mcp` is deployed. Nothing is written twice; the client starts the sync again ([FLOW-207](../backlog/TASKS.md#flow-207)).
 
+## Dependabot auto-merge
+
+`.github/workflows/dependabot-auto-merge.yml` runs on Dependabot PRs only. For semver patch and minor updates it waits until every check on the head commit has finished and `pr` passed, then squash-merges with `gh pr merge --auto --squash`. A failed check or a major update leaves the PR for a human. The `protect-main` ruleset is unchanged (0 required approvals, no bypass), so the workflow does not approve. Note: a merge made with `GITHUB_TOKEN` does not start the `ci` workflow on main, so the next human merge to main runs the full suite and deploy.
+
 ## Secrets
 
 These secrets live only on the GitHub environment `production`. The repository copies are deleted. The environment is restricted to `main` and has no required reviewer. The deploy job selects that environment, which is how it can read them. A job that does not select `production` cannot see them.
