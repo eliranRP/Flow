@@ -344,6 +344,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-969"></a>[FLOW-969](tasks/FLOW-969.md) | Profit v2: the UX/UI rules review of the profit pages | UI (design approved) |
 | <a id="flow-970"></a>[FLOW-970](tasks/FLOW-970.md) | Forecast v2: the UX/UI rules review of תזרים צפוי | UI (design approved) |
 | <a id="flow-971"></a>[FLOW-971](tasks/FLOW-971.md) | Search v2 and Review lists v2: the UX/UI rules review | UI (design approved) |
+| <a id="flow-976"></a>[FLOW-976](tasks/FLOW-976.md) | First use v2: the UX/UI rules review of sign-in and setup | UI (design approved) |
 | <a id="flow-972"></a>[FLOW-972](tasks/FLOW-972.md) | Settings v2: the UX/UI rules review of הגדרות | UI (design approved) |
 | <a id="flow-973"></a>[FLOW-973](tasks/FLOW-973.md) | One under-the-header toast helper | cleanup |
 | <a id="flow-365"></a>[FLOW-365](tasks/FLOW-365.md) | Redesign: the review queue (לאישור) without a tab | UI (design approved) |
