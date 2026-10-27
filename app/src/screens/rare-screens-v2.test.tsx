@@ -100,7 +100,7 @@ describe("the lawyer's draft stays out of the app", () => {
 
   it.each(["terms", "privacy"] as const)("/%s renders none of the draft", (kind) => {
     openFresh(`/${kind}`, <LegalScreen kind={kind} />);
-    const page = document.body.textContent ?? "";
+    const page = document.body.textContent;
     expect(page).not.toContain("[");
     expect(page).not.toContain("טיוטה");
     for (const heading of draftHeadings) expect(screen.queryByRole("heading", { name: heading })).not.toBeInTheDocument();
