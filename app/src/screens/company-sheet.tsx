@@ -5,7 +5,7 @@ import { useLeaveShownCompany, useMyCompaniesQuery, useMyInvitesQuery, useOpenCo
 import { Button } from "../ui/button";
 import { Sheet } from "../ui/sheet";
 import { List, ListRow } from "../ui/list-row";
-import { useToast } from "../ui/toast";
+import { useTopToast } from "../ui/top-toast";
 import { useWrite } from "../use-write";
 import { useInviteActions } from "./invite-actions";
 
@@ -74,12 +74,13 @@ export function CompanySheet({
   returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const navigate = useNavigate();
-  const toast = useToast();
+  const toast = useTopToast();
   const companies = useMyCompaniesQuery();
   const invites = useMyInvitesQuery(open);
   const openCompany = useOpenCompany();
   const leave = useLeaveShownCompany();
   const switchTo = useWrite<{ id: string; name: string }>({
+    place: "top",
     keys: [],
     failure: SWITCH_FAILED,
     onSuccess: (company) => {

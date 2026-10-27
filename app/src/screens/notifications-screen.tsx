@@ -25,9 +25,10 @@ import { CalendarIcon, BellIcon, DocumentIcon } from "../ui/icons";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { Toggle } from "../ui/toggle";
-import { useToast } from "../ui/toast";
+import { useTopToast } from "../ui/top-toast";
 import { PUSH_ACTIVE_HERE, pushBlockedMessage, subscribeDiagnostic, subscribeFailure } from "./push-copy";
 import { IOS_HOME_NOTE, IosHomeNote } from "./review-push-prompt";
+import { SettingsOfflineLine } from "./settings-offline";
 
 const SWITCHES: Array<{ key: NotificationPrefKey; label: string; hint: string; icon: ReactNode }> = [
   { key: "new_transaction", label: "תנועה חדשה", hint: "כשנכנסת תנועה מהבנק", icon: <BellIcon size={22} /> },
@@ -116,7 +117,7 @@ export function NotificationsScreen({
   const deviceQuery = useDevicePushQuery(live && can === "ok");
   const devicesQuery = usePushDevicesQuery(live);
   const client = useQueryClient();
-  const toast = useToast();
+  const toast = useTopToast();
   const [local, setLocal] = useState<NotificationPrefs>(sample ?? NO_PREFS);
   const [sampleHere, setSampleHere] = useState<DevicePush>(() => device ?? (can === "ok" ? "not-subscribed" : can === "not-configured" ? "unsupported" : can));
   // Each switch's save in the background: the value on screen, the last one the server stored, and
@@ -287,6 +288,7 @@ export function NotificationsScreen({
         backTo={backTo}
         below={note != null ? <p className="t-caption t-muted" id={noteId} data-push-note="">{noteBody}</p> : undefined}
       />
+      <SettingsOfflineLine />
       <List layout="inset">
         <Toggle
           label={DEVICE_LABEL}

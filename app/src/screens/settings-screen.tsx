@@ -30,6 +30,7 @@ import { notificationsHint } from "./notifications-screen";
 import { themeChoiceLabel, THEME_TITLE } from "../ui/theme-choices";
 import { readThemeChoice, writeThemeChoice, type ThemeChoice } from "../theme-store";
 import { ThemeSheet } from "./theme-sheet";
+import { SettingsOfflineLine } from "./settings-offline";
 
 /** Shown on `/settings?preview=` when the value is not `empty` and no sample is passed. */
 const previewAccountName = "בית הספר אלון";
@@ -203,6 +204,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
     row?.focus({ preventScroll: true });
   }, [phase.kind, navigationType, openedPage]);
   const signOut = useWrite({
+    place: "top",
     failure: "לא הצלחנו לצאת.",
     keys: [],
     onSuccess: () => { void navigate("/sign-in"); },
@@ -300,6 +302,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
     <ViewerScope>
     <div className="ui-settings-page">
       <ScreenHeader title="הגדרות" backTo="/" backText="בית" subtitle={subtitle} />
+      <SettingsOfflineLine />
       <ViewerNote />
       {noCompany ? null : (
         <List layout="inset">

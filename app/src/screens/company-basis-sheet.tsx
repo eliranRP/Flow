@@ -4,7 +4,7 @@ import { forgetProjectReads } from "../project-cache";
 import { ChoiceSheet } from "../ui/choice-sheet";
 import { BASIS_COPY, type BasisChoice } from "../ui/company-choices";
 import type { ChoiceSheetCopy } from "../ui/choice-sheet";
-import { useToast } from "../ui/toast";
+import { useTopToast } from "../ui/top-toast";
 import { assertNoError, useWrite, type WriteFailure } from "../use-write";
 
 export const BASIS_SAVED = "התאריך נשמר";
@@ -53,8 +53,9 @@ export function CompanyBasisSheet({
   /** The sheet's words: Settings keeps BASIS_COPY, the profit page passes BASIS_PROFIT_COPY. */
   copy?: ChoiceSheetCopy<BasisChoice>;
 }) {
-  const toast = useToast();
+  const toast = useTopToast();
   const undo = useWrite<Change>({
+    place: "top",
     failure: basisFailure,
     success: BASIS_UNDONE,
     keys: BASIS_KEYS,
@@ -64,6 +65,7 @@ export function CompanyBasisSheet({
   });
   const closeSheet = useRef<() => void>(() => { onOpenChange(false); });
   const save = useWrite<Change>({
+    place: "top",
     failure: basisFailure,
     keys: BASIS_KEYS,
     onSuccess: (payload) => {

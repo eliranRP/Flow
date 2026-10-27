@@ -302,7 +302,8 @@
   background: transparent;
   color: var(--color-text);
   font: inherit;
-  font-size: var(--type-btn-2-size);
+  /* FLOW-972: a business's name at 17px, the type scale's step. */
+  font-size: var(--type-body-size);
   text-align: start;
 }
 
@@ -388,7 +389,7 @@
 }
 
 .cs-invite-name {
-  font-size: var(--type-btn-2-size);
+  font-size: var(--type-body-size);
 }
 
 .cs-invite-line {
@@ -423,7 +424,7 @@
 
 .cs-new {
   block-size: var(--field-height);
-  border: 1.5px dashed var(--color-track-strong);
+  border: 1.5px dashed var(--color-control-edge);
   border-radius: var(--radius-toast);
   background: none;
   color: var(--color-accent-text);

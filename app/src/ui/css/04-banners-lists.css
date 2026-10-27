@@ -384,7 +384,7 @@
 
 /* The choice sheet (pace, currency, basis, theme) draws the board's choice: one card per row, 14px round, the
    chosen row tinted, a solid accent disc for it, and no dividers. A row is 56px at least, 8px above and below
-   its text; the title is 16px and the note 12px under it, 2px apart. */
+   its text; the title is 17px and the note 13px under it, 2px apart (the type scale, FLOW-972). */
 .ui-choice-sheet {
   display: flex;
   flex-direction: column;
@@ -418,13 +418,13 @@
 }
 
 .ui-choice-sheet .ui-row-title {
-  font-size: var(--type-btn-2-size);
+  font-size: var(--type-body-size);
   line-height: var(--type-btn-line);
 }
 
 .ui-choice-sheet .ui-radio-desc {
-  font-size: calc(var(--type-cents-size) + 1px);
-  line-height: calc(var(--type-cents-size) * 1.45);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
 }
 
 .ui-choice-sheet .ui-radio {
