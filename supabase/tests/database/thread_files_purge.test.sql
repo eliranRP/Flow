@@ -55,7 +55,7 @@ from (values ('live note', null::timestamptz), ('old removed note', now() - inte
   ('recent removed note', now() - interval '3 days')) v(body, removed);
 
 create function pg_temp.due() returns text[] language sql as $$
-  select coalesce(array_agg(split_part(n, '/', 3) order by 1), '{}')
+  select coalesce(array_agg(split_part(n, '/', 3) order by split_part(n, '/', 3)), '{}')
   from jsonb_array_elements_text(public.thread_files_to_purge(100)) n;
 $$;
 grant execute on function pg_temp.due() to authenticated, service_role;
