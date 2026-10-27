@@ -22,6 +22,9 @@ if (dom) {
     import("@testing-library/jest-dom/vitest"),
     ...(css ? [import("../../design/system/implementation-tokens.css"), import("./ui/ui.css")] : []),
   ]);
+  // FLOW-974: the on-demand screens' stylesheets, after ui.css as in the app. A test renders a
+  // screen's parts without the screen that imports them.
+  if (css) await import("./ui/lazy.css");
 }
 const library = dom ? await import("@testing-library/react") : null;
 const back = dom ? await import("./ui/back") : null;

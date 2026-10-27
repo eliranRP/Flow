@@ -1,6 +1,10 @@
 /* Shared components. Colours, type, space, and radii come from the token file. */
 /* Split by area, in cascade order (FLOW-807). The order of these imports is the order of the old
-   single file: keep it. Add a new block to the file for its area, or a new file at the end. */
+   single file: keep it. Add a new block to the file for its area, or a new file at the end.
+   FLOW-974: this file loads with Home. A file whose every rule is one on-demand screen's own (its
+   classes render nowhere in Home's first load) is imported by ./lazy.css instead, which loads with
+   the screen's chunk. A file that styles shared parts (rows, buttons, fields, sheets, toasts, bands)
+   stays here. */
 @import "./css/00-motion.css";
 @import "./css/01-base.css";
 @import "./css/02-fields-sheets.css";
@@ -9,15 +13,12 @@
 @import "./css/05-search-toast.css";
 @import "./css/06-review-card.css";
 @import "./css/06-review-marks.css";
-@import "./css/06-review-list.css";
 @import "./css/07-band-home.css";
 @import "./css/07-band-states.css";
 @import "./css/08-tabbar-empty.css";
 @import "./css/09-sign-in-project.css";
 @import "./css/10-settings-onboarding.css";
-@import "./css/10-settings-connect.css";
 @import "./css/11-month-lists.css";
-@import "./css/13-line-split.css";
 @import "./css/14-review-change.css";
 @import "./css/15-install.css";
 @import "./css/16-transaction.css";
@@ -29,15 +30,10 @@
 @import "./css/22-edge-back.css";
 @import "./css/23-period-polish.css";
 @import "./css/24-category-groups.css";
-@import "./css/25-investment.css";
-@import "./css/26-loan-row.css";
 @import "./css/27-compact-header.css";
 @import "./css/28-forecast.css";
-@import "./css/28-forecast-categories.css";
-@import "./css/29-loan-detail.css";
 @import "./css/30-prompt-card.css";
 @import "./css/32-project-page.css";
-@import "./css/33-loan-split-editor.css";
 @import "./css/34-swipe-row.css";
 @import "./css/35-team.css";
 @import "./css/36-cash.css";
@@ -48,13 +44,7 @@
 @import "./css/43-counted-in.css";
 @import "./css/43-home.css";
 @import "./css/44-parts-bar.css";
-@import "./css/45-project-profit.css";
-@import "./css/45-invoices.css";
-@import "./css/44-add-entry.css";
-@import "./css/46-loans.css";
-@import "./css/47-company-profit.css";
 @import "./css/06-review-board.css";
 @import "./css/48-invite.css";
 @import "./css/49-state-skeletons.css";
-@import "./css/51-next-month.css";
 @import "./css/52-notifications.css";

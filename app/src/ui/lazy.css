@@ -1,56 +1,22 @@
-/* FLOW-974: the styles only on-demand screens use, out of Home's first load. Every module a
-   dynamic import loads imports this file (scripts/check-lazy-css.mjs), so Vite loads it with the
-   first such chunk, before that screen renders. The order is ui.css's, then setup.css's. */
-@import "./css-lazy/00-motion.css";
-@import "./css-lazy/01-base.css";
-@import "./css-lazy/02-fields-sheets.css";
-@import "./css-lazy/03-controls.css";
-@import "./css-lazy/04-banners-lists.css";
-@import "./css-lazy/05-search-toast.css";
-@import "./css-lazy/06-review-card.css";
-@import "./css-lazy/06-review-marks.css";
-@import "./css-lazy/06-review-list.css";
-@import "./css-lazy/07-band-home.css";
-@import "./css-lazy/08-tabbar-empty.css";
-@import "./css-lazy/09-sign-in-project.css";
-@import "./css-lazy/10-settings-onboarding.css";
-@import "./css-lazy/10-settings-connect.css";
-@import "./css-lazy/11-month-lists.css";
-@import "./css-lazy/13-line-split.css";
-@import "./css-lazy/14-review-change.css";
-@import "./css-lazy/15-install.css";
-@import "./css-lazy/16-transaction.css";
-@import "./css-lazy/17-action-bar.css";
-@import "./css-lazy/18-period-bar.css";
-@import "./css-lazy/19-search-screen.css";
-@import "./css-lazy/21-category-sheet.css";
-@import "./css-lazy/23-period-polish.css";
-@import "./css-lazy/24-category-groups.css";
-@import "./css-lazy/25-investment.css";
-@import "./css-lazy/26-loan-row.css";
-@import "./css-lazy/27-compact-header.css";
-@import "./css-lazy/28-forecast.css";
-@import "./css-lazy/28-forecast-categories.css";
-@import "./css-lazy/29-loan-detail.css";
-@import "./css-lazy/30-prompt-card.css";
-@import "./css-lazy/32-project-page.css";
-@import "./css-lazy/33-loan-split-editor.css";
-@import "./css-lazy/34-swipe-row.css";
-@import "./css-lazy/35-team.css";
-@import "./css-lazy/36-cash.css";
-@import "./css-lazy/40-card.css";
-@import "./css-lazy/33-project-flip.css";
-@import "./css-lazy/41-rows.css";
-@import "./css-lazy/42-icon-row.css";
-@import "./css-lazy/43-counted-in.css";
-@import "./css-lazy/45-project-profit.css";
-@import "./css-lazy/45-invoices.css";
-@import "./css-lazy/44-add-entry.css";
-@import "./css-lazy/46-loans.css";
-@import "./css-lazy/47-company-profit.css";
-@import "./css-lazy/06-review-board.css";
-@import "./css-lazy/48-invite.css";
-@import "./css-lazy/49-state-skeletons.css";
-@import "./css-lazy/51-next-month.css";
-@import "./css-lazy/52-notifications.css";
-@import "./css-lazy/setup.css";
+/* FLOW-974: the stylesheets only on-demand screens use, out of Home's first load. Each file here is
+   one screen's own: its classes render nowhere in Home's first load. Every module the app loads
+   with import() imports this file first (scripts/check-lazy-css.mjs), so Vite loads it with the
+   first such chunk, before that screen renders. Same order as they had in ui.css, then setup.css
+   (all of it the setup screens' own, loaded by app.css before); they now load
+   after it, which the story style check (every story's computed styles against main) found
+   changes nothing. */
+@import "./css/06-review-list.css";
+@import "./css/10-settings-connect.css";
+@import "./css/13-line-split.css";
+@import "./css/25-investment.css";
+@import "./css/26-loan-row.css";
+@import "./css/28-forecast-categories.css";
+@import "./css/29-loan-detail.css";
+@import "./css/33-loan-split-editor.css";
+@import "./css/45-project-profit.css";
+@import "./css/45-invoices.css";
+@import "./css/44-add-entry.css";
+@import "./css/46-loans.css";
+@import "./css/47-company-profit.css";
+@import "./css/51-next-month.css";
+@import "../setup/setup.css";
