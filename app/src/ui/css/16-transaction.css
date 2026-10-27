@@ -325,7 +325,7 @@ html:not(:has(.ui-tabbar)) .ui-txn-step {
 
 /* ---------------------------------------------------------------------------------------------
    FLOW-327: the pinned action bar (ActionBar). A screen's repeated action sits on top of the tab
-   bar; the screen's toasts sit just above it (decision 0137). `edge` sits on the screen edge.
+   bar; the screen's toasts sit just above it (decision 0182). `edge` sits on the screen edge.
    --------------------------------------------------------------------------------------------- */
 :root {
   /* Two control rows, the gap between them, and the bar's block padding: 136px. */

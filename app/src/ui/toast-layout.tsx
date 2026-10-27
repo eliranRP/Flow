@@ -240,7 +240,7 @@ function padSheetUnderToast(sheet: HTMLElement, top: number, height: number, gap
  * Decision 0182: a toast sits above the floor, the top of the pinned bar or the tab bar, else the
  * screen's bottom above the home indicator. Over an open sheet a non-confirmation keeps its place
  * above the sheet (0074 §6), and pads the sheet only when a control would be covered. The text is
- * never clipped (0075). A bar toast sits above the screen's action bar (0137).
+ * never clipped (0075).
  */
 export function placeToast(layer: HTMLElement): void {
   const toast = layer.querySelector(".ui-toast");

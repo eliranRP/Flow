@@ -4,7 +4,7 @@ import { cx } from "./cx";
 /**
  * FLOW-327. A screen's repeated action, pinned at the bottom: `tabbar` sits on top of the tab bar,
  * `edge` sits on the screen edge with the safe area. The content scrolls above it, and the
- * screen's toasts sit just above it (`data-toast-floor`, decision 0137).
+ * screen's toasts sit just above it (`data-toast-floor`, decision 0182).
  */
 export function ActionBar({
   children,

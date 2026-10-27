@@ -61,7 +61,7 @@ export function TextField({
         }}
       />
       {error || reserveMessage || hint ? (
-        <span id={errorId} aria-live={liveMessage ? "polite" : undefined} className={error ? "ui-field-message" : hint ? "ui-field-hint" : "ui-field-message ui-field-message-slot"}>
+        <span id={errorId} aria-live={liveMessage && error ? "polite" : undefined} className={error ? "ui-field-message" : hint ? "ui-field-hint" : "ui-field-message ui-field-message-slot"}>
           {error ?? hint ?? ""}
         </span>
       ) : null}
