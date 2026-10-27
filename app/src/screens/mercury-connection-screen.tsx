@@ -55,6 +55,8 @@ export type MercurySample = {
   imported?: string;
   /** The edit list opens with these accounts checked (the board's frame). */
   editSelection?: string[];
+  /** The note under the key a frame opens on: a tap with the key missing, or a key Mercury refused (decision 0223). */
+  keyError?: "short" | "rejected";
 };
 
 /**
@@ -98,7 +100,7 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
   const [key, setKey] = useState("");
   const [showKey, setShowKey] = useState(false);
   // "short": a tap with the key missing; "rejected": Mercury refused it (decision 0223).
-  const [keyError, setKeyError] = useState<"short" | "rejected" | null>(null);
+  const [keyError, setKeyError] = useState<"short" | "rejected" | null>(sample?.keyError ?? null);
   const [replacing, setReplacing] = useState(false);
   const toast = useToast();
 

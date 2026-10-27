@@ -35,6 +35,8 @@ export type ConnectionSample = {
   lastSync?: string;
   /** A connect is in flight. */
   busy?: boolean;
+  /** The note under the key a frame opens on: a tap with something missing, or a key SUMIT refused (decision 0223). */
+  keyError?: "short" | "rejected";
 };
 
 /** A tap on חיבור checks the key and the company number first, and says what is missing (decision 0223). */
@@ -95,7 +97,9 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
   const [importTouched, setImportTouched] = useState(false);
   const [importValue, setImportValue] = useState<string | null>(null);
   // "short": a tap with something missing; "rejected": SUMIT refused the key (decision 0223).
-  const [keyError, setKeyError] = useState<"short" | "rejected" | null>(null);
+  const [keyError, setKeyError] = useState<"short" | "rejected" | null>(sample?.keyError ?? null);
+  // A sample's disconnect, waiting on its ביטול (the live page reads its own write).
+  const [sampleGone, setSampleGone] = useState(false);
   const refreshSumit = useSumitRefresh();
   const storedCompany = live && sumit.data?.sumit_company_id != null ? String(sumit.data.sumit_company_id) : (sample?.companyId ?? "");
   // A reconnect starts with the company number on file; a typed one replaces it.
@@ -142,7 +146,6 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
     return <ScreenState title={copy.title} kicker="חיבורים" backTo={backTo} phase={screenPhase(preview, dashboard)} onRetry={() => { void dashboard.refetch(); }} />;
   }
 
-  const [sampleGone, setSampleGone] = useState(false);
   const shown = sample ?? liveView(provider, live, status.data, now);
   // A disconnect waiting on its ביטול already shows the page as SUMIT will be after it.
   const view: ConnectionSample = (disconnect.isPending || sampleGone) && shown.state === "connected" ? { state: "new" } : shown;

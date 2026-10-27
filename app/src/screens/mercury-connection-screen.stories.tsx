@@ -27,6 +27,12 @@ const CONNECTED: MercurySample = { connections: [sampleConnection()], lastSync: 
 
 export const FirstConnection: Story = { name: "First connection (the key)", render: () => page({ connections: [] }) };
 
+/** Decision 0223: חיבור is never greyed out; a tap with no key says what is missing. */
+export const KeyMissing: Story = { name: "First connection, a tap with no key", render: () => page({ connections: [], keyError: "short" }) };
+
+/** Decision 0223: a key Mercury refuses is said under the field, and the button reads חיבור מחדש. */
+export const KeyRejected: Story = { name: "First connection, key rejected", render: () => page({ connections: [], keyError: "rejected" }) };
+
 export const AccountsAndDate: Story = {
   name: "3 · accounts and date",
   render: () => page({ connections: [SAMPLE_PICK] }),
