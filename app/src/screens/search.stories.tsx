@@ -92,6 +92,8 @@ export const NoResults: Story = { render: () => <Search entry="/search?q=מעל�
 
 export const Loading: Story = { render: () => <Search entry="/search?q=חומרי" data={{ ...sample, phase: { kind: "loading" } }} /> };
 export const Failed: Story = { render: () => <Search entry="/search?q=חומרי" data={{ ...sample, phase: { kind: "error", offline: false } }} /> };
+/** FLOW-971: offline, the search runs on the lines already read and says so under the field. */
+export const Offline: Story = { render: () => <Search entry="/search?q=חומרי" data={{ ...sample, offline: true }} /> };
 
 /** More lines than one page: the month head of the last month waits, and the count says the total. */
 export const MorePages: Story = { render: () => <Search entry="/search?dir=expense" data={{ ...sample, total: 120 }} /> };

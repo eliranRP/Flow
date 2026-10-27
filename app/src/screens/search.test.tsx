@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Link, MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -116,6 +116,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  onlineManager.setOnline(true);
 });
 
 describe("Search screen (FLOW-323)", () => {
@@ -162,6 +163,9 @@ describe("Search screen (FLOW-323)", () => {
     await screen.findByText("שווה לבדוק");
     fireEvent.click(screen.getByRole("button", { name: /^סינון/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "הוצאות" }));
+    // FLOW-971: the project chips are one choice, a radiogroup with "all" checked.
+    expect(screen.getByRole("radio", { name: "כל הפרויקטים" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radiogroup", { name: "פרויקט" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^הצגת/ }));
     await waitFor(() => {
       expect(searchCalls().at(-1)?.args).toMatchObject({ p_direction: "expense" });
@@ -232,11 +236,28 @@ describe("Search screen (FLOW-323)", () => {
       : Promise.resolve({ data: name === "get_dashboard" ? dashboard : [], error: null }));
     wrap("/search?dir=expense");
     const retry = await screen.findByRole("button", { name: "נסו שוב" });
+    // FLOW-971: the page's failure card, with what happened and the way to help.
+    expect(screen.getByRole("heading", { name: "החיפוש לא הצליח" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "צריך עזרה?" })).toBeInTheDocument();
     const before = searchCalls().length;
     rpc.impl = (name) => Promise.resolve({ data: name === "search_transactions" ? page : name === "get_dashboard" ? dashboard : [], error: null });
     fireEvent.click(retry);
     expect(await screen.findByRole("link", { name: /^חומרי בניין לדוגמה/ })).toBeInTheDocument();
     expect(searchCalls().length).toBeGreaterThan(before);
+  });
+
+  it("offline, searches only the lines already read, and says so (FLOW-971)", async () => {
+    wrap("/search?dir=expense");
+    await screen.findByRole("link", { name: /^חומרי בניין לדוגמה/ });
+    onlineManager.setOnline(false);
+    const before = searchCalls().length;
+    fireEvent.change(screen.getByRole("searchbox", { name: "חיפוש תנועות" }), { target: { value: "לקוח" } });
+    expect(await screen.findByText("לא מצאנו ״לקוח״")).toBeInTheDocument();
+    expect(screen.getByText(/מחפש רק במה שכבר נטען/)).toBeInTheDocument();
+    // The income line was not read under the expense filter; clearing the chip finds it among what is loaded.
+    fireEvent.click(screen.getByRole("button", { name: "הסרת הוצאות" }));
+    expect(await screen.findByRole("link", { name: /^לקוח לדוגמה/ })).toBeInTheDocument();
+    expect(searchCalls().length).toBe(before);
   });
 
   it("loads the next page with עוד תנועות", async () => {

@@ -2,7 +2,7 @@ import { allTime, periodPillLabel, presetPeriod, type PeriodChoice } from "../pe
 import { searchCountWords, type SearchDirection, type SearchFilters } from "../search";
 import { Button } from "../ui/button";
 import { Chip } from "../ui/chip";
-import { SegmentedControl } from "../ui/segmented-control";
+import { onRadioArrow, SegmentedControl } from "../ui/segmented-control";
 import { Sheet } from "../ui/sheet";
 import { Toggle } from "../ui/toggle";
 
@@ -58,6 +58,8 @@ export function SearchFilterSheet({
   // A finished project stays listed while it is the filter, so the chip shows what the count applies.
   const shown = projects.filter((project) => project.status !== "finished" || project.id === edit.project);
   const other = periodKey(edit.period) === "other";
+  // One tab stop for the group: the checked chip, or "all" when the filter names a project that is not listed.
+  const picked = shown.some((project) => project.id === edit.project);
   const applyLabel = count == null ? "הצגת תנועות" : count === 1 ? "הצגת תנועה אחת" : `הצגת ${searchCountWords(count)}`;
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title="סינון">
@@ -93,12 +95,14 @@ export function SearchFilterSheet({
         </div>
         <div className="ui-search-filter-group">
           <p className="ui-search-filter-label">פרויקט</p>
-          <div className="ui-search-filter-projects" role="group" aria-label="פרויקט">
-            <Chip pressed={edit.project == null} onClick={() => { onDraft({ project: null }); }}>כל הפרויקטים</Chip>
+          <div className="ui-search-filter-projects" role="radiogroup" aria-label="פרויקט" onKeyDown={onRadioArrow}>
+            <Chip radio pressed={edit.project == null} tabIndex={edit.project == null || !picked ? 0 : -1} onClick={() => { onDraft({ project: null }); }}>כל הפרויקטים</Chip>
             {shown.map((project) => (
               <Chip
                 key={project.id}
+                radio
                 pressed={edit.project === project.id}
+                tabIndex={edit.project === project.id ? 0 : -1}
                 onClick={() => { onDraft({ project: project.id }); }}
               >
                 {project.name}

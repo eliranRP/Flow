@@ -112,9 +112,10 @@
   font-size: var(--type-chip-size);
 }
 
+/* FLOW-971: each chip is a whole 44px target. */
 .ui-search-active .ui-search-active-chip {
-  block-size: calc(var(--space-2) * 4);
-  min-block-size: calc(var(--space-2) * 4);
+  block-size: var(--touch-min);
+  min-block-size: var(--touch-min);
   gap: calc(var(--space-1) * 1.5);
   padding-inline: calc(var(--space-2) + var(--space-1) / 2) var(--space-3);
   font-size: var(--type-chip-size);
@@ -334,6 +335,24 @@
   border-radius: var(--radius-input);
 }
 
+/* FLOW-971: the sheet's segments and project chips are 44px targets. */
+.ui-search-filter .ui-seg-btn {
+  --hit-block: var(--touch-min);
+  block-size: var(--touch-min);
+  min-block-size: var(--touch-min);
+}
+
+.ui-search-filter-projects .ui-chip {
+  block-size: var(--touch-min);
+  min-block-size: var(--touch-min);
+}
+
+/* FLOW-971: off, the review switch's track is the outline colour, 3:1 on the sheet. */
+.ui-search-filter .ui-switch-row input:not(:checked) + .ui-switch {
+  background-color: var(--color-track-outline);
+  box-shadow: none;
+}
+
 .ui-search-filter .ui-switch {
   inline-size: 52px;
   block-size: 32px;
@@ -342,6 +361,14 @@
 .ui-search-filter .ui-switch i {
   inline-size: 26px;
   block-size: 26px;
+}
+
+.ui-search-head .ui-page-offline {
+  margin-top: 0;
+}
+
+.ui-search-failed {
+  padding-block-start: var(--space-4);
 }
 
 .ui-search-filter .ui-switch-row {
@@ -402,7 +429,7 @@
   color: var(--color-accent-text);
 }
 
-/* The board's head (not the searching state): 63px bar, the filter text at 20px, the field a 44px pill. */
+/* The board's head (not the searching state): the filter text at 20px, the field a 48px pill (FLOW-971). */
 .ui-search-head:not(:has(.ui-search-row-searching)) {
   padding: var(--space-2) var(--space-4) calc(var(--space-1) * 2.75) var(--space-5);
 }
@@ -423,21 +450,27 @@
 .ui-search-row:not(.ui-search-row-searching) .ui-search-form .ui-search {
   background: var(--color-surface);
   border: 1px solid var(--color-tint-strong);
-  border-radius: var(--radius-button);
-  block-size: 44px;
+  border-radius: var(--radius-chip);
+  block-size: 48px;
   box-sizing: border-box;
 }
 
 .ui-search-row:not(.ui-search-row-searching) .ui-search-form .ui-search-field {
   border: 0;
   background: none;
-  min-block-size: 42px;
+  min-block-size: 46px;
 }
 
-/* The clear X: a 28px disc in the track colour, its glyph 14px, the disc inset in its 44px hit area. */
+/* FLOW-971: the placeholder is muted text at 4.5:1 (the browser's grey was 2.75:1). */
+.ui-search-form .ui-search input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+/* The clear X: a 26px disc in the outline colour (3:1), its glyph 14px, centred in its whole 44px hit area. */
 .ui-search-form .ui-search-clear {
-  background: radial-gradient(circle, var(--color-track-strong) 14px, transparent 14.5px);
-  translate: 6px -1px;
+  align-self: center;
+  background: radial-gradient(circle, var(--color-track-outline) 13px, transparent 13.5px);
 }
 
 .ui-search-form .ui-search-clear svg {
