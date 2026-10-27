@@ -6,7 +6,7 @@ const A = "0a1b2c3d-0000-4000-8000-000000000001";
 const L = "0a1b2c3d-0000-4000-8000-000000000002";
 
 /** A client whose list returns the given batches in turn, then nothing. */
-function client(batches: unknown[][], fail: { list?: boolean; remove?: boolean } = {}) {
+function client(batches: unknown[][], fail: { list?: boolean; remove?: boolean; keep?: number } = {}) {
   const removed: Array<{ bucket: string; paths: string[] }> = [];
   let calls = 0;
   const admin: PurgeClient = {
@@ -18,7 +18,9 @@ function client(batches: unknown[][], fail: { list?: boolean; remove?: boolean }
       from: (bucket) => ({
         remove: (paths) => {
           removed.push({ bucket, paths });
-          return Promise.resolve({ error: fail.remove ? { message: "x" } : null });
+          if (fail.remove) return Promise.resolve({ data: null, error: { message: "x" } });
+          // Storage answers with the objects it removed; `keep` leaves that many in place.
+          return Promise.resolve({ data: paths.slice(fail.keep ?? 0).map((name) => ({ name })), error: null });
         },
       }),
     },
@@ -46,10 +48,19 @@ Deno.test("a full batch asks again; a run stops after its rounds", async () => {
   assertEquals(c.calls(), PURGE_ROUNDS);
 });
 
-Deno.test("removes only thread file paths, never another kind of path", async () => {
-  const c = client([[`${A}/${L}/a.jpg`, "avatars/me.png", `${A}/../x.jpg`, `${A}/${L}/sub/b.jpg`, `${A}/${L}/..`]]);
-  assertEquals(await purgeThreadFiles(c.admin, "transaction-files"), { removed: 1 });
-  assertEquals(c.removed, [{ bucket: "transaction-files", paths: [`${A}/${L}/a.jpg`] }]);
+Deno.test("removes any thread file name, never another kind of path", async () => {
+  const ok = [`${A}/${L}/a.jpg`, `${A}/${L}/חשבונית.pdf`, `${A}/${L}/sub/b.jpg`, `${A}/${L}/m-1a2b-scan..pdf`];
+  const bad = ["avatars/me.png", `${A}/../x.jpg`, `${A}/${L}/..`, `${A}/${L}/./a.jpg`, `${A}/${L}//a.jpg`, `${A}/${L}/sub/`, `${A}/${L}/a\\b.jpg`];
+  const c = client([[...ok, ...bad]]);
+  assertEquals(await purgeThreadFiles(c.admin, "transaction-files"), { removed: ok.length });
+  assertEquals(c.removed, [{ bucket: "transaction-files", paths: ok }]);
+  assertEquals(c.calls(), 1);
+});
+
+Deno.test("counts what Storage removed, and stops when it kept some", async () => {
+  const full = Array.from({ length: PURGE_BATCH }, (_, i) => `${A}/${L}/${String(i)}.jpg`);
+  const c = client([[...full], [...full]], { keep: 2 });
+  assertEquals(await purgeThreadFiles(c.admin, "transaction-files"), { removed: PURGE_BATCH - 2 });
   assertEquals(c.calls(), 1);
 });
 

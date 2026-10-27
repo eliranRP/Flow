@@ -48,6 +48,14 @@ select pg_temp.file('kept', 'never-recorded.jpg', '2 days', 'none');
 select pg_temp.file('kept', 'removed-old.jpg', '9 days', '8 days');
 select pg_temp.file('kept', 'removed-recent.jpg', '4 days', '3 days');
 select pg_temp.file('doomed', 'doomed.jpg', '1 hour', 'live');
+-- Any name a writer can upload is a thread file: Hebrew letters, a sub-folder.
+select pg_temp.file('doomed', 'e-חשבונית.pdf', '1 hour', 'live');
+select pg_temp.file('doomed', 'f-sub/scan..pdf', '1 hour', 'live');
+-- Not a thread file's path: never listed, however old (the Storage API would not take it either).
+insert into storage.objects (bucket_id, name, created_at) values
+  ('transaction-files', pg_temp.path('kept', '../old.jpg'), now() - interval '2 days'),
+  ('transaction-files', pg_temp.path('kept', '/old.jpg'), now() - interval '2 days'),
+  ('transaction-files', 'not-a-company/old.jpg', now() - interval '2 days');
 
 insert into public.transaction_notes (company_id, transaction_id, source, body, removed_at)
 select (select id from tp where label = 'kept'), (select id from tp where label = 'kept_line'), 'flow', v.body, v.removed
@@ -76,7 +84,7 @@ reset role;
 -- 2. Expiry deletes what was removed more than 7 days ago, and keeps the rest.
 select is(private.expire_removed_thread_items(), '{"files": 1, "notes": 1}'::jsonb, 'one file and one note expire');
 select is((select array_agg(file_name order by file_name) from public.transaction_files),
-  array['doomed.jpg', 'live.jpg', 'removed-recent.jpg'], 'a file removed 3 days ago stays for undo');
+  array['doomed.jpg', 'e-חשבונית.pdf', 'f-sub/scan..pdf', 'live.jpg', 'removed-recent.jpg'], 'a file removed 3 days ago stays for undo');
 select is((select array_agg(body order by body) from public.transaction_notes),
   array['live note', 'recent removed note'], 'a note removed 3 days ago stays for undo');
 set local role service_role;
@@ -90,8 +98,8 @@ select lives_ok($$ select public.delete_company((select id from pg_temp.tp where
 reset role;
 select is((select count(*)::int from public.transaction_files where file_name = 'doomed.jpg'), 0, 'its file rows go with it');
 set local role service_role;
-select is(pg_temp.due(), array['doomed.jpg', 'never-recorded.jpg', 'removed-old.jpg'],
-  'its objects are due at once; the other company''s live ones are not');
+select is(pg_temp.due(), array['doomed.jpg', 'e-חשבונית.pdf', 'f-sub', 'never-recorded.jpg', 'removed-old.jpg'],
+  'its objects are due at once, whatever their name; the other company''s live ones are not');
 select is(jsonb_array_length(public.thread_files_to_purge(1)), 1, 'the limit holds');
 reset role;
 

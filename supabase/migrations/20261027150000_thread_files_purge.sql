@@ -33,6 +33,12 @@ as $$
     select o.name, o.created_at
     from storage.objects o
     where o.bucket_id = 'transaction-files'
+      -- A thread file's path only: <company uuid>/<line uuid>/ and a name of any letters (a Hebrew
+      -- name, a sub-folder, "scan..pdf"), with no empty, "." or ".." part and no backslash. The same
+      -- rule as THREAD_PATH in thread_purge.ts, so nothing listed is then skipped and keeps its place.
+      and o.name ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[^/\\]'
+      and o.name !~ '(^|/)\.{0,2}(/|$)'
+      and position(E'\\' in o.name) = 0
       and not exists (select 1 from public.transaction_files f where f.storage_path = o.name)
       and (
         o.created_at < now() - interval '1 day'
@@ -169,6 +175,6 @@ end
 $schedule$;
 
 comment on function public.delete_company(uuid, text) is
-  'Decision 0194: the owner deletes the company and all of its data, after typing its name. The user stays. Its files in transaction-files are removed within the hour (FLOW-978, thread_files_to_purge).';
+  'Decision 0194: the owner deletes the company and all of its data, after typing its name. The user stays. Its files in transaction-files are removed by the hourly purge, usually within the hour (FLOW-978, thread_files_to_purge).';
 
 commit;
