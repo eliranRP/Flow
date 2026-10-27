@@ -4,7 +4,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { useDashboardQuery } from "../use-books";
 import { useHoldOwnerSettings, ViewerNote, ViewerScope } from "../use-is-viewer";
-import { useToast } from "../ui/toast";
 import { Button } from "../ui/button";
 import { ConnectionNote, ConnectionPage } from "../ui/connection-page";
 import { ScreenState } from "../ui/screen-state";
@@ -24,7 +23,7 @@ import {
 } from "./assistant-keys";
 import { KeyList, KeyPage } from "./assistant-key-views";
 import { AssistantSetup } from "./assistant-setup";
-import { connectionToast } from "../connection-toast";
+import { useTopToast } from "../ui/top-toast";
 
 const TITLE = "חיבור ל־AI";
 const SUBTITLE = "MCP · העוזר שלכם עובד עם הספרים של Flow";
@@ -88,7 +87,8 @@ export function AiConnectionPage({
   const location = useLocation();
   const navigate = useNavigate();
   const client = useQueryClient();
-  const toast = useToast();
+  // Every toast on the connection pages sits under the header (decisions 0222, 0223).
+  const toast = useTopToast();
   const localBlocked = useBlockedPreview();
   const guard = blocked ?? localBlocked;
   const holdOwner = useHoldOwnerSettings();
@@ -127,7 +127,7 @@ export function AiConnectionPage({
       const listed = client.getQueryData<{ keys?: AssistantKey[] }>(["mcp-status"])?.keys ?? [];
       active = activeKeys(listed).length + (listed.some((key) => key.id === added.id) ? 0 : 1);
     }
-    toast.show(connectionToast({ tone: "info", message: addedToast(active) }));
+    toast.show({ tone: "info", message: addedToast(active) });
     void navigate(listTo);
   }, [sample, sampleKeys, client, toast, navigate, listTo]);
 
@@ -169,7 +169,7 @@ export function AiConnectionPage({
       const before = keys;
       setSampleKeys(keys.filter((item) => item.id !== key.id));
       void navigate(listTo);
-      toast.show(connectionToast({ tone: "info", message, action: "ביטול", onAction: () => { setSampleKeys(before); } }));
+      toast.show({ tone: "info", message, action: "ביטול", onAction: () => { setSampleKeys(before); } });
       return;
     }
     setRevoking(true);
@@ -177,7 +177,7 @@ export function AiConnectionPage({
       await revokeKey(key.id);
       await client.invalidateQueries({ queryKey: ["mcp-status"] });
       void navigate(listTo);
-      toast.show(connectionToast({
+      toast.show({
         tone: "info",
         message,
         action: "ביטול",
@@ -186,9 +186,9 @@ export function AiConnectionPage({
             .catch(() => { toast.show({ tone: "bad", message: RESTORE_FAILED }); })
             .finally(() => client.invalidateQueries({ queryKey: ["mcp-status"] }));
         },
-      }));
+      });
     } catch {
-      toast.show(connectionToast({ tone: "bad", message: REVOKE_FAILED }));
+      toast.show({ tone: "bad", message: REVOKE_FAILED });
     } finally {
       setRevoking(false);
     }

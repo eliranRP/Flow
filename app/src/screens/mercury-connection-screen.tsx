@@ -25,8 +25,8 @@ import { List, ListRow } from "../ui/list-row";
 import { ScreenState } from "../ui/screen-state";
 import { TextField } from "../ui/text-field";
 import { useBlockedPreview } from "./screen-shared";
-import { connectionToast, holdForUndo, UNDONE, type UndoHold } from "../connection-toast";
-import { useToast } from "../ui/toast";
+import { holdForUndo, UNDONE, type UndoHold } from "../connection-undo";
+import { topToast, useTopToast } from "../ui/top-toast";
 import { MercuryAccountsStep, type MercuryAccountsPick } from "./mercury-accounts-step";
 import { MercuryConnectedView } from "./mercury-connected-view";
 
@@ -102,7 +102,8 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
   // "short": a tap with the key missing; "rejected": Mercury refused it (decision 0223).
   const [keyError, setKeyError] = useState<"short" | "rejected" | null>(sample?.keyError ?? null);
   const [replacing, setReplacing] = useState(false);
-  const toast = useToast();
+  // Every toast on the connection pages sits under the header (decisions 0222, 0223).
+  const toast = useTopToast();
 
   const disconnect = useWrite<{ slot: number; hold: UndoHold }>({
     failure: "לא הצלחנו לנתק.",
@@ -119,7 +120,7 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
     },
   });
   // A disconnect waiting on its ביטול already shows the page without it, even if a read lands meanwhile.
-  const leaving = disconnect.isPending ? disconnect.variables?.slot : undefined;
+  const leaving = disconnect.isPending ? disconnect.variables.slot : undefined;
   const connections = shownConnections.filter((connection) => connection.slot !== leaving);
 
   const multi = connections.length > 1;
@@ -139,6 +140,7 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
     onRejected: () => { setKeyError("rejected"); },
   });
   const accounts = useMercuryAccounts({
+    place: "top",
     onSuccess: (save) => {
       if (save.kind === "connect" && connections.length > 1) go({}, true);
       else if (save.kind === "edit") go({ slot: multi ? save.slot : undefined }, true);
@@ -169,6 +171,7 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
     lastSyncAt: live ? state.last_sync_at : undefined,
     lastError: live ? state.last_error : undefined,
     success: REFRESH_DONE,
+    shape: topToast,
   });
 
   if (sample?.state === "loading" || (live && (dashboard.isLoading || status.isLoading))) {
@@ -247,7 +250,7 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
       disconnect.mutate({ slot: connection.slot, hold });
     }
     go({}, true);
-    toast.show(connectionToast({ message: GONE, action: "ביטול", onAction: () => { hold.cancel(); } }));
+    toast.show({ message: GONE, action: "ביטול", onAction: () => { hold.cancel(); } });
   };
 
   const keyForm = (reconnect: boolean, onCancel?: () => void) => (

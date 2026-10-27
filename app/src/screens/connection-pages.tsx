@@ -15,10 +15,10 @@ import { ConnectionFacts, ConnectionHead, ConnectionNote, ConnectionPage, StepLi
 import { List, ListRow } from "../ui/list-row";
 import { ScreenState } from "../ui/screen-state";
 import { TextField } from "../ui/text-field";
-import { useToast } from "../ui/toast";
 import { useBlockedPreview } from "./screen-shared";
 import { screenPhase } from "../query-phase";
-import { connectionToast, holdForUndo, UNDONE, type UndoHold } from "../connection-toast";
+import { holdForUndo, UNDONE, type UndoHold } from "../connection-undo";
+import { topToast, useTopToast } from "../ui/top-toast";
 import type { SumitStatus } from "@flow/shared";
 
 /** FLOW-938: Mercury has its own page (mercury-connection-screen.tsx); this one is SUMIT's. */
@@ -78,7 +78,8 @@ const COPY: Record<Provider, {
 export function ConnectionDetailPage({ provider, sample }: { provider: Provider; sample?: ConnectionSample }) {
   const preview = useHomePreview();
   const search = usePreviewSearch();
-  const toast = useToast();
+  // Every toast on the connection pages sits under the header (decisions 0222, 0223).
+  const toast = useTopToast();
   const blocked = useBlockedPreview();
   const holdOwner = useHoldOwnerSettings();
   const dashboard = useDashboardQuery(sample == null);
@@ -100,7 +101,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
   const [keyError, setKeyError] = useState<"short" | "rejected" | null>(sample?.keyError ?? null);
   // A sample's disconnect, waiting on its ביטול (the live page reads its own write).
   const [sampleGone, setSampleGone] = useState(false);
-  const refreshSumit = useSumitRefresh();
+  const refreshSumit = useSumitRefresh(topToast);
   const storedCompany = live && sumit.data?.sumit_company_id != null ? String(sumit.data.sumit_company_id) : (sample?.companyId ?? "");
   // A reconnect starts with the company number on file; a typed one replaces it.
   const companyValue = typedCompany ?? storedCompany;
@@ -134,6 +135,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
     lastSyncAt: liveStatus?.last_sync_at,
     lastError: liveStatus?.last_error,
     success: REFRESH_DONE,
+    shape: topToast,
   });
 
   if (live && (dashboard.isLoading || status.isLoading)) {
@@ -182,7 +184,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
     } else {
       disconnect.mutate(hold);
     }
-    toast.show(connectionToast({ message: "SUMIT נותק. מה שכבר נכנס נשמר", action: "ביטול", onAction: () => { hold.cancel(); } }));
+    toast.show({ message: "SUMIT נותק. מה שכבר נכנס נשמר", action: "ביטול", onAction: () => { hold.cancel(); } });
   };
 
   const syncLine = view.lastSync ?? israelSyncPhrase(live ? sumit.data?.last_sync_at : null, now);

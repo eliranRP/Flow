@@ -1,5 +1,5 @@
 import { onlineManager, QueryClient } from "@tanstack/react-query";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defaultPeriod } from "../period";
 import { renderWithProviders } from "../test-render";

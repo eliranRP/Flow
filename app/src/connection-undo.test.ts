@@ -1,16 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CONNECTION_UNDO_MS, connectionToast, holdForUndo, UNDONE } from "./connection-toast";
+import { holdForUndo, UNDONE } from "./connection-undo";
+import { TOP_UNDO_MS } from "./ui/top-toast";
 
 afterEach(() => {
   vi.useRealTimers();
   Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
-});
-
-describe("connectionToast (decision 0223)", () => {
-  it("puts every toast under the header: an undo for 5s, a note for 4s", () => {
-    expect(connectionToast({ message: "נותק", action: "ביטול" })).toMatchObject({ place: "top", durationMs: 5000 });
-    expect(connectionToast({ message: "הועתק" })).toMatchObject({ place: "top", durationMs: 4000 });
-  });
 });
 
 describe("holdForUndo (decision 0223)", () => {
@@ -19,7 +13,7 @@ describe("holdForUndo (decision 0223)", () => {
     const hold = holdForUndo();
     let through = false;
     void hold.done.then(() => { through = true; });
-    await vi.advanceTimersByTimeAsync(CONNECTION_UNDO_MS - 1);
+    await vi.advanceTimersByTimeAsync(TOP_UNDO_MS - 1);
     expect(through).toBe(false);
     await vi.advanceTimersByTimeAsync(1);
     expect(through).toBe(true);
@@ -33,7 +27,7 @@ describe("holdForUndo (decision 0223)", () => {
     await expect(hold.done).rejects.toThrow(UNDONE);
     // A second tap, or the timer, changes nothing.
     expect(hold.cancel()).toBe(false);
-    await vi.advanceTimersByTimeAsync(CONNECTION_UNDO_MS);
+    await vi.advanceTimersByTimeAsync(TOP_UNDO_MS);
   });
 
   it("lets the write through at once when the app is left, since nobody can tap ביטול any more", async () => {

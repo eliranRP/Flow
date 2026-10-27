@@ -4,7 +4,7 @@ import { IMPORT_FROM_FAILED, importFromAfterConnect } from "./import-from";
 import { useRef } from "react";
 import { useToast } from "./ui/toast";
 import { useWrite } from "./use-write";
-import { connectionToast } from "./connection-toast";
+import { topToast } from "./ui/top-toast";
 
 export function useSumitConnect({
   companyId,
@@ -40,7 +40,7 @@ export function useSumitConnect({
     ...(onRejected == null ? {} : { place: "top" as const }),
     onSuccess: () => {
       const note = dateFailed.current ? { message: IMPORT_FROM_FAILED("SUMIT"), tone: "info" as const } : { message: "SUMIT מחובר. המפתח נשאר בשרת." };
-      toast.show(onRejected == null ? note : connectionToast(note));
+      toast.show(onRejected == null ? note : topToast(note));
       setApiKey("");
       onSuccess?.();
     },

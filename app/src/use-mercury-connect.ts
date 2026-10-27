@@ -3,7 +3,7 @@ import { invokeEdge, isRecord } from "./edge";
 import { useRef } from "react";
 import { useToast } from "./ui/toast";
 import { useWrite } from "./use-write";
-import { connectionToast } from "./connection-toast";
+import { topToast } from "./ui/top-toast";
 
 /** What a successful connect says (FLOW-938): the connection's slot, and whether its accounts are to be chosen. */
 export type MercuryConnected = { slot: number; chooseAccounts: boolean };
@@ -51,7 +51,7 @@ export function useMercuryConnect({
     ...(onRejected == null ? {} : { place: "top" as const }),
     onSuccess: () => {
       const note = { message: "Mercury מחובר. המפתח נשאר בשרת." };
-      if (!result.current.chooseAccounts) toast.show(onRejected == null ? note : connectionToast(note));
+      if (!result.current.chooseAccounts) toast.show(onRejected == null ? note : topToast(note));
       setApiKey("");
       onSuccess?.(result.current);
     },

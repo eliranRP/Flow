@@ -1,13 +1,4 @@
-import type { ToastInput } from "./ui/toast-layout";
-
-/** Decision 0223: on the connection pages an undo stays 5s and a plain note 4s. */
-export const CONNECTION_UNDO_MS = 5000;
-const CONNECTION_NOTE_MS = 4000;
-
-/** A connection page's toast: under the header (decision 0223), the undo 5s and a note 4s. */
-export function connectionToast(input: ToastInput): ToastInput {
-  return { durationMs: input.action == null ? CONNECTION_NOTE_MS : CONNECTION_UNDO_MS, ...input, place: "top" };
-}
+import { TOP_UNDO_MS } from "./ui/top-toast";
 
 /** What a disconnect waits on: its 5s ביטול. `cancel` is the ביטול; it reports whether it came in time. */
 export type UndoHold = { done: Promise<void>; cancel: () => boolean };
@@ -20,7 +11,7 @@ export const UNDONE = "undone";
  * server for those 5s. Leaving the app ends the wait at once: nobody can tap ביטול any more, and the
  * disconnect should not be lost with the page.
  */
-export function holdForUndo(ms = CONNECTION_UNDO_MS): UndoHold {
+export function holdForUndo(ms = TOP_UNDO_MS): UndoHold {
   let settled = false;
   let finish: () => void = () => undefined;
   let fail: (error: Error) => void = () => undefined;
