@@ -3,7 +3,10 @@ import path from "node:path";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { LEGAL_DOC_MARK, LEGAL_DRAFT_LINE, PRIVACY, TERMS, type LegalText } from "../legal-copy";
+import { LEGAL_DRAFT_LINE, PRIVACY, TERMS, type LegalText } from "../legal-copy";
+
+/** scripts/legal-docs.mjs puts this mark at the top of each lawyer's copy. */
+const DOC_MARK = "טיוטה לעורך דין — לא לפרסום כטקסט סופי";
 import type { NotificationPrefs, SubscribeOutcome } from "../push";
 import { renderWithProviders } from "../test-render";
 
@@ -78,7 +81,9 @@ describe("terms and privacy", () => {
     const headings = screen.getAllByRole("heading", { level: 2 }).map((node) => node.textContent);
     expect(headings).toEqual(text.sections.map((section) => section.heading));
     // The draft line opens the page, before the first section.
-    expect(note.compareDocumentPosition(screen.getAllByRole("heading", { level: 2 })[0]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const [first] = screen.getAllByRole("heading", { level: 2 });
+    expect(first).toBeDefined();
+    if (first != null) expect(note.compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("חזרה goes to sign-in signed out, and Home signed in", () => {
@@ -103,7 +108,7 @@ describe("the lawyer's copy in docs/legal", () => {
 
   it.each([["terms-draft.md", TERMS], ["privacy-draft.md", PRIVACY]] as const)("%s holds the app's text word for word, marked as a draft", (name, text: LegalText) => {
     const body = doc(name);
-    expect(body).toContain(LEGAL_DOC_MARK);
+    expect(body).toContain(DOC_MARK);
     expect(body).toContain(`# ${text.title}`);
     for (const section of text.sections) {
       expect(body).toContain(`## ${section.heading}`);

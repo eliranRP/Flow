@@ -1,7 +1,8 @@
 /**
  * FLOW-977 (decision 0225): the terms and privacy texts are a DRAFT for the owner's lawyer.
  * They describe what Flow does today; a bracketed [ ] is a detail only the owner or the lawyer can
- * fill. docs/legal/ holds the same text for the lawyer; legal-copy.test.ts keeps the two the same.
+ * fill. docs/legal/ holds the same text for the lawyer (scripts/legal-docs.mjs writes it), and
+ * screens/rare-screens-v2.test.tsx keeps the two the same.
  * When the lawyer signs off, the final text replaces this one and `draft` goes false.
  */
 export type LegalSection = { heading: string; paragraphs: string[] };
@@ -9,9 +10,6 @@ export type LegalText = { title: string; draft: boolean; sections: LegalSection[
 
 /** The line above a draft (the board's "draft for legal review"). */
 export const LEGAL_DRAFT_LINE = "טיוטה לבדיקה משפטית. הנוסח הסופי יפורסם אחרי אישור עורך הדין.";
-
-/** The mark on the docs/legal/ copies. */
-export const LEGAL_DOC_MARK = "טיוטה לעורך דין — לא לפרסום כטקסט סופי";
 
 export const TERMS: LegalText = {
   title: "תנאי השימוש",
