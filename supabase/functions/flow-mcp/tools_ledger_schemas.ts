@@ -1,5 +1,5 @@
-// FLOW-948 (decision 0208). The balanced-legs booking tool (book_line). Split from
-// tools_schemas.ts to keep it under the file-size limit.
+// FLOW-948 (decision 0208). The balanced-legs booking tools (book_line, and create_journal_entry of
+// FLOW-149). Split from tools_schemas.ts to keep it under the file-size limit.
 import { z } from "zod";
 import { isCalendarDate } from "./tools_args.ts";
 import { IDEMPOTENCY_KEY, UUID_TEXT, visibleName } from "./tools_schemas.ts";
@@ -38,5 +38,21 @@ export const bookLineSchema = z.object({
     } else if (existing && body[key] != null) {
       ctx.addIssue({ code: "custom", message: "not taken with transaction_id (the line keeps its own)", path: [key] });
     }
+  }
+});
+
+// FLOW-149 (decision 0228): create_journal_entry, an entry that moves no money (depreciation). The
+// legs balance to 0 with no bank leg; the server checks the accounts, that one leg is in the P&L and
+// that the P&L legs do not net to 0.
+export const createJournalEntrySchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  doc_date: z.string().refine((v) => isCalendarDate(v), "doc_date must be a calendar date (YYYY-MM-DD)"),
+  currency: z.string().regex(/^[A-Z]{3}$/, "currency must be a 3-letter code"),
+  description: visibleName(1, 120),
+  reference: visibleName(1, 60).nullable().optional(),
+  legs: z.array(legSchema).min(2).max(50),
+}).strict().superRefine((body, ctx) => {
+  if (body.legs.reduce((sum, leg) => sum + leg.amount_minor, 0) !== 0) {
+    ctx.addIssue({ code: "custom", message: "legs must balance to 0", path: ["legs"] });
   }
 });

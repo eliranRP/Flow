@@ -193,6 +193,12 @@
       "ui/date-sheet.tsx",
       "ui/month-grid.tsx"
     ],
+    "journal-entry.spec.ts": [
+      "screens/company-profit-screen.tsx",
+      "screens/profit-categories.tsx",
+      "use-company-profit.ts",
+      "screens/cash-lines-screen.tsx"
+    ],
     "unshare-line.spec.ts": [
       "screens/company-profit-screen.tsx",
       "use-company-profit.ts"

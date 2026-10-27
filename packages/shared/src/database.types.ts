@@ -520,6 +520,68 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"journal_counter_legs": {
+                  Row: {
+                    "account_id": string,"amount_minor": number,"company_id": string,"id": string,"ordinal": number,"project_id": string | null,"transaction_id": string
+                  }
+                  Insert: {
+                    "account_id": string,"amount_minor": number,"company_id": string,"id"?: string,"ordinal": number,"project_id"?: string | null,"transaction_id": string
+                  }
+                  Update: {
+                    "account_id"?: string,"amount_minor"?: number,"company_id"?: string,"id"?: string,"ordinal"?: number,"project_id"?: string | null,"transaction_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "journal_counter_legs_account_fkey"
+      columns: ["company_id","account_id"]
+isOneToOne: false
+      referencedRelation: "accounts"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "journal_counter_legs_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "journal_counter_legs_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "journal_counter_legs_transaction_id_fkey"
+      columns: ["transaction_id"]
+isOneToOne: false
+      referencedRelation: "journal_entries"
+      referencedColumns: ["transaction_id"]
+    }
+                  ]
+                },"journal_entries": {
+                  Row: {
+                    "company_id": string,"created_at": string,"created_by": string | null,"reference": string | null,"transaction_id": string
+                  }
+                  Insert: {
+                    "company_id": string,"created_at"?: string,"created_by"?: string | null,"reference"?: string | null,"transaction_id": string
+                  }
+                  Update: {
+                    "company_id"?: string,"created_at"?: string,"created_by"?: string | null,"reference"?: string | null,"transaction_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "journal_entries_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "journal_entries_line_fkey"
+      columns: ["company_id","transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
                 },"legs": {
                   Row: {
                     "account_id": string,"amount_minor": number,"category_id": string | null,"company_id": string,"created_at": string,"gross_up": boolean,"id": string,"leg_kind": string,"loan_split_fallback": boolean,"ordinal": number,"part": Database["public"]['Enums']["loan_split_part"] | null,"project_explicit": boolean,"project_id": string | null,"transaction_id": string
@@ -1701,6 +1763,9 @@ isOneToOne: false
 "match_lines":
 { Args: { "p_currency"?: string,"p_direction"?: string,"p_rows": Json,"p_window_days"?: number }; Returns: Json
                            },
+"mcp_account_balances":
+{ Args: { "p_as_of"?: string }; Returns: Json
+                           },
 "mcp_accounts":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -1750,6 +1815,9 @@ isOneToOne: false
 { Args: { "p_idempotency_key": string,"p_kind": string,"p_name": string }; Returns: Json
                            } |
 { Args: { "p_idempotency_key": string,"p_kind": string,"p_name": string,"p_parent_id": string }; Returns: Json
+                           },
+"mcp_create_journal_entry":
+{ Args: { "p_currency": string,"p_description": string,"p_doc_date": string,"p_idempotency_key": string,"p_legs": Json,"p_reference": string }; Returns: Json
                            },
 "mcp_create_manual_entry":
 { Args: { "p_amount_minor": number,"p_category_id": string,"p_cheque_number": string,"p_direction": string,"p_doc_date": string,"p_idempotency_key": string,"p_method": string,"p_payee": string,"p_project_id": string }; Returns: Json
