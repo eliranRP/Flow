@@ -90,6 +90,8 @@ export const WRITE_TOOL_NAMES = [
   "link_invoice_payment",
   "dismiss_invoice_match",
   "detach_loan_payment",
+  "set_loan_part_category",
+  "set_loan_category_from",
   "delete_loan",
   "reorder_loans",
   "set_project_investment",
@@ -184,7 +186,7 @@ export const ALLOWED: Record<string, Set<string>> = {
     "kind", "interest_only_months", "amortization_months",
   ]),
   update_loan: new Set(["idempotency_key", "loan_id", "name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow", "project_id", "status", "closed_on", "interest_category_id", "escrow_category_id", "principal_category_id", "fees_category_id", "kind", "interest_only_months", "amortization_months"]),
-  attach_loan_payment: new Set(["idempotency_key", "transaction_id", "loan_id", "installments", "fees", "parts", "fees_category_id"]),
+  attach_loan_payment: new Set(["idempotency_key", "transaction_id", "loan_id", "installments", "fees", "parts", "fees_category_id", "interest_category_id", "escrow_category_id", "principal_category_id"]),
   set_loan_rate: new Set(["idempotency_key", "loan_id", "effective_date", "annual_rate_percent"]),
   set_loan_index: new Set(["idempotency_key", "loan_id", "rate_index", "margin_percent"]),
   set_loan_refinance: new Set(["idempotency_key", "loan_id", "new_loan_id"]),
@@ -196,6 +198,8 @@ export const ALLOWED: Record<string, Set<string>> = {
   link_invoice_payment: new Set(["idempotency_key", "invoice_id", "transaction_id"]),
   dismiss_invoice_match: new Set(["idempotency_key", "invoice_id", "transaction_id"]),
   detach_loan_payment: new Set(["idempotency_key", "transaction_id"]),
+  set_loan_part_category: new Set(["idempotency_key", "transaction_ids", "part", "category_id"]),
+  set_loan_category_from: new Set(["idempotency_key", "loan_id", "part", "effective_date", "category_id", "apply_to_existing"]),
   delete_loan: new Set(["idempotency_key", "loan_id"]),
   reorder_loans: new Set(["idempotency_key", "loan_ids"]),
   set_project_investment: new Set(["idempotency_key", "project_id", "currency", "purchase_minor", "arv_minor", "value_minor", "value_date"]),
@@ -275,7 +279,7 @@ export const categorySchema = z.object({
 }).strict();
 export const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "supplier_category", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "loan_refinance", "index_rate", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", ...THREAD_UNDO_KINDS]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "supplier_category", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "loan_refinance", "index_rate", "loan_part_category", "loan_category_from", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", ...THREAD_UNDO_KINDS]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -470,6 +474,11 @@ export const attachLoanSchema = z.object({
   }).strict().optional(),
   // This payment's fees category; only with fees (top-level or in parts).
   fees_category_id: UUID_TEXT.optional(),
+  // This payment's category for the other parts (FLOW-148); else the switch in force on the
+  // line's date, the loan's, or the default.
+  interest_category_id: UUID_TEXT.optional(),
+  escrow_category_id: UUID_TEXT.optional(),
+  principal_category_id: UUID_TEXT.optional(),
 }).strict().superRefine((body, ctx) => {
   if (body.parts !== undefined && (body.installments !== undefined || body.fees !== undefined)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["parts"], message: "not with installments or fees" });
@@ -714,18 +723,6 @@ export const setInvoicePaidSchema = z.object({
 export const undoJevPrefillSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
-}).strict();
-export const detachLoanPaymentSchema = z.object({
-  idempotency_key: IDEMPOTENCY_KEY,
-  transaction_id: UUID_TEXT,
-}).strict();
-export const deleteLoanSchema = z.object({
-  idempotency_key: IDEMPOTENCY_KEY,
-  loan_id: UUID_TEXT,
-}).strict();
-export const reorderLoansSchema = z.object({
-  idempotency_key: IDEMPOTENCY_KEY,
-  loan_ids: z.array(UUID_TEXT).min(1).max(200),
 }).strict();
 const INVESTMENT_AMOUNT = z.number().int().min(0).max(999_999_999_999_999);
 export const INVESTMENT_KEYS = ["currency", "purchase_minor", "arv_minor", "value_minor", "value_date"] as const;

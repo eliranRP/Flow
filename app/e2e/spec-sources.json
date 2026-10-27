@@ -193,6 +193,12 @@
       "ui/date-sheet.tsx",
       "ui/month-grid.tsx"
     ],
+    "loan-part-category.spec.ts": [
+      "screens/company-profit-screen.tsx",
+      "screens/profit-categories.tsx",
+      "use-company-profit.ts",
+      "screens/loan-payments-view.tsx"
+    ],
     "loan-project.spec.ts": [
       "screens/settings-screen.tsx",
       "screens/loan-setup.tsx",

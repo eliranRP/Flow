@@ -28,16 +28,14 @@ import {
   createProjectSchema,
   createProjectsSchema,
   deleteCategorySchema,
-  deleteLoanSchema,
   deleteProjectSchema,
-  detachLoanPaymentSchema,
   hideCategorySchema,
   invalid,
+  invalidFields,
   INVESTMENT_KEYS,
   moveCategoryLinesSchema,
   renameCategorySchema,
   renameCompanySchema,
-  reorderLoansSchema,
   setCashBasisSchema,
   setCategoryCashSchema,
   setCategoryGroupSchema,
@@ -72,6 +70,13 @@ import {
   updateProjectSchema,
   WRITE_TOOL_NAMES,
 } from "./tools_schemas.ts";
+import {
+  deleteLoanSchema,
+  detachLoanPaymentSchema,
+  reorderLoansSchema,
+  setLoanCategoryFromSchema,
+  setLoanPartCategorySchema,
+} from "./tools_loan_schemas.ts";
 import { inviteMemberSchema, removeMemberSchema, setMemberRoleSchema } from "./tools_team_schemas.ts";
 import { invalidDetail, splitLineSchema } from "./tools_split_schemas.ts";
 import { addLoanWrite, attachLoanWrite, updateLoanWrite } from "./tools_loans.ts";
@@ -547,6 +552,29 @@ export async function callWrite(
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
+    };
+  } else if (name === "set_loan_part_category") {
+    const parsed = setLoanPartCategorySchema.safeParse(args);
+    if (!parsed.success) return invalidFields(parsed.error);
+    rpcName = "mcp_set_loan_part_category";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_transaction_ids: parsed.data.transaction_ids,
+      p_part: parsed.data.part,
+      p_category_id: parsed.data.category_id,
+    };
+  } else if (name === "set_loan_category_from") {
+    const parsed = setLoanCategoryFromSchema.safeParse(args);
+    if (!parsed.success) return invalidFields(parsed.error);
+    if (!isCalendarDate(parsed.data.effective_date)) return fail("validation", "effective_date: a date, YYYY-MM-DD");
+    rpcName = "mcp_set_loan_category_from";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_loan_id: parsed.data.loan_id,
+      p_part: parsed.data.part,
+      p_effective_date: parsed.data.effective_date,
+      p_category_id: parsed.data.category_id,
+      p_apply_to_existing: parsed.data.apply_to_existing ?? false,
     };
   } else if (name === "delete_loan") {
     const parsed = deleteLoanSchema.safeParse(args);

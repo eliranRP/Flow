@@ -5,6 +5,7 @@ import { buildLoanSchedule, contractualPaymentMinor } from "../../../packages/sh
 import { callTool } from "./tools.ts";
 import {
   CATEGORY,
+  CATEGORY_NEW,
   DEMAND_LOAN,
   feesRpc,
   INCOME_CATEGORY,
@@ -465,6 +466,41 @@ Deno.test("attach_loan_payment files fees under the call's category, else the lo
     }, ["write"], rpc);
     assertEquals(refused.structuredContent, { ok: false, error: { code: "refused", message } });
   }
+});
+
+Deno.test("attach_loan_payment sends a category on any part it names, and a fees switch stands in for the loan's (FLOW-148)", async () => {
+  const exact = { interest: "500.00", escrow: "100.00", principal: "300.00", fees: "100.00" };
+  const named = feesRpc(FEES_LOAN, 100000);
+  const out = await callTool("attach_loan_payment", {
+    idempotency_key: "pc-1", transaction_id: LOAN_TXN, loan_id: LOAN, parts: exact,
+    interest_category_id: CATEGORY, escrow_category_id: CATEGORY_NEW, principal_category_id: INCOME_CATEGORY,
+  }, ["write"], named.rpc);
+  assertEquals(out.isError, false);
+  assertEquals(
+    (attachedParts(named.calls) as Array<Record<string, unknown>>).map((part) => [part.part, part.category_id]),
+    [["interest", CATEGORY], ["escrow", CATEGORY_NEW], ["principal", INCOME_CATEGORY], ["fees", undefined]],
+  );
+  if (out.structuredContent.ok) {
+    const parts = (out.structuredContent.data as { parts: Array<Record<string, unknown>> }).parts;
+    assertEquals(parts[0]?.category_id, CATEGORY);
+  }
+
+  // Fees with no category on the call or the loan: a fees switch in force on the line's date is
+  // enough, and the database files the part under it; one dated after the line is not.
+  const switched = { ...FEES_LOAN, fees_category_id: null };
+  const onDate = feesRpc({ ...switched, category_switches: [{ part: "fees", effective_date: "2026-01-01", category_id: CATEGORY }] }, 100000);
+  assertEquals((await callTool("attach_loan_payment", {
+    idempotency_key: "pc-2", transaction_id: LOAN_TXN, loan_id: LOAN, parts: exact,
+  }, ["write"], onDate.rpc)).isError, false);
+  const later = feesRpc({ ...switched, category_switches: [{ part: "fees", effective_date: "2026-02-01", category_id: CATEGORY }] }, 100000);
+  assertEquals((await callTool("attach_loan_payment", {
+    idempotency_key: "pc-3", transaction_id: LOAN_TXN, loan_id: LOAN, parts: exact,
+  }, ["write"], later.rpc)).structuredContent, { ok: false, error: { code: "refused", message: "fees category required" } });
+
+  const bad = await callTool("attach_loan_payment", {
+    idempotency_key: "pc-4", transaction_id: LOAN_TXN, loan_id: LOAN, interest_category_id: "nope",
+  }, ["write"], named.rpc);
+  assertEquals(bad.structuredContent, { ok: false, error: { code: "validation", message: "interest_category_id: wrong format" } });
 });
 
 Deno.test("attach_loan_payment on a demand loan: interest for the days since the last payment, the rest principal", async () => {
