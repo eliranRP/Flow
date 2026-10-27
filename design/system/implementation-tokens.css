@@ -297,7 +297,7 @@
     --color-text: #F1EDF8;
     --color-text-secondary: #B1A8C4;
     --color-text-muted: #978EAB;
-    --color-placeholder: #978EAB; /* FLOW-976: 5.12:1 on the raised fill, 5.99:1 on the surface */
+    --color-placeholder: #978EAB; /* FLOW-976: 5.12:1 on the raised fill, 5.52:1 on the surface */
     --color-loan-interest: #D9D2E9;
     --color-accent: #B894FF;
     --color-accent-text: #C3A5FF;
@@ -376,7 +376,7 @@
   --color-text: #F1EDF8;
   --color-text-secondary: #B1A8C4;
   --color-text-muted: #978EAB;
-  --color-placeholder: #978EAB; /* FLOW-976: 5.12:1 on the raised fill, 5.99:1 on the surface */
+  --color-placeholder: #978EAB; /* FLOW-976: 5.12:1 on the raised fill, 5.52:1 on the surface */
   --color-loan-interest: #D9D2E9;
   --color-accent: #B894FF;
   --color-accent-text: #C3A5FF;

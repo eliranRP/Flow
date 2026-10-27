@@ -351,6 +351,7 @@ export function StepProjects({
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
   const [nameNote, setNameNote] = useState<string | null>(null);
+  const [noteTap, setNoteTap] = useState(0);
   const suggestions = useSetupSuggestions(companyId, bankConnected);
   const taken = (name: string) => chips.includes(name) || existingNames.includes(name);
   const trimmed = draft.trim();
@@ -395,10 +396,11 @@ export function StepProjects({
         onSubmit={(event) => {
           event.preventDefault();
           const problem = projectNameProblem(trimmed, taken);
-          // Cleared first, so the same note on a second tap is announced again.
-          setNameNote(null);
+          // A new note fills the line that is already there and is announced. The same note on a
+          // repeated tap redraws the line, so it is announced again.
+          if (problem != null && problem === nameNote) setNoteTap((tap) => tap + 1);
+          setNameNote(problem);
           if (problem == null) add(trimmed);
-          else requestAnimationFrame(() => { setNameNote(problem); });
         }}
       >
         <div className="ui-onb-add-field">
@@ -408,6 +410,8 @@ export function StepProjects({
             value={draft}
             error={nameNote ?? undefined}
             liveMessage
+            reserveMessage
+            messageKey={noteTap}
             onChange={(event) => { setDraft(event.target.value); setNameNote(null); }}
           />
         </div>

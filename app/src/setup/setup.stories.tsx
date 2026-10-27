@@ -1,6 +1,6 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { StoryRoute } from "../ui/story-route";
 import { PROJECT_ADD, PROJECT_NAME_EMPTY, REVIEW_APPROVE, REVIEW_BEFORE } from "./copy";
 import { SetupDone } from "./done";
@@ -66,8 +66,13 @@ export const Step3ProjectsNoName: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: PROJECT_ADD }));
-    await expect(await canvas.findByText(PROJECT_NAME_EMPTY)).toBeVisible();
+    // The note is there at once; the step's fade-in can still hold it at opacity 0 under load.
+    await expect(canvas.getByText(PROJECT_NAME_EMPTY)).toBeInTheDocument();
+    await waitFor(() => expect(canvas.getByText(PROJECT_NAME_EMPTY)).toBeVisible());
     await expect(canvas.getByRole("textbox")).toHaveAttribute("aria-invalid", "true");
+    // A second tap keeps the note on screen.
+    await userEvent.click(canvas.getByRole("button", { name: PROJECT_ADD }));
+    await expect(canvas.getByText(PROJECT_NAME_EMPTY)).toBeVisible();
   },
 };
 

@@ -282,7 +282,7 @@
   gap: var(--space-2);
 }
 
-/* FLOW-976: a note under the name field leaves הוספה beside the field, centered on it (52 on 48). */
+/* FLOW-976: a note under the name field leaves הוספה beside the field; both are 48px, so their tops line up. */
 .ui-onb-add {
   align-items: flex-start;
 }
@@ -296,7 +296,6 @@
 
 .ui-onb-add > .ui-btn {
   flex: none;
-  margin-block-start: calc((var(--field-height) - var(--control-height)) / 2);
   min-inline-size: 0;
   padding-inline: var(--space-4);
   font-size: var(--type-line2-size);

@@ -70,20 +70,26 @@ describe("setup v2", () => {
     renderWithProviders(<StepProjects {...step} companyId={null} bankConnected={false} existingNames={["Oak Ridge"]} />, { route: "/setup/3" });
     const add = screen.getByRole("button", { name: PROJECT_ADD });
     expect(add).toBeEnabled();
-    fireEvent.click(add);
-    const note = await screen.findByText(PROJECT_NAME_EMPTY);
-    expect(note).toHaveAttribute("aria-live", "polite");
     const field = screen.getByRole("textbox");
+    // The line is there, empty and live, before any note, so the first note is announced.
+    const line = document.getElementById(`${field.id}-error`);
+    expect(line).toHaveAttribute("aria-live", "polite");
+    expect(line).toHaveTextContent("");
+    fireEvent.click(add);
+    // Shown at once, in the same line.
+    const note = screen.getByText(PROJECT_NAME_EMPTY);
+    expect(note).toBe(line);
     expect(field).toHaveAttribute("aria-invalid", "true");
     expect(field).toHaveAttribute("aria-describedby", note.id);
-    // A second tap clears the note and sets it again, so it is announced again.
+    // A second tap with the same note keeps it on screen and redraws the line, so it is announced again.
     fireEvent.click(add);
-    expect(screen.queryByText(PROJECT_NAME_EMPTY)).toBeNull();
-    expect(await screen.findByText(PROJECT_NAME_EMPTY)).toBeInTheDocument();
+    const again = screen.getByText(PROJECT_NAME_EMPTY);
+    expect(again).not.toBe(note);
+    expect(again).toHaveAttribute("aria-live", "polite");
     fireEvent.change(field, { target: { value: "Oak Ridge" } });
     expect(screen.queryByText(PROJECT_NAME_EMPTY)).toBeNull();
     fireEvent.click(add);
-    expect(await screen.findByText(PROJECT_NAME_TAKEN)).toBeInTheDocument();
+    expect(screen.getByText(PROJECT_NAME_TAKEN)).toBeInTheDocument();
     fireEvent.change(field, { target: { value: "Cedar St" } });
     fireEvent.click(add);
     await waitFor(() => { expect(screen.getByText("Cedar St")).toBeInTheDocument(); });

@@ -13,8 +13,14 @@ type TextFieldProps = {
   numeric?: boolean;
   /** Under the field, in the message line, while there is no error (FLOW-139d). */
   hint?: ReactNode;
-  /** The message line is announced when it changes, for a note that comes as the name is typed (FLOW-972). */
+  /**
+   * The message line is announced when it changes, for a note that comes as the name is typed (FLOW-972).
+   * It is live while it holds an error or nothing (FLOW-976: with reserveMessage the line is there before
+   * the note, so the note is announced); a hint in it is not read back when an error clears.
+   */
   liveMessage?: boolean;
+  /** A new key redraws the message line, so the same note is announced again (FLOW-976, a repeated tap). */
+  messageKey?: number;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "className">;
 
 export function TextField({
@@ -31,6 +37,7 @@ export function TextField({
   readOnly = false,
   hint,
   liveMessage = false,
+  messageKey,
   onPointerDown,
   ...rest
 }: TextFieldProps) {
@@ -61,7 +68,7 @@ export function TextField({
         }}
       />
       {error || reserveMessage || hint ? (
-        <span id={errorId} aria-live={liveMessage && error ? "polite" : undefined} className={error ? "ui-field-message" : hint ? "ui-field-hint" : "ui-field-message ui-field-message-slot"}>
+        <span key={messageKey} id={errorId} aria-live={liveMessage && (error || !hint) ? "polite" : undefined} className={error ? "ui-field-message" : hint ? "ui-field-hint" : "ui-field-message ui-field-message-slot"}>
           {error ?? hint ?? ""}
         </span>
       ) : null}
