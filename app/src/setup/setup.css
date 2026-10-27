@@ -36,7 +36,8 @@
 }
 
 .ui-onb-link {
-  min-height: var(--size-seg);
+  /* FLOW-976: 44px (the segment height was 40). */
+  min-height: var(--touch-min);
   padding-inline: var(--space-1);
   display: inline-flex;
   align-items: center;
@@ -281,6 +282,11 @@
   gap: var(--space-2);
 }
 
+/* FLOW-976: a note under the name field leaves הוספה beside the field; both are 48px, so their tops line up. */
+.ui-onb-add {
+  align-items: flex-start;
+}
+
 /* The name field takes the row; הוספה is as wide as its word (16px sides, 15/500). */
 .ui-onb-add-field,
 .ui-onb-add-field > * {
@@ -415,7 +421,8 @@
 .ui-onb-mark {
   inline-size: calc(var(--space-5) + var(--space-half));
   text-align: center;
-  color: var(--color-btn-disabled-text);
+  /* FLOW-976: a skipped row's "—" reads at 4.5:1 (the disabled-button grey was 3.22:1). */
+  color: var(--color-text-muted);
 }
 
 .ui-onb-mark-good {

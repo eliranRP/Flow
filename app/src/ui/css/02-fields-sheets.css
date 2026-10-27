@@ -483,6 +483,12 @@
   padding: 0;
 }
 
+/* FLOW-976: a field's prompt reads at 4.5:1 and more on its raised fill (the browser's grey was about 3:1). */
+.ui-field-control::placeholder {
+  color: var(--color-placeholder);
+  opacity: 1;
+}
+
 .ui-field-control:focus {
   border-color: var(--color-accent);
   outline: none;

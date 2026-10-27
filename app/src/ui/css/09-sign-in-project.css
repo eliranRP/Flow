@@ -37,20 +37,15 @@
   margin-top: var(--space-5);
 }
 
-.ui-signin-help {
-  margin-top: var(--space-3);
-  text-align: center;
-}
-
-.ui-signin-help a,
+/* FLOW-976: the failed sign-in's help link sits inside the error, at its start, with a 44px target. */
+.ui-signin-help,
 .ui-signin-privacy a {
   display: inline-flex;
   align-items: center;
   min-height: var(--touch-min);
 }
 
-/* The 44px target stays. The negative margin keeps the failed sign-in ui-stack on er-04. */
-.ui-signin-help a,
+/* The 44px target stays; the negative margin keeps the privacy lines on their rhythm. */
 .ui-signin-privacy a {
   margin-block: calc((1lh - var(--touch-min)) / 2);
 }

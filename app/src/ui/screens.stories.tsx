@@ -4,7 +4,7 @@ import { AddForm } from "../screens/flow-screens";
 import { SignInScreen } from "../screens/SignInScreen";
 import { InstallScreen } from "./install-screen";
 import { StoryRoute } from "./story-route";
-import { ExampleBar, exampleLabel } from "./screen-stories-support";
+import { ExampleBar, exampleLabel, OfflineStory } from "./screen-stories-support";
 
 const meta = {
   title: "Screens/Routes",
@@ -27,6 +27,18 @@ export const SignInFailed: Story = {
     <StoryRoute entry="/sign-in?error=server_error">
       <SignInScreen />
     </StoryRoute>
+  ),
+};
+
+/** FLOW-976: offline, sign-in says so before the tap. */
+export const SignInOffline: Story = {
+  name: "Sign in, offline",
+  render: () => (
+    <OfflineStory>
+      <StoryRoute entry="/sign-in">
+        <SignInScreen />
+      </StoryRoute>
+    </OfflineStory>
   ),
 };
 

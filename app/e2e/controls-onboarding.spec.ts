@@ -41,3 +41,41 @@ test("install and legal screens", async ({ page }) => {
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page).toHaveURL(/\/sign-in/);
 });
+
+// FLOW-976: First use v2.
+test("sign-in says it is offline before the tap, and keeps its help in the error", async ({ page, context }) => {
+  await page.goto("/sign-in?error=server_error");
+  const help = page.getByRole("link", { name: "צריך עזרה בכניסה?" });
+  expect(await help.evaluate((el) => el.closest(".ui-notice") != null)).toBe(true);
+  expect((await help.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  await expect(page.getByRole("button", { name: "ניסיון חוזר עם Google" })).toBeVisible();
+  for (const name of ["תנאי שימוש", "מדיניות פרטיות"]) {
+    expect((await page.getByRole("link", { name }).boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  }
+  await page.goto("/sign-in");
+  await context.setOffline(true);
+  const offline = page.getByText("אין חיבור · הכניסה תעבוד כשהחיבור יחזור");
+  await expect(offline).toBeVisible();
+  // Nothing on sign-in retries by itself, so the line does not say it is reconnecting.
+  await expect(page.getByText("מתחבר מחדש…")).toHaveCount(0);
+  await context.setOffline(false);
+  await expect(offline).toHaveCount(0);
+});
+
+test("setup's buttons are never greyed out and say why a tap did nothing", async ({ page }) => {
+  await page.goto("/e2e/setup/review");
+  const before = page.getByRole("button", { name: "אשרו את השורה למעלה" });
+  await expect(before).toBeEnabled();
+  await before.click();
+  await expect(page.getByRole("button", { name: "אישור", exact: true })).toBeFocused();
+  for (const name of ["הקודם", "דילוג על הכל"]) {
+    expect((await page.getByRole("button", { name }).boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  }
+
+  await page.goto("/e2e/setup/projects");
+  const add = page.getByRole("button", { name: "הוספה", exact: true });
+  await expect(add).toBeEnabled();
+  await add.click();
+  await expect(page.getByText("כתבו שם לפרויקט")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: /שם הפרויקט/ })).toHaveAttribute("aria-invalid", "true");
+});
