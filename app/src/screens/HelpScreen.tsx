@@ -12,13 +12,15 @@ export const SIGN_IN_TIPS = [
 ] as const;
 
 export function HelpScreen() {
-  const signedIn = useAuth().status === "authed";
+  const status = useAuth().status;
   const back = usePublicBackTarget();
   return (
     <main className="safe-bottom min-h-dvh">
-      <ScreenHeader title="עזרה" subtitle={signedIn ? "יש שאלה או תקלה? כותבים לנו." : "לעזרה בכניסה כותבים לנו."} backTo={back} />
-      {signedIn ? null : (
-        <ul className="ui-page-pad ui-help-tips">
+      <ScreenHeader title="עזרה" subtitle={status === "authed" ? "יש שאלה או תקלה? כותבים לנו." : "לעזרה בכניסה כותבים לנו."} backTo={back} />
+      {/* Only once the visitor is known to be signed out: not while the session still loads. */}
+      {status !== "anon" ? null : (
+        // An unstyled list loses its list role in Safari; role="list" keeps it.
+        <ul className="ui-page-pad ui-help-tips" role="list">
           {SIGN_IN_TIPS.map((tip) => <li key={tip} className="t-body">{tip}</li>)}
         </ul>
       )}

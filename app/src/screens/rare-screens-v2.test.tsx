@@ -10,7 +10,7 @@ import { renderWithProviders } from "../test-render";
 // FLOW-977 (decision 0225): the rare screens' review. חזרה from help and the legal pages, help's
 // sign-in tips, the legal pages (which never show the lawyer's draft), and the push note's place.
 
-let status: "anon" | "authed" = "anon";
+let status: "anon" | "authed" | "loading" = "anon";
 vi.mock("../auth", () => ({ useAuth: () => ({ status, session: null }) }));
 
 const rpc = vi.fn();
@@ -67,6 +67,13 @@ describe("help", () => {
     fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
     expect(screen.getByText("home page")).toBeInTheDocument();
   });
+
+  it("while the session still loads: no sign-in tips yet", () => {
+    status = "loading";
+    openFresh("/help", <HelpScreen />);
+    expect(screen.queryByText(SIGN_IN_TIPS[0])).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /@/ })).toBeInTheDocument();
+  });
 });
 
 describe("terms and privacy", () => {
@@ -76,10 +83,16 @@ describe("terms and privacy", () => {
     for (const line of text.paragraphs) expect(screen.getByText(line)).toHaveClass("t-body");
   });
 
-  it("חזרה goes to sign-in signed out, and Home signed in", () => {
-    openFresh("/terms", <LegalScreen kind="terms" />);
+  it.each([
+    ["terms", "anon", "sign-in page"],
+    ["privacy", "anon", "sign-in page"],
+    ["terms", "authed", "home page"],
+    ["privacy", "authed", "home page"],
+  ] as const)("%s, %s: חזרה goes to the %s", (kind, who, target) => {
+    status = who;
+    openFresh(`/${kind}`, <LegalScreen kind={kind} />);
     fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
-    expect(screen.getByText("sign-in page")).toBeInTheDocument();
+    expect(screen.getByText(target)).toBeInTheDocument();
   });
 });
 
