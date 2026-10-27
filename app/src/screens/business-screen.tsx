@@ -12,7 +12,7 @@ import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { Toggle } from "../ui/toggle";
-import { useToast } from "../ui/toast";
+import { useTopToast } from "../ui/top-toast";
 import { useBlockedPreview } from "./screen-shared";
 import { RenameCompanySheet } from "./rename-company";
 import { useSheetHistory } from "../ui/back";
@@ -20,6 +20,7 @@ import { CompanyCurrencySheet } from "./company-currency-sheet";
 import { CompanyBasisSheet } from "./company-basis-sheet";
 import { DANGER_HEAD, DELETE_NOTE, DELETE_ROW, DeleteCompanySheet } from "./delete-company-sheet";
 import type { SettingsSample } from "./settings-screen";
+import { SettingsOfflineLine } from "./settings-offline";
 
 const TITLE = "העסק";
 const BACK = "/settings";
@@ -38,7 +39,7 @@ export function BusinessScreen({ sample }: { sample?: SettingsSample } = {}) {
   const preview = useHomePreview();
   const search = usePreviewSearch();
   const blocked = useBlockedPreview();
-  const toast = useToast();
+  const toast = useTopToast();
   const holdWrites = useHoldWrites();
   const holdOwner = useHoldOwnerSettings();
   const viewerNoteId = useViewerNoteId() ?? undefined;
@@ -67,6 +68,7 @@ export function BusinessScreen({ sample }: { sample?: SettingsSample } = {}) {
 
   const saveOverhead = useWrite({
     failure: OVERHEAD_FAILED,
+    place: "top",
     keys: ["dashboard", "project"],
     run: async () => {
       const supabase = getSupabase();
@@ -132,6 +134,7 @@ export function BusinessScreen({ sample }: { sample?: SettingsSample } = {}) {
     <ViewerScope>
     <div className="ui-settings-page">
       <ScreenHeader title={TITLE} kicker="הגדרות" backTo={`${BACK}${search}`} />
+      <SettingsOfflineLine />
       <ViewerNote />
       <List layout="inset">
         {holdOwner ? (

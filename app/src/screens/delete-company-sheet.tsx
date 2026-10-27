@@ -6,8 +6,9 @@ import { pinReviewLine } from "../review-pin";
 import { useLeaveShownCompany } from "../team-queries";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { TextField } from "../ui/text-field";
-import { useToast } from "../ui/toast";
+import { useTopToast } from "../ui/top-toast";
 import { assertNoError, useWrite, type WriteFailure } from "../use-write";
+import { DELETE_COMPANY_OFFLINE, useOfflineRefusal } from "./settings-offline";
 
 export const DANGER_HEAD = "אזור מסוכן";
 export const DELETE_ROW = "מחיקת כל הנתונים";
@@ -67,14 +68,16 @@ export function DeleteCompanySheet({
   const [typed, setTyped] = useState("");
   const client = useQueryClient();
   const navigate = useNavigate();
-  const toast = useToast();
+  const toast = useTopToast();
   const leave = useLeaveShownCompany();
+  const refuseOffline = useOfflineRefusal();
 
   useEffect(() => {
     if (open) setTyped("");
   }, [open]);
 
   const remove = useWrite<Delete>({
+    place: "top",
     failure: deleteFailure,
     keys: [],
     onSuccess: () => {
@@ -96,6 +99,8 @@ export function DeleteCompanySheet({
   const matches = deleteConfirmMatches(typed, companyName);
   const submit = () => {
     if (remove.isPending || !matches) return;
+    // FLOW-972: a delete must not run by itself when the connection returns.
+    if (refuseOffline(DELETE_COMPANY_OFFLINE)) return;
     if (blocked()) return;
     if (companyId == null) return;
     remove.mutate({ companyId, confirm: typed.trim() });

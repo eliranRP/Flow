@@ -1,30 +1,18 @@
-import { useLayoutEffect, useRef } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ActionBar, ActionBarRow } from "./action-bar";
 import { Button } from "./button";
 import { CheckIcon } from "./icons";
 import { ReviewCard, REVIEW_MISMATCH_ID, REVIEW_MISSING_ID, SPLIT_MISMATCH_ACTION, SPLIT_MISMATCH_KEEP } from "./review-card";
 import { TabBar } from "./tab-bar";
-import { placeToast, Toast } from "./toast";
 
 type BarArgs = {
   kind: "review" | "mismatch";
   busy?: boolean;
   disabled?: boolean;
-  toast?: string;
 };
 
 /** FLOW-327: the review card with its bar pinned on the tab bar. Invented data. */
-function ReviewWithBar({ kind, busy = false, disabled = false, toast }: BarArgs) {
-  const host = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const node = host.current;
-    if (!node || !toast) return;
-    const place = () => { placeToast(node); };
-    place();
-    const timers = [50, 150, 320].map((ms) => window.setTimeout(place, ms));
-    return () => { for (const timer of timers) window.clearTimeout(timer); };
-  }, [toast]);
+function ReviewWithBar({ kind, busy = false, disabled = false }: BarArgs) {
   const mismatch = kind === "mismatch";
   return (
     <div className="ui-review-queue" data-bar="">
@@ -68,11 +56,6 @@ function ReviewWithBar({ kind, busy = false, disabled = false, toast }: BarArgs)
           </>
         )}
       </ActionBar>
-      {toast ? (
-        <div className="ui-toast-host" data-place="bar" ref={host}>
-          <Toast action="ביטול" onAction={() => undefined}>{toast}</Toast>
-        </div>
-      ) : null}
       <TabBar />
     </div>
   );
@@ -90,5 +73,3 @@ type Story = StoryObj<typeof meta>;
 export const ReviewBusy: Story = { args: { busy: true } };
 export const ReviewDisabled: Story = { args: { disabled: true } };
 export const SplitMismatch: Story = { args: { kind: "mismatch" } };
-/** Decision 0137: the undo toast sits just above the bar. */
-export const ToastAboveBar: Story = { args: { toast: "הפריט אושר" } };

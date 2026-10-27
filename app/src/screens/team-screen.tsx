@@ -13,6 +13,7 @@ import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { InviteSheet, MemberSheet, PendingInviteSheet } from "./team-sheets";
+import { SettingsOfflineLine } from "./settings-offline";
 
 const TITLE = "צוות";
 const BACK = "/settings";
@@ -99,6 +100,7 @@ export function TeamList({ team, business }: { team: Team; business?: string }) 
   return (
     <div className={alone ? "ui-settings-page ui-team-alone" : "ui-settings-page"}>
       <ScreenHeader title={TITLE} kicker="הגדרות" subtitle={business && !alone ? `מי רואה את הספרים של ${business}` : undefined} backTo={BACK} />
+      <SettingsOfflineLine />
       <List className="ui-team-list" layout={layout}>
         {members.map((row) => {
           const opens = manage && row.role !== "owner" && !row.you;

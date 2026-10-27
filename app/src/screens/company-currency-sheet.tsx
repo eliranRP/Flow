@@ -2,7 +2,7 @@ import { useRef, type RefObject } from "react";
 import { getSupabase } from "../lib/supabase";
 import { ChoiceSheet } from "../ui/choice-sheet";
 import { CURRENCY_COPY, type CurrencyChoice } from "../ui/company-choices";
-import { useToast } from "../ui/toast";
+import { useTopToast } from "../ui/top-toast";
 import { assertNoError, useWrite, type WriteFailure } from "../use-write";
 
 export const CURRENCY_SAVED = "מטבע העסק נשמר";
@@ -45,8 +45,9 @@ export function CompanyCurrencySheet({
   blocked: () => boolean;
   returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
-  const toast = useToast();
+  const toast = useTopToast();
   const undo = useWrite<Change>({
+    place: "top",
     failure: currencyFailure,
     success: CURRENCY_UNDONE,
     keys: CURRENCY_KEYS,
@@ -57,6 +58,7 @@ export function CompanyCurrencySheet({
   // The sheet's history-aware close for the last pick; a retry from the failure toast reuses it.
   const closeSheet = useRef<() => void>(() => { onOpenChange(false); });
   const save = useWrite<Change>({
+    place: "top",
     failure: currencyFailure,
     keys: CURRENCY_KEYS,
     onSuccess: (payload) => {

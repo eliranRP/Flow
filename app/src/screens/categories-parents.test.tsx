@@ -85,7 +85,7 @@ describe("FLOW-406 sub-categories in Settings → Categories", () => {
     fireEvent.click(await screen.findByRole("button", { name: "הוספת תת־קטגוריה" }));
     const sheet = await screen.findByRole("dialog", { name: "תת־קטגוריה חדשה" });
     fireEvent.change(within(sheet).getByLabelText("שם"), { target: { value: "גינון" } });
-    fireEvent.click(within(sheet).getByRole("button", { name: "שמירה" }));
+    fireEvent.click(within(sheet).getByRole("button", { name: "יצירת הקטגוריה" }));
     await waitFor(() => {
       expect(rpc.calls.find((call) => call.name === "create_category")?.args).toEqual({ p_name: "גינון", p_kind: "expense", p_parent_id: "c2" });
     });

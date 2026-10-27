@@ -459,7 +459,8 @@
   block-size: var(--field-height);
   min-height: var(--touch-min);
   padding-inline: var(--field-pad);
-  border: var(--stroke-strong) solid var(--color-tint-strong);
+  /* FLOW-972: the edge is the control edge, 3:1 and more on the card (the tint was 1.35:1). */
+  border: var(--stroke-strong) solid var(--color-control-edge);
   border-radius: var(--radius-input);
   background: var(--color-raised);
   color: var(--color-text);

@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { MY_COMPANIES_KEY, VIEWER_NOTE } from "./company-role-cache";
 import { useInvalidateBooks } from "./use-books";
 import { useToast } from "./ui/toast";
+import { topToast } from "./ui/top-toast";
 
 export function assertNoError(result: { error: { message: string; code?: string } | null }): void {
   if (!result.error) return;
@@ -70,7 +71,7 @@ export function useWrite<T = void>(options: {
   /** An error that needs no toast, because the screen already shows the state. */
   silent?: (error: Error) => boolean;
   /** Where this write's toasts sit. לאישור keeps them under its header (decision 0212). */
-  place?: "page" | "bar" | "top";
+  place?: "page" | "top";
   /** A retryable failure's toast stays until it is acted on or dismissed (לאישור's approve, decision 0212). */
   persistFailure?: boolean;
   /** The queries the write changes and each one's value after it. The tap shows it at once; a failure restores it. */
@@ -115,7 +116,8 @@ export function useWrite<T = void>(options: {
         await invalidate(options.keys);
       }
       const success = typeof options.success === "function" ? options.success() : options.success;
-      if (success) toast.show({ message: success, ...(options.place ? { place: options.place } : {}) });
+      // Under the header a note stays 4s (decision 0222); elsewhere a confirmation keeps its 3s.
+      if (success) toast.show(options.place === "top" ? topToast({ message: success }) : { message: success, ...(options.place ? { place: options.place } : {}) });
       options.onSuccess?.(payload);
     },
     onError: (error, payload, snapshots) => {

@@ -13,6 +13,8 @@ type TextFieldProps = {
   numeric?: boolean;
   /** Under the field, in the message line, while there is no error (FLOW-139d). */
   hint?: ReactNode;
+  /** The message line is announced when it changes, for a note that comes as the name is typed (FLOW-972). */
+  liveMessage?: boolean;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "className">;
 
 export function TextField({
@@ -28,6 +30,7 @@ export function TextField({
   numeric = false,
   readOnly = false,
   hint,
+  liveMessage = false,
   onPointerDown,
   ...rest
 }: TextFieldProps) {
@@ -58,7 +61,7 @@ export function TextField({
         }}
       />
       {error || reserveMessage || hint ? (
-        <span id={errorId} className={error ? "ui-field-message" : hint ? "ui-field-hint" : "ui-field-message ui-field-message-slot"}>
+        <span id={errorId} aria-live={liveMessage && error ? "polite" : undefined} className={error ? "ui-field-message" : hint ? "ui-field-hint" : "ui-field-message ui-field-message-slot"}>
           {error ?? hint ?? ""}
         </span>
       ) : null}

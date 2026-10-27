@@ -117,14 +117,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       seq.current += 1;
       clearTimer();
       clearOutTimer();
-      const confirmation = (input.tone == null || input.tone === "ok") && input.place !== "bar" && input.place !== "top";
+      const confirmation = (input.tone == null || input.tone === "ok") && input.place !== "top";
       const next = confirmation ? { ...input, place: "page" as const } : input;
       remaining.current = toastMs(next);
       const current = phaseRef.current;
       revealNow.current = current === "pad" || current === "fade" || current === "in";
       if (!revealNow.current) setPhase("measure");
       if (host.current) {
-        if (next.place === "page" || next.place === "bar" || next.place === "top") host.current.dataset.place = next.place;
+        if (next.place === "page" || next.place === "top") host.current.dataset.place = next.place;
         else delete host.current.dataset.place;
       }
       const id = seq.current;
@@ -203,7 +203,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }
     padToken.current += 1;
     const layer = node;
-    if (toast.place === "page" || toast.place === "bar" || toast.place === "top") layer.dataset.place = toast.place;
+    if (toast.place === "page" || toast.place === "top") layer.dataset.place = toast.place;
     else delete layer.dataset.place;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let generation = 0;
@@ -433,21 +433,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
     begin();
 
-    // A bar toast follows the bar: when the bar comes or goes (the last card skipped), place again.
-    let floorWatch: MutationObserver | null = null;
-    if (layer.dataset.place === "bar" && typeof MutationObserver !== "undefined") {
-      floorWatch = new MutationObserver((records) => {
-        const floorMoved = records.some((record) => [...record.addedNodes, ...record.removedNodes].some((node) => (
-          node instanceof Element
-          && (node.hasAttribute("data-toast-floor") || node.querySelector("[data-toast-floor]") != null)
-        )));
-        if (floorMoved) placeToast(layer);
-      });
-      floorWatch.observe(document.body, { childList: true, subtree: true });
-    }
-
     return () => {
-      floorWatch?.disconnect();
       generation += 1;
       waiting = false;
       hold = true;

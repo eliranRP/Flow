@@ -219,7 +219,7 @@ describe("category sheet: rename", () => {
     const field = within(form).getByLabelText("שם הקטגוריה");
     expect(field).toHaveValue("חומרים");
     fireEvent.change(field, { target: { value: "  חומרי בניין " } });
-    fireEvent.click(within(form).getByRole("button", { name: "שמירה" }));
+    fireEvent.click(within(form).getByRole("button", { name: "שמירת השם" }));
     await waitFor(() => { expect(calls("rename_category")).toEqual([{ p_category_id: "c1", p_name: "חומרי בניין" }]); });
     expect(await screen.findByText("השם נשמר")).toBeInTheDocument();
     await waitFor(() => { expect(screen.queryByRole("dialog", { name: "שינוי שם" })).toBeNull(); });
@@ -234,11 +234,11 @@ describe("category sheet: rename", () => {
     const form = await screen.findByRole("dialog", { name: "שינוי שם" });
     const field = within(form).getByLabelText("שם הקטגוריה");
     fireEvent.change(field, { target: { value: "א" } });
-    fireEvent.click(within(form).getByRole("button", { name: "שמירה" }));
+    fireEvent.click(within(form).getByRole("button", { name: "שמירת השם" }));
     expect(await within(form).findByText("שם קצר מדי – לפחות 2 תווים")).toBeInTheDocument();
     expect(calls("rename_category")).toHaveLength(0);
     fireEvent.change(field, { target: { value: "קבלנים" } });
-    fireEvent.click(within(form).getByRole("button", { name: "שמירה" }));
+    fireEvent.click(within(form).getByRole("button", { name: "שמירת השם" }));
     expect(await screen.findByText("יש כבר קטגוריה בשם הזה.", {}, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "שינוי שם" })).toBeInTheDocument();
   });
@@ -247,7 +247,7 @@ describe("category sheet: rename", () => {
     const sheet = await openSheet("חומרים");
     fireEvent.click(within(sheet).getByRole("button", { name: "שינוי שם" }));
     const form = await screen.findByRole("dialog", { name: "שינוי שם" });
-    fireEvent.click(within(form).getByRole("button", { name: "שמירה" }));
+    fireEvent.click(within(form).getByRole("button", { name: "שמירת השם" }));
     await waitFor(() => { expect(screen.queryByRole("dialog", { name: "שינוי שם" })).toBeNull(); });
     expect(calls("rename_category")).toHaveLength(0);
   });

@@ -25,9 +25,10 @@ import { CalendarIcon, BellIcon, DocumentIcon } from "../ui/icons";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { Toggle } from "../ui/toggle";
-import { useToast } from "../ui/toast";
+import { useTopToast } from "../ui/top-toast";
 import { PUSH_ACTIVE_HERE, pushBlockedMessage, subscribeDiagnostic, subscribeFailure } from "./push-copy";
 import { IOS_HOME_NOTE, IosHomeNote } from "./review-push-prompt";
+import { NOTIFICATIONS_OFFLINE, SettingsOfflineLine, useOfflineRefusal } from "./settings-offline";
 
 const SWITCHES: Array<{ key: NotificationPrefKey; label: string; hint: string; icon: ReactNode }> = [
   { key: "new_transaction", label: "תנועה חדשה", hint: "כשנכנסת תנועה מהבנק", icon: <BellIcon size={22} /> },
@@ -116,7 +117,7 @@ export function NotificationsScreen({
   const deviceQuery = useDevicePushQuery(live && can === "ok");
   const devicesQuery = usePushDevicesQuery(live);
   const client = useQueryClient();
-  const toast = useToast();
+  const toast = useTopToast();
   const [local, setLocal] = useState<NotificationPrefs>(sample ?? NO_PREFS);
   const [sampleHere, setSampleHere] = useState<DevicePush>(() => device ?? (can === "ok" ? "not-subscribed" : can === "not-configured" ? "unsupported" : can));
   // Each switch's save in the background: the value on screen, the last one the server stored, and
@@ -127,6 +128,8 @@ export function NotificationsScreen({
   const [failure, setFailure] = useState<SubscribeOutcome | null>(null);
   const backTo = `/settings${search}`;
   const noteId = useId();
+  // FLOW-972: a switch, this device and the test push all need the server now, so offline they say so instead.
+  const refuseOffline = useOfflineRefusal();
 
   // A build without the VAPID key shows nothing about push; an old link lands on Settings.
   if (can === "not-configured" && sample == null) return <Navigate to={backTo} replace />;
@@ -167,6 +170,7 @@ export function NotificationsScreen({
 
   function deviceChange(on: boolean) {
     if (deviceBusy) return;
+    if (refuseOffline(NOTIFICATIONS_OFFLINE)) return;
     if (!live) {
       setSampleHere(on ? "subscribed" : "not-subscribed");
       toast.show({ message: on ? PUSH_ACTIVE_HERE : DEVICE_OFF_TOAST });
@@ -204,6 +208,7 @@ export function NotificationsScreen({
 
   function testPush() {
     if (testBusy) return;
+    if (refuseOffline(NOTIFICATIONS_OFFLINE)) return;
     if (!live) {
       toast.show({ message: TEST_PUSH_COPY.sent });
       return;
@@ -262,6 +267,7 @@ export function NotificationsScreen({
    * switch at once and saves in the background, so no switch waits for another (FLOW-936).
    */
   function change(key: NotificationPrefKey, on: boolean) {
+    if (refuseOffline(NOTIFICATIONS_OFFLINE)) return;
     if (!live) {
       setLocal((current) => ({ ...current, [key]: on }));
       said(key, on);
@@ -287,6 +293,7 @@ export function NotificationsScreen({
         backTo={backTo}
         below={note != null ? <p className="t-caption t-muted" id={noteId} data-push-note="">{noteBody}</p> : undefined}
       />
+      <SettingsOfflineLine words={NOTIFICATIONS_OFFLINE} />
       <List layout="inset">
         <Toggle
           label={DEVICE_LABEL}

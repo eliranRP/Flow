@@ -228,14 +228,14 @@ describe("inner write gates after the role changes", () => {
 
     it("creates a category for an owner", async () => {
       const dialog = await openCreate();
-      fireEvent.click(within(dialog).getByRole("button", { name: "שמירה" }));
+      fireEvent.click(within(dialog).getByRole("button", { name: "יצירת הקטגוריה" }));
       await vi.waitFor(() => { expect(rpc).toHaveBeenCalled(); });
     });
 
     it("creates nothing once the role is viewer", async () => {
       const dialog = await openCreate();
       flip("viewer");
-      fireEvent.click(within(dialog).getByRole("button", { name: "שמירה" }));
+      fireEvent.click(within(dialog).getByRole("button", { name: "יצירת הקטגוריה" }));
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(rpc).not.toHaveBeenCalled();
     });
