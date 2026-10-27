@@ -81,7 +81,7 @@ test("add is a sheet over Home and transaction detail keeps the tab bar (the boa
   await expect(page.getByRole("navigation", { name: "ניווט ראשי" })).toHaveCount(1);
 });
 
-test("help links are at least 44px and sign-in help does not grow the stack", async ({ page }) => {
+test("help links are at least 44px and sign-in help sits in the error", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/help");
   const mail = page.getByRole("link", { name: HELP_EMAIL });
@@ -94,8 +94,8 @@ test("help links are at least 44px and sign-in help does not grow the stack", as
   const help = page.getByRole("link", { name: "צריך עזרה בכניסה?" });
   const box = await help.boundingBox();
   expect(box?.height).toBeGreaterThanOrEqual(44);
-  const stack = await help.evaluate((el) => el.parentElement?.getBoundingClientRect().height ?? 0);
-  expect(stack).toBeLessThan(32);
+  // FLOW-976: the way out sits in the error itself, not under the button.
+  expect(await help.evaluate((el) => el.closest(".ui-notice") != null)).toBe(true);
 });
 
 test("a signed-out deep link to review keeps it for after sign-in; an off-list route does not", async ({ page }) => {

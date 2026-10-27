@@ -566,8 +566,9 @@ export function projectNameProblem(name: string, taken: (name: string) => boolea
 /** Step 6 before the approval: the bottom button takes the owner to the sample's own אישור. */
 function focusSampleApprove() {
   const approve = document.querySelector<HTMLButtonElement>(".ui-sample .ui-btn");
-  approve?.scrollIntoView({ block: "center", behavior: "smooth" });
-  approve?.focus({ preventScroll: true });
+  if (!approve) return;
+  approve.focus({ preventScroll: true });
+  if (typeof approve.scrollIntoView === "function") approve.scrollIntoView({ block: "center", behavior: "smooth" });
 }
 
 /** Step 6 · אישור ראשון. The sample writes nothing: approving only stamps sample_review_at in the setup store. */
