@@ -1720,7 +1720,7 @@ isOneToOne: false
 { Args: { "p_idempotency_key": string,"p_in_transaction_id": string,"p_out_transaction_id": string,"p_same": boolean }; Returns: Json
                            },
 "mcp_assign_expense":
-{ Args: { "p_category_id": string,"p_idempotency_key": string,"p_project_id": string,"p_remember"?: boolean,"p_transaction_id": string }; Returns: Json
+{ Args: { "p_category_id": string,"p_idempotency_key": string,"p_project_id": string,"p_remember"?: boolean,"p_transaction_id": string,"p_unshare"?: boolean }; Returns: Json
                            },
 "mcp_assign_expense_split":
 { Args: { "p_category_id"?: string,"p_idempotency_key": string,"p_shares": Json,"p_transaction_id": string }; Returns: Json

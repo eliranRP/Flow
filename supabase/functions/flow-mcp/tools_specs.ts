@@ -252,12 +252,13 @@ const LINE_PARTS_SPEC = {
 
 function writeTools() {
   return [
-    toolSpec("assign_expense", "Assign one expense or income line to a project and category. An open review is closed. A line needs a project unless its category is an income category kept out of the P&L; then project_id can be left out or null. The category kind decides the P&L side, so an outflow under an income category is a reversal (negative income) and an inflow under an expense category is a reversal (negative expense). An income-kind category needs a project, also on an outflow.", {
+    toolSpec("assign_expense", "Assign one expense or income line to a project and category. An open review is closed. A line needs a project unless its category is an income category kept out of the P&L; then project_id can be left out or null. The category kind decides the P&L side, so an outflow under an income category is a reversal (negative income) and an inflow under an expense category is a reversal (negative expense). An income-kind category needs a project, also on an outflow. A line shared across projects is refused (shared costs are split, not assigned to one project) unless unshare is true (FLOW-150, decision 0229): then its shares go and the whole line goes to project_id (required), under category_id or, left out, the line's own category; only that line moves, never the other lines of the same supplier or charge. A shared line split by category is refused (line has a split by category; use split_line). On a line that is not shared, unshare changes nothing. Returns undo_kind reassign and unshared true; undo puts the shares and the shared role back.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       project_id: { type: ["string", "null"] },
       category_id: { type: "string" },
       remember: { type: "boolean" },
+      unshare: { type: "boolean" },
     }, true),
     toolSpec("assign_expense_split", "Split one expense across projects. Each share is a whole percent (share; shares sum to 100) or an exact amount in cents (amount_minor; all shares then give amount_minor and sum to the line exactly: parts must sum to the line, parts exceed the line). Optional category_id sets the category like assign_expense.", {
       idempotency_key: { type: "string" },
@@ -265,7 +266,7 @@ function writeTools() {
       category_id: { type: "string" },
       shares: SHARES_SPEC,
     }, true),
-    toolSpec("assign_expenses", "Assign up to 200 expenses in one write. Partial success is allowed. A row with shares[] splits that expense like assign_expense_split. A row with only transaction_id and parts[] runs split_line on that line (same parts; parts [] clears the split); its undo_kind is line_split. remember needs project_id on the same row. undo_batch with the returned batch_key undoes the rows that succeeded.", {
+    toolSpec("assign_expenses", "Assign up to 200 expenses in one write. Partial success is allowed. A row with shares[] splits that expense like assign_expense_split. A row with only transaction_id and parts[] runs split_line on that line (same parts; parts [] clears the split); its undo_kind is line_split. remember needs project_id on the same row. unshare (with project_id; not with shares or parts) moves a shared line to that one project as assign_expense does, category_id then optional. undo_batch with the returned batch_key undoes the rows that succeeded.", {
       idempotency_key: { type: "string" },
       items: {
         type: "array",
@@ -276,6 +277,7 @@ function writeTools() {
             project_id: { type: "string" },
             category_id: { type: "string" },
             remember: { type: "boolean" },
+            unshare: { type: "boolean" },
             shares: SHARES_SPEC,
             parts: LINE_PARTS_SPEC,
           },

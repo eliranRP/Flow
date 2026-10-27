@@ -160,7 +160,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   get_cash_lines: new Set(["month", "side", "currency", "limit", "offset"]),
   match_lines: new Set(["rows", "window_days", "direction", "currency"]),
   ...FORECAST_ALLOWED, ...PROJECT_FORECAST_ALLOWED, ...BANK_ALLOWED, ...LEDGER_ALLOWED, ...THREAD_ALLOWED,
-  assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
+  assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember", "unshare"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
   set_expense_category: new Set(["idempotency_key", "transaction_id", "category_id"]),
@@ -237,9 +237,9 @@ export const assignSchema = z.object({
   transaction_id: UUID_TEXT,
   // Optional: a line under a kept-out category needs no project (the RPC checks it).
   project_id: UUID_TEXT.nullable().optional(),
-  category_id: UUID_TEXT,
+  category_id: UUID_TEXT.optional(), unshare: z.boolean().optional(), // FLOW-150: a shared line keeps its category
   remember: z.boolean().optional(),
-}).strict();
+}).strict().refine((body) => body.category_id != null || body.unshare === true);
 // A share is a whole percent (share) or, since FLOW-346, an exact amount_minor (cents).
 const splitShareSchema = z.object({
   project_id: UUID_TEXT,
@@ -573,13 +573,14 @@ const batchItemSchema = z.object({
   project_id: UUID_TEXT.optional(),
   category_id: UUID_TEXT.optional(),
   remember: z.boolean().optional(),
+  unshare: z.boolean().optional(),
   shares: SPLIT_SHARES.optional(),
   parts: z.array(linePartSchema).optional(),
 }).strict().superRefine((item, ctx) => {
   if (item.parts != null) {
     // A split_line row takes only transaction_id and parts[] (FLOW-312).
     if (
-      item.shares != null || item.project_id != null || item.category_id != null || item.remember != null
+      item.shares != null || item.project_id != null || item.category_id != null || item.remember != null || item.unshare != null
     ) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "a parts row takes only transaction_id and parts" });
       return;
@@ -590,7 +591,7 @@ const batchItemSchema = z.object({
   }
   if (item.shares != null) {
     // A split row names its projects in shares[]; category_id is optional like assign_expense_split.
-    if (item.project_id != null || item.remember != null || !sharesAreValid(item.shares)) {
+    if (item.project_id != null || item.remember != null || item.unshare != null || !sharesAreValid(item.shares)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom });
     }
     return;
@@ -598,7 +599,8 @@ const batchItemSchema = z.object({
   if (item.project_id == null && item.category_id == null) {
     ctx.addIssue({ code: z.ZodIssueCode.custom });
   }
-  if (item.project_id != null && item.category_id == null) {
+  // FLOW-150: unshare moves a shared line to its row's one project, keeping its category.
+  if (item.project_id != null ? item.category_id == null && item.unshare !== true : item.unshare === true) {
     ctx.addIssue({ code: z.ZodIssueCode.custom });
   }
   // remember saves a project for the supplier, so a category-only row can't take it (FLOW-205).

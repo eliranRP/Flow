@@ -81,7 +81,7 @@ insert into pg_allowed (sig) values
     ('mcp_accounts()'),
     ('mcp_line_legs(uuid)'),
     ('mcp_assign_expense_split(text,uuid,jsonb,uuid)'),
-    ('mcp_assign_expense(text,uuid,uuid,uuid,boolean)'),
+    ('mcp_assign_expense(text,uuid,uuid,uuid,boolean,boolean)'),
     ('mcp_assign_expenses(text,jsonb)'),
     ('mcp_attach_document(text,uuid,jsonb)'),
     ('mcp_attach_loan_payment(text,uuid,uuid,jsonb)'),
