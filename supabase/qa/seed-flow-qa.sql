@@ -7,8 +7,9 @@
 -- Guards (the runbook's):
 -- - The target is the one company named 'Flow QA', not a demo, owned by the QA login. Any other
 --   result stops the run before a write.
--- - Every insert names that company id. Other companies are only counted (count(*) per company),
---   never read.
+-- - Every insert names that company id. Of other companies it reads only the companies row's
+--   name, owner and demo flag (to find Flow QA and skip demos) and count(*) per table, never
+--   their rows.
 -- - Writes that the app makes through an RPC (loan and line splits) go through that RPC, as the
 --   QA login, so every app rule applies. Every other insert passes the tables' checks and
 --   triggers; nothing is disabled.
@@ -29,6 +30,21 @@ returns uuid
 language sql
 immutable
 as $$ select md5(p_company::text || ':' || p_table || ':' || p_n)::uuid; $$;
+
+-- The first p_k seeded numbers n whose row (id pg_temp.qa_id) is not in the table yet, so a
+-- deleted seeded row is filled again and new rows never collide with old ones.
+create or replace function pg_temp.qa_free(p_company uuid, p_table text, p_k integer)
+returns setof integer
+language plpgsql
+as $$
+begin
+  if p_k > 0 then
+    return query execute format(
+      'select g from generate_series(1, $3 + (select count(*)::integer from public.%I where company_id = $1)) g where not exists (select 1 from public.%I x where x.company_id = $1 and x.id = pg_temp.qa_id($1, $2, g)) order by g limit $3',
+      p_table, p_table) using p_company, p_table, p_k;
+  end if;
+end;
+$$;
 
 -- A deterministic number in [0, 1) for a key, so a re-run builds the same rows.
 create or replace function pg_temp.qa_r(p_key text)
@@ -75,11 +91,8 @@ declare
   ref integer;
   n_now integer;
   k integer;
-  s integer;
   r record;
   loan record;
-  i integer;
-  m integer;
   pay_month integer;
   txn uuid;
   bal bigint;
@@ -145,31 +158,25 @@ begin
   -- Customers and suppliers.
   select target - (select count(*) from public.customers where company_id = qa) into k from pg_temp.qa_seed_report where tbl = 'customers';
   if k > 0 then
-    select count(*) into s from public.customers where company_id = qa
-      and id in (select pg_temp.qa_id(qa, 'customers', g) from generate_series(1, k + 100000) g);
     insert into public.customers (id, company_id, name)
     select pg_temp.qa_id(qa, 'customers', g), qa,
       'QA ' || pg_temp.qa_pick(first_names, 'cf' || g) || ' ' || pg_temp.qa_pick(last_names, 'cl' || g) || ' ' || g
-    from generate_series(s + 1, s + k) g
+    from pg_temp.qa_free(qa, 'customers', k) g
     on conflict do nothing;
   end if;
 
   select target - (select count(*) from public.suppliers where company_id = qa) into k from pg_temp.qa_seed_report where tbl = 'suppliers';
   if k > 0 then
-    select count(*) into s from public.suppliers where company_id = qa
-      and id in (select pg_temp.qa_id(qa, 'suppliers', g) from generate_series(1, k + 100000) g);
     insert into public.suppliers (id, company_id, name)
     select pg_temp.qa_id(qa, 'suppliers', g), qa,
       'QA ' || pg_temp.qa_pick(last_names, 'sl' || g) || ' ' || pg_temp.qa_pick(trades, 'st' || g) || ' ' || g
-    from generate_series(s + 1, s + k) g
+    from pg_temp.qa_free(qa, 'suppliers', k) g
     on conflict do nothing;
   end if;
 
   -- Projects: properties with a purchase price and an after-repair value.
   select target - (select count(*) from public.projects where company_id = qa) into k from pg_temp.qa_seed_report where tbl = 'projects';
   if k > 0 then
-    select count(*) into s from public.projects where company_id = qa
-      and id in (select pg_temp.qa_id(qa, 'projects', g) from generate_series(1, k + 1000) g);
     insert into public.projects (id, company_id, name, status, purchase_minor, arv_minor, investment_currency, finished_on)
     select pg_temp.qa_id(qa, 'projects', g), qa,
       'QA ' || pg_temp.qa_pick(streets, 'ps' || g) || ' ' || (2 + floor(pg_temp.qa_r('pn' || g) * 90))::integer || ' ' || g,
@@ -178,15 +185,13 @@ begin
       (15000000 + floor(pg_temp.qa_r('pa' || g) * 60000000))::bigint,
       cur,
       case when pg_temp.qa_r('pf' || g) < 0.2 then span_end - 30 end
-    from generate_series(s + 1, s + k) g
+    from pg_temp.qa_free(qa, 'projects', k) g
     on conflict do nothing;
   end if;
 
   -- Categories (each one also gets its ledger account from the categories trigger).
   select target - (select count(*) from public.categories where company_id = qa) into k from pg_temp.qa_seed_report where tbl = 'categories';
   if k > 0 then
-    select count(*) into s from public.categories where company_id = qa
-      and id in (select pg_temp.qa_id(qa, 'categories', g) from generate_series(1, k + 1000) g);
     insert into public.categories (id, company_id, name, kind, sort_order)
     select pg_temp.qa_id(qa, 'categories', g), qa,
       case when g % 4 = 0
@@ -195,18 +200,16 @@ begin
       end,
       case when g % 4 = 0 then 'income'::public.category_kind else 'expense'::public.category_kind end,
       1000 + g
-    from generate_series(s + 1, s + k) g
+    from pg_temp.qa_free(qa, 'categories', k) g
     on conflict do nothing;
   end if;
 
   -- Accounts beyond the categories' own: cash boxes.
   select target - (select count(*) from public.accounts where company_id = qa) into k from pg_temp.qa_seed_report where tbl = 'accounts';
   if k > 0 then
-    select count(*) into s from public.accounts where company_id = qa
-      and id in (select pg_temp.qa_id(qa, 'accounts', g) from generate_series(1, k + 1000) g);
     insert into public.accounts (id, company_id, name, type)
     select pg_temp.qa_id(qa, 'accounts', g), qa, 'QA קופה ' || g, 'asset'
-    from generate_series(s + 1, s + k) g
+    from pg_temp.qa_free(qa, 'accounts', k) g
     on conflict do nothing;
   end if;
 
@@ -226,8 +229,6 @@ begin
   -- Loans: mostly amortizing, some interest-only and balloon, in the company currency.
   select target - (select count(*) from public.loans where company_id = qa) into k from pg_temp.qa_seed_report where tbl = 'loans';
   if k > 0 then
-    select count(*) into s from public.loans where company_id = qa
-      and id in (select pg_temp.qa_id(qa, 'loans', g) from generate_series(1, k + 1000) g);
     insert into public.loans (
       id, company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor,
       escrow_minor, currency, project_id, kind, interest_only_months, amortization_months, sort_order
@@ -252,7 +253,7 @@ begin
         case when pg_temp.qa_r('le' || g) < 0.5 then 0 else (15000 + floor(pg_temp.qa_r('lx' || g) * 25000))::bigint end as escrow,
         span_start + floor(pg_temp.qa_r('ld' || g) * span_days * 0.4)::integer as start_date,
         project_ids[1 + floor(pg_temp.qa_r('lj' || g) * array_length(project_ids, 1))::integer] as project_id
-      from generate_series(s + 1, s + k) g
+      from pg_temp.qa_free(qa, 'loans', k) g
     ) l
     on conflict do nothing;
   end if;
@@ -273,7 +274,7 @@ begin
         and (l.start_date + make_interval(months => 6 * st.step))::date <= span_end
         and not exists (
           select 1 from public.loan_rates lr
-          where lr.loan_id = l.id and lr.effective_date = (l.start_date + make_interval(months => 6 * st.step))::date
+          where lr.company_id = qa and lr.loan_id = l.id and lr.effective_date = (l.start_date + make_interval(months => 6 * st.step))::date
         )
     ) x
     where x.rn <= k
@@ -296,7 +297,7 @@ begin
         exit months when paid >= wanted;
         continue when (loan.start_date + make_interval(months => pay_month))::date > span_end;
         txn := pg_temp.qa_id(qa, 'loanpay:' || loan.id, pay_month);
-        continue when exists (select 1 from public.transactions t where t.id = txn);
+        continue when exists (select 1 from public.transactions t where t.company_id = qa and t.id = txn);
         select b.balance_minor into bal from public.loan_balances b where b.company_id = qa and b.loan_id = loan.id;
         bal := coalesce(bal, loan.principal_minor);
         continue when bal <= 0;
@@ -338,8 +339,6 @@ begin
   -- Everyday lines: expenses (to one project, shared across projects, or overhead) and income.
   select target - (select count(*) from public.transactions where company_id = qa) into k from pg_temp.qa_seed_report where tbl = 'transactions';
   if k > 0 then
-    select count(*) into s from public.transactions where company_id = qa
-      and id in (select pg_temp.qa_id(qa, 'transactions', g) from generate_series(1, k + 100000) g);
     insert into public.transactions (
       id, company_id, direction, doc_kind, pnl_role, amount_gross, amount_net, vat_amount, vat_status,
       doc_date, cash_date, source, idempotency_key, project_id, customer_id, supplier_id, category_id,
@@ -349,8 +348,8 @@ begin
       case when x.direction = 'income' then 'invoice_receipt'::public.doc_kind else 'expense'::public.doc_kind end,
       x.role::public.pnl_role, x.amount, x.amount, 0, 'derived', x.doc_date, x.doc_date, 'manual',
       'qa-seed:txn:' || x.g, x.project_id, x.customer_id, x.supplier_id, x.category_id,
-      coalesce((select c.name from public.customers c where c.id = x.customer_id),
-               (select p.name from public.suppliers p where p.id = x.supplier_id), ''),
+      coalesce((select c.name from public.customers c where c.company_id = qa and c.id = x.customer_id),
+               (select p.name from public.suppliers p where p.company_id = qa and p.id = x.supplier_id), ''),
       not x.open_review, x.open_review, not x.open_review, not x.open_review, cur, '{"qa_seed": true}'
     from (
       select g, pg_temp.qa_id(qa, 'transactions', g) as id, y.direction, y.open_review,
@@ -369,7 +368,7 @@ begin
         case when y.direction = 'income'
              then income_cats[1 + floor(pg_temp.qa_r('tk' || g) * array_length(income_cats, 1))::integer]
              else expense_cats[1 + floor(pg_temp.qa_r('tk' || g) * array_length(expense_cats, 1))::integer] end as category_id
-      from generate_series(s + 1, s + k) g
+      from pg_temp.qa_free(qa, 'transactions', k) g
       cross join lateral (
         select case when pg_temp.qa_r('tdir' || g) < 0.2 then 'income' else 'expense' end as direction,
           pg_temp.qa_r('trole' || g) as rr,
@@ -384,16 +383,16 @@ begin
     select qa, t.id, t.project_id, 10000, t.amount_net
     from public.transactions t
     where t.company_id = qa and t.idempotency_key like 'qa-seed:txn:%' and t.pnl_role = 'project'
-      and not exists (select 1 from public.allocations a where a.transaction_id = t.id);
+      and not exists (select 1 from public.allocations a where a.company_id = qa and a.transaction_id = t.id);
     insert into public.overhead (company_id, transaction_id)
     select qa, t.id
     from public.transactions t
     where t.company_id = qa and t.idempotency_key like 'qa-seed:txn:%' and t.pnl_role = 'overhead'
-      and not exists (select 1 from public.overhead o where o.transaction_id = t.id);
+      and not exists (select 1 from public.overhead o where o.company_id = qa and o.transaction_id = t.id);
 
     select count(*) into shared_n from public.transactions t
     where t.company_id = qa and t.idempotency_key like 'qa-seed:txn:%' and t.pnl_role = 'shared'
-      and not exists (select 1 from public.allocations a where a.transaction_id = t.id);
+      and not exists (select 1 from public.allocations a where a.company_id = qa and a.transaction_id = t.id);
     select target - (select count(*) from public.allocations where company_id = qa) into alloc_needed
     from pg_temp.qa_seed_report where tbl = 'allocations';
     per_shared := least(greatest(ceil(greatest(alloc_needed, 0)::numeric / greatest(shared_n, 1))::integer, 2),
@@ -401,16 +400,15 @@ begin
     if shared_n > 0 and per_shared >= 2 then
       insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
       select qa, t.id,
-        project_ids[1 + ((t.base + j * t.step) % array_length(project_ids, 1))],
+        project_ids[1 + ((t.base + j) % array_length(project_ids, 1))],
         (10000 / per_shared) + case when j = 0 then 10000 % per_shared else 0 end,
         (t.amount_net / per_shared) + case when j = 0 then t.amount_net % per_shared else 0 end
       from (
         select t.id, t.amount_net,
-          floor(pg_temp.qa_r('sb' || t.id) * array_length(project_ids, 1))::integer as base,
-          1 as step
+          floor(pg_temp.qa_r('sb' || t.id) * array_length(project_ids, 1))::integer as base
         from public.transactions t
         where t.company_id = qa and t.idempotency_key like 'qa-seed:txn:%' and t.pnl_role = 'shared'
-          and not exists (select 1 from public.allocations a where a.transaction_id = t.id)
+          and not exists (select 1 from public.allocations a where a.company_id = qa and a.transaction_id = t.id)
       ) t
       cross join generate_series(0, per_shared - 1) j;
     end if;
@@ -424,8 +422,8 @@ begin
       from public.transactions t
       where t.company_id = qa and t.idempotency_key like 'qa-seed:txn:%' and t.pnl_role = 'overhead'
         and t.user_assigned
-        and not exists (select 1 from public.line_splits l where l.transaction_id = t.id)
-        and not exists (select 1 from public.review_queue q where q.transaction_id = t.id)
+        and not exists (select 1 from public.line_splits l where l.company_id = qa and l.transaction_id = t.id)
+        and not exists (select 1 from public.review_queue q where q.company_id = qa and q.transaction_id = t.id)
       order by t.idempotency_key
       limit ceil(k / 2.0)::integer
     loop
@@ -447,8 +445,8 @@ begin
       from public.transactions t
       where t.company_id = qa and t.idempotency_key like 'qa-seed:txn:%' and t.pnl_role = 'overhead'
         and t.user_assigned and abs(t.amount_net) >= 300
-        and not exists (select 1 from public.line_splits l where l.transaction_id = t.id)
-        and not exists (select 1 from public.review_queue q where q.transaction_id = t.id and q.status = 'open')
+        and not exists (select 1 from public.line_splits l where l.company_id = qa and l.transaction_id = t.id)
+        and not exists (select 1 from public.review_queue q where q.company_id = qa and q.transaction_id = t.id and q.status = 'open')
       order by t.idempotency_key desc
       limit ceil(k / 2.0)::integer
     loop
@@ -479,13 +477,14 @@ begin
                   when pg_temp.qa_r('rs' || t.id) < 0.75 then 'approved' else 'skipped' end as status
     ) x
     where t.company_id = qa and t.idempotency_key like 'qa-seed:%'
-      and not exists (select 1 from public.review_queue q where q.transaction_id = t.id)
+      and not exists (select 1 from public.review_queue q where q.company_id = qa and q.transaction_id = t.id)
     order by t.idempotency_key
     limit k;
   end if;
 
   -- Open seeded review rows carry a suggestion from Flow QA's newest Jev model, so Jev does not
-  -- spend a call on them.
+  -- spend a call on them. Not counted against a target: the unique (transaction_id,
+  -- model_version) key makes a re-run add only the missing ones.
   select ts.model_version into model from public.tag_suggestions ts
   where ts.company_id = qa order by ts.created_at desc limit 1;
   if model is not null then
@@ -498,7 +497,7 @@ begin
           'confidence', 0.85, 'probabilities', jsonb_build_object(t.category_id::text, 0.85))),
       0.8, model, model
     from public.transactions t
-    join public.review_queue q on q.transaction_id = t.id and q.status = 'open'
+    join public.review_queue q on q.company_id = qa and q.transaction_id = t.id and q.status = 'open'
     where t.company_id = qa and t.idempotency_key like 'qa-seed:%' and t.category_id is not null
     on conflict do nothing;
   end if;
@@ -510,7 +509,7 @@ begin
     select qa, t.id, 'flow', qa_owner, pg_temp.qa_pick(note_bodies, 'nb' || t.id)
     from public.transactions t
     where t.company_id = qa and t.idempotency_key like 'qa-seed:txn:%'
-      and not exists (select 1 from public.transaction_notes n where n.transaction_id = t.id and n.removed_at is null)
+      and not exists (select 1 from public.transaction_notes n where n.company_id = qa and n.transaction_id = t.id and n.removed_at is null)
     order by t.idempotency_key
     limit k;
   end if;
@@ -522,7 +521,7 @@ begin
       (40000 + floor(pg_temp.qa_r('fb' || t.id) * 400000))::bigint, qa_owner
     from public.transactions t
     where t.company_id = qa and t.idempotency_key like 'qa-seed:txn:%'
-      and not exists (select 1 from public.transaction_files f where f.transaction_id = t.id)
+      and not exists (select 1 from public.transaction_files f where f.company_id = qa and f.transaction_id = t.id)
     order by t.idempotency_key desc
     limit k
     on conflict do nothing;
@@ -531,13 +530,13 @@ begin
   select target - (select count(*) from public.jev_prefills where company_id = qa) into k from pg_temp.qa_seed_report where tbl = 'jev_prefills';
   if k > 0 then
     insert into public.jev_prefills (id, company_id, transaction_id, model_version, confidence, project_id, category_id)
-    select pg_temp.qa_id(qa, 'jev_prefills', t.rn::integer), qa, t.id, coalesce(model, 'qa-seed'), 0.9, t.project_id, t.category_id
+    select pg_temp.qa_id(qa, 'jev_prefills:' || t.id, 1), qa, t.id, coalesce(model, 'qa-seed'), 0.9, t.project_id, t.category_id
     from (
-      select t.id, t.project_id, t.category_id, row_number() over (order by t.idempotency_key) as rn
+      select t.id, t.project_id, t.category_id
       from public.transactions t
       where t.company_id = qa and t.idempotency_key like 'qa-seed:txn:%' and t.category_id is not null
         and t.user_assigned
-        and not exists (select 1 from public.jev_prefills p where p.transaction_id = t.id)
+        and not exists (select 1 from public.jev_prefills p where p.company_id = qa and p.transaction_id = t.id)
       limit k
     ) t
     on conflict do nothing;
@@ -546,8 +545,6 @@ begin
   -- Forecast edits: planned income and costs per project.
   select target - (select count(*) from public.project_forecast_edits where company_id = qa) into k from pg_temp.qa_seed_report where tbl = 'project_forecast_edits';
   if k > 0 then
-    select count(*) into s from public.project_forecast_edits where company_id = qa
-      and id in (select pg_temp.qa_id(qa, 'project_forecast_edits', g) from generate_series(1, k + 10000) g);
     insert into public.project_forecast_edits (id, company_id, project_id, kind, category_id, direction, amount_minor, pace, start_month, created_by)
     select pg_temp.qa_id(qa, 'project_forecast_edits', g), qa,
       project_ids[1 + (g % array_length(project_ids, 1))], 'add',
@@ -558,7 +555,7 @@ begin
       pg_temp.qa_pick(array['once', 'month', '2months', 'quarter', 'year'], 'fp' || g),
       to_char(span_end + make_interval(months => g % 9), 'YYYY-MM'),
       qa_owner
-    from generate_series(s + 1, s + k) g
+    from pg_temp.qa_free(qa, 'project_forecast_edits', k) g
     on conflict do nothing;
   end if;
 
