@@ -56,8 +56,8 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   await page.goto("/e2e/business?preview=1");
   await page.getByRole("button", { name: "שם העסק: בדיקה" }).click();
   const rename = page.getByRole("dialog", { name: "שם העסק" });
-  await expect(rename.getByLabel("שם")).toHaveValue("בדיקה");
-  await rename.getByLabel("שם").fill("בדיקה חדשה");
+  await expect(rename.getByRole("textbox", { name: "השם כפי שיופיע" })).toHaveValue("בדיקה");
+  await rename.getByRole("textbox", { name: "השם כפי שיופיע" }).fill("בדיקה חדשה");
   await rename.getByRole("button", { name: "שמירת השם" }).click();
   await toast(page, previewToast);
   await rename.getByRole("button", { name: "סגירה" }).click();
