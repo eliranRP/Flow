@@ -19,7 +19,7 @@ import { REFRESH_DONE } from "../use-sumit-refresh";
 import { useSyncSettled } from "../use-sync-settled";
 import { screenPhase } from "../query-phase";
 import { Button } from "../ui/button";
-import { ConnectionHead, ConnectionNote, ConnectionPage, StepList } from "../ui/connection-page";
+import { ConnectionHead, ConnectionNote, ConnectionPage, focusConnectionTitle, StepList } from "../ui/connection-page";
 import { BankIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenState } from "../ui/screen-state";
@@ -250,7 +250,8 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
       disconnect.mutate({ slot: connection.slot, hold });
     }
     go({}, true);
-    toast.show({ message: GONE, action: "ביטול", onAction: () => { hold.cancel(); } });
+    focusConnectionTitle();
+    toast.show({ message: GONE, action: "ביטול", onAction: () => { hold.cancel(); focusConnectionTitle(); } });
   };
 
   const keyForm = (reconnect: boolean, onCancel?: () => void) => (

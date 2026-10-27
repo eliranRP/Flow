@@ -11,7 +11,7 @@ import { REFRESH_DONE, useSumitRefresh } from "../use-sumit-refresh";
 import { useSyncSettled } from "../use-sync-settled";
 import { Button } from "../ui/button";
 import { ImportFromField } from "../ui/import-from-field";
-import { ConnectionFacts, ConnectionHead, ConnectionNote, ConnectionPage, StepList } from "../ui/connection-page";
+import { ConnectionFacts, ConnectionHead, ConnectionNote, ConnectionPage, focusConnectionTitle, StepList } from "../ui/connection-page";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenState } from "../ui/screen-state";
 import { TextField } from "../ui/text-field";
@@ -177,7 +177,8 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
     if (holdOwner || blocked()) return;
     const hold = holdForUndo();
     disconnect.mutate(hold);
-    toast.show({ message: "SUMIT נותק. מה שכבר נכנס נשמר", action: "ביטול", onAction: () => { hold.cancel(); } });
+    focusConnectionTitle();
+    toast.show({ message: "SUMIT נותק. מה שכבר נכנס נשמר", action: "ביטול", onAction: () => { hold.cancel(); focusConnectionTitle(); } });
   };
 
   const syncLine = view.lastSync ?? israelSyncPhrase(live ? sumit.data?.last_sync_at : null, now);

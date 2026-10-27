@@ -242,8 +242,11 @@ describe("Mercury page: the synced accounts, a new account, several connections 
     fireEvent.click(await screen.findByRole("button", { name: "ניתוק" }));
     expect(await screen.findByText("Mercury נותק. מה שכבר נכנס נשמר")).toBeInTheDocument();
     expect(screen.getByLabelText("מפתח API")).toBeInTheDocument();
+    // The tapped button is gone, so focus is on the page title, not lost.
+    expect(screen.getByRole("heading", { name: "Mercury" })).toHaveFocus();
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     expect(await screen.findByRole("button", { name: "ניתוק" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Mercury" })).toHaveFocus();
     expect(rpcArgs("disconnect_connector")).toEqual([]);
   });
 

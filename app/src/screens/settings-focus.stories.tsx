@@ -28,9 +28,12 @@ function bodyOf(canvasElement: HTMLElement) {
   return within(canvasElement.ownerDocument.body);
 }
 
-/** The SUMIT page's ניתוק confirm: closing it puts focus back on the button. */
+/**
+ * Decision 0223: ניתוק has no confirm. The button goes away with the connection, so focus moves to the page
+ * title; ביטול brings the connection back, and focus is on the title again, not lost with the toast.
+ */
 export const SumitDisconnectFocus: Story = {
-  name: "SUMIT disconnect, close returns focus",
+  name: "SUMIT disconnect, focus goes to the title, and stays there after ביטול",
   render: () => (
     <StoryRoute entry="/settings/connections/sumit">
       <ConnectionDetailPage provider="sumit" sample={{ state: "connected", companyId: "1234567", lastSync: "היום, 06:05" }} />
@@ -39,12 +42,15 @@ export const SumitDisconnectFocus: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = bodyOf(canvasElement);
-    const disconnect = canvas.getByRole("button", { name: "ניתוק" });
-    await userEvent.click(disconnect);
-    const confirm = await body.findByRole("dialog", { name: "לנתק את SUMIT?" });
-    await userEvent.click(within(confirm).getByRole("button", { name: "סגירה" }));
-    await waitFor(() => expect(confirm).not.toBeInTheDocument());
-    await waitFor(() => expect(disconnect).toHaveFocus());
+    const title = canvas.getByRole("heading", { name: "SUMIT" });
+    await userEvent.click(canvas.getByRole("button", { name: "ניתוק" }));
+    await expect(body.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() => expect(canvas.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument());
+    await waitFor(() => expect(title).toHaveFocus());
+    await body.findByText("SUMIT נותק. מה שכבר נכנס נשמר");
+    await userEvent.click(body.getByRole("button", { name: "ביטול" }));
+    await waitFor(() => expect(canvas.getByRole("button", { name: "ניתוק" })).toBeInTheDocument());
+    await waitFor(() => expect(title).toHaveFocus());
   },
 };
 
