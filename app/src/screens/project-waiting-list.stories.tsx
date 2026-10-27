@@ -1,7 +1,7 @@
 import type { ProjectWaitingRow } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StoryRoute } from "../ui/story-route";
-import { ProjectWaitingList } from "./review-screen";
+import { ProjectWaitingList } from "./review-lists";
 
 /** A project's לאישור list (FLOW-124, FLOW-125): a bank line gets the bank icon, a line out of the P&L the ⊘. Invented data. */
 const meta = {

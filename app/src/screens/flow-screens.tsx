@@ -2,7 +2,8 @@
 // import from the screen's own file in new code.
 export { reviewFocusPath } from "../review-paths";
 export { reviewLineFocus, reviewListPath, rotateReview, queueAfterFocus, ReviewEmpty, reviewHasParty, reviewIsSplit, reviewSplitTitle } from "./review-shared";
-export { resetReviewListFocus, ReviewScreen, ReviewAllList, ProjectWaitingList } from "./review-screen";
+export { resetReviewListFocus, ReviewScreen } from "./review-screen";
+export { ReviewAllList, ProjectWaitingList } from "./review-lists";
 export { type ReviewPreviewWrite, ReviewQueue } from "./review-queue";
 export { ChangeForm } from "./change-form";
 export { AddForm } from "./add-sheet";
