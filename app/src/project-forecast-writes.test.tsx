@@ -3,7 +3,8 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectForecastEdit } from "./project-next-month";
 import { FORECAST_EDITS_KEY } from "./project-next-month-query";
-import { FORECAST_UNDO_MS, useProjectForecastWrites } from "./project-forecast-writes";
+import { FORECAST_UNDO_MS } from "./forecast-toast";
+import { useProjectForecastWrites } from "./project-forecast-writes";
 import { renderWithProviders } from "./test-render";
 
 const rpc = vi.hoisted(() => vi.fn((_name: string, _args?: unknown) => Promise.resolve<{ data: unknown; error: unknown }>({ data: null, error: null })));

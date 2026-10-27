@@ -210,9 +210,13 @@ export function monthForecastSample(kind: ForecastSampleKind): MonthForecastSamp
 /**
  * `board` is the MonthForecast frame; `changed` moves its largest invoice to next month (the
  * MonthForecastChanged frame); `empty` has nothing left to arrive (StatesForecastEmpty); `category` opens
- * לפי קטגוריה with the rent category open (MonthForecastCategory).
+ * לפי קטגוריה with the rent category open (MonthForecastCategory); `failed` is the forecast's failed read and
+ * `offline` the board's figures from 09:41 with no connection (FLOW-970).
  */
-export type BoardForecastVariant = "board" | "changed" | "empty" | "category";
+export type BoardForecastVariant = "board" | "changed" | "empty" | "category" | "failed" | "offline";
+
+/** 09:41 Israel time on the board's day: the moment the offline frame's figures are from. */
+const BOARD_OFFLINE_SINCE = Date.parse("2026-10-11T06:41:00Z");
 
 /**
  * FLOW-141: the dev fixture that matches the board frames: an invented USD company with the same
@@ -296,5 +300,7 @@ export function monthForecastBoardSample(variant: BoardForecastVariant = "board"
     soFar,
     view: category ? "categories" : "items",
     openCategories: category ? ["income:cat-rent"] : [],
+    ...(variant === "failed" ? { failed: true } : {}),
+    ...(variant === "offline" ? { offlineSince: BOARD_OFFLINE_SINCE } : {}),
   };
 }

@@ -95,7 +95,7 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
     fireEvent.change(input, { target: { value: "+$1234567.5x" } });
     expect(input).toHaveValue("+$1,234,567.5");
     fireEvent.change(input, { target: { value: "+$13,000" } });
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת השינוי בצפי" }));
     expect(screen.getByTestId("where").textContent).toBe("/forecast");
     expect(screen.queryByRole("textbox", { name: "סכום צפוי" })).toBeNull();
     await screen.findByText("הצפי עודכן");
@@ -106,6 +106,9 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
         p_patch: { amount_minor: 1300000, due_on: "2026-10-17", moved_out: false },
       });
     });
+    // FLOW-970: the toast hangs under the header, and the write's answer never replaces its ביטול.
+    expect(document.querySelector(".ui-toast-host")).toHaveAttribute("data-place", "top");
+    expect(screen.getByRole("button", { name: "ביטול" })).toBeTruthy();
   });
 
   it("opens the מתי צפוי sheet, and a pick sets the draft and closes it", async () => {
@@ -129,7 +132,7 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
     fireEvent.click(screen.getByRole("button", { name: "מתי צפוי: לא החודש" }));
     fireEvent.click(await screen.findByRole("radio", { name: /^עד 31\/10/ }));
     await sheetGone();
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת השינוי בצפי" }));
     await waitFor(() => {
       expect(rpc).toHaveBeenCalledWith("set_forecast_item", {
         p_month: "2026-10",
@@ -146,7 +149,7 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
     fireEvent.click(screen.getByRole("button", { name: "מתי צפוי: השבוע" }));
     fireEvent.click(await screen.findByRole("radio", { name: /^עד 31\/10/ }));
     // No wait: the sheet is still closing (the page is still behind its modal) and its entry may still be on the history.
-    fireEvent.click(screen.getByRole("button", { name: "שמירה", hidden: true }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת השינוי בצפי", hidden: true }));
     await waitFor(() => { expect(screen.getByTestId("where").textContent).toBe("/forecast"); });
     await waitFor(() => { expect(screen.getByTestId("where").dataset.layers).toBe(""); });
     // Settled: still the list, the page gone and the row back on screen.
@@ -175,7 +178,7 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
     let folded = false;
     const watch = new MutationObserver(() => { folded ||= li.classList.contains("ui-forecast-leaving"); });
     watch.observe(li, { attributes: true, attributeFilter: ["class"] });
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת השינוי בצפי" }));
     await screen.findByText("Northgate Co הועבר לחודש הבא");
     await waitFor(() => { expect(folded).toBe(true); });
     watch.disconnect();
@@ -186,6 +189,23 @@ describe("ForecastItemPage (MonthForecastEdit)", () => {
         p_patch: { moved_out: true },
       });
     });
+  });
+
+  it("a ביטול before the fold ends sends nothing: the move is cancelled, not written then undone", async () => {
+    rpc.mockClear();
+    renderForecast(board());
+    openNorthgate();
+    fireEvent.click(screen.getByRole("button", { name: "מתי צפוי: השבוע" }));
+    fireEvent.click(await screen.findByRole("radio", { name: /^לא החודש/ }));
+    await sheetGone();
+    fireEvent.click(screen.getByRole("button", { name: "שמירת השינוי בצפי" }));
+    await screen.findByText("Northgate Co הועבר לחודש הבא");
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    // Past the fold (280ms) and its two frames: still no write, and the row stays in the list.
+    await new Promise((resolve) => { setTimeout(resolve, 500); });
+    expect(rpc.mock.calls.filter(([name]) => name === "set_forecast_item")).toHaveLength(0);
+    const li = screen.getByRole("button", { name: "Northgate Co, +$12,500" }).closest("li");
+    expect(li).not.toHaveClass("ui-forecast-leaving");
   });
 
   it("Back closes the page and gives the focus back to the row", async () => {

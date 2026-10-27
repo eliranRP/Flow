@@ -9,10 +9,9 @@ import type { DevRoute } from "./types";
  */
 export function DevForecast() {
   const [params] = useSearchParams();
-  // `board` is the USD company that matches the MonthForecast board frame; `state=changed|empty|category` the others.
+  // `board` is the USD company that matches the MonthForecast board frame; `state=changed|empty|category|failed|offline` the others.
   if (params.get("kind") === "board") {
-    const state = params.get("state");
-    const variant = state === "changed" || state === "empty" || state === "category" ? state : "board";
+    const variant = (["changed", "empty", "category", "failed", "offline"] as const).find((state) => state === params.get("state")) ?? "board";
     return <ForecastScreen sample={monthForecastBoardSample(variant)} openWhen={params.get("when") === "1"} />;
   }
   const kind = (["positive", "negative", "moved"] as const).find((k) => k === params.get("kind")) ?? "positive";
