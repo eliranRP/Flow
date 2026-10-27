@@ -1,8 +1,6 @@
 /* Shared components. Colours, type, space, and radii come from the token file. */
 /* Split by area, in cascade order (FLOW-807). The order of these imports is the order of the old
-   single file: keep it. Add a new block to the file for its area, or a new file at the end.
-   FLOW-974: this file loads with Home. A rule that can match only inside an on-demand screen goes
-   in its area's file under ./css-lazy/, which ./lazy.css loads with that screen's chunk. */
+   single file: keep it. Add a new block to the file for its area, or a new file at the end. */
 @import "./css/00-motion.css";
 @import "./css/01-base.css";
 @import "./css/02-fields-sheets.css";
@@ -11,12 +9,15 @@
 @import "./css/05-search-toast.css";
 @import "./css/06-review-card.css";
 @import "./css/06-review-marks.css";
+@import "./css/06-review-list.css";
 @import "./css/07-band-home.css";
 @import "./css/07-band-states.css";
 @import "./css/08-tabbar-empty.css";
 @import "./css/09-sign-in-project.css";
 @import "./css/10-settings-onboarding.css";
+@import "./css/10-settings-connect.css";
 @import "./css/11-month-lists.css";
+@import "./css/13-line-split.css";
 @import "./css/14-review-change.css";
 @import "./css/15-install.css";
 @import "./css/16-transaction.css";
@@ -24,19 +25,36 @@
 @import "./css/18-period-bar.css";
 @import "./css/19-search-screen.css";
 @import "./css/20-banner-slim.css";
+@import "./css/21-category-sheet.css";
 @import "./css/22-edge-back.css";
 @import "./css/23-period-polish.css";
 @import "./css/24-category-groups.css";
+@import "./css/25-investment.css";
+@import "./css/26-loan-row.css";
 @import "./css/27-compact-header.css";
 @import "./css/28-forecast.css";
+@import "./css/28-forecast-categories.css";
+@import "./css/29-loan-detail.css";
+@import "./css/30-prompt-card.css";
 @import "./css/32-project-page.css";
+@import "./css/33-loan-split-editor.css";
 @import "./css/34-swipe-row.css";
 @import "./css/35-team.css";
 @import "./css/36-cash.css";
 @import "./css/40-card.css";
 @import "./css/33-project-flip.css";
 @import "./css/41-rows.css";
+@import "./css/42-icon-row.css";
+@import "./css/43-counted-in.css";
 @import "./css/43-home.css";
 @import "./css/44-parts-bar.css";
+@import "./css/45-project-profit.css";
+@import "./css/45-invoices.css";
+@import "./css/44-add-entry.css";
+@import "./css/46-loans.css";
+@import "./css/47-company-profit.css";
 @import "./css/06-review-board.css";
 @import "./css/48-invite.css";
+@import "./css/49-state-skeletons.css";
+@import "./css/51-next-month.css";
+@import "./css/52-notifications.css";

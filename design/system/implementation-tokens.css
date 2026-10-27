@@ -222,7 +222,7 @@
   --color-switch-off: #DAD3E6;  /* switch track, off (board: Settings switch off; FLOW-512) */
   --color-text: #1D1728;
   --color-text-secondary: #5B536E;
-  --color-text-muted: #746C88;
+  --color-text-muted: #6E6682; /* FLOW-980: 4.71:1 on the raised fill, 4.95:1 on the page, 5.4:1 on white; lighter than secondary text */
   --color-placeholder: #6E6682; /* FLOW-976: a field's prompt, 4.71:1 on the raised fill, 5.4:1 on white; lighter than secondary text */
   --color-loan-interest: #3D3550; /* FLOW-962: a loan bar's interest part, ink, 11.5:1 on white; dark #D9D2E9 */
   --color-accent: #6C2ED6;

@@ -72,9 +72,10 @@ describe("light text and accent on the light background and surface (WCAG AA 4.5
 
 // FLOW-976: a field draws on --color-raised, so its text and its prompt are checked on that fill too,
 // in light and dark. The prompt stays lighter than secondary text, so it does not read as a value.
+// FLOW-980: muted text (hints, dates, an inner box's labels) sits on the raised fill too.
 describe("a field's text and prompt on the raised fill and the surface (WCAG AA 4.5:1)", () => {
   const backgrounds = ["--color-raised", "--color-surface"];
-  const foregrounds = ["--color-text", "--color-text-secondary", "--color-placeholder"];
+  const foregrounds = ["--color-text", "--color-text-secondary", "--color-text-muted", "--color-placeholder"];
 
   for (const [theme, map] of [["light", light], ["dark", dark]] as const) {
     for (const fg of foregrounds) {
@@ -85,9 +86,11 @@ describe("a field's text and prompt on the raised fill and the surface (WCAG AA 
         });
       }
     }
-    it(`${theme}: the prompt is lighter than secondary text on the raised fill`, () => {
+    it(`${theme}: the prompt and muted text are lighter than secondary text on the raised fill`, () => {
       const raised = hexOf(map, "--color-raised");
-      expect(contrast(hexOf(map, "--color-placeholder"), raised)).toBeLessThan(contrast(hexOf(map, "--color-text-secondary"), raised));
+      const secondary = contrast(hexOf(map, "--color-text-secondary"), raised);
+      expect(contrast(hexOf(map, "--color-placeholder"), raised)).toBeLessThan(secondary);
+      expect(contrast(hexOf(map, "--color-text-muted"), raised)).toBeLessThan(secondary);
     });
   }
 });
@@ -105,7 +108,7 @@ describe("light values from the Design guide's Light theme table", () => {
     "--color-tint-strong": "#D9CBF6",
     "--color-text": "#1D1728",
     "--color-text-secondary": "#5B536E",
-    "--color-text-muted": "#746C88",
+    "--color-text-muted": "#6E6682",
     "--color-accent": "#6C2ED6",
     "--color-accent-text": "#6C2ED6",
     "--color-on-accent": "#F6F4FA",

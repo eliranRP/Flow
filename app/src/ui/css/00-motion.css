@@ -42,6 +42,10 @@
   }
 }
 
+.m-push-in {
+  animation: m-push-in var(--motion-page) var(--ease-enter);
+}
+
 @keyframes m-bar-in {
   from {
     transform: translateY(-110%);
@@ -80,6 +84,16 @@
     grid-template-rows: 0fr;
     opacity: 0;
   }
+}
+
+.m-row-leave {
+  display: grid;
+  animation: m-row-leave var(--motion-sheet-out) var(--ease-exit) forwards;
+}
+
+.m-row-leave > * {
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* FLOW-363 (3c), decision 0182: a toast rises 12px as it fades in (--motion-fade), and sinks as it
@@ -127,6 +141,11 @@
   to {
     transform: scaleX(1);
   }
+}
+
+.m-bar-grow {
+  transform-origin: right;
+  animation: m-bar-grow var(--motion-bar-grow) var(--ease-enter) both;
 }
 
 /* No reduced-motion block here: the tokens go to 0ms (sheets 1ms) and the rises to 0, so each

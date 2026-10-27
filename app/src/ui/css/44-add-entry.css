@@ -1,0 +1,512 @@
+/*
+  FLOW-369: the add (+) sheet. The three tiles and the card of rows on the sheet, and the tall add
+  form (fields in the new-loan form's style, the chips, the matched bank line box, the footer with
+  שמירה). Colours, type and spacing come from tokens.
+  FLOW-966 (Add v2): field, chip and dashed edges are the control edge (3:1 and more), placeholders
+  the muted text (4.5:1), every chip and segment 44px, and an error line under each field.
+*/
+.ui-add-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.ui-add-tile {
+  display: flex;
+  min-block-size: 112px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-card-tight);
+  background: var(--color-raised);
+  color: var(--color-text);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color var(--motion-press) var(--ease-standard);
+}
+
+.ui-add-tile:active {
+  background: var(--color-tint-pressed);
+}
+
+.ui-add-tile:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.ui-add-tile-icon {
+  display: flex;
+  color: var(--color-accent);
+}
+
+.ui-add-tile-icon svg {
+  inline-size: 28px;
+  block-size: 28px;
+  stroke-width: 1.6;
+}
+
+.ui-add-tile-name {
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-add-tile-sub {
+  color: var(--color-text-muted);
+  font-size: var(--type-meta-size);
+}
+
+.ui-add-rows {
+  overflow: hidden;
+  border-radius: var(--radius-card-tight);
+  background: var(--color-raised);
+}
+
+/* The menu's rows are text and a chevron, 72px each on the board, with a hairline between them. */
+.ui-add-menu .ui-row {
+  min-block-size: 72px;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-inset-row);
+  gap: var(--space-3);
+}
+
+.ui-add-menu .ui-row + .ui-row {
+  border-block-start: 1px solid var(--color-line);
+}
+
+.ui-add-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-inset-row);
+  padding-block: 0 var(--space-4);
+  padding-inline: 0;
+}
+
+.ui-add-doc {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-card-row);
+  background: var(--color-tint);
+}
+
+/* The attached document drawn as a small sheet of paper: a title line and two text lines. */
+.ui-add-doc-thumb {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-1);
+  inline-size: calc(var(--touch-min));
+  block-size: calc(var(--touch-min) + var(--space-3));
+  padding: var(--space-2) calc(var(--space-1) + var(--space-half));
+  box-sizing: border-box;
+  border-radius: var(--radius-thumb);
+  background: var(--color-paper);
+}
+
+.ui-add-doc-thumb i {
+  block-size: calc(var(--space-1) - var(--space-half) / 2);
+  border-radius: var(--radius-chip);
+  background: var(--color-paper-line);
+}
+
+.ui-add-doc-thumb i:first-child {
+  inline-size: 70%;
+  block-size: var(--space-1);
+  background: var(--color-paper-ink);
+}
+
+.ui-add-doc-text {
+  display: flex;
+  min-inline-size: 0;
+  flex-direction: column;
+  gap: var(--space-half);
+  font-size: var(--type-line2-size);
+}
+
+.ui-add-doc-text .ui-add-hint {
+  color: var(--color-text-secondary);
+}
+
+.ui-add-field {
+  display: flex;
+  min-inline-size: 0;
+  flex-direction: column;
+  gap: calc(var(--space-1) * 1.5);
+}
+
+.ui-add-label {
+  line-height: calc(var(--type-title-line) - 0.05);
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-line2-weight);
+}
+
+.ui-add-hint {
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-add-hint-bad {
+  color: var(--color-bad);
+}
+
+.ui-add-input {
+  block-size: 48px;
+  padding-inline: var(--space-3);
+  border: 1.5px solid var(--color-control-edge);
+  border-radius: var(--radius-input);
+  background: var(--color-raised);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-add-input[dir="ltr"] {
+  text-align: end;
+}
+
+.ui-add-input::placeholder,
+.ui-add-amount-input::placeholder,
+.ui-add-create-input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+.ui-add-input[aria-invalid="true"],
+.ui-add-amount[data-invalid],
+.ui-add-amount[data-invalid]:focus-within {
+  border-color: var(--color-bad);
+}
+
+/* The error under a field: an alert icon and what the field needs (board: 13px, the bad colour). */
+.ui-add-err {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space-1) * 1.5);
+  color: var(--color-bad);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-add-err svg {
+  flex: none;
+}
+
+/* The date's quick picks, היום and אתמול, under the date row. */
+.ui-add-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space-1) * 1.5);
+  margin-block-start: calc(var(--space-inset-row) * -1 + var(--space-1));
+}
+
+.ui-add-input:focus-visible {
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-focus);
+  outline-offset: 0;
+}
+
+/* The currency sits inside the field, at its far side, with the value large (board: 24px value, $ at 17px). */
+.ui-add-amount {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  block-size: 50px;
+  padding-inline: var(--space-3);
+  border: 1.5px solid var(--color-control-edge);
+  border-radius: var(--radius-input);
+  background: var(--color-raised);
+}
+
+.ui-add-amount:focus-within {
+  border-color: var(--color-accent);
+}
+
+/* The amount's ring is the field's, as on the other inputs; the value inside draws none. */
+.ui-add-amount:has(:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 0;
+}
+
+.ui-add-amount .ui-add-amount-input:is(:focus, :focus-visible) {
+  outline: none;
+}
+
+.ui-add-amount-input {
+  flex: 1;
+  min-inline-size: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--type-name-size);
+  font-weight: var(--type-body-weight);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  outline: none;
+}
+
+.ui-add-currency {
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-add-row2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+/* The board: a raised track with 2px padding, and the chosen item a filled tint-strong pill. */
+.ui-add-seg {
+  display: grid;
+  gap: calc(var(--space-1) / 2);
+  padding: calc(var(--space-1) / 2);
+  border-radius: var(--radius-input);
+  background: var(--color-raised);
+}
+
+.ui-add-seg-btn {
+  block-size: var(--touch-min);
+  border: 0;
+  border-radius: var(--radius-seg-btn);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-line2-weight);
+  cursor: pointer;
+}
+
+.ui-add-seg-btn[aria-checked="true"] {
+  background: var(--color-tint-strong);
+  color: var(--color-text);
+}
+
+.ui-add-chips,
+.ui-add-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space-1) * 1.5);
+}
+
+/* The radiogroup holds the chips; the "+ … חדש" button follows it in the same row (a radiogroup holds radios only). */
+.ui-add-chip-group {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+}
+
+/* The form's chips: 44px tall, and an unchosen chip's edge is the control edge, not the faint tint. */
+.ui-add-entry .ui-chip {
+  block-size: var(--touch-min);
+  min-block-size: var(--touch-min);
+}
+
+.ui-add-entry .ui-chip-choice:not([aria-pressed="true"], [aria-checked="true"]) {
+  border-color: var(--color-control-edge);
+}
+
+.ui-add-chip-new {
+  block-size: var(--touch-min);
+  min-block-size: var(--touch-min);
+  padding-inline: var(--space-3);
+  border: 1px dashed var(--color-control-edge);
+  border-radius: var(--radius-chip);
+  background: transparent;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: var(--type-line2-size);
+  cursor: pointer;
+}
+
+.ui-add-create {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-add-create-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ui-add-create-input {
+  min-block-size: var(--control-height);
+  flex: 1;
+  min-inline-size: 0;
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-input);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--type-body-size);
+}
+
+.ui-add-create-add,
+.ui-add-create-cancel {
+  min-block-size: var(--touch-min);
+  padding-inline: var(--space-3);
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: var(--type-line2-size);
+  cursor: pointer;
+}
+
+.ui-add-create-add {
+  color: var(--color-accent-text);
+  font-weight: var(--type-line2-weight);
+}
+
+.ui-add-create-add:disabled {
+  color: var(--color-disabled-text);
+}
+
+.ui-add-create-cancel {
+  color: var(--color-text-secondary);
+}
+
+.ui-add-match {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--color-tint);
+}
+
+.ui-add-match-title {
+  color: var(--color-accent-text);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-line2-weight);
+}
+
+.ui-add-match-line {
+  font-size: var(--type-body-size);
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-add-attach {
+  min-block-size: 52px;
+  border: 1.5px dashed var(--color-control-edge);
+  border-radius: var(--radius-input);
+  background: transparent;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: var(--type-body-size);
+  cursor: pointer;
+}
+
+.ui-add-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-add-error {
+  margin: 0;
+  color: var(--color-bad);
+  font-size: var(--type-caption-size);
+}
+
+.ui-add-save {
+  min-block-size: var(--control-height);
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font: inherit;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-line2-weight);
+  cursor: pointer;
+}
+
+/* The form is a 790px board sheet, 54px below the top of the screen (the panel is 100dvh - 54). The
+   320px keyboard rule of 01-base keeps its 16px gap here too. */
+.ui-add-entry {
+  --sheet-gap: 54px;
+  --sheet-pad-bottom: 0px;
+  --sheet-side: var(--space-side);
+}
+
+@media (max-width: 359px) {
+  :root[data-kb="open"] .ui-add-entry {
+    --sheet-gap: var(--space-4);
+  }
+}
+
+/* The head's rule is the hairline colour (board), not the tint. */
+.ui-add-entry .ui-sheet-head {
+  padding-block: 0;
+  border-block-end: 1px solid var(--color-line);
+}
+
+/* The body takes the height the head and foot leave, and scrolls under the fixed foot. */
+.ui-add-entry .ui-sheet-body {
+  max-height: none;
+}
+
+/* The foot: a hairline above, then the 52px save pill (board: 12 20 24). */
+.ui-add-entry .ui-sheet-foot {
+  padding: var(--space-3) var(--sheet-side) var(--space-6);
+  border-block-start: 1px solid var(--color-line);
+}
+
+/* The head's title and hint sit at their natural line heights (board: 24 and 15). */
+.ui-add-entry .ui-focus-title,
+.ui-add-entry .ui-sheet-subtitle {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+/* The form head starts 4px higher and has 8px under its text; the body opens 4px lower (board). */
+.ui-add-entry .ui-sheet-head {
+  margin-block-start: calc(var(--space-1) * -1);
+  padding-block-end: var(--space-2);
+}
+
+.ui-add-entry .ui-sheet-body {
+  padding-block-start: var(--space-1);
+}
+
+/* The menu: title 9px lower, 24px above the tiles, 14px between the tiles and the rows; the tile text at the board's sizes. */
+.ui-add-menu .ui-sheet-head {
+  margin-block: calc(var(--space-2) + 1px) calc(var(--space-2) + var(--space-1) / 2);
+}
+
+.ui-add-menu .ui-add-rows {
+  margin-block-start: var(--space-inset-row);
+}
+
+.ui-add-menu .ui-focus-title,
+.ui-add-menu .ui-add-tile-name,
+.ui-add-menu .ui-add-tile-sub,
+.ui-add-menu .ui-row-title {
+  line-height: calc(var(--type-title-line) - 0.015);
+}
+
+.ui-add-menu .ui-add-tile-sub {
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+}
+
+/* From a project the menu has a hint under the title: the title sits as on the form, the hint is a 13px muted line. */
+.ui-add-menu .ui-sheet-head:has(+ .ui-sheet-hint) {
+  margin-block: 0 calc(var(--space-inset-row) * -1);
+}
+
+.ui-add-menu .ui-sheet-hint {
+  padding: 0 var(--sheet-side) calc(var(--space-1) / 2);
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: calc(var(--type-title-line) - 0.05);
+}

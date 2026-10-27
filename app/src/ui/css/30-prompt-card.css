@@ -1,0 +1,28 @@
+/* FLOW-502: one quiet yes/no question, e.g. the evening reminder under the review empty state. */
+.ui-prompt-card {
+  width: 100%;
+  max-inline-size: var(--empty-measure);
+  margin: var(--space-6) auto 0;
+  text-align: start;
+}
+
+.ui-prompt-question {
+  margin: 0;
+  font-weight: var(--type-section-weight);
+  overflow-wrap: anywhere;
+  /* FLOW-420: a two-line question splits evenly, so no last word sits alone ("בערב?"). */
+  text-wrap: balance;
+}
+
+.ui-prompt-note {
+  margin: var(--label-gap) 0 0;
+  overflow-wrap: anywhere;
+}
+
+.ui-prompt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}

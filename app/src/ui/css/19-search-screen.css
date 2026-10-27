@@ -1,3 +1,401 @@
+/*
+  FLOW-368: the transaction search. One field at the top with סינון beside it; the active filters
+  sit under it as removable chips. Before anything is typed the start shows the last searches and
+  three ready checks; results follow with the count, a project shortcut and the months.
+*/
+.ui-search-screen {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100dvh;
+  min-inline-size: 0;
+  padding-block-end: calc(var(--safe-bottom) + var(--space-6));
+}
+
+.ui-search-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  /* The board's head: the field 12px below the status bar (--safe-top on an iPhone), 11px from the
+     physical left edge (FLOW-368b, States board). */
+  padding: calc(var(--safe-top) + var(--space-3)) var(--space-4) var(--space-2) calc(var(--space-1) * 2.75);
+  background: var(--color-bg);
+}
+
+.ui-search-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ui-search-form {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.ui-search-form .ui-search {
+  position: relative;
+}
+
+.ui-search-form .ui-search-field {
+  min-block-size: 44px;
+  border: 1.5px solid var(--color-line);
+  background: var(--color-surface);
+  border-radius: var(--radius-button);
+  padding-inline: var(--space-inset-row);
+  gap: var(--space-2);
+}
+
+.ui-search-filter-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 44px;
+  padding: 0 var(--space-1);
+  border: 0;
+  background: none;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: var(--type-btn-size);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-search-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 20px;
+  block-size: 20px;
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-seg-btn);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-name-weight);
+}
+
+.ui-search-back {
+  flex: none;
+}
+
+/* The active filters: one row that scrolls sideways; each chip removes itself on tap. */
+.ui-search-active {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  /* Room for the 44px hit area and the focus ring around the chips, without moving them. */
+  margin-block: calc(var(--space-1) * -1);
+  padding-block: var(--space-1);
+}
+
+.ui-search-active::-webkit-scrollbar {
+  display: none;
+}
+
+.ui-search-active > div {
+  flex: none;
+}
+
+.ui-search-active-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  block-size: 32px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-chip);
+  border: 0;
+  background: var(--color-tint);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--type-chip-size);
+}
+
+/* FLOW-971: each chip is a whole 44px target. */
+.ui-search-active .ui-search-active-chip {
+  block-size: var(--touch-min);
+  min-block-size: var(--touch-min);
+  gap: calc(var(--space-1) * 1.5);
+  padding-inline: calc(var(--space-2) + var(--space-1) / 2) var(--space-3);
+  font-size: var(--type-chip-size);
+  font-weight: var(--type-caption-weight);
+}
+
+.ui-search-active-x {
+  display: inline-flex;
+  color: var(--color-accent-text);
+}
+
+.ui-search-count {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--space-6);
+  margin-block-start: var(--space-2);
+  padding-inline: var(--space-side);
+  color: var(--color-text-secondary);
+}
+
+.ui-search-count .ui-spinner {
+  flex: none;
+}
+
+.ui-search-results {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-inline-size: 0;
+  padding-inline: var(--space-side);
+}
+
+/* Searching: the skeleton rows span the full results width, 16px from each edge of the panel (States board). */
+.ui-search-results:has(.ui-search-searching) { padding-inline: 0; }
+
+.ui-search-more {
+  margin-block-start: var(--space-4);
+}
+
+.ui-search-start {
+  display: flex;
+  flex-direction: column;
+  padding-block: 0 var(--space-6);
+}
+
+.ui-search-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-search-heading {
+  margin: 0;
+  padding-block: var(--space-5) calc(var(--space-1) * 1.5);
+  font-size: var(--type-section-size);
+  font-weight: var(--type-section-weight);
+  line-height: calc(var(--type-section-line) - 0.1);
+  color: var(--color-text);
+}
+
+.ui-search-section + .ui-search-section .ui-search-heading {
+  padding-block-start: calc(var(--space-5) + var(--space-1) / 2);
+}
+
+.ui-search-recent,
+.ui-search-checks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-search-recent-row,
+.ui-search-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-inset-row);
+  inline-size: 100%;
+  min-block-size: 52px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+}
+
+.ui-search-recent-row {
+  font-size: var(--type-body-size);
+}
+
+.ui-search-recent-icon,
+.ui-search-check-chevron {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+/* The check chevrons point the other way from the RTL flip. The clock face stays as drawn. */
+.ui-search-check-chevron svg,
+.ui-search-project-chevron svg {
+  transform: scaleX(-1);
+}
+
+.ui-search-check {
+  min-block-size: 56px;
+}
+
+.ui-search-check-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.ui-search-check-title {
+  font-size: var(--type-body-size);
+}
+
+.ui-search-check-hint {
+  font-size: var(--type-caption-size);
+  color: var(--color-text-muted);
+}
+
+.ui-search-check-count {
+  flex: none;
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-line2-weight);
+  color: var(--color-text-muted);
+}
+
+/* The project shortcut, first in the results when the text names a project. */
+.ui-search-project {
+  display: flex;
+  align-items: center;
+  gap: var(--space-inset-row);
+  min-block-size: 56px;
+  margin-block-start: var(--space-3);
+  padding-block: calc(var(--space-2) + var(--space-1) / 2);
+  border-block-end: 1px solid var(--color-line);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.ui-search-project-tile {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: var(--radius-seg-btn);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-btn-weight);
+}
+
+.ui-search-project-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.ui-search-project-name {
+  font-size: var(--type-body-size);
+  line-height: var(--type-cents-line);
+}
+
+.ui-search-project-hint {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-cents-line);
+  color: var(--color-text-muted);
+}
+
+.ui-search-project-chevron {
+  display: inline-flex;
+  color: var(--color-text-muted);
+}
+
+/* The filter sheet (FLOW-368 §2.4). */
+.ui-search-filter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-inset-row);
+}
+
+.ui-search-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-1) * 1.5);
+}
+
+.ui-search-filter-label {
+  margin: 0;
+  font-size: var(--type-caption-size);
+  line-height: calc(var(--type-caption-size) * 15 / 13);
+  font-weight: var(--type-caption-weight);
+  color: var(--color-text-muted);
+}
+
+.ui-search-filter-projects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space-1) * 1.5);
+}
+
+/* The board's sheet: the title sits 11.5px under the grabber and 8.5px above the filters. */
+.ui-sheet-panel:has(.ui-search-filter) .ui-sheet-head {
+  margin-top: calc(var(--space-1) * 2.875);
+  margin-bottom: calc(var(--space-1) * 2.125);
+}
+
+.ui-search-filter .ui-seg {
+  padding: calc(var(--space-1) / 2);
+  border-radius: var(--radius-input);
+}
+
+/* FLOW-971: the sheet's segments and project chips are 44px targets. */
+.ui-search-filter .ui-seg-btn {
+  --hit-block: var(--touch-min);
+  block-size: var(--touch-min);
+  min-block-size: var(--touch-min);
+}
+
+.ui-search-filter-projects .ui-chip {
+  block-size: var(--touch-min);
+  min-block-size: var(--touch-min);
+}
+
+/* FLOW-971: off, the review switch's track is the outline colour, 3:1 on the sheet. */
+.ui-search-filter .ui-switch-row input:not(:checked) + .ui-switch {
+  background-color: var(--color-track-outline);
+  box-shadow: none;
+}
+
+.ui-search-filter .ui-switch {
+  inline-size: 52px;
+  block-size: 32px;
+}
+
+.ui-search-filter .ui-switch i {
+  inline-size: 26px;
+  block-size: 26px;
+}
+
+.ui-search-head .ui-page-offline {
+  margin-top: 0;
+}
+
+.ui-search-failed {
+  padding-block-start: var(--space-4);
+}
+
+.ui-search-filter .ui-switch-row {
+  margin-block: calc(var(--space-1) / 2);
+}
+
+.ui-search-filter-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ui-search-filter-foot > .ui-btn {
+  flex: 1 1 auto;
+}
+
+.ui-search-filter-clear {
+  min-block-size: 52px;
+  padding: 0 var(--space-4);
+  border: 0;
+  background: none;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: var(--type-btn-size);
+}
+
 /* The typed text inside a result's name: the tint behind it, the row's own text colour. */
 .ui-match {
   background: var(--color-tint);
@@ -32,10 +430,235 @@
   color: var(--color-accent-text);
 }
 
+/* The board's head (not the searching state): the filter text at 20px, the field a 48px pill (FLOW-971),
+   below the status bar on an iPhone (--safe-top). */
+.ui-search-head:not(:has(.ui-search-row-searching)) {
+  padding: calc(var(--safe-top) + var(--space-2)) var(--space-4) calc(var(--space-1) * 2.75) var(--space-5);
+}
+
+.ui-search-row:not(.ui-search-row-searching) {
+  gap: var(--space-3);
+}
+
+.ui-search-row:not(.ui-search-row-searching) .ui-search-back {
+  margin-inline-start: calc(var(--space-3) * -1);
+}
+
+.ui-search-row:not(.ui-search-row-searching) .ui-search-filter-btn {
+  font-size: var(--type-line2-size);
+  padding: 0;
+}
+
+.ui-search-row:not(.ui-search-row-searching) .ui-search-form .ui-search {
+  background: var(--color-surface);
+  border: 1px solid var(--color-tint-strong);
+  border-radius: var(--radius-chip);
+  block-size: 48px;
+  box-sizing: border-box;
+}
+
+.ui-search-row:not(.ui-search-row-searching) .ui-search-form .ui-search-field {
+  border: 0;
+  background: none;
+  min-block-size: 46px;
+}
+
+/* FLOW-971: the placeholder is muted text at 4.5:1 (the browser's grey was 2.75:1). */
+.ui-search-form .ui-search input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+/* The clear X: a 26px disc in the outline colour (3:1), its glyph 14px, centred in its whole 44px hit area. */
+.ui-search-form .ui-search-clear {
+  align-self: center;
+  background: radial-gradient(circle, var(--color-track-outline) 13px, transparent 13.5px);
+}
+
+.ui-search-form .ui-search-clear svg {
+  inline-size: 14px;
+  block-size: 14px;
+}
+
+/* FLOW-368: the count line sits in the scroll area under the head, as on the board (15px muted). */
+.ui-search-results > .ui-search-count {
+  margin: 0;
+  min-block-size: 0;
+  padding: var(--space-4) 0 0;
+  font-size: var(--type-line2-size);
+  line-height: calc(var(--type-line2-size) * 1.2);
+  font-weight: var(--type-body-weight);
+  color: var(--color-text-muted);
+}
+
+/* The board's results: the rows and month heads run the full width of the list (no second inset). */
+.ui-search-results .ui-project-list {
+  padding-inline: 0;
+}
+
+.ui-search-results .ui-month-head {
+  margin-inline: 0;
+  padding: calc(var(--space-1) * 4.5) 0 calc(var(--space-1) * 1.5);
+}
+
+.ui-search-results .ui-month + .ui-month .ui-month-head {
+  margin-block-start: 0;
+}
+
+.ui-search-results .ui-month-title {
+  font-weight: var(--type-section-weight);
+  line-height: calc(var(--space-1) * 6);
+}
+
+.ui-search-results .ui-month-signed {
+  font-size: var(--type-line2-size);
+}
+
+/* A result row is 80px (a note line fits inside): 8px padding, the content centred, the title and lines at the board's line heights. */
+.ui-search-results .ui-row-statement {
+  padding-block: var(--space-2);
+  min-block-size: calc(var(--space-5) * 4);
+}
+
+.ui-search-results .ui-statement-note {
+  line-height: var(--type-cents-line);
+}
+
+.ui-search-results .ui-statement-title {
+  line-height: calc(var(--space-1) * 5);
+}
+
+.ui-search-results .ui-statement-line {
+  line-height: calc(var(--space-1) * 4.5);
+}
+
+.ui-search-results .ui-statement-line .ui-hint-part {
+  line-height: calc(var(--space-1) * 4.5);
+}
+
+.ui-search-results .ui-row-text {
+  gap: calc(var(--space-1) / 2);
+}
+
+/* Line 2 stays on one line and ends in "…" (board). */
+.ui-search-results .ui-statement-details {
+  flex-wrap: nowrap;
+}
+
+.ui-search-results .ui-statement-details .ui-hint-part {
+  min-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 /* The line-3 note: a state to act on, in the accent, 13px, on its own line. */
 .ui-statement-note {
   display: block;
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
   color: var(--color-accent-text);
+}
+
+/* The month's signed total: one muted figure at the end of the head. */
+.ui-month-head:has(.ui-month-signed) {
+  justify-content: space-between;
+}
+
+.ui-month-signed {
+  margin: 0;
+  font-size: var(--type-body-size);
+  color: var(--color-text-muted);
+}
+
+/* Empty: the name searched, one muted line, and a text link when filters are on. */
+.ui-search-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: calc(var(--space-10) + var(--space-6)) var(--space-3) 0;
+  text-align: center;
+}
+
+.ui-search-empty-title {
+  margin: 0;
+  font-size: var(--type-section-size);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-search-empty-body {
+  margin: 0;
+  font-size: var(--type-line2-size);
+  line-height: calc(var(--type-line2-line) + 0.1);
+  color: var(--color-text-muted);
+}
+
+/* The field's cancel link, shown while the first read loads. */
+.ui-search-cancel {
+  flex: none;
+  min-block-size: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--type-line2-size);
+  color: var(--color-accent-text);
+  text-decoration: none;
+}
+
+/* Searching: the note, then five skeleton rows of the board's row shape. */
+.ui-search-searching-note {
+  margin: 0;
+  padding: calc(var(--space-1) * 1.5) var(--space-4) calc(var(--space-1) * 0.75);
+  font-size: var(--type-caption-size);
+  color: var(--color-text-muted);
+}
+
+.ui-search-skel-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-search-skel-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: 64px;
+  padding: var(--space-2) var(--space-4);
+}
+
+.ui-search-skel-avatar {
+  flex: none;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: 50%;
+}
+
+.ui-search-skel-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-search-skel-bar-long,
+.ui-search-skel-bar-short,
+.ui-search-skel-end {
+  display: block;
+  block-size: 12px;
+  border-radius: var(--radius-chip);
+}
+
+.ui-search-skel-bar-long { inline-size: 58%; }
+.ui-search-skel-bar-short { inline-size: 38%; block-size: 10px; }
+.ui-search-skel-end { flex: none; inline-size: 64px; }
+
+/* Line 2 of a result is 15px muted (board), one line. */
+.ui-search-results .ui-statement-details {
+  font-size: var(--type-line2-size);
+}
+
+/* The first read's field: no outline, a filled box with the spinner at its end (board StatesSearching). */
+.ui-search-row-searching .ui-search-field {
+  border-color: transparent;
+  background: var(--color-skeleton);
 }

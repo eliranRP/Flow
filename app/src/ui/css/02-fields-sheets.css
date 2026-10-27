@@ -2,6 +2,99 @@
   text-wrap: pretty;
 }
 
+/* FLOW-115: the amount and its currency are one field: the control sits --space-2 under the input. */
+.ui-loan-amount-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* FLOW-115: the loan form's shape while the company currency loads. */
+.ui-loan-skel-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-loan-skel-control {
+  display: block;
+  inline-size: 100%;
+  block-size: var(--touch-min);
+  border-radius: var(--radius-input);
+}
+
+.ui-loan-caution {
+  color: var(--color-warning);
+}
+
+/* FLOW-115: the שיוך row's height while the loans load: the eyebrow, the title and the hint the row
+   always has, so nothing moves when the read lands. */
+.ui-loan-skel .ui-row {
+  min-height: calc(
+    2 * var(--row-pad)
+    + 2 * var(--type-line2-size) * var(--type-line2-line)
+    + var(--type-btn-size) * var(--type-btn-line)
+  );
+}
+
+/* FLOW-115: loan list and loan page rows while they load: the two text lines every loaded row has
+   (title and hint, or eyebrow and title), so the list does not grow when the read lands. */
+.ui-loan-skel-rows .ui-row {
+  min-height: calc(
+    2 * var(--row-pad)
+    + var(--type-line2-size) * var(--type-line2-line)
+    + var(--type-btn-size) * var(--type-btn-line)
+  );
+}
+
+/* A loading line on the loan page keeps its text style's line height around the bar. */
+.ui-loan-skel-line {
+  display: flex;
+  align-items: center;
+  min-block-size: 1lh;
+  margin: 0;
+}
+
+/* The status pill's height (it holds one line of chip text) at about a short status's width. */
+.ui-loan-skel-pill {
+  inline-size: 4.5rem;
+}
+
+/* A loan's balance in a row's meta slot: the list amount size, not the hint size the slot sets,
+   so its agorot (.ui-num-cents) are not 7.8px (FLOW-339). */
+.ui-loan-amount {
+  color: var(--color-text);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: var(--type-body-weight);
+  white-space: nowrap;
+}
+
+.ui-num-field {
+  direction: ltr;
+  text-align: right;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-date-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  text-align: start;
+}
+
+.ui-date-field .ui-num {
+  flex: 1;
+  direction: ltr;
+  text-align: right;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-date-field:disabled {
+  cursor: not-allowed;
+}
+
 .ui-row-hint {
   display: block;
   overflow-wrap: anywhere;
@@ -123,6 +216,10 @@
   flex-grow: 1;
 }
 
+.ui-nowrap {
+  white-space: nowrap;
+}
+
 /* HintParts (FLOW-415): whole parts that wrap, with no "·" at either end of a line. Every part pads
    1em at its start, and each part but the first puts its dot box in that pad; the inner row starts
    1em before the clip, so the box of a part that opens a line is cut off.
@@ -214,6 +311,11 @@
   overflow-anchor: none;
 }
 
+[data-vaul-drawer].ui-sheet-panel.ui-sheet-fit {
+  height: auto !important;
+  padding-bottom: 0;
+}
+
 [data-vaul-drawer].ui-sheet-panel.ui-sheet-tall {
   height: calc(var(--vvh, 100dvh) - var(--sheet-gap)) !important;
   max-height: calc(var(--vvh, 100dvh) - var(--sheet-gap)) !important;
@@ -222,6 +324,11 @@
 
 .ui-sheet-tall .ui-sheet-body {
   max-height: none;
+}
+
+/* A fit sheet's panel has no bottom padding, so its last body carries the gap. */
+.ui-sheet-fit .ui-sheet-body:last-child {
+  padding-block-end: var(--space-4);
 }
 
 /* FLOW-363 (3b): the ✕ glyph is 22px in the secondary text colour (board). */
@@ -244,4 +351,280 @@
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.ui-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--label-gap);
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.ui-field-label {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-caption-line);
+}
+
+.ui-code-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--label-gap);
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.ui-code-field-box {
+  position: relative;
+  inline-size: 100%;
+  min-inline-size: 0;
+  direction: ltr;
+}
+
+.ui-code-field-input {
+  direction: ltr;
+  text-align: start;
+  font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", monospace;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-overflow: clip;
+  user-select: text;
+  touch-action: pan-x;
+}
+
+/* Vaul sets touch-action: none on the drawer. The field has to win so a sideways swipe pans the value. */
+[data-vaul-drawer] .ui-code-field-input {
+  touch-action: pan-x;
+}
+
+.ui-code-field-copy {
+  position: absolute;
+  z-index: 1;
+  /* Sit inside the field border, so the end edge of the box stays clear of the button. */
+  inset-inline-end: var(--stroke-strong);
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--field-copy-width);
+  block-size: var(--touch-min);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.ui-code-field-copy-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  block-size: var(--control-height-sm);
+  inline-size: 100%;
+  padding-inline: var(--field-btn-pad);
+  border-radius: var(--radius-field-btn);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-chip-weight);
+  line-height: var(--type-caption-line);
+  white-space: nowrap;
+}
+
+/* The hit area sits on the field's inner end edge, inside the border. */
+.ui-code-field-copy:focus-visible {
+  outline-offset: -2px;
+}
+
+/* The value is read-only text, so it takes the board's 13px caption size and the line colour. */
+.ui-code-field-input.ui-field-control {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  border-color: var(--color-line);
+}
+
+.ui-code-field-input.ui-field-control:focus {
+  border-color: var(--color-accent);
+}
+
+.ui-field-control {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  block-size: var(--field-height);
+  min-height: var(--touch-min);
+  padding-inline: var(--field-pad);
+  /* FLOW-972: the edge is the control edge, 3:1 and more on the card (the tint was 1.35:1). */
+  border: var(--stroke-strong) solid var(--color-control-edge);
+  border-radius: var(--radius-input);
+  background: var(--color-raised);
+  color: var(--color-text);
+  box-sizing: border-box;
+  font-size: max(16px, var(--type-body-size));
+  font-weight: var(--type-body-weight);
+  transition: border-color var(--motion-fast) var(--ease-standard);
+}
+
+/* After .ui-field-control. That rule's padding-inline would otherwise put the value under the copy button. */
+.ui-code-field-box[data-copy="on"] .ui-code-field-input.ui-field-control {
+  padding-inline-end: calc(var(--field-copy-width) + var(--space-2));
+}
+
+.ui-code-field-box[data-copy="off"] .ui-code-field-input.ui-field-control {
+  padding-inline-end: var(--field-pad);
+}
+
+.ui-money-field.ui-field-control {
+  padding: 0;
+}
+
+/* FLOW-976: a field's prompt reads at 4.5:1 and more on its raised fill (the browser's grey was about 3:1). */
+.ui-field-control::placeholder {
+  color: var(--color-placeholder);
+  opacity: 1;
+}
+
+.ui-field-control:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+/* A field error keeps the border as drawn. The note under the field carries it (FLOW-363 (4)). */
+.ui-field-readonly .ui-field-control {
+  color: var(--color-text-muted);
+}
+
+.ui-field-message {
+  color: var(--color-error);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-caption-line);
+}
+
+.ui-field-error .ui-field-message {
+  color: var(--color-signal-soft);
+}
+
+.ui-field-message-slot {
+  min-block-size: calc(var(--type-caption-size) * var(--type-caption-line));
+}
+
+.ui-money-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  direction: ltr;
+  cursor: text;
+}
+
+.ui-money-lead,
+.ui-percent-suffix {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  color: inherit;
+  pointer-events: none;
+}
+
+.ui-percent-suffix {
+  font-weight: var(--type-title-weight);
+}
+
+/* The prefix sits just to the left of the right-aligned digits: the lead lays out the prefix and a
+   hidden copy of the digits in the input's own font, so commas and the dot keep the gap at 0.35em. */
+.ui-money-lead {
+  inset-inline: var(--field-pad);
+  justify-content: flex-end;
+  gap: 0.35em;
+  overflow: hidden;
+  white-space: pre;
+}
+
+.ui-money-prefix {
+  flex: none;
+  font-weight: var(--type-title-weight);
+}
+
+.ui-money-mirror {
+  visibility: hidden;
+  font-size: max(16px, var(--type-body-size));
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-money-field input {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  inline-size: 100%;
+  block-size: 100%;
+  min-block-size: var(--touch-min);
+  margin: 0;
+  padding-inline: var(--field-pad);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: max(16px, var(--type-body-size));
+  font-variant-numeric: tabular-nums lining-nums;
+  text-align: right;
+  outline: none;
+}
+
+.ui-money-field:focus-within {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+/* FLOW-445: the confirm sheet's explaining line (17/1.5) and its pending warning (signal-soft). */
+.ui-confirm-body {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+}
+
+/* FLOW-922: the percent field of a part (money-field.tsx). */
+.ui-percent-field {
+  flex: 0 0 auto;
+  inline-size: auto;
+  min-inline-size: 96px;
+  max-inline-size: 100%;
+}
+
+.ui-percent-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  inline-size: auto;
+  width: auto;
+  min-inline-size: 96px;
+  block-size: var(--field-height);
+  height: var(--field-height);
+  padding-inline: var(--field-pad);
+  border-radius: var(--radius-input);
+  font-size: var(--type-btn-size);
+}
+
+.ui-percent-suffix {
+  inset-inline-end: var(--space-3);
+  color: var(--color-text-secondary);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-percent-field .ui-money-field input {
+  padding-inline-end: 1.75em;
+  font-size: inherit;
+  text-align: right;
+  white-space: nowrap;
 }

@@ -1,0 +1,78 @@
+/*
+  FLOW-363 (4): IconRow, a fact row on a detail page. It is a `.ui-row` (press, focus and the
+  disabled look come from there), with the board's icon, label and value. Values come from tokens.
+*/
+.ui-icon-row {
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-min);
+  padding-block: var(--space-3);
+  padding-inline: var(--space-inset-row);
+  border: 0;
+  background: transparent;
+  font: inherit;
+}
+
+.ui-icon-row-icon {
+  display: flex;
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.ui-icon-row-icon svg {
+  stroke-width: 1.8;
+}
+
+.ui-icon-row-text {
+  display: flex;
+  flex: 1;
+  min-inline-size: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+  text-align: start;
+}
+
+.ui-icon-row-label,
+.ui-icon-row-hint {
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  font-weight: var(--type-caption-weight);
+}
+
+.ui-icon-row-value-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.ui-icon-row-value {
+  min-inline-size: 0;
+  color: var(--color-text);
+  font-size: var(--type-btn-2-size);
+  line-height: var(--type-btn-2-line);
+  font-weight: var(--type-btn-2-weight);
+  overflow-wrap: anywhere;
+}
+
+.ui-icon-row-value-accent {
+  color: var(--color-accent-text);
+}
+
+.ui-icon-row-end {
+  display: flex;
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.ui-icon-row-warning :is(.ui-icon-row-hint, .ui-icon-row-icon) {
+  color: var(--color-warning);
+}
+
+/* The brief keeps the global ring on IconRow, so this undoes the row rule's `outline: none` (01-base.css). */
+.ui-icon-row:is(:focus-visible, [data-focus-ring]:focus) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}

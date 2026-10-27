@@ -1,3 +1,216 @@
+.ui-seg {
+  display: flex;
+  max-width: 100%;
+  min-width: 0;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--radius-segment);
+  background: var(--color-raised);
+}
+
+.ui-seg-input {
+  inline-size: 100%;
+  border-radius: var(--radius-input);
+}
+
+.ui-seg-btn {
+  /* FLOW-363 (3c): the 40px button takes taps across the track's padding, so the whole 48px track is hit. */
+  --hit-block: var(--size-seg-track);
+  position: relative;
+  block-size: var(--size-seg);
+  min-block-size: var(--size-seg);
+  min-width: 0;
+  flex: 1;
+  padding-inline: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-seg-btn);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--type-chip-size);
+  line-height: var(--type-chip-line);
+  font-weight: var(--type-chip-weight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), opacity var(--motion-press) var(--ease-linear);
+}
+
+.ui-seg-label {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-seg-btn:active {
+  opacity: .72;
+}
+
+.ui-seg-btn:is([aria-checked="true"], [aria-selected="true"]) {
+  background: var(--color-tint-strong);
+  color: var(--color-text);
+}
+
+/* A period switch on the page (the loans summary, the company profit page): its track is the card tone (the
+   board's), with 9px segments. */
+.ui-period-switch .ui-seg {
+  background: var(--color-surface);
+}
+
+.ui-period-switch .ui-seg-btn {
+  border-radius: var(--radius-seg-btn-page);
+}
+
+/* A save is running (busy): the other segments read as unavailable, but stay focusable. */
+.ui-seg[aria-busy="true"] .ui-seg-btn {
+  cursor: not-allowed;
+}
+
+.ui-seg[aria-busy="true"] .ui-seg-btn[aria-checked="false"] {
+  color: var(--color-disabled-text);
+}
+
+.ui-chip {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  block-size: var(--size-chip);
+  min-block-size: var(--size-chip);
+  align-items: center;
+  gap: var(--space-1);
+  padding-inline: var(--field-pad);
+  border-radius: var(--radius-chip);
+  border: var(--stroke-strong) solid var(--color-tint-strong);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--type-chip-size);
+  line-height: var(--type-chip-line);
+  font-weight: var(--type-chip-weight);
+  transition: background-color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), opacity var(--motion-press) var(--ease-linear);
+}
+
+.ui-chip-spark {
+  flex: none;
+}
+
+/* FLOW-363 (3c): a press fades the chip; a selected chip is the tint-strong fill with an accent border, no tick. */
+.ui-chip:active:not(:disabled) {
+  opacity: .72;
+}
+
+.ui-chip-suggested {
+  background: var(--color-tint);
+  color: var(--color-text);
+}
+
+.ui-chip-spark {
+  color: var(--color-accent-text);
+}
+
+.ui-chip-choice {
+  background: transparent;
+  /* FLOW-965: an unselected chip's edge meets 3:1 on the page (the tint was 1.4:1). The outlined controls'
+     edge (FLOW-963, the + form's chips in FLOW-966): 4.7:1 on white, 5.4:1 on the dark page. */
+  border-color: var(--color-control-edge);
+  color: var(--color-text);
+}
+
+.ui-chip:is([aria-pressed="true"], [aria-checked="true"]) {
+  background: var(--color-tint-strong);
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+.ui-chip-disabled {
+  border-color: var(--color-line);
+  color: var(--color-disabled-text);
+}
+
+/* FLOW-363 (2b): a status is coloured text or a 6px dot, never a filled chip. */
+.ui-status {
+  display: inline-flex;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  align-items: center;
+  gap: var(--status-gap);
+  color: var(--color-text-secondary);
+}
+
+.ui-status-accent {
+  color: var(--color-accent-text);
+}
+
+.ui-status-signal {
+  color: var(--color-signal);
+}
+
+.ui-status-dot {
+  flex: none;
+  inline-size: var(--dot);
+  block-size: var(--dot);
+  border-radius: 50%;
+  background: var(--color-text-secondary);
+}
+
+/* With a dot the words stay secondary; the dot carries the tone (the board: #E8A598 on the signal). */
+.ui-status-dot-accent {
+  background: var(--color-accent-text);
+}
+
+.ui-status-dot-signal {
+  background: var(--color-signal-soft);
+}
+
+.ui-status-icon {
+  display: inline-flex;
+  flex: none;
+}
+
+/* FLOW-363 (2b): a thin bar is 6px, rounded; the thin and default variants are one bar. */
+.ui-bar {
+  height: var(--bar-thin);
+  overflow: hidden;
+  border-radius: var(--radius-chip);
+  background: var(--color-tint);
+}
+
+/* The grow wrapper runs m-bar-grow once on mount; the fill eases to a new value with scaleX. */
+.ui-bar-grow {
+  height: 100%;
+}
+
+.ui-bar-fill {
+  height: 100%;
+  background: var(--color-accent);
+  transform-origin: right;
+  transition: transform var(--motion-width) var(--ease-standard);
+}
+
+.ui-bar-fill[data-over="true"] {
+  background: var(--color-bad);
+}
+
+.ui-meter-label {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 .ui-num {
   white-space: nowrap;
+}
+
+/* FLOW-965 (Lines v2), shared with the profit pages (FLOW-969): an order-chip row (ui/order-chips.tsx) is 44px chips, 14px sides, a 1.5px edge at 3:1, 15/600 type (the type
+   scale's line size at the name weight). */
+.ui-order-chips .ui-chip {
+  block-size: var(--touch-min);
+  min-block-size: var(--touch-min);
+  gap: var(--space-2);
+  padding-inline: var(--space-inset-row);
+  border-width: var(--stroke-strong);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-chip-line);
+  font-weight: var(--type-name-weight);
 }

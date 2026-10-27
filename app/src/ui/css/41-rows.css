@@ -53,6 +53,14 @@
   font-weight: var(--type-caption-weight);
 }
 
+.ui-tag-pending {
+  color: var(--color-text-secondary);
+}
+
+.ui-tag-aside {
+  color: var(--color-accent-text);
+}
+
 /* A project row's end side holds the amount, and a muted line under it (FLOW-367: an open invoice's age). */
 .ui-row-end {
   display: flex;

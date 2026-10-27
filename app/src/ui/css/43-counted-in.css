@@ -1,0 +1,19 @@
+/* FLOW-366: the counted-in row's sheet (guide §7.10). The two switch rows sit on the raised colour,
+   and the footer says the change is for this line only. Values come from the tokens. */
+.ui-counted-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ui-counted-switch {
+  min-block-size: var(--row-height);
+  padding: var(--space-2) var(--space-inset-row);
+  border-radius: var(--radius-seg-btn);
+  background: var(--color-raised);
+}
+
+.ui-counted-note {
+  margin: 0;
+  color: var(--color-text-muted);
+}
