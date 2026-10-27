@@ -143,24 +143,8 @@ function AppRoutes() {
             <Route path="/sign-in" element={<SignInScreen />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/preview" element={<Navigate to="/?preview=1" replace />} />
-            <Route
-              path="/terms"
-              element={
-                <LegalScreen
-                  title="תנאי השימוש"
-                  body="Flow שומר את נתוני העסק שלכם אצלכם. תנאי השימוש המלאים יפורסמו לפני ההשקה."
-                />
-              }
-            />
-            <Route
-              path="/privacy"
-              element={
-                <LegalScreen
-                  title="מדיניות הפרטיות"
-                  body="בכניסה עם Google אנחנו מקבלים רק שם ואימייל. אין גישה לתיבת הדואר."
-                />
-              }
-            />
+            <Route path="/terms" element={<LegalScreen kind="terms" />} />
+            <Route path="/privacy" element={<LegalScreen kind="privacy" />} />
             <Route path="/help" element={<HelpScreen />} />
             {import.meta.env.DEV ? (
               <>

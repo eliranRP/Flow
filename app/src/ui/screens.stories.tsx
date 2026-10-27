@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { HelpScreen } from "../screens/HelpScreen";
+import { LegalScreen } from "../screens/LegalScreen";
 import { AddForm } from "../screens/flow-screens";
 import { SignInScreen } from "../screens/SignInScreen";
 import { InstallScreen } from "./install-screen";
@@ -46,6 +47,23 @@ export const Help: Story = {
   render: () => (
     <StoryRoute entry="/help">
       <HelpScreen />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-979 (decision 0225): the live legal pages in the reading style; the lawyer's draft is never shown. */
+export const Terms: Story = {
+  render: () => (
+    <StoryRoute entry="/terms">
+      <LegalScreen kind="terms" />
+    </StoryRoute>
+  ),
+};
+
+export const Privacy: Story = {
+  render: () => (
+    <StoryRoute entry="/privacy">
+      <LegalScreen kind="privacy" />
     </StoryRoute>
   ),
 };

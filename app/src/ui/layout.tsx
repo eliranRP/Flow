@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { useGoBack } from "./back";
 import { FocusTitle } from "./focus-title";
 import { Button } from "./button";
 
@@ -71,19 +70,3 @@ export function HelpMail({ email }: { email: string }) {
   );
 }
 
-export function HelpBack({ to = "/sign-in" }: { to?: string }) {
-  const goBack = useGoBack();
-  return (
-    <p className="ui-page-pad">
-      <Button
-        variant="link"
-        quiet
-        onClick={() => {
-          goBack(to);
-        }}
-      >
-        חזרה
-      </Button>
-    </p>
-  );
-}

@@ -27,7 +27,7 @@ export { SyncStrip } from "./sync-strip";
 export { MonthGrid } from "./month-grid";
 export { ScreenState } from "./screen-state";
 export { MoneyField } from "./money-field";
-export { FormError, HelpBack, HelpMail, SectionHead, SignInActions, SignInBrand, SignInFrame, SignInHeading, SignInPanel, SignInPrivacy, SignInTagline } from "./layout";
+export { FormError, HelpMail, SectionHead, SignInActions, SignInBrand, SignInFrame, SignInHeading, SignInPanel, SignInPrivacy, SignInTagline } from "./layout";
 export { ScreenHeader } from "./screen-header";
 export { ReviewCard } from "./review-card";
 export { JevTag, SuggestTag } from "./suggest-tag";

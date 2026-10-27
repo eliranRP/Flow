@@ -348,6 +348,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-973"></a>[FLOW-973](tasks/FLOW-973.md) | One under-the-header toast helper | cleanup |
 | <a id="flow-975"></a>[FLOW-975](tasks/FLOW-975.md) | Connections v2: the UX/UI rules review of Mercury, SUMIT and AI | UI (design approved) |
 | <a id="flow-976"></a>[FLOW-976](tasks/FLOW-976.md) | First use v2: the UX/UI rules review of sign-in and setup | UI (design approved) |
+| <a id="flow-979"></a>[FLOW-979](tasks/FLOW-979.md) | Rare screens v2: help, terms and privacy, the push question, the reviewer view | UI (design approved) |
 | <a id="flow-365"></a>[FLOW-365](tasks/FLOW-365.md) | Redesign: the review queue (לאישור) without a tab | UI (design approved) |
 | <a id="flow-921"></a>[FLOW-921](tasks/FLOW-921.md) | Review queue: a server transfer flag, approve as a transfer, and the document thumbnail | Server + UI |
 | <a id="flow-366"></a>[FLOW-366](tasks/FLOW-366.md) | Redesign: month lines (נכנס / יצא) and the transaction page | UI (design approved) |
@@ -481,6 +482,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-814"></a>[FLOW-814](tasks/FLOW-814.md) | A migration that main overtook fails in seconds, and one command renames it | SMALL CYCLE |
 | <a id="flow-815"></a>[FLOW-815](tasks/FLOW-815.md) | Headroom under the Home entry size budget | SMALL CYCLE |
 | <a id="flow-974"></a>[FLOW-974](tasks/FLOW-974.md) | Each lazy screen's styles load with its chunk | SMALL CYCLE |
+| <a id="flow-978"></a>[FLOW-978](tasks/FLOW-978.md) | Deleting a company also deletes its attached files | SMALL CYCLE (data) |
 | <a id="flow-816"></a>[FLOW-816](tasks/FLOW-816.md) | The project-open speed check scales to the container in local gates | SMALL CYCLE |
 | <a id="flow-817"></a>[FLOW-817](tasks/FLOW-817.md) | Docs-only merges don't count toward the deploy batch | SMALL CYCLE |
 | <a id="flow-818"></a>[FLOW-818](tasks/FLOW-818.md) | vitest 4 bump (dependabot #566, #567) | SMALL CYCLE |
