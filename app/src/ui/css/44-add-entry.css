@@ -175,7 +175,7 @@
 .ui-add-input::placeholder,
 .ui-add-amount-input::placeholder,
 .ui-add-create-input::placeholder {
-  color: var(--color-text-muted);
+  color: var(--color-placeholder);
   opacity: 1;
 }
 
