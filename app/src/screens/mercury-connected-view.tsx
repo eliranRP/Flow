@@ -43,7 +43,7 @@ export function MercuryConnectedView({
   onRefresh: () => void;
   onReplaceKey: () => void;
   onAdd: () => void;
-  onDisconnect: (event: { currentTarget: HTMLElement }) => void;
+  onDisconnect: () => void;
 }) {
   const summary = syncedSummary(connection);
   const fresh = readOnly ? undefined : newAccounts(connection)[0];
@@ -58,7 +58,8 @@ export function MercuryConnectedView({
       <BankIcon size={22} />
       <span className="ui-merc-row-text">
         <span className="ui-merc-row-title">חשבונות מסונכרנים</span>
-        <bdi dir="ltr" className="ui-merc-row-sub ui-merc-row-names">{summary.names}</bdi>
+        {/* One line with an ellipsis, as the board draws it; the count beside it says how many (FLOW-975). */}
+        <bdi dir="ltr" className="ui-merc-row-sub ui-merc-row-names" data-clip-ok>{summary.names}</bdi>
       </span>
       <span className="ui-merc-row-value">{summary.count}</span>
     </>

@@ -34,6 +34,14 @@ export function ConnectionPage({
   );
 }
 
+/**
+ * Decision 0223: a disconnect takes away the ניתוק button that was tapped, and its ביטול takes away the
+ * toast; focus goes to the page title, so a keyboard or screen reader is not left on nothing.
+ */
+export function focusConnectionTitle(): void {
+  document.querySelector<HTMLElement>(".ui-connection-page .ui-focus-title")?.focus({ preventScroll: true });
+}
+
 /** A numbered head above a card or a field group: "1 · מוצאים את הפרטים ב־SUMIT". */
 export function ConnectionHead({ children }: { children: ReactNode }) {
   return <h2 className="ui-settings-head">{children}</h2>;

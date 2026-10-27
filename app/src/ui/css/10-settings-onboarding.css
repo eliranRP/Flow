@@ -465,12 +465,13 @@
   padding-inline-end: calc(var(--space-10) + var(--space-3));
 }
 
-/* Level with the input: the label sits above the 48px box, so the pill centres on the box, not the wrap. */
+/* Level with the input: the label sits above the 48px box, so the pill centres on the box, not the wrap.
+   44px tall, a whole target (decision 0223). */
 .ui-secret-toggle {
   position: absolute;
   inset-inline-end: var(--space-2);
-  top: calc(var(--type-caption-size) * var(--type-caption-line) + var(--label-gap) + (var(--field-height) - var(--control-height-sm)) / 2);
-  min-block-size: var(--control-height-sm);
+  top: calc(var(--type-caption-size) * var(--type-caption-line) + var(--label-gap) + (var(--field-height) - var(--touch-min)) / 2);
+  min-block-size: var(--touch-min);
   padding: 0 var(--space-3);
   border: 0;
   border-radius: var(--radius-field-btn);

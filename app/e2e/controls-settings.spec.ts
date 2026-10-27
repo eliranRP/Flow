@@ -88,9 +88,11 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   await page.goto("/e2e/connections/sumit?preview=1");
   await page.getByRole("button", { name: "רענון עכשיו" }).click();
   await toast(page, previewToast);
+  // FLOW-975: ניתוק has no confirm (decision 0223); a preview says so and disconnects nothing.
   await page.getByRole("button", { name: "ניתוק" }).click();
-  await page.getByRole("dialog", { name: "לנתק את SUMIT?" }).getByRole("button", { name: "ניתוק" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await toast(page, previewToast);
+  await expect(page.getByRole("button", { name: "רענון עכשיו" })).toBeVisible();
 
   await page.goto("/e2e/settings?preview=1&nocompany=1");
   await expect(page.getByText("owner@example.com")).toBeVisible();

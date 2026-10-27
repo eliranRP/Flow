@@ -25,12 +25,13 @@ import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { Button } from "../ui/button";
 import { Skeleton } from "../ui/skeleton";
-import { forgetThisDevice, NO_PREFS, pushConfigured, useNotificationPrefsQuery, type NotificationPrefs } from "../push";
+import { forgetThisDevice, NO_PREFS, pushConfigured, type NotificationPrefs, useNotificationPrefsQuery, within } from "../push";
 import { notificationsHint } from "./notifications-screen";
 import { themeChoiceLabel, THEME_TITLE } from "../ui/theme-choices";
 import { readThemeChoice, writeThemeChoice, type ThemeChoice } from "../theme-store";
 import { ThemeSheet } from "./theme-sheet";
 import { SettingsOfflineLine, SIGN_OUT_OFFLINE, useOfflineRefusal } from "./settings-offline";
+import { flushDisconnects } from "../connection-undo";
 
 /** Shown on `/settings?preview=` when the value is not `empty` and no sample is passed. */
 const previewAccountName = "בית הספר אלון";
@@ -213,6 +214,9 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
     run: async () => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
+      // Decision 0223: a disconnect still waiting on its ביטול goes out while the session still works.
+      // A server that does not answer cannot hold the sign-out: the same 5s as the push step below.
+      await within(flushDisconnects(), 5000);
       // FLOW-516: an explicit sign-out drops this device's push, here and on the server, while the
       // session still works. It never blocks the sign-out (each step has a timeout).
       await forgetThisDevice({ server: true });

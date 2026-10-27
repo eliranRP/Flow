@@ -1,9 +1,9 @@
 import { onlineManager, QueryClient } from "@tanstack/react-query";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defaultPeriod } from "../period";
 import { renderWithProviders } from "../test-render";
-import { backend, DASHBOARD, resetBackend, serve, sumitStatus } from "./connection-page-test-backend";
+import { backend, DASHBOARD, invokeEdge, resetBackend, serve, sumitStatus } from "./connection-page-test-backend";
 import { renderPage } from "./connection-page-test-support";
 import { ConnectionDetailPage } from "./connection-pages";
 
@@ -91,40 +91,98 @@ describe("SUMIT page: a failed status read, and where focus goes (FLOW-918)", ()
   });
 });
 
-describe("SUMIT page: focus after ניתוק (FLOW-918)", () => {
-  async function openDisconnect() {
+describe("SUMIT page: ניתוק at once, with ביטול (decision 0223)", () => {
+  async function disconnectNow() {
     serve({ sumit: CONNECTED });
     renderPage("sumit");
-    const disconnect = await screen.findByRole("button", { name: "ניתוק" });
-    fireEvent.click(disconnect);
-    await screen.findByRole("dialog", { name: "לנתק את SUMIT?" });
-    return disconnect;
+    fireEvent.click(await screen.findByRole("button", { name: "ניתוק" }));
+    expect(await screen.findByText("SUMIT נותק. מה שכבר נכנס נשמר")).toBeInTheDocument();
   }
 
-  it("returns to the ניתוק button after Escape", async () => {
-    const disconnect = await openDisconnect();
-    fireEvent.keyDown(document, { key: "Escape" });
-    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "לנתק את SUMIT?" })).not.toBeInTheDocument(); });
-    await waitFor(() => { expect(disconnect).toHaveFocus(); });
+  /** Leaving the app ends the 5s wait at once, the same as running out. */
+  function hide() {
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  }
+
+  afterEach(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
   });
 
-  it("returns to the ניתוק button after a tap outside the sheet", async () => {
-    const disconnect = await openDisconnect();
-    const scrim = document.querySelector(".ui-sheet-scrim") ?? document.body;
-    fireEvent.pointerDown(scrim);
-    fireEvent.pointerUp(scrim);
-    fireEvent.click(scrim);
-    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "לנתק את SUMIT?" })).not.toBeInTheDocument(); });
-    await waitFor(() => { expect(disconnect).toHaveFocus(); });
+  it("shows the form at once and keeps the key on the server while ביטול is offered", async () => {
+    await disconnectNow();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("מפתח API")).toBeInTheDocument();
+    expect(backend.calls).not.toContain("disconnect_sumit");
+    // End the wait here, so this test's disconnect does not run in the next one.
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
   });
 
-  it("returns to the ניתוק button after confirming, and says what stays", async () => {
-    const disconnect = await openDisconnect();
-    fireEvent.click(within(screen.getByRole("dialog", { name: "לנתק את SUMIT?" })).getByRole("button", { name: "ניתוק" }));
+  it("puts the connection back on ביטול and never deletes the key", async () => {
+    await disconnectNow();
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    expect(await screen.findByRole("button", { name: "רענון עכשיו" })).toBeInTheDocument();
+    hide();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(backend.calls).not.toContain("disconnect_sumit");
+  });
+
+  it("deletes the key once the wait ends", async () => {
+    await disconnectNow();
+    hide();
     await waitFor(() => { expect(backend.calls).toContain("disconnect_sumit"); });
-    expect(await screen.findByText("SUMIT נותק. מה שכבר נכנס נשמר")).toBeInTheDocument();
-    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "לנתק את SUMIT?" })).not.toBeInTheDocument(); });
-    await waitFor(() => { expect(disconnect).toHaveFocus(); });
+  });
+});
+
+describe("SUMIT page: during ביטול's wait (decision 0223)", () => {
+  it("sends the waiting disconnect before a new key, so the new key is not deleted", async () => {
+    serve({ sumit: CONNECTED });
+    let before: string[] = [];
+    invokeEdge.mockImplementation(() => { before = [...backend.calls]; return Promise.resolve({ ok: true }); });
+    renderPage("sumit");
+    fireEvent.click(await screen.findByRole("button", { name: "ניתוק" }));
+    fireEvent.change(screen.getByLabelText("מספר חברה"), { target: { value: "1234567" } });
+    fireEvent.change(screen.getByLabelText("מפתח API"), { target: { value: "sumit-key-123" } });
+    fireEvent.click(screen.getByRole("button", { name: "חיבור" }));
+    await waitFor(() => { expect(invokeEdge).toHaveBeenCalledWith("sumit-connect", expect.anything() as unknown); });
+    expect(before).toContain("disconnect_sumit");
+  });
+
+  it("still shows SUMIT leaving on a second visit while ביטול waits", async () => {
+    serve({ sumit: CONNECTED });
+    const { unmount } = renderPage("sumit");
+    fireEvent.click(await screen.findByRole("button", { name: "ניתוק" }));
+    unmount();
+    renderPage("sumit");
+    expect(await screen.findByLabelText("מפתח API")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "רענון עכשיו" })).not.toBeInTheDocument();
+    expect(backend.calls).not.toContain("disconnect_sumit");
+  });
+});
+
+describe("SUMIT page: what is missing is said and focused (decision 0223)", () => {
+  it("names the company number when it is the short one, announces it and focuses that field", async () => {
+    serve({ sumit: sumitStatus({ connected: false }) });
+    renderPage("sumit");
+    fireEvent.change(await screen.findByLabelText("מפתח API"), { target: { value: "sumit-key-123" } });
+    fireEvent.click(screen.getByRole("button", { name: "חיבור" }));
+    const company = screen.getByLabelText("מספר חברה");
+    expect(company).toHaveFocus();
+    const note = screen.getByText("צריך מספר חברה (6 ספרות לפחות) ומפתח מלא");
+    expect(note).toHaveAttribute("aria-live", "polite");
+    expect(company.getAttribute("aria-describedby")).toContain(note.id);
+  });
+
+  it("focuses the key, and announces it, when SUMIT refuses it", async () => {
+    serve({ sumit: sumitStatus({ connected: false }) });
+    invokeEdge.mockRejectedValueOnce(new Error("sumit_auth"));
+    renderPage("sumit");
+    fireEvent.change(await screen.findByLabelText("מספר חברה"), { target: { value: "1234567" } });
+    fireEvent.change(screen.getByLabelText("מפתח API"), { target: { value: "sumit-key-123" } });
+    fireEvent.click(screen.getByRole("button", { name: "חיבור" }));
+    const note = await screen.findByText("SUMIT לא קיבל את המפתח. בדקו את מספר החברה ואת המפתח.");
+    expect(note).toHaveAttribute("aria-live", "polite");
+    expect(screen.getByLabelText("מפתח API")).toHaveFocus();
   });
 });
 
@@ -144,6 +202,18 @@ describe("SUMIT page: reconnect and cached states (FLOW-918)", () => {
     expect(box).toHaveClass("ui-connection-problem");
     expect(screen.getByRole("button", { name: "חיבור מחדש" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "רענון עכשיו" })).not.toBeInTheDocument();
+  });
+
+  it("says under the key when SUMIT refuses it, with no toast, and offers חיבור מחדש (decision 0223)", async () => {
+    serve({ sumit: sumitStatus({ connected: false }) });
+    invokeEdge.mockRejectedValueOnce(new Error("sumit_auth"));
+    renderPage("sumit");
+    fireEvent.change(await screen.findByLabelText("מספר חברה"), { target: { value: "1234567" } });
+    fireEvent.change(screen.getByLabelText("מפתח API"), { target: { value: "sumit-key-123" } });
+    fireEvent.click(screen.getByRole("button", { name: "חיבור" }));
+    expect(await screen.findByText("SUMIT לא קיבל את המפתח. בדקו את מספר החברה ואת המפתח.")).toBeInTheDocument();
+    expect(screen.queryByText("החיבור נכשל. בדקו את המזהה ואת המפתח.")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "חיבור מחדש" })).toBeInTheDocument();
   });
 
   it("keeps a sync failure connected: facts and actions, no problem box", async () => {
@@ -208,7 +278,8 @@ describe("SUMIT page: reconnect and cached states (FLOW-918)", () => {
       unmount();
       renderWithProviders(<ConnectionDetailPage provider="sumit" />, { route: "/settings/connections/sumit?preview=1" });
       expect(screen.getByLabelText("מספר חברה")).toHaveValue("");
-      expect(screen.getByRole("button", { name: "חיבור" })).toBeDisabled();
+      // Never greyed out (decision 0223): a tap says what is missing.
+      expect(screen.getByRole("button", { name: "חיבור" })).toBeEnabled();
       expect(screen.queryByRole("button", { name: RETRY })).not.toBeInTheDocument();
     } finally {
       onlineManager.setOnline(true);

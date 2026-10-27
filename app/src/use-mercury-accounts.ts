@@ -5,6 +5,7 @@ import { LEDGER_KEYS } from "./ledger-keys";
 import { hebrewMercuryError, mercuryRefreshDone } from "./mercury-copy";
 import { useInvalidateBooks } from "./use-books";
 import { useToast } from "./ui/toast";
+import { topToast } from "./ui/top-toast";
 import { assertNoError, useWrite } from "./use-write";
 
 /** How long the save waits for the first sync's count before it says connected without it. */
@@ -38,7 +39,11 @@ function insertedOf(result: unknown): number | null {
  * connect waits a few seconds for the count ("Mercury מחובר · 4 חשבונות · 214 תנועות נכנסו"); a sync
  * that takes longer goes on, and says what came in when it finishes.
  */
-export function useMercuryAccounts({ onSuccess }: { onSuccess?: (save: MercuryAccountsSave) => void } = {}) {
+export function useMercuryAccounts({ onSuccess, place }: {
+  onSuccess?: (save: MercuryAccountsSave) => void;
+  /** The Mercury page puts its toasts under the header (decision 0223); setup's sheet keeps its place. */
+  place?: "top";
+} = {}) {
   const toast = useToast();
   const invalidate = useInvalidateBooks();
   const message = useRef("");
@@ -46,6 +51,7 @@ export function useMercuryAccounts({ onSuccess }: { onSuccess?: (save: MercuryAc
     keys: LEDGER_KEYS,
     failure: (error) => hebrewMercuryError(error.message) ?? "לא הצלחנו לשמור.",
     success: () => message.current,
+    ...(place == null ? {} : { place }),
     onSuccess,
     run: async (save) => {
       const supabase = getSupabase();
@@ -75,7 +81,7 @@ export function useMercuryAccounts({ onSuccess }: { onSuccess?: (save: MercuryAc
       }
       void sync.then(async (result) => {
         await invalidate(LEDGER_KEYS);
-        if (result != null) toast.show({ message: mercuryRefreshDone(result) });
+        if (result != null) toast.show(place == null ? { message: mercuryRefreshDone(result) } : topToast({ message: mercuryRefreshDone(result) }));
       });
     },
   });

@@ -77,7 +77,21 @@ describe("Mercury page: states (FLOW-918, FLOW-938)", () => {
     expect(await screen.findByLabelText("מפתח API")).toBeInTheDocument();
     expect(screen.queryByLabelText("מספר חברה")).not.toBeInTheDocument();
     expect(screen.queryByRole("radio", { name: "מההתחלה" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "חיבור" })).toBeDisabled();
+    // Never greyed out (decision 0223): a tap with no key says what is missing.
+    fireEvent.click(screen.getByRole("button", { name: "חיבור" }));
+    expect(screen.getByText("צריך את המפתח המלא, לפחות 8 תווים")).toBeInTheDocument();
+    expect(invokeEdge).not.toHaveBeenCalled();
+  });
+
+  it("says under the key when Mercury refuses it, with no toast, and offers חיבור מחדש (decision 0223)", async () => {
+    serve({});
+    invokeEdge.mockRejectedValueOnce(new Error("auth"));
+    renderPage("mercury");
+    fireEvent.change(await screen.findByLabelText("מפתח API"), { target: { value: "mercury-key-123" } });
+    fireEvent.click(screen.getByRole("button", { name: "חיבור" }));
+    expect(await screen.findByText("Mercury לא קיבל את המפתח. בדקו שהוא Read Only ושהעתקתם אותו כולו.")).toBeInTheDocument();
+    expect(screen.queryByText("החיבור נכשל. בדקו את המפתח.")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "חיבור מחדש" })).toBeInTheDocument();
   });
 
   it("shows the facts without the accounts and card rows, and the synced accounts row with 3 מתוך 4", async () => {
@@ -146,7 +160,9 @@ describe("Mercury page: the key, then step 3 (FLOW-938)", () => {
     fireEvent.click(await screen.findByRole("button", { name: "בחירת כולם" }));
     expect(screen.getByRole("button", { name: "סנכרון 4 חשבונות" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "ניקוי הבחירה" }));
-    expect(screen.getByRole("button", { name: "בחרו לפחות חשבון אחד" })).toBeDisabled();
+    // Never greyed out (decision 0223): the label says what is missing and a tap sends nothing.
+    fireEvent.click(screen.getByRole("button", { name: "בחרו לפחות חשבון אחד" }));
+    expect(rpcArgs("set_mercury_accounts")).toEqual([]);
     fireEvent.click(screen.getByRole("checkbox", { name: /Savings/ }));
     expect(screen.getByRole("button", { name: "סנכרון חשבון אחד" })).toBeEnabled();
   });
@@ -210,9 +226,57 @@ describe("Mercury page: the synced accounts, a new account, several connections 
     fireEvent.click(screen.getByRole("link", { name: /Cedar Lane Holdings LLC/ }));
     expect(await screen.findByRole("button", { name: "כל חיבורי Mercury" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "ניתוק החיבור הזה" }));
-    const confirm = await screen.findByRole("dialog", { name: "לנתק את Cedar Lane Holdings LLC?" });
-    fireEvent.click(within(confirm).getByRole("button", { name: "ניתוק" }));
+    // At once, with ביטול (decision 0223): the page goes back to the one connection left, and the key waits.
+    expect(await screen.findByText("Mercury נותק. מה שכבר נכנס נשמר")).toBeInTheDocument();
+    expect(screen.queryByText("חיבורים ל־Mercury · 2")).not.toBeInTheDocument();
+    expect(rpcArgs("disconnect_connector")).toEqual([]);
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
     await waitFor(() => { expect(rpcArgs("disconnect_connector")).toEqual([{ p_provider: "mercury", p_slot: 2 }]); });
+  });
+
+  it("sends the waiting disconnect before a new key, so the new connection is not deleted (decision 0223)", async () => {
+    serveWith(CONNECTED);
+    let before: unknown[] = [];
+    invokeEdge.mockImplementation((name: string) => {
+      if (name === "mercury-connect") before = rpcArgs("disconnect_connector");
+      return Promise.resolve({ slot: 1, choose_accounts: false });
+    });
+    renderPage("mercury");
+    fireEvent.click(await screen.findByRole("button", { name: "ניתוק" }));
+    fireEvent.change(screen.getByLabelText("מפתח API"), { target: { value: "mercury-key-123" } });
+    fireEvent.click(screen.getByRole("button", { name: "חיבור" }));
+    await waitFor(() => { expect(invokeEdge).toHaveBeenCalledWith("mercury-connect", expect.anything() as unknown); });
+    expect(before).toEqual([{ p_provider: "mercury", p_slot: 1 }]);
+  });
+
+  it("sends the first of two disconnects when the second one's toast takes its place (decision 0223)", async () => {
+    const second = mercuryStatus({ connected: true, slot: 2, org_label: "Cedar Lane Holdings LLC", account_labels: [{ id: "acct-hold", label: "Ops", kind: "checking" }], sync_account_ids: ["acct-hold"] });
+    serveWith([CONNECTED, second]);
+    renderPage("mercury", { route: "/settings/connections/mercury?slot=2" });
+    fireEvent.click(await screen.findByRole("button", { name: "ניתוק החיבור הזה" }));
+    // One connection left: its page, with its own ניתוק.
+    fireEvent.click(await screen.findByRole("button", { name: "ניתוק" }));
+    await waitFor(() => { expect(rpcArgs("disconnect_connector")).toEqual([{ p_provider: "mercury", p_slot: 2 }]); });
+    // The second still waits on its own ביטול.
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(rpcArgs("disconnect_connector")).toEqual([{ p_provider: "mercury", p_slot: 2 }]);
+  });
+
+  it("puts a disconnected connection back on ביטול, and never deletes its key", async () => {
+    serveWith(CONNECTED);
+    renderPage("mercury");
+    fireEvent.click(await screen.findByRole("button", { name: "ניתוק" }));
+    expect(await screen.findByText("Mercury נותק. מה שכבר נכנס נשמר")).toBeInTheDocument();
+    expect(screen.getByLabelText("מפתח API")).toBeInTheDocument();
+    // The tapped button is gone, so focus is on the page title, not lost.
+    expect(screen.getByRole("heading", { name: "Mercury" })).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    expect(await screen.findByRole("button", { name: "ניתוק" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Mercury" })).toHaveFocus();
+    expect(rpcArgs("disconnect_connector")).toEqual([]);
   });
 
   it("adds a connection through the key, from the one connection's page", async () => {

@@ -3,6 +3,7 @@ import { invokeEdge, isRecord } from "./edge";
 import { useRef } from "react";
 import { useToast } from "./ui/toast";
 import { useWrite } from "./use-write";
+import { topToast } from "./ui/top-toast";
 
 /** What a successful connect says (FLOW-938): the connection's slot, and whether its accounts are to be chosen. */
 export type MercuryConnected = { slot: number; chooseAccounts: boolean };
@@ -24,11 +25,17 @@ export function useMercuryConnect({
   setApiKey,
   slot,
   onSuccess,
+  onRejected,
 }: {
   apiKey: string;
   setApiKey: (value: string) => void;
   slot?: number;
   onSuccess?: (connected: MercuryConnected) => void;
+  /**
+   * Mercury refused the key. The connection page says so under the field, so no toast, and its toasts sit
+   * under the header (decision 0223); setup, which passes none, keeps its toast and its place.
+   */
+  onRejected?: () => void;
 }) {
   const toast = useToast();
   const result = useRef<MercuryConnected>({ slot: 1, chooseAccounts: false });
@@ -38,9 +45,13 @@ export function useMercuryConnect({
       if (error.message === "transient" || error.message === "rate_limited") return "לא הצלחנו להתחבר. נסו שוב.";
       return hebrewMercuryError(error.message) ?? "לא הצלחנו להתחבר. נסו שוב.";
     },
+    silent: (error) => error.message === "auth" && onRejected != null,
+    onError: (error) => { if (error.message === "auth") onRejected?.(); },
     keys: ["mercury", "dashboard"],
+    ...(onRejected == null ? {} : { place: "top" as const }),
     onSuccess: () => {
-      if (!result.current.chooseAccounts) toast.show({ message: "Mercury מחובר. המפתח נשאר בשרת." });
+      const note = { message: "Mercury מחובר. המפתח נשאר בשרת." };
+      if (!result.current.chooseAccounts) toast.show(onRejected == null ? note : topToast(note));
       setApiKey("");
       onSuccess?.(result.current);
     },

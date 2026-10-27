@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRefreshingNow } from "../israel-clock";
 import { claudeCodeCommand, flowMcpUrl } from "../mcp-address";
-import { useToast } from "../ui/toast";
 import { Button } from "../ui/button";
 import { CodeField, type CopyTarget } from "../ui/code-field";
 import { ConnectionHead, ConnectionNote, StepList } from "../ui/connection-page";
@@ -23,6 +22,7 @@ import {
   type Minted,
 } from "./assistant-keys";
 import { AllKeysLink } from "./assistant-key-views";
+import { useTopToast } from "../ui/top-toast";
 
 /** The three questions the board shows under "מה אפשר לשאול" (the project and supplier are invented). */
 export const EXAMPLE_QUESTIONS = [
@@ -97,7 +97,8 @@ export function AssistantSetup({
   onAdded: (key: { id: string; name: string; client: AssistantClient; scope: string[] }) => void;
 }) {
   const client = useQueryClient();
-  const toast = useToast();
+  // Every toast on the connection pages sits under the header (decisions 0222, 0223).
+  const toast = useTopToast();
   const [now] = useRefreshingNow();
   const [name, setName] = useState("");
   const [scope, setScope] = useState<AssistantScope>("read_write");

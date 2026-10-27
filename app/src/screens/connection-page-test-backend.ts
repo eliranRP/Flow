@@ -1,5 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 import { vi } from "vitest";
+import { resetDisconnectsForTests } from "../connection-undo";
 
 /**
  * The fake server behind the connection page tests (FLOW-918). A test file declares its own `vi.mock`s
@@ -130,6 +131,8 @@ export function serve(status: { sumit?: Record<string, unknown> | null; mercury?
 
 /** Between tests: an empty backend and an edge that answers nothing. */
 export function resetBackend() {
+  // A disconnect still waiting on its ביטול would leak into the next test (decision 0223).
+  resetDisconnectsForTests();
   window.history.replaceState(null, "");
   invokeEdge.mockReset();
   invokeEdge.mockResolvedValue(undefined);
