@@ -16,7 +16,7 @@ import { KeptOutTag, rowSource } from "../ui/line-marks";
 import { KEPT_OUT } from "./screen-shared";
 import { ScreenState } from "../ui/screen-state";
 import { DEV_FILED_ROWS } from "../dev/filed-today-sample";
-import { ReviewListEmpty, signedAmount } from "./review-lists";
+import { ListTake, ReviewListEmpty, signedTotals } from "./review-lists";
 
 function devFiledFixture(sampleFlag: string | null): FiledTodayRow[] | undefined {
   if (!import.meta.env.DEV || sampleFlag !== "1") return undefined;
@@ -61,12 +61,12 @@ export function FiledTodayScreen({
   const location = useLocation();
   const rowIds = rows.map((row) => row.id);
   const filedMarks = useLoanMarks(rows.map((row) => row.id), shown == null);
-  // FLOW-971: the day's total, signed, in shekels as the rows (the list has no currency of its own).
-  let net = 0n;
-  for (const row of rows) {
+  // FLOW-971: the day's total, signed, one figure per currency; a line kept out of profit adds nothing.
+  const totals = signedTotals(rows, (row) => {
+    if (row.kept_out === true) return null;
     const abs = row.amount_net < 0n ? -row.amount_net : row.amount_net;
-    net += row.direction === "income" ? abs : -abs;
-  }
+    return { minor: row.direction === "income" ? abs : -abs, currency: row.currency ?? "ILS" };
+  });
   return (
     <ScreenState
       title="שויכו היום"
@@ -87,7 +87,7 @@ export function FiledTodayScreen({
       )}
     >
       <div className="ui-review-list-body">
-        <bdi className="ui-review-list-take ui-num" dir="ltr">{signedAmount(net, "ILS")}</bdi>
+        <ListTake figures={totals} />
       </div>
       <GroupList
         groups={groups}

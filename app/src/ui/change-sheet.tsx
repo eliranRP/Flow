@@ -653,7 +653,7 @@ export function ChangeAssignment(props: Props) {
                 }}
               />
             )}
-            {props.fieldErrors?.project && !props.categoryOnly ? <p id="change-error-project" className="ui-change-field-error">{props.fieldErrors.project}</p> : null}
+            {props.fieldErrors?.project && !props.categoryOnly ? <p id="change-error-project" className="ui-change-field-error" role="status">{props.fieldErrors.project}</p> : null}
             {props.categoryLocked ? null : (
             <ListRow
               variant="button"
@@ -670,7 +670,7 @@ export function ChangeAssignment(props: Props) {
               }}
             />
             )}
-            {props.fieldErrors?.category && !props.categoryLocked ? <p id="change-error-category" className="ui-change-field-error">{props.fieldErrors.category}</p> : null}
+            {props.fieldErrors?.category && !props.categoryLocked ? <p id="change-error-category" className="ui-change-field-error" role="status">{props.fieldErrors.category}</p> : null}
           </div>
           {props.hold ? (props.fieldErrors == null ? <HoldLine onDiscard={discardHeld}>{props.hold}</HoldLine> : <Button variant="link" quiet onClick={discardHeld}>ביטול השינוי</Button>) : null}
           {showRemember ? (

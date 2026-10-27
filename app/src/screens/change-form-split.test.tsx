@@ -4,6 +4,7 @@ import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
 import { ViewerPreview } from "../use-is-viewer";
+import { reviewHold, reviewPin, pinReviewLine } from "../review-pin";
 import { ChangeForm } from "./flow-screens";
 
 // FLOW-325 §10 (option A): פיצול לפי קטגוריות on the change sheet's project list approves the
@@ -240,6 +241,50 @@ describe("a pick saves at once, with ביטול for 5s (decision 0221)", () => {
     expect(await screen.findByRole("button", { name: "ניסיון חוזר", hidden: true })).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: /הרצל/, hidden: true })).toBeInTheDocument();
     expect(resolveCalls()).toHaveLength(1);
+  });
+
+  it("a second pick waits for the first write; it reassigns the closed line, never in parallel", async () => {
+    state.row = row();
+    let answer: (result: { data: unknown; error: { message: string } | null }) => void = () => undefined;
+    state.resolve = () => new Promise((resolve) => { answer = resolve; });
+    renderSheet();
+    fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
+    await waitFor(() => {
+      expect(resolveCalls()).toHaveLength(1);
+    });
+    fireEvent.click(await screen.findByRole("button", { name: /^פרויקט:/, hidden: true }));
+    fireEvent.click(await screen.findByRole("radio", { name: /הרצל/, hidden: true }));
+    // The reassign waits in the sheet's scope until resolve_review answers.
+    await act(async () => { await Promise.resolve(); });
+    expect(state.calls.some((call) => call.name === "reassign_transaction")).toBe(false);
+    await act(async () => {
+      answer({ data: null, error: null });
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(state.calls.some((call) => call.name === "reassign_transaction")).toBe(true);
+    });
+    const order = state.calls.map((call) => call.name).filter((name) => name === "resolve_review" || name === "reassign_transaction");
+    expect(order).toEqual(["resolve_review", "reassign_transaction"]);
+    expect(state.calls.find((call) => call.name === "reassign_transaction")?.args).toMatchObject({ p_project_id: "p1" });
+  });
+
+  it("ביטול pins the line as the queue's head, and the next pick resolves the item again", async () => {
+    pinReviewLine(null);
+    state.row = row();
+    renderSheet();
+    fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
+    fireEvent.click(await screen.findByRole("button", { name: "ביטול", hidden: true }));
+    expect(reviewPin()).toBe("t1");
+    expect(reviewHold()).toBe("t1");
+    expect(await screen.findByText("השיוך הקודם חזר, והפריט חזר לתור.")).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: /^פרויקט:/, hidden: true }));
+    fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
+    await waitFor(() => {
+      expect(resolveCalls()).toHaveLength(2);
+    });
+    expect(state.calls.some((call) => call.name === "reassign_transaction")).toBe(false);
+    pinReviewLine(null);
   });
 
   it("names what was saved, and ביטול puts the item back in the queue", async () => {

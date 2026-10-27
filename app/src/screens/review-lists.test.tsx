@@ -92,6 +92,26 @@ describe("Review lists v2 (FLOW-971)", () => {
     expect(screen.getByRole("group", { name: "אוקטובר" })).toHaveTextContent("2 תנועות");
   });
 
+  it("שויכו היום totals each currency on its own, shekels first, and leaves a line kept out of profit out", () => {
+    renderWithProviders(
+      <FiledTodayScreen
+        sample={[
+          { id: "f1", description: "USD", doc_date: "2026-10-11", amount_net: -50_000n, currency: "USD", direction: "expense", supplier_name: "ספק דולר", project_name: "פרויקט", category_name: "חומרים" },
+          { id: "f2", description: "ILS", doc_date: "2026-10-11", amount_net: 30_000n, direction: "income", supplier_name: "לקוח", project_name: "פרויקט", category_name: "עבודות" },
+          { id: "f3", description: "out", doc_date: "2026-10-11", amount_net: -99_900n, direction: "expense", supplier_name: "בחוץ", project_name: "פרויקט", category_name: "ריבית", kept_out: true },
+        ]}
+      />,
+    );
+    const take = document.querySelector(".ui-review-list-take");
+    expect([...(take?.querySelectorAll("bdi") ?? [])].map((node) => node.textContent)).toEqual(["+₪300", "−$500"]);
+    expect(take).toHaveTextContent(/^סה״כ/);
+  });
+
+  it("a day of another year carries its year", () => {
+    renderWithProviders(<ReviewAllList rows={[row("old", { doc_date: "2025-12-30" })]} search="" backTo="/review" now={new Date("2026-10-11T09:00:00Z")} />);
+    expect(screen.getByRole("heading", { level: 2, name: "30/12/2025" })).toBeInTheDocument();
+  });
+
   it("שויכו היום says the day's count and that each can change; empty, it leads back to לאישור", () => {
     const { unmount } = renderWithProviders(
       <FiledTodayScreen sample={[{ id: "f1", description: "מלט", doc_date: "2026-10-11", amount_net: -350_000n, direction: "expense", supplier_name: "ספק", project_name: "פרויקט", category_name: "חומרים" }]} />,

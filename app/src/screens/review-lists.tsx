@@ -10,7 +10,8 @@ import type { JevBooking } from "../jev-bookings";
 import { Avatar } from "../ui/avatar";
 import { BandOfflineLine, PageLoadFailed, ReviewButton } from "../ui/band-states";
 import { Button } from "../ui/button";
-import { formatDayMonth, HEBREW_MONTHS, israelToday } from "../ui/date-math";
+import { formatDayMonth, israelToday } from "../ui/date-math";
+import { searchMonthTitle } from "../search";
 import { groupByKey } from "../ui/month-groups";
 import { GroupList } from "../ui/month-list";
 import { lineCountHint } from "../line-count-hint";
@@ -36,17 +37,36 @@ export function signedAmount(minor: bigint, currency: string): string {
   return formatAmountText(minor, currency, minor > 0n ? { detail: true, direction: "income", plus: true } : { detail: true });
 }
 
-/** A group's signed total in its first currency (a list rarely mixes them; the rows keep their own). */
-function groupTotal<T>(rows: readonly T[], amountOf: (row: T) => { minor: bigint; currency: string }): string | null {
-  const first = rows[0];
-  if (first == null) return null;
-  const currency = amountOf(first).currency;
-  let sum = 0n;
+/**
+ * Rows' signed totals, one figure per currency, shekels first: "−$500.00", "+₪300". A row `amountOf`
+ * returns null for (a line kept out of profit) adds nothing. Empty when no row counts.
+ */
+export function signedTotals<T>(rows: readonly T[], amountOf: (row: T) => { minor: bigint; currency: string } | null): string[] {
+  const sums = new Map<string, bigint>();
   for (const row of rows) {
     const amount = amountOf(row);
-    if (amount.currency === currency) sum += amount.minor;
+    if (amount == null) continue;
+    sums.set(amount.currency, (sums.get(amount.currency) ?? 0n) + amount.minor);
   }
-  return signedAmount(sum, currency);
+  return [...sums.entries()]
+    .sort(([a], [b]) => Number(b === "ILS") - Number(a === "ILS"))
+    .map(([currency, minor]) => signedAmount(minor, currency));
+}
+
+/** A list's big total: each currency's figure, read as "סה״כ". */
+export function ListTake({ figures }: { figures: readonly string[] }) {
+  if (figures.length === 0) return null;
+  return (
+    <p className="ui-review-list-take">
+      <span className="sr-only">סה״כ </span>
+      {figures.map((figure) => <bdi key={figure} className="ui-num" dir="ltr">{figure}</bdi>)}
+    </p>
+  );
+}
+
+/** "היום • 11/10", "אתמול • 10/10", "09/10"; another year's day adds its year. */
+function reviewDayTitle(date: string, today: string): string {
+  return date.slice(0, 4) === today.slice(0, 4) ? lineDayTitle(date, today) : `${date.slice(8, 10)}/${date.slice(5, 7)}/${date.slice(0, 4)}`;
 }
 
 /** Rows under one head per key, in the order the keys first appear (the queue's order). */
@@ -61,12 +81,16 @@ function groupRows<T>(rows: readonly T[], keyOf: (row: T) => string): { key: str
   return groups;
 }
 
-/** A group's head: its name, and the count and total on the end side, tabular (board M6). */
-function ReviewGroupHead({ id, title, meta }: { id: string; title: string; meta: string | null }) {
+/** A group's head: its name, and its total per currency on the end side, tabular (board M6). */
+function ReviewGroupHead({ id, title, totals }: { id: string; title: string; totals: readonly string[] }) {
   return (
     <div className="ui-review-group-head">
       <h2 className="ui-review-group-title" id={id}>{title}</h2>
-      {meta != null ? <bdi className="ui-review-group-meta ui-num" dir="ltr">{meta}</bdi> : null}
+      {totals.length > 0 ? (
+        <p className="ui-review-group-meta">
+          {totals.map((total) => <bdi key={total} className="ui-num" dir="ltr">{total}</bdi>)}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -147,10 +171,18 @@ export function ReviewAllList({
   const count = rows.length + bookings.length;
   const missing = rows.filter((row) => row.project_id == null).length;
   const today = israelToday(now);
-  const entries: AllEntry[] = [
-    ...bookings.map((booking) => ({ kind: "booking" as const, key: `b:${booking.transaction_id}`, date: booking.doc_date, booking })),
-    ...ordered.map((row) => ({ kind: "row" as const, key: row.id, date: row.doc_date, row })),
-  ];
+  // Jev's bookings take their date's place; under one day they come first, as in the queue.
+  const rowEntries: AllEntry[] = ordered.map((row) => ({ kind: "row" as const, key: row.id, date: row.doc_date, row }));
+  const entries: AllEntry[] = [...rowEntries];
+  for (const booking of bookings) {
+    const entry: AllEntry = { kind: "booking", key: `b:${booking.transaction_id}`, date: booking.doc_date, booking };
+    const day = booking.doc_date.slice(0, 10);
+    const sameDay = entries.findIndex((other) => other.date.slice(0, 10) === day);
+    const later = entries.findIndex((other) => other.date.slice(0, 10) < day);
+    const at = sameDay >= 0 ? sameDay : later;
+    if (at < 0) entries.push(entry);
+    else entries.splice(at, 0, entry);
+  }
   const groups = groupRows(entries, (entry) => entry.date.slice(0, 10));
   const failed = state.failed != null;
   return (
@@ -170,7 +202,7 @@ export function ReviewAllList({
             <ReviewButton row={{ id: "review", to: `/review${search}`, title: "", button: { label: "לאישור הפריט הראשון", hint: `${reviewMinutes(count)} לכולם` } }} />
             {groups.map((group) => (
               <section key={group.key} className="ui-review-group" aria-labelledby={`review-day-${group.key}`}>
-                <ReviewGroupHead id={`review-day-${group.key}`} title={lineDayTitle(group.key, today)} meta={groupTotal(group.rows, entryAmount)} />
+                <ReviewGroupHead id={`review-day-${group.key}`} title={reviewDayTitle(group.key, today)} totals={signedTotals(group.rows, entryAmount)} />
                 <ul className="ui-review-all">
                   {group.rows.map((entry) => (
                     <li key={entry.key}>
@@ -197,7 +229,7 @@ function ReviewAllBookingRow({ booking, href }: { booking: JevBooking; href: str
       <Avatar name={booking.party} fallback="invoice" />
       <span className="ui-review-all-text">
         <span className="ui-review-all-title">{booking.party}</span>
-        <span className="ui-review-all-meta">✦ פקודת יומן של Jev</span>
+        <span className="ui-review-all-meta"><span className="ui-review-all-meta-text">✦ פקודת יומן של Jev</span></span>
       </span>
       <bdi className={income ? "ui-review-all-amount ui-review-all-in ui-num" : "ui-review-all-amount ui-num"} dir="ltr">{signedAmount(booking.amount_gross, booking.currency)}</bdi>
     </Link>
@@ -223,7 +255,7 @@ function ReviewAllRow({ row, href }: { row: ReviewRow; href: string }) {
         <span className="ui-review-all-title">{name}</span>
         <span className={missing ? "ui-review-all-meta ui-review-all-missing" : "ui-review-all-meta"}>
           {missing ? <AlertIcon size={14} /> : null}
-          {meta}
+          <span className="ui-review-all-meta-text">{meta}</span>
         </span>
       </span>
       <bdi className={income ? "ui-review-all-amount ui-review-all-in ui-num" : "ui-review-all-amount ui-num"} dir="ltr">{formatAmountText(minor, currency, income ? { detail: true, direction: "income", plus: true } : { detail: true })}</bdi>
@@ -268,8 +300,9 @@ export function ProjectWaitingList({
     const abs = row.amount_net < 0n ? -row.amount_net : row.amount_net;
     return { minor: row.direction === "income" ? abs : -abs, currency: row.currency ?? "ILS" };
   };
-  const total = groupTotal(ordered, amountOf);
-  const months = groupByKey(ordered, (row) => ({ key: row.doc_date.slice(0, 7), title: monthName(row.doc_date.slice(0, 7)) }), (row) => ({ minor: row.amount_net, currency: row.currency ?? "ILS", direction: "expense" }), true);
+  const totals = signedTotals(ordered, amountOf);
+  const now = new Date();
+  const months = groupByKey(ordered, (row) => ({ key: row.doc_date.slice(0, 7), title: searchMonthTitle(Number(row.doc_date.slice(0, 4)), Number(row.doc_date.slice(5, 7)) - 1, now) }), (row) => ({ minor: row.amount_net, currency: row.currency ?? "ILS", direction: "expense" }), true);
   const first = ordered[0];
   const count = ordered.length;
   const subtitle = `${projectName != null && projectName !== "" ? `${projectName} · ` : ""}${count === 1 ? "הוצאה אחת מחכה" : `${String(count)} הוצאות מחכות`}`;
@@ -277,7 +310,7 @@ export function ProjectWaitingList({
     <div className="ui-review-waiting-page">
       <ScreenHeader layout="stacked" title="לאישור" subtitle={state.failed ? undefined : subtitle} backTo={backTo} backText={backText} />
       <ListBody state={state} failTitle="הפריטים לאישור לא נטענו">
-        {total != null ? <bdi className="ui-review-list-take ui-num" dir="ltr">{total}</bdi> : null}
+        <ListTake figures={totals} />
         {first != null ? (
           <div className="ui-review-cta">
             <Button full to={hrefOf(first)} state={stateOf(first)} chevron>
@@ -312,8 +345,4 @@ export function ProjectWaitingList({
       </ListBody>
     </div>
   );
-}
-
-function monthName(key: string): string {
-  return HEBREW_MONTHS[Number(key.slice(5, 7)) - 1] ?? key;
 }

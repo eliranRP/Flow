@@ -22,6 +22,10 @@
 
 /* A project's total waiting: the page's figure, signed and tabular. */
 .ui-review-list-take {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-3);
+  margin: 0;
   align-self: flex-start;
   font-size: var(--type-title-size);
   font-weight: var(--type-name-weight);
@@ -51,6 +55,11 @@
 }
 
 .ui-review-group-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0 var(--space-2);
+  margin: 0;
   flex: none;
   font-size: var(--type-line2-size);
   color: var(--color-text-muted);
@@ -108,6 +117,14 @@
 
 .ui-review-all-meta > svg {
   flex: none;
+}
+
+/* The ellipsis sits on the text itself: a flex box does not draw one. */
+.ui-review-all-meta-text {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* FLOW-960: a row with no project, the one that blocks אישור, is marked by an icon and the warning tone. */

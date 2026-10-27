@@ -79,7 +79,7 @@ for (const width of [390, 320]) {
         async () => {
           await page.getByRole("radio", { name: "הובלה" }).tap();
         },
-        page.locator(".ui-toast").getByText("השיוך נשמר"),
+        page.locator(".ui-toast").getByText("השיוך נשמר", { exact: true }),
       );
       await expect(page.getByRole("button", { name: /קטגוריה: הובלה/ })).toBeVisible();
     });

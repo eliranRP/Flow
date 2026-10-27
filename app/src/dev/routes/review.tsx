@@ -143,6 +143,11 @@ export function DevFiled() {
   );
 }
 
+const DEV_CHANGE_CATEGORIES = [
+  { id: "c1", name: "חומרים" },
+  { id: "c2", name: "הובלה" },
+];
+
 export function DevChange() {
   const toast = useToast();
   const [projectId, setProjectId] = useState("p1");
@@ -160,10 +165,7 @@ export function DevChange() {
       amount="₪3,500"
       direction="expense"
       projects={projects}
-      categories={[
-        { id: "c1", name: "חומרים" },
-        { id: "c2", name: "הובלה" },
-      ]}
+      categories={DEV_CHANGE_CATEGORIES}
       projectId={projectId}
       categoryId={categoryId}
       suggestionProjectId="p1"
@@ -174,8 +176,22 @@ export function DevChange() {
       onRemember={setRemember}
       pending={!remember}
       saveOnPick
-      onCommitPick={() => {
-        toast.show({ message: "השיוך נשמר" });
+      onCommitPick={(kind, id) => {
+        // As לאישור's sheet (decision 0221): the toast names the pick, and ביטול puts the previous one back.
+        const back = { projectId, categoryId };
+        const next = kind === "project" ? { projectId: id, categoryId } : { projectId, categoryId: id };
+        const names = [projects.find((project) => project.id === next.projectId)?.name, DEV_CHANGE_CATEGORIES.find((category) => category.id === next.categoryId)?.name];
+        toast.show({
+          message: ["השיוך נשמר", ...names.filter((name) => name != null)].join(" · "),
+          place: "top",
+          durationMs: 5000,
+          action: "ביטול",
+          onAction: () => {
+            setProjectId(back.projectId);
+            setCategoryId(back.categoryId);
+            toast.show({ message: "השיוך הקודם חזר, והפריט חזר לתור.", place: "top" });
+          },
+        });
         return Promise.resolve(undefined);
       }}
       onCommitPending={() => {
