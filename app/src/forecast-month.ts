@@ -4,7 +4,7 @@ import { readStoredCurrency } from "./company-currency";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview } from "./preview";
-import { forecastScope } from "./forecast-toast";
+import { forecastScope } from "./forecast-scope";
 import { assertNoError, useWrite } from "./use-write";
 import { waitForAccessToken } from "./wait-for-session";
 

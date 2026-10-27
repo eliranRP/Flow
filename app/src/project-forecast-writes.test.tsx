@@ -3,9 +3,9 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectForecastEdit } from "./project-next-month";
 import { FORECAST_EDITS_KEY } from "./project-next-month-query";
-import { FORECAST_UNDO_MS } from "./forecast-toast";
 import { useProjectForecastWrites } from "./project-forecast-writes";
 import { renderWithProviders } from "./test-render";
+import { TOP_UNDO_MS } from "./ui/top-toast";
 
 const rpc = vi.hoisted(() => vi.fn((_name: string, _args?: unknown) => Promise.resolve<{ data: unknown; error: unknown }>({ data: null, error: null })));
 vi.mock("./lib/supabase", () => ({ getSupabase: () => ({ rpc }) }));
@@ -60,7 +60,7 @@ describe("useProjectForecastWrites (decision 0219)", () => {
     fireEvent.click(screen.getByRole("button", { name: "remove" }));
     await screen.findByText("הוסר מהצפי: חשמל ומים");
     expect(screen.getByRole("button", { name: "ביטול" })).toBeTruthy();
-    act(() => { vi.advanceTimersByTime(FORECAST_UNDO_MS - 500); });
+    act(() => { vi.advanceTimersByTime(TOP_UNDO_MS - 500); });
     expect(screen.queryByText("הוסר מהצפי: חשמל ומים")).toBeTruthy();
     act(() => { vi.advanceTimersByTime(1500); });
     await waitFor(() => { expect(screen.queryByText("הוסר מהצפי: חשמל ומים")).toBeNull(); });

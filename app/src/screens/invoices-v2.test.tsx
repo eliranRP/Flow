@@ -5,8 +5,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { UnpaidRow } from "@flow/shared";
 import { UnpaidScreen } from "./unpaid-screen";
 import { InvoiceScreen } from "./invoice-screen";
-import { unpaidToast, UNPAID_UNDO_MS } from "./unpaid-actions";
 import { ToastProvider } from "../ui/toast";
+import { TOP_UNDO_MS, topToast } from "../ui/top-toast";
 
 // FLOW-968: the invoice pages' undo toasts, the failed read and the offline line, on the live path.
 const db = vi.hoisted(() => ({
@@ -78,9 +78,9 @@ afterEach(() => {
 
 describe("Invoice toasts (FLOW-968, decision 0218)", () => {
   it("keeps an undo 5s and a note 4s, both under the header", () => {
-    expect(unpaidToast({ message: "x", action: "ביטול", onAction: () => undefined })).toMatchObject({ place: "top", durationMs: UNPAID_UNDO_MS });
-    expect(UNPAID_UNDO_MS).toBe(5000);
-    expect(unpaidToast({ message: "x" })).toMatchObject({ place: "top", durationMs: 4000 });
+    expect(topToast({ message: "x", action: "ביטול", onAction: () => undefined })).toMatchObject({ place: "top", durationMs: TOP_UNDO_MS });
+    expect(TOP_UNDO_MS).toBe(5000);
+    expect(topToast({ message: "x" })).toMatchObject({ place: "top", durationMs: 4000 });
   });
 
   it("לא זה offers ביטול, which takes back only that dismissal at the time it was written", async () => {

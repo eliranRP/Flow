@@ -9,7 +9,6 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { useHoldWrites } from "../use-is-viewer";
 import { dismissRecurringAlert, answerRecurringMatch, liveRpcClient, restoreRecurringAlert, type AlertKind } from "../recurring-actions";
 import { type ChargePageData, useChargePageData } from "../recurring-charge-data";
-import { recurringToast } from "../recurring-toast";
 import { amountOf, askText, bannerText, changeLine, chargeAlert, dayMonth, endedText, ignoredText, metaOf, monthsThrough, statusOf } from "../recurring-charge";
 import { chargeKey, israelToday, type ScheduleRow } from "../recurring-schedule";
 import { Button } from "../ui/button";
@@ -27,6 +26,7 @@ import { useChargePick, type ChargePickChoice } from "./recurring-charge-pick";
 import { ChargeUsualAmount } from "./recurring-usual-amount";
 import { TransactionTopBar } from "./transaction-top-bar";
 import { useBlockedPreview } from "./screen-shared";
+import { topToast } from "../ui/top-toast";
 
 /** A dev fixture's party: the schedule row and the reads the page would make, as the server returns them. */
 export type ChargeSample = {
@@ -178,11 +178,11 @@ function ChargeBody({
       if (live) await dismissRecurringAlert(liveRpcClient(), key, kind);
     } catch {
       setIgnoredLocal(null);
-      toast.show(recurringToast({ message: "לא הצלחנו לעדכן את השורה." }));
+      toast.show(topToast({ message: "לא הצלחנו לעדכן את השורה." }));
       return;
     }
     if (live) refresh();
-    toast.show(recurringToast({ message, action: "ביטול", onAction: () => void restore(key, kind) }));
+    toast.show(topToast({ message, action: "ביטול", onAction: () => void restore(key, kind) }));
   }
 
   async function restore(key: string, kind: AlertKind) {
@@ -191,11 +191,11 @@ function ChargeBody({
       if (live) await restoreRecurringAlert(liveRpcClient(), key, kind);
     } catch {
       setIgnoredLocal(true);
-      toast.show(recurringToast({ message: "לא הצלחנו לעדכן את השורה." }));
+      toast.show(topToast({ message: "לא הצלחנו לעדכן את השורה." }));
       return;
     }
     if (live) refresh();
-    toast.show(recurringToast({ message: "ההתראה חזרה" }));
+    toast.show(topToast({ message: "ההתראה חזרה" }));
   }
 
   async function answer(same: boolean | null) {
@@ -205,13 +205,13 @@ function ChargeBody({
       if (live) await answerRecurringMatch(liveRpcClient(), { direction: row.direction, partyId: row.party_id, matchPartyId: suggestion.party_id, same });
     } catch {
       setMatchLocal(null);
-      toast.show(recurringToast({ message: "לא הצלחנו לעדכן את השורה." }));
+      toast.show(topToast({ message: "לא הצלחנו לעדכן את השורה." }));
       return;
     }
     if (live) refresh();
     if (same === null) return;
     const message = same ? (income ? "סומן כאותו לקוח" : "סומן כאותו ספק") : "לא נציע שוב";
-    toast.show(recurringToast({ message, action: "ביטול", onAction: () => void answer(null) }));
+    toast.show(topToast({ message, action: "ביטול", onAction: () => void answer(null) }));
   }
 
   const write = useWrite<PaceChange>({
@@ -224,7 +224,7 @@ function ChargeBody({
       done.close?.();
       if (done.undo) return;
       const message = done.toast ?? (done.next === "never" ? "סומן כלא קבוע" : paceToast(done.next));
-      toast.show(recurringToast({ message, action: "ביטול", onAction: () => {
+      toast.show(topToast({ message, action: "ביטול", onAction: () => {
         undoPace(done);
       } }));
     },

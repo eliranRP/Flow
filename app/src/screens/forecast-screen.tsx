@@ -5,7 +5,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { cashMonthKey, cashRows } from "../cash";
 import { daysLeftInMonth, type ForecastPatch, type MonthForecast, nextMonth, priorPatch, useMonthForecastQuery, useResetForecastMonth, useRestoreForecast, useSetForecastItem } from "../forecast-month";
 import { expenseCountNote, incomeCountNote, itemsCaption, monthEndChart, monthEndTakeaway } from "../forecast-chart";
-import { forecastToast } from "../forecast-toast";
 import { CHART_MONTHS, cashMonthFigures, type MonthFigures } from "../month-figures";
 import { useCategoriesQuery, useDashboardQuery } from "../use-books";
 import { useCashMonthsQuery } from "../use-cash";
@@ -27,6 +26,7 @@ import { Amount } from "../ui/amount";
 import { ForecastCard, MonthChart } from "../ui/month-forecast";
 import { NO_CATEGORY } from "../recurring-layout";
 import { cx } from "../ui/cx";
+import { topToast } from "../ui/top-toast";
 
 /**
  * A story's data: the builder's output (in `data.base`, the currency it counted) and the cash net today, in its minor units.
@@ -244,7 +244,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
       const fold = () => { leave(item, patch, prior, move); };
       if (openKey == null) fold();
       else pendingLeave.current = fold;
-      toast.show(forecastToast({
+      toast.show(topToast({
         message: `${item.name} הועבר לחודש הבא`,
         action: "ביטול",
         onAction: () => {
@@ -262,7 +262,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
       return;
     }
     write.mutate({ key: item.key, patch, undo: false, prior });
-    toast.show(forecastToast({
+    toast.show(topToast({
       message: "הצפי עודכן",
       action: "ביטול",
       onAction: () => { write.mutate({ key: item.key, patch: priorPatch(prior), undo: true, prior }); },
@@ -274,7 +274,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
     const before = data?.overrides ?? [];
     reset.mutate(undefined, {
       onSuccess: () => {
-        toast.show(forecastToast({ message: "הצפי חזר לחישוב של Flow", action: "ביטול", onAction: () => { restore.mutate(before); } }));
+        toast.show(topToast({ message: "הצפי חזר לחישוב של Flow", action: "ביטול", onAction: () => { restore.mutate(before); } }));
       },
     });
   }

@@ -7,7 +7,6 @@ import { useMissingBillsQuery } from "../forecast";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { RECURRING_KEYS } from "../pace-write";
 import { liveRecurringWrites, type RecurringWrites } from "../recurring-actions";
-import { recurringToast } from "../recurring-toast";
 import { chargeHref, comparable, dayMonth, endedText } from "../recurring-charge";
 import { groupRecurring, monthInflow, monthOutflow, type RecurringLine } from "../recurring-layout";
 import { alertState, changePercentOf, daysBetween, isSplitParty, israelToday, rowId, type RecurringAlert, type ScheduleRow, scheduleLines, useRecurringScheduleQuery } from "../recurring-schedule";
@@ -17,6 +16,7 @@ import { type RecurringListGroup, type RecurringListRow, RecurringList } from ".
 import { RecurringSkeleton } from "../ui/screen-skeletons";
 import { useToast } from "../ui/toast";
 import { RepeatIcon } from "../ui/icons";
+import { topToast } from "../ui/top-toast";
 
 /** "אוקטובר 2026" for the day's month. */
 function monthTitle(today: string): string {
@@ -118,7 +118,7 @@ export function RecurringScreen({
   const refresh = () => {
     for (const key of RECURRING_KEYS) void client.invalidateQueries({ queryKey: [key] });
   };
-  const failure = () => toast.show(recurringToast({ message: "לא הצלחנו לעדכן את השורה." }));
+  const failure = () => toast.show(topToast({ message: "לא הצלחנו לעדכן את השורה." }));
 
   /** An ignore, or the ask's "כן, עדיין קבוע": the late alert is set aside until the next late bill. */
   async function ignore(alertKey: string, message = "התעלמת מההתראה") {
@@ -132,7 +132,7 @@ export function RecurringScreen({
       return;
     }
     refresh();
-    toast.show(recurringToast({ message, action: "ביטול", onAction: () => void restore(alertKey, removed) }));
+    toast.show(topToast({ message, action: "ביטול", onAction: () => void restore(alertKey, removed) }));
   }
 
   /** The ask's "הסתיים": the charge leaves the list and the forecast; the undo brings it back. */
@@ -153,7 +153,7 @@ export function RecurringScreen({
       ending.current = null;
     }
     refresh();
-    toast.show(recurringToast({
+    toast.show(topToast({
       // The switch is the charge's: ending a split party's charge ends that project's alone.
       message: endedText(charge.party_name, split ? (charge.project_name ?? "ללא פרויקט") : null),
       action: "ביטול",

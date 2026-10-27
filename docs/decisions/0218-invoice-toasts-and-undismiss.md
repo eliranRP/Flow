@@ -20,3 +20,5 @@ FLOW-968 reviewed the unpaid invoices list and the invoice page against the UX/U
 
 - No ביטול on "לא זה": a mistaken tap hid the right deposit until the owner marked the invoice by hand.
 - Deleting any dismissal of the pair on ביטול: an older dismissal, from another tab or the assistant, would be lost with it.
+
+**Since FLOW-973 (2026-10-27):** these toasts use the one under-the-header helper, `topToast()` / `useTopToast()` in `app/src/ui/top-toast.ts` (decision 0222), with the same times; the screen's own helper is gone.

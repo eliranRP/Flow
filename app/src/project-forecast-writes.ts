@@ -1,12 +1,12 @@
 import type { Json } from "@flow/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
-import { forecastToast } from "./forecast-toast";
 import { getSupabase } from "./lib/supabase";
 import type { ProjectForecastEdit } from "./project-next-month";
 import { FORECAST_EDITS_KEY } from "./project-next-month-query";
 import { assertNoError, useWrite } from "./use-write";
 import { useToast } from "./ui/toast";
+import { topToast } from "./ui/top-toast";
 
 /**
  * The project forecast's writes (set_project_forecast_edit, remove_project_forecast_row,
@@ -81,7 +81,7 @@ export function useProjectForecastWrites(projectId: string, month: string) {
     onSuccess: (call) => {
       const back = lastUndo.current;
       // Decision 0219: under the header, the ביטול 5s and a note 4s.
-      toast.show(forecastToast({
+      toast.show(topToast({
         message: call.message,
         ...(back == null ? {} : { action: "ביטול", onAction: () => { undo.mutate(back); } }),
       }));
