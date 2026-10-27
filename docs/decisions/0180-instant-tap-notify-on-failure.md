@@ -1,7 +1,7 @@
 # A tap shows its result at once, and a failure comes back as a toast
 
 **Date:** 2026-10-11
-**Status:** Accepted
+**Status:** Accepted (point 6 amended for the change sheet on לאישור by [0221](0221-review-change-saves-on-pick.md))
 
 ## Context
 

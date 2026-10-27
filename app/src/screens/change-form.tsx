@@ -56,6 +56,8 @@ type ChangeSample = {
   project_suggested?: boolean;
   /** The suggested fields Jev filled, so they say הצעת Jev (FLOW-704). */
   jev?: { project?: boolean; category?: boolean };
+  /** A close was tried with fields missing: the summary names them (FLOW-971). */
+  missing?: boolean;
 };
 
 export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
@@ -86,7 +88,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
   const [projectId, setProjectId] = useState(sample?.projectId ?? sample?.suggestionId ?? "");
   const [categoryId, setCategoryId] = useState(sample?.categoryId ?? sample?.suggestionCategoryId ?? "");
   const [remember, setRemember] = useState(true);
-  const [hold, setHold] = useState("");
+  const [hold, setHold] = useState(sample?.missing === true ? "בחרו פרויקט וקטגוריה." : "");
   const [leaveNote, setLeaveNote] = useState("");
   const [savedRemember, setSavedRemember] = useState(true);
   const wroteReview = useRef(false);

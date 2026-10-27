@@ -41,3 +41,21 @@ export const LineMarks: Story = {
     </StoryRoute>
   ),
 };
+
+/** FLOW-971: the project named in Back and under the title, its total waiting, and the filled button. */
+export const NamedProject: Story = {
+  render: () => (
+    <StoryRoute entry="/review?project=a" tabs>
+      <ProjectWaitingList rows={rows} search="" backTo="/projects/a" backText="וילה רעננה" projectName="וילה רעננה" />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-971: a failed read keeps the page, with נסו שוב. */
+export const Failed: Story = {
+  render: () => (
+    <StoryRoute entry="/review?project=a" tabs>
+      <ProjectWaitingList rows={[]} search="" backTo="/projects/a" backText="וילה רעננה" state={{ failed: { offline: false, onRetry: () => undefined } }} />
+    </StoryRoute>
+  ),
+};

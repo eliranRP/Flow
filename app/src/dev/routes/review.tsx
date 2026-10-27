@@ -173,6 +173,7 @@ export function DevChange() {
       remember={remember}
       onRemember={setRemember}
       pending={!remember}
+      saveOnPick
       onCommitPick={() => {
         toast.show({ message: "השיוך נשמר" });
         return Promise.resolve(undefined);
