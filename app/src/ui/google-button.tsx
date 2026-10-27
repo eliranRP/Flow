@@ -2,9 +2,11 @@ type GoogleButtonProps = {
   pending: boolean;
   disabled: boolean;
   onClick: () => void;
+  /** After a failed sign-in the button names the retry (FLOW-976). */
+  label?: string;
 };
 
-export function GoogleButton({ pending, disabled, onClick }: GoogleButtonProps) {
+export function GoogleButton({ pending, disabled, onClick, label = "המשך עם Google" }: GoogleButtonProps) {
   const unavailable = disabled && !pending;
   return (
     <button
@@ -15,7 +17,7 @@ export function GoogleButton({ pending, disabled, onClick }: GoogleButtonProps) 
       className={unavailable ? "ui-gsi-button ui-gsi-dis ui-hit" : "ui-gsi-button ui-hit"}
     >
       {pending ? <span className="ui-gsi-spinner" aria-hidden="true" /> : <GoogleMark dimmed={unavailable} />}
-      <span>{pending ? "מתחברים…" : "המשך עם Google"}</span>
+      <span>{pending ? "מתחברים…" : label}</span>
     </button>
   );
 }

@@ -50,15 +50,11 @@ export function SignInPanel({ children }: { children: ReactNode }) {
 }
 
 export function SignInHeading({ children }: { children: ReactNode }) {
-  return <FocusTitle className="t-name ui-signin-heading">{children}</FocusTitle>;
+  return <FocusTitle className="t-title ui-signin-heading">{children}</FocusTitle>;
 }
 
 export function SignInActions({ children }: { children: ReactNode }) {
   return <div className="ui-signin-button">{children}</div>;
-}
-
-export function SignInHelp({ children }: { children: ReactNode }) {
-  return <p className="ui-signin-help">{children}</p>;
 }
 
 export function SignInPrivacy({ children }: { children: ReactNode }) {

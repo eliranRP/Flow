@@ -36,7 +36,8 @@
 }
 
 .ui-onb-link {
-  min-height: var(--size-seg);
+  /* FLOW-976: 44px (the segment height was 40). */
+  min-height: var(--touch-min);
   padding-inline: var(--space-1);
   display: inline-flex;
   align-items: center;
@@ -415,7 +416,8 @@
 .ui-onb-mark {
   inline-size: calc(var(--space-5) + var(--space-half));
   text-align: center;
-  color: var(--color-btn-disabled-text);
+  /* FLOW-976: a skipped row's "—" reads at 4.5:1 (the disabled-button grey was 3.22:1). */
+  color: var(--color-text-muted);
 }
 
 .ui-onb-mark-good {

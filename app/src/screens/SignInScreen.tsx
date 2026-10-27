@@ -3,13 +3,19 @@ import { Navigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import { Notice } from "../ui/banner";
 import { GoogleButton } from "../ui/google-button";
-import { SignInActions, SignInBrand, SignInFrame, SignInHeading, SignInHelp, SignInPanel, SignInPrivacy, SignInTagline } from "../ui/layout";
+import { BandOfflineLine, useOnline } from "../ui/band-states";
+import { SignInActions, SignInBrand, SignInFrame, SignInHeading, SignInPanel, SignInPrivacy, SignInTagline } from "../ui/layout";
 import { Button } from "../ui/button";
 import { Wordmark } from "../ui/wordmark";
 import { getSupabase } from "../lib/supabase";
 import { rememberSignInReturn, safeSignInReturn } from "../safe-return";
 
 type Notice = "cancelled" | "failed" | null;
+
+/** FLOW-976: offline, sign-in says so before the tap; Google's page cannot open without a connection. */
+export const SIGN_IN_OFFLINE = "הכניסה תעבוד כשהחיבור יחזור";
+/** After a failed sign-in the button names the retry. */
+export const SIGN_IN_RETRY = "ניסיון חוזר עם Google";
 
 function noticeFromQuery(params: URLSearchParams): Notice {
   const error = params.get("error");
@@ -25,6 +31,7 @@ export function SignInScreen() {
   const [localNotice, setLocalNotice] = useState<Notice>(null);
   const notice = localNotice ?? noticeFromQuery(params);
   const ready = getSupabase() != null;
+  const online = useOnline();
 
   useEffect(() => {
     function onPageShow(event: PageTransitionEvent) {
@@ -44,7 +51,8 @@ export function SignInScreen() {
 
   async function continueWithGoogle() {
     const supabase = getSupabase();
-    if (!supabase) {
+    // Offline, the redirect would land on the browser's own error page; the failure stays here instead.
+    if (!supabase || !online) {
       setLocalNotice("failed");
       return;
     }
@@ -72,6 +80,7 @@ export function SignInScreen() {
       </SignInBrand>
 
       <SignInPanel>
+        {online ? null : <BandOfflineLine onPage words={SIGN_IN_OFFLINE} />}
         {ready ? null : (
           <Notice title="הגדרת השרת אינה תקינה" body="הכתובת או המפתח הציבורי אינם תקינים, ולכן אי אפשר להתחבר." tone="bad" />
         )}
@@ -83,6 +92,12 @@ export function SignInScreen() {
             tone="bad"
             title="לא הצלחנו להתחבר"
             body="אולי אין חיבור לאינטרנט, או ש־Google לא אישרה את החשבון. כדאי לבדוק את החיבור ולנסות שוב."
+            // FLOW-976: the way out sits in the error itself.
+            extra={
+              <Button variant="link" to="/help" quiet className="ui-signin-help">
+                צריך עזרה בכניסה?
+              </Button>
+            }
           />
         ) : null}
 
@@ -90,16 +105,13 @@ export function SignInScreen() {
         <p className="t-line2 text-text-secondary">בלי סיסמה – עם חשבון Google שכבר יש לך</p>
 
         <SignInActions>
-          <GoogleButton pending={pending} disabled={!ready} onClick={() => void continueWithGoogle()} />
+          <GoogleButton
+            pending={pending}
+            disabled={!ready}
+            label={notice === "failed" ? SIGN_IN_RETRY : undefined}
+            onClick={() => void continueWithGoogle()}
+          />
         </SignInActions>
-
-        {notice === "failed" ? (
-          <SignInHelp>
-            <Button variant="link" to="/help" quiet>
-              צריך עזרה בכניסה?
-            </Button>
-          </SignInHelp>
-        ) : null}
 
         <SignInPrivacy>
           נקבל מ־Google רק שם ואימייל. אין לנו גישה לתיבת הדואר.

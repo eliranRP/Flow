@@ -62,6 +62,10 @@ export const CONNECT_ROWS = {
 export const PROJECTS_LEAD = "נכס, שיפוץ או עבודה ללקוח. כל שורה תשויך לאחד מהם.";
 export const PROJECT_PLACEHOLDER = "שם הפרויקט, למשל Elm Row";
 export const PROJECT_ADD = "הוספה";
+/** FLOW-976: הוספה is never greyed out; a tap that cannot add says why under the field. */
+export const PROJECT_NAME_EMPTY = "כתבו שם לפרויקט";
+export const PROJECT_NAME_SHORT = "שם קצר מדי – לפחות 2 תווים";
+export const PROJECT_NAME_TAKEN = "כבר יש פרויקט בשם הזה";
 export const SUGGESTED_PROJECTS_LABEL = "מהבנק נראה שיש לכם עוד:";
 
 export function projectsPrimary(count: number): string {
