@@ -1,4 +1,3 @@
-import "../ui/lazy.css";
 import type { MissingBill } from "@flow/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";

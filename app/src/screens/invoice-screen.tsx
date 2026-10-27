@@ -1,4 +1,3 @@
-import "../ui/lazy.css";
 import { formatAmountText } from "@flow/shared";
 import { useNavigate, useParams } from "react-router-dom";
 import { absAgorot } from "../agorot";

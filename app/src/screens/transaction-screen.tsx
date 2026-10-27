@@ -1,4 +1,3 @@
-import "../ui/lazy.css";
 import { formatAmountText, type PartyCharges, type PaymentRecurring, type TransactionDetail } from "@flow/shared";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";

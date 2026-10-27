@@ -1,4 +1,3 @@
-import "../ui/lazy.css";
 import { formatAmountText } from "@flow/shared";
 import { useState } from "react";
 import { LEDGER_KEYS } from "../ledger-keys";

@@ -1,4 +1,3 @@
-import "../ui/lazy.css";
 import { formatAmountText, type CashLine, type ProjectDetail } from "@flow/shared";
 import { useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";

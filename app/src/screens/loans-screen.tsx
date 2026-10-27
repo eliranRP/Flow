@@ -1,4 +1,3 @@
-import "../ui/lazy.css";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";

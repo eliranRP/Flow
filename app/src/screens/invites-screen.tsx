@@ -1,4 +1,3 @@
-import "../ui/lazy.css";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { screenPhase } from "../query-phase";

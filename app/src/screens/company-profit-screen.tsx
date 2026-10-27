@@ -1,4 +1,3 @@
-import "../ui/lazy.css";
 import { formatAmountText } from "@flow/shared";
 import { useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";

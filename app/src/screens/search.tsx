@@ -1,4 +1,3 @@
-import "../ui/lazy.css";
 import type { SearchRow } from "@flow/shared";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";

@@ -1,4 +1,3 @@
-import "../ui/lazy.css";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type TransactionDetail } from "@flow/shared";
 import { useMemo, useSyncExternalStore } from "react";

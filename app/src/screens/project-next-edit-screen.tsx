@@ -1,4 +1,3 @@
-import "../ui/lazy.css";
 import { type CategoryRow, formatAmountText } from "@flow/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
