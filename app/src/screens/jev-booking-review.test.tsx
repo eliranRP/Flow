@@ -75,7 +75,7 @@ describe("Jev's booking in לאישור", () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    expect(screen.getByText(/2 פריטים מחכים/)).toBeInTheDocument();
+    expect(screen.getByText("2 פריטים")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Example Lending/ })).toHaveAttribute("href", "/review");
     expect(screen.getAllByText(/פקודת יומן של Jev/)).toHaveLength(2);
   });
