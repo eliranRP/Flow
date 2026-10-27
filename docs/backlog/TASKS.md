@@ -342,6 +342,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-967"></a>[FLOW-967](tasks/FLOW-967.md) | Add: an offline save kept on the device and sent when back online | feature (owner call) |
 | <a id="flow-968"></a>[FLOW-968](tasks/FLOW-968.md) | Invoices v2: the UX/UI rules review of חשבוניות פתוחות | UI (design approved) |
 | <a id="flow-969"></a>[FLOW-969](tasks/FLOW-969.md) | Profit v2: the UX/UI rules review of the profit pages | UI (design approved) |
+| <a id="flow-971"></a>[FLOW-971](tasks/FLOW-971.md) | Search v2 and Review lists v2: the UX/UI rules review | UI (design approved) |
 | <a id="flow-365"></a>[FLOW-365](tasks/FLOW-365.md) | Redesign: the review queue (לאישור) without a tab | UI (design approved) |
 | <a id="flow-921"></a>[FLOW-921](tasks/FLOW-921.md) | Review queue: a server transfer flag, approve as a transfer, and the document thumbnail | Server + UI |
 | <a id="flow-366"></a>[FLOW-366](tasks/FLOW-366.md) | Redesign: month lines (נכנס / יצא) and the transaction page | UI (design approved) |
