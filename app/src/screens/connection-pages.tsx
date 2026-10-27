@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useHomePreview, usePreviewSearch } from "../preview";
-import { useHoldOwnerSettings, ViewerNote, ViewerScope } from "../use-is-viewer";
+import { useCompanyRole, useHoldOwnerSettings, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { useDashboardQuery, useSumitStatusQuery } from "../use-books";
 import { israelSyncPhrase } from "../sumit-copy";
 import { useRefreshingNow } from "../israel-clock";
@@ -78,6 +78,9 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
   const search = usePreviewSearch();
   const blocked = useBlockedPreview();
   const holdOwner = useHoldOwnerSettings();
+  const role = useCompanyRole();
+  // A sample's disconnect drops SUMIT in memory; nothing is sent.
+  const [sampleGone, setSampleGone] = useState(false);
   const dashboard = useDashboardQuery(sample == null);
   const live = sample == null && preview === "off";
   const companyId = dashboard.data?.company_id;
@@ -113,7 +116,12 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
     },
   });
   // Decision 0223: SUMIT leaves the page at once; the key is deleted only once ביטול's toast closes.
-  const disconnect = useConnectorDisconnect({ provider: "sumit", companyId: companyId ?? null, live, readOnly: holdOwner });
+  const disconnect = useConnectorDisconnect({
+    provider: "sumit",
+    live,
+    revoked: role === "viewer" || role === "editor",
+    sampleSend: () => { setSampleGone(true); },
+  });
   // A refresh started before a reload or in another tab: when its claim clears, reload the books and say so.
   const liveStatus = live ? status.data : undefined;
   useSyncSettled({
@@ -137,7 +145,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
 
   const shown = sample ?? liveView(provider, live, status.data, now);
   // A disconnect waiting on its ביטול already shows the page as SUMIT will be after it, on any visit.
-  const view: ConnectionSample = disconnect.leaving.has(SUMIT_SLOT) && shown.state === "connected" ? { state: "new" } : shown;
+  const view: ConnectionSample = (disconnect.leaving.has(SUMIT_SLOT) || sampleGone) && shown.state === "connected" ? { state: "new" } : shown;
   const noCompany = live && companyId == null && dashboard.isSuccess;
   const problem = view.state === "problem";
   const connected = view.state === "connected";
@@ -152,7 +160,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
   const companyMessage = keyError === "short" && !companyOk ? SHORT : undefined;
   const keyMessage = keyError === "rejected" ? REJECTED : keyError === "short" && companyOk && !keyOk ? SHORT : undefined;
   // A preview passes busy to show the connect in flight; the live page reads its own mutation.
-  const busy = view.busy === true || sumitConnect.isPending;
+  const busy = view.busy === true || sumitConnect.isPending || disconnect.connecting;
   const showForm = !loading && !viewerOnly && (!connected || replacing);
 
   const connect = () => {
@@ -164,7 +172,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
     }
     setKeyError(null);
     // A disconnect still waiting on its ביטול would delete the new key: it goes out first.
-    void disconnect.beforeConnect().then(() => { sumitConnect.mutate(); });
+    disconnect.connectAfter(() => { sumitConnect.mutate(); });
   };
   const disconnectNow = () => {
     if (holdOwner || blocked()) return;

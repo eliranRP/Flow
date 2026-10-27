@@ -16,6 +16,10 @@ import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { Skeleton } from "../ui/skeleton";
 import type { SettingsSample } from "./settings-screen";
+import { useLeavingSlots } from "../connection-undo";
+
+/** A connection whose disconnect waits on its ביטול (decision 0223). */
+const LEAVING = "מתנתק…";
 
 /** The Connections note under the עזרים card (FLOW-512). */
 export const HELPERS_NOTE = "תיוג חכם משייך שורות חדשות לפרויקט ולקטגוריה. חיבור ל־AI נותן ל־Claude, ל־ChatGPT או לעוזר אחר לעבוד עם הספרים.";
@@ -41,6 +45,9 @@ export function ConnectionsScreen({ sample }: { sample?: SettingsSample; sampleS
   const blocked = useBlockedPreview();
   const status = useSumitStatusQuery(sample == null);
   const mercuryStatus = useMercuryStatusQuery(sample == null);
+  // Decision 0223: a disconnect waiting on its ביטול reads "מתנתק…" here, not "מחובר".
+  const sumitLeaving = useLeavingSlots("sumit").size > 0;
+  const mercuryLeaving = useLeavingSlots("mercury");
   const dashboard = useDashboardQuery(sample == null);
   const signedInUserId = session?.user.id;
   const signedInCompanyId = dashboard.data?.company_id;
@@ -107,10 +114,15 @@ export function ConnectionsScreen({ sample }: { sample?: SettingsSample; sampleS
   const sumitLoading = sumitState === "loading";
   const mercuryLoading = mercuryState === "loading";
   // FLOW-938: more than one Mercury connection says how many, unless one needs its key again.
-  const mercuryCount = sample ? (sample.mercuryConnections ?? 1) : (mercuryStatus.data?.connections.length ?? 0);
-  const mercuryWord = mercuryState === "connected" && mercuryCount > 1
-    ? `${String(mercuryCount)} חיבורים`
-    : connectorWord(mercuryState, viewerOnly);
+  const mercuryLive = sample ? [] : (mercuryStatus.data?.connections ?? []);
+  const mercuryCount = sample ? (sample.mercuryConnections ?? 1) : mercuryLive.filter((connection) => !mercuryLeaving.has(connection.slot)).length;
+  const mercuryGoing = mercuryLeaving.size > 0 && mercuryState === "connected" && mercuryCount === 0;
+  const mercuryWord = mercuryGoing
+    ? LEAVING
+    : mercuryState === "connected" && mercuryCount > 1
+      ? `${String(mercuryCount)} חיבורים`
+      : connectorWord(mercuryState, viewerOnly);
+  const sumitWord = sumitLeaving && sumitState === "connected" ? LEAVING : connectorWord(sumitState, viewerOnly);
 
   return (
     <ViewerScope>
@@ -132,7 +144,7 @@ export function ConnectionsScreen({ sample }: { sample?: SettingsSample; sampleS
           href={`/settings/connections/sumit${search}`}
           title="SUMIT"
           icon={<DocumentIcon size={24} />}
-          value={noCompany ? "אין עסק עדיין" : providerValue(sumitState, connectorWord(sumitState, viewerOnly), sumitLoading)}
+          value={noCompany ? "אין עסק עדיין" : providerValue(sumitState, sumitWord, sumitLoading)}
           chevron
         />
       </List>

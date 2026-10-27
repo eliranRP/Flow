@@ -15,6 +15,7 @@ import {
   sampleInvite,
 } from "../team-test-harness";
 import { CompanySwitcher } from "./company-switcher";
+import { resetDisconnectsForTests, startDisconnect } from "../connection-undo";
 import { NEW_COMPANY_PATH } from "./company-sheet";
 
 vi.mock("../lib/supabase", async () => {
@@ -23,6 +24,7 @@ vi.mock("../lib/supabase", async () => {
 });
 
 beforeEach(() => {
+  resetDisconnectsForTests();
   localStorage.clear();
   resetShownCompanyForTests();
   resetTeamRpc();
@@ -57,6 +59,26 @@ describe("company switcher and the העסקים שלך sheet (FLOW-601, FLOW-513
     await waitFor(() => { expect(rpcCalls("list_my_companies").length).toBeGreaterThan(reads); });
     expect(await screen.findByRole("button", { name: "חברה: נכסים לדוגמה בע״מ" })).toBeInTheDocument();
     await waitFor(() => { expect(screen.queryByRole("dialog", { name: "העסקים שלך" })).toBeNull(); });
+  });
+
+  it("sends a disconnect still waiting on its ביטול before the header names another company (decision 0223)", async () => {
+    answer("list_my_companies", { data: companiesFor("owner", true) });
+    const dialog = await openSheet();
+    const sentFor: Array<string | null> = [];
+    let switchesBefore = -1;
+    startDisconnect({
+      provider: "mercury",
+      slot: 1,
+      send: () => {
+        sentFor.push(shownCompanyFor(TEAM_USER));
+        switchesBefore = rpcCalls("switch_company").length;
+        return Promise.resolve();
+      },
+    });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "נכסים לדוגמה בע״מ" }));
+    await waitFor(() => { expect(rpcCalls("switch_company")).toEqual([{ p_company_id: COMPANY_B }]); });
+    expect(sentFor).toEqual([COMPANY_A]);
+    expect(switchesBefore).toBe(0);
   });
 
   it("leaves out the old demo book, which a switch cannot open", async () => {

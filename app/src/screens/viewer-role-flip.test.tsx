@@ -215,12 +215,20 @@ describe("inner write gates after the role changes", () => {
       await vi.waitFor(() => { expect(disconnects()).toBe(1); });
     });
 
-    it("sends nothing when the role turns viewer while ביטול is on screen (decision 0223)", async () => {
+    it("sends nothing when the role turns viewer while ביטול is on screen, and says why (decision 0223)", async () => {
       fireEvent.click(await openLive());
       flip("viewer");
+      expect(await screen.findByText("החיבור נשאר: אין לך הרשאה לנתק")).toBeInTheDocument();
       hide();
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(disconnects()).toBe(0);
+    });
+
+    it("keeps the wait when the role read only fails to settle: that is not a viewer (decision 0223)", async () => {
+      fireEvent.click(await openLive());
+      flip("unknown");
+      hide();
+      await vi.waitFor(() => { expect(disconnects()).toBe(1); });
     });
   });
   describe("category menu and new category", () => {

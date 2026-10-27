@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type ReactNode } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { useHomePreview, usePreviewSearch } from "../preview";
-import { useHoldOwnerSettings, ViewerNote, ViewerScope } from "../use-is-viewer";
+import { useCompanyRole, useHoldOwnerSettings, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { useDashboardQuery, useMercuryStatusQuery } from "../use-books";
 import { invokeEdge } from "../edge";
 import { LEDGER_KEYS } from "../ledger-keys";
@@ -71,6 +71,7 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
   const queryClient = useQueryClient();
   const blocked = useBlockedPreview();
   const holdOwner = useHoldOwnerSettings();
+  const role = useCompanyRole();
   const dashboard = useDashboardQuery(sample == null);
   const live = sample == null && preview === "off";
   const companyId = dashboard.data?.company_id;
@@ -106,9 +107,8 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
   // A sample drops it from memory instead.
   const disconnect = useConnectorDisconnect({
     provider: "mercury",
-    companyId: companyId ?? null,
     live,
-    readOnly: holdOwner,
+    revoked: role === "viewer" || role === "editor",
     sampleSend: (slot) => { setLocal((current) => current.filter((item) => item.slot !== slot)); },
   });
   // Every connection waiting on its ביטול is already off the page, on any visit and whatever a read says.
@@ -192,7 +192,7 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
 
   const viewerOnly = holdOwner;
   const keyOk = key.trim().length >= MIN_KEY;
-  const busyKey = connect.isPending;
+  const busyKey = connect.isPending || disconnect.connecting;
 
   /** A sample keeps a save in memory; live writes go to the server. */
   const saveAccounts = (save: MercuryAccountsSave) => {
@@ -233,7 +233,7 @@ export function MercuryConnectionRoute({ sample }: { sample?: MercurySample } = 
     }
     setKeyError(null);
     // A disconnect still waiting on its ביטול would delete the new key (a new connection can take its slot).
-    void disconnect.beforeConnect().then(() => { connect.mutate(); });
+    disconnect.connectAfter(() => { connect.mutate(); });
   };
   const disconnectNow = (connection: MercuryConnection) => {
     if (holdOwner || blocked()) return;

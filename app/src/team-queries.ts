@@ -4,6 +4,7 @@ import { useAuth } from "./auth";
 import { MY_COMPANIES_KEY, writeRoleCache } from "./company-role-cache";
 import { setShownCompany, shownCompanyFor } from "./lib/company-header";
 import { pinReviewLine } from "./review-pin";
+import { flushDisconnects } from "./connection-undo";
 import { useTeamApi, type MyCompanies } from "./team-api";
 
 export { MY_COMPANIES_KEY };
@@ -105,6 +106,8 @@ export function useOpenCompany(): (companyId: string, options?: { opened?: boole
   const api = useTeamApi();
   return async (companyId, options) => {
     if (userId == null) throw new Error("no user");
+    // Decision 0223: a disconnect still waiting on its ביטול is this company's; it goes out before the header names another.
+    await flushDisconnects();
     const before = shownCompanyFor(userId);
     if (!sample) setShownCompany(userId, companyId);
     if (options?.opened !== true) {

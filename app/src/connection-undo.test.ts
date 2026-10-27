@@ -1,18 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  cancelDisconnects,
-  flushDisconnects,
-  REPLAY_MS,
-  replayDisconnects,
-  resetDisconnectsForTests,
-  startDisconnect,
-  type DisconnectJob,
-} from "./connection-undo";
+import { resetShownCompanyForTests, setShownCompany } from "./lib/company-header";
+import { dropDisconnects, flushDisconnects, resetDisconnectsForTests, startDisconnect, type DisconnectJob } from "./connection-undo";
 
-const STORAGE_KEY = "flow.pending-disconnects";
+const COMPANY_A = "11111111-1111-4111-8111-111111111111";
+const COMPANY_B = "22222222-2222-4222-8222-222222222222";
 
-function job(partial: Partial<DisconnectJob> = {}): DisconnectJob & { send: ReturnType<typeof vi.fn> } {
-  return { provider: "mercury", slot: 1, companyId: "c1", send: vi.fn(() => Promise.resolve()), ...partial } as DisconnectJob & { send: ReturnType<typeof vi.fn> };
+type TestJob = DisconnectJob & { send: ReturnType<typeof vi.fn<() => Promise<void>>> };
+
+function job(partial: Partial<DisconnectJob> = {}): TestJob {
+  return { provider: "mercury", slot: 1, send: vi.fn(() => Promise.resolve()), ...partial } as TestJob;
 }
 
 function hide() {
@@ -23,6 +19,7 @@ function hide() {
 
 afterEach(() => {
   resetDisconnectsForTests();
+  resetShownCompanyForTests();
   vi.useRealTimers();
 });
 
@@ -76,49 +73,53 @@ describe("a disconnect's wait (decision 0223)", () => {
     expect(other.send).not.toHaveBeenCalled();
   });
 
-  it("drops a provider's waits without sending when the owner becomes a viewer", async () => {
+  it("drops waits without sending, and their toasts go (a role that cannot disconnect)", async () => {
     const one = job();
+    const ended = vi.fn();
     const hold = startDisconnect(one);
-    cancelDisconnects("mercury");
+    hold.onEnd(ended);
+    expect(dropDisconnects("mercury")).toBe(1);
+    expect(ended).toHaveBeenCalledTimes(1);
     await hold.end();
     expect(one.send).not.toHaveBeenCalled();
   });
 
-  it("calls onFailed when the disconnect fails, and the connection is no longer leaving", async () => {
+  it("draws the connection gone before it stops being leaving, so it does not flicker back", async () => {
+    const order: string[] = [];
+    const one = job({ onSent: () => { order.push("drawn"); } });
+    const hold = startDisconnect(one);
+    await hold.end();
+    order.push("settled");
+    expect(order).toEqual(["drawn", "settled"]);
+  });
+
+  it("calls onFailed when the disconnect fails", async () => {
     const onFailed = vi.fn();
     const one = job({ send: vi.fn(() => Promise.reject(new Error("down"))), onFailed });
     await startDisconnect(one).end();
     expect(onFailed).toHaveBeenCalledWith(expect.objectContaining({ message: "down" }) as unknown);
-    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 });
 
-describe("a disconnect a reload left waiting (decision 0223)", () => {
-  it("is saved while it waits and cleared once it settles", async () => {
-    const hold = startDisconnect(job());
-    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "[]")).toEqual([expect.objectContaining({ provider: "mercury", slot: 1, companyId: "c1" })]);
+describe("a wait and the company it belongs to (decision 0223)", () => {
+  it("sends nothing, and says so, when the app shows another company by the time it ends", async () => {
+    setShownCompany("user-1", COMPANY_A);
+    const onRefused = vi.fn();
+    const ended = vi.fn();
+    const one = job({ onRefused });
+    const hold = startDisconnect(one);
+    hold.onEnd(ended);
+    setShownCompany("user-1", COMPANY_B);
     await hold.end();
-    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(one.send).not.toHaveBeenCalled();
+    expect(onRefused).toHaveBeenCalledTimes(1);
+    expect(ended).toHaveBeenCalledTimes(1);
   });
 
-  it("is sent on the next start when fresh and for this company; a stale one is dropped", () => {
-    const now = Date.now();
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify([
-      { provider: "mercury", slot: 2, companyId: "c1", at: now - 1000 },
-      { provider: "sumit", slot: 0, companyId: "c1", at: now - REPLAY_MS - 1 },
-      { provider: "sumit", slot: 0, companyId: "c2", at: now - 1000 },
-    ]));
-    const send = vi.fn(() => Promise.resolve());
-    replayDisconnects("c1", send);
-    expect(send).toHaveBeenCalledTimes(1);
-    expect(send).toHaveBeenCalledWith("mercury", 2);
-    // Another company's fresh one stays for that company.
-    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "[]")).toEqual([expect.objectContaining({ companyId: "c2" })]);
-  });
-
-  it("works with storage off", () => {
-    const get = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("blocked"); });
-    expect(() => { replayDisconnects("c1", vi.fn(() => Promise.resolve())); }).not.toThrow();
-    get.mockRestore();
+  it("sends when the app still shows the company of the tap", async () => {
+    setShownCompany("user-1", COMPANY_A);
+    const one = job();
+    await startDisconnect(one).end();
+    expect(one.send).toHaveBeenCalledTimes(1);
   });
 });

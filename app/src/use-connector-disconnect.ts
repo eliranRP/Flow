@@ -1,15 +1,15 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect } from "react";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useState } from "react";
 import {
-  cancelDisconnects,
+  dropDisconnects,
   flushDisconnects,
-  replayDisconnects,
   startDisconnect,
   useLeavingSlots,
   type ConnectorProvider,
   type DisconnectJob,
 } from "./connection-undo";
 import { getSupabase } from "./lib/supabase";
+import type { MercuryState } from "./mercury-state";
 import { focusConnectionTitle } from "./ui/connection-page";
 import { useTopToast } from "./ui/top-toast";
 import { assertNoError } from "./use-write";
@@ -27,6 +27,20 @@ async function sendDisconnect(provider: ConnectorProvider, slot: number): Promis
   else assertNoError(await supabase.rpc("disconnect_connector", { p_provider: "mercury", p_slot: slot }));
 }
 
+/** The status after the disconnect, written before the wait ends, so the connection does not flicker back while the read runs. */
+async function drawGone(client: QueryClient, provider: ConnectorProvider, slot: number): Promise<void> {
+  if (provider === "sumit") {
+    client.setQueriesData<Record<string, unknown>>({ queryKey: ["sumit"] }, (old) => (old == null ? old : { ...old, connected: false, last_error: null, syncing: false }));
+  } else {
+    client.setQueriesData<MercuryState>({ queryKey: ["mercury"] }, (old) => {
+      if (old == null) return old;
+      const connections = old.connections.filter((connection) => connection.slot !== slot);
+      return { ...old, connections, connected: connections.some((connection) => connection.chosen && connection.keyWorks), syncing: false };
+    });
+  }
+  await client.invalidateQueries({ queryKey: [provider] });
+}
+
 /**
  * Decision 0223: a connection page's ניתוק. The connection leaves the page at once, and the toast under
  * the header offers ביטול; the disconnect is sent when that toast closes (or the app is left, or a new
@@ -35,43 +49,35 @@ async function sendDisconnect(provider: ConnectorProvider, slot: number): Promis
  */
 export function useConnectorDisconnect({
   provider,
-  companyId,
   live,
-  readOnly,
+  revoked,
   sampleSend,
 }: {
   provider: ConnectorProvider;
-  companyId: string | null;
-  /** A live page reads and writes the server; a sample or a preview does not. */
+  /** A live page writes the server; a sample or a preview does not. */
   live: boolean;
-  /** A viewer cannot disconnect; a role that turns read-only mid-wait cancels the wait. */
-  readOnly: boolean;
-  sampleSend?: (slot: number) => void;
+  /** The role is now one that cannot disconnect (viewer, editor); a role still loading is not. */
+  revoked: boolean;
+  sampleSend: (slot: number) => void;
 }) {
   const toast = useTopToast();
   const client = useQueryClient();
   const leaving = useLeavingSlots(provider);
+  const [connecting, setConnecting] = useState(false);
 
-  // An owner who becomes a viewer while ביטול is on screen: nothing is sent.
+  // An owner who is now a viewer or an editor while ביטול is on screen: nothing is sent, and the page says why.
   useEffect(() => {
-    if (readOnly) cancelDisconnects(provider);
-  }, [readOnly, provider]);
-
-  // A disconnect a reload or a closed app left waiting is sent now, when it is fresh and for this company.
-  useEffect(() => {
-    if (!live || companyId == null || readOnly) return;
-    replayDisconnects(companyId, (savedProvider, slot) => sendDisconnect(savedProvider, slot).then(() => {
-      void client.invalidateQueries({ queryKey: [savedProvider] });
-    }));
-  }, [live, companyId, readOnly, client]);
+    if (!revoked) return;
+    if (dropDisconnects(provider) > 0) toast.show({ tone: "info", message: "החיבור נשאר: אין לך הרשאה לנתק" });
+  }, [revoked, provider, toast]);
 
   const disconnect = useCallback((slot: number) => {
     const job: DisconnectJob = {
       provider,
       slot,
-      companyId,
-      send: live ? () => sendDisconnect(provider, slot) : () => { sampleSend?.(slot); return Promise.resolve(); },
-      onSent: () => { void client.invalidateQueries({ queryKey: [provider] }); },
+      send: live ? () => sendDisconnect(provider, slot) : () => { sampleSend(slot); return Promise.resolve(); },
+      onSent: live ? () => drawGone(client, provider, slot) : undefined,
+      onRefused: () => { toast.show({ tone: "info", message: "הניתוק בוטל, עברת לעסק אחר" }); },
       onFailed: () => {
         void client.invalidateQueries({ queryKey: [provider] });
         toast.show({
@@ -93,14 +99,24 @@ export function useConnectorDisconnect({
       // The wait lasts exactly as long as ביטול is on screen: a hover or focus that pauses the toast keeps it.
       onClose: () => { void hold.end(); },
     });
-    // Leaving the app ends the wait; the ביטול that can no longer work goes with it.
+    // The wait ended another way (the app was left, a new key, a role that cannot disconnect): the ביטול goes with it.
     hold.onEnd(() => { toast.dismiss(id); });
     // The tapped button goes away with the connection: focus goes to the page title, not to nothing.
     focusConnectionTitle();
-  }, [provider, companyId, live, sampleSend, client, toast]);
+  }, [provider, live, sampleSend, client, toast]);
 
-  /** Before a new key is sent: an old disconnect still waiting would delete it, so it goes out first. */
-  const beforeConnect = useCallback(() => flushDisconnects(provider), [provider]);
+  /**
+   * Sends a new key after the provider's waiting disconnects, which would otherwise delete it. Busy until
+   * the key goes out, so a second tap does not send two.
+   */
+  const connectAfter = useCallback((connect: () => void) => {
+    if (connecting) return;
+    setConnecting(true);
+    void flushDisconnects(provider).then(() => {
+      setConnecting(false);
+      connect();
+    });
+  }, [connecting, provider]);
 
-  return { leaving, disconnect, beforeConnect };
+  return { leaving, disconnect, connectAfter, connecting };
 }
