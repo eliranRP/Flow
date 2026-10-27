@@ -64,7 +64,7 @@ export function CompanyNextMonthBlock({
           forecast={loading ? null : ahead}
           sub={chartSub(history, !loading && ahead != null)}
           label={chartLabel(history, loading ? null : ahead, currency, "profit", "הכנסות והוצאות של החברה")}
-          takeaway={profitTakeaway(history.months, "month", today.slice(0, 7))}
+          takeaway={profitTakeaway(history.months, "month", current)}
         />
       )}
     </div>

@@ -75,7 +75,7 @@ export function NextMonthBlock({
           sub={chartSub(history, ahead != null)}
           label={chartLabel(history, ahead, currency, kind)}
           link={chartLink}
-          takeaway={!takeaway ? null : kind === "profit" ? profitTakeaway(history.months, "month", today.slice(0, 7)) : cashTakeaway(history, currency)}
+          takeaway={!takeaway ? null : kind === "profit" ? profitTakeaway(history.months, "month", current ?? undefined) : cashTakeaway(history, currency)}
         />
       )}
     </div>
