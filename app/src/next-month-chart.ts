@@ -103,23 +103,28 @@ export function cashTakeaway(history: ChartHistory, currency: string): string | 
 /**
  * FLOW-969 (owner card, 2026-10-26): a profit chart's title says what its bars show, across the pairs drawn
  * (the forecast is left out): the one pair where more went out than came in ("ספטמבר היה החודש היחיד שבו יצא
- * יותר משנכנס"), how many there were ("2 חודשים יצא יותר משנכנס"), or none ("בכל חודש נכנס יותר משיצא").
- * `unit` names the pairs: months on the month and year charts, years since the start. Null with no pairs.
+ * יותר משנכנס"), how many there were ("2 חודשים יצא יותר משנכנס"), every one, or none: "בכל חודש נכנס יותר
+ * משיצא" only when every pair had more in than out, else "אף חודש לא יצא יותר משנכנס" (a month that broke
+ * even or had nothing is not a gain). `unit` names the pairs: months on the month and year charts, years since
+ * the start. `partial` is the month (or year) still running: it is drawn but not counted, so a slow first week
+ * is not named a loss. Null with nothing to count.
  */
-export function profitTakeaway(pairs: readonly ChartMonth[], unit: "month" | "year" = "month"): string | null {
+export function profitTakeaway(pairs: readonly ChartMonth[], unit: "month" | "year" = "month", partial?: string): string | null {
+  const counted = pairs.filter((pair) => pair.key !== partial);
   // Nothing in or out yet: no bars to sum up, so the kind's title stays.
-  if (pairs.every((pair) => pair.incomeMinor === 0n && pair.expenseMinor === 0n)) return null;
-  const losses = pairs.filter((pair) => pair.expenseMinor > pair.incomeMinor);
-  const name = (pair: ChartMonth) => (unit === "month" ? monthWord(pair.key) : pair.key);
+  if (counted.every((pair) => pair.incomeMinor === 0n && pair.expenseMinor === 0n)) return null;
+  const losses = counted.filter((pair) => pair.expenseMinor > pair.incomeMinor);
+  const gains = counted.filter((pair) => pair.incomeMinor > pair.expenseMinor);
+  const month = unit === "month";
+  const name = (pair: ChartMonth) => (month ? monthWord(pair.key) : pair.key);
   const [only] = losses;
   if (losses.length === 1 && only != null) {
-    return unit === "month" ? `${name(only)} היה החודש היחיד שבו יצא יותר משנכנס` : `${name(only)} הייתה השנה היחידה שבה יצא יותר משנכנס`;
+    return month ? `${name(only)} היה החודש היחיד שבו יצא יותר משנכנס` : `${name(only)} הייתה השנה היחידה שבה יצא יותר משנכנס`;
   }
-  if (losses.length > 1) {
-    if (losses.length === pairs.length) return unit === "month" ? "בכל חודש יצא יותר משנכנס" : "בכל שנה יצא יותר משנכנס";
-    return unit === "month" ? `${String(losses.length)} חודשים יצא יותר משנכנס` : `${String(losses.length)} שנים יצא יותר משנכנס`;
-  }
-  return unit === "month" ? "בכל חודש נכנס יותר משיצא" : "בכל שנה נכנס יותר משיצא";
+  if (losses.length > 1 && losses.length === counted.length) return month ? "בכל חודש יצא יותר משנכנס" : "בכל שנה יצא יותר משנכנס";
+  if (losses.length > 1) return month ? `${String(losses.length)} חודשים יצא יותר משנכנס` : `${String(losses.length)} שנים יצא יותר משנכנס`;
+  if (gains.length === counted.length) return month ? "בכל חודש נכנס יותר משיצא" : "בכל שנה נכנס יותר משיצא";
+  return month ? "אף חודש לא יצא יותר משנכנס" : "אף שנה לא יצא יותר משנכנס";
 }
 
 /** A company category as the income caption reads it: its name, and its parent's id when it has one. */

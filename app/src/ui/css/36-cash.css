@@ -136,7 +136,6 @@
   white-space: nowrap;
 }
 
-
 /* FLOW-965: the page's states: the review button and the offline line sit in the head, the failed and empty
    cards under it at the page's sides (band-states' page cards). */
 .ui-lines-head .ui-review-cta,

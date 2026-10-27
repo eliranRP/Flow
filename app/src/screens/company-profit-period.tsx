@@ -153,7 +153,7 @@ function yearView(input: PeriodViewInput, year: YearFigures): PeriodView {
         <CompanySummaryCard rows={yearSummaryRows(input.data, year)} currency={input.currency} />
         <div className="ui-fc-block">
           {year.current ? <YearForecast year={year} input={input} /> : null}
-          <MonthChart kind="profit" history={chart.history} forecast={chart.forecast} sub={chart.sub} label={chart.label} takeaway={profitTakeaway(chart.history)} />
+          <MonthChart kind="profit" history={chart.history} forecast={chart.forecast} sub={chart.sub} label={chart.label} takeaway={profitTakeaway(chart.history, "month", input.today.slice(0, 7))} />
         </div>
       </>
     ),
@@ -175,7 +175,7 @@ function allTimeView(input: PeriodViewInput): PeriodView {
         <Figure minor={totals.profitMinor} currency={input.currency} />
         <CompanySummaryCard rows={allTimeSummaryRows(input.data)} currency={input.currency} />
         <div className="ui-fc-block">
-          <MonthChart kind="profit" title="הכנסות והוצאות לפי שנה" history={chart.months} forecast={null} sub={chart.sub} label={chart.label} takeaway={profitTakeaway(chart.months, "year")} />
+          <MonthChart kind="profit" title="הכנסות והוצאות לפי שנה" history={chart.months} forecast={null} sub={chart.sub} label={chart.label} takeaway={profitTakeaway(chart.months, "year", input.today.slice(0, 4))} />
         </div>
       </>
     ),

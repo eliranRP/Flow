@@ -120,6 +120,13 @@ describe("ProjectNextEditScreen, a row's edit page", () => {
     await waitFor(() => { expect(rpc).toHaveBeenCalledWith("undo_project_forecast", { p_project_id: "juniper-ct", p_undo: UNDO }); });
   });
 
+  it("leaves for the forecast page at once, before the server answers (decision 0219)", () => {
+    rpc.mockImplementation(() => new Promise(() => undefined));
+    renderEdit({ rowKey: "avg:power" });
+    fireEvent.click(screen.getByRole("button", { name: "הסרה מהצפי" }));
+    expect(screen.getByText("the forecast page")).toBeTruthy();
+  });
+
   it("says so when the row is no longer in the forecast", () => {
     renderEdit({ rowKey: "avg:gone" });
     expect(screen.getByText("השורה הזו כבר לא בצפי.")).toBeTruthy();

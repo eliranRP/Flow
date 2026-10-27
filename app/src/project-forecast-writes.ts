@@ -1,6 +1,8 @@
 import type { Json } from "@flow/shared";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
 import { getSupabase } from "./lib/supabase";
+import type { ProjectForecastEdit } from "./project-next-month";
 import { FORECAST_EDITS_KEY } from "./project-next-month-query";
 import { assertNoError, useWrite } from "./use-write";
 import { useToast } from "./ui/toast";
@@ -30,8 +32,14 @@ function undoOf(data: unknown): ForecastUndo | null {
   return { drop: undo.drop.filter((id): id is string => typeof id === "string"), put: undo.put as Json[] };
 }
 
+/** The edit a removal will write, drawn at once (decision 0219: the row leaves at once, ביטול 5s). */
+function removalEdit(rowKey: string, month: string): ProjectForecastEdit {
+  return { id: `optimistic-remove:${rowKey}`, kind: "remove", row_key: rowKey, category_id: null, direction: null, amount_minor: null, pace: "once", start_month: month };
+}
+
 export function useProjectForecastWrites(projectId: string, month: string) {
   const toast = useToast();
+  const client = useQueryClient();
   const lastUndo = useRef<ForecastUndo | null>(null);
   // FLOW-969: a write and its ביטול run one after the other, so a quick ביטול never races the write.
   const scope = `project-forecast-${projectId}`;
@@ -65,6 +73,13 @@ export function useProjectForecastWrites(projectId: string, month: string) {
       lastUndo.current = undoOf(result.data);
     },
     keys: [FORECAST_EDITS_KEY],
+    // A removal leaves the list at once; a failure puts the row back (useWrite's rollback) and says so.
+    optimistic: (call) => {
+      if (call.fn !== "remove_project_forecast_row") return [];
+      return client.getQueriesData<ProjectForecastEdit[]>({ queryKey: [FORECAST_EDITS_KEY] })
+        .filter(([key]) => key[2] === projectId && key[3] === month)
+        .map(([key]) => ({ key, update: (old: unknown) => [...((old as ProjectForecastEdit[] | undefined) ?? []), removalEdit(call.rowKey, month)] }));
+    },
     failure: "לא הצלחנו לעדכן את הצפי",
     onSuccess: (call) => {
       const back = lastUndo.current;
