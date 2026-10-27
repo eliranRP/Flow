@@ -18,8 +18,8 @@ test("Home's profit row opens the company profit page, and Back returns Home", a
 
 test("the chips sort the page, a category opens in place, and a project opens its profit", async ({ page }) => {
   await page.goto("/e2e/company-profit?preview=1");
-  const chips = page.getByRole("group", { name: "סידור" }).first();
-  await chips.getByRole("button", { name: "לפי קטגוריה" }).click();
+  const chips = page.getByRole("radiogroup", { name: "סידור" }).first();
+  await chips.getByRole("radio", { name: "לפי קטגוריה" }).click();
   await expect(page).toHaveURL(/\?preview=1&by=category$/);
   const categories = page.locator(".ui-pcat-button");
   const category = categories.first();
@@ -32,7 +32,7 @@ test("the chips sort the page, a category opens in place, and a project opens it
   await expect(category).toHaveAttribute("aria-expanded", "false");
   await categories.nth(1).click();
   await expect(categories.nth(1)).toHaveAttribute("aria-expanded", "false");
-  await chips.getByRole("button", { name: "לפי פרויקט" }).click();
+  await chips.getByRole("radio", { name: "לפי פרויקט" }).click();
   await expect(page).toHaveURL(/\/e2e\/company-profit\?preview=1$/);
   // The general costs (get_breakdown's overhead and unassigned, and the overhead project's own lines) are one row
   // under the overhead project's name, opening that project (owner 20/10); no כללי row and no key in a link.
@@ -116,10 +116,10 @@ test("the period switch: this year, its projects, since the start and a closed y
   await expect(page.locator(".ui-cp-head .ui-fc-ahead")).toHaveCount(2);
 
   // By project: a project opens its profit page.
-  await page.getByRole("group", { name: "סידור" }).first().getByRole("button", { name: "לפי פרויקט" }).click();
+  await page.getByRole("radiogroup", { name: "סידור" }).first().getByRole("radio", { name: "לפי פרויקט" }).click();
   await expect(page).toHaveURL(/period=year&list=project$/);
   await expect(page.getByText("פרויקטים שהסתיימו · 4")).toBeVisible();
-  await page.getByRole("button", { name: "לפי חודש" }).first().click();
+  await page.getByRole("radio", { name: "לפי חודש" }).first().click();
   await expect(page).toHaveURL(/\?preview=1&period=year$/);
 
   // This month's row opens the month view.
@@ -168,7 +168,7 @@ test("at the top, the compact bar stays up after the period switch and Back from
     await expect(period.getByRole("radio", { name })).toHaveAttribute("aria-checked", "true");
     await expectUp();
   }
-  await page.getByRole("group", { name: "סידור" }).first().getByRole("button", { name: "לפי פרויקט" }).click();
+  await page.getByRole("radiogroup", { name: "סידור" }).first().getByRole("radio", { name: "לפי פרויקט" }).click();
   await expect(page).toHaveURL(/period=year&list=project$/);
   await page.locator('.ui-cp-period-list a[href^="/projects/"]').first().click();
   await expect(page).toHaveURL(/\/projects\/p\d\/profit\?from=profit&preview=1$/);

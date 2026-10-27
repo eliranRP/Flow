@@ -242,3 +242,27 @@ export const BasisSheet: Story = {
   name: "Basis sheet",
   render: () => <ProfitRoute entry="/profit" sample={{ ...COMPANY_PROFIT_SAMPLE, sheetOpen: true }} />,
 };
+
+/** Offline (FLOW-969): the figures stay, with the moment they are from under them. */
+export const CompanyProfitOffline: Story = {
+  name: "Company profit, offline",
+  render: () => <ProfitRoute entry="/profit" sample={{ ...COMPANY_PROFIT_SAMPLE, offlineSince: Date.UTC(2026, 9, 26, 6, 41) }} />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText(/אין חיבור · מוצג המצב/)).toBeInTheDocument();
+  },
+};
+
+/** The read failed (FLOW-969): the failure card in place of the figures, with נסו שוב and צריך עזרה?. */
+export const CompanyProfitFailed: Story = {
+  name: "Company profit, the read failed",
+  render: () => (
+    <StoryRoute entry="/profit?preview=error-server" tabs>
+      <CompanyProfitScreen />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    await expect(canvas.getByRole("link", { name: "צריך עזרה?" })).toBeInTheDocument();
+  },
+};

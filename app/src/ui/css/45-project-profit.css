@@ -211,7 +211,7 @@
   gap: calc(var(--space-3) + var(--space-1) / 2);
   min-block-size: 52px;
   color: var(--color-accent-text);
-  font-size: var(--type-btn-2-size);
+  font-size: var(--type-line2-size);
   font-weight: var(--type-btn-weight);
   text-decoration: none;
 }
@@ -263,7 +263,8 @@
 }
 
 .ui-pn-off-meta {
-  color: var(--color-btn-disabled-text);
+  /* FLOW-969: muted text at 4.5:1 (the disabled grey was 3.2:1). */
+  color: var(--color-text-muted);
   font-size: var(--type-caption-size);
 }
 

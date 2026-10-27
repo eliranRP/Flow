@@ -202,3 +202,15 @@
   white-space: nowrap;
 }
 
+/* FLOW-965 (Lines v2), shared with the profit pages (FLOW-969): an order-chip row (ui/order-chips.tsx) is 44px chips, 14px sides, a 1.5px edge at 3:1, 15/600 type (the type
+   scale's line size at the name weight). */
+.ui-order-chips .ui-chip {
+  block-size: var(--touch-min);
+  min-block-size: var(--touch-min);
+  gap: var(--space-2);
+  padding-inline: var(--space-inset-row);
+  border-width: var(--stroke-strong);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-chip-line);
+  font-weight: var(--type-name-weight);
+}

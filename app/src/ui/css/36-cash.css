@@ -136,19 +136,6 @@
   white-space: nowrap;
 }
 
-/* FLOW-965 (Lines v2): the chip row is 44px chips, 14px sides, a 1.5px edge at 3:1, 15/600 type (the type
-   scale's line size at the name weight). */
-.ui-lines-chips .ui-chip {
-  block-size: var(--touch-min);
-  min-block-size: var(--touch-min);
-  gap: var(--space-2);
-  padding-inline: var(--space-inset-row);
-  border-width: var(--stroke-strong);
-  font-size: var(--type-line2-size);
-  line-height: var(--type-chip-line);
-  font-weight: var(--type-name-weight);
-}
-
 /* FLOW-965: the page's states: the review button and the offline line sit in the head, the failed and empty
    cards under it at the page's sides (band-states' page cards). */
 .ui-lines-head .ui-review-cta,

@@ -82,7 +82,7 @@ test("next month's card opens the next-month page, and the project page's chart 
 
 test("the profit page's category row opens that category, and the project page's waiting line opens the project's queue", async ({ page }) => {
   await page.goto("/e2e/project-profit?preview=1");
-  await page.getByRole("button", { name: "לפי קטגוריה" }).click();
+  await page.getByRole("radio", { name: "לפי קטגוריה" }).click();
   await page.getByRole("link", { name: /^תיקונים ותחזוקה/ }).click();
   await expect(page).toHaveURL(/\/projects\/[^/]+\/categories\/repairs/);
   await page.goto("/e2e/project-detail?preview=1");

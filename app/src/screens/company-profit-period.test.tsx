@@ -73,7 +73,7 @@ describe("the period switch", () => {
 
   it("by project: each project's year, the finished ones in one row, a project opening its profit page", () => {
     renderPage("/profit?period=year");
-    fireEvent.click(screen.getAllByRole("button", { name: "לפי פרויקט" })[0] as HTMLElement);
+    fireEvent.click(screen.getAllByRole("radio", { name: "לפי פרויקט" })[0] as HTMLElement);
     expect(screen.getByTestId("search").textContent).toBe("?period=year&list=project");
     const list = document.querySelector(".ui-cp-period-list");
     if (!(list instanceof HTMLElement)) throw new Error("no list");
@@ -90,11 +90,11 @@ describe("the period switch", () => {
     expect(screen.getByText("מאז ינואר 2024 · 3 שנים")).toBeInTheDocument();
     expect(document.querySelector(".ui-cp-figure")?.textContent).toContain("96,524");
     expect(summaryLabels()).toEqual(["הכנסות", "הוצאות שנספרות ברווח", "רווח מתחילת הדרך", "השנה הרווחית ביותר · 2025"]);
-    expect(screen.getByText("הכנסות והוצאות לפי שנה")).toBeInTheDocument();
+    expect(screen.getByText(/^הכנסות והוצאות לפי שנה · /)).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /^הכנסות לפי שנה: 2024 \$148,600, 2025 \$291,400, 2026 עד היום \$262,227 וצפי לסוף השנה/ })).toBeInTheDocument();
     // No forecast card and no chips since the start.
     expect(document.querySelector(".ui-cp-head .ui-fc-card")).toBeNull();
-    expect(screen.queryByRole("button", { name: "לפי פרויקט" })).toBeNull();
+    expect(screen.queryByRole("radio", { name: "לפי פרויקט" })).toBeNull();
     const years = screen.getByRole("region", { name: "לפי שנה" });
     expect(within(years).getAllByRole("button").map((row) => row.querySelector(".ui-cp-name")?.textContent)).toEqual(["2026 · עד היום", "2025", "2024"]);
     fireEvent.click(within(years).getByRole("button", { name: /^2025/ }));

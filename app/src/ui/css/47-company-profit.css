@@ -31,6 +31,9 @@
 /* FLOW-145: the period switch, 14px under the sub; the figure follows 8px under it. */
 .ui-cp-period {
   margin-top: var(--space-inset-row);
+  /* FLOW-969: 44px segments (were 40px), as the loan page's switch (FLOW-962). */
+  --size-seg: var(--touch-min);
+  --size-seg-track: calc(var(--touch-min) + var(--space-2));
 }
 
 .ui-cp-period + .ui-cp-figure {
@@ -70,15 +73,10 @@
   overflow-y: hidden;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
-  /* Room for the 44px hit area and the focus ring around the 36px chips; the margins keep the chips where they were. */
-  margin-top: calc(var(--space-1) * 3.5);
+  /* FLOW-969: the chips are 44px (`.ui-order-chips`); the padding keeps room for the focus ring. */
+  margin-top: var(--space-2);
   margin-bottom: calc(var(--space-1) * -1);
   padding: var(--space-1) 0;
-}
-
-/* An idle chip sits on the track, not the tint line. */
-.ui-cp-chips .ui-chip-choice[aria-pressed="false"] {
-  border-color: var(--color-track-strong);
 }
 
 .ui-cp-list {
