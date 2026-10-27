@@ -7,6 +7,26 @@ import { ScreenHeader } from "./screen-header";
 import { ListSkeleton, SkeletonSwap } from "./skeleton";
 import { SyncStrip } from "./sync-strip";
 
+/**
+ * A failure's נסו שוב: a preview of the failure goes back to the plain preview, anything else runs onRetry.
+ * ScreenState and the invoice pages (FLOW-968) share it.
+ */
+export function usePreviewRetry(onRetry: () => void): () => void {
+  const preview = useHomePreview();
+  const navigate = useNavigate();
+  const location = useLocation();
+  return () => {
+    if (preview === "error" || preview === "error-server") {
+      const params = new URLSearchParams(location.search);
+      params.set("preview", "1");
+      // Keep the entry's state: a card opened from a list keeps its prev and next.
+      void navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true, state: location.state as unknown });
+      return;
+    }
+    onRetry();
+  };
+}
+
 export function ScreenState({
   title,
   subtitle,
@@ -63,19 +83,7 @@ export function ScreenState({
   /** FLOW-965: the page's own failed card in place of the failure line, given the retry and whether it is offline. */
   failed?: (retry: () => void, offline: boolean) => ReactNode;
 }) {
-  const preview = useHomePreview();
-  const navigate = useNavigate();
-  const location = useLocation();
-  function retry() {
-    if (preview === "error" || preview === "error-server") {
-      const params = new URLSearchParams(location.search);
-      params.set("preview", "1");
-      // Keep the entry's state: a card opened from a list keeps its prev and next.
-      void navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true, state: location.state as unknown });
-      return;
-    }
-    onRetry();
-  }
+  const retry = usePreviewRetry(onRetry);
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <SyncStrip label={syncing ?? null} />
