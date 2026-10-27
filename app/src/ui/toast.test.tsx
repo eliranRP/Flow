@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { placeToast, safeTopPx, ToastProvider, useToast } from "./toast";
 import { toastMs } from "./toast-layout";
 
-function Probe({ tone, message = "הפריט אושר", place }: { tone?: "ok" | "bad" | "info"; message?: string; place?: "page" | "bar" }) {
+function Probe({ tone, message = "הפריט אושר", place }: { tone?: "ok" | "bad" | "info"; message?: string; place?: "page" | "top" }) {
   const toast = useToast();
   return (
     <button

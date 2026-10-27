@@ -8,6 +8,7 @@ import { ConfirmSheet } from "../ui/confirm-sheet";
 import { TextField } from "../ui/text-field";
 import { useTopToast } from "../ui/top-toast";
 import { assertNoError, useWrite, type WriteFailure } from "../use-write";
+import { DELETE_COMPANY_OFFLINE, useOfflineRefusal } from "./settings-offline";
 
 export const DANGER_HEAD = "אזור מסוכן";
 export const DELETE_ROW = "מחיקת כל הנתונים";
@@ -69,6 +70,7 @@ export function DeleteCompanySheet({
   const navigate = useNavigate();
   const toast = useTopToast();
   const leave = useLeaveShownCompany();
+  const refuseOffline = useOfflineRefusal();
 
   useEffect(() => {
     if (open) setTyped("");
@@ -97,6 +99,8 @@ export function DeleteCompanySheet({
   const matches = deleteConfirmMatches(typed, companyName);
   const submit = () => {
     if (remove.isPending || !matches) return;
+    // FLOW-972: a delete must not run by itself when the connection returns.
+    if (refuseOffline(DELETE_COMPANY_OFFLINE)) return;
     if (blocked()) return;
     if (companyId == null) return;
     remove.mutate({ companyId, confirm: typed.trim() });

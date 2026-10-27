@@ -71,7 +71,7 @@ export function useWrite<T = void>(options: {
   /** An error that needs no toast, because the screen already shows the state. */
   silent?: (error: Error) => boolean;
   /** Where this write's toasts sit. לאישור keeps them under its header (decision 0212). */
-  place?: "page" | "bar" | "top";
+  place?: "page" | "top";
   /** A retryable failure's toast stays until it is acted on or dismissed (לאישור's approve, decision 0212). */
   persistFailure?: boolean;
   /** The queries the write changes and each one's value after it. The tap shows it at once; a failure restores it. */

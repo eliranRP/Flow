@@ -159,6 +159,24 @@ export const CategoriesNewEmpty: Story = {
   },
 };
 
+/** FLOW-972: a one-letter name says it is too short on the tap (create_category's 2 characters). */
+export const CategoriesNewShort: Story = {
+  name: "Categories, new category with a one-letter name",
+  render: () => (
+    <StoryRoute entry="/settings/categories" tabs>
+      <ExampleBar />
+      <CategoriesScreen sample={sampleCategories} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "קטגוריה חדשה" }));
+    const sheet = await storyBody(canvasElement).findByRole("dialog", { name: "קטגוריה חדשה" });
+    await userEvent.type(within(sheet).getByRole("textbox", { name: "שם" }), "ח");
+    await userEvent.click(within(sheet).getByRole("button", { name: "יצירת הקטגוריה" }));
+    await within(sheet).findByText("שם קצר מדי – לפחות 2 תווים");
+  },
+};
+
 /** FLOW-972: a name the kind already has says so as it is typed. */
 export const CategoriesNewTaken: Story = {
   name: "Categories, new category with a taken name",

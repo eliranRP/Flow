@@ -10,6 +10,7 @@ import {
 } from "../team-api";
 import { MY_INVITES_KEY, useOpenCompany } from "../team-queries";
 import { useToast } from "../ui/toast";
+import { useTopToast } from "../ui/top-toast";
 import { isTransientWriteError, useWrite, type WriteFailure } from "../use-write";
 
 export type InviteBusy = { id: string; kind: "join" | "decline" } | null;
@@ -29,20 +30,26 @@ export function useInviteActions({
   onJoined,
   onDeclined,
   onReopened,
+  place,
 }: {
   onJoined: (invite: MyInvite) => void;
+  /** Where the toasts sit: "top" in החלפת עסק on Settings (decision 0222); the default elsewhere. */
+  place?: "top";
   /** The invitation screen shows its own declined state, so no toast: it offers `reopen` itself. */
   onDeclined?: (invite: MyInvite) => void;
   onReopened?: (invite: MyInvite) => void;
 }) {
   const api = useTeamApi();
-  const toast = useToast();
+  const plainToast = useToast();
+  const topToast = useTopToast();
+  const toast = place === "top" ? topToast : plainToast;
   const client = useQueryClient();
   const openCompany = useOpenCompany();
   const refreshInvites = () => {
     void client.invalidateQueries({ queryKey: [MY_INVITES_KEY] });
   };
   const join = useWrite<MyInvite>({
+    place,
     keys: [],
     failure: teamFailure(JOIN_FAILED),
     onSuccess: onJoined,
@@ -57,6 +64,7 @@ export function useInviteActions({
     },
   });
   const reopen = useWrite<MyInvite>({
+    place,
     keys: [MY_INVITES_KEY],
     failure: reopenFailure,
     onSuccess: onReopened,
@@ -65,6 +73,7 @@ export function useInviteActions({
     },
   });
   const decline = useWrite<MyInvite>({
+    place,
     keys: [MY_INVITES_KEY],
     failure: (error) => {
       refreshInvites();

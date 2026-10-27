@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { readThemeChoice, writeThemeChoice, type ThemeChoice } from "../theme-store";
 import { toastMs } from "../ui/toast-layout";
 import { ToastProvider } from "../ui/toast";
-import { topToast } from "../ui/top-toast";
+import { TOP_UNDO_MS, topToast } from "../ui/top-toast";
 import { ThemeSheet, themePickToast } from "./theme-sheet";
 
 function Harness() {
@@ -111,6 +111,6 @@ describe("ThemeSheet (Settings › מראה)", () => {
   it("keeps the undo toast under the header for 5 s (decision 0222)", () => {
     const shown = topToast({ message: themePickToast("light"), action: "ביטול", onAction: () => undefined });
     expect(shown.place).toBe("top");
-    expect(toastMs(shown)).toBe(5000);
+    expect(toastMs(shown)).toBe(TOP_UNDO_MS);
   });
 });

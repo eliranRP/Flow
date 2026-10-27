@@ -209,7 +209,6 @@
 
 /* FLOW-972: the הוצאות / הכנסות switch: 44px segments (the board's) at 15px, the type scale's step. */
 .ui-cat-seg .ui-seg-btn {
-  --hit-block: var(--touch-min);
   block-size: var(--touch-min);
   min-block-size: var(--touch-min);
   font-size: var(--type-line2-size);

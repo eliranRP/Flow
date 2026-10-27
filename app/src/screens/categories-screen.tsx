@@ -7,7 +7,7 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useCategoriesQuery, useDashboardQuery } from "../use-books";
 import { assertNoError, useWrite } from "../use-write";
-import { mergeFailureText, pnlFailureText } from "../category-copy";
+import { CATEGORY_NAME_MAX, categoryNameError, mergeFailureText, pnlFailureText } from "../category-copy";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { EmptyState } from "../ui/empty-state";
@@ -71,12 +71,14 @@ export const NEW_CATEGORY_TAKEN = "כבר יש קטגוריה בשם הזה";
 
 /**
  * FLOW-972: what is wrong with a new category's name, or nothing. A name taken in the same kind says so
- * as it is typed; an empty name says so on the tap (`tried`), so the button never greys out.
+ * as it is typed; an empty or too short name (create_category's 2 characters) says so on the tap
+ * (`tried`), so the button never greys out.
  */
 export function newCategoryProblem(name: string, rows: readonly CategoryRow[], kind: CategoryRow["kind"], tried: boolean): string | undefined {
   const clean = name.trim();
   if (clean === "") return tried ? NEW_CATEGORY_EMPTY : undefined;
-  return rows.some((row) => row.kind === kind && row.name.trim() === clean) ? NEW_CATEGORY_TAKEN : undefined;
+  if (rows.some((row) => row.kind === kind && row.name.trim() === clean)) return NEW_CATEGORY_TAKEN;
+  return tried ? categoryNameError(clean) : undefined;
 }
 
 /**
@@ -463,6 +465,8 @@ export function CategoriesScreen({
           value={categoryName}
           hint={NEW_CATEGORY_NOTE}
           error={newCategoryProblem(categoryName, rows, kind, createTried)}
+          maxLength={CATEGORY_NAME_MAX}
+          liveMessage
           onChange={(event) => { setCategoryName(event.target.value); }}
         />
       </Sheet>

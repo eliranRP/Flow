@@ -1,7 +1,8 @@
 # Review toasts sit above the action bar
 
 **Date:** 2026-10-08
-**Status:** Accepted (owner, 2026-10-08: the skip-undo toast above the bar). §2 to §4 superseded for לאישור by [0212](0212-review-toast-under-header.md) (2026-10-26)
+**Status:** Superseded (accepted by the owner, 2026-10-08: the skip-undo toast above the bar; §2 to §4 superseded for לאישור by [0212](0212-review-toast-under-header.md) on 2026-10-26)
+**Superseded by:** [0222](0222-settings-toast-under-header.md) (2026-10-27): the team page, the bar place's last user, moved its toasts under the header, and `place: "bar"` is gone. The pinned `ActionBar` itself stays.
 
 ## Context
 

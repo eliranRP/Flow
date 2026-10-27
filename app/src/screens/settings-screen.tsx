@@ -30,7 +30,7 @@ import { notificationsHint } from "./notifications-screen";
 import { themeChoiceLabel, THEME_TITLE } from "../ui/theme-choices";
 import { readThemeChoice, writeThemeChoice, type ThemeChoice } from "../theme-store";
 import { ThemeSheet } from "./theme-sheet";
-import { SettingsOfflineLine } from "./settings-offline";
+import { SettingsOfflineLine, SIGN_OUT_OFFLINE, useOfflineRefusal } from "./settings-offline";
 
 /** Shown on `/settings?preview=` when the value is not `empty` and no sample is passed. */
 const previewAccountName = "בית הספר אלון";
@@ -203,6 +203,8 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
     const row = document.querySelector<HTMLElement>(`[data-settings-page="${openedPage}"] a`);
     row?.focus({ preventScroll: true });
   }, [phase.kind, navigationType, openedPage]);
+  // FLOW-972: a sign-out must not run by itself when the connection returns.
+  const refuseOffline = useOfflineRefusal();
   const signOut = useWrite({
     place: "top",
     failure: "לא הצלחנו לצאת.",
@@ -358,6 +360,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
         onOpenChange={setCompanySheet}
         onLeave={() => { setCompanyOpen(false); }}
         returnFocusRef={companyRowRef}
+        toastPlace="top"
       />
       <List layout="inset">
         <ListRow
@@ -397,7 +400,10 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
       </List>
       {showSignOut ? (
         <div className="ui-settings-signout">
-          <Button variant="danger-link" busy={signOut.isPending} onClick={() => { signOut.mutate(); }}>
+          <Button variant="danger-link" busy={signOut.isPending} onClick={() => {
+            if (refuseOffline(SIGN_OUT_OFFLINE)) return;
+            signOut.mutate();
+          }}>
             התנתקות
           </Button>
         </div>

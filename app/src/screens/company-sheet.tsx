@@ -5,6 +5,7 @@ import { useLeaveShownCompany, useMyCompaniesQuery, useMyInvitesQuery, useOpenCo
 import { Button } from "../ui/button";
 import { Sheet } from "../ui/sheet";
 import { List, ListRow } from "../ui/list-row";
+import { useToast } from "../ui/toast";
 import { useTopToast } from "../ui/top-toast";
 import { useWrite } from "../use-write";
 import { useInviteActions } from "./invite-actions";
@@ -66,21 +67,26 @@ export function CompanySheet({
   onOpenChange,
   onLeave,
   returnFocusRef,
+  toastPlace,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Closes the sheet without its history step, before "+ עסק חדש" replaces that entry. */
   onLeave: () => void;
   returnFocusRef?: RefObject<HTMLElement | null>;
+  /** "top" on Settings, under its header (decision 0222). Home's band keeps the default place. */
+  toastPlace?: "top";
 }) {
   const navigate = useNavigate();
-  const toast = useTopToast();
+  const plainToast = useToast();
+  const topToast = useTopToast();
+  const toast = toastPlace === "top" ? topToast : plainToast;
   const companies = useMyCompaniesQuery();
   const invites = useMyInvitesQuery(open);
   const openCompany = useOpenCompany();
   const leave = useLeaveShownCompany();
   const switchTo = useWrite<{ id: string; name: string }>({
-    place: "top",
+    place: toastPlace,
     keys: [],
     failure: SWITCH_FAILED,
     onSuccess: (company) => {
@@ -92,6 +98,7 @@ export function CompanySheet({
     },
   });
   const actions = useInviteActions({
+    place: toastPlace,
     onJoined: (invite) => {
       onOpenChange(false);
       toast.show({ message: `הצטרפת ל־${invite.company_name}` });

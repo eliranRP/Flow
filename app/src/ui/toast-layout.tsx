@@ -2,17 +2,17 @@
 
 export type ToastInput = {
   message: string;
-  /** Overrides the default time on screen, in ms (the theme undo is 3 s, the board's). */
+  /** Overrides the default time on screen, in ms. */
   durationMs?: number;
   tone?: "ok" | "bad" | "info";
   action?: string;
   onAction?: () => void;
   /**
-   * `page` is every confirmation: it sits above the floor, sheet or not (decision 0182). `bar` sits just
-   * above the screen's pinned action bar (decision 0137); a confirmation stays there too. `top` sits
-   * under the screen's header, below its `[data-toast-ceiling]` when it marks one (לאישור, decision 0212).
+   * `page` is every confirmation: it sits above the floor, sheet or not (decision 0182). `top` sits
+   * under the screen's header, below its `[data-toast-ceiling]` when it marks one (לאישור, decision 0212);
+   * a confirmation stays there too.
    */
-  place?: "page" | "bar" | "top";
+  place?: "page" | "top";
   /** FLOW-960: the toast stays until it is acted on or dismissed; no timer ends it. */
   persist?: boolean;
 };
@@ -71,9 +71,9 @@ function safeAreaPx(name: string): number {
   return Number.isFinite(height) ? height : 0;
 }
 
-/** The open sheet, if any. A page or bar toast sits on the page, not on a sheet. */
+/** The open sheet, if any. A page or top toast sits on the page, not on a sheet. */
 export function toastAnchor(layer?: HTMLElement | null): { sheet: Element | null } {
-  const onPage = layer?.dataset.place === "page" || layer?.dataset.place === "bar" || layer?.dataset.place === "top";
+  const onPage = layer?.dataset.place === "page" || layer?.dataset.place === "top";
   return { sheet: onPage ? null : document.querySelector("[data-vaul-drawer][data-state='open']") };
 }
 
@@ -253,20 +253,6 @@ export function placeToast(layer: HTMLElement): void {
     const ceiling = document.querySelector("[data-toast-ceiling]") ?? document.querySelector("header.ui-page");
     const below = ceiling instanceof Element ? ceiling.getBoundingClientRect().bottom + gap : 0;
     layer.style.top = `${String(Math.max(safeTopPx() + gap, below))}px`;
-    return;
-  }
-  if (layer.dataset.place === "bar") {
-    // Decision 0137: just above the bar, near the thumb. It may cover the bottom of the
-    // scrolling card, never the bar.
-    const gap = cssPx("--space-2");
-    layer.style.paddingInline = "var(--space-card-inset)";
-    const safe = safeTopPx();
-    // No bar (the last card was handled): above the tab bar, else the screen edge (0137 §3).
-    const floor = toastFloor() ?? tabBarObstacle();
-    const top = floor && height > 0
-      ? Math.max(safe, floor.top - gap - height)
-      : Math.max(safe, window.innerHeight - gap - height);
-    layer.style.top = `${String(top)}px`;
     return;
   }
   const { sheet } = toastAnchor(layer);
