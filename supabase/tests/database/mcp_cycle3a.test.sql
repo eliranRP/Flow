@@ -480,12 +480,12 @@ select ok(
 );
 
 select ok(
-  has_function_privilege('authenticated', 'public.mcp_assign_expense(text, uuid, uuid, uuid, boolean)', 'execute')
+  has_function_privilege('authenticated', 'public.mcp_assign_expense(text, uuid, uuid, uuid, boolean, boolean)', 'execute')
   and has_function_privilege('authenticated', 'public.mcp_set_expense_category(text, uuid, uuid)', 'execute')
   and has_function_privilege('authenticated', 'public.mcp_undo(text, text, uuid)', 'execute')
   and has_function_privilege('authenticated', 'public.approve_review_item(uuid, uuid, uuid, boolean, uuid, uuid, boolean)', 'execute')
-  and not has_function_privilege('anon', 'public.mcp_assign_expense(text, uuid, uuid, uuid, boolean)', 'execute')
-  and not has_function_privilege('service_role', 'public.mcp_assign_expense(text, uuid, uuid, uuid, boolean)', 'execute')
+  and not has_function_privilege('anon', 'public.mcp_assign_expense(text, uuid, uuid, uuid, boolean, boolean)', 'execute')
+  and not has_function_privilege('service_role', 'public.mcp_assign_expense(text, uuid, uuid, uuid, boolean, boolean)', 'execute')
   and not has_function_privilege('service_role', 'public.mcp_undo(text, text, uuid)', 'execute')
   and not has_function_privilege('authenticated', 'private.mcp_require_writer()', 'execute')
   and not has_function_privilege('anon', 'private.mcp_idempotency_store(uuid, text, text, jsonb)', 'execute'),
@@ -516,10 +516,10 @@ select ok(
 
 select ok(
   strpos(
-    pg_get_functiondef('public.mcp_assign_expense(text, uuid, uuid, uuid, boolean)'::regprocedure),
+    pg_get_functiondef('public.mcp_assign_expense(text, uuid, uuid, uuid, boolean, boolean)'::regprocedure),
     'for update'
   ) < strpos(
-    pg_get_functiondef('public.mcp_assign_expense(text, uuid, uuid, uuid, boolean)'::regprocedure),
+    pg_get_functiondef('public.mcp_assign_expense(text, uuid, uuid, uuid, boolean, boolean)'::regprocedure),
     'from public.review_queue q'
   )
   and strpos(

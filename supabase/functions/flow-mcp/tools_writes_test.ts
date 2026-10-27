@@ -1027,7 +1027,7 @@ Deno.test("assign_expenses lists shares[] on its items like assign_expense_split
   const single = tools.find((tool) => tool.name === "assign_expense_split");
   const props = batch?.inputSchema.properties as Record<string, { items?: { properties?: Record<string, unknown> } }>;
   const itemProps = props.items.items?.properties ?? {};
-  assertEquals(Object.keys(itemProps), ["transaction_id", "project_id", "category_id", "remember", "shares", "parts"]);
+  assertEquals(Object.keys(itemProps), ["transaction_id", "project_id", "category_id", "remember", "unshare", "shares", "parts"]);
   assertEquals(itemProps.shares, (single?.inputSchema.properties as Record<string, unknown>).shares);
   assertEquals(itemProps.shares, {
     type: "array",
@@ -1114,4 +1114,32 @@ Deno.test("assign_expenses forwards a parts[] row like split_line and validates 
   const single = tools.find((tool) => tool.name === "split_line");
   const props = batchTool?.inputSchema.properties as Record<string, { items?: { properties?: Record<string, unknown> } }>;
   assertEquals(props.items.items?.properties?.parts, (single?.inputSchema.properties as Record<string, unknown>).parts);
+});
+
+Deno.test("assign_expense and assign_expenses take unshare, with a project and an optional category (FLOW-150)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: TXN, undo_kind: "reassign", unshared: true } } }));
+  assertEquals((await callTool("assign_expense", { idempotency_key: "u-1", transaction_id: TXN, project_id: PROJECT, unshare: true }, ["write"], rpc)).isError, false);
+  assertEquals(calls.at(-1), {
+    name: "mcp_assign_expense",
+    body: { p_idempotency_key: "u-1", p_transaction_id: TXN, p_project_id: PROJECT, p_category_id: null, p_remember: false, p_unshare: true },
+  });
+  // Without unshare a category is still required.
+  const before = calls.length;
+  assertEquals((await callTool("assign_expense", { idempotency_key: "u-2", transaction_id: TXN, project_id: PROJECT }, ["write"], rpc)).structuredContent,
+    { ok: false, error: { code: "validation", message: "validation" } });
+  assertEquals((await callTool("assign_expense", { idempotency_key: "u-3", transaction_id: TXN, project_id: PROJECT, unshare: "yes" }, ["write"], rpc)).isError, true);
+  assertEquals(calls.length, before);
+
+  await callTool("assign_expenses", { idempotency_key: "u-4", items: [{ transaction_id: TXN, project_id: PROJECT, unshare: true }] }, ["write"], rpc);
+  assertEquals(calls.at(-1)?.body.p_items, [{ transaction_id: TXN, project_id: PROJECT, unshare: true }]);
+  const after = calls.length;
+  for (const item of [
+    { transaction_id: TXN, unshare: true, category_id: CATEGORY },
+    { transaction_id: TXN, project_id: PROJECT, unshare: true, shares: [{ project_id: PROJECT, share: 100 }] },
+    { transaction_id: TXN, unshare: true, parts: [] },
+  ]) {
+    const refused = await callTool("assign_expenses", { idempotency_key: "u-bad", items: [item] }, ["write"], rpc);
+    assertEquals(refused.isError, true, JSON.stringify(item));
+  }
+  assertEquals(calls.length, after);
 });

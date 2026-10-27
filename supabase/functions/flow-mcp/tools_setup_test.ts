@@ -178,6 +178,7 @@ Deno.test("assign_expense forwards project and category for an income review lin
       p_project_id: PROJECT,
       p_category_id: INCOME_CATEGORY,
       p_remember: false,
+      p_unshare: false,
     },
   });
   if (assigned.structuredContent.ok) {
@@ -289,6 +290,7 @@ Deno.test("assign, set category, and undo call their wrappers", async () => {
       p_project_id: PROJECT,
       p_category_id: CATEGORY,
       p_remember: false,
+      p_unshare: false,
     },
   });
   const remembered = await callTool("assign_expense", {

@@ -120,8 +120,9 @@ export async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
       p_project_id: parsed.data.project_id ?? null,
-      p_category_id: parsed.data.category_id,
+      p_category_id: parsed.data.category_id ?? null,
       p_remember: parsed.data.remember ?? false,
+      p_unshare: parsed.data.unshare ?? false,
     };
   } else if (name === "assign_expense_split") {
     const parsed = assignExpenseSplitSchema.safeParse(args);
