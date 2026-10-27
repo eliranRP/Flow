@@ -184,11 +184,14 @@ describe("inner write gates after the role changes", () => {
       expect(writes()).toBe(0);
     });
 
-    it("asks to disconnect for an owner, and disconnects on confirm", async () => {
+    it("disconnects for an owner once ביטול runs out (decision 0223)", async () => {
       openStatus();
       fireEvent.click(screen.getByRole("button", { name: "ניתוק" }));
-      const confirm = await screen.findByRole("dialog", { name: "לנתק את SUMIT?" });
-      fireEvent.click(within(confirm).getByRole("button", { name: "ניתוק" }));
+      expect(writes()).toBe(0);
+      // Leaving the app ends the 5s wait at once.
+      Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+      document.dispatchEvent(new Event("visibilitychange"));
+      Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
       await vi.waitFor(() => { expect(writes()).toBeGreaterThan(0); });
     });
   });

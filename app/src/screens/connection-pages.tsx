@@ -99,8 +99,6 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
   const [importValue, setImportValue] = useState<string | null>(null);
   // "short": a tap with something missing; "rejected": SUMIT refused the key (decision 0223).
   const [keyError, setKeyError] = useState<"short" | "rejected" | null>(sample?.keyError ?? null);
-  // A sample's disconnect, waiting on its ביטול (the live page reads its own write).
-  const [sampleGone, setSampleGone] = useState(false);
   const refreshSumit = useSumitRefresh(topToast);
   const storedCompany = live && sumit.data?.sumit_company_id != null ? String(sumit.data.sumit_company_id) : (sample?.companyId ?? "");
   // A reconnect starts with the company number on file; a typed one replaces it.
@@ -150,7 +148,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
 
   const shown = sample ?? liveView(provider, live, status.data, now);
   // A disconnect waiting on its ביטול already shows the page as SUMIT will be after it.
-  const view: ConnectionSample = (disconnect.isPending || sampleGone) && shown.state === "connected" ? { state: "new" } : shown;
+  const view: ConnectionSample = disconnect.isPending && shown.state === "connected" ? { state: "new" } : shown;
   const noCompany = live && companyId == null && dashboard.isSuccess;
   const problem = view.state === "problem";
   const connected = view.state === "connected";
@@ -178,12 +176,7 @@ export function ConnectionDetailPage({ provider, sample }: { provider: Provider;
   const disconnectNow = () => {
     if (holdOwner || blocked()) return;
     const hold = holdForUndo();
-    if (sample != null) {
-      setSampleGone(true);
-      void hold.done.then(() => undefined, () => { setSampleGone(false); });
-    } else {
-      disconnect.mutate(hold);
-    }
+    disconnect.mutate(hold);
     toast.show({ message: "SUMIT נותק. מה שכבר נכנס נשמר", action: "ביטול", onAction: () => { hold.cancel(); } });
   };
 
