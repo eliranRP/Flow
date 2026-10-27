@@ -97,3 +97,23 @@ export const Offline: Story = { render: () => <Search entry="/search?q=חומר�
 
 /** More lines than one page: the month head of the last month waits, and the count says the total. */
 export const MorePages: Story = { render: () => <Search entry="/search?dir=expense" data={{ ...sample, total: 120 }} /> };
+
+/**
+ * A large income kept out of profit, with a project and a category: its one line ("date · project ·
+ * category · לא נספר ברווח") is wider than a phone, so it ends in "…" and the amount stays on screen.
+ * The storybook layout sweep checks "Large Amount" stories at 320 and 390.
+ */
+export const LargeAmount: Story = {
+  render: () => (
+    <Search
+      entry="/search?q=Northwind"
+      data={{
+        ...sample,
+        rows: [
+          line("s9", { doc_date: "2026-10-02", supplier_name: null, customer_name: "NORTHWIND PARTNER CAPITAL", direction: "income", currency: "USD", amount_net: 4_960_000n, amount_original: 4_960_000n, vat_agorot: 0n, kept_out: true, project_name: "כללי לדוגמה", category_id: "c6", category_name: "הון בעלים" }),
+          ...rows,
+        ],
+      }}
+    />
+  ),
+};
