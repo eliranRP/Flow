@@ -73,8 +73,8 @@ describe("תזרים צפוי's chart", () => {
 
 describe("monthEndTakeaway", () => {
   it("says where the month ends, the minus before the currency in an isolated amount", () => {
-    expect(monthEndTakeaway("2026-10", -574_100n, "USD")).toBe("אוקטובר צפוי להיסגר ב־⁦−$5,741⁩");
-    expect(monthEndTakeaway("2026-10", 120_000n, "USD")).toBe("אוקטובר צפוי להיסגר ב־⁦$1,200⁩");
+    expect(monthEndTakeaway("2026-10", -574_100n, "USD")).toBe("אוקטובר צפוי להיסגר ב־\u2066−$5,741\u2069");
+    expect(monthEndTakeaway("2026-10", 120_000n, "USD")).toBe("אוקטובר צפוי להיסגר ב־\u2066$1,200\u2069");
   });
 
   it("says a month that ends at zero closes even, never ב־$0", () => {

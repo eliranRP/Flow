@@ -73,5 +73,5 @@ export function monthEndTakeaway(month: string, end: bigint, currency: string): 
   const name = monthWord(month);
   if (end === 0n) return `${name} צפוי להיסגר באיזון`;
   const amount = end < 0n ? `−${formatAmountText(-end, currency)}` : formatAmountText(end, currency);
-  return `${name} צפוי להיסגר ב־⁦${amount}⁩`;
+  return `${name} צפוי להיסגר ב־\u2066${amount}\u2069`;
 }

@@ -288,7 +288,7 @@ describe("ForecastScreen", () => {
     renderWithProviders(<ForecastScreen sample={monthForecastBoardSample("board")} />, { route: "/forecast" });
     const big = document.querySelector(".ui-forecast-big")?.textContent ?? "";
     const takeaway = screen.getByRole("heading", { name: /^אוקטובר צפוי להיסגר ב־/ });
-    expect(takeaway.textContent?.replace(/[⁦⁩]/g, "")).toBe(`אוקטובר צפוי להיסגר ב־${big}`);
+    expect(takeaway.textContent.replace(/[\u2066\u2069]/g, "")).toBe(`אוקטובר צפוי להיסגר ב־${big}`);
     expect(screen.getByText("נכנס ויצא לפי חודש · מאי עד סוף אוקטובר")).toBeTruthy();
   });
 
