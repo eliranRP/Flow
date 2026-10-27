@@ -230,7 +230,7 @@ test("filed today lists both rows, opens one, and can be empty", async ({ page }
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
   await page.goto("/reviewer/filed?empty=1");
-  await expect(page.getByText("אין תנועות ששויכו היום")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "עוד לא שויך כלום היום" })).toBeVisible();
   await expectNoOverflow(page);
 });
 
@@ -320,11 +320,12 @@ test("category, project queue, and waiting stay inside the sample", async ({ pag
   await expect(page.getByRole("heading", { name: "לאישור" })).toBeVisible();
   await expect(page.getByText("₪150")).toBeVisible();
   await expect(page.getByText("₪300")).toBeVisible();
-  await page.getByRole("link", { name: /ברגים/ }).click();
+  // FLOW-971: a waiting row is named by its supplier, as on the board.
+  await page.getByRole("link", { name: /ברגי העמק/ }).click();
   await expect(page).toHaveURL(/\/reviewer\/save\?save=ok&item=q-bolts$/);
   await expect(page.getByText("ברגי העמק בע״מ · ₪150")).toBeVisible();
   await page.goto("/reviewer/waiting");
-  await page.getByRole("link", { name: /צבע/ }).click();
+  await page.getByRole("link", { name: /צבעי הכרמל/ }).click();
   await expect(page).toHaveURL(/\/reviewer\/save\?save=ok&item=q-paint$/);
   await expect(page.getByText("צבעי הכרמל בע״מ · ₪300")).toBeVisible();
 

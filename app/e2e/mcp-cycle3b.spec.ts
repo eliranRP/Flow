@@ -86,8 +86,9 @@ test("the empty filed list says both sources and does not clip", async ({ page }
     await page.emulateMedia({ colorScheme: scheme });
     await page.setViewportSize({ width: 320, height: 844 });
     await page.goto("/reviewer/filed?empty=1");
-    await expect(page.getByText("אין תנועות ששויכו היום")).toBeVisible();
-    await expect(page.getByText("כש־SUMIT משייך תנועה בלי תור, או כשהעוזר מאשר תנועה היום, היא תופיע כאן.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "עוד לא שויך כלום היום" })).toBeVisible();
+    // Both sources: the owner's approvals, and what SUMIT and the assistant file (FLOW-971 keeps them).
+    await expect(page.getByText("שורות שתאשרו בלאישור, או ש־SUMIT והעוזר ישייכו, יופיעו כאן עד סוף היום, לפי פרויקט.")).toBeVisible();
     await expectNoOverflow(page);
   }
 });

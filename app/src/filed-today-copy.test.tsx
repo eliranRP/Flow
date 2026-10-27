@@ -3,7 +3,7 @@ import { FILED_TODAY_EMPTY_BODY, FILED_TODAY_EMPTY_TITLE } from "./filed-today-c
 
 describe("שויכו היום copy", () => {
   it("keeps the empty title and covers both sources", () => {
-    expect(FILED_TODAY_EMPTY_TITLE).toBe("אין תנועות ששויכו היום");
-    expect(FILED_TODAY_EMPTY_BODY).toBe("כש־SUMIT משייך תנועה בלי תור, או כשהעוזר מאשר תנועה היום, היא תופיע כאן.");
+    expect(FILED_TODAY_EMPTY_TITLE).toBe("עוד לא שויך כלום היום");
+    expect(FILED_TODAY_EMPTY_BODY).toBe("שורות שתאשרו בלאישור, או ש־SUMIT והעוזר ישייכו, יופיעו כאן עד סוף היום, לפי פרויקט.");
   });
 });

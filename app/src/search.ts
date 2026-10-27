@@ -1,6 +1,6 @@
 import { formatAmountText, type SearchPage, type SearchRow } from "@flow/shared";
-import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { keepPreviousData, useInfiniteQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { allTime, periodFromSearch, periodSearch, type PeriodChoice } from "./period";
@@ -327,6 +327,27 @@ export function searchMonthTotals(months: SearchPage["months"]): Map<string, Mon
 /** "1 תנועה" or "N תנועות". */
 export function searchCountWords(count: number): string {
   return count === 1 ? "1 תנועה" : `${String(count)} תנועות`;
+}
+
+/**
+ * Offline (the search board's offline state): every line an earlier search already read, once each.
+ * The screen filters these by the server's rules and says it searches only what is loaded. Null
+ * when off or when nothing was read.
+ */
+export function useLoadedSearchRows(active: boolean): SearchRow[] | null {
+  const client = useQueryClient();
+  const preview = useHomePreview();
+  // The same rows keep one array until a read lands, so the screen's filtering memo holds.
+  const stamp = active
+    ? client.getQueryCache().findAll({ queryKey: ["search", preview] }).map((query) => query.state.dataUpdatedAt).join(",")
+    : null;
+  return useMemo(() => {
+    if (stamp == null) return null;
+    const pages = client
+      .getQueriesData<InfiniteData<SearchReadPage>>({ queryKey: ["search", preview] })
+      .flatMap(([, data]) => data?.pages ?? []);
+    return pages.length === 0 ? null : uniqueSearchRows(pages);
+  }, [client, preview, stamp]);
 }
 
 /** The results' month titles: the current year's months drop the year ("אוקטובר"), as the board draws them. */

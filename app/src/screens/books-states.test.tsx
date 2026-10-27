@@ -662,7 +662,6 @@ describe("an unchanged complete review", () => {
     fireEvent.click(screen.getByRole("button", { name: "קטגוריה: חומרים, שינוי" }));
     fireEvent.click(await screen.findByRole("button", { name: "החזר ללקוח" }));
     fireEvent.click(await screen.findByRole("radio", { name: "שכירות" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(writes(calls)).toContain("resolve_review");
     });

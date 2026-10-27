@@ -216,9 +216,10 @@ describe("review queue list", () => {
     fireEvent.click(await screen.findByRole("link", { name: "הצגת הכול" }));
     const first = await screen.findByRole("link", { name: /מחסן הנמל/ });
     const second = screen.getByRole("link", { name: /עגורני החוף/ });
-    // FLOW-365: no day heads; each row carries its date and source on the meta line, and no Jev marks.
-    expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
-    expect(first).toHaveTextContent("חשבונית");
+    // FLOW-971: one day head with the day's total; each row carries its project and category, and no Jev marks.
+    expect(screen.getByText("2 פריטים")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /לאישור הפריט הראשון/ })).toHaveAttribute("href", "/review");
+    expect(first).toHaveTextContent("הרצל");
     expect(first).not.toHaveTextContent("✦");
     fireEvent.click(second);
     expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
@@ -361,7 +362,6 @@ describe("review queue list", () => {
     renderAt("/review");
     fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: לא נבחר" }));
     fireEvent.click(await screen.findByRole("radio", { name: "חומרים" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(true);
     });
@@ -397,7 +397,6 @@ describe("review queue list", () => {
     renderAt("/review");
     fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, הצעה" }));
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(true);
     });
@@ -483,7 +482,6 @@ describe("review queue list", () => {
     renderAt("/review");
     fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: לא נבחר" }));
     fireEvent.click(await screen.findByRole("radio", { name: "חומרים" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "set_transaction_category")).toBe(true);
     });
@@ -667,7 +665,10 @@ describe("review queue list", () => {
     const dialog = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
     fireEvent.click(within(dialog).getByRole("button", { name: "סגירה" }));
     expect(await screen.findByRole("heading", { name: "שינוי שיוך" })).toBeInTheDocument();
-    expect(await screen.findByText("בחרו פרויקט וקטגוריה.")).toBeInTheDocument();
+    // FLOW-971: each missing field says so under its row, and the row points at its message.
+    expect(await screen.findByText("בחרו פרויקט")).toHaveAttribute("id", "change-error-project");
+    expect(screen.getByText("בחרו קטגוריה")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^קטגוריה: לא נבחר/ })).toHaveAttribute("aria-describedby", "change-error-category");
     expect(screen.queryByRole("heading", { name: "בחירת קטגוריה" })).not.toBeInTheDocument();
   });
 
@@ -890,7 +891,8 @@ describe("review amounts keep their currency", () => {
         backTo="/review"
       />,
     );
-    expect(screen.getByText("+$100")).toHaveClass("ui-review-all-in");
+    expect(screen.getByRole("link", { name: /Pending credit/ }).querySelector(".ui-review-all-amount")).toHaveTextContent(/^\+\$100$/);
+    expect(screen.getByRole("link", { name: /Pending credit/ }).querySelector(".ui-review-all-in")).not.toBeNull();
     expect(screen.queryByText("₪100")).not.toBeInTheDocument();
   });
 });

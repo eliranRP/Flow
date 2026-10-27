@@ -116,28 +116,15 @@
   color: var(--color-text-muted);
 }
 
+/* FLOW-971: the remember note is a sentence; a long supplier name wraps inside it. */
 .ui-remember-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
+  display: block;
   min-inline-size: 0;
-  gap: 0.25rem;
 }
 
 .ui-remember-supplier {
-  flex: 0 1 auto;
-  min-inline-size: 0;
   overflow-wrap: anywhere;
   white-space: normal;
-}
-
-.ui-remember-dest {
-  flex: 1 1 auto;
-  min-inline-size: 0;
-}
-
-.ui-remember-join {
-  white-space: nowrap;
 }
 
 .ui-switch-row:has(input:disabled),

@@ -7,7 +7,7 @@ import { jevBookingFailure, parseJevBookings, type JevBooking, type JevBookingAp
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { JEV_BOOKING_DELETE_HINT, JEV_BOOKING_HINT, JevBookingReview } from "./jev-booking-review";
-import { ReviewAllList } from "./review-screen";
+import { ReviewAllList } from "./review-lists";
 
 /** FLOW-955 (board LedgerReviewCard). Jev's bookings in לאישור: אישור, ביטול, and what a refusal says. Invented data. */
 function renderReview(api: JevBookingApi, bookings: readonly JevBooking[] = SAMPLE_JEV_BOOKINGS) {
@@ -75,7 +75,7 @@ describe("Jev's booking in לאישור", () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    expect(screen.getByText(/2 פריטים מחכים/)).toBeInTheDocument();
+    expect(screen.getByText("2 פריטים")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Example Lending/ })).toHaveAttribute("href", "/review");
     expect(screen.getAllByText(/פקודת יומן של Jev/)).toHaveLength(2);
   });

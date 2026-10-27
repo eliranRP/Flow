@@ -7,8 +7,7 @@ import { useFiledTodayQuery } from "../use-books";
 import { FILED_TODAY_EMPTY_BODY, FILED_TODAY_EMPTY_TITLE } from "../filed-today-copy";
 import { useHeldOrder } from "../list-hold";
 import { txnListState } from "../txn-nav";
-import { EmptyState } from "../ui/empty-state";
-import { ReviewIcon } from "../ui/icons";
+import { PageLoadFailed } from "../ui/band-states";
 import { ListRow } from "../ui/list-row";
 import { GroupList } from "../ui/month-list";
 import { groupByKey } from "../ui/month-groups";
@@ -17,6 +16,7 @@ import { KeptOutTag, rowSource } from "../ui/line-marks";
 import { KEPT_OUT } from "./screen-shared";
 import { ScreenState } from "../ui/screen-state";
 import { DEV_FILED_ROWS } from "../dev/filed-today-sample";
+import { ListTake, ReviewListEmpty, signedTotals } from "./review-lists";
 
 function devFiledFixture(sampleFlag: string | null): FiledTodayRow[] | undefined {
   if (!import.meta.env.DEV || sampleFlag !== "1") return undefined;
@@ -61,14 +61,34 @@ export function FiledTodayScreen({
   const location = useLocation();
   const rowIds = rows.map((row) => row.id);
   const filedMarks = useLoanMarks(rows.map((row) => row.id), shown == null);
+  // FLOW-971: the day's total, signed, one figure per currency; a line kept out of profit adds nothing.
+  const totals = signedTotals(rows, (row) => {
+    if (row.kept_out === true) return null;
+    const abs = row.amount_net < 0n ? -row.amount_net : row.amount_net;
+    return { minor: row.direction === "income" ? abs : -abs, currency: row.currency ?? "ILS" };
+  });
   return (
     <ScreenState
       title="שויכו היום"
+      kicker="לאישור"
+      subtitle={rows.length === 1 ? "שורה אחת שויכה היום · אפשר לשנות אותה" : `${String(rows.length)} שורות שויכו היום · אפשר לשנות כל אחת`}
       backTo={backTo ?? `/review${search}`}
       phase={phase.kind === "ready" && rows.length === 0 ? { kind: "empty" } : phase}
       onRetry={() => { void filed.refetch(); }}
-      empty={<EmptyState icon={<ReviewIcon />} title={FILED_TODAY_EMPTY_TITLE} body={FILED_TODAY_EMPTY_BODY} />}
+      empty={(
+        <div className="ui-review-list-body">
+          <ReviewListEmpty title={FILED_TODAY_EMPTY_TITLE} body={FILED_TODAY_EMPTY_BODY} action="ללאישור" to={backTo ?? `/review${search}`} />
+        </div>
+      )}
+      failed={(retry, offline) => (
+        <div className="ui-review-list-body">
+          <PageLoadFailed title="השיוכים של היום לא נטענו" offline={offline} onRetry={retry} />
+        </div>
+      )}
     >
+      <div className="ui-review-list-body">
+        <ListTake figures={totals} />
+      </div>
       <GroupList
         groups={groups}
         keyOf={(row) => row.id}

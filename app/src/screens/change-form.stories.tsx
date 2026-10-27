@@ -43,6 +43,7 @@ function ChangeStory({
   split,
   splitTitle,
   jev,
+  missing,
 }: {
   entry?: string;
   projectId?: string;
@@ -58,6 +59,7 @@ function ChangeStory({
   split?: boolean;
   splitTitle?: string;
   jev?: { project?: boolean; category?: boolean };
+  missing?: boolean;
 } = {}) {
   return (
     <StoryRoute entry={entry}>
@@ -78,6 +80,7 @@ function ChangeStory({
           ...(split ? { split } : {}),
           ...(splitTitle != null ? { splitTitle } : {}),
           ...(jev ? { jev } : {}),
+          ...(missing ? { missing } : {}),
         }}
       />
     </StoryRoute>
@@ -112,38 +115,33 @@ export const ChangeProjectPicker: Story = {
   },
 };
 
-/** FLOW-831: a row tap only moves the check, so שמירה is enabled once the check differs from the saved project. */
-export const ChangeProjectChoicePending: Story = {
-  name: "Project picker, choice pending",
+/** Decision 0221: on לאישור a row tap is the pick; there is no שמירה, and the summary shows it. */
+export const ChangeProjectSavesOnPick: Story = {
+  name: "Project picker, a tap saves",
   render: () => <ChangeStory entry="/review/change?item=r1&pick=project" />,
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(await body.findByRole("radio", { name: /וילה/ }));
-    await expect(body.getByRole("button", { name: "שמירה" })).toBeEnabled();
+    await expect(body.queryByRole("button", { name: "שמירה" })).not.toBeInTheDocument();
+    await expect(await body.findByRole("button", { name: /^פרויקט: וילה/ })).toBeInTheDocument();
   },
 };
 
-
-/** FLOW-831: nothing changed yet, so שמירה is disabled. */
-export const ChangeProjectUnchanged: Story = {
-  name: "Project picker, nothing changed",
-  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" suggestionId="" />,
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    await expect(await body.findByRole("button", { name: "שמירה" })).toBeDisabled();
-  },
-};
-
-
-/** FLOW-831: a category row tap only moves the check; שמירה saves it. */
-export const ChangeCategoryChoicePending: Story = {
-  name: "Category picker, choice pending",
+/** Decision 0221: a category tap saves too. */
+export const ChangeCategorySavesOnPick: Story = {
+  name: "Category picker, a tap saves",
   render: () => <ChangeStory entry="/review/change?item=r1&pick=category" />,
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(await body.findByRole("radio", { name: /הובלה/ }));
-    await expect(body.getByRole("button", { name: "שמירה" })).toBeEnabled();
+    await expect(await body.findByRole("button", { name: /^קטגוריה: הובלה/ })).toBeInTheDocument();
   },
+};
+
+/** FLOW-971: closing with both fields missing names each one under its row, with a red edge. */
+export const ChangeFieldErrors: Story = {
+  name: "Summary, fields missing",
+  render: () => <ChangeStory projectId="" categoryId="" suggestionId="" suggestionCategoryId="" missing />,
 };
 
 export const ChangeProjectLoading: Story = {

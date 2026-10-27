@@ -5,6 +5,7 @@ test.use({ viewport: { width: 390, height: 844 } });
 // Preview-mode tests, one page per test (see controls-review.spec.ts).
 test.describe.configure({ mode: "parallel" });
 
+// /e2e/change is לאישור's change sheet (closes to /review): a pick saves at once, with ביטול (decision 0221).
 test("change sheet picks, remembers, splits, and saves", async ({ page }) => {
   await page.goto("/e2e/change?preview=1");
   await page.getByRole("button", { name: /פרויקט:/ }).click();
@@ -13,14 +14,18 @@ test("change sheet picks, remembers, splits, and saves", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "שינוי שיוך" })).toBeVisible();
   await page.getByRole("button", { name: /פרויקט:/ }).click();
   await page.getByRole("radio", { name: "וילה רעננה" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
-  await toast(page, "השיוך נשמר");
+  await expect(page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true })).toHaveCount(0);
+  await expect(page.locator(".ui-toast")).toContainText("השיוך נשמר · וילה רעננה · חומרים");
   await expect(page.getByRole("button", { name: /וילה רעננה/ })).toBeVisible();
+  // ביטול on the toast puts the previous project back.
+  // The sheet is a modal, so the toast sits outside its accessibility tree; a tap on it keeps the sheet open.
+  await page.locator(".ui-toast button", { hasText: "ביטול" }).click();
+  await toast(page, "השיוך הקודם חזר, והפריט חזר לתור.");
+  await expect(page.getByRole("button", { name: /^פרויקט: שיפוץ הרצל 12/ })).toBeVisible();
   await page.getByRole("button", { name: /קטגוריה:/ }).click();
   await expect(page.getByRole("heading", { name: "בחירת קטגוריה" })).toBeVisible();
   await page.getByRole("radio", { name: "הובלה" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "שמירה", exact: true }).click();
-  await toast(page, "השיוך נשמר");
+  await expect(page.locator(".ui-toast")).toContainText("השיוך נשמר · שיפוץ הרצל 12 · הובלה");
   const remember = page.getByRole("switch", { name: "לזכור לספק הזה" });
   await remember.click();
   await expect(remember).not.toBeChecked();
