@@ -16,7 +16,7 @@ function totalsOf(month: string): string | null {
   return group.querySelector(".ui-month-totals")?.textContent ?? null;
 }
 
-describe("review list rows (FLOW-365 flat list)", () => {
+describe("review list rows (FLOW-971 day groups)", () => {
   const review = (id: string, doc_date: string, amount_net: bigint, direction: "income" | "expense", currency?: string): ReviewRow => ({
     id,
     transaction_id: `t-${id}`,
@@ -32,7 +32,7 @@ describe("review list rows (FLOW-365 flat list)", () => {
   });
   const amountsOf = (container: HTMLElement) => [...container.querySelectorAll(".ui-review-all-amount")].map((node) => node.textContent);
 
-  it("lists every row in order with no month groups, and counts them in the subtitle", () => {
+  it("lists every row in order under its day, and counts them in the subtitle", () => {
     const { container } = wrap(<ReviewAllList
       rows={[
         review("a", "2026-08-03", 10_000n, "income", "USD"),
@@ -42,10 +42,10 @@ describe("review list rows (FLOW-365 flat list)", () => {
       search=""
       backTo="/review"
     />);
-    expect(screen.queryAllByRole("group")).toHaveLength(0);
+    expect(container.querySelectorAll(".ui-review-group")).toHaveLength(3);
     expect(container.querySelectorAll(".ui-review-all-row")).toHaveLength(3);
-    expect(screen.getByText("3 פריטים מחכים · הקישו על פריט כדי לפתוח אותו")).toBeTruthy();
-    expect(amountsOf(container)).toEqual(["+$100", "₪250", "₪50"]);
+    expect(screen.getByText("3 פריטים · 3 בלי פרויקט")).toBeTruthy();
+    expect(amountsOf(container)).toEqual(["+$100", "−₪250", "−₪50"]);
   });
 
   it("marks a row with no project with an icon and the warning tone (FLOW-960)", () => {
@@ -69,11 +69,11 @@ describe("review list rows (FLOW-365 flat list)", () => {
       search=""
       backTo="/review"
     />);
-    expect(amountsOf(container)).toEqual(["₪100.50", "₪100.50"]);
+    expect(amountsOf(container)).toEqual(["−₪100.50", "−₪100.50"]);
   });
 });
 
-describe("review list row details (FLOW-305, flat list)", () => {
+describe("review list row details (FLOW-971)", () => {
   const base: ReviewRow = {
     id: "s1",
     transaction_id: "t-s1",
@@ -91,24 +91,23 @@ describe("review list row details (FLOW-305, flat list)", () => {
     source: "mercury",
   };
 
-  it("shows the payee, the date and source, and the amount in its currency", () => {
+  it("shows the payee, its project and category, and the signed amount in its currency", () => {
     const { container } = wrap(<ReviewAllList rows={[base]} search="" backTo="/review" />);
     const row = container.querySelector(".ui-review-all-row");
     expect(row?.querySelector(".ui-review-all-title")?.textContent).toBe("Northwind Traders");
-    expect(row?.querySelector(".ui-review-all-meta")?.textContent).toBe("29/09/2026 · בנק");
-    expect(row?.querySelector(".ui-review-all-amount")?.textContent).toBe("$1,200.50");
+    expect(row?.querySelector(".ui-review-all-meta")?.textContent).toBe("וילה לדוגמה · חומרים");
+    expect(row?.querySelector(".ui-review-all-amount")?.textContent).toBe("−$1,200.50");
     expect(row?.querySelector(".ui-review-all-amount")?.getAttribute("dir")).toBe("ltr");
-    expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
   });
 
-  it("flags a row without a project and labels an invoice row with its document source", () => {
+  it("flags a row without a project, and money in is green with its plus", () => {
     const { container } = wrap(<ReviewAllList
       rows={[{ ...base, description: "לקוח לדוגמה", amount_net: 500_000n, currency: "ILS", direction: "income", source: "sumit", doc_kind: "invoice", project_id: null, project_name: null, category_id: null, category_name: null }]}
       search=""
       backTo="/review"
     />);
     const row = container.querySelector(".ui-review-all-row");
-    expect(row?.querySelector(".ui-review-all-meta")?.textContent).toBe("29/09/2026 · חשבונית · חסר פרויקט");
+    expect(row?.querySelector(".ui-review-all-meta")?.textContent).toBe("חסר פרויקט");
     expect(row?.querySelector(".ui-review-all-amount")?.textContent).toBe("+₪5,000");
     expect(row?.querySelector(".ui-review-all-amount")?.classList.contains("ui-review-all-in")).toBe(true);
   });
