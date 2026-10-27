@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { useCallback, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";

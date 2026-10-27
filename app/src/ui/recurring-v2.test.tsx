@@ -2,12 +2,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { recurringToast } from "../recurring-toast";
 import { RecurringScreen } from "../screens/recurring-screen";
 import { RECURRING_FIXTURE, RECURRING_MISSING_FIXTURE } from "../recurring-sample";
 import { RecurringList } from "./recurring-list";
 import { RecurringAskBox, RecurringMatchBox } from "./recurring-match-box";
 import { ToastProvider } from "./toast";
+import { topToast } from "./top-toast";
 
 function renderScreen(props: Partial<Parameters<typeof RecurringScreen>[0]> = {}) {
   return render(
@@ -77,8 +77,8 @@ describe("Recurring v2: the answers (FLOW-963)", () => {
 
 describe("Recurring v2: the toasts (decision 0215)", () => {
   it("hang under the header; an undo stays 5s, a note 4s", () => {
-    expect(recurringToast({ message: "x", action: "ביטול", onAction: () => undefined })).toMatchObject({ place: "top", durationMs: 5000 });
-    expect(recurringToast({ message: "x" })).toMatchObject({ place: "top", durationMs: 4000 });
+    expect(topToast({ message: "x", action: "ביטול", onAction: () => undefined })).toMatchObject({ place: "top", durationMs: 5000 });
+    expect(topToast({ message: "x" })).toMatchObject({ place: "top", durationMs: 4000 });
   });
 
   it("the list's ignore toast sits under the header and keeps its ביטול for 5s", async () => {

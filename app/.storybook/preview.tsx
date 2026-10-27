@@ -1,6 +1,9 @@
 import type { Decorator, Preview } from "@storybook/react-vite";
 import { MemoryRouter } from "react-router-dom";
 import "../src/styles/app.css";
+// FLOW-974: the on-demand screens' stylesheets, after app.css as in the app. The screens import it
+// themselves; a component story (the stepper, the month forecast, the skeletons) does not.
+import "../src/ui/lazy.css";
 import { primeSheetDrawer } from "../src/ui/sheet";
 import * as sheetDrawer from "../src/ui/sheet-drawer";
 

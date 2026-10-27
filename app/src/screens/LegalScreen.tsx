@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { PRIVACY, TERMS } from "../legal-copy";
 import { ScreenHeader } from "../ui/screen-header";
 import { usePublicBackTarget } from "./public-back";

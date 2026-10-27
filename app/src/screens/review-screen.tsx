@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import type { ReviewRow } from "@flow/shared";
 import { useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";

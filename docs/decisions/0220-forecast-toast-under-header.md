@@ -19,3 +19,5 @@ FLOW-970 reviewed the month-end forecast (/forecast) against the same UX/UI rule
 
 - Keeping 0182's place above the floor: the toast covered the list's last rows, where the moved row folds away.
 - Keeping the write's own "הצפי עודכן": it took the ביטול away a moment after the tap.
+
+**Since FLOW-973 (2026-10-27):** these toasts use the one under-the-header helper, `topToast()` / `useTopToast()` in `app/src/ui/top-toast.ts` (decision 0222), with the same times; the screen's own helper is gone.

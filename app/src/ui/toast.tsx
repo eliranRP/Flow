@@ -547,6 +547,9 @@ export function Toast({ children, action, onAction, onDismiss, onPause, onResume
     <div
       className={quiet ? "ui-toast-live" : "ui-toast"}
       role="status"
+      // FLOW-982: a modal sheet hides the rest of the page (aria-hidden), all but live regions it
+      // finds by this attribute, so a toast and its ביטול stay reachable over a sheet.
+      aria-live="polite"
       dir="rtl"
       onMouseEnter={() => { setHold("hover", true); }}
       onMouseLeave={() => { setHold("hover", false); }}

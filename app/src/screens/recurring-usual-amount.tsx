@@ -8,7 +8,7 @@ import { UsualAmountRow } from "../ui/recurring-charge-parts";
 import { useToast } from "../ui/toast";
 import { UsualAmountSheet } from "../ui/usual-amount-sheet";
 import { useWrite } from "../use-write";
-import { recurringToast } from "../recurring-toast";
+import { topToast } from "../ui/top-toast";
 
 /**
  * Decision 0189: the charge page's usual amount, its row and its sheet. Save writes the owner's amount for the
@@ -54,7 +54,7 @@ export function ChargeUsualAmount({
       setOpen(false);
       if (done.undo) return;
       const back = prior.current;
-      toast.show(recurringToast({
+      toast.show(topToast({
         message: usualToast(done.next, name),
         action: "ביטול",
         onAction: () => {

@@ -88,7 +88,7 @@ Light and dark values are both drawn from the Design canvas (the Light theme pag
 | `signal-soft` | `#B9503F` | `#E8A598` | Soft signal fill or text beside `signal` (new) |
 | `text` | `#1D1728` | `#F1EDF8` | Main text and all figures |
 | `text-secondary` | `#5B536E` | `#B1A8C4` | Labels and secondary lines |
-| `text-muted` | `#746C88` | `#978EAB` | Hints, dates, placeholders |
+| `text-muted` | `#6E6682` | `#978EAB` | Hints, dates, placeholders |
 | `line` | `#E7E2F0` | `#2E2740` | Hairlines |
 | `outline-secondary` | `#DAD3E6` | `#382A5E` (= `tint-strong`) | Secondary button border (new). Dark aliases `tint-strong` |
 | `tint-strong` | `#D9CBF6` | `#382A5E` | Selected outline and selected row fill (new) |

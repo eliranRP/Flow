@@ -463,9 +463,9 @@
   min-block-size: 46px;
 }
 
-/* FLOW-971: the placeholder is muted text at 4.5:1 (the browser's grey was 2.75:1). */
+/* FLOW-971, FLOW-980: the prompt is the placeholder token (the browser's grey was 2.75:1). */
 .ui-search-form .ui-search input::placeholder {
-  color: var(--color-text-muted);
+  color: var(--color-placeholder);
   opacity: 1;
 }
 

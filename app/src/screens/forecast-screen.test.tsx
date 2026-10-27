@@ -1,11 +1,11 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { monthForecastBoardSample, monthForecastSample } from "../forecast-sample";
-import { forecastToast } from "../forecast-toast";
 import { shiftMonthKey } from "../period";
 import { renderWithProviders } from "../test-render";
 import { israelToday } from "../ui/date-math";
 import { ForecastScreen } from "./forecast-screen";
+import { topToast } from "../ui/top-toast";
 
 const rpc = vi.hoisted(() => vi.fn((_name: string, _args?: unknown) => Promise.resolve({ data: null, error: null })));
 
@@ -280,8 +280,8 @@ describe("ForecastScreen", () => {
   });
 
   it("keeps its toasts under the header: an undo 5s, a note 4s", () => {
-    expect(forecastToast({ message: "x", action: "ביטול", onAction: () => undefined })).toMatchObject({ place: "top", durationMs: 5000 });
-    expect(forecastToast({ message: "x" })).toMatchObject({ place: "top", durationMs: 4000 });
+    expect(topToast({ message: "x", action: "ביטול", onAction: () => undefined })).toMatchObject({ place: "top", durationMs: 5000 });
+    expect(topToast({ message: "x" })).toMatchObject({ place: "top", durationMs: 4000 });
   });
 
   it("titles the chart with where the month ends, the big figure's amount", () => {

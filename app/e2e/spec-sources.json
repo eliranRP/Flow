@@ -170,6 +170,10 @@
     "jev-review.spec.ts": [
       "screens/jev-review-card.tsx"
     ],
+    "lazy-css.spec.ts": [
+      "ui/lazy.css",
+      "screen-loaders.ts"
+    ],
     "loan-detail.spec.ts": [
       "screens/loan-detail-screen.tsx",
       "screens/loan-detail-cards.tsx",

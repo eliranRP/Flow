@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { useAuth } from "../auth";
 import { HELP_EMAIL } from "../config";
 import { HelpMail } from "../ui/layout";

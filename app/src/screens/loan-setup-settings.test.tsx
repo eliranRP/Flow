@@ -470,7 +470,8 @@ describe("the Loans tab list and sheet", () => {
     fireEvent.change(screen.getByLabelText("מלווה"), { target: { value: "בנק דוגמה" } });
     fireEvent.change(screen.getByLabelText("סכום מקורי"), { target: { value: "1500" } });
     view.rerender(sectionTree(view.client, <LoanSettingsSection companyId="co-1" />));
-    expect(screen.getByRole("status")).toHaveTextContent("טוען…");
+    // The sheet's own status; the toast region beside it stays reachable too (FLOW-982).
+    expect(within(screen.getByRole("dialog")).getByRole("status")).toHaveTextContent("טוען…");
     expect(screen.queryByLabelText("מלווה")).not.toBeInTheDocument();
     release();
     expect(await screen.findByLabelText("מלווה")).toHaveValue("בנק דוגמה");

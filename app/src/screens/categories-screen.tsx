@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { type CategoryRow } from "@flow/shared";
 import { useRef, useState } from "react";
 import { Navigate, useParams, useSearchParams } from "react-router-dom";

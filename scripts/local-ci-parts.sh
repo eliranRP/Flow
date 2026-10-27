@@ -69,10 +69,11 @@ static_part() {
 typecheck_part() {
   local info dir script
   info="$(cd "$cache" && pwd)/tsbuildinfo"
-  # FLOW-819, 822, 363: no dead code, CSS or raw CSS values. Separate statements, not an and-list: errexit does not stop an and-list early.
+  # FLOW-819, 822, 363, 974: no dead code, CSS or raw CSS values; every lazy screen imports its CSS. Separate statements, not an and-list: errexit does not stop an and-list early.
   node scripts/check-unused-app-code.mjs
   node scripts/check-unused-css.mjs
   node scripts/check-css-tokens.mjs
+  node scripts/check-lazy-css.mjs
   if (( ! skips )) || [[ "$(node -p 'require("./package.json").scripts.typecheck')" \
     != 'tsc --noEmit -p scripts/tsconfig.json && pnpm -r --if-present --filter "!flow" typecheck' ]]; then
     pnpm typecheck

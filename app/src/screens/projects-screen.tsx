@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { type Dashboard, type ProjectCashRow, type ProjectsCashMonth } from "@flow/shared";
 import { useRef, useState } from "react";
 import { useLocation } from "react-router-dom";

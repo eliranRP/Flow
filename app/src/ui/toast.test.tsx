@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { Sheet } from "./sheet";
 import { placeToast, safeTopPx, ToastProvider, useToast } from "./toast";
 import { toastMs } from "./toast-layout";
 
@@ -412,6 +413,31 @@ describe("Toast", () => {
       Element.prototype.getBoundingClientRect = original;
       Object.defineProperty(window, "innerHeight", { configurable: true, value: innerHeight });
     }
+  });
+  it("keeps a toast and its ביטול in the accessibility tree while a modal sheet hides the page (FLOW-982)", async () => {
+    function OverSheet() {
+      const toast = useToast();
+      return (
+        <>
+          <button type="button">מאחורי הגיליון</button>
+          <Sheet open onOpenChange={() => undefined} title="עריכה">
+            <button type="button" onClick={() => { toast.show({ message: "נמחק", action: "ביטול", onAction: () => undefined }); }}>
+              מחיקה
+            </button>
+          </Sheet>
+        </>
+      );
+    }
+    render(
+      <ToastProvider>
+        <OverSheet />
+      </ToastProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "מחיקה" }));
+    // Queries by role skip what aria-hidden hides, as a screen reader does.
+    expect(await screen.findByRole("button", { name: "ביטול" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("נמחק");
+    expect(screen.queryByRole("button", { name: "מאחורי הגיליון" })).not.toBeInTheDocument();
   });
 });
 

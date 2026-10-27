@@ -83,7 +83,7 @@
 }
 
 .ui-fe-amount-input::placeholder {
-  color: var(--color-text-muted);
+  color: var(--color-placeholder);
 }
 
 .ui-fe-amount:focus-within {
@@ -327,7 +327,7 @@
 }
 
 .ui-fe-search .ui-search input::placeholder {
-  color: var(--color-text-muted);
+  color: var(--color-placeholder);
   opacity: 1;
 }
 

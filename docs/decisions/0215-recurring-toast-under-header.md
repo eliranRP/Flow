@@ -18,3 +18,5 @@ FLOW-963 reviewed קבועים against the same UX/UI rule set as לאישור (
 
 - Keeping 0182's place above the floor: the toast covered the last rows of the list, and the board puts feedback where the eye returns after the row moves.
 - Making the 5s undo app-wide: the same reason as 0212; each screen moves with its own review.
+
+**Since FLOW-973 (2026-10-27):** these toasts use the one under-the-header helper, `topToast()` / `useTopToast()` in `app/src/ui/top-toast.ts` (decision 0222), with the same times; the screen's own helper is gone.

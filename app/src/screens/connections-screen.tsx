@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import { useHoldOwnerSettings, useHoldWrites, ViewerNote, ViewerScope } from "../use-is-viewer";

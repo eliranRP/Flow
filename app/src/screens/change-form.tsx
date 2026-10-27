@@ -1,3 +1,4 @@
+import "../ui/lazy.css";
 import { formatAmountText, type ReviewRow } from "@flow/shared";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";

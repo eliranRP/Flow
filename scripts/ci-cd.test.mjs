@@ -676,6 +676,7 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
     "pnpm typecheck",
     "node scripts/check-unused-app-code.mjs",
     "node scripts/check-unused-css.mjs",
+    "node scripts/check-lazy-css.mjs",
     "pnpm test:unit",
     "pnpm test:connectors",
     "pnpm check:bundle",

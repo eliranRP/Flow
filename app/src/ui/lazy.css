@@ -1,0 +1,16 @@
+/* FLOW-974: the stylesheets only on-demand screens use, out of Home's first load. Each file here is
+   one screen's own: its classes render nowhere in Home's first load. Every module the app loads
+   with import() imports this file first (scripts/check-lazy-css.mjs), so Vite loads it with the
+   first such chunk, before that screen renders. Same order as they had in ui.css, then setup.css
+   (all of it the setup screens' own, loaded by app.css before); they now load
+   after it, which the story style check (every story's computed styles against main) found
+   changes nothing. */
+@import "./css/10-settings-connect.css";
+@import "./css/25-investment.css";
+@import "./css/28-forecast-categories.css";
+@import "./css/33-loan-split-editor.css";
+@import "./css/45-project-profit.css";
+@import "./css/45-invoices.css";
+@import "./css/47-company-profit.css";
+@import "./css/51-next-month.css";
+@import "../setup/setup.css";

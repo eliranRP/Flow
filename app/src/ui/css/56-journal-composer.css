@@ -242,7 +242,7 @@
 }
 
 .ui-jc-amount .ui-money-field input::placeholder {
-  color: var(--color-text-muted);
+  color: var(--color-placeholder);
 }
 
 .ui-jc-side {

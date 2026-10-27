@@ -78,7 +78,7 @@ In CSS, every colour is `--color-<name>`, for example `--color-text-secondary`.
 | `bad-tint` | #FCEDEC | #3A1E24 | Soft fill behind a destructive confirm button (`bad` text on it: 4.9:1 / 6.6:1) |
 | `text` | #1D1728 | #F1EDF8 | Main text and **all figures** |
 | `text-secondary` | #5B536E | #B1A8C4 | Labels, secondary lines, row icons |
-| `text-muted` | #746C88 | #978EAB | Hints, dates, percentages, chevrons, placeholders |
+| `text-muted` | #6E6682 | #978EAB | Hints, dates, percentages, chevrons, placeholders |
 | `accent` | #6C2ED6 | #B894FF | + button, primary button fill, switch on, selected chip |
 | `accent-pressed` | #6631C9 | #A47FF0 | Pressed accent fills |
 | `accent-text` | #6C2ED6 | #C3A5FF | Links, accent icons, active tab, secondary button text |

@@ -7,12 +7,12 @@ import { RECURRING_KEYS } from "../pace-write";
 import { usePreviewSearch } from "../preview";
 import { liveRpcClient, reassignRecurringCharge, undoRecurringChargePick, type ChargePickResult } from "../recurring-actions";
 import { chargeHref } from "../recurring-charge";
-import { recurringToast } from "../recurring-toast";
 import type { ScheduleRow } from "../recurring-schedule";
 import { useCategoriesQuery, useDashboardQuery } from "../use-books";
 import { ChoiceSheet } from "../ui/choice-sheet";
 import { useToast } from "../ui/toast";
 import { useWrite } from "../use-write";
+import { topToast } from "../ui/top-toast";
 
 /** Which picker is open. */
 export type ChargePickKind = "project" | "category";
@@ -93,7 +93,7 @@ export function useChargePick({
           else setLocal((old) => ({ ...old, [pick.kind]: undefined }));
         } catch (error) {
           running = false;
-          toast.show(recurringToast({ tone: "bad", message: chargeUndoFailure(error) }));
+          toast.show(topToast({ tone: "bad", message: chargeUndoFailure(error) }));
           return;
         }
         for (const key of PICK_KEYS) void client.invalidateQueries({ queryKey: [key] });
@@ -122,7 +122,7 @@ export function useChargePick({
       }
       setSaving(null);
       pick.close();
-      toast.show(recurringToast({
+      toast.show(topToast({
         message: chargePickToast(row.party_name, pick.name, result),
         ...(result.changed === 0 ? {} : { action: "ביטול", onAction: undoAction(pick, result) }),
       }));
