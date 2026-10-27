@@ -600,6 +600,43 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
+                },"loan_category_switches": {
+                  Row: {
+                    "category_id": string,"company_id": string,"created_at": string,"effective_date": string,"id": string,"loan_id": string,"part": Database["public"]['Enums']["loan_split_part"],"updated_at": string
+                  }
+                  Insert: {
+                    "category_id": string,"company_id": string,"created_at"?: string,"effective_date": string,"id"?: string,"loan_id": string,"part": Database["public"]['Enums']["loan_split_part"],"updated_at"?: string
+                  }
+                  Update: {
+                    "category_id"?: string,"company_id"?: string,"created_at"?: string,"effective_date"?: string,"id"?: string,"loan_id"?: string,"part"?: Database["public"]['Enums']["loan_split_part"],"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "loan_category_switches_category_fkey"
+      columns: ["company_id","category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "loan_category_switches_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "loan_category_switches_loan_fkey"
+      columns: ["company_id","loan_id"]
+isOneToOne: false
+      referencedRelation: "loan_balances"
+      referencedColumns: ["company_id","loan_id"]
+    },{
+      foreignKeyName: "loan_category_switches_loan_fkey"
+      columns: ["company_id","loan_id"]
+isOneToOne: false
+      referencedRelation: "loans"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
                 },"loan_rates": {
                   Row: {
                     "annual_rate_ppm": number,"company_id": string,"created_at": string,"effective_date": string,"id": string,"loan_id": string,"updated_at": string
@@ -1876,8 +1913,14 @@ isOneToOne: false
 "mcp_set_lines_pnl":
 { Args: { "p_idempotency_key": string,"p_items": Json }; Returns: Json
                            },
+"mcp_set_loan_category_from":
+{ Args: { "p_apply_to_existing"?: boolean,"p_category_id": string,"p_effective_date": string,"p_idempotency_key": string,"p_loan_id": string,"p_part": string }; Returns: Json
+                           },
 "mcp_set_loan_index":
 { Args: { "p_idempotency_key": string,"p_loan_id": string,"p_margin_ppm": number,"p_rate_index": string }; Returns: Json
+                           },
+"mcp_set_loan_part_category":
+{ Args: { "p_category_id": string,"p_idempotency_key": string,"p_part": string,"p_transaction_ids": (string)[] }; Returns: Json
                            },
 "mcp_set_loan_rate":
 { Args: { "p_annual_rate_ppm": number,"p_effective_date": string,"p_idempotency_key": string,"p_loan_id": string }; Returns: Json

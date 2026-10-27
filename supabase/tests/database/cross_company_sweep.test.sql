@@ -161,7 +161,7 @@ begin
   perform pg_temp.put('loan2', loan2);
   insert into public.loan_rates (company_id, loan_id, effective_date, annual_rate_ppm)
   values (a, loan, '2026-06-01', 55000) returning id into token;
-  perform pg_temp.put('loan_rate', token);
+  perform pg_temp.put('loan_rate', token); insert into public.loan_category_switches (company_id, loan_id, part, effective_date, category_id) select a, loan, 'interest', '2026-06-01', c.id from public.categories c where c.company_id = a and c.kind = 'expense' and c.loan_part is null order by c.sort_order limit 1; -- FLOW-148: a dated switch on A's loan
   insert into public.loan_splits (
     company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
   )
@@ -703,7 +703,7 @@ begin
       case when n = 'id' then pg_temp.hint_id(p_fn, p_fn) end,
       pg_temp.sid('line'))::text;
   elsif t = 'uuid[]' then
-    v := case
+    v := case when n ~ 'transaction' and p_fn ~ 'loan' then format('{%s}', ids->>'loan_line')
       when n ~ 'loan' or p_fn ~ 'loan' then format('{%s,%s}', ids->>'loan', ids->>'loan2')
       else format('{%s,%s,%s,%s}', ids->>'line', ids->>'line2', ids->>'invoice', ids->>'suggested')
     end;
@@ -782,7 +782,7 @@ begin
       when n = 'mode' then 'shadow'
       when n = 'provider' then 'jev'
       when n = 'pace' then 'month'
-      when n = 'rate_index' then 'il_prime'
+      when n = 'rate_index' then 'il_prime' when n = 'part' then 'interest'
       when n = 'set' then 'general'
       when n = 'action' then 'approved'
       when n = 'status' then 'active'

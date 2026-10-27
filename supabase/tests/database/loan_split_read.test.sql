@@ -96,8 +96,10 @@ grant execute on function pg_temp.split(text) to authenticated, service_role;
 
 select tests.authenticate_as('lr_owner');
 
+-- Each part also names its category since FLOW-148 (loan_part_category_override.test.sql).
 select is(
-  pg_temp.split('lr_main')->'parts',
+  (select jsonb_agg(p.value - 'category_id' - 'category_name' order by p.ordinality)
+   from jsonb_array_elements(pg_temp.split('lr_main')->'parts') with ordinality p),
   '[{"part": "interest", "amount_minor": 70000, "in_pnl": true},
     {"part": "escrow", "amount_minor": 20000, "in_pnl": true},
     {"part": "principal", "amount_minor": 10000, "in_pnl": false}]'::jsonb,

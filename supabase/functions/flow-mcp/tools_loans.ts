@@ -74,7 +74,14 @@ type LoanRow = {
   interest_only_months?: number | null;
   amortization_months?: number | null;
   rates?: Array<{ id?: string; effective_date: string; annual_rate_ppm: number }>;
+  /** FLOW-148: from effective_date on, a part of the loan's payments goes to category_id. */
+  category_switches?: Array<{ part: string; effective_date: string; category_id: string }>;
 };
+
+/** Whether a switch names the part's category for a payment dated `on` (decision 0227). */
+function hasSwitchOn(loan: LoanRow, part: string, on: string): boolean {
+  return (loan.category_switches ?? []).some((row) => row.part === part && row.effective_date <= on);
+}
 
 export function loanKindOf(loan: LoanRow): LoanKind {
   return loan.kind ?? "amortizing";
@@ -576,15 +583,27 @@ export async function attachLoanWrite(args: Record<string, unknown>, rpc: ToolRp
   // Fees go to this call's category, else the loan's. There is no default (decision 0130).
   const hasFees = parts.some((part) => part.part === "fees");
   const callFeesCategory = parsed.data.fees_category_id ?? null;
-  if (hasFees && callFeesCategory == null && (loan.fees_category_id ?? null) == null) {
+  if (hasFees && callFeesCategory == null && (loan.fees_category_id ?? null) == null
+    && !hasSwitchOn(loan, "fees", docDate)) {
     return fail("refused", "fees category required");
   }
-  const payload = parts.map((part) => ({
-    part: part.part,
-    amount_minor: Number(part.amountMinor),
-    scheduled_minor: Number(part.scheduledMinor),
-    ...(part.part === "fees" && callFeesCategory != null ? { category_id: callFeesCategory } : {}),
-  }));
+  // A category named for a part goes with it; a part with none takes the switch in force on the
+  // line's date, else the loan's, else the default, in the database (FLOW-148).
+  const callCategory: Record<LoanSplitAmount["part"], string | null> = {
+    interest: parsed.data.interest_category_id ?? null,
+    escrow: parsed.data.escrow_category_id ?? null,
+    principal: parsed.data.principal_category_id ?? null,
+    fees: callFeesCategory,
+  };
+  const payload = parts.map((part) => {
+    const categoryId = callCategory[part.part];
+    return {
+      part: part.part,
+      amount_minor: Number(part.amountMinor),
+      scheduled_minor: Number(part.scheduledMinor),
+      ...(categoryId != null ? { category_id: categoryId } : {}),
+    };
+  });
   const result = await rpc("mcp_attach_loan_payment", {
     p_idempotency_key: parsed.data.idempotency_key,
     p_transaction_id: parsed.data.transaction_id,

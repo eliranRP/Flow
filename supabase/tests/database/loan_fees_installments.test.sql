@@ -308,8 +308,8 @@ select is(
       {"part": "principal", "amount_minor": 40000, "scheduled_minor": 40000},
       {"part": "fees", "amount_minor": 25000, "scheduled_minor": 25000}]'::jsonb
   )->'error'->>'message',
-  'invalid loan parts',
-  'only the fees part may name a category'
+  'category not found',
+  'a category on interest is checked like the fees one (FLOW-148)'
 );
 
 -- Fees refused at 0, twice, or in place of a part.

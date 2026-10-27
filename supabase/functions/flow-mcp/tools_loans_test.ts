@@ -4,6 +4,7 @@ import { contractualPaymentMinor, regularPaymentMinor } from "../../../packages/
 import { callTool, toolsFor } from "./tools.ts";
 import {
   CATEGORY,
+  CATEGORY_NEW,
   DEMAND_LOAN,
   feesRpc,
   LOAN,
@@ -464,6 +465,7 @@ Deno.test("update_loan sends fees_category_id, and the loan tool descriptions na
   const attach = spec(write, "attach_loan_payment");
   assertEquals(Object.keys(attach?.inputSchema.properties ?? {}), [
     "idempotency_key", "transaction_id", "loan_id", "installments", "fees", "parts", "fees_category_id",
+    "interest_category_id", "escrow_category_id", "principal_category_id",
   ]);
   for (const words of ["installments (1 to 12)", "not enough schedule rows", "parts don't add up", "fees exceed the line", "fees category required"]) {
     assertEquals(attach?.description.includes(words), true, words);
@@ -882,4 +884,91 @@ Deno.test("get_expense takes the loan split from get_transaction when it carries
   assertEquals(out.isError, false);
   if (out.structuredContent.ok) assertEquals((out.structuredContent.data as { loan_split: unknown }).loan_split, split);
   assertEquals(calls.some((call) => call.name === "get_loan_split"), false, "no second read");
+});
+
+Deno.test("set_loan_part_category forwards the lines, part and category; null goes back to the loan's (FLOW-148)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: LOAN, undo_kind: "loan_part_category" } } }));
+  const out = await callTool("set_loan_part_category", {
+    idempotency_key: "lp-1", transaction_ids: [LOAN_TXN, CATEGORY_NEW], part: "interest", category_id: CATEGORY,
+  }, ["write"], rpc);
+  assertEquals(out.isError, false);
+  assertEquals(calls.at(-1), {
+    name: "mcp_set_loan_part_category",
+    body: { p_idempotency_key: "lp-1", p_transaction_ids: [LOAN_TXN, CATEGORY_NEW], p_part: "interest", p_category_id: CATEGORY },
+  });
+  await callTool("set_loan_part_category", { idempotency_key: "lp-2", transaction_ids: [LOAN_TXN], part: "fees", category_id: null }, ["write"], rpc);
+  assertEquals(calls.at(-1)?.body.p_category_id, null);
+  await callTool("undo", { idempotency_key: "lp-3", kind: "loan_part_category", id: LOAN }, ["write"], rpc);
+  assertEquals(calls.at(-1), { name: "mcp_undo", body: { p_idempotency_key: "lp-3", p_kind: "loan_part_category", p_id: LOAN } });
+
+  const before = calls.length;
+  const cases: Array<[Record<string, unknown>, string]> = [
+    [{ transaction_ids: [], part: "interest", category_id: CATEGORY }, "transaction_ids: Too small: expected array to have >=1 items"],
+    [{ transaction_ids: [LOAN_TXN, LOAN_TXN.toUpperCase()], part: "interest", category_id: CATEGORY }, "transaction_ids: each line once"],
+    [{ transaction_ids: [LOAN_TXN], part: "rent", category_id: CATEGORY }, "part"],
+    [{ transaction_ids: [LOAN_TXN], part: "interest" }, "category_id"],
+    [{ transaction_ids: [LOAN_TXN], part: "interest", category_id: CATEGORY, loan_id: LOAN }, "loan_id: unknown field"],
+  ];
+  for (const [bad, field] of cases) {
+    const refused = await callTool("set_loan_part_category", { idempotency_key: "lp-bad", ...bad }, ["write"], rpc);
+    assertEquals(refused.structuredContent.ok, false, JSON.stringify(bad));
+    if (!refused.structuredContent.ok) {
+      assertEquals(refused.structuredContent.error.code, "validation");
+      assertEquals(refused.structuredContent.error.message.startsWith(field), true, refused.structuredContent.error.message);
+    }
+  }
+  assertEquals(calls.length, before);
+
+  const db = rpcOf(() => ({ status: 200, json: { ok: false, error: { code: "refused", message: "payment has no such part" } } }));
+  const refused = await callTool("set_loan_part_category", { idempotency_key: "lp-db", transaction_ids: [LOAN_TXN], part: "fees", category_id: CATEGORY }, ["write"], db.rpc);
+  assertEquals(refused.structuredContent, { ok: false, error: { code: "refused", message: "payment has no such part" } });
+});
+
+Deno.test("set_loan_category_from forwards the switch, apply_to_existing defaults to false (FLOW-148)", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: LOAN, undo_kind: "loan_category_from" } } }));
+  assertEquals((await callTool("set_loan_category_from", {
+    idempotency_key: "cf-1", loan_id: LOAN, part: "interest", effective_date: "2026-03-10", category_id: CATEGORY,
+  }, ["write"], rpc)).isError, false);
+  assertEquals(calls.at(-1), {
+    name: "mcp_set_loan_category_from",
+    body: {
+      p_idempotency_key: "cf-1", p_loan_id: LOAN, p_part: "interest", p_effective_date: "2026-03-10",
+      p_category_id: CATEGORY, p_apply_to_existing: false,
+    },
+  });
+  await callTool("set_loan_category_from", {
+    idempotency_key: "cf-2", loan_id: LOAN, part: "interest", effective_date: "2026-03-10", category_id: null, apply_to_existing: true,
+  }, ["write"], rpc);
+  assertEquals([calls.at(-1)?.body.p_category_id, calls.at(-1)?.body.p_apply_to_existing], [null, true]);
+  await callTool("undo", { idempotency_key: "cf-3", kind: "loan_category_from", id: LOAN }, ["write"], rpc);
+  assertEquals(calls.at(-1)?.body.p_kind, "loan_category_from");
+
+  const before = calls.length;
+  for (const bad of [
+    { effective_date: "2026-02-30" },
+    { effective_date: "10/03/2026" },
+    { part: "rent" },
+    { apply_to_existing: "yes" },
+  ]) {
+    const refused = await callTool("set_loan_category_from", {
+      idempotency_key: "cf-bad", loan_id: LOAN, part: "interest", effective_date: "2026-03-10", category_id: CATEGORY, ...bad,
+    }, ["write"], rpc);
+    assertEquals(refused.structuredContent.ok, false, JSON.stringify(bad));
+  }
+  assertEquals(calls.length, before);
+
+  for (const message of ["switch before the loan start", "switch not found", "category does not fit the loan part"]) {
+    const db = rpcOf(() => ({ status: 200, json: { ok: false, error: { code: "refused", message } } }));
+    const refused = await callTool("set_loan_category_from", {
+      idempotency_key: "cf-db", loan_id: LOAN, part: "interest", effective_date: "2026-03-10", category_id: CATEGORY,
+    }, ["write"], db.rpc);
+    assertEquals(refused.structuredContent, { ok: false, error: { code: "refused", message } });
+  }
+
+  const write = toolsFor(["write"]);
+  const spec = (name: string) => write.find((tool) => tool.name === name);
+  assertEquals(Object.keys(spec("set_loan_category_from")?.inputSchema.properties ?? {}), [
+    "idempotency_key", "loan_id", "part", "effective_date", "category_id", "apply_to_existing",
+  ]);
+  assertEquals(spec("set_loan_part_category")?.description.includes("stay attached"), true);
 });
