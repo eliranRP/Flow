@@ -13,7 +13,7 @@
 
 .ui-legal .t-body {
   margin: var(--space-2) 0 0;
-  line-height: 1.5;
+  line-height: var(--type-reading-line);
 }
 
 .ui-legal-draft {
