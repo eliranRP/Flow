@@ -49,7 +49,15 @@ async function layoutProblems(page: Page): Promise<string[]> {
       if (box.width < 1 && box.height < 1) continue;
       const pastEnd = box.right - rootBox.right;
       const pastStart = rootBox.left - box.left;
-      if (pastEnd > 1 || pastStart > 1) {
+      // A part a clipping box inside the story cuts away (a hint part that did not fit its line) draws nothing past it.
+      let clipped = false;
+      for (let up = node.parentElement; up && up !== root; up = up.parentElement) {
+        if (getComputedStyle(up).overflowX === "visible") continue;
+        const clip = up.getBoundingClientRect();
+        if (clip.left >= rootBox.left - 1 && clip.right <= rootBox.right + 1) clipped = true;
+        break;
+      }
+      if (!clipped && (pastEnd > 1 || pastStart > 1)) {
         const name = typeof node.className === "string" && node.className ? node.className : node.tagName;
         offenders.push(`${name} +${String(Math.round(Math.max(pastEnd, pastStart)))}px`);
       }

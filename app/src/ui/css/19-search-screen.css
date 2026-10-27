@@ -15,8 +15,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  /* The board's head: the field 12px from the top, 11px from the physical left edge (FLOW-368b, States board). */
-  padding: var(--space-3) var(--space-4) var(--space-2) calc(var(--space-1) * 2.75);
+  /* The board's head: the field 12px below the status bar (--safe-top on an iPhone), 11px from the
+     physical left edge (FLOW-368b, States board). */
+  padding: calc(var(--safe-top) + var(--space-3)) var(--space-4) var(--space-2) calc(var(--space-1) * 2.75);
   background: var(--color-bg);
 }
 
@@ -429,9 +430,10 @@
   color: var(--color-accent-text);
 }
 
-/* The board's head (not the searching state): the filter text at 20px, the field a 48px pill (FLOW-971). */
+/* The board's head (not the searching state): the filter text at 20px, the field a 48px pill (FLOW-971),
+   below the status bar on an iPhone (--safe-top). */
 .ui-search-head:not(:has(.ui-search-row-searching)) {
-  padding: var(--space-2) var(--space-4) calc(var(--space-1) * 2.75) var(--space-5);
+  padding: calc(var(--safe-top) + var(--space-2)) var(--space-4) calc(var(--space-1) * 2.75) var(--space-5);
 }
 
 .ui-search-row:not(.ui-search-row-searching) {
