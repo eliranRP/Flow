@@ -203,6 +203,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "reorder_loans",
     "set_project_investment",
     "set_category_rehab",
+    "remember_supplier_category",
     "delete_category",
     "move_category_lines",
     "set_company_currency",

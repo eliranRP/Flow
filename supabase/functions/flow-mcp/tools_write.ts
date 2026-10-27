@@ -44,6 +44,7 @@ import {
   setCategoryParentSchema,
   setCategoryPnlSchema,
   setCategoryRehabSchema,
+  rememberSupplierCategorySchema,
   setCompanyCurrencySchema,
   setInvoicePaidSchema,
   invoiceBankWriteSchema,
@@ -585,6 +586,15 @@ export async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_category_id: parsed.data.category_id,
       p_rehab: parsed.data.rehab,
+    };
+  } else if (name === "remember_supplier_category") {
+    const parsed = rememberSupplierCategorySchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_remember_supplier_category";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_transaction_id: parsed.data.transaction_id,
+      p_category_id: parsed.data.category_id,
     };
   } else if (name === "delete_category") {
     const parsed = deleteCategorySchema.safeParse(args);

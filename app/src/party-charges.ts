@@ -21,17 +21,12 @@ const MARK_FROM_PERCENT = 20;
 export type PartyChangeView = {
   /** "92%", or null when it is the usual amount. */
   percent: string | null;
-  arrow: "▲" | "▼" | null;
   /** The change hurts: an expense rose or income fell by 5% or more. Only then is it drawn in the signal colour. */
   hurts: boolean;
   /** The usual amount, "$11.99". */
   usual: string;
-  /** The change in words: "עלה ב־92%", "ירד ב־20%" or "כרגיל". */
-  change: string;
-  /** For screen readers: "עלייה של 92% לעומת הרגיל, $11.99". */
-  words: string;
-  /** FLOW-963: the charge page's takeaway, "גבוה ב־92% מהרגיל" or "כמו בכל חודש". */
-  takeaway?: string;
+  /** FLOW-963: the history's takeaway, "גבוה ב־92% מהרגיל" or "כמו בכל חודש". */
+  takeaway: string;
 };
 
 /** The section's change line; null when the party has no usual amount yet (too few earlier charges). */
@@ -40,19 +35,18 @@ export function partyChangeView(data: PartyCharges | null | undefined): PartyCha
   const usual = formatAmountText(absAgorot(data.typical_amount_minor), data.party.currency, { detail: true });
   const pct = data.change_percent;
   if (Math.abs(pct) < FLAT_BELOW_PERCENT) {
-    return { percent: null, arrow: null, hurts: false, usual, change: "כרגיל", words: `כרגיל, ${usual}` };
+    return { percent: null, hurts: false, usual, takeaway: "כמו בכל חודש" };
   }
   const up = pct > 0;
   const income = data.party.direction === "income";
   const percent = `${String(Math.abs(pct))}%`;
   return {
     percent,
-    arrow: up ? "▲" : "▼",
     // An expense going up or income going down is the bad news (DESIGN-RULES: red only then).
     hurts: income ? !up : up,
     usual,
-    change: `${up ? "עלה" : "ירד"} ב־${percent}`,
-    words: `${up ? "עלייה" : "ירידה"} של ${percent} לעומת הרגיל, ${usual}`,
+    // FLOW-965: the transaction page's history says it as the charge page does (FLOW-963).
+    takeaway: `${up ? "גבוה" : "נמוך"} ב־${percent} מהרגיל`,
   };
 }
 

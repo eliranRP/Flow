@@ -239,7 +239,7 @@ select k, gen_random_uuid(),
     else pg_temp.id('target')
   end
 from unnest(array[
-  'recurring_match', 'line_pace', 'line_recurring', 'line_amount', 'category_cash', 'line_cash',
+  'supplier_category', 'recurring_match', 'line_pace', 'line_recurring', 'line_amount', 'category_cash', 'line_cash',
   'cash_basis', 'invite', 'member_role', 'member_remove', 'review', 'reassign', 'project',
   'category', 'category_hidden', 'category_pnl', 'loan', 'loan_update', 'loan_split',
   'overhead_project', 'company', 'line_split', 'line_pnl', 'loan_rate', 'invoice_paid',
@@ -264,7 +264,7 @@ select s.write_id, pg_temp.id('tok_b'), tests.get_supabase_uid('muc_user'),
     'party_id', t.id, 'match_party_id', t.id, 'project_id', t.id, 'deletion_id', t.id,
     'move_id', t.id, 'effective_date', '2026-01-01', 'written_at', null, 'parts', '[]'::jsonb,
     'undo', '[]'::jsonb, 'row', '{}'::jsonb, 'direction', 'expense', 'connection_id', t.id,
-    'in_transaction_id', t.id, 'note_id', t.id, 'file_id', t.id
+    'in_transaction_id', t.id, 'note_id', t.id, 'file_id', t.id, 'supplier_id', t.id
   )
 from muc_sweep s cross join (select pg_temp.id('target') as id) t;
 
@@ -286,7 +286,7 @@ select is(
 );
 select is(
   (select count(*)::int from muc_sweep),
-  56,
+  57,
   'the sweep covers every undo kind but the two forecast ones'
 );
 
@@ -294,7 +294,7 @@ select is(
 select is(
   (select count(*)::int from private.mcp_writes w join muc_sweep s on s.write_id = w.id
    where w.company_id = pg_temp.id('b')),
-  56,
+  57,
   'the swept writes keep the company they were stored with'
 );
 select is(

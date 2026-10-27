@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { shiftMonthKey } from "../period";
@@ -142,7 +142,9 @@ describe("Cash lines", () => {
   it("flips the side in place and keeps the order chip", async () => {
     wrap(`/cash/${earlier}/out/ILS?order=amount`);
     await screen.findByText("בנק לדוגמה");
-    fireEvent.click(screen.getByRole("radio", { name: "נכנס" }));
+    // FLOW-965: the side switch is a tab list (two views of the month), the order chips one choice.
+    expect(screen.getAllByRole("tablist", { name: "כיוון" }).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByRole("tab", { name: "נכנס" })[0] as HTMLElement);
     await waitFor(() => {
       expect(rpc.calls.some((c) => c.name === "cash_month_lines" && (c.args as { p_side: string }).p_side === "in")).toBe(true);
     });
@@ -151,10 +153,46 @@ describe("Cash lines", () => {
   it("sets the order from the chips, and groups by project with the largest first", async () => {
     wrap(`/cash/${earlier}/out/ILS`);
     await screen.findByText("בנק לדוגמה");
-    expect(screen.getByRole("button", { name: "לפי תאריך" })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(screen.getByRole("button", { name: "לפי פרויקט" }));
+    const chips = () => screen.getAllByRole("radiogroup", { name: "סדר" })[0] as HTMLElement;
+    expect(within(chips()).getByRole("radio", { name: "לפי תאריך" })).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(within(chips()).getByRole("radio", { name: "לפי פרויקט" }));
     expect(await screen.findByRole("heading", { name: "בית לדוגמה" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "לפי פרויקט" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(chips()).getByRole("radio", { name: "לפי פרויקט" })).toHaveAttribute("aria-checked", "true");
+    expect(within(chips()).getByRole("radio", { name: "לפי תאריך" })).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("moves the order with the arrow keys, right to left", async () => {
+    wrap(`/cash/${earlier}/out/ILS`);
+    await screen.findByText("בנק לדוגמה");
+    const chips = () => screen.getAllByRole("radiogroup", { name: "סדר" })[0] as HTMLElement;
+    const group = chips();
+    group.style.direction = "rtl";
+    const byDate = within(group).getByRole("radio", { name: "לפי תאריך" });
+    // A key acts on the focused chip, as a keyboard does.
+    byDate.focus();
+    fireEvent.keyDown(byDate, { key: "ArrowLeft" });
+    await waitFor(() => {
+      expect(within(chips()).getByRole("radio", { name: "לפי סכום" })).toHaveAttribute("aria-checked", "true");
+    });
+  });
+
+  it("Home and End jump to the first and the last order", async () => {
+    wrap(`/cash/${earlier}/out/ILS`);
+    await screen.findByText("בנק לדוגמה");
+    const chips = () => screen.getAllByRole("radiogroup", { name: "סדר" })[0] as HTMLElement;
+    const radios = () => within(chips()).getAllByRole("radio");
+    const first = radios()[0] as HTMLElement;
+    first.focus();
+    fireEvent.keyDown(first, { key: "End" });
+    await waitFor(() => {
+      expect(radios().at(-1)).toHaveAttribute("aria-checked", "true");
+    });
+    const last = radios().at(-1) as HTMLElement;
+    last.focus();
+    fireEvent.keyDown(last, { key: "Home" });
+    await waitFor(() => {
+      expect(radios()[0]).toHaveAttribute("aria-checked", "true");
+    });
   });
 });
 
