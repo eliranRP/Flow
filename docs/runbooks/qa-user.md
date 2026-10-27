@@ -10,6 +10,7 @@ So QA has its own login that owns its own company, **Flow QA**. It is a normal o
 - Leave test data in Flow QA. Prefix names with `QA ` so they are easy to spot.
 - Connect the owner's Mercury account to Flow QA, so sync runs against a copy of the real bank lines. Mercury is only read.
 - Seed a scenario straight in the database when the app can't create it. This SQL runs through the owner's Supabase connector, which bypasses row-level security, so the company filter below is the only guard. Every insert or update names Flow QA's company id, and the statement first checks that the id belongs to the company named `Flow QA` with `is_demo` false.
+- Keep Flow QA at least twice as large as the largest real company with [`supabase/qa/seed-flow-qa.sql`](../../supabase/qa/seed-flow-qa.sql), which follows these rules ([how](../../supabase/qa/README.md)).
 
 ## What QA must not do
 
