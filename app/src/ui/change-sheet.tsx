@@ -62,6 +62,10 @@ type Shared = {
   categorySuggested?: boolean;
   /** An incomplete edit. Leaving stays open and this sentence shows on the summary. */
   hold?: string;
+  /** FLOW-971: with a hold, each missing field's own message under its row (red edge) in place of the sentence. */
+  fieldErrors?: { project?: string; category?: string };
+  /** FLOW-971 (owner, Review lists v2): a picker row's tap saves at once, with no pinned שמירה; the screen offers ביטול. */
+  saveOnPick?: boolean;
   /** The history pop of an overlay sheet. The same check as the backdrop and the X. */
   leave?: { current: () => Promise<boolean> };
   /** A split already has its projects. The sheet changes the category only. */
@@ -267,7 +271,6 @@ export function ChangeAssignment(props: Props) {
       window.removeEventListener("popstate", onPop);
     };
   }, []);
-
 
   useEffect(() => {
     if (view !== "summary") {
@@ -641,6 +644,8 @@ export function ChangeAssignment(props: Props) {
                 eyebrow="פרויקט"
                 title={projectLabel}
                 label={`פרויקט: ${projectLabel}, שינוי`}
+                className={props.fieldErrors?.project ? "ui-change-row-error" : undefined}
+                describedBy={props.fieldErrors?.project ? "change-error-project" : undefined}
                 tag={projectSuggested ? (props.suggestionProjectJev ? <JevTag /> : <SuggestTag />) : undefined}
                 chevron
                 onClick={() => {
@@ -648,6 +653,7 @@ export function ChangeAssignment(props: Props) {
                 }}
               />
             )}
+            {props.fieldErrors?.project && !props.categoryOnly ? <p id="change-error-project" className="ui-change-field-error">{props.fieldErrors.project}</p> : null}
             {props.categoryLocked ? null : (
             <ListRow
               variant="button"
@@ -655,6 +661,8 @@ export function ChangeAssignment(props: Props) {
               eyebrow="קטגוריה"
               title={categoryName === "" ? "לא נבחר" : categoryName}
               label={`קטגוריה: ${categoryName === "" ? "לא נבחר" : categoryName}${categoryReversal ? ", החזר" : ""}, שינוי`}
+              className={props.fieldErrors?.category ? "ui-change-row-error" : undefined}
+              describedBy={props.fieldErrors?.category ? "change-error-category" : undefined}
               tag={categorySuggested ? (props.suggestionCategoryJev ? <JevTag /> : <SuggestTag />) : categoryReversal ? <ReversalTag /> : undefined}
               chevron
               onClick={() => {
@@ -662,24 +670,20 @@ export function ChangeAssignment(props: Props) {
               }}
             />
             )}
+            {props.fieldErrors?.category && !props.categoryLocked ? <p id="change-error-category" className="ui-change-field-error">{props.fieldErrors.category}</p> : null}
           </div>
-          {props.hold ? <HoldLine onDiscard={discardHeld}>{props.hold}</HoldLine> : null}
+          {props.hold ? (props.fieldErrors == null ? <HoldLine onDiscard={discardHeld}>{props.hold}</HoldLine> : <Button variant="link" quiet onClick={discardHeld}>ביטול השינוי</Button>) : null}
           {showRemember ? (
             <Toggle
               label="לזכור לספק הזה"
               checked={props.remember === true}
               onChange={props.onRemember ?? (() => undefined)}
               hint={
+                // FLOW-971: what the rule does and how to stop it. It keeps the category only (0064; 0216 point 5).
                 <span className="ui-remember-line">
+                  {"השורה הבאה מ־"}
                   <span className="ui-remember-supplier">{props.supplier}</span>
-                  <span className="ui-remember-dest">
-                    {/* Only the arrow is LTR. A space inside the bdi lands on the wrong side in RTL (FLOW-328). */}
-                    <bdi className="ui-remember-join" dir="ltr">←</bdi>
-                    {"\u00A0\u2060"}
-                    {projectName === "" ? "פרויקט" : projectName}
-                    {" · "}
-                    {categoryName === "" ? "קטגוריה" : categoryName}
-                  </span>
+                  {` תיכנס לבד ל${categoryName === "" ? "קטגוריה שתבחרו" : categoryName}. כדי שלא, כבו את המתג.`}
                 </span>
               }
             />
@@ -714,8 +718,8 @@ export function ChangeAssignment(props: Props) {
           } : undefined}
           splitLink={pickerKind === "project" && props.hideSplitLink !== true}
           onSelect={(id) => {
-            // A compact list has no שמירה: a tap is the pick, and the sheet closes through choose.
-            if (compact) {
+            // A compact list, or a sheet that saves on the pick, has no שמירה: a tap is the pick.
+            if (compact || props.saveOnPick === true) {
               void choose(pickerKind, id);
               return;
             }
@@ -763,7 +767,7 @@ export function ChangeAssignment(props: Props) {
 
   // The pinned שמירה: the only write a picker makes. Disabled while the check is the saved value,
   // unless that value is a suggestion the owner has not confirmed yet.
-  const footer = pickerView && !compact ? (
+  const footer = pickerView && !compact && props.saveOnPick !== true ? (
     <Button
       full
       busy={savingNow != null}

@@ -362,7 +362,6 @@ describe("review queue list", () => {
     renderAt("/review");
     fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: לא נבחר" }));
     fireEvent.click(await screen.findByRole("radio", { name: "חומרים" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(true);
     });
@@ -398,7 +397,6 @@ describe("review queue list", () => {
     renderAt("/review");
     fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, הצעה" }));
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(true);
     });
@@ -484,7 +482,6 @@ describe("review queue list", () => {
     renderAt("/review");
     fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: לא נבחר" }));
     fireEvent.click(await screen.findByRole("radio", { name: "חומרים" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "set_transaction_category")).toBe(true);
     });
@@ -668,7 +665,10 @@ describe("review queue list", () => {
     const dialog = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
     fireEvent.click(within(dialog).getByRole("button", { name: "סגירה" }));
     expect(await screen.findByRole("heading", { name: "שינוי שיוך" })).toBeInTheDocument();
-    expect(await screen.findByText("בחרו פרויקט וקטגוריה.")).toBeInTheDocument();
+    // FLOW-971: each missing field says so under its row, and the row points at its message.
+    expect(await screen.findByText("בחרו פרויקט")).toHaveAttribute("id", "change-error-project");
+    expect(screen.getByText("בחרו קטגוריה")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^קטגוריה: לא נבחר/ })).toHaveAttribute("aria-describedby", "change-error-category");
     expect(screen.queryByRole("heading", { name: "בחירת קטגוריה" })).not.toBeInTheDocument();
   });
 

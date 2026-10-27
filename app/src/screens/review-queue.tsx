@@ -706,7 +706,7 @@ const REVIEW_HOLD_SETTLE_MS = 1000;
 /** FLOW-315: how many cards ahead the bank details read covers. */
 const META_AHEAD = 50;
 
-async function reopenReview(
+export async function reopenReview(
   id: string,
   invalidate: (keys: string[]) => Promise<void>,
   toast: { show: (input: { message: string; tone?: "ok" | "bad"; action?: string; onAction?: () => void; place?: "top" }) => void },

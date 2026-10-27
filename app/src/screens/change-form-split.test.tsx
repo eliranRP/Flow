@@ -195,7 +195,6 @@ describe("פיצול לפי קטגוריות on the change sheet (FLOW-325 §10)
     state.resolve = () => new Promise((resolve) => { answer = resolve; });
     renderSheet();
     fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה", hidden: true }));
     // The picker closes and the summary shows the tapped project, with no busy row (decision 0180).
     expect(await screen.findByRole("button", { name: /וילה/, hidden: true })).toBeInTheDocument();
     expect(screen.queryByRole("radio", { name: /וילה/, hidden: true })).not.toBeInTheDocument();
@@ -217,28 +216,18 @@ function resolveCalls() {
   return state.calls.filter((call) => call.name === "resolve_review");
 }
 
-describe("the picker keeps the choice until שמירה (FLOW-831)", () => {
+describe("a pick saves at once, with ביטול for 5s (decision 0221)", () => {
   afterEach(() => {
     state.resolve = null;
   });
 
-  it("שמירה is disabled while the checked project is the saved one, once it is owned", async () => {
-    state.row = row({ project_suggested: false });
-    renderSheet();
-    expect(await screen.findByRole("button", { name: "שמירה", hidden: true })).toBeDisabled();
-    fireEvent.click(screen.getByRole("radio", { name: /וילה/, hidden: true }));
-    expect(screen.getByRole("button", { name: "שמירה", hidden: true })).toBeEnabled();
-  });
-
-  it("a row tap writes nothing; שמירה sends one resolve_review and shows the project while it is pending", async () => {
+  it("has no pinned שמירה: a row tap sends one resolve_review and shows the project while it is pending", async () => {
     state.row = row();
     let answer: (result: { data: unknown; error: { message: string } | null }) => void = () => undefined;
     state.resolve = () => new Promise((resolve) => { answer = resolve; });
     renderSheet();
     fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
-    expect(resolveCalls()).toHaveLength(0);
-    expect(screen.getByRole("heading", { name: "בחירת פרויקט", hidden: true })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "שמירה", hidden: true }));
+    expect(screen.queryByRole("button", { name: "שמירה", hidden: true })).not.toBeInTheDocument();
     expect(await screen.findByRole("button", { name: /וילה/, hidden: true })).toBeInTheDocument();
     await waitFor(() => {
       expect(resolveCalls()).toHaveLength(1);
@@ -253,14 +242,15 @@ describe("the picker keeps the choice until שמירה (FLOW-831)", () => {
     expect(resolveCalls()).toHaveLength(1);
   });
 
-  it("✕ without שמירה sends nothing", async () => {
+  it("names what was saved, and ביטול puts the item back in the queue", async () => {
     state.row = row();
     renderSheet();
     fireEvent.click(await screen.findByRole("radio", { name: /וילה/, hidden: true }));
-    fireEvent.click(screen.getByRole("button", { name: "סגירה", hidden: true }));
+    const undo = await screen.findByRole("button", { name: "ביטול", hidden: true });
+    expect(screen.getByText(/^השיוך נשמר · וילה/)).toBeInTheDocument();
+    fireEvent.click(undo);
     await waitFor(() => {
-      expect(screen.queryByRole("heading", { name: "בחירת פרויקט", hidden: true })).not.toBeInTheDocument();
+      expect(state.calls.some((call) => call.name === "reopen_review" && (call.args as { p_id?: string }).p_id === "r1")).toBe(true);
     });
-    expect(resolveCalls()).toHaveLength(0);
   });
 });

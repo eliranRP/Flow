@@ -95,7 +95,7 @@ describe("supplier names", () => {
     expect(getComputedStyle(title).webkitLineClamp).toBe("3");
   });
 
-  it("keeps the remember arrow's spaces outside its LTR bdi (FLOW-328)", () => {
+  it("says what the remember switch does, naming the supplier and the category (FLOW-971)", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <MemoryRouter>
@@ -103,10 +103,9 @@ describe("supplier names", () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    const join = document.querySelector(".ui-remember-join");
-    expect(join?.textContent).toBe("←");
-    const dest = join?.closest(".ui-remember-dest");
-    expect(dest?.textContent).toBe("←\u00A0\u2060פרויקט · מלט");
+    const note = document.querySelector(".ui-remember-line");
+    expect(note?.textContent).toBe("השורה הבאה מ־חשמל לדוגמה תיכנס לבד למלט. כדי שלא, כבו את המתג.");
+    expect(note?.querySelector(".ui-remember-supplier")?.textContent).toBe("חשמל לדוגמה");
     // The summary values read at the row-title role (body, FLOW-363 2d), like the transaction detail.
     for (const title of document.querySelectorAll(".ui-change-summary .ui-row-title")) {
       expect(getComputedStyle(title).fontWeight).toBe("var(--type-body-weight)");

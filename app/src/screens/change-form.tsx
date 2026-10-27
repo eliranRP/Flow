@@ -21,6 +21,10 @@ import { reversalChoices } from "../reversal";
 import { collapseSplit, combinePhase, saveNewProject, useBlockedPreview, withChoice } from "./screen-shared";
 import { reviewE2e, reviewIsSplit, reviewLineFocus, reviewSplitTitle } from "./review-shared";
 import { projectChoices } from "../project-groups";
+import { reopenReview } from "./review-queue";
+
+/** Decision 0221: the change sheet's pick saves at once; its ביטול stays 5s, as on לאישור (0212). */
+const CHANGE_UNDO_MS = 5000;
 
 /** A pick's check before the tap. A failed instant write puts the check back on it (decision 0075). */
 type InstantPick = { back: { projectId: string; categoryId: string } | null };
@@ -172,7 +176,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
   // A pick that resolves the review closes its card at once (decision 0180).
   const save = useWrite<InstantPick>({
     failure: changeSaveFailure,
-    success: "השיוך נשמר",
+    place: "top",
     keys: ["review", "dashboard", "project", "project-category", "project-waiting"],
     optimistic: () => [{
       key: ["review", preview],
@@ -184,10 +188,20 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       void navigate(`/transactions/${row.transaction_id}/split-category${search}`, { replace: true });
     },
     onSuccess: () => {
-      setSavedRemember(picked.current.remember);
-      setProjectId(picked.current.projectId);
-      setCategoryId(picked.current.categoryId);
+      const next = picked.current;
+      setSavedRemember(next.remember);
+      setProjectId(next.projectId);
+      setCategoryId(next.categoryId);
       wroteReview.current = true;
+      // Decision 0221: the toast names what was saved, and ביטול puts the item back in the queue as it was.
+      const names = [choiceName(projectOptions, next.projectId), choiceName(categoryOptions, next.categoryId)].filter((name) => name != null);
+      toast.show({
+        message: ["השיוך נשמר", ...names].join(" · "),
+        place: "top",
+        durationMs: CHANGE_UNDO_MS,
+        action: "ביטול",
+        onAction: () => { void reopenReview(item, (keys) => invalidate(keys), toast, "השיוך הקודם חזר, והפריט חזר לתור."); },
+      });
     },
     run: async () => {
       const supabase = getSupabase();
@@ -447,6 +461,11 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       {...(income || splitReview ? {} : { remember, onRemember: setRemember })}
       categorySuggested={sample ? sample.categorySuggested !== false : filledRow?.category_suggested !== false}
       hold={hold || leaveNote}
+      saveOnPick
+      fieldErrors={hold === "" ? undefined : {
+        project: !splitReview && projectId === "" ? "בחרו פרויקט" : undefined,
+        category: categoryId === "" ? "בחרו קטגוריה" : undefined,
+      }}
       pending={rememberDirty && !wroteReview.current && !closedReview.current}
       projectNote={splitReview ? COLLAPSE_SPLIT_NOTE : undefined}
       projectTitle={sample?.splitTitle ?? (splitReview && row ? reviewSplitTitle(row) : undefined)}
