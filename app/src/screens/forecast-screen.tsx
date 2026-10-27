@@ -3,11 +3,13 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cashMonthKey, cashRows } from "../cash";
 import { daysLeftInMonth, type ForecastPatch, type MonthForecast, nextMonth, priorPatch, useMonthForecastQuery, useResetForecastMonth, useRestoreForecast, useSetForecastItem } from "../forecast-month";
-import { expenseCountNote, incomeCountNote, itemsCaption, monthEndChart } from "../forecast-chart";
+import { expenseCountNote, incomeCountNote, itemsCaption, monthEndChart, monthEndTakeaway } from "../forecast-chart";
+import { forecastToast } from "../forecast-toast";
 import { CHART_MONTHS, cashMonthFigures, type MonthFigures } from "../month-figures";
 import { useCategoriesQuery, useDashboardQuery } from "../use-books";
 import { useCashMonthsQuery } from "../use-cash";
 import { useGoBack } from "../ui/back";
+import { BandOfflineLine, PageLoadFailed, useOnline } from "../ui/band-states";
 import { israelToday } from "../ui/date-math";
 import { ScreenHeader } from "../ui/screen-header";
 import { NextMonthCardSkeleton } from "../ui/screen-skeletons";
@@ -28,7 +30,8 @@ import { cx } from "../ui/cx";
 /**
  * A story's data: the builder's output (in `data.base`, the currency it counted) and the cash net today, in its minor units.
  * `months` is the chart's cash months by yyyy-mm (the current one to date); `soFar` is the month by category for
- * לפי קטגוריה; `view` and `openCategories` are where a frame opens.
+ * לפי קטגוריה; `view` and `openCategories` are where a frame opens. `failed` draws the forecast's failed read,
+ * and `offlineSince` the offline line from that moment (FLOW-970).
  */
 export type ForecastSample = {
   data: MonthForecast;
@@ -38,6 +41,8 @@ export type ForecastSample = {
   soFar?: ForecastSoFar;
   view?: ForecastView;
   openCategories?: readonly string[];
+  failed?: boolean;
+  offlineSince?: number;
 };
 
 const NO_SO_FAR: ForecastSoFar = { income: [], expense: [] };
@@ -132,6 +137,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
   const [compact, setCompact] = useState(false);
   const [view, setView] = useState<ForecastView>(sample?.view ?? "items");
   const [openCategories, setOpenCategories] = useState<ReadonlySet<string>>(() => new Set(sample?.openCategories ?? []));
+  const online = useOnline();
 
   const data = sample?.data ?? query.data ?? null;
   const base = data?.base ?? "ILS";
@@ -144,6 +150,9 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
   const days = daysLeftInMonth(today, month);
   const chartFigures = sample != null ? sample.months ?? null : chartCash.data == null ? null : cashMonthFigures(chartCash.data, base);
   const chart = build == null || chartFigures == null ? null : monthEndChart(month, chartFigures, { incomeMinor: build.incomeTotal, expenseMinor: build.expenseTotal }, base);
+  // FLOW-970: a failed read says what happened, with the retry and the way to help; offline, the last figures stay with their moment.
+  const failed = sample?.failed ?? (data == null && query.isError);
+  const offlineSince = live ? (online || data == null ? undefined : query.dataUpdatedAt || undefined) : sample.offlineSince;
   const byCategory = view === "categories";
   const { pathname, search } = useLocation();
   const navigate = useNavigate();
@@ -226,19 +235,19 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
     if (patch.moved_out) {
       if (openKey == null) leave(item, patch, prior);
       else pendingLeave.current = () => { leave(item, patch, prior); };
-      toast.show({
+      toast.show(forecastToast({
         message: `${item.name} הועבר לחודש הבא`,
         action: "ביטול",
         onAction: () => { write.mutate({ key: item.key, patch: priorPatch(prior), undo: true, prior }); },
-      });
+      }));
       return;
     }
     write.mutate({ key: item.key, patch, undo: false, prior });
-    toast.show({
+    toast.show(forecastToast({
       message: "הצפי עודכן",
       action: "ביטול",
       onAction: () => { write.mutate({ key: item.key, patch: priorPatch(prior), undo: true, prior }); },
-    });
+    }));
   }
 
   /** The reset clears every override; the undo sends the captured ones back (FLOW-141b). */
@@ -246,7 +255,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
     const before = data?.overrides ?? [];
     reset.mutate(undefined, {
       onSuccess: () => {
-        toast.show({ message: "הצפי חזר לחישוב של Flow", action: "ביטול", onAction: () => { restore.mutate(before); } });
+        toast.show(forecastToast({ message: "הצפי חזר לחישוב של Flow", action: "ביטול", onAction: () => { restore.mutate(before); } }));
       },
     });
   }
@@ -290,20 +299,19 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
         <span className="ui-forecast-compact-figure">{startKnown ? <>{`${FORECAST_TITLE} · `}<bdi dir="ltr">{forecastBigText(total, base)}</bdi></> : FORECAST_TITLE}</span>
       </div>
       <ScreenHeader title={FORECAST_TITLE} backTo="/" backText="בית" subtitle={`סוף ${monthName(month)} · עוד ${String(days)} ימים`} />
-      {data == null && live && query.isError ? (
-        <p className="ui-forecast-error t-caption t-muted" role="alert">לא הצלחנו לטעון את הצפי.</p>
-      ) : null}
-      {data == null && !query.isError ? (
+      {failed ? <PageLoadFailed title="הצפי לא נטען" offline={!online} onRetry={() => { if (live) void query.refetch(); }} /> : null}
+      {offlineSince == null || failed ? null : <BandOfflineLine since={offlineSince} onPage />}
+      {data == null && !failed ? (
         <DelayedSkeleton>
           <ListSkeleton />
         </DelayedSkeleton>
       ) : null}
-      {build == null ? null : (
+      {build == null || failed ? null : (
         <>
           {!startKnown ? (
             // A read that failed, or came back without this month (no company, a month the server has not opened), says so.
             cash.isError || cash.isSuccess ? (
-              <p className="ui-forecast-error t-caption t-muted" role="alert">לא הצלחנו לטעון את התזרים של היום.</p>
+              <PageLoadFailed title="התזרים של היום לא נטען" offline={!online} onRetry={() => void cash.refetch()} />
             ) : (
               <DelayedSkeleton><NextMonthCardSkeleton /></DelayedSkeleton>
             )
@@ -327,7 +335,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
               strong
               caption={itemsCaption(build)}
             />
-            {chart == null ? null : <MonthChart kind="cash" history={chart.months} forecast={null} sub={chart.sub} label={chart.label} />}
+            {chart == null ? null : <MonthChart kind="cash" history={chart.months} forecast={null} sub={chart.sub} label={chart.label} takeaway={monthEndTakeaway(month, total, base)} />}
           </div>
           </>
           )}
@@ -336,7 +344,7 @@ export function ForecastScreen({ sample, openWhen = false }: { sample?: Forecast
           {byCategory ? (
             soFar == null ? (
               live && soFarQuery.isError ? (
-                <p className="ui-forecast-error t-caption t-muted" role="alert">לא הצלחנו לטעון את הקטגוריות.</p>
+                <PageLoadFailed title="הקטגוריות לא נטענו" offline={!online} onRetry={() => void soFarQuery.refetch()} />
               ) : (
                 <DelayedSkeleton>
                   <ListSkeleton />

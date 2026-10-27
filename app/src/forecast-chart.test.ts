@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type ForecastBuild, type ForecastItem, forecastTotal } from "@flow/shared";
-import { expenseCountNote, incomeCountNote, itemsCaption, monthEndChart } from "./forecast-chart";
+import { expenseCountNote, incomeCountNote, itemsCaption, monthEndChart, monthEndTakeaway } from "./forecast-chart";
 import { monthForecastBoardSample } from "./forecast-sample";
 
 function item(key: string, direction: "income" | "expense", kind: "recurring" | "invoice", lateDays = 0): ForecastItem {
@@ -68,5 +68,16 @@ describe("תזרים צפוי's chart", () => {
     expect(first.months).toHaveLength(1);
     expect(first.sub).toBe("עד סוף אוקטובר");
     expect(first.label).toContain("אוקטובר עד היום: נכנס $0, יצא $0; צפוי עוד: נכנס $50, יצא $0");
+  });
+});
+
+describe("monthEndTakeaway", () => {
+  it("says where the month ends, the minus before the currency in an isolated amount", () => {
+    expect(monthEndTakeaway("2026-10", -574_100n, "USD")).toBe("אוקטובר צפוי להיסגר ב־⁦−$5,741⁩");
+    expect(monthEndTakeaway("2026-10", 120_000n, "USD")).toBe("אוקטובר צפוי להיסגר ב־⁦$1,200⁩");
+  });
+
+  it("says a month that ends at zero closes even, never ב־$0", () => {
+    expect(monthEndTakeaway("2026-12", 0n, "USD")).toBe("דצמבר צפוי להיסגר באיזון");
   });
 });

@@ -203,7 +203,7 @@ export function ForecastItemPage({
       <p className="ui-forecast-page-hint">
         {item.kind !== "invoice" ? `משנה רק את הצפי של ${monthLabel}. החיוב הקבוע לא משתנה.` : "משנה רק את הצפי. החשבונית עצמה לא משתנה."}
       </p>
-      <Button variant="primary" full onClick={save}>שמירה</Button>
+      <Button variant="primary" full onClick={save}>שמירת השינוי בצפי</Button>
       <ChoiceSheet
         copy={whenSheetCopy(item, today, monthEndChoice)}
         open={whenOpen}
