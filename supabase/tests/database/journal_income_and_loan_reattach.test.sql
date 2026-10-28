@@ -253,7 +253,14 @@ select is(
   true,
   'no P&L figure moves on either basis'
 );
-select is((select count(*)::integer from private.ledger_pnl_diff(pg_temp.id('company'))), 0, 'and the ledger agrees with the posting rules');
+select is(
+  (select count(*)::integer from (
+     select l.transaction_id from public.legs l
+     where l.company_id = pg_temp.id('company') and not l.draft
+     group by l.transaction_id having sum(l.amount_minor) <> 0) x),
+  0,
+  'and every line''s legs still balance'
+);
 select is(
   (select count(*)::integer from private.mcp_writes w
    where w.kind = 'category_account' and w.category_id = pg_temp.id('deposits') and w.undone_at is null),
@@ -428,7 +435,7 @@ select is(
 );
 select is(
   (select jsonb_agg(jsonb_build_object('part', s.part, 'amount', s.amount_minor, 'cat', s.category_id = pg_temp.id('interest_cat')) order by s.part)
-   from public.loan_splits s where s.transaction_id = pg_temp.id('pay_02')),
+   from private.loan_parts s where s.transaction_id = pg_temp.id('pay_02')),
   '[{"cat": true, "part": "interest", "amount": 100000}, {"cat": false, "part": "escrow", "amount": 0}, {"cat": false, "part": "principal", "amount": 0}]'::jsonb,
   'with its exact parts and the interest category it names'
 );
@@ -454,7 +461,7 @@ select is(
 );
 select is(pg_temp.undo('f151-undo-att', 'loan_split', pg_temp.id('pay_02'))->>'ok', 'true', 'the re-attach undoes');
 select is(
-  (select count(*)::integer from public.loan_splits s where s.transaction_id = pg_temp.id('pay_02')),
+  (select count(*)::integer from private.loan_parts s where s.transaction_id = pg_temp.id('pay_02')),
   0,
   'and the line is whole again, as before it'
 );

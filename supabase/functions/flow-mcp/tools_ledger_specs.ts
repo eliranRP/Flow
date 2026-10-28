@@ -16,6 +16,10 @@ export const LEDGER_READ_SPECS = [
   spec("get_account_balances", "The balance-sheet accounts' balances from the ledger legs (FLOW-149, decision 0228), as of as_of (YYYY-MM-DD, default today, by each line's date): balances[] (account_id, account_name, type asset or liability, project_id, project_name, currency, balance_minor: SIGNED, debit positive, credit negative, so an asset reads positive and Accumulated depreciation or a liability negative), every account but the bank, per project and currency, only non-zero; and book_value[] per project and currency (property_minor on Property, accumulated_depreciation_minor on Accumulated depreciation, net_book_value_minor their sum). Any member reads it.", {
     as_of: { type: ["string", "null"] },
   }, false),
+  spec("get_balance_sheet", "The balance sheet from the ledger legs (FLOW-152), as of as_of (YYYY-MM-DD, default today), per currency: assets, liabilities and equity, each with total_minor and accounts[] (account_id, name, is_system, balance_minor; zero balances left out), retained_earnings_minor (the running P&L: minus the income and expense legs), total_assets_minor, total_liabilities_and_equity_minor (liabilities + equity + retained earnings), difference_minor and balanced (assets = liabilities + equity + retained earnings), and warnings[] (code suspense or uncategorized, account_id, account_name, balance_minor, message) when Suspense or an Uncategorized account is not zero. Debit is positive; liabilities and equity are shown positive (credit), so a debit balance there shows negative. Rule: a line's legs count from the line's doc_date (the bank leg too), on posted lines that are not removed; draft legs are not on the books. project_id limits it to the legs filed to one project (an entry that spans projects may then not balance on its own). Any member reads it.", {
+    as_of: { type: ["string", "null"] },
+    project_id: { type: ["string", "null"] },
+  }, false),
 ];
 
 export const LEDGER_WRITE_SPECS = [
@@ -35,9 +39,35 @@ export const LEDGER_WRITE_SPECS = [
       },
     },
   }, true),
-  spec("set_category_account", "Bind a kept-out category to the balance-sheet account its ledger legs land on (FLOW-151, decision 0231; owner or editor): its posts_to in list_accounts. A category is bound by its name when it is created (decision 0210, English names only); any other kept-out category lands on Suspense, so bind it here, e.g. tenants' deposits to Security deposit held, owner contributions to Owner capital, renovation to Property. account_id is an asset or liability system account from list_accounts (not the bank, Suspense or VAT control), or null for the default (its loan part's account, else Suspense). The category's lines are re-posted: their legs move to the account, and no P&L figure moves (the P&L reads the category). Refused: a category counted in the P&L (the category is counted in the P&L), a loan part category (a loan part category posts by its part), and any other account (a category posts only to a balance-sheet account). A journal entry already booked keeps its legs. Returns category_id, account_id, posts_to and posts_to_name (where its legs land now), previous_account_id and undo_kind category_account; undo is kind category_account with the category id and puts the binding back while it is still the one written.", {
+  spec("set_category_account", "Bind a kept-out category to the balance-sheet account its ledger legs land on (FLOW-151, decision 0231; owner or editor): its posts_to in list_accounts. A category is bound by its name when it is created (decision 0210, English names only); any other kept-out category lands on Suspense, so bind it here, e.g. tenants' deposits to Security deposit held, owner contributions to Owner capital, renovation to Property. account_id is an open asset, liability or equity account from list_accounts (a system account or the company's own; not the bank, Suspense or VAT control; an archived one is refused: account is archived), or null for the default (its loan part's account, else Suspense). The category's lines are re-posted: their legs move to the account, and no P&L figure moves (the P&L reads the category). Refused: a category counted in the P&L (the category is counted in the P&L), a loan part category (a loan part category posts by its part), and any other account (a category posts only to a balance-sheet account). A journal entry already booked keeps its legs. Returns category_id, account_id, posts_to and posts_to_name (where its legs land now), previous_account_id and undo_kind category_account; undo is kind category_account with the category id and puts the binding back while it is still the one written.", {
     idempotency_key: { type: "string" },
     category_id: { type: "string" },
     account_id: { type: ["string", "null"] },
+  }, true),
+  spec("create_account", "Add a balance-sheet account to the company's chart (FLOW-152; owner or editor): name (1 to 60 characters), type asset, liability or equity, description (optional, up to 200). E.g. Deposits paid (asset). Then bind a kept-out category to it with set_category_account, or book it with book_line or create_journal_entry. Refused: a system name such as Suspense or Property (that name belongs to a system account), a name already used (account already exists). Returns id, name, type, description, is_system, archived and undo_kind account_create; undo is kind account_create with the account id and deletes it while it has no legs or categories and reads as written.", {
+    idempotency_key: { type: "string" },
+    name: { type: "string" },
+    type: { type: "string", enum: ["asset", "liability", "equity"] },
+    description: { type: ["string", "null"] },
+  }, true),
+  spec("update_account", "Rename or describe a company account, or change its type (FLOW-152; owner or editor). Give at least one of name, description (an empty string clears it) and type. The type changes only while the account has no legs (account has postings, so its type can't change). The 12 system accounts and the accounts of categories are refused (system account can't be changed, category account can't be changed), and so is an archived account (account is archived). Returns the account and undo_kind account_update; undo is kind account_update with the account id and puts the old values back while it reads as written.", {
+    idempotency_key: { type: "string" },
+    account_id: { type: "string" },
+    name: { type: "string" },
+    description: { type: "string" },
+    type: { type: "string", enum: ["asset", "liability", "equity"] },
+  }, true),
+  spec("archive_account", "Archive a company account that is no longer used (FLOW-152; owner or editor): it leaves list_accounts (unless include_archived) and can't be booked. Refused: a system account, an account with a balance in any project and currency (account has a balance of 388.00), and one with categories bound to it (account has linked categories; hidden '· ledger' categories count). Returns the account and undo_kind account_archive; undo is kind account_archive with the account id.", {
+    idempotency_key: { type: "string" },
+    account_id: { type: "string" },
+  }, true),
+  spec("restore_account", "Open an archived company account again (FLOW-152; owner or editor). Refused when it is not archived (account is not archived). Returns the account and undo_kind account_restore; undo is kind account_restore with the account id and archives it again while it still has no balance or bound category.", {
+    idempotency_key: { type: "string" },
+    account_id: { type: "string" },
+  }, true),
+  spec("merge_account", "Merge a company account into another of the same type (FLOW-152; owner or editor): the categories bound to from_account_id (hidden '· ledger' ones too) and its journal entry legs move to into_account_id, their lines are posted again, and from_account_id is archived. The legs move between two balance-sheet accounts, so no P&L figure moves. into_account_id may be a system account (not the bank, Suspense or VAT control); from_account_id may not. Refused: the same account (pick a different account), a different type (accounts must be the same type), an archived account, a category's account. Returns from, into, categories_moved, journal_legs_moved and undo_kind account_merge; undo is kind account_merge with the FROM account id and moves everything back while it reads as written (account_merge conflict when a category or leg moved since).", {
+    idempotency_key: { type: "string" },
+    from_account_id: { type: "string" },
+    into_account_id: { type: "string" },
   }, true),
 ];

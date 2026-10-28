@@ -94,7 +94,7 @@ returns integer
 language sql
 set search_path = ''
 as $$
-  select count(*)::integer from public.loan_splits where transaction_id = pg_temp.id(p_label);
+  select count(*)::integer from private.loan_parts where transaction_id = pg_temp.id(p_label);
 $$;
 grant execute on function pg_temp.rows(text) to authenticated, service_role;
 
@@ -170,7 +170,7 @@ select is(
   'true', 'a split on the same loan is replaced, with a fees part');
 select is(pg_temp.rows('txn_a1'), 4, 'the line now has four parts');
 select is(
-  (select category_id from public.loan_splits where transaction_id = pg_temp.id('txn_a1') and part = 'fees'),
+  (select category_id from private.loan_parts where transaction_id = pg_temp.id('txn_a1') and part = 'fees'),
   pg_temp.id('fees_cat'), 'fees go to the category the call names');
 select is(
   public.save_loan_split(pg_temp.id('txn_a1'), pg_temp.id('amort'), pg_temp.parts(60000, 11946))->'balance_after_minor',
@@ -215,13 +215,13 @@ select is(
   pg_temp.mcp_attach('sls-mcp-1', 'txn_d_mcp', 'demand')->'error'->>'message',
   'a later payment is already attached', 'MCP refuses the same order under the loan lock');
 -- A line whose parts all wait for review is no payment yet: confirming it is a new payment.
-update public.loan_splits set needs_review = true where transaction_id = pg_temp.id('txn_d1');
+select tests.loan_split_review(pg_temp.id('txn_d1'), true);
 select tests.authenticate_as('sls_owner');
 select throws_ok(
   format('select public.save_loan_split(%L, %L, %L)', pg_temp.id('txn_d1'), pg_temp.id('demand'), pg_temp.parts(100, 9900)),
   'a later payment is already attached', 'confirming a flagged payment dated before a later one is refused');
 reset role;
-update public.loan_splits set needs_review = false where transaction_id = pg_temp.id('txn_d1');
+select tests.loan_split_review(pg_temp.id('txn_d1'), false);
 -- A pending line's own principal is not in the balance, so it is not added back.
 update public.transactions set line_status = 'pending' where id = pg_temp.id('txn_d2');
 select tests.authenticate_as('sls_owner');

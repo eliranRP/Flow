@@ -859,172 +859,9 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
--- The worded refusals the MCP shows: the writer API's own reasons that reach a tool, and FLOW-152's.
--- ---------------------------------------------------------------------------
-create or replace function private.mcp_refused(p_message text)
-returns jsonb
-language sql
-immutable
-set search_path = ''
-as $$
-  select private.mcp_error(
-    'refused',
-    case
-      when p_message in (
-        'no company',
-        'unknown review action',
-        'review item not found',
-        'shared costs are split, not assigned to one project',
-        'category is required',
-        'project or category not found',
-        'category kind must match the direction',
-        'project and category are required',
-        'transaction not found',
-        'category not found',
-        'project name is too short',
-        'project already exists',
-        'category name is too short',
-        'category already exists',
-        'project group already exists',
-        'group name is too short',
-        'group name is too long',
-        'unknown category kind',
-        'in use',
-        'loan not found',
-        'loan currency mismatch',
-        'loan already attached',
-        'loan balance exceeded',
-        'no schedule row for this date',
-        'loan categories missing',
-        'invalid loan terms',
-        'loan category is fixed',
-        'project not found',
-        'parts must sum to the line',
-        'line has a loan split',
-        'line has a split by category',
-        'line has an open review',
-        'payment below interest',
-        'invalid loan parts',
-        'loan line is fixed',
-        'parts exceed the line',
-        'a part rounds to zero',
-        'nothing is left for the rest',
-        'line has no category for the rest',
-        'a reversal part needs a project',
-        'same category and project twice',
-        'line amount is zero',
-        -- FLOW-946 (decision 0206).
-        'a gross-up part needs a project',
-        -- FLOW-948 (decision 0208): book_line self-correction hints (no existence leak).
-        'legs do not balance',
-        'exactly one bank leg is required',
-        'at least one category leg is required',
-        'the bank leg sign must match the direction',
-        -- FLOW-953 (decision 0210): balance-sheet legs.
-        'book_line: unsupported account — use a category account or a balance-sheet account',
-        'book_line: a VAT leg is a later phase',
-        'book_line: several kept-out categories post to this account — book the leg on one category''s account',
-        'book_line: no kept-out category posts to this account',
-        'book_line: the line is switched into the P&L — clear set_line_pnl first',
-        'book_line: could not represent the legs in the ledger',
-        -- FLOW-950 (decision 0208, item 9): booking an existing line.
-        'book_line: the line is not posted',
-        'book_line: direction does not match the line',
-        'book_line: the bank leg must equal the line amount',
-        'book_line: a line with VAT is a later phase',
-        'book_line: one category leg on an existing line — use assign_expense',
-        'book_line: the line is kept out of the P&L',
-        -- FLOW-106 parts 1 and 2 (decisions 0122 and 0128).
-        'closed_on required',
-        'loan is open',
-        'payments after closed_on',
-        'loan closed',
-        'category does not fit the loan part',
-        -- FLOW-106 part 3 (decision 0130).
-        'fees category required',
-        -- FLOW-106 part 4 (decision 0132).
-        'rate before the loan start',
-        'rate not found',
-        -- The demand order checks under the loan lock (20261010120000_save_loan_split.sql).
-        'payment before the loan start',
-        'a later payment is already attached',
-        -- FLOW-330 (decision 0133).
-        'invoice not found',
-        -- FLOW-367.
-        'payment not matched', 'payment already linked', 'invoice already marked paid',
-        -- FLOW-114 (decision 0136).
-        'line has no loan split',
-        -- FLOW-110 (decision 0142).
-        'loan cannot be restored',
-        -- FLOW-405 (decision 0144).
-        'a loan uses this category',
-        'pick a different category',
-        'categories must be the same kind',
-        'a split line has both categories',
-        'a loan uses this category for a part the other category cannot take',
-        -- FLOW-137 (decision 0160).
-        'no loan linked to this index',
-        'no linked loan is open on this date',
-        -- FLOW-601 (decision 0167).
-        'already a member',
-        'invalid email',
-        'too many invites',
-        -- FLOW-928 (decision 0195).
-        'invite_limit',
-        'member not found',
-        -- FLOW-369 (manual entry and documents).
-        'direction must be income or expense',
-        'amount must be above zero',
-        'date is required',
-        'payee is invalid',
-        'method must be cash or cheque',
-        'cheque number is invalid',
-        'document is required',
-        'document name is invalid',
-        'document type is not allowed',
-        'document size is invalid',
-        'document sha256 is invalid',
-        'document already attached',
-        'too many documents',
-        -- FLOW-148 (decision 0227).
-        'payment has no such part',
-        'switch before the loan start',
-        'switch not found',
-        'a loan payment is an expense line',
-        -- FLOW-149 (decision 0228).
-        'journal entry is fixed',
-        'a journal entry has no bank leg',
-        'a journal entry takes category and balance-sheet accounts',
-        'a journal entry must change the P&L',
-        -- FLOW-151 (decision 0231).
-        'the category posts to Suspense',
-        'the category is counted in the P&L',
-        'a loan part category posts by its part',
-        'a category posts only to a balance-sheet account',
-        -- Decision 0232: the parts writer API's reasons.
-        'too many parts',
-        'part amount must be above zero',
-        'category or project not found',
-        'duplicate part',
-        'loan part amount below zero',
-        -- FLOW-152.
-        'account is archived'
-      ) then p_message
-      when p_message = 'loan_closed' then 'loan closed'
-      -- The loan payment rules' names, in the words the tools use.
-      when p_message = 'loan_split_category' then 'category does not fit the loan part'
-      when p_message in ('loan_split_sum', 'loan_split_incomplete') then 'invalid loan parts'
-      when p_message = 'loan_split_currency' then 'loan currency mismatch'
-      when p_message = 'loan_split_balance' then 'loan balance exceeded'
-      when p_message = 'loan_split_income' then 'a loan payment is an expense line'
-      else 'The write was refused.'
-    end
-  );
-$$;
-
--- ---------------------------------------------------------------------------
--- mcp_undo (87 KB) is patched in place with counted anchors: the kinds that read or wrote the old split
--- tables read the part views and restore parts through the writer API.
+-- The worded refusals the MCP shows (patched in place, as 70_accounts adds its own): the parts writer
+-- API's reasons that reach a tool, and no more "a journal entry needs a leg in the P&L" (FLOW-152).
+-- 'account is archived' is 70_accounts'.
 -- ---------------------------------------------------------------------------
 create or replace function pg_temp.anchor_count(p_def text, p_anchor text)
 returns integer
@@ -1032,6 +869,37 @@ language sql
 immutable
 as $$ select (length(p_def) - length(replace(p_def, p_anchor, ''))) / length(p_anchor); $$;
 
+do $refused$
+declare
+  def text := pg_get_functiondef('private.mcp_refused(text)'::regprocedure);
+  a_list constant text := $a$        'a category posts only to a balance-sheet account'
+      ) then p_message$a$;
+  a_gone constant text := $a$        'a journal entry needs a leg in the P&L',
+$a$;
+  a_note constant text := $a$      -- private.loan_splits_check's names, in the words the tools use.$a$;
+begin
+  if pg_temp.anchor_count(def, a_list) <> 1 or pg_temp.anchor_count(def, a_gone) <> 1
+    or pg_temp.anchor_count(def, a_note) <> 1 then
+    raise exception 'mcp_refused is not the expected definition';
+  end if;
+  def := replace(def, a_list, $n$        'a category posts only to a balance-sheet account',
+        -- Decision 0232: the parts writer API's reasons.
+        'too many parts',
+        'part amount must be above zero',
+        'category or project not found',
+        'duplicate part',
+        'loan part amount below zero'
+      ) then p_message$n$);
+  def := replace(def, a_gone, '');
+  def := replace(def, a_note, $n$      -- The loan payment rules' names, in the words the tools use.$n$);
+  execute def;
+end
+$refused$;
+
+-- ---------------------------------------------------------------------------
+-- mcp_undo (87 KB) is patched in place with counted anchors: the kinds that read or wrote the old split
+-- tables read the part views and restore parts through the writer API.
+-- ---------------------------------------------------------------------------
 do $patch$
 declare
   def text := pg_get_functiondef('public.mcp_undo(text, text, uuid)'::regprocedure);
