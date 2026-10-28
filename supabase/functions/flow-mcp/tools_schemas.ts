@@ -48,7 +48,7 @@ export const READ_TOOL_NAMES = [
   "get_cash_years",
   "get_cash_lines",
   "get_started", "match_lines", "get_forecast", "get_project_forecast_edits", "list_bank_connections", "list_transfer_matches",
-  "list_accounts", "get_line_legs", "get_account_balances", "get_balance_sheet", "list_prepaid_schedules", "get_prepaid_schedule", "get_weekly_summary", "get_transaction_thread",
+  "list_accounts", "get_line_legs", "get_account_balances", "get_balance_sheet", "get_pnl_statement", "list_prepaid_schedules", "get_prepaid_schedule", "get_weekly_summary", "get_transaction_thread",
 ] as const;
 
 /** Read tool that a write-only token may also call: it polls that token's own sync job. */

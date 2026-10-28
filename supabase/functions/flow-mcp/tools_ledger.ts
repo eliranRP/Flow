@@ -1,11 +1,12 @@
 // MCP tools: the ledger reads (FLOW-950, decision 0208 item 9), so an assistant can use book_line end to
 // end: list_accounts gives the account ids book_line needs (mcp_accounts), and get_line_legs reads one
 // line's legs back to verify a booking (mcp_line_legs). get_account_balances (FLOW-149, decision 0228)
-// sums the balance-sheet legs per project (mcp_account_balances). Any member reads them.
+// sums the balance-sheet legs per project (mcp_account_balances). get_pnl_statement (FLOW-160) reads the P&L as a
+// statement for the reports screen (get_pnl_statement). Any member reads them.
 import { PREPAID_ALLOWED, PREPAID_READS, prepaidRead } from "./tools_prepaid.ts";
 import { DATE, fail, isCalendarDate, ok, READ_REFUSED, type ToolResult, type ToolRpc, UUID } from "./tools_args.ts";
 
-export const LEDGER_READS = ["list_accounts", "get_line_legs", "get_account_balances", "get_balance_sheet", ...PREPAID_READS] as const;
+export const LEDGER_READS = ["list_accounts", "get_line_legs", "get_account_balances", "get_balance_sheet", "get_pnl_statement", ...PREPAID_READS] as const;
 
 /** The reads' and the account writes' argument allow-list, merged into ALLOWED in tools_schemas.ts. */
 export const LEDGER_ALLOWED: Record<string, Set<string>> = {
@@ -13,6 +14,7 @@ export const LEDGER_ALLOWED: Record<string, Set<string>> = {
   get_line_legs: new Set(["transaction_id"]),
   get_account_balances: new Set(["as_of"]),
   get_balance_sheet: new Set(["as_of", "project_id"]),
+  get_pnl_statement: new Set(["from", "to", "project_id", "by_project", "basis"]),
   // FLOW-152: the chart of accounts writes (tools_accounts.ts).
   create_account: new Set(["idempotency_key", "name", "type", "description"]),
   update_account: new Set(["idempotency_key", "account_id", "name", "description", "type"]),
@@ -66,6 +68,7 @@ export async function ledgerRead(
     if (result.status >= 400 || !isObject(body) || !Array.isArray(body.currencies)) return fail("refused", READ_REFUSED);
     return ok(body);
   }
+  if (name === "get_pnl_statement") return pnlStatement(args, rpc);
   const id = args.transaction_id;
   if (typeof id !== "string" || !UUID.test(id)) return fail("validation", "validation");
   const result = await rpc("mcp_line_legs", { p_transaction_id: id });
@@ -74,4 +77,37 @@ export async function ledgerRead(
   if (result.json == null) return fail("not_found", "not found");
   if (!isObject(result.json) || !Array.isArray(result.json.legs)) return fail("refused", READ_REFUSED);
   return ok(result.json);
+}
+
+function optionalDate(value: unknown): boolean {
+  return value === undefined || value === null || (typeof value === "string" && DATE.test(value) && isCalendarDate(value));
+}
+
+// FLOW-160: the P&L statement. Both dates or neither; one project or by_project, not both.
+async function pnlStatement(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
+  const { from, to, project_id: project, by_project: byProject, basis } = args;
+  if (!optionalDate(from) || !optionalDate(to)) return fail("validation", "from and to: dates, YYYY-MM-DD");
+  if (((from ?? null) === null) !== ((to ?? null) === null)) return fail("validation", "from and to: both or neither");
+  if (typeof from === "string" && typeof to === "string" && from > to) return fail("validation", "from is after to");
+  if (project !== undefined && project !== null && (typeof project !== "string" || !UUID.test(project))) {
+    return fail("validation", "project_id: a project id");
+  }
+  if (byProject !== undefined && typeof byProject !== "boolean") return fail("validation", "by_project: true or false");
+  if (byProject === true && typeof project === "string") return fail("validation", "project_id or by_project, not both");
+  if (basis !== undefined && basis !== null && basis !== "cash" && basis !== "invoiced") {
+    return fail("validation", "basis: cash or invoiced");
+  }
+  const result = await rpc("get_pnl_statement", {
+    p_from: from ?? null,
+    p_to: to ?? null,
+    p_project_id: project ?? null,
+    p_by_project: byProject === true,
+    p_basis: basis ?? null,
+  });
+  if (result.status >= 400) return fail("refused", READ_REFUSED);
+  // Null for another company's project or an unknown one.
+  if (result.json == null) return fail("not_found", "not found");
+  const body = result.json;
+  if (!isObject(body) || !Array.isArray(body.currencies) || !Array.isArray(body.projects)) return fail("refused", READ_REFUSED);
+  return ok(body);
 }
