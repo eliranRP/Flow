@@ -1,5 +1,5 @@
 -- Loans, access: a demo viewer reads, another owner sees nothing, the owner
--- cannot retarget a split, a flagged line clears review, and anon is refused.
+-- cannot write the loan part legs, a flagged line clears review, and anon is refused.
 -- The fixtures are the loan, its lines, and one three-part split from loans_l1.
 
 begin;
@@ -120,37 +120,33 @@ select is(
 );
 
 select throws_ok(
-  $$select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', 'interest', 'amount_minor', 1, 'scheduled_minor', 1,
-      'category_id', c.id)))
+  $$insert into public.legs (
+      company_id, transaction_id, account_id, amount_minor, ordinal, leg_kind, category_id, part,
+      loan_id, scheduled_minor, needs_review, draft
+    )
+    select l.company_id, t.id, a.id, 1, 1, 'item', c.id, 'interest', l.id, 1, false, true
     from public.loans l
     join public.transactions t
       on t.company_id = l.company_id and t.idempotency_key = 'loan:partial'
     join public.categories c
       on c.company_id = l.company_id and c.name = 'ריבית משכנתא' and c.kind = 'expense'
-    group by t.id, l.id$$,
+    join public.accounts a on a.company_id = l.company_id and a.category_id = c.id$$,
   '42501',
   null,
   'a viewer cannot insert a split'
 );
 
-update public.loan_splits set amount_minor = 1;
-
-select is(
-  (
-    select s.amount_minor
-    from public.loan_splits s
-    join public.transactions t on t.id = s.transaction_id
-    where t.idempotency_key = 'loan:paid' and s.part = 'interest'
-  ),
-  5000::bigint,
+select throws_ok(
+  $$update public.legs set amount_minor = 1 where loan_id is not null$$,
+  '42501',
+  null,
   'a viewer cannot update a split'
 );
 
-delete from public.loan_splits;
-
-select is(
-  (select count(*)::int from public.loan_splits),
-  3,
+select throws_ok(
+  $$delete from public.legs where loan_id is not null$$,
+  '42501',
+  null,
   'a viewer cannot delete a split'
 );
 
@@ -172,40 +168,40 @@ set local role authenticated;
 select tests.authenticate_as('loan_other');
 
 select is((select count(*)::int from public.loans), 0, 'another owner cannot read the loan');
-select is((select count(*)::int from public.loan_splits), 0, 'another owner cannot read the split');
+select is((select count(*)::int from private.loan_parts), 0, 'another owner cannot read the split');
 
 select tests.authenticate_as('loan_owner');
 
 select throws_ok(
-  $$update public.loan_splits set transaction_id = gen_random_uuid()$$,
+  $$update public.legs set transaction_id = gen_random_uuid() where loan_id is not null$$,
   '42501',
   null,
   'the owner cannot move a split onto another line'
 );
 
 select throws_ok(
-  $$update public.loan_splits set loan_id = gen_random_uuid()$$,
+  $$update public.legs set loan_id = gen_random_uuid() where loan_id is not null$$,
   '42501',
   null,
   'the owner cannot retarget a split to another loan'
 );
 
 select throws_ok(
-  $$update public.loan_splits set company_id = gen_random_uuid()$$,
+  $$update public.legs set company_id = gen_random_uuid() where loan_id is not null$$,
   '42501',
   null,
   'the owner cannot move a split to another company'
 );
 
 select throws_ok(
-  $$update public.loan_splits set part = 'escrow'$$,
+  $$update public.legs set part = 'escrow' where loan_id is not null$$,
   '42501',
   null,
   'the owner cannot change which part a row is'
 );
 
 select throws_ok(
-  $$update public.loan_splits set needs_review = true$$,
+  $$update public.legs set needs_review = true where loan_id is not null$$,
   '42501',
   null,
   'the owner cannot mark a split for review'
@@ -213,16 +209,19 @@ select throws_ok(
 
 select throws_ok(
   $$
-    select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', 'interest', 'amount_minor', 1, 'scheduled_minor', 1,
-      'category_id', c.id, 'needs_review', true)))
+    insert into public.legs (
+      company_id, transaction_id, account_id, amount_minor, ordinal, leg_kind, category_id, part,
+      loan_id, scheduled_minor, needs_review, draft
+    )
+    select l.company_id, t.id, a.id, 1, 1, 'item', c.id, 'interest', l.id, 1, true, true
     from public.loans l
     join public.transactions t
       on t.company_id = l.company_id and t.idempotency_key = 'loan:partial'
     join public.categories c
       on c.company_id = l.company_id and c.name = 'ריבית משכנתא' and c.kind = 'expense'
+    join public.accounts a on a.company_id = l.company_id and a.category_id = c.id
     where l.name = 'משכנתא לדוגמה'
-  
-    group by t.id, l.id$$,
+  $$,
   '42501',
   null,
   'the owner cannot insert a split already flagged'
@@ -230,22 +229,20 @@ select throws_ok(
 
 select lives_ok(
   $$
-    update public.loan_splits
-    set amount_minor = case part
-      when 'interest' then 5001
-      when 'principal' then 2999
-      else amount_minor
-    end
-    where company_id = (select private.current_company_id());
-    set constraints all immediate;
-    update public.loan_splits
-    set amount_minor = case part
-      when 'interest' then 5000
-      when 'principal' then 3000
-      else amount_minor
-    end
-    where company_id = (select private.current_company_id());
-    set constraints all immediate;
+    select public.save_loan_split(s.transaction_id, s.loan_id, jsonb_agg(jsonb_build_object(
+      'part', s.part,
+      'amount_minor', case s.part when 'interest' then 5001 when 'principal' then 2999 else s.amount_minor end,
+      'scheduled_minor', s.scheduled_minor, 'category_id', s.category_id)))
+    from private.loan_parts s
+    where s.company_id = (select private.current_company_id())
+    group by s.transaction_id, s.loan_id;
+    select public.save_loan_split(s.transaction_id, s.loan_id, jsonb_agg(jsonb_build_object(
+      'part', s.part,
+      'amount_minor', case s.part when 'interest' then 5000 when 'principal' then 3000 else s.amount_minor end,
+      'scheduled_minor', s.scheduled_minor, 'category_id', s.category_id)))
+    from private.loan_parts s
+    where s.company_id = (select private.current_company_id())
+    group by s.transaction_id, s.loan_id;
   $$,
   'the owner can correct an amount'
 );
@@ -265,18 +262,23 @@ select is((select count(*)::int from public.loans), 2, 'the owner reads both loa
 select tests.clear_authentication();
 reset role;
 
-update public.loan_splits s
-set needs_review = true
-from public.transactions t
-where s.transaction_id = t.id
-  and t.idempotency_key = 'loan:paid';
+-- A line's parts with a new principal, written back through the writer (flags kept).
+create function pg_temp.set_principal(p_key text, p_principal bigint)
+returns void
+language sql
+as $$
+  select tests.loan_split(s.transaction_id, s.loan_id, jsonb_agg(jsonb_build_object(
+    'part', s.part,
+    'amount_minor', case s.part when 'principal' then p_principal else s.amount_minor end,
+    'scheduled_minor', s.scheduled_minor, 'category_id', s.category_id, 'needs_review', s.needs_review)))
+  from private.loan_parts s
+  join public.transactions t on t.id = s.transaction_id
+  where t.idempotency_key = p_key
+  group by s.transaction_id, s.loan_id;
+$$;
 
-update public.loan_splits s
-set amount_minor = 100000
-from public.transactions t
-where s.transaction_id = t.id
-  and t.idempotency_key = 'loan:paid'
-  and s.part = 'principal';
+select tests.loan_split_review(t.id, true) from public.transactions t where t.idempotency_key = 'loan:paid';
+select pg_temp.set_principal('loan:paid', 100000);
 
 select lives_ok(
   $$set constraints all immediate$$,
@@ -319,19 +321,12 @@ select throws_ok(
 );
 set local role authenticated;
 
+set local role postgres;
 select lives_ok(
-  $$
-    update public.loan_splits
-    set amount_minor = 3000
-    where part = 'principal'
-      and transaction_id = (
-        select id from public.transactions where idempotency_key = 'loan:paid'
-      );
-  $$,
+  $$ select pg_temp.set_principal('loan:paid', 3000) $$,
   'the owner can fix a split part'
 );
 
-set local role postgres;
 select lives_ok(
   $$
     select public.clear_loan_split_review(id)
@@ -345,7 +340,7 @@ set local role authenticated;
 select is(
   (
     select bool_or(s.needs_review)
-    from public.loan_splits s
+    from private.loan_parts s
     join public.transactions t on t.id = s.transaction_id
     where t.idempotency_key = 'loan:paid'
   ),
