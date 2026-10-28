@@ -224,8 +224,8 @@ reset role;
 insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, currency)
 values ((select id from lsp where label = 'co'), 'Example note', 1000000, 60000, 360, '2026-01-01', 10000, 0, 'USD');
 select throws_ok(
-  $$insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id)
-    select t.company_id, l.id, t.id, 'interest', 100, 100, (select id from lsp where label = 'repairs')
+  $$select tests.loan_split(t.id, l.id, jsonb_build_array(jsonb_build_object('part', 'interest', 'amount_minor', 100,
+      'scheduled_minor', 100, 'category_id', (select id from lsp where label = 'repairs'))))
     from public.transactions t join public.loans l on l.company_id = t.company_id
     where t.id = (select id from lsp where label = 'txn_repair')$$,
   'line has a split by category', 'a loan split on a split line is refused');

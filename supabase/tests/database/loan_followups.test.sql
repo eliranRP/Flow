@@ -34,24 +34,24 @@ from f114 c
 cross join (values ('f114:kept'), ('f114:removed'), ('f114:void')) as v(k)
 where c.label = 'company';
 
-insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review)
-select t.company_id, (select id from f114 where label = 'loan'), t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id, true
+select tests.loan_split(t.id, (select id from f114 where label = 'loan'), (
+  select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+    'category_id', c.id, 'needs_review', true))
+  from (values
+    ('interest', 'ריבית משכנתא', 0::bigint),
+    ('escrow', 'מסים וביטוח', 0::bigint),
+    ('principal', 'תשלומי הלוואה', 100000::bigint)
+  ) as v(part, category, amount)
+  join public.categories c on c.company_id = t.company_id and c.name = v.category and c.kind = 'expense'
+))
 from public.transactions t
-cross join (values
-  ('interest', 'ריבית משכנתא', 0::bigint),
-  ('escrow', 'מסים וביטוח', 0::bigint),
-  ('principal', 'תשלומי הלוואה', 100000::bigint)
-) as v(part, category, amount)
-join public.categories c on c.company_id = t.company_id and c.name = v.category and c.kind = 'expense'
 where t.idempotency_key like 'f114:%';
-set constraints all immediate;
-set constraints all deferred;
 
 update public.transactions set removed_at = now() where idempotency_key = 'f114:removed';
 update public.transactions set line_status = 'void' where idempotency_key = 'f114:void';
 
 select is(
-  (select count(*)::integer from public.loan_splits where loan_id = (select id from f114 where label = 'loan') and needs_review),
+  (select count(*)::integer from private.loan_parts where loan_id = (select id from f114 where label = 'loan') and needs_review),
   9, 'all nine parts are still flagged');
 
 select tests.authenticate_as('f114_owner');

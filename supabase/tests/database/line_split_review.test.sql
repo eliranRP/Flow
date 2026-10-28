@@ -4,9 +4,6 @@
 
 begin;
 
--- The review follows the parts at commit (a deferred trigger); judge after each statement.
-set constraints all immediate;
-
 select plan(38);
 
 do $users$
@@ -201,17 +198,15 @@ select lives_ok($$select public.reopen_review((select id from public.review_queu
 reset role;
 select is(pg_temp.open_reviews('txn_busy'), '[]'::jsonb, 'a reopened split_mismatch on matching parts closes at once');
 
--- Deferred: save_line_split is judged once, at commit (here, when constraints turn immediate).
+-- The writer judges the parts at once (they were checked at commit before the legs were the store).
 select pg_temp.resync('txn_busy', -12000);
 select is(pg_temp.open_reviews('txn_busy'), '["split_mismatch"]'::jsonb, 'the mismatch is open again');
-set constraints all deferred;
 select tests.authenticate_as('lsr_owner');
 select lives_ok($$select public.save_line_split((select id from lsr where label = 'txn_busy'), pg_temp.parts(5000, 7000))$$,
-  'new parts, deferred');
+  'new parts');
 reset role;
-select is(pg_temp.open_reviews('txn_busy'), '["split_mismatch"]'::jsonb, 'the review waits for commit');
-set constraints all immediate;
-select is(pg_temp.open_reviews('txn_busy'), '[]'::jsonb, 'and closes when the deferred check runs');
+select is(pg_temp.open_reviews('txn_busy'), '[]'::jsonb, 'the review closes with the write');
+select is(pg_temp.open_reviews('txn_busy'), '[]'::jsonb, 'and stays closed');
 
 -- A removed line opens nothing.
 select tests.line_split((select id from lsr where label = 'txn_gone'), jsonb_build_array(

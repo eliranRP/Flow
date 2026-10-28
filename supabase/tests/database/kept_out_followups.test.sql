@@ -168,21 +168,19 @@ from (values ('ko:loan-key'), ('ko:loan-name')) v(k);
 
 
 create function pg_temp.ko_split(p_ikey text, p_by text) returns void language sql as $f$
-  insert into public.loan_splits (
-    company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-  )
-  select t.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount,
-    case
-      when v.part = 'interest' and p_by = 'name' then
-        (select k.id from public.categories k
-         where k.company_id = t.company_id and k.name = 'ריבית משכנתא' and k.kind = 'expense')
-      else
-        (select k.id from public.categories k
-         where k.company_id = t.company_id and k.loan_part = v.part::public.loan_split_part)
-    end
+  select tests.loan_split(t.id, l.id, (
+    select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+      'category_id', case
+        when v.part = 'interest' and p_by = 'name' then
+          (select k.id from public.categories k
+           where k.company_id = t.company_id and k.name = 'ריבית משכנתא' and k.kind = 'expense')
+        else
+          (select k.id from public.categories k
+           where k.company_id = t.company_id and k.loan_part = v.part::public.loan_split_part)
+      end) order by v.ord)
+    from (values (1, 'interest', 70000), (2, 'escrow', 20000), (3, 'principal', 10000)) v(ord, part, amount)))
   from public.transactions t
   join public.loans l on l.company_id = t.company_id
-  cross join (values ('interest', 70000), ('escrow', 20000), ('principal', 10000)) v(part, amount)
   where t.idempotency_key = p_ikey;
   set constraints all immediate;
 $f$;

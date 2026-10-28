@@ -48,8 +48,11 @@ from public.transactions where idempotency_key like 'lsg:%';
 
 insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, currency)
 values ((select id from lsg where label = 'co'), 'Example note', 1000000, 60000, 360, '2026-01-01', 10000, 0, 'USD');
-select tests.loan_split(t.id, l.id, jsonb_build_array(jsonb_build_object('part', 'interest', 'amount_minor', 1000,
-  'scheduled_minor', 1000, 'category_id', (select id from lsg where label = 'repairs'))))
+select tests.loan_split(t.id, l.id, (
+  select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+    'category_id', (select k.id from public.categories k
+      where k.company_id = t.company_id and k.loan_part = v.part::public.loan_split_part)) order by v.ord)
+  from (values (1, 'interest', 400), (2, 'escrow', 300), (3, 'principal', 300)) as v(ord, part, amount)))
 from public.transactions t join public.loans l on l.company_id = t.company_id
 where t.id = (select id from lsg where label = 'txn_loan');
 

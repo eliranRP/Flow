@@ -1,6 +1,6 @@
 -- FLOW-949. A normal part and a gross-up part may share a category and project on one line
 -- (decision 0207, amended). The per-(category, project) key of save_line_split and of the
--- line_splits unique constraint now includes gross_up: one normal and one gross-up part per pair;
+-- the split parts' unique key includes gross_up: one normal and one gross-up part per pair;
 -- two of the same kind are still 'same category and project twice'. Category merges follow the same
 -- key, and a shared line's project cash keeps the two parts apart. Invented books only; USD cents.
 
@@ -207,14 +207,16 @@ select throws_ok(
   'P0001', 'same category and project twice', 'a part with no project still pairs with the line''s project');
 select is(pg_temp.parts_of('txn_pay'), 'build/beta/200000/false taxes/alpha/24948/false taxes/alpha/85077/true',
   'the refused saves changed nothing');
--- The table holds the same key.
+-- The writer holds the same key.
 reset role;
 select throws_ok(
-  format($$insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, gross_up)
-    values (%L, %L, 9, %L, %L, 1, true)$$,
-    (select id from gsc where label = 'co'), (select id from gsc where label = 'txn_pay'),
+  format($$select tests.line_split(%L, jsonb_build_array(
+      jsonb_build_object('category_id', %L, 'project_id', %L, 'amount_minor', 2, 'gross_up', true),
+      jsonb_build_object('category_id', %L, 'project_id', %L, 'amount_minor', 1, 'gross_up', true)))$$,
+    (select id from gsc where label = 'txn_pay'),
+    (select id from gsc where label = 'taxes'), (select id from gsc where label = 'alpha'),
     (select id from gsc where label = 'taxes'), (select id from gsc where label = 'alpha')),
-  '23505', null, 'the table refuses a second gross-up row on one category and project');
+  '23505', null, 'the writer refuses a second gross-up part on one category and project');
 select tests.authenticate_as('gsc_owner');
 
 -- ===========================================================================
