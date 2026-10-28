@@ -461,7 +461,7 @@ A payment made up front (a year of insurance) is spread over months. Rules for a
 - The total is split over the months rounded to the minor unit; the last month takes the rest (262,100 over 12 is 11 months of 21,842 and one of 21,838). Planned months always add up to what remains (total less posted less refunds).
 - The payment line is filed to a hidden kept-out category bound to the prepaid account. A part of the line (`amount_minor` below the line) splits it; the previous coding is kept so delete and undo restore it.
 - The books-closed date blocks adding, changing or removing a posted month dated on or before it (`refused`, `the books are closed through YYYY-MM-DD`). It guards the prepaid tools only for now.
-- Writes need owner or editor, an `idempotency_key`, and return an `undo_kind`. Reads: any member.
+- Writes need owner or editor, an `idempotency_key`, and return an `undo_kind`. Reads: any member. Another company's schedule is refused as `The write was refused.`; another company's line as `transaction not found`.
 
 ### create_prepaid_schedule
 
@@ -469,7 +469,7 @@ A payment made up front (a year of insurance) is spread over months. Rules for a
 { "idempotency_key": "pre-1", "transaction_id": "<payment line>", "expense_category_id": "<category>", "project_id": "<optional project>", "start_month": "2026-01", "months": 12, "amount_minor": 262100, "day_of_month": 1, "prepaid_account_id": "<optional asset account>", "description": "Example Insurance Co, Maple house" }
 ```
 
-`start_month` is `YYYY-MM` (a real month), `months` 1 to 120, `day_of_month` 1 to 28 (default the line's day), `amount_minor` a positive integer in minor units, at most the line (default the whole line). `prepaid_account_id` defaults to the account named Prepaid expenses (made when missing). Refused: a line not found, not an expense, not posted, a journal entry or already in a schedule; a category that is not an expense counted in the P&L; an amount above the line; a month due on or before the books-closed date. Output `data`: `{ "schedule_id", "prepaid_account_id", "prepaid_category_id", "total_minor", "rows", "posted_count", "remaining_minor", "undo_kind": "prepaid_create" }`. Undo `prepaid_create` takes the schedule id: it removes the schedule and its entries and restores the line, while it reads as written (else `conflict`); it obeys the books-closed date too.
+`start_month` is `YYYY-MM` (a real month), `months` 1 to 120, `day_of_month` 1 to 28 (default the line's day), `amount_minor` a positive integer in minor units, at most the line (default the whole line). `prepaid_account_id` defaults to the account named Prepaid expenses (made when missing). Refused: `transaction not found`, `the line is not an expense`, `the line is not posted`, `the line is a journal entry`, `the line is in another currency`, `a line with VAT can't be prepaid yet`, `the line is switched into the P&L`, `the line is already in a prepaid schedule`, `line is already split`, `line has a loan split`, `amount is above the line`, `the category must be an expense category counted in the P&L`, `category not found`, `the prepaid account must be an asset account`, `the books are closed through YYYY-MM-DD`. Output `data`: `{ "schedule_id", "prepaid_account_id", "prepaid_category_id", "total_minor", "rows", "posted_count", "remaining_minor", "undo_kind": "prepaid_create" }`. Undo `prepaid_create` takes the schedule id: it removes the schedule and its entries and restores the line, while it reads as written (else `conflict`); it obeys the books-closed date too.
 
 ### list_prepaid_schedules
 
@@ -493,7 +493,7 @@ The schedule fields as listed, plus `rows` (`seq`, `due_date`, `amount_minor`, `
 { "idempotency_key": "pre-2", "schedule_id": "<schedule id>", "transaction_id": "<refund line>", "amount_minor": 139703 }
 ```
 
-The refund line (a posted income line) is filed to the prepaid category, whole or split when `amount_minor` is below the line (default the whole line, at most what remains). The planned months are spread again over the months left. Output `data`: the schedule with `rows` and `undo_kind: "prepaid_refund"`.
+The refund line (a posted income line) is filed to the prepaid category, whole or split when `amount_minor` is below the line (default the whole line, at most what remains). The planned months are spread again over the months left. Refused: `transaction not found`, `the line is not income`, `the line is not posted`, `the line is a journal entry`, `the line is in another currency`, `a line with VAT can't be prepaid yet`, `the line is switched into the P&L`, `the line is already in a prepaid schedule`, `line is already split`, `line has a loan split`, `amount is above the line`, `amount is above what remains`, `the schedule is not active`, `the books are closed through YYYY-MM-DD`. Output `data`: the schedule with `rows` and `undo_kind: "prepaid_refund"`.
 
 ### update_prepaid_schedule
 
@@ -501,7 +501,7 @@ The refund line (a posted income line) is filed to the prepaid category, whole o
 { "idempotency_key": "pre-3", "schedule_id": "<schedule id>", "months": 24, "expense_category_id": "<optional>", "project_id": "<optional>" }
 ```
 
-At least one of `months` (the new total, above the months already posted), `expense_category_id`, `project_id`. Only planned months change. Output `data`: the schedule with `rows` and `undo_kind: "prepaid_update"`.
+At least one of `months` (the new total, above the months already posted), `expense_category_id`, `project_id`. Only planned months change. It cannot clear the project: a `null` field is left as it is. Refused: `months must be above the months posted`, `the schedule is not active`, `the category must be an expense category counted in the P&L`, `category not found`, `nothing to change`. Output `data`: the schedule with `rows` and `undo_kind: "prepaid_update"`.
 
 ### end_prepaid_schedule
 
@@ -509,7 +509,7 @@ At least one of `months` (the new total, above the months already posted), `expe
 { "idempotency_key": "pre-4", "schedule_id": "<schedule id>", "from_month": "2026-07", "remaining": "expense" }
 ```
 
-Drops the planned months from `from_month` (`YYYY-MM`). `remaining` `expense` books what is left as one last expense in `from_month` (on the schedule's day, posted now if due); `keep` leaves it on the Prepaid account. The schedule becomes `ended`. Output `data`: the schedule with `rows` and `undo_kind: "prepaid_end"`.
+Drops the planned months from `from_month` (`YYYY-MM`). `remaining` `expense` books what is left as one last expense in `from_month` (on the schedule's day, posted now if due); `keep` leaves it on the Prepaid account. The schedule becomes `ended`. It never removes a posted month. Refused: `the schedule is not active` (ended or completed, so a second end too), `from_month is before the last posted month`, `the books are closed through YYYY-MM-DD`. Output `data`: the schedule with `rows` and `undo_kind: "prepaid_end"`.
 
 ### delete_prepaid_schedule
 
@@ -517,7 +517,7 @@ Drops the planned months from `from_month` (`YYYY-MM`). `remaining` `expense` bo
 { "idempotency_key": "pre-5", "schedule_id": "<schedule id>" }
 ```
 
-Removes every posted entry and the schedule, and restores the payment and refund lines' coding. Refused when a posted month is on or before the books-closed date. Output `data`: `{ "schedule_id", "undo_kind": "prepaid_delete" }`.
+Removes every posted entry and the schedule, and restores the payment and refund lines' coding. Refused: `the books are closed through YYYY-MM-DD` when a posted month is on or before the books-closed date. Output `data`: `{ "schedule_id", "undo_kind": "prepaid_delete" }`.
 
 ### set_books_closed_through
 
@@ -525,7 +525,7 @@ Removes every posted entry and the schedule, and restores the payment and refund
 { "idempotency_key": "close-1", "date": "2026-03-31" }
 ```
 
-Owner only. `date` is `YYYY-MM-DD`, not after today, or `null` to open the books. Refused: closing past a due prepaid month not yet posted (`post the due prepaid rows first`). Output `data`: `{ "books_closed_through", "previous", "undo_kind": "books_closed" }`; undo `books_closed` takes the company id and puts the previous date back while it reads as written.
+Owner only. `date` is `YYYY-MM-DD`, or `null` to open the books. Refused: `only the owner can close the books`, `the date is after today`, `post the due prepaid rows first`. Output `data`: `{ "books_closed_through", "previous", "undo_kind": "books_closed" }`; undo `books_closed` takes the company id and puts the previous date back while it reads as written.
 
 ## Lines from the add sheet · FLOW-369
 

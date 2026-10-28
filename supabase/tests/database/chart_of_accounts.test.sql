@@ -615,9 +615,10 @@ select ok(
     between 1 and strpos(pg_get_functiondef('private.book_line_core(uuid,text,date,text,text,jsonb,uuid,uuid)'::regprocedure), 'select * into acct from public.accounts a'),
   'book_line holds the legs'' accounts and their kept-out targets for share, in id order, before the per-leg reads');
 select ok(
-  pg_get_functiondef('public.mcp_create_journal_entry(text,date,text,text,text,jsonb)'::regprocedure) ~ 'kept_out_account\(cid, n\.category_id, null\)[^;]*order by a\.id\s+for share;'
-  and strpos(pg_get_functiondef('public.mcp_create_journal_entry(text,date,text,text,text,jsonb)'::regprocedure), 'order by a.id')
-    between 1 and strpos(pg_get_functiondef('public.mcp_create_journal_entry(text,date,text,text,text,jsonb)'::regprocedure), 'select * into acct from public.accounts a'),
+  pg_get_functiondef('private.post_journal_entry(uuid,date,text,text,text,jsonb)'::regprocedure) ~ 'kept_out_account\(cid, n\.category_id, null\)[^;]*order by a\.id\s+for share;'
+  and strpos(pg_get_functiondef('private.post_journal_entry(uuid,date,text,text,text,jsonb)'::regprocedure), 'order by a.id')
+    between 1 and strpos(pg_get_functiondef('private.post_journal_entry(uuid,date,text,text,text,jsonb)'::regprocedure), 'select * into acct from public.accounts a'),
+  -- FLOW-155: the entry's core, private.post_journal_entry, which create_journal_entry and the prepaid posting call.
   'create_journal_entry holds the legs'' accounts and their kept-out targets for share, in id order, before the per-leg reads');
 
 select * from finish();

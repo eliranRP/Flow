@@ -132,13 +132,13 @@ isOneToOne: false
                   ]
                 },"companies": {
                   Row: {
-                    "after_overhead": boolean,"base_currency": string,"cash_basis": string,"created_at": string,"id": string,"is_demo": boolean,"last_sumit_company_id": number | null,"name": string,"overhead_project_id": string | null,"owner_id": string,"tax_id": string | null,"updated_at": string,"vat_rate_bp": number,"vat_registered": boolean
+                    "after_overhead": boolean,"base_currency": string,"books_closed_through": string | null,"cash_basis": string,"created_at": string,"id": string,"is_demo": boolean,"last_sumit_company_id": number | null,"name": string,"overhead_project_id": string | null,"owner_id": string,"tax_id": string | null,"updated_at": string,"vat_rate_bp": number,"vat_registered": boolean
                   }
                   Insert: {
-                    "after_overhead"?: boolean,"base_currency"?: string,"cash_basis"?: string,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name": string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
+                    "after_overhead"?: boolean,"base_currency"?: string,"books_closed_through"?: string | null,"cash_basis"?: string,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name": string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
                   }
                   Update: {
-                    "after_overhead"?: boolean,"base_currency"?: string,"cash_basis"?: string,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name"?: string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
+                    "after_overhead"?: boolean,"base_currency"?: string,"books_closed_through"?: string | null,"cash_basis"?: string,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name"?: string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
                   }
                   Relationships: [
                     {
@@ -832,6 +832,117 @@ isOneToOne: false
       columns: ["company_id","supplier_id"]
 isOneToOne: false
       referencedRelation: "suppliers"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
+                },"prepaid_refunds": {
+                  Row: {
+                    "amount_minor": number,"company_id": string,"created_at": string,"id": string,"prior": NonNullable<Json>,"schedule_id": string,"transaction_id": string
+                  }
+                  Insert: {
+                    "amount_minor": number,"company_id": string,"created_at"?: string,"id"?: string,"prior": NonNullable<Json>,"schedule_id": string,"transaction_id": string
+                  }
+                  Update: {
+                    "amount_minor"?: number,"company_id"?: string,"created_at"?: string,"id"?: string,"prior"?: NonNullable<Json>,"schedule_id"?: string,"transaction_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "prepaid_refunds_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "prepaid_refunds_line_fkey"
+      columns: ["company_id","transaction_id"]
+isOneToOne: true
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "prepaid_refunds_schedule_fkey"
+      columns: ["company_id","schedule_id"]
+isOneToOne: false
+      referencedRelation: "prepaid_schedules"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
+                },"prepaid_rows": {
+                  Row: {
+                    "amount_minor": number,"company_id": string,"due_date": string,"entry_id": string | null,"id": string,"kind": string,"schedule_id": string,"seq": number
+                  }
+                  Insert: {
+                    "amount_minor": number,"company_id": string,"due_date": string,"entry_id"?: string | null,"id"?: string,"kind"?: string,"schedule_id": string,"seq": number
+                  }
+                  Update: {
+                    "amount_minor"?: number,"company_id"?: string,"due_date"?: string,"entry_id"?: string | null,"id"?: string,"kind"?: string,"schedule_id"?: string,"seq"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "prepaid_rows_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "prepaid_rows_entry_fkey"
+      columns: ["company_id","entry_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "prepaid_rows_schedule_fkey"
+      columns: ["company_id","schedule_id"]
+isOneToOne: false
+      referencedRelation: "prepaid_schedules"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
+                },"prepaid_schedules": {
+                  Row: {
+                    "company_id": string,"created_at": string,"created_by": string | null,"currency": string,"day_of_month": number,"description": string,"end_mode": string | null,"ended_on": string | null,"expense_category_id": string,"id": string,"months": number,"prepaid_account_id": string,"prepaid_category_id": string,"prior": NonNullable<Json>,"project_id": string | null,"start_month": string,"status": string,"total_minor": number,"transaction_id": string
+                  }
+                  Insert: {
+                    "company_id": string,"created_at"?: string,"created_by"?: string | null,"currency": string,"day_of_month": number,"description": string,"end_mode"?: string | null,"ended_on"?: string | null,"expense_category_id": string,"id"?: string,"months": number,"prepaid_account_id": string,"prepaid_category_id": string,"prior": NonNullable<Json>,"project_id"?: string | null,"start_month": string,"status"?: string,"total_minor": number,"transaction_id": string
+                  }
+                  Update: {
+                    "company_id"?: string,"created_at"?: string,"created_by"?: string | null,"currency"?: string,"day_of_month"?: number,"description"?: string,"end_mode"?: string | null,"ended_on"?: string | null,"expense_category_id"?: string,"id"?: string,"months"?: number,"prepaid_account_id"?: string,"prepaid_category_id"?: string,"prior"?: NonNullable<Json>,"project_id"?: string | null,"start_month"?: string,"status"?: string,"total_minor"?: number,"transaction_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "prepaid_schedules_account_fkey"
+      columns: ["company_id","prepaid_account_id"]
+isOneToOne: false
+      referencedRelation: "accounts"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "prepaid_schedules_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "prepaid_schedules_expense_category_fkey"
+      columns: ["company_id","expense_category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "prepaid_schedules_line_fkey"
+      columns: ["company_id","transaction_id"]
+isOneToOne: true
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "prepaid_schedules_prepaid_category_fkey"
+      columns: ["company_id","prepaid_category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "prepaid_schedules_project_fkey"
+      columns: ["company_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
       referencedColumns: ["company_id","id"]
     }
                   ]
@@ -1736,6 +1847,9 @@ isOneToOne: false
 "mcp_attach_loan_payment":
 { Args: { "p_idempotency_key": string,"p_loan_id": string,"p_parts": Json,"p_transaction_id": string }; Returns: Json
                            },
+"mcp_attach_prepaid_refund":
+{ Args: { "p_amount_minor"?: number,"p_idempotency_key": string,"p_schedule_id": string,"p_transaction_id": string }; Returns: Json
+                           },
 "mcp_balance_sheet":
 { Args: { "p_as_of"?: string,"p_project_id"?: string }; Returns: Json
                            },
@@ -1765,6 +1879,9 @@ isOneToOne: false
 "mcp_create_manual_entry":
 { Args: { "p_amount_minor": number,"p_category_id": string,"p_cheque_number": string,"p_direction": string,"p_doc_date": string,"p_idempotency_key": string,"p_method": string,"p_payee": string,"p_project_id": string }; Returns: Json
                            },
+"mcp_create_prepaid_schedule":
+{ Args: { "p_amount_minor"?: number,"p_day_of_month"?: number,"p_description"?: string,"p_expense_category_id": string,"p_idempotency_key": string,"p_months": number,"p_prepaid_account_id"?: string,"p_project_id"?: string,"p_start_month": string,"p_transaction_id": string }; Returns: Json
+                           },
 "mcp_create_project":
 { Args: { "p_budget_minor"?: number,"p_idempotency_key": string,"p_name": string,"p_status"?: string,"p_type"?: string }; Returns: Json
                            },
@@ -1783,6 +1900,9 @@ isOneToOne: false
 "mcp_delete_loan":
 { Args: { "p_idempotency_key": string,"p_loan_id": string }; Returns: Json
                            },
+"mcp_delete_prepaid_schedule":
+{ Args: { "p_idempotency_key": string,"p_schedule_id": string }; Returns: Json
+                           },
 "mcp_delete_project":
 { Args: { "p_id": string,"p_idempotency_key": string }; Returns: Json
                            },
@@ -1794,6 +1914,12 @@ isOneToOne: false
                            },
 "mcp_edit_transaction_note":
 { Args: { "p_body": string,"p_idempotency_key": string,"p_note_id": string }; Returns: Json
+                           },
+"mcp_end_prepaid_schedule":
+{ Args: { "p_from_month": string,"p_idempotency_key": string,"p_remaining": string,"p_schedule_id": string }; Returns: Json
+                           },
+"mcp_get_prepaid_schedule":
+{ Args: { "p_schedule_id": string }; Returns: Json
                            },
 "mcp_hide_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string }; Returns: Json
@@ -1818,6 +1944,9 @@ isOneToOne: false
                            },
 "mcp_list_loans":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"mcp_list_prepaid_schedules":
+{ Args: { "p_status"?: string }; Returns: Json
                            },
 "mcp_loan_payments":
 { Args: { "p_loan_id": string }; Returns: Json
@@ -1872,6 +2001,9 @@ isOneToOne: false
                            },
 "mcp_set_bank_accounts":
 { Args: { "p_account_ids": (string)[],"p_from"?: string,"p_idempotency_key": string,"p_slot": number }; Returns: Json
+                           },
+"mcp_set_books_closed_through":
+{ Args: { "p_date": string,"p_idempotency_key": string }; Returns: Json
                            },
 "mcp_set_cash_basis":
 { Args: { "p_basis": string,"p_idempotency_key": string }; Returns: Json
@@ -1989,6 +2121,9 @@ isOneToOne: false
                            },
 "mcp_update_loan":
 { Args: { "p_idempotency_key": string,"p_loan_id": string,"p_patch": Json }; Returns: Json
+                           },
+"mcp_update_prepaid_schedule":
+{ Args: { "p_expense_category_id"?: string,"p_idempotency_key": string,"p_months"?: number,"p_project_id"?: string,"p_schedule_id": string }; Returns: Json
                            },
 "mcp_update_project":
 { Args: { "p_id": string,"p_idempotency_key": string,"p_patch": Json }; Returns: Json
