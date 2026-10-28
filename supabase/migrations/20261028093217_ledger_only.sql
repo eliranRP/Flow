@@ -905,12 +905,12 @@ create or replace view private.pnl_lines with (security_invoker = true) as
 -- 10 line splits: the split-by-category functions read and write the parts through the legs.
 -- ===========================================================================
 
-CREATE OR REPLACE FUNCTION private.line_has_loose_reversal(p_transaction_id uuid, p_parts jsonb DEFAULT NULL::jsonb)
- RETURNS boolean
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.line_has_loose_reversal(p_transaction_id uuid, p_parts jsonb default null::jsonb)
+ returns boolean
+ language sql
+ stable security definer
+ set search_path = ''
+as $$
   with parts as (
     select s.category_id, s.project_id
     from private.split_parts s
@@ -930,14 +930,14 @@ AS $function$
       and s.category_id is distinct from t.category_id
       and pc.kind::text is distinct from coalesce(lc.kind::text, t.direction::text)
   );
-$function$;
+$$;
 
-CREATE OR REPLACE FUNCTION private.line_pnl_state(p_transaction_id uuid, p_project_id uuid DEFAULT NULL::uuid, p_category_id uuid DEFAULT NULL::uuid)
- RETURNS text
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.line_pnl_state(p_transaction_id uuid, p_project_id uuid default null::uuid, p_category_id uuid default null::uuid)
+ returns text
+ language sql
+ stable security definer
+ set search_path = ''
+as $$
   select case
     when t.line_status = 'posted' then coalesce(
       -- The parts on this project and category, when the caller names them. A shared line's
@@ -986,14 +986,14 @@ AS $function$
     -- Definer, so the reads skip row security, which kept the planner off the line's own index
     -- (11 ms a line on a 3,600-line company). The caller still sees only its own company.
     and (auth.role() = 'service_role' or t.company_id = private.readable_company_id());
-$function$;
+$$;
 
-CREATE OR REPLACE FUNCTION private.line_pnl_states(p_ids uuid[], p_project_id uuid, p_category_id uuid)
- RETURNS TABLE(transaction_id uuid, state text)
- LANGUAGE plpgsql
- STABLE SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.line_pnl_states(p_ids uuid[], p_project_id uuid, p_category_id uuid)
+ returns table(transaction_id uuid, state text)
+ language plpgsql
+ stable security definer
+ set search_path = ''
+as $$
 begin
   -- Executed, so each call is planned for its own ids. The parts' states are one id-keyed map
   -- read once, so the lines never nested-loop against them.
@@ -1045,14 +1045,14 @@ begin
       and ((select auth.role()) = 'service_role' or t.company_id = (select private.readable_company_id()))
   $q$ using p_ids, p_project_id, p_category_id;
 end;
-$function$;
+$$;
 
-CREATE OR REPLACE FUNCTION private.line_pnl_states(p_ids uuid[])
- RETURNS TABLE(transaction_id uuid, state text)
- LANGUAGE plpgsql
- STABLE SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.line_pnl_states(p_ids uuid[])
+ returns table(transaction_id uuid, state text)
+ language plpgsql
+ stable security definer
+ set search_path = ''
+as $$
 begin
   -- Executed, so each call is planned for its own ids. The parts' states are one id-keyed map
   -- read once, so the lines never nested-loop against them.
@@ -1094,14 +1094,14 @@ begin
       and ((select auth.role()) = 'service_role' or t.company_id = (select private.readable_company_id()))
   $q$ using p_ids;
 end;
-$function$;
+$$;
 
-CREATE OR REPLACE FUNCTION private.line_split_parts(p_transaction_id uuid)
- RETURNS jsonb
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.line_split_parts(p_transaction_id uuid)
+ returns jsonb
+ language sql
+ stable security definer
+ set search_path = ''
+as $$
   select coalesce(jsonb_agg(jsonb_build_object(
     'category_id', s.category_id,
     'project_id', s.project_id,
@@ -1110,14 +1110,14 @@ AS $function$
   ) order by s.ordinal), '[]'::jsonb)
   from private.split_parts s
   where s.transaction_id = p_transaction_id;
-$function$;
+$$;
 
-CREATE OR REPLACE FUNCTION private.line_split_parts_full(p_transaction_id uuid)
- RETURNS jsonb
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.line_split_parts_full(p_transaction_id uuid)
+ returns jsonb
+ language sql
+ stable security definer
+ set search_path = ''
+as $$
   select coalesce(jsonb_agg(jsonb_build_object(
     'category_id', s.category_id,
     'project_id', s.project_id,
@@ -1128,14 +1128,14 @@ AS $function$
   ) order by s.ordinal), '[]'::jsonb)
   from private.split_parts s
   where s.transaction_id = p_transaction_id;
-$function$;
+$$;
 
-CREATE OR REPLACE FUNCTION private.line_split_review_sync(p_transaction_id uuid)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.line_split_review_sync(p_transaction_id uuid)
+ returns void
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   line record;
   parts integer;
@@ -1176,27 +1176,27 @@ begin
       and q.reason = 'split_mismatch';
   end if;
 end;
-$function$;
+$$;
 
-CREATE OR REPLACE FUNCTION private.line_split_valid(p_transaction_id uuid)
- RETURNS boolean
- LANGUAGE sql
- STABLE
- SET search_path TO ''
-AS $function$
+create or replace function private.line_split_valid(p_transaction_id uuid)
+ returns boolean
+ language sql
+ stable
+ set search_path = ''
+as $$
   select count(*) >= 2
     and sum(case when s.gross_up then -s.amount_minor else s.amount_minor end)
       = (select abs(t.amount_net) from public.transactions t where t.id = p_transaction_id)
   from private.split_parts s
   where s.transaction_id = p_transaction_id;
-$function$;
+$$;
 
-CREATE OR REPLACE FUNCTION private.review_queue_line_split_review()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.review_queue_line_split_review()
+ returns trigger
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 begin
   if old.transaction_id is null
     or not exists (select 1 from private.split_parts s where s.transaction_id = old.transaction_id)
@@ -1228,28 +1228,28 @@ begin
   end if;
   return null;
 end;
-$function$;
+$$;
 
-CREATE OR REPLACE FUNCTION private.transactions_line_split_review()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.transactions_line_split_review()
+ returns trigger
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 begin
   if exists (select 1 from private.split_parts s where s.transaction_id = new.id) then
     perform private.line_split_review_sync(new.id);
   end if;
   return null;
 end;
-$function$;
+$$;
 
-CREATE OR REPLACE FUNCTION public.get_line_split(p_transaction_id uuid)
- RETURNS jsonb
- LANGUAGE sql
- STABLE
- SET search_path TO ''
-AS $function$
+create or replace function public.get_line_split(p_transaction_id uuid)
+ returns jsonb
+ language sql
+ stable
+ set search_path = ''
+as $$
   select jsonb_build_object(
     'transaction_id', t.id,
     'currency', coalesce(t.currency, 'ILS'),
@@ -1284,14 +1284,14 @@ AS $function$
   where t.id = p_transaction_id
     and t.removed_at is null
     and t.company_id = (select private.readable_company_id());
-$function$;
+$$;
 
-CREATE OR REPLACE FUNCTION public.set_transaction_pnl(p_id uuid, p_in_pnl boolean)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function public.set_transaction_pnl(p_id uuid, p_in_pnl boolean)
+ returns jsonb
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   cid uuid;
   line record;
@@ -1333,14 +1333,14 @@ begin
     'in_pnl', private.line_in_pnl(p_in_pnl, line.excluded_from_pnl, null)
   );
 end;
-$function$;
+$$;
 
-CREATE OR REPLACE FUNCTION public.mcp_assign_expense(p_idempotency_key text, p_transaction_id uuid, p_project_id uuid, p_category_id uuid, p_remember boolean DEFAULT false, p_unshare boolean DEFAULT false)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function public.mcp_assign_expense(p_idempotency_key text, p_transaction_id uuid, p_project_id uuid, p_category_id uuid, p_remember boolean default false, p_unshare boolean default false)
+ returns jsonb
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   gate jsonb;
   token uuid;
@@ -1494,14 +1494,14 @@ begin
   perform private.mcp_idempotency_store(token, p_idempotency_key, hash, response);
   return response;
 end;
-$function$;
+$$;
 
-CREATE OR REPLACE FUNCTION private.undo_line_split_write(p_company uuid, p_write private.mcp_writes)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.undo_line_split_write(p_company uuid, p_write private.mcp_writes)
+ returns jsonb
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   cid uuid := p_company;
   p_id uuid := p_write.transaction_id;
@@ -1544,14 +1544,14 @@ begin
   end if;
   return response;
 end;
-$function$;
+$$;
 
-CREATE OR REPLACE FUNCTION public.save_line_split(p_transaction_id uuid, p_parts jsonb, p_preview boolean DEFAULT false)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function public.save_line_split(p_transaction_id uuid, p_parts jsonb, p_preview boolean default false)
+ returns jsonb
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   cid uuid;
   line_net bigint;
@@ -1853,7 +1853,7 @@ begin
 
   return private.line_split_parts(p_transaction_id);
 end;
-$function$;
+$$;
 
 -- 20 categories. Moving, deleting and restoring categories, and the readers around them, on the
 -- parts views and the part writers.
@@ -1886,7 +1886,7 @@ create or replace function private.category_move(p_company_id uuid, p_from uuid,
  language plpgsql
  security definer
  set search_path to ''
-as $function$
+as $$
 declare
   -- The snapshot keys an older move already holds.
   k_lines constant text := 'line' || '_splits';
@@ -2078,14 +2078,14 @@ begin
     'suppliers', remembered
   );
 end;
-$function$;
+$$;
 
 create or replace function private.category_move_undo(p_company_id uuid, p_move_id uuid)
  returns void
  language plpgsql
  security definer
  set search_path to ''
-as $function$
+as $$
 declare
   k_lines constant text := 'line' || '_splits';
   k_loans constant text := 'loan' || '_splits';
@@ -2241,14 +2241,14 @@ begin
 
   update private.category_moves set undone_at = clock_timestamp() where id = p_move_id;
 end;
-$function$;
+$$;
 
-CREATE OR REPLACE FUNCTION public.delete_category(p_category_id uuid)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function public.delete_category(p_category_id uuid)
+ returns jsonb
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   cid uuid;
   cat jsonb;
@@ -2419,14 +2419,14 @@ begin
               where t.removed_at is null and t.line_status is distinct from 'void'::public.line_status)
   );
 end;
-$function$;
+$$;
 
-CREATE OR REPLACE FUNCTION private.category_restore(p_company_id uuid, p_deletion_id uuid)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.category_restore(p_company_id uuid, p_deletion_id uuid)
+ returns void
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   d record;
   n integer;
@@ -2534,14 +2534,14 @@ begin
 
   update private.category_deletions set restored_at = clock_timestamp() where id = p_deletion_id;
 end;
-$function$;
+$$;
 
-CREATE OR REPLACE FUNCTION public.move_category_lines(p_from uuid, p_into uuid)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function public.move_category_lines(p_from uuid, p_into uuid)
+ returns jsonb
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   cid uuid;
   moved jsonb;
@@ -2565,14 +2565,14 @@ begin
                   or t.id in (select h.transaction_id from private.category_moved_parts(moved->('line' || '_splits')) h)))
   );
 end;
-$function$;
+$$;
 
-CREATE OR REPLACE FUNCTION private.categories_loan_pnl_check()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.categories_loan_pnl_check()
+ returns trigger
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 begin
   if new.excluded_from_pnl is distinct from old.excluded_from_pnl
      and (
@@ -2611,16 +2611,16 @@ begin
   end if;
   return new;
 end;
-$function$
+$$
 
 ;
 
-CREATE OR REPLACE FUNCTION private.dedupe_loan_money_categories()
- RETURNS integer
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.dedupe_loan_money_categories()
+ returns integer
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   removed integer;
 begin
@@ -2672,16 +2672,16 @@ begin
   drop table loan_money_dupes;
   return removed;
 end;
-$function$
+$$
 
 ;
 
-CREATE OR REPLACE FUNCTION private.remember_line_category(p_company uuid, p_id uuid, p_category_id uuid)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.remember_line_category(p_company uuid, p_id uuid, p_category_id uuid)
+ returns jsonb
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   line record;
   cat record;
@@ -2736,16 +2736,16 @@ begin
     'prior_category_id', prior
   );
 end;
-$function$
+$$
 
 ;
 
-CREATE OR REPLACE FUNCTION public.get_setup_suggestions(p_today date DEFAULT NULL::date)
- RETURNS jsonb
- LANGUAGE plpgsql
- STABLE SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function public.get_setup_suggestions(p_today date default null::date)
+ returns jsonb
+ language plpgsql
+ stable security definer
+ set search_path = ''
+as $$
 declare
   cid uuid;
   today date := coalesce(p_today, private.flow_today());
@@ -2805,16 +2805,16 @@ begin
     ), '[]'::jsonb)
   );
 end;
-$function$
+$$
 
 ;
 
-CREATE OR REPLACE FUNCTION public.list_categories()
- RETURNS jsonb
- LANGUAGE sql
- STABLE
- SET search_path TO ''
-AS $function$
+create or replace function public.list_categories()
+ returns jsonb
+ language sql
+ stable
+ set search_path = ''
+as $$
   with co as (
     select private.readable_company_id() as id
   ),
@@ -2887,7 +2887,7 @@ AS $function$
   left join counted n on n.category_id = c.id
   left join loan_used lu on lu.category_id = c.id
   where c.company_id = (select id from co);
-$function$
+$$
 
 ;
 
@@ -2935,12 +2935,12 @@ comment on function private.set_loan_part_category(uuid, uuid, public.loan_split
   'Decision 0232. Sets the category of one part of a line''s loan payment through set_loan_parts '
   '(the loan rules are checked and the line posted). Used by the MCP loan category writes and their undo.';
 
-create or replace function public.save_loan_split(p_transaction_id uuid, p_loan_id uuid, p_parts jsonb, p_preview boolean DEFAULT false)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function public.save_loan_split(p_transaction_id uuid, p_loan_id uuid, p_parts jsonb, p_preview boolean default false)
+ returns jsonb
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   cid uuid;
   txn record;
@@ -3174,14 +3174,14 @@ exception
     end if;
     raise;
 end;
-$function$;
+$$;
 
 create or replace function public.clear_loan_split(p_transaction_id uuid)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+ returns jsonb
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   cid uuid;
   attached uuid;
@@ -3248,14 +3248,14 @@ begin
     'parts', removed
   );
 end;
-$function$;
+$$;
 
 create or replace function public.clear_loan_split_review(p_transaction_id uuid)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+ returns void
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   company uuid;
   parts integer;
@@ -3278,14 +3278,14 @@ begin
   -- Clearing the flag re-checks the closed loan and the loan rules, and posts the line.
   perform private.set_loan_parts_review(company, p_transaction_id, false);
 end;
-$function$;
+$$;
 
 create or replace function public.mcp_attach_loan_payment(p_idempotency_key text, p_transaction_id uuid, p_loan_id uuid, p_parts jsonb)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+ returns jsonb
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   gate jsonb;
   token uuid;
@@ -3648,14 +3648,14 @@ begin
   perform private.mcp_idempotency_store(token, p_idempotency_key, hash, response);
   return response;
 end;
-$function$;
+$$;
 
-create or replace function public.mcp_set_loan_category_from(p_idempotency_key text, p_loan_id uuid, p_part text, p_effective_date date, p_category_id uuid, p_apply_to_existing boolean DEFAULT false)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function public.mcp_set_loan_category_from(p_idempotency_key text, p_loan_id uuid, p_part text, p_effective_date date, p_category_id uuid, p_apply_to_existing boolean default false)
+ returns jsonb
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   gate jsonb;
   token uuid;
@@ -3830,14 +3830,14 @@ begin
   perform private.mcp_idempotency_store(token, p_idempotency_key, hash, response);
   return response;
 end;
-$function$;
+$$;
 
 create or replace function public.mcp_set_loan_part_category(p_idempotency_key text, p_transaction_ids uuid[], p_part text, p_category_id uuid)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+ returns jsonb
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   gate jsonb;
   token uuid;
@@ -3990,14 +3990,14 @@ begin
   perform private.mcp_idempotency_store(token, p_idempotency_key, hash, response);
   return response;
 end;
-$function$;
+$$;
 
 create or replace function private.loan_restore(p_company_id uuid, p_snapshot jsonb)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+ returns void
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   loan_row public.loans;
   lines uuid[];
@@ -4088,14 +4088,14 @@ exception
   when check_violation or foreign_key_violation or unique_violation or not_null_violation then
     raise exception 'loan cannot be restored' using errcode = '23514';
 end;
-$function$;
+$$;
 
 create or replace function public.delete_loan(p_loan_id uuid)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+ returns jsonb
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   cid uuid;
   loan_row public.loans;
@@ -4187,14 +4187,14 @@ begin
     'deletion_id', deletion
   );
 end;
-$function$;
+$$;
 
 create or replace function public.get_loan_split(p_transaction_id uuid)
- RETURNS jsonb
- LANGUAGE sql
- STABLE
- SET search_path TO ''
-AS $function$
+ returns jsonb
+ language sql
+ stable
+ set search_path = ''
+as $$
   with parts as (
     select s.part, s.amount_minor, s.needs_review, s.loan_id, s.category_id
     from private.loan_parts s
@@ -4230,14 +4230,14 @@ AS $function$
       left join public.categories cat on cat.id = p.category_id
     )
   ) end;
-$function$;
+$$;
 
 create or replace function public.mcp_list_loans()
- RETURNS jsonb
- LANGUAGE sql
- STABLE
- SET search_path TO ''
-AS $function$
+ returns jsonb
+ language sql
+ stable
+ set search_path = ''
+as $$
   select coalesce(jsonb_agg(jsonb_build_object(
     'id', l.id,
     'name', l.name,
@@ -4326,14 +4326,14 @@ AS $function$
     on cf.company_id = l.company_id
    and cf.id = l.fees_category_id
   where l.company_id = (select private.current_company_id());
-$function$;
+$$;
 
 create or replace function public.mcp_loan_payments(p_loan_id uuid)
- RETURNS jsonb
- LANGUAGE sql
- STABLE
- SET search_path TO ''
-AS $function$
+ returns jsonb
+ language sql
+ stable
+ set search_path = ''
+as $$
   select coalesce(jsonb_agg(jsonb_build_object(
     'transaction_id', p.transaction_id,
     'doc_date', p.doc_date,
@@ -4364,14 +4364,14 @@ AS $function$
       and t.line_status <> 'pending'
     group by s.transaction_id, t.doc_date, t.line_status
   ) p;
-$function$;
+$$;
 
 create or replace function private.loans_close_check()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+ returns trigger
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 begin
   if new.status <> 'open'::public.loan_status
      and (
@@ -4404,14 +4404,14 @@ begin
   end if;
   return new;
 end;
-$function$;
+$$;
 
 create or replace function private.loans_lock_currency()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+ returns trigger
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 begin
   if new.currency is distinct from old.currency
      and exists (
@@ -4425,7 +4425,7 @@ begin
   end if;
   return new;
 end;
-$function$;
+$$;
 
 
 -- ===========================================================================
@@ -5477,13 +5477,13 @@ $patch$;
 
 -- 50 project and P&L readers: split and loan parts now come from the part views (decision 0232).
 
-create or replace function public.get_project(p_id uuid, p_basis text, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date)
- RETURNS jsonb
- LANGUAGE plpgsql
- STABLE
- SET search_path TO ''
+create or replace function public.get_project(p_id uuid, p_basis text, p_from date default null::date, p_to date default null::date)
+ returns jsonb
+ language plpgsql
+ stable
+ set search_path = ''
  SET plan_cache_mode TO 'force_generic_plan'
-AS $function$
+as $$
 declare
   cid uuid;
   basis text;
@@ -5899,16 +5899,16 @@ begin
     ), '[]'::jsonb)
   );
 end;
-$function$
+$$
 
 ;
 
-create or replace function public.get_profit_months(p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_basis text DEFAULT NULL::text, p_project_id uuid DEFAULT NULL::uuid)
- RETURNS jsonb
- LANGUAGE plpgsql
- STABLE
- SET search_path TO ''
-AS $function$
+create or replace function public.get_profit_months(p_from date default null::date, p_to date default null::date, p_basis text default null::text, p_project_id uuid default null::uuid)
+ returns jsonb
+ language plpgsql
+ stable
+ set search_path = ''
+as $$
 declare
   cid uuid;
   basis text;
@@ -6082,16 +6082,16 @@ begin
 
   return result;
 end;
-$function$
+$$
 
 ;
 
-create or replace function public.projects_cash_month(p_month date DEFAULT NULL::date, p_today date DEFAULT NULL::date, p_project uuid DEFAULT NULL::uuid)
- RETURNS jsonb
- LANGUAGE plpgsql
- STABLE SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function public.projects_cash_month(p_month date default null::date, p_today date default null::date, p_project uuid default null::uuid)
+ returns jsonb
+ language plpgsql
+ stable security definer
+ set search_path = ''
+as $$
 declare
   cid uuid;
   today date := coalesce(p_today, private.flow_today());
@@ -6366,16 +6366,16 @@ begin
 
   return result;
 end;
-$function$
+$$
 
 ;
 
-create or replace function public.company_next_month_inputs(p_today date DEFAULT NULL::date)
- RETURNS jsonb
- LANGUAGE plpgsql
- STABLE SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function public.company_next_month_inputs(p_today date default null::date)
+ returns jsonb
+ language plpgsql
+ stable security definer
+ set search_path = ''
+as $$
 declare
   cid uuid;
   today date := coalesce(p_today, private.flow_today());
@@ -6518,16 +6518,16 @@ begin
     'rest_edits', rest_edits
   );
 end;
-$function$
+$$
 
 ;
 
 create or replace function private.overhead_shares(p_company uuid, p_project uuid, p_basis text, p_from date, p_to date, p_currencies text[], p_by_month boolean)
- RETURNS TABLE(month date, currency text, available boolean, share_agorot bigint)
- LANGUAGE sql
- STABLE
- SET search_path TO ''
-AS $function$
+ returns table(month date, currency text, available boolean, share_agorot bigint)
+ language sql
+ stable
+ set search_path = ''
+as $$
   with cid as (
     select
       p_company as id,
@@ -6648,16 +6648,16 @@ AS $function$
       ), 0)
     end
   from totals t;
-$function$
+$$
 
 ;
 
 create or replace function private.overhead_share_for(p_company uuid, p_project uuid, p_basis text, p_from date, p_to date)
- RETURNS TABLE(available boolean, share_agorot bigint)
- LANGUAGE sql
- STABLE
- SET search_path TO ''
-AS $function$
+ returns table(available boolean, share_agorot bigint)
+ language sql
+ stable
+ set search_path = ''
+as $$
   with cid as (
     select
       p_company as id,
@@ -6758,16 +6758,16 @@ AS $function$
       when (select id from cid) is null or (select total_income from totals) = 0 then null::bigint
       else coalesce((select a.share from adjusted a where a.project_id = p_project), 0)
     end;
-$function$
+$$
 
 ;
 
 create or replace function private.project_category_entries_by_currency(p_project uuid)
- RETURNS TABLE(category_id uuid, transaction_id uuid, description text, doc_date date, amount_net bigint, created_at timestamp with time zone, shared boolean, currency text)
- LANGUAGE sql
- STABLE
- SET search_path TO ''
-AS $function$
+ returns table(category_id uuid, transaction_id uuid, description text, doc_date date, amount_net bigint, created_at timestamp with time zone, shared boolean, currency text)
+ language sql
+ stable
+ set search_path = ''
+as $$
   -- Each branch reads the project's lines first and looks up each line's own rows by index
   -- (lateral, offset 0 so the planner can't flatten it), whatever row counts it guesses.
   select l.category_id, l.transaction_id, t.description, l.doc_date, l.amount_net, t.created_at, false, l.currency
@@ -6822,16 +6822,16 @@ AS $function$
     and l.kind = 'expense'
     and l.pnl_role = 'shared'
     and l.category_id is not null;
-$function$
+$$
 
 ;
 
 create or replace function private.project_category_months_many(p_projects uuid[], p_months integer, p_today date)
- RETURNS TABLE(project_id uuid, categories jsonb)
- LANGUAGE sql
- STABLE
- SET search_path TO ''
-AS $function$
+ returns table(project_id uuid, categories jsonb)
+ language sql
+ stable
+ set search_path = ''
+as $$
   with bounds as (
     select date_trunc('month', p_today)::date as this_month,
       (date_trunc('month', p_today)::date - make_interval(months => p_months))::date as first_month,
@@ -6918,16 +6918,16 @@ AS $function$
   cross join bounds b
   left join public.categories c on c.id = r.category_id
   group by r.project_id;
-$function$
+$$
 
 ;
 
 create or replace function private.project_is_empty(p_company uuid, p_project uuid)
- RETURNS boolean
- LANGUAGE sql
- STABLE
- SET search_path TO ''
-AS $function$
+ returns boolean
+ language sql
+ stable
+ set search_path = ''
+as $$
   select not exists (
     select 1 from public.transactions t
     where t.company_id = p_company and t.project_id = p_project
@@ -6947,16 +6947,16 @@ AS $function$
     select 1 from public.loans l
     where l.company_id = p_company and l.project_id = p_project
   );
-$function$
+$$
 
 ;
 
 create or replace function private.project_line_ids(p_company uuid, p_project uuid)
- RETURNS uuid[]
- LANGUAGE sql
- STABLE
- SET search_path TO ''
-AS $function$
+ returns uuid[]
+ language sql
+ stable
+ set search_path = ''
+as $$
   select array(
     select t.id from public.transactions t where t.company_id = p_company and t.project_id = p_project
     union
@@ -6964,18 +6964,18 @@ AS $function$
     union
     select s.transaction_id from private.split_parts s where s.company_id = p_company and s.project_id = p_project
   );
-$function$
+$$
 
 ;
 
 -- P6: line lists, review, recurring and Jev readers read parts through the split_parts / loan_parts views.
 
-CREATE OR REPLACE FUNCTION public.search_transactions(p_query text DEFAULT NULL::text, p_scope text DEFAULT 'all'::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_project text DEFAULT NULL::text, p_category text DEFAULT NULL::text, p_direction text DEFAULT NULL::text, p_amount_min bigint DEFAULT NULL::bigint, p_amount_max bigint DEFAULT NULL::bigint, p_category_exact boolean DEFAULT false)
- RETURNS jsonb
- LANGUAGE plpgsql
- STABLE
- SET search_path TO ''
-AS $function$
+create or replace function public.search_transactions(p_query text default null::text, p_scope text default 'all'::text, p_limit integer default 50, p_offset integer default 0, p_from date default null::date, p_to date default null::date, p_project text default null::text, p_category text default null::text, p_direction text default null::text, p_amount_min bigint default null::bigint, p_amount_max bigint default null::bigint, p_category_exact boolean default false)
+ returns jsonb
+ language plpgsql
+ stable
+ set search_path = ''
+as $$
 declare
   cid uuid;
   lim integer;
@@ -7246,15 +7246,15 @@ begin
     )
   );
 end;
-$function$
+$$
 ;
 
-CREATE OR REPLACE FUNCTION public.sync_review_queue(p_company_id uuid)
- RETURNS integer
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function public.sync_review_queue(p_company_id uuid)
+ returns integer
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   inserted integer;
   income_inserted integer := 0;
@@ -7484,15 +7484,15 @@ begin
 
   return inserted + income_inserted;
 end;
-$function$
+$$
 ;
 
-CREATE OR REPLACE FUNCTION public.get_transaction(p_id uuid)
- RETURNS jsonb
- LANGUAGE sql
- STABLE
- SET search_path TO ''
-AS $function$
+create or replace function public.get_transaction(p_id uuid)
+ returns jsonb
+ language sql
+ stable
+ set search_path = ''
+as $$
   select jsonb_build_object(
     'id', t.id,
     'description', t.description,
@@ -7598,15 +7598,15 @@ AS $function$
     and t.removed_at is null
     and t.line_status <> 'pending'
     and t.company_id = (select private.readable_company_id());
-$function$
+$$
 ;
 
-CREATE OR REPLACE FUNCTION private.follow_invoice(p_invoice uuid, p_owner boolean DEFAULT false)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.follow_invoice(p_invoice uuid, p_owner boolean default false)
+ returns void
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   inv record;
   receipt_ids uuid[];
@@ -7847,15 +7847,15 @@ begin
     end if;
   end loop;
 end;
-$function$
+$$
 ;
 
-CREATE OR REPLACE FUNCTION private.line_anomalies(p_company uuid, p_ids uuid[])
- RETURNS jsonb
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.line_anomalies(p_company uuid, p_ids uuid[])
+ returns jsonb
+ language sql
+ stable security definer
+ set search_path = ''
+as $$
   with target as (
     select t.id, t.direction, coalesce(t.supplier_id, t.customer_id) as party_id, t.currency,
       t.doc_date, t.amount_net, t.amount_gross, t.doc_kind, t.external_id, t.linked_external_id
@@ -7980,15 +7980,15 @@ AS $function$
     union all select * from spike
     union all select * from new_party
   ) a;
-$function$
+$$
 ;
 
-CREATE OR REPLACE FUNCTION public.answer_transfer_match(p_out_transaction_id uuid, p_in_transaction_id uuid, p_same boolean)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function public.answer_transfer_match(p_out_transaction_id uuid, p_in_transaction_id uuid, p_same boolean)
+ returns jsonb
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   cid uuid;
   o public.transactions%rowtype;
@@ -8085,15 +8085,15 @@ begin
     'prior_same', prior_same
   );
 end;
-$function$
+$$
 ;
 
-CREATE OR REPLACE FUNCTION private.transfer_match_lines(p_company uuid, p_ids uuid[] DEFAULT NULL::uuid[])
- RETURNS TABLE(id uuid, direction txn_direction, doc_date date, currency text, amount bigint, slot smallint, org_label text, party text)
- LANGUAGE sql
- STABLE
- SET search_path TO ''
-AS $function$
+create or replace function private.transfer_match_lines(p_company uuid, p_ids uuid[] default null::uuid[])
+ returns table(id uuid, direction txn_direction, doc_date date, currency text, amount bigint, slot smallint, org_label text, party text)
+ language sql
+ stable
+ set search_path = ''
+as $$
   select t.id, t.direction, t.doc_date, t.currency, t.amount_original, a.slot, a.org_label,
     case when t.direction = 'expense' then s.name else cu.name end
   from public.transactions t
@@ -8121,15 +8121,15 @@ AS $function$
       select 1 from public.transfer_matches m
       where m.company_id = p_company and m.same and t.id in (m.out_transaction_id, m.in_transaction_id)
     );
-$function$
+$$
 ;
 
-CREATE OR REPLACE FUNCTION private.recurring_parties(p_company uuid, p_today date, p_overrides boolean DEFAULT true)
- RETURNS TABLE(direction txn_direction, party_id uuid, currency text, months_seen integer, typical_day integer, typical_amount_minor bigint, last_doc_date date, seen_this_month boolean, project_id uuid, category_id uuid, last_amount_minor bigint, source text, pace text, pace_source text, next_due_month date, typical_amount_source text, pays_loan boolean, this_month_minor bigint, this_month_transaction_id uuid, this_month_line_count integer)
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.recurring_parties(p_company uuid, p_today date, p_overrides boolean default true)
+ returns table(direction txn_direction, party_id uuid, currency text, months_seen integer, typical_day integer, typical_amount_minor bigint, last_doc_date date, seen_this_month boolean, project_id uuid, category_id uuid, last_amount_minor bigint, source text, pace text, pace_source text, next_due_month date, typical_amount_source text, pays_loan boolean, this_month_minor bigint, this_month_transaction_id uuid, this_month_line_count integer)
+ language sql
+ stable security definer
+ set search_path = ''
+as $$
   with bounds as (
     select date_trunc('month', p_today)::date as this_month,
       (date_trunc('month', p_today) - interval '6 months')::date as window6
@@ -8409,15 +8409,15 @@ AS $function$
   from seen p
   cross join bounds b
   order by p.ord;
-$function$
+$$
 ;
 
-CREATE OR REPLACE FUNCTION private.recurring_line_parts(p_company uuid, p_from date, p_to date)
- RETURNS TABLE(id uuid, direction txn_direction, party_id uuid, line_party_id uuid, currency text, doc_date date, created_at timestamp with time zone, amount_net bigint, project_id uuid, category_id uuid, split boolean)
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.recurring_line_parts(p_company uuid, p_from date, p_to date)
+ returns table(id uuid, direction txn_direction, party_id uuid, line_party_id uuid, currency text, doc_date date, created_at timestamp with time zone, amount_net bigint, project_id uuid, category_id uuid, split boolean)
+ language sql
+ stable security definer
+ set search_path = ''
+as $$
   with lines as (
     select t.id, t.direction, coalesce(mm.party_id, t.supplier_id, t.customer_id) as party_id,
       coalesce(t.supplier_id, t.customer_id) as line_party_id, t.currency,
@@ -8471,15 +8471,15 @@ AS $function$
     p.project_id, p.category_id, true
   from parts p
   where p.pick = 1;
-$function$
+$$
 ;
 
-CREATE OR REPLACE FUNCTION private.party_charges_json(p_company uuid, p_transaction_id uuid, p_today date)
- RETURNS jsonb
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.party_charges_json(p_company uuid, p_transaction_id uuid, p_today date)
+ returns jsonb
+ language sql
+ stable security definer
+ set search_path = ''
+as $$
   with line as (
     select t.id, t.amount_net, t.doc_date, t.project_id, t.category_id,
       date_trunc('month', t.doc_date)::date as anchor
@@ -8629,15 +8629,15 @@ AS $function$
       from party p, usual u, month_total mt, change c
     )
   end;
-$function$
+$$
 ;
 
-CREATE OR REPLACE FUNCTION private.reassign_charge_line(p_company uuid, p_id uuid, p_project uuid, p_category uuid)
- RETURNS uuid
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.reassign_charge_line(p_company uuid, p_id uuid, p_project uuid, p_category uuid)
+ returns uuid
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   line record;
   undo_id uuid;
@@ -8681,15 +8681,15 @@ begin
   where u.id = undo_id and u.company_id = p_company and t.id = p_id and t.company_id = p_company;
   return undo_id;
 end;
-$function$
+$$
 ;
 
-CREATE OR REPLACE FUNCTION private.jev_outcome_sync(p_company uuid, p_transaction uuid)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function private.jev_outcome_sync(p_company uuid, p_transaction uuid)
+ returns void
+ language plpgsql
+ security definer
+ set search_path = ''
+as $$
 declare
   review public.review_status;
   sugg public.tag_suggestions%rowtype;
@@ -8786,15 +8786,15 @@ begin
           else excluded.resolved_at
         end;
 end;
-$function$
+$$
 ;
 
-CREATE OR REPLACE FUNCTION public.jev_supplier_history(p_company uuid, p_suppliers uuid[], p_per integer DEFAULT 5)
- RETURNS jsonb
- LANGUAGE plpgsql
- STABLE SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function public.jev_supplier_history(p_company uuid, p_suppliers uuid[], p_per integer default 5)
+ returns jsonb
+ language plpgsql
+ stable security definer
+ set search_path = ''
+as $$
 declare
   result jsonb;
 begin
@@ -8853,15 +8853,15 @@ begin
   where f.n <= p_per;
   return result;
 end;
-$function$
+$$
 ;
 
-CREATE OR REPLACE FUNCTION private.forecast_line_candidates(p_company uuid, p_ids uuid[])
- RETURNS TABLE(line_id uuid, line_date date, edit_id uuid, month text, project_id uuid, category_id uuid, expected_minor bigint, diff bigint, edit_created timestamp with time zone)
- LANGUAGE sql
- STABLE
- SET search_path TO ''
-AS $function$
+create or replace function private.forecast_line_candidates(p_company uuid, p_ids uuid[])
+ returns table(line_id uuid, line_date date, edit_id uuid, month text, project_id uuid, category_id uuid, expected_minor bigint, diff bigint, edit_created timestamp with time zone)
+ language sql
+ stable
+ set search_path = ''
+as $$
   with l as (
     select t.id, t.direction::text as direction, t.amount_net, t.amount_gross, t.category_id, t.doc_date,
       to_char(t.doc_date, 'YYYY-MM') as line_month,
@@ -8911,7 +8911,7 @@ AS $function$
     and x.expected > 0
     and x.diff <= greatest(x.expected / 10, 100)
     and (not l.firm or l.category_id = e.category_id);
-$function$
+$$
 ;
 
 -- FLOW-152: the chart of accounts and the balance sheet from the ledger.
