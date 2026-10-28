@@ -2,6 +2,7 @@
 
 **Date:** 2026-09-26
 **Status:** Accepted
+**Load limit superseded by:** [0230](0230-screens-data-in-half-a-second.md) (every screen within 0.5 seconds). The $5 cost cap stays.
 
 ## Context
 
