@@ -1,6 +1,6 @@
 <a id="flow-217"></a>
 # FLOW-217 · An MCP agent learns the tools in one call
-- **Type:** MCP · **Status:** in-progress (#850) · **Source:** owner, 2026-10-28.
+- **Type:** MCP · **Status:** done (#850; deployed eacfd73 2026-10-28, production check read-only: migration recorded, 0 unbalanced lines, 0 legacy objects) · **Source:** owner, 2026-10-28.
 - **Files:** `supabase/functions/flow-mcp/handler.ts`, `tools_specs.ts`, `tools_schemas.ts`, a new guide module and its test, `docs/mcp/TOOLS.md`.
 
 An agent that connects sees 120+ flat tools with long descriptions and no map: no server instructions on `initialize`, no overview tool.

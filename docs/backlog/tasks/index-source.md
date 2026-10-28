@@ -213,6 +213,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - FLOW-151
 - FLOW-152
 - FLOW-153
+- FLOW-154
 - FLOW-920
 - FLOW-930
 - FLOW-935
@@ -455,6 +456,7 @@ Everything else follows by area, roughly in priority order inside each area.
 ## Infra and CI
 
 
+- FLOW-838
 - FLOW-705
 - FLOW-706
 - FLOW-801
