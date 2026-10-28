@@ -40,7 +40,7 @@ begin
     raise exception 'book_line_core is not the expected definition';
   end if;
   def := replace(def, anchor, $n$case
-        when current_setting('flow.journal_entry', true) <> 'on' then 'receipt'
+        when coalesce(current_setting('flow.journal_entry', true), '') <> 'on' then 'receipt'
         -- FLOW-151: income counts by its document kind, and invoice_receipt counts on both bases.
         when p_direction = 'income' then 'invoice_receipt'
         else 'other'

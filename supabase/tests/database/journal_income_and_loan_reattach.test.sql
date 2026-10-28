@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(44);
+select plan(45);
 
 do $users$
 begin
@@ -195,6 +195,32 @@ values
    '2025-12-01', '2025-12-01', 'ILS', 'manual', 'f151:rent', 'Example rent', pg_temp.id('rent'),
    pg_temp.id('maple'), 'project', true);
 insert into f151 (label, id) select 'deposit_line', id from public.transactions where idempotency_key = 'f151:deposit';
+
+-- book_line, before any journal entry in the session (flow.journal_entry never set), books income
+-- as a receipt, as it always has.
+create or replace function pg_temp.book_rent()
+returns uuid
+language plpgsql
+set search_path = ''
+as $$
+declare
+  result jsonb;
+begin
+  perform pg_temp.as_mcp();
+  result := public.mcp_book_line('f151-book', '2025-10-01', 'income', 'ILS', 'Example rent booked', jsonb_build_array(
+    jsonb_build_object('account_id', (select a.id from public.accounts a where a.company_id = pg_temp.id('company') and a.is_bank), 'amount_minor', 1000),
+    jsonb_build_object('account_id', pg_temp.acct('Example rent'), 'amount_minor', -1000, 'project_id', pg_temp.id('maple'))));
+  reset role;
+  return (result->'data'->>'id')::uuid;
+end;
+$$;
+grant execute on function pg_temp.book_rent() to authenticated, service_role;
+insert into f151 (label, id) select 'booked', pg_temp.book_rent();
+select is(
+  (select t.doc_kind::text from public.transactions t where t.id = pg_temp.id('booked')),
+  'receipt',
+  'a book_line income line is still a receipt'
+);
 
 -- Bug A2: the deposits category has no binding, so its leg would land on Suspense.
 select is(pg_temp.balance('Suspense'), -190000::bigint, 'the unbound deposit sits on Suspense');
