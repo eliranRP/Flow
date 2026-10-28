@@ -19,11 +19,11 @@ function spec(
 
 // The rules every prepaid tool shares, so each description stands alone.
 const RULES =
-  "Rules: a posted month is a normal journal entry (Prepaid, an asset account, to the expense category, on the project) and moves no cash, so no cash view or bank total changes; planned months are not on the books and show in no report; a daily job posts every month that is due and a re-run posts nothing; a start month in the past backfills the months already due with their original dates; the books-closed date (set_books_closed_through) blocks adding, changing or removing a posted month on or before it (the books are closed through YYYY-MM-DD).";
+  "Rules: a posted month is a normal journal entry (Prepaid, an asset account, to the expense category, on the project) and moves no cash, so no cash view or bank total changes; planned months are not on the books and show in no report; a daily job posts every month that is due and a re-run posts nothing; a start month in the past backfills the months already due with their original dates; the books-closed date (set_books_closed_through) blocks adding, changing or removing a posted month on or before it (the books are closed through YYYY-MM-DD). A line held by a schedule (the payment, a refund, a posted month's entry) is locked against other tools (the line is in a prepaid schedule; the entry belongs to a prepaid schedule): change it with the prepaid tools.";
 
 // Another company's schedule and line are refused with these two messages.
 const FOREIGN =
-  "Another company's schedule is refused as \"The write was refused.\"; another company's line as \"transaction not found\".";
+  'Another company\'s schedule is refused as "The write was refused."; another company\'s line as "transaction not found".';
 
 export const PREPAID_READ_SPECS = [
   spec(

@@ -149,17 +149,19 @@ grant select on public.prepaid_schedules, public.prepaid_rows, public.prepaid_re
 -- ---------------------------------------------------------------------------
 -- 3. private.post_journal_entry: create_journal_entry's core.
 -- ---------------------------------------------------------------------------
--- Books one journal entry in p_company and returns its line id. Raises 'validation' for a malformed
--- leg and a worded reason for a refused one; the caller maps them.
+-- Books one journal entry in p_company and returns its line id and its P&L effect (the P&L legs'
+-- sum, negated). Raises 'validation' for a malformed leg and a worded reason for a refused one; the
+-- caller maps them.
 create function private.post_journal_entry(
   p_company uuid,
   p_doc_date date,
   p_currency text,
   p_description text,
   p_reference text,
-  p_legs jsonb
+  p_legs jsonb,
+  out line_id uuid,
+  out pnl_minor bigint
 )
-returns uuid
 language plpgsql
 security definer
 set search_path = ''
@@ -318,7 +320,8 @@ begin
     (row_number() over (order by (c->>'ordinal')::integer))::smallint
   from jsonb_array_elements(counter) c;
   perform private.post_lines(cid, array[rid]);
-  return rid;
+  line_id := rid;
+  pnl_minor := -pnl_sum;
 end;
 $$;
 
@@ -348,7 +351,7 @@ declare
   prior jsonb;
   cid uuid;
   response jsonb;
-  pnl_sum bigint;
+  pnl bigint;
   rid uuid;
 begin
   if p_idempotency_key is null
@@ -382,13 +385,8 @@ begin
   cid := private.current_company_id();
   response := private.mcp_error('refused', 'The write was refused.');
   begin
-    rid := private.post_journal_entry(cid, p_doc_date, p_currency, p_description, p_reference, p_legs);
-    -- The P&L legs' sum, as the core read it: the legs on a category counted in the P&L.
-    select coalesce(sum((e->>'amount_minor')::bigint), 0) into pnl_sum
-    from jsonb_array_elements(p_legs) e
-    join public.accounts a on a.id = (e->>'account_id')::uuid and a.company_id = cid
-    join public.categories c on c.id = a.category_id and c.company_id = cid
-    where not coalesce(c.excluded_from_pnl, false);
+    select j.line_id, j.pnl_minor into rid, pnl
+    from private.post_journal_entry(cid, p_doc_date, p_currency, p_description, p_reference, p_legs) j;
 
     insert into private.mcp_writes (token_id, user_id, company_id, kind, transaction_id, prior)
     values (token, auth.uid(), cid, 'journal_entry', rid,
@@ -400,7 +398,7 @@ begin
       'currency', p_currency,
       'description', btrim(p_description),
       'reference', nullif(btrim(p_reference), ''),
-      'pnl_minor', -pnl_sum,
+      'pnl_minor', pnl,
       'legs', (
         select jsonb_agg(jsonb_build_object(
             'account_id', l.account_id, 'project_id', l.project_id, 'amount_minor', l.amount_minor,
@@ -513,12 +511,17 @@ as $$
 declare
   txn uuid := (p_print->>'transaction_id')::uuid;
   cur jsonb;
+  gone boolean;
 begin
-  perform 1 from public.transactions t
-  where t.company_id = p_company and t.id = txn and t.removed_at is null
+  select t.removed_at is not null into gone from public.transactions t
+  where t.company_id = p_company and t.id = txn
   for update;
   if not found then
     raise exception 'transaction not found';
+  end if;
+  -- A line a bank sync removed keeps the coding it has.
+  if gone then
+    return;
   end if;
   cur := private.prepaid_line_print(p_company, txn);
   if cur = p_print then
@@ -698,7 +701,7 @@ begin
   select a.id into expense_account from public.accounts a
   where a.company_id = s.company_id and a.category_id = s.expense_category_id;
   suffix := case when r.kind = 'end_expense' then ' · end' else ' · ' || r.seq || '/' || s.months end;
-  rid := private.post_journal_entry(
+  select j.line_id into rid from private.post_journal_entry(
     s.company_id, r.due_date, s.currency,
     left('Prepaid · ' || s.description, 120 - char_length(suffix)) || suffix,
     'prepaid:' || s.id::text || ':' || r.seq,
@@ -706,7 +709,7 @@ begin
       jsonb_build_object('account_id', expense_account, 'amount_minor', r.amount_minor, 'project_id', s.project_id),
       jsonb_build_object('account_id', s.prepaid_account_id, 'amount_minor', -r.amount_minor, 'project_id', s.project_id)
     )
-  );
+  ) j;
   update public.prepaid_rows x set entry_id = rid where x.id = r.id;
   return rid;
 end;
@@ -714,7 +717,9 @@ $$;
 
 -- Posts every planned row due on or before p_today, oldest first, of one schedule or of all.
 -- For one schedule (a write): a row in a closed period is refused and any failure raises. For all
--- (the daily job): a row in a closed period waits, and a row that fails is skipped with a warning.
+-- (the daily job): a row in a closed period waits; a row another session holds, or that loses a
+-- deadlock, waits for the next run; a row that fails otherwise is skipped with a warning. Either way
+-- a schedule whose payment line a bank sync removed or voided posts nothing (its rows stay planned).
 -- Returns the number of rows posted. A re-run posts nothing.
 create function private.prepaid_post_due(p_today date default current_date, p_schedule uuid default null)
 returns integer
@@ -731,6 +736,8 @@ begin
     from public.prepaid_rows x
     join public.prepaid_schedules s on s.company_id = x.company_id and s.id = x.schedule_id
     join public.companies c on c.id = x.company_id
+    join public.transactions p on p.company_id = s.company_id and p.id = s.transaction_id
+      and p.removed_at is null and p.line_status = 'posted'
     where x.entry_id is null and x.due_date <= p_today
       and (p_schedule is null or x.schedule_id = p_schedule)
     order by x.due_date, x.company_id, x.schedule_id, x.seq
@@ -744,17 +751,20 @@ begin
     end if;
     if p_schedule is not null then
       perform private.prepaid_post_row(r.id);
+      perform private.prepaid_settle_status(r.company_id, r.schedule_id);
     else
       begin
         perform private.prepaid_post_row(r.id);
+        perform private.prepaid_settle_status(r.company_id, r.schedule_id);
       exception
+        when deadlock_detected or lock_not_available or serialization_failure then
+          continue;
         when others then
           raise warning 'flow-prepaid-post: row % not posted: %', r.id, sqlerrm;
           continue;
       end;
     end if;
     posted := posted + 1;
-    perform private.prepaid_settle_status(r.company_id, r.schedule_id);
   end loop;
   return posted;
 end;
@@ -818,7 +828,10 @@ declare
   r record;
   removed integer := 0;
   print jsonb;
+  prev text := current_setting('flow.prepaid_apply', true);
 begin
+  -- The schedule's own lines and entries change here: the prepaid guards let this through.
+  perform set_config('flow.prepaid_apply', 'on', true);
   select c.books_closed_through into closed from public.companies c where c.id = p_company;
   perform 1 from public.prepaid_schedules s where s.company_id = p_company and s.id = p_schedule for update;
 
@@ -886,9 +899,145 @@ begin
     perform private.prepaid_post_due(current_date, p_schedule);
     perform private.prepaid_settle_status(p_company, p_schedule);
   end if;
+  perform set_config('flow.prepaid_apply', coalesce(prev, ''), true);
   return removed;
 end;
 $$;
+
+-- ---------------------------------------------------------------------------
+-- 4b. The guards: a schedule's lines and entries change only through the prepaid tools.
+-- ---------------------------------------------------------------------------
+-- Why a line can't change, or null: it is a schedule's payment line or an attached refund line, or
+-- a posted month's entry. The prepaid writers set flow.prepaid_apply while they change them.
+create function private.prepaid_line_held(p_company uuid, p_txn uuid)
+returns text
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select case
+    when coalesce(current_setting('flow.prepaid_apply', true), '') = 'on' then null
+    when exists (select 1 from public.prepaid_rows r where r.company_id = p_company and r.entry_id = p_txn)
+      then 'the entry belongs to a prepaid schedule'
+    when exists (select 1 from public.prepaid_schedules x where x.company_id = p_company and x.transaction_id = p_txn)
+      or exists (select 1 from public.prepaid_refunds f where f.company_id = p_company and f.transaction_id = p_txn)
+      then 'the line is in a prepaid schedule'
+  end;
+$$;
+
+-- A person's write (the app or the MCP) that changes what a held line books is refused. A bank sync
+-- or a job (no user) may still change, remove or void it; a schedule whose payment line is removed or
+-- voided then posts nothing (prepaid_post_due).
+create function private.prepaid_line_guard_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  why text;
+begin
+  if auth.uid() is not null then
+    why := private.prepaid_line_held(old.company_id, old.id);
+    if why is not null then
+      raise exception '%', why;
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+-- No delete of a held line or entry, but by the prepaid writers or with its company.
+create function private.prepaid_line_guard_delete()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  why text;
+begin
+  if exists (select 1 from public.companies c where c.id = old.company_id) then
+    why := private.prepaid_line_held(old.company_id, old.id);
+    if why is not null then
+      raise exception '%', why;
+    end if;
+  end if;
+  return old;
+end;
+$$;
+
+-- A person's split by category or loan parts on a held line, refused like the update.
+create function private.prepaid_line_check(p_company uuid, p_txn uuid)
+returns void
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  why text;
+begin
+  if auth.uid() is not null then
+    why := private.prepaid_line_held(p_company, p_txn);
+    if why is not null then
+      raise exception '%', why;
+    end if;
+  end if;
+end;
+$$;
+
+create trigger transactions_prepaid_held
+  before update on public.transactions
+  for each row
+  when (old.direction is distinct from new.direction
+    or old.doc_kind is distinct from new.doc_kind
+    or old.amount_gross is distinct from new.amount_gross
+    or old.amount_net is distinct from new.amount_net
+    or old.vat_amount is distinct from new.vat_amount
+    or old.amount_original is distinct from new.amount_original
+    or old.category_id is distinct from new.category_id
+    or old.project_id is distinct from new.project_id
+    or old.pnl_role is distinct from new.pnl_role
+    or old.in_pnl_override is distinct from new.in_pnl_override
+    or old.in_cash_override is distinct from new.in_cash_override
+    or old.line_status is distinct from new.line_status
+    or old.removed_at is distinct from new.removed_at
+    or old.doc_date is distinct from new.doc_date
+    or old.cash_date is distinct from new.cash_date
+    or old.currency is distinct from new.currency
+    or old.company_id is distinct from new.company_id)
+  execute function private.prepaid_line_guard_update();
+
+create trigger transactions_prepaid_held_delete
+  before delete on public.transactions
+  for each row
+  execute function private.prepaid_line_guard_delete();
+
+do $parts$
+declare
+  def text;
+  anchor constant text := $a$  perform private.part_line_lock(p_company, p_txn);$a$;
+  fn text;
+begin
+  foreach fn in array array['private.set_line_parts(uuid,uuid,jsonb)', 'private.set_loan_parts(uuid,uuid,uuid,jsonb)'] loop
+    def := pg_get_functiondef(fn::regprocedure);
+    if pg_temp.anchor_count(def, anchor) <> 1 then
+      raise exception '% is not the expected definition', fn;
+    end if;
+    def := replace(def, anchor, anchor || $n$
+  -- FLOW-155: a schedule's payment or refund line, or a prepaid entry, keeps its parts.
+  perform private.prepaid_line_check(p_company, p_txn);$n$);
+    execute def;
+  end loop;
+end
+$parts$;
+
+revoke all on function private.prepaid_line_held(uuid, uuid) from public, anon, authenticated;
+revoke all on function private.prepaid_line_guard_update() from public, anon, authenticated;
+revoke all on function private.prepaid_line_guard_delete() from public, anon, authenticated;
+revoke all on function private.prepaid_line_check(uuid, uuid) from public, anon, authenticated;
 
 -- A schedule as the tools show it.
 create function private.prepaid_json(p_company uuid, p_schedule uuid)
@@ -918,7 +1067,8 @@ as $$
     'start_month', to_char(s.start_month, 'YYYY-MM'),
     'day_of_month', s.day_of_month,
     'months', s.months,
-    'months_posted', (select count(*) from public.prepaid_rows r
+    -- The last amortization month posted (a month of 0 has no row, so this is not a row count).
+    'months_posted', (select coalesce(max(r.seq), 0) from public.prepaid_rows r
                       where r.company_id = s.company_id and r.schedule_id = s.id and r.entry_id is not null
                         and r.kind = 'amortization'),
     'next_date', (select min(r.due_date) from public.prepaid_rows r
@@ -989,6 +1139,9 @@ end;
 $$;
 
 -- The undo of a prepaid write: puts back what the write found while the schedule reads as it left it.
+-- Posting is not a change: a month the daily job posted since the write keeps its entry when the
+-- restored plan has the same month, else the entry goes with it (and a month due today posts again
+-- from the restored plan). The books-closed date still holds.
 create function private.undo_prepaid_write(p_company uuid, p_write private.mcp_writes)
 returns jsonb
 language plpgsql
@@ -1024,6 +1177,7 @@ begin
       'kind', rec.kind, 'id', cid, 'books_closed_through', rec.prior->>'before'));
   end if;
 
+  perform 1 from public.companies c where c.id = cid for share;
   sid := (rec.prior->>'schedule_id')::uuid;
   perform 1 from public.prepaid_schedules s where s.company_id = cid and s.id = sid for update;
   select coalesce(array_agg((l->>'transaction_id')::uuid), '{}') into lines
@@ -1123,6 +1277,8 @@ begin
   cid := private.current_company_id();
   response := private.mcp_error('refused', 'The write was refused.');
   begin
+    -- Held against a books-closed change until this write commits.
+    perform 1 from public.companies c where c.id = cid for share;
     perform private.prepaid_expense_category(cid, p_expense_category_id);
     if p_project_id is not null
       and not exists (select 1 from public.projects p where p.company_id = cid and p.id = p_project_id)
@@ -1305,6 +1461,8 @@ begin
   cid := private.current_company_id();
   response := private.mcp_error('refused', 'The write was refused.');
   begin
+    -- Held against a books-closed change until this write commits.
+    perform 1 from public.companies c where c.id = cid for share;
     s := private.prepaid_lock(cid, p_schedule_id, true);
     before := private.prepaid_snapshot(cid, s.id, array[p_transaction_id]);
     filed := private.prepaid_file_line(cid, p_transaction_id, 'income',
@@ -1392,6 +1550,8 @@ begin
   cid := private.current_company_id();
   response := private.mcp_error('refused', 'The write was refused.');
   begin
+    -- Held against a books-closed change until this write commits.
+    perform 1 from public.companies c where c.id = cid for share;
     s := private.prepaid_lock(cid, p_schedule_id, true);
     if p_expense_category_id is not null then
       perform private.prepaid_expense_category(cid, p_expense_category_id);
@@ -1496,6 +1656,8 @@ begin
   cid := private.current_company_id();
   response := private.mcp_error('refused', 'The write was refused.');
   begin
+    -- Held against a books-closed change until this write commits.
+    perform 1 from public.companies c where c.id = cid for share;
     s := private.prepaid_lock(cid, p_schedule_id, true);
     from_month := (p_from_month || '-01')::date;
     if from_month < (
@@ -1589,6 +1751,8 @@ begin
   cid := private.current_company_id();
   response := private.mcp_error('refused', 'The write was refused.');
   begin
+    -- Held against a books-closed change until this write commits.
+    perform 1 from public.companies c where c.id = cid for share;
     s := private.prepaid_lock(cid, p_schedule_id, false);
     before := private.prepaid_snapshot(cid, s.id, '{}');
     select array_agg((l->>'transaction_id')::uuid) into lines from jsonb_array_elements(before->'lines') l;
@@ -1774,7 +1938,9 @@ begin
         'from_month is before the last posted month',
         'only the owner can close the books',
         'the date is after today',
-        'post the due prepaid rows first'
+        'post the due prepaid rows first',
+        'the line is in a prepaid schedule',
+        'the entry belongs to a prepaid schedule'
       ) or p_message ~ '^the books are closed through [0-9]{4}-[0-9]{2}-[0-9]{2}$' then p_message
 $n$ || anchor);
   execute def;

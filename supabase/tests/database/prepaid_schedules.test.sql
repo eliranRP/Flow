@@ -6,7 +6,7 @@
 
 begin;
 
-select plan(103);
+select plan(122);
 
 do $users$
 begin
@@ -100,6 +100,26 @@ create or replace function pg_temp.get_pp(p_sid uuid, p_who text default 'a')
 returns jsonb language sql set search_path = '' as $$
   select pg_temp.mcp(p_who, format('select public.mcp_get_prepaid_schedule(%L::uuid)', p_sid));
 $$;
+-- A call that may raise, as p_who: 'ok' or the error's message.
+create or replace function pg_temp.try(p_who text, p_sql text)
+returns text language plpgsql set search_path = '' as $$
+begin
+  perform pg_temp.as_mcp(p_who);
+  execute p_sql;
+  reset role;
+  return 'ok';
+exception when others then
+  return sqlerrm;
+end; $$;
+-- As postgres with no user, as a bank sync or a job writes.
+create or replace function pg_temp.no_user()
+returns void language sql set search_path = '' as $$
+  select set_config('request.jwt.claims', '', true), set_config('request.jwt.claim.sub', '', true);
+$$;
+create or replace function pg_temp.pnl_all()
+returns bigint language sql set search_path = '' as $$
+  select coalesce(sum(p.amount_net), 0)::bigint from private.pnl_lines p where p.company_id = pg_temp.id('co') and p.in_pnl;
+$$;
 grant execute on all functions in schema pg_temp to authenticated, service_role;
 
 -- A schedule's rows as postgres sees them, and the books.
@@ -181,6 +201,7 @@ insert into pp (label, id) values
   ('l_split', tests.fixture_line(pg_temp.id('co'), 'pp:split', 40000, 'expense', pg_temp.id('maple'), pg_temp.id('repairs'), pg_temp.m1(-1))),
   ('l_future', tests.fixture_line(pg_temp.id('co'), 'pp:future', 90000, 'expense', pg_temp.id('maple'), pg_temp.id('repairs'), current_date)),
   ('l_closed', tests.fixture_line(pg_temp.id('co'), 'pp:closed', 20000, 'expense', pg_temp.id('maple'), pg_temp.id('repairs'), pg_temp.m1(-2))),
+  ('r_guard', tests.fixture_line(pg_temp.id('co'), 'pp:guard-in', 1000, 'income', pg_temp.id('maple'), pg_temp.id('rent'), current_date)),
   ('l_b', tests.fixture_line(pg_temp.id('co_b'), 'pp:b', 10000, 'expense', null, pg_temp.id('b_cat'), current_date));
 select tests.line_split(pg_temp.id('l_split'), jsonb_build_array(
   jsonb_build_object('category_id', pg_temp.id('repairs'), 'project_id', pg_temp.id('maple'), 'amount_minor', 30000),
@@ -309,7 +330,10 @@ select is(pg_temp.close_books('pp-c1', current_date, 'e')->'error'->>'message', 
   'an editor can''t close the books');
 select is(pg_temp.close_books('pp-c2', current_date + 1)->'error'->>'message', 'the date is after today', 'nor can a future date');
 -- A month whose entry went (any path) is planned again, and due.
+-- (Only the prepaid writers may remove it: the test takes their flag to make one month planned again.)
+select set_config('flow.prepaid_apply', 'on', true);
 delete from public.transactions where id = (select entry_id from public.prepaid_rows where schedule_id = pg_temp.id('s_year') and seq = 12);
+select set_config('flow.prepaid_apply', '', true);
 select is(pg_temp.close_books('pp-c3', current_date)->'error'->>'message', 'post the due prepaid rows first',
   'closing past a due month not posted is refused');
 select is(private.prepaid_post_due(), 1, 'the daily run posts it again');
@@ -397,11 +421,55 @@ select is(pg_temp.amounts(pg_temp.id('s_keep'), true), array[10000, 10000]::bigi
 select is((select status || ' ' || end_mode from public.prepaid_schedules where id = pg_temp.id('s_keep')), 'ended keep', 'as it was');
 select is(pg_temp.undo('pp-del-2', 'prepaid_delete', pg_temp.id('s_keep'))->'error'->>'code', 'not_found', 'an undo is done once');
 
+-- A schedule's lines and entries change only through the prepaid tools.
+select is(pg_temp.refund_pp('pp-g0', pg_temp.id('s_past'), pg_temp.id('r_guard'))->>'ok', 'true', 'a refund line is attached');
+insert into res values ('pnl_guard', to_jsonb(pg_temp.pnl_all()));
+select is(pg_temp.try('a', format('select public.delete_transaction(%L::uuid)',
+  (select entry_id from public.prepaid_rows where schedule_id = pg_temp.id('s_past') and seq = 1))),
+  'the entry belongs to a prepaid schedule', 'delete_transaction refuses a posted month''s entry');
+select is(pg_temp.try('a', format('select public.delete_transaction(%L::uuid)', pg_temp.id('l_past'))),
+  'the line is in a prepaid schedule', 'and the payment line');
+select is(pg_temp.try('a', format('select public.delete_transaction(%L::uuid)', pg_temp.id('r_guard'))),
+  'the line is in a prepaid schedule', 'and a refund line');
+select is(pg_temp.mcp('a', format('select public.mcp_set_expense_category(%L, %L::uuid, %L::uuid)', 'pp-g1',
+  pg_temp.id('l_past'), pg_temp.id('repairs')))->'error'->>'message', 'the line is in a prepaid schedule',
+  'set_expense_category refuses the payment line');
+select is(pg_temp.mcp('a', format('select public.mcp_assign_expense(%L, %L::uuid, %L::uuid, %L::uuid)', 'pp-g2',
+  pg_temp.id('l_past'), pg_temp.id('maple'), pg_temp.id('repairs')))->'error'->>'message', 'the line is in a prepaid schedule',
+  'assign_expense refuses it');
+select is(pg_temp.mcp('a', format('select public.mcp_split_line(%L, %L::uuid, %L::jsonb)', 'pp-g3', pg_temp.id('l_past'),
+  jsonb_build_array(jsonb_build_object('category_id', pg_temp.id('repairs'), 'amount_minor', 20000),
+    jsonb_build_object('category_id', pg_temp.id('insurance'), 'rest', true))))->'error'->>'message',
+  'the line is in a prepaid schedule', 'split_line refuses it');
+select is(pg_temp.mcp('a', format('select public.mcp_set_line_pnl(%L, %L::uuid, true)', 'pp-g4', pg_temp.id('l_past')))->'error'->>'message',
+  'the line is in a prepaid schedule', 'set_line_pnl refuses it');
+select is(pg_temp.mcp('a', format('select public.mcp_set_expense_category(%L, %L::uuid, %L::uuid)', 'pp-g5',
+  pg_temp.id('r_guard'), pg_temp.id('rent')))->'error'->>'message', 'the line is in a prepaid schedule',
+  'and a refund line can''t be recategorised');
+select is(pg_temp.mcp('b', format('select public.mcp_set_expense_category(%L, %L::uuid, %L::uuid)', 'pp-g6',
+  pg_temp.id('l_past'), pg_temp.id('b_cat')))->>'ok', 'false', 'nor can another company touch it');
+select is(pg_temp.pnl_all(), (select r::bigint from res where label = 'pnl_guard'), 'the P&L did not move');
+select is((select category_id from public.transactions where id = pg_temp.id('l_past')),
+  (select prepaid_category_id from public.prepaid_schedules where id = pg_temp.id('s_past')), 'and the payment line kept its filing');
+-- A bank sync (no user) may void the payment line; the schedule then posts nothing.
+select pg_temp.no_user();
+update public.transactions set line_status = 'void', removed_at = now() where id = pg_temp.id('l_past');
+select is(private.prepaid_post_due(pg_temp.m1(3), pg_temp.id('s_past')), 0, 'a schedule whose payment line a sync voided posts nothing');
+update public.transactions set line_status = 'posted', removed_at = null where id = pg_temp.id('l_past');
+select is(private.prepaid_post_due(pg_temp.m1(1), pg_temp.id('s_past')), 1, 'and posts again once the line is back');
+
 -- 7. Posting never moves cash: the cash views and the bank are the same before and after.
 insert into res values ('future', pg_temp.create_pp('pp-future', pg_temp.id('l_future'), pg_temp.id('insurance'), pg_temp.ym(1), 3));
+insert into pp values ('s_future', ((select r from res where label = 'future')->'data'->>'schedule_id')::uuid);
+select is(pg_temp.update_pp('pp-future-1', pg_temp.id('s_future'), 6)->>'ok', 'true', 'a planned schedule is spread over six months');
 insert into res values ('cash_before', pg_temp.cash_print());
 select cmp_ok(private.prepaid_post_due(pg_temp.m1(4)), '>=', 3, 'posting the months to come');
 select is(pg_temp.cash_print(), (select r from res where label = 'cash_before'), 'leaves cash_months, cash_month_lines and the bank legs as they were');
+
+-- Undo after the job posted: the posts the restored plan does not have go with the write.
+select is(pg_temp.undo('pp-future-2', 'prepaid_update', pg_temp.id('s_future'))->>'ok', 'true', 'undo still works after the job posted');
+select is(pg_temp.amounts(pg_temp.id('s_future')), array[30000, 30000, 30000]::bigint[], 'the three months come back');
+select is(pg_temp.entries(pg_temp.id('s_future')), 0, 'and the job''s posts of the six-month plan are removed');
 
 -- The daily job, where pg_cron is installed (the local test databases may lack it).
 create or replace function pg_temp.cron_job()
@@ -413,6 +481,11 @@ begin
 end; $$;
 select ok(not exists (select 1 from pg_extension where extname = 'pg_cron')
   or pg_temp.cron_job() = '41 0 * * * select private.prepaid_post_due();', 'flow-prepaid-post runs daily where pg_cron is installed');
+
+-- A company with schedules, posted months and refunds can still be deleted.
+delete from public.companies where id = pg_temp.id('co');
+select is((select count(*)::integer from public.prepaid_schedules where company_id = pg_temp.id('co')), 0,
+  'deleting the company removes its schedules with its lines');
 
 select * from finish();
 

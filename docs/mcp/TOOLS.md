@@ -461,6 +461,7 @@ A payment made up front (a year of insurance) is spread over months. Rules for a
 - The total is split over the months rounded to the minor unit; the last month takes the rest (262,100 over 12 is 11 months of 21,842 and one of 21,838). Planned months always add up to what remains (total less posted less refunds).
 - The payment line is filed to a hidden kept-out category bound to the prepaid account. A part of the line (`amount_minor` below the line) splits it; the previous coding is kept so delete and undo restore it.
 - The books-closed date blocks adding, changing or removing a posted month dated on or before it (`refused`, `the books are closed through YYYY-MM-DD`). It guards the prepaid tools only for now.
+- A held line is locked against every other writer: recategorizing, re-projecting, splitting, switching it in or out of the P&L, removing or deleting a schedule's payment line or refund line is refused (`the line is in a prepaid schedule`), and so is deleting a posted month's entry (`the entry belongs to a prepaid schedule`). Change it through the prepaid tools (update, end, delete). A bank sync that removes or voids the payment line is not refused: the schedule's months wait until the line is back.
 - Writes need owner or editor, an `idempotency_key`, and return an `undo_kind`. Reads: any member. Another company's schedule is refused as `The write was refused.`; another company's line as `transaction not found`.
 
 ### create_prepaid_schedule

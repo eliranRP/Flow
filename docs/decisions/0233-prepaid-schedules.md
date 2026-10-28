@@ -21,6 +21,9 @@ A cost paid once can cover many months, such as a yearly insurance premium. The 
    - Both re-spread what remains over the months left.
    - `end_prepaid_schedule` drops the planned rows from a month on. What is left is either expensed in that month (`expense`) or stays on Prepaid (`keep`).
    - A posted month is never changed. Only deleting the schedule removes its entries.
+   - **A line held by a schedule is locked.** No person can recategorize, re-project, split, switch in or out of the P&L, remove or delete the payment line, a refund line, or a posted month's entry ("the line is in a prepaid schedule", "the entry belongs to a prepaid schedule"). Otherwise the same cost would count twice, or the schedule would lose its money. Only the prepaid tools change them. A company that is deleted takes its schedules with it.
+   - **A bank sync is never refused.** If the bank removes or voids the payment line, the schedule stays and its months wait. Posting resumes when the line comes back.
+   - **Posting is safe to run twice at once.** A month that another write is holding is skipped and posts on the next run. A write never posts inside a period being closed at the same moment.
 7. **A books-closed date per company.** `companies.books_closed_through` is set with MCP `set_books_closed_through`, owner only, never after today. The prepaid writes refuse to add, change or remove a posted month on or before it. Closing past a due month that isn't posted yet is refused. Other write tools don't check it yet.
 8. **MCP.**
    - Writes: `create_prepaid_schedule`, `attach_prepaid_refund`, `update_prepaid_schedule`, `end_prepaid_schedule`, `delete_prepaid_schedule` and `set_books_closed_through`. Each takes an idempotency key, is logged, and has an undo kind (`prepaid_create`, `prepaid_refund`, `prepaid_update`, `prepaid_end`, `prepaid_delete`, `books_closed`).
