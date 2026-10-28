@@ -610,13 +610,15 @@ select is(pg_temp.sheet('2026-12-31')->'currencies'->0->>'balanced', 'true', 'an
 -- FLOW-154: a booking holds every leg's account in id order before it reads any, as merge_account
 -- takes its two, so a booking and a merge on the same accounts never wait on each other in a circle.
 select ok(
-  strpos(pg_get_functiondef('private.book_line_core(uuid,text,date,text,text,jsonb,uuid,uuid)'::regprocedure), 'order by a.id')
+  pg_get_functiondef('private.book_line_core(uuid,text,date,text,text,jsonb,uuid,uuid)'::regprocedure) ~ 'kept_out_account\(cid, n\.category_id, null\)[^;]*order by a\.id\s+for share;'
+  and strpos(pg_get_functiondef('private.book_line_core(uuid,text,date,text,text,jsonb,uuid,uuid)'::regprocedure), 'order by a.id')
     between 1 and strpos(pg_get_functiondef('private.book_line_core(uuid,text,date,text,text,jsonb,uuid,uuid)'::regprocedure), 'select * into acct from public.accounts a'),
-  'book_line holds the legs'' accounts in id order before the per-leg reads');
+  'book_line holds the legs'' accounts and their kept-out targets for share, in id order, before the per-leg reads');
 select ok(
-  strpos(pg_get_functiondef('public.mcp_create_journal_entry(text,date,text,text,text,jsonb)'::regprocedure), 'order by a.id')
+  pg_get_functiondef('public.mcp_create_journal_entry(text,date,text,text,text,jsonb)'::regprocedure) ~ 'kept_out_account\(cid, n\.category_id, null\)[^;]*order by a\.id\s+for share;'
+  and strpos(pg_get_functiondef('public.mcp_create_journal_entry(text,date,text,text,text,jsonb)'::regprocedure), 'order by a.id')
     between 1 and strpos(pg_get_functiondef('public.mcp_create_journal_entry(text,date,text,text,text,jsonb)'::regprocedure), 'select * into acct from public.accounts a'),
-  'create_journal_entry holds the legs'' accounts in id order before the per-leg reads');
+  'create_journal_entry holds the legs'' accounts and their kept-out targets for share, in id order, before the per-leg reads');
 
 select * from finish();
 rollback;

@@ -1,6 +1,6 @@
 <a id="flow-153"></a>
 # FLOW-153 · The ledger is the only write model: cut the legacy split tables and the rollback view
-- **Type:** BIG CYCLE (DB + MCP + app) · **Status:** done (#850; deployed eacfd73 2026-10-28, production check read-only: migration recorded, 0 unbalanced lines, 0 legacy objects) · **Depends on:** FLOW-952 · **Source:** owner, 2026-10-28 ("full cut": legs become the only write model).
+- **Type:** BIG CYCLE (DB + MCP + app) · **Status:** done (#850; deployed eacfd73 by the manual ci run of 2026-10-28; prod check by dev lane 1, read-only SQL through the Supabase connector: migration 20261028093217 recorded, 0 legacy tables or functions, 0 unbalanced lines, every company and currency nets to 0, the app serves eacfd73) · **Depends on:** FLOW-952 · **Source:** owner, 2026-10-28 ("full cut": legs become the only write model).
 
 After FLOW-952 the P&L reads the legs, but every writer still writes the legacy rows (`line_splits`, `loan_splits`, the booking columns on `transactions`) and the legs are compiled from them; `pnl_lines_legacy` and `ledger_pnl_diff` stay as a rollback, and some readers still read the legacy tables. The owner chose to cut it.
 
