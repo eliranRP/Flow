@@ -380,70 +380,73 @@ select throws_ok(
   'principal cannot use an income category'
 );
 
-select throws_ok(
-  $$
-    insert into public.loans (
-      company_id, name, principal_minor, annual_rate_ppm, term_months,
-      start_date, payment_minor, escrow_minor, currency
-    )
-    select id, 'משכנתא אחרת', 50000, 0, 12, '2026-04-01', 4000, 0, 'USD'
-    from public.companies where name = 'הלוואות בדיקה';
-    select tests.loan_split(t.id, case when v.part = 'principal' then other.id else l.id end, jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
-      'category_id', c.id)))
-    from public.loans l
-    join public.loans other
-      on other.company_id = l.company_id and other.name = 'משכנתא אחרת'
-    join public.transactions t
-      on t.company_id = l.company_id and t.idempotency_key = 'loan:sum'
-    cross join (
-      values
-        ('interest', 'ריבית משכנתא', 5000),
-        ('escrow', 'מסים וביטוח', 2000),
-        ('principal', 'תשלומי הלוואה', 3000)
-    ) as v(part, category, amount)
-    join public.categories c
-      on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense'
-    where l.name = 'משכנתא לדוגמה'
-    group by t.id, case when v.part = 'principal' then other.id else l.id end;
-  $$,
-  '23514',
-  'loan_split_incomplete',
+-- The writer takes one loan per line: parts written for another loan replace the first loan's.
+insert into public.loans (
+  company_id, name, principal_minor, annual_rate_ppm, term_months,
+  start_date, payment_minor, escrow_minor, currency
+)
+select id, 'משכנתא אחרת', 50000, 0, 12, '2026-04-01', 4000, 0, 'USD'
+from public.companies where name = 'הלוואות בדיקה';
+select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+  'category_id', c.id)))
+from public.loans l
+join public.transactions t
+  on t.company_id = l.company_id and t.idempotency_key = 'loan:sum'
+cross join (
+  values
+    ('interest', 'ריבית משכנתא', 5000),
+    ('escrow', 'מסים וביטוח', 2000),
+    ('principal', 'תשלומי הלוואה', 3000)
+) as v(part, category, amount)
+join public.categories c
+  on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense'
+where l.name in ('משכנתא לדוגמה', 'משכנתא אחרת')
+group by t.id, l.id, l.name
+order by l.name desc;
+select is(
+  (select array_agg(distinct l.name) from private.loan_parts s
+   join public.loans l on l.id = s.loan_id
+   join public.transactions t on t.id = s.transaction_id
+   where t.idempotency_key = 'loan:sum'),
+  array['משכנתא אחרת'],
   'a line belongs to one loan'
 );
+select tests.loan_split(t.id, null, null) from public.transactions t where t.idempotency_key = 'loan:sum';
+delete from public.loans where name = 'משכנתא אחרת';
 
 select throws_ok(
   $$
-    select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', 'interest', 'amount_minor', 10000, 'scheduled_minor', 10000,
-      'category_id', c.id)))
+    select tests.loan_split(t.id, l.id, jsonb_build_array(
+      jsonb_build_object('part', 'interest', 'amount_minor', 10000, 'scheduled_minor', 10000, 'category_id', c.id),
+      jsonb_build_object('part', 'interest', 'amount_minor', 10000, 'scheduled_minor', 10000, 'category_id', c.id)))
     from public.loans l
     join public.transactions t
       on t.company_id = l.company_id and t.idempotency_key = 'loan:partial'
     join public.categories c
-      on c.company_id = l.company_id and c.name = 'ריבית משכנתא' and c.kind = 'expense'
-    group by t.id, l.id;
-    select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', 'interest', 'amount_minor', 10000, 'scheduled_minor', 10000,
-      'category_id', c.id)))
-    from public.loans l
-    join public.transactions t
-      on t.company_id = l.company_id and t.idempotency_key = 'loan:partial'
-    join public.categories c
-      on c.company_id = l.company_id and c.name = 'ריבית משכנתא' and c.kind = 'expense'
-    group by t.id, l.id;
+      on c.company_id = l.company_id and c.name = 'ריבית משכנתא' and c.kind = 'expense';
   $$,
   '23505',
   null,
   'a line has one row per part'
 );
 
+-- A line's parts with new interest and principal amounts, written back through the writer.
+create function pg_temp.set_amounts(p_key text, p_interest bigint, p_principal bigint)
+returns void
+language sql
+as $$
+  select tests.loan_split(s.transaction_id, s.loan_id, jsonb_agg(jsonb_build_object(
+    'part', s.part,
+    'amount_minor', case s.part when 'interest' then p_interest when 'principal' then p_principal else s.amount_minor end,
+    'scheduled_minor', s.scheduled_minor, 'category_id', s.category_id, 'needs_review', s.needs_review)))
+  from private.loan_parts s
+  join public.transactions t on t.id = s.transaction_id
+  where t.idempotency_key = p_key
+  group by s.transaction_id, s.loan_id;
+$$;
+
 select throws_ok(
-  $$
-    update public.loan_splits s
-    set amount_minor = 5001
-    from public.transactions t
-    where s.transaction_id = t.id
-      and t.idempotency_key = 'loan:paid'
-      and s.part = 'interest';
-  $$,
+  $$ select pg_temp.set_amounts('loan:paid', 5001, 3000) $$,
   '23514',
   'loan_split_sum',
   'changing a part rechecks the sum'
@@ -451,24 +454,8 @@ select throws_ok(
 
 select lives_ok(
   $$
-    update public.loan_splits s
-    set amount_minor = case s.part
-      when 'interest' then 5001
-      when 'principal' then 2999
-      else s.amount_minor
-    end
-    from public.transactions t
-    where s.transaction_id = t.id
-      and t.idempotency_key = 'loan:paid';
-    update public.loan_splits s
-    set amount_minor = case s.part
-      when 'interest' then 5000
-      when 'principal' then 3000
-      else s.amount_minor
-    end
-    from public.transactions t
-    where s.transaction_id = t.id
-      and t.idempotency_key = 'loan:paid';
+    select pg_temp.set_amounts('loan:paid', 5001, 2999);
+    select pg_temp.set_amounts('loan:paid', 5000, 3000);
   $$,
   'an amount change that still sums is kept'
 );
@@ -583,7 +570,7 @@ select is(
 select is(
   (
     select bool_or(s.needs_review)
-    from public.loan_splits s
+    from private.loan_parts s
     join public.transactions t on t.id = s.transaction_id
     where t.idempotency_key = 'loan:paid'
   ),
@@ -599,7 +586,7 @@ select lives_ok(
 select is(
   (
     select bool_or(s.needs_review)
-    from public.loan_splits s
+    from private.loan_parts s
     join public.transactions t on t.id = s.transaction_id
     where t.idempotency_key = 'loan:paid'
   ),
@@ -620,7 +607,7 @@ set constraints all deferred;
 select is(
   (
     select bool_and(s.needs_review)
-    from public.loan_splits s
+    from private.loan_parts s
     join public.transactions t on t.id = s.transaction_id
     where t.idempotency_key = 'loan:paid'
   ),
@@ -631,7 +618,7 @@ select is(
 select is(
   (
     select s.amount_minor
-    from public.loan_splits s
+    from private.loan_parts s
     join public.transactions t on t.id = s.transaction_id
     where t.idempotency_key = 'loan:paid' and s.part = 'interest'
   ),
@@ -652,7 +639,7 @@ where idempotency_key = 'loan:paid';
 select is(
   (
     select bool_and(s.needs_review)
-    from public.loan_splits s
+    from private.loan_parts s
     join public.transactions t on t.id = s.transaction_id
     where t.idempotency_key = 'loan:paid'
   ),
@@ -666,11 +653,7 @@ where idempotency_key = 'loan:paid';
 
 select throws_ok(
   $$
-    update public.loan_splits s
-    set needs_review = false
-    from public.transactions t
-    where s.transaction_id = t.id
-      and t.idempotency_key = 'loan:paid';
+    select tests.loan_split_review(t.id, false) from public.transactions t where t.idempotency_key = 'loan:paid';
   $$,
   '23514',
   'loan_split_sum',
@@ -682,11 +665,7 @@ select lives_ok(
     update public.transactions
     set amount_original = 10000
     where idempotency_key = 'loan:paid';
-    update public.loan_splits s
-    set needs_review = false
-    from public.transactions t
-    where s.transaction_id = t.id
-      and t.idempotency_key = 'loan:paid';
+    select tests.loan_split_review(t.id, false) from public.transactions t where t.idempotency_key = 'loan:paid';
   $$,
   'restoring the line amount lets the flag clear'
 );
@@ -695,7 +674,7 @@ set constraints all deferred;
 select is(
   (
     select bool_or(s.needs_review)
-    from public.loan_splits s
+    from private.loan_parts s
     join public.transactions t on t.id = s.transaction_id
     where t.idempotency_key = 'loan:paid'
   ),
@@ -716,7 +695,7 @@ set constraints all deferred;
 select is(
   (
     select bool_and(s.needs_review)
-    from public.loan_splits s
+    from private.loan_parts s
     join public.transactions t on t.id = s.transaction_id
     where t.idempotency_key = 'loan:paid'
   ),
@@ -731,7 +710,7 @@ where idempotency_key = 'loan:paid';
 select is(
   (
     select bool_and(s.needs_review)
-    from public.loan_splits s
+    from private.loan_parts s
     join public.transactions t on t.id = s.transaction_id
     where t.idempotency_key = 'loan:paid'
   ),
@@ -744,11 +723,7 @@ select lives_ok(
     update public.transactions
     set currency = 'USD'
     where idempotency_key = 'loan:paid';
-    update public.loan_splits s
-    set needs_review = false
-    from public.transactions t
-    where s.transaction_id = t.id
-      and t.idempotency_key = 'loan:paid';
+    select tests.loan_split_review(t.id, false) from public.transactions t where t.idempotency_key = 'loan:paid';
   $$,
   'restoring the currency lets the flag clear'
 );
@@ -783,29 +758,20 @@ set constraints all deferred;
 
 select throws_ok(
   $$
-    delete from public.loan_splits s
-    using public.transactions t
-    where s.transaction_id = t.id
-      and t.idempotency_key = 'loan:move'
-      and s.part = 'interest';
-    update public.loan_splits s
-    set transaction_id = dest.id
-    from public.transactions src, public.transactions dest
-    where s.transaction_id = src.id
-      and src.idempotency_key = 'loan:paid'
-      and s.part = 'interest'
-      and dest.idempotency_key = 'loan:move'
-      and dest.company_id = src.company_id;
+    select tests.loan_split(s.transaction_id, s.loan_id, jsonb_agg(jsonb_build_object(
+      'part', s.part, 'amount_minor', s.amount_minor, 'scheduled_minor', s.scheduled_minor,
+      'category_id', s.category_id)))
+    from private.loan_parts s
+    join public.transactions t on t.id = s.transaction_id
+    where t.idempotency_key = 'loan:paid' and s.part <> 'interest'
+    group by s.transaction_id, s.loan_id;
   $$,
   '23514',
   'loan_split_incomplete',
-  'moving a part rechecks the line it left'
+  'taking a part off a line rechecks the line'
 );
 
-delete from public.loan_splits s
-using public.transactions t
-where s.transaction_id = t.id
-  and t.idempotency_key = 'loan:move';
+select tests.loan_split(t.id, null, null) from public.transactions t where t.idempotency_key = 'loan:move';
 
 select lives_ok($$set constraints all immediate$$, 'clearing every part of a line is allowed');
 set constraints all deferred;

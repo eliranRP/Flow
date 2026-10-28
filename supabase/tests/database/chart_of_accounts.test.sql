@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(125);
+select plan(160);
 
 do $users$
 begin
@@ -369,7 +369,7 @@ insert into p152 (label, id) values ('hid', tests.fixture_category(pg_temp.id('c
 update public.categories set hidden = true, ledger_account_id = pg_temp.id('unused') where id = pg_temp.id('hid');
 select is(pg_temp.archive_acct('p152-a6', pg_temp.id('unused'))->'error'->>'message', 'account has linked categories',
   'so does a hidden · ledger category');
-update public.categories set ledger_account_id = null where id = pg_temp.id('hid');
+delete from public.categories where id = pg_temp.id('hid');
 insert into r152 values ('arch', pg_temp.archive_acct('p152-a7', pg_temp.id('unused')));
 select is((select r->>'ok' from r152 where label = 'arch'), 'true', 'an empty account with nothing bound is archived');
 select is(pg_temp.archive_acct('p152-a7', pg_temp.id('unused')), (select r from r152 where label = 'arch'), 'a replay returns the same answer');
@@ -382,7 +382,7 @@ select is((select count(*)::integer from jsonb_array_elements(pg_temp.listed()) 
   'the default list hides it as well');
 select is(pg_temp.update_acct('p152-u12', pg_temp.id('unused'), 'Renamed')->'error'->>'message', 'account is archived',
   'an archived account is not changed');
-select is(pg_temp.bind('p152-b5', pg_temp.id('empty_cat'), pg_temp.id('unused'))->'error'->>'message', 'The write was refused.',
+select is(pg_temp.bind('p152-b5', pg_temp.id('empty_cat'), pg_temp.id('unused'))->'error'->>'message', 'account is archived',
   'a category is not bound to an archived account');
 select is(public.mcp_accounts() is not null, true, 'the old list_accounts signature still works');
 
@@ -548,7 +548,7 @@ select is((select a->>'balance_minor' from sheet152, jsonb_array_elements(s->'cu
 select is((select a->>'balance_minor' from sheet152, jsonb_array_elements(s->'currencies'->0->'equity'->'accounts') a where a->>'name' = 'Owner capital'),
   '20000', 'Owner capital is in equity, credit positive');
 select is((select a->>'balance_minor' from sheet152, jsonb_array_elements(s->'currencies'->0->'assets'->'accounts') a where a->>'name' = 'Bank/Clearing'),
-  '-380000', 'the bank is an asset: 1,000.00 in, 300.00 + 600.00 + 1,500.00 + 1,900.00 out');
+  '-333000', 'the bank is an asset: 1,000.00 in; 300.00, 600.00, 1,500.00, 1,900.00 and three bookings of 10.00 out');
 select is((select s->'currencies'->0->'warnings' from sheet152), '[]'::jsonb, 'no warnings once Suspense is empty');
 select is((pg_temp.sheet('2026-03-14')->'currencies'->0->>'retained_earnings_minor')::bigint, 100000 - 30000 - 60000::bigint,
   'as of a date: the P&L up to then');

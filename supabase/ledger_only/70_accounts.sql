@@ -397,35 +397,12 @@ $n$ || a_branch);
 end
 $undo$;
 
--- 4. Equity and archived accounts where book_line, journal entries and set_category_account take
--- balance-sheet accounts.
+-- 4. Equity and archived accounts: book_line and journal entries (40_book_line) take any balance-sheet
+-- account that is open; set_category_account does here.
 do $bookable$
 declare
   def text;
-  fn text;
-  anchor_type constant text := $a$acct.type in ('asset', 'liability')$a$;
-  pat constant text := $p$(select \* into acct from public\.accounts a\s+where a\.id = \(leg->>'account_id'\)::uuid and a\.company_id = cid);$p$;
-  n integer;
 begin
-  foreach fn in array array[
-    'private.book_line_core(uuid,text,date,text,text,jsonb,uuid,uuid)',
-    'public.mcp_create_journal_entry(text,date,text,text,text,jsonb)'
-  ] loop
-    def := pg_get_functiondef(fn::regprocedure);
-    if pg_temp.anchor_count(def, anchor_type) <> 1 then
-      raise exception '% is not the expected definition (balance-sheet types)', fn;
-    end if;
-    select count(*) into n from regexp_matches(def, pat, 'g');
-    if n <> 1 then
-      raise exception '% is not the expected definition (account lookup)', fn;
-    end if;
-    def := replace(def, anchor_type, $n$acct.type in ('asset', 'liability', 'equity')$n$);
-    -- FOUND is the lookup's: an archived account is refused in words, before the not-found check.
-    def := regexp_replace(def, pat,
-      E'\\1;\n    if found and acct.archived_at is not null then\n      raise exception ''account is archived'';\n    end if;');
-    execute def;
-  end loop;
-
   def := pg_get_functiondef('public.mcp_set_category_account(text,uuid,uuid)'::regprocedure);
   if pg_temp.anchor_count(def, $a$select a.id, a.type, a.is_bank, a.name, a.category_id into acct$a$) <> 1
     or pg_temp.anchor_count(def, $a$if acct.category_id is not null or acct.type not in ('asset', 'liability') or acct.is_bank$a$) <> 1
