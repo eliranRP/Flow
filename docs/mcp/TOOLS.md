@@ -19,7 +19,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_journal_entry`, `set_category_account`, `create_account`, `update_account`, `archive_account`, `restore_account`, `merge_account`, `create_manual_entry`, `attach_document`, `add_transaction_note`, `edit_transaction_note`, `remove_transaction_note`, `remove_transaction_file`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_loan_refinance`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `set_loan_part_category`, `set_loan_category_from`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `reassign_recurring_charge`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_journal_entry`, `set_category_account`, `create_account`, `update_account`, `archive_account`, `restore_account`, `merge_account`, `create_prepaid_schedule`, `attach_prepaid_refund`, `update_prepaid_schedule`, `end_prepaid_schedule`, `delete_prepaid_schedule`, `set_books_closed_through`, `create_manual_entry`, `attach_document`, `add_transaction_note`, `edit_transaction_note`, `remove_transaction_note`, `remove_transaction_file`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_loan_refinance`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `set_loan_part_category`, `set_loan_category_from`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `reassign_recurring_charge`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -116,6 +116,11 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `update_account`, `archive_account`, `restore_account`, `undo` `kind: "account_*"` | `account_id`, `id` | `list_accounts` `accounts[].id` (a company account, `is_system` false) |
 | `merge_account` | `from_account_id`, `into_account_id` | `list_accounts` `accounts[].id`; undo `account_merge` takes the from id |
 | `get_balance_sheet` | `project_id` | `list_projects` |
+| `create_prepaid_schedule` | `transaction_id`, `expense_category_id`, `project_id`, `prepaid_account_id` | `list_review.transaction_id` or `get_expense.id` (a posted expense line), `list_categories` (an expense category counted in the P&L), `list_projects`, `list_accounts` `accounts[].id` (an asset account) |
+| `get_prepaid_schedule`, `update_prepaid_schedule`, `end_prepaid_schedule`, `delete_prepaid_schedule`, `attach_prepaid_refund` | `id`, `schedule_id` | `list_prepaid_schedules` `schedules[].schedule_id` |
+| `attach_prepaid_refund` | `transaction_id` | the refund line: a posted income line |
+| `undo` `kind: "prepaid_create"`, `"prepaid_update"`, `"prepaid_refund"`, `"prepaid_end"`, `"prepaid_delete"` | `id` | the schedule id the write returned |
+| `undo` `kind: "books_closed"` | `id` | the company id `set_books_closed_through` used |
 | `book_line`, `get_line_legs` | `transaction_id` | `list_review.transaction_id`, `get_cash_lines` `rows[].transaction_id`, `search_expenses` rows, or `get_expense.id` |
 | `undo` `kind: "book_line"` / `kind: "line_split"` | `id` | the line id `book_line` returned (`data.id`) |
 | `set_member_role`, `remove_member` | `member_id` | `list_team` `members[].user_id` |
@@ -446,6 +451,81 @@ The price is booked on the kept-out category's own account, Property purchase pr
 Either way the server checks that the legs it derived equal the request, per account, project and sign (a kept-out leg on the balance-sheet account it posts to), and **refuses rather than mis-books** (`book_line: could not represent the legs in the ledger`). A refusal of the arguments is `validation` with `detail`, the field that failed: `legs: legs must balance to 0`, `legs.1.account_id: ...`, `doc_date: not taken with transaction_id (the line keeps its own)`. Other refusals: `legs do not balance`, `exactly one bank leg is required`, `at least one category leg is required`, `the bank leg sign must match the direction`, `book_line: a VAT leg is a later phase` (a leg on VAT control), `book_line: unsupported account — use a category account or a balance-sheet account` (Suspense and the Uncategorized accounts) and `book_line: no kept-out category posts to this account` (the name of the category `book_line` would make is taken by a category counted in the P&L or bound elsewhere). Legs carry no currency: a booking is in the line's one currency, and a leg with a `currency` is `validation`. A leg on another company's account is `The write was refused.`, which does not say whether that account exists.
 
 **The owner reviews what an assistant books (FLOW-955).** A `book_line` or `split_line` write waits in the app's לאישור as "✦ בדיקת פקודת יומן של Jev" while the line is still as the write left it: the proposed entry, אישור (keeps it, `approve_jev_booking`) and ביטול (takes it back through the same branch as `undo`, `undo_jev_booking`; the line returns to its normal assignment). Nothing changes for the tools: the write, its response and its `undo` are as before, and a write the owner approved can still be undone through `undo`. The app books a line itself through `save_line_journal` (the composer, פקודת יומן · עריכה), with `book_line`'s rules; it is a person's booking, so it does not wait for review. Writes made before this change count as reviewed.
+
+## Prepaid schedules and the books-closed date · FLOW-155, FLOW-156
+
+A payment made up front (a year of insurance) is spread over months. Rules for all eight tools:
+
+- A posted month is a normal journal entry: a debit to the expense category on the project, a credit to the Prepaid expenses asset account (reference `prepaid:<schedule>:<seq>`). It moves no cash, so no cash view and no bank total changes. Planned months are not on the books and are in no report.
+- A daily job posts every planned month that is due; a re-run posts nothing. Create, refund, update and end also post what is already due at once, so a start month in the past backfills with the original dates.
+- The total is split over the months rounded to the minor unit; the last month takes the rest (262,100 over 12 is 11 months of 21,842 and one of 21,838). Planned months always add up to what remains (total less posted less refunds).
+- The payment line is filed to a hidden kept-out category bound to the prepaid account. A part of the line (`amount_minor` below the line) splits it; the previous coding is kept so delete and undo restore it.
+- The books-closed date blocks adding, changing or removing a posted month dated on or before it (`refused`, `the books are closed through YYYY-MM-DD`). It guards the prepaid tools only for now.
+- Writes need owner or editor, an `idempotency_key`, and return an `undo_kind`. Reads: any member.
+
+### create_prepaid_schedule
+
+```json
+{ "idempotency_key": "pre-1", "transaction_id": "<payment line>", "expense_category_id": "<category>", "project_id": "<optional project>", "start_month": "2026-01", "months": 12, "amount_minor": 262100, "day_of_month": 1, "prepaid_account_id": "<optional asset account>", "description": "Example Insurance Co, Maple house" }
+```
+
+`start_month` is `YYYY-MM` (a real month), `months` 1 to 120, `day_of_month` 1 to 28 (default the line's day), `amount_minor` a positive integer in minor units, at most the line (default the whole line). `prepaid_account_id` defaults to the account named Prepaid expenses (made when missing). Refused: a line not found, not an expense, not posted, a journal entry or already in a schedule; a category that is not an expense counted in the P&L; an amount above the line; a month due on or before the books-closed date. Output `data`: `{ "schedule_id", "prepaid_account_id", "prepaid_category_id", "total_minor", "rows", "posted_count", "remaining_minor", "undo_kind": "prepaid_create" }`. Undo `prepaid_create` takes the schedule id: it removes the schedule and its entries and restores the line, while it reads as written (else `conflict`); it obeys the books-closed date too.
+
+### list_prepaid_schedules
+
+```json
+{ "status": "active" }
+```
+
+`status` (optional) is `active`, `completed` or `ended`. Output `data`: `{ "books_closed_through": "YYYY-MM-DD" | null, "schedules": [{ "schedule_id", "transaction_id", "description", "project_id", "project_name", "expense_category_id", "expense_category_name", "currency", "total_minor", "posted_minor", "refunded_minor", "remaining_minor", "months", "months_posted", "next_date", "status" }] }`.
+
+### get_prepaid_schedule
+
+```json
+{ "id": "<schedule id>" }
+```
+
+The schedule fields as listed, plus `rows` (`seq`, `due_date`, `amount_minor`, `kind` `amortization` or `end_expense`, `status` `posted` or `planned`, `entry_id`) and `refunds` (`transaction_id`, `amount_minor`). Unknown or another company's: `not_found`.
+
+### attach_prepaid_refund
+
+```json
+{ "idempotency_key": "pre-2", "schedule_id": "<schedule id>", "transaction_id": "<refund line>", "amount_minor": 139703 }
+```
+
+The refund line (a posted income line) is filed to the prepaid category, whole or split when `amount_minor` is below the line (default the whole line, at most what remains). The planned months are spread again over the months left. Output `data`: the schedule with `rows` and `undo_kind: "prepaid_refund"`.
+
+### update_prepaid_schedule
+
+```json
+{ "idempotency_key": "pre-3", "schedule_id": "<schedule id>", "months": 24, "expense_category_id": "<optional>", "project_id": "<optional>" }
+```
+
+At least one of `months` (the new total, above the months already posted), `expense_category_id`, `project_id`. Only planned months change. Output `data`: the schedule with `rows` and `undo_kind: "prepaid_update"`.
+
+### end_prepaid_schedule
+
+```json
+{ "idempotency_key": "pre-4", "schedule_id": "<schedule id>", "from_month": "2026-07", "remaining": "expense" }
+```
+
+Drops the planned months from `from_month` (`YYYY-MM`). `remaining` `expense` books what is left as one last expense in `from_month` (on the schedule's day, posted now if due); `keep` leaves it on the Prepaid account. The schedule becomes `ended`. Output `data`: the schedule with `rows` and `undo_kind: "prepaid_end"`.
+
+### delete_prepaid_schedule
+
+```json
+{ "idempotency_key": "pre-5", "schedule_id": "<schedule id>" }
+```
+
+Removes every posted entry and the schedule, and restores the payment and refund lines' coding. Refused when a posted month is on or before the books-closed date. Output `data`: `{ "schedule_id", "undo_kind": "prepaid_delete" }`.
+
+### set_books_closed_through
+
+```json
+{ "idempotency_key": "close-1", "date": "2026-03-31" }
+```
+
+Owner only. `date` is `YYYY-MM-DD`, not after today, or `null` to open the books. Refused: closing past a due prepaid month not yet posted (`post the due prepaid rows first`). Output `data`: `{ "books_closed_through", "previous", "undo_kind": "books_closed" }`; undo `books_closed` takes the company id and puts the previous date back while it reads as written.
 
 ## Lines from the add sheet · FLOW-369
 

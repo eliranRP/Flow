@@ -5,9 +5,21 @@
 // set_books_closed_through (owner) closes the posted months. The database does the work in
 // mcp_create_prepaid_schedule and its siblings (owner or editor, idempotency key, undo).
 import { z } from "zod";
-import { envelopeOf, fail, isCalendarDate, READ_REFUSED, type ToolResult, type ToolRpc, UUID, WRITE_REFUSED } from "./tools_args.ts";
+import {
+  envelopeOf,
+  fail,
+  isCalendarDate,
+  READ_REFUSED,
+  type ToolResult,
+  type ToolRpc,
+  UUID,
+  WRITE_REFUSED,
+} from "./tools_args.ts";
 
-export const PREPAID_READS = ["list_prepaid_schedules", "get_prepaid_schedule"] as const;
+export const PREPAID_READS = [
+  "list_prepaid_schedules",
+  "get_prepaid_schedule",
+] as const;
 export const PREPAID_WRITES = [
   "create_prepaid_schedule",
   "attach_prepaid_refund",
@@ -33,9 +45,25 @@ export const PREPAID_ALLOWED: Record<string, Set<string>> = {
     "prepaid_account_id",
     "description",
   ]),
-  attach_prepaid_refund: new Set(["idempotency_key", "schedule_id", "transaction_id", "amount_minor"]),
-  update_prepaid_schedule: new Set(["idempotency_key", "schedule_id", "months", "expense_category_id", "project_id"]),
-  end_prepaid_schedule: new Set(["idempotency_key", "schedule_id", "from_month", "remaining"]),
+  attach_prepaid_refund: new Set([
+    "idempotency_key",
+    "schedule_id",
+    "transaction_id",
+    "amount_minor",
+  ]),
+  update_prepaid_schedule: new Set([
+    "idempotency_key",
+    "schedule_id",
+    "months",
+    "expense_category_id",
+    "project_id",
+  ]),
+  end_prepaid_schedule: new Set([
+    "idempotency_key",
+    "schedule_id",
+    "from_month",
+    "remaining",
+  ]),
   delete_prepaid_schedule: new Set(["idempotency_key", "schedule_id"]),
   set_books_closed_through: new Set(["idempotency_key", "date"]),
 };
@@ -74,7 +102,12 @@ const updateSchema = z.object({
   months: MONTHS.optional(),
   expense_category_id: ID.optional(),
   project_id: ID.optional(),
-}).strict().refine((b) => b.months !== undefined || b.expense_category_id !== undefined || b.project_id !== undefined, "nothing to change");
+}).strict().refine(
+  (b) =>
+    b.months !== undefined || b.expense_category_id !== undefined ||
+    b.project_id !== undefined,
+  "nothing to change",
+);
 
 const endSchema = z.object({
   idempotency_key: KEY,
@@ -83,7 +116,8 @@ const endSchema = z.object({
   remaining: z.enum(["expense", "keep"]),
 }).strict();
 
-const deleteSchema = z.object({ idempotency_key: KEY, schedule_id: ID }).strict();
+const deleteSchema = z.object({ idempotency_key: KEY, schedule_id: ID })
+  .strict();
 
 // date: a real calendar day, or null to open the books again. The database refuses a future date.
 const closedSchema = z.object({
@@ -91,7 +125,9 @@ const closedSchema = z.object({
   date: z.string().refine(isCalendarDate).nullable(),
 }).strict();
 
-const LIST_SCHEMA = z.object({ status: z.enum(["active", "completed", "ended"]).nullish() }).strict();
+const LIST_SCHEMA = z.object({
+  status: z.enum(["active", "completed", "ended"]).nullish(),
+}).strict();
 const GET_SCHEMA = z.object({ id: ID }).strict();
 
 export async function prepaidRead(
@@ -175,7 +211,10 @@ export async function prepaidWrite(
     const p = deleteSchema.safeParse(args);
     if (!p.success) return fail("validation", "validation");
     rpcName = "mcp_delete_prepaid_schedule";
-    body = { p_idempotency_key: p.data.idempotency_key, p_schedule_id: p.data.schedule_id };
+    body = {
+      p_idempotency_key: p.data.idempotency_key,
+      p_schedule_id: p.data.schedule_id,
+    };
   } else {
     const p = closedSchema.safeParse(args);
     if (!p.success) return fail("validation", "validation");

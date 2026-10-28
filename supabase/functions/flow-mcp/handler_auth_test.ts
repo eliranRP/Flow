@@ -155,6 +155,8 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "list_accounts",
     "get_account_balances",
     "get_balance_sheet",
+    "list_prepaid_schedules",
+    "get_prepaid_schedule",
     "get_line_legs",
     "get_transaction_thread",
     "assign_expense",
