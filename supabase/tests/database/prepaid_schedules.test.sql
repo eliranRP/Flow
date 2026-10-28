@@ -466,10 +466,12 @@ insert into res values ('cash_before', pg_temp.cash_print());
 select cmp_ok(private.prepaid_post_due(pg_temp.m1(4)), '>=', 3, 'posting the months to come');
 select is(pg_temp.cash_print(), (select r from res where label = 'cash_before'), 'leaves cash_months, cash_month_lines and the bank legs as they were');
 
--- Undo after the job posted: the posts the restored plan does not have go with the write.
-select is(pg_temp.undo('pp-future-2', 'prepaid_update', pg_temp.id('s_future'))->>'ok', 'true', 'undo still works after the job posted');
-select is(pg_temp.amounts(pg_temp.id('s_future')), array[30000, 30000, 30000]::bigint[], 'the three months come back');
-select is(pg_temp.entries(pg_temp.id('s_future')), 0, 'and the job''s posts of the six-month plan are removed');
+-- Undo after the job posted: the schedule no longer reads as the write left it, so undo is a conflict
+-- and keeps the job's posts; delete_prepaid_schedule is the way back.
+select is(pg_temp.undo('pp-future-2', 'prepaid_update', pg_temp.id('s_future'))->'error'->>'code', 'conflict',
+  'undo after the job posted a month is a conflict');
+select is(pg_temp.entries(pg_temp.id('s_future')), 4, 'and the job''s four posts stay');
+select is(pg_temp.delete_pp('pp-future-3', pg_temp.id('s_future'))->'data'->>'entries_removed', '4', 'delete takes them back');
 
 -- The daily job, where pg_cron is installed (the local test databases may lack it).
 create or replace function pg_temp.cron_job()

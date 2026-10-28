@@ -773,9 +773,8 @@ $$;
 comment on function private.prepaid_post_due(date, uuid) is
   'FLOW-155: posts every planned prepaid row due on or before p_today (one schedule, or all: the daily flow-prepaid-post job). Idempotent.';
 
--- A schedule as a write leaves it, to compare and put back: the schedule (completed reads as active,
--- since posting completes it), its rows' plan (posted or not), its refunds, and the coding of its
--- lines and of p_lines.
+-- A schedule as a write leaves it, to compare and put back: the schedule (completed reads as active),
+-- its rows and whether each is posted, its refunds, and the coding of its lines and of p_lines.
 create function private.prepaid_snapshot(p_company uuid, p_schedule uuid, p_lines uuid[])
 returns jsonb
 language sql
@@ -790,7 +789,7 @@ as $$
     ),
     'rows', coalesce((
       select jsonb_agg(jsonb_build_object('seq', r.seq, 'due_date', r.due_date, 'amount_minor', r.amount_minor,
-          'kind', r.kind) order by r.seq)
+          'kind', r.kind, 'posted', r.entry_id is not null) order by r.seq)
       from public.prepaid_rows r where r.company_id = p_company and r.schedule_id = p_schedule
     ), '[]'::jsonb),
     'refunds', coalesce((
@@ -948,7 +947,9 @@ begin
 end;
 $$;
 
--- No delete of a held line or entry, but by the prepaid writers or with its company.
+-- A hard delete of a held line or entry is refused for everyone (a person, a job, a sync), but for
+-- the prepaid writers (flow.prepaid_apply) and a delete that comes with its company. A bank sync only
+-- soft-removes a line (removed_at, void), which the update guard lets through when no user writes.
 create function private.prepaid_line_guard_delete()
 returns trigger
 language plpgsql
@@ -1007,7 +1008,9 @@ create trigger transactions_prepaid_held
     or old.doc_date is distinct from new.doc_date
     or old.cash_date is distinct from new.cash_date
     or old.currency is distinct from new.currency
-    or old.company_id is distinct from new.company_id)
+    or old.company_id is distinct from new.company_id
+    or old.user_assigned is distinct from new.user_assigned
+    or old.category_assigned is distinct from new.category_assigned)
   execute function private.prepaid_line_guard_update();
 
 create trigger transactions_prepaid_held_delete
@@ -1139,9 +1142,8 @@ end;
 $$;
 
 -- The undo of a prepaid write: puts back what the write found while the schedule reads as it left it.
--- Posting is not a change: a month the daily job posted since the write keeps its entry when the
--- restored plan has the same month, else the entry goes with it (and a month due today posts again
--- from the restored plan). The books-closed date still holds.
+-- A month posted since the write (by the daily job or another write) is a change: the undo is a
+-- conflict, and delete_prepaid_schedule is the way back. The months the write posted itself go with it.
 create function private.undo_prepaid_write(p_company uuid, p_write private.mcp_writes)
 returns jsonb
 language plpgsql
