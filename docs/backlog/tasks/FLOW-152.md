@@ -1,6 +1,6 @@
 <a id="flow-152"></a>
 # FLOW-152 · Chart of accounts and the balance sheet from the ledger
-- **Type:** BIG CYCLE (MCP + DB) · **Status:** in-progress (#850) · **Depends on:** FLOW-952, FLOW-953, FLOW-151 · **Source:** owner, 2026-10-28 (spec "manage balance-sheet accounts from the Flow MCP", reviewed in session).
+- **Type:** BIG CYCLE (MCP + DB) · **Status:** done (#850; deployed eacfd73 by the manual ci run of 2026-10-28; prod check by dev lane 1, read-only SQL through the Supabase connector: migration 20261028093217 recorded, 0 legacy tables or functions, 0 unbalanced lines, every company and currency nets to 0, the app serves eacfd73) · **Depends on:** FLOW-952, FLOW-953, FLOW-151 · **Source:** owner, 2026-10-28 (spec "manage balance-sheet accounts from the Flow MCP", reviewed in session).
 - **Files:** `supabase/migrations/<ts>_ledger_only.sql` (new), `supabase/migrations.lock`, `supabase/functions/flow-mcp/` (ledger tools, specs, schemas, tests), `docs/mcp/TOOLS.md`, `supabase/tests/database/` (new chart-of-accounts and balance-sheet tests), `packages/shared/src/database.types.ts`, a new decision.
 
 The ledger is the books, but the chart of accounts is fixed: 12 system accounts, nothing can be created, renamed, archived or merged. A kept-out category with no fitting account sits on Suspense.

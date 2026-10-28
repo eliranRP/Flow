@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(162);
+select plan(164);
 
 do $users$
 begin
@@ -606,6 +606,19 @@ select is(pg_temp.balances(pg_temp.acct('Owner capital')), -20000::bigint, 'and 
 update public.transactions set amount_gross = -61000, amount_net = -61000, amount_original = 61000 where id = pg_temp.id('l_split');
 select is((select count(*)::integer from public.legs where transaction_id = pg_temp.id('l_split') and draft), 2, 'the mismatched split is kept as draft legs');
 select is(pg_temp.sheet('2026-12-31')->'currencies'->0->>'balanced', 'true', 'and the balance sheet balances without them');
+
+-- FLOW-154: a booking holds every leg's account in id order before it reads any, as merge_account
+-- takes its two, so a booking and a merge on the same accounts never wait on each other in a circle.
+select ok(
+  pg_get_functiondef('private.book_line_core(uuid,text,date,text,text,jsonb,uuid,uuid)'::regprocedure) ~ 'kept_out_account\(cid, n\.category_id, null\)[^;]*order by a\.id\s+for share;'
+  and strpos(pg_get_functiondef('private.book_line_core(uuid,text,date,text,text,jsonb,uuid,uuid)'::regprocedure), 'order by a.id')
+    between 1 and strpos(pg_get_functiondef('private.book_line_core(uuid,text,date,text,text,jsonb,uuid,uuid)'::regprocedure), 'select * into acct from public.accounts a'),
+  'book_line holds the legs'' accounts and their kept-out targets for share, in id order, before the per-leg reads');
+select ok(
+  pg_get_functiondef('public.mcp_create_journal_entry(text,date,text,text,text,jsonb)'::regprocedure) ~ 'kept_out_account\(cid, n\.category_id, null\)[^;]*order by a\.id\s+for share;'
+  and strpos(pg_get_functiondef('public.mcp_create_journal_entry(text,date,text,text,text,jsonb)'::regprocedure), 'order by a.id')
+    between 1 and strpos(pg_get_functiondef('public.mcp_create_journal_entry(text,date,text,text,text,jsonb)'::regprocedure), 'select * into acct from public.accounts a'),
+  'create_journal_entry holds the legs'' accounts and their kept-out targets for share, in id order, before the per-leg reads');
 
 select * from finish();
 rollback;

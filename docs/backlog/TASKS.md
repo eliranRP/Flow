@@ -217,6 +217,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-151"></a>[FLOW-151](tasks/FLOW-151.md) | Journal entry income legs and Suspense, and re-attaching a detached loan payment | BUG (MCP + DB) |
 | <a id="flow-152"></a>[FLOW-152](tasks/FLOW-152.md) | Chart of accounts and the balance sheet from the ledger | BIG CYCLE (MCP + DB) |
 | <a id="flow-153"></a>[FLOW-153](tasks/FLOW-153.md) | The ledger is the only write model: cut the legacy split tables and the rollback view | BIG CYCLE (DB + MCP + app) |
+| <a id="flow-154"></a>[FLOW-154](tasks/FLOW-154.md) | Book and merge lock accounts in one order | BACKLOG NIT |
+| <a id="flow-158"></a>[FLOW-158](tasks/FLOW-158.md) | The part writers hold their accounts in id order too | BACKLOG NIT |
 | <a id="flow-920"></a>[FLOW-920](tasks/FLOW-920.md) | Project profit: the month's share and after-overhead rows from the server, and the old profit-month section goes | UI + server (follow-up to FLOW-140) |
 | <a id="flow-930"></a>[FLOW-930](tasks/FLOW-930.md) | A yearly charge shows in this month's forecast at a monthly amount | BUG |
 | <a id="flow-935"></a>[FLOW-935](tasks/FLOW-935.md) | The iPhone Home Screen app moves to a new deploy without a reinstall | BUG |
@@ -475,6 +477,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 | Id | Title | Type |
 | --- | --- | --- |
+| <a id="flow-838"></a>[FLOW-838](tasks/FLOW-838.md) | txn-step e2e: prev and next walk the list is flaky on CI | BUG (e2e) |
 | <a id="flow-705"></a>[FLOW-705](tasks/FLOW-705.md) | Jev anomalies follow-ups (#160 review) | BACKLOG NIT |
 | <a id="flow-706"></a>[FLOW-706](tasks/FLOW-706.md) | Jev fills can't be undone from the app while Jev is off | BUG |
 | <a id="flow-801"></a>[FLOW-801](tasks/FLOW-801.md) | Backups and restore tests | PLAN FIRST |
