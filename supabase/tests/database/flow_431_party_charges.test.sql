@@ -89,16 +89,15 @@ select k || '_' || to_char(d, 'MM'), tests.fixture_line(
 from generate_series('2026-07-01'::date, '2026-10-01'::date, interval '1 month') d, unnest(array['lender_a', 'lender_b']) k;
 -- Before the follow-up, loan A's October payment read against both loans' months together.
 update public.transactions set supplier_id = pg_temp.id('lender') where id in (select id from pc where label like 'lender_%');
-insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review)
-select pg_temp.id('co'), pg_temp.id(case when pc.label like 'lender_a%' then 'loan_a' else 'loan_b' end), pc.id,
-  v.part::public.loan_split_part, v.amount, v.amount,
-  (select c.id from public.categories c where c.company_id = pg_temp.id('co') and c.kind = 'expense' order by c.sort_order limit 1),
-  false
+-- Loan A's principal is 130000 (its payment is 210000), loan B's 100000 (180000).
+select tests.loan_split(pc.id, pg_temp.id(case when pc.label like 'lender_a%' then 'loan_a' else 'loan_b' end),
+  jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount + case when pc.label like 'lender_a%' and v.part = 'principal' then 30000 else 0 end, 'scheduled_minor', v.amount + case when pc.label like 'lender_a%' and v.part = 'principal' then 30000 else 0 end,
+    'category_id', (select c.id from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = v.part::public.loan_split_part),
+    'needs_review', false) order by v.n))
 from pc
-join (values ('principal', 100000), ('interest', 50000), ('escrow', 30000)) v(part, amount) on true
-where pc.label like 'lender_%';
-update public.loan_splits ls set amount_minor = 130000, scheduled_minor = 130000
-where ls.part = 'principal' and ls.transaction_id in (select id from pc where label like 'lender_a%');
+join (values (1, 'interest', 50000), (2, 'escrow', 30000), (3, 'principal', 100000)) v(n, part, amount) on true
+where pc.label like 'lender_%'
+group by pc.id, pc.label;
 -- Store: one category July to September, another in October.
 insert into pc (label, id) values
   ('cat_tools', tests.fixture_category(pg_temp.id('co'), 'Example Tools')),

@@ -95,12 +95,10 @@ values ((select id from jsh_ref where label = 'company_a'), 'income', 'invoice',
 insert into public.review_queue (company_id, transaction_id, status, reason)
 select company_id, id, 'approved', 'test' from public.transactions where idempotency_key = 'sumit:jsh-in';
 -- t3 is split by category.
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, amount_minor)
-select t.company_id, t.id, 1, c.id, 3000
-from public.transactions t
-join public.categories c on c.company_id = t.company_id and c.kind = 'expense'
-where t.id = (select id from jsh_ref where label = 't3')
-order by c.name limit 1;
+select tests.line_split((select id from jsh_ref where label = 't3'), jsonb_build_array(jsonb_build_object(
+  'category_id', (select c.id from public.categories c join public.transactions t on t.company_id = c.company_id
+    where c.kind = 'expense' and t.id = (select id from jsh_ref where label = 't3') order by c.name limit 1),
+  'amount_minor', 3000)));
 -- t5 is removed; t4 is back in review with a newer open row.
 update public.transactions set removed_at = now() where id = (select id from jsh_ref where label = 't5');
 insert into public.review_queue (company_id, transaction_id, status, reason, created_at)

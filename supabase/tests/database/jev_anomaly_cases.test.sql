@@ -95,13 +95,11 @@ create or replace function pg_temp.attach(p_label text, p_loan text)
 returns void
 language sql
 as $$
-  insert into public.loan_splits (
-    company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review
-  )
-  select pg_temp.id('co'), pg_temp.id(p_loan), pg_temp.id(p_label), v.part::public.loan_split_part, v.amount, v.amount,
-    (select c.id from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = v.part::public.loan_split_part),
-    false
-  from (values ('interest', 70000), ('escrow', 20000), ('principal', 10000)) as v(part, amount);
+  select tests.loan_split(pg_temp.id(p_label), pg_temp.id(p_loan), jsonb_agg(jsonb_build_object(
+    'part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+    'category_id', (select c.id from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = v.part::public.loan_split_part),
+    'needs_review', false) order by v.n))
+  from (values (1, 'interest', 70000), (2, 'escrow', 20000), (3, 'principal', 10000)) as v(n, part, amount);
 $$;
 select pg_temp.attach('la', 'loan_A');
 select pg_temp.attach('lb', 'loan_B');

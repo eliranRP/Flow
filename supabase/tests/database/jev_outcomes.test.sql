@@ -196,9 +196,8 @@ select is(
 );
 
 -- A split by category is not compared on category.
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, amount_minor)
-select t.company_id, t.id, 1, (select id from jo_ref where label = 'c1'), 10000
-from public.transactions t where t.id = (select id from jo_ref where label = 't1');
+select tests.line_split((select id from jo_ref where label = 't1'),
+  jsonb_build_array(jsonb_build_object('category_id', (select id from jo_ref where label = 'c1'), 'amount_minor', 10000)));
 update public.review_queue set status = 'approved' where transaction_id = (select id from jo_ref where label = 't1');
 set constraints all immediate;
 set constraints all deferred;
@@ -206,7 +205,7 @@ select ok(
   (select category_match is null and project_match from public.jev_outcomes where transaction_id = (select id from jo_ref where label = 't1')),
   'a line split by category is not compared on category'
 );
-delete from public.line_splits where transaction_id = (select id from jo_ref where label = 't1');
+select tests.line_split((select id from jo_ref where label = 't1'), '[]');
 update public.review_queue set status = 'approved' where transaction_id = (select id from jo_ref where label = 't1');
 set constraints all immediate;
 set constraints all deferred;
@@ -350,11 +349,10 @@ select is(
   3, 't10 to t12 match before the edits'
 );
 update public.transactions set removed_at = now() where id = (select id from jo_ref where label = 't10');
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-select t.company_id, t.id, n, (select id from jo_ref where label = 'c1'),
-  (select id from jo_ref where label = case n when 1 then 'p1' else 'p2' end), 5000
-from public.transactions t, generate_series(1, 2) n
-where t.id = (select id from jo_ref where label = 't11');
+select tests.line_split((select id from jo_ref where label = 't11'), jsonb_agg(jsonb_build_object(
+  'category_id', (select id from jo_ref where label = 'c1'),
+  'project_id', (select id from jo_ref where label = case n when 1 then 'p1' else 'p2' end), 'amount_minor', 5000) order by n))
+from generate_series(1, 2) n;
 update public.transactions set pnl_role = 'overhead', project_id = null
 where id = (select id from jo_ref where label = 't12');
 set constraints all immediate;
@@ -375,19 +373,16 @@ select ok(
 );
 
 -- t11 split again, every part on p2; t12 back on p1 and split {p2, no project}.
-delete from public.line_splits where transaction_id = (select id from jo_ref where label = 't11');
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-select t.company_id, t.id, n, (select id from jo_ref where label = case n when 1 then 'c1' else 'c2' end),
-  (select id from jo_ref where label = 'p2'), 5000
-from public.transactions t, generate_series(1, 2) n
-where t.id = (select id from jo_ref where label = 't11');
+select tests.line_split((select id from jo_ref where label = 't11'), jsonb_agg(jsonb_build_object(
+  'category_id', (select id from jo_ref where label = case n when 1 then 'c1' else 'c2' end),
+  'project_id', (select id from jo_ref where label = 'p2'), 'amount_minor', 5000) order by n))
+from generate_series(1, 2) n;
 update public.transactions set pnl_role = 'project', project_id = (select id from jo_ref where label = 'p1')
 where id = (select id from jo_ref where label = 't12');
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-select t.company_id, t.id, n, (select id from jo_ref where label = 'c1'),
-  case n when 1 then (select id from jo_ref where label = 'p2') end, 5000
-from public.transactions t, generate_series(1, 2) n
-where t.id = (select id from jo_ref where label = 't12');
+select tests.line_split((select id from jo_ref where label = 't12'), jsonb_agg(jsonb_build_object(
+  'category_id', (select id from jo_ref where label = 'c1'),
+  'project_id', case n when 1 then (select id from jo_ref where label = 'p2') end, 'amount_minor', 5000) order by n))
+from generate_series(1, 2) n;
 set constraints all immediate;
 set constraints all deferred;
 select is(

@@ -78,10 +78,9 @@ values
   (pg_temp.id('co'), pg_temp.id('shared'), pg_temp.id('beta'), 5000, -20000);
 
 -- The split line puts a part on Beta under Tools; the rest stays on the line's project.
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-values
-  (pg_temp.id('co'), pg_temp.id('split'), 1, pg_temp.id('materials'), null, 60000),
-  (pg_temp.id('co'), pg_temp.id('split'), 2, pg_temp.id('tools'), pg_temp.id('beta'), 40000);
+select tests.line_split(pg_temp.id('split'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('materials'), 'project_id', null, 'amount_minor', 60000),
+  jsonb_build_object('category_id', pg_temp.id('tools'), 'project_id', pg_temp.id('beta'), 'amount_minor', 40000)));
 
 -- The loan payment's parts.
 insert into public.loans (
@@ -90,10 +89,10 @@ insert into public.loans (
 )
 values (pg_temp.id('co'), 'Example mortgage', 12000000, 60000, 360, '2026-01-01', 80000, 0, 'ILS');
 insert into sfl (label, id) select 'mortgage', id from public.loans where company_id = pg_temp.id('co');
-insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, category_id, scheduled_minor)
-values
-  (pg_temp.id('co'), pg_temp.id('mortgage'), pg_temp.id('loan'), 'interest', 60000, pg_temp.id('interest'), 60000),
-  (pg_temp.id('co'), pg_temp.id('mortgage'), pg_temp.id('loan'), 'principal', 20000, pg_temp.id('draws'), 20000);
+select tests.loan_split(pg_temp.id('loan'), pg_temp.id('mortgage'), jsonb_build_array(
+  jsonb_build_object('part', 'interest', 'amount_minor', 60000, 'scheduled_minor', 60000, 'category_id', pg_temp.id('interest'), 'needs_review', false),
+  jsonb_build_object('part', 'escrow', 'amount_minor', 0, 'scheduled_minor', 0, 'category_id', pg_temp.id('interest'), 'needs_review', false),
+  jsonb_build_object('part', 'principal', 'amount_minor', 20000, 'scheduled_minor', 20000, 'category_id', pg_temp.id('draws'), 'needs_review', false)));
 
 -- Two lines wait for review.
 delete from public.review_queue where company_id = pg_temp.id('co');
@@ -166,10 +165,9 @@ reset role;
 insert into sfl (label, id) values
   ('moved', tests.fixture_line(pg_temp.id('co'), 'sfl:moved', 50000, 'expense',
     pg_temp.id('alpha'), pg_temp.id('materials'), '2026-04-01'));
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-values
-  (pg_temp.id('co'), pg_temp.id('moved'), 1, pg_temp.id('tools'), pg_temp.id('beta'), 30000),
-  (pg_temp.id('co'), pg_temp.id('moved'), 2, pg_temp.id('interest'), pg_temp.id('beta'), 20000);
+select tests.line_split(pg_temp.id('moved'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('tools'), 'project_id', pg_temp.id('beta'), 'amount_minor', 30000),
+  jsonb_build_object('category_id', pg_temp.id('interest'), 'project_id', pg_temp.id('beta'), 'amount_minor', 20000)));
 select tests.authenticate_as('sfl_owner');
 select is((public.search_transactions(p_project => pg_temp.id('alpha')::text, p_to => '2026-04-30')->>'total')::int
   + (public.search_transactions(p_category => pg_temp.id('materials')::text, p_to => '2026-04-30')->>'total')::int,
@@ -178,13 +176,13 @@ select is(pg_temp.keys(public.search_transactions(p_project => pg_temp.id('beta'
   'sfl:moved', 'it is listed under the project its parts name');
 reset role;
 update public.transactions set category_id = pg_temp.id('tools') where id = pg_temp.id('loan');
-update public.loan_splits set needs_review = true where transaction_id = pg_temp.id('loan') and part = 'principal';
+select tests.loan_split_review(pg_temp.id('loan'), true);
 select tests.authenticate_as('sfl_owner');
 select is(pg_temp.keys(public.search_transactions(p_category => pg_temp.id('tools')::text, p_from => '2026-06-16')),
   'sfl:drill,sfl:loan', 'a loan payment with a part waiting for review is listed under its own category');
 reset role;
-update public.loan_splits set needs_review = false where transaction_id = pg_temp.id('loan');
-delete from public.line_splits where transaction_id = pg_temp.id('moved');
+select tests.loan_split_review(pg_temp.id('loan'), false);
+select tests.line_split(pg_temp.id('moved'), '[]');
 update public.transactions set removed_at = now(), category_id = null where id in (pg_temp.id('moved'), pg_temp.id('loan'));
 update public.transactions set removed_at = null where id = pg_temp.id('loan');
 select tests.authenticate_as('sfl_owner');
@@ -281,10 +279,9 @@ insert into sfl (label, id) values
   ('half_out', tests.fixture_line(pg_temp.id('co'), 'sfl:half_out', 10000, 'expense',
     pg_temp.id('alpha'), pg_temp.id('materials'), '2026-03-12'));
 update public.transactions set amount_gross = -5000, amount_net = -5000 where id = pg_temp.id('credit');
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-values
-  (pg_temp.id('co'), pg_temp.id('half_out'), 1, pg_temp.id('materials'), null, 6000),
-  (pg_temp.id('co'), pg_temp.id('half_out'), 2, pg_temp.id('draws'), null, 4000);
+select tests.line_split(pg_temp.id('half_out'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('materials'), 'project_id', null, 'amount_minor', 6000),
+  jsonb_build_object('category_id', pg_temp.id('draws'), 'project_id', null, 'amount_minor', 4000)));
 select tests.authenticate_as('sfl_owner');
 select ok(not (pg_temp.row_of('half_out')->>'kept_out')::boolean,
   'a line split with one part kept out is not kept out (its row counts in full)');

@@ -68,11 +68,12 @@ set customer_id = case when l.party = 'platform' then pg_temp.id('platform') end
 from prc_lines l
 where t.id = pg_temp.id(l.label);
 
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-select pg_temp.id('co'), pg_temp.id(l.label), o.ordinal, pg_temp.id('rent_cat'), pg_temp.id(o.project), o.amount
+select tests.line_split(pg_temp.id(l.label), jsonb_agg(jsonb_build_object('category_id', pg_temp.id('rent_cat'),
+  'project_id', pg_temp.id(o.project), 'amount_minor', o.amount) order by o.ordinal))
 from prc_lines l
 cross join lateral (values (1, 'pine', l.pine), (2, 'oak', l.amount - l.pine)) o(ordinal, project, amount)
-where l.party = 'platform';
+where l.party = 'platform'
+group by l.label;
 
 select tests.authenticate_as('prc_owner');
 
