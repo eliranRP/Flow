@@ -42,10 +42,8 @@ as $$ insert into pg_temp.sweep_ids (kind, id) values (p_kind, p_id) returning i
 
 do $ids$
 begin
-  perform pg_temp.put('a_owner', tests.get_supabase_uid('sweep_a_owner'));
-  perform pg_temp.put('a_viewer', tests.get_supabase_uid('sweep_a_viewer'));
-  perform pg_temp.put('b_owner', tests.get_supabase_uid('sweep_b_owner'));
-  perform pg_temp.put('invitee', tests.get_supabase_uid('sweep_invitee'));
+  perform pg_temp.put('a_owner', tests.get_supabase_uid('sweep_a_owner')); perform pg_temp.put('a_viewer', tests.get_supabase_uid('sweep_a_viewer'));
+  perform pg_temp.put('b_owner', tests.get_supabase_uid('sweep_b_owner')); perform pg_temp.put('invitee', tests.get_supabase_uid('sweep_invitee'));
   insert into auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
   select u.id::text, u.id, jsonb_build_object('sub', u.id::text, 'email', u.email, 'email_verified', true),
     'google', now(), now(), now()
@@ -53,8 +51,7 @@ begin
   -- B and the viewer have a confirmed email too, so the invite functions reach the email comparison
   -- for them rather than stopping at "no confirmed email".
   where u.id in (pg_temp.sid('invitee'), pg_temp.sid('b_owner'), pg_temp.sid('a_viewer'));
-  perform pg_temp.put('company', tests.fixture_company('sweep_a_owner', 'Victim Sample Co'));
-  perform pg_temp.put('b_company', tests.fixture_company('sweep_b_owner', 'Attacker Sample Co'));
+  perform pg_temp.put('company', tests.fixture_company('sweep_a_owner', 'Victim Sample Co')); perform pg_temp.put('b_company', tests.fixture_company('sweep_b_owner', 'Attacker Sample Co'));
   -- The viewer owns a company of its own, so only the company header puts it in A.
   perform pg_temp.put('v_company', tests.fixture_company('sweep_a_viewer', 'Viewer Own Co'));
 end
@@ -100,9 +97,7 @@ begin
   insert into public.suppliers (company_id, name) values (a, 'Victim Sample Supplier') returning id into supplier;
   insert into public.suppliers (company_id, name) values (a, 'Victim Other Supplier') returning id into supplier2;
   insert into public.customers (company_id, name) values (a, 'Victim Sample Customer') returning id into customer;
-  perform pg_temp.put('supplier', supplier);
-  perform pg_temp.put('supplier2', supplier2);
-  perform pg_temp.put('customer', customer);
+  perform pg_temp.put('supplier', supplier); perform pg_temp.put('supplier2', supplier2); perform pg_temp.put('customer', customer);
 
   line := pg_temp.put('line', tests.fixture_line(a, 'Victim expense line', 7654321, 'expense', project, category, d));
   line2 := pg_temp.put('line2', tests.fixture_line(a, 'Victim split line', 6543217, 'expense', project, category, d));
@@ -156,20 +151,24 @@ begin
   )
   values (a, 'Victim Second Mortgage', 23456700, 52000, 240, '2026-02-01', 165432, 0, 'ILS')
   returning id into loan2;
-  perform pg_temp.put('loan', loan);
-  perform pg_temp.put('loan2', loan2);
+  perform pg_temp.put('loan', loan); perform pg_temp.put('loan2', loan2);
   -- FLOW-152: A's own balance-sheet accounts (two to merge, one archived to restore).
   insert into public.accounts (company_id, name, type) values (a, 'Victim Deposits Paid', 'asset') returning id into token; perform pg_temp.put('account', token);
   insert into public.accounts (company_id, name, type) values (a, 'Victim Prepaid', 'asset') returning id into token; perform pg_temp.put('account2', token);
   insert into public.accounts (company_id, name, type, archived_at) values (a, 'Victim Old Deposits', 'asset', now()) returning id into token; perform pg_temp.put('account_archived', token);
+  -- FLOW-155: a free payment and a free refund line; a schedule on account2 with one month posted and a refund.
+  perform pg_temp.put('prepaid_line', tests.fixture_line(a, 'Victim premium', 2413579, 'expense', project, category, d)); perform pg_temp.put('prepaid_refund_line', tests.fixture_line(a, 'Victim premium refund', 135792, 'income', project, income_category, d));
+  token := tests.fixture_line(a, 'Victim paid premium', 2468024, 'expense', project, private.ledger_mirror_category(a, pg_temp.sid('account2'), true), d);
+  insert into public.prepaid_schedules (company_id, transaction_id, prepaid_account_id, prepaid_category_id, expense_category_id, project_id, currency, total_minor, start_month, months, day_of_month, description, prior) values (a, token, pg_temp.sid('account2'), private.ledger_mirror_category(a, pg_temp.sid('account2'), true), category, project, 'ILS', 2468024, date_trunc('month', current_date)::date, 6, 1, 'Victim premium plan', jsonb_build_object('transaction_id', token, 'category_id', category, 'user_assigned', true, 'category_assigned', true, 'category_suggested', false, 'parts', '[]'::jsonb)) returning id into token;
+  perform pg_temp.put('prepaid', token); insert into public.prepaid_refunds (company_id, schedule_id, transaction_id, amount_minor, prior) select a, token, x, 13579, jsonb_build_object('transaction_id', x, 'category_id', income_category, 'user_assigned', true, 'category_assigned', true, 'category_suggested', false, 'parts', '[]'::jsonb) from tests.fixture_line(a, 'Victim small refund', 13579, 'income', project, private.ledger_mirror_category(a, pg_temp.sid('account2'), false), d) x; perform private.prepaid_respread(a, token);
+  perform private.prepaid_post_due(current_date, token);
   insert into public.loan_rates (company_id, loan_id, effective_date, annual_rate_ppm)
   values (a, loan, '2026-06-01', 55000) returning id into token;
   perform pg_temp.put('loan_rate', token); insert into public.loan_category_switches (company_id, loan_id, part, effective_date, category_id) select a, loan, 'interest', '2026-06-01', c.id from public.categories c where c.company_id = a and c.kind = 'expense' and c.loan_part is null order by c.sort_order limit 1; insert into public.transactions (company_id, direction, doc_kind, line_status, amount_gross, amount_net, amount_original, vat_amount, vat_status, doc_date, cash_date, currency, source, idempotency_key, description, category_id, pnl_role, user_assigned, in_cash_override) select a, 'expense', 'other', 'posted', -1000, -1000, 1000, 0, 'unknown', '2026-01-31', '2026-01-31', 'ILS', 'manual', 'sweep:journal', 'Victim depreciation', c.id, 'project', true, false from public.categories c where c.company_id = a and c.kind = 'expense' and not c.excluded_from_pnl and c.loan_part is null order by c.sort_order limit 1 returning id into token; insert into public.journal_entries (transaction_id, company_id, reference) values (token, a, 'Victim JE'); insert into public.journal_counter_legs (company_id, transaction_id, account_id, amount_minor, ordinal) select a, token, x.id, -1000, 1 from public.accounts x where x.company_id = a and x.name = 'Accumulated depreciation'; perform private.post_lines(a, array[token]); -- FLOW-148: a dated switch on A's loan; FLOW-149: a journal entry of A's
   -- A's loan payment, split into its three parts (the loan's own part categories).
   perform tests.loan_split(loan_line, loan, (select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount, 'category_id', (select c.id from public.categories c where c.company_id = a and c.loan_part::text = v.part order by c.sort_order limit 1))) from (values ('interest', 3000000), ('escrow', 432176), ('principal', 2000000)) as v(part, amount)));
   insert into private.category_moves (company_id, from_id, into_id, moved)
-  values (a, category2, category, '[]'::jsonb) returning id into token;
-  perform pg_temp.put('move', token);
+  values (a, category2, category, '[]'::jsonb) returning id into token; perform pg_temp.put('move', token);
 
   insert into public.project_groups (company_id, name) values (a, 'Victim Sample Group') returning id into token;
   perform pg_temp.put('group', token);
@@ -591,7 +590,7 @@ as $$
     when p_hint ~ 'invoice' and p_fn ~ 'link|dismiss' then 'invoice_open'
     when p_hint ~ 'transaction|^id$' and p_fn ~ 'split' and p_fn !~ 'assign|review' then 'line2'
     when p_hint ~ 'transaction' and p_fn ~ 'jev' then 'suggested'
-    when p_hint ~ 'invite' then 'invite'
+    when p_hint ~ 'invite' then 'invite' when p_hint ~ 'schedule|prepaid' then 'prepaid'
     when p_hint ~ 'member|user' then 'a_viewer'
     when p_hint ~ 'loan_rate' then 'loan_rate'
     when p_hint ~ 'loan' then 'loan'
@@ -608,7 +607,7 @@ as $$
     when p_hint ~ 'categor|into' then 'category'
     when p_hint ~ 'project_forecast|forecast_edit' then 'edit'
     when p_hint ~ 'project' then 'project'
-    when p_hint ~ 'company|cash_basis|jev_mode|index_rate|currency|forecast' then 'company'
+    when p_hint ~ 'company|cash_basis|jev_mode|index_rate|currency|forecast|books_closed' then 'company'
     when p_hint ~ 'transaction|line|payment|split|document|manual|from' then 'line'
   end);
 $$;
@@ -682,6 +681,7 @@ $variants$;
 
 -- FLOW-948/950: mcp_book_line gets a balanced set of legs on the victim's own bank and category accounts, so B's call is a real cross-company refusal (not an argument-shape error) and A's owner's reach call is a legitimate booking; once on A's line (p_transaction_id by the name rules, the line's own date, currency and description) and once as a new line.
 insert into pg_temp.sweep_variants (fn, args) select 'mcp_book_line', b.args || v.extra from (values (jsonb_build_object('p_doc_date', 'null::date', 'p_currency', 'null::text', 'p_description', 'null::text')), (jsonb_build_object('p_transaction_id', 'null::uuid'))) v(extra), (select jsonb_build_object('p_direction', pg_temp.lit('expense'::text), 'p_doc_date', pg_temp.lit(current_date), 'p_currency', pg_temp.lit('USD'::text), 'p_description', pg_temp.lit('Sweep booking'::text), 'p_legs', pg_temp.lit(jsonb_build_array(jsonb_build_object('account_id', (select id from public.accounts where company_id = pg_temp.sid('company') and category_id is null and name = 'Bank/Clearing'), 'amount_minor', -1000), jsonb_build_object('account_id', (select id from public.accounts where company_id = pg_temp.sid('company') and category_id is not null and type = 'expense' and not excluded_from_pnl order by name limit 1), 'amount_minor', 1000)))) as args) b; insert into pg_temp.sweep_variants (fn, args) select 'mcp_create_journal_entry', jsonb_build_object('p_doc_date', pg_temp.lit(current_date), 'p_currency', pg_temp.lit('ILS'::text), 'p_description', pg_temp.lit('Sweep booking'::text), 'p_reference', 'null::text', 'p_legs', pg_temp.lit(jsonb_build_array(jsonb_build_object('account_id', (select id from public.accounts where company_id = pg_temp.sid('company') and category_id is not null and type = 'expense' and not excluded_from_pnl order by name limit 1), 'amount_minor', 1000), jsonb_build_object('account_id', (select id from public.accounts where company_id = pg_temp.sid('company') and category_id is null and name = 'Accumulated depreciation'), 'amount_minor', -1000)))); -- FLOW-149
+insert into pg_temp.sweep_variants (fn, args) values ('mcp_create_prepaid_schedule', jsonb_build_object('p_transaction_id', pg_temp.lit(pg_temp.sid('prepaid_line')), 'p_start_month', pg_temp.lit(to_char(current_date, 'YYYY-MM')), 'p_prepaid_account_id', 'null::uuid')), ('mcp_attach_prepaid_refund', jsonb_build_object('p_transaction_id', pg_temp.lit(pg_temp.sid('prepaid_refund_line')))), ('mcp_end_prepaid_schedule', jsonb_build_object('p_from_month', pg_temp.lit(to_char(current_date, 'YYYY-MM')), 'p_remaining', pg_temp.lit('expense'::text))); -- FLOW-155: A's free lines and real months
 
 -- One argument's SQL literal, by its type and name, preferring A's ids.
 create or replace function pg_temp.arg_literal(p_fn text, p_arg text, p_type oid)

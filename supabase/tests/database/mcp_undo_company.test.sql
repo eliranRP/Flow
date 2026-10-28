@@ -235,7 +235,7 @@ insert into muc_sweep (kind, write_id, p_id)
 select k, gen_random_uuid(),
   case
     when k in ('project_forecast', 'index_rate', 'loan_part_category', 'loan_category_from') then null
-    when k in ('cash_basis', 'company', 'loan_order', 'company_currency', 'jev_mode') then pg_temp.id('b')
+    when k in ('cash_basis', 'company', 'loan_order', 'company_currency', 'jev_mode', 'books_closed') then pg_temp.id('b')
     else pg_temp.id('target')
   end
 from unnest(array[
@@ -250,7 +250,8 @@ from unnest(array[
   'invoice_dismiss', 'manual_entry', 'document_attach', 'bank_accounts', 'transfer_match',
   'book_line', 'note_add', 'note_edit', 'note_remove', 'file_remove', 'loan_part_category',
   'loan_category_from', 'journal_entry', 'category_account', 'account_create', 'account_update',
-  'account_archive', 'account_restore', 'account_merge'
+  'account_archive', 'account_restore', 'account_merge', 'prepaid_create', 'prepaid_refund', 'prepaid_update',
+  'prepaid_end', 'prepaid_delete', 'books_closed'
 ]) k;
 update muc_sweep set p_id = write_id where p_id is null;
 
@@ -267,7 +268,7 @@ select s.write_id, pg_temp.id('tok_b'), tests.get_supabase_uid('muc_user'),
     'move_id', t.id, 'effective_date', '2026-01-01', 'written_at', null, 'parts', '[]'::jsonb,
     'undo', '[]'::jsonb, 'row', '{}'::jsonb, 'direction', 'expense', 'connection_id', t.id,
     'in_transaction_id', t.id, 'note_id', t.id, 'file_id', t.id, 'supplier_id', t.id,
-    'part', 'interest', 'moved', '[]'::jsonb, 'account_id', t.id
+    'part', 'interest', 'moved', '[]'::jsonb, 'account_id', t.id, 'schedule_id', t.id
   )
 from muc_sweep s cross join (select pg_temp.id('target') as id) t;
 
@@ -289,7 +290,7 @@ select is(
 );
 select is(
   (select count(*)::int from muc_sweep),
-  66,
+  72,
   'the sweep covers every undo kind but the two forecast ones'
 );
 
@@ -297,7 +298,7 @@ select is(
 select is(
   (select count(*)::int from private.mcp_writes w join muc_sweep s on s.write_id = w.id
    where w.company_id = pg_temp.id('b')),
-  66,
+  72,
   'the swept writes keep the company they were stored with'
 );
 select is(

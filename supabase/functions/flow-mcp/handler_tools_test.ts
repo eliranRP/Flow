@@ -110,6 +110,12 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
     "archive_account",
     "restore_account",
     "merge_account",
+    "create_prepaid_schedule",
+    "attach_prepaid_refund",
+    "update_prepaid_schedule",
+    "end_prepaid_schedule",
+    "delete_prepaid_schedule",
+    "set_books_closed_through",
     "book_line",
     "create_manual_entry",
     "attach_document",
@@ -194,7 +200,7 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
   }), localDeps);
   const readNames = ((await readList.json()).result.tools as { name: string }[]).map((tool) => tool.name);
   assertEquals(readNames.includes("assign_expense"), false, "read token hides writes");
-  assertEquals(readNames.length, 47, "forty-seven reads (FLOW-152 adds get_balance_sheet, FLOW-217 adds get_started, FLOW-514 adds get_setup_suggestions, FLOW-141 adds get_forecast, FLOW-142 adds get_loans_paid, the project forecast adds get_project_forecast_edits, FLOW-938 adds list_bank_connections, FLOW-941 adds list_transfer_matches, FLOW-950 adds list_accounts and get_line_legs, FLOW-517 adds get_weekly_summary, FLOW-957 adds get_transaction_thread, FLOW-149 adds get_account_balances)");
+  assertEquals(readNames.length, 49, "forty-nine reads (FLOW-155 adds list_prepaid_schedules and get_prepaid_schedule, FLOW-152 adds get_balance_sheet, FLOW-217 adds get_started, FLOW-514 adds get_setup_suggestions, FLOW-141 adds get_forecast, FLOW-142 adds get_loans_paid, the project forecast adds get_project_forecast_edits, FLOW-938 adds list_bank_connections, FLOW-941 adds list_transfer_matches, FLOW-950 adds list_accounts and get_line_legs, FLOW-517 adds get_weekly_summary, FLOW-957 adds get_transaction_thread, FLOW-149 adds get_account_balances)");
 });
 
 Deno.test("assign_expenses is one write rate hit for many rows", async () => {

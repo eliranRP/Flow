@@ -58,6 +58,13 @@ export const TOOL_GROUPS: GuideGroup[] = [
     ],
   },
   {
+    id: "prepaid", title: "Prepaid costs and closed books", summary: "Spread a cost paid up front over months, and close the books through a date.",
+    tools: [
+      "create_prepaid_schedule", "list_prepaid_schedules", "get_prepaid_schedule", "attach_prepaid_refund",
+      "update_prepaid_schedule", "end_prepaid_schedule", "delete_prepaid_schedule", "set_books_closed_through",
+    ],
+  },
+  {
     id: "reports", title: "P&L and reports", summary: "Profit by period, project and category.",
     tools: ["get_totals", "get_breakdown", "get_profit_months", "get_weekly_summary"],
   },
@@ -142,6 +149,16 @@ export const WORKFLOWS: GuideWorkflow[] = [
       "list_accounts: pick the accounts to debit and credit.",
       "create_journal_entry: the legs must sum to zero.",
       "get_account_balances: check the balances moved as expected.",
+    ],
+  },
+  {
+    id: "prepaid_spread", title: "Spread a prepaid cost",
+    steps: [
+      "list_review or get_expense: find the payment line (a posted expense, not a journal entry).",
+      "list_categories and list_projects: pick the expense category and the project the cost lands on.",
+      "create_prepaid_schedule: the start month (YYYY-MM), the number of months and, optionally, part of the amount; a past start posts the months already due.",
+      "get_prepaid_schedule: read the rows (posted or planned); each posted month is a journal entry Prepaid to expense and moves no cash.",
+      "attach_prepaid_refund, update_prepaid_schedule or end_prepaid_schedule when the cost changes; set_books_closed_through (owner) locks posted months.",
     ],
   },
   {

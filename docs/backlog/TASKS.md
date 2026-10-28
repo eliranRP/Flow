@@ -219,6 +219,10 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-153"></a>[FLOW-153](tasks/FLOW-153.md) | The ledger is the only write model: cut the legacy split tables and the rollback view | BIG CYCLE (DB + MCP + app) |
 | <a id="flow-154"></a>[FLOW-154](tasks/FLOW-154.md) | Book and merge lock accounts in one order | BACKLOG NIT |
 | <a id="flow-158"></a>[FLOW-158](tasks/FLOW-158.md) | The part writers hold their accounts in id order too | BACKLOG NIT |
+| <a id="flow-155"></a>[FLOW-155](tasks/FLOW-155.md) | Prepaid amortization schedules (MCP) | BIG CYCLE (MCP + DB) |
+| <a id="flow-156"></a>[FLOW-156](tasks/FLOW-156.md) | Books closed through a date | MCP |
+| <a id="flow-157"></a>[FLOW-157](tasks/FLOW-157.md) | Prepaid schedules in the app | PLAN FIRST |
+| <a id="flow-159"></a>[FLOW-159](tasks/FLOW-159.md) | Prepaid: say when a schedule waits on a removed line, and test the job's deadlock skip | BACKLOG NIT |
 | <a id="flow-920"></a>[FLOW-920](tasks/FLOW-920.md) | Project profit: the month's share and after-overhead rows from the server, and the old profit-month section goes | UI + server (follow-up to FLOW-140) |
 | <a id="flow-930"></a>[FLOW-930](tasks/FLOW-930.md) | A yearly charge shows in this month's forecast at a monthly amount | BUG |
 | <a id="flow-935"></a>[FLOW-935](tasks/FLOW-935.md) | The iPhone Home Screen app moves to a new deploy without a reinstall | BUG |
