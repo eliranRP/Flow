@@ -91,7 +91,7 @@ create function pg_temp.parts(p_line text) returns text
 language sql
 as $$
   select coalesce(string_agg(c.name || ':' || abs(s.amount_minor), ',' order by s.ordinal), '')
-  from public.line_splits s join public.categories c on c.id = s.category_id
+  from private.split_parts s join public.categories c on c.id = s.category_id
   where s.transaction_id = pg_temp.id(p_line)
 $$;
 grant execute on function pg_temp.parts(text) to authenticated;
@@ -117,15 +117,12 @@ reset role;
 delete from public.review_queue where transaction_id in (pg_temp.id('gs'), pg_temp.id('os'));
 
 -- A line split between Gone and Spare whose parts fall short of it, so it sits in review as a
--- split mismatch. The split's review sync is deferred; immediate runs it now.
+-- split mismatch. 
 insert into cdm (label, id) values
   ('gm', tests.fixture_line(pg_temp.id('co'), 'cdm:gm', 10000, p_project => pg_temp.id('house'), p_category => pg_temp.id('other')));
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-values
-  (pg_temp.id('co'), pg_temp.id('gm'), 1, pg_temp.id('gone'), pg_temp.id('house'), 3000),
-  (pg_temp.id('co'), pg_temp.id('gm'), 2, pg_temp.id('spare'), pg_temp.id('house'), 5000);
-set constraints all immediate;
-set constraints all deferred;
+select tests.line_split(pg_temp.id('gm'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('gone'), 'project_id', pg_temp.id('house'), 'amount_minor', 3000),
+  jsonb_build_object('category_id', pg_temp.id('spare'), 'project_id', pg_temp.id('house'), 'amount_minor', 5000)));
 select is((select string_agg(reason, ',') from public.review_queue where transaction_id = pg_temp.id('gm') and status = 'open'),
   'split_mismatch', 'the short split line is in review as a split mismatch');
 

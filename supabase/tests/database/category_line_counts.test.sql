@@ -48,15 +48,13 @@ insert into clc (label, id) values
   ('p1', tests.fixture_line(pg_temp.id('co'), 'clc:p1', 5000, p_project => pg_temp.id('house'), p_category => pg_temp.id('paint'))),
   ('ow', tests.fixture_line(pg_temp.id('other_co'), 'clc:ow', 5000, p_category => pg_temp.id('other_wood')));
 update public.transactions set removed_at = now() where id = pg_temp.id('wr');
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-values
-  (pg_temp.id('co'), pg_temp.id('ws'), 1, pg_temp.id('wood'), pg_temp.id('house'), 3000),
-  (pg_temp.id('co'), pg_temp.id('ws'), 2, pg_temp.id('paint'), pg_temp.id('house'), 5000),
-  -- Imported as Empty, then split between Wood and Paint: Empty keeps it as its own category.
-  (pg_temp.id('co'), pg_temp.id('hx'), 1, pg_temp.id('wood'), pg_temp.id('house'), 4000),
-  (pg_temp.id('co'), pg_temp.id('hx'), 2, pg_temp.id('paint'), pg_temp.id('house'), 5000);
-set constraints all immediate;
-set constraints all deferred;
+select tests.line_split(pg_temp.id('ws'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('wood'), 'project_id', pg_temp.id('house'), 'amount_minor', 3000),
+  jsonb_build_object('category_id', pg_temp.id('paint'), 'project_id', pg_temp.id('house'), 'amount_minor', 5000)));
+-- Imported as Empty, then split between Wood and Paint: Empty keeps it as its own category.
+select tests.line_split(pg_temp.id('hx'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('wood'), 'project_id', pg_temp.id('house'), 'amount_minor', 4000),
+  jsonb_build_object('category_id', pg_temp.id('paint'), 'project_id', pg_temp.id('house'), 'amount_minor', 5000)));
 
 -- A loan whose fees part is Bank fees.
 insert into public.loans (

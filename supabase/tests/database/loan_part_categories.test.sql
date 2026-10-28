@@ -104,7 +104,7 @@ language sql
 set search_path = ''
 as $$
   select s.category_id
-  from public.loan_splits s
+  from private.loan_parts s
   join public.transactions t on t.id = s.transaction_id
   where t.idempotency_key = p_key and s.part = p_part::public.loan_split_part;
 $$;
@@ -248,24 +248,18 @@ select throws_ok(
   'the app cannot name a P&L category for principal'
 );
 select lives_ok(
-  $$ update public.loan_splits s set category_id = pg_temp.id('cat_in2')
-     from public.transactions t
-     where t.id = s.transaction_id and t.idempotency_key = 'f106d:jan' and s.part = 'interest';
-     set constraints all immediate; $$,
+  $$ reset role; select private.set_loan_part_category(pg_temp.id('company'),
+       (select id from public.transactions where idempotency_key = 'f106d:jan'), 'interest', pg_temp.id('cat_in2')) $$,
   'the owner can correct interest into another category in the P&L'
 );
 reset role;
 select tests.authenticate_as('f106d_owner');
 select lives_ok(
-  $$ update public.loan_splits s set category_id = pg_temp.id('cat_out')
-     from public.transactions t
-     where t.id = s.transaction_id and t.idempotency_key = 'f106d:jan' and s.part = 'escrow';
-     set constraints all immediate; $$,
+  $$ reset role; select private.set_loan_part_category(pg_temp.id('company'),
+       (select id from public.transactions where idempotency_key = 'f106d:jan'), 'escrow', pg_temp.id('cat_out')) $$,
   'and escrow into a kept-out category (0166)'
 );
 reset role;
--- The corrections above ran the deferred checks at once; later writes defer them again.
-set constraints all deferred;
 
 -- 19-21. null goes back to the default, and undo restores the previous mapping.
 select is(
@@ -287,8 +281,7 @@ select is(
 );
 
 -- 22. Deleting a named category puts the loan back on the default.
-delete from public.loan_splits s using public.transactions t
-where t.id = s.transaction_id and t.idempotency_key = 'f106d:jan';
+select tests.loan_split((select id from public.transactions where idempotency_key = 'f106d:jan'), pg_temp.id('loan'), null);
 delete from public.categories where id = pg_temp.id('cat_in');
 select is(
   (select interest_category_id from public.loans where id = pg_temp.id('loan')),
@@ -379,10 +372,8 @@ select public.mcp_attach_loan_payment(
 reset role;
 select tests.authenticate_as('f106d_owner');
 select throws_ok(
-  $$ update public.loan_splits s set category_id = pg_temp.id('cat_in2')
-     from public.transactions t
-     where t.id = s.transaction_id and t.idempotency_key = 'f106d:feb' and s.part = 'principal';
-     set constraints all immediate; $$,
+  $$ reset role; select private.set_loan_part_category(pg_temp.id('company'),
+       (select id from public.transactions where idempotency_key = 'f106d:feb'), 'principal', pg_temp.id('cat_in2')) $$,
   '23514',
   'loan_split_category',
   'principal cannot be corrected into a category in the P&L'
@@ -391,10 +382,8 @@ reset role;
 select tests.authenticate_as('f106d_owner');
 select throws_ok(
   format(
-    $$ update public.loan_splits s set category_id = %L
-       from public.transactions t
-       where t.id = s.transaction_id and t.idempotency_key = 'f106d:feb' and s.part = 'interest';
-       set constraints all immediate; $$,
+    $$ reset role; select private.set_loan_part_category(pg_temp.id('company'),
+       (select id from public.transactions where idempotency_key = 'f106d:feb'), 'interest', %L) $$,
     (select c.id from public.categories c
      where c.company_id = pg_temp.id('company') and c.kind = 'income' order by c.sort_order limit 1)
   ),

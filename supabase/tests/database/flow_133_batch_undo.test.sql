@@ -4,7 +4,6 @@
 
 begin;
 
-set constraints all immediate;
 
 select plan(21);
 
