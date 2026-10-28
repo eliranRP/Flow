@@ -1,7 +1,7 @@
 -- FLOW-953 (decision 0210). Balance-sheet accounts through book_line: a closing wire, a refinance
--- deposit and a mortgage payment book asset and liability legs; each is mirrored to a kept-out category
--- part, so pnl_lines equals the equivalent split_line booking, the shadow P&L still equals the posting
--- rules (ledger_pnl_diff empty), and get_line_legs reads the legs back on the right accounts. Also owner
+-- deposit and a mortgage payment book asset and liability legs; each is a part in a kept-out category
+-- (decision 0232: the parts are the line's legs), so pnl_lines equals the equivalent split_line booking,
+-- every line's legs still balance, and get_line_legs reads the legs back on the right accounts. Also owner
 -- capital, a transfer pair through Transfers in transit, a security deposit held, the name binding,
 -- list_accounts, undo and the refusals. Invented books only; USD cents.
 
@@ -134,9 +134,13 @@ begin
 end $$;
 grant execute on function pg_temp.as_mcp() to authenticated, service_role;
 
--- The shadow P&L equals the posting rules (FLOW-951's gate), read as the test's superuser.
+-- The lines whose legs on the books do not balance (decision 0232: the legs are the only booking
+-- store), read as the test's superuser.
 create function pg_temp.diff_rows() returns bigint language sql security definer set search_path = '' as $$
-  select count(*) from private.ledger_pnl_diff(pg_temp.id('co'))
+  select count(*) from (
+    select l.transaction_id from public.legs l
+    where l.company_id = pg_temp.id('co') and not l.draft
+    group by l.transaction_id having sum(l.amount_minor) <> 0) x
 $$;
 grant execute on function pg_temp.diff_rows() to authenticated;
 
@@ -166,7 +170,7 @@ select pg_temp.as_mcp();
 create temp table acct as select x from jsonb_array_elements(public.mcp_accounts()->'accounts') x;
 select is((select string_agg(x->>'name' || ':' || (x->>'type') || ':' || (x->>'bookable'), ' ' order by x->>'name')
   from acct x where (x->>'system')::boolean and not (x->>'is_bank')::boolean),
-  'Accumulated depreciation:asset:true Escrow:asset:true Loan principal:liability:true Owner capital:liability:true Property:asset:true Security deposit held:liability:true Suspense:asset:false Transfers in transit:asset:true Uncategorized expense:expense:false Uncategorized income:income:false VAT control:liability:false',
+  'Accumulated depreciation:asset:true Escrow:asset:true Loan principal:liability:true Owner capital:equity:true Property:asset:true Security deposit held:liability:true Suspense:asset:false Transfers in transit:asset:true Uncategorized expense:expense:false Uncategorized income:income:false VAT control:liability:false',
   'balance-sheet system accounts are bookable, except Suspense; VAT control and Uncategorized are not');
 select is((select (x->>'bookable') || '/' || (x->>'posts_to') from acct x where (x->>'id')::uuid = pg_temp.id('a_property_purchase_price')),
   'true/' || pg_temp.id('s_property'), 'a kept-out category account is bookable and says it posts to Property');
@@ -210,10 +214,10 @@ select is((select string_agg(l->>'account_name' || '/' || (l->>'account_type') |
   from wire_legs, jsonb_array_elements(j->'legs') l where l->>'account_type' in ('asset', 'liability') and not (l->>'is_bank')::boolean),
   'Loan principal/liability/כסף שהתקבל מהלוואות Property/asset/Property purchase price',
   'get_line_legs names the balance-sheet account and the category behind each kept-out leg');
-select is(pg_temp.diff_rows(), 0::bigint, 'the shadow P&L still equals the posting rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'every line''s legs still balance');
 
 select is(public.mcp_undo('ba-wire-undo', 'line_split', pg_temp.id('txn_wire'))->>'ok', 'true', 'undo of the wire succeeds');
-select is((select count(*)::int from public.line_splits where transaction_id = pg_temp.id('txn_wire')), 0, 'undo restores the whole line');
+select is((select count(*)::int from private.split_parts where transaction_id = pg_temp.id('txn_wire')), 0, 'undo restores the whole line');
 select is(pg_temp.legs_of(pg_temp.id('txn_wire')), 'a_closing_costs:6490000 s_bank:-6490000', 'its legs are the whole line again');
 
 -- ---------------------------------------------------------------------------
@@ -235,7 +239,7 @@ select is((select hidden::text || '/' || excluded_from_pnl::text || '/' || (ledg
   from public.categories where id = pg_temp.id('c_escrow_hidden')),
   'true/true/true', 'a hidden kept-out "Escrow · ledger" category, bound to Escrow, is made for the escrow leg');
 select is((select string_agg(b.label || ':' || s.amount_minor || ':' || s.gross_up, ' ' order by s.ordinal)
-  from public.line_splits s join ba b on b.id = s.category_id where s.transaction_id = pg_temp.id('txn_refi')),
+  from private.split_parts s join ba b on b.id = s.category_id where s.transaction_id = pg_temp.id('txn_refi')),
   'c_loan_money:50000000:false c_principal:42000000:true c_closing_costs:600000:true c_escrow_hidden:300000:true',
   'the new loan is a normal part; the payoff, closing costs and escrow net against it');
 select is(public.save_line_split(pg_temp.id('txn_refi_twin'), jsonb_build_array(
@@ -250,7 +254,7 @@ select is((select sum(amount_net)::bigint from private.pnl_lines where transacti
 select is(pg_temp.legs_of(pg_temp.id('txn_refi')),
   'a_closing_costs:600000 s_bank:7100000 s_escrow:300000 s_loan:-50000000 s_loan:42000000',
   'the loan legs sit on Loan principal and the escrow on Escrow');
-select is(pg_temp.diff_rows(), 0::bigint, 'after the refinance the shadow P&L still equals the posting rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'after the refinance every line''s legs still balance');
 
 -- ---------------------------------------------------------------------------
 -- 5. A mortgage payment on an existing line: interest, escrow and principal.
@@ -261,7 +265,7 @@ select is(public.mcp_book_line('ba-mortgage', null, 'expense', null, null, jsonb
     pg_temp.leg('s_escrow', 50000),
     pg_temp.leg('s_loan', 60000)), null, pg_temp.id('txn_mortgage'))->>'ok', 'true', 'the mortgage payment books in place');
 select is((select string_agg(b.label || ':' || s.amount_minor, ' ' order by s.ordinal)
-  from public.line_splits s join ba b on b.id = s.category_id where s.transaction_id = pg_temp.id('txn_mortgage')),
+  from private.split_parts s join ba b on b.id = s.category_id where s.transaction_id = pg_temp.id('txn_mortgage')),
   'c_interest:210000 c_escrow_hidden:50000 c_principal:60000', 'the escrow leg reuses the hidden Escrow category; principal is the loan category');
 select is(public.save_line_split(pg_temp.id('txn_mortgage_twin'), jsonb_build_array(
     pg_temp.part('c_interest', 210000, false, null),
@@ -273,7 +277,7 @@ select is((select sum(amount_net)::bigint from private.pnl_lines where transacti
   -210000::bigint, 'only the interest reaches profit');
 select is(pg_temp.legs_of(pg_temp.id('txn_mortgage')), 'a_interest:210000 s_bank:-320000 s_escrow:50000 s_loan:60000',
   'escrow debits Escrow and principal debits Loan principal');
-select is((select count(*)::int from public.loan_splits where transaction_id = pg_temp.id('txn_mortgage')), 0,
+select is((select count(*)::int from private.loan_parts where transaction_id = pg_temp.id('txn_mortgage')), 0,
   'book_line writes no loan split: a tracked loan''s balance moves only through attach_loan_payment');
 
 -- ---------------------------------------------------------------------------
@@ -310,7 +314,7 @@ select is((select c.name || '/' || c.kind || '/' || c.hidden::text from public.t
   join public.categories c on c.id = t.category_id),
   'Security deposit held · ledger/income/true', 'no category posts to Security deposit held, so a hidden income one is made');
 select is((select pg_temp.legs_of((r->'data'->>'id')::uuid) from deposit), 's_bank:150000 s_deposit:-150000', 'the deposit credits Security deposit held');
-select is(pg_temp.diff_rows(), 0::bigint, 'after every booking the shadow P&L still equals the posting rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'after every booking every line''s legs still balance');
 
 -- Undo of a new line removes it; the hidden category stays for the next booking.
 select is(public.mcp_undo('ba-deposit-undo', 'book_line', (select (r->'data'->>'id')::uuid from deposit))->>'ok', 'true',
@@ -377,7 +381,7 @@ select is((select count(*)::int from acct x where (x->>'id')::uuid in (select id
   0, 'list_accounts shows no account of another company');
 select is((select count(*)::int from public.categories where company_id = pg_temp.id('other_co') and hidden), 0,
   'no hidden category was made in another company');
-select is(pg_temp.diff_rows(), 0::bigint, 'at the end the shadow P&L equals the posting rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'at the end every line''s legs balance');
 
 select * from finish();
 rollback;

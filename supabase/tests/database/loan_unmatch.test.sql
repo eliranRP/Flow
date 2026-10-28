@@ -59,14 +59,14 @@ create or replace function pg_temp.attach(p_label text, p_loan text default 'loa
 returns void
 language sql
 as $$
-  insert into public.loan_splits (
-    company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review
-  )
-  select pg_temp.id('co'), pg_temp.id(p_loan), pg_temp.id(p_label), v.part::public.loan_split_part, v.amount, v.amount,
-    (select c.id from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = v.part::public.loan_split_part),
-    false
-  from (values ('interest', 70000), ('escrow', case when p_loan = 'demand' then 0 else 20000 end),
-    ('principal', case when p_loan = 'demand' then 30000 else 10000 end)) as v(part, amount);
+  select tests.loan_split(pg_temp.id(p_label), pg_temp.id(p_loan), (
+    select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+      'category_id', (select c.id from public.categories c
+                      where c.company_id = pg_temp.id('co') and c.loan_part = v.part::public.loan_split_part),
+      'needs_review', false))
+    from (values ('interest', 70000), ('escrow', case when p_loan = 'demand' then 0 else 20000 end),
+      ('principal', case when p_loan = 'demand' then 30000 else 10000 end)) as v(part, amount)
+  ));
 $$;
 
 create or replace function pg_temp.parts(p_label text)
@@ -74,7 +74,7 @@ returns text
 language sql
 as $$
   select coalesce(string_agg(s.part || ':' || s.amount_minor || ':' || s.needs_review, ',' order by s.part), '')
-  from public.loan_splits s where s.transaction_id = pg_temp.id(p_label);
+  from private.loan_parts s where s.transaction_id = pg_temp.id(p_label);
 $$;
 grant execute on function pg_temp.parts(text) to authenticated, service_role;
 
@@ -166,6 +166,7 @@ select is(pg_temp.parts('txn_mcp'), 'interest:70000:false,escrow:20000:false,pri
   'with the same parts');
 select is((public.get_loan_split(pg_temp.id('txn_mcp'))->>'by_parts')::boolean, true, 'counted by parts again');
 select lives_ok('set constraints all immediate', 'the restored parts pass the deferred loan checks');
+set constraints all deferred;
 select is(public.mcp_undo('lun-u2', 'loan_detach', pg_temp.id('txn_mcp'))->'error'->>'code', 'not_found',
   'a second undo finds nothing to undo');
 
