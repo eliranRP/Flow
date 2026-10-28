@@ -21,6 +21,13 @@ export const LEDGER_READ_SPECS = [
     as_of: { type: ["string", "null"] },
     project_id: { type: ["string", "null"] },
   }, false),
+  spec("get_pnl_statement", "The P&L as a statement (FLOW-160), the one the reports screen and its PDF show. from and to (YYYY-MM-DD, both or neither; neither is all time), basis (cash or invoiced, default the company's), and either project_id (one project, a shared cost as its allocation) or by_project true (a statement per project key: each project, overhead and unassigned), not both. Output: from, to, basis, project_id, project_name, by_project, currencies[] (the company's or the project's statement per currency: currency, income_minor, expense_minor, net_minor, income[] and expense[] categories largest first, each { id, name, amount_minor, count, own_minor, children[] } where a parent holds its sub-categories (children, each { id, name, amount_minor, count }) and own_minor is its own lines, and kept_out[] { id, name, direction, amount_minor, count, account_name, account_type }, the categories kept out of the P&L and the balance-sheet account each posts to), projects[] (by_project only: { key, project_id, name, currencies[] the same shape }; key overhead and unassigned have no project_id), and review_count (open review items in the range). Amounts are minor units of their currency, income and cost both positive; currencies are never added together. The totals equal get_breakdown's for the same range and basis. Another company's project is not_found.", {
+    from: { type: ["string", "null"] },
+    to: { type: ["string", "null"] },
+    project_id: { type: ["string", "null"] },
+    by_project: { type: "boolean" },
+    basis: { type: ["string", "null"] },
+  }, false),
   ...PREPAID_READ_SPECS,
 ];
 

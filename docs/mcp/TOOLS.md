@@ -116,6 +116,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `update_account`, `archive_account`, `restore_account`, `undo` `kind: "account_*"` | `account_id`, `id` | `list_accounts` `accounts[].id` (a company account, `is_system` false) |
 | `merge_account` | `from_account_id`, `into_account_id` | `list_accounts` `accounts[].id`; undo `account_merge` takes the from id |
 | `get_balance_sheet` | `project_id` | `list_projects` |
+| `get_pnl_statement` | `project_id` | `list_projects` |
 | `create_prepaid_schedule` | `transaction_id`, `expense_category_id`, `project_id`, `prepaid_account_id` | `list_review.transaction_id` or `get_expense.id` (a posted expense line), `list_categories` (an expense category counted in the P&L), `list_projects`, `list_accounts` `accounts[].id` (an asset account) |
 | `get_prepaid_schedule`, `update_prepaid_schedule`, `end_prepaid_schedule`, `delete_prepaid_schedule`, `attach_prepaid_refund` | `id`, `schedule_id` | `list_prepaid_schedules` `schedules[].schedule_id` |
 | `attach_prepaid_refund` | `transaction_id` | the refund line: a posted income line |
@@ -621,6 +622,18 @@ Merge one company account into another of the same type (owner or editor): the c
 ```
 
 The balance sheet from the legs (any member, `mcp_balance_sheet`; FLOW-152). Per currency: `assets`, `liabilities` and `equity` (each `{ total_minor, accounts: [{ account_id, name, is_system, balance_minor }] }`, zero balances left out), `retained_earnings_minor` (the running P&L: minus the income and expense legs), `total_assets_minor`, `total_liabilities_and_equity_minor`, `difference_minor`, `balanced` (assets = liabilities + equity + retained earnings) and `warnings` (`suspense` or `uncategorized`: that account is not zero). Debit is positive; liabilities and equity show credit as positive. **Rule:** a line's legs count from the line's `doc_date` (the bank leg too), on posted lines that are not removed; draft legs are not on the books. `as_of` defaults to today. `project_id` keeps the legs filed to that project (an entry that spans projects may then not balance on its own).
+
+### get_pnl_statement
+
+```json
+{ "from": "2026-01-01", "to": "2026-10-31", "project_id": "<optional project id>", "by_project": false, "basis": "cash" }
+```
+
+The P&L as a statement (any member, `get_pnl_statement`; FLOW-160): the one the reports screen and its PDF show, so the three read the same numbers. `from` and `to` are both given or both left out (all time); `from` after `to` is `validation`. `basis` is `cash` or `invoiced` (default the company's). `project_id` reads one project, with a shared cost as its allocation; `by_project: true` adds a statement per project key; both together is `validation`. Output `data`: `from`, `to`, `basis`, `project_id`, `project_name`, `by_project`, `currencies[]`, `projects[]` and `review_count` (open review items on posted lines in the range, and on the project when one is named).
+
+Each `currencies[]` row is one currency's statement, never converted: `currency`, `income_minor`, `expense_minor`, `net_minor` (income minus cost; both are positive), `income[]` and `expense[]` (categories, largest first: `id`, `name`, `amount_minor`, `count`, `own_minor` and `children[]`; a parent category holds its sub-categories, each `{ id, name, amount_minor, count }`, and `own_minor` is its own lines; a category with no sub-categories has none; `id` and `name` are null for lines with no category) and `kept_out[]` (the categories kept out of the P&L: `id`, `name`, `direction`, `amount_minor`, `count`, and `account_name` / `account_type`, the balance-sheet account their legs post to). With `by_project`, `currencies` is still the company's and `projects[]` holds `{ key, project_id, name, currencies[] }` per key: each project, then `overhead` (overhead costs) and `unassigned` (lines with no project), whose `project_id` and `name` are null.
+
+**Rule:** the rows are `get_breakdown`'s, so the totals are its totals for the same range and basis: the company's by category, a project's and each `projects[]` key's by project. The projects add up to the company within 1 minor unit per shared part. Another company's project, or an unknown one, is `not_found`.
 
 ### create_manual_entry
 

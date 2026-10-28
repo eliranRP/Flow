@@ -1689,6 +1689,9 @@ isOneToOne: false
 "get_notification_prefs":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"get_pnl_statement":
+{ Args: { "p_basis"?: string,"p_by_project"?: boolean,"p_from"?: string,"p_project_id"?: string,"p_to"?: string }; Returns: Json
+                           },
 "get_profit_months":
 { Args: { "p_basis"?: string,"p_from"?: string,"p_project_id"?: string,"p_to"?: string }; Returns: Json
                            },
