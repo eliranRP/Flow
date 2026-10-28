@@ -368,6 +368,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-946"></a>[FLOW-946](tasks/FLOW-946.md) | Gross-up split parts: an opposite-sign part that nets against the line | FEATURE |
 | <a id="flow-947"></a>[FLOW-947](tasks/FLOW-947.md) | Gross-up contra effect: a gross-up part on either kind, nets its own category | FEATURE |
 | <a id="flow-949"></a>[FLOW-949](tasks/FLOW-949.md) | A normal cost and its gross-up contra credit on the same category and project | BUG |
+| <a id="flow-984"></a>[FLOW-984](tasks/FLOW-984.md) | Review loads its open items in pages, not all at once | PLAN FIRST |
 
 ## Projects and reports
 
