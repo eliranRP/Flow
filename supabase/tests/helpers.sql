@@ -271,3 +271,50 @@ grant execute on function tests.fixture_project(uuid, text, text) to postgres, s
 grant execute on function tests.fixture_category(uuid, text, text, boolean) to postgres, service_role;
 grant execute on function tests.fixture_line(uuid, text, bigint, text, uuid, uuid, date, text, text, text, text, text, boolean)
   to postgres, service_role;
+
+-- Decision 0232: a line's parts are its item legs. These replace the inserts into the old
+-- line_splits and loan_splits tables. Call them as postgres.
+-- tests.line_split(line, '[{"category_id": …, "project_id": … or null, "amount_minor": 3000,
+--   "gross_up": false}, …]') replaces the line's split by category (parts in order; [] clears it).
+create or replace function tests.line_split(p_txn uuid, p_parts jsonb)
+returns void
+language plpgsql
+set search_path = ''
+as $$
+begin
+  perform private.set_line_parts(
+    (select t.company_id from public.transactions t where t.id = p_txn), p_txn, p_parts);
+end;
+$$;
+
+-- tests.loan_split(line, loan, '[{"part": "interest", "amount_minor": 1000, "scheduled_minor": 1000,
+--   "category_id": …, "needs_review": false}, …]') replaces the line's loan payment parts.
+create or replace function tests.loan_split(p_txn uuid, p_loan uuid, p_parts jsonb)
+returns void
+language plpgsql
+set search_path = ''
+as $$
+begin
+  perform private.set_loan_parts(
+    (select t.company_id from public.transactions t where t.id = p_txn), p_txn, p_loan, p_parts);
+end;
+$$;
+
+-- tests.loan_split_review(line, true) flags the line's loan parts as a re-sync would; false clears them.
+create or replace function tests.loan_split_review(p_txn uuid, p_needs_review boolean)
+returns void
+language plpgsql
+set search_path = ''
+as $$
+begin
+  perform private.set_loan_parts_review(
+    (select t.company_id from public.transactions t where t.id = p_txn), p_txn, p_needs_review);
+end;
+$$;
+
+revoke all on function tests.line_split(uuid, jsonb) from public, anon, authenticated;
+revoke all on function tests.loan_split(uuid, uuid, jsonb) from public, anon, authenticated;
+revoke all on function tests.loan_split_review(uuid, boolean) from public, anon, authenticated;
+grant execute on function tests.line_split(uuid, jsonb) to postgres, service_role;
+grant execute on function tests.loan_split(uuid, uuid, jsonb) to postgres, service_role;
+grant execute on function tests.loan_split_review(uuid, boolean) to postgres, service_role;

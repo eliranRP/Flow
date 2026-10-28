@@ -125,8 +125,9 @@ begin
 
   insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
   values (a, line, project, 10000, -7654321);
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-  values (a, line2, 1, category, project, 4000000), (a, line2, 2, category2, project2, 2543217);
+  perform tests.line_split(line2, jsonb_build_array(
+    jsonb_build_object('category_id', category, 'project_id', project, 'amount_minor', 4000000),
+    jsonb_build_object('category_id', category2, 'project_id', project2, 'amount_minor', 2543217)));
   insert into public.overhead (company_id, transaction_id) values (a, line);
   insert into public.reassign_undo (company_id, transaction_id, prior_project_id, prior_user_assigned, prior_allocations)
   values (a, line, project2, true, '[]'::jsonb)
@@ -161,15 +162,13 @@ begin
   perform pg_temp.put('loan2', loan2);
   insert into public.loan_rates (company_id, loan_id, effective_date, annual_rate_ppm)
   values (a, loan, '2026-06-01', 55000) returning id into token;
-  perform pg_temp.put('loan_rate', token); insert into public.loan_category_switches (company_id, loan_id, part, effective_date, category_id) select a, loan, 'interest', '2026-06-01', c.id from public.categories c where c.company_id = a and c.kind = 'expense' and c.loan_part is null order by c.sort_order limit 1; insert into public.transactions (company_id, direction, doc_kind, line_status, amount_gross, amount_net, amount_original, vat_amount, vat_status, doc_date, cash_date, currency, source, idempotency_key, description, category_id, pnl_role, user_assigned, in_cash_override) select a, 'expense', 'other', 'posted', -1000, -1000, 1000, 0, 'unknown', '2026-01-31', '2026-01-31', 'ILS', 'manual', 'sweep:journal', 'Victim depreciation', c.id, 'project', true, false from public.categories c where c.company_id = a and c.kind = 'expense' and not c.excluded_from_pnl and c.loan_part is null order by c.sort_order limit 1 returning id into token; insert into public.journal_entries (transaction_id, company_id, reference) values (token, a, 'Victim JE'); insert into public.journal_counter_legs (company_id, transaction_id, account_id, amount_minor, ordinal) select a, token, x.id, -1000, 1 from public.accounts x where x.company_id = a and x.name = 'Accumulated depreciation'; perform private.rebuild_legs_many(a, array[token]); -- FLOW-148: a dated switch on A's loan; FLOW-149: a journal entry of A's
-  insert into public.loan_splits (
-    company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-  )
-  select a, loan, loan_line, 'interest', 5432176, 5432176, c.id
-  from public.categories c
-  where c.company_id = a and c.kind = 'expense'
-  order by c.sort_order
-  limit 1;
+  perform pg_temp.put('loan_rate', token); insert into public.loan_category_switches (company_id, loan_id, part, effective_date, category_id) select a, loan, 'interest', '2026-06-01', c.id from public.categories c where c.company_id = a and c.kind = 'expense' and c.loan_part is null order by c.sort_order limit 1; insert into public.transactions (company_id, direction, doc_kind, line_status, amount_gross, amount_net, amount_original, vat_amount, vat_status, doc_date, cash_date, currency, source, idempotency_key, description, category_id, pnl_role, user_assigned, in_cash_override) select a, 'expense', 'other', 'posted', -1000, -1000, 1000, 0, 'unknown', '2026-01-31', '2026-01-31', 'ILS', 'manual', 'sweep:journal', 'Victim depreciation', c.id, 'project', true, false from public.categories c where c.company_id = a and c.kind = 'expense' and not c.excluded_from_pnl and c.loan_part is null order by c.sort_order limit 1 returning id into token; insert into public.journal_entries (transaction_id, company_id, reference) values (token, a, 'Victim JE'); insert into public.journal_counter_legs (company_id, transaction_id, account_id, amount_minor, ordinal) select a, token, x.id, -1000, 1 from public.accounts x where x.company_id = a and x.name = 'Accumulated depreciation'; perform private.post_lines(a, array[token]); -- FLOW-148: a dated switch on A's loan; FLOW-149: a journal entry of A's
+  -- A's loan payment, split into its three parts (the loan's own part categories).
+  perform tests.loan_split(loan_line, loan, (
+    select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+      'category_id', (select c.id from public.categories c
+                      where c.company_id = a and c.loan_part::text = v.part order by c.sort_order limit 1)))
+    from (values ('interest', 3000000), ('escrow', 432176), ('principal', 2000000)) as v(part, amount)));
   insert into private.category_moves (company_id, from_id, into_id, moved)
   values (a, category2, category, '[]'::jsonb) returning id into token;
   perform pg_temp.put('move', token);
