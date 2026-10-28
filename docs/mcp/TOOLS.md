@@ -19,7 +19,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_journal_entry`, `set_category_account`, `create_manual_entry`, `attach_document`, `add_transaction_note`, `edit_transaction_note`, `remove_transaction_note`, `remove_transaction_file`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_loan_refinance`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `set_loan_part_category`, `set_loan_category_from`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `reassign_recurring_charge`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_journal_entry`, `set_category_account`, `create_account`, `update_account`, `archive_account`, `restore_account`, `merge_account`, `create_manual_entry`, `attach_document`, `add_transaction_note`, `edit_transaction_note`, `remove_transaction_note`, `remove_transaction_file`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_loan_refinance`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `set_loan_part_category`, `set_loan_category_from`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `reassign_recurring_charge`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -113,6 +113,9 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "journal_entry"` | `id` | the line id `create_journal_entry` returned |
 | `set_category_account` | `category_id`, `account_id` | `list_categories` (a kept-out category), `list_accounts` `accounts[].id` (an asset or liability system account) |
 | `undo` `kind: "category_account"` | `id` | the category id `set_category_account` took |
+| `update_account`, `archive_account`, `restore_account`, `undo` `kind: "account_*"` | `account_id`, `id` | `list_accounts` `accounts[].id` (a company account, `is_system` false) |
+| `merge_account` | `from_account_id`, `into_account_id` | `list_accounts` `accounts[].id`; undo `account_merge` takes the from id |
+| `get_balance_sheet` | `project_id` | `list_projects` |
 | `book_line`, `get_line_legs` | `transaction_id` | `list_review.transaction_id`, `get_cash_lines` `rows[].transaction_id`, `search_expenses` rows, or `get_expense.id` |
 | `undo` `kind: "book_line"` / `kind: "line_split"` | `id` | the line id `book_line` returned (`data.id`) |
 | `set_member_role`, `remove_member` | `member_id` | `list_team` `members[].user_id` |
@@ -357,8 +360,10 @@ The ledger (decision [0208](../decisions/0208-balanced-legs-ledger.md)) resolves
 ### list_accounts
 
 ```json
-{}
+{ "include_archived": false }
 ```
+
+FLOW-152 adds per account `is_system` (one of the 12 locked system accounts; `system` says the same), `archived`, `description`, `balances` (`[{ currency, balance_minor }]`, debit positive, legs on the books only) and `categories` (`[{ id, name, hidden }]` bound to it); `type` may also be `equity` (Owner capital is equity). Archived company accounts are hidden unless `include_archived` is true, and an archived account is not `bookable`. `bookable` also covers the company's own open asset, liability and equity accounts.
 
 The company's chart of accounts (any member, `mcp_accounts`). `accounts[]`: `id` (the `account_id` `book_line` takes), `name`, `type` (`income`, `expense`, `asset` or `liability`), `category_id` (null for a system account), `system`, `is_bank` (the one bank account every booking hits), `excluded_from_pnl`, `loan_part`, `hidden`, `bookable` (what `book_line` takes: the bank, every category account, and every asset or liability system account except Suspense and VAT control) and `posts_to` (FLOW-953, on a kept-out category's account: the balance-sheet account its legs land on; null otherwise). A category's account reads the category's **live** name, kind and P&L flag, and its stored copy follows every rename and keep-out. System accounts come first: Bank/Clearing, Loan principal (liability), Escrow (asset), Owner capital (liability), Security deposit held (liability), Transfers in transit (asset), Property (asset), Accumulated depreciation (asset, credited by depreciation; FLOW-149), Suspense, VAT control, Uncategorized income and Uncategorized expense.
 
@@ -487,6 +492,54 @@ The balance-sheet account a kept-out category's legs land on, its `posts_to` in 
 The category's lines are posted again: their legs move to the account, and no P&L figure moves (the P&L reads the category, not the account). A journal entry already booked keeps its legs. Refused: a category counted in the P&L (`the category is counted in the P&L`), a loan part category (`a loan part category posts by its part`), any other account (`a category posts only to a balance-sheet account`); another company's account or an unknown one `The write was refused.`; another company's category `category not found`.
 
 Output `data`: `{ "category_id", "account_id", "posts_to", "posts_to_name", "previous_account_id", "undo_kind": "category_account" }`. Undo `kind: "category_account"` takes the category id and puts the binding back while it is still the one written; otherwise `conflict`.
+
+### create_account
+
+```json
+{ "idempotency_key": "acct-1", "name": "Deposits paid", "type": "asset", "description": "Deposits we paid out" }
+```
+
+Add a balance-sheet account to the chart (owner or editor; FLOW-152). `type` is `asset`, `liability` or `equity`; `name` 1 to 60 characters; `description` optional, up to 200. A system name (Suspense, Property, Owner capital, ...) is refused (`that name belongs to a system account`), as is a name already used (`account already exists`, case ignored). Output `data`: `{ "id", "name", "type", "description", "is_system": false, "archived": false, "archived_at", "undo_kind": "account_create" }`. Undo `kind: "account_create"` takes the account id and deletes it while it has no legs, journal legs or bound categories and still reads as written.
+
+### update_account
+
+```json
+{ "idempotency_key": "acct-2", "account_id": "<account id>", "name": "Deposits paid out", "description": "", "type": "asset" }
+```
+
+Rename, describe (an empty `description` clears it) or retype a company account; give at least one field. The `type` changes only while the account has no legs (`account has postings, so its type can't change`). Refused: a system account (`system account can't be changed`), a category's account (`category account can't be changed`), an archived account (`account is archived`), a reserved or used name, and a call that changes nothing (`nothing to change`). Output `data`: the account plus `undo_kind: "account_update"`; undo takes the account id and puts the old values back while it reads as written (else `conflict`).
+
+### archive_account
+
+```json
+{ "idempotency_key": "acct-3", "account_id": "<account id>" }
+```
+
+Archive a company account no longer used: it leaves `list_accounts` (unless `include_archived`) and is not bookable by `book_line`, `create_journal_entry` or `set_category_account` (`account is archived`). Refused: a system account; a balance in any project and currency on the books (`account has a balance of 388.00`); a category bound to it, a hidden `· ledger` category included (`account has linked categories`). Output `data`: the account plus `undo_kind: "account_archive"`; undo takes the account id and opens it again while it is still archived by that write.
+
+### restore_account
+
+```json
+{ "idempotency_key": "acct-4", "account_id": "<account id>" }
+```
+
+Open an archived company account again (`account is not archived` when it is open). Output `data`: the account plus `undo_kind: "account_restore"`; undo archives it again while it has no balance or bound category.
+
+### merge_account
+
+```json
+{ "idempotency_key": "acct-5", "from_account_id": "<account to merge away>", "into_account_id": "<account to keep>" }
+```
+
+Merge one company account into another of the same type (owner or editor): the categories bound to `from` (hidden `· ledger` ones too) and its journal entry legs move to `into`, their lines are posted again, and `from` is archived. Only balance-sheet legs move, so no P&L figure moves. `into` may be a system account (not the bank, Suspense or VAT control); `from` may not. Refused: the same account (`pick a different account`), different types (`accounts must be the same type`), an archived account, a category's account or Suspense as the target (`the account must be a balance-sheet account`). Output `data`: `{ "from", "into", "categories_moved", "journal_legs_moved", "undo_kind": "account_merge" }`. Undo `kind: "account_merge"` takes the FROM account id and moves everything back while it reads as written (else `conflict`).
+
+### get_balance_sheet
+
+```json
+{ "as_of": "2026-03-31", "project_id": "<optional project id>" }
+```
+
+The balance sheet from the legs (any member, `mcp_balance_sheet`; FLOW-152). Per currency: `assets`, `liabilities` and `equity` (each `{ total_minor, accounts: [{ account_id, name, is_system, balance_minor }] }`, zero balances left out), `retained_earnings_minor` (the running P&L: minus the income and expense legs), `total_assets_minor`, `total_liabilities_and_equity_minor`, `difference_minor`, `balanced` (assets = liabilities + equity + retained earnings) and `warnings` (`suspense` or `uncategorized`: that account is not zero). Debit is positive; liabilities and equity show credit as positive. **Rule:** a line's legs count from the line's `doc_date` (the bank leg too), on posted lines that are not removed; draft legs are not on the books. `as_of` defaults to today. `project_id` keeps the legs filed to that project (an entry that spans projects may then not balance on its own).
 
 ### create_manual_entry
 

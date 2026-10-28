@@ -868,6 +868,8 @@ begin
         order by t.id
         for update;
         for item in
+          -- split_id keeps the undo payload's shape; a part's leg is rewritten on every posting, so the undo
+          -- finds the part by its line and part.
           select s.leg_id as split_id, s.transaction_id, s.category_id, t.doc_date
           from private.loan_parts s
           join public.transactions t on t.id = s.transaction_id and t.company_id = s.company_id
@@ -1040,6 +1042,8 @@ begin
       response := private.mcp_refused(refusal);
     else
       for item in
+        -- split_id keeps the undo payload's shape; a part's leg is rewritten on every posting, so the undo
+        -- finds the part by its line and part.
         select s.leg_id as split_id, s.transaction_id, s.loan_id, s.category_id, t.doc_date
         from private.loan_parts s
         join public.transactions t on t.id = s.transaction_id and t.company_id = s.company_id

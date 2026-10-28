@@ -105,7 +105,7 @@ begin
     where company_id = p_company and category_id is null
   ),
   parts as materialized (
-    select l.id, l.transaction_id, l.category_id, l.project_id, l.project_explicit, abs(l.amount_minor) as m,
+    select l.id, l.created_at, l.transaction_id, l.category_id, l.project_id, l.project_explicit, abs(l.amount_minor) as m,
       l.gross_up, l.split_part, l.part_ordinal, l.loan_id, l.part, l.scheduled_minor, l.needs_review,
       l.part_percent, l.part_rest
     from public.legs l
@@ -151,7 +151,8 @@ begin
       coalesce(c.kind::text, x.direction::text) as kind, c.loan_part,
       p.part, false as gross_up, false as loan_split_fallback,
       false as split_part, p.part_ordinal, p.loan_id, p.scheduled_minor, p.needs_review,
-      not (x.live and x.parts_ok) as draft, p.id as leg_id, null::numeric as part_percent, false as part_rest
+      not (x.live and x.parts_ok) as draft, p.id as leg_id, null::numeric as part_percent, false as part_rest,
+      p.created_at
     from lines x
     join parts p on p.transaction_id = x.id and p.loan_id is not null
     left join public.categories c on c.id = p.category_id
@@ -169,7 +170,7 @@ begin
       coalesce(c.kind::text, x.direction::text), c.loan_part,
       null::public.loan_split_part, p.gross_up, false,
       true, p.part_ordinal, null::uuid, null::bigint, false,
-      not (x.live and x.parts_ok), p.id, p.part_percent, p.part_rest
+      not (x.live and x.parts_ok), p.id, p.part_percent, p.part_rest, p.created_at
     from lines x
     join parts p on p.transaction_id = x.id and p.split_part
     left join public.categories c on c.id = p.category_id
@@ -183,10 +184,11 @@ begin
       coalesce(c.kind::text, x.direction::text), c.loan_part,
       null::public.loan_split_part, false, x.loan_n > 0,
       false, null::smallint, null::uuid, null::bigint, false,
-      false, null::uuid, null::numeric, false
+      false, null::uuid, null::numeric, false, null::timestamptz
     from lines x
     left join public.categories c on c.id = x.category_id
-    where x.live and not x.parts_ok
+    -- A journal entry on balance-sheet accounts only has no P&L amount: its counter legs are the entry.
+    where x.live and not x.parts_ok and not (x.journal and x.amount_net = 0)
   ),
   entries as (
     select r.transaction_id,
@@ -204,35 +206,36 @@ begin
       r.category_id as k1, r.project_id as k2, r.amount_net as k3,
       'item' as leg_kind, r.category_id, r.part, r.gross_up, r.loan_split_fallback, r.project_explicit,
       r.split_part, r.part_ordinal, r.loan_id, r.scheduled_minor, r.needs_review, r.draft,
-      r.leg_id, r.part_percent, r.part_rest
+      r.leg_id, r.part_percent, r.part_rest, r.created_at
     from rows r
     left join public.accounts ba on ba.company_id = p_company and ba.category_id = r.category_id
     cross join sys
     union all
     -- The bank leg: the signed statement movement = amount_gross.
     select x.id, sys.bank, null, x.amount_gross, 1, null, null, null,
-      'bank', null, null, false, false, false, false, null, null, null, false, false, null, null, false
+      'bank', null, null, false, false, false, false, null, null, null, false, false, null, null, false, null
     from lines x cross join sys
     where x.live and not x.journal
     union all
     -- A journal entry moves no money; its balance-sheet legs stand in for the bank leg.
     select j.transaction_id, j.account_id, j.project_id, j.amount_minor, 1, null, null, j.ordinal::bigint,
-      'journal', null, null, false, false, false, false, null, null, null, false, false, null, null, false
+      'journal', null, null, false, false, false, false, null, null, null, false, false, null, null, false, null
     from public.journal_counter_legs j
     join lines x on x.id = j.transaction_id and x.live
     where j.company_id = p_company
     union all
     -- VAT is one more leg so the net + VAT legs balance the gross bank movement.
     select x.id, sys.vat, null, -x.vat_amount, 2, null, null, null,
-      'vat', null, null, false, false, false, false, null, null, null, false, false, null, null, false
+      'vat', null, null, false, false, false, false, null, null, null, false, false, null, null, false, null
     from lines x cross join sys
     where x.live and coalesce(x.vat_amount, 0) <> 0
   )
-  -- A part leg keeps its id across postings, so a snapshot that names it (a category move) still finds it.
-  insert into public.legs (id, company_id, transaction_id, account_id, project_id, amount_minor, ordinal,
+  -- A part leg keeps its id and its created_at across postings, so a snapshot that names it (a category
+  -- move) still finds it, and an undo that checks when the parts were written still matches.
+  insert into public.legs (id, created_at, company_id, transaction_id, account_id, project_id, amount_minor, ordinal,
     leg_kind, category_id, part, gross_up, loan_split_fallback, project_explicit,
     split_part, part_ordinal, loan_id, scheduled_minor, needs_review, draft, part_percent, part_rest)
-  select coalesce(e.leg_id, gen_random_uuid()), p_company, e.transaction_id, e.account_id, e.project_id, e.amount_minor,
+  select coalesce(e.leg_id, gen_random_uuid()), coalesce(e.created_at, now()), p_company, e.transaction_id, e.account_id, e.project_id, e.amount_minor,
     (row_number() over (partition by e.transaction_id
                         order by e.grp, e.k1 nulls first, e.k2 nulls first, e.k3, e.part_ordinal))::smallint,
     e.leg_kind, e.category_id, e.part, e.gross_up, e.loan_split_fallback, e.project_explicit,
