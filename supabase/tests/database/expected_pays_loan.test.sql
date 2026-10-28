@@ -58,10 +58,12 @@ values (pg_temp.id('co'), 'Example Alder Loan', 24000000, 60000, 360, '2026-01-0
 insert into pl (label, id) select 'loan', l.id from public.loans l where l.company_id = pg_temp.id('co');
 
 -- Only the latest payment is split: one split line is enough to name the charge.
-insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review)
-select pg_temp.id('co'), pg_temp.id('loan'), pg_temp.id('alder:2026-09-01'), v.part::public.loan_split_part, v.amount, v.amount,
-  (select c.id from public.categories c where c.company_id = pg_temp.id('co') and c.kind = 'expense' order by c.sort_order limit 1),
-  false
+select tests.loan_split(pg_temp.id('alder:2026-09-01'), pg_temp.id('loan'), jsonb_agg(jsonb_build_object(
+  'part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+  'category_id', (select c.id from public.categories c
+                  where c.company_id = pg_temp.id('co') and c.loan_part = v.part::public.loan_split_part
+                  order by c.sort_order limit 1),
+  'needs_review', false)))
 from (values ('principal', 42000), ('interest', 118000), ('escrow', 28000)) v(part, amount);
 
 create or replace function pg_temp.charge(p_party text, p_project text)

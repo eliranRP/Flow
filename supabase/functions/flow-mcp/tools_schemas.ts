@@ -48,14 +48,14 @@ export const READ_TOOL_NAMES = [
   "get_cash_years",
   "get_cash_lines",
   "get_started", "match_lines", "get_forecast", "get_project_forecast_edits", "list_bank_connections", "list_transfer_matches",
-  "list_accounts", "get_line_legs", "get_account_balances", "get_weekly_summary", "get_transaction_thread",
+  "list_accounts", "get_line_legs", "get_account_balances", "get_balance_sheet", "get_weekly_summary", "get_transaction_thread",
 ] as const;
 
 /** Read tool that a write-only token may also call: it polls that token's own sync job. */
 export const SYNC_STATUS_TOOL = "get_sync_status";
 
 export const WRITE_TOOL_NAMES = [
-  "create_manual_entry", "book_line", "create_journal_entry", "set_category_account",
+  "create_manual_entry", "book_line", "create_journal_entry", "set_category_account", "create_account", "update_account", "archive_account", "restore_account", "merge_account",
   "attach_document",
   "add_transaction_note", "edit_transaction_note", "remove_transaction_note", "remove_transaction_file",
   "assign_expense",
@@ -279,7 +279,7 @@ export const categorySchema = z.object({
 }).strict();
 export const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "supplier_category", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "loan_refinance", "index_rate", "loan_part_category", "loan_category_from", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", "journal_entry", "category_account", ...THREAD_UNDO_KINDS]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "supplier_category", "category_delete", "category_move", "company_currency", "category_name", "category_group", "category_parent", "project_group", "project_group_member", "jev_mode", "loan_index", "loan_refinance", "index_rate", "loan_part_category", "loan_category_from", "invite", "member_role", "member_remove", "category_cash", "line_cash", "cash_basis", "line_recurring", "line_pace", "line_amount", "recurring_match", "project_update", "project_delete", "invoice_link", "invoice_dismiss", "manual_entry", "document_attach", "project_forecast", "bank_accounts", "transfer_match", "book_line", "journal_entry", "category_account", "account_create", "account_update", "account_archive", "account_restore", "account_merge", ...THREAD_UNDO_KINDS]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
