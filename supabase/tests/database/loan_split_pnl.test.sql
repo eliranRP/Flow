@@ -94,17 +94,7 @@ from public.companies c
 where c.name = 'Example Neighbour LLC';
 
 -- Splits. Amounts are positive, the line is negative.
-insert into public.loan_splits (
-  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review
-)
-select
-  t.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount,
-  (select k.id from public.categories k
-   where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense'),
-  v.flagged
-from public.transactions t
-join public.loans l on l.company_id = t.company_id
-join (values
+with v(ikey, part, amount, cat, flagged) as (values
   ('main',     'interest',  70000, 'ריבית משכנתא', false),
   ('main',     'escrow',    20000, 'מסים וביטוח',   false),
   ('main',     'principal', 10000, 'תשלומי הלוואה', false),
@@ -129,8 +119,16 @@ join (values
   ('neighbour', 'interest', 20000, 'ריבית משכנתא', false),
   ('neighbour', 'escrow',    5000, 'מסים וביטוח',   false),
   ('neighbour', 'principal', 5000, 'תשלומי הלוואה', false)
-) as v(ikey, part, amount, cat, flagged) on t.idempotency_key = v.ikey
-where t.company_id in (select id from ls_ref where label in ('co', 'co2'));
+)
+select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+  'category_id', (select k.id from public.categories k
+   where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense'),
+  'needs_review', v.flagged)))
+from public.transactions t
+join public.loans l on l.company_id = t.company_id
+join v on t.idempotency_key = v.ikey
+where t.company_id in (select id from ls_ref where label in ('co', 'co2'))
+group by t.id, l.id;
 
 -- The shared line is split a third each over three sites. The zero line goes to one.
 insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
@@ -458,9 +456,8 @@ select is(
 
 -- Deleting the split restores the whole line under its own category.
 select lives_ok(
-  $$delete from public.loan_splits
-    where transaction_id = (select id from public.transactions where idempotency_key = 'main'
-      and company_id = (select id from ls_ref where label = 'co'))$$,
+  $$select public.clear_loan_split((select id from public.transactions where idempotency_key = 'main'
+      and company_id = (select id from ls_ref where label = 'co')))$$,
   'the owner deletes the split of the main line'
 );
 

@@ -44,8 +44,8 @@ declare
   new_parts jsonb;
   here jsonb;
 begin
-  -- A line that has both parts on one category and project cannot take the move (the writer
-  -- refuses a duplicate part).
+  -- A line with a part on each category, on one project and both gross-up or both not, cannot
+  -- take the move: the two would be one part.
   if exists (
     select 1
     from private.split_parts f
@@ -53,6 +53,7 @@ begin
       on s.transaction_id = f.transaction_id
       and s.category_id = p_into
       and s.project_id is not distinct from f.project_id
+      and s.gross_up = f.gross_up
     where f.company_id = p_company_id and f.category_id = p_from
   ) then
     raise exception 'a split line has both categories';

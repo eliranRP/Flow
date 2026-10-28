@@ -53,17 +53,7 @@ join (values
   ('lr_theirs',  'Example Split Neighbour LLC',  -30000,  -30000,     0, false)
 ) as v(ikey, company, gross, net, vat, removed) on v.company = c.name;
 
-insert into public.loan_splits (
-  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review
-)
-select
-  t.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount,
-  (select k.id from public.categories k
-   where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense'),
-  v.flagged
-from public.transactions t
-join public.loans l on l.company_id = t.company_id
-join (values
+with v(ikey, part, amount, cat, flagged) as (values
   ('lr_main',    'principal', 10000, 'תשלומי הלוואה', false),
   ('lr_main',    'interest',  70000, 'ריבית משכנתא', false),
   ('lr_main',    'escrow',    20000, 'מסים וביטוח',   false),
@@ -79,7 +69,15 @@ join (values
   ('lr_theirs',  'interest',  20000, 'ריבית משכנתא', false),
   ('lr_theirs',  'escrow',     5000, 'מסים וביטוח',   false),
   ('lr_theirs',  'principal',  5000, 'תשלומי הלוואה', false)
-) as v(ikey, part, amount, cat, flagged) on t.idempotency_key = v.ikey;
+)
+select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+  'category_id', (select k.id from public.categories k
+   where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense'),
+  'needs_review', v.flagged)))
+from public.transactions t
+join public.loans l on l.company_id = t.company_id
+join v on t.idempotency_key = v.ikey
+group by t.id, l.id;
 
 create temp table lr_ref (label text primary key, id uuid);
 grant all on lr_ref to authenticated, service_role;

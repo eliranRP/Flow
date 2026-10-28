@@ -49,21 +49,20 @@ select (select id from lr_ref where label = 'co'), 'expense', 'expense', 'shared
   v.ikey, true
 from (values ('odd', -100001), ('tie', -6)) as v(ikey, net);
 
-insert into public.loan_splits (
-  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-)
-select t.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount,
-  (select k.id from public.categories k where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense')
-from public.transactions t
-join public.loans l on l.company_id = t.company_id
-join (values
+with v(ikey, part, amount, cat) as (values
   ('odd', 'interest', 70001, 'ריבית משכנתא'),
   ('odd', 'escrow', 20000, 'מסים וביטוח'),
   ('odd', 'principal', 10000, 'תשלומי הלוואה'),
   ('tie', 'interest', 1, 'ריבית משכנתא'),
   ('tie', 'escrow', 3, 'מסים וביטוח'),
   ('tie', 'principal', 2, 'תשלומי הלוואה')
-) as v(ikey, part, amount, cat) on v.ikey = t.idempotency_key;
+)
+select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+  'category_id', (select k.id from public.categories k where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense'))))
+from public.transactions t
+join public.loans l on l.company_id = t.company_id
+join v on v.ikey = t.idempotency_key
+group by t.id, l.id;
 
 insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
 select t.company_id, t.id, (select id from lr_ref where label = v.proj), v.bp, v.amt

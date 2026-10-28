@@ -247,7 +247,7 @@ select is(
   'a part without scheduled_minor is refused by name'
 );
 select is(
-  (select count(*)::int from public.loan_splits where transaction_id = (select id from f111 where label = 'txn')),
+  (select count(*)::int from private.loan_parts where transaction_id = (select id from f111 where label = 'txn')),
   0,
   'refused parts write nothing'
 );
@@ -263,11 +263,14 @@ select is(
   'valid parts attach'
 );
 
-select tests.authenticate_as('f111_owner');
-update public.loan_splits set amount_minor = 55000
-where transaction_id = (select id from f111 where label = 'txn') and part = 'interest';
-update public.loan_splits set amount_minor = 15000
-where transaction_id = (select id from f111 where label = 'txn') and part = 'principal';
+reset role;
+select tests.loan_split(s.transaction_id, s.loan_id, jsonb_agg(jsonb_build_object(
+  'part', s.part,
+  'amount_minor', case s.part when 'interest' then 55000 when 'principal' then 15000 else s.amount_minor end,
+  'scheduled_minor', s.scheduled_minor, 'category_id', s.category_id, 'needs_review', s.needs_review)))
+from private.loan_parts s
+where s.transaction_id = (select id from f111 where label = 'txn')
+group by s.transaction_id, s.loan_id;
 
 select pg_temp.as_mcp('write');
 select is(
@@ -276,16 +279,19 @@ select is(
   'undo refuses a split the app corrected afterwards'
 );
 select is(
-  (select count(*)::int from public.loan_splits where transaction_id = (select id from f111 where label = 'txn')),
+  (select count(*)::int from private.loan_parts where transaction_id = (select id from f111 where label = 'txn')),
   3,
   'the corrected split stays'
 );
 
-select tests.authenticate_as('f111_owner');
-update public.loan_splits set amount_minor = 60000
-where transaction_id = (select id from f111 where label = 'txn') and part = 'interest';
-update public.loan_splits set amount_minor = 10000
-where transaction_id = (select id from f111 where label = 'txn') and part = 'principal';
+reset role;
+select tests.loan_split(s.transaction_id, s.loan_id, jsonb_agg(jsonb_build_object(
+  'part', s.part,
+  'amount_minor', case s.part when 'interest' then 60000 when 'principal' then 10000 else s.amount_minor end,
+  'scheduled_minor', s.scheduled_minor, 'category_id', s.category_id, 'needs_review', s.needs_review)))
+from private.loan_parts s
+where s.transaction_id = (select id from f111 where label = 'txn')
+group by s.transaction_id, s.loan_id;
 
 -- An undo row written before the parts were kept falls back to updated_at.
 reset role;
@@ -302,7 +308,7 @@ select is(
 reset role;
 update private.mcp_writes set prior = jsonb_build_object('parts', (
   select jsonb_agg(jsonb_build_object('part', s.part, 'amount_minor', s.amount_minor, 'category_id', s.category_id) order by s.part)
-  from public.loan_splits s where s.transaction_id = (select id from f111 where label = 'txn')
+  from private.loan_parts s where s.transaction_id = (select id from f111 where label = 'txn')
 ))
 where kind = 'loan_split' and transaction_id = (select id from f111 where label = 'txn');
 
@@ -324,20 +330,20 @@ select c.id, 'expense', 'expense', 'posted', -13000000, -13000000, 13000000, 0, 
   '2026-01-01', 'USD', 'manual', 'f111:big', 'Example large payment'
 from f111 c where c.label = 'company';
 
-select tests.authenticate_as('f111_owner');
 select throws_ok(
   $$
-    insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id)
-    select t.company_id, (select id from f111 where label = 'loan'), t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id
+    select tests.loan_split(t.id, (select id from f111 where label = 'loan'), (
+      select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+        'category_id', c.id))
+      from (values
+        ('interest', 'ריבית משכנתא', 0),
+        ('escrow', 'מסים וביטוח', 0),
+        ('principal', 'תשלומי הלוואה', 13000000)
+      ) as v(part, category, amount)
+      join public.categories c on c.company_id = t.company_id and c.name = v.category and c.kind = 'expense'
+    ))
     from public.transactions t
-    cross join (values
-      ('interest', 'ריבית משכנתא', 0),
-      ('escrow', 'מסים וביטוח', 0),
-      ('principal', 'תשלומי הלוואה', 13000000)
-    ) as v(part, category, amount)
-    join public.categories c on c.company_id = t.company_id and c.name = v.category and c.kind = 'expense'
     where t.idempotency_key = 'f111:big';
-    set constraints all immediate;
   $$,
   '23514',
   'loan_split_balance',
@@ -346,20 +352,20 @@ select throws_ok(
 reset role;
 update public.transactions set amount_gross = -12000000, amount_net = -12000000, amount_original = 12000000
 where idempotency_key = 'f111:big';
-select tests.authenticate_as('f111_owner');
 select lives_ok(
   $$
-    insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id)
-    select t.company_id, (select id from f111 where label = 'loan'), t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id
+    select tests.loan_split(t.id, (select id from f111 where label = 'loan'), (
+      select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+        'category_id', c.id))
+      from (values
+        ('interest', 'ריבית משכנתא', 0),
+        ('escrow', 'מסים וביטוח', 0),
+        ('principal', 'תשלומי הלוואה', 12000000)
+      ) as v(part, category, amount)
+      join public.categories c on c.company_id = t.company_id and c.name = v.category and c.kind = 'expense'
+    ))
     from public.transactions t
-    cross join (values
-      ('interest', 'ריבית משכנתא', 0),
-      ('escrow', 'מסים וביטוח', 0),
-      ('principal', 'תשלומי הלוואה', 12000000)
-    ) as v(part, category, amount)
-    join public.categories c on c.company_id = t.company_id and c.name = v.category and c.kind = 'expense'
     where t.idempotency_key = 'f111:big';
-    set constraints all immediate;
   $$,
   'an app split that pays the balance down to exactly zero saves'
 );

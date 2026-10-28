@@ -19,16 +19,17 @@ delete from public.legs l
 where exists (select 1 from public.line_splits s where s.transaction_id = l.transaction_id)
    or exists (select 1 from public.loan_splits s where s.transaction_id = l.transaction_id);
 
-insert into public.legs (company_id, transaction_id, account_id, project_id, amount_minor, ordinal, leg_kind,
-  category_id, gross_up, project_explicit, split_part, part_ordinal, draft)
-select s.company_id, s.transaction_id, a.id, s.project_id, s.amount_minor, s.ordinal, 'item',
-  s.category_id, s.gross_up, s.project_id is not null, true, s.ordinal, true
+-- A part leg takes its old row's id, so a snapshot that names the row (a category move) still finds it.
+insert into public.legs (id, company_id, transaction_id, account_id, project_id, amount_minor, ordinal, leg_kind,
+  category_id, gross_up, project_explicit, split_part, part_ordinal, draft, part_percent, part_rest)
+select s.id, s.company_id, s.transaction_id, a.id, s.project_id, s.amount_minor, s.ordinal, 'item',
+  s.category_id, s.gross_up, s.project_id is not null, true, s.ordinal, true, s.percent, s.is_rest
 from public.line_splits s
 join public.accounts a on a.company_id = s.company_id and a.category_id = s.category_id;
 
-insert into public.legs (company_id, transaction_id, account_id, amount_minor, ordinal, leg_kind,
+insert into public.legs (id, company_id, transaction_id, account_id, amount_minor, ordinal, leg_kind,
   category_id, part, loan_id, scheduled_minor, needs_review, part_ordinal, draft)
-select s.company_id, s.transaction_id, a.id, s.amount_minor, 1, 'item',
+select s.id, s.company_id, s.transaction_id, a.id, s.amount_minor, 1, 'item',
   s.category_id, s.part, s.loan_id, s.scheduled_minor, s.needs_review,
   case s.part::text when 'interest' then 1 when 'escrow' then 2 when 'principal' then 3 else 4 end, true
 from public.loan_splits s

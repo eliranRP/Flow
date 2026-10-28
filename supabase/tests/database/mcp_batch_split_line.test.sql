@@ -3,7 +3,6 @@
 
 begin;
 
-
 select plan(16);
 
 do $users$

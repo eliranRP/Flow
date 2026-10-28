@@ -6,7 +6,7 @@
 
 begin;
 
-select plan(44);
+select plan(54);
 
 do $users$
 begin
@@ -286,11 +286,14 @@ select is(
   'it is not a receipt, so it never pairs with an invoice'
 );
 
--- The P&L from the posting rules and from the legs still agree (the FLOW-951 gate).
+-- Every line's legs on the books balance (decision 0232: the legs are the only booking store).
 select is(
-  (select count(*)::integer from private.ledger_pnl_diff(pg_temp.id('company'))),
+  (select count(*)::integer from (
+     select l.transaction_id from public.legs l
+     where l.company_id = pg_temp.id('company') and not l.draft
+     group by l.transaction_id having sum(l.amount_minor) <> 0) x),
   0,
-  'the legs and the P&L agree'
+  'every line''s legs balance'
 );
 
 -- Balances: Accumulated depreciation per project, and the house's net book value.
@@ -323,7 +326,7 @@ select 'je_oak', (pg_temp.je('f149-oak', '2025-12-31', jsonb_build_array(
 ), 'Example JE 2')->'data'->>'id')::uuid;
 select is(pg_temp.pnl('oak'), -648000::bigint, 'a split entry counts each expense leg in the duplex''s P&L');
 select is(
-  (select count(*)::integer from public.line_splits s where s.transaction_id = pg_temp.id('je_oak')),
+  (select count(*)::integer from private.split_parts s where s.transaction_id = pg_temp.id('je_oak') and not s.draft),
   2,
   'its two expense legs are two split parts'
 );
@@ -338,7 +341,10 @@ select throws_ok(
   '23514', 'journal entry is fixed', 'it cannot come into the cash view'
 );
 select throws_ok(
-  $$ update public.line_splits set amount_minor = amount_minor + 1 where transaction_id = pg_temp.id('je_oak') $$,
+  $$ select tests.line_split(pg_temp.id('je_oak'), (
+       select jsonb_agg(jsonb_build_object('category_id', s.category_id, 'project_id', s.project_id,
+         'amount_minor', s.amount_minor + 1, 'gross_up', s.gross_up) order by s.ordinal)
+       from private.split_parts s where s.transaction_id = pg_temp.id('je_oak'))) $$,
   '23514', 'journal entry is fixed', 'its split cannot change'
 );
 select lives_ok(
@@ -365,12 +371,6 @@ select is(
     pg_temp.leg('Example depreciation', 1000, 'maple'), pg_temp.leg('Accumulated depreciation', -900, 'maple')))->'error'->>'message',
   'legs do not balance',
   'legs that do not balance are refused'
-);
-select is(
-  pg_temp.je('f149-sheet-only', '2025-12-31', jsonb_build_array(
-    pg_temp.leg('Property', 1000, 'maple'), pg_temp.leg('Accumulated depreciation', -1000, 'maple')))->'error'->>'message',
-  'a journal entry needs a leg in the P&L',
-  'an entry with no P&L leg is refused'
 );
 select is(
   pg_temp.je('f149-zero', '2025-12-31', jsonb_build_array(
@@ -403,6 +403,72 @@ select is(
   (select count(*)::integer from public.journal_entries where company_id = pg_temp.id('company')),
   2,
   'a refused entry writes nothing'
+);
+
+-- FLOW-152: an entry on balance-sheet accounts only (a reclass of the house's cost) is booked. Its line
+-- moves nothing: it is in no P&L and no cash figure, its legs balance, and it undoes.
+insert into f149 (label, id)
+select 'je_sheet', (pg_temp.je('f149-sheet-only', '2025-12-31', jsonb_build_array(
+  pg_temp.leg('Property', 100000, 'maple'), pg_temp.leg('Owner capital', -100000, 'maple')), 'Example JE 3')->'data'->>'id')::uuid;
+select isnt(pg_temp.id('je_sheet'), null, 'an entry with no P&L leg is booked');
+select is(
+  (select jsonb_agg(jsonb_build_object('kind', l.leg_kind, 'account', a.name, 'amount', l.amount_minor) order by l.ordinal)
+   from public.legs l join public.accounts a on a.id = l.account_id
+   where l.transaction_id = pg_temp.id('je_sheet') and l.amount_minor <> 0),
+  '[{"kind": "journal", "account": "Property", "amount": 100000},
+    {"kind": "journal", "account": "Owner capital", "amount": -100000}]'::jsonb,
+  'its legs are the two balance-sheet legs'
+);
+select is(
+  (select count(*)::integer from private.pnl_lines p
+   where p.transaction_id = pg_temp.id('je_sheet') and (p.in_pnl or p.amount_net <> 0)),
+  0,
+  'it is in no P&L figure'
+);
+select is(pg_temp.pnl('maple'), -560900::bigint, 'the house''s P&L does not move');
+select is(
+  (select count(*)::integer from private.cash_parts(pg_temp.id('company'), 'cash', '2025-01-01', '2025-12-31') p
+   where p.transaction_id = pg_temp.id('je_sheet') and p.in_cash),
+  0,
+  'and in no cash figure'
+);
+select pg_temp.as_mcp();
+select is(
+  (public.mcp_line_legs(pg_temp.id('je_sheet'))->>'balanced')::boolean,
+  true,
+  'get_line_legs reads it balanced'
+);
+reset role;
+select is(
+  (select (b->>'balance_minor')::bigint from jsonb_array_elements(pg_temp.balances('2025-12-31')->'balances') b
+   where b->>'account_name' = 'Owner capital' and b->>'project_id' = pg_temp.id('maple')::text),
+  -100000::bigint,
+  'get_account_balances shows the credit to Owner capital'
+);
+
+-- The person's own balance-sheet account takes a leg; once archived it is refused.
+insert into public.accounts (company_id, name, type)
+values (pg_temp.id('company'), 'Example equipment', 'asset');
+select is(
+  pg_temp.je('f149-own-account', '2025-12-31', jsonb_build_array(
+    pg_temp.leg('Example equipment', 2500, 'oak'), pg_temp.leg('Owner capital', -2500, 'oak')))->>'ok',
+  'true',
+  'a user account takes a journal leg'
+);
+update public.accounts set archived_at = now()
+where company_id = pg_temp.id('company') and name = 'Example equipment';
+select is(
+  pg_temp.je('f149-archived', '2025-12-31', jsonb_build_array(
+    pg_temp.leg('Example equipment', 2500, 'oak'), pg_temp.leg('Owner capital', -2500, 'oak')))->'error'->>'message',
+  'account is archived',
+  'an archived account is refused'
+);
+
+select is(pg_temp.undo('f149-undo-sheet', pg_temp.id('je_sheet'))->>'ok', 'true', 'undo of the balance-sheet entry succeeds');
+select is(
+  (select count(*)::integer from public.legs where transaction_id = pg_temp.id('je_sheet')),
+  0,
+  'its line and legs are gone'
 );
 
 -- Undo removes the entry while it reads as written; a second undo finds nothing.

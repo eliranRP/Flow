@@ -81,21 +81,22 @@ select extensions.dblink_exec('f106a', $fn$
   $body$;
 $fn$);
 
--- The app split of one line, dated 2026-02-01, with the deferred checks run now.
+-- The app split of one line, dated 2026-02-01; the writer checks the rules as it writes.
 create or replace function pg_temp.split_sql(p_key text)
 returns text
 language sql
 as $$
   select format($s$
-    insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id)
-    select t.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id
+    select tests.loan_split(t.id, l.id, (
+      select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+        'category_id', c.id))
+      from (values ('interest', 0::bigint), ('escrow', 0::bigint), ('principal', 100000::bigint)) as v(part, amount)
+      join public.categories c
+        on c.company_id = t.company_id and c.loan_part = v.part::public.loan_split_part and c.kind = 'expense'
+    ))
     from public.transactions t
     join public.loans l on l.company_id = t.company_id
-    cross join (values ('interest', 0::bigint), ('escrow', 0::bigint), ('principal', 100000::bigint)) as v(part, amount)
-    join public.categories c
-      on c.company_id = t.company_id and c.loan_part = v.part::public.loan_split_part and c.kind = 'expense'
     where t.idempotency_key = %L;
-    set constraints all immediate;
   $s$, p_key);
 $$;
 

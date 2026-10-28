@@ -11,7 +11,9 @@ alter table public.legs
   add column loan_id uuid,
   add column scheduled_minor bigint,
   add column needs_review boolean not null default false,
-  add column draft boolean not null default false;
+  add column draft boolean not null default false,
+  add column part_percent numeric(7,4),
+  add column part_rest boolean not null default false;
 
 alter table public.legs
   add constraint legs_part_shape check (
@@ -21,6 +23,8 @@ alter table public.legs
                              and scheduled_minor >= 0 and abs(amount_minor) >= 0))
     and (loan_id is not null or (scheduled_minor is null and not needs_review))
     and (not draft or split_part or loan_id is not null)
+    and (part_percent is null or (split_part and part_percent > 0 and part_percent <= 100))
+    and (not part_rest or split_part)
   ),
   add constraint legs_company_id_loan_id_fkey
     foreign key (company_id, loan_id) references public.loans (company_id, id);
@@ -39,6 +43,10 @@ comment on column public.legs.scheduled_minor is
   'Decision 0232. The loan schedule''s amount for this part (loan parts only).';
 comment on column public.legs.needs_review is
   'Decision 0232. A loan part a re-sync flagged (was loan_splits.needs_review). Flagged parts are draft.';
+comment on column public.legs.part_percent is
+  'Decision 0232. The percent the person gave for a split part (null for an exact amount).';
+comment on column public.legs.part_rest is
+  'Decision 0232. The split part is the rest of the line (the person gave no amount).';
 comment on column public.legs.draft is
   'Decision 0232. A part kept for the person but not on the books: the split no longer matches the line, '
   'or the loan split is flagged, incomplete or carries VAT. The line then posts whole from its header. '
@@ -50,7 +58,8 @@ comment on column public.legs.draft is
 create view private.split_parts with (security_invoker = true) as
   select l.company_id, l.transaction_id, l.part_ordinal as ordinal, l.category_id,
     case when l.project_explicit then l.project_id end as project_id,
-    abs(l.amount_minor) as amount_minor, l.gross_up, l.draft, l.id as leg_id
+    abs(l.amount_minor) as amount_minor, l.gross_up, l.draft, l.id as leg_id,
+    l.part_percent as percent, l.part_rest as is_rest
   from public.legs l
   where l.split_part;
 
@@ -96,8 +105,9 @@ begin
     where company_id = p_company and category_id is null
   ),
   parts as materialized (
-    select l.transaction_id, l.category_id, l.project_id, l.project_explicit, abs(l.amount_minor) as m,
-      l.gross_up, l.split_part, l.part_ordinal, l.loan_id, l.part, l.scheduled_minor, l.needs_review
+    select l.id, l.transaction_id, l.category_id, l.project_id, l.project_explicit, abs(l.amount_minor) as m,
+      l.gross_up, l.split_part, l.part_ordinal, l.loan_id, l.part, l.scheduled_minor, l.needs_review,
+      l.part_percent, l.part_rest
     from public.legs l
     where l.company_id = p_company and l.transaction_id = any (p_txns)
       and (l.split_part or l.loan_id is not null)
@@ -141,7 +151,7 @@ begin
       coalesce(c.kind::text, x.direction::text) as kind, c.loan_part,
       p.part, false as gross_up, false as loan_split_fallback,
       false as split_part, p.part_ordinal, p.loan_id, p.scheduled_minor, p.needs_review,
-      not (x.live and x.parts_ok) as draft
+      not (x.live and x.parts_ok) as draft, p.id as leg_id, null::numeric as part_percent, false as part_rest
     from lines x
     join parts p on p.transaction_id = x.id and p.loan_id is not null
     left join public.categories c on c.id = p.category_id
@@ -159,7 +169,7 @@ begin
       coalesce(c.kind::text, x.direction::text), c.loan_part,
       null::public.loan_split_part, p.gross_up, false,
       true, p.part_ordinal, null::uuid, null::bigint, false,
-      not (x.live and x.parts_ok)
+      not (x.live and x.parts_ok), p.id, p.part_percent, p.part_rest
     from lines x
     join parts p on p.transaction_id = x.id and p.split_part
     left join public.categories c on c.id = p.category_id
@@ -173,7 +183,7 @@ begin
       coalesce(c.kind::text, x.direction::text), c.loan_part,
       null::public.loan_split_part, false, x.loan_n > 0,
       false, null::smallint, null::uuid, null::bigint, false,
-      false
+      false, null::uuid, null::numeric, false
     from lines x
     left join public.categories c on c.id = x.category_id
     where x.live and not x.parts_ok
@@ -193,38 +203,41 @@ begin
       case when r.draft then 3 else 0 end as grp,
       r.category_id as k1, r.project_id as k2, r.amount_net as k3,
       'item' as leg_kind, r.category_id, r.part, r.gross_up, r.loan_split_fallback, r.project_explicit,
-      r.split_part, r.part_ordinal, r.loan_id, r.scheduled_minor, r.needs_review, r.draft
+      r.split_part, r.part_ordinal, r.loan_id, r.scheduled_minor, r.needs_review, r.draft,
+      r.leg_id, r.part_percent, r.part_rest
     from rows r
     left join public.accounts ba on ba.company_id = p_company and ba.category_id = r.category_id
     cross join sys
     union all
     -- The bank leg: the signed statement movement = amount_gross.
     select x.id, sys.bank, null, x.amount_gross, 1, null, null, null,
-      'bank', null, null, false, false, false, false, null, null, null, false, false
+      'bank', null, null, false, false, false, false, null, null, null, false, false, null, null, false
     from lines x cross join sys
     where x.live and not x.journal
     union all
     -- A journal entry moves no money; its balance-sheet legs stand in for the bank leg.
     select j.transaction_id, j.account_id, j.project_id, j.amount_minor, 1, null, null, j.ordinal::bigint,
-      'journal', null, null, false, false, false, false, null, null, null, false, false
+      'journal', null, null, false, false, false, false, null, null, null, false, false, null, null, false
     from public.journal_counter_legs j
     join lines x on x.id = j.transaction_id and x.live
     where j.company_id = p_company
     union all
     -- VAT is one more leg so the net + VAT legs balance the gross bank movement.
     select x.id, sys.vat, null, -x.vat_amount, 2, null, null, null,
-      'vat', null, null, false, false, false, false, null, null, null, false, false
+      'vat', null, null, false, false, false, false, null, null, null, false, false, null, null, false
     from lines x cross join sys
     where x.live and coalesce(x.vat_amount, 0) <> 0
   )
-  insert into public.legs (company_id, transaction_id, account_id, project_id, amount_minor, ordinal,
+  -- A part leg keeps its id across postings, so a snapshot that names it (a category move) still finds it.
+  insert into public.legs (id, company_id, transaction_id, account_id, project_id, amount_minor, ordinal,
     leg_kind, category_id, part, gross_up, loan_split_fallback, project_explicit,
-    split_part, part_ordinal, loan_id, scheduled_minor, needs_review, draft)
-  select p_company, e.transaction_id, e.account_id, e.project_id, e.amount_minor,
+    split_part, part_ordinal, loan_id, scheduled_minor, needs_review, draft, part_percent, part_rest)
+  select coalesce(e.leg_id, gen_random_uuid()), p_company, e.transaction_id, e.account_id, e.project_id, e.amount_minor,
     (row_number() over (partition by e.transaction_id
                         order by e.grp, e.k1 nulls first, e.k2 nulls first, e.k3, e.part_ordinal))::smallint,
     e.leg_kind, e.category_id, e.part, e.gross_up, e.loan_split_fallback, e.project_explicit,
-    e.split_part, e.part_ordinal, e.loan_id, e.scheduled_minor, e.needs_review, e.draft
+    e.split_part, e.part_ordinal, e.loan_id, e.scheduled_minor, e.needs_review, e.draft,
+    e.part_percent, e.part_rest
   from entries e
   where (select count(*) from gone) >= 0;
 end;
@@ -262,7 +275,8 @@ $$;
 
 revoke all on function private.part_line_lock(uuid, uuid) from public, anon, authenticated, service_role;
 
--- Replace a line's split by category. p_parts: [{category_id, project_id, amount_minor, gross_up}],
+-- Replace a line's split by category. p_parts: [{category_id, project_id, amount_minor, gross_up,
+-- percent, is_rest}],
 -- in the person's order; null or [] clears the split.
 create or replace function private.set_line_parts(p_company uuid, p_txn uuid, p_parts jsonb)
 returns void
@@ -304,7 +318,7 @@ begin
   end if;
   if exists (
     select 1 from jsonb_array_elements(coalesce(p_parts, '[]'::jsonb)) e
-    group by (e->>'category_id'), (e->>'project_id')
+    group by (e->>'category_id'), (e->>'project_id'), coalesce((e->>'gross_up')::boolean, false)
     having count(*) > 1
   ) then
     raise exception 'duplicate part' using errcode = '23505';
@@ -314,10 +328,11 @@ begin
   where l.company_id = p_company and l.transaction_id = p_txn and l.split_part;
 
   insert into public.legs (company_id, transaction_id, account_id, project_id, amount_minor, ordinal,
-    leg_kind, category_id, gross_up, project_explicit, split_part, part_ordinal, draft)
+    leg_kind, category_id, gross_up, project_explicit, split_part, part_ordinal, draft, part_percent, part_rest)
   select p_company, p_txn, a.id, (e->>'project_id')::uuid, (e->>'amount_minor')::bigint, x.ord::smallint,
     'item', (e->>'category_id')::uuid, coalesce((e->>'gross_up')::boolean, false),
-    e->>'project_id' is not null, true, x.ord::smallint, true
+    e->>'project_id' is not null, true, x.ord::smallint, true,
+    (e->>'percent')::numeric, coalesce((e->>'is_rest')::boolean, false)
   from jsonb_array_elements(coalesce(p_parts, '[]'::jsonb)) with ordinality as x(e, ord)
   join public.accounts a on a.company_id = p_company and a.category_id = (x.e->>'category_id')::uuid;
 

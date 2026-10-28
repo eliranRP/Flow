@@ -183,7 +183,7 @@ select is(
   'the review item stays open'
 );
 select is(
-  (select count(*)::int from public.loan_splits where transaction_id = (select id from lf where label = 'g1')),
+  (select count(*)::int from private.loan_parts where transaction_id = (select id from lf where label = 'g1')),
   3,
   'the parts are still attached'
 );
@@ -255,7 +255,7 @@ select is(
 );
 reset role;
 select is(
-  (select count(*)::int from public.loan_splits where transaction_id = (select id from lf where label = 'f1')),
+  (select count(*)::int from private.loan_parts where transaction_id = (select id from lf where label = 'f1')),
   3,
   'the parts are attached'
 );
