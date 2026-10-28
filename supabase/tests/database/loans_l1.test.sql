@@ -140,16 +140,14 @@ where name = 'הלוואות אחר';
 
 select throws_ok(
   $$
-    insert into public.loan_splits (
-      company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-    )
-    select l.company_id, l.id, t.id, 'interest', 10000, 10000, c.id
+    select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', 'interest', 'amount_minor', 10000, 'scheduled_minor', 10000,
+      'category_id', c.id)))
     from public.loans l
     join public.transactions t
       on t.company_id = l.company_id and t.idempotency_key = 'loan:partial'
     join public.categories c
-      on c.company_id = l.company_id and c.name = 'ריבית משכנתא' and c.kind = 'expense';
-    set constraints all immediate;
+      on c.company_id = l.company_id and c.name = 'ריבית משכנתא' and c.kind = 'expense'
+    group by t.id, l.id;
   $$,
   '23514',
   'loan_split_incomplete',
@@ -158,10 +156,8 @@ select throws_ok(
 
 select throws_ok(
   $$
-    insert into public.loan_splits (
-      company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-    )
-    select l.company_id, l.id, t.id, v.part::public.loan_split_part, 1, 1, c.id
+    select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', 1, 'scheduled_minor', 1,
+      'category_id', c.id)))
     from public.loans l
     join public.transactions t
       on t.company_id = l.company_id and t.idempotency_key = 'loan:sum'
@@ -172,8 +168,8 @@ select throws_ok(
         ('principal', 'תשלומי הלוואה')
     ) as v(part, category)
     join public.categories c
-      on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense';
-    set constraints all immediate;
+      on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense'
+    group by t.id, l.id;
   $$,
   '23514',
   'loan_split_sum',
@@ -182,10 +178,8 @@ select throws_ok(
 
 select throws_ok(
   $$
-    insert into public.loan_splits (
-      company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-    )
-    select l.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id
+    select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+      'category_id', c.id)))
     from public.loans l
     join public.transactions t
       on t.company_id = l.company_id and t.idempotency_key = 'loan:currency'
@@ -196,8 +190,8 @@ select throws_ok(
         ('principal', 'תשלומי הלוואה', 3000)
     ) as v(part, category, amount)
     join public.categories c
-      on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense';
-    set constraints all immediate;
+      on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense'
+    group by t.id, l.id;
   $$,
   '23514',
   'loan_split_currency',
@@ -206,10 +200,8 @@ select throws_ok(
 
 select throws_ok(
   $$
-    insert into public.loan_splits (
-      company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-    )
-    select l.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id
+    select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+      'category_id', c.id)))
     from public.loans l
     join public.transactions t
       on t.company_id = l.company_id and t.idempotency_key = 'loan:category'
@@ -220,8 +212,8 @@ select throws_ok(
         ('principal', 'תשלומי הלוואה', 3000)
     ) as v(part, category, amount)
     join public.categories c
-      on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense';
-    set constraints all immediate;
+      on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense'
+    group by t.id, l.id;
   $$,
   '23514',
   'loan_split_category',
@@ -229,25 +221,22 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$insert into public.loan_splits (
-      company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-    )
-    select o.id, l.id, t.id, 'principal', 10000, 10000, c.id
+  $$select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', 'principal', 'amount_minor', 10000, 'scheduled_minor', 10000,
+      'category_id', c.id)))
     from public.companies o
     join public.loans l on l.name = 'משכנתא לדוגמה'
     join public.transactions t on t.idempotency_key = 'loan:foreign'
     join public.categories c
       on c.company_id = o.id and c.name = 'תשלומי הלוואה' and c.kind = 'expense'
-    where o.name = 'הלוואות אחר'$$,
+    where o.name = 'הלוואות אחר'
+    group by t.id, l.id$$,
   '23503',
   null,
   'a split cannot point at another company''s loan'
 );
 
-insert into public.loan_splits (
-  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-)
-select l.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id
+select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+  'category_id', c.id)))
 from public.loans l
 join public.transactions t
   on t.company_id = l.company_id and t.idempotency_key = 'loan:paid'
@@ -258,7 +247,8 @@ cross join (
     ('principal', 'תשלומי הלוואה', 3000)
 ) as v(part, category, amount)
 join public.categories c
-  on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense';
+  on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense'
+group by t.id, l.id;
 
 select lives_ok($$set constraints all immediate$$, 'three parts that match the line are kept');
 set constraints all deferred;
@@ -290,10 +280,8 @@ select throws_ok(
     where company_id = (select id from public.companies where name = 'הלוואות בדיקה')
       and name = 'ריבית משכנתא'
       and kind = 'expense';
-    insert into public.loan_splits (
-      company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-    )
-    select l.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id
+    select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+      'category_id', c.id)))
     from public.loans l
     join public.transactions t
       on t.company_id = l.company_id and t.idempotency_key = 'loan:category'
@@ -304,8 +292,8 @@ select throws_ok(
         ('principal', 'תשלומי הלוואה', 3000)
     ) as v(part, category, amount)
     join public.categories c
-      on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense';
-    set constraints all immediate;
+      on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense'
+    group by t.id, l.id;
   $$,
   '23514',
   'loan category is fixed',
@@ -319,10 +307,8 @@ where name = 'הלוואות בדיקה';
 
 select throws_ok(
   $$
-    insert into public.loan_splits (
-      company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-    )
-    select l.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id
+    select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+      'category_id', c.id)))
     from public.loans l
     join public.transactions t
       on t.company_id = l.company_id and t.idempotency_key = 'loan:category'
@@ -335,8 +321,8 @@ select throws_ok(
     join public.categories c
       on c.company_id = l.company_id
      and c.name = v.category
-     and c.kind = v.kind::public.category_kind;
-    set constraints all immediate;
+     and c.kind = v.kind::public.category_kind
+    group by t.id, l.id;
   $$,
   '23514',
   'loan_split_category',
@@ -350,10 +336,8 @@ select throws_ok(
     where company_id = (select id from public.companies where name = 'הלוואות בדיקה')
       and name = 'תשלומי הלוואה'
       and kind = 'expense';
-    insert into public.loan_splits (
-      company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-    )
-    select l.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id
+    select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+      'category_id', c.id)))
     from public.loans l
     join public.transactions t
       on t.company_id = l.company_id and t.idempotency_key = 'loan:category'
@@ -364,8 +348,8 @@ select throws_ok(
         ('principal', 'תשלומי הלוואה', 3000)
     ) as v(part, category, amount)
     join public.categories c
-      on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense';
-    set constraints all immediate;
+      on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense'
+    group by t.id, l.id;
   $$,
   '23514',
   'loan category is fixed',
@@ -374,10 +358,8 @@ select throws_ok(
 
 select throws_ok(
   $$
-    insert into public.loan_splits (
-      company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-    )
-    select l.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id
+    select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+      'category_id', c.id)))
     from public.loans l
     join public.transactions t
       on t.company_id = l.company_id and t.idempotency_key = 'loan:category'
@@ -390,8 +372,8 @@ select throws_ok(
     join public.categories c
       on c.company_id = l.company_id
      and c.name = v.category
-     and c.kind = v.kind::public.category_kind;
-    set constraints all immediate;
+     and c.kind = v.kind::public.category_kind
+    group by t.id, l.id;
   $$,
   '23514',
   'loan_split_category',
@@ -406,12 +388,8 @@ select throws_ok(
     )
     select id, 'משכנתא אחרת', 50000, 0, 12, '2026-04-01', 4000, 0, 'USD'
     from public.companies where name = 'הלוואות בדיקה';
-    insert into public.loan_splits (
-      company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-    )
-    select l.company_id,
-           case when v.part = 'principal' then other.id else l.id end,
-           t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id
+    select tests.loan_split(t.id, case when v.part = 'principal' then other.id else l.id end, jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+      'category_id', c.id)))
     from public.loans l
     join public.loans other
       on other.company_id = l.company_id and other.name = 'משכנתא אחרת'
@@ -425,8 +403,8 @@ select throws_ok(
     ) as v(part, category, amount)
     join public.categories c
       on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense'
-    where l.name = 'משכנתא לדוגמה';
-    set constraints all immediate;
+    where l.name = 'משכנתא לדוגמה'
+    group by t.id, case when v.part = 'principal' then other.id else l.id end;
   $$,
   '23514',
   'loan_split_incomplete',
@@ -435,24 +413,22 @@ select throws_ok(
 
 select throws_ok(
   $$
-    insert into public.loan_splits (
-      company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-    )
-    select l.company_id, l.id, t.id, 'interest', 10000, 10000, c.id
+    select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', 'interest', 'amount_minor', 10000, 'scheduled_minor', 10000,
+      'category_id', c.id)))
     from public.loans l
     join public.transactions t
       on t.company_id = l.company_id and t.idempotency_key = 'loan:partial'
     join public.categories c
-      on c.company_id = l.company_id and c.name = 'ריבית משכנתא' and c.kind = 'expense';
-    insert into public.loan_splits (
-      company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-    )
-    select l.company_id, l.id, t.id, 'interest', 10000, 10000, c.id
+      on c.company_id = l.company_id and c.name = 'ריבית משכנתא' and c.kind = 'expense'
+    group by t.id, l.id;
+    select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', 'interest', 'amount_minor', 10000, 'scheduled_minor', 10000,
+      'category_id', c.id)))
     from public.loans l
     join public.transactions t
       on t.company_id = l.company_id and t.idempotency_key = 'loan:partial'
     join public.categories c
-      on c.company_id = l.company_id and c.name = 'ריבית משכנתא' and c.kind = 'expense';
+      on c.company_id = l.company_id and c.name = 'ריבית משכנתא' and c.kind = 'expense'
+    group by t.id, l.id;
   $$,
   '23505',
   null,
@@ -467,7 +443,6 @@ select throws_ok(
     where s.transaction_id = t.id
       and t.idempotency_key = 'loan:paid'
       and s.part = 'interest';
-    set constraints all immediate;
   $$,
   '23514',
   'loan_split_sum',
@@ -485,7 +460,6 @@ select lives_ok(
     from public.transactions t
     where s.transaction_id = t.id
       and t.idempotency_key = 'loan:paid';
-    set constraints all immediate;
     update public.loan_splits s
     set amount_minor = case s.part
       when 'interest' then 5000
@@ -495,7 +469,6 @@ select lives_ok(
     from public.transactions t
     where s.transaction_id = t.id
       and t.idempotency_key = 'loan:paid';
-    set constraints all immediate;
   $$,
   'an amount change that still sums is kept'
 );
@@ -510,10 +483,8 @@ select throws_ok(
     select id, 'income', 'other', 10000, 10000, 10000, 0, 'unknown',
       '2026-02-01', 'USD', 'manual', 'loan:income', 'תקבול'
     from public.companies where name = 'הלוואות בדיקה';
-    insert into public.loan_splits (
-      company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-    )
-    select l.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id
+    select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+      'category_id', c.id)))
     from public.loans l
     join public.transactions t
       on t.company_id = l.company_id and t.idempotency_key = 'loan:income'
@@ -524,8 +495,8 @@ select throws_ok(
         ('principal', 'תשלומי הלוואה', 3000)
     ) as v(part, category, amount)
     join public.categories c
-      on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense';
-    set constraints all immediate;
+      on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense'
+    group by t.id, l.id;
   $$,
   '23514',
   'loan_split_income',
@@ -641,7 +612,6 @@ select lives_ok(
     update public.transactions
     set amount_original = 9000
     where idempotency_key = 'loan:paid';
-    set constraints all immediate;
   $$,
   'a re-sync that changes the amount does not fail'
 );
@@ -701,7 +671,6 @@ select throws_ok(
     from public.transactions t
     where s.transaction_id = t.id
       and t.idempotency_key = 'loan:paid';
-    set constraints all immediate;
   $$,
   '23514',
   'loan_split_sum',
@@ -718,7 +687,6 @@ select lives_ok(
     from public.transactions t
     where s.transaction_id = t.id
       and t.idempotency_key = 'loan:paid';
-    set constraints all immediate;
   $$,
   'restoring the line amount lets the flag clear'
 );
@@ -740,7 +708,6 @@ select lives_ok(
     update public.transactions
     set currency = 'EUR'
     where idempotency_key = 'loan:paid';
-    set constraints all immediate;
   $$,
   'a re-sync that changes the currency does not fail'
 );
@@ -782,7 +749,6 @@ select lives_ok(
     from public.transactions t
     where s.transaction_id = t.id
       and t.idempotency_key = 'loan:paid';
-    set constraints all immediate;
   $$,
   'restoring the currency lets the flag clear'
 );
@@ -797,10 +763,8 @@ select id, 'expense', 'expense', -10000, -10000, 10000, 0, 'unknown',
 from public.companies
 where name = 'הלוואות בדיקה';
 
-insert into public.loan_splits (
-  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-)
-select l.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id
+select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+  'category_id', c.id)))
 from public.loans l
 join public.transactions t
   on t.company_id = l.company_id and t.idempotency_key = 'loan:move'
@@ -811,7 +775,8 @@ cross join (
     ('principal', 'תשלומי הלוואה', 3000)
 ) as v(part, category, amount)
 join public.categories c
-  on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense';
+  on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense'
+group by t.id, l.id;
 
 select lives_ok($$set constraints all immediate$$, 'a second line can carry its own split');
 set constraints all deferred;
@@ -831,7 +796,6 @@ select throws_ok(
       and s.part = 'interest'
       and dest.idempotency_key = 'loan:move'
       and dest.company_id = src.company_id;
-    set constraints all immediate;
   $$,
   '23514',
   'loan_split_incomplete',

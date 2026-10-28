@@ -194,15 +194,15 @@ insert into p152 (label, id) values
   ('deposits', tests.fixture_category(pg_temp.id('co'), 'Example deposits paid out', 'expense', true)),
   ('accrual', tests.fixture_category(pg_temp.id('co'), 'Example accrual', 'expense', true));
 
-select public.store_mcp_credential(tests.get_supabase_uid('p152_owner'), 'hash-p152-write', array['read','write'],
+select public.store_mcp_credential(tests.get_supabase_uid('p152_owner'), 'hash-p152-write-1', array['read','write'],
   now() + interval '90 days', 'pepper-1');
-select public.store_mcp_credential(tests.get_supabase_uid('p152_owner'), 'hash-p152-read', array['read'],
+select public.store_mcp_credential(tests.get_supabase_uid('p152_owner'), 'hash-p152-read-1', array['read'],
   now() + interval '90 days', 'pepper-1');
-select public.store_mcp_credential(tests.get_supabase_uid('p152_other'), 'hash-p152-bwrite', array['read','write'],
+select public.store_mcp_credential(tests.get_supabase_uid('p152_other'), 'hash-p152-bwrite-1', array['read','write'],
   now() + interval '90 days', 'pepper-1');
 insert into p152 (label, id)
 select v.label, c.id from private.mcp_credentials c
-join (values ('write', 'hash-p152-write'), ('read', 'hash-p152-read'), ('bwrite', 'hash-p152-bwrite')) v(label, h)
+join (values ('write', 'hash-p152-write-1'), ('read', 'hash-p152-read-1'), ('bwrite', 'hash-p152-bwrite-1')) v(label, h)
   on c.token_hash = v.h;
 
 -- A rent receipt, a repair, a split repair (repairs + utilities), a loan payment, a deposit paid out (kept out).
