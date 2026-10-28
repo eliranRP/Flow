@@ -189,7 +189,7 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
   }), localDeps);
   const readNames = ((await readList.json()).result.tools as { name: string }[]).map((tool) => tool.name);
   assertEquals(readNames.includes("assign_expense"), false, "read token hides writes");
-  assertEquals(readNames.length, 45, "forty-five reads (FLOW-514 adds get_setup_suggestions, FLOW-141 adds get_forecast, FLOW-142 adds get_loans_paid, the project forecast adds get_project_forecast_edits, FLOW-938 adds list_bank_connections, FLOW-941 adds list_transfer_matches, FLOW-950 adds list_accounts and get_line_legs, FLOW-517 adds get_weekly_summary, FLOW-957 adds get_transaction_thread, FLOW-149 adds get_account_balances)");
+  assertEquals(readNames.length, 46, "forty-six reads (FLOW-217 adds get_started, FLOW-514 adds get_setup_suggestions, FLOW-141 adds get_forecast, FLOW-142 adds get_loans_paid, the project forecast adds get_project_forecast_edits, FLOW-938 adds list_bank_connections, FLOW-941 adds list_transfer_matches, FLOW-950 adds list_accounts and get_line_legs, FLOW-517 adds get_weekly_summary, FLOW-957 adds get_transaction_thread, FLOW-149 adds get_account_balances)");
 });
 
 Deno.test("assign_expenses is one write rate hit for many rows", async () => {
@@ -435,7 +435,9 @@ Deno.test("initialize stamps the tool list, and a stale session hears list_chang
       body: JSON.stringify(body),
     }), localDeps);
   const init = await post({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} });
-  assertEquals((await init.json()).result.capabilities, { tools: { listChanged: true } }, "capability");
+  const initResult = (await init.json()).result;
+  assertEquals(initResult.capabilities, { tools: { listChanged: true } }, "capability");
+  assert(typeof initResult.instructions === "string" && initResult.instructions.includes("get_started"), "instructions point to get_started");
   const session = init.headers.get("mcp-session-id") ?? "";
   assert(/^[0-9a-f-]{36}\.[0-9a-f]{16}$/.test(session), `session id shape: ${session}`);
   const again = await post({ jsonrpc: "2.0", id: 2, method: "initialize", params: {} });

@@ -110,6 +110,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
   const body = await response.json();
   const names = (body.result.tools as { name: string }[]).map((tool) => tool.name);
   assertEquals(names, [
+    "get_started",
     "list_projects",
     "get_project",
     "get_project_categories",

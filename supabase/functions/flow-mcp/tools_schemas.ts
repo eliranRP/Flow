@@ -47,7 +47,7 @@ export const READ_TOOL_NAMES = [
   "get_cash_months",
   "get_cash_years",
   "get_cash_lines",
-  "match_lines", "get_forecast", "get_project_forecast_edits", "list_bank_connections", "list_transfer_matches",
+  "get_started", "match_lines", "get_forecast", "get_project_forecast_edits", "list_bank_connections", "list_transfer_matches",
   "list_accounts", "get_line_legs", "get_account_balances", "get_weekly_summary", "get_transaction_thread",
 ] as const;
 
@@ -137,7 +137,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   get_loans_paid: new Set(["period", "year"]),
   get_sync_status: new Set(["job_id"]),
   get_breakdown: new Set(["direction", "from", "to", "group_by", "level", "basis", "group", "currency", "excluded", "limit", "offset"]),
-  get_jev_status: new Set(),
+  get_jev_status: new Set(), get_started: new Set(),
   get_jev_accuracy: new Set(["from", "to"]),
   get_profit_months: new Set(["from", "to", "basis", "project_id"]),
   get_project_cash_months: new Set(["project_id", "months"]),

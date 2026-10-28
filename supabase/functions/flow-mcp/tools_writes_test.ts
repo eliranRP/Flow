@@ -123,6 +123,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     assertEquals(tool.annotations, expected);
   }
   assertEquals(toolsFor(["read", "write"]).map((tool) => tool.name), [
+    "get_started",
     "list_projects",
     "get_project",
     "get_project_categories",

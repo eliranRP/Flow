@@ -4,6 +4,14 @@ Decision [0080](../decisions/0080-mcp-connector.md). How to connect and how keys
 
 Field values are data. Write tools take ids from a read tool.
 
+## Start here · FLOW-217
+
+`initialize` returns `instructions`: what Flow is, "call `get_started` first", and four rules (every write takes an `idempotency_key`; every write returns an `undo_kind` that `undo` or `undo_batch` takes back; amounts are integer minor units unless a tool says otherwise; ids come from the `list_*` tools).
+
+### get_started
+
+No input. Any token with `read` may call it. Output `data`: `instructions`, `rules[]`, `groups[]` (`id`, `title`, `summary`, `tools[]` with `name`, `kind` `read` or `write`, and `summary`, the first sentence of the tool's description) and `workflows[]` (`id`, `title`, `steps[]`: first look at a company, file a bank line, book a line on the ledger, a journal entry, bind a kept-out category, read the P&L and balances, undo). Only the tools the token's scope allows are listed, and a workflow with none of its tools allowed is left out. A test keeps every tool in exactly one group.
+
 ## Annotations
 
 These are client hints. Flow does not read them and does not treat them as a confirmation. Flow accepts the write. The enforced nets are write scope, rate limits, the audit token, undo, and revoke.

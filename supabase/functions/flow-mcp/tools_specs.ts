@@ -27,6 +27,7 @@ export function isWriteTool(name: string): boolean {
 
 function readTools() {
   return [
+    toolSpec("get_started", "Start here: the map of every tool you can call, grouped, with the common workflows step by step and the rules for writes.", {}),
     toolSpec("list_projects", "Projects and their profit for a period, and groups[] (FLOW-406: each project group's id, name, sort_order, project_count, income, direct, shared and profit, and by_currency, the sum of its projects' rows; every group, an empty one too). Each project has group_id (null when none). Omit both dates for all time. Amounts in *_agorot are ILS only. by_currency gives each currency's P&L in minor units (cents for USD). basis is invoiced or cash (default the company's date choice, set_cash_basis: paid is cash, invoice is invoiced; the app counts the same); the output echoes basis.", {
       from: { type: "string" },
       to: { type: "string" },
