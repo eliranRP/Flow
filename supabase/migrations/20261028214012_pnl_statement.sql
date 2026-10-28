@@ -45,7 +45,7 @@ as $$
     left join public.categories c on c.company_id = p_company_id and c.id = r.category_id
     where r.in_pnl
   ),
-  -- A sub-category under its parent; a parent's own lines are its own row among the children.
+  -- A sub-category under its parent; a parent's own lines are its own_minor, not a child row.
   leaves as (
     select
       k.direction, k.currency, k.node_id, k.category_id, max(k.category_name) as name,
@@ -81,6 +81,7 @@ as $$
           ) order by l.amount_minor desc, l.name nulls last, l.category_id)
           from leaves l
           where l.direction = n.direction and l.currency = n.currency and l.node_id is not distinct from n.node_id
+            and l.category_id is distinct from n.node_id
         ) end
       ) as body,
       pc.name as node_name,

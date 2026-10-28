@@ -6,7 +6,7 @@
 
 begin;
 
-select plan(36);
+select plan(46);
 
 do $users$
 begin
@@ -129,6 +129,10 @@ from public.transactions t
 join (values ('alpha', 6000), ('beta', 4000)) as s(proj, bp) on true
 where t.idempotency_key in ('ps:ILS:ex-shared', 'ps:USD:ex-shared');
 
+-- One open review item on the ILS repair: it counts in June on the company and on Alpha, not in July.
+insert into public.review_queue (company_id, transaction_id, status)
+select t.company_id, t.id, 'open' from public.transactions t where t.idempotency_key = 'ps:ILS:ex-repairs';
+
 -- The reads, as the owner.
 select tests.authenticate_as('ps_owner');
 insert into ps_out values
@@ -143,6 +147,7 @@ insert into ps_out values
   ('bd_in_inv', public.get_breakdown('income', '2026-06-01', '2026-06-30', 'category', 'invoiced')),
   ('bdp_in',    public.get_breakdown('income', '2026-06-01', '2026-06-30', 'project', 'cash')),
   ('bdp_ex',    public.get_breakdown('expense', '2026-06-01', '2026-06-30', 'project', 'cash')),
+  ('dash',      public.get_dashboard('2026-06-01', '2026-06-30', 'cash')),
   ('own_other', public.get_pnl_statement(null, null, pg_temp.ref('other_site'), false, null));
 
 -- The company, by category: get_breakdown's totals.
@@ -165,7 +170,7 @@ select is(pg_temp.out_of('co') ->> 'basis', 'cash', 'the basis is echoed');
 select is((select sum((x ->> 'amount_minor')::bigint) from jsonb_array_elements(pg_temp.cur(pg_temp.out_of('co'), 'ILS') -> 'expense') x)::bigint,
   46500::bigint, 'the expense categories add up to the cost');
 select is((pg_temp.node(pg_temp.cur(pg_temp.out_of('co'), 'ILS'), 'expense', 'Example repairs') ->> 'amount_minor')::bigint, 42000::bigint,
-  'a parent holds its own lines and its sub-categories''');
+  'a parent holds its own lines and its sub-categories');
 select is((pg_temp.node(pg_temp.cur(pg_temp.out_of('co'), 'ILS'), 'expense', 'Example repairs') ->> 'own_minor')::bigint, 30000::bigint,
   'a parent says how much is its own');
 select is((select (x ->> 'amount_minor')::bigint from jsonb_array_elements(
@@ -173,6 +178,8 @@ select is((select (x ->> 'amount_minor')::bigint from jsonb_array_elements(
   12000::bigint, 'the sub-category is listed under its parent with its own amount');
 select is(jsonb_array_length(pg_temp.node(pg_temp.cur(pg_temp.out_of('co'), 'ILS'), 'expense', 'Example office') -> 'children'), 0,
   'a category with no sub-categories has no children');
+select is(jsonb_array_length(pg_temp.node(pg_temp.cur(pg_temp.out_of('co'), 'ILS'), 'expense', 'Example repairs') -> 'children'), 1,
+  'a parent lists its sub-categories only; its own lines are own_minor, not a child row');
 select is((pg_temp.node(pg_temp.cur(pg_temp.out_of('co'), 'ILS'), 'expense', 'Example plumbing')), null::jsonb,
   'a sub-category is not a top-level row');
 select is((select x ->> 'name' from jsonb_array_elements(pg_temp.cur(pg_temp.out_of('co'), 'ILS') -> 'expense') x limit 1),
@@ -216,8 +223,14 @@ select is(jsonb_array_length(pg_temp.out_of('july') -> 'currencies'), 0, 'a peri
 select ok((pg_temp.cur(pg_temp.out_of('all_time'), 'ILS') ->> 'income_minor')::bigint >= 150000, 'all time reads every date');
 select throws_ok($$ select public.get_pnl_statement('2026-06-01', null, null, false, null) $$, 'validation',
   'one date alone is refused');
+select throws_ok($$ select public.get_pnl_statement('2026-03-01', '2026-02-01', null, false, null) $$, 'validation',
+  'from after to is refused');
 select throws_ok($$ select public.get_pnl_statement(null, null, pg_temp.ref('alpha'), true, null) $$, 'validation',
   'a project and by_project together are refused');
+
+select is((pg_temp.out_of('co') ->> 'review_count')::integer, 1, 'the company counts the open review item in the range');
+select is((pg_temp.out_of('alpha') ->> 'review_count')::integer, 1, 'a project counts its own open review item');
+select is((pg_temp.out_of('july') ->> 'review_count')::integer, 0, 'an item outside the range is not counted');
 
 -- Another company's project reads as unknown; the owner still reads their own.
 select is(pg_temp.out_of('own_other'), null::jsonb, 'another company''s project reads as unknown');
@@ -227,6 +240,25 @@ select is(jsonb_array_length(public.get_pnl_statement(null, null, null, false, n
   'the other company sees none of company A''s lines');
 select is(public.get_pnl_statement(null, null, pg_temp.ref('other_site'), false, null) ->> 'project_name', 'Other Site',
   'positive control: the other company reads its own project');
+
+-- get_dashboard for the same range and basis: the company's totals and Alpha's income and profit.
+select is((pg_temp.cur(pg_temp.out_of('co'), 'ILS') ->> 'income_minor')::bigint,
+  (select (x ->> 'income_minor')::bigint from jsonb_array_elements(pg_temp.out_of('dash') -> 'by_currency') x where x ->> 'currency' = 'ILS'),
+  'company income is get_dashboard''s');
+select is((pg_temp.cur(pg_temp.out_of('co'), 'ILS') ->> 'expense_minor')::bigint,
+  (select (x ->> 'expense_minor')::bigint from jsonb_array_elements(pg_temp.out_of('dash') -> 'by_currency') x where x ->> 'currency' = 'ILS'),
+  'company cost is get_dashboard''s');
+select is((pg_temp.cur(pg_temp.out_of('co'), 'ILS') ->> 'net_minor')::bigint,
+  (select (x ->> 'net_profit_minor')::bigint from jsonb_array_elements(pg_temp.out_of('dash') -> 'by_currency') x where x ->> 'currency' = 'ILS'),
+  'company net is get_dashboard''s net profit');
+select is((pg_temp.cur(pg_temp.out_of('alpha'), 'ILS') ->> 'income_minor')::bigint,
+  (select (x ->> 'income_minor')::bigint from jsonb_array_elements(pg_temp.out_of('dash') -> 'projects') p, jsonb_array_elements(p -> 'by_currency') x
+   where p ->> 'name' = 'Site Alpha' and x ->> 'currency' = 'ILS'),
+  'Alpha income is get_dashboard''s');
+select is((pg_temp.cur(pg_temp.out_of('alpha'), 'ILS') ->> 'net_minor')::bigint,
+  (select (x ->> 'profit_minor')::bigint from jsonb_array_elements(pg_temp.out_of('dash') -> 'projects') p, jsonb_array_elements(p -> 'by_currency') x
+   where p ->> 'name' = 'Site Alpha' and x ->> 'currency' = 'ILS'),
+  'Alpha net is get_dashboard''s profit');
 
 select * from finish();
 rollback;

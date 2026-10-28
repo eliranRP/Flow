@@ -87,7 +87,7 @@ function optionalDate(value: unknown): boolean {
 async function pnlStatement(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
   const { from, to, project_id: project, by_project: byProject, basis } = args;
   if (!optionalDate(from) || !optionalDate(to)) return fail("validation", "from and to: dates, YYYY-MM-DD");
-  if ((from ?? null) === null !== ((to ?? null) === null)) return fail("validation", "from and to: both or neither");
+  if (((from ?? null) === null) !== ((to ?? null) === null)) return fail("validation", "from and to: both or neither");
   if (typeof from === "string" && typeof to === "string" && from > to) return fail("validation", "from is after to");
   if (project !== undefined && project !== null && (typeof project !== "string" || !UUID.test(project))) {
     return fail("validation", "project_id: a project id");
