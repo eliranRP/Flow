@@ -59,10 +59,8 @@ select id, 'expense', 'expense', -10000, -10000, 10000, 0, 'unknown',
 from public.companies
 where name = 'הלוואות אחר';
 
-insert into public.loan_splits (
-  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-)
-select l.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id
+select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+  'category_id', c.id)))
 from public.loans l
 join public.transactions t
   on t.company_id = l.company_id and t.idempotency_key = 'loan:paid'
@@ -73,7 +71,8 @@ cross join (
     ('principal', 'תשלומי הלוואה', 3000)
 ) as v(part, category, amount)
 join public.categories c
-  on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense';
+  on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense'
+group by t.id, l.id;
 
 select lives_ok($$set constraints all immediate$$, 'three parts that match the line are kept');
 set constraints all deferred;
@@ -121,15 +120,14 @@ select is(
 );
 
 select throws_ok(
-  $$insert into public.loan_splits (
-      company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-    )
-    select l.company_id, l.id, t.id, 'interest', 1, 1, c.id
+  $$select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', 'interest', 'amount_minor', 1, 'scheduled_minor', 1,
+      'category_id', c.id)))
     from public.loans l
     join public.transactions t
       on t.company_id = l.company_id and t.idempotency_key = 'loan:partial'
     join public.categories c
-      on c.company_id = l.company_id and c.name = 'ריבית משכנתא' and c.kind = 'expense'$$,
+      on c.company_id = l.company_id and c.name = 'ריבית משכנתא' and c.kind = 'expense'
+    group by t.id, l.id$$,
   '42501',
   null,
   'a viewer cannot insert a split'
@@ -215,17 +213,16 @@ select throws_ok(
 
 select throws_ok(
   $$
-    insert into public.loan_splits (
-      company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review
-    )
-    select l.company_id, l.id, t.id, 'interest', 1, 1, c.id, true
+    select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', 'interest', 'amount_minor', 1, 'scheduled_minor', 1,
+      'category_id', c.id, 'needs_review', true)))
     from public.loans l
     join public.transactions t
       on t.company_id = l.company_id and t.idempotency_key = 'loan:partial'
     join public.categories c
       on c.company_id = l.company_id and c.name = 'ריבית משכנתא' and c.kind = 'expense'
     where l.name = 'משכנתא לדוגמה'
-  $$,
+  
+    group by t.id, l.id$$,
   '42501',
   null,
   'the owner cannot insert a split already flagged'
