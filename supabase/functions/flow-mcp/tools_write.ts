@@ -83,7 +83,7 @@ import { addLoanWrite, attachLoanWrite, updateLoanWrite } from "./tools_loans.ts
 import { syncBank } from "./tools_sync.ts";
 import { resetForecastSchema, setForecastItemSchema } from "./tools_forecast_schemas.ts";
 import { attachDocumentSchema, createManualEntrySchema } from "./tools_manual_schemas.ts";
-import { bookLineSchema, createJournalEntrySchema } from "./tools_ledger_schemas.ts";
+import { bookLineSchema, createJournalEntrySchema, setCategoryAccountSchema } from "./tools_ledger_schemas.ts";
 import { PROJECT_FORECAST_WRITES, projectForecastWrite } from "./tools_project_forecast.ts";
 import { BANK_WRITES, bankWrite } from "./tools_bank.ts";
 import { THREAD_WRITES, threadWrite } from "./tools_thread.ts";
@@ -184,6 +184,16 @@ export async function callWrite(
         amount_minor: leg.amount_minor,
         ...(leg.project_id == null ? {} : { project_id: leg.project_id }),
       })),
+    };
+  } else if (name === "set_category_account") {
+    // FLOW-151 (decision 0231): the database re-posts the category's lines; no P&L figure moves.
+    const parsed = setCategoryAccountSchema.safeParse(args);
+    if (!parsed.success) return invalidDetail(parsed.error);
+    rpcName = "mcp_set_category_account";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_category_id: parsed.data.category_id,
+      p_account_id: parsed.data.account_id,
     };
   } else if (name === "create_manual_entry") {
     // FLOW-369: the cash or cheque line. The database refuses another company's project or category.

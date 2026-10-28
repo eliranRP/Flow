@@ -160,6 +160,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "assign_expenses",
     "set_expense_category",
     "create_journal_entry",
+    "set_category_account",
     "book_line",
     "create_manual_entry",
     "attach_document",

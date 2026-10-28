@@ -141,6 +141,7 @@ insert into pg_allowed (sig) values
     ('mcp_set_loan_refinance(text,uuid,uuid)'),
     ('mcp_set_loan_part_category(text,uuid[],text,uuid)'),
     ('mcp_create_journal_entry(text,date,text,text,text,jsonb)'),
+    ('mcp_set_category_account(text,uuid,uuid)'),
     ('mcp_account_balances(date)'),
     ('mcp_set_loan_category_from(text,uuid,text,date,uuid,boolean)'),
     ('mcp_set_member_role(text,uuid,text)'),

@@ -1927,6 +1927,9 @@ isOneToOne: false
 "mcp_set_cash_basis":
 { Args: { "p_basis": string,"p_idempotency_key": string }; Returns: Json
                            },
+"mcp_set_category_account":
+{ Args: { "p_account_id"?: string,"p_category_id": string,"p_idempotency_key": string }; Returns: Json
+                           },
 "mcp_set_category_cash":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_in_cash": boolean }; Returns: Json
                            },

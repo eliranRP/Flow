@@ -68,6 +68,7 @@ Deno.test("the ledger reads are listed for a read scope only", () => {
 const DEPRECIATION = "a0000000-0000-4000-8000-0000000000d1";
 const ACCUMULATED = "a0000000-0000-4000-8000-0000000000d2";
 const PROJECT = "b0000000-0000-4000-8000-0000000000e1";
+const CATEGORY = "c0000000-0000-4000-8000-0000000000f1";
 
 Deno.test("create_journal_entry forwards a balanced entry with no bank leg and its reference", async () => {
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: TXN, undo_kind: "journal_entry" } } }));
@@ -114,13 +115,40 @@ Deno.test("create_journal_entry forwards a balanced entry with no bank leg and i
   assertEquals(calls.length, before);
   assertEquals(codeOf(await callTool("create_journal_entry", entry, ["read"], rpc)), "forbidden");
 
-  for (const message of ["a journal entry has no bank leg", "a journal entry needs a leg in the P&L", "a journal entry must change the P&L", "journal entry is fixed"]) {
+  for (const message of ["a journal entry has no bank leg", "a journal entry needs a leg in the P&L", "a journal entry must change the P&L", "journal entry is fixed", "the category posts to Suspense"]) {
     const db = rpcOf(() => ({ status: 200, json: { ok: false, error: { code: "refused", message } } }));
     const refused = await callTool("create_journal_entry", entry, ["write"], db.rpc);
     assertEquals(refused.structuredContent, { ok: false, error: { code: "refused", message } });
   }
   const spec = toolsFor(["write"]).find((tool) => tool.name === "create_journal_entry");
   assertEquals(Object.keys(spec?.inputSchema.properties ?? {}), ["idempotency_key", "doc_date", "currency", "description", "reference", "legs"]);
+});
+
+Deno.test("set_category_account forwards a binding, null for the default, and undoes by the category", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { category_id: CATEGORY, undo_kind: "category_account" } } }));
+  const binding = { idempotency_key: "bind-1", category_id: CATEGORY, account_id: ACCUMULATED };
+  assertEquals((await callTool("set_category_account", binding, ["write"], rpc)).isError, false);
+  assertEquals(calls.at(-1), {
+    name: "mcp_set_category_account",
+    body: { p_idempotency_key: "bind-1", p_category_id: CATEGORY, p_account_id: ACCUMULATED },
+  });
+  await callTool("set_category_account", { ...binding, idempotency_key: "bind-2", account_id: null }, ["write"], rpc);
+  assertEquals(calls.at(-1)?.body.p_account_id, null);
+  await callTool("undo", { idempotency_key: "bind-3", kind: "category_account", id: CATEGORY }, ["write"], rpc);
+  assertEquals(calls.at(-1), { name: "mcp_undo", body: { p_idempotency_key: "bind-3", p_kind: "category_account", p_id: CATEGORY } });
+
+  const before = calls.length;
+  for (const bad of [{ category_id: "nope" }, { account_id: "nope" }, { account_id: undefined }, { project_id: PROJECT }]) {
+    assertEquals(codeOf(await callTool("set_category_account", { ...binding, idempotency_key: "bind-bad", ...bad }, ["write"], rpc)), "validation", JSON.stringify(bad));
+  }
+  assertEquals(calls.length, before);
+  assertEquals(codeOf(await callTool("set_category_account", binding, ["read"], rpc)), "forbidden");
+  for (const message of ["the category is counted in the P&L", "a loan part category posts by its part", "a category posts only to a balance-sheet account"]) {
+    const db = rpcOf(() => ({ status: 200, json: { ok: false, error: { code: "refused", message } } }));
+    assertEquals((await callTool("set_category_account", binding, ["write"], db.rpc)).structuredContent, { ok: false, error: { code: "refused", message } });
+  }
+  const spec = toolsFor(["write"]).find((tool) => tool.name === "set_category_account");
+  assertEquals(Object.keys(spec?.inputSchema.properties ?? {}), ["idempotency_key", "category_id", "account_id"]);
 });
 
 Deno.test("get_account_balances passes the balances through, takes an optional as_of and needs read scope", async () => {

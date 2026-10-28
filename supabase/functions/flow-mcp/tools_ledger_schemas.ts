@@ -1,5 +1,6 @@
-// FLOW-948 (decision 0208). The balanced-legs booking tools (book_line, and create_journal_entry of
-// FLOW-149). Split from tools_schemas.ts to keep it under the file-size limit.
+// FLOW-948 (decision 0208). The balanced-legs booking tools (book_line, create_journal_entry of
+// FLOW-149, set_category_account of FLOW-151). Split from tools_schemas.ts to keep it under the
+// file-size limit.
 import { z } from "zod";
 import { isCalendarDate } from "./tools_args.ts";
 import { IDEMPOTENCY_KEY, UUID_TEXT, visibleName } from "./tools_schemas.ts";
@@ -56,3 +57,11 @@ export const createJournalEntrySchema = z.object({
     ctx.addIssue({ code: "custom", message: "legs must balance to 0", path: ["legs"] });
   }
 });
+
+// FLOW-151 (decision 0231): set_category_account, the balance-sheet account a kept-out category posts
+// to (account_id null: the default, its loan part's account or Suspense).
+export const setCategoryAccountSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  category_id: UUID_TEXT,
+  account_id: UUID_TEXT.nullable(),
+}).strict();

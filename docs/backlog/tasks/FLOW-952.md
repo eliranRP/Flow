@@ -1,6 +1,6 @@
 <a id="flow-952"></a>
 # FLOW-952 · The P&L reads the legs: flip private.pnl_lines to the shadow body
-- **Type:** BIG CYCLE · **Status:** in-progress (#846; production diff read-only on 2026-10-27: 4 companies, 0 rows) · **Source:** Switch plan, step 2 of 3; decision [0209](../../decisions/0209-legs-source-of-truth.md) item 9
+- **Type:** BIG CYCLE · **Status:** done (#846; production diff read-only before and after the deploy: 4 companies, 0 rows) · **Source:** Switch plan, step 2 of 3; decision [0209](../../decisions/0209-legs-source-of-truth.md) item 9
 - **Files:** `supabase/migrations/<ts>_pnl_from_legs.sql` (new), `supabase/migrations.lock`, `supabase/tests/database/pnl_golden_switch.test.sql` (new), `docs/changelog.d/<date>-flow-952.md` (new), `docs/backlog/tasks/FLOW-952.md`.
 - [x] The migration repeats FLOW-951's gate (any company's diff non-empty aborts), then `create or replace view private.pnl_lines` with the `pnl_lines_ledger` body (same 19 columns, same order, `security_invoker`, granted to `authenticated` and `service_role`), and drops `private.pnl_lines_ledger`. `pnl_lines_legacy`, the posting triggers and the legacy tables stay.
 - [x] `private.ledger_pnl_diff` then compares `pnl_lines_legacy` with `pnl_lines`.
