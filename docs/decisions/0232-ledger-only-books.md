@@ -15,10 +15,10 @@ The chart of accounts was fixed at 12 system accounts. A kept-out category with 
 1. **Legs are the only booking store.** A line's split by category and its loan payment parts are item legs. `line_splits`, `loan_splits`, `private.pnl_lines_legacy`, `private.ledger_pnl_diff` and `private.rebuild_legs_many` are dropped.
 2. **The line header stays the source document.** `transactions` keeps the bank or document facts (amounts, dates, direction, VAT, status, currency) and the whole-line coding (category, project, P&L role, overrides). A line with no parts posts one item leg from its header, as before.
 3. **New columns on `public.legs`.**
-   - `split_part` and `part_ordinal`: a part of a split by category and its place in the person's order.
+   - `split_part`, `part_ordinal`, `part_percent` and `part_rest`: a part of a split by category, its place in the person's order, and how the person gave it (a percent, or the rest of the line).
    - `loan_id`, `scheduled_minor` and `needs_review`: a loan payment part, its scheduled amount, and the re-sync flag.
    - `draft`: a part kept for the person but not on the books.
-   A part's magnitude is `abs(amount_minor)`. Its sign, account and project are derived again on every posting.
+   A part's magnitude is `abs(amount_minor)`. Its sign, account and project are derived again on every posting. A part leg keeps its id and its `created_at` across postings. The migration seeds both from the old row, so a category move or a loan-split undo written before the migration still finds its parts.
 4. **Draft parts keep the old fallback.** When a split no longer matches its line, the parts become draft legs and the line posts whole from its header. A line no longer matches when its amount changed, or when a loan split is flagged, incomplete or carries VAT. Draft legs are outside the balance check, `pnl_lines` and every money read. When the amounts match again, or the review is cleared, the parts are on the books again. Nothing the person sees changes.
 5. **One posting function and a small writer API.**
    - `private.post_lines(company, lines[])` posts lines. It keeps their parts and rebuilds the bank, VAT, journal and whole-line legs with the posting rules of 0209.
@@ -31,9 +31,10 @@ The chart of accounts was fixed at 12 system accounts. A kept-out category with 
    - MCP `create_account`, `update_account`, `archive_account`, `restore_account` and `merge_account` manage the balance-sheet accounts. Each write takes an idempotency key and has an undo kind.
    - The 12 system accounts cannot be renamed, archived or merged away.
    - Archiving is refused while any project and currency holds a balance, or while a category posts there.
-   - A merge rebinds the categories and journal legs and posts their lines again. No P&L figure moves.
-   - A journal entry may move only balance-sheet accounts.
-   - MCP `get_balance_sheet` reads assets, liabilities, equity and retained earnings (the running P&L) as of a date, per currency and project. It checks that the sides balance and warns while Suspense holds money.
+   - A merge needs two accounts of the same type. The target may not be the bank, Suspense, VAT control or a category's account. The merge rebinds the categories and journal legs, posts their lines again and archives the account merged away. No P&L figure moves.
+   - A journal entry may move only balance-sheet accounts. Its line has amount 0, is an expense, has document kind `other` and no category. Its counter legs are the whole entry, so it shows in no P&L or cash read. An entry whose P&L legs net to 0 is still refused.
+   - MCP `get_balance_sheet` reads assets, liabilities, equity and retained earnings (the running P&L) as of a date, per currency and project. It checks that the sides balance and warns while Suspense or Uncategorized holds money. A line's legs count from its `doc_date`. A balance sheet for one project can read unbalanced when a journal entry spans projects.
+   - Owner capital is `equity`, and the app shows the type as הון.
 8. **The migration proves it.** It snapshots every company's legs and P&L rows, moves the parts into the legs and posts every line again. It aborts if a single leg or P&L row differs. It then drops the legacy objects, and aborts if any function still names them.
 
 ## Alternatives rejected

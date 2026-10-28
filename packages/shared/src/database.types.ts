@@ -7,13 +7,13 @@ export type Database = {
           Tables: {
             "accounts": {
                   Row: {
-                    "category_id": string | null,"company_id": string,"created_at": string,"excluded_from_pnl": boolean,"id": string,"is_bank": boolean,"loan_part": Database["public"]['Enums']["loan_split_part"] | null,"name": string,"type": string
+                    "archived_at": string | null,"category_id": string | null,"company_id": string,"created_at": string,"description": string | null,"excluded_from_pnl": boolean,"id": string,"is_bank": boolean,"is_system": boolean,"loan_part": Database["public"]['Enums']["loan_split_part"] | null,"name": string,"type": string
                   }
                   Insert: {
-                    "category_id"?: string | null,"company_id": string,"created_at"?: string,"excluded_from_pnl"?: boolean,"id"?: string,"is_bank"?: boolean,"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name": string,"type": string
+                    "archived_at"?: string | null,"category_id"?: string | null,"company_id": string,"created_at"?: string,"description"?: string | null,"excluded_from_pnl"?: boolean,"id"?: string,"is_bank"?: boolean,"is_system"?: boolean,"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name": string,"type": string
                   }
                   Update: {
-                    "category_id"?: string | null,"company_id"?: string,"created_at"?: string,"excluded_from_pnl"?: boolean,"id"?: string,"is_bank"?: boolean,"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name"?: string,"type"?: string
+                    "archived_at"?: string | null,"category_id"?: string | null,"company_id"?: string,"created_at"?: string,"description"?: string | null,"excluded_from_pnl"?: boolean,"id"?: string,"is_bank"?: boolean,"is_system"?: boolean,"loan_part"?: Database["public"]['Enums']["loan_split_part"] | null,"name"?: string,"type"?: string
                   }
                   Relationships: [
                     {
@@ -584,13 +584,13 @@ isOneToOne: false
                   ]
                 },"legs": {
                   Row: {
-                    "account_id": string,"amount_minor": number,"category_id": string | null,"company_id": string,"created_at": string,"gross_up": boolean,"id": string,"leg_kind": string,"loan_split_fallback": boolean,"ordinal": number,"part": Database["public"]['Enums']["loan_split_part"] | null,"project_explicit": boolean,"project_id": string | null,"transaction_id": string
+                    "account_id": string,"amount_minor": number,"category_id": string | null,"company_id": string,"created_at": string,"draft": boolean,"gross_up": boolean,"id": string,"leg_kind": string,"loan_id": string | null,"loan_split_fallback": boolean,"needs_review": boolean,"ordinal": number,"part": Database["public"]['Enums']["loan_split_part"] | null,"part_ordinal": number | null,"part_percent": number | null,"part_rest": boolean,"project_explicit": boolean,"project_id": string | null,"scheduled_minor": number | null,"split_part": boolean,"transaction_id": string
                   }
                   Insert: {
-                    "account_id": string,"amount_minor": number,"category_id"?: string | null,"company_id": string,"created_at"?: string,"gross_up"?: boolean,"id"?: string,"leg_kind": string,"loan_split_fallback"?: boolean,"ordinal": number,"part"?: Database["public"]['Enums']["loan_split_part"] | null,"project_explicit"?: boolean,"project_id"?: string | null,"transaction_id": string
+                    "account_id": string,"amount_minor": number,"category_id"?: string | null,"company_id": string,"created_at"?: string,"draft"?: boolean,"gross_up"?: boolean,"id"?: string,"leg_kind": string,"loan_id"?: string | null,"loan_split_fallback"?: boolean,"needs_review"?: boolean,"ordinal": number,"part"?: Database["public"]['Enums']["loan_split_part"] | null,"part_ordinal"?: number | null,"part_percent"?: number | null,"part_rest"?: boolean,"project_explicit"?: boolean,"project_id"?: string | null,"scheduled_minor"?: number | null,"split_part"?: boolean,"transaction_id": string
                   }
                   Update: {
-                    "account_id"?: string,"amount_minor"?: number,"category_id"?: string | null,"company_id"?: string,"created_at"?: string,"gross_up"?: boolean,"id"?: string,"leg_kind"?: string,"loan_split_fallback"?: boolean,"ordinal"?: number,"part"?: Database["public"]['Enums']["loan_split_part"] | null,"project_explicit"?: boolean,"project_id"?: string | null,"transaction_id"?: string
+                    "account_id"?: string,"amount_minor"?: number,"category_id"?: string | null,"company_id"?: string,"created_at"?: string,"draft"?: boolean,"gross_up"?: boolean,"id"?: string,"leg_kind"?: string,"loan_id"?: string | null,"loan_split_fallback"?: boolean,"needs_review"?: boolean,"ordinal"?: number,"part"?: Database["public"]['Enums']["loan_split_part"] | null,"part_ordinal"?: number | null,"part_percent"?: number | null,"part_rest"?: boolean,"project_explicit"?: boolean,"project_id"?: string | null,"scheduled_minor"?: number | null,"split_part"?: boolean,"transaction_id"?: string
                   }
                   Relationships: [
                     {
@@ -612,6 +612,18 @@ isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "legs_company_id_loan_id_fkey"
+      columns: ["company_id","loan_id"]
+isOneToOne: false
+      referencedRelation: "loan_balances"
+      referencedColumns: ["company_id","loan_id"]
+    },{
+      foreignKeyName: "legs_company_id_loan_id_fkey"
+      columns: ["company_id","loan_id"]
+isOneToOne: false
+      referencedRelation: "loans"
+      referencedColumns: ["company_id","id"]
+    },{
       foreignKeyName: "legs_company_id_transaction_id_fkey"
       columns: ["company_id","transaction_id"]
 isOneToOne: false
@@ -623,43 +635,6 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "projects"
       referencedColumns: ["id"]
-    }
-                  ]
-                },"line_splits": {
-                  Row: {
-                    "amount_minor": number,"category_id": string,"company_id": string,"created_at": string,"gross_up": boolean,"id": string,"is_rest": boolean,"ordinal": number,"percent": number | null,"project_id": string | null,"transaction_id": string
-                  }
-                  Insert: {
-                    "amount_minor": number,"category_id": string,"company_id": string,"created_at"?: string,"gross_up"?: boolean,"id"?: string,"is_rest"?: boolean,"ordinal": number,"percent"?: number | null,"project_id"?: string | null,"transaction_id": string
-                  }
-                  Update: {
-                    "amount_minor"?: number,"category_id"?: string,"company_id"?: string,"created_at"?: string,"gross_up"?: boolean,"id"?: string,"is_rest"?: boolean,"ordinal"?: number,"percent"?: number | null,"project_id"?: string | null,"transaction_id"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "line_splits_company_id_category_id_fkey"
-      columns: ["company_id","category_id"]
-isOneToOne: false
-      referencedRelation: "categories"
-      referencedColumns: ["company_id","id"]
-    },{
-      foreignKeyName: "line_splits_company_id_fkey"
-      columns: ["company_id"]
-isOneToOne: false
-      referencedRelation: "companies"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "line_splits_company_id_project_id_fkey"
-      columns: ["company_id","project_id"]
-isOneToOne: false
-      referencedRelation: "projects"
-      referencedColumns: ["company_id","id"]
-    },{
-      foreignKeyName: "line_splits_company_id_transaction_id_fkey"
-      columns: ["company_id","transaction_id"]
-isOneToOne: false
-      referencedRelation: "transactions"
-      referencedColumns: ["company_id","id"]
     }
                   ]
                 },"loan_category_switches": {
@@ -727,49 +702,6 @@ isOneToOne: false
       columns: ["company_id","loan_id"]
 isOneToOne: false
       referencedRelation: "loans"
-      referencedColumns: ["company_id","id"]
-    }
-                  ]
-                },"loan_splits": {
-                  Row: {
-                    "amount_minor": number,"category_id": string,"company_id": string,"created_at": string,"id": string,"loan_id": string,"needs_review": boolean,"part": Database["public"]['Enums']["loan_split_part"],"scheduled_minor": number,"transaction_id": string,"updated_at": string
-                  }
-                  Insert: {
-                    "amount_minor": number,"category_id": string,"company_id": string,"created_at"?: string,"id"?: string,"loan_id": string,"needs_review"?: boolean,"part": Database["public"]['Enums']["loan_split_part"],"scheduled_minor": number,"transaction_id": string,"updated_at"?: string
-                  }
-                  Update: {
-                    "amount_minor"?: number,"category_id"?: string,"company_id"?: string,"created_at"?: string,"id"?: string,"loan_id"?: string,"needs_review"?: boolean,"part"?: Database["public"]['Enums']["loan_split_part"],"scheduled_minor"?: number,"transaction_id"?: string,"updated_at"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "loan_splits_company_id_category_id_fkey"
-      columns: ["company_id","category_id"]
-isOneToOne: false
-      referencedRelation: "categories"
-      referencedColumns: ["company_id","id"]
-    },{
-      foreignKeyName: "loan_splits_company_id_fkey"
-      columns: ["company_id"]
-isOneToOne: false
-      referencedRelation: "companies"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "loan_splits_company_id_loan_id_fkey"
-      columns: ["company_id","loan_id"]
-isOneToOne: false
-      referencedRelation: "loan_balances"
-      referencedColumns: ["company_id","loan_id"]
-    },{
-      foreignKeyName: "loan_splits_company_id_loan_id_fkey"
-      columns: ["company_id","loan_id"]
-isOneToOne: false
-      referencedRelation: "loans"
-      referencedColumns: ["company_id","id"]
-    },{
-      foreignKeyName: "loan_splits_company_id_transaction_id_fkey"
-      columns: ["company_id","transaction_id"]
-isOneToOne: false
-      referencedRelation: "transactions"
       referencedColumns: ["company_id","id"]
     }
                   ]
@@ -1768,6 +1700,8 @@ isOneToOne: false
                            },
 "mcp_accounts":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           } |
+{ Args: { "p_include_archived": boolean }; Returns: Json
                            },
 "mcp_add_loan":
 { Args: { "p_amortization_months"?: number,"p_annual_rate_ppm": number,"p_currency": string,"p_escrow_minor": number,"p_idempotency_key": string,"p_interest_only_months"?: number,"p_kind"?: string,"p_name": string,"p_payment_minor": number,"p_principal_minor": number,"p_project_id"?: string,"p_start_date": string,"p_term_months": number }; Returns: Json
@@ -1784,6 +1718,9 @@ isOneToOne: false
 "mcp_answer_transfer_match":
 { Args: { "p_idempotency_key": string,"p_in_transaction_id": string,"p_out_transaction_id": string,"p_same": boolean }; Returns: Json
                            },
+"mcp_archive_account":
+{ Args: { "p_account_id": string,"p_idempotency_key": string }; Returns: Json
+                           },
 "mcp_assign_expense":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_project_id": string,"p_remember"?: boolean,"p_transaction_id": string,"p_unshare"?: boolean }; Returns: Json
                            },
@@ -1799,6 +1736,9 @@ isOneToOne: false
 "mcp_attach_loan_payment":
 { Args: { "p_idempotency_key": string,"p_loan_id": string,"p_parts": Json,"p_transaction_id": string }; Returns: Json
                            },
+"mcp_balance_sheet":
+{ Args: { "p_as_of"?: string,"p_project_id"?: string }; Returns: Json
+                           },
 "mcp_bank_connections":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -1807,6 +1747,9 @@ isOneToOne: false
                            },
 "mcp_company_loan_currency":
 { Args: Record<PropertyKey, never>; Returns: string
+                           },
+"mcp_create_account":
+{ Args: { "p_description"?: string,"p_idempotency_key": string,"p_name": string,"p_type": string }; Returns: Json
                            },
 "mcp_create_categories":
 { Args: { "p_idempotency_key": string,"p_items": Json }; Returns: Json
@@ -1879,6 +1822,9 @@ isOneToOne: false
 "mcp_loan_payments":
 { Args: { "p_loan_id": string }; Returns: Json
                            },
+"mcp_merge_account":
+{ Args: { "p_from_account_id": string,"p_idempotency_key": string,"p_into_account_id": string }; Returns: Json
+                           },
 "mcp_move_category_lines":
 { Args: { "p_from": string,"p_idempotency_key": string,"p_into": string }; Returns: Json
                            },
@@ -1914,6 +1860,9 @@ isOneToOne: false
                            },
 "mcp_reset_project_forecast":
 { Args: { "p_idempotency_key": string,"p_month"?: string,"p_project_id": string }; Returns: Json
+                           },
+"mcp_restore_account":
+{ Args: { "p_account_id": string,"p_idempotency_key": string }; Returns: Json
                            },
 "mcp_restore_project_forecast_row":
 { Args: { "p_idempotency_key": string,"p_month": string,"p_project_id": string,"p_row_key": string }; Returns: Json
@@ -2034,6 +1983,9 @@ isOneToOne: false
                            },
 "mcp_undo_jev_prefill":
 { Args: { "p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
+                           },
+"mcp_update_account":
+{ Args: { "p_account_id": string,"p_description"?: string,"p_idempotency_key": string,"p_name"?: string,"p_type"?: string }; Returns: Json
                            },
 "mcp_update_loan":
 { Args: { "p_idempotency_key": string,"p_loan_id": string,"p_patch": Json }; Returns: Json

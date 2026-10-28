@@ -151,8 +151,9 @@ test("a shared expense's אישור opens the split, the split saves, and the re
   await expect(page.getByText("הפיצול נשמר")).toBeVisible();
   await expect(page.getByText("אשרו את התנועה בתור לאישור, ואז פצלו.")).toHaveCount(0);
 
-  const parts = await admin.from("line_splits").select("amount_minor").eq("transaction_id", transactionId).order("ordinal");
-  expect((parts.data ?? []).map((part: { amount_minor: number }) => part.amount_minor)).toContain(10000);
+  // The split's parts are the line's split legs (decision 0232); a leg's amount is signed.
+  const parts = await admin.from("legs").select("amount_minor").eq("transaction_id", transactionId).eq("split_part", true).order("part_ordinal");
+  expect((parts.data ?? []).map((part: { amount_minor: number }) => Math.abs(part.amount_minor))).toContain(10000);
   const closed = await admin.from("review_queue").select("status, reason").eq("transaction_id", transactionId);
   expect(closed.data).toEqual([{ status: "changed", reason: "unallocated_shared" }]);
 

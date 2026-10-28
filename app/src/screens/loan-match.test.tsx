@@ -91,8 +91,8 @@ vi.mock("../lib/supabase", () => ({
           }),
         };
       }
-      if (table === "loan_splits") {
-        return { select: () => ({ eq: () => held(() => ({ data: db.splits, error: null })) }) };
+      if (table === "legs") {
+        return { select: () => ({ eq: () => ({ not: () => held(() => ({ data: db.splits, error: null })) }) }) };
       }
       if (table === "loans") {
         return {
@@ -452,7 +452,7 @@ describe("LoanTransactionSplit", () => {
   it("skips the split reads when get_transaction says the line has no split (FLOW-114)", async () => {
     renderSplit({ split: null });
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
-    expect(db.reads).not.toContain("loan_splits");
+    expect(db.reads).not.toContain("legs");
     expect(db.rpcs.map((call) => call.name)).not.toContain("get_loan_split");
   });
 

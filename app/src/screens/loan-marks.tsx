@@ -33,11 +33,12 @@ async function readLoanMarks(ids: readonly string[]): Promise<ReadonlyMap<string
   const marks = new Map<string, LoanMark>();
   for (let start = 0; start < ids.length; start += CHUNK) {
     const result = await supabase
-      .from("loan_splits")
+      .from("legs")
       .select("transaction_id, needs_review")
-      .in("transaction_id", ids.slice(start, start + CHUNK));
+      .in("transaction_id", ids.slice(start, start + CHUNK))
+      .not("loan_id", "is", null);
     assertNoError(result);
-    // One loan_splits row per part.
+    // One leg per loan part.
     for (const row of result.data ?? []) {
       const mark = marks.get(row.transaction_id) ?? { parts: 0, review: false };
       marks.set(row.transaction_id, { parts: mark.parts + 1, review: mark.review || row.needs_review });

@@ -144,7 +144,7 @@ export function LineSplitScreen({ sample, backTo }: { sample?: LineSplitSample; 
     queryFn: async (): Promise<boolean> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
-      const { count, error } = await supabase.from("loan_splits").select("id", { count: "exact", head: true }).eq("transaction_id", transactionId);
+      const { count, error } = await supabase.from("legs").select("id", { count: "exact", head: true }).eq("transaction_id", transactionId).not("loan_id", "is", null);
       if (error) throw error;
       return (count ?? 0) > 0;
     },

@@ -273,7 +273,7 @@ grant execute on function tests.fixture_line(uuid, text, bigint, text, uuid, uui
   to postgres, service_role;
 
 -- Decision 0232: a line's parts are its item legs. These replace the inserts into the old
--- line_splits and loan_splits tables. Call them as postgres.
+-- split and loan parts tables. Call them as postgres.
 -- tests.line_split(line, '[{"category_id": …, "project_id": … or null, "amount_minor": 3000,
 --   "gross_up": false}, …]') replaces the line's split by category (parts in order; [] clears it).
 create or replace function tests.line_split(p_txn uuid, p_parts jsonb)

@@ -20,7 +20,7 @@ export type ComposerLeg = {
   amount: string;
 };
 
-export type AccountGroup = "income" | "expense" | "asset" | "liability";
+export type AccountGroup = "income" | "expense" | "asset" | "liability" | "equity";
 
 /** A bookable account as the composer shows it: the name, its type's words, and whether it counts in profit. */
 export type ComposerAccount = {
@@ -33,7 +33,7 @@ export type ComposerAccount = {
 const rawAccountSchema = z.object({
   id: z.string(),
   name: z.string(),
-  type: z.enum(["income", "expense", "asset", "liability"]),
+  type: z.enum(["income", "expense", "asset", "liability", "equity"]),
   system: z.boolean(),
   is_bank: z.boolean(),
   excluded_from_pnl: z.boolean(),
@@ -50,6 +50,7 @@ export const ACCOUNT_GROUPS: ReadonlyArray<{ group: AccountGroup; heading: strin
   { group: "income", heading: "הכנסות" },
   { group: "asset", heading: "נכסים" },
   { group: "liability", heading: "התחייבויות" },
+  { group: "equity", heading: "הון עצמי" },
 ];
 
 /**
@@ -85,6 +86,8 @@ export function groupLabel(group: AccountGroup): string {
       return "נכס";
     case "liability":
       return "התחייבות";
+    case "equity":
+      return "הון";
   }
 }
 
@@ -252,7 +255,7 @@ const journalLegSchema = z.object({
   ordinal: z.number().int(),
   account_id: z.string(),
   account_name: z.string(),
-  account_type: z.enum(["income", "expense", "asset", "liability"]),
+  account_type: z.enum(["income", "expense", "asset", "liability", "equity"]),
   system: z.boolean(),
   is_bank: z.boolean(),
   in_pnl: z.boolean(),

@@ -66,6 +66,7 @@ export function companyCategoryGroups(model: Pick<ProfitModel, "categories" | "l
 export function keptOutTypeLabel(direction: "income" | "expense", loanPart: string | null, accountType: string | null = null): string {
   if (accountType === "liability") return "התחייבות";
   if (accountType === "asset") return "נכס";
+  if (accountType === "equity") return "הון";
   if (loanPart === "principal") return "התחייבות";
   if (loanPart === "escrow") return "נכס";
   return direction === "income" ? "התחייבות" : "נכס";

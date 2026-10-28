@@ -60,8 +60,8 @@ vi.mock("../lib/supabase", () => ({
       const one = (data: unknown) => ({ eq: () => ({ single: () => Promise.resolve({ data, error: null }) }) });
       if (table === "transactions") return { select: () => one({ amount_original: db.amountOriginal, currency: "ILS", company_id: "co-1" }) };
       if (table === "loans") return { select: () => one({ currency: "ILS" }) };
-      if (table === "loan_splits") {
-        return { select: () => ({ eq: () => Promise.resolve(db.splitsError ? { data: null, error: db.splitsError } : { data: db.splits, error: null }) }) };
+      if (table === "legs") {
+        return { select: () => ({ eq: () => ({ not: () => Promise.resolve(db.splitsError ? { data: null, error: db.splitsError } : { data: db.splits, error: null }) }) }) };
       }
       return { select: () => ({ eq: () => Promise.resolve({ data: [], error: null }) }) };
     },
@@ -402,10 +402,10 @@ describe("LoanCategoryRow (FLOW-114 option B)", () => {
     renderRow({ split: { ...SPLIT, needs_review: true } });
     const dialog = await openSheet();
     await waitFor(() => { expect(within(dialog).getByLabelText("סכום, קרן")).toHaveValue("4,150"); });
-    const reads = db.reads.filter((table) => table === "loan_splits").length;
+    const reads = db.reads.filter((table) => table === "legs").length;
     fireEvent.click(within(dialog).getByRole("button", { name: "שמירה" }));
     expect(await screen.findByText("לא הצלחנו לשמור את התיקון.")).toBeInTheDocument();
-    await waitFor(() => { expect(db.reads.filter((table) => table === "loan_splits").length).toBeGreaterThan(reads); });
+    await waitFor(() => { expect(db.reads.filter((table) => table === "legs").length).toBeGreaterThan(reads); });
   });
 
   it("keeps what was typed when a correction fails (FLOW-115)", async () => {
@@ -416,9 +416,9 @@ describe("LoanCategoryRow (FLOW-114 option B)", () => {
     await waitFor(() => { expect(within(dialog).getByLabelText("סכום, קרן")).toHaveValue("4,150"); });
     fireEvent.change(within(dialog).getByLabelText("סכום, קרן"), { target: { value: "4100" } });
     fireEvent.change(within(dialog).getByLabelText("סכום, ריבית"), { target: { value: "1680" } });
-    const reads = db.reads.filter((table) => table === "loan_splits").length;
+    const reads = db.reads.filter((table) => table === "legs").length;
     fireEvent.click(within(dialog).getByRole("button", { name: "שמירה" }));
-    await waitFor(() => { expect(db.reads.filter((table) => table === "loan_splits").length).toBeGreaterThan(reads); });
+    await waitFor(() => { expect(db.reads.filter((table) => table === "legs").length).toBeGreaterThan(reads); });
     await new Promise((r) => { setTimeout(r, 50); });
     expect(within(dialog).getByLabelText("סכום, קרן")).toHaveValue("4,100");
     expect(within(dialog).getByLabelText("סכום, ריבית")).toHaveValue("1,680");
@@ -480,7 +480,7 @@ describe("the transaction card with a matched payment", () => {
     showLive();
     expect(await screen.findByRole("button", { name: /^תשלום הלוואה · משכנתא לדוגמה/ })).toHaveTextContent("3 חלקים");
     await new Promise((r) => { setTimeout(r, 50); });
-    expect(db.reads).not.toContain("loan_splits");
+    expect(db.reads).not.toContain("legs");
     expect(db.rpcs.map((call) => call.name)).not.toContain("get_loan_split");
   });
 
