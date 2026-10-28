@@ -1,5 +1,6 @@
 // MCP tools: the descriptions of FLOW-149's ledger tools (decision 0228), create_journal_entry and
 // get_account_balances, and FLOW-151's set_category_account (decision 0231), listed in tools_specs.ts. Split out of it to keep it under the file-size limit.
+import { PREPAID_READ_SPECS, PREPAID_WRITE_SPECS } from "./tools_prepaid_specs.ts";
 
 function spec(name: string, description: string, properties: Record<string, unknown>, write: boolean) {
   return {
@@ -20,6 +21,7 @@ export const LEDGER_READ_SPECS = [
     as_of: { type: ["string", "null"] },
     project_id: { type: ["string", "null"] },
   }, false),
+  ...PREPAID_READ_SPECS,
 ];
 
 export const LEDGER_WRITE_SPECS = [
@@ -70,4 +72,5 @@ export const LEDGER_WRITE_SPECS = [
     from_account_id: { type: "string" },
     into_account_id: { type: "string" },
   }, true),
+  ...PREPAID_WRITE_SPECS,
 ];

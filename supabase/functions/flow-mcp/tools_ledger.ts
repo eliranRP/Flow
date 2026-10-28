@@ -2,9 +2,10 @@
 // end: list_accounts gives the account ids book_line needs (mcp_accounts), and get_line_legs reads one
 // line's legs back to verify a booking (mcp_line_legs). get_account_balances (FLOW-149, decision 0228)
 // sums the balance-sheet legs per project (mcp_account_balances). Any member reads them.
+import { PREPAID_ALLOWED, PREPAID_READS, prepaidRead } from "./tools_prepaid.ts";
 import { DATE, fail, isCalendarDate, ok, READ_REFUSED, type ToolResult, type ToolRpc, UUID } from "./tools_args.ts";
 
-export const LEDGER_READS = ["list_accounts", "get_line_legs", "get_account_balances", "get_balance_sheet"] as const;
+export const LEDGER_READS = ["list_accounts", "get_line_legs", "get_account_balances", "get_balance_sheet", ...PREPAID_READS] as const;
 
 /** The reads' and the account writes' argument allow-list, merged into ALLOWED in tools_schemas.ts. */
 export const LEDGER_ALLOWED: Record<string, Set<string>> = {
@@ -18,6 +19,7 @@ export const LEDGER_ALLOWED: Record<string, Set<string>> = {
   archive_account: new Set(["idempotency_key", "account_id"]),
   restore_account: new Set(["idempotency_key", "account_id"]),
   merge_account: new Set(["idempotency_key", "from_account_id", "into_account_id"]),
+  ...PREPAID_ALLOWED,
 };
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -29,6 +31,7 @@ export async function ledgerRead(
   args: Record<string, unknown>,
   rpc: ToolRpc,
 ): Promise<ToolResult> {
+  if (name === "list_prepaid_schedules" || name === "get_prepaid_schedule") return prepaidRead(name, args, rpc);
   if (name === "list_accounts") {
     const archived = args.include_archived;
     if (archived !== undefined && typeof archived !== "boolean") return fail("validation", "include_archived: true or false");
