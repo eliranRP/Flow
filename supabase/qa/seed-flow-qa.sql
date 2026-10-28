@@ -75,7 +75,7 @@ declare
   floors jsonb := coalesce(nullif(current_setting('qa_seed.floors', true), '')::jsonb, '{}'::jsonb);
   tables constant text[] := array[
     'customers', 'suppliers', 'projects', 'categories', 'accounts', 'loans', 'loan_rates',
-    'loan_splits', 'transactions', 'allocations', 'line_splits', 'review_queue', 'legs',
+    'transactions', 'allocations', 'review_queue', 'legs',
     'transaction_notes', 'transaction_files', 'jev_prefills', 'project_forecast_edits',
     'recurring_overrides', 'recurring_dismissals', 'recurring_matches'
   ];
@@ -88,6 +88,7 @@ declare
   span_days integer;
   model text;
   tname text;
+  pred text;
   ref integer;
   n_now integer;
   k integer;
@@ -143,6 +144,18 @@ begin
       'select coalesce(max(n), 0) from (select count(*) n from public.%I x join public.companies c on c.id = x.company_id where x.company_id <> $1 and not c.is_demo group by x.company_id) s',
       tname) into ref using qa;
     execute format('select count(*) from public.%I where company_id = $1', tname) into n_now using qa;
+    insert into pg_temp.qa_seed_report (tbl, reference, target, before)
+    values (tname, ref, greatest(ceil(ref * factor)::integer, coalesce((floors->>tname)::integer, 0)), n_now);
+  end loop;
+
+  -- Loan parts and split parts are legs rows (loan_id set, split_part true), one row per part.
+  -- Counted per company like the tables above.
+  foreach tname in array array['loan parts', 'split parts'] loop
+    pred := case when tname = 'loan parts' then 'x.loan_id is not null' else 'x.split_part' end;
+    execute format(
+      'select coalesce(max(n), 0) from (select count(*) n from public.legs x join public.companies c on c.id = x.company_id where x.company_id <> $1 and not c.is_demo and %s group by x.company_id) s',
+      pred) into ref using qa;
+    execute format('select count(*) from public.legs x where x.company_id = $1 and %s', pred) into n_now using qa;
     insert into pg_temp.qa_seed_report (tbl, reference, target, before)
     values (tname, ref, greatest(ceil(ref * factor)::integer, coalesce((floors->>tname)::integer, 0)), n_now);
   end loop;
@@ -282,8 +295,8 @@ begin
   end if;
 
   -- Loan payments: a monthly line per seeded loan, split by save_loan_split (interest, escrow,
-  -- principal), until the loan splits reach their target.
-  select target - (select count(*) from public.loan_splits where company_id = qa) into k from pg_temp.qa_seed_report where tbl = 'loan_splits';
+  -- principal), until the loan parts (legs with loan_id) reach their target.
+  select target - (select count(*) from public.legs l where l.company_id = qa and l.loan_id is not null) into k from pg_temp.qa_seed_report where tbl = 'loan parts';
   if k > 0 and cat_interest is not null then
     wanted := ceil(k / 3.0)::integer;
     paid := 0;
@@ -414,15 +427,15 @@ begin
     end if;
   end if;
 
-  -- Line splits through save_line_split: an overhead expense split across two categories.
-  select target - (select count(*) from public.line_splits where company_id = qa) into k from pg_temp.qa_seed_report where tbl = 'line_splits';
+  -- Split parts through save_line_split: an overhead expense split across two categories.
+  select target - (select count(*) from public.legs l where l.company_id = qa and l.split_part) into k from pg_temp.qa_seed_report where tbl = 'split parts';
   if k > 0 and array_length(expense_cats, 1) >= 2 then
     for r in
       select t.id, t.amount_net, t.category_id
       from public.transactions t
       where t.company_id = qa and t.idempotency_key like 'qa-seed:txn:%' and t.pnl_role = 'overhead'
         and t.user_assigned
-        and not exists (select 1 from public.line_splits l where l.company_id = qa and l.transaction_id = t.id)
+        and not exists (select 1 from public.legs l where l.company_id = qa and l.transaction_id = t.id and l.split_part)
         and not exists (select 1 from public.review_queue q where q.company_id = qa and q.transaction_id = t.id)
       order by t.idempotency_key
       limit ceil(k / 2.0)::integer
@@ -445,7 +458,7 @@ begin
       from public.transactions t
       where t.company_id = qa and t.idempotency_key like 'qa-seed:txn:%' and t.pnl_role = 'overhead'
         and t.user_assigned and abs(t.amount_net) >= 300
-        and not exists (select 1 from public.line_splits l where l.company_id = qa and l.transaction_id = t.id)
+        and not exists (select 1 from public.legs l where l.company_id = qa and l.transaction_id = t.id and l.split_part)
         and not exists (select 1 from public.review_queue q where q.company_id = qa and q.transaction_id = t.id and q.status = 'open')
       order by t.idempotency_key desc
       limit ceil(k / 2.0)::integer
@@ -606,6 +619,11 @@ begin
   -- The counts after.
   foreach tname in array tables loop
     execute format('select count(*) from public.%I where company_id = $1', tname) into n_now using qa;
+    update pg_temp.qa_seed_report set after = n_now where qa_seed_report.tbl = tname;
+  end loop;
+  foreach tname in array array['loan parts', 'split parts'] loop
+    pred := case when tname = 'loan parts' then 'x.loan_id is not null' else 'x.split_part' end;
+    execute format('select count(*) from public.legs x where x.company_id = $1 and %s', pred) into n_now using qa;
     update pg_temp.qa_seed_report set after = n_now where qa_seed_report.tbl = tname;
   end loop;
 end;

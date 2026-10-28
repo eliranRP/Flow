@@ -121,7 +121,7 @@ select is(
 select is(
   public.mcp_split_line('k-open', (select id from msl where label = 'txn_review'), pg_temp.parts(2000, 3000)) -> 'error' ->> 'message',
   'line has an open review', 'a line with an open review is refused');
-select is((select count(*)::integer from public.line_splits), 0, 'no refused call wrote parts');
+select is((select count(*)::integer from private.split_parts), 0, 'no refused call wrote parts');
 
 -- Happy path.
 select is(
@@ -142,7 +142,7 @@ select is(
 select is(
   public.mcp_split_line('k-1', (select id from msl where label = 'txn_bill'), pg_temp.parts(5000, 5000)) -> 'error' ->> 'code',
   'conflict', 'the same key with other parts is a conflict');
-select is((select count(*)::integer from public.line_splits), 2, 'the replay wrote nothing more');
+select is((select count(*)::integer from private.split_parts), 2, 'the replay wrote nothing more');
 
 select is(
   (select jsonb_agg(x ->> 'amount_minor' order by x ->> 'amount_minor') from jsonb_array_elements(

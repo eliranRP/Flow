@@ -115,7 +115,7 @@ Deno.test("create_journal_entry forwards a balanced entry with no bank leg and i
   assertEquals(calls.length, before);
   assertEquals(codeOf(await callTool("create_journal_entry", entry, ["read"], rpc)), "forbidden");
 
-  for (const message of ["a journal entry has no bank leg", "a journal entry needs a leg in the P&L", "a journal entry must change the P&L", "journal entry is fixed", "the category posts to Suspense"]) {
+  for (const message of ["a journal entry has no bank leg", "a journal entry must change the P&L", "account is archived", "journal entry is fixed", "the category posts to Suspense"]) {
     const db = rpcOf(() => ({ status: 200, json: { ok: false, error: { code: "refused", message } } }));
     const refused = await callTool("create_journal_entry", entry, ["write"], db.rpc);
     assertEquals(refused.structuredContent, { ok: false, error: { code: "refused", message } });

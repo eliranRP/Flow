@@ -59,13 +59,13 @@ create or replace function pg_temp.attach(p_label text, p_loan text)
 returns void
 language sql
 as $$
-  insert into public.loan_splits (
-    company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review
-  )
-  select pg_temp.id('co'), pg_temp.id(p_loan), pg_temp.id(p_label), v.part::public.loan_split_part, v.amount, v.amount,
-    (select c.id from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = v.part::public.loan_split_part),
-    false
-  from (values ('interest', 70000), ('escrow', 20000), ('principal', 10000)) as v(part, amount);
+  select tests.loan_split(pg_temp.id(p_label), pg_temp.id(p_loan), (
+    select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+      'category_id', (select c.id from public.categories c
+                      where c.company_id = pg_temp.id('co') and c.loan_part = v.part::public.loan_split_part),
+      'needs_review', false))
+  from (values ('interest', 70000), ('escrow', 20000), ('principal', 10000)) as v(part, amount)
+  ));
 $$;
 grant execute on function pg_temp.attach(text, text) to authenticated, service_role;
 
@@ -74,7 +74,7 @@ returns text
 language sql
 as $$
   select coalesce(string_agg(s.part || ':' || s.amount_minor, ',' order by s.part), '')
-  from public.loan_splits s where s.transaction_id = pg_temp.id(p_label);
+  from private.loan_parts s where s.transaction_id = pg_temp.id(p_label);
 $$;
 grant execute on function pg_temp.parts(text) to authenticated, service_role;
 
@@ -164,7 +164,7 @@ select throws_ok($$select public.restore_loan(pg_temp.id('a'))$$, '23514', 'loan
 select ok(not exists (select 1 from public.loans where id = pg_temp.id('a')), 'and leaves nothing behind');
 select is(pg_temp.parts('txn_one'), '', 'not even the parts that still fit');
 reset role;
-delete from public.loan_splits where transaction_id = pg_temp.id('txn_two');
+select tests.loan_split(pg_temp.id('txn_two'), pg_temp.id('b'), null);
 select tests.authenticate_as('ldo_owner');
 select lives_ok($$select public.restore_loan(pg_temp.id('a'))$$, 'once that line is free again, restore works');
 

@@ -75,16 +75,13 @@ values (pg_temp.id('co'), 'Old bridge loan', 900000, 60000, 12, '2025-01-01', 80
 -- principal part lowers the mortgage balance to 119800.00.
 insert into pin (label, id) values
   ('pay', tests.fixture_line(pg_temp.id('co'), 'pin:pay', 100000, p_project => pg_temp.id('house'), p_category => pg_temp.id('interest')));
-insert into public.loan_splits (
-  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review
-)
-select pg_temp.id('co'), (select id from public.loans where name = 'House mortgage'), pg_temp.id('pay'),
-  v.part::public.loan_split_part, v.amount, v.amount,
-  coalesce(
-    (select c.id from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = v.part::public.loan_split_part),
-    pg_temp.id('materials')),
-  false
-from (values ('interest', 60000), ('escrow', 10000), ('principal', 20000), ('fees', 10000)) as v(part, amount);
+select tests.loan_split(pg_temp.id('pay'), (select id from public.loans where name = 'House mortgage'), (
+  select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+    'category_id', coalesce(
+      (select c.id from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = v.part::public.loan_split_part),
+      pg_temp.id('materials')),
+    'needs_review', false) order by v.n)
+  from (values (1, 'interest', 60000), (2, 'escrow', 10000), (3, 'principal', 20000), (4, 'fees', 10000)) as v(n, part, amount)));
 
 select public.store_mcp_credential(tests.get_supabase_uid('pin_owner'), 'hash-pin-write01', array['read','write'],
   now() + interval '90 days', 'pepper-1');

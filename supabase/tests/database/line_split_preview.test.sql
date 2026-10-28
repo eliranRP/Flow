@@ -77,7 +77,7 @@ select is(
     jsonb_build_object('category_id', (select id from lpv where label = 'repairs'),
       'project_id', null, 'amount_minor', 5668, 'percent', null, 'rest', true, 'gross_up', false)),
   'a preview returns the parts in cents with percent and rest');
-select is((select count(*)::integer from public.line_splits), 0, 'a preview stores no parts');
+select is((select count(*)::integer from private.split_parts), 0, 'a preview stores no parts');
 select ok(
   (select not t.user_assigned from public.transactions t
    where t.id = (select id from lpv where label = 'txn_bill')),
@@ -109,7 +109,7 @@ select ok(
 select is(
   public.save_line_split((select id from lpv where label = 'txn_bill'), '[]'::jsonb, true),
   '[]'::jsonb, 'a preview of a clear returns nothing');
-select is((select count(*)::integer from public.line_splits), 3, 'and keeps the saved parts');
+select is((select count(*)::integer from private.split_parts), 3, 'and keeps the saved parts');
 
 -- Named refusals.
 select throws_ok(

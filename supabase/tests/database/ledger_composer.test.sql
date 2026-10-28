@@ -67,10 +67,10 @@ language sql as $$
 $$;
 
 create function pg_temp.split(p_line text, p_parts jsonb) returns void language sql as $$
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, percent, is_rest, gross_up)
-  select pg_temp.id('co'), pg_temp.id(p_line), o::smallint, pg_temp.id(e->>'c'), pg_temp.id(e->>'p'),
-    (e->>'n')::bigint, null, false, coalesce((e->>'g')::boolean, false)
-  from jsonb_array_elements(p_parts) with ordinality x(e, o);
+  select tests.line_split(pg_temp.id(p_line), (
+    select jsonb_agg(jsonb_build_object('category_id', pg_temp.id(e->>'c'), 'project_id', pg_temp.id(e->>'p'),
+      'amount_minor', (e->>'n')::bigint, 'gross_up', coalesce((e->>'g')::boolean, false)) order by o)
+    from jsonb_array_elements(p_parts) with ordinality x(e, o)));
 $$;
 
 -- The lender's history: three loans booked as proceeds 103% of the deposit less closing costs 3%
@@ -161,7 +161,7 @@ select is((select count(*)::int from public.legs l where l.transaction_id = pg_t
 select is(public.get_line_journal(pg_temp.id('txn_new'))->>'booked_by_ai', 'false', 'a person''s booking is not Jev''s');
 -- ביטול: the parts before go back through save_line_split (empty clears the split).
 select is(jsonb_array_length(public.save_line_split(pg_temp.id('txn_new'), '[]'::jsonb)), 0, 'the app''s ביטול clears the split');
-select is((select count(*)::int from public.line_splits where transaction_id = pg_temp.id('txn_new')), 0, 'the line is plain again');
+select is((select count(*)::int from private.split_parts where transaction_id = pg_temp.id('txn_new')), 0, 'the line is plain again');
 
 select throws_ok($$ select public.save_line_journal(pg_temp.id('txn_new'), jsonb_build_array(
   pg_temp.leg('a_bank', 20000001), pg_temp.leg('a_closing', 600000), pg_temp.leg('a_proceeds', -20600000))) $$,
@@ -248,7 +248,7 @@ select throws_ok($$ select public.undo_jev_booking(pg_temp.id('txn_shop')) $$,
 -- ביטול takes the booking back: the shop line returns to its plain category.
 select tests.authenticate_as('lc_owner');
 select is(public.undo_jev_booking(pg_temp.id('txn_shop'))->>'undone', 'true', 'ביטול undoes Jev''s booking');
-select is((select count(*)::int from public.line_splits where transaction_id = pg_temp.id('txn_shop')), 0,
+select is((select count(*)::int from private.split_parts where transaction_id = pg_temp.id('txn_shop')), 0,
   'the shop line is plain again (normal assignment)');
 select is(public.list_jev_bookings(), '[]'::jsonb, 'the queue is empty');
 

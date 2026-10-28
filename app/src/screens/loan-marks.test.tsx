@@ -12,12 +12,14 @@ const db = vi.hoisted(() => ({
 vi.mock("../lib/supabase", () => ({
   getSupabase: () => ({
     from: (table: string) => {
-      if (table !== "loan_splits") throw new Error(table);
+      if (table !== "legs") throw new Error(table);
       return {
         select: () => ({
           in: (_column: string, ids: string[]) => {
             db.batches.push(ids);
-            return Promise.resolve({ data: db.rows.filter((row) => ids.includes(row.transaction_id)), error: null });
+            return {
+              not: () => Promise.resolve({ data: db.rows.filter((row) => ids.includes(row.transaction_id)), error: null }),
+            };
           },
         }),
       };

@@ -93,11 +93,10 @@ begin
     values (co, 'expense', 'expense', 'project', 'posted', 'ILS', -200000 - case when m = 4 then 1000 else 0 end, -200000, 200000,
       case when m = 4 then -1000 else 0 end, 'source', d, d, 'manual', 'mss:loan:' || m, pb, s_bank, cint, 'mss loan', true, true)
     returning id into ln;
-    insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review)
-    values
-      (co, loan, ln, 'interest', 120000, 120000, cint, m = 2),
-      (co, loan, ln, 'principal', 50000, 50000, cpri, false),
-      (co, loan, ln, 'escrow', 30000, 30000, cesc, false);
+    perform tests.loan_split(ln, loan, jsonb_build_array(
+      jsonb_build_object('part', 'interest', 'amount_minor', 120000, 'scheduled_minor', 120000, 'category_id', cint, 'needs_review', m = 2),
+      jsonb_build_object('part', 'principal', 'amount_minor', 50000, 'scheduled_minor', 50000, 'category_id', cpri, 'needs_review', false),
+      jsonb_build_object('part', 'escrow', 'amount_minor', 30000, 'scheduled_minor', 30000, 'category_id', cesc, 'needs_review', false)));
   end loop;
 
   -- A counted line split (A and B), a shared line over A and B, an unpaid invoice, a kept-out line,
@@ -113,8 +112,9 @@ begin
     (co, 'expense', 'expense', 'project', 'posted', 'ILS', -7000, -7000, 7000, 0, 'source', date '2026-04-05', date '2026-04-05', 'manual', 'mss:out-in', pb, s_water, cx, 'mss out in', true, true, true),
     (co, 'expense', 'expense', null, 'posted', 'ILS', -6000, -6000, 6000, 0, 'source', date '2026-06-08', date '2026-06-08', 'manual', 'mss:none', null, s_water, c1, 'mss none', true, true, null);
   select id into ln from public.transactions where company_id = co and idempotency_key = 'mss:split';
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-  values (co, ln, 1, c1, pa, 6000), (co, ln, 2, c2, pb, 3000);
+  perform tests.line_split(ln, jsonb_build_array(
+    jsonb_build_object('category_id', c1, 'project_id', pa, 'amount_minor', 6000),
+    jsonb_build_object('category_id', c2, 'project_id', pb, 'amount_minor', 3000)));
   select id into ln from public.transactions where company_id = co and idempotency_key = 'mss:shared';
   insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
   values (co, ln, pa, 5000, -5000), (co, ln, pb, 5000, -5001);

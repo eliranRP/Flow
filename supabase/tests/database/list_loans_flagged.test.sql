@@ -41,7 +41,7 @@ end;
 $$;
 grant execute on function pg_temp.as_mcp(text) to authenticated, service_role;
 
--- A line with the given status and amount, split by the app (as the owner) into
+-- A line with the given status and amount, split (through the loan parts writer) into
 -- interest 0, escrow 0 and the whole amount as principal. A null status splits an
 -- existing line, found by its external id.
 create or replace function pg_temp.app_split_line(p_key text, p_status text, p_amount bigint)
@@ -61,20 +61,18 @@ begin
   from pg_temp.f131 c where c.label = 'company';
   end if;
 
-  perform tests.authenticate_as('f131_owner');
-  insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id)
-  select t.company_id, (select id from pg_temp.f131 where label = 'loan'), t.id, v.part::public.loan_split_part,
-    v.amount, v.amount, c.id
+  perform tests.loan_split(t.id, (select id from pg_temp.f131 where label = 'loan'), (
+    select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+      'category_id', c.id))
+    from (values
+      ('interest', 'ריבית משכנתא', 0::bigint),
+      ('escrow', 'מסים וביטוח', 0::bigint),
+      ('principal', 'תשלומי הלוואה', p_amount)
+    ) as v(part, category, amount)
+    join public.categories c on c.company_id = t.company_id and c.name = v.category and c.kind = 'expense'
+  ))
   from public.transactions t
-  cross join (values
-    ('interest', 'ריבית משכנתא', 0::bigint),
-    ('escrow', 'מסים וביטוח', 0::bigint),
-    ('principal', 'תשלומי הלוואה', p_amount)
-  ) as v(part, category, amount)
-  join public.categories c on c.company_id = t.company_id and c.name = v.category and c.kind = 'expense'
   where t.idempotency_key = p_key or t.external_id = p_key;
-  set constraints all immediate;
-  set constraints all deferred;
   reset role;
 end;
 $$;

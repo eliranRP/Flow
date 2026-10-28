@@ -4,7 +4,6 @@
 
 begin;
 
-set constraints all immediate;
 
 select plan(21);
 
@@ -115,7 +114,7 @@ select is(
   'conflict', 'the pnl row is a conflict while a newer set_line_pnl on the line is live');
 reset role;
 select is(
-  (select jsonb_agg(amount_minor order by ordinal) from public.line_splits where transaction_id = pg_temp.id('txn_a')),
+  (select jsonb_agg(amount_minor order by ordinal) from private.split_parts where transaction_id = pg_temp.id('txn_a')),
   '[2500, 7500]'::jsonb, 'the later split is still in place');
 select is((select in_pnl_override from public.transactions where id = pg_temp.id('txn_b')), true,
   'the later override is still in place');
@@ -127,7 +126,7 @@ select is(public.mcp_undo('fbu-pu', 'line_pnl', pg_temp.id('txn_b')) ->> 'ok', '
 reset role;
 select is(
   (select jsonb_agg(jsonb_build_array(amount_minor, percent, is_rest) order by ordinal)
-   from public.line_splits where transaction_id = pg_temp.id('txn_a')),
+   from private.split_parts where transaction_id = pg_temp.id('txn_a')),
   '[[4000, 40.0000, false], [6000, null, true]]'::jsonb, 'undo restores each part''s percent and rest');
 
 -- 5. Now the batch's own writes are the newest: undo_batch undoes them.
@@ -139,7 +138,7 @@ select is(
   public.mcp_undo_batch('fbu-pu2', (select r -> 'data' ->> 'batch_key' from fbu_pnl)) -> 'data' ->> 'ok_count',
   '1', 'the pnl row undoes once its own write is the newest');
 reset role;
-select is((select count(*)::integer from public.line_splits where transaction_id = pg_temp.id('txn_a')), 0,
+select is((select count(*)::integer from private.split_parts where transaction_id = pg_temp.id('txn_a')), 0,
   'the line has no split again');
 select is((select in_pnl_override from public.transactions where id = pg_temp.id('txn_b')), null::boolean,
   'the line follows its category again');
@@ -154,7 +153,7 @@ select is(
   'not_found', 'an undone batch row is not_found, not the newest write on the line');
 reset role;
 select is(
-  (select jsonb_agg(amount_minor order by ordinal) from public.line_splits where transaction_id = pg_temp.id('txn_a')),
+  (select jsonb_agg(amount_minor order by ordinal) from private.split_parts where transaction_id = pg_temp.id('txn_a')),
   '[1000, 9000]'::jsonb, 'the unrelated split stays');
 
 -- 7. A batch stored before FLOW-133 has no write_id: its row still undoes the newest write
@@ -179,7 +178,7 @@ select is(
   public.mcp_undo_batch('fbu-ou1', (select r -> 'data' ->> 'batch_key' from fbu_old)) -> 'data' ->> 'ok_count',
   '1', 'an old batch row still undoes through mcp_undo');
 reset role;
-select is((select count(*)::integer from public.line_splits where transaction_id = pg_temp.id('txn_c')), 0,
+select is((select count(*)::integer from private.split_parts where transaction_id = pg_temp.id('txn_c')), 0,
   'the old batch row put back no split');
 
 select * from finish();

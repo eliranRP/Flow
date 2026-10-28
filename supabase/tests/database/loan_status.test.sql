@@ -39,7 +39,7 @@ end;
 $$;
 grant execute on function pg_temp.as_mcp() to authenticated, service_role;
 
--- A posted 300.00 line on p_date, split by the app (as the owner) into principal only.
+-- A posted 300.00 line on p_date, split (through the loan parts writer) into principal only.
 create or replace function pg_temp.app_split(p_key text, p_date date)
 returns void
 language plpgsql
@@ -55,21 +55,19 @@ begin
     p_date, 'USD', 'manual', p_key, 'Example loan payment'
   from pg_temp.f106 c where c.label = 'company';
 
-  perform tests.authenticate_as('f106_owner');
-  insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id)
-  select t.company_id, (select id from pg_temp.f106 where label = 'loan'), t.id, v.part::public.loan_split_part,
-    v.amount, v.amount, c.id
+  perform tests.loan_split(t.id, (select id from pg_temp.f106 where label = 'loan'), (
+    select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+      'category_id', c.id))
+    from (values
+      ('interest', 0::bigint),
+      ('escrow', 0::bigint),
+      ('principal', 30000::bigint)
+    ) as v(part, amount)
+    join public.categories c
+      on c.company_id = t.company_id and c.loan_part = v.part::public.loan_split_part and c.kind = 'expense'
+  ))
   from public.transactions t
-  cross join (values
-    ('interest', 0::bigint),
-    ('escrow', 0::bigint),
-    ('principal', 30000::bigint)
-  ) as v(part, amount)
-  join public.categories c
-    on c.company_id = t.company_id and c.loan_part = v.part::public.loan_split_part and c.kind = 'expense'
   where t.idempotency_key = p_key;
-  set constraints all immediate;
-  set constraints all deferred;
   reset role;
 end;
 $$;

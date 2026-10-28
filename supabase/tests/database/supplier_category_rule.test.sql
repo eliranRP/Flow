@@ -44,10 +44,9 @@ insert into scr (label, id)
 select 'shared_line', tests.fixture_line(id, 'scr:shared', 40000, 'expense', (select id from scr where label = 'proj'), (select id from scr where label = 'tools'), '2026-10-11') from scr where label = 'co';
 update public.transactions set supplier_id = (select id from scr where label = 'depot')
 where id in (select id from scr where label in ('line', 'no_category', 'loan_line', 'split_line', 'shared_line'));
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-values
-  ((select id from scr where label = 'co'), (select id from scr where label = 'split_line'), 1, (select id from scr where label = 'tools'), null, 40000),
-  ((select id from scr where label = 'co'), (select id from scr where label = 'split_line'), 2, (select id from scr where label = 'rent'), null, 20000);
+select tests.line_split((select id from scr where label = 'split_line'), jsonb_build_array(
+  jsonb_build_object('category_id', (select id from scr where label = 'tools'), 'project_id', null, 'amount_minor', 40000),
+  jsonb_build_object('category_id', (select id from scr where label = 'rent'), 'project_id', null, 'amount_minor', 20000)));
 update public.transactions set pnl_role = 'shared' where id = (select id from scr where label = 'shared_line');
 
 insert into public.company_members (company_id, user_id, role)

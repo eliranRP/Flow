@@ -45,11 +45,10 @@ values (
 insert into lpp (label, id) select 'txn', id from public.transactions where idempotency_key = 'lpp:split';
 
 -- Three parts: an ordinary category, a kept-out category, and the loan principal category.
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-values
-  ((select id from lpp where label = 'co'), (select id from lpp where label = 'txn'), 1, (select id from lpp where label = 'cat_fittings'), null, 20000),
-  ((select id from lpp where label = 'co'), (select id from lpp where label = 'txn'), 2, (select id from lpp where label = 'cat_kept_deposits'), null, 10000),
-  ((select id from lpp where label = 'co'), (select id from lpp where label = 'txn'), 3, (select id from lpp where label = 'cat_principal'), null, 30000);
+select tests.line_split((select id from lpp where label = 'txn'), jsonb_build_array(
+  jsonb_build_object('category_id', (select id from lpp where label = 'cat_fittings'), 'project_id', null, 'amount_minor', 20000),
+  jsonb_build_object('category_id', (select id from lpp where label = 'cat_kept_deposits'), 'project_id', null, 'amount_minor', 10000),
+  jsonb_build_object('category_id', (select id from lpp where label = 'cat_principal'), 'project_id', null, 'amount_minor', 30000)));
 
 -- The sum of the line's parts that count.
 create or replace function pg_temp.counted()

@@ -1,10 +1,11 @@
--- FLOW-952 (decision 0209 item 9): the golden test of the flip. private.pnl_lines now reads the item legs.
--- On a broad invented fixture (the FLOW-948 reconciliation lines: plain income and expense with VAT,
--- kept out both ways, no category, a line split, a reversal part, gross-up normal and contra, a loan
--- split, the overhead project and a shared line; ILS and USD; paid and unpaid; plus a project group,
--- a pending line and a removed line), every reader of the P&L gives the same result::text with the
--- legs body and with the legacy body (swapped back in inside this transaction). Then the same for a
--- viewer, who reads the legs through RLS. Invented data only. USD amounts are cents, ILS agorot.
+-- FLOW-952 (decision 0209 item 9): the golden test of the P&L over the item legs. Since decision 0232
+-- the legs are the only booking store. On a broad invented fixture (the FLOW-948 reconciliation lines:
+-- plain income and expense with VAT, kept out both ways, no category, a line split, a reversal part,
+-- gross-up normal and contra, a loan split, the overhead project and a shared line; ILS and USD; paid
+-- and unpaid; plus a project group, a pending line and a removed line), every reader of the P&L gives
+-- the same result::text before and after every line's parts are written again through the writer API
+-- and every line is re-posted from scratch (private.post_lines). Then the same for a viewer, who reads
+-- the legs through RLS. Invented data only. USD amounts are cents, ILS agorot.
 
 begin;
 
@@ -48,6 +49,9 @@ insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, te
 select (select id from lr where label = 'co'), 'L1', 1000000, 50000, 120, '2026-01-01', 10000, 2000, 'USD';
 insert into lr select 'loan', id from public.loans where company_id = (select id from lr where label = 'co');
 
+create or replace function pg_temp.lid(p_label text)
+returns uuid language sql stable as $$ select id from lr where label = p_label $$;
+
 -- A helper for a whole line.
 create or replace function pg_temp.line(
   p_key text, p_dir text, p_net bigint, p_vat bigint, p_cat text,
@@ -85,40 +89,36 @@ end $$;
 do $$ declare rid uuid; begin
   rid := pg_temp.line('split', 'expense', -8000, 0, 'repairs', null, 'USD');
   update public.transactions set category_id = null where id = rid;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 1, (select id from lr where label='repairs'), (select id from lr where label='north'), 5000, false, false;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 2, (select id from lr where label='closing'), (select id from lr where label='south'), 3000, false, false;
+  perform tests.line_split(rid, jsonb_build_array(
+    jsonb_build_object('category_id', pg_temp.lid('repairs'), 'project_id', pg_temp.lid('north'), 'amount_minor', 5000, 'gross_up', false),
+    jsonb_build_object('category_id', pg_temp.lid('closing'), 'project_id', pg_temp.lid('south'), 'amount_minor', 3000, 'gross_up', false)));
 end $$;
 
 -- 7. reversal part: income line 6000 with an expense refund part reducing the other side (not gross_up)
 do $$ declare rid uuid; begin
   rid := pg_temp.line('reversal', 'income', 6000, 0, 'rent', null);
   update public.transactions set category_id = null where id = rid;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 1, (select id from lr where label='rent'), (select id from lr where label='north'), 8000, false, false;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 2, (select id from lr where label='repairs'), (select id from lr where label='south'), 2000, false, false;
+  perform tests.line_split(rid, jsonb_build_array(
+    jsonb_build_object('category_id', pg_temp.lid('rent'), 'project_id', pg_temp.lid('north'), 'amount_minor', 8000, 'gross_up', false),
+    jsonb_build_object('category_id', pg_temp.lid('repairs'), 'project_id', pg_temp.lid('south'), 'amount_minor', 2000, 'gross_up', false)));
 end $$;
 
 -- 8. gross-up NORMAL: deposit (income) net 7000 = Proceeds 10000 (income) - cost 3000 (expense gross_up)
 do $$ declare rid uuid; begin
   rid := pg_temp.line('gu_normal', 'income', 7000, 0, 'proceeds', null);
   update public.transactions set category_id = null where id = rid;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 1, (select id from lr where label='proceeds'), (select id from lr where label='north'), 10000, false, false;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 2, (select id from lr where label='repairs'), (select id from lr where label='north'), 3000, false, true;
+  perform tests.line_split(rid, jsonb_build_array(
+    jsonb_build_object('category_id', pg_temp.lid('proceeds'), 'project_id', pg_temp.lid('north'), 'amount_minor', 10000, 'gross_up', false),
+    jsonb_build_object('category_id', pg_temp.lid('repairs'), 'project_id', pg_temp.lid('north'), 'amount_minor', 3000, 'gross_up', true)));
 end $$;
 
 -- 9. gross-up CONTRA: expense (PropTax) net -6000 = PropTax 10000 - escrow credit 4000 (same kind, own project)
 do $$ declare rid uuid; begin
   rid := pg_temp.line('gu_contra', 'expense', -6000, 0, 'proptax', null);
   update public.transactions set category_id = null where id = rid;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 1, (select id from lr where label='proptax'), (select id from lr where label='north'), 10000, false, false;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 2, (select id from lr where label='proptax'), (select id from lr where label='south'), 4000, false, true;
+  perform tests.line_split(rid, jsonb_build_array(
+    jsonb_build_object('category_id', pg_temp.lid('proptax'), 'project_id', pg_temp.lid('north'), 'amount_minor', 10000, 'gross_up', false),
+    jsonb_build_object('category_id', pg_temp.lid('proptax'), 'project_id', pg_temp.lid('south'), 'amount_minor', 4000, 'gross_up', true)));
 end $$;
 
 -- 9b. gross-up CONTRA on the SAME category AND project (FLOW-949): PropTax cost 10000 + PropTax
@@ -126,22 +126,21 @@ end $$;
 do $$ declare rid uuid; begin
   rid := pg_temp.line('gu_contra_same', 'expense', -6000, 0, 'proptax', null);
   update public.transactions set category_id = null where id = rid;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 1, (select id from lr where label='proptax'), (select id from lr where label='north'), 10000, false, false;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 2, (select id from lr where label='proptax'), (select id from lr where label='north'), 4000, false, true;
+  perform tests.line_split(rid, jsonb_build_array(
+    jsonb_build_object('category_id', pg_temp.lid('proptax'), 'project_id', pg_temp.lid('north'), 'amount_minor', 10000, 'gross_up', false),
+    jsonb_build_object('category_id', pg_temp.lid('proptax'), 'project_id', pg_temp.lid('north'), 'amount_minor', 4000, 'gross_up', true)));
 end $$;
 
 -- 10. loan split: expense -10000 = interest 7000 (in) + escrow 2000 (in) + principal 1000 (kept out), USD, vat 0
 do $$ declare rid uuid; begin
   rid := pg_temp.line('loan', 'expense', -10000, 0, 'rent', 'north', 'USD');
   update public.transactions set category_id = null where id = rid;
-  insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review)
-  select (select id from lr where label='co'), (select id from lr where label='loan'), rid, 'interest', 7000, 7000, (select id from public.categories where company_id=(select id from lr where label='co') and loan_part='interest'), false;
-  insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review)
-  select (select id from lr where label='co'), (select id from lr where label='loan'), rid, 'escrow', 2000, 2000, (select id from public.categories where company_id=(select id from lr where label='co') and loan_part='escrow'), false;
-  insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review)
-  select (select id from lr where label='co'), (select id from lr where label='loan'), rid, 'principal', 1000, 1000, (select id from public.categories where company_id=(select id from lr where label='co') and loan_part='principal'), false;
+  perform tests.loan_split(rid, (select id from lr where label='loan'), (
+    select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+      'category_id', (select id from public.categories where company_id=(select id from lr where label='co')
+                      and loan_part = v.part::public.loan_split_part limit 1),
+      'needs_review', false) order by v.ord)
+    from (values (1, 'interest', 7000), (2, 'escrow', 2000), (3, 'principal', 1000)) v(ord, part, amount)));
 end $$;
 
 -- 11. overhead line: expense on the overhead project
@@ -163,7 +162,7 @@ returns table (transaction_id uuid, category_id uuid, project_id uuid, kind text
 language sql stable as $$
   select l.transaction_id, a.category_id, l.project_id, a.type, sum(-l.amount_minor)::bigint
   from public.legs l join public.accounts a on a.id = l.account_id
-  where l.company_id = p_company and a.type in ('income', 'expense')
+  where l.company_id = p_company and a.type in ('income', 'expense') and not l.draft
   group by l.transaction_id, a.category_id, l.project_id, a.type
 $$;
 
@@ -183,8 +182,6 @@ do $u$ begin perform tests.create_supabase_user('lr_viewer', 'lr-viewer@example.
 insert into public.company_members (company_id, user_id, role)
 values ((select id from lr where label = 'co'), tests.get_supabase_uid('lr_viewer'), 'viewer');
 
-create or replace function pg_temp.lid(p_label text)
-returns uuid language sql stable as $$ select id from lr where label = p_label $$;
 grant execute on function pg_temp.lid(text) to authenticated, service_role;
 create or replace function pg_temp.tid(p_key text)
 returns uuid language sql stable as $$
@@ -243,10 +240,10 @@ as $$
   from private.line_pnl_states((select array_agg(id order by id) from public.transactions where company_id = pg_temp.lid('co'))) x
 $$;
 
-create temp table golden (name text primary key, legs text, legacy text);
+create temp table golden (name text primary key, legs text, reposted text);
 grant all on golden to authenticated, service_role;
 
--- The readers with the legs body (this migration's private.pnl_lines).
+-- The readers over the legs as the writers left them.
 select tests.authenticate_as('lr_owner');
 insert into golden (name, legs) select r.name, r.result from pg_temp.reads() r;
 insert into golden (name, legs) values ('viewer get_project', null);
@@ -263,28 +260,47 @@ insert into golden (name, legs) values
   ('line_pnl_states', pg_temp.line_states());
 select set_config('request.jwt.claims', '', true);
 
--- The legacy body back in (rolled back with the test), and the same readers again.
-grant select on private.pnl_lines_legacy to authenticated;
-create or replace view private.pnl_lines with (security_invoker = true) as
-select company_id, transaction_id, project_id, pnl_role, direction, doc_kind, doc_date, cash_date, currency,
-  category_id, part, amount_net, line_amount_net, in_pnl, loan_split_fallback, unassigned, kind, unpaid, gross_up
-from private.pnl_lines_legacy;
+-- Every line's parts written again through the writer API (in their order), every other leg deleted,
+-- every line posted from scratch, and the same readers again.
+do $$
+declare
+  co uuid := pg_temp.lid('co');
+  r record;
+begin
+  for r in
+    select s.transaction_id, jsonb_agg(jsonb_build_object('category_id', s.category_id, 'project_id', s.project_id,
+      'amount_minor', s.amount_minor, 'gross_up', s.gross_up) order by s.ordinal) as parts
+    from private.split_parts s where s.company_id = co group by s.transaction_id
+  loop
+    perform tests.line_split(r.transaction_id, r.parts);
+  end loop;
+  for r in
+    select s.transaction_id, s.loan_id, jsonb_agg(jsonb_build_object('part', s.part, 'amount_minor', s.amount_minor,
+      'scheduled_minor', s.scheduled_minor, 'category_id', s.category_id, 'needs_review', s.needs_review)) as parts
+    from private.loan_parts s where s.company_id = co group by s.transaction_id, s.loan_id
+  loop
+    perform tests.loan_split(r.transaction_id, r.loan_id, r.parts);
+  end loop;
+  delete from public.legs l where l.company_id = co and not (l.split_part or l.loan_id is not null);
+  perform private.post_lines(co, array(select t.id from public.transactions t where t.company_id = co));
+end
+$$;
 
 select tests.authenticate_as('lr_owner');
-update golden g set legacy = r.result from pg_temp.reads() r where r.name = g.name;
+update golden g set reposted = r.result from pg_temp.reads() r where r.name = g.name;
 reset role;
 select tests.authenticate_as('lr_viewer');
-update golden set legacy = public.get_project(pg_temp.lid('north'), 'cash', '2026-01-01', '2026-12-31')::text
+update golden set reposted = public.get_project(pg_temp.lid('north'), 'cash', '2026-01-01', '2026-12-31')::text
 where name = 'viewer get_project';
 reset role;
 select set_config('request.jwt.claims', '{"role": "service_role"}', true);
-update golden set legacy = public.company_pnl(pg_temp.lid('co'), '2026-01-01', '2026-12-31', 'cash')::text where name = 'company_pnl cash';
-update golden set legacy = public.company_pnl(pg_temp.lid('co'), '2026-01-01', '2026-12-31', 'invoiced')::text where name = 'company_pnl invoiced';
-update golden set legacy = pg_temp.line_states() where name = 'line_pnl_states';
+update golden set reposted = public.company_pnl(pg_temp.lid('co'), '2026-01-01', '2026-12-31', 'cash')::text where name = 'company_pnl cash';
+update golden set reposted = public.company_pnl(pg_temp.lid('co'), '2026-01-01', '2026-12-31', 'invoiced')::text where name = 'company_pnl invoiced';
+update golden set reposted = pg_temp.line_states() where name = 'line_pnl_states';
 select set_config('request.jwt.claims', '', true);
 
--- Every reader reads a non-empty result, the same from the legs as from the legacy body.
-select is(g.legs, g.legacy, 'the legs and the legacy body agree: ' || g.name)
+-- Every reader reads a non-empty result, the same before and after the re-post.
+select is(g.reposted, g.legs, 'a full re-post reads the same: ' || g.name)
 from golden g
 order by g.name;
 select is(

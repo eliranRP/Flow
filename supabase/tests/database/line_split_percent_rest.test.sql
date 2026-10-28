@@ -76,7 +76,7 @@ create function pg_temp.amounts(p_txn text) returns bigint[]
 language sql
 as $$
   select array_agg(s.amount_minor order by s.ordinal)
-  from public.line_splits s where s.transaction_id = (select id from lpr where label = p_txn)
+  from private.split_parts s where s.transaction_id = (select id from lpr where label = p_txn)
 $$;
 grant execute on function pg_temp.amounts(text) to authenticated;
 
@@ -130,7 +130,7 @@ select lives_ok(
 select is(pg_temp.amounts('txn_bill'), array[1, 5001, 4999]::bigint[], 'the rest takes what is left');
 select ok(
   (select s.category_id = (select id from lpr where label = 'repairs') and s.project_id is null
-   from public.line_splits s where s.transaction_id = (select id from lpr where label = 'txn_bill') and s.ordinal = 3),
+   from private.split_parts s where s.transaction_id = (select id from lpr where label = 'txn_bill') and s.ordinal = 3),
   'the rest keeps the line''s category and project');
 select is(pg_temp.proj_expense('south'), 5002::bigint, 'South counts its two parts');
 

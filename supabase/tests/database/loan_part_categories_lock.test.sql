@@ -117,23 +117,23 @@ as $$
   $s$;
 $$;
 
--- The app files the line's principal under the category, with the deferred checks run now.
+-- The app files the line's principal under the category; the writer checks the rules as it writes.
 create or replace function pg_temp.split_sql()
 returns text
 language sql
 as $$
   select $s$
-    insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id)
-    select t.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount,
-      case when v.part = 'principal' then mine.id else c.id end
+    select tests.loan_split(t.id, l.id, (
+      select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+        'category_id', case when v.part = 'principal' then mine.id else c.id end))
+      from (values ('interest', 50000::bigint), ('escrow', 10000::bigint), ('principal', 40000::bigint)) as v(part, amount)
+      join public.categories c
+        on c.company_id = t.company_id and c.loan_part = v.part::public.loan_split_part and c.kind = 'expense'
+    ))
     from public.transactions t
     join public.loans l on l.company_id = t.company_id
     join public.categories mine on mine.company_id = t.company_id and mine.name = 'Example lock principal'
-    cross join (values ('interest', 50000::bigint), ('escrow', 10000::bigint), ('principal', 40000::bigint)) as v(part, amount)
-    join public.categories c
-      on c.company_id = t.company_id and c.loan_part = v.part::public.loan_split_part and c.kind = 'expense'
     where t.idempotency_key = 'f127lock:one';
-    set constraints all immediate;
   $s$;
 $$;
 

@@ -69,11 +69,11 @@ values (
   (select id from pko where label = 'harbor'), (select id from pko where label = 'rent'), 'pko:split',
   true, true, false
 );
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-select (select id from pko where label = 'co'), t.id, v.ordinal, (select id from pko where label = v.category),
-  (select id from pko where label = v.project), v.amount
+select tests.line_split(t.id, (
+  select jsonb_agg(jsonb_build_object('category_id', (select id from pko where label = v.category),
+    'project_id', (select id from pko where label = v.project), 'amount_minor', v.amount) order by v.ordinal)
+  from (values (1, 'deposit', 'harbor', 1500), (2, 'rent', 'pier', 2500)) as v(ordinal, category, project, amount)))
 from public.transactions t
-cross join (values (1, 'deposit', 'harbor', 1500), (2, 'rent', 'pier', 2500)) as v(ordinal, category, project, amount)
 where t.idempotency_key = 'pko:split';
 
 select tests.authenticate_as('pko_owner');

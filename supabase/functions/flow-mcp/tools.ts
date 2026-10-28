@@ -40,6 +40,7 @@ import { ALLOWED, READ_TOOL_NAMES, SYNC_STATUS_TOOL, WRITE_TOOL_NAMES } from "./
 import { countedPayments, demandPaymentsOf, demandTermsOf, listedLoan, loadLoanPayments, loadLoans } from "./tools_loans.ts";
 import { loanKindOf, loansPaidRead, storedLoanSchedule } from "./tools_loans.ts";
 import { scopeAllows } from "./tools_specs.ts";
+import { getStartedPayload } from "./tools_guide.ts";
 import { projectForecastRead } from "./tools_project_forecast.ts";
 import { bankRead } from "./tools_bank.ts";
 import { weeklySummaryTool } from "./tools_weekly.ts";
@@ -54,7 +55,6 @@ export { type ToolRpc, type ToolInvoke, type ToolDefer } from "./tools_args.ts";
 export { READ_TOOL_NAMES, SYNC_STATUS_TOOL, WRITE_TOOL_NAMES } from "./tools_schemas.ts";
 export { isWriteTool, scopeAllows, toolsFor } from "./tools_specs.ts";
 export { filterReviews } from "./tools_reports.ts";
-
 export async function callTool(
   name: string,
   input: unknown,
@@ -178,6 +178,7 @@ export async function callTool(
     return ok({ ...(result.json as Review), basis });
   }
 
+  if (name === "get_started") return ok(getStartedPayload(scope));
   if (name === "get_jev_status") {
     const result = await rpc("mcp_jev_status", {});
     const status = result.json;

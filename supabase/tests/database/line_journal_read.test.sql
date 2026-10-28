@@ -61,9 +61,9 @@ select pg_temp.line('two', 'co', -30000, 'purchase');
 select pg_temp.line('julbuild', 'co', -5000, 'build');
 update public.transactions set doc_date = '2026-07-10', cash_date = '2026-07-10'
 where id in (pg_temp.id('txn_two'), pg_temp.id('txn_julbuild'));
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, percent, is_rest)
-values (pg_temp.id('co'), pg_temp.id('txn_two'), 1, pg_temp.id('purchase'), pg_temp.id('alpha'), 20000, null, false),
-  (pg_temp.id('co'), pg_temp.id('txn_two'), 2, pg_temp.id('principal'), pg_temp.id('alpha'), 10000, null, true);
+select tests.line_split(pg_temp.id('txn_two'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('purchase'), 'project_id', pg_temp.id('alpha'), 'amount_minor', 20000),
+  jsonb_build_object('category_id', pg_temp.id('principal'), 'project_id', pg_temp.id('alpha'), 'amount_minor', 10000)));
 select pg_temp.line('foreign', 'other_co', -240000, null);
 
 -- An MCP write on 'booked' (live) and on 'undone' (undone since).

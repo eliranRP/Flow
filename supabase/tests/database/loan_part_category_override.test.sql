@@ -158,7 +158,7 @@ returns uuid
 language sql
 set search_path = ''
 as $$
-  select s.category_id from public.loan_splits s
+  select s.category_id from private.loan_parts s
   where s.transaction_id = pg_temp.id('line_' || p_date::text) and s.part = p_part::public.loan_split_part;
 $$;
 grant execute on function pg_temp.cat(date, text) to authenticated, service_role;
@@ -270,7 +270,7 @@ select is(
   'an unknown category is not found'
 );
 select is(
-  (select count(*)::integer from public.loan_splits where transaction_id = pg_temp.id('line_2026-02-20')),
+  (select count(*)::integer from private.loan_parts where transaction_id = pg_temp.id('line_2026-02-20')),
   0,
   'a refused attach writes nothing'
 );
@@ -284,7 +284,7 @@ select is(
 select is(pg_temp.cat('2026-01-01', 'interest'), pg_temp.id('rental'), 'the interest moved');
 select is(pg_temp.interest_in_pnl('2026-01-01'), true, 'the moved interest counts in the P&L');
 select is(
-  (select count(*)::integer from public.loan_splits where transaction_id = pg_temp.id('line_2026-01-01')),
+  (select count(*)::integer from private.loan_parts where transaction_id = pg_temp.id('line_2026-01-01')),
   3,
   'the payment is still attached to the loan, all three parts'
 );
@@ -355,8 +355,7 @@ select is(
 );
 insert into f148 (label, id)
 select 'part_write', (pg_temp.set_part('f148-part-2', array['2026-01-01', '2026-02-01']::date[], 'interest', pg_temp.id('other'))->'data'->>'id')::uuid;
-update public.loan_splits set category_id = pg_temp.id('rental')
-where transaction_id = pg_temp.id('line_2026-02-01') and part = 'interest';
+select private.set_loan_part_category(pg_temp.id('company'), pg_temp.id('line_2026-02-01'), 'interest', pg_temp.id('rental'));
 select is(
   pg_temp.undo('f148-undo-part-3', 'loan_part_category', pg_temp.id('part_write'))->'error'->>'code',
   'conflict',

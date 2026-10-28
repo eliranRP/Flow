@@ -77,13 +77,14 @@ from sp_lines l;
 update public.transactions t set customer_id = pg_temp.id('platform')
 from sp_lines l where t.id = pg_temp.id(l.key);
 
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor) values
-  (pg_temp.id('co'), pg_temp.id('hazel:0'), 1, pg_temp.id('rent'), null, 170000),
-  (pg_temp.id('co'), pg_temp.id('hazel:0'), 2, pg_temp.id('power'), null, 17176),
-  (pg_temp.id('co'), pg_temp.id('hazel:0'), 3, pg_temp.id('water'), null, 18310),
-  (pg_temp.id('co'), pg_temp.id('elm:0'), 1, pg_temp.id('deposit'), null, 250000),
-  (pg_temp.id('co'), pg_temp.id('elm:0'), 2, pg_temp.id('rent'), pg_temp.id('elm'), 16129),
-  (pg_temp.id('co'), pg_temp.id('elm:0'), 3, pg_temp.id('rent'), pg_temp.id('grove'), 56439);
+select tests.line_split(pg_temp.id('hazel:0'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('rent'), 'project_id', null, 'amount_minor', 170000),
+  jsonb_build_object('category_id', pg_temp.id('power'), 'project_id', null, 'amount_minor', 17176),
+  jsonb_build_object('category_id', pg_temp.id('water'), 'project_id', null, 'amount_minor', 18310)));
+select tests.line_split(pg_temp.id('elm:0'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('deposit'), 'project_id', null, 'amount_minor', 250000),
+  jsonb_build_object('category_id', pg_temp.id('rent'), 'project_id', pg_temp.id('elm'), 'amount_minor', 16129),
+  jsonb_build_object('category_id', pg_temp.id('rent'), 'project_id', pg_temp.id('grove'), 'amount_minor', 56439)));
 
 -- Grove's charge is marked recurring by a word on its own row (it has no line of its own).
 insert into public.recurring_overrides (company_id, direction, party_id, currency, project_id, recurring)

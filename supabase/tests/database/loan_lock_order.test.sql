@@ -64,17 +64,23 @@ select extensions.dblink_exec('f131a', $setup$
   from public.companies c
   cross join (values ('f131lock:app', 'posted'), ('f131lock:sync', 'pending'), ('f131lock:free', 'pending')) as v(key, status)
   where c.name = 'Example Lock Co';
-  insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id)
-  select t.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id
-  from public.transactions t
-  join public.loans l on l.company_id = t.company_id
-  cross join (values
-    ('interest', 'ריבית משכנתא', 0::bigint),
-    ('escrow', 'מסים וביטוח', 0::bigint),
-    ('principal', 'תשלומי הלוואה', 100000::bigint)
-  ) as v(part, category, amount)
-  join public.categories c on c.company_id = t.company_id and c.name = v.category and c.kind = 'expense'
-  where t.idempotency_key in ('f131lock:sync', 'f131lock:free');
+  do $parts$
+  begin
+    perform tests.loan_split(t.id, l.id, (
+      select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+        'category_id', c.id))
+      from (values
+        ('interest', 'ריבית משכנתא', 0::bigint),
+        ('escrow', 'מסים וביטוח', 0::bigint),
+        ('principal', 'תשלומי הלוואה', 100000::bigint)
+      ) as v(part, category, amount)
+      join public.categories c on c.company_id = t.company_id and c.name = v.category and c.kind = 'expense'
+    ))
+    from public.transactions t
+    join public.loans l on l.company_id = t.company_id
+    where t.idempotency_key in ('f131lock:sync', 'f131lock:free');
+  end
+  $parts$;
 $setup$);
 
 -- Session b runs each step and reports the SQLSTATE it ends with, or ok.
@@ -101,34 +107,35 @@ returns bigint
 language sql
 as $$
   select n from extensions.dblink('f131b', format(
-    'select count(*) from public.loan_splits s join public.transactions t on t.id = s.transaction_id
+    'select count(*) from private.loan_parts s join public.transactions t on t.id = s.transaction_id
      where t.idempotency_key = %L and s.needs_review', p_key
   )) as t(n bigint);
 $$;
 
--- The app split of a posted line: insert the parts and run the deferred checks now.
+-- The app split of a posted line: the loan parts writer checks the rules as it writes.
 create or replace function pg_temp.app_split_sql()
 returns text
 language sql
 as $$
   select $s$
-    insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id)
-    select t.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id
+    select tests.loan_split(t.id, l.id, (
+      select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+        'category_id', c.id))
+      from (values
+        ('interest', 'ריבית משכנתא', 0::bigint),
+        ('escrow', 'מסים וביטוח', 0::bigint),
+        ('principal', 'תשלומי הלוואה', 100000::bigint)
+      ) as v(part, category, amount)
+      join public.categories c on c.company_id = t.company_id and c.name = v.category and c.kind = 'expense'
+    ))
     from public.transactions t
     join public.loans l on l.company_id = t.company_id
-    cross join (values
-      ('interest', 'ריבית משכנתא', 0::bigint),
-      ('escrow', 'מסים וביטוח', 0::bigint),
-      ('principal', 'תשלומי הלוואה', 100000::bigint)
-    ) as v(part, category, amount)
-    join public.categories c on c.company_id = t.company_id and c.name = v.category and c.kind = 'expense'
     where t.idempotency_key = 'f131lock:app';
-    set constraints all immediate;
   $s$;
 $$;
 
 -- Session a holds the loan as another app split's balance check does (for no key update).
--- Not for update: that also blocks the key-share lock the loan_splits foreign key takes,
+-- Not for update: that also blocks the key-share lock the loan parts' foreign key takes,
 -- so the app split below would time out on the insert even with no lock in the check.
 select extensions.dblink_exec('f131a', 'begin');
 select extensions.dblink_exec('f131a', $$

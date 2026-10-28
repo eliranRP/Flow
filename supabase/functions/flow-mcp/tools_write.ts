@@ -1,6 +1,7 @@
 // MCP tools: callWrite runs every write tool after its scope and argument checks.
 // Split out of tools.ts (FLOW-807). Decision 0080.
 
+import { ACCOUNT_WRITES, accountWrite } from "./tools_accounts.ts";
 import {
   argsOf,
   envelopeOf,
@@ -105,6 +106,7 @@ export async function callWrite(
   if ((PROJECT_FORECAST_WRITES as readonly string[]).includes(name)) {
     return projectForecastWrite(name as typeof PROJECT_FORECAST_WRITES[number], args, rpc);
   }
+  if ((ACCOUNT_WRITES as readonly string[]).includes(name)) return accountWrite(name as typeof ACCOUNT_WRITES[number], args, rpc);
   if ((BANK_WRITES as readonly string[]).includes(name)) return bankWrite(name as typeof BANK_WRITES[number], args, rpc);
   if ((THREAD_WRITES as readonly string[]).includes(name)) return threadWrite(name as typeof THREAD_WRITES[number], args, rpc);
   if (name === "sync_bank") {

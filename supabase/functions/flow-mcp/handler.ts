@@ -5,6 +5,7 @@
 
 import { corsHeadersFor } from "../_shared/http.ts";
 import { companyHint } from "../_shared/owner.ts";
+import { SERVER_INSTRUCTIONS } from "./tools_guide_data.ts";
 import { callTool, isWriteTool, READ_TOOL_NAMES, scopeAllows, type ToolDefer, toolsFor } from "./tools.ts";
 import { signUserJwt, type SigningKey } from "./sign.ts";
 import { chargePreAuth, preAuthOverLimit, resetPreAuthGate } from "./preauth.ts";
@@ -597,6 +598,7 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
         protocolVersion: PROTOCOL,
         capabilities: { tools: { listChanged: true } },
         serverInfo: { name: "flow-mcp", version: "0.1.0" },
+        instructions: SERVER_INSTRUCTIONS,
       },
     }, 200, { "mcp-session-id": `${crypto.randomUUID()}.${await toolsVersion(deps, scope)}` });
   }

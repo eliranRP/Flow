@@ -47,25 +47,32 @@ select (select id from le_ref where label = 'co'), 'expense', 'expense', 'projec
   (select id from le_ref where label = 'p1'), (select id from le_ref where label = 'own'), v.ikey, true
 from (values ('june', '2026-06-10'), ('may', '2026-05-10'), ('partial', '2026-06-12')) as v(ikey, d);
 
-insert into public.loan_splits (
-  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review
-)
-select t.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount,
-  (select k.id from public.categories k where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense'),
-  v.flagged
+select tests.loan_split(t.id, l.id, (
+  select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+    'category_id', (select k.id from public.categories k where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense'),
+    'needs_review', v.flagged))
+  from (values
+    ('june', 'interest', 70000, 'ריבית משכנתא', false),
+    ('june', 'escrow', 20000, 'מסים וביטוח', false),
+    ('june', 'principal', 10000, 'תשלומי הלוואה', false),
+    ('may', 'interest', 70000, 'ריבית משכנתא', true),
+    ('may', 'escrow', 20000, 'מסים וביטוח', true),
+    ('may', 'principal', 10000, 'תשלומי הלוואה', true),
+    ('partial', 'interest', 70000, 'ריבית משכנתא', false),
+    ('partial', 'escrow', 30000, 'מסים וביטוח', false),
+    ('partial', 'principal', 0, 'תשלומי הלוואה', false)
+  ) as v(ikey, part, amount, cat, flagged)
+  where v.ikey = t.idempotency_key
+))
 from public.transactions t
 join public.loans l on l.company_id = t.company_id
-join (values
-  ('june', 'interest', 70000, 'ריבית משכנתא', false),
-  ('june', 'escrow', 20000, 'מסים וביטוח', false),
-  ('june', 'principal', 10000, 'תשלומי הלוואה', false),
-  ('may', 'interest', 70000, 'ריבית משכנתא', true),
-  ('may', 'escrow', 20000, 'מסים וביטוח', true),
-  ('may', 'principal', 10000, 'תשלומי הלוואה', true),
-  ('partial', 'interest', 70000, 'ריבית משכנתא', false),
-  ('partial', 'escrow', 30000, 'מסים וביטוח', false)
-) as v(ikey, part, amount, cat, flagged) on v.ikey = t.idempotency_key;
--- loan_splits_match is deferred, so inside this transaction the partial split exists.
+where t.idempotency_key in ('june', 'may', 'partial');
+-- The writer refuses a two-part split, so the partial one is made by taking a part leg away
+-- and posting the line again: its two parts are then kept off the books.
+delete from public.legs
+where transaction_id = (select id from public.transactions where idempotency_key = 'partial') and part = 'principal';
+select private.post_lines((select id from le_ref where label = 'co'),
+  array[(select id from public.transactions where idempotency_key = 'partial')]);
 
 select tests.authenticate_as('le_owner');
 

@@ -4,13 +4,20 @@
 // sums the balance-sheet legs per project (mcp_account_balances). Any member reads them.
 import { DATE, fail, isCalendarDate, ok, READ_REFUSED, type ToolResult, type ToolRpc, UUID } from "./tools_args.ts";
 
-export const LEDGER_READS = ["list_accounts", "get_line_legs", "get_account_balances"] as const;
+export const LEDGER_READS = ["list_accounts", "get_line_legs", "get_account_balances", "get_balance_sheet"] as const;
 
-/** The reads' argument allow-list, merged into ALLOWED in tools_schemas.ts. */
+/** The reads' and the account writes' argument allow-list, merged into ALLOWED in tools_schemas.ts. */
 export const LEDGER_ALLOWED: Record<string, Set<string>> = {
-  list_accounts: new Set(),
+  list_accounts: new Set(["include_archived"]),
   get_line_legs: new Set(["transaction_id"]),
   get_account_balances: new Set(["as_of"]),
+  get_balance_sheet: new Set(["as_of", "project_id"]),
+  // FLOW-152: the chart of accounts writes (tools_accounts.ts).
+  create_account: new Set(["idempotency_key", "name", "type", "description"]),
+  update_account: new Set(["idempotency_key", "account_id", "name", "description", "type"]),
+  archive_account: new Set(["idempotency_key", "account_id"]),
+  restore_account: new Set(["idempotency_key", "account_id"]),
+  merge_account: new Set(["idempotency_key", "from_account_id", "into_account_id"]),
 };
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -23,7 +30,9 @@ export async function ledgerRead(
   rpc: ToolRpc,
 ): Promise<ToolResult> {
   if (name === "list_accounts") {
-    const result = await rpc("mcp_accounts", {});
+    const archived = args.include_archived;
+    if (archived !== undefined && typeof archived !== "boolean") return fail("validation", "include_archived: true or false");
+    const result = await rpc("mcp_accounts", archived === undefined ? {} : { p_include_archived: archived });
     const body = result.json;
     if (result.status >= 400 || !isObject(body) || !Array.isArray(body.accounts)) return fail("refused", READ_REFUSED);
     return ok(body);
@@ -38,6 +47,20 @@ export async function ledgerRead(
     if (result.status >= 400 || !isObject(body) || !Array.isArray(body.balances) || !Array.isArray(body.book_value)) {
       return fail("refused", READ_REFUSED);
     }
+    return ok(body);
+  }
+  if (name === "get_balance_sheet") {
+    const asOf = args.as_of;
+    if (asOf !== undefined && asOf !== null && (typeof asOf !== "string" || !DATE.test(asOf) || !isCalendarDate(asOf))) {
+      return fail("validation", "as_of: a date, YYYY-MM-DD");
+    }
+    const project = args.project_id;
+    if (project !== undefined && project !== null && (typeof project !== "string" || !UUID.test(project))) {
+      return fail("validation", "project_id: a project id");
+    }
+    const result = await rpc("mcp_balance_sheet", { p_as_of: asOf ?? null, p_project_id: project ?? null });
+    const body = result.json;
+    if (result.status >= 400 || !isObject(body) || !Array.isArray(body.currencies)) return fail("refused", READ_REFUSED);
     return ok(body);
   }
   const id = args.transaction_id;

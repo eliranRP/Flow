@@ -174,12 +174,12 @@ select is(
   'attach returns undo kind'
 );
 select is(
-  (select count(*)::int from public.loan_splits where transaction_id = (select id from mcp5 where label = 'txn')),
+  (select count(*)::int from private.loan_parts where transaction_id = (select id from mcp5 where label = 'txn')),
   3,
   'attach inserts three parts'
 );
 select is(
-  (select sum(amount_minor)::bigint from public.loan_splits where transaction_id = (select id from mcp5 where label = 'txn')),
+  (select sum(amount_minor)::bigint from private.loan_parts where transaction_id = (select id from mcp5 where label = 'txn')),
   100000::bigint,
   'parts sum to the line'
 );
@@ -208,7 +208,7 @@ select is(
   'attach replay returns the stored result'
 );
 select is(
-  (select count(*)::int from public.loan_splits where transaction_id = (select id from mcp5 where label = 'txn')),
+  (select count(*)::int from private.loan_parts where transaction_id = (select id from mcp5 where label = 'txn')),
   3,
   'attach replay writes nothing'
 );
@@ -312,7 +312,7 @@ select is(
   'undo split deletes'
 );
 select is(
-  (select count(*)::int from public.loan_splits where transaction_id = (select id from mcp5 where label = 'txn')),
+  (select count(*)::int from private.loan_parts where transaction_id = (select id from mcp5 where label = 'txn')),
   0,
   'undo split removes rows'
 );

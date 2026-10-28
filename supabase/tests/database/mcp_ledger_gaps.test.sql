@@ -76,9 +76,13 @@ values (pg_temp.id('co'), pg_temp.id('txn_rev'), 'open', 'suggested');
 insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months,
   start_date, payment_minor, escrow_minor, currency)
 values (pg_temp.id('co'), 'Example Loan', 1000000, 50000, 120, '2026-01-01', 30000, 0, 'USD');
-insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review)
-select pg_temp.id('co'), l.id, pg_temp.id('txn_loan'), 'interest', 30000, 30000,
-  (select id from public.categories where company_id = pg_temp.id('co') and loan_part = 'interest'), false
+-- The loan line's payment parts: interest, escrow and principal.
+select tests.loan_split(pg_temp.id('txn_loan'), l.id, (
+  select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+    'category_id', (select c.id from public.categories c
+                    where c.company_id = pg_temp.id('co') and c.loan_part = v.part::public.loan_split_part limit 1),
+    'needs_review', false) order by v.ord)
+  from (values (1, 'interest', 20000), (2, 'escrow', 0), (3, 'principal', 10000)) v(ord, part, amount)))
 from public.loans l where l.company_id = pg_temp.id('co');
 
 -- A leg: account label, signed amount, project label.
@@ -99,7 +103,7 @@ grant execute on function pg_temp.book(text, text, jsonb, text) to authenticated
 -- A line's parts as (category, project, amount, gross_up) text, in stored order.
 create function pg_temp.parts_of(p_line text) returns text language sql stable as $$
   select string_agg(format('%s/%s/%s/%s', c.label, coalesce(p.label, '-'), s.amount_minor, s.gross_up::text), ' ' order by s.ordinal)
-  from public.line_splits s
+  from private.split_parts s
   join pg_temp.lg c on c.id = s.category_id
   left join pg_temp.lg p on p.id = s.project_id
   where s.transaction_id = pg_temp.id(p_line)

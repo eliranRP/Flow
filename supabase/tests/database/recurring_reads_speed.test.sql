@@ -71,9 +71,9 @@ from rs_lines l;
 update public.transactions t set supplier_id = pg_temp.id(l.supplier)
 from rs_lines l where t.id = pg_temp.id(l.key);
 update public.transactions t set category_id = pg_temp.id('upkeep') where t.id = pg_temp.id('u:split');
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor) values
-  (pg_temp.id('co'), pg_temp.id('u:split'), 1, pg_temp.id('upkeep'), null, 80000),
-  (pg_temp.id('co'), pg_temp.id('u:split'), 2, pg_temp.id('upkeep'), pg_temp.id('dogwood'), 40000);
+select tests.line_split(pg_temp.id('u:split'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('upkeep'), 'project_id', null, 'amount_minor', 80000),
+  jsonb_build_object('category_id', pg_temp.id('upkeep'), 'project_id', pg_temp.id('dogwood'), 'amount_minor', 40000)));
 
 -- The reference: the per-line subquery the set-based pick replaced (20261019063254).
 create temp table rs_reference as
@@ -148,9 +148,9 @@ select tests.fixture_line(pg_temp.id('co'), 'rs:pending', 2500, 'expense', pg_te
   p_line_status => 'pending');
 insert into rs (label, id) values
   ('mixed', tests.fixture_line(pg_temp.id('co'), 'rs:mixed', 10000, 'expense', pg_temp.id('alder'), pg_temp.id('upkeep')));
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor) values
-  (pg_temp.id('co'), pg_temp.id('mixed'), 1, pg_temp.id('upkeep'), null, 6000),
-  (pg_temp.id('co'), pg_temp.id('mixed'), 2, pg_temp.id('deposit'), pg_temp.id('birch'), 4000);
+select tests.line_split(pg_temp.id('mixed'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('upkeep'), 'project_id', null, 'amount_minor', 6000),
+  jsonb_build_object('category_id', pg_temp.id('deposit'), 'project_id', pg_temp.id('birch'), 'amount_minor', 4000)));
 
 -- A line waiting on Alder (a suggested category), and every line id, for the company checks after test 10.
 select tests.fixture_line(pg_temp.id('co'), 'rs:guess', 3000, 'expense', pg_temp.id('alder'), pg_temp.id('upkeep'),

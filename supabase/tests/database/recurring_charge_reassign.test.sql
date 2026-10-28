@@ -63,9 +63,9 @@ update public.transactions set supplier_id = pg_temp.id('utility')
 where idempotency_key like 'rc:w%';
 update public.transactions set supplier_id = pg_temp.id('other') where id = pg_temp.id('o_10');
 update public.transactions set removed_at = now() where id = pg_temp.id('w_gone');
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor) values
-  (pg_temp.id('co'), pg_temp.id('w_split'), 1, pg_temp.id('water'), pg_temp.id('oak'), 500),
-  (pg_temp.id('co'), pg_temp.id('w_split'), 2, pg_temp.id('power'), pg_temp.id('oak'), 400);
+select tests.line_split(pg_temp.id('w_split'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('water'), 'project_id', pg_temp.id('oak'), 'amount_minor', 500),
+  jsonb_build_object('category_id', pg_temp.id('power'), 'project_id', pg_temp.id('oak'), 'amount_minor', 400)));
 insert into public.review_queue (company_id, transaction_id, status, reason)
 values (pg_temp.id('co'), pg_temp.id('w_unalloc'), 'open', 'unallocated_shared');
 

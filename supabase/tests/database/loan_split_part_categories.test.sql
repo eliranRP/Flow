@@ -92,7 +92,7 @@ returns uuid
 language sql
 set search_path = ''
 as $$
-  select category_id from public.loan_splits
+  select category_id from private.loan_parts
   where transaction_id = pg_temp.id('txn') and part::text = p_part;
 $$;
 grant execute on function pg_temp.stored(text) to authenticated, service_role;

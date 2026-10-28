@@ -1,13 +1,12 @@
 -- FLOW-948 (decision 0208). The reconciliation proof: the P&L projection of the balanced legs
 -- EQUALS the live private.pnl_lines output, per line/category/project, over a broad invented
 -- fixture — plain, line-split, loan-split, reversal, gross-up normal + contra, kept-out proceeds,
--- overhead, shared, VAT, in ILS and USD, on the cash and invoiced bases. This is how we prove the
--- legs faithfully mirror the P&L WITHOUT changing pnl_lines. The legs are maintained only by the
--- migration's triggers (we never call rebuild_legs here), so this also proves the maintenance
--- path. Invented data only. USD amounts are cents, ILS amounts are agorot.
--- FLOW-951 (decision 0209) adds the mutation matrix at the end: after each legacy writer, the shadow
--- P&L over the legs (private.pnl_lines since FLOW-952) equals the posting rules (private.pnl_lines_legacy)
--- on all 19 pnl_lines columns, kept-out rows included (private.ledger_pnl_diff, both ways).
+-- overhead, shared, VAT, in ILS and USD, on the cash and invoiced bases. The fixture's parts are
+-- written through the parts writer API (decision 0232: a line's parts are its item legs).
+-- Invented data only. USD amounts are cents, ILS amounts are agorot.
+-- FLOW-951 (decision 0209) adds the mutation matrix at the end: after each writer, every line's legs
+-- on the books balance, and the legs are exactly what a full re-post (private.post_lines over every
+-- line) gives, on every leg column, parts and draft parts included.
 
 begin;
 
@@ -51,6 +50,9 @@ insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, te
 select (select id from lr where label = 'co'), 'L1', 1000000, 50000, 120, '2026-01-01', 10000, 2000, 'USD';
 insert into lr select 'loan', id from public.loans where company_id = (select id from lr where label = 'co');
 
+create or replace function pg_temp.lid(p_label text) returns uuid language sql as $$
+  select id from lr where label = p_label $$;
+
 -- A helper for a whole line.
 create or replace function pg_temp.line(
   p_key text, p_dir text, p_net bigint, p_vat bigint, p_cat text,
@@ -88,40 +90,36 @@ end $$;
 do $$ declare rid uuid; begin
   rid := pg_temp.line('split', 'expense', -8000, 0, 'repairs', null, 'USD');
   update public.transactions set category_id = null where id = rid;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 1, (select id from lr where label='repairs'), (select id from lr where label='north'), 5000, false, false;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 2, (select id from lr where label='closing'), (select id from lr where label='south'), 3000, false, false;
+  perform tests.line_split(rid, jsonb_build_array(
+    jsonb_build_object('category_id', pg_temp.lid('repairs'), 'project_id', pg_temp.lid('north'), 'amount_minor', 5000, 'gross_up', false),
+    jsonb_build_object('category_id', pg_temp.lid('closing'), 'project_id', pg_temp.lid('south'), 'amount_minor', 3000, 'gross_up', false)));
 end $$;
 
 -- 7. reversal part: income line 6000 with an expense refund part reducing the other side (not gross_up)
 do $$ declare rid uuid; begin
   rid := pg_temp.line('reversal', 'income', 6000, 0, 'rent', null);
   update public.transactions set category_id = null where id = rid;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 1, (select id from lr where label='rent'), (select id from lr where label='north'), 8000, false, false;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 2, (select id from lr where label='repairs'), (select id from lr where label='south'), 2000, false, false;
+  perform tests.line_split(rid, jsonb_build_array(
+    jsonb_build_object('category_id', pg_temp.lid('rent'), 'project_id', pg_temp.lid('north'), 'amount_minor', 8000, 'gross_up', false),
+    jsonb_build_object('category_id', pg_temp.lid('repairs'), 'project_id', pg_temp.lid('south'), 'amount_minor', 2000, 'gross_up', false)));
 end $$;
 
 -- 8. gross-up NORMAL: deposit (income) net 7000 = Proceeds 10000 (income) - cost 3000 (expense gross_up)
 do $$ declare rid uuid; begin
   rid := pg_temp.line('gu_normal', 'income', 7000, 0, 'proceeds', null);
   update public.transactions set category_id = null where id = rid;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 1, (select id from lr where label='proceeds'), (select id from lr where label='north'), 10000, false, false;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 2, (select id from lr where label='repairs'), (select id from lr where label='north'), 3000, false, true;
+  perform tests.line_split(rid, jsonb_build_array(
+    jsonb_build_object('category_id', pg_temp.lid('proceeds'), 'project_id', pg_temp.lid('north'), 'amount_minor', 10000, 'gross_up', false),
+    jsonb_build_object('category_id', pg_temp.lid('repairs'), 'project_id', pg_temp.lid('north'), 'amount_minor', 3000, 'gross_up', true)));
 end $$;
 
 -- 9. gross-up CONTRA: expense (PropTax) net -6000 = PropTax 10000 - escrow credit 4000 (same kind, own project)
 do $$ declare rid uuid; begin
   rid := pg_temp.line('gu_contra', 'expense', -6000, 0, 'proptax', null);
   update public.transactions set category_id = null where id = rid;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 1, (select id from lr where label='proptax'), (select id from lr where label='north'), 10000, false, false;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 2, (select id from lr where label='proptax'), (select id from lr where label='south'), 4000, false, true;
+  perform tests.line_split(rid, jsonb_build_array(
+    jsonb_build_object('category_id', pg_temp.lid('proptax'), 'project_id', pg_temp.lid('north'), 'amount_minor', 10000, 'gross_up', false),
+    jsonb_build_object('category_id', pg_temp.lid('proptax'), 'project_id', pg_temp.lid('south'), 'amount_minor', 4000, 'gross_up', true)));
 end $$;
 
 -- 9b. gross-up CONTRA on the SAME category AND project (FLOW-949): PropTax cost 10000 + PropTax
@@ -129,22 +127,21 @@ end $$;
 do $$ declare rid uuid; begin
   rid := pg_temp.line('gu_contra_same', 'expense', -6000, 0, 'proptax', null);
   update public.transactions set category_id = null where id = rid;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 1, (select id from lr where label='proptax'), (select id from lr where label='north'), 10000, false, false;
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor, is_rest, gross_up)
-  select (select id from lr where label='co'), rid, 2, (select id from lr where label='proptax'), (select id from lr where label='north'), 4000, false, true;
+  perform tests.line_split(rid, jsonb_build_array(
+    jsonb_build_object('category_id', pg_temp.lid('proptax'), 'project_id', pg_temp.lid('north'), 'amount_minor', 10000, 'gross_up', false),
+    jsonb_build_object('category_id', pg_temp.lid('proptax'), 'project_id', pg_temp.lid('north'), 'amount_minor', 4000, 'gross_up', true)));
 end $$;
 
 -- 10. loan split: expense -10000 = interest 7000 (in) + escrow 2000 (in) + principal 1000 (kept out), USD, vat 0
 do $$ declare rid uuid; begin
   rid := pg_temp.line('loan', 'expense', -10000, 0, 'rent', 'north', 'USD');
   update public.transactions set category_id = null where id = rid;
-  insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review)
-  select (select id from lr where label='co'), (select id from lr where label='loan'), rid, 'interest', 7000, 7000, (select id from public.categories where company_id=(select id from lr where label='co') and loan_part='interest'), false;
-  insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review)
-  select (select id from lr where label='co'), (select id from lr where label='loan'), rid, 'escrow', 2000, 2000, (select id from public.categories where company_id=(select id from lr where label='co') and loan_part='escrow'), false;
-  insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review)
-  select (select id from lr where label='co'), (select id from lr where label='loan'), rid, 'principal', 1000, 1000, (select id from public.categories where company_id=(select id from lr where label='co') and loan_part='principal'), false;
+  perform tests.loan_split(rid, (select id from lr where label='loan'), (
+    select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+      'category_id', (select id from public.categories where company_id=(select id from lr where label='co')
+                      and loan_part = v.part::public.loan_split_part limit 1),
+      'needs_review', false) order by v.ord)
+    from (values (1, 'interest', 7000), (2, 'escrow', 2000), (3, 'principal', 1000)) v(ord, part, amount)));
 end $$;
 
 -- 11. overhead line: expense on the overhead project
@@ -166,7 +163,7 @@ returns table (transaction_id uuid, category_id uuid, project_id uuid, kind text
 language sql stable as $$
   select l.transaction_id, a.category_id, l.project_id, a.type, sum(-l.amount_minor)::bigint
   from public.legs l join public.accounts a on a.id = l.account_id
-  where l.company_id = p_company and a.type in ('income', 'expense')
+  where l.company_id = p_company and a.type in ('income', 'expense') and not l.draft
   group by l.transaction_id, a.category_id, l.project_id, a.type
 $$;
 
@@ -177,12 +174,12 @@ select is(
   (select coalesce(count(*), 0) from (
      select l.transaction_id
      from public.legs l join public.accounts a on a.id = l.account_id
-     where l.company_id = (select id from lr where label = 'co')
+     where l.company_id = (select id from lr where label = 'co') and not l.draft
      group by l.transaction_id
      having sum(l.amount_minor) <> 0 or count(*) filter (where a.is_bank) <> 1
    ) bad)::bigint,
   0::bigint,
-  'every backfilled line balances to 0 with exactly one bank leg'
+  'every line balances to 0 with exactly one bank leg'
 );
 
 -- The projection EQUALS pnl_lines per line/category/project/kind (no row differs, none missing/extra).
@@ -263,29 +260,49 @@ select is(
 );
 
 -- ---- FLOW-951: the mutation matrix. ----
--- pg_temp.diff_rows runs the deferred leg checks now (balance, category FK), then counts the rows
--- where the shadow and the posting rules differ, both ways, on all 19 columns.
+-- pg_temp.diff_rows runs the deferred leg checks now (balance, category FK), then re-posts every line
+-- of the company and counts the legs that differ from what the writers left, both ways, on every
+-- column but the id and the time.
 create or replace function pg_temp.diff_rows() returns bigint language plpgsql as $$
+declare
+  cid uuid := (select id from lr where label = 'co');
+  n bigint;
 begin
   set constraints public.legs_balance, public.legs_company_id_category_id_fkey immediate;
   set constraints public.legs_balance, public.legs_company_id_category_id_fkey deferred;
-  return (select count(*) from private.ledger_pnl_diff((select id from lr where label = 'co')));
+  create temp table lr_legs_before on commit drop as
+    select transaction_id, account_id, project_id, amount_minor, ordinal, leg_kind, category_id, part, gross_up,
+      loan_split_fallback, project_explicit, split_part, part_ordinal, loan_id, scheduled_minor, needs_review, draft
+    from public.legs where company_id = cid;
+  perform private.post_lines(cid, array(select id from public.transactions where company_id = cid));
+  select count(*) into n from (
+    (select * from lr_legs_before except all
+     select transaction_id, account_id, project_id, amount_minor, ordinal, leg_kind, category_id, part, gross_up,
+       loan_split_fallback, project_explicit, split_part, part_ordinal, loan_id, scheduled_minor, needs_review, draft
+     from public.legs where company_id = cid)
+    union all
+    (select transaction_id, account_id, project_id, amount_minor, ordinal, leg_kind, category_id, part, gross_up,
+       loan_split_fallback, project_explicit, split_part, part_ordinal, loan_id, scheduled_minor, needs_review, draft
+     from public.legs where company_id = cid
+     except all select * from lr_legs_before)) d;
+  drop table lr_legs_before;
+  set constraints public.legs_balance immediate;
+  set constraints public.legs_balance deferred;
+  return n;
 end $$;
 create or replace function pg_temp.tid(p_key text) returns uuid language sql as $$
   select id from public.transactions
   where company_id = (select id from lr where label = 'co') and idempotency_key = p_key $$;
-create or replace function pg_temp.lid(p_label text) returns uuid language sql as $$
-  select id from lr where label = p_label $$;
 grant execute on function pg_temp.tid(text) to authenticated, service_role;
 grant execute on function pg_temp.lid(text) to authenticated, service_role;
--- A posting-rules read for the "did the writer really change something" checks.
+-- A P&L read for the "did the writer really change something" checks.
 create or replace function pg_temp.rules(p_key text) returns text language sql as $$
   select string_agg(concat_ws(':', category_id, project_id, kind, amount_net, in_pnl, unassigned, pnl_role, loan_split_fallback),
     '|' order by category_id, project_id, amount_net)
-  from private.pnl_lines_legacy where transaction_id = pg_temp.tid(p_key) $$;
+  from private.pnl_lines where transaction_id = pg_temp.tid(p_key) $$;
 create temp table lr_seen (label text primary key, v text);
 
-select is(pg_temp.diff_rows(), 0::bigint, 'M0 the fixture: the shadow equals the posting rules on all 19 columns');
+select is(pg_temp.diff_rows(), 0::bigint, 'M0 the fixture: the legs are what a full re-post gives');
 select cmp_ok(
   (select count(*) from private.pnl_lines where company_id = pg_temp.lid('co') and not in_pnl), '>=', 3::bigint,
   'M0 kept-out rows are in the P&L over the legs too (owner draw, owner funds, principal)');
@@ -296,11 +313,11 @@ select public.set_category_excluded_from_pnl(pg_temp.lid('repairs'), true);
 reset role;
 select is((select count(*) from private.pnl_lines where category_id = pg_temp.lid('repairs') and in_pnl), 0::bigint,
   'M1 the keep-out took effect on every Repairs row');
-select is(pg_temp.diff_rows(), 0::bigint, 'M1 category kept out: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M1 category kept out: the legs are the posting');
 select tests.authenticate_as('lr_owner');
 select public.set_category_excluded_from_pnl(pg_temp.lid('repairs'), false);
 reset role;
-select is(pg_temp.diff_rows(), 0::bigint, 'M1 category counted again: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M1 category counted again: the legs are the posting');
 
 -- M2 per-line overrides: out, in on a kept-out category, cleared.
 select tests.authenticate_as('lr_owner');
@@ -309,36 +326,36 @@ select public.set_transaction_pnl(pg_temp.tid('kept_exp'), true);
 reset role;
 select is((select bool_and(in_pnl) from private.pnl_lines where transaction_id = pg_temp.tid('kept_exp')), true,
   'M2 the override counts the kept-out line');
-select is(pg_temp.diff_rows(), 0::bigint, 'M2 overrides out and in: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M2 overrides out and in: the legs are the posting');
 select tests.authenticate_as('lr_owner');
 select public.set_transaction_pnl(pg_temp.tid('plain_inc'), null);
 select public.set_transaction_pnl(pg_temp.tid('kept_exp'), null);
 reset role;
-select is(pg_temp.diff_rows(), 0::bigint, 'M2 overrides cleared: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M2 overrides cleared: the legs are the posting');
 
 -- M3 a loan split flagged for review falls back to the whole line, then the review is cleared.
 insert into lr_seen values ('loan', pg_temp.rules('loan'));
-update public.loan_splits set needs_review = true where transaction_id = pg_temp.tid('loan') and part = 'interest';
+select tests.loan_split_review(pg_temp.tid('loan'), true);
 select isnt(pg_temp.rules('loan'), (select v from lr_seen where label = 'loan'), 'M3 the flagged split falls back');
-select is(pg_temp.diff_rows(), 0::bigint, 'M3 loan split flagged: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M3 loan split flagged: the legs are the posting');
 -- No client grant: called as the owner's session, without the client role.
 select tests.authenticate_as('lr_owner');
 reset role;
 select public.clear_loan_split_review(pg_temp.tid('loan'));
-select is(pg_temp.diff_rows(), 0::bigint, 'M3 loan split review cleared: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M3 loan split review cleared: the legs are the posting');
 
 -- M4 a sync changes the loan line's amount (the stale trigger flags the split), then adds VAT.
 update public.transactions set amount_net = -10100, amount_gross = -10100, amount_original = 10100
 where id = pg_temp.tid('loan');
-select is(pg_temp.diff_rows(), 0::bigint, 'M4 loan line amount changed (split stale): shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M4 loan line amount changed (split stale): the legs are the posting');
 update public.transactions set amount_net = -10000, amount_gross = -10000, amount_original = 10000
 where id = pg_temp.tid('loan');
-update public.loan_splits set needs_review = false where transaction_id = pg_temp.tid('loan');
+select tests.loan_split_review(pg_temp.tid('loan'), false);
 update public.transactions set amount_gross = -10100, vat_amount = -100, amount_original = 10100
 where id = pg_temp.tid('loan');
 select is((select bool_and(loan_split_fallback) from private.pnl_lines where transaction_id = pg_temp.tid('loan')), true,
   'M4 a loan line with VAT falls back to its own category');
-select is(pg_temp.diff_rows(), 0::bigint, 'M4 loan line with VAT: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M4 loan line with VAT: the legs are the posting');
 update public.transactions set amount_gross = -10000, vat_amount = 0, amount_original = 10000
 where id = pg_temp.tid('loan');
 
@@ -347,10 +364,10 @@ insert into lr_seen values ('split', pg_temp.rules('split'));
 update public.transactions set amount_net = -8100, amount_gross = -8100, amount_original = 8100
 where id = pg_temp.tid('split');
 select isnt(pg_temp.rules('split'), (select v from lr_seen where label = 'split'), 'M5 the split no longer adds up');
-select is(pg_temp.diff_rows(), 0::bigint, 'M5 split invalidated by an amount change: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M5 split invalidated by an amount change: the legs are the posting');
 update public.transactions set amount_net = -8000, amount_gross = -8000, amount_original = 8000
 where id = pg_temp.tid('split');
-select is(pg_temp.diff_rows(), 0::bigint, 'M5 split adds up again: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M5 split adds up again: the legs are the posting');
 
 -- M6 save_line_split on the overhead line: one part names a project, one keeps the line's.
 select tests.authenticate_as('lr_owner');
@@ -360,22 +377,24 @@ select public.save_line_split(pg_temp.tid('overhead'), jsonb_build_array(
 reset role;
 select is((select count(*) from private.pnl_lines where transaction_id = pg_temp.tid('overhead')), 2::bigint,
   'M6 the overhead line is split in two');
-select is(pg_temp.diff_rows(), 0::bigint, 'M6 save_line_split (explicit and inherited project): shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M6 save_line_split (explicit and inherited project): the legs are the posting');
 
 -- M7 delete_category on a category a whole line and a split part use.
 insert into public.categories (company_id, name, kind, sort_order, is_default)
 values (pg_temp.lid('co'), 'Temp', 'expense', 91, false);
 insert into lr select 'temp', id from public.categories where company_id = pg_temp.lid('co') and name = 'Temp';
 update public.transactions set category_id = pg_temp.lid('temp') where id = pg_temp.tid('plain_exp');
-update public.line_splits set category_id = pg_temp.lid('temp')
-where transaction_id = pg_temp.tid('split') and ordinal = 2;
-select is(pg_temp.diff_rows(), 0::bigint, 'M7 lines moved onto a new category: shadow equals rules');
+select tests.line_split(pg_temp.tid('split'), (
+  select jsonb_agg(jsonb_build_object('category_id', case when s.ordinal = 2 then pg_temp.lid('temp') else s.category_id end,
+    'project_id', s.project_id, 'amount_minor', s.amount_minor, 'gross_up', s.gross_up) order by s.ordinal)
+  from private.split_parts s where s.transaction_id = pg_temp.tid('split')));
+select is(pg_temp.diff_rows(), 0::bigint, 'M7 lines moved onto a new category: the legs are the posting');
 select tests.authenticate_as('lr_owner');
 select public.delete_category(pg_temp.lid('temp'));
 reset role;
 select is((select count(*) from public.legs where category_id = pg_temp.lid('temp')), 0::bigint,
   'M7 no leg names the deleted category');
-select is(pg_temp.diff_rows(), 0::bigint, 'M7 delete_category: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M7 delete_category: the legs are the posting');
 
 -- M8 merge_category: Closing into Repairs (whole lines and split parts move).
 select tests.authenticate_as('lr_owner');
@@ -383,7 +402,7 @@ select public.merge_category(pg_temp.lid('closing'), pg_temp.lid('repairs'));
 reset role;
 select is((select count(*) from public.legs where category_id = pg_temp.lid('closing')), 0::bigint,
   'M8 no leg names the merged category');
-select is(pg_temp.diff_rows(), 0::bigint, 'M8 merge_category: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M8 merge_category: the legs are the posting');
 
 -- M9 a project is deleted: a line's project is cleared by the key (set null); delete_project on an
 -- empty one.
@@ -393,39 +412,39 @@ update public.transactions set project_id = pg_temp.lid('east') where id = pg_te
 delete from public.projects where id = pg_temp.lid('east');
 select is((select project_id from public.legs where transaction_id = pg_temp.tid('plain_inc') and leg_kind = 'item'), null::uuid,
   'M9 the line''s legs lose the deleted project');
-select is(pg_temp.diff_rows(), 0::bigint, 'M9 project deleted under a line: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M9 project deleted under a line: the legs are the posting');
 select tests.authenticate_as('lr_owner');
 select public.delete_project(pg_temp.lid('west'));
 reset role;
-select is(pg_temp.diff_rows(), 0::bigint, 'M9 delete_project: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M9 delete_project: the legs are the posting');
 
 -- M10 set_overhead_project moves the overhead role (read at view time), and back.
 select tests.authenticate_as('lr_owner');
 select public.set_overhead_project(pg_temp.lid('south'));
 reset role;
-select is(pg_temp.diff_rows(), 0::bigint, 'M10 overhead project changed: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M10 overhead project changed: the legs are the posting');
 select tests.authenticate_as('lr_owner');
 select public.set_overhead_project(pg_temp.lid('overhead'));
 reset role;
-select is(pg_temp.diff_rows(), 0::bigint, 'M10 overhead project back: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M10 overhead project back: the legs are the posting');
 
 -- M11 allocation edits on the shared line (unassigned is read at view time).
 delete from public.allocations where transaction_id = pg_temp.tid('shared');
 select is((select bool_and(unassigned) from private.pnl_lines where transaction_id = pg_temp.tid('shared')), true,
   'M11 a shared line with no allocations is unassigned');
-select is(pg_temp.diff_rows(), 0::bigint, 'M11 allocations removed: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M11 allocations removed: the legs are the posting');
 insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net) values
   (pg_temp.lid('co'), pg_temp.tid('shared'), pg_temp.lid('north'), 3333, -3000),
   (pg_temp.lid('co'), pg_temp.tid('shared'), pg_temp.lid('south'), 6667, -6000);
-select is(pg_temp.diff_rows(), 0::bigint, 'M11 allocations added: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M11 allocations added: the legs are the posting');
 
 -- M12 a transfer match is confirmed on a line, then undone.
 create temp table lr_transfer as select private.transfer_mark_line(pg_temp.lid('co'), pg_temp.tid('plain_inc')) as p;
 select is((select bool_and(not in_pnl) from private.pnl_lines where transaction_id = pg_temp.tid('plain_inc')), true,
   'M12 the confirmed transfer is kept out');
-select is(pg_temp.diff_rows(), 0::bigint, 'M12 transfer confirmed: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M12 transfer confirmed: the legs are the posting');
 select private.transfer_restore_line(pg_temp.lid('co'), (select p from lr_transfer));
-select is(pg_temp.diff_rows(), 0::bigint, 'M12 transfer undone: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M12 transfer undone: the legs are the posting');
 
 -- M13 Jev fills a line in review, then the owner undoes it.
 do $$ declare rid uuid; begin
@@ -442,18 +461,18 @@ select public.jev_prefill(pg_temp.lid('co'), pg_temp.tid('jev'), pg_temp.lid('no
 reset role;
 select is((select category_id from public.transactions where id = pg_temp.tid('jev')), pg_temp.lid('repairs'),
   'M13 Jev filled the category');
-select is(pg_temp.diff_rows(), 0::bigint, 'M13 jev_prefill: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M13 jev_prefill: the legs are the posting');
 select tests.authenticate_as('lr_owner');
 select public.undo_jev_prefill(pg_temp.tid('jev'));
 reset role;
-select is(pg_temp.diff_rows(), 0::bigint, 'M13 undo_jev_prefill: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M13 undo_jev_prefill: the legs are the posting');
 
 -- M14 reassign and recategorize a line.
 select tests.authenticate_as('lr_owner');
 select public.reassign_transaction(pg_temp.tid('plain_exp'), pg_temp.lid('north'), pg_temp.lid('proptax'));
 select public.set_transaction_category(pg_temp.tid('nocat'), pg_temp.lid('proceeds'));
 reset role;
-select is(pg_temp.diff_rows(), 0::bigint, 'M14 reassign_transaction and set_transaction_category: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M14 reassign_transaction and set_transaction_category: the legs are the posting');
 
 -- M15 a guessed category keeps a line out; pending, removed and back.
 -- (A guessed kept-out category still counts; only category_suggested changes in this update.)
@@ -461,27 +480,27 @@ insert into lr_seen values ('kept_inc', pg_temp.rules('kept_inc'));
 update public.transactions set user_assigned = false, category_assigned = false where id = pg_temp.tid('kept_inc');
 update public.transactions set category_suggested = true where id = pg_temp.tid('kept_inc');
 select isnt(pg_temp.rules('kept_inc'), (select v from lr_seen where label = 'kept_inc'), 'M15 the guessed kept-out category counts');
-select is(pg_temp.diff_rows(), 0::bigint, 'M15 suggested category: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M15 suggested category: the legs are the posting');
 update public.transactions set line_status = 'pending' where id = pg_temp.tid('reversal');
 update public.transactions set removed_at = now() where id = pg_temp.tid('gu_normal');
-select is((select count(*) from public.legs where transaction_id in (pg_temp.tid('reversal'), pg_temp.tid('gu_normal'))), 0::bigint,
-  'M15 a pending or removed line has no legs');
-select is(pg_temp.diff_rows(), 0::bigint, 'M15 pending and removed lines: shadow equals rules');
+select is((select count(*) from public.legs where transaction_id in (pg_temp.tid('reversal'), pg_temp.tid('gu_normal')) and not draft), 0::bigint,
+  'M15 a pending or removed line has no legs on the books (its parts stay, as draft)');
+select is(pg_temp.diff_rows(), 0::bigint, 'M15 pending and removed lines: the legs are the posting');
 update public.transactions set line_status = 'posted' where id = pg_temp.tid('reversal');
 update public.transactions set removed_at = null where id = pg_temp.tid('gu_normal');
-select is(pg_temp.diff_rows(), 0::bigint, 'M15 posted again: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M15 posted again: the legs are the posting');
 
 -- M16 a category's kind changes (its rows' kind, and the gross-up part's effect, contra or normal).
 insert into lr_seen values ('gu_contra', pg_temp.rules('gu_contra'));
 update public.categories set kind = 'income' where id = pg_temp.lid('proptax');
 select isnt(pg_temp.rules('gu_contra'), (select v from lr_seen where label = 'gu_contra'), 'M16 the kind change moved the posting rules');
-select is(pg_temp.diff_rows(), 0::bigint, 'M16 category kind changed: shadow equals rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'M16 category kind changed: the legs are the posting');
 
 -- And still: every line balances with one bank leg, and the projection book_line checks still agrees.
 select is(
   (select count(*) from (
      select l.transaction_id from public.legs l join public.accounts a on a.id = l.account_id
-     where l.company_id = pg_temp.lid('co')
+     where l.company_id = pg_temp.lid('co') and not l.draft
      group by l.transaction_id
      having sum(l.amount_minor) <> 0 or count(*) filter (where a.is_bank) <> 1) bad)::bigint,
   0::bigint, 'after the matrix every line balances with one bank leg');

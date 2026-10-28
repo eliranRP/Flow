@@ -215,6 +215,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-149"></a>[FLOW-149](tasks/FLOW-149.md) | Journal entries that move no money (depreciation), and the balance-sheet balances per project | MCP + DB |
 | <a id="flow-150"></a>[FLOW-150](tasks/FLOW-150.md) | Move a shared line back to one project | MCP + DB |
 | <a id="flow-151"></a>[FLOW-151](tasks/FLOW-151.md) | Journal entry income legs and Suspense, and re-attaching a detached loan payment | BUG (MCP + DB) |
+| <a id="flow-152"></a>[FLOW-152](tasks/FLOW-152.md) | Chart of accounts and the balance sheet from the ledger | BIG CYCLE (MCP + DB) |
+| <a id="flow-153"></a>[FLOW-153](tasks/FLOW-153.md) | The ledger is the only write model: cut the legacy split tables and the rollback view | BIG CYCLE (DB + MCP + app) |
 | <a id="flow-920"></a>[FLOW-920](tasks/FLOW-920.md) | Project profit: the month's share and after-overhead rows from the server, and the old profit-month section goes | UI + server (follow-up to FLOW-140) |
 | <a id="flow-930"></a>[FLOW-930](tasks/FLOW-930.md) | A yearly charge shows in this month's forecast at a monthly amount | BUG |
 | <a id="flow-935"></a>[FLOW-935](tasks/FLOW-935.md) | The iPhone Home Screen app moves to a new deploy without a reinstall | BUG |
@@ -252,6 +254,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-214"></a>[FLOW-214](tasks/FLOW-214.md) | search_expenses takes amounts in minor units too | SMALL CYCLE |
 | <a id="flow-215"></a>[FLOW-215](tasks/FLOW-215.md) | get_cash_lines names a missing side, and documents its page cap | SMALL CYCLE |
 | <a id="flow-216"></a>[FLOW-216](tasks/FLOW-216.md) | MCP get_company_next_month_inputs: the company forecast's inputs | MCP |
+| <a id="flow-217"></a>[FLOW-217](tasks/FLOW-217.md) | An MCP agent learns the tools in one call | MCP |
 | <a id="flow-515"></a>[FLOW-515](tasks/FLOW-515.md) | MCP: the AI connection page shows the assistant's name, its request count and the code's expiry from the server | MCP |
 | <a id="flow-939"></a>[FLOW-939](tasks/FLOW-939.md) | Several AI (MCP) keys: the key list, one key, a new named key | UI (design approved) |
 

@@ -2,10 +2,11 @@
 -- lines whose posting columns changed (header-only edits leave the legs alone, since the shadow view
 -- reads the header at view time); one insert statement posts all its lines; allocation edits post
 -- nothing (allocations are read at view time); a deleted line loses its legs through the key; a
--- category rename leaves the legs alone and a keep-out re-posts them. Also: pnl_lines and the
--- posting rules give the same rows, the diff finds a corrupted leg both ways, re-posting a set of
--- lines gives the legs the triggers gave, kept-out routing, leg kinds, and that no client can read
--- the posting rules or the shadow. Invented data only; amounts are agorot.
+-- category rename leaves the legs alone and a keep-out re-posts them. Also: pnl_lines gives the
+-- expected rows, a corrupted leg unbalances its line and re-posting repairs it, re-posting every line
+-- gives the legs the triggers gave, kept-out routing, leg kinds, and that no client can post or write
+-- parts. Since decision 0232 the legs are the only booking store (no legacy rows to compare with).
+-- Invented data only; amounts are agorot.
 
 begin;
 
@@ -22,8 +23,12 @@ create or replace function pg_temp.id(p_label text) returns uuid language sql as
 -- The leg ids of one line, as text: unchanged ids mean the line was not re-posted.
 create or replace function pg_temp.leg_ids(p_label text) returns text language sql as $$
   select string_agg(id::text, ',' order by id) from public.legs where transaction_id = pg_temp.id(p_label) $$;
+-- The company's lines whose legs on the books do not balance.
 create or replace function pg_temp.diff_rows() returns bigint language sql as $$
-  select count(*) from private.ledger_pnl_diff(pg_temp.id('co')) $$;
+  select count(*) from (
+    select l.transaction_id from public.legs l
+    where l.company_id = pg_temp.id('co') and not l.draft
+    group by l.transaction_id having sum(l.amount_minor) <> 0) x $$;
 create temp table lpt_seen (label text primary key, v text);
 
 do $fixture$
@@ -46,29 +51,28 @@ begin
     ('shared', tests.fixture_line(co, 'lpt:shared', 9000, 'expense', null, c1, p_pnl_role => 'shared'));
   ln := tests.fixture_line(co, 'lpt:split', 8000, 'expense', pa, null);
   insert into pg_temp.lpt values ('split', ln);
-  insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-  values (co, ln, 1, c1, pb, 5000), (co, ln, 2, c2, null, 3000);
+  perform tests.line_split(ln, jsonb_build_array(
+    jsonb_build_object('category_id', c1, 'project_id', pb, 'amount_minor', 5000),
+    jsonb_build_object('category_id', c2, 'project_id', null, 'amount_minor', 3000)));
   insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
   values (co, pg_temp.id('shared'), pa, 5000, -4500), (co, pg_temp.id('shared'), pb, 5000, -4500);
 end
 $fixture$;
 
--- 1. The live view and the posting rules give the same rows (all 19 columns, both ways).
+-- 1. pnl_lines reads the expected rows from the legs: each line whole, the split by its parts (the first
+-- part on its own project), the kept-out line out of profit.
 select is(
-  (select count(*) from (
-    (select * from private.pnl_lines where company_id = pg_temp.id('co')
-     except all
-     select company_id, transaction_id, project_id, pnl_role, direction, doc_kind, doc_date, cash_date, currency,
-       category_id, part, amount_net, line_amount_net, in_pnl, loan_split_fallback, unassigned, kind, unpaid, gross_up
-     from private.pnl_lines_legacy where company_id = pg_temp.id('co'))
-    union all
-    (select company_id, transaction_id, project_id, pnl_role, direction, doc_kind, doc_date, cash_date, currency,
-       category_id, part, amount_net, line_amount_net, in_pnl, loan_split_fallback, unassigned, kind, unpaid, gross_up
-     from private.pnl_lines_legacy where company_id = pg_temp.id('co')
-     except all
-     select * from private.pnl_lines where company_id = pg_temp.id('co'))) d)::bigint,
-  0::bigint, 'pnl_lines and pnl_lines_legacy give the same rows');
-select is(pg_temp.diff_rows(), 0::bigint, 'the shadow equals the posting rules after the fixture');
+  (select string_agg(x.k, ' ' order by x.k) from (
+     select coalesce(lt.label, '?') || ':' || coalesce(lc.label, '-') || ':' || coalesce(lp.label, '-') || ':'
+       || p.amount_net || ':' || p.in_pnl as k
+     from private.pnl_lines p
+     left join pg_temp.lpt lt on lt.id = p.transaction_id
+     left join pg_temp.lpt lc on lc.id = p.category_id
+     left join pg_temp.lpt lp on lp.id = p.project_id
+     where p.company_id = pg_temp.id('co')) x),
+  'a:c1:pa:-10000:true b:c1:pb:-20000:true inc:ci:pa:50000:true out:cx:pa:-7000:false shared:c1:-:-9000:true split:c1:pb:-5000:true split:c2:pa:-3000:true',
+  'pnl_lines gives the expected rows');
+select is(pg_temp.diff_rows(), 0::bigint, 'every line''s legs balance after the fixture');
 
 -- 2. Header-only edits do not re-post (the shadow reads them at view time).
 insert into lpt_seen values ('a', pg_temp.leg_ids('a')), ('b', pg_temp.leg_ids('b'));
@@ -77,7 +81,7 @@ set description = 'lpt edited', doc_date = date '2026-06-02', cash_date = date '
     doc_kind = 'invoice', currency = 'USD', pnl_role = 'shared', in_cash_override = false
 where id = pg_temp.id('a');
 select is(pg_temp.leg_ids('a'), (select v from lpt_seen where label = 'a'), 'a header-only edit leaves the line''s legs alone');
-select is(pg_temp.diff_rows(), 0::bigint, 'after a header-only edit the shadow still equals the rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'after a header-only edit the legs still balance');
 
 -- 3. A posting edit re-posts only that line.
 update public.transactions set amount_net = -11000, amount_gross = -11000 where id = pg_temp.id('a');
@@ -114,7 +118,7 @@ select is(
      from public.legs l join public.transactions t on t.id = l.transaction_id
      where t.idempotency_key like 'lpt:bulk:%' group by l.leg_kind) x),
   'bank:3,item:3,vat:3', 'one insert of three lines posts three bank, three item and three VAT legs');
-select is(pg_temp.diff_rows(), 0::bigint, 'after a bulk insert the shadow equals the rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'after a bulk insert the legs balance');
 
 -- 6. Allocation edits post nothing; the shadow follows them at view time.
 insert into lpt_seen values ('shared', pg_temp.leg_ids('shared'));
@@ -123,7 +127,7 @@ select is(pg_temp.leg_ids('shared'), (select v from lpt_seen where label = 'shar
 select is(
   (select bool_and(unassigned) from private.pnl_lines where transaction_id = pg_temp.id('shared')), true,
   'the P&L over the legs shows the shared line unassigned at once');
-select is(pg_temp.diff_rows(), 0::bigint, 'after an allocation edit the shadow equals the rules');
+select is(pg_temp.diff_rows(), 0::bigint, 'after an allocation edit the legs balance');
 
 -- 7. A category rename leaves the legs alone (the bridge account takes the name); a keep-out re-posts.
 update lpt_seen set v = pg_temp.leg_ids('b') where label = 'b';
@@ -145,31 +149,32 @@ select is(
 delete from public.transactions where id = pg_temp.id('out');
 select is((select count(*) from public.legs where transaction_id = pg_temp.id('out')), 0::bigint, 'a deleted line has no legs');
 
--- 9. The diff finds a corrupted leg on both sides, and re-posting repairs it.
-update public.legs set gross_up = true
-where transaction_id = pg_temp.id('split') and leg_kind = 'item' and category_id = pg_temp.id('c2');
-select is(
-  (select string_agg(side, ',' order by side) from private.ledger_pnl_diff(pg_temp.id('co'))),
-  'ledger_only,legacy_only', 'a corrupted leg shows on both sides of the diff');
-select private.rebuild_legs_many(pg_temp.id('co'), array[pg_temp.id('split')]);
-select is(pg_temp.diff_rows(), 0::bigint, 'rebuild_legs_many repairs it');
+-- 9. A corrupted bank leg unbalances its line (the balance check waits for the commit), and re-posting
+-- the line repairs it.
+update public.legs set amount_minor = amount_minor - 100
+where transaction_id = pg_temp.id('split') and leg_kind = 'bank';
+select is(pg_temp.diff_rows(), 1::bigint, 'a corrupted leg unbalances its line');
+select private.post_lines(pg_temp.id('co'), array[pg_temp.id('split')]);
+select is(pg_temp.diff_rows(), 0::bigint, 'post_lines repairs it');
 
--- 10. rebuild_legs_many over every line posts exactly what the triggers posted.
+-- 10. post_lines over every line posts exactly what the triggers posted, parts included.
 create temp table lpt_one as
 select transaction_id, account_id, project_id, amount_minor, ordinal, leg_kind, category_id, part, gross_up,
-  loan_split_fallback, project_explicit
+  loan_split_fallback, project_explicit, split_part, part_ordinal, loan_id, scheduled_minor, needs_review, draft
 from public.legs where company_id = pg_temp.id('co');
-select private.rebuild_legs_many(pg_temp.id('co'), array(select id from public.transactions where company_id = pg_temp.id('co')));
+select private.post_lines(pg_temp.id('co'), array(select id from public.transactions where company_id = pg_temp.id('co')));
 select is(
   (select count(*) from (
     (select * from lpt_one except all
      select transaction_id, account_id, project_id, amount_minor, ordinal, leg_kind, category_id, part, gross_up,
-       loan_split_fallback, project_explicit from public.legs where company_id = pg_temp.id('co'))
+       loan_split_fallback, project_explicit, split_part, part_ordinal, loan_id, scheduled_minor, needs_review, draft
+     from public.legs where company_id = pg_temp.id('co'))
     union all
     (select transaction_id, account_id, project_id, amount_minor, ordinal, leg_kind, category_id, part, gross_up,
-       loan_split_fallback, project_explicit from public.legs where company_id = pg_temp.id('co')
+       loan_split_fallback, project_explicit, split_part, part_ordinal, loan_id, scheduled_minor, needs_review, draft
+     from public.legs where company_id = pg_temp.id('co')
      except all select * from lpt_one)) d)::bigint,
-  0::bigint, 'rebuild_legs_many posts the same legs as the triggers did');
+  0::bigint, 'post_lines posts the same legs as the triggers did');
 
 -- 11. Kept-out routing and leg kinds.
 select is(
@@ -183,16 +188,16 @@ select is(
   array['Loan principal', 'Escrow', 'Suspense', 'Loan principal'],
   'kept_out_account routes by loan part (given, or read from the category), else Suspense');
 
--- 12. No client reads the posting rules, or runs the diff and posting. Since FLOW-952 the P&L itself
--- (private.pnl_lines) reads the legs; a member reads it as before, and anon does not.
+-- 12. No client posts lines or writes parts. The P&L (private.pnl_lines) reads the legs; a member reads
+-- it as before, and anon does not.
 select ok(
-  not has_table_privilege('authenticated', 'private.pnl_lines_legacy', 'select')
-  and has_table_privilege('authenticated', 'private.pnl_lines', 'select')
-  and not has_function_privilege('authenticated', 'private.ledger_pnl_diff(uuid)', 'execute')
-  and not has_function_privilege('authenticated', 'private.rebuild_legs_many(uuid,uuid[])', 'execute')
+  has_table_privilege('authenticated', 'private.pnl_lines', 'select')
+  and not has_function_privilege('authenticated', 'private.post_lines(uuid,uuid[])', 'execute')
+  and not has_function_privilege('authenticated', 'private.set_line_parts(uuid,uuid,jsonb)', 'execute')
+  and not has_function_privilege('authenticated', 'private.set_loan_parts(uuid,uuid,uuid,jsonb)', 'execute')
   and not has_function_privilege('authenticated', 'private.kept_out_account(uuid,uuid,public.loan_split_part)', 'execute')
   and not has_table_privilege('anon', 'private.pnl_lines', 'select'),
-  'the posting rules, the diff and posting are closed to clients; the P&L over the legs is read as before');
+  'posting and the parts writers are closed to clients; the P&L over the legs is read as before');
 
 select finish();
 rollback;

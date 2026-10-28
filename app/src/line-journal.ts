@@ -13,7 +13,7 @@ const legSchema = z.object({
   ordinal: z.number().int(),
   account_id: z.string(),
   account_name: z.string(),
-  account_type: z.enum(["income", "expense", "asset", "liability"]),
+  account_type: z.enum(["income", "expense", "asset", "liability", "equity"]),
   system: z.boolean(),
   is_bank: z.boolean(),
   in_pnl: z.boolean(),
@@ -56,6 +56,8 @@ export function legTypeLabel(leg: Pick<JournalLeg, "account_type" | "is_bank">):
       return "נכס";
     case "liability":
       return "התחייבות";
+    case "equity":
+      return "הון";
   }
 }
 

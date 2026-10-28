@@ -38,18 +38,18 @@ select (select id from lc_ref where label = 'co'), 'expense', 'expense', 'overhe
   v.ikey, true
 from (values ('pay', -100000), ('plain', -5000)) as v(ikey, net);
 
-insert into public.loan_splits (
-  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-)
-select t.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount,
-  (select k.id from public.categories k where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense')
+select tests.loan_split(t.id, l.id, (
+  select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+    'category_id', (select k.id from public.categories k where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense')))
+  from (values
+    ('interest', 70000, 'ריבית משכנתא'),
+    ('escrow', 20000, 'מסים וביטוח'),
+    ('principal', 10000, 'תשלומי הלוואה')
+  ) as v(part, amount, cat)
+))
 from public.transactions t
 join public.loans l on l.company_id = t.company_id
-join (values
-  ('interest', 70000, 'ריבית משכנתא'),
-  ('escrow', 20000, 'מסים וביטוח'),
-  ('principal', 10000, 'תשלומי הלוואה')
-) as v(part, amount, cat) on t.idempotency_key = 'pay';
+where t.idempotency_key = 'pay';
 
 select tests.authenticate_as('lc_owner');
 

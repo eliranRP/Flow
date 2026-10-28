@@ -40,17 +40,15 @@ insert into public.loans (
 )
 values (pg_temp.id('co'), 'Example mortgage', 12000000, 60000, 360, '2026-01-01', 150000, 10000, 'ILS');
 
-insert into public.loan_splits (
-  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review
-)
-select pg_temp.id('co'), l.id, pg_temp.id('loan'), v.part::public.loan_split_part, v.amount, v.amount,
-  pg_temp.cat(v.cat, 'expense'), false
+select tests.loan_split(pg_temp.id('loan'), l.id, (
+  select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+    'category_id', pg_temp.cat(v.cat, 'expense'), 'needs_review', false) order by v.n)
+  from (values
+    (1, 'principal', 90000, 'תשלומי הלוואה'),
+    (2, 'interest', 50000, 'ריבית משכנתא'),
+    (3, 'escrow', 10000, 'מסים וביטוח')
+  ) as v(n, part, amount, cat)))
 from public.loans l
-join (values
-  ('principal', 90000, 'תשלומי הלוואה'),
-  ('interest', 50000, 'ריבית משכנתא'),
-  ('escrow', 10000, 'מסים וביטוח')
-) as v(part, amount, cat) on true
 where l.company_id = pg_temp.id('co');
 
 create or replace function pg_temp.kept(p_page jsonb)

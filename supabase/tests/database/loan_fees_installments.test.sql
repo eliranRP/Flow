@@ -130,7 +130,7 @@ language sql
 set search_path = ''
 as $$
   select s.category_id
-  from public.loan_splits s
+  from private.loan_parts s
   join public.transactions t on t.id = s.transaction_id
   where t.idempotency_key = p_key and s.part = p_part::public.loan_split_part;
 $$;
@@ -233,7 +233,7 @@ select is(
   'fees with no category on the call or the loan are refused'
 );
 select is(
-  (select count(*)::int from public.loan_splits where transaction_id = pg_temp.line('f106f:jan')),
+  (select count(*)::int from private.loan_parts where transaction_id = pg_temp.line('f106f:jan')),
   0,
   'and nothing is written'
 );
@@ -243,7 +243,7 @@ select is(
 select pg_temp.update_loan('f106f-int', jsonb_build_object('interest_category_id', pg_temp.id('cat_int')));
 select is(pg_temp.attach('f106f-jan', 'f106f:jan', pg_temp.four_parts(25000, pg_temp.id('cat_fees')))->>'ok', 'true', 'a 4-part attach succeeds');
 select is(
-  (select count(*)::int from public.loan_splits where transaction_id = pg_temp.line('f106f:jan')),
+  (select count(*)::int from private.loan_parts where transaction_id = pg_temp.line('f106f:jan')),
   4,
   'the line has four parts'
 );
@@ -337,31 +337,23 @@ select is(
   'fees cannot stand in for a missing part'
 );
 
--- The app's own writes: a fees part at 0 is refused; fees may move to a kept-out category.
-select tests.authenticate_as('f106f_owner');
+-- The writer's own rules: a fees part at 0 is refused; fees may move to a kept-out category.
 select throws_ok(
-  $$ insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id)
-     values
-       (pg_temp.id('company'), pg_temp.id('loan'), pg_temp.line('f106f:bad'), 'interest', 50000, 50000, pg_temp.id('keyed_interest')),
-       (pg_temp.id('company'), pg_temp.id('loan'), pg_temp.line('f106f:bad'), 'escrow', 10000, 10000, pg_temp.id('keyed_escrow')),
-       (pg_temp.id('company'), pg_temp.id('loan'), pg_temp.line('f106f:bad'), 'principal', 65000, 40000, pg_temp.id('keyed_principal')),
-       (pg_temp.id('company'), pg_temp.id('loan'), pg_temp.line('f106f:bad'), 'fees', 0, 0, pg_temp.id('cat_fees'));
-     set constraints all immediate; $$,
+  $$ select tests.loan_split(pg_temp.line('f106f:bad'), pg_temp.id('loan'), jsonb_build_array(
+       jsonb_build_object('part', 'interest', 'amount_minor', 50000, 'scheduled_minor', 50000, 'category_id', pg_temp.id('keyed_interest')),
+       jsonb_build_object('part', 'escrow', 'amount_minor', 10000, 'scheduled_minor', 10000, 'category_id', pg_temp.id('keyed_escrow')),
+       jsonb_build_object('part', 'principal', 'amount_minor', 65000, 'scheduled_minor', 40000, 'category_id', pg_temp.id('keyed_principal')),
+       jsonb_build_object('part', 'fees', 'amount_minor', 0, 'scheduled_minor', 0, 'category_id', pg_temp.id('cat_fees')))) $$,
   '23514',
   'loan_split_incomplete',
   'the app cannot write a fees part at 0'
 );
-reset role;
-select tests.authenticate_as('f106f_owner');
 select throws_ok(
-  $$ update public.loan_splits s set category_id = pg_temp.id('income_cat')
-     where s.transaction_id = pg_temp.line('f106f:jan') and s.part = 'fees';
-     set constraints all immediate; $$,
+  $$ select private.set_loan_part_category(pg_temp.id('company'), pg_temp.line('f106f:jan'), 'fees', pg_temp.id('income_cat')) $$,
   '23514',
   'loan_split_category',
   'fees cannot be corrected into an income category'
 );
-reset role;
 set constraints all deferred;
 
 -- A fees part in a kept-out category stays out of the P&L.
@@ -459,7 +451,7 @@ select is(
 -- Undo of a 4-part split removes every part and puts the whole line back.
 select is(pg_temp.undo('f106f-undo-feb', 'loan_split', pg_temp.line('f106f:feb'))->>'ok', 'true', 'undo of a 4-part split succeeds');
 select is(
-  (select count(*)::int from public.loan_splits where transaction_id = pg_temp.line('f106f:feb')),
+  (select count(*)::int from private.loan_parts where transaction_id = pg_temp.line('f106f:feb')),
   0,
   'no part is left'
 );

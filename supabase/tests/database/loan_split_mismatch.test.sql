@@ -37,18 +37,18 @@ values ((select id from lm_ref where label = 'co'), 'expense', 'expense', 'overh
   (select id from public.categories where company_id = (select id from lm_ref where label = 'co') and name = 'Mortgage servicer'),
   'pay', true);
 
-insert into public.loan_splits (
-  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-)
-select t.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount,
-  (select k.id from public.categories k where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense')
+select tests.loan_split(t.id, l.id, (
+  select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+    'category_id', (select k.id from public.categories k where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense')))
+  from (values
+    ('interest', 70000, 'ריבית משכנתא'),
+    ('escrow', 20000, 'מסים וביטוח'),
+    ('principal', 10000, 'תשלומי הלוואה')
+  ) as v(part, amount, cat)
+))
 from public.transactions t
 join public.loans l on l.company_id = t.company_id
-join (values
-  ('interest', 70000, 'ריבית משכנתא'),
-  ('escrow', 20000, 'מסים וביטוח'),
-  ('principal', 10000, 'תשלומי הלוואה')
-) as v(part, amount, cat) on t.idempotency_key = 'pay';
+where t.idempotency_key = 'pay';
 
 create function pg_temp.usd()
 returns jsonb
@@ -78,7 +78,7 @@ update public.transactions set amount_gross = -120000, amount_net = -120000 wher
 select tests.authenticate_as('lm_owner');
 
 select is(
-  (select bool_and(s.needs_review) from public.loan_splits s
+  (select bool_and(s.needs_review) from private.loan_parts s
    join public.transactions t on t.id = s.transaction_id where t.idempotency_key = 'pay'),
   false,
   'precondition: nothing flagged the parts'

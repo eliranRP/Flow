@@ -41,7 +41,7 @@ end;
 $$;
 grant execute on function pg_temp.as_mcp(text) to authenticated, service_role;
 
--- A line with the given status and amount, split by the app (as the owner) into
+-- A line with the given status and amount, split (through the loan parts writer) into
 -- interest 0, escrow 0 and the whole amount as principal. A null status splits an
 -- existing line, found by its external id.
 create or replace function pg_temp.app_split_line(p_key text, p_status text, p_amount bigint)
@@ -61,20 +61,18 @@ begin
   from pg_temp.f123 c where c.label = 'company';
   end if;
 
-  perform tests.authenticate_as('f123_owner');
-  insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id)
-  select t.company_id, (select id from pg_temp.f123 where label = 'loan'), t.id, v.part::public.loan_split_part,
-    v.amount, v.amount, c.id
+  perform tests.loan_split(t.id, (select id from pg_temp.f123 where label = 'loan'), (
+    select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+      'category_id', c.id))
+    from (values
+      ('interest', 'ריבית משכנתא', 0::bigint),
+      ('escrow', 'מסים וביטוח', 0::bigint),
+      ('principal', 'תשלומי הלוואה', p_amount)
+    ) as v(part, category, amount)
+    join public.categories c on c.company_id = t.company_id and c.name = v.category and c.kind = 'expense'
+  ))
   from public.transactions t
-  cross join (values
-    ('interest', 'ריבית משכנתא', 0::bigint),
-    ('escrow', 'מסים וביטוח', 0::bigint),
-    ('principal', 'תשלומי הלוואה', p_amount)
-  ) as v(part, category, amount)
-  join public.categories c on c.company_id = t.company_id and c.name = v.category and c.kind = 'expense'
   where t.idempotency_key = p_key or t.external_id = p_key;
-  set constraints all immediate;
-  set constraints all deferred;
   reset role;
 end;
 $$;
@@ -93,7 +91,7 @@ returns bigint
 language sql
 set search_path = ''
 as $$
-  select count(*) from public.loan_splits s
+  select count(*) from private.loan_parts s
   join public.transactions t on t.id = s.transaction_id
   where (t.idempotency_key = p_key or t.external_id = p_key) and s.needs_review;
 $$;
@@ -121,8 +119,8 @@ reset role;
 -- 1. The app split check locks the loan, like the MCP attach path.
 
 select ok(
-  pg_get_functiondef('private.loan_splits_check(uuid)'::regprocedure) ~* 'from public\.loans l where l\.id = loan for no key update',
-  'loan_splits_check locks the loan before the balance check'
+  pg_get_functiondef('private.loan_parts_check(uuid)'::regprocedure) ~* 'from public\.loans l where l\.id = loan for no key update',
+  'loan_parts_check locks the loan before the balance check'
 );
 
 -- 2. A pending line does not count; when it posts past the balance, its parts wait for review.

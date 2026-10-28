@@ -43,8 +43,8 @@ export const bookLineSchema = z.object({
 });
 
 // FLOW-149 (decision 0228): create_journal_entry, an entry that moves no money (depreciation). The
-// legs balance to 0 with no bank leg; the server checks the accounts, that one leg is in the P&L and
-// that the P&L legs do not net to 0.
+// legs balance to 0 with no bank leg; the server checks the accounts and that the P&L legs, if any, do
+// not net to 0 (FLOW-152: an entry on balance-sheet accounts only is allowed).
 export const createJournalEntrySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   doc_date: z.string().refine((v) => isCalendarDate(v), "doc_date must be a calendar date (YYYY-MM-DD)"),

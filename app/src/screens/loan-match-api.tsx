@@ -310,14 +310,15 @@ async function readStoredSplit(transactionId: string): Promise<StoredSplit> {
   const [txn, splits] = await Promise.all([
     supabase.from("transactions").select("amount_original, currency").eq("id", transactionId).single(),
     supabase
-      .from("loan_splits")
+      .from("legs")
       .select("part, amount_minor, scheduled_minor, category_id, needs_review, loan_id")
-      .eq("transaction_id", transactionId),
+      .eq("transaction_id", transactionId)
+      .not("loan_id", "is", null),
   ]);
   assertNoError(txn);
   assertNoError(splits);
   if (!txn.data) throw new Error("supabase");
-  const rows = splits.data ?? [];
+  const rows = (splits.data ?? []).map(loanLeg);
   const loanId = rows[0]?.loan_id;
   let loanCurrency: string | null = null;
   if (loanId) {
@@ -330,12 +331,22 @@ async function readStoredSplit(transactionId: string): Promise<StoredSplit> {
     loanCurrency,
     parts: rows.map((row) => ({
       part: row.part,
-      amountMinor: BigInt(row.amount_minor),
+      amountMinor: BigInt(Math.abs(row.amount_minor)),
       scheduledMinor: BigInt(row.scheduled_minor),
       categoryId: row.category_id,
       needsReview: row.needs_review,
     })),
   };
+}
+
+// A loan part's leg always has its part, loan and schedule (the legs_part_shape check); the read
+// filters on loan_id, so a row without them means the read went wrong.
+function loanLeg<T extends { part: LoanSplitPart | null; loan_id: string | null; scheduled_minor: number | null }>(
+  row: T,
+): T & { part: LoanSplitPart; loan_id: string; scheduled_minor: number } {
+  const { part, loan_id: loanId, scheduled_minor: scheduledMinor } = row;
+  if (part == null || loanId == null || scheduledMinor == null) throw new Error("supabase");
+  return { ...row, part, loan_id: loanId, scheduled_minor: scheduledMinor };
 }
 
 async function readLoanMatch(transactionId: string, known: boolean): Promise<LoadedMatch> {
@@ -354,9 +365,10 @@ async function readLoanMatch(transactionId: string, known: boolean): Promise<Loa
     known
       ? Promise.resolve({ data: [], error: null })
       : supabase
-        .from("loan_splits")
+        .from("legs")
         .select("id, part, amount_minor, scheduled_minor, needs_review, loan_id")
-        .eq("transaction_id", transactionId),
+        .eq("transaction_id", transactionId)
+        .not("loan_id", "is", null),
     supabase
       .from("loans")
       .select("id, name, currency, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, status, closed_on, interest_category_id, escrow_category_id, principal_category_id, fees_category_id, kind, interest_only_months, amortization_months, loan_rates(effective_date, annual_rate_ppm)")
@@ -402,10 +414,10 @@ async function readLoanMatch(transactionId: string, known: boolean): Promise<Loa
     companyId,
     lineMinor: BigInt(txn.data.amount_original),
     currency: txn.data.currency,
-    splits: (splits.data ?? []).map((row) => ({
+    splits: (splits.data ?? []).map(loanLeg).map((row) => ({
       id: row.id,
       part: row.part,
-      amountMinor: BigInt(row.amount_minor),
+      amountMinor: BigInt(Math.abs(row.amount_minor)),
       scheduledMinor: BigInt(row.scheduled_minor),
       needsReview: row.needs_review,
       loanId: row.loan_id,

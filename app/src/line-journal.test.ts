@@ -46,6 +46,7 @@ describe("the line's journal (FLOW-954)", () => {
     expect([interest, escrow, bank].map(legTypeLabel)).toEqual(["הוצאה", "נכס", "בנק"]);
     expect(legTypeLabel({ account_type: "liability", is_bank: false })).toBe("התחייבות");
     expect(legTypeLabel({ account_type: "income", is_bank: false })).toBe("הכנסה");
+    expect(legTypeLabel({ account_type: "equity", is_bank: false })).toBe("הון");
   });
 
   it("only a leg that is neither the bank nor in profit is kept out", () => {

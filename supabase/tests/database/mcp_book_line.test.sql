@@ -1,6 +1,6 @@
--- FLOW-948 (decision 0208). public.mcp_book_line: a balanced set of legs writes the equivalent
--- legacy rows so the unchanged pnl_lines reflects it, and the derived legs project back to the
--- request. Unbalanced legs are refused; a leg on another company's account is refused; the write
+-- FLOW-948 (decision 0208). public.mcp_book_line: a balanced set of legs writes the line and its split
+-- parts (decision 0232: the parts are the line's legs), pnl_lines reflects it, and the legs on the books
+-- project back to the request. Unbalanced legs are refused; a leg on another company's account is refused; the write
 -- is idempotent and undoable. FLOW-953: a kept-out category leg books, kept out of the P&L; a VAT leg is
 -- refused. Invented data only. USD amounts are cents.
 
@@ -65,7 +65,7 @@ select ok((public.mcp_book_line('k1', '2026-06-10', 'expense', 'USD', 'A repair 
     jsonb_build_object('account_id', (select id from bl where label='a_repairs'), 'project_id', (select id from bl where label='north'), 'amount_minor', 5000)
   )))->>'ok' = 'true', 'a balanced single-category payment is booked');
 
--- 2. It created a legacy transaction that pnl_lines shows as -5000 under Repairs/North.
+-- 2. It created a line that pnl_lines shows as -5000 under Repairs/North.
 select is(
   (select l.amount_net from private.pnl_lines l
    join public.transactions t on t.id = l.transaction_id
@@ -85,13 +85,13 @@ select ok((public.mcp_book_line('k2', '2026-06-11', 'expense', 'USD', 'A split b
     jsonb_build_object('account_id', (select id from bl where label='a_bank'), 'amount_minor', -8000),
     jsonb_build_object('account_id', (select id from bl where label='a_repairs'), 'project_id', (select id from bl where label='north'), 'amount_minor', 5000),
     jsonb_build_object('account_id', (select id from bl where label='a_closing'), 'project_id', (select id from bl where label='south'), 'amount_minor', 3000)
-  )))->>'ok' = 'true', 'a balanced split payment is booked as line_splits');
+  )))->>'ok' = 'true', 'a balanced split payment is booked as a split');
 
--- 5. The split created two line_splits.
+-- 5. The split has two parts on the books.
 select is(
-  (select count(*) from public.line_splits s
-   join public.transactions t on t.id=s.transaction_id where t.description='A split bill')::bigint,
-  2::bigint, 'the split booking created two line_splits');
+  (select count(*) from private.split_parts s
+   join public.transactions t on t.id=s.transaction_id where t.description='A split bill' and not s.draft)::bigint,
+  2::bigint, 'the split booking created two split parts');
 
 -- 6. Its income/expense legs project to the request (Repairs -5000, Closing -3000), read as the owner.
 reset role;
@@ -130,7 +130,7 @@ select ok((public.mcp_book_line('k8', '2026-06-12', 'expense', 'USD', 'Gross-up 
   )))->>'ok' = 'true', 'a new line with a contra credit and an income credit is booked');
 select is(
   (select string_agg(c.name || ':' || s.amount_minor || ':' || s.gross_up, ' ' order by s.ordinal)
-   from public.line_splits s join public.categories c on c.id = s.category_id
+   from private.split_parts s join public.categories c on c.id = s.category_id
    join public.transactions t on t.id = s.transaction_id where t.description = 'Gross-up bill'),
   'Repairs:9000:false Repairs:2000:true Rent:1000:true', 'the credits are gross-up parts, the debit a normal part');
 select is(

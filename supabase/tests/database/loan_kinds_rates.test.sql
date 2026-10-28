@@ -198,7 +198,7 @@ returns boolean
 language sql
 set search_path = ''
 as $$
-  select bool_and(s.needs_review) from public.loan_splits s where s.transaction_id = pg_temp.line(p_key);
+  select bool_and(s.needs_review) from private.loan_parts s where s.transaction_id = pg_temp.line(p_key);
 $$;
 
 select tests.authenticate_as('f106k_owner');

@@ -35,13 +35,14 @@ insert into clp (label, id) values
     pg_temp.id('power_cat'), '2026-06-07'));
 
 -- The deposit is rent plus two refunds: 1,700.00 + 120.00 + 180.00 = 2,000.00.
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor) values
-  (pg_temp.id('co'), pg_temp.id('deposit'), 1, pg_temp.id('rent_cat'), null, 170000),
-  (pg_temp.id('co'), pg_temp.id('deposit'), 2, pg_temp.id('power_cat'), null, 12000),
-  (pg_temp.id('co'), pg_temp.id('deposit'), 3, pg_temp.id('water_cat'), null, 18000),
-  -- One category on two projects.
-  (pg_temp.id('co'), pg_temp.id('repair'), 1, pg_temp.id('power_cat'), null, 30000),
-  (pg_temp.id('co'), pg_temp.id('repair'), 2, pg_temp.id('power_cat'), pg_temp.id('pier'), 20000);
+select tests.line_split(pg_temp.id('deposit'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('rent_cat'), 'project_id', null, 'amount_minor', 170000),
+  jsonb_build_object('category_id', pg_temp.id('power_cat'), 'project_id', null, 'amount_minor', 12000),
+  jsonb_build_object('category_id', pg_temp.id('water_cat'), 'project_id', null, 'amount_minor', 18000)));
+-- One category on two projects.
+select tests.line_split(pg_temp.id('repair'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('power_cat'), 'project_id', null, 'amount_minor', 30000),
+  jsonb_build_object('category_id', pg_temp.id('power_cat'), 'project_id', pg_temp.id('pier'), 'amount_minor', 20000)));
 
 create or replace function pg_temp.row_of(p_page jsonb, p_description text)
 returns jsonb
@@ -90,7 +91,10 @@ select is(
 
 -- A split that no longer sums to the line counts whole, so the row names no parts.
 reset role;
-update public.line_splits set amount_minor = 17000 where transaction_id = pg_temp.id('deposit') and ordinal = 1;
+select tests.line_split(pg_temp.id('deposit'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('rent_cat'), 'project_id', null, 'amount_minor', 17000),
+  jsonb_build_object('category_id', pg_temp.id('power_cat'), 'project_id', null, 'amount_minor', 12000),
+  jsonb_build_object('category_id', pg_temp.id('water_cat'), 'project_id', null, 'amount_minor', 18000)));
 select tests.authenticate_as('clp_owner');
 select is(
   pg_temp.row_of(public.cash_month_lines('2026-06-01', 'in'), 'clp:deposit') -> 'parts',

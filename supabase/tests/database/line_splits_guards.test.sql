@@ -48,8 +48,11 @@ from public.transactions where idempotency_key like 'lsg:%';
 
 insert into public.loans (company_id, name, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, currency)
 values ((select id from lsg where label = 'co'), 'Example note', 1000000, 60000, 360, '2026-01-01', 10000, 0, 'USD');
-insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id)
-select t.company_id, l.id, t.id, 'interest', 1000, 1000, (select id from lsg where label = 'repairs')
+select tests.loan_split(t.id, l.id, (
+  select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+    'category_id', (select k.id from public.categories k
+      where k.company_id = t.company_id and k.loan_part = v.part::public.loan_split_part)) order by v.ord)
+  from (values (1, 'interest', 400), (2, 'escrow', 300), (3, 'principal', 300)) as v(ord, part, amount)))
 from public.transactions t join public.loans l on l.company_id = t.company_id
 where t.id = (select id from lsg where label = 'txn_loan');
 
@@ -102,10 +105,9 @@ select throws_ok(
   'line has a loan split', 'the RPC refuses a line with a loan split');
 reset role;
 select throws_ok(
-  $$insert into public.line_splits (company_id, transaction_id, ordinal, category_id, amount_minor)
-    values ((select id from lsg where label = 'co'), (select id from lsg where label = 'txn_loan'), 1,
-      (select id from lsg where label = 'supplies'), 1000)$$,
-  'line has a loan split', 'the trigger refuses a direct insert on a line with a loan split');
+  $$select tests.line_split((select id from lsg where label = 'txn_loan'), jsonb_build_array(jsonb_build_object(
+      'category_id', (select id from lsg where label = 'supplies'), 'project_id', null, 'amount_minor', 1000)))$$,
+  'line has a loan split', 'the writer refuses parts on a line with a loan split');
 
 -- Undo of a created project or category that a part uses is a conflict, not a refusal.
 select pg_temp.as_mcp();
@@ -126,7 +128,7 @@ select is(
   public.mcp_undo('lsg-u2', 'category', (select id from lsg where label = 'new_category')) -> 'error' ->> 'code',
   'conflict', 'undo of a category a part uses is a conflict');
 select is(
-  (select count(*)::integer from public.line_splits where transaction_id = (select id from lsg where label = 'txn_new')),
+  (select count(*)::integer from private.split_parts where transaction_id = (select id from lsg where label = 'txn_new')),
   2, 'and the parts stay');
 
 select * from finish();

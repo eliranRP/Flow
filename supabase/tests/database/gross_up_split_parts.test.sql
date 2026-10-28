@@ -178,7 +178,7 @@ select throws_ok(
   $$select public.save_line_split((select id from gru where label = 'txn_dep'),
     jsonb_build_array(pg_temp.part('proceeds', 100000), pg_temp.part('closing', 3000, 'rival', true)))$$,
   'project not found', 'another company''s project is refused');
-select is((select count(*)::integer from public.line_splits), 0, 'nothing was written by the refusals');
+select is((select count(*)::integer from private.split_parts), 0, 'nothing was written by the refusals');
 
 -- ---------------------------------------------------------------------------
 -- The gross-up deposit: gross proceeds (+income) minus a real closing cost (expense).

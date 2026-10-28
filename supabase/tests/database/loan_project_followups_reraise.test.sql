@@ -122,7 +122,7 @@ select is(
 );
 reset role;
 select is(
-  (select count(*)::int from public.loan_splits where transaction_id = (select id from lr where label = 'd1')),
+  (select count(*)::int from private.loan_parts where transaction_id = (select id from lr where label = 'd1')),
   0,
   'the deadlocked attach kept no parts'
 );
@@ -134,7 +134,7 @@ select is(
 );
 reset role;
 select is(
-  (select count(*)::int from public.loan_splits where transaction_id = (select id from lr where label = 'd1')),
+  (select count(*)::int from private.loan_parts where transaction_id = (select id from lr where label = 'd1')),
   0,
   'the timed-out attach kept no parts'
 );
@@ -153,7 +153,7 @@ select is(
 );
 reset role;
 select is(
-  (select count(*)::int from public.loan_splits where transaction_id = (select id from lr where label = 'd1')),
+  (select count(*)::int from private.loan_parts where transaction_id = (select id from lr where label = 'd1')),
   3,
   'the retried attach kept the parts'
 );
@@ -171,8 +171,8 @@ begin
 end;
 $$;
 create trigger lr_fail_split_delete
-  before delete on public.loan_splits
-  for each row execute function public.lr_fail_split_delete();
+  before delete on public.legs
+  for each row when (old.loan_id is not null) execute function public.lr_fail_split_delete();
 
 create or replace function pg_temp.undo(p_key text, p_fail text)
 returns jsonb
@@ -207,7 +207,7 @@ select is(
 );
 reset role;
 select is(
-  (select count(*)::int from public.loan_splits where transaction_id = (select id from lr where label = 'd1')),
+  (select count(*)::int from private.loan_parts where transaction_id = (select id from lr where label = 'd1')),
   3,
   'the timed-out undo kept the parts'
 );
@@ -218,7 +218,7 @@ select is(
 );
 reset role;
 select is(
-  (select count(*)::int from public.loan_splits where transaction_id = (select id from lr where label = 'd1')),
+  (select count(*)::int from private.loan_parts where transaction_id = (select id from lr where label = 'd1')),
   0,
   'the retried undo removed the parts'
 );

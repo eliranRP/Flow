@@ -46,13 +46,8 @@ values (
   'ols:payment', true
 );
 
-insert into public.loan_splits (
-  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review
-)
-select
-  t.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount,
-  (select k.id from public.categories k where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense'),
-  false
+select tests.loan_split(t.id, l.id, jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+  'category_id', (select k.id from public.categories k where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense'), 'needs_review', false)))
 from public.transactions t
 join public.loans l on l.company_id = t.company_id
 join (values
@@ -60,7 +55,8 @@ join (values
   ('escrow',    20000, 'מסים וביטוח'),
   ('principal', 10000, 'תשלומי הלוואה')
 ) as v(part, amount, cat) on true
-where t.idempotency_key = 'ols:payment';
+where t.idempotency_key = 'ols:payment'
+group by t.id, l.id;
 
 select tests.authenticate_as('ols_owner');
 

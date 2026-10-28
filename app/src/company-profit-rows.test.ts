@@ -82,6 +82,7 @@ describe("the kept-out group (FLOW-954)", () => {
     expect(keptOutTypeLabel("income", null)).toBe("התחייבות");
     // The bound account wins (FLOW-953): owner money out to Owner capital is a liability, a deposit held an asset.
     expect(keptOutTypeLabel("expense", null, "liability")).toBe("התחייבות");
+    expect(keptOutTypeLabel("income", null, "equity")).toBe("הון");
     expect(keptOutTypeLabel("income", null, "asset")).toBe("נכס");
   });
 

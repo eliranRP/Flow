@@ -34,7 +34,7 @@ returns text
 language sql
 as $$
   select string_agg((s.project_id is not null)::text || ':' || s.amount_minor, ',' order by s.ordinal)
-  from public.line_splits s where s.transaction_id = pg_temp.id('refund');
+  from private.split_parts s where s.transaction_id = pg_temp.id('refund');
 $$;
 grant execute on function pg_temp.parts() to authenticated, service_role;
 
