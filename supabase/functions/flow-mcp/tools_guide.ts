@@ -1,9 +1,9 @@
 // MCP get_started: the map of the tools a caller's scope allows, with workflows and rules (FLOW-217).
 
-import { OPTIONAL_TOOLS, RULES, SERVER_INSTRUCTIONS, TOOL_GROUPS, WORKFLOWS } from "./tools_guide_data.ts";
+import { RULES, SERVER_INSTRUCTIONS, TOOL_GROUPS, WORKFLOWS } from "./tools_guide_data.ts";
 import { isWriteTool, scopeAllows, toolsFor } from "./tools_specs.ts";
 
-export { OPTIONAL_TOOLS, RULES, SERVER_INSTRUCTIONS, TOOL_GROUPS, WORKFLOWS } from "./tools_guide_data.ts";
+export { RULES, SERVER_INSTRUCTIONS, TOOL_GROUPS, WORKFLOWS } from "./tools_guide_data.ts";
 
 const SUMMARY_MAX = 160;
 
@@ -31,10 +31,10 @@ export function getStartedPayload(scope: string[]) {
   })).filter((group) => group.tools.length > 0);
   const workflows = WORKFLOWS.map((workflow) => ({
     ...workflow,
-    // A step stays when every real tool it names is allowed; a step naming a not-yet-added tool goes.
+    // A step stays when every tool it names is allowed.
     steps: workflow.steps.filter((step) => {
       const names = step.match(/[a-z]+(?:_[a-z]+)+/g) ?? [];
-      return names.every((n) => allowed(n) || (!summaries.has(n) && !OPTIONAL_TOOLS.includes(n)));
+      return names.every((n) => allowed(n) || !summaries.has(n));
     }),
   })).filter((workflow) => workflow.steps.some((step) => (step.match(/[a-z]+(?:_[a-z]+)+/g) ?? []).some(allowed)));
   return { instructions: SERVER_INSTRUCTIONS, rules: RULES, groups, workflows };

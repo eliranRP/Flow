@@ -1,7 +1,7 @@
 // Flow MCP tests: the get_started guide stays in step with the tool lists (FLOW-217).
 import { assert, assertEquals } from "jsr:@std/assert@1";
 import { callTool } from "./tools.ts";
-import { getStartedPayload, OPTIONAL_TOOLS, SERVER_INSTRUCTIONS, TOOL_GROUPS, WORKFLOWS } from "./tools_guide.ts";
+import { getStartedPayload, SERVER_INSTRUCTIONS, TOOL_GROUPS, WORKFLOWS } from "./tools_guide.ts";
 import { READ_TOOL_NAMES, WRITE_TOOL_NAMES } from "./tools_schemas.ts";
 import { toolsFor } from "./tools_specs.ts";
 import { rpcOf } from "./tools_test_support.ts";
@@ -13,7 +13,6 @@ Deno.test("every tool is in exactly one group, and every group tool is real", ()
   const seen = new Map<string, number>();
   for (const group of TOOL_GROUPS) {
     for (const name of group.tools) {
-      if (OPTIONAL_TOOLS.includes(name) && !present(name)) continue;
       assert(present(name), `${name} in group ${group.id} is not a tool`);
       seen.set(name, (seen.get(name) ?? 0) + 1);
     }
@@ -26,7 +25,7 @@ Deno.test("every tool name in a workflow step is a real tool", () => {
     for (const step of workflow.steps) {
       for (const name of step.match(/[a-z]+(?:_[a-z]+)+/g) ?? []) {
         if (name === "undo_kind" || name === "idempotency_key" || name === "batch_key") continue;
-        assert(present(name) || OPTIONAL_TOOLS.includes(name), `${name} in ${workflow.id} is not a tool`);
+        assert(present(name), `${name} in ${workflow.id} is not a tool`);
       }
     }
   }

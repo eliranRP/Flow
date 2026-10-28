@@ -19,11 +19,6 @@ export const RULES: string[] = [
 export type GuideGroup = { id: string; title: string; summary: string; tools: string[] };
 export type GuideWorkflow = { id: string; title: string; steps: string[] };
 
-/** Tool names that another change may add; they are listed only when the tool exists. */
-export const OPTIONAL_TOOLS = [
-  "create_account", "update_account", "archive_account", "restore_account", "merge_account", "get_balance_sheet",
-];
-
 export const TOOL_GROUPS: GuideGroup[] = [
   { id: "start", title: "Start", summary: "The map of the tools.", tools: ["get_started"] },
   {
@@ -58,7 +53,8 @@ export const TOOL_GROUPS: GuideGroup[] = [
     id: "ledger", title: "Ledger and accounts", summary: "The chart of accounts and the balanced legs behind each line.",
     tools: [
       "list_accounts", "get_line_legs", "get_account_balances", "book_line", "create_journal_entry",
-      "set_category_account", ...OPTIONAL_TOOLS,
+      "set_category_account", "create_account", "update_account", "archive_account", "restore_account",
+      "merge_account", "get_balance_sheet",
     ],
   },
   {

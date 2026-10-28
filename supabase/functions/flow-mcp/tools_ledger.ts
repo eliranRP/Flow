@@ -6,7 +6,7 @@ import { DATE, fail, isCalendarDate, ok, READ_REFUSED, type ToolResult, type Too
 
 export const LEDGER_READS = ["list_accounts", "get_line_legs", "get_account_balances", "get_balance_sheet"] as const;
 
-/** The reads' argument allow-list, merged into ALLOWED in tools_schemas.ts. */
+/** The reads' and the account writes' argument allow-list, merged into ALLOWED in tools_schemas.ts. */
 export const LEDGER_ALLOWED: Record<string, Set<string>> = {
   list_accounts: new Set(["include_archived"]),
   get_line_legs: new Set(["transaction_id"]),

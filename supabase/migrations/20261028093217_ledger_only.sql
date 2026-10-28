@@ -313,6 +313,7 @@ set search_path = ''
 as $$
 declare
   n integer := coalesce(jsonb_array_length(case when jsonb_typeof(p_parts) = 'array' then p_parts end), 0);
+  written integer;
 begin
   perform private.part_line_lock(p_company, p_txn);
   if n > 0 and exists (
@@ -362,6 +363,10 @@ begin
     (e->>'percent')::numeric, coalesce((e->>'is_rest')::boolean, false)
   from jsonb_array_elements(coalesce(p_parts, '[]'::jsonb)) with ordinality as x(e, ord)
   join public.accounts a on a.company_id = p_company and a.category_id = (x.e->>'category_id')::uuid;
+  get diagnostics written = row_count;
+  if written <> n then
+    raise exception 'category or project not found' using errcode = '23503';
+  end if;
 
   perform private.post_lines(p_company, array[p_txn]);
   perform private.line_split_review_sync(p_txn);
@@ -497,6 +502,7 @@ set search_path = ''
 as $$
 declare
   n integer := coalesce(jsonb_array_length(case when jsonb_typeof(p_parts) = 'array' then p_parts end), 0);
+  written integer;
 begin
   perform private.part_line_lock(p_company, p_txn);
   if n > 0 then
@@ -522,8 +528,7 @@ begin
       select 1 from jsonb_array_elements(p_parts) e
       group by e->>'part' having count(*) > 1
     ) then
-      raise exception 'duplicate key value violates unique constraint "loan_splits_transaction_id_part_key"'
-        using errcode = '23505';
+      raise exception 'duplicate loan part' using errcode = '23505';
     end if;
     if exists (
       select 1 from jsonb_array_elements(p_parts) e
@@ -547,6 +552,10 @@ begin
     true
   from jsonb_array_elements(coalesce(p_parts, '[]'::jsonb)) e
   join public.accounts a on a.company_id = p_company and a.category_id = (e->>'category_id')::uuid;
+  get diagnostics written = row_count;
+  if written <> n then
+    raise exception 'category not found' using errcode = '23503';
+  end if;
 
   if n > 0 and exists (
     select 1 from jsonb_array_elements(p_parts) e where not coalesce((e->>'needs_review')::boolean, false)
@@ -4524,8 +4533,10 @@ begin
     then
       raise exception 'validation';
     end if;
+    -- Held, so an archive of this account waits for the booking and then sees its legs.
     select * into acct from public.accounts a
-    where a.id = (leg->>'account_id')::uuid and a.company_id = cid;
+    where a.id = (leg->>'account_id')::uuid and a.company_id = cid
+    for share;
     if not found then
       raise exception 'account not found';
     end if;
@@ -5005,8 +5016,10 @@ begin
       then
         raise exception 'validation';
       end if;
+      -- Held, so an archive of this account waits for the entry and then sees its legs.
       select * into acct from public.accounts a
-      where a.id = (leg->>'account_id')::uuid and a.company_id = cid;
+      where a.id = (leg->>'account_id')::uuid and a.company_id = cid
+      for share;
       if not found then
         raise exception 'account not found';
       end if;
@@ -9029,6 +9042,15 @@ begin
   ) then
     return 'account has linked categories';
   end if;
+  -- A removed journal entry's legs come back with the entry when it is restored.
+  if exists (
+    select 1 from public.journal_counter_legs j
+    join public.transactions t on t.id = j.transaction_id and t.company_id = j.company_id
+    where j.company_id = p_company and j.account_id = p_account
+      and (t.removed_at is not null or t.line_status <> 'posted')
+  ) then
+    return 'account has journal entries that are not posted';
+  end if;
   return null;
 end;
 $$;
@@ -9275,6 +9297,7 @@ begin
         'category account can''t be changed',
         'system account can''t be changed',
         'account has linked categories',
+        'account has journal entries that are not posted',
         'account has postings, so its type can''t change',
         'account is archived',
         'account is not archived',

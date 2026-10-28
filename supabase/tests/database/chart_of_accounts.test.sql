@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(160);
+select plan(162);
 
 do $users$
 begin
@@ -325,6 +325,13 @@ select is(pg_temp.row_of(pg_temp.acct('Suspense'))->>'bookable', 'false', 'Suspe
 select is(pg_temp.row_of(pg_temp.acct('Example rent'))->>'is_system', 'false', 'a category''s account is no system account');
 select is(pg_temp.row_of(pg_temp.acct('Bank/Clearing'))->'balances' is not null, true, 'the bank lists its balances');
 
+create or replace function pg_temp.balances_on_books(p_account uuid)
+returns bigint language sql set search_path = '' as $$
+  select coalesce(sum(l.amount_minor), 0)::bigint from public.legs l
+  join public.transactions t on t.id = l.transaction_id and t.removed_at is null and t.line_status = 'posted'
+  where l.account_id = p_account and not l.draft;
+$$;
+
 -- 6. A journal entry on company accounts (equity and liability), booked by book_line rules for the P&L side.
 create or replace function pg_temp.je(p_key text, p_legs jsonb, p_date date default '2026-03-31')
 returns jsonb language plpgsql set search_path = '' as $$
@@ -569,6 +576,16 @@ select is((select w->>'code' from jsonb_array_elements(pg_temp.sheet('2026-12-31
 select is((select (w->>'balance_minor')::bigint from jsonb_array_elements(pg_temp.sheet('2026-12-31')->'currencies'->0->'warnings') w), 12300::bigint,
   'with its balance');
 select is(pg_temp.sheet('2026-12-31')->'currencies'->0->>'balanced', 'true', 'and the sheet still balances');
+
+-- A removed journal entry comes back with its legs when it is restored: its account can't be archived.
+insert into public.accounts (company_id, name, type) values (pg_temp.id('co'), 'Example holding', 'asset');
+insert into r152 values ('je_hold', pg_temp.je('p152-je-hold', jsonb_build_array(
+  pg_temp.leg(pg_temp.acct('Example depreciation'), 7000), pg_temp.leg(pg_temp.acct('Example holding'), -7000))));
+update public.transactions set removed_at = now()
+where id = (select (r->'data'->>'id')::uuid from r152 where label = 'je_hold');
+select is(pg_temp.balances_on_books(pg_temp.acct('Example holding')), 0::bigint, 'a removed entry leaves no balance on the account');
+select is(pg_temp.archive_acct('p152-a-hold', pg_temp.acct('Example holding'))->'error'->>'message',
+  'account has journal entries that are not posted', 'but the account can''t be archived while the entry can come back');
 
 -- get_account_balances: company accounts and equity, no draft legs.
 create or replace function pg_temp.balances(p_account uuid)
