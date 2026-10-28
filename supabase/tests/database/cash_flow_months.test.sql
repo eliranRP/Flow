@@ -124,11 +124,10 @@ set amount_net = -10000, vat_amount = -1800, amount_gross = -11800
 where id in (pg_temp.id('vat'), pg_temp.id('split'));
 
 -- The split line: three categories, 33.33 / 33.33 / 33.34 net.
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-values
-  (pg_temp.id('co'), pg_temp.id('split'), 1, pg_temp.cat('אחר', 'expense'), pg_temp.id('harbor'), 3333),
-  (pg_temp.id('co'), pg_temp.id('split'), 2, pg_temp.cat('חומרים', 'expense'), pg_temp.id('harbor'), 3333),
-  (pg_temp.id('co'), pg_temp.id('split'), 3, pg_temp.cat('עבודה', 'expense'), pg_temp.id('harbor'), 3334);
+select tests.line_split(pg_temp.id('split'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.cat('אחר', 'expense'), 'project_id', pg_temp.id('harbor'), 'amount_minor', 3333),
+  jsonb_build_object('category_id', pg_temp.cat('חומרים', 'expense'), 'project_id', pg_temp.id('harbor'), 'amount_minor', 3333),
+  jsonb_build_object('category_id', pg_temp.cat('עבודה', 'expense'), 'project_id', pg_temp.id('harbor'), 'amount_minor', 3334)));
 
 -- The loan payment: 7,000 principal, 2,000 interest, 1,000 escrow.
 insert into public.loans (
@@ -137,17 +136,15 @@ insert into public.loans (
 )
 values (pg_temp.id('co'), 'Example mortgage', 120000000, 60000, 360, '2026-01-01', 1000000, 100000, 'ILS');
 
-insert into public.loan_splits (
-  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review
-)
-select pg_temp.id('co'), l.id, pg_temp.id('loan'), v.part::public.loan_split_part, v.amount, v.amount,
-  pg_temp.cat(v.cat, 'expense'), false
+select tests.loan_split(pg_temp.id('loan'), l.id, (
+  select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+    'category_id', pg_temp.cat(v.cat, 'expense'), 'needs_review', false) order by v.n)
+  from (values
+    (1, 'principal', 700000, 'תשלומי הלוואה'),
+    (2, 'interest', 200000, 'ריבית משכנתא'),
+    (3, 'escrow', 100000, 'מסים וביטוח')
+  ) as v(n, part, amount, cat)))
 from public.loans l
-join (values
-  ('principal', 700000, 'תשלומי הלוואה'),
-  ('interest', 200000, 'ריבית משכנתא'),
-  ('escrow', 100000, 'מסים וביטוח')
-) as v(part, amount, cat) on true
 where l.company_id = pg_temp.id('co');
 
 -- 1-6. Defaults.

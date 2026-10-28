@@ -165,10 +165,9 @@ reset role;
 select is(pg_temp.open_reviews('txn_bill'), '["split_mismatch"]'::jsonb, 'the stale parts are back with their review');
 
 -- A line that already has another open review keeps that one only.
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-select (select id from lsr where label = 'co'), (select id from lsr where label = 'txn_busy'), o,
-  (select id from lsr where label = c), null, a
-from (values (1, 'repairs', 4000::bigint), (2, 'supplies', 6000::bigint)) v(o, c, a);
+select tests.line_split((select id from lsr where label = 'txn_busy'), jsonb_build_array(
+  jsonb_build_object('category_id', (select id from lsr where label = 'repairs'), 'project_id', null, 'amount_minor', 4000),
+  jsonb_build_object('category_id', (select id from lsr where label = 'supplies'), 'project_id', null, 'amount_minor', 6000)));
 insert into public.review_queue (company_id, transaction_id, status, reason)
 values ((select id from lsr where label = 'co'), (select id from lsr where label = 'txn_busy'), 'open', 'suggested');
 select pg_temp.resync('txn_busy', -12000);
@@ -215,10 +214,9 @@ set constraints all immediate;
 select is(pg_temp.open_reviews('txn_busy'), '[]'::jsonb, 'and closes when the deferred check runs');
 
 -- A removed line opens nothing.
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-select (select id from lsr where label = 'co'), (select id from lsr where label = 'txn_gone'), o,
-  (select id from lsr where label = c), null, a
-from (values (1, 'repairs', 4000::bigint), (2, 'supplies', 6000::bigint)) v(o, c, a);
+select tests.line_split((select id from lsr where label = 'txn_gone'), jsonb_build_array(
+  jsonb_build_object('category_id', (select id from lsr where label = 'repairs'), 'project_id', null, 'amount_minor', 4000),
+  jsonb_build_object('category_id', (select id from lsr where label = 'supplies'), 'project_id', null, 'amount_minor', 6000)));
 update public.transactions set removed_at = now() where id = (select id from lsr where label = 'txn_gone');
 select pg_temp.resync('txn_gone', -12000);
 select is(pg_temp.open_reviews('txn_gone'), '[]'::jsonb, 'a removed line opens no review');

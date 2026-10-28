@@ -105,9 +105,9 @@ select is((select r -> 'data' -> 'results' -> 2 ->> 'undo_kind' from mbs_out), '
 
 reset role;
 select is(
-  (select jsonb_agg(amount_minor order by ordinal) from public.line_splits where transaction_id = pg_temp.id('txn_a')),
+  (select jsonb_agg(amount_minor order by ordinal) from private.split_parts where transaction_id = pg_temp.id('txn_a')),
   '[4000, 6000]'::jsonb, 'the split row stored its parts in cents');
-select is((select count(*)::integer from public.line_splits where transaction_id = pg_temp.id('txn_b')), 0,
+select is((select count(*)::integer from private.split_parts where transaction_id = pg_temp.id('txn_b')), 0,
   'the refused row wrote nothing');
 select is(
   (select jsonb_build_array(user_assigned, category_suggested) from public.transactions where id = pg_temp.id('txn_a')),
@@ -132,7 +132,7 @@ select is(
   public.mcp_undo_batch('mbs-u1', (select r -> 'data' ->> 'batch_key' from mbs_out)) -> 'data' ->> 'ok_count',
   '2', 'undo_batch undoes both rows');
 reset role;
-select is((select count(*)::integer from public.line_splits where transaction_id = pg_temp.id('txn_a')), 0,
+select is((select count(*)::integer from private.split_parts where transaction_id = pg_temp.id('txn_a')), 0,
   'the split is gone');
 select is(
   (select jsonb_build_array(user_assigned, category_suggested) from public.transactions where id = pg_temp.id('txn_a')),

@@ -204,7 +204,7 @@ select is(
 select * from extensions.dblink_get_result('fur_b') as t(r text);
 select extensions.dblink_exec('fur_b', 'commit');
 select is(
-  (select count(*)::integer from public.line_splits where transaction_id in (pg_temp.id('txn_a'), pg_temp.id('txn_b'))),
+  (select count(*)::integer from private.split_parts where transaction_id in (pg_temp.id('txn_a'), pg_temp.id('txn_b'))),
   0, 'both lines are back to no split, undone once each');
 
 -- 3. Another token's split_line on the line, not yet committed: undo_batch waits, then sees
@@ -233,7 +233,7 @@ select is(
 select * from extensions.dblink_get_result('fur_a') as t(r text);
 select extensions.dblink_exec('fur_a', 'commit');
 select is(
-  (select jsonb_agg(amount_minor order by ordinal) from public.line_splits where transaction_id = pg_temp.id('txn_c')),
+  (select jsonb_agg(amount_minor order by ordinal) from private.split_parts where transaction_id = pg_temp.id('txn_c')),
   '[2500, 7500]'::jsonb, 'and the newer split stays');
 
 select extensions.dblink_exec('fur_a', $cleanup$

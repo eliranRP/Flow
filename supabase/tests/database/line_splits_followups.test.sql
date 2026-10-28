@@ -55,18 +55,18 @@ insert into public.loans (
 )
 values ((select id from lsf where label = 'co'), 'Example mortgage', 12000000, 60000, 360, '2026-01-01', 100000, 20000, 'USD');
 
-insert into public.loan_splits (
-  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
-)
-select t.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount,
-  (select k.id from public.categories k where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense')
+select tests.loan_split(t.id, l.id, (
+  select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+    'category_id', (select k.id from public.categories k where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense'))
+    order by v.ord)
+  from (values
+    (1, 'interest', 70000, 'ריבית משכנתא'),
+    (2, 'escrow', 20000, 'מסים וביטוח'),
+    (3, 'principal', 10000, 'תשלומי הלוואה')
+  ) as v(ord, part, amount, cat)))
 from public.transactions t
 join public.loans l on l.company_id = t.company_id
-join (values
-  ('interest', 70000, 'ריבית משכנתא'),
-  ('escrow', 20000, 'מסים וביטוח'),
-  ('principal', 10000, 'תשלומי הלוואה')
-) as v(part, amount, cat) on t.idempotency_key = 'lsf:loan';
+where t.idempotency_key = 'lsf:loan';
 
 create function pg_temp.row_of(p_project text, p_txn text) returns jsonb
 language sql

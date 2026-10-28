@@ -155,7 +155,7 @@ select throws_ok(
   $$select public.save_line_split((select id from lsp where label = 'txn_repair'),
     jsonb_build_array(pg_temp.part('repairs', 17000, 'north') || '{"share": 5}'::jsonb, pg_temp.part('repairs', 300000, 'south')))$$,
   'validation', 'an unknown key is refused');
-select is((select count(*)::integer from public.line_splits), 0, 'nothing was written by the refusals');
+select is((select count(*)::integer from private.split_parts), 0, 'nothing was written by the refusals');
 
 -- Exact cents across two projects, same category.
 select is(

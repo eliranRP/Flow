@@ -131,20 +131,17 @@ values (
   (select id from fb_ref where label = 'materials'), 'fb:loan', true
 );
 
-insert into public.loan_splits (
-  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review
-)
-select
-  t.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount,
-  (select k.id from public.categories k where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense'),
-  false
+select tests.loan_split(t.id, l.id, (
+  select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+    'category_id', (select k.id from public.categories k where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense'),
+    'needs_review', false) order by v.n)
+  from (values
+    (1, 'interest',  70000, 'ריבית משכנתא'),
+    (2, 'escrow',    20000, 'מסים וביטוח'),
+    (3, 'principal', 10000, 'תשלומי הלוואה')
+  ) as v(n, part, amount, cat)))
 from public.transactions t
 join public.loans l on l.company_id = t.company_id
-join (values
-  ('interest',  70000, 'ריבית משכנתא'),
-  ('escrow',    20000, 'מסים וביטוח'),
-  ('principal', 10000, 'תשלומי הלוואה')
-) as v(part, amount, cat) on true
 where t.idempotency_key = 'fb:loan';
 
 -- A EUR shared loan payment of 1000.00 split 700.03 / 199.97 / 100.00, half to Alpha and
@@ -172,20 +169,17 @@ from public.transactions t
 join (values ('alpha'), ('beta')) as s(proj) on true
 where t.idempotency_key = 'fb:eur-loan';
 
-insert into public.loan_splits (
-  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review
-)
-select
-  t.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount,
-  (select k.id from public.categories k where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense'),
-  false
+select tests.loan_split(t.id, l.id, (
+  select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+    'category_id', (select k.id from public.categories k where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense'),
+    'needs_review', false) order by v.n)
+  from (values
+    (1, 'interest',  70003, 'ריבית משכנתא'),
+    (2, 'escrow',    19997, 'מסים וביטוח'),
+    (3, 'principal', 10000, 'תשלומי הלוואה')
+  ) as v(n, part, amount, cat)))
 from public.transactions t
 join public.loans l on l.company_id = t.company_id and l.name = 'Example EUR loan'
-join (values
-  ('interest',  70003, 'ריבית משכנתא'),
-  ('escrow',    19997, 'מסים וביטוח'),
-  ('principal', 10000, 'תשלומי הלוואה')
-) as v(part, amount, cat) on true
 where t.idempotency_key = 'fb:eur-loan';
 
 -- A EUR receipt dated 28 May and paid on 2 June counts in June on the cash basis.
@@ -244,10 +238,12 @@ insert into public.transactions (
   -10000, -10000, 10000, 0, 'source', '2026-06-14', 'manual', 'fb:CAD:split',
   (select id from fb_ref where label = 'alpha'), (select id from fb_ref where label = 'materials'), 'cad-split', true
 );
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-select t.company_id, t.id, v.ordinal, (select id from fb_ref where label = 'materials'), (select id from fb_ref where label = v.project), v.amount
+select tests.line_split(t.id, jsonb_build_array(
+  jsonb_build_object('category_id', (select id from fb_ref where label = 'materials'),
+    'project_id', (select id from fb_ref where label = 'beta'), 'amount_minor', 6000),
+  jsonb_build_object('category_id', (select id from fb_ref where label = 'materials'),
+    'project_id', null, 'amount_minor', 4000)))
 from public.transactions t
-cross join (values (1, 'beta', 6000), (2, null, 4000)) as v(ordinal, project, amount)
 where t.idempotency_key = 'fb:CAD:split';
 
 -- One open expense review, one open income review, one closed expense review, an open

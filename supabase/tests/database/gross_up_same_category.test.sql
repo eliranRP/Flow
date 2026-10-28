@@ -109,7 +109,7 @@ create function pg_temp.parts_of(p_line text) returns text
 language sql
 as $$
   select string_agg(format('%s/%s/%s/%s', c.label, coalesce(p.label, '-'), s.amount_minor, s.gross_up::text), ' ' order by s.ordinal)
-  from public.line_splits s
+  from private.split_parts s
   join gsc c on c.id = s.category_id
   left join gsc p on p.id = s.project_id
   where s.transaction_id = (select id from gsc where label = p_line)

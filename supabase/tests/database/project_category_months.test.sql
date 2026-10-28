@@ -77,10 +77,9 @@ select pg_temp.line('g8', 'gas', 1000, '2026-08-20');
 select pg_temp.line('g9', 'gas', 2000, '2026-09-02');
 -- An August line split between Electricity ₪20 and Water ₪30. Its own category is Split header.
 insert into pcm (label, id) values ('s8', pg_temp.line('s8', 'split', 5000, '2026-08-20'));
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-values
-  (pg_temp.id('co'), pg_temp.id('s8'), 1, pg_temp.id('elec'), pg_temp.id('house'), 2000),
-  (pg_temp.id('co'), pg_temp.id('s8'), 2, pg_temp.id('water'), pg_temp.id('house'), 3000);
+select tests.line_split(pg_temp.id('s8'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.id('elec'), 'project_id', pg_temp.id('house'), 'amount_minor', 2000),
+  jsonb_build_object('category_id', pg_temp.id('water'), 'project_id', pg_temp.id('house'), 'amount_minor', 3000)));
 set constraints all immediate;
 set constraints all deferred;
 -- A line still in review this month does not count yet.

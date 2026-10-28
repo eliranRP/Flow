@@ -69,10 +69,10 @@ begin
       (co, ln, lots[3], 5000, -((100001 + m * 37) - div(100001 + m * 37, 2)));
     ln := tests.fixture_line(co, 'ps:split:' || m, 90000 + m * 11, 'expense', null, exp,
       d - 8, 'ILS', 'posted', 'manual', 'project', 'receipt');
-    insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor) values
-      (co, ln, 1, exp, lots[2], 40000),
-      (co, ln, 2, exp, lots[4], 30000 + m * 11),
-      (co, ln, 3, exp, office, 20000);
+    perform tests.line_split(ln, jsonb_build_array(
+      jsonb_build_object('category_id', exp, 'project_id', lots[2], 'amount_minor', 40000),
+      jsonb_build_object('category_id', exp, 'project_id', lots[4], 'amount_minor', 30000 + m * 11),
+      jsonb_build_object('category_id', exp, 'project_id', office, 'amount_minor', 20000)));
     perform tests.fixture_line(co, 'ps:out:' || m, 55555 + m, 'expense', lots[3], outc,
       d - 9, 'ILS', 'posted', 'manual', 'project', 'receipt');
     ln := tests.fixture_line(co, 'ps:out-in:' || m, 66666 + m, 'income', lots[4], inc,
@@ -149,9 +149,9 @@ AS $function$
           and (t.direction = 'income' or k.kind = 'income' or t.pnl_role = 'overhead'
             or t.project_id = (select overhead_project from cid))
         union
-        select s.transaction_id from public.line_splits s where s.company_id = p_company
+        select s.transaction_id from private.split_parts s where s.company_id = p_company
         union
-        select s.transaction_id from public.loan_splits s where s.company_id = p_company
+        select s.transaction_id from private.loan_parts s where s.company_id = p_company
       ))
   ),
   income as (

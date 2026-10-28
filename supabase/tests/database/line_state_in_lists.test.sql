@@ -63,10 +63,10 @@ update public.transactions set category_suggested = true where id = (select id f
 update public.transactions set in_pnl_override = false where id = (select id from lso where label = 'txn_taken_out');
 
 -- The split line: 1500 on Harbor in the kept-out category, 2500 on Pier in the P&L.
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-select (select id from lso where label = 'co'), (select id from lso where label = 'txn_split'), v.ordinal,
-  (select id from lso where label = v.category), (select id from lso where label = v.project), v.amount
-from (values (1, 'draw', 'harbor', 1500), (2, 'materials', 'pier', 2500)) as v(ordinal, category, project, amount);
+select tests.line_split((select id from lso where label = 'txn_split'), (
+  select jsonb_agg(jsonb_build_object('category_id', (select id from lso where label = v.category),
+    'project_id', (select id from lso where label = v.project), 'amount_minor', v.amount) order by v.ordinal)
+  from (values (1, 'draw', 'harbor', 1500), (2, 'materials', 'pier', 2500)) as v(ordinal, category, project, amount)));
 
 -- A shared line split by category, allocated whole to Harbor: 1000 kept out, 2000 counted.
 insert into public.transactions (
@@ -84,10 +84,10 @@ insert into lso (label, id) select 'txn_shared', id from public.transactions whe
 insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
 values ((select id from lso where label = 'co'), (select id from lso where label = 'txn_shared'),
   (select id from lso where label = 'harbor'), 10000, 3000);
-insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-select (select id from lso where label = 'co'), (select id from lso where label = 'txn_shared'), v.ordinal,
-  (select id from lso where label = v.category), null, v.amount
-from (values (1, 'draw', 1000), (2, 'materials', 2000)) as v(ordinal, category, amount);
+select tests.line_split((select id from lso where label = 'txn_shared'), (
+  select jsonb_agg(jsonb_build_object('category_id', (select id from lso where label = v.category),
+    'project_id', null, 'amount_minor', v.amount) order by v.ordinal)
+  from (values (1, 'draw', 1000), (2, 'materials', 2000)) as v(ordinal, category, amount)));
 
 -- A loan payment counted by its parts (the company's loan-part categories): interest and escrow
 -- count, the principal is kept out.
@@ -107,20 +107,12 @@ values (
   (select id from lso where label = 'materials'), 'lso:loan', true
 );
 insert into lso (label, id) select 'txn_loan', id from public.transactions where idempotency_key = 'lso:loan';
-insert into public.loan_splits (
-  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review
-)
-select
-  (select id from lso where label = 'co'), l.id, (select id from lso where label = 'txn_loan'),
-  v.part::public.loan_split_part, v.amount, v.amount,
-  (select k.id from public.categories k where k.company_id = l.company_id and k.loan_part = v.part::public.loan_split_part),
-  false
+select tests.loan_split((select id from lso where label = 'txn_loan'), l.id, (
+  select jsonb_agg(jsonb_build_object('part', v.part, 'amount_minor', v.amount, 'scheduled_minor', v.amount,
+    'category_id', (select k.id from public.categories k where k.company_id = l.company_id and k.loan_part = v.part::public.loan_split_part),
+    'needs_review', false) order by v.ord)
+  from (values (1, 'interest', 70000), (2, 'escrow', 20000), (3, 'principal', 10000)) as v(ord, part, amount)))
 from public.loans l
-cross join (values
-  ('interest', 70000),
-  ('escrow', 20000),
-  ('principal', 10000)
-) as v(part, amount)
 where l.company_id = (select id from lso where label = 'co');
 
 insert into public.review_queue (company_id, transaction_id, status, reason)

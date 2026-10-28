@@ -58,7 +58,7 @@ select lives_ok(
   'a reversal part in a kept-out category needs no project');
 select is(
   (select row(s.category_id = pg_temp.id('draws'), s.project_id is null, s.amount_minor)::text
-   from public.line_splits s where s.transaction_id = pg_temp.id('refund') and s.ordinal = 1),
+   from private.split_parts s where s.transaction_id = pg_temp.id('refund') and s.ordinal = 1),
   '(t,t,3000)', 'and it is stored with no project');
 select throws_ok(
   format($$select public.save_line_split(%L, %L::jsonb)$$, pg_temp.id('refund_b'),
@@ -129,7 +129,7 @@ select is(pg_temp.parts_minor('alpha', 'bounce'), 4000::bigint,
   'the rest in the line''s own expense category counts plus, the income part minus');
 
 reset role;
-select is((select count(*)::int from public.line_splits where transaction_id = pg_temp.id('loose')), 0,
+select is((select count(*)::int from private.split_parts where transaction_id = pg_temp.id('loose')), 0,
   'previews write nothing');
 
 select * from finish();
