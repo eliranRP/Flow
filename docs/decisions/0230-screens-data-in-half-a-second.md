@@ -13,7 +13,7 @@ Every screen shows its data within 0.5 seconds. This supersedes 0034's load limi
 
 What is measured, each day, on the Flow QA sandbox company (at least twice the size of the largest real company, [supabase/qa/README.md](../../supabase/qa/README.md)), signed in as its owner:
 
-1. **Data round trip.** Each screen's main read (`get_home`, `get_dashboard`, `list_review`, and the others the screens call), 10 calls each, p50 and p90, from the measuring machine to production. The database time of each read (`EXPLAIN ANALYZE`) is reported beside it, because the network from the measuring machine is part of the round trip.
+1. **Data round trip.** Each screen's main read (`get_home`, `get_dashboard`, `list_review`, `get_project`, and the others the screens call; `pnpm latency` lists them), 10 calls each, p50 and p90, from the measuring machine to production. Loans read their tables directly rather than through one read, so the Loans screen is measured by its screen-ready time only. The database time of each read (`EXPLAIN ANALYZE`) is reported beside it, because the network from the measuring machine is part of the round trip.
 2. **Screen ready.** On the FLOW-804 phone (CPU slowed 4×, 4G), the time from an in-app tap to the screen's data on screen: no skeleton or busy marker, and the page has stopped changing. The first visit in a session and a repeat visit are both reported.
 3. **Cold Home.** `node scripts/load-report.mjs --speed 7`, Home ready on the stub build including the 4G network, reported against the goal.
 

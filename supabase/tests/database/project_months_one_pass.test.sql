@@ -1,17 +1,20 @@
--- FLOW-977. private.project_category_months_many reads many projects' category months in one pass:
--- each project's categories are exactly project_category_months' (a line shared by two projects is in
--- each at its share), a project with no lines has no row, another company's projects read nothing, and
--- clients outside a company cannot call it. company_next_month_inputs takes its projects from it.
+-- FLOW-983. private.project_category_months_many reads many projects' category months in one pass.
+-- The house's categories are pinned field by field (the same values the per-project read gave before
+-- the change); read with other projects, each project's categories are its own page's (a line shared by
+-- two projects is in each at its share); a project with no lines has no row; another company's projects
+-- and a user with no company read nothing; anon cannot call it. company_next_month_inputs takes its
+-- projects from it.
 -- Invented data only. "Today" is 2026-09-20, so the complete months are March to August 2026.
 
 begin;
 
-select plan(8);
+select plan(10);
 
 do $users$
 begin
   perform tests.create_supabase_user('pmo_owner', 'pmo-owner@example.com');
   perform tests.create_supabase_user('pmo_other', 'pmo-other@example.com');
+  perform tests.create_supabase_user('pmo_nobody', 'pmo-nobody@example.com');
 end
 $users$;
 
@@ -65,15 +68,23 @@ select ok(not has_function_privilege('anon', 'private.project_category_months_ma
 
 select tests.authenticate_as('pmo_owner');
 select is(pg_temp.many(array['house', 'shop', 'yard'])->pg_temp.id('house')::text,
-  public.project_category_months(pg_temp.id('house'), 6, '2026-09-20')->'categories',
-  'the house''s categories, read with others, are its own page''s');
+  jsonb_build_array(
+    jsonb_build_object('id', pg_temp.id('paint'), 'flag', null, 'name', 'Paint', 'currency', 'ILS', 'parent_id', null,
+      'group_name', null, 'months_seen', 2, 'typical_day', 10, 'months_minor', '[0, 0, 0, 0, 12000, 40000]'::jsonb,
+      'expected_minor', null, 'this_month_minor', 9000),
+    jsonb_build_object('id', pg_temp.id('elec'), 'flag', 'missing', 'name', 'Electricity', 'currency', 'ILS', 'parent_id', null,
+      'group_name', null, 'months_seen', 6, 'typical_day', 12,
+      'months_minor', '[10300, 10400, 10500, 10600, 10700, 10800]'::jsonb,
+      'expected_minor', 10550, 'this_month_minor', 0)),
+  'the house: paint (its share of the shared line in July, this month first), then electricity with its usual amount and day and a missing flag');
+select is(public.project_category_months(pg_temp.id('house'), 6, '2026-09-20')->'categories',
+  pg_temp.many(array['house'])->pg_temp.id('house')::text,
+  'the house''s own page reads the same categories');
 select is(pg_temp.many(array['house', 'shop', 'yard'])->pg_temp.id('shop')::text,
   public.project_category_months(pg_temp.id('shop'), 6, '2026-09-20')->'categories',
   'the shop''s too');
 select is(pg_temp.many(array['house', 'shop', 'yard'])->pg_temp.id('shop')::text->0->'months_minor',
   '[0, 0, 0, 0, 8000, 0]'::jsonb, 'the shop holds its 40% of the shared paint line in July');
-select is(pg_temp.many(array['house'])->pg_temp.id('house')::text->0->>'this_month_minor', '9000',
-  'this month''s paint first, then electricity');
 select ok(not (pg_temp.many(array['house', 'shop', 'yard']) ? pg_temp.id('yard')::text), 'a project with no lines has no row');
 select is(
   (select x->'categories' from jsonb_array_elements(public.company_next_month_inputs('2026-09-20')->'projects') x
@@ -81,6 +92,10 @@ select is(
   public.project_category_months(pg_temp.id('house'), 6, '2026-09-20')->'categories',
   'company_next_month_inputs takes each project''s categories from the one pass');
 select is(pg_temp.many(array['other_house']), '{}'::jsonb, 'another company''s project reads nothing');
+
+select tests.authenticate_as('pmo_nobody');
+select is(pg_temp.many(array['house', 'shop']), '{}'::jsonb, 'a user with no company reads nothing');
+select is(public.project_category_months(pg_temp.id('house'), 6, '2026-09-20'), null, 'nor the house''s page');
 
 
 select * from finish();

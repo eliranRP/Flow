@@ -47,6 +47,14 @@ const headers = {
   "Content-Type": "application/json",
 };
 
+// The project page reads one project: the company's first active one. Loans read their tables
+// directly (loans, loan_balances), not through an RPC, so they are not timed here.
+if (accessToken) {
+  const projects = await fetch(`${base}/rest/v1/projects?select=id&status=eq.active&order=id&limit=1`, { headers });
+  const [first] = projects.ok ? ((await projects.json()) as { id: string }[]) : [];
+  if (first) reads.push({ screen: "Project page", rpc: "get_project", body: { p_id: first.id, p_basis: null } });
+}
+
 function percentile(sorted: number[], p: number): number {
   return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * p) - 1)] ?? 0;
 }

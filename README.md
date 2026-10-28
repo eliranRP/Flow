@@ -65,7 +65,7 @@ pnpm check:bundle     # after pnpm build: the client graph and dist import no fi
 pnpm build-storybook && pnpm test:storybook:smoke   # every static story opens with no console error
 pnpm test:e2e:live    # local Supabase plus the live SUMIT test company. See the SUMIT runbook.
 pnpm --filter @flow/app exec playwright test -c playwright.drain.config.ts   # local drain. Needs CRON_SECRET in supabase/.env.
-pnpm latency          # times get_home() against SUPABASE_URL
+pnpm latency          # times every screen's main read against SUPABASE_URL (decision 0230)
 ```
 
 Production builds read `app/.env.production` ([0046](docs/decisions/0046-public-anon-key.md)): the hosted URL and the public anon key. Do not put a service-role key in that file or anywhere else in git.
