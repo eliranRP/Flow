@@ -17,6 +17,9 @@ test("prev and next walk the list, and Back returns to its scroll spot", async (
   await page.getByRole("button", next).click();
   await expect(page).toHaveURL(/\/transactions\/t-step-13\?preview=1$/);
   await expect(page.getByRole("button", next)).toBeFocused();
+  // The URL changes first, and a press before the new card renders is ignored (one move per card, txn-nav.tsx).
+  // Card 14's name also sits hidden in card 13's swipe peek, so wait for 13 itself on screen.
+  await expect(page.getByText("ספק 13", { exact: true })).toBeVisible();
   await page.getByRole("button", next).click();
   await expect(page.getByText("ספק 14", { exact: true })).toBeVisible();
   await page.getByRole("button", prev).click();
