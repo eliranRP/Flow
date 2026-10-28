@@ -214,6 +214,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-148"></a>[FLOW-148](tasks/FLOW-148.md) | A category for each part of one loan payment, and a dated category switch on the loan | MCP + DB |
 | <a id="flow-149"></a>[FLOW-149](tasks/FLOW-149.md) | Journal entries that move no money (depreciation), and the balance-sheet balances per project | MCP + DB |
 | <a id="flow-150"></a>[FLOW-150](tasks/FLOW-150.md) | Move a shared line back to one project | MCP + DB |
+| <a id="flow-151"></a>[FLOW-151](tasks/FLOW-151.md) | Journal entry income legs and Suspense, and re-attaching a detached loan payment | BUG (MCP + DB) |
 | <a id="flow-920"></a>[FLOW-920](tasks/FLOW-920.md) | Project profit: the month's share and after-overhead rows from the server, and the old profit-month section goes | UI + server (follow-up to FLOW-140) |
 | <a id="flow-930"></a>[FLOW-930](tasks/FLOW-930.md) | A yearly charge shows in this month's forecast at a monthly amount | BUG |
 | <a id="flow-935"></a>[FLOW-935](tasks/FLOW-935.md) | The iPhone Home Screen app moves to a new deploy without a reinstall | BUG |
