@@ -1,6 +1,6 @@
 import "../ui/lazy.css";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { lineInitials } from "../cash-lines-groups";
 import { getSupabase } from "../lib/supabase";
@@ -59,21 +59,23 @@ async function fetchPage(args: ReturnType<typeof accountArgs>, offset: number): 
   return (await loadReadSchemas()).accountLinesSchema.parse(data);
 }
 
-/** A movement's title: its party (or description), and the loan part when it is one. */
+/** A movement's title: its party, else its description. */
 function rowTitle(row: AccountRow): string {
-  const who = row.party_name ?? row.description ?? "תנועה";
-  const part = row.part != null && row.part in LOAN_PART_LABEL ? LOAN_PART_LABEL[row.part as LoanPartKey] : null;
-  return part != null ? `${who} · ${part}` : who;
+  return row.party_name ?? row.description ?? "תנועה";
 }
 
-/** The date, and the whole line when the account holds only part of it, else the project. */
-function rowHint(row: AccountRow): string {
+/** The hint's parts, each whole or dropped at the end: the loan part first (so a narrow row keeps it), the date, the project. */
+function rowHint(row: AccountRow): string[] {
+  const part = row.part != null && row.part in LOAN_PART_LABEL ? LOAN_PART_LABEL[row.part as LoanPartKey] : null;
   const day = `${row.doc_date.slice(8, 10)}/${row.doc_date.slice(5, 7)}`;
+  return [part, day, row.project_name].filter((item): item is string => item != null);
+}
+
+/** The whole payment, on its own line, when the account holds only part of the line. */
+function rowWhole(row: AccountRow): ReactNode {
   const abs = (value: bigint) => (value < 0n ? -value : value);
-  if (abs(row.line_amount_minor) !== abs(row.amount_minor) && row.line_amount_minor !== 0n) {
-    return `${day} · מתוך ${ltr(formatAmount(abs(row.line_amount_minor), "summary", row.currency))}`;
-  }
-  return row.project_name != null ? `${day} · ${row.project_name}` : day;
+  if (row.line_amount_minor === 0n || abs(row.line_amount_minor) === abs(row.amount_minor)) return null;
+  return <>{"מתוך תשלום "}<bdi dir="ltr">{formatAmount(abs(row.line_amount_minor), "summary", row.currency)}</bdi></>;
 }
 
 /** The loan page a principal account opens: its one loan, or the loans list when it holds several. */
@@ -153,11 +155,11 @@ export function ReportAccountScreen({ sample }: { sample?: ReportAccountSample }
           <ReportRow name={`יתרה ב־${ltr(opening)}`} amount={<Amount agorot={summary?.opening_minor ?? 0n} currency={currency} />} />
           <ReportRow
             name={principal ? "שולם השנה" : "שינוי השנה"}
-            meta={count === 1 ? (principal ? "תשלום אחד" : "תנועה אחת") : `${String(count)} ${principal ? "תשלומים" : "תנועות"}`}
+            meta={count === 0 ? undefined : count === 1 ? (principal ? "תשלום אחד" : "תנועה אחת") : `${String(count)} ${principal ? "תשלומים" : "תנועות"}`}
             amount={<Amount agorot={summary?.movement_minor ?? 0n} currency={currency} />}
           />
         </ul>
-        <ReportSection id="moves" title="תנועות" total={<span className="t-muted">{String(count)}</span>} collapse={{ isOpen: () => open, onToggle: () => { setOpen((value) => !value); } }}>
+        <ReportSection id="moves" title="תנועות" total={count > 0 ? <span className="t-muted">{String(count)}</span> : null} collapse={{ isOpen: () => open, onToggle: () => { setOpen((value) => !value); } }}>
           {rows.length === 0 ? <p className="ui-rep-note">{`אין תנועות מתחילת ${year}.`}</p> : null}
           {linesByMonth(rows).map((group) => (
             <section key={group.key} className="ui-lines-group" aria-label={group.title}>
@@ -171,7 +173,8 @@ export function ReportAccountScreen({ sample }: { sample?: ReportAccountSample }
                     layout="flat"
                     variant="transaction"
                     title={rowTitle(row)}
-                    hint={rowHint(row)}
+                    hintParts={rowHint(row)}
+                    tagLine={rowWhole(row)}
                     agorot={row.amount_minor}
                     currency={row.currency}
                     sign="moved-in"

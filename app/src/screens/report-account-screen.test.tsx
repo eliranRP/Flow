@@ -61,9 +61,12 @@ describe("ReportAccountScreen", () => {
     expect(screen.getByText("שולם השנה")).toBeInTheDocument();
     expect(screen.getByText("10 תשלומים")).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "אוקטובר 2026" })).toBeInTheDocument();
-    const first = screen.getAllByRole("link", { name: /Example Mortgage Co · קרן/ })[0];
+    const first = screen.getAllByRole("link", { name: /Example Mortgage Co/ })[0];
     expect(first?.getAttribute("href")).toBe(`/transactions/${REPORT_ACCOUNT_LOAN.rows[0]?.transaction_id ?? ""}`);
-    expect(first?.textContent).toContain("מתוך");
+    // The loan part leads the hint, so a narrow row keeps it; the title is the party alone.
+    expect(first?.querySelector(".ui-row-title")?.textContent).toBe("Example Mortgage Co");
+    expect(first?.querySelector(".ui-row-hint")?.textContent).toBe("קרן · 01/10 · Cedar St");
+    expect(first?.querySelector(".ui-row-tagline")?.textContent).toBe("מתוך תשלום $1,350");
     expect(screen.getByRole("link", { name: /לדף ההלוואה/ }).getAttribute("href")).toBe("/loans/d0000000-0000-4000-8000-000000000165");
   });
 
@@ -71,6 +74,9 @@ describe("ReportAccountScreen", () => {
     renderWithProviders(<ReportAccountScreen sample={{ today: "2026-10-31", page: REPORT_ACCOUNT_QUIET }} />, { route: ROUTE });
     expect(screen.getByText("אין תנועות מתחילת 2026.")).toBeInTheDocument();
     expect(screen.getByText("שינוי השנה")).toBeInTheDocument();
+    // No movement: no "0" on the section or the change row.
+    expect(screen.getByRole("button", { name: /תנועות/ }).textContent).not.toContain("0");
+    expect(screen.queryByText(/^0 /)).toBeNull();
     expect(screen.queryByRole("link", { name: /הלוואה/ })).toBeNull();
   });
 

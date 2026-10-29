@@ -121,7 +121,11 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
       </div>
     );
   }
-  const total = rows.reduce((sum, row) => sum + row.amount_minor, 0n);
+  // The read's whole-group total and count (FLOW-165), so a long category shows its full figure; the loaded
+  // rows are the fallback for an older payload and the fixtures.
+  const firstPage = read.data?.pages[0];
+  const total = sample == null && firstPage?.total_minor != null ? firstPage.total_minor : rows.reduce((sum, row) => sum + row.amount_minor, 0n);
+  const lineCount = sample == null && firstPage?.count != null ? firstPage.count : rows.length;
   const signed = args.side === "income" ? total : -total;
   const split = linesByProject(rows);
   const collapse: Collapse = { isOpen: () => splitOpen, onToggle: () => { setSplitOpen((open) => !open); } };
@@ -129,7 +133,7 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
     <div className="ui-rep-screen">
       {header}
       <div className="ui-rep-content">
-        <ReportSummary label={args.side === "income" ? "הכנסות" : "הוצאות"} amount={signed} currency={currency} loss={false} sub={rows.length === 1 ? "תנועה אחת" : `${String(rows.length)} תנועות${hasMore ? " ועוד" : ""}`} />
+        <ReportSummary label={args.side === "income" ? "הכנסות" : "הוצאות"} amount={signed} currency={currency} loss={false} sub={lineCount === 1 ? "תנועה אחת" : `${String(lineCount)} תנועות${hasMore && lineCount === rows.length ? " ועוד" : ""}`} />
         {split.length > 1 ? (
           <ReportSection id="split" title="לפי פרויקט" total={<span className="t-muted">{String(split.length)}</span>} collapse={collapse}>
             <ul className="ui-rep-rows">

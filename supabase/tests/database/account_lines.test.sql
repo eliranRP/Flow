@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(45);
+select plan(52);
 
 do $users$
 begin
@@ -205,6 +205,51 @@ select is(pg_temp.descs(pg_temp.out_of('bd_all')), array['shared-repair', 'repai
 select is(pg_temp.descs(pg_temp.out_of('bd_parent')), array['shared-repair', 'repair'], 'by parent the project''s lines too');
 select is(pg_temp.out_of('bd_page') ->> 'has_more', 'true', 'one project''s lines page');
 select is(pg_temp.descs(pg_temp.out_of('bd_kept')), array['pay-mar'], 'the kept-out lines of one project');
+
+select is((pg_temp.out_of('bd_page') ->> 'total_minor')::bigint, (select sum((x ->> 'amount_minor')::bigint)::bigint from jsonb_array_elements(pg_temp.out_of('bd_alpha') -> 'rows') x),
+  'a page carries the whole group''s total');
+select is((pg_temp.out_of('bd_page') ->> 'count')::integer, 2, 'and its row count');
+
+-- 7b. Kept out by project: a line split over two kept-out categories stays two rows, each with its category.
+reset role;
+insert into public.categories (company_id, name, kind, sort_order, is_default, excluded_from_pnl)
+values (pg_temp.ref('co'), 'Example kept A', 'expense', 62, false, true), (pg_temp.ref('co'), 'Example kept B', 'expense', 63, false, true);
+insert into al_ref (label, id) select 'kept_a', id from public.categories where company_id = pg_temp.ref('co') and name = 'Example kept A';
+insert into al_ref (label, id) select 'kept_b', id from public.categories where company_id = pg_temp.ref('co') and name = 'Example kept B';
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, line_status, currency, amount_gross, amount_net, amount_original,
+  vat_amount, vat_status, doc_date, cash_date, source, idempotency_key, project_id, category_id, description, user_assigned
+) values (pg_temp.ref('co'), 'expense', 'expense', 'project', 'posted', 'ILS', -10000, -10000, 10000, 0, 'source',
+  '2026-07-05', '2026-07-05', 'manual', 'al:kept-split', pg_temp.ref('beta'), pg_temp.ref('kept_a'), 'kept-split', true);
+insert into al_ref (label, id) select 'kept_split', id from public.transactions where idempotency_key = 'al:kept-split';
+select private.set_line_parts(pg_temp.ref('co'), pg_temp.ref('kept_split'), jsonb_build_array(
+  jsonb_build_object('category_id', pg_temp.ref('kept_a'), 'amount_minor', 6000),
+  jsonb_build_object('category_id', pg_temp.ref('kept_b'), 'amount_minor', 4000)));
+select tests.authenticate_as('al_owner');
+select is(
+  (select array_agg(x ->> 'category_id' order by (x ->> 'amount_minor')::bigint desc)
+   from jsonb_array_elements(public.get_breakdown_lines('expense', 'category', null, 'ILS', '2026-07-01', '2026-07-31', 'cash', true, 40, 0, pg_temp.ref('beta')) -> 'rows') x),
+  array[pg_temp.ref('kept_a')::text, pg_temp.ref('kept_b')::text],
+  'one project''s kept-out split parts stay apart, each with its category');
+
+-- 7c. A draft leg is not on the books; a line's several legs on the account are one movement.
+reset role;
+insert into public.legs (company_id, transaction_id, account_id, amount_minor, ordinal, leg_kind, split_part, part_ordinal, draft)
+select pg_temp.ref('co'), t.id, pg_temp.ref('principal_acct'), 99900, 40, 'item', true, 1, true
+from public.transactions t where t.idempotency_key = 'al:pay-feb';
+insert into public.legs (company_id, transaction_id, account_id, amount_minor, ordinal, leg_kind)
+select pg_temp.ref('co'), t.id, v.acct, v.amount, v.ord, 'journal'
+from public.transactions t,
+  (values (pg_temp.ref('principal_acct'), 10000::bigint, 41::smallint), (pg_temp.ref('principal_acct'), 5000::bigint, 42::smallint),
+          (pg_temp.ref('bank_acct'), -15000::bigint, 43::smallint)) as v(acct, amount, ord)
+where t.idempotency_key = 'al:repair';
+select tests.authenticate_as('al_owner');
+insert into al_out values ('after', public.get_account_lines(pg_temp.ref('principal_acct'), '2026-10-15', null, 'ILS'));
+select is((pg_temp.cur(pg_temp.out_of('after'), 'ILS') ->> 'balance_minor')::bigint, 15280000::bigint - 15000,
+  'the draft leg is left out; the two legs of one line both count');
+select is(pg_temp.descs(pg_temp.out_of('after')), array['repair', 'pay-mar', 'pay-feb', 'pay-jan'], 'one row per line');
+select is((pg_temp.out_of('after') -> 'rows' -> 0 ->> 'amount_minor')::bigint, -15000::bigint, 'its legs on the account summed');
+select is((pg_temp.cur(pg_temp.out_of('after'), 'ILS') ->> 'count')::integer, 4, 'the count is per line');
 
 -- 8. Another company's account or project, an unknown account and a P&L account read as unknown; a bad
 -- currency and a project by payer are refused.

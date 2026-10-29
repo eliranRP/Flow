@@ -33,7 +33,7 @@ export const LoanPrincipal: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByText("יתרה היום")).toBeInTheDocument();
     await expect(canvas.getByRole("link", { name: /לדף ההלוואה/ }).getAttribute("href")).toBe("/loans/d0000000-0000-4000-8000-000000000165");
-    await expect(canvas.getAllByRole("link", { name: /Example Mortgage Co · קרן/ })).toHaveLength(3);
+    await expect(canvas.getAllByRole("link", { name: /Example Mortgage Co/ })).toHaveLength(3);
     await expect(canvas.getByRole("button", { name: "עוד 7 תנועות" })).toBeInTheDocument();
   },
 };

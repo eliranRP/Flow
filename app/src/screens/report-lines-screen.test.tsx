@@ -80,10 +80,12 @@ describe("ReportLinesScreen", () => {
     const wire = (row: ReturnType<typeof line>) => ({ ...row, amount_minor: Number(row.amount_minor) });
     rpc.impl = (name) => {
       if (name !== "get_breakdown_lines") return Promise.resolve({ data: null, error: { message: "down" } });
-      return Promise.resolve({ data: { rows: [wire(line("0013", "2026-09-30", 700, "Cedar St")), wire(line("0014", "2026-09-29", 200, "Cedar St"))], has_more: true }, error: null });
+      return Promise.resolve({ data: { rows: [wire(line("0013", "2026-09-30", 700, "Cedar St")), wire(line("0014", "2026-09-29", 200, "Cedar St"))], has_more: true, total_minor: 150_000, count: 5 }, error: null });
     };
     renderWithProviders(<ReportLinesScreen />, { route: `${ROUTE}&scope=project&project=a0000000-0000-4000-8000-000000000161&pname=Cedar+St` });
-    await waitFor(() => { expect(document.querySelector(".ui-rep-summary")?.textContent).toContain("−$900"); });
+    // The summary is the whole group's, from the read, not the loaded page's $900.
+    await waitFor(() => { expect(document.querySelector(".ui-rep-summary")?.textContent).toContain("−$1,500"); });
+    expect(screen.getByText("5 תנועות")).toBeInTheDocument();
     expect(rpc.calls).toHaveLength(1);
     expect(rpc.calls[0]?.args).toMatchObject({ p_project_id: "a0000000-0000-4000-8000-000000000161", p_offset: 0, p_group_key: "c-repairs" });
     expect(screen.getByText(/2026.* · Cedar St$/)).toBeInTheDocument();
