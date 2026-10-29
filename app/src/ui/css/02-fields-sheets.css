@@ -121,12 +121,16 @@
   white-space: normal;
 }
 
-/* FLOW-167: a title that wraps (a description a search found), so the matched word stays in view. */
+/* FLOW-167: a title that wraps (a description a search found), so the matched word stays in view. It
+   stops at three lines; a late match is shown from a few words before it, so the word is in them. */
 .ui-row-title-wrap {
-  overflow: visible;
+  display: -webkit-box;
+  overflow: hidden;
   overflow-wrap: anywhere;
   text-overflow: clip;
   white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 /* A project row's name is its identity, on Home and the Projects tab: it wraps up to two lines, then
@@ -174,9 +178,10 @@
   white-space: pre;
 }
 
-/* FLOW-168: in a row's hint, the parts after the first take a few letters' room (4em, the "·" included)
-   to stay on the line, then grow to their whole width in order: the second part fills first, so the
-   first part that does not fit is the one cut with "…". A part with less room than 4em drops. */
+/* FLOW-168: in a row's hint, the parts past the first take a few letters' room (4em, the "·" included)
+   to stay on the line, then grow toward their whole width, the second part first. The parts past the
+   first that do not fit are cut with "…" or, with less room than 4em, dropped: two parts can both be
+   cut on one line when both have letters and the second does not fill it. */
 .ui-row-hint-line > .ui-hint-parts > .ui-hint-part {
   display: flex;
 }
@@ -197,15 +202,15 @@
 
 .ui-row-hint-line .ui-hint-sep {
   flex: none;
-  unicode-bidi: isolate;
   white-space: pre;
 }
 
+/* The cut text is a designed ellipsis (clip-check reads data-clip-ok with nowrap). */
 .ui-row-hint-line .ui-hint-text {
   min-inline-size: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: pre;
+  white-space: nowrap;
 }
 
 .ui-row-hint-skel {

@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
 import { HomeReportsCard } from "./home-reports-card";
-import { lineMatches, lineText, linesByMonth, linesByProject, ReportLinesScreen, reportLinesArgs, searchPath, type ReportLinesSample } from "./report-lines-screen";
+import { descriptionSnippet, lineMatches, lineText, linesByMonth, linesByProject, ReportLinesScreen, reportLinesArgs, searchPath, type ReportLinesSample } from "./report-lines-screen";
 import { REPORTS_BALANCE, REPORTS_STATEMENT } from "../dev/reports-sample";
 
 const rpc = vi.hoisted(() => ({
@@ -183,11 +183,18 @@ describe("the drill-down's search", () => {
 
   it("titles a line with its description when only the description matched, the supplier in the hint (FLOW-167), and links the app's search", () => {
     const row = { ...line("0099", "2026-09-05", 1_388, "Cedar St", "Anytime Mailbox"), description: "Annual renewal" };
-    const supplier = { title: "Anytime Mailbox", hint: "05/09 · Cedar St", byDescription: false };
+    const supplier = { title: "Anytime Mailbox", full: null, hint: "05/09 · Cedar St", wrap: false };
     expect(lineText(row, "")).toEqual(supplier);
     expect(lineText(row, "cedar")).toEqual(supplier);
-    expect(lineText(row, "renewal")).toEqual({ title: "Annual renewal", hint: "05/09 · Anytime Mailbox", byDescription: true });
-    expect(lineText({ ...row, supplier_name: null }, "renewal")).toEqual({ title: "Annual renewal", hint: "05/09 · Cedar St", byDescription: false });
+    expect(lineText(row, "renewal")).toEqual({ title: "Annual renewal", full: null, hint: "05/09 · Anytime Mailbox", wrap: true });
+    // A line with no supplier is titled by its description; a search wraps it too, so the word stays in view.
+    expect(lineText({ ...row, supplier_name: null }, "renewal")).toEqual({ title: "Annual renewal", full: null, hint: "05/09 · Cedar St", wrap: true });
+    expect(lineText({ ...row, supplier_name: null }, "")).toEqual({ title: "Annual renewal", full: null, hint: "05/09 · Cedar St", wrap: false });
+    // A late match shows from two words before it, the whole description kept for screen readers.
+    const long = { ...row, description: "Quarterly service visit for the boiler room, parts and labour, unit 2" };
+    expect(lineText(long, "labour")).toEqual({ title: "…parts and labour, unit 2", full: long.description, hint: "05/09 · Anytime Mailbox", wrap: true });
+    expect(descriptionSnippet("Annual renewal", "renewal")).toBe("Annual renewal");
+    expect(descriptionSnippet("החלפת לוח החשמל הראשי בקומת הכניסה, יחידה 4", "יחידה")).toBe("…בקומת הכניסה, יחידה 4");
     expect(searchPath(" rent ", "none", "")).toBe("/search?q=rent&category=none");
     expect(searchPath("rent", "c1", "?preview=empty")).toBe("/search?preview=empty&q=rent&category=c1");
   });

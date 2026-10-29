@@ -197,7 +197,11 @@ const phone320 = { globals: { viewport: { value: "flow320", isRotated: false } }
 
 /** Whether the text is drawn whole inside its row: not cut by an ellipsis, not on a hidden line. */
 function inView(element: Element, text: string): boolean {
-  const node = [...element.querySelectorAll("*"), element].flatMap((el) => [...el.childNodes]).find((child) => child.nodeType === Node.TEXT_NODE && child.textContent?.includes(text) === true);
+  // The drawn text only: a snippet's whole description for screen readers is hidden (.sr-only).
+  const node = [...element.querySelectorAll("*"), element]
+    .filter((el) => el.closest(".sr-only") == null)
+    .flatMap((el) => [...el.childNodes])
+    .find((child) => child.nodeType === Node.TEXT_NODE && child.textContent?.includes(text) === true);
   if (node?.textContent == null) return false;
   const range = document.createRange();
   const start = node.textContent.indexOf(text);
@@ -268,28 +272,55 @@ export const CategoryLinesNoMatch: Story = {
   },
 };
 
+const LONG_LATIN = "Quarterly service visit for the boiler room and the shared laundry on the ground floor, parts, labour, inspection 120";
+const LONG_HEBREW = "ביקור שירות רבעוני בחדר הדודים ובחדר הכביסה המשותף בקומת הקרקע, כולל חלקים, עבודה, ניקוי המסננים ובדיקת המעלית בבניין";
+
+/** The title's drawn lines: its height over its line height. */
+function titleLines(title: Element): number {
+  const line = Number.parseFloat(getComputedStyle(title).lineHeight);
+  return Math.round(title.getBoundingClientRect().height / line);
+}
+
 /**
  * A line found only by its description shows the description as its title and the supplier in the hint
- * (FLOW-167). At 320 the matched word stays in view, at the end of a Latin description and of a Hebrew one.
+ * (FLOW-167). At 320 the matched word stays in view, at the end of a Latin description and of a Hebrew one,
+ * and the title stops at three lines: a late match (117 characters in) shows from a few words before it,
+ * after "…", with the whole description in the row's name.
  */
 export const CategoryLinesByDescription: Story = {
   name: "Drill-down · search by description",
   ...phone320,
-  render: () => <CategoryLinesView rows={[...CATEGORY_ROWS, line("0005", "2026-08-14", 300, "Maple Ave", "Bright Electric", "החלפת לוח החשמל הראשי בקומת הכניסה, יחידה 4")]} />,
+  render: () => (
+    <CategoryLinesView
+      rows={[
+        ...CATEGORY_ROWS,
+        line("0005", "2026-08-14", 300, "Maple Ave", "Bright Electric", "החלפת לוח החשמל הראשי בקומת הכניסה, יחידה 4"),
+        line("0006", "2026-08-06", 500, "Oak Ridge", "Northside Hardware", LONG_LATIN),
+        line("0007", "2026-08-03", 700, "Cedar St", "Bright Electric", LONG_HEBREW),
+      ]}
+    />
+  ),
   play: async ({ canvasElement }) => {
     await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
     const canvas = within(canvasElement);
     const field = canvas.getByRole("searchbox", { name: "חיפוש בתנועות" });
-    for (const [word, description, hint] of [
-      ["unit", "Water heater replacement, unit 2", "18/10 · Quick Fix Plumbing"],
-      ["יחידה", "החלפת לוח החשמל הראשי בקומת הכניסה, יחידה 4", "14/08 · Bright Electric"],
+    for (const [word, description, shown, hint] of [
+      ["unit", "Water heater replacement, unit 2", "…heater replacement, unit 2", "18/10 · Quick Fix Plumbing"],
+      ["יחידה", "החלפת לוח החשמל הראשי בקומת הכניסה, יחידה 4", "…בקומת הכניסה, יחידה 4", "14/08 · Bright Electric"],
+      ["inspection", LONG_LATIN, "…parts, labour, inspection 120", "06/08 · Northside Hardware"],
+      ["המעלית", LONG_HEBREW, "…המסננים ובדיקת המעלית בבניין", "03/08 · Bright Electric"],
     ] as const) {
       await userEvent.clear(field);
       await userEvent.type(field, word);
-      await waitFor(() => expect(canvasElement.querySelector(".ui-lines-group .ui-row-title")?.textContent).toBe(description));
-      const title = canvasElement.querySelector(".ui-lines-group .ui-row-title");
-      await expect(title?.closest(".ui-row")?.querySelector(".ui-row-hint")?.textContent).toBe(hint);
+      await waitFor(() => expect(canvasElement.querySelectorAll(".ui-lines-group .ui-row")).toHaveLength(1));
+      const row = canvasElement.querySelector(".ui-lines-group .ui-row");
+      const title = row?.querySelector(".ui-row-title");
+      await expect(title?.querySelector("[aria-hidden='true']")?.textContent ?? title?.textContent).toBe(shown);
+      await expect(row?.querySelector(".ui-row-hint")?.textContent).toBe(hint);
+      // The row's name keeps the whole description.
+      await expect(row?.textContent?.includes(description)).toBe(true);
       await expect(title != null && inView(title, word)).toBe(true);
+      await expect(title != null && titleLines(title) <= 3).toBe(true);
     }
   },
 };

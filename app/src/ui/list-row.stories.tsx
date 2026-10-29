@@ -278,3 +278,34 @@ export const LongProjectHint: Story = {
     await expect(within(canvasElement).getByText("Riverside Commons Phase Two Townhomes")).toHaveAttribute("dir", "auto");
   },
 };
+
+/**
+ * FLOW-168 as it stands (review of #865): with three parts whose 2nd and 3rd both have letters, both can be
+ * cut on one line at 393. The parts past the first that do not fit are cut or dropped, not only one.
+ */
+export const TwoCutParts: Story = {
+  args: { variant: "transaction", title: "ספק לדוגמה", layout: "flat" },
+  globals: { viewport: { value: "flow393", isRotated: false } },
+  render: () => (
+    <List layout="flat">
+      <ListRow layout="flat" variant="transaction" title="ספק לדוגמה" hint="קרן · מתחם המגורים הגדול ברחוב הדקל שלב ב · תיקונים ותחזוקה שוטפת" agorot={120_000n} sign="out" source="invoice" initials="סל" href="/transactions/1" />
+    </List>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBe(393);
+    const parts = [...canvasElement.querySelectorAll(".ui-hint-part")];
+    const top = parts[0]?.getBoundingClientRect().top ?? 0;
+    const shown = parts.map((part) => {
+      const text = part.querySelector(".ui-hint-text");
+      return {
+        line1: Math.abs(part.getBoundingClientRect().top - top) < 1,
+        cut: text instanceof HTMLElement && text.scrollWidth > text.clientWidth + 1,
+      };
+    });
+    await expect(shown).toEqual([
+      { line1: true, cut: false },
+      { line1: true, cut: true },
+      { line1: true, cut: true },
+    ]);
+  },
+};

@@ -158,6 +158,19 @@ describe("ListRow", () => {
     expect(screen.getByText("חשבונית 12")).not.toHaveAttribute("dir");
   });
 
+  it("hides a snippet title from screen readers and gives them the whole text, outside the title (FLOW-167)", () => {
+    render(
+      <MemoryRouter>
+        <ListRow variant="transaction" title="…labour, inspection" titleFull="Service visit, parts, labour, inspection" wrapTitle agorot={100n} sign="out" source="bank" href="/transactions/1" />
+      </MemoryRouter>,
+    );
+    const title = document.querySelector(".ui-row-title");
+    expect(title).toHaveClass("ui-row-title-wrap");
+    expect(title?.querySelector("[aria-hidden='true']")?.textContent).toBe("…labour, inspection");
+    expect(title?.querySelector(".sr-only")).toBeNull();
+    expect(screen.getByRole("link")).toHaveTextContent("Service visit, parts, labour, inspection");
+  });
+
   it("drops the chevron on a static row and exposes aria-expanded on a disclosure", () => {
     const { container } = render(
       <MemoryRouter>

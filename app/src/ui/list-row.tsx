@@ -26,8 +26,8 @@ type Common = {
   wrapHint?: boolean;
   /**
    * The hint's parts on one line (a transaction row always splits its hint at " · "): whole parts in order,
-   * then the first one that does not fit shortens with "…" (FLOW-168). A part drops only when not even a
-   * few letters fit, and a date or an amount never shortens.
+   * then the parts past the first that do not fit shorten with "…" (FLOW-168). A part drops only when not
+   * even a few letters fit, and a date or an amount never shortens.
    */
   hintParts?: readonly ReactNode[];
   /** Hint uses t-caption t-muted, and the control points at it with aria-describedby. */
@@ -57,6 +57,8 @@ type Common = {
   label?: string;
   /** The title wraps instead of ending in an ellipsis (a description found by a search, FLOW-167). */
   wrapTitle?: boolean;
+  /** The whole title for screen readers, when the title shows a part of it (a search snippet, FLOW-167). */
+  titleFull?: string;
   /** An email or other Latin value. The title stays LTR so the start remains visible. */
   ltrTitle?: boolean;
   className?: string;
@@ -351,6 +353,8 @@ export function ListRow(props: ListRowProps) {
           ) : (
             <span className={titleClass} dir={titleDir}>{titleBody}</span>
           )}
+          {/* Outside the title, so it never adds to a clamped title's lines or width. */}
+          {props.titleFull != null ? <span className="sr-only">{props.titleFull}</span> : null}
           {hintValue != null ? (
             <span
               id={described}
@@ -520,11 +524,12 @@ const HINT_SEPARATOR = " · ";
 
 /**
  * A one-line hint "מגדל הים · 03/10 · חלק משותף": whole parts, in order, as many as fit; then the
- * first part that does not fit shortens with "…" while a few letters of it fit (FLOW-168), so a
- * long project after the date is cut, not lost. A part with less room than that drops to a hidden
- * second line with its separator, so a line never ends on "·". A part with no letters (a date, an
- * amount) is never cut: it shows whole or drops. Each part's text takes its own direction, so a
- * Latin name in a Hebrew row is cut at its end. Screen readers still read every part.
+ * parts past the first that do not fit shorten with "…" while a few letters of each fit (FLOW-168;
+ * two can be cut on one line), so a long project after the date is cut, not lost. A part with less
+ * room than that drops to a hidden second line with its separator, so a line never ends on "·". A
+ * part with no letters (a date, an amount) is never cut: it shows whole or drops. Each part's text
+ * takes its own direction, so a Latin name in a Hebrew row is cut at its end. Screen readers still
+ * read every part.
  */
 function hintParts(hint: ReactNode | readonly ReactNode[]): ReactNode {
   const parts = isPartList(hint) ? hint : typeof hint === "string" && hint.includes(HINT_SEPARATOR) ? hint.split(HINT_SEPARATOR) : null;
@@ -536,7 +541,7 @@ function hintParts(hint: ReactNode | readonly ReactNode[]): ReactNode {
         return (
           <span key={index} className={whole ? "ui-hint-part ui-hint-part-whole" : "ui-hint-part"} data-clip-ok="">
             {index > 0 ? <span className="ui-hint-sep">{HINT_SEPARATOR}</span> : null}
-            <span className="ui-hint-text" dir={typeof part === "string" && !whole ? "auto" : undefined}>{part}</span>
+            <span className="ui-hint-text" dir={typeof part === "string" && !whole ? "auto" : undefined} data-clip-ok="">{part}</span>
           </span>
         );
       })}
@@ -549,8 +554,9 @@ function isPartList(hint: ReactNode | readonly ReactNode[]): hint is readonly Re
 }
 
 function titleText(props: Common): ReactNode {
-  if (!props.ltrTitle) return props.title;
-  return <bdi dir="ltr">{props.title}</bdi>;
+  const shown = props.ltrTitle ? <bdi dir="ltr">{props.title}</bdi> : props.title;
+  // A snippet is hidden from screen readers; the whole text follows the title (see the body).
+  return props.titleFull == null ? shown : <span aria-hidden="true">{shown}</span>;
 }
 
 function withAction(props: { actionBelow?: boolean; action?: ReactNode }, row: ReactNode) {
