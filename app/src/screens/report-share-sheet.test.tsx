@@ -78,6 +78,14 @@ describe("ReportShareSheet", () => {
     expect(screen.getByRole("dialog", { name: "שיתוף Excel" })).toBeInTheDocument();
   });
 
+  it("says to wait a minute when the file limit is reached", async () => {
+    invoke.impl = () => Promise.resolve({ data: null, error: Object.assign(new Error("429"), { context: new Response("{}", { status: 429 }) }) });
+    renderReports();
+    fireEvent.click(screen.getByRole("button", { name: "שיתוף הדוח" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "שיתוף PDF" })).getByRole("button", { name: "שיתוף PDF" }));
+    expect(await screen.findByText("נוצרו הרבה קבצים בדקה האחרונה. נסו שוב בעוד דקה.")).toBeInTheDocument();
+  });
+
   it("has nothing to share before the report is in, or when it is empty", () => {
     const loading = renderWithProviders(<ReportsScreen sample={{ today: REPORTS_TODAY, phase: { kind: "loading" } }} />, { route: "/reports" });
     expect(screen.queryByRole("button", { name: "שיתוף הדוח" })).toBeNull();

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { deliverFile, fetchReportFile, fileNameOf, reportFileArgs, type ShareChoice } from "./report-share";
+import { deliverFile, fetchReportFile, fileNameOf, reportFileArgs, TooManyFiles, type ShareChoice } from "./report-share";
 import { reportStateOf } from "./reports";
 
 type InvokeResult = { data: unknown; error: unknown; response?: Response };
@@ -58,6 +58,13 @@ describe("the file", () => {
     expect([...new Uint8Array(await file.arrayBuffer()).slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
     expect(file.name).toBe("ד.csv");
     expect(file.type).toBe("text/csv");
+  });
+
+  it("tells the file limit apart from a failure", async () => {
+    invoke.result = { data: null, error: Object.assign(new Error("429"), { context: new Response("{}", { status: 429 }) }) };
+    await expect(fetchReportFile({ format: "pdf" })).rejects.toBeInstanceOf(TooManyFiles);
+    invoke.result = { data: null, error: Object.assign(new Error("502"), { context: new Response("{}", { status: 502 }) }) };
+    await expect(fetchReportFile({ format: "pdf" })).rejects.not.toBeInstanceOf(TooManyFiles);
   });
 
   it("goes to the phone's share sheet when it takes files, and a closed share sheet is no failure", async () => {

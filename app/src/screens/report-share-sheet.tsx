@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { deliverFile, fetchReportFile, reportFileArgs, type ShareChoice } from "../report-share";
+import { deliverFile, fetchReportFile, reportFileArgs, TooManyFiles, type ShareChoice } from "../report-share";
 import type { ReportState } from "../reports";
 import { useSheetHistory } from "../ui/back";
 import { Button } from "../ui/button";
@@ -49,8 +49,8 @@ export function ReportShareSheet({ open, onOpenChange, state, today }: {
       setReady(null);
       if (outcome !== "cancelled") setOpen(false);
       if (outcome === "saved") toast.show({ message: `הקובץ ${file.name} ירד`, tone: "ok" });
-    } catch {
-      toast.show({ message: "הקובץ לא נוצר. נסו שוב.", tone: "bad" });
+    } catch (error) {
+      toast.show({ message: error instanceof TooManyFiles ? "נוצרו הרבה קבצים בדקה האחרונה. נסו שוב בעוד דקה." : "הקובץ לא נוצר. נסו שוב.", tone: "bad" });
     } finally {
       setBusy(false);
     }

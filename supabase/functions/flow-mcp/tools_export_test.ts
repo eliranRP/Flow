@@ -2,7 +2,9 @@
 import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
 import { SAMPLE_BALANCE_BODY, SAMPLE_STATEMENT_BODY } from "../_shared/report_sample.ts";
 import { handle } from "./handler.ts";
-import { env } from "./handler_test_support.ts";
+import { env, pepperSecret } from "./handler_test_support.ts";
+import { hmacSecret } from "./handler.ts";
+import type { SigningKey } from "./sign.ts";
 import { callTool } from "./tools.ts";
 import { exportReport } from "./tools_export.ts";
 import { rpcOf } from "./tools_test_support.ts";
@@ -15,6 +17,7 @@ function reads(name: string) {
   if (name === "get_pnl_statement") return { status: 200, json: SAMPLE_STATEMENT_BODY };
   if (name === "mcp_balance_sheet") return { status: 200, json: SAMPLE_BALANCE_BODY };
   if (name === "get_dashboard") return { status: 200, json: { name: "נכסי הדוגמה בע״מ" } };
+  if (name === "bump_report_rate") return { status: 200, json: { allowed: true, retry_after_seconds: 0 } };
   return { status: 404, json: null };
 }
 
@@ -136,7 +139,8 @@ Deno.test("the report route refuses a foreign origin, no session and bad argumen
   const bad = await handle(appRequest({ format: "docx" }), appDeps(seen));
   assertEquals(bad.status, 400);
   assertEquals((await bad.json()).error, "validation");
-  assertEquals(seen.some((call) => call.url.includes("/rpc/")), false);
+  // Only the limit is counted: no report is read.
+  assertEquals(seen.filter((call) => call.url.includes("/rpc/")).map((call) => call.url.split("/").pop()), ["bump_report_rate"]);
 });
 
 Deno.test("the report route's file name escapes the marks RFC 5987 does not allow bare", async () => {
@@ -153,4 +157,87 @@ Deno.test("the report route's file name escapes the marks RFC 5987 does not allo
   const disposition = response.headers.get("content-disposition") ?? "";
   assertStringIncludes(disposition, "O%27Neil-%28North%29-%21.pdf");
   assertEquals(/filename\*=UTF-8''[A-Za-z0-9%!#$&+\-.^_`|~]+$/.test(disposition.replace(/%[0-9A-F]{2}/g, "")), true, disposition);
+});
+
+Deno.test("the report route counts each file against the user's limit, before any read, and says when to come back", async () => {
+  const seen: Seen[] = [];
+  await handle(appRequest({}), appDeps(seen));
+  const bump = seen.find((call) => call.url.endsWith("/rpc/bump_report_rate"));
+  assertEquals(bump?.body, { p_user: "user-1" });
+  assertEquals(bump?.authorization, "Bearer secret-key");
+  const limitedSeen: Seen[] = [];
+  const base = appDeps(limitedSeen);
+  const limited = {
+    ...base,
+    fetch: (input: string, init?: RequestInit) => input.endsWith("/rpc/bump_report_rate")
+      ? Promise.resolve(new Response(JSON.stringify({ allowed: false, retry_after_seconds: 42 })))
+      : base.fetch(input, init),
+  };
+  const refused = await handle(appRequest({}), limited);
+  assertEquals(refused.status, 429);
+  assertEquals(refused.headers.get("retry-after"), "42");
+  assertEquals(refused.headers.get("access-control-allow-origin"), "https://flow-app-dx5.pages.dev");
+  assertEquals((await refused.json()).error, "rate_limited");
+  assertEquals(limitedSeen.some((call) => call.url.includes("/rpc/get_pnl_statement")), false);
+  const down = { ...base, fetch: (input: string, init?: RequestInit) => input.endsWith("/rpc/bump_report_rate") ? Promise.resolve(new Response("{}", { status: 500 })) : base.fetch(input, init) };
+  assertEquals((await handle(appRequest({}), down)).status, 503);
+});
+
+Deno.test("export_report through the MCP counts against the same file limit, before any read", async () => {
+  const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  const jwk = await crypto.subtle.exportKey("jwk", pair.privateKey) as SigningKey;
+  jwk.kid = "report-kid";
+  jwk.alg = "ES256";
+  const token = `flow_mcp_${"r".repeat(43)}`;
+  const hash = await hmacSecret(token, new TextEncoder().encode(pepperSecret));
+  const localEnv: Record<string, string> = { ...env, FLOW_MCP_SIGNING_KEY: JSON.stringify(jwk) };
+  let allowed = false;
+  let scope = ["read"];
+  const asked: Array<{ name: string; body: unknown }> = [];
+  const deps = {
+    env: (name: string) => localEnv[name],
+    fetch: (input: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : null;
+      const name = input.split("/").pop() ?? "";
+      asked.push({ name, body });
+      if (name === "lookup_mcp_credential") {
+        if (body?.p_token_hash !== hash) return Promise.resolve(new Response(JSON.stringify({ found: false })));
+        return Promise.resolve(new Response(JSON.stringify({
+          found: true,
+          id: "88888888-8888-4000-8000-000000000166",
+          user_id: "aaaaaaaa-aaaa-4000-8000-000000000166",
+          company_id: "cccccccc-cccc-4000-8000-000000000166",
+          scope,
+          expires_at: "2099-01-01T00:00:00.000Z",
+          revoked_at: null,
+        })));
+      }
+      if (name === "bump_mcp_rate") return Promise.resolve(new Response(JSON.stringify({ allowed: true, retry_after_seconds: 0 })));
+      if (name === "bump_report_rate") return Promise.resolve(new Response(JSON.stringify({ allowed, retry_after_seconds: 30 })));
+      if (name === "touch_mcp_credential") return Promise.resolve(new Response("null"));
+      const answer = reads(name);
+      return Promise.resolve(new Response(JSON.stringify(answer.json), { status: answer.status }));
+    },
+    now: () => NOW.getTime(),
+  };
+  const call = async () => (await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 7, method: "tools/call", params: { name: "export_report", arguments: { format: "csv" } } }),
+  }), deps)).json();
+  // A token that may not read is refused before the count: it uses up none of the user's files.
+  scope = ["write"];
+  assertEquals((await call()).result.structuredContent.error.code, "forbidden");
+  assertEquals(asked.some((item) => item.name === "bump_report_rate"), false);
+  scope = ["read"];
+  const refused = await call();
+  assertEquals(refused.result.isError, true);
+  assertEquals(refused.result.structuredContent.error.code, "rate_limited");
+  assertEquals(asked.find((item) => item.name === "bump_report_rate")?.body, { p_user: "aaaaaaaa-aaaa-4000-8000-000000000166" });
+  assertEquals(asked.some((item) => item.name === "get_pnl_statement"), false);
+  allowed = true;
+  const made = await call();
+  assertEquals(made.result.isError, false);
+  assertEquals(made.result.content[1].type, "resource");
+  assertEquals(made.result.content[1].resource.mimeType, "text/csv");
 });
