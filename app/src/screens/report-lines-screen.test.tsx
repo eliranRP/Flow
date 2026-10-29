@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
 import { HomeReportsCard } from "./home-reports-card";
-import { lineMatches, linesByMonth, linesByProject, ReportLinesScreen, reportLinesArgs, type ReportLinesSample } from "./report-lines-screen";
+import { lineHint, lineMatches, linesByMonth, linesByProject, ReportLinesScreen, reportLinesArgs, searchPath, type ReportLinesSample } from "./report-lines-screen";
 import { REPORTS_BALANCE, REPORTS_STATEMENT } from "../dev/reports-sample";
 
 const rpc = vi.hoisted(() => ({
@@ -153,6 +153,9 @@ describe("the drill-down's search", () => {
     expect(lineMatches(row, "$1,388")).toBe(true);
     expect(lineMatches(row, "1388.00")).toBe(true);
     expect(lineMatches(row, "mailbox maple")).toBe(false);
+    expect(lineMatches(row, "−$1,388")).toBe(true);
+    expect(lineMatches(row, "-1388")).toBe(true);
+    expect(lineMatches({ ...row, description: "only in the description" }, "description")).toBe(true);
     expect(lineMatches(line("0098", "2026-09-05", 10, null), "בלי פרויקט")).toBe(true);
   });
 
@@ -165,9 +168,20 @@ describe("the drill-down's search", () => {
     expect(screen.queryByRole("link", { name: /Quick Fix Plumbing/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /לפי פרויקט/ })).toBeNull();
     fireEvent.change(field, { target: { value: "nothing like it" } });
-    expect(screen.getByText("אין תנועות שמתאימות לחיפוש.")).toBeInTheDocument();
+    expect(screen.getByText("אין תנועות שמתאימות לחיפוש")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "לחיפוש בכל התנועות" })).toHaveAttribute("href", "/search?q=nothing+like+it&category=c-repairs");
     fireEvent.change(field, { target: { value: "" } });
     expect(screen.getByRole("button", { name: /לפי פרויקט/ })).toBeInTheDocument();
+  });
+
+  it("shows the description in the hint when only the description matched, and links the app's search", () => {
+    const row = { ...line("0099", "2026-09-05", 1_388, "Cedar St", "Anytime Mailbox"), description: "Annual renewal" };
+    expect(lineHint(row, "")).toBe("05/09 · Cedar St");
+    expect(lineHint(row, "cedar")).toBe("05/09 · Cedar St");
+    expect(lineHint(row, "renewal")).toBe("05/09 · Annual renewal");
+    expect(lineHint({ ...row, supplier_name: null }, "renewal")).toBe("05/09 · Cedar St");
+    expect(searchPath(" rent ", "none", "")).toBe("/search?q=rent");
+    expect(searchPath("rent", "c1", "?preview=empty")).toBe("/search?preview=empty&q=rent&category=c1");
   });
 
   it("shows no search on a short list", () => {
@@ -191,5 +205,27 @@ describe("the drill-down's search", () => {
     expect(await screen.findByRole("link", { name: /Distant Supplier/ })).toBeInTheDocument();
     expect(rpc.calls).toHaveLength(2);
     await waitFor(() => { expect(screen.getByText("תנועה אחת מתאימה")).toBeInTheDocument(); });
+  });
+});
+
+describe("the drill-down's search, when a page fails", () => {
+  it("stops reading, says the list is partial and offers a retry", async () => {
+    const wire = (row: ReportLinesSample["rows"][number]) => ({ ...row, amount_minor: Number(row.amount_minor) });
+    rpc.impl = (_name, args) => (args as { p_offset: number }).p_offset === 0
+      ? Promise.resolve({ data: { rows: MANY.map(wire), has_more: true }, error: null })
+      : Promise.resolve({ data: null, error: { message: "down" } });
+    renderWithProviders(<ReportLinesScreen />, { route: ROUTE });
+    const field = await screen.findByRole("searchbox", { name: "חיפוש בתנועות" });
+    fireEvent.change(field, { target: { value: "northside" } });
+    expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    expect(rpc.calls).toHaveLength(2);
+    expect(screen.getByText(/חלק מהתנועות לא נטענו/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ניקוי" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /עוד תנועות/ })).toBeNull();
+  });
+
+  it("shows the search from the sixth line", () => {
+    renderWithProviders(<ReportLinesScreen sample={{ rows: MANY.slice(0, 5) }} />, { route: ROUTE });
+    expect(screen.queryByRole("searchbox", { name: "חיפוש בתנועות" })).toBeNull();
   });
 });

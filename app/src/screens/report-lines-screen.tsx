@@ -18,7 +18,7 @@ import { SearchField } from "../ui/search-field";
 import { ProfitRowsSkeleton } from "../ui/screen-skeletons";
 import { DelayedSkeleton } from "../ui/skeleton";
 import { waitForAccessToken } from "../wait-for-session";
-import { useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useState } from "react";
 import { ReportRow, ReportSection, ReportSummary, type Collapse } from "./reports-parts";
 
 type LinesPage = NonNullable<BreakdownLinesPage>;
@@ -85,20 +85,44 @@ export function linesByProject(rows: readonly LineRow[]): { name: string; total:
 
 /** The search's words, the way a line is matched: lower case, no thousands commas or money signs. */
 function searchText(value: string): string {
-  return value.toLowerCase().replace(/[,$₪€£]/g, "").replace(/\s+/g, " ").trim();
+  return value
+    .toLowerCase()
+    .replace(/״/g, '"')
+    .replace(/׳/g, "'")
+    // A figure as the row draws it: "−$1,388.00" reads as "1388.00". A comma between words stays a break.
+    .replace(/(^|\s)[−+-](?=[$₪€£]?\d)/g, "$1")
+    .replace(/(\d),(?=\d)/g, "$1")
+    .replace(/[$₪€£]/g, "")
+    .replace(/[\s,]+/g, " ")
+    .trim();
 }
 
 /**
  * Whether a line matches the search (owner, 2026-10-29): every word is in its supplier, description,
  * project, date (dd/mm) or amount ("189.15", "189"). An empty search matches every line.
  */
-export function lineMatches(row: LineRow, query: string): boolean {
+export function lineMatches(row: LineRow, query: string, { description = true } = {}): boolean {
   const words = searchText(query).split(" ").filter((word) => word !== "");
   if (words.length === 0) return true;
   const abs = row.amount_minor < 0n ? -row.amount_minor : row.amount_minor;
   const amount = `${String(abs / 100n)}.${String(abs % 100n).padStart(2, "0")}`;
-  const haystack = searchText([row.supplier_name ?? "", row.description, row.project_name ?? "בלי פרויקט", `${row.doc_date.slice(8, 10)}/${row.doc_date.slice(5, 7)}`, amount].join(" "));
+  const haystack = searchText([row.supplier_name ?? "", description ? row.description : "", row.project_name ?? "בלי פרויקט", `${row.doc_date.slice(8, 10)}/${row.doc_date.slice(5, 7)}`, amount].join(" "));
   return words.every((word) => haystack.includes(word));
+}
+
+/** A row's hint: its date and project, or, when the search matched only the description the title hides, the description. */
+export function lineHint(row: LineRow, query: string): string {
+  const date = `${row.doc_date.slice(8, 10)}/${row.doc_date.slice(5, 7)}`;
+  const byDescription = row.supplier_name != null && searchText(query) !== "" && !lineMatches(row, query, { description: false });
+  return `${date} · ${byDescription ? row.description : (row.project_name ?? "בלי פרויקט")}`;
+}
+
+/** The app's search for the same words in this category, all dates, keeping the preview flag. */
+export function searchPath(query: string, category: string, search: string): string {
+  const params = new URLSearchParams(search);
+  params.set("q", query.trim());
+  if (category !== "none") params.set("category", category);
+  return `/search?${params.toString()}`;
 }
 
 /** A search shows once the list is long enough to need it. */
@@ -119,6 +143,8 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
   const [splitOpen, setSplitOpen] = useState(true);
   const [query, setQuery] = useState("");
   const searching = searchText(query) !== "";
+  // The list filters on a deferred copy, so typing stays quick on a long period.
+  const deferred = useDeferredValue(query);
   const read = useInfiniteQuery({
     queryKey: ["breakdown-lines", "report", preview, args.side, args.category, args.from ?? "", args.to ?? "", currency],
     enabled: sample == null && preview === "off",
@@ -154,8 +180,10 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
   const total = rows.reduce((sum, row) => sum + row.amount_minor, 0n);
   const signed = args.side === "income" ? total : -total;
   const split = linesByProject(rows);
-  const shown = searching ? rows.filter((row) => lineMatches(row, query)) : rows;
-  const stillReading = searching && sample == null && hasNextPage;
+  const shown = searching ? rows.filter((row) => lineMatches(row, deferred)) : rows;
+  // A page that fails stops the read (the effect's guard); the line says so and offers the retry.
+  const readFailed = searching && sample == null && isFetchNextPageError;
+  const stillReading = searching && sample == null && hasNextPage && !readFailed;
   const collapse: Collapse = { isOpen: () => splitOpen, onToggle: () => { setSplitOpen((open) => !open); } };
   return (
     <div className="ui-rep-screen">
@@ -165,11 +193,14 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
         {rows.length >= SEARCH_FROM || hasMore ? (
           <div className="ui-rep-search">
             <SearchField label="חיפוש בתנועות" value={query} onChange={setQuery} placeholder="ספק, פרויקט, סכום או תאריך" busy={stillReading} />
-            {searching ? (
-              <p className="t-caption t-muted" role="status">
-                {shown.length === 0 && !stillReading ? "אין תנועות שמתאימות לחיפוש." : shown.length === 1 ? "תנועה אחת מתאימה" : `${String(shown.length)} תנועות מתאימות`}
-              </p>
+            {/* Mounted before the first word, so a screen reader hears the first count too. */}
+            <p className="t-caption t-muted" role="status">
+              {!searching ? "" : readFailed ? `${String(shown.length)} מתאימות מהתנועות שנטענו. חלק מהתנועות לא נטענו.` : stillReading ? "מחפשים בכל התנועות…" : shown.length === 0 ? "אין תנועות שמתאימות לחיפוש" : shown.length === 1 ? "תנועה אחת מתאימה" : `${String(shown.length)} תנועות מתאימות`}
+            </p>
+            {searching && shown.length === 0 && !stillReading && !readFailed ? (
+              <Button variant="secondary" to={searchPath(query, args.category, search)}>לחיפוש בכל התנועות</Button>
             ) : null}
+            {readFailed ? <Button variant="secondary" onClick={() => { void fetchNextPage(); }}>נסו שוב</Button> : null}
           </div>
         ) : null}
         {split.length > 1 && !searching ? (
@@ -191,7 +222,7 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
                   layout="flat"
                   variant="transaction"
                   title={row.supplier_name ?? row.description}
-                  hint={`${row.doc_date.slice(8, 10)}/${row.doc_date.slice(5, 7)} · ${row.project_name ?? "בלי פרויקט"}`}
+                  hint={lineHint(row, deferred)}
                   agorot={row.amount_minor}
                   currency={row.currency}
                   sign={args.side === "income" ? "in" : "out"}
