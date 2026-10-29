@@ -116,6 +116,34 @@ export const ReportShortcutProject: Story = {
   },
 };
 
+/** FLOW-169: a uuid project, so its reports link is one the reports screen reads as a project. */
+const CHIP_PROJECT = "a0000000-0000-4000-8000-000000000169";
+
+/**
+ * FLOW-169: with the project chip on, "המאזן?" (a prefix letter and a question mark) opens the
+ * balance sheet on that project, as a typed project name does. At 320, in light and dark.
+ */
+export const ReportShortcutProjectChip: Story = {
+  name: "Report shortcut · the project chip at 320",
+  globals: { viewport: { value: "flow320", isRotated: false } },
+  render: () => (
+    <Search
+      entry={`/search?q=${encodeURIComponent("המאזן?")}&project=${CHIP_PROJECT}`}
+      data={{ ...sample, projects: [...(sample.projects ?? []), { id: CHIP_PROJECT, name: "בית לדוגמה בגבעה", status: "active" }] }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
+    const canvas = within(canvasElement);
+    const link = await canvas.findByRole("link", { name: /מאזן · בית לדוגמה בגבעה/ });
+    await expect(link).toHaveAttribute("href", `/reports?kind=balance&scope=project&project=${CHIP_PROJECT}`);
+    await expect(canvas.getByRole("button", { name: "הסרת בית לדוגמה בגבעה" })).toBeInTheDocument();
+    const row = link.getBoundingClientRect();
+    await expect(row.right).toBeLessThanOrEqual(320);
+    await expect(row.left).toBeGreaterThanOrEqual(0);
+  },
+};
+
 /**
  * FLOW-163 (review r1): a project whose name holds a report's name. The דוחות section comes first,
  * then the project shortcut, then the project's lines.

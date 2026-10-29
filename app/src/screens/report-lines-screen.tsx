@@ -19,6 +19,7 @@ import { ProfitRowsSkeleton } from "../ui/screen-skeletons";
 import { DelayedSkeleton } from "../ui/skeleton";
 import { waitForAccessToken } from "../wait-for-session";
 import { memo, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { SearchSnippet, searchText, searchWords } from "./report-lines-snippet";
 import { ReportRow, ReportSection, ReportSummary, type Collapse } from "./reports-parts";
 
 type LinesPage = NonNullable<BreakdownLinesPage>;
@@ -87,26 +88,12 @@ export function linesByProject(rows: readonly LineRow[]): { name: string; total:
   return [...totals.entries()].map(([name, total]) => ({ name, total })).sort((a, b) => (a.total === b.total ? a.name.localeCompare(b.name) : b.total > a.total ? 1 : -1));
 }
 
-/** The search's words, the way a line is matched: lower case, no thousands commas or money signs. */
-function searchText(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/״/g, '"')
-    .replace(/׳/g, "'")
-    // A figure as the row draws it: "−$1,388.00" reads as "1388.00". A comma between words stays a break.
-    .replace(/(^|\s)[−+-](?=[$₪€£]?\d)/g, "$1")
-    .replace(/(\d),(?=\d)/g, "$1")
-    .replace(/[$₪€£]/g, "")
-    .replace(/[\s,]+/g, " ")
-    .trim();
-}
-
 /**
  * Whether a line matches the search (owner, 2026-10-29): every word is in its supplier, description,
  * project, date (dd/mm) or amount ("189.15", "189"). An empty search matches every line.
  */
 export function lineMatches(row: LineRow, query: string, { description = true } = {}): boolean {
-  const words = searchText(query).split(" ").filter((word) => word !== "");
+  const words = searchWords(query);
   if (words.length === 0) return true;
   const abs = row.amount_minor < 0n ? -row.amount_minor : row.amount_minor;
   const amount = `${String(abs / 100n)}.${String(abs % 100n).padStart(2, "0")}`;
@@ -119,58 +106,25 @@ function matchedByDescription(row: LineRow, query: string): boolean {
   return row.supplier_name != null && searchText(query) !== "" && !lineMatches(row, query, { description: false });
 }
 
-/** A matched word further in than this starts the shown description a few words before it (FLOW-167). */
-const SNIPPET_FROM = 24;
-/** How many words before the matched word the snippet keeps. */
-const SNIPPET_WORDS = 2;
-
-/**
- * Where a search word is in the description, matched as `lineMatches` matches it (`searchText`: "1388"
- * finds "1,388", `בע"מ` finds "בע״מ"), from the start of the word it is in; -1 when it is not there.
- */
-function wordStart(description: string, word: string): number {
-  if (!searchText(description).includes(word)) return -1;
-  const lower = description.toLowerCase();
-  // The plain text first; else the shortest start of the description whose search text holds the word ends in it.
-  let end = lower.length === description.length ? lower.indexOf(word) + 1 : 0;
-  for (let length = 1; end === 0 && length <= description.length; length += 1) {
-    if (searchText(description.slice(0, length)).includes(word)) end = length;
-  }
-  let start = Math.max(end - 1, 0);
-  while (start > 0 && !/\s/.test(description[start - 1] ?? "")) start -= 1;
-  return start;
-}
-
-/**
- * The description as a search shows it: whole, or, when the first matched word starts late, from a word
- * boundary a few words before it after a leading "…", so the word is in the title's three lines.
- */
-export function descriptionSnippet(description: string, query: string): string {
-  const starts = searchText(query).split(" ").filter((word) => word !== "").map((word) => wordStart(description, word)).filter((index) => index >= 0);
-  if (starts.length === 0) return description;
-  let start = Math.min(...starts);
-  if (start <= SNIPPET_FROM) return description;
-  for (let word = 0; word < SNIPPET_WORDS; word += 1) {
-    while (start > 0 && /\s/.test(description[start - 1] ?? "")) start -= 1;
-    while (start > 0 && !/\s/.test(description[start - 1] ?? "")) start -= 1;
-  }
-  return start === 0 ? description : `…${description.slice(start)}`;
-}
-
 /**
  * A row's title and hint: the supplier over its date and project. When the search matched only the
  * description the supplier hides, the description is the title and the supplier moves to the hint
- * (FLOW-167). A description title wraps while a search is on (`wrap`, up to three lines), so the matched
- * word stays in view; a late match shows from a few words before it, with the whole text in `full` for
- * screen readers. A line with no supplier is titled by its description already.
+ * (FLOW-167); a project one of the words matched stays in the hint, after the supplier, which names
+ * the line (FLOW-169, "heater cedar"; review of #868). A description title wraps while a search is on (`wrap`, up to three lines) and is
+ * drawn by `SearchSnippet`, which starts it late when the matched words would fall past those lines;
+ * `full` keeps the whole text for screen readers. A line with no supplier is titled by its description
+ * already.
  */
 export function lineText(row: LineRow, query: string): { title: string; full: string | null; hint: string; wrap: boolean } {
   const date = `${row.doc_date.slice(8, 10)}/${row.doc_date.slice(5, 7)}`;
+  const project = row.project_name ?? "בלי פרויקט";
   const byDescription = matchedByDescription(row, query) || (row.supplier_name == null && searchText(query) !== "");
-  if (!byDescription) return { title: row.supplier_name ?? row.description, full: null, hint: `${date} · ${row.project_name ?? "בלי פרויקט"}`, wrap: false };
-  const title = descriptionSnippet(row.description, query);
-  const hint = `${date} · ${row.supplier_name ?? row.project_name ?? "בלי פרויקט"}`;
-  return { title, full: title === row.description ? null : row.description, hint, wrap: true };
+  if (!byDescription) return { title: row.supplier_name ?? row.description, full: null, hint: `${date} · ${project}`, wrap: false };
+  if (row.supplier_name == null) return { title: row.description, full: row.description, hint: `${date} · ${project}`, wrap: true };
+  const projectText = searchText(project);
+  const matchedProject = searchWords(query).some((word) => projectText.includes(word));
+  const hint = matchedProject ? `${date} · ${row.supplier_name} · ${project}` : `${date} · ${row.supplier_name}`;
+  return { title: row.description, full: row.description, hint, wrap: true };
 }
 
 /** The app's search for the same words in this category ("none": the lines with no category, as /search reads it), all dates, keeping the preview flag. */
@@ -297,7 +251,7 @@ const LineGroups = memo(function LineGroups({ rows, query, side, search }: { row
               key={`${row.transaction_id}:${row.part ?? ""}`}
               layout="flat"
               variant="transaction"
-              title={text.title}
+              title={text.wrap ? <SearchSnippet key={query} text={text.title} query={query} /> : text.title}
               wrapTitle={text.wrap}
               titleFull={text.full ?? undefined}
               hint={text.hint}

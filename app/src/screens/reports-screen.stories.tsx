@@ -12,11 +12,11 @@ import {
   REPORTS_STATEMENT,
   REPORTS_TODAY,
 } from "../dev/reports-sample";
-import { ExampleBar } from "../ui/screen-stories-support";
+import { ExampleBar, storyBody } from "../ui/screen-stories-support";
 import { StoryRoute } from "../ui/story-route";
 import { ToastProvider } from "../ui/toast";
 import { HomeReportsCard } from "./home-reports-card";
-import { ReportLinesScreen } from "./report-lines-screen";
+import { CATEGORY_ROWS, CategoryLinesView, inView, line, titleLines } from "./report-lines-story-support";
 import { ReportsScreen, type ReportsSample } from "./reports-screen";
 
 /** FLOW-161: the reports screen, the category drill-down and the Home card (board row "דוחות"). */
@@ -139,6 +139,33 @@ export const ShareSheet: Story = {
   },
 };
 
+/**
+ * FLOW-170: the balance sheet's date sheet says every date counts from the start, one caption under
+ * the dates and under the calendar for another date (the owner asked for "from the start"). At 320,
+ * in light and dark.
+ */
+export const BalanceDateSheet320: Story = {
+  name: "Sheet · balance date at 320",
+  globals: { viewport: { value: "flow320", isRotated: false } },
+  render: () => <Reports entry="/reports?kind=balance" />,
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "היום" }));
+    const sheet = await storyBody(canvasElement).findByRole("dialog", { name: "נכון לתאריך" });
+    const note = within(sheet).getByText("המאזן כולל את כל התנועות מההתחלה ועד התאריך שבוחרים");
+    await expect(within(sheet).getByRole("radiogroup", { name: "נכון לתאריך" })).toHaveAttribute("aria-describedby", note.id);
+    const box = note.getBoundingClientRect();
+    await expect(box.left).toBeGreaterThanOrEqual(0);
+    await expect(box.right).toBeLessThanOrEqual(320);
+    await expect(note.scrollWidth).toBeLessThanOrEqual(note.clientWidth + 1);
+    // The calendar for another date says it too, inside the screen.
+    await userEvent.click(within(sheet).getByRole("button", { name: "תאריך אחר" }));
+    const again = await within(sheet).findByText("המאזן כולל את כל התנועות מההתחלה ועד התאריך שבוחרים");
+    await expect(again.getBoundingClientRect().right).toBeLessThanOrEqual(320);
+    await expect(again.getBoundingClientRect().left).toBeGreaterThanOrEqual(0);
+  },
+};
+
 export const CustomDates: Story = {
   name: "Sheet · custom dates",
   render: () => <Reports entry="/reports?period=custom&from=2026-10-05&to=2026-10-20" />,
@@ -162,56 +189,7 @@ export const Loading: Story = { name: "State · loading", render: () => <Reports
 export const Failed: Story = { name: "State · failed to load", render: () => <Reports sample={{ phase: { kind: "error", offline: false } }} /> };
 export const Offline: Story = { name: "State · offline", render: () => <Reports sample={{ offlineSince: Date.parse("2026-10-31T07:41:00Z") }} /> };
 
-function line(id: string, date: string, dollars: number, project: string, supplier: string, description = supplier) {
-  return {
-    transaction_id: `b0000000-0000-4000-8000-00000000${id}`,
-    part: null,
-    description,
-    supplier_name: supplier,
-    project_name: project,
-    category_name: "תיקונים ותחזוקה",
-    doc_date: date,
-    currency: "USD",
-    amount_minor: BigInt(dollars * 100),
-    shared: false,
-  };
-}
-
-const CATEGORY_ROWS = [
-  line("0001", "2026-10-18", 1_250, "Cedar St", "Quick Fix Plumbing", "Water heater replacement, unit 2"),
-  line("0002", "2026-10-09", 400, "Maple Ave", "Northside Hardware"),
-  line("0003", "2026-09-22", 980, "Oak Ridge", "Bright Electric"),
-  line("0004", "2026-09-11", 200, "Riverside Commons Phase Two Townhomes", "Northside Hardware"),
-];
-
-function CategoryLinesView({ rows = CATEGORY_ROWS }: { rows?: ReturnType<typeof line>[] }) {
-  return (
-    <StoryRoute entry="/reports/lines?side=expense&category=c-repairs&name=%D7%AA%D7%99%D7%A7%D7%95%D7%A0%D7%99%D7%9D%20%D7%95%D7%AA%D7%97%D7%96%D7%95%D7%A7%D7%94&from=2026-01-01&to=2026-10-31&cur=USD" tabs>
-      <ExampleBar />
-      <ReportLinesScreen sample={{ rows, hasMore: true }} />
-    </StoryRoute>
-  );
-}
-
 const phone320 = { globals: { viewport: { value: "flow320", isRotated: false } } };
-
-/** Whether the text is drawn whole inside its row: not cut by an ellipsis, not on a hidden line. */
-function inView(element: Element, text: string): boolean {
-  // The drawn text only: a snippet's whole description for screen readers is hidden (.sr-only).
-  const node = [...element.querySelectorAll("*"), element]
-    .filter((el) => el.closest(".sr-only") == null)
-    .flatMap((el) => [...el.childNodes])
-    .find((child) => child.nodeType === Node.TEXT_NODE && child.textContent?.includes(text) === true);
-  if (node?.textContent == null) return false;
-  const range = document.createRange();
-  const start = node.textContent.indexOf(text);
-  range.setStart(node, start);
-  range.setEnd(node, start + text.length);
-  const word = range.getBoundingClientRect();
-  const box = element.getBoundingClientRect();
-  const clipped = element instanceof HTMLElement && element.scrollWidth > element.clientWidth + 1;
-  return !clipped && word.width > 0 && word.left >= box.left - 1 && word.right <= box.right + 1 && word.top >= box.top - 1 && word.bottom <= box.bottom + 1;
-}
 
 /** A row's hint parts that show on its one line, each with whether it is cut with "…". */
 function shownParts(row: Element): { text: string; cut: boolean }[] {
@@ -275,12 +253,6 @@ export const CategoryLinesNoMatch: Story = {
 const LONG_LATIN = "Quarterly service visit for the boiler room and the shared laundry on the ground floor, parts, labour, inspection 120";
 const LONG_HEBREW = "ביקור שירות רבעוני בחדר הדודים ובחדר הכביסה המשותף בקומת הקרקע, כולל חלקים, עבודה, ניקוי המסננים ובדיקת המעלית בבניין";
 
-/** The title's drawn lines: its height over its line height. */
-function titleLines(title: Element): number {
-  const line = Number.parseFloat(getComputedStyle(title).lineHeight);
-  return Math.round(title.getBoundingClientRect().height / line);
-}
-
 /**
  * A line found only by its description shows the description as its title and the supplier in the hint
  * (FLOW-167). At 320 the matched word stays in view, at the end of a Latin description and of a Hebrew one,
@@ -305,7 +277,9 @@ export const CategoryLinesByDescription: Story = {
     const canvas = within(canvasElement);
     const field = canvas.getByRole("searchbox", { name: "חיפוש בתנועות" });
     for (const [word, description, shown, hint] of [
-      ["unit", "Water heater replacement, unit 2", "…heater replacement, unit 2", "18/10 · Quick Fix Plumbing"],
+      // FLOW-170 N3: a description that fits its three lines with the word in them shows whole.
+      ["unit", "Water heater replacement, unit 2", "Water heater replacement, unit 2", "18/10 · Quick Fix Plumbing"],
+      // Longer Hebrew words leave "יחידה" on a fourth line, so it is cut two words before it.
       ["יחידה", "החלפת לוח החשמל הראשי בקומת הכניסה, יחידה 4", "…בקומת הכניסה, יחידה 4", "14/08 · Bright Electric"],
       ["inspection", LONG_LATIN, "…parts, labour, inspection 120", "06/08 · Northside Hardware"],
       ["המעלית", LONG_HEBREW, "…המסננים ובדיקת המעלית בבניין", "03/08 · Bright Electric"],

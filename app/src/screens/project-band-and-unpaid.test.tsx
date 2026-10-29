@@ -4,6 +4,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { allTime, type PeriodChoice } from "../period";
+import { reportStateOf } from "../reports";
 import { ToastProvider } from "../ui/toast";
 import { BooksProvider } from "../use-books";
 import { ProjectDetailScreen, UnpaidScreen } from "./flow-screens";
@@ -36,9 +37,12 @@ function wrap(children: React.ReactNode, entry = "/") {
   );
 }
 
+/** FLOW-169: a uuid, so the reports link is one the reports screen reads as a project. */
+const PROJECT_ID = "a0000000-0000-4000-8000-000000000169";
+
 function project(overrides: Partial<NonNullable<ProjectDetail>> = {}): NonNullable<ProjectDetail> {
   return {
-    id: "p1",
+    id: PROJECT_ID,
     name: "פרויקט לדוגמה",
     status: "active",
     state_label: "פעיל",
@@ -60,12 +64,12 @@ describe("FLOW-335 project band", () => {
     expect(projectStateLine({ status: "active", state_label: "פעיל" })).toBeNull();
     expect(projectStateLine({ status: "active", state_label: null })).toBeNull();
     expect(projectStateLine({ status: "finished", state_label: null })).toBe("הסתיים");
-    render(wrap(<ProjectDetailScreen sample={project()} />, "/projects/p1"));
+    render(wrap(<ProjectDetailScreen sample={project()} />, `/projects/${PROJECT_ID}`));
     expect(screen.queryByText("פעיל")).not.toBeInTheDocument();
   });
 
   it("keeps the overhead switch in the edit sheet (from the ⋯ menu), not on the page (FLOW-340 C)", () => {
-    render(wrap(<ProjectDetailScreen sample={project()} />, "/projects/p1?period=month&at=2026-09"));
+    render(wrap(<ProjectDetailScreen sample={project()} />, `/projects/${PROJECT_ID}?period=month&at=2026-09`));
     expect(screen.queryByRole("switch", { name: /רווח אחרי הוצאות כלליות/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "עוד" }));
     fireEvent.click(screen.getByRole("button", { name: /עריכת פרטים/ }));
@@ -75,17 +79,19 @@ describe("FLOW-335 project band", () => {
 
 describe("FLOW-163 the project's way into the reports", () => {
   it("puts דוחות on the band, before ⋯, opening the reports on this project", () => {
-    render(wrap(<ProjectDetailScreen sample={project()} />, "/projects/p1"));
+    render(wrap(<ProjectDetailScreen sample={project()} />, `/projects/${PROJECT_ID}`));
     const link = screen.getByRole("link", { name: "דוחות" });
-    expect(link).toHaveAttribute("href", "/reports?scope=project&project=p1");
+    expect(link).toHaveAttribute("href", `/reports?scope=project&project=${PROJECT_ID}`);
+    const query = new URLSearchParams(link.getAttribute("href")?.split("?")[1]);
+    expect(reportStateOf(query).scope).toEqual({ kind: "project", id: PROJECT_ID });
     expect(link.closest(".ui-band")).not.toBeNull();
     const menu = screen.getByRole("button", { name: "עוד" });
     expect(link.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("keeps a preview query on the link", () => {
-    render(wrap(<ProjectDetailScreen sample={project()} />, "/projects/p1?preview=empty"));
-    expect(screen.getByRole("link", { name: "דוחות" })).toHaveAttribute("href", "/reports?scope=project&project=p1&preview=empty");
+    render(wrap(<ProjectDetailScreen sample={project()} />, `/projects/${PROJECT_ID}?preview=empty`));
+    expect(screen.getByRole("link", { name: "דוחות" })).toHaveAttribute("href", `/reports?scope=project&project=${PROJECT_ID}&preview=empty`);
   });
 });
 
@@ -96,7 +102,7 @@ describe("FLOW-337 the project's months are the whole project", () => {
       <Routes>
         <Route path="/projects/:projectId/profit" element={<ProjectProfitScreen />} />
       </Routes>,
-      "/projects/p1/profit?period=months3&at=2026-09",
+      `/projects/${PROJECT_ID}/profit?period=months3&at=2026-09`,
     ));
     expect(months.periods.length).toBeGreaterThan(0);
     for (const call of months.periods as Array<{ period: PeriodChoice }>) expect(call.period).toEqual(allTime());

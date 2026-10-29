@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import {
   BALANCE_PRESETS,
   PNL_PRESETS,
@@ -145,7 +145,10 @@ export function PnlPeriodSheet({ open, onOpenChange, value, today, onPick }: {
   );
 }
 
-/** The balance sheet's date: presets, then one day. */
+/** Why the balance sheet has no "from the start": every date already is (FLOW-170). */
+const BALANCE_FROM_START = "המאזן כולל את כל התנועות מההתחלה ועד התאריך שבוחרים";
+
+/** The balance sheet's date: presets, then one day, each view with a line saying it counts from the start. */
 export function BalanceDateSheet({ open, onOpenChange, value, today, onPick }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -154,6 +157,7 @@ export function BalanceDateSheet({ open, onOpenChange, value, today, onPick }: {
   onPick: (asOf: BalanceDate) => void;
 }) {
   const setOpen = useSheetHistory("report-date", open, onOpenChange);
+  const noteId = useId();
   const [custom, setCustom] = useState(false);
   const [day, setDay] = useState(today);
   useEffect(() => {
@@ -182,18 +186,23 @@ export function BalanceDateSheet({ open, onOpenChange, value, today, onPick }: {
       {custom ? (
         <div className="ui-rep-custom">
           <CalendarPick label="תאריך" today={today} value={day} onPick={setDay} start={day} />
+          <p id={noteId} className="ui-rep-note">{BALANCE_FROM_START}</p>
         </div>
       ) : (
-        <div role="radiogroup" aria-label="נכון לתאריך" className="ui-choice-sheet">
-          {BALANCE_PRESETS.map((kind) => {
-            const words = balancePresetLabel(kind, today);
-            return <ListRow control="radio" key={kind} value={kind} title={words.label} description={words.dates} selected={value.kind === kind} onSelect={() => { pick({ kind }); }} />;
-          })}
-          <button type="button" className="ui-rep-more-row m-press" aria-pressed={value.kind === "custom"} onClick={() => { setCustom(true); }}>
-            <span>תאריך אחר</span>
-            <ChevronIcon size={18} />
-          </button>
-        </div>
+        <>
+          <div role="radiogroup" aria-label="נכון לתאריך" aria-describedby={noteId} className="ui-choice-sheet">
+            {BALANCE_PRESETS.map((kind) => {
+              const words = balancePresetLabel(kind, today);
+              return <ListRow control="radio" key={kind} value={kind} title={words.label} description={words.dates} selected={value.kind === kind} onSelect={() => { pick({ kind }); }} />;
+            })}
+            <button type="button" className="ui-rep-more-row m-press" aria-pressed={value.kind === "custom"} onClick={() => { setCustom(true); }}>
+              <span>תאריך אחר</span>
+              <ChevronIcon size={18} />
+            </button>
+          </div>
+          {/* FLOW-170 (owner, 2026-10-29: "why can't I choose all dates? From start"): a balance sheet already sums everything up to its date. */}
+          <p id={noteId} className="ui-rep-note">{BALANCE_FROM_START}</p>
+        </>
       )}
     </Sheet>
   );

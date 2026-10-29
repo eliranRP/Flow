@@ -178,6 +178,18 @@ describe("ReportsScreen · the balance sheet", () => {
     expect(document.querySelector(".ui-rep-summary")?.textContent).not.toContain("מאוזן");
   });
 
+  it("says in the date sheet that every date counts from the start (FLOW-170)", () => {
+    renderReports({}, "/reports?kind=balance");
+    fireEvent.click(screen.getByRole("button", { name: "היום" }));
+    const group = screen.getByRole("radiogroup", { name: "נכון לתאריך" });
+    const note = screen.getByText("המאזן כולל את כל התנועות מההתחלה ועד התאריך שבוחרים");
+    expect(note).toHaveClass("ui-rep-note");
+    expect(group).toHaveAttribute("aria-describedby", note.id);
+    // The calendar for another date says it too.
+    fireEvent.click(screen.getByRole("button", { name: "תאריך אחר" }));
+    expect(screen.getByText("המאזן כולל את כל התנועות מההתחלה ועד התאריך שבוחרים")).toHaveClass("ui-rep-note");
+  });
+
   it("drops by project on the balance sheet", () => {
     renderReports({}, "/reports?scope=by_project");
     fireEvent.click(screen.getByRole("radio", { name: "מאזן" }));

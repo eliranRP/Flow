@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
 import { HomeReportsCard } from "./home-reports-card";
-import { descriptionSnippet, lineMatches, lineText, linesByMonth, linesByProject, ReportLinesScreen, reportLinesArgs, searchPath, type ReportLinesSample } from "./report-lines-screen";
+import { lineMatches, lineText, linesByMonth, linesByProject, ReportLinesScreen, reportLinesArgs, searchPath, type ReportLinesSample } from "./report-lines-screen";
 import { REPORTS_BALANCE, REPORTS_STATEMENT } from "../dev/reports-sample";
 
 const rpc = vi.hoisted(() => ({
@@ -186,20 +186,13 @@ describe("the drill-down's search", () => {
     const supplier = { title: "Anytime Mailbox", full: null, hint: "05/09 · Cedar St", wrap: false };
     expect(lineText(row, "")).toEqual(supplier);
     expect(lineText(row, "cedar")).toEqual(supplier);
-    expect(lineText(row, "renewal")).toEqual({ title: "Annual renewal", full: null, hint: "05/09 · Anytime Mailbox", wrap: true });
+    expect(lineText(row, "renewal")).toEqual({ title: "Annual renewal", full: "Annual renewal", hint: "05/09 · Anytime Mailbox", wrap: true });
     // A line with no supplier is titled by its description; a search wraps it too, so the word stays in view.
-    expect(lineText({ ...row, supplier_name: null }, "renewal")).toEqual({ title: "Annual renewal", full: null, hint: "05/09 · Cedar St", wrap: true });
+    expect(lineText({ ...row, supplier_name: null }, "renewal")).toEqual({ title: "Annual renewal", full: "Annual renewal", hint: "05/09 · Cedar St", wrap: true });
     expect(lineText({ ...row, supplier_name: null }, "")).toEqual({ title: "Annual renewal", full: null, hint: "05/09 · Cedar St", wrap: false });
-    // A late match shows from two words before it, the whole description kept for screen readers.
-    const long = { ...row, description: "Quarterly service visit for the boiler room, parts and labour, unit 2" };
-    expect(lineText(long, "labour")).toEqual({ title: "…parts and labour, unit 2", full: long.description, hint: "05/09 · Anytime Mailbox", wrap: true });
-    expect(descriptionSnippet("Annual renewal", "renewal")).toBe("Annual renewal");
-    expect(descriptionSnippet("החלפת לוח החשמל הראשי בקומת הכניסה, יחידה 4", "יחידה")).toBe("…בקומת הכניסה, יחידה 4");
-    // The word is found as the search matched it: a figure without its comma or sign, Hebrew gershayim typed as ".
-    expect(descriptionSnippet("Quarterly service visit for the boiler room, refund −$1,388.00 to tenant", "-$1,388")).toBe("…room, refund −$1,388.00 to tenant");
-    expect(descriptionSnippet("חשבונית מספר 4471 עבור עבודות אינסטלציה, חברת אבג בע״מ", 'בע"מ')).toBe("…חברת אבג בע״מ");
-    // A match inside a word counts from that word's start.
-    expect(descriptionSnippet("Quarterly service visit for the shared community laundry", "unit")).toBe("…the shared community laundry");
+    // FLOW-169: a word that matched the project keeps the project in the hint, after the supplier.
+    expect(lineText(row, "renewal cedar")).toEqual({ title: "Annual renewal", full: "Annual renewal", hint: "05/09 · Anytime Mailbox · Cedar St", wrap: true });
+    expect(lineText(row, "cedar renewal").hint).toBe("05/09 · Anytime Mailbox · Cedar St");
     expect(searchPath(" rent ", "none", "")).toBe("/search?q=rent&category=none");
     expect(searchPath("rent", "c1", "?preview=empty")).toBe("/search?preview=empty&q=rent&category=c1");
   });

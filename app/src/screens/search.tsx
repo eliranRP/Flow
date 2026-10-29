@@ -295,7 +295,9 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
     : null;
 
   // FLOW-163: the reports the text names come first, whatever the transactions read finds.
-  const reports = reportShortcuts(typed, projects, previewSearch);
+  // FLOW-169: with a project chip on, the rows open on that project, as a typed project name does.
+  const chipProject = filters.project == null ? null : projects.find((project) => project.id === filters.project) ?? null;
+  const reports = reportShortcuts(typed, projects, previewSearch, chipProject);
 
   const retry = usePreviewRetry(() => {
     void query.refetch();
