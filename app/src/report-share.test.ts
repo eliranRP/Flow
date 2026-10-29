@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { deliverFile, fetchReportFile, fileNameOf, reportFileArgs, type ShareChoice } from "./report-share";
 import { reportStateOf } from "./reports";
 
-const invoke = vi.hoisted(() => ({ result: { data: null as unknown, error: null as unknown, response: undefined as Response | undefined } }));
+type InvokeResult = { data: unknown; error: unknown; response?: Response };
+const invoke = vi.hoisted((): { result: InvokeResult } => ({ result: { data: null, error: null } }));
 
 vi.mock("./lib/supabase", () => ({
   getSupabase: () => ({ functions: { invoke: () => Promise.resolve(invoke.result) } }),
