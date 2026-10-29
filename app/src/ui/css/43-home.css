@@ -427,3 +427,87 @@
   text-align: center;
   text-decoration: none;
 }
+
+/* FLOW-161: the reports card, the last card on Home (board "Option 2 · Home, דוחות card last"). The same card
+   as the split card above it; two halves open the P&L and the balance sheet. */
+.ui-home-rep {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: calc(var(--space-5) - var(--space-1) / 2) var(--space-4) var(--space-1);
+  padding: var(--space-3) calc(var(--space-4) + var(--space-1) / 2) calc(var(--space-4) + var(--space-1) / 2);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ui-home-rep-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-min);
+}
+
+.ui-home-rep-icon {
+  display: inline-flex;
+  color: var(--color-accent-text);
+}
+
+.ui-home-rep-title {
+  margin: 0;
+  font-size: var(--type-section-size);
+  line-height: var(--type-cents-line);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-home-rep-halves {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.ui-home-rep-half {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  min-height: var(--touch-min);
+  padding-block: var(--space-1);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.ui-home-rep-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+}
+
+.ui-home-rep-figure {
+  direction: ltr;
+  text-align: right;
+}
+
+.ui-home-rep-figure .ui-num {
+  white-space: nowrap;
+}
+
+.ui-home-rep-figure-empty {
+  color: var(--color-text-muted);
+}
+
+.ui-home-rep-sub,
+.ui-home-rep-foot {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-cents-line);
+}
+
+.ui-home-rep-divider {
+  flex: none;
+  inline-size: 1px;
+  background: var(--color-line);
+}

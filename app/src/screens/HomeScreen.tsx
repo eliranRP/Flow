@@ -14,6 +14,7 @@ import { pageEnterStyle } from "../ui/motion";
 import { israelToday } from "../ui/date-math";
 import { monthPeriod, shiftMonthKey } from "../period";
 import { homeMonthKey, homeMonthPath, forecastMinor } from "../home-month";
+import { HomeReportsCard } from "./home-reports-card";
 import { HomeBandActions, HomeCompactBar, HomeMonthPill, HomeSwipeFigures, SplitCard, AttentionBox, ForecastRow, homeMonthLabel, monthName, type HomeFigureRows, type HomeMonthNav } from "./home-parts";
 import { MonthDrawer } from "./month-drawer";
 import { BandLoadFailed, BandOfflineLine, useOnline } from "../ui/band-states";
@@ -268,6 +269,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       onStepMonth={navigateTo}
       offlineSince={previewing || online ? null : cash.dataUpdatedAt}
       checklist={isCurrent ? <SetupHomeSlot emptyHome={false} /> : null}
+      reports={previewing ? null : <HomeReportsCard today={today} search={search} enabled />}
       weekly={weekly == null || weeklyCardHidden(weekly) ? null : (
         <Suspense fallback={null}>
           <WeeklySummaryCardSlot weekStart={weekly} />
@@ -303,6 +305,7 @@ export function CashHome({
   drawerYearMonths,
   syncing = null,
   offlineSince = null,
+  reports = null,
 }: {
   data: NonNullable<CashMonths>;
   /** The month shown (YYYY-MM). */
@@ -322,6 +325,8 @@ export function CashHome({
   checklist?: ReactNode;
   /** FLOW-956: last week's summary card, under the band (Sunday to Tuesday, the current month). */
   weekly?: ReactNode;
+  /** FLOW-161: the reports card, the last card on the page. */
+  reports?: ReactNode;
   /** FLOW-601: the company's name, which opens the חברה sheet, on the band's row 1. */
   company?: ReactNode;
   /** FLOW-364: the previous month's figures up to today's day, from cash_month_to_day (the current month only). */
@@ -447,6 +452,8 @@ export function CashHome({
           <SplitCard monthKey={monthKey} row={baseRow} search={search} onOpenProfit={openProfit} />
         </div>
       )}
+
+      {reports == null ? null : <div className="m-page-enter" style={pageEnterStyle(3)}>{reports}</div>}
 
       <HomeCompactBar monthKey={monthKey} net={baseRow?.net_minor ?? 0n} currency={base} isPast={isPast} nav={nav} shown={compactShown} />
       <MonthDrawer
