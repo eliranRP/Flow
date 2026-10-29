@@ -134,7 +134,7 @@ export function parseBalanceSheet(body: unknown): BalanceSheet {
 const SYSTEM_NAMES: Record<string, string> = {
   "Bank/Clearing": "בנק",
   "Loan principal": "קרן הלוואה",
-  Escrow: "אסקרו",
+  Escrow: "פיקדון מסים וביטוח",
   Property: "נכסים",
   "Accumulated depreciation": "פחת שנצבר",
   "Transfers in transit": "העברות בין חשבונות",

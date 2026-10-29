@@ -76,7 +76,7 @@ function pnlRows(part: PnlPart, rows: string[][]) {
 
 /** The PDF's notes under the P&L, as rows: what is kept out of profit, and the lines still waiting for review. */
 function pnlNotes(statement: PnlPart["statement"], rows: string[][]) {
-  rows.push(["הערה", "קרן, אסקרו וקניית נכסים לא נספרים ברווח; הם במאזן."]);
+  rows.push(["הערה", "קרן, פיקדון מסים וביטוח וקניית נכסים לא נספרים ברווח; הם במאזן."]);
   if (statement.review_count > 0) rows.push(["הערה", `${String(statement.review_count)} תנועות ממתינות לבדיקה בתקופה ולא נכללו.`]);
 }
 

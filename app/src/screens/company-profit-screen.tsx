@@ -222,7 +222,7 @@ export function CompanyProfitScreen({ sample }: { sample?: CompanyProfitSample }
   const chips = <OrderChips className="ui-cp-chips" label="סידור" value={by} options={ORDERS} onChange={setBy} />;
   const basisFooter = (
     <>
-      <p className="ui-cp-foot t-caption t-muted">לא נספר ברווח: נכסים והתחייבויות, כמו קנייה של נכס, הלוואה, קרן ואסקרו. הם נשארים בספר ובתזרים, לא ברווח.</p>
+      <p className="ui-cp-foot t-caption t-muted">לא נספר ברווח: נכסים והתחייבויות, כמו קנייה של נכס, הלוואה, קרן ופיקדון מסים וביטוח. הם נשארים בספר ובתזרים, לא ברווח.</p>
       <button type="button" ref={basisRef} className="ui-cp-basis" onClick={() => { setSheetOpen(true); }}>
         נספר לפי {basisChoiceLabel(model.basis)} · <span className="ui-cp-change">שינוי</span>
       </button>

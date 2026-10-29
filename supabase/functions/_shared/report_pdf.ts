@@ -282,7 +282,7 @@ function pnlPages(layout: Layout, part: PnlPart) {
     if (part.byProject && statement.projects.length > 0) projectTable(layout, part, row0.currency);
     else statementBlock(layout, row0, part.expand);
   });
-  const notes: string[] = ["קרן, אסקרו וקניית נכסים לא נספרים ברווח; הם במאזן."];
+  const notes: string[] = ["קרן, פיקדון מסים וביטוח וקניית נכסים לא נספרים ברווח; הם במאזן."];
   if (statement.review_count > 0) notes.push(`${String(statement.review_count)} תנועות ממתינות לבדיקה בתקופה ולא נכללו.`);
   for (const note of notes) {
     layout.need(14);

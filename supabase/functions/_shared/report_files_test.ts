@@ -70,7 +70,7 @@ Deno.test("a file name stays short and plain, whatever the project is called", (
 
 Deno.test("the CSV carries the PDF's notes: kept out of profit, waiting for review, and the balance check with its warnings", () => {
   const csv = renderReportCsv(SAMPLE_FILE);
-  assertStringIncludes(csv, 'הערה,"קרן, אסקרו וקניית נכסים לא נספרים ברווח; הם במאזן."');
+  assertStringIncludes(csv, 'הערה,"קרן, פיקדון מסים וביטוח וקניית נכסים לא נספרים ברווח; הם במאזן."');
   assertStringIncludes(csv, "הערה,2 תנועות ממתינות לבדיקה בתקופה ולא נכללו.");
   assertStringIncludes(csv, "הערה,מאוזן · נכסים = התחייבויות + הון");
   const off = { ...SAMPLE_BALANCE, currencies: SAMPLE_BALANCE.currencies.map((row) => ({ ...row, balanced: false, warnings: [{ account_name: "Suspense", balance_minor: -50_000n }] })) };
