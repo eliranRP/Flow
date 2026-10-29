@@ -39,7 +39,9 @@ export function ReportShareSheet({ open, onOpenChange, state, today }: {
     setBusy(true);
     try {
       const file = ready ?? await fetchReportFile(reportFileArgs(state, today, choice));
-      const outcome = await deliverFile(file, choice.pnl && choice.balance ? "דוחות" : choice.pnl ? "רווח והפסד" : "מאזן");
+      const title = choice.pnl && choice.balance ? "דוחות" : choice.pnl ? "רווח והפסד" : "מאזן";
+      // A second refusal on the kept file: the browser will not share it, so it downloads instead.
+      const outcome = await deliverFile(file, title, { download: ready != null });
       if (outcome === "blocked") {
         setReady(file);
         return;

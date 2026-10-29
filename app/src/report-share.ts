@@ -59,15 +59,16 @@ export async function fetchReportFile(args: Record<string, unknown>): Promise<Fi
  * "blocked": the browser wants a fresh tap (the file took too long to make), so the caller keeps the file
  * and shares it on the next tap.
  */
-export async function deliverFile(file: File, title: string): Promise<"shared" | "saved" | "cancelled" | "blocked"> {
+export async function deliverFile(file: File, title: string, options: { download?: boolean } = {}): Promise<"shared" | "saved" | "cancelled" | "blocked"> {
   if (typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title });
       return "shared";
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return "cancelled";
-      if (error instanceof DOMException && error.name === "NotAllowedError") return "blocked";
-      throw error;
+      // Refused again on a kept file (`download`): it downloads, so the button never loops.
+      if (error instanceof DOMException && error.name === "NotAllowedError" && options.download !== true) return "blocked";
+      if (!(error instanceof DOMException && error.name === "NotAllowedError")) throw error;
     }
   }
   const href = URL.createObjectURL(file);

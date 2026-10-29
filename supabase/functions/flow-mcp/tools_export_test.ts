@@ -138,3 +138,19 @@ Deno.test("the report route refuses a foreign origin, no session and bad argumen
   assertEquals((await bad.json()).error, "validation");
   assertEquals(seen.some((call) => call.url.includes("/rpc/")), false);
 });
+
+Deno.test("the report route's file name escapes the marks RFC 5987 does not allow bare", async () => {
+  const seen: Seen[] = [];
+  const deps = appDeps(seen);
+  const named = {
+    ...deps,
+    fetch: (input: string, init?: RequestInit) => input.endsWith("/rpc/get_pnl_statement")
+      ? Promise.resolve(new Response(JSON.stringify({ ...SAMPLE_STATEMENT_BODY, project_id: PROJECT, project_name: "O'Neil (North)*!", by_project: false, projects: [] })))
+      : deps.fetch(input, init),
+  };
+  const response = await handle(appRequest({ project_id: PROJECT }), named);
+  assertEquals(response.status, 200);
+  const disposition = response.headers.get("content-disposition") ?? "";
+  assertStringIncludes(disposition, "O%27Neil-%28North%29-%21.pdf");
+  assertEquals(/filename\*=UTF-8''[A-Za-z0-9%!#$&+\-.^_`|~]+$/.test(disposition.replace(/%[0-9A-F]{2}/g, "")), true, disposition);
+});

@@ -3,7 +3,7 @@ import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
 import { PDFDocument } from "npm:pdf-lib@1.17.1";
 import { cell, decimal, renderReportCsv } from "./report_csv.ts";
 import { reportFileName } from "./report_model.ts";
-import { forFontkit, renderReportPdf } from "./report_pdf.ts";
+import { forFontkit, percent, renderReportPdf } from "./report_pdf.ts";
 import { SAMPLE_BALANCE, SAMPLE_FILE, SAMPLE_STATEMENT } from "./report_sample.ts";
 
 Deno.test("the PDF holds one page per report here, each with its page number", async () => {
@@ -66,4 +66,20 @@ Deno.test("a file name stays short and plain, whatever the project is called", (
   assert(new TextEncoder().encode(name).length <= 255, name);
   assert(!/[\p{Cc}\p{Cf}]/u.test(name));
   assert(name.endsWith(".pdf"));
+});
+
+Deno.test("the CSV carries the PDF's notes: kept out of profit, waiting for review, and the balance check with its warnings", () => {
+  const csv = renderReportCsv(SAMPLE_FILE);
+  assertStringIncludes(csv, 'הערה,"קרן, אסקרו וקניית נכסים לא נספרים ברווח; הם במאזן."');
+  assertStringIncludes(csv, "הערה,2 תנועות ממתינות לבדיקה בתקופה ולא נכללו.");
+  assertStringIncludes(csv, "הערה,מאוזן · נכסים = התחייבויות + הון");
+  const off = { ...SAMPLE_BALANCE, currencies: SAMPLE_BALANCE.currencies.map((row) => ({ ...row, balanced: false, warnings: [{ account_name: "Suspense", balance_minor: -50_000n }] })) };
+  const unbalanced = renderReportCsv({ ...SAMPLE_FILE, parts: [{ kind: "balance", sheet: off }] });
+  assertStringIncludes(unbalanced, "הערה,לא מאוזן: כדאי לבדוק את הספרים");
+  assertStringIncludes(unbalanced, "אזהרה,חשבון מעבר,USD,-500.00");
+});
+
+Deno.test("a percent takes the amounts' minus sign", () => {
+  assertEquals(percent(-44), "−44%");
+  assertEquals(percent(30), "30%");
 });

@@ -215,7 +215,7 @@ function columnHeads(layout: Layout, columns: Column[]) {
 }
 
 /** A whole percent with the amounts' minus sign: −44%. */
-function percent(value: number): string {
+export function percent(value: number): string {
   return `${value < 0 ? "−" : ""}${String(Math.abs(value))}%`;
 }
 

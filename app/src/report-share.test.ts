@@ -70,6 +70,12 @@ describe("the file", () => {
     expect(await deliverFile(file, "רווח והפסד")).toBe("cancelled");
     share.mockImplementationOnce(() => Promise.reject(new DOMException("needs a tap", "NotAllowedError")));
     expect(await deliverFile(file, "רווח והפסד")).toBe("blocked");
+    // Refused again on the kept file: it downloads instead.
+    share.mockImplementationOnce(() => Promise.reject(new DOMException("needs a tap", "NotAllowedError")));
+    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: vi.fn(() => "blob:report"), revokeObjectURL: vi.fn() }));
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    expect(await deliverFile(file, "רווח והפסד", { download: true })).toBe("saved");
+    expect(click).toHaveBeenCalledOnce();
   });
 
   it("downloads where there is no share sheet", async () => {
