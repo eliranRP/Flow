@@ -7,6 +7,7 @@ import { corsHeadersFor } from "../_shared/http.ts";
 import { companyHint } from "../_shared/owner.ts";
 import { SERVER_INSTRUCTIONS } from "./tools_guide_data.ts";
 import { callTool, isWriteTool, READ_TOOL_NAMES, scopeAllows, type ToolDefer, toolsFor } from "./tools.ts";
+import { reportLimit } from "./report_limit.ts";
 import { buildReport, isBuilt, reportRequest } from "./tools_export.ts";
 import { signUserJwt, type SigningKey } from "./sign.ts";
 import { chargePreAuth, preAuthOverLimit, resetPreAuthGate } from "./preauth.ts";
@@ -674,6 +675,12 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
     if ((isWriteTool(name) || knownRead) && !scopeAllows(name, scope)) {
       return toolError("forbidden", "forbidden");
     }
+    // FLOW-166: a report file counts against the user's file limit too, as on the app's route.
+    if (name === "export_report") {
+      const limit = await reportLimit((fn, body) => rpc(deps, fn, body), typeof row.user_id === "string" ? row.user_id : "");
+      if (limit === "unavailable") return toolError("unavailable", "unavailable");
+      if (limit !== "allowed") return toolError("rate_limited", `10 report files a minute; try again in ${String(limit.retry)} s`);
+    }
     const key = signingKey(deps);
     if (!key) return toolError("unavailable", "unavailable");
     const userId = typeof row.user_id === "string" ? row.user_id : "";
@@ -756,15 +763,12 @@ export async function handle(req: Request, deps: Deps = defaultDeps): Promise<Re
     return withCors(response, origin);
   }
   if (route === "report") {
-    // FLOW-166: a file costs a render; a user gets 10 a minute (bump_report_rate), before any read.
-    const limited = await rpc(deps, "bump_report_rate", { p_user: userId });
-    const limit = limited.json as { allowed?: unknown; retry_after_seconds?: unknown } | null;
-    if (limited.status >= 400 || typeof limit?.allowed !== "boolean") {
-      return withCors(jsonResponse(req, { error: "unavailable" }, 503), origin);
-    }
-    if (limit.allowed !== true) {
-      const retry = typeof limit.retry_after_seconds === "number" ? limit.retry_after_seconds : 1;
-      return withCors(jsonResponse(req, { error: "rate_limited", retry_after_seconds: retry }, 429, { "retry-after": String(retry) }), origin);
+    // FLOW-166: a file costs a render; a user gets 10 a minute, counted before any read.
+    const limit = await reportLimit((name, body) => rpc(deps, name, body), userId);
+    if (limit === "unavailable") return withCors(jsonResponse(req, { error: "unavailable" }, 503), origin);
+    if (limit !== "allowed") {
+      const headers = { "retry-after": String(limit.retry), "access-control-expose-headers": "retry-after" };
+      return withCors(jsonResponse(req, { error: "rate_limited", retry_after_seconds: limit.retry }, 429, headers), origin);
     }
     return withCors(await handleReport(req, deps), origin);
   }

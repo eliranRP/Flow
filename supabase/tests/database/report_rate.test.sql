@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(8);
+select plan(9);
 
 select ok(not has_function_privilege('authenticated', 'public.bump_report_rate(uuid)', 'execute'), 'a signed-in user cannot call it');
 select ok(not has_function_privilege('anon', 'public.bump_report_rate(uuid)', 'execute'), 'anon cannot call it');
@@ -27,6 +27,12 @@ select is(
 insert into private.mcp_rate (subject_id, subject_kind, bucket, window_start, hits)
 select 'f1660000-0000-4000-8000-000000000002', 'user', 'report', minute, 10
 from (values (date_trunc('minute', clock_timestamp())), (date_trunc('minute', clock_timestamp()) + interval '1 minute')) as w (minute);
+
+-- A user at 9 this minute (and the next) still gets the 10th.
+insert into private.mcp_rate (subject_id, subject_kind, bucket, window_start, hits)
+select 'f1660000-0000-4000-8000-000000000003', 'user', 'report', minute, 9
+from (values (date_trunc('minute', clock_timestamp())), (date_trunc('minute', clock_timestamp()) + interval '1 minute')) as w (minute);
+select is(public.bump_report_rate('f1660000-0000-4000-8000-000000000003') ->> 'allowed', 'true', 'the 10th file in a minute is allowed');
 
 create temp table rr_out (body jsonb);
 insert into rr_out select public.bump_report_rate('f1660000-0000-4000-8000-000000000002');

@@ -2,8 +2,11 @@
 -- report costs about 0.1 to 0.4 s of CPU and three or four reads, so a user gets 10 files a minute, counted
 -- in private.mcp_rate's per-minute windows under a bucket of its own. flow-mcp calls it with the secret key
 -- before it builds the file; no client can.
+-- CLI 2.118.0 runs each statement on its own. This file is one transaction.
 
-alter table private.mcp_rate drop constraint mcp_rate_bucket_check;
+begin;
+
+alter table private.mcp_rate drop constraint if exists mcp_rate_bucket_check;
 alter table private.mcp_rate add constraint mcp_rate_bucket_check check (bucket in ('read', 'write', 'report'));
 
 comment on table private.mcp_rate is
@@ -41,3 +44,5 @@ $$;
 
 revoke all on function public.bump_report_rate(uuid) from public, anon, authenticated;
 grant execute on function public.bump_report_rate(uuid) to service_role;
+
+commit;

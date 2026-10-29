@@ -300,14 +300,15 @@ test("home, projects, review, and settings load from list reads", async ({ page 
 // FLOW-166: the reports' file, made on the server (flow-mcp's report route, FLOW-162), comes back for the
 // signed-in smoke user. The renderers load only when a file is asked for, so this is the check that the
 // deployed function holds them. The route only reads (it counts the file against the user's limit).
-test("the reports come back as a PDF and as a CSV for Excel", async ({ request, baseURL }) => {
+test("the reports come back as a PDF and as a CSV for Excel", async ({ request }) => {
   const client = createClient(hosted.url, hosted.anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const signed = await client.auth.signInWithPassword({ email, password });
   const token = signed.data.session?.access_token;
   if (signed.error || token == null) throw new Error("smoke sign-in failed");
-  const origin = new URL(baseURL ?? "https://flow-app-dx5.pages.dev").origin;
+  // flow-mcp allows only the Pages origin (FLOW_MCP_APP_ORIGINS), whatever host SMOKE_BASE_URL names.
+  const origin = "https://flow-app-dx5.pages.dev";
   const ask = (data: Record<string, unknown>) => request.post(`${hosted.url}/functions/v1/flow-mcp/report`, {
     headers: { origin, authorization: `Bearer ${token}`, apikey: hosted.anonKey, "content-type": "application/json" },
     data,
