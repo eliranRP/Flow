@@ -96,6 +96,14 @@ describe("ReportLinesScreen", () => {
     expect(rpc.calls[1]?.args).toMatchObject({ p_project_id: "a0000000-0000-4000-8000-000000000161", p_offset: 100 });
   });
 
+  it("leaves out the split by project while the summary is the whole group's and pages remain", async () => {
+    const wire = (row: ReturnType<typeof line>) => ({ ...row, amount_minor: Number(row.amount_minor) });
+    rpc.impl = () => Promise.resolve({ data: { rows: [wire(line("0013", "2026-09-30", 700, "Cedar St")), wire(line("0014", "2026-09-29", 200, "Oak Ridge"))], has_more: true, total_minor: 150_000, count: 5 }, error: null });
+    renderWithProviders(<ReportLinesScreen />, { route: ROUTE });
+    await waitFor(() => { expect(document.querySelector(".ui-rep-summary")?.textContent).toContain("−$1,500"); });
+    expect(screen.queryByRole("button", { name: /לפי פרויקט/ })).toBeNull();
+  });
+
   it("reads the whole company without a project id", async () => {
     rpc.impl = () => Promise.resolve({ data: { rows: [], has_more: false }, error: null });
     renderWithProviders(<ReportLinesScreen />, { route: ROUTE });
@@ -194,8 +202,8 @@ describe("the drill-down's search", () => {
       if (name !== "get_breakdown_lines") return Promise.resolve({ data: null, error: { message: "down" } });
       const offset = (args as { p_offset: number }).p_offset;
       return Promise.resolve(offset === 0
-        ? { data: { rows: MANY.map(wire), has_more: true }, error: null }
-        : { data: { rows: [wire(line("0020", "2026-07-02", 77, "Maple Ave", "Distant Supplier"))], has_more: false }, error: null });
+        ? { data: { rows: MANY.map(wire), has_more: true, total_minor: 1_234_500, count: 42 }, error: null }
+        : { data: { rows: [wire(line("0020", "2026-07-02", 77, "Maple Ave", "Distant Supplier"))], has_more: false, total_minor: 1_234_500, count: 42 }, error: null });
     };
     renderWithProviders(<ReportLinesScreen />, { route: ROUTE });
     const field = await screen.findByRole("searchbox", { name: "חיפוש בתנועות" });
@@ -204,6 +212,9 @@ describe("the drill-down's search", () => {
     expect(await screen.findByRole("link", { name: /Distant Supplier/ })).toBeInTheDocument();
     expect(rpc.calls).toHaveLength(2);
     await waitFor(() => { expect(screen.getByText("תנועה אחת מתאימה")).toBeInTheDocument(); });
+    // The summary stays the category's whole total while the search narrows the list (FLOW-165).
+    expect(document.querySelector(".ui-rep-summary")?.textContent).toContain("−$12,345");
+    expect(screen.getByText("42 תנועות")).toBeInTheDocument();
   });
 });
 

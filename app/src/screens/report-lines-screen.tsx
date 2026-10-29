@@ -190,7 +190,9 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
   const total = sample == null && firstPage?.total_minor != null ? firstPage.total_minor : rows.reduce((sum, row) => sum + row.amount_minor, 0n);
   const lineCount = sample == null && firstPage?.count != null ? firstPage.count : rows.length;
   const signed = args.side === "income" ? total : -total;
-  const split = linesByProject(rows);
+  // The split adds up the loaded rows only: while the summary is the whole group's and pages remain, it is left out.
+  const partial = hasMore && lineCount > rows.length;
+  const split = partial ? [] : linesByProject(rows);
   // A page that fails stops the read (the effect's guard); the line says so and offers the retry. While the
   // retry runs the query keeps its error, so the line goes back to reading until that page answers.
   const readFailed = searching && sample == null && isFetchNextPageError && !isFetchingNextPage;
