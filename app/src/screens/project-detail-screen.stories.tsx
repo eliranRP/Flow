@@ -1,6 +1,6 @@
 import type { ProjectDetail as ProjectDetailData } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { ProjectDetailScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { FILLED } from "../ui/investment-card.stories-support";
@@ -147,6 +147,16 @@ export const ProjectOverview: Story = {
       <ProjectDetailScreen example={exampleOnBand} sample={overviewProject} sampleInvestment={filledInvestment} sectionTo={sectionTo} />
     </StoryRoute>
   ),
+};
+
+/** FLOW-163 (board ReportEntryProject): דוחות on the band before ⋯, opening the reports on this project. */
+export const ProjectReportsButton: Story = {
+  name: "Project, דוחות on the band (FLOW-163)",
+  render: ProjectOverview.render,
+  play: async ({ canvasElement }) => {
+    const link = within(canvasElement).getByRole("link", { name: "דוחות" });
+    await expect(link).toHaveAttribute("href", "/reports?scope=project&project=p-a");
+  },
 };
 
 /** FLOW-334: the ⋯ menu, the overhead switch then "סיום הפרויקט" as a row. */

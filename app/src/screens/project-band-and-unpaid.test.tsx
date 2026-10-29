@@ -73,6 +73,22 @@ describe("FLOW-335 project band", () => {
   });
 });
 
+describe("FLOW-163 the project's way into the reports", () => {
+  it("puts דוחות on the band, before ⋯, opening the reports on this project", () => {
+    render(wrap(<ProjectDetailScreen sample={project()} />, "/projects/p1"));
+    const link = screen.getByRole("link", { name: "דוחות" });
+    expect(link).toHaveAttribute("href", "/reports?scope=project&project=p1");
+    expect(link.closest(".ui-band")).not.toBeNull();
+    const menu = screen.getByRole("button", { name: "עוד" });
+    expect(link.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("keeps a preview query on the link", () => {
+    render(wrap(<ProjectDetailScreen sample={project()} />, "/projects/p1?preview=empty"));
+    expect(screen.getByRole("link", { name: "דוחות" })).toHaveAttribute("href", "/reports?scope=project&project=p1&preview=empty");
+  });
+});
+
 describe("FLOW-337 the project's months are the whole project", () => {
   it("asks for the months with no dates whatever the link's period", () => {
     months.periods.length = 0;
