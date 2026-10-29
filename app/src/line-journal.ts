@@ -64,13 +64,13 @@ export function legTypeLabel(leg: Pick<JournalLeg, "account_type" | "is_bank">):
 
 /**
  * A leg's name: the bank account the line moved through; a system account in Hebrew, with the category that
- * posted there ("אסקרו · מסים וביטוח"); or the category.
+ * posted there ("נכסים · רכישת נכס"), unless the account name already says it; or the category.
  */
 export function legName(leg: Pick<JournalLeg, "account_name" | "is_bank" | "system" | "category_name">, bankName: string | null): string {
   if (leg.is_bank) return bankName ?? "בנק";
   if (!leg.system) return leg.account_name;
   const account = SYSTEM_NAMES[leg.account_name] ?? leg.account_name;
-  return leg.category_name != null && leg.category_name !== account ? `${account} · ${leg.category_name}` : account;
+  return leg.category_name != null && !account.includes(leg.category_name) ? `${account} · ${leg.category_name}` : account;
 }
 
 /** A leg kept out of profit: neither the bank nor an income or expense account. */
