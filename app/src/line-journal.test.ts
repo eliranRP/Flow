@@ -44,6 +44,11 @@ describe("the line's journal (FLOW-954)", () => {
     expect(legName({ account_name: "Property", is_bank: false, system: true, category_name: "רכישת נכס" }, null)).toBe("נכסים · רכישת נכס");
     // The escrow account already says "מסים וביטוח", so its category is not repeated.
     expect(legName({ account_name: "Escrow", is_bank: false, system: true, category_name: "מסים וביטוח" }, null)).toBe("פיקדון מסים וביטוח");
+    // A shorter word inside the account name is still a different category; empty says nothing.
+    expect(legName({ account_name: "Property", is_bank: false, system: true, category_name: "נכס" }, null)).toBe("נכסים · נכס");
+    expect(legName({ account_name: "Loan principal", is_bank: false, system: true, category_name: "הלוואה" }, null)).toBe("קרן הלוואה");
+    expect(legName({ account_name: "Escrow", is_bank: false, system: true, category_name: "פיקדון" }, null)).toBe("פיקדון מסים וביטוח · פיקדון");
+    expect(legName({ account_name: "Property", is_bank: false, system: true, category_name: "  " }, null)).toBe("נכסים");
     expect(legName(interest, null)).toBe("ריבית");
     expect([interest, escrow, bank].map(legTypeLabel)).toEqual(["הוצאה", "נכס", "בנק"]);
     expect(legTypeLabel({ account_type: "liability", is_bank: false })).toBe("התחייבות");

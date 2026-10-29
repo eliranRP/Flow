@@ -70,7 +70,11 @@ export function legName(leg: Pick<JournalLeg, "account_name" | "is_bank" | "syst
   if (leg.is_bank) return bankName ?? "בנק";
   if (!leg.system) return leg.account_name;
   const account = SYSTEM_NAMES[leg.account_name] ?? leg.account_name;
-  return leg.category_name != null && !account.includes(leg.category_name) ? `${account} · ${leg.category_name}` : account;
+  const category = leg.category_name?.trim();
+  if (!category) return account;
+  // Whole words only: a category must match the name or its last words; "נכס" is not said by "נכסים".
+  const said = account === category || account.endsWith(` ${category}`);
+  return said ? account : `${account} · ${category}`;
 }
 
 /** A leg kept out of profit: neither the bank nor an income or expense account. */
