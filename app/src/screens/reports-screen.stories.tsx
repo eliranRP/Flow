@@ -333,3 +333,31 @@ export const HomeCard: Story = {
     </StoryRoute>
   ),
 };
+
+/** At 320 both figures step down together until the longer one fits its half ("$285,000" was 18px wider). */
+export const HomeCardNarrow: Story = {
+  name: "Home · דוחות card at 320",
+  globals: { viewport: { value: "flow320", isRotated: false } },
+  render: () => (
+    <StoryRoute entry="/">
+      <HomeReportsCard today={REPORTS_TODAY} search="" sample={{ statement: REPORTS_STATEMENT, balance: REPORTS_BALANCE }} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
+    const halves = [...canvasElement.querySelectorAll<HTMLElement>(".ui-home-rep-half")];
+    await expect(halves).toHaveLength(2);
+    const measure = () => halves.map((half) => {
+      const figure = half.querySelector<HTMLElement>(".ui-home-rep-figure .ui-num");
+      if (figure == null) throw new Error("no figure");
+      return { width: figure.getBoundingClientRect().width, room: half.clientWidth, size: getComputedStyle(figure).fontSize };
+    });
+    // Each figure ends inside its half once the step has settled.
+    await waitFor(() => {
+      if (measure().some((row) => row.width > row.room + 0.5)) throw new Error("a figure is wider than its half");
+    });
+    const [pnl, balance] = measure();
+    // The two share one size.
+    await expect(pnl?.size).toBe(balance?.size);
+  },
+};
