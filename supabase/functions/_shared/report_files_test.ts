@@ -3,7 +3,7 @@ import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
 import { PDFDocument } from "npm:pdf-lib@1.17.1";
 import { cell, decimal, renderReportCsv } from "./report_csv.ts";
 import { reportFileName } from "./report_model.ts";
-import { renderReportPdf } from "./report_pdf.ts";
+import { forFontkit, renderReportPdf } from "./report_pdf.ts";
 import { SAMPLE_BALANCE, SAMPLE_FILE, SAMPLE_STATEMENT } from "./report_sample.ts";
 
 Deno.test("the PDF holds one page per report here, each with its page number", async () => {
@@ -43,4 +43,19 @@ Deno.test("a CSV cell is quoted when it has to be, and a formula is defused", ()
 Deno.test("the file's name says the report, its dates and its projects", () => {
   assertEquals(reportFileName(SAMPLE_FILE, "pdf"), "דוחות_2026-01-01_2026-10-31_כל-הפרויקטים.pdf");
   assertEquals(reportFileName({ ...SAMPLE_FILE, parts: [{ kind: "balance", sheet: SAMPLE_BALANCE }] }, "csv"), "מאזן_2026-10-31_כל-הפרויקטים.csv");
+});
+
+Deno.test("Hebrew is drawn right to left: the font engine lays each run out in the page's visual order", async () => {
+  const { default: fontkit } = await import("npm:@pdf-lib/fontkit@1.1.1");
+  const { HEBREW_400 } = await import("./report_fonts.ts");
+  const { visualSegments } = await import("./report_text.ts");
+  const font = fontkit.create(Uint8Array.from(atob(HEBREW_400), (char) => char.charCodeAt(0)));
+  for (const line of ["רווח והפסד", "עמוד 1 מתוך 3", "סה״כ הוצאות −$67,200", "נכון ל־31/10/2026"]) {
+    for (const segment of visualSegments(line).filter((item) => item.script === "hebrew")) {
+      const drawn = font.layout(forFontkit(segment)).glyphs.map((glyph: { codePoints: number[] }) => String.fromCodePoint(...glyph.codePoints)).join("");
+      assertEquals(drawn, segment.text, line);
+    }
+  }
+  // Read right to left, the drawn line is the text itself.
+  assertEquals([...visualSegments("רווח נקי").map((segment) => segment.text).join("")].reverse().join(""), "רווח נקי");
 });

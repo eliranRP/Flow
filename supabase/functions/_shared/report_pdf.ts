@@ -48,7 +48,7 @@ function bytes(base64: string): Uint8Array {
 
 // fontkit lays a run with a Hebrew letter out right to left itself (pdf-lib hands it the whole string), so a
 // segment already in visual order goes back to logical order before it is drawn; fontkit turns it again.
-function forFontkit(segment: { text: string }): string {
+export function forFontkit(segment: { text: string }): string {
   return /[\u0590-\u05FF\uFB1D-\uFB4F]/.test(segment.text) ? [...segment.text].reverse().join("") : segment.text;
 }
 
