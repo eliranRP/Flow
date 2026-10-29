@@ -201,9 +201,14 @@
   text-overflow: ellipsis;
 }
 
+/* The amounts form one column: each ends at the same point (its ones digit), up to −$999,999, so a
+   shorter or positive figure lines up under a longer one. */
 .ui-rep-row-amount {
   flex: none;
+  min-inline-size: 9ch;
   font-size: var(--type-body-size);
+  font-variant-numeric: tabular-nums lining-nums;
+  text-align: right;
 }
 
 .ui-rep-row-amount .ui-num {
