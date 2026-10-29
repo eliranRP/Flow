@@ -462,3 +462,32 @@
 .ui-project-row-figure {
   font-variant-numeric: tabular-nums lining-nums;
 }
+
+/* FLOW-163 (board ReportEntryProject): דוחות before ⋯ on the band, a 44px pill. White on the band's
+   10% white track passes AA (FLOW-335), light and dark alike. */
+.ui-project-band-end {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.ui-band-reports {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-block-size: var(--touch-min);
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-button);
+  background: color-mix(in srgb, var(--color-on-band) 10%, transparent);
+  color: var(--color-on-band);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-btn-weight);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ui-band-reports:focus-visible {
+  outline: 2px solid var(--color-focus-on-band);
+  outline-offset: 2px;
+}

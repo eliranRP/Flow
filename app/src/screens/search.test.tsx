@@ -1,5 +1,5 @@
 import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { Link, MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readTxnList } from "../txn-nav";
@@ -92,6 +92,7 @@ function wrap(entry: string | { pathname: string; search?: string; state?: unkno
           <Routes>
             <Route path="/search" element={<SearchScreen />} />
             <Route path="/transactions/:id" element={<Where />} />
+            <Route path="/reports" element={<Where />} />
             <Route path="/" element={<Link to="/search" state={SEARCH_FOCUS_STATE} aria-label="חיפוש תנועות">חיפוש</Link>} />
           </Routes>
         </MemoryRouter>
@@ -195,6 +196,30 @@ describe("Search screen (FLOW-323)", () => {
       expect(searchCalls().at(-1)?.args).not.toHaveProperty("p_query");
     });
     expect(screen.getByRole("searchbox", { name: "חיפוש תנועות" })).toHaveValue("");
+  });
+
+  it("opens a report the text names, above the lines, even when no line matches (FLOW-163)", async () => {
+    page = { total: 0, expenses: [] };
+    wrap(`/search?q=${encodeURIComponent("מאזן")}`);
+    const reports = await screen.findByRole("region", { name: "דוחות" });
+    const link = within(reports).getByRole("link", { name: /מאזן/ });
+    expect(link).toHaveAttribute("href", "/reports?kind=balance");
+    expect(link).toHaveTextContent("כל הפרויקטים · היום");
+    expect(await screen.findByText("לא מצאנו ״מאזן״")).toBeInTheDocument();
+    fireEvent.click(link);
+    expect(screen.getByTestId("where")).toHaveTextContent("/reports");
+  });
+
+  it("opens the P&L on a project when the text names both", async () => {
+    wrap(`/search?q=${encodeURIComponent("רווח והפסד שיפוץ")}`);
+    const link = await screen.findByRole("link", { name: /רווח והפסד · שיפוץ לדוגמה/ });
+    expect(link).toHaveAttribute("href", `/reports?scope=project&project=${PROJECT}`);
+  });
+
+  it("shows no report row for text that names no report", async () => {
+    wrap(`/search?q=${encodeURIComponent("חומרי")}`);
+    expect(await screen.findByText("חומרי בניין לדוגמה")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "דוחות" })).not.toBeInTheDocument();
   });
 
   it("reads a typed amount by its range and by its text, both at once", async () => {

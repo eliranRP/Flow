@@ -79,6 +79,17 @@ export function reportSearch(state: ReportState): string {
   return text === "" ? "" : `?${text}`;
 }
 
+/**
+ * FLOW-163: the route that opens one report on one scope, at its default dates (this year's P&L,
+ * today's balance sheet). `search` is a preview query ("?preview=…") the link carries along.
+ */
+export function reportsTo(kind: ReportKind, scope: ReportScope = { kind: "all" }, search = ""): string {
+  const query = reportSearch({ kind, period: { kind: "year" }, asOf: { kind: "today" }, scope });
+  const extra = search.replace(/^\?/, "");
+  if (extra === "") return `/reports${query}`;
+  return `/reports${query === "" ? "?" : `${query}&`}${extra}`;
+}
+
 function iso(year: number, month: number, day: number): string {
   return `${String(year)}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }

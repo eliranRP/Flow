@@ -16,6 +16,7 @@ import {
   readCollapsed,
   reportSearch,
   reportStateOf,
+  reportsTo,
   statementEmpty,
   statementSectionIds,
   writeCollapsed,
@@ -48,6 +49,17 @@ describe("the report's choices in the URL", () => {
     expect(reportStateOf(new URLSearchParams("period=week&asof=yesterday")).period).toEqual({ kind: "year" });
     expect(reportStateOf(new URLSearchParams("asof=custom&date=2026-13-01")).asOf).toEqual({ kind: "today" });
     expect(reportStateOf(new URLSearchParams("kind=balance&scope=by_project")).scope).toEqual({ kind: "all" });
+  });
+});
+
+describe("a link into the reports (FLOW-163)", () => {
+  it("opens one report on one scope at its default dates, and keeps a preview query", () => {
+    expect(reportsTo("pnl")).toBe("/reports");
+    expect(reportsTo("balance")).toBe("/reports?kind=balance");
+    expect(reportsTo("pnl", { kind: "project", id: ID })).toBe(`/reports?scope=project&project=${ID}`);
+    expect(reportsTo("pnl", { kind: "all" }, "?preview=empty")).toBe("/reports?preview=empty");
+    expect(reportsTo("balance", { kind: "project", id: ID }, "?preview=empty")).toBe(`/reports?kind=balance&scope=project&project=${ID}&preview=empty`);
+    expect(reportStateOf(new URLSearchParams(reportsTo("pnl", { kind: "project", id: ID }).split("?")[1])).scope).toEqual({ kind: "project", id: ID });
   });
 });
 
