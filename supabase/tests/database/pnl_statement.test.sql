@@ -6,7 +6,7 @@
 
 begin;
 
-select plan(46);
+select plan(47);
 
 do $users$
 begin
@@ -148,7 +148,8 @@ insert into ps_out values
   ('bdp_in',    public.get_breakdown('income', '2026-06-01', '2026-06-30', 'project', 'cash')),
   ('bdp_ex',    public.get_breakdown('expense', '2026-06-01', '2026-06-30', 'project', 'cash')),
   ('dash',      public.get_dashboard('2026-06-01', '2026-06-30', 'cash')),
-  ('own_other', public.get_pnl_statement(null, null, pg_temp.ref('other_site'), false, null));
+  ('own_other', public.get_pnl_statement(null, null, pg_temp.ref('other_site'), false, null)),
+  ('own_other_byp', public.get_pnl_statement(null, null, pg_temp.ref('other_site'), true, null));
 
 -- The company, by category: get_breakdown's totals.
 select is((pg_temp.cur(pg_temp.out_of('co'), 'ILS') ->> 'income_minor')::bigint, pg_temp.bd_total(pg_temp.out_of('bd_in'), 'ILS'),
@@ -234,6 +235,8 @@ select is((pg_temp.out_of('july') ->> 'review_count')::integer, 0, 'an item outs
 
 -- Another company's project reads as unknown; the owner still reads their own.
 select is(pg_temp.out_of('own_other'), null::jsonb, 'another company''s project reads as unknown');
+select is(pg_temp.out_of('own_other_byp'), null::jsonb,
+  'another company''s project reads as unknown with by_project too: the company check comes first');
 reset role;
 select tests.authenticate_as('ps_other');
 select is(jsonb_array_length(public.get_pnl_statement(null, null, null, false, null) -> 'currencies'), 0,
