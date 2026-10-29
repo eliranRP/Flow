@@ -32,3 +32,11 @@ Deno.test("a shortened line's ellipsis ends the text it cuts", () => {
   assertEquals(visual("Phase Two Townhom…"), "Phase Two Townhom…");
   assertEquals(visual("הוצאות הנכס…"), "…סכנה תואצוה");
 });
+
+Deno.test("a number after Hebrew reads as the browser shows it: before a Latin word, inside brackets, before a time", () => {
+  assertEquals(visual("פרויקט 12 - Maple"), "Maple - 12 טקיורפ");
+  assertEquals(visual("בניין 7 (Cedar)"), "(Cedar) 7 ןיינב");
+  assertEquals(visual("שלב ב׳ (מבנים 3–7) Riverside"), "Riverside (3–7 םינבמ) ׳ב בלש");
+  assertEquals(visual("הופק ב־31/10/2026 09:15"), "09:15 31/10/2026־ב קפוה");
+  assertEquals(visual("Maple Ave 2 שלב"), "בלש Maple Ave 2");
+});

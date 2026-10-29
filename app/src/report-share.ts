@@ -22,7 +22,9 @@ export function reportFileArgs(state: ReportState, today: string, choice: ShareC
     args.expand = choice.expand;
     if (state.scope.kind === "by_project") args.by_project = true;
   }
-  if (kind !== "pnl") args.as_of = balanceDate(state.asOf, today);
+  // The balance sheet's date: the one on screen when the balance sheet is open; from the P&L, the server's
+  // default, the period's last day, so both reports end on the same day.
+  if (kind === "balance" || (kind === "both" && state.kind === "balance")) args.as_of = balanceDate(state.asOf, today);
   if (state.scope.kind === "project") args.project_id = state.scope.id;
   return args;
 }
@@ -52,14 +54,19 @@ export async function fetchReportFile(args: Record<string, unknown>): Promise<Fi
   return new File([body], name, { type: csv ? "text/csv" : "application/pdf" });
 }
 
-/** Shares the file through the phone's share sheet, or downloads it. "cancelled": the share sheet was closed. */
-export async function deliverFile(file: File, title: string): Promise<"shared" | "saved" | "cancelled"> {
+/**
+ * Shares the file through the phone's share sheet, or downloads it. "cancelled": the share sheet was closed.
+ * "blocked": the browser wants a fresh tap (the file took too long to make), so the caller keeps the file
+ * and shares it on the next tap.
+ */
+export async function deliverFile(file: File, title: string): Promise<"shared" | "saved" | "cancelled" | "blocked"> {
   if (typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title });
       return "shared";
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return "cancelled";
+      if (error instanceof DOMException && error.name === "NotAllowedError") return "blocked";
       throw error;
     }
   }
@@ -68,7 +75,7 @@ export async function deliverFile(file: File, title: string): Promise<"shared" |
   link.href = href;
   link.download = file.name;
   link.click();
-  // The click starts the download before this runs.
-  setTimeout(() => { URL.revokeObjectURL(href); }, 0);
+  // Some browsers read the URL after the click returns: it is freed a minute later.
+  setTimeout(() => { URL.revokeObjectURL(href); }, 60_000);
   return "saved";
 }

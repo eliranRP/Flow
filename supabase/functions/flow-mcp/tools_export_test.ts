@@ -82,6 +82,9 @@ Deno.test("export_report refuses a bad kind, format, range, date, project or fla
 Deno.test("export_report: another company's project is not_found; a failed read is refused", async () => {
   const missing = rpcOf((name) => (name === "get_pnl_statement" ? { status: 200, json: null } : reads(name)));
   assertEquals(codeOf(await callTool("export_report", { project_id: PROJECT }, ["read"], missing.rpc)), "not_found");
+  // The balance sheet raises P0002 for another company's project: PostgREST's 404.
+  const foreign = rpcOf((name) => (name === "mcp_balance_sheet" ? { status: 404, json: { code: "P0002" } } : reads(name)));
+  assertEquals(codeOf(await callTool("export_report", { kind: "balance", project_id: PROJECT }, ["read"], foreign.rpc)), "not_found");
   const down = rpcOf((name) => (name === "mcp_balance_sheet" ? { status: 500, json: null } : reads(name)));
   assertEquals(codeOf(await callTool("export_report", { kind: "both" }, ["read"], down.rpc)), "refused");
 });

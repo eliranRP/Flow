@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { deliverFile, fileNameOf, reportFileArgs, type ShareChoice } from "./report-share";
+import { deliverFile, fetchReportFile, fileNameOf, reportFileArgs, type ShareChoice } from "./report-share";
 import { reportStateOf } from "./reports";
+
+const invoke = vi.hoisted(() => ({ result: { data: null as unknown, error: null as unknown, response: undefined as Response | undefined } }));
+
+vi.mock("./lib/supabase", () => ({
+  getSupabase: () => ({ functions: { invoke: () => Promise.resolve(invoke.result) } }),
+}));
 
 /** Stubs the browser's share calls only (jsdom has neither). */
 function stubShare(canShare: (() => boolean) | undefined, share: (() => Promise<void>) | undefined) {
@@ -31,6 +37,11 @@ describe("the report file's arguments", () => {
     expect(reportFileArgs(state, TODAY, { ...PDF, pnl: false, balance: true })).toEqual({ kind: "balance", format: "pdf", as_of: "2026-09-30" });
     expect(reportFileArgs(state, TODAY, { ...PDF, balance: true, format: "csv" })).toEqual({ kind: "both", format: "csv", from: "2026-01-01", to: "2026-10-29", expand: true, as_of: "2026-09-30" });
   });
+
+  it("from the P&L, both reports end on the period's last day (the server's default)", () => {
+    const args = reportFileArgs(reportStateOf(new URLSearchParams("period=last_month&asof=last_year")), TODAY, { ...PDF, balance: true });
+    expect(args).toEqual({ kind: "both", format: "pdf", from: "2026-09-01", to: "2026-09-30", expand: true });
+  });
 });
 
 describe("the file", () => {
@@ -38,6 +49,14 @@ describe("the file", () => {
     expect(fileNameOf(`attachment; filename="report.pdf"; filename*=UTF-8''${encodeURIComponent("מאזן_2026-10-31_כל-הפרויקטים.pdf")}`)).toBe("מאזן_2026-10-31_כל-הפרויקטים.pdf");
     expect(fileNameOf('attachment; filename="report.pdf"')).toBeNull();
     expect(fileNameOf(null)).toBeNull();
+  });
+
+  it("puts back the byte-order mark Excel needs, which the text read drops", async () => {
+    invoke.result = { data: "סעיף,סכום\r\n", error: null, response: new Response(null, { headers: { "content-disposition": "attachment; filename*=UTF-8''%D7%93.csv" } }) };
+    const file = await fetchReportFile({ format: "csv" });
+    expect([...new Uint8Array(await file.arrayBuffer()).slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+    expect(file.name).toBe("ד.csv");
+    expect(file.type).toBe("text/csv");
   });
 
   it("goes to the phone's share sheet when it takes files, and a closed share sheet is no failure", async () => {
@@ -48,6 +67,8 @@ describe("the file", () => {
     expect(share).toHaveBeenCalledWith({ files: [file], title: "רווח והפסד" });
     share.mockImplementationOnce(() => Promise.reject(new DOMException("closed", "AbortError")));
     expect(await deliverFile(file, "רווח והפסד")).toBe("cancelled");
+    share.mockImplementationOnce(() => Promise.reject(new DOMException("needs a tap", "NotAllowedError")));
+    expect(await deliverFile(file, "רווח והפסד")).toBe("blocked");
   });
 
   it("downloads where there is no share sheet", async () => {

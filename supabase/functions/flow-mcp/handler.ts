@@ -308,6 +308,11 @@ async function userRpc(deps: Deps, jwt: string, name: string, body: Record<strin
   return { status: response.status, json };
 }
 
+/** A file name for filename*: encodeURIComponent, plus the five marks RFC 5987 does not allow bare. */
+function rfc5987(name: string): string {
+  return encodeURIComponent(name).replace(/['()*!]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
 /**
  * FLOW-162: the app's share button. The signed-in user's own session reads the reports (the company the
  * app shows rides in x-flow-company, as on every app call) and gets export_report's file back as the body.
@@ -335,7 +340,7 @@ async function handleReport(req: Request, deps: Deps): Promise<Response> {
   if (!isBuilt(built)) return refused(built);
   const headers = new Headers();
   headers.set("content-type", built.mimeType);
-  headers.set("content-disposition", `attachment; filename="report.${request.format}"; filename*=UTF-8''${encodeURIComponent(built.name)}`);
+  headers.set("content-disposition", `attachment; filename="report.${request.format}"; filename*=UTF-8''${rfc5987(built.name)}`);
   headers.set("access-control-expose-headers", "content-disposition");
   headers.set("cache-control", "no-store");
   headers.set("x-flow-cf-connecting-ip", cfState(req));

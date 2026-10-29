@@ -108,8 +108,10 @@ class Layout {
 
   /** A table's head, drawn now and again at the top of every page the table runs onto. */
   tableHead(draw: () => void) {
-    this.repeat = draw;
+    // Drawn before it is set to repeat: a break inside draw() must not draw the head twice.
+    this.repeat = null;
     draw();
+    this.repeat = draw;
   }
 
   endTable() {
@@ -120,24 +122,29 @@ class Layout {
     const total = this.pages.length;
     this.pages.forEach(({ page, head }, index) => {
       const top = PAGE_H - TOP;
-      draw(page, this.fonts, company, RIGHT, top - 10, 9, { color: SECONDARY });
+      draw(page, this.fonts, fit(this.fonts, company, 9, RIGHT - LEFT - 60), RIGHT, top - 10, 9, { color: SECONDARY });
       draw(page, this.fonts, head.title, RIGHT, top - 32, 18, { weight: 600 });
-      draw(page, this.fonts, head.meta, RIGHT, top - 48, 9, { color: SECONDARY });
+      draw(page, this.fonts, fit(this.fonts, head.meta, 9, RIGHT - LEFT), RIGHT, top - 48, 9, { color: SECONDARY });
       draw(page, this.fonts, "Flow", LEFT, top - 10, 11, { weight: 600, color: ACCENT, align: "left" });
       draw(page, this.fonts, `הופק ב־${createdAt}`, LEFT + width(this.fonts, `הופק ב־${createdAt}`, 8), top - 24, 8, { color: MUTED });
       const pageWords = `עמוד ${String(index + 1)} מתוך ${String(total)}`;
       draw(page, this.fonts, pageWords, LEFT + width(this.fonts, pageWords, 8), top - 36, 8, { color: MUTED });
       page.drawLine({ start: { x: LEFT, y: top - 58 }, end: { x: RIGHT, y: top - 58 }, thickness: 1.5, color: ACCENT });
       page.drawLine({ start: { x: LEFT, y: BOTTOM }, end: { x: RIGHT, y: BOTTOM }, thickness: 0.5, color: RULE });
-      draw(page, this.fonts, head.footer, RIGHT, BOTTOM - 12, 7.5, { color: MUTED });
       const note = "דוח ניהולי מתוך Flow · לא דוח כספי מבוקר";
+      // The footer and the note share a line: the footer is cut short before it reaches the note.
+      draw(page, this.fonts, fit(this.fonts, head.footer, 7.5, RIGHT - LEFT - width(this.fonts, note, 7.5) - 12), RIGHT, BOTTOM - 12, 7.5, { color: MUTED });
       draw(page, this.fonts, note, LEFT + width(this.fonts, note, 7.5), BOTTOM - 12, 7.5, { color: MUTED });
     });
   }
 }
 
+const KEEP_WITH_TABLE = 52 + 27 + 22 + 17;
+
 /** Four boxes across the page: the first, on the right, is the lead figure. */
 function boxes(layout: Layout, items: { label: string; value: string }[]) {
+  // The boxes keep with the table under them: their 52, a two-line column head, a heading and one row.
+  layout.need(KEEP_WITH_TABLE);
   const gap = 6;
   const boxW = (RIGHT - LEFT - gap * (items.length - 1)) / items.length;
   const top = layout.y;
@@ -207,8 +214,13 @@ function columnHeads(layout: Layout, columns: Column[]) {
   layout.y -= height;
 }
 
+/** A whole percent with the amounts' minus sign: −44%. */
+function percent(value: number): string {
+  return `${value < 0 ? "−" : ""}${String(Math.abs(value))}%`;
+}
+
 function percentOf(part: bigint, whole: bigint): string {
-  return whole <= 0n ? "" : `${String(Math.round((Number(part) * 100) / Number(whole)))}%`;
+  return whole <= 0n ? "" : percent(Math.round((Number(part) * 100) / Number(whole)));
 }
 
 function statementBlock(layout: Layout, row0: StatementCurrency, expand: boolean) {
@@ -255,7 +267,7 @@ function pnlPages(layout: Layout, part: PnlPart) {
   }
   statement.currencies.forEach((row0, index) => {
     if (index > 0) {
-      layout.need(80);
+      layout.need(30 + KEEP_WITH_TABLE);
       layout.y -= 10;
       draw(layout.page, layout.fonts, `ב־${row0.currency}`, RIGHT, layout.y - 12, 12, { weight: 600 });
       layout.y -= 20;
@@ -265,7 +277,7 @@ function pnlPages(layout: Layout, part: PnlPart) {
       { label: "רווח נקי", value: money(row0.net_minor, row0.currency) },
       { label: "הכנסות", value: money(row0.income_minor, row0.currency) },
       { label: "הוצאות", value: money(-row0.expense_minor, row0.currency) },
-      { label: "מההכנסות", value: margin == null ? "—" : `${String(margin)}%` },
+      { label: "מההכנסות", value: margin == null ? "—" : percent(margin) },
     ]);
     if (part.byProject && statement.projects.length > 0) projectTable(layout, part, row0.currency);
     else statementBlock(layout, row0, part.expand);
@@ -281,7 +293,8 @@ function pnlPages(layout: Layout, part: PnlPart) {
 
 /** By project: up to four project columns and the total per page width; more projects take more blocks. */
 function projectTable(layout: Layout, part: PnlPart, currency: string) {
-  const projects = part.statement.projects;
+  // A project with no lines in this currency has no column in its block.
+  const projects = part.statement.projects.filter((project) => project.currencies.some((row0) => row0.currency === currency));
   const company = part.statement.currencies.find((row0) => row0.currency === currency);
   const perBlock = 4;
   for (let start = 0; start < projects.length; start += perBlock) {
@@ -354,7 +367,7 @@ function balancePages(layout: Layout, part: BalancePart) {
   }
   sheet.currencies.forEach((row0, index) => {
     if (index > 0) {
-      layout.need(80);
+      layout.need(30 + KEEP_WITH_TABLE);
       layout.y -= 10;
       draw(layout.page, layout.fonts, `ב־${row0.currency}`, RIGHT, layout.y - 12, 12, { weight: 600 });
       layout.y -= 20;

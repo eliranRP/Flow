@@ -2,9 +2,7 @@
 // or both, as a PDF in Hebrew (report_pdf.ts) or a CSV for Excel (report_csv.ts). It reads the same
 // statements as get_pnl_statement and get_balance_sheet, so the file shows the screen's numbers. The app's
 // share button asks the same builder through flow-mcp's `report` route. Any member reads it.
-import { renderReportCsv } from "../_shared/report_csv.ts";
 import { parseBalanceSheet, parseStatement, reportFileName, type ReportFile, type ReportPart } from "../_shared/report_model.ts";
-import { renderReportPdf } from "../_shared/report_pdf.ts";
 import { DATE, fail, isCalendarDate, ok, READ_REFUSED, type ToolResult, type ToolRpc, UUID } from "./tools_args.ts";
 
 export const EXPORT_ALLOWED: Record<string, Set<string>> = {
@@ -30,31 +28,42 @@ function optionalDate(value: unknown): value is string | null | undefined {
   return value === undefined || value === null || (typeof value === "string" && DATE.test(value) && isCalendarDate(value));
 }
 
-/** The arguments, checked before any read; a refusal names the one that failed. */
-export function reportRequest(args: Record<string, unknown>): ReportRequest | ToolResult {
-  const { kind = "pnl", format = "pdf", from, to, as_of: asOf, project_id: project, by_project: byProject, basis, expand } = args;
-  if (kind !== "pnl" && kind !== "balance" && kind !== "both") return fail("validation", "kind: pnl, balance or both");
-  if (format !== "pdf" && format !== "csv") return fail("validation", "format: pdf or csv");
+/**
+ * The P&L's arguments (FLOW-160), shared by get_pnl_statement and export_report: both dates or neither, from
+ * not after to, and one project or by_project, not both. Null when they are fine.
+ */
+export function pnlProblem(args: Record<string, unknown>): ToolResult | null {
+  const { from, to, project_id: project, by_project: byProject, basis } = args;
   if (!optionalDate(from) || !optionalDate(to)) return fail("validation", "from and to: dates, YYYY-MM-DD");
   if ((from ?? null) === null !== ((to ?? null) === null)) return fail("validation", "from and to: both or neither");
   if (typeof from === "string" && typeof to === "string" && from > to) return fail("validation", "from is after to");
-  if (!optionalDate(asOf)) return fail("validation", "as_of: a date, YYYY-MM-DD");
   if (project !== undefined && project !== null && (typeof project !== "string" || !UUID.test(project))) {
     return fail("validation", "project_id: a project id");
   }
   if (byProject !== undefined && typeof byProject !== "boolean") return fail("validation", "by_project: true or false");
   if (byProject === true && typeof project === "string") return fail("validation", "project_id or by_project, not both");
   if (basis !== undefined && basis !== null && basis !== "cash" && basis !== "invoiced") return fail("validation", "basis: cash or invoiced");
+  return null;
+}
+
+/** The arguments, checked before any read; a refusal names the one that failed. */
+export function reportRequest(args: Record<string, unknown>): ReportRequest | ToolResult {
+  const { kind = "pnl", format = "pdf", from, to, as_of: asOf, project_id: project, by_project: byProject, basis, expand } = args;
+  if (kind !== "pnl" && kind !== "balance" && kind !== "both") return fail("validation", "kind: pnl, balance or both");
+  if (format !== "pdf" && format !== "csv") return fail("validation", "format: pdf or csv");
+  const problem = pnlProblem(args);
+  if (problem != null) return problem;
+  if (!optionalDate(asOf)) return fail("validation", "as_of: a date, YYYY-MM-DD");
   if (expand !== undefined && typeof expand !== "boolean") return fail("validation", "expand: true or false");
   return {
     kind,
     format,
-    from: from ?? null,
-    to: to ?? null,
+    from: typeof from === "string" ? from : null,
+    to: typeof to === "string" ? to : null,
     asOf: asOf ?? null,
     projectId: typeof project === "string" ? project : null,
     byProject: byProject === true,
-    basis: basis ?? null,
+    basis: basis === "cash" || basis === "invoiced" ? basis : null,
     expand: expand !== false,
   };
 }
@@ -103,6 +112,8 @@ export async function buildReport(request: ReportRequest, rpc: ToolRpc, now: Dat
     // Both reports: the balance sheet is at the P&L's last day unless as_of says otherwise.
     const asOf = request.asOf ?? (request.kind === "both" ? request.to : null) ?? today;
     const result = await rpc("mcp_balance_sheet", { p_as_of: asOf, p_project_id: request.projectId });
+    // Another company's project, or an unknown one, raises P0002, which PostgREST answers with 404.
+    if (result.status === 404) return fail("not_found", "not found");
     if (result.status >= 400) return fail("refused", READ_REFUSED);
     if (result.json == null) return fail("not_found", "not found");
     try {
@@ -115,9 +126,12 @@ export async function buildReport(request: ReportRequest, rpc: ToolRpc, now: Dat
   const named = await rpc("get_dashboard", { p_from: today, p_to: today, p_basis: null });
   const company = named.status < 400 && isObject(named.json) && typeof named.json.name === "string" ? named.json.name : "Flow";
   const file: ReportFile = { company, createdAt: `${clock.day}/${clock.month}/${clock.year} ${clock.hour}:${clock.minute}`, parts };
+  // The renderers (pdf-lib, fontkit and the fonts) load only for a report, not on every flow-mcp start.
   if (request.format === "csv") {
+    const { renderReportCsv } = await import("../_shared/report_csv.ts");
     return { name: reportFileName(file, "csv"), mimeType: "text/csv", bytes: new TextEncoder().encode(renderReportCsv(file)) };
   }
+  const { renderReportPdf } = await import("../_shared/report_pdf.ts");
   return { name: reportFileName(file, "pdf"), mimeType: "application/pdf", bytes: await renderReportPdf(file) };
 }
 

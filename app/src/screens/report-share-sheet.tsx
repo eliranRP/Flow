@@ -23,17 +23,28 @@ export function ReportShareSheet({ open, onOpenChange, state, today }: {
   const toast = useToast();
   const [choice, setChoice] = useState<ShareChoice>({ pnl: true, balance: false, expand: true, format: "pdf" });
   const [busy, setBusy] = useState(false);
+  // A file the browser would not share yet (no fresh tap): the next tap shares it without making it again.
+  const [ready, setReady] = useState<File | null>(null);
   useEffect(() => {
     if (open) setChoice((current) => ({ ...current, pnl: state.kind === "pnl", balance: state.kind === "balance" }));
   }, [open, state.kind]);
+  useEffect(() => {
+    setReady(null);
+  }, [open, choice, state]);
+  const byProject = state.scope.kind === "by_project";
   const none = !choice.pnl && !choice.balance;
   const word = choice.format === "pdf" ? "PDF" : "Excel";
   const share = async () => {
     if (busy || none) return;
     setBusy(true);
     try {
-      const file = await fetchReportFile(reportFileArgs(state, today, choice));
+      const file = ready ?? await fetchReportFile(reportFileArgs(state, today, choice));
       const outcome = await deliverFile(file, choice.pnl && choice.balance ? "דוחות" : choice.pnl ? "רווח והפסד" : "מאזן");
+      if (outcome === "blocked") {
+        setReady(file);
+        return;
+      }
+      setReady(null);
       if (outcome !== "cancelled") setOpen(false);
       if (outcome === "saved") toast.show({ message: `הקובץ ${file.name} ירד`, tone: "ok" });
     } catch {
@@ -50,7 +61,7 @@ export function ReportShareSheet({ open, onOpenChange, state, today }: {
       panelClassName="ui-rep-sheet"
       action={(
         <Button full disabled={none} busy={busy} onClick={() => { void share(); }}>
-          {`שיתוף ${word}`}
+          {ready != null ? "שליחת הקובץ" : `שיתוף ${word}`}
         </Button>
       )}
     >
@@ -65,9 +76,9 @@ export function ReportShareSheet({ open, onOpenChange, state, today }: {
         />
         <Toggle label="רווח והפסד" checked={choice.pnl} onChange={(pnl) => { setChoice({ ...choice, pnl }); }} />
         <Toggle label="מאזן" checked={choice.balance} onChange={(balance) => { setChoice({ ...choice, balance }); }} />
-        <Toggle label="לפרט קטעים מכווצים" hint="כל תת־קטגוריה מתחת לקטגוריה שלה" checked={choice.expand} disabled={!choice.pnl} onChange={(expand) => { setChoice({ ...choice, expand }); }} />
+        <Toggle label="לפרט קטעים מכווצים" hint="כל תת־קטגוריה מתחת לקטגוריה שלה" checked={choice.expand && !byProject} disabled={!choice.pnl || byProject} onChange={(expand) => { setChoice({ ...choice, expand }); }} />
         <p className="t-caption t-muted">
-          {none ? "בחרו לפחות דוח אחד." : choice.format === "pdf" ? "קובץ PDF בעברית, עמוד לכל דוח, עם התאריכים והפרויקטים שעל המסך." : "קובץ CSV שנפתח ב־Excel, עם אותם המספרים שעל המסך."}
+          {none ? "בחרו לפחות דוח אחד." : ready != null ? "הקובץ מוכן. הקישו על שליחת הקובץ." : choice.format === "pdf" ? "קובץ PDF בעברית, עמוד לכל דוח, עם התאריכים והפרויקטים שעל המסך." : "קובץ CSV שנפתח ב־Excel, עם אותם המספרים שעל המסך."}
         </p>
       </div>
     </Sheet>

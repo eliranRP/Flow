@@ -203,6 +203,9 @@ export function reportFileName(file: ReportFile, extension: "pdf" | "csv"): stri
     when = first.sheet.as_of;
     if (first.sheet.project_name != null) scope = first.sheet.project_name;
   }
-  const safe = (value: string) => value.replace(/[\\/:*?"<>|\s]+/g, "-");
-  return `${[kind, when, scope].filter((part) => part !== "").map(safe).join("_")}.${extension}`;
+  // No control or format characters, and a scope of at most 60 characters, so the name stays under the
+  // 255-byte limit phones and disks set on a file name.
+  const safe = (value: string) => value.replace(/[\p{Cc}\p{Cf}]/gu, "").replace(/[\\/:*?"<>|\s]+/g, "-");
+  const short = (value: string) => [...value].slice(0, 60).join("");
+  return `${[kind, when, short(scope)].filter((part) => part !== "").map(safe).join("_")}.${extension}`;
 }

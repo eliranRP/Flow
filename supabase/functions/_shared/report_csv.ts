@@ -44,6 +44,7 @@ function pnlRows(part: PnlPart, rows: string[][]) {
       for (const row of project.currencies) rows.push([projectKeyName(project), row.currency, decimal(row.income_minor), decimal(-row.expense_minor), decimal(row.net_minor)]);
     }
     for (const row of statement.currencies) rows.push(["סה״כ", row.currency, decimal(row.income_minor), decimal(-row.expense_minor), decimal(row.net_minor)]);
+    pnlNotes(statement, rows);
     rows.push([]);
     return;
   }
@@ -69,7 +70,14 @@ function pnlRows(part: PnlPart, rows: string[][]) {
       rows.push(["לא נספר ברווח", categoryName(item.name), account === categoryName(item.name) ? "" : account, row.currency, decimal(item.direction === "income" ? item.amount_minor : -item.amount_minor)]);
     }
   }
+  pnlNotes(statement, rows);
   rows.push([]);
+}
+
+/** The PDF's notes under the P&L, as rows: what is kept out of profit, and the lines still waiting for review. */
+function pnlNotes(statement: PnlPart["statement"], rows: string[][]) {
+  rows.push(["הערה", "קרן, אסקרו וקניית נכסים לא נספרים ברווח; הם במאזן."]);
+  if (statement.review_count > 0) rows.push(["הערה", `${String(statement.review_count)} תנועות ממתינות לבדיקה בתקופה ולא נכללו.`]);
 }
 
 function balanceRows(part: BalancePart, rows: string[][]) {
@@ -87,6 +95,8 @@ function balanceRows(part: BalancePart, rows: string[][]) {
     rows.push(["הון", "רווח שנצבר", row.currency, decimal(row.retained_earnings_minor)]);
     rows.push(["סה״כ הון", "", row.currency, decimal(row.equity.total_minor + row.retained_earnings_minor)]);
     rows.push(["התחייבויות והון", "", row.currency, decimal(row.total_liabilities_and_equity_minor)]);
+    rows.push(["הערה", row.balanced ? "מאוזן · נכסים = התחייבויות + הון" : "לא מאוזן: כדאי לבדוק את הספרים"]);
+    for (const warning of row.warnings) rows.push(["אזהרה", systemAccountName(warning.account_name), row.currency, decimal(warning.balance_minor)]);
   }
   rows.push([]);
 }

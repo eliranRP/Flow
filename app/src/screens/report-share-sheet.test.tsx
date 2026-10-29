@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { REPORTS_BALANCE, REPORTS_BY_PROJECT, REPORTS_STATEMENT, REPORTS_TODAY } from "../dev/reports-sample";
+import { REPORTS_BALANCE, REPORTS_BY_PROJECT, REPORTS_EMPTY, REPORTS_STATEMENT, REPORTS_TODAY } from "../dev/reports-sample";
 import { renderWithProviders } from "../test-render";
 import { ReportsScreen } from "./reports-screen";
 
@@ -73,12 +73,43 @@ describe("ReportShareSheet", () => {
     fireEvent.click(within(excel).getByRole("switch", { name: "מאזן" }));
     fireEvent.click(within(excel).getByRole("button", { name: "שיתוף Excel" }));
     expect(await screen.findByText("הקובץ לא נוצר. נסו שוב.")).toBeInTheDocument();
-    expect(invoke.calls[0]?.body).toMatchObject({ kind: "both", format: "csv", as_of: REPORTS_TODAY });
+    // From the P&L, the balance sheet ends on the period's last day: the server's default, so no as_of.
+    expect(invoke.calls[0]?.body).toEqual({ kind: "both", format: "csv", from: "2026-01-01", to: REPORTS_TODAY, expand: true });
     expect(screen.getByRole("dialog", { name: "שיתוף Excel" })).toBeInTheDocument();
   });
 
   it("has nothing to share before the report is in, or when it is empty", () => {
-    renderWithProviders(<ReportsScreen sample={{ today: REPORTS_TODAY, phase: { kind: "loading" } }} />, { route: "/reports" });
+    const loading = renderWithProviders(<ReportsScreen sample={{ today: REPORTS_TODAY, phase: { kind: "loading" } }} />, { route: "/reports" });
     expect(screen.queryByRole("button", { name: "שיתוף הדוח" })).toBeNull();
+    loading.unmount();
+    const empty = renderWithProviders(<ReportsScreen sample={{ today: REPORTS_TODAY, statement: REPORTS_EMPTY, balance: REPORTS_BALANCE, projects: REPORTS_BY_PROJECT }} />, { route: "/reports" });
+    expect(screen.queryByRole("button", { name: "שיתוף הדוח" })).toBeNull();
+    empty.unmount();
+    renderWithProviders(<ReportsScreen sample={{ today: REPORTS_TODAY, statement: REPORTS_STATEMENT, balance: { ...REPORTS_BALANCE, currencies: [] }, projects: REPORTS_BY_PROJECT }} />, { route: "/reports?kind=balance" });
+    expect(screen.queryByRole("button", { name: "שיתוף הדוח" })).toBeNull();
+  });
+
+  it("keeps a file the phone would not share yet, and sends it on the next tap without making it again", async () => {
+    const share = vi.fn((): Promise<void> => Promise.reject(new DOMException("needs a tap", "NotAllowedError")));
+    stubShare(() => true, share);
+    invoke.impl = () => Promise.resolve({ data: new Blob(["%PDF-"]), error: null, response: new Response(null) });
+    renderReports();
+    fireEvent.click(screen.getByRole("button", { name: "שיתוף הדוח" }));
+    const sheet = screen.getByRole("dialog", { name: "שיתוף PDF" });
+    fireEvent.click(within(sheet).getByRole("button", { name: "שיתוף PDF" }));
+    const again = await within(sheet).findByRole("button", { name: "שליחת הקובץ" });
+    expect(screen.queryByText("הקובץ לא נוצר. נסו שוב.")).toBeNull();
+    share.mockImplementationOnce(() => Promise.resolve());
+    fireEvent.click(again);
+    await waitFor(() => { expect(share).toHaveBeenCalledTimes(2); });
+    expect(invoke.calls).toHaveLength(1);
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "שיתוף PDF" })).toBeNull(); });
+    stubShare(undefined, undefined);
+  });
+
+  it("does not offer sub-categories by project, where the file has a column per project", () => {
+    renderReports("/reports?scope=by_project");
+    fireEvent.click(screen.getByRole("button", { name: "שיתוף הדוח" }));
+    expect(within(screen.getByRole("dialog", { name: "שיתוף PDF" })).getByRole("switch", { name: "לפרט קטעים מכווצים" })).toBeDisabled();
   });
 });

@@ -8,7 +8,7 @@ export type Script = "hebrew" | "latin";
 /** One piece to draw, in visual order (left to right), with the subset that holds its glyphs. */
 export type Segment = { text: string; script: Script };
 
-type Kind = "R" | "L" | "N";
+type Kind = "R" | "L" | "E" | "N";
 
 const HEBREW = /[֐-׿יִ-ﭏ]/;
 const STRONG_L = /[A-Za-z0-9À-ɏ$€£₪%]/;
@@ -18,33 +18,65 @@ const MIRROR: Record<string, string> = { "(": ")", ")": "(", "[": "]", "]": "[",
 // Inside a number or a date these stay with it: "29,000", "01/01/2026", "−$1,250.50", "30%".
 const NUMBER_JOINER = /[.,/:\-−+]/;
 
+const DIGIT = /[0-9]/;
+const OPEN: Record<string, string> = { "(": ")", "[": "]", "{": "}", "<": ">" };
+const CLOSE = new Set(Object.values(OPEN));
+
 function kindOf(char: string): Kind {
   if (HEBREW.test(char)) return "R";
+  if (DIGIT.test(char)) return "E";
   if (STRONG_L.test(char)) return "L";
   return "N";
 }
 
-/** The line's runs in logical order, every neutral resolved to the direction around it. */
+/**
+ * The line's runs in logical order, by the Unicode bidi rules a browser applies to the same text in a
+ * right-to-left block (one paragraph, no embeddings): a number after a Latin letter is Latin (W7); a number
+ * after Hebrew or at the start is drawn left to right but counts as Hebrew for the neutrals beside it (N1);
+ * a bracket pair takes the direction of what it holds (N0). A joiner inside a number or a date range keeps
+ * it whole ("29,000", "01/01/2026–31/10/2026"), and a sign before a number joins it ("−$1,250"), as the
+ * app's ltr() isolates them.
+ */
 export function bidiRuns(text: string): { text: string; rtl: boolean }[] {
   const chars = [...text];
   const kinds = chars.map(kindOf);
+  let strong: "R" | "L" = "R";
+  for (let i = 0; i < kinds.length; i += 1) {
+    if (kinds[i] === "R" || kinds[i] === "L") strong = kinds[i] as "R" | "L";
+    else if (kinds[i] === "E" && strong === "L") kinds[i] = "L";
+  }
+  for (let i = 0; i < kinds.length; i += 1) {
+    const char = chars[i] ?? "";
+    if (kinds[i] !== "N" || !(NUMBER_JOINER.test(char) || char === "–")) continue;
+    const next = kinds[i + 1];
+    const prev = kinds[i - 1];
+    if (next !== "E" && next !== "L") continue;
+    if (prev === next || (/[-−+]/.test(char) && prev !== "E" && prev !== "L")) kinds[i] = next;
+  }
+  const nearest = (from: number, step: 1 | -1): Kind => {
+    for (let i = from; i >= 0 && i < kinds.length; i += step) if (kinds[i] !== "N") return kinds[i] as Kind;
+    return "R";
+  };
+  const stack: number[] = [];
+  for (let i = 0; i < chars.length; i += 1) {
+    const char = chars[i] ?? "";
+    if (OPEN[char] != null) { stack.push(i); continue; }
+    if (!CLOSE.has(char)) continue;
+    const at = stack.findLastIndex((open) => OPEN[chars[open] ?? ""] === char);
+    if (at < 0) continue;
+    const open = stack[at] as number;
+    stack.length = at;
+    const inside = kinds.slice(open + 1, i);
+    const dir: Kind = inside.some((kind) => kind === "R" || kind === "E") ? "R" : inside.includes("L") ? (nearest(open - 1, -1) === "L" ? "L" : "R") : "N";
+    if (dir !== "N") { kinds[open] = dir; kinds[i] = dir; }
+  }
   const resolved: ("R" | "L")[] = kinds.map((kind, index) => {
-    if (kind !== "N") return kind;
-    // A joiner inside a number keeps it whole; any neutral between two left-to-right runs joins them.
-    let before: Kind = "R";
-    for (let i = index - 1; i >= 0; i -= 1) {
-      if (kinds[i] !== "N") { before = kinds[i] as Kind; break; }
-    }
-    let after: Kind = "R";
-    for (let i = index + 1; i < kinds.length; i += 1) {
-      if (kinds[i] !== "N") { after = kinds[i] as Kind; break; }
-    }
-    if (before === "L" && after === "L") return "L";
+    if (kind === "R" || kind === "L") return kind;
+    if (kind === "E") return "L";
+    const before = nearest(index - 1, -1);
     // The "…" of a shortened line ends the text it cuts: "Riverside Commons…".
     if (chars[index] === "…") return before === "L" ? "L" : "R";
-    // A minus or a sign right before a number belongs to it ("−$1,250").
-    if (after === "L" && NUMBER_JOINER.test(chars[index] ?? "") && kinds[index + 1] === "L") return "L";
-    return "R";
+    return before === "L" && nearest(index + 1, 1) === "L" ? "L" : "R";
   });
   const runs: { text: string; rtl: boolean }[] = [];
   chars.forEach((char, index) => {

@@ -59,3 +59,11 @@ Deno.test("Hebrew is drawn right to left: the font engine lays each run out in t
   // Read right to left, the drawn line is the text itself.
   assertEquals([...visualSegments("רווח נקי").map((segment) => segment.text).join("")].reverse().join(""), "רווח נקי");
 });
+
+Deno.test("a file name stays short and plain, whatever the project is called", () => {
+  const long = { ...SAMPLE_STATEMENT, project_name: `${"פרויקט ארוך מאוד ".repeat(10)}\u200f\u0007` };
+  const name = reportFileName({ ...SAMPLE_FILE, parts: [{ kind: "pnl", statement: long, byProject: false, expand: true }] }, "pdf");
+  assert(new TextEncoder().encode(name).length <= 255, name);
+  assert(!/[\p{Cc}\p{Cf}]/u.test(name));
+  assert(name.endsWith(".pdf"));
+});
