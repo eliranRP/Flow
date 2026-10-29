@@ -11,7 +11,10 @@ import { fileURLToPath } from "node:url";
 const importPattern =
   /(?:import|export)\s([^'"]*?)from\s*["']([^"']+)["']|import\(\s*["']([^"']+)["']\s*\)|import\s+["']([^"']+)["']/g;
 const sourcePattern = /\.(ts|tsx|css)$/;
-const notSourcePattern = /\.(test|stories)\.tsx?$/;
+// Tests, stories and their helpers (story-support, *-story-support, *.stories-support, *-test-support)
+// are not app sources: a helper that imports the story router would make every page's providers look
+// reached by a spec.
+const notSourcePattern = /\.(test|stories)\.tsx?$|(^|[.-])(story|stories|test)-support\.tsx?$/;
 
 /** @param {string} root @param {string} from @param {string} spec */
 function resolveImport(root, from, spec) {
