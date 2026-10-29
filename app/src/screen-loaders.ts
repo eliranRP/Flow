@@ -31,6 +31,7 @@ export const screenLoaders = {
   companyProfit: () => import("./screens/company-profit-screen"),
   reports: () => import("./screens/reports-screen"),
   reportLines: () => import("./screens/report-lines-screen"),
+  reportAccount: () => import("./screens/report-account-screen"),
   projectProfit: () => import("./screens/project-profit-screen"),
   projectMonthProfit: () => import("./screens/project-month-profit-screen"),
   projectNextMonth: () => import("./screens/project-next-month-screen"),

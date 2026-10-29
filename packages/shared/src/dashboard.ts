@@ -686,6 +686,9 @@ export const breakdownLinesSchema = z
       }),
     ),
     has_more: z.boolean(),
+    /** FLOW-165: the whole group's total and row count, whatever page this is. Older payloads omit them. */
+    total_minor: agorotSchema.optional().catch(undefined),
+    count: z.number().int().nonnegative().optional().catch(undefined),
   })
   .nullable();
 

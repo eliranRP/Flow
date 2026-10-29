@@ -1659,11 +1659,14 @@ isOneToOne: false
 "forget_line_category":
 { Args: { "p_category_id": string,"p_prior_category_id": string,"p_supplier_id": string }; Returns: Json
                            },
+"get_account_lines":
+{ Args: { "p_account_id": string,"p_as_of"?: string,"p_currency"?: string,"p_limit"?: number,"p_offset"?: number,"p_project_id"?: string }; Returns: Json
+                           },
 "get_breakdown":
 { Args: { "p_basis"?: string,"p_direction": string,"p_from"?: string,"p_group_by"?: string,"p_to"?: string }; Returns: Json
                            },
 "get_breakdown_lines":
-{ Args: { "p_basis"?: string,"p_currency": string,"p_direction": string,"p_excluded"?: boolean,"p_from"?: string,"p_group_by": string,"p_group_key": string,"p_limit"?: number,"p_offset"?: number,"p_to"?: string }; Returns: Json
+{ Args: { "p_basis"?: string,"p_currency": string,"p_direction": string,"p_excluded"?: boolean,"p_from"?: string,"p_group_by": string,"p_group_key": string,"p_limit"?: number,"p_offset"?: number,"p_project_id"?: string,"p_to"?: string }; Returns: Json
                            },
 "get_dashboard":
 { Args: { "p_basis"?: string,"p_from"?: string,"p_to"?: string }; Returns: Json

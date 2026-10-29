@@ -3,12 +3,13 @@
 // line's legs back to verify a booking (mcp_line_legs). get_account_balances (FLOW-149, decision 0228)
 // sums the balance-sheet legs per project (mcp_account_balances). get_pnl_statement (FLOW-160) reads the P&L as a
 // statement for the reports screen (get_pnl_statement); export_report (FLOW-162, tools_export.ts) makes the
-// reports a PDF or CSV file. Any member reads them.
+// reports a PDF or CSV file. get_account_lines (FLOW-165) opens one balance-sheet account's movements
+// (get_account_lines). Any member reads them.
 import { EXPORT_ALLOWED, exportReport, pnlProblem } from "./tools_export.ts";
 import { PREPAID_ALLOWED, PREPAID_READS, prepaidRead } from "./tools_prepaid.ts";
-import { DATE, fail, isCalendarDate, ok, READ_REFUSED, type ToolResult, type ToolRpc, UUID } from "./tools_args.ts";
+import { DATE, fail, isCalendarDate, limitOf, offsetOf, ok, READ_REFUSED, type ToolResult, type ToolRpc, UUID } from "./tools_args.ts";
 
-export const LEDGER_READS = ["list_accounts", "get_line_legs", "get_account_balances", "get_balance_sheet", "get_pnl_statement", "export_report", ...PREPAID_READS] as const;
+export const LEDGER_READS = ["list_accounts", "get_line_legs", "get_account_balances", "get_balance_sheet", "get_account_lines", "get_pnl_statement", "export_report", ...PREPAID_READS] as const;
 
 /** The reads' and the account writes' argument allow-list, merged into ALLOWED in tools_schemas.ts. */
 export const LEDGER_ALLOWED: Record<string, Set<string>> = {
@@ -16,6 +17,7 @@ export const LEDGER_ALLOWED: Record<string, Set<string>> = {
   get_line_legs: new Set(["transaction_id"]),
   get_account_balances: new Set(["as_of"]),
   get_balance_sheet: new Set(["as_of", "project_id"]),
+  get_account_lines: new Set(["account_id", "as_of", "project_id", "currency", "limit", "offset"]),
   get_pnl_statement: new Set(["from", "to", "project_id", "by_project", "basis"]),
   // FLOW-152: the chart of accounts writes (tools_accounts.ts).
   create_account: new Set(["idempotency_key", "name", "type", "description"]),
@@ -71,6 +73,7 @@ export async function ledgerRead(
     if (result.status >= 400 || !isObject(body) || !Array.isArray(body.currencies)) return fail("refused", READ_REFUSED);
     return ok(body);
   }
+  if (name === "get_account_lines") return accountLines(args, rpc);
   if (name === "get_pnl_statement") return pnlStatement(args, rpc);
   if (name === "export_report") return exportReport(args, rpc);
   const id = args.transaction_id;
@@ -100,5 +103,39 @@ async function pnlStatement(args: Record<string, unknown>, rpc: ToolRpc): Promis
   if (result.json == null) return fail("not_found", "not found");
   const body = result.json;
   if (!isObject(body) || !Array.isArray(body.currencies) || !Array.isArray(body.projects)) return fail("refused", READ_REFUSED);
+  return ok(body);
+}
+
+// FLOW-165: one balance-sheet account's balance, the year's opening and its movements, paged.
+async function accountLines(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
+  const { account_id: account, as_of: asOf, project_id: project, currency } = args;
+  if (typeof account !== "string" || !UUID.test(account)) return fail("validation", "account_id: an account id");
+  if (asOf !== undefined && asOf !== null && (typeof asOf !== "string" || !DATE.test(asOf) || !isCalendarDate(asOf))) {
+    return fail("validation", "as_of: a date, YYYY-MM-DD");
+  }
+  if (project !== undefined && project !== null && (typeof project !== "string" || !UUID.test(project))) {
+    return fail("validation", "project_id: a project id");
+  }
+  if (currency !== undefined && currency !== null && (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency))) {
+    return fail("validation", "currency: a currency code, like ILS");
+  }
+  const limit = limitOf(args.limit, 50);
+  if (typeof limit !== "number") return limit;
+  if (limit < 1) return fail("validation", "limit: 1 to 100");
+  const offset = offsetOf(args.offset);
+  if (typeof offset !== "number") return offset;
+  const result = await rpc("get_account_lines", {
+    p_account_id: account,
+    p_as_of: asOf ?? null,
+    p_project_id: project ?? null,
+    p_currency: currency ?? null,
+    p_limit: limit,
+    p_offset: offset,
+  });
+  if (result.status >= 400) return fail("refused", READ_REFUSED);
+  // Null for another company's account or project, an unknown one, or an income or expense account.
+  if (result.json == null) return fail("not_found", "not found");
+  const body = result.json;
+  if (!isObject(body) || !Array.isArray(body.currencies) || !Array.isArray(body.rows)) return fail("refused", READ_REFUSED);
   return ok(body);
 }

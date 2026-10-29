@@ -11,6 +11,7 @@ export const readRpcs = new Set([
   "cash_years",
   "company_next_month_inputs",
   "expected_months",
+  "get_account_lines",
   "get_breakdown",
   "get_breakdown_lines",
   "get_pnl_statement",

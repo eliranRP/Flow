@@ -86,3 +86,38 @@ export const balanceSheetSchema = z.object({
     })),
   })),
 });
+
+/** FLOW-165: get_account_lines, one balance-sheet account's movements; null when the account is not found. */
+export const accountLinesSchema = z.object({
+  account_id: z.string(),
+  name: z.string(),
+  type: z.enum(["asset", "liability", "equity"]),
+  is_system: z.boolean(),
+  as_of: z.string(),
+  year_start: z.string(),
+  project_id: z.string().nullable(),
+  project_name: z.string().nullable(),
+  loan_ids: z.array(z.string()),
+  currencies: z.array(z.object({
+    currency: z.string(),
+    opening_minor: minorSchema,
+    movement_minor: minorSchema,
+    balance_minor: minorSchema,
+    count: z.number().int().nonnegative(),
+  })),
+  rows: z.array(z.object({
+    transaction_id: z.string(),
+    doc_date: z.string(),
+    currency: z.string(),
+    amount_minor: minorSchema,
+    description: z.string().nullable(),
+    party_name: z.string().nullable(),
+    project_name: z.string().nullable(),
+    part: z.string().nullable(),
+    loan_id: z.string().nullable(),
+    line_amount_minor: minorSchema,
+  })),
+  has_more: z.boolean(),
+}).nullable();
+
+export type AccountLines = NonNullable<z.output<typeof accountLinesSchema>>;

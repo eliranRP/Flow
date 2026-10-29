@@ -6,7 +6,7 @@ import { lineInitials } from "../cash-lines-groups";
 import { getSupabase } from "../lib/supabase";
 import { loadReadSchemas } from "../load-read-schemas";
 import { useHomePreview, usePreviewSearch } from "../preview";
-import { categoryName, dateRangeText } from "../reports";
+import { categoryName, dateRangeText, reportStateOf } from "../reports";
 import { Amount } from "../ui/amount";
 import { PageLoadFailed, useOnline } from "../ui/band-states";
 import { Button } from "../ui/button";
@@ -39,6 +39,8 @@ export function reportLinesArgs(params: URLSearchParams) {
     from: params.get("from"),
     to: params.get("to"),
     projectName: params.get("pname"),
+    // One project's report: its lines, read by project (FLOW-165).
+    projectId: ((scope) => (scope.kind === "project" ? scope.id : null))(reportStateOf(params).scope),
     currency: /^[A-Z]{3}$/.test(params.get("cur") ?? "") ? (params.get("cur") ?? "ILS") : "ILS",
   } as const;
 }
@@ -53,17 +55,19 @@ async function fetchPage(args: ReturnType<typeof reportLinesArgs>, currency: str
     p_group_by: "category",
     p_group_key: args.category,
     p_currency: currency,
+    ...(args.projectId != null ? { p_project_id: args.projectId } : {}),
     p_limit: PAGE,
     p_offset: offset,
   });
   if (error) throw error;
+  // Null: the project is not this company's (or is gone); it has no lines here.
   const page = (await loadReadSchemas()).breakdownLinesSchema.parse(data);
   return page ?? { rows: [], has_more: false };
 }
 
 /** The rows by month, newest first: "אוקטובר 2026" and its lines. */
-export function linesByMonth(rows: readonly LineRow[]): { key: string; title: string; rows: LineRow[] }[] {
-  const groups = new Map<string, LineRow[]>();
+export function linesByMonth<Row extends { doc_date: string }>(rows: readonly Row[]): { key: string; title: string; rows: Row[] }[] {
+  const groups = new Map<string, Row[]>();
   for (const row of rows) {
     const key = row.doc_date.slice(0, 7);
     groups.set(key, [...(groups.get(key) ?? []), row]);
@@ -134,7 +138,8 @@ const SEARCH_FROM = 6;
 
 /**
  * FLOW-161 (board ReportCategoryDrill): one category's lines for the report's period: the total, its split by
- * project, and the lines by month, each opening the transaction page. One project's report keeps that project.
+ * project, and the lines by month, each opening the transaction page. One project's report reads that
+ * project's lines, page by page (FLOW-165).
  */
 export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {}) {
   const location = useLocation();
@@ -151,31 +156,26 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
   const deferred = useDeferredValue(query);
   const searching = searchText(deferred) !== "";
   const read = useInfiniteQuery({
-    queryKey: ["breakdown-lines", "report", preview, args.side, args.category, args.from ?? "", args.to ?? "", currency],
+    queryKey: ["breakdown-lines", "report", preview, args.side, args.category, args.from ?? "", args.to ?? "", currency, args.projectId ?? ""],
     enabled: sample == null && preview === "off",
     initialPageParam: 0,
     queryFn: ({ pageParam }) => fetchPage(args, currency, pageParam),
     getNextPageParam: (last, pages) => (last.has_more ? pages.length * PAGE : undefined),
   });
-  // The read has no project filter, so a one-project drill-down filters the loaded pages: it reads them all
-  // first, and shows the skeleton until then rather than a part of the total.
   const { fetchNextPage, hasNextPage, isFetchingNextPage, isFetchNextPageError } = read;
-  const filterByProject = args.projectName != null;
+  // One project's report reads that project's lines (p_project_id, FLOW-165), so the pages need no filter.
   const pages = read.data?.pages;
-  const all = useMemo(() => sample?.rows ?? pages?.flatMap((page) => page.rows) ?? null, [sample, pages]);
-  const reading = sample == null && filterByProject && hasNextPage;
-  const rows = useMemo(() => (all == null || reading ? null : args.projectName == null ? all : all.filter((row) => row.project_name === args.projectName)), [all, reading, args.projectName]);
+  const rows = useMemo(() => sample?.rows ?? pages?.flatMap((page) => page.rows) ?? null, [sample, pages]);
   const shown = useMemo(() => (rows == null ? [] : searching ? rows.filter((row) => lineMatches(row, deferred)) : rows), [rows, searching, deferred]);
   const hasMore = sample?.hasMore ?? read.hasNextPage;
   // A search looks at every line of the period, so it reads the pages not loaded yet too.
-  const readAll = filterByProject || searching;
   useEffect(() => {
-    if (readAll && hasNextPage && !isFetchingNextPage && !isFetchNextPageError) void fetchNextPage();
-  }, [readAll, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
+    if (searching && hasNextPage && !isFetchingNextPage && !isFetchNextPageError) void fetchNextPage();
+  }, [searching, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
   const title = categoryName(args.name);
   // Back to the report, with its own choices (the drill keys ride along and are ignored there).
   const back = `/reports${location.search}`;
-  const header = <ScreenHeader layout="stacked" title={title} backTo={back} backText="דוחות" subtitle={dateRangeText(args.from, args.to)} />;
+  const header = <ScreenHeader layout="stacked" title={title} backTo={back} backText="דוחות" subtitle={args.projectName != null ? `${dateRangeText(args.from, args.to)} · ${args.projectName}` : dateRangeText(args.from, args.to)} />;
   if (rows == null) {
     return (
       <div className="ui-rep-screen">
@@ -184,9 +184,15 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
       </div>
     );
   }
-  const total = rows.reduce((sum, row) => sum + row.amount_minor, 0n);
+  // The read's whole-group total and count (FLOW-165), so a long category shows its full figure; the loaded
+  // rows are the fallback for an older payload and the fixtures.
+  const firstPage = read.data?.pages[0];
+  const total = sample == null && firstPage?.total_minor != null ? firstPage.total_minor : rows.reduce((sum, row) => sum + row.amount_minor, 0n);
+  const lineCount = sample == null && firstPage?.count != null ? firstPage.count : rows.length;
   const signed = args.side === "income" ? total : -total;
-  const split = linesByProject(rows);
+  // The split adds up the loaded rows only: while the summary is the whole group's and pages remain, it is left out.
+  const partial = hasMore && lineCount > rows.length;
+  const split = partial ? [] : linesByProject(rows);
   // A page that fails stops the read (the effect's guard); the line says so and offers the retry. While the
   // retry runs the query keeps its error, so the line goes back to reading until that page answers.
   const readFailed = searching && sample == null && isFetchNextPageError && !isFetchingNextPage;
@@ -196,7 +202,7 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
     <div className="ui-rep-screen">
       {header}
       <div className="ui-rep-content">
-        <ReportSummary label={args.side === "income" ? "הכנסות" : "הוצאות"} amount={signed} currency={currency} loss={false} sub={rows.length === 1 ? "תנועה אחת" : `${String(rows.length)} תנועות${hasMore ? " ועוד" : ""}`} />
+        <ReportSummary label={args.side === "income" ? "הכנסות" : "הוצאות"} amount={signed} currency={currency} loss={false} sub={lineCount === 1 ? "תנועה אחת" : `${String(lineCount)} תנועות${hasMore && lineCount === rows.length ? " ועוד" : ""}`} />
         {rows.length >= SEARCH_FROM || hasMore ? (
           <div className="ui-rep-search">
             <SearchField label="חיפוש בתנועות" value={query} onChange={setQuery} placeholder="ספק, פרויקט, סכום או תאריך" busy={stillReading} />
