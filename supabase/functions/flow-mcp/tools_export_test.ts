@@ -192,6 +192,7 @@ Deno.test("export_report through the MCP counts against the same file limit, bef
   const hash = await hmacSecret(token, new TextEncoder().encode(pepperSecret));
   const localEnv: Record<string, string> = { ...env, FLOW_MCP_SIGNING_KEY: JSON.stringify(jwk) };
   let allowed = false;
+  let scope = ["read"];
   const asked: Array<{ name: string; body: unknown }> = [];
   const deps = {
     env: (name: string) => localEnv[name],
@@ -206,7 +207,7 @@ Deno.test("export_report through the MCP counts against the same file limit, bef
           id: "88888888-8888-4000-8000-000000000166",
           user_id: "aaaaaaaa-aaaa-4000-8000-000000000166",
           company_id: "cccccccc-cccc-4000-8000-000000000166",
-          scope: ["read"],
+          scope,
           expires_at: "2099-01-01T00:00:00.000Z",
           revoked_at: null,
         })));
@@ -224,6 +225,11 @@ Deno.test("export_report through the MCP counts against the same file limit, bef
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
     body: JSON.stringify({ jsonrpc: "2.0", id: 7, method: "tools/call", params: { name: "export_report", arguments: { format: "csv" } } }),
   }), deps)).json();
+  // A token that may not read is refused before the count: it uses up none of the user's files.
+  scope = ["write"];
+  assertEquals((await call()).result.structuredContent.error.code, "forbidden");
+  assertEquals(asked.some((item) => item.name === "bump_report_rate"), false);
+  scope = ["read"];
   const refused = await call();
   assertEquals(refused.result.isError, true);
   assertEquals(refused.result.structuredContent.error.code, "rate_limited");
