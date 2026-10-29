@@ -53,7 +53,7 @@ insert into pg_allowed (sig) values
     ('expected_months(integer,uuid,date)'),
     ('forecast_overrides_for(text)'),
     ('forget_line_category(uuid,uuid,uuid)'),
-    ('get_account_lines(uuid,date,uuid,text,integer,integer)'),
+    ('get_account_lines(uuid,date,uuid,text,integer,integer,date,boolean)'),
     ('get_breakdown_lines(text,text,text,text,date,date,text,boolean,integer,integer,uuid)'),
     ('get_breakdown(text,date,date,text,text)'),
     ('get_pnl_statement(date,date,uuid,boolean,text)'),

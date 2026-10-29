@@ -18,6 +18,16 @@ export const Default: Story = { args: { title: "עזרה", subtitle: "לעזרה
 export const WithBack: Story = { args: { title: "חשבוניות פתוחות", backTo: "/" } };
 export const LongHebrew: Story = { args: { title: longHebrew, subtitle: longHebrew, backTo: "/" } };
 
+/** FLOW-171: a stacked title with a slash between letters may break after the slash (a <wbr>), and reads the same. */
+export const SlashTitle: Story = {
+  args: { title: "Partner A – Contributions/Distributions", layout: "stacked", backTo: "/" },
+  play: async ({ canvasElement }) => {
+    const title = canvasElement.querySelector(".ui-focus-title");
+    await expect(title?.textContent).toBe("Partner A – Contributions/Distributions");
+    await expect(title?.querySelector("wbr")).not.toBeNull();
+  },
+};
+
 /**
  * FLOW-334 H1: once the large title scrolls off, a compact bar keeps Back and a small title at the
  * top. Invented rows.

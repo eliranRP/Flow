@@ -1,16 +1,18 @@
--- FLOW-165: get_account_lines, one balance-sheet account's movements for the reports screen and the MCP
+-- FLOW-165 and FLOW-171: get_account_lines, one balance-sheet account's movements for the reports screen and the MCP
 -- (get_account_lines), and get_breakdown_lines' p_project_id (one project's lines in a category). The
 -- balance, the year's opening balance and the movements follow get_balance_sheet's rule and sign; another
--- company's account or project reads as unknown. Invented data only; amounts are agorot and cents.
+-- company's account or project reads as unknown. FLOW-171: the period starts on p_from, or at the very start
+-- (p_from_start). Invented data only; amounts are agorot and cents.
 
 begin;
 
-select plan(52);
+select plan(73);
 
 do $users$
 begin
   perform tests.create_supabase_user('al_owner', 'al-owner@example.com');
   perform tests.create_supabase_user('al_other', 'al-other@example.com');
+  perform tests.create_supabase_user('al_viewer', 'al-viewer@example.com');
 end
 $users$;
 
@@ -137,10 +139,20 @@ insert into al_out values
   ('bd_kept',   public.get_breakdown_lines('expense', 'category', null, 'ILS', '2026-01-01', '2026-06-30', 'cash', true, 40, 0, pg_temp.ref('beta'))),
   ('pnl_alpha', public.get_pnl_statement('2026-06-01', '2026-06-30', pg_temp.ref('alpha'), false, 'cash'));
 
+-- FLOW-171: from the very start, and from a custom date.
+insert into al_out values
+  ('start',      public.get_account_lines(pg_temp.ref('principal_acct'), '2026-10-15', null, 'ILS', 50, 0, null, true)),
+  ('start_page', public.get_account_lines(pg_temp.ref('principal_acct'), '2026-10-15', null, 'ILS', 2, 2, null, true)),
+  ('from_feb',   public.get_account_lines(pg_temp.ref('principal_acct'), '2026-10-15', null, 'ILS', 50, 0, '2026-02-01')),
+  ('from_day',   public.get_account_lines(pg_temp.ref('principal_acct'), '2026-10-15', null, 'ILS', 50, 0, '2026-10-15')),
+  ('start_beta', public.get_account_lines(p_account_id => pg_temp.ref('principal_acct'), p_as_of => '2026-10-15',
+                   p_project_id => pg_temp.ref('beta'), p_currency => 'ILS', p_from_start => true));
+
 -- 1. The loan's principal: a liability shown positive, its year's opening, its movements, by currency.
 select is(pg_temp.out_of('loan') ->> 'type', 'liability', 'the account is a liability');
 select is(pg_temp.out_of('loan') ->> 'name', 'Loan principal', 'the account names itself');
-select is(pg_temp.out_of('loan') ->> 'year_start', '2026-01-01', 'the year starts on 1 January of as_of''s year');
+select is(pg_temp.out_of('loan') ->> 'from', '2026-01-01', 'with no start the period starts on 1 January of as_of''s year');
+select is(pg_temp.out_of('loan') ->> 'from_start', 'false', 'and it is not from the start');
 select is((pg_temp.cur(pg_temp.out_of('loan'), 'ILS') ->> 'opening_minor')::bigint, 15400000::bigint, 'the opening balance is what was owed on 1 January, positive');
 select is((pg_temp.cur(pg_temp.out_of('loan'), 'ILS') ->> 'balance_minor')::bigint, 15280000::bigint, 'the balance is after the year''s three payments, not the removed, pending or later one');
 select is((pg_temp.cur(pg_temp.out_of('loan'), 'ILS') ->> 'movement_minor')::bigint, -120000::bigint, 'the year''s movement is the balance less the opening');
@@ -251,6 +263,30 @@ select is(pg_temp.descs(pg_temp.out_of('after')), array['repair', 'pay-mar', 'pa
 select is((pg_temp.out_of('after') -> 'rows' -> 0 ->> 'amount_minor')::bigint, -15000::bigint, 'its legs on the account summed');
 select is((pg_temp.cur(pg_temp.out_of('after'), 'ILS') ->> 'count')::integer, 4, 'the count is per line');
 
+-- 4b. FLOW-171: from the very start: no opening, every movement since the account's first leg.
+select is(pg_temp.out_of('start') ->> 'from_start', 'true', 'from the start says so');
+select is(pg_temp.out_of('start') ->> 'from', null, 'from the start has no first day');
+select is((pg_temp.cur(pg_temp.out_of('start'), 'ILS') ->> 'opening_minor')::bigint, 0::bigint, 'from the start opens at zero');
+select is((pg_temp.cur(pg_temp.out_of('start'), 'ILS') ->> 'balance_minor')::bigint, 15280000::bigint, 'the balance is the same as the year''s');
+select is((pg_temp.cur(pg_temp.out_of('start'), 'ILS') ->> 'movement_minor')::bigint, 15280000::bigint, 'the change since the start is the balance');
+select is((pg_temp.cur(pg_temp.out_of('start'), 'ILS') ->> 'count')::integer, 4, 'four movements since the start');
+select is(pg_temp.descs(pg_temp.out_of('start')), array['pay-mar', 'pay-feb', 'pay-jan', 'loan-in'], 'the 2025 movement is listed after this year''s');
+select is(pg_temp.descs(pg_temp.out_of('start_page')), array['pay-jan', 'loan-in'], 'from the start pages in the same order');
+select is(pg_temp.out_of('start_page') ->> 'has_more', 'false', 'its last page says so');
+select is(pg_temp.descs(pg_temp.out_of('start_beta')), array['pay-mar'], 'from the start for one project, its legs only');
+
+-- 4c. FLOW-171: from a custom date: the opening is the balance before it.
+select is(pg_temp.out_of('from_feb') ->> 'from', '2026-02-01', 'the period starts on p_from');
+select is((pg_temp.cur(pg_temp.out_of('from_feb'), 'ILS') ->> 'opening_minor')::bigint, 15360000::bigint, 'the opening is the balance before 1 February');
+select is((pg_temp.cur(pg_temp.out_of('from_feb'), 'ILS') ->> 'movement_minor')::bigint, -80000::bigint, 'the change from 1 February');
+select is(pg_temp.descs(pg_temp.out_of('from_feb')), array['pay-mar', 'pay-feb'], 'the movements from 1 February');
+select is((pg_temp.cur(pg_temp.out_of('from_feb'), 'ILS') ->> 'count')::integer, 2, 'two movements from 1 February');
+select is(jsonb_array_length(pg_temp.out_of('from_day') -> 'rows'), 0, 'a start on as_of itself is allowed');
+select throws_ok($$ select public.get_account_lines(pg_temp.ref('principal_acct'), '2026-10-15', null, 'ILS', 50, 0, '2026-10-16') $$,
+  'P0001', 'validation', 'a start after as_of is refused');
+select throws_ok($$ select public.get_account_lines(pg_temp.ref('principal_acct'), '2026-10-15', null, 'ILS', 50, 0, '2026-02-01', true) $$,
+  'P0001', 'validation', 'a start date and from the start together are refused');
+
 -- 8. Another company's account or project, an unknown account and a P&L account read as unknown; a bad
 -- currency and a project by payer are refused.
 select tests.authenticate_as('al_other');
@@ -258,6 +294,8 @@ select ok(
   public.get_account_lines(pg_temp.ref('principal_acct'), '2026-10-15') is null
   and public.get_account_lines(pg_temp.ref('other_principal'), '2026-10-15', pg_temp.ref('alpha')) is null
   and public.get_account_lines(gen_random_uuid()) is null
+  and public.get_account_lines(pg_temp.ref('principal_acct'), '2026-10-15', null, null, 50, 0, null, true) is null
+  and public.get_account_lines(pg_temp.ref('principal_acct'), '2026-10-15', null, null, 50, 0, '2026-11-01') is null
   and public.get_breakdown_lines('expense', 'category', pg_temp.ref('repairs')::text, 'ILS', null, null, 'cash', false, 40, 0, pg_temp.ref('alpha')) is null
   and public.get_breakdown_lines('nope', 'payer', 'x', 'ILS', null, null, 'cash', false, 40, 0, pg_temp.ref('alpha')) is null,
   'another company''s account or project, or an unknown account, is null, before any other check');
@@ -266,6 +304,17 @@ select ok(public.get_account_lines(pg_temp.ref('repairs_acct')) is null, 'a P&L 
 select throws_ok($$ select public.get_account_lines(pg_temp.ref('principal_acct'), null, null, 'usd') $$, 'P0001', 'validation', 'a currency is three capitals');
 select throws_ok($$ select public.get_breakdown_lines('expense', 'payer', 'none', 'ILS', null, null, 'cash', false, 40, 0, pg_temp.ref('alpha')) $$,
   'P0001', 'validation', 'a project goes with a category or a parent only');
+
+-- 9. FLOW-171: a viewer of the company reads the account from the start too.
+reset role;
+insert into public.company_members (company_id, user_id, role) values (pg_temp.ref('co'), tests.get_supabase_uid('al_viewer'), 'viewer');
+select tests.authenticate_as('al_viewer');
+select is(
+  (pg_temp.cur(public.get_account_lines(pg_temp.ref('principal_acct'), '2026-10-15', null, 'ILS', 50, 0, null, true), 'ILS') ->> 'count')::integer,
+  5, 'a viewer reads every movement since the start (the repair''s legs included)');
+select is(
+  (pg_temp.cur(public.get_account_lines(pg_temp.ref('principal_acct'), '2026-10-15', null, 'ILS', 50, 0, '2026-02-01'), 'ILS') ->> 'opening_minor')::bigint,
+  15360000::bigint, 'and from a custom date');
 
 select * from finish();
 rollback;

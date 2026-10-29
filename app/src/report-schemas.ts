@@ -87,14 +87,16 @@ export const balanceSheetSchema = z.object({
   })),
 });
 
-/** FLOW-165: get_account_lines, one balance-sheet account's movements; null when the account is not found. */
+/** FLOW-165: get_account_lines, one balance-sheet account's movements; null when the account is not found. FLOW-171: from a date or the start. */
 export const accountLinesSchema = z.object({
   account_id: z.string(),
   name: z.string(),
   type: z.enum(["asset", "liability", "equity"]),
   is_system: z.boolean(),
   as_of: z.string(),
-  year_start: z.string(),
+  /** FLOW-171: the period's first day (1 January of as_of's year by default); null from the start. */
+  from: z.string().nullable(),
+  from_start: z.boolean(),
   project_id: z.string().nullable(),
   project_name: z.string().nullable(),
   loan_ids: z.array(z.string()),
