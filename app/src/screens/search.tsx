@@ -26,6 +26,7 @@ import {
   useSearchQuery,
   type SearchFilters,
 } from "../search";
+import { reportShortcuts } from "../search-reports";
 import { txnListState } from "../txn-nav";
 import { useCategoriesQuery, useDashboardQuery } from "../use-books";
 import { useSheetHistory } from "../ui/back";
@@ -41,7 +42,7 @@ import { SearchField } from "../ui/search-field";
 import { TabBar } from "../ui/tab-bar";
 import type { StatementDetail } from "../ui/statement";
 import { SearchFilterSheet, activeFilterCount, type SearchSheetProject } from "./search-filter-sheet";
-import { SearchEmptyState, SearchingRows } from "./search-parts";
+import { SearchEmptyState, SearchReportShortcuts, SearchingRows } from "./search-parts";
 import { SearchStart, type QuickCheck } from "./search-start";
 import { readRecentSearches, rememberRecentSearch } from "./search-recent";
 
@@ -293,6 +294,9 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
     ? projects.find((project) => project.name.toLowerCase().includes(typed.toLowerCase())) ?? null
     : null;
 
+  // FLOW-163: the reports the text names come first, whatever the transactions read finds.
+  const reports = reportShortcuts(typed, projects, previewSearch);
+
   const retry = usePreviewRetry(() => {
     void query.refetch();
   });
@@ -447,6 +451,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
         ) : null}
       </div>
       <div className="ui-search-results">
+        {filtered ? <SearchReportShortcuts rows={reports} /> : null}
         {body}
         {!searching ? <TabBar section="home" /> : null}
       </div>

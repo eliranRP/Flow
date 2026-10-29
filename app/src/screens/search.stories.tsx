@@ -1,5 +1,6 @@
 import type { SearchRow } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { StoryRoute } from "../ui/story-route";
 import { SearchScreen, type SearchSample } from "./search";
 
@@ -97,6 +98,23 @@ export const Offline: Story = { render: () => <Search entry="/search?q=חומר�
 
 /** More lines than one page: the month head of the last month waits, and the count says the total. */
 export const MorePages: Story = { render: () => <Search entry="/search?dir=expense" data={{ ...sample, total: 120 }} /> };
+
+/** FLOW-163 (board ReportEntrySearch): "מאזן" names a report. Its row comes first, and no line matches. */
+export const ReportShortcut: Story = {
+  render: () => <Search entry={`/search?q=${encodeURIComponent("מאזן")}`} />,
+  play: async ({ canvasElement }) => {
+    const link = await within(canvasElement).findByRole("link", { name: /מאזן/ });
+    await expect(link).toHaveAttribute("href", "/reports?kind=balance");
+  },
+};
+
+/** FLOW-163: "דוחות וילה" offers both reports on that project. */
+export const ReportShortcutProject: Story = {
+  render: () => <Search entry={`/search?q=${encodeURIComponent("דוחות וילה")}`} />,
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("link", { name: /רווח והפסד · וילה לדוגמה/ });
+  },
+};
 
 /**
  * A large income kept out of profit, with a project and a category: its one line ("date · project ·

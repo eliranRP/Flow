@@ -28,6 +28,8 @@ import { CompactBar } from "../ui/compact-bar";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { TopBand, usePageAtEnd } from "../ui/top-band";
 import { israelToday } from "../ui/date-math";
+import { DocumentIcon } from "../ui/icons";
+import { reportsTo } from "../reports";
 import { loansFigure } from "./project-overview";
 import type { RentCategory } from "../next-month-chart";
 import type { ProjectInvestment } from "./project-investment-data";
@@ -62,6 +64,19 @@ export function investmentLoansRow(data: ProjectInvestment, project: Project): {
   const entered = figures != null
     && (figures.purchaseMinor != null || figures.valueMinor != null || figures.arvMinor != null || figures.rehabMinor !== 0n);
   return entered ? {} : null;
+}
+
+/**
+ * FLOW-163 (board ReportEntryProject): דוחות on the band, before ⋯. It opens the reports already on
+ * this project: this year's P&L, with the balance sheet one tab away.
+ */
+export function ProjectReportsLink({ projectId, search }: { projectId: string; search: string }) {
+  return (
+    <Link className="ui-band-reports m-press" to={reportsTo("pnl", { kind: "project", id: projectId }, search)}>
+      <DocumentIcon size={20} />
+      <span>דוחות</span>
+    </Link>
+  );
 }
 
 export function ProjectCashOverview({
@@ -147,7 +162,12 @@ export function ProjectCashOverview({
         wordmark={false}
         example={example}
         leading={<BackButton fallback={`/projects${search}`} text="פרויקטים" onBand />}
-        trailing={menu}
+        trailing={(
+          <div className="ui-project-band-end">
+            <ProjectReportsLink projectId={project.id} search={search} />
+            {menu}
+          </div>
+        )}
         heroClassName="ui-band-hero-project"
         hero={
           <>

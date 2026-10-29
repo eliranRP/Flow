@@ -34,13 +34,13 @@ import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { israelToday } from "../ui/date-math";
 import { ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
 import { useProjectGroups, type ProjectGroups } from "./project-group-sheets";
-import { investmentLoansRow, ProjectCashOverview } from "./project-cash-screens";
+import { investmentLoansRow, ProjectCashOverview, ProjectReportsLink } from "./project-cash-screens";
 import { ProjectFormSheet } from "./project-form-sheet";
 import { ProjectMenu } from "./project-menu";
 import { projectAttentionRows, useProjectRecurring, type ProjectRecurringSample } from "./project-attention";
 import { toProjectInvestment, type ProjectInvestment } from "./project-investment-data";
 
-function ProjectLoading({ search, example }: { search: string; example?: ReactNode }) {
+function ProjectLoading({ projectId, search, example }: { projectId: string; search: string; example?: ReactNode }) {
   const holdWrites = useHoldWrites();
   const [menu, setMenu] = useState(false);
   return (
@@ -52,10 +52,15 @@ function ProjectLoading({ search, example }: { search: string; example?: ReactNo
         leading={
           <BackButton fallback={`/projects${search}`} onBand />
         }
-        trailing={holdWrites ? <ReservedMenuSlot /> : (
-          <IconButton label="עוד" onBand onClick={() => { setMenu(true); }}>
-            <MoreIcon />
-          </IconButton>
+        trailing={(
+          <div className="ui-project-band-end">
+            <ProjectReportsLink projectId={projectId} search={search} />
+            {holdWrites ? <ReservedMenuSlot /> : (
+              <IconButton label="עוד" onBand onClick={() => { setMenu(true); }}>
+                <MoreIcon />
+              </IconButton>
+            )}
+          </div>
         )}
         hero={
           <div className="ui-project-skel">
@@ -192,7 +197,7 @@ export function ProjectDetailScreen({
   const holdWrites = useHoldWrites();
   const online = useOnline();
   if (phase.kind === "loading") {
-    return <ProjectLoading search={search} example={example} />;
+    return <ProjectLoading projectId={sample?.id ?? projectId} search={search} example={example} />;
   }
   if (phase.kind === "error") {
     // FLOW-961: the band stays, as on Home: the project's name, what happened, נסו שוב and צריך עזרה?.
