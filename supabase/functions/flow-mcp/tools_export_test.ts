@@ -1,0 +1,137 @@
+// FLOW-162: export_report and the app's report route: the reports as a PDF or a CSV. Invented ids and names only.
+import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
+import { SAMPLE_BALANCE_BODY, SAMPLE_STATEMENT_BODY } from "../_shared/report_sample.ts";
+import { handle } from "./handler.ts";
+import { env } from "./handler_test_support.ts";
+import { callTool } from "./tools.ts";
+import { exportReport } from "./tools_export.ts";
+import { rpcOf } from "./tools_test_support.ts";
+
+const PROJECT = "b0000000-0000-4000-8000-0000000000e1";
+const COMPANY = "5eb3b1ca-b8b9-4322-9227-07d8e360ac82";
+const NOW = new Date("2026-10-31T07:15:00Z");
+
+function reads(name: string) {
+  if (name === "get_pnl_statement") return { status: 200, json: SAMPLE_STATEMENT_BODY };
+  if (name === "mcp_balance_sheet") return { status: 200, json: SAMPLE_BALANCE_BODY };
+  if (name === "get_dashboard") return { status: 200, json: { name: "נכסי הדוגמה בע״מ" } };
+  return { status: 404, json: null };
+}
+
+function codeOf(result: Awaited<ReturnType<typeof callTool>>): string | null {
+  return result.structuredContent.ok ? null : result.structuredContent.error.code;
+}
+
+const decode = (base64: string) => Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+
+Deno.test("export_report reads the P&L and makes a PDF, named for its dates, carried as a file", async () => {
+  const { calls, rpc } = rpcOf(reads);
+  const result = await exportReport({ from: "2026-01-01", to: "2026-10-31" }, rpc, NOW);
+  assertEquals(result.isError, false);
+  assertEquals(calls.map((call) => call.name), ["get_pnl_statement", "get_dashboard"]);
+  assertEquals(calls[0]?.body, { p_from: "2026-01-01", p_to: "2026-10-31", p_project_id: null, p_by_project: false, p_basis: null });
+  const file = result.files?.[0];
+  assertEquals(file?.mimeType, "application/pdf");
+  assertEquals(new TextDecoder().decode(decode(file?.base64 ?? "").slice(0, 5)), "%PDF-");
+  assertEquals(result.structuredContent.ok && result.structuredContent.data, {
+    file_name: "רווח-והפסד_2026-01-01_2026-10-31_כל-הפרויקטים.pdf",
+    mime_type: "application/pdf",
+    size_bytes: decode(file?.base64 ?? "").length,
+  });
+});
+
+Deno.test("export_report both: the balance sheet at the P&L's last day, unless as_of says otherwise; a CSV for Excel", async () => {
+  const { calls, rpc } = rpcOf(reads);
+  const both = await exportReport({ kind: "both", format: "csv", from: "2026-01-01", to: "2026-09-30", project_id: PROJECT }, rpc, NOW);
+  assertEquals(calls.find((call) => call.name === "mcp_balance_sheet")?.body, { p_as_of: "2026-09-30", p_project_id: PROJECT });
+  // ignoreBOM keeps the byte-order mark, which a default decoder drops.
+  const csv = new TextDecoder("utf-8", { ignoreBOM: true }).decode(decode(both.files?.[0]?.base64 ?? ""));
+  assert(csv.startsWith("﻿"));
+  assertStringIncludes(csv, "סה״כ הכנסות,,,USD,96200.00");
+  assertStringIncludes(csv, "התחייבויות והון,,USD,615000.00");
+  assertEquals(both.files?.[0]?.mimeType, "text/csv");
+  await exportReport({ kind: "balance", as_of: "2026-06-30" }, rpc, NOW);
+  assertEquals(calls.filter((call) => call.name === "mcp_balance_sheet").at(-1)?.body, { p_as_of: "2026-06-30", p_project_id: null });
+  // No date: today in Israel.
+  await exportReport({ kind: "balance" }, rpc, new Date("2026-10-31T22:30:00Z"));
+  assertEquals(calls.filter((call) => call.name === "mcp_balance_sheet").at(-1)?.body, { p_as_of: "2026-11-01", p_project_id: null });
+});
+
+Deno.test("export_report refuses a bad kind, format, range, date, project or flag before any read", async () => {
+  const { calls, rpc } = rpcOf(reads);
+  for (
+    const bad of [
+      { kind: "cash" },
+      { format: "xlsx" },
+      { from: "2026-01-01" },
+      { from: "2026-03-01", to: "2026-02-01" },
+      { as_of: "2026-02-30" },
+      { project_id: "nope" },
+      { project_id: PROJECT, by_project: true },
+      { by_project: "yes" },
+      { expand: 1 },
+      { basis: "accrual" },
+      { extra: 1 },
+    ]
+  ) {
+    assertEquals(codeOf(await callTool("export_report", bad, ["read"], rpc)), "validation", JSON.stringify(bad));
+  }
+  assertEquals(calls.length, 0);
+});
+
+Deno.test("export_report: another company's project is not_found; a failed read is refused", async () => {
+  const missing = rpcOf((name) => (name === "get_pnl_statement" ? { status: 200, json: null } : reads(name)));
+  assertEquals(codeOf(await callTool("export_report", { project_id: PROJECT }, ["read"], missing.rpc)), "not_found");
+  const down = rpcOf((name) => (name === "mcp_balance_sheet" ? { status: 500, json: null } : reads(name)));
+  assertEquals(codeOf(await callTool("export_report", { kind: "both" }, ["read"], down.rpc)), "refused");
+});
+
+type Seen = { url: string; authorization: string; company: string | null; body: unknown };
+
+function appDeps(seen: Seen[]) {
+  return {
+    env: (name: string) => env[name],
+    fetch: (input: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      seen.push({ url: input, authorization: headers.get("authorization") ?? "", company: headers.get("x-flow-company"), body: init?.body ? JSON.parse(String(init.body)) : null });
+      const name = input.split("/").pop() ?? "";
+      if (name === "user") return Promise.resolve(new Response(JSON.stringify({ id: "user-1" })));
+      const answer = reads(name);
+      return Promise.resolve(new Response(JSON.stringify(answer.json), { status: answer.status }));
+    },
+    now: () => NOW.getTime(),
+  };
+}
+
+const appRequest = (body: unknown, headers: Record<string, string> = {}) =>
+  new Request("http://127.0.0.1:54321/functions/v1/flow-mcp/report", {
+    method: "POST",
+    headers: { origin: "https://flow-app-dx5.pages.dev", authorization: "Bearer app-jwt", "content-type": "application/json", ...headers },
+    body: JSON.stringify(body),
+  });
+
+Deno.test("the app's report route reads as the signed-in user, on the company the app shows, and returns the file", async () => {
+  const seen: Seen[] = [];
+  const response = await handle(appRequest({ kind: "pnl", by_project: true }, { "x-flow-company": COMPANY.toUpperCase() }), appDeps(seen));
+  assertEquals(response.status, 200);
+  assertEquals(response.headers.get("content-type"), "application/pdf");
+  assertStringIncludes(response.headers.get("content-disposition") ?? "", `filename*=UTF-8''${encodeURIComponent("רווח-והפסד_2026-01-01_2026-10-31_לפי-פרויקט.pdf")}`);
+  assertEquals(response.headers.get("access-control-allow-origin"), "https://flow-app-dx5.pages.dev");
+  assertEquals(response.headers.get("access-control-expose-headers"), "content-disposition");
+  assertEquals(new TextDecoder().decode(new Uint8Array(await response.arrayBuffer()).slice(0, 5)), "%PDF-");
+  const statement = seen.find((call) => call.url.endsWith("/rpc/get_pnl_statement"));
+  assertEquals(statement?.authorization, "Bearer app-jwt");
+  assertEquals(statement?.company, COMPANY);
+  assertEquals((statement?.body as Record<string, unknown>).p_by_project, true);
+});
+
+Deno.test("the report route refuses a foreign origin, no session and bad arguments", async () => {
+  const seen: Seen[] = [];
+  assertEquals((await handle(appRequest({}, { origin: "https://evil.example" }), appDeps(seen))).status, 403);
+  const signedOut = { ...appDeps(seen), fetch: () => Promise.resolve(new Response("{}", { status: 401 })) };
+  assertEquals((await handle(appRequest({}), signedOut)).status, 401);
+  const bad = await handle(appRequest({ format: "docx" }), appDeps(seen));
+  assertEquals(bad.status, 400);
+  assertEquals((await bad.json()).error, "validation");
+  assertEquals(seen.some((call) => call.url.includes("/rpc/")), false);
+});

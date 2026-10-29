@@ -7,6 +7,7 @@ import { corsHeadersFor } from "../_shared/http.ts";
 import { companyHint } from "../_shared/owner.ts";
 import { SERVER_INSTRUCTIONS } from "./tools_guide_data.ts";
 import { callTool, isWriteTool, READ_TOOL_NAMES, scopeAllows, type ToolDefer, toolsFor } from "./tools.ts";
+import { buildReport, isBuilt, reportRequest } from "./tools_export.ts";
 import { signUserJwt, type SigningKey } from "./sign.ts";
 import { chargePreAuth, preAuthOverLimit, resetPreAuthGate } from "./preauth.ts";
 
@@ -47,12 +48,12 @@ const defaultDeps: Deps = {
 // finish step after a long pull) signs a fresh one.
 const RESIGN_AFTER_MS = 30_000;
 
-type Route = "mcp" | "mint" | "revoke" | "restore" | "status";
+type Route = "mcp" | "mint" | "revoke" | "restore" | "status" | "report";
 
 function routeOf(url: URL): Route {
   const parts = url.pathname.split("/").filter((part) => part.length > 0);
   const last = parts[parts.length - 1] ?? "";
-  if (last === "mint" || last === "revoke" || last === "restore" || last === "status") return last;
+  if (last === "mint" || last === "revoke" || last === "restore" || last === "status" || last === "report") return last;
   return "mcp";
 }
 
@@ -282,7 +283,7 @@ async function invokeFunction(
   }
 }
 
-async function userRpc(deps: Deps, jwt: string, name: string, body: Record<string, unknown>): Promise<{ status: number; json: unknown }> {
+async function userRpc(deps: Deps, jwt: string, name: string, body: Record<string, unknown>, company: string | null = null): Promise<{ status: number; json: unknown }> {
   const url = deps.env("SUPABASE_URL") ?? "";
   const key = publishableKey(deps);
   const response = await deps.fetch(`${url}/rest/v1/rpc/${name}`, {
@@ -291,6 +292,7 @@ async function userRpc(deps: Deps, jwt: string, name: string, body: Record<strin
       apikey: key,
       authorization: `Bearer ${jwt}`,
       "content-type": "application/json",
+      ...(company == null ? {} : { "x-flow-company": company }),
     },
     body: JSON.stringify(body),
   });
@@ -304,6 +306,40 @@ async function userRpc(deps: Deps, jwt: string, name: string, body: Record<strin
     }
   }
   return { status: response.status, json };
+}
+
+/**
+ * FLOW-162: the app's share button. The signed-in user's own session reads the reports (the company the
+ * app shows rides in x-flow-company, as on every app call) and gets export_report's file back as the body.
+ */
+async function handleReport(req: Request, deps: Deps): Promise<Response> {
+  const text = await cappedText(req);
+  if (text === "too_large") return jsonResponse(req, { error: "validation" }, 400);
+  let args: unknown = {};
+  try {
+    args = text === "" ? {} : JSON.parse(text);
+  } catch {
+    return jsonResponse(req, { error: "validation" }, 400);
+  }
+  if (args == null || typeof args !== "object" || Array.isArray(args)) return jsonResponse(req, { error: "validation" }, 400);
+  const request = reportRequest(args as Record<string, unknown>);
+  const refused = (result: { structuredContent: unknown }) => {
+    const error = (result.structuredContent as { error?: { code?: string; message?: string } }).error;
+    const code = error?.code ?? "refused";
+    return jsonResponse(req, { error: code, message: error?.message ?? code }, code === "validation" ? 400 : code === "not_found" ? 404 : 502);
+  };
+  if (!("kind" in request)) return refused(request);
+  const jwt = bearer(req);
+  const hint = companyHint(req);
+  const built = await buildReport(request, (name, body) => userRpc(deps, jwt, name, body, hint), new Date(nowMs(deps)));
+  if (!isBuilt(built)) return refused(built);
+  const headers = new Headers();
+  headers.set("content-type", built.mimeType);
+  headers.set("content-disposition", `attachment; filename="report.${request.format}"; filename*=UTF-8''${encodeURIComponent(built.name)}`);
+  headers.set("access-control-expose-headers", "content-disposition");
+  headers.set("cache-control", "no-store");
+  headers.set("x-flow-cf-connecting-ip", cfState(req));
+  return new Response(new Uint8Array(built.bytes), { status: 200, headers });
 }
 
 async function getUserId(deps: Deps, jwt: string): Promise<string | null> {
@@ -667,11 +703,16 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
       deps.waitUntil,
     );
     const text = JSON.stringify(result.structuredContent);
+    // A file (export_report) rides as an embedded resource after the text.
+    const files = (result.files ?? []).map((file) => ({
+      type: "resource",
+      resource: { uri: `flow://reports/${encodeURIComponent(file.name)}`, mimeType: file.mimeType, blob: file.base64 },
+    }));
     return reply({
       jsonrpc: "2.0",
       id,
       result: {
-        content: [{ type: "text", text }],
+        content: [{ type: "text", text }, ...files],
         structuredContent: result.structuredContent,
         isError: result.isError,
       },
@@ -709,6 +750,7 @@ export async function handle(req: Request, deps: Deps = defaultDeps): Promise<Re
     const response = await handleKeyChange(req, deps, userId, route);
     return withCors(response, origin);
   }
+  if (route === "report") return withCors(await handleReport(req, deps), origin);
   const response = await handleStatus(deps, req, userId);
   return withCors(response, origin);
 }

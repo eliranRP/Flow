@@ -28,6 +28,17 @@ export const LEDGER_READ_SPECS = [
     by_project: { type: "boolean" },
     basis: { type: ["string", "null"] },
   }, false),
+  spec("export_report", "The reports as a file to download or share (FLOW-162): the P&L, the balance sheet or both (kind pnl, balance or both, default pnl), as a PDF in Hebrew, A4, right to left, the reports screen's layout (format pdf, the default) or a CSV that opens in Excel (format csv: UTF-8 with a byte-order mark, one row per line of the report, amounts as decimals with a minus on money out). The P&L takes get_pnl_statement's from, to (both or neither; neither is all time), basis, and project_id or by_project true (a table with a column per project), and expand (default true: each category's sub-categories under it); the balance sheet takes as_of (default today; with kind both, default the P&L's to) and the same project_id. The numbers are get_pnl_statement's and get_balance_sheet's. Output: file_name, mime_type and size_bytes; the file itself comes as an embedded resource (base64 blob) in the result's content. Another company's project is not_found.", {
+    kind: { type: "string", enum: ["pnl", "balance", "both"] },
+    format: { type: "string", enum: ["pdf", "csv"] },
+    from: { type: ["string", "null"] },
+    to: { type: ["string", "null"] },
+    as_of: { type: ["string", "null"] },
+    project_id: { type: ["string", "null"] },
+    by_project: { type: "boolean" },
+    basis: { type: ["string", "null"] },
+    expand: { type: "boolean" },
+  }, false),
   ...PREPAID_READ_SPECS,
 ];
 

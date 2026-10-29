@@ -19,6 +19,8 @@ export type ToolDefer = (work: Promise<unknown>) => void;
 export type ToolResult = {
   isError: boolean;
   structuredContent: { ok: true; data: unknown } | { ok: false; error: { code: string; message: string; detail?: string } };
+  /** Files the result carries (export_report, FLOW-162): sent as embedded resources, base64. */
+  files?: { name: string; mimeType: string; base64: string }[];
 };
 
 /** A refusal. `detail`, when given, names the rule that failed (FLOW-949); most refusals have none. */

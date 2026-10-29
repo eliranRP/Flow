@@ -225,7 +225,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-159"></a>[FLOW-159](tasks/FLOW-159.md) | Prepaid: say when a schedule waits on a removed line, and test the job's deadlock skip | BACKLOG NIT |
 | <a id="flow-160"></a>[FLOW-160](tasks/FLOW-160.md) | Reports: one P&L statement read for the app, the MCP and the PDF | MCP |
 | <a id="flow-161"></a>[FLOW-161](tasks/FLOW-161.md) | Reports screens: P&L and balance sheet, from a card on Home | UI (design approved) |
-| <a id="flow-162"></a>[FLOW-162](tasks/FLOW-162.md) | Reports: share the P&L and balance sheet as a PDF | UI (design approved) |
+| <a id="flow-162"></a>[FLOW-162](tasks/FLOW-162.md) | Reports: share the P&L and balance sheet as a PDF or a CSV for Excel | UI (design approved) |
 | <a id="flow-163"></a>[FLOW-163](tasks/FLOW-163.md) | Reports: open them from a project page and from search | PLAN FIRST |
 | <a id="flow-164"></a>[FLOW-164](tasks/FLOW-164.md) | P&L statement test: a line with no category, and the shared fixture helpers | BACKLOG NIT |
 | <a id="flow-165"></a>[FLOW-165](tasks/FLOW-165.md) | Reports: open a balance-sheet account's movements | MCP + UI (design approved) |
