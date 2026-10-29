@@ -41,7 +41,7 @@ describe("the drill-down's description snippet (FLOW-170)", () => {
 
   it("cuts a description with no spaces at its punctuation, or at the match", () => {
     const slashes = "INV/2026/10/0042/BUILDING-B/WATERHEATER/REPLACEMENT/UNIT2/FINAL";
-    expect(shown(slashes, "unit2").slice(1)).toEqual(["…UNIT2/FINAL"]);
+    expect(shown(slashes, "unit2").slice(1)).toEqual(["…WATERHEATER/REPLACEMENT/UNIT2/FINAL", "…UNIT2/FINAL"]);
     const bare = "ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPheaterXYZ";
     expect(shown(bare, "heater").slice(1)).toEqual(["…heaterXYZ"]);
   });

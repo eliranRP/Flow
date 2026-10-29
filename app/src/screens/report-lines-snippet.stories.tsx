@@ -93,7 +93,8 @@ export const NoSpaces320: Story = {
   play: async ({ canvasElement }) => {
     const { title, drawn } = await searchOne(canvasElement, "unit2");
     await expect(drawn.startsWith("…")).toBe(true);
-    await expect(drawn.endsWith("UNIT2/FINAL")).toBe(true);
+    // Two parts before the match, as two words before it in a text with spaces.
+    await expect(drawn).toBe("…EXPANSION-TANK/UNIT2/FINAL");
     await expect(title != null && inView(title, "UNIT2")).toBe(true);
     await expect(title != null && titleLines(title) <= 3).toBe(true);
   },

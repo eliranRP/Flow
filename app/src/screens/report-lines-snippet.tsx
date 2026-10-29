@@ -80,7 +80,8 @@ function leadStart(text: string, start: number): number {
   let lead = start;
   for (let word = 0; word < LEAD_WORDS; word += 1) {
     let end = lead;
-    while (end > 0 && isSpace(text[end - 1])) end -= 1;
+    // Over the spaces and punctuation between the words ("room, ", "TANK/").
+    while (end > 0 && (isSpace(text[end - 1]) || BREAK.test(text[end - 1] ?? ""))) end -= 1;
     if (end === 0) return 0;
     const begin = wordStart(text, end);
     if (begin === end) break;
