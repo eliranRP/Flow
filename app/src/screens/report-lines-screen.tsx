@@ -10,7 +10,7 @@ import { categoryName, dateRangeText } from "../reports";
 import { Amount } from "../ui/amount";
 import { PageLoadFailed, useOnline } from "../ui/band-states";
 import { Button } from "../ui/button";
-import { HEBREW_MONTHS, formatDisplay } from "../ui/date-math";
+import { HEBREW_MONTHS } from "../ui/date-math";
 import { rowSource } from "../ui/line-marks";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
@@ -102,19 +102,21 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
     queryFn: ({ pageParam }) => fetchPage(args, currency, pageParam),
     getNextPageParam: (last, pages) => (last.has_more ? pages.length * PAGE : undefined),
   });
-  const all = sample?.rows ?? read.data?.pages.flatMap((page) => page.rows) ?? null;
-  const rows = all == null ? null : args.projectName == null ? all : all.filter((row) => row.project_name === args.projectName);
-  const hasMore = sample?.hasMore ?? read.hasNextPage;
-  // The read has no project filter, so a one-project drill-down filters the loaded pages: read them all first.
-  const { fetchNextPage, hasNextPage, isFetchingNextPage } = read;
+  // The read has no project filter, so a one-project drill-down filters the loaded pages: it reads them all
+  // first, and shows the skeleton until then rather than a part of the total.
+  const { fetchNextPage, hasNextPage, isFetchingNextPage, isFetchNextPageError } = read;
   const filterByProject = args.projectName != null;
+  const all = sample?.rows ?? read.data?.pages.flatMap((page) => page.rows) ?? null;
+  const reading = sample == null && filterByProject && hasNextPage;
+  const rows = all == null || reading ? null : args.projectName == null ? all : all.filter((row) => row.project_name === args.projectName);
+  const hasMore = sample?.hasMore ?? read.hasNextPage;
   useEffect(() => {
-    if (filterByProject && hasNextPage && !isFetchingNextPage) void fetchNextPage();
-  }, [filterByProject, hasNextPage, isFetchingNextPage, fetchNextPage]);
+    if (filterByProject && hasNextPage && !isFetchingNextPage && !isFetchNextPageError) void fetchNextPage();
+  }, [filterByProject, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
   const title = categoryName(args.name);
   // Back to the report, with its own choices (the drill keys ride along and are ignored there).
   const back = `/reports${location.search}`;
-  const header = <ScreenHeader layout="stacked" title={title} backTo={back} backText="דוחות" subtitle={dateRangeText(args.from, args.to, formatDisplay)} />;
+  const header = <ScreenHeader layout="stacked" title={title} backTo={back} backText="דוחות" subtitle={dateRangeText(args.from, args.to)} />;
   if (rows == null) {
     return (
       <div className="ui-rep-screen">

@@ -1,5 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   REPORTS_BALANCE,
   REPORTS_BALANCE_SUSPENSE,
@@ -84,12 +87,48 @@ export const PeriodSheet: Story = {
   },
 };
 
+function BrowserReports() {
+  const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+  const [router] = useState(() => createBrowserRouter([
+    { path: "*", element: <ReportsScreen sample={{ today: REPORTS_TODAY, statement: REPORTS_STATEMENT, balance: REPORTS_BALANCE, projects: REPORTS_BY_PROJECT }} /> },
+  ]));
+  return (
+    <QueryClientProvider client={client}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
+  );
+}
+
+/**
+ * The browser's own history (not a memory router, which the screen tests use): closing the sheet steps back
+ * over its entry, and the address still holds the pick afterwards.
+ */
+export const PeriodPickBrowserHistory: Story = {
+  name: "Sheet · period pick in the browser's history",
+  render: () => <BrowserReports />,
+  play: async ({ canvasElement }) => {
+    const before = `${window.location.pathname}${window.location.search}`;
+    try {
+      const canvas = within(canvasElement);
+      await userEvent.click(canvas.getByRole("button", { name: "השנה · 2026" }));
+      const sheet = await within(document.body).findByRole("dialog", { name: "תקופה" });
+      await userEvent.click(within(sheet).getByRole("radio", { name: /חודש שעבר/ }));
+      await waitFor(async () => { await expect(within(document.body).queryByRole("dialog", { name: "תקופה" })).toBeNull(); });
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      await expect(new URLSearchParams(window.location.search).get("period")).toBe("last_month");
+      await expect(canvas.getByRole("button", { name: /^חודש שעבר/ })).toBeInTheDocument();
+    } finally {
+      window.history.replaceState(null, "", before);
+    }
+  },
+};
+
 export const CustomDates: Story = {
   name: "Sheet · custom dates",
   render: () => <Reports entry="/reports?period=custom&from=2026-10-05&to=2026-10-20" />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "05/10/2026–20/10/2026" }));
+    await userEvent.click(canvas.getByRole("button", { name: "\u206605/10/2026–20/10/2026\u2069" }));
   },
 };
 
@@ -140,6 +179,11 @@ export const CategoryLines: Story = {
       />
     </StoryRoute>
   ),
+  play: async ({ canvasElement }) => {
+    // A side's total is not a loss: the figure keeps the text colour, never the loss red.
+    const figure = canvasElement.querySelector(".ui-rep-summary-figure .ui-num");
+    await expect(figure?.classList.contains("ui-loss")).toBe(false);
+  },
 };
 
 export const HomeCard: Story = {

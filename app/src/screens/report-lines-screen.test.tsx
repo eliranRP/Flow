@@ -1,9 +1,29 @@
-import { fireEvent, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
 import { HomeReportsCard } from "./home-reports-card";
 import { linesByMonth, linesByProject, ReportLinesScreen, reportLinesArgs, type ReportLinesSample } from "./report-lines-screen";
 import { REPORTS_BALANCE, REPORTS_STATEMENT } from "../dev/reports-sample";
+
+const rpc = vi.hoisted(() => ({
+  calls: [] as Array<{ name: string; args: unknown }>,
+  impl: (_name: string, _args?: unknown): Promise<{ data: unknown; error: { message: string } | null }> =>
+    Promise.resolve({ data: null, error: { message: "down" } }),
+}));
+
+vi.mock("../lib/supabase", () => ({
+  getSupabase: () => ({
+    rpc: (name: string, args?: unknown) => {
+      rpc.calls.push({ name, args });
+      return rpc.impl(name, args);
+    },
+  }),
+}));
+
+beforeEach(() => {
+  rpc.calls = [];
+  rpc.impl = () => Promise.resolve({ data: null, error: { message: "down" } });
+});
 
 function line(id: string, date: string, dollars: number, project: string | null, supplier = "Northside Hardware") {
   return {
@@ -62,6 +82,26 @@ describe("ReportLinesScreen", () => {
     expect(document.querySelector(".ui-rep-summary")?.textContent).toContain("−$1,450");
     // One project: no split.
     expect(screen.queryByRole("button", { name: /לפי פרויקט/ })).toBeNull();
+  });
+
+  it("reads every page before it sums one project's lines, and shows no part of the total until then", async () => {
+    const wire = (row: ReturnType<typeof line>) => ({ ...row, amount_minor: Number(row.amount_minor) });
+    let releaseSecond: () => void = () => {};
+    const second = new Promise<void>((resolve) => { releaseSecond = resolve; });
+    rpc.impl = async (name, args) => {
+      if (name !== "get_breakdown_lines") return { data: null, error: { message: "down" } };
+      const offset = (args as { p_offset: number }).p_offset;
+      if (offset === 0) return { data: { rows: [wire(line("0011", "2026-10-02", 300, "Maple Ave")), wire(line("0012", "2026-10-01", 500, "Maple Ave"))], has_more: true }, error: null };
+      await second;
+      return { data: { rows: [wire(line("0013", "2026-09-30", 700, "Cedar St")), wire(line("0014", "2026-09-29", 200, "Cedar St"))], has_more: false }, error: null };
+    };
+    renderWithProviders(<ReportLinesScreen />, { route: `${ROUTE}&pname=Cedar+St` });
+    await waitFor(() => { expect(rpc.calls).toHaveLength(2); });
+    expect(document.querySelector(".ui-rep-summary")).toBeNull();
+    releaseSecond();
+    await waitFor(() => { expect(document.querySelector(".ui-rep-summary")?.textContent).toContain("−$900"); });
+    expect(screen.getByText("2 תנועות")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "עוד תנועות" })).toBeNull();
   });
 
   it("offers more lines when the read has more", () => {

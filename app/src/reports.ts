@@ -150,7 +150,7 @@ function monthName(month: number): string {
 export function pnlPresetLabel(kind: PnlPreset, today: string = israelToday()): { label: string; dates: string } {
   const { y, m } = parts(today);
   const range = pnlRange({ kind }, today);
-  const span = range.from == null || range.to == null ? "כל התאריכים" : `${formatDisplay(range.from)}–${formatDisplay(range.to)}`;
+  const span = dateRangeText(range.from, range.to);
   switch (kind) {
     case "month":
       return { label: "החודש", dates: `${monthName(m)} ${String(y)}` };
@@ -170,7 +170,7 @@ export function pnlPresetLabel(kind: PnlPreset, today: string = israelToday()): 
 }
 
 export function balancePresetLabel(kind: BalancePreset, today: string = israelToday()): { label: string; dates: string } {
-  const date = formatDisplay(balanceDate({ kind }, today));
+  const date = ltr(formatDisplay(balanceDate({ kind }, today)));
   switch (kind) {
     case "today":
       return { label: "היום", dates: date };
@@ -185,13 +185,13 @@ export function balancePresetLabel(kind: BalancePreset, today: string = israelTo
 
 /** The period chip's text. */
 export function pnlChipLabel(period: PnlPeriod, today: string = israelToday()): string {
-  if (period.kind === "custom") return `${formatDisplay(period.from)}–${formatDisplay(period.to)}`;
+  if (period.kind === "custom") return dateRangeText(period.from, period.to);
   const { label } = pnlPresetLabel(period.kind, today);
   return period.kind === "year" ? `${label} · ${today.slice(0, 4)}` : label;
 }
 
 export function balanceChipLabel(asOf: BalanceDate, today: string = israelToday()): string {
-  if (asOf.kind === "custom") return `נכון ל־${formatDisplay(asOf.date)}`;
+  if (asOf.kind === "custom") return `נכון ל־${ltr(formatDisplay(asOf.date))}`;
   return balancePresetLabel(asOf.kind, today).label;
 }
 
@@ -334,7 +334,12 @@ export function writeCollapsed(kind: ReportKind, collapsed: ReadonlySet<string>)
   }
 }
 
-/** A date range as "05/10/2026–20/10/2026", kept left to right inside a Hebrew line (an LTR isolate). */
-export function dateRangeText(from: string | null, to: string | null, display: (iso: string) => string): string {
-  return from == null || to == null ? "כל התאריכים" : `\u2066${display(from)}–${display(to)}\u2069`;
+/** Text kept left to right inside a Hebrew line (an LTR isolate): a date or a date range. */
+export function ltr(text: string): string {
+  return `\u2066${text}\u2069`;
+}
+
+/** A date range as "05/10/2026–20/10/2026", kept left to right; "כל התאריכים" with no range. */
+export function dateRangeText(from: string | null, to: string | null): string {
+  return from == null || to == null ? "כל התאריכים" : ltr(`${formatDisplay(from)}–${formatDisplay(to)}`);
 }

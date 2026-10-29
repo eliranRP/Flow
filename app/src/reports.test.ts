@@ -47,6 +47,7 @@ describe("the report's choices in the URL", () => {
     expect(reportStateOf(new URLSearchParams("scope=project&project=nope")).scope).toEqual({ kind: "all" });
     expect(reportStateOf(new URLSearchParams("period=week&asof=yesterday")).period).toEqual({ kind: "year" });
     expect(reportStateOf(new URLSearchParams("asof=custom&date=2026-13-01")).asOf).toEqual({ kind: "today" });
+    expect(reportStateOf(new URLSearchParams("kind=balance&scope=by_project")).scope).toEqual({ kind: "all" });
   });
 });
 
@@ -68,9 +69,9 @@ describe("preset dates", () => {
 
   it("name themselves on the chip and in the sheet", () => {
     expect(pnlChipLabel({ kind: "year" }, TODAY)).toBe("השנה · 2026");
-    expect(pnlChipLabel({ kind: "custom", from: "2026-10-05", to: "2026-10-20" }, TODAY)).toBe("05/10/2026–20/10/2026");
+    expect(pnlChipLabel({ kind: "custom", from: "2026-10-05", to: "2026-10-20" }, TODAY)).toBe("\u206605/10/2026–20/10/2026\u2069");
     expect(pnlPresetLabel("last_month", TODAY)).toEqual({ label: "חודש שעבר", dates: "ספטמבר 2026" });
-    expect(balanceChipLabel({ kind: "custom", date: "2026-06-30" }, TODAY)).toBe("נכון ל־30/06/2026");
+    expect(balanceChipLabel({ kind: "custom", date: "2026-06-30" }, TODAY)).toBe("נכון ל־\u206630/06/2026\u2069");
     expect(balanceChipLabel({ kind: "today" }, TODAY)).toBe("היום");
   });
 

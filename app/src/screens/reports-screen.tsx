@@ -8,6 +8,7 @@ import {
   balanceDate,
   balanceEmpty,
   dateRangeText,
+  ltr,
   equityTotal,
   pnlChipLabel,
   pnlRange,
@@ -134,7 +135,7 @@ export function ReportsScreen({ sample }: { sample?: ReportsSample } = {}) {
   const scopeLabel = state.scope.kind === "all" ? "כל הפרויקטים" : state.scope.kind === "by_project" ? "לפי פרויקט" : (projectName ?? "פרויקט");
   const periodLabel = state.kind === "pnl" ? pnlChipLabel(state.period, today) : balanceChipLabel(state.asOf, today);
   const range = pnlRange(state.period, today);
-  const rangeText = dateRangeText(range.from, range.to, formatDisplay);
+  const rangeText = dateRangeText(range.from, range.to);
 
   const head = (
     <div className="ui-rep-head-controls">
@@ -230,7 +231,7 @@ export function ReportsScreen({ sample }: { sample?: ReportsSample } = {}) {
             label={state.scope.kind === "project" ? `הון עצמי · ${projectName ?? ""}` : "הון עצמי"}
             amount={equityTotal(first)}
             currency={first.currency}
-            sub={`${first.balanced && first.warnings.length === 0 ? "מאוזן · " : ""}נכון ל־\u2066${formatDisplay(balanceDate(state.asOf, today))}\u2069`}
+            sub={`${first.balanced && first.warnings.length === 0 ? "מאוזן · " : ""}נכון ל־${ltr(formatDisplay(balanceDate(state.asOf, today)))}`}
             ok={first.balanced && first.warnings.length === 0}
           />
         ) : null}
