@@ -6,4 +6,4 @@
 - [ ] The PDF follows the spec note: A4, Rubik embedded, right to left, header and footer on every page, repeated table headers, rows that never split, a page per report, the by-project page.
 - [ ] The assistant gets the same file (an MCP tool), or the plan says why not.
 
-**Decisions needed:** where the file is made (on the phone from the same read, or on the server so the MCP can return it); a short plan before the build.
+**Decided** (2026-10-29, owner asked to keep building; the lane's default, open to the owner's change): the file is made on the phone from the same reads as the screen (`get_pnl_statement`, `get_balance_sheet`), so no new server is needed; the assistant reads the same numbers through those two MCP tools.
