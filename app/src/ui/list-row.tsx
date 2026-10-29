@@ -314,8 +314,9 @@ export function ListRow(props: ListRowProps) {
   const CopyMain = blockCopy ? "div" : "span";
   const CopyText = blockCopy ? "div" : "span";
   // FLOW-125: a Latin-only title in an RTL row runs LTR, so a long one is cut at its end, not its start.
-  // A title with any Hebrew keeps the row's direction.
-  const autoLtr = !props.ltrTitle && typeof props.title === "string" && textDir(props.title) === "ltr" && !/[א-ת]/.test(props.title);
+  // A title with any Hebrew keeps the row's direction. A drawn snippet's direction is its whole text's (FLOW-170).
+  const titleString = typeof props.title === "string" ? props.title : props.titleFull;
+  const autoLtr = !props.ltrTitle && titleString != null && textDir(titleString) === "ltr" && !/[א-ת]/.test(titleString);
   const titleClass = cx(
     "ui-row-title",
     props.muted && "ui-row-title-muted",
