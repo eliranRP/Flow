@@ -515,8 +515,10 @@ function externalName(name: string | undefined): string | undefined {
   return name == null ? undefined : `${name} ${NEW_TAB}`;
 }
 
-function rowName(props: { label?: string; title: ReactNode }): string | undefined {
+function rowName(props: { label?: string; title: ReactNode; titleFull?: string }): string | undefined {
   if (props.label) return props.label;
+  // A snippet title names the row by its whole text, as the content does (FLOW-167).
+  if (props.titleFull != null) return props.titleFull;
   return typeof props.title === "string" ? props.title : undefined;
 }
 

@@ -168,7 +168,17 @@ describe("ListRow", () => {
     expect(title).toHaveClass("ui-row-title-wrap");
     expect(title?.querySelector("[aria-hidden='true']")?.textContent).toBe("…labour, inspection");
     expect(title?.querySelector(".sr-only")).toBeNull();
-    expect(screen.getByRole("link")).toHaveTextContent("Service visit, parts, labour, inspection");
+    expect(screen.getByRole("link")).toHaveAccessibleName(/^Service visit, parts, labour, inspection/);
+    expect(screen.getByRole("link")).not.toHaveAccessibleName(/…/);
+  });
+
+  it("names a snippet row with a described hint by its whole title (FLOW-167)", () => {
+    render(
+      <MemoryRouter>
+        <ListRow variant="transaction" title="…labour, inspection" titleFull="Service visit, parts, labour, inspection" wrapTitle hint="06/08" describeHint agorot={100n} sign="out" source="bank" href="/transactions/1" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("link")).toHaveAccessibleName("Service visit, parts, labour, inspection");
   });
 
   it("drops the chevron on a static row and exposes aria-expanded on a disclosure", () => {

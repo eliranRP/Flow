@@ -312,7 +312,7 @@ export const TwoCutParts: Story = {
 
 /**
  * FLOW-167: a title a search found in a description wraps, at most three lines, and a snippet keeps the
- * whole text for screen readers (`titleFull`). Drawn without a search, so clip-check measures the clamp.
+ * whole text for screen readers (`titleFull`). clip-check measures width only, so the play checks the lines.
  */
 export const WrapTitle: Story = {
   args: { variant: "transaction", title: "…parts, labour, inspection 120", layout: "flat" },

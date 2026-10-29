@@ -125,16 +125,31 @@ const SNIPPET_FROM = 24;
 const SNIPPET_WORDS = 2;
 
 /**
+ * Where a search word is in the description, matched as `lineMatches` matches it (`searchText`: "1388"
+ * finds "1,388", `בע"מ` finds "בע״מ"), from the start of the word it is in; -1 when it is not there.
+ */
+function wordStart(description: string, word: string): number {
+  if (!searchText(description).includes(word)) return -1;
+  const lower = description.toLowerCase();
+  // The plain text first; else the shortest start of the description whose search text holds the word ends in it.
+  let end = lower.length === description.length ? lower.indexOf(word) + 1 : 0;
+  for (let length = 1; end === 0 && length <= description.length; length += 1) {
+    if (searchText(description.slice(0, length)).includes(word)) end = length;
+  }
+  let start = Math.max(end - 1, 0);
+  while (start > 0 && !/\s/.test(description[start - 1] ?? "")) start -= 1;
+  return start;
+}
+
+/**
  * The description as a search shows it: whole, or, when the first matched word starts late, from a word
  * boundary a few words before it after a leading "…", so the word is in the title's three lines.
  */
 export function descriptionSnippet(description: string, query: string): string {
-  const lower = description.toLowerCase();
-  const starts = searchText(query).split(" ").filter((word) => word !== "").map((word) => lower.indexOf(word)).filter((index) => index >= 0);
+  const starts = searchText(query).split(" ").filter((word) => word !== "").map((word) => wordStart(description, word)).filter((index) => index >= 0);
   if (starts.length === 0) return description;
-  const at = Math.min(...starts);
-  if (at <= SNIPPET_FROM) return description;
-  let start = at;
+  let start = Math.min(...starts);
+  if (start <= SNIPPET_FROM) return description;
   for (let word = 0; word < SNIPPET_WORDS; word += 1) {
     while (start > 0 && /\s/.test(description[start - 1] ?? "")) start -= 1;
     while (start > 0 && !/\s/.test(description[start - 1] ?? "")) start -= 1;

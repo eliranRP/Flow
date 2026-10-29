@@ -195,6 +195,11 @@ describe("the drill-down's search", () => {
     expect(lineText(long, "labour")).toEqual({ title: "…parts and labour, unit 2", full: long.description, hint: "05/09 · Anytime Mailbox", wrap: true });
     expect(descriptionSnippet("Annual renewal", "renewal")).toBe("Annual renewal");
     expect(descriptionSnippet("החלפת לוח החשמל הראשי בקומת הכניסה, יחידה 4", "יחידה")).toBe("…בקומת הכניסה, יחידה 4");
+    // The word is found as the search matched it: a figure without its comma or sign, Hebrew gershayim typed as ".
+    expect(descriptionSnippet("Quarterly service visit for the boiler room, refund −$1,388.00 to tenant", "-$1,388")).toBe("…room, refund −$1,388.00 to tenant");
+    expect(descriptionSnippet("חשבונית מספר 4471 עבור עבודות אינסטלציה, חברת אבג בע״מ", 'בע"מ')).toBe("…חברת אבג בע״מ");
+    // A match inside a word counts from that word's start.
+    expect(descriptionSnippet("Quarterly service visit for the shared community laundry", "unit")).toBe("…the shared community laundry");
     expect(searchPath(" rent ", "none", "")).toBe("/search?q=rent&category=none");
     expect(searchPath("rent", "c1", "?preview=empty")).toBe("/search?preview=empty&q=rent&category=c1");
   });
