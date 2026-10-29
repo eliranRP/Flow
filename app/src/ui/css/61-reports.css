@@ -201,9 +201,14 @@
   text-overflow: ellipsis;
 }
 
+/* The amounts form one column: each ends at the same point (its ones digit), up to −$999,999, so a
+   shorter or positive figure lines up under a longer one. */
 .ui-rep-row-amount {
   flex: none;
+  min-inline-size: 9ch;
   font-size: var(--type-body-size);
+  font-variant-numeric: tabular-nums lining-nums;
+  text-align: right;
 }
 
 .ui-rep-row-amount .ui-num {
@@ -218,6 +223,12 @@
 
 .ui-rep-rows-kept .ui-rep-row-amount {
   opacity: 0.6;
+}
+
+/* Kept-out rows open nothing, so they have no chevron: keep its slot (16px icon + the row's 8px gap)
+   so their amounts end on the P&L's one column. */
+.ui-rep-rows-kept .ui-rep-row-link {
+  padding-inline-end: var(--space-6);
 }
 
 .ui-rep-total {
@@ -408,4 +419,21 @@
 
 .ui-rep-share > p {
   margin: 0;
+}
+
+/* The drill-down's search: the field, then one line on what it found. */
+.ui-rep-search {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-block: var(--space-2);
+}
+
+.ui-rep-search > p {
+  margin: 0;
+}
+
+/* The status line stays mounted for screen readers; empty, it takes back the gap it would leave. */
+.ui-rep-search > p:empty {
+  margin-block-start: calc(var(--space-1) * -1);
 }
