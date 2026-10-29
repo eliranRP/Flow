@@ -55,6 +55,7 @@ insert into pg_allowed (sig) values
     ('forget_line_category(uuid,uuid,uuid)'),
     ('get_breakdown_lines(text,text,text,text,date,date,text,boolean,integer,integer)'),
     ('get_breakdown(text,date,date,text,text)'),
+    ('get_pnl_statement(date,date,uuid,boolean,text)'),
     ('get_dashboard(date,date,text)'),
     ('get_line_journal(uuid)'),
     ('get_line_journal_copies(uuid)'),
