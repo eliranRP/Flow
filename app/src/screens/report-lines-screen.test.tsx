@@ -73,7 +73,7 @@ describe("ReportLinesScreen", () => {
 
 describe("HomeReportsCard", () => {
   it("opens the P&L with this year's net profit and the balance sheet with today's equity", () => {
-    renderWithProviders(<HomeReportsCard today="2026-10-31" search="" enabled={false} sample={{ statement: REPORTS_STATEMENT, balance: REPORTS_BALANCE }} />);
+    renderWithProviders(<HomeReportsCard today="2026-10-31" search="" sample={{ statement: REPORTS_STATEMENT, balance: REPORTS_BALANCE }} />);
     const pnl = screen.getByRole("link", { name: /רווח והפסד/ });
     expect(pnl.getAttribute("href")).toBe("/reports");
     expect(pnl.textContent).toContain("$29,000");
@@ -83,8 +83,15 @@ describe("HomeReportsCard", () => {
   });
 
   it("keeps the preview flag on its links and shows a dash before the reads", () => {
-    renderWithProviders(<HomeReportsCard today="2026-10-31" search="?preview=1" enabled={false} />);
+    renderWithProviders(<HomeReportsCard today="2026-10-31" search="?preview=1" sample={{}} />);
     expect(screen.getByRole("link", { name: /מאזן/ }).getAttribute("href")).toBe("/reports?kind=balance&preview=1");
     expect(document.querySelectorAll(".ui-home-rep-figure-empty")).toHaveLength(2);
+  });
+
+  it("says when its reads failed, with a retry, and keeps both ways in", async () => {
+    renderWithProviders(<HomeReportsCard today="2026-10-31" search="" />);
+    expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    expect(screen.getByText("לא הצלחנו לטעון.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /רווח והפסד/ })).toBeInTheDocument();
   });
 });

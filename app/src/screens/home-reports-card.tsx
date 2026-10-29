@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { equityTotal, type BalanceSheet, type Statement } from "../reports";
 import { Amount } from "../ui/amount";
+import { useOnline } from "../ui/band-states";
+import { FailureLine } from "../ui/empty-state";
 import { ChevronIcon, DocumentIcon } from "../ui/icons";
 import { useBalanceSheet, useStatement } from "../use-reports";
 
@@ -21,12 +23,14 @@ function Figure({ minor, currency }: { minor: bigint | null; currency: string })
 
 /**
  * FLOW-161 (board "Option 2 · Home, דוחות card last", owner's pick 2026-10-28): the last card on Home. Two
- * halves open the reports: רווח והפסד with this year's net profit, מאזן with today's equity. The reads start
- * only once Home has its figures (`enabled`), so the card never slows Home's first paint.
+ * halves open the reports: רווח והפסד with this year's net profit, מאזן with today's equity. A figure is a
+ * dash until its read lands; a failed read says so in the foot, with נסו שוב. A `sample` reads nothing.
  */
-export function HomeReportsCard({ today, search, enabled, sample }: { today: string; search: string; enabled: boolean; sample?: HomeReportsSample }) {
-  const statementRead = useStatement(YEAR_PNL, today, enabled && sample == null);
-  const balanceRead = useBalanceSheet(TODAY_BALANCE, today, enabled && sample == null);
+export function HomeReportsCard({ today, search, sample }: { today: string; search: string; sample?: HomeReportsSample }) {
+  const online = useOnline();
+  const statementRead = useStatement(YEAR_PNL, today, sample == null);
+  const balanceRead = useBalanceSheet(TODAY_BALANCE, today, sample == null);
+  const failed = sample == null && ((statementRead.failed && statementRead.data == null) || (balanceRead.failed && balanceRead.data == null));
   const statement = sample?.statement ?? statementRead.data ?? null;
   const balance = sample?.balance ?? balanceRead.data ?? null;
   const pnl = statement?.currencies[0] ?? null;
@@ -57,7 +61,11 @@ export function HomeReportsCard({ today, search, enabled, sample }: { today: str
           <span className="ui-home-rep-sub">הון עצמי · היום</span>
         </Link>
       </div>
-      <p className="ui-home-rep-foot">תאריכים, פרויקטים, פירוט ושיתוף PDF בתוך הדוח</p>
+      {failed ? (
+        <FailureLine offline={!online} onRetry={() => { statementRead.refetch(); balanceRead.refetch(); }} />
+      ) : (
+        <p className="ui-home-rep-foot">תאריכים, פרויקטים, פירוט ושיתוף PDF בתוך הדוח</p>
+      )}
     </section>
   );
 }

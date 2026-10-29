@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { getSupabase } from "./lib/supabase";
 import { loadReadSchemas } from "./load-read-schemas";
 import { useHomePreview } from "./preview";
@@ -54,7 +54,6 @@ export function useStatement(state: ReportState, today: string, enabled = true):
   const query = useQuery({
     queryKey: ["dashboard", "pnl-statement", preview, args.from ?? "", args.to ?? "", args.projectId ?? "", args.byProject],
     enabled: enabled && preview === "off",
-    placeholderData: keepPreviousData,
     queryFn: () => fetchStatement(args),
   });
   return { data: query.data, pending: query.isPending, failed: query.isError, readAt: query.dataUpdatedAt, refetch: () => { void query.refetch(); } };
@@ -68,13 +67,16 @@ export function useBalanceSheet(state: ReportState, today: string, enabled = tru
   const query = useQuery({
     queryKey: ["balance-sheet", preview, asOf, projectId ?? ""],
     enabled: enabled && preview === "off",
-    placeholderData: keepPreviousData,
     queryFn: () => fetchBalanceSheet(asOf, projectId),
   });
   return { data: query.data, pending: query.isPending, failed: query.isError, readAt: query.dataUpdatedAt, refetch: () => { void query.refetch(); } };
 }
 
-/** The projects the picker lists: every project with a line this period, from the by-project statement. */
+/**
+ * The projects the picker lists, from the by-project statement: on the P&L every project with a line this
+ * period; on the balance sheet every project with a line at any time (a balance has no period).
+ */
 export function useReportProjects(state: ReportState, today: string, enabled: boolean): ReportRead<Statement> {
-  return useStatement({ ...state, scope: { kind: "by_project" } }, today, enabled);
+  const period = state.kind === "balance" ? ({ kind: "all" } as const) : state.period;
+  return useStatement({ ...state, period, scope: { kind: "by_project" } }, today, enabled);
 }

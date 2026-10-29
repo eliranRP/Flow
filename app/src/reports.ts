@@ -51,7 +51,8 @@ export function reportStateOf(params: URLSearchParams): ReportState {
   const scopeName = params.get("scope");
   const project = params.get("project");
   let scope: ReportScope = { kind: "all" };
-  if (scopeName === "by_project") scope = { kind: "by_project" };
+  // The balance sheet has no by-project view: a link that asks for one shows all projects, with that chip not pressed.
+  if (scopeName === "by_project" && kind === "pnl") scope = { kind: "by_project" };
   else if (scopeName === "project" && project != null && UUID.test(project)) scope = { kind: "project", id: project };
   return { kind, period, asOf, scope };
 }
@@ -331,4 +332,9 @@ export function writeCollapsed(kind: ReportKind, collapsed: ReadonlySet<string>)
   } catch {
     // Storage off (a private window): the page still works, it just forgets.
   }
+}
+
+/** A date range as "05/10/2026–20/10/2026", kept left to right inside a Hebrew line (an LTR isolate). */
+export function dateRangeText(from: string | null, to: string | null, display: (iso: string) => string): string {
+  return from == null || to == null ? "כל התאריכים" : `\u2066${display(from)}–${display(to)}\u2069`;
 }

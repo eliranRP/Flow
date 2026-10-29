@@ -239,6 +239,8 @@ describe("Home's first paint waits on cash_months alone", () => {
       if (name === "cash_months") return Promise.resolve({ data: cash, error: null });
       if (name === "get_dashboard") return Promise.resolve(fail ? { data: null, error: { message: "db down" } } : { data: dashboard(4), error: null });
       if (name === "list_unpaid" || name === "list_missing_bills") return Promise.resolve({ data: [], error: null });
+      // The reports card's reads stay out of this: they wait.
+      if (name === "get_pnl_statement" || name === "mcp_balance_sheet") return new Promise(() => {});
       return Promise.resolve({ data: null, error: null });
     };
     renderWithProviders(<HomeScreen />);

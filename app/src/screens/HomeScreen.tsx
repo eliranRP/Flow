@@ -269,7 +269,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       onStepMonth={navigateTo}
       offlineSince={previewing || online ? null : cash.dataUpdatedAt}
       checklist={isCurrent ? <SetupHomeSlot emptyHome={false} /> : null}
-      reports={previewing ? null : <HomeReportsCard today={today} search={search} enabled />}
+      reports={previewing ? null : <HomeReportsCard today={today} search={search} />}
       weekly={weekly == null || weeklyCardHidden(weekly) ? null : (
         <Suspense fallback={null}>
           <WeeklySummaryCardSlot weekStart={weekly} />

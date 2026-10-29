@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { useLocation } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   REPORTS_BALANCE,
@@ -154,6 +154,20 @@ describe("ReportsScreen · the sheets", () => {
     const sheet = screen.getByRole("dialog", { name: "פרויקטים" });
     fireEvent.click(within(sheet).getByRole("radio", { name: /Maple Ave/ }));
     await waitFor(() => { expect(where()).toBe(`/reports?scope=project&project=${REPORTS_PROJECT_IDS.maple}`); });
+  });
+
+  it("keeps the pick in the browser's history once the sheet has stepped back over its entry", async () => {
+    window.history.replaceState(null, "", "/reports");
+    const router = createBrowserRouter([
+      { path: "/reports", element: <ReportsScreen sample={{ today: REPORTS_TODAY, statement: REPORTS_STATEMENT, balance: REPORTS_BALANCE, projects: REPORTS_BY_PROJECT }} /> },
+    ]);
+    renderWithProviders(<RouterProvider router={router} />, { memoryRouter: false });
+    fireEvent.click(screen.getByRole("button", { name: "השנה · 2026" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "תקופה" })).getByRole("radio", { name: /חודש שעבר/ }));
+    await waitFor(() => { expect(router.state.location.search).toBe("?period=last_month"); });
+    await waitFor(() => { expect(window.location.search).toBe("?period=last_month"); });
+    expect(screen.queryByRole("dialog", { name: "תקופה" })).not.toBeInTheDocument();
+    router.dispose();
   });
 });
 

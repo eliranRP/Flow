@@ -38,7 +38,7 @@ export function ReportSection({ id, title, total, collapse, children, tone = "se
   const open = collapse.isOpen(id);
   return (
     <section className={tone === "section" ? "ui-rep-section" : "ui-rep-group"} aria-label={title}>
-      <button type="button" className="ui-rep-head" aria-expanded={open} aria-controls={bodyId} onClick={() => { collapse.onToggle(id); }}>
+      <button type="button" className="ui-rep-head" aria-expanded={open} aria-controls={open ? bodyId : undefined} onClick={() => { collapse.onToggle(id); }}>
         <span className="ui-chevron-turn ui-rep-chevron" data-open={open ? "true" : "false"} aria-hidden="true">
           <ChevronDownIcon size={16} />
         </span>

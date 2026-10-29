@@ -121,15 +121,14 @@
   color: var(--color-text-muted);
 }
 
+/* A name wraps rather than cutting its start: a project's name is how the reader finds it (rule tables § 25). */
 .ui-rep-head-title {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
+  overflow-wrap: anywhere;
   color: var(--color-text-secondary);
   font-size: var(--type-line2-size);
   font-weight: var(--type-section-weight);
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 .ui-rep-head-total {
@@ -188,11 +187,9 @@
 }
 
 .ui-rep-row-name {
-  overflow: hidden;
+  overflow-wrap: anywhere;
   font-size: var(--type-body-size);
   line-height: var(--type-title-line);
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 .ui-rep-row-meta {

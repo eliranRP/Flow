@@ -6,7 +6,7 @@ import { lineInitials } from "../cash-lines-groups";
 import { getSupabase } from "../lib/supabase";
 import { loadReadSchemas } from "../load-read-schemas";
 import { useHomePreview, usePreviewSearch } from "../preview";
-import { categoryName } from "../reports";
+import { categoryName, dateRangeText } from "../reports";
 import { Amount } from "../ui/amount";
 import { PageLoadFailed, useOnline } from "../ui/band-states";
 import { Button } from "../ui/button";
@@ -17,7 +17,7 @@ import { ScreenHeader } from "../ui/screen-header";
 import { ProfitRowsSkeleton } from "../ui/screen-skeletons";
 import { DelayedSkeleton } from "../ui/skeleton";
 import { waitForAccessToken } from "../wait-for-session";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ReportRow, ReportSection, ReportSummary, type Collapse } from "./reports-parts";
 
 type LinesPage = NonNullable<BreakdownLinesPage>;
@@ -37,7 +37,6 @@ export function reportLinesArgs(params: URLSearchParams) {
     name: params.get("name"),
     from: params.get("from"),
     to: params.get("to"),
-    project: params.get("project"),
     projectName: params.get("pname"),
     currency: /^[A-Z]{3}$/.test(params.get("cur") ?? "") ? (params.get("cur") ?? "ILS") : "ILS",
   } as const;
@@ -106,10 +105,16 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
   const all = sample?.rows ?? read.data?.pages.flatMap((page) => page.rows) ?? null;
   const rows = all == null ? null : args.projectName == null ? all : all.filter((row) => row.project_name === args.projectName);
   const hasMore = sample?.hasMore ?? read.hasNextPage;
+  // The read has no project filter, so a one-project drill-down filters the loaded pages: read them all first.
+  const { fetchNextPage, hasNextPage, isFetchingNextPage } = read;
+  const filterByProject = args.projectName != null;
+  useEffect(() => {
+    if (filterByProject && hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [filterByProject, hasNextPage, isFetchingNextPage, fetchNextPage]);
   const title = categoryName(args.name);
   // Back to the report, with its own choices (the drill keys ride along and are ignored there).
   const back = `/reports${location.search}`;
-  const header = <ScreenHeader layout="stacked" title={title} backTo={back} backText="דוחות" subtitle={args.from != null && args.to != null ? `${formatDisplay(args.from)}–${formatDisplay(args.to)}` : "כל התאריכים"} />;
+  const header = <ScreenHeader layout="stacked" title={title} backTo={back} backText="דוחות" subtitle={dateRangeText(args.from, args.to, formatDisplay)} />;
   if (rows == null) {
     return (
       <div className="ui-rep-screen">

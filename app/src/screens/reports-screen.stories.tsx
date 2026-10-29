@@ -39,7 +39,7 @@ export const ProfitAndLoss: Story = {
   render: () => <Reports />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText("30% מההכנסות · 01/01/2026–31/10/2026")).toBeInTheDocument();
+    await expect(canvas.getByText("30% מההכנסות · \u206601/01/2026–31/10/2026\u2069")).toBeInTheDocument();
     await expect(canvas.getByRole("link", { name: /ריבית משכנתא/ })).toBeInTheDocument();
   },
 };
@@ -146,7 +146,7 @@ export const HomeCard: Story = {
   name: "Home · דוחות card",
   render: () => (
     <StoryRoute entry="/">
-      <HomeReportsCard today={REPORTS_TODAY} search="" enabled={false} sample={{ statement: REPORTS_STATEMENT, balance: REPORTS_BALANCE }} />
+      <HomeReportsCard today={REPORTS_TODAY} search="" sample={{ statement: REPORTS_STATEMENT, balance: REPORTS_BALANCE }} />
     </StoryRoute>
   ),
 };
