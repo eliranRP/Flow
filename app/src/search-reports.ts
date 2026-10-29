@@ -8,7 +8,6 @@ import { reportsTo, type ReportKind } from "./reports";
  */
 export type ReportShortcut = {
   key: string;
-  kind: ReportKind;
   title: string;
   hint: string;
   to: string;
@@ -17,7 +16,7 @@ export type ReportShortcut = {
 /** The words for each report, normalized (lower case, no quotes or gershayim, single spaces). */
 const KEYWORDS: Record<ReportKind, readonly string[]> = {
   balance: ["מאזן", "מאזנים", "balance sheet", "balance"],
-  pnl: ["רווח והפסד", "רווח הפסד", "רוה", "p&l", "pnl", "p & l", "profit and loss", "profit & loss", "income statement"],
+  pnl: ["רווח והפסד", "רווח הפסד", "רוה", "רווה", "p&l", "pnl", "p & l", "profit and loss", "profit & loss", "income statement"],
 };
 
 /** Words that name the reports in general: both rows, or left out around a report's own name. */
@@ -26,13 +25,21 @@ const GENERAL = ["דוחות", "דוח", "דוחות כספיים", "reports", "
 /** Fewer letters than this match no report by their start alone ("מא" is too many things). */
 const MIN_PREFIX = 3;
 
+/** Only the Hebrew names match by their start: "pro", "inc" or "rep" begin too many English words. */
+const HEBREW = /[\u0590-\u05FF]/;
+
+function startsName(words: readonly string[], text: string): boolean {
+  return text.length >= MIN_PREFIX && HEBREW.test(text) && words.some((word) => word.startsWith(text));
+}
+
 /** A project's name beside a report's needs this many letters. */
 const MIN_PROJECT = 2;
 
 export function normalizeReportText(text: string): string {
   return text
     .toLowerCase()
-    .replace(/["'׳״`]/g, "")
+    // Straight and typographic quotes (iOS smart punctuation types ” for "), geresh and gershayim.
+    .replace(/["'׳״`\u2018\u2019\u201C\u201D]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -53,24 +60,22 @@ function strip(text: string): string {
 }
 
 /** Which reports the text names, and the text left beside the name. */
-function matchKinds(text: string): { kinds: ReportKind[]; rest: string } | null {
+function matchKinds(text: string): { kinds: ReportKind[]; rest: string; general: boolean } | null {
   for (const kind of ["balance", "pnl"] as const) {
     for (const word of [...KEYWORDS[kind]].sort((a, b) => b.length - a.length)) {
       const rest = without(text, word);
-      if (rest != null) return { kinds: [kind], rest: strip(rest) };
+      if (rest != null) return { kinds: [kind], rest: strip(rest), general: false };
     }
   }
-  if (text.length >= MIN_PREFIX) {
-    for (const kind of ["balance", "pnl"] as const) {
-      if (KEYWORDS[kind].some((word) => word.startsWith(text))) return { kinds: [kind], rest: "" };
-    }
+  for (const kind of ["balance", "pnl"] as const) {
+    if (startsName(KEYWORDS[kind], text)) return { kinds: [kind], rest: "", general: false };
   }
   const general = [...GENERAL].sort((a, b) => b.length - a.length);
   for (const word of general) {
     const rest = without(text, word);
-    if (rest != null) return { kinds: ["pnl", "balance"], rest: strip(rest) };
+    if (rest != null) return { kinds: ["pnl", "balance"], rest: strip(rest), general: true };
   }
-  if (text.length >= MIN_PREFIX && general.some((word) => word.startsWith(text))) return { kinds: ["pnl", "balance"], rest: "" };
+  if (startsName(general, text)) return { kinds: ["pnl", "balance"], rest: "", general: true };
   return null;
 }
 
@@ -95,10 +100,12 @@ export function reportShortcuts(
   const project = match.rest.length >= MIN_PROJECT
     ? projects.find((row) => normalizeReportText(row.name).includes(match.rest)) ?? null
     : null;
+  // "דוח" beside words that name no project is a line's own text ("דוח חניה", "דו״ח שמאי"), not the reports.
+  if (match.general && match.rest !== "" && project == null) return [];
   return match.kinds.map((kind) => {
     const { title, when } = NAMES[kind];
     return project == null
-      ? { key: kind, kind, title, hint: `כל הפרויקטים · ${when}`, to: reportsTo(kind, { kind: "all" }, search) }
-      : { key: `${kind}-${project.id}`, kind, title: `${title} · ${project.name}`, hint: when, to: reportsTo(kind, { kind: "project", id: project.id }, search) };
+      ? { key: kind, title, hint: `כל הפרויקטים · ${when}`, to: reportsTo(kind, { kind: "all" }, search) }
+      : { key: `${kind}-${project.id}`, title: `${title} · ${project.name}`, hint: when, to: reportsTo(kind, { kind: "project", id: project.id }, search) };
   });
 }

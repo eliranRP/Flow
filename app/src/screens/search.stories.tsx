@@ -117,6 +117,34 @@ export const ReportShortcutProject: Story = {
 };
 
 /**
+ * FLOW-163 (review r1): a project whose name holds a report's name. The דוחות section comes first,
+ * then the project shortcut, then the project's lines.
+ */
+export const ReportShortcutAboveResults: Story = {
+  render: () => (
+    <Search
+      entry={`/search?q=${encodeURIComponent("מאזן")}`}
+      data={{
+        ...sample,
+        projects: [...(sample.projects ?? []), { id: "p4", name: "בית מאזן לדוגמה", status: "active" }],
+        rows: [
+          line("m1", { doc_date: "2026-10-05", supplier_name: "חומרי בניין לדוגמה", amount_net: -86_400n, project_id: "p4", project_name: "בית מאזן לדוגמה" }),
+          line("m2", { doc_date: "2026-09-22", supplier_name: null, customer_name: "לקוח לדוגמה", direction: "income", amount_net: 920_000n, project_id: "p4", project_name: "בית מאזן לדוגמה", category_id: "c3", category_name: "עבודה" }),
+          ...rows,
+        ],
+      }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const report = await canvas.findByRole("link", { name: /כל הפרויקטים · היום/ });
+    const project = canvas.getByRole("link", { name: /בית מאזן לדוגמה.*לדף הפרויקט/ });
+    await expect(report.compareDocumentPosition(project) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await expect(canvas.getByText("2 תנועות", { exact: false })).toBeInTheDocument();
+  },
+};
+
+/**
  * A large income kept out of profit, with a project and a category: its one line ("date · project ·
  * category · לא נספר ברווח") is wider than a phone, so it ends in "…" and the amount stays on screen.
  * The storybook layout sweep checks "Large Amount" stories at 320 and 390.

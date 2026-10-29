@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { equityTotal, type BalanceSheet, type Statement } from "../reports";
+import { equityTotal, reportsTo, type BalanceSheet, type Statement } from "../reports";
 import { Amount } from "../ui/amount";
 import { useOnline } from "../ui/band-states";
 import { FailureLine } from "../ui/empty-state";
@@ -35,7 +35,6 @@ export function HomeReportsCard({ today, search, sample }: { today: string; sear
   const balance = sample?.balance ?? balanceRead.data ?? null;
   const pnl = statement?.currencies[0] ?? null;
   const sheet = balance?.currencies[0] ?? null;
-  const join = search === "" ? "" : `&${search.slice(1)}`;
   return (
     <section className="ui-home-rep" aria-labelledby="home-rep-title">
       <div className="ui-home-rep-head">
@@ -43,7 +42,7 @@ export function HomeReportsCard({ today, search, sample }: { today: string; sear
         <h2 id="home-rep-title" className="ui-home-rep-title">דוחות</h2>
       </div>
       <div className="ui-home-rep-halves">
-        <Link className="ui-home-rep-half m-press" to={`/reports${search}`}>
+        <Link className="ui-home-rep-half m-press" to={reportsTo("pnl", { kind: "all" }, search)}>
           <span className="ui-home-rep-label">
             רווח והפסד
             <ChevronIcon size={16} />
@@ -52,7 +51,7 @@ export function HomeReportsCard({ today, search, sample }: { today: string; sear
           <span className="ui-home-rep-sub">רווח נקי · השנה</span>
         </Link>
         <span className="ui-home-rep-divider" aria-hidden="true" />
-        <Link className="ui-home-rep-half m-press" to={`/reports?kind=balance${join}`}>
+        <Link className="ui-home-rep-half m-press" to={reportsTo("balance", { kind: "all" }, search)}>
           <span className="ui-home-rep-label">
             מאזן
             <ChevronIcon size={16} />
