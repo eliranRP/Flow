@@ -17,7 +17,7 @@ export const LEDGER_ALLOWED: Record<string, Set<string>> = {
   get_line_legs: new Set(["transaction_id"]),
   get_account_balances: new Set(["as_of"]),
   get_balance_sheet: new Set(["as_of", "project_id"]),
-  get_account_lines: new Set(["account_id", "as_of", "project_id", "currency", "limit", "offset"]),
+  get_account_lines: new Set(["account_id", "as_of", "from", "from_start", "project_id", "currency", "limit", "offset"]),
   get_pnl_statement: new Set(["from", "to", "project_id", "by_project", "basis"]),
   // FLOW-152: the chart of accounts writes (tools_accounts.ts).
   create_account: new Set(["idempotency_key", "name", "type", "description"]),
@@ -106,13 +106,21 @@ async function pnlStatement(args: Record<string, unknown>, rpc: ToolRpc): Promis
   return ok(body);
 }
 
-// FLOW-165: one balance-sheet account's balance, the year's opening and its movements, paged.
+function isDateArg(value: unknown): boolean {
+  return value === undefined || value === null || (typeof value === "string" && DATE.test(value) && isCalendarDate(value));
+}
+
+// FLOW-165: one balance-sheet account's balance, the period's opening and its movements, paged. FLOW-171: the
+// period starts on from, at the very start (from_start true: no opening, every movement), or by default on
+// 1 January of as_of's year.
 async function accountLines(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
-  const { account_id: account, as_of: asOf, project_id: project, currency } = args;
+  const { account_id: account, as_of: asOf, from, from_start: fromStart, project_id: project, currency } = args;
   if (typeof account !== "string" || !UUID.test(account)) return fail("validation", "account_id: an account id");
-  if (asOf !== undefined && asOf !== null && (typeof asOf !== "string" || !DATE.test(asOf) || !isCalendarDate(asOf))) {
-    return fail("validation", "as_of: a date, YYYY-MM-DD");
-  }
+  if (!isDateArg(asOf)) return fail("validation", "as_of: a date, YYYY-MM-DD");
+  if (!isDateArg(from)) return fail("validation", "from: a date, YYYY-MM-DD");
+  if (fromStart !== undefined && fromStart !== null && typeof fromStart !== "boolean") return fail("validation", "from_start: true or false");
+  if (fromStart === true && from != null) return fail("validation", "from or from_start, not both");
+  if (typeof from === "string" && typeof asOf === "string" && from > asOf) return fail("validation", "from: on or before as_of");
   if (project !== undefined && project !== null && (typeof project !== "string" || !UUID.test(project))) {
     return fail("validation", "project_id: a project id");
   }
@@ -131,7 +139,13 @@ async function accountLines(args: Record<string, unknown>, rpc: ToolRpc): Promis
     p_currency: currency ?? null,
     p_limit: limit,
     p_offset: offset,
+    p_from: from ?? null,
+    p_from_start: fromStart === true,
   });
+  // With no as_of, the database finds a from after today; any other refusal it calls validation stays generic.
+  if (result.status >= 400 && isObject(result.json) && result.json.message === "validation") {
+    return fail("validation", typeof from === "string" && asOf == null ? "from: on or before as_of" : "validation");
+  }
   if (result.status >= 400) return fail("refused", READ_REFUSED);
   // Null for another company's account or project, an unknown one, or an income or expense account.
   if (result.json == null) return fail("not_found", "not found");
