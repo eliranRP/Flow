@@ -98,5 +98,5 @@ export function renderReportCsv(file: ReportFile): string {
     if (part.kind === "pnl") pnlRows(part, rows);
     else balanceRows(part, rows);
   }
-  return `﻿${rows.map(line).join("\r\n")}\r\n`;
+  return `\uFEFF${rows.map(line).join("\r\n")}\r\n`;
 }

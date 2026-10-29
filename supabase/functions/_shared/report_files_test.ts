@@ -23,7 +23,7 @@ Deno.test("a long P&L runs onto more pages and never drops a line", async () => 
 
 Deno.test("the CSV opens in Excel: a byte-order mark, the same totals as the reports, amounts as numbers", () => {
   const csv = renderReportCsv(SAMPLE_FILE);
-  assert(csv.startsWith("﻿"));
+  assert(csv.startsWith("\uFEFF"));
   assertStringIncludes(csv, "סה״כ הכנסות,,,USD,96200.00");
   assertStringIncludes(csv, "סה״כ הוצאות,,,USD,-67200.00");
   assertStringIncludes(csv, "Riverside Commons Phase Two Townhomes,USD,44200.00,-30000.00,14200.00");

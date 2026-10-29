@@ -28,7 +28,8 @@ import { Chip } from "../ui/chip";
 import { formatDisplay, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { Button } from "../ui/button";
-import { DocumentIcon } from "../ui/icons";
+import { DocumentIcon, ShareIcon } from "../ui/icons";
+import { IconButton } from "../ui/icon-button";
 import { ScreenHeader } from "../ui/screen-header";
 import { ProfitRowsSkeleton } from "../ui/screen-skeletons";
 import type { ScreenPhase } from "../ui/screen-phase";
@@ -36,6 +37,7 @@ import { SegmentedControl } from "../ui/segmented-control";
 import { DelayedSkeleton } from "../ui/skeleton";
 import { useBalanceSheet, useReportProjects, useStatement } from "../use-reports";
 import { BalanceView, ByProjectView, ReportSummary, StatementView, statementSub, type Collapse } from "./reports-parts";
+import { ReportShareSheet } from "./report-share-sheet";
 import { BalanceDateSheet, PnlPeriodSheet, ReportProjectSheet } from "./reports-sheets";
 
 /** A fixture: today, and the reads as they would come back (null statement: the project is not found). */
@@ -91,7 +93,7 @@ export function ReportsScreen({ sample }: { sample?: ReportsSample } = {}) {
   const projects = (live ? projectsRead.data : sample.projects)?.projects ?? [];
   const [collapsedByKind, setCollapsedByKind] = useState<Record<ReportKind, Set<string>>>(() => ({ pnl: readCollapsed("pnl"), balance: readCollapsed("balance") }));
   const collapsed = collapsedByKind[state.kind];
-  const [sheet, setSheet] = useState<"period" | "projects" | null>(null);
+  const [sheet, setSheet] = useState<"period" | "projects" | "share" | null>(null);
   // A pick lands once its sheet has closed: closing steps back over the sheet's history entry, which
   // would undo a URL written before it.
   const pendingPick = useRef<ReportState | null>(null);
@@ -160,10 +162,14 @@ export function ReportsScreen({ sample }: { sample?: ReportsSample } = {}) {
       ) : (
         <BalanceDateSheet open={sheet === "period"} onOpenChange={sheetChange("period")} value={state.asOf} today={today} onPick={(asOf) => { pickLater({ ...state, asOf }); }} />
       )}
+      <ReportShareSheet open={sheet === "share"} onOpenChange={(open) => { setSheet(open ? "share" : null); }} state={state} today={today} />
       <ReportProjectSheet open={sheet === "projects"} onOpenChange={sheetChange("projects")} value={state.scope} projects={projects} allowByProject={state.kind === "pnl"} onPick={(scope) => { pickLater({ ...state, scope }); }} />
     </>
   );
-  const header = <ScreenHeader layout="stacked" title="דוחות" backTo={`/${search}`} backText="בית" below={head} />;
+  const share = phase.kind === "ready" && data != null && !(state.kind === "pnl" && statement != null && statementEmpty(statement)) && !(state.kind === "balance" && balance != null && balanceEmpty(balance))
+    ? <IconButton label="שיתוף הדוח" onClick={() => { setSheet("share"); }}><ShareIcon size={22} /></IconButton>
+    : null;
+  const header = <ScreenHeader layout="stacked" title="דוחות" backTo={`/${search}`} backText="בית" below={head} action={share} />;
 
   let body;
   if (phase.kind === "loading") {

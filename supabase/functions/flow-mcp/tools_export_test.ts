@@ -46,7 +46,7 @@ Deno.test("export_report both: the balance sheet at the P&L's last day, unless a
   assertEquals(calls.find((call) => call.name === "mcp_balance_sheet")?.body, { p_as_of: "2026-09-30", p_project_id: PROJECT });
   // ignoreBOM keeps the byte-order mark, which a default decoder drops.
   const csv = new TextDecoder("utf-8", { ignoreBOM: true }).decode(decode(both.files?.[0]?.base64 ?? ""));
-  assert(csv.startsWith("﻿"));
+  assert(csv.startsWith("\uFEFF"));
   assertStringIncludes(csv, "סה״כ הכנסות,,,USD,96200.00");
   assertStringIncludes(csv, "התחייבויות והון,,USD,615000.00");
   assertEquals(both.files?.[0]?.mimeType, "text/csv");
