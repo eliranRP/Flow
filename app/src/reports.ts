@@ -1,5 +1,5 @@
 import { HEBREW_MONTHS, formatDisplay, israelToday } from "./ui/date-math";
-import { SYSTEM_NAMES } from "./line-journal";
+import { SYSTEM_NAMES } from "./system-accounts";
 
 /**
  * FLOW-161: the reports screen's choices and models (board row "דוחות", page "In design · for approval").
