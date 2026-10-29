@@ -1,3 +1,4 @@
+import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
 import { equityTotal, reportsTo, type BalanceSheet, type Statement } from "../reports";
 import { Amount } from "../ui/amount";
@@ -12,11 +13,12 @@ export type HomeReportsSample = { statement?: Statement; balance?: BalanceSheet 
 const YEAR_PNL = { kind: "pnl", period: { kind: "year" }, asOf: { kind: "today" }, scope: { kind: "all" } } as const;
 const TODAY_BALANCE = { ...YEAR_PNL, kind: "balance" } as const;
 
-function Figure({ minor, currency }: { minor: bigint | null; currency: string }) {
+/** A half's figure: the two share one size, stepping down from card size until the longer one fits its half. */
+function Figure({ minor, currency, onFit, minStep }: { minor: bigint | null; currency: string; onFit: (step: number) => void; minStep: number }) {
   if (minor == null) return <span className="ui-home-rep-figure ui-home-rep-figure-empty" aria-hidden="true">—</span>;
   return (
     <span className="ui-home-rep-figure">
-      <Amount agorot={minor} currency={currency} size="card" loss={minor < 0n} />
+      <Amount agorot={minor} currency={currency} size="column" loss={minor < 0n} onFit={onFit} minStep={minStep} />
     </span>
   );
 }
@@ -35,6 +37,11 @@ export function HomeReportsCard({ today, search, sample }: { today: string; sear
   const balance = sample?.balance ?? balanceRead.data ?? null;
   const pnl = statement?.currencies[0] ?? null;
   const sheet = balance?.currencies[0] ?? null;
+  // At 320 a figure such as "$285,000" is wider than its half at card size; both halves step down together.
+  const [fits, setFits] = useState<[number, number]>([0, 0]);
+  const shared = Math.max(fits[0], fits[1]);
+  const fitPnl = useCallback((step: number) => { setFits((held) => (held[0] === step ? held : [step, held[1]])); }, []);
+  const fitBalance = useCallback((step: number) => { setFits((held) => (held[1] === step ? held : [held[0], step])); }, []);
   return (
     <section className="ui-home-rep" aria-labelledby="home-rep-title">
       <div className="ui-home-rep-head">
@@ -42,21 +49,21 @@ export function HomeReportsCard({ today, search, sample }: { today: string; sear
         <h2 id="home-rep-title" className="ui-home-rep-title">דוחות</h2>
       </div>
       <div className="ui-home-rep-halves">
-        <Link className="ui-home-rep-half m-press" to={reportsTo("pnl", { kind: "all" }, search)}>
+        <Link className="ui-home-rep-half ui-amount-fit m-press" to={reportsTo("pnl", { kind: "all" }, search)}>
           <span className="ui-home-rep-label">
             רווח והפסד
             <ChevronIcon size={16} />
           </span>
-          <Figure minor={pnl?.net_minor ?? null} currency={pnl?.currency ?? "ILS"} />
+          <Figure minor={pnl?.net_minor ?? null} currency={pnl?.currency ?? "ILS"} onFit={fitPnl} minStep={shared} />
           <span className="ui-home-rep-sub">רווח נקי · השנה</span>
         </Link>
         <span className="ui-home-rep-divider" aria-hidden="true" />
-        <Link className="ui-home-rep-half m-press" to={reportsTo("balance", { kind: "all" }, search)}>
+        <Link className="ui-home-rep-half ui-amount-fit m-press" to={reportsTo("balance", { kind: "all" }, search)}>
           <span className="ui-home-rep-label">
             מאזן
             <ChevronIcon size={16} />
           </span>
-          <Figure minor={sheet == null ? null : equityTotal(sheet)} currency={sheet?.currency ?? "ILS"} />
+          <Figure minor={sheet == null ? null : equityTotal(sheet)} currency={sheet?.currency ?? "ILS"} onFit={fitBalance} minStep={shared} />
           <span className="ui-home-rep-sub">הון עצמי · היום</span>
         </Link>
       </div>
