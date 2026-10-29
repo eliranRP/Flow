@@ -4,10 +4,11 @@
 --
 -- A SQL function that sets search_path is not inlined, so its query is planned with p_company,
 -- p_from and p_to unknown. With that generic plan the parts step joined the split lines back to every
--- line of the company in a nested loop (55 split lines x 1,518 lines on the largest sandbox, about
+-- line of the company in a nested loop (on the largest sandbox, 55 split lines x the 1,518 lines of its last 24 months, about
 -- 9 of its 14 ms). The split step now carries the line's own columns, so the parts step reads them
 -- from it and no longer joins the lines again. The rule and the result are unchanged; the rest of
--- the body is the latest live one (20261028093217_ledger_only.sql).
+-- the body is the latest live one (20261028093217_ledger_only.sql). The rows do not change: lines has one row per transaction
+-- (recurring_matches_one_same_idx allows one "same" match per party), so grouping by its columns adds no group.
 begin;
 set local lock_timeout = '5s';
 
