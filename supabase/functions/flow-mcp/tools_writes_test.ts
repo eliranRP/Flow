@@ -179,6 +179,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "list_accounts",
     "get_account_balances",
     "get_balance_sheet",
+    "get_account_lines",
     "get_pnl_statement",
     "export_report",
     "list_prepaid_schedules",
