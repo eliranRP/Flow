@@ -1,0 +1,1 @@
+Reports: a category's lines (the drill-down from the P&L) can be searched by supplier, description, project, date or amount. A search looks at every line of the period, and the split by project hides while it is on. A line found by its description shows it under the supplier, and a search with no match offers the app's search across all dates.
