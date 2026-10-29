@@ -40,12 +40,17 @@ export function fileNameOf(disposition: string | null): string | null {
   }
 }
 
+/** The server's per-user file limit was reached (FLOW-166, 10 files a minute). */
+export class TooManyFiles extends Error {}
+
 export async function fetchReportFile(args: Record<string, unknown>): Promise<File> {
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
   const csv = args.format === "csv";
   const result = await supabase.functions.invoke<Blob | string>("flow-mcp/report", { body: args });
   const data = result.data;
+  const context = (result.error as { context?: unknown } | null)?.context;
+  if (context instanceof Response && context.status === 429) throw new TooManyFiles("rate_limited");
   if (result.error != null || data == null) throw new Error("report");
   const response = (result as { response?: Response }).response;
   const name = fileNameOf(response?.headers.get("content-disposition") ?? null) ?? (csv ? "report.csv" : "report.pdf");

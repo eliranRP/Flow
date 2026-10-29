@@ -2,7 +2,7 @@
 
 To use this account for a live check, see [live-test-account.md](live-test-account.md).
 
-The live check after Pages signs in as one email-and-password user and only reads. That user is a viewer of the demo company **Flow Test**. It is not a member of any real company, and it cannot write. `authenticated` has no insert on `public.companies`. Onboarding calls `create_company`, which rejects a viewer. The app hides or disables the write controls for this viewer. The server still rejects a write.
+The live check after Pages signs in as one email-and-password user and only reads (one exception below: the report file's counter). That user is a viewer of the demo company **Flow Test**. It is not a member of any real company, and it cannot write. `authenticated` has no insert on `public.companies`. Onboarding calls `create_company`, which rejects a viewer. The app hides or disables the write controls for this viewer. The server still rejects a write.
 
 There is no viewer role on `companies`. `private.current_company_id()` is still the owner. Write policies and write RPCs use that. `public.company_viewers` adds one user to one company, and a trigger rejects the row unless `companies.is_demo` is true. Select policies use `private.readable_company_id()`, so the list RPCs below can run. A table read follows that same company. Detail RPCs do not.
 
@@ -16,6 +16,11 @@ A viewer gets these reads:
 | `list_review` | The open review list. `auto_approved_today` and `assistant_filed_today` stay empty, because they call `private.filed_today_rows()`. |
 | `sumit_status` | Whether the demo SUMIT connection is up, and its company number. No secret. |
 | `company_integrations` | The Jev row: enabled, mode, and threshold. This is a select, not an RPC. |
+| `get_pnl_statement` | The demo P&L as a statement (FLOW-160): Home's reports card reads it, and so does the report file. |
+| `mcp_balance_sheet` | The demo balance sheet (FLOW-152): Home's reports card reads it, and so does the report file. |
+| `flow-mcp/report` | The reports as a PDF or a CSV (FLOW-162), built from the two reads above. |
+
+The report test (FLOW-166) calls the `flow-mcp/report` route directly through Playwright's request client, not through the page, so the page's write guard does not see it. Its only write is the smoke user's report counter in `private.mcp_rate`, made by the service role: one row a minute with 2 hits a run, or 4 with the retry. The counter holds no company data.
 
 These stay on `private.current_company_id()` and return empty for a viewer. The smoke does not call them and does not assert their rows:
 

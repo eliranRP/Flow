@@ -1538,6 +1538,9 @@ isOneToOne: false
 "bump_mcp_rate":
 { Args: { "p_kind": string,"p_token": string,"p_user": string }; Returns: Json
                            },
+"bump_report_rate":
+{ Args: { "p_user": string }; Returns: Json
+                           },
 "cancel_invite":
 { Args: { "p_invite_id": string }; Returns: Json
                            },

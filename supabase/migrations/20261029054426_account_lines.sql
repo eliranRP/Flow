@@ -10,8 +10,9 @@
 --      parent) for one project, read by project key as get_pnl_statement reads a project (a shared cost
 --      counts as the project's allocation), so FLOW-161's one-project drill-down pages like the rest. The
 --      project is looked up first: another company's project reads as unknown (null). With group_by
---      project or payer a project is 'validation'. Every other argument and the return shape are kept;
---      the old ten-argument function is dropped, so positional calls resolve to the new one.
+--      project or payer a project is 'validation'. The result also carries total_minor and count, the
+--      whole group's, so a screen that loads one page shows the full figure. Every other argument and
+--      field is kept; the old ten-argument function is dropped, so positional calls resolve to the new one.
 -- CLI 2.118.0 runs each statement on its own. This file is one transaction.
 
 begin;
@@ -133,7 +134,7 @@ begin
           'amount_minor', pg.amount_minor,
           'description', t.description,
           'party_name', coalesce(sup.name, cus.name),
-          'project_id', pg.project_id,
+          'project_id', pr.id,
           'project_name', pr.name,
           'part', pg.part,
           'loan_id', pg.loan_id,
@@ -246,7 +247,7 @@ begin
       case when count(distinct r.project_id) = 1 and count(r.project_id) = count(*) then min(r.project_id::text)::uuid end as project_id,
       bool_or(r.gross_up) as gross_up
     from r
-    group by r.transaction_id, r.part, r.shared, case when coalesce(p_excluded, false) then r.group_key end
+    group by r.transaction_id, r.part, r.shared, case when coalesce(p_excluded, false) then r.drill_key end
   ),
   page as (
     select
@@ -290,7 +291,10 @@ begin
       from page pg
       where pg.n > off and pg.n <= off + lim
     ), '[]'::jsonb),
-    'has_more', exists (select 1 from page pg where pg.n > off + lim)
+    'has_more', exists (select 1 from page pg where pg.n > off + lim),
+    -- FLOW-165: the whole group's total and row count, so a screen that loads a page shows the full figure.
+    'total_minor', (select coalesce(sum(pg.amount_minor), 0)::bigint from page pg),
+    'count', (select count(*)::integer from page pg)
   ) into result;
 
   return result;
