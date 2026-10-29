@@ -225,6 +225,12 @@
   opacity: 0.6;
 }
 
+/* Kept-out rows open nothing, so they have no chevron: keep its slot (16px icon + the row's 8px gap)
+   so their amounts end on the P&L's one column. */
+.ui-rep-rows-kept .ui-rep-row-link {
+  padding-inline-end: var(--space-6);
+}
+
 .ui-rep-total {
   display: flex;
   align-items: baseline;
