@@ -14,6 +14,7 @@ import {
 } from "../dev/reports-sample";
 import { ExampleBar } from "../ui/screen-stories-support";
 import { StoryRoute } from "../ui/story-route";
+import { ToastProvider } from "../ui/toast";
 import { HomeReportsCard } from "./home-reports-card";
 import { ReportLinesScreen } from "./report-lines-screen";
 import { ReportsScreen, type ReportsSample } from "./reports-screen";
@@ -94,7 +95,9 @@ function BrowserReports() {
   ]));
   return (
     <QueryClientProvider client={client}>
-      <RouterProvider router={router} />
+      <ToastProvider>
+        <RouterProvider router={router} />
+      </ToastProvider>
     </QueryClientProvider>
   );
 }
@@ -120,6 +123,19 @@ export const PeriodPickBrowserHistory: Story = {
     } finally {
       window.history.replaceState(null, "", before);
     }
+  },
+};
+
+/** FLOW-162: the share sheet: PDF or Excel, which reports, and whether collapsed sections print in full. */
+export const ShareSheet: Story = {
+  name: "Sheet · share",
+  render: () => <Reports />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "שיתוף הדוח" }));
+    const sheet = await within(document.body).findByRole("dialog", { name: "שיתוף PDF" });
+    await expect(within(sheet).getByRole("switch", { name: "רווח והפסד" })).toBeChecked();
+    await expect(within(sheet).getByRole("button", { name: "שיתוף PDF" })).toBeEnabled();
   },
 };
 

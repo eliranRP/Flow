@@ -2,11 +2,13 @@
 // end: list_accounts gives the account ids book_line needs (mcp_accounts), and get_line_legs reads one
 // line's legs back to verify a booking (mcp_line_legs). get_account_balances (FLOW-149, decision 0228)
 // sums the balance-sheet legs per project (mcp_account_balances). get_pnl_statement (FLOW-160) reads the P&L as a
-// statement for the reports screen (get_pnl_statement). Any member reads them.
+// statement for the reports screen (get_pnl_statement); export_report (FLOW-162, tools_export.ts) makes the
+// reports a PDF or CSV file. Any member reads them.
+import { EXPORT_ALLOWED, exportReport, pnlProblem } from "./tools_export.ts";
 import { PREPAID_ALLOWED, PREPAID_READS, prepaidRead } from "./tools_prepaid.ts";
 import { DATE, fail, isCalendarDate, ok, READ_REFUSED, type ToolResult, type ToolRpc, UUID } from "./tools_args.ts";
 
-export const LEDGER_READS = ["list_accounts", "get_line_legs", "get_account_balances", "get_balance_sheet", "get_pnl_statement", ...PREPAID_READS] as const;
+export const LEDGER_READS = ["list_accounts", "get_line_legs", "get_account_balances", "get_balance_sheet", "get_pnl_statement", "export_report", ...PREPAID_READS] as const;
 
 /** The reads' and the account writes' argument allow-list, merged into ALLOWED in tools_schemas.ts. */
 export const LEDGER_ALLOWED: Record<string, Set<string>> = {
@@ -22,6 +24,7 @@ export const LEDGER_ALLOWED: Record<string, Set<string>> = {
   restore_account: new Set(["idempotency_key", "account_id"]),
   merge_account: new Set(["idempotency_key", "from_account_id", "into_account_id"]),
   ...PREPAID_ALLOWED,
+  ...EXPORT_ALLOWED,
 };
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -69,6 +72,7 @@ export async function ledgerRead(
     return ok(body);
   }
   if (name === "get_pnl_statement") return pnlStatement(args, rpc);
+  if (name === "export_report") return exportReport(args, rpc);
   const id = args.transaction_id;
   if (typeof id !== "string" || !UUID.test(id)) return fail("validation", "validation");
   const result = await rpc("mcp_line_legs", { p_transaction_id: id });
@@ -79,24 +83,11 @@ export async function ledgerRead(
   return ok(result.json);
 }
 
-function optionalDate(value: unknown): boolean {
-  return value === undefined || value === null || (typeof value === "string" && DATE.test(value) && isCalendarDate(value));
-}
-
 // FLOW-160: the P&L statement. Both dates or neither; one project or by_project, not both.
 async function pnlStatement(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
   const { from, to, project_id: project, by_project: byProject, basis } = args;
-  if (!optionalDate(from) || !optionalDate(to)) return fail("validation", "from and to: dates, YYYY-MM-DD");
-  if (((from ?? null) === null) !== ((to ?? null) === null)) return fail("validation", "from and to: both or neither");
-  if (typeof from === "string" && typeof to === "string" && from > to) return fail("validation", "from is after to");
-  if (project !== undefined && project !== null && (typeof project !== "string" || !UUID.test(project))) {
-    return fail("validation", "project_id: a project id");
-  }
-  if (byProject !== undefined && typeof byProject !== "boolean") return fail("validation", "by_project: true or false");
-  if (byProject === true && typeof project === "string") return fail("validation", "project_id or by_project, not both");
-  if (basis !== undefined && basis !== null && basis !== "cash" && basis !== "invoiced") {
-    return fail("validation", "basis: cash or invoiced");
-  }
+  const problem = pnlProblem(args);
+  if (problem != null) return problem;
   const result = await rpc("get_pnl_statement", {
     p_from: from ?? null,
     p_to: to ?? null,

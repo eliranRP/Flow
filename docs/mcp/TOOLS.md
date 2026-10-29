@@ -635,6 +635,28 @@ Each `currencies[]` row is one currency's statement, never converted: `currency`
 
 **Rule:** the rows are `get_breakdown`'s, so the totals are its totals for the same range and basis: the company's by category, a project's and each `projects[]` key's by project. The projects add up to the company within 1 minor unit per shared part. Another company's project, or an unknown one, is `not_found`.
 
+### export_report
+
+```json
+{ "kind": "both", "format": "pdf", "from": "2026-01-01", "to": "2026-10-31", "as_of": "2026-10-31", "project_id": "<optional project id>", "by_project": false, "expand": true }
+```
+
+The reports as a file to download or share (any member, FLOW-162). It is the same file the reports screen's share button sends.
+
+- **Arguments:**
+  - `kind`: `pnl` (the default), `balance` or `both`.
+  - `format`: `pdf` (the default) or `csv`.
+  - The P&L takes `get_pnl_statement`'s `from`, `to`, `basis`, and `project_id` or `by_project`, under the same rules. `expand` (default `true`) lists each category's sub-categories under it.
+  - The balance sheet takes `as_of` (default today in Israel; with `kind: "both"`, the P&L's `to`) and the same `project_id`.
+- **Output:** `data` is `{ "file_name", "mime_type", "size_bytes" }`. The file itself is the second item in the result's `content`: an embedded resource `{ "type": "resource", "resource": { "uri": "flow://reports/<file name>", "mimeType", "blob" } }`, base64.
+- **PDF:**
+  - A4, Hebrew right to left, Rubik embedded.
+  - The company, the report's dates, projects and basis, and page n of N on every page. Table heads repeat on each page.
+  - Each report starts on its own page. By project, the table has up to four project columns per block.
+- **CSV:** UTF-8 with a byte-order mark (so Excel reads the Hebrew), one row per line of the report, and amounts as decimals with a minus on money out. A cell that would start a formula is defused with `'`.
+
+**Rule:** the numbers are `get_pnl_statement`'s and `get_balance_sheet`'s for the same arguments. Another company's project is `not_found`; a bad argument is `validation`, before any read.
+
 ### create_manual_entry
 
 ```json
