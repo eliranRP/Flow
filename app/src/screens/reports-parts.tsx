@@ -173,7 +173,7 @@ export function StatementView({ row, collapse, drill, prefix = "" }: { row: Stat
               />
             ))}
           </ul>
-          <p className="ui-rep-note">נכסים והתחייבויות, כמו קנייה של נכס, הלוואה, קרן ואסקרו. הם במאזן, לא ברווח.</p>
+          <p className="ui-rep-note">נכסים והתחייבויות, כמו קנייה של נכס, הלוואה, קרן ופיקדון מסים וביטוח. הם במאזן, לא ברווח.</p>
         </ReportSection>
       ) : null}
     </div>

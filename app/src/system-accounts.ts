@@ -3,7 +3,7 @@
 /** Hebrew for the ledger's system accounts (decision 0208); a category account keeps its own name. */
 export const SYSTEM_NAMES: Record<string, string> = {
   "Loan principal": "קרן הלוואה",
-  Escrow: "אסקרו",
+  Escrow: "פיקדון מסים וביטוח",
   Property: "נכסים",
   "Transfers in transit": "העברות בין חשבונות",
   "Owner capital": "השקעת בעלים",
