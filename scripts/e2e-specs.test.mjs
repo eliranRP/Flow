@@ -61,6 +61,14 @@ test("a source only App.tsx reaches runs every spec", () => {
   assert.deepEqual(select("app/src/session-providers.tsx"), Object.keys(map.specs).sort());
 });
 
+test("a story or test helper in a mapped folder is not a spec's source", () => {
+  const { closures } = specClosures({ root, map });
+  const reached = new Set([...closures.values()].flatMap((closure) => [...closure]));
+  for (const helper of ["app/src/screens/report-lines-story-support.tsx", "app/src/screens/connection-page-test-support.tsx"]) {
+    assert.ok(!reached.has(helper), helper);
+  }
+});
+
 test("a screen change ranks the specs that open its route (#504: the project page)", () => {
   const specs = routeSpecs(["app/src/screens/project-detail-screen.tsx"], { root, map });
   for (const spec of ["controls-projects.spec.ts", "loan-project.spec.ts"]) assert.ok(specs.includes(spec), spec);
