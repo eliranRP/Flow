@@ -145,12 +145,40 @@ describe("ListRow", () => {
     expect(hint?.textContent).toBe("מגדל הים · 03/10");
     // Each part carries its separator in front, so a part that drops takes its "·" with it.
     expect([...(hint?.querySelectorAll(".ui-hint-part") ?? [])].map((part) => part.textContent)).toEqual(["מגדל הים", " · 03/10"]);
+    // FLOW-168: a part with letters may shorten with "…" and takes its own direction; a date never shortens.
+    const parts = [...(hint?.querySelectorAll(".ui-hint-part") ?? [])];
+    expect(parts.map((part) => part.classList.contains("ui-hint-part-whole"))).toEqual([false, true]);
+    expect(parts.map((part) => part.querySelector(".ui-hint-text")?.getAttribute("dir") ?? null)).toEqual(["auto", null]);
+    expect(parts[1]?.querySelector(".ui-hint-sep")?.textContent).toBe(" · ");
     expect(screen.getByText("Example Mortgage Home Loans")).toHaveAttribute("dir", "ltr");
     expect(screen.getByText("Example Mortgage Home Loans")).toHaveClass("ui-row-title-ltr");
     const tagged = screen.getByText("Example Bank Loan");
     expect(tagged).toHaveAttribute("dir", "ltr");
     expect(tagged.closest(".ui-row-title-with-tag")).not.toHaveAttribute("dir");
     expect(screen.getByText("חשבונית 12")).not.toHaveAttribute("dir");
+  });
+
+  it("hides a snippet title from screen readers and gives them the whole text, outside the title (FLOW-167)", () => {
+    render(
+      <MemoryRouter>
+        <ListRow variant="transaction" title="…labour, inspection" titleFull="Service visit, parts, labour, inspection" wrapTitle agorot={100n} sign="out" source="bank" href="/transactions/1" />
+      </MemoryRouter>,
+    );
+    const title = document.querySelector(".ui-row-title");
+    expect(title).toHaveClass("ui-row-title-wrap");
+    expect(title?.querySelector("[aria-hidden='true']")?.textContent).toBe("…labour, inspection");
+    expect(title?.querySelector(".sr-only")).toBeNull();
+    expect(screen.getByRole("link")).toHaveAccessibleName(/^Service visit, parts, labour, inspection/);
+    expect(screen.getByRole("link")).not.toHaveAccessibleName(/…/);
+  });
+
+  it("names a snippet row with a described hint by its whole title (FLOW-167)", () => {
+    render(
+      <MemoryRouter>
+        <ListRow variant="transaction" title="…labour, inspection" titleFull="Service visit, parts, labour, inspection" wrapTitle hint="06/08" describeHint agorot={100n} sign="out" source="bank" href="/transactions/1" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("link")).toHaveAccessibleName("Service visit, parts, labour, inspection");
   });
 
   it("drops the chevron on a static row and exposes aria-expanded on a disclosure", () => {

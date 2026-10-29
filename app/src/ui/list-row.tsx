@@ -24,7 +24,11 @@ type Common = {
   hint?: ReactNode;
   /** The hint wraps instead of ending in an ellipsis. */
   wrapHint?: boolean;
-  /** The hint's whole parts on one line; a part that does not fit drops (a transaction row always does). */
+  /**
+   * The hint's parts on one line (a transaction row always splits its hint at " · "): whole parts in order,
+   * then the parts past the first that do not fit shorten with "…" (FLOW-168). A part drops only when not
+   * even a few letters fit, and a date or an amount never shortens.
+   */
   hintParts?: readonly ReactNode[];
   /** Hint uses t-caption t-muted, and the control points at it with aria-describedby. */
   describeHint?: boolean;
@@ -51,6 +55,10 @@ type Common = {
   tag?: ReactNode;
   /** Replaces the accessible name. Summary rows say "פרויקט: X, שינוי". */
   label?: string;
+  /** The title wraps instead of ending in an ellipsis (a description found by a search, FLOW-167). */
+  wrapTitle?: boolean;
+  /** The whole title for screen readers, when the title shows a part of it (a search snippet, FLOW-167). */
+  titleFull?: string;
   /** An email or other Latin value. The title stays LTR so the start remains visible. */
   ltrTitle?: boolean;
   className?: string;
@@ -311,6 +319,7 @@ export function ListRow(props: ListRowProps) {
   const titleClass = cx(
     "ui-row-title",
     props.muted && "ui-row-title-muted",
+    props.wrapTitle && "ui-row-title-wrap",
     props.tag ? "ui-row-title-with-tag" : false,
     autoLtr && !props.tag && "ui-row-title-ltr",
   );
@@ -344,6 +353,8 @@ export function ListRow(props: ListRowProps) {
           ) : (
             <span className={titleClass} dir={titleDir}>{titleBody}</span>
           )}
+          {/* Outside the title, so it never adds to a clamped title's lines or width. */}
+          {props.titleFull != null ? <span className="sr-only">{props.titleFull}</span> : null}
           {hintValue != null ? (
             <span
               id={described}
@@ -504,30 +515,38 @@ function externalName(name: string | undefined): string | undefined {
   return name == null ? undefined : `${name} ${NEW_TAB}`;
 }
 
-function rowName(props: { label?: string; title: ReactNode }): string | undefined {
+function rowName(props: { label?: string; title: ReactNode; titleFull?: string }): string | undefined {
   if (props.label) return props.label;
+  // A snippet title names the row by its whole text, as the content does (FLOW-167).
+  if (props.titleFull != null) return props.titleFull;
   return typeof props.title === "string" ? props.title : undefined;
 }
 
 const HINT_SEPARATOR = " · ";
 
 /**
- * A one-line hint "מגדל הים · 03/10 · חלק משותף": whole parts, in order, as many as fit. A part
- * that does not fit drops to a hidden second line with its separator, so a line never ends on
- * "·" and a date is never cut. Only a first part that is too long on its own ends in an ellipsis.
- * Screen readers still read every part.
+ * A one-line hint "מגדל הים · 03/10 · חלק משותף": whole parts, in order, as many as fit; then the
+ * parts past the first that do not fit shorten with "…" while a few letters of each fit (FLOW-168;
+ * two can be cut on one line), so a long project after the date is cut, not lost. A part with less
+ * room than that drops to a hidden second line with its separator, so a line never ends on "·". A
+ * part with no letters (a date, an amount) is never cut: it shows whole or drops. Each part's text
+ * takes its own direction, so a Latin name in a Hebrew row is cut at its end. Screen readers still
+ * read every part.
  */
 function hintParts(hint: ReactNode | readonly ReactNode[]): ReactNode {
   const parts = isPartList(hint) ? hint : typeof hint === "string" && hint.includes(HINT_SEPARATOR) ? hint.split(HINT_SEPARATOR) : null;
   if (parts == null) return hint as ReactNode;
   return (
     <span className="ui-hint-parts">
-      {parts.map((part, index) => (
-        <span key={index} className="ui-hint-part" data-clip-ok="">
-          {index > 0 ? HINT_SEPARATOR : null}
-          {part}
-        </span>
-      ))}
+      {parts.map((part, index) => {
+        const whole = typeof part === "string" && !/\p{L}/u.test(part);
+        return (
+          <span key={index} className={whole ? "ui-hint-part ui-hint-part-whole" : "ui-hint-part"} data-clip-ok="">
+            {index > 0 ? <span className="ui-hint-sep">{HINT_SEPARATOR}</span> : null}
+            <span className="ui-hint-text" dir={typeof part === "string" && !whole ? "auto" : undefined} data-clip-ok="">{part}</span>
+          </span>
+        );
+      })}
     </span>
   );
 }
@@ -537,8 +556,9 @@ function isPartList(hint: ReactNode | readonly ReactNode[]): hint is readonly Re
 }
 
 function titleText(props: Common): ReactNode {
-  if (!props.ltrTitle) return props.title;
-  return <bdi dir="ltr">{props.title}</bdi>;
+  const shown = props.ltrTitle ? <bdi dir="ltr">{props.title}</bdi> : props.title;
+  // A snippet is hidden from screen readers; the whole text follows the title (see the body).
+  return props.titleFull == null ? shown : <span aria-hidden="true">{shown}</span>;
 }
 
 function withAction(props: { actionBelow?: boolean; action?: ReactNode }, row: ReactNode) {

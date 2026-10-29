@@ -119,10 +119,58 @@ function matchedByDescription(row: LineRow, query: string): boolean {
   return row.supplier_name != null && searchText(query) !== "" && !lineMatches(row, query, { description: false });
 }
 
-/** A row's hint: its date and project, or, when the search matched only the description the title hides, the description. */
-export function lineHint(row: LineRow, query: string): string {
+/** A matched word further in than this starts the shown description a few words before it (FLOW-167). */
+const SNIPPET_FROM = 24;
+/** How many words before the matched word the snippet keeps. */
+const SNIPPET_WORDS = 2;
+
+/**
+ * Where a search word is in the description, matched as `lineMatches` matches it (`searchText`: "1388"
+ * finds "1,388", `בע"מ` finds "בע״מ"), from the start of the word it is in; -1 when it is not there.
+ */
+function wordStart(description: string, word: string): number {
+  if (!searchText(description).includes(word)) return -1;
+  const lower = description.toLowerCase();
+  // The plain text first; else the shortest start of the description whose search text holds the word ends in it.
+  let end = lower.length === description.length ? lower.indexOf(word) + 1 : 0;
+  for (let length = 1; end === 0 && length <= description.length; length += 1) {
+    if (searchText(description.slice(0, length)).includes(word)) end = length;
+  }
+  let start = Math.max(end - 1, 0);
+  while (start > 0 && !/\s/.test(description[start - 1] ?? "")) start -= 1;
+  return start;
+}
+
+/**
+ * The description as a search shows it: whole, or, when the first matched word starts late, from a word
+ * boundary a few words before it after a leading "…", so the word is in the title's three lines.
+ */
+export function descriptionSnippet(description: string, query: string): string {
+  const starts = searchText(query).split(" ").filter((word) => word !== "").map((word) => wordStart(description, word)).filter((index) => index >= 0);
+  if (starts.length === 0) return description;
+  let start = Math.min(...starts);
+  if (start <= SNIPPET_FROM) return description;
+  for (let word = 0; word < SNIPPET_WORDS; word += 1) {
+    while (start > 0 && /\s/.test(description[start - 1] ?? "")) start -= 1;
+    while (start > 0 && !/\s/.test(description[start - 1] ?? "")) start -= 1;
+  }
+  return start === 0 ? description : `…${description.slice(start)}`;
+}
+
+/**
+ * A row's title and hint: the supplier over its date and project. When the search matched only the
+ * description the supplier hides, the description is the title and the supplier moves to the hint
+ * (FLOW-167). A description title wraps while a search is on (`wrap`, up to three lines), so the matched
+ * word stays in view; a late match shows from a few words before it, with the whole text in `full` for
+ * screen readers. A line with no supplier is titled by its description already.
+ */
+export function lineText(row: LineRow, query: string): { title: string; full: string | null; hint: string; wrap: boolean } {
   const date = `${row.doc_date.slice(8, 10)}/${row.doc_date.slice(5, 7)}`;
-  return `${date} · ${matchedByDescription(row, query) ? row.description : (row.project_name ?? "בלי פרויקט")}`;
+  const byDescription = matchedByDescription(row, query) || (row.supplier_name == null && searchText(query) !== "");
+  if (!byDescription) return { title: row.supplier_name ?? row.description, full: null, hint: `${date} · ${row.project_name ?? "בלי פרויקט"}`, wrap: false };
+  const title = descriptionSnippet(row.description, query);
+  const hint = `${date} · ${row.supplier_name ?? row.project_name ?? "בלי פרויקט"}`;
+  return { title, full: title === row.description ? null : row.description, hint, wrap: true };
 }
 
 /** The app's search for the same words in this category ("none": the lines with no category, as /search reads it), all dates, keeping the preview flag. */
@@ -242,23 +290,26 @@ const LineGroups = memo(function LineGroups({ rows, query, side, search }: { row
         <h2 className="t-section ui-lines-group-title">{group.title}</h2>
       </div>
       <List layout="flat">
-        {group.rows.map((row) => (
-          <ListRow
-            key={`${row.transaction_id}:${row.part ?? ""}`}
-            layout="flat"
-            variant="transaction"
-            title={row.supplier_name ?? row.description}
-            hint={lineHint(row, query)}
-            // A transaction hint drops a part that does not fit, and a description is long: one part, cut at its end.
-            hintParts={matchedByDescription(row, query) ? [lineHint(row, query)] : undefined}
-            agorot={row.amount_minor}
-            currency={row.currency}
-            sign={side === "income" ? "in" : "out"}
-            source={rowSource(row.source)}
-            initials={lineInitials(row.supplier_name ?? row.description)}
-            href={`/transactions/${row.transaction_id}${search}`}
-          />
-        ))}
+        {group.rows.map((row) => {
+          const text = lineText(row, query);
+          return (
+            <ListRow
+              key={`${row.transaction_id}:${row.part ?? ""}`}
+              layout="flat"
+              variant="transaction"
+              title={text.title}
+              wrapTitle={text.wrap}
+              titleFull={text.full ?? undefined}
+              hint={text.hint}
+              agorot={row.amount_minor}
+              currency={row.currency}
+              sign={side === "income" ? "in" : "out"}
+              source={rowSource(row.source)}
+              initials={lineInitials(row.supplier_name ?? row.description)}
+              href={`/transactions/${row.transaction_id}${search}`}
+            />
+          );
+        })}
       </List>
     </section>
   ));

@@ -177,28 +177,75 @@ function line(id: string, date: string, dollars: number, project: string, suppli
   };
 }
 
-export const CategoryLines: Story = {
-  name: "Drill-down · a category",
-  render: () => (
+const CATEGORY_ROWS = [
+  line("0001", "2026-10-18", 1_250, "Cedar St", "Quick Fix Plumbing", "Water heater replacement, unit 2"),
+  line("0002", "2026-10-09", 400, "Maple Ave", "Northside Hardware"),
+  line("0003", "2026-09-22", 980, "Oak Ridge", "Bright Electric"),
+  line("0004", "2026-09-11", 200, "Riverside Commons Phase Two Townhomes", "Northside Hardware"),
+];
+
+function CategoryLinesView({ rows = CATEGORY_ROWS }: { rows?: ReturnType<typeof line>[] }) {
+  return (
     <StoryRoute entry="/reports/lines?side=expense&category=c-repairs&name=%D7%AA%D7%99%D7%A7%D7%95%D7%A0%D7%99%D7%9D%20%D7%95%D7%AA%D7%97%D7%96%D7%95%D7%A7%D7%94&from=2026-01-01&to=2026-10-31&cur=USD" tabs>
       <ExampleBar />
-      <ReportLinesScreen
-        sample={{
-          rows: [
-            line("0001", "2026-10-18", 1_250, "Cedar St", "Quick Fix Plumbing", "Water heater replacement, unit 2"),
-            line("0002", "2026-10-09", 400, "Maple Ave", "Northside Hardware"),
-            line("0003", "2026-09-22", 980, "Oak Ridge", "Bright Electric"),
-            line("0004", "2026-09-11", 200, "Riverside Commons Phase Two Townhomes", "Northside Hardware"),
-          ],
-          hasMore: true,
-        }}
-      />
+      <ReportLinesScreen sample={{ rows, hasMore: true }} />
     </StoryRoute>
-  ),
+  );
+}
+
+const phone320 = { globals: { viewport: { value: "flow320", isRotated: false } } };
+
+/** Whether the text is drawn whole inside its row: not cut by an ellipsis, not on a hidden line. */
+function inView(element: Element, text: string): boolean {
+  // The drawn text only: a snippet's whole description for screen readers is hidden (.sr-only).
+  const node = [...element.querySelectorAll("*"), element]
+    .filter((el) => el.closest(".sr-only") == null)
+    .flatMap((el) => [...el.childNodes])
+    .find((child) => child.nodeType === Node.TEXT_NODE && child.textContent?.includes(text) === true);
+  if (node?.textContent == null) return false;
+  const range = document.createRange();
+  const start = node.textContent.indexOf(text);
+  range.setStart(node, start);
+  range.setEnd(node, start + text.length);
+  const word = range.getBoundingClientRect();
+  const box = element.getBoundingClientRect();
+  const clipped = element instanceof HTMLElement && element.scrollWidth > element.clientWidth + 1;
+  return !clipped && word.width > 0 && word.left >= box.left - 1 && word.right <= box.right + 1 && word.top >= box.top - 1 && word.bottom <= box.bottom + 1;
+}
+
+/** A row's hint parts that show on its one line, each with whether it is cut with "…". */
+function shownParts(row: Element): { text: string; cut: boolean }[] {
+  const parts = [...row.querySelectorAll(".ui-row-hint .ui-hint-part")];
+  const line = parts[0]?.getBoundingClientRect().top ?? 0;
+  return parts
+    .filter((part) => Math.abs(part.getBoundingClientRect().top - line) < 1)
+    .map((part) => {
+      const text = part.querySelector(".ui-hint-text");
+      return { text: part.textContent, cut: text instanceof HTMLElement && text.scrollWidth > text.clientWidth + 1 };
+    });
+}
+
+export const CategoryLines: Story = {
+  name: "Drill-down · a category",
+  render: () => <CategoryLinesView />,
   play: async ({ canvasElement }) => {
     // A side's total is not a loss: the figure keeps the text colour, never the loss red.
     const figure = canvasElement.querySelector(".ui-rep-summary-figure .ui-num");
     await expect(figure?.classList.contains("ui-loss")).toBe(false);
+  },
+};
+
+/** FLOW-168: at 320 a long project after the date is cut with "…", not dropped; the date stays whole. */
+export const CategoryLinesLongProject: Story = {
+  name: "Drill-down · a long project at 320",
+  ...phone320,
+  render: () => <CategoryLinesView />,
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
+    const row = within(canvasElement).getByRole("link", { name: /Northside Hardware.*11\/09/ });
+    const parts = shownParts(row);
+    await expect(parts.map((part) => part.text)).toEqual(["11/09", " · Riverside Commons Phase Two Townhomes"]);
+    await expect(parts.map((part) => part.cut)).toEqual([false, true]);
   },
 };
 
@@ -225,18 +272,56 @@ export const CategoryLinesNoMatch: Story = {
   },
 };
 
-/** A line found only by its description shows the description in its hint, under the supplier. */
+const LONG_LATIN = "Quarterly service visit for the boiler room and the shared laundry on the ground floor, parts, labour, inspection 120";
+const LONG_HEBREW = "ביקור שירות רבעוני בחדר הדודים ובחדר הכביסה המשותף בקומת הקרקע, כולל חלקים, עבודה, ניקוי המסננים ובדיקת המעלית בבניין";
+
+/** The title's drawn lines: its height over its line height. */
+function titleLines(title: Element): number {
+  const line = Number.parseFloat(getComputedStyle(title).lineHeight);
+  return Math.round(title.getBoundingClientRect().height / line);
+}
+
+/**
+ * A line found only by its description shows the description as its title and the supplier in the hint
+ * (FLOW-167). At 320 the matched word stays in view, at the end of a Latin description and of a Hebrew one,
+ * and the title stops at three lines: a late match (117 characters in) shows from a few words before it,
+ * after "…", with the whole description in the row's name.
+ */
 export const CategoryLinesByDescription: Story = {
   name: "Drill-down · search by description",
-  render: CategoryLines.render,
+  ...phone320,
+  render: () => (
+    <CategoryLinesView
+      rows={[
+        ...CATEGORY_ROWS,
+        line("0005", "2026-08-14", 300, "Maple Ave", "Bright Electric", "החלפת לוח החשמל הראשי בקומת הכניסה, יחידה 4"),
+        line("0006", "2026-08-06", 500, "Oak Ridge", "Northside Hardware", LONG_LATIN),
+        line("0007", "2026-08-03", 700, "Cedar St", "Bright Electric", LONG_HEBREW),
+      ]}
+    />
+  ),
   play: async ({ canvasElement }) => {
+    await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
     const canvas = within(canvasElement);
-    await userEvent.type(canvas.getByRole("searchbox", { name: "חיפוש בתנועות" }), "heater");
-    await waitFor(() => expect(canvasElement.querySelector(".ui-row-hint")?.textContent).toBe("18/10 · Water heater replacement, unit 2"));
-    // In sight: the description is not a part wrapped to the hint's hidden second line.
-    const hint = canvasElement.querySelector(".ui-row-hint .ui-hint-parts")?.getBoundingClientRect();
-    const last = [...canvasElement.querySelectorAll(".ui-row-hint .ui-hint-part")].at(-1)?.getBoundingClientRect();
-    await expect(last != null && hint != null && last.bottom <= hint.bottom + 1).toBe(true);
+    const field = canvas.getByRole("searchbox", { name: "חיפוש בתנועות" });
+    for (const [word, description, shown, hint] of [
+      ["unit", "Water heater replacement, unit 2", "…heater replacement, unit 2", "18/10 · Quick Fix Plumbing"],
+      ["יחידה", "החלפת לוח החשמל הראשי בקומת הכניסה, יחידה 4", "…בקומת הכניסה, יחידה 4", "14/08 · Bright Electric"],
+      ["inspection", LONG_LATIN, "…parts, labour, inspection 120", "06/08 · Northside Hardware"],
+      ["המעלית", LONG_HEBREW, "…המסננים ובדיקת המעלית בבניין", "03/08 · Bright Electric"],
+    ] as const) {
+      await userEvent.clear(field);
+      await userEvent.type(field, word);
+      await waitFor(() => expect(canvasElement.querySelectorAll(".ui-lines-group .ui-row")).toHaveLength(1));
+      const row = canvasElement.querySelector(".ui-lines-group .ui-row");
+      const title = row?.querySelector(".ui-row-title");
+      await expect(title?.querySelector("[aria-hidden='true']")?.textContent ?? title?.textContent).toBe(shown);
+      await expect(row?.querySelector(".ui-row-hint")?.textContent).toBe(hint);
+      // The row's name keeps the whole description.
+      await expect(row?.textContent.includes(description)).toBe(true);
+      await expect(title != null && inView(title, word)).toBe(true);
+      await expect(title != null && titleLines(title) <= 3).toBe(true);
+    }
   },
 };
 

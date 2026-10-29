@@ -230,6 +230,8 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-164"></a>[FLOW-164](tasks/FLOW-164.md) | P&L statement test: a line with no category, and the shared fixture helpers | BACKLOG NIT |
 | <a id="flow-165"></a>[FLOW-165](tasks/FLOW-165.md) | Reports: open a balance-sheet account's movements | MCP + UI (design approved) |
 | <a id="flow-166"></a>[FLOW-166](tasks/FLOW-166.md) | Reports file: a per-user rate limit on flow-mcp's report route, and a deploy smoke for export_report | BACKLOG NIT |
+| <a id="flow-167"></a>[FLOW-167](tasks/FLOW-167.md) | Reports lines search: a long Latin description is cut at its start | BUG |
+| <a id="flow-168"></a>[FLOW-168](tasks/FLOW-168.md) | List rows: a long project name drops out of the hint, leaving only the date | BUG |
 | <a id="flow-169"></a>[FLOW-169](tasks/FLOW-169.md) | Search's report rows: Hebrew prefix letters and punctuation, the project chip, uuid test ids | BACKLOG NIT |
 | <a id="flow-920"></a>[FLOW-920](tasks/FLOW-920.md) | Project profit: the month's share and after-overhead rows from the server, and the old profit-month section goes | UI + server (follow-up to FLOW-140) |
 | <a id="flow-930"></a>[FLOW-930](tasks/FLOW-930.md) | A yearly charge shows in this month's forecast at a monthly amount | BUG |

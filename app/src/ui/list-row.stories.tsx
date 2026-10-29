@@ -238,3 +238,97 @@ export const TransactionTags: Story = {
     </List>
   ),
 };
+
+/**
+ * FLOW-168: at 320 a long project after the date is cut with "…" instead of dropping, Hebrew or Latin (a
+ * Latin one is cut at its end). The date never shortens, and a part with no room at all still drops.
+ */
+export const LongProjectHint: Story = {
+  args: { variant: "transaction", title: "ספק לדוגמה", layout: "flat" },
+  globals: { viewport: { value: "flow320", isRotated: false } },
+  render: () => (
+    <List layout="flat">
+      <ListRow layout="flat" variant="transaction" title="ספק לדוגמה" hint="18/10 · מתחם המגורים הגדול ברחוב הדקל שלב ב" agorot={120_000n} sign="out" source="invoice" initials="סל" href="/transactions/1" />
+      <ListRow layout="flat" variant="transaction" title="Example Hardware" hint="18/10 · Riverside Commons Phase Two Townhomes" agorot={40_000n} sign="out" source="bank" initials="EH" href="/transactions/2" />
+      <ListRow layout="flat" variant="transaction" title="אור חשמל" hint="מתחם המגורים הגדול ברחוב הדקל שלב ב · 03/10 · חשמל" agorot={86_000n} sign="out" source="invoice" initials="אח" href="/transactions/3" />
+      <ListRow layout="flat" variant="transaction" title="העברה" hint="10/09 · בית הים" agorot={450_000n} sign="out" source="bank" initials="הע" href="/transactions/4" />
+    </List>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
+    const lines = [...canvasElement.querySelectorAll(".ui-row")].map((row) => {
+      const parts = [...row.querySelectorAll(".ui-hint-part")];
+      const top = parts[0]?.getBoundingClientRect().top ?? 0;
+      return parts
+        .filter((part) => Math.abs(part.getBoundingClientRect().top - top) < 1)
+        .map((part) => {
+          const text = part.querySelector(".ui-hint-text");
+          const cut = text instanceof HTMLElement && text.scrollWidth > text.clientWidth + 1;
+          return `${part.textContent}${cut ? "…" : ""}`;
+        });
+    });
+    await expect(lines).toEqual([
+      ["18/10", " · מתחם המגורים הגדול ברחוב הדקל שלב ב…"],
+      ["18/10", " · Riverside Commons Phase Two Townhomes…"],
+      // The first part too long for the line is cut on its own; the date after it drops whole.
+      ["מתחם המגורים הגדול ברחוב הדקל שלב ב…"],
+      ["10/09", " · בית הים"],
+    ]);
+    // A Latin part runs left to right, so its start stays in view.
+    await expect(within(canvasElement).getByText("Riverside Commons Phase Two Townhomes")).toHaveAttribute("dir", "auto");
+  },
+};
+
+/**
+ * FLOW-168 as it stands (review of #865): with three parts whose 2nd and 3rd both have letters, both can be
+ * cut on one line at 393. The parts past the first that do not fit are cut or dropped, not only one.
+ */
+export const TwoCutParts: Story = {
+  args: { variant: "transaction", title: "ספק לדוגמה", layout: "flat" },
+  globals: { viewport: { value: "flow393", isRotated: false } },
+  render: () => (
+    <List layout="flat">
+      <ListRow layout="flat" variant="transaction" title="ספק לדוגמה" hint="קרן · מתחם המגורים הגדול ברחוב הדקל שלב ב · תיקונים ותחזוקה שוטפת" agorot={120_000n} sign="out" source="invoice" initials="סל" href="/transactions/1" />
+    </List>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBe(393);
+    const parts = [...canvasElement.querySelectorAll(".ui-hint-part")];
+    const top = parts[0]?.getBoundingClientRect().top ?? 0;
+    const shown = parts.map((part) => {
+      const text = part.querySelector(".ui-hint-text");
+      return {
+        line1: Math.abs(part.getBoundingClientRect().top - top) < 1,
+        cut: text instanceof HTMLElement && text.scrollWidth > text.clientWidth + 1,
+      };
+    });
+    await expect(shown).toEqual([
+      { line1: true, cut: false },
+      { line1: true, cut: true },
+      { line1: true, cut: true },
+    ]);
+  },
+};
+
+/**
+ * FLOW-167: a title a search found in a description wraps, at most three lines, and a snippet keeps the
+ * whole text for screen readers (`titleFull`). clip-check measures width only, so the play checks the lines.
+ */
+export const WrapTitle: Story = {
+  args: { variant: "transaction", title: "…parts, labour, inspection 120", layout: "flat" },
+  globals: { viewport: { value: "flow320", isRotated: false } },
+  render: () => (
+    <List layout="flat">
+      <ListRow layout="flat" variant="transaction" title="…parts, labour, inspection 120" titleFull="Quarterly service visit for the boiler room and the shared laundry on the ground floor, parts, labour, inspection 120" wrapTitle hint="06/08 · Northside Hardware" agorot={50_000n} sign="out" source="bank" initials="NH" href="/transactions/1" />
+      <ListRow layout="flat" variant="transaction" title="ביקור שירות רבעוני בחדר הדודים ובחדר הכביסה המשותף בקומת הקרקע, כולל חלקים, עבודה, ניקוי המסננים ובדיקת המעלית בבניין" wrapTitle hint="03/08 · Bright Electric" agorot={70_000n} sign="out" source="invoice" initials="BE" href="/transactions/2" />
+    </List>
+  ),
+  play: async ({ canvasElement }) => {
+    const titles = [...canvasElement.querySelectorAll(".ui-row-title")];
+    for (const title of titles) {
+      const lines = Math.round(title.getBoundingClientRect().height / Number.parseFloat(getComputedStyle(title).lineHeight));
+      await expect(lines).toBeLessThanOrEqual(3);
+    }
+    await expect(within(canvasElement).getAllByRole("link")[0]).toHaveTextContent("Quarterly service visit");
+  },
+};
