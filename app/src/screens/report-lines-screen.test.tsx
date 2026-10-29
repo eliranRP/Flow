@@ -180,7 +180,7 @@ describe("the drill-down's search", () => {
     expect(lineHint(row, "cedar")).toBe("05/09 · Cedar St");
     expect(lineHint(row, "renewal")).toBe("05/09 · Annual renewal");
     expect(lineHint({ ...row, supplier_name: null }, "renewal")).toBe("05/09 · Cedar St");
-    expect(searchPath(" rent ", "none", "")).toBe("/search?q=rent");
+    expect(searchPath(" rent ", "none", "")).toBe("/search?q=rent&category=none");
     expect(searchPath("rent", "c1", "?preview=empty")).toBe("/search?preview=empty&q=rent&category=c1");
   });
 
@@ -224,8 +224,22 @@ describe("the drill-down's search, when a page fails", () => {
     expect(screen.queryByRole("button", { name: /עוד תנועות/ })).toBeNull();
   });
 
-  it("shows the search from the sixth line", () => {
-    renderWithProviders(<ReportLinesScreen sample={{ rows: MANY.slice(0, 5) }} />, { route: ROUTE });
-    expect(screen.queryByRole("searchbox", { name: "חיפוש בתנועות" })).toBeNull();
+  it("goes back to reading while the retry runs, and finds the line once the page answers", async () => {
+    const wire = (row: ReportLinesSample["rows"][number]) => ({ ...row, amount_minor: Number(row.amount_minor) });
+    const page: { answer?: () => void } = {};
+    rpc.impl = (_name, args) => {
+      if ((args as { p_offset: number }).p_offset === 0) return Promise.resolve({ data: { rows: MANY.map(wire), has_more: true }, error: null });
+      if (rpc.calls.length === 2) return Promise.resolve({ data: null, error: { message: "down" } });
+      return new Promise((resolve) => { page.answer = () => { resolve({ data: { rows: [wire(line("0100", "2026-07-02", 77, null, "Late Page Supply"))], has_more: false }, error: null }); }; });
+    };
+    renderWithProviders(<ReportLinesScreen />, { route: ROUTE });
+    fireEvent.change(await screen.findByRole("searchbox", { name: "חיפוש בתנועות" }), { target: { value: "late page" } });
+    fireEvent.click(await screen.findByRole("button", { name: "נסו שוב" }));
+    expect(await screen.findByText("מחפשים בכל התנועות…")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "נסו שוב" })).toBeNull();
+    await waitFor(() => { expect(page.answer).toBeDefined(); });
+    page.answer?.();
+    expect(await screen.findByText("תנועה אחת מתאימה")).toBeInTheDocument();
+    expect(rpc.calls).toHaveLength(3);
   });
 });

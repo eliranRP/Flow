@@ -162,11 +162,11 @@ export const Loading: Story = { name: "State · loading", render: () => <Reports
 export const Failed: Story = { name: "State · failed to load", render: () => <Reports sample={{ phase: { kind: "error", offline: false } }} /> };
 export const Offline: Story = { name: "State · offline", render: () => <Reports sample={{ offlineSince: Date.parse("2026-10-31T07:41:00Z") }} /> };
 
-function line(id: string, date: string, dollars: number, project: string, supplier: string) {
+function line(id: string, date: string, dollars: number, project: string, supplier: string, description = supplier) {
   return {
     transaction_id: `b0000000-0000-4000-8000-00000000${id}`,
     part: null,
-    description: supplier,
+    description,
     supplier_name: supplier,
     project_name: project,
     category_name: "תיקונים ותחזוקה",
@@ -185,7 +185,7 @@ export const CategoryLines: Story = {
       <ReportLinesScreen
         sample={{
           rows: [
-            line("0001", "2026-10-18", 1_250, "Cedar St", "Quick Fix Plumbing"),
+            line("0001", "2026-10-18", 1_250, "Cedar St", "Quick Fix Plumbing", "Water heater replacement, unit 2"),
             line("0002", "2026-10-09", 400, "Maple Ave", "Northside Hardware"),
             line("0003", "2026-09-22", 980, "Oak Ridge", "Bright Electric"),
             line("0004", "2026-09-11", 200, "Riverside Commons Phase Two Townhomes", "Northside Hardware"),
@@ -211,6 +211,32 @@ export const CategoryLinesSearch: Story = {
     await userEvent.type(canvas.getByRole("searchbox", { name: "חיפוש בתנועות" }), "northside");
     await expect(canvas.getByText("2 תנועות מתאימות")).toBeInTheDocument();
     await expect(canvas.queryByRole("button", { name: /לפי פרויקט/ })).toBeNull();
+  },
+};
+
+/** A search with no match says so and offers the app's search, for the same words in this category, all dates. */
+export const CategoryLinesNoMatch: Story = {
+  name: "Drill-down · search, no match",
+  render: CategoryLines.render,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(canvas.getByRole("searchbox", { name: "חיפוש בתנועות" }), "roof");
+    await expect(await canvas.findByRole("link", { name: "לחיפוש בכל התנועות" })).toHaveAttribute("href", "/search?q=roof&category=c-repairs");
+  },
+};
+
+/** A line found only by its description shows the description in its hint, under the supplier. */
+export const CategoryLinesByDescription: Story = {
+  name: "Drill-down · search by description",
+  render: CategoryLines.render,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(canvas.getByRole("searchbox", { name: "חיפוש בתנועות" }), "heater");
+    await waitFor(() => expect(canvasElement.querySelector(".ui-row-hint")?.textContent).toBe("18/10 · Water heater replacement, unit 2"));
+    // In sight: the description is not a part wrapped to the hint's hidden second line.
+    const hint = canvasElement.querySelector(".ui-row-hint .ui-hint-parts")?.getBoundingClientRect();
+    const last = [...canvasElement.querySelectorAll(".ui-row-hint .ui-hint-part")].at(-1)?.getBoundingClientRect();
+    await expect(last != null && hint != null && last.bottom <= hint.bottom + 1).toBe(true);
   },
 };
 

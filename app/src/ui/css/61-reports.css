@@ -421,3 +421,8 @@
 .ui-rep-search > p {
   margin: 0;
 }
+
+/* The status line stays mounted for screen readers; empty, it takes back the gap it would leave. */
+.ui-rep-search > p:empty {
+  margin-block-start: calc(var(--space-1) * -1);
+}
