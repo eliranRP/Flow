@@ -190,9 +190,9 @@ describe("the drill-down's search", () => {
     // A line with no supplier is titled by its description; a search wraps it too, so the word stays in view.
     expect(lineText({ ...row, supplier_name: null }, "renewal")).toEqual({ title: "Annual renewal", full: "Annual renewal", hint: "05/09 · Cedar St", wrap: true });
     expect(lineText({ ...row, supplier_name: null }, "")).toEqual({ title: "Annual renewal", full: null, hint: "05/09 · Cedar St", wrap: false });
-    // FLOW-169: a word that matched the project keeps the project in the hint, before the supplier.
-    expect(lineText(row, "renewal cedar")).toEqual({ title: "Annual renewal", full: "Annual renewal", hint: "05/09 · Cedar St · Anytime Mailbox", wrap: true });
-    expect(lineText(row, "cedar renewal").hint).toBe("05/09 · Cedar St · Anytime Mailbox");
+    // FLOW-169: a word that matched the project keeps the project in the hint, after the supplier.
+    expect(lineText(row, "renewal cedar")).toEqual({ title: "Annual renewal", full: "Annual renewal", hint: "05/09 · Anytime Mailbox · Cedar St", wrap: true });
+    expect(lineText(row, "cedar renewal").hint).toBe("05/09 · Anytime Mailbox · Cedar St");
     expect(searchPath(" rent ", "none", "")).toBe("/search?q=rent&category=none");
     expect(searchPath("rent", "c1", "?preview=empty")).toBe("/search?preview=empty&q=rent&category=c1");
   });

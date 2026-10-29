@@ -133,11 +133,19 @@ const NAMES: Record<ReportKind, { title: string; when: string }> = {
 
 type ProjectRow = { id: string; name: string };
 
-/** The project the words beside the report's name point to: the words as typed, then with a prefix letter off. */
+/**
+ * The project the words beside the report's name point to: the words as typed, then with a prefix
+ * letter off. A form with the letters off needs MIN_PREFIX letters and must start a word of the name,
+ * so "דוח מים" (a water bill) does not read "ים" inside "הגפנים".
+ */
 function namedProject(rest: string, projects: readonly ProjectRow[]): ProjectRow | null {
-  for (const form of prefixForms(rest)) {
-    if (form.length < MIN_PROJECT) break;
-    const project = projects.find((row) => normalizeReportText(row.name).includes(form));
+  const [typed = "", ...stripped] = prefixForms(rest);
+  if (typed.length < MIN_PROJECT) return null;
+  const asTyped = projects.find((row) => normalizeReportText(row.name).includes(typed));
+  if (asTyped != null) return asTyped;
+  for (const form of stripped) {
+    if (form.length < MIN_PREFIX) break;
+    const project = projects.find((row) => ` ${normalizeReportText(row.name)}`.includes(` ${form}`));
     if (project != null) return project;
   }
   return null;

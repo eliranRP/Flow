@@ -404,6 +404,16 @@
   margin: var(--space-3) 0 var(--space-1);
 }
 
+/* FLOW-170: the balance date sheet's note under its dates or its calendar ("from the start"). */
+.ui-rep-note {
+  margin: var(--space-3) 0 0;
+}
+
+/* Under the calendar the column's gap spaces it. */
+.ui-rep-custom > .ui-rep-note {
+  margin: 0;
+}
+
 .ui-rep-more-wrap {
   display: flex;
   justify-content: center;

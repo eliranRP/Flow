@@ -76,6 +76,11 @@ describe("the search's report shortcuts (FLOW-163)", () => {
     // A name that starts with one of the letters matches as typed first.
     const own = [{ id: PROJECT, name: "הדר לדוגמה" }];
     expect(reportShortcuts("מאזן הדר", own).map((row) => row.title)).toEqual(["מאזן · הדר לדוגמה"]);
+    // With the letters off, the rest must start a word of the name and keep three letters: "מים" is
+    // not "ים" inside "הגפנים", so a water bill's "דוח מים" stays a line's own text.
+    const vines = [{ id: PROJECT, name: "הגפנים 12" }];
+    expect(reportShortcuts("דוח מים", vines)).toEqual([]);
+    expect(reportShortcuts("מאזן מים", vines).map((row) => row.title)).toEqual(["מאזן"]);
   });
 
   it("shows the balance sheet for English balance only as the whole query or in balance sheet (FLOW-169)", () => {

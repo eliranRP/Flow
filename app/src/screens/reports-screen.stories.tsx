@@ -141,7 +141,8 @@ export const ShareSheet: Story = {
 
 /**
  * FLOW-170: the balance sheet's date sheet says every date counts from the start, one caption under
- * the dates (the owner asked for "from the start"). At 320, in light and dark.
+ * the dates and under the calendar for another date (the owner asked for "from the start"). At 320,
+ * in light and dark.
  */
 export const BalanceDateSheet320: Story = {
   name: "Sheet · balance date at 320",
@@ -157,6 +158,11 @@ export const BalanceDateSheet320: Story = {
     await expect(box.left).toBeGreaterThanOrEqual(0);
     await expect(box.right).toBeLessThanOrEqual(320);
     await expect(note.scrollWidth).toBeLessThanOrEqual(note.clientWidth + 1);
+    // The calendar for another date says it too, inside the screen.
+    await userEvent.click(within(sheet).getByRole("button", { name: "תאריך אחר" }));
+    const again = await within(sheet).findByText("המאזן כולל את כל התנועות מההתחלה ועד התאריך שבוחרים");
+    await expect(again.getBoundingClientRect().right).toBeLessThanOrEqual(320);
+    await expect(again.getBoundingClientRect().left).toBeGreaterThanOrEqual(0);
   },
 };
 

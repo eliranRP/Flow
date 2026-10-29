@@ -109,8 +109,8 @@ function matchedByDescription(row: LineRow, query: string): boolean {
 /**
  * A row's title and hint: the supplier over its date and project. When the search matched only the
  * description the supplier hides, the description is the title and the supplier moves to the hint
- * (FLOW-167); a project one of the words matched stays in the hint, before the supplier (FLOW-169,
- * "heater cedar"). A description title wraps while a search is on (`wrap`, up to three lines) and is
+ * (FLOW-167); a project one of the words matched stays in the hint, after the supplier, which names
+ * the line (FLOW-169, "heater cedar"; review of #868). A description title wraps while a search is on (`wrap`, up to three lines) and is
  * drawn by `SearchSnippet`, which starts it late when the matched words would fall past those lines;
  * `full` keeps the whole text for screen readers. A line with no supplier is titled by its description
  * already.
@@ -123,7 +123,7 @@ export function lineText(row: LineRow, query: string): { title: string; full: st
   if (row.supplier_name == null) return { title: row.description, full: row.description, hint: `${date} · ${project}`, wrap: true };
   const projectText = searchText(project);
   const matchedProject = searchWords(query).some((word) => projectText.includes(word));
-  const hint = matchedProject ? `${date} · ${project} · ${row.supplier_name}` : `${date} · ${row.supplier_name}`;
+  const hint = matchedProject ? `${date} · ${row.supplier_name} · ${project}` : `${date} · ${row.supplier_name}`;
   return { title: row.description, full: row.description, hint, wrap: true };
 }
 

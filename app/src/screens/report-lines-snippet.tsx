@@ -178,5 +178,13 @@ export function SearchSnippet({ text, query }: { text: string; query: string }) 
     observer.observe(node);
     return () => { observer.disconnect(); };
   }, []);
+  // Rubik loads with `font-display: swap`: a cut measured in the fallback font is measured again once it arrives.
+  useLayoutEffect(() => {
+    const fonts = typeof document === "undefined" ? undefined : document.fonts;
+    if (fonts == null || fonts.status === "loaded") return;
+    let live = true;
+    void fonts.ready.then(() => { if (live) setMeasure(START); });
+    return () => { live = false; };
+  }, []);
   return <span ref={ref}>{snippetText(text, cuts[measure.at] ?? 0)}</span>;
 }
