@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
 import { HomeReportsCard } from "./home-reports-card";
-import { linesByMonth, linesByProject, ReportLinesScreen, reportLinesArgs, type ReportLinesSample } from "./report-lines-screen";
+import { lineMatches, linesByMonth, linesByProject, ReportLinesScreen, reportLinesArgs, type ReportLinesSample } from "./report-lines-screen";
 import { REPORTS_BALANCE, REPORTS_STATEMENT } from "../dev/reports-sample";
 
 const rpc = vi.hoisted(() => ({
@@ -133,5 +133,63 @@ describe("HomeReportsCard", () => {
     expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     expect(screen.getByText("לא הצלחנו לטעון.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /רווח והפסד/ })).toBeInTheDocument();
+  });
+});
+
+const MANY: ReportLinesSample["rows"] = [
+  ...ROWS,
+  line("0005", "2026-08-17", 4, "Oak Ridge", "CodeBox"),
+  line("0006", "2026-08-12", 41, null, "LOI Properties LLC"),
+  line("0007", "2026-08-06", 51, null, "Anytime Mailbox"),
+];
+
+describe("the drill-down's search", () => {
+  it("matches the supplier, project, date or amount, every word", () => {
+    const row = line("0099", "2026-09-05", 1_388, "Cedar St", "Anytime Mailbox");
+    expect(lineMatches(row, "")).toBe(true);
+    expect(lineMatches(row, "anytime")).toBe(true);
+    expect(lineMatches(row, "mailbox cedar")).toBe(true);
+    expect(lineMatches(row, "05/09")).toBe(true);
+    expect(lineMatches(row, "$1,388")).toBe(true);
+    expect(lineMatches(row, "1388.00")).toBe(true);
+    expect(lineMatches(row, "mailbox maple")).toBe(false);
+    expect(lineMatches(line("0098", "2026-09-05", 10, null), "בלי פרויקט")).toBe(true);
+  });
+
+  it("filters the lines, says how many match, and hides the split while it searches", () => {
+    renderWithProviders(<ReportLinesScreen sample={{ rows: MANY }} />, { route: ROUTE });
+    const field = screen.getByRole("searchbox", { name: "חיפוש בתנועות" });
+    fireEvent.change(field, { target: { value: "northside" } });
+    expect(screen.getByText("2 תנועות מתאימות")).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /Northside Hardware/ })).toHaveLength(2);
+    expect(screen.queryByRole("link", { name: /Quick Fix Plumbing/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /לפי פרויקט/ })).toBeNull();
+    fireEvent.change(field, { target: { value: "nothing like it" } });
+    expect(screen.getByText("אין תנועות שמתאימות לחיפוש.")).toBeInTheDocument();
+    fireEvent.change(field, { target: { value: "" } });
+    expect(screen.getByRole("button", { name: /לפי פרויקט/ })).toBeInTheDocument();
+  });
+
+  it("shows no search on a short list", () => {
+    renderWithProviders(<ReportLinesScreen sample={{ rows: ROWS }} />, { route: ROUTE });
+    expect(screen.queryByRole("searchbox", { name: "חיפוש בתנועות" })).toBeNull();
+  });
+
+  it("searches every page of the period, not just the loaded one", async () => {
+    const wire = (row: ReportLinesSample["rows"][number]) => ({ ...row, amount_minor: Number(row.amount_minor) });
+    rpc.impl = (name, args) => {
+      if (name !== "get_breakdown_lines") return Promise.resolve({ data: null, error: { message: "down" } });
+      const offset = (args as { p_offset: number }).p_offset;
+      return Promise.resolve(offset === 0
+        ? { data: { rows: MANY.map(wire), has_more: true }, error: null }
+        : { data: { rows: [wire(line("0020", "2026-07-02", 77, "Maple Ave", "Distant Supplier"))], has_more: false }, error: null });
+    };
+    renderWithProviders(<ReportLinesScreen />, { route: ROUTE });
+    const field = await screen.findByRole("searchbox", { name: "חיפוש בתנועות" });
+    expect(rpc.calls).toHaveLength(1);
+    fireEvent.change(field, { target: { value: "distant" } });
+    expect(await screen.findByRole("link", { name: /Distant Supplier/ })).toBeInTheDocument();
+    expect(rpc.calls).toHaveLength(2);
+    await waitFor(() => { expect(screen.getByText("תנועה אחת מתאימה")).toBeInTheDocument(); });
   });
 });

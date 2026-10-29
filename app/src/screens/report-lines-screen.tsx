@@ -14,6 +14,7 @@ import { HEBREW_MONTHS } from "../ui/date-math";
 import { rowSource } from "../ui/line-marks";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
+import { SearchField } from "../ui/search-field";
 import { ProfitRowsSkeleton } from "../ui/screen-skeletons";
 import { DelayedSkeleton } from "../ui/skeleton";
 import { waitForAccessToken } from "../wait-for-session";
@@ -82,6 +83,27 @@ export function linesByProject(rows: readonly LineRow[]): { name: string; total:
   return [...totals.entries()].map(([name, total]) => ({ name, total })).sort((a, b) => (a.total === b.total ? a.name.localeCompare(b.name) : b.total > a.total ? 1 : -1));
 }
 
+/** The search's words, the way a line is matched: lower case, no thousands commas or money signs. */
+function searchText(value: string): string {
+  return value.toLowerCase().replace(/[,$₪€£]/g, "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Whether a line matches the search (owner, 2026-10-29): every word is in its supplier, description,
+ * project, date (dd/mm) or amount ("189.15", "189"). An empty search matches every line.
+ */
+export function lineMatches(row: LineRow, query: string): boolean {
+  const words = searchText(query).split(" ").filter((word) => word !== "");
+  if (words.length === 0) return true;
+  const abs = row.amount_minor < 0n ? -row.amount_minor : row.amount_minor;
+  const amount = `${String(abs / 100n)}.${String(abs % 100n).padStart(2, "0")}`;
+  const haystack = searchText([row.supplier_name ?? "", row.description, row.project_name ?? "בלי פרויקט", `${row.doc_date.slice(8, 10)}/${row.doc_date.slice(5, 7)}`, amount].join(" "));
+  return words.every((word) => haystack.includes(word));
+}
+
+/** A search shows once the list is long enough to need it. */
+const SEARCH_FROM = 6;
+
 /**
  * FLOW-161 (board ReportCategoryDrill): one category's lines for the report's period: the total, its split by
  * project, and the lines by month, each opening the transaction page. One project's report keeps that project.
@@ -95,6 +117,8 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
   const args = reportLinesArgs(params);
   const currency = args.currency;
   const [splitOpen, setSplitOpen] = useState(true);
+  const [query, setQuery] = useState("");
+  const searching = searchText(query) !== "";
   const read = useInfiniteQuery({
     queryKey: ["breakdown-lines", "report", preview, args.side, args.category, args.from ?? "", args.to ?? "", currency],
     enabled: sample == null && preview === "off",
@@ -110,9 +134,11 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
   const reading = sample == null && filterByProject && hasNextPage;
   const rows = all == null || reading ? null : args.projectName == null ? all : all.filter((row) => row.project_name === args.projectName);
   const hasMore = sample?.hasMore ?? read.hasNextPage;
+  // A search looks at every line of the period, so it reads the pages not loaded yet too.
+  const readAll = filterByProject || searching;
   useEffect(() => {
-    if (filterByProject && hasNextPage && !isFetchingNextPage && !isFetchNextPageError) void fetchNextPage();
-  }, [filterByProject, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
+    if (readAll && hasNextPage && !isFetchingNextPage && !isFetchNextPageError) void fetchNextPage();
+  }, [readAll, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
   const title = categoryName(args.name);
   // Back to the report, with its own choices (the drill keys ride along and are ignored there).
   const back = `/reports${location.search}`;
@@ -128,20 +154,32 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
   const total = rows.reduce((sum, row) => sum + row.amount_minor, 0n);
   const signed = args.side === "income" ? total : -total;
   const split = linesByProject(rows);
+  const shown = searching ? rows.filter((row) => lineMatches(row, query)) : rows;
+  const stillReading = searching && sample == null && hasNextPage;
   const collapse: Collapse = { isOpen: () => splitOpen, onToggle: () => { setSplitOpen((open) => !open); } };
   return (
     <div className="ui-rep-screen">
       {header}
       <div className="ui-rep-content">
         <ReportSummary label={args.side === "income" ? "הכנסות" : "הוצאות"} amount={signed} currency={currency} loss={false} sub={rows.length === 1 ? "תנועה אחת" : `${String(rows.length)} תנועות${hasMore ? " ועוד" : ""}`} />
-        {split.length > 1 ? (
+        {rows.length >= SEARCH_FROM || hasMore ? (
+          <div className="ui-rep-search">
+            <SearchField label="חיפוש בתנועות" value={query} onChange={setQuery} placeholder="ספק, פרויקט, סכום או תאריך" busy={stillReading} />
+            {searching ? (
+              <p className="t-caption t-muted" role="status">
+                {shown.length === 0 && !stillReading ? "אין תנועות שמתאימות לחיפוש." : shown.length === 1 ? "תנועה אחת מתאימה" : `${String(shown.length)} תנועות מתאימות`}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+        {split.length > 1 && !searching ? (
           <ReportSection id="split" title="לפי פרויקט" total={<span className="t-muted">{String(split.length)}</span>} collapse={collapse}>
             <ul className="ui-rep-rows">
               {split.map((item) => <ReportRow key={item.name} name={item.name} amount={<Amount agorot={args.side === "income" ? item.total : -item.total} currency={currency} />} />)}
             </ul>
           </ReportSection>
         ) : null}
-        {linesByMonth(rows).map((group) => (
+        {linesByMonth(shown).map((group) => (
           <section key={group.key} className="ui-lines-group" aria-label={group.title}>
             <div className="ui-lines-group-head">
               <h2 className="t-section ui-lines-group-title">{group.title}</h2>
@@ -165,7 +203,7 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
             </List>
           </section>
         ))}
-        {hasMore ? (
+        {hasMore && !searching ? (
           <div className="ui-rep-more-wrap">
             <Button variant="secondary" busy={read.isFetchingNextPage} onClick={() => { void read.fetchNextPage(); }}>עוד תנועות</Button>
           </div>

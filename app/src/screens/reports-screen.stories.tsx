@@ -202,6 +202,18 @@ export const CategoryLines: Story = {
   },
 };
 
+/** The owner's ask (2026-10-29): search a category's lines; the split hides and the matches stay by month. */
+export const CategoryLinesSearch: Story = {
+  name: "Drill-down · search",
+  render: CategoryLines.render,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(canvas.getByRole("searchbox", { name: "חיפוש בתנועות" }), "northside");
+    await expect(canvas.getByText("2 תנועות מתאימות")).toBeInTheDocument();
+    await expect(canvas.queryByRole("button", { name: /לפי פרויקט/ })).toBeNull();
+  },
+};
+
 export const HomeCard: Story = {
   name: "Home · דוחות card",
   render: () => (

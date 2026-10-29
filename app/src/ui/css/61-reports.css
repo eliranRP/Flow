@@ -409,3 +409,15 @@
 .ui-rep-share > p {
   margin: 0;
 }
+
+/* The drill-down's search: the field, then one line on what it found. */
+.ui-rep-search {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-block: var(--space-2);
+}
+
+.ui-rep-search > p {
+  margin: 0;
+}
