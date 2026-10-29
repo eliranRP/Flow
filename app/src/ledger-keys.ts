@@ -30,6 +30,8 @@ export const LEDGER_KEYS = [
   "loan-split",
   "breakdown",
   "breakdown-lines",
+  // FLOW-161: the reports' balance sheet (the P&L statement sits under "dashboard").
+  "balance-sheet",
   "month-forecast",
   "missing-bills",
   "expected-months",

@@ -37,6 +37,8 @@ import { SettingsRoutes } from "./routes/settings";
 import { TransfersRoute, UnpaidInvoiceRoute, UnpaidRoute } from "./routes/unpaid";
 
 const CompanyProfitScreen = lazy(() => screenLoaders.companyProfit().then((m) => ({ default: m.CompanyProfitScreen })));
+const ReportsScreen = lazy(() => screenLoaders.reports().then((m) => ({ default: m.ReportsScreen })));
+const ReportLinesScreen = lazy(() => screenLoaders.reportLines().then((m) => ({ default: m.ReportLinesScreen })));
 const ReviewScreen = lazy(() => screenLoaders.review().then((m) => ({ default: m.ReviewScreen })));
 const ChangeForm = lazy(() => screenLoaders.changeForm().then((m) => ({ default: m.ChangeForm })));
 const FiledTodayScreen = lazy(() => screenLoaders.filedToday().then((m) => ({ default: m.FiledTodayScreen })));
@@ -170,6 +172,8 @@ function AppRoutes() {
                 </Route>
                 {/* FLOW-413: Home is the month's cash; its rows open the profit view, a month, and a month's lines. */}
                 <Route path="profit" element={<CompanyProfitScreen />} />
+                <Route path="reports" element={<ReportsScreen />} />
+                <Route path="reports/lines" element={<ReportLinesScreen />} />
                 <Route path="cash/:month/:side/:currency" element={<CashLinesScreen />} />
                 {ProjectRoutes()}
                 <Route element={<ReviewWithSheet />}>

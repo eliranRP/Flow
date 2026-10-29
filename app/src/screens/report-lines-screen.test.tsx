@@ -1,0 +1,137 @@
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithProviders } from "../test-render";
+import { HomeReportsCard } from "./home-reports-card";
+import { linesByMonth, linesByProject, ReportLinesScreen, reportLinesArgs, type ReportLinesSample } from "./report-lines-screen";
+import { REPORTS_BALANCE, REPORTS_STATEMENT } from "../dev/reports-sample";
+
+const rpc = vi.hoisted(() => ({
+  calls: [] as Array<{ name: string; args: unknown }>,
+  impl: (_name: string, _args?: unknown): Promise<{ data: unknown; error: { message: string } | null }> =>
+    Promise.resolve({ data: null, error: { message: "down" } }),
+}));
+
+vi.mock("../lib/supabase", () => ({
+  getSupabase: () => ({
+    rpc: (name: string, args?: unknown) => {
+      rpc.calls.push({ name, args });
+      return rpc.impl(name, args);
+    },
+  }),
+}));
+
+beforeEach(() => {
+  rpc.calls = [];
+  rpc.impl = () => Promise.resolve({ data: null, error: { message: "down" } });
+});
+
+function line(id: string, date: string, dollars: number, project: string | null, supplier = "Northside Hardware") {
+  return {
+    transaction_id: `b0000000-0000-4000-8000-00000000${id}`,
+    part: null,
+    description: supplier,
+    supplier_name: supplier,
+    project_name: project,
+    category_name: "תיקונים ותחזוקה",
+    doc_date: date,
+    currency: "USD",
+    amount_minor: BigInt(dollars * 100),
+    shared: false,
+  };
+}
+
+const ROWS: ReportLinesSample["rows"] = [
+  line("0001", "2026-10-18", 1_250, "Cedar St", "Quick Fix Plumbing"),
+  line("0002", "2026-10-09", 400, "Maple Ave"),
+  line("0003", "2026-09-22", 980, "Oak Ridge", "Bright Electric"),
+  line("0004", "2026-09-11", 200, "Cedar St"),
+];
+
+const ROUTE = "/reports/lines?side=expense&category=c-repairs&name=%D7%AA%D7%99%D7%A7%D7%95%D7%A0%D7%99%D7%9D&from=2026-01-01&to=2026-10-31&cur=USD&period=year";
+
+describe("the drill-down's helpers", () => {
+  it("reads its choices and falls back on a bad currency", () => {
+    const args = reportLinesArgs(new URLSearchParams("side=income&category=c1&cur=usd"));
+    expect(args.side).toBe("income");
+    expect(args.currency).toBe("ILS");
+    expect(reportLinesArgs(new URLSearchParams("")).side).toBe("expense");
+  });
+
+  it("groups lines by month, newest first, and totals them by project", () => {
+    expect(linesByMonth(ROWS).map((group) => [group.title, group.rows.length])).toEqual([["אוקטובר 2026", 2], ["ספטמבר 2026", 2]]);
+    expect(linesByProject(ROWS)).toEqual([
+      { name: "Cedar St", total: 145_000n },
+      { name: "Oak Ridge", total: 98_000n },
+      { name: "Maple Ave", total: 40_000n },
+    ]);
+  });
+});
+
+describe("ReportLinesScreen", () => {
+  it("shows the total, the split by project and each line opening its transaction", () => {
+    renderWithProviders(<ReportLinesScreen sample={{ rows: ROWS }} />, { route: ROUTE });
+    expect(screen.getByRole("heading", { name: "תיקונים" })).toBeInTheDocument();
+    expect(document.querySelector(".ui-rep-summary")?.textContent).toContain("−$2,830");
+    expect(screen.getByRole("button", { name: /לפי פרויקט/ })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("link", { name: /Quick Fix Plumbing/ }).getAttribute("href")).toBe(`/transactions/${ROWS[0]?.transaction_id ?? ""}`);
+  });
+
+  it("keeps one project's lines when the report was on one project", () => {
+    renderWithProviders(<ReportLinesScreen sample={{ rows: ROWS }} />, { route: `${ROUTE}&pname=Cedar+St` });
+    expect(screen.queryByRole("link", { name: /Bright Electric/ })).toBeNull();
+    expect(document.querySelector(".ui-rep-summary")?.textContent).toContain("−$1,450");
+    // One project: no split.
+    expect(screen.queryByRole("button", { name: /לפי פרויקט/ })).toBeNull();
+  });
+
+  it("reads every page before it sums one project's lines, and shows no part of the total until then", async () => {
+    const wire = (row: ReturnType<typeof line>) => ({ ...row, amount_minor: Number(row.amount_minor) });
+    let releaseSecond: () => void = () => {};
+    const second = new Promise<void>((resolve) => { releaseSecond = resolve; });
+    rpc.impl = async (name, args) => {
+      if (name !== "get_breakdown_lines") return { data: null, error: { message: "down" } };
+      const offset = (args as { p_offset: number }).p_offset;
+      if (offset === 0) return { data: { rows: [wire(line("0011", "2026-10-02", 300, "Maple Ave")), wire(line("0012", "2026-10-01", 500, "Maple Ave"))], has_more: true }, error: null };
+      await second;
+      return { data: { rows: [wire(line("0013", "2026-09-30", 700, "Cedar St")), wire(line("0014", "2026-09-29", 200, "Cedar St"))], has_more: false }, error: null };
+    };
+    renderWithProviders(<ReportLinesScreen />, { route: `${ROUTE}&pname=Cedar+St` });
+    await waitFor(() => { expect(rpc.calls).toHaveLength(2); });
+    expect(document.querySelector(".ui-rep-summary")).toBeNull();
+    releaseSecond();
+    await waitFor(() => { expect(document.querySelector(".ui-rep-summary")?.textContent).toContain("−$900"); });
+    expect(screen.getByText("2 תנועות")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "עוד תנועות" })).toBeNull();
+  });
+
+  it("offers more lines when the read has more", () => {
+    renderWithProviders(<ReportLinesScreen sample={{ rows: ROWS, hasMore: true }} />, { route: ROUTE });
+    fireEvent.click(screen.getByRole("button", { name: "עוד תנועות" }));
+    expect(screen.getByText("4 תנועות ועוד")).toBeInTheDocument();
+  });
+});
+
+describe("HomeReportsCard", () => {
+  it("opens the P&L with this year's net profit and the balance sheet with today's equity", () => {
+    renderWithProviders(<HomeReportsCard today="2026-10-31" search="" sample={{ statement: REPORTS_STATEMENT, balance: REPORTS_BALANCE }} />);
+    const pnl = screen.getByRole("link", { name: /רווח והפסד/ });
+    expect(pnl.getAttribute("href")).toBe("/reports");
+    expect(pnl.textContent).toContain("$29,000");
+    const balance = screen.getByRole("link", { name: /מאזן/ });
+    expect(balance.getAttribute("href")).toBe("/reports?kind=balance");
+    expect(balance.textContent).toContain("$285,000");
+  });
+
+  it("keeps the preview flag on its links and shows a dash before the reads", () => {
+    renderWithProviders(<HomeReportsCard today="2026-10-31" search="?preview=1" sample={{}} />);
+    expect(screen.getByRole("link", { name: /מאזן/ }).getAttribute("href")).toBe("/reports?kind=balance&preview=1");
+    expect(document.querySelectorAll(".ui-home-rep-figure-empty")).toHaveLength(2);
+  });
+
+  it("says when its reads failed, with a retry, and keeps both ways in", async () => {
+    renderWithProviders(<HomeReportsCard today="2026-10-31" search="" />);
+    expect(await screen.findByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    expect(screen.getByText("לא הצלחנו לטעון.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /רווח והפסד/ })).toBeInTheDocument();
+  });
+});
