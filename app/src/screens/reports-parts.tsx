@@ -2,6 +2,7 @@ import { useId, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Amount } from "../ui/amount";
 import { AlertIcon, CheckIcon, ChevronDownIcon, ChevronIcon } from "../ui/icons";
+import { slashBreaks } from "../ui/slash-breaks";
 import {
   accountName,
   balanceWarning,
@@ -55,7 +56,7 @@ export function ReportRow({ name, meta, amount, href }: { name: string; meta?: s
   const content = (
     <>
       <span className="ui-rep-row-text">
-        <span className="ui-rep-row-name" dir="auto">{name}</span>
+        <span className="ui-rep-row-name" dir="auto">{slashBreaks(name)}</span>
         {meta ? <span className="ui-rep-row-meta">{meta}</span> : null}
       </span>
       <span className="ui-rep-row-amount">{amount}</span>
@@ -172,7 +173,7 @@ export function StatementView({ row, collapse, drill, prefix = "" }: { row: Stat
               />
             ))}
           </ul>
-          <p className="ui-rep-note">נכסים והתחייבויות, כמו קנייה של נכס, הלוואה, קרן ואסקרו. הם במאזן, לא ברווח.</p>
+          <p className="ui-rep-note">נכסים והתחייבויות, כמו קנייה של נכס, הלוואה, קרן ופיקדון מסים וביטוח. הם במאזן, לא ברווח.</p>
         </ReportSection>
       ) : null}
     </div>

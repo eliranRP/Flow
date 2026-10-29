@@ -41,7 +41,7 @@ export const REPORTS_STATEMENT_ROW: StatementCurrency = {
   ],
   kept_out: [
     { id: "k-principal", name: "קרן הלוואה", direction: "expense", amount_minor: 1_500_000n, count: 10, account_name: "Loan principal", account_type: "liability" },
-    { id: "k-escrow", name: "אסקרו", direction: "expense", amount_minor: 150_000n, count: 10, account_name: "Escrow", account_type: "asset" },
+    { id: "k-escrow", name: "פיקדון מסים וביטוח", direction: "expense", amount_minor: 150_000n, count: 10, account_name: "Escrow", account_type: "asset" },
   ],
 };
 

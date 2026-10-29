@@ -6,4 +6,4 @@
 - [x] N4: with several words, the whole text first, then a cut before each match from the earliest (two words before it, then at its own word); the first that shows every matched word wins, else the one that shows the most, the earliest of a tie.
 - [x] N5: a long description with no spaces is cut after the nearest / , - _ . : ; | before the match, or at the match itself.
 - [x] N6 (the space before "…" in a cut hint part) moved to its own task, [FLOW-172](FLOW-172.md), for the design lead (review of #868).
-- [x] The balance sheet's date sheet (נכון לתאריך) says, in one caption under the dates and under the calendar for another date (`.ui-rep-note`): "המאזן כולל את כל התנועות מההתחלה ועד התאריך שבוחרים", since a balance sheet already sums everything from the start (`BalanceDateSheet`, `app/src/screens/reports-sheets.tsx`).
+- [x] The balance sheet's date sheet (נכון לתאריך) says, in one caption under the dates and under the calendar for another date (the reports' caption, `.ui-rep-note`): "המאזן כולל את כל התנועות מההתחלה ועד התאריך שבוחרים", since a balance sheet already sums everything from the start (`BalanceDateSheet`, `app/src/screens/reports-sheets.tsx`).

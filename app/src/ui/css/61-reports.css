@@ -404,12 +404,7 @@
   margin: var(--space-3) 0 var(--space-1);
 }
 
-/* FLOW-170: the balance date sheet's note under its dates or its calendar ("from the start"). */
-.ui-rep-note {
-  margin: var(--space-3) 0 0;
-}
-
-/* Under the calendar the column's gap spaces it. */
+/* FLOW-170: the balance date sheet's note under its calendar: the column's gap spaces it. */
 .ui-rep-custom > .ui-rep-note {
   margin: 0;
 }
@@ -446,4 +441,42 @@
 /* The status line stays mounted for screen readers; empty, it takes back the gap it would leave. */
 .ui-rep-search > p:empty {
   margin-block-start: calc(var(--space-1) * -1);
+}
+
+/* FLOW-171: the reports' titles. A long Latin name in the right-to-left title wraps inside the screen. */
+.ui-rep-screen .ui-page-stacked .ui-focus-title {
+  overflow-wrap: anywhere;
+}
+
+/* The account page only: its name shows whole on up to three lines ("Partner – Contributions/Distributions"
+   takes three at 320), not the pages' two. Waits on the design lead's sign-off (DESIGN-RULES: names wrap to two). */
+.ui-page.ui-rep-account-head .ui-focus-title {
+  -webkit-line-clamp: 3;
+}
+
+/* The period choice over the summary rows and the movements: 44px segments, as the reports' own switch. */
+.ui-rep-account-span {
+  margin-block: var(--space-2);
+  --size-seg: var(--touch-min);
+  --size-seg-track: calc(var(--touch-min) + var(--space-2));
+}
+
+/* From the start: a heading per year over its months; the months' heads keep sticking under it. */
+.ui-rep-account-year-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-side) var(--space-1);
+  border-block-end: var(--stroke-hairline) solid var(--color-line);
+}
+
+.ui-rep-account-year-title {
+  margin: 0;
+}
+
+.ui-rep-account-year-count {
+  color: var(--color-text-muted);
+  font-size: var(--type-meta-size);
+  white-space: nowrap;
 }

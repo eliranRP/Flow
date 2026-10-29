@@ -183,11 +183,11 @@ describe("ReportsScreen · the balance sheet", () => {
     fireEvent.click(screen.getByRole("button", { name: "היום" }));
     const group = screen.getByRole("radiogroup", { name: "נכון לתאריך" });
     const note = screen.getByText("המאזן כולל את כל התנועות מההתחלה ועד התאריך שבוחרים");
-    expect(note).toHaveClass("t-caption", "t-muted");
+    expect(note).toHaveClass("ui-rep-note");
     expect(group).toHaveAttribute("aria-describedby", note.id);
     // The calendar for another date says it too.
     fireEvent.click(screen.getByRole("button", { name: "תאריך אחר" }));
-    expect(screen.getByText("המאזן כולל את כל התנועות מההתחלה ועד התאריך שבוחרים")).toHaveClass("t-caption", "t-muted", "ui-rep-note");
+    expect(screen.getByText("המאזן כולל את כל התנועות מההתחלה ועד התאריך שבוחרים")).toHaveClass("ui-rep-note");
   });
 
   it("drops by project on the balance sheet", () => {

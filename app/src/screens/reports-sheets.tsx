@@ -186,7 +186,7 @@ export function BalanceDateSheet({ open, onOpenChange, value, today, onPick }: {
       {custom ? (
         <div className="ui-rep-custom">
           <CalendarPick label="תאריך" today={today} value={day} onPick={setDay} start={day} />
-          <p id={noteId} className="t-caption t-muted ui-rep-note">{BALANCE_FROM_START}</p>
+          <p id={noteId} className="ui-rep-note">{BALANCE_FROM_START}</p>
         </div>
       ) : (
         <>
@@ -201,7 +201,7 @@ export function BalanceDateSheet({ open, onOpenChange, value, today, onPick }: {
             </button>
           </div>
           {/* FLOW-170 (owner, 2026-10-29: "why can't I choose all dates? From start"): a balance sheet already sums everything up to its date. */}
-          <p id={noteId} className="t-caption t-muted ui-rep-note">{BALANCE_FROM_START}</p>
+          <p id={noteId} className="ui-rep-note">{BALANCE_FROM_START}</p>
         </>
       )}
     </Sheet>
