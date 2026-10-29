@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
 import { HomeReportsCard } from "./home-reports-card";
-import { lineHint, lineMatches, linesByMonth, linesByProject, ReportLinesScreen, reportLinesArgs, searchPath, type ReportLinesSample } from "./report-lines-screen";
+import { lineMatches, lineText, linesByMonth, linesByProject, ReportLinesScreen, reportLinesArgs, searchPath, type ReportLinesSample } from "./report-lines-screen";
 import { REPORTS_BALANCE, REPORTS_STATEMENT } from "../dev/reports-sample";
 
 const rpc = vi.hoisted(() => ({
@@ -181,12 +181,13 @@ describe("the drill-down's search", () => {
     expect(screen.getByRole("button", { name: /לפי פרויקט/ })).toBeInTheDocument();
   });
 
-  it("shows the description in the hint when only the description matched, and links the app's search", () => {
+  it("titles a line with its description when only the description matched, the supplier in the hint (FLOW-167), and links the app's search", () => {
     const row = { ...line("0099", "2026-09-05", 1_388, "Cedar St", "Anytime Mailbox"), description: "Annual renewal" };
-    expect(lineHint(row, "")).toBe("05/09 · Cedar St");
-    expect(lineHint(row, "cedar")).toBe("05/09 · Cedar St");
-    expect(lineHint(row, "renewal")).toBe("05/09 · Annual renewal");
-    expect(lineHint({ ...row, supplier_name: null }, "renewal")).toBe("05/09 · Cedar St");
+    const supplier = { title: "Anytime Mailbox", hint: "05/09 · Cedar St", byDescription: false };
+    expect(lineText(row, "")).toEqual(supplier);
+    expect(lineText(row, "cedar")).toEqual(supplier);
+    expect(lineText(row, "renewal")).toEqual({ title: "Annual renewal", hint: "05/09 · Anytime Mailbox", byDescription: true });
+    expect(lineText({ ...row, supplier_name: null }, "renewal")).toEqual({ title: "Annual renewal", hint: "05/09 · Cedar St", byDescription: false });
     expect(searchPath(" rent ", "none", "")).toBe("/search?q=rent&category=none");
     expect(searchPath("rent", "c1", "?preview=empty")).toBe("/search?preview=empty&q=rent&category=c1");
   });

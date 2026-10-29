@@ -121,6 +121,14 @@
   white-space: normal;
 }
 
+/* FLOW-167: a title that wraps (a description a search found), so the matched word stays in view. */
+.ui-row-title-wrap {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
 /* A project row's name is its identity, on Home and the Projects tab: it wraps up to two lines, then
    ends in an ellipsis (DESIGN-RULES: names wrap before they truncate; FLOW-358, §3.7). */
 .ui-row-project .ui-row-title:not(.ui-row-title-with-tag) {
@@ -160,6 +168,40 @@
 
 .ui-hint-part {
   flex: 0 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre;
+}
+
+/* FLOW-168: in a row's hint, the parts after the first take a few letters' room (4em, the "·" included)
+   to stay on the line, then grow to their whole width in order: the second part fills first, so the
+   first part that does not fit is the one cut with "…". A part with less room than 4em drops. */
+.ui-row-hint-line > .ui-hint-parts > .ui-hint-part {
+  display: flex;
+}
+
+.ui-row-hint-line > .ui-hint-parts > .ui-hint-part:not(:first-child) {
+  flex: 1 1 4em;
+  max-inline-size: max-content;
+}
+
+.ui-row-hint-line > .ui-hint-parts > .ui-hint-part:nth-child(2) {
+  flex-grow: 1000;
+}
+
+/* A date or an amount shows whole or drops; it is never cut. */
+.ui-row-hint-line > .ui-hint-parts > .ui-hint-part.ui-hint-part-whole {
+  flex: 0 0 auto;
+}
+
+.ui-row-hint-line .ui-hint-sep {
+  flex: none;
+  unicode-bidi: isolate;
+  white-space: pre;
+}
+
+.ui-row-hint-line .ui-hint-text {
   min-inline-size: 0;
   overflow: hidden;
   text-overflow: ellipsis;

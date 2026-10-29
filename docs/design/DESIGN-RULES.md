@@ -409,7 +409,7 @@ Folded in from [design log](log/README.md) `Rule:` lines at UI/UX cycles 6 to 21
 - A row whose name is its identity wraps (up to 2 lines) before it truncates. A class that styles a figure is never reused as a layout wrapper (FLOW-339 loans).
 - Text is placed against text by layout, never by counting characters (FLOW-310).
 - A borderless card lines its content up with the title through its row padding, not the card margin. A bordered card keeps the side gutter (FLOW-334 split).
-- A hint part shows whole or not at all. Only a first part too long on its own, or a state to act on, ends in "…" (FLOW-339 Search).
+- A hint part shows whole or not at all, with two exceptions that end in "…": a first part too long on its own, and a state to act on (FLOW-339 Search). On a list row's one-line hint, the first part that does not fit shortens with "…" while a few letters of it still fit, so a long project after the date is cut, not lost; a part with less room drops, and a date or an amount never shortens (FLOW-168). A Latin part is cut at its end.
 - A whitelisted ellipsis is for stress copy, not real labels. A real label that ends in "…" at 320–390 gets a new layout (size to content, a short form, or a second line) (FLOW-310).
 - A list that is found, not browsed (Search), shows who and how much on one line, with detail one tap away. A month figure says what it is ("נטו") (FLOW-339 C).
 - A list grouped by something other than the month (שויכו היום by project) uses the month head's shape: name, line count in muted `meta`, totals; rows drop what the head says (FLOW-334).

@@ -119,10 +119,15 @@ function matchedByDescription(row: LineRow, query: string): boolean {
   return row.supplier_name != null && searchText(query) !== "" && !lineMatches(row, query, { description: false });
 }
 
-/** A row's hint: its date and project, or, when the search matched only the description the title hides, the description. */
-export function lineHint(row: LineRow, query: string): string {
+/**
+ * A row's title and hint: the supplier over its date and project. When the search matched only the
+ * description the supplier hides, the description is the title (it wraps, so the matched word stays in
+ * view, and a Latin one runs left to right) and the supplier moves to the hint (FLOW-167).
+ */
+export function lineText(row: LineRow, query: string): { title: string; hint: string; byDescription: boolean } {
   const date = `${row.doc_date.slice(8, 10)}/${row.doc_date.slice(5, 7)}`;
-  return `${date} · ${matchedByDescription(row, query) ? row.description : (row.project_name ?? "בלי פרויקט")}`;
+  if (row.supplier_name != null && matchedByDescription(row, query)) return { title: row.description, hint: `${date} · ${row.supplier_name}`, byDescription: true };
+  return { title: row.supplier_name ?? row.description, hint: `${date} · ${row.project_name ?? "בלי פרויקט"}`, byDescription: false };
 }
 
 /** The app's search for the same words in this category ("none": the lines with no category, as /search reads it), all dates, keeping the preview flag. */
@@ -242,23 +247,25 @@ const LineGroups = memo(function LineGroups({ rows, query, side, search }: { row
         <h2 className="t-section ui-lines-group-title">{group.title}</h2>
       </div>
       <List layout="flat">
-        {group.rows.map((row) => (
-          <ListRow
-            key={`${row.transaction_id}:${row.part ?? ""}`}
-            layout="flat"
-            variant="transaction"
-            title={row.supplier_name ?? row.description}
-            hint={lineHint(row, query)}
-            // A transaction hint drops a part that does not fit, and a description is long: one part, cut at its end.
-            hintParts={matchedByDescription(row, query) ? [lineHint(row, query)] : undefined}
-            agorot={row.amount_minor}
-            currency={row.currency}
-            sign={side === "income" ? "in" : "out"}
-            source={rowSource(row.source)}
-            initials={lineInitials(row.supplier_name ?? row.description)}
-            href={`/transactions/${row.transaction_id}${search}`}
-          />
-        ))}
+        {group.rows.map((row) => {
+          const text = lineText(row, query);
+          return (
+            <ListRow
+              key={`${row.transaction_id}:${row.part ?? ""}`}
+              layout="flat"
+              variant="transaction"
+              title={text.title}
+              wrapTitle={text.byDescription}
+              hint={text.hint}
+              agorot={row.amount_minor}
+              currency={row.currency}
+              sign={side === "income" ? "in" : "out"}
+              source={rowSource(row.source)}
+              initials={lineInitials(row.supplier_name ?? row.description)}
+              href={`/transactions/${row.transaction_id}${search}`}
+            />
+          );
+        })}
       </List>
     </section>
   ));

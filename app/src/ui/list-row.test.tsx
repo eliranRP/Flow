@@ -145,6 +145,11 @@ describe("ListRow", () => {
     expect(hint?.textContent).toBe("מגדל הים · 03/10");
     // Each part carries its separator in front, so a part that drops takes its "·" with it.
     expect([...(hint?.querySelectorAll(".ui-hint-part") ?? [])].map((part) => part.textContent)).toEqual(["מגדל הים", " · 03/10"]);
+    // FLOW-168: a part with letters may shorten with "…" and takes its own direction; a date never shortens.
+    const parts = [...(hint?.querySelectorAll(".ui-hint-part") ?? [])];
+    expect(parts.map((part) => part.classList.contains("ui-hint-part-whole"))).toEqual([false, true]);
+    expect(parts.map((part) => part.querySelector(".ui-hint-text")?.getAttribute("dir") ?? null)).toEqual(["auto", null]);
+    expect(parts[1]?.querySelector(".ui-hint-sep")?.textContent).toBe(" · ");
     expect(screen.getByText("Example Mortgage Home Loans")).toHaveAttribute("dir", "ltr");
     expect(screen.getByText("Example Mortgage Home Loans")).toHaveClass("ui-row-title-ltr");
     const tagged = screen.getByText("Example Bank Loan");

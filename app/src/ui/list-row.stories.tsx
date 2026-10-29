@@ -238,3 +238,43 @@ export const TransactionTags: Story = {
     </List>
   ),
 };
+
+/**
+ * FLOW-168: at 320 a long project after the date is cut with "…" instead of dropping, Hebrew or Latin (a
+ * Latin one is cut at its end). The date never shortens, and a part with no room at all still drops.
+ */
+export const LongProjectHint: Story = {
+  args: { variant: "transaction", title: "ספק לדוגמה", layout: "flat" },
+  globals: { viewport: { value: "flow320", isRotated: false } },
+  render: () => (
+    <List layout="flat">
+      <ListRow layout="flat" variant="transaction" title="ספק לדוגמה" hint="18/10 · מתחם המגורים הגדול ברחוב הדקל שלב ב" agorot={120_000n} sign="out" source="invoice" initials="סל" href="/transactions/1" />
+      <ListRow layout="flat" variant="transaction" title="Example Hardware" hint="18/10 · Riverside Commons Phase Two Townhomes" agorot={40_000n} sign="out" source="bank" initials="EH" href="/transactions/2" />
+      <ListRow layout="flat" variant="transaction" title="אור חשמל" hint="מתחם המגורים הגדול ברחוב הדקל שלב ב · 03/10 · חשמל" agorot={86_000n} sign="out" source="invoice" initials="אח" href="/transactions/3" />
+      <ListRow layout="flat" variant="transaction" title="העברה" hint="10/09 · בית הים" agorot={450_000n} sign="out" source="bank" initials="הע" href="/transactions/4" />
+    </List>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
+    const lines = [...canvasElement.querySelectorAll(".ui-row")].map((row) => {
+      const parts = [...row.querySelectorAll(".ui-hint-part")];
+      const top = parts[0]?.getBoundingClientRect().top ?? 0;
+      return parts
+        .filter((part) => Math.abs(part.getBoundingClientRect().top - top) < 1)
+        .map((part) => {
+          const text = part.querySelector(".ui-hint-text");
+          const cut = text instanceof HTMLElement && text.scrollWidth > text.clientWidth + 1;
+          return `${part.textContent}${cut ? "…" : ""}`;
+        });
+    });
+    await expect(lines).toEqual([
+      ["18/10", " · מתחם המגורים הגדול ברחוב הדקל שלב ב…"],
+      ["18/10", " · Riverside Commons Phase Two Townhomes…"],
+      // The first part too long for the line is cut on its own; the date after it drops whole.
+      ["מתחם המגורים הגדול ברחוב הדקל שלב ב…"],
+      ["10/09", " · בית הים"],
+    ]);
+    // A Latin part runs left to right, so its start stays in view.
+    await expect(within(canvasElement).getByText("Riverside Commons Phase Two Townhomes")).toHaveAttribute("dir", "auto");
+  },
+};
