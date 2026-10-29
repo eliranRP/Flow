@@ -31,6 +31,10 @@
 /forecast/ /forecast 301
 /forecast/item/:itemKey /app-shell 200
 /forecast/item/:itemKey/ /forecast/item/:itemKey 301
+/reports /app-shell 200
+/reports/ /reports 301
+/reports/lines /app-shell 200
+/reports/lines/ /reports/lines 301
 /review /app-shell 200
 /review/ /review 301
 /review/all /app-shell 200
