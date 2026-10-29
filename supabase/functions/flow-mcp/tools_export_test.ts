@@ -15,6 +15,7 @@ function reads(name: string) {
   if (name === "get_pnl_statement") return { status: 200, json: SAMPLE_STATEMENT_BODY };
   if (name === "mcp_balance_sheet") return { status: 200, json: SAMPLE_BALANCE_BODY };
   if (name === "get_dashboard") return { status: 200, json: { name: "נכסי הדוגמה בע״מ" } };
+  if (name === "bump_report_rate") return { status: 200, json: { allowed: true, retry_after_seconds: 0 } };
   return { status: 404, json: null };
 }
 
@@ -136,7 +137,8 @@ Deno.test("the report route refuses a foreign origin, no session and bad argumen
   const bad = await handle(appRequest({ format: "docx" }), appDeps(seen));
   assertEquals(bad.status, 400);
   assertEquals((await bad.json()).error, "validation");
-  assertEquals(seen.some((call) => call.url.includes("/rpc/")), false);
+  // Only the limit is counted: no report is read.
+  assertEquals(seen.filter((call) => call.url.includes("/rpc/")).map((call) => call.url.split("/").pop()), ["bump_report_rate"]);
 });
 
 Deno.test("the report route's file name escapes the marks RFC 5987 does not allow bare", async () => {
@@ -153,4 +155,28 @@ Deno.test("the report route's file name escapes the marks RFC 5987 does not allo
   const disposition = response.headers.get("content-disposition") ?? "";
   assertStringIncludes(disposition, "O%27Neil-%28North%29-%21.pdf");
   assertEquals(/filename\*=UTF-8''[A-Za-z0-9%!#$&+\-.^_`|~]+$/.test(disposition.replace(/%[0-9A-F]{2}/g, "")), true, disposition);
+});
+
+Deno.test("the report route counts each file against the user's limit, before any read, and says when to come back", async () => {
+  const seen: Seen[] = [];
+  await handle(appRequest({}), appDeps(seen));
+  const bump = seen.find((call) => call.url.endsWith("/rpc/bump_report_rate"));
+  assertEquals(bump?.body, { p_user: "user-1" });
+  assertEquals(bump?.authorization, "Bearer secret-key");
+  const limitedSeen: Seen[] = [];
+  const base = appDeps(limitedSeen);
+  const limited = {
+    ...base,
+    fetch: (input: string, init?: RequestInit) => input.endsWith("/rpc/bump_report_rate")
+      ? Promise.resolve(new Response(JSON.stringify({ allowed: false, retry_after_seconds: 42 })))
+      : base.fetch(input, init),
+  };
+  const refused = await handle(appRequest({}), limited);
+  assertEquals(refused.status, 429);
+  assertEquals(refused.headers.get("retry-after"), "42");
+  assertEquals(refused.headers.get("access-control-allow-origin"), "https://flow-app-dx5.pages.dev");
+  assertEquals((await refused.json()).error, "rate_limited");
+  assertEquals(limitedSeen.some((call) => call.url.includes("/rpc/get_pnl_statement")), false);
+  const down = { ...base, fetch: (input: string, init?: RequestInit) => input.endsWith("/rpc/bump_report_rate") ? Promise.resolve(new Response("{}", { status: 500 })) : base.fetch(input, init) };
+  assertEquals((await handle(appRequest({}), down)).status, 503);
 });

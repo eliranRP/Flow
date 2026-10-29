@@ -296,3 +296,31 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   expect(watched.consoleErrors, watched.consoleErrors.join("\n")).toEqual([]);
   expect(watched.httpErrors, watched.httpErrors.join("\n")).toEqual([]);
 });
+
+// FLOW-166: the reports' file, made on the server (flow-mcp's report route, FLOW-162), comes back for the
+// signed-in smoke user. The renderers load only when a file is asked for, so this is the check that the
+// deployed function holds them. The route only reads (it counts the file against the user's limit).
+test("the reports come back as a PDF and as a CSV for Excel", async ({ request, baseURL }) => {
+  const client = createClient(hosted.url, hosted.anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const signed = await client.auth.signInWithPassword({ email, password });
+  const token = signed.data.session?.access_token;
+  if (signed.error || token == null) throw new Error("smoke sign-in failed");
+  const origin = new URL(baseURL ?? "https://flow-app-dx5.pages.dev").origin;
+  const ask = (data: Record<string, unknown>) => request.post(`${hosted.url}/functions/v1/flow-mcp/report`, {
+    headers: { origin, authorization: `Bearer ${token}`, apikey: hosted.anonKey, "content-type": "application/json" },
+    data,
+  });
+
+  const pdf = await ask({ kind: "both", format: "pdf" });
+  expect(pdf.status(), await pdf.text()).toBe(200);
+  expect(pdf.headers()["content-type"]).toBe("application/pdf");
+  expect(pdf.headers()["content-disposition"] ?? "").toContain("filename*=UTF-8''");
+  expect((await pdf.body()).subarray(0, 5).toString("latin1")).toBe("%PDF-");
+
+  const csv = await ask({ kind: "pnl", format: "csv" });
+  expect(csv.status(), await csv.text()).toBe(200);
+  expect(csv.headers()["content-type"]).toBe("text/csv");
+  expect([...(await csv.body()).subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+});

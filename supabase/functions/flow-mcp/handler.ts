@@ -755,7 +755,19 @@ export async function handle(req: Request, deps: Deps = defaultDeps): Promise<Re
     const response = await handleKeyChange(req, deps, userId, route);
     return withCors(response, origin);
   }
-  if (route === "report") return withCors(await handleReport(req, deps), origin);
+  if (route === "report") {
+    // FLOW-166: a file costs a render; a user gets 10 a minute (bump_report_rate), before any read.
+    const limited = await rpc(deps, "bump_report_rate", { p_user: userId });
+    const limit = limited.json as { allowed?: unknown; retry_after_seconds?: unknown } | null;
+    if (limited.status >= 400 || typeof limit?.allowed !== "boolean") {
+      return withCors(jsonResponse(req, { error: "unavailable" }, 503), origin);
+    }
+    if (limit.allowed !== true) {
+      const retry = typeof limit.retry_after_seconds === "number" ? limit.retry_after_seconds : 1;
+      return withCors(jsonResponse(req, { error: "rate_limited", retry_after_seconds: retry }, 429, { "retry-after": String(retry) }), origin);
+    }
+    return withCors(await handleReport(req, deps), origin);
+  }
   const response = await handleStatus(deps, req, userId);
   return withCors(response, origin);
 }

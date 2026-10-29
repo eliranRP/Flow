@@ -657,6 +657,8 @@ The reports as a file to download or share (any member, FLOW-162). It is the sam
 
 **Rule:** the numbers are `get_pnl_statement`'s and `get_balance_sheet`'s for the same arguments. Another company's project is `not_found`; a bad argument is `validation`, before any read.
 
+The app's share button asks for the same file through flow-mcp's `report` route, with the user's own session. That route allows 10 files a minute per user (FLOW-166). One more is `429` with `rate_limited`, `retry_after_seconds` and a `retry-after` header. The MCP tool counts in the token's read bucket, as every read does.
+
 ### create_manual_entry
 
 ```json
