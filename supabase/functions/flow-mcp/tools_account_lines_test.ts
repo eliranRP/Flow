@@ -50,6 +50,9 @@ Deno.test("get_account_lines forwards from, and from_start for the whole history
   assertEquals(calls.at(-1)?.body.p_from_start, true);
   await callTool("get_account_lines", { account_id: ACCOUNT, from: null, from_start: false }, ["read"], rpc);
   assertEquals(calls.at(-1)?.body.p_from_start, false);
+  const ok = await callTool("get_account_lines", { account_id: ACCOUNT, from_start: null }, ["read"], rpc);
+  assertEquals(codeOf(ok), null, "from_start null reads as false");
+  assertEquals(calls.at(-1)?.body.p_from_start, false);
 });
 
 Deno.test("get_account_lines refuses a bad from before the database, and a from after today from it", async () => {
@@ -68,6 +71,10 @@ Deno.test("get_account_lines refuses a bad from before the database, and a from 
   const later = rpcOf(() => ({ status: 400, json: { code: "P0001", message: "validation" } }));
   const result = await callTool("get_account_lines", { account_id: ACCOUNT, from: "2099-01-01" }, ["read"], later.rpc);
   assertEquals(codeOf(result), "validation");
+  assertEquals(result.structuredContent.ok ? null : result.structuredContent.error.message, "from: on or before as_of");
+  // Another validation from the database, with no from: a generic message, not the from one.
+  const generic = await callTool("get_account_lines", { account_id: ACCOUNT }, ["read"], later.rpc);
+  assertEquals(generic.structuredContent.ok ? null : generic.structuredContent.error.message, "validation");
   const other = rpcOf(() => ({ status: 200, json: null }));
   assertEquals(codeOf(await callTool("get_account_lines", { account_id: ACCOUNT, from_start: true }, ["read"], other.rpc)), "not_found");
 });

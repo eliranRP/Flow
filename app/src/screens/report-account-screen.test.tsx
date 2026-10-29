@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
-import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   REPORT_ACCOUNT_EQUITY,
@@ -188,6 +188,28 @@ describe("ReportAccountScreen: the period (FLOW-171)", () => {
     fireEvent.click(screen.getByRole("radio", { name: "השנה" }));
     await waitFor(() => { expect(screen.getByText("שינוי השנה")).toBeInTheDocument(); });
     expect(screen.getByTestId("search").textContent).toBe("/reports/account?kind=balance&account=q-partner&cur=USD");
+  });
+
+  it("switching the period replaces the history entry: Back leaves the account page", async () => {
+    rpc.impl = (name, args) => {
+      if (name !== "get_account_lines") return Promise.resolve({ data: null, error: { message: "down" } });
+      const all = (args as { p_from_start?: boolean }).p_from_start === true;
+      return Promise.resolve({ data: wire(all ? REPORT_ACCOUNT_EQUITY_ALL : REPORT_ACCOUNT_EQUITY), error: null });
+    };
+    const ui = (
+      <MemoryRouter initialEntries={["/reports?kind=balance", EQUITY_ROUTE]} initialIndex={1}>
+        <Routes>
+          <Route path="/reports/account" element={<><ReportAccountScreen /><Probe /></>} />
+          <Route path="*" element={<Probe />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    renderWithProviders(ui, { memoryRouter: false });
+    await waitFor(() => { expect(screen.getByText("שינוי השנה")).toBeInTheDocument(); });
+    fireEvent.click(screen.getByRole("radio", { name: "מההתחלה" }));
+    await waitFor(() => { expect(screen.getByTestId("search").textContent).toBe(`${EQUITY_ROUTE}&span=all`); });
+    fireEvent.click(screen.getByRole("button", { name: "browser back" }));
+    await waitFor(() => { expect(screen.getByTestId("search").textContent).toBe("/reports?kind=balance"); });
   });
 
   it("a balance sheet dated in 2025 reads that year: the date goes to the read and the choice names the year", async () => {

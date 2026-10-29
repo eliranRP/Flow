@@ -124,7 +124,7 @@ function MonthMoves({ group, search, inYear }: { group: MonthGroup; search: stri
   return (
     <section className="ui-lines-group" aria-label={group.title}>
       <div className="ui-lines-group-head">
-        <Heading className="t-section ui-lines-group-title">{inYear ? (HEBREW_MONTHS[Number(group.key.slice(5, 7)) - 1] ?? group.title) : group.title}</Heading>
+        <Heading className={inYear ? "t-line2 t-muted ui-lines-group-title" : "t-section ui-lines-group-title"}>{inYear ? (HEBREW_MONTHS[Number(group.key.slice(5, 7)) - 1] ?? group.title) : group.title}</Heading>
       </div>
       <List layout="flat">
         {group.rows.map((row) => (
@@ -181,7 +181,7 @@ export function ReportAccountScreen({ sample }: { sample?: ReportAccountSample }
   backParams.delete("span");
   const back = `/reports${backParams.size > 0 ? `?${backParams.toString()}` : ""}`;
   const title = first != null ? accountName(first) : "חשבון";
-  const header = <ScreenHeader layout="stacked" title={title} backTo={back} backText="דוחות" />;
+  const header = <ScreenHeader layout="stacked" className="ui-rep-account-head" title={title} backTo={back} backText="דוחות" />;
   if (first === undefined) {
     return (
       <div className="ui-rep-screen">

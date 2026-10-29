@@ -6,7 +6,7 @@
 
 begin;
 
-select plan(73);
+select plan(75);
 
 do $users$
 begin
@@ -266,6 +266,9 @@ select is((pg_temp.cur(pg_temp.out_of('after'), 'ILS') ->> 'count')::integer, 4,
 -- 4b. FLOW-171: from the very start: no opening, every movement since the account's first leg.
 select is(pg_temp.out_of('start') ->> 'from_start', 'true', 'from the start says so');
 select is(pg_temp.out_of('start') ->> 'from', null, 'from the start has no first day');
+-- The app before FLOW-171 requires year_start: it stays for one release, 1 January of as_of's year.
+select is(pg_temp.out_of('loan') ->> 'year_start', '2026-01-01', 'year_start stays for the app before FLOW-171');
+select is(pg_temp.out_of('start') ->> 'year_start', '2026-01-01', 'and from the start too, so that app still parses it');
 select is((pg_temp.cur(pg_temp.out_of('start'), 'ILS') ->> 'opening_minor')::bigint, 0::bigint, 'from the start opens at zero');
 select is((pg_temp.cur(pg_temp.out_of('start'), 'ILS') ->> 'balance_minor')::bigint, 15280000::bigint, 'the balance is the same as the year''s');
 select is((pg_temp.cur(pg_temp.out_of('start'), 'ILS') ->> 'movement_minor')::bigint, 15280000::bigint, 'the change since the start is the balance');

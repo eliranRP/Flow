@@ -66,6 +66,26 @@ async function fitsTheScreen(canvasElement: HTMLElement, width: number) {
   await expect(title instanceof HTMLElement && title.scrollHeight <= title.clientHeight + 1).toBe(true);
 }
 
+/** The last character of each line the title is drawn on: every one is a space or "/", never inside a word. */
+function lineEnds(title: Element): string[] {
+  const chars: { char: string; top: number }[] = [];
+  const walker = title.ownerDocument.createTreeWalker(title, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node != null; node = walker.nextNode()) {
+    const text = node.textContent ?? "";
+    for (let i = 0; i < text.length; i += 1) {
+      const range = title.ownerDocument.createRange();
+      range.setStart(node, i);
+      range.setEnd(node, i + 1);
+      const rect = range.getClientRects()[0];
+      if (rect != null) chars.push({ char: text[i] ?? "", top: rect.top });
+    }
+  }
+  return chars.filter((item, i) => {
+    const next = chars[i + 1];
+    return next != null && next.top > item.top + 1;
+  }).map((item) => item.char);
+}
+
 /** This year: an equity account with a long Latin name; the period choice reads "השנה". */
 export const EquityThisYear: Story = {
   name: "Account · this year (a long Latin name)",
@@ -117,6 +137,10 @@ export const LongTitle320: Story = {
   play: async ({ canvasElement }) => {
     await fitsTheScreen(canvasElement, 320);
     // The break opportunity sits after the slash, so the name never breaks inside a word.
-    await expect(canvasElement.querySelector(".ui-page-stacked .ui-focus-title wbr")).not.toBeNull();
+    const title = canvasElement.querySelector(".ui-page-stacked .ui-focus-title");
+    await expect(title?.querySelector("wbr")).not.toBeNull();
+    const ends = title == null ? [] : lineEnds(title);
+    await expect(ends.length).toBeGreaterThan(0);
+    for (const end of ends) await expect([" ", "/"]).toContain(end);
   },
 };

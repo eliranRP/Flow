@@ -118,7 +118,7 @@ async function accountLines(args: Record<string, unknown>, rpc: ToolRpc): Promis
   if (typeof account !== "string" || !UUID.test(account)) return fail("validation", "account_id: an account id");
   if (!isDateArg(asOf)) return fail("validation", "as_of: a date, YYYY-MM-DD");
   if (!isDateArg(from)) return fail("validation", "from: a date, YYYY-MM-DD");
-  if (fromStart !== undefined && typeof fromStart !== "boolean") return fail("validation", "from_start: true or false");
+  if (fromStart !== undefined && fromStart !== null && typeof fromStart !== "boolean") return fail("validation", "from_start: true or false");
   if (fromStart === true && from != null) return fail("validation", "from or from_start, not both");
   if (typeof from === "string" && typeof asOf === "string" && from > asOf) return fail("validation", "from: on or before as_of");
   if (project !== undefined && project !== null && (typeof project !== "string" || !UUID.test(project))) {
@@ -142,9 +142,9 @@ async function accountLines(args: Record<string, unknown>, rpc: ToolRpc): Promis
     p_from: from ?? null,
     p_from_start: fromStart === true,
   });
-  // With no as_of, the database finds a from after today.
+  // With no as_of, the database finds a from after today; any other refusal it calls validation stays generic.
   if (result.status >= 400 && isObject(result.json) && result.json.message === "validation") {
-    return fail("validation", "from: on or before as_of");
+    return fail("validation", typeof from === "string" && asOf == null ? "from: on or before as_of" : "validation");
   }
   if (result.status >= 400) return fail("refused", READ_REFUSED);
   // Null for another company's account or project, an unknown one, or an income or expense account.

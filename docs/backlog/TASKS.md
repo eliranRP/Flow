@@ -234,6 +234,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-168"></a>[FLOW-168](tasks/FLOW-168.md) | List rows: a long project name drops out of the hint, leaving only the date | BUG |
 | <a id="flow-169"></a>[FLOW-169](tasks/FLOW-169.md) | Search's report rows: Hebrew prefix letters and punctuation, the project chip, uuid test ids | BACKLOG NIT |
 | <a id="flow-171"></a>[FLOW-171](tasks/FLOW-171.md) | Reports: an account's movements from the start, any year, and a long Latin title that wraps | MCP + UI |
+| <a id="flow-173"></a>[FLOW-173](tasks/FLOW-173.md) | get_account_lines: drop year_start from the output after one release | BACKLOG NIT |
 | <a id="flow-920"></a>[FLOW-920](tasks/FLOW-920.md) | Project profit: the month's share and after-overhead rows from the server, and the old profit-month section goes | UI + server (follow-up to FLOW-140) |
 | <a id="flow-930"></a>[FLOW-930](tasks/FLOW-930.md) | A yearly charge shows in this month's forecast at a monthly amount | BUG |
 | <a id="flow-935"></a>[FLOW-935](tasks/FLOW-935.md) | The iPhone Home Screen app moves to a new deploy without a reinstall | BUG |
