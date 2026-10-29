@@ -76,32 +76,29 @@ describe("ReportLinesScreen", () => {
     expect(screen.getByRole("link", { name: /Quick Fix Plumbing/ }).getAttribute("href")).toBe(`/transactions/${ROWS[0]?.transaction_id ?? ""}`);
   });
 
-  it("keeps one project's lines when the report was on one project", () => {
-    renderWithProviders(<ReportLinesScreen sample={{ rows: ROWS }} />, { route: `${ROUTE}&pname=Cedar+St` });
-    expect(screen.queryByRole("link", { name: /Bright Electric/ })).toBeNull();
-    expect(document.querySelector(".ui-rep-summary")?.textContent).toContain("−$1,450");
-    // One project: no split.
+  it("reads one project's lines by its id, page by page, and names the project", async () => {
+    const wire = (row: ReturnType<typeof line>) => ({ ...row, amount_minor: Number(row.amount_minor) });
+    rpc.impl = (name) => {
+      if (name !== "get_breakdown_lines") return Promise.resolve({ data: null, error: { message: "down" } });
+      return Promise.resolve({ data: { rows: [wire(line("0013", "2026-09-30", 700, "Cedar St")), wire(line("0014", "2026-09-29", 200, "Cedar St"))], has_more: true }, error: null });
+    };
+    renderWithProviders(<ReportLinesScreen />, { route: `${ROUTE}&scope=project&project=a0000000-0000-4000-8000-000000000161&pname=Cedar+St` });
+    await waitFor(() => { expect(document.querySelector(".ui-rep-summary")?.textContent).toContain("−$900"); });
+    expect(rpc.calls).toHaveLength(1);
+    expect(rpc.calls[0]?.args).toMatchObject({ p_project_id: "a0000000-0000-4000-8000-000000000161", p_offset: 0, p_group_key: "c-repairs" });
+    expect(screen.getByText(/2026.* · Cedar St$/)).toBeInTheDocument();
+    // One project: no split by project, and the next page only on request.
     expect(screen.queryByRole("button", { name: /לפי פרויקט/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "עוד תנועות" }));
+    await waitFor(() => { expect(rpc.calls).toHaveLength(2); });
+    expect(rpc.calls[1]?.args).toMatchObject({ p_project_id: "a0000000-0000-4000-8000-000000000161", p_offset: 100 });
   });
 
-  it("reads every page before it sums one project's lines, and shows no part of the total until then", async () => {
-    const wire = (row: ReturnType<typeof line>) => ({ ...row, amount_minor: Number(row.amount_minor) });
-    let releaseSecond: () => void = () => {};
-    const second = new Promise<void>((resolve) => { releaseSecond = resolve; });
-    rpc.impl = async (name, args) => {
-      if (name !== "get_breakdown_lines") return { data: null, error: { message: "down" } };
-      const offset = (args as { p_offset: number }).p_offset;
-      if (offset === 0) return { data: { rows: [wire(line("0011", "2026-10-02", 300, "Maple Ave")), wire(line("0012", "2026-10-01", 500, "Maple Ave"))], has_more: true }, error: null };
-      await second;
-      return { data: { rows: [wire(line("0013", "2026-09-30", 700, "Cedar St")), wire(line("0014", "2026-09-29", 200, "Cedar St"))], has_more: false }, error: null };
-    };
-    renderWithProviders(<ReportLinesScreen />, { route: `${ROUTE}&pname=Cedar+St` });
-    await waitFor(() => { expect(rpc.calls).toHaveLength(2); });
-    expect(document.querySelector(".ui-rep-summary")).toBeNull();
-    releaseSecond();
-    await waitFor(() => { expect(document.querySelector(".ui-rep-summary")?.textContent).toContain("−$900"); });
-    expect(screen.getByText("2 תנועות")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "עוד תנועות" })).toBeNull();
+  it("reads the whole company without a project id", async () => {
+    rpc.impl = () => Promise.resolve({ data: { rows: [], has_more: false }, error: null });
+    renderWithProviders(<ReportLinesScreen />, { route: ROUTE });
+    await waitFor(() => { expect(rpc.calls).toHaveLength(1); });
+    expect(rpc.calls[0]?.args).not.toHaveProperty("p_project_id");
   });
 
   it("offers more lines when the read has more", () => {

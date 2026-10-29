@@ -215,19 +215,22 @@ export function ByProjectView({ projects, currency, collapse, openProject }: {
   );
 }
 
-function sideList(side: BalanceSide, currency: string, extra?: ReactNode): ReactNode {
+function sideList(side: BalanceSide, currency: string, accountHref: (accountId: string) => string, extra?: ReactNode): ReactNode {
   return (
     <ul className="ui-rep-rows">
       {side.accounts.map((account) => (
-        <ReportRow key={account.account_id} name={accountName(account)} amount={<Amount agorot={account.balance_minor} currency={currency} />} />
+        <ReportRow key={account.account_id} name={accountName(account)} amount={<Amount agorot={account.balance_minor} currency={currency} />} href={accountHref(account.account_id)} />
       ))}
       {extra}
     </ul>
   );
 }
 
-/** One currency's balance sheet: assets, liabilities and equity (with the running profit), and the check line. */
-export function BalanceView({ row, collapse, fixHref }: { row: BalanceCurrency; collapse: Collapse; fixHref: string }) {
+/**
+ * One currency's balance sheet: assets, liabilities and equity (with the running profit), and the check line.
+ * An account's row opens its movements (FLOW-165).
+ */
+export function BalanceView({ row, collapse, fixHref, accountHref }: { row: BalanceCurrency; collapse: Collapse; fixHref: string; accountHref: (accountId: string) => string }) {
   const warning = balanceWarning(row);
   const equity = equityTotal(row);
   return (
@@ -246,13 +249,13 @@ export function BalanceView({ row, collapse, fixHref }: { row: BalanceCurrency; 
         </div>
       ) : null}
       <ReportSection id={`${row.currency}:assets`} title="נכסים" total={<Amount agorot={row.assets.total_minor} currency={row.currency} />} collapse={collapse}>
-        {sideList(row.assets, row.currency)}
+        {sideList(row.assets, row.currency, accountHref)}
       </ReportSection>
       <ReportSection id={`${row.currency}:liabilities`} title="התחייבויות" total={<Amount agorot={row.liabilities.total_minor} currency={row.currency} />} collapse={collapse}>
-        {sideList(row.liabilities, row.currency)}
+        {sideList(row.liabilities, row.currency, accountHref)}
       </ReportSection>
       <ReportSection id={`${row.currency}:equity`} title="הון" total={<Amount agorot={equity} currency={row.currency} loss={equity < 0n} />} collapse={collapse}>
-        {sideList(row.equity, row.currency, row.retained_earnings_minor !== 0n ? (
+        {sideList(row.equity, row.currency, accountHref, row.retained_earnings_minor !== 0n ? (
           <ReportRow name="רווח שנצבר" meta="מרווח והפסד" amount={<Amount agorot={row.retained_earnings_minor} currency={row.currency} loss={row.retained_earnings_minor < 0n} />} />
         ) : null)}
       </ReportSection>

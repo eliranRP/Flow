@@ -66,9 +66,22 @@ export function reportLinesPath(state: ReportState, side: "income" | "expense", 
     params.delete("to");
   }
   params.set("cur", currency);
+  // One project: its id, so the drill-down reads that project's lines (FLOW-165), and its name to show.
+  if (state.scope.kind === "project") {
+    params.set("scope", "project");
+    params.set("project", state.scope.id);
+  }
   if (state.scope.kind === "project" && projectName != null) params.set("pname", projectName);
   else params.delete("pname");
   return `/reports/lines?${params.toString()}`;
+}
+
+/** FLOW-165: a balance-sheet account's movements, keeping the date and the project. */
+export function reportAccountPath(search: string, accountId: string, currency: string): string {
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  params.set("account", accountId);
+  params.set("cur", currency);
+  return `/reports/account?${params.toString()}`;
 }
 
 /**
@@ -256,7 +269,7 @@ export function ReportsScreen({ sample }: { sample?: ReportsSample } = {}) {
         {balance.currencies.map((row, index) => (
           <div key={row.currency} className="ui-rep-currency">
             {index > 0 ? <h2 className="t-section ui-rep-currency-title">{`ב־${row.currency}`}</h2> : null}
-            <BalanceView row={row} collapse={collapse} fixHref={`/settings/categories${search}`} />
+            <BalanceView row={row} collapse={collapse} fixHref={`/settings/categories${search}`} accountHref={(id) => reportAccountPath(location.search, id, row.currency)} />
           </div>
         ))}
         <p className="ui-rep-note">דוח ניהולי, לא דוח כספי מבוקר.</p>

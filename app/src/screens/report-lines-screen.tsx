@@ -6,7 +6,7 @@ import { lineInitials } from "../cash-lines-groups";
 import { getSupabase } from "../lib/supabase";
 import { loadReadSchemas } from "../load-read-schemas";
 import { useHomePreview, usePreviewSearch } from "../preview";
-import { categoryName, dateRangeText } from "../reports";
+import { categoryName, dateRangeText, reportStateOf } from "../reports";
 import { Amount } from "../ui/amount";
 import { PageLoadFailed, useOnline } from "../ui/band-states";
 import { Button } from "../ui/button";
@@ -17,7 +17,7 @@ import { ScreenHeader } from "../ui/screen-header";
 import { ProfitRowsSkeleton } from "../ui/screen-skeletons";
 import { DelayedSkeleton } from "../ui/skeleton";
 import { waitForAccessToken } from "../wait-for-session";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ReportRow, ReportSection, ReportSummary, type Collapse } from "./reports-parts";
 
 type LinesPage = NonNullable<BreakdownLinesPage>;
@@ -38,6 +38,8 @@ export function reportLinesArgs(params: URLSearchParams) {
     from: params.get("from"),
     to: params.get("to"),
     projectName: params.get("pname"),
+    // One project's report: its lines, read by project (FLOW-165).
+    projectId: ((scope) => (scope.kind === "project" ? scope.id : null))(reportStateOf(params).scope),
     currency: /^[A-Z]{3}$/.test(params.get("cur") ?? "") ? (params.get("cur") ?? "ILS") : "ILS",
   } as const;
 }
@@ -52,17 +54,19 @@ async function fetchPage(args: ReturnType<typeof reportLinesArgs>, currency: str
     p_group_by: "category",
     p_group_key: args.category,
     p_currency: currency,
+    ...(args.projectId != null ? { p_project_id: args.projectId } : {}),
     p_limit: PAGE,
     p_offset: offset,
   });
   if (error) throw error;
+  // Null: the project is not this company's (or is gone); it has no lines here.
   const page = (await loadReadSchemas()).breakdownLinesSchema.parse(data);
   return page ?? { rows: [], has_more: false };
 }
 
 /** The rows by month, newest first: "אוקטובר 2026" and its lines. */
-export function linesByMonth(rows: readonly LineRow[]): { key: string; title: string; rows: LineRow[] }[] {
-  const groups = new Map<string, LineRow[]>();
+export function linesByMonth<Row extends { doc_date: string }>(rows: readonly Row[]): { key: string; title: string; rows: Row[] }[] {
+  const groups = new Map<string, Row[]>();
   for (const row of rows) {
     const key = row.doc_date.slice(0, 7);
     groups.set(key, [...(groups.get(key) ?? []), row]);
@@ -84,7 +88,8 @@ export function linesByProject(rows: readonly LineRow[]): { name: string; total:
 
 /**
  * FLOW-161 (board ReportCategoryDrill): one category's lines for the report's period: the total, its split by
- * project, and the lines by month, each opening the transaction page. One project's report keeps that project.
+ * project, and the lines by month, each opening the transaction page. One project's report reads that
+ * project's lines, page by page (FLOW-165).
  */
 export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {}) {
   const location = useLocation();
@@ -96,27 +101,18 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
   const currency = args.currency;
   const [splitOpen, setSplitOpen] = useState(true);
   const read = useInfiniteQuery({
-    queryKey: ["breakdown-lines", "report", preview, args.side, args.category, args.from ?? "", args.to ?? "", currency],
+    queryKey: ["breakdown-lines", "report", preview, args.side, args.category, args.from ?? "", args.to ?? "", currency, args.projectId ?? ""],
     enabled: sample == null && preview === "off",
     initialPageParam: 0,
     queryFn: ({ pageParam }) => fetchPage(args, currency, pageParam),
     getNextPageParam: (last, pages) => (last.has_more ? pages.length * PAGE : undefined),
   });
-  // The read has no project filter, so a one-project drill-down filters the loaded pages: it reads them all
-  // first, and shows the skeleton until then rather than a part of the total.
-  const { fetchNextPage, hasNextPage, isFetchingNextPage, isFetchNextPageError } = read;
-  const filterByProject = args.projectName != null;
-  const all = sample?.rows ?? read.data?.pages.flatMap((page) => page.rows) ?? null;
-  const reading = sample == null && filterByProject && hasNextPage;
-  const rows = all == null || reading ? null : args.projectName == null ? all : all.filter((row) => row.project_name === args.projectName);
+  const rows = sample?.rows ?? read.data?.pages.flatMap((page) => page.rows) ?? null;
   const hasMore = sample?.hasMore ?? read.hasNextPage;
-  useEffect(() => {
-    if (filterByProject && hasNextPage && !isFetchingNextPage && !isFetchNextPageError) void fetchNextPage();
-  }, [filterByProject, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
   const title = categoryName(args.name);
   // Back to the report, with its own choices (the drill keys ride along and are ignored there).
   const back = `/reports${location.search}`;
-  const header = <ScreenHeader layout="stacked" title={title} backTo={back} backText="דוחות" subtitle={dateRangeText(args.from, args.to)} />;
+  const header = <ScreenHeader layout="stacked" title={title} backTo={back} backText="דוחות" subtitle={args.projectName != null ? `${dateRangeText(args.from, args.to)} · ${args.projectName}` : dateRangeText(args.from, args.to)} />;
   if (rows == null) {
     return (
       <div className="ui-rep-screen">

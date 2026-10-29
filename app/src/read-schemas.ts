@@ -34,4 +34,4 @@ export {
 } from "@flow/shared";
 export { parseTxnMetaList } from "./txn-meta-parse";
 export { transferMatchesSchema } from "./transfer-match-schema";
-export { balanceSheetSchema, pnlStatementSchema } from "./report-schemas";
+export { accountLinesSchema, balanceSheetSchema, pnlStatementSchema } from "./report-schemas";
