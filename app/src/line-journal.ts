@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { getSupabase } from "./lib/supabase";
 import { useHomePreview } from "./preview";
+import { SYSTEM_NAMES } from "./system-accounts";
 import { waitForAccessToken } from "./wait-for-session";
 
 /**
@@ -60,20 +61,6 @@ export function legTypeLabel(leg: Pick<JournalLeg, "account_type" | "is_bank">):
       return "הון";
   }
 }
-
-/** Hebrew for the ledger's system accounts (decision 0208); a category account keeps its own name. */
-export const SYSTEM_NAMES: Record<string, string> = {
-  "Loan principal": "קרן הלוואה",
-  Escrow: "אסקרו",
-  Property: "נכסים",
-  "Transfers in transit": "העברות בין חשבונות",
-  "Owner capital": "השקעת בעלים",
-  "Security deposit held": "פיקדון שהתקבל",
-  Suspense: "חשבון מעבר",
-  "VAT control": "מע״מ",
-  "Uncategorized income": "הכנסה בלי קטגוריה",
-  "Uncategorized expense": "הוצאה בלי קטגוריה",
-};
 
 /**
  * A leg's name: the bank account the line moved through; a system account in Hebrew, with the category that
