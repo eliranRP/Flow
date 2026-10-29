@@ -318,7 +318,7 @@ export const CategoryLinesByDescription: Story = {
       await expect(title?.querySelector("[aria-hidden='true']")?.textContent ?? title?.textContent).toBe(shown);
       await expect(row?.querySelector(".ui-row-hint")?.textContent).toBe(hint);
       // The row's name keeps the whole description.
-      await expect(row?.textContent?.includes(description)).toBe(true);
+      await expect(row?.textContent.includes(description)).toBe(true);
       await expect(title != null && inView(title, word)).toBe(true);
       await expect(title != null && titleLines(title) <= 3).toBe(true);
     }

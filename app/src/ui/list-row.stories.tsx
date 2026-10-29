@@ -309,3 +309,26 @@ export const TwoCutParts: Story = {
     ]);
   },
 };
+
+/**
+ * FLOW-167: a title a search found in a description wraps, at most three lines, and a snippet keeps the
+ * whole text for screen readers (`titleFull`). Drawn without a search, so clip-check measures the clamp.
+ */
+export const WrapTitle: Story = {
+  args: { variant: "transaction", title: "…parts, labour, inspection 120", layout: "flat" },
+  globals: { viewport: { value: "flow320", isRotated: false } },
+  render: () => (
+    <List layout="flat">
+      <ListRow layout="flat" variant="transaction" title="…parts, labour, inspection 120" titleFull="Quarterly service visit for the boiler room and the shared laundry on the ground floor, parts, labour, inspection 120" wrapTitle hint="06/08 · Northside Hardware" agorot={50_000n} sign="out" source="bank" initials="NH" href="/transactions/1" />
+      <ListRow layout="flat" variant="transaction" title="ביקור שירות רבעוני בחדר הדודים ובחדר הכביסה המשותף בקומת הקרקע, כולל חלקים, עבודה, ניקוי המסננים ובדיקת המעלית בבניין" wrapTitle hint="03/08 · Bright Electric" agorot={70_000n} sign="out" source="invoice" initials="BE" href="/transactions/2" />
+    </List>
+  ),
+  play: async ({ canvasElement }) => {
+    const titles = [...canvasElement.querySelectorAll(".ui-row-title")];
+    for (const title of titles) {
+      const lines = Math.round(title.getBoundingClientRect().height / Number.parseFloat(getComputedStyle(title).lineHeight));
+      await expect(lines).toBeLessThanOrEqual(3);
+    }
+    await expect(within(canvasElement).getAllByRole("link")[0]).toHaveTextContent("Quarterly service visit");
+  },
+};
