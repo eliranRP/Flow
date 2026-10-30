@@ -7,5 +7,5 @@
 - [x] דוחות is a tab root: no "‹ בית" in its header.
 - [x] קבועים (`/recurring`, `/missing-bills`) lights בית, and its header gets "‹ בית".
 - [x] The owner picked concept B (2026-10-30) of three on the board's "In design · for approval" page: a repeat icon in Home's band, between search and the avatar, with a signal dot when a recurring bill or income is late.
-- [ ] Left for later: the board's one-time tip ("קבועים עברו לכאן") under the icon.
+- [x] The board's one-time tip under the icon moved to [FLOW-987](FLOW-987.md).
 - **Acceptance:** the tab unit tests and e2e specs pass with four tabs; the reports screen has no Back; קבועים opens from the band's icon and from Home's late-bills row, and goes back to Home.

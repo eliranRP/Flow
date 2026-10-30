@@ -106,6 +106,8 @@ export function DevCash() {
       })}
       lateRecurring={params.get("recurring") === "1" ? SAMPLE_MISSING_BILLS.length : 0}
       recurringTo="/e2e/recurring"
+      // FLOW-987: `?tip=1` shows the one-time tip under the band's קבועים icon.
+      recurringTip={params.get("tip") === "1"}
       sameDay={usdLoss ? (past ? null : sampleCashUsdToDay()) : sampleCashToDay()}
       forecast={usdLoss ? -574_100n : -6_810_000n}
       company={<BandCompany name="Acme Test Co" onOpen={() => { void navigate("/settings?preview=1"); }} />}

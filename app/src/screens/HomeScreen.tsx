@@ -271,6 +271,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       checklist={isCurrent ? <SetupHomeSlot emptyHome={false} /> : null}
       reports={previewing ? null : <HomeReportsCard today={today} search={search} />}
       lateRecurring={isCurrent ? late.expense + late.income : 0}
+      recurringTip={!previewing}
       weekly={weekly == null || weeklyCardHidden(weekly) ? null : (
         <Suspense fallback={null}>
           <WeeklySummaryCardSlot weekStart={weekly} />
@@ -309,6 +310,7 @@ export function CashHome({
   reports = null,
   lateRecurring = 0,
   recurringTo,
+  recurringTip = false,
 }: {
   data: NonNullable<CashMonths>;
   /** The month shown (YYYY-MM). */
@@ -334,6 +336,8 @@ export function CashHome({
   lateRecurring?: number;
   /** FLOW-986: where the קבועים icon goes (the dev fixtures' own path). */
   recurringTo?: string;
+  /** FLOW-987: may show the one-time tip under the band's קבועים icon. */
+  recurringTip?: boolean;
   /** FLOW-601: the company's name, which opens the חברה sheet, on the band's row 1. */
   company?: ReactNode;
   /** FLOW-364: the previous month's figures up to today's day, from cash_month_to_day (the current month only). */
@@ -420,7 +424,7 @@ export function CashHome({
           example={example}
           tone={isPast ? "past" : "current"}
           leading={company}
-          trailing={<HomeBandActions isPast={isPast} currentName={monthName(currentKey)} search={search} lateRecurring={lateRecurring} recurringTo={recurringTo} />}
+          trailing={<HomeBandActions isPast={isPast} currentName={monthName(currentKey)} search={search} lateRecurring={lateRecurring} recurringTo={recurringTo} recurringTip={recurringTip} />}
         >
           <div className="ui-band-body">
             {offlineSince == null ? null : <BandOfflineLine since={offlineSince} />}

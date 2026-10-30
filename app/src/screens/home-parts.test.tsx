@@ -1,5 +1,5 @@
 import { type CashCurrencyRow } from "@flow/shared";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AttentionBox, ForecastRow, HomeBandActions, HomeFigures, homeMonthLabel, HomeMonthPill, SplitCard, splitTakeaway, type HomeFigureRows } from "./home-parts";
@@ -134,6 +134,34 @@ describe("the band's קבועים icon (FLOW-986, board concept B)", () => {
   it("is not on a past month's band", () => {
     renderWithProviders(<HomeBandActions isPast currentName="אוקטובר" search="" lateRecurring={2} />);
     expect(screen.queryByRole("link", { name: /קבועים/ })).toBeNull();
+  });
+});
+
+describe("the one-time קבועים tip (FLOW-987)", () => {
+  afterEach(() => {
+    window.localStorage.removeItem("flow.recurring-tip-seen");
+  });
+
+  it("shows under the icon until its ✕, then never again on this phone", () => {
+    const { unmount } = renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" recurringTip />);
+    const tip = screen.getByRole("note", { name: "קבועים עברו לכאן" });
+    expect(tip).toHaveTextContent("נקודה אדומה: חשבון קבוע לא הגיע.");
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    expect(screen.queryByRole("note")).toBeNull();
+    unmount();
+    renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" recurringTip />);
+    expect(screen.queryByRole("note")).toBeNull();
+  });
+
+  it("is seen once the icon is tapped", () => {
+    renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" recurringTip />);
+    fireEvent.click(screen.getByRole("link", { name: "קבועים" }));
+    expect(window.localStorage.getItem("flow.recurring-tip-seen")).toBe("1");
+  });
+
+  it("is not shown where Home does not ask for it (previews, stories)", () => {
+    renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" />);
+    expect(screen.queryByRole("note")).toBeNull();
   });
 });
 

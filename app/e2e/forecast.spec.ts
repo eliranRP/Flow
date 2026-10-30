@@ -40,6 +40,21 @@ test("קבועים opens from the band's icon, with a dot for late bills, and go
   await expect(page).toHaveURL(/\/e2e\/cash\?preview=1&recurring=1$/);
 });
 
+test("the one-time tip under the band's קבועים icon closes for good (FLOW-987)", async ({ page }) => {
+  await page.goto("/e2e/cash?preview=1&recurring=1&tip=1");
+  const tip = page.getByRole("note", { name: "קבועים עברו לכאן" });
+  await expect(tip).toBeVisible();
+  // Inside the screen, under the icon.
+  const box = await tip.boundingBox();
+  expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
+  expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(page.viewportSize()?.width ?? 0);
+  await tip.getByRole("button", { name: "סגירה" }).click();
+  await expect(tip).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("link", { name: /^קבועים/ })).toBeVisible();
+  await expect(page.getByRole("note", { name: "קבועים עברו לכאן" })).toHaveCount(0);
+});
+
 test("קבועים on one project shows only its rows and names it (FLOW-424)", async ({ page }) => {
   await page.goto("/e2e/recurring?preview=1&project=p-birch-lane");
   await expect(page.getByRole("heading", { name: "קבועים" })).toBeVisible();
