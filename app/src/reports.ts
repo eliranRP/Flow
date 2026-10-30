@@ -251,6 +251,27 @@ export function categoryName(name: string | null): string {
   return name ?? "בלי קטגוריה";
 }
 
+/** The number a category's name starts with ("05 ניקיון" → 5), or null when it has none. */
+function leadingNumber(name: string | null): number | null {
+  const match = /^\s*(\d+)/.exec(name ?? "");
+  return match ? Number(match[1]) : null;
+}
+
+/**
+ * Numbered categories first, by their number (05, 06, 07…); the rest after them in the order they came,
+ * which is the statement's largest first. Groups and their children both.
+ */
+export function byCategoryNumber<T extends { name: string | null }>(rows: readonly T[]): T[] {
+  return rows
+    .map((row, index) => ({ row, index, number: leadingNumber(row.name) }))
+    .sort((a, b) => {
+      if (a.number != null && b.number != null && a.number !== b.number) return a.number - b.number;
+      if ((a.number == null) !== (b.number == null)) return a.number == null ? 1 : -1;
+      return a.index - b.index;
+    })
+    .map(({ row }) => row);
+}
+
 /** A by-project key's name: the overhead and the unassigned have none of their own. */
 export function projectKeyName(project: Pick<StatementProject, "key" | "name">): string {
   if (project.key === "overhead") return "הוצאות כלליות";
