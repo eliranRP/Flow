@@ -26,4 +26,4 @@ A project's profit page showed next month's forecast as one dashed row ("נוב�
 
 - The project page reads six cash months instead of four.
 - The card no longer says what the forecast is made of in counts; its captions name the rent or the income instead, and the expenses against the last full month.
-- On a project with a loan, the project page's הוצאות צפויות is higher than the צפי page's by the rest of next month's payment that the profit leaves out (an amortizing loan's principal, a hard-money flip's interest), and its net lower; with no loan, or no payment next month, the two agree. Project profit › לפי חודש stays on the profit basis (רווח צפוי).
+- On a project with a loan, the project page's הוצאות צפויות is higher than the צפי page's by the rest of next month's payment that the profit leaves out (an amortizing loan's principal, a hard-money flip's interest), and its net lower; with no loan, or no payment next month, the two agree. Project profit › לפי חודש stays on the profit basis (רווח צפוי). Amended by [0236](0236-forecast-page-leads-with-cash.md): the צפי page now leads with the card's cash and lists that rest as a row.

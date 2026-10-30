@@ -358,3 +358,8 @@
 .ui-pcat-kept-type {
   color: var(--color-text-muted);
 }
+
+/* FLOW-994: the צפי page names its figure, the cash the project page's card shows. */
+.ui-pn-figure-label {
+  margin: var(--space-2) 0 0;
+}

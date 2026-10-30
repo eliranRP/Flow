@@ -27,7 +27,8 @@ import { type ForecastCategory, type ForecastLoan, type LoanCash, loanCashOnly, 
  *   a row out, or adds a line of a category, for the edits that apply to the month.
  * - The rest of the same payments, which the profit leaves out (the principal, and an interest or escrow part
  *   kept out of the profit or with no category), is kept apart (`cashOnlyMinor`), never a row or in the
- *   totals. cashForecast adds it for the project page, whose net is תזרים צפוי (decision 0196). A loan whose
+ *   totals. cashForecast adds it for the project page, whose net is תזרים צפוי (decision 0196), and for the צפי
+ *   page, which leads with the same figure and lists it as one row (decision 0236). A loan whose
  *   every row the user took out adds none: the owner says that payment will not happen.
  */
 
