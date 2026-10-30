@@ -134,7 +134,8 @@ describe("ReportShareSheet", () => {
     expect(within(sheet).getByRole("button", { name: "שיתוף PDF" })).toBeDisabled();
     expect(within(sheet).getByText("בחרו לפחות פרויקט אחד.")).toBeInTheDocument();
     const group = within(sheet).getByRole("group", { name: "פרויקטים" });
-    const first = within(group).getAllByRole("switch")[0]!;
+    const [first] = within(group).getAllByRole("switch");
+    if (first == null) throw new Error("no project switch");
     fireEvent.click(first);
     fireEvent.click(within(sheet).getByRole("button", { name: "שיתוף PDF" }));
     await waitFor(() => { expect(invoke.calls).toHaveLength(1); });
