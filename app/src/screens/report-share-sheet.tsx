@@ -9,9 +9,9 @@ import { useToast } from "../ui/toast";
 import { Toggle } from "../ui/toggle";
 
 /** FLOW-993: the columns' words, in the sheet's order. */
-const COLUMNS: Array<{ value: ShareColumns; label: string }> = [
+const COLUMNS: Array<{ value: ShareColumns; label: string; short?: string }> = [
   { value: "total", label: "סה״כ" },
-  { value: "project", label: "פרויקט" },
+  { value: "project", label: "פרויקט", short: "פר׳" },
   { value: "month", label: "חודש" },
   { value: "quarter", label: "רבעון" },
   { value: "year", label: "שנה" },
@@ -40,7 +40,7 @@ export function ReportShareSheet({ open, onOpenChange, state, today, projects }:
   // A file the browser would not share yet (no fresh tap): the next tap shares it without making it again.
   const [ready, setReady] = useState<File | null>(null);
   useEffect(() => {
-    if (open) setChoice(shareChoiceOf(state.kind, state.scope.kind, projectId));
+    if (open) setChoice((current) => ({ ...shareChoiceOf(state.kind, state.scope.kind, projectId), format: current.format, expand: current.expand }));
   }, [open, state.kind, state.scope.kind, projectId]);
   useEffect(() => {
     setReady(null);

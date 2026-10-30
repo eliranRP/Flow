@@ -157,9 +157,9 @@ export const ShareSheetProjects320: Story = {
     const [first] = within(group).getAllByRole("switch");
     if (first != null) await userEvent.click(first);
     await expect(within(sheet).getByRole("button", { name: "שיתוף PDF" })).toBeEnabled();
-    const box = group.getBoundingClientRect();
-    await expect(box.left).toBeGreaterThanOrEqual(0);
-    await expect(box.right).toBeLessThanOrEqual(320);
+    for (const segment of sheet.querySelectorAll<HTMLElement>(".ui-seg-label")) {
+      await expect(segment.scrollWidth).toBeLessThanOrEqual(segment.clientWidth);
+    }
   },
 };
 

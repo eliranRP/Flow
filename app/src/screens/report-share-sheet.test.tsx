@@ -151,12 +151,21 @@ describe("ReportShareSheet", () => {
     expect(within(sheet).getByText("עמודות לפי תקופה צריכות טווח תאריכים: בחרו תקופה במסך.")).toBeInTheDocument();
   });
 
-  it("a year by month in a PDF is 13 columns and fits; a longer range warns", () => {
+  it("a range of 18 months by month in a PDF is 19 columns with the total, and warns", () => {
     renderReports("/reports?period=custom&from=2025-01-01&to=2026-06-30");
     fireEvent.click(screen.getByRole("button", { name: "שיתוף הדוח" }));
     const sheet = screen.getByRole("dialog", { name: "שיתוף PDF" });
     fireEvent.click(within(sheet).getByRole("radio", { name: "חודש" }));
     expect(within(sheet).getByText(/19 עמודות לא נכנסות ברוחב הדף/)).toBeInTheDocument();
     expect(within(sheet).getByRole("button", { name: "שיתוף PDF" })).toBeEnabled();
+  });
+
+  it("by month over more than 36 columns is held back, and the sheet says the most", () => {
+    renderReports("/reports?period=custom&from=2024-01-01&to=2027-01-31");
+    fireEvent.click(screen.getByRole("button", { name: "שיתוף הדוח" }));
+    const sheet = screen.getByRole("dialog", { name: "שיתוף PDF" });
+    fireEvent.click(within(sheet).getByRole("radio", { name: "חודש" }));
+    expect(within(sheet).getByText("עד 36 עמודות: בחרו תקופה קצרה יותר או עמודות ארוכות יותר.")).toBeInTheDocument();
+    expect(within(sheet).getByRole("button", { name: "שיתוף PDF" })).toBeDisabled();
   });
 });

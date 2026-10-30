@@ -33,6 +33,10 @@ describe("the report file's arguments", () => {
     expect(reportFileArgs(reportStateOf(new URLSearchParams("")), TODAY, { ...PDF, projectIds: [ID] }).project_ids).toEqual([ID]);
   });
 
+  it("sends no project_ids for an empty pick: the server would read it as every project", () => {
+    expect(reportFileArgs(reportStateOf(new URLSearchParams("")), TODAY, { ...PDF, projectIds: [] })).not.toHaveProperty("project_ids");
+  });
+
   it("starts from the screen: by project as columns, one project as the filter (FLOW-993)", () => {
     expect(shareChoiceOf("pnl", "by_project", null)).toMatchObject({ columns: "project", projectIds: null });
     expect(shareChoiceOf("balance", "project", ID)).toMatchObject({ pnl: false, balance: true, columns: "total", projectIds: [ID] });
