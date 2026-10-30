@@ -254,7 +254,9 @@ describe("the next-month page with a loan (decision 0190)", () => {
     // The headline is the project page card's cash; the רווח צפוי row is the profit page card's net.
     expect(container.querySelector(".ui-pp-figure")?.textContent).toBe(formatAmountText(cash.netMinor, "USD", { plus: cash.netMinor > 0n, direction: cash.netMinor > 0n ? "income" : undefined }));
     expect(rows[1]).toBe(`צפוי לצאת${formatAmountText(cash.expenseMinor, "USD")}`);
-    expect(rows[2]).toBe(`רווח צפוי${formatAmountText(forecast.netMinor, "USD", { plus: forecast.netMinor > 0n, direction: forecast.netMinor > 0n ? "income" : undefined })}`);
+    // The bridge on the card: the part of צפוי לצאת the profit leaves out, then the profit.
+    expect(rows[2]).toBe(`מזה לא נספר ברווח${formatAmountText(forecast.cashOnlyMinor, "USD")}`);
+    expect(rows[3]).toBe(`רווח צפוי${formatAmountText(forecast.netMinor, "USD", { plus: forecast.netMinor > 0n, direction: forecast.netMinor > 0n ? "income" : undefined })}`);
     // The rows add up to the headline: the profit's rows and the one row the profit leaves out.
     const kept = Array.from(container.querySelectorAll(".ui-pn-rows .ui-row")).at(-1);
     expect(kept?.textContent).toContain("לא נספר ברווח");
@@ -264,6 +266,35 @@ describe("the next-month page with a loan (decision 0190)", () => {
     const card = screen.getByRole("link", { name: /^צפי נובמבר/ });
     const figures = Array.from(card.querySelectorAll(".ui-fc-col > .ui-num")).map((figure) => figure.textContent);
     expect(`צפוי להיכנס${figures[0] ?? ""}`).toBe(rows[0]);
-    expect(card.querySelector(".ui-fc-net > .ui-num")?.textContent).toBe(rows[2]?.replace("רווח צפוי", ""));
+    expect(card.querySelector(".ui-fc-net > .ui-num")?.textContent).toBe(rows[3]?.replace("רווח צפוי", ""));
+  });
+
+  it("FLOW-991: lists the part the profit leaves out even when no other row is expected", () => {
+    // A loan whose interest and escrow categories are kept out of the profit (a hard-money flip, decision 0166),
+    // and nothing else expected: no row but the payment the profit leaves out.
+    const kept = new Set(["loan-interest", "taxes"]);
+    const sample: NextMonthSample = {
+      ...JUNIPER_NEXT_LOAN,
+      expected: { ...JUNIPER_NEXT_LOAN.expected, recurring: JUNIPER_NEXT_LOAN.expected.recurring.filter((party) => party.pays_loan === true) },
+      categoryMonths: JUNIPER_NEXT_LOAN.categoryMonths == null ? null : { ...JUNIPER_NEXT_LOAN.categoryMonths, categories: [] },
+      categories: (JUNIPER_NEXT_LOAN.categories ?? []).map((row) => (kept.has(row.id) ? { ...row, excluded_from_pnl: true } : row)),
+    };
+    const { container } = renderNext(sample);
+    const rows = Array.from(container.querySelectorAll(".ui-pn-rows .ui-row"));
+    expect(rows.map((row) => row.querySelector(".ui-row-title")?.textContent)).toEqual(["לא נספר ברווח"]);
+    expect(screen.queryByText("אין תנועות צפויות בחודש הזה.")).toBeNull();
+    // Nothing comes in: the figure is minus the payment the profit leaves out, the row's amount.
+    const forecast = nextMonthForecast({
+      projectId: JUNIPER_PROFIT.project.id,
+      currency: "USD",
+      today: sample.today,
+      recurring: sample.expected.recurring,
+      categoryMonths: sample.categoryMonths,
+      loans: sample.loans ?? [],
+      categories: sample.categories ?? [],
+    });
+    expect(forecast.rows).toHaveLength(0);
+    expect(forecast.cashOnlyMinor > 0n).toBe(true);
+    expect(container.querySelector(".ui-pp-figure")?.textContent).toBe(formatAmountText(-forecast.cashOnlyMinor, "USD"));
   });
 });

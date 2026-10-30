@@ -3,7 +3,7 @@ import { formatAmountText } from "@flow/shared";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { projectRows } from "../by-currency";
-import { cashMonthName } from "../cash";
+import { cashMonthName, NOT_IN_PROFIT_LABEL } from "../cash";
 import { lineInitials } from "../cash-lines-groups";
 import { useCompanyCurrency } from "../company-currency";
 import { allTime } from "../period";
@@ -16,6 +16,7 @@ import { screenPhase } from "../query-phase";
 import { useHoldWrites } from "../use-is-viewer";
 import { useProfitMonthsQuery, useProjectQuery } from "../use-books";
 import { Amount } from "../ui/amount";
+import { forecastWords } from "../ui/forecast-words";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { formatDayMonth } from "../ui/date-math";
@@ -29,6 +30,8 @@ import { SummaryRow } from "./profit-summary";
 type ProjectNextMonthSample = ProjectProfitSample & { next: NonNullable<ProjectProfitSample["next"]> };
 
 const NOTE = "לפי הקבועים של הנכס וממוצע 6 החודשים האחרונים לכל קטגוריה. נגיעה בשורה משנה אותה או מסירה אותה.";
+const CASH = forecastWords("cash");
+const PROFIT = forecastWords("profit");
 const LOAN_NOTE = "לפי הקבועים של הנכס, לוח ההלוואה וממוצע 6 החודשים האחרונים לכל קטגוריה. נגיעה בשורה משנה אותה או מסירה אותה.";
 
 /** What a row is made of: its day and קבוע, the loan, its average, or the line the user added. */
@@ -55,11 +58,14 @@ export function editPath(projectId: string, rowKey: string): string {
 }
 
 /**
- * The ProfitNext frame: a project's forecast for next month, opened from the dashed card on its profit page.
- * The card's four rows are the expected income and expenses, the project's average monthly share of general
- * expenses (its share since the start over its months, as the profit page shows it) and the profit after it.
+ * The ProfitNext frame: a project's forecast for next month, opened from the dashed card on its profit page and
+ * on its project page. FLOW-991 (decision 0236): the figure is תזרים צפוי, the project page card's cash. The
+ * card reads צפוי להיכנס and צפוי לצאת; when the loans' payments hold a part the profit leaves out, it names
+ * that part (מזה לא נספר ברווח) and רווח צפוי, the profit page card's net; then the project's average monthly
+ * share of general expenses (its share since the start over its months) and the profit after it.
  * Then the expected rows: recurring charges by their day, the loan's interest and escrow, the category averages
- * last, the lines the user added after them. No chips, no grouping. A tap on a row opens its edit page; under the rows, הוספת קטגוריה
+ * last, the lines the user added after them, and that part the profit leaves out as the last row (not
+ * editable), so the rows add up to the figure. No chips, no grouping. A tap on a row opens its edit page; under the rows, הוספת קטגוריה
  * לצפי, the rows taken out (with החזרה) and חזרה לצפי של Flow. A viewer reads the rows only.
  */
 export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSample } = {}) {
@@ -129,15 +135,17 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
         </div>
       ) : (
         <div className="ui-pm-month">
-          <p className="ui-pn-figure-label ui-page-pad">תזרים צפוי</p>
+          <p className="ui-pn-figure-label ui-page-pad t-caption t-muted">{CASH.net}</p>
           <p ref={setFigure} className="ui-pp-figure ui-page-pad">
             <Amount agorot={cashNet} currency={currency} size="display" loss={cashNet < 0n} direction={cashNet > 0n ? "income" : undefined} />
           </p>
           <Card className="ui-pp-card">
-            <SummaryRow label="צפוי להיכנס" value={<Amount agorot={forecast.incomeMinor} currency={currency} income />} />
-            <SummaryRow label="צפוי לצאת" value={<Amount agorot={cash?.expenseMinor ?? 0n} currency={currency} />} />
+            <SummaryRow label={CASH.income} value={<Amount agorot={forecast.incomeMinor} currency={currency} income />} />
+            <SummaryRow label={CASH.expense} value={<Amount agorot={cash?.expenseMinor ?? 0n} currency={currency} />} />
+            {/* The bridge from the cash to the profit, on the card: the part of צפוי לצאת the profit leaves out. */}
+            {keptOut === 0n ? null : <SummaryRow label={`מזה ${NOT_IN_PROFIT_LABEL}`} value={<Amount agorot={keptOut} currency={currency} />} />}
             {keptOut === 0n ? null : (
-              <SummaryRow label="רווח צפוי" value={<Amount agorot={net} currency={currency} loss={net < 0n} direction={net > 0n ? "income" : undefined} />} />
+              <SummaryRow label={PROFIT.net} value={<Amount agorot={net} currency={currency} loss={net < 0n} direction={net > 0n ? "income" : undefined} />} />
             )}
             {monthShare == null ? null : <SummaryRow label="חלק בהוצאות הכלליות" value={<Amount agorot={monthShare} currency={currency} />} />}
             {after == null ? null : (
@@ -145,7 +153,7 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
             )}
           </Card>
           <p className="ui-pp-note t-caption t-muted">{forecast.loanCount > 0 ? LOAN_NOTE : NOTE}</p>
-          {forecast.rows.length === 0 ? <p className="ui-pp-note t-caption t-muted">אין תנועות צפויות בחודש הזה.</p> : (
+          {forecast.rows.length === 0 && keptOut === 0n ? <p className="ui-pp-note t-caption t-muted">אין תנועות צפויות בחודש הזה.</p> : (
             <List layout="flat" className="ui-pn-rows">
               {forecast.rows.map((row) => (
                 <ListRow
@@ -166,13 +174,13 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
                 <ListRow
                   layout="flat"
                   variant="transaction"
-                  title="לא נספר ברווח"
+                  title={NOT_IN_PROFIT_LABEL}
                   hint={LOAN_SOURCE}
                   agorot={keptOut}
                   currency={currency}
                   sign="out"
                   source="bank"
-                  initials={lineInitials("קרן הלוואה")}
+                  initials={lineInitials(NOT_IN_PROFIT_LABEL)}
                 />
               )}
             </List>
