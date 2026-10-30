@@ -689,6 +689,8 @@ export const breakdownLinesSchema = z
     /** FLOW-165: the whole group's total and row count, whatever page this is. Older payloads omit them. */
     total_minor: agorotSchema.optional().catch(undefined),
     count: z.number().int().nonnegative().optional().catch(undefined),
+    /** FLOW-989: the group by project, as `get_pnl_statement` by project counts it (key: a project id, "overhead", "unassigned" or null). */
+    projects: z.array(z.object({ key: z.string().nullable(), project_id: z.string().nullable(), name: z.string().nullable(), total_minor: agorotSchema })).optional().catch(undefined),
   })
   .nullable();
 

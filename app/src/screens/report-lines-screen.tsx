@@ -6,7 +6,7 @@ import { lineInitials } from "../cash-lines-groups";
 import { getSupabase } from "../lib/supabase";
 import { loadReadSchemas } from "../load-read-schemas";
 import { useHomePreview, usePreviewSearch } from "../preview";
-import { categoryName, dateRangeText, reportStateOf } from "../reports";
+import { categoryName, dateRangeText, projectKeyName, reportStateOf } from "../reports";
 import { Amount } from "../ui/amount";
 import { PageLoadFailed, useOnline } from "../ui/band-states";
 import { Button } from "../ui/button";
@@ -25,8 +25,10 @@ import { ReportRow, ReportSection, ReportSummary, type Collapse } from "./report
 type LinesPage = NonNullable<BreakdownLinesPage>;
 type LineRow = LinesPage["rows"][number];
 
-/** A fixture: the rows the read would return. */
-export type ReportLinesSample = { rows: LineRow[]; hasMore?: boolean };
+type SplitProject = NonNullable<LinesPage["projects"]>[number];
+
+/** A fixture: the rows the read would return, and its split by project. */
+export type ReportLinesSample = { rows: LineRow[]; hasMore?: boolean; projects?: SplitProject[] };
 
 const PAGE = 100;
 
@@ -78,14 +80,32 @@ export function linesByMonth<Row extends { doc_date: string }>(rows: readonly Ro
     .map(([key, list]) => ({ key, title: `${HEBREW_MONTHS[Number(key.slice(5, 7)) - 1] ?? key} ${key.slice(0, 4)}`, rows: list }));
 }
 
-/** The rows' totals per project, largest first. */
-export function linesByProject(rows: readonly LineRow[]): { name: string; total: bigint }[] {
+type SplitRow = { key: string; name: string; total: bigint; href?: string };
+
+/** The rows' totals per project, largest first: the fallback for an older payload with no `projects`. */
+export function linesByProject(rows: readonly LineRow[]): SplitRow[] {
   const totals = new Map<string, bigint>();
   for (const row of rows) {
     const name = row.project_name ?? "בלי פרויקט";
     totals.set(name, (totals.get(name) ?? 0n) + row.amount_minor);
   }
-  return [...totals.entries()].map(([name, total]) => ({ name, total })).sort((a, b) => (a.total === b.total ? a.name.localeCompare(b.name) : b.total > a.total ? 1 : -1));
+  return [...totals.entries()].map(([name, total]) => ({ key: name, name, total })).sort((a, b) => (a.total === b.total ? a.name.localeCompare(b.name) : b.total > a.total ? 1 : -1));
+}
+
+/**
+ * FLOW-989: the read's split by project, as the P&L by project counts it (a split line by its parts, a shared
+ * cost by its allocations). A project's row opens this category for that project, keeping the rest of `search`.
+ */
+export function projectSplit(projects: readonly SplitProject[], search: string): SplitRow[] {
+  return projects.map((project) => {
+    const name = project.key == null ? "בלי פרויקט" : projectKeyName({ key: project.key, name: project.name });
+    if (project.project_id == null) return { key: project.key ?? "none", name, total: project.total_minor };
+    const params = new URLSearchParams(search);
+    params.set("scope", "project");
+    params.set("project", project.project_id);
+    params.set("pname", name);
+    return { key: project.key ?? "none", name, total: project.total_minor, href: `/reports/lines?${params.toString()}` };
+  });
 }
 
 /**
@@ -192,9 +212,11 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
   const total = sample == null && firstPage?.total_minor != null ? firstPage.total_minor : rows.reduce((sum, row) => sum + row.amount_minor, 0n);
   const lineCount = sample == null && firstPage?.count != null ? firstPage.count : rows.length;
   const signed = args.side === "income" ? total : -total;
-  // The split adds up the loaded rows only: while the summary is the whole group's and pages remain, it is left out.
+  // The read's split is the whole group's (FLOW-989). An older payload's split adds up the loaded rows only:
+  // while the summary is the whole group's and pages remain, it is left out.
+  const projects = sample != null ? sample.projects : firstPage?.projects;
   const partial = hasMore && lineCount > rows.length;
-  const split = partial ? [] : linesByProject(rows);
+  const split = projects != null ? projectSplit(projects, location.search) : partial ? [] : linesByProject(rows);
   // A page that fails stops the read (the effect's guard); the line says so and offers the retry. While the
   // retry runs the query keeps its error, so the line goes back to reading until that page answers.
   const readFailed = searching && sample == null && isFetchNextPageError && !isFetchingNextPage;
@@ -221,7 +243,7 @@ export function ReportLinesScreen({ sample }: { sample?: ReportLinesSample } = {
         {split.length > 1 && !searching ? (
           <ReportSection id="split" title="לפי פרויקט" total={<span className="t-muted">{String(split.length)}</span>} collapse={collapse}>
             <ul className="ui-rep-rows">
-              {split.map((item) => <ReportRow key={item.name} name={item.name} amount={<Amount agorot={args.side === "income" ? item.total : -item.total} currency={currency} />} />)}
+              {split.map((item) => <ReportRow key={item.key} name={item.name} amount={<Amount agorot={args.side === "income" ? item.total : -item.total} currency={currency} />} href={item.href} />)}
             </ul>
           </ReportSection>
         ) : null}
