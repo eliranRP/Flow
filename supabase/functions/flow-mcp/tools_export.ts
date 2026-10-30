@@ -149,8 +149,10 @@ async function build(request: ReportRequest, rpc: ToolRpc, now: Date): Promise<B
   const today = `${clock.year}-${clock.month}-${clock.day}`;
   // The company's name for the header and its projects; get_dashboard names the company this read is on.
   const named = await rpc("get_dashboard", { p_from: today, p_to: today, p_basis: null });
-  const company = named.status < 400 && isObject(named.json) && typeof named.json.name === "string" ? named.json.name : "Flow";
-  const allProjects: Project[] = named.status < 400 && isObject(named.json) && Array.isArray(named.json.projects)
+  // The project list is the guard for project_ids: when it cannot be read, nothing is read (fail closed).
+  if (named.status >= 400) throw new Refusal(fail("refused", READ_REFUSED));
+  const company = isObject(named.json) && typeof named.json.name === "string" ? named.json.name : "Flow";
+  const allProjects: Project[] = isObject(named.json) && Array.isArray(named.json.projects)
     ? named.json.projects.filter(isObject).flatMap((row) => (typeof row.id === "string" && typeof row.name === "string" ? [{ id: row.id.toLowerCase(), name: row.name }] : []))
     : [];
   const picked: Project[] = request.projectIds.map((id) => allProjects.find((project) => project.id === id) ?? { id, name: "" });

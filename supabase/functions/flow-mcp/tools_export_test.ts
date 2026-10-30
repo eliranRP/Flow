@@ -307,3 +307,18 @@ Deno.test("export_report with two projects picked: the balance sheet reads each 
   // Each project read returns the sample: the sum is twice it.
   assertEquals(grid.rows.find((row) => row.label === "סה״כ נכסים")?.amounts_minor, [123_000_000]);
 });
+
+Deno.test("export_report: a project list that cannot be read refuses before any read", async () => {
+  const down = rpcOf((name) => (name === "get_dashboard" ? { status: 500, json: null } : reads(name)));
+  assertEquals(codeOf(await callTool("export_report", { project_id: PROJECT }, ["read"], down.rpc)), "refused");
+  assertEquals(down.calls.map((call) => call.name), ["get_dashboard"]);
+});
+
+Deno.test("export_report stops at 120 reads for one file before it reads more", async () => {
+  const three = ["b0000000-0000-4000-8000-0000000000e1", "b0000000-0000-4000-8000-0000000000e2", "b0000000-0000-4000-8000-0000000000e3"];
+  const { calls, rpc } = rpcOf((name) => (name === "get_dashboard" ? { status: 200, json: { name: "נכסי הדוגמה בע״מ", projects: three.map((id, index) => ({ id, name: `Project ${String(index)}` })) } } : reads(name)));
+  // 36 months of the P&L (one read each) and 3 projects' balance sheets at 36 month-ends: 144 reads, over the 120.
+  const result = await exportReport({ kind: "both", columns: "month", from: "2024-01-01", to: "2026-12-31", project_ids: three, format: "json" }, rpc, NOW);
+  assertEquals(result.structuredContent.ok, false);
+  assertEquals(calls.filter((call) => call.name !== "get_dashboard").length, 120);
+});

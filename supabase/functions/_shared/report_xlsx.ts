@@ -61,8 +61,8 @@ function cellXml(cell: Cell, ref: string): string {
 function rowsFormula(column: string, plus: number[], minus: number[]): string {
   const run = minus.length === 0 && plus.length > 1 && plus.every((row, index) => index === 0 || row === (plus[index - 1] ?? 0) + 1);
   if (run) return `SUM(${column}${String(plus[0])}:${column}${String(plus[plus.length - 1])})`;
-  const terms = [...plus.map((row) => `+${column}${String(row)}`), ...minus.map((row) => `-${column}${String(row)}`)].join("");
-  return terms === "" ? "0" : terms.replace(/^\+/, "");
+  const terms = [...plus.map((row) => `${column}${String(row)}`), ...minus.map((row) => `-${column}${String(row)}`)];
+  return terms.length === 0 ? "0" : `SUM(${terms.join(",")})`;
 }
 
 /** A grid's rows from sheet row `first` on (1-based); the head row is `first`. */
@@ -169,7 +169,7 @@ export async function renderReportXlsx(file: ReportFile): Promise<Uint8Array> {
     ["_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
     ["xl/workbook.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView rightToLeft="1"/></bookViews><sheets>${sheets.map((sheet, index) => `<sheet name="${xml(sheet.name)}" sheetId="${String(index + 1)}" r:id="rId${String(index + 1)}"/>`).join("")}</sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`],
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets>${sheets.map((sheet, index) => `<sheet name="${xml(sheet.name)}" sheetId="${String(index + 1)}" r:id="rId${String(index + 1)}"/>`).join("")}</sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`],
     ["xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_, index) => `<Relationship Id="rId${String(index + 1)}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${String(index + 1)}.xml"/>`).join("")}<Relationship Id="rId${String(sheets.length + 1)}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
     ["xl/styles.xml", STYLES],
