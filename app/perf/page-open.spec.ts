@@ -11,10 +11,12 @@ import { median, RUNS, runsLine } from "./runs";
 const CPU = 4;
 const LIMIT_MS = 700;
 
+// FLOW-986: דוחות took קבועים's tab; קבועים opens from the icon in Home's band.
 const taps = [
-  { tab: "פרויקטים", heading: "פרויקטים" },
-  { tab: "הלוואות", heading: "הלוואות" },
-  { tab: "קבועים", heading: "קבועים" },
+  { tab: "פרויקטים", heading: "פרויקטים", band: false },
+  { tab: "דוחות", heading: "דוחות", band: false },
+  { tab: "הלוואות", heading: "הלוואות", band: false },
+  { tab: "קבועים", heading: "קבועים", band: true },
 ] as const;
 
 async function openHome(page: Page) {
@@ -27,7 +29,7 @@ test("projects and inner pages open within 0.7 s of a tap on a mid-range phone",
   test.setTimeout(180_000);
   const lines: string[] = [];
   const slow: string[] = [];
-  for (const { tab, heading } of taps) {
+  for (const { tab, heading, band } of taps) {
     const runs: number[] = [];
     for (let run = 0; run < RUNS; run += 1) {
       const context = await browser.newContext();
@@ -35,7 +37,9 @@ test("projects and inner pages open within 0.7 s of a tap on a mid-range phone",
       await openHome(page);
       const cdp = await context.newCDPSession(page);
       await cdp.send("Emulation.setCPUThrottlingRate", { rate: CPU });
-      const link = page.getByRole("navigation", { name: "ניווט ראשי" }).getByRole("link", { name: tab, exact: false });
+      const link = band
+        ? page.locator(".ui-band-actions").getByRole("link", { name: tab, exact: false })
+        : page.getByRole("navigation", { name: "ניווט ראשי" }).getByRole("link", { name: tab, exact: false });
       const start = Date.now();
       await link.tap();
       await expect(page.getByRole("heading", { name: heading, exact: true }).first()).toBeVisible({ timeout: 10_000 });

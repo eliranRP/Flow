@@ -30,7 +30,8 @@ test("קבועים opens from the band's icon, with a dot for late bills, and go
   const bar = page.getByRole("navigation", { name: "ניווט ראשי" });
   await expect(bar.getByRole("link", { name: "קבועים" })).toHaveCount(0);
   const icon = page.getByRole("link", { name: "קבועים, 2 לא הגיעו" });
-  expect((await icon.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+  // The band sits on a fractional offset: 44px can measure 43.99999.
+  expect(Math.round((await icon.boundingBox())?.height ?? 0)).toBeGreaterThanOrEqual(44);
   await icon.click();
   await expect(page).toHaveURL(/\/e2e\/recurring\?preview=1$/);
   await expect(page.getByRole("heading", { name: "קבועים" })).toBeVisible();
