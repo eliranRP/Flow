@@ -3,7 +3,7 @@
 **Date:** 2026-10-30
 **Status:** Accepted (owner, 2026-10-30, FLOW-990: of six board concepts, A (Home) and E (Projects) together, "Approve and start building")
 **Builds on:** [0196](0196-next-month-forecast-card-and-chart.md) (the forecast card and chart, cash terms on a cash screen), [0197](0197-company-next-month.md) (the company's next month)
-**Amends:** Home's figure budget (implementation guide §1 P2 and P3, the figure budget in §8; DESIGN-RULES "Use few numbers" and "Don't pile extra figures")
+**Amends:** Home's figure budget (implementation guide §1 P2 and P3, the figure budget in §11.3; DESIGN-RULES "Use few numbers" and "Don't pile extra figures")
 
 ## Context
 
