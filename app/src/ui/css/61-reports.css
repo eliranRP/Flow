@@ -426,6 +426,14 @@
   margin: 0;
 }
 
+/* FLOW-993: the projects picked for the file, a switch each, set in under "כל הפרויקטים". */
+.ui-rep-share-projects {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-inline-start: var(--space-3);
+}
+
 /* The drill-down's search: the field, then one line on what it found. */
 .ui-rep-search {
   display: flex;

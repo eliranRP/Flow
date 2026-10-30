@@ -175,7 +175,7 @@ export function ReportsScreen({ sample }: { sample?: ReportsSample } = {}) {
       ) : (
         <BalanceDateSheet open={sheet === "period"} onOpenChange={sheetChange("period")} value={state.asOf} today={today} onPick={(asOf) => { pickLater({ ...state, asOf }); }} />
       )}
-      <ReportShareSheet open={sheet === "share"} onOpenChange={(open) => { setSheet(open ? "share" : null); }} state={state} today={today} />
+      <ReportShareSheet open={sheet === "share"} onOpenChange={(open) => { setSheet(open ? "share" : null); }} state={state} today={today} projects={projects} />
       <ReportProjectSheet open={sheet === "projects"} onOpenChange={sheetChange("projects")} value={state.scope} projects={projects} allowByProject={state.kind === "pnl"} onPick={(scope) => { pickLater({ ...state, scope }); }} />
     </>
   );
