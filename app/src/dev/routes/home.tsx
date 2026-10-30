@@ -104,6 +104,8 @@ export function DevCash() {
         changes: params.get("recurring") === "1" ? chargeChangeViews(usdLoss ? SAMPLE_USD_CHANGES : SAMPLE_RECURRING_CHANGES, "?preview=1") : [],
         search: "?preview=1",
       })}
+      lateRecurring={params.get("recurring") === "1" ? SAMPLE_MISSING_BILLS.length : 0}
+      recurringTo="/e2e/recurring"
       sameDay={usdLoss ? (past ? null : sampleCashUsdToDay()) : sampleCashToDay()}
       forecast={usdLoss ? -574_100n : -6_810_000n}
       company={<BandCompany name="Acme Test Co" onOpen={() => { void navigate("/settings?preview=1"); }} />}
