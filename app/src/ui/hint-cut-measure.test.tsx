@@ -1,6 +1,7 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { cutPoints, cutText, fitCut, HintText } from "./hint-cut";
+import { HintText } from "./hint-cut";
+import { cutPoints, cutText, fitCut } from "./hint-cut-measure";
 
 /** A monospace text: every grapheme is 10px wide. */
 const mono = (text: string) => (end: number) => [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text.slice(0, end))].length * 10;
@@ -11,6 +12,8 @@ describe("hint cut (FLOW-172)", () => {
     expect(cutText("חשמל ותאורה, ")).toBe("חשמל ותאורה…");
     expect(cutText("Cedar St")).toBe("Cedar St…");
     expect(cutText("Unit 2 ($")).toBe("Unit 2 ($…");
+    expect(cutText("Lot 4 – ")).toBe("Lot 4…");
+    expect(cutText("Cedar St. (B) ")).toBe("Cedar St. (B)…");
   });
 
   it("cuts at the longest prefix that fits with the ellipsis, then trims it", () => {

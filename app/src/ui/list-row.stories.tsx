@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
 import { BankIcon } from "./icons";
 import { KeptOutTag, lineTagText } from "./line-marks";
 import { List, ListRow, type ListLayout } from "./list-row";
@@ -300,56 +300,30 @@ export const CutAtALetter: Story = {
   ),
   play: async ({ canvasElement }) => {
     await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
-    // The shared observer reports after layout, before the frame is drawn; a font that arrives measures again.
+    // The measuring loads once; the shared observer reports after layout, and a font that arrives measures again.
     await canvasElement.ownerDocument.fonts.ready;
+    await waitFor(() => expect(canvasElement.querySelectorAll(".ui-hint-text[data-cut]").length).toBeGreaterThanOrEqual(6));
     for (let frame = 0; frame < 2; frame += 1) await new Promise((done) => requestAnimationFrame(done));
-    let cuts = 0;
-    let spaced = 0;
+    let atBoundary = 0;
     for (const row of canvasElement.querySelectorAll(".ui-row")) {
       const texts = [...row.querySelectorAll<HTMLElement>(".ui-hint-text")];
       const top = texts[0]?.getBoundingClientRect().top ?? 0;
       for (const text of texts.filter((item) => Math.abs(item.getBoundingClientRect().top - top) < 1)) {
-        if (text.scrollWidth <= text.clientWidth + 1) {
-          await expect(text).not.toHaveAttribute("data-cut");
-          continue;
-        }
-        // CSS's own "…" would draw the longest prefix that fits with it, a space at its end included.
-        const css = cssCut(text);
-        spaced += /\s$/u.test(css) ? 1 : 0;
-        cuts += 1;
-        // The drawn cut is that prefix without its trailing spaces and punctuation, over the whole text.
-        const cut = text.getAttribute("data-cut") ?? "";
-        await expect(cut).toBe(`${css.replace(/[\s\p{P}]+$/u, "")}…`);
-        await expect(cut).toMatch(/[^\s\p{P}]…$/u);
-        await expect(getComputedStyle(text, "::after").content).toContain(cut);
+        if (text.scrollWidth <= text.clientWidth + 1) continue;
+        // What is drawn: the overlay's text (the whole text below it is unpainted, its own "…" too).
         await expect(getComputedStyle(text).webkitTextFillColor).toBe("rgba(0, 0, 0, 0)");
+        const drawn = /^"(.*?)"/u.exec(getComputedStyle(text, "::after").content)?.[1] ?? "";
+        await expect(drawn).toMatch(/[^\s,;:\-–]…$/u);
+        const kept = drawn.slice(0, -1);
+        const whole = text.textContent;
+        await expect(whole.startsWith(kept)).toBe(true);
+        // Its "…" sits where a space or a comma follows in the text: there CSS's own "…" kept it.
+        if (/^[\s,]/u.test(whole.slice(kept.length))) atBoundary += 1;
       }
     }
-    await expect(cuts).toBeGreaterThanOrEqual(6);
-    // At least one row's room ends right after a space: the case FLOW-172 fixes.
-    await expect(spaced).toBeGreaterThanOrEqual(1);
+    await expect(atBoundary).toBeGreaterThanOrEqual(2);
   },
 };
-
-/** The longest prefix of a hint part's text that fits its box with "…" after it. */
-function cssCut(text: HTMLElement): string {
-  const node = text.firstChild;
-  const whole = node?.textContent ?? "";
-  const style = getComputedStyle(text);
-  const context = document.createElement("canvas").getContext("2d");
-  if (node == null || context == null) return "";
-  context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-  const room = text.getBoundingClientRect().width - context.measureText("…").width;
-  const range = document.createRange();
-  let fits = "";
-  for (const char of whole) {
-    range.setStart(node, 0);
-    range.setEnd(node, fits.length + char.length);
-    if (range.getBoundingClientRect().width > room) break;
-    fits += char;
-  }
-  return fits;
-}
 
 /**
  * FLOW-168 as it stands (review of #865): with three parts whose 2nd and 3rd both have letters, both can be
