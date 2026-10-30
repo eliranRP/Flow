@@ -204,6 +204,6 @@ Deno.test("a wide P&L grid measures each piece of text once, not once per try (t
   } finally {
     PDFFont.prototype.widthOfTextAtSize = measure;
   }
-  // Each run of text is laid out once and its width scaled; it was over 20,000 calls for this grid.
+  // Each run of text is laid out once and its width scaled; it was 35,059 calls for this grid.
   assert(calls < 3000, `${String(calls)} measurements`);
 });
