@@ -1,6 +1,6 @@
 <a id="flow-991"></a>
 # FLOW-991 · The צפי page leads with the cash its project card shows
-- **Type:** SMALL UI · **Status:** in-progress · **Source:** the owner, 2026-10-30, two screenshots of a project with a loan: the project page's card said תזרים צפוי −$301 and its "פירוט ועריכה" page said צפי נובמבר +$106 ("the revenue and cashflow numbers are interchangeable, confusing"). The owner chose to fix the terminology and the calculation on the existing screens, cash for both. Decision [0236](../../decisions/0236-forecast-page-leads-with-cash.md).
+- **Type:** SMALL UI · **Status:** in-progress (#888) · **Source:** the owner, 2026-10-30, two screenshots of a project with a loan: the project page's card said תזרים צפוי −$301 and its "פירוט ועריכה" page said צפי נובמבר +$106 ("the revenue and cashflow numbers are interchangeable, confusing"). The owner chose to fix the terminology and the calculation on the existing screens, cash for both. Decision [0236](../../decisions/0236-forecast-page-leads-with-cash.md).
 - **Files:** `app/src/screens/project-next-month-screen.tsx` and its test, `app/src/ui/css/45-project-profit.css` (`.ui-pn-figure-label`), `docs/decisions/0236-forecast-page-leads-with-cash.md`, `docs/decisions/README.md`, a design log entry, a changelog fragment.
 
 - [x] The page's figure is תזרים צפוי, the card's cash (cashForecast), labelled under the title.
