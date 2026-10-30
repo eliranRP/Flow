@@ -53,7 +53,8 @@ export const TOOL_GROUPS: GuideGroup[] = [
     id: "ledger", title: "Ledger and accounts", summary: "The chart of accounts and the balanced legs behind each line.",
     tools: [
       "list_accounts", "get_line_legs", "get_account_balances", "book_line", "create_journal_entry",
-      "update_journal_entry", "get_journal_entry_history", "set_category_account", "create_account", "update_account", "archive_account", "restore_account",
+      "update_journal_entry", "set_journal_entry_leg_project", "get_journal_entry_history",
+      "set_category_account", "create_account", "update_account", "archive_account", "restore_account",
       "merge_account", "get_balance_sheet", "get_account_lines", "get_pnl_statement", "export_report",
     ],
   },

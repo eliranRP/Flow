@@ -187,6 +187,37 @@ Deno.test("update_journal_entry forwards the fields sent, tells a cleared refere
   assertEquals(Object.keys(spec?.inputSchema.properties ?? {}), ["idempotency_key", "journal_entry_id", "expected_version", "doc_date", "description", "reference", "legs", "reason"]);
 });
 
+Deno.test("set_journal_entry_leg_project forwards one leg's project, null for none, and undoes as an update", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: TXN, version: "2", undo_kind: "journal_entry_update" } } }));
+  const change = { idempotency_key: "jlp-1", journal_entry_id: TXN, expected_version: "1", leg_ordinal: 3, project_id: PROJECT, reason: "Example: on the house" };
+  assertEquals((await callTool("set_journal_entry_leg_project", change, ["write"], rpc)).isError, false);
+  assertEquals(calls.at(-1), {
+    name: "mcp_set_journal_entry_leg_project",
+    body: { p_idempotency_key: "jlp-1", p_journal_entry_id: TXN, p_expected_version: "1", p_leg_ordinal: 3, p_project_id: PROJECT, p_reason: "Example: on the house" },
+  });
+  await callTool("set_journal_entry_leg_project", { ...change, idempotency_key: "jlp-2", project_id: null }, ["write"], rpc);
+  assertEquals(calls.at(-1)?.body.p_project_id, null);
+
+  const before = calls.length;
+  for (const [bad, detail] of [
+    [{ leg_ordinal: 0 }, "leg_ordinal"],
+    [{ leg_ordinal: 1.5 }, "leg_ordinal"],
+    [{ project_id: undefined }, "project_id"],
+    [{ reason: "" }, "reason"],
+    [{ expected_version: "v1" }, "expected_version"],
+    [{ idempotency_key: "k".repeat(125) }, "idempotency_key"],
+  ] as Array<[Record<string, unknown>, string]>) {
+    const refused = await callTool("set_journal_entry_leg_project", { ...change, ...bad }, ["write"], rpc);
+    assertEquals(codeOf(refused), "validation", JSON.stringify(bad));
+    assertEquals(JSON.stringify(refused.structuredContent).includes(detail), true, `${detail} in ${JSON.stringify(refused.structuredContent)}`);
+  }
+  assertEquals(calls.length, before);
+  assertEquals(codeOf(await callTool("set_journal_entry_leg_project", change, ["read"], rpc)), "forbidden");
+  const db = rpcOf(() => ({ status: 200, json: { ok: false, error: { code: "refused", message: "leg not found" } } }));
+  assertEquals((await callTool("set_journal_entry_leg_project", change, ["write"], db.rpc)).structuredContent,
+    { ok: false, error: { code: "refused", message: "leg not found" } });
+});
+
 Deno.test("get_journal_entry_history reads the versions; another line is refused and an unknown id not found", async () => {
   const history = { journal_entry_id: TXN, version: "2", versions: [{ version: "2", current: true }, { version: "1", current: false }] };
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ...history, is_journal_entry: true } }));

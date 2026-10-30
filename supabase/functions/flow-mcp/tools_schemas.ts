@@ -55,7 +55,7 @@ export const READ_TOOL_NAMES = [
 export const SYNC_STATUS_TOOL = "get_sync_status";
 
 export const WRITE_TOOL_NAMES = [
-  "create_manual_entry", "book_line", "create_journal_entry", "update_journal_entry", "set_category_account", "create_account", "update_account", "archive_account", "restore_account", "merge_account", "create_prepaid_schedule", "attach_prepaid_refund", "update_prepaid_schedule", "end_prepaid_schedule", "delete_prepaid_schedule", "set_books_closed_through",
+  "create_manual_entry", "book_line", "create_journal_entry", "update_journal_entry", "set_journal_entry_leg_project", "set_category_account", "create_account", "update_account", "archive_account", "restore_account", "merge_account", "create_prepaid_schedule", "attach_prepaid_refund", "update_prepaid_schedule", "end_prepaid_schedule", "delete_prepaid_schedule", "set_books_closed_through",
   "attach_document",
   "add_transaction_note", "edit_transaction_note", "remove_transaction_note", "remove_transaction_file",
   "assign_expense",
@@ -165,7 +165,7 @@ export const ALLOWED: Record<string, Set<string>> = {
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
   set_expense_category: new Set(["idempotency_key", "transaction_id", "category_id"]),
-  create_manual_entry: new Set(["idempotency_key", "direction", "amount_minor", "doc_date", "payee", "project_id", "category_id", "method", "cheque_number"]), book_line: new Set(["idempotency_key", "transaction_id", "doc_date", "direction", "currency", "description", "legs", "project_id"]), create_journal_entry: new Set(["idempotency_key", "doc_date", "currency", "description", "reference", "legs"]), update_journal_entry: new Set(["idempotency_key", "journal_entry_id", "expected_version", "doc_date", "description", "reference", "legs", "reason"]), set_category_account: new Set(["idempotency_key", "category_id", "account_id"]),
+  create_manual_entry: new Set(["idempotency_key", "direction", "amount_minor", "doc_date", "payee", "project_id", "category_id", "method", "cheque_number"]), book_line: new Set(["idempotency_key", "transaction_id", "doc_date", "direction", "currency", "description", "legs", "project_id"]), create_journal_entry: new Set(["idempotency_key", "doc_date", "currency", "description", "reference", "legs"]), update_journal_entry: new Set(["idempotency_key", "journal_entry_id", "expected_version", "doc_date", "description", "reference", "legs", "reason"]), set_journal_entry_leg_project: new Set(["idempotency_key", "journal_entry_id", "expected_version", "leg_ordinal", "project_id", "reason"]), set_category_account: new Set(["idempotency_key", "category_id", "account_id"]),
   attach_document: new Set(["idempotency_key", "transaction_id", "document"]),
   create_project: new Set(["idempotency_key", "name", "status", "type", "budget_minor"]),
   update_project: new Set(["idempotency_key", "id", "name", "type", "budget_minor", "status"]),

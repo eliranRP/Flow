@@ -2081,6 +2081,9 @@ isOneToOne: false
 "mcp_set_jev_mode":
 { Args: { "p_enabled": boolean,"p_idempotency_key": string,"p_mode"?: string,"p_threshold"?: number }; Returns: Json
                            },
+"mcp_set_journal_entry_leg_project":
+{ Args: { "p_expected_version": string,"p_idempotency_key": string,"p_journal_entry_id": string,"p_leg_ordinal": number,"p_project_id": string,"p_reason": string }; Returns: Json
+                           },
 "mcp_set_line_cash":
 { Args: { "p_idempotency_key": string,"p_in_cash": boolean,"p_transaction_id": string }; Returns: Json
                            },

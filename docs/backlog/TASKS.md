@@ -238,7 +238,6 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-172"></a>[FLOW-172](tasks/FLOW-172.md) | List rows: a cut hint part can end in a space before "…" | BACKLOG NIT |
 | <a id="flow-173"></a>[FLOW-173](tasks/FLOW-173.md) | get_account_lines: drop year_start from the output after one release | BACKLOG NIT |
 | <a id="flow-174"></a>[FLOW-174](tasks/FLOW-174.md) | Correct a posted journal entry in place, with its history | MCP + DB |
-| <a id="flow-175"></a>[FLOW-175](tasks/FLOW-175.md) | Undo a journal entry another member wrote (owner only) | MCP |
 | <a id="flow-176"></a>[FLOW-176](tasks/FLOW-176.md) | Set the project of one journal entry leg | MCP |
 | <a id="flow-177"></a>[FLOW-177](tasks/FLOW-177.md) | Hebrew names for the last two built-in accounts | SMALL CYCLE |
 | <a id="flow-920"></a>[FLOW-920](tasks/FLOW-920.md) | Project profit: the month's share and after-overhead rows from the server, and the old profit-month section goes | UI + server (follow-up to FLOW-140) |
