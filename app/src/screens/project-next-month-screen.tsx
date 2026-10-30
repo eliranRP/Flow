@@ -10,7 +10,7 @@ import { allTime } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { useProjectForecastWrites } from "../project-forecast-writes";
 import { monthWord, PACE_WORDS } from "../project-next-edit";
-import { LOAN_SOURCE, monthlyOverheadShare, type NextMonthRow } from "../project-next-month";
+import { cashForecast, LOAN_SOURCE, monthlyOverheadShare, type NextMonthRow } from "../project-next-month";
 import { useNextMonthForecast } from "../project-next-month-query";
 import { screenPhase } from "../query-phase";
 import { useHoldWrites } from "../use-is-viewer";
@@ -94,7 +94,13 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
     : null;
   const monthShare = monthlyOverheadShare(share, monthRows.length);
   const forecast = next.forecast;
+  // FLOW-991 (owner, 2026-10-30): the page leads with the cash the project page's card shows (decision 0196:
+  // the loans' payments the profit leaves out, its principal, are in צפוי לצאת), and names the profit the
+  // profit page's card shows under it, so both cards that open it find their number here.
+  const cash = forecast == null ? null : cashForecast(forecast);
   const net = forecast?.netMinor ?? 0n;
+  const cashNet = cash?.netMinor ?? 0n;
+  const keptOut = forecast?.cashOnlyMinor ?? 0n;
   const after = monthShare == null ? null : net - monthShare;
   const title = forecast == null ? "צפי" : `צפי ${cashMonthName(forecast.month)}`;
   const sub = project == null || forecast == null
@@ -123,12 +129,16 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
         </div>
       ) : (
         <div className="ui-pm-month">
+          <p className="ui-pn-figure-label ui-page-pad">תזרים צפוי</p>
           <p ref={setFigure} className="ui-pp-figure ui-page-pad">
-            <Amount agorot={net} currency={currency} size="display" loss={net < 0n} direction={net > 0n ? "income" : undefined} />
+            <Amount agorot={cashNet} currency={currency} size="display" loss={cashNet < 0n} direction={cashNet > 0n ? "income" : undefined} />
           </p>
           <Card className="ui-pp-card">
-            <SummaryRow label="הכנסות צפויות" value={<Amount agorot={forecast.incomeMinor} currency={currency} income />} />
-            <SummaryRow label="הוצאות צפויות" value={<Amount agorot={forecast.expenseMinor} currency={currency} />} />
+            <SummaryRow label="צפוי להיכנס" value={<Amount agorot={forecast.incomeMinor} currency={currency} income />} />
+            <SummaryRow label="צפוי לצאת" value={<Amount agorot={cash?.expenseMinor ?? 0n} currency={currency} />} />
+            {keptOut === 0n ? null : (
+              <SummaryRow label="רווח צפוי" value={<Amount agorot={net} currency={currency} loss={net < 0n} direction={net > 0n ? "income" : undefined} />} />
+            )}
             {monthShare == null ? null : <SummaryRow label="חלק בהוצאות הכלליות" value={<Amount agorot={monthShare} currency={currency} />} />}
             {after == null ? null : (
               <SummaryRow strong label="רווח אחרי הוצאות כלליות" value={<Amount agorot={after} currency={currency} loss={after < 0n} />} />
@@ -152,6 +162,19 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
                   href={hold ? undefined : `${editPath(projectId, row.key)}${search}`}
                 />
               ))}
+              {keptOut === 0n ? null : (
+                <ListRow
+                  layout="flat"
+                  variant="transaction"
+                  title="לא נספר ברווח"
+                  hint={LOAN_SOURCE}
+                  agorot={keptOut}
+                  currency={currency}
+                  sign="out"
+                  source="bank"
+                  initials={lineInitials("קרן הלוואה")}
+                />
+              )}
             </List>
           )}
           {hold ? null : (
