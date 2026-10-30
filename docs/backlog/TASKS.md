@@ -393,6 +393,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-947"></a>[FLOW-947](tasks/FLOW-947.md) | Gross-up contra effect: a gross-up part on either kind, nets its own category | FEATURE |
 | <a id="flow-949"></a>[FLOW-949](tasks/FLOW-949.md) | A normal cost and its gross-up contra credit on the same category and project | BUG |
 | <a id="flow-984"></a>[FLOW-984](tasks/FLOW-984.md) | Review loads its open items in pages, not all at once | PLAN FIRST |
+| <a id="flow-986"></a>[FLOW-986](tasks/FLOW-986.md) | דוחות takes קבועים's place in the tab bar; קבועים moves to an icon in Home's band | SMALL UI |
 
 ## Projects and reports
 

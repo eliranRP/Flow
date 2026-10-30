@@ -12,7 +12,7 @@ import { groupRecurring, monthInflow, monthOutflow, type RecurringLine } from ".
 import { alertState, changePercentOf, daysBetween, isSplitParty, israelToday, rowId, type RecurringAlert, type ScheduleRow, scheduleLines, useRecurringScheduleQuery } from "../recurring-schedule";
 import { EmptyState } from "../ui/empty-state";
 import { PageLoadFailed, useOnline } from "../ui/band-states";
-import { type RecurringListGroup, type RecurringListRow, RecurringList } from "../ui/recurring-list";
+import { type RecurringListGroup, type RecurringListRow, RecurringBack, RecurringList } from "../ui/recurring-list";
 import { RecurringSkeleton } from "../ui/screen-skeletons";
 import { useToast } from "../ui/toast";
 import { RepeatIcon } from "../ui/icons";
@@ -40,6 +40,7 @@ function RecurringEmpty() {
   return (
     <div className="ui-recurring">
       <header className="ui-recurring-head">
+        <RecurringBack />
         <h1 className="t-title">קבועים</h1>
       </header>
       <EmptyState icon={<RepeatIcon />} title="עוד Flow לומד" body="חיובים והכנסות שחוזרים כל חודש יופיעו כאן אחרי חודשיים של תנועות. אפשר גם לסמן שורה כקבועה מדף התנועה." />
@@ -101,6 +102,7 @@ export function RecurringScreen({
     return (
       <div className="ui-recurring">
         <header className="ui-recurring-head">
+          <RecurringBack />
           <h1 className="t-title">קבועים</h1>
         </header>
         <PageLoadFailed title="הקבועים לא נטענו" offline={!online} onRetry={() => void (live ? query.refetch() : undefined)} />

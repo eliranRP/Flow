@@ -19,7 +19,7 @@ export const devRouteGroups: DevRouteGroup[] = import.meta.env.DEV
       { section: "none", routes: [...setupRoutes, ...projectRoutes] },
       { section: "home", routes: reviewRoutes },
       { section: "home", routes: [...homeRoutes, ...invoicesRoutes, ...forecastRoutes, ...profitRoutes] },
-      { section: "recurring", routes: recurringRoutes },
+      { section: "home", routes: recurringRoutes },
       { section: "projects", routes: projectsRoutes },
       { section: "loans", routes: loansRoutes },
       { section: "home", routes: settingsRoutes },

@@ -272,7 +272,20 @@ html[data-kb="open"] .ui-sheet-body {
 }
 
 .ui-band-action {
+  position: relative;
   color: var(--color-on-band);
+}
+
+/* FLOW-986: a late recurring bill, an 8px signal dot on the קבועים icon's top corner, ringed in the band's colour. */
+.ui-band-dot {
+  position: absolute;
+  inset-block-start: calc(var(--space-2) + var(--space-1) / 4);
+  inset-inline-end: var(--space-2);
+  inline-size: var(--space-2);
+  block-size: var(--space-2);
+  border-radius: var(--radius-chip);
+  background: var(--color-signal);
+  box-shadow: 0 0 0 2px var(--color-band);
 }
 
 .ui-band-avatar {

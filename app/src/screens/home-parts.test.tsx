@@ -2,7 +2,7 @@ import { type CashCurrencyRow } from "@flow/shared";
 import { act, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AttentionBox, ForecastRow, HomeFigures, homeMonthLabel, HomeMonthPill, SplitCard, splitTakeaway, type HomeFigureRows } from "./home-parts";
+import { AttentionBox, ForecastRow, HomeBandActions, HomeFigures, homeMonthLabel, HomeMonthPill, SplitCard, splitTakeaway, type HomeFigureRows } from "./home-parts";
 import { CashHomeSkeleton } from "./home-skeleton";
 import { renderWithProviders } from "../test-render";
 import { SKELETON_DELAY_MS } from "../ui/skeleton";
@@ -112,6 +112,30 @@ describe("Home's band parts (FLOW-364)", () => {
   });
 });
 // --- home-skeleton.test.tsx
+
+describe("the band's קבועים icon (FLOW-986, board concept B)", () => {
+  it("sits after search and opens קבועים, with no dot when nothing is late", () => {
+    renderWithProviders(<HomeBandActions isPast={false} currentName="" search="?preview=1" />);
+    const icon = screen.getByRole("link", { name: "קבועים" });
+    expect(icon).toHaveAttribute("href", "/recurring?preview=1");
+    expect(icon.querySelector(".ui-band-dot")).toBeNull();
+    const search = screen.getByRole("link", { name: "חיפוש" });
+    expect(search.compareDocumentPosition(icon) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("marks late bills with a dot and says how many in its name", () => {
+    const { unmount } = renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" lateRecurring={2} />);
+    expect(screen.getByRole("link", { name: "קבועים, 2 לא הגיעו" }).querySelector(".ui-band-dot")).not.toBeNull();
+    unmount();
+    renderWithProviders(<HomeBandActions isPast={false} currentName="" search="" lateRecurring={1} />);
+    expect(screen.getByRole("link", { name: "קבועים, אחד לא הגיע" })).toBeInTheDocument();
+  });
+
+  it("is not on a past month's band", () => {
+    renderWithProviders(<HomeBandActions isPast currentName="אוקטובר" search="" lateRecurring={2} />);
+    expect(screen.queryByRole("link", { name: /קבועים/ })).toBeNull();
+  });
+});
 
 describe("CashHomeSkeleton (FLOW-364)", () => {
   beforeEach(() => {

@@ -1,7 +1,9 @@
 import { formatAmountText } from "@flow/shared";
 import { useId } from "react";
 import { Link } from "react-router-dom";
+import { usePreviewSearch } from "../preview";
 import { Avatar } from "./avatar";
+import { BackButton } from "./back";
 import { ClockIcon } from "./icons";
 import { cx } from "./cx";
 import { SectionHead } from "./layout";
@@ -76,6 +78,12 @@ export type RecurringListProps = {
   offlineSince?: number;
 };
 
+/** FLOW-986: קבועים is no longer a tab; it opens from Home, so Back goes there ("‹ בית"). */
+export function RecurringBack() {
+  const search = usePreviewSearch();
+  return <BackButton fallback={`/${search}`} text="בית" />;
+}
+
 /**
  * FLOW-447: the קבועים list. The card totals this month's income and expenses side by side; the late
  * bills come first, in a tinted box that asks for a decision; then the income groups under "הכנסות
@@ -91,6 +99,7 @@ export function RecurringList({ project, subtitle, currency, outflow, inflow, la
   return (
     <div className="ui-recurring">
       <header className="ui-recurring-head">
+        <RecurringBack />
         <h1 className="t-title">קבועים</h1>
         {project != null && <p className="t-sheet">{project}</p>}
         <p className="t-line2">{subtitle}</p>

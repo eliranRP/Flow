@@ -16,7 +16,7 @@ import { cx } from "../ui/cx";
 import { HEBREW_MONTHS } from "../ui/date-math";
 import { IconButton } from "../ui/icon-button";
 import { SEARCH_FOCUS_STATE } from "../ui/search-entry";
-import { ChevronDownIcon, ChevronIcon, OutwardChevron, PersonIcon, PlusIcon, SearchIcon } from "../ui/icons";
+import { ChevronDownIcon, ChevronIcon, OutwardChevron, PersonIcon, PlusIcon, RepeatIcon, SearchIcon } from "../ui/icons";
 import { MonthStepper } from "../ui/month-stepper";
 import { PartsBar } from "../ui/parts-bar";
 import { PeriodSwipe } from "../ui/period-swipe";
@@ -44,8 +44,20 @@ export type HomeMonthNav = {
   onOpenDrawer: () => void;
 };
 
-/** Row 1 of the band: + , search and the avatar on the current month; "חזרה ל…" on a past one. */
-export function HomeBandActions({ isPast, currentName, search, avatarInitial }: { isPast: boolean; currentName: string; search: string; avatarInitial?: string }) {
+/**
+ * Row 1 of the band: + , search, קבועים and the avatar on the current month; "חזרה ל…" on a past one.
+ * FLOW-986 (board concept B): קבועים left the tab bar for this icon; a dot marks late recurring bills.
+ */
+export function HomeBandActions({ isPast, currentName, search, avatarInitial, lateRecurring = 0, recurringTo = "/recurring" }: {
+  isPast: boolean;
+  currentName: string;
+  search: string;
+  avatarInitial?: string;
+  /** Recurring bills and income late for this month: a dot on the קבועים icon when more than 0. */
+  lateRecurring?: number;
+  /** Where the icon goes (the dev fixtures' own path). */
+  recurringTo?: string;
+}) {
   const allowAdd = useAllowAdd();
   if (isPast) {
     return (
@@ -74,6 +86,15 @@ export function HomeBandActions({ isPast, currentName, search, avatarInitial }: 
       {/* The search opens with its field focused, as the entry on the other screens does (FLOW-323). */}
       <IconButton label="חיפוש" onBand to={`/search${search}`} state={SEARCH_FOCUS_STATE} className="ui-band-action">
         <SearchIcon size={22} />
+      </IconButton>
+      <IconButton
+        label={lateRecurring > 0 ? `קבועים, ${lateRecurring === 1 ? "אחד לא הגיע" : `${String(lateRecurring)} לא הגיעו`}` : "קבועים"}
+        onBand
+        to={`${recurringTo}${search}`}
+        className="ui-band-action"
+      >
+        <RepeatIcon size={22} />
+        {lateRecurring > 0 ? <span className="ui-band-dot" aria-hidden="true" /> : null}
       </IconButton>
       <IconButton label="הגדרות וחשבון" onBand to={`/settings${search}`} className="ui-band-action">
         <span className="ui-band-avatar" aria-hidden="true">
