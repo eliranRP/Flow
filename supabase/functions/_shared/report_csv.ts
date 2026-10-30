@@ -7,8 +7,8 @@ import {
   categoryName,
   displayDate,
   periodLabel,
-  projectKeyName,
   type BalancePart,
+  type GridPart,
   type PnlPart,
   type ReportFile,
   type StatementCurrency,
@@ -36,18 +36,8 @@ function line(cells: string[]): string {
 
 function pnlRows(part: PnlPart, rows: string[][]) {
   const statement = part.statement;
-  const scope = statement.project_name ?? (part.byProject ? "לפי פרויקט" : "כל הפרויקטים");
+  const scope = statement.project_name ?? "כל הפרויקטים";
   rows.push(["רווח והפסד", periodLabel(statement), scope, basisLabel(statement.basis)]);
-  if (part.byProject && statement.projects.length > 0) {
-    rows.push(["פרויקט", "מטבע", "הכנסות", "הוצאות", "רווח נקי"]);
-    for (const project of statement.projects) {
-      for (const row of project.currencies) rows.push([projectKeyName(project), row.currency, decimal(row.income_minor), decimal(-row.expense_minor), decimal(row.net_minor)]);
-    }
-    for (const row of statement.currencies) rows.push(["סה״כ", row.currency, decimal(row.income_minor), decimal(-row.expense_minor), decimal(row.net_minor)]);
-    pnlNotes(statement, rows);
-    rows.push([]);
-    return;
-  }
   rows.push(["סעיף", "קטגוריה", "תת־קטגוריה", "מטבע", "סכום"]);
   const side = (row: StatementCurrency, title: string, nodes: StatementCurrency["income"], sign: 1n | -1n) => {
     for (const node of nodes) {
@@ -80,6 +70,26 @@ function pnlNotes(statement: PnlPart["statement"], rows: string[][]) {
   if (statement.review_count > 0) rows.push(["הערה", `${String(statement.review_count)} תנועות ממתינות לבדיקה בתקופה ולא נכללו.`]);
 }
 
+/** FLOW-991: a grid, a column per project or period, the total last; a sub-category is indented. */
+function gridRows(part: GridPart, rows: string[][]) {
+  const by = { total: "סה״כ", project: "לפי פרויקט", month: "לפי חודש", quarter: "לפי רבעון", year: "לפי שנה" }[part.by];
+  rows.push([part.report === "pnl" ? "רווח והפסד" : "מאזן", by, part.when, part.scope, ...(part.basis == null ? [] : [basisLabel(part.basis)])]);
+  for (const grid of part.grids) {
+    rows.push(["חשבון", "מטבע", ...grid.columns, ...(grid.hasTotal ? ["סה״כ"] : [])]);
+    for (const item of grid.rows) {
+      const label = item.kind === "child" ? `  ${item.label}` : item.label;
+      if (item.kind === "section") {
+        rows.push([label]);
+        continue;
+      }
+      const amounts = [...item.cells, ...(grid.hasTotal ? [item.total] : [])].map((value) => (value == null ? "" : decimal(value)));
+      rows.push([label, grid.currency, ...amounts]);
+    }
+    for (const note of grid.notes) rows.push(["הערה", note]);
+  }
+  rows.push([]);
+}
+
 function balanceRows(part: BalancePart, rows: string[][]) {
   const sheet = part.sheet;
   rows.push(["מאזן", `נכון ל־${displayDate(sheet.as_of)}`, sheet.project_name ?? "כל הפרויקטים"]);
@@ -106,6 +116,7 @@ export function renderReportCsv(file: ReportFile): string {
   const rows: string[][] = [[file.company, `הופק ב־${file.createdAt}`, "דוח ניהולי מתוך Flow, לא דוח כספי מבוקר"], []];
   for (const part of file.parts) {
     if (part.kind === "pnl") pnlRows(part, rows);
+    else if (part.kind === "grid") gridRows(part, rows);
     else balanceRows(part, rows);
   }
   return `\uFEFF${rows.map(line).join("\r\n")}\r\n`;

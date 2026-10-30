@@ -187,7 +187,7 @@ export const WORKFLOWS: GuideWorkflow[] = [
       "get_balance_sheet: assets, liabilities and equity (when listed).",
       "get_account_lines: one balance-sheet account's opening balance and movements (when listed).",
       "get_pnl_statement: the P&L as a statement, for one project or by project (when listed).",
-      "export_report: the P&L, the balance sheet or both as a PDF or a CSV for Excel, to share (when listed).",
+      "export_report: the P&L, the balance sheet or both as a PDF, an Excel workbook or a CSV, to share, with a column per project or per month, quarter or year, for one or more projects; format json gives the table itself (when listed).",
     ],
   },
   {

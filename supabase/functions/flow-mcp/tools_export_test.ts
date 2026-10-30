@@ -1,4 +1,5 @@
-// FLOW-162: export_report and the app's report route: the reports as a PDF or a CSV. Invented ids and names only.
+// FLOW-162: export_report and the app's report route: the reports as a PDF or a CSV (FLOW-991: by project or
+// period, several projects, xlsx and json). Invented ids and names only.
 import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
 import { SAMPLE_BALANCE_BODY, SAMPLE_STATEMENT_BODY } from "../_shared/report_sample.ts";
 import { handle } from "./handler.ts";
@@ -31,8 +32,8 @@ Deno.test("export_report reads the P&L and makes a PDF, named for its dates, car
   const { calls, rpc } = rpcOf(reads);
   const result = await exportReport({ from: "2026-01-01", to: "2026-10-31" }, rpc, NOW);
   assertEquals(result.isError, false);
-  assertEquals(calls.map((call) => call.name), ["get_pnl_statement", "get_dashboard"]);
-  assertEquals(calls[0]?.body, { p_from: "2026-01-01", p_to: "2026-10-31", p_project_id: null, p_by_project: false, p_basis: null });
+  assertEquals(calls.map((call) => call.name), ["get_dashboard", "get_pnl_statement"]);
+  assertEquals(calls[1]?.body, { p_from: "2026-01-01", p_to: "2026-10-31", p_project_id: null, p_by_project: false, p_basis: null });
   const file = result.files?.[0];
   assertEquals(file?.mimeType, "application/pdf");
   assertEquals(new TextDecoder().decode(decode(file?.base64 ?? "").slice(0, 5)), "%PDF-");
@@ -65,7 +66,14 @@ Deno.test("export_report refuses a bad kind, format, range, date, project or fla
   for (
     const bad of [
       { kind: "cash" },
-      { format: "xlsx" },
+      { format: "docx" },
+      { columns: "week" },
+      { columns: "month" },
+      { columns: "quarter", from: "2020-01-01", to: "2029-12-31" },
+      { columns: "month", by_project: true, from: "2026-01-01", to: "2026-03-31" },
+      { project_ids: ["nope"] },
+      { project_ids: PROJECT },
+      { project_ids: [PROJECT], project_id: PROJECT },
       { from: "2026-01-01" },
       { from: "2026-03-01", to: "2026-02-01" },
       { as_of: "2026-02-30" },
@@ -240,4 +248,62 @@ Deno.test("export_report through the MCP counts against the same file limit, bef
   assertEquals(made.result.isError, false);
   assertEquals(made.result.content[1].type, "resource");
   assertEquals(made.result.content[1].resource.mimeType, "text/csv");
+});
+
+// FLOW-991: columns by project or period, several projects, xlsx and json.
+const P2 = "b0000000-0000-4000-8000-0000000000e2";
+const projectsBody = { ...SAMPLE_STATEMENT_BODY, projects: SAMPLE_STATEMENT_BODY.projects.map((project, index) => (index === 0 ? { ...project, project_id: PROJECT } : index === 1 ? { ...project, project_id: P2 } : project)) };
+function listed(name: string) {
+  if (name === "get_dashboard") return { status: 200, json: { name: "נכסי הדוגמה בע״מ", projects: [{ id: PROJECT, name: "Maple Ave" }, { id: P2, name: "Riverside Commons" }] } };
+  if (name === "get_pnl_statement") return { status: 200, json: projectsBody };
+  return reads(name);
+}
+
+Deno.test("export_report json by project: a column per project and כללי; the total is the company's", async () => {
+  const { rpc } = rpcOf(listed);
+  const result = await exportReport({ columns: "project", format: "json", from: "2026-01-01", to: "2026-10-31" }, rpc, NOW);
+  assertEquals(result.isError, false);
+  assertEquals(result.files, undefined);
+  const data = (result.structuredContent as { data: { reports: { grids: { columns: string[]; rows: { label: string; amounts_minor: number[]; total_minor: number }[] }[] }[] } }).data;
+  const grid = data.reports[0]!.grids[0]!;
+  assertEquals(grid.columns, ["Maple Ave", "Riverside Commons Phase Two Townhomes", "כללי"]);
+  const net = grid.rows.find((row) => row.label === "רווח נקי")!;
+  assertEquals(net.amounts_minor, [2_100_000, 1_420_000, -620_000]);
+  assertEquals(net.total_minor, 2_900_000);
+});
+
+Deno.test("export_report by project with projects picked: only their columns, no כללי", async () => {
+  const { rpc } = rpcOf(listed);
+  const result = await exportReport({ columns: "project", format: "json", project_ids: [P2] }, rpc, NOW);
+  const grid = (result.structuredContent as { data: { reports: { grids: { columns: string[] }[] }[] } }).data.reports[0]!.grids[0]!;
+  assertEquals(grid.columns, ["Riverside Commons"]);
+  // A project the company does not have is not_found.
+  const other = await exportReport({ columns: "project", project_ids: ["b0000000-0000-4000-8000-0000000000ff"] }, rpc, NOW);
+  assertEquals(codeOf(other), "not_found");
+});
+
+Deno.test("export_report by quarter: one P&L read per quarter, and the balance sheet at each quarter's end, as xlsx", async () => {
+  const { calls, rpc } = rpcOf(listed);
+  const result = await exportReport({ kind: "both", columns: "quarter", format: "xlsx", from: "2026-01-01", to: "2026-10-31" }, rpc, NOW);
+  assertEquals(result.isError, false);
+  assertEquals(calls.filter((call) => call.name === "get_pnl_statement").map((call) => [call.body.p_from, call.body.p_to]), [
+    ["2026-01-01", "2026-03-31"],
+    ["2026-04-01", "2026-06-30"],
+    ["2026-07-01", "2026-09-30"],
+    ["2026-10-01", "2026-10-31"],
+  ]);
+  assertEquals(calls.filter((call) => call.name === "mcp_balance_sheet").map((call) => call.body.p_as_of), ["2026-03-31", "2026-06-30", "2026-09-30", "2026-10-31"]);
+  assertEquals(result.files?.[0]?.mimeType, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  assertEquals(result.files?.[0]?.name, "דוחות_2026-01-01_2026-10-31_כל-הפרויקטים.xlsx");
+  // An xlsx is a zip.
+  assertEquals([...decode(result.files?.[0]?.base64 ?? "").slice(0, 2)], [0x50, 0x4B]);
+});
+
+Deno.test("export_report with two projects picked: the balance sheet reads each project and adds them up", async () => {
+  const { calls, rpc } = rpcOf(listed);
+  const result = await exportReport({ kind: "balance", format: "json", project_ids: [PROJECT, P2], as_of: "2026-10-31" }, rpc, NOW);
+  assertEquals(calls.filter((call) => call.name === "mcp_balance_sheet").map((call) => call.body.p_project_id), [PROJECT, P2]);
+  const grid = (result.structuredContent as { data: { reports: { grids: { rows: { label: string; amounts_minor: number[] }[] }[] }[] } }).data.reports[0]!.grids[0]!;
+  // Each project read returns the sample: the sum is twice it.
+  assertEquals(grid.rows.find((row) => row.label === "סה״כ נכסים")?.amounts_minor, [123_000_000]);
 });

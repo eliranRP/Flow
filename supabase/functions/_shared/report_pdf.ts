@@ -1,4 +1,5 @@
-// FLOW-162: the report as a PDF (Design canvas, row "the shared PDF", and its build-spec note). A4 portrait,
+// FLOW-162: the report as a PDF (Design canvas, row "the shared PDF", and its build-spec note). A4 portrait
+// (FLOW-991: landscape for a grid with more than 4 amount columns),
 // Rubik embedded (Hebrew and Latin subsets, 400 and 600), right to left. Every page has the header (business,
 // report, period or date, projects, basis, currency, when it was made, page n of N) and the footer. A table's
 // head repeats after a page break, a row never splits, and a section heading never ends a page alone.
@@ -13,14 +14,15 @@ import {
   marginPercent,
   money,
   periodLabel,
-  projectKeyName,
   type BalanceCurrency,
   type BalancePart,
+  type GridPart,
   type PnlPart,
   type ReportFile,
   type StatementCurrency,
   systemAccountName,
 } from "./report_model.ts";
+import type { GridRow, ReportGrid } from "./report_grid.ts";
 import { visualSegments } from "./report_text.ts";
 
 const PAGE_W = 595.28;
@@ -29,8 +31,6 @@ const MM = 72 / 25.4;
 const SIDE = 18 * MM;
 const TOP = 15 * MM;
 const BOTTOM = 20 * MM;
-const RIGHT = PAGE_W - SIDE;
-const LEFT = SIDE;
 const INK = rgb(0.1, 0.086, 0.133);
 const SECONDARY = rgb(0.31, 0.28, 0.376);
 const MUTED = rgb(0.42, 0.39, 0.5);
@@ -81,23 +81,34 @@ type Head = { title: string; meta: string; footer: string };
 
 /** Lays pages out top to bottom; the header and footer are drawn last, once the page count is known. */
 class Layout {
-  readonly pages: { page: PDFPage; head: Head }[] = [];
+  readonly pages: { page: PDFPage; head: Head; right: number }[] = [];
   page!: PDFPage;
   y = 0;
+  /** FLOW-991: a wide grid's pages are A4 landscape; every other report's are portrait. */
+  landscape = false;
   private head!: Head;
   private repeat: (() => void) | null = null;
   constructor(private readonly doc: PDFDocument, readonly fonts: Fonts) {}
 
-  start(head: Head) {
+  get right(): number {
+    return (this.landscape ? PAGE_H : PAGE_W) - SIDE;
+  }
+
+  get left(): number {
+    return SIDE;
+  }
+
+  start(head: Head, landscape = false) {
     this.head = head;
+    this.landscape = landscape;
     this.repeat = null;
     this.newPage();
   }
 
   newPage() {
-    this.page = this.doc.addPage([PAGE_W, PAGE_H]);
-    this.pages.push({ page: this.page, head: this.head });
-    this.y = PAGE_H - TOP - 70;
+    this.page = this.doc.addPage(this.landscape ? [PAGE_H, PAGE_W] : [PAGE_W, PAGE_H]);
+    this.pages.push({ page: this.page, head: this.head, right: this.right });
+    this.y = this.page.getHeight() - TOP - 70;
     this.repeat?.();
   }
 
@@ -120,21 +131,22 @@ class Layout {
 
   finish(company: string, createdAt: string) {
     const total = this.pages.length;
-    this.pages.forEach(({ page, head }, index) => {
-      const top = PAGE_H - TOP;
-      draw(page, this.fonts, fit(this.fonts, company, 9, RIGHT - LEFT - 60), RIGHT, top - 10, 9, { color: SECONDARY });
-      draw(page, this.fonts, head.title, RIGHT, top - 32, 18, { weight: 600 });
-      draw(page, this.fonts, fit(this.fonts, head.meta, 9, RIGHT - LEFT), RIGHT, top - 48, 9, { color: SECONDARY });
-      draw(page, this.fonts, "Flow", LEFT, top - 10, 11, { weight: 600, color: ACCENT, align: "left" });
-      draw(page, this.fonts, `הופק ב־${createdAt}`, LEFT + width(this.fonts, `הופק ב־${createdAt}`, 8), top - 24, 8, { color: MUTED });
+    const left = SIDE;
+    this.pages.forEach(({ page, head, right }, index) => {
+      const top = page.getHeight() - TOP;
+      draw(page, this.fonts, fit(this.fonts, company, 9, right - left - 60), right, top - 10, 9, { color: SECONDARY });
+      draw(page, this.fonts, head.title, right, top - 32, 18, { weight: 600 });
+      draw(page, this.fonts, fit(this.fonts, head.meta, 9, right - left - 120), right, top - 48, 9, { color: SECONDARY });
+      draw(page, this.fonts, "Flow", left, top - 10, 11, { weight: 600, color: ACCENT, align: "left" });
+      draw(page, this.fonts, `הופק ב־${createdAt}`, left + width(this.fonts, `הופק ב־${createdAt}`, 8), top - 24, 8, { color: MUTED });
       const pageWords = `עמוד ${String(index + 1)} מתוך ${String(total)}`;
-      draw(page, this.fonts, pageWords, LEFT + width(this.fonts, pageWords, 8), top - 36, 8, { color: MUTED });
-      page.drawLine({ start: { x: LEFT, y: top - 58 }, end: { x: RIGHT, y: top - 58 }, thickness: 1.5, color: ACCENT });
-      page.drawLine({ start: { x: LEFT, y: BOTTOM }, end: { x: RIGHT, y: BOTTOM }, thickness: 0.5, color: RULE });
+      draw(page, this.fonts, pageWords, left + width(this.fonts, pageWords, 8), top - 36, 8, { color: MUTED });
+      page.drawLine({ start: { x: left, y: top - 58 }, end: { x: right, y: top - 58 }, thickness: 1.5, color: ACCENT });
+      page.drawLine({ start: { x: left, y: BOTTOM }, end: { x: right, y: BOTTOM }, thickness: 0.5, color: RULE });
       const note = "דוח ניהולי מתוך Flow · לא דוח כספי מבוקר";
       // The footer and the note share a line: the footer is cut short before it reaches the note.
-      draw(page, this.fonts, fit(this.fonts, head.footer, 7.5, RIGHT - LEFT - width(this.fonts, note, 7.5) - 12), RIGHT, BOTTOM - 12, 7.5, { color: MUTED });
-      draw(page, this.fonts, note, LEFT + width(this.fonts, note, 7.5), BOTTOM - 12, 7.5, { color: MUTED });
+      draw(page, this.fonts, fit(this.fonts, head.footer, 7.5, right - left - width(this.fonts, note, 7.5) - 12), right, BOTTOM - 12, 7.5, { color: MUTED });
+      draw(page, this.fonts, note, left + width(this.fonts, note, 7.5), BOTTOM - 12, 7.5, { color: MUTED });
     });
   }
 }
@@ -146,10 +158,10 @@ function boxes(layout: Layout, items: { label: string; value: string }[]) {
   // The boxes keep with the table under them: their 52, a two-line column head, a heading and one row.
   layout.need(KEEP_WITH_TABLE);
   const gap = 6;
-  const boxW = (RIGHT - LEFT - gap * (items.length - 1)) / items.length;
+  const boxW = (layout.right - layout.left - gap * (items.length - 1)) / items.length;
   const top = layout.y;
   items.forEach((item, index) => {
-    const xRight = RIGHT - index * (boxW + gap);
+    const xRight = layout.right - index * (boxW + gap);
     layout.page.drawRectangle({ x: xRight - boxW, y: top - 40, width: boxW, height: 40, color: BAND });
     draw(layout.page, layout.fonts, item.label, xRight - 8, top - 14, 8, { color: SECONDARY });
     draw(layout.page, layout.fonts, fit(layout.fonts, item.value, index === 0 ? 13 : 11, boxW - 16, 600), xRight - 8, top - 32, index === 0 ? 13 : 11, { weight: 600 });
@@ -160,22 +172,30 @@ function boxes(layout: Layout, items: { label: string; value: string }[]) {
 type Column = { right: number; header: string; max?: number };
 
 /** A table row: the label on the right, then one cell per column (amounts end at their column's right edge). */
-function row(layout: Layout, label: string, cells: string[], columns: Column[], options: { kind?: "row" | "child" | "sub" | "total" | "note"; height?: number } = {}) {
+function row(
+  layout: Layout,
+  label: string,
+  cells: string[],
+  columns: Column[],
+  options: { kind?: "row" | "child" | "sub" | "total" | "note"; height?: number; size?: number; weight?: Weight; band?: { x: number; w: number } } = {},
+) {
   const kind = options.kind ?? "row";
   const height = options.height ?? (kind === "total" ? 22 : 17);
   layout.need(height);
   const page = layout.page;
   const base = layout.y - height + 5;
-  const weight: Weight = kind === "sub" || kind === "total" ? 600 : 400;
-  const size = kind === "total" ? 11 : 9;
-  if (kind === "sub") page.drawLine({ start: { x: LEFT, y: layout.y }, end: { x: RIGHT, y: layout.y }, thickness: 0.5, color: RULE });
+  const weight: Weight = options.weight ?? (kind === "sub" || kind === "total" ? 600 : 400);
+  const size = options.size ?? (kind === "total" ? 11 : 9);
+  // FLOW-991: the grid's total column sits on a light band.
+  if (options.band != null) page.drawRectangle({ x: options.band.x, y: layout.y - height, width: options.band.w, height, color: BAND });
+  if (kind === "sub") page.drawLine({ start: { x: layout.left, y: layout.y }, end: { x: layout.right, y: layout.y }, thickness: 0.5, color: RULE });
   if (kind === "total") {
-    page.drawLine({ start: { x: LEFT, y: layout.y }, end: { x: RIGHT, y: layout.y }, thickness: 1.2, color: INK });
-    page.drawLine({ start: { x: LEFT, y: layout.y - height }, end: { x: RIGHT, y: layout.y - height }, thickness: 1.2, color: INK });
+    page.drawLine({ start: { x: layout.left, y: layout.y }, end: { x: layout.right, y: layout.y }, thickness: 1.2, color: INK });
+    page.drawLine({ start: { x: layout.left, y: layout.y - height }, end: { x: layout.right, y: layout.y - height }, thickness: 1.2, color: INK });
   }
-  const firstCell = columns[0]?.right ?? LEFT;
-  const labelMax = RIGHT - firstCell - 70 - (kind === "child" ? 14 : 0);
-  draw(page, layout.fonts, fit(layout.fonts, label, size, labelMax, weight), RIGHT - (kind === "child" ? 14 : 0), base, size, { weight, color: kind === "note" ? SECONDARY : INK });
+  const firstCell = columns[0]?.right ?? layout.left;
+  const labelMax = layout.right - firstCell - (options.band != null ? 10 : 70) - (kind === "child" ? 14 : 0);
+  draw(page, layout.fonts, fit(layout.fonts, label, size, labelMax, weight), layout.right - (kind === "child" ? 14 : 0), base, size, { weight, color: kind === "note" ? SECONDARY : INK });
   cells.forEach((cell, index) => {
     const column = columns[index];
     if (column != null && cell !== "") draw(page, layout.fonts, cell, column.right, base, size, { weight });
@@ -186,7 +206,7 @@ function row(layout: Layout, label: string, cells: string[], columns: Column[], 
 function sectionHeading(layout: Layout, title: string) {
   // A heading never sits alone at the bottom of a page: it needs room for one row under it.
   layout.need(22 + 17);
-  draw(layout.page, layout.fonts, title, RIGHT, layout.y - 15, 10, { weight: 600 });
+  draw(layout.page, layout.fonts, title, layout.right, layout.y - 15, 10, { weight: 600 });
   layout.y -= 22;
 }
 
@@ -210,7 +230,7 @@ function columnHeads(layout: Layout, columns: Column[]) {
       draw(layout.page, layout.fonts, line, column.right, layout.y - 12 - at * 9, 7.5, { weight: 600, color: MUTED });
     });
   });
-  layout.page.drawLine({ start: { x: LEFT, y: layout.y - height + 2 }, end: { x: RIGHT, y: layout.y - height + 2 }, thickness: 0.5, color: RULE });
+  layout.page.drawLine({ start: { x: layout.left, y: layout.y - height + 2 }, end: { x: layout.right, y: layout.y - height + 2 }, thickness: 0.5, color: RULE });
   layout.y -= height;
 }
 
@@ -224,7 +244,7 @@ function percentOf(part: bigint, whole: bigint): string {
 }
 
 function statementBlock(layout: Layout, row0: StatementCurrency, expand: boolean) {
-  const columns: Column[] = [{ right: LEFT + 150, header: "סכום" }, { right: LEFT + 50, header: "% מההכנסות" }];
+  const columns: Column[] = [{ right: layout.left + 150, header: "סכום" }, { right: layout.left + 50, header: "% מההכנסות" }];
   layout.tableHead(() => { columnHeads(layout, columns); });
   const money0 = (value: bigint) => money(value, row0.currency);
   const side = (title: string, total: string, nodes: StatementCurrency["income"], sign: 1n | -1n, totalLabel: string) => {
@@ -256,12 +276,12 @@ function statementBlock(layout: Layout, row0: StatementCurrency, expand: boolean
 
 function pnlPages(layout: Layout, part: PnlPart) {
   const statement = part.statement;
-  const scope = statement.project_name ?? (part.byProject ? "לפי פרויקט" : "כל הפרויקטים");
+  const scope = statement.project_name ?? "כל הפרויקטים";
   const currencies = statement.currencies.map((row0) => row0.currency).join(", ") || "—";
   const meta = `${periodLabel(statement)} · ${scope} · ${basisLabel(statement.basis)} · ${currencies}`;
-  layout.start({ title: part.byProject ? "רווח והפסד לפי פרויקט" : "רווח והפסד", meta, footer: `רווח והפסד · ${periodLabel(statement)} · ${scope}` });
+  layout.start({ title: "רווח והפסד", meta, footer: `רווח והפסד · ${periodLabel(statement)} · ${scope}` });
   if (statement.currencies.length === 0) {
-    draw(layout.page, layout.fonts, "אין תנועות בתקופה הזאת.", RIGHT, layout.y - 20, 10, { color: SECONDARY });
+    draw(layout.page, layout.fonts, "אין תנועות בתקופה הזאת.", layout.right, layout.y - 20, 10, { color: SECONDARY });
     layout.y -= 30;
     return;
   }
@@ -269,7 +289,7 @@ function pnlPages(layout: Layout, part: PnlPart) {
     if (index > 0) {
       layout.need(30 + KEEP_WITH_TABLE);
       layout.y -= 10;
-      draw(layout.page, layout.fonts, `ב־${row0.currency}`, RIGHT, layout.y - 12, 12, { weight: 600 });
+      draw(layout.page, layout.fonts, `ב־${row0.currency}`, layout.right, layout.y - 12, 12, { weight: 600 });
       layout.y -= 20;
     }
     const margin = marginPercent(row0);
@@ -279,47 +299,84 @@ function pnlPages(layout: Layout, part: PnlPart) {
       { label: "הוצאות", value: money(-row0.expense_minor, row0.currency) },
       { label: "מההכנסות", value: margin == null ? "—" : percent(margin) },
     ]);
-    if (part.byProject && statement.projects.length > 0) projectTable(layout, part, row0.currency);
-    else statementBlock(layout, row0, part.expand);
+    statementBlock(layout, row0, part.expand);
   });
   const notes: string[] = ["קרן, פיקדון מסים וביטוח וקניית נכסים לא נספרים ברווח; הם במאזן."];
   if (statement.review_count > 0) notes.push(`${String(statement.review_count)} תנועות ממתינות לבדיקה בתקופה ולא נכללו.`);
   for (const note of notes) {
     layout.need(14);
-    draw(layout.page, layout.fonts, note, RIGHT, layout.y - 12, 7.5, { color: SECONDARY });
+    draw(layout.page, layout.fonts, note, layout.right, layout.y - 12, 7.5, { color: SECONDARY });
     layout.y -= 14;
   }
 }
 
-/** By project: up to four project columns and the total per page width; more projects take more blocks. */
-function projectTable(layout: Layout, part: PnlPart, currency: string) {
-  // A project with no lines in this currency has no column in its block.
-  const projects = part.statement.projects.filter((project) => project.currencies.some((row0) => row0.currency === currency));
-  const company = part.statement.currencies.find((row0) => row0.currency === currency);
-  const perBlock = 4;
-  for (let start = 0; start < projects.length; start += perBlock) {
-    const block = projects.slice(start, start + perBlock);
-    const last = start + perBlock >= projects.length;
-    const count = block.length + (last ? 1 : 0);
-    const columnW = (RIGHT - LEFT - 130) / count;
-    const columns: Column[] = Array.from({ length: count }, (_, index) => {
-      const project = block[index];
-      return { right: RIGHT - 130 - index * columnW, header: project == null ? "סה״כ" : projectKeyName(project), max: columnW - 6 };
-    });
-    const cell = (pick: (row0: StatementCurrency) => bigint) => [
-      ...block.map((project) => {
-        const row0 = project.currencies.find((item) => item.currency === currency);
-        return row0 == null ? "—" : money(pick(row0), currency);
-      }),
-      ...(last && company != null ? [money(pick(company), currency)] : []),
-    ];
+const BY_WORD: Record<GridPart["by"], string> = { total: "סה״כ", project: "פרויקט", month: "חודש", quarter: "רבעון", year: "שנה" };
+/** FLOW-991: the most amount columns a grid shows side by side; more go to the next block. */
+export const PER_BLOCK = 13;
+
+/** A grid's cell as text: an amount, "–" for zero, nothing for a cell with no figure. */
+function gridCell(value: bigint | null, currency: string): string {
+  if (value == null) return "";
+  return value === 0n ? "–" : money(value, currency);
+}
+
+function gridTable(layout: Layout, grid: ReportGrid) {
+  const heads = [...grid.columns, ...(grid.hasTotal ? ["סה״כ"] : [])];
+  const values = (item: GridRow) => [...item.cells, ...(grid.hasTotal ? [item.total] : [])];
+  const totalAt = grid.hasTotal ? heads.length - 1 : -1;
+  const labelW = layout.landscape ? 170 : 190;
+  for (let start = 0; start < heads.length; start += PER_BLOCK) {
+    const block = heads.slice(start, start + PER_BLOCK).map((header, offset) => ({ header, at: start + offset }));
+    const room = layout.right - layout.left - labelW;
+    const columnW = Math.min(room / Math.max(block.length, 1), 95);
+    // The widest amount sets the size: 8.5 points, smaller until every amount fits its column.
+    const texts = grid.rows.flatMap((item) => block.map(({ at }) => gridCell(values(item)[at] ?? null, grid.currency)));
+    let size = 8.5;
+    while (size > 6 && texts.some((text) => width(layout.fonts, text, size, 600) > columnW - 8)) size -= 0.5;
+    const columns: Column[] = block.map(({ header }, index) => ({ right: layout.right - labelW - index * columnW, header, max: columnW - 6 }));
+    const totalIndex = block.findIndex(({ at }) => at === totalAt);
+    const band = totalIndex < 0 ? undefined : { x: (columns[totalIndex]?.right ?? 0) - columnW + 4, w: columnW };
     layout.tableHead(() => { columnHeads(layout, columns); });
-    row(layout, "הכנסות", cell((row0) => row0.income_minor), columns);
-    row(layout, "הוצאות", cell((row0) => -row0.expense_minor), columns);
-    row(layout, "רווח נקי", cell((row0) => row0.net_minor), columns, { kind: "total" });
+    for (const item of grid.rows) {
+      if (item.kind === "section") {
+        sectionHeading(layout, item.label);
+        continue;
+      }
+      const cells = block.map(({ at }) => gridCell(values(item)[at] ?? null, grid.currency));
+      const kind = item.kind === "net" ? "total" : item.kind === "sub" || item.kind === "mid" ? "sub" : item.kind === "child" ? "child" : "row";
+      row(layout, item.label, cells, columns, { kind, size: kind === "total" ? size + 1.5 : size, height: kind === "total" ? 20 : 15, weight: item.kind === "parent" ? 600 : undefined, band });
+    }
     layout.endTable();
     layout.y -= 10;
   }
+}
+
+function gridPages(layout: Layout, part: GridPart) {
+  const title = `${part.report === "pnl" ? "רווח והפסד" : "מאזן"} לפי ${BY_WORD[part.by]}`;
+  const currencies = part.grids.map((grid) => grid.currency).join(", ") || "—";
+  const meta = [part.when, part.scope, part.basis == null ? null : basisLabel(part.basis), currencies].filter((item) => item != null).join(" · ");
+  const amountColumns = Math.max(0, ...part.grids.map((grid) => grid.columns.length + (grid.hasTotal ? 1 : 0)));
+  layout.start({ title, meta, footer: `${title} · ${part.when} · ${part.scope}` }, amountColumns > 4);
+  if (part.grids.length === 0) {
+    draw(layout.page, layout.fonts, part.report === "pnl" ? "אין תנועות בתקופה הזאת." : "אין עדיין יתרות עד התאריך הזה.", layout.right, layout.y - 20, 10, { color: SECONDARY });
+    layout.y -= 30;
+    return;
+  }
+  part.grids.forEach((grid, index) => {
+    if (index > 0) {
+      layout.need(30 + KEEP_WITH_TABLE);
+      layout.y -= 10;
+      draw(layout.page, layout.fonts, `ב־${grid.currency}`, layout.right, layout.y - 12, 12, { weight: 600 });
+      layout.y -= 20;
+    }
+    boxes(layout, grid.kpis);
+    gridTable(layout, grid);
+    for (const note of grid.notes) {
+      layout.need(14);
+      draw(layout.page, layout.fonts, fit(layout.fonts, `• ${note}`, 7.5, layout.right - layout.left), layout.right, layout.y - 12, 7.5, { color: SECONDARY });
+      layout.y -= 14;
+    }
+  });
 }
 
 function balanceBlock(layout: Layout, row0: BalanceCurrency) {
@@ -331,7 +388,7 @@ function balanceBlock(layout: Layout, row0: BalanceCurrency) {
     { label: "התחייבויות", value: money(row0.liabilities.total_minor, row0.currency) },
     { label: "חשבון מעבר", value: money(suspense, row0.currency) },
   ]);
-  const columns: Column[] = [{ right: LEFT + 150, header: "יתרה" }];
+  const columns: Column[] = [{ right: layout.left + 150, header: "יתרה" }];
   layout.tableHead(() => { columnHeads(layout, columns); });
   const side = (title: string, accounts: BalanceCurrency["assets"]["accounts"], total: bigint, extra?: [string, bigint]) => {
     sectionHeading(layout, title);
@@ -350,7 +407,7 @@ function balanceBlock(layout: Layout, row0: BalanceCurrency) {
     : row0.balanced
     ? `מאוזן, עם ${money(suspense, row0.currency)} בחשבון מעבר: יש קטגוריות שלא קשורות לחשבון במאזן`
     : "לא מאוזן: כדאי לבדוק את הספרים";
-  draw(layout.page, layout.fonts, check, RIGHT, layout.y - 14, 9, { weight: 600 });
+  draw(layout.page, layout.fonts, check, layout.right, layout.y - 14, 9, { weight: 600 });
   layout.y -= 22;
 }
 
@@ -361,7 +418,7 @@ function balancePages(layout: Layout, part: BalancePart) {
   const date = displayDate(sheet.as_of);
   layout.start({ title: "מאזן", meta: `נכון ל־${date} · ${scope} · ${currencies}`, footer: `מאזן · ${date} · ${scope}` });
   if (sheet.currencies.length === 0) {
-    draw(layout.page, layout.fonts, "אין עדיין יתרות עד התאריך הזה.", RIGHT, layout.y - 20, 10, { color: SECONDARY });
+    draw(layout.page, layout.fonts, "אין עדיין יתרות עד התאריך הזה.", layout.right, layout.y - 20, 10, { color: SECONDARY });
     layout.y -= 30;
     return;
   }
@@ -369,7 +426,7 @@ function balancePages(layout: Layout, part: BalancePart) {
     if (index > 0) {
       layout.need(30 + KEEP_WITH_TABLE);
       layout.y -= 10;
-      draw(layout.page, layout.fonts, `ב־${row0.currency}`, RIGHT, layout.y - 12, 12, { weight: 600 });
+      draw(layout.page, layout.fonts, `ב־${row0.currency}`, layout.right, layout.y - 12, 12, { weight: 600 });
       layout.y -= 20;
     }
     balanceBlock(layout, row0);
@@ -388,10 +445,11 @@ export async function renderReportPdf(file: ReportFile): Promise<Uint8Array> {
   const layout = new Layout(doc, fonts);
   for (const part of file.parts) {
     if (part.kind === "pnl") pnlPages(layout, part);
+    else if (part.kind === "grid") gridPages(layout, part);
     else balancePages(layout, part);
   }
   layout.finish(file.company, file.createdAt);
-  const title = file.parts.map((part) => (part.kind === "pnl" ? "רווח והפסד" : "מאזן")).join(" ו");
+  const title = file.parts.map((part) => (part.kind === "pnl" || (part.kind === "grid" && part.report === "pnl") ? "רווח והפסד" : "מאזן")).join(" ו");
   doc.setTitle(`${title} · ${file.company}`);
   doc.setAuthor("Flow");
   doc.setCreator("Flow");

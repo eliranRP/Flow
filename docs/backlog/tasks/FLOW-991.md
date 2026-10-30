@@ -5,12 +5,12 @@
 
 One rule: the columns are projects or periods, never both; the other is a filter.
 
-- [ ] `export_report` takes `columns` (total, project, month, quarter or year; default total) and `project_ids` (one or more; empty is every project). `by_project: true` still works and means `columns: "project"`; `project_id` still works and means `project_ids: [id]`.
-- [ ] P&L by project: a row per category and sub-category, a column per project, a "כללי" column (overhead and lines with no project) when no projects are picked, and a total that equals the company P&L. With projects picked, only those columns and their total.
-- [ ] P&L by period: a column per month, quarter or year from `from` to `to` (both needed), each read with the same projects filter; the total is the sum of the columns.
-- [ ] Balance sheet by project: a column per project, read with that project; "כללי" is the company less the projects; a "נכסים נטו" row; equity only in the total column.
-- [ ] Balance sheet by period: the balance at the end of each period, the last column at `to`.
-- [ ] The PDF draws a grid on A4 landscape when it has more than 4 amount columns, up to 13 amount columns a block; more columns take more blocks. The total-only reports are unchanged.
-- [ ] The CSV writes the same grid. `format: "json"` returns the grid itself, so the assistant can read the numbers without a file.
+- [x] `export_report` takes `columns` (total, project, month, quarter or year; default total) and `project_ids` (one or more; empty is every project). `by_project: true` still works and means `columns: "project"`; `project_id` still works and means `project_ids: [id]`.
+- [x] P&L by project: a row per category and sub-category, a column per project, a "כללי" column (overhead and lines with no project) when no projects are picked, and a total that equals the company P&L. With projects picked, only those columns and their total.
+- [x] P&L by period: a column per month, quarter or year from `from` to `to` (both needed), each read with the same projects filter; the total is the sum of the columns.
+- [x] Balance sheet by project: a column per project, read with that project; "כללי" is the company less the projects; a "נכסים נטו" row; equity only in the total column.
+- [x] Balance sheet by period: the balance at the end of each period, the last column at `to`.
+- [x] The PDF draws a grid on A4 landscape when it has more than 4 amount columns, up to 13 amount columns a block; more columns take more blocks. The total-only reports are unchanged.
+- [x] The CSV writes the same grid. `format: "json"` returns the grid itself, so the assistant can read the numbers without a file.
 
 **Acceptance:** unit tests: the project grid's total equals the company statement; the "כללי" balance column is the company less the projects; the period grid's total equals the sum of its columns; the argument refusals; the PDF renders landscape pages for a wide grid.
