@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../test-render";
 import { HomeReportsCard } from "./home-reports-card";
-import { lineMatches, lineText, linesByMonth, linesByProject, ReportLinesScreen, reportLinesArgs, searchPath, type ReportLinesSample } from "./report-lines-screen";
+import { lineMatches, lineText, linesByMonth, linesByProject, projectSplit, ReportLinesScreen, reportLinesArgs, searchPath, type ReportLinesSample } from "./report-lines-screen";
 import { REPORTS_BALANCE, REPORTS_STATEMENT } from "../dev/reports-sample";
 
 const rpc = vi.hoisted(() => ({
@@ -60,10 +60,23 @@ describe("the drill-down's helpers", () => {
   it("groups lines by month, newest first, and totals them by project", () => {
     expect(linesByMonth(ROWS).map((group) => [group.title, group.rows.length])).toEqual([["אוקטובר 2026", 2], ["ספטמבר 2026", 2]]);
     expect(linesByProject(ROWS)).toEqual([
-      { name: "Cedar St", total: 145_000n },
-      { name: "Oak Ridge", total: 98_000n },
-      { name: "Maple Ave", total: 40_000n },
+      { key: "Cedar St", name: "Cedar St", total: 145_000n },
+      { key: "Oak Ridge", name: "Oak Ridge", total: 98_000n },
+      { key: "Maple Ave", name: "Maple Ave", total: 40_000n },
     ]);
+  });
+
+  it("names the read's projects and links each to its own drill-down (FLOW-989)", () => {
+    const split = projectSplit([
+      { key: "a0000000-0000-4000-8000-000000000989", project_id: "a0000000-0000-4000-8000-000000000989", name: "Cedar St", total_minor: 60_000n },
+      { key: "overhead", project_id: null, name: null, total_minor: 20_000n },
+      { key: null, project_id: null, name: null, total_minor: 5_000n },
+    ], "?side=expense&category=c-repairs&cur=USD");
+    expect(split.map((item) => [item.name, item.total])).toEqual([["Cedar St", 60_000n], ["הוצאות כלליות", 20_000n], ["בלי פרויקט", 5_000n]]);
+    const href = new URL(split[0]?.href ?? "", "https://example.com");
+    expect(href.pathname).toBe("/reports/lines");
+    expect(Object.fromEntries(href.searchParams)).toMatchObject({ category: "c-repairs", scope: "project", project: "a0000000-0000-4000-8000-000000000989", pname: "Cedar St" });
+    expect(split[1]?.href).toBeUndefined();
   });
 });
 
@@ -102,6 +115,22 @@ describe("ReportLinesScreen", () => {
     renderWithProviders(<ReportLinesScreen />, { route: ROUTE });
     await waitFor(() => { expect(document.querySelector(".ui-rep-summary")?.textContent).toContain("−$1,500"); });
     expect(screen.queryByRole("button", { name: /לפי פרויקט/ })).toBeNull();
+  });
+
+  it("splits by the read's projects, not the rows' own, and opens a project's parts (FLOW-989)", async () => {
+    const wire = (row: ReturnType<typeof line>) => ({ ...row, amount_minor: Number(row.amount_minor) });
+    // A line with no project split over Cedar St and Oak Ridge: the read's projects carry the parts, even with pages left.
+    const projects = [
+      { key: "a0000000-0000-4000-8000-000000000001", project_id: "a0000000-0000-4000-8000-000000000001", name: "Cedar St", total_minor: 45_000 },
+      { key: "a0000000-0000-4000-8000-000000000002", project_id: "a0000000-0000-4000-8000-000000000002", name: "Oak Ridge", total_minor: 35_000 },
+    ];
+    rpc.impl = () => Promise.resolve({ data: { rows: [wire(line("0013", "2026-08-29", 450, "Cedar St")), wire(line("0013", "2026-08-29", 350, "Oak Ridge"))], has_more: true, total_minor: 80_000, count: 3, projects }, error: null });
+    renderWithProviders(<ReportLinesScreen />, { route: ROUTE });
+    await waitFor(() => { expect(screen.getByRole("button", { name: /לפי פרויקט/ })).toBeInTheDocument(); });
+    expect(screen.queryByText("בלי פרויקט")).toBeNull();
+    const cedar = screen.getByRole("link", { name: /^Cedar St/ });
+    expect(cedar.textContent).toContain("−$450");
+    expect(cedar.getAttribute("href")).toContain("project=a0000000-0000-4000-8000-000000000001");
   });
 
   it("reads the whole company without a project id", async () => {
