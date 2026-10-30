@@ -6,7 +6,7 @@
 --   2. The result carries 'projects': the whole group's totals by project, read as get_pnl_statement with
 --      by_project reads them (private.breakdown_rows by project: a split line by its parts, a shared cost by
 --      its allocations, a whole line by its project), so the screen's split equals the P&L by project.
---      Empty when one project is read (p_project_id), for kept-out lines, and by payer.
+--      Empty when one project is read (p_project_id), for kept-out lines, and by project or payer.
 --   Every argument and every other field is kept.
 -- CLI 2.118.0 runs each statement on its own. This file is one transaction.
 
