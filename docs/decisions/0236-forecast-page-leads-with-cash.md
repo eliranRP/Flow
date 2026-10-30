@@ -1,7 +1,7 @@
 # The צפי page leads with the cash its project card shows
 
 **Date:** 2026-10-30
-**Status:** Accepted (owner, 2026-10-30, FLOW-991: "the revenue and cashflow numbers are interchangeable, confusing", then "fix the terminology or calculation" on the existing screens, cash for both)
+**Status:** Accepted (owner, 2026-10-30, FLOW-994: "the revenue and cashflow numbers are interchangeable, confusing", then "fix the terminology or calculation" on the existing screens, cash for both)
 **Amends:** [0196](0196-next-month-forecast-card-and-chart.md) point 4 and its consequence that the page's expenses are lower than the card's
 
 ## Context

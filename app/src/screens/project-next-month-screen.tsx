@@ -59,7 +59,7 @@ export function editPath(projectId: string, rowKey: string): string {
 
 /**
  * The ProfitNext frame: a project's forecast for next month, opened from the dashed card on its profit page and
- * on its project page. FLOW-991 (decision 0236): the figure is תזרים צפוי, the project page card's cash. The
+ * on its project page. FLOW-994 (decision 0236): the figure is תזרים צפוי, the project page card's cash. The
  * card reads צפוי להיכנס and צפוי לצאת; when the loans' payments hold a part the profit leaves out, it names
  * that part (מזה לא נספר ברווח) and רווח צפוי, the profit page card's net; then the project's average monthly
  * share of general expenses (its share since the start over its months) and the profit after it.
@@ -100,7 +100,7 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
     : null;
   const monthShare = monthlyOverheadShare(share, monthRows.length);
   const forecast = next.forecast;
-  // FLOW-991 (owner, 2026-10-30): the page leads with the cash the project page's card shows (decision 0196:
+  // FLOW-994 (owner, 2026-10-30): the page leads with the cash the project page's card shows (decision 0196:
   // the loans' payments the profit leaves out, its principal, are in צפוי לצאת), and names the profit the
   // profit page's card shows under it, so both cards that open it find their number here.
   const cash = forecast == null ? null : cashForecast(forecast);

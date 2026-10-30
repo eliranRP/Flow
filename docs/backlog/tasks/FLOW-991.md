@@ -1,10 +1,16 @@
 <a id="flow-991"></a>
-# FLOW-991 · The צפי page leads with the cash its project card shows
-- **Type:** SMALL UI · **Status:** in-progress (#888) · **Source:** the owner, 2026-10-30, two screenshots of a project with a loan: the project page's card said תזרים צפוי −$301 and its "פירוט ועריכה" page said צפי נובמבר +$106 ("the revenue and cashflow numbers are interchangeable, confusing"). The owner chose to fix the terminology and the calculation on the existing screens, cash for both. Decision [0236](../../decisions/0236-forecast-page-leads-with-cash.md).
-- **Files:** `app/src/screens/project-next-month-screen.tsx` and its test, `app/src/ui/css/45-project-profit.css` (`.ui-pn-figure-label`), `docs/decisions/0236-forecast-page-leads-with-cash.md`, `docs/decisions/README.md`, a design log entry, a changelog fragment.
+# FLOW-991 · Reports by property or by period: the grid read, export_report's columns and project_ids, and the landscape PDF
+- **Type:** MCP (design approved) · **Status:** in-progress (#887) · **Source:** the owner, 2026-10-30: export the P&L and the balance sheet as PDF and Excel, aggregated by date or project, filtered by date and project, from the app and the MCP, in the layout of an accounting app's "by property" report. **Approved:** the owner, 2026-10-30 ("Approve"). Design: [Reports export](https://claude.ai/artifact/Bhc1JVsCQYmdVXFGcb9PuU), sections "PDF · רווח והפסד לפי נכס", "לפי חודש", "מאזן לפי נכס", "מאזן לפי רבעון", MCP.
+- **Files:** `supabase/functions/_shared/report_grid.ts` (new), `report_model.ts`, `report_pdf.ts`, `report_csv.ts`, `report_sample.ts`, `report_files_test.ts`, `supabase/functions/flow-mcp/tools_export.ts`, `tools_export_test.ts`, `tools_ledger_specs.ts`, `tools_schemas.ts`, `tools_guide_data.ts`, `docs/mcp/TOOLS.md`, a changelog fragment.
 
-- [x] The page's figure is תזרים צפוי, the card's cash (cashForecast), labelled under the title.
-- [x] The summary reads צפוי להיכנס / צפוי לצאת; רווח צפוי (the profit page card's net) follows when the loans hold a part the profit leaves out.
-- [x] That part is the list's last row, "לא נספר ברווח · לפי ההלוואה", with no edit page, so the rows add up to the figure.
+One rule: the columns are projects or periods, never both; the other is a filter.
 
-**Acceptance:** on a project with a loan, the page's figure equals the project card's net, its רווח צפוי the profit card's net, and its last row the difference.
+- [x] `export_report` takes `columns` (total, project, month, quarter or year; default total) and `project_ids` (one or more; empty is every project). `by_project: true` still works and means `columns: "project"`; `project_id` still works and means `project_ids: [id]`.
+- [x] P&L by project: a row per category and sub-category, a column per project, a "כללי" column (overhead and lines with no project) when no projects are picked, and a total that equals the company P&L. With projects picked, only those columns and their total.
+- [x] P&L by period: a column per month, quarter or year from `from` to `to` (both needed), each read with the same projects filter; the total is the sum of the columns.
+- [x] Balance sheet by project: a column per project, read with that project; "כללי" is the company less the projects; a "נכסים נטו" row; equity only in the total column.
+- [x] Balance sheet by period: the balance at the end of each period, the last column at `to`.
+- [x] The PDF draws a grid on A4 landscape when it has more than 4 amount columns, up to 13 amount columns a block; more columns take more blocks. The total-only reports are unchanged.
+- [x] The CSV writes the same grid. `format: "json"` returns the grid itself, so the assistant can read the numbers without a file.
+
+**Acceptance:** unit tests: the project grid's total equals the company statement; the "כללי" balance column is the company less the projects; the period grid's total equals the sum of its columns; the argument refusals; the PDF renders landscape pages for a wide grid.

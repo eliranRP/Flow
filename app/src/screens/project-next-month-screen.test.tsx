@@ -124,7 +124,7 @@ describe("ProjectNextMonthScreen", () => {
   it("adds the summary card up: expected in and out, the monthly share and the profit after it", () => {
     const { container } = renderNext();
     const rows = Array.from(container.querySelectorAll(".ui-pp-row")).map((row) => row.textContent);
-    // No loan: cash and profit are the same, so no רווח צפוי row and no לא נספר ברווח row (FLOW-991).
+    // No loan: cash and profit are the same, so no רווח צפוי row and no לא נספר ברווח row (FLOW-994).
     expect(rows).toEqual([
       "צפוי להיכנס+$4,150",
       "צפוי לצאת$1,865",
@@ -237,7 +237,7 @@ describe("the next-month page with a loan (decision 0190)", () => {
     expect(screen.getByText("לפי הקבועים של הנכס, לוח ההלוואה וממוצע 6 החודשים האחרונים לכל קטגוריה. נגיעה בשורה משנה אותה או מסירה אותה.")).toBeTruthy();
   });
 
-  it("FLOW-991: leads with the cash and names the profit, so each card that opens it finds its number", () => {
+  it("FLOW-994: leads with the cash and names the profit, so each card that opens it finds its number", () => {
     const forecast = applyForecastEdits(nextMonthForecast({
       projectId: JUNIPER_PROFIT.project.id,
       currency: "USD",
@@ -269,7 +269,7 @@ describe("the next-month page with a loan (decision 0190)", () => {
     expect(card.querySelector(".ui-fc-net > .ui-num")?.textContent).toBe(rows[3]?.replace("רווח צפוי", ""));
   });
 
-  it("FLOW-991: lists the part the profit leaves out even when no other row is expected", () => {
+  it("FLOW-994: lists the part the profit leaves out even when no other row is expected", () => {
     // A loan whose interest and escrow categories are kept out of the profit (a hard-money flip, decision 0166),
     // and nothing else expected: no row but the payment the profit leaves out.
     const kept = new Set(["loan-interest", "taxes"]);

@@ -242,6 +242,9 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-177"></a>[FLOW-177](tasks/FLOW-177.md) | Hebrew names for the last two built-in accounts | SMALL CYCLE |
 | <a id="flow-988"></a>[FLOW-988](tasks/FLOW-988.md) | The P&L lists numbered categories by their number | SMALL CYCLE |
 | <a id="flow-989"></a>[FLOW-989](tasks/FLOW-989.md) | The category drill-down's split by project counts a split line by its parts | BUG |
+| <a id="flow-991"></a>[FLOW-991](tasks/FLOW-991.md) | Reports by property or by period: the grid read, export_report's columns and project_ids, and the landscape PDF | MCP (design approved) |
+| <a id="flow-992"></a>[FLOW-992](tasks/FLOW-992.md) | Reports as a real Excel file (xlsx) | MCP (design approved) |
+| <a id="flow-993"></a>[FLOW-993](tasks/FLOW-993.md) | The export sheet: columns by project or period, several projects, and Excel as xlsx | SMALL UI (design approved) |
 | <a id="flow-920"></a>[FLOW-920](tasks/FLOW-920.md) | Project profit: the month's share and after-overhead rows from the server, and the old profit-month section goes | UI + server (follow-up to FLOW-140) |
 | <a id="flow-930"></a>[FLOW-930](tasks/FLOW-930.md) | A yearly charge shows in this month's forecast at a monthly amount | BUG |
 | <a id="flow-935"></a>[FLOW-935](tasks/FLOW-935.md) | The iPhone Home Screen app moves to a new deploy without a reinstall | BUG |
@@ -401,7 +404,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-986"></a>[FLOW-986](tasks/FLOW-986.md) | דוחות takes קבועים's place in the tab bar; קבועים moves to an icon in Home's band | SMALL UI |
 | <a id="flow-987"></a>[FLOW-987](tasks/FLOW-987.md) | The one-time "קבועים עברו לכאן" tip under the band's קבועים icon | SMALL UI |
 | <a id="flow-990"></a>[FLOW-990](tasks/FLOW-990.md) | Next month's forecast on Home and on Projects | SMALL UI (design approved) |
-| <a id="flow-991"></a>[FLOW-991](tasks/FLOW-991.md) | The צפי page leads with the cash its project card shows | SMALL UI |
+| <a id="flow-994"></a>[FLOW-994](tasks/FLOW-994.md) | The צפי page leads with the cash its project card shows | SMALL UI |
 
 ## Projects and reports
 
