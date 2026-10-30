@@ -5,7 +5,7 @@
 
 The company's next month, in cash terms (decision 0196: the loans' principal due next month added), the same card on both screens. No new component: `ForecastCard` and `MonthChart` as the project page uses them.
 
-- [x] Home, current month only: after the split card, "החודש הבא", the dashed card (the month and its צפי tag, צפוי להיכנס, צפוי לצאת, תזרים צפוי) with no link and the grey caption of what the sum covers ("4 פרויקטים וכללי"), then the chart of the company's last six cash months with next month dashed. Hidden when nothing is expected or the read fails; a skeleton while it loads. Its code loads in its own chunk, so Home's first load does not grow.
+- [x] Home, current month only: after the split card, "החודש הבא", the dashed card (the month and its צפי tag, צפוי להיכנס, צפוי לצאת, תזרים צפוי) with no link and the grey caption of what the sum covers ("N פרויקטים וכללי"), then the chart of the company's last six cash months with next month dashed. Hidden when nothing is expected or the read fails; a skeleton while it loads. Its code loads in its own chunk, so Home's first load does not grow.
 - [x] Projects: the same card under the subtitle, above פעילים. Each project row, and the overhead row, gets a muted צפי figure under this month's: that project's (or the general costs') next-month cash forecast. The figures add up to the card's net.
 - [x] Stories for both; unit tests for the cash sum and the per-project figure.
 

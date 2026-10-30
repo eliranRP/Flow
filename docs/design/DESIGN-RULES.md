@@ -803,7 +803,7 @@ Distilled from the owner's choices in [0023](../decisions/0023-violet-coloured-t
 **Do**
 
 - Keep the page white in light mode (`#FFFFFF`) and a clear violet-black in dark mode (`#15111E`). [0023](../decisions/0023-violet-coloured-top-band.md).
-- Use few numbers. Home's budget is the profit, one change, income, expenses, the pending summary, and at most five projects (FLOW-411). A project row reads name, then "▲ ברווח" (`text-muted`) or "▼ הפסד" (`bad`), then the amount. Guide §1 P2.
+- Use few numbers. Home's budget is the profit, one change, income, expenses, the pending summary, and at most five projects (FLOW-411), plus next month's forecast block ([0235](../decisions/0235-next-month-on-home-and-projects.md)). A project row reads name, then "▲ ברווח" (`text-muted`) or "▼ הפסד" (`bad`), then the amount. Guide §1 P2.
 - Use Rubik at 400 / 500 / 600 / 700, with body at 500 and titles at 600. [0023](../decisions/0023-violet-coloured-top-band.md).
 - Use the violet band only on Home and the Project header. [0024](../decisions/0024-design-system-approved.md).
 - Leave the after-overhead switch off until the owner turns it on. [0022](../decisions/0022-after-overhead-starts-off.md).
@@ -814,7 +814,7 @@ Distilled from the owner's choices in [0023](../decisions/0023-violet-coloured-t
 
 - Don't design busy, data-dense screens. Mercury-like P1 Graphite, P2 Cobalt, and P3 Petrol were rejected as too busy. [0023](../decisions/0023-violet-coloured-top-band.md).
 - Don't add hints, legends, "usually" figures or status chips to every row. The owner rejected a project page that did (FLOW-401, 2026-10-08). Show the one thing that needs attention, and keep the rest on the next screen.
-- Don't pile extra figures, charts, or breakdowns onto Home or Project. Put them on the next screen. Guide §1 P3.
+- Don't pile extra figures, charts, or breakdowns onto Home or Project. Put them on the next screen. Guide §1 P3. The one exception is Home's next-month block ([0235](../decisions/0235-next-month-on-home-and-projects.md)).
 - Don't use a faint off-white tinted background. Styles A (`#F5F7F9`) and C (`#F3ECE1`) and the "faint off-white" alternative were rejected. The page is clean white, or a clear colour. [0023](../decisions/0023-violet-coloured-top-band.md), [design README](../module-1-project-pnl/design/README.md).
 - Don't use a stiff or thin face. IBM Plex was too stiff. Assistant and Varela Round were too thin. [0023](../decisions/0023-violet-coloured-top-band.md).
 - Don't revive styles A, B, or C, or the muted and other-bright palettes listed in 0023.

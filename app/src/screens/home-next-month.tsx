@@ -21,7 +21,8 @@ export function HomeNextMonth({ today, currency, sample }: { today: string; curr
   const next = useCompanyCashNextMonth(currency, today, sample == null, sample?.next);
   const cashRead = useCashMonthsQuery(sample == null, CHART_MONTHS);
   const cash = sample?.cash ?? cashRead.data ?? null;
-  if (!next.loading && nothingExpected(next.forecast)) return null;
+  // Hidden when nothing is expected or a read failed (the forecast's, or the cash months').
+  if ((!next.loading && nothingExpected(next.forecast)) || (sample == null && cashRead.isError)) return null;
   const current = today.slice(0, 7);
   const figures = cash == null ? null : cashMonthFigures(cash, currency);
   // Always the six months, as the company profit page: the company has no first month to start the window from.

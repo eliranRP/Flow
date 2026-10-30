@@ -345,13 +345,18 @@
 .ui-home-next-title {
   margin: 0 var(--space-1);
   font-size: var(--type-section-size);
-  line-height: var(--type-cents-line);
+  line-height: var(--type-section-line);
   font-weight: var(--type-section-weight);
 }
 
 /* FLOW-990: the Projects tab's card, under the subtitle, above פעילים (board ProjectsNextMonth). */
 .ui-projects-next {
   margin-block: var(--space-4) var(--space-1);
+}
+
+/* No card (nothing expected, a failed read, or the skeleton's delay): no gap either. */
+.ui-projects-next:empty {
+  display: none;
 }
 
 /* A project row's next month under this month's figure: the צפי tag and the amount. */

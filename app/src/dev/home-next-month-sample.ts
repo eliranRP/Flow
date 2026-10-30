@@ -25,7 +25,7 @@ function row(dollarsIn: number, dollarsOut: number, profitDollars: number): Cash
   };
 }
 
-export const NEXT_MONTH_CASH: NonNullable<CashMonths> = {
+const NEXT_MONTH_CASH: NonNullable<CashMonths> = {
   basis: "paid",
   base_currency: "USD",
   months: [
@@ -76,6 +76,7 @@ export const NEXT_MONTH_PROJECTS: NonNullable<ProjectsCashMonth> = {
     project("p3", "דירת הרימון", "השכרה", 2_150),
     project("p4", "בית השקד", "השכרה", 1_950),
     project("p5", "הבית ברחוב הזית", "השכרה", 3_400),
+    project("p0", "משרד החברה / תקורה", "", -5_000, true),
   ],
   unassigned: { count: 0, cash: [] },
 };

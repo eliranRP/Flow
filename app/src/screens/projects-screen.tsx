@@ -154,7 +154,7 @@ function ProjectsBody({
   onNew?: () => void;
   next: CompanyCashNextMonth;
   today: string;
-  thisMonthOut: bigint;
+  thisMonthOut: bigint | null;
 }) {
   const base = month.base_currency;
   const [titleEnd, setTitleEnd] = useState<HTMLSpanElement | null>(null);
@@ -244,7 +244,7 @@ function nextFigure(forecast: CompanyNextMonth | null, projectId: string | null,
   return (
     <span className="ui-proj-next">
       <span className="ui-fc-tag">צפי</span>
-      <Amount agorot={net} currency={currency} direction={net > 0n ? "income" : undefined} />
+      <Amount agorot={net} currency={currency} income={net > 0n} />
     </span>
   );
 }

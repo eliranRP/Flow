@@ -26,9 +26,13 @@ export function useCompanyCashNextMonth(currency: string, today: string, enabled
   return { forecast, loading: next.pending, categories: next.categories };
 }
 
-/** This month's cash out so far in the currency, from cash_months: the card's expense caption compares with it. */
-export function thisMonthCashOut(cash: NonNullable<CashMonths> | null, today: string, currency: string): bigint {
-  const month = cash?.months.find((row) => cashMonthKey(row.month) === today.slice(0, 7));
+/**
+ * This month's cash out so far in the currency, from cash_months: the card's expense caption compares with it.
+ * Null while the read is out or failed, so the caption never says "מול $0".
+ */
+export function thisMonthCashOut(cash: NonNullable<CashMonths> | null, today: string, currency: string): bigint | null {
+  if (cash == null) return null;
+  const month = cash.months.find((row) => cashMonthKey(row.month) === today.slice(0, 7));
   return month?.by_currency.find((row) => row.currency === currency)?.out_minor ?? 0n;
 }
 
@@ -52,8 +56,8 @@ export function CompanyCashCard({
   currency: string;
   /** yyyy-mm-dd: the month's name carries a year only when it is not today's. */
   today: string;
-  /** This month's cash out so far, in the currency: the expense caption compares with it. */
-  thisMonthOut: bigint;
+  /** This month's cash out so far, in the currency: the expense caption compares with it; null while unknown. */
+  thisMonthOut: bigint | null;
 }) {
   if (next.loading) return <DelayedSkeleton><NextMonthCardSkeleton /></DelayedSkeleton>;
   const forecast = next.forecast;
@@ -66,7 +70,7 @@ export function CompanyCashCard({
       incomeMinor={forecast.incomeMinor}
       expenseMinor={forecast.expenseMinor}
       incomeNote={companyIncomeNote(forecast, next.categories)}
-      expenseNote={companyExpenseNote(forecast, today.slice(0, 7), thisMonthOut, currency)}
+      expenseNote={thisMonthOut == null ? "" : companyExpenseNote(forecast, today.slice(0, 7), thisMonthOut, currency)}
       caption={companyForecastCaption(forecast)}
     />
   );
