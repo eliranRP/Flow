@@ -152,7 +152,8 @@ Bugs, features, and tasks are **batched by area**. A lane takes related items to
 
 ### Merging and after the merge
 
-- A lane merges its own PR once every gate has passed (the review of the current head, and the `pr` check green on it). It does not ask the owner.
+- A lane merges its own PR once every gate has passed (the review of the current head, and the `pr` check green on it). It does not ask the owner, and does not wait for the owner: this is the owner's standing approval (2026-10-30), for every lane and every agent working on this repo.
+- The reviewer's approval is a PR comment. PRs are opened under the owner's GitHub account, and GitHub does not let an author approve their own PR, so the reviewer posts its verdict as a comment whose first line is `#<n> r<round> (head <sha>): APPROVED` (or `CHANGES REQUESTED`). That comment, for the PR's current head, is the approval this section and the cycle ask for. A PR that changes only `docs/` or Markdown still gets the review, against the code checklist only.
 - PR flow: run `bash scripts/cloud-agent-install.sh` before the first push, so the pre-push hook runs the quick check; send the PR to the reviewer right after the push; squash-merge (or turn on squash auto-merge) once the reviewer approves the current head and the `pr` check is green on it. Before any later push, turn auto-merge off; turn it on again after the new head is approved. Changelog entries go in `docs/changelog.d/` only.
 - While a PR waits on review, check it about once a minute. Never leave a PR idle.
 - After the merge, tell the MCP/data agent what changed and what it means for bookkeeping (new or changed tools, totals that will move).

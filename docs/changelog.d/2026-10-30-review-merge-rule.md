@@ -1,0 +1,1 @@
+Owner rule, 2026-10-30: agents review and merge their own PRs without waiting for the owner. The reviewer's verdict is posted as a PR comment ("#<n> r<round> (head <sha>): APPROVED"), which counts as the approval, since GitHub cannot record an approval on a PR its own author opened (CLAUDE.md, backlog guide).
