@@ -85,7 +85,7 @@ import { addLoanWrite, attachLoanWrite, updateLoanWrite } from "./tools_loans.ts
 import { syncBank } from "./tools_sync.ts";
 import { resetForecastSchema, setForecastItemSchema } from "./tools_forecast_schemas.ts";
 import { attachDocumentSchema, createManualEntrySchema } from "./tools_manual_schemas.ts";
-import { bookLineSchema, createJournalEntrySchema, setCategoryAccountSchema } from "./tools_ledger_schemas.ts";
+import { bookLineSchema, createJournalEntrySchema, setCategoryAccountSchema, updateJournalEntrySchema } from "./tools_ledger_schemas.ts";
 import { PROJECT_FORECAST_WRITES, projectForecastWrite } from "./tools_project_forecast.ts";
 import { BANK_WRITES, bankWrite } from "./tools_bank.ts";
 import { THREAD_WRITES, threadWrite } from "./tools_thread.ts";
@@ -188,6 +188,27 @@ export async function callWrite(
         amount_minor: leg.amount_minor,
         ...(leg.project_id == null ? {} : { project_id: leg.project_id }),
       })),
+    };
+  } else if (name === "update_journal_entry") {
+    // FLOW-174 (decision 0234): the database re-books the entry in place with create_journal_entry's rules
+    // and keeps the version it replaces. p_set_reference tells a cleared reference (null) from one left out.
+    const parsed = updateJournalEntrySchema.safeParse(args);
+    if (!parsed.success) return invalidDetail(parsed.error);
+    rpcName = "mcp_update_journal_entry";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_journal_entry_id: parsed.data.journal_entry_id,
+      p_expected_version: parsed.data.expected_version,
+      p_reason: parsed.data.reason,
+      p_doc_date: parsed.data.doc_date ?? null,
+      p_description: parsed.data.description ?? null,
+      p_set_reference: parsed.data.reference !== undefined,
+      p_reference: parsed.data.reference ?? null,
+      p_legs: parsed.data.legs?.map((leg) => ({
+        account_id: leg.account_id,
+        amount_minor: leg.amount_minor,
+        ...(leg.project_id == null ? {} : { project_id: leg.project_id }),
+      })) ?? null,
     };
   } else if (name === "set_category_account") {
     // FLOW-151 (decision 0231): the database re-posts the category's lines; no P&L figure moves.

@@ -19,7 +19,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_journal_entry`, `set_category_account`, `create_account`, `update_account`, `archive_account`, `restore_account`, `merge_account`, `create_prepaid_schedule`, `attach_prepaid_refund`, `update_prepaid_schedule`, `end_prepaid_schedule`, `delete_prepaid_schedule`, `set_books_closed_through`, `create_manual_entry`, `attach_document`, `add_transaction_note`, `edit_transaction_note`, `remove_transaction_note`, `remove_transaction_file`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_loan_refinance`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `set_loan_part_category`, `set_loan_category_from`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `reassign_recurring_charge`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `link_invoice_payment`, `dismiss_invoice_match`, `book_line`, `create_journal_entry`, `update_journal_entry`, `set_category_account`, `create_account`, `update_account`, `archive_account`, `restore_account`, `merge_account`, `create_prepaid_schedule`, `attach_prepaid_refund`, `update_prepaid_schedule`, `end_prepaid_schedule`, `delete_prepaid_schedule`, `set_books_closed_through`, `create_manual_entry`, `attach_document`, `add_transaction_note`, `edit_transaction_note`, `remove_transaction_note`, `remove_transaction_file`, `create_project`, `update_project`, `delete_project`, `set_forecast_item`, `reset_forecast`, `set_project_forecast_edit`, `remove_project_forecast_row`, `restore_project_forecast_row`, `reset_project_forecast`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `set_bank_accounts`, `answer_bank_account`, `confirm_transfer_match`, `dismiss_transfer_match`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `set_loan_index`, `set_loan_refinance`, `set_index_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `set_loan_part_category`, `set_loan_category_from`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_parent`, `set_category_group`, `create_project_group`, `set_project_group`, `set_jev_mode`, `set_category_cash`, `set_line_cash`, `set_lines_cash`, `set_cash_basis`, `set_line_recurring`, `set_line_pace`, `set_line_usual_amount`, `answer_recurring_match`, `reassign_recurring_charge`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -111,6 +111,8 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `book_line` | `legs[].account_id` | `list_accounts` `accounts[].id` (`bookable` true) |
 | `create_journal_entry` | `legs[].account_id`, `legs[].project_id` | `list_accounts` `accounts[].id` (`bookable` true, not the bank), `list_projects` |
 | `undo` `kind: "journal_entry"` | `id` | the line id `create_journal_entry` returned |
+| `update_journal_entry`, `get_journal_entry_history` | `journal_entry_id`, `expected_version` | the entry's line id (`get_expense` `id`, `get_line_legs` `transaction_id`) and its `journal_entry.version` there |
+| `undo` `kind: "journal_entry_update"` | `id` | the entry id `update_journal_entry` took |
 | `set_category_account` | `category_id`, `account_id` | `list_categories` (a kept-out category), `list_accounts` `accounts[].id` (an asset or liability system account) |
 | `undo` `kind: "category_account"` | `id` | the category id `set_category_account` took |
 | `update_account`, `archive_account`, `restore_account`, `undo` `kind: "account_*"` | `account_id`, `id` | `list_accounts` `accounts[].id` (a company account, `is_system` false) |
@@ -247,7 +249,7 @@ A line split with `split_line` whose amount the bank sync changed is queued with
 
 `get_transaction` with the transaction id. A missing row is `not_found`. `review_status` is the line's latest review state; while it is `open`, `review_reason` is its reason and `review_id` its review-queue id (the `id` in `list_review`), else `review_id` is null. Output includes `allocations[]` of `{project_id, project_name, share_bp, amount_net}`. A line split with `split_line` also has `line_split` (see [split_line](#split_line)); its parts are what counts, so shares kept from before the split move to `allocations_superseded` and `allocations` is then empty ([FLOW-212](../backlog/TASKS.md#flow-212)).
 
-Output also has `loan_split` ([FLOW-107](../backlog/TASKS.md#flow-107)), from `get_loan_split`: `null` when the line has no loan split (and always for income, which skips the read), else `{loan_id, loan_name, needs_review, by_parts, parts[]}` with `parts` in the order interest, escrow, principal, then fees when the payment has a fees part ([0130](../decisions/0130-loan-fees-installments.md)), each `{part, amount_minor, in_pnl, category_id, category_name}` (the category the part is filed under, [0227](../decisions/0227-loan-part-category-override.md)). `amount_minor` is positive and the parts add up to the line. `by_parts` is true when the P&L counts the line by its parts (three parts, or four with fees, none needs review, no VAT, parts add up), and then `in_pnl` says whether that part counts; the principal is kept out by default. When `by_parts` is false, `in_pnl` is null and the whole line counts under its own category. A failed split read is `refused`, like the row read. Since [0136](../decisions/0136-loan-unmatch.md) `get_transaction` carries `loan_split` itself, so `get_expense` makes no second read. `journal_entry` is `{ reference }` when the line is a journal entry (`create_journal_entry`, FLOW-149), else null.
+Output also has `loan_split` ([FLOW-107](../backlog/TASKS.md#flow-107)), from `get_loan_split`: `null` when the line has no loan split (and always for income, which skips the read), else `{loan_id, loan_name, needs_review, by_parts, parts[]}` with `parts` in the order interest, escrow, principal, then fees when the payment has a fees part ([0130](../decisions/0130-loan-fees-installments.md)), each `{part, amount_minor, in_pnl, category_id, category_name}` (the category the part is filed under, [0227](../decisions/0227-loan-part-category-override.md)). `amount_minor` is positive and the parts add up to the line. `by_parts` is true when the P&L counts the line by its parts (three parts, or four with fees, none needs review, no VAT, parts add up), and then `in_pnl` says whether that part counts; the principal is kept out by default. When `by_parts` is false, `in_pnl` is null and the whole line counts under its own category. A failed split read is `refused`, like the row read. Since [0136](../decisions/0136-loan-unmatch.md) `get_transaction` carries `loan_split` itself, so `get_expense` makes no second read. `journal_entry` is `{ reference, version }` when the line is a journal entry (`create_journal_entry`, FLOW-149; `version` is `update_journal_entry`'s `expected_version`, FLOW-174), else null.
 
 The row also has `in_pnl` (whether the line counts in the P&L), `in_pnl_override` (`false` out, `true` in, `null` follows the category; see [set_line_pnl](#set_line_pnl)), `category_excluded_from_pnl`, and `pnl_fixed` (a loan line: `set_line_pnl` refuses it) ([FLOW-108](../backlog/TASKS.md#flow-108)). `category_suggested` is true while the category is only a guess; a guessed kept-out category still counts, so `in_pnl` is true until the category is confirmed ([FLOW-121](../backlog/TASKS.md#flow-121)). `pnl_state` is `in`, `out`, or `mixed`: for a line split by category it reads the parts, so a split with one part kept out is `mixed` while `in_pnl` follows the line's own category; a loan payment counted by its parts is `mixed` too (the principal is kept out), and `pnl_fixed` marks it ([0135](../decisions/0135-line-state-in-lists.md)). `in_cash_override` is the line's cash view switch (`false` out, `true` in, `null` follows the category; see [set_line_cash](#set_line_cash)) and `cash_state` is `in`, `out`, or `mixed` (a line split across categories in and out of the cash view). `cash_state` describes the switch; it does not say the line falls in a given month ([0168](../decisions/0168-cash-flow-view.md)).
 
@@ -382,7 +384,7 @@ The company's chart of accounts (any member, `mcp_accounts`). `accounts[]`: `id`
 { "transaction_id": "<line id>" }
 ```
 
-One line's legs (any member, `mcp_line_legs`): `transaction_id`, `direction`, `line_status`, `currency`, `amount_gross`, `vat_amount`, `journal_entry` (`{ reference }` on a journal entry, else null; FLOW-149), `legs[]` (`ordinal`, `account_id`, `account_name`, `account_type`, `category_id`, `category_name`, `is_bank`, `project_id`, `amount_minor`) and `balanced` (the legs sum to 0). `category_id` and `category_name` are the category the person sees: on a kept-out leg, which sits on a balance-sheet account such as Property, they name the category it was filed under (FLOW-953). `amount_minor` is signed: debit positive, credit negative; an income or expense leg counts as `-amount_minor` in the P&L. A pending line has no legs. A journal entry's line has no bank leg: its balance-sheet legs stand in for it (see `create_journal_entry`). Another company's line, a removed one and an unknown id are `not_found`.
+One line's legs (any member, `mcp_line_legs`): `transaction_id`, `direction`, `line_status`, `currency`, `amount_gross`, `vat_amount`, `journal_entry` (`{ reference, version }` on a journal entry, else null; FLOW-149, FLOW-174), `legs[]` (`ordinal`, `account_id`, `account_name`, `account_type`, `category_id`, `category_name`, `is_bank`, `project_id`, `amount_minor`) and `balanced` (the legs sum to 0). `category_id` and `category_name` are the category the person sees: on a kept-out leg, which sits on a balance-sheet account such as Property, they name the category it was filed under (FLOW-953). `amount_minor` is signed: debit positive, credit negative; an income or expense leg counts as `-amount_minor` in the P&L. A pending line has no legs. A journal entry's line has no bank leg: its balance-sheet legs stand in for it (see `create_journal_entry`). Another company's line, a removed one and an unknown id are `not_found`.
 
 ### get_account_balances
 
@@ -559,10 +561,53 @@ The entry is a line of its own:
 - It counts in the P&L (`get_totals`, `get_project`, `list_projects`, the breakdowns) of its projects and month, on either basis. An income entry (its P&L legs net to a credit, such as a forfeited deposit applied as rent) counts too: its line is an `invoice_receipt`, the document kind income counts by on both bases; an expense entry's line is `other` (FLOW-151, [0231](../decisions/0231-journal-income-category-account.md)).
 - It stays out of every cash view (`get_cash_months`, `get_cash_lines`, cash flow): the line is kept out of the cash view, and it never pairs with an invoice.
 - It never waits for review, and Jev's booking review does not list it.
-- It is fixed: no tool changes its category, project, amount, date, split, loan split, shares, P&L or cash flag (`refused` / `journal entry is fixed`), and a category it uses cannot be deleted for the same reason. Its description, note and files stay editable.
-- `get_expense` names it in `journal_entry` (`{ reference }`, null on any other line); `get_line_legs` shows its legs (no bank leg; the balance-sheet legs in its place); `get_account_balances` sums them per project.
+- It is fixed: no other tool changes its category, project, amount, date, split, loan split, shares, P&L or cash flag (`refused` / `journal entry is fixed`), and a category it uses cannot be deleted for the same reason. Its description, note and files stay editable. `update_journal_entry` corrects it in place (FLOW-174, below).
+- `get_expense` names it in `journal_entry` (`{ reference, version }`, null on any other line); `get_line_legs` shows its legs (no bank leg; the balance-sheet legs in its place); `get_account_balances` sums them per project.
 
-Output `data`: `{ "id", "doc_date", "currency", "description", "reference", "pnl_minor", "legs": [{ "account_id", "project_id", "amount_minor", "in_pnl" }], "undo_kind": "journal_entry" }`; `pnl_minor` is its effect on the P&L, signed (an expense negative). Undo `kind: "journal_entry"` takes the line id and removes the entry, its parts and its legs while it reads as written; otherwise `conflict`, and a second undo is `not_found`.
+Output `data`: `{ "id", "doc_date", "currency", "description", "reference", "pnl_minor", "legs": [{ "account_id", "project_id", "amount_minor", "in_pnl" }], "version": "1", "undo_kind": "journal_entry" }`; `pnl_minor` is its effect on the P&L, signed (an expense negative). Undo `kind: "journal_entry"` takes the line id and removes the entry, its parts and its legs while it reads as written; otherwise `conflict` (after an `update_journal_entry`, undo the updates first), and a second undo is `not_found`.
+
+### update_journal_entry
+
+```json
+{
+  "idempotency_key": "je-fix-1",
+  "journal_entry_id": "<the entry's line id>",
+  "expected_version": "1",
+  "reason": "plug moved to furniture",
+  "legs": [
+    { "account_id": "<depreciation category account>", "amount_minor": 500000, "project_id": "<project id>" },
+    { "account_id": "<furniture category account>", "amount_minor": 10000, "project_id": "<project id>" },
+    { "account_id": "<Accumulated depreciation>", "amount_minor": -510000, "project_id": "<project id>" }
+  ]
+}
+```
+
+Corrects a posted journal entry in place (owner or editor, also for an entry another member wrote; FLOW-174, [0234](../decisions/0234-journal-entry-update.md)). The entry keeps its id, its notes, files and thread, and its place in every report; only its legs and fields change. `expected_version` is the `journal_entry.version` that `get_line_legs` or `get_expense` gave (a string); `reason` (required, 1 to 200 characters) says why. Optional, and kept as they are when left out: `doc_date`, `description` (1 to 120), `reference` (1 to 60, or `null` to clear it) and `legs`, which **replaces every leg** with exactly `create_journal_entry`'s rules and messages (2 to 50, signed, summing to 0, no bank leg, not Suspense or VAT control, no archived account, P&L legs that do not net to 0). The currency stays the entry's.
+
+Refused:
+
+| Message | When |
+| --- | --- |
+| `validation` (code, with `detail`) | a malformed argument, a blank `reason`, legs that do not sum to 0 |
+| `entry changed` | `expected_version` is not the current version |
+| `not a journal entry` | the id is a bank line or a manual line |
+| `the entry belongs to a prepaid schedule` | a prepaid month's entry: change it with the prepaid tools |
+| `the books are closed through YYYY-MM-DD` | the old or the new `doc_date` is on or before `set_books_closed_through`'s date |
+| `create_journal_entry`'s messages | the legs break one of its rules |
+| `transaction not found` | another company's entry, or an unknown id |
+| `forbidden` (code) | a viewer, or a read-only token |
+
+The ledger legs and every balance read (`get_account_balances`, `get_balance_sheet`, `get_account_lines`, the P&L) show the new version at once: the P&L moves by the difference of the P&L legs only, and the entry stays out of every cash view. The version it replaces is kept (`get_journal_entry_history`).
+
+Output `data`: `{ "id", "version", "previous_version", "doc_date", "currency", "description", "reference", "pnl_minor", "previous_pnl_minor", "legs": [{ "account_id", "project_id", "amount_minor" }], "reason", "undo_kind": "journal_entry_update" }`. Undo `kind: "journal_entry_update"` takes the entry id and puts the version before back, as a new version with the reason `undo: <reason>`, while the entry still reads as this update left it (its legs, date, description and reference); otherwise `conflict`. Only the member who made the update can undo it; several updates undo newest first.
+
+### get_journal_entry_history
+
+```json
+{ "journal_entry_id": "<the entry's line id>" }
+```
+
+A journal entry's versions (any member; FLOW-174). Output `data`: `journal_entry_id`, `version` (the current one), `created_by`, `created_by_name`, `created_at` (who booked it), and `versions[]`, newest first. Each version has `version`, `current` (true for the current one), `doc_date`, `currency`, `description`, `reference`, `legs[]` (`account_id`, `project_id`, `amount_minor`, signed as `create_journal_entry` takes them), `pnl_minor`, and `written_by`, `written_by_name`, `written_at`, `reason` (who wrote it, when and why; `reason` is null for the version booked). A replaced version also has `replaced_by`, `replaced_by_name`, `replaced_at` and `replaced_reason` (the update, or its undo, that replaced it). A bank or manual line is `refused` / `not a journal entry`; another company's line or an unknown id is `not_found`.
 
 ### set_category_account
 

@@ -58,6 +58,23 @@ export const createJournalEntrySchema = z.object({
   }
 });
 
+// FLOW-174 (decision 0234): update_journal_entry corrects a posted entry in place. legs, when sent,
+// replaces every leg with create_journal_entry's rules; a field left out stays. reason is required.
+export const updateJournalEntrySchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  journal_entry_id: UUID_TEXT,
+  expected_version: z.string().regex(/^[1-9][0-9]{0,8}$/, "expected_version: the version get_line_legs or get_expense gives"),
+  doc_date: z.string().refine((v) => isCalendarDate(v), "doc_date must be a calendar date (YYYY-MM-DD)").optional(),
+  description: visibleName(1, 120).optional(),
+  reference: visibleName(1, 60).nullable().optional(),
+  legs: z.array(legSchema).min(2).max(50).optional(),
+  reason: visibleName(1, 200),
+}).strict().superRefine((body, ctx) => {
+  if (body.legs != null && body.legs.reduce((sum, leg) => sum + leg.amount_minor, 0) !== 0) {
+    ctx.addIssue({ code: "custom", message: "legs must balance to 0", path: ["legs"] });
+  }
+});
+
 // FLOW-151 (decision 0231): set_category_account, the balance-sheet account a kept-out category posts
 // to (account_id null: the default, its loan part's account or Suspense).
 export const setCategoryAccountSchema = z.object({

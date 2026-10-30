@@ -53,7 +53,7 @@ export const TOOL_GROUPS: GuideGroup[] = [
     id: "ledger", title: "Ledger and accounts", summary: "The chart of accounts and the balanced legs behind each line.",
     tools: [
       "list_accounts", "get_line_legs", "get_account_balances", "book_line", "create_journal_entry",
-      "set_category_account", "create_account", "update_account", "archive_account", "restore_account",
+      "update_journal_entry", "get_journal_entry_history", "set_category_account", "create_account", "update_account", "archive_account", "restore_account",
       "merge_account", "get_balance_sheet", "get_account_lines", "get_pnl_statement", "export_report",
     ],
   },
@@ -149,6 +149,14 @@ export const WORKFLOWS: GuideWorkflow[] = [
       "list_accounts: pick the accounts to debit and credit.",
       "create_journal_entry: the legs must sum to zero.",
       "get_account_balances: check the balances moved as expected.",
+    ],
+  },
+  {
+    id: "journal_entry_fix", title: "Correct a posted journal entry",
+    steps: [
+      "get_line_legs: read the entry's legs and its version.",
+      "update_journal_entry: send the version read, the reason, and every leg as it should be.",
+      "get_journal_entry_history: the version replaced is kept, and undo puts it back.",
     ],
   },
   {
