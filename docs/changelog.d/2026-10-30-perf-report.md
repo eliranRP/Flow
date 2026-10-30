@@ -1,1 +1,1 @@
-The 2026-10-30 daily perf report is in `docs/qa/perf/`: no read got slower in the database; the round trips over 0.5 s are Review, the company profit page's next month and, on a slow network day, the recurring, forecast and search reads.
+The 2026-10-30 daily perf report is in `docs/qa/perf/`. The round trips over 0.5 s are Review, the company profit page's next month and, on a day of longer round trips, the recurring, forecast and search reads; for the three of those with a database time from the day before, the database time held or fell.
