@@ -701,21 +701,29 @@ Each `currencies[]` row is one currency's statement, never converted: `currency`
 ### export_report
 
 ```json
-{ "kind": "both", "format": "pdf", "from": "2026-01-01", "to": "2026-10-31", "as_of": "2026-10-31", "project_id": "<optional project id>", "by_project": false, "expand": true }
+{ "kind": "both", "format": "xlsx", "columns": "project", "from": "2026-01-01", "to": "2026-10-31", "project_ids": [], "expand": true }
 ```
 
 The reports as a file to download or share (any member, FLOW-162). It is the same file the reports screen's share button sends.
 
 - **Arguments:**
   - `kind`: `pnl` (the default), `balance` or `both`.
-  - `format`: `pdf` (the default) or `csv`.
-  - The P&L takes `get_pnl_statement`'s `from`, `to`, `basis`, and `project_id` or `by_project`, under the same rules. `expand` (default `true`) lists each category's sub-categories under it.
-  - The balance sheet takes `as_of` (default today in Israel; with `kind: "both"`, the P&L's `to`) and the same `project_id`.
-- **Output:** `data` is `{ "file_name", "mime_type", "size_bytes" }`. The file itself is the second item in the result's `content`: an embedded resource `{ "type": "resource", "resource": { "uri": "flow://reports/<file name>", "mimeType", "blob" } }`, base64.
+  - `format`: `pdf` (the default), `xlsx` (FLOW-992), `csv` (kept for one release) or `json` (the table in the answer, no file).
+  - `columns` (FLOW-991): `total` (the default), `project`, `month`, `quarter` or `year`. Columns are projects or periods, never both; the other is a filter.
+  - `project_ids`: up to 50 project ids; empty or left out is every project. Several projects are added up. `project_id` is the older `project_ids: [id]`, and `by_project: true` the older `columns: "project"`; `project_id` with `project_ids`, or `by_project` with another `columns`, is `validation`.
+  - The P&L takes `get_pnl_statement`'s `from`, `to` and `basis`, under the same rules. Period columns need both `from` and `to`, and at most 36 periods. `expand` (default `true`) lists each category's sub-categories under it.
+  - The balance sheet takes `as_of` (default today in Israel; with `kind: "both"`, the P&L's `to`). With period columns it is read at each period's end instead.
+- **Columns:**
+  - `project`, P&L: a row per category and sub-category, a column per project. With no `project_ids`, a `כללי` column holds overhead and lines with no project, so the total equals the company P&L. With `project_ids`, only those projects and their total.
+  - `project`, balance sheet: each project's column is the balance sheet read with that project. `כללי` is the company less the projects. A `נכסים נטו` row per column; equity is the company's and shows in the total column only, when no `project_ids` are given.
+  - `month`, `quarter`, `year`: the P&L per period (the first and last clipped to the range), its total the sum of the columns; the balance sheet at each period's end, with no total column (the last column is `to`).
+  - One read per column; more than 120 reads for one file is `validation`.
+- **Output:** `data` is `{ "file_name", "mime_type", "size_bytes" }`. The file itself is the second item in the result's `content`: an embedded resource `{ "type": "resource", "resource": { "uri": "flow://reports/<file name>", "mimeType", "blob" } }`, base64. With `format: "json"`, `data` is `{ company, created_at, reports[] }`, each report `{ report, columns, period, projects, basis, grids[] }`, a grid per currency: `currency`, `columns[]`, `has_total`, `rows[]` (`kind`: parent, child, row, sub, mid or net; `label`; `amounts_minor[]`, null where a column has no figure; `total_minor`) and `notes[]`.
 - **PDF:**
-  - A4, Hebrew right to left, Rubik embedded.
+  - A4, Hebrew right to left, Rubik embedded. Portrait; landscape when a table has more than 4 amount columns.
   - The company, the report's dates, projects and basis, and page n of N on every page. Table heads repeat on each page.
-  - Each report starts on its own page. By project, the table has up to four project columns per block.
+  - Each report starts on its own page. A table shows up to 13 amount columns side by side; more go in another block below, the total in the last.
+- **xlsx:** a sheet per report and a `פרטים` sheet (company, made at, period, projects, basis, notes). Right to left, the head row and the names column frozen. Amounts are numbers with cents in the currency's format; every total is a `SUM` or `+`/`-` formula; sub-categories sit in an outline group under their category.
 - **CSV:** UTF-8 with a byte-order mark (so Excel reads the Hebrew), one row per line of the report, and amounts as decimals with a minus on money out. A cell that would start a formula is defused with `'`.
 
 **Rule:** the numbers are `get_pnl_statement`'s and `get_balance_sheet`'s for the same arguments. Another company's project is `not_found`; a bad argument is `validation`, before any read.

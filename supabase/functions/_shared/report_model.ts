@@ -2,6 +2,7 @@
 // as PostgREST returns them, and the words both files use. The PDF (report_pdf.ts) and the CSV
 // (report_csv.ts) take the same parts, so the two never disagree.
 import { formatAmountText } from "../../../packages/shared/src/money.ts";
+import type { GridBy, ReportGrid } from "./report_grid.ts";
 
 export type StatementChild = { id: string | null; name: string | null; amount_minor: bigint; count: number };
 export type StatementNode = StatementChild & { own_minor: bigint; children: StatementChild[] };
@@ -24,7 +25,7 @@ export type Statement = {
   projects: { key: string; project_id: string | null; name: string | null; currencies: StatementCurrency[] }[];
   review_count: number;
 };
-export type BalanceAccount = { name: string; is_system: boolean; balance_minor: bigint };
+export type BalanceAccount = { account_id?: string | null; name: string; is_system: boolean; balance_minor: bigint };
 export type BalanceCurrency = {
   currency: string;
   assets: { total_minor: bigint; accounts: BalanceAccount[] };
@@ -37,9 +38,14 @@ export type BalanceCurrency = {
 };
 export type BalanceSheet = { as_of: string; project_name: string | null; currencies: BalanceCurrency[] };
 
-export type PnlPart = { kind: "pnl"; statement: Statement; byProject: boolean; expand: boolean };
+export type PnlPart = { kind: "pnl"; statement: Statement; expand: boolean };
 export type BalancePart = { kind: "balance"; sheet: BalanceSheet };
-export type ReportPart = PnlPart | BalancePart;
+/**
+ * FLOW-991: a report with a column per project or per period, one grid per currency. `when` is the period or
+ * the date as text, `scope` the projects as text, and `fileWhen` the dates for the file's name.
+ */
+export type GridPart = { kind: "grid"; report: "pnl" | "balance"; by: GridBy; when: string; fileWhen: string; scope: string; basis: string | null; grids: ReportGrid[] };
+export type ReportPart = PnlPart | BalancePart | GridPart;
 /** One file: the company, when it was made (Israel time, as text), and its reports in order. */
 export type ReportFile = { company: string; createdAt: string; parts: ReportPart[] };
 
@@ -110,7 +116,7 @@ export function parseBalanceSheet(body: unknown): BalanceSheet {
     const row = isObject(value) ? value : {};
     return {
       total_minor: minor(row.total_minor ?? 0),
-      accounts: list(row.accounts).map((account) => ({ name: text(account.name) ?? "", is_system: account.is_system === true, balance_minor: minor(account.balance_minor) })),
+      accounts: list(row.accounts).map((account) => ({ account_id: text(account.account_id), name: text(account.name) ?? "", is_system: account.is_system === true, balance_minor: minor(account.balance_minor) })),
     };
   };
   return {
@@ -190,15 +196,18 @@ export function marginPercent(row: Pick<StatementCurrency, "income_minor" | "net
 }
 
 /** The file's name: the report, the period or date, and the projects, as words the phone shows. */
-export function reportFileName(file: ReportFile, extension: "pdf" | "csv"): string {
+export function reportFileName(file: ReportFile, extension: "pdf" | "csv" | "xlsx"): string {
   const first = file.parts[0];
-  const kind = file.parts.length > 1 ? "דוחות" : first?.kind === "balance" ? "מאזן" : "רווח-והפסד";
+  const isBalance = first?.kind === "balance" || (first?.kind === "grid" && first.report === "balance");
+  const kind = file.parts.length > 1 ? "דוחות" : isBalance ? "מאזן" : "רווח-והפסד";
   let when = "";
   let scope = "כל-הפרויקטים";
   if (first?.kind === "pnl") {
     when = first.statement.from == null ? "מההתחלה" : `${first.statement.from}_${first.statement.to ?? ""}`;
     if (first.statement.project_name != null) scope = first.statement.project_name;
-    else if (first.byProject) scope = "לפי-פרויקט";
+  } else if (first?.kind === "grid") {
+    when = first.fileWhen;
+    scope = first.by === "project" ? `לפי-פרויקט${first.scope === "כל הפרויקטים" ? "" : `_${first.scope}`}` : first.scope;
   } else if (first?.kind === "balance") {
     when = first.sheet.as_of;
     if (first.sheet.project_name != null) scope = first.sheet.project_name;
