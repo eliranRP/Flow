@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
 import { BankIcon } from "./icons";
 import { KeptOutTag, lineTagText } from "./line-marks";
 import { List, ListRow, type ListLayout } from "./list-row";
@@ -276,6 +276,52 @@ export const LongProjectHint: Story = {
     ]);
     // A Latin part runs left to right, so its start stays in view.
     await expect(within(canvasElement).getByText("Riverside Commons Phase Two Townhomes")).toHaveAttribute("dir", "auto");
+  },
+};
+
+/**
+ * FLOW-172: a cut part ends at its last letter that fits, then "…": never "Quick …" with a space before it,
+ * nor a comma. The whole text stays in the DOM for screen readers; the cut is drawn over it (`data-cut`).
+ */
+export const CutAtALetter: Story = {
+  args: { variant: "transaction", title: "ספק לדוגמה", layout: "flat" },
+  globals: { viewport: { value: "flow320", isRotated: false } },
+  render: () => (
+    <List layout="flat">
+      <ListRow layout="flat" variant="transaction" title="Water heater replacement" hint="18/10 · Quick Fix Plumbing · Cedar St" agorot={125_000n} sign="out" source="bank" initials="QF" href="/transactions/1" />
+      <ListRow layout="flat" variant="transaction" title="אור חשמל" hint="03/10 · חשמל ותאורה, קומה ב" agorot={86_000n} sign="out" source="invoice" initials="אח" href="/transactions/2" />
+      <ListRow layout="flat" variant="transaction" title="אור חשמל" hint="03/10 · חשמל ותאורה קומה ב" agorot={86_000n} sign="out" source="invoice" initials="אח" href="/transactions/3" />
+      <ListRow layout="flat" variant="transaction" title="ספק לדוגמה" hint="18/10 · Quick Fix Mainline" agorot={125_000n} sign="out" source="bank" initials="QF" href="/transactions/4" />
+      <ListRow layout="flat" variant="transaction" title="Example Hardware" hint="18/10 · A B C D E F G H I J K L M N O P" agorot={40_000n} sign="out" source="bank" initials="EH" href="/transactions/5" />
+      <ListRow layout="flat" variant="transaction" title="Example Hardware" hint="18/10 · AB C D E F G H I J K L M N O P" agorot={40_000n} sign="out" source="bank" initials="EH" href="/transactions/6" />
+      <ListRow layout="flat" variant="transaction" title="ספק לדוגמה" hint="03/10 · א ב ג ד ה ו ז ח ט י כ ל מ נ ס ע" agorot={86_000n} sign="out" source="invoice" initials="סל" href="/transactions/7" />
+      <ListRow layout="flat" variant="transaction" title="ספק לדוגמה" hint="03/10 · אב ג ד ה ו ז ח ט י כ ל מ נ ס ע" agorot={86_000n} sign="out" source="invoice" initials="סל" href="/transactions/8" />
+    </List>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
+    // The measuring loads once; the shared observer reports after layout, and a font that arrives measures again.
+    await canvasElement.ownerDocument.fonts.ready;
+    await waitFor(() => expect(canvasElement.querySelectorAll(".ui-hint-text[data-cut]").length).toBeGreaterThanOrEqual(6));
+    for (let frame = 0; frame < 2; frame += 1) await new Promise((done) => requestAnimationFrame(done));
+    let atBoundary = 0;
+    for (const row of canvasElement.querySelectorAll(".ui-row")) {
+      const texts = [...row.querySelectorAll<HTMLElement>(".ui-hint-text")];
+      const top = texts[0]?.getBoundingClientRect().top ?? 0;
+      for (const text of texts.filter((item) => Math.abs(item.getBoundingClientRect().top - top) < 1)) {
+        if (text.scrollWidth <= text.clientWidth + 1) continue;
+        // What is drawn: the overlay's text (the whole text below it is unpainted, its own "…" too).
+        await expect(getComputedStyle(text).webkitTextFillColor).toBe("rgba(0, 0, 0, 0)");
+        const drawn = /^"(.*?)"/u.exec(getComputedStyle(text, "::after").content)?.[1] ?? "";
+        await expect(drawn).toMatch(/[^\s,;:\-–]…$/u);
+        const kept = drawn.slice(0, -1);
+        const whole = text.textContent;
+        await expect(whole.startsWith(kept)).toBe(true);
+        // Its "…" sits where a space or a comma follows in the text: there CSS's own "…" kept it.
+        if (/^[\s,]/u.test(whole.slice(kept.length))) atBoundary += 1;
+      }
+    }
+    await expect(atBoundary).toBeGreaterThanOrEqual(2);
   },
 };
 

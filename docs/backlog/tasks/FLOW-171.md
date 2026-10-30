@@ -1,6 +1,6 @@
 <a id="flow-171"></a>
 # FLOW-171 · Reports: an account's movements from the start, any year, and a long Latin title that wraps
-- **Type:** MCP + UI · **Status:** claimed (dev lane 1, 2026-10-29, flow-171-account-history) · **Depends on:** [FLOW-165](FLOW-165.md) · **Source:** the owner's report on 2026-10-29, with phone screenshots ("keep building without waiting").
+- **Type:** MCP + UI · **Status:** done (#869) · **Depends on:** [FLOW-165](FLOW-165.md) · **Source:** the owner's report on 2026-10-29, with phone screenshots ("keep building without waiting").
 
 On the balance sheet, an equity account (a partner's contributions and distributions) opened the FLOW-165 account page with the balance today, the balance on 1 January, the year's change and only this year's movements. The earlier years' money is inside the opening balance, but their movements can't be seen.
 
