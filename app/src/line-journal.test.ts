@@ -50,6 +50,9 @@ describe("the line's journal (FLOW-954)", () => {
     expect(legName({ account_name: "Escrow", is_bank: false, system: true, category_name: "פיקדון" }, null)).toBe("פיקדון מסים וביטוח · פיקדון");
     expect(legName({ account_name: "Property", is_bank: false, system: true, category_name: "  " }, null)).toBe("נכסים");
     expect(legName(interest, null)).toBe("ריבית");
+    // FLOW-177: the last two system accounts have Hebrew names too.
+    expect(legName({ account_name: "Accumulated depreciation", is_bank: false, system: true, category_name: null }, null)).toBe("פחת שנצבר");
+    expect(legName({ account_name: "Bank/Clearing", is_bank: false, system: true, category_name: null }, null)).toBe("בנק");
     expect([interest, escrow, bank].map(legTypeLabel)).toEqual(["הוצאה", "נכס", "בנק"]);
     expect(legTypeLabel({ account_type: "liability", is_bank: false })).toBe("התחייבות");
     expect(legTypeLabel({ account_type: "income", is_bank: false })).toBe("הכנסה");

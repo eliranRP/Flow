@@ -12,4 +12,6 @@ export const SYSTEM_NAMES: Record<string, string> = {
   "VAT control": "מע״מ",
   "Uncategorized income": "הכנסה בלי קטגוריה",
   "Uncategorized expense": "הוצאה בלי קטגוריה",
+  "Bank/Clearing": "בנק",
+  "Accumulated depreciation": "פחת שנצבר",
 };

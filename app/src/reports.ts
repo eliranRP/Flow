@@ -294,15 +294,10 @@ export type BalanceCurrency = {
 };
 export type BalanceSheet = { as_of: string; project_id: string | null; project_name: string | null; currencies: BalanceCurrency[] };
 
-const MORE_SYSTEM_NAMES: Record<string, string> = {
-  "Bank/Clearing": "בנק",
-  "Accumulated depreciation": "פחת שנצבר",
-};
-
 /** An account's name in Hebrew: the ledger's system accounts are stored in English. */
 export function accountName(account: Pick<BalanceAccount, "name" | "is_system">): string {
   if (!account.is_system) return account.name;
-  return SYSTEM_NAMES[account.name] ?? MORE_SYSTEM_NAMES[account.name] ?? account.name;
+  return SYSTEM_NAMES[account.name] ?? account.name;
 }
 
 /** Equity as the page leads with it: owner equity plus the running profit. */
