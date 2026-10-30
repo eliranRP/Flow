@@ -74,7 +74,7 @@ describe("ReportShareSheet", () => {
     fireEvent.click(within(excel).getByRole("button", { name: "שיתוף Excel" }));
     expect(await screen.findByText("הקובץ לא נוצר. נסו שוב.")).toBeInTheDocument();
     // From the P&L, the balance sheet ends on the period's last day: the server's default, so no as_of.
-    expect(invoke.calls[0]?.body).toEqual({ kind: "both", format: "csv", from: "2026-01-01", to: REPORTS_TODAY, expand: true });
+    expect(invoke.calls[0]?.body).toEqual({ kind: "both", format: "xlsx", from: "2026-01-01", to: REPORTS_TODAY, expand: true });
     expect(screen.getByRole("dialog", { name: "שיתוף Excel" })).toBeInTheDocument();
   });
 
@@ -115,9 +115,57 @@ describe("ReportShareSheet", () => {
     stubShare(undefined, undefined);
   });
 
-  it("does not offer sub-categories by project, where the file has a column per project", () => {
+  it("by project on screen: a column per project; sub-categories still offered (FLOW-993)", async () => {
     renderReports("/reports?scope=by_project");
     fireEvent.click(screen.getByRole("button", { name: "שיתוף הדוח" }));
-    expect(within(screen.getByRole("dialog", { name: "שיתוף PDF" })).getByRole("switch", { name: "לפרט קטעים מכווצים" })).toBeDisabled();
+    const sheet = screen.getByRole("dialog", { name: "שיתוף PDF" });
+    expect(within(sheet).getByRole("radio", { name: "פרויקט" })).toBeChecked();
+    expect(within(sheet).getByRole("switch", { name: "לפרט קטעים מכווצים" })).toBeEnabled();
+    fireEvent.click(within(sheet).getByRole("button", { name: "שיתוף PDF" }));
+    await waitFor(() => { expect(invoke.calls).toHaveLength(1); });
+    expect(invoke.calls[0]?.body).toMatchObject({ kind: "pnl", columns: "project" });
+  });
+
+  it("picks some projects: none picked holds the file back, one picked sends its id", async () => {
+    renderReports();
+    fireEvent.click(screen.getByRole("button", { name: "שיתוף הדוח" }));
+    const sheet = screen.getByRole("dialog", { name: "שיתוף PDF" });
+    fireEvent.click(within(sheet).getByRole("switch", { name: "כל הפרויקטים" }));
+    expect(within(sheet).getByRole("button", { name: "שיתוף PDF" })).toBeDisabled();
+    expect(within(sheet).getByText("בחרו לפחות פרויקט אחד.")).toBeInTheDocument();
+    const group = within(sheet).getByRole("group", { name: "פרויקטים" });
+    const [first] = within(group).getAllByRole("switch");
+    if (first == null) throw new Error("no project switch");
+    fireEvent.click(first);
+    fireEvent.click(within(sheet).getByRole("button", { name: "שיתוף PDF" }));
+    await waitFor(() => { expect(invoke.calls).toHaveLength(1); });
+    expect((invoke.calls[0]?.body as { project_ids?: string[] }).project_ids).toHaveLength(1);
+  });
+
+  it("by month over all time needs a range, and a wide PDF suggests quarters or Excel", () => {
+    renderReports("/reports?period=all");
+    fireEvent.click(screen.getByRole("button", { name: "שיתוף הדוח" }));
+    const sheet = screen.getByRole("dialog", { name: "שיתוף PDF" });
+    fireEvent.click(within(sheet).getByRole("radio", { name: "חודש" }));
+    expect(within(sheet).getByRole("button", { name: "שיתוף PDF" })).toBeDisabled();
+    expect(within(sheet).getByText("עמודות לפי תקופה צריכות טווח תאריכים: בחרו תקופה במסך.")).toBeInTheDocument();
+  });
+
+  it("a range of 18 months by month in a PDF is 19 columns with the total, and warns", () => {
+    renderReports("/reports?period=custom&from=2025-01-01&to=2026-06-30");
+    fireEvent.click(screen.getByRole("button", { name: "שיתוף הדוח" }));
+    const sheet = screen.getByRole("dialog", { name: "שיתוף PDF" });
+    fireEvent.click(within(sheet).getByRole("radio", { name: "חודש" }));
+    expect(within(sheet).getByText(/19 עמודות לא נכנסות ברוחב הדף/)).toBeInTheDocument();
+    expect(within(sheet).getByRole("button", { name: "שיתוף PDF" })).toBeEnabled();
+  });
+
+  it("by month over more than 36 columns is held back, and the sheet says the most", () => {
+    renderReports("/reports?period=custom&from=2024-01-01&to=2027-01-31");
+    fireEvent.click(screen.getByRole("button", { name: "שיתוף הדוח" }));
+    const sheet = screen.getByRole("dialog", { name: "שיתוף PDF" });
+    fireEvent.click(within(sheet).getByRole("radio", { name: "חודש" }));
+    expect(within(sheet).getByText("עד 36 עמודות: בחרו תקופה קצרה יותר או עמודות ארוכות יותר.")).toBeInTheDocument();
+    expect(within(sheet).getByRole("button", { name: "שיתוף PDF" })).toBeDisabled();
   });
 });

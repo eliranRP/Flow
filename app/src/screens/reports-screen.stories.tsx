@@ -126,7 +126,10 @@ export const PeriodPickBrowserHistory: Story = {
   },
 };
 
-/** FLOW-162: the share sheet: PDF or Excel, which reports, and whether collapsed sections print in full. */
+/**
+ * FLOW-162: the share sheet: PDF or Excel, which reports, and whether collapsed sections print in full.
+ * FLOW-993: the columns (סה״כ, פרויקט, חודש, רבעון, שנה) and the projects.
+ */
 export const ShareSheet: Story = {
   name: "Sheet · share",
   render: () => <Reports />,
@@ -136,6 +139,27 @@ export const ShareSheet: Story = {
     const sheet = await within(document.body).findByRole("dialog", { name: "שיתוף PDF" });
     await expect(within(sheet).getByRole("switch", { name: "רווח והפסד" })).toBeChecked();
     await expect(within(sheet).getByRole("button", { name: "שיתוף PDF" })).toBeEnabled();
+    await expect(within(sheet).getByRole("radio", { name: "סה״כ" })).toBeChecked();
+  },
+};
+
+/** FLOW-993: some projects picked, by quarter, at 320: the five columns and the project switches fit the width. */
+export const ShareSheetProjects320: Story = {
+  name: "Sheet · share · projects by quarter at 320",
+  globals: { viewport: { value: "flow320", isRotated: false } },
+  render: () => <Reports />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "שיתוף הדוח" }));
+    const sheet = await storyBody(canvasElement).findByRole("dialog", { name: "שיתוף PDF" });
+    await userEvent.click(within(sheet).getByRole("radio", { name: "רבעון" }));
+    await userEvent.click(within(sheet).getByRole("switch", { name: "כל הפרויקטים" }));
+    const group = within(sheet).getByRole("group", { name: "פרויקטים" });
+    const [first] = within(group).getAllByRole("switch");
+    if (first != null) await userEvent.click(first);
+    await expect(within(sheet).getByRole("button", { name: "שיתוף PDF" })).toBeEnabled();
+    for (const segment of sheet.querySelectorAll<HTMLElement>(".ui-seg-label")) {
+      await expect(segment.scrollWidth).toBeLessThanOrEqual(segment.clientWidth);
+    }
   },
 };
 

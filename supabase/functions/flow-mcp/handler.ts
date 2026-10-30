@@ -8,7 +8,7 @@ import { companyHint } from "../_shared/owner.ts";
 import { SERVER_INSTRUCTIONS } from "./tools_guide_data.ts";
 import { callTool, isWriteTool, READ_TOOL_NAMES, scopeAllows, type ToolDefer, toolsFor } from "./tools.ts";
 import { reportLimit } from "./report_limit.ts";
-import { buildReport, isBuilt, reportRequest } from "./tools_export.ts";
+import { buildReport, isBuilt, reportRequest, XLSX } from "./tools_export.ts";
 import { signUserJwt, type SigningKey } from "./sign.ts";
 import { chargePreAuth, preAuthOverLimit, resetPreAuthGate } from "./preauth.ts";
 
@@ -340,7 +340,9 @@ async function handleReport(req: Request, deps: Deps): Promise<Response> {
   const built = await buildReport(request, (name, body) => userRpc(deps, jwt, name, body, hint), new Date(nowMs(deps)));
   if (!isBuilt(built)) return refused(built);
   const headers = new Headers();
-  headers.set("content-type", built.mimeType);
+  // FLOW-993: supabase-js reads a body as a Blob only for octet-stream and PDF (anything else as text, which
+  // breaks a binary file), so the workbook travels as octet-stream; its name says what it is.
+  headers.set("content-type", built.mimeType === XLSX ? "application/octet-stream" : built.mimeType);
   headers.set("content-disposition", `attachment; filename="report.${request.format}"; filename*=UTF-8''${rfc5987(built.name)}`);
   headers.set("access-control-expose-headers", "content-disposition");
   headers.set("cache-control", "no-store");

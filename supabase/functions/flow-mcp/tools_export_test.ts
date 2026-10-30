@@ -139,6 +139,14 @@ Deno.test("the app's report route reads as the signed-in user, on the company th
   assertEquals((statement?.body as Record<string, unknown>).p_by_project, true);
 });
 
+Deno.test("the report route sends a workbook as octet-stream, so the app reads it as a Blob, named .xlsx", async () => {
+  const response = await handle(appRequest({ kind: "pnl", format: "xlsx" }), appDeps([]));
+  assertEquals(response.status, 200);
+  assertEquals(response.headers.get("content-type"), "application/octet-stream");
+  assertStringIncludes(response.headers.get("content-disposition") ?? "", ".xlsx");
+  assertEquals([...new Uint8Array(await response.arrayBuffer()).slice(0, 2)], [0x50, 0x4B]);
+});
+
 Deno.test("the report route refuses a foreign origin, no session and bad arguments", async () => {
   const seen: Seen[] = [];
   assertEquals((await handle(appRequest({}, { origin: "https://evil.example" }), appDeps(seen))).status, 403);
