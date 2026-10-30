@@ -251,7 +251,7 @@ from unnest(array[
   'book_line', 'note_add', 'note_edit', 'note_remove', 'file_remove', 'loan_part_category',
   'loan_category_from', 'journal_entry', 'category_account', 'account_create', 'account_update',
   'account_archive', 'account_restore', 'account_merge', 'prepaid_create', 'prepaid_refund', 'prepaid_update',
-  'prepaid_end', 'prepaid_delete', 'books_closed'
+  'prepaid_end', 'prepaid_delete', 'books_closed', 'journal_entry_update'
 ]) k;
 update muc_sweep set p_id = write_id where p_id is null;
 
@@ -290,7 +290,7 @@ select is(
 );
 select is(
   (select count(*)::int from muc_sweep),
-  72,
+  73,
   'the sweep covers every undo kind but the two forecast ones'
 );
 
@@ -298,7 +298,7 @@ select is(
 select is(
   (select count(*)::int from private.mcp_writes w join muc_sweep s on s.write_id = w.id
    where w.company_id = pg_temp.id('b')),
-  72,
+  73,
   'the swept writes keep the company they were stored with'
 );
 select is(

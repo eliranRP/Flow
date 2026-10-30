@@ -124,6 +124,83 @@ Deno.test("create_journal_entry forwards a balanced entry with no bank leg and i
   assertEquals(Object.keys(spec?.inputSchema.properties ?? {}), ["idempotency_key", "doc_date", "currency", "description", "reference", "legs"]);
 });
 
+// FLOW-174 (decision 0234): update_journal_entry and get_journal_entry_history.
+Deno.test("update_journal_entry forwards the fields sent, tells a cleared reference from one left out, and undoes", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: TXN, version: "2", undo_kind: "journal_entry_update" } } }));
+  const update = {
+    idempotency_key: "jeu-1", journal_entry_id: TXN, expected_version: "1", reason: "Example: plug moved",
+    legs: [
+      { account_id: DEPRECIATION, amount_minor: 560900, project_id: PROJECT },
+      { account_id: ACCUMULATED, amount_minor: -560900, project_id: null },
+    ],
+  };
+  assertEquals((await callTool("update_journal_entry", update, ["write"], rpc)).isError, false);
+  assertEquals(calls.at(-1), {
+    name: "mcp_update_journal_entry",
+    body: {
+      p_idempotency_key: "jeu-1", p_journal_entry_id: TXN, p_expected_version: "1", p_reason: "Example: plug moved",
+      p_doc_date: null, p_description: null, p_set_reference: false, p_reference: null,
+      p_legs: [{ account_id: DEPRECIATION, amount_minor: 560900, project_id: PROJECT }, { account_id: ACCUMULATED, amount_minor: -560900 }],
+    },
+  });
+  // Only the header: no legs; a null reference clears it.
+  await callTool("update_journal_entry", {
+    idempotency_key: "jeu-2", journal_entry_id: TXN, expected_version: "2", reason: "Example: words",
+    doc_date: "2025-12-30", description: "Example corrected", reference: null,
+  }, ["write"], rpc);
+  assertEquals(calls.at(-1)?.body, {
+    p_idempotency_key: "jeu-2", p_journal_entry_id: TXN, p_expected_version: "2", p_reason: "Example: words",
+    p_doc_date: "2025-12-30", p_description: "Example corrected", p_set_reference: true, p_reference: null, p_legs: null,
+  });
+  await callTool("undo", { idempotency_key: "jeu-3", kind: "journal_entry_update", id: TXN }, ["write"], rpc);
+  assertEquals(calls.at(-1), { name: "mcp_undo", body: { p_idempotency_key: "jeu-3", p_kind: "journal_entry_update", p_id: TXN } });
+
+  const before = calls.length;
+  for (const [bad, detail] of [
+    [{ reason: undefined }, "reason"],
+    [{ reason: "" }, "reason"],
+    [{ reason: "x".repeat(201) }, "reason"],
+    [{ expected_version: undefined }, "expected_version"],
+    [{ expected_version: 1 }, "expected_version"],
+    [{ expected_version: "0" }, "expected_version"],
+    [{ journal_entry_id: "not-a-uuid" }, "journal_entry_id"],
+    [{ legs: [{ account_id: DEPRECIATION, amount_minor: 100 }, { account_id: ACCUMULATED, amount_minor: -90 }] }, "legs must balance to 0"],
+    [{ legs: [{ account_id: DEPRECIATION, amount_minor: 0 }] }, "legs"],
+    [{ doc_date: "2025-02-30" }, "doc_date"],
+    [{ description: "" }, "description"],
+    [{ reference: "x".repeat(61) }, "reference"],
+    [{ currency: "USD" }, "currency"],
+  ] as Array<[Record<string, unknown>, string]>) {
+    const refused = await callTool("update_journal_entry", { ...update, idempotency_key: "jeu-bad", ...bad }, ["write"], rpc);
+    assertEquals(codeOf(refused), "validation", JSON.stringify(bad));
+    assertEquals(JSON.stringify(refused.structuredContent).includes(detail), true, `${detail} in ${JSON.stringify(refused.structuredContent)}`);
+  }
+  assertEquals(calls.length, before);
+  assertEquals(codeOf(await callTool("update_journal_entry", update, ["read"], rpc)), "forbidden");
+
+  for (const message of ["entry changed", "not a journal entry", "the books are closed through 2025-12-31", "the entry belongs to a prepaid schedule", "transaction not found"]) {
+    const db = rpcOf(() => ({ status: 200, json: { ok: false, error: { code: "refused", message } } }));
+    const refused = await callTool("update_journal_entry", update, ["write"], db.rpc);
+    assertEquals(refused.structuredContent, { ok: false, error: { code: "refused", message } });
+  }
+  const spec = toolsFor(["write"]).find((tool) => tool.name === "update_journal_entry");
+  assertEquals(Object.keys(spec?.inputSchema.properties ?? {}), ["idempotency_key", "journal_entry_id", "expected_version", "doc_date", "description", "reference", "legs", "reason"]);
+});
+
+Deno.test("get_journal_entry_history reads the versions; another line is refused and an unknown id not found", async () => {
+  const history = { journal_entry_id: TXN, version: "2", versions: [{ version: "2", current: true }, { version: "1", current: false }] };
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ...history, is_journal_entry: true } }));
+  const read = await callTool("get_journal_entry_history", { journal_entry_id: TXN }, ["read"], rpc);
+  assertEquals(read.structuredContent, { ok: true, data: history });
+  assertEquals(calls.at(-1), { name: "mcp_journal_entry_history", body: { p_journal_entry_id: TXN } });
+  assertEquals(codeOf(await callTool("get_journal_entry_history", { journal_entry_id: "x" }, ["read"], rpc)), "validation");
+  const line = rpcOf(() => ({ status: 200, json: { journal_entry_id: TXN, is_journal_entry: false } }));
+  assertEquals((await callTool("get_journal_entry_history", { journal_entry_id: TXN }, ["read"], line.rpc)).structuredContent,
+    { ok: false, error: { code: "refused", message: "not a journal entry" } });
+  const none = rpcOf(() => ({ status: 200, json: null }));
+  assertEquals(codeOf(await callTool("get_journal_entry_history", { journal_entry_id: TXN }, ["read"], none.rpc)), "not_found");
+});
+
 Deno.test("set_category_account forwards a binding, null for the default, and undoes by the category", async () => {
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { category_id: CATEGORY, undo_kind: "category_account" } } }));
   const binding = { idempotency_key: "bind-1", category_id: CATEGORY, account_id: ACCUMULATED };

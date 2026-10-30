@@ -4,17 +4,19 @@
 // sums the balance-sheet legs per project (mcp_account_balances). get_pnl_statement (FLOW-160) reads the P&L as a
 // statement for the reports screen (get_pnl_statement); export_report (FLOW-162, tools_export.ts) makes the
 // reports a PDF or CSV file. get_account_lines (FLOW-165) opens one balance-sheet account's movements
-// (get_account_lines). Any member reads them.
+// (get_account_lines). get_journal_entry_history (FLOW-174) reads a journal entry's versions
+// (mcp_journal_entry_history). Any member reads them.
 import { EXPORT_ALLOWED, exportReport, pnlProblem } from "./tools_export.ts";
 import { PREPAID_ALLOWED, PREPAID_READS, prepaidRead } from "./tools_prepaid.ts";
 import { DATE, fail, isCalendarDate, limitOf, offsetOf, ok, READ_REFUSED, type ToolResult, type ToolRpc, UUID } from "./tools_args.ts";
 
-export const LEDGER_READS = ["list_accounts", "get_line_legs", "get_account_balances", "get_balance_sheet", "get_account_lines", "get_pnl_statement", "export_report", ...PREPAID_READS] as const;
+export const LEDGER_READS = ["list_accounts", "get_line_legs", "get_journal_entry_history", "get_account_balances", "get_balance_sheet", "get_account_lines", "get_pnl_statement", "export_report", ...PREPAID_READS] as const;
 
 /** The reads' and the account writes' argument allow-list, merged into ALLOWED in tools_schemas.ts. */
 export const LEDGER_ALLOWED: Record<string, Set<string>> = {
   list_accounts: new Set(["include_archived"]),
   get_line_legs: new Set(["transaction_id"]),
+  get_journal_entry_history: new Set(["journal_entry_id"]),
   get_account_balances: new Set(["as_of"]),
   get_balance_sheet: new Set(["as_of", "project_id"]),
   get_account_lines: new Set(["account_id", "as_of", "from", "from_start", "project_id", "currency", "limit", "offset"]),
@@ -76,6 +78,7 @@ export async function ledgerRead(
   if (name === "get_account_lines") return accountLines(args, rpc);
   if (name === "get_pnl_statement") return pnlStatement(args, rpc);
   if (name === "export_report") return exportReport(args, rpc);
+  if (name === "get_journal_entry_history") return journalEntryHistory(args, rpc);
   const id = args.transaction_id;
   if (typeof id !== "string" || !UUID.test(id)) return fail("validation", "validation");
   const result = await rpc("mcp_line_legs", { p_transaction_id: id });
@@ -84,6 +87,21 @@ export async function ledgerRead(
   if (result.json == null) return fail("not_found", "not found");
   if (!isObject(result.json) || !Array.isArray(result.json.legs)) return fail("refused", READ_REFUSED);
   return ok(result.json);
+}
+
+// FLOW-174: a journal entry's versions, the current one first.
+async function journalEntryHistory(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
+  const id = args.journal_entry_id;
+  if (typeof id !== "string" || !UUID.test(id)) return fail("validation", "journal_entry_id: a journal entry id");
+  const result = await rpc("mcp_journal_entry_history", { p_journal_entry_id: id });
+  if (result.status >= 400) return fail("refused", READ_REFUSED);
+  // Null for an unknown or removed line and for another company's.
+  if (result.json == null) return fail("not_found", "not found");
+  if (!isObject(result.json)) return fail("refused", READ_REFUSED);
+  if (result.json.is_journal_entry !== true) return fail("refused", "not a journal entry");
+  if (!Array.isArray(result.json.versions)) return fail("refused", READ_REFUSED);
+  const { is_journal_entry: _, ...history } = result.json;
+  return ok(history);
 }
 
 // FLOW-160: the P&L statement. Both dates or neither; one project or by_project, not both.

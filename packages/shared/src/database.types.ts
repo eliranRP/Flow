@@ -559,13 +559,13 @@ isOneToOne: false
                   ]
                 },"journal_entries": {
                   Row: {
-                    "company_id": string,"created_at": string,"created_by": string | null,"reference": string | null,"transaction_id": string
+                    "company_id": string,"created_at": string,"created_by": string | null,"reason": string | null,"reference": string | null,"transaction_id": string,"updated_at": string | null,"updated_by": string | null,"version": number
                   }
                   Insert: {
-                    "company_id": string,"created_at"?: string,"created_by"?: string | null,"reference"?: string | null,"transaction_id": string
+                    "company_id": string,"created_at"?: string,"created_by"?: string | null,"reason"?: string | null,"reference"?: string | null,"transaction_id": string,"updated_at"?: string | null,"updated_by"?: string | null,"version"?: number
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"created_by"?: string | null,"reference"?: string | null,"transaction_id"?: string
+                    "company_id"?: string,"created_at"?: string,"created_by"?: string | null,"reason"?: string | null,"reference"?: string | null,"transaction_id"?: string,"updated_at"?: string | null,"updated_by"?: string | null,"version"?: number
                   }
                   Relationships: [
                     {
@@ -580,6 +580,31 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "transactions"
       referencedColumns: ["company_id","id"]
+    }
+                  ]
+                },"journal_entry_versions": {
+                  Row: {
+                    "company_id": string,"currency": string,"description": string,"doc_date": string,"id": string,"legs": NonNullable<Json>,"pnl_minor": number,"reason": string | null,"reference": string | null,"replaced_at": string,"replaced_by": string | null,"replaced_reason": string,"transaction_id": string,"version": number,"written_at": string,"written_by": string | null
+                  }
+                  Insert: {
+                    "company_id": string,"currency": string,"description": string,"doc_date": string,"id"?: string,"legs": NonNullable<Json>,"pnl_minor": number,"reason"?: string | null,"reference"?: string | null,"replaced_at"?: string,"replaced_by"?: string | null,"replaced_reason": string,"transaction_id": string,"version": number,"written_at": string,"written_by"?: string | null
+                  }
+                  Update: {
+                    "company_id"?: string,"currency"?: string,"description"?: string,"doc_date"?: string,"id"?: string,"legs"?: NonNullable<Json>,"pnl_minor"?: number,"reason"?: string | null,"reference"?: string | null,"replaced_at"?: string,"replaced_by"?: string | null,"replaced_reason"?: string,"transaction_id"?: string,"version"?: number,"written_at"?: string,"written_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "journal_entry_versions_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "journal_entry_versions_transaction_id_fkey"
+      columns: ["transaction_id"]
+isOneToOne: false
+      referencedRelation: "journal_entries"
+      referencedColumns: ["transaction_id"]
     }
                   ]
                 },"legs": {
@@ -1945,6 +1970,9 @@ isOneToOne: false
 "mcp_jev_suggestions":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"mcp_journal_entry_history":
+{ Args: { "p_journal_entry_id": string }; Returns: Json
+                           },
 "mcp_line_legs":
 { Args: { "p_transaction_id": string }; Returns: Json
                            },
@@ -2127,6 +2155,9 @@ isOneToOne: false
                            },
 "mcp_update_account":
 { Args: { "p_account_id": string,"p_description"?: string,"p_idempotency_key": string,"p_name"?: string,"p_type"?: string }; Returns: Json
+                           },
+"mcp_update_journal_entry":
+{ Args: { "p_description"?: string,"p_doc_date"?: string,"p_expected_version": string,"p_idempotency_key": string,"p_journal_entry_id": string,"p_legs"?: Json,"p_reason": string,"p_reference"?: string,"p_set_reference"?: boolean }; Returns: Json
                            },
 "mcp_update_loan":
 { Args: { "p_idempotency_key": string,"p_loan_id": string,"p_patch": Json }; Returns: Json
