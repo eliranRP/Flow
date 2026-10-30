@@ -266,9 +266,65 @@ html[data-kb="open"] .ui-sheet-body {
 
 /* FLOW-364: Home's band. Row 1 holds the company and the actions; the month pill, the figures and the forecast follow. */
 .ui-band-actions {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--band-label-gap);
+}
+
+/* FLOW-987: the one-time tip under the קבועים icon (board RecurringConceptB): an inverse bubble with a
+   ✕, its arrow under the icon, which sits one target and one gap in from the avatar's end. */
+.ui-band-tip-anchor {
+  display: inline-flex;
+}
+
+.ui-band-tip {
+  --tip-arrow: 12px;
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-2));
+  inset-inline-end: 0;
+  z-index: 3;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  inline-size: max-content;
+  max-inline-size: min(260px, calc(100vw - 2 * var(--space-side)));
+  padding-block: var(--space-2);
+  padding-inline: var(--space-3) var(--space-1);
+  border-radius: var(--radius-card);
+  background: var(--color-text);
+  color: var(--color-bg);
+  box-shadow: var(--shadow-toast);
+}
+
+.ui-band-tip::before {
+  content: "";
+  position: absolute;
+  inset-block-start: calc(var(--tip-arrow) / -2);
+  inset-inline-end: calc(var(--touch-min) + var(--band-label-gap) + var(--touch-min) / 2 - var(--tip-arrow) / 2);
+  inline-size: var(--tip-arrow);
+  block-size: var(--tip-arrow);
+  background: inherit;
+  transform: rotate(45deg);
+}
+
+.ui-band-tip-text {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-1) / 2);
+  margin: 0;
+  padding-block-start: var(--space-2);
+  font-size: var(--type-meta-size);
+  line-height: var(--type-caption-line);
+}
+
+.ui-band-tip-text > strong {
+  font-weight: var(--type-sheet-weight);
+}
+
+.ui-band-tip-close {
+  flex: none;
+  color: inherit;
 }
 
 .ui-band-action {

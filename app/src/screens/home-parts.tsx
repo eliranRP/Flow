@@ -1,6 +1,8 @@
+import { useState } from "react";
 import type { CashCurrencyRow } from "@flow/shared";
 import { formatAmountText } from "@flow/shared";
 import { addTriggerRef } from "../add-trigger";
+import { markRecurringTipSeen, recurringTipSeen } from "../recurring-tip";
 import { Link } from "react-router-dom";
 import { cashLinesPath, notInProfitHint } from "../cash";
 import { changeTone, splitParts } from "../home-month";
@@ -16,7 +18,7 @@ import { cx } from "../ui/cx";
 import { HEBREW_MONTHS } from "../ui/date-math";
 import { IconButton } from "../ui/icon-button";
 import { SEARCH_FOCUS_STATE } from "../ui/search-entry";
-import { ChevronDownIcon, ChevronIcon, OutwardChevron, PersonIcon, PlusIcon, RepeatIcon, SearchIcon } from "../ui/icons";
+import { ChevronDownIcon, ChevronIcon, CloseIcon, OutwardChevron, PersonIcon, PlusIcon, RepeatIcon, SearchIcon } from "../ui/icons";
 import { MonthStepper } from "../ui/month-stepper";
 import { PartsBar } from "../ui/parts-bar";
 import { PeriodSwipe } from "../ui/period-swipe";
@@ -48,7 +50,7 @@ export type HomeMonthNav = {
  * Row 1 of the band: + , search, קבועים and the avatar on the current month; "חזרה ל…" on a past one.
  * FLOW-986 (board concept B): קבועים left the tab bar for this icon; a dot marks late recurring bills.
  */
-export function HomeBandActions({ isPast, currentName, search, avatarInitial, lateRecurring = 0, recurringTo = "/recurring" }: {
+export function HomeBandActions({ isPast, currentName, search, avatarInitial, lateRecurring = 0, recurringTo = "/recurring", recurringTip = false }: {
   isPast: boolean;
   currentName: string;
   search: string;
@@ -57,8 +59,15 @@ export function HomeBandActions({ isPast, currentName, search, avatarInitial, la
   lateRecurring?: number;
   /** Where the icon goes (the dev fixtures' own path). */
   recurringTo?: string;
+  /** FLOW-987: may show the one-time "קבועים עברו לכאן" tip under the icon (live Home only). */
+  recurringTip?: boolean;
 }) {
   const allowAdd = useAllowAdd();
+  const [tipOpen, setTipOpen] = useState(() => recurringTip && !recurringTipSeen());
+  const closeTip = () => {
+    markRecurringTipSeen();
+    setTipOpen(false);
+  };
   if (isPast) {
     return (
       <Link to={`/${search}`} replace className="ui-band-back m-press">
@@ -87,15 +96,28 @@ export function HomeBandActions({ isPast, currentName, search, avatarInitial, la
       <IconButton label="חיפוש" onBand to={`/search${search}`} state={SEARCH_FOCUS_STATE} className="ui-band-action">
         <SearchIcon size={22} />
       </IconButton>
-      <IconButton
-        label={lateRecurring > 0 ? `קבועים, ${lateRecurring === 1 ? "אחד לא הגיע" : `${String(lateRecurring)} לא הגיעו`}` : "קבועים"}
-        onBand
-        to={`${recurringTo}${search}`}
-        className="ui-band-action"
-      >
-        <RepeatIcon size={22} />
-        {lateRecurring > 0 ? <span className="ui-band-dot" aria-hidden="true" /> : null}
-      </IconButton>
+      <span className="ui-band-tip-anchor" onClickCapture={tipOpen ? closeTip : undefined}>
+        <IconButton
+          label={lateRecurring > 0 ? `קבועים, ${lateRecurring === 1 ? "אחד לא הגיע" : `${String(lateRecurring)} לא הגיעו`}` : "קבועים"}
+          onBand
+          to={`${recurringTo}${search}`}
+          className="ui-band-action"
+        >
+          <RepeatIcon size={22} />
+          {lateRecurring > 0 ? <span className="ui-band-dot" aria-hidden="true" /> : null}
+        </IconButton>
+      </span>
+      {tipOpen ? (
+        <div className="ui-band-tip" role="note" aria-label="קבועים עברו לכאן">
+          <p className="ui-band-tip-text">
+            <strong>קבועים עברו לכאן</strong>
+            <span>נקודה אדומה: חשבון קבוע לא הגיע.</span>
+          </p>
+          <IconButton label="סגירה" onClick={closeTip} className="ui-band-tip-close">
+            <CloseIcon size={18} />
+          </IconButton>
+        </div>
+      ) : null}
       <IconButton label="הגדרות וחשבון" onBand to={`/settings${search}`} className="ui-band-action">
         <span className="ui-band-avatar" aria-hidden="true">
           {avatarInitial ?? <PersonIcon />}
