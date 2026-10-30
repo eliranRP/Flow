@@ -4,6 +4,7 @@ import { expect, userEvent, within } from "storybook/test";
 import { ProjectsScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { ExampleBar, sampleDashboard } from "../ui/screen-stories-support";
+import { HOME_NEXT_MONTH_SAMPLE, NEXT_MONTH_PROJECTS, NEXT_MONTH_TODAY } from "../dev/home-next-month-sample";
 
 /** FLOW-445: one project's row in the month's cash (the list reads projects_cash_month). Invented names only. */
 function cashRow(input: { id: string; name: string; net?: number; type?: string | null; status?: "active" | "finished"; overhead?: boolean; group?: string | null; fresh?: boolean; spent?: number; budget?: number; profitAll?: number }): ProjectCashRow {
@@ -84,6 +85,23 @@ export const ProjectsList: Story = {
       <ProjectsScreen sample={sampleDashboard} cashSample={activeMonth} />
     </StoryRoute>
   ),
+};
+
+/** FLOW-990 (board ProjectsNextMonth): the company's next month above the list, and each row's צפי figure. */
+export const ProjectsNextMonth: Story = {
+  name: "Projects, next month's card and each project's צפי",
+  render: () => (
+    <StoryRoute entry="/projects" tabs>
+      <ExampleBar />
+      <ProjectsScreen sample={sampleDashboard} cashSample={NEXT_MONTH_PROJECTS} nextSample={HOME_NEXT_MONTH_SAMPLE} today={NEXT_MONTH_TODAY} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("צפוי להיכנס")).toBeInTheDocument();
+    await expect(canvas.getByText(/פרויקטים וכללי/u)).toBeInTheDocument();
+    await expect(canvas.getAllByText("צפי").length).toBeGreaterThan(1);
+  },
 };
 
 /** FLOW-445: the finished projects stay closed until הצג opens them. */

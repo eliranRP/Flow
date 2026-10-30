@@ -1,32 +1,54 @@
 import "../ui/lazy.css";
 import { type Dashboard, type ProjectCashRow, type ProjectsCashMonth } from "@flow/shared";
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { useHoldWrites } from "../use-is-viewer";
 import { useOpenFromQuery } from "../open-from-query";
 import { cashMonthName } from "../cash";
+import { companyPartNet, type CompanyNextMonth } from "../company-next-month";
 import { useProjectsCashMonth } from "../project-cash";
 import { netIn, orderActiveProjects, overheadRow, isOverBudget, projectMeta, unassignedCountLabel } from "../project-list";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import { useDashboardQuery } from "../use-books";
+import { israelToday } from "../ui/date-math";
 import { useSheetHistory } from "../ui/back";
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
 import { CompactBar } from "../ui/compact-bar";
 import { useScrolledPast } from "../ui/screen-header";
-import { formatAmount } from "../ui/amount";
+import { Amount, formatAmount } from "../ui/amount";
 import { CheckIcon, HomeIcon, PlusIcon, SearchIcon } from "../ui/icons";
 import { Avatar } from "../ui/avatar";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ProjectsSkeleton } from "../ui/screen-skeletons";
 import { ScreenState } from "../ui/screen-state";
+import { CompanyCashCard, thisMonthCashOut, useCompanyCashNextMonth, type CompanyCashNextMonth } from "./company-cash-next-month";
+import type { HomeNextMonthSample } from "./home-next-month";
+import { useCashMonthsQuery } from "../use-cash";
 import { ProjectFormSheet } from "./project-form-sheet";
 
-/** FLOW-445: the Projects tab. Rows are this month's cash per project, the overhead row last. */
-export function ProjectsScreen({ sample, cashSample, finishedOpen: openFinished = false }: { sample?: Dashboard; cashSample?: ProjectsCashMonth; /** Stories and the proof build open הסתיימו at once. */ finishedOpen?: boolean } = {}) {
+/**
+ * FLOW-445: the Projects tab. Rows are this month's cash per project, the overhead row last. FLOW-990: the
+ * company's next month above the list, and each row's own next month under its figure.
+ */
+export function ProjectsScreen({
+  sample,
+  cashSample,
+  nextSample,
+  today: sampleToday,
+  finishedOpen: openFinished = false,
+}: {
+  sample?: Dashboard;
+  cashSample?: ProjectsCashMonth;
+  /** FLOW-990: the next month's reads and the company's cash months, as they would come back; with `today`, the day they are from. */
+  nextSample?: HomeNextMonthSample;
+  today?: string;
+  /** Stories and the proof build open הסתיימו at once. */
+  finishedOpen?: boolean;
+} = {}) {
   const preview = useHomePreview();
   const search = usePreviewSearch();
   const dashboard = useDashboardQuery(sample == null);
@@ -45,6 +67,12 @@ export function ProjectsScreen({ sample, cashSample, finishedOpen: openFinished 
   const finishedFromRoute = (location.state as { finishedOpen?: boolean } | null)?.finishedOpen === true;
   const [finishedOpen, setFinishedOpen] = useState(finishedFromRoute || openFinished);
   const month = cashSample ?? cash.data;
+  const today = sampleToday ?? israelToday();
+  // FLOW-990: the forecast waits for the list's currency; a sample list with no forecast sample reads nothing.
+  const next = useCompanyCashNextMonth(month?.base_currency ?? "ILS", today, month != null && cashSample == null, nextSample?.next);
+  // This month's cash out so far, for the card's expense caption, as Home reads it (usually cached by Home).
+  const companyCash = useCashMonthsQuery(nextSample == null && cashSample == null);
+  const thisMonthOut = thisMonthCashOut(nextSample?.cash ?? companyCash.data ?? null, today, month?.base_currency ?? "ILS");
   // The dashboard first, then the cash month: a pending or failed cash read is the screen's phase too.
   const phase: ScreenPhase = sample ? { kind: "ready" } : screenPhase(preview, dashboard.isPending || dashboard.isError || cashSample != null ? dashboard : cash);
   const sheet = (
@@ -97,6 +125,9 @@ export function ProjectsScreen({ sample, cashSample, finishedOpen: openFinished 
             finishedOpen={finishedOpen}
             setFinishedOpen={setFinishedOpen}
             onNew={holdWrites ? undefined : () => { setOpen(true); }}
+            next={next}
+            today={today}
+            thisMonthOut={thisMonthOut}
           />
         ) : null}
       </ScreenState>
@@ -111,6 +142,9 @@ function ProjectsBody({
   finishedOpen,
   setFinishedOpen,
   onNew,
+  next,
+  today,
+  thisMonthOut,
 }: {
   month: NonNullable<ProjectsCashMonth>;
   search: string;
@@ -118,6 +152,9 @@ function ProjectsBody({
   setFinishedOpen: (value: boolean) => void;
   /** Undefined while writes are held: the compact bar then has no פרויקט חדש. */
   onNew?: () => void;
+  next: CompanyCashNextMonth;
+  today: string;
+  thisMonthOut: bigint | null;
 }) {
   const base = month.base_currency;
   const [titleEnd, setTitleEnd] = useState<HTMLSpanElement | null>(null);
@@ -136,13 +173,16 @@ function ProjectsBody({
           </Button>
         </div>
       ) : null}
+      <div className="ui-page-pad ui-projects-next">
+        <CompanyCashCard next={next} currency={base} today={today} thisMonthOut={thisMonthOut} />
+      </div>
       <div className="ui-page-pad ui-projects-head">
         <h2>פעילים</h2>
         <span className="ui-muted">לפי פעילות</span>
       </div>
       <List>
         {active.map((row) => (
-          <ProjectCashRowItem key={row.id} row={row} currency={base} search={search} />
+          <ProjectCashRowItem key={row.id} row={row} currency={base} search={search} next={nextFigure(next.forecast, row.id, base)} />
         ))}
         {overhead ? (
           <ListRow
@@ -154,6 +194,7 @@ function ProjectsBody({
             signed
             currency={base}
             href={`/projects/${overhead.id}${search}`}
+            endSub={nextFigure(next.forecast, null, base)}
           />
         ) : null}
       </List>
@@ -193,8 +234,23 @@ function ProjectsBody({
   );
 }
 
+/**
+ * FLOW-990: a row's next month under its figure, the צפי tag and the cash net (a project's part, or the general
+ * costs' on the overhead row). Undefined while the forecast is out or the part expects nothing.
+ */
+function nextFigure(forecast: CompanyNextMonth | null, projectId: string | null, currency: string) {
+  const net = forecast == null ? null : companyPartNet(forecast, projectId);
+  if (net == null) return undefined;
+  return (
+    <span className="ui-proj-next">
+      <span className="ui-fc-tag">צפי</span>
+      <Amount agorot={net} currency={currency} income={net > 0n} />
+    </span>
+  );
+}
+
 /** One project's row: initials, name, its type and status, and this month's cash (or its profit when finished). */
-function ProjectCashRowItem({ row, currency, search, finished = false }: { row: ProjectCashRow; currency: string; search: string; finished?: boolean }) {
+function ProjectCashRowItem({ row, currency, search, finished = false, next }: { row: ProjectCashRow; currency: string; search: string; finished?: boolean; next?: ReactNode }) {
   const net = netIn(row.cash, currency);
   // Cash outside the base currency lists each line; the order stays on the base currency.
   const lines = finished ? [] : row.cash.map((line) => ({ minor: BigInt(line.net_minor), currency: line.currency }));
@@ -230,6 +286,7 @@ function ProjectCashRowItem({ row, currency, search, finished = false }: { row: 
       amounts={elsewhere ? lines : undefined}
       signed
       href={`/projects/${row.id}${search}`}
+      endSub={next}
     />
   );
 }

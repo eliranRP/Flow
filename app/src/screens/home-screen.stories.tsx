@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, waitFor } from "storybook/test";
 import { attentionRows, CashHome, HomeScreen } from "./HomeScreen";
 import { sampleCashMonths, sampleQuietCashMonths } from "../dev/cash-sample";
+import { HOME_NEXT_MONTH_SAMPLE, NEXT_MONTH_TODAY } from "../dev/home-next-month-sample";
+import { HomeNextMonth } from "./home-next-month";
 import { shiftMonthKey } from "../period";
 import { israelToday } from "../ui/date-math";
 import { StoryRoute } from "../ui/story-route";
@@ -81,6 +83,33 @@ function CashHomeStory({ monthBack = 0, attention = true, initialDrawerOpen = fa
     </StoryRoute>
   );
 }
+
+/** FLOW-990 (board HomeNextMonth): next month's card and chart after the split card. Invented dollar figures. */
+export const HomeNextMonthBlock: Story = {
+  name: "Home, next month after the split card",
+  render: () => (
+    <StoryRoute entry="/" tabs>
+      <CashHome
+        data={HOME_NEXT_MONTH_SAMPLE.cash}
+        monthKey={NEXT_MONTH_TODAY.slice(0, 7)}
+        currentKey={NEXT_MONTH_TODAY.slice(0, 7)}
+        previewing={false}
+        search=""
+        attention={attentionRows({ pending: 2, unpaidCount: 0, unpaidGross: 0n, search: "" })}
+        example={exampleOnBand}
+        onStepMonth={() => undefined}
+        nextMonth={<HomeNextMonth today={NEXT_MONTH_TODAY} currency="USD" sample={HOME_NEXT_MONTH_SAMPLE} />}
+      />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await waitFor(async () => {
+      await expect(canvasElement.querySelector("#home-next-title")?.textContent).toBe("החודש הבא");
+    });
+    await expect(canvasElement.querySelector(".ui-fc-card")).not.toBeNull();
+    await expect(canvasElement.querySelector(".ui-fc-chart")).not.toBeNull();
+  },
+};
 
 /** The current month, with the attention box and the split card. */
 export const HomeCurrent: Story = { render: () => <CashHomeStory /> };

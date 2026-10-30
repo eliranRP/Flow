@@ -141,6 +141,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "get_missing_bills",
     "get_forecast",
     "get_project_forecast_edits",
+    "get_company_next_month_inputs",
     "get_expected_months",
     "get_recurring_changes",
     "get_line_recurring",

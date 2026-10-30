@@ -40,6 +40,8 @@ import { cardWeek, weeklyCardHidden } from "../weekly-card";
 const WeeklySummaryRoute = /* @__PURE__ */ lazy(() => import("./weekly-summary-sheet").then((m) => ({ default: m.WeeklySummaryRoute })));
 // FLOW-956: last week's card, Sunday to Tuesday; it and its read load in their own chunk too.
 const WeeklySummaryCardSlot = /* @__PURE__ */ lazy(() => import("./weekly-summary-card").then((m) => ({ default: m.WeeklySummaryCardSlot })));
+// FLOW-990: next month's card and chart, with their reads, load in their own chunk too.
+const HomeNextMonth = /* @__PURE__ */ lazy(() => import("./home-next-month").then((m) => ({ default: m.HomeNextMonth })));
 
 export { attentionRows };
 
@@ -269,6 +271,11 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       onStepMonth={navigateTo}
       offlineSince={previewing || online ? null : cash.dataUpdatedAt}
       checklist={isCurrent ? <SetupHomeSlot emptyHome={false} /> : null}
+      nextMonth={previewing || !isCurrent ? null : (
+        <Suspense fallback={null}>
+          <HomeNextMonth today={today} currency={base} />
+        </Suspense>
+      )}
       reports={previewing ? null : <HomeReportsCard today={today} search={search} />}
       lateRecurring={isCurrent ? late.expense + late.income : 0}
       recurringTip={!previewing}
@@ -307,6 +314,7 @@ export function CashHome({
   drawerYearMonths,
   syncing = null,
   offlineSince = null,
+  nextMonth = null,
   reports = null,
   lateRecurring = 0,
   recurringTo,
@@ -330,6 +338,8 @@ export function CashHome({
   checklist?: ReactNode;
   /** FLOW-956: last week's summary card, under the band (Sunday to Tuesday, the current month). */
   weekly?: ReactNode;
+  /** FLOW-990: next month's card and chart, after the split card (the current month only). */
+  nextMonth?: ReactNode;
   /** FLOW-161: the reports card, the last card on the page. */
   reports?: ReactNode;
   /** FLOW-986: late recurring bills and income, the dot on the band's קבועים icon. */
@@ -464,7 +474,9 @@ export function CashHome({
         </div>
       )}
 
-      {reports == null ? null : <div className="m-page-enter" style={pageEnterStyle(3)}>{reports}</div>}
+      {nextMonth == null || isPast ? null : <div className="m-page-enter" style={pageEnterStyle(3)}>{nextMonth}</div>}
+
+      {reports == null ? null : <div className="m-page-enter" style={pageEnterStyle(4)}>{reports}</div>}
 
       <HomeCompactBar monthKey={monthKey} net={baseRow?.net_minor ?? 0n} currency={base} isPast={isPast} nav={nav} shown={compactShown} />
       <MonthDrawer

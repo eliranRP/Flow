@@ -40,8 +40,8 @@ These rules come before everything else. When in doubt, choose the calmer option
 | # | Rule | In practice |
 |---|---|---|
 | P1 | **Calm and airy.** | White page (violet-tinted near-black in dark mode), generous space, hairlines instead of boxes. White space is part of the look, so don't fill it. |
-| P2 | **Few numbers per screen.** | A screen answers one question. Home shows the profit, one change, income, expenses, the pending summary and at most 3 projects. That is the whole budget. |
-| P3 | **Detail moves to inner screens.** | If you want to add a figure, a chart or a breakdown to an overview screen, put it on the next screen down and link to it with a row or a text link. |
+| P2 | **Few numbers per screen.** | A screen answers one question. Home shows the profit, one change, income, expenses, the pending summary and at most 3 projects, plus next month's forecast block (decision 0235). That is the whole budget. |
+| P3 | **Detail moves to inner screens.** | If you want to add a figure, a chart or a breakdown to an overview screen, put it on the next screen down and link to it with a row or a text link. Decision 0235 (next month on Home) is the one exception. |
 | P4 | **One violet accent: `#7B3FE4`.** | Violet is used on the + button, the primary button, links, the active tab, selected controls and the top band. Filled violet appears **at most about twice** per screen area (normally the + button and one primary button). |
 | P5 | **No gradients, no emoji, no heavy shadows.** | Depth comes from the tint fill and 1px hairlines. The only shadows allowed are the faint ones on the switch knob and the selected segment. |
 | P6 | **Figures use the main text colour.** | Amounts, counts and percentages use `--color-text`. They are never violet, and never red or green on their own. |
@@ -892,7 +892,7 @@ Home is for a glance, so figures are whole and stable:
 5. **Change pill:** the absolute % with ▼/▲. The direction comes from the sign of the exact change, not the rounded one. Hide it when there is no comparison period.
 6. **Band fit:** if the band figure doesn't fit the width at `band` (52px), step it down to `detail` (40px). Never scale the font continuously, and never truncate.
 7. **Counts** are exact integers ("7 פריטים").
-8. **Figure budget on Home:** profit, change, income, expenses, pending count, unpaid total, and up to 3 top projects (profit and margin each). Adding any other figure needs a design decision.
+8. **Figure budget on Home:** profit, change, income, expenses, pending count, unpaid total, and up to 3 top projects (profit and margin each), and next month's forecast block (decision 0235). Adding any other figure needs a design decision.
 
 ---
 

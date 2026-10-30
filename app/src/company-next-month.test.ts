@@ -1,6 +1,8 @@
 import type { ExpectedParty, ProjectCategoryMonths } from "@flow/shared";
 import { describe, expect, it } from "vitest";
 import {
+  companyCashForecast,
+  companyPartNet,
   companyExpenseNote,
   companyForecastCaption,
   companyIncomeNote,
@@ -11,7 +13,7 @@ import {
 } from "./company-next-month";
 import { JUNIPER_NEXT, JUNIPER_NEXT_EDITED, JUNIPER_NEXT_LOAN } from "./dev/project-next-month-sample";
 import type { ForecastLoan } from "./project-next-loans";
-import { applyForecastEdits, nextMonthForecast, type NextMonthRow } from "./project-next-month";
+import { applyForecastEdits, cashForecast, nextMonthForecast, type NextMonthRow } from "./project-next-month";
 
 /**
  * FLOW-143: the company's next month is every project's צפי page summed, edits included, plus the general costs
@@ -175,5 +177,27 @@ describe("the company card's captions", () => {
   it("sets next month's expenses against this month's so far", () => {
     expect(companyExpenseNote({ expenseMinor: 100n }, "2026-10", 2_506_000n, "USD")).toBe("מול $25,060 באוקטובר");
     expect(companyExpenseNote({ expenseMinor: 0n }, "2026-10", 2_506_000n, "USD")).toBe("אין הוצאות צפויות");
+  });
+});
+
+describe("the company's next month in cash terms (FLOW-990)", () => {
+  it("adds each part's loans' principal and keeps the rows", () => {
+    const profit = company();
+    const cash = companyCashForecast(profit);
+    const principal = profit.parts.reduce((sum, part) => sum + part.forecast.cashOnlyMinor, 0n);
+    expect(principal > 0n).toBe(true);
+    expect(cash.incomeMinor).toBe(profit.incomeMinor);
+    expect(cash.expenseMinor).toBe(profit.expenseMinor + principal);
+    expect(cash.netMinor).toBe(cash.incomeMinor - cash.expenseMinor);
+    expect(cash.rows).toEqual(profit.rows);
+    expect(cash.parts.map((part) => part.forecast)).toEqual(profit.parts.map((part) => cashForecast(part.forecast)));
+  });
+
+  it("gives each part's net, and the parts' nets add up to the card's", () => {
+    const cash = companyCashForecast(company());
+    const nets = cash.parts.map((part) => companyPartNet(cash, part.projectId) ?? 0n);
+    expect(nets.reduce((sum, net) => sum + net, 0n)).toBe(cash.netMinor);
+    expect(companyPartNet(cash, JUNIPER)).toBe(cash.parts.find((part) => part.projectId === JUNIPER)?.forecast.netMinor);
+    expect(companyPartNet(cash, "no-such-project")).toBeNull();
   });
 });
