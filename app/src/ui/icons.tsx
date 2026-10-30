@@ -131,6 +131,17 @@ export function DocumentIcon(props: IconProps) {
   );
 }
 
+/** The reports tab (board ReportTab): a folded sheet with three bars. */
+export function ReportsIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M7 3h7l5 5v13H7z" />
+      <path d="M14 3v5h5" />
+      <path d="M10 17v-3M13 17v-5M16 17v-2" />
+    </Svg>
+  );
+}
+
 /** An invoice: a folded sheet with two lines of text. */
 export function InvoiceIcon(props: IconProps) {
   return (

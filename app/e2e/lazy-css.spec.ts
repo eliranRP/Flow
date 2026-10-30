@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
 // the screen's heading first appears. Invented data only.
 test.use({ viewport: { width: 375, height: 667 } });
 
-for (const tab of ["פרויקטים", "הלוואות", "קבועים"]) {
+for (const tab of ["פרויקטים", "דוחות", "הלוואות"]) {
   test(`Home → ${tab}: the screen draws only after its styles load`, async ({ page }) => {
     await page.addInitScript((heading) => {
       const seen = { at: 0, styled: false };

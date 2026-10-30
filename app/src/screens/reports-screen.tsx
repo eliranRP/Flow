@@ -182,7 +182,7 @@ export function ReportsScreen({ sample }: { sample?: ReportsSample } = {}) {
   const share = phase.kind === "ready" && data != null && !(state.kind === "pnl" && statement != null && statementEmpty(statement)) && !(state.kind === "balance" && balance != null && balanceEmpty(balance))
     ? <IconButton label="שיתוף הדוח" onClick={() => { setSheet("share"); }}><ShareIcon size={22} /></IconButton>
     : null;
-  const header = <ScreenHeader layout="stacked" title="דוחות" backTo={`/${search}`} backText="בית" below={head} action={share} />;
+  const header = <ScreenHeader layout="stacked" title="דוחות" below={head} action={share} />;
 
   let body;
   if (phase.kind === "loading") {

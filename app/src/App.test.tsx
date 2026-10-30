@@ -46,7 +46,7 @@ describe("App", () => {
     const tabs = within(nav)
       .getAllByRole("link")
       .map((link) => link.getAttribute("aria-label") ?? link.textContent.trim());
-    expect(tabs).toEqual(["בית", "פרויקטים", "הלוואות", "קבועים"]);
+    expect(tabs).toEqual(["בית", "פרויקטים", "דוחות", "הלוואות"]);
   });
 
   it("shows the offline error from preview=error in the band (FLOW-958)", async () => {

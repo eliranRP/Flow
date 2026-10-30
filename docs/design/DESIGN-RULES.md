@@ -215,7 +215,7 @@ A viewer cannot take an action that would not apply, so that action is hidden. W
 | 15 | **SwipeRow** (`swipe-row.tsx`, from `swipe-remove.tsx`) | Lines | rest, revealed (התעלמות in signal-colour text, no fill), leaving | Leaves with 220ms fade and collapse; undo toast |
 | 16 | **ChangePill** and **StatusDot** (`change-pill.tsx`) | DesignGuide | helps, hurts (on the band and off it); dot tones neutral, accent, signal | None |
 | 17 | **ProgressBar** (`progress-bar.tsx`): thin 6 to 8px bars and split bars; the 8px job bar of FLOW-371 | DesignGuide, Lines | value, split, indeterminate (sync strip) | Grows from the right, 480ms on enter; widths ease `--motion-width` |
-| 18 | **TabBar** (`tab-bar.tsx`): בית · פרויקטים · הלוואות · קבועים | States | active, pressed, badge | Tab colour 120ms; content crossfade 150ms; no slide |
+| 18 | **TabBar** (`tab-bar.tsx`): בית · פרויקטים · דוחות · הלוואות (FLOW-986: דוחות took קבועים's slot; קבועים opens from Home) | States | active, pressed, badge | Tab colour 120ms; content crossfade 150ms; no slide |
 | 19 | **Page transitions** (`usePageEnter`, `PushPage`) | Flow & motion | entering, entered, going back | Page enter 280ms with a 40ms stagger; push 280ms from the left, back 220ms |
 
 Parts not in the inventory keep their rules until their screens move. They are listed in the table below. A part that a screen PR removes is deleted in that PR.

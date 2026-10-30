@@ -25,14 +25,15 @@ test("קבועים: a charge up 20% or more shows its change as the bad-news hin
   await expect(page.getByText("▲ 38%", { exact: true })).toBeVisible();
 });
 
-test("Home: the קבועים tab opens קבועים, and the box has no link to it (FLOW-364)", async ({ page }) => {
+test("קבועים is not a tab any more; its Back goes to Home (FLOW-986)", async ({ page }) => {
   await page.goto("/e2e/cash?preview=1&box=none");
   await expect(page.getByRole("link", { name: "לכל הקבועים" })).toHaveCount(0);
-  const tab = page.getByRole("navigation", { name: "ניווט ראשי" }).getByRole("link", { name: "קבועים" });
-  await expect(tab).toBeVisible();
-  expect((await tab.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
-  await tab.click();
-  await expect(page).toHaveURL(/\/recurring\?preview=1$/);
+  const bar = page.getByRole("navigation", { name: "ניווט ראשי" });
+  await expect(bar.getByRole("link", { name: "קבועים" })).toHaveCount(0);
+  await page.goto("/e2e/recurring?preview=1");
+  await expect(bar.getByRole("link", { name: "בית", exact: true })).toHaveAttribute("aria-current", "page");
+  const back = page.getByRole("button", { name: /חזרה/ }).first();
+  expect((await back.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
 });
 
 test("קבועים on one project shows only its rows and names it (FLOW-424)", async ({ page }) => {

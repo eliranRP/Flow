@@ -40,8 +40,8 @@ describe("TabBar", () => {
     );
     const nav = screen.getByRole("navigation", { name: "ניווט ראשי" });
     const links = [...nav.querySelectorAll("a")];
-    expect(links.map((link) => link.textContent.trim())).toEqual(["בית", "פרויקטים", "הלוואות", "קבועים"]);
-    expect(links.map((link) => link.getAttribute("href"))).toEqual(["/", "/projects", "/loans", "/recurring"]);
+    expect(links.map((link) => link.textContent.trim())).toEqual(["בית", "פרויקטים", "דוחות", "הלוואות"]);
+    expect(links.map((link) => link.getAttribute("href"))).toEqual(["/", "/projects", "/reports", "/loans"]);
     expectTarget(screen.getByRole("link", { name: "הלוואות" }));
   });
 
@@ -166,7 +166,7 @@ describe("TabBar", () => {
   it("goes to the tab's main screen when its tab is tapped from a page inside it", () => {
     const scroll = vi.fn();
     window.scrollTo = scroll;
-    for (const [from, name, to] of [["/projects/p-1", "פרויקטים", "/projects"], ["/settings", "בית", "/"], ["/loans/loan-1", "הלוואות", "/loans"], ["/recurring/expense/party-1", "קבועים", "/recurring"]] as const) {
+    for (const [from, name, to] of [["/projects/p-1", "פרויקטים", "/projects"], ["/settings", "בית", "/"], ["/loans/loan-1", "הלוואות", "/loans"], ["/reports/lines", "דוחות", "/reports"]] as const) {
       const { unmount } = render(
         <MemoryRouter initialEntries={[from]}>
           <TabBar />
@@ -205,8 +205,10 @@ describe("tabSection", () => {
     ["/projects/villa/profit/2026-06", "home"],
     ["/loans", "loans"],
     ["/loans", "loans"],
-    ["/recurring", "recurring"],
-    ["/missing-bills", "recurring"],
+    ["/reports", "reports"],
+    ["/reports/account", "reports"],
+    ["/recurring", "home"],
+    ["/missing-bills", "home"],
     ["/settings", "home"],
     ["/settings/categories", "home"],
     ["/add", null],

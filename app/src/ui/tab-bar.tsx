@@ -2,7 +2,7 @@ import type { MouseEvent, ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { usePreviewSearch } from "../preview";
 import { reducedMotion } from "./period-swipe";
-import { BankColumnsIcon, HomeIcon, ProjectsIcon, RepeatIcon } from "./icons";
+import { BankColumnsIcon, HomeIcon, ProjectsIcon, ReportsIcon } from "./icons";
 
 const slot = "ui-tab-slot";
 
@@ -12,21 +12,23 @@ type TabBarProps = {
   section?: TabSection | null;
 };
 
-export type TabSection = "home" | "projects" | "loans" | "recurring";
+export type TabSection = "home" | "projects" | "reports" | "loans";
 
 /**
  * The tab a path belongs to. Settings is behind the avatar on Home, so Home stays current there, as
- * on the board; the loans page is the loans tab's (FLOW-364).
+ * on the board; the loans page is the loans tab's (FLOW-364). FLOW-986: דוחות took קבועים's slot; קבועים
+ * opens from Home (its late-bills row), so Home stays current there.
  */
 export function tabSection(pathname: string): TabSection | null {
   if (pathname === "/" || pathname.startsWith("/unpaid") || pathname === "/transfers") return "home";
   // The profit view and the cash months open from Home; the review queue opens from Home's box.
   if (pathname === "/profit" || pathname.startsWith("/cash/") || pathname.startsWith("/review") || pathname.startsWith("/settings")) return "home";
+  if (pathname.startsWith("/missing-bills") || pathname.startsWith("/recurring")) return "home";
   // A project's profit pages open from Home's profit view, so the board lights Home there too.
   if (/^\/projects\/[^/]+\/profit(\/|$)/.test(pathname)) return "home";
   if (pathname.startsWith("/projects")) return "projects";
+  if (pathname.startsWith("/reports")) return "reports";
   if (pathname.startsWith("/loans")) return "loans";
-  if (pathname.startsWith("/missing-bills") || pathname.startsWith("/recurring")) return "recurring";
   return null;
 }
 
@@ -43,8 +45,8 @@ function TabFace({ icon, label }: { icon: ReactNode; label: string }) {
 const tabs: { section: TabSection; label: string; path: string; icon: ReactNode }[] = [
   { section: "home", label: "בית", path: "/", icon: <HomeIcon size={24} stroke={2} /> },
   { section: "projects", label: "פרויקטים", path: "/projects", icon: <ProjectsIcon size={24} stroke={2} /> },
+  { section: "reports", label: "דוחות", path: "/reports", icon: <ReportsIcon size={24} stroke={2} /> },
   { section: "loans", label: "הלוואות", path: "/loans", icon: <BankColumnsIcon size={24} stroke={2} /> },
-  { section: "recurring", label: "קבועים", path: "/recurring", icon: <RepeatIcon size={24} stroke={2} /> },
 ];
 
 export function TabBar({ label = "ניווט ראשי", section: pinned }: TabBarProps) {
