@@ -1,6 +1,6 @@
 import type { ProjectDetail as ProjectDetailData } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { ProjectDetailScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 import { FILLED } from "../ui/investment-card.stories-support";
@@ -72,8 +72,11 @@ export const ProjectDetailError: Story = {
 };
 
 
+/** FLOW-169: a uuid, so the reports link it gives is one the reports screen reads as a project. */
+const PROJECT_ID = "a0000000-0000-4000-8000-000000000169";
+
 const periodProject: NonNullable<ProjectDetailData> = {
-  id: "p-a",
+  id: PROJECT_ID,
   name: "וילה לדוגמה",
   status: "active",
   state_label: "פעיל",
@@ -137,16 +140,26 @@ const overviewProject: NonNullable<ProjectDetailData> = {
     { id: "l2", name: "משכנתא לדוגמה", currency: "ILS", balance_minor: 30_000_000n, status: "open" },
   ],
 };
-const sectionTo = (target: string) => (target === "overview" ? "/projects/p-a" : `/projects/p-a/${target}`);
+const sectionTo = (target: string) => (target === "overview" ? `/projects/${PROJECT_ID}` : `/projects/${PROJECT_ID}/${target}`);
 const filledInvestment = { isOverhead: false, figures: FILLED, categories: [], loans: [] };
 
 export const ProjectOverview: Story = {
   name: "Project, short page (FLOW-340 C)",
   render: () => (
-    <StoryRoute entry="/projects/p-a" tabs>
+    <StoryRoute entry={`/projects/${PROJECT_ID}`} tabs>
       <ProjectDetailScreen example={exampleOnBand} sample={overviewProject} sampleInvestment={filledInvestment} sectionTo={sectionTo} />
     </StoryRoute>
   ),
+};
+
+/** FLOW-163 (board ReportEntryProject): דוחות on the band before ⋯, opening the reports on this project. */
+export const ProjectReportsButton: Story = {
+  name: "Project, דוחות on the band (FLOW-163)",
+  render: ProjectOverview.render,
+  play: async ({ canvasElement }) => {
+    const link = within(canvasElement).getByRole("link", { name: "דוחות" });
+    await expect(link).toHaveAttribute("href", `/reports?scope=project&project=${PROJECT_ID}`);
+  },
 };
 
 /** FLOW-334: the ⋯ menu, the overhead switch then "סיום הפרויקט" as a row. */
@@ -165,7 +178,7 @@ const sampleGroups = {
   currentId: null,
 };
 const groupedRender = (currentId: string | null) => () => (
-  <StoryRoute entry="/projects/p-a" tabs>
+  <StoryRoute entry={`/projects/${PROJECT_ID}`} tabs>
     <ProjectDetailScreen
       example={exampleOnBand}
       sample={overviewProject}
@@ -201,7 +214,7 @@ export const ProjectGroupPicker: Story = {
 export const ProjectMenuFinished: Story = {
   name: "Project, ⋯ menu, finished",
   render: () => (
-    <StoryRoute entry="/projects/p-a" tabs>
+    <StoryRoute entry={`/projects/${PROJECT_ID}`} tabs>
       <ProjectDetailScreen
         example={exampleOnBand}
         sample={{ ...overviewProject, status: "finished", state_label: "הסתיים" }}
@@ -217,7 +230,7 @@ export const ProjectMenuFinished: Story = {
 export const ProjectOverBudget: Story = {
   name: "Project, over budget",
   render: () => (
-    <StoryRoute entry="/projects/p-a" tabs>
+    <StoryRoute entry={`/projects/${PROJECT_ID}`} tabs>
       <ProjectDetailScreen example={exampleOnBand} sample={{ ...periodProject, budget_agorot: 20_000_000n }} sectionTo={sectionTo} />
     </StoryRoute>
   ),
@@ -227,7 +240,7 @@ export const ProjectOverBudget: Story = {
 export const ProjectNoBudget: Story = {
   name: "Project, no budget",
   render: () => (
-    <StoryRoute entry="/projects/p-a" tabs>
+    <StoryRoute entry={`/projects/${PROJECT_ID}`} tabs>
       <ProjectDetailScreen example={exampleOnBand} sample={{ ...periodProject, budget_agorot: null, pending_count: 2 }} sectionTo={sectionTo} />
     </StoryRoute>
   ),
@@ -237,7 +250,7 @@ export const ProjectNoBudget: Story = {
 export const ProjectOffline: Story = {
   name: "Project, offline",
   render: () => (
-    <StoryRoute entry="/projects/p-a" tabs>
+    <StoryRoute entry={`/projects/${PROJECT_ID}`} tabs>
       <ProjectDetailScreen example={exampleOnBand} sample={periodProject} sectionTo={sectionTo} sampleOfflineSince={Date.UTC(2026, 9, 26, 7, 41)} />
     </StoryRoute>
   ),

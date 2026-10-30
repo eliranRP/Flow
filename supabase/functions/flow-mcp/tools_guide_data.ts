@@ -54,7 +54,7 @@ export const TOOL_GROUPS: GuideGroup[] = [
     tools: [
       "list_accounts", "get_line_legs", "get_account_balances", "book_line", "create_journal_entry",
       "set_category_account", "create_account", "update_account", "archive_account", "restore_account",
-      "merge_account", "get_balance_sheet", "get_pnl_statement",
+      "merge_account", "get_balance_sheet", "get_account_lines", "get_pnl_statement", "export_report",
     ],
   },
   {
@@ -176,7 +176,9 @@ export const WORKFLOWS: GuideWorkflow[] = [
       "get_breakdown: the same by category or project.",
       "get_account_balances: the balance of each ledger account.",
       "get_balance_sheet: assets, liabilities and equity (when listed).",
+      "get_account_lines: one balance-sheet account's opening balance and movements (when listed).",
       "get_pnl_statement: the P&L as a statement, for one project or by project (when listed).",
+      "export_report: the P&L, the balance sheet or both as a PDF or a CSV for Excel, to share (when listed).",
     ],
   },
   {

@@ -354,7 +354,10 @@ export async function callTool(
     // The kept-out list has no group; a group with excluded would be silently ignored.
     if (excluded && args.group != null) return fail("validation", "validation");
     const totals = args.group == null && !excluded;
-    if (totals && (args.currency != null || args.limit != null || args.offset != null)) return fail("validation", "validation");
+    if (totals && (args.currency != null || args.limit != null || args.offset != null || args.project_id != null)) return fail("validation", "validation");
+    // FLOW-165: one project's lines of a category (its allocation of a shared cost), by category only.
+    const project = args.project_id ?? null;
+    if (project != null && (typeof project !== "string" || !UUID.test(project) || groupBy !== "category")) return fail("validation", "validation");
     const group = args.group == null ? null : args.group;
     if (group != null && (typeof group !== "string" || group.length === 0 || group.length > 64)) return fail("validation", "validation");
     let currency = args.currency;
@@ -378,16 +381,11 @@ export async function callTool(
       if (typeof base !== "string") return base;
       currency = base;
     }
-    const result = await rpc("get_breakdown_lines", {
-      ...range,
-      p_group_key: group,
-      p_currency: currency,
-      p_excluded: excluded,
-      p_limit: limit,
-      p_offset: offset,
-    });
+    const page = { p_group_key: group, p_currency: currency, p_excluded: excluded, p_limit: limit, p_offset: offset };
+    const result = await rpc("get_breakdown_lines", { ...range, ...page, ...(project != null ? { p_project_id: project } : {}) });
     if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {
-      return fail("refused", READ_REFUSED);
+      // Null with a project: another company's project, or an unknown one.
+      return project != null && result.status < 400 && result.json == null ? fail("not_found", "not found") : fail("refused", READ_REFUSED);
     }
     return ok({ ...(result.json as Review), basis });
   }

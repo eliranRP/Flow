@@ -1,4 +1,7 @@
+import { Link } from "react-router-dom";
+import type { ReportShortcut } from "../search-reports";
 import { Button } from "../ui/button";
+import { BackIcon, DocumentIcon } from "../ui/icons";
 
 /**
  * The first read of a typed search, before any line is in hand (FLOW-368 §2.5): five rows drawn as
@@ -38,5 +41,35 @@ export function SearchEmptyState({ text, withChips, onClearChips }: { text: stri
         <Button variant="link" onClick={onClearChips}>חיפוש בלי הסינון</Button>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * FLOW-163 (board ReportEntrySearch): the reports the typed text names, under "דוחות", first in the
+ * results. Each row is the project shortcut's row with the document icon in its tile, and opens that
+ * report.
+ */
+export function SearchReportShortcuts({ rows }: { rows: readonly ReportShortcut[] }) {
+  if (rows.length === 0) return null;
+  return (
+    <section className="ui-search-section ui-search-reports" aria-labelledby="ui-search-reports-title">
+      <h2 className="ui-search-heading" id="ui-search-reports-title">דוחות</h2>
+      <ul className="ui-search-reports-list">
+        {rows.map((row) => (
+          <li key={row.key}>
+            <Link className="ui-search-project" to={row.to}>
+              <span className="ui-search-project-tile" aria-hidden="true"><DocumentIcon size={20} /></span>
+              <span className="ui-search-project-text">
+                <span className="ui-search-project-name">{row.title}</span>
+                <span className="ui-search-project-hint">{row.hint}</span>
+              </span>
+              <span className="ui-search-project-chevron" aria-hidden="true">
+                <BackIcon size={18} />
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

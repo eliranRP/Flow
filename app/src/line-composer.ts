@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { amountOf, amountText } from "./line-split";
-import { legName, SYSTEM_NAMES, type JournalLeg } from "./line-journal";
+import { legName, type JournalLeg } from "./line-journal";
+import { SYSTEM_NAMES } from "./system-accounts";
 
 /**
  * FLOW-955 (decision 0208). The journal entry composer ("פקודת יומן", board LedgerComposer): the

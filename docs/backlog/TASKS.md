@@ -225,9 +225,18 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-159"></a>[FLOW-159](tasks/FLOW-159.md) | Prepaid: say when a schedule waits on a removed line, and test the job's deadlock skip | BACKLOG NIT |
 | <a id="flow-160"></a>[FLOW-160](tasks/FLOW-160.md) | Reports: one P&L statement read for the app, the MCP and the PDF | MCP |
 | <a id="flow-161"></a>[FLOW-161](tasks/FLOW-161.md) | Reports screens: P&L and balance sheet, from a card on Home | UI (design approved) |
-| <a id="flow-162"></a>[FLOW-162](tasks/FLOW-162.md) | Reports: share the P&L and balance sheet as a PDF | UI (design approved) |
+| <a id="flow-162"></a>[FLOW-162](tasks/FLOW-162.md) | Reports: share the P&L and balance sheet as a PDF or a CSV for Excel | UI (design approved) |
 | <a id="flow-163"></a>[FLOW-163](tasks/FLOW-163.md) | Reports: open them from a project page and from search | PLAN FIRST |
 | <a id="flow-164"></a>[FLOW-164](tasks/FLOW-164.md) | P&L statement test: a line with no category, and the shared fixture helpers | BACKLOG NIT |
+| <a id="flow-165"></a>[FLOW-165](tasks/FLOW-165.md) | Reports: open a balance-sheet account's movements | MCP + UI (design approved) |
+| <a id="flow-166"></a>[FLOW-166](tasks/FLOW-166.md) | Reports file: a per-user rate limit on flow-mcp's report route, and a deploy smoke for export_report | BACKLOG NIT |
+| <a id="flow-167"></a>[FLOW-167](tasks/FLOW-167.md) | Reports lines search: a long Latin description is cut at its start | BUG |
+| <a id="flow-168"></a>[FLOW-168](tasks/FLOW-168.md) | List rows: a long project name drops out of the hint, leaving only the date | BUG |
+| <a id="flow-169"></a>[FLOW-169](tasks/FLOW-169.md) | Search's report rows: Hebrew prefix letters and punctuation, the project chip, uuid test ids | BACKLOG NIT |
+| <a id="flow-170"></a>[FLOW-170](tasks/FLOW-170.md) | Reports drill-down search: a snippet placed by layout, and the balance date sheet's "from the start" caption | BACKLOG NIT |
+| <a id="flow-171"></a>[FLOW-171](tasks/FLOW-171.md) | Reports: an account's movements from the start, any year, and a long Latin title that wraps | MCP + UI |
+| <a id="flow-172"></a>[FLOW-172](tasks/FLOW-172.md) | List rows: a cut hint part can end in a space before "…" | BACKLOG NIT |
+| <a id="flow-173"></a>[FLOW-173](tasks/FLOW-173.md) | get_account_lines: drop year_start from the output after one release | BACKLOG NIT |
 | <a id="flow-920"></a>[FLOW-920](tasks/FLOW-920.md) | Project profit: the month's share and after-overhead rows from the server, and the old profit-month section goes | UI + server (follow-up to FLOW-140) |
 | <a id="flow-930"></a>[FLOW-930](tasks/FLOW-930.md) | A yearly charge shows in this month's forecast at a monthly amount | BUG |
 | <a id="flow-935"></a>[FLOW-935](tasks/FLOW-935.md) | The iPhone Home Screen app moves to a new deploy without a reinstall | BUG |
@@ -447,6 +456,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-514"></a>[FLOW-514](tasks/FLOW-514.md) | Redesign: first-time onboarding in 7 short steps | UI (design approved) |
 | <a id="flow-516"></a>[FLOW-516](tasks/FLOW-516.md) | Notifications: this device's own row, shared switches, connected devices and a test push | BUG |
 | <a id="flow-517"></a>[FLOW-517](tasks/FLOW-517.md) | Weekly summary: the Sunday push opens a summary sheet over Home | UI (design approved) |
+| <a id="flow-518"></a>[FLOW-518](tasks/FLOW-518.md) | Mercury: a new account was found, ask on Home, at the transfer and in Settings | UI (design approved) |
 | <a id="flow-956"></a>[FLOW-956](tasks/FLOW-956.md) | Weekly summary card on Home, Sunday to Tuesday | UI (design approved) |
 | <a id="flow-957"></a>[FLOW-957](tasks/FLOW-957.md) | Notes and files on a transaction, with Mercury's note and attachments | UI (design approved) |
 

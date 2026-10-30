@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { BackButton } from "./back";
 import { CompactBar } from "./compact-bar";
 import { FocusTitle } from "./focus-title";
+import { slashBreaks } from "./slash-breaks";
 
 type HeaderChrome = {
   subtitle?: string;
@@ -105,11 +106,11 @@ export function ScreenHeader(props: ScreenHeaderProps) {
       {stacked && title != null ? (
         titleAside != null ? (
           <div className="ui-page-title-line">
-            <FocusTitle className="t-title">{title}</FocusTitle>
+            <FocusTitle className="t-title">{slashBreaks(title)}</FocusTitle>
             {titleAside}
           </div>
         ) : (
-          <FocusTitle className="t-title">{title}</FocusTitle>
+          <FocusTitle className="t-title">{slashBreaks(title)}</FocusTitle>
         )
       ) : null}
       {subtitle ? <p className={subtitleClass(subtitleClassName, stacked)}>{subtitle}</p> : null}

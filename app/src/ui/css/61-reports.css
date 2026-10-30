@@ -1,0 +1,482 @@
+/* FLOW-161: the reports screen (ReportsScreen, ReportLinesScreen; board row "דוחות"). Every value is a token. */
+
+.ui-rep-screen {
+  min-width: 0;
+  padding-bottom: var(--space-6);
+}
+
+.ui-rep-head-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  min-width: 0;
+  margin-top: var(--space-inset-row);
+  /* 44px segments, as the profit page's period switch. */
+  --size-seg: var(--touch-min);
+  --size-seg-track: calc(var(--touch-min) + var(--space-2));
+}
+
+/* The period and project chips: one row that scrolls, never wraps (rule tables § 25). */
+.ui-rep-chips {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ui-rep-chips .ui-chip {
+  flex: none;
+  min-height: var(--touch-min);
+}
+
+.ui-rep-content {
+  display: flex;
+  flex-direction: column;
+  padding-inline: var(--space-side);
+}
+
+/* The number that leads a report, at the total step at most (rule tables § 19). */
+.ui-rep-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-block: var(--space-2) var(--space-3);
+}
+
+.ui-rep-summary-label {
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  line-height: var(--type-title-line);
+}
+
+.ui-rep-summary-figure {
+  margin: 0;
+  direction: ltr;
+  text-align: right;
+}
+
+.ui-rep-summary-figure .ui-num {
+  font-size: var(--type-total-size);
+  line-height: calc(var(--type-total-size) * 1.2);
+  white-space: nowrap;
+}
+
+.ui-rep-summary-sub {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-cents-line);
+}
+
+.ui-rep-ok {
+  display: inline-flex;
+  color: var(--color-good);
+}
+
+.ui-rep-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: var(--touch-min);
+}
+
+.ui-rep-toggle-all {
+  min-height: var(--touch-min);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-section-weight);
+  cursor: pointer;
+}
+
+/* A section: its head keeps the total in view when it is closed. */
+.ui-rep-section {
+  border-top: 1px solid var(--color-line);
+}
+
+.ui-rep-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: calc(var(--touch-min) + var(--space-1));
+  padding: var(--space-2) 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ui-rep-chevron {
+  display: inline-flex;
+  color: var(--color-text-muted);
+}
+
+/* A name wraps rather than cutting its start: a project's name is how the reader finds it (rule tables § 25). */
+.ui-rep-head-title {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-rep-head-total {
+  flex: none;
+  color: var(--color-text-secondary);
+  font-size: var(--type-line2-size);
+}
+
+.ui-rep-group .ui-rep-head {
+  min-height: var(--touch-min);
+  padding-block: var(--space-1);
+}
+
+.ui-rep-group .ui-rep-head-title,
+.ui-rep-group .ui-rep-head-total {
+  color: var(--color-text);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-rep-body {
+  padding-bottom: var(--space-2);
+}
+
+.ui-rep-rows {
+  margin: 0;
+  padding: 0;
+  padding-inline-start: var(--space-5);
+  list-style: none;
+}
+
+.ui-rep-rows-sub {
+  padding-inline-start: var(--space-4);
+}
+
+.ui-rep-row-group {
+  border-top: 0;
+}
+
+.ui-rep-row-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--touch-min);
+  padding-block: var(--space-1);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.ui-rep-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ui-rep-row-name {
+  overflow-wrap: anywhere;
+  font-size: var(--type-body-size);
+  line-height: var(--type-title-line);
+}
+
+.ui-rep-row-meta {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-cents-line);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The amounts form one column: each ends at the same point (its ones digit), up to −$999,999, so a
+   shorter or positive figure lines up under a longer one. */
+.ui-rep-row-amount {
+  flex: none;
+  min-inline-size: 9ch;
+  font-size: var(--type-body-size);
+  font-variant-numeric: tabular-nums lining-nums;
+  text-align: right;
+}
+
+.ui-rep-row-amount .ui-num {
+  white-space: nowrap;
+}
+
+.ui-rep-row-go {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.ui-rep-rows-kept .ui-rep-row-amount {
+  opacity: 0.6;
+}
+
+/* Kept-out rows open nothing, so they have no chevron: keep its slot (16px icon + the row's 8px gap)
+   so their amounts end on the P&L's one column. */
+.ui-rep-rows-kept .ui-rep-row-link {
+  padding-inline-end: var(--space-6);
+}
+
+.ui-rep-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: var(--touch-min);
+  padding-block: var(--space-2);
+  border-top: 1px solid var(--color-line);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-rep-total-strong {
+  font-size: var(--type-section-size);
+}
+
+.ui-rep-total-amount .ui-num {
+  white-space: nowrap;
+}
+
+.ui-rep-note {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-cents-line);
+}
+
+.ui-rep-currency-title {
+  margin: var(--space-5) 0 var(--space-1);
+}
+
+/* By project: one card per project key. */
+.ui-rep-projects {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-rep-project {
+  padding-inline: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ui-rep-project .ui-rep-section {
+  border-top: 0;
+}
+
+.ui-rep-project .ui-rep-head-title,
+.ui-rep-project .ui-rep-head-total {
+  color: var(--color-text);
+  font-size: var(--type-body-size);
+}
+
+.ui-rep-project-body .ui-rep-total {
+  min-height: var(--touch-min);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-rep-project-body .ui-rep-total-strong {
+  font-weight: var(--type-section-weight);
+}
+
+.ui-rep-more {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--touch-min);
+  color: var(--color-accent-text);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-section-weight);
+  text-decoration: none;
+}
+
+/* The balance sheet's Suspense warning: an icon and words, never colour alone (rule visual § 7). */
+.ui-rep-warning {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ui-rep-warning-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-bad);
+}
+
+.ui-rep-warning-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.ui-rep-warning-title {
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-section-weight);
+}
+
+.ui-rep-warning-body {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-cents-line);
+}
+
+.ui-rep-warning-action {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-min);
+  padding-inline: var(--space-4);
+  border-radius: var(--radius-button);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--type-line2-size);
+  font-weight: var(--type-section-weight);
+  text-decoration: none;
+}
+
+/* The sheets: the custom range in the same sheet as the presets. */
+.ui-rep-more-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: calc(var(--touch-min) + var(--space-2));
+  padding: 0;
+  border: 0;
+  border-top: 1px solid var(--color-line);
+  background: transparent;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: var(--type-body-size);
+  cursor: pointer;
+}
+
+.ui-rep-custom {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ui-rep-fields {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.ui-rep-field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-input);
+  background: var(--color-surface);
+  font-size: var(--type-body-size);
+}
+
+.ui-rep-days {
+  margin: 0;
+}
+
+.ui-rep-group-label {
+  margin: var(--space-3) 0 var(--space-1);
+}
+
+/* FLOW-170: the balance date sheet's note under its calendar: the column's gap spaces it. */
+.ui-rep-custom > .ui-rep-note {
+  margin: 0;
+}
+
+.ui-rep-more-wrap {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--space-3);
+}
+
+/* FLOW-162: the share sheet: the file type, the reports in it, the detail switch and one line on the file. */
+.ui-rep-share {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-rep-share > p {
+  margin: 0;
+}
+
+/* The drill-down's search: the field, then one line on what it found. */
+.ui-rep-search {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-block: var(--space-2);
+}
+
+.ui-rep-search > p {
+  margin: 0;
+}
+
+/* The status line stays mounted for screen readers; empty, it takes back the gap it would leave. */
+.ui-rep-search > p:empty {
+  margin-block-start: calc(var(--space-1) * -1);
+}
+
+/* FLOW-171: the reports' titles. A long Latin name in the right-to-left title wraps inside the screen. */
+.ui-rep-screen .ui-page-stacked .ui-focus-title {
+  overflow-wrap: anywhere;
+}
+
+/* The account page only: its name shows whole on up to three lines ("Partner – Contributions/Distributions"
+   takes three at 320), not the pages' two. Waits on the design lead's sign-off (DESIGN-RULES: names wrap to two). */
+.ui-page.ui-rep-account-head .ui-focus-title {
+  -webkit-line-clamp: 3;
+}
+
+/* The period choice over the summary rows and the movements: 44px segments, as the reports' own switch. */
+.ui-rep-account-span {
+  margin-block: var(--space-2);
+  --size-seg: var(--touch-min);
+  --size-seg-track: calc(var(--touch-min) + var(--space-2));
+}
+
+/* From the start: a heading per year over its months; the months' heads keep sticking under it. */
+.ui-rep-account-year-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-side) var(--space-1);
+  border-block-end: var(--stroke-hairline) solid var(--color-line);
+}
+
+.ui-rep-account-year-title {
+  margin: 0;
+}
+
+.ui-rep-account-year-count {
+  color: var(--color-text-muted);
+  font-size: var(--type-meta-size);
+  white-space: nowrap;
+}

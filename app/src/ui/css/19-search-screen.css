@@ -662,3 +662,19 @@
   border-color: transparent;
   background: var(--color-skeleton);
 }
+
+/* FLOW-163: the reports the text names, under their heading: the project shortcut's rows, one per report. */
+.ui-search-reports-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-search-reports-list .ui-search-project {
+  margin-block-start: 0;
+}
+
+/* The searching view runs edge to edge; the reports keep the page's side. */
+.ui-search-results:has(.ui-search-searching) > .ui-search-reports {
+  padding-inline: var(--space-side);
+}

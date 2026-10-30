@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { getSupabase } from "./lib/supabase";
 import { useHomePreview } from "./preview";
+import { SYSTEM_NAMES } from "./system-accounts";
 import { waitForAccessToken } from "./wait-for-session";
 
 /**
@@ -61,29 +62,19 @@ export function legTypeLabel(leg: Pick<JournalLeg, "account_type" | "is_bank">):
   }
 }
 
-/** Hebrew for the ledger's system accounts (decision 0208); a category account keeps its own name. */
-export const SYSTEM_NAMES: Record<string, string> = {
-  "Loan principal": "קרן הלוואה",
-  Escrow: "אסקרו",
-  Property: "נכסים",
-  "Transfers in transit": "העברות בין חשבונות",
-  "Owner capital": "השקעת בעלים",
-  "Security deposit held": "פיקדון שהתקבל",
-  Suspense: "חשבון מעבר",
-  "VAT control": "מע״מ",
-  "Uncategorized income": "הכנסה בלי קטגוריה",
-  "Uncategorized expense": "הוצאה בלי קטגוריה",
-};
-
 /**
  * A leg's name: the bank account the line moved through; a system account in Hebrew, with the category that
- * posted there ("אסקרו · מסים וביטוח"); or the category.
+ * posted there ("נכסים · רכישת נכס"), unless the account name already says it; or the category.
  */
 export function legName(leg: Pick<JournalLeg, "account_name" | "is_bank" | "system" | "category_name">, bankName: string | null): string {
   if (leg.is_bank) return bankName ?? "בנק";
   if (!leg.system) return leg.account_name;
   const account = SYSTEM_NAMES[leg.account_name] ?? leg.account_name;
-  return leg.category_name != null && leg.category_name !== account ? `${account} · ${leg.category_name}` : account;
+  const category = leg.category_name?.trim();
+  if (!category) return account;
+  // Whole words only: a category must match the name or its last words; "נכס" is not said by "נכסים".
+  const said = account === category || account.endsWith(` ${category}`);
+  return said ? account : `${account} · ${category}`;
 }
 
 /** A leg kept out of profit: neither the bank nor an income or expense account. */

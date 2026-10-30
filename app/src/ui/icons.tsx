@@ -398,6 +398,17 @@ export function DownloadIcon(props: IconProps) {
   );
 }
 
+/** Share: a box with an arrow out of it (FLOW-162, the reports' share). */
+export function ShareIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2" />
+      <polyline points="8 6 12 2 16 6" />
+      <line x1="12" y1="2" x2="12" y2="15" />
+    </Svg>
+  );
+}
+
 export function TrashIcon(props: IconProps) {
   return (
     <Svg size={20} stroke={2} {...props}>

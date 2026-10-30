@@ -1,5 +1,6 @@
 import type { SearchRow } from "@flow/shared";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { StoryRoute } from "../ui/story-route";
 import { SearchScreen, type SearchSample } from "./search";
 
@@ -97,6 +98,79 @@ export const Offline: Story = { render: () => <Search entry="/search?q=חומר�
 
 /** More lines than one page: the month head of the last month waits, and the count says the total. */
 export const MorePages: Story = { render: () => <Search entry="/search?dir=expense" data={{ ...sample, total: 120 }} /> };
+
+/** FLOW-163 (board ReportEntrySearch): "מאזן" names a report. Its row comes first, and no line matches. */
+export const ReportShortcut: Story = {
+  render: () => <Search entry={`/search?q=${encodeURIComponent("מאזן")}`} />,
+  play: async ({ canvasElement }) => {
+    const link = await within(canvasElement).findByRole("link", { name: /מאזן/ });
+    await expect(link).toHaveAttribute("href", "/reports?kind=balance");
+  },
+};
+
+/** FLOW-163: "דוחות וילה" offers both reports on that project. */
+export const ReportShortcutProject: Story = {
+  render: () => <Search entry={`/search?q=${encodeURIComponent("דוחות וילה")}`} />,
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("link", { name: /רווח והפסד · וילה לדוגמה/ });
+  },
+};
+
+/** FLOW-169: a uuid project, so its reports link is one the reports screen reads as a project. */
+const CHIP_PROJECT = "a0000000-0000-4000-8000-000000000169";
+
+/**
+ * FLOW-169: with the project chip on, "המאזן?" (a prefix letter and a question mark) opens the
+ * balance sheet on that project, as a typed project name does. At 320, in light and dark.
+ */
+export const ReportShortcutProjectChip: Story = {
+  name: "Report shortcut · the project chip at 320",
+  globals: { viewport: { value: "flow320", isRotated: false } },
+  render: () => (
+    <Search
+      entry={`/search?q=${encodeURIComponent("המאזן?")}&project=${CHIP_PROJECT}`}
+      data={{ ...sample, projects: [...(sample.projects ?? []), { id: CHIP_PROJECT, name: "בית לדוגמה בגבעה", status: "active" }] }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
+    const canvas = within(canvasElement);
+    const link = await canvas.findByRole("link", { name: /מאזן · בית לדוגמה בגבעה/ });
+    await expect(link).toHaveAttribute("href", `/reports?kind=balance&scope=project&project=${CHIP_PROJECT}`);
+    await expect(canvas.getByRole("button", { name: "הסרת בית לדוגמה בגבעה" })).toBeInTheDocument();
+    const row = link.getBoundingClientRect();
+    await expect(row.right).toBeLessThanOrEqual(320);
+    await expect(row.left).toBeGreaterThanOrEqual(0);
+  },
+};
+
+/**
+ * FLOW-163 (review r1): a project whose name holds a report's name. The דוחות section comes first,
+ * then the project shortcut, then the project's lines.
+ */
+export const ReportShortcutAboveResults: Story = {
+  render: () => (
+    <Search
+      entry={`/search?q=${encodeURIComponent("מאזן")}`}
+      data={{
+        ...sample,
+        projects: [...(sample.projects ?? []), { id: "p4", name: "בית מאזן לדוגמה", status: "active" }],
+        rows: [
+          line("m1", { doc_date: "2026-10-05", supplier_name: "חומרי בניין לדוגמה", amount_net: -86_400n, project_id: "p4", project_name: "בית מאזן לדוגמה" }),
+          line("m2", { doc_date: "2026-09-22", supplier_name: null, customer_name: "לקוח לדוגמה", direction: "income", amount_net: 920_000n, project_id: "p4", project_name: "בית מאזן לדוגמה", category_id: "c3", category_name: "עבודה" }),
+          ...rows,
+        ],
+      }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const report = await canvas.findByRole("link", { name: /כל הפרויקטים · היום/ });
+    const project = canvas.getByRole("link", { name: /בית מאזן לדוגמה.*לדף הפרויקט/ });
+    await expect(report.compareDocumentPosition(project) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await expect(canvas.getByText("2 תנועות", { exact: false })).toBeInTheDocument();
+  },
+};
 
 /**
  * A large income kept out of profit, with a project and a category: its one line ("date · project ·

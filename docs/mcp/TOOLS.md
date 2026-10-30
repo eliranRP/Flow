@@ -116,6 +116,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `update_account`, `archive_account`, `restore_account`, `undo` `kind: "account_*"` | `account_id`, `id` | `list_accounts` `accounts[].id` (a company account, `is_system` false) |
 | `merge_account` | `from_account_id`, `into_account_id` | `list_accounts` `accounts[].id`; undo `account_merge` takes the from id |
 | `get_balance_sheet` | `project_id` | `list_projects` |
+| `get_account_lines` | `account_id`, `project_id` | `get_balance_sheet` `currencies[].assets/liabilities/equity.accounts[].account_id` or `list_accounts` `accounts[].id` (an asset, liability or equity account), `list_projects` |
 | `get_pnl_statement` | `project_id` | `list_projects` |
 | `create_prepaid_schedule` | `transaction_id`, `expense_category_id`, `project_id`, `prepaid_account_id` | `list_review.transaction_id` or `get_expense.id` (a posted expense line), `list_categories` (an expense category counted in the P&L), `list_projects`, `list_accounts` `accounts[].id` (an asset account) |
 | `get_prepaid_schedule`, `update_prepaid_schedule`, `end_prepaid_schedule`, `delete_prepaid_schedule`, `attach_prepaid_refund` | `id`, `schedule_id` | `list_prepaid_schedules` `schedules[].schedule_id` |
@@ -273,11 +274,11 @@ Input: `{ "scope": "all", "query": "מלט", "from": "2026-06-01", "to": "2026-0
 
 ### get_breakdown
 
-`get_breakdown` or `get_breakdown_lines` ([0110](../decisions/0110-home-breakdown.md)). `direction` is `income` or `expense` (required). `group_by` is `category` (default), `project`, or `payer`. Each `groups` row has `projects`, the number of projects with a counted line in that group (FLOW-140; with `group_by` `category` it is the category's project count). `level` is `category` (default) or `parent` (FLOW-406, with `group_by` `category` only): by parent, a sub-category's lines count under its parent, so `key` is the parent's id and its `group` lines are its own and its sub-categories'. `totals` are the same either way, and the output's `group_by` reads `parent`. A line split between two sub-categories of one parent is one row in the parent's lines, with `category_name` null, as for any line split across categories. `basis` defaults to the company's choice (like `get_totals`) and the output echoes it, the lines included. Omit both dates for all time; one date alone is `validation`.
+`get_breakdown` or `get_breakdown_lines` ([0110](../decisions/0110-home-breakdown.md)). `direction` is `income` or `expense` (required). `group_by` is `category` (default), `project`, or `payer`. Each `groups` row has `projects`, the number of projects with a counted line in that group (FLOW-140; with `group_by` `category` it is the category's project count). `level` is `category` (default) or `parent` (FLOW-406, with `group_by` `category` only): by parent, a sub-category's lines count under its parent, so `key` is the parent's id and its `group` lines are its own and its sub-categories'. `totals` are the same either way, and the output's `group_by` reads `parent`. A line split between two sub-categories of one parent is one row in the parent's lines, with `category_name` null, as for any line split across categories. `basis` defaults to the company's choice (like `get_totals`) and the output echoes it, the lines included. Omit both dates for all time; one date alone is `validation`. `project_id` (FLOW-165, with `group` or `excluded: true` and `group_by` `category`) keeps one project's lines: its own and its allocation of a shared cost, read by project as `get_pnl_statement` reads a project, so they add up to that project's category; another company's project is `not_found`.
 
 Without `group`: output `data` is `direction`, `basis`, `group_by`, `from`, `to`, `totals[]` (`currency`, `amount_minor`, `count`), `groups[]` (`key`, `name`, `currency`, `amount_minor`, `count`, `shared`), `excluded[]` (kept-out lines, not in the totals), `excluded_groups[]` (FLOW-954; with `group_by` `category` only, else `[]`: each kept-out category's `key`, `name`, `currency`, `amount_minor`, `count`, `projects`, `loan_part`, and `account_type` / `account_name`, the balance-sheet account its lines post to, adding up to `excluded`), and `review_count`. `totals` equal `get_totals`' `income_minor` / `expense_minor`. On `cash`, an unpaid supplier invoice is left out of every row, like `get_totals`. Under `project`, `key` is a project id, `overhead`, or `unassigned`; a shared cost is split by its allocations and the project's row has `shared: true`. A null `name` means no category, payer, or project (key `none` or `unassigned`). Passing `currency`, `limit`, or `offset` here is `validation`.
 
-With `group` (a `key` from `groups`) and `currency` (default `ILS`), or with `excluded: true` (not both): output `data.rows[]` (`transaction_id`, `part`, `description`, `supplier_name`, `project_name`, `category_name`, `doc_date`, `currency`, `amount_minor`, `shared`, and `category_id` since FLOW-954, null when a row spans two categories) newest first, and `has_more`. `limit` defaults to 40, at most 100.
+With `group` (a `key` from `groups`) and `currency` (default `ILS`), or with `excluded: true` (not both): output `data.rows[]` (`transaction_id`, `part`, `description`, `supplier_name`, `project_name`, `category_name`, `doc_date`, `currency`, `amount_minor`, `shared`, and `category_id` since FLOW-954, null when a row spans two categories) newest first, and `has_more`; since FLOW-165 also `total_minor` and `count`, the whole group's total and row count whatever the page. `limit` defaults to 40, at most 100.
 
 `amount_minor` is positive for income and for a normal expense. A loan payment with a valid split counts by part, so its rows carry `part`.
 
@@ -623,6 +624,15 @@ Merge one company account into another of the same type (owner or editor): the c
 
 The balance sheet from the legs (any member, `mcp_balance_sheet`; FLOW-152). Per currency: `assets`, `liabilities` and `equity` (each `{ total_minor, accounts: [{ account_id, name, is_system, balance_minor }] }`, zero balances left out), `retained_earnings_minor` (the running P&L: minus the income and expense legs), `total_assets_minor`, `total_liabilities_and_equity_minor`, `difference_minor`, `balanced` (assets = liabilities + equity + retained earnings) and `warnings` (`suspense` or `uncategorized`: that account is not zero). Debit is positive; liabilities and equity show credit as positive. **Rule:** a line's legs count from the line's `doc_date` (the bank leg too), on posted lines that are not removed; draft legs are not on the books. `as_of` defaults to today. `project_id` keeps the legs filed to that project (an entry that spans projects may then not balance on its own).
 
+### get_account_lines
+
+```json
+{ "account_id": "<balance-sheet account id>", "as_of": "2026-10-15", "from": "2026-01-01", "project_id": "<optional>", "currency": "ILS", "limit": 50, "offset": 0 }
+{ "account_id": "<balance-sheet account id>", "from_start": true }
+```
+
+One balance-sheet account's movements (any member, `get_account_lines`; FLOW-165), the reports screen's account page. Output `data`: `account_id`, `name`, `type` (`asset`, `liability` or `equity`), `is_system`, `as_of` (default today), `from` (the period's first day; null from the start), `from_start`, `year_start` (1 January of `as_of`'s year whatever the period; kept for one release for older clients, read `from`), `project_id`, `project_name`, `currency`, `loan_ids` (the loans whose parts post to the account, as on a loan's principal), `currencies[]` (`currency`, `opening_minor` the balance before `from`, 0 from the start, `movement_minor` the period's change, `balance_minor` as of `as_of`, the same figure as the account's line in `get_balance_sheet`, and `count` the period's movements), `rows[]` and `has_more`. **The period (FLOW-171):** `from` (YYYY-MM-DD, on or before `as_of`) starts it on that day; `from_start: true` makes it the account's whole history, from its first leg, with no opening balance (not with `from`); with neither it starts on 1 January of `as_of`'s year, as before. `rows[]` are the period's movements up to `as_of`, newest first, one per line with its legs on the account summed: `transaction_id`, `doc_date`, `currency`, `amount_minor`, `description`, `party_name`, `project_id`, `project_name`, `part` (a loan part), `loan_id`, `line_amount_minor` (the whole line's signed amount). Signed as `get_balance_sheet` shows them: an asset's debit is positive, a liability's and equity's credit is, so a loan's principal payment reads negative. **Rule:** `get_balance_sheet`'s: a line's legs count from its `doc_date`, on posted lines that are not removed; draft legs are not on the books. `project_id` keeps the legs filed to that project and `currency` that currency's. `limit` is 1 to 100 (default 50). Another company's account or project, an unknown one, or an income or expense account is `not_found`; a bad argument is `validation`, before any read, and so is a `from` after `as_of` (after today when `as_of` is left out).
+
 ### get_pnl_statement
 
 ```json
@@ -634,6 +644,30 @@ The P&L as a statement (any member, `get_pnl_statement`; FLOW-160): the one the 
 Each `currencies[]` row is one currency's statement, never converted: `currency`, `income_minor`, `expense_minor`, `net_minor` (income minus cost; both are positive), `income[]` and `expense[]` (categories, largest first: `id`, `name`, `amount_minor`, `count`, `own_minor` and `children[]`; a parent category holds its sub-categories, each `{ id, name, amount_minor, count }`, and `own_minor` is its own lines; a category with no sub-categories has none; `id` and `name` are null for lines with no category) and `kept_out[]` (the categories kept out of the P&L: `id`, `name`, `direction`, `amount_minor`, `count`, and `account_name` / `account_type`, the balance-sheet account their legs post to). With `by_project`, `currencies` is still the company's and `projects[]` holds `{ key, project_id, name, currencies[] }` per key: each project, then `overhead` (overhead costs) and `unassigned` (lines with no project), whose `project_id` and `name` are null.
 
 **Rule:** the rows are `get_breakdown`'s, so the totals are its totals for the same range and basis: the company's by category, a project's and each `projects[]` key's by project. The projects add up to the company within 1 minor unit per shared part. Another company's project, or an unknown one, is `not_found`.
+
+### export_report
+
+```json
+{ "kind": "both", "format": "pdf", "from": "2026-01-01", "to": "2026-10-31", "as_of": "2026-10-31", "project_id": "<optional project id>", "by_project": false, "expand": true }
+```
+
+The reports as a file to download or share (any member, FLOW-162). It is the same file the reports screen's share button sends.
+
+- **Arguments:**
+  - `kind`: `pnl` (the default), `balance` or `both`.
+  - `format`: `pdf` (the default) or `csv`.
+  - The P&L takes `get_pnl_statement`'s `from`, `to`, `basis`, and `project_id` or `by_project`, under the same rules. `expand` (default `true`) lists each category's sub-categories under it.
+  - The balance sheet takes `as_of` (default today in Israel; with `kind: "both"`, the P&L's `to`) and the same `project_id`.
+- **Output:** `data` is `{ "file_name", "mime_type", "size_bytes" }`. The file itself is the second item in the result's `content`: an embedded resource `{ "type": "resource", "resource": { "uri": "flow://reports/<file name>", "mimeType", "blob" } }`, base64.
+- **PDF:**
+  - A4, Hebrew right to left, Rubik embedded.
+  - The company, the report's dates, projects and basis, and page n of N on every page. Table heads repeat on each page.
+  - Each report starts on its own page. By project, the table has up to four project columns per block.
+- **CSV:** UTF-8 with a byte-order mark (so Excel reads the Hebrew), one row per line of the report, and amounts as decimals with a minus on money out. A cell that would start a formula is defused with `'`.
+
+**Rule:** the numbers are `get_pnl_statement`'s and `get_balance_sheet`'s for the same arguments. Another company's project is `not_found`; a bad argument is `validation`, before any read.
+
+The app's share button asks for the same file through flow-mcp's `report` route, with the user's own session. That route allows 10 files a minute per user (FLOW-166). One more is `429` with `rate_limited`, `retry_after_seconds` and a `retry-after` header. The MCP tool counts against the same limit of 10 files a minute per user, as well as in the token's read bucket, as every read does; over it, the tool returns `rate_limited`, with the seconds to wait in its message (`try again in N s`).
 
 ### create_manual_entry
 
