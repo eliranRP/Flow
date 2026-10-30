@@ -47,7 +47,7 @@ export const READ_TOOL_NAMES = [
   "get_cash_months",
   "get_cash_years",
   "get_cash_lines",
-  "get_started", "match_lines", "get_forecast", "get_project_forecast_edits", "list_bank_connections", "list_transfer_matches",
+  "get_started", "match_lines", "get_forecast", "get_project_forecast_edits", "get_company_next_month_inputs", "list_bank_connections", "list_transfer_matches",
   "list_accounts", "get_line_legs", "get_journal_entry_history", "get_account_balances", "get_balance_sheet", "get_account_lines", "get_pnl_statement", "export_report", "list_prepaid_schedules", "get_prepaid_schedule", "get_weekly_summary", "get_transaction_thread",
 ] as const;
 

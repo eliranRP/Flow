@@ -89,7 +89,7 @@ export const TOOL_GROUPS: GuideGroup[] = [
     tools: [
       "get_expected_months", "get_recurring_changes", "get_line_recurring", "get_line_charges", "get_recurring_this_month",
       "get_recurring_schedule", "set_line_recurring", "set_line_pace", "set_line_usual_amount", "answer_recurring_match",
-      "reassign_recurring_charge", "get_forecast", "set_forecast_item", "reset_forecast", "get_project_forecast_edits",
+      "reassign_recurring_charge", "get_forecast", "set_forecast_item", "reset_forecast", "get_project_forecast_edits", "get_company_next_month_inputs",
       "set_project_forecast_edit", "remove_project_forecast_row", "restore_project_forecast_row", "reset_project_forecast",
     ],
   },

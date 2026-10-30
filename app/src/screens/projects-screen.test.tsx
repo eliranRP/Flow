@@ -1,6 +1,8 @@
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { devProjectsCash } from "../dev/projects-sample";
+import { HOME_NEXT_MONTH_SAMPLE, NEXT_MONTH_PROJECTS, NEXT_MONTH_TODAY } from "../dev/home-next-month-sample";
+import { companyCashForecast, companyForecastCaption, companyNextMonthForecast } from "../company-next-month";
 import { renderWithProviders } from "../test-render";
 import { sampleDashboard } from "../ui/screen-stories-support";
 import { ProjectsScreen } from "./projects-screen";
@@ -38,5 +40,27 @@ describe("ProjectsScreen (FLOW-445b)", () => {
     renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={{ ...devProjectsCash, projects: [] }} />);
     expect(screen.getByText("עוד אין פרויקטים")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "פרויקט חדש" })).toBeInTheDocument();
+  });
+
+  it("FLOW-990: shows the company's next month above the list, and each project's own under its figure", () => {
+    const next = HOME_NEXT_MONTH_SAMPLE.next;
+    const forecast = companyCashForecast(companyNextMonthForecast({ currency: "USD", today: NEXT_MONTH_TODAY, recurring: next.recurring, loans: next.loans, categories: next.categories, inputs: next.inputs }));
+    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={NEXT_MONTH_PROJECTS} nextSample={HOME_NEXT_MONTH_SAMPLE} today={NEXT_MONTH_TODAY} />);
+    expect(screen.getByText("נובמבר")).toBeInTheDocument();
+    expect(screen.getByText(companyForecastCaption(forecast))).toBeInTheDocument();
+    for (const part of forecast.parts.filter((item) => item.projectId != null)) {
+      const row = NEXT_MONTH_PROJECTS.projects.find((item) => item.id === part.projectId);
+      if (row == null) continue;
+      expect(within(screen.getByRole("link", { name: new RegExp(`^${row.name}`, "u") })).getByText("צפי")).toBeInTheDocument();
+    }
+    // A project that expects nothing next month has no צפי figure.
+    const quiet = NEXT_MONTH_PROJECTS.projects.filter((item) => !forecast.parts.some((part) => part.projectId === item.id));
+    for (const row of quiet) expect(within(screen.getByRole("link", { name: new RegExp(`^${row.name}`, "u") })).queryByText("צפי")).toBeNull();
+  });
+
+  it("FLOW-990: no forecast sample, no card and no צפי figures", () => {
+    renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={devProjectsCash} />);
+    expect(screen.queryByText("צפוי להיכנס")).toBeNull();
+    expect(screen.queryByText("צפי")).toBeNull();
   });
 });

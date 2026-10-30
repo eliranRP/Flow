@@ -55,3 +55,26 @@ Deno.test("undo takes the project_forecast kind to mcp_undo", async () => {
   await callTool("undo", { idempotency_key: "pf-undo", kind: "project_forecast", id }, ["write"], rpc);
   assertEquals(calls, [{ name: "mcp_undo", body: { p_idempotency_key: "pf-undo", p_kind: "project_forecast", p_id: id } }]);
 });
+
+Deno.test("get_company_next_month_inputs forwards company_next_month_inputs as is", async () => {
+  const inputs = { today: "2026-10-30", month: "2026-11", overhead_project_id: null, projects: [{ project_id: PROJECT, categories: [] }], general: [], edits: [], rest_edits: [] };
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: inputs }));
+  const result = await callTool("get_company_next_month_inputs", { today: "2026-10-30" }, ["read"], rpc);
+  assertEquals(result.isError, false);
+  assertEquals(result.structuredContent.ok ? result.structuredContent.data : null, inputs);
+  await callTool("get_company_next_month_inputs", {}, ["read"], rpc);
+  assertEquals(calls, [
+    { name: "company_next_month_inputs", body: { p_today: "2026-10-30" } },
+    { name: "company_next_month_inputs", body: { p_today: null } },
+  ]);
+  const bad = await callTool("get_company_next_month_inputs", { today: "30/10/2026" }, ["read"], rpc);
+  const extra = await callTool("get_company_next_month_inputs", { project_id: PROJECT }, ["read"], rpc);
+  assertEquals([bad.isError, extra.isError], [true, true]);
+  assertEquals(calls.length, 2);
+});
+
+Deno.test("get_company_next_month_inputs: a refused read is refused", async () => {
+  const { rpc } = rpcOf(() => ({ status: 403, json: { message: "denied" } }));
+  const result = await callTool("get_company_next_month_inputs", {}, ["read"], rpc);
+  assertEquals(result.isError, true);
+});

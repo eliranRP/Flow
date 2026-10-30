@@ -41,7 +41,7 @@ import { countedPayments, demandPaymentsOf, demandTermsOf, listedLoan, loadLoanP
 import { loanKindOf, loansPaidRead, storedLoanSchedule } from "./tools_loans.ts";
 import { scopeAllows } from "./tools_specs.ts";
 import { getStartedPayload } from "./tools_guide.ts";
-import { projectForecastRead } from "./tools_project_forecast.ts";
+import { companyNextMonthInputsRead, projectForecastRead } from "./tools_project_forecast.ts";
 import { bankRead } from "./tools_bank.ts";
 import { weeklySummaryTool } from "./tools_weekly.ts";
 import { threadRead } from "./tools_thread.ts";
@@ -702,6 +702,7 @@ export async function callTool(
 
   if (name === "get_loans_paid") return loansPaidRead(args, rpc);
   if (name === "get_project_forecast_edits") return projectForecastRead(args, rpc);
+  if (name === "get_company_next_month_inputs") return companyNextMonthInputsRead(args, rpc);
   if (name === "list_bank_connections" || name === "list_transfer_matches") return bankRead(name, rpc);
   if ((LEDGER_READS as readonly string[]).includes(name)) return ledgerRead(name as typeof LEDGER_READS[number], args, rpc);
 

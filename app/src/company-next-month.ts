@@ -2,7 +2,7 @@ import { formatAmountText, type CategoryRow, type ExpectedParty, type ProjectCat
 import { incomeNote, isRent, type RentCategory } from "./next-month-chart";
 import { monthWord } from "./project-next-edit";
 import type { ForecastLoan } from "./project-next-loans";
-import { applyForecastEdits, nextMonthForecast, nextMonthKey, type NextMonthForecast, type NextMonthRow, type ProjectForecastEdit } from "./project-next-month";
+import { applyForecastEdits, cashForecast, nextMonthForecast, nextMonthKey, type NextMonthForecast, type NextMonthRow, type ProjectForecastEdit } from "./project-next-month";
 
 /**
  * The company's forecast for next month (canvas note spec-fcwide, item 2; decision 0196 point 5), pure: the
@@ -149,6 +149,21 @@ export function companyNextMonthForecast(input: {
     rows: kept.flatMap((part) => part.forecast.rows.map((row) => ({ ...row, projectId: part.projectId }))),
     parts: kept,
   };
+}
+
+/**
+ * FLOW-990: the company's next month in cash terms (decision 0196), as Home and the Projects tab show it: each
+ * part's loans' principal due next month added (cashForecast), the totals summed again. The rows stay as they are.
+ */
+export function companyCashForecast(forecast: CompanyNextMonth): CompanyNextMonth {
+  const parts = forecast.parts.map((part) => ({ ...part, forecast: cashForecast(part.forecast) }));
+  const expenseMinor = parts.reduce((sum, part) => sum + part.forecast.expenseMinor, 0n);
+  return { ...forecast, parts, expenseMinor, netMinor: forecast.incomeMinor - expenseMinor };
+}
+
+/** FLOW-990: one part's net (a project's, or the general costs' for null), or null when it expects nothing. */
+export function companyPartNet(forecast: Pick<CompanyNextMonth, "parts">, projectId: string | null): bigint | null {
+  return forecast.parts.find((part) => part.projectId === projectId)?.forecast.netMinor ?? null;
 }
 
 /** The card's grey corner caption: "7 פרויקטים וכללי", what the sum is made of. */
