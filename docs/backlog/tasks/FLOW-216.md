@@ -1,6 +1,6 @@
 <a id="flow-216"></a>
 # FLOW-216 · MCP get_company_next_month_inputs: the company forecast's inputs
-- **Type:** MCP · **Status:** in-progress (#885) · **Depends on:** [FLOW-143](FLOW-143.md) (the read `company_next_month_inputs`) · **Source:** the review of FLOW-143's PR (#742), decision [0197](../../decisions/0197-company-next-month.md) and [0095](../../decisions/0095-mcp-first.md), 2026-10-20
+- **Type:** MCP · **Status:** done (#885) · **Depends on:** [FLOW-143](FLOW-143.md) (the read `company_next_month_inputs`) · **Source:** the review of FLOW-143's PR (#742), decision [0197](../../decisions/0197-company-next-month.md) and [0095](../../decisions/0095-mcp-first.md), 2026-10-20
 - **Files:** `supabase/functions/flow-mcp/` (the tool and its Deno test), `docs/mcp/TOOLS.md`.
 
 The company profit page shows next month as the sum of every project's forecast and the general costs, built in the app from four reads. An agent has the per-project reads (`get_expected_months`, `get_project_forecast_edits`, `list_loans`) but nothing for the category months of every project at once.
