@@ -1,10 +1,10 @@
 // FLOW-162: the report's PDF and CSV, from an invented company's reports (report_sample.ts).
 import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
-import { PDFDocument } from "npm:pdf-lib@1.17.1";
+import { PDFDocument, PDFFont } from "npm:pdf-lib@1.17.1";
 import { cell, decimal, renderReportCsv } from "./report_csv.ts";
 import { reportFileName } from "./report_model.ts";
 import { forFontkit, percent, renderReportPdf } from "./report_pdf.ts";
-import { periods } from "./report_grid.ts";
+import { generalLabel, periods } from "./report_grid.ts";
 import { SAMPLE_BALANCE, SAMPLE_BALANCE_GRID, SAMPLE_FILE, SAMPLE_PNL_GRID, SAMPLE_QUARTER_GRID, SAMPLE_STATEMENT } from "./report_sample.ts";
 import { columnName, crc32, renderReportXlsx, workbookSheets } from "./report_xlsx.ts";
 
@@ -180,4 +180,30 @@ Deno.test("the xlsx: a sheet per report and פרטים, right to left, frozen he
   assertStringIncludes(details, "נכסי הדוגמה");
   assertEquals(workbookSheets(file).map((sheet) => sheet.name), ["רווח והפסד", "מאזן", "פרטים"]);
   assertEquals([columnName(0), columnName(25), columnName(26)], ["A", "Z", "AA"]);
+});
+
+// FLOW-996: a real company's by-project P&L ran out of the edge function's CPU time, and its overhead project,
+// itself called "כללי", gave two columns of that name.
+Deno.test("the general column is named so it never repeats a project's name", () => {
+  assertEquals(generalLabel(["Maple Ave", "Cedar St"]), "כללי");
+  assertEquals(generalLabel(["Maple Ave", "כללי"]), "בלי פרויקט");
+});
+
+Deno.test("a wide P&L grid measures each piece of text once, not once per try (the edge function's CPU budget)", async () => {
+  const long = "הוצאות תפעול שוטפות של הנכסים ותחזוקה כללית לאורך כל השנה";
+  const rows = Array.from({ length: 6 }, (_, at) => grid(SAMPLE_PNL_GRID).rows.map((row) => ({ ...row, label: `${long} ${String(at)}` }))).flat();
+  const wide = { ...SAMPLE_PNL_GRID, grids: [{ ...grid(SAMPLE_PNL_GRID), columns: Array.from({ length: 8 }, (_, index) => `Property ${String(index + 1)} Ave`), rows: rows.map((row) => ({ ...row, cells: Array.from({ length: 8 }, (_, index) => (row.cells[0] == null ? null : row.cells[0] * BigInt(index + 1) * 7n + 13n)) })) }] };
+  const measure = PDFFont.prototype.widthOfTextAtSize;
+  let calls = 0;
+  PDFFont.prototype.widthOfTextAtSize = function (this: PDFFont, text: string, size: number) {
+    calls += 1;
+    return measure.call(this, text, size);
+  };
+  try {
+    await renderReportPdf({ ...SAMPLE_FILE, parts: [wide] });
+  } finally {
+    PDFFont.prototype.widthOfTextAtSize = measure;
+  }
+  // Each run of text is laid out once and its width scaled; it was over 20,000 calls for this grid.
+  assert(calls < 3000, `${String(calls)} measurements`);
 });

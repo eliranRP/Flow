@@ -52,9 +52,28 @@ export function forFontkit(segment: { text: string }): string {
   return /[\u0590-\u05FF\uFB1D-\uFB4F]/.test(segment.text) ? [...segment.text].reverse().join("") : segment.text;
 }
 
+// A width from fontkit lays the text out each time, which is slow; a file measures the same amounts and
+// names many times (a grid tries several sizes). Widths scale with the size, so each run is measured once,
+// at size 1, per font (FLOW-996: a by-project P&L ran out of the edge function's CPU time).
+const MEASURED = new WeakMap<PDFFont, Map<string, number>>();
+
+function runWidth(font: PDFFont, text: string, size: number): number {
+  let seen = MEASURED.get(font);
+  if (seen == null) {
+    seen = new Map();
+    MEASURED.set(font, seen);
+  }
+  let unit = seen.get(text);
+  if (unit == null) {
+    unit = font.widthOfTextAtSize(text, 1);
+    seen.set(text, unit);
+  }
+  return unit * size;
+}
+
 /** The width of a line as drawn. */
 function width(fonts: Fonts, value: string, size: number, weight: Weight = 400): number {
-  return visualSegments(value).reduce((sum, segment) => sum + fonts[segment.script][weight].widthOfTextAtSize(forFontkit(segment), size), 0);
+  return visualSegments(value).reduce((sum, segment) => sum + runWidth(fonts[segment.script][weight], forFontkit(segment), size), 0);
 }
 
 /** Draws a line so it ends at `x` (its right edge), or starts there with align "left". */
@@ -65,7 +84,7 @@ function draw(page: PDFPage, fonts: Fonts, value: string, x: number, y: number, 
     const font = fonts[segment.script][weight];
     const text = forFontkit(segment);
     page.drawText(text, { x: cursor, y, size, font, color: options.color ?? INK });
-    cursor += font.widthOfTextAtSize(text, size);
+    cursor += runWidth(font, text, size);
   }
 }
 

@@ -4,7 +4,7 @@
 // (project_ids); json returns the grid itself. It reads the same
 // statements as get_pnl_statement and get_balance_sheet, so the file shows the screen's numbers. The app's
 // share button asks the same builder through flow-mcp's `report` route. Any member reads it.
-import { addSheets, balanceGridByPeriod, balanceGridByProject, mergeStatements, periods, pnlGrid } from "../_shared/report_grid.ts";
+import { addSheets, balanceGridByPeriod, balanceGridByProject, generalLabel, mergeStatements, periods, pnlGrid } from "../_shared/report_grid.ts";
 import {
   type BalanceSheet,
   displayDate,
@@ -264,7 +264,7 @@ async function pnlPart(request: ReportRequest, reads: Reads, picked: Project[], 
     // Every project: "כללי" holds the overhead and the lines with no project, so the total is the company's.
     if (picked.length === 0) {
       const general = statement.projects.filter((project) => project.project_id == null).map((project) => project.currencies);
-      if (general.some((list) => list.length > 0)) columns.push({ label: "כללי", lists: general });
+      if (general.some((list) => list.length > 0)) columns.push({ label: generalLabel(columns.map((column) => column.label)), lists: general });
     }
     const lists = columns.flatMap((column) => column.lists);
     const grids = currenciesOf(lists).map((currency) =>
