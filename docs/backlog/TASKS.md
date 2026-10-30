@@ -400,6 +400,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-984"></a>[FLOW-984](tasks/FLOW-984.md) | Review loads its open items in pages, not all at once | PLAN FIRST |
 | <a id="flow-986"></a>[FLOW-986](tasks/FLOW-986.md) | דוחות takes קבועים's place in the tab bar; קבועים moves to an icon in Home's band | SMALL UI |
 | <a id="flow-987"></a>[FLOW-987](tasks/FLOW-987.md) | The one-time "קבועים עברו לכאן" tip under the band's קבועים icon | SMALL UI |
+| <a id="flow-990"></a>[FLOW-990](tasks/FLOW-990.md) | Next month's forecast on Home and on Projects | SMALL UI (design approved) |
 
 ## Projects and reports
 
