@@ -714,7 +714,7 @@ The reports as a file to download or share (any member, FLOW-162). It is the sam
   - The P&L takes `get_pnl_statement`'s `from`, `to` and `basis`, under the same rules. Period columns need both `from` and `to`, and at most 36 periods. `expand` (default `true`) lists each category's sub-categories under it.
   - The balance sheet takes `as_of` (default today in Israel; with `kind: "both"`, the P&L's `to`). With period columns it is read at each period's end instead.
 - **Columns:**
-  - `project`, P&L: a row per category and sub-category, a column per project. With no `project_ids`, a `כללי` column holds overhead and lines with no project, so the total equals the company P&L. With `project_ids`, only those projects and their total.
+  - `project`, P&L: a row per category and sub-category, a column per project. With no `project_ids`, a `כללי` column holds overhead and lines with no project (named `בלי פרויקט` when a project is itself called `כללי`), so the total equals the company P&L. With `project_ids`, only those projects and their total.
   - `project`, balance sheet: each project's column is the balance sheet read with that project. `כללי` is the company less the projects. A `נכסים נטו` row per column; equity is the company's and shows in the total column only, when no `project_ids` are given.
   - `month`, `quarter`, `year`: the P&L per period (the first and last clipped to the range), its total the sum of the columns; the balance sheet at each period's end, with no total column (the last column is `to`).
   - One read per column; more than 120 reads for one file is `validation`.

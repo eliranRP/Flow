@@ -280,6 +280,14 @@ Deno.test("export_report json by project: a column per project and כללי; the
   assertEquals(net.total_minor, 2_900_000);
 });
 
+Deno.test("export_report json by project: a project named כללי gets the overhead column בלי פרויקט (FLOW-996)", async () => {
+  const named = { ...projectsBody, projects: projectsBody.projects.map((project) => (project.project_id === PROJECT ? { ...project, name: "כללי" } : project)) };
+  const { rpc } = rpcOf((name) => (name === "get_pnl_statement" ? { status: 200, json: named } : listed(name)));
+  const result = await exportReport({ columns: "project", format: "json", from: "2026-01-01", to: "2026-10-31" }, rpc, NOW);
+  const grid = (result.structuredContent as { data: { reports: { grids: { columns: string[] }[] }[] } }).data.reports[0]!.grids[0]!;
+  assertEquals(grid.columns, ["כללי", "Riverside Commons Phase Two Townhomes", "בלי פרויקט"]);
+});
+
 Deno.test("export_report by project with projects picked: only their columns, no כללי", async () => {
   const { rpc } = rpcOf(listed);
   const result = await exportReport({ columns: "project", format: "json", project_ids: [P2] }, rpc, NOW);

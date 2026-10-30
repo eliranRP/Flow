@@ -197,6 +197,14 @@ export function pnlGrid(by: GridBy, currency: string, columns: PnlColumn[], expa
   };
 }
 
+/**
+ * The name of the column for the overhead and the lines with no project: "כללי", or "בלי פרויקט" when a
+ * project is itself called "כללי" (a company's overhead project often is), so no two columns share a name.
+ */
+export function generalLabel(projects: string[]): string {
+  return projects.includes("כללי") ? "בלי פרויקט" : "כללי";
+}
+
 /** A balance-sheet column in one currency; undefined when it has no balances in that currency. */
 export type BalanceColumn = { label: string; sheet: BalanceCurrency | undefined };
 
@@ -222,7 +230,7 @@ function accountRows(sheets: (BalanceCurrency | undefined)[], pick: (sheet: Bala
  */
 export function balanceGridByProject(currency: string, projects: BalanceColumn[], company: BalanceCurrency | undefined, general: boolean, date: string): ReportGrid {
   const columns = [...projects];
-  if (general) columns.push({ label: "כללי", sheet: company == null ? undefined : remainder(company, projects.map((column) => column.sheet)) });
+  if (general) columns.push({ label: generalLabel(projects.map((column) => column.label)), sheet: company == null ? undefined : remainder(company, projects.map((column) => column.sheet)) });
   const sheets = columns.map((column) => column.sheet);
   const rows: GridRow[] = [];
   const block = (title: string, pick: (sheet: BalanceCurrency) => BalanceAccount[], totalLabel: string): number => {
