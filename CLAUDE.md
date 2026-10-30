@@ -8,4 +8,6 @@ Before you start any task:
 2. Take a `ready` task (or a batch of related ones) that no open PR names and whose files no open PR changes.
 3. Open a draft PR with a `Claim` block right away, and keep its `Progress` line current until the merge.
 
+Review and merge your own PRs without waiting for the owner (the owner's standing approval, 2026-10-30): the reviewer's APPROVED comment on the current head and a green `pr` check are enough ([how](docs/backlog/README.md#merging-and-after-the-merge)).
+
 Then read [CONTRIBUTING.md](CONTRIBUTING.md). One rule from it for every change: remove what your change leaves unused. A component, story, test, CSS block, helper, script or fixture that your change replaces or stops using is deleted in the same PR ([how](CONTRIBUTING.md#remove-what-your-change-leaves-unused)). Everything here is public: never commit real data, secrets, or session ids.
