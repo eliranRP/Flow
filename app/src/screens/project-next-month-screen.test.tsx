@@ -6,6 +6,7 @@ import { JUNIPER_NEXT, JUNIPER_NEXT_EDITED, JUNIPER_NEXT_LOAN } from "../dev/pro
 import { JUNIPER_PROFIT } from "../dev/project-profit-sample";
 import type { ForecastLoan } from "../project-next-loans";
 import type { NextMonthSample } from "../project-next-month-query";
+import { applyForecastEdits, cashForecast, nextMonthForecast } from "../project-next-month";
 import { renderWithProviders } from "../test-render";
 import { loanOutlook } from "./loan-outlook";
 import { ProjectNextMonthScreen } from "./project-next-month-screen";
@@ -120,16 +121,19 @@ describe("ProjectNextMonthScreen", () => {
     expect(screen.getByRole("button", { name: "חזרה לרווח Juniper Ct" })).toBeTruthy();
   });
 
-  it("adds the summary card up: expected income and expenses, the monthly share and the profit after it", () => {
+  it("adds the summary card up: expected in and out, the monthly share and the profit after it", () => {
     const { container } = renderNext();
     const rows = Array.from(container.querySelectorAll(".ui-pp-row")).map((row) => row.textContent);
+    // No loan: cash and profit are the same, so no רווח צפוי row and no לא נספר ברווח row (FLOW-994).
     expect(rows).toEqual([
-      "הכנסות צפויות+$4,150",
-      "הוצאות צפויות$1,865",
+      "צפוי להיכנס+$4,150",
+      "צפוי לצאת$1,865",
       "חלק בהוצאות הכלליות$152",
       "רווח אחרי הוצאות כלליות$2,133",
     ]);
+    expect(container.querySelector(".ui-pn-figure-label")?.textContent).toBe("תזרים צפוי");
     expect(container.querySelector(".ui-pp-figure")?.textContent).toBe("+$2,285");
+    expect(screen.queryByText("לא נספר ברווח")).toBeNull();
     expect(screen.getByText("לפי הקבועים של הנכס וממוצע 6 החודשים האחרונים לכל קטגוריה. נגיעה בשורה משנה אותה או מסירה אותה.")).toBeTruthy();
   });
 
@@ -221,6 +225,7 @@ describe("the next-month page with a loan (decision 0190)", () => {
       "מסים וביטוח",
       "תיקונים ותחזוקה",
       "חשמל ומים",
+      "לא נספר ברווח",
     ]);
     expect(rows[2]?.textContent).toContain("לפי ההלוואה");
     const next = loanOutlook(JUNIPER_NEXT_LOAN.loans?.[0] as ForecastLoan, JUNIPER_NEXT_LOAN.today)?.next;
@@ -232,13 +237,64 @@ describe("the next-month page with a loan (decision 0190)", () => {
     expect(screen.getByText("לפי הקבועים של הנכס, לוח ההלוואה וממוצע 6 החודשים האחרונים לכל קטגוריה. נגיעה בשורה משנה אותה או מסירה אותה.")).toBeTruthy();
   });
 
-  it("shows the same figures on the profit page's card as on the next-month page", () => {
-    const { unmount } = renderNext(JUNIPER_NEXT_LOAN);
-    const rows = Array.from(document.querySelectorAll(".ui-pp-row")).map((row) => row.textContent);
+  it("FLOW-994: leads with the cash and names the profit, so each card that opens it finds its number", () => {
+    const forecast = applyForecastEdits(nextMonthForecast({
+      projectId: JUNIPER_PROFIT.project.id,
+      currency: "USD",
+      today: JUNIPER_NEXT_LOAN.today,
+      recurring: JUNIPER_NEXT_LOAN.expected.recurring,
+      categoryMonths: JUNIPER_NEXT_LOAN.categoryMonths,
+      loans: JUNIPER_NEXT_LOAN.loans ?? [],
+      categories: JUNIPER_NEXT_LOAN.categories ?? [],
+    }), JUNIPER_NEXT_LOAN.edits ?? []);
+    const cash = cashForecast(forecast);
+    expect(forecast.cashOnlyMinor > 0n).toBe(true);
+    const { container, unmount } = renderNext(JUNIPER_NEXT_LOAN);
+    const rows = Array.from(container.querySelectorAll(".ui-pp-row")).map((row) => row.textContent);
+    // The headline is the project page card's cash; the רווח צפוי row is the profit page card's net.
+    expect(container.querySelector(".ui-pp-figure")?.textContent).toBe(formatAmountText(cash.netMinor, "USD", { plus: cash.netMinor > 0n, direction: cash.netMinor > 0n ? "income" : undefined }));
+    expect(rows[1]).toBe(`צפוי לצאת${formatAmountText(cash.expenseMinor, "USD")}`);
+    // The bridge on the card: the part of צפוי לצאת the profit leaves out, then the profit.
+    expect(rows[2]).toBe(`מזה לא נספר ברווח${formatAmountText(forecast.cashOnlyMinor, "USD")}`);
+    expect(rows[3]).toBe(`רווח צפוי${formatAmountText(forecast.netMinor, "USD", { plus: forecast.netMinor > 0n, direction: forecast.netMinor > 0n ? "income" : undefined })}`);
+    // The rows add up to the headline: the profit's rows and the one row the profit leaves out.
+    const kept = Array.from(container.querySelectorAll(".ui-pn-rows .ui-row")).at(-1);
+    expect(kept?.textContent).toContain("לא נספר ברווח");
+    expect(kept?.textContent).toContain(`−${formatAmountText(forecast.cashOnlyMinor, "USD")}`);
     unmount();
     renderProfit({ ...JUNIPER_PROFIT, next: JUNIPER_NEXT_LOAN });
     const card = screen.getByRole("link", { name: /^צפי נובמבר/ });
     const figures = Array.from(card.querySelectorAll(".ui-fc-col > .ui-num")).map((figure) => figure.textContent);
-    expect([`הכנסות צפויות${figures[0] ?? ""}`, `הוצאות צפויות${figures[1] ?? ""}`]).toEqual(rows.slice(0, 2));
+    expect(`צפוי להיכנס${figures[0] ?? ""}`).toBe(rows[0]);
+    expect(card.querySelector(".ui-fc-net > .ui-num")?.textContent).toBe(rows[3]?.replace("רווח צפוי", ""));
+  });
+
+  it("FLOW-994: lists the part the profit leaves out even when no other row is expected", () => {
+    // A loan whose interest and escrow categories are kept out of the profit (a hard-money flip, decision 0166),
+    // and nothing else expected: no row but the payment the profit leaves out.
+    const kept = new Set(["loan-interest", "taxes"]);
+    const sample: NextMonthSample = {
+      ...JUNIPER_NEXT_LOAN,
+      expected: { ...JUNIPER_NEXT_LOAN.expected, recurring: JUNIPER_NEXT_LOAN.expected.recurring.filter((party) => party.pays_loan === true) },
+      categoryMonths: JUNIPER_NEXT_LOAN.categoryMonths == null ? null : { ...JUNIPER_NEXT_LOAN.categoryMonths, categories: [] },
+      categories: (JUNIPER_NEXT_LOAN.categories ?? []).map((row) => (kept.has(row.id) ? { ...row, excluded_from_pnl: true } : row)),
+    };
+    const { container } = renderNext(sample);
+    const rows = Array.from(container.querySelectorAll(".ui-pn-rows .ui-row"));
+    expect(rows.map((row) => row.querySelector(".ui-row-title")?.textContent)).toEqual(["לא נספר ברווח"]);
+    expect(screen.queryByText("אין תנועות צפויות בחודש הזה.")).toBeNull();
+    // Nothing comes in: the figure is minus the payment the profit leaves out, the row's amount.
+    const forecast = nextMonthForecast({
+      projectId: JUNIPER_PROFIT.project.id,
+      currency: "USD",
+      today: sample.today,
+      recurring: sample.expected.recurring,
+      categoryMonths: sample.categoryMonths,
+      loans: sample.loans ?? [],
+      categories: sample.categories ?? [],
+    });
+    expect(forecast.rows).toHaveLength(0);
+    expect(forecast.cashOnlyMinor > 0n).toBe(true);
+    expect(container.querySelector(".ui-pp-figure")?.textContent).toBe(formatAmountText(-forecast.cashOnlyMinor, "USD"));
   });
 });
