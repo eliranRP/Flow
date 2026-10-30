@@ -1,6 +1,7 @@
 // MCP tools: the descriptions of FLOW-149's ledger tools (decision 0228), create_journal_entry and
 // get_account_balances, FLOW-151's set_category_account (decision 0231), and FLOW-174's
-// update_journal_entry and get_journal_entry_history (decision 0234), listed in tools_specs.ts. Split out of it to keep it under the file-size limit.
+// update_journal_entry and get_journal_entry_history (decision 0234), and FLOW-176's
+// set_journal_entry_leg_project, listed in tools_specs.ts. Split out of it to keep it under the file-size limit.
 import { PREPAID_READ_SPECS, PREPAID_WRITE_SPECS } from "./tools_prepaid_specs.ts";
 
 function spec(name: string, description: string, properties: Record<string, unknown>, write: boolean) {
@@ -89,6 +90,14 @@ export const LEDGER_WRITE_SPECS = [
         additionalProperties: false,
       },
     },
+    reason: { type: "string" },
+  }, true),
+  spec("set_journal_entry_leg_project", "Set the project of one leg of a posted journal entry (FLOW-176, decision 0234; owner or editor), without sending every leg: a shortcut over update_journal_entry, which books it with its rules, refusals, version check and history. journal_entry_id is the entry's line id; expected_version is journal_entry.version from get_line_legs or get_expense (entry changed when it changed since); leg_ordinal is the leg's ordinal in get_line_legs (1 to 50; leg not found when the entry has no such leg); project_id is a project from list_projects, or null for none (project not found for another company's or an unknown project); reason (required, 1 to 200) says why. The leg's account and amount and every other leg stay; the P&L of the projects moves when the leg is in the P&L, and the balance per project when it is on a balance-sheet account. idempotency_key is 1 to 124 characters. Returns what update_journal_entry returns (the new version, legs, undo_kind journal_entry_update); undo is kind journal_entry_update with the entry id.", {
+    idempotency_key: { type: "string" },
+    journal_entry_id: { type: "string" },
+    expected_version: { type: "string" },
+    leg_ordinal: { type: "integer" },
+    project_id: { type: ["string", "null"] },
     reason: { type: "string" },
   }, true),
   spec("set_category_account", "Bind a kept-out category to the balance-sheet account its ledger legs land on (FLOW-151, decision 0231; owner or editor): its posts_to in list_accounts. A category is bound by its name when it is created (decision 0210, English names only); any other kept-out category lands on Suspense, so bind it here, e.g. tenants' deposits to Security deposit held, owner contributions to Owner capital, renovation to Property. account_id is an open asset, liability or equity account from list_accounts (a system account or the company's own; not the bank, Suspense or VAT control; an archived one is refused: account is archived), or null for the default (its loan part's account, else Suspense). The category's lines are re-posted: their legs move to the account, and no P&L figure moves (the P&L reads the category). Refused: a category counted in the P&L (the category is counted in the P&L), a loan part category (a loan part category posts by its part), and any other account (a category posts only to a balance-sheet account). A journal entry already booked keeps its legs. Returns category_id, account_id, posts_to and posts_to_name (where its legs land now), previous_account_id and undo_kind category_account; undo is kind category_account with the category id and puts the binding back while it is still the one written.", {

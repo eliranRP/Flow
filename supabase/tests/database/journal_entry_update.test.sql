@@ -7,7 +7,7 @@
 
 begin;
 
-select plan(58);
+select plan(71);
 
 do $users$
 begin
@@ -378,6 +378,62 @@ select is(
 select is(
   (select count(*)::integer from public.journal_entry_versions v where v.transaction_id = pg_temp.id('entry')),
   0, 'its history goes with it');
+
+-- FLOW-176: set_journal_entry_leg_project gives one leg a project; the other legs and every total stay.
+create or replace function pg_temp.leg_project(p_who text, p_key text, p_id uuid, p_version text, p_ordinal integer, p_project uuid, p_reason text)
+returns jsonb language sql set search_path = '' as $$
+  select pg_temp.mcp(p_who, format('select public.mcp_set_journal_entry_leg_project(%L, %L::uuid, %L, %s, %L::uuid, %L)',
+    p_key, p_id, p_version, p_ordinal, p_project, p_reason));
+$$;
+grant execute on function pg_temp.leg_project(text, text, uuid, text, integer, uuid, text) to authenticated, service_role;
+insert into je (label, id)
+select 'entry2', (pg_temp.mcp('a', format('select public.mcp_create_journal_entry(%L, %L::date, %L, %L, %L, %L::jsonb)',
+  'je176-create', '2025-12-31', 'ILS', 'Example second entry', null, jsonb_build_array(
+    pg_temp.leg('Example depreciation', 300000, 'maple'),
+    pg_temp.leg('Accumulated depreciation', -280000, 'maple'),
+    pg_temp.leg('Property', -20000)
+  )))->'data'->>'id')::uuid;
+select is(
+  (select l.ordinal::integer from public.legs l join public.accounts a on a.id = l.account_id
+   where l.transaction_id = pg_temp.id('entry2') and a.name = 'Property' and a.category_id is null),
+  3, 'the Property credit is leg 3 in get_line_legs');
+select is(
+  pg_temp.leg_project('a', 'je176-none', pg_temp.id('entry2'), '1', 9, pg_temp.id('maple'), 'Example fix')->'error'->>'message',
+  'leg not found', 'a leg the entry does not have is refused');
+select is(
+  pg_temp.leg_project('a', 'je176-stale', pg_temp.id('entry2'), '2', 3, pg_temp.id('maple'), 'Example fix')->'error'->>'message',
+  'entry changed', 'a stale version is refused');
+select is(
+  pg_temp.leg_project('v', 'je176-viewer', pg_temp.id('entry2'), '1', 3, pg_temp.id('maple'), 'Example fix')->'error'->>'code',
+  'forbidden', 'a viewer is refused');
+select is(
+  pg_temp.leg_project('a', 'je176-other', pg_temp.id('b_entry'), '1', 1, pg_temp.id('maple'), 'Example fix')->'error'->>'message',
+  'transaction not found', 'another company''s entry is not found');
+select is(
+  pg_temp.leg_project('a', 'je176-bank', pg_temp.id('bank_line'), '1', 1, pg_temp.id('maple'), 'Example fix')->'error'->>'message',
+  'not a journal entry', 'a bank line is not a journal entry');
+select is(
+  (select jsonb_build_object('v', d->'version', 'kind', d->'undo_kind', 'pnl', d->'pnl_minor', 'reason', d->'reason')
+   from (select pg_temp.leg_project('e', 'je176-set', pg_temp.id('entry2'), '1', 3, pg_temp.id('maple'), 'Example: Property on the house')->'data' d) x),
+  '{"v": "2", "kind": "journal_entry_update", "pnl": -300000, "reason": "Example: Property on the house"}'::jsonb,
+  'set_journal_entry_leg_project books version 2 through update_journal_entry');
+select is(
+  pg_temp.leg_project('e', 'je176-set', pg_temp.id('entry2'), '1', 3, pg_temp.id('maple'), 'Example: Property on the house')->'data'->>'version',
+  '2', 'a replay with the same key returns the same answer');
+select is(
+  pg_temp.legs_of(pg_temp.id('entry2')),
+  '[{"account": "Accumulated depreciation", "project": "maple", "amount": -280000},
+    {"account": "Example depreciation", "project": "maple", "amount": 300000},
+    {"account": "Property", "project": "maple", "amount": -20000}]'::jsonb,
+  'only the Property leg moved to the house');
+select is(pg_temp.bal('Property', null), 0::bigint, 'no Property credit is left without a project');
+select is(
+  (select v.legs->2->>'project_id' from public.journal_entry_versions v where v.transaction_id = pg_temp.id('entry2') and v.version = 1),
+  null, 'the history keeps version 1 with the leg on no project');
+select is(
+  pg_temp.undo('e', 'je176-undo', 'journal_entry_update', pg_temp.id('entry2'))->'data'->>'version',
+  '3', 'undo kind journal_entry_update puts the leg back on no project');
+select is(pg_temp.bal('Property', null), -20000::bigint, 'and the Property credit is off the house again');
 
 select * from finish();
 rollback;

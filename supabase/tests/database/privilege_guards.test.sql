@@ -152,6 +152,7 @@ insert into pg_allowed (sig) values
     ('mcp_set_loan_part_category(text,uuid[],text,uuid)'),
     ('mcp_create_journal_entry(text,date,text,text,text,jsonb)'),
     ('mcp_update_journal_entry(text,uuid,text,text,date,text,boolean,text,jsonb)'),
+    ('mcp_set_journal_entry_leg_project(text,uuid,text,integer,uuid,text)'),
     ('mcp_set_category_account(text,uuid,uuid)'),
     ('mcp_create_prepaid_schedule(text,uuid,uuid,text,integer,uuid,bigint,integer,uuid,text)'),
     ('mcp_list_prepaid_schedules(text)'),

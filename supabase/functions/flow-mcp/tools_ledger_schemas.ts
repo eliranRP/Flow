@@ -75,6 +75,16 @@ export const updateJournalEntrySchema = z.object({
   }
 });
 
+// FLOW-176: set_journal_entry_leg_project, one leg's project (null: none) through update_journal_entry.
+export const setJournalEntryLegProjectSchema = z.object({
+  idempotency_key: z.string().min(1).max(124),
+  journal_entry_id: UUID_TEXT,
+  expected_version: z.string().regex(/^[1-9][0-9]{0,8}$/, "expected_version: the version get_line_legs or get_expense gives"),
+  leg_ordinal: z.number().int().min(1).max(50),
+  project_id: UUID_TEXT.nullable(),
+  reason: visibleName(1, 200),
+}).strict();
+
 // FLOW-151 (decision 0231): set_category_account, the balance-sheet account a kept-out category posts
 // to (account_id null: the default, its loan part's account or Suspense).
 export const setCategoryAccountSchema = z.object({
