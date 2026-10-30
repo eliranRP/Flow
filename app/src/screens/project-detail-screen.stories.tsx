@@ -157,7 +157,10 @@ export const ProjectReportsButton: Story = {
   name: "Project, דוחות on the band (FLOW-163)",
   render: ProjectOverview.render,
   play: async ({ canvasElement }) => {
-    const link = within(canvasElement).getByRole("link", { name: "דוחות" });
+    // The band's link, not the tab bar's דוחות tab (FLOW-986).
+    const band = canvasElement.querySelector<HTMLElement>(".ui-band");
+    if (band == null) throw new Error("no band");
+    const link = within(band).getByRole("link", { name: "דוחות" });
     await expect(link).toHaveAttribute("href", `/reports?scope=project&project=${PROJECT_ID}`);
   },
 };
