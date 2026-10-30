@@ -240,6 +240,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-174"></a>[FLOW-174](tasks/FLOW-174.md) | Correct a posted journal entry in place, with its history | MCP + DB |
 | <a id="flow-176"></a>[FLOW-176](tasks/FLOW-176.md) | Set the project of one journal entry leg | MCP |
 | <a id="flow-177"></a>[FLOW-177](tasks/FLOW-177.md) | Hebrew names for the last two built-in accounts | SMALL CYCLE |
+| <a id="flow-988"></a>[FLOW-988](tasks/FLOW-988.md) | The P&L lists numbered categories by their number | SMALL CYCLE |
 | <a id="flow-920"></a>[FLOW-920](tasks/FLOW-920.md) | Project profit: the month's share and after-overhead rows from the server, and the old profit-month section goes | UI + server (follow-up to FLOW-140) |
 | <a id="flow-930"></a>[FLOW-930](tasks/FLOW-930.md) | A yearly charge shows in this month's forecast at a monthly amount | BUG |
 | <a id="flow-935"></a>[FLOW-935](tasks/FLOW-935.md) | The iPhone Home Screen app moves to a new deploy without a reinstall | BUG |

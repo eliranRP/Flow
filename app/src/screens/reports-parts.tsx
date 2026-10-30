@@ -6,6 +6,7 @@ import { slashBreaks } from "../ui/slash-breaks";
 import {
   accountName,
   balanceWarning,
+  byCategoryNumber,
   categoryName,
   equityTotal,
   marginPercent,
@@ -113,7 +114,7 @@ type DrillHref = (side: "income" | "expense", node: { id: string | null; name: s
 
 function sideRows(row: StatementCurrency, side: "income" | "expense", collapse: Collapse, drill: DrillHref, prefix: string): ReactNode {
   const amount = (minor: bigint) => (side === "income" ? incomeAmount(minor, row.currency) : costAmount(minor, row.currency));
-  const nodes: StatementNode[] = row[side];
+  const nodes: StatementNode[] = byCategoryNumber(row[side]);
   return (
     <ul className="ui-rep-rows">
       {nodes.map((node) => {
@@ -125,7 +126,7 @@ function sideRows(row: StatementCurrency, side: "income" | "expense", collapse: 
             <ReportSection id={`${prefix}${row.currency}:${side}:${node.id ?? "none"}`} title={categoryName(node.name)} total={amount(node.amount_minor)} collapse={collapse} tone="group">
               <ul className="ui-rep-rows ui-rep-rows-sub">
                 {node.own_minor !== 0n ? <ReportRow name={categoryName(node.name)} meta="ישירות בקטגוריה" amount={amount(node.own_minor)} href={drill(side, node)} /> : null}
-                {node.children.map((child) => <ReportRow key={child.id ?? "none"} name={categoryName(child.name)} amount={amount(child.amount_minor)} href={drill(side, child)} />)}
+                {byCategoryNumber(node.children).map((child) => <ReportRow key={child.id ?? "none"} name={categoryName(child.name)} amount={amount(child.amount_minor)} href={drill(side, child)} />)}
               </ul>
             </ReportSection>
           </li>

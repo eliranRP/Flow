@@ -6,6 +6,7 @@ import {
   balanceDate,
   balanceEmpty,
   balanceWarning,
+  byCategoryNumber,
   equityTotal,
   marginPercent,
   pnlChipLabel,
@@ -106,6 +107,12 @@ describe("the P&L statement", () => {
 
   it("lists every section כיווץ הכל closes: the two sides and each parent", () => {
     expect(statementSectionIds(REPORTS_STATEMENT_ROW)).toEqual(["USD:income", "USD:expense", "USD:expense:c-props", "USD:expense:c-general"]);
+  });
+
+  it("puts numbered categories first, by their number, and keeps the rest in the order they came", () => {
+    const names = ["ביטוח", "11 ארנונה", "06 ניהול", "פיקדון", null, "05 ניקיון", "10 תיקונים", "07 ביטוח"];
+    expect(byCategoryNumber(names.map((name) => ({ name }))).map((row) => row.name))
+      .toEqual(["05 ניקיון", "06 ניהול", "07 ביטוח", "10 תיקונים", "11 ארנונה", "ביטוח", "פיקדון", null]);
   });
 
   it("names the overhead and unassigned keys", () => {
