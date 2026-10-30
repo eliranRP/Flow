@@ -1,6 +1,6 @@
 <a id="flow-177"></a>
 # FLOW-177 · Hebrew names for the last two built-in accounts
-- **Type:** SMALL CYCLE · **Status:** in-progress (flow-177-account-names) · **Source:** the MCP/data agent, 2026-10-30 (the fourth extra of the correction request).
+- **Type:** SMALL CYCLE · **Status:** done (#879) · **Source:** the MCP/data agent, 2026-10-30 (the fourth extra of the correction request).
 
 - [x] `app/src/system-accounts.ts` has no Hebrew display name for Bank/Clearing and Accumulated depreciation, so they show in English. Suggested: Bank/Clearing → "בנק", Accumulated depreciation → "פחת שנצבר".
 
