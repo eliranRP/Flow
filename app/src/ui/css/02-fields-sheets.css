@@ -213,6 +213,24 @@
   white-space: nowrap;
 }
 
+/* FLOW-172: an overflowing part's cut is measured in script (hint-cut.tsx), so it never ends in a space
+   before "…". The whole text stays laid out, unpainted, to keep the part's width and what screen readers
+   read; the cut is drawn over it and hidden from them (the alt text after "/"). */
+.ui-row-hint-line .ui-hint-text[data-cut] {
+  position: relative;
+  -webkit-text-fill-color: transparent;
+}
+
+.ui-row-hint-line .ui-hint-text[data-cut]::after {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  content: attr(data-cut);
+  content: attr(data-cut) / "";
+  -webkit-text-fill-color: currentcolor;
+  white-space: nowrap;
+}
+
 .ui-row-hint-skel {
   display: flex;
   align-items: center;

@@ -280,6 +280,78 @@ export const LongProjectHint: Story = {
 };
 
 /**
+ * FLOW-172: a cut part ends at its last letter that fits, then "…": never "Quick …" with a space before it,
+ * nor a comma. The whole text stays in the DOM for screen readers; the cut is drawn over it (`data-cut`).
+ */
+export const CutAtALetter: Story = {
+  args: { variant: "transaction", title: "ספק לדוגמה", layout: "flat" },
+  globals: { viewport: { value: "flow320", isRotated: false } },
+  render: () => (
+    <List layout="flat">
+      <ListRow layout="flat" variant="transaction" title="Water heater replacement" hint="18/10 · Quick Fix Plumbing · Cedar St" agorot={125_000n} sign="out" source="bank" initials="QF" href="/transactions/1" />
+      <ListRow layout="flat" variant="transaction" title="אור חשמל" hint="03/10 · חשמל ותאורה, קומה ב" agorot={86_000n} sign="out" source="invoice" initials="אח" href="/transactions/2" />
+      <ListRow layout="flat" variant="transaction" title="אור חשמל" hint="03/10 · חשמל ותאורה קומה ב" agorot={86_000n} sign="out" source="invoice" initials="אח" href="/transactions/3" />
+      <ListRow layout="flat" variant="transaction" title="ספק לדוגמה" hint="18/10 · Quick Fix Mainline" agorot={125_000n} sign="out" source="bank" initials="QF" href="/transactions/4" />
+      <ListRow layout="flat" variant="transaction" title="Example Hardware" hint="18/10 · A B C D E F G H I J K L M N O P" agorot={40_000n} sign="out" source="bank" initials="EH" href="/transactions/5" />
+      <ListRow layout="flat" variant="transaction" title="Example Hardware" hint="18/10 · AB C D E F G H I J K L M N O P" agorot={40_000n} sign="out" source="bank" initials="EH" href="/transactions/6" />
+      <ListRow layout="flat" variant="transaction" title="ספק לדוגמה" hint="03/10 · א ב ג ד ה ו ז ח ט י כ ל מ נ ס ע" agorot={86_000n} sign="out" source="invoice" initials="סל" href="/transactions/7" />
+      <ListRow layout="flat" variant="transaction" title="ספק לדוגמה" hint="03/10 · אב ג ד ה ו ז ח ט י כ ל מ נ ס ע" agorot={86_000n} sign="out" source="invoice" initials="סל" href="/transactions/8" />
+    </List>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.ownerDocument.documentElement.clientWidth).toBeLessThanOrEqual(320);
+    // The shared observer reports after layout, before the frame is drawn; a font that arrives measures again.
+    await canvasElement.ownerDocument.fonts.ready;
+    for (let frame = 0; frame < 2; frame += 1) await new Promise((done) => requestAnimationFrame(done));
+    let cuts = 0;
+    let spaced = 0;
+    for (const row of canvasElement.querySelectorAll(".ui-row")) {
+      const texts = [...row.querySelectorAll<HTMLElement>(".ui-hint-text")];
+      const top = texts[0]?.getBoundingClientRect().top ?? 0;
+      for (const text of texts.filter((item) => Math.abs(item.getBoundingClientRect().top - top) < 1)) {
+        if (text.scrollWidth <= text.clientWidth + 1) {
+          await expect(text).not.toHaveAttribute("data-cut");
+          continue;
+        }
+        // CSS's own "…" would draw the longest prefix that fits with it, a space at its end included.
+        const css = cssCut(text);
+        spaced += /\s$/u.test(css) ? 1 : 0;
+        cuts += 1;
+        // The drawn cut is that prefix without its trailing spaces and punctuation, over the whole text.
+        const cut = text.getAttribute("data-cut") ?? "";
+        await expect(cut).toBe(`${css.replace(/[\s\p{P}]+$/u, "")}…`);
+        await expect(cut).toMatch(/[^\s\p{P}]…$/u);
+        await expect(getComputedStyle(text, "::after").content).toContain(cut);
+        await expect(getComputedStyle(text).webkitTextFillColor).toBe("rgba(0, 0, 0, 0)");
+      }
+    }
+    await expect(cuts).toBeGreaterThanOrEqual(6);
+    // At least one row's room ends right after a space: the case FLOW-172 fixes.
+    await expect(spaced).toBeGreaterThanOrEqual(1);
+  },
+};
+
+/** The longest prefix of a hint part's text that fits its box with "…" after it. */
+function cssCut(text: HTMLElement): string {
+  const node = text.firstChild;
+  const whole = node?.textContent ?? "";
+  const style = getComputedStyle(text);
+  const context = document.createElement("canvas").getContext("2d");
+  if (node == null || context == null) return "";
+  context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+  const room = text.getBoundingClientRect().width - context.measureText("…").width;
+  const range = document.createRange();
+  let fits = "";
+  for (const char of whole) {
+    range.setStart(node, 0);
+    range.setEnd(node, fits.length + char.length);
+    if (range.getBoundingClientRect().width > room) break;
+    fits += char;
+  }
+  return fits;
+}
+
+/**
  * FLOW-168 as it stands (review of #865): with three parts whose 2nd and 3rd both have letters, both can be
  * cut on one line at 393. The parts past the first that do not fit are cut or dropped, not only one.
  */

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Avatar } from "./avatar";
 import { Amount } from "./amount";
 import { cx } from "./cx";
+import { HintText } from "./hint-cut";
 import { MatchText } from "./match-text";
 import { statementRowLabel, textDir, type StatementDetail, type StatementMethod } from "./statement";
 import { BankIcon, ChevronIcon, DocumentIcon, GripIcon } from "./icons";
@@ -531,8 +532,8 @@ const HINT_SEPARATOR = " · ";
  * two can be cut on one line), so a long project after the date is cut, not lost. A part with less
  * room than that drops to a hidden second line with its separator, so a line never ends on "·". A
  * part with no letters (a date, an amount) is never cut: it shows whole or drops. Each part's text
- * takes its own direction, so a Latin name in a Hebrew row is cut at its end. Screen readers still
- * read every part.
+ * takes its own direction, so a Latin name in a Hebrew row is cut at its end, and a cut never ends in a
+ * space before its "…" (FLOW-172, `HintText`). Screen readers still read every part.
  */
 function hintParts(hint: ReactNode | readonly ReactNode[]): ReactNode {
   const parts = isPartList(hint) ? hint : typeof hint === "string" && hint.includes(HINT_SEPARATOR) ? hint.split(HINT_SEPARATOR) : null;
@@ -544,7 +545,11 @@ function hintParts(hint: ReactNode | readonly ReactNode[]): ReactNode {
         return (
           <span key={index} className={whole ? "ui-hint-part ui-hint-part-whole" : "ui-hint-part"} data-clip-ok="">
             {index > 0 ? <span className="ui-hint-sep">{HINT_SEPARATOR}</span> : null}
-            <span className="ui-hint-text" dir={typeof part === "string" && !whole ? "auto" : undefined} data-clip-ok="">{part}</span>
+            {typeof part === "string" && !whole ? (
+              <HintText text={part} dir="auto" />
+            ) : (
+              <span className="ui-hint-text" data-clip-ok="">{part}</span>
+            )}
           </span>
         );
       })}
