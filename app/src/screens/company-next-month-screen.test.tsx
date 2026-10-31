@@ -88,6 +88,7 @@ describe("CompanyNextMonthScreen phases and holds (FLOW-1000 r1)", () => {
       </ViewerPreview>,
       { route: "/forecast/next" },
     );
+    expect(container.querySelectorAll(".ui-pn-rows .ui-row").length).toBeGreaterThan(0);
     const rowLinks = Array.from(container.querySelectorAll<HTMLAnchorElement>(".ui-pn-rows a"));
     expect(rowLinks.filter((link) => link.getAttribute("href")?.includes("/profit/next/edit/") === true)).toHaveLength(0);
   });
@@ -101,12 +102,10 @@ describe("CompanyNextMonthScreen phases and holds (FLOW-1000 r1)", () => {
     expect((part?.forecast.cashOnlyMinor ?? 0n) > 0n).toBe(true);
     const { container } = renderWithProviders(<CompanyNextMonthScreen sample={sample} today={NEXT_MONTH_TODAY} projects={NEXT_MONTH_PROJECTS.projects} currency="USD" />, { route: "/forecast/next" });
     const section = Array.from(container.querySelectorAll<HTMLElement>(".ui-cn-group")).find((item) => item.getAttribute("aria-label")?.startsWith("בית הדקל") === true);
-    const total = (part?.forecast.rows.length ?? 0) + 1;
+    // The project's own rows and that part: three or fewer, so all show and that part is the last.
+    expect((part?.forecast.rows.length ?? 0) + 1).toBeLessThanOrEqual(3);
     const titles = Array.from(section?.querySelectorAll(".ui-row-title") ?? []).map((title) => title.textContent);
-    if (total <= 3) {
-      expect(titles.at(-1)).toBe(NOT_IN_PROFIT_LABEL);
-    } else {
-      expect(within(section as HTMLElement).getByRole("link", { name: `עוד ${String(total - 3)} בצפי של בית הדקל` })).toBeInTheDocument();
-    }
+    expect(titles.at(-1)).toBe(NOT_IN_PROFIT_LABEL);
+    expect(within(section as HTMLElement).queryByRole("link", { name: /^עוד /u })).toBeNull();
   });
 });
