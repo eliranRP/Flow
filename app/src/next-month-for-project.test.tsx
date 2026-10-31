@@ -11,15 +11,18 @@ const INPUT: CompanyForecastInput = { currency: "USD", today: NEXT_MONTH_TODAY, 
 type OverheadRead = { project: { id: string; name: string } | null | undefined; failed: boolean };
 
 const reads = vi.hoisted(() => {
+  const currency: { data: string | undefined; isError: boolean } = { data: "USD", isError: false };
   const overhead: OverheadRead = { project: { id: "p0", name: "משרד" }, failed: false };
-  return { ownEnabled: [] as boolean[], companyCurrency: [] as string[], overhead, company: { pending: false, failed: false, paused: false } };
+  return { ownEnabled: [] as boolean[], companyCurrency: [] as string[], currency, overhead, company: { pending: false, failed: false, paused: false } };
 });
 
 vi.mock("./overhead-project", () => ({
   useOverheadProject: () => ({ ...reads.overhead, refetch: () => undefined }),
 }));
 
-vi.mock("./company-currency", () => ({ useCompanyCurrency: () => "USD" }));
+vi.mock("./company-currency", () => ({
+  useCompanyCurrencyQuery: () => ({ ...reads.currency, refetch: () => Promise.resolve() }),
+}));
 
 vi.mock("./company-next-month-query", () => ({
   useCompanyNextMonth: (currency: string, _today: string, enabled: boolean) => (reads.companyCurrency.push(currency), {
@@ -85,6 +88,18 @@ describe("useProjectNextMonth (FLOW-1002)", () => {
     expect(result.current.forecast).toEqual(companyGeneralForecast(INPUT));
     // Any other project keeps its own currency.
     expect(renderHook(() => useProjectNextMonth("p1", "ILS")).result.current.currency).toBe("ILS");
+  });
+
+  it("waits for the company's currency, and fails rather than guess it", () => {
+    reads.currency = { data: undefined, isError: false };
+    const waiting = renderHook(() => useProjectNextMonth(OVERHEAD, "ILS")).result.current;
+    expect(waiting.pending).toBe(true);
+    expect(waiting.forecast).toBeNull();
+    reads.currency = { data: undefined, isError: true };
+    const failed = renderHook(() => useProjectNextMonth(OVERHEAD, "ILS")).result.current;
+    expect(failed.failed).toBe(true);
+    expect(failed.pending).toBe(false);
+    reads.currency = { data: "USD", isError: false };
   });
 
   it("gives any other project its own forecast", () => {

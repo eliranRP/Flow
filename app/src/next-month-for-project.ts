@@ -1,7 +1,7 @@
 import type { ExpectedParty, ProjectCategoryMonths } from "@flow/shared";
 import { useMemo } from "react";
 import { companyGeneralForecast } from "./company-next-month";
-import { useCompanyCurrency } from "./company-currency";
+import { useCompanyCurrencyQuery } from "./company-currency";
 import { useCompanyNextMonth } from "./company-next-month-query";
 import { useOverheadProject } from "./overhead-project";
 import { nextMonthKey, type ProjectForecastEdit } from "./project-next-month";
@@ -28,8 +28,11 @@ export function useProjectNextMonth(projectId: string, currency: string, sample?
   const today = israelToday();
   // The general costs are the company's, in its books currency (0147), as the company's צפי page reads them,
   // whatever currency the overhead project's own figures are in. The pages show them in the currency returned.
-  const companyCurrency = useCompanyCurrency();
-  const company = useCompanyNextMonth(companyCurrency, today, isOverhead);
+  // A failed currency read fails the page rather than showing a USD company's general costs in shekels.
+  const currencyRead = useCompanyCurrencyQuery(isOverhead);
+  const companyCurrency = currencyRead.data ?? currency;
+  const company = useCompanyNextMonth(companyCurrency, today, isOverhead && currencyRead.data != null);
+  const currencyFailed = currencyRead.data == null && currencyRead.isError;
   const input = company.input;
   const general = useMemo(() => {
     if (!isOverhead || input == null) return null;
@@ -56,9 +59,9 @@ export function useProjectNextMonth(projectId: string, currency: string, sample?
     recurring: general?.recurring ?? [],
     categoryMonths: general?.categoryMonths ?? null,
     categories: company.categories,
-    pending: company.pending,
-    failed: company.failed,
+    pending: !currencyFailed && (currencyRead.data == null || company.pending),
+    failed: currencyFailed || company.failed,
     paused: company.paused,
-    refetch: () => { void company.refetch(); },
+    refetch: () => { void currencyRead.refetch(); void company.refetch(); },
   };
 }
