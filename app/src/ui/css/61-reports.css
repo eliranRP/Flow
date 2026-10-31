@@ -434,9 +434,11 @@
   padding-inline-start: var(--space-3);
 }
 
-/* FLOW-995: a project's name keeps its own direction, so a long Latin name is cut at its end, not its start. */
+/* FLOW-995: a project's name keeps its own direction, so a long Latin name is cut at its end, not its start;
+   it still sits at the row's right edge, as the Hebrew labels do (the sheet is always right to left). */
 .ui-rep-share-projects .ui-switch-label {
   unicode-bidi: plaintext;
+  text-align: right;
 }
 
 /* The drill-down's search: the field, then one line on what it found. */
