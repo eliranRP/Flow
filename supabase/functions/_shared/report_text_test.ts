@@ -40,3 +40,11 @@ Deno.test("a number after Hebrew reads as the browser shows it: before a Latin w
   assertEquals(visual("הופק ב־31/10/2026 09:15"), "09:15 31/10/2026־ב קפוה");
   assertEquals(visual("Maple Ave 2 שלב"), "בלש Maple Ave 2");
 });
+
+Deno.test("a name with no Hebrew reads left to right, its number first (FLOW-997)", () => {
+  assertEquals(visual("2407 Example Road"), "2407 Example Road");
+  assertEquals(visual("318 Sample Court"), "318 Sample Court");
+  assertEquals(visual("−$29,000"), "−$29,000");
+  assertEquals(visual("(1)"), "(1)");
+  assertEquals(bidiRuns(""), []);
+});
