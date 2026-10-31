@@ -5,6 +5,7 @@ import { useCompanyNextMonth } from "./company-next-month-query";
 import { useOverheadProject } from "./overhead-project";
 import { nextMonthKey, type ProjectForecastEdit } from "./project-next-month";
 import { type NextMonthSample, useNextMonthForecast } from "./project-next-month-query";
+import { shiftMonthKey } from "./period";
 import { israelToday } from "./ui/date-math";
 
 /**
@@ -17,7 +18,9 @@ import { israelToday } from "./ui/date-math";
 export function useProjectNextMonth(projectId: string, currency: string, sample?: NextMonthSample, enabled = true) {
   const live = sample == null && enabled;
   const overhead = useOverheadProject(live && projectId !== "");
-  // Until the company's overhead project is known, neither forecast is built: the page waits on one read.
+  // Until the company's overhead project is known, neither forecast is built: the page waits on one read. If that
+  // read fails, every project (the overhead one too) falls back to its own forecast, as before FLOW-1002, rather
+  // than every project page failing over one small read.
   const deciding = live && overhead.project === undefined && !overhead.failed;
   const isOverhead = live && overhead.project != null && overhead.project.id === projectId;
   const own = useNextMonthForecast(projectId, currency, sample, enabled && !deciding && !isOverhead);
@@ -31,14 +34,15 @@ export function useProjectNextMonth(projectId: string, currency: string, sample?
     const categoryMonths: ProjectCategoryMonths = {
       project_id: projectId,
       today: input.today,
-      this_month: input.today.slice(0, 7),
-      months: [],
+      this_month: `${input.today.slice(0, 7)}-01`,
+      // The six months before this one, as company_next_month_inputs reads them: the edit page's history labels.
+      months: Array.from({ length: 6 }, (_, index) => `${shiftMonthKey(input.today.slice(0, 7), index - 6)}-01`),
       categories: input.inputs.general.map((row) => ({ ...row, group_name: null, this_month_minor: 0, months_seen: 0, expected_minor: null, typical_day: null, flag: null })),
     };
     const edits: ProjectForecastEdit[] = input.inputs.edits.filter((edit) => edit.project_id === projectId);
     return { forecast: companyGeneralForecast(input), recurring, categoryMonths, edits };
   }, [isOverhead, input, projectId]);
-  if (!isOverhead) return deciding ? { ...own, pending: true } : own;
+  if (!isOverhead) return deciding ? { ...own, forecast: null, pending: true } : own;
   return {
     forecast: general?.forecast ?? null,
     month: nextMonthKey(today),
