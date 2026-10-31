@@ -29,6 +29,8 @@
 /search/ /search 301
 /forecast /app-shell 200
 /forecast/ /forecast 301
+/forecast/next /app-shell 200
+/forecast/next/ /forecast/next 301
 /forecast/item/:itemKey /app-shell 200
 /forecast/item/:itemKey/ /forecast/item/:itemKey 301
 /reports /app-shell 200
