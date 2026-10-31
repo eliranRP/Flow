@@ -109,3 +109,19 @@ describe("CompanyNextMonthScreen phases and holds (FLOW-1000 r1)", () => {
     expect(within(section as HTMLElement).queryByRole("link", { name: /^עוד /u })).toBeNull();
   });
 });
+
+describe("CompanyNextMonthScreen general costs (FLOW-1001)", () => {
+  it("lists every one of the general costs' rows, so they add up to its heading on the page", () => {
+    // Four general rows: more than a project section shows, and no page of their own to send the rest to.
+    const general = reads.inputs.general;
+    const sample = { ...reads, inputs: { ...reads.inputs, general: [...general, { id: "c-software", name: "תוכנה ומנויים", currency: "USD", months_minor: [43_900, 43_900, 43_900, 43_900, 43_900, 43_900] }] } };
+    const forecast = companyCashForecast(companyNextMonthForecast({ currency: "USD", today: NEXT_MONTH_TODAY, recurring: sample.recurring, loans: sample.loans, categories: sample.categories, inputs: sample.inputs }));
+    const part = forecast.parts.find((item) => item.projectId == null);
+    expect((part?.forecast.rows.length ?? 0) > 3).toBe(true);
+    const { container } = renderWithProviders(<CompanyNextMonthScreen sample={sample} today={NEXT_MONTH_TODAY} projects={NEXT_MONTH_PROJECTS.projects} currency="USD" />, { route: "/forecast/next" });
+    const section = Array.from(container.querySelectorAll<HTMLElement>(".ui-cn-group")).at(-1) as HTMLElement;
+    expect(section.querySelector(".ui-cn-name")?.textContent).toBe("כללי");
+    expect(section.querySelectorAll(".ui-pn-rows .ui-row")).toHaveLength(part?.forecast.rows.length ?? 0);
+    expect(within(section).queryByRole("link", { name: /^עוד /u })).toBeNull();
+  });
+});
