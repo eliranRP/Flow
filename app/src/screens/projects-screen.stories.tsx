@@ -99,7 +99,7 @@ export const ProjectsNextMonth: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByText("צפוי להיכנס")).toBeInTheDocument();
-    await expect(canvas.getByText(/פרויקטים וכללי/u)).toBeInTheDocument();
+    await expect(canvas.getByRole("link", { name: /פירוט ועריכה$/u })).toHaveAttribute("href", "/forecast/next");
     await expect(canvas.getAllByText("צפי").length).toBeGreaterThan(1);
   },
 };

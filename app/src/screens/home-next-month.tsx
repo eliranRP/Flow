@@ -32,7 +32,7 @@ export function HomeNextMonth({ today, currency, sample }: { today: string; curr
     <section className="ui-home-next" aria-labelledby="home-next-title">
       <h2 id="home-next-title" className="ui-home-next-title">החודש הבא</h2>
       <div className="ui-fc-block">
-        <CompanyCashCard next={next} currency={currency} today={today} thisMonthOut={thisMonthCashOut(cash, today, currency)} />
+        <CompanyCashCard next={next} currency={currency} today={today} thisMonthOut={thisMonthCashOut(cash, today, currency)} href="/forecast/next" />
         {next.loading || history == null ? null : (
           <MonthChart
             kind="cash"

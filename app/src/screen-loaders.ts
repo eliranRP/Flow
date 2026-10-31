@@ -38,6 +38,7 @@ export const screenLoaders = {
   projectNextEdit: () => import("./screens/project-next-edit-screen"),
   search: () => import("./screens/search"),
   forecast: () => import("./screens/forecast-screen"),
+  companyNextMonth: () => import("./screens/company-next-month-screen"),
   lineSplit: () => import("./screens/line-split"),
   journalComposer: () => import("./screens/journal-composer-screen"),
   loans: () => import("./screens/loans-screen"),

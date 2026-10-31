@@ -408,6 +408,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-987"></a>[FLOW-987](tasks/FLOW-987.md) | The one-time "קבועים עברו לכאן" tip under the band's קבועים icon | SMALL UI |
 | <a id="flow-990"></a>[FLOW-990](tasks/FLOW-990.md) | Next month's forecast on Home and on Projects | SMALL UI (design approved) |
 | <a id="flow-994"></a>[FLOW-994](tasks/FLOW-994.md) | The צפי page leads with the cash its project card shows | SMALL UI |
+| <a id="flow-1000"></a>[FLOW-1000](tasks/FLOW-1000.md) | The company's צפי page: next month by project, from Home and Projects | SMALL UI (design approved) |
 
 ## Projects and reports
 

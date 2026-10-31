@@ -17,13 +17,15 @@ export type CompanyCashNextMonth = {
   /** Null while the reads are out, when one failed, or in a preview. */
   forecast: CompanyNextMonth | null;
   loading: boolean;
+  /** FLOW-1000: a read failed (the company צפי page says so; the cards just hide). */
+  failed: boolean;
   categories: readonly RentCategory[];
 };
 
 export function useCompanyCashNextMonth(currency: string, today: string, enabled: boolean, sample?: CompanyNextMonthSample): CompanyCashNextMonth {
   const next = useCompanyNextMonth(currency, today, enabled, sample);
   const forecast = useMemo(() => (next.forecast == null ? null : companyCashForecast(next.forecast)), [next.forecast]);
-  return { forecast, loading: next.pending, categories: next.categories };
+  return { forecast, loading: next.pending, failed: next.failed, categories: next.categories };
 }
 
 /**
@@ -51,8 +53,11 @@ export function CompanyCashCard({
   currency,
   today,
   thisMonthOut,
+  href,
 }: {
   next: CompanyCashNextMonth;
+  /** FLOW-1000: the company צפי page; the card then says פירוט ועריכה, and its caption moves to that page. */
+  href?: string;
   currency: string;
   /** yyyy-mm-dd: the month's name carries a year only when it is not today's. */
   today: string;
@@ -72,6 +77,7 @@ export function CompanyCashCard({
       incomeNote={companyIncomeNote(forecast, next.categories)}
       expenseNote={thisMonthOut == null ? "" : companyExpenseNote(forecast, today.slice(0, 7), thisMonthOut, currency)}
       caption={companyForecastCaption(forecast)}
+      href={href}
     />
   );
 }

@@ -174,7 +174,7 @@ function ProjectsBody({
         </div>
       ) : null}
       <div className="ui-page-pad ui-projects-next">
-        <CompanyCashCard next={next} currency={base} today={today} thisMonthOut={thisMonthOut} />
+        <CompanyCashCard next={next} currency={base} today={today} thisMonthOut={thisMonthOut} href={`/forecast/next${search}`} />
       </div>
       <div className="ui-page-pad ui-projects-head">
         <h2>פעילים</h2>

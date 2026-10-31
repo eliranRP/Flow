@@ -46,6 +46,7 @@ const FiledTodayScreen = lazy(() => screenLoaders.filedToday().then((m) => ({ de
 const TransactionScreen = lazy(() => screenLoaders.transaction().then((m) => ({ default: m.TransactionScreen })));
 const CashLinesScreen = lazy(() => screenLoaders.cashLines().then((m) => ({ default: m.CashLinesScreen })));
 const ForecastScreen = lazy(() => screenLoaders.forecast().then((m) => ({ default: m.ForecastScreen })));
+const CompanyNextMonthScreen = lazy(() => screenLoaders.companyNextMonth().then((m) => ({ default: m.CompanyNextMonthScreen })));
 const RecurringScreen = lazy(() => screenLoaders.recurring().then((m) => ({ default: m.RecurringScreen })));
 const RecurringChargeScreen = lazy(() => screenLoaders.recurringCharge().then((m) => ({ default: m.RecurringChargeScreen })));
 const LineSplitScreen = lazy(() => screenLoaders.lineSplit().then((m) => ({ default: m.LineSplitScreen })));
@@ -192,6 +193,8 @@ function AppRoutes() {
                 {UnpaidInvoiceRoute()}
                 <Route path="transactions/:transactionId" element={<TransactionRoute />} />
                 {/* MonthForecastEdit: a row's page opens over the list, which stays mounted under it. */}
+                {/* FLOW-1000: the company's צפי for next month, from the card on Home and on Projects. */}
+                <Route path="forecast/next" element={<CompanyNextMonthScreen />} />
                 <Route path="forecast" element={<ForecastScreen />}>
                   <Route path="item/:itemKey" element={null} />
                 </Route>

@@ -5,13 +5,14 @@ import { renderWithProviders } from "../test-render";
 import { HomeNextMonth } from "./home-next-month";
 
 describe("HomeNextMonth (FLOW-990)", () => {
-  it("draws החודש הבא: the company's dashed card with no link, and the six months' chart with November dashed", () => {
+  it("draws החודש הבא: the company's dashed card, opening its צפי page, and the six months' chart with November dashed", () => {
     renderWithProviders(<HomeNextMonth today={NEXT_MONTH_TODAY} currency="USD" sample={HOME_NEXT_MONTH_SAMPLE} />);
     expect(screen.getByRole("heading", { name: "החודש הבא" })).toBeInTheDocument();
     expect(screen.getByText("נובמבר")).toBeInTheDocument();
     expect(screen.getByText("צפוי להיכנס")).toBeInTheDocument();
     expect(screen.getByText("תזרים צפוי")).toBeInTheDocument();
-    expect(screen.queryByText("פירוט ועריכה")).toBeNull();
+    // FLOW-1000: the card opens the company צפי page.
+    expect(screen.getByRole("link", { name: /^צפי נובמבר:.*פירוט ועריכה$/u })).toHaveAttribute("href", "/forecast/next");
     expect(screen.getByRole("img", { name: /^נכנס ויצא של החברה, מאי עד אוקטובר/u })).toBeInTheDocument();
     expect(document.querySelectorAll(".ui-fc-month-bars")).toHaveLength(7);
     expect(document.querySelector(".ui-fc-ahead")).not.toBeNull();

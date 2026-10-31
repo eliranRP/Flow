@@ -48,7 +48,9 @@ describe("ProjectsScreen (FLOW-445b)", () => {
     const forecast = companyCashForecast(companyNextMonthForecast({ currency: "USD", today: NEXT_MONTH_TODAY, recurring: next.recurring, loans: next.loans, categories: next.categories, inputs: next.inputs }));
     renderWithProviders(<ProjectsScreen sample={sampleDashboard} cashSample={NEXT_MONTH_PROJECTS} nextSample={HOME_NEXT_MONTH_SAMPLE} today={NEXT_MONTH_TODAY} />);
     expect(screen.getByText("נובמבר")).toBeInTheDocument();
-    expect(screen.getByText(companyForecastCaption(forecast))).toBeInTheDocument();
+    // FLOW-1000: the card opens the company צפי page (its caption moves there).
+    expect(screen.getByRole("link", { name: /^צפי נובמבר:.*פירוט ועריכה$/u })).toHaveAttribute("href", "/forecast/next");
+    expect(screen.queryByText(companyForecastCaption(forecast))).toBeNull();
     // Each part's cash net on its row (the general costs' on the overhead row), so the rows add up to the card.
     const shown: bigint[] = [];
     for (const part of forecast.parts) {
