@@ -67,6 +67,8 @@
   Content-Type: text/html; charset=utf-8
 /forecast
   Content-Type: text/html; charset=utf-8
+/forecast/next
+  Content-Type: text/html; charset=utf-8
 /forecast/item/:itemKey
   Content-Type: text/html; charset=utf-8
 /loans
