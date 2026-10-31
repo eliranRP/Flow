@@ -247,6 +247,7 @@ Everything else follows by area, roughly in priority order inside each area.
 | <a id="flow-993"></a>[FLOW-993](tasks/FLOW-993.md) | The export sheet: columns by project or period, several projects, and Excel as xlsx | SMALL UI (design approved) |
 | <a id="flow-995"></a>[FLOW-995](tasks/FLOW-995.md) | Reports export: review follow-ups from #887 and #889 | BACKLOG NIT |
 | <a id="flow-996"></a>[FLOW-996](tasks/FLOW-996.md) | The P&L by project as a PDF fails on a real company: out of the edge function's CPU time | BUG (high priority) |
+| <a id="flow-997"></a>[FLOW-997](tasks/FLOW-997.md) | The report PDF puts a project's number last: "1219 Clifton" reads "Clifton 1219" | BUG |
 | <a id="flow-920"></a>[FLOW-920](tasks/FLOW-920.md) | Project profit: the month's share and after-overhead rows from the server, and the old profit-month section goes | UI + server (follow-up to FLOW-140) |
 | <a id="flow-930"></a>[FLOW-930](tasks/FLOW-930.md) | A yearly charge shows in this month's forecast at a monthly amount | BUG |
 | <a id="flow-935"></a>[FLOW-935](tasks/FLOW-935.md) | The iPhone Home Screen app moves to a new deploy without a reinstall | BUG |

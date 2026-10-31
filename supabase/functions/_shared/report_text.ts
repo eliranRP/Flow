@@ -40,6 +40,9 @@ function kindOf(char: string): Kind {
 export function bidiRuns(text: string): { text: string; rtl: boolean }[] {
   const chars = [...text];
   const kinds = chars.map(kindOf);
+  // FLOW-997: a line with no Hebrew letter (a project called "1219 Clifton", an amount) is one left-to-right
+  // run, as the app shows a name in its own <bdi>; the paragraph's direction would put the number last.
+  if (!kinds.includes("R")) return text === "" ? [] : [{ text, rtl: false }];
   let strong: "R" | "L" = "R";
   for (let i = 0; i < kinds.length; i += 1) {
     if (kinds[i] === "R" || kinds[i] === "L") strong = kinds[i] as "R" | "L";
