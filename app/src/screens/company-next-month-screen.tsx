@@ -55,7 +55,8 @@ function orderParts(parts: readonly CompanyForecastPart[], projects: readonly Pr
  * next-month card on Home and on the Projects tab opens. The figure is תזרים צפוי (the cards' cash) and the
  * summary is a project צפי page's (decision 0236). Then one section per project in the Projects tab's order, the
  * general costs (כללי) last: its name and its own צפי net (its row's figure on Projects; the header opens the
- * project), its first three rows, and "עוד N בצפי של …" to that project's צפי page. A project's row opens its
+ * project), its first three rows, and "עוד N בצפי של …" to that project's צפי page; the general costs list
+ * every row (FLOW-1001), since no other page holds them. A project's row opens its
  * existing edit page; the general costs' rows are read only, since no project's page holds them.
  */
 export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: sampleProjects, currency: sampleCurrency }: {
@@ -138,7 +139,9 @@ export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: s
             const name = general ? "כללי" : names.get(part.projectId ?? "") ?? "פרויקט";
             const projectId = general ? overhead?.id ?? null : part.projectId;
             const rows = partRows(part);
-            const more = rows.length - SHOWN;
+            // FLOW-1001: the general costs have no צפי page of their own, so every row shows here.
+            const shown = general ? rows : rows.slice(0, SHOWN);
+            const more = rows.length - shown.length;
             const net = part.forecast.netMinor;
             const head = (
               <>
@@ -154,7 +157,7 @@ export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: s
                   <Link to={`/projects/${projectId}${search}`} className="ui-cn-head ui-page-pad ui-hit m-press">{head}</Link>
                 )}
                 <List layout="flat" className="ui-pn-rows">
-                  {rows.slice(0, SHOWN).map((item) => (item.kind === "kept" ? (
+                  {shown.map((item) => (item.kind === "kept" ? (
                     <ListRow
                       key="kept"
                       layout="flat"
