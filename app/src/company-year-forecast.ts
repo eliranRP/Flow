@@ -1,4 +1,4 @@
-import { companyIncomeNote, companyNextMonthForecast, type CompanyForecastEdit, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
+import { companyIncomeNote, companyNextMonthForecast, type CompanyForecastEdit, type CompanyForecastInput, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
 import type { RentCategory } from "./next-month-chart";
 import { nextMonthKey } from "./project-next-month";
 import { HEBREW_MONTHS } from "./ui/date-math";
@@ -11,7 +11,7 @@ import { HEBREW_MONTHS } from "./ui/date-math";
  * apply to it (company_next_month_inputs' `rest_edits`).
  */
 
-type CompanyForecastInput = Omit<Parameters<typeof companyNextMonthForecast>[0], "month">;
+type RestOfYearInput = Omit<CompanyForecastInput, "month">;
 
 /** One month left in the year: its positive totals. */
 export type RestOfYearMonth = { month: string; incomeMinor: bigint; expenseMinor: bigint };
@@ -53,7 +53,7 @@ function monthEdits(inputs: CompanyNextMonthInputs, month: string): CompanyForec
  * The rest of the year for the whole company, or null in December (nothing is left). A line that already came
  * against an added edit leaves that month only; in another month the edit is expected again.
  */
-export function companyRestOfYear(input: CompanyForecastInput): RestOfYear | null {
+export function companyRestOfYear(input: RestOfYearInput): RestOfYear | null {
   const months = restOfYearMonths(input.today);
   if (months.length === 0) return null;
   const forecasts = months.map((month) => companyNextMonthForecast({

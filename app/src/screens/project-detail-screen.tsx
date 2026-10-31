@@ -166,7 +166,7 @@ export function ProjectDetailScreen({
   const nextMonth = {
     forecast: next.forecast == null ? null : cashForecast(next.forecast),
     loading: currencyPending || (forecastLive && next.pending && !next.paused && !next.failed),
-    currency: forecastCurrency,
+    currency: next.currency,
     categories: next.categories,
     today: next.today,
   };

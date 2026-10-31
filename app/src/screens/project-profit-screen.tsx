@@ -195,9 +195,10 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
                 // The card waits for the months too, so its expense caption never shows the count first.
                 loading={cardLoading || monthsLoading}
                 current={monthsLoading || monthsFailed ? null : shiftMonthKey(nextMonth.month, -1)}
-                figures={profitMonthFigures(rows, currency)}
+                // FLOW-1002: in the forecast's currency, the company's on the overhead project's page.
+                figures={profitMonthFigures(rows, nextMonth.currency)}
                 firstMonth={oldest ?? null}
-                currency={currency}
+                currency={nextMonth.currency}
                 kind="profit"
                 takeaway
                 cardHref={`/projects/${id}/profit/next${search}`}

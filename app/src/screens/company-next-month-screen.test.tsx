@@ -63,6 +63,15 @@ describe("CompanyNextMonthScreen (FLOW-1000)", () => {
     expect(hrefs.slice(1)).toEqual((generalPart?.forecast.rows ?? []).map((row) => `/projects/${overheadId}/profit/next/edit/${encodeURIComponent(row.key)}`));
   });
 
+  it("keeps the general rows read-only when the company has no overhead project (FLOW-1002)", () => {
+    const projects = NEXT_MONTH_PROJECTS.projects.map((row) => ({ ...row, is_overhead: false }));
+    const { container } = renderWithProviders(<CompanyNextMonthScreen sample={reads} today={NEXT_MONTH_TODAY} projects={projects} currency="USD" />, { route: "/forecast/next" });
+    const general = Array.from(container.querySelectorAll<HTMLElement>(".ui-cn-group")).at(-1) as HTMLElement;
+    expect(general.querySelector(".ui-cn-name")?.textContent).toBe("כללי");
+    expect(within(general).queryAllByRole("link")).toHaveLength(0);
+    expect(general.querySelectorAll(".ui-pn-rows li, .ui-pn-rows > *").length > 0).toBe(true);
+  });
+
   it("shows three rows a project, then links the rest to that project's צפי page", () => {
     renderPage();
     const big = FORECAST.parts.find((part) => part.projectId != null && part.forecast.rows.length + (part.forecast.cashOnlyMinor > 0n ? 1 : 0) > 3);

@@ -101,8 +101,9 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
   const detail = useProjectQuery(sample ? "" : projectId, allTime());
   const project = sample?.project ?? detail.data ?? null;
   const figures = project == null ? null : projectRows(project, companyCurrency)[0] ?? null;
-  const currency = figures?.currency ?? companyCurrency;
-  const next = useProjectNextMonth(projectId, currency, sample?.next, sample == null && figures != null);
+  // FLOW-1002: the overhead project's page is the company's general costs, in the company's currency.
+  const next = useProjectNextMonth(projectId, figures?.currency ?? companyCurrency, sample?.next, sample == null && figures != null);
+  const currency = next.currency;
   const writes = useProjectForecastWrites(projectId, next.month);
   const create = useCreateForecastCategory();
   const [draftText, setDraftText] = useState<string | null>(sample?.draft == null ? null : formatDraft(sample.draft));

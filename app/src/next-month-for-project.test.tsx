@@ -12,15 +12,17 @@ type OverheadRead = { project: { id: string; name: string } | null | undefined; 
 
 const reads = vi.hoisted(() => {
   const overhead: OverheadRead = { project: { id: "p0", name: "משרד" }, failed: false };
-  return { ownEnabled: [] as boolean[], overhead, company: { pending: false, failed: false, paused: false } };
+  return { ownEnabled: [] as boolean[], companyCurrency: [] as string[], overhead, company: { pending: false, failed: false, paused: false } };
 });
 
 vi.mock("./overhead-project", () => ({
   useOverheadProject: () => ({ ...reads.overhead, refetch: () => undefined }),
 }));
 
+vi.mock("./company-currency", () => ({ useCompanyCurrency: () => "USD" }));
+
 vi.mock("./company-next-month-query", () => ({
-  useCompanyNextMonth: (_currency: string, _today: string, enabled: boolean) => ({
+  useCompanyNextMonth: (currency: string, _today: string, enabled: boolean) => (reads.companyCurrency.push(currency), {
     forecast: null, input: enabled && !reads.company.pending ? INPUT : null, rest: null, categories: [], ...reads.company, refetch: () => Promise.resolve(),
   }),
 }));
@@ -73,6 +75,16 @@ describe("useProjectNextMonth (FLOW-1002)", () => {
     reads.overhead = { project: null, failed: false };
     expect(renderHook(() => useProjectNextMonth(OVERHEAD, "USD")).result.current.forecast).toBe("own");
     reads.overhead = { project: { id: "p0", name: "משרד" }, failed: false };
+  });
+
+  it("reads the general costs in the company's currency, whatever the overhead project's own currency", () => {
+    reads.companyCurrency.length = 0;
+    const { result } = renderHook(() => useProjectNextMonth(OVERHEAD, "ILS"));
+    expect(reads.companyCurrency.every((currency) => currency === "USD")).toBe(true);
+    expect(result.current.currency).toBe("USD");
+    expect(result.current.forecast).toEqual(companyGeneralForecast(INPUT));
+    // Any other project keeps its own currency.
+    expect(renderHook(() => useProjectNextMonth("p1", "ILS")).result.current.currency).toBe("ILS");
   });
 
   it("gives any other project its own forecast", () => {

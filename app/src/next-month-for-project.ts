@@ -1,6 +1,7 @@
 import type { ExpectedParty, ProjectCategoryMonths } from "@flow/shared";
 import { useMemo } from "react";
 import { companyGeneralForecast } from "./company-next-month";
+import { useCompanyCurrency } from "./company-currency";
 import { useCompanyNextMonth } from "./company-next-month-query";
 import { useOverheadProject } from "./overhead-project";
 import { nextMonthKey, type ProjectForecastEdit } from "./project-next-month";
@@ -25,7 +26,10 @@ export function useProjectNextMonth(projectId: string, currency: string, sample?
   const isOverhead = live && overhead.project != null && overhead.project.id === projectId;
   const own = useNextMonthForecast(projectId, currency, sample, enabled && !deciding && !isOverhead);
   const today = israelToday();
-  const company = useCompanyNextMonth(currency, today, isOverhead);
+  // The general costs are the company's, in its books currency (0147), as the company's צפי page reads them,
+  // whatever currency the overhead project's own figures are in. The pages show them in the currency returned.
+  const companyCurrency = useCompanyCurrency();
+  const company = useCompanyNextMonth(companyCurrency, today, isOverhead);
   const input = company.input;
   const general = useMemo(() => {
     if (!isOverhead || input == null) return null;
@@ -42,8 +46,9 @@ export function useProjectNextMonth(projectId: string, currency: string, sample?
     const edits: ProjectForecastEdit[] = input.inputs.edits.filter((edit) => edit.project_id === projectId);
     return { forecast: companyGeneralForecast(input), recurring, categoryMonths, edits };
   }, [isOverhead, input, projectId]);
-  if (!isOverhead) return deciding ? { ...own, forecast: null, pending: true } : own;
+  if (!isOverhead) return deciding ? { ...own, forecast: null, pending: true, currency } : { ...own, currency };
   return {
+    currency: companyCurrency,
     forecast: general?.forecast ?? null,
     month: nextMonthKey(today),
     today,
