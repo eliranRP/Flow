@@ -1,1 +1,1 @@
-The 2026-10-31 daily perf report is in `docs/qa/perf/`. FLOW-985 is in production: the recurring reads' database time is 11 to 15% lower. The reads over 0.5 s are Review and the company profit page's next month; FLOW-998 is filed for the recurring reads' category pick.
+The 2026-10-31 daily perf report is in `docs/qa/perf/`. FLOW-985 is in production: the database time of the recurring schedule and forecast reads is 15% lower. The reads over 0.5 s are Review and the company profit page's next month; FLOW-998 is filed for the recurring reads' category pick.
