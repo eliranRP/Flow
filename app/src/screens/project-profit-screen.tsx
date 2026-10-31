@@ -8,7 +8,8 @@ import { projectExpenseMinor, projectRows } from "../by-currency";
 import { profitMonthFigures } from "../next-month-chart";
 import { allTime, monthPeriod, shiftMonthKey } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
-import { useNextMonthForecast, type NextMonthSample } from "../project-next-month-query";
+import { type NextMonthSample } from "../project-next-month-query";
+import { useProjectNextMonth } from "../next-month-for-project";
 import { withPeriodSearch } from "../project-period";
 import { screenPhase } from "../query-phase";
 import { EMPTY_FILTERS, searchFiltersQuery } from "../search";
@@ -95,7 +96,11 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
   const share = project?.overhead_weighted === true && (project.base_currency ?? "ILS") === currency
     ? project.overhead_share_minor ?? null
     : null;
-  const nextMonth = useNextMonthForecast(id, currency, sample?.next, sample == null);
+  const nextMonth = useProjectNextMonth(id, currency, sample?.next, sample == null);
+  // FLOW-1002: the card is in the forecast's currency, the company's on the overhead project's page. When the
+  // project's own months are in another currency they are not set beside it: the card shows no history and no
+  // chart, rather than a "מול ₪0". The month list below stays in the project's currency.
+  const sameCurrency = nextMonth.currency === currency;
   // The figure comes with the project; the month rows and the next-month card load after it, each on its own,
   // so each slot shows its skeleton meanwhile and loaded rows never wait for the forecast. A read paused offline
   // stays pending, so the card's skeleton shows only while its reads are really loading.
@@ -193,10 +198,10 @@ export function ProjectProfitScreen({ sample }: { sample?: ProjectProfitSample }
                 forecast={nextMonth.forecast}
                 // The card waits for the months too, so its expense caption never shows the count first.
                 loading={cardLoading || monthsLoading}
-                current={monthsLoading || monthsFailed ? null : shiftMonthKey(nextMonth.month, -1)}
+                current={monthsLoading || monthsFailed || !sameCurrency ? null : shiftMonthKey(nextMonth.month, -1)}
                 figures={profitMonthFigures(rows, currency)}
                 firstMonth={oldest ?? null}
-                currency={currency}
+                currency={nextMonth.currency}
                 kind="profit"
                 takeaway
                 cardHref={`/projects/${id}/profit/next${search}`}

@@ -57,7 +57,8 @@ function orderParts(parts: readonly CompanyForecastPart[], projects: readonly Pr
  * general costs (כללי) last: its name and its own צפי net (its row's figure on Projects; the header opens the
  * project), its first three rows, and "עוד N בצפי של …" to that project's צפי page; the general costs list
  * every row (FLOW-1001), since no other page holds them. A project's row opens its
- * existing edit page; the general costs' rows are read only, since no project's page holds them.
+ * existing edit page; a general row the overhead project's (FLOW-1002: its צפי page is the general costs), and
+ * none when the company has no overhead project.
  */
 export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: sampleProjects, currency: sampleCurrency }: {
   sample?: CompanyNextMonthSample;
@@ -182,7 +183,8 @@ export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: s
                       sign={item.row.minor < 0n ? "out" : "in"}
                       source="bank"
                       initials={lineInitials(item.row.name)}
-                      href={hold || general || part.projectId == null ? undefined : `${editPath(part.projectId, item.row.key)}${search}`}
+                      // FLOW-1002: a general row opens the overhead project's edit page, whose forecast is the general costs.
+                      href={hold || projectId == null ? undefined : `${editPath(projectId, item.row.key)}${search}`}
                     />
                   )))}
                 </List>

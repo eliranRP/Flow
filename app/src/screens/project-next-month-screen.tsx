@@ -11,7 +11,7 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { useProjectForecastWrites } from "../project-forecast-writes";
 import { monthWord, PACE_WORDS } from "../project-next-edit";
 import { cashForecast, LOAN_SOURCE, monthlyOverheadShare, type NextMonthRow } from "../project-next-month";
-import { useNextMonthForecast } from "../project-next-month-query";
+import { useProjectNextMonth } from "../next-month-for-project";
 import { screenPhase } from "../query-phase";
 import { useHoldWrites } from "../use-is-viewer";
 import { useProfitMonthsQuery, useProjectQuery } from "../use-books";
@@ -82,8 +82,9 @@ export function ProjectNextMonthScreen({ sample }: { sample?: ProjectNextMonthSa
   const project = sample?.project ?? detail.data ?? null;
   const monthRows = sample?.months.months ?? months.data?.months ?? [];
   const figures = project == null ? null : projectRows(project, companyCurrency)[0] ?? null;
-  const currency = figures?.currency ?? companyCurrency;
-  const next = useNextMonthForecast(projectId, currency, sample?.next, sample == null && figures != null);
+  // FLOW-1002: the overhead project's page is the company's general costs, in the company's currency.
+  const next = useProjectNextMonth(projectId, figures?.currency ?? companyCurrency, sample?.next, sample == null && figures != null);
+  const currency = next.currency;
   const holdRole = useHoldWrites();
   const hold = sample == null && holdRole;
   const writes = useProjectForecastWrites(projectId, next.month);

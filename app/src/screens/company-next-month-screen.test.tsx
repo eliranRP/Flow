@@ -45,7 +45,7 @@ describe("CompanyNextMonthScreen (FLOW-1000)", () => {
     }
   });
 
-  it("opens a project's row on its existing edit page; the general costs' rows are read only", () => {
+  it("opens a project's row on its existing edit page, and a general row on the overhead project's (FLOW-1002)", () => {
     const { container } = renderPage();
     const sections = Array.from(container.querySelectorAll<HTMLElement>(".ui-cn-group"));
     const project = FORECAST.parts.find((part) => part.projectId != null);
@@ -54,10 +54,22 @@ describe("CompanyNextMonthScreen (FLOW-1000)", () => {
     const section = sections.find((item) => item.getAttribute("aria-label")?.startsWith(NEXT_MONTH_PROJECTS.projects.find((row) => row.id === project?.projectId)?.name ?? "-") === true);
     const link = within(section as HTMLElement).getByRole("link", { name: new RegExp(`^${first?.name ?? ""}`, "u") });
     expect(link).toHaveAttribute("href", `/projects/${project?.projectId ?? ""}/profit/next/edit/${encodeURIComponent(first?.key ?? "")}`);
-    // The general costs: only the heading links, to the overhead project; no row opens an edit page.
+    // The general costs: the heading opens the overhead project, and each row its edit page there, like a project's.
+    const overheadId = NEXT_MONTH_PROJECTS.projects.find((row) => row.is_overhead)?.id ?? "";
     const general = sections.at(-1) as HTMLElement;
-    const links = within(general).queryAllByRole("link");
-    expect(links.map((item) => item.getAttribute("href"))).toEqual([`/projects/${NEXT_MONTH_PROJECTS.projects.find((row) => row.is_overhead)?.id ?? ""}`]);
+    const generalPart = FORECAST.parts.find((part) => part.projectId == null);
+    const hrefs = within(general).queryAllByRole("link").map((item) => item.getAttribute("href"));
+    expect(hrefs[0]).toBe(`/projects/${overheadId}`);
+    expect(hrefs.slice(1)).toEqual((generalPart?.forecast.rows ?? []).map((row) => `/projects/${overheadId}/profit/next/edit/${encodeURIComponent(row.key)}`));
+  });
+
+  it("keeps the general rows read-only when the company has no overhead project (FLOW-1002)", () => {
+    const projects = NEXT_MONTH_PROJECTS.projects.map((row) => ({ ...row, is_overhead: false }));
+    const { container } = renderWithProviders(<CompanyNextMonthScreen sample={reads} today={NEXT_MONTH_TODAY} projects={projects} currency="USD" />, { route: "/forecast/next" });
+    const general = Array.from(container.querySelectorAll<HTMLElement>(".ui-cn-group")).at(-1) as HTMLElement;
+    expect(general.querySelector(".ui-cn-name")?.textContent).toBe("כללי");
+    expect(within(general).queryAllByRole("link")).toHaveLength(0);
+    expect(general.querySelectorAll(".ui-pn-rows li, .ui-pn-rows > *").length > 0).toBe(true);
   });
 
   it("shows three rows a project, then links the rest to that project's צפי page", () => {

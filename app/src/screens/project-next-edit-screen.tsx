@@ -26,7 +26,7 @@ import {
   savedToast,
 } from "../project-next-edit";
 import { type ForecastPace, LOAN_SOURCE, type NextMonthRow } from "../project-next-month";
-import { useNextMonthForecast } from "../project-next-month-query";
+import { useProjectNextMonth } from "../next-month-for-project";
 import { screenPhase } from "../query-phase";
 import { createCategoryNamed } from "../use-add-entry";
 import { useProjectQuery } from "../use-books";
@@ -101,8 +101,9 @@ export function ProjectNextEditScreen({ add = false, sample }: { add?: boolean; 
   const detail = useProjectQuery(sample ? "" : projectId, allTime());
   const project = sample?.project ?? detail.data ?? null;
   const figures = project == null ? null : projectRows(project, companyCurrency)[0] ?? null;
-  const currency = figures?.currency ?? companyCurrency;
-  const next = useNextMonthForecast(projectId, currency, sample?.next, sample == null && figures != null);
+  // FLOW-1002: the overhead project's page is the company's general costs, in the company's currency.
+  const next = useProjectNextMonth(projectId, figures?.currency ?? companyCurrency, sample?.next, sample == null && figures != null);
+  const currency = next.currency;
   const writes = useProjectForecastWrites(projectId, next.month);
   const create = useCreateForecastCategory();
   const [draftText, setDraftText] = useState<string | null>(sample?.draft == null ? null : formatDraft(sample.draft));
