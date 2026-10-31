@@ -109,6 +109,10 @@ export function useCompanyNextMonth(currency: string, today: string, enabled: bo
     categories: categoryList ?? [],
     pending: live && reads.some((read) => read.isPending) && !reads.some((read) => read.isPaused),
     failed: live && reads.some((read) => read.isError),
+    /** FLOW-1000: a read waits for the network (offline). */
+    paused: live && reads.some((read) => read.isPaused),
+    /** FLOW-1000: reads every one of them again (a page's נסו שוב). */
+    refetch: () => Promise.all(reads.map((read) => read.refetch())),
   };
 }
 

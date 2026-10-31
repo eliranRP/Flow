@@ -17,7 +17,7 @@ describe("CompanyCashCard (FLOW-990)", () => {
   });
 
   it("holds the card's place with its skeleton while the reads are out, after the skeleton's delay", () => {
-    const { container } = renderWithProviders(<CompanyCashCard next={{ forecast: null, loading: true, failed: false, categories: [] }} currency="USD" today={NEXT_MONTH_TODAY} thisMonthOut={null} />);
+    const { container } = renderWithProviders(<CompanyCashCard next={{ forecast: null, loading: true, failed: false, paused: false, refetch: () => Promise.resolve(), categories: [] }} currency="USD" today={NEXT_MONTH_TODAY} thisMonthOut={null} />);
     expect(container.querySelector(".ui-fc-card")).toBeNull();
     act(() => {
       vi.advanceTimersByTime(2_000);
@@ -26,7 +26,7 @@ describe("CompanyCashCard (FLOW-990)", () => {
   });
 
   it("draws nothing when a read failed (no forecast) or nothing is expected", () => {
-    const failed = renderWithProviders(<CompanyCashCard next={{ forecast: null, loading: false, failed: true, categories: [] }} currency="USD" today={NEXT_MONTH_TODAY} thisMonthOut={0n} />);
+    const failed = renderWithProviders(<CompanyCashCard next={{ forecast: null, loading: false, failed: true, paused: false, refetch: () => Promise.resolve(), categories: [] }} currency="USD" today={NEXT_MONTH_TODAY} thisMonthOut={0n} />);
     expect(failed.container.querySelector(".ui-fc-card")).toBeNull();
     const empty = { ...FORECAST, rows: [], parts: [], incomeMinor: 0n, expenseMinor: 0n, netMinor: 0n };
     expect(nothingExpected(null)).toBe(true);
@@ -35,7 +35,7 @@ describe("CompanyCashCard (FLOW-990)", () => {
   });
 
   it("leaves the expense caption empty until this month's cash out is known, never \"מול $0\"", () => {
-    const { container } = renderWithProviders(<CompanyCashCard next={{ forecast: FORECAST, loading: false, failed: false, categories: [] }} currency="USD" today={NEXT_MONTH_TODAY} thisMonthOut={null} />);
+    const { container } = renderWithProviders(<CompanyCashCard next={{ forecast: FORECAST, loading: false, failed: false, paused: false, refetch: () => Promise.resolve(), categories: [] }} currency="USD" today={NEXT_MONTH_TODAY} thisMonthOut={null} />);
     expect(container.textContent).not.toMatch(/מול/u);
     expect(thisMonthCashOut(null, NEXT_MONTH_TODAY, "USD")).toBeNull();
     expect(thisMonthCashOut(HOME_NEXT_MONTH_SAMPLE.cash, NEXT_MONTH_TODAY, "USD")).toBe(2_220_000n);

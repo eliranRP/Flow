@@ -3,7 +3,11 @@ import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { companyCashForecast, companyForecastCaption, companyNextMonthForecast } from "../company-next-month";
 import { HOME_NEXT_MONTH_SAMPLE, NEXT_MONTH_PROJECTS, NEXT_MONTH_TODAY } from "../dev/home-next-month-sample";
+import { JUNIPER_NEXT_LOAN } from "../dev/project-next-month-sample";
+import { NOT_IN_PROFIT_LABEL } from "../cash";
+import type { ForecastLoan } from "../project-next-loans";
 import { renderWithProviders } from "../test-render";
+import { ViewerPreview } from "../use-is-viewer";
 import { CompanyNextMonthScreen } from "./company-next-month-screen";
 
 const reads = HOME_NEXT_MONTH_SAMPLE.next;
@@ -63,5 +67,46 @@ describe("CompanyNextMonthScreen (FLOW-1000)", () => {
     const name = NEXT_MONTH_PROJECTS.projects.find((row) => row.id === big?.projectId)?.name ?? "";
     const extra = (big?.forecast.rows.length ?? 0) + ((big?.forecast.cashOnlyMinor ?? 0n) > 0n ? 1 : 0) - 3;
     expect(screen.getByRole("link", { name: `עוד ${String(extra)} בצפי של ${name}` })).toHaveAttribute("href", `/projects/${big?.projectId ?? ""}/profit/next`);
+  });
+});
+
+describe("CompanyNextMonthScreen phases and holds (FLOW-1000 r1)", () => {
+  it("shows the skeleton while loading and the failure with נסו שוב on an error, never 'nothing expected'", () => {
+    const loading = renderWithProviders(<CompanyNextMonthScreen />, { route: "/forecast/next?preview=loading" });
+    expect(loading.container.querySelector(".ui-pp-figure")).toBeNull();
+    expect(screen.queryByText("אין תנועות צפויות בחודש הבא.")).toBeNull();
+    loading.unmount();
+    renderWithProviders(<CompanyNextMonthScreen />, { route: "/forecast/next?preview=error-server" });
+    expect(screen.getByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    expect(screen.queryByText("אין תנועות צפויות בחודש הבא.")).toBeNull();
+  });
+
+  it("a viewer reads the rows: no row opens an edit page", () => {
+    const { container } = renderWithProviders(
+      <ViewerPreview>
+        <CompanyNextMonthScreen sample={reads} today={NEXT_MONTH_TODAY} projects={NEXT_MONTH_PROJECTS.projects} currency="USD" />
+      </ViewerPreview>,
+      { route: "/forecast/next" },
+    );
+    const rowLinks = Array.from(container.querySelectorAll<HTMLAnchorElement>(".ui-pn-rows a"));
+    expect(rowLinks.filter((link) => link.getAttribute("href")?.includes("/profit/next/edit/") === true)).toHaveLength(0);
+  });
+
+  it("lists a project's part the profit leaves out as its last row, and counts it in עוד N", () => {
+    // The loan's escrow files to a category the company does not have: it is cash the profit leaves out.
+    const loan = { ...(JUNIPER_NEXT_LOAN.loans?.[0] as ForecastLoan), projectId: "p1" };
+    const sample = { ...reads, loans: [loan] };
+    const forecast = companyCashForecast(companyNextMonthForecast({ currency: "USD", today: NEXT_MONTH_TODAY, recurring: sample.recurring, loans: sample.loans, categories: sample.categories, inputs: sample.inputs }));
+    const part = forecast.parts.find((item) => item.projectId === "p1");
+    expect((part?.forecast.cashOnlyMinor ?? 0n) > 0n).toBe(true);
+    const { container } = renderWithProviders(<CompanyNextMonthScreen sample={sample} today={NEXT_MONTH_TODAY} projects={NEXT_MONTH_PROJECTS.projects} currency="USD" />, { route: "/forecast/next" });
+    const section = Array.from(container.querySelectorAll<HTMLElement>(".ui-cn-group")).find((item) => item.getAttribute("aria-label")?.startsWith("בית הדקל") === true);
+    const total = (part?.forecast.rows.length ?? 0) + 1;
+    const titles = Array.from(section?.querySelectorAll(".ui-row-title") ?? []).map((title) => title.textContent);
+    if (total <= 3) {
+      expect(titles.at(-1)).toBe(NOT_IN_PROFIT_LABEL);
+    } else {
+      expect(within(section as HTMLElement).getByRole("link", { name: `עוד ${String(total - 3)} בצפי של בית הדקל` })).toBeInTheDocument();
+    }
   });
 });

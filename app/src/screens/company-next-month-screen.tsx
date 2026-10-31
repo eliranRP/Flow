@@ -9,9 +9,10 @@ import type { CompanyNextMonthSample } from "../company-next-month-query";
 import { useCompanyCurrency } from "../company-currency";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { useProjectsCashMonth } from "../project-cash";
+import { screenPhase } from "../query-phase";
 import { orderActiveProjects } from "../project-list";
 import { LOAN_SOURCE, type NextMonthRow } from "../project-next-month";
-import { useHoldWrites } from "../use-is-viewer";
+import { useCompanyRole, useHoldWrites } from "../use-is-viewer";
 import { Amount } from "../ui/amount";
 import { Card } from "../ui/card";
 import { israelToday } from "../ui/date-math";
@@ -69,7 +70,9 @@ export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: s
   const search = usePreviewSearch();
   const preview = useHomePreview();
   const holdRole = useHoldWrites();
-  const hold = sample == null && holdRole;
+  const role = useCompanyRole();
+  // A sample (a story, a test) holds only for a pinned viewer; the live page for anyone who can't write.
+  const hold = sample == null ? holdRole : role === "viewer";
   const companyCurrency = useCompanyCurrency();
   const list = useProjectsCashMonth();
   const projects = sampleProjects ?? list.data?.projects ?? [];
@@ -78,15 +81,14 @@ export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: s
   const next = useCompanyCashNextMonth(currency, today, sample == null && list.data != null, sample);
   const [figure, setFigure] = useState<HTMLElement | null>(null);
   const forecast = next.forecast;
+  // The list (names, order, currency) first, then the forecast's reads; a paused read is offline, not a skeleton.
   const phase = sample != null
     ? ({ kind: "ready" } as const)
-    : preview !== "off"
-      ? ({ kind: "empty" } as const)
-      : list.isError || next.failed
-        ? ({ kind: "error", offline: false } as const)
-        : list.data == null || next.loading
-          ? ({ kind: "loading" } as const)
-          : ({ kind: "ready" } as const);
+    : screenPhase(preview, {
+      isPending: list.isPending || (list.data != null && (next.loading || (next.forecast == null && !next.failed))),
+      isError: list.isError || next.failed,
+      isPaused: list.isPaused || next.paused,
+    });
   const title = forecast == null ? "צפי" : `צפי ${cashMonthName(forecast.month, new Date(`${today}T12:00:00Z`))}`;
   const count = forecast == null ? 0 : forecast.rows.length;
   const caption = forecast == null ? "" : companyForecastCaption(forecast);
@@ -105,7 +107,10 @@ export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: s
       headerClassName="ui-pp-head"
       headEnd={figure}
       phase={phase}
-      onRetry={() => { void list.refetch(); }}
+      onRetry={() => {
+        void list.refetch();
+        void next.refetch();
+      }}
       loading={<ProfitSkeleton />}
       empty={<p className="ui-pp-note t-caption t-muted">אין עדיין מספיק נתונים לצפי</p>}
     >
@@ -137,10 +142,10 @@ export function CompanyNextMonthScreen({ sample, today: sampleToday, projects: s
             const net = part.forecast.netMinor;
             const head = (
               <>
-                <h2 className="ui-cn-name">{name}</h2>
+                <h2 className="ui-cn-name" data-clip-ok>{name}</h2>
                 <span className="ui-fc-tag">צפי</span>
                 <Amount agorot={net} currency={currency} income={net > 0n} />
-                {projectId == null ? null : <ChevronIcon size={18} />}
+                {projectId == null ? null : <ChevronIcon size={16} />}
               </>
             );
             return (

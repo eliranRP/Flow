@@ -19,13 +19,17 @@ export type CompanyCashNextMonth = {
   loading: boolean;
   /** FLOW-1000: a read failed (the company צפי page says so; the cards just hide). */
   failed: boolean;
+  /** FLOW-1000: a read waits for the network. */
+  paused: boolean;
+  /** FLOW-1000: reads the forecast again. */
+  refetch: () => Promise<unknown>;
   categories: readonly RentCategory[];
 };
 
 export function useCompanyCashNextMonth(currency: string, today: string, enabled: boolean, sample?: CompanyNextMonthSample): CompanyCashNextMonth {
   const next = useCompanyNextMonth(currency, today, enabled, sample);
   const forecast = useMemo(() => (next.forecast == null ? null : companyCashForecast(next.forecast)), [next.forecast]);
-  return { forecast, loading: next.pending, failed: next.failed, categories: next.categories };
+  return { forecast, loading: next.pending, failed: next.failed, paused: next.paused, refetch: next.refetch, categories: next.categories };
 }
 
 /**
