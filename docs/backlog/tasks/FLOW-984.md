@@ -1,13 +1,13 @@
 <a id="flow-984"></a>
 # FLOW-984 · Review loads its open items in pages, not all at once
-- **Type:** PLAN FIRST · **Status:** ready (plan approved 2026-10-31) · **Source:** the owner on 2026-10-28, from the perf steward's daily report ([2026-10-28](../../qa/perf/2026-10-28.md)) under decision [0230](../../decisions/0230-screens-data-in-half-a-second.md): page the Review screen.
-- **Files:** `public.list_review` (a new migration: a limit and a cursor, the total count), its pgTAP test, `app/src/use-books.ts` (the review read), the Review screen and its stories and tests, the MCP review tools if they read `list_review`, a decision record.
+- **Type:** PLAN FIRST · **Status:** owner approved the plan (2026-10-31); ready to build · **Source:** the owner on 2026-10-28, from the perf steward's daily report ([2026-10-28](../../qa/perf/2026-10-28.md)) under decision [0230](../../decisions/0230-screens-data-in-half-a-second.md): page the Review screen.
+- **Files:** a new migration adding `public.list_review_page` (`list_review()` unchanged), `supabase/tests/database/review_paging.test.sql`, `app/src/read-schemas.ts`, `app/src/use-books.ts`, the Review screens (`review-screen.tsx`, `review-queue.tsx`, `review-lists.tsx`, `review-shared.tsx`, `change-form.tsx`) and their stories and tests, a decision record. The MCP tools and Home are unchanged.
 
 `list_review` returns every open item in one read: on the Flow QA sandbox about 1,280 items, 793 KB before compression, 0.7 to 1.0 s round trip and about 170 ms in the database. Review shows one card at a time and a list.
 
 - [x] Plan approved by the owner (2026-10-31), below.
-- [ ] `list_review` takes a project filter on the server, so Review filtered to one project loads that project's items in pages too.
-- [ ] `list_review` takes a page size and a cursor (doc date and created-at, its current order) and returns the total open count; the default call stays compatible until the app moves.
+- [ ] A new read, `list_review_page`, takes a page size, a cursor (doc date, created-at, then id) and a project, and returns the page, the total open count and the next cursor. The zero-argument `list_review()` stays byte for byte the same (the MCP tools read it).
+- [ ] Review filtered to one project loads that project's items in pages, through the project argument.
 - [ ] Review shows its first page within 0.5 s on the FLOW-804 phone and loads the next page before the user reaches it.
 - **Plan (owner's answers, 2026-10-31):**
   - **First page:** 50 items, then 50 more at a time.
@@ -18,12 +18,12 @@
   - **New read:** `public.list_review_page(p_limit, p_after_date, p_after_created, p_after_id, p_project)` returns `{items, total, next}`. Keyset on `(t.doc_date, q.created_at, q.id)`, adding `q.id` as the tie-break; fetches `limit + 1`; limit capped.
   - **Old read kept:** the zero-argument `list_review()` stays unchanged for the MCP tools, which filter and page in the edge function. The two reads share their row body through a private function, and a pgTAP test checks that `list_review()` is byte for byte the same.
   - **Choose the page first:** the page is picked before `line_pnl_states` and the forecast matches run, so the database time drops along with the size.
-  - **App cache:** `["review", preview]` stays a flat `ReviewRow[]`. More pages are appended with `setQueryData`, so the six `Array.isArray(old)` optimistic updates and the undo keep working. After an invalidation, the app refetches up to the loaded count.
+  - **App cache:** `["review", preview]` stays a flat `ReviewRow[]`. More pages are appended with `setQueryData`, so the four `Array.isArray(old)` optimistic updates (`change-form.tsx`, three; `review-queue.tsx`, one) and the undo keep working. After an invalidation, the app refetches up to the loaded count.
   - **Deep link:** `?item=` to a row not yet loaded reads that one row.
   - **Jev prefetch:** the Jev scope prefetch runs per page.
   - **Files:**
-    - Database: a new migration, `supabase/tests/database/review_paging.test.sql`.
-    - App: `app/src/read-schemas.ts`, `app/src/use-books.ts`, `app/src/screens/review-screen.tsx`, `review-queue.tsx`, `review-lists.tsx`, `review-shared.tsx`, `change-form.tsx`, and their stories and tests.
-    - Docs: a decision record.
-    - The MCP and Home are unchanged.
-- **Acceptance:** pgTAP for the paging (order, cursor, count, another company), unit and e2e tests for the screen across a page boundary, the perf steward's measurement before and after.
+    - As in the Files line above.
+- **Acceptance:**
+  - pgTAP for the paging: order, cursor, count, the project argument, and another company. It also checks that `list_review()` is byte for byte unchanged.
+  - Unit and e2e tests for the screen across a page boundary. They cover a `?item=` deep link to an unloaded row, the failed-batch row, and the Jev prefetch per page.
+  - The perf steward's measurement before and after.
