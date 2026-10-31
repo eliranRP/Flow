@@ -14,7 +14,8 @@ import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useProjectQuery } from "../use-books";
 import { useProjectCashMonthsQuery, useProjectsCashMonth } from "../project-cash";
-import { useNextMonthForecast, type NextMonthSample } from "../project-next-month-query";
+import { type NextMonthSample } from "../project-next-month-query";
+import { useProjectNextMonth } from "../next-month-for-project";
 import { cashForecast } from "../project-next-month";
 import { assertNoError, useWrite } from "../use-write";
 import { Amount } from "../ui/amount";
@@ -159,7 +160,7 @@ export function ProjectDetailScreen({
   // The forecast waits for the lifetime read too, so it is never built first in the company's currency.
   const currencyPending = sample == null && detail.data != null && lifetime.data == null && lifetime.isPending && !lifetime.isPaused;
   const forecastLive = sample == null && detail.data != null && lifetime.data != null;
-  const next = useNextMonthForecast(sample?.id ?? projectId, forecastCurrency, sampleNext, forecastLive);
+  const next = useProjectNextMonth(sample?.id ?? projectId, forecastCurrency, sampleNext, forecastLive);
   // Decision 0196: the page is about cash, so its card and chart take the forecast in cash terms (the loans'
   // principal due next month included), derived from the one forecast the צפי page shows.
   const nextMonth = {

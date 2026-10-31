@@ -89,7 +89,8 @@ function asCategoryMonths(projectId: string, rows: readonly CategoryMonthsRow[])
  * the project's edits on top) and the general costs' (with the overhead project's), summed. A project with
  * nothing expected adds nothing.
  */
-export function companyNextMonthForecast(input: {
+/** What the company's forecast is built from. */
+export type CompanyForecastInput = {
   currency: string;
   today: string;
   /** expected_months for the whole company: every charge with its project (null for none). */
@@ -100,7 +101,9 @@ export function companyNextMonthForecast(input: {
   inputs: CompanyNextMonthInputs;
   /** yyyy-mm, a later month (the rest of the year, decision 0200); default next month. */
   month?: string;
-}): CompanyNextMonth {
+};
+
+export function companyNextMonthForecast(input: CompanyForecastInput): CompanyNextMonth {
   const month = input.month ?? nextMonthKey(input.today);
   const overhead = input.inputs.overhead_project_id;
   const build = (projectId: string, rows: readonly CategoryMonthsRow[], recurring: readonly ExpectedParty[], loans: readonly ForecastLoan[]) => nextMonthForecast({
@@ -125,19 +128,7 @@ export function companyNextMonthForecast(input: {
         input.inputs.edits.filter((edit) => edit.project_id === projectId),
       ),
     }));
-  // The general costs: what carries no project and what the overhead project carries (its lines are already in
-  // the general months), built as one part under the builder's own project key, so a category one of their
-  // charges or loans fills is never also averaged.
-  const general = (projectId: string | null | undefined) => projectId == null || projectId === overhead;
-  const generalRecurring = input.recurring.filter((party) => general(party.project_id)).map((party) => ({ ...party, project_id: GENERAL }));
-  const generalLoans = input.loans.filter((loan) => general(loan.projectId)).map((loan) => ({ ...loan, projectId: GENERAL }));
-  parts.push({
-    projectId: null,
-    forecast: applyForecastEdits(
-      build(GENERAL, input.inputs.general, generalRecurring, generalLoans),
-      input.inputs.edits.filter((edit) => overhead != null && edit.project_id === overhead),
-    ),
-  });
+  parts.push({ projectId: null, forecast: companyGeneralForecast(input, month) });
   const kept = parts.filter((part) => part.forecast.rows.length > 0);
   const incomeMinor = kept.reduce((sum, part) => sum + part.forecast.incomeMinor, 0n);
   const expenseMinor = kept.reduce((sum, part) => sum + part.forecast.expenseMinor, 0n);
@@ -164,6 +155,34 @@ export function companyCashForecast(forecast: CompanyNextMonth): CompanyNextMont
 /** FLOW-990: one part's net (a project's, or the general costs' for null), or null when it expects nothing. */
 export function companyPartNet(forecast: Pick<CompanyNextMonth, "parts">, projectId: string | null): bigint | null {
   return forecast.parts.find((part) => part.projectId === projectId)?.forecast.netMinor ?? null;
+}
+
+/**
+ * FLOW-1002: the general costs' part on its own (what carries no project and what the overhead project carries),
+ * with the overhead project's edits, even when it expects nothing. The company sums it with the projects'; the
+ * overhead project's own צפי page, its edit page and its card show it, so a general row is edited like any
+ * project's row.
+ */
+export function companyGeneralForecast(input: CompanyForecastInput, month = nextMonthKey(input.today)): NextMonthForecast {
+  const overhead = input.inputs.overhead_project_id;
+  // Its lines are already in the general months; built as one part under the builder's own project key, so a
+  // category one of their charges or loans fills is never also averaged.
+  const general = (projectId: string | null | undefined) => projectId == null || projectId === overhead;
+  const recurring = input.recurring.filter((party) => general(party.project_id)).map((party) => ({ ...party, project_id: GENERAL }));
+  const loans = input.loans.filter((loan) => general(loan.projectId)).map((loan) => ({ ...loan, projectId: GENERAL }));
+  return applyForecastEdits(
+    nextMonthForecast({
+      projectId: GENERAL,
+      currency: input.currency,
+      today: input.today,
+      recurring,
+      categoryMonths: asCategoryMonths(GENERAL, input.inputs.general),
+      loans,
+      categories: input.categories,
+      month,
+    }),
+    input.inputs.edits.filter((edit) => overhead != null && edit.project_id === overhead),
+  );
 }
 
 /** The card's grey corner caption: "7 פרויקטים וכללי", what the sum is made of. */

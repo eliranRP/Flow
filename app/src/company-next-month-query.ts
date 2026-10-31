@@ -2,7 +2,7 @@ import type { CategoryRow, ExpectedMonths, ProfitMonths } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { z } from "zod";
-import { companyNextMonthForecast, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
+import { companyNextMonthForecast, type CompanyForecastInput, type CompanyNextMonth, type CompanyNextMonthInputs } from "./company-next-month";
 import { companyRestOfYear, type RestOfYear } from "./company-year-forecast";
 import { CHART_MONTHS } from "./month-figures";
 import { getSupabase } from "./lib/supabase";
@@ -89,12 +89,14 @@ export function useCompanyNextMonth(currency: string, today: string, enabled: bo
   const loanList = sample?.loans ?? loans.data ?? (sample == null ? undefined : NO_LOANS);
   const categoryList = sample?.categories ?? categories.data;
   const inputData = sample?.inputs ?? inputs.data;
-  const forecast: CompanyNextMonth | null = useMemo(
+  // FLOW-1002: what the forecast is built from, so the overhead project's page can build the general costs alone.
+  const input: CompanyForecastInput | null = useMemo(
     () => (recurring != null && loanList != null && categoryList != null && inputData != null
-      ? companyNextMonthForecast({ currency, today, recurring, loans: loanList, categories: categoryList, inputs: inputData })
+      ? { currency, today, recurring, loans: loanList, categories: categoryList, inputs: inputData }
       : null),
     [recurring, loanList, categoryList, inputData, currency, today],
   );
+  const forecast: CompanyNextMonth | null = useMemo(() => (input == null ? null : companyNextMonthForecast(input)), [input]);
   // The year view's rest of the year (decision 0200): the same reads, built again for each month left.
   const rest: RestOfYear | null = useMemo(
     () => (recurring != null && loanList != null && categoryList != null && inputData != null
@@ -105,6 +107,7 @@ export function useCompanyNextMonth(currency: string, today: string, enabled: bo
   const reads = [expected, loans, inputs, categories];
   return {
     forecast,
+    input,
     rest,
     categories: categoryList ?? [],
     pending: live && reads.some((read) => read.isPending) && !reads.some((read) => read.isPaused),
