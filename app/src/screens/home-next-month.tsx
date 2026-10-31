@@ -4,6 +4,7 @@ import type { CompanyNextMonthSample } from "../company-next-month-query";
 import { CHART_MONTHS, cashMonthFigures } from "../month-figures";
 import { cashTakeaway, chartHistory, chartLabel, chartSub, forecastChartMonth } from "../next-month-chart";
 import { shiftMonthKey } from "../period";
+import { usePreviewSearch } from "../preview";
 import { useCashMonthsQuery } from "../use-cash";
 import { MonthChart } from "../ui/month-forecast";
 import { CompanyCashCard, nothingExpected, thisMonthCashOut, useCompanyCashNextMonth } from "./company-cash-next-month";
@@ -18,6 +19,7 @@ export type HomeNextMonthSample = { next: CompanyNextMonthSample; cash: NonNulla
  * chunk, so the forecast and the chart stay out of Home's first load.
  */
 export function HomeNextMonth({ today, currency, sample }: { today: string; currency: string; sample?: HomeNextMonthSample }) {
+  const search = usePreviewSearch();
   const next = useCompanyCashNextMonth(currency, today, sample == null, sample?.next);
   const cashRead = useCashMonthsQuery(sample == null, CHART_MONTHS);
   const cash = sample?.cash ?? cashRead.data ?? null;
@@ -32,7 +34,7 @@ export function HomeNextMonth({ today, currency, sample }: { today: string; curr
     <section className="ui-home-next" aria-labelledby="home-next-title">
       <h2 id="home-next-title" className="ui-home-next-title">החודש הבא</h2>
       <div className="ui-fc-block">
-        <CompanyCashCard next={next} currency={currency} today={today} thisMonthOut={thisMonthCashOut(cash, today, currency)} />
+        <CompanyCashCard next={next} currency={currency} today={today} thisMonthOut={thisMonthCashOut(cash, today, currency)} href={`/forecast/next${search}`} />
         {next.loading || history == null ? null : (
           <MonthChart
             kind="cash"

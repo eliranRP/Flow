@@ -365,3 +365,54 @@
   align-items: center;
   gap: var(--space-1);
 }
+
+/* FLOW-1000: the company צפי page, one section per project (board CompanyNextA). */
+.ui-cn-group {
+  margin-block-start: var(--space-5);
+  border-block-start: 1px solid var(--color-line);
+}
+
+/* A section's rows sit under its heading: the gap above .ui-pn-rows is the profit page's, under its note. */
+.ui-cn-group .ui-pn-rows {
+  margin-block-start: 0;
+}
+
+.ui-cn-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 48px;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.ui-cn-name {
+  flex: 1;
+  min-inline-size: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-section-weight);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* A long name takes the shrink; the tag and the net keep their width at 320. */
+.ui-cn-head > .ui-num {
+  flex: none;
+  font-weight: var(--type-section-weight);
+}
+
+.ui-cn-head > .ui-fc-tag {
+  flex: none;
+}
+
+.ui-cn-more {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-block-size: 44px;
+  color: var(--color-accent-text);
+  font-size: var(--type-caption-size);
+  text-decoration: none;
+}
