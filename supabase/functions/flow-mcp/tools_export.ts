@@ -156,8 +156,8 @@ async function build(request: ReportRequest, rpc: ToolRpc, now: Date): Promise<B
     ? named.json.projects.filter(isObject).flatMap((row) => (typeof row.id === "string" && typeof row.name === "string" ? [{ id: row.id.toLowerCase(), name: row.name }] : []))
     : [];
   const picked: Project[] = request.projectIds.map((id) => allProjects.find((project) => project.id === id) ?? { id, name: "" });
-  // Another company's project, or an unknown one, is not on the company's list.
-  if (allProjects.length > 0 && picked.some((project) => project.name === "")) throw new Refusal(fail("not_found", "not found"));
+  // Another company's project, or an unknown one, is not on the company's list (FLOW-995: an empty list too).
+  if (picked.some((project) => project.name === "")) throw new Refusal(fail("not_found", "not found"));
   const reads = new Reads(rpc);
   const gridFormat = request.format === "xlsx" || request.format === "json";
   const parts: ReportPart[] = [];

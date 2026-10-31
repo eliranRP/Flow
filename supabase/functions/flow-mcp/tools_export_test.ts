@@ -17,7 +17,7 @@ const NOW = new Date("2026-10-31T07:15:00Z");
 function reads(name: string) {
   if (name === "get_pnl_statement") return { status: 200, json: SAMPLE_STATEMENT_BODY };
   if (name === "mcp_balance_sheet") return { status: 200, json: SAMPLE_BALANCE_BODY };
-  if (name === "get_dashboard") return { status: 200, json: { name: "נכסי הדוגמה בע״מ" } };
+  if (name === "get_dashboard") return { status: 200, json: { name: "נכסי הדוגמה בע״מ", projects: [{ id: PROJECT, name: "Maple Ave" }] } };
   if (name === "bump_report_rate") return { status: 200, json: { allowed: true, retry_after_seconds: 0 } };
   return { status: 404, json: null };
 }
@@ -322,6 +322,12 @@ Deno.test("export_report with two projects picked: the balance sheet reads each 
   const grid = (result.structuredContent as { data: { reports: { grids: { rows: { label: string; amounts_minor: number[] }[] }[] }[] } }).data.reports[0]!.grids[0]!;
   // Each project read returns the sample: the sum is twice it.
   assertEquals(grid.rows.find((row) => row.label === "סה״כ נכסים")?.amounts_minor, [123_000_000]);
+});
+
+Deno.test("export_report: a project id refused when the company lists no projects at all (FLOW-995)", async () => {
+  const none = rpcOf((name) => (name === "get_dashboard" ? { status: 200, json: { name: "נכסי הדוגמה בע״מ", projects: [] } } : reads(name)));
+  assertEquals(codeOf(await callTool("export_report", { project_id: PROJECT }, ["read"], none.rpc)), "not_found");
+  assertEquals(none.calls.map((call) => call.name), ["get_dashboard"]);
 });
 
 Deno.test("export_report: a project list that cannot be read refuses before any read", async () => {

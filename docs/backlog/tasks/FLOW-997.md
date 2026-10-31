@@ -1,6 +1,6 @@
 <a id="flow-997"></a>
 # FLOW-997 · The report PDF puts a project's number last: "2407 Example Road" reads "Example Road 2407"
-- **Type:** BUG · **Status:** in-progress · **Source:** the prod check of FLOW-996, 2026-10-30, on the owner's company: by-project column heads with a street number came out reordered. **Approved:** the owner, 2026-10-31 ("Yes do it").
+- **Type:** BUG · **Status:** done (#891) · **Source:** the prod check of FLOW-996, 2026-10-30, on the owner's company: by-project column heads with a street number came out reordered. **Approved:** the owner, 2026-10-31 ("Yes do it").
 - **Files:** `supabase/functions/_shared/report_text.ts` (`bidiRuns`), `report_text_test.ts`, a changelog fragment.
 
 Cause: the PDF lays every line out in the page's right-to-left direction, so in a line with no Hebrew the number and the words became separate runs and swapped.
