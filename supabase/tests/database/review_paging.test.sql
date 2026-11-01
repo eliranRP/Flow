@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(40);
+select plan(41);
 
 do $users$
 begin
@@ -163,8 +163,14 @@ select is(public.list_review_page(1, null, null, null, null, (select q.id from p
 select is(public.list_review_page(1, null, null, null, null, (select q.id from public.review_queue q where q.transaction_id = pg_temp.id('done')))->'items', '[]'::jsonb,
   'an item that is no longer open gives nothing');
 
--- Another company, and a user with no company.
+-- Another company, and a user with no company. Company A's review id is kept before switching user,
+-- since company B cannot read A's queue to look it up.
+create temp table rp_item as
+select q.id from public.review_queue q where q.transaction_id = pg_temp.id('l5');
+grant select on rp_item to authenticated;
 select tests.authenticate_as('rp_b');
+select is(jsonb_array_length(public.list_review_page(50, null, null, null, null, (select id from rp_item))->'items'), 0,
+  'company B cannot read company A''s item by id');
 select is(pg_temp.txns(public.list_review_page(100)->'items'), jsonb_build_array(pg_temp.id('b1')), 'company B lists only its own item');
 select is((public.list_review_page(100)->>'total')::int, 1, 'and counts only its own');
 select is(pg_temp.txns(public.list_review_page(100, null, null, null, pg_temp.id('px'))->'items'), '[]'::jsonb, 'company A''s project gives B nothing');

@@ -137,7 +137,9 @@ describe("FLOW-984: the Review screen in pages", () => {
   it("shows the first page of 50 and counts every open item from the server's total", async () => {
     renderAt("/review");
     expect(await screen.findByRole("heading", { name: "ספק r001" })).toBeInTheDocument();
-    expect(document.querySelector(".ui-review-counter")?.textContent).toBe("פריט 1 מתוך 120");
+    await waitFor(() => {
+      expect(document.querySelector(".ui-review-counter")?.textContent).toBe("פריט 1 מתוך 120");
+    });
     expect(reads()).toHaveLength(1);
     expect(reads()[0]?.args).toEqual({ p_limit: 50 });
     expect(screen.getByText(/הבא בתור: ספק r002/)).toBeInTheDocument();
