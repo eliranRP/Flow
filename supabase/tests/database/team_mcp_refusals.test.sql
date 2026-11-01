@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(1);
+select plan(3);
 
 do $users$
 begin
@@ -23,6 +23,21 @@ insert into tr (label, id) values
 select public.store_mcp_credential((select id from tr where label = 'owner'), 'hash-tr-write-0001',
   array['read', 'write'], now() + interval '90 days', 'pepper-1');
 insert into tr (label, id) select 'cred', id from private.mcp_credentials where token_hash = 'hash-tr-write-0001';
+
+create or replace function pg_temp.as_owner()
+returns void
+language plpgsql
+as $$
+declare
+  uid uuid := (select id from pg_temp.tr where label = 'owner');
+begin
+  perform set_config('role', 'authenticated', true);
+  perform set_config('request.jwt.claim.sub', uid::text, true);
+  perform set_config('request.jwt.claim.role', 'authenticated', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', uid, 'role', 'authenticated')::text, true);
+end;
+$$;
+grant execute on function pg_temp.as_owner() to authenticated, service_role;
 
 create or replace function pg_temp.as_mcp()
 returns void
@@ -44,6 +59,16 @@ select pg_temp.as_mcp();
 select is(public.mcp_remove_member('tr-4', (select id from tr where label = 'stranger'))->'error',
   '{"code": "refused", "message": "member not found"}'::jsonb, 'remove_member on a non-member is member not found');
 
+-- The 50-pending cap, now in the app's own call (the MCP invite tool is gone, decision 0241).
+reset role;
+insert into public.company_invites (company_id, email, role, invited_by)
+select (select id from tr where label = 'a'), 'tr-fill-' || n || '@example.com', 'viewer', (select id from tr where label = 'owner')
+from generate_series(1, 50) n;
+select pg_temp.as_owner();
+select throws_ok($$select public.invite_member('tr-one-more@example.com', 'viewer')$$, 'P0001', 'too many invites',
+  'the 51st pending invite is too many invites');
+select is((public.invite_member('tr-fill-1@example.com', 'editor')->>'existing')::boolean, true,
+  'and a pending email still answers its invite (positive control)');
 
 select * from finish();
 rollback;
