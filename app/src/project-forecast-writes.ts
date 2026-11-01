@@ -29,9 +29,9 @@ function undoOf(data: unknown): ForecastUndo | null {
   return { drop: undo.drop.filter((id): id is string => typeof id === "string"), put: undo.put as Json[] };
 }
 
-/** The edit a removal will write, drawn at once (decision 0219: the row leaves at once, ביטול 5s). */
+/** The edit a removal will write, drawn at once (decision 0219: the row leaves at once, ביטול 5s); from its month on (0239). */
 function removalEdit(rowKey: string, month: string): ProjectForecastEdit {
-  return { id: `optimistic-remove:${rowKey}`, kind: "remove", row_key: rowKey, category_id: null, direction: null, amount_minor: null, pace: "once", start_month: month };
+  return { id: `optimistic-remove:${rowKey}`, kind: "remove", row_key: rowKey, category_id: null, direction: null, amount_minor: null, pace: "month", start_month: month };
 }
 
 export function useProjectForecastWrites(projectId: string, month: string) {
