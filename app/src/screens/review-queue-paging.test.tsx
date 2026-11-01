@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReviewRow } from "@flow/shared";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pinReviewLine } from "../review-pin";
 import { ToastProvider } from "../ui/toast";
 import type { ReviewPaging } from "../use-review";
@@ -49,7 +49,24 @@ function queue(rows: ReviewRow[], paging: ReviewPaging) {
   );
 }
 
+// These tests are about the order of the cards, not the swap between them: with reduced motion the next card
+// shows at once (review-swap.ts), so a busy CI runner can't outrun the 200 ms swap and the 1 s wait for the card.
+beforeEach(() => {
+  vi.spyOn(window, "matchMedia").mockImplementation(
+    (query: string) =>
+      ({
+        matches: query.includes("prefers-reduced-motion"),
+        media: query,
+        onchange: null,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        dispatchEvent: () => false,
+      }) as unknown as MediaQueryList,
+  );
+});
+
 afterEach(() => {
+  vi.restoreAllMocks();
   cleanup();
   pinReviewLine(null);
   takeReviewFocus();
@@ -128,7 +145,8 @@ describe("FLOW-984: a page that fails to load", () => {
     const paging = pagingOf({ failed: true });
     render(queue(rowsOf(1), paging));
     fireEvent.click(screen.getByRole("button", { name: "דלג" }));
-    expect(await screen.findByText("לא הצלחנו לטעון עוד פריטים")).toBeInTheDocument();
+    // The row moves from below the card to the card's own place as the card leaves, so wait for where it settles.
+    await waitFor(() => { expect(screen.getByText("לא הצלחנו לטעון עוד פריטים")).toBeInTheDocument(); });
     expect(screen.queryByText("הכל מאושר")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "ניסיון חוזר" }));
     expect(paging.retry).toHaveBeenCalled();
