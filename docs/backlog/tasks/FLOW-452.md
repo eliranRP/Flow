@@ -10,3 +10,4 @@
 - [ ] MCP tests: the tax_bracket undo test passes a category id (use a company id); remove a conditional assertion in `tools_property_returns_test.ts`; one entry per line in `WRITE_TOOL_NAMES`.
 - [ ] `missing` does not name `rehab` when rehab is null because of costs in another currency.
 - [ ] Tests: the tax bracket sheet's save and clear, a viewer on the returns pages, the paging row.
+- [ ] (FLOW-453) The ⓘ sheets show an operator and a signed amount, so a subtracted part reads "− −$210,000". Show the amount unsigned next to its operator in every sheet (the sums stay signed).
