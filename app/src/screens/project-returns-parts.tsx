@@ -159,7 +159,7 @@ function TransactionGroups({ rows, line, currency, search }: { rows: readonly Re
       <List layout="flat">
         {group.rows.map((row) => (
           <ListRow
-            key={row.transactionId}
+            key={`${row.transactionId}:${row.categoryId ?? ""}`}
             layout="flat"
             variant="transaction"
             title={row.supplierName ?? row.description}
