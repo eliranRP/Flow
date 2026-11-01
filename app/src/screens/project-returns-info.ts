@@ -37,6 +37,12 @@ export type Formula = { rows: FormulaRow[]; result: FormulaRow | null };
 export const MISSING_HISTORY = "חסר · שווי לפני שנה";
 export const HISTORY_HINT = "השווי נשמר בכל פעם שמעדכנים אותו, ומכאן עליית הערך.";
 export const TAX_CAPTION = "הערכה. במכירה הפחת חוזר כמס. החישוב המדויק אצל רואה החשבון.";
+export const CASH_FLOW_CAPTION = "מהשכר הראשון בלבד. מה שלפניו נכנס לכסף בעסקה.";
+export const MONEY_IN_BODY = "מה שהנכס לקח ממך עד שהתחיל להכניס שכירות, פחות מה שחזר מההלוואה.";
+export const MONEY_IN_CAPTION = "רכישה, שיפוץ והחזקה פחות הלוואות";
+export const ALL_TIME = "מאז הקנייה";
+/** In place of a per-cent figure when all the cash came out. */
+export const INFINITY = "∞";
 
 const money = (minor: bigint, income = false): FigureValue => ({ kind: "money", minor, income });
 const missing = (add: EditField | null, note?: string): FigureValue => ({ kind: "missing", add, note });
@@ -69,6 +75,21 @@ function computed(minor: bigint | null, r: PropertyReturns, needs: readonly Edit
 
 export function countHint(count: number): string {
   return count === 1 ? "תנועה אחת" : `${String(count)} תנועות`;
+}
+
+/** "עד השכר הראשון ב־01/04/2026", or "עדיין לפני השכר הראשון". */
+export function firstRentHint(r: PropertyReturns): string {
+  return r.firstRent == null ? "עדיין לפני השכר הראשון" : `עד השכר הראשון ב־${formatDisplay(r.firstRent)}`;
+}
+
+/** The first rent when it falls inside the period, so the statement starts there; else null. */
+export function firstRentInPeriod(r: PropertyReturns): string | null {
+  return r.firstRent != null && r.firstRent > r.from && r.firstRent <= r.to ? r.firstRent : null;
+}
+
+/** How much more came out than went in, when all the cash came out; else null. */
+export function cashOutMinor(r: PropertyReturns): bigint | null {
+  return r.equity.allCashOut && r.equity.moneyInMinor != null ? -r.equity.moneyInMinor : null;
 }
 
 /* -- the four sources ---------------------------------------------------------------------------- */
@@ -137,6 +158,15 @@ export function equityTodayFormula(r: PropertyReturns): Formula {
   };
 }
 
+/** The purchase: from the acquisition lines (opening them), or the typed price (opening its sheet). */
+function purchaseRow(r: PropertyReturns, op: Op, negate: boolean): FormulaRow {
+  if (r.inputs.purchaseSource === "lines" && r.inputs.purchaseMinor != null) {
+    const minor = r.inputs.purchaseMinor;
+    return { key: "purchase", op, label: "מחיר רכישה (מהתנועות)", hint: "רכישה וסגירה", value: money(negate ? -minor : minor), target: { kind: "line", line: "acquisition" } };
+  }
+  return { key: "purchase", op, label: "מחיר רכישה", hint: "מנתוני הנכס · עריכה", value: typed(r.inputs.purchaseMinor, "purchase", negate), target: { kind: "edit", field: "purchase" } };
+}
+
 function rehabRow(r: PropertyReturns, op: Op, part: PartKey, negate: boolean): FormulaRow {
   const rehab = r.inputs.rehabMinor;
   return {
@@ -153,28 +183,40 @@ export function forcedFormula(r: PropertyReturns): Formula {
   return {
     rows: [
       { key: "arv", op: "", label: "שווי אחרי שיפוץ (ARV)", hint: "הערכה שלך", value: typed(r.inputs.arvMinor, "arv"), target: { kind: "edit", field: "arv" } },
-      { key: "purchase", op: "−", label: "מחיר רכישה", value: typed(r.inputs.purchaseMinor, "purchase", true), target: { kind: "edit", field: "purchase" } },
+      purchaseRow(r, "−", true),
       rehabRow(r, "−", "forced", true),
     ],
     result: { key: "forced", op: "=", label: "השבחה צפויה", value: computed(r.equity.forcedMinor, r, ["arv", "purchase"]) },
   };
 }
 
+/**
+ * The money in the deal by part (decision 0245): what the property took before the first rent, less
+ * what came back from the loans. Each part is shown as it counts (a cost positive, the proceeds
+ * negative), so the rows add up to the money in; each opens its lines.
+ */
 export function moneyInFormula(r: PropertyReturns): Formula {
+  const parts = r.equity.moneyInParts;
+  const acquisition: FormulaRow = parts.acquisitionMinor == null
+    ? { key: "acquisition", op: "", label: "רכישה וסגירה", value: missing("purchase"), target: { kind: "edit", field: "purchase" } }
+    : r.inputs.purchaseSource === "lines"
+      ? { key: "acquisition", op: "", label: "רכישה וסגירה", hint: "מהתנועות", value: money(-parts.acquisitionMinor), target: { kind: "line", line: "acquisition" } }
+      : { key: "acquisition", op: "", label: "רכישה וסגירה", hint: "מחיר הרכישה שהוזן · עריכה", value: money(-parts.acquisitionMinor), target: { kind: "edit", field: "purchase" } };
   return {
     rows: [
-      { key: "purchase", op: "", label: "מחיר רכישה", hint: "מנתוני הנכס · עריכה", value: typed(r.inputs.purchaseMinor, "purchase"), target: { kind: "edit", field: "purchase" } },
-      rehabRow(r, "+", "money-in", false),
-      { key: "borrowed", op: "−", label: "הלוואות בקנייה", hint: "הסכום שנלקח · לא היתרה", value: money(-(r.inputs.borrowedMinor ?? 0n)), target: { kind: "loans" } },
+      acquisition,
+      { key: "renovation", op: "+", label: "שיפוץ לפני השכרה", value: money(-parts.renovationMinor), target: { kind: "line", line: "renovation" } },
+      { key: "holding", op: "+", label: "עלויות החזקה", hint: firstRentHint(r), value: money(-parts.holdingMinor), target: { kind: "line", line: "holding" } },
+      { key: "financing", op: "−", label: "תקבולי הלוואות והחזרים", hint: "נטו, אחרי עלויות ההלוואה", value: money(-parts.financingMinor), target: { kind: "line", line: "financing" } },
     ],
-    result: { key: "money-in", op: "=", label: "כסף בעסקה", value: computed(r.equity.moneyInMinor, r, ["purchase"]) },
+    result: { key: "money-in", op: "=", label: "כסף בעסקה", hint: r.equity.allCashOut ? "כל הכסף חזר" : undefined, value: computed(r.equity.moneyInMinor, r, ["purchase"]) },
   };
 }
 
 export function buildingFormula(r: PropertyReturns): Formula {
   return {
     rows: [
-      { key: "purchase", op: "", label: "מחיר רכישה", hint: "מנתוני הנכס · עריכה", value: typed(r.inputs.purchaseMinor, "purchase"), target: { kind: "edit", field: "purchase" } },
+      purchaseRow(r, "", false),
       rehabRow(r, "+", "building", false),
       { key: "land", op: "−", label: "קרקע", hint: "שלך · עריכה", value: typed(r.inputs.landMinor, "land", true), target: { kind: "edit", field: "land" } },
     ],
@@ -189,7 +231,7 @@ export type InfoKey = "cash_flow" | "principal" | "appreciation" | "tax" | "equi
 export type ReturnInfo = { key: InfoKey; title: string; body: string; formula: Formula; caption?: string };
 
 const INFO: Record<InfoKey, { title: string; body: string; caption?: string; formula: (r: PropertyReturns) => Formula }> = {
-  cash_flow: { title: "תזרים", body: "מה שנשאר בחשבון אחרי כל ההוצאות והתשלומים", formula: cashFlowFormula },
+  cash_flow: { title: "תזרים", body: "מה שנשאר בחשבון אחרי כל ההוצאות והתשלומים", caption: CASH_FLOW_CAPTION, formula: cashFlowFormula },
   principal: { title: "החזר קרן", body: "חלק הקרן מתשלומי ההלוואה: חוב שנפרע, כסף שנשאר שלך", formula: principalFormula },
   appreciation: { title: "עליית ערך", body: "כמה השווי עלה מתחילת התקופה ועד סופה, לפי השווי שהזנת", formula: appreciationFormula },
   tax: {
@@ -200,7 +242,7 @@ const INFO: Record<InfoKey, { title: string; body: string; caption?: string; for
   },
   equity_today: { title: "הון עצמי היום", body: "החלק בנכס שהוא שלך: השווי היום, פחות מה שעוד חייבים", formula: equityTodayFormula },
   forced: { title: "השבחה צפויה", body: "כמה ערך השיפוץ יוסיף: השווי אחרי השיפוץ, פחות מה שהנכס עלה", formula: forcedFormula },
-  money_in: { title: "כסף בעסקה", body: "הכסף שלך שנמצא בנכס: מה שהוא עלה, פחות מה שנלקח בהלוואות", formula: moneyInFormula },
+  money_in: { title: "כסף בעסקה", body: MONEY_IN_BODY, formula: moneyInFormula },
 };
 
 export function returnInfo(key: InfoKey, r: PropertyReturns): ReturnInfo {
@@ -233,7 +275,7 @@ export function partPage(part: PartKey, r: PropertyReturns): PartPage {
     };
   }
   if (part === "money-in") {
-    return { title: "כסף בעסקה", meta: "קנייה ושיפוץ פחות הלוואות", body: INFO.money_in.body, back: "השקעה", formula: withoutSelf(moneyInFormula(r), part) };
+    return { title: "כסף בעסקה", meta: MONEY_IN_CAPTION, body: MONEY_IN_BODY, back: "השקעה", formula: moneyInFormula(r) };
   }
   return { title: "השבחה צפויה", meta: "ARV פחות קנייה ושיפוץ", body: INFO.forced.body, back: "השקעה", formula: withoutSelf(forcedFormula(r), part) };
 }
@@ -241,7 +283,8 @@ export function partPage(part: PartKey, r: PropertyReturns): PartPage {
 /* -- the metrics ---------------------------------------------------------------------------------- */
 
 export type MetricSection = { key: string; title: string; total?: FigureValue; formula: Formula };
-export type MetricPage = { title: string; caption: string; value: FigureValue; sections: MetricSection[]; result: { text: string; value: FigureValue } | null };
+/** `cashOut`: how much more came out than went in, when all the cash came out (the caption then says so). */
+export type MetricPage = { title: string; caption: string; cashOut: bigint | null; value: FigureValue; sections: MetricSection[]; result: { text: string; value: FigureValue } | null };
 
 const PERIOD = "12 חודשים";
 
@@ -278,7 +321,7 @@ function bpValue(bp: number | null, r: PropertyReturns, needs: readonly EditFiel
 /** The card's row value of a metric (the same as its page's figure). */
 export function metricValue(metric: MetricKey, r: PropertyReturns): FigureValue {
   const m = r.metrics;
-  if (metric === "coc") return bpValue(m.cashOnCashBp, r, ["purchase"]);
+  if (metric === "coc") return r.equity.allCashOut ? { kind: "text", text: INFINITY } : bpValue(m.cashOnCashBp, r, ["purchase"]);
   if (metric === "cap-rate") return bpValue(m.capRateBp, r, ["value"]);
   if (metric === "dscr") return m.dscrMilli == null ? { kind: "text", text: "אין תשלומים" } : { kind: "text", text: dscrText(m.dscrMilli) };
   return m.perUnitMonthMinor == null ? missing("units") : money(m.perUnitMonthMinor);
@@ -308,12 +351,14 @@ export function metricPage(metric: MetricKey, r: PropertyReturns): MetricPage {
   const result = (text: string | null) => (text == null || value.kind === "missing" ? null : { text, value });
   if (metric === "coc") {
     const moneyIn = r.equity.moneyInMinor;
+    const cashOut = cashOutMinor(r);
     return {
       title,
       caption,
+      cashOut,
       value,
       sections: [cashSection(r), { key: "money-in", title: "כסף בעסקה", total: computed(moneyIn, r, ["purchase"]), formula: moneyInFormula(r) }],
-      result: result(moneyIn == null ? null : `${cents(st.cashFlowMinor, cur)} ÷ ${cents(moneyIn, cur)}`),
+      result: result(moneyIn == null || cashOut != null ? null : `${cents(st.cashFlowMinor, cur)} ÷ ${cents(moneyIn, cur)}`),
     };
   }
   if (metric === "cap-rate") {
@@ -321,6 +366,7 @@ export function metricPage(metric: MetricKey, r: PropertyReturns): MetricPage {
     return {
       title,
       caption,
+      cashOut: null,
       value,
       sections: [
         { key: "noi", title: "רווח תפעולי (NOI)", total: money(st.noiMinor), formula: noiFormula(r) },
@@ -333,6 +379,7 @@ export function metricPage(metric: MetricKey, r: PropertyReturns): MetricPage {
     return {
       title,
       caption,
+      cashOut: null,
       value,
       sections: [
         { key: "noi", title: "רווח תפעולי (NOI)", total: money(st.noiMinor), formula: noiFormula(r) },
@@ -345,6 +392,7 @@ export function metricPage(metric: MetricKey, r: PropertyReturns): MetricPage {
   return {
     title,
     caption,
+    cashOut: null,
     value,
     sections: [
       cashSection(r),
@@ -361,18 +409,34 @@ export const LINE_TITLES: Record<ReturnLine, string> = {
   opex: "הוצאות תפעול",
   debt_service: "תשלומי הלוואה",
   capex: "שיפוץ (CapEx)",
+  before_rent: "לפני השכרה",
   not_counted: "לא נספר בתזרים",
   principal: "החזר קרן",
+  acquisition: "רכישה וסגירה",
+  renovation: "שיפוץ לפני השכרה",
+  holding: "עלויות החזקה",
+  financing: "תקבולי הלוואות והחזרים",
+  money_in: "כסף בעסקה",
 };
 
-/** A line's figure: the statement's, or the principal paid (a cost's part shown as paid, so negative). */
-export function lineMinor(line: ReturnLine, r: PropertyReturns): bigint {
+/**
+ * A line's figure, signed as its transactions: the statement's, the principal paid (a cost's part
+ * shown as paid, so negative), or a part of the money in (all time). Null with no purchase at all.
+ */
+export function lineMinor(line: ReturnLine, r: PropertyReturns): bigint | null {
   const st = r.statement;
+  const parts = r.equity.moneyInParts;
   if (line === "income") return st.incomeMinor;
   if (line === "opex") return st.opexMinor;
   if (line === "debt_service") return st.debtServiceMinor;
   if (line === "capex") return st.capexMinor;
+  if (line === "before_rent") return st.beforeRentMinor;
   if (line === "not_counted") return st.notCountedMinor;
+  if (line === "acquisition") return parts.acquisitionMinor;
+  if (line === "renovation") return parts.renovationMinor;
+  if (line === "holding") return parts.holdingMinor;
+  if (line === "financing") return parts.financingMinor;
+  if (line === "money_in") return r.equity.moneyInMinor == null ? null : -r.equity.moneyInMinor;
   return r.sources.principalMinor;
 }
 

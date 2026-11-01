@@ -41,12 +41,15 @@ function FigureRow({
   note,
   value,
   onOpen,
+  href,
   buttonRef,
 }: {
   title: string;
   note?: ReactNode;
   value: ReactNode;
   onOpen: (() => void) | undefined;
+  /** A link instead of a sheet (the purchase from the lines opens them). */
+  href?: string;
   buttonRef?: RefObject<HTMLButtonElement | null>;
 }) {
   const body = (
@@ -56,9 +59,10 @@ function FigureRow({
         {note == null ? null : <span className="ui-pinv-hint">{note}</span>}
       </span>
       {value}
-      {onOpen == null ? null : <span className="ui-pinv-chevron" aria-hidden="true"><ChevronIcon size={18} /></span>}
+      {onOpen == null && href == null ? null : <span className="ui-pinv-chevron" aria-hidden="true"><ChevronIcon size={18} /></span>}
     </>
   );
+  if (href != null) return <Link to={href} className="ui-pinv-row">{body}</Link>;
   return onOpen == null ? <div className="ui-pinv-row">{body}</div> : (
     <button type="button" ref={buttonRef} className="ui-pinv-row" onClick={onOpen}>{body}</button>
   );
@@ -71,8 +75,11 @@ function FigureValue({ minor, currency, readOnly }: { minor: bigint | null; curr
   return <span className="ui-pinv-value ui-pinv-value-add">הוספה</span>;
 }
 
-/** The two figures only the returns read carries (FLOW-451): null while it loads. */
-export type PropertyExtras = { landMinor: bigint | null; units: number | null };
+/**
+ * The figures only the returns read carries (FLOW-451): null while it loads. FLOW-453: the purchase
+ * as the returns count it, from the acquisition lines when there are any.
+ */
+export type PropertyExtras = { landMinor: bigint | null; units: number | null; purchaseMinor: bigint | null; purchaseSource: "lines" | "typed" | null };
 
 /** "נתוני הנכס": the figures; each opens its sheet (a viewer's open nothing). */
 export function FiguresCard({
@@ -82,9 +89,12 @@ export function FiguresCard({
   onEdit,
   onRehab,
   rows,
+  linesHref,
 }: {
   figures: InvestmentFigures;
   extras: PropertyExtras | null;
+  /** Where the purchase from the lines opens: its line page. */
+  linesHref: string;
   readOnly: boolean;
   onEdit: (field: InvestmentField) => void;
   onRehab: () => void;
@@ -92,15 +102,27 @@ export function FiguresCard({
 }) {
   const { currency } = figures;
   const open = (field: InvestmentField) => (readOnly ? undefined : () => { onEdit(field); });
+  const fromLines = extras?.purchaseSource === "lines" && extras.purchaseMinor != null;
   return (
     <section className="ui-pinv-card" aria-label="נתוני הנכס">
       <h2 className="ui-pinv-card-title">נתוני הנכס</h2>
-      <FigureRow
-        title={INVESTMENT_LABELS.purchase}
-        value={<FigureValue minor={figures.purchaseMinor} currency={currency} readOnly={readOnly} />}
-        onOpen={open("purchase")}
-        buttonRef={rows.purchase}
-      />
+      {fromLines ? (
+        // FLOW-453: the purchase comes from the acquisition lines; it opens them, with no edit sheet.
+        <FigureRow
+          title={INVESTMENT_LABELS.purchase}
+          note={readOnly ? "מהתנועות" : "מהתנועות · לפירוט"}
+          value={<FigureValue minor={extras.purchaseMinor} currency={currency} readOnly={readOnly} />}
+          onOpen={undefined}
+          href={readOnly ? undefined : linesHref}
+        />
+      ) : (
+        <FigureRow
+          title={INVESTMENT_LABELS.purchase}
+          value={<FigureValue minor={figures.purchaseMinor} currency={currency} readOnly={readOnly} />}
+          onOpen={open("purchase")}
+          buttonRef={rows.purchase}
+        />
+      )}
       <FigureRow
         title="שיפוץ עד היום"
         note={(

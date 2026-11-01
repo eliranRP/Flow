@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { birchLaneInvestment } from "../dev/investment-sample";
 import { project as sampleProject } from "../dev/project-cash-sample";
-import { birchLaneReturnLines, birchLaneReturns, birchLaneReturnsMissing, birchLaneReturnsNegative } from "../dev/returns-sample";
+import { birchLaneReturnLines, birchLaneReturns, birchLaneReturnsCashOut, birchLaneReturnsMissing, birchLaneReturnsNegative } from "../dev/returns-sample";
 import { ToastProvider } from "../ui/toast";
 import { ProjectInvestmentScreen } from "./project-investment-screen";
 import { UNITS_HOLD, editVerdict } from "./project-investment-sheets";
@@ -12,10 +12,14 @@ import { barShares } from "./project-returns-cards";
 import { bracketText, dscrText, percentText, shareOfMoneyIn, toPropertyReturns, toReturnLinesPage } from "./project-returns-data";
 import { PropertyMetricScreen, PropertyPartScreen } from "./project-returns-detail-screen";
 import {
+  CASH_FLOW_CAPTION,
   MISSING_HISTORY,
+  MONEY_IN_BODY,
   TAX_CAPTION,
   buildingFormula,
+  forcedFormula,
   metricPage,
+  metricValue,
   returnInfo,
   type Formula,
   type FormulaRow,
@@ -144,6 +148,22 @@ describe("the returns read", () => {
     expect(typeof parsed.statement.cashFlowMinor).toBe("bigint");
   });
 
+  it("reads the period's lines before the first rent and the kept-out lines from their server lines", () => {
+    const json = toReturnsJson(birchLaneReturns);
+    const statement = {
+      ...(json.statement as object),
+      lines: { holding: { amount_minor: -100_000, lines: 2 }, renovation: { amount_minor: -500_000, lines: 3 }, financing: { amount_minor: 900_000, lines: 1 } },
+      by_category: {
+        holding: [{ category_id: "c-int", name: "ריבית", amount_minor: -100_000, lines: 2 }],
+        renovation: [{ category_id: "c-mat", name: "חומרים", amount_minor: -500_000, lines: 3 }],
+      },
+    };
+    const parsed = toPropertyReturns({ ...json, statement });
+    expect(parsed.statement.counts.before_rent).toBe(5);
+    expect(parsed.statement.counts.not_counted).toBe(1);
+    expect(parsed.statement.byCategory.before_rent.map((item) => item.id)).toEqual(["c-mat", "c-int"]);
+  });
+
   it("keeps only the inputs it knows as missing, and reads absent lines as none", () => {
     const json = toReturnsJson(birchLaneReturnsMissing);
     const parsed = toPropertyReturns({ ...json, missing: [...birchLaneReturnsMissing.missing, "something_new"], statement: { ...(json.statement as object), lines: {}, by_category: {} } });
@@ -172,7 +192,7 @@ describe("the returns read", () => {
 
 describe("the sample figures add up", () => {
   it("in every sheet whose parts are added", () => {
-    for (const sample of [birchLaneReturns, birchLaneReturnsNegative]) {
+    for (const sample of [birchLaneReturns, birchLaneReturnsNegative, birchLaneReturnsCashOut]) {
       for (const key of INFO_KEYS) {
         const info = returnInfo(key, sample);
         expect(addsUp(info.formula), key).toBe(true);
@@ -184,13 +204,14 @@ describe("the sample figures add up", () => {
   });
 
   it("in the statement and the total", () => {
-    for (const r of [birchLaneReturns, birchLaneReturnsNegative]) {
+    for (const r of [birchLaneReturns, birchLaneReturnsNegative, birchLaneReturnsCashOut]) {
       const st = r.statement;
       expect(st.incomeMinor + st.opexMinor).toBe(st.noiMinor);
       expect(st.noiMinor + st.debtServiceMinor + st.capexMinor).toBe(st.cashFlowMinor);
-      for (const line of ["income", "opex", "debt_service", "capex", "not_counted"] as const) {
+      const sums = { income: st.incomeMinor, opex: st.opexMinor, debt_service: st.debtServiceMinor, capex: st.capexMinor, before_rent: st.beforeRentMinor, not_counted: st.notCountedMinor };
+      for (const line of ["income", "opex", "debt_service", "capex", "before_rent", "not_counted"] as const) {
         const categories = st.byCategory[line];
-        expect(categories.reduce((sum, item) => sum + item.minor, 0n)).toBe(line === "income" ? st.incomeMinor : line === "opex" ? st.opexMinor : line === "debt_service" ? st.debtServiceMinor : line === "capex" ? st.capexMinor : st.notCountedMinor);
+        expect(categories.reduce((sum, item) => sum + item.minor, 0n)).toBe(sums[line]);
         expect(categories.reduce((sum, item) => sum + item.count, 0)).toBe(line === "debt_service" ? st.counts[line] * 2 : st.counts[line]);
       }
       const s = r.sources;
@@ -227,10 +248,38 @@ describe("the sheet contents", () => {
     expect(appreciation.rows[1]?.value).toEqual({ kind: "missing", add: null, note: MISSING_HISTORY });
   });
 
-  it("works the money in the deal out from what was borrowed, not the balance", () => {
-    const rows = returnInfo("money_in", birchLaneReturns).formula.rows;
-    expect(rows.map((row) => row.label)).toEqual(["מחיר רכישה", "שיפוץ עד היום", "הלוואות בקנייה"]);
-    expect(rows[2]?.value).toEqual({ kind: "money", minor: -21_000_000n, income: false });
+  it("builds the money in the deal from its four parts, which add up to it, each opening its lines", () => {
+    for (const sample of [birchLaneReturns, birchLaneReturnsCashOut]) {
+      const info = returnInfo("money_in", sample);
+      expect(info.body).toBe(MONEY_IN_BODY);
+      expect(info.formula.rows.map((row) => `${row.op}${row.label}`)).toEqual(["רכישה וסגירה", "+שיפוץ לפני השכרה", "+עלויות החזקה", "−תקבולי הלוואות והחזרים"]);
+      expect(info.formula.rows.map((row) => row.target)).toEqual(["acquisition", "renovation", "holding", "financing"].map((line) => ({ kind: "line", line })));
+      expect(sumOf(info.formula.rows)).toBe(sample.equity.moneyInMinor);
+    }
+    const rows = returnInfo("money_in", birchLaneReturnsCashOut).formula.rows;
+    expect(rows[2]).toMatchObject({ hint: "עד השכר הראשון ב־01/04/2026", value: { kind: "money", minor: 580_000n } });
+    expect(rows[3]).toMatchObject({ hint: "נטו, אחרי עלויות ההלוואה", value: { kind: "money", minor: -28_030_000n } });
+    expect(returnInfo("money_in", { ...birchLaneReturns, firstRent: null }).formula.rows[2]?.hint).toBe("עדיין לפני השכר הראשון");
+  });
+
+  it("opens the typed purchase's sheet when there are no purchase lines", () => {
+    const typed = { ...birchLaneReturns, inputs: { ...birchLaneReturns.inputs, purchaseSource: "typed" as const } };
+    expect(returnInfo("money_in", typed).formula.rows[0]?.target).toEqual({ kind: "edit", field: "purchase" });
+    expect(forcedFormula(typed).rows[1]).toMatchObject({ label: "מחיר רכישה", target: { kind: "edit", field: "purchase" } });
+    expect(forcedFormula(birchLaneReturns).rows[1]).toMatchObject({ label: "מחיר רכישה (מהתנועות)", target: { kind: "line", line: "acquisition" } });
+    expect(buildingFormula(birchLaneReturns).rows[0]).toMatchObject({ label: "מחיר רכישה (מהתנועות)", target: { kind: "line", line: "acquisition" } });
+  });
+
+  it("says the cash flow counts from the first rent", () => {
+    expect(returnInfo("cash_flow", birchLaneReturns).caption).toBe(CASH_FLOW_CAPTION);
+  });
+
+  it("reads ∞ for cash-on-cash when all the cash came out, with no division", () => {
+    expect(metricValue("coc", birchLaneReturnsCashOut)).toEqual({ kind: "text", text: "∞" });
+    const page = metricPage("coc", birchLaneReturnsCashOut);
+    expect(page.cashOut).toBe(3_000_000n);
+    expect(page.result).toBeNull();
+    expect(page.sections.map((section) => section.key)).toEqual(["cash", "money-in"]);
   });
 
   it("asks for units on the cash flow per unit", () => {
@@ -291,6 +340,27 @@ describe("the investment page's returns cards", () => {
     expect(await screen.findByRole("dialog", { name: "מספר יחידות" })).toBeInTheDocument();
   });
 
+  it("draws ∞ on the total return when all the cash came out, with each source's amount and no per cent", async () => {
+    renderInvestment(birchLaneReturnsCashOut);
+    const card = (await screen.findByRole("heading", { name: "תשואה כוללת · שנה" })).closest("section");
+    if (card == null) throw new Error("no card");
+    expect(within(card).getByText("∞")).toBeInTheDocument();
+    expect(within(card).getByText(/כל הכסף חזר/)).toHaveTextContent("כל הכסף חזר · יצא $30,000 יותר משנכנס");
+    expect(within(card).getByText("$82,000")).toBeInTheDocument();
+    expect(within(card).queryByText(/%$/)).toBeNull();
+    const metrics = await screen.findByRole("region", { name: "מדדים" });
+    expect(within(metrics).getByRole("link", { name: /תשואה על המזומן/ })).toHaveTextContent("∞");
+  });
+
+  it("opens the purchase from the lines on its line page, with no edit sheet", async () => {
+    renderInvestment();
+    const card = await screen.findByRole("region", { name: "נתוני הנכס" });
+    const row = within(card).getByRole("link", { name: /מחיר רכישה/ });
+    expect(row).toHaveAttribute("href", "/projects/p1/investment/returns/acquisition");
+    expect(row).toHaveTextContent("מהתנועות · לפירוט");
+    expect(within(card).queryByRole("button", { name: /מחיר רכישה/ })).toBeNull();
+  });
+
   it("opens each metric's page", async () => {
     renderInvestment();
     const card = await screen.findByRole("region", { name: "מדדים" });
@@ -331,8 +401,47 @@ describe("the returns pages", () => {
     serve();
     renderAt("/projects/p1/investment/metric/coc");
     expect(await screen.findByText("$4,200 ÷ $36,300")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /הלוואות בקנייה/ })).toHaveAttribute("href", "/loans");
-    expect(screen.getByRole("link", { name: /מחיר רכישה/ })).toHaveAttribute("href", "/projects/p1/investment?edit=purchase");
+    expect(screen.getByRole("link", { name: /תקבולי הלוואות והחזרים/ })).toHaveAttribute("href", "/projects/p1/investment/returns/financing");
+    expect(screen.getByRole("link", { name: /רכישה וסגירה/ })).toHaveAttribute("href", "/projects/p1/investment/returns/acquisition");
+  });
+
+  it("draws ∞ on cash-on-cash when all the cash came out", async () => {
+    serve(birchLaneReturnsCashOut);
+    renderAt("/projects/p1/investment/metric/coc");
+    expect(await screen.findByText("∞")).toBeInTheDocument();
+    expect(screen.getByText(/כל הכסף חזר · יצא/)).toHaveTextContent("כל הכסף חזר · יצא $30,000 יותר משנכנס");
+  });
+
+  it("lists the holding costs before the first rent apart, and starts the statement at the rent", async () => {
+    serve();
+    renderAt("/projects/p1/investment/returns");
+    expect(await screen.findByRole("link", { name: /עלויות החזקה ושיפוץ לפני השכרה/ })).toHaveAttribute("href", "/projects/p1/investment/returns/before_rent");
+    expect(screen.getByRole("link", { name: /לא נספר בתזרים/ })).toHaveTextContent("רכישה, סגירה ותקבולי הלוואות");
+    expect(screen.getByText(/משכר ראשון ב־01\/04\/2026/)).toBeInTheDocument();
+  });
+
+  it("leaves the holding row out when nothing came before the rent", async () => {
+    serve({ ...birchLaneReturns, statement: { ...birchLaneReturns.statement, beforeRentMinor: 0n, counts: { ...birchLaneReturns.statement.counts, before_rent: 0 }, byCategory: { ...birchLaneReturns.statement.byCategory, before_rent: [] } } });
+    renderAt("/projects/p1/investment/returns");
+    await screen.findByRole("link", { name: /לא נספר בתזרים/ });
+    expect(screen.queryByRole("link", { name: /לפני השכרה/ })).toBeNull();
+  });
+
+  it("reads a part of the money in since the purchase", async () => {
+    serve();
+    renderAt("/projects/p1/investment/returns/holding");
+    expect(await screen.findByRole("heading", { name: "עלויות החזקה" })).toBeInTheDocument();
+    expect((await screen.findAllByText(/מאז הקנייה/)).length).toBeGreaterThan(0);
+    await waitFor(() => { expect(rpc.calls.some((call) => call.name === "get_property_return_lines")).toBe(true); });
+    expect(rpc.calls.find((call) => call.name === "get_property_return_lines")?.args).toMatchObject({ p_line: "holding" });
+  });
+
+  it("lists the money in's transactions on its part page", async () => {
+    serve();
+    renderAt("/projects/p1/investment/part/money-in");
+    expect(await screen.findByRole("link", { name: /עלויות החזקה/ })).toHaveAttribute("href", "/projects/p1/investment/returns/holding");
+    await waitFor(() => { expect(rpc.calls.some((call) => call.name === "get_property_return_lines")).toBe(true); });
+    expect(rpc.calls.find((call) => call.name === "get_property_return_lines")?.args).toMatchObject({ p_line: "money_in" });
   });
 
   it("sends an unknown metric back to the investment page", async () => {

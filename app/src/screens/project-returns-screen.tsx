@@ -2,6 +2,7 @@ import "../ui/lazy.css";
 import { useState, type ReactNode } from "react";
 import { Navigate, useLocation, useParams } from "react-router-dom";
 import { useHomePreview, usePreviewSearch } from "../preview";
+import { formatDisplay } from "../ui/date-math";
 import { useProjectPeriod } from "../project-period";
 import { screenPhase } from "../query-phase";
 import { useProjectQuery } from "../use-books";
@@ -13,12 +14,13 @@ import { ScreenState } from "../ui/screen-state";
 import { ReportRow, ReportSection, ReportTotal, type Collapse } from "./reports-parts";
 import {
   RETURN_LINES,
+  isAllTimeLine,
   usePropertyReturnsQuery,
   type PropertyReturns,
   type ReturnLine,
   type ReturnLinesPage,
 } from "./project-returns-data";
-import { LINE_TITLES, countHint, lineMinor } from "./project-returns-info";
+import { ALL_TIME, LINE_TITLES, countHint, firstRentInPeriod, lineMinor } from "./project-returns-info";
 import { ReturnLinesSection, ReturnsHero, investmentBase, withParam } from "./project-returns-parts";
 
 /* ------------------------------------------------------------------------------------------------
@@ -47,7 +49,7 @@ export function useCollapse(): Collapse {
 export type ReturnsSample = { returns: PropertyReturns; projectName: string; lines?: ReturnLinesPage };
 
 /** The returns read behind every returns page, and the project's name for the period line. */
-export function useReturnsPage(sample: ReturnsSample | undefined, baseProp: string | undefined) {
+export function useReturnsPage(sample: ReturnsSample | undefined, baseProp: string | undefined, allTime = false) {
   const { projectId = "" } = useParams();
   const preview = useHomePreview();
   const search = usePreviewSearch();
@@ -64,7 +66,7 @@ export function useReturnsPage(sample: ReturnsSample | undefined, baseProp: stri
     returns: sample?.returns ?? read.data ?? null,
     phase,
     retry: () => { void read.refetch(); },
-    subtitle: name == null ? PERIOD_LINE : `${PERIOD_LINE} · ${name}`,
+    subtitle: name == null ? (allTime ? ALL_TIME : PERIOD_LINE) : `${allTime ? ALL_TIME : PERIOD_LINE} · ${name}`,
     name,
   };
 }
@@ -84,16 +86,28 @@ function categoriesHint(count: number, categories: number): string {
   return `${countHint(count)} · ${String(categories)} קטגוריות`;
 }
 
-/** "איך מחושב התזרים": income, opex, NOI, debt service, CapEx, cash flow, and what is left out. */
+export const NOT_COUNTED_HINT = "רכישה, סגירה ותקבולי הלוואות";
+
+/** "תזרים · משכר ראשון ב־01/04/2026 · 59 תנועות": the statement starts at the first rent when it falls in the period. */
+function statementMeta(r: PropertyReturns, lines: number): string {
+  const first = firstRentInPeriod(r);
+  return `תזרים · ${first == null ? "12 חודשים" : `משכר ראשון ב־${formatDisplay(first)}`} · ${countHint(lines)}`;
+}
+
+/**
+ * "איך מחושב התזרים": income, opex, NOI, debt service, CapEx, cash flow, and what is left out: the
+ * holding and renovation before the first rent (only when there are any), and the kept-out lines.
+ */
 function Statement({ r, base, search }: { r: PropertyReturns; base: string; search: string }) {
   const collapse = useCollapse();
   const st = r.statement;
   const cur = r.currency;
   const href = (line: ReturnLine) => `${base}/returns/${line}${search}`;
   const lines = st.counts.income + st.counts.opex + st.counts.debt_service + st.counts.capex;
+  const beforeRent = st.beforeRentMinor !== 0n;
   return (
     <div className="ui-rep-content">
-      <ReturnsHero figure={<Amount agorot={st.cashFlowMinor} currency={cur} loss={st.cashFlowMinor < 0n} />} meta={`תזרים · 12 חודשים · ${countHint(lines)}`} />
+      <ReturnsHero figure={<Amount agorot={st.cashFlowMinor} currency={cur} loss={st.cashFlowMinor < 0n} />} meta={statementMeta(r, lines)} />
       <ReportSection id="calc" title="החישוב" total={<span className="t-muted">5 שורות</span>} collapse={collapse}>
         <ul className="ui-rep-rows">
           <ReportRow name={LINE_TITLES.income} meta={countHint(st.counts.income)} amount={income(st.incomeMinor, cur)} href={href("income")} />
@@ -106,9 +120,12 @@ function Statement({ r, base, search }: { r: PropertyReturns; base: string; sear
         </ul>
         <ReportTotal label="תזרים" amount={money(st.cashFlowMinor, cur)} strong />
       </ReportSection>
-      <ReportSection id="out" title="מחוץ לחישוב" total={<span className="t-muted">1</span>} collapse={collapse}>
+      <ReportSection id="out" title="מחוץ לחישוב" total={<span className="t-muted">{beforeRent ? "2" : "1"}</span>} collapse={collapse}>
         <ul className="ui-rep-rows">
-          <ReportRow name={LINE_TITLES.not_counted} meta={`${countHint(st.counts.not_counted)} · רכישה והעברות`} amount={money(st.notCountedMinor, cur)} href={href("not_counted")} />
+          {beforeRent ? (
+            <ReportRow name="עלויות החזקה ושיפוץ לפני השכרה" meta={`${countHint(st.counts.before_rent)} · נכנס לכסף בעסקה`} amount={money(st.beforeRentMinor, cur)} href={href("before_rent")} />
+          ) : null}
+          <ReportRow name={LINE_TITLES.not_counted} meta={`${countHint(st.counts.not_counted)} · ${NOT_COUNTED_HINT}`} amount={money(st.notCountedMinor, cur)} href={href("not_counted")} />
         </ul>
       </ReportSection>
       {r.otherCurrencies.length > 0 ? (
@@ -140,15 +157,19 @@ function isReturnLine(value: string | undefined): value is ReturnLine {
   return value != null && (RETURN_LINES as readonly string[]).includes(value);
 }
 
-/** A line's meta: its count, and opex's share of the rent. */
+/** A line's meta: its count, and opex's share of the rent; a line of the money in reads since the purchase. */
 function lineMeta(line: ReturnLine, r: PropertyReturns, minor: bigint, count: number | null, name: string | null): string {
-  const parts: string[] = [];
+  const parts: string[] = isAllTimeLine(line) ? [ALL_TIME] : [];
   if (line === "opex" && r.statement.incomeMinor > 0n && minor < 0n) {
     parts.push(`${String(Math.round((Number(-minor) / Number(r.statement.incomeMinor)) * 100))}% מהשכירות`);
   }
   if (count != null) parts.push(countHint(count));
   if (name != null) parts.push(name);
   return parts.join(" · ");
+}
+
+function periodCategories(line: ReturnLine, r: PropertyReturns) {
+  return line === "principal" || isAllTimeLine(line) ? [] : r.statement.byCategory[line];
 }
 
 function LineBody({ line, categoryId, r, base, search, projectId, name, lines }: {
@@ -163,14 +184,15 @@ function LineBody({ line, categoryId, r, base, search, projectId, name, lines }:
 }) {
   const collapse = useCollapse();
   const cur = r.currency;
-  const categories = line === "principal" ? [] : r.statement.byCategory[line];
+  // The returns read has the period's categories only: a line since the purchase lists its transactions.
+  const categories = periodCategories(line, r);
   const category = categoryId == null ? null : categories.find((item) => item.id === categoryId) ?? null;
   const minor = category?.minor ?? lineMinor(line, r);
-  const count = category?.count ?? (line === "principal" ? null : r.statement.counts[line]);
+  const count = category?.count ?? (line === "principal" || isAllTimeLine(line) ? null : r.statement.counts[line]);
   const own = (value: bigint) => (line === "income" ? income(value, cur) : money(value, cur));
   return (
     <div className="ui-rep-content">
-      <ReturnsHero figure={own(minor)} meta={lineMeta(line, r, minor, count, name)} />
+      <ReturnsHero figure={minor == null ? <span className="ui-ret-missing">חסר</span> : own(minor)} meta={lineMeta(line, r, minor ?? 0n, count, name)} />
       {categoryId == null && categories.length > 0 ? (
         <ReportSection id="cats" title="לפי קטגוריה" total={<bdi dir="ltr" className="t-muted">{String(categories.length)}</bdi>} collapse={collapse}>
           <ul className="ui-rep-rows">
@@ -193,15 +215,16 @@ function LineBody({ line, categoryId, r, base, search, projectId, name, lines }:
 
 /** One line of the statement (or the principal parts): its categories, then its transactions by month. */
 export function PropertyReturnLineScreen({ sample, base: baseProp }: { sample?: ReturnsSample; base?: string } = {}) {
-  const page = useReturnsPage(sample, baseProp);
   const { line: named, key } = useParams();
   const line = named ?? key;
+  const page = useReturnsPage(sample, baseProp, line != null && isAllTimeLine(line));
   const location = useLocation();
   const categoryId = new URLSearchParams(location.search).get("category");
   if (!isReturnLine(line)) return <Navigate replace to={`${page.base}/returns${page.search}`} />;
-  const category = categoryId == null || line === "principal" ? null : page.returns?.statement.byCategory[line].find((item) => item.id === categoryId) ?? null;
+  const category = categoryId == null || page.returns == null ? null : periodCategories(line, page.returns).find((item) => item.id === categoryId) ?? null;
   const title = category?.name ?? LINE_TITLES[line];
-  const principal = line === "principal";
+  // The principal and the money in's lines open from the investment page; the rest from the statement.
+  const principal = line === "principal" || isAllTimeLine(line);
   return (
     <ScreenState
       title={title}

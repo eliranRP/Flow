@@ -84,11 +84,20 @@ function returnsOf(over: Partial<PropertyReturns["equity"]> = {}, inputs: Partia
       arvMinor: 190_000_000n,
       valueMinor: 165_000_000n,
       rehabMinor: 31_240_000n,
-      borrowedMinor: 80_000_000n,
+      // The typed price: the purchase row opens its edit sheet.
+      purchaseSource: "typed",
+      purchaseTypedMinor: 125_000_000n,
       loanBalanceMinor: 80_000_000n,
       ...inputs,
     },
-    equity: { todayMinor: 85_000_000n, forcedMinor: 33_760_000n, moneyInMinor: 76_240_000n, ...over },
+    equity: {
+      todayMinor: 85_000_000n,
+      forcedMinor: 33_760_000n,
+      moneyInMinor: 76_240_000n,
+      moneyInParts: { acquisitionMinor: -125_000_000n, renovationMinor: -31_240_000n, holdingMinor: 0n, financingMinor: 80_000_000n },
+      allCashOut: false,
+      ...over,
+    },
   };
   return toReturnsJson(r);
 }

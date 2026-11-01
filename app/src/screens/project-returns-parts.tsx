@@ -128,8 +128,13 @@ export function FormulaList({ formula, currency, resolve, readOnly = false, labe
   );
 }
 
+/** "כל הכסף חזר · יצא $30,000 יותר משנכנס": the meta under ∞. */
+export function AllCashOutMeta({ minor, currency }: { minor: bigint; currency: string }) {
+  return <>{"כל הכסף חזר · יצא "}<Amount agorot={minor} currency={currency} />{" יותר משנכנס"}</>;
+}
+
 /** The figure a page leads with, 40/400, and its meta line. */
-export function ReturnsHero({ figure, meta }: { figure: ReactNode; meta: string }) {
+export function ReturnsHero({ figure, meta }: { figure: ReactNode; meta: ReactNode }) {
   return (
     <div className="ui-ret-hero">
       <span className="ui-ret-hero-figure t-detail">{figure}</span>

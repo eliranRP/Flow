@@ -2,8 +2,8 @@ import "../ui/lazy.css";
 import { Navigate, useParams } from "react-router-dom";
 import { ScreenState } from "../ui/screen-state";
 import { ReportSection } from "./reports-parts";
-import { METRIC_KEYS, PART_KEYS, metricPage, partPage, type MetricKey, type PartKey } from "./project-returns-info";
-import { FigureText, FormulaList, ReturnLinesSection, ReturnsHero, pageResolver } from "./project-returns-parts";
+import { ALL_TIME, METRIC_KEYS, PART_KEYS, metricPage, partPage, type MetricKey, type PartKey } from "./project-returns-info";
+import { AllCashOutMeta, FigureText, FormulaList, ReturnLinesSection, ReturnsHero, pageResolver } from "./project-returns-parts";
 import { RETURNS_EMPTY, useCollapse, useReturnsPage, type ReturnsSample } from "./project-returns-screen";
 import type { PropertyReturns } from "./project-returns-data";
 
@@ -28,7 +28,10 @@ function MetricBody({ metric, r, base, search }: { metric: MetricKey; r: Propert
   const negative = page.value.kind === "text" && page.value.text.startsWith("−");
   return (
     <div className="ui-rep-content">
-      <ReturnsHero figure={<span className={negative ? "ui-loss" : undefined}><FigureText value={page.value} currency={r.currency} loss /></span>} meta={page.caption} />
+      <ReturnsHero
+        figure={<span className={negative ? "ui-loss" : undefined}><FigureText value={page.value} currency={r.currency} loss /></span>}
+        meta={page.cashOut == null ? page.caption : <AllCashOutMeta minor={page.cashOut} currency={r.currency} />}
+      />
       {page.sections.map((section) => (
         <ReportSection
           key={section.key}
@@ -71,19 +74,21 @@ function PartBody({ part, r, base, search, projectId, sample }: { part: PartKey;
   const collapse = useCollapse();
   const page = partPage(part, r);
   const figure = page.formula.result?.value;
+  const moneyIn = part === "money-in";
+  // All the cash out is a good state: the money in below zero is no loss.
   return (
     <div className="ui-rep-content">
-      <ReturnsHero figure={figure == null ? null : <FigureText value={figure} currency={r.currency} loss />} meta={page.meta} />
+      <ReturnsHero figure={figure == null ? null : <FigureText value={figure} currency={r.currency} loss={!moneyIn} />} meta={page.meta} />
       <p className="ui-ret-body">{page.body}</p>
       <ReportSection id="calc" title="החישוב" total={<bdi dir="ltr" className="t-muted">{String(page.formula.rows.length + 1)}</bdi>} collapse={collapse}>
         <FormulaList formula={page.formula} currency={r.currency} resolve={pageResolver(base, search)} label={page.title} />
       </ReportSection>
-      <ReturnLinesSection projectId={projectId} line="rehab" categoryId={null} currency={r.currency} search={search} collapse={collapse} sample={sample?.lines} />
+      <ReturnLinesSection projectId={projectId} line={moneyIn ? "money_in" : "rehab"} categoryId={null} currency={r.currency} search={search} collapse={collapse} sample={sample?.lines} />
     </div>
   );
 }
 
-/** A part of a figure (the building cost, the money in the deal, the forced equity) and its rehab lines, all time. */
+/** A part of a figure (the building cost, the money in the deal, the forced equity) and its lines (rehab, or the money in's), all time. */
 export function PropertyPartScreen({ sample, base: baseProp }: { sample?: ReturnsSample; base?: string } = {}) {
   const page = useReturnsPage(sample, baseProp);
   const { part: named, key } = useParams();
@@ -91,8 +96,8 @@ export function PropertyPartScreen({ sample, base: baseProp }: { sample?: Return
   if (!isPart(part)) return <Navigate replace to={`${page.base}${page.search}`} />;
   const title = page.returns == null ? "חישוב" : partPage(part, page.returns).title;
   const back = page.returns == null ? "השקעה" : partPage(part, page.returns).back;
-  // A part reads the rehab lines since the purchase, not the last 12 months.
-  const subtitle = page.name == null ? "מאז הקנייה" : `מאז הקנייה · ${page.name}`;
+  // A part reads its lines since the purchase, not the last 12 months.
+  const subtitle = page.name == null ? ALL_TIME : `${ALL_TIME} · ${page.name}`;
   return (
     <ScreenState title={title} kicker={back} subtitle={subtitle} backTo={`${page.base}${page.search}`} phase={page.phase} onRetry={page.retry} empty={RETURNS_EMPTY}>
       {page.returns == null ? null : <PartBody part={part} r={page.returns} base={page.base} search={page.search} projectId={page.projectId} sample={sample} />}

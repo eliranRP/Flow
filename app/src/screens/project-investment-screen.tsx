@@ -64,7 +64,14 @@ export function applySample(figures: InvestmentFigures, patch: InvestmentPatch):
 export function applyReturnsSample(returns: PropertyReturns, patch: InvestmentPatch): PropertyReturns {
   const inputs = { ...returns.inputs };
   const big = (value: number | null | undefined) => (value == null ? null : BigInt(value));
-  if ("purchase_minor" in patch) inputs.purchaseMinor = big(patch.purchase_minor);
+  if ("purchase_minor" in patch) {
+    // A purchase from the lines stays; the typed price stands in only when there are none.
+    inputs.purchaseTypedMinor = big(patch.purchase_minor);
+    if (inputs.purchaseSource !== "lines") {
+      inputs.purchaseMinor = inputs.purchaseTypedMinor;
+      inputs.purchaseSource = inputs.purchaseMinor == null ? null : "typed";
+    }
+  }
   if ("arv_minor" in patch) inputs.arvMinor = big(patch.arv_minor);
   if ("value_minor" in patch) inputs.valueMinor = big(patch.value_minor);
   if ("land_minor" in patch) inputs.landMinor = big(patch.land_minor);
@@ -287,7 +294,12 @@ export function ProjectInvestmentScreen({
 
   const currency = data?.figures?.currency ?? data?.loans[0]?.currency ?? companyCurrency;
   const figures = data == null ? null : (hasFigures ? data.figures : loansOnly(currency, data));
-  const extras: PropertyExtras | null = returns == null ? null : { landMinor: returns.inputs.landMinor, units: returns.inputs.units };
+  const extras: PropertyExtras | null = returns == null ? null : {
+    landMinor: returns.inputs.landMinor,
+    units: returns.inputs.units,
+    purchaseMinor: returns.inputs.purchaseMinor,
+    purchaseSource: returns.inputs.purchaseSource,
+  };
   figuresRef.current = hasFigures ? figures : null;
   extrasRef.current = extras;
   bracketRef.current = returns?.inputs.taxBracketBp ?? null;
@@ -346,6 +358,7 @@ export function ProjectInvestmentScreen({
                 extras={extras}
                 readOnly={readOnly}
                 rows={rows}
+                linesHref={`${base}/returns/acquisition${search}`}
                 onEdit={openEdit}
                 onRehab={() => { setRehabSheet(true); }}
               />

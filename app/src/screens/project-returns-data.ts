@@ -30,11 +30,33 @@ const lineCategorySchema = z.object({
   lines: z.number().int(),
 });
 
-export const STATEMENT_LINES = ["income", "opex", "debt_service", "capex", "not_counted"] as const;
+/**
+ * The statement's lines for the period (FLOW-453, decision 0245): the four from the first rent on,
+ * then the two shown apart. `before_rent` is the server's holding and renovation lines of the
+ * period, `not_counted` its acquisition and financing lines.
+ */
+export const STATEMENT_LINES = ["income", "opex", "debt_service", "capex", "before_rent", "not_counted"] as const;
 export type StatementLine = (typeof STATEMENT_LINES)[number];
-/** The lines a line page opens: the statement's, and the principal parts alone. */
-export type ReturnLine = StatementLine | "principal";
-export const RETURN_LINES: readonly ReturnLine[] = [...STATEMENT_LINES, "principal"];
+/** The money in the deal by part, and the four together: all time, no period. */
+export const ALL_TIME_LINES = ["acquisition", "renovation", "holding", "financing", "money_in"] as const;
+export type AllTimeLine = (typeof ALL_TIME_LINES)[number];
+/** The lines a line page opens: the statement's, the principal parts alone, and the money in's. */
+export type ReturnLine = StatementLine | "principal" | AllTimeLine;
+export const RETURN_LINES: readonly ReturnLine[] = [...STATEMENT_LINES, "principal", ...ALL_TIME_LINES];
+
+export function isAllTimeLine(line: string): line is AllTimeLine {
+  return (ALL_TIME_LINES as readonly string[]).includes(line);
+}
+
+/** The server's lines behind each statement line. */
+const SERVER_LINES: Record<StatementLine, readonly string[]> = {
+  income: ["income"],
+  opex: ["opex"],
+  debt_service: ["debt_service"],
+  capex: ["capex"],
+  before_rent: ["holding", "renovation"],
+  not_counted: ["acquisition", "financing"],
+};
 
 export const MISSING_INPUTS = ["purchase", "value", "value_history", "land", "tax_bracket", "units"] as const;
 export type MissingInput = (typeof MISSING_INPUTS)[number];
@@ -44,10 +66,13 @@ const returnsSchema = z.object({
   from: z.string(),
   to: z.string(),
   days: z.number().int(),
+  first_rent: dateOrNull,
   other_currencies: z.array(z.string()).optional().default([]),
   missing: z.array(z.string()).optional().default([]),
   inputs: z.object({
     purchase_minor: minorOrNull,
+    purchase_source: z.enum(["lines", "typed"]).nullable().optional().transform((value) => value ?? null),
+    purchase_typed_minor: minorOrNull,
     arv_minor: minorOrNull,
     value_minor: minorOrNull,
     value_date: dateOrNull,
@@ -55,7 +80,6 @@ const returnsSchema = z.object({
     land_minor: minorOrNull,
     tax_bracket_bp: intOrNull,
     rehab_minor: minorOrNull,
-    borrowed_minor: minorOrNull,
     loan_balance_minor: minorOrNull,
     value_start: valueAtSchema,
     value_end: valueAtSchema,
@@ -67,6 +91,7 @@ const returnsSchema = z.object({
     debt_service_minor: minor,
     capex_minor: minor,
     cash_flow_minor: minor,
+    before_rent_minor: minor.optional().default(0n),
     not_counted_minor: minor,
     lines: z.record(z.string(), lineSumSchema).optional().default({}),
     by_category: z.record(z.string(), z.array(lineCategorySchema)).optional().default({}),
@@ -85,6 +110,11 @@ const returnsSchema = z.object({
     equity_today_minor: minorOrNull,
     forced_equity_minor: minorOrNull,
     money_in_minor: minorOrNull,
+    money_in_parts: z
+      .object({ acquisition_minor: minorOrNull, renovation_minor: minor, holding_minor: minor, financing_minor: minor })
+      .optional()
+      .default({ acquisition_minor: null, renovation_minor: 0n, holding_minor: 0n, financing_minor: 0n }),
+    all_cash_out: z.boolean().nullable().optional().transform((value) => value === true),
   }),
   metrics: z.object({
     cash_on_cash_bp: intOrNull,
@@ -103,10 +133,15 @@ export type PropertyReturns = {
   from: string;
   to: string;
   days: number;
+  /** YYYY-MM-DD: the first rent payment; null before it. */
+  firstRent: string | null;
   otherCurrencies: string[];
   missing: MissingInput[];
   inputs: {
+    /** The acquisition lines, or the typed price when there are none. */
     purchaseMinor: bigint | null;
+    purchaseSource: "lines" | "typed" | null;
+    purchaseTypedMinor: bigint | null;
     arvMinor: bigint | null;
     valueMinor: bigint | null;
     valueDate: string | null;
@@ -115,7 +150,6 @@ export type PropertyReturns = {
     taxBracketBp: number | null;
     /** Null while rehab has a cost in another currency. */
     rehabMinor: bigint | null;
-    borrowedMinor: bigint | null;
     loanBalanceMinor: bigint | null;
     valueStart: ValueAt | null;
     valueEnd: ValueAt | null;
@@ -127,6 +161,8 @@ export type PropertyReturns = {
     debtServiceMinor: bigint;
     capexMinor: bigint;
     cashFlowMinor: bigint;
+    /** The period's holding and renovation before the first rent, not in the cash flow. */
+    beforeRentMinor: bigint;
     notCountedMinor: bigint;
     /** How many transactions each line holds (0 when it has none). */
     counts: Record<StatementLine, number>;
@@ -143,12 +179,36 @@ export type PropertyReturns = {
     totalMinor: bigint;
     totalBp: number | null;
   };
-  equity: { todayMinor: bigint | null; forcedMinor: bigint | null; moneyInMinor: bigint | null };
+  equity: {
+    todayMinor: bigint | null;
+    forcedMinor: bigint | null;
+    moneyInMinor: bigint | null;
+    /** Signed as the lines: costs negative, the loan proceeds positive. Acquisition is null with no purchase at all. */
+    moneyInParts: MoneyInParts;
+    /** Money in at or below zero: all the cash came out, and the per-cent figures are null. */
+    allCashOut: boolean;
+  };
   metrics: { cashOnCashBp: number | null; capRateBp: number | null; dscrMilli: number | null; perUnitMonthMinor: bigint | null };
 };
 
+export type MoneyInParts = { acquisitionMinor: bigint | null; renovationMinor: bigint; holdingMinor: bigint; financingMinor: bigint };
+
 function isMissingInput(value: string): value is MissingInput {
   return (MISSING_INPUTS as readonly string[]).includes(value);
+}
+
+/** Two server lines' categories as one list: a category in both added up, largest first. */
+function mergeCategories(lists: readonly LineCategory[][]): LineCategory[] {
+  const filled = lists.filter((list) => list.length > 0);
+  if (filled.length <= 1) return filled[0] ?? [];
+  const byId = new Map<string, LineCategory>();
+  for (const item of filled.flat()) {
+    const key = item.id ?? "";
+    const seen = byId.get(key);
+    byId.set(key, seen == null ? { ...item } : { ...seen, minor: seen.minor + item.minor, count: seen.count + item.count });
+  }
+  const size = (value: bigint) => (value < 0n ? -value : value);
+  return [...byId.values()].sort((a, b) => (size(b.minor) > size(a.minor) ? 1 : size(b.minor) < size(a.minor) ? -1 : 0));
 }
 
 export function toPropertyReturns(data: unknown): PropertyReturns {
@@ -157,8 +217,9 @@ export function toPropertyReturns(data: unknown): PropertyReturns {
   const counts = {} as Record<StatementLine, number>;
   const byCategory = {} as Record<StatementLine, LineCategory[]>;
   for (const line of STATEMENT_LINES) {
-    counts[line] = st.lines[line]?.lines ?? 0;
-    byCategory[line] = (st.by_category[line] ?? []).map((row) => ({ id: row.category_id, name: row.name, minor: row.amount_minor, count: row.lines }));
+    const own = SERVER_LINES[line];
+    counts[line] = own.reduce((sum, key) => sum + (st.lines[key]?.lines ?? 0), 0);
+    byCategory[line] = mergeCategories(own.map((key) => (st.by_category[key] ?? []).map((row) => ({ id: row.category_id, name: row.name, minor: row.amount_minor, count: row.lines }))));
   }
   const inp = raw.inputs;
   return {
@@ -166,10 +227,13 @@ export function toPropertyReturns(data: unknown): PropertyReturns {
     from: raw.from,
     to: raw.to,
     days: raw.days,
+    firstRent: raw.first_rent,
     otherCurrencies: raw.other_currencies,
     missing: raw.missing.filter(isMissingInput),
     inputs: {
       purchaseMinor: inp.purchase_minor,
+      purchaseSource: inp.purchase_source,
+      purchaseTypedMinor: inp.purchase_typed_minor,
       arvMinor: inp.arv_minor,
       valueMinor: inp.value_minor,
       valueDate: inp.value_date,
@@ -177,7 +241,6 @@ export function toPropertyReturns(data: unknown): PropertyReturns {
       landMinor: inp.land_minor,
       taxBracketBp: inp.tax_bracket_bp,
       rehabMinor: inp.rehab_minor,
-      borrowedMinor: inp.borrowed_minor,
       loanBalanceMinor: inp.loan_balance_minor,
       valueStart: inp.value_start,
       valueEnd: inp.value_end,
@@ -189,6 +252,7 @@ export function toPropertyReturns(data: unknown): PropertyReturns {
       debtServiceMinor: st.debt_service_minor,
       capexMinor: st.capex_minor,
       cashFlowMinor: st.cash_flow_minor,
+      beforeRentMinor: st.before_rent_minor,
       notCountedMinor: st.not_counted_minor,
       counts,
       byCategory,
@@ -207,6 +271,13 @@ export function toPropertyReturns(data: unknown): PropertyReturns {
       todayMinor: raw.equity.equity_today_minor,
       forcedMinor: raw.equity.forced_equity_minor,
       moneyInMinor: raw.equity.money_in_minor,
+      moneyInParts: {
+        acquisitionMinor: raw.equity.money_in_parts.acquisition_minor,
+        renovationMinor: raw.equity.money_in_parts.renovation_minor,
+        holdingMinor: raw.equity.money_in_parts.holding_minor,
+        financingMinor: raw.equity.money_in_parts.financing_minor,
+      },
+      allCashOut: raw.equity.all_cash_out,
     },
     metrics: {
       cashOnCashBp: raw.metrics.cash_on_cash_bp,
@@ -305,7 +376,7 @@ export function usePropertyReturnsQuery(projectId: string, enabled = true) {
 
 export const LINES_PAGE = 50;
 
-/** The lines behind one figure: a line of the period, or `rehab` for all time (the building cost). */
+/** The lines behind one figure: a line of the period, or one for all time (the money in's, `rehab` the building cost). */
 export type LinesSource = ReturnLine | "rehab";
 
 /** get_property_return_lines, 50 at a time, newest first; `categoryId` narrows to one category. */
