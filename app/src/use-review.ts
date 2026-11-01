@@ -168,7 +168,9 @@ async function readReviewPage(
   supabase: ScopeClient,
   args: ReviewArgs,
 ) {
-  const listed = supabase.rpc("list_review_page", args);
+  // The query builder sends its request each time it is awaited: wrap it once, so the Jev prefetch and this
+  // read share one request (they sent two, each a full page).
+  const listed = Promise.resolve(supabase.rpc("list_review_page", args));
   if (typeof supabase.from === "function") {
     const lookup = beginJevScopeLookup();
     const items = Promise.resolve(listed).then((result) => ({

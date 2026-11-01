@@ -68,7 +68,7 @@ const devFixtures = () => import("./dev/routes/render");
 // chain of requests there. In dev every screen and fixture is fetched at start, as before FLOW-804.
 if (import.meta.env.DEV) {
   // The e2e sweeps wait for this mark, so a screen or sheet never mounts between their look and their tap.
-  void Promise.all([preloadScreens(), devFixtures().then((m) => m.preloadDevFixtures())])
+  void Promise.all([preloadScreens(Infinity), devFixtures().then((m) => m.preloadDevFixtures())])
     .catch(() => undefined)
     .then(() => {
       document.documentElement.dataset.screensLoaded = "1";

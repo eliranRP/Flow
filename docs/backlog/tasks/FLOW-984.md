@@ -1,6 +1,6 @@
 <a id="flow-984"></a>
 # FLOW-984 · Review loads its open items in pages, not all at once
-- **Type:** PLAN FIRST · **Status:** in-progress (#901, perf steward); owner approved the plan (2026-10-31) · **Source:** the owner on 2026-10-28, from the perf steward's daily report ([2026-10-28](../../qa/perf/2026-10-28.md)) under decision [0230](../../decisions/0230-screens-data-in-half-a-second.md): page the Review screen.
+- **Type:** PLAN FIRST · **Status:** done (#901); the phone's first Review under 0.5 s goes on in FLOW-1007; owner approved the plan (2026-10-31) · **Source:** the owner on 2026-10-28, from the perf steward's daily report ([2026-10-28](../../qa/perf/2026-10-28.md)) under decision [0230](../../decisions/0230-screens-data-in-half-a-second.md): page the Review screen.
 - **Files:** a new migration adding `public.list_review_page` (`list_review()` unchanged), `supabase/tests/database/review_paging.test.sql`, `app/src/read-schemas.ts`, `app/src/use-books.ts`, the Review screens (`review-screen.tsx`, `review-queue.tsx`, `review-lists.tsx`, `review-shared.tsx`, `change-form.tsx`) and their stories and tests, a decision record. The MCP tools and Home are unchanged.
 
 `list_review` returns every open item in one read: on the Flow QA sandbox about 1,280 items, 793 KB before compression, 0.7 to 1.0 s round trip and about 170 ms in the database. Review shows one card at a time and a list.
@@ -8,7 +8,7 @@
 - [x] Plan approved by the owner (2026-10-31), below.
 - [x] A new read, `list_review_page`, takes a page size, a cursor (doc date, created-at, then id) and a project, and returns the page, the total open count and the next cursor. The zero-argument `list_review()` stays byte for byte the same (the MCP tools read it).
 - [x] Review filtered to one project loads that project's items in pages, through the project argument.
-- [ ] Review shows its first page within 0.5 s on the FLOW-804 phone and loads the next page before the user reaches it.
+- [ ] Review shows its first page within 0.5 s on the FLOW-804 phone and loads the next page before the user reaches it. Moved to FLOW-1007: in production (2026-11-01) the first page is 46 KB, not 799 KB, and 29 ms in the database, not 146 ms, but the first visit still took about 2.1 s, held up by the other screens' preload and a read sent twice.
 - **Plan (owner's answers, 2026-10-31):**
   - **First page:** 50 items, then 50 more at a time.
   - **Loading more:** automatic, ahead of the user, with no button. It starts when 15 cards remain in the card flow, or one screen before the end of the list. Skip cycles within the loaded cards and wraps to the first card only once everything is loaded. If a batch fails, a quiet "לא הצלחנו לטעון עוד פריטים · ניסיון חוזר" row takes the next card's place.
