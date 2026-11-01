@@ -135,7 +135,7 @@ function OpenInvestmentSheet({ sheet, field }: { sheet: string | null; field: st
   return null;
 }
 
-/** FLOW-451: the returns fixture: `?returns=missing` (no land, bracket, units or value a year back), `?returns=negative`. */
+/** FLOW-451: the returns fixture: `?returns=missing` (no land, bracket or value a year back; units the default 1), `?returns=negative`. */
 function devReturns(params: URLSearchParams) {
   const kind = params.get("returns");
   return kind === "missing" ? birchLaneReturnsMissing : kind === "negative" ? birchLaneReturnsNegative : birchLaneReturns;

@@ -79,21 +79,26 @@
   background: color-mix(in srgb, var(--color-accent) 32%, var(--color-surface));
 }
 
+/* FLOW-454: each source is a grid of fixed tracks, dot | label | ⓘ and a flexible gap | amount |
+   per-cent, so the amounts and per-cents keep their columns whatever a row holds. The amount and
+   per-cent tracks are fixed; the amount sits at their shared edge (left in RTL), in tabular figures. */
 .ui-ret-sources {
+  --ret-col-amount: calc(var(--space-10) + var(--space-8));
+  --ret-col-share: calc(var(--space-10) + var(--space-2));
   display: flex;
   flex-direction: column;
 }
 
-.ui-ret-source-line {
-  display: flex;
+.ui-ret-source {
+  display: grid;
+  grid-template-columns: var(--space-2) auto minmax(0, 1fr) var(--ret-col-amount) var(--ret-col-share);
+  grid-template-rows: minmax(var(--touch-min), auto);
   align-items: center;
-  gap: calc(var(--space-2) + var(--space-1) / 2);
-  min-block-size: var(--touch-min);
+  column-gap: var(--space-2);
   font-size: var(--type-line2-size);
 }
 
 .ui-ret-swatch {
-  flex: none;
   inline-size: var(--space-2);
   block-size: var(--space-2);
   border-radius: var(--radius-chip);
@@ -101,26 +106,69 @@
 
 .ui-ret-source-label {
   color: var(--color-text-secondary);
-}
-
-.ui-ret-source-value {
-  margin-inline-start: auto;
   white-space: nowrap;
 }
 
+.ui-ret-source > .ui-ret-info-btn {
+  justify-self: start;
+}
+
+.ui-ret-source-value {
+  grid-column: 4;
+  min-inline-size: 0;
+  font-variant-numeric: var(--font-numerals);
+  text-align: end;
+  white-space: nowrap;
+}
+
+/* A missing note, ∞ or "לא מחושב": across the amount and per-cent tracks, from the amount's edge. */
+.ui-ret-source-value.ui-ret-source-wide {
+  grid-column: 4 / -1;
+  text-align: start;
+}
+
 .ui-ret-source-share {
-  flex: none;
-  inline-size: calc(var(--space-10) + var(--space-2));
+  grid-column: 5;
   color: var(--color-text-muted);
+  font-variant-numeric: var(--font-numerals);
   text-align: end;
 }
 
+/* Before the first rent: the note in the per-cent's place, on its own line, at the per-cent's edge. */
+.ui-ret-source-note {
+  grid-column: 4 / -1;
+  margin-block-start: calc(var(--space-2) * -1);
+  padding-block-end: var(--space-1);
+  text-align: end;
+}
+
+/* A hint under a row: its own row of the grid, from the label's track to the end. */
 .ui-ret-source-hint {
+  grid-column: 2 / -1;
   margin: calc(var(--space-1) * -1) 0 var(--space-1);
-  padding-inline-start: calc(var(--space-2) + var(--space-3));
   color: var(--color-text-muted);
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line);
+}
+
+/* "לפני השכר הראשון" in a per-cent figure's place: caption, muted. */
+.ui-ret-note {
+  color: var(--color-text-muted);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-caption-line);
+}
+
+/* הון בנכס and מדדים: the value in a fixed column too, at its edge (left in RTL). The metrics are
+   short (a per-cent, a ratio), so their column is narrower and the titles keep their line at 320. */
+.ui-pinv-value.ui-ret-fixed-value {
+  min-inline-size: calc(var(--space-10) * 2);
+  font-variant-numeric: var(--font-numerals);
+  text-align: end;
+}
+
+.ui-pinv-value.ui-ret-fixed-metric {
+  min-inline-size: calc(var(--space-10) + var(--space-4));
 }
 
 /* The ⓘ: a 44px target around an 18px icon, pulled in so the row keeps its height. */

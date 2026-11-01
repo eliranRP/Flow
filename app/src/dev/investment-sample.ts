@@ -91,3 +91,30 @@ export const birchLaneNegativeInvestment: ProjectInvestment = {
     currentEquityMinor: usd(-15_000),
   },
 };
+
+/**
+ * FLOW-454: "Maple Court", the Sub2 deal of the returns sample: purchase $331,600 ($41,600 of lines
+ * and the $290,000 mortgage taken over), rehab $18,400, ARV $380,000, value $360,000, the mortgage at
+ * $286,000. השבחה צפויה $30,000, הון עצמי היום $74,000.
+ */
+export const mapleCourtSub2Investment: ProjectInvestment = {
+  isOverhead: false,
+  figures: {
+    currency: "USD",
+    purchaseMinor: null,
+    arvMinor: usd(380_000),
+    valueMinor: usd(360_000),
+    valueDate: "2026-10-01",
+    rehabMinor: usd(18_400),
+    rehabOther: [],
+    loanMinor: usd(286_000),
+    loanOther: [],
+    forcedEquityMinor: usd(30_000),
+    currentEquityMinor: usd(74_000),
+  },
+  loans: [{ id: "loan-maple", name: "Maple Street Mortgage", currency: "USD", balance_minor: usd(286_000), status: "open", closedOn: null, terms: null }],
+  categories: [
+    { id: "cat-contractors", name: "קבלני משנה", currency: "USD", minor: usd(12_000) },
+    { id: "cat-materials", name: "חומרים", currency: "USD", minor: usd(6_400) },
+  ],
+};

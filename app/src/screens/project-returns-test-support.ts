@@ -32,6 +32,9 @@ export function toReturnsJson(r: PropertyReturns): Record<string, unknown> {
       value_minor: n(r.inputs.valueMinor),
       value_date: r.inputs.valueDate,
       units: r.inputs.units,
+      units_default: r.inputs.unitsDefault,
+      taken_over_minor: Number(r.inputs.takenOverMinor),
+      taken_over_loans: r.inputs.takenOverLoans.map((loan) => ({ loan_id: loan.id, name: loan.name, principal_minor: Number(loan.minor) })),
       land_minor: n(r.inputs.landMinor),
       tax_bracket_bp: r.inputs.taxBracketBp,
       rehab_minor: n(r.inputs.rehabMinor),
@@ -77,7 +80,7 @@ export function toReturnsJson(r: PropertyReturns): Record<string, unknown> {
       cash_on_cash_bp: r.metrics.cashOnCashBp,
       cap_rate_bp: r.metrics.capRateBp,
       dscr_milli: r.metrics.dscrMilli,
-      cash_flow_per_unit_month_minor: n(r.metrics.perUnitMonthMinor),
+      cash_flow_per_unit_month_minor: Number(r.metrics.perUnitMonthMinor),
     },
   };
 }

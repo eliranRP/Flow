@@ -4,7 +4,15 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { birchLaneInvestment } from "../dev/investment-sample";
 import { project as sampleProject } from "../dev/project-cash-sample";
-import { birchLaneReturnLines, birchLaneReturns, birchLaneReturnsCashOut, birchLaneReturnsMissing, birchLaneReturnsNegative } from "../dev/returns-sample";
+import {
+  birchLaneReturnLines,
+  birchLaneReturns,
+  birchLaneReturnsBeforeRent,
+  birchLaneReturnsCashOut,
+  birchLaneReturnsMissing,
+  birchLaneReturnsNegative,
+  mapleCourtSub2Returns,
+} from "../dev/returns-sample";
 import { ToastProvider } from "../ui/toast";
 import { ProjectInvestmentScreen } from "./project-investment-screen";
 import { UNITS_HOLD, editVerdict } from "./project-investment-sheets";
@@ -12,10 +20,13 @@ import { barShares } from "./project-returns-cards";
 import { bracketText, dscrText, percentText, shareOfMoneyIn, toPropertyReturns, toReturnLinesPage } from "./project-returns-data";
 import { PropertyMetricScreen, PropertyPartScreen } from "./project-returns-detail-screen";
 import {
+  BEFORE_FIRST_RENT,
   CASH_FLOW_CAPTION,
   MISSING_HISTORY,
   MONEY_IN_BODY,
+  TAKEN_OVER_LABEL,
   TAX_CAPTION,
+  UNITS_DEFAULT_HINT,
   buildingFormula,
   forcedFormula,
   metricPage,
@@ -167,9 +178,18 @@ describe("the returns read", () => {
   it("keeps only the inputs it knows as missing, and reads absent lines as none", () => {
     const json = toReturnsJson(birchLaneReturnsMissing);
     const parsed = toPropertyReturns({ ...json, missing: [...birchLaneReturnsMissing.missing, "something_new"], statement: { ...(json.statement as object), lines: {}, by_category: {} } });
-    expect(parsed.missing).toEqual(["value_history", "land", "tax_bracket", "units"]);
+    expect(parsed.missing).toEqual(["value_history", "land", "tax_bracket"]);
     expect(parsed.statement.counts.opex).toBe(0);
     expect(parsed.statement.byCategory.capex).toEqual([]);
+  });
+
+  it("reads one unit by default, and the loans taken over at closing", () => {
+    const json = toReturnsJson(mapleCourtSub2Returns);
+    const parsed = toPropertyReturns(json);
+    expect(parsed.inputs).toMatchObject({ units: 1, unitsDefault: true, takenOverMinor: 29_000_000n });
+    expect(parsed.inputs.takenOverLoans).toEqual([{ id: "loan-maple", name: "Maple Street Mortgage", minor: 29_000_000n }]);
+    const inputs = { ...(json.inputs as object), units: null, units_default: undefined, taken_over_minor: undefined, taken_over_loans: undefined };
+    expect(toPropertyReturns({ ...json, inputs }).inputs).toMatchObject({ units: 1, unitsDefault: false, takenOverMinor: 0n, takenOverLoans: [] });
   });
 
   it("maps a page of lines, signed as in the statement", () => {
@@ -192,7 +212,7 @@ describe("the returns read", () => {
 
 describe("the sample figures add up", () => {
   it("in every sheet whose parts are added", () => {
-    for (const sample of [birchLaneReturns, birchLaneReturnsNegative, birchLaneReturnsCashOut]) {
+    for (const sample of [birchLaneReturns, birchLaneReturnsNegative, birchLaneReturnsCashOut, mapleCourtSub2Returns, birchLaneReturnsBeforeRent]) {
       for (const key of INFO_KEYS) {
         const info = returnInfo(key, sample);
         expect(addsUp(info.formula), key).toBe(true);
@@ -204,7 +224,7 @@ describe("the sample figures add up", () => {
   });
 
   it("in the statement and the total", () => {
-    for (const r of [birchLaneReturns, birchLaneReturnsNegative, birchLaneReturnsCashOut]) {
+    for (const r of [birchLaneReturns, birchLaneReturnsNegative, birchLaneReturnsCashOut, mapleCourtSub2Returns, birchLaneReturnsBeforeRent]) {
       const st = r.statement;
       expect(st.incomeMinor + st.opexMinor).toBe(st.noiMinor);
       expect(st.noiMinor + st.debtServiceMinor + st.capexMinor).toBe(st.cashFlowMinor);
@@ -220,10 +240,11 @@ describe("the sample figures add up", () => {
   });
 
   it("in the tax savings: the building over 27.5 years at the bracket", () => {
-    const { sources, inputs } = birchLaneReturns;
-    expect(sources.buildingMinor).toBe((inputs.purchaseMinor ?? 0n) + (inputs.rehabMinor ?? 0n) - (inputs.landMinor ?? 0n));
-    expect(Math.round((Number(sources.buildingMinor) * 10) / 275)).toBe(Number(sources.depreciationYearMinor));
-    expect(Math.round((Number(sources.buildingMinor) * 10 * 2400) / (275 * 10_000))).toBe(Number(sources.taxSavingsMinor));
+    for (const { sources, inputs } of [birchLaneReturns, mapleCourtSub2Returns]) {
+      expect(sources.buildingMinor).toBe((inputs.purchaseMinor ?? 0n) + (inputs.rehabMinor ?? 0n) - (inputs.landMinor ?? 0n));
+      expect(Math.round((Number(sources.buildingMinor) * 10) / 275)).toBe(Number(sources.depreciationYearMinor));
+      expect(Math.round((Number(sources.buildingMinor) * 10 * 2400) / (275 * 10_000))).toBe(Number(sources.taxSavingsMinor));
+    }
   });
 
   it("splits the bar by the positive parts only", () => {
@@ -270,6 +291,41 @@ describe("the sheet contents", () => {
     expect(buildingFormula(birchLaneReturns).rows[0]).toMatchObject({ label: "מחיר רכישה (מהתנועות)", target: { kind: "line", line: "acquisition" } });
   });
 
+  it("splits a Sub2 purchase into the cash lines and the loan taken over, which add up to the price", () => {
+    const price = mapleCourtSub2Returns.inputs.purchaseMinor ?? 0n;
+    const building = buildingFormula(mapleCourtSub2Returns).rows;
+    expect(building.slice(0, 2).map((row) => `${row.op}${row.label}`)).toEqual(["רכישה וסגירה (מהתנועות)", `+${TAKEN_OVER_LABEL}`]);
+    expect(sumOf(building.slice(0, 2))).toBe(price);
+    expect(building[0]).toMatchObject({ value: { kind: "money", minor: 4_160_000n }, target: { kind: "line", line: "acquisition" } });
+    expect(building[1]).toMatchObject({ hint: "Maple Street Mortgage", target: { kind: "loans", loanId: "loan-maple" } });
+    const forced = forcedFormula(mapleCourtSub2Returns).rows;
+    expect(forced.map((row) => `${row.op}${row.key}`)).toEqual(["arv", "−purchase", "−taken-over", "−rehab"]);
+    expect(-sumOf(forced.slice(1, 3))).toBe(price);
+    // Several loans taken over: their names joined, and the row opens the loans list.
+    const two = {
+      ...mapleCourtSub2Returns,
+      inputs: {
+        ...mapleCourtSub2Returns.inputs,
+        takenOverLoans: [{ id: "l1", name: "Maple Street Mortgage", minor: 25_000_000n }, { id: "l2", name: "Oak Bridge Lending", minor: 4_000_000n }],
+      },
+    };
+    expect(buildingFormula(two).rows[1]).toMatchObject({ hint: "Maple Street Mortgage, Oak Bridge Lending", target: { kind: "loans" } });
+    expect(buildingFormula(two).rows[1]?.target).not.toHaveProperty("loanId");
+    // The money in stays cash only: no loan row.
+    expect(returnInfo("money_in", mapleCourtSub2Returns).formula.rows.map((row) => row.key)).toEqual(["acquisition", "renovation", "holding", "financing"]);
+  });
+
+  it("reads לפני השכר הראשון for the per-cent metrics before the first rent, with no result row", () => {
+    for (const metric of ["coc", "cap-rate"] as const) {
+      const page = metricPage(metric, birchLaneReturnsBeforeRent);
+      expect(page.value).toEqual({ kind: "note", text: BEFORE_FIRST_RENT });
+      expect(page.result).toBeNull();
+    }
+    expect(metricValue("dscr", birchLaneReturnsBeforeRent)).toEqual({ kind: "text", text: "אין תשלומים" });
+    expect(metricValue("per-unit", birchLaneReturnsBeforeRent)).toEqual({ kind: "money", minor: 0n, income: false });
+    expect(metricValue("coc", birchLaneReturns)).toEqual({ kind: "text", text: "11.6%" });
+  });
+
   it("says the cash flow counts from the first rent", () => {
     expect(returnInfo("cash_flow", birchLaneReturns).caption).toBe(CASH_FLOW_CAPTION);
   });
@@ -282,8 +338,12 @@ describe("the sheet contents", () => {
     expect(page.sections.map((section) => section.key)).toEqual(["cash", "money-in"]);
   });
 
-  it("asks for units on the cash flow per unit", () => {
-    expect(metricPage("per-unit", birchLaneReturnsMissing).value).toEqual({ kind: "missing", add: "units", note: undefined });
+  it("divides the cash flow per unit by the default one unit, which says so", () => {
+    const page = metricPage("per-unit", birchLaneReturnsMissing);
+    expect(page.value).toEqual({ kind: "money", minor: 35_000n, income: false });
+    expect(page.caption).toBe("בחודש · תזרים ÷ 1 יחידה ÷ 12 · 12 חודשים");
+    expect(page.sections[1]?.formula.rows[0]).toMatchObject({ hint: UNITS_DEFAULT_HINT, value: { kind: "text", text: "1" } });
+    expect(page.result?.text).toBe("$4,200 ÷ 1 ÷ 12");
     expect(metricPage("coc", birchLaneReturns).result?.text).toBe("$4,200 ÷ $36,300");
   });
 });
@@ -327,10 +387,11 @@ describe("the investment page's returns cards", () => {
     expect(await screen.findByRole("dialog", { name: "שווי הקרקע" })).toBeInTheDocument();
   });
 
-  it("adds land and units to the property's figures", async () => {
+  it("adds land to the property's figures, and shows the default one unit, still editable", async () => {
     renderInvestment(birchLaneReturnsMissing);
     const card = await screen.findByRole("region", { name: "נתוני הנכס" });
-    expect(within(card).getByRole("button", { name: /^יחידות.*הוספה/ })).toBeInTheDocument();
+    const units = within(card).getByRole("button", { name: /^יחידות/ });
+    expect(units).toHaveTextContent(`יחידות${UNITS_DEFAULT_HINT}1`);
     fireEvent.click(within(card).getByRole("button", { name: /^קרקע/ }));
     expect(await screen.findByRole("dialog", { name: "שווי הקרקע" })).toBeInTheDocument();
   });
@@ -359,6 +420,56 @@ describe("the investment page's returns cards", () => {
     expect(row).toHaveAttribute("href", "/projects/p1/investment/returns/acquisition");
     expect(row).toHaveTextContent("מהתנועות · לפירוט");
     expect(within(card).queryByRole("button", { name: /מחיר רכישה/ })).toBeNull();
+  });
+
+  it("keeps each source's amount and per-cent in fixed tracks, a missing note spanning both from the amount's edge", async () => {
+    renderInvestment(birchLaneReturnsMissing);
+    const card = (await screen.findByRole("heading", { name: "תשואה כוללת · שנה" })).closest("section");
+    if (card == null) throw new Error("no card");
+    const rows = [...card.querySelectorAll(".ui-ret-sources > .ui-ret-source")];
+    expect(rows).toHaveLength(4);
+    const cell = (label: string, selector: string) => {
+      const row = rows.find((item) => item.querySelector(".ui-ret-source-label")?.textContent === label);
+      return row?.querySelector(selector) ?? null;
+    };
+    // An amount: the amount track, then the per-cent track.
+    expect(cell("תזרים", ".ui-ret-source-value")).not.toHaveClass("ui-ret-source-wide");
+    expect(cell("תזרים", ".ui-ret-source-share")).toHaveTextContent("11.6%");
+    // A missing note (with or without הוספה): one cell across both tracks, and no per-cent cell.
+    expect(cell("עליית ערך", ".ui-ret-source-value")).toHaveClass("ui-ret-source-wide");
+    expect(cell("עליית ערך", ".ui-ret-source-value")).toHaveTextContent(MISSING_HISTORY);
+    expect(cell("עליית ערך", ".ui-ret-source-share")).toBeNull();
+    expect(cell("חיסכון מס", ".ui-ret-source-value")).toHaveClass("ui-ret-source-wide");
+    // The hint is a child of the row's grid, its own line.
+    expect(cell("עליית ערך", ":scope > .ui-ret-source-hint")).not.toBeNull();
+  });
+
+  it("reads לפני השכר הראשון in place of the per-cents before the first rent, and keeps the amounts", async () => {
+    renderInvestment(birchLaneReturnsBeforeRent);
+    const card = (await screen.findByRole("heading", { name: "תשואה כוללת · שנה" })).closest("section");
+    if (card == null) throw new Error("no card");
+    expect(card.querySelector(".ui-ret-total")).toHaveTextContent(BEFORE_FIRST_RENT);
+    expect(within(card).queryByText(/%$/)).toBeNull();
+    expect(within(card).getAllByText(BEFORE_FIRST_RENT)).toHaveLength(5);
+    expect(within(card).getByText("$12,000")).toBeInTheDocument();
+    const metrics = await screen.findByRole("region", { name: "מדדים" });
+    expect(within(metrics).getByRole("link", { name: /תשואה על המזומן/ })).toHaveTextContent(BEFORE_FIRST_RENT);
+    expect(within(metrics).getByRole("link", { name: /Cap rate/ })).toHaveTextContent(BEFORE_FIRST_RENT);
+    expect(within(metrics).getByRole("link", { name: /כיסוי חוב/ })).toHaveTextContent("אין תשלומים");
+  });
+
+  it("names the loan taken over in the purchase, on the figures card and in the השבחה ⓘ", async () => {
+    renderInvestment(mapleCourtSub2Returns);
+    const card = await screen.findByRole("region", { name: "נתוני הנכס" });
+    const purchase = within(card).getByRole("link", { name: /מחיר רכישה/ });
+    expect(purchase).toHaveTextContent("מהתנועות + הלוואה שנלקחה · לפירוט");
+    expect(purchase).toHaveTextContent("$331,600");
+    fireEvent.click(screen.getByRole("button", { name: "איך מחושב: השבחה צפויה" }));
+    const dialog = await screen.findByRole("dialog", { name: "השבחה צפויה" });
+    expect(within(dialog).getByRole("link", { name: /רכישה וסגירה \(מהתנועות\)/ })).toHaveAttribute("href", "/projects/p1/investment/returns/acquisition");
+    const loan = within(dialog).getByRole("link", { name: new RegExp(TAKEN_OVER_LABEL) });
+    expect(loan).toHaveAttribute("href", "/loans/loan-maple");
+    expect(loan).toHaveTextContent("Maple Street Mortgage");
   });
 
   it("opens each metric's page", async () => {
@@ -448,6 +559,20 @@ describe("the returns pages", () => {
     serve();
     renderAt("/projects/p1/investment/metric/irr");
     expect(await screen.findByTestId("where")).toHaveTextContent("/projects/p1/investment");
+  });
+
+  it("splits the Sub2 purchase on the building cost's page", async () => {
+    serve(mapleCourtSub2Returns);
+    renderAt("/projects/p1/investment/part/building");
+    expect(await screen.findByRole("link", { name: /רכישה וסגירה \(מהתנועות\)/ })).toHaveAttribute("href", "/projects/p1/investment/returns/acquisition");
+    expect(screen.getByRole("link", { name: new RegExp(TAKEN_OVER_LABEL) })).toHaveAttribute("href", "/loans/loan-maple");
+  });
+
+  it("leads the cash-on-cash page with לפני השכר הראשון before the first rent", async () => {
+    serve(birchLaneReturnsBeforeRent);
+    renderAt("/projects/p1/investment/metric/coc");
+    expect((await screen.findAllByText(BEFORE_FIRST_RENT))[0]?.closest(".ui-ret-hero")).not.toBeNull();
+    expect(screen.queryByText("התוצאה")).toBeNull();
   });
 
   it("draws a part with its rehab lines, all time", async () => {

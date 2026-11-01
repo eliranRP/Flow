@@ -58,8 +58,10 @@ const SERVER_LINES: Record<StatementLine, readonly string[]> = {
   not_counted: ["acquisition", "financing"],
 };
 
-export const MISSING_INPUTS = ["purchase", "value", "value_history", "land", "tax_bracket", "units"] as const;
+export const MISSING_INPUTS = ["purchase", "value", "value_history", "land", "tax_bracket"] as const;
 export type MissingInput = (typeof MISSING_INPUTS)[number];
+
+const takenOverSchema = z.object({ loan_id: z.string(), name: z.string().nullable().optional().transform((value) => value ?? ""), principal_minor: minor });
 
 const returnsSchema = z.object({
   currency: z.string(),
@@ -76,7 +78,10 @@ const returnsSchema = z.object({
     arv_minor: minorOrNull,
     value_minor: minorOrNull,
     value_date: dateOrNull,
-    units: intOrNull,
+    units: z.number().int().nullable().optional().transform((value) => value ?? 1),
+    units_default: z.boolean().nullable().optional().transform((value) => value === true),
+    taken_over_minor: minor.nullable().optional().transform((value) => value ?? 0n),
+    taken_over_loans: z.array(takenOverSchema).optional().default([]),
     land_minor: minorOrNull,
     tax_bracket_bp: intOrNull,
     rehab_minor: minorOrNull,
@@ -120,11 +125,12 @@ const returnsSchema = z.object({
     cash_on_cash_bp: intOrNull,
     cap_rate_bp: intOrNull,
     dscr_milli: intOrNull,
-    cash_flow_per_unit_month_minor: minorOrNull,
+    cash_flow_per_unit_month_minor: minor,
   }),
 });
 
 export type ValueAt = { minor: bigint; date: string };
+export type TakenOverLoan = { id: string; name: string; minor: bigint };
 export type LineCategory = { id: string | null; name: string | null; minor: bigint; count: number };
 
 /** get_property_returns, typed: minor units as bigint, percents in basis points, DSCR × 1000. */
@@ -145,7 +151,12 @@ export type PropertyReturns = {
     arvMinor: bigint | null;
     valueMinor: bigint | null;
     valueDate: string | null;
-    units: number | null;
+    /** 1 until the owner sets it (decision 0246). */
+    units: number;
+    unitsDefault: boolean;
+    /** A loan paid out at closing without passing through the bank (Sub2), inside the purchase; 0 when none. */
+    takenOverMinor: bigint;
+    takenOverLoans: TakenOverLoan[];
     landMinor: bigint | null;
     taxBracketBp: number | null;
     /** Null while rehab has a cost in another currency. */
@@ -188,7 +199,7 @@ export type PropertyReturns = {
     /** Money in at or below zero: all the cash came out, and the per-cent figures are null. */
     allCashOut: boolean;
   };
-  metrics: { cashOnCashBp: number | null; capRateBp: number | null; dscrMilli: number | null; perUnitMonthMinor: bigint | null };
+  metrics: { cashOnCashBp: number | null; capRateBp: number | null; dscrMilli: number | null; perUnitMonthMinor: bigint };
 };
 
 export type MoneyInParts = { acquisitionMinor: bigint | null; renovationMinor: bigint; holdingMinor: bigint; financingMinor: bigint };
@@ -238,6 +249,9 @@ export function toPropertyReturns(data: unknown): PropertyReturns {
       valueMinor: inp.value_minor,
       valueDate: inp.value_date,
       units: inp.units,
+      unitsDefault: inp.units_default,
+      takenOverMinor: inp.taken_over_minor,
+      takenOverLoans: inp.taken_over_loans.map((loan) => ({ id: loan.loan_id, name: loan.name, minor: loan.principal_minor })),
       landMinor: inp.land_minor,
       taxBracketBp: inp.tax_bracket_bp,
       rehabMinor: inp.rehab_minor,

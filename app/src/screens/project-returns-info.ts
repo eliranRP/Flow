@@ -21,11 +21,14 @@ export type Target =
   | { kind: "statement" }
   | { kind: "part"; part: PartKey }
   | { kind: "edit"; field: EditField }
-  | { kind: "loans" };
+  /** One loan's page, or the loans list with no id. */
+  | { kind: "loans"; loanId?: string };
 
 export type FigureValue =
   | { kind: "money"; minor: bigint; income?: boolean }
   | { kind: "text"; text: string }
+  /** A muted caption in a figure's place: a per-cent figure before the first rent. */
+  | { kind: "note"; text: string }
   /** "חסר" and, when `add` names one, an accent הוספה that opens that figure's sheet. */
   | { kind: "missing"; add: EditField | null; note?: string };
 
@@ -43,6 +46,10 @@ export const MONEY_IN_CAPTION = "רכישה, שיפוץ והחזקה פחות ה
 export const ALL_TIME = "מאז הקנייה";
 /** In place of a per-cent figure when all the cash came out. */
 export const INFINITY = "∞";
+/** In place of a per-cent figure before the first rent: with no rent yet, the per-cents say nothing. */
+export const BEFORE_FIRST_RENT = "לפני השכר הראשון";
+export const UNITS_DEFAULT_HINT = "ברירת מחדל · עריכה";
+export const TAKEN_OVER_LABEL = "הלוואה שנלקחה בסגירה";
 
 const money = (minor: bigint, income = false): FigureValue => ({ kind: "money", minor, income });
 const missing = (add: EditField | null, note?: string): FigureValue => ({ kind: "missing", add, note });
@@ -60,7 +67,6 @@ export function firstMissing(r: PropertyReturns, needs: readonly EditField[]): E
     if (field === "arv" && r.inputs.arvMinor == null) return field;
     if (field === "value" && r.inputs.valueMinor == null) return field;
     if (field === "land" && r.inputs.landMinor == null) return field;
-    if (field === "units" && r.inputs.units == null) return field;
     if (field === "tax_bracket" && r.inputs.taxBracketBp == null) return field;
   }
   return null;
@@ -85,6 +91,11 @@ export function firstRentHint(r: PropertyReturns): string {
 /** The first rent when it falls inside the period, so the statement starts there; else null. */
 export function firstRentInPeriod(r: PropertyReturns): string | null {
   return r.firstRent != null && r.firstRent > r.from && r.firstRent <= r.to ? r.firstRent : null;
+}
+
+/** No rent yet (none at all, or only after the period): the per-cent figures read BEFORE_FIRST_RENT. */
+export function beforeFirstRent(r: PropertyReturns): boolean {
+  return r.firstRent == null || r.firstRent > r.to;
 }
 
 /** How much more came out than went in, when all the cash came out; else null. */
@@ -158,13 +169,31 @@ export function equityTodayFormula(r: PropertyReturns): Formula {
   };
 }
 
-/** The purchase: from the acquisition lines (opening them), or the typed price (opening its sheet). */
-function purchaseRow(r: PropertyReturns, op: Op, negate: boolean): FormulaRow {
+/** The loans taken over at closing: one loan opens its page, several the loans list. */
+function takenOverTarget(r: PropertyReturns): Target {
+  const loans = r.inputs.takenOverLoans;
+  return loans.length === 1 && loans[0] != null ? { kind: "loans", loanId: loans[0].id } : { kind: "loans" };
+}
+
+/**
+ * The purchase: from the acquisition lines (opening them), or the typed price (opening its sheet).
+ * Decision 0246: a loan taken over at closing (Sub2) is a row of its own, so the two add up to the
+ * price: the cash lines (purchase − taken over), then "+ הלוואה שנלקחה בסגירה" opening the loan.
+ */
+export function purchaseRows(r: PropertyReturns, op: Op, negate: boolean): FormulaRow[] {
+  const sign = (minor: bigint) => money(negate ? -minor : minor);
   if (r.inputs.purchaseSource === "lines" && r.inputs.purchaseMinor != null) {
     const minor = r.inputs.purchaseMinor;
-    return { key: "purchase", op, label: "מחיר רכישה (מהתנועות)", hint: "רכישה וסגירה", value: money(negate ? -minor : minor), target: { kind: "line", line: "acquisition" } };
+    const takenOver = r.inputs.takenOverMinor;
+    const acquisition: Target = { kind: "line", line: "acquisition" };
+    if (takenOver <= 0n) return [{ key: "purchase", op, label: "מחיר רכישה (מהתנועות)", hint: "רכישה וסגירה", value: sign(minor), target: acquisition }];
+    const names = r.inputs.takenOverLoans.map((loan) => loan.name).filter((name) => name !== "").join(", ");
+    return [
+      { key: "purchase", op, label: "רכישה וסגירה (מהתנועות)", value: sign(minor - takenOver), target: acquisition },
+      { key: "taken-over", op: negate ? "−" : "+", label: TAKEN_OVER_LABEL, hint: names === "" ? undefined : names, value: sign(takenOver), target: takenOverTarget(r) },
+    ];
   }
-  return { key: "purchase", op, label: "מחיר רכישה", hint: "מנתוני הנכס · עריכה", value: typed(r.inputs.purchaseMinor, "purchase", negate), target: { kind: "edit", field: "purchase" } };
+  return [{ key: "purchase", op, label: "מחיר רכישה", hint: "מנתוני הנכס · עריכה", value: typed(r.inputs.purchaseMinor, "purchase", negate), target: { kind: "edit", field: "purchase" } }];
 }
 
 function rehabRow(r: PropertyReturns, op: Op, part: PartKey, negate: boolean): FormulaRow {
@@ -183,7 +212,7 @@ export function forcedFormula(r: PropertyReturns): Formula {
   return {
     rows: [
       { key: "arv", op: "", label: "שווי אחרי שיפוץ (ARV)", hint: "הערכה שלך", value: typed(r.inputs.arvMinor, "arv"), target: { kind: "edit", field: "arv" } },
-      purchaseRow(r, "−", true),
+      ...purchaseRows(r, "−", true),
       rehabRow(r, "−", "forced", true),
     ],
     result: { key: "forced", op: "=", label: "השבחה צפויה", value: computed(r.equity.forcedMinor, r, ["arv", "purchase"]) },
@@ -216,7 +245,7 @@ export function moneyInFormula(r: PropertyReturns): Formula {
 export function buildingFormula(r: PropertyReturns): Formula {
   return {
     rows: [
-      purchaseRow(r, "", false),
+      ...purchaseRows(r, "", false),
       rehabRow(r, "+", "building", false),
       { key: "land", op: "−", label: "קרקע", hint: "שלך · עריכה", value: typed(r.inputs.landMinor, "land", true), target: { kind: "edit", field: "land" } },
     ],
@@ -313,6 +342,7 @@ function cashSection(r: PropertyReturns): MetricSection {
 }
 
 function bpValue(bp: number | null, r: PropertyReturns, needs: readonly EditField[]): FigureValue {
+  if (beforeFirstRent(r)) return { kind: "note", text: BEFORE_FIRST_RENT };
   if (bp != null) return { kind: "text", text: percentText(bp) };
   const add = firstMissing(r, needs);
   return add == null ? { kind: "text", text: "לא מחושב" } : missing(add);
@@ -324,7 +354,7 @@ export function metricValue(metric: MetricKey, r: PropertyReturns): FigureValue 
   if (metric === "coc") return r.equity.allCashOut ? { kind: "text", text: INFINITY } : bpValue(m.cashOnCashBp, r, ["purchase"]);
   if (metric === "cap-rate") return bpValue(m.capRateBp, r, ["value"]);
   if (metric === "dscr") return m.dscrMilli == null ? { kind: "text", text: "אין תשלומים" } : { kind: "text", text: dscrText(m.dscrMilli) };
-  return m.perUnitMonthMinor == null ? missing("units") : money(m.perUnitMonthMinor);
+  return money(m.perUnitMonthMinor);
 }
 
 export const METRIC_TITLES: Record<MetricKey, string> = {
@@ -339,7 +369,7 @@ export function metricCaption(metric: MetricKey, r: PropertyReturns): string {
   if (metric === "cap-rate") return "רווח תפעולי ÷ שווי היום";
   if (metric === "dscr") return "רווח תפעולי ÷ תשלומי הלוואה";
   const units = r.inputs.units;
-  return units == null ? "בחודש · תזרים ÷ יחידות ÷ 12" : `בחודש · תזרים ÷ ${String(units)} ${units === 1 ? "יחידה" : "יחידות"} ÷ 12`;
+  return `בחודש · תזרים ÷ ${String(units)} ${units === 1 ? "יחידה" : "יחידות"} ÷ 12`;
 }
 
 export function metricPage(metric: MetricKey, r: PropertyReturns): MetricPage {
@@ -348,7 +378,8 @@ export function metricPage(metric: MetricKey, r: PropertyReturns): MetricPage {
   const value = metricValue(metric, r);
   const title = METRIC_TITLES[metric];
   const caption = `${metricCaption(metric, r)} · ${PERIOD}`;
-  const result = (text: string | null) => (text == null || value.kind === "missing" ? null : { text, value });
+  // No result row for a figure that is missing, or that reads "לפני השכר הראשון".
+  const result = (text: string | null) => (text == null || value.kind === "missing" || value.kind === "note" ? null : { text, value });
   if (metric === "coc") {
     const moneyIn = r.equity.moneyInMinor;
     const cashOut = cashOutMinor(r);
@@ -396,9 +427,9 @@ export function metricPage(metric: MetricKey, r: PropertyReturns): MetricPage {
     value,
     sections: [
       cashSection(r),
-      { key: "units", title: "יחידות", formula: { rows: [{ key: "units", op: "", label: "יחידות בנכס", hint: "מנתוני הנכס · עריכה", value: units == null ? missing("units") : { kind: "text", text: String(units) }, target: { kind: "edit", field: "units" } }], result: null } },
+      { key: "units", title: "יחידות", formula: { rows: [{ key: "units", op: "", label: "יחידות בנכס", hint: r.inputs.unitsDefault ? UNITS_DEFAULT_HINT : "מנתוני הנכס · עריכה", value: { kind: "text", text: String(units) }, target: { kind: "edit", field: "units" } }], result: null } },
     ],
-    result: result(units == null ? null : `${cents(st.cashFlowMinor, cur)} ÷ ${String(units)} ÷ 12`),
+    result: result(`${cents(st.cashFlowMinor, cur)} ÷ ${String(units)} ÷ 12`),
   };
 }
 

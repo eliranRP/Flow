@@ -7,12 +7,14 @@ import { ChevronIcon, InfoIcon } from "../ui/icons";
 import { ListRow } from "../ui/list-row";
 import { percentText, shareOfMoneyIn, type PropertyReturns } from "./project-returns-data";
 import {
+  BEFORE_FIRST_RENT,
   HISTORY_HINT,
   INFINITY,
   MISSING_HISTORY,
   MONEY_IN_CAPTION,
   METRIC_KEYS,
   METRIC_TITLES,
+  beforeFirstRent,
   cashOutMinor,
   firstMissing,
   metricCaption,
@@ -104,6 +106,7 @@ export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: Car
   const totalBp = r.sources.totalBp;
   const totalMissing = firstMissing(r, ["purchase"]);
   const cashOut = cashOutMinor(r);
+  const before = beforeFirstRent(r);
   return (
     <section className="ui-pinv-card ui-ret-card" aria-labelledby={titleId}>
       <div className="ui-ret-card-head">
@@ -114,6 +117,9 @@ export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: Car
         {cashOut != null ? (
           // All the cash came out: no per-cent figure, and no signal colour, a good state.
           <bdi dir="ltr" className="ui-num t-detail">{INFINITY}</bdi>
+        ) : before ? (
+          // No rent yet: a per-cent of the money in says nothing (FLOW-454). The amounts stay.
+          <span className="ui-ret-note">{BEFORE_FIRST_RENT}</span>
         ) : totalBp != null ? (
           <bdi dir="ltr" className={totalBp < 0 ? "ui-num t-detail ui-loss" : "ui-num t-detail"}>{percentText(totalBp)}</bdi>
         ) : totalMissing != null ? (
@@ -136,16 +142,24 @@ export function TotalReturnCard({ returns: r, base, search, onInfo, onAdd }: Car
       ) : null}
       <div className="ui-ret-sources">
         {sources.map((source) => {
+          // FLOW-454: fixed tracks (dot | label | ⓘ and the gap | amount | per-cent), so every row's amount
+          // and per-cent sit in the same columns. A figure that is not an amount spans both from the amount's edge.
+          const amount = source.value.kind === "money";
           const share = source.value.kind === "money" ? shareOfMoneyIn(source.value.minor, moneyIn, r.days) : null;
           return (
             <div key={source.key} className="ui-ret-source">
-              <div className="ui-ret-source-line">
-                <span className={`ui-ret-swatch ui-ret-shade-${String(source.shade)}`} aria-hidden="true" />
-                <span className="ui-ret-source-label">{source.label}</span>
-                <InfoButton label={source.label} infoKey={source.key} onInfo={onInfo} />
-                <span className="ui-ret-source-value"><CardFigure value={source.value} currency={r.currency} onAdd={onAdd} /></span>
-                <span className="ui-ret-source-share">{share == null ? null : <bdi dir="ltr" className="ui-num">{percentText(share)}</bdi>}</span>
-              </div>
+              <span className={`ui-ret-swatch ui-ret-shade-${String(source.shade)}`} aria-hidden="true" />
+              <span className="ui-ret-source-label">{source.label}</span>
+              <InfoButton label={source.label} infoKey={source.key} onInfo={onInfo} />
+              <span className={amount ? "ui-ret-source-value" : "ui-ret-source-value ui-ret-source-wide"}>
+                <CardFigure value={source.value} currency={r.currency} onAdd={onAdd} />
+              </span>
+              {amount ? (
+                <span className="ui-ret-source-share">
+                  {before || share == null ? null : <bdi dir="ltr" className="ui-num">{percentText(share)}</bdi>}
+                </span>
+              ) : null}
+              {amount && before ? <span className="ui-ret-source-note ui-ret-note">{BEFORE_FIRST_RENT}</span> : null}
               {source.hint == null ? null : <p className="ui-ret-source-hint">{source.hint}</p>}
             </div>
           );
@@ -173,7 +187,7 @@ function EquityRow({ label, caption, infoKey, value, currency, onInfo, onAdd }: 
         </span>
         <span className="ui-pinv-hint">{caption}</span>
       </span>
-      <span className="ui-pinv-value"><CardFigure value={value} currency={currency} onAdd={onAdd} /></span>
+      <span className="ui-pinv-value ui-ret-fixed-value"><CardFigure value={value} currency={currency} onAdd={onAdd} /></span>
     </div>
   );
 }
@@ -204,7 +218,7 @@ function MetricRow({ metric, r, href, onAdd }: { metric: MetricKey; r: PropertyR
         <span className="ui-pinv-row-title">{METRIC_TITLES[metric]}</span>
         <span className="ui-pinv-hint">{metricCaption(metric, r)}</span>
       </span>
-      <span className="ui-pinv-value"><FigureText value={value} currency={r.currency} addText={value.kind === "missing" && onAdd != null} /></span>
+      <span className="ui-pinv-value ui-ret-fixed-value ui-ret-fixed-metric"><FigureText value={value} currency={r.currency} addText={value.kind === "missing" && onAdd != null} /></span>
       <span className="ui-pinv-chevron" aria-hidden="true"><ChevronIcon size={18} /></span>
     </>
   );
